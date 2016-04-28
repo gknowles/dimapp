@@ -32,7 +32,7 @@ configuration "Release"
 
 project "dimapp"
   kind "StaticLib"
-  location "build"
+  location "projects"
   vpaths { 
     ["include"] = { "include/*.h", "include/dim/*.h" },
     ["config"] = "include/dim/compiler/*"
@@ -45,17 +45,17 @@ project "dimapp"
 
 project "dimapp-win8"
   kind "StaticLib"
-  location "build"
+  location "projects"
   vpaths { ["*"] = "src/win8" }
   files { 
     "src/win8/*"
   }
   pchsource "src/win8/pch.cpp"
 
-group ".meta"
-project ".meta"
+group "-meta"
+project "-meta"
   kind "StaticLib"
-  location "build"
+  location "projects"
   files { 
     "*.lua",
     "*.yml",
@@ -69,7 +69,7 @@ project ".meta"
 group "tests"
 project "cmdline"
   kind "ConsoleApp"
-  location "build"
+  location "projects"
   vpaths { ["*"] = "tests/cmdline" }
   files { "tests/cmdline/**" }
   pchsource "tests/cmdline/pch.cpp"
@@ -77,7 +77,7 @@ project "cmdline"
 
 project "hpack"
   kind "ConsoleApp"
-  location "build"
+  location "projects"
   vpaths { ["*"] = "tests/hpack" }
   files { "tests/hpack/**" }
   pchsource "tests/hpack/pch.cpp"
@@ -85,7 +85,7 @@ project "hpack"
 
 project "http"
   kind "ConsoleApp"
-  location "build"
+  location "projects"
   vpaths { ["*"] = "tests/http" }
   files { "tests/http/**" }
   pchsource "tests/http/pch.cpp"
@@ -93,7 +93,7 @@ project "http"
 
 project "tls"
   kind "ConsoleApp"
-  location "build"
+  location "projects"
   vpaths { ["*"] = "tests/tls" }
   files { "tests/tls/**" }
   pchsource "tests/tls/pch.cpp"
@@ -104,7 +104,7 @@ project "tls"
 group "tools"
 project "pargen"
   kind "ConsoleApp"
-  location "build"
+  location "projects"
   vpaths { ["*"] = "tools/pargen" }
   files { "tools/pargen/**" }
   pchsource "tools/pargen/pch.cpp"
@@ -112,7 +112,7 @@ project "pargen"
 
 project "tnet"
   kind "ConsoleApp"
-  location "build"
+  location "projects"
   vpaths { ["*"] = "tools/tnet" }
   files { "tools/tnet/**" }
   pchsource "tools/tnet/pch.cpp"
