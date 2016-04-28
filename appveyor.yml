@@ -10,11 +10,6 @@ build:
   project: dimapp.sln
   verbosity: minimal
 
-test_script:
-  - lib\dim\bin\cmdline
-  - lib\dim\bin\hpack
-  - lib\dim\bin\http
-
 after_build:
   - 7z a dimapp-v%appveyor_build_version%.zip bin\*.exe bin\*.pdb
 
@@ -24,6 +19,11 @@ artifacts:
     type: zip
 #  - path: bin\*.exe
 #  - path: bin\*.pdb
+
+test_script:
+  - bin\cmdline
+  - bin\hpack
+  - bin\http
 
 deploy:
   tag: dimapp-v$(appveyor_build_version)
