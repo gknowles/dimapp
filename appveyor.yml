@@ -7,7 +7,7 @@ configuration:
 
 build:
   parallel: true
-  project: tismet.sln
+  project: dimapp.sln
   verbosity: minimal
 
 test_script:
@@ -16,17 +16,17 @@ test_script:
   - lib\dim\bin\http
 
 after_build:
-  - 7z a tismet-v%appveyor_build_version%.zip bin\*.exe bin\*.pdb
+  - 7z a dimapp-v%appveyor_build_version%.zip bin\*.exe bin\*.pdb
 
 artifacts:
-  - path: tismet-v$(appveyor_build_version).zip
-    name: tismet
+  - path: dimapp-v$(appveyor_build_version).zip
+    name: dimapp
     type: zip
 #  - path: bin\*.exe
 #  - path: bin\*.pdb
 
 deploy:
-  tag: tismet-v$(appveyor_build_version)
+  tag: dimapp-v$(appveyor_build_version)
   description: continuous trunk build
   provider: GitHub
   auth_token:
