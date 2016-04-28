@@ -107,7 +107,7 @@ class Application
     // ILogNotify
     void onLog (LogType type, const string & msg) override;
 
-    int m_errors;
+    int m_errors{0};
 };
 } // namespace
 
