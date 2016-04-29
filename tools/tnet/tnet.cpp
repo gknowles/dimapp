@@ -13,10 +13,8 @@ using namespace Dim;
 ***/
 
 enum {
-    kExitBadArgs = 1,
-    kExitConnectFailed = 2,
-    kExitDisconnect = 3,
-    kExitCtrlBreak = 4,
+    kExitConnectFailed = kExitFirstAvailable,
+    kExitDisconnect
 };
 
 
@@ -26,52 +24,8 @@ enum {
 *
 ***/
 
-static WORD s_consoleAttrs;
 static Endpoint s_localEnd;
 static int s_cancelAddrId;
-
-
-/****************************************************************************
-*
-*   Helpers
-*
-***/
-
-//===========================================================================
-static BOOL WINAPI controlCallback (DWORD ctrl) {
-    switch (ctrl) {
-        case CTRL_C_EVENT:
-        case CTRL_BREAK_EVENT:
-            appSignalShutdown(kExitCtrlBreak);
-            return true;
-    }
-
-    return false;
-}
-
-//===========================================================================
-static void initializeConsole () {
-    // set ctrl-c handler
-    SetConsoleCtrlHandler(&controlCallback, true);
-
-    // disable echo
-    HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
-    SetConsoleMode(hInput, ENABLE_PROCESSED_INPUT);
-
-    // save console text attributes
-    HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-    CONSOLE_SCREEN_BUFFER_INFO info;
-    if (!GetConsoleScreenBufferInfo(hOutput, &info)) {
-        logMsgCrash() << "GetConsoleScreenBufferInfo: " << GetLastError();
-    }
-    s_consoleAttrs = info.wAttributes;
-}
-
-//===========================================================================
-static void setConsoleText (WORD attr) {
-    HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-    SetConsoleTextAttribute(hOutput, attr);
-}
 
 
 /****************************************************************************
@@ -92,6 +46,8 @@ class SocketConn
 
     // IDimEndpointNotify
     void onEndpointFound (Endpoint * ends, int count) override;
+
+    unique_ptr<ConsoleScopedAttr> m_connected;
 };
 static SocketConn s_socket;
 
@@ -108,7 +64,7 @@ void SocketConn::onEndpointFound (Endpoint * ends, int count) {
 
 //===========================================================================
 void SocketConn::onSocketConnect (const SocketConnectInfo & info) {
-    setConsoleText(FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+    m_connected = make_unique<ConsoleScopedAttr>(kConsoleGreen);
     cout << "Connected" << endl;
 }
 
@@ -126,6 +82,7 @@ void SocketConn::onSocketRead (const SocketData & data) {
 
 //===========================================================================
 void SocketConn::onSocketDisconnect () {
+    m_connected.reset();
     appSignalShutdown(kExitDisconnect);
 }
 
@@ -193,7 +150,6 @@ void ConsoleReader::onFileEnd (int64_t offset, IFile * file) {
 class MainShutdown : public IAppShutdownNotify {
     void onAppStartClientCleanup () override;
     bool onAppQueryClientDestroy () override;
-    void onAppStartConsoleCleanup () override;
 };
 static MainShutdown s_cleanup;
 
@@ -212,12 +168,6 @@ bool MainShutdown::onAppQueryClientDestroy () {
         return appQueryDestroyFailed();
     }
     return true;
-}
-
-//===========================================================================
-void MainShutdown::onAppStartConsoleCleanup () {
-    if (s_consoleAttrs)
-        setConsoleText(s_consoleAttrs);
 }
 
 
@@ -253,7 +203,7 @@ void Application::onTask () {
         return appSignalShutdown(kExitBadArgs);
     }
 
-    initializeConsole();
+    consoleEnableEcho(false);
 
     if (m_argc > 2)
         parse(&s_localEnd, m_argv[2], 0);

@@ -25,7 +25,15 @@ public:
 // returns exit code
 int appRun (ITaskNotify & app);
 
-void appSignalShutdown (int exitcode = 0);
+enum {
+    kExitSuccess = 0,
+    kExitBadArgs = 1,
+    kExitCtrlBreak = 2,
+
+    // first available for use by application
+    kExitFirstAvailable 
+};
+void appSignalShutdown (int exitcode = kExitSuccess);
 
 void appMonitorShutdown (IAppShutdownNotify * cleanup);
 bool appQueryDestroyFailed ();

@@ -171,6 +171,7 @@ bool MainTimer::queryDestroy (QueryFn notify) {
 //===========================================================================
 int appRun (ITaskNotify & app) {
     iHashInitialize();
+    iConsoleInitialize();
     iTaskInitialize();
     iTimerInitialize();
     iFileInitialize();
