@@ -216,7 +216,7 @@ TaskQueueHandle taskCreateQueue (const string & name, int threads) {
     q->wantThreads = 0;
     q->curThreads = 0;
 
-    lock_guard<mutex> lk(s_mut);
+    lock_guard<mutex> lk{s_mut};
     q->hq = s_queues.insert(q);
     setThreads_LK(*q, threads);
     return q->hq;
