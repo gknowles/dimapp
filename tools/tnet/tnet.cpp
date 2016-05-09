@@ -93,7 +93,7 @@ void SocketConn::onSocketDisconnect () {
 *
 ***/
 
-class ConsoleReader : public IFileNotify {
+class ConsoleReader : public IFileReadNotify {
 public:
     unique_ptr<SocketBuffer> m_buffer;
     unique_ptr<IFile> m_file;
