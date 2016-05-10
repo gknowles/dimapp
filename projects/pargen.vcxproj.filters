@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
+    <ClInclude Include="..\tools\pargen\intern.h" />
     <ClInclude Include="..\tools\pargen\pch.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\tools\pargen\gen.cpp" />
     <ClCompile Include="..\tools\pargen\pargen.cpp" />
     <ClCompile Include="..\tools\pargen\pch.cpp" />
   </ItemGroup>

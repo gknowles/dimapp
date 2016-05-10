@@ -5,8 +5,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
+#include <set>
 
-#define _WIN32_WINNT _WIN32_WINNT_WIN8
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <Windows.h>
+#include "intern.h"
