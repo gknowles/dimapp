@@ -6,5 +6,6 @@
 #include <cstdlib>
 #include <iostream>
 #include <set>
+#include <unordered_set>
 
 #include "intern.h"

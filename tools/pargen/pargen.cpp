@@ -12,9 +12,10 @@ using namespace Dim;
 *
 ***/
 
+static unsigned s_nextElemId;
+
 //===========================================================================
-static void getLineRules (set<Element> & rules) 
-{
+static void getLineRules (set<Element> & rules) {
     // line = OWS *1(param-list) OWS
     auto * rule = addSequenceRule(rules, "line", 1, 1);
     addRule(rule, "ows", 1, 1);
@@ -295,6 +296,7 @@ static Element * addElement (Element * rule, unsigned m, unsigned n) {
     rule->elements.resize(rule->elements.size() + 1);
     // rule->elements.emplace_back();
     Element * e = &rule->elements.back();
+    e->id = ++s_nextElemId;
     e->parent = rule;
     e->m = m;
     e->n = n;
@@ -339,7 +341,7 @@ void Application::onTask () {
     getAbnfRules(rules);
 
     // ostringstream os;
-    writeParser(cout, rules, "rulelist");
+    writeParser(cout, rules, "num-val");
 
     appSignalShutdown(kExitSuccess);
 }
@@ -380,6 +382,7 @@ Element * addChoiceRule (
     unsigned n
 ) {
     Element e;
+    e.id = ++s_nextElemId;
     e.name = name;
     e.m = m;
     e.n = n;

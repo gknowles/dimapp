@@ -1,7 +1,7 @@
 // intern.h - pargen
 
-
 struct Element {
+    unsigned id{0};
     std::string name;
     Element * parent{nullptr};
 
@@ -16,6 +16,7 @@ struct Element {
     } type;
     std::vector<Element> elements;
     std::string value;
+    const Element * rule{nullptr};
 
     bool operator< (const Element & right) const {
         return name < right.name;
