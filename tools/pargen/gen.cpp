@@ -12,41 +12,29 @@ using namespace Dim;
 *
 ***/
 
+static void hashCombine (size_t & seed, size_t v);
+
 namespace {
 
 struct StateElement {
-    const char * rule;
     const Element * elem;
     unsigned rep;
 
-    int compare (const StateElement & right) const {
-        if (int rc = (int) (elem->id - right.elem->id))
-            return rc;
-        if (rule) {
-            if (right.rule) {
-                if (int rc = strcmp(rule, right.rule))
-                    return rc;
-            } else {
-                return -1;
-            }
-        } else {
-            if (right.rule)
-                return 1;
-        }
-        int rc = rep - right.rep;
-        return rc;
-    }
-    bool operator< (const StateElement & right) const {
-        return compare(right) < 0;
-    }
-    bool operator== (const StateElement & right) const {
-        return compare(right) == 0;
-    }
+    int compare (const StateElement & right) const;
+    bool operator< (const StateElement & right) const;
+    bool operator== (const StateElement & right) const;
+};
+
+struct StatePosition {
+    vector<StateElement> elems;
+
+    bool operator< (const StatePosition & right) const;
+    bool operator== (const StatePosition & right) const;
 };
 
 struct State {
     unsigned id;
-    vector<StateElement> positions;
+    vector<StatePosition> positions;
     vector<unsigned> next;
 
     void clear () {
@@ -55,30 +43,33 @@ struct State {
         next.clear();
     }
 
-    int compare (const State & right) const {
-        if (int rc = (int) (positions.size() - right.positions.size()))
-            return rc;
-        auto ptr = right.positions.data();
-        for (auto&& se : positions) {
-            if (int rc = se.compare(*ptr))
-                return rc;
-            ++ptr;
-        }
-        return 0;
-    }
     bool operator== (const State & right) const {
-        return compare(right) == 0;
+        return equal(
+            positions.begin(), 
+            positions.end(), 
+            right.positions.begin(), 
+            right.positions.end()
+        );
     }
 };
 
 } // namespace
 
-
 namespace std {
 template<> struct hash<StateElement> {
     size_t operator() (const StateElement & val) const {
         size_t out = val.elem->id;
-        out = (out << 1) ^ val.rep;
+        hashCombine(out, val.rep);
+        return out;
+    }
+};
+
+template<> struct hash<StatePosition> {
+    size_t operator() (const StatePosition & val) const {
+        size_t out = 0;
+        for (auto&& se : val.elems) {
+            hashCombine(out, hash<StateElement>{}(se));
+        }
         return out;
     }
 };
@@ -86,8 +77,8 @@ template<> struct hash<StateElement> {
 template<> struct hash<State> {
     size_t operator() (const State & val) const {
         size_t out = 0;
-        for (auto&& elem : val.positions) {
-            out = (out << 1) ^ hash<StateElement>{}(elem);
+        for (auto&& sp : val.positions) {
+            hashCombine(out, hash<StatePosition>{}(sp));
         }
         return out;
     }
@@ -103,6 +94,7 @@ template<> struct hash<State> {
 
 static unordered_set<State> s_states;
 static unsigned s_nextStateId;
+static unsigned s_matched;
 
 
 /****************************************************************************
@@ -119,6 +111,11 @@ static void copyRules (
     bool failIfExists
 );
 static void normalizeSequence (Element & rule);
+
+//===========================================================================
+static void hashCombine (size_t & seed, size_t v) {
+    seed ^= v + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+}
 
 //===========================================================================
 static void copyRequiredDeps (
@@ -248,9 +245,6 @@ static void normalize (Element & rule, const set<Element> & rules) {
         normalizeRule(rule, rules);
         break;
     }
-
-    for (auto&& elem : rule.elements)
-        elem.parent = &rule;
 }
 
 //===========================================================================
@@ -297,7 +291,7 @@ ostream & operator<< (ostream & os, const Element & elem) {
         os << " )";
         break;
     case Element::kTerminal:
-        os << "%x" << hex << (unsigned) elem.value[0];
+        os << "%x" << hex << (unsigned) elem.value[0] << dec;
         break;
     }
     return os;
@@ -314,35 +308,38 @@ ostream & operator<< (ostream & os, const set<Element> & rules) {
 //===========================================================================
 static void addPositions (
     State * st, 
-    const Element & rule, 
-    const char name[]
+    StatePosition * sp,
+    const Element & rule,
+    unsigned rep
 ) {
     StateElement se;
+    se.elem = &rule;
+    se.rep = rep;
+    sp->elems.push_back(se);
     switch (rule.type) {
     case Element::kChoice:
         // all
         for (auto&& elem : rule.elements) {
-            addPositions(st, elem, name);
+            addPositions(st, sp, elem, 0);
         }
         break;
     case Element::kRule:
-        addPositions(st, *rule.rule, rule.name.c_str());
+        addPositions(st, sp, *rule.rule, 0);
         break;
     case Element::kSequence:
         // up to first with a minimum
         for (auto&& elem : rule.elements) {
-            addPositions(st, elem, name);
+            addPositions(st, sp, elem, 0);
             if (elem.m)
-                return;
+                goto done;
         }
         break;
     case Element::kTerminal:
-        se.rule = name;
-        se.elem = &rule;
-        se.rep = 0;
-        st->positions.push_back(se);
+        st->positions.push_back(*sp);
         break;
     }
+done:
+    sp->elems.pop_back();
 }
 
 //===========================================================================
@@ -355,43 +352,144 @@ static void initPositions (
     key.name = root;
     const Element & rule = *rules.find(key);
     st->positions.clear();
-    addPositions(st, rule, rule.name.c_str());
+    StatePosition sp;
+    addPositions(st, &sp, rule, 0);
     sort(st->positions.begin(), st->positions.end());
 }
 
 //===========================================================================
-static void buildStateTree (State * st) {
+static void addNextPositions (
+    State * st,
+    const StatePosition & sp
+) {
+    auto it = sp.elems.rbegin();
+    auto eit = sp.elems.rend();
+    for (; it != eit; ++it) {
+        // repeat and/or advance to next
+        const StateElement & se = *it;
+        unsigned rep = se.rep + 1;
+        unsigned m = se.elem->m;
+        unsigned n = se.elem->n;
+        // repeat if rep < n
+        if (rep < n) {
+            if (rep >= m && n == kUnlimited) {
+                // when the count is unlimited collapse all counts >= m
+                // to the same state
+                rep = m;
+            }
+            StatePosition nsp;
+            nsp.elems.assign(sp.elems.begin(), --it.base());
+            addPositions(st, &nsp, *se.elem, rep);
+        }
+        // don't advance unless rep >= m
+        if (rep < m) 
+            return;
+
+        // advance to next in sequence
+        if (se.elem->type == Element::kSequence) {
+            const Element * cur = (it - 1)->elem;
+            const Element * last = &se.elem->elements.back();
+            if (cur != last) {
+                StatePosition nsp;
+                nsp.elems.assign(sp.elems.begin(), it.base());
+                do {
+                    cur += 1;
+                    addPositions(st, &nsp, *cur, 0);
+                } while (cur != last && !cur->m);
+                return;
+            }
+        }
+
+        // advance parent
+    }
+}
+
+//===========================================================================
+static void buildStateTree (
+    State * st, 
+    string * path
+) {
     st->next.assign(256, 0);
     State next;
     for (unsigned i = 0; i < 256; ++i) {
         next.clear();
-        for (auto&& se : st->positions) {
+        for (auto&& sp : st->positions) {
+            auto & se = sp.elems.back();
             assert(se.elem->type == Element::kTerminal);
             if ((unsigned char) se.elem->value.front() != i) 
                 continue;
-            StateElement se2;
-            se2.rep = se.rep + 1;
-            if (se.elem->n < se2.rep) {
-                se2.rule = se.rule;
-                se2.elem = se.elem;
-                next.positions.push_back(se2);
-                continue;
-            }
-            if (!se.elem->parent)
-                continue;
-
+            addNextPositions(&next, sp);
         }
         if (next.positions.size()) {
             auto ib = s_states.insert(move(next));
             State * st2 = const_cast<State *>(&*ib.first);
-            if (!ib.second) {
-                st2->id = ++s_nextStateId;
+
+            if (i < ' ') {
+                path->push_back('\\');
+                switch (i) {
+                case 9: path->push_back('t'); break;
+                case 10: path->push_back('n'); break;
+                case 13: path->push_back('r'); break;
+                }
+            } else {
+                path->push_back(unsigned char(i));
             }
+
+            if (ib.second) {
+                st2->id = ++s_nextStateId;
+                cout << s_nextStateId << " states, " 
+                    << s_matched << " matched, " 
+                    << *path << endl;
+                buildStateTree(st2, path);
+            } else {
+                if (++s_matched % 1000 != 0) {
+                    cout << s_nextStateId << " states, " 
+                        << s_matched << " matched, " 
+                        << *path << endl;
+                }
+            }
+            path->pop_back();
+            if (i < ' ')
+                path->pop_back();
+
             st->next[i] = st2->id;
-            if (!ib.second)
-                buildStateTree(st2);
         }
     }
+}
+
+
+/****************************************************************************
+*
+*   StateElement and StatePosition
+*
+***/
+
+//===========================================================================
+int StateElement::compare (const StateElement & right) const {
+    if (int rc = (int) (elem->id - right.elem->id))
+        return rc;
+    int rc = rep - right.rep;
+    return rc;
+}
+
+//===========================================================================
+bool StateElement::operator< (const StateElement & right) const {
+    return compare(right) < 0;
+}
+
+//===========================================================================
+bool StateElement::operator== (const StateElement & right) const {
+    return compare(right) == 0;
+}
+
+//===========================================================================
+bool StatePosition::operator< (const StatePosition & right) const {
+    return elems < right.elems;
+}
+
+//===========================================================================
+bool StatePosition::operator== (const StatePosition & right) const {
+    return elems == right.elems;
 }
 
 
@@ -420,5 +518,7 @@ void writeParser (
     s_nextStateId = 0;
     state.id = ++s_nextStateId;
     s_states.insert(move(state));
-    buildStateTree(const_cast<State *>(&*s_states.begin()));
+    string path;
+    buildStateTree(const_cast<State *>(&*s_states.begin()), &path);
+    cout << "States: " << s_states.size() << endl;
 }

@@ -3,7 +3,6 @@
 struct Element {
     unsigned id{0};
     std::string name;
-    Element * parent{nullptr};
 
     unsigned m{1};
     unsigned n{1};

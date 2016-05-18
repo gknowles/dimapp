@@ -51,7 +51,6 @@ static void getLineRules (set<Element> & rules) {
 //===========================================================================
 static void getCoreRules (set<Element> & rules) {
     Element * rule;
-//    Element * elem;
 
     // ALPHA          =  %x41-5A / %x61-7A   ; A-Z / a-z
     rule = addChoiceRule(rules, "ALPHA", 1, 1);
@@ -297,7 +296,6 @@ static Element * addElement (Element * rule, unsigned m, unsigned n) {
     // rule->elements.emplace_back();
     Element * e = &rule->elements.back();
     e->id = ++s_nextElemId;
-    e->parent = rule;
     e->m = m;
     e->n = n;
     return e;
@@ -341,7 +339,7 @@ void Application::onTask () {
     getAbnfRules(rules);
 
     // ostringstream os;
-    writeParser(cout, rules, "num-val");
+    writeParser(cout, rules, "bin-val");
 
     appSignalShutdown(kExitSuccess);
 }
