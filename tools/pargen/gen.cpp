@@ -365,8 +365,25 @@ static void addNextPositions (
     auto it = sp.elems.rbegin();
     auto eit = sp.elems.rend();
     for (; it != eit; ++it) {
-        // repeat and/or advance to next
         const StateElement & se = *it;
+
+        // advance to next in sequence
+        if (se.elem->type == Element::kSequence) {
+            const Element * cur = (it - 1)->elem;
+            const Element * last = &se.elem->elements.back();
+            if (cur != last) {
+                StatePosition nsp;
+                nsp.elems.assign(sp.elems.begin(), it.base());
+                do {
+                    cur += 1;
+                    addPositions(st, &nsp, *cur, 0);
+                    if (cur->m)
+                        return;
+                } while (cur != last);
+            }
+        }
+
+        // repeat and/or advance to next
         unsigned rep = se.rep + 1;
         unsigned m = se.elem->m;
         unsigned n = se.elem->n;
@@ -384,21 +401,6 @@ static void addNextPositions (
         // don't advance unless rep >= m
         if (rep < m) 
             return;
-
-        // advance to next in sequence
-        if (se.elem->type == Element::kSequence) {
-            const Element * cur = (it - 1)->elem;
-            const Element * last = &se.elem->elements.back();
-            if (cur != last) {
-                StatePosition nsp;
-                nsp.elems.assign(sp.elems.begin(), it.base());
-                do {
-                    cur += 1;
-                    addPositions(st, &nsp, *cur, 0);
-                } while (cur != last && !cur->m);
-                return;
-            }
-        }
 
         // advance parent
     }
