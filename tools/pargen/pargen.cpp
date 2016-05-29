@@ -256,6 +256,14 @@ static void getAbnfRules (set<Element> & rules) {
 
     // bin-val        =  "b" 1*BIT
     //                 [ 1*("." 1*BIT) / ("-" 1*BIT) ]
+
+    // bin-val = "b" (bin-val-simple / bin-val-concatenation 
+    //      / bin-val-alterntation)
+    // bin-val-simple = 1*BIT
+    // bin-val-concatenation = bin-val-simple 1*("." bin-val-simple)
+    // bin-val-alternation = bin-val-simple "-" bin-val-simple
+
+
     rule = addSequenceRule(rules, "bin-val", 1, 1);
     addLiteral(rule, "b", 1, 1);
     addRule(rule, "BIT", 1, kUnlimited);
@@ -342,8 +350,8 @@ void Application::onTask () {
     getCoreRules(rules);
     getAbnfRules(rules);
 
-    // ostringstream os;
-    writeParser(cout, rules, "bin-val");
+    ofstream os("abnfsyntax.cpp");
+    writeParser(os, rules, "rulelist");
 
     appSignalShutdown(kExitSuccess);
 }

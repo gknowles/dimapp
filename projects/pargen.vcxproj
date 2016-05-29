@@ -119,6 +119,9 @@
     <ClInclude Include="..\tools\pargen\pch.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\tools\pargen\abnfsyntax.cpp">
+      <ObjectFileName>$(IntDir)tools\pargen\</ObjectFileName>
+    </ClCompile>
     <ClCompile Include="..\tools\pargen\gen.cpp">
       <ObjectFileName>$(IntDir)tools\pargen\</ObjectFileName>
     </ClCompile>

@@ -4,6 +4,7 @@
 #include <crtdbg.h>
 #include <cstdio>
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
 #include <set>
 #include <unordered_set>

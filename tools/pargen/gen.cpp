@@ -102,7 +102,7 @@ template<> struct hash<State> {
 
 static unordered_set<State> s_states;
 static unsigned s_nextStateId = 1;
-static unsigned s_matched;
+static unsigned s_transitions;
 static ElementDone s_done;
 
 
@@ -490,15 +490,15 @@ static void buildStateTree (
                 path->push_back(unsigned char(i));
             }
 
+            ++s_transitions;
             if (ib.second) {
                 st2->id = ++s_nextStateId;
                 st2->name = *path;
                 logMsgInfo() << s_nextStateId << " states, " 
-                    << s_matched << " matched, " 
+                    << s_transitions << " transitions, " 
                     << *path;
                 buildStateTree(st2, path);
             } else {
-                ++s_matched;
             }
             path->pop_back();
             if (i <= ' ')
@@ -509,7 +509,7 @@ static void buildStateTree (
     }
     if (!path->size()) {
         logMsgInfo() << s_nextStateId << " states, " 
-            << s_matched << " matched";
+            << s_transitions << " transitions";
     }
 }
 
@@ -665,11 +665,21 @@ void writeParser (
     string path;
     buildStateTree(const_cast<State *>(&*ib.first), &path);
 
+    os << 1 + R"(
+// abnfsyntax.cpp - pargen
+#include "pch.h"
+#pragma hdrstop
+
+)";
+
     os << "//============================================"
         "===============================\n";
+    os << "// Root rule: " << root << "\n"
+        << "//\n"
+        << "// Normalized ABNF Definition:\n";
     os << rules;
     os << 1 + R"(
-bool parser (IParserNotify * notify, const char src[]) {
+bool abnfCheckSyntax (const char src[]) {
     const char * ptr = src;
     goto state2;
 
