@@ -28,7 +28,11 @@ configuration "Debug"
 configuration "Release"
   defines { "NDEBUG" }
   libdirs { "vendor/sodium/x64/Release" }
+  flags { 
+    "Optimize"
+  }
 
+print "hello"
 
 project "dimapp"
   kind "StaticLib"

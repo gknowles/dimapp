@@ -350,8 +350,12 @@ void Application::onTask () {
     getCoreRules(rules);
     getAbnfRules(rules);
 
+    TimePoint start = Clock::now();
     ofstream os("abnfsyntax.cpp");
     writeParser(os, rules, "rulelist");
+    TimePoint finish = Clock::now();
+    Duration elapsed = finish - start;
+    cout << "Elapsed time: " << elapsed.count() << endl;
 
     appSignalShutdown(kExitSuccess);
 }
