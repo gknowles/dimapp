@@ -124,11 +124,14 @@ static void getAbnfRules (set<Element> & rules) {
     Element * elem;
     Element * elem2;
 
+    // definitions taken from rfc5234
+
     // rulelist       =  1*( rule / (*c-wsp c-nl) )
     rule = addChoiceRule(rules, "rulelist", 1, kUnlimited);
     addRule(rule, "rule", 1, 1);
     elem = addSequence(rule, 1, 1);
     addRule(elem, "c-wsp", 0, kUnlimited);
+    //addRule(elem, "WSP", 0, kUnlimited);    // see errata 3076
     addRule(elem, "c-nl", 1, 1);
 
     // rule           =  rulename defined-as elements c-nl
@@ -160,6 +163,7 @@ static void getAbnfRules (set<Element> & rules) {
     rule = addSequenceRule(rules, "elements", 1, 1);
     addRule(rule, "alternation", 1, 1);
     addRule(rule, "c-wsp", 0, kUnlimited);
+    //addRule(rule, "WSP", 0, kUnlimited);        // see errata 2968
 
     // c-wsp          =  WSP / (c-nl WSP)
     rule = addChoiceRule(rules, "c-wsp", 1, 1);
@@ -356,6 +360,7 @@ int main(int argc, char * argv[]) {
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
     _set_error_mode(_OUT_TO_MSGBOX);
 
+    consoleEnableCtrlC(false);
     Application app(argc, argv);
     return appRun(app);
 }

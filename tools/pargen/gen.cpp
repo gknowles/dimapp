@@ -14,7 +14,14 @@ using namespace Dim;
 
 static void hashCombine (size_t & seed, size_t v);
 
+const char kDoneStateName[] = "<DONE>";
+const char kFailedStateName[] = "<FAILED>";
+
 namespace {
+
+struct ElementDone : Element {
+    ElementDone ();
+};
 
 struct StateElement {
     const Element * elem;
@@ -34,7 +41,8 @@ struct StatePosition {
 
 struct State {
     unsigned id;
-    vector<StatePosition> positions;
+    string name;
+    set<StatePosition> positions;
     vector<unsigned> next;
 
     void clear () {
@@ -93,8 +101,9 @@ template<> struct hash<State> {
 ***/
 
 static unordered_set<State> s_states;
-static unsigned s_nextStateId;
+static unsigned s_nextStateId = 1;
 static unsigned s_matched;
+static ElementDone s_done;
 
 
 /****************************************************************************
@@ -300,8 +309,24 @@ ostream & operator<< (ostream & os, const Element & elem) {
 //===========================================================================
 ostream & operator<< (ostream & os, const set<Element> & rules) {
     for (auto&& rule : rules) {
-        os << rule.name << " = " << rule << '\n';
+        os << "// " << rule.name << " = " << rule << '\n';
     }
+    return os;
+}
+
+//===========================================================================
+ostream & operator<< (ostream & os, const StateElement & se) {
+    os << *se.elem << '.' << se.rep;
+    return os;
+}
+
+//===========================================================================
+ostream & operator<< (ostream & os, const StatePosition & sp) {
+    os << "sp:";
+    for (auto&& se : sp.elems) {
+        os << "\n  " << se;
+    }
+    os << "\n";
     return os;
 }
 
@@ -324,6 +349,20 @@ static void addPositions (
         }
         break;
     case Element::kRule:
+        // check for rule recursion
+        for (auto&& ose : sp->elems) {
+            if (ose.elem->rule == rule.rule
+                && &ose != &sp->elems.back()
+            ) {
+                vector<StateElement> tmp{sp->elems};
+                size_t num = &ose - &sp->elems.front() + 1;
+                sp->elems.resize(num);
+                sp->elems.back().rep = 0;
+                addPositions(st, sp, *rule.rule, 0);
+                sp->elems = move(tmp);
+                goto done;
+            }
+        }
         addPositions(st, sp, *rule.rule, 0);
         break;
     case Element::kSequence:
@@ -335,7 +374,8 @@ static void addPositions (
         }
         break;
     case Element::kTerminal:
-        st->positions.push_back(*sp);
+        st->positions.insert(*sp);
+        //cout << *sp << endl;
         break;
     }
 done:
@@ -354,7 +394,6 @@ static void initPositions (
     st->positions.clear();
     StatePosition sp;
     addPositions(st, &sp, rule, 0);
-    sort(st->positions.begin(), st->positions.end());
 }
 
 //===========================================================================
@@ -404,6 +443,14 @@ static void addNextPositions (
 
         // advance parent
     }
+
+    // completed parsing
+    StatePosition nsp;
+    StateElement nse;
+    nse.elem = &s_done;
+    nse.rep = 0;
+    nsp.elems.push_back(nse);
+    st->positions.insert(nsp);
 }
 
 //===========================================================================
@@ -417,21 +464,27 @@ static void buildStateTree (
         next.clear();
         for (auto&& sp : st->positions) {
             auto & se = sp.elems.back();
-            assert(se.elem->type == Element::kTerminal);
-            if ((unsigned char) se.elem->value.front() != i) 
-                continue;
-            addNextPositions(&next, sp);
+            if (se.elem->type != Element::kTerminal) {
+                assert(se.elem == &s_done);
+                if (i == 0) {
+                    st->next[i] = 1;
+                }
+            } else {
+                if ((unsigned char) se.elem->value.front() == i)
+                    addNextPositions(&next, sp);
+            }
         }
         if (next.positions.size()) {
             auto ib = s_states.insert(move(next));
             State * st2 = const_cast<State *>(&*ib.first);
 
-            if (i < ' ') {
+            if (i <= ' ') {
                 path->push_back('\\');
                 switch (i) {
                 case 9: path->push_back('t'); break;
                 case 10: path->push_back('n'); break;
                 case 13: path->push_back('r'); break;
+                case 32: path->push_back('s'); break;
                 }
             } else {
                 path->push_back(unsigned char(i));
@@ -439,24 +492,104 @@ static void buildStateTree (
 
             if (ib.second) {
                 st2->id = ++s_nextStateId;
-                cout << s_nextStateId << " states, " 
+                st2->name = *path;
+                logMsgInfo() << s_nextStateId << " states, " 
                     << s_matched << " matched, " 
-                    << *path << endl;
+                    << *path;
                 buildStateTree(st2, path);
             } else {
-                if (++s_matched % 1000 != 0) {
-                    cout << s_nextStateId << " states, " 
-                        << s_matched << " matched, " 
-                        << *path << endl;
-                }
+                ++s_matched;
             }
             path->pop_back();
-            if (i < ' ')
+            if (i <= ' ')
                 path->pop_back();
 
             st->next[i] = st2->id;
         }
     }
+    if (!path->size()) {
+        logMsgInfo() << s_nextStateId << " states, " 
+            << s_matched << " matched";
+    }
+}
+
+//===========================================================================
+static void writeParserState (ostream & os, const State & st) {
+    os << "state" << st.id << ": // " << st.name << "\n";
+    //for (auto&& sp : st.positions) {
+    //    os << sp << '\n';
+    //}
+
+    if (st.name == kDoneStateName) {
+        os << "    return true;\n\n";
+        return;
+    }
+
+    struct NextState {
+        unsigned char ch;
+        unsigned state;
+    };
+    vector<NextState> cases;
+    for (unsigned i = 0; i < 256; ++i) {
+        if (st.next[i])
+            cases.push_back({unsigned char(i), st.next[i]});
+    }
+    sort(
+        cases.begin(), 
+        cases.end(), 
+        [](const NextState & e1, const NextState & e2) {
+            return 256 * e1.state + e1.ch < 256 * e2.state + e2.ch;
+        }
+    );
+    os << "    switch (*ptr++) {\n";
+    unsigned prev = cases.front().state;
+    unsigned pos = 0;
+    for (auto&& ns : cases) {
+        if (ns.state != prev) {
+            if (pos % 7 != 0)
+                os << '\n';
+            os << "        goto state" << prev << ";\n";
+            prev = ns.state;
+            pos = 0;
+        }
+        if (pos % 7 == 0)
+            os << "    ";
+        os << "case ";
+        if (ns.ch < ' ' || ns.ch >= 0x7f) {
+            os << (unsigned) ns.ch;
+        } else {
+            os << '\'';
+            if (ns.ch == '\'' || ns.ch == '\\') 
+                os << '\\';
+            os << ns.ch << '\'';
+        }
+        os << ':';
+        if (++pos % 7 == 0) {
+            os << '\n';
+        } else {
+            os << ' ';
+        }
+    }
+    if (pos % 7 != 0)
+        os << '\n';
+
+    os << "        goto state" << cases.back().state << ";\n"
+       << "    }\n"
+       << "    goto state0;\n"
+       << "    \n";
+}
+
+
+/****************************************************************************
+*
+*   ElementDone
+*
+***/
+
+//===========================================================================
+ElementDone::ElementDone () {
+    type = Element::kRule;
+    value = kDoneStateName;
 }
 
 
@@ -510,17 +643,46 @@ void writeParser (
     set<Element> rules;
     copyRules(rules, src, root, true);
     normalize(rules);
-    os << rules;
 
     State state;
-    initPositions(&state, rules, root);
-    cout << "Positions: " << state.positions.size() << endl;
-    
     s_states.clear();
     s_nextStateId = 0;
     state.id = ++s_nextStateId;
+    state.name = kDoneStateName;
+    StatePosition nsp;
+    StateElement nse;
+    nse.elem = &s_done;
+    nse.rep = 0;
+    nsp.elems.push_back(nse);
+    state.positions.insert(nsp);
     s_states.insert(move(state));
+
+    state.clear();
+    initPositions(&state, rules, root);
+    state.id = ++s_nextStateId;
+    auto ib = s_states.insert(move(state));
+
     string path;
-    buildStateTree(const_cast<State *>(&*s_states.begin()), &path);
-    cout << "States: " << s_states.size() << endl;
+    buildStateTree(const_cast<State *>(&*ib.first), &path);
+
+    os << "//============================================"
+        "===============================\n";
+    os << rules;
+    os << 1 + R"(
+bool parser (IParserNotify * notify, const char src[]) {
+    const char * ptr = src;
+    goto state2;
+
+state0: // <FAILED>
+    return false;
+
+)";
+    vector<State> states;
+    states.resize(s_nextStateId);
+    for (auto&& st : s_states) 
+        states[st.id - 1] = st;
+    for (auto&& st : states) {
+        writeParserState(os, st);
+    }
+    os << "}\n";
 }

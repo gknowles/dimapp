@@ -1,18 +1,17 @@
 // intern.h - pargen
 
 struct Element {
-    unsigned id{0};
-    std::string name;
-
-    unsigned m{1};
-    unsigned n{1};
-
-    enum Type {
+    enum Type : uint8_t {
         kSequence,
         kRule,
         kChoice,
         kTerminal,
     } type;
+    std::string name;
+    unsigned m{1};
+    unsigned n{1};
+    unsigned id{0};
+
     std::vector<Element> elements;
     std::string value;
     const Element * rule{nullptr};
