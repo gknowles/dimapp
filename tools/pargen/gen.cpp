@@ -674,9 +674,10 @@ void writeParser (
 
     os << "//============================================"
         "===============================\n";
-    os << "// Root rule: " << root << "\n"
-        << "//\n"
-        << "// Normalized ABNF Definition:\n";
+    os << "// Normalized ABNF of syntax being checked, with '" 
+       << root << "' as the\n"
+       << "// top level rule:\n"
+       << "//\n";
     os << rules;
     os << 1 + R"(
 bool abnfCheckSyntax (const char src[]) {
