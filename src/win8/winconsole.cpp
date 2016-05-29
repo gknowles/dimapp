@@ -15,6 +15,7 @@ namespace Dim {
 
 static mutex s_mut;
 static vector<WORD> s_consoleAttrs;
+static bool s_controlEnabled = false;
 
 
 /****************************************************************************
@@ -25,11 +26,13 @@ static vector<WORD> s_consoleAttrs;
 
 //===========================================================================
 static BOOL WINAPI controlCallback (DWORD ctrl) {
-    switch (ctrl) {
-        case CTRL_C_EVENT:
-        case CTRL_BREAK_EVENT:
-            appSignalShutdown(kExitCtrlBreak);
-            return true;
+    if (s_controlEnabled) {
+        switch (ctrl) {
+            case CTRL_C_EVENT:
+            case CTRL_BREAK_EVENT:
+                appSignalShutdown(kExitCtrlBreak);
+                return true;
+        }
     }
 
     return false;
@@ -102,6 +105,7 @@ void iConsoleInitialize () {
 *
 ***/
 
+//===========================================================================
 void consoleEnableEcho (bool enable) {
     HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
     DWORD mode = 0;
@@ -112,6 +116,11 @@ void consoleEnableEcho (bool enable) {
         mode &= ~ENABLE_ECHO_INPUT;
     }
     SetConsoleMode(hInput, mode);
+}
+
+//===========================================================================
+void consoleEnableCtrlC (bool enable) {
+    s_controlEnabled = enable;
 }
 
 

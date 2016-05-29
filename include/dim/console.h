@@ -20,5 +20,6 @@ public:
 };
 
 void consoleEnableEcho (bool enable = true);
+void consoleEnableCtrlC (bool enable = true);
 
 } // namespace
