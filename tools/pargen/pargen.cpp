@@ -336,6 +336,8 @@ Application::Application (int argc, char * argv[])
     , m_argv(argv)
 {}
 
+bool abnfCheckSyntax (const char src[]);
+
 //===========================================================================
 void Application::onTask () {
     //if (m_argc < 2) {
@@ -356,6 +358,13 @@ void Application::onTask () {
     TimePoint finish = Clock::now();
     Duration elapsed = finish - start;
     cout << "Elapsed time: " << elapsed.count() << endl;
+
+    ostringstream abnf;
+    for (auto&& rule : rules) {
+        abnf << rule.name << " = " << rule << '\n';
+    }
+    bool valid = abnfCheckSyntax(abnf.str().c_str());
+    cout << "Valid: " << valid << endl;
 
     appSignalShutdown(kExitSuccess);
 }
