@@ -20,6 +20,7 @@ struct Element {
         return name < right.name;
     }
 };
+std::ostream & operator<< (std::ostream & os, const Element & elem);
 
 const unsigned kUnlimited = unsigned(-1);
 

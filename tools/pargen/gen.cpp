@@ -350,17 +350,25 @@ static void addPositions (
         break;
     case Element::kRule:
         // check for rule recursion
-        for (auto&& ose : sp->elems) {
-            if (ose.elem->rule == rule.rule
-                && &ose != &sp->elems.back()
-            ) {
-                vector<StateElement> tmp{sp->elems};
-                size_t num = &ose - &sp->elems.front() + 1;
-                sp->elems.resize(num);
-                sp->elems.back().rep = 0;
-                addPositions(st, sp, *rule.rule, 0);
-                sp->elems = move(tmp);
-                goto done;
+        {
+            size_t depth = sp->elems.size();
+            if (depth >= 3) {
+                StateElement * m = sp->elems.data() + depth / 2;
+                StateElement * z = &sp->elems.back();
+                for (StateElement * y = z - 1; y >= m; --y) {
+                    if (y->elem == z->elem) {
+                        StateElement * x = y - (z - y);
+                        if (equal(x, y, y, z)) {
+                            vector<StateElement> tmp{sp->elems};
+                            size_t num = y - sp->elems.data() + 1;
+                            sp->elems.resize(num);
+                            sp->elems.back().rep = 0;
+                            addPositions(st, sp, *rule.rule, 0);
+                            sp->elems = move(tmp);
+                            goto done;
+                        }
+                    }
+                }
             }
         }
         addPositions(st, sp, *rule.rule, 0);
@@ -494,9 +502,14 @@ static void buildStateTree (
             if (ib.second) {
                 st2->id = ++s_nextStateId;
                 st2->name = *path;
+                const char * show = path->data();
+                if (path->size() > 40) {
+                    show += path->size() - 40;
+                }
                 logMsgInfo() << s_nextStateId << " states, " 
-                    << s_transitions << " transitions, " 
-                    << *path;
+                    << s_transitions << " transitions, "
+                    << "(" << path->size() << " chars) ..."
+                    << show;
                 buildStateTree(st2, path);
             } else {
             }
