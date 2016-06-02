@@ -49,6 +49,23 @@ static void getLineRules (set<Element> & rules) {
 }
 
 //===========================================================================
+static void getTestRules (set<Element> & rules) {
+    Element * rule;
+    Element * elem;
+    rule = addChoiceRule(rules, "left-recurse", 1, 1);
+    elem = addSequence(rule, 1, 1);
+    addRule(elem, "left-recurse", 1, 1);
+    addTerminal(elem, 's', 1, 1);
+    addTerminal(rule, 'y', 1, 1);
+
+    rule = addChoiceRule(rules, "right-recurse", 1, 1);
+    elem = addSequence(rule, 1, 1);
+    addTerminal(elem, 's', 1, 1);
+    addRule(elem, "right-recurse", 1, 1);
+    addTerminal(rule, 'y', 1, 1);
+}
+
+//===========================================================================
 static void getCoreRules (set<Element> & rules) {
     Element * rule;
 
@@ -186,7 +203,7 @@ static void getAbnfRules (set<Element> & rules) {
     addRule(rule, "CRLF", 1, 1);
 
     // alternation    =  concatenation *(*c-wsp "/" *c-wsp concatenation)
-    rule = addSequenceRule(rules, "alternation", 1, 1);
+    rule = addSequenceRule(rules, "alternation", 1, 1, true);
     addRule(rule, "concatenation", 1, 1);
     elem = addSequence(rule, 0, kUnlimited);
     addRule(elem, "c-wsp", 0, kUnlimited);
@@ -262,7 +279,6 @@ static void getAbnfRules (set<Element> & rules) {
     // bin-val-simple = 1*BIT
     // bin-val-concatenation = bin-val-simple 1*("." bin-val-simple)
     // bin-val-alternation = bin-val-simple "-" bin-val-simple
-
 
     rule = addSequenceRule(rules, "bin-val", 1, 1);
     addLiteral(rule, "b", 1, 1);
@@ -351,10 +367,11 @@ void Application::onTask () {
     rules.clear();
     getCoreRules(rules);
     getAbnfRules(rules);
+    getTestRules(rules);
 
     TimePoint start = Clock::now();
     ofstream os("abnfsyntax.cpp");
-    writeParser(os, rules, "rulelist");
+    writeParser(os, rules, "bin-val");
     TimePoint finish = Clock::now();
     Duration elapsed = finish - start;
     cout << "Elapsed time: " << elapsed.count() << endl;
@@ -391,9 +408,10 @@ Element * addSequenceRule (
     set<Element> & rules, 
     const string & name,
     unsigned m,
-    unsigned n
+    unsigned n,
+    bool recurse
 ) {
-    auto e = addChoiceRule(rules, name, m, n);
+    auto e = addChoiceRule(rules, name, m, n, recurse);
     e = addSequence(e, 1, 1);
     return e;
 }
@@ -403,7 +421,8 @@ Element * addChoiceRule (
     set<Element> & rules, 
     const string & name,
     unsigned m,
-    unsigned n
+    unsigned n,
+    bool recurse
 ) {
     Element e;
     e.id = ++s_nextElemId;
@@ -411,6 +430,7 @@ Element * addChoiceRule (
     e.m = m;
     e.n = n;
     e.type = Element::kChoice;
+    e.recurse = recurse;
     auto ib = rules.insert(e);
     assert(ib.second);
     return const_cast<Element *>(&*ib.first);

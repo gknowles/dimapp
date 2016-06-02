@@ -14,6 +14,7 @@ using namespace Dim;
 
 static void hashCombine (size_t & seed, size_t v);
 
+const char kRootElement[] = "<ROOT>";
 const char kDoneStateName[] = "<DONE>";
 const char kFailedStateName[] = "<FAILED>";
 
@@ -120,6 +121,12 @@ static void copyRules (
     bool failIfExists
 );
 static void normalizeSequence (Element & rule);
+
+static void addNextPositions (
+    State * st,
+    const StatePosition & sp
+);
+
 
 //===========================================================================
 static void hashCombine (size_t & seed, size_t v) {
@@ -337,6 +344,12 @@ static void addPositions (
     const Element & rule,
     unsigned rep
 ) {
+    enum {
+        kTruncate,
+        kNext,
+        kRestart,
+    } recurse = kRestart;
+
     StateElement se;
     se.elem = &rule;
     se.rep = rep;
@@ -359,12 +372,24 @@ static void addPositions (
                     if (y->elem == z->elem) {
                         StateElement * x = y - (z - y);
                         if (equal(x, y, y, z)) {
-                            vector<StateElement> tmp{sp->elems};
-                            size_t num = y - sp->elems.data() + 1;
-                            sp->elems.resize(num);
-                            sp->elems.back().rep = 0;
-                            addPositions(st, sp, *rule.rule, 0);
-                            sp->elems = move(tmp);
+                            switch (recurse) {
+                            case kTruncate:
+                                break;
+                            case kRestart:
+                            {
+                                vector<StateElement> tmp{sp->elems};
+                                size_t num = y - sp->elems.data() + 1;
+                                sp->elems.resize(num);
+                                sp->elems.back().rep = 0;
+                                addPositions(st, sp, *rule.rule, 0);
+                                sp->elems = move(tmp);
+                            }
+                            break;
+
+                            case kNext:
+                                addNextPositions(st, *sp);
+                                break;
+                            }
                             goto done;
                         }
                     }
@@ -554,18 +579,19 @@ static void writeParserState (ostream & os, const State & st) {
             return 256 * e1.state + e1.ch < 256 * e2.state + e2.ch;
         }
     );
+    const unsigned kCaseColumns = 6;
     os << "    switch (*ptr++) {\n";
     unsigned prev = cases.front().state;
     unsigned pos = 0;
     for (auto&& ns : cases) {
         if (ns.state != prev) {
-            if (pos % 7 != 0)
+            if (pos % kCaseColumns != 0)
                 os << '\n';
             os << "        goto state" << prev << ";\n";
             prev = ns.state;
             pos = 0;
         }
-        if (pos % 7 == 0)
+        if (pos % kCaseColumns == 0)
             os << "    ";
         os << "case ";
         if (ns.ch < ' ' || ns.ch >= 0x7f) {
@@ -577,13 +603,13 @@ static void writeParserState (ostream & os, const State & st) {
             os << ns.ch << '\'';
         }
         os << ':';
-        if (++pos % 7 == 0) {
+        if (++pos % kCaseColumns == 0) {
             os << '\n';
         } else {
             os << ' ';
         }
     }
-    if (pos % 7 != 0)
+    if (pos % kCaseColumns != 0)
         os << '\n';
 
     os << "        goto state" << cases.back().state << ";\n"
@@ -655,6 +681,8 @@ void writeParser (
 ) {
     set<Element> rules;
     copyRules(rules, src, root, true);
+    Element * elem = addChoiceRule(rules, kRootElement, 1, 1);
+    addRule(elem, root, 1, 1);
     normalize(rules);
 
     State state;
@@ -671,7 +699,7 @@ void writeParser (
     s_states.insert(move(state));
 
     state.clear();
-    initPositions(&state, rules, root);
+    initPositions(&state, rules, kRootElement);
     state.id = ++s_nextStateId;
     auto ib = s_states.insert(move(state));
 
@@ -688,7 +716,7 @@ void writeParser (
     os << "//============================================"
         "===============================\n";
     os << "// Normalized ABNF of syntax being checked, with '" 
-       << root << "' as the\n"
+       << kRootElement << "' as the\n"
        << "// top level rule:\n"
        << "//\n";
     os << rules;

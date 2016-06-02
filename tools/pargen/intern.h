@@ -15,6 +15,7 @@ struct Element {
     std::vector<Element> elements;
     std::string value;
     const Element * rule{nullptr};
+    bool recurse{false};
 
     bool operator< (const Element & right) const {
         return name < right.name;
@@ -28,13 +29,15 @@ Element * addSequenceRule (
     std::set<Element> & rules, 
     const std::string & name,
     unsigned m,
-    unsigned n
+    unsigned n,
+    bool recurse = false
 );
 Element * addChoiceRule (
     std::set<Element> & rules, 
     const std::string & name,
     unsigned m,
-    unsigned n
+    unsigned n,
+    bool recurse = false
 );
 Element * addSequence (Element * rule, unsigned m, unsigned n);
 Element * addChoice (Element * rule, unsigned m, unsigned n);
@@ -51,7 +54,7 @@ void addLiteral (
     unsigned n
 );
 void addRange (Element * rule, unsigned char a, unsigned char b);
-
+void addTerminal (Element * rule, unsigned char ch, unsigned m, unsigned n);
 
 void writeParser (
     std::ostream & os, 
