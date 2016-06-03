@@ -61,6 +61,7 @@ project "-meta"
   kind "StaticLib"
   location "projects"
   files { 
+    "uncrustify.cfg",
     "*.lua",
     "*.yml",
     "LICENSE",
