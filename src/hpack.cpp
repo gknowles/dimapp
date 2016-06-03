@@ -1,9 +1,9 @@
 // hpack.cpp - dim services
 //
 // TODO:
-//  * padding strictly longer than 7 bits MUST be treated as a decoding 
+//  * padding strictly longer than 7 bits MUST be treated as a decoding
 //    error
-//  * padding not corresponding to the most significant bits of the code for 
+//  * padding not corresponding to the most significant bits of the code for
 //    the EOS symbol MUST be treated as a decoding error
 
 #include "pch.h"
@@ -15,17 +15,17 @@ namespace Dim {
 
 
 /****************************************************************************
-*
-*   Tuning parameters
-*
-***/
+ *
+ *   Tuning parameters
+ *
+ ***/
 
 
 /****************************************************************************
-*
-*   Declarations
-*
-***/
+ *
+ *   Declarations
+ *
+ ***/
 
 struct HpackFieldView {
     const char * name;
@@ -42,23 +42,23 @@ struct EncodeItem {
 
 const int16_t kDecodeUnused = numeric_limits<int16_t>::max();
 struct DecodeItem {
-    int16_t zero{kDecodeUnused};
-    int16_t one{kDecodeUnused};
+    int16_t zero {kDecodeUnused};
+    int16_t one {kDecodeUnused};
 };
 class HuffDecoder {
 public:
     HuffDecoder (const EncodeItem items[], size_t count);
 
     bool decode (
-        const char ** out, 
-        ITempHeap * heap, 
-        size_t unusedBits,
-        const char src[],
-        size_t count
+    const char ** out,
+    ITempHeap * heap,
+    size_t unusedBits,
+    const char src[],
+    size_t count
     );
 
 private:
-    int m_prefixBits{0};
+    int m_prefixBits {0};
     vector<DecodeItem> m_decodeTable;
 };
 
@@ -66,12 +66,12 @@ private:
 
 
 /****************************************************************************
-*
-*   Contants
-*
-***/
+ *
+ *   Contants
+ *
+ ***/
 
-// static table has the following 61 members (not counting 0) as defined by 
+// static table has the following 61 members (not counting 0) as defined by
 // rfc7541 appendix A
 const HpackFieldView s_staticTable[] = {
     {},
@@ -397,25 +397,25 @@ const EncodeItem s_encodeTable[] = {
     {  0x7ffffef, 27 }, //     (253) |11111111|11111111|11111101|111
     {  0x7fffff0, 27 }, //     (254) |11111111|11111111|11111110|000
     {  0x3ffffee, 26 }, //     (255) |11111111|11111111|11111011|10
-    { 0x3fffffff, 30 }, // EOS (256) |11111111|11111111|11111111|111111      
-};    
+    { 0x3fffffff, 30 }, // EOS (256) |11111111|11111111|11111111|111111
+};
 static_assert(size(s_encodeTable) == 257, "");
 
-      
+
 /****************************************************************************
-*     
-*   Variables
-*
-***/  
+ *
+ *   Variables
+ *
+ ***/
 
 static HuffDecoder s_decode(s_encodeTable, size(s_encodeTable));
 
 
 /****************************************************************************
-*     
-*   Helpers
-*     
-***/  
+ *
+ *   Helpers
+ *
+ ***/
 
 //===========================================================================
 static size_t fieldSize (const HpackFieldView & fld) {
@@ -429,10 +429,10 @@ static size_t fieldSize (const HpackDynField & fld) {
 
 
 /****************************************************************************
-*     
-*   Encoding data
-*     
-***/  
+ *
+ *   Encoding data
+ *
+ ***/
 
 //===========================================================================
 HpackEncode::HpackEncode (size_t tableSize) {
@@ -450,13 +450,12 @@ void HpackEncode::startBlock (CharBuf * out) {
 }
 
 //===========================================================================
-void HpackEncode::endBlock () {
-}
+void HpackEncode::endBlock () {}
 
 //===========================================================================
 void HpackEncode::header (
-    const char name[], 
-    const char value[], 
+    const char name[],
+    const char value[],
     int flags
 ) {
     // (0x00) - literal header field without indexing (new name)
@@ -468,11 +467,10 @@ void HpackEncode::header (
 
 //===========================================================================
 void HpackEncode::header (
-    HttpHdr name, 
-    const char value[], 
+    HttpHdr name,
+    const char value[],
     int flags
-) {
-}
+) {}
 
 //===========================================================================
 void HpackEncode::write (const char str[]) {
@@ -508,10 +506,10 @@ void HpackEncode::write (size_t val, char prefix, int prefixBits) {
 
 
 /****************************************************************************
-*     
-*   Decoding data
-*     
-***/  
+ *
+ *   Decoding data
+ *
+ ***/
 
 //===========================================================================
 // HuffDecoder
@@ -535,7 +533,7 @@ HuffDecoder::HuffDecoder (const EncodeItem items[], size_t count) {
         int pos = ptr->code >> (ptr->bits - m_prefixBits);
         int mask = 1 << (ptr->bits - m_prefixBits - 1);
 
-        for (;;) {
+        for (;; ) {
             assert(pos >= 0 && pos < size(m_decodeTable));
             DecodeItem & item = m_decodeTable[pos];
             int16_t & key = (~ptr->code & mask) ? item.zero : item.one;
@@ -559,10 +557,10 @@ HuffDecoder::HuffDecoder (const EncodeItem items[], size_t count) {
 
 //===========================================================================
 static bool read (
-    int * out, 
+    int * out,
     int bits,
-    int & availBits, 
-    const char *& ptr, 
+    int & availBits,
+    const char *& ptr,
     const char * eptr
 ) {
     if (ptr == eptr) {
@@ -597,8 +595,8 @@ static bool read (
 
 //===========================================================================
 bool HuffDecoder::decode (
-    const char ** out, 
-    ITempHeap * heap, 
+    const char ** out,
+    ITempHeap * heap,
     size_t unusedBits,
     const char src[],
     size_t count
@@ -610,7 +608,7 @@ bool HuffDecoder::decode (
     char * optr = heap->alloc<char>(2 * count);
     *out = optr;
     int val;
-    for (;;) {
+    for (;; ) {
         int key = 0;
         if (!read(&key, m_prefixBits, avail, ptr, eptr))
             goto done;
@@ -634,7 +632,7 @@ done:
 //===========================================================================
 // HpackDecode
 //===========================================================================
-HpackDecode::HpackDecode (size_t tableSize) 
+HpackDecode::HpackDecode (size_t tableSize)
     : m_dynSize{tableSize}
 {}
 
@@ -669,7 +667,7 @@ bool HpackDecode::parse (
 bool HpackDecode::readInstruction (
     IHpackDecodeNotify * notify,
     ITempHeap * heap,
-    const char *& src, 
+    const char *& src,
     size_t & srcLen
 ) {
     enum {
@@ -736,9 +734,9 @@ bool HpackDecode::readInstruction (
     }
 
     notify->onHpackHeader(
-        kHttpInvalid, 
-        fld.name, 
-        fld.value, 
+        kHttpInvalid,
+        fld.name,
+        fld.value,
         mode == kNeverIndexed ? kNeverIndexed : 0
     );
     return true;
@@ -749,7 +747,7 @@ bool HpackDecode::readIndexedField (
     HpackFieldView * out,
     ITempHeap * heap,
     size_t prefixBits,
-    const char *& src, 
+    const char *& src,
     size_t & srcLen
 ) {
     size_t index;
@@ -775,7 +773,7 @@ bool HpackDecode::readIndexedName (
     HpackFieldView * out,
     ITempHeap * heap,
     size_t prefixBits,
-    const char *& src, 
+    const char *& src,
     size_t & srcLen
 ) {
     size_t index;
@@ -808,8 +806,8 @@ void HpackDecode::pruneDynTable () {
 //===========================================================================
 bool HpackDecode::read (
     size_t * out,
-    size_t prefixBits, 
-    const char *& src, 
+    size_t prefixBits,
+    const char *& src,
     size_t & srcLen
 ) {
     assert(prefixBits >= 1 && prefixBits <= 8);
@@ -840,7 +838,7 @@ bool HpackDecode::read (
 bool HpackDecode::read (
     const char ** out,
     ITempHeap * heap,
-    const char *& src, 
+    const char *& src,
     size_t & srcLen
 ) {
     size_t len;
@@ -849,7 +847,7 @@ bool HpackDecode::read (
         return false;
     if (srcLen < len)
         return false;
-    
+
     if (!huffman) {
         *out = heap->strDup(src, len);
     } else {

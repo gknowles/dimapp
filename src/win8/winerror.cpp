@@ -8,52 +8,52 @@ namespace Dim {
 
 
 /****************************************************************************
-*
-*   Private declarations
-*
-***/
+ *
+ *   Private declarations
+ *
+ ***/
 
-using RtlNtStatusToDosErrorFn = ULONG (WINAPI *)(int ntStatus);
+using RtlNtStatusToDosErrorFn = ULONG(WINAPI *)(int ntStatus);
 
 
 /****************************************************************************
-*
-*   Variables
-*
-***/
+ *
+ *   Variables
+ *
+ ***/
 
 static RtlNtStatusToDosErrorFn s_RtlNtStatusToDosError;
 static once_flag s_loadOnce;
 
 
 /****************************************************************************
-*
-*   Helpers
-*
-***/
+ *
+ *   Helpers
+ *
+ ***/
 
 //===========================================================================
 static void loadProc () {
     HMODULE mod = LoadLibrary("ntdll.dll");
     if (!mod)
-        logMsgCrash() << "LoadLibrary(ntdll): " << WinError{};
+        logMsgCrash() << "LoadLibrary(ntdll): " << WinError {};
 
     s_RtlNtStatusToDosError = (RtlNtStatusToDosErrorFn) GetProcAddress(
         mod,
         "RtlNtStatusToDosError"
-    );
+        );
     if (!s_RtlNtStatusToDosError) {
-        logMsgCrash() << "GetProcAddress(RtlNtStatusToDosError): " 
-            << WinError{};
+        logMsgCrash() << "GetProcAddress(RtlNtStatusToDosError): "
+                      << WinError {};
     }
 }
 
 
 /****************************************************************************
-*
-*   WinError
-*
-***/
+ *
+ *   WinError
+ *
+ ***/
 
 //===========================================================================
 WinError::WinError () {
@@ -61,7 +61,7 @@ WinError::WinError () {
 }
 
 //===========================================================================
-WinError::WinError (int error) 
+WinError::WinError (int error)
     : m_value{error}
 {}
 
@@ -102,7 +102,7 @@ std::ostream & operator<< (std::ostream & os, const WinError & val) {
 
     // trim trailing whitespace (i.e. \r\n)
     char * ptr = buf + strlen(buf) - 1;
-    for (; ptr > buf && isspace((unsigned char) *ptr); --ptr) 
+    for (; ptr > buf && isspace((unsigned char) *ptr); --ptr)
         *ptr = 0;
 
     os << buf;

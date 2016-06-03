@@ -10,10 +10,10 @@ namespace Dim {
 
 
 /****************************************************************************
-*
-*   Address
-*
-***/
+ *
+ *   Address
+ *
+ ***/
 
 //===========================================================================
 bool parse (Address * out, const char src[]) {
@@ -35,10 +35,10 @@ std::ostream & operator<< (std::ostream & os, const Address & addr) {
 
 
 /****************************************************************************
-*
-*   Endpoint
-*
-***/
+ *
+ *   Endpoint
+ *
+ ***/
 
 //===========================================================================
 bool parse (Endpoint * end, const char src[], int defaultPort) {
@@ -50,7 +50,7 @@ bool parse (Endpoint * end, const char src[], int defaultPort) {
         NULL,
         (sockaddr *) &sas,
         &sasLen
-    )) {
+        )) {
         *end = {};
         return false;
     }
@@ -72,7 +72,7 @@ std::ostream & operator<< (std::ostream & os, const Endpoint & src) {
         NULL,
         tmp,
         &tmpLen
-    )) {
+        )) {
         os << "(bad_sockaddr)";
     } else {
         os << tmp;
@@ -82,10 +82,10 @@ std::ostream & operator<< (std::ostream & os, const Endpoint & src) {
 
 
 /****************************************************************************
-*
-*   sockaddr_storage
-*
-***/
+ *
+ *   sockaddr_storage
+ *
+ ***/
 
 //===========================================================================
 void copy (sockaddr_storage * out, const Endpoint & src) {
@@ -107,24 +107,24 @@ void copy (Endpoint * out, const sockaddr_storage & storage) {
 
 
 /****************************************************************************
-*
-*   Address query
-*
-***/
+ *
+ *   Address query
+ *
+ ***/
 
 namespace {
-    struct QueryTask : ITaskNotify {
-        WinOverlappedEvent evt{};
-        ADDRINFOEXW * results{nullptr};
-        IEndpointNotify * notify{nullptr};
-        HANDLE cancel{nullptr};
-        int id;
+struct QueryTask : ITaskNotify {
+    WinOverlappedEvent evt {};
+    ADDRINFOEXW * results {nullptr};
+    IEndpointNotify * notify {nullptr};
+    HANDLE cancel {nullptr};
+    int id;
 
-        vector<Endpoint> ends;
-        WinError err{0};
+    vector<Endpoint> ends;
+    WinError err {0};
 
-        void onTask () override;
-    };
+    void onTask () override;
+};
 } // namespace
 
 //===========================================================================
@@ -143,14 +143,14 @@ static void CALLBACK addressQueryCallback (
 ) {
     QueryTask * task = static_cast<QueryTask *>(
         ((WinOverlappedEvent *)overlapped)->notify
-    );
+        );
     task->err = error;
     if (task->results) {
         ADDRINFOEXW * result = task->results;
         while (result) {
             if (result->ai_family == AF_INET) {
                 Endpoint end;
-                sockaddr_storage sas{};
+                sockaddr_storage sas {};
                 memcpy(&sas, result->ai_addr, result->ai_addrlen);
                 copy(&end, sas);
                 task->ends.push_back(end);
@@ -177,13 +177,13 @@ void QueryTask::onTask () {
 // Public API
 //===========================================================================
 void endpointQuery (
-    int * cancelId, 
-    IEndpointNotify * notify, 
+    int * cancelId,
+    IEndpointNotify * notify,
     const std::string & name,
     int defaultPort
 ) {
-    QueryTask * task{nullptr};
-    for (;;) {
+    QueryTask * task {nullptr};
+    for (;; ) {
         *cancelId = ++s_lastCancelId;
         auto ib = s_tasks.try_emplace(*cancelId);
         if (ib.second) {
@@ -203,9 +203,9 @@ void endpointQuery (
         return;
     }
 
-    // Async completion requires wchar version of 
+    // Async completion requires wchar version of
     wstring wname;
-    wstring wport{to_wstring(defaultPort)};
+    wstring wport {to_wstring(defaultPort)};
     wname.resize(name.size() + 1);
     int chars = MultiByteToWideChar(
         CP_UTF8,
@@ -214,7 +214,7 @@ void endpointQuery (
         (int) name.size(),
         (wchar_t *) wname.data(),
         (int) wname.size()
-    );
+        );
     wname.resize(chars);
 
     // extract non-default port if present in name
@@ -235,7 +235,7 @@ void endpointQuery (
         &task->evt.overlapped,
         &addressQueryCallback,
         &task->cancel
-    );
+        );
     if (err != ERROR_IO_PENDING)
         addressQueryCallback(err, 0, &task->evt.overlapped);
 }
@@ -253,10 +253,10 @@ void addressGetLocal (std::vector<Address> * out) {
     ADDRINFO * result;
     WinError err = getaddrinfo(
         "..localmachine",
-        NULL,   // service name
-        NULL,   // hints
+        NULL,     // service name
+        NULL,     // hints
         &result
-    );
+        );
     if (err)
         logMsgCrash() << "getaddrinfo(..localmachine): " << err;
 
@@ -265,7 +265,7 @@ void addressGetLocal (std::vector<Address> * out) {
     while (result) {
         if (result->ai_family == AF_INET) {
             memcpy(&sas, result->ai_addr, result->ai_addrlen);
-            copy(&end, sas); 
+            copy(&end, sas);
             out->push_back(end.addr);
         }
         result = result->ai_next;

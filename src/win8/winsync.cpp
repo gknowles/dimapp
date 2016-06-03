@@ -9,19 +9,19 @@ namespace Dim {
 
 
 /****************************************************************************
-*
-*   WinEvent
-*
-***/
+ *
+ *   WinEvent
+ *
+ ***/
 
 //===========================================================================
 WinEvent::WinEvent () {
     m_handle = CreateEvent(
-        NULL,   // security attributes
-        false,  // manual reset
-        false,  // initial signaled state
-        NULL    // name
-    );
+        NULL,     // security attributes
+        false,     // manual reset
+        false,     // initial signaled state
+        NULL     // name
+        );
 }
 
 //===========================================================================
@@ -46,13 +46,13 @@ void WinEvent::wait (Duration wait) {
 
 
 /****************************************************************************
-*
-*   IWinEventWaitNotify
-*
-***/
+ *
+ *   IWinEventWaitNotify
+ *
+ ***/
 
 //===========================================================================
-static void __stdcall eventWaitCallback (void * param, uint8_t timeout) {
+static void __stdcall eventWaitCallback(void * param, uint8_t timeout) {
     auto notify = reinterpret_cast<IWinEventWaitNotify *>(param);
     taskPushEvent(*notify);
 }
@@ -67,20 +67,20 @@ IWinEventWaitNotify::IWinEventWaitNotify () {
         m_overlapped.hEvent,
         &eventWaitCallback,
         this,
-        INFINITE,   // timeout
+        INFINITE,     // timeout
         WT_EXECUTEINWAITTHREAD
-    )) {
-        logMsgCrash() << "RegisterWaitForSingleObject: " << WinError{};
+        )) {
+        logMsgCrash() << "RegisterWaitForSingleObject: " << WinError {};
     }
 }
 
 //===========================================================================
 IWinEventWaitNotify::~IWinEventWaitNotify () {
     if (m_registeredWait && !UnregisterWaitEx(m_registeredWait, nullptr)) {
-        logMsgError() << "UnregisterWaitEx: " << WinError{};
+        logMsgError() << "UnregisterWaitEx: " << WinError {};
     }
     if (m_overlapped.hEvent && !CloseHandle(m_overlapped.hEvent)) {
-        logMsgError() << "CloseHandle(overlapped.hEvent): " << WinError{};
+        logMsgError() << "CloseHandle(overlapped.hEvent): " << WinError {};
     }
 }
 

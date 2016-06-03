@@ -9,10 +9,10 @@ namespace Dim {
 
 
 /****************************************************************************
-*
-*   Declarations
-*
-***/
+ *
+ *   Declarations
+ *
+ ***/
 
 namespace {
 
@@ -37,8 +37,8 @@ enum ETimerMode {
 
 class MainTimer : public ITimerNotify {
 public:
-    typedef void (IAppShutdownNotify::*CleanFn)();
-    typedef bool (IAppShutdownNotify::*QueryFn)();
+    typedef void (IAppShutdownNotify::* CleanFn)();
+    typedef bool (IAppShutdownNotify::* QueryFn)();
 
 public:
     bool stopped () const;
@@ -51,8 +51,8 @@ private:
     void startCleanup (CleanFn notify);
     bool queryDestroy (QueryFn notify);
 
-    enum ETimerMode m_mode{MAIN_SC};
-    const char * m_modeName{nullptr};
+    enum ETimerMode m_mode {MAIN_SC};
+    const char * m_modeName {nullptr};
     TimePoint m_shutdownStart;
 };
 
@@ -60,10 +60,10 @@ private:
 
 
 /****************************************************************************
-*
-*   Variables
-*
-***/
+ *
+ *   Variables
+ *
+ ***/
 
 static MainTimer s_mainTimer;
 static int s_exitcode;
@@ -71,50 +71,50 @@ static int s_exitcode;
 // cleaners are in the order (newest to oldest) that they will be executed.
 static vector<CleanupInfo> s_cleaners;
 
-static Duration s_shutdownTimeout{2min};
+static Duration s_shutdownTimeout {2min};
 static mutex s_runMut;
 static condition_variable s_stopped;
-static RunMode s_runMode{kRunStopped};
+static RunMode s_runMode {kRunStopped};
 
 
 /****************************************************************************
-*
-*   MainTimer
-*
-***/
+ *
+ *   MainTimer
+ *
+ ***/
 
 //===========================================================================
 Duration MainTimer::onTimer (TimePoint now) {
     bool next = true;
     switch (m_mode) {
-        case MAIN_SC: 
-            s_runMode = kRunStopping;
-            m_shutdownStart = now;
-            break;
-        case MAIN_QD:
-            break;
-        case CLIENT_SC:
-            startCleanup(&IAppShutdownNotify::onAppStartClientCleanup);
-            break;
-        case CLIENT_QD:
-            next = queryDestroy(&IAppShutdownNotify::onAppQueryClientDestroy);
-            break;
-        case SERVER_SC:
-            startCleanup(&IAppShutdownNotify::onAppStartServerCleanup);
-            break;
-        case SERVER_QD:
-            next = queryDestroy(&IAppShutdownNotify::onAppQueryServerDestroy);
-            break;
-        case CONSOLE_SC:
-            startCleanup(&IAppShutdownNotify::onAppStartConsoleCleanup);
-            break;
-        case CONSOLE_QD:
-            next = queryDestroy(&IAppShutdownNotify::onAppQueryConsoleDestroy);
-            break;
-        case DONE:
-            s_cleaners.clear();
-            s_stopped.notify_one();
-            return kTimerInfinite;
+    case MAIN_SC:
+        s_runMode = kRunStopping;
+        m_shutdownStart = now;
+        break;
+    case MAIN_QD:
+        break;
+    case CLIENT_SC:
+        startCleanup(&IAppShutdownNotify::onAppStartClientCleanup);
+        break;
+    case CLIENT_QD:
+        next = queryDestroy(&IAppShutdownNotify::onAppQueryClientDestroy);
+        break;
+    case SERVER_SC:
+        startCleanup(&IAppShutdownNotify::onAppStartServerCleanup);
+        break;
+    case SERVER_QD:
+        next = queryDestroy(&IAppShutdownNotify::onAppQueryServerDestroy);
+        break;
+    case CONSOLE_SC:
+        startCleanup(&IAppShutdownNotify::onAppStartConsoleCleanup);
+        break;
+    case CONSOLE_QD:
+        next = queryDestroy(&IAppShutdownNotify::onAppQueryConsoleDestroy);
+        break;
+    case DONE:
+        s_cleaners.clear();
+        s_stopped.notify_one();
+        return kTimerInfinite;
     }
 
     // some delay when rerunning the same step (i.e. QueryDestroy failed)
@@ -141,7 +141,7 @@ bool MainTimer::queryDestroyFailed (Duration grace) {
 
 //===========================================================================
 void MainTimer::startCleanup (CleanFn notify) {
-    for (auto&& v : s_cleaners) {
+    for (auto && v : s_cleaners) {
         (v.notify->*notify)();
         v.destroyed = false;
     }
@@ -149,7 +149,7 @@ void MainTimer::startCleanup (CleanFn notify) {
 
 //===========================================================================
 bool MainTimer::queryDestroy (QueryFn notify) {
-    for (auto&& v : s_cleaners) {
+    for (auto && v : s_cleaners) {
         if (!v.destroyed) {
             if ((v.notify->*notify)()) {
                 v.destroyed = true;
@@ -163,10 +163,10 @@ bool MainTimer::queryDestroy (QueryFn notify) {
 
 
 /****************************************************************************
-*
-*   Externals
-*
-***/
+ *
+ *   Externals
+ *
+ ***/
 
 //===========================================================================
 int appRun (ITaskNotify & app) {
@@ -180,7 +180,7 @@ int appRun (ITaskNotify & app) {
 
     taskPushEvent(app);
 
-    unique_lock<mutex> lk{s_runMut};
+    unique_lock<mutex> lk {s_runMut};
     while (!s_mainTimer.stopped())
         s_stopped.wait(lk);
     iTimerDestroy();

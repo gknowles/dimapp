@@ -9,17 +9,19 @@
 namespace Dim {
 
 /****************************************************************************
-*
-*   Task queue
-*
-***/
+ *
+ *   Task queue
+ *
+ ***/
 
 struct TaskQueueHandle : HandleBase {};
 
 class ITaskNotify {
 public:
     virtual ~ITaskNotify () {}
-    virtual void onTask () { delete this; }
+    virtual void onTask () {
+        delete this;
+    }
 
 private:
     friend class TaskQueue;

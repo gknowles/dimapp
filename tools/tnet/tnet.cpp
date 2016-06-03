@@ -7,10 +7,10 @@ using namespace Dim;
 
 
 /****************************************************************************
-*
-*   Declarations
-*
-***/
+ *
+ *   Declarations
+ *
+ ***/
 
 enum {
     kExitConnectFailed = kExitFirstAvailable,
@@ -19,35 +19,35 @@ enum {
 
 
 /****************************************************************************
-*
-*   Variables
-*
-***/
+ *
+ *   Variables
+ *
+ ***/
 
 static Endpoint s_localEnd;
 static int s_cancelAddrId;
 
 
 /****************************************************************************
-*
-*   SocketConn
-*
-***/
+ *
+ *   SocketConn
+ *
+ ***/
 
-class SocketConn 
-    : public ISocketNotify 
+class SocketConn
+    : public ISocketNotify
     , public IEndpointNotify
 {
-    // ISocketNotify
-    void onSocketConnect (const SocketConnectInfo & info) override;
-    void onSocketConnectFailed () override;
-    void onSocketRead (const SocketData & data) override;
-    void onSocketDisconnect () override;
+// ISocketNotify
+void onSocketConnect (const SocketConnectInfo & info) override;
+void onSocketConnectFailed () override;
+void onSocketRead (const SocketData & data) override;
+void onSocketDisconnect () override;
 
-    // IDimEndpointNotify
-    void onEndpointFound (Endpoint * ends, int count) override;
+// IDimEndpointNotify
+void onEndpointFound (Endpoint * ends, int count) override;
 
-    unique_ptr<ConsoleScopedAttr> m_connected;
+unique_ptr<ConsoleScopedAttr> m_connected;
 };
 static SocketConn s_socket;
 
@@ -88,34 +88,36 @@ void SocketConn::onSocketDisconnect () {
 
 
 /****************************************************************************
-*
-*   ConsoleReader
-*
-***/
+ *
+ *   ConsoleReader
+ *
+ ***/
 
 class ConsoleReader : public IFileReadNotify {
 public:
     unique_ptr<SocketBuffer> m_buffer;
     unique_ptr<IFile> m_file;
 
-    bool QueryDestroy () const { return !m_file && !m_buffer; }
+    bool QueryDestroy () const {
+        return !m_file && !m_buffer;
+    }
 
     bool onFileRead (
-        char * data, 
-        int bytes,
-        int64_t offset,
-        IFile * file
+    char * data,
+    int bytes,
+    int64_t offset,
+    IFile * file
     ) override;
     void onFileEnd (
-        int64_t offset, 
-        IFile * file
+    int64_t offset,
+    IFile * file
     ) override;
 };
 static ConsoleReader s_console;
 
 //===========================================================================
 bool ConsoleReader::onFileRead (
-    char * data, 
+    char * data,
     int bytes,
     int64_t offset,
     IFile * file
@@ -130,7 +132,7 @@ void ConsoleReader::onFileEnd (int64_t offset, IFile * file) {
     if (m_file) {
         m_buffer = socketGetBuffer();
         fileRead(
-            this, 
+            this,
             m_buffer->data,
             m_buffer->len,
             file
@@ -142,14 +144,14 @@ void ConsoleReader::onFileEnd (int64_t offset, IFile * file) {
 
 
 /****************************************************************************
-*
-*   MainShutdown
-*
-***/
+ *
+ *   MainShutdown
+ *
+ ***/
 
 class MainShutdown : public IAppShutdownNotify {
-    void onAppStartClientCleanup () override;
-    bool onAppQueryClientDestroy () override;
+void onAppStartClientCleanup () override;
+bool onAppQueryClientDestroy () override;
 };
 static MainShutdown s_cleanup;
 
@@ -172,15 +174,15 @@ bool MainShutdown::onAppQueryClientDestroy () {
 
 
 /****************************************************************************
-*     
-*   Application
-*     
-***/
+ *
+ *   Application
+ *
+ ***/
 
 namespace {
 class Application : public ITaskNotify {
-    int m_argc;
-    char ** m_argv;
+int m_argc;
+char ** m_argv;
 public:
     Application (int argc, char * argv[]);
     void onTask () override;
@@ -188,7 +190,7 @@ public:
 } // namespace
 
 //===========================================================================
-Application::Application (int argc, char * argv[]) 
+Application::Application (int argc, char * argv[])
     : m_argc(argc)
     , m_argv(argv)
 {}
@@ -199,7 +201,7 @@ void Application::onTask () {
 
     if (m_argc < 2) {
         cout << "tnet v1.0 (" __DATE__ ")\n"
-            << "usage: tnet <remote address> [<local address>]\n";
+             << "usage: tnet <remote address> [<local address>]\n";
         return appSignalShutdown(kExitBadArgs);
     }
 
@@ -209,11 +211,11 @@ void Application::onTask () {
         parse(&s_localEnd, m_argv[2], 0);
 
     endpointQuery(&s_cancelAddrId, &s_socket, m_argv[1], 23);
-    
+
     fileOpen(s_console.m_file, "conin$", IFile::kReadWrite);
     s_console.m_buffer = socketGetBuffer();
     fileRead(
-        &s_console, 
+        &s_console,
         s_console.m_buffer->data,
         s_console.m_buffer->len,
         s_console.m_file.get()
@@ -222,10 +224,10 @@ void Application::onTask () {
 
 
 /****************************************************************************
-*
-*   Externals
-*
-***/
+ *
+ *   Externals
+ *
+ ***/
 
 //===========================================================================
 int main(int argc, char * argv[]) {

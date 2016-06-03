@@ -13,14 +13,14 @@
 
 namespace Dim {
 
-template <typename T> class ForwardListIterator;
+template<typename T> class ForwardListIterator;
 
 
 /****************************************************************************
-*
-*   Constants
-*
-***/
+ *
+ *   Constants
+ *
+ ***/
 
 enum HttpHdr {
     kHttpInvalid,
@@ -83,10 +83,10 @@ enum HttpHdr {
 
 
 /****************************************************************************
-*
-*   Http message
-*
-***/
+ *
+ *   Http message
+ *
+ ***/
 
 class HttpMsg {
 public:
@@ -99,8 +99,8 @@ public:
     void addHeader (HttpHdr id, const char value[]);
     void addHeader (const char name[], const char value[]);
 
-    // When adding references the memory referenced by the name and value 
-    // pointers must be valid for the life of the http msg, such as constants 
+    // When adding references the memory referenced by the name and value
+    // pointers must be valid for the life of the http msg, such as constants
     // or strings allocated from this messages Heap().
     void addHeaderRef (HttpHdr id, const char value[]);
     void addHeaderRef (const char name[], const char value[]);
@@ -129,20 +129,20 @@ protected:
         kFlagHasPath = 0x10,
         kFlagHasHeader = 0x20,
     };
-    int m_flags{0}; // kFlag*
+    int m_flags {0}; // kFlag*
 
 private:
     void addHeaderRef (HttpHdr id, const char name[], const char value[]);
 
     CharBuf m_data;
     TempHeap m_heap;
-    HdrName * m_firstHeader{nullptr};
+    HdrName * m_firstHeader {nullptr};
 };
 
 struct HttpMsg::HdrName {
-    HttpHdr m_id{kHttpInvalid};
-    const char * m_name{nullptr};
-    HdrName * m_next{nullptr};
+    HttpHdr m_id {kHttpInvalid};
+    const char * m_name {nullptr};
+    HdrName * m_next {nullptr};
 
     ForwardListIterator<HdrValue> begin ();
     ForwardListIterator<HdrValue> end ();
@@ -152,8 +152,8 @@ struct HttpMsg::HdrName {
 
 struct HttpMsg::HdrValue {
     const char * m_value;
-    HdrValue * m_next{nullptr};
-    HdrValue * m_prev{nullptr};
+    HdrValue * m_next {nullptr};
+    HdrValue * m_prev {nullptr};
 };
 
 
@@ -169,7 +169,7 @@ public:
     const char * path () const;
     const char * query () const;
     const char * fragment () const;
-    
+
 private:
     bool checkPseudoHeaders () const override;
 };
@@ -184,10 +184,10 @@ private:
 
 
 /****************************************************************************
-*
-*   Http connection context
-*
-***/
+ *
+ *   Http connection context
+ *
+ ***/
 
 struct HttpConnHandle : HandleBase {};
 
@@ -204,8 +204,8 @@ void httpClose (HttpConnHandle conn);
 bool httpRecv (
     HttpConnHandle conn,
     CharBuf * out,
-    std::vector<std::unique_ptr<HttpMsg>> * msgs, 
-    const void * src, 
+    std::vector<std::unique_ptr<HttpMsg> > * msgs,
+    const void * src,
     size_t srcLen
 );
 

@@ -7,10 +7,10 @@ using namespace Dim;
 
 
 /****************************************************************************
-*
-*   Declarations
-*
-***/
+ *
+ *   Declarations
+ *
+ ***/
 
 static void hashCombine (size_t & seed, size_t v);
 
@@ -54,9 +54,9 @@ struct State {
 
     bool operator== (const State & right) const {
         return equal(
-            positions.begin(), 
-            positions.end(), 
-            right.positions.begin(), 
+            positions.begin(),
+            positions.end(),
+            right.positions.begin(),
             right.positions.end()
         );
     }
@@ -76,8 +76,8 @@ template<> struct hash<StateElement> {
 template<> struct hash<StatePosition> {
     size_t operator() (const StatePosition & val) const {
         size_t out = 0;
-        for (auto&& se : val.elems) {
-            hashCombine(out, hash<StateElement>{}(se));
+        for (auto && se : val.elems) {
+            hashCombine(out, hash<StateElement> {} (se));
         }
         return out;
     }
@@ -86,8 +86,8 @@ template<> struct hash<StatePosition> {
 template<> struct hash<State> {
     size_t operator() (const State & val) const {
         size_t out = 0;
-        for (auto&& sp : val.positions) {
-            hashCombine(out, hash<StatePosition>{}(sp));
+        for (auto && sp : val.positions) {
+            hashCombine(out, hash<StatePosition> {} (sp));
         }
         return out;
     }
@@ -96,10 +96,10 @@ template<> struct hash<State> {
 
 
 /****************************************************************************
-*
-*   Variables
-*
-***/
+ *
+ *   Variables
+ *
+ ***/
 
 static unordered_set<State> s_states;
 static unsigned s_nextStateId = 1;
@@ -108,10 +108,10 @@ static ElementDone s_done;
 
 
 /****************************************************************************
-*
-*   Helpers
-*
-***/
+ *
+ *   Helpers
+ *
+ ***/
 
 // forward declarations
 static void copyRules (
@@ -142,7 +142,7 @@ static void copyRequiredDeps (
     switch (root.type) {
     case Element::kSequence:
     case Element::kChoice:
-        for (auto&& elem : root.elements)
+        for (auto && elem : root.elements)
             copyRequiredDeps(rules, src, elem);
         break;
     case Element::kRule:
@@ -178,10 +178,10 @@ static void copyRules (
 //===========================================================================
 static void normalizeChoice (Element & rule) {
     vector<Element> tmp;
-    for (auto&& elem : rule.elements) {
+    for (auto && elem : rule.elements) {
         if (elem.type != Element::kChoice)
             continue;
-        for (auto&& e : elem.elements) {
+        for (auto && e : elem.elements) {
             tmp.push_back(move(e));
             Element & back = tmp.back();
             back.m *= elem.m;
@@ -190,21 +190,21 @@ static void normalizeChoice (Element & rule) {
         elem = move(tmp.back());
         tmp.pop_back();
     }
-    for (auto&& e : tmp) {
+    for (auto && e : tmp) {
         rule.elements.push_back(move(e));
     }
 }
 
 //===========================================================================
 static void normalizeSequence (Element & rule) {
-    // it's okay to elevate a sub-list if multiplying the ordinals 
+    // it's okay to elevate a sub-list if multiplying the ordinals
     // doesn't change them?
     for (unsigned i = 0; i < rule.elements.size(); ++i) {
         Element & elem = rule.elements[i];
         if (elem.type != Element::kSequence)
             continue;
         bool skip = false;
-        for (auto&& e : elem.elements) {
+        for (auto && e : elem.elements) {
             if (e.m != elem.m * e.m
                 || e.n != max({elem.n, e.n, elem.n * e.n})
             ) {
@@ -216,7 +216,7 @@ static void normalizeSequence (Element & rule) {
             continue;
         if (elem.elements.size() > 1) {
             rule.elements.insert(
-                rule.elements.begin() + i + 1, 
+                rule.elements.begin() + i + 1,
                 elem.elements.begin() + 1,
                 elem.elements.end()
             );
@@ -242,12 +242,12 @@ static void normalize (Element & rule, const set<Element> & rules) {
         rule.n = max({rule.n, elem.n, rule.n * elem.n});
         rule.type = elem.type;
         rule.value = elem.value;
-        vector<Element> tmp{move(elem.elements)};
+        vector<Element> tmp {move(elem.elements)};
         rule.elements = move(tmp);
         return normalize(rule, rules);
     }
-    
-    for (auto&& elem : rule.elements)
+
+    for (auto && elem : rule.elements)
         normalize(elem, rules);
 
     switch (rule.type) {
@@ -265,7 +265,7 @@ static void normalize (Element & rule, const set<Element> & rules) {
 
 //===========================================================================
 static void normalize (set<Element> & rules) {
-    for (auto&& rule : rules) {
+    for (auto && rule : rules) {
         normalize(const_cast<Element &>(rule), rules);
     }
 }
@@ -281,7 +281,7 @@ ostream & operator<< (ostream & os, const Element & elem) {
     switch (elem.type) {
     case Element::kChoice:
         os << "( ";
-        for (auto&& e : elem.elements) {
+        for (auto && e : elem.elements) {
             if (first) {
                 first = false;
             } else {
@@ -296,7 +296,7 @@ ostream & operator<< (ostream & os, const Element & elem) {
         break;
     case Element::kSequence:
         os << "( ";
-        for (auto&& e : elem.elements) {
+        for (auto && e : elem.elements) {
             if (first) {
                 first = false;
             } else {
@@ -315,7 +315,7 @@ ostream & operator<< (ostream & os, const Element & elem) {
 
 //===========================================================================
 ostream & operator<< (ostream & os, const set<Element> & rules) {
-    for (auto&& rule : rules) {
+    for (auto && rule : rules) {
         os << "// " << rule.name << " = " << rule << '\n';
     }
     return os;
@@ -330,7 +330,7 @@ ostream & operator<< (ostream & os, const StateElement & se) {
 //===========================================================================
 ostream & operator<< (ostream & os, const StatePosition & sp) {
     os << "sp:";
-    for (auto&& se : sp.elems) {
+    for (auto && se : sp.elems) {
         os << "\n  " << se;
     }
     os << "\n";
@@ -339,7 +339,7 @@ ostream & operator<< (ostream & os, const StatePosition & sp) {
 
 //===========================================================================
 static void addPositions (
-    State * st, 
+    State * st,
     StatePosition * sp,
     const Element & rule,
     unsigned rep
@@ -357,50 +357,50 @@ static void addPositions (
     switch (rule.type) {
     case Element::kChoice:
         // all
-        for (auto&& elem : rule.elements) {
+        for (auto && elem : rule.elements) {
             addPositions(st, sp, elem, 0);
         }
         break;
     case Element::kRule:
         // check for rule recursion
-        {
-            size_t depth = sp->elems.size();
-            if (depth >= 3) {
-                StateElement * m = sp->elems.data() + depth / 2;
-                StateElement * z = &sp->elems.back();
-                for (StateElement * y = z - 1; y >= m; --y) {
-                    if (y->elem == z->elem) {
-                        StateElement * x = y - (z - y);
-                        if (equal(x, y, y, z)) {
-                            switch (recurse) {
-                            case kTruncate:
-                                break;
-                            case kRestart:
-                            {
-                                vector<StateElement> tmp{sp->elems};
-                                size_t num = y - sp->elems.data() + 1;
-                                sp->elems.resize(num);
-                                sp->elems.back().rep = 0;
-                                addPositions(st, sp, *rule.rule, 0);
-                                sp->elems = move(tmp);
-                            }
+    {
+        size_t depth = sp->elems.size();
+        if (depth >= 3) {
+            StateElement * m = sp->elems.data() + depth / 2;
+            StateElement * z = &sp->elems.back();
+            for (StateElement * y = z - 1; y >= m; --y) {
+                if (y->elem == z->elem) {
+                    StateElement * x = y - (z - y);
+                    if (equal(x, y, y, z)) {
+                        switch (recurse) {
+                        case kTruncate:
                             break;
-
-                            case kNext:
-                                addNextPositions(st, *sp);
-                                break;
-                            }
-                            goto done;
+                        case kRestart:
+                        {
+                            vector<StateElement> tmp {sp->elems};
+                            size_t num = y - sp->elems.data() + 1;
+                            sp->elems.resize(num);
+                            sp->elems.back().rep = 0;
+                            addPositions(st, sp, *rule.rule, 0);
+                            sp->elems = move(tmp);
                         }
+                        break;
+
+                        case kNext:
+                            addNextPositions(st, *sp);
+                            break;
+                        }
+                        goto done;
                     }
                 }
             }
         }
+    }
         addPositions(st, sp, *rule.rule, 0);
         break;
     case Element::kSequence:
         // up to first with a minimum
-        for (auto&& elem : rule.elements) {
+        for (auto && elem : rule.elements) {
             addPositions(st, sp, elem, 0);
             if (elem.m)
                 goto done;
@@ -417,7 +417,7 @@ done:
 
 //===========================================================================
 static void initPositions (
-    State * st, 
+    State * st,
     const set<Element> & rules,
     const string & root
 ) {
@@ -471,7 +471,7 @@ static void addNextPositions (
             addPositions(st, &nsp, *se.elem, rep);
         }
         // don't advance unless rep >= m
-        if (rep < m) 
+        if (rep < m)
             return;
 
         // advance parent
@@ -488,14 +488,14 @@ static void addNextPositions (
 
 //===========================================================================
 static void buildStateTree (
-    State * st, 
+    State * st,
     string * path
 ) {
     st->next.assign(256, 0);
     State next;
     for (unsigned i = 0; i < 256; ++i) {
         next.clear();
-        for (auto&& sp : st->positions) {
+        for (auto && sp : st->positions) {
             auto & se = sp.elems.back();
             if (se.elem->type != Element::kTerminal) {
                 assert(se.elem == &s_done);
@@ -531,13 +531,12 @@ static void buildStateTree (
                 if (path->size() > 40) {
                     show += path->size() - 40;
                 }
-                logMsgInfo() << s_nextStateId << " states, " 
-                    << s_transitions << " transitions, "
-                    << "(" << path->size() << " chars) ..."
-                    << show;
+                logMsgInfo() << s_nextStateId << " states, "
+                             << s_transitions << " transitions, "
+                             << "(" << path->size() << " chars) ..."
+                             << show;
                 buildStateTree(st2, path);
-            } else {
-            }
+            } else {}
             path->pop_back();
             if (i <= ' ')
                 path->pop_back();
@@ -546,8 +545,8 @@ static void buildStateTree (
         }
     }
     if (!path->size()) {
-        logMsgInfo() << s_nextStateId << " states, " 
-            << s_transitions << " transitions";
+        logMsgInfo() << s_nextStateId << " states, "
+                     << s_transitions << " transitions";
     }
 }
 
@@ -573,17 +572,17 @@ static void writeParserState (ostream & os, const State & st) {
             cases.push_back({unsigned char(i), st.next[i]});
     }
     sort(
-        cases.begin(), 
-        cases.end(), 
+        cases.begin(),
+        cases.end(),
         [](const NextState & e1, const NextState & e2) {
-            return 256 * e1.state + e1.ch < 256 * e2.state + e2.ch;
-        }
+        return 256 * e1.state + e1.ch < 256 * e2.state + e2.ch;
+    }
     );
     const unsigned kCaseColumns = 6;
     os << "    switch (*ptr++) {\n";
     unsigned prev = cases.front().state;
     unsigned pos = 0;
-    for (auto&& ns : cases) {
+    for (auto && ns : cases) {
         if (ns.state != prev) {
             if (pos % kCaseColumns != 0)
                 os << '\n';
@@ -598,7 +597,7 @@ static void writeParserState (ostream & os, const State & st) {
             os << (unsigned) ns.ch;
         } else {
             os << '\'';
-            if (ns.ch == '\'' || ns.ch == '\\') 
+            if (ns.ch == '\'' || ns.ch == '\\')
                 os << '\\';
             os << ns.ch << '\'';
         }
@@ -620,10 +619,10 @@ static void writeParserState (ostream & os, const State & st) {
 
 
 /****************************************************************************
-*
-*   ElementDone
-*
-***/
+ *
+ *   ElementDone
+ *
+ ***/
 
 //===========================================================================
 ElementDone::ElementDone () {
@@ -633,10 +632,10 @@ ElementDone::ElementDone () {
 
 
 /****************************************************************************
-*
-*   StateElement and StatePosition
-*
-***/
+ *
+ *   StateElement and StatePosition
+ *
+ ***/
 
 //===========================================================================
 int StateElement::compare (const StateElement & right) const {
@@ -668,14 +667,14 @@ bool StatePosition::operator== (const StatePosition & right) const {
 
 
 /****************************************************************************
-*
-*   Internal API
-*
-***/
+ *
+ *   Internal API
+ *
+ ***/
 
 //===========================================================================
 void writeParser (
-    ostream & os, 
+    ostream & os,
     const set<Element> & src,
     const string & root
 ) {
@@ -715,7 +714,7 @@ void writeParser (
 
     os << "//============================================"
         "===============================\n";
-    os << "// Normalized ABNF of syntax being checked, with '" 
+    os << "// Normalized ABNF of syntax being checked, with '"
        << kRootElement << "' as the\n"
        << "// top level rule:\n"
        << "//\n";
@@ -731,9 +730,9 @@ state0: // <FAILED>
 )";
     vector<State> states;
     states.resize(s_nextStateId);
-    for (auto&& st : s_states) 
+    for (auto && st : s_states)
         states[st.id - 1] = st;
-    for (auto&& st : states) {
+    for (auto && st : states) {
         writeParserState(os, st);
     }
     os << "}\n";

@@ -47,7 +47,7 @@ public:
 
 private:
     friend class SocketBase;
-    SocketBase * m_socket{nullptr};
+    SocketBase * m_socket {nullptr};
 };
 
 ISocketNotify::Mode socketGetMode (ISocketNotify * notify);
@@ -94,7 +94,7 @@ std::unique_ptr<SocketBuffer> socketGetBuffer ();
 
 // Writes the data and deletes the buffer.
 void socketWrite (
-    ISocketNotify * notify, 
+    ISocketNotify * notify,
     std::unique_ptr<SocketBuffer> buffer,
     size_t bytes
 );

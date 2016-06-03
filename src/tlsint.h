@@ -10,10 +10,10 @@ class TlsRecordReader;
 class TlsRecordWriter;
 
 /****************************************************************************
-*
-*   Handshake messages
-*
-***/
+ *
+ *   Handshake messages
+ *
+ ***/
 
 struct TlsKeyShare {
     std::vector<uint8_t> keyExchange;
@@ -60,8 +60,7 @@ struct TlsHelloRetryRequestMsg {
     uint16_t draftVersion;
 };
 
-struct TlsEncryptedExtensionsMsg {
-};
+struct TlsEncryptedExtensionsMsg {};
 
 
 void tlsSetKeyShare (TlsKeyShare & out, TlsNamedGroup group);
@@ -74,10 +73,10 @@ bool tlsParse (TlsServerHelloMsg * msg, TlsRecordReader & in);
 
 
 /****************************************************************************
-*
-*   Tls connection
-*
-***/
+ *
+ *   Tls connection
+ *
+ ***/
 
 class TlsConnBase : public ITlsRecordDecryptNotify {
 public:
@@ -86,18 +85,18 @@ public:
     const std::vector<TlsCipherSuite> & suites () const;
 
     bool recv (
-        CharBuf * reply,
-        CharBuf * data,
-        const void * src,
-        size_t srcLen
+    CharBuf * reply,
+    CharBuf * data,
+    const void * src,
+    size_t srcLen
     );
 
     // ITlsRecordDecryptNotify
     virtual void onTlsAlert (TlsAlertDesc desc, TlsAlertLevel level) override;
     virtual void onTlsHandshake (
-        TlsHandshakeType type,
-        const uint8_t msg[], 
-        size_t msgLen
+    TlsHandshakeType type,
+    const uint8_t msg[],
+    size_t msgLen
     ) override;
 
     virtual void onTlsHandshake (const TlsClientHelloMsg & msg);
@@ -109,12 +108,12 @@ private:
     friend class TlsRecordReader;
     void addAlert (TlsAlertDesc desc, TlsAlertLevel level = kFatal);
 
-    template <typename T>
+    template<typename T>
     void handshake (TlsRecordReader & in);
 
     std::vector<TlsCipherSuite> m_suites;
 
-    CharBuf * m_reply{nullptr};
+    CharBuf * m_reply {nullptr};
     TlsRecordEncrypt m_encrypt;
     TlsRecordDecrypt m_in;
 };
@@ -142,10 +141,10 @@ public:
     void end ();
 
 private:
-    CharBuf * m_out{nullptr};
+    CharBuf * m_out {nullptr};
     TlsRecordEncrypt & m_rec;
 
-    unsigned m_type{256};
+    unsigned m_type {256};
     CharBuf m_buf;
     struct Pos {
         size_t pos;
@@ -161,26 +160,26 @@ public:
     uint8_t number ();
     uint16_t number16 ();
     unsigned number24 ();
-    template <typename T> T number ();
+    template<typename T> T number ();
     void fixed (uint8_t * dst, size_t dstLen);
     void skip (size_t count);
 
     void setAlert (TlsAlertDesc desc, TlsAlertLevel level = kFatal);
 
     size_t size () const;
-    
+
 private:
-    bool m_failed{false};
+    bool m_failed {false};
     TlsConnBase & m_conn;
     const uint8_t * m_ptr;
     int m_count;
 };
 
-template <typename T>
+template<typename T>
 inline T TlsRecordReader::number () {
     switch (sizeof(T)) {
-        case 1: return (T) number();
-        case 2: return (T) number16();
+    case 1: return (T) number();
+    case 2: return (T) number16();
     }
     assert(sizeof(T) == 3);
     return (T) number24();

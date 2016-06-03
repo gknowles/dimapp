@@ -7,10 +7,10 @@ using namespace Dim;
 
 
 /****************************************************************************
-*     
-*   Declarations
-*     
-***/  
+ *
+ *   Declarations
+ *
+ ***/
 
 namespace {
 
@@ -40,75 +40,75 @@ struct Test {
 
 
 /****************************************************************************
-*     
-*   Test vectors
-*     
-***/  
+ *
+ *   Test vectors
+ *
+ ***/
 
 const Test s_tests[] = {
     {
-        "/a",
-        true,
-        { 
-            'P','R','I',' ','*',' ','H','T','T','P','/','2','.','0','\r','\n',
-            '\r','\n',
-            'S','M','\r','\n',
-            '\r','\n',
-            0, 0, 0, 4, 0, 0, 0, 0, 0,  // settings
-            0, 0, 38, 1, 5, 0, 0, 0, 1, // headers (38 bytes) + eoh + eos
-                '\x82',     // :method: GET
-                '\x87',     // :scheme: https
-                0x44, 0x09, '/','r','e','s','o','u','r','c','e',
-                0x66, 0x0b, 'e','x','a','m','p','l','e','.','o','r','g',
-                0x53, 0x0a, 'i','m','a','g','e','/','j','p','e','g',
-        },
-        true,
-        { 
-            0, 0, 0, 4, 0, 0, 0, 0, 0,  // settings
-            0, 0, 0, 4, 1, 0, 0, 0, 0,  // settings + ack
-        },
-        {
-            {
-                {
-                    { ":method", "GET" },
-                    { ":scheme", "https" },
-                    { ":path", "/resource" },
-                    { "host", "example.org" },
-                    { "accept", "image/jpeg" },
-                },
-                ""
-            },
-        }
-    },
+    "/a",
+    true,
+    {
+    'P', 'R', 'I', ' ', '*', ' ', 'H', 'T', 'T', 'P', '/', '2', '.', '0', '\r', '\n',
+    '\r', '\n',
+    'S', 'M', '\r', '\n',
+    '\r', '\n',
+    0, 0, 0, 4, 0, 0, 0, 0, 0,          // settings
+    0, 0, 38, 1, 5, 0, 0, 0, 1,         // headers (38 bytes) + eoh + eos
+    '\x82',                 // :method: GET
+    '\x87',                 // :scheme: https
+    0x44, 0x09, '/', 'r', 'e', 's', 'o', 'u', 'r', 'c', 'e',
+    0x66, 0x0b, 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'o', 'r', 'g',
+    0x53, 0x0a, 'i', 'm', 'a', 'g', 'e', '/', 'j', 'p', 'e', 'g',
+},
+    true,
+    {
+    0, 0, 0, 4, 0, 0, 0, 0, 0,          // settings
+    0, 0, 0, 4, 1, 0, 0, 0, 0,          // settings + ack
+},
+    {
+    {
+    {
+    { ":method", "GET" },
+    { ":scheme", "https" },
+    { ":path", "/resource" },
+    { "host", "example.org" },
+    { "accept", "image/jpeg" },
+},
+    ""
+},
+}
+},
 };
 
 
 /****************************************************************************
-*     
-*   Helpers
-*     
-***/
+ *
+ *   Helpers
+ *
+ ***/
 
 
 /****************************************************************************
-*     
-*   Application
-*     
-***/
+ *
+ *   Application
+ *
+ ***/
 
 namespace {
-class Application 
-    : public ITaskNotify 
-    , public ILogNotify
-{
-    // ITaskNotify
-    void onTask () override;
+    class Application
+        : public ITaskNotify
+        , public ILogNotify
+    {
+        // ITaskNotify
+        void onTask () override;
 
-    // ILogNotify
-    void onLog (LogType type, const string & msg) override;
+        // ILogNotify
+        void onLog (LogType type, const string & msg) override;
 
-    int m_errors{0};
-};
+        int m_errors {0};
+    };
 } // namespace
 
 //===========================================================================
@@ -124,30 +124,30 @@ void Application::onLog (LogType type, const string & msg) {
 //===========================================================================
 void Application::onTask () {
     CharBuf output;
-    HttpConnHandle conn{};
+    HttpConnHandle conn {};
     bool result;
-    vector<unique_ptr<HttpMsg>> msgs;
-    for (auto&& test : s_tests) {
+    vector<unique_ptr<HttpMsg> > msgs;
+    for (auto && test : s_tests) {
         cout << "Test - " << test.name << endl;
         if (test.reset && conn)
             httpClose(conn);
         if (!conn)
             conn = httpListen();
         result = httpRecv(
-            conn, 
-            &output, 
-            &msgs, 
-            data(test.input), 
+            conn,
+            &output,
+            &msgs,
+            data(test.input),
             size(test.input)
-        );
+            );
         if (result != test.result) {
-            logMsgError() << "result: " << result << " != " << test.result 
-                 << " (FAILED)";
+            logMsgError() << "result: " << result << " != " << test.result
+                          << " (FAILED)";
         }
-        if (output.compare(test.output) != 0) 
+        if (output.compare(test.output) != 0)
             logMsgError() << "headers mismatch (FAILED)";
         auto tmi = test.msgs.begin();
-        for (auto&& msg : msgs) {
+        for (auto && msg : msgs) {
             if (tmi == test.msgs.end()) {
                 logMsgError() << "too many messages (FAILED)";
                 break;
@@ -155,9 +155,9 @@ void Application::onTask () {
             if (msg->body().compare(tmi->body) != 0)
                 logMsgError() << "body mismatch (FAILED)";
             auto thi = tmi->headers.begin(),
-                ethi = tmi->headers.end();
-            for (auto&& hdr : *msg) {
-                for (auto&& hv : hdr) {
+            ethi = tmi->headers.end();
+            for (auto && hdr : *msg) {
+                for (auto && hv : hdr) {
                     if (thi == ethi) {
                         logMsgError() << "expected fewer headers";
                         goto finished_headers;
@@ -166,10 +166,10 @@ void Application::onTask () {
                         || strcmp(thi->value, hv.m_value) != 0
                     ) {
                         logMsgError() << "header mismatch, '"
-                            << hdr.m_name << ": " << hv.m_value 
-                            << "', expected '"
-                            << thi->name << ": " << thi->value
-                            << "' (FAILED)";
+                                      << hdr.m_name << ": " << hv.m_value
+                                      << "', expected '"
+                                      << thi->name << ": " << thi->value
+                                      << "' (FAILED)";
                     }
                     ++thi;
                 }
@@ -193,12 +193,12 @@ void Application::onTask () {
 
 
 /****************************************************************************
-*     
-*   External
-*     
-***/  
+ *
+ *   External
+ *
+ ***/
 
-int main (int argc, char *argv[]) {
+int main (int argc, char * argv[]) {
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
     _set_error_mode(_OUT_TO_MSGBOX);
     Application app;

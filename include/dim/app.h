@@ -15,11 +15,17 @@ public:
     virtual ~IAppShutdownNotify () {}
 
     virtual void onAppStartClientCleanup () {}
-    virtual bool onAppQueryClientDestroy () { return true; }
+    virtual bool onAppQueryClientDestroy () {
+        return true;
+    }
     virtual void onAppStartServerCleanup () {}
-    virtual bool onAppQueryServerDestroy () { return true; }
+    virtual bool onAppQueryServerDestroy () {
+        return true;
+    }
     virtual void onAppStartConsoleCleanup () {}
-    virtual bool onAppQueryConsoleDestroy () { return true; }
+    virtual bool onAppQueryConsoleDestroy () {
+        return true;
+    }
 };
 
 // returns exit code
@@ -31,7 +37,7 @@ enum {
     kExitCtrlBreak = 2,
 
     // first available for use by application
-    kExitFirstAvailable 
+    kExitFirstAvailable
 };
 void appSignalShutdown (int exitcode = kExitSuccess);
 

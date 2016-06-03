@@ -6,19 +6,19 @@ namespace Dim {
 
 
 /****************************************************************************
-*
-*   Tuning parameters
-*
-***/
+ *
+ *   Tuning parameters
+ *
+ ***/
 
 const unsigned kBufferSize = 4096;
 
 
 /****************************************************************************
-*
-*   Declarations
-*
-***/
+ *
+ *   Declarations
+ *
+ ***/
 
 namespace {
 
@@ -31,18 +31,18 @@ struct Buffer {
 
 
 /****************************************************************************
-*
-*   Variables
-*
-***/
+ *
+ *   Variables
+ *
+ ***/
 
 
 
 /****************************************************************************
-*
-*   TempHeap
-*
-***/
+ *
+ *   TempHeap
+ *
+ ***/
 
 //===========================================================================
 TempHeap::~TempHeap () {
@@ -61,7 +61,7 @@ void TempHeap::clear () {
 
 //===========================================================================
 char * TempHeap::alloc (size_t bytes, size_t align) {
-    for (;;) {
+    for (;; ) {
         Buffer * buf = (Buffer *) m_buffer;
         if (buf) {
             void * ptr = (char *) buf + kBufferSize - buf->m_avail;

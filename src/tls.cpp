@@ -8,19 +8,19 @@ namespace Dim {
 
 
 /****************************************************************************
-*
-*   Private
-*
-***/
+ *
+ *   Private
+ *
+ ***/
 
 namespace {
 
 class ClientConn : public TlsConnBase {
 public:
     ClientConn (
-        const char hostName[],
-        const TlsCipherSuite suites[], 
-        size_t count
+    const char hostName[],
+    const TlsCipherSuite suites[],
+    size_t count
     );
     void connect (CharBuf * out);
 
@@ -39,22 +39,22 @@ private:
 
 
 /****************************************************************************
-*
-*   Variables
-*
-***/
+ *
+ *   Variables
+ *
+ ***/
 
 static HandleMap<TlsConnHandle, TlsConnBase> s_conns;
 
 
 /****************************************************************************
-*
-*   TlsConnBase
-*
-***/
+ *
+ *   TlsConnBase
+ *
+ ***/
 
 //===========================================================================
-TlsConnBase::TlsConnBase () 
+TlsConnBase::TlsConnBase ()
 {}
 
 //===========================================================================
@@ -95,7 +95,7 @@ void TlsConnBase::onTlsAlert (TlsAlertDesc desc, TlsAlertLevel level) {
 }
 
 //===========================================================================
-template <typename T>
+template<typename T>
 void TlsConnBase::handshake (TlsRecordReader & in) {
     T msg;
     if (tlsParse(&msg, in) && !in.size())
@@ -106,36 +106,33 @@ void TlsConnBase::handshake (TlsRecordReader & in) {
 //===========================================================================
 void TlsConnBase::onTlsHandshake (
     TlsHandshakeType type,
-    const uint8_t data[], 
+    const uint8_t data[],
     size_t dataLen
 ) {
     TlsRecordReader in(*this, data, dataLen);
     switch (type) {
-        case kClientHello: 
-            return handshake<TlsClientHelloMsg>(in);
-        case kServerHello:
-            return handshake<TlsServerHelloMsg>(in);
+    case kClientHello:
+        return handshake<TlsClientHelloMsg>(in);
+    case kServerHello:
+        return handshake<TlsServerHelloMsg>(in);
     };
 }
 
 //===========================================================================
-void TlsConnBase::onTlsHandshake (const TlsClientHelloMsg & msg) {
-}
+void TlsConnBase::onTlsHandshake (const TlsClientHelloMsg & msg) {}
 
 //===========================================================================
-void TlsConnBase::onTlsHandshake (const TlsServerHelloMsg & msg) {
-}
+void TlsConnBase::onTlsHandshake (const TlsServerHelloMsg & msg) {}
 
 //===========================================================================
-void TlsConnBase::onTlsHandshake (const TlsHelloRetryRequestMsg & msg) {
-}
+void TlsConnBase::onTlsHandshake (const TlsHelloRetryRequestMsg & msg) {}
 
 
 /****************************************************************************
-*
-*   TlsRecordWriter
-*
-***/
+ *
+ *   TlsRecordWriter
+ *
+ ***/
 
 //===========================================================================
 TlsRecordWriter::TlsRecordWriter (TlsConnBase & conn, CharBuf * out)
@@ -214,17 +211,17 @@ void TlsRecordWriter::end () {
     size_t count = m_buf.size() - pos.pos;
     char buf[4];
     switch (pos.width) {
-        default: assert(0);
-        case 3: buf[1] = uint8_t(count >> 16);
-        case 2: buf[2] = uint8_t(count >> 8);
-        case 1: buf[3] = uint8_t(count);
+    default: assert(0);
+    case 3: buf[1] = uint8_t(count >> 16);
+    case 2: buf[2] = uint8_t(count >> 8);
+    case 1: buf[3] = uint8_t(count);
     };
     m_buf.replace(pos.pos, pos.width, buf + 4 - pos.width, pos.width);
     m_stack.pop_back();
     if (!m_stack.size()) {
         m_rec.add(
-            m_out, 
-            (TlsContentType) m_type, 
+            m_out,
+            (TlsContentType) m_type,
             m_buf.data(),
             m_buf.size()
         );
@@ -234,17 +231,17 @@ void TlsRecordWriter::end () {
 
 
 /****************************************************************************
-*
-*   TlsRecordReader
-*
-***/
+ *
+ *   TlsRecordReader
+ *
+ ***/
 
 //===========================================================================
 TlsRecordReader::TlsRecordReader (
-    TlsConnBase & conn, 
-    const void * ptr, 
+    TlsConnBase & conn,
+    const void * ptr,
     size_t count
-) 
+)
     : m_conn(conn)
     , m_ptr((const uint8_t *) ptr)
 {
@@ -330,17 +327,17 @@ size_t TlsRecordReader::size () const {
 
 
 /****************************************************************************
-*
-*   ClientConn
-*
-***/
+ *
+ *   ClientConn
+ *
+ ***/
 
 const uint8_t kClientVersion[] = { 3, 4 };
 
 //===========================================================================
 ClientConn::ClientConn (
     const char hostName[],
-    const TlsCipherSuite suites[], 
+    const TlsCipherSuite suites[],
     size_t count
 ) {
     if (hostName)
@@ -368,25 +365,24 @@ void ClientConn::connect (CharBuf * outbuf) {
 
 
 /****************************************************************************
-*
-*   ServerConn
-*
-***/
+ *
+ *   ServerConn
+ *
+ ***/
 
 //===========================================================================
-void ServerConn::onTlsHandshake (const TlsClientHelloMsg & msg) {
-}
+void ServerConn::onTlsHandshake (const TlsClientHelloMsg & msg) {}
 
 
 /****************************************************************************
-*
-*   Public API
-*
-***/
+ *
+ *   Public API
+ *
+ ***/
 
 //===========================================================================
 TlsConnHandle tlsAccept (
-    const TlsCipherSuite suites[], 
+    const TlsCipherSuite suites[],
     size_t count
 ) {
     auto conn = new ServerConn;
@@ -398,7 +394,7 @@ TlsConnHandle tlsAccept (
 TlsConnHandle tlsConnect (
     CharBuf * out,
     const char hostName[],
-    const TlsCipherSuite suites[], 
+    const TlsCipherSuite suites[],
     size_t count
 ) {
     auto conn = new ClientConn(hostName, suites, count);

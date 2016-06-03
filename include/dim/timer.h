@@ -9,19 +9,19 @@
 namespace Dim {
 
 /****************************************************************************
-*
-*   Constants
-*
-***/
+ *
+ *   Constants
+ *
+ ***/
 
 const auto kTimerInfinite = Duration::max();
 
 
 /****************************************************************************
-*
-*   Implemented by clients
-*
-***/
+ *
+ *   Implemented by clients
+ *
+ ***/
 
 class ITimerNotify {
 public:
@@ -35,14 +35,14 @@ private:
 
 
 /****************************************************************************
-*
-*   Public API
-*
-***/
+ *
+ *   Public API
+ *
+ ***/
 
 void timerUpdate (
-    ITimerNotify * notify, 
-    Duration wait, 
+    ITimerNotify * notify,
+    Duration wait,
     bool onlyIfSooner = false
 );
 void timerStopSync (ITimerNotify * notify);

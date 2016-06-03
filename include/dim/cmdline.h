@@ -12,40 +12,42 @@ namespace CmdLine {
 
 
 /****************************************************************************
-*
-*   OptBase
-*
-***/
+ *
+ *   OptBase
+ *
+ ***/
 
 class OptBase {
 public:
     OptBase (
-        const std::string & names, 
-        const std::string & desc,
-        bool multiple,
-        bool boolean
+    const std::string & names,
+    const std::string & desc,
+    bool multiple,
+    bool boolean
     );
     virtual ~OptBase ();
 
-    bool Explicit () const { return m_explicit; }
+    bool Explicit () const {
+        return m_explicit;
+    }
 
 protected:
     virtual bool ParseValue (const std::string & value) = 0;
 
 private:
-    bool m_explicit{false}; // the value was explicitly set
-    bool m_bool{false};     // the value is a bool (no separate value)
-    bool m_multiple{false}; // there can be multiple values
+    bool m_explicit {false}; // the value was explicitly set
+    bool m_bool {false};     // the value is a bool (no separate value)
+    bool m_multiple {false}; // there can be multiple values
 };
 
 
 /****************************************************************************
-*
-*   Option
-*
-***/
+ *
+ *   Option
+ *
+ ***/
 
-template <typename T>
+template<typename T>
 class Option : public OptBase {
 public:
     Option (
@@ -54,7 +56,9 @@ public:
         const T & def = {}
     );
 
-    operator T& () { return m_value; }
+    operator T&() {
+        return m_value;
+    }
 
 private:
     bool ParseValue (const std::string & value) override;
@@ -63,29 +67,29 @@ private:
 };
 
 //===========================================================================
-template <typename T>
+template<typename T>
 inline Option<T>::Option (
     const std::string & names,
     const std::string & desc,
     const T & def
-) 
+)
     : OptBase{names, desc, false, false}
     , m_value{def}
 {}
 
 //===========================================================================
-template <>
+template<>
 inline Option<bool>::Option (
     const std::string & names,
     const std::string & desc,
     const bool & def
-) 
+)
     : OptBase{names, desc, false, true}
     , m_value{def}
 {}
 
 //===========================================================================
-template <typename T>
+template<typename T>
 inline bool Option<T>::ParseValue (const std::string & value) {
     std::stringstream interpreter;
     if (!(interpreter << value)
@@ -95,25 +99,25 @@ inline bool Option<T>::ParseValue (const std::string & value) {
         m_value = {};
         return false;
     }
-    return true; 
+    return true;
 }
 
 
 /****************************************************************************
-*
-*   OptionVector
-*
-***/
+ *
+ *   OptionVector
+ *
+ ***/
 
-template <typename T>
+template<typename T>
 class OptionVector : public OptBase {
 public:
     OptionVector (
-        const std::string & names,
-        const std::string & desc
+    const std::string & names,
+    const std::string & desc
     );
 
-    operator std::vector<T>& () { return m_values; }
+    operator std::vector<T> &() { return m_values; }
 
 private:
     bool ParseValue (const std::string & value) override;
@@ -122,25 +126,25 @@ private:
 };
 
 //===========================================================================
-template <typename T>
+template<typename T>
 inline OptionVector<T>::OptionVector (
     const std::string & names,
     const std::string & desc
-) 
+)
     : OptBase{names, desc, true, false}
 {}
 
 //===========================================================================
-template <>
+template<>
 inline OptionVector<bool>::OptionVector (
     const std::string & names,
     const std::string & desc
-) 
+)
     : OptBase{names, desc, true, true}
 {}
 
 //===========================================================================
-template <typename T>
+template<typename T>
 inline bool OptionVector<T>::ParseValue (const std::string & value) {
     std::stringstream interpreter;
     T tmp;
@@ -151,15 +155,15 @@ inline bool OptionVector<T>::ParseValue (const std::string & value) {
         return false;
     }
     m_values.push_back(tmp);
-    return true; 
+    return true;
 }
 
 
 /****************************************************************************
-*
-*   General
-*
-***/
+ *
+ *   General
+ *
+ ***/
 
 bool ParseOptions (int argc, char ** argv);
 bool ParseOptions (const char cmdline[]);

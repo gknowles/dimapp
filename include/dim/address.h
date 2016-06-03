@@ -15,10 +15,10 @@ namespace Dim {
 
 
 /****************************************************************************
-*
-*   Address & Endpoint
-*
-***/
+ *
+ *   Address & Endpoint
+ *
+ ***/
 
 bool parse (Address * addr, const char src[]);
 bool parse (Endpoint * end, const char src[], int defaultPort);
@@ -34,10 +34,10 @@ void copy (Endpoint * out, const sockaddr_storage & storage);
 
 
 /****************************************************************************
-*
-*   Lookup
-*
-***/
+ *
+ *   Lookup
+ *
+ ***/
 
 void addressGetLocal (std::vector<Address> * out);
 
@@ -49,8 +49,8 @@ public:
 };
 
 void endpointQuery (
-    int * cancelId, 
-    IEndpointNotify * notify, 
+    int * cancelId,
+    IEndpointNotify * notify,
     const std::string & name,
     int defaultPort
 );

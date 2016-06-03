@@ -8,10 +8,10 @@ namespace Dim {
 
 
 /****************************************************************************
-*
-*   HamdleMap
-*
-***/
+ *
+ *   HamdleMap
+ *
+ ***/
 
 //===========================================================================
 HandleMapBase::HandleMapBase () {
@@ -30,9 +30,9 @@ bool HandleMapBase::empty () const {
 
 //===========================================================================
 void * HandleMapBase::find (HandleBase handle) {
-    return handle.pos >= (int) m_values.size() 
-        ? NULL 
-        : m_values[handle.pos].value;
+    return handle.pos >= (int) m_values.size()
+           ? NULL
+           : m_values[handle.pos].value;
 }
 
 //===========================================================================

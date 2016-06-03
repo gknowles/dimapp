@@ -8,20 +8,20 @@ namespace Dim {
 
 
 /****************************************************************************
-*
-*   Tuning parameters
-*
-***/
+ *
+ *   Tuning parameters
+ *
+ ***/
 
 // includes space for BufferSlice header
 const unsigned kDefaultBufferSliceSize = 4096;
 
 
 /****************************************************************************
-*
-*   Private declarations
-*
-***/
+ *
+ *   Private declarations
+ *
+ ***/
 
 static void destroyBufferSlice (void * ptr);
 
@@ -49,15 +49,15 @@ struct Buffer {
 
 
 /****************************************************************************
-*
-*   Variables
-*
-***/
+ *
+ *   Variables
+ *
+ ***/
 
 static RIO_EXTENSION_FUNCTION_TABLE s_rio;
 
-static int s_sliceSize{kDefaultBufferSliceSize};
-static size_t s_bufferSize{256 * kDefaultBufferSliceSize};
+static int s_sliceSize {kDefaultBufferSliceSize};
+static size_t s_bufferSize {256 * kDefaultBufferSliceSize};
 static size_t s_minLargeAlloc;
 static size_t s_minAlloc;
 static size_t s_pageSize;
@@ -70,10 +70,10 @@ static mutex s_mut;
 
 
 /****************************************************************************
-*
-*   Helpers
-*
-***/
+ *
+ *   Helpers
+ *
+ ***/
 
 //===========================================================================
 static BufferSlice * getSlice (const Buffer & buf, int pos) {
@@ -83,8 +83,8 @@ static BufferSlice * getSlice (const Buffer & buf, int pos) {
 
 //===========================================================================
 static void findBufferSlice (
-    BufferSlice ** sliceOut, 
-    Buffer ** bufferOut, 
+    BufferSlice ** sliceOut,
+    Buffer ** bufferOut,
     void * ptr
 ) {
     auto * slice = (BufferSlice *) ptr - 1;
@@ -124,17 +124,17 @@ static void createEmptyBuffer () {
     buf.base = (char *) VirtualAlloc(
         nullptr,
         bytes,
-        MEM_COMMIT 
-            | MEM_RESERVE 
-            | (bytes > s_minLargeAlloc ? MEM_LARGE_PAGES : 0),
+        MEM_COMMIT
+        | MEM_RESERVE
+        | (bytes > s_minLargeAlloc ? MEM_LARGE_PAGES : 0),
         PAGE_READWRITE
-    );
+        );
     assert(buf.base);
 
     buf.id = s_rio.RIORegisterBuffer(buf.base, (DWORD) bytes);
     if (buf.id == RIO_INVALID_BUFFERID) {
-        logMsgCrash() << "RIORegisterBuffer failed, " 
-            << WinError();
+        logMsgCrash() << "RIORegisterBuffer failed, "
+                      << WinError();
     }
 }
 
@@ -150,7 +150,7 @@ static void destroyEmptyBuffer () {
 
 //===========================================================================
 static void destroyBufferSlice (void * ptr) {
-    // get the header 
+    // get the header
     BufferSlice * slice;
     Buffer * pbuf;
     findBufferSlice(&slice, &pbuf, ptr);
@@ -183,10 +183,10 @@ static void destroyBufferSlice (void * ptr) {
 
 
 /****************************************************************************
-*
-*   SocketBuffer
-*
-***/
+ *
+ *   SocketBuffer
+ *
+ ***/
 
 //===========================================================================
 SocketBuffer::~SocketBuffer () {
@@ -195,21 +195,21 @@ SocketBuffer::~SocketBuffer () {
 
 
 /****************************************************************************
-*
-*   Shutdown
-*
-***/
+ *
+ *   Shutdown
+ *
+ ***/
 
 namespace {
-    class Shutdown : public IAppShutdownNotify {
-        bool onAppQueryConsoleDestroy () override;
-    };
+class Shutdown : public IAppShutdownNotify {
+bool onAppQueryConsoleDestroy () override;
+};
 } // namespace
 static Shutdown s_cleanup;
 
 //===========================================================================
 bool Shutdown::onAppQueryConsoleDestroy () {
-    lock_guard<mutex> lk{s_mut};
+    lock_guard<mutex> lk {s_mut};
 
     while (!s_buffers.empty())
         destroyEmptyBuffer();
@@ -219,10 +219,10 @@ bool Shutdown::onAppQueryConsoleDestroy () {
 
 
 /****************************************************************************
-*
-*   Internal API
-*
-***/
+ *
+ *   Internal API
+ *
+ ***/
 
 //===========================================================================
 void iSocketBufferInitialize (RIO_EXTENSION_FUNCTION_TABLE & rio) {
@@ -236,18 +236,18 @@ void iSocketBufferInitialize (RIO_EXTENSION_FUNCTION_TABLE & rio) {
     s_pageSize = info.dwPageSize;
     s_minAlloc = info.dwAllocationGranularity;
 
-    // if large pages are available make sure the buffers are at least 
+    // if large pages are available make sure the buffers are at least
     // that big
     s_bufferSize = max(s_minLargeAlloc, s_bufferSize);
 }
 
 //===========================================================================
 void iSocketGetRioBuffer (
-    RIO_BUF * out, 
+    RIO_BUF * out,
     SocketBuffer * sbuf,
     size_t bytes
 ) {
-    lock_guard<mutex> lk{s_mut};
+    lock_guard<mutex> lk {s_mut};
 
     assert(bytes <= sbuf->len);
     BufferSlice * slice;
@@ -260,14 +260,14 @@ void iSocketGetRioBuffer (
 
 
 /****************************************************************************
-*
-*   Public API
-*
-***/
+ *
+ *   Public API
+ *
+ ***/
 
 //===========================================================================
 unique_ptr<SocketBuffer> socketGetBuffer () {
-    lock_guard<mutex> lk{s_mut};
+    lock_guard<mutex> lk {s_mut};
 
     // all buffers full? create a new one
     if (s_numFull == s_buffers.size())

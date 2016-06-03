@@ -8,10 +8,10 @@ using namespace Dim::CmdLine;
 
 
 /****************************************************************************
-*
-*   OptBase
-*
-***/
+ *
+ *   OptBase
+ *
+ ***/
 
 //===========================================================================
 OptBase::OptBase(
@@ -19,19 +19,17 @@ OptBase::OptBase(
     const std::string & desc,
     bool multiple,
     bool boolean
-) {
-}
+) {}
 
 //===========================================================================
-OptBase::~OptBase() {
-}
+OptBase::~OptBase() {}
 
 
 /****************************************************************************
-*
-*   Public Interface
-*
-***/
+ *
+ *   Public Interface
+ *
+ ***/
 
 //===========================================================================
 static bool FindUnescapedQuote(string & arg, const char *& ptr) {
@@ -40,7 +38,7 @@ static bool FindUnescapedQuote(string & arg, const char *& ptr) {
 
     char ch;
     unsigned num = 1;
-    for (;;) {
+    for (;; ) {
         ch = *ptr;
         if (ch != '\\') break;
         ptr += 1;
@@ -67,14 +65,13 @@ static bool FindUnescapedQuote(string & arg, const char *& ptr) {
 
 //===========================================================================
 static void ParseArg(string & arg, const char *& ptr) {
-    for (;;) {
+    for (;; ) {
         char ch = *ptr++;
         if (ch == 0 || ch == '\t' || ch == ' ') return;
         if (ch == '\\') {
-            if (FindUnescapedQuote(arg, ptr)) {
-            }
+            if (FindUnescapedQuote(arg, ptr)) {}
             unsigned num = 1;
-            for (;;) {
+            for (;; ) {
                 ch = *ptr++;
                 if (ch != '\\') break;
                 num += 1;
@@ -90,13 +87,12 @@ static void ParseArg(string & arg, const char *& ptr) {
                 arg.push_back('"');
                 continue;
             }
-            for (;;) {
+            for (;; ) {
                 ch = *ptr++;
                 if (ch == 0) return;
             }
         }
-        if (ch == '"') {
-        }
+        if (ch == '"') {}
     }
 }
 
@@ -135,9 +131,9 @@ bool Dim::CmdLine::ParseOptions(int argc, char * argv[]) {
         os << '"';
         for (; *ptr; ++ptr) {
             switch (*ptr) {
-                case '\\':
-                case '"':
-                    os << '\\';
+            case '\\':
+            case '"':
+                os << '\\';
             }
             os << *ptr;
         }

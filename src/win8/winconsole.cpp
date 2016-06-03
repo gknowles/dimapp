@@ -8,10 +8,10 @@ namespace Dim {
 
 
 /****************************************************************************
-*
-*   Variables
-*
-***/
+ *
+ *   Variables
+ *
+ ***/
 
 static mutex s_mut;
 static vector<WORD> s_consoleAttrs;
@@ -19,19 +19,19 @@ static bool s_controlEnabled = false;
 
 
 /****************************************************************************
-*
-*   Helpers
-*
-***/
+ *
+ *   Helpers
+ *
+ ***/
 
 //===========================================================================
 static BOOL WINAPI controlCallback (DWORD ctrl) {
     if (s_controlEnabled) {
         switch (ctrl) {
-            case CTRL_C_EVENT:
-            case CTRL_BREAK_EVENT:
-                appSignalShutdown(kExitCtrlBreak);
-                return true;
+        case CTRL_C_EVENT:
+        case CTRL_BREAK_EVENT:
+            appSignalShutdown(kExitCtrlBreak);
+            return true;
         }
     }
 
@@ -40,10 +40,10 @@ static BOOL WINAPI controlCallback (DWORD ctrl) {
 
 
 /****************************************************************************
-*
-*   ConsoleScopedAttr
-*
-***/
+ *
+ *   ConsoleScopedAttr
+ *
+ ***/
 
 //===========================================================================
 ConsoleScopedAttr::ConsoleScopedAttr (ConsoleAttr attr) {
@@ -54,11 +54,11 @@ ConsoleScopedAttr::ConsoleScopedAttr (ConsoleAttr attr) {
         logMsgCrash() << "GetConsoleScreenBufferInfo: " << GetLastError();
     }
 
-    lock_guard<mutex> lk{s_mut};
+    lock_guard<mutex> lk {s_mut};
     s_consoleAttrs.push_back(info.wAttributes);
     switch (attr) {
-    case kConsoleNormal: 
-        info.wAttributes = 
+    case kConsoleNormal:
+        info.wAttributes =
             FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_RED;
         break;
     case kConsoleGreen:
@@ -80,17 +80,17 @@ ConsoleScopedAttr::ConsoleScopedAttr (ConsoleAttr attr) {
 //===========================================================================
 ConsoleScopedAttr::~ConsoleScopedAttr () {
     HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-    lock_guard<mutex> lk{s_mut};
+    lock_guard<mutex> lk {s_mut};
     SetConsoleTextAttribute(hOutput, s_consoleAttrs.back());
     s_consoleAttrs.pop_back();
 }
 
 
 /****************************************************************************
-*
-*   Internal API
-*
-***/
+ *
+ *   Internal API
+ *
+ ***/
 
 //===========================================================================
 void iConsoleInitialize () {
@@ -100,10 +100,10 @@ void iConsoleInitialize () {
 
 
 /****************************************************************************
-*
-*   Internal API
-*
-***/
+ *
+ *   Internal API
+ *
+ ***/
 
 //===========================================================================
 void consoleEnableEcho (bool enable) {

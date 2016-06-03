@@ -8,10 +8,10 @@ namespace Dim {
 
 
 /****************************************************************************
-*
-*   Private
-*
-***/
+ *
+ *   Private
+ *
+ ***/
 
 namespace {
 
@@ -61,14 +61,14 @@ const char kTextTypeTable[256] = {
 
 
 /****************************************************************************
-*
-*   IXBuilder
-*
-***/
+ *
+ *   IXBuilder
+ *
+ ***/
 
 enum IXBuilder::State {
     kStateFail,
-    kStateDocIntro,         // 
+    kStateDocIntro,         //
     kStateElemNameIntro,    // <
     kStateElemName,         // <X_
     kStateAttrNameIntro,    // <X _
@@ -183,17 +183,17 @@ IXBuilder & IXBuilder::end () {
 }
 
 //===========================================================================
-template <bool isContent>
+template<bool isContent>
 void IXBuilder::addText (const char val[]) {
     const char * base = val;
-    for (;;) {
+    for (;; ) {
         TextType type = (TextType) kTextTypeTable[*val];
         switch (type) {
         case kTextTypeGreater:
             // ">" must be escaped when following "]]"
             if (isContent) {
-                if (val - base >= 2 
-                    && val[-1] == ']' 
+                if (val - base >= 2
+                    && val[-1] == ']'
                     && val[-2] == ']'
                 ) {
                     break;
@@ -227,10 +227,10 @@ void IXBuilder::addText (const char val[]) {
 
 
 /****************************************************************************
-*
-*   XBuilder
-*
-***/
+ *
+ *   XBuilder
+ *
+ ***/
 
 //===========================================================================
 void XBuilder::append (const char text[], size_t count) {
@@ -249,10 +249,10 @@ size_t XBuilder::size () {
 
 
 /****************************************************************************
-*
-*   Public API
-*
-***/
+ *
+ *   Public API
+ *
+ ***/
 
 //===========================================================================
 IXBuilder & operator<< (IXBuilder & out, int64_t val) {

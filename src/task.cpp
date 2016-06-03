@@ -9,10 +9,10 @@ namespace Dim {
 
 
 /****************************************************************************
-*
-*   Incomplete public types
-*
-***/
+ *
+ *   Incomplete public types
+ *
+ ***/
 
 class TaskQueue {
 public:
@@ -21,11 +21,11 @@ public:
 
     // current threads have been created, haven't exited, but may not have
     // run yet.
-    int curThreads{0};
-    int wantThreads{0};
+    int curThreads {0};
+    int wantThreads {0};
 
-    ITaskNotify * first{nullptr};
-    ITaskNotify * last{nullptr};
+    ITaskNotify * first {nullptr};
+    ITaskNotify * last {nullptr};
 
     condition_variable cv;
 
@@ -35,10 +35,10 @@ public:
 
 
 /****************************************************************************
-*
-*   Private declarations
-*
-***/
+ *
+ *   Private declarations
+ *
+ ***/
 
 namespace {
 
@@ -48,10 +48,10 @@ class EndThreadTask : public ITaskNotify {};
 
 
 /****************************************************************************
-*
-*   Variables
-*
-***/
+ *
+ *   Variables
+ *
+ ***/
 
 static HandleMap<TaskQueueHandle, TaskQueue> s_queues;
 static int s_numThreads;
@@ -66,18 +66,18 @@ static atomic_bool s_running;
 
 
 /****************************************************************************
-*
-*   Run tasks
-*
-***/
+ *
+ *   Run tasks
+ *
+ ***/
 
 //===========================================================================
 static void taskQueueThread (TaskQueue * ptr) {
-    TaskQueue & q{*ptr};
-    bool more{true};
-    unique_lock<mutex> lk{s_mut};
+    TaskQueue & q {*ptr};
+    bool more {true};
+    unique_lock<mutex> lk {s_mut};
     while (more) {
-        while (!q.first) 
+        while (!q.first)
             q.cv.wait(lk);
 
         auto * task = q.first;
@@ -108,7 +108,7 @@ static void setThreads_LK (TaskQueue & q, size_t threads) {
 
     if (num > 0) {
         for (int i = 0; i < num; ++i) {
-            thread thr{taskQueueThread, &q};
+            thread thr {taskQueueThread, &q};
             thr.detach();
         }
     } else if (num < 0) {
@@ -123,10 +123,10 @@ static void setThreads_LK (TaskQueue & q, size_t threads) {
 
 
 /****************************************************************************
-*
-*   TaskQueue
-*
-***/
+ *
+ *   TaskQueue
+ *
+ ***/
 
 //===========================================================================
 void TaskQueue::push (ITaskNotify & task) {
@@ -148,10 +148,10 @@ void TaskQueue::pop () {
 
 
 /****************************************************************************
-*
-*   Internal API
-*
-***/
+ *
+ *   Internal API
+ *
+ ***/
 
 //===========================================================================
 void iTaskInitialize () {
@@ -163,10 +163,10 @@ void iTaskInitialize () {
 //===========================================================================
 void iTaskDestroy () {
     s_running = false;
-    unique_lock<mutex> lk{s_mut};
+    unique_lock<mutex> lk {s_mut};
 
     // send shutdown task to all task threads
-    for (auto&& q : s_queues)
+    for (auto && q : s_queues)
         setThreads_LK(*q.second, 0);
 
     // wait for all threads to stop
@@ -174,16 +174,16 @@ void iTaskDestroy () {
         s_destroyed.wait(lk);
 
     // delete task queues
-    for (auto&& q : s_queues)
+    for (auto && q : s_queues)
         s_queues.erase(q.first);
 }
 
 
 /****************************************************************************
-*
-*   Public API
-*
-***/
+ *
+ *   Public API
+ *
+ ***/
 
 //===========================================================================
 void taskPushEvent (ITaskNotify & task) {
@@ -216,7 +216,7 @@ TaskQueueHandle taskCreateQueue (const string & name, int threads) {
     q->wantThreads = 0;
     q->curThreads = 0;
 
-    lock_guard<mutex> lk{s_mut};
+    lock_guard<mutex> lk {s_mut};
     q->hq = s_queues.insert(q);
     setThreads_LK(*q, threads);
     return q->hq;
@@ -226,7 +226,7 @@ TaskQueueHandle taskCreateQueue (const string & name, int threads) {
 void taskSetQueueThreads (TaskQueueHandle hq, int threads) {
     assert(s_running || !threads);
 
-    lock_guard<mutex> lk{s_mut};
+    lock_guard<mutex> lk {s_mut};
     auto * q = s_queues.find(hq);
     setThreads_LK(*q, threads);
 }
@@ -239,15 +239,15 @@ void taskPush (TaskQueueHandle hq, ITaskNotify & task) {
 
 //===========================================================================
 void taskPush (
-    TaskQueueHandle hq, 
-    ITaskNotify * tasks[], 
+    TaskQueueHandle hq,
+    ITaskNotify * tasks[],
     size_t numTasks
 ) {
     assert(s_running);
 
-    lock_guard<mutex> lk{s_mut};
+    lock_guard<mutex> lk {s_mut};
     auto * q = s_queues.find(hq);
-    for (int i = 0; i < numTasks; ++tasks, ++i) 
+    for (int i = 0; i < numTasks; ++tasks, ++i)
         q->push(**tasks);
 
     if (numTasks > 1 && q->curThreads > 1) {

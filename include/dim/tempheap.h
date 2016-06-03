@@ -8,24 +8,24 @@
 namespace Dim {
 
 /****************************************************************************
-*
-*   Temp heap interface
-*
-***/
+ *
+ *   Temp heap interface
+ *
+ ***/
 
 class ITempHeap {
 public:
     virtual ~ITempHeap () {}
 
-    template <typename T, typename... Args>
-    T * emplace (Args&&... args);
-    template <typename T>
+    template<typename T, typename ... Args>
+    T * emplace (Args&& ... args);
+    template<typename T>
     T * alloc (size_t num);
 
     char * strDup (const char src[]);
     char * strDup (
-        const char src[], 
-        size_t len          // does not include null terminator
+    const char src[],
+    size_t len              // does not include null terminator
     );
 
     char * alloc (size_t bytes);
@@ -33,14 +33,14 @@ public:
 };
 
 //===========================================================================
-template <typename T, typename... Args>
-inline T * ITempHeap::emplace (Args&&... args) {
+template<typename T, typename ... Args>
+inline T * ITempHeap::emplace (Args&& ... args) {
     char * tmp = alloc(sizeof(T), alignof(T));
-    return new(tmp) T(args...);
+    return new(tmp) T(args ...);
 }
 
 //===========================================================================
-template <typename T>
+template<typename T>
 inline T * ITempHeap::alloc (size_t num) {
     char * tmp = alloc(num * sizeof(T), alignof(T));
     return new(tmp) T[num];
@@ -67,10 +67,10 @@ inline char * ITempHeap::alloc (size_t bytes) {
 
 
 /****************************************************************************
-*
-*   TempHeap
-*
-***/
+ *
+ *   TempHeap
+ *
+ ***/
 
 class TempHeap : public ITempHeap {
 public:
@@ -81,7 +81,7 @@ public:
     char * alloc (size_t bytes, size_t align) override;
 
 private:
-    void * m_buffer{nullptr};
+    void * m_buffer {nullptr};
 };
 
 } // namespace

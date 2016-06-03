@@ -57,20 +57,20 @@ public:
     int compare (const CharBuf & buf) const;
     int compare (size_t pos, size_t count, const CharBuf & buf) const;
     int compare (
-        size_t pos, 
-        size_t count, 
-        const CharBuf & buf, 
-        size_t bufPos, 
-        size_t bufLen
+    size_t pos,
+    size_t count,
+    const CharBuf & buf,
+    size_t bufPos,
+    size_t bufLen
     ) const;
     CharBuf & replace (size_t pos, size_t count, const char src[]);
     CharBuf & replace (size_t pos, size_t count, const char src[], size_t srcLen);
     CharBuf & replace (
-        size_t pos, 
-        size_t count, 
-        const CharBuf & src, 
-        size_t srcPos = 0, 
-        size_t srcLen = -1
+    size_t pos,
+    size_t count,
+    const CharBuf & src,
+    size_t srcPos = 0,
+    size_t srcLen = -1
     );
     size_t copy (char * out, size_t count, size_t pos = 0) const;
     void swap (CharBuf & other);
@@ -86,8 +86,8 @@ private:
     CharBuf & erase (std::vector<Buffer*>::iterator it, int pos, int count);
 
     std::vector<Buffer*> m_buffers;
-    int m_lastUsed{0};
-    int m_size{0};
+    int m_lastUsed {0};
+    int m_size {0};
 };
 
 bool operator== (const CharBuf & left, const std::string & right);

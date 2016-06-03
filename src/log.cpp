@@ -8,26 +8,26 @@ namespace Dim {
 
 
 /****************************************************************************
-*
-*   Private
-*
-***/
+ *
+ *   Private
+ *
+ ***/
 
 static vector<ILogNotify *> s_notifiers;
 
 
 /****************************************************************************
-*
-*   Helpers
-*
-***/
+ *
+ *   Helpers
+ *
+ ***/
 
 //===========================================================================
 static void LogMsg (LogType type, const string & msg) {
     if (s_notifiers.empty()) {
         cout << msg << endl;
     } else {
-        for (auto&& notify : s_notifiers) {
+        for (auto && notify : s_notifiers) {
             notify->onLog(type, msg);
         }
     }
@@ -38,13 +38,13 @@ static void LogMsg (LogType type, const string & msg) {
 
 
 /****************************************************************************
-*
-*   Log
-*
-***/
+ *
+ *   Log
+ *
+ ***/
 
 //===========================================================================
-Detail::Log::Log (LogType type) 
+Detail::Log::Log (LogType type)
     : m_type(type)
 {}
 
@@ -55,21 +55,21 @@ Detail::Log::~Log () {
 
 
 /****************************************************************************
-*
-*   LogCrash
-*
-***/
+ *
+ *   LogCrash
+ *
+ ***/
 
 //===========================================================================
-Detail::LogCrash::~LogCrash () 
+Detail::LogCrash::~LogCrash ()
 {}
 
 
 /****************************************************************************
-*
-*   External
-*
-***/
+ *
+ *   External
+ *
+ ***/
 
 //===========================================================================
 void logAddNotify (ILogNotify * notify) {
@@ -77,23 +77,23 @@ void logAddNotify (ILogNotify * notify) {
 }
 
 //===========================================================================
-Detail::Log logMsgDebug () { 
+Detail::Log logMsgDebug () {
     return kLogDebug;
 }
 
 //===========================================================================
 Detail::Log logMsgInfo () {
-    return kLogInfo; 
+    return kLogInfo;
 }
 
 //===========================================================================
 Detail::Log logMsgError () {
-    return kLogError; 
+    return kLogError;
 }
 
 //===========================================================================
 Detail::LogCrash logMsgCrash () {
-    return kLogCrash; 
+    return kLogCrash;
 }
 
 

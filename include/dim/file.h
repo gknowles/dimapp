@@ -39,15 +39,15 @@ public:
     // return false to prevent more reads, otherwise reads continue until the
     // requested length has been received.
     virtual bool onFileRead (
-        char data[], 
-        int bytes,
-        int64_t offset,
-        IFile * file
+    char data[],
+    int bytes,
+    int64_t offset,
+    IFile * file
     ) = 0;
 
     virtual void onFileEnd (
-        int64_t offset, 
-        IFile * file
+    int64_t offset,
+    IFile * file
     ) = 0;
 };
 void fileRead (
@@ -56,7 +56,7 @@ void fileRead (
     size_t outBufLen,
     IFile * file,
     int64_t offset = 0,
-    int64_t length = 0  // 0 to read until the end
+    int64_t length = 0     // 0 to read until the end
 );
 
 class IFileWriteNotify {
@@ -64,11 +64,11 @@ public:
     virtual ~IFileWriteNotify () {}
 
     virtual void onFileWrite (
-        int written,
-        const char data[],
-        int bytes,
-        int64_t offset,
-        IFile * file
+    int written,
+    const char data[],
+    int bytes,
+    int64_t offset,
+    IFile * file
     ) = 0;
 };
 void fileWrite (

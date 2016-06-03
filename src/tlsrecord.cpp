@@ -8,14 +8,14 @@ namespace Dim {
 
 
 /****************************************************************************
-*
-*   Private
-*
-***/
+ *
+ *   Private
+ *
+ ***/
 
 namespace {
 
-const unsigned kMaxPlaintext = 16'384;
+const unsigned kMaxPlaintext = 16 '384;
 const unsigned kMaxCiphertext = kMaxPlaintext + 256;
 
 } // namespace
@@ -150,89 +150,89 @@ bool TlsRecordDecrypt::parse (
             case kContentAlert:
             case kContentHandshake:
                 // When there's a cipher, the outer opaque_type is always
-                // application data. The actual type is in the ciphertext.
-                if (m_cipher)
-                    return parseError(kUnexpectedMessage);
-            case kContentAppData:
-                break;
-            default:
-                return parseError(kUnexpectedMessage);
-            }
-        case 1: // protocol version major - MUST ignore
-            if (ptr == eptr)
-                return true;
-            ptr += 1;
-            m_recPos += 1;
-        case 2: // protocol version minor - MUST ignore
-            if (ptr == eptr)
-                return true;
-            ptr += 1;
-            m_recPos += 1;
-        case 3: // text length MSB
-            if (ptr == eptr)
-                return true;
-            m_textLen = *ptr++;
-            m_recPos += 1;
-        case 4: // text length LSB
-            if (ptr == eptr)
-                return true;
-            m_textLen = (m_textLen << 8) + *ptr++;
-            m_recPos += 1;
-            if (m_textLen > (m_cipher ? kMaxCiphertext : kMaxPlaintext))
-                return parseError(kRecordOverflow);
-        }
+// application data. The actual type is in the ciphertext.
+if (m_cipher)
+    return parseError(kUnexpectedMessage);
+casekContentAppData:
+break;
+default:
+return parseError(kUnexpectedMessage);
+}
+case1:          // protocol version major - MUST ignore
+if (ptr == eptr)
+    return true;
+ptr += 1;
+m_recPos += 1;
+case2:          // protocol version minor - MUST ignore
+if (ptr == eptr)
+    return true;
+ptr += 1;
+m_recPos += 1;
+case3:          // text length MSB
+if (ptr == eptr)
+    return true;
+m_textLen = *ptr++;
+m_recPos += 1;
+case4:          // text length LSB
+if (ptr == eptr)
+    return true;
+m_textLen = (m_textLen << 8) + *ptr++;
+m_recPos += 1;
+if (m_textLen > (m_cipher ? kMaxCiphertext : kMaxPlaintext))
+    return parseError(kRecordOverflow);
+}
 
-        srcLen = eptr - ptr;
-        size_t textNeeded = m_textLen - m_recPos - 5;
+srcLen = eptr - ptr;
+size_t textNeeded = m_textLen - m_recPos - 5;
 
-        if (m_cipher) {
-            if (textNeeded > srcLen) {
-                m_ciphertext.insert(m_ciphertext.end(), ptr, eptr);
-                m_recPos += (unsigned) srcLen;
-                return true;
-            }
-
-            m_ciphertext.insert(m_ciphertext.end(), ptr, ptr + textNeeded);
-            m_cipher->add(&m_plaintext, m_ciphertext.data(), m_ciphertext.size());
-            m_ciphertext.clear();
-            m_plaintext.rtrim(0);
-            // no content type treated as unexpected_message (5.2.3)
-            if (!m_plaintext.size())
-                return parseError(kUnexpectedMessage);
-            m_curType = m_plaintext.back();
-            m_plaintext.popBack();
-            if (m_textLen > kMaxPlaintext)
-                return parseError(kRecordOverflow);
-        } else {
-            if (textNeeded > srcLen) {
-                m_plaintext.append((char *) ptr, srcLen);
-                m_recPos += (unsigned) srcLen;
-                return true;
-            }
-
-            m_plaintext.append((char *) ptr, textNeeded);
-        }
-
-        switch (m_curType) {
-        case kContentAlert:
-            if (!parseAlerts(notify))
-                return false;
-            break;
-        case kContentHandshake:
-            if (!parseHandshakes(notify))
-                return false;
-            break;
-        case kContentAppData:
-            data->append(m_plaintext);
-            break;
-        default:
-            return parseError(kUnexpectedMessage);
-        }
-
-        m_plaintext.clear();
-        ptr += textNeeded;
-        m_recPos = 0;
+if (m_cipher) {
+    if (textNeeded > srcLen) {
+        m_ciphertext.insert(m_ciphertext.end(), ptr, eptr);
+        m_recPos += (unsigned) srcLen;
+        return true;
     }
+
+    m_ciphertext.insert(m_ciphertext.end(), ptr, ptr + textNeeded);
+    m_cipher->add(&m_plaintext, m_ciphertext.data(), m_ciphertext.size());
+    m_ciphertext.clear();
+    m_plaintext.rtrim(0);
+    // no content type treated as unexpected_message (5.2.3)
+    if (!m_plaintext.size())
+        return parseError(kUnexpectedMessage);
+    m_curType = m_plaintext.back();
+    m_plaintext.popBack();
+    if (m_textLen > kMaxPlaintext)
+        return parseError(kRecordOverflow);
+} else {
+    if (textNeeded > srcLen) {
+        m_plaintext.append((char *) ptr, srcLen);
+        m_recPos += (unsigned) srcLen;
+        return true;
+    }
+
+    m_plaintext.append((char *) ptr, textNeeded);
+}
+
+switch (m_curType) {
+case kContentAlert:
+    if (!parseAlerts(notify))
+        return false;
+    break;
+case kContentHandshake:
+    if (!parseHandshakes(notify))
+        return false;
+    break;
+case kContentAppData:
+    data->append(m_plaintext);
+    break;
+default:
+    return parseError(kUnexpectedMessage);
+}
+
+m_plaintext.clear();
+ptr += textNeeded;
+m_recPos = 0;
+}
 }
 
 //===========================================================================
@@ -264,7 +264,7 @@ bool TlsRecordDecrypt::parseHandshakes (ITlsRecordDecryptNotify * notify) {
             break;
         notify->onTlsHandshake(
             TlsHandshakeType(*ptr),
-            (uint8_t *) m_plaintext.data(pos + 4, recLen), 
+            (uint8_t *) m_plaintext.data(pos + 4, recLen),
             recLen
         );
         pos += recLen;
@@ -274,7 +274,7 @@ bool TlsRecordDecrypt::parseHandshakes (ITlsRecordDecryptNotify * notify) {
 
 //===========================================================================
 bool TlsRecordDecrypt::parseError (
-    TlsAlertDesc desc, 
+    TlsAlertDesc desc,
     TlsAlertLevel level
 ) {
     m_alertLevel = level;
@@ -284,9 +284,9 @@ bool TlsRecordDecrypt::parseError (
 
 
 /****************************************************************************
-*
-*   Public API
-*
-***/
+ *
+ *   Public API
+ *
+ ***/
 
 } // namespace

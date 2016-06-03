@@ -8,17 +8,17 @@ namespace Dim {
 
 
 /****************************************************************************
-*
-*   Tuning parameters
-*
-***/
+ *
+ *   Tuning parameters
+ *
+ ***/
 
 
 /****************************************************************************
-*
-*   Declarations
-*
-***/
+ *
+ *   Declarations
+ *
+ ***/
 
 namespace {
 
@@ -30,10 +30,10 @@ enum TlsNameType : uint8_t {
 
 
 /****************************************************************************
-*
-*   Update message components
-*
-***/
+ *
+ *   Update message components
+ *
+ ***/
 
 //===========================================================================
 void tlsSetKeyShare (TlsKeyShare & out, TlsNamedGroup group) {
@@ -43,14 +43,14 @@ void tlsSetKeyShare (TlsKeyShare & out, TlsNamedGroup group) {
 
 
 /****************************************************************************
-*
-*   Write message components
-*
-***/
+ *
+ *   Write message components
+ *
+ ***/
 
 //===========================================================================
 static void write (
-    TlsRecordWriter & out, 
+    TlsRecordWriter & out,
     const std::vector<TlsKeyShare> & keys
 ) {
     if (keys.empty())
@@ -60,7 +60,7 @@ static void write (
     out.start16(); // extensions.extension_data
     // supported_groups
     out.start16();
-    for (auto&& key : keys) {
+    for (auto && key : keys) {
         out.number16(key.group);
     }
     out.end();
@@ -70,7 +70,7 @@ static void write (
     out.start16(); // extensions.extension_data
     // client_shares
     out.start16();
-    for (auto&& key : keys) {
+    for (auto && key : keys) {
         out.number16(key.group); // client_shares.group
         out.start16(); // client_shares.key_exchange
         out.var(key.keyExchange.data(), key.keyExchange.size());
@@ -81,23 +81,20 @@ static void write (
 }
 
 //===========================================================================
-static void write (TlsRecordWriter & out, const TlsKeyShare & key) {
-}
+static void write (TlsRecordWriter & out, const TlsKeyShare & key) {}
 
 //===========================================================================
 static void write (
-    TlsRecordWriter & out, 
+    TlsRecordWriter & out,
     const std::vector<TlsPresharedKey> & keys
-) {
-}
+) {}
 
 //===========================================================================
-static void write (TlsRecordWriter & out, const TlsPresharedKey & key) {
-}
+static void write (TlsRecordWriter & out, const TlsPresharedKey & key) {}
 
 //===========================================================================
 static void write (
-    TlsRecordWriter & out, 
+    TlsRecordWriter & out,
     const std::vector<TlsSignatureScheme> & schemes
 ) {
     if (schemes.empty())
@@ -107,7 +104,7 @@ static void write (
     out.start16(); // extensions.extension_data
     // supported_signature_algorithms
     out.start16();
-    for (auto&& sch : schemes) {
+    for (auto && sch : schemes) {
         out.number16(sch);
     }
     out.end();
@@ -142,10 +139,10 @@ static void writeDraftVersion (TlsRecordWriter & out, uint16_t version) {
 
 
 /****************************************************************************
-*
-*   Write messages
-*
-***/
+ *
+ *   Write messages
+ *
+ ***/
 
 //===========================================================================
 void tlsWrite (TlsRecordWriter & out, const TlsClientHelloMsg & msg) {
@@ -159,7 +156,7 @@ void tlsWrite (TlsRecordWriter & out, const TlsClientHelloMsg & msg) {
     out.fixed(msg.random, size(msg.random));
     out.number(0); // legacy_session_id
     out.start16(); // cipher_suites
-    for (auto&& suite : msg.suites)
+    for (auto && suite : msg.suites)
         out.number16(suite);
     out.end();
     out.start(); // legacy_compression_methods
@@ -219,10 +216,10 @@ void tlsWrite (TlsRecordWriter & out, const TlsHelloRetryRequestMsg & msg) {
 
 
 /****************************************************************************
-*
-*   Parse message components
-*
-***/
+ *
+ *   Parse message components
+ *
+ ***/
 
 //===========================================================================
 static bool parseSni (
@@ -253,14 +250,14 @@ static bool parseGroups (
 ) {
     int listLen = in.number16();
     vector<TlsKeyShare> groups(listLen);
-    for (auto&& group : groups) {
+    for (auto && group : groups) {
         group.group = in.number<TlsNamedGroup>();
     }
     if (out->empty()) {
         swap(*out, groups);
         return true;
     }
-    for (auto&& share : *out) {
+    for (auto && share : *out) {
         unsigned found = 0;
         auto it = groups.begin();
         auto last = groups.end();
@@ -348,7 +345,7 @@ static bool parseExt (
 }
 
 //===========================================================================
-template <typename T>
+template<typename T>
 static bool parseExts (T * msg, TlsRecordReader & in) {
     // no extensions? done
     if (!in.size())
@@ -371,10 +368,10 @@ static bool parseExts (T * msg, TlsRecordReader & in) {
 
 
 /****************************************************************************
-*
-*   Parse messages
-*
-***/
+ *
+ *   Parse messages
+ *
+ ***/
 
 //===========================================================================
 bool tlsParse (TlsClientHelloMsg * msg, TlsRecordReader & in) {
@@ -383,7 +380,7 @@ bool tlsParse (TlsClientHelloMsg * msg, TlsRecordReader & in) {
     in.fixed(msg->random, size(msg->random));
 
     // legacy_session_id
-    size_t len = in.number(); 
+    size_t len = in.number();
     if (len > 32) {
         in.setAlert(kDecodeError);
         // TODO: what's the right error?

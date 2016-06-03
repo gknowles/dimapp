@@ -5,10 +5,10 @@
 
 namespace Dim {
 
-template <typename T>
+template<typename T>
 class List;
 
-template <typename T>
+template<typename T>
 class ListMemberHook {
 public:
     bool isLinked () const;
@@ -18,11 +18,11 @@ public:
 private:
     friend class List<T>;
 
-    T * m_next{nullptr};
-    ListMemberHook * m_prev{nullptr};
+    T * m_next {nullptr};
+    ListMemberHook * m_prev {nullptr};
 };
 
-template <typename T>
+template<typename T>
 class List {
 public:
     List ();

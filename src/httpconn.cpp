@@ -8,20 +8,20 @@ namespace Dim {
 
 
 /****************************************************************************
-*
-*   Tuning parameters
-*
-***/
+ *
+ *   Tuning parameters
+ *
+ ***/
 
 const unsigned kDefaultBlockSize = 4096;
 const unsigned kDefaultHeaderTableSize = 4096;
 
 
 /****************************************************************************
-*
-*   Private declarations
-*
-***/
+ *
+ *   Private declarations
+ *
+ ***/
 
 namespace {
 
@@ -96,25 +96,25 @@ struct ResetStream {
 
 
 /****************************************************************************
-*
-*   Variables
-*
-***/
+ *
+ *   Variables
+ *
+ ***/
 
 static HandleMap<HttpConnHandle, HttpConn> s_conns;
 
 
 /****************************************************************************
-*
-*   Reset streams
-*
-***/
+ *
+ *   Reset streams
+ *
+ ***/
 
 const Duration kMaxResetStreamAge = 10s;
 const Duration kMinResetStreamCheckInterval = 2s;
 
 class ResetStreamTimer : public ITimerNotify {
-    Duration onTimer (TimePoint now) override;
+Duration onTimer (TimePoint now) override;
 };
 
 static deque<ResetStream> s_resetStreams;
@@ -126,7 +126,7 @@ Duration ResetStreamTimer::onTimer (TimePoint now) {
     while (!empty(s_resetStreams)) {
         auto & rs = s_resetStreams.front();
         sleep = rs.closed - expire;
-        if (sleep > 0s) 
+        if (sleep > 0s)
             return min(sleep, kMinResetStreamCheckInterval);
 
         if (rs.sm->m_state == HttpStream::kClosed) {
@@ -144,10 +144,10 @@ Duration ResetStreamTimer::onTimer (TimePoint now) {
 
 
 /****************************************************************************
-*
-*   HPACK message decoder
-*
-***/
+ *
+ *   HPACK message decoder
+ *
+ ***/
 
 class MsgDecoder : public IHpackDecodeNotify {
 public:
@@ -158,18 +158,18 @@ public:
 
 private:
     void onHpackHeader (
-        HttpHdr id,
-        const char name[],
-        const char value[],
-        int flags // Flags::*
+    HttpHdr id,
+    const char name[],
+    const char value[],
+    int flags     // Flags::*
     ) override;
 
     HttpMsg & m_msg;
-    FrameError m_error{FrameError::kNoError};
+    FrameError m_error {FrameError::kNoError};
 };
 
 //===========================================================================
-MsgDecoder::MsgDecoder (HttpMsg & msg) 
+MsgDecoder::MsgDecoder (HttpMsg & msg)
     : m_msg(msg)
 {}
 
@@ -200,10 +200,10 @@ FrameError MsgDecoder::Error () const {
 
 
 /****************************************************************************
-*
-*   Connection initialization
-*
-***/
+ *
+ *   Connection initialization
+ *
+ ***/
 
 enum class HttpConn::ByteMode {
     kInvalid,
@@ -219,7 +219,7 @@ enum class HttpConn::FrameMode {
 };
 
 //===========================================================================
-HttpConn::HttpConn () 
+HttpConn::HttpConn ()
     : m_byteMode{ByteMode::kPreface}
     , m_frameMode{FrameMode::kSettings}
     , m_encoder{kDefaultHeaderTableSize}
@@ -228,18 +228,18 @@ HttpConn::HttpConn ()
 
 
 /****************************************************************************
-*
-*   Receiving data
-*
-***/
+ *
+ *   Receiving data
+ *
+ ***/
 
 const int kFrameHeaderLen = 9;
 const char kPrefaceData[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
 
 //===========================================================================
 static bool Skip (
-    const char *& ptr, 
-    const char * eptr, 
+    const char *& ptr,
+    const char * eptr,
     const char literal[]
 ) {
     while (ptr != eptr && *literal) {
@@ -284,22 +284,22 @@ static void StartFrame (
 //===========================================================================
 static int ntoh16 (const char frame[]) {
     return (uint8_t) (frame[0] << 8)
-        + (uint8_t) frame[1];
+           + (uint8_t) frame[1];
 }
 
 //===========================================================================
 static int ntoh24 (const char frame[]) {
     return (uint8_t) (frame[0] << 16)
-        + (uint8_t) (frame[1] << 8)
-        + (uint8_t) frame[2];
+           + (uint8_t) (frame[1] << 8)
+           + (uint8_t) frame[2];
 }
 
 //===========================================================================
 static int ntoh32 (const char frame[]) {
     return (uint8_t) (frame[0] << 24)
-        + (uint8_t) (frame[1] << 16)
-        + (uint8_t) (frame[2] << 8)
-        + (uint8_t) frame[3];
+           + (uint8_t) (frame[1] << 16)
+           + (uint8_t) (frame[2] << 8)
+           + (uint8_t) frame[3];
 }
 
 //===========================================================================
@@ -332,8 +332,7 @@ static void ReplyGoAway (
     CharBuf * out,
     int lastStream,
     FrameError error
-) {
-}
+) {}
 
 //===========================================================================
 static void ReplyRstStream (
@@ -341,8 +340,7 @@ static void ReplyRstStream (
     int stream,
     HttpStream * sm,
     FrameError error
-) {
-}
+) {}
 
 //===========================================================================
 static bool RemovePadding (
@@ -364,7 +362,7 @@ static bool RemovePadding (
         out->padLen = *out->data;
         out->dataLen -= out->padLen + 1;
     }
-    if (out->dataLen <= 0) 
+    if (out->dataLen <= 0)
         return false;
     out->hdr += 1;
     out->data += 1;
@@ -373,7 +371,7 @@ static bool RemovePadding (
     const char * ptr = out->data + out->dataLen;
     const char * term = ptr + out->padLen;
     for (; ptr != term; ++ptr) {
-        if (*ptr) 
+        if (*ptr)
             return false;
     }
 
@@ -382,7 +380,7 @@ static bool RemovePadding (
 
 //===========================================================================
 static bool RemovePriority (
-    PriorityData * out, 
+    PriorityData * out,
     const char hdr[],
     int hdrLen
 ) {
@@ -398,14 +396,13 @@ static bool RemovePriority (
 }
 
 //===========================================================================
-static void UpdatePriority () {
-}
+static void UpdatePriority () {}
 
 //===========================================================================
 bool HttpConn::recv (
     CharBuf * out,
-    std::vector<std::unique_ptr<HttpMsg>> * msgs, 
-    const void * src, 
+    std::vector<std::unique_ptr<HttpMsg> > * msgs,
+    const void * src,
     size_t srcLen
 ) {
     const char * ptr = static_cast<const char *>(src);
@@ -413,16 +410,16 @@ bool HttpConn::recv (
     size_t avail;
     switch (m_byteMode) {
     case ByteMode::kPreface:
-        if (!Skip(ptr, eptr, kPrefaceData + size(m_input))) 
+        if (!Skip(ptr, eptr, kPrefaceData + size(m_input)))
             return false;
         if (ptr == eptr) {
             m_input.insert(m_input.end(), ptr - srcLen, eptr);
             return true;
         }
-        StartFrame(out, 0, FrameType::kSettings, 0, 0); 
+        StartFrame(out, 0, FrameType::kSettings, 0, 0);
         m_input.clear();
         m_byteMode = ByteMode::kHeader;
-        // fall through
+    // fall through
 
     case ByteMode::kHeader:
     next_frame:
@@ -471,7 +468,7 @@ bool HttpConn::recv (
 
     default:
         assert(m_byteMode == ByteMode::kPayload);
-        // fall through
+    // fall through
 
     case ByteMode::kPayload:
         avail = eptr - ptr;
@@ -512,7 +509,7 @@ HttpStream * HttpConn::findAlways (CharBuf * out, int stream) {
 
 //===========================================================================
 bool HttpConn::onFrame (
-    std::vector<std::unique_ptr<HttpMsg>> * msgs, 
+    std::vector<std::unique_ptr<HttpMsg> > * msgs,
     CharBuf * out,
     const char src[]
 ) {
@@ -534,30 +531,30 @@ bool HttpConn::onFrame (
     }
 
     switch (type) {
-    case FrameType::kContinuation: 
+    case FrameType::kContinuation:
         return onContinuation(msgs, out, src, stream, flags);
-    case FrameType::kData: 
+    case FrameType::kData:
         return onData(msgs, out, src, stream, flags);
-    case FrameType::kGoAway: 
+    case FrameType::kGoAway:
         return onGoAway(msgs, out, src, stream, flags);
-    case FrameType::kHeaders: 
+    case FrameType::kHeaders:
         return onHeaders(msgs, out, src, stream, flags);
-    case FrameType::kPing: 
+    case FrameType::kPing:
         return onPing(msgs, out, src, stream, flags);
-    case FrameType::kPriority: 
+    case FrameType::kPriority:
         return onPriority(msgs, out, src, stream, flags);
-    case FrameType::kPushPromise: 
+    case FrameType::kPushPromise:
         return onPushPromise(msgs, out, src, stream, flags);
-    case FrameType::kRstStream: 
+    case FrameType::kRstStream:
         return onRstStream(msgs, out, src, stream, flags);
-    case FrameType::kSettings: 
+    case FrameType::kSettings:
         return onSettings(msgs, out, src, stream, flags);
-    case FrameType::kWindowUpdate: 
+    case FrameType::kWindowUpdate:
         return onWindowUpdate(msgs, out, src, stream, flags);
     };
 
     // ignore unknown frames unless a specific frame type is required
-    if (m_frameMode == FrameMode::kNormal) 
+    if (m_frameMode == FrameMode::kNormal)
         return true;
     ReplyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
     return false;
@@ -565,7 +562,7 @@ bool HttpConn::onFrame (
 
 //===========================================================================
 bool HttpConn::onData (
-    std::vector<std::unique_ptr<HttpMsg>> * msgs, 
+    std::vector<std::unique_ptr<HttpMsg> > * msgs,
     CharBuf * out,
     const char src[],
     int stream,
@@ -587,9 +584,9 @@ bool HttpConn::onData (
 
     auto it = m_streams.find(stream);
     auto * sm = (it == m_streams.end()) ? it->second.get() : nullptr;
-    if (!sm 
+    if (!sm
         || sm->m_state != HttpStream::kOpen
-           && sm->m_state != HttpStream::kLocalClosed
+        && sm->m_state != HttpStream::kLocalClosed
     ) {
         // data frame on non-open stream
         ReplyRstStream(out, stream, sm, FrameError::kStreamClosed);
@@ -617,7 +614,7 @@ bool HttpConn::onData (
 
 //===========================================================================
 bool HttpConn::onHeaders (
-    std::vector<std::unique_ptr<HttpMsg>> * msgs, 
+    std::vector<std::unique_ptr<HttpMsg> > * msgs,
     CharBuf * out,
     const char src[],
     int stream,
@@ -665,39 +662,39 @@ bool HttpConn::onHeaders (
         return false;
 
     switch (sm->m_state) {
-        case HttpStream::kIdle:
-            if (~flags & kEndStream) {
-                sm->m_state = HttpStream::kOpen;
-            } else {
-                sm->m_state = HttpStream::kRemoteClosed;
-            }
-            sm->m_msg = make_unique<HttpRequest>();
-            break;
-        case HttpStream::kRemoteReserved:
-            if (~flags & kEndStream) {
-                sm->m_state = HttpStream::kLocalClosed;
-            } else {
-                sm->m_state = HttpStream::kClosed;
-            }
-            sm->m_msg = make_unique<HttpRequest>();
-            break;
-        case HttpStream::kOpen:
-        case HttpStream::kLocalClosed:
-            if (flags & kEndStream) {
-                // trailing headers not supported
-                // !!! should probably send a stream error and process
-                //     the headers (to maintain the connection decompression 
-                //     context) instead of dropping the connection.
-                ReplyGoAway(out, stream, FrameError::kProtocolError);
-                return false;
-            }
-            // fall through
-        default:
+    case HttpStream::kIdle:
+        if (~flags & kEndStream) {
+            sm->m_state = HttpStream::kOpen;
+        } else {
+            sm->m_state = HttpStream::kRemoteClosed;
+        }
+        sm->m_msg = make_unique<HttpRequest>();
+        break;
+    case HttpStream::kRemoteReserved:
+        if (~flags & kEndStream) {
+            sm->m_state = HttpStream::kLocalClosed;
+        } else {
+            sm->m_state = HttpStream::kClosed;
+        }
+        sm->m_msg = make_unique<HttpRequest>();
+        break;
+    case HttpStream::kOpen:
+    case HttpStream::kLocalClosed:
+        if (flags & kEndStream) {
+            // trailing headers not supported
             // !!! should probably send a stream error and process
-            //     the headers (to maintain the connection decompression 
+            //     the headers (to maintain the connection decompression
             //     context) instead of dropping the connection.
             ReplyGoAway(out, stream, FrameError::kProtocolError);
             return false;
+        }
+    // fall through
+    default:
+        // !!! should probably send a stream error and process
+        //     the headers (to maintain the connection decompression
+        //     context) instead of dropping the connection.
+        ReplyGoAway(out, stream, FrameError::kProtocolError);
+        return false;
     }
 
     if (~flags & kEndHeaders)
@@ -720,7 +717,7 @@ bool HttpConn::onHeaders (
 
 //===========================================================================
 bool HttpConn::onPriority (
-    std::vector<std::unique_ptr<HttpMsg>> * msgs, 
+    std::vector<std::unique_ptr<HttpMsg> > * msgs,
     CharBuf * out,
     const char src[],
     int stream,
@@ -755,7 +752,7 @@ bool HttpConn::onPriority (
 
 //===========================================================================
 bool HttpConn::onRstStream (
-    std::vector<std::unique_ptr<HttpMsg>> * msgs, 
+    std::vector<std::unique_ptr<HttpMsg> > * msgs,
     CharBuf * out,
     const char src[],
     int stream,
@@ -784,7 +781,7 @@ bool HttpConn::onRstStream (
 
 //===========================================================================
 bool HttpConn::onSettings (
-    std::vector<std::unique_ptr<HttpMsg>> * msgs, 
+    std::vector<std::unique_ptr<HttpMsg> > * msgs,
     CharBuf * out,
     const char src[],
     int stream,
@@ -795,7 +792,7 @@ bool HttpConn::onSettings (
     //      identifier : 16
     //      value : 32
 
-    if (m_frameMode != FrameMode::kNormal 
+    if (m_frameMode != FrameMode::kNormal
         && m_frameMode != FrameMode::kSettings
         || stream
     ) {
@@ -832,7 +829,7 @@ bool HttpConn::onSettings (
 
 //===========================================================================
 bool HttpConn::onPushPromise (
-    std::vector<std::unique_ptr<HttpMsg>> * msgs, 
+    std::vector<std::unique_ptr<HttpMsg> > * msgs,
     CharBuf * out,
     const char src[],
     int stream,
@@ -851,7 +848,7 @@ bool HttpConn::onPushPromise (
 
 //===========================================================================
 bool HttpConn::onPing (
-    std::vector<std::unique_ptr<HttpMsg>> * msgs, 
+    std::vector<std::unique_ptr<HttpMsg> > * msgs,
     CharBuf * out,
     const char src[],
     int stream,
@@ -865,7 +862,7 @@ bool HttpConn::onPing (
 
 //===========================================================================
 bool HttpConn::onGoAway (
-    std::vector<std::unique_ptr<HttpMsg>> * msgs, 
+    std::vector<std::unique_ptr<HttpMsg> > * msgs,
     CharBuf * out,
     const char src[],
     int stream,
@@ -882,7 +879,7 @@ bool HttpConn::onGoAway (
         ReplyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
         return false;
     }
-    
+
     int lastStreamId = ntoh31(src + kFrameHeaderLen);
     FrameError errorCode = (FrameError) ntoh32(src + kFrameHeaderLen + 4);
 
@@ -905,7 +902,7 @@ bool HttpConn::onGoAway (
 
 //===========================================================================
 bool HttpConn::onWindowUpdate (
-    std::vector<std::unique_ptr<HttpMsg>> * msgs, 
+    std::vector<std::unique_ptr<HttpMsg> > * msgs,
     CharBuf * out,
     const char src[],
     int stream,
@@ -931,7 +928,7 @@ bool HttpConn::onWindowUpdate (
 
 //===========================================================================
 bool HttpConn::onContinuation (
-    std::vector<std::unique_ptr<HttpMsg>> * msgs, 
+    std::vector<std::unique_ptr<HttpMsg> > * msgs,
     CharBuf * out,
     const char src[],
     int stream,
@@ -940,23 +937,23 @@ bool HttpConn::onContinuation (
     // Continuation frame
     //  headerBlock[]
 
-    if (m_frameMode != FrameMode::kContinuation 
+    if (m_frameMode != FrameMode::kContinuation
         || stream != m_continueStream
     ) {
         ReplyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
         return false;
     }
 
-    
+
     return false;
 }
 
 
 /****************************************************************************
-*
-*   Sending data
-*
-***/
+ *
+ *   Sending data
+ *
+ ***/
 
 //===========================================================================
 // Serializes a request and returns the stream id used
@@ -972,8 +969,7 @@ int HttpConn::request (
 void HttpConn::pushPromise (
     CharBuf * out,
     const HttpMsg & msg
-) {
-}
+) {}
 
 //===========================================================================
 // Serializes a reply on the specified stream
@@ -988,17 +984,17 @@ void HttpConn::reply (
 
     HttpStream * strm = it->second.get();
     switch (strm->m_state) {
-        case HttpStream::kOpen:
-            strm->m_state = HttpStream::kLocalClosed;
-            break;
-        case HttpStream::kLocalReserved:
-        case HttpStream::kRemoteClosed:
-            strm->m_state = HttpStream::kClosed;
-            break;
-        default:
-            logMsgCrash() << "httpReply invalid state, {" 
-                << strm->m_state << "}";
-            return;
+    case HttpStream::kOpen:
+        strm->m_state = HttpStream::kLocalClosed;
+        break;
+    case HttpStream::kLocalReserved:
+    case HttpStream::kRemoteClosed:
+        strm->m_state = HttpStream::kClosed;
+        break;
+    default:
+        logMsgCrash() << "httpReply invalid state, {"
+                      << strm->m_state << "}";
+        return;
     }
 
     const CharBuf & body = msg.body();
@@ -1010,8 +1006,8 @@ void HttpConn::reply (
     SetFrameHeader(frameHdr, stream, ftype, 0, 0);
     out->append((char *) frameHdr, size(frameHdr));
     m_encoder.startBlock(out);
-    for (auto&& hdr : msg) {
-        for (auto&& hv : hdr) {
+    for (auto && hdr : msg) {
+        for (auto && hv : hdr) {
             if (hdr.m_id) {
                 m_encoder.header(hdr.m_id, hv.m_value);
             } else {
@@ -1019,8 +1015,8 @@ void HttpConn::reply (
             }
             if (size(*out) > maxEndPos) {
                 SetFrameHeader(
-                    frameHdr, 
-                    stream, 
+                    frameHdr,
+                    stream,
                     ftype,
                     m_maxOutputFrame,
                     flags
@@ -1036,13 +1032,13 @@ void HttpConn::reply (
     }
     SetFrameHeader(
         frameHdr,
-        stream, 
+        stream,
         ftype,
         int(size(*out) - framePos),
         flags | FrameFlag::kEndHeaders
     );
     out->replace(framePos, size(frameHdr), (char *) frameHdr);
-    
+
     size_t bodyLen = size(body);
     if (!bodyLen)
         return;
@@ -1054,18 +1050,17 @@ void HttpConn::reply (
         bodyPos += m_maxOutputFrame;
     }
     StartFrame(
-        out, 
-        stream, 
-        FrameType::kData, 
-        int(bodyLen - bodyPos), 
+        out,
+        stream,
+        FrameType::kData,
+        int(bodyLen - bodyPos),
         FrameFlag::kEndStream
     );
     out->append(body, bodyPos);
 }
 
 //===========================================================================
-void HttpConn::resetStream (CharBuf * out, int stream) {
-}
+void HttpConn::resetStream (CharBuf * out, int stream) {}
 
 //===========================================================================
 void HttpConn::deleteStream (int stream, HttpStream * sm) {
@@ -1078,10 +1073,10 @@ void HttpConn::deleteStream (int stream, HttpStream * sm) {
 
 
 /****************************************************************************
-*
-*   Public API
-*
-***/
+ *
+ *   Public API
+ *
+ ***/
 
 //===========================================================================
 HttpConnHandle httpListen () {
@@ -1098,8 +1093,8 @@ void httpClose (HttpConnHandle hc) {
 bool httpRecv (
     HttpConnHandle hc,
     CharBuf * out,
-    std::vector<std::unique_ptr<HttpMsg>> * msgs, 
-    const void * src, 
+    std::vector<std::unique_ptr<HttpMsg> > * msgs,
+    const void * src,
     size_t srcLen
 ) {
     if (auto * conn = s_conns.find(hc))

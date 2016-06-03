@@ -10,10 +10,10 @@ namespace Dim {
 
 
 /****************************************************************************
-*
-*   Hashing
-*
-***/
+ *
+ *   Hashing
+ *
+ ***/
 
 size_t strHash (const char src[]);
 
@@ -22,24 +22,24 @@ size_t strHash (const char src[], size_t maxlen);
 
 
 /****************************************************************************
-*
-*   String conversions
-*
-***/
+ *
+ *   String conversions
+ *
+ ***/
 
-template <typename T>
+template<typename T>
 constexpr int maxIntegralChars () {
     return numeric_limits<T>::is_signed
-        ? 1 + ((CHAR_BIT * sizeof(T) - 1) * 301L + 999L) / 1000L
-        : (CHAR_BIT * sizeof(T) * 301L + 999L) / 1000L;
+           ? 1 + ((CHAR_BIT * sizeof(T) - 1) * 301L + 999L) / 1000L
+           : (CHAR_BIT * sizeof(T) * 301L + 999L) / 1000L;
 }
 
-template <typename T>
+template<typename T>
 class IntegralStr {
 public:
     IntegralStr (T val);
     const char * set (T val);
-    operator const char * () const;
+    operator const char *() const;
 
 private:
     using Signed = typename std::make_signed<T>::type;
@@ -48,29 +48,29 @@ private:
     const char * internalSet (Signed val);
     const char * internalSet (Unsigned val);
 
-    char data[maxIntegralChars<T>() + 1];
+    char data[maxIntegralChars < T > () + 1];
 };
 
 //===========================================================================
-template <typename T>
-IntegralStr<T>::IntegralStr (T val) { 
-    internalSet(val); 
+template<typename T>
+IntegralStr<T>::IntegralStr (T val) {
+    internalSet(val);
 }
 
 //===========================================================================
-template <typename T>
+template<typename T>
 const char * IntegralStr<T>::set (T val) {
     return internalSet(val);
 }
 
 //===========================================================================
-template <typename T>
-IntegralStr<T>::operator const char * () const { 
-    return data; 
+template<typename T>
+IntegralStr<T>::operator const char * () const {
+    return data;
 }
 
 //===========================================================================
-template <typename T>
+template<typename T>
 const char * IntegralStr<T>::internalSet (Unsigned val) {
     if (!val) {
         data[0] = '0';
@@ -78,7 +78,7 @@ const char * IntegralStr<T>::internalSet (Unsigned val) {
     } else {
         char * ptr = data;
         unsigned i = 0;
-        for (;;) {
+        for (;; ) {
             ptr[i] = (val % 10) + '0';
             val /= 10;
             i += 1;
@@ -95,7 +95,7 @@ const char * IntegralStr<T>::internalSet (Unsigned val) {
 }
 
 //===========================================================================
-template <typename T>
+template<typename T>
 const char * IntegralStr<T>::internalSet (Signed val) {
     if (!val) {
         data[0] = '0';
@@ -107,7 +107,7 @@ const char * IntegralStr<T>::internalSet (Signed val) {
             val = -val;
         }
         unsigned i = 0;
-        for (;;) {
+        for (;; ) {
             ptr[i] = (val % 10) + '0';
             val /= 10;
             i += 1;
@@ -125,15 +125,15 @@ const char * IntegralStr<T>::internalSet (Signed val) {
 
 
 /****************************************************************************
-*
-*   Containers
-*
-***/
+ *
+ *   Containers
+ *
+ ***/
 
-template <typename T>
+template<typename T>
 class ForwardListIterator {
 protected:
-    T * m_current{nullptr};
+    T * m_current {nullptr};
 public:
     ForwardListIterator (T * node) : m_current(node) {}
     bool operator!= (const ForwardListIterator & right) {

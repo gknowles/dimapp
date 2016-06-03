@@ -7,22 +7,22 @@ namespace Dim {
 
 
 /****************************************************************************
-*
-*   Overlapped
-*
-***/
+ *
+ *   Overlapped
+ *
+ ***/
 
 struct WinOverlappedEvent {
-    OVERLAPPED overlapped{};
-    ITaskNotify * notify{nullptr};
+    OVERLAPPED overlapped {};
+    ITaskNotify * notify {nullptr};
 };
 
 
 /****************************************************************************
-*
-*   Event
-*
-***/
+ *
+ *   Event
+ *
+ ***/
 
 class WinEvent {
 public:
@@ -32,7 +32,9 @@ public:
     void signal ();
     void wait (Duration wait = kTimerInfinite);
 
-    HANDLE nativeHandle () const { return m_handle; };
+    HANDLE nativeHandle () const {
+        return m_handle;
+    };
 
 private:
     HANDLE m_handle;
@@ -40,10 +42,10 @@ private:
 
 
 /****************************************************************************
-*
-*   Iocp
-*
-***/
+ *
+ *   Iocp
+ *
+ ***/
 
 void winIocpInitialize ();
 
@@ -51,10 +53,10 @@ bool winIocpBindHandle (HANDLE handle);
 
 
 /****************************************************************************
-*
-*   Wait for events
-*
-***/
+ *
+ *   Wait for events
+ *
+ ***/
 
 class IWinEventWaitNotify : public ITaskNotify {
 public:
@@ -63,16 +65,16 @@ public:
 
     virtual void onTask () override = 0;
 
-    OVERLAPPED m_overlapped{};
-    HANDLE m_registeredWait{nullptr};
+    OVERLAPPED m_overlapped {};
+    HANDLE m_registeredWait {nullptr};
 };
 
 
 /****************************************************************************
-*
-*   Error
-*
-***/
+ *
+ *   Error
+ *
+ ***/
 
 class WinError {
 public:
@@ -88,7 +90,7 @@ public:
     // sets equivalent standard windows error value
     WinError & operator= (NtStatus status);
 
-    operator int () const { return m_value; }
+    operator int() const { return m_value; }
 
 private:
     int m_value;
@@ -98,10 +100,10 @@ private:
 
 
 /****************************************************************************
-*
-*   Socket
-*
-***/
+ *
+ *   Socket
+ *
+ ***/
 
 SOCKET winSocketCreate ();
 SOCKET winSocketCreate (const Endpoint & localEnd);

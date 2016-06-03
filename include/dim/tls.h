@@ -11,10 +11,10 @@
 namespace Dim {
 
 /****************************************************************************
-*
-*   Constants
-*
-***/
+ *
+ *   Constants
+ *
+ ***/
 
 enum TlsAlertLevel : uint8_t {
     kWarning = 1,
@@ -68,8 +68,8 @@ enum TlsHandshakeType : uint8_t {
 
 enum TlsCipherSuite : uint16_t {
     TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256 = 0xcca8,
-    TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256 = 0xcca9,      
-    TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256 = 0xccaa,    
+    TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256 = 0xcca9,
+    TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256 = 0xccaa,
 };
 
 enum TlsExtensionType : uint16_t {
@@ -92,21 +92,21 @@ enum TlsSignatureScheme : uint16_t {
 
 
 /****************************************************************************
-*
-*   Tls connection context
-*
-***/
+ *
+ *   Tls connection context
+ *
+ ***/
 
 struct TlsConnHandle : HandleBase {};
 
 TlsConnHandle tlsConnect (
     CharBuf * out,
     const char hostName[],
-    const TlsCipherSuite suites[], 
+    const TlsCipherSuite suites[],
     size_t count
 );
 TlsConnHandle tlsAccept (
-    const TlsCipherSuite suites[], 
+    const TlsCipherSuite suites[],
     size_t count
 );
 void tlsClose (TlsConnHandle h);

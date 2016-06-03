@@ -8,23 +8,23 @@ namespace Dim {
 
 
 /****************************************************************************
-*
-*   Tuning parameters
-*
-***/
+ *
+ *   Tuning parameters
+ *
+ ***/
 
 
 /****************************************************************************
-*
-*   Declarations
-*
-***/
+ *
+ *   Declarations
+ *
+ ***/
 
 /****************************************************************************
-*
-*   Private
-*
-***/
+ *
+ *   Private
+ *
+ ***/
 
 namespace {
 
@@ -89,7 +89,7 @@ const TokenTable::Token s_hdrNames[] = {
     { kHttpVary, "vary" },
     { kHttpVia, "via" },
     { kHttpWwwAuthenticate, "www-authenticate" },
-};  
+};
 static_assert(size(s_hdrNames) == kHttps, "");
 
 const TokenTable s_hdrNameTbl(s_hdrNames, size(s_hdrNames));
@@ -102,43 +102,43 @@ struct HdrNameInfo : HttpMsg::HdrName {
 
 
 /****************************************************************************
-*
-*   HttpMsg::HdrName
-*
-***/
+ *
+ *   HttpMsg::HdrName
+ *
+ ***/
 
 //===========================================================================
-auto HttpMsg::HdrName::begin () -> ForwardListIterator<HdrValue> {
+auto HttpMsg::HdrName::begin ()->ForwardListIterator<HdrValue> {
     auto * hdr = static_cast<HdrNameInfo *>(this);
     return ForwardListIterator<HdrValue>(&hdr->m_value);
 }
 
 //===========================================================================
-auto HttpMsg::HdrName::end () -> ForwardListIterator<HdrValue> {
+auto HttpMsg::HdrName::end ()->ForwardListIterator<HdrValue> {
     return ForwardListIterator<HdrValue>(nullptr);
 }
 
 //===========================================================================
-auto HttpMsg::HdrName::begin () const 
-    -> ForwardListIterator<const HdrValue> 
+auto HttpMsg::HdrName::begin () const
+->ForwardListIterator<const HdrValue>
 {
     auto * hdr = static_cast<const HdrNameInfo *>(this);
     return ForwardListIterator<const HdrValue>(&hdr->m_value);
 }
 
 //===========================================================================
-auto HttpMsg::HdrName::end () const 
-    -> ForwardListIterator<const HdrValue> 
+auto HttpMsg::HdrName::end () const
+->ForwardListIterator<const HdrValue>
 {
     return ForwardListIterator<const HdrValue>(nullptr);
 }
 
 
 /****************************************************************************
-*
-*   HttpMsg
-*
-***/
+ *
+ *   HttpMsg
+ *
+ ***/
 
 //===========================================================================
 void HttpMsg::addHeader (HttpHdr id, const char value[]) {
@@ -160,13 +160,13 @@ void HttpMsg::addHeader (const char name[], const char value[]) {
 
 //===========================================================================
 void HttpMsg::addHeaderRef (
-    HttpHdr id, 
-    const char name[], 
+    HttpHdr id,
+    const char name[],
     const char value[]
 ) {
     auto ni = static_cast<HdrNameInfo *>(m_firstHeader);
     auto prev = ni;
-    for (;;) {
+    for (;; ) {
         if (!ni) {
             ni = m_heap.emplace<HdrNameInfo>();
             if (prev) {
@@ -179,7 +179,7 @@ void HttpMsg::addHeaderRef (
             break;
         }
 
-        if (ni->m_id == id 
+        if (ni->m_id == id
             && (id || !strcmp(ni->m_name, name))
         ) {
             break;
@@ -217,23 +217,23 @@ void HttpMsg::addHeaderRef (const char name[], const char value[]) {
 }
 
 //===========================================================================
-auto HttpMsg::begin () -> ForwardListIterator<HdrName> {
-    return ForwardListIterator<HdrName>{m_firstHeader};
+auto HttpMsg::begin ()->ForwardListIterator<HdrName> {
+    return ForwardListIterator<HdrName> {m_firstHeader};
 }
 
 //===========================================================================
-auto HttpMsg::end () -> ForwardListIterator<HdrName> {
-    return ForwardListIterator<HdrName>{nullptr};
+auto HttpMsg::end ()->ForwardListIterator<HdrName> {
+    return ForwardListIterator<HdrName> {nullptr};
 }
 
 //===========================================================================
-auto HttpMsg::begin () const -> ForwardListIterator<const HdrName> {
-    return ForwardListIterator<const HdrName>{m_firstHeader};
+auto HttpMsg::begin () const->ForwardListIterator<const HdrName> {
+    return ForwardListIterator<const HdrName> {m_firstHeader};
 }
 
 //===========================================================================
-auto HttpMsg::end () const -> ForwardListIterator<const HdrName> {
-    return ForwardListIterator<const HdrName>{nullptr};
+auto HttpMsg::end () const->ForwardListIterator<const HdrName> {
+    return ForwardListIterator<const HdrName> {nullptr};
 }
 
 //===========================================================================
@@ -253,10 +253,10 @@ ITempHeap & HttpMsg::heap () {
 
 
 /****************************************************************************
-*
-*   HttpRequest
-*
-***/
+ *
+ *   HttpRequest
+ *
+ ***/
 
 bool HttpRequest::checkPseudoHeaders () const {
     const int must = kFlagHasMethod | kFlagHasScheme | kFlagHasPath;

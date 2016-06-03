@@ -7,10 +7,10 @@ using namespace Dim;
 
 
 /****************************************************************************
-*
-*   Declarations
-*
-***/
+ *
+ *   Declarations
+ *
+ ***/
 
 static unsigned s_nextElemId;
 
@@ -32,7 +32,7 @@ static void getLineRules (set<Element> & rules) {
     // param = *fully-quoted [half-quoted] *BSLASH
     // fully-quoted = *1unquoted active-quote quoted active-quote
     // half-quoted = *1unquoted active-quote quoted
-    // unquoted = 1*( ptext  / escaped-quote ) 
+    // unquoted = 1*( ptext  / escaped-quote )
     // quoted = 1*( ptext / dquote-pair / escaped-quote / ws )
     // ptext = *(pchar / BSLASH) pchar
     // escaped-quote = *bslash-pair BSLASH DQUOTE
@@ -84,7 +84,7 @@ static void getCoreRules (set<Element> & rules) {
     // CR             =  %x0D
     rule = addChoiceRule(rules, "CR", 1, 1);
     addRange(rule, 0xd, 0xd);
-    
+
     // CRLF           =  CR LF
     rule = addSequenceRule(rules, "CRLF", 1, 1);
     addRule(rule, "CR", 1, 1);
@@ -113,7 +113,7 @@ static void getCoreRules (set<Element> & rules) {
     // HTAB           =  %x09
     rule = addChoiceRule(rules, "HTAB", 1, 1);
     addRange(rule, 0x9, 0x9);
-    
+
     // LF             =  %x0A
     rule = addChoiceRule(rules, "LF", 1, 1);
     addRange(rule, 0xa, 0xa);
@@ -231,7 +231,7 @@ static void getAbnfRules (set<Element> & rules) {
     addLiteral(elem, "*", 1, 1);
     addRule(elem, "DIGIT", 0, kUnlimited);
 
-    // element        =  rulename / group / option / char-val / num-val 
+    // element        =  rulename / group / option / char-val / num-val
     rule = addChoiceRule(rules, "element", 1, 1);
     addRule(rule, "rulename", 1, 1);
     addRule(rule, "group", 1, 1);
@@ -274,7 +274,7 @@ static void getAbnfRules (set<Element> & rules) {
     // bin-val        =  "b" 1*BIT
     //                 [ 1*("." 1*BIT) / ("-" 1*BIT) ]
 
-    // bin-val = "b" (bin-val-simple / bin-val-concatenation 
+    // bin-val = "b" (bin-val-simple / bin-val-concatenation
     //      / bin-val-alterntation)
     // bin-val-simple = 1*BIT
     // bin-val-concatenation = bin-val-simple 1*("." bin-val-simple)
@@ -331,15 +331,15 @@ static Element * addElement (Element * rule, unsigned m, unsigned n) {
 
 
 /****************************************************************************
-*     
-*   Application
-*     
-***/
+ *
+ *   Application
+ *
+ ***/
 
 namespace {
 class Application : public ITaskNotify {
-    int m_argc;
-    char ** m_argv;
+int m_argc;
+char ** m_argv;
 public:
     Application (int argc, char * argv[]);
     void onTask () override;
@@ -347,7 +347,7 @@ public:
 } // namespace
 
 //===========================================================================
-Application::Application (int argc, char * argv[]) 
+Application::Application (int argc, char * argv[])
     : m_argc(argc)
     , m_argv(argv)
 {}
@@ -377,7 +377,7 @@ void Application::onTask () {
     cout << "Elapsed time: " << elapsed.count() << endl;
 
     ostringstream abnf;
-    for (auto&& rule : rules) {
+    for (auto && rule : rules) {
         abnf << rule.name << " = " << rule << '\n';
     }
     bool valid = abnfCheckSyntax(abnf.str().c_str());
@@ -388,10 +388,10 @@ void Application::onTask () {
 
 
 /****************************************************************************
-*
-*   Externals
-*
-***/
+ *
+ *   Externals
+ *
+ ***/
 
 //===========================================================================
 int main(int argc, char * argv[]) {
@@ -405,7 +405,7 @@ int main(int argc, char * argv[]) {
 
 //===========================================================================
 Element * addSequenceRule (
-    set<Element> & rules, 
+    set<Element> & rules,
     const string & name,
     unsigned m,
     unsigned n,
@@ -418,7 +418,7 @@ Element * addSequenceRule (
 
 //===========================================================================
 Element * addChoiceRule (
-    set<Element> & rules, 
+    set<Element> & rules,
     const string & name,
     unsigned m,
     unsigned n,
@@ -452,9 +452,9 @@ Element * addChoice (Element * rule, unsigned m, unsigned n) {
 
 //===========================================================================
 void addRule (
-    Element * rule, 
-    const string & name, 
-    unsigned m, 
+    Element * rule,
+    const string & name,
+    unsigned m,
     unsigned n
 ) {
     auto e = addElement(rule, m, n);
@@ -476,7 +476,7 @@ void addTerminal (
 
 //===========================================================================
 void addLiteral (
-    Element * rule, 
+    Element * rule,
     const string & value,
     unsigned m,
     unsigned n
@@ -494,7 +494,7 @@ void addLiteral (
 
 //===========================================================================
 void addRange (
-    Element * rule, 
+    Element * rule,
     unsigned char a,
     unsigned char b
 ) {
