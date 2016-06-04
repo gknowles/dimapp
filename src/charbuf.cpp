@@ -6,7 +6,6 @@ using namespace std;
 
 namespace Dim {
 
-
 /****************************************************************************
  *
  *   Tuning parameters
@@ -15,31 +14,24 @@ namespace Dim {
 
 const unsigned kDefaultBlockSize = 4096;
 
-
 /****************************************************************************
  *
  *   CharBuf::Buffer
  *
  ***/
 
-//#pragma warning(disable: 4200) // nonstandard extension used: zero-sized array in struct/union
+//#pragma warning(disable: 4200) // nonstandard extension used: zero-sized array
+//in struct/union
 struct CharBuf::Buffer {
-    int m_used {0};
-    int m_reserved {kDefaultBlockSize};
-    bool m_heapUsed {false};
+    int m_used{0};
+    int m_reserved{kDefaultBlockSize};
+    bool m_heapUsed{false};
     char m_data[1];
 
-    char * base () {
-        return m_data;
-    }
-    char * unused () {
-        return base() + m_used;
-    }
-    char * end () {
-        return base() + m_reserved;
-    }
+    char *base() { return m_data; }
+    char *unused() { return base() + m_used; }
+    char *end() { return base() + m_reserved; }
 };
-
 
 /****************************************************************************
  *
@@ -48,81 +40,76 @@ struct CharBuf::Buffer {
  ***/
 
 //===========================================================================
-CharBuf::CharBuf ()
-{}
+CharBuf::CharBuf() {}
 
 //===========================================================================
 CharBuf::~CharBuf() {
-    for (auto && ptr : m_buffers)
+    for (auto &&ptr : m_buffers)
         delete ptr;
 }
 
 //===========================================================================
-CharBuf & CharBuf::assign (const char s[]) {
+CharBuf &CharBuf::assign(const char s[]) {
     return replace(0, m_size, s);
 }
 
 //===========================================================================
-CharBuf & CharBuf::assign (const char s[], size_t count) {
+CharBuf &CharBuf::assign(const char s[], size_t count) {
     return replace(0, m_size, s, count);
 }
 
 //===========================================================================
-CharBuf & CharBuf::assign (const string & str, size_t pos, size_t count) {
+CharBuf &CharBuf::assign(const string &str, size_t pos, size_t count) {
     assert(pos < str.size());
     return replace(
-        0,
-        m_size,
-        str.data() + pos,
-        min(str.size(), pos + count) - pos
-    );
+        0, m_size, str.data() + pos, min(str.size(), pos + count) - pos);
 }
 
 //===========================================================================
-char & CharBuf::front () {
+char &CharBuf::front() {
     assert(m_size);
-    auto & buf = *m_buffers.front();
+    auto &buf = *m_buffers.front();
     return *buf.m_data;
 }
 
 //===========================================================================
-const char & CharBuf::front () const {
+const char &CharBuf::front() const {
     assert(m_size);
-    auto & buf = *m_buffers.front();
+    auto &buf = *m_buffers.front();
     return *buf.m_data;
 }
 
 //===========================================================================
-char & CharBuf::back () {
+char &CharBuf::back() {
     assert(m_size);
-    auto & buf = *m_buffers.back();
+    auto &buf = *m_buffers.back();
     return buf.m_data[buf.m_used - 1];
 }
 
 //===========================================================================
-const char & CharBuf::back () const {
+const char &CharBuf::back() const {
     assert(m_size);
-    auto & buf = *m_buffers.back();
+    auto &buf = *m_buffers.back();
     return buf.m_data[buf.m_used - 1];
 }
 
 //===========================================================================
-bool CharBuf::empty () const {
+bool CharBuf::empty() const {
     return !m_size;
 }
 
 //===========================================================================
-size_t CharBuf::size () const {
+size_t CharBuf::size() const {
     return m_size;
 }
 
 //===========================================================================
-const char * CharBuf::data () const {
+const char *CharBuf::data() const {
     return data(0, m_size);
 }
 
 //===========================================================================
-const char * CharBuf::data (size_t pos, size_t count) const {
+const char *CharBuf::data(size_t pos, size_t count) const {
     assert(pos <= m_size);
     if (pos == m_size)
         return nullptr;
@@ -134,13 +121,13 @@ const char * CharBuf::data (size_t pos, size_t count) const {
     auto ic = const_cast<CharBuf *>(this)->find(pos);
 
     size_t need = ic.second + count;
-    Buffer * pbuf = *ic.first;
+    Buffer *pbuf = *ic.first;
 
     if (need > pbuf->m_used) {
         if (need > pbuf->m_reserved) {
             size_t bufsize = count + kDefaultBlockSize - 1;
             bufsize -= bufsize % kDefaultBlockSize;
-            Buffer * out = allocBuffer(bufsize);
+            Buffer *out = allocBuffer(bufsize);
             memcpy(out->base(), pbuf->base(), pbuf->m_used);
             out->m_used = pbuf->m_used;
             delete pbuf;
@@ -151,7 +138,7 @@ const char * CharBuf::data (size_t pos, size_t count) const {
         auto et = ic.first;
         do {
             ++et;
-            Buffer * ebuf = *et;
+            Buffer *ebuf = *et;
             memcpy(pbuf->unused(), ebuf->base(), ebuf->m_used);
             pbuf->m_used += ebuf->m_used;
             delete ebuf;
@@ -164,38 +151,38 @@ const char * CharBuf::data (size_t pos, size_t count) const {
 }
 
 //===========================================================================
-void CharBuf::clear () {
+void CharBuf::clear() {
     if (m_size)
         erase(m_buffers.begin(), 0, m_size);
 }
 
 //===========================================================================
-CharBuf & CharBuf::insert (size_t pos, const char s[]) {
+CharBuf &CharBuf::insert(size_t pos, const char s[]) {
     return replace(pos, 0, s);
 }
 
 //===========================================================================
-CharBuf & CharBuf::insert (size_t pos, const char s[], size_t count) {
+CharBuf &CharBuf::insert(size_t pos, const char s[], size_t count) {
     return replace(pos, 0, s, count);
 }
 
 //===========================================================================
-CharBuf & CharBuf::erase (size_t pos, size_t count) {
+CharBuf &CharBuf::erase(size_t pos, size_t count) {
     auto ic = find(pos);
-    return erase(ic.first, ic.second, (int) count);
+    return erase(ic.first, ic.second, (int)count);
 }
 
 //===========================================================================
-CharBuf & CharBuf::rtrim (char ch) {
+CharBuf &CharBuf::rtrim(char ch) {
     auto it = m_buffers.end();
     --it;
-    for (;; ) {
-        Buffer * buf = *it;
+    for (;;) {
+        Buffer *buf = *it;
         if (!m_size)
             return *this;
-        const char * base = buf->base();
-        const char * ptr = buf->unused() - 1;
-        for (;; ) {
+        const char *base = buf->base();
+        const char *ptr = buf->unused() - 1;
+        for (;;) {
             if (*ptr != ch) {
                 int num = int(buf->unused() - ptr - 1);
                 if (num) {
@@ -220,15 +207,15 @@ CharBuf & CharBuf::rtrim (char ch) {
 }
 
 //===========================================================================
-void CharBuf::pushBack (char ch) {
+void CharBuf::pushBack(char ch) {
     append(1, ch);
 }
 
 //===========================================================================
-void CharBuf::popBack () {
+void CharBuf::popBack() {
     assert(m_size);
     m_size -= 1;
-    Buffer * buf = m_buffers.back();
+    Buffer *buf = m_buffers.back();
     if (--buf->m_used)
         return;
 
@@ -237,20 +224,20 @@ void CharBuf::popBack () {
 }
 
 //===========================================================================
-CharBuf & CharBuf::append (size_t count, char ch) {
+CharBuf &CharBuf::append(size_t count, char ch) {
     assert(m_size + count < numeric_limits<int>::max());
-    int add = (int) count;
+    int add = (int)count;
     if (!add)
         return *this;
 
     if (!m_size)
         m_buffers.emplace_back(allocBuffer());
     m_size += add;
-    for (;; ) {
-        Buffer * buf = m_buffers.back();
+    for (;;) {
+        Buffer *buf = m_buffers.back();
         int added = min(add, buf->m_reserved - buf->m_used);
         if (added) {
-            char * ptr = buf->unused();
+            char *ptr = buf->unused();
             memset(ptr, ch, added);
             buf->m_used += added;
             add -= added;
@@ -262,18 +249,18 @@ CharBuf & CharBuf::append (size_t count, char ch) {
 }
 
 //===========================================================================
-CharBuf & CharBuf::append (const char s[]) {
+CharBuf &CharBuf::append(const char s[]) {
     if (!*s)
         return *this;
 
     if (!m_size)
         m_buffers.emplace_back(allocBuffer());
 
-    for (;; ) {
-        Buffer * buf = m_buffers.back();
-        char * ptr = buf->unused();
-        char * eptr = buf->end();
-        for (;; ) {
+    for (;;) {
+        Buffer *buf = m_buffers.back();
+        char *ptr = buf->unused();
+        char *eptr = buf->end();
+        for (;;) {
             if (ptr == eptr) {
                 m_size += buf->m_reserved - buf->m_used;
                 buf->m_used = buf->m_reserved;
@@ -292,8 +279,8 @@ CharBuf & CharBuf::append (const char s[]) {
 }
 
 //===========================================================================
-CharBuf & CharBuf::append (const char src[], size_t srcLen) {
-    int add = (int) srcLen;
+CharBuf &CharBuf::append(const char src[], size_t srcLen) {
+    int add = (int)srcLen;
     if (!add)
         return *this;
 
@@ -301,8 +288,8 @@ CharBuf & CharBuf::append (const char src[], size_t srcLen) {
         m_buffers.emplace_back(allocBuffer());
     m_size += add;
 
-    for (;; ) {
-        Buffer * buf = m_buffers.back();
+    for (;;) {
+        Buffer *buf = m_buffers.back();
         int added = min(add, buf->m_reserved - buf->m_used);
         memcpy(buf->unused(), src, added);
         buf->m_used += added;
@@ -314,22 +301,22 @@ CharBuf & CharBuf::append (const char src[], size_t srcLen) {
 }
 
 //===========================================================================
-CharBuf & CharBuf::append (const string & str, size_t pos, size_t count) {
+CharBuf &CharBuf::append(const string &str, size_t pos, size_t count) {
     assert(pos < str.size());
     return append(str.data() + pos, min(str.size(), pos + count) - pos);
 }
 
 //===========================================================================
-CharBuf & CharBuf::append (const CharBuf & buf, size_t pos, size_t count) {
+CharBuf &CharBuf::append(const CharBuf &buf, size_t pos, size_t count) {
     assert(pos < buf.size());
     auto ic = find(pos);
     auto eb = m_buffers.end();
-    int add = (int) count;
-    Buffer * ptr = *ic.first;
+    int add = (int)count;
+    Buffer *ptr = *ic.first;
     int copied = min(ptr->m_used - ic.second, add);
     append(ptr->m_data + ic.second, copied);
 
-    for (;; ) {
+    for (;;) {
         add -= copied;
         if (!add || ++ic.first == eb)
             return *this;
@@ -340,8 +327,8 @@ CharBuf & CharBuf::append (const CharBuf & buf, size_t pos, size_t count) {
 }
 
 //===========================================================================
-int CharBuf::compare (const char s[], size_t count) const {
-    for (auto && ptr : m_buffers) {
+int CharBuf::compare(const char s[], size_t count) const {
+    for (auto &&ptr : m_buffers) {
         if (count < ptr->m_used) {
             if (memcmp(ptr->m_data, s, count) < 0)
                 return -1;
@@ -356,23 +343,23 @@ int CharBuf::compare (const char s[], size_t count) const {
 }
 
 //===========================================================================
-int CharBuf::compare (const string & str) const {
+int CharBuf::compare(const string &str) const {
     return compare(str.data(), str.size());
 }
 
 //===========================================================================
-int CharBuf::compare (const CharBuf & buf) const {
+int CharBuf::compare(const CharBuf &buf) const {
     auto myi = m_buffers.begin();
     auto mye = m_buffers.end();
-    const char * mydata;
+    const char *mydata;
     int mycount;
     auto ri = buf.m_buffers.begin();
     auto re = buf.m_buffers.end();
-    const char * rdata;
+    const char *rdata;
     int rcount;
     goto compare_new_buffers;
 
-    for (;; ) {
+    for (;;) {
         if (mycount < rcount) {
             int rc = memcmp(mydata, rdata, mycount);
             if (rc)
@@ -414,28 +401,25 @@ int CharBuf::compare (const CharBuf & buf) const {
 }
 
 //===========================================================================
-CharBuf & CharBuf::replace (size_t pos, size_t count, const char s[]) {
+CharBuf &CharBuf::replace(size_t pos, size_t count, const char s[]) {
     assert(pos + count <= m_size);
 
     if (pos == m_size)
         return append(s);
 
-    int remove = (int) count;
+    int remove = (int)count;
     auto ic = find(pos);
     auto eb = m_buffers.end();
-    Buffer * pbuf = *ic.first;
+    Buffer *pbuf = *ic.first;
 
-    vector<Buffer*>::iterator next;
-    char * base = pbuf->m_data + ic.second;
-    char * ptr = base;
-    char * eptr = ptr + min(pbuf->m_used - ic.second, remove);
-    for (;; ) {
+    vector<Buffer *>::iterator next;
+    char *base = pbuf->m_data + ic.second;
+    char *ptr = base;
+    char *eptr = ptr + min(pbuf->m_used - ic.second, remove);
+    for (;;) {
         if (!*s) {
             return erase(
-                ic.first,
-                int(ptr - pbuf->m_data),
-                remove - int(ptr - base)
-            );
+                ic.first, int(ptr - pbuf->m_data), remove - int(ptr - base));
         }
         *ptr++ = *s++;
         if (ptr == eptr) {
@@ -456,14 +440,14 @@ CharBuf & CharBuf::replace (size_t pos, size_t count, const char s[]) {
     if (remove) {
         assert(remove == pbuf->unused() - ptr);
         auto it = m_buffers.emplace(next, allocBuffer());
-        char * dst = (*it)->m_data;
+        char *dst = (*it)->m_data;
         memcpy(dst, ptr, remove);
         (*it)->m_used = remove;
     }
 
     base = ptr;
     eptr = pbuf->end();
-    for (;; ) {
+    for (;;) {
         if (!*s) {
             int added = int(ptr - base);
             pbuf->m_used += added;
@@ -484,34 +468,26 @@ CharBuf & CharBuf::replace (size_t pos, size_t count, const char s[]) {
 }
 
 //===========================================================================
-CharBuf & CharBuf::replace (
-    size_t pos,
-    size_t count,
-    const char src[],
-    size_t srcLen
-) {
+CharBuf &
+CharBuf::replace(size_t pos, size_t count, const char src[], size_t srcLen) {
     assert(pos + count <= m_size);
     if (pos == m_size)
         return append(src, srcLen);
 
-    int remove = (int) count;
-    int copy = (int) srcLen;
+    int remove = (int)count;
+    int copy = (int)srcLen;
     auto ic = find(pos);
     auto eb = m_buffers.end();
-    Buffer * pbuf = *ic.first;
+    Buffer *pbuf = *ic.first;
     m_size += copy - remove;
 
-    char * ptr = pbuf->m_data + ic.second;
+    char *ptr = pbuf->m_data + ic.second;
     int reserved = pbuf->m_reserved - ic.second;
     int used = pbuf->m_used - ic.second;
     int replaced;
-    for (;; ) {
+    for (;;) {
         if (!copy) {
-            return erase(
-                ic.first,
-                int(ptr - pbuf->m_data),
-                remove
-            );
+            return erase(ic.first, int(ptr - pbuf->m_data), remove);
         }
 
         replaced = min({reserved, remove, copy});
@@ -544,12 +520,12 @@ CharBuf & CharBuf::replace (
 
     // shift following to new block
     if (used > replaced) {
-        Buffer * tmp = *m_buffers.emplace(next, allocBuffer());
+        Buffer *tmp = *m_buffers.emplace(next, allocBuffer());
         memcpy(tmp->m_data, ptr, used - replaced);
         tmp->m_used = used - replaced;
     }
     // copy remaining source into new blocks
-    for (;; ) {
+    for (;;) {
         memcpy(ptr, src, replaced);
         pbuf->m_used += replaced;
         src += replaced;
@@ -564,7 +540,7 @@ CharBuf & CharBuf::replace (
 }
 
 //===========================================================================
-void CharBuf::swap (CharBuf & other) {
+void CharBuf::swap(CharBuf &other) {
     ::swap(m_buffers, other.m_buffers);
     ::swap(m_lastUsed, other.m_lastUsed);
     ::swap(m_size, other.m_size);
@@ -572,7 +548,7 @@ void CharBuf::swap (CharBuf & other) {
 
 //===========================================================================
 // ITempHeap
-char * CharBuf::alloc (size_t bytes, size_t align) {
+char *CharBuf::alloc(size_t bytes, size_t align) {
     return nullptr;
 }
 
@@ -580,30 +556,29 @@ char * CharBuf::alloc (size_t bytes, size_t align) {
 // private
 //===========================================================================
 // static
-CharBuf::Buffer * CharBuf::allocBuffer () {
+CharBuf::Buffer *CharBuf::allocBuffer() {
     return allocBuffer(kDefaultBlockSize);
 }
 
 //===========================================================================
 // static
-CharBuf::Buffer * CharBuf::allocBuffer (size_t reserve) {
-    size_t bytes = max(
-        sizeof(Buffer),
-        offsetof(Buffer, m_data) + reserve * sizeof(*Buffer::m_data)
-        );
+CharBuf::Buffer *CharBuf::allocBuffer(size_t reserve) {
+    size_t bytes =
+        max(sizeof(Buffer),
+            offsetof(Buffer, m_data) + reserve * sizeof(*Buffer::m_data));
     assert(bytes >= sizeof(Buffer));
-    void * vptr = malloc(bytes);
-    auto ptr = new(vptr) Buffer;
-    ptr->m_reserved = (int) reserve;
+    void *vptr = malloc(bytes);
+    auto ptr = new (vptr) Buffer;
+    ptr->m_reserved = (int)reserve;
     return ptr;
 }
 
 //===========================================================================
-pair<vector<CharBuf::Buffer*>::iterator, int> CharBuf::find (size_t pos) {
-    int off = (int) pos;
+pair<vector<CharBuf::Buffer *>::iterator, int> CharBuf::find(size_t pos) {
+    int off = (int)pos;
     if (off <= m_size / 2) {
         auto it = m_buffers.begin();
-        for (;; ) {
+        for (;;) {
             int used = (*it)->m_used;
             if (off <= used) {
                 if (off < used || used < (*it)->m_reserved)
@@ -620,7 +595,7 @@ pair<vector<CharBuf::Buffer*>::iterator, int> CharBuf::find (size_t pos) {
             assert(pos == 0);
             return make_pair(it, off);
         }
-        for (;; ) {
+        for (;;) {
             --it;
             base -= (*it)->m_used;
             if (base <= off)
@@ -630,20 +605,17 @@ pair<vector<CharBuf::Buffer*>::iterator, int> CharBuf::find (size_t pos) {
 }
 
 //===========================================================================
-CharBuf & CharBuf::erase (
-    vector<CharBuf::Buffer*>::iterator it,
-    int pos,
-    int remove
-) {
-    Buffer * pbuf = *it;
+CharBuf &
+CharBuf::erase(vector<CharBuf::Buffer *>::iterator it, int pos, int remove) {
+    Buffer *pbuf = *it;
     assert(pos <= pbuf->m_used && pos >= 0);
     assert(m_size >= remove && remove >= 0);
     m_size -= remove;
     if (pos) {
         int copied = pbuf->m_used - pos - remove;
         if (copied > 0) {
-            char * ptr = pbuf->m_data + pos;
-            char * eptr = ptr + remove;
+            char *ptr = pbuf->m_data + pos;
+            char *eptr = ptr + remove;
             memmove(ptr, eptr, copied);
             pbuf->m_used -= remove;
             return *this;
@@ -673,8 +645,8 @@ CharBuf & CharBuf::erase (
     }
 
     pbuf->m_used -= remove;
-    char * ptr = pbuf->m_data;
-    char * eptr = ptr + remove;
+    char *ptr = pbuf->m_data;
+    char *eptr = ptr + remove;
     memmove(ptr, eptr, pbuf->m_used);
     return *this;
 }

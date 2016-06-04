@@ -17,9 +17,9 @@
 #define NOMINMAX
 #include <Windows.h>
 #include <WinSock2.h>
-#include <WS2tcpip.h>   // getaddrinfo, GetAddrInfoEx
-#include <mstcpip.h>    // SIO_LOOPBACK_FAST_PATH
-#include <MSWSock.h>    // Registered IO
+#include <WS2tcpip.h> // getaddrinfo, GetAddrInfoEx
+#include <mstcpip.h>  // SIO_LOOPBACK_FAST_PATH
+#include <MSWSock.h>  // Registered IO
 
 #pragma comment(lib, "ws2_32.lib")
 

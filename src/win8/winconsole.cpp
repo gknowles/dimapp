@@ -6,7 +6,6 @@ using namespace std;
 
 namespace Dim {
 
-
 /****************************************************************************
  *
  *   Variables
@@ -17,7 +16,6 @@ static mutex s_mut;
 static vector<WORD> s_consoleAttrs;
 static bool s_controlEnabled = false;
 
-
 /****************************************************************************
  *
  *   Helpers
@@ -25,7 +23,7 @@ static bool s_controlEnabled = false;
  ***/
 
 //===========================================================================
-static BOOL WINAPI controlCallback (DWORD ctrl) {
+static BOOL WINAPI controlCallback(DWORD ctrl) {
     if (s_controlEnabled) {
         switch (ctrl) {
         case CTRL_C_EVENT:
@@ -38,7 +36,6 @@ static BOOL WINAPI controlCallback (DWORD ctrl) {
     return false;
 }
 
-
 /****************************************************************************
  *
  *   ConsoleScopedAttr
@@ -46,7 +43,7 @@ static BOOL WINAPI controlCallback (DWORD ctrl) {
  ***/
 
 //===========================================================================
-ConsoleScopedAttr::ConsoleScopedAttr (ConsoleAttr attr) {
+ConsoleScopedAttr::ConsoleScopedAttr(ConsoleAttr attr) {
     // save console text attributes
     HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
     CONSOLE_SCREEN_BUFFER_INFO info;
@@ -54,38 +51,34 @@ ConsoleScopedAttr::ConsoleScopedAttr (ConsoleAttr attr) {
         logMsgCrash() << "GetConsoleScreenBufferInfo: " << GetLastError();
     }
 
-    lock_guard<mutex> lk {s_mut};
+    lock_guard<mutex> lk{s_mut};
     s_consoleAttrs.push_back(info.wAttributes);
     switch (attr) {
     case kConsoleNormal:
-        info.wAttributes =
-            FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_RED;
+        info.wAttributes = FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_RED;
         break;
     case kConsoleGreen:
-        info.wAttributes = FOREGROUND_INTENSITY
-            | FOREGROUND_GREEN;
+        info.wAttributes = FOREGROUND_INTENSITY | FOREGROUND_GREEN;
         break;
     case kConsoleHighlight:
-        info.wAttributes = FOREGROUND_INTENSITY
-            | FOREGROUND_BLUE | FOREGROUND_GREEN;
+        info.wAttributes =
+            FOREGROUND_INTENSITY | FOREGROUND_BLUE | FOREGROUND_GREEN;
         break;
     case kConsoleError:
-        info.wAttributes = FOREGROUND_INTENSITY
-            | FOREGROUND_RED;
+        info.wAttributes = FOREGROUND_INTENSITY | FOREGROUND_RED;
         break;
     }
     SetConsoleTextAttribute(hOutput, info.wAttributes);
 }
 
 //===========================================================================
-ConsoleScopedAttr::~ConsoleScopedAttr () {
+ConsoleScopedAttr::~ConsoleScopedAttr() {
     HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-    lock_guard<mutex> lk {s_mut};
+    lock_guard<mutex> lk{s_mut};
     SetConsoleTextAttribute(hOutput, s_consoleAttrs.back());
     s_consoleAttrs.pop_back();
 }
 
-
 /****************************************************************************
  *
  *   Internal API
@@ -93,12 +86,11 @@ ConsoleScopedAttr::~ConsoleScopedAttr () {
  ***/
 
 //===========================================================================
-void iConsoleInitialize () {
+void iConsoleInitialize() {
     // set ctrl-c handler
     SetConsoleCtrlHandler(&controlCallback, true);
 }
 
-
 /****************************************************************************
  *
  *   Internal API
@@ -106,7 +98,7 @@ void iConsoleInitialize () {
  ***/
 
 //===========================================================================
-void consoleEnableEcho (bool enable) {
+void consoleEnableEcho(bool enable) {
     HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
     DWORD mode = 0;
     GetConsoleMode(hInput, &mode);
@@ -119,9 +111,8 @@ void consoleEnableEcho (bool enable) {
 }
 
 //===========================================================================
-void consoleEnableCtrlC (bool enable) {
+void consoleEnableCtrlC(bool enable) {
     s_controlEnabled = enable;
 }
-
 
 } // namespace

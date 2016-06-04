@@ -6,7 +6,6 @@ using namespace std;
 
 namespace Dim {
 
-
 /****************************************************************************
  *
  *   Private
@@ -26,19 +25,13 @@ enum TextType : char {
     kTextTypes,
 };
 
-const char * kTextEntityTable[] = {
-    nullptr,
-    nullptr,
-    nullptr,
-    "&quote;",
-    "&amp;",
-    "&lt;",
-    "&gt;",
+const char *kTextEntityTable[] = {
+    nullptr, nullptr, nullptr, "&quote;", "&amp;", "&lt;", "&gt;",
 };
 static_assert(size(kTextEntityTable) == kTextTypes, "");
 
 const char kTextTypeTable[256] = {
-//  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
+    //  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
     2, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, // 0
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 1
     1, 3, 1, 1, 1, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 2
@@ -59,7 +52,6 @@ const char kTextTypeTable[256] = {
 
 } // namespace
 
-
 /****************************************************************************
  *
  *   IXBuilder
@@ -68,18 +60,18 @@ const char kTextTypeTable[256] = {
 
 enum IXBuilder::State {
     kStateFail,
-    kStateDocIntro,         //
-    kStateElemNameIntro,    // <
-    kStateElemName,         // <X_
-    kStateAttrNameIntro,    // <X _
-    kStateAttrName,         // <X a_
-    kStateAttrText,         // <X a="_
-    kStateAttrEnd,          // <X a="1"_
-    kStateText,             // >_
+    kStateDocIntro,      //
+    kStateElemNameIntro, // <
+    kStateElemName,      // <X_
+    kStateAttrNameIntro, // <X _
+    kStateAttrName,      // <X a_
+    kStateAttrText,      // <X a="_
+    kStateAttrEnd,       // <X a="1"_
+    kStateText,          // >_
 };
 
 //===========================================================================
-IXBuilder & IXBuilder::text (const char val[]) {
+IXBuilder &IXBuilder::text(const char val[]) {
     switch (m_state) {
     case kStateElemNameIntro:
         m_state = kStateElemName;
@@ -106,7 +98,7 @@ IXBuilder & IXBuilder::text (const char val[]) {
 }
 
 //===========================================================================
-IXBuilder & IXBuilder::elem (const char name[], const char val[]) {
+IXBuilder &IXBuilder::elem(const char name[], const char val[]) {
     switch (m_state) {
     case kStateAttrText:
         append("\">\n<");
@@ -132,7 +124,7 @@ IXBuilder & IXBuilder::elem (const char name[], const char val[]) {
 }
 
 //===========================================================================
-IXBuilder & IXBuilder::attr (const char name[], const char val[]) {
+IXBuilder &IXBuilder::attr(const char name[], const char val[]) {
     switch (m_state) {
     case kStateElemName:
         append(" ");
@@ -157,7 +149,7 @@ IXBuilder & IXBuilder::attr (const char name[], const char val[]) {
 }
 
 //===========================================================================
-IXBuilder & IXBuilder::end () {
+IXBuilder &IXBuilder::end() {
     switch (m_state) {
     case kStateElemName:
         append("/>\n");
@@ -175,7 +167,7 @@ IXBuilder & IXBuilder::end () {
     }
     assert(m_state == kStateText);
     append("</");
-    auto & top = m_stack.back();
+    auto &top = m_stack.back();
     appendCopy(top.pos, top.len);
     m_stack.pop_back();
     append(">\n");
@@ -183,19 +175,15 @@ IXBuilder & IXBuilder::end () {
 }
 
 //===========================================================================
-template<bool isContent>
-void IXBuilder::addText (const char val[]) {
-    const char * base = val;
-    for (;; ) {
-        TextType type = (TextType) kTextTypeTable[*val];
+template <bool isContent> void IXBuilder::addText(const char val[]) {
+    const char *base = val;
+    for (;;) {
+        TextType type = (TextType)kTextTypeTable[*val];
         switch (type) {
         case kTextTypeGreater:
             // ">" must be escaped when following "]]"
             if (isContent) {
-                if (val - base >= 2
-                    && val[-1] == ']'
-                    && val[-2] == ']'
-                ) {
+                if (val - base >= 2 && val[-1] == ']' && val[-2] == ']') {
                     break;
                 }
             }
@@ -225,7 +213,6 @@ void IXBuilder::addText (const char val[]) {
     }
 }
 
-
 /****************************************************************************
  *
  *   XBuilder
@@ -233,20 +220,19 @@ void IXBuilder::addText (const char val[]) {
  ***/
 
 //===========================================================================
-void XBuilder::append (const char text[], size_t count) {
+void XBuilder::append(const char text[], size_t count) {
     m_buf.append(text, count);
 }
 
 //===========================================================================
-void XBuilder::appendCopy (size_t pos, size_t count) {
+void XBuilder::appendCopy(size_t pos, size_t count) {
     m_buf.append(m_buf, pos, count);
 }
 
 //===========================================================================
-size_t XBuilder::size () {
+size_t XBuilder::size() {
     return m_buf.size();
 }
-
 
 /****************************************************************************
  *
@@ -255,42 +241,42 @@ size_t XBuilder::size () {
  ***/
 
 //===========================================================================
-IXBuilder & operator<< (IXBuilder & out, int64_t val) {
+IXBuilder &operator<<(IXBuilder &out, int64_t val) {
     IntegralStr<int64_t> tmp(val);
     return out.text(tmp);
 }
 
 //===========================================================================
-IXBuilder & operator<< (IXBuilder & out, uint64_t val) {
+IXBuilder &operator<<(IXBuilder &out, uint64_t val) {
     IntegralStr<int64_t> tmp(val);
     return out.text(tmp);
 }
 
 //===========================================================================
-IXBuilder & operator<< (IXBuilder & out, int val) {
+IXBuilder &operator<<(IXBuilder &out, int val) {
     IntegralStr<int> tmp(val);
     return out.text(tmp);
 }
 
 //===========================================================================
-IXBuilder & operator<< (IXBuilder & out, unsigned val) {
+IXBuilder &operator<<(IXBuilder &out, unsigned val) {
     IntegralStr<unsigned> tmp(val);
     return out.text(tmp);
 }
 
 //===========================================================================
-IXBuilder & operator<< (IXBuilder & out, char val) {
-    char str[] = { val, 0 };
+IXBuilder &operator<<(IXBuilder &out, char val) {
+    char str[] = {val, 0};
     return out.text(str);
 }
 
 //===========================================================================
-IXBuilder & operator<< (IXBuilder & out, const char val[]) {
+IXBuilder &operator<<(IXBuilder &out, const char val[]) {
     return out.text(val);
 }
 
 //===========================================================================
-IXBuilder & operator<< (IXBuilder & out, const std::string & val) {
+IXBuilder &operator<<(IXBuilder &out, const std::string &val) {
     return out.text(val.c_str());
 }
 

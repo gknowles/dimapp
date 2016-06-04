@@ -24,31 +24,31 @@ enum TlsAlertLevel : uint8_t {
 enum TlsAlertDesc : uint8_t {
     kCloseNotify = 0,
     kEndOfEarlyData = 1,
-    kUnexpectedMessage = 10,            // fatal
-    kBadRecordMac = 20,                 // fatal
-    kRecordOverflow = 22,               // fatal
-    kHandshakeFailure = 40,             // fatal
+    kUnexpectedMessage = 10, // fatal
+    kBadRecordMac = 20,      // fatal
+    kRecordOverflow = 22,    // fatal
+    kHandshakeFailure = 40,  // fatal
     kBadCertificate = 42,
     kUnsupportedCertificate = 43,
     kCertificateRevoked = 44,
     kCertificateExpired = 45,
     kCertificateUnknown = 46,
-    kIllegalParameter = 47,             // fatal
-    kUnknownCa = 48,                    // fatal
-    kAccessDenied = 49,                 // fatal
-    kDecodeError = 50,                  // fatal
-    kDecryptError = 51,                 // fatal
-    kProtocolVersion = 70,              // fatal
-    kInsufficientSecurity = 71,         // fatal
-    kInternalError = 80,                // fatal
-    kInappropriateFallback = 86,        // fatal
+    kIllegalParameter = 47,      // fatal
+    kUnknownCa = 48,             // fatal
+    kAccessDenied = 49,          // fatal
+    kDecodeError = 50,           // fatal
+    kDecryptError = 51,          // fatal
+    kProtocolVersion = 70,       // fatal
+    kInsufficientSecurity = 71,  // fatal
+    kInternalError = 80,         // fatal
+    kInappropriateFallback = 86, // fatal
     kUserCanceled = 90,
-    kMissingExtension = 109,            // fatal
-    kUnsupportedExtension = 110,        // fatal
+    kMissingExtension = 109,     // fatal
+    kUnsupportedExtension = 110, // fatal
     kCertificateUnobtainable = 111,
     kUnrecognizedName = 112,
-    kBadCertificateStatusResponse = 113,// fatal
-    kBadCertificateHashValue = 114,     // fatal
+    kBadCertificateStatusResponse = 113, // fatal
+    kBadCertificateHashValue = 114,      // fatal
     kUnknownPskIdentity = 115,
 };
 
@@ -90,7 +90,6 @@ enum TlsSignatureScheme : uint16_t {
     kSigEd25519 = 0x0703,
 };
 
-
 /****************************************************************************
  *
  *   Tls connection context
@@ -99,31 +98,21 @@ enum TlsSignatureScheme : uint16_t {
 
 struct TlsConnHandle : HandleBase {};
 
-TlsConnHandle tlsConnect (
-    CharBuf * out,
+TlsConnHandle tlsConnect(
+    CharBuf *out,
     const char hostName[],
     const TlsCipherSuite suites[],
-    size_t count
-);
-TlsConnHandle tlsAccept (
-    const TlsCipherSuite suites[],
-    size_t count
-);
-void tlsClose (TlsConnHandle h);
+    size_t count);
+TlsConnHandle tlsAccept(const TlsCipherSuite suites[], size_t count);
+void tlsClose(TlsConnHandle h);
 
-bool tlsRecv (
+bool tlsRecv(
     TlsConnHandle conn,
-    CharBuf * out,
-    CharBuf * data,
-    const void * src,
-    size_t srcLen
-);
+    CharBuf *out,
+    CharBuf *data,
+    const void *src,
+    size_t srcLen);
 
-void tlsSend (
-    TlsConnHandle conn,
-    CharBuf * out,
-    const void * src,
-    size_t srcLen
-);
+void tlsSend(TlsConnHandle conn, CharBuf *out, const void *src, size_t srcLen);
 
 } // namespace

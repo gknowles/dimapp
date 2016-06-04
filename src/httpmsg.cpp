@@ -6,13 +6,11 @@ using namespace std;
 
 namespace Dim {
 
-
 /****************************************************************************
  *
  *   Tuning parameters
  *
  ***/
-
 
 /****************************************************************************
  *
@@ -30,65 +28,65 @@ namespace {
 
 struct HttpHdrInfo {
     HttpHdr header;
-    const char * name;
+    const char *name;
 };
 
 const TokenTable::Token s_hdrNames[] = {
-    { kHttpInvalid, "INVALID" },
-    { KHttp_Authority, ":authority" },
-    { kHttp_Method, ":method" },
-    { kHttp_Path, ":path" },
-    { kHttp_Schema, ":schema" },
-    { kHttp_Status, ":status" },
-    { kHttpAccept, "accept" },
-    { kHttpAcceptCharset, "accept-charset" },
-    { kHttpAcceptEncoding, "accept-encoding" },
-    { kHttpAcceptLanguage, "accept-language" },
-    { kHttpAcceptRanges, "accept-ranges" },
-    { kHttpAccessControlAllowOrigin, "accept-control-allow-origin" },
-    { kHttpAge, "age" },
-    { kHttpAllow, "allow" },
-    { kHttpAuthorization, "authorization" },
-    { kHttpCacheControl, "cache-control" },
-    { kHttpConnection, "connection" },
-    { kHttpContentDisposition, "content-disposition" },
-    { kHttpContentEncoding, "content-encoding" },
-    { kHttpContentLanguage, "content-language" },
-    { kHttpContentLength, "content-length" },
-    { kHttpContentLocation, "content-location" },
-    { kHttpContentRange, "content-range" },
-    { kHttpContentType, "content-type" },
-    { kHttpCookie, "cookie" },
-    { kHttpDate, "date" },
-    { kHttpETag, "etag" },
-    { kHttpExpect, "expect" },
-    { kHttpExpires, "expires" },
-    { kHttpForwardedFor, "forwarded-for" },
-    { kHttpFrom, "from" },
-    { kHttpHost, "host" },
-    { kHttpIfMatch, "if-match" },
-    { kHttpIfModifiedSince, "if-modified-since" },
-    { kHttpIfNoneMatch, "if-none-match" },
-    { kHttpIfRange, "if-range" },
-    { kHttpIfUnmodifiedSince, "if-unmodified-since" },
-    { kHttpLastModified, "last-modified" },
-    { kHttpLink, "link" },
-    { kHttpLocation, "location" },
-    { kHttpMaxForwards, "max-forwards" },
-    { kHttpProxyAuthenticate, "proxy-authenticate" },
-    { kHttpProxyAuthorization, "proxy-authorization" },
-    { kHttpRange, "range" },
-    { kHttpReferer, "referer" },
-    { kHttpRefresh, "refresh" },
-    { kHttpRetryAfter, "retry-after" },
-    { kHttpServer, "server" },
-    { kHttpSetCookie, "set-cookie" },
-    { kHttpStrictTransportSecurity, "strict-transport-security" },
-    { kHttpTransferEncoding, "transfer-encoding" },
-    { kHttpUserAgent, "user-agent" },
-    { kHttpVary, "vary" },
-    { kHttpVia, "via" },
-    { kHttpWwwAuthenticate, "www-authenticate" },
+    {kHttpInvalid, "INVALID"},
+    {KHttp_Authority, ":authority"},
+    {kHttp_Method, ":method"},
+    {kHttp_Path, ":path"},
+    {kHttp_Schema, ":schema"},
+    {kHttp_Status, ":status"},
+    {kHttpAccept, "accept"},
+    {kHttpAcceptCharset, "accept-charset"},
+    {kHttpAcceptEncoding, "accept-encoding"},
+    {kHttpAcceptLanguage, "accept-language"},
+    {kHttpAcceptRanges, "accept-ranges"},
+    {kHttpAccessControlAllowOrigin, "accept-control-allow-origin"},
+    {kHttpAge, "age"},
+    {kHttpAllow, "allow"},
+    {kHttpAuthorization, "authorization"},
+    {kHttpCacheControl, "cache-control"},
+    {kHttpConnection, "connection"},
+    {kHttpContentDisposition, "content-disposition"},
+    {kHttpContentEncoding, "content-encoding"},
+    {kHttpContentLanguage, "content-language"},
+    {kHttpContentLength, "content-length"},
+    {kHttpContentLocation, "content-location"},
+    {kHttpContentRange, "content-range"},
+    {kHttpContentType, "content-type"},
+    {kHttpCookie, "cookie"},
+    {kHttpDate, "date"},
+    {kHttpETag, "etag"},
+    {kHttpExpect, "expect"},
+    {kHttpExpires, "expires"},
+    {kHttpForwardedFor, "forwarded-for"},
+    {kHttpFrom, "from"},
+    {kHttpHost, "host"},
+    {kHttpIfMatch, "if-match"},
+    {kHttpIfModifiedSince, "if-modified-since"},
+    {kHttpIfNoneMatch, "if-none-match"},
+    {kHttpIfRange, "if-range"},
+    {kHttpIfUnmodifiedSince, "if-unmodified-since"},
+    {kHttpLastModified, "last-modified"},
+    {kHttpLink, "link"},
+    {kHttpLocation, "location"},
+    {kHttpMaxForwards, "max-forwards"},
+    {kHttpProxyAuthenticate, "proxy-authenticate"},
+    {kHttpProxyAuthorization, "proxy-authorization"},
+    {kHttpRange, "range"},
+    {kHttpReferer, "referer"},
+    {kHttpRefresh, "refresh"},
+    {kHttpRetryAfter, "retry-after"},
+    {kHttpServer, "server"},
+    {kHttpSetCookie, "set-cookie"},
+    {kHttpStrictTransportSecurity, "strict-transport-security"},
+    {kHttpTransferEncoding, "transfer-encoding"},
+    {kHttpUserAgent, "user-agent"},
+    {kHttpVary, "vary"},
+    {kHttpVia, "via"},
+    {kHttpWwwAuthenticate, "www-authenticate"},
 };
 static_assert(size(s_hdrNames) == kHttps, "");
 
@@ -100,7 +98,6 @@ struct HdrNameInfo : HttpMsg::HdrName {
 
 } // namespace
 
-
 /****************************************************************************
  *
  *   HttpMsg::HdrName
@@ -108,31 +105,26 @@ struct HdrNameInfo : HttpMsg::HdrName {
  ***/
 
 //===========================================================================
-auto HttpMsg::HdrName::begin ()->ForwardListIterator<HdrValue> {
-    auto * hdr = static_cast<HdrNameInfo *>(this);
+auto HttpMsg::HdrName::begin() -> ForwardListIterator<HdrValue> {
+    auto *hdr = static_cast<HdrNameInfo *>(this);
     return ForwardListIterator<HdrValue>(&hdr->m_value);
 }
 
 //===========================================================================
-auto HttpMsg::HdrName::end ()->ForwardListIterator<HdrValue> {
+auto HttpMsg::HdrName::end() -> ForwardListIterator<HdrValue> {
     return ForwardListIterator<HdrValue>(nullptr);
 }
 
 //===========================================================================
-auto HttpMsg::HdrName::begin () const
-->ForwardListIterator<const HdrValue>
-{
-    auto * hdr = static_cast<const HdrNameInfo *>(this);
+auto HttpMsg::HdrName::begin() const -> ForwardListIterator<const HdrValue> {
+    auto *hdr = static_cast<const HdrNameInfo *>(this);
     return ForwardListIterator<const HdrValue>(&hdr->m_value);
 }
 
 //===========================================================================
-auto HttpMsg::HdrName::end () const
-->ForwardListIterator<const HdrValue>
-{
+auto HttpMsg::HdrName::end() const -> ForwardListIterator<const HdrValue> {
     return ForwardListIterator<const HdrValue>(nullptr);
 }
-
 
 /****************************************************************************
  *
@@ -141,32 +133,24 @@ auto HttpMsg::HdrName::end () const
  ***/
 
 //===========================================================================
-void HttpMsg::addHeader (HttpHdr id, const char value[]) {
+void HttpMsg::addHeader(HttpHdr id, const char value[]) {
     addHeaderRef(id, m_heap.strDup(value));
 }
 
 //===========================================================================
-void HttpMsg::addHeader (const char name[], const char value[]) {
+void HttpMsg::addHeader(const char name[], const char value[]) {
     HttpHdr id;
-    if (s_hdrNameTbl.find((int *) &id, name))
+    if (s_hdrNameTbl.find((int *)&id, name))
         return addHeader(id, value);
 
-    addHeaderRef(
-        kHttpInvalid,
-        m_heap.strDup(name),
-        m_heap.strDup(value)
-    );
+    addHeaderRef(kHttpInvalid, m_heap.strDup(name), m_heap.strDup(value));
 }
 
 //===========================================================================
-void HttpMsg::addHeaderRef (
-    HttpHdr id,
-    const char name[],
-    const char value[]
-) {
+void HttpMsg::addHeaderRef(HttpHdr id, const char name[], const char value[]) {
     auto ni = static_cast<HdrNameInfo *>(m_firstHeader);
     auto prev = ni;
-    for (;; ) {
+    for (;;) {
         if (!ni) {
             ni = m_heap.emplace<HdrNameInfo>();
             if (prev) {
@@ -179,9 +163,7 @@ void HttpMsg::addHeaderRef (
             break;
         }
 
-        if (ni->m_id == id
-            && (id || !strcmp(ni->m_name, name))
-        ) {
+        if (ni->m_id == id && (id || !strcmp(ni->m_name, name))) {
             break;
         }
         prev = ni;
@@ -205,52 +187,51 @@ void HttpMsg::addHeaderRef (
 }
 
 //===========================================================================
-void HttpMsg::addHeaderRef (HttpHdr id, const char value[]) {
-    const char * name = tokenTableGetName(s_hdrNameTbl, id);
+void HttpMsg::addHeaderRef(HttpHdr id, const char value[]) {
+    const char *name = tokenTableGetName(s_hdrNameTbl, id);
     addHeaderRef(id, name, value);
 }
 
 //===========================================================================
-void HttpMsg::addHeaderRef (const char name[], const char value[]) {
+void HttpMsg::addHeaderRef(const char name[], const char value[]) {
     HttpHdr id = tokenTableGetEnum(s_hdrNameTbl, name, kHttpInvalid);
     addHeaderRef(id, name, value);
 }
 
 //===========================================================================
-auto HttpMsg::begin ()->ForwardListIterator<HdrName> {
-    return ForwardListIterator<HdrName> {m_firstHeader};
+auto HttpMsg::begin() -> ForwardListIterator<HdrName> {
+    return ForwardListIterator<HdrName>{m_firstHeader};
 }
 
 //===========================================================================
-auto HttpMsg::end ()->ForwardListIterator<HdrName> {
-    return ForwardListIterator<HdrName> {nullptr};
+auto HttpMsg::end() -> ForwardListIterator<HdrName> {
+    return ForwardListIterator<HdrName>{nullptr};
 }
 
 //===========================================================================
-auto HttpMsg::begin () const->ForwardListIterator<const HdrName> {
-    return ForwardListIterator<const HdrName> {m_firstHeader};
+auto HttpMsg::begin() const -> ForwardListIterator<const HdrName> {
+    return ForwardListIterator<const HdrName>{m_firstHeader};
 }
 
 //===========================================================================
-auto HttpMsg::end () const->ForwardListIterator<const HdrName> {
-    return ForwardListIterator<const HdrName> {nullptr};
+auto HttpMsg::end() const -> ForwardListIterator<const HdrName> {
+    return ForwardListIterator<const HdrName>{nullptr};
 }
 
 //===========================================================================
-CharBuf & HttpMsg::body () {
+CharBuf &HttpMsg::body() {
     return m_data;
 }
 
 //===========================================================================
-const CharBuf & HttpMsg::body () const {
+const CharBuf &HttpMsg::body() const {
     return m_data;
 }
 
 //===========================================================================
-ITempHeap & HttpMsg::heap () {
+ITempHeap &HttpMsg::heap() {
     return m_heap;
 }
-
 
 /****************************************************************************
  *
@@ -258,7 +239,7 @@ ITempHeap & HttpMsg::heap () {
  *
  ***/
 
-bool HttpRequest::checkPseudoHeaders () const {
+bool HttpRequest::checkPseudoHeaders() const {
     const int must = kFlagHasMethod | kFlagHasScheme | kFlagHasPath;
     const int mustNot = kFlagHasStatus;
     return (m_flags & must) == must && (~m_flags & mustNot);

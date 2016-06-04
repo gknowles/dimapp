@@ -6,7 +6,6 @@ using namespace std;
 using namespace Dim;
 using namespace Dim::CmdLine;
 
-
 /****************************************************************************
  *
  *   OptBase
@@ -15,15 +14,13 @@ using namespace Dim::CmdLine;
 
 //===========================================================================
 OptBase::OptBase(
-    const std::string & names,
-    const std::string & desc,
+    const std::string &names,
+    const std::string &desc,
     bool multiple,
-    bool boolean
-) {}
+    bool boolean) {}
 
 //===========================================================================
 OptBase::~OptBase() {}
-
 
 /****************************************************************************
  *
@@ -32,15 +29,16 @@ OptBase::~OptBase() {}
  ***/
 
 //===========================================================================
-static bool FindUnescapedQuote(string & arg, const char *& ptr) {
+static bool FindUnescapedQuote(string &arg, const char *&ptr) {
     // only called when a \ is consumed
     assert(ptr[-1] == '\\');
 
     char ch;
     unsigned num = 1;
-    for (;; ) {
+    for (;;) {
         ch = *ptr;
-        if (ch != '\\') break;
+        if (ch != '\\')
+            break;
         ptr += 1;
         num += 1;
     }
@@ -64,21 +62,25 @@ static bool FindUnescapedQuote(string & arg, const char *& ptr) {
 }
 
 //===========================================================================
-static void ParseArg(string & arg, const char *& ptr) {
-    for (;; ) {
+static void ParseArg(string &arg, const char *&ptr) {
+    for (;;) {
         char ch = *ptr++;
-        if (ch == 0 || ch == '\t' || ch == ' ') return;
+        if (ch == 0 || ch == '\t' || ch == ' ')
+            return;
         if (ch == '\\') {
-            if (FindUnescapedQuote(arg, ptr)) {}
+            if (FindUnescapedQuote(arg, ptr)) {
+            }
             unsigned num = 1;
-            for (;; ) {
+            for (;;) {
                 ch = *ptr++;
-                if (ch != '\\') break;
+                if (ch != '\\')
+                    break;
                 num += 1;
             }
             if (ch != '"') {
                 arg.append(num, '\\');
-                if (ch == 0 || ch == '\t' || ch == ' ') return;
+                if (ch == 0 || ch == '\t' || ch == ' ')
+                    return;
                 arg.push_back(ch);
                 continue;
             }
@@ -87,25 +89,29 @@ static void ParseArg(string & arg, const char *& ptr) {
                 arg.push_back('"');
                 continue;
             }
-            for (;; ) {
+            for (;;) {
                 ch = *ptr++;
-                if (ch == 0) return;
+                if (ch == 0)
+                    return;
             }
         }
-        if (ch == '"') {}
+        if (ch == '"') {
+        }
     }
 }
 
 //===========================================================================
-static void ParseOptions(vector<string> & argv, const char cmdline[]) {
+static void ParseOptions(vector<string> &argv, const char cmdline[]) {
     argv.resize(0);
-    const char * ptr = cmdline;
+    const char *ptr = cmdline;
 
     // skip whitespace
     for (;; ++ptr) {
         char ch = *ptr;
-        if (ch == 0) return;
-        if (ch == '\t' || ch == ' ') break;
+        if (ch == 0)
+            return;
+        if (ch == '\t' || ch == ' ')
+            break;
     }
 
     // get args
@@ -117,15 +123,15 @@ static void ParseOptions(vector<string> & argv, const char cmdline[]) {
 }
 
 //===========================================================================
-static bool ParseOptions (const vector<string> & argv) {
+static bool ParseOptions(const vector<string> &argv) {
     return argv.size() || argv.empty();
 }
 
 //===========================================================================
-bool Dim::CmdLine::ParseOptions(int argc, char * argv[]) {
+bool Dim::CmdLine::ParseOptions(int argc, char *argv[]) {
     ostringstream os;
     int args = 0;
-    for (char * ptr = *argv; ptr; ptr = *++argv) {
+    for (char *ptr = *argv; ptr; ptr = *++argv) {
         if (++args > 1)
             os << ' ';
         os << '"';
@@ -151,5 +157,5 @@ bool Dim::CmdLine::ParseOptions(const char cmdline[]) {
     return ::ParseOptions(argv);
 }
 
-void Dim::CmdLine::PrintError(std::ostream & os);
-void Dim::CmdLine::PrintHelp(std::ostream & os);
+void Dim::CmdLine::PrintError(std::ostream &os);
+void Dim::CmdLine::PrintHelp(std::ostream &os);

@@ -5,7 +5,6 @@
 
 namespace Dim {
 
-
 /****************************************************************************
  *
  *   Overlapped
@@ -13,10 +12,9 @@ namespace Dim {
  ***/
 
 struct WinOverlappedEvent {
-    OVERLAPPED overlapped {};
-    ITaskNotify * notify {nullptr};
+    OVERLAPPED overlapped{};
+    ITaskNotify *notify{nullptr};
 };
-
 
 /****************************************************************************
  *
@@ -25,21 +23,18 @@ struct WinOverlappedEvent {
  ***/
 
 class WinEvent {
-public:
-    WinEvent ();
-    ~WinEvent ();
+  public:
+    WinEvent();
+    ~WinEvent();
 
-    void signal ();
-    void wait (Duration wait = kTimerInfinite);
+    void signal();
+    void wait(Duration wait = kTimerInfinite);
 
-    HANDLE nativeHandle () const {
-        return m_handle;
-    };
+    HANDLE nativeHandle() const { return m_handle; };
 
-private:
+  private:
     HANDLE m_handle;
 };
-
 
 /****************************************************************************
  *
@@ -47,10 +42,9 @@ private:
  *
  ***/
 
-void winIocpInitialize ();
+void winIocpInitialize();
 
-bool winIocpBindHandle (HANDLE handle);
-
+bool winIocpBindHandle(HANDLE handle);
 
 /****************************************************************************
  *
@@ -59,16 +53,15 @@ bool winIocpBindHandle (HANDLE handle);
  ***/
 
 class IWinEventWaitNotify : public ITaskNotify {
-public:
-    IWinEventWaitNotify ();
-    ~IWinEventWaitNotify ();
+  public:
+    IWinEventWaitNotify();
+    ~IWinEventWaitNotify();
 
-    virtual void onTask () override = 0;
+    virtual void onTask() override = 0;
 
-    OVERLAPPED m_overlapped {};
-    HANDLE m_registeredWait {nullptr};
+    OVERLAPPED m_overlapped{};
+    HANDLE m_registeredWait{nullptr};
 };
-
 
 /****************************************************************************
  *
@@ -77,27 +70,26 @@ public:
  ***/
 
 class WinError {
-public:
+  public:
     enum NtStatus;
 
-public:
+  public:
     // default constructor calls GetLastError()
-    WinError ();
-    WinError (NtStatus status);
-    WinError (int error);
+    WinError();
+    WinError(NtStatus status);
+    WinError(int error);
 
-    WinError & operator= (int error);
+    WinError &operator=(int error);
     // sets equivalent standard windows error value
-    WinError & operator= (NtStatus status);
+    WinError &operator=(NtStatus status);
 
     operator int() const { return m_value; }
 
-private:
+  private:
     int m_value;
 };
 
-::std::ostream & operator<< (::std::ostream & os, const WinError & val);
-
+::std::ostream &operator<<(::std::ostream &os, const WinError &val);
 
 /****************************************************************************
  *
@@ -105,7 +97,7 @@ private:
  *
  ***/
 
-SOCKET winSocketCreate ();
-SOCKET winSocketCreate (const Endpoint & localEnd);
+SOCKET winSocketCreate();
+SOCKET winSocketCreate(const Endpoint &localEnd);
 
 } // namespace

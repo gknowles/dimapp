@@ -61,6 +61,7 @@ project "-meta"
   kind "StaticLib"
   location "projects"
   files { 
+    ".clang-format",
     "uncrustify.cfg",
     "*.lua",
     "*.yml",

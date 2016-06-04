@@ -2,8 +2,8 @@
 #include "dim.h"
 #include "dim/hpack.h"
 #include "dim/tlsrecord.h"
-#include "intern.h"
 #include "httpint.h"
+#include "intern.h"
 #include "tlsint.h"
 
 #define SODIUM_STATIC

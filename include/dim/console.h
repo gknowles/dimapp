@@ -13,13 +13,14 @@ enum ConsoleAttr {
 };
 
 class ConsoleScopedAttr {
-int m_attr;
-public:
-    ConsoleScopedAttr (ConsoleAttr attr);
-    ~ConsoleScopedAttr ();
+    int m_attr;
+
+  public:
+    ConsoleScopedAttr(ConsoleAttr attr);
+    ~ConsoleScopedAttr();
 };
 
-void consoleEnableEcho (bool enable = true);
-void consoleEnableCtrlC (bool enable = true);
+void consoleEnableEcho(bool enable = true);
+void consoleEnableCtrlC(bool enable = true);
 
 } // namespace

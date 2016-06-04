@@ -1,8 +1,9 @@
 // intern.h - dim core
 #pragma once
 
-namespace Dim {
+#include <cstdint>
 
+namespace Dim {
 
 /****************************************************************************
  *
@@ -10,8 +11,7 @@ namespace Dim {
  *
  ***/
 
-void iConsoleInitialize ();
-
+void iConsoleInitialize();
 
 /****************************************************************************
  *
@@ -19,8 +19,7 @@ void iConsoleInitialize ();
  *
  ***/
 
-void iFileInitialize ();
-
+void iFileInitialize();
 
 /****************************************************************************
  *
@@ -28,8 +27,7 @@ void iFileInitialize ();
  *
  ***/
 
-void iHashInitialize ();
-
+void iHashInitialize();
 
 /****************************************************************************
  *
@@ -37,8 +35,7 @@ void iHashInitialize ();
  *
  ***/
 
-void iSocketInitialize ();
-
+void iSocketInitialize();
 
 /****************************************************************************
  *
@@ -46,9 +43,8 @@ void iSocketInitialize ();
  *
  ***/
 
-void iTaskInitialize ();
-void iTaskDestroy ();
-
+void iTaskInitialize();
+void iTaskDestroy();
 
 /****************************************************************************
  *
@@ -56,9 +52,8 @@ void iTaskDestroy ();
  *
  ***/
 
-void iTimerInitialize ();
-void iTimerDestroy ();
-
+void iTimerInitialize();
+void iTimerDestroy();
 
 /****************************************************************************
  *
@@ -66,6 +61,6 @@ void iTimerDestroy ();
  *
  ***/
 
-int64_t iClockGetTicks ();
+int64_t iClockGetTicks();
 
 } // namespace

@@ -16,7 +16,6 @@ namespace Dim {
 
 const auto kTimerInfinite = Duration::max();
 
-
 /****************************************************************************
  *
  *   Implemented by clients
@@ -24,15 +23,14 @@ const auto kTimerInfinite = Duration::max();
  ***/
 
 class ITimerNotify {
-public:
-    virtual ~ITimerNotify ();
-    virtual Duration onTimer (TimePoint now) = 0;
+  public:
+    virtual ~ITimerNotify();
+    virtual Duration onTimer(TimePoint now) = 0;
 
-private:
+  private:
     friend class Timer;
     std::shared_ptr<Timer> m_timer;
 };
-
 
 /****************************************************************************
  *
@@ -40,11 +38,8 @@ private:
  *
  ***/
 
-void timerUpdate (
-    ITimerNotify * notify,
-    Duration wait,
-    bool onlyIfSooner = false
-);
-void timerStopSync (ITimerNotify * notify);
+void timerUpdate(
+    ITimerNotify *notify, Duration wait, bool onlyIfSooner = false);
+void timerStopSync(ITimerNotify *notify);
 
 } // namespace

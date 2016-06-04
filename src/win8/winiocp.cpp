@@ -6,7 +6,6 @@ using namespace std;
 
 namespace Dim {
 
-
 /****************************************************************************
  *
  *   Incomplete public types
@@ -21,17 +20,15 @@ namespace Dim {
 
 namespace {} // namespace
 
-
 /****************************************************************************
  *
  *   Variables
  *
  ***/
 
-static RunMode s_mode {kRunStopped};
+static RunMode s_mode{kRunStopped};
 static HANDLE s_iocp;
 static mutex s_mut;
-
 
 /****************************************************************************
  *
@@ -40,20 +37,15 @@ static mutex s_mut;
  ***/
 
 //===========================================================================
-static void iocpDispatchThread () {
-    OVERLAPPED * overlapped;
+static void iocpDispatchThread() {
+    OVERLAPPED *overlapped;
     ULONG_PTR key;
     ULONG bytes;
-    for (;; ) {
+    for (;;) {
         // TODO: use GetQueuedCompletionStatusEx and array version of
         // DimTaskPushEvent
         if (!GetQueuedCompletionStatus(
-            s_iocp,
-            &bytes,
-            &key,
-            &overlapped,
-            INFINITE
-            )) {
+                s_iocp, &bytes, &key, &overlapped, INFINITE)) {
             WinError err;
             if (err == ERROR_ABANDONED_WAIT_0) {
                 // completion port was closed
@@ -61,19 +53,17 @@ static void iocpDispatchThread () {
             } else if (err == ERROR_OPERATION_ABORTED) {
                 // probably file handle was closed
             } else {
-                logMsgCrash() << "GetQueuedCompletionStatus: "
-                              << err;
+                logMsgCrash() << "GetQueuedCompletionStatus: " << err;
             }
         }
 
-        auto evt = (WinOverlappedEvent *) overlapped;
+        auto evt = (WinOverlappedEvent *)overlapped;
         taskPushEvent(*evt->notify);
     }
 
-    lock_guard<mutex> lk {s_mut};
+    lock_guard<mutex> lk{s_mut};
     s_iocp = 0;
 }
-
 
 /****************************************************************************
  *
@@ -83,17 +73,17 @@ static void iocpDispatchThread () {
 
 namespace {
 class WinIocpShutdown : public IAppShutdownNotify {
-bool onAppQueryConsoleDestroy () override;
+    bool onAppQueryConsoleDestroy() override;
 };
 static WinIocpShutdown s_cleanup;
 } // namespace
 
 //===========================================================================
-bool WinIocpShutdown::onAppQueryConsoleDestroy () {
+bool WinIocpShutdown::onAppQueryConsoleDestroy() {
     if (s_mode != kRunStopping) {
         s_mode = kRunStopping;
         if (!CloseHandle(s_iocp))
-            logMsgError() << "CloseHandle(iocp): " << WinError {};
+            logMsgError() << "CloseHandle(iocp): " << WinError{};
 
         Sleep(0);
     }
@@ -110,7 +100,6 @@ bool WinIocpShutdown::onAppQueryConsoleDestroy () {
     return true;
 }
 
-
 /****************************************************************************
  *
  *   Internal API
@@ -118,36 +107,31 @@ bool WinIocpShutdown::onAppQueryConsoleDestroy () {
  ***/
 
 //===========================================================================
-void winIocpInitialize () {
+void winIocpInitialize() {
     s_mode = kRunStarting;
     appMonitorShutdown(&s_cleanup);
 
     s_iocp = CreateIoCompletionPort(
         INVALID_HANDLE_VALUE,
-        NULL,     // existing port
-        NULL,     // completion key
-        0       // num threads, 0 for default
+        NULL, // existing port
+        NULL, // completion key
+        0     // num threads, 0 for default
         );
     if (!s_iocp)
-        logMsgCrash() << "CreateIoCompletionPort(null): " << WinError {};
+        logMsgCrash() << "CreateIoCompletionPort(null): " << WinError{};
 
-    thread thr {iocpDispatchThread};
+    thread thr{iocpDispatchThread};
     thr.detach();
 
     s_mode = kRunRunning;
 }
 
 //===========================================================================
-bool winIocpBindHandle (HANDLE handle) {
+bool winIocpBindHandle(HANDLE handle) {
     assert(s_iocp);
 
-    if (!CreateIoCompletionPort(
-        handle,
-        s_iocp,
-        NULL,
-        0
-        )) {
-        logMsgError() << "CreateIoCompletionPort(handle): " << WinError {};
+    if (!CreateIoCompletionPort(handle, s_iocp, NULL, 0)) {
+        logMsgError() << "CreateIoCompletionPort(handle): " << WinError{};
         return false;
     }
 

@@ -6,7 +6,6 @@ using namespace std;
 
 namespace Dim {
 
-
 /****************************************************************************
  *
  *   Time
@@ -14,7 +13,7 @@ namespace Dim {
  ***/
 
 //===========================================================================
-int64_t iClockGetTicks () {
+int64_t iClockGetTicks() {
     LARGE_INTEGER out;
     FILETIME ft;
     GetSystemTimeAsFileTime(&ft);

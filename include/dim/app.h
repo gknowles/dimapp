@@ -9,27 +9,20 @@ namespace Dim {
 enum RunMode;
 class ITaskNotify;
 
-
 class IAppShutdownNotify {
-public:
-    virtual ~IAppShutdownNotify () {}
+  public:
+    virtual ~IAppShutdownNotify() {}
 
-    virtual void onAppStartClientCleanup () {}
-    virtual bool onAppQueryClientDestroy () {
-        return true;
-    }
-    virtual void onAppStartServerCleanup () {}
-    virtual bool onAppQueryServerDestroy () {
-        return true;
-    }
-    virtual void onAppStartConsoleCleanup () {}
-    virtual bool onAppQueryConsoleDestroy () {
-        return true;
-    }
+    virtual void onAppStartClientCleanup() {}
+    virtual bool onAppQueryClientDestroy() { return true; }
+    virtual void onAppStartServerCleanup() {}
+    virtual bool onAppQueryServerDestroy() { return true; }
+    virtual void onAppStartConsoleCleanup() {}
+    virtual bool onAppQueryConsoleDestroy() { return true; }
 };
 
 // returns exit code
-int appRun (ITaskNotify & app);
+int appRun(ITaskNotify &app);
 
 enum {
     kExitSuccess = 0,
@@ -39,11 +32,11 @@ enum {
     // first available for use by application
     kExitFirstAvailable
 };
-void appSignalShutdown (int exitcode = kExitSuccess);
+void appSignalShutdown(int exitcode = kExitSuccess);
 
-void appMonitorShutdown (IAppShutdownNotify * cleanup);
-bool appQueryDestroyFailed ();
+void appMonitorShutdown(IAppShutdownNotify *cleanup);
+bool appQueryDestroyFailed();
 
-RunMode appMode ();
+RunMode appMode();
 
 } // namespace

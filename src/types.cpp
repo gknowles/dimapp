@@ -6,21 +6,21 @@ using namespace std;
 
 namespace Dim {
 
+/****************************************************************************
+*
+*   Helpers
+*
+***/
 
 /****************************************************************************
- *
- *   Helpers
- *
- ***/
+*
+*   Clock
+*
+***/
 
-
-/****************************************************************************
- *
- *   Clock
- *
- ***/
-
-const int64_t kClockTicksPerTimeT {10 '000' 000};
+// *INDENT-OFF*
+const int64_t kClockTicksPerTimeT{10'000'000};
+// *INDENT-ON*
 
 //===========================================================================
 // static
@@ -30,9 +30,8 @@ Clock::time_point Clock::now() noexcept {
 
 //===========================================================================
 // static
-time_t Clock::to_time_t(const time_point& time) noexcept {
-    return ((time_t)(time.time_since_epoch().count()
-           / kClockTicksPerTimeT));
+time_t Clock::to_time_t(const time_point &time) noexcept {
+    return ((time_t)(time.time_since_epoch().count() / kClockTicksPerTimeT));
 }
 
 //===========================================================================

@@ -6,15 +6,13 @@ using namespace std;
 
 namespace Dim {
 
-
 /****************************************************************************
  *
  *   Tuning parameters
  *
  ***/
 
-const Duration kConnectTimeout {10s};
-
+const Duration kConnectTimeout{10s};
 
 /****************************************************************************
  *
@@ -25,41 +23,42 @@ const Duration kConnectTimeout {10s};
 namespace {
 
 class ConnSocket : public SocketBase {
-public:
-    static void connect (
-    ISocketNotify * notify,
-    const Endpoint & remoteEnd,
-    const Endpoint & localEnd,
-    Duration timeout
-    );
-public:
+  public:
+    static void connect(
+        ISocketNotify *notify,
+        const Endpoint &remoteEnd,
+        const Endpoint &localEnd,
+        Duration timeout);
+
+  public:
     using SocketBase::SocketBase;
-    void onConnect (int error, int bytes);
+    void onConnect(int error, int bytes);
 };
 
 class ConnectTask : public IWinEventWaitNotify {
-public:
+  public:
     TimePoint m_expiration;
     unique_ptr<ConnSocket> m_socket;
     list<ConnectTask>::iterator m_iter;
-public:
-    ConnectTask (unique_ptr<ConnSocket> && sock);
-    void onTask () override;
+
+  public:
+    ConnectTask(unique_ptr<ConnSocket> &&sock);
+    void onTask() override;
 };
 
 class ConnectFailedTask : public ITaskNotify {
-ISocketNotify * m_notify {nullptr};
-public:
-    ConnectFailedTask (ISocketNotify * notify);
-    void onTask () override;
+    ISocketNotify *m_notify{nullptr};
+
+  public:
+    ConnectFailedTask(ISocketNotify *notify);
+    void onTask() override;
 };
 
 class ConnectTimer : public ITimerNotify {
-Duration onTimer (TimePoint now) override;
+    Duration onTimer(TimePoint now) override;
 };
 
 } // namespace
-
 
 /****************************************************************************
  *
@@ -72,7 +71,6 @@ static list<ConnectTask> s_connecting;
 static list<ConnectTask> s_closing;
 static ConnectTimer s_connectTimer;
 
-
 /****************************************************************************
  *
  *   ConnectTimer
@@ -80,8 +78,8 @@ static ConnectTimer s_connectTimer;
  ***/
 
 //===========================================================================
-Duration ConnectTimer::onTimer (TimePoint now) {
-    lock_guard<mutex> lk {s_mut};
+Duration ConnectTimer::onTimer(TimePoint now) {
+    lock_guard<mutex> lk{s_mut};
     while (!s_connecting.empty()) {
         auto it = s_connecting.begin();
         if (now < it->m_expiration) {
@@ -94,7 +92,6 @@ Duration ConnectTimer::onTimer (TimePoint now) {
     return kTimerInfinite;
 }
 
-
 /****************************************************************************
  *
  *   ConnectTask
@@ -102,34 +99,32 @@ Duration ConnectTimer::onTimer (TimePoint now) {
  ***/
 
 //===========================================================================
-ConnectTask::ConnectTask (unique_ptr<ConnSocket> && sock)
-    : m_socket(move(sock))
-{
+ConnectTask::ConnectTask(unique_ptr<ConnSocket> &&sock)
+    : m_socket(move(sock)) {
     m_expiration = Clock::now() + kConnectTimeout;
 }
 
 //===========================================================================
-void ConnectTask::onTask () {
+void ConnectTask::onTask() {
     DWORD bytesTransferred;
-    WinError err {0};
+    WinError err{0};
     if (!GetOverlappedResult(
-        NULL,
-        &m_overlapped,
-        &bytesTransferred,
-        false     // wait?
-        )) {
-        err = WinError {};
+            NULL,
+            &m_overlapped,
+            &bytesTransferred,
+            false // wait?
+            )) {
+        err = WinError{};
     }
     m_socket.release()->onConnect(err, bytesTransferred);
 
-    lock_guard<mutex> lk {s_mut};
+    lock_guard<mutex> lk{s_mut};
     if (m_expiration == TimePoint::max()) {
         s_closing.erase(m_iter);
     } else {
         s_connecting.erase(m_iter);
     }
 }
-
 
 /****************************************************************************
  *
@@ -138,16 +133,14 @@ void ConnectTask::onTask () {
  ***/
 
 //===========================================================================
-ConnectFailedTask::ConnectFailedTask (ISocketNotify * notify)
-    : m_notify(notify)
-{}
+ConnectFailedTask::ConnectFailedTask(ISocketNotify *notify)
+    : m_notify(notify) {}
 
 //===========================================================================
-void ConnectFailedTask::onTask () {
+void ConnectFailedTask::onTask() {
     m_notify->onSocketConnectFailed();
     delete this;
 }
-
 
 /****************************************************************************
  *
@@ -156,19 +149,18 @@ void ConnectFailedTask::onTask () {
  ***/
 
 //===========================================================================
-static void pushConnectFailed (ISocketNotify * notify) {
+static void pushConnectFailed(ISocketNotify *notify) {
     auto ptr = new ConnectFailedTask(notify);
     taskPushEvent(*ptr);
 }
 
 //===========================================================================
 // static
-void ConnSocket::connect (
-    ISocketNotify * notify,
-    const Endpoint & remoteEnd,
-    const Endpoint & localEnd,
-    Duration timeout
-) {
+void ConnSocket::connect(
+    ISocketNotify *notify,
+    const Endpoint &remoteEnd,
+    const Endpoint &localEnd,
+    Duration timeout) {
     assert(getMode(notify) == Mode::kInactive);
 
     if (timeout == 0ms)
@@ -184,15 +176,17 @@ void ConnSocket::connect (
     LPFN_CONNECTEX fConnectEx;
     DWORD bytes;
     if (WSAIoctl(
-        sock->m_handle,
-        SIO_GET_EXTENSION_FUNCTION_POINTER,
-        &extId, sizeof(extId),
-        &fConnectEx, sizeof(fConnectEx),
-        &bytes,
-        nullptr,     // overlapped
-        nullptr     // completion routine
-        )) {
-        logMsgError() << "WSAIoctl(get ConnectEx): " << WinError {};
+            sock->m_handle,
+            SIO_GET_EXTENSION_FUNCTION_POINTER,
+            &extId,
+            sizeof(extId),
+            &fConnectEx,
+            sizeof(fConnectEx),
+            &bytes,
+            nullptr, // overlapped
+            nullptr  // completion routine
+            )) {
+        logMsgError() << "WSAIoctl(get ConnectEx): " << WinError{};
         return pushConnectFailed(notify);
     }
 
@@ -201,17 +195,14 @@ void ConnSocket::connect (
     timerUpdate(&s_connectTimer, timeout, true);
 
     {
-        lock_guard<mutex> lk {s_mut};
+        lock_guard<mutex> lk{s_mut};
         TimePoint expiration = Clock::now() + timeout;
 
         // TODO: check if this really puts them in expiration order!
         auto rhint = find_if(
-            s_connecting.rbegin(),
-            s_connecting.rend(),
-            [&](auto&& task) {
+            s_connecting.rbegin(), s_connecting.rend(), [&](auto &&task) {
                 return task.m_expiration <= expiration;
-            }
-            );
+            });
         it = s_connecting.emplace(rhint.base(), move(sock));
 
         it->m_iter = it;
@@ -222,27 +213,23 @@ void ConnSocket::connect (
     copy(&sas, remoteEnd);
     bool error = !fConnectEx(
         it->m_socket->m_handle,
-        (sockaddr *) &sas,
+        (sockaddr *)&sas,
         sizeof(sas),
-        NULL,     // send buffer
-        0,      // send buffer length
-        NULL,     // bytes sent
-        &it->m_overlapped
-        );
+        NULL, // send buffer
+        0,    // send buffer length
+        NULL, // bytes sent
+        &it->m_overlapped);
     WinError err;
     if (!error || err != ERROR_IO_PENDING) {
         logMsgError() << "ConnectEx(" << remoteEnd << "): " << err;
-        lock_guard<mutex> lk {s_mut};
+        lock_guard<mutex> lk{s_mut};
         s_connecting.pop_back();
         return pushConnectFailed(notify);
     }
 }
 
 //===========================================================================
-void ConnSocket::onConnect (
-    int error,
-    int bytes
-) {
+void ConnSocket::onConnect(int error, int bytes) {
     unique_ptr<ConnSocket> hostage(this);
 
     if (m_mode == ISocketNotify::kClosing)
@@ -255,16 +242,11 @@ void ConnSocket::onConnect (
 
     //-----------------------------------------------------------------------
     // update socket and start receiving
-    if (SOCKET_ERROR == setsockopt(
-        m_handle,
-        SOL_SOCKET,
-        SO_UPDATE_CONNECT_CONTEXT,
-        nullptr,
-        0
-        )) {
-        logMsgError()
-            << "setsockopt(SO_UPDATE_CONNECT_CONTEXT): "
-            << WinError {};
+    if (SOCKET_ERROR ==
+        setsockopt(
+            m_handle, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, nullptr, 0)) {
+        logMsgError() << "setsockopt(SO_UPDATE_CONNECT_CONTEXT): "
+                      << WinError{};
         return m_notify->onSocketConnectFailed();
     }
 
@@ -276,23 +258,15 @@ void ConnSocket::onConnect (
 
     // address of remote node
     int sasLen = sizeof(sas);
-    if (SOCKET_ERROR == getpeername(
-        m_handle,
-        (sockaddr *) &sas,
-        &sasLen
-        )) {
-        logMsgError() << "getpeername: " << WinError {};
+    if (SOCKET_ERROR == getpeername(m_handle, (sockaddr *)&sas, &sasLen)) {
+        logMsgError() << "getpeername: " << WinError{};
         return m_notify->onSocketConnectFailed();
     }
     copy(&m_connInfo.remoteEnd, sas);
 
     // locally bound address
-    if (SOCKET_ERROR == getsockname(
-        m_handle,
-        (sockaddr *) &sas,
-        &sasLen
-        )) {
-        logMsgError() << "getsockname: " << WinError {};
+    if (SOCKET_ERROR == getsockname(m_handle, (sockaddr *)&sas, &sasLen)) {
+        logMsgError() << "getsockname: " << WinError{};
         return m_notify->onSocketConnectFailed();
     }
     copy(&m_connInfo.localEnd, sas);
@@ -307,7 +281,6 @@ void ConnSocket::onConnect (
     m_notify->onSocketConnect(m_connInfo);
 }
 
-
 /****************************************************************************
  *
  *   ShutdownNotify
@@ -316,26 +289,24 @@ void ConnSocket::onConnect (
 
 namespace {
 class ShutdownNotify : public IAppShutdownNotify {
-void onAppStartConsoleCleanup () override;
-bool onAppQueryConsoleDestroy () override;
+    void onAppStartConsoleCleanup() override;
+    bool onAppQueryConsoleDestroy() override;
 };
 } // namespace
 static ShutdownNotify s_cleanup;
 
 //===========================================================================
-void ShutdownNotify::onAppStartConsoleCleanup () {
-    lock_guard<mutex> lk {s_mut};
-    for (auto && task : s_connecting)
+void ShutdownNotify::onAppStartConsoleCleanup() {
+    lock_guard<mutex> lk{s_mut};
+    for (auto &&task : s_connecting)
         task.m_socket->hardClose();
 }
 
 //===========================================================================
-bool ShutdownNotify::onAppQueryConsoleDestroy () {
-    lock_guard<mutex> lk {s_mut};
-    return s_connecting.empty()
-           && s_closing.empty();
+bool ShutdownNotify::onAppQueryConsoleDestroy() {
+    lock_guard<mutex> lk{s_mut};
+    return s_connecting.empty() && s_closing.empty();
 }
-
 
 /****************************************************************************
  *
@@ -344,12 +315,11 @@ bool ShutdownNotify::onAppQueryConsoleDestroy () {
  ***/
 
 //===========================================================================
-void iSocketConnectInitialize () {
+void iSocketConnectInitialize() {
     // Don't register cleanup until all dependents (aka sockbuf) have
     // registered their cleanups (aka been initialized)
     appMonitorShutdown(&s_cleanup);
 }
-
 
 /****************************************************************************
  *
@@ -358,12 +328,11 @@ void iSocketConnectInitialize () {
  ***/
 
 //===========================================================================
-void socketConnect (
-    ISocketNotify * notify,
-    const Endpoint & remoteEnd,
-    const Endpoint & localEnd,
-    Duration timeout
-) {
+void socketConnect(
+    ISocketNotify *notify,
+    const Endpoint &remoteEnd,
+    const Endpoint &localEnd,
+    Duration timeout) {
     ConnSocket::connect(notify, remoteEnd, localEnd, timeout);
 }
 

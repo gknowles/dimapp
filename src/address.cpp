@@ -6,13 +6,11 @@ using namespace std;
 
 namespace Dim {
 
-
 /****************************************************************************
  *
  *   Helpers
  *
  ***/
-
 
 /****************************************************************************
  *
@@ -21,12 +19,12 @@ namespace Dim {
  ***/
 
 //===========================================================================
-bool Address::operator== (const Address & right) const {
+bool Address::operator==(const Address &right) const {
     return memcmp(this, &right, sizeof *this) == 0;
 }
 
 //===========================================================================
-Address::operator bool () const {
+Address::operator bool() const {
     return data[3] || data[0] || data[1] || data[2];
 }
 
@@ -37,16 +35,16 @@ Address::operator bool () const {
  ***/
 
 //===========================================================================
-bool Endpoint::operator== (const Endpoint & right) const {
+bool Endpoint::operator==(const Endpoint &right) const {
     return port == right.port && addr == right.addr;
 }
 
 //===========================================================================
-Endpoint::operator bool () const {
+Endpoint::operator bool() const {
     return port || addr;
 }
 
-bool parse (Endpoint * out, const char src[]);
-std::ostream & operator<< (std::ostream & os, const Endpoint & src);
+bool parse(Endpoint *out, const char src[]);
+std::ostream &operator<<(std::ostream &os, const Endpoint &src);
 
 } // namespace

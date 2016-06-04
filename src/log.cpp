@@ -6,7 +6,6 @@ using namespace std;
 
 namespace Dim {
 
-
 /****************************************************************************
  *
  *   Private
@@ -15,7 +14,6 @@ namespace Dim {
 
 static vector<ILogNotify *> s_notifiers;
 
-
 /****************************************************************************
  *
  *   Helpers
@@ -23,11 +21,11 @@ static vector<ILogNotify *> s_notifiers;
  ***/
 
 //===========================================================================
-static void LogMsg (LogType type, const string & msg) {
+static void LogMsg(LogType type, const string &msg) {
     if (s_notifiers.empty()) {
         cout << msg << endl;
     } else {
-        for (auto && notify : s_notifiers) {
+        for (auto &&notify : s_notifiers) {
             notify->onLog(type, msg);
         }
     }
@@ -36,7 +34,6 @@ static void LogMsg (LogType type, const string & msg) {
         abort();
 }
 
-
 /****************************************************************************
  *
  *   Log
@@ -44,15 +41,13 @@ static void LogMsg (LogType type, const string & msg) {
  ***/
 
 //===========================================================================
-Detail::Log::Log (LogType type)
-    : m_type(type)
-{}
+Detail::Log::Log(LogType type)
+    : m_type(type) {}
 
 //===========================================================================
-Detail::Log::~Log () {
+Detail::Log::~Log() {
     LogMsg(m_type, str());
 }
-
 
 /****************************************************************************
  *
@@ -61,9 +56,7 @@ Detail::Log::~Log () {
  ***/
 
 //===========================================================================
-Detail::LogCrash::~LogCrash ()
-{}
-
+Detail::LogCrash::~LogCrash() {}
 
 /****************************************************************************
  *
@@ -72,29 +65,28 @@ Detail::LogCrash::~LogCrash ()
  ***/
 
 //===========================================================================
-void logAddNotify (ILogNotify * notify) {
+void logAddNotify(ILogNotify *notify) {
     s_notifiers.push_back(notify);
 }
 
 //===========================================================================
-Detail::Log logMsgDebug () {
+Detail::Log logMsgDebug() {
     return kLogDebug;
 }
 
 //===========================================================================
-Detail::Log logMsgInfo () {
+Detail::Log logMsgInfo() {
     return kLogInfo;
 }
 
 //===========================================================================
-Detail::Log logMsgError () {
+Detail::Log logMsgError() {
     return kLogError;
 }
 
 //===========================================================================
-Detail::LogCrash logMsgCrash () {
+Detail::LogCrash logMsgCrash() {
     return kLogCrash;
 }
-
 
 } // namespace

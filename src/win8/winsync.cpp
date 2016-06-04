@@ -7,7 +7,6 @@ using namespace std::chrono;
 
 namespace Dim {
 
-
 /****************************************************************************
  *
  *   WinEvent
@@ -15,35 +14,34 @@ namespace Dim {
  ***/
 
 //===========================================================================
-WinEvent::WinEvent () {
+WinEvent::WinEvent() {
     m_handle = CreateEvent(
-        NULL,     // security attributes
-        false,     // manual reset
-        false,     // initial signaled state
-        NULL     // name
+        NULL,  // security attributes
+        false, // manual reset
+        false, // initial signaled state
+        NULL   // name
         );
 }
 
 //===========================================================================
-WinEvent::~WinEvent () {
+WinEvent::~WinEvent() {
     CloseHandle(m_handle);
 }
 
 //===========================================================================
-void WinEvent::signal () {
+void WinEvent::signal() {
     SetEvent(m_handle);
 }
 
 //===========================================================================
-void WinEvent::wait (Duration wait) {
+void WinEvent::wait(Duration wait) {
     auto waitMs = duration_cast<milliseconds>(wait);
     if (wait <= 0ms || waitMs >= chrono::milliseconds(INFINITE)) {
         WaitForSingleObject(m_handle, INFINITE);
     } else {
-        WaitForSingleObject(m_handle, (DWORD) waitMs.count());
+        WaitForSingleObject(m_handle, (DWORD)waitMs.count());
     }
 }
-
 
 /****************************************************************************
  *
@@ -52,35 +50,34 @@ void WinEvent::wait (Duration wait) {
  ***/
 
 //===========================================================================
-static void __stdcall eventWaitCallback(void * param, uint8_t timeout) {
+static void __stdcall eventWaitCallback(void *param, uint8_t timeout) {
     auto notify = reinterpret_cast<IWinEventWaitNotify *>(param);
     taskPushEvent(*notify);
 }
 
 //===========================================================================
-IWinEventWaitNotify::IWinEventWaitNotify () {
+IWinEventWaitNotify::IWinEventWaitNotify() {
     m_overlapped.hEvent = CreateEvent(nullptr, 0, 0, nullptr);
     assert(m_overlapped.hEvent);
 
     if (!RegisterWaitForSingleObject(
-        &m_registeredWait,
-        m_overlapped.hEvent,
-        &eventWaitCallback,
-        this,
-        INFINITE,     // timeout
-        WT_EXECUTEINWAITTHREAD
-        )) {
-        logMsgCrash() << "RegisterWaitForSingleObject: " << WinError {};
+            &m_registeredWait,
+            m_overlapped.hEvent,
+            &eventWaitCallback,
+            this,
+            INFINITE, // timeout
+            WT_EXECUTEINWAITTHREAD)) {
+        logMsgCrash() << "RegisterWaitForSingleObject: " << WinError{};
     }
 }
 
 //===========================================================================
-IWinEventWaitNotify::~IWinEventWaitNotify () {
+IWinEventWaitNotify::~IWinEventWaitNotify() {
     if (m_registeredWait && !UnregisterWaitEx(m_registeredWait, nullptr)) {
-        logMsgError() << "UnregisterWaitEx: " << WinError {};
+        logMsgError() << "UnregisterWaitEx: " << WinError{};
     }
     if (m_overlapped.hEvent && !CloseHandle(m_overlapped.hEvent)) {
-        logMsgError() << "CloseHandle(overlapped.hEvent): " << WinError {};
+        logMsgError() << "CloseHandle(overlapped.hEvent): " << WinError{};
     }
 }
 

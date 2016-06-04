@@ -8,7 +8,7 @@
 #include <memory>
 #include <ratio>
 
-//using namespace std::literals;
+// using namespace std::literals;
 namespace Dim {
 
 /****************************************************************************
@@ -27,14 +27,13 @@ struct Clock {
 
     static time_point now() noexcept;
 
-// C conversions
-    static time_t to_time_t(const time_point& time) noexcept;
+    // C conversions
+    static time_t to_time_t(const time_point &time) noexcept;
     static time_point from_time_t(time_t tm) noexcept;
 };
 
 typedef Clock::duration Duration;
 typedef Clock::time_point TimePoint;
-
 
 /****************************************************************************
  *
@@ -48,23 +47,22 @@ typedef Clock::time_point TimePoint;
 
 // IP v4 or v6 address
 struct Address {
-    int32_t data[4] {};
+    int32_t data[4]{};
 
-    bool operator== (const Address & right) const;
-    explicit operator bool () const;
+    bool operator==(const Address &right) const;
+    explicit operator bool() const;
 };
 struct Endpoint {
     Address addr;
-    unsigned port {0};
+    unsigned port{0};
 
-    bool operator== (const Endpoint & right) const;
-    explicit operator bool () const;
+    bool operator==(const Endpoint &right) const;
+    explicit operator bool() const;
 };
 struct Network {
     Address addr;
-    int mask {0};
+    int mask{0};
 };
-
 
 /****************************************************************************
  *

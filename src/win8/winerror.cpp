@@ -6,7 +6,6 @@ using namespace std;
 
 namespace Dim {
 
-
 /****************************************************************************
  *
  *   Private declarations
@@ -14,7 +13,6 @@ namespace Dim {
  ***/
 
 using RtlNtStatusToDosErrorFn = ULONG(WINAPI *)(int ntStatus);
-
 
 /****************************************************************************
  *
@@ -25,7 +23,6 @@ using RtlNtStatusToDosErrorFn = ULONG(WINAPI *)(int ntStatus);
 static RtlNtStatusToDosErrorFn s_RtlNtStatusToDosError;
 static once_flag s_loadOnce;
 
-
 /****************************************************************************
  *
  *   Helpers
@@ -33,21 +30,18 @@ static once_flag s_loadOnce;
  ***/
 
 //===========================================================================
-static void loadProc () {
+static void loadProc() {
     HMODULE mod = LoadLibrary("ntdll.dll");
     if (!mod)
-        logMsgCrash() << "LoadLibrary(ntdll): " << WinError {};
+        logMsgCrash() << "LoadLibrary(ntdll): " << WinError{};
 
-    s_RtlNtStatusToDosError = (RtlNtStatusToDosErrorFn) GetProcAddress(
-        mod,
-        "RtlNtStatusToDosError"
-        );
+    s_RtlNtStatusToDosError =
+        (RtlNtStatusToDosErrorFn)GetProcAddress(mod, "RtlNtStatusToDosError");
     if (!s_RtlNtStatusToDosError) {
         logMsgCrash() << "GetProcAddress(RtlNtStatusToDosError): "
-                      << WinError {};
+                      << WinError{};
     }
 }
-
 
 /****************************************************************************
  *
@@ -56,28 +50,27 @@ static void loadProc () {
  ***/
 
 //===========================================================================
-WinError::WinError () {
+WinError::WinError() {
     m_value = GetLastError();
 }
 
 //===========================================================================
-WinError::WinError (int error)
-    : m_value{error}
-{}
+WinError::WinError(int error)
+    : m_value{error} {}
 
 //===========================================================================
-WinError::WinError (NtStatus status) {
+WinError::WinError(NtStatus status) {
     operator=(status);
 }
 
 //===========================================================================
-WinError & WinError::operator= (int error) {
+WinError &WinError::operator=(int error) {
     m_value = error;
     return *this;
 }
 
 //===========================================================================
-WinError & WinError::operator= (NtStatus status) {
+WinError &WinError::operator=(NtStatus status) {
     if (!status) {
         m_value = 0;
     } else {
@@ -88,21 +81,20 @@ WinError & WinError::operator= (NtStatus status) {
 }
 
 //===========================================================================
-std::ostream & operator<< (std::ostream & os, const WinError & val) {
+std::ostream &operator<<(std::ostream &os, const WinError &val) {
     char buf[256];
     FormatMessage(
         FORMAT_MESSAGE_FROM_SYSTEM,
-        NULL,   // source
+        NULL, // source
         val,
-        0,      // language
+        0, // language
         buf,
-        (DWORD) size(buf),
-        NULL
-    );
+        (DWORD)size(buf),
+        NULL);
 
     // trim trailing whitespace (i.e. \r\n)
-    char * ptr = buf + strlen(buf) - 1;
-    for (; ptr > buf && isspace((unsigned char) *ptr); --ptr)
+    char *ptr = buf + strlen(buf) - 1;
+    for (; ptr > buf && isspace((unsigned char)*ptr); --ptr)
         *ptr = 0;
 
     os << buf;

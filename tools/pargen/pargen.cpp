@@ -5,7 +5,6 @@
 using namespace std;
 using namespace Dim;
 
-
 /****************************************************************************
  *
  *   Declarations
@@ -15,9 +14,9 @@ using namespace Dim;
 static unsigned s_nextElemId;
 
 //===========================================================================
-static void getLineRules (set<Element> & rules) {
+static void getLineRules(set<Element> &rules) {
     // line = OWS *1(param-list) OWS
-    auto * rule = addSequenceRule(rules, "line", 1, 1);
+    auto *rule = addSequenceRule(rules, "line", 1, 1);
     addRule(rule, "ows", 1, 1);
     addRule(rule, "param-list", 0, 1);
     addRule(rule, "ows", 1, 1);
@@ -25,7 +24,7 @@ static void getLineRules (set<Element> & rules) {
     // param-list = param *(ws param)
     rule = addSequenceRule(rules, "param-list", 1, 1);
     addRule(rule, "param", 1, 1);
-    auto * elem = addSequence(rule, 0, kUnlimited);
+    auto *elem = addSequence(rule, 0, kUnlimited);
     addRule(elem, "ws", 1, 1);
     addRule(elem, "param", 1, 1);
 
@@ -49,9 +48,9 @@ static void getLineRules (set<Element> & rules) {
 }
 
 //===========================================================================
-static void getTestRules (set<Element> & rules) {
-    Element * rule;
-    Element * elem;
+static void getTestRules(set<Element> &rules) {
+    Element *rule;
+    Element *elem;
     rule = addChoiceRule(rules, "left-recurse", 1, 1);
     elem = addSequence(rule, 1, 1);
     addRule(elem, "left-recurse", 1, 1);
@@ -66,8 +65,8 @@ static void getTestRules (set<Element> & rules) {
 }
 
 //===========================================================================
-static void getCoreRules (set<Element> & rules) {
-    Element * rule;
+static void getCoreRules(set<Element> &rules) {
+    Element *rule;
 
     // ALPHA          =  %x41-5A / %x61-7A   ; A-Z / a-z
     rule = addChoiceRule(rules, "ALPHA", 1, 1);
@@ -136,10 +135,10 @@ static void getCoreRules (set<Element> & rules) {
 }
 
 //===========================================================================
-static void getAbnfRules (set<Element> & rules) {
-    Element * rule;
-    Element * elem;
-    Element * elem2;
+static void getAbnfRules(set<Element> &rules) {
+    Element *rule;
+    Element *elem;
+    Element *elem2;
 
     // definitions taken from rfc5234
 
@@ -148,7 +147,7 @@ static void getAbnfRules (set<Element> & rules) {
     addRule(rule, "rule", 1, 1);
     elem = addSequence(rule, 1, 1);
     addRule(elem, "c-wsp", 0, kUnlimited);
-    //addRule(elem, "WSP", 0, kUnlimited);    // see errata 3076
+    // addRule(elem, "WSP", 0, kUnlimited);    // see errata 3076
     addRule(elem, "c-nl", 1, 1);
 
     // rule           =  rulename defined-as elements c-nl
@@ -180,7 +179,7 @@ static void getAbnfRules (set<Element> & rules) {
     rule = addSequenceRule(rules, "elements", 1, 1);
     addRule(rule, "alternation", 1, 1);
     addRule(rule, "c-wsp", 0, kUnlimited);
-    //addRule(rule, "WSP", 0, kUnlimited);        // see errata 2968
+    // addRule(rule, "WSP", 0, kUnlimited);        // see errata 2968
 
     // c-wsp          =  WSP / (c-nl WSP)
     rule = addChoiceRule(rules, "c-wsp", 1, 1);
@@ -319,16 +318,15 @@ static void getAbnfRules (set<Element> & rules) {
 }
 
 //===========================================================================
-static Element * addElement (Element * rule, unsigned m, unsigned n) {
+static Element *addElement(Element *rule, unsigned m, unsigned n) {
     rule->elements.resize(rule->elements.size() + 1);
     // rule->elements.emplace_back();
-    Element * e = &rule->elements.back();
+    Element *e = &rule->elements.back();
     e->id = ++s_nextElemId;
     e->m = m;
     e->n = n;
     return e;
 }
-
 
 /****************************************************************************
  *
@@ -338,25 +336,25 @@ static Element * addElement (Element * rule, unsigned m, unsigned n) {
 
 namespace {
 class Application : public ITaskNotify {
-int m_argc;
-char ** m_argv;
-public:
-    Application (int argc, char * argv[]);
-    void onTask () override;
+    int m_argc;
+    char **m_argv;
+
+  public:
+    Application(int argc, char *argv[]);
+    void onTask() override;
 };
 } // namespace
 
 //===========================================================================
-Application::Application (int argc, char * argv[])
+Application::Application(int argc, char *argv[])
     : m_argc(argc)
-    , m_argv(argv)
-{}
+    , m_argv(argv) {}
 
-bool abnfCheckSyntax (const char src[]);
+bool abnfCheckSyntax(const char src[]);
 
 //===========================================================================
-void Application::onTask () {
-    //if (m_argc < 2) {
+void Application::onTask() {
+    // if (m_argc < 2) {
     //    cout << "pargen v0.1.0 (" __DATE__ ") - simplistic parser generator\n"
     //        << "usage: pargen\n";
     //    return appSignalShutdown(kExitBadArgs);
@@ -377,7 +375,7 @@ void Application::onTask () {
     cout << "Elapsed time: " << elapsed.count() << endl;
 
     ostringstream abnf;
-    for (auto && rule : rules) {
+    for (auto &&rule : rules) {
         abnf << rule.name << " = " << rule << '\n';
     }
     bool valid = abnfCheckSyntax(abnf.str().c_str());
@@ -386,7 +384,6 @@ void Application::onTask () {
     appSignalShutdown(kExitSuccess);
 }
 
-
 /****************************************************************************
  *
  *   Externals
@@ -394,7 +391,7 @@ void Application::onTask () {
  ***/
 
 //===========================================================================
-int main(int argc, char * argv[]) {
+int main(int argc, char *argv[]) {
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
     _set_error_mode(_OUT_TO_MSGBOX);
 
@@ -404,26 +401,24 @@ int main(int argc, char * argv[]) {
 }
 
 //===========================================================================
-Element * addSequenceRule (
-    set<Element> & rules,
-    const string & name,
+Element *addSequenceRule(
+    set<Element> &rules,
+    const string &name,
     unsigned m,
     unsigned n,
-    bool recurse
-) {
+    bool recurse) {
     auto e = addChoiceRule(rules, name, m, n, recurse);
     e = addSequence(e, 1, 1);
     return e;
 }
 
 //===========================================================================
-Element * addChoiceRule (
-    set<Element> & rules,
-    const string & name,
+Element *addChoiceRule(
+    set<Element> &rules,
+    const string &name,
     unsigned m,
     unsigned n,
-    bool recurse
-) {
+    bool recurse) {
     Element e;
     e.id = ++s_nextElemId;
     e.name = name;
@@ -437,67 +432,48 @@ Element * addChoiceRule (
 }
 
 //===========================================================================
-Element * addSequence (Element * rule, unsigned m, unsigned n) {
+Element *addSequence(Element *rule, unsigned m, unsigned n) {
     auto e = addElement(rule, m, n);
     e->type = Element::kSequence;
     return e;
 }
 
 //===========================================================================
-Element * addChoice (Element * rule, unsigned m, unsigned n) {
+Element *addChoice(Element *rule, unsigned m, unsigned n) {
     auto e = addElement(rule, m, n);
     e->type = Element::kChoice;
     return e;
 }
 
 //===========================================================================
-void addRule (
-    Element * rule,
-    const string & name,
-    unsigned m,
-    unsigned n
-) {
+void addRule(Element *rule, const string &name, unsigned m, unsigned n) {
     auto e = addElement(rule, m, n);
     e->type = Element::kRule;
     e->value = name;
 }
 
 //===========================================================================
-void addTerminal (
-    Element * rule,
-    unsigned char ch,
-    unsigned m,
-    unsigned n
-) {
+void addTerminal(Element *rule, unsigned char ch, unsigned m, unsigned n) {
     auto e = addElement(rule, m, n);
     e->type = Element::kTerminal;
     e->value = ch;
 }
 
 //===========================================================================
-void addLiteral (
-    Element * rule,
-    const string & value,
-    unsigned m,
-    unsigned n
-) {
+void addLiteral(Element *rule, const string &value, unsigned m, unsigned n) {
     auto c = addChoice(rule, m, n);
     for (unsigned char ch : value) {
         addTerminal(c, ch, 1, 1);
         if (islower(ch)) {
-            addTerminal(c, (unsigned char) toupper(ch), 1, 1);
+            addTerminal(c, (unsigned char)toupper(ch), 1, 1);
         } else if (isupper(ch)) {
-            addTerminal(c, (unsigned char) tolower(ch), 1, 1);
+            addTerminal(c, (unsigned char)tolower(ch), 1, 1);
         }
     }
 }
 
 //===========================================================================
-void addRange (
-    Element * rule,
-    unsigned char a,
-    unsigned char b
-) {
+void addRange(Element *rule, unsigned char a, unsigned char b) {
     assert(a <= b);
     for (; a <= b; ++a) {
         addTerminal(rule, a, 1, 1);
