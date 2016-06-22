@@ -40,7 +40,8 @@ class HttpConn {
     // of the input or due to error.
     // Even after an error, out and msgs should be processed.
     //  - out: data to send to the remote endpoint is appended
-    //  - msg: zero or more requests, push promises, and/or replies are appended
+    //  - msg: zero or more requests, push promises, and/or replies are
+    //  appended
     bool recv(
         CharBuf *out,
         std::vector<std::unique_ptr<HttpMsg>> *msgs,

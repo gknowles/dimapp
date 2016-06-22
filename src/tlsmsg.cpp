@@ -284,14 +284,10 @@ static bool parseExt(
     TlsExtensionType type,
     size_t extLen) {
     switch (type) {
-    case kServerName:
-        return parseSni(&msg->hostName, in, extLen);
-    case kSupportedGroups:
-        return parseGroups(&msg->groups, in, extLen);
-    case kSignatureAlgorithms:
-        return parse(&msg->sigSchemes, in, extLen);
-    case kKeyShare:
-        return parseKeyShares(&msg->groups, in, extLen);
+    case kServerName: return parseSni(&msg->hostName, in, extLen);
+    case kSupportedGroups: return parseGroups(&msg->groups, in, extLen);
+    case kSignatureAlgorithms: return parse(&msg->sigSchemes, in, extLen);
+    case kKeyShare: return parseKeyShares(&msg->groups, in, extLen);
     case kDraftVersion:
         return parseDraftVersion(&msg->draftVersion, in, extLen);
     }

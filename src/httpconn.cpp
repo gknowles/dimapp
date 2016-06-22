@@ -495,22 +495,16 @@ bool HttpConn::onFrame(
     switch (type) {
     case FrameType::kContinuation:
         return onContinuation(msgs, out, src, stream, flags);
-    case FrameType::kData:
-        return onData(msgs, out, src, stream, flags);
-    case FrameType::kGoAway:
-        return onGoAway(msgs, out, src, stream, flags);
-    case FrameType::kHeaders:
-        return onHeaders(msgs, out, src, stream, flags);
-    case FrameType::kPing:
-        return onPing(msgs, out, src, stream, flags);
-    case FrameType::kPriority:
-        return onPriority(msgs, out, src, stream, flags);
+    case FrameType::kData: return onData(msgs, out, src, stream, flags);
+    case FrameType::kGoAway: return onGoAway(msgs, out, src, stream, flags);
+    case FrameType::kHeaders: return onHeaders(msgs, out, src, stream, flags);
+    case FrameType::kPing: return onPing(msgs, out, src, stream, flags);
+    case FrameType::kPriority: return onPriority(msgs, out, src, stream, flags);
     case FrameType::kPushPromise:
         return onPushPromise(msgs, out, src, stream, flags);
     case FrameType::kRstStream:
         return onRstStream(msgs, out, src, stream, flags);
-    case FrameType::kSettings:
-        return onSettings(msgs, out, src, stream, flags);
+    case FrameType::kSettings: return onSettings(msgs, out, src, stream, flags);
     case FrameType::kWindowUpdate:
         return onWindowUpdate(msgs, out, src, stream, flags);
     };
@@ -912,13 +906,9 @@ void HttpConn::reply(CharBuf *out, int stream, const HttpMsg &msg) {
 
     HttpStream *strm = it->second.get();
     switch (strm->m_state) {
-    case HttpStream::kOpen:
-        strm->m_state = HttpStream::kLocalClosed;
-        break;
+    case HttpStream::kOpen: strm->m_state = HttpStream::kLocalClosed; break;
     case HttpStream::kLocalReserved:
-    case HttpStream::kRemoteClosed:
-        strm->m_state = HttpStream::kClosed;
-        break;
+    case HttpStream::kRemoteClosed: strm->m_state = HttpStream::kClosed; break;
     default:
         logMsgCrash() << "httpReply invalid state, {" << strm->m_state << "}";
         return;

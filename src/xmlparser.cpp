@@ -91,28 +91,22 @@ bool XStreamParser::parse(
 
     for (;;) {
         switch (s_charMap[*ptr]) {
-        case kNull:
-            return true;
+        case kNull: return true;
         case kLess:
             ptr += 1;
             if (!parseNode(notify, ptr))
                 return false;
             break;
-        case kLinefeed:
-            m_line += 1;
-            [[fallthrough]];
+        case kLinefeed: m_line += 1; [[fallthrough]];
         case kWhitespace:
-        case kReturn:
-            ptr += 1;
-            break;
+        case kReturn: ptr += 1; break;
         case kUtf8BomIntro:
             // skip utf-8 bom if present
             if (ptr[1] == 0xbb && ptr[2] == 0xbf && (char *)ptr == src) {
                 ptr += 3;
                 break;
             }
-        default:
-            return fail("expected <");
+        default: return fail("expected <");
         }
     }
 }
@@ -176,8 +170,7 @@ bool XStreamParser::parseNode(
     case kColon:
     case kAlpha:
     case kHexAlpha:
-    case kUnder:
-        return parseElement(notify, ptr, ptr + 1);
+    case kUnder: return parseElement(notify, ptr, ptr + 1);
     case kQuestion: // <?
         ptr += 1;
         return parsePI(ptr);
@@ -249,8 +242,7 @@ bool XStreamParser::parseElement(
     ptr = nextChar;
     for (;;) {
         switch (s_charMap[*ptr]) {
-        case kNull:
-            return fail("expected >");
+        case kNull: return fail("expected >");
         case kUtf8Lead2:
             if (!twoByte(ptr, &utf8))
                 return fail("invalid utf-8 encoding");
@@ -279,17 +271,11 @@ bool XStreamParser::parseElement(
         case kHexAlpha:
         case kDash:
         case kDot:
-        case kNum:
-            ptr += 1;
-            break;
-        case kLinefeed:
-            m_line += 1;
-            [[fallthrough]];
+        case kNum: ptr += 1; break;
+        case kLinefeed: m_line += 1; [[fallthrough]];
         case kWhitespace:
-        case kReturn:
-            return parseAttrs(notify, ptr);
-        case kGreater:;
-            break;
+        case kReturn: return parseAttrs(notify, ptr);
+        case kGreater:; break;
         case kSlash:
             if (!notify.StartElem(*this, (char *)startTag, ptr - startTag))
                 return false;
@@ -304,17 +290,14 @@ bool XStreamParser::parsePI(unsigned char *&ptr) {
     // skip to ?>
     for (;;) {
         switch (*ptr) {
-        case '\0':
-            return fail("unexpected end of data");
+        case '\0': return fail("unexpected end of data");
         case '?':
             if (ptr[1] != '>') {
                 ptr += 2;
                 return nullptr;
             }
             break;
-        case '\n':
-            m_line += 1;
-            break;
+        case '\n': m_line += 1; break;
         }
         ptr += 1;
     }
@@ -324,10 +307,8 @@ bool XStreamParser::parsePI(unsigned char *&ptr) {
 bool XStreamParser::parseBangNode(
     IXStreamParserNotify &notify, unsigned char *&ptr) {
     switch (*ptr) {
-    case kDash:
-        return parseComment(ptr);
-    case kLBracket:
-        return parseCData(notify, ptr);
+    case kDash: return parseComment(ptr);
+    case kLBracket: return parseCData(notify, ptr);
     }
     return false;
 }

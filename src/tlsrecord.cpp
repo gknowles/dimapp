@@ -14,9 +14,9 @@ namespace Dim {
 
 namespace {
 
-// *INDENT-OFF*
+// clang-format off
 const unsigned kMaxPlaintext = 16'384;
-// *INDENT-ON*
+// clang-format on
 
 const unsigned kMaxCiphertext = kMaxPlaintext + 256;
 
@@ -142,10 +142,8 @@ bool TlsRecordDecrypt::parse(
                 // application data. The actual type is in the ciphertext.
                 if (m_cipher)
                     return parseError(kUnexpectedMessage);
-            case kContentAppData:
-                break;
-            default:
-                return parseError(kUnexpectedMessage);
+            case kContentAppData: break;
+            default: return parseError(kUnexpectedMessage);
             }
         case 1: // protocol version major - MUST ignore
             if (ptr == eptr)
@@ -212,11 +210,8 @@ bool TlsRecordDecrypt::parse(
             if (!parseHandshakes(notify))
                 return false;
             break;
-        case kContentAppData:
-            data->append(m_plaintext);
-            break;
-        default:
-            return parseError(kUnexpectedMessage);
+        case kContentAppData: data->append(m_plaintext); break;
+        default: return parseError(kUnexpectedMessage);
         }
 
         m_plaintext.clear();

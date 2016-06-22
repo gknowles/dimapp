@@ -89,8 +89,7 @@ Duration MainTimer::onTimer(TimePoint now) {
         s_runMode = kRunStopping;
         m_shutdownStart = now;
         break;
-    case MAIN_QD:
-        break;
+    case MAIN_QD: break;
     case CLIENT_SC:
         startCleanup(&IAppShutdownNotify::onAppStartClientCleanup);
         break;

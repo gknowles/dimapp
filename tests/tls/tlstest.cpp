@@ -35,110 +35,35 @@ struct Test {
  *
  ***/
 
+// clang-format off
 const Test s_tests[] = {
     {"connect", kTestReset | kTestClient, {}, true, {}, {}},
     {"simple client hello",
      kTestReset,
      {
          kClientHello, // msg_type
-         0,
-         0,
-         10, // length
+         0, 0, 10, // length
          // ClientHello
-         3,
-         4, // client_version
-         0,
-         1,
-         2,
-         3,
-         4,
-         5,
-         6,
-         7,
-         8,
-         9,
-         10,
-         11,
-         12,
-         13,
-         14,
-         15, // random[32]
-         0,
-         1,
-         2,
-         3,
-         4,
-         5,
-         6,
-         7,
-         8,
-         9,
-         10,
-         11,
-         12,
-         13,
-         14,
-         15,
+         3, 4, // client_version
+         0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, // random[32]
+         0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
          0, // legacy_session_id<0..32>
-         0,
-         2,
-         '\xcc',
-         '\xa9', // cipher_suites<2..2^16-2>
-         0,
-         0, // legacy_compression_methods<1..2*8-1> (null compression)
-         0,
-         49, // extensions<0..2^16-1>
-             // KeyShare
-         '\x88',
-         2, // extension type
-         0,
-         37, // extension_data<0..2^16-1>
-         0,
-         29, // group (kEcdhX25519)
-         0,
-         33, // key_exchange<1..2^16-1>
+         0, 2, '\xcc', '\xa9', // cipher_suites<2..2^16-2>
+         0, 0, // legacy_compression_methods<1..2*8-1> (null compression)
+         0, 49, // extensions<0..2^16-1>
+         // KeyShare
+         '\x88', 2, // extension type
+         0, 37, // extension_data<0..2^16-1>
+         0, 29, // group (kEcdhX25519)
+         0, 33, // key_exchange<1..2^16-1>
          32, // point<1..2^8-1>
-         0,
-         1,
-         2,
-         3,
-         4,
-         5,
-         6,
-         7,
-         8,
-         9,
-         10,
-         11,
-         12,
-         13,
-         14,
-         15,
-         0,
-         1,
-         2,
-         3,
-         4,
-         5,
-         6,
-         7,
-         8,
-         9,
-         10,
-         11,
-         12,
-         13,
-         14,
-         15,
+         0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+         0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
          // SignatureAndHashAlgorithm
-         0,
-         13, // extension type
-         0,
-         4, // extension_data<0..2^16-1>
-         0,
-         2, // supported_signature_algorithms<2..2^16-2>
-         4,
-         5, // (sha256, eddsa)
+         0, 13, // extension type
+         0, 4, // extension_data<0..2^16-1>
+         0, 2, // supported_signature_algorithms<2..2^16-2>
+         4, 5, // (sha256, eddsa)
      },
      true,
      {
@@ -149,6 +74,8 @@ const Test s_tests[] = {
      },
      {}},
 };
+// clang-format on
+
 
 /****************************************************************************
  *

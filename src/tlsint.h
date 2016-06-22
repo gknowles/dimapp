@@ -165,10 +165,8 @@ class TlsRecordReader {
 
 template <typename T> inline T TlsRecordReader::number() {
     switch (sizeof(T)) {
-    case 1:
-        return (T)number();
-    case 2:
-        return (T)number16();
+    case 1: return (T)number();
+    case 2: return (T)number16();
     }
     assert(sizeof(T) == 3);
     return (T)number24();

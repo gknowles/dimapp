@@ -20,8 +20,9 @@ const unsigned kDefaultBlockSize = 4096;
  *
  ***/
 
-//#pragma warning(disable: 4200) // nonstandard extension used: zero-sized array
-//in struct/union
+//#pragma warning(disable: 4200) // nonstandard extension used: zero-sized
+// array
+// in struct/union
 struct CharBuf::Buffer {
     int m_used{0};
     int m_reserved{kDefaultBlockSize};

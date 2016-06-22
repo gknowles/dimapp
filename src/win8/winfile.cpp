@@ -48,21 +48,11 @@ static bool setErrno(int error) {
 
     switch (error) {
     case ERROR_ALREADY_EXISTS:
-    case ERROR_FILE_EXISTS:
-        _set_errno(EEXIST);
-        break;
-    case ERROR_FILE_NOT_FOUND:
-        _set_errno(ENOENT);
-        break;
-    case ERROR_SHARING_VIOLATION:
-        _set_errno(EBUSY);
-        break;
-    case ERROR_ACCESS_DENIED:
-        _set_errno(EACCES);
-        break;
-    default:
-        _set_errno(EIO);
-        break;
+    case ERROR_FILE_EXISTS: _set_errno(EEXIST); break;
+    case ERROR_FILE_NOT_FOUND: _set_errno(ENOENT); break;
+    case ERROR_SHARING_VIOLATION: _set_errno(EBUSY); break;
+    case ERROR_ACCESS_DENIED: _set_errno(EACCES); break;
+    default: _set_errno(EIO); break;
     }
 
     return false;

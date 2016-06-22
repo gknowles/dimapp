@@ -18,9 +18,9 @@ namespace Dim {
 *
 ***/
 
-// *INDENT-OFF*
+// clang-format off
 const int64_t kClockTicksPerTimeT{10'000'000};
-// *INDENT-ON*
+// clang-format on
 
 //===========================================================================
 // static

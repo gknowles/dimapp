@@ -27,9 +27,7 @@ static BOOL WINAPI controlCallback(DWORD ctrl) {
     if (s_controlEnabled) {
         switch (ctrl) {
         case CTRL_C_EVENT:
-        case CTRL_BREAK_EVENT:
-            appSignalShutdown(kExitCtrlBreak);
-            return true;
+        case CTRL_BREAK_EVENT: appSignalShutdown(kExitCtrlBreak); return true;
         }
     }
 

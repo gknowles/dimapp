@@ -73,24 +73,12 @@ enum IXBuilder::State {
 //===========================================================================
 IXBuilder &IXBuilder::text(const char val[]) {
     switch (m_state) {
-    case kStateElemNameIntro:
-        m_state = kStateElemName;
-        [[fallthrough]];
-    case kStateElemName:
-        append(val);
-        return *this;
-    case kStateAttrNameIntro:
-        m_state = kStateAttrName;
-        [[fallthrough]];
-    case kStateAttrName:
-        append(val);
-        return *this;
-    case kStateAttrText:
-        addText<false>(val);
-        return *this;
-    case kStateAttrEnd:
-        append(">");
-        m_state = kStateText;
+    case kStateElemNameIntro: m_state = kStateElemName; [[fallthrough]];
+    case kStateElemName: append(val); return *this;
+    case kStateAttrNameIntro: m_state = kStateAttrName; [[fallthrough]];
+    case kStateAttrName: append(val); return *this;
+    case kStateAttrText: addText<false>(val); return *this;
+    case kStateAttrEnd: append(">"); m_state = kStateText;
     }
     assert(m_state == kStateText);
     addText<true>(val);
@@ -100,9 +88,7 @@ IXBuilder &IXBuilder::text(const char val[]) {
 //===========================================================================
 IXBuilder &IXBuilder::elem(const char name[], const char val[]) {
     switch (m_state) {
-    case kStateAttrText:
-        append("\">\n<");
-        break;
+    case kStateAttrText: append("\">\n<"); break;
     default:
         assert(m_state == kStateDocIntro || m_state == kStateText);
         append("<");
@@ -126,9 +112,7 @@ IXBuilder &IXBuilder::elem(const char name[], const char val[]) {
 //===========================================================================
 IXBuilder &IXBuilder::attr(const char name[], const char val[]) {
     switch (m_state) {
-    case kStateElemName:
-        append(" ");
-        break;
+    case kStateElemName: append(" "); break;
     default:
         assert(m_state == kStateAttrEnd);
         append("\" ");
@@ -188,23 +172,16 @@ template <bool isContent> void IXBuilder::addText(const char val[]) {
                 }
             }
             [[fallthrough]];
-        case kTextTypeNormal:
-            val += 1;
-            continue;
-        case kTextTypeNull:
-            append(base, val - base);
-            return;
+        case kTextTypeNormal: val += 1; continue;
+        case kTextTypeNull: append(base, val - base); return;
         case kTextTypeQuote:
             if (isContent) {
                 val += 1;
                 continue;
             }
         case kTextTypeAmp:
-        case kTextTypeLess:
-            break;
-        case kTextTypeInvalid:
-            m_state = kStateFail;
-            return;
+        case kTextTypeLess: break;
+        case kTextTypeInvalid: m_state = kStateFail; return;
         }
 
         append(base, val - base);

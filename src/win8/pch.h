@@ -1,5 +1,6 @@
 // pch.h - dim core - windows platform
 #include "dim.h"
+
 #include "../intern.h"
 
 #include <algorithm>
@@ -15,11 +16,12 @@
 #define _WIN32_WINNT _WIN32_WINNT_WIN8
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
-#include <Windows.h>
-#include <WinSock2.h>
 #include <WS2tcpip.h> // getaddrinfo, GetAddrInfoEx
-#include <mstcpip.h>  // SIO_LOOPBACK_FAST_PATH
-#include <MSWSock.h>  // Registered IO
+#include <WinSock2.h>
+#include <Windows.h>
+
+#include <MSWSock.h> // Registered IO
+#include <mstcpip.h> // SIO_LOOPBACK_FAST_PATH
 
 #pragma comment(lib, "ws2_32.lib")
 

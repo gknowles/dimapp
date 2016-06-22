@@ -138,8 +138,7 @@ bool Dim::CmdLine::ParseOptions(int argc, char *argv[]) {
         for (; *ptr; ++ptr) {
             switch (*ptr) {
             case '\\':
-            case '"':
-                os << '\\';
+            case '"': os << '\\';
             }
             os << *ptr;
         }

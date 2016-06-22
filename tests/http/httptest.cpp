@@ -43,66 +43,56 @@ struct Test {
  *
  ***/
 
+// clang-format off
 const Test s_tests[] = {
-    {"/a",
-     true,
-     {
-         'P',    'R',  'I',  ' ',  '*',  ' ',  'H', 'T', 'T',  'P',  '/',  '2',
-         '.',    '0',  '\r', '\n', '\r', '\n', 'S', 'M', '\r', '\n', '\r', '\n',
-         0,      0,    0,    4,    0,    0,    0,   0,   0, // settings
-         0,      0,    38,   1,    5,    0,    0,   0,   1, // headers (38
-                                                            // bytes) + eoh +
-                                                            // eos
-         '\x82',                                            // :method: GET
-         '\x87',                                            // :scheme: https
-         0x44,   0x09, '/',  'r',  'e',  's',  'o', 'u', 'r',  'c',  'e',  0x66,
-         0x0b,   'e',  'x',  'a',  'm',  'p',  'l', 'e', '.',  'o',  'r',  'g',
-         0x53,   0x0a, 'i',  'm',  'a',  'g',  'e', '/', 'j',  'p',  'e',  'g',
-     },
-     true,
-     {
-         0,
-         0,
-         0,
-         4,
-         0,
-         0,
-         0,
-         0,
-         0, // settings
-         0,
-         0,
-         0,
-         4,
-         1,
-         0,
-         0,
-         0,
-         0, // settings + ack
-     },
-     {
-         {{
-              {":method", "GET"},
-              {":scheme", "https"},
-              {":path", "/resource"},
-              {"host", "example.org"},
-              {"accept", "image/jpeg"},
-          },
-          ""},
-     }},
+    { 
+        "/a", true,
+        { 
+            'P','R','I',' ','*',' ','H','T','T','P','/','2','.','0','\r','\n',
+            '\r','\n',
+            'S', 'M', '\r', '\n', '\r', '\n',
+            0, 0, 0, 4, 0, 0, 0, 0, 0, // settings
+            0, 0, 38, 1, 5, 0, 0, 0, 1, // headers (38 bytes) + eoh + eos
+            '\x82', // :method: GET
+            '\x87', // :scheme: https
+            0x44, 0x09, '/','r','e','s','o','u','r','c','e',
+            0x66, 0x0b, 'e','x','a','m','p','l','e','.','o','r','g',
+            0x53, 0x0a, 'i','m','a','g','e','/','j','p','e','g',
+        },
+        true,
+        {
+            0, 0, 0, 4, 0, 0, 0, 0, 0, // settings
+            0, 0, 0, 4, 1, 0, 0, 0, 0, // settings + ack
+        },
+        {
+            {
+                {
+                    {":method", "GET"},
+                    {":scheme", "https"},
+                    {":path", "/resource"},
+                    {"host", "example.org"},
+                    {"accept", "image/jpeg"},
+                },
+                ""
+            },
+        }
+    },
 };
+// clang-format on
+
 
 /****************************************************************************
- *
- *   Helpers
- *
- ***/
+*
+*   Helpers
+*
+***/
+
 
 /****************************************************************************
- *
- *   Application
- *
- ***/
+*
+*   Application
+*
+***/
 
 namespace {
 class Application : public ITaskNotify, public ILogNotify {
