@@ -62,6 +62,10 @@ static void getTestRules(set<Element> &rules) {
     addTerminal(elem, 's', 1, 1);
     addRule(elem, "right-recurse", 1, 1);
     addTerminal(rule, 'y', 1, 1);
+
+    rule = addChoiceRule(rules, "simple-recurse", 1, 1);
+    addRule(rule, "simple-recurse", 1, 1);
+    addTerminal(rule, 'y', 1, 1);
 }
 
 //===========================================================================
@@ -355,7 +359,8 @@ bool abnfCheckSyntax(const char src[]);
 //===========================================================================
 void Application::onTask() {
     // if (m_argc < 2) {
-    //    cout << "pargen v0.1.0 (" __DATE__ ") - simplistic parser generator\n"
+    //    cout << "pargen v0.1.0 (" __DATE__ ") - simplistic parser
+    //    generator\n"
     //        << "usage: pargen\n";
     //    return appSignalShutdown(kExitBadArgs);
     //}
