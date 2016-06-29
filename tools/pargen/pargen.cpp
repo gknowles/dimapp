@@ -373,17 +373,19 @@ void Application::onTask() {
     getTestRules(rules);
 
     TimePoint start = Clock::now();
-    ofstream os("abnfsyntax.cpp");
-    writeParser(os, rules, "bin-val");
+    ofstream oh("abnfsyntax.h");
+    ofstream ocpp("abnfsyntax.cpp");
+    writeParser(oh, ocpp, rules, "rulelist");
     TimePoint finish = Clock::now();
-    Duration elapsed = finish - start;
-    cout << "Elapsed time: " << elapsed.count() << endl;
+    std::chrono::duration<double> elapsed = finish - start;
+    cout << "Elapsed time: " << elapsed.count() << " seconds" << endl;
 
     ostringstream abnf;
     for (auto &&rule : rules) {
         abnf << rule.name << " = " << rule << '\n';
     }
-    bool valid = abnfCheckSyntax(abnf.str().c_str());
+    AbnfParser parser{nullptr};
+    bool valid = parser.checkSyntax(abnf.str().c_str());
     cout << "Valid: " << valid << endl;
 
     appSignalShutdown(kExitSuccess);

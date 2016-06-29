@@ -44,4 +44,7 @@ void addRange(Element *rule, unsigned char a, unsigned char b);
 void addTerminal(Element *rule, unsigned char ch, unsigned m, unsigned n);
 
 void writeParser(
-    std::ostream &os, const std::set<Element> &rules, const std::string &root);
+    std::ostream &hfile,
+    std::ostream &cppfile,
+    const std::set<Element> &rules,
+    const std::string &root);

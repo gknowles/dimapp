@@ -117,6 +117,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\tools\pargen\abnfsyntax.h" />
     <ClInclude Include="..\tools\pargen\intern.h" />
     <ClInclude Include="..\tools\pargen\pch.h" />
   </ItemGroup>

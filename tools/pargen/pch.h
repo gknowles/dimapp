@@ -9,4 +9,5 @@
 #include <set>
 #include <unordered_set>
 
+#include "abnfsyntax.h"
 #include "intern.h"

@@ -40,7 +40,29 @@ struct StatePosition {
     bool operator<(const StatePosition &right) const;
     bool operator==(const StatePosition &right) const;
 };
+} // namespace
 
+namespace std {
+template <> struct hash<StateElement> {
+    size_t operator()(const StateElement &val) const {
+        size_t out = val.elem->id;
+        hashCombine(out, val.rep);
+        return out;
+    }
+};
+
+template <> struct hash<StatePosition> {
+    size_t operator()(const StatePosition &val) const {
+        size_t out = 0;
+        for (auto &&se : val.elems) {
+            hashCombine(out, hash<StateElement>{}(se));
+        }
+        return out;
+    }
+};
+}
+
+namespace {
 struct State {
     unsigned id;
     string name;
@@ -65,24 +87,6 @@ struct State {
 } // namespace
 
 namespace std {
-template <> struct hash<StateElement> {
-    size_t operator()(const StateElement &val) const {
-        size_t out = val.elem->id;
-        hashCombine(out, val.rep);
-        return out;
-    }
-};
-
-template <> struct hash<StatePosition> {
-    size_t operator()(const StatePosition &val) const {
-        size_t out = 0;
-        for (auto &&se : val.elems) {
-            hashCombine(out, hash<StateElement>{}(se));
-        }
-        return out;
-    }
-};
-
 template <> struct hash<State> {
     size_t operator()(const State &val) const {
         size_t out = 0;
@@ -101,7 +105,6 @@ template <> struct hash<State> {
 *
 ***/
 
-static unordered_set<State> s_states;
 static unsigned s_nextStateId = 1;
 static unsigned s_transitions;
 static ElementDone s_done;
@@ -121,7 +124,8 @@ static void copyRules(
     bool failIfExists);
 static void normalizeSequence(Element &rule);
 
-static void addNextPositions(State *st, const StatePosition &sp, bool recurse);
+static void addPositions(
+    State *st, StatePosition *sp, bool init, const Element &elem, unsigned rep);
 
 //===========================================================================
 static void hashCombine(size_t &seed, size_t v) {
@@ -331,7 +335,7 @@ ostream &operator<<(ostream &os, const Element &elem) {
 //===========================================================================
 ostream &operator<<(ostream &os, const set<Element> &rules) {
     for (auto &&rule : rules) {
-        os << "// " << rule.name;
+        os << "*   " << rule.name;
         if (rule.recurse)
             os << '*';
         os << " = " << rule << '\n';
@@ -359,18 +363,47 @@ ostream &operator<<(ostream &os, const StatePosition &sp) {
 }
 
 //===========================================================================
+static void addRulePositions(State *st, StatePosition *sp, bool init) {
+    const Element &elem = *sp->elems.back().elem;
+
+    if (elem.rule->recurse) {
+        st->positions.insert(*sp);
+        return;
+    }
+
+    // check for rule recursion
+    size_t depth = sp->elems.size();
+    if (depth >= 3) {
+        StateElement *m = sp->elems.data() + depth / 2;
+        StateElement *z = &sp->elems.back();
+        for (StateElement *y = z - 1; y >= m; --y) {
+            if (y->elem == z->elem) {
+                StateElement *x = y - (z - y);
+                if (equal(x + 1, y, y + 1, z)) {
+                    if (!init) {
+                        vector<StateElement> tmp{sp->elems};
+                        size_t num = y - sp->elems.data() + 1;
+                        sp->elems.resize(num);
+                        sp->elems.back().rep = 0;
+                        addPositions(st, sp, false, *elem.rule, 0);
+                        sp->elems = move(tmp);
+                    }
+                    return;
+                }
+            }
+        }
+    }
+
+    addPositions(st, sp, init, *elem.rule, 0);
+}
+
+//===========================================================================
 static void addPositions(
     State *st,
     StatePosition *sp,
     bool init,
     const Element &rule,
     unsigned rep) {
-    enum {
-        kTruncate,
-        kNext,
-        kRestart,
-    } recurse = init ? kTruncate : kRestart;
-
     StateElement se;
     se.elem = &rule;
     se.rep = rep;
@@ -382,37 +415,7 @@ static void addPositions(
             addPositions(st, sp, true, elem, 0);
         }
         break;
-    case Element::kRule:
-        // check for rule recursion
-        {
-            size_t depth = sp->elems.size();
-            if (depth >= 3) {
-                StateElement *m = sp->elems.data() + depth / 2;
-                StateElement *z = &sp->elems.back();
-                for (StateElement *y = z - 1; y >= m; --y) {
-                    if (y->elem == z->elem) {
-                        StateElement *x = y - (z - y);
-                        if (equal(x + 1, y, y + 1, z)) {
-                            switch (recurse) {
-                            case kTruncate: break;
-                            case kRestart: {
-                                vector<StateElement> tmp{sp->elems};
-                                size_t num = y - sp->elems.data() + 1;
-                                sp->elems.resize(num);
-                                sp->elems.back().rep = 0;
-                                addPositions(st, sp, false, *rule.rule, 0);
-                                sp->elems = move(tmp);
-                            } break;
-                            case kNext: addNextPositions(st, *sp, true); break;
-                            }
-                            goto done;
-                        }
-                    }
-                }
-            }
-        }
-        addPositions(st, sp, init, *rule.rule, 0);
-        break;
+    case Element::kRule: addRulePositions(st, sp, init); break;
     case Element::kSequence:
         // up to first with a minimum
         for (auto &&elem : rule.elements) {
@@ -442,8 +445,8 @@ initPositions(State *st, const set<Element> &rules, const string &root) {
 }
 
 //===========================================================================
-static void addNextPositions(State *st, const StatePosition &sp, bool recurse) {
-    if (sp.recurse) 
+static void addNextPositions(State *st, const StatePosition &sp) {
+    if (sp.recurse)
         st->positions.insert(sp);
 
     auto it = sp.elems.rbegin();
@@ -496,9 +499,6 @@ static void addNextPositions(State *st, const StatePosition &sp, bool recurse) {
         // advance parent
     }
 
-    if (recurse)
-        return;
-
     // completed parsing
     StatePosition nsp;
     StateElement nse;
@@ -509,25 +509,25 @@ static void addNextPositions(State *st, const StatePosition &sp, bool recurse) {
 }
 
 //===========================================================================
-static void buildStateTree(State *st, string *path) {
+static void
+buildStateTree(State *st, string *path, unordered_set<State> &states) {
     st->next.assign(256, 0);
     State next;
     for (unsigned i = 0; i < 256; ++i) {
         next.clear();
         for (auto &&sp : st->positions) {
             auto &se = sp.elems.back();
-            if (se.elem->type != Element::kTerminal) {
-                assert(se.elem == &s_done);
-                if (i == 0) {
-                    st->next[i] = 1;
-                }
-            } else {
+            if (se.elem->type == Element::kTerminal) {
                 if ((unsigned char)se.elem->value.front() == i)
-                    addNextPositions(&next, sp, false);
+                    addNextPositions(&next, sp);
+            } else {
+                assert(se.elem->type == Element::kRule);
+                if (i == 0 && se.elem == &s_done)
+                    st->next[i] = 1;
             }
         }
         if (next.positions.size()) {
-            auto ib = s_states.insert(move(next));
+            auto ib = states.insert(move(next));
             State *st2 = const_cast<State *>(&*ib.first);
 
             if (i <= ' ') {
@@ -553,8 +553,7 @@ static void buildStateTree(State *st, string *path) {
                 logMsgInfo() << s_nextStateId << " states, " << s_transitions
                              << " transitions, "
                              << "(" << path->size() << " chars) ..." << show;
-                buildStateTree(st2, path);
-            } else {
+                buildStateTree(st2, path, states);
             }
             path->pop_back();
             if (i <= ' ')
@@ -570,17 +569,52 @@ static void buildStateTree(State *st, string *path) {
 }
 
 //===========================================================================
-static void writeParserState(ostream &os, const State &st) {
-    os << "state" << st.id << ": // " << st.name << "\n";
-    for (auto &&sp : st.positions) {
-        os << sp << '\n';
-    }
+static void buildStateTree(
+    unordered_set<State> *states,
+    const set<Element> &rules,
+    const string &root,
+    bool inclDeps) {
+    logMsgInfo() << "rule: " << root;
 
-    if (st.name == kDoneStateName) {
-        os << "    return true;\n\n";
-        return;
-    }
+    states->clear();
+    State state;
+    s_nextStateId = 0;
+    s_transitions = 0;
+    state.id = ++s_nextStateId;
+    state.name = kDoneStateName;
+    StatePosition nsp;
+    StateElement nse;
+    nse.elem = &s_done;
+    nse.rep = 0;
+    nsp.elems.push_back(nse);
+    state.positions.insert(nsp);
+    states->insert(move(state));
 
+    state.clear();
+    if (inclDeps) {
+        initPositions(&state, rules, root);
+        state.id = ++s_nextStateId;
+        auto ib = states->insert(move(state));
+
+        string path;
+        buildStateTree(const_cast<State *>(&*ib.first), &path, *states);
+    }
+}
+
+//===========================================================================
+static void writeRuleName(ostream &os, const string &name, bool capitalize) {
+    for (auto &&ch : name) {
+        if (ch == '-') {
+            capitalize = true;
+        } else {
+            os << (capitalize ? (char)toupper(ch) : ch);
+            capitalize = false;
+        }
+    }
+}
+
+//===========================================================================
+static void writeSwitchCase(ostream &os, const State &st) {
     struct NextState {
         unsigned char ch;
         unsigned state;
@@ -590,6 +624,9 @@ static void writeParserState(ostream &os, const State &st) {
         if (st.next[i])
             cases.push_back({unsigned char(i), st.next[i]});
     }
+    if (cases.empty())
+        return;
+
     sort(
         cases.begin(),
         cases.end(),
@@ -630,9 +667,155 @@ static void writeParserState(ostream &os, const State &st) {
         os << '\n';
 
     os << "        goto state" << cases.back().state << ";\n"
-       << "    }\n"
-       << "    goto state0;\n"
-       << "    \n";
+       << "    }\n";
+}
+
+//===========================================================================
+static void
+writeParserState(ostream &os, const State &st, bool inclStatePositions) {
+    os << "\nstate" << st.id << ": // " << st.name << "\n";
+    if (inclStatePositions) {
+        for (auto &&sp : st.positions) {
+            os << sp << '\n';
+        }
+    }
+
+    if (st.name == kDoneStateName) {
+        os << "    return true;\n";
+        return;
+    }
+
+    // write switch case
+    writeSwitchCase(os, st);
+
+    // write calls to recursive states
+    bool hasCalls = false;
+    for (auto &&sp : st.positions) {
+        const Element *elem = sp.elems.back().elem;
+        if (elem->type != Element::kTerminal && elem != &s_done) {
+            hasCalls = true;
+            assert(elem->type == Element::kRule && elem->rule->recurse);
+            os << "    if (state";
+            writeRuleName(os, elem->rule->name, true);
+            os << "(--ptr)) {\n";
+            os << "        goto state1;\n";
+            os << "    }\n";
+        }
+    }
+
+    os << "    goto state0;\n";
+}
+
+//===========================================================================
+static void writeCppfileStart(ostream &os, const set<Element> &rules) {
+    os << 1 + R"(
+// abnfsyntax.cpp - pargen
+// clang-format off
+#include "pch.h"
+#pragma hdrstop
+
+
+/****************************************************************************
+*
+*   AbnfParser
+*
+*   Normalized ABNF of syntax being checked: 
+)";
+    os << rules;
+    os << 1 + R"(
+*
+***/
+)";
+}
+
+//===========================================================================
+static void writeFunction(
+    ostream &os,
+    const Element *root,
+    const set<Element> &rules,
+    const unordered_set<State> &stateSet,
+    bool inclStatePositions) {
+    os << 1 + R"(
+
+//===========================================================================
+)";
+    if (!root) {
+        os << 1 + R"(
+bool AbnfParser::checkSyntax (const char src[]) {
+    const char * ptr = src;
+)";
+    } else {
+        os << "bool AbnfParser::state";
+        writeRuleName(os, root->name, true);
+        os << "(const char *& ptr) {\n";
+    }
+    os << 1 + R"(
+    goto state2;
+
+state0: // <FAILED>
+    return false;
+)";
+    vector<const State *> states;
+    states.resize(s_nextStateId);
+    for (auto &&st : stateSet)
+        states[st.id - 1] = &st;
+    for (auto &&st : states) {
+        writeParserState(os, *st, inclStatePositions);
+    }
+    os << "}\n";
+}
+
+//===========================================================================
+static void writeHeaderfile(ostream &os, const set<Element> &rules) {
+    os << 1 + R"(
+// abnfparser.h - pargen
+// clang-format off
+#pragma once
+
+
+/****************************************************************************
+*
+*   Parser event notifications
+*   Clients inherit from this class to make process parsed results
+*
+***/
+
+class IAbnfParserNotify {
+public:
+    virtual ~IAbnfParserNotify () {}
+
+    virtual bool startDoc () {}
+    virtual bool endDoc () {}
+};
+
+
+/****************************************************************************
+*
+*   AbnfParser
+*
+***/
+
+class AbnfParser {
+public:
+    AbnfParser (IAbnfParserNotify * notify) : m_notify(notify) {}
+    ~AbnfParser () {}
+
+    bool checkSyntax (const char src[]);
+
+private:
+)";
+    for (auto &&elem : rules) {
+        if (elem.recurse) {
+            os << "    bool state";
+            writeRuleName(os, elem.name, true);
+            os << " (const char *& src);\n";
+        }
+    }
+    os << 1 + R"(
+
+    IAbnfParserNotify * m_notify{nullptr};
+};
+)";
 }
 
 
@@ -647,6 +830,7 @@ ElementDone::ElementDone() {
     type = Element::kRule;
     value = kDoneStateName;
 }
+
 
 /****************************************************************************
  *
@@ -690,8 +874,16 @@ bool StatePosition::operator==(const StatePosition &right) const {
 *
 ***/
 
+static bool s_markRecursion = true;
+static bool s_buildStateTree = true;
+static bool s_writeStatePositions = false;
+
 //===========================================================================
-void writeParser(ostream &os, const set<Element> &src, const string &root) {
+void writeParser(
+    ostream &hfile,
+    ostream &cppfile,
+    const set<Element> &src,
+    const string &root) {
     logMsgInfo() << "parser: " << root;
 
     set<Element> rules;
@@ -699,60 +891,22 @@ void writeParser(ostream &os, const set<Element> &src, const string &root) {
     Element *elem = addChoiceRule(rules, kRootElement, 1, 1);
     addRule(elem, root, 1, 1);
     normalize(rules);
-    findRecursion(rules, *elem);
+    if (s_markRecursion)
+        findRecursion(rules, *elem);
 
-    State state;
-    s_states.clear();
-    s_nextStateId = 0;
-    state.id = ++s_nextStateId;
-    state.name = kDoneStateName;
-    StatePosition nsp;
-    StateElement nse;
-    nse.elem = &s_done;
-    nse.rep = 0;
-    nsp.elems.push_back(nse);
-    state.positions.insert(nsp);
-    s_states.insert(move(state));
+    writeHeaderfile(hfile, rules);
 
-    state.clear();
-    if (state.positions.empty()) {
-        initPositions(&state, rules, kRootElement);
-        state.id = ++s_nextStateId;
-        auto ib = s_states.insert(move(state));
+    writeCppfileStart(cppfile, rules);
 
-        string path;
-        buildStateTree(const_cast<State *>(&*ib.first), &path);
+    unordered_set<State> states;
+    buildStateTree(&states, rules, kRootElement, s_buildStateTree);
+    writeFunction(cppfile, nullptr, rules, states, s_writeStatePositions);
+
+    for (auto &&elem : rules) {
+        if (elem.recurse) {
+            buildStateTree(&states, rules, elem.name, s_buildStateTree);
+            writeFunction(cppfile, &elem, rules, states, s_writeStatePositions);
+        }
     }
-
-    os << 1 + R"(
-// abnfsyntax.cpp - pargen
-#include "pch.h"
-#pragma hdrstop
-
-)";
-
-    os << "//============================================"
-          "===============================\n";
-    os << "// Normalized ABNF of syntax being checked, with '" << kRootElement
-       << "' as the\n"
-       << "// top level rule:\n"
-       << "//\n";
-    os << rules;
-    os << 1 + R"(
-bool abnfCheckSyntax (const char src[]) {
-    const char * ptr = src;
-    goto state2;
-
-state0: // <FAILED>
-    return false;
-
-)";
-    vector<State> states;
-    states.resize(s_nextStateId);
-    for (auto &&st : s_states)
-        states[st.id - 1] = st;
-    for (auto &&st : states) {
-        writeParserState(os, st);
-    }
-    os << "}\n";
+    cppfile << endl;
 }
