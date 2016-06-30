@@ -669,7 +669,7 @@ static void writeRuleName(ostream &os, const string &name, bool capitalize) {
 }
 
 //===========================================================================
-static void writeSwitchCase(ostream &os, const State &st) {
+static bool writeSwitchCase(ostream &os, const State &st) {
     struct NextState {
         unsigned char ch;
         unsigned state;
@@ -680,7 +680,7 @@ static void writeSwitchCase(ostream &os, const State &st) {
             cases.push_back({unsigned char(i), st.next[i]});
     }
     if (cases.empty())
-        return;
+        return false;
 
     sort(
         cases.begin(),
@@ -723,6 +723,7 @@ static void writeSwitchCase(ostream &os, const State &st) {
 
     os << "        goto state" << cases.back().state << ";\n"
        << "    }\n";
+    return true;
 }
 
 //===========================================================================
@@ -741,7 +742,7 @@ writeParserState(ostream &os, const State &st, bool inclStatePositions) {
     }
 
     // write switch case
-    writeSwitchCase(os, st);
+    bool hasSwitch = writeSwitchCase(os, st);
 
     // write calls to recursive states
     bool hasCalls = false;
@@ -752,9 +753,12 @@ writeParserState(ostream &os, const State &st, bool inclStatePositions) {
             assert(elem->type == Element::kRule && elem->rule->recurse);
             os << "    if (state";
             writeRuleName(os, elem->rule->name, true);
-            os << "(--ptr)) {\n";
-            os << "        goto state1;\n";
-            os << "    }\n";
+            os << "(";
+            if (hasSwitch)
+                os << "--";
+            os << "ptr)) {\n"
+               << "        goto state1;\n"
+               << "    }\n";
         }
     }
 
