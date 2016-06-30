@@ -375,7 +375,7 @@ void Application::onTask() {
     TimePoint start = Clock::now();
     ofstream oh("abnfsyntax.h");
     ofstream ocpp("abnfsyntax.cpp");
-    writeParser(oh, ocpp, rules, "rulelist");
+    writeParser(oh, ocpp, rules, "left-recurse");
     TimePoint finish = Clock::now();
     std::chrono::duration<double> elapsed = finish - start;
     cout << "Elapsed time: " << elapsed.count() << " seconds" << endl;

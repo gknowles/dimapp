@@ -10,5 +10,6 @@
     <ClCompile Include="..\tools\pargen\gen.cpp" />
     <ClCompile Include="..\tools\pargen\pargen.cpp" />
     <ClCompile Include="..\tools\pargen\pch.cpp" />
+    <ClCompile Include="..\tools\pargen\write.cpp" />
   </ItemGroup>
 </Project>

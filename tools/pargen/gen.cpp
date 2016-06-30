@@ -14,90 +14,6 @@ using namespace Dim;
 
 static void hashCombine(size_t &seed, size_t v);
 
-const char kRootElement[] = "<ROOT>";
-const char kDoneStateName[] = "<DONE>";
-const char kFailedStateName[] = "<FAILED>";
-
-namespace {
-
-struct ElementDone : Element {
-    ElementDone();
-};
-
-struct StateElement {
-    const Element *elem;
-    unsigned rep;
-
-    int compare(const StateElement &right) const;
-    bool operator<(const StateElement &right) const;
-    bool operator==(const StateElement &right) const;
-};
-
-struct StatePosition {
-    vector<StateElement> elems;
-    bool recurse{false};
-
-    bool operator<(const StatePosition &right) const;
-    bool operator==(const StatePosition &right) const;
-};
-} // namespace
-
-namespace std {
-template <> struct hash<StateElement> {
-    size_t operator()(const StateElement &val) const {
-        size_t out = val.elem->id;
-        hashCombine(out, val.rep);
-        return out;
-    }
-};
-
-template <> struct hash<StatePosition> {
-    size_t operator()(const StatePosition &val) const {
-        size_t out = 0;
-        for (auto &&se : val.elems) {
-            hashCombine(out, hash<StateElement>{}(se));
-        }
-        return out;
-    }
-};
-}
-
-namespace {
-struct State {
-    unsigned id;
-    string name;
-    set<StatePosition> positions;
-    vector<unsigned> next;
-
-    void clear() {
-        id = 0;
-        positions.clear();
-        next.clear();
-    }
-
-    bool operator==(const State &right) const {
-        return equal(
-            positions.begin(),
-            positions.end(),
-            right.positions.begin(),
-            right.positions.end());
-    }
-};
-
-} // namespace
-
-namespace std {
-template <> struct hash<State> {
-    size_t operator()(const State &val) const {
-        size_t out = 0;
-        for (auto &&sp : val.positions) {
-            hashCombine(out, hash<StatePosition>{}(sp));
-        }
-        return out;
-    }
-};
-} // namespace std
-
 
 /****************************************************************************
 *
@@ -107,7 +23,6 @@ template <> struct hash<State> {
 
 static unsigned s_nextStateId = 1;
 static unsigned s_transitions;
-static ElementDone s_done;
 
 
 /****************************************************************************
@@ -117,13 +32,7 @@ static ElementDone s_done;
 ***/
 
 // forward declarations
-static void copyRules(
-    set<Element> &rules,
-    const set<Element> &src,
-    const string &root,
-    bool failIfExists);
 static void normalizeSequence(Element &rule);
-
 static void addPositions(
     State *st, StatePosition *sp, bool init, const Element &elem, unsigned rep);
 
@@ -131,6 +40,125 @@ static void addPositions(
 static void hashCombine(size_t &seed, size_t v) {
     seed ^= v + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 }
+
+
+/****************************************************************************
+*
+*   ElementDone
+*
+***/
+
+ElementDone ElementDone::s_elem;
+
+//===========================================================================
+ElementDone::ElementDone() {
+    type = Element::kRule;
+    value = kDoneStateName;
+}
+
+
+/****************************************************************************
+*
+*   StateElement
+*
+***/
+
+namespace std {
+//===========================================================================
+size_t hash<StateElement>::operator()(const StateElement &val) const {
+    size_t out = val.elem->id;
+    hashCombine(out, val.rep);
+    return out;
+}
+} // namespace std
+
+//===========================================================================
+int StateElement::compare(const StateElement &right) const {
+    if (int rc = (int)(elem->id - right.elem->id))
+        return rc;
+    int rc = rep - right.rep;
+    return rc;
+}
+
+//===========================================================================
+bool StateElement::operator<(const StateElement &right) const {
+    return compare(right) < 0;
+}
+
+//===========================================================================
+bool StateElement::operator==(const StateElement &right) const {
+    return compare(right) == 0;
+}
+
+
+/****************************************************************************
+*
+*   StateElement
+*
+***/
+
+namespace std {
+//===========================================================================
+size_t hash<StatePosition>::operator()(const StatePosition &val) const {
+    size_t out = 0;
+    for (auto &&se : val.elems) {
+        hashCombine(out, hash<StateElement>{}(se));
+    }
+    return out;
+}
+} // namespace std
+
+//===========================================================================
+bool StatePosition::operator<(const StatePosition &right) const {
+    return recurse < right.recurse ||
+           recurse == right.recurse && elems < right.elems;
+}
+
+//===========================================================================
+bool StatePosition::operator==(const StatePosition &right) const {
+    return elems == right.elems && recurse == right.recurse;
+}
+
+
+/****************************************************************************
+*
+*   StateElement
+*
+***/
+
+namespace std {
+//===========================================================================
+size_t hash<State>::operator()(const State &val) const {
+    size_t out = 0;
+    for (auto &&sp : val.positions) {
+        hashCombine(out, hash<StatePosition>{}(sp));
+    }
+    return out;
+}
+} // namespace std
+
+//===========================================================================
+void State::clear() {
+    id = 0;
+    positions.clear();
+    next.clear();
+}
+
+//===========================================================================
+bool State::operator==(const State &right) const {
+    return equal(
+        positions.begin(),
+        positions.end(),
+        right.positions.begin(),
+        right.positions.end());
+}
+
+
+/****************************************************************************
+*
+*   copy rules
+*
+***/
 
 //===========================================================================
 static void copyRequiredDeps(
@@ -146,7 +174,7 @@ static void copyRequiredDeps(
 }
 
 //===========================================================================
-static void copyRules(
+void copyRules(
     set<Element> &rules,
     const set<Element> &src,
     const string &root,
@@ -167,6 +195,13 @@ static void copyRules(
     }
     copyRequiredDeps(rules, src, *ib.first);
 }
+
+
+/****************************************************************************
+*
+*   normalize
+*
+***/
 
 //===========================================================================
 static void normalizeChoice(Element &rule) {
@@ -251,11 +286,18 @@ static void normalize(Element &rule, const set<Element> &rules) {
 }
 
 //===========================================================================
-static void normalize(set<Element> &rules) {
+void normalize(set<Element> &rules) {
     for (auto &&rule : rules) {
         normalize(const_cast<Element &>(rule), rules);
     }
 }
+
+
+/****************************************************************************
+*
+*   find recursion
+*
+***/
 
 //===========================================================================
 static void
@@ -279,7 +321,7 @@ findRecursion(set<Element> &rules, Element &rule, vector<bool> &used) {
 }
 
 //===========================================================================
-static void findRecursion(set<Element> &rules, Element &rule) {
+void findRecursion(set<Element> &rules, Element &rule) {
     size_t maxId = 0;
     for (auto &&elem : rules) {
         const_cast<Element &>(elem).recurse = false;
@@ -289,78 +331,12 @@ static void findRecursion(set<Element> &rules, Element &rule) {
     findRecursion(rules, rule, used);
 }
 
-//===========================================================================
-ostream &operator<<(ostream &os, const Element &elem) {
-    if (elem.m != 1 || elem.n != 1) {
-        if (elem.m)
-            os << elem.m;
-        os << '*';
-        if (elem.n != kUnlimited)
-            os << elem.n;
-    }
-    bool first = true;
-    switch (elem.type) {
-    case Element::kChoice:
-        os << "( ";
-        for (auto &&e : elem.elements) {
-            if (first) {
-                first = false;
-            } else {
-                os << " / ";
-            }
-            os << e;
-        }
-        os << " )";
-        break;
-    case Element::kRule: os << elem.value; break;
-    case Element::kSequence:
-        os << "( ";
-        for (auto &&e : elem.elements) {
-            if (first) {
-                first = false;
-            } else {
-                os << " ";
-            }
-            os << e;
-        }
-        os << " )";
-        break;
-    case Element::kTerminal:
-        os << "%x" << hex << (unsigned)elem.value[0] << dec;
-        break;
-    }
-    return os;
-}
 
-//===========================================================================
-ostream &operator<<(ostream &os, const set<Element> &rules) {
-    for (auto &&rule : rules) {
-        os << "*   " << rule.name;
-        if (rule.recurse)
-            os << '*';
-        os << " = " << rule << '\n';
-    }
-    return os;
-}
-
-//===========================================================================
-ostream &operator<<(ostream &os, const StateElement &se) {
-    os << *se.elem << '.' << se.rep;
-    return os;
-}
-
-//===========================================================================
-ostream &operator<<(ostream &os, const StatePosition &sp) {
-    os << "sp";
-    if (sp.recurse)
-        os << '*';
-    os << ':';
-    for (auto &&se : sp.elems) {
-        os << "\n  " << se;
-    }
-    os << "\n";
-    return os;
-}
+/****************************************************************************
+*
+*   build state tree
+*
+***/
 
 //===========================================================================
 static void addRulePositions(State *st, StatePosition *sp, bool init) {
@@ -502,7 +478,7 @@ static void addNextPositions(State *st, const StatePosition &sp) {
     // completed parsing
     StatePosition nsp;
     StateElement nse;
-    nse.elem = &s_done;
+    nse.elem = &ElementDone::s_elem;
     nse.rep = 0;
     nsp.elems.push_back(nse);
     st->positions.insert(nsp);
@@ -522,7 +498,7 @@ buildStateTree(State *st, string *path, unordered_set<State> &states) {
                     addNextPositions(&next, sp);
             } else {
                 assert(se.elem->type == Element::kRule);
-                if (i == 0 && se.elem == &s_done)
+                if (i == 0 && se.elem == &ElementDone::s_elem)
                     st->next[i] = 1;
             }
         }
@@ -569,7 +545,7 @@ buildStateTree(State *st, string *path, unordered_set<State> &states) {
 }
 
 //===========================================================================
-static void buildStateTree(
+void buildStateTree(
     unordered_set<State> *states,
     const set<Element> &rules,
     const string &root,
@@ -584,7 +560,7 @@ static void buildStateTree(
     state.name = kDoneStateName;
     StatePosition nsp;
     StateElement nse;
-    nse.elem = &s_done;
+    nse.elem = &ElementDone::s_elem;
     nse.rep = 0;
     nsp.elems.push_back(nse);
     state.positions.insert(nsp);
@@ -599,378 +575,4 @@ static void buildStateTree(
         string path;
         buildStateTree(const_cast<State *>(&*ib.first), &path, *states);
     }
-}
-
-//===========================================================================
-// remove leading/trailing spaces and replace multiple spaces with one
-// replace spaces, with NL followed by the prefix, if waiting until the next
-//   space would go past the maxWidth
-static void writeWordwrap(
-    ostream &os,
-    size_t &indent,
-    const string &str,
-    size_t maxWidth,
-    const string &prefix) {
-    const char *base = str.c_str();
-    for (;;) {
-        while (*base == ' ')
-            base += 1;
-        if (!*base)
-            return;
-        const char *ptr = strchr(base, ' ');
-        if (!ptr) {
-            ptr = str.c_str() + str.size();
-            while (ptr >= base && ptr[-1] == ' ')
-                ptr -= 1;
-        }
-        size_t len = ptr - base;
-        if (indent + len >= maxWidth) {
-            os << '\n' << prefix;
-            indent = size(prefix);
-        }
-        if (*ptr) {
-            os.write(base, len + 1);
-            base = ptr + 1;
-        } else {
-            os.write(base, len);
-            os << ' ';
-            base = ptr;
-        }
-        indent += len + 1;
-    }
-}
-
-//===========================================================================
-static void writeRule(
-    ostream &os, const Element &rule, size_t maxWidth, const string &prefix) {
-    streampos pos = os.tellp();
-    os << prefix << rule.name;
-    if (rule.recurse)
-        os << '*';
-    os << " = ";
-    size_t indent = os.tellp() - pos;
-    ostringstream raw;
-    raw << rule;
-    string vpre = prefix + "    ";
-    writeWordwrap(os, indent, raw.str(), maxWidth, vpre);
-    os << '\n';
-}
-
-//===========================================================================
-static void writeRuleName(ostream &os, const string &name, bool capitalize) {
-    for (auto &&ch : name) {
-        if (ch == '-') {
-            capitalize = true;
-        } else {
-            os << (capitalize ? (char)toupper(ch) : ch);
-            capitalize = false;
-        }
-    }
-}
-
-//===========================================================================
-static bool writeSwitchCase(ostream &os, const State &st) {
-    struct NextState {
-        unsigned char ch;
-        unsigned state;
-    };
-    vector<NextState> cases;
-    for (unsigned i = 0; i < 256; ++i) {
-        if (st.next[i])
-            cases.push_back({unsigned char(i), st.next[i]});
-    }
-    if (cases.empty())
-        return false;
-
-    sort(
-        cases.begin(),
-        cases.end(),
-        [](const NextState &e1, const NextState &e2) {
-            return 256 * e1.state + e1.ch < 256 * e2.state + e2.ch;
-        });
-    const unsigned kCaseColumns = 6;
-    os << "    switch (*ptr++) {\n";
-    unsigned prev = cases.front().state;
-    unsigned pos = 0;
-    for (auto &&ns : cases) {
-        if (ns.state != prev) {
-            if (pos % kCaseColumns != 0)
-                os << '\n';
-            os << "        goto state" << prev << ";\n";
-            prev = ns.state;
-            pos = 0;
-        }
-        if (pos % kCaseColumns == 0)
-            os << "    ";
-        os << "case ";
-        if (ns.ch < ' ' || ns.ch >= 0x7f) {
-            os << (unsigned)ns.ch;
-        } else {
-            os << '\'';
-            if (ns.ch == '\'' || ns.ch == '\\')
-                os << '\\';
-            os << ns.ch << '\'';
-        }
-        os << ':';
-        if (++pos % kCaseColumns == 0) {
-            os << '\n';
-        } else {
-            os << ' ';
-        }
-    }
-    if (pos % kCaseColumns != 0)
-        os << '\n';
-
-    os << "        goto state" << cases.back().state << ";\n"
-       << "    }\n";
-    return true;
-}
-
-//===========================================================================
-static void
-writeParserState(ostream &os, const State &st, bool inclStatePositions) {
-    os << "\nstate" << st.id << ": // " << st.name << "\n";
-    if (inclStatePositions) {
-        for (auto &&sp : st.positions) {
-            os << sp << '\n';
-        }
-    }
-
-    if (st.name == kDoneStateName) {
-        os << "    return true;\n";
-        return;
-    }
-
-    // write switch case
-    bool hasSwitch = writeSwitchCase(os, st);
-
-    // write calls to recursive states
-    bool hasCalls = false;
-    for (auto &&sp : st.positions) {
-        const Element *elem = sp.elems.back().elem;
-        if (elem->type != Element::kTerminal && elem != &s_done) {
-            hasCalls = true;
-            assert(elem->type == Element::kRule && elem->rule->recurse);
-            os << "    if (state";
-            writeRuleName(os, elem->rule->name, true);
-            os << "(";
-            if (hasSwitch)
-                os << "--";
-            os << "ptr)) {\n"
-               << "        goto state1;\n"
-               << "    }\n";
-        }
-    }
-
-    os << "    goto state0;\n";
-}
-
-//===========================================================================
-static void writeCppfileStart(ostream &os, const set<Element> &rules) {
-    os << 1 + R"(
-// abnfsyntax.cpp - pargen
-// clang-format off
-#include "pch.h"
-#pragma hdrstop
-
-
-/****************************************************************************
-*
-*   AbnfParser
-*
-*   Normalized ABNF of syntax being checked (recursive rules are marked 
-*       with asterisks):
-)";
-
-    for (auto &&elem : rules) {
-        writeRule(os, elem, 79, "*   ");
-    }
-
-    os << 1 + R"(
-*
-***/
-)";
-}
-
-//===========================================================================
-static void writeFunction(
-    ostream &os,
-    const Element *root,
-    const set<Element> &rules,
-    const unordered_set<State> &stateSet,
-    bool inclStatePositions) {
-    os << 1 + R"(
-
-//===========================================================================
-)";
-    if (!root) {
-        os << 1 + R"(
-bool AbnfParser::checkSyntax (const char src[]) {
-    const char * ptr = src;
-)";
-    } else {
-        os << "bool AbnfParser::state";
-        writeRuleName(os, root->name, true);
-        os << "(const char *& ptr) {\n";
-    }
-    os << 1 + R"(
-    goto state2;
-
-state0: // <FAILED>
-    return false;
-)";
-    vector<const State *> states;
-    states.resize(s_nextStateId);
-    for (auto &&st : stateSet)
-        states[st.id - 1] = &st;
-    for (auto &&st : states) {
-        writeParserState(os, *st, inclStatePositions);
-    }
-    os << "}\n";
-}
-
-//===========================================================================
-static void writeHeaderfile(ostream &os, const set<Element> &rules) {
-    os << 1 + R"(
-// abnfparser.h - pargen
-// clang-format off
-#pragma once
-
-
-/****************************************************************************
-*
-*   Parser event notifications
-*   Clients inherit from this class to make process parsed results
-*
-***/
-
-class IAbnfParserNotify {
-public:
-    virtual ~IAbnfParserNotify () {}
-
-    virtual bool startDoc () {}
-    virtual bool endDoc () {}
-};
-
-
-/****************************************************************************
-*
-*   AbnfParser
-*
-***/
-
-class AbnfParser {
-public:
-    AbnfParser (IAbnfParserNotify * notify) : m_notify(notify) {}
-    ~AbnfParser () {}
-
-    bool checkSyntax (const char src[]);
-
-private:
-)";
-    for (auto &&elem : rules) {
-        if (elem.recurse) {
-            os << "    bool state";
-            writeRuleName(os, elem.name, true);
-            os << " (const char *& src);\n";
-        }
-    }
-    os << 1 + R"(
-
-    IAbnfParserNotify * m_notify{nullptr};
-};
-)";
-}
-
-
-/****************************************************************************
-*
-*   ElementDone
-*
-***/
-
-//===========================================================================
-ElementDone::ElementDone() {
-    type = Element::kRule;
-    value = kDoneStateName;
-}
-
-
-/****************************************************************************
- *
- *   StateElement and StatePosition
- *
- ***/
-
-//===========================================================================
-int StateElement::compare(const StateElement &right) const {
-    if (int rc = (int)(elem->id - right.elem->id))
-        return rc;
-    int rc = rep - right.rep;
-    return rc;
-}
-
-//===========================================================================
-bool StateElement::operator<(const StateElement &right) const {
-    return compare(right) < 0;
-}
-
-//===========================================================================
-bool StateElement::operator==(const StateElement &right) const {
-    return compare(right) == 0;
-}
-
-//===========================================================================
-bool StatePosition::operator<(const StatePosition &right) const {
-    return recurse < right.recurse ||
-           recurse == right.recurse && elems < right.elems;
-}
-
-//===========================================================================
-bool StatePosition::operator==(const StatePosition &right) const {
-    return elems == right.elems && recurse == right.recurse;
-}
-
-
-/****************************************************************************
-*
-*   Internal API
-*
-***/
-
-static bool s_markRecursion = true;
-static bool s_buildStateTree = true;
-static bool s_writeStatePositions = false;
-
-//===========================================================================
-void writeParser(
-    ostream &hfile,
-    ostream &cppfile,
-    const set<Element> &src,
-    const string &root) {
-    logMsgInfo() << "parser: " << root;
-
-    set<Element> rules;
-    copyRules(rules, src, root, true);
-    Element *elem = addChoiceRule(rules, kRootElement, 1, 1);
-    addRule(elem, root, 1, 1);
-    normalize(rules);
-    if (s_markRecursion)
-        findRecursion(rules, *elem);
-
-    writeHeaderfile(hfile, rules);
-
-    writeCppfileStart(cppfile, rules);
-
-    unordered_set<State> states;
-    buildStateTree(&states, rules, kRootElement, s_buildStateTree);
-    writeFunction(cppfile, nullptr, rules, states, s_writeStatePositions);
-
-    for (auto &&elem : rules) {
-        if (elem.recurse) {
-            buildStateTree(&states, rules, elem.name, s_buildStateTree);
-            writeFunction(cppfile, &elem, rules, states, s_writeStatePositions);
-        }
-    }
-    cppfile << endl;
 }

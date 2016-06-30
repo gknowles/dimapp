@@ -1,5 +1,14 @@
 // intern.h - pargen
 
+
+/****************************************************************************
+*
+*   Grammar rules
+*
+***/
+
+const unsigned kUnlimited = unsigned(-1);
+
 struct Element {
     enum Type : uint8_t {
         kSequence,
@@ -21,8 +30,13 @@ struct Element {
 };
 std::ostream &operator<<(std::ostream &os, const Element &elem);
 
-const unsigned kUnlimited = unsigned(-1);
+struct ElementDone : Element {
+    ElementDone();
 
+    static ElementDone s_elem;
+};
+
+// create rules
 Element *addSequenceRule(
     std::set<Element> &rules,
     const std::string &name,
@@ -43,6 +57,79 @@ void addLiteral(
 void addRange(Element *rule, unsigned char a, unsigned char b);
 void addTerminal(Element *rule, unsigned char ch, unsigned m, unsigned n);
 
+// modify rules
+void copyRules(
+    std::set<Element> &rules,
+    const std::set<Element> &src,
+    const std::string &root,
+    bool failIfExists);
+void normalize(std::set<Element> &rules);
+void findRecursion(std::set<Element> &rules, Element &rule);
+
+
+/****************************************************************************
+*
+*   Parse state
+*
+***/
+
+const char kRootElement[] = "<ROOT>";
+const char kDoneStateName[] = "<DONE>";
+const char kFailedStateName[] = "<FAILED>";
+
+struct StateElement {
+    const Element *elem;
+    unsigned rep;
+
+    int compare(const StateElement &right) const;
+    bool operator<(const StateElement &right) const;
+    bool operator==(const StateElement &right) const;
+};
+
+struct StatePosition {
+    std::vector<StateElement> elems;
+    bool recurse{false};
+
+    bool operator<(const StatePosition &right) const;
+    bool operator==(const StatePosition &right) const;
+};
+
+struct State {
+    unsigned id;
+    std::string name;
+    std::set<StatePosition> positions;
+    std::vector<unsigned> next;
+
+    void clear();
+    bool operator==(const State &right) const;
+};
+
+namespace std {
+template <> struct hash<StateElement> {
+    size_t operator()(const StateElement &val) const;
+};
+template <> struct hash<StatePosition> {
+    size_t operator()(const StatePosition &val) const;
+};
+template <> struct hash<State> { size_t operator()(const State &val) const; };
+} // namespace std
+
+
+// build state tree
+void buildStateTree(
+    std::unordered_set<State> *states,
+    const std::set<Element> &rules,
+    const std::string &root,
+    bool inclDeps);
+
+
+/****************************************************************************
+*
+*   Public API
+*
+***/
+
+// write generated code
 void writeParser(
     std::ostream &hfile,
     std::ostream &cppfile,
