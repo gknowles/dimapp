@@ -602,6 +602,61 @@ static void buildStateTree(
 }
 
 //===========================================================================
+// remove leading/trailing spaces and replace multiple spaces with one
+// replace spaces, with NL followed by the prefix, if waiting until the next
+//   space would go past the maxWidth
+static void writeWordwrap(
+    ostream &os,
+    size_t &indent,
+    const string &str,
+    size_t maxWidth,
+    const string &prefix) {
+    const char *base = str.c_str();
+    for (;;) {
+        while (*base == ' ')
+            base += 1;
+        if (!*base)
+            return;
+        const char *ptr = strchr(base, ' ');
+        if (!ptr) {
+            ptr = str.c_str() + str.size();
+            while (ptr >= base && ptr[-1] == ' ')
+                ptr -= 1;
+        }
+        size_t len = ptr - base;
+        if (indent + len >= maxWidth) {
+            os << '\n' << prefix;
+            indent = size(prefix);
+        }
+        if (*ptr) {
+            os.write(base, len + 1);
+            base = ptr + 1;
+        } else {
+            os.write(base, len);
+            os << ' ';
+            base = ptr;
+        }
+        indent += len + 1;
+    }
+}
+
+//===========================================================================
+static void writeRule(
+    ostream &os, const Element &rule, size_t maxWidth, const string &prefix) {
+    streampos pos = os.tellp();
+    os << prefix << rule.name;
+    if (rule.recurse)
+        os << '*';
+    os << " = ";
+    size_t indent = os.tellp() - pos;
+    ostringstream raw;
+    raw << rule;
+    string vpre = prefix + "    ";
+    writeWordwrap(os, indent, raw.str(), maxWidth, vpre);
+    os << '\n';
+}
+
+//===========================================================================
 static void writeRuleName(ostream &os, const string &name, bool capitalize) {
     for (auto &&ch : name) {
         if (ch == '-') {
@@ -719,9 +774,14 @@ static void writeCppfileStart(ostream &os, const set<Element> &rules) {
 *
 *   AbnfParser
 *
-*   Normalized ABNF of syntax being checked: 
+*   Normalized ABNF of syntax being checked (recursive rules are marked 
+*       with asterisks):
 )";
-    os << rules;
+
+    for (auto &&elem : rules) {
+        writeRule(os, elem, 79, "*   ");
+    }
+
     os << 1 + R"(
 *
 ***/

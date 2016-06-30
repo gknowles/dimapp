@@ -8,40 +8,69 @@
 *
 *   AbnfParser
 *
-*   Normalized ABNF of syntax being checked: 
-*   <ROOT> = rulelist
-*   ALPHA = ( %x41 / %x42 / %x43 / %x44 / %x45 / %x46 / %x47 / %x48 / %x49 / %x4a / %x4b / %x4c / %x4d / %x4e / %x4f / %x50 / %x51 / %x52 / %x53 / %x54 / %x55 / %x56 / %x57 / %x58 / %x59 / %x5a / %x61 / %x62 / %x63 / %x64 / %x65 / %x66 / %x67 / %x68 / %x69 / %x6a / %x6b / %x6c / %x6d / %x6e / %x6f / %x70 / %x71 / %x72 / %x73 / %x74 / %x75 / %x76 / %x77 / %x78 / %x79 / %x7a )
-*   BIT = ( %x30 / %x31 )
-*   CR = %xd
-*   CRLF = ( CR LF )
-*   DIGIT = ( %x30 / %x31 / %x32 / %x33 / %x34 / %x35 / %x36 / %x37 / %x38 / %x39 )
-*   DQUOTE = %x22
-*   HEXDIG = ( DIGIT / %x61 / %x62 / %x63 / %x64 / %x65 / %x66 / %x41 / %x42 / %x43 / %x44 / %x45 / %x46 )
-*   HTAB = %x9
-*   LF = %xa
-*   SP = %x20
-*   VCHAR = ( %x21 / %x22 / %x23 / %x24 / %x25 / %x26 / %x27 / %x28 / %x29 / %x2a / %x2b / %x2c / %x2d / %x2e / %x2f / %x30 / %x31 / %x32 / %x33 / %x34 / %x35 / %x36 / %x37 / %x38 / %x39 / %x3a / %x3b / %x3c / %x3d / %x3e / %x3f / %x40 / %x41 / %x42 / %x43 / %x44 / %x45 / %x46 / %x47 / %x48 / %x49 / %x4a / %x4b / %x4c / %x4d / %x4e / %x4f / %x50 / %x51 / %x52 / %x53 / %x54 / %x55 / %x56 / %x57 / %x58 / %x59 / %x5a / %x5b / %x5c / %x5d / %x5e / %x5f / %x60 / %x61 / %x62 / %x63 / %x64 / %x65 / %x66 / %x67 / %x68 / %x69 / %x6a / %x6b / %x6c / %x6d / %x6e / %x6f / %x70 / %x71 / %x72 / %x73 / %x74 / %x75 / %x76 / %x77 / %x78 / %x79 / %x7a / %x7b / %x7c / %x7d / %x7e )
-*   WSP = ( SP / HTAB )
-*   alternation* = ( concatenation *( *c-wsp %x2f *c-wsp concatenation ) )
-*   bin-val = ( ( %x62 / %x42 ) 1*BIT *1( 1*( %x2e 1*BIT ) / ( %x2d 1*BIT ) ) )
-*   c-nl = ( comment / CRLF )
-*   c-wsp = ( WSP / ( c-nl WSP ) )
-*   char-val = ( DQUOTE *( %x20 / %x21 / %x23 / %x24 / %x25 / %x26 / %x27 / %x28 / %x29 / %x2a / %x2b / %x2c / %x2d / %x2e / %x2f / %x30 / %x31 / %x32 / %x33 / %x34 / %x35 / %x36 / %x37 / %x38 / %x39 / %x3a / %x3b / %x3c / %x3d / %x3e / %x3f / %x40 / %x41 / %x42 / %x43 / %x44 / %x45 / %x46 / %x47 / %x48 / %x49 / %x4a / %x4b / %x4c / %x4d / %x4e / %x4f / %x50 / %x51 / %x52 / %x53 / %x54 / %x55 / %x56 / %x57 / %x58 / %x59 / %x5a / %x5b / %x5c / %x5d / %x5e / %x5f / %x60 / %x61 / %x62 / %x63 / %x64 / %x65 / %x66 / %x67 / %x68 / %x69 / %x6a / %x6b / %x6c / %x6d / %x6e / %x6f / %x70 / %x71 / %x72 / %x73 / %x74 / %x75 / %x76 / %x77 / %x78 / %x79 / %x7a / %x7b / %x7c / %x7d / %x7e ) DQUOTE )
-*   comment = ( %x3b *( WSP / VCHAR ) CRLF )
-*   concatenation = ( repetition *( 1*c-wsp repetition ) )
-*   dec-val = ( ( %x64 / %x44 ) 1*DIGIT *1( 1*( %x2e 1*DIGIT ) / ( %x2d 1*DIGIT ) ) )
-*   defined-as = ( *c-wsp ( %x3d / ( %x2f %x3d ) ) *c-wsp )
-*   element = ( rulename / group / option / char-val / num-val )
-*   elements = ( alternation *c-wsp )
-*   group = ( %x28 *c-wsp alternation *c-wsp %x29 )
-*   hex-val = ( ( %x78 / %x58 ) 1*HEXDIG *1( 1*( %x2e 1*HEXDIG ) / ( %x2d 1*HEXDIG ) ) )
-*   num-val = ( %x25 ( bin-val / dec-val / hex-val ) )
-*   option = ( %x5b *c-wsp alternation *c-wsp %x5d )
-*   repeat = ( 1*DIGIT / ( *DIGIT %x2a *DIGIT ) )
-*   repetition = ( *1repeat element )
-*   rule = ( rulename defined-as elements c-nl )
-*   rulelist = 1*( rule / ( *c-wsp c-nl ) )
-*   rulename = ( ALPHA *( ALPHA / DIGIT / %x2d ) )
+*   Normalized ABNF of syntax being checked (recursive rules are marked 
+*       with asterisks):
+*   <ROOT> = rulelist 
+*   ALPHA = ( %x41 / %x42 / %x43 / %x44 / %x45 / %x46 / %x47 / %x48 / %x49 / 
+*       %x4a / %x4b / %x4c / %x4d / %x4e / %x4f / %x50 / %x51 / %x52 / %x53 / 
+*       %x54 / %x55 / %x56 / %x57 / %x58 / %x59 / %x5a / %x61 / %x62 / %x63 / 
+*       %x64 / %x65 / %x66 / %x67 / %x68 / %x69 / %x6a / %x6b / %x6c / %x6d / 
+*       %x6e / %x6f / %x70 / %x71 / %x72 / %x73 / %x74 / %x75 / %x76 / %x77 / 
+*       %x78 / %x79 / %x7a ) 
+*   BIT = ( %x30 / %x31 ) 
+*   CR = %xd 
+*   CRLF = ( CR LF ) 
+*   DIGIT = ( %x30 / %x31 / %x32 / %x33 / %x34 / %x35 / %x36 / %x37 / %x38 / 
+*       %x39 ) 
+*   DQUOTE = %x22 
+*   HEXDIG = ( DIGIT / %x61 / %x62 / %x63 / %x64 / %x65 / %x66 / %x41 / %x42 / 
+*       %x43 / %x44 / %x45 / %x46 ) 
+*   HTAB = %x9 
+*   LF = %xa 
+*   SP = %x20 
+*   VCHAR = ( %x21 / %x22 / %x23 / %x24 / %x25 / %x26 / %x27 / %x28 / %x29 / 
+*       %x2a / %x2b / %x2c / %x2d / %x2e / %x2f / %x30 / %x31 / %x32 / %x33 / 
+*       %x34 / %x35 / %x36 / %x37 / %x38 / %x39 / %x3a / %x3b / %x3c / %x3d / 
+*       %x3e / %x3f / %x40 / %x41 / %x42 / %x43 / %x44 / %x45 / %x46 / %x47 / 
+*       %x48 / %x49 / %x4a / %x4b / %x4c / %x4d / %x4e / %x4f / %x50 / %x51 / 
+*       %x52 / %x53 / %x54 / %x55 / %x56 / %x57 / %x58 / %x59 / %x5a / %x5b / 
+*       %x5c / %x5d / %x5e / %x5f / %x60 / %x61 / %x62 / %x63 / %x64 / %x65 / 
+*       %x66 / %x67 / %x68 / %x69 / %x6a / %x6b / %x6c / %x6d / %x6e / %x6f / 
+*       %x70 / %x71 / %x72 / %x73 / %x74 / %x75 / %x76 / %x77 / %x78 / %x79 / 
+*       %x7a / %x7b / %x7c / %x7d / %x7e ) 
+*   WSP = ( SP / HTAB ) 
+*   alternation* = ( concatenation *( *c-wsp %x2f *c-wsp concatenation ) ) 
+*   bin-val = ( ( %x62 / %x42 ) 1*BIT *1( 1*( %x2e 1*BIT ) / ( %x2d 1*BIT ) ) 
+*       ) 
+*   c-nl = ( comment / CRLF ) 
+*   c-wsp = ( WSP / ( c-nl WSP ) ) 
+*   char-val = ( DQUOTE *( %x20 / %x21 / %x23 / %x24 / %x25 / %x26 / %x27 / 
+*       %x28 / %x29 / %x2a / %x2b / %x2c / %x2d / %x2e / %x2f / %x30 / %x31 / 
+*       %x32 / %x33 / %x34 / %x35 / %x36 / %x37 / %x38 / %x39 / %x3a / %x3b / 
+*       %x3c / %x3d / %x3e / %x3f / %x40 / %x41 / %x42 / %x43 / %x44 / %x45 / 
+*       %x46 / %x47 / %x48 / %x49 / %x4a / %x4b / %x4c / %x4d / %x4e / %x4f / 
+*       %x50 / %x51 / %x52 / %x53 / %x54 / %x55 / %x56 / %x57 / %x58 / %x59 / 
+*       %x5a / %x5b / %x5c / %x5d / %x5e / %x5f / %x60 / %x61 / %x62 / %x63 / 
+*       %x64 / %x65 / %x66 / %x67 / %x68 / %x69 / %x6a / %x6b / %x6c / %x6d / 
+*       %x6e / %x6f / %x70 / %x71 / %x72 / %x73 / %x74 / %x75 / %x76 / %x77 / 
+*       %x78 / %x79 / %x7a / %x7b / %x7c / %x7d / %x7e ) DQUOTE ) 
+*   comment = ( %x3b *( WSP / VCHAR ) CRLF ) 
+*   concatenation = ( repetition *( 1*c-wsp repetition ) ) 
+*   dec-val = ( ( %x64 / %x44 ) 1*DIGIT *1( 1*( %x2e 1*DIGIT ) / ( %x2d 
+*       1*DIGIT ) ) ) 
+*   defined-as = ( *c-wsp ( %x3d / ( %x2f %x3d ) ) *c-wsp ) 
+*   element = ( rulename / group / option / char-val / num-val ) 
+*   elements = ( alternation *c-wsp ) 
+*   group = ( %x28 *c-wsp alternation *c-wsp %x29 ) 
+*   hex-val = ( ( %x78 / %x58 ) 1*HEXDIG *1( 1*( %x2e 1*HEXDIG ) / ( %x2d 
+*       1*HEXDIG ) ) ) 
+*   num-val = ( %x25 ( bin-val / dec-val / hex-val ) ) 
+*   option = ( %x5b *c-wsp alternation *c-wsp %x5d ) 
+*   repeat = ( 1*DIGIT / ( *DIGIT %x2a *DIGIT ) ) 
+*   repetition = ( *1repeat element ) 
+*   rule = ( rulename defined-as elements c-nl ) 
+*   rulelist = 1*( rule / ( *c-wsp c-nl ) ) 
+*   rulename = ( ALPHA *( ALPHA / DIGIT / %x2d ) ) 
 *
 ***/
 
