@@ -211,8 +211,11 @@ static bool writeSwitchCase(ostream &os, const State &st) {
 }
 
 //===========================================================================
-static void
-writeParserState(ostream &os, const State &st, bool inclStatePositions) {
+static void writeParserState(
+    ostream &os,
+    const State &st,
+    const Element *root,
+    bool inclStatePositions) {
     os << "\nstate" << st.id << ": // " << st.name << "\n";
     if (inclStatePositions) {
         for (auto &&sp : st.positions) {
@@ -225,6 +228,9 @@ writeParserState(ostream &os, const State &st, bool inclStatePositions) {
         return;
     }
 
+    if (st.next[0] && root) {
+        os << "    last = ptr;\n";
+    }
     // write switch case
     bool hasSwitch = writeSwitchCase(os, st);
 
@@ -286,30 +292,38 @@ static void writeFunction(
     os << 1 + R"(
 
 //===========================================================================
-)";
+bool AbnfParser::)";
     if (!root) {
-        os << 1 + R"(
-bool AbnfParser::checkSyntax (const char src[]) {
+        os << R"(checkSyntax (const char src[]) {
     const char * ptr = src;
-)";
-    } else {
-        os << "bool AbnfParser::state";
-        writeRuleName(os, root->name, true);
-        os << "(const char *& ptr) {\n";
-    }
-    os << 1 + R"(
     goto state2;
 
 state0: // )"
-       << kFailedStateName << R"(
+           << kFailedStateName << R"(
     return false;
 )";
+    } else {
+        os << "state";
+        writeRuleName(os, root->name, true);
+        os << R"( (const char *& ptr) {
+    const char * last{nullptr};
+    goto state2;
+
+state0: // )"
+           << kFailedStateName << R"(
+    if (last) {
+        ptr = last;
+        return true;
+    }
+    return false;
+)";
+    }
     vector<const State *> states;
     states.resize(stateSet.size());
     for (auto &&st : stateSet)
         states[st.id - 1] = &st;
     for (auto &&st : states) {
-        writeParserState(os, *st, inclStatePositions);
+        writeParserState(os, *st, root, inclStatePositions);
     }
     os << "}\n";
 }

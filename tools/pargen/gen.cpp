@@ -342,7 +342,7 @@ void findRecursion(set<Element> &rules, Element &rule) {
 static void addRulePositions(State *st, StatePosition *sp, bool init) {
     const Element &elem = *sp->elems.back().elem;
 
-    // Don't generate states for right recursion when it can be broken with 
+    // Don't generate states for right recursion when it can be broken with
     // a call. This could also be done for left recursion when the grammar
     // allows it, but that's more difficult to determine.
     if (elem.rule->recurse && !init) {
@@ -501,14 +501,14 @@ buildStateTree(State *st, string *path, unordered_set<State> &states) {
                     addNextPositions(&next, sp);
             } else {
                 if (se.elem == &ElementDone::s_elem) {
-                    if (i == 0) 
+                    if (i == 0)
                         st->next[i] = 1;
-                } else if (i == 256) {                    
+                } else if (i == 256) {
                     assert(se.elem->type == Element::kRule);
                     assert(se.elem->rule->recurse);
                     if (next.positions.size()) {
-                        logMsgError() << "Multiple recursive targets, " 
-                            << *path;
+                        logMsgError() << "Multiple recursive targets, "
+                                      << *path;
                     }
                     addNextPositions(&next, sp);
                 }
