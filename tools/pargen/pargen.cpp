@@ -122,6 +122,13 @@ static void getCoreRules(set<Element> &rules) {
     addRange(rule, 0xa, 0xa);
 
     // LWSP           =  *(WSP / CRLF WSP)
+
+    // NEWLINE        =  CR / LF / CRLF
+    rule = addChoiceRule(rules, "NEWLINE", 1, 1);
+    addRule(rule, "CR", 1, 1);
+    addRule(rule, "LF", 1, 1);
+    addRule(rule, "CRLF", 1, 1);
+
     // OCTET          =  %x00-FF
 
     // SP             =  %x20
@@ -192,18 +199,18 @@ static void getAbnfRules(set<Element> &rules) {
     addRule(elem, "c-nl", 1, 1);
     addRule(elem, "WSP", 1, 1);
 
-    // c-nl           =  comment / CRLF
+    // c-nl           =  comment / NEWLINE
     rule = addChoiceRule(rules, "c-nl", 1, 1);
     addRule(rule, "comment", 1, 1);
-    addRule(rule, "CRLF", 1, 1);
+    addRule(rule, "NEWLINE", 1, 1);
 
-    // comment        =  ";" *(WSP / VCHAR) CRLF
+    // comment        =  ";" *(WSP / VCHAR) NEWLINE
     rule = addSequenceRule(rules, "comment", 1, 1);
     addLiteral(rule, ";", 1, 1);
     elem = addChoice(rule, 0, kUnlimited);
     addRule(elem, "WSP", 1, 1);
     addRule(elem, "VCHAR", 1, 1);
-    addRule(rule, "CRLF", 1, 1);
+    addRule(rule, "NEWLINE", 1, 1);
 
     // alternation    =  concatenation *(*c-wsp "/" *c-wsp concatenation)
     rule = addSequenceRule(rules, "alternation", 1, 1, true);
