@@ -342,7 +342,10 @@ void findRecursion(set<Element> &rules, Element &rule) {
 static void addRulePositions(State *st, StatePosition *sp, bool init) {
     const Element &elem = *sp->elems.back().elem;
 
-    if (elem.rule->recurse) {
+    // Don't generate states for right recursion when it can be broken with 
+    // a call. This could also be done for left recursion when the grammar
+    // allows it, but that's more difficult to determine.
+    if (elem.rule->recurse && !init) {
         st->positions.insert(*sp);
         return;
     }
