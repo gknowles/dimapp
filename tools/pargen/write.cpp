@@ -241,7 +241,7 @@ writeParserState(ostream &os, const State &st, bool inclStatePositions) {
             if (hasSwitch)
                 os << "--";
             os << "ptr)) {\n"
-               << "        goto state1;\n"
+               << "        goto state" << st.next[256] << ";\n"
                << "    }\n";
         }
     }
@@ -374,9 +374,9 @@ private:
 *
 ***/
 
-static bool s_markRecursion = false;
+static bool s_markRecursion = true;
 static bool s_buildStateTree = true;
-static bool s_writeStatePositions = true;
+static bool s_writeStatePositions = false;
 
 //===========================================================================
 void writeParser(

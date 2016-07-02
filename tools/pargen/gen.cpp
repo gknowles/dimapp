@@ -487,9 +487,9 @@ static void addNextPositions(State *st, const StatePosition &sp) {
 //===========================================================================
 static void
 buildStateTree(State *st, string *path, unordered_set<State> &states) {
-    st->next.assign(256, 0);
+    st->next.assign(257, 0);
     State next;
-    for (unsigned i = 0; i < 256; ++i) {
+    for (unsigned i = 0; i < 257; ++i) {
         next.clear();
         for (auto &&sp : st->positions) {
             auto &se = sp.elems.back();
@@ -497,22 +497,33 @@ buildStateTree(State *st, string *path, unordered_set<State> &states) {
                 if ((unsigned char)se.elem->value.front() == i)
                     addNextPositions(&next, sp);
             } else {
-                assert(se.elem->type == Element::kRule);
-                if (i == 0 && se.elem == &ElementDone::s_elem)
-                    st->next[i] = 1;
+                if (se.elem == &ElementDone::s_elem) {
+                    if (i == 0) 
+                        st->next[i] = 1;
+                } else if (i == 256) {                    
+                    assert(se.elem->type == Element::kRule);
+                    assert(se.elem->rule->recurse);
+                    if (next.positions.size()) {
+                        logMsgError() << "Multiple recursive targets, " 
+                            << *path;
+                    }
+                    addNextPositions(&next, sp);
+                }
             }
         }
         if (next.positions.size()) {
             auto ib = states.insert(move(next));
             State *st2 = const_cast<State *>(&*ib.first);
 
-            if (i <= ' ') {
+            if (i <= ' ' || i == 256) {
                 path->push_back('\\');
                 switch (i) {
+                case 0: path->push_back('0'); break;
                 case 9: path->push_back('t'); break;
                 case 10: path->push_back('n'); break;
                 case 13: path->push_back('r'); break;
                 case 32: path->push_back('s'); break;
+                case 256: path->push_back('*'); break;
                 }
             } else {
                 path->push_back(unsigned char(i));
@@ -532,7 +543,7 @@ buildStateTree(State *st, string *path, unordered_set<State> &states) {
                 buildStateTree(st2, path, states);
             }
             path->pop_back();
-            if (i <= ' ')
+            if (i <= ' ' || i == 256)
                 path->pop_back();
 
             st->next[i] = st2->id;
