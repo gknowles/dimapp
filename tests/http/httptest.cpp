@@ -5,11 +5,12 @@
 using namespace std;
 using namespace Dim;
 
+
 /****************************************************************************
- *
- *   Declarations
- *
- ***/
+*
+*   Declarations
+*
+***/
 
 namespace {
 
@@ -37,11 +38,12 @@ struct Test {
 
 } // namespace
 
+
 /****************************************************************************
- *
- *   Test vectors
- *
- ***/
+*
+*   Test vectors
+*
+***/
 
 // clang-format off
 const Test s_tests[] = {
@@ -178,11 +180,12 @@ void Application::onTask() {
     }
 }
 
+
 /****************************************************************************
- *
- *   External
- *
- ***/
+*
+*   External
+*
+***/
 
 int main(int argc, char *argv[]) {
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);

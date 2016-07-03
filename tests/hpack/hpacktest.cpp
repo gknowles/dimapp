@@ -5,11 +5,12 @@
 using namespace std;
 using namespace Dim;
 
+
 /****************************************************************************
- *
- *   Declarations
- *
- ***/
+*
+*   Declarations
+*
+***/
 
 namespace {
 
@@ -45,11 +46,12 @@ struct Test {
 
 } // namespace
 
+
 /****************************************************************************
- *
- *   Test vectors
- *
- ***/
+*
+*   Test vectors
+*
+***/
 
 const Test s_tests[] = {
     {"C.2.1",
@@ -332,11 +334,12 @@ const Test s_tests[] = {
      }},
 };
 
+
 /****************************************************************************
- *
- *   Helpers
- *
- ***/
+*
+*   Helpers
+*
+***/
 
 //===========================================================================
 bool NameValue::operator==(const NameValue &right) const {
@@ -344,11 +347,12 @@ bool NameValue::operator==(const NameValue &right) const {
            flags == right.flags;
 }
 
+
 /****************************************************************************
- *
- *   Reader
- *
- ***/
+*
+*   Reader
+*
+***/
 
 //===========================================================================
 void Reader::onHpackHeader(
@@ -361,11 +365,12 @@ void Reader::onHpackHeader(
     headers.push_back({name, value, flags});
 }
 
+
 /****************************************************************************
- *
- *   Application
- *
- ***/
+*
+*   Application
+*
+***/
 
 namespace {
 class Application : public ITaskNotify, public ILogNotify {
@@ -421,11 +426,12 @@ void Application::onTask() {
     }
 }
 
+
 /****************************************************************************
- *
- *   External
- *
- ***/
+*
+*   External
+*
+***/
 
 //===========================================================================
 int main(int argc, char *argv[]) {

@@ -5,28 +5,31 @@
 using namespace std;
 using namespace Dim;
 
+
 /****************************************************************************
- *
- *   Declarations
- *
- ***/
+*
+*   Declarations
+*
+***/
 
 enum { kExitConnectFailed = kExitFirstAvailable, kExitDisconnect };
 
+
 /****************************************************************************
- *
- *   Variables
- *
- ***/
+*
+*   Variables
+*
+***/
 
 static Endpoint s_localEnd;
 static int s_cancelAddrId;
 
+
 /****************************************************************************
- *
- *   SocketConn
- *
- ***/
+*
+*   SocketConn
+*
+***/
 
 class SocketConn : public ISocketNotify, public IEndpointNotify {
     // ISocketNotify
@@ -77,11 +80,12 @@ void SocketConn::onSocketDisconnect() {
     appSignalShutdown(kExitDisconnect);
 }
 
+
 /****************************************************************************
- *
- *   ConsoleReader
- *
- ***/
+*
+*   ConsoleReader
+*
+***/
 
 class ConsoleReader : public IFileReadNotify {
   public:
@@ -114,11 +118,12 @@ void ConsoleReader::onFileEnd(int64_t offset, IFile *file) {
     }
 }
 
+
 /****************************************************************************
- *
- *   MainShutdown
- *
- ***/
+*
+*   MainShutdown
+*
+***/
 
 class MainShutdown : public IAppShutdownNotify {
     void onAppStartClientCleanup() override;
@@ -142,11 +147,12 @@ bool MainShutdown::onAppQueryClientDestroy() {
     return true;
 }
 
+
 /****************************************************************************
- *
- *   Application
- *
- ***/
+*
+*   Application
+*
+***/
 
 namespace {
 class Application : public ITaskNotify {
@@ -190,11 +196,12 @@ void Application::onTask() {
         s_console.m_file.get());
 }
 
+
 /****************************************************************************
- *
- *   Externals
- *
- ***/
+*
+*   Externals
+*
+***/
 
 //===========================================================================
 int main(int argc, char *argv[]) {
