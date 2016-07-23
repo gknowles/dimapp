@@ -6,28 +6,31 @@ using namespace std;
 
 namespace Dim {
 
+
 /****************************************************************************
- *
- *   Private declarations
- *
- ***/
+*
+*   Private declarations
+*
+***/
 
 using RtlNtStatusToDosErrorFn = ULONG(WINAPI *)(int ntStatus);
 
+
 /****************************************************************************
- *
- *   Variables
- *
- ***/
+*
+*   Variables
+*
+***/
 
 static RtlNtStatusToDosErrorFn s_RtlNtStatusToDosError;
 static once_flag s_loadOnce;
 
+
 /****************************************************************************
- *
- *   Helpers
- *
- ***/
+*
+*   Helpers
+*
+***/
 
 //===========================================================================
 static void loadProc() {
@@ -43,11 +46,12 @@ static void loadProc() {
     }
 }
 
+
 /****************************************************************************
- *
- *   WinError
- *
- ***/
+*
+*   WinError
+*
+***/
 
 //===========================================================================
 WinError::WinError() {

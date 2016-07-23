@@ -20,6 +20,7 @@
 #include <WinSock2.h>
 #include <Windows.h>
 
+// must come after WinSock2.h
 #include <MSWSock.h> // Registered IO
 #include <mstcpip.h> // SIO_LOOPBACK_FAST_PATH
 

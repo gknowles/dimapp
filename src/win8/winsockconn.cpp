@@ -6,19 +6,21 @@ using namespace std;
 
 namespace Dim {
 
+
 /****************************************************************************
- *
- *   Tuning parameters
- *
- ***/
+*
+*   Tuning parameters
+*
+***/
 
 const Duration kConnectTimeout{10s};
 
+
 /****************************************************************************
- *
- *   Private declarations
- *
- ***/
+*
+*   Private declarations
+*
+***/
 
 namespace {
 
@@ -60,22 +62,24 @@ class ConnectTimer : public ITimerNotify {
 
 } // namespace
 
+
 /****************************************************************************
- *
- *   Variables
- *
- ***/
+*
+*   Variables
+*
+***/
 
 static mutex s_mut;
 static list<ConnectTask> s_connecting;
 static list<ConnectTask> s_closing;
 static ConnectTimer s_connectTimer;
 
+
 /****************************************************************************
- *
- *   ConnectTimer
- *
- ***/
+*
+*   ConnectTimer
+*
+***/
 
 //===========================================================================
 Duration ConnectTimer::onTimer(TimePoint now) {
@@ -92,11 +96,12 @@ Duration ConnectTimer::onTimer(TimePoint now) {
     return kTimerInfinite;
 }
 
+
 /****************************************************************************
- *
- *   ConnectTask
- *
- ***/
+*
+*   ConnectTask
+*
+***/
 
 //===========================================================================
 ConnectTask::ConnectTask(unique_ptr<ConnSocket> &&sock)
@@ -126,11 +131,12 @@ void ConnectTask::onTask() {
     }
 }
 
+
 /****************************************************************************
- *
- *   ConnectFailedTask
- *
- ***/
+*
+*   ConnectFailedTask
+*
+***/
 
 //===========================================================================
 ConnectFailedTask::ConnectFailedTask(ISocketNotify *notify)
@@ -142,11 +148,12 @@ void ConnectFailedTask::onTask() {
     delete this;
 }
 
+
 /****************************************************************************
- *
- *   ConnSocket
- *
- ***/
+*
+*   ConnSocket
+*
+***/
 
 //===========================================================================
 static void pushConnectFailed(ISocketNotify *notify) {
@@ -281,11 +288,12 @@ void ConnSocket::onConnect(int error, int bytes) {
     m_notify->onSocketConnect(m_connInfo);
 }
 
+
 /****************************************************************************
- *
- *   ShutdownNotify
- *
- ***/
+*
+*   ShutdownNotify
+*
+***/
 
 namespace {
 class ShutdownNotify : public IAppShutdownNotify {
@@ -308,11 +316,12 @@ bool ShutdownNotify::onAppQueryConsoleDestroy() {
     return s_connecting.empty() && s_closing.empty();
 }
 
+
 /****************************************************************************
- *
- *   Internal API
- *
- ***/
+*
+*   Internal API
+*
+***/
 
 //===========================================================================
 void iSocketConnectInitialize() {
@@ -321,11 +330,12 @@ void iSocketConnectInitialize() {
     appMonitorShutdown(&s_cleanup);
 }
 
+
 /****************************************************************************
- *
- *   Public API
- *
- ***/
+*
+*   Public API
+*
+***/
 
 //===========================================================================
 void socketConnect(

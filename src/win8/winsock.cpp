@@ -6,20 +6,22 @@ using namespace std;
 
 namespace Dim {
 
+
 /****************************************************************************
- *
- *   Tuning parameters
- *
- ***/
+*
+*   Tuning parameters
+*
+***/
 
 const int kInitialCompletionQueueSize = 100;
 const int kInitialSendQueueSize = 10;
 
+
 /****************************************************************************
- *
- *   Variables
- *
- ***/
+*
+*   Variables
+*
+***/
 
 static RIO_EXTENSION_FUNCTION_TABLE s_rio;
 
@@ -33,11 +35,12 @@ static int s_cqUsed;
 
 static atomic_int s_numSockets;
 
+
 /****************************************************************************
- *
- *   Helpers
- *
- ***/
+*
+*   Helpers
+*
+***/
 
 //===========================================================================
 static void addCqUsed_LK(int delta) {
@@ -60,11 +63,12 @@ static void addCqUsed_LK(int delta) {
     }
 }
 
+
 /****************************************************************************
- *
- *   RioDispatchThread
- *
- ***/
+*
+*   RioDispatchThread
+*
+***/
 
 namespace {
 class RioDispatchThread : public ITaskNotify {
@@ -114,11 +118,12 @@ void RioDispatchThread::onTask() {
     s_modeCv.notify_one();
 }
 
+
 /****************************************************************************
- *
- *   SocketReadTask
- *
- ***/
+*
+*   SocketReadTask
+*
+***/
 
 //===========================================================================
 void SocketReadTask::onTask() {
@@ -127,11 +132,12 @@ void SocketReadTask::onTask() {
     // socket is deleted
 }
 
+
 /****************************************************************************
- *
- *   DSocketWriteTask
- *
- ***/
+*
+*   SocketWriteTask
+*
+***/
 
 //===========================================================================
 void SocketWriteTask::onTask() {
@@ -139,11 +145,12 @@ void SocketWriteTask::onTask() {
     m_socket->onWrite(this);
 }
 
+
 /****************************************************************************
- *
- *   SocketBase
- *
- ***/
+*
+*   SocketBase
+*
+***/
 
 //===========================================================================
 // static
@@ -344,11 +351,12 @@ void SocketBase::queueWriteFromUnsent_LK() {
     }
 }
 
+
 /****************************************************************************
- *
- *   ShutdownNotify
- *
- ***/
+*
+*   ShutdownNotify
+*
+***/
 
 namespace {
 class ShutdownNotify : public IAppShutdownNotify {
@@ -378,11 +386,12 @@ bool ShutdownNotify::onAppQueryConsoleDestroy() {
     return true;
 }
 
+
 /****************************************************************************
- *
- *   Internal API
- *
- ***/
+*
+*   Internal API
+*
+***/
 
 //===========================================================================
 void iSocketInitialize() {
@@ -449,11 +458,12 @@ void iSocketInitialize() {
     s_mode = kRunRunning;
 }
 
+
 /****************************************************************************
- *
- *   Win socket
- *
- ***/
+*
+*   Win socket
+*
+***/
 
 //===========================================================================
 SOCKET winSocketCreate() {
@@ -525,11 +535,12 @@ SOCKET winSocketCreate(const Endpoint &end) {
     return handle;
 }
 
+
 /****************************************************************************
- *
- *   Public API
- *
- ***/
+*
+*   Public API
+*
+***/
 
 //===========================================================================
 ISocketNotify::Mode socketGetMode(ISocketNotify *notify) {

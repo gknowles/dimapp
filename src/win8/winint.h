@@ -5,22 +5,24 @@
 
 namespace Dim {
 
+
 /****************************************************************************
- *
- *   Overlapped
- *
- ***/
+*
+*   Overlapped
+*
+***/
 
 struct WinOverlappedEvent {
     OVERLAPPED overlapped{};
     ITaskNotify *notify{nullptr};
 };
 
+
 /****************************************************************************
- *
- *   Event
- *
- ***/
+*
+*   Event
+*
+***/
 
 class WinEvent {
   public:
@@ -36,21 +38,23 @@ class WinEvent {
     HANDLE m_handle;
 };
 
+
 /****************************************************************************
- *
- *   Iocp
- *
- ***/
+*
+*   Iocp
+*
+***/
 
 void winIocpInitialize();
 
 bool winIocpBindHandle(HANDLE handle);
 
+
 /****************************************************************************
- *
- *   Wait for events
- *
- ***/
+*
+*   Wait for events
+*
+***/
 
 class IWinEventWaitNotify : public ITaskNotify {
   public:
@@ -63,11 +67,12 @@ class IWinEventWaitNotify : public ITaskNotify {
     HANDLE m_registeredWait{nullptr};
 };
 
+
 /****************************************************************************
- *
- *   Error
- *
- ***/
+*
+*   Error
+*
+***/
 
 class WinError {
   public:
@@ -91,11 +96,12 @@ class WinError {
 
 ::std::ostream &operator<<(::std::ostream &os, const WinError &val);
 
+
 /****************************************************************************
- *
- *   Socket
- *
- ***/
+*
+*   Socket
+*
+***/
 
 SOCKET winSocketCreate();
 SOCKET winSocketCreate(const Endpoint &localEnd);

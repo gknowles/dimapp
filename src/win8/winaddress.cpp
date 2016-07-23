@@ -8,11 +8,12 @@ using namespace std;
 
 namespace Dim {
 
+
 /****************************************************************************
- *
- *   Address
- *
- ***/
+*
+*   Address
+*
+***/
 
 //===========================================================================
 bool parse(Address *out, const char src[]) {
@@ -32,11 +33,12 @@ std::ostream &operator<<(std::ostream &os, const Address &addr) {
     return operator<<(os, sa);
 }
 
+
 /****************************************************************************
- *
- *   Endpoint
- *
- ***/
+*
+*   Endpoint
+*
+***/
 
 //===========================================================================
 bool parse(Endpoint *end, const char src[], int defaultPort) {
@@ -69,11 +71,12 @@ std::ostream &operator<<(std::ostream &os, const Endpoint &src) {
     return os;
 }
 
+
 /****************************************************************************
- *
- *   sockaddr_storage
- *
- ***/
+*
+*   sockaddr_storage
+*
+***/
 
 //===========================================================================
 void copy(sockaddr_storage *out, const Endpoint &src) {
@@ -93,11 +96,12 @@ void copy(Endpoint *out, const sockaddr_storage &storage) {
     out->addr.data[3] = ntohl(ia.sin_addr.s_addr);
 }
 
+
 /****************************************************************************
- *
- *   Address query
- *
- ***/
+*
+*   Address query
+*
+***/
 
 namespace {
 struct QueryTask : ITaskNotify {

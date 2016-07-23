@@ -6,20 +6,22 @@ using namespace std;
 
 namespace Dim {
 
+
 /****************************************************************************
- *
- *   Tuning parameters
- *
- ***/
+*
+*   Tuning parameters
+*
+***/
 
 // includes space for BufferSlice header
 const unsigned kDefaultBufferSliceSize = 4096;
 
+
 /****************************************************************************
- *
- *   Private declarations
- *
- ***/
+*
+*   Private declarations
+*
+***/
 
 static void destroyBufferSlice(void *ptr);
 
@@ -45,11 +47,12 @@ struct Buffer {
 
 } // namespace
 
+
 /****************************************************************************
- *
- *   Variables
- *
- ***/
+*
+*   Variables
+*
+***/
 
 static RIO_EXTENSION_FUNCTION_TABLE s_rio;
 
@@ -65,11 +68,12 @@ static int s_numPartial;
 static int s_numFull;
 static mutex s_mut;
 
+
 /****************************************************************************
- *
- *   Helpers
- *
- ***/
+*
+*   Helpers
+*
+***/
 
 //===========================================================================
 static BufferSlice *getSlice(const Buffer &buf, int pos) {
@@ -171,22 +175,24 @@ static void destroyBufferSlice(void *ptr) {
     }
 }
 
+
 /****************************************************************************
- *
- *   SocketBuffer
- *
- ***/
+*
+*   SocketBuffer
+*
+***/
 
 //===========================================================================
 SocketBuffer::~SocketBuffer() {
     destroyBufferSlice(data);
 }
 
+
 /****************************************************************************
- *
- *   Shutdown
- *
- ***/
+*
+*   Shutdown
+*
+***/
 
 namespace {
 class Shutdown : public IAppShutdownNotify {
@@ -205,11 +211,12 @@ bool Shutdown::onAppQueryConsoleDestroy() {
     return true;
 }
 
+
 /****************************************************************************
- *
- *   Internal API
- *
- ***/
+*
+*   Internal API
+*
+***/
 
 //===========================================================================
 void iSocketBufferInitialize(RIO_EXTENSION_FUNCTION_TABLE &rio) {
@@ -241,11 +248,12 @@ void iSocketGetRioBuffer(RIO_BUF *out, SocketBuffer *sbuf, size_t bytes) {
     out->Length = (int)bytes;
 }
 
+
 /****************************************************************************
- *
- *   Public API
- *
- ***/
+*
+*   Public API
+*
+***/
 
 //===========================================================================
 unique_ptr<SocketBuffer> socketGetBuffer() {

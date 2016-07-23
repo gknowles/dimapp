@@ -6,21 +6,23 @@ using namespace std;
 
 namespace Dim {
 
+
 /****************************************************************************
- *
- *   Variables
- *
- ***/
+*
+*   Variables
+*
+***/
 
 static mutex s_mut;
 static vector<WORD> s_consoleAttrs;
 static bool s_controlEnabled = false;
 
+
 /****************************************************************************
- *
- *   Helpers
- *
- ***/
+*
+*   Helpers
+*
+***/
 
 //===========================================================================
 static BOOL WINAPI controlCallback(DWORD ctrl) {
@@ -34,11 +36,12 @@ static BOOL WINAPI controlCallback(DWORD ctrl) {
     return false;
 }
 
+
 /****************************************************************************
- *
- *   ConsoleScopedAttr
- *
- ***/
+*
+*   ConsoleScopedAttr
+*
+***/
 
 //===========================================================================
 ConsoleScopedAttr::ConsoleScopedAttr(ConsoleAttr attr) {
@@ -77,11 +80,12 @@ ConsoleScopedAttr::~ConsoleScopedAttr() {
     s_consoleAttrs.pop_back();
 }
 
+
 /****************************************************************************
- *
- *   Internal API
- *
- ***/
+*
+*   Internal API
+*
+***/
 
 //===========================================================================
 void iConsoleInitialize() {
@@ -89,11 +93,12 @@ void iConsoleInitialize() {
     SetConsoleCtrlHandler(&controlCallback, true);
 }
 
+
 /****************************************************************************
- *
- *   Internal API
- *
- ***/
+*
+*   Internal API
+*
+***/
 
 //===========================================================================
 void consoleEnableEcho(bool enable) {

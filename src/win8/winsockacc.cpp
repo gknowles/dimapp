@@ -6,17 +6,19 @@ using namespace std;
 
 namespace Dim {
 
-/****************************************************************************
- *
- *   Tuning parameters
- *
- ***/
 
 /****************************************************************************
- *
- *   Private declarations
- *
- ***/
+*
+*   Tuning parameters
+*
+***/
+
+
+/****************************************************************************
+*
+*   Private declarations
+*
+***/
 
 namespace {
 
@@ -55,20 +57,22 @@ class ListenStopTask : public ITaskNotify {
 
 } // namespace
 
+
 /****************************************************************************
- *
- *   Variables
- *
- ***/
+*
+*   Variables
+*
+***/
 
 static mutex s_mut;
 static list<unique_ptr<ListenSocket>> s_listeners;
 
+
 /****************************************************************************
- *
- *   ListenStopTask
- *
- ***/
+*
+*   ListenStopTask
+*
+***/
 
 //===========================================================================
 ListenStopTask::ListenStopTask(ISocketListenNotify *notify)
@@ -80,11 +84,12 @@ void ListenStopTask::onTask() {
     delete this;
 }
 
+
 /****************************************************************************
- *
- *   ListenSocket
- *
- ***/
+*
+*   ListenSocket
+*
+***/
 
 //===========================================================================
 ListenSocket::ListenSocket(ISocketListenNotify *notify, const Endpoint &end)
@@ -106,11 +111,12 @@ void ListenSocket::onTask() {
     m_socket->onAccept(this, err, bytesTransferred);
 }
 
+
 /****************************************************************************
- *
- *   AcceptSocket
- *
- ***/
+*
+*   AcceptSocket
+*
+***/
 
 //===========================================================================
 static void pushListenStop(ListenSocket *listen) {
@@ -260,11 +266,12 @@ void AcceptSocket::onAccept(
     m_notify->onSocketAccept(info);
 }
 
+
 /****************************************************************************
- *
- *   ShutdownNotify
- *
- ***/
+*
+*   ShutdownNotify
+*
+***/
 
 namespace {
 class ShutdownNotify : public IAppShutdownNotify {
@@ -278,22 +285,24 @@ void ShutdownNotify::onAppStartConsoleCleanup() {
     assert(s_listeners.empty());
 }
 
+
 /****************************************************************************
- *
- *   Internal API
- *
- ***/
+*
+*   Internal API
+*
+***/
 
 //===========================================================================
 void iSocketAcceptInitialize() {
     appMonitorShutdown(&s_cleanup);
 }
 
+
 /****************************************************************************
- *
- *   Public API
- *
- ***/
+*
+*   Public API
+*
+***/
 
 //===========================================================================
 static void pushListenStop(ISocketListenNotify *notify) {

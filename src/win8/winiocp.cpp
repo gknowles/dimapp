@@ -6,35 +6,39 @@ using namespace std;
 
 namespace Dim {
 
-/****************************************************************************
- *
- *   Incomplete public types
- *
- ***/
 
 /****************************************************************************
- *
- *   Private declarations
- *
- ***/
+*
+*   Incomplete public types
+*
+***/
+
+
+/****************************************************************************
+*
+*   Private declarations
+*
+***/
 
 namespace {} // namespace
 
+
 /****************************************************************************
- *
- *   Variables
- *
- ***/
+*
+*   Variables
+*
+***/
 
 static RunMode s_mode{kRunStopped};
 static HANDLE s_iocp;
 static mutex s_mut;
 
+
 /****************************************************************************
- *
- *   Iocp thread
- *
- ***/
+*
+*   Iocp thread
+*
+***/
 
 //===========================================================================
 static void iocpDispatchThread() {
@@ -65,11 +69,12 @@ static void iocpDispatchThread() {
     s_iocp = 0;
 }
 
+
 /****************************************************************************
- *
- *   WinIocpShutdown
- *
- ***/
+*
+*   WinIocpShutdown
+*
+***/
 
 namespace {
 class WinIocpShutdown : public IAppShutdownNotify {
@@ -100,11 +105,12 @@ bool WinIocpShutdown::onAppQueryConsoleDestroy() {
     return true;
 }
 
+
 /****************************************************************************
- *
- *   Internal API
- *
- ***/
+*
+*   Internal API
+*
+***/
 
 //===========================================================================
 void winIocpInitialize() {

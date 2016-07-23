@@ -6,11 +6,12 @@
 
 namespace Dim {
 
+
 /****************************************************************************
- *
- *   DimSocket
- *
- ***/
+*
+*   DimSocket
+*
+***/
 
 class SocketRequestTaskBase : public ITaskNotify {
     virtual void onTask() override = 0;
@@ -79,27 +80,30 @@ class SocketBase {
     std::list<SocketWriteTask> m_unsent;
 };
 
+
 /****************************************************************************
- *
- *   Socket accept
- *
- ***/
+*
+*   Socket accept
+*
+***/
 
 void iSocketAcceptInitialize();
 
+
 /****************************************************************************
- *
- *   Socket connect
- *
- ***/
+*
+*   Socket connect
+*
+***/
 
 void iSocketConnectInitialize();
 
+
 /****************************************************************************
- *
- *   Socket buffers
- *
- ***/
+*
+*   Socket buffers
+*
+***/
 
 void iSocketBufferInitialize(RIO_EXTENSION_FUNCTION_TABLE &rio);
 void iSocketGetRioBuffer(RIO_BUF *out, SocketBuffer *buf, size_t bytes);

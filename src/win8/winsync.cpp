@@ -7,11 +7,12 @@ using namespace std::chrono;
 
 namespace Dim {
 
+
 /****************************************************************************
- *
- *   WinEvent
- *
- ***/
+*
+*   WinEvent
+*
+***/
 
 //===========================================================================
 WinEvent::WinEvent() {
@@ -43,11 +44,12 @@ void WinEvent::wait(Duration wait) {
     }
 }
 
+
 /****************************************************************************
- *
- *   IWinEventWaitNotify
- *
- ***/
+*
+*   IWinEventWaitNotify
+*
+***/
 
 //===========================================================================
 static void __stdcall eventWaitCallback(void *param, uint8_t timeout) {
