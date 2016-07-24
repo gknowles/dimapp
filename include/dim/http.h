@@ -15,11 +15,12 @@ namespace Dim {
 
 template <typename T> class ForwardListIterator;
 
+
 /****************************************************************************
- *
- *   Constants
- *
- ***/
+*
+*   Constants
+*
+***/
 
 enum HttpHdr {
     kHttpInvalid,
@@ -80,11 +81,12 @@ enum HttpHdr {
     kHttps
 };
 
+
 /****************************************************************************
- *
- *   Http message
- *
- ***/
+*
+*   Http message
+*
+***/
 
 class HttpMsg {
   public:
@@ -179,11 +181,12 @@ class HttpResponse : public HttpMsg {
     bool checkPseudoHeaders() const override;
 };
 
+
 /****************************************************************************
- *
- *   Http connection context
- *
- ***/
+*
+*   Http connection context
+*
+***/
 
 struct HttpConnHandle : HandleBase {};
 

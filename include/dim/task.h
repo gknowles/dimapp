@@ -8,11 +8,12 @@
 
 namespace Dim {
 
+
 /****************************************************************************
- *
- *   Task queue
- *
- ***/
+*
+*   Task queue
+*
+***/
 
 struct TaskQueueHandle : HandleBase {};
 

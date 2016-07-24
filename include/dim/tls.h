@@ -10,11 +10,12 @@
 
 namespace Dim {
 
+
 /****************************************************************************
- *
- *   Constants
- *
- ***/
+*
+*   Constants
+*
+***/
 
 enum TlsAlertLevel : uint8_t {
     kWarning = 1,
@@ -90,11 +91,12 @@ enum TlsSignatureScheme : uint16_t {
     kSigEd25519 = 0x0703,
 };
 
+
 /****************************************************************************
- *
- *   Tls connection context
- *
- ***/
+*
+*   Tls connection context
+*
+***/
 
 struct TlsConnHandle : HandleBase {};
 

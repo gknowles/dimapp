@@ -10,11 +10,12 @@
 namespace Dim {
 namespace CmdLine {
 
+
 /****************************************************************************
- *
- *   OptBase
- *
- ***/
+*
+*   OptBase
+*
+***/
 
 class OptBase {
   public:
@@ -36,11 +37,12 @@ class OptBase {
     bool m_multiple{false}; // there can be multiple values
 };
 
+
 /****************************************************************************
- *
- *   Option
- *
- ***/
+*
+*   Option
+*
+***/
 
 template <typename T> class Option : public OptBase {
   public:
@@ -81,11 +83,12 @@ inline bool Option<T>::ParseValue(const std::string &value) {
     return true;
 }
 
+
 /****************************************************************************
- *
- *   OptionVector
- *
- ***/
+*
+*   OptionVector
+*
+***/
 
 template <typename T> class OptionVector : public OptBase {
   public:
@@ -124,11 +127,12 @@ inline bool OptionVector<T>::ParseValue(const std::string &value) {
     return true;
 }
 
+
 /****************************************************************************
- *
- *   General
- *
- ***/
+*
+*   General
+*
+***/
 
 bool ParseOptions(int argc, char **argv);
 bool ParseOptions(const char cmdline[]);

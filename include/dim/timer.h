@@ -8,19 +8,21 @@
 
 namespace Dim {
 
+
 /****************************************************************************
- *
- *   Constants
- *
- ***/
+*
+*   Constants
+*
+***/
 
 const auto kTimerInfinite = Duration::max();
 
+
 /****************************************************************************
- *
- *   Implemented by clients
- *
- ***/
+*
+*   Implemented by clients
+*
+***/
 
 class ITimerNotify {
   public:
@@ -32,11 +34,12 @@ class ITimerNotify {
     std::shared_ptr<Timer> m_timer;
 };
 
+
 /****************************************************************************
- *
- *   Public API
- *
- ***/
+*
+*   Public API
+*
+***/
 
 void timerUpdate(
     ITimerNotify *notify, Duration wait, bool onlyIfSooner = false);

@@ -8,11 +8,12 @@ namespace Dim {
 class TlsRecordReader;
 class TlsRecordWriter;
 
+
 /****************************************************************************
- *
- *   Handshake messages
- *
- ***/
+*
+*   Handshake messages
+*
+***/
 
 struct TlsKeyShare {
     std::vector<uint8_t> keyExchange;
@@ -69,11 +70,12 @@ void tlsWrite(TlsRecordWriter &out, const TlsServerHelloMsg &msg);
 bool tlsParse(TlsClientHelloMsg *msg, TlsRecordReader &in);
 bool tlsParse(TlsServerHelloMsg *msg, TlsRecordReader &in);
 
+
 /****************************************************************************
- *
- *   Tls connection
- *
- ***/
+*
+*   Tls connection
+*
+***/
 
 class TlsConnBase : public ITlsRecordDecryptNotify {
   public:

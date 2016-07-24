@@ -6,11 +6,12 @@ using namespace std;
 
 namespace Dim {
 
+
 /****************************************************************************
- *
- *   Variables
- *
- ***/
+*
+*   Variables
+*
+***/
 
 // randomly generated key
 static uint8_t s_key[] = {
@@ -33,11 +34,12 @@ static uint8_t s_key[] = {
 };
 static_assert(size(s_key) == crypto_shorthash_KEYBYTES, "");
 
+
 /****************************************************************************
- *
- *   Public API
- *
- ***/
+*
+*   Public API
+*
+***/
 
 //===========================================================================
 size_t strHash(const char src[]) {

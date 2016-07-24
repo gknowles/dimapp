@@ -6,19 +6,21 @@ using namespace std;
 
 namespace Dim {
 
+
 /****************************************************************************
- *
- *   Tuning parameters
- *
- ***/
+*
+*   Tuning parameters
+*
+***/
 
 const unsigned kDefaultBlockSize = 4096;
 
+
 /****************************************************************************
- *
- *   CharBuf::Buffer
- *
- ***/
+*
+*   CharBuf::Buffer
+*
+***/
 
 //#pragma warning(disable: 4200) // nonstandard extension used: zero-sized
 // array
@@ -34,11 +36,12 @@ struct CharBuf::Buffer {
     char *end() { return base() + m_reserved; }
 };
 
+
 /****************************************************************************
- *
- *   CharBuf
- *
- ***/
+*
+*   CharBuf
+*
+***/
 
 //===========================================================================
 CharBuf::CharBuf() {}

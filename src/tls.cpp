@@ -6,11 +6,12 @@ using namespace std;
 
 namespace Dim {
 
+
 /****************************************************************************
- *
- *   Private
- *
- ***/
+*
+*   Private
+*
+***/
 
 namespace {
 
@@ -32,19 +33,21 @@ class ServerConn : public TlsConnBase {
 
 } // namespace
 
+
 /****************************************************************************
- *
- *   Variables
- *
- ***/
+*
+*   Variables
+*
+***/
 
 static HandleMap<TlsConnHandle, TlsConnBase> s_conns;
 
+
 /****************************************************************************
- *
- *   TlsConnBase
- *
- ***/
+*
+*   TlsConnBase
+*
+***/
 
 //===========================================================================
 TlsConnBase::TlsConnBase() {}
@@ -109,11 +112,12 @@ void TlsConnBase::onTlsHandshake(const TlsServerHelloMsg &msg) {}
 //===========================================================================
 void TlsConnBase::onTlsHandshake(const TlsHelloRetryRequestMsg &msg) {}
 
+
 /****************************************************************************
- *
- *   TlsRecordWriter
- *
- ***/
+*
+*   TlsRecordWriter
+*
+***/
 
 //===========================================================================
 TlsRecordWriter::TlsRecordWriter(TlsConnBase &conn, CharBuf *out)
@@ -204,11 +208,12 @@ void TlsRecordWriter::end() {
     }
 }
 
+
 /****************************************************************************
- *
- *   TlsRecordReader
- *
- ***/
+*
+*   TlsRecordReader
+*
+***/
 
 //===========================================================================
 TlsRecordReader::TlsRecordReader(
@@ -295,11 +300,12 @@ size_t TlsRecordReader::size() const {
     return m_count;
 }
 
+
 /****************************************************************************
- *
- *   ClientConn
- *
- ***/
+*
+*   ClientConn
+*
+***/
 
 const uint8_t kClientVersion[] = {3, 4};
 
@@ -329,20 +335,22 @@ void ClientConn::connect(CharBuf *outbuf) {
     tlsWrite(out, msg);
 }
 
+
 /****************************************************************************
- *
- *   ServerConn
- *
- ***/
+*
+*   ServerConn
+*
+***/
 
 //===========================================================================
 void ServerConn::onTlsHandshake(const TlsClientHelloMsg &msg) {}
 
+
 /****************************************************************************
- *
- *   Public API
- *
- ***/
+*
+*   Public API
+*
+***/
 
 //===========================================================================
 TlsConnHandle tlsAccept(const TlsCipherSuite suites[], size_t count) {

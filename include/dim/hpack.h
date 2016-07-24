@@ -11,11 +11,12 @@
 
 namespace Dim {
 
+
 /****************************************************************************
- *
- *   Common
- *
- ***/
+*
+*   Common
+*
+***/
 
 struct HpackFieldView;
 enum HpackFlags {
@@ -27,11 +28,12 @@ struct HpackDynField {
     std::string value;
 };
 
+
 /****************************************************************************
- *
- *   HpackEncode
- *
- ***/
+*
+*   HpackEncode
+*
+***/
 
 class HpackEncode {
   public:
@@ -61,11 +63,12 @@ class HpackEncode {
     CharBuf *m_out{nullptr};
 };
 
+
 /****************************************************************************
- *
- *   HpackDecode
- *
- ***/
+*
+*   HpackDecode
+*
+***/
 
 class IHpackDecodeNotify {
   public:

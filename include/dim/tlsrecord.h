@@ -11,11 +11,12 @@
 
 namespace Dim {
 
+
 /****************************************************************************
- *
- *   Constants
- *
- ***/
+*
+*   Constants
+*
+***/
 
 enum TlsContentType : uint8_t {
     kContentAlert = 21,
@@ -23,11 +24,12 @@ enum TlsContentType : uint8_t {
     kContentAppData = 23,
 };
 
+
 /****************************************************************************
- *
- *   Tls connection
- *
- ***/
+*
+*   Tls connection
+*
+***/
 
 struct TlsCipher {
     std::vector<uint8_t> m_key;

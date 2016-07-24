@@ -13,17 +13,19 @@ using namespace std;
 
 namespace Dim {
 
-/****************************************************************************
- *
- *   Tuning parameters
- *
- ***/
 
 /****************************************************************************
- *
- *   Declarations
- *
- ***/
+*
+*   Tuning parameters
+*
+***/
+
+
+/****************************************************************************
+*
+*   Declarations
+*
+***/
 
 struct HpackFieldView {
     const char *name;
@@ -61,11 +63,12 @@ class HuffDecoder {
 
 } // namespace
 
+
 /****************************************************************************
- *
- *   Contants
- *
- ***/
+*
+*   Contants
+*
+***/
 
 // static table has the following 61 members (not counting 0) as defined by
 // rfc7541 appendix A
@@ -397,19 +400,21 @@ const EncodeItem s_encodeTable[] = {
 };
 static_assert(size(s_encodeTable) == 257, "");
 
+
 /****************************************************************************
- *
- *   Variables
- *
- ***/
+*
+*   Variables
+*
+***/
 
 static HuffDecoder s_decode(s_encodeTable, size(s_encodeTable));
 
+
 /****************************************************************************
- *
- *   Helpers
- *
- ***/
+*
+*   Helpers
+*
+***/
 
 //===========================================================================
 static size_t fieldSize(const HpackFieldView &fld) {
@@ -421,11 +426,12 @@ static size_t fieldSize(const HpackDynField &fld) {
     return size(fld.name) + size(fld.value) + 32;
 }
 
+
 /****************************************************************************
- *
- *   Encoding data
- *
- ***/
+*
+*   Encoding data
+*
+***/
 
 //===========================================================================
 HpackEncode::HpackEncode(size_t tableSize) {
@@ -489,11 +495,12 @@ void HpackEncode::write(size_t val, char prefix, int prefixBits) {
     m_out->append(1, (char)val);
 }
 
+
 /****************************************************************************
- *
- *   Decoding data
- *
- ***/
+*
+*   Decoding data
+*
+***/
 
 //===========================================================================
 // HuffDecoder

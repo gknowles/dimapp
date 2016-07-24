@@ -6,20 +6,22 @@ using namespace std;
 
 namespace Dim {
 
+
 /****************************************************************************
- *
- *   Tuning parameters
- *
- ***/
+*
+*   Tuning parameters
+*
+***/
 
 const unsigned kDefaultBlockSize = 4096;
 const unsigned kDefaultHeaderTableSize = 4096;
 
+
 /****************************************************************************
- *
- *   Private declarations
- *
- ***/
+*
+*   Private declarations
+*
+***/
 
 namespace {
 
@@ -92,19 +94,21 @@ struct ResetStream {
 
 } // namespace
 
+
 /****************************************************************************
- *
- *   Variables
- *
- ***/
+*
+*   Variables
+*
+***/
 
 static HandleMap<HttpConnHandle, HttpConn> s_conns;
 
+
 /****************************************************************************
- *
- *   Reset streams
- *
- ***/
+*
+*   Reset streams
+*
+***/
 
 const Duration kMaxResetStreamAge = 10s;
 const Duration kMinResetStreamCheckInterval = 2s;
@@ -138,11 +142,12 @@ Duration ResetStreamTimer::onTimer(TimePoint now) {
     return kTimerInfinite;
 }
 
+
 /****************************************************************************
- *
- *   HPACK message decoder
- *
- ***/
+*
+*   HPACK message decoder
+*
+***/
 
 class MsgDecoder : public IHpackDecodeNotify {
   public:
@@ -192,11 +197,12 @@ FrameError MsgDecoder::Error() const {
     return m_error;
 }
 
+
 /****************************************************************************
- *
- *   Connection initialization
- *
- ***/
+*
+*   Connection initialization
+*
+***/
 
 enum class HttpConn::ByteMode {
     kInvalid,
@@ -218,11 +224,12 @@ HttpConn::HttpConn()
     , m_encoder{kDefaultHeaderTableSize}
     , m_decoder{kDefaultHeaderTableSize} {}
 
+
 /****************************************************************************
- *
- *   Receiving data
- *
- ***/
+*
+*   Receiving data
+*
+***/
 
 const int kFrameHeaderLen = 9;
 const char kPrefaceData[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
@@ -881,11 +888,12 @@ bool HttpConn::onContinuation(
     return false;
 }
 
+
 /****************************************************************************
- *
- *   Sending data
- *
- ***/
+*
+*   Sending data
+*
+***/
 
 //===========================================================================
 // Serializes a request and returns the stream id used
@@ -981,11 +989,12 @@ void HttpConn::deleteStream(int stream, HttpStream *sm) {
     }
 }
 
+
 /****************************************************************************
- *
- *   Public API
- *
- ***/
+*
+*   Public API
+*
+***/
 
 //===========================================================================
 HttpConnHandle httpListen() {

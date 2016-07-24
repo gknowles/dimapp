@@ -7,11 +7,12 @@ using namespace std::rel_ops;
 
 namespace Dim {
 
+
 /****************************************************************************
- *
- *   Incomplete public types
- *
- ***/
+*
+*   Incomplete public types
+*
+***/
 
 class TaskQueue {
   public:
@@ -32,11 +33,12 @@ class TaskQueue {
     void pop();
 };
 
+
 /****************************************************************************
- *
- *   Private declarations
- *
- ***/
+*
+*   Private declarations
+*
+***/
 
 namespace {
 
@@ -44,11 +46,12 @@ class EndThreadTask : public ITaskNotify {};
 
 } // namespace
 
+
 /****************************************************************************
- *
- *   Variables
- *
- ***/
+*
+*   Variables
+*
+***/
 
 static HandleMap<TaskQueueHandle, TaskQueue> s_queues;
 static int s_numThreads;
@@ -61,11 +64,12 @@ static TaskQueueHandle s_eventQ;
 static TaskQueueHandle s_computeQ;
 static atomic_bool s_running;
 
+
 /****************************************************************************
- *
- *   Run tasks
- *
- ***/
+*
+*   Run tasks
+*
+***/
 
 //===========================================================================
 static void taskQueueThread(TaskQueue *ptr) {
@@ -117,11 +121,12 @@ static void setThreads_LK(TaskQueue &q, size_t threads) {
     }
 }
 
+
 /****************************************************************************
- *
- *   TaskQueue
- *
- ***/
+*
+*   TaskQueue
+*
+***/
 
 //===========================================================================
 void TaskQueue::push(ITaskNotify &task) {
@@ -141,11 +146,12 @@ void TaskQueue::pop() {
     task->m_taskNext = nullptr;
 }
 
+
 /****************************************************************************
- *
- *   Internal API
- *
- ***/
+*
+*   Internal API
+*
+***/
 
 //===========================================================================
 void iTaskInitialize() {
@@ -172,11 +178,12 @@ void iTaskDestroy() {
         s_queues.erase(q.first);
 }
 
+
 /****************************************************************************
- *
- *   Public API
- *
- ***/
+*
+*   Public API
+*
+***/
 
 //===========================================================================
 void taskPushEvent(ITaskNotify &task) {

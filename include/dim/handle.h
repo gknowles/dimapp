@@ -8,15 +8,16 @@
 
 namespace Dim {
 
+
 /****************************************************************************
- *
- *   Base handle class
- *   Clients inherit from this class to make different kinds of handles
- *
- *   Expected usage:
- *   struct HWidget : DimHandleBase {};
- *
- ***/
+*
+*   Base handle class
+*   Clients inherit from this class to make different kinds of handles
+*
+*   Expected usage:
+*   struct HWidget : DimHandleBase {};
+*
+***/
 
 struct HandleBase {
     int pos;
@@ -29,11 +30,12 @@ struct HandleBase {
     }
 };
 
+
 /****************************************************************************
- *
- *   Handle map base type - internal only
- *
- ***/
+*
+*   Handle map base type - internal only
+*
+***/
 
 class HandleMapBase {
   public:
@@ -108,15 +110,16 @@ inline auto HandleMapBase::end() -> Iterator<H, T> {
     return Iterator<H, T>{};
 }
 
+
 /****************************************************************************
- *
- *   Handle map
- *   Container of handles
- *
- *   Expected usage:
- *   DimHandleMap<HWidget, WidgetClass> widgets;
- *
- ***/
+*
+*   Handle map
+*   Container of handles
+*
+*   Expected usage:
+*   DimHandleMap<HWidget, WidgetClass> widgets;
+*
+***/
 
 template <typename H, typename T> class HandleMap : public HandleMapBase {
   public:

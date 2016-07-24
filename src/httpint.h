@@ -8,11 +8,12 @@
 
 namespace Dim {
 
+
 /****************************************************************************
- *
- *   Http connection
- *
- ***/
+*
+*   Http connection
+*
+***/
 
 struct HttpStream {
     enum State {

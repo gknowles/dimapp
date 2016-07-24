@@ -11,11 +11,12 @@
 // using namespace std::literals;
 namespace Dim {
 
+
 /****************************************************************************
- *
- *   Clock
- *
- ***/
+*
+*   Clock
+*
+***/
 
 struct Clock {
     typedef int64_t rep;
@@ -35,15 +36,16 @@ struct Clock {
 typedef Clock::duration Duration;
 typedef Clock::time_point TimePoint;
 
+
 /****************************************************************************
- *
- *   Networking
- *
- *   Address - machine location (IP)
- *   Endpoint - machine location (IP) and service at location (port)
- *   Network - network location (IP) and size (net mask)
- *
- ***/
+*
+*   Networking
+*
+*   Address - machine location (IP)
+*   Endpoint - machine location (IP) and service at location (port)
+*   Network - network location (IP) and size (net mask)
+*
+***/
 
 // IP v4 or v6 address
 struct Address {
@@ -64,11 +66,12 @@ struct Network {
     int mask{0};
 };
 
+
 /****************************************************************************
- *
- *   Run modes
- *
- ***/
+*
+*   Run modes
+*
+***/
 
 enum RunMode {
     kRunStopped,

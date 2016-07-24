@@ -8,22 +8,24 @@ namespace Dim {
 #include <climits>
 #include <type_traits>
 
+
 /****************************************************************************
- *
- *   Hashing
- *
- ***/
+*
+*   Hashing
+*
+***/
 
 size_t strHash(const char src[]);
 
 // calculates hash up to trailing null or maxlen, whichever comes first
 size_t strHash(const char src[], size_t maxlen);
 
+
 /****************************************************************************
- *
- *   String conversions
- *
- ***/
+*
+*   String conversions
+*
+***/
 
 template <typename T> constexpr int maxIntegralChars() {
     return numeric_limits<T>::is_signed
@@ -114,11 +116,12 @@ template <typename T> const char *IntegralStr<T>::internalSet(Signed val) {
     return data;
 }
 
+
 /****************************************************************************
- *
- *   Containers
- *
- ***/
+*
+*   Containers
+*
+***/
 
 template <typename T> class ForwardListIterator {
   protected:

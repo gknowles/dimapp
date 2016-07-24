@@ -6,11 +6,12 @@ using namespace std;
 
 namespace Dim {
 
+
 /****************************************************************************
- *
- *   Private
- *
- ***/
+*
+*   Private
+*
+***/
 
 namespace {
 
@@ -22,17 +23,19 @@ const unsigned kMaxCiphertext = kMaxPlaintext + 256;
 
 } // namespace
 
-/****************************************************************************
- *
- *   Variables
- *
- ***/
 
 /****************************************************************************
- *
- *   TlsRecordEncrypt
- *
- ***/
+*
+*   Variables
+*
+***/
+
+
+/****************************************************************************
+*
+*   TlsRecordEncrypt
+*
+***/
 
 //===========================================================================
 void TlsRecordEncrypt::setCipher(CharBuf *out, TlsCipher *cipher) {
@@ -105,11 +108,12 @@ void TlsRecordEncrypt::flush(CharBuf *out) {
     }
 }
 
+
 /****************************************************************************
- *
- *   TlsRecordDecrypt
- *
- ***/
+*
+*   TlsRecordDecrypt
+*
+***/
 
 //===========================================================================
 void TlsRecordDecrypt::setCipher(TlsCipher *cipher) {
@@ -263,10 +267,11 @@ bool TlsRecordDecrypt::parseError(TlsAlertDesc desc, TlsAlertLevel level) {
     return false;
 }
 
+
 /****************************************************************************
- *
- *   Public API
- *
- ***/
+*
+*   Public API
+*
+***/
 
 } // namespace

@@ -6,17 +6,19 @@ using namespace std;
 
 namespace Dim {
 
-/****************************************************************************
- *
- *   Tuning parameters
- *
- ***/
 
 /****************************************************************************
- *
- *   Declarations
- *
- ***/
+*
+*   Tuning parameters
+*
+***/
+
+
+/****************************************************************************
+*
+*   Declarations
+*
+***/
 
 namespace {
 
@@ -25,11 +27,12 @@ enum TlsNameType : uint8_t {
 };
 }
 
+
 /****************************************************************************
- *
- *   Update message components
- *
- ***/
+*
+*   Update message components
+*
+***/
 
 //===========================================================================
 void tlsSetKeyShare(TlsKeyShare &out, TlsNamedGroup group) {
@@ -37,11 +40,12 @@ void tlsSetKeyShare(TlsKeyShare &out, TlsNamedGroup group) {
     out.keyExchange.assign(32, 0);
 }
 
+
 /****************************************************************************
- *
- *   Write message components
- *
- ***/
+*
+*   Write message components
+*
+***/
 
 //===========================================================================
 static void write(TlsRecordWriter &out, const std::vector<TlsKeyShare> &keys) {
@@ -125,11 +129,12 @@ static void writeDraftVersion(TlsRecordWriter &out, uint16_t version) {
     out.end(); // extension_data
 };
 
+
 /****************************************************************************
- *
- *   Write messages
- *
- ***/
+*
+*   Write messages
+*
+***/
 
 //===========================================================================
 void tlsWrite(TlsRecordWriter &out, const TlsClientHelloMsg &msg) {
@@ -201,11 +206,12 @@ void tlsWrite(TlsRecordWriter &out, const TlsHelloRetryRequestMsg &msg) {
     out.end(); // handshake
 }
 
+
 /****************************************************************************
- *
- *   Parse message components
- *
- ***/
+*
+*   Parse message components
+*
+***/
 
 //===========================================================================
 static bool
@@ -328,11 +334,12 @@ template <typename T> static bool parseExts(T *msg, TlsRecordReader &in) {
     return true;
 }
 
+
 /****************************************************************************
- *
- *   Parse messages
- *
- ***/
+*
+*   Parse messages
+*
+***/
 
 //===========================================================================
 bool tlsParse(TlsClientHelloMsg *msg, TlsRecordReader &in) {

@@ -13,11 +13,12 @@ struct sockaddr_storage;
 
 namespace Dim {
 
+
 /****************************************************************************
- *
- *   Address & Endpoint
- *
- ***/
+*
+*   Address & Endpoint
+*
+***/
 
 bool parse(Address *addr, const char src[]);
 bool parse(Endpoint *end, const char src[], int defaultPort);
@@ -31,11 +32,12 @@ bool parse(Endpoint *end, const char src[], int defaultPort);
 void copy(sockaddr_storage *out, const Endpoint &end);
 void copy(Endpoint *out, const sockaddr_storage &storage);
 
+
 /****************************************************************************
- *
- *   Lookup
- *
- ***/
+*
+*   Lookup
+*
+***/
 
 void addressGetLocal(std::vector<Address> *out);
 

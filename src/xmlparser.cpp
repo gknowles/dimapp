@@ -6,11 +6,12 @@ using namespace std;
 
 namespace Dim {
 
+
 /****************************************************************************
- *
- *   Private
- *
- ***/
+*
+*   Private
+*
+***/
 
 namespace {
 
@@ -21,11 +22,12 @@ struct XElemInfo : XElem {
 
 } // namespace
 
+
 /****************************************************************************
- *
- *   XParser
- *
- ***/
+*
+*   XParser
+*
+***/
 
 enum CharType : uint8_t {
     kInvalid = 0,
@@ -348,11 +350,12 @@ ITempHeap &XStreamParser::heap() {
     return m_heap;
 }
 
+
 /****************************************************************************
- *
- *   Dom parser
- *
- ***/
+*
+*   Dom parser
+*
+***/
 
 //===========================================================================
 XElem *XParser::setRoot(const char elemName[], const char text[]) {
@@ -363,10 +366,11 @@ XElem *XParser::setRoot(const char elemName[], const char text[]) {
     return elem;
 }
 
+
 /****************************************************************************
- *
- *   Public API
- *
- ***/
+*
+*   Public API
+*
+***/
 
 } // namespace

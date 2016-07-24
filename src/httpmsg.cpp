@@ -6,23 +6,26 @@ using namespace std;
 
 namespace Dim {
 
-/****************************************************************************
- *
- *   Tuning parameters
- *
- ***/
 
 /****************************************************************************
- *
- *   Declarations
- *
- ***/
+*
+*   Tuning parameters
+*
+***/
+
 
 /****************************************************************************
- *
- *   Private
- *
- ***/
+*
+*   Declarations
+*
+***/
+
+
+/****************************************************************************
+*
+*   Private
+*
+***/
 
 namespace {
 
@@ -98,11 +101,12 @@ struct HdrNameInfo : HttpMsg::HdrName {
 
 } // namespace
 
+
 /****************************************************************************
- *
- *   HttpMsg::HdrName
- *
- ***/
+*
+*   HttpMsg::HdrName
+*
+***/
 
 //===========================================================================
 auto HttpMsg::HdrName::begin() -> ForwardListIterator<HdrValue> {
@@ -126,11 +130,12 @@ auto HttpMsg::HdrName::end() const -> ForwardListIterator<const HdrValue> {
     return ForwardListIterator<const HdrValue>(nullptr);
 }
 
+
 /****************************************************************************
- *
- *   HttpMsg
- *
- ***/
+*
+*   HttpMsg
+*
+***/
 
 //===========================================================================
 void HttpMsg::addHeader(HttpHdr id, const char value[]) {
@@ -233,11 +238,12 @@ ITempHeap &HttpMsg::heap() {
     return m_heap;
 }
 
+
 /****************************************************************************
- *
- *   HttpRequest
- *
- ***/
+*
+*   HttpRequest
+*
+***/
 
 bool HttpRequest::checkPseudoHeaders() const {
     const int must = kFlagHasMethod | kFlagHasScheme | kFlagHasPath;

@@ -7,11 +7,12 @@
 
 namespace Dim {
 
+
 /****************************************************************************
- *
- *   Temp heap interface
- *
- ***/
+*
+*   Temp heap interface
+*
+***/
 
 class ITempHeap {
   public:
@@ -62,11 +63,12 @@ inline char *ITempHeap::alloc(size_t bytes) {
     return alloc(bytes, alignof(char));
 }
 
+
 /****************************************************************************
- *
- *   TempHeap
- *
- ***/
+*
+*   TempHeap
+*
+***/
 
 class TempHeap : public ITempHeap {
   public:

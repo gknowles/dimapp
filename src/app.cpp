@@ -7,11 +7,12 @@ using namespace std::chrono;
 
 namespace Dim {
 
+
 /****************************************************************************
- *
- *   Declarations
- *
- ***/
+*
+*   Declarations
+*
+***/
 
 namespace {
 
@@ -58,11 +59,12 @@ class MainTimer : public ITimerNotify {
 
 } // namespace
 
+
 /****************************************************************************
- *
- *   Variables
- *
- ***/
+*
+*   Variables
+*
+***/
 
 static MainTimer s_mainTimer;
 static int s_exitcode;
@@ -75,11 +77,12 @@ static mutex s_runMut;
 static condition_variable s_stopped;
 static RunMode s_runMode{kRunStopped};
 
+
 /****************************************************************************
- *
- *   MainTimer
- *
- ***/
+*
+*   MainTimer
+*
+***/
 
 //===========================================================================
 Duration MainTimer::onTimer(TimePoint now) {
@@ -158,11 +161,12 @@ bool MainTimer::queryDestroy(QueryFn notify) {
     return true;
 }
 
+
 /****************************************************************************
- *
- *   Externals
- *
- ***/
+*
+*   Externals
+*
+***/
 
 //===========================================================================
 int appRun(ITaskNotify &app) {

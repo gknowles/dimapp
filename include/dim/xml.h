@@ -9,11 +9,12 @@
 
 namespace Dim {
 
+
 /****************************************************************************
- *
- *   Xml builder
- *
- ***/
+*
+*   Xml builder
+*
+***/
 
 class IXBuilder {
   public:
@@ -84,11 +85,12 @@ class XBuilder : public IXBuilder {
     CharBuf &m_buf;
 };
 
+
 /****************************************************************************
- *
- *   Xml stream parser
- *
- ***/
+*
+*   Xml stream parser
+*
+***/
 
 class XStreamParser;
 
@@ -141,11 +143,12 @@ class XStreamParser {
     bool m_failed{false};
 };
 
+
 /****************************************************************************
- *
- *   Xml dom parser
- *
- ***/
+*
+*   Xml dom parser
+*
+***/
 
 struct XElem;
 

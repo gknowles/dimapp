@@ -7,11 +7,12 @@ using namespace std;
 
 namespace Dim {
 
+
 /****************************************************************************
- *
- *   Incomplete public types
- *
- ***/
+*
+*   Incomplete public types
+*
+***/
 
 class Dim::Timer {
   public:
@@ -30,11 +31,12 @@ class Dim::Timer {
     bool bugged{false};
 };
 
+
 /****************************************************************************
- *
- *   Private declarations
- *
- ***/
+*
+*   Private declarations
+*
+***/
 
 namespace {
 
@@ -51,11 +53,12 @@ struct TimerQueueNode {
 
 } // namespace
 
+
 /****************************************************************************
- *
- *   Variables
- *
- ***/
+*
+*   Variables
+*
+***/
 
 static mutex s_mut;
 static condition_variable s_modeCv; // when run mode changes to stopped
@@ -71,11 +74,12 @@ static thread::id s_processingThread;     // thread running any current callback
 static condition_variable s_processingCv; // when running callback completes
 static ITimerNotify *s_processingNotify;  // callback currently in progress
 
+
 /****************************************************************************
- *
- *   Queue and run timers
- *
- ***/
+*
+*   Queue and run timers
+*
+***/
 
 //===========================================================================
 class CRunTimers : public ITaskNotify {
@@ -164,11 +168,12 @@ static void timerQueueThread() {
     }
 }
 
+
 /****************************************************************************
- *
- *   ITimerNotify
- *
- ***/
+*
+*   ITimerNotify
+*
+***/
 
 //===========================================================================
 ITimerNotify::~ITimerNotify() {
@@ -176,11 +181,12 @@ ITimerNotify::~ITimerNotify() {
         timerStopSync(this);
 }
 
+
 /****************************************************************************
- *
- *   TimerQueueNode
- *
- ***/
+*
+*   TimerQueueNode
+*
+***/
 
 //===========================================================================
 TimerQueueNode::TimerQueueNode(shared_ptr<Timer> &timer)
@@ -204,11 +210,12 @@ bool TimerQueueNode::operator==(const TimerQueueNode &right) const {
            instance == right.instance;
 }
 
+
 /****************************************************************************
- *
- *   Timer
- *
- ***/
+*
+*   Timer
+*
+***/
 
 //===========================================================================
 // static
@@ -271,11 +278,12 @@ bool Timer::connected() const {
     return this == notify->m_timer.get();
 }
 
+
 /****************************************************************************
- *
- *   Internal API
- *
- ***/
+*
+*   Internal API
+*
+***/
 
 //===========================================================================
 void iTimerInitialize() {
@@ -299,11 +307,12 @@ void iTimerDestroy() {
         s_modeCv.wait(lk);
 }
 
+
 /****************************************************************************
- *
- *   Public API
- *
- ***/
+*
+*   Public API
+*
+***/
 
 //===========================================================================
 void timerUpdate(ITimerNotify *notify, Duration wait, bool onlyIfSooner) {

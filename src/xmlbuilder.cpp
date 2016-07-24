@@ -6,11 +6,12 @@ using namespace std;
 
 namespace Dim {
 
+
 /****************************************************************************
- *
- *   Private
- *
- ***/
+*
+*   Private
+*
+***/
 
 namespace {
 
@@ -52,11 +53,12 @@ const char kTextTypeTable[256] = {
 
 } // namespace
 
+
 /****************************************************************************
- *
- *   IXBuilder
- *
- ***/
+*
+*   IXBuilder
+*
+***/
 
 enum IXBuilder::State {
     kStateFail,
@@ -190,11 +192,12 @@ template <bool isContent> void IXBuilder::addText(const char val[]) {
     }
 }
 
+
 /****************************************************************************
- *
- *   XBuilder
- *
- ***/
+*
+*   XBuilder
+*
+***/
 
 //===========================================================================
 void XBuilder::append(const char text[], size_t count) {
@@ -211,11 +214,12 @@ size_t XBuilder::size() {
     return m_buf.size();
 }
 
+
 /****************************************************************************
- *
- *   Public API
- *
- ***/
+*
+*   Public API
+*
+***/
 
 //===========================================================================
 IXBuilder &operator<<(IXBuilder &out, int64_t val) {
