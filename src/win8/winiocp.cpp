@@ -42,7 +42,7 @@ static mutex s_mut;
 
 //===========================================================================
 static void iocpDispatchThread() {
-    OVERLAPPED *overlapped;
+    OVERLAPPED * overlapped;
     ULONG_PTR key;
     ULONG bytes;
     for (;;) {

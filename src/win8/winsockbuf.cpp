@@ -23,7 +23,7 @@ const unsigned kDefaultBufferSliceSize = 4096;
 *
 ***/
 
-static void destroyBufferSlice(void *ptr);
+static void destroyBufferSlice(void * ptr);
 
 //===========================================================================
 namespace {
@@ -36,7 +36,7 @@ struct BufferSlice {
 };
 struct Buffer {
     RIO_BUFFERID id;
-    char *base;
+    char * base;
     TimePoint lastUsed;
     int sliceSize;
     int reserved;
@@ -76,18 +76,18 @@ static mutex s_mut;
 ***/
 
 //===========================================================================
-static BufferSlice *getSlice(const Buffer &buf, int pos) {
-    char *ptr = (char *)buf.base + pos * buf.sliceSize;
+static BufferSlice * getSlice(const Buffer & buf, int pos) {
+    char * ptr = (char *)buf.base + pos * buf.sliceSize;
     return (BufferSlice *)ptr;
 }
 
 //===========================================================================
 static void
-findBufferSlice(BufferSlice **sliceOut, Buffer **bufferOut, void *ptr) {
-    auto *slice = (BufferSlice *)ptr - 1;
+findBufferSlice(BufferSlice ** sliceOut, Buffer ** bufferOut, void * ptr) {
+    auto * slice = (BufferSlice *)ptr - 1;
     assert((size_t)slice->ownerPos < s_buffers.size());
     int rbufPos = slice->ownerPos;
-    auto *buf = &s_buffers[rbufPos];
+    auto * buf = &s_buffers[rbufPos];
     // BufferSlice must be aligned within the owning registered buffer
     assert((char *)slice >= buf->base && slice < getSlice(*buf, buf->size));
     assert(((char *)slice - buf->base) % buf->sliceSize == 0);
@@ -111,7 +111,7 @@ static void createEmptyBuffer() {
     }
 
     s_buffers.emplace_back();
-    Buffer &buf = s_buffers.back();
+    Buffer & buf = s_buffers.back();
     buf.sliceSize = s_sliceSize;
     buf.reserved = int(bytes / s_sliceSize);
     buf.lastUsed = TimePoint::min();
@@ -135,7 +135,7 @@ static void createEmptyBuffer() {
 //===========================================================================
 static void destroyEmptyBuffer() {
     assert(!s_buffers.empty());
-    Buffer &buf = s_buffers.back();
+    Buffer & buf = s_buffers.back();
     assert(!buf.used);
     s_rio.RIODeregisterBuffer(buf.id);
     VirtualFree(buf.base, 0, MEM_RELEASE);
@@ -143,12 +143,12 @@ static void destroyEmptyBuffer() {
 }
 
 //===========================================================================
-static void destroyBufferSlice(void *ptr) {
+static void destroyBufferSlice(void * ptr) {
     // get the header
-    BufferSlice *slice;
-    Buffer *pbuf;
+    BufferSlice * slice;
+    Buffer * pbuf;
     findBufferSlice(&slice, &pbuf, ptr);
-    auto &buf = *pbuf;
+    auto & buf = *pbuf;
     int rbufPos = slice->ownerPos;
 
     slice->nextPos = buf.firstFree;
@@ -219,7 +219,7 @@ bool Shutdown::onAppQueryConsoleDestroy() {
 ***/
 
 //===========================================================================
-void iSocketBufferInitialize(RIO_EXTENSION_FUNCTION_TABLE &rio) {
+void iSocketBufferInitialize(RIO_EXTENSION_FUNCTION_TABLE & rio) {
     appMonitorShutdown(&s_cleanup);
 
     s_rio = rio;
@@ -236,12 +236,12 @@ void iSocketBufferInitialize(RIO_EXTENSION_FUNCTION_TABLE &rio) {
 }
 
 //===========================================================================
-void iSocketGetRioBuffer(RIO_BUF *out, SocketBuffer *sbuf, size_t bytes) {
+void iSocketGetRioBuffer(RIO_BUF * out, SocketBuffer * sbuf, size_t bytes) {
     lock_guard<mutex> lk{s_mut};
 
     assert(bytes <= sbuf->len);
-    BufferSlice *slice;
-    Buffer *pbuf;
+    BufferSlice * slice;
+    Buffer * pbuf;
     findBufferSlice(&slice, &pbuf, sbuf->data);
     out->BufferId = pbuf->id;
     out->Offset = ULONG((char *)sbuf->data - (char *)pbuf->base);
@@ -263,10 +263,10 @@ unique_ptr<SocketBuffer> socketGetBuffer() {
     if (s_numFull == s_buffers.size())
         createEmptyBuffer();
     // use the last partial or, if there aren't any, the first empty
-    auto &buf = s_numPartial ? s_buffers[s_numFull + s_numPartial - 1]
-                             : s_buffers[s_numFull];
+    auto & buf = s_numPartial ? s_buffers[s_numFull + s_numPartial - 1]
+                              : s_buffers[s_numFull];
 
-    BufferSlice *slice;
+    BufferSlice * slice;
     if (buf.used < buf.size) {
         slice = getSlice(buf, buf.firstFree);
         buf.firstFree = slice->nextPos;

@@ -15,20 +15,20 @@ using namespace Dim;
 namespace {
 
 struct NameValue {
-    const char *name;
-    const char *value;
+    const char * name;
+    const char * value;
     int flags;
 
-    bool operator==(const NameValue &right) const;
+    bool operator==(const NameValue & right) const;
 };
 
 struct TestMsg {
     vector<NameValue> headers;
-    const char *body;
+    const char * body;
 };
 
 struct Test {
-    const char *name;
+    const char * name;
     bool reset;
     string input;
     bool result;
@@ -102,14 +102,14 @@ class Application : public ITaskNotify, public ILogNotify {
     void onTask() override;
 
     // ILogNotify
-    void onLog(LogType type, const string &msg) override;
+    void onLog(LogType type, const string & msg) override;
 
     int m_errors{0};
 };
 } // namespace
 
 //===========================================================================
-void Application::onLog(LogType type, const string &msg) {
+void Application::onLog(LogType type, const string & msg) {
     if (type >= kLogError) {
         m_errors += 1;
         cout << "ERROR: " << msg << endl;
@@ -124,7 +124,7 @@ void Application::onTask() {
     HttpConnHandle conn{};
     bool result;
     vector<unique_ptr<HttpMsg>> msgs;
-    for (auto &&test : s_tests) {
+    for (auto && test : s_tests) {
         cout << "Test - " << test.name << endl;
         if (test.reset && conn)
             httpClose(conn);
@@ -139,7 +139,7 @@ void Application::onTask() {
         if (output.compare(test.output) != 0)
             logMsgError() << "headers mismatch (FAILED)";
         auto tmi = test.msgs.begin();
-        for (auto &&msg : msgs) {
+        for (auto && msg : msgs) {
             if (tmi == test.msgs.end()) {
                 logMsgError() << "too many messages (FAILED)";
                 break;
@@ -147,8 +147,8 @@ void Application::onTask() {
             if (msg->body().compare(tmi->body) != 0)
                 logMsgError() << "body mismatch (FAILED)";
             auto thi = tmi->headers.begin(), ethi = tmi->headers.end();
-            for (auto &&hdr : *msg) {
-                for (auto &&hv : hdr) {
+            for (auto && hdr : *msg) {
+                for (auto && hv : hdr) {
                     if (thi == ethi) {
                         logMsgError() << "expected fewer headers";
                         goto finished_headers;
@@ -187,7 +187,7 @@ void Application::onTask() {
 *
 ***/
 
-int main(int argc, char *argv[]) {
+int main(int argc, char * argv[]) {
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
     _set_error_mode(_OUT_TO_MSGBOX);
     Application app;

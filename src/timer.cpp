@@ -16,15 +16,15 @@ namespace Dim {
 
 class Dim::Timer {
   public:
-    static void update(ITimerNotify *notify, Duration wait, bool onlyIfSooner);
-    static void stopSync(ITimerNotify *notify);
+    static void update(ITimerNotify * notify, Duration wait, bool onlyIfSooner);
+    static void stopSync(ITimerNotify * notify);
 
-    Timer(ITimerNotify *notify);
+    Timer(ITimerNotify * notify);
 
     // is the notify still pointing back at this timer?
     bool connected() const;
 
-    ITimerNotify *notify{nullptr};
+    ITimerNotify * notify{nullptr};
     TimePoint expiration{TimePoint::max()};
     unsigned instance{0};
 
@@ -45,10 +45,10 @@ struct TimerQueueNode {
     TimePoint expiration;
     unsigned instance;
 
-    TimerQueueNode(shared_ptr<Timer> &timer);
-    bool operator<(const TimerQueueNode &right) const;
-    bool operator>(const TimerQueueNode &right) const;
-    bool operator==(const TimerQueueNode &right) const;
+    TimerQueueNode(shared_ptr<Timer> & timer);
+    bool operator<(const TimerQueueNode & right) const;
+    bool operator>(const TimerQueueNode & right) const;
+    bool operator==(const TimerQueueNode & right) const;
 };
 
 } // namespace
@@ -72,7 +72,7 @@ static bool s_processing; // dispatch task has been queued and isn't done
 
 static thread::id s_processingThread;     // thread running any current callback
 static condition_variable s_processingCv; // when running callback completes
-static ITimerNotify *s_processingNotify;  // callback currently in progress
+static ITimerNotify * s_processingNotify; // callback currently in progress
 
 
 /****************************************************************************
@@ -109,7 +109,7 @@ void CRunTimers::onTask() {
             continue;
 
         // call notifier
-        Timer *timer = node.timer.get();
+        Timer * timer = node.timer.get();
         timer->expiration = TimePoint::max();
         s_processingNotify = timer->notify;
         lk.unlock();
@@ -189,23 +189,23 @@ ITimerNotify::~ITimerNotify() {
 ***/
 
 //===========================================================================
-TimerQueueNode::TimerQueueNode(shared_ptr<Timer> &timer)
+TimerQueueNode::TimerQueueNode(shared_ptr<Timer> & timer)
     : timer{timer}
     , expiration{timer->expiration}
     , instance{timer->instance} {}
 
 //===========================================================================
-bool TimerQueueNode::operator<(const TimerQueueNode &right) const {
+bool TimerQueueNode::operator<(const TimerQueueNode & right) const {
     return expiration < right.expiration;
 }
 
 //===========================================================================
-bool TimerQueueNode::operator>(const TimerQueueNode &right) const {
+bool TimerQueueNode::operator>(const TimerQueueNode & right) const {
     return expiration > right.expiration;
 }
 
 //===========================================================================
-bool TimerQueueNode::operator==(const TimerQueueNode &right) const {
+bool TimerQueueNode::operator==(const TimerQueueNode & right) const {
     return expiration == right.expiration && timer == right.timer &&
            instance == right.instance;
 }
@@ -219,7 +219,7 @@ bool TimerQueueNode::operator==(const TimerQueueNode &right) const {
 
 //===========================================================================
 // static
-void Timer::update(ITimerNotify *notify, Duration wait, bool onlyIfSooner) {
+void Timer::update(ITimerNotify * notify, Duration wait, bool onlyIfSooner) {
     TimePoint now{Clock::now()};
     auto expire = wait == kTimerInfinite ? TimePoint::max() : now + wait;
 
@@ -227,7 +227,7 @@ void Timer::update(ITimerNotify *notify, Duration wait, bool onlyIfSooner) {
         lock_guard<mutex> lk{s_mut};
         if (!notify->m_timer)
             new Timer{notify};
-        auto &timer = notify->m_timer;
+        auto & timer = notify->m_timer;
         if (onlyIfSooner && !(expire < timer->expiration))
             return;
         timer->expiration = expire;
@@ -245,7 +245,7 @@ void Timer::update(ITimerNotify *notify, Duration wait, bool onlyIfSooner) {
 
 //===========================================================================
 // static
-void Timer::stopSync(ITimerNotify *notify) {
+void Timer::stopSync(ITimerNotify * notify) {
     if (!notify->m_timer)
         return;
 
@@ -267,7 +267,7 @@ void Timer::stopSync(ITimerNotify *notify) {
 }
 
 //===========================================================================
-Timer::Timer(ITimerNotify *notify)
+Timer::Timer(ITimerNotify * notify)
     : notify(notify) {
     assert(!notify->m_timer);
     notify->m_timer.reset(this);
@@ -315,12 +315,12 @@ void iTimerDestroy() {
 ***/
 
 //===========================================================================
-void timerUpdate(ITimerNotify *notify, Duration wait, bool onlyIfSooner) {
+void timerUpdate(ITimerNotify * notify, Duration wait, bool onlyIfSooner) {
     Timer::update(notify, wait, onlyIfSooner);
 }
 
 //===========================================================================
-void timerStopSync(ITimerNotify *notify) {
+void timerStopSync(ITimerNotify * notify) {
     Timer::stopSync(notify);
 }
 

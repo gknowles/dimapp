@@ -79,8 +79,8 @@ struct PriorityData {
     bool exclusive;
 };
 struct UnpaddedData {
-    const char *hdr;
-    const char *data;
+    const char * hdr;
+    const char * data;
     int dataLen;
     int padLen;
 };
@@ -124,13 +124,13 @@ Duration ResetStreamTimer::onTimer(TimePoint now) {
     TimePoint expire = now - kMaxResetStreamAge;
     Duration sleep;
     while (!empty(s_resetStreams)) {
-        auto &rs = s_resetStreams.front();
+        auto & rs = s_resetStreams.front();
         sleep = rs.closed - expire;
         if (sleep > 0s)
             return min(sleep, kMinResetStreamCheckInterval);
 
         if (rs.sm->m_state == HttpStream::kClosed) {
-            HttpConn *conn = s_conns.find(rs.hc);
+            HttpConn * conn = s_conns.find(rs.hc);
             conn->deleteStream(rs.stream, rs.sm.get());
         } else {
             assert(rs.sm->m_state == HttpStream::kDeleted);
@@ -151,7 +151,7 @@ Duration ResetStreamTimer::onTimer(TimePoint now) {
 
 class MsgDecoder : public IHpackDecodeNotify {
   public:
-    MsgDecoder(HttpMsg &msg);
+    MsgDecoder(HttpMsg & msg);
 
     explicit operator bool() const;
     FrameError Error() const;
@@ -164,12 +164,12 @@ class MsgDecoder : public IHpackDecodeNotify {
         int flags // Flags::*
         ) override;
 
-    HttpMsg &m_msg;
+    HttpMsg & m_msg;
     FrameError m_error{FrameError::kNoError};
 };
 
 //===========================================================================
-MsgDecoder::MsgDecoder(HttpMsg &msg)
+MsgDecoder::MsgDecoder(HttpMsg & msg)
     : m_msg(msg) {}
 
 //===========================================================================
@@ -235,7 +235,7 @@ const int kFrameHeaderLen = 9;
 const char kPrefaceData[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
 
 //===========================================================================
-static bool Skip(const char *&ptr, const char *eptr, const char literal[]) {
+static bool Skip(const char *& ptr, const char * eptr, const char literal[]) {
     while (ptr != eptr && *literal) {
         if (*ptr++ != *literal++)
             false;
@@ -263,7 +263,7 @@ static void SetFrameHeader(
 
 //===========================================================================
 static void StartFrame(
-    CharBuf *out,
+    CharBuf * out,
     unsigned stream,
     FrameType type,
     unsigned length,
@@ -316,15 +316,15 @@ static int GetFrameStream(const char frame[kFrameHeaderLen]) {
 }
 
 //===========================================================================
-static void ReplyGoAway(CharBuf *out, int lastStream, FrameError error) {}
+static void ReplyGoAway(CharBuf * out, int lastStream, FrameError error) {}
 
 //===========================================================================
 static void
-ReplyRstStream(CharBuf *out, int stream, HttpStream *sm, FrameError error) {}
+ReplyRstStream(CharBuf * out, int stream, HttpStream * sm, FrameError error) {}
 
 //===========================================================================
 static bool RemovePadding(
-    UnpaddedData *out, const char src[], int frameLen, int hdrLen, int flags) {
+    UnpaddedData * out, const char src[], int frameLen, int hdrLen, int flags) {
     out->hdr = src + kFrameHeaderLen;
     out->data = out->hdr + hdrLen;
     out->dataLen = frameLen - hdrLen;
@@ -343,8 +343,8 @@ static bool RemovePadding(
     out->data += 1;
 
     // verify that the padding is zero filled
-    const char *ptr = out->data + out->dataLen;
-    const char *term = ptr + out->padLen;
+    const char * ptr = out->data + out->dataLen;
+    const char * term = ptr + out->padLen;
     for (; ptr != term; ++ptr) {
         if (*ptr)
             return false;
@@ -354,7 +354,7 @@ static bool RemovePadding(
 }
 
 //===========================================================================
-static bool RemovePriority(PriorityData *out, const char hdr[], int hdrLen) {
+static bool RemovePriority(PriorityData * out, const char hdr[], int hdrLen) {
     if (hdrLen < 5)
         return false;
     unsigned tmp = ntoh32(hdr);
@@ -371,12 +371,12 @@ static void UpdatePriority() {}
 
 //===========================================================================
 bool HttpConn::recv(
-    CharBuf *out,
-    std::vector<std::unique_ptr<HttpMsg>> *msgs,
-    const void *src,
+    CharBuf * out,
+    std::vector<std::unique_ptr<HttpMsg>> * msgs,
+    const void * src,
     size_t srcLen) {
-    const char *ptr = static_cast<const char *>(src);
-    const char *eptr = ptr + srcLen;
+    const char * ptr = static_cast<const char *>(src);
+    const char * eptr = ptr + srcLen;
     size_t avail;
     switch (m_byteMode) {
     case ByteMode::kPreface:
@@ -459,7 +459,7 @@ bool HttpConn::recv(
 }
 
 //===========================================================================
-HttpStream *HttpConn::findAlways(CharBuf *out, int stream) {
+HttpStream * HttpConn::findAlways(CharBuf * out, int stream) {
     auto ib = m_streams.emplace(stream, nullptr);
     if (!ib.second)
         return ib.first->second.get();
@@ -479,8 +479,8 @@ HttpStream *HttpConn::findAlways(CharBuf *out, int stream) {
 
 //===========================================================================
 bool HttpConn::onFrame(
-    std::vector<std::unique_ptr<HttpMsg>> *msgs,
-    CharBuf *out,
+    std::vector<std::unique_ptr<HttpMsg>> * msgs,
+    CharBuf * out,
     const char src[]) {
     // Frame header
     //  length : 24
@@ -489,7 +489,7 @@ bool HttpConn::onFrame(
     //  reserved : 1
     //  stream : 31
 
-    auto *hdr = src;
+    auto * hdr = src;
     FrameType type = GetFrameType(hdr);
     int flags = GetFrameFlags(hdr);
     int stream = GetFrameStream(hdr);
@@ -525,8 +525,8 @@ bool HttpConn::onFrame(
 
 //===========================================================================
 bool HttpConn::onData(
-    std::vector<std::unique_ptr<HttpMsg>> *msgs,
-    CharBuf *out,
+    std::vector<std::unique_ptr<HttpMsg>> * msgs,
+    CharBuf * out,
     const char src[],
     int stream,
     int flags) {
@@ -543,7 +543,7 @@ bool HttpConn::onData(
     }
 
     auto it = m_streams.find(stream);
-    auto *sm = (it == m_streams.end()) ? it->second.get() : nullptr;
+    auto * sm = (it == m_streams.end()) ? it->second.get() : nullptr;
     if (!sm ||
         sm->m_state != HttpStream::kOpen &&
             sm->m_state != HttpStream::kLocalClosed) {
@@ -563,7 +563,7 @@ bool HttpConn::onData(
 
     // TODO: check total buffer size
 
-    CharBuf &buf = sm->m_msg->body();
+    CharBuf & buf = sm->m_msg->body();
     buf.append(data.data, data.dataLen);
     if (flags & kEndStream) {
         msgs->push_back(move(sm->m_msg));
@@ -573,8 +573,8 @@ bool HttpConn::onData(
 
 //===========================================================================
 bool HttpConn::onHeaders(
-    std::vector<std::unique_ptr<HttpMsg>> *msgs,
-    CharBuf *out,
+    std::vector<std::unique_ptr<HttpMsg>> * msgs,
+    CharBuf * out,
     const char src[],
     int stream,
     int flags) {
@@ -613,7 +613,7 @@ bool HttpConn::onHeaders(
     }
 
     // find stream
-    HttpStream *sm = findAlways(out, stream);
+    HttpStream * sm = findAlways(out, stream);
     if (!sm)
         return false;
 
@@ -656,7 +656,7 @@ bool HttpConn::onHeaders(
     if (~flags & kEndHeaders)
         m_frameMode = FrameMode::kContinuation;
 
-    auto *msg = sm->m_msg.get();
+    auto * msg = sm->m_msg.get();
     MsgDecoder notify(*msg);
     if (!m_decoder.parse(&notify, &msg->heap(), ud.data, ud.dataLen)) {
         ReplyGoAway(out, m_lastInputStream, FrameError::kCompressionError);
@@ -673,8 +673,8 @@ bool HttpConn::onHeaders(
 
 //===========================================================================
 bool HttpConn::onPriority(
-    std::vector<std::unique_ptr<HttpMsg>> *msgs,
-    CharBuf *out,
+    std::vector<std::unique_ptr<HttpMsg>> * msgs,
+    CharBuf * out,
     const char src[],
     int stream,
     int flags) {
@@ -705,8 +705,8 @@ bool HttpConn::onPriority(
 
 //===========================================================================
 bool HttpConn::onRstStream(
-    std::vector<std::unique_ptr<HttpMsg>> *msgs,
-    CharBuf *out,
+    std::vector<std::unique_ptr<HttpMsg>> * msgs,
+    CharBuf * out,
     const char src[],
     int stream,
     int flags) {
@@ -731,8 +731,8 @@ bool HttpConn::onRstStream(
 
 //===========================================================================
 bool HttpConn::onSettings(
-    std::vector<std::unique_ptr<HttpMsg>> *msgs,
-    CharBuf *out,
+    std::vector<std::unique_ptr<HttpMsg>> * msgs,
+    CharBuf * out,
     const char src[],
     int stream,
     int flags) {
@@ -777,8 +777,8 @@ bool HttpConn::onSettings(
 
 //===========================================================================
 bool HttpConn::onPushPromise(
-    std::vector<std::unique_ptr<HttpMsg>> *msgs,
-    CharBuf *out,
+    std::vector<std::unique_ptr<HttpMsg>> * msgs,
+    CharBuf * out,
     const char src[],
     int stream,
     int flags) {
@@ -795,8 +795,8 @@ bool HttpConn::onPushPromise(
 
 //===========================================================================
 bool HttpConn::onPing(
-    std::vector<std::unique_ptr<HttpMsg>> *msgs,
-    CharBuf *out,
+    std::vector<std::unique_ptr<HttpMsg>> * msgs,
+    CharBuf * out,
     const char src[],
     int stream,
     int flags) {
@@ -808,8 +808,8 @@ bool HttpConn::onPing(
 
 //===========================================================================
 bool HttpConn::onGoAway(
-    std::vector<std::unique_ptr<HttpMsg>> *msgs,
-    CharBuf *out,
+    std::vector<std::unique_ptr<HttpMsg>> * msgs,
+    CharBuf * out,
     const char src[],
     int stream,
     int flags) {
@@ -847,8 +847,8 @@ bool HttpConn::onGoAway(
 
 //===========================================================================
 bool HttpConn::onWindowUpdate(
-    std::vector<std::unique_ptr<HttpMsg>> *msgs,
-    CharBuf *out,
+    std::vector<std::unique_ptr<HttpMsg>> * msgs,
+    CharBuf * out,
     const char src[],
     int stream,
     int flags) {
@@ -872,8 +872,8 @@ bool HttpConn::onWindowUpdate(
 
 //===========================================================================
 bool HttpConn::onContinuation(
-    std::vector<std::unique_ptr<HttpMsg>> *msgs,
-    CharBuf *out,
+    std::vector<std::unique_ptr<HttpMsg>> * msgs,
+    CharBuf * out,
     const char src[],
     int stream,
     int flags) {
@@ -897,22 +897,22 @@ bool HttpConn::onContinuation(
 
 //===========================================================================
 // Serializes a request and returns the stream id used
-int HttpConn::request(CharBuf *out, const HttpMsg &msg) {
+int HttpConn::request(CharBuf * out, const HttpMsg & msg) {
     return 0;
 }
 
 //===========================================================================
 // Serializes a push promise
-void HttpConn::pushPromise(CharBuf *out, const HttpMsg &msg) {}
+void HttpConn::pushPromise(CharBuf * out, const HttpMsg & msg) {}
 
 //===========================================================================
 // Serializes a reply on the specified stream
-void HttpConn::reply(CharBuf *out, int stream, const HttpMsg &msg) {
+void HttpConn::reply(CharBuf * out, int stream, const HttpMsg & msg) {
     auto it = m_streams.find(stream);
     if (it == m_streams.end())
         return;
 
-    HttpStream *strm = it->second.get();
+    HttpStream * strm = it->second.get();
     switch (strm->m_state) {
     case HttpStream::kOpen: strm->m_state = HttpStream::kLocalClosed; break;
     case HttpStream::kLocalReserved:
@@ -922,7 +922,7 @@ void HttpConn::reply(CharBuf *out, int stream, const HttpMsg &msg) {
         return;
     }
 
-    const CharBuf &body = msg.body();
+    const CharBuf & body = msg.body();
     size_t framePos = out->size();
     size_t maxEndPos = framePos + m_maxOutputFrame + kFrameHeaderLen;
     FrameType ftype = FrameType::kHeaders;
@@ -931,8 +931,8 @@ void HttpConn::reply(CharBuf *out, int stream, const HttpMsg &msg) {
     SetFrameHeader(frameHdr, stream, ftype, 0, 0);
     out->append((char *)frameHdr, size(frameHdr));
     m_encoder.startBlock(out);
-    for (auto &&hdr : msg) {
-        for (auto &&hv : hdr) {
+    for (auto && hdr : msg) {
+        for (auto && hv : hdr) {
             if (hdr.m_id) {
                 m_encoder.header(hdr.m_id, hv.m_value);
             } else {
@@ -978,10 +978,10 @@ void HttpConn::reply(CharBuf *out, int stream, const HttpMsg &msg) {
 }
 
 //===========================================================================
-void HttpConn::resetStream(CharBuf *out, int stream) {}
+void HttpConn::resetStream(CharBuf * out, int stream) {}
 
 //===========================================================================
-void HttpConn::deleteStream(int stream, HttpStream *sm) {
+void HttpConn::deleteStream(int stream, HttpStream * sm) {
     auto it = m_streams.find(stream);
     if (it != m_streams.end() && sm == it->second.get()) {
         sm->m_state = sm->kDeleted;
@@ -998,7 +998,7 @@ void HttpConn::deleteStream(int stream, HttpStream *sm) {
 
 //===========================================================================
 HttpConnHandle httpListen() {
-    auto *conn = new HttpConn;
+    auto * conn = new HttpConn;
     return s_conns.insert(conn);
 }
 
@@ -1010,19 +1010,19 @@ void httpClose(HttpConnHandle hc) {
 //===========================================================================
 bool httpRecv(
     HttpConnHandle hc,
-    CharBuf *out,
-    std::vector<std::unique_ptr<HttpMsg>> *msgs,
-    const void *src,
+    CharBuf * out,
+    std::vector<std::unique_ptr<HttpMsg>> * msgs,
+    const void * src,
     size_t srcLen) {
-    if (auto *conn = s_conns.find(hc))
+    if (auto * conn = s_conns.find(hc))
         return conn->recv(out, msgs, src, srcLen);
     return false;
 }
 
 //===========================================================================
 void httpReply(
-    HttpConnHandle hc, CharBuf *out, int stream, const HttpMsg &msg) {
-    auto *conn = s_conns.find(hc);
+    HttpConnHandle hc, CharBuf * out, int stream, const HttpMsg & msg) {
+    auto * conn = s_conns.find(hc);
     conn->reply(out, stream, msg);
 }
 

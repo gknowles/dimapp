@@ -16,8 +16,8 @@ namespace Dim {
 namespace {
 
 struct XElemInfo : XElem {
-    XElem *m_firstElem{nullptr};
-    XAttr *m_firstAttr{nullptr};
+    XElem * m_firstElem{nullptr};
+    XAttr * m_firstAttr{nullptr};
 };
 
 } // namespace
@@ -85,7 +85,7 @@ static uint8_t s_charMap[] = {
 
 //===========================================================================
 bool XStreamParser::parse(
-    IXStreamParserNotify &notify, char src[], size_t len) {
+    IXStreamParserNotify & notify, char src[], size_t len) {
     auto ptr = (unsigned char *)src;
     m_heap.clear();
     m_line = 0;
@@ -114,7 +114,7 @@ bool XStreamParser::parse(
 }
 
 //===========================================================================
-static bool twoByte(unsigned char *&ptr, unsigned *utf8) {
+static bool twoByte(unsigned char *& ptr, unsigned * utf8) {
     if ((ptr[1] & 0xc0) == 0x80) {
         *utf8 = ((*ptr & 0x1f) << 6) + (ptr[1] & 0x3f);
         ptr += 2;
@@ -126,7 +126,7 @@ static bool twoByte(unsigned char *&ptr, unsigned *utf8) {
 }
 
 //===========================================================================
-static bool threeByte(unsigned char *&ptr, unsigned *utf8) {
+static bool threeByte(unsigned char *& ptr, unsigned * utf8) {
     if ((ptr[1] & 0xc0) == 0x80 && (ptr[2] & 0xc0) == 0x80) {
         *utf8 =
             ((*ptr & 0x0f) << 12) + ((ptr[1] & 0x3f) << 6) + (ptr[2] & 0x3f);
@@ -139,7 +139,7 @@ static bool threeByte(unsigned char *&ptr, unsigned *utf8) {
 }
 
 //===========================================================================
-static bool fourByte(unsigned char *&ptr, unsigned *utf8) {
+static bool fourByte(unsigned char *& ptr, unsigned * utf8) {
     if ((ptr[1] & 0xc0) == 0x80 && (ptr[2] & 0xc0) == 0x80 &&
         (ptr[3] & 0xc0) == 0x80) {
         *utf8 = ((*ptr & 0x07) << 18) + ((ptr[1] & 0x3f) << 12) +
@@ -154,7 +154,7 @@ static bool fourByte(unsigned char *&ptr, unsigned *utf8) {
 
 //===========================================================================
 bool XStreamParser::parseNode(
-    IXStreamParserNotify &notify, unsigned char *&ptr) {
+    IXStreamParserNotify & notify, unsigned char *& ptr) {
     unsigned utf8;
     switch (s_charMap[*ptr]) {
     default: // <
@@ -197,7 +197,7 @@ static bool isNameStartChar(unsigned ch) {
         0x200e, 0x2070, 0x2190, 0x2c00, 0x2ff0,  0x3001,  0xd800,
         0xf900, 0xfdd0, 0xfdf0, 0xfffe, 0x10000, 0xf0000,
     };
-    auto *range = lower_bound(ranges, ::end(ranges), ch);
+    auto * range = lower_bound(ranges, ::end(ranges), ch);
     return (range - ranges) % 2 == 1;
 }
 
@@ -219,15 +219,15 @@ static bool isNameChar(unsigned ch) {
         0x2070, 0x2190, 0x2c00, 0x2ff0, 0x3001,  0xd800,
         0xf900, 0xfdd0, 0xfdf0, 0xfffe, 0x10000, 0xf0000,
     };
-    auto *range = lower_bound(ranges, ::end(ranges), ch);
+    auto * range = lower_bound(ranges, ::end(ranges), ch);
     return (range - ranges) % 2 == 1;
 }
 
 //===========================================================================
 bool XStreamParser::parseElement(
-    IXStreamParserNotify &notify,
-    unsigned char *&ptr,
-    unsigned char *nextChar,
+    IXStreamParserNotify & notify,
+    unsigned char *& ptr,
+    unsigned char * nextChar,
     unsigned firstChar) {
     if (!isNameStartChar(firstChar))
         return fail("invalid NameStartChar");
@@ -236,11 +236,11 @@ bool XStreamParser::parseElement(
 
 //===========================================================================
 bool XStreamParser::parseElement(
-    IXStreamParserNotify &notify,
-    unsigned char *&ptr,
-    unsigned char *nextChar) {
+    IXStreamParserNotify & notify,
+    unsigned char *& ptr,
+    unsigned char * nextChar) {
     unsigned utf8;
-    unsigned char *startTag = ptr;
+    unsigned char * startTag = ptr;
     ptr = nextChar;
     for (;;) {
         switch (s_charMap[*ptr]) {
@@ -288,7 +288,7 @@ bool XStreamParser::parseElement(
 }
 
 //===========================================================================
-bool XStreamParser::parsePI(unsigned char *&ptr) {
+bool XStreamParser::parsePI(unsigned char *& ptr) {
     // skip to ?>
     for (;;) {
         switch (*ptr) {
@@ -307,7 +307,7 @@ bool XStreamParser::parsePI(unsigned char *&ptr) {
 
 //===========================================================================
 bool XStreamParser::parseBangNode(
-    IXStreamParserNotify &notify, unsigned char *&ptr) {
+    IXStreamParserNotify & notify, unsigned char *& ptr) {
     switch (*ptr) {
     case kDash: return parseComment(ptr);
     case kLBracket: return parseCData(notify, ptr);
@@ -316,25 +316,25 @@ bool XStreamParser::parseBangNode(
 }
 
 //===========================================================================
-bool XStreamParser::parseComment(unsigned char *&ptr) {
+bool XStreamParser::parseComment(unsigned char *& ptr) {
     return false;
 }
 
 //===========================================================================
 bool XStreamParser::parseCData(
-    IXStreamParserNotify &notify, unsigned char *&ptr) {
+    IXStreamParserNotify & notify, unsigned char *& ptr) {
     return false;
 }
 
 //===========================================================================
 bool XStreamParser::parseAttrs(
-    IXStreamParserNotify &notify, unsigned char *&ptr) {
+    IXStreamParserNotify & notify, unsigned char *& ptr) {
     return false;
 }
 
 //===========================================================================
 bool XStreamParser::parseContent(
-    IXStreamParserNotify &notify, unsigned char *&ptr) {
+    IXStreamParserNotify & notify, unsigned char *& ptr) {
     return false;
 }
 
@@ -346,7 +346,7 @@ void XStreamParser::clear() {
 }
 
 //===========================================================================
-ITempHeap &XStreamParser::heap() {
+ITempHeap & XStreamParser::heap() {
     return m_heap;
 }
 
@@ -358,9 +358,9 @@ ITempHeap &XStreamParser::heap() {
 ***/
 
 //===========================================================================
-XElem *XParser::setRoot(const char elemName[], const char text[]) {
+XElem * XParser::setRoot(const char elemName[], const char text[]) {
     assert(elemName);
-    XElemInfo *elem = heap().emplace<XElemInfo>();
+    XElemInfo * elem = heap().emplace<XElemInfo>();
     elem->m_name = elemName;
     elem->m_value = text ? text : "";
     return elem;

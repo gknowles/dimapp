@@ -38,14 +38,14 @@ const unsigned kMaxCiphertext = kMaxPlaintext + 256;
 ***/
 
 //===========================================================================
-void TlsRecordEncrypt::setCipher(CharBuf *out, TlsCipher *cipher) {
+void TlsRecordEncrypt::setCipher(CharBuf * out, TlsCipher * cipher) {
     assert(!m_cipher && cipher);
     flush(out);
     m_cipher = cipher;
 }
 
 //===========================================================================
-void TlsRecordEncrypt::writePlaintext(CharBuf *out) {
+void TlsRecordEncrypt::writePlaintext(CharBuf * out) {
     size_t plainLen = m_plaintext.size();
     assert(plainLen <= kMaxPlaintext);
     char hdr[] = {
@@ -56,7 +56,7 @@ void TlsRecordEncrypt::writePlaintext(CharBuf *out) {
 }
 
 //===========================================================================
-void TlsRecordEncrypt::writeCiphertext(CharBuf *out) {
+void TlsRecordEncrypt::writeCiphertext(CharBuf * out) {
     char hdr[] = {kContentAppData, 3, 1, 0, 0};
     size_t pos = out->size();
     out->append(hdr, size(hdr));
@@ -73,7 +73,7 @@ void TlsRecordEncrypt::writeCiphertext(CharBuf *out) {
 
 //===========================================================================
 void TlsRecordEncrypt::add(
-    CharBuf *out, TlsContentType ct, const void *vptr, size_t count) {
+    CharBuf * out, TlsContentType ct, const void * vptr, size_t count) {
     // MUST NOT send zero-length fragments of Handshake or Alert types
     assert(ct != kContentAlert && ct != kContentHandshake || count);
     assert(count <= kMaxPlaintext);
@@ -98,7 +98,7 @@ void TlsRecordEncrypt::add(
 }
 
 //===========================================================================
-void TlsRecordEncrypt::flush(CharBuf *out) {
+void TlsRecordEncrypt::flush(CharBuf * out) {
     if (size(m_plaintext)) {
         if (!m_cipher) {
             writePlaintext(out);
@@ -116,16 +116,16 @@ void TlsRecordEncrypt::flush(CharBuf *out) {
 ***/
 
 //===========================================================================
-void TlsRecordDecrypt::setCipher(TlsCipher *cipher) {
+void TlsRecordDecrypt::setCipher(TlsCipher * cipher) {
     assert(!m_cipher && cipher);
     m_cipher = cipher;
 }
 
 //===========================================================================
 bool TlsRecordDecrypt::parse(
-    CharBuf *data,
-    ITlsRecordDecryptNotify *notify,
-    const void *vsrc,
+    CharBuf * data,
+    ITlsRecordDecryptNotify * notify,
+    const void * vsrc,
     size_t srcLen) {
     auto base = (const uint8_t *)vsrc;
     auto ptr = base;
@@ -225,13 +225,13 @@ bool TlsRecordDecrypt::parse(
 }
 
 //===========================================================================
-bool TlsRecordDecrypt::parseAlerts(ITlsRecordDecryptNotify *notify) {
+bool TlsRecordDecrypt::parseAlerts(ITlsRecordDecryptNotify * notify) {
     int num = (int)m_plaintext.size();
     if (!num)
         return parseError(kUnexpectedMessage);
 
-    const char *ptr = m_plaintext.data();
-    const char *eptr = ptr + num / 2 * 2;
+    const char * ptr = m_plaintext.data();
+    const char * eptr = ptr + num / 2 * 2;
     while (ptr != eptr) {
         auto level = TlsAlertLevel(*ptr++);
         auto desc = TlsAlertDesc(*ptr++);
@@ -243,11 +243,11 @@ bool TlsRecordDecrypt::parseAlerts(ITlsRecordDecryptNotify *notify) {
 }
 
 //===========================================================================
-bool TlsRecordDecrypt::parseHandshakes(ITlsRecordDecryptNotify *notify) {
+bool TlsRecordDecrypt::parseHandshakes(ITlsRecordDecryptNotify * notify) {
     int pos = 0;
     int epos = (int)m_plaintext.size();
     while (pos + 4 <= epos) {
-        const char *ptr = m_plaintext.data(pos, 4);
+        const char * ptr = m_plaintext.data(pos, 4);
         int recLen = (ptr[1] << 16) + (ptr[2] << 8) + ptr[3];
         if (pos + recLen > epos)
             break;

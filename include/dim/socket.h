@@ -17,7 +17,7 @@ struct SocketAcceptInfo {
     Endpoint localEnd;
 };
 struct SocketData {
-    char *data;
+    char * data;
     int bytes;
 };
 
@@ -36,30 +36,30 @@ class ISocketNotify {
     virtual ~ISocketNotify() {}
 
     // for connectors
-    virtual void onSocketConnect(const SocketConnectInfo &info){};
+    virtual void onSocketConnect(const SocketConnectInfo & info){};
     virtual void onSocketConnectFailed(){};
 
     // for listeners
-    virtual void onSocketAccept(const SocketAcceptInfo &info){};
+    virtual void onSocketAccept(const SocketAcceptInfo & info){};
 
-    virtual void onSocketRead(const SocketData &data) = 0;
+    virtual void onSocketRead(const SocketData & data) = 0;
     virtual void onSocketDisconnect(){};
 
   private:
     friend class SocketBase;
-    SocketBase *m_socket{nullptr};
+    SocketBase * m_socket{nullptr};
 };
 
-ISocketNotify::Mode socketGetMode(ISocketNotify *notify);
-void socketDisconnect(ISocketNotify *notify);
+ISocketNotify::Mode socketGetMode(ISocketNotify * notify);
+void socketDisconnect(ISocketNotify * notify);
 
 //===========================================================================
 // connect
 //===========================================================================
 void socketConnect(
-    ISocketNotify *notify,
-    const Endpoint &remoteEnd,
-    const Endpoint &localEnd,
+    ISocketNotify * notify,
+    const Endpoint & remoteEnd,
+    const Endpoint & localEnd,
     Duration timeout = {} // 0 for default timeout
     );
 
@@ -72,14 +72,14 @@ class ISocketListenNotify {
     virtual void onListenStop() = 0;
     virtual std::unique_ptr<ISocketNotify> onListenCreateSocket() = 0;
 };
-void socketListen(ISocketListenNotify *notify, const Endpoint &localEnd);
-void socketStop(ISocketListenNotify *notify, const Endpoint &localEnd);
+void socketListen(ISocketListenNotify * notify, const Endpoint & localEnd);
+void socketStop(ISocketListenNotify * notify, const Endpoint & localEnd);
 
 //===========================================================================
 // write
 //===========================================================================
 struct SocketBuffer {
-    char *data;
+    char * data;
     int len;
 
     ~SocketBuffer();
@@ -88,6 +88,6 @@ std::unique_ptr<SocketBuffer> socketGetBuffer();
 
 // Writes the data and deletes the buffer.
 void socketWrite(
-    ISocketNotify *notify, std::unique_ptr<SocketBuffer> buffer, size_t bytes);
+    ISocketNotify * notify, std::unique_ptr<SocketBuffer> buffer, size_t bytes);
 
 } // namespace

@@ -24,18 +24,18 @@ class ITaskNotify {
 
   private:
     friend class TaskQueue;
-    ITaskNotify *m_taskNext = nullptr;
+    ITaskNotify * m_taskNext = nullptr;
 };
 
-void taskPushEvent(ITaskNotify &task);
-void taskPushEvent(ITaskNotify *tasks[], size_t numTasks);
+void taskPushEvent(ITaskNotify & task);
+void taskPushEvent(ITaskNotify * tasks[], size_t numTasks);
 
-void taskPushCompute(ITaskNotify &task);
-void taskPushCompute(ITaskNotify *tasks[], size_t numTasks);
+void taskPushCompute(ITaskNotify & task);
+void taskPushCompute(ITaskNotify * tasks[], size_t numTasks);
 
-TaskQueueHandle taskCreateQueue(const std::string &name, int threads);
+TaskQueueHandle taskCreateQueue(const std::string & name, int threads);
 void taskSetQueueThreads(TaskQueueHandle q, int threads);
-void taskPush(TaskQueueHandle q, ITaskNotify &task);
-void taskPush(TaskQueueHandle q, ITaskNotify *tasks[], size_t numTasks);
+void taskPush(TaskQueueHandle q, ITaskNotify & task);
+void taskPush(TaskQueueHandle q, ITaskNotify * tasks[], size_t numTasks);
 
 } // namespace

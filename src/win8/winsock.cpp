@@ -81,7 +81,7 @@ static RioDispatchThread s_dispatchThread;
 void RioDispatchThread::onTask() {
     static const int kNumResults = 100;
     RIORESULT results[kNumResults];
-    ITaskNotify *tasks[size(results)];
+    ITaskNotify * tasks[size(results)];
     int count;
 
     for (;;) {
@@ -96,7 +96,7 @@ void RioDispatchThread::onTask() {
             logMsgCrash() << "RIODequeueCompletion: " << WinError{};
 
         for (int i = 0; i < count; ++i) {
-            auto &&rr = results[i];
+            auto && rr = results[i];
             auto task = (SocketRequestTaskBase *)rr.RequestContext;
             task->m_socket = (SocketBase *)rr.SocketContext;
             task->m_xferError = (WinError::NtStatus)rr.Status;
@@ -154,9 +154,9 @@ void SocketWriteTask::onTask() {
 
 //===========================================================================
 // static
-SocketBase::Mode SocketBase::getMode(ISocketNotify *notify) {
+SocketBase::Mode SocketBase::getMode(ISocketNotify * notify) {
     unique_lock<mutex> lk{s_mut};
-    if (auto *sock = notify->m_socket)
+    if (auto * sock = notify->m_socket)
         return sock->m_mode;
 
     return Mode::kInactive;
@@ -164,7 +164,7 @@ SocketBase::Mode SocketBase::getMode(ISocketNotify *notify) {
 
 //===========================================================================
 // static
-void SocketBase::disconnect(ISocketNotify *notify) {
+void SocketBase::disconnect(ISocketNotify * notify) {
     unique_lock<mutex> lk{s_mut};
     if (notify->m_socket)
         notify->m_socket->hardClose();
@@ -173,10 +173,10 @@ void SocketBase::disconnect(ISocketNotify *notify) {
 //===========================================================================
 // static
 void SocketBase::write(
-    ISocketNotify *notify, unique_ptr<SocketBuffer> buffer, size_t bytes) {
+    ISocketNotify * notify, unique_ptr<SocketBuffer> buffer, size_t bytes) {
     assert(bytes <= buffer->len);
     unique_lock<mutex> lk{s_mut};
-    SocketBase *sock = notify->m_socket;
+    SocketBase * sock = notify->m_socket;
     if (!sock)
         return;
 
@@ -184,7 +184,7 @@ void SocketBase::write(
 }
 
 //===========================================================================
-SocketBase::SocketBase(ISocketNotify *notify)
+SocketBase::SocketBase(ISocketNotify * notify)
     : m_notify(notify) {
     s_numSockets += 1;
 }
@@ -290,10 +290,10 @@ void SocketBase::queueRead_LK() {
 }
 
 //===========================================================================
-void SocketBase::onWrite(SocketWriteTask *task) {
+void SocketBase::onWrite(SocketWriteTask * task) {
     unique_lock<mutex> lk{s_mut};
 
-    auto it = find_if(m_sending.begin(), m_sending.end(), [task](auto &&val) {
+    auto it = find_if(m_sending.begin(), m_sending.end(), [task](auto && val) {
         return &val == task;
     });
     assert(it != m_sending.end());
@@ -313,7 +313,7 @@ void SocketBase::onWrite(SocketWriteTask *task) {
 //===========================================================================
 void SocketBase::queueWrite_LK(unique_ptr<SocketBuffer> buffer, size_t bytes) {
     if (!m_unsent.empty()) {
-        auto &back = m_unsent.back();
+        auto & back = m_unsent.back();
         int count =
             min(back.m_buffer->len - (int)back.m_rbuf.Length, (int)bytes);
         if (count) {
@@ -329,7 +329,7 @@ void SocketBase::queueWrite_LK(unique_ptr<SocketBuffer> buffer, size_t bytes) {
 
     if (bytes) {
         m_unsent.emplace_back();
-        auto &task = m_unsent.back();
+        auto & task = m_unsent.back();
         iSocketGetRioBuffer(&task.m_rbuf, buffer.get(), bytes);
         task.m_buffer = move(buffer);
     }
@@ -342,7 +342,7 @@ void SocketBase::queueWriteFromUnsent_LK() {
     while (m_numSending < m_maxSending && !m_unsent.empty()) {
         m_sending.splice(m_sending.end(), m_unsent, m_unsent.begin());
         m_numSending += 1;
-        auto &task = m_sending.back();
+        auto & task = m_sending.back();
         if (!s_rio.RIOSend(m_rq, &task.m_rbuf, 1, 0, &task)) {
             logMsgCrash() << "RIOSend: " << WinError{};
             m_sending.pop_back();
@@ -519,7 +519,7 @@ SOCKET winSocketCreate() {
 }
 
 //===========================================================================
-SOCKET winSocketCreate(const Endpoint &end) {
+SOCKET winSocketCreate(const Endpoint & end) {
     SOCKET handle = winSocketCreate();
     if (handle == INVALID_SOCKET)
         return handle;
@@ -543,18 +543,18 @@ SOCKET winSocketCreate(const Endpoint &end) {
 ***/
 
 //===========================================================================
-ISocketNotify::Mode socketGetMode(ISocketNotify *notify) {
+ISocketNotify::Mode socketGetMode(ISocketNotify * notify) {
     return SocketBase::getMode(notify);
 }
 
 //===========================================================================
-void socketDisconnect(ISocketNotify *notify) {
+void socketDisconnect(ISocketNotify * notify) {
     SocketBase::disconnect(notify);
 }
 
 //===========================================================================
 void socketWrite(
-    ISocketNotify *notify, unique_ptr<SocketBuffer> buffer, size_t bytes) {
+    ISocketNotify * notify, unique_ptr<SocketBuffer> buffer, size_t bytes) {
     SocketBase::write(notify, move(buffer), bytes);
 }
 

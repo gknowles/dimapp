@@ -41,7 +41,7 @@ class HandleMapBase {
   public:
     template <typename H, typename T> class Iterator;
     struct Node {
-        void *value;
+        void * value;
         int next;
     };
 
@@ -49,10 +49,10 @@ class HandleMapBase {
     HandleMapBase();
     ~HandleMapBase();
     bool empty() const;
-    void *find(HandleBase handle);
+    void * find(HandleBase handle);
 
-    HandleBase insert(void *value);
-    void *release(HandleBase handle);
+    HandleBase insert(void * value);
+    void * release(HandleBase handle);
 
     template <typename H, typename T> Iterator<H, T> begin();
     template <typename H, typename T> Iterator<H, T> end();
@@ -64,13 +64,13 @@ class HandleMapBase {
 };
 
 template <typename H, typename T> class HandleMapBase::Iterator {
-    HandleMapBase::Node *node{nullptr};
-    HandleMapBase::Node *base{nullptr};
-    HandleMapBase::Node *end{nullptr};
+    HandleMapBase::Node * node{nullptr};
+    HandleMapBase::Node * base{nullptr};
+    HandleMapBase::Node * end{nullptr};
 
   public:
     Iterator() {}
-    Iterator(Node *base, Node *end)
+    Iterator(Node * base, Node * end)
         : node{base}
         , base{base}
         , end{end} {
@@ -80,13 +80,13 @@ template <typename H, typename T> class HandleMapBase::Iterator {
         }
         node = nullptr;
     }
-    bool operator!=(const Iterator &right) const { return node != right.node; }
+    bool operator!=(const Iterator & right) const { return node != right.node; }
     std::pair<H, T *> operator*() {
         H handle;
         handle.pos = int(node - base);
         return make_pair(handle, static_cast<T *>(node->value));
     }
-    Iterator &operator++() {
+    Iterator & operator++() {
         node += 1;
         for (; node != end; ++node) {
             if (node->value)
@@ -123,14 +123,14 @@ inline auto HandleMapBase::end() -> Iterator<H, T> {
 
 template <typename H, typename T> class HandleMap : public HandleMapBase {
   public:
-    T *find(H handle) { return static_cast<T *>(HandleMapBase::find(handle)); }
+    T * find(H handle) { return static_cast<T *>(HandleMapBase::find(handle)); }
     void clear() {
-        for (auto &&ht : *this)
+        for (auto && ht : *this)
             erase(ht);
     }
-    H insert(T *value) { return HandleMapBase::insert(value).as<H>(); }
+    H insert(T * value) { return HandleMapBase::insert(value).as<H>(); }
     void erase(H handle) { delete release(handle); }
-    T *release(H handle) {
+    T * release(H handle) {
         return static_cast<T *>(HandleMapBase::release(handle));
     }
 

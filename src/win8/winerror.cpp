@@ -68,13 +68,13 @@ WinError::WinError(NtStatus status) {
 }
 
 //===========================================================================
-WinError &WinError::operator=(int error) {
+WinError & WinError::operator=(int error) {
     m_value = error;
     return *this;
 }
 
 //===========================================================================
-WinError &WinError::operator=(NtStatus status) {
+WinError & WinError::operator=(NtStatus status) {
     if (!status) {
         m_value = 0;
     } else {
@@ -85,7 +85,7 @@ WinError &WinError::operator=(NtStatus status) {
 }
 
 //===========================================================================
-std::ostream &operator<<(std::ostream &os, const WinError &val) {
+std::ostream & operator<<(std::ostream & os, const WinError & val) {
     char buf[256];
     FormatMessage(
         FORMAT_MESSAGE_FROM_SYSTEM,
@@ -97,7 +97,7 @@ std::ostream &operator<<(std::ostream &os, const WinError &val) {
         NULL);
 
     // trim trailing whitespace (i.e. \r\n)
-    char *ptr = buf + strlen(buf) - 1;
+    char * ptr = buf + strlen(buf) - 1;
     for (; ptr > buf && isspace((unsigned char)*ptr); --ptr)
         *ptr = 0;
 

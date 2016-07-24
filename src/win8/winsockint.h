@@ -23,7 +23,7 @@ class SocketRequestTaskBase : public ITaskNotify {
     // filled in after completion
     WinError m_xferError{(WinError::NtStatus)0};
     int m_xferBytes{0};
-    SocketBase *m_socket{nullptr};
+    SocketBase * m_socket{nullptr};
 };
 
 class SocketReadTask : public SocketRequestTaskBase {
@@ -39,29 +39,29 @@ class SocketBase {
     using Mode = ISocketNotify::Mode;
 
   public:
-    static SocketBase::Mode getMode(ISocketNotify *notify);
-    static void disconnect(ISocketNotify *notify);
+    static SocketBase::Mode getMode(ISocketNotify * notify);
+    static void disconnect(ISocketNotify * notify);
     static void write(
-        ISocketNotify *notify,
+        ISocketNotify * notify,
         std::unique_ptr<SocketBuffer> buffer,
         size_t bytes);
 
   public:
-    SocketBase(ISocketNotify *notify);
+    SocketBase(ISocketNotify * notify);
     virtual ~SocketBase();
 
     void hardClose();
 
     bool createQueue();
     void onRead();
-    void onWrite(SocketWriteTask *task);
+    void onWrite(SocketWriteTask * task);
 
     void queueRead_LK();
     void queueWrite_LK(std::unique_ptr<SocketBuffer> buffer, size_t bytes);
     void queueWriteFromUnsent_LK();
 
   protected:
-    ISocketNotify *m_notify{nullptr};
+    ISocketNotify * m_notify{nullptr};
     SOCKET m_handle{INVALID_SOCKET};
     SocketConnectInfo m_connInfo;
     Mode m_mode{Mode::kInactive};
@@ -105,7 +105,7 @@ void iSocketConnectInitialize();
 *
 ***/
 
-void iSocketBufferInitialize(RIO_EXTENSION_FUNCTION_TABLE &rio);
-void iSocketGetRioBuffer(RIO_BUF *out, SocketBuffer *buf, size_t bytes);
+void iSocketBufferInitialize(RIO_EXTENSION_FUNCTION_TABLE & rio);
+void iSocketGetRioBuffer(RIO_BUF * out, SocketBuffer * buf, size_t bytes);
 
 } // namespace

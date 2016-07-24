@@ -36,15 +36,15 @@ template <typename T> constexpr int maxIntegralChars() {
 template <typename T> class IntegralStr {
   public:
     IntegralStr(T val);
-    const char *set(T val);
+    const char * set(T val);
     operator const char *() const;
 
   private:
     using Signed = typename std::make_signed<T>::type;
     using Unsigned = typename std::make_unsigned<T>::type;
 
-    const char *internalSet(Signed val);
-    const char *internalSet(Unsigned val);
+    const char * internalSet(Signed val);
+    const char * internalSet(Unsigned val);
 
     char data[maxIntegralChars<T>() + 1];
 };
@@ -55,7 +55,7 @@ template <typename T> IntegralStr<T>::IntegralStr(T val) {
 }
 
 //===========================================================================
-template <typename T> const char *IntegralStr<T>::set(T val) {
+template <typename T> const char * IntegralStr<T>::set(T val) {
     return internalSet(val);
 }
 
@@ -65,12 +65,12 @@ template <typename T> IntegralStr<T>::operator const char *() const {
 }
 
 //===========================================================================
-template <typename T> const char *IntegralStr<T>::internalSet(Unsigned val) {
+template <typename T> const char * IntegralStr<T>::internalSet(Unsigned val) {
     if (!val) {
         data[0] = '0';
         data[1] = 0;
     } else {
-        char *ptr = data;
+        char * ptr = data;
         unsigned i = 0;
         for (;;) {
             ptr[i] = (val % 10) + '0';
@@ -89,12 +89,12 @@ template <typename T> const char *IntegralStr<T>::internalSet(Unsigned val) {
 }
 
 //===========================================================================
-template <typename T> const char *IntegralStr<T>::internalSet(Signed val) {
+template <typename T> const char * IntegralStr<T>::internalSet(Signed val) {
     if (!val) {
         data[0] = '0';
         data[1] = 0;
     } else {
-        char *ptr = data;
+        char * ptr = data;
         if (val < 0) {
             *ptr++ = '-';
             val = -val;
@@ -125,19 +125,19 @@ template <typename T> const char *IntegralStr<T>::internalSet(Signed val) {
 
 template <typename T> class ForwardListIterator {
   protected:
-    T *m_current{nullptr};
+    T * m_current{nullptr};
 
   public:
-    ForwardListIterator(T *node)
+    ForwardListIterator(T * node)
         : m_current(node) {}
-    bool operator!=(const ForwardListIterator &right) {
+    bool operator!=(const ForwardListIterator & right) {
         return m_current != right.m_current;
     }
     auto operator++() {
         m_current = m_current->m_next;
         return *this;
     }
-    T &operator*() {
+    T & operator*() {
         assert(m_current);
         return *m_current;
     }

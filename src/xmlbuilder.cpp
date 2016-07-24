@@ -26,7 +26,7 @@ enum TextType : char {
     kTextTypes,
 };
 
-const char *kTextEntityTable[] = {
+const char * kTextEntityTable[] = {
     nullptr, nullptr, nullptr, "&quote;", "&amp;", "&lt;", "&gt;",
 };
 static_assert(size(kTextEntityTable) == kTextTypes, "");
@@ -73,7 +73,7 @@ enum IXBuilder::State {
 };
 
 //===========================================================================
-IXBuilder &IXBuilder::text(const char val[]) {
+IXBuilder & IXBuilder::text(const char val[]) {
     switch (m_state) {
     case kStateElemNameIntro: m_state = kStateElemName; [[fallthrough]];
     case kStateElemName: append(val); return *this;
@@ -88,7 +88,7 @@ IXBuilder &IXBuilder::text(const char val[]) {
 }
 
 //===========================================================================
-IXBuilder &IXBuilder::elem(const char name[], const char val[]) {
+IXBuilder & IXBuilder::elem(const char name[], const char val[]) {
     switch (m_state) {
     case kStateAttrText: append("\">\n<"); break;
     default:
@@ -112,7 +112,7 @@ IXBuilder &IXBuilder::elem(const char name[], const char val[]) {
 }
 
 //===========================================================================
-IXBuilder &IXBuilder::attr(const char name[], const char val[]) {
+IXBuilder & IXBuilder::attr(const char name[], const char val[]) {
     switch (m_state) {
     case kStateElemName: append(" "); break;
     default:
@@ -135,7 +135,7 @@ IXBuilder &IXBuilder::attr(const char name[], const char val[]) {
 }
 
 //===========================================================================
-IXBuilder &IXBuilder::end() {
+IXBuilder & IXBuilder::end() {
     switch (m_state) {
     case kStateElemName:
         append("/>\n");
@@ -153,7 +153,7 @@ IXBuilder &IXBuilder::end() {
     }
     assert(m_state == kStateText);
     append("</");
-    auto &top = m_stack.back();
+    auto & top = m_stack.back();
     appendCopy(top.pos, top.len);
     m_stack.pop_back();
     append(">\n");
@@ -162,7 +162,7 @@ IXBuilder &IXBuilder::end() {
 
 //===========================================================================
 template <bool isContent> void IXBuilder::addText(const char val[]) {
-    const char *base = val;
+    const char * base = val;
     for (;;) {
         TextType type = (TextType)kTextTypeTable[*val];
         switch (type) {
@@ -222,42 +222,42 @@ size_t XBuilder::size() {
 ***/
 
 //===========================================================================
-IXBuilder &operator<<(IXBuilder &out, int64_t val) {
+IXBuilder & operator<<(IXBuilder & out, int64_t val) {
     IntegralStr<int64_t> tmp(val);
     return out.text(tmp);
 }
 
 //===========================================================================
-IXBuilder &operator<<(IXBuilder &out, uint64_t val) {
+IXBuilder & operator<<(IXBuilder & out, uint64_t val) {
     IntegralStr<int64_t> tmp(val);
     return out.text(tmp);
 }
 
 //===========================================================================
-IXBuilder &operator<<(IXBuilder &out, int val) {
+IXBuilder & operator<<(IXBuilder & out, int val) {
     IntegralStr<int> tmp(val);
     return out.text(tmp);
 }
 
 //===========================================================================
-IXBuilder &operator<<(IXBuilder &out, unsigned val) {
+IXBuilder & operator<<(IXBuilder & out, unsigned val) {
     IntegralStr<unsigned> tmp(val);
     return out.text(tmp);
 }
 
 //===========================================================================
-IXBuilder &operator<<(IXBuilder &out, char val) {
+IXBuilder & operator<<(IXBuilder & out, char val) {
     char str[] = {val, 0};
     return out.text(str);
 }
 
 //===========================================================================
-IXBuilder &operator<<(IXBuilder &out, const char val[]) {
+IXBuilder & operator<<(IXBuilder & out, const char val[]) {
     return out.text(val);
 }
 
 //===========================================================================
-IXBuilder &operator<<(IXBuilder &out, const std::string &val) {
+IXBuilder & operator<<(IXBuilder & out, const std::string & val) {
     return out.text(val.c_str());
 }
 

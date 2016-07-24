@@ -29,7 +29,7 @@ struct Clock {
     static time_point now() noexcept;
 
     // C conversions
-    static time_t to_time_t(const time_point &time) noexcept;
+    static time_t to_time_t(const time_point & time) noexcept;
     static time_point from_time_t(time_t tm) noexcept;
 };
 
@@ -51,14 +51,14 @@ typedef Clock::time_point TimePoint;
 struct Address {
     int32_t data[4]{};
 
-    bool operator==(const Address &right) const;
+    bool operator==(const Address & right) const;
     explicit operator bool() const;
 };
 struct Endpoint {
     Address addr;
     unsigned port{0};
 
-    bool operator==(const Endpoint &right) const;
+    bool operator==(const Endpoint & right) const;
     explicit operator bool() const;
 };
 struct Network {

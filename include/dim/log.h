@@ -17,10 +17,10 @@ enum LogType {
 
 class ILogNotify {
   public:
-    virtual void onLog(LogType type, const std::string &msg) = 0;
+    virtual void onLog(LogType type, const std::string & msg) = 0;
 };
 
-void logAddNotify(ILogNotify *notify);
+void logAddNotify(ILogNotify * notify);
 
 namespace Detail {
 

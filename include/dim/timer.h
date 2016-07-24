@@ -42,7 +42,7 @@ class ITimerNotify {
 ***/
 
 void timerUpdate(
-    ITimerNotify *notify, Duration wait, bool onlyIfSooner = false);
-void timerStopSync(ITimerNotify *notify);
+    ITimerNotify * notify, Duration wait, bool onlyIfSooner = false);
+void timerStopSync(ITimerNotify * notify);
 
 } // namespace

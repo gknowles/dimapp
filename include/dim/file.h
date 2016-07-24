@@ -27,8 +27,8 @@ class IFile {
 };
 
 bool fileOpen(
-    std::unique_ptr<IFile> &file,
-    const std::experimental::filesystem::path &path,
+    std::unique_ptr<IFile> & file,
+    const std::experimental::filesystem::path & path,
     IFile::OpenMode mode);
 
 class IFileReadNotify {
@@ -38,15 +38,15 @@ class IFileReadNotify {
     // return false to prevent more reads, otherwise reads continue until the
     // requested length has been received.
     virtual bool
-    onFileRead(char data[], int bytes, int64_t offset, IFile *file) = 0;
+    onFileRead(char data[], int bytes, int64_t offset, IFile * file) = 0;
 
-    virtual void onFileEnd(int64_t offset, IFile *file) = 0;
+    virtual void onFileEnd(int64_t offset, IFile * file) = 0;
 };
 void fileRead(
-    IFileReadNotify *notify,
-    void *outBuf,
+    IFileReadNotify * notify,
+    void * outBuf,
     size_t outBufLen,
-    IFile *file,
+    IFile * file,
     int64_t offset = 0,
     int64_t length = 0 // 0 to read until the end
     );
@@ -60,18 +60,18 @@ class IFileWriteNotify {
         const char data[],
         int bytes,
         int64_t offset,
-        IFile *file) = 0;
+        IFile * file) = 0;
 };
 void fileWrite(
-    IFile *file,
-    const void *buf,
+    IFile * file,
+    const void * buf,
     size_t bufLen,
     int64_t offset = 0,
-    IFileWriteNotify *notify = nullptr);
+    IFileWriteNotify * notify = nullptr);
 void fileAppend(
-    IFile *file,
-    const void *buf,
+    IFile * file,
+    const void * buf,
     size_t bufLen,
-    IFileWriteNotify *notify = nullptr);
+    IFileWriteNotify * notify = nullptr);
 
 } // namespace

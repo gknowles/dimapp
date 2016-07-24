@@ -101,7 +101,7 @@ enum TlsSignatureScheme : uint16_t {
 struct TlsConnHandle : HandleBase {};
 
 TlsConnHandle tlsConnect(
-    CharBuf *out,
+    CharBuf * out,
     const char hostName[],
     const TlsCipherSuite suites[],
     size_t count);
@@ -110,11 +110,12 @@ void tlsClose(TlsConnHandle h);
 
 bool tlsRecv(
     TlsConnHandle conn,
-    CharBuf *out,
-    CharBuf *data,
-    const void *src,
+    CharBuf * out,
+    CharBuf * data,
+    const void * src,
     size_t srcLen);
 
-void tlsSend(TlsConnHandle conn, CharBuf *out, const void *src, size_t srcLen);
+void tlsSend(
+    TlsConnHandle conn, CharBuf * out, const void * src, size_t srcLen);
 
 } // namespace

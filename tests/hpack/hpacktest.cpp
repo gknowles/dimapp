@@ -15,11 +15,11 @@ using namespace Dim;
 namespace {
 
 struct NameValue {
-    const char *name;
-    const char *value;
+    const char * name;
+    const char * value;
     int flags;
 
-    bool operator==(const NameValue &right) const;
+    bool operator==(const NameValue & right) const;
 };
 
 class Reader : public IHpackDecodeNotify {
@@ -36,9 +36,9 @@ class Reader : public IHpackDecodeNotify {
 };
 
 struct Test {
-    const char *name;
+    const char * name;
     bool reset;
-    const char *input;
+    const char * input;
     bool result;
     vector<NameValue> headers;
     vector<NameValue> dynTable;
@@ -342,7 +342,7 @@ const Test s_tests[] = {
 ***/
 
 //===========================================================================
-bool NameValue::operator==(const NameValue &right) const {
+bool NameValue::operator==(const NameValue & right) const {
     return strcmp(name, right.name) == 0 && strcmp(value, right.value) == 0 &&
            flags == right.flags;
 }
@@ -378,14 +378,14 @@ class Application : public ITaskNotify, public ILogNotify {
     void onTask() override;
 
     // ILogNotify
-    void onLog(LogType type, const string &msg) override;
+    void onLog(LogType type, const string & msg) override;
 
     int m_errors{0};
 };
 } // namespace
 
 //===========================================================================
-void Application::onLog(LogType type, const string &msg) {
+void Application::onLog(LogType type, const string & msg) {
     if (type >= kLogError) {
         m_errors += 1;
         cout << "ERROR: " << msg << endl;
@@ -400,7 +400,7 @@ void Application::onTask() {
     HpackDecode decode(256);
     Reader out;
     bool result;
-    for (auto &&test : s_tests) {
+    for (auto && test : s_tests) {
         cout << "Test - " << test.name << endl;
         out.headers.clear();
         if (test.reset)
@@ -434,7 +434,7 @@ void Application::onTask() {
 ***/
 
 //===========================================================================
-int main(int argc, char *argv[]) {
+int main(int argc, char * argv[]) {
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
     _set_error_mode(_OUT_TO_MSGBOX);
     Application app;

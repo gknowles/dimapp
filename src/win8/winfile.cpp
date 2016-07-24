@@ -73,7 +73,7 @@ namespace {
 class FileReader : public ITaskNotify {
   public:
     FileReader(
-        IFileReadNotify *notify, File *file, void *outBuf, size_t outBufLen);
+        IFileReadNotify * notify, File * file, void * outBuf, size_t outBufLen);
     void read(int64_t off, int64_t len);
 
     // ITaskNotify
@@ -84,16 +84,16 @@ class FileReader : public ITaskNotify {
     int64_t m_offset{0};
     int64_t m_length{0};
 
-    IFileReadNotify *m_notify;
-    File *m_file;
-    char *m_outBuf;
+    IFileReadNotify * m_notify;
+    File * m_file;
+    char * m_outBuf;
     int m_outBufLen;
 };
 }
 
 //===========================================================================
 FileReader::FileReader(
-    IFileReadNotify *notify, File *file, void *outBuf, size_t outBufLen)
+    IFileReadNotify * notify, File * file, void * outBuf, size_t outBufLen)
     : m_file(file)
     , m_notify(notify)
     , m_outBuf((char *)outBuf)
@@ -162,7 +162,7 @@ namespace {
 class FileWriteBuf : public ITaskNotify {
   public:
     FileWriteBuf(
-        IFileWriteNotify *notify, File *file, void *buf, size_t bufLen);
+        IFileWriteNotify * notify, File * file, void * buf, size_t bufLen);
     void write(int64_t off);
 
     // ITaskNotify
@@ -172,9 +172,9 @@ class FileWriteBuf : public ITaskNotify {
     WinOverlappedEvent m_iocpEvt;
     int64_t m_offset{0};
 
-    IFileWriteNotify *m_notify;
-    File *m_file;
-    char *m_buf;
+    IFileWriteNotify * m_notify;
+    File * m_file;
+    char * m_buf;
     int m_bufLen;
 
     WinError m_err{0};
@@ -187,7 +187,7 @@ class FileWriteBuf : public ITaskNotify {
 
 //===========================================================================
 FileWriteBuf::FileWriteBuf(
-    IFileWriteNotify *notify, File *file, void *buf, size_t bufLen)
+    IFileWriteNotify * notify, File * file, void * buf, size_t bufLen)
     : m_notify(notify)
     , m_file(file)
     , m_buf((char *)buf)
@@ -289,7 +289,8 @@ void iFileInitialize() {
 ***/
 
 //===========================================================================
-bool fileOpen(unique_ptr<IFile> &out, const path &path, IFile::OpenMode mode) {
+bool fileOpen(
+    unique_ptr<IFile> & out, const path & path, IFile::OpenMode mode) {
     using om = IFile::OpenMode;
 
     out.reset();
@@ -356,33 +357,33 @@ bool fileOpen(unique_ptr<IFile> &out, const path &path, IFile::OpenMode mode) {
 
 //===========================================================================
 void fileRead(
-    IFileReadNotify *notify,
-    void *outBuf,
+    IFileReadNotify * notify,
+    void * outBuf,
     size_t outBufLen,
-    IFile *ifile,
+    IFile * ifile,
     int64_t off,
     int64_t len) {
     assert(notify);
-    File *file = static_cast<File *>(ifile);
+    File * file = static_cast<File *>(ifile);
     auto ptr = new FileReader(notify, file, outBuf, outBufLen);
     ptr->read(off, len);
 }
 
 //===========================================================================
 void fileWrite(
-    IFile *ifile,
-    void *buf,
+    IFile * ifile,
+    void * buf,
     size_t bufLen,
     int64_t off,
-    IFileWriteNotify *notify) {
-    File *file = static_cast<File *>(ifile);
+    IFileWriteNotify * notify) {
+    File * file = static_cast<File *>(ifile);
     auto ptr = new FileWriteBuf(notify, file, buf, bufLen);
     ptr->write(off);
 }
 
 //===========================================================================
 void fileAppend(
-    IFile *file, void *buf, size_t bufLen, IFileWriteNotify *notify) {
+    IFile * file, void * buf, size_t bufLen, IFileWriteNotify * notify) {
     // file writes to offset 2^64-1 are interpreted as appends to the end
     // of the file.
     fileWrite(file, buf, bufLen, 0xffff'ffff'ffff'ffff, notify);

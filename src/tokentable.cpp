@@ -53,12 +53,12 @@ static size_t mathPow2Ceil(size_t num) {
 }
 
 //===========================================================================
-TokenTable::TokenTable(const Token *src, size_t count) {
+TokenTable::TokenTable(const Token * src, size_t count) {
     size_t num = mathPow2Ceil(2 * count);
     m_names.resize(num);
     if (num < 2) {
         if (num == 1) {
-            Value &val = m_names.front();
+            Value & val = m_names.front();
             m_hashLen = (int)strlen(src->name);
             val.hash = strHash(src->name);
             val.id = src->id;
@@ -68,9 +68,9 @@ TokenTable::TokenTable(const Token *src, size_t count) {
     }
 
     m_hashLen = 0;
-    const Token *eptr = src + count;
-    for (const Token *a = src + 1; a != eptr; ++a) {
-        for (const Token *b = src; b != a; ++b) {
+    const Token * eptr = src + count;
+    for (const Token * a = src + 1; a != eptr; ++a) {
+        for (const Token * b = src; b != a; ++b) {
             int pos = 0;
             while (a->name[pos] == b->name[pos]) {
                 if (!a->name[pos])
@@ -83,13 +83,13 @@ TokenTable::TokenTable(const Token *src, size_t count) {
     next_a:;
     }
 
-    Value *base = m_names.data();
-    for (const Token *a = src; a != eptr; ++a) {
+    Value * base = m_names.data();
+    for (const Token * a = src; a != eptr; ++a) {
         size_t hash = strHash(a->name, m_hashLen);
         size_t pos = hash;
         for (;;) {
             pos %= num;
-            Value &val = base[pos];
+            Value & val = base[pos];
             if (!val.name) {
                 val.hash = hash;
                 val.id = a->id;
@@ -104,13 +104,13 @@ TokenTable::TokenTable(const Token *src, size_t count) {
 }
 
 //===========================================================================
-bool TokenTable::find(int *out, const char name[]) const {
+bool TokenTable::find(int * out, const char name[]) const {
     size_t hash = strHash(name, m_hashLen);
     size_t pos = hash;
     size_t num = size(m_names);
     for (;;) {
         pos %= num;
-        const Value &val = m_names[pos];
+        const Value & val = m_names[pos];
         if (!val.name)
             break;
         if (val.hash == hash && !strcmp(val.name, name)) {
@@ -124,7 +124,7 @@ bool TokenTable::find(int *out, const char name[]) const {
 }
 
 //===========================================================================
-bool TokenTable::find(const char *const *out, int id) const {
+bool TokenTable::find(const char * const * out, int id) const {
     return false;
 }
 

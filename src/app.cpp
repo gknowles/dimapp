@@ -17,10 +17,10 @@ namespace Dim {
 namespace {
 
 struct CleanupInfo {
-    IAppShutdownNotify *notify;
+    IAppShutdownNotify * notify;
     bool destroyed = false;
 
-    CleanupInfo(IAppShutdownNotify *notify)
+    CleanupInfo(IAppShutdownNotify * notify)
         : notify(notify) {}
 };
 
@@ -53,7 +53,7 @@ class MainTimer : public ITimerNotify {
     bool queryDestroy(QueryFn notify);
 
     enum ETimerMode m_mode { MAIN_SC };
-    const char *m_modeName{nullptr};
+    const char * m_modeName{nullptr};
     TimePoint m_shutdownStart;
 };
 
@@ -141,7 +141,7 @@ bool MainTimer::queryDestroyFailed(Duration grace) {
 
 //===========================================================================
 void MainTimer::startCleanup(CleanFn notify) {
-    for (auto &&v : s_cleaners) {
+    for (auto && v : s_cleaners) {
         (v.notify->*notify)();
         v.destroyed = false;
     }
@@ -149,7 +149,7 @@ void MainTimer::startCleanup(CleanFn notify) {
 
 //===========================================================================
 bool MainTimer::queryDestroy(QueryFn notify) {
-    for (auto &&v : s_cleaners) {
+    for (auto && v : s_cleaners) {
         if (!v.destroyed) {
             if ((v.notify->*notify)()) {
                 v.destroyed = true;
@@ -169,7 +169,7 @@ bool MainTimer::queryDestroy(QueryFn notify) {
 ***/
 
 //===========================================================================
-int appRun(ITaskNotify &app) {
+int appRun(ITaskNotify & app) {
     iHashInitialize();
     iConsoleInitialize();
     iTaskInitialize();
@@ -198,7 +198,7 @@ void appSignalShutdown(int exitcode) {
 }
 
 //===========================================================================
-void appMonitorShutdown(IAppShutdownNotify *cleaner) {
+void appMonitorShutdown(IAppShutdownNotify * cleaner) {
     s_cleaners.emplace(s_cleaners.begin(), cleaner);
 }
 

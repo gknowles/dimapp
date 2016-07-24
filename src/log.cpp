@@ -23,11 +23,11 @@ static vector<ILogNotify *> s_notifiers;
 ***/
 
 //===========================================================================
-static void LogMsg(LogType type, const string &msg) {
+static void LogMsg(LogType type, const string & msg) {
     if (s_notifiers.empty()) {
         cout << msg << endl;
     } else {
-        for (auto &&notify : s_notifiers) {
+        for (auto && notify : s_notifiers) {
             notify->onLog(type, msg);
         }
     }
@@ -70,7 +70,7 @@ Detail::LogCrash::~LogCrash() {}
 ***/
 
 //===========================================================================
-void logAddNotify(ILogNotify *notify) {
+void logAddNotify(ILogNotify * notify) {
     s_notifiers.push_back(notify);
 }
 

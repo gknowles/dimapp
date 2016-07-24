@@ -20,7 +20,7 @@ enum {
 };
 
 struct Test {
-    const char *name;
+    const char * name;
     unsigned flags; // kTest*
     string input;
     bool result;
@@ -99,7 +99,7 @@ class Application : public ITaskNotify, public ILogNotify {
     void onTask() override;
 
     // ILogNotify
-    void onLog(LogType type, const string &msg) override;
+    void onLog(LogType type, const string & msg) override;
 
     int m_errors;
 };
@@ -107,7 +107,7 @@ class Application : public ITaskNotify, public ILogNotify {
 } // namespace
 
 //===========================================================================
-void Application::onLog(LogType type, const string &msg) {
+void Application::onLog(LogType type, const string & msg) {
     if (type >= kLogError) {
         m_errors += 1;
         cout << "ERROR: " << msg << endl;
@@ -127,9 +127,9 @@ void Application::onTask() {
     TlsConnHandle client{};
     TlsConnHandle server{};
     bool result;
-    for (auto &&test : s_tests) {
+    for (auto && test : s_tests) {
         cout << "Test - " << test.name << endl;
-        TlsConnHandle &conn = (test.flags & kTestClient) ? client : server;
+        TlsConnHandle & conn = (test.flags & kTestClient) ? client : server;
         if ((test.flags & kTestReset) && conn)
             tlsClose(conn);
         if (!conn) {
@@ -167,7 +167,7 @@ void Application::onTask() {
 *
 ***/
 
-int main(int argc, char *argv[]) {
+int main(int argc, char * argv[]) {
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
     _set_error_mode(_OUT_TO_MSGBOX);
     Application app;

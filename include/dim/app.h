@@ -22,7 +22,7 @@ class IAppShutdownNotify {
 };
 
 // returns exit code
-int appRun(ITaskNotify &app);
+int appRun(ITaskNotify & app);
 
 enum {
     kExitSuccess = 0,
@@ -34,7 +34,7 @@ enum {
 };
 void appSignalShutdown(int exitcode = kExitSuccess);
 
-void appMonitorShutdown(IAppShutdownNotify *cleanup);
+void appMonitorShutdown(IAppShutdownNotify * cleanup);
 bool appQueryDestroyFailed();
 
 RunMode appMode();

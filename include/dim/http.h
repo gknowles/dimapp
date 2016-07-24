@@ -113,10 +113,10 @@ class HttpMsg {
     HdrName headers(HttpHdr header);
     HdrName headers(const char name[]);
 
-    CharBuf &body();
-    const CharBuf &body() const;
+    CharBuf & body();
+    const CharBuf & body() const;
 
-    ITempHeap &heap();
+    ITempHeap & heap();
 
   protected:
     virtual bool checkPseudoHeaders() const = 0;
@@ -136,13 +136,13 @@ class HttpMsg {
 
     CharBuf m_data;
     TempHeap m_heap;
-    HdrName *m_firstHeader{nullptr};
+    HdrName * m_firstHeader{nullptr};
 };
 
 struct HttpMsg::HdrName {
     HttpHdr m_id{kHttpInvalid};
-    const char *m_name{nullptr};
-    HdrName *m_next{nullptr};
+    const char * m_name{nullptr};
+    HdrName * m_next{nullptr};
 
     ForwardListIterator<HdrValue> begin();
     ForwardListIterator<HdrValue> end();
@@ -151,23 +151,23 @@ struct HttpMsg::HdrName {
 };
 
 struct HttpMsg::HdrValue {
-    const char *m_value;
-    HdrValue *m_next{nullptr};
-    HdrValue *m_prev{nullptr};
+    const char * m_value;
+    HdrValue * m_next{nullptr};
+    HdrValue * m_prev{nullptr};
 };
 
 class HttpRequest : public HttpMsg {
   public:
-    const char *method() const;
-    const char *scheme() const;
-    const char *authority() const;
+    const char * method() const;
+    const char * scheme() const;
+    const char * authority() const;
 
     // includes path, query, and fragment
-    const char *pathAbsolute() const;
+    const char * pathAbsolute() const;
 
-    const char *path() const;
-    const char *query() const;
-    const char *fragment() const;
+    const char * path() const;
+    const char * query() const;
+    const char * fragment() const;
 
   private:
     bool checkPseudoHeaders() const override;
@@ -190,7 +190,7 @@ class HttpResponse : public HttpMsg {
 
 struct HttpConnHandle : HandleBase {};
 
-HttpConnHandle httpConnect(CharBuf *out);
+HttpConnHandle httpConnect(CharBuf * out);
 HttpConnHandle httpListen();
 
 void httpClose(HttpConnHandle conn);
@@ -202,21 +202,21 @@ void httpClose(HttpConnHandle conn);
 //  - out: data to send to the remote endpoint is appended
 bool httpRecv(
     HttpConnHandle conn,
-    CharBuf *out,
-    std::vector<std::unique_ptr<HttpMsg>> *msgs,
-    const void *src,
+    CharBuf * out,
+    std::vector<std::unique_ptr<HttpMsg>> * msgs,
+    const void * src,
     size_t srcLen);
 
 // Serializes a request and returns the stream id used
-int httpRequest(HttpConnHandle conn, CharBuf *out, const HttpMsg &msg);
+int httpRequest(HttpConnHandle conn, CharBuf * out, const HttpMsg & msg);
 
 // Serializes a push promise
-void httpPushPromise(HttpConnHandle conn, CharBuf *out, const HttpMsg &msg);
+void httpPushPromise(HttpConnHandle conn, CharBuf * out, const HttpMsg & msg);
 
 // Serializes a reply on the specified stream
 void httpReply(
-    HttpConnHandle conn, CharBuf *out, int stream, const HttpMsg &msg);
+    HttpConnHandle conn, CharBuf * out, int stream, const HttpMsg & msg);
 
-void httpResetStream(HttpConnHandle conn, CharBuf *out, int stream);
+void httpResetStream(HttpConnHandle conn, CharBuf * out, int stream);
 
 } // namespace

@@ -19,7 +19,7 @@ class ClientConn : public TlsConnBase {
   public:
     ClientConn(
         const char hostName[], const TlsCipherSuite suites[], size_t count);
-    void connect(CharBuf *out);
+    void connect(CharBuf * out);
 
   private:
     string m_host;
@@ -28,7 +28,7 @@ class ClientConn : public TlsConnBase {
 class ServerConn : public TlsConnBase {
   public:
   private:
-    void onTlsHandshake(const TlsClientHelloMsg &msg) override;
+    void onTlsHandshake(const TlsClientHelloMsg & msg) override;
 };
 
 } // namespace
@@ -61,13 +61,13 @@ void TlsConnBase::setSuites(const TlsCipherSuite suites[], size_t count) {
 }
 
 //===========================================================================
-const std::vector<TlsCipherSuite> &TlsConnBase::suites() const {
+const std::vector<TlsCipherSuite> & TlsConnBase::suites() const {
     return m_suites;
 }
 
 //===========================================================================
 bool TlsConnBase::recv(
-    CharBuf *out, CharBuf *data, const void *src, size_t srcLen) {
+    CharBuf * out, CharBuf * data, const void * src, size_t srcLen) {
     m_reply = out;
     bool success = m_in.parse(data, this, src, srcLen);
     m_reply = nullptr;
@@ -86,7 +86,7 @@ void TlsConnBase::onTlsAlert(TlsAlertDesc desc, TlsAlertLevel level) {
 }
 
 //===========================================================================
-template <typename T> void TlsConnBase::handshake(TlsRecordReader &in) {
+template <typename T> void TlsConnBase::handshake(TlsRecordReader & in) {
     T msg;
     if (tlsParse(&msg, in) && !in.size())
         return onTlsHandshake(msg);
@@ -104,13 +104,13 @@ void TlsConnBase::onTlsHandshake(
 }
 
 //===========================================================================
-void TlsConnBase::onTlsHandshake(const TlsClientHelloMsg &msg) {}
+void TlsConnBase::onTlsHandshake(const TlsClientHelloMsg & msg) {}
 
 //===========================================================================
-void TlsConnBase::onTlsHandshake(const TlsServerHelloMsg &msg) {}
+void TlsConnBase::onTlsHandshake(const TlsServerHelloMsg & msg) {}
 
 //===========================================================================
-void TlsConnBase::onTlsHandshake(const TlsHelloRetryRequestMsg &msg) {}
+void TlsConnBase::onTlsHandshake(const TlsHelloRetryRequestMsg & msg) {}
 
 
 /****************************************************************************
@@ -120,7 +120,7 @@ void TlsConnBase::onTlsHandshake(const TlsHelloRetryRequestMsg &msg) {}
 ***/
 
 //===========================================================================
-TlsRecordWriter::TlsRecordWriter(TlsConnBase &conn, CharBuf *out)
+TlsRecordWriter::TlsRecordWriter(TlsConnBase & conn, CharBuf * out)
     : m_rec(conn.m_encrypt)
     , m_out(out) {}
 
@@ -149,7 +149,7 @@ void TlsRecordWriter::number16(uint16_t val) {
 }
 
 //===========================================================================
-void TlsRecordWriter::fixed(const void *ptr, size_t count) {
+void TlsRecordWriter::fixed(const void * ptr, size_t count) {
     if (m_buf.size()) {
         m_buf.append((const char *)ptr, count);
     } else {
@@ -158,14 +158,14 @@ void TlsRecordWriter::fixed(const void *ptr, size_t count) {
 }
 
 //===========================================================================
-void TlsRecordWriter::var(const void *ptr, size_t count) {
+void TlsRecordWriter::var(const void * ptr, size_t count) {
     assert(count < 1 << 8);
     number((uint8_t)count);
     fixed(ptr, count);
 }
 
 //===========================================================================
-void TlsRecordWriter::var16(const void *ptr, size_t count) {
+void TlsRecordWriter::var16(const void * ptr, size_t count) {
     assert(count < 1 << 16);
     number16((uint16_t)count);
     fixed(ptr, count);
@@ -191,7 +191,7 @@ void TlsRecordWriter::start24() {
 
 //===========================================================================
 void TlsRecordWriter::end() {
-    Pos &pos = m_stack.back();
+    Pos & pos = m_stack.back();
     size_t count = m_buf.size() - pos.pos;
     char buf[4];
     switch (pos.width) {
@@ -217,7 +217,7 @@ void TlsRecordWriter::end() {
 
 //===========================================================================
 TlsRecordReader::TlsRecordReader(
-    TlsConnBase &conn, const void *ptr, size_t count)
+    TlsConnBase & conn, const void * ptr, size_t count)
     : m_conn(conn)
     , m_ptr((const uint8_t *)ptr) {
     assert(count < numeric_limits<int>::max());
@@ -262,7 +262,7 @@ unsigned TlsRecordReader::number24() {
 }
 
 //===========================================================================
-void TlsRecordReader::fixed(uint8_t *dst, size_t count) {
+void TlsRecordReader::fixed(uint8_t * dst, size_t count) {
     assert(count < 1 << 24);
     m_count -= (int)count;
     if (m_count >= 0) {
@@ -318,7 +318,7 @@ ClientConn::ClientConn(
 }
 
 //===========================================================================
-void ClientConn::connect(CharBuf *outbuf) {
+void ClientConn::connect(CharBuf * outbuf) {
     TlsRecordWriter out(*this, outbuf);
 
     TlsClientHelloMsg msg;
@@ -328,7 +328,7 @@ void ClientConn::connect(CharBuf *outbuf) {
     randombytes_buf(msg.random, sizeof(msg.random));
     msg.suites = suites();
     msg.groups.resize(1);
-    TlsKeyShare &key = msg.groups.back();
+    TlsKeyShare & key = msg.groups.back();
     tlsSetKeyShare(key, kGroupX25519);
     msg.sigSchemes.push_back(kSigEd25519);
     msg.hostName.assign(m_host.begin(), m_host.end());
@@ -343,7 +343,7 @@ void ClientConn::connect(CharBuf *outbuf) {
 ***/
 
 //===========================================================================
-void ServerConn::onTlsHandshake(const TlsClientHelloMsg &msg) {}
+void ServerConn::onTlsHandshake(const TlsClientHelloMsg & msg) {}
 
 
 /****************************************************************************
@@ -361,7 +361,7 @@ TlsConnHandle tlsAccept(const TlsCipherSuite suites[], size_t count) {
 
 //===========================================================================
 TlsConnHandle tlsConnect(
-    CharBuf *out,
+    CharBuf * out,
     const char hostName[],
     const TlsCipherSuite suites[],
     size_t count) {
@@ -378,9 +378,9 @@ void tlsClose(TlsConnHandle h) {
 //===========================================================================
 bool tlsRecv(
     TlsConnHandle h,
-    CharBuf *out,
-    CharBuf *data,
-    const void *src,
+    CharBuf * out,
+    CharBuf * data,
+    const void * src,
     size_t srcLen) {
     auto conn = s_conns.find(h);
     return conn->recv(out, data, src, srcLen);

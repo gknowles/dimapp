@@ -26,11 +26,11 @@ class ListenSocket;
 
 class AcceptSocket : public SocketBase {
   public:
-    static void accept(ListenSocket *notify);
+    static void accept(ListenSocket * notify);
 
   public:
     using SocketBase::SocketBase;
-    void onAccept(ListenSocket *listen, int xferError, int xferBytes);
+    void onAccept(ListenSocket * listen, int xferError, int xferBytes);
 };
 
 class ListenSocket : public IWinEventWaitNotify {
@@ -38,20 +38,20 @@ class ListenSocket : public IWinEventWaitNotify {
     SOCKET m_handle{INVALID_SOCKET};
     Endpoint m_localEnd;
     unique_ptr<AcceptSocket> m_socket;
-    ISocketListenNotify *m_notify{nullptr};
+    ISocketListenNotify * m_notify{nullptr};
     char m_addrBuf[2 * sizeof sockaddr_storage];
 
   public:
-    ListenSocket(ISocketListenNotify *notify, const Endpoint &end);
+    ListenSocket(ISocketListenNotify * notify, const Endpoint & end);
 
     void onTask() override;
 };
 
 class ListenStopTask : public ITaskNotify {
-    ISocketListenNotify *m_notify{nullptr};
+    ISocketListenNotify * m_notify{nullptr};
 
   public:
-    ListenStopTask(ISocketListenNotify *notify);
+    ListenStopTask(ISocketListenNotify * notify);
     void onTask() override;
 };
 
@@ -75,7 +75,7 @@ static list<unique_ptr<ListenSocket>> s_listeners;
 ***/
 
 //===========================================================================
-ListenStopTask::ListenStopTask(ISocketListenNotify *notify)
+ListenStopTask::ListenStopTask(ISocketListenNotify * notify)
     : m_notify(notify) {}
 
 //===========================================================================
@@ -92,7 +92,7 @@ void ListenStopTask::onTask() {
 ***/
 
 //===========================================================================
-ListenSocket::ListenSocket(ISocketListenNotify *notify, const Endpoint &end)
+ListenSocket::ListenSocket(ISocketListenNotify * notify, const Endpoint & end)
     : m_notify{notify}
     , m_localEnd{end} {}
 
@@ -119,7 +119,7 @@ void ListenSocket::onTask() {
 ***/
 
 //===========================================================================
-static void pushListenStop(ListenSocket *listen) {
+static void pushListenStop(ListenSocket * listen) {
     auto ptr = new ListenStopTask(listen->m_notify);
 
     {
@@ -143,7 +143,7 @@ static void pushListenStop(ListenSocket *listen) {
 
 //===========================================================================
 // static
-void AcceptSocket::accept(ListenSocket *listen) {
+void AcceptSocket::accept(ListenSocket * listen) {
     assert(!listen->m_socket.get());
     auto sock = make_unique<AcceptSocket>(
         listen->m_notify->onListenCreateSocket().release());
@@ -190,7 +190,7 @@ void AcceptSocket::accept(ListenSocket *listen) {
 }
 
 //===========================================================================
-static bool getAcceptInfo(SocketAcceptInfo *out, SOCKET s, void *buffer) {
+static bool getAcceptInfo(SocketAcceptInfo * out, SOCKET s, void * buffer) {
     GUID extId = WSAID_GETACCEPTEXSOCKADDRS;
     LPFN_GETACCEPTEXSOCKADDRS fGetAcceptExSockAddrs;
     DWORD bytes;
@@ -209,9 +209,9 @@ static bool getAcceptInfo(SocketAcceptInfo *out, SOCKET s, void *buffer) {
         return false;
     }
 
-    sockaddr *lsa;
+    sockaddr * lsa;
     int lsaLen;
-    sockaddr *rsa;
+    sockaddr * rsa;
     int rsaLen;
     fGetAcceptExSockAddrs(
         buffer,
@@ -233,7 +233,7 @@ static bool getAcceptInfo(SocketAcceptInfo *out, SOCKET s, void *buffer) {
 
 //===========================================================================
 void AcceptSocket::onAccept(
-    ListenSocket *listen, int xferError, int xferBytes) {
+    ListenSocket * listen, int xferError, int xferBytes) {
     unique_ptr<AcceptSocket> hostage{move(listen->m_socket)};
 
     SocketAcceptInfo info;
@@ -305,13 +305,13 @@ void iSocketAcceptInitialize() {
 ***/
 
 //===========================================================================
-static void pushListenStop(ISocketListenNotify *notify) {
+static void pushListenStop(ISocketListenNotify * notify) {
     auto ptr = new ListenStopTask(notify);
     taskPushEvent(*ptr);
 }
 
 //===========================================================================
-void socketListen(ISocketListenNotify *notify, const Endpoint &localEnd) {
+void socketListen(ISocketListenNotify * notify, const Endpoint & localEnd) {
     auto hostage = make_unique<ListenSocket>(notify, localEnd);
     auto sock = hostage.get();
     sock->m_handle = winSocketCreate(localEnd);
@@ -334,9 +334,9 @@ void socketListen(ISocketListenNotify *notify, const Endpoint &localEnd) {
 }
 
 //===========================================================================
-void socketStop(ISocketListenNotify *notify, const Endpoint &localEnd) {
+void socketStop(ISocketListenNotify * notify, const Endpoint & localEnd) {
     lock_guard<mutex> lk{s_mut};
-    for (auto &&ptr : s_listeners) {
+    for (auto && ptr : s_listeners) {
         if (ptr->m_notify == notify && ptr->m_localEnd == localEnd &&
             ptr->m_handle != INVALID_SOCKET) {
             if (SOCKET_ERROR == closesocket(ptr->m_handle)) {

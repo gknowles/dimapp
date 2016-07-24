@@ -52,7 +52,7 @@ void WinEvent::wait(Duration wait) {
 ***/
 
 //===========================================================================
-static void __stdcall eventWaitCallback(void *param, uint8_t timeout) {
+static void __stdcall eventWaitCallback(void * param, uint8_t timeout) {
     auto notify = reinterpret_cast<IWinEventWaitNotify *>(param);
     taskPushEvent(*notify);
 }

@@ -14,7 +14,7 @@ namespace Dim {
 
 struct WinOverlappedEvent {
     OVERLAPPED overlapped{};
-    ITaskNotify *notify{nullptr};
+    ITaskNotify * notify{nullptr};
 };
 
 
@@ -84,9 +84,9 @@ class WinError {
     WinError(NtStatus status);
     WinError(int error);
 
-    WinError &operator=(int error);
+    WinError & operator=(int error);
     // sets equivalent standard windows error value
-    WinError &operator=(NtStatus status);
+    WinError & operator=(NtStatus status);
 
     operator int() const { return m_value; }
 
@@ -94,7 +94,7 @@ class WinError {
     int m_value;
 };
 
-::std::ostream &operator<<(::std::ostream &os, const WinError &val);
+::std::ostream & operator<<(::std::ostream & os, const WinError & val);
 
 
 /****************************************************************************
@@ -104,6 +104,6 @@ class WinError {
 ***/
 
 SOCKET winSocketCreate();
-SOCKET winSocketCreate(const Endpoint &localEnd);
+SOCKET winSocketCreate(const Endpoint & localEnd);
 
 } // namespace

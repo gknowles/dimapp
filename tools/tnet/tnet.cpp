@@ -33,20 +33,20 @@ static int s_cancelAddrId;
 
 class SocketConn : public ISocketNotify, public IEndpointNotify {
     // ISocketNotify
-    void onSocketConnect(const SocketConnectInfo &info) override;
+    void onSocketConnect(const SocketConnectInfo & info) override;
     void onSocketConnectFailed() override;
-    void onSocketRead(const SocketData &data) override;
+    void onSocketRead(const SocketData & data) override;
     void onSocketDisconnect() override;
 
     // IDimEndpointNotify
-    void onEndpointFound(Endpoint *ends, int count) override;
+    void onEndpointFound(Endpoint * ends, int count) override;
 
     unique_ptr<ConsoleScopedAttr> m_connected;
 };
 static SocketConn s_socket;
 
 //===========================================================================
-void SocketConn::onEndpointFound(Endpoint *ends, int count) {
+void SocketConn::onEndpointFound(Endpoint * ends, int count) {
     if (!count) {
         cout << "Host not found" << endl;
         appSignalShutdown(kExitConnectFailed);
@@ -57,7 +57,7 @@ void SocketConn::onEndpointFound(Endpoint *ends, int count) {
 }
 
 //===========================================================================
-void SocketConn::onSocketConnect(const SocketConnectInfo &info) {
+void SocketConn::onSocketConnect(const SocketConnectInfo & info) {
     m_connected = make_unique<ConsoleScopedAttr>(kConsoleGreen);
     cout << "Connected" << endl;
 }
@@ -69,7 +69,7 @@ void SocketConn::onSocketConnectFailed() {
 }
 
 //===========================================================================
-void SocketConn::onSocketRead(const SocketData &data) {
+void SocketConn::onSocketRead(const SocketData & data) {
     cout.write(data.data, data.bytes);
     cout.flush();
 }
@@ -95,21 +95,21 @@ class ConsoleReader : public IFileReadNotify {
     bool QueryDestroy() const { return !m_file && !m_buffer; }
 
     bool
-    onFileRead(char *data, int bytes, int64_t offset, IFile *file) override;
-    void onFileEnd(int64_t offset, IFile *file) override;
+    onFileRead(char * data, int bytes, int64_t offset, IFile * file) override;
+    void onFileEnd(int64_t offset, IFile * file) override;
 };
 static ConsoleReader s_console;
 
 //===========================================================================
 bool ConsoleReader::onFileRead(
-    char *data, int bytes, int64_t offset, IFile *file) {
+    char * data, int bytes, int64_t offset, IFile * file) {
     socketWrite(&s_socket, move(m_buffer), bytes);
     // stop reading (return false) so we can get a new buffer
     return false;
 }
 
 //===========================================================================
-void ConsoleReader::onFileEnd(int64_t offset, IFile *file) {
+void ConsoleReader::onFileEnd(int64_t offset, IFile * file) {
     if (m_file) {
         m_buffer = socketGetBuffer();
         fileRead(this, m_buffer->data, m_buffer->len, file);
@@ -157,16 +157,16 @@ bool MainShutdown::onAppQueryClientDestroy() {
 namespace {
 class Application : public ITaskNotify {
     int m_argc;
-    char **m_argv;
+    char ** m_argv;
 
   public:
-    Application(int argc, char *argv[]);
+    Application(int argc, char * argv[]);
     void onTask() override;
 };
 } // namespace
 
 //===========================================================================
-Application::Application(int argc, char *argv[])
+Application::Application(int argc, char * argv[])
     : m_argc(argc)
     , m_argv(argv) {}
 
@@ -204,7 +204,7 @@ void Application::onTask() {
 ***/
 
 //===========================================================================
-int main(int argc, char *argv[]) {
+int main(int argc, char * argv[]) {
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
     _set_error_mode(_OUT_TO_MSGBOX);
 

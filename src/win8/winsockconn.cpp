@@ -27,9 +27,9 @@ namespace {
 class ConnSocket : public SocketBase {
   public:
     static void connect(
-        ISocketNotify *notify,
-        const Endpoint &remoteEnd,
-        const Endpoint &localEnd,
+        ISocketNotify * notify,
+        const Endpoint & remoteEnd,
+        const Endpoint & localEnd,
         Duration timeout);
 
   public:
@@ -44,15 +44,15 @@ class ConnectTask : public IWinEventWaitNotify {
     list<ConnectTask>::iterator m_iter;
 
   public:
-    ConnectTask(unique_ptr<ConnSocket> &&sock);
+    ConnectTask(unique_ptr<ConnSocket> && sock);
     void onTask() override;
 };
 
 class ConnectFailedTask : public ITaskNotify {
-    ISocketNotify *m_notify{nullptr};
+    ISocketNotify * m_notify{nullptr};
 
   public:
-    ConnectFailedTask(ISocketNotify *notify);
+    ConnectFailedTask(ISocketNotify * notify);
     void onTask() override;
 };
 
@@ -104,7 +104,7 @@ Duration ConnectTimer::onTimer(TimePoint now) {
 ***/
 
 //===========================================================================
-ConnectTask::ConnectTask(unique_ptr<ConnSocket> &&sock)
+ConnectTask::ConnectTask(unique_ptr<ConnSocket> && sock)
     : m_socket(move(sock)) {
     m_expiration = Clock::now() + kConnectTimeout;
 }
@@ -139,7 +139,7 @@ void ConnectTask::onTask() {
 ***/
 
 //===========================================================================
-ConnectFailedTask::ConnectFailedTask(ISocketNotify *notify)
+ConnectFailedTask::ConnectFailedTask(ISocketNotify * notify)
     : m_notify(notify) {}
 
 //===========================================================================
@@ -156,7 +156,7 @@ void ConnectFailedTask::onTask() {
 ***/
 
 //===========================================================================
-static void pushConnectFailed(ISocketNotify *notify) {
+static void pushConnectFailed(ISocketNotify * notify) {
     auto ptr = new ConnectFailedTask(notify);
     taskPushEvent(*ptr);
 }
@@ -164,9 +164,9 @@ static void pushConnectFailed(ISocketNotify *notify) {
 //===========================================================================
 // static
 void ConnSocket::connect(
-    ISocketNotify *notify,
-    const Endpoint &remoteEnd,
-    const Endpoint &localEnd,
+    ISocketNotify * notify,
+    const Endpoint & remoteEnd,
+    const Endpoint & localEnd,
     Duration timeout) {
     assert(getMode(notify) == Mode::kInactive);
 
@@ -207,7 +207,7 @@ void ConnSocket::connect(
 
         // TODO: check if this really puts them in expiration order!
         auto rhint = find_if(
-            s_connecting.rbegin(), s_connecting.rend(), [&](auto &&task) {
+            s_connecting.rbegin(), s_connecting.rend(), [&](auto && task) {
                 return task.m_expiration <= expiration;
             });
         it = s_connecting.emplace(rhint.base(), move(sock));
@@ -306,7 +306,7 @@ static ShutdownNotify s_cleanup;
 //===========================================================================
 void ShutdownNotify::onAppStartConsoleCleanup() {
     lock_guard<mutex> lk{s_mut};
-    for (auto &&task : s_connecting)
+    for (auto && task : s_connecting)
         task.m_socket->hardClose();
 }
 
@@ -339,9 +339,9 @@ void iSocketConnectInitialize() {
 
 //===========================================================================
 void socketConnect(
-    ISocketNotify *notify,
-    const Endpoint &remoteEnd,
-    const Endpoint &localEnd,
+    ISocketNotify * notify,
+    const Endpoint & remoteEnd,
+    const Endpoint & localEnd,
     Duration timeout) {
     ConnSocket::connect(notify, remoteEnd, localEnd, timeout);
 }

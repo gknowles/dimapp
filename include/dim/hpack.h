@@ -40,7 +40,7 @@ class HpackEncode {
     HpackEncode(size_t tableSize);
     void setTableSize(size_t tableSize);
 
-    void startBlock(CharBuf *out);
+    void startBlock(CharBuf * out);
     void endBlock();
 
     void header(
@@ -60,7 +60,7 @@ class HpackEncode {
     void write(size_t val, char prefix, int prefixBits);
 
     size_t m_dynSize{0};
-    CharBuf *m_out{nullptr};
+    CharBuf * m_out{nullptr};
 };
 
 
@@ -89,8 +89,8 @@ class HpackDecode {
     void setTableSize(size_t tableSize);
 
     bool parse(
-        IHpackDecodeNotify *notify,
-        ITempHeap *heap,
+        IHpackDecodeNotify * notify,
+        ITempHeap * heap,
         const char src[],
         size_t srcLen);
 
@@ -98,25 +98,29 @@ class HpackDecode {
     void pruneDynTable();
 
     bool readInstruction(
-        IHpackDecodeNotify *notify,
-        ITempHeap *heap,
-        const char *&src,
-        size_t &srcLen);
+        IHpackDecodeNotify * notify,
+        ITempHeap * heap,
+        const char *& src,
+        size_t & srcLen);
     bool readIndexedField(
-        HpackFieldView *out,
-        ITempHeap *heap,
+        HpackFieldView * out,
+        ITempHeap * heap,
         size_t prefixBits,
-        const char *&src,
-        size_t &srcLen);
+        const char *& src,
+        size_t & srcLen);
     bool readIndexedName(
-        HpackFieldView *out,
-        ITempHeap *heap,
+        HpackFieldView * out,
+        ITempHeap * heap,
         size_t prefixBits,
-        const char *&src,
-        size_t &srcLen);
-    bool read(size_t *out, size_t prefixBits, const char *&src, size_t &srcLen);
+        const char *& src,
+        size_t & srcLen);
     bool
-    read(const char **out, ITempHeap *heap, const char *&src, size_t &srcLen);
+    read(size_t * out, size_t prefixBits, const char *& src, size_t & srcLen);
+    bool read(
+        const char ** out,
+        ITempHeap * heap,
+        const char *& src,
+        size_t & srcLen);
 
     size_t m_dynSize{0};
     std::deque<HpackDynField> m_dynTable;

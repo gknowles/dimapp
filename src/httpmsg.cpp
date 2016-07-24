@@ -31,7 +31,7 @@ namespace {
 
 struct HttpHdrInfo {
     HttpHdr header;
-    const char *name;
+    const char * name;
 };
 
 const TokenTable::Token s_hdrNames[] = {
@@ -110,7 +110,7 @@ struct HdrNameInfo : HttpMsg::HdrName {
 
 //===========================================================================
 auto HttpMsg::HdrName::begin() -> ForwardListIterator<HdrValue> {
-    auto *hdr = static_cast<HdrNameInfo *>(this);
+    auto * hdr = static_cast<HdrNameInfo *>(this);
     return ForwardListIterator<HdrValue>(&hdr->m_value);
 }
 
@@ -121,7 +121,7 @@ auto HttpMsg::HdrName::end() -> ForwardListIterator<HdrValue> {
 
 //===========================================================================
 auto HttpMsg::HdrName::begin() const -> ForwardListIterator<const HdrValue> {
-    auto *hdr = static_cast<const HdrNameInfo *>(this);
+    auto * hdr = static_cast<const HdrNameInfo *>(this);
     return ForwardListIterator<const HdrValue>(&hdr->m_value);
 }
 
@@ -193,7 +193,7 @@ void HttpMsg::addHeaderRef(HttpHdr id, const char name[], const char value[]) {
 
 //===========================================================================
 void HttpMsg::addHeaderRef(HttpHdr id, const char value[]) {
-    const char *name = tokenTableGetName(s_hdrNameTbl, id);
+    const char * name = tokenTableGetName(s_hdrNameTbl, id);
     addHeaderRef(id, name, value);
 }
 
@@ -224,17 +224,17 @@ auto HttpMsg::end() const -> ForwardListIterator<const HdrName> {
 }
 
 //===========================================================================
-CharBuf &HttpMsg::body() {
+CharBuf & HttpMsg::body() {
     return m_data;
 }
 
 //===========================================================================
-const CharBuf &HttpMsg::body() const {
+const CharBuf & HttpMsg::body() const {
     return m_data;
 }
 
 //===========================================================================
-ITempHeap &HttpMsg::heap() {
+ITempHeap & HttpMsg::heap() {
     return m_heap;
 }
 

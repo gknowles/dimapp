@@ -28,8 +28,8 @@ namespace Dim {
 ***/
 
 struct HpackFieldView {
-    const char *name;
-    const char *value;
+    const char * name;
+    const char * value;
 };
 
 //===========================================================================
@@ -50,8 +50,8 @@ class HuffDecoder {
     HuffDecoder(const EncodeItem items[], size_t count);
 
     bool decode(
-        const char **out,
-        ITempHeap *heap,
+        const char ** out,
+        ITempHeap * heap,
         size_t unusedBits,
         const char src[],
         size_t count);
@@ -417,12 +417,12 @@ static HuffDecoder s_decode(s_encodeTable, size(s_encodeTable));
 ***/
 
 //===========================================================================
-static size_t fieldSize(const HpackFieldView &fld) {
+static size_t fieldSize(const HpackFieldView & fld) {
     return strlen(fld.name) + strlen(fld.value) + 32;
 }
 
 //===========================================================================
-static size_t fieldSize(const HpackDynField &fld) {
+static size_t fieldSize(const HpackDynField & fld) {
     return size(fld.name) + size(fld.value) + 32;
 }
 
@@ -444,7 +444,7 @@ void HpackEncode::setTableSize(size_t tableSize) {
 }
 
 //===========================================================================
-void HpackEncode::startBlock(CharBuf *out) {
+void HpackEncode::startBlock(CharBuf * out) {
     m_out = out;
 }
 
@@ -525,8 +525,8 @@ HuffDecoder::HuffDecoder(const EncodeItem items[], size_t count) {
 
         for (;;) {
             assert(pos >= 0 && pos < size(m_decodeTable));
-            DecodeItem &item = m_decodeTable[pos];
-            int16_t &key = (~ptr->code & mask) ? item.zero : item.one;
+            DecodeItem & item = m_decodeTable[pos];
+            int16_t & key = (~ptr->code & mask) ? item.zero : item.one;
             mask >>= 1;
             if (!mask) {
                 assert(key == kDecodeUnused);
@@ -546,8 +546,12 @@ HuffDecoder::HuffDecoder(const EncodeItem items[], size_t count) {
 }
 
 //===========================================================================
-static bool
-read(int *out, int bits, int &availBits, const char *&ptr, const char *eptr) {
+static bool read(
+    int * out,
+    int bits,
+    int & availBits,
+    const char *& ptr,
+    const char * eptr) {
     if (ptr == eptr) {
         assert(availBits == 8);
         return false;
@@ -580,16 +584,16 @@ read(int *out, int bits, int &availBits, const char *&ptr, const char *eptr) {
 
 //===========================================================================
 bool HuffDecoder::decode(
-    const char **out,
-    ITempHeap *heap,
+    const char ** out,
+    ITempHeap * heap,
     size_t unusedBits,
     const char src[],
     size_t count) {
     assert(count);
     int avail = (int)unusedBits;
-    const char *ptr = src;
-    const char *eptr = src + count;
-    char *optr = heap->alloc<char>(2 * count);
+    const char * ptr = src;
+    const char * eptr = src + count;
+    char * optr = heap->alloc<char>(2 * count);
     *out = optr;
     int val;
     for (;;) {
@@ -597,7 +601,7 @@ bool HuffDecoder::decode(
         if (!read(&key, m_prefixBits, avail, ptr, eptr))
             goto done;
         do {
-            DecodeItem &di = m_decodeTable[key];
+            DecodeItem & di = m_decodeTable[key];
             if (!read(&key, 1, avail, ptr, eptr))
                 goto done;
             val = (key & 1) ? di.one : di.zero;
@@ -634,8 +638,8 @@ void HpackDecode::setTableSize(size_t tableSize) {
 
 //===========================================================================
 bool HpackDecode::parse(
-    IHpackDecodeNotify *notify,
-    ITempHeap *heap,
+    IHpackDecodeNotify * notify,
+    ITempHeap * heap,
     const char src[],
     size_t srcLen) {
     while (srcLen) {
@@ -647,10 +651,10 @@ bool HpackDecode::parse(
 
 //===========================================================================
 bool HpackDecode::readInstruction(
-    IHpackDecodeNotify *notify,
-    ITempHeap *heap,
-    const char *&src,
-    size_t &srcLen) {
+    IHpackDecodeNotify * notify,
+    ITempHeap * heap,
+    const char *& src,
+    size_t & srcLen) {
     enum {
         kNeverIndexed,
         kNotIndexed,
@@ -705,7 +709,7 @@ bool HpackDecode::readInstruction(
 
     if (mode == kIndexed) {
         m_dynTable.emplace_front();
-        auto &front = m_dynTable.front();
+        auto & front = m_dynTable.front();
         front.name = fld.name;
         front.value = fld.value;
         m_dynUsed += fieldSize(fld);
@@ -722,11 +726,11 @@ bool HpackDecode::readInstruction(
 
 //===========================================================================
 bool HpackDecode::readIndexedField(
-    HpackFieldView *out,
-    ITempHeap *heap,
+    HpackFieldView * out,
+    ITempHeap * heap,
     size_t prefixBits,
-    const char *&src,
-    size_t &srcLen) {
+    const char *& src,
+    size_t & srcLen) {
     size_t index;
     if (!read(&index, prefixBits, src, srcLen))
         return false;
@@ -738,7 +742,7 @@ bool HpackDecode::readIndexedField(
         index -= size(s_staticTable);
         if (index >= size(m_dynTable))
             return false;
-        HpackDynField &dfld = m_dynTable[index];
+        HpackDynField & dfld = m_dynTable[index];
         out->name = heap->strDup(data(dfld.name), size(dfld.name));
         out->value = heap->strDup(data(dfld.value), size(dfld.value));
     }
@@ -747,11 +751,11 @@ bool HpackDecode::readIndexedField(
 
 //===========================================================================
 bool HpackDecode::readIndexedName(
-    HpackFieldView *out,
-    ITempHeap *heap,
+    HpackFieldView * out,
+    ITempHeap * heap,
     size_t prefixBits,
-    const char *&src,
-    size_t &srcLen) {
+    const char *& src,
+    size_t & srcLen) {
     size_t index;
     if (!read(&index, prefixBits, src, srcLen))
         return false;
@@ -763,7 +767,7 @@ bool HpackDecode::readIndexedName(
         index -= size(s_staticTable);
         if (index >= size(m_dynTable))
             return false;
-        HpackDynField &dfld = m_dynTable[index];
+        HpackDynField & dfld = m_dynTable[index];
         out->name = heap->strDup(data(dfld.name));
     }
     if (!read(&out->value, heap, src, srcLen))
@@ -781,7 +785,7 @@ void HpackDecode::pruneDynTable() {
 
 //===========================================================================
 bool HpackDecode::read(
-    size_t *out, size_t prefixBits, const char *&src, size_t &srcLen) {
+    size_t * out, size_t prefixBits, const char *& src, size_t & srcLen) {
     assert(prefixBits >= 1 && prefixBits <= 8);
     if (!srcLen)
         return false;
@@ -808,7 +812,7 @@ bool HpackDecode::read(
 
 //===========================================================================
 bool HpackDecode::read(
-    const char **out, ITempHeap *heap, const char *&src, size_t &srcLen) {
+    const char ** out, ITempHeap * heap, const char *& src, size_t & srcLen) {
     size_t len;
     bool huffman = (*src & 0x80) != 0;
     if (!read(&len, 7, src, srcLen))

@@ -2,9 +2,9 @@
 #pragma once
 
 #pragma warning(disable : 4100) // unreferenced formal parameter
-#pragma warning(                                                               \
+#pragma warning( \
     disable : 4324) // structure was padded due to alignment specifier
-#pragma warning(                                                               \
+#pragma warning( \
     disable : 4456) // declaration of 'elem' hides previous local declaration
 #pragma warning(disable : 5030) // attribute 'identifier' is not recognized
 

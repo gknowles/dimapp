@@ -16,7 +16,7 @@ namespace Dim {
 ***/
 
 //===========================================================================
-bool parse(Address *out, const char src[]) {
+bool parse(Address * out, const char src[]) {
     Endpoint sa;
     if (!parse(&sa, src, 9)) {
         *out = {};
@@ -27,7 +27,7 @@ bool parse(Address *out, const char src[]) {
 }
 
 //===========================================================================
-std::ostream &operator<<(std::ostream &os, const Address &addr) {
+std::ostream & operator<<(std::ostream & os, const Address & addr) {
     Endpoint sa;
     sa.addr = addr;
     return operator<<(os, sa);
@@ -41,7 +41,7 @@ std::ostream &operator<<(std::ostream &os, const Address &addr) {
 ***/
 
 //===========================================================================
-bool parse(Endpoint *end, const char src[], int defaultPort) {
+bool parse(Endpoint * end, const char src[], int defaultPort) {
     sockaddr_storage sas;
     int sasLen = sizeof(sas);
     if (SOCKET_ERROR ==
@@ -57,7 +57,7 @@ bool parse(Endpoint *end, const char src[], int defaultPort) {
 }
 
 //===========================================================================
-std::ostream &operator<<(std::ostream &os, const Endpoint &src) {
+std::ostream & operator<<(std::ostream & os, const Endpoint & src) {
     sockaddr_storage sas;
     copy(&sas, src);
     char tmp[256];
@@ -79,7 +79,7 @@ std::ostream &operator<<(std::ostream &os, const Endpoint &src) {
 ***/
 
 //===========================================================================
-void copy(sockaddr_storage *out, const Endpoint &src) {
+void copy(sockaddr_storage * out, const Endpoint & src) {
     *out = {};
     auto ia = reinterpret_cast<sockaddr_in *>(out);
     ia->sin_family = AF_INET;
@@ -88,7 +88,7 @@ void copy(sockaddr_storage *out, const Endpoint &src) {
 }
 
 //===========================================================================
-void copy(Endpoint *out, const sockaddr_storage &storage) {
+void copy(Endpoint * out, const sockaddr_storage & storage) {
     *out = {};
     auto ia = reinterpret_cast<const sockaddr_in &>(storage);
     assert(ia.sin_family == AF_INET);
@@ -106,8 +106,8 @@ void copy(Endpoint *out, const sockaddr_storage &storage) {
 namespace {
 struct QueryTask : ITaskNotify {
     WinOverlappedEvent evt{};
-    ADDRINFOEXW *results{nullptr};
-    IEndpointNotify *notify{nullptr};
+    ADDRINFOEXW * results{nullptr};
+    IEndpointNotify * notify{nullptr};
     HANDLE cancel{nullptr};
     int id;
 
@@ -128,12 +128,12 @@ static unordered_map<int, QueryTask> s_tasks;
 // Callback
 //===========================================================================
 static void CALLBACK
-addressQueryCallback(DWORD error, DWORD bytes, OVERLAPPED *overlapped) {
-    QueryTask *task =
+addressQueryCallback(DWORD error, DWORD bytes, OVERLAPPED * overlapped) {
+    QueryTask * task =
         static_cast<QueryTask *>(((WinOverlappedEvent *)overlapped)->notify);
     task->err = error;
     if (task->results) {
-        ADDRINFOEXW *result = task->results;
+        ADDRINFOEXW * result = task->results;
         while (result) {
             if (result->ai_family == AF_INET) {
                 Endpoint end;
@@ -164,11 +164,11 @@ void QueryTask::onTask() {
 // Public API
 //===========================================================================
 void endpointQuery(
-    int *cancelId,
-    IEndpointNotify *notify,
-    const std::string &name,
+    int * cancelId,
+    IEndpointNotify * notify,
+    const std::string & name,
     int defaultPort) {
-    QueryTask *task{nullptr};
+    QueryTask * task{nullptr};
     for (;;) {
         *cancelId = ++s_lastCancelId;
         auto ib = s_tasks.try_emplace(*cancelId);
@@ -232,9 +232,9 @@ void endpointCancelQuery(int cancelId) {
 }
 
 //===========================================================================
-void addressGetLocal(std::vector<Address> *out) {
+void addressGetLocal(std::vector<Address> * out) {
     out->resize(0);
-    ADDRINFO *result;
+    ADDRINFO * result;
     WinError err = getaddrinfo(
         "..localmachine",
         NULL, // service name

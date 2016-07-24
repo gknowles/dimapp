@@ -30,7 +30,7 @@ Clock::time_point Clock::now() noexcept {
 
 //===========================================================================
 // static
-time_t Clock::to_time_t(const time_point &time) noexcept {
+time_t Clock::to_time_t(const time_point & time) noexcept {
     return ((time_t)(time.time_since_epoch().count() / kClockTicksPerTimeT));
 }
 
