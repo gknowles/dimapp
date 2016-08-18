@@ -14,9 +14,9 @@ using namespace Dim;
 static unsigned s_nextElemId;
 
 //===========================================================================
-static void getLineRules(set<Element> &rules) {
+static void getLineRules(set<Element> & rules) {
     // line = OWS *1(param-list) OWS
-    auto *rule = addSequenceRule(rules, "line", 1, 1);
+    auto * rule = addSequenceRule(rules, "line", 1, 1);
     addRule(rule, "ows", 1, 1);
     addRule(rule, "param-list", 0, 1);
     addRule(rule, "ows", 1, 1);
@@ -24,7 +24,7 @@ static void getLineRules(set<Element> &rules) {
     // param-list = param *(ws param)
     rule = addSequenceRule(rules, "param-list", 1, 1);
     addRule(rule, "param", 1, 1);
-    auto *elem = addSequence(rule, 0, kUnlimited);
+    auto * elem = addSequence(rule, 0, kUnlimited);
     addRule(elem, "ws", 1, 1);
     addRule(elem, "param", 1, 1);
 
@@ -48,9 +48,9 @@ static void getLineRules(set<Element> &rules) {
 }
 
 //===========================================================================
-static void getTestRules(set<Element> &rules) {
-    Element *rule;
-    Element *elem;
+static void getTestRules(set<Element> & rules) {
+    Element * rule;
+    Element * elem;
     rule = addChoiceRule(rules, "left-recurse", 1, 1);
     elem = addSequence(rule, 1, 1);
     addRule(elem, "left-recurse", 1, 1);
@@ -69,8 +69,8 @@ static void getTestRules(set<Element> &rules) {
 }
 
 //===========================================================================
-static void getCoreRules(set<Element> &rules) {
-    Element *rule;
+static void getCoreRules(set<Element> & rules) {
+    Element * rule;
 
     // ALPHA          =  %x41-5A / %x61-7A   ; A-Z / a-z
     rule = addChoiceRule(rules, "ALPHA", 1, 1);
@@ -80,7 +80,7 @@ static void getCoreRules(set<Element> &rules) {
     // BIT            =  "0" / "1"
     rule = addChoiceRule(rules, "BIT", 1, 1);
     addLiteral(rule, "0", 1, 1);
-    addLiteral(rule, "1", 1, 1);
+    //addLiteral(rule, "1", 1, 1);
 
     // CHAR           =  %x01-7F
 
@@ -146,10 +146,10 @@ static void getCoreRules(set<Element> &rules) {
 }
 
 //===========================================================================
-static void getAbnfRules(set<Element> &rules) {
-    Element *rule;
-    Element *elem;
-    Element *elem2;
+static void getAbnfRules(set<Element> & rules) {
+    Element * rule;
+    Element * elem;
+    Element * elem2;
 
     // definitions taken from rfc5234
 
@@ -169,7 +169,7 @@ static void getAbnfRules(set<Element> &rules) {
     addRule(rule, "c-nl", 1, 1);
 
     // rulename       =  ALPHA *(ALPHA / DIGIT / "-")
-    rule = addSequenceRule(rules, "rulename", 1, 1);
+    rule = addSequenceRule(rules, "rulename", 1, 1, Element::kOnEnd);
     addRule(rule, "ALPHA", 1, 1);
     elem = addChoice(rule, 0, kUnlimited);
     addRule(elem, "ALPHA", 1, 1);
@@ -213,7 +213,8 @@ static void getAbnfRules(set<Element> &rules) {
     addRule(rule, "NEWLINE", 1, 1);
 
     // alternation    =  concatenation *(*c-wsp "/" *c-wsp concatenation)
-    rule = addSequenceRule(rules, "alternation", 1, 1, true);
+    rule = addSequenceRule(
+        rules, "alternation", 1, 1, Element::kOnStart | Element::kOnEnd);
     addRule(rule, "concatenation", 1, 1);
     elem = addSequence(rule, 0, kUnlimited);
     addRule(elem, "c-wsp", 0, kUnlimited);
@@ -222,7 +223,8 @@ static void getAbnfRules(set<Element> &rules) {
     addRule(elem, "concatenation", 1, 1);
 
     // concatenation  =  repetition *(1*c-wsp repetition)
-    rule = addSequenceRule(rules, "concatenation", 1, 1);
+    rule = addSequenceRule(
+        rules, "concatenation", 1, 1, Element::kOnStart | Element::kOnEnd);
     addRule(rule, "repetition", 1, 1);
     elem = addSequence(rule, 0, kUnlimited);
     addRule(elem, "c-wsp", 1, kUnlimited);
@@ -233,13 +235,24 @@ static void getAbnfRules(set<Element> &rules) {
     addRule(rule, "repeat", 0, 1);
     addRule(rule, "element", 1, 1);
 
-    // repeat         =  1*DIGIT / (*DIGIT "*" *DIGIT)
+    // repeat         =  repeat-minmax / repeat-range
     rule = addChoiceRule(rules, "repeat", 1, 1);
+    addRule(rule, "repeat-minmax", 1, 1);
+    addRule(rule, "repeat-range", 1, 1);
+    // repeat-minmax = repeat-min
+    rule = addChoiceRule(rules, "repeat-minmax", 1, 1, Element::kOnEnd);
+    addRule(rule, "repeat-min", 1, 1);
+    // repeat-range = [repeat-min] * [repeat-max]
+    rule = addSequenceRule(rules, "repeat-range", 1, 1, Element::kOnEnd);
+    addRule(rule, "repeat-min", 0, 1);
+    addLiteral(rule, "*", 1, 1);
+    addRule(rule, "repeat-max", 0, 1);
+    // repeat-min = 1*DIGIT
+    rule = addChoiceRule(rules, "repeat-min", 1, 1, Element::kOnChar);
     addRule(rule, "DIGIT", 1, kUnlimited);
-    elem = addSequence(rule, 1, 1);
-    addRule(elem, "DIGIT", 0, kUnlimited);
-    addLiteral(elem, "*", 1, 1);
-    addRule(elem, "DIGIT", 0, kUnlimited);
+    // repeat-max = 1*DIGIT
+    rule = addChoiceRule(rules, "repeat-max", 1, 1, Element::kOnChar);
+    addRule(rule, "DIGIT", 1, kUnlimited);
 
     // element        =  rulename / group / option / char-val / num-val
     rule = addChoiceRule(rules, "element", 1, 1);
@@ -250,7 +263,8 @@ static void getAbnfRules(set<Element> &rules) {
     addRule(rule, "num-val", 1, 1);
 
     // group          =  "(" *c-wsp alternation *c-wsp ")"
-    rule = addSequenceRule(rules, "group", 1, 1);
+    rule = addSequenceRule(
+        rules, "group", 1, 1, Element::kOnStart | Element::kOnEnd);
     addLiteral(rule, "(", 1, 1);
     addRule(rule, "c-wsp", 0, kUnlimited);
     addRule(rule, "alternation", 1, 1);
@@ -258,20 +272,24 @@ static void getAbnfRules(set<Element> &rules) {
     addLiteral(rule, ")", 1, 1);
 
     // option         =  "[" *c-wsp alternation *c-wsp "]"
-    rule = addSequenceRule(rules, "option", 1, 1);
+    rule = addSequenceRule(
+        rules, "option", 1, 1, Element::kOnStart | Element::kOnEnd);
     addLiteral(rule, "[", 1, 1);
     addRule(rule, "c-wsp", 0, kUnlimited);
     addRule(rule, "alternation", 1, 1);
     addRule(rule, "c-wsp", 0, kUnlimited);
     addLiteral(rule, "]", 1, 1);
 
-    // char-val       =  DQUOTE *(%x20-21 / %x23-7E) DQUOTE
+    // char-val       =  DQUOTE char-val-sequence DQUOTE
     rule = addSequenceRule(rules, "char-val", 1, 1);
     addRule(rule, "DQUOTE", 1, 1);
-    elem = addChoice(rule, 0, kUnlimited);
-    addRange(elem, 0x20, 0x21);
-    addRange(elem, 0x23, 0x7e);
+    addRule(rule, "char-val-sequence", 1, 1);
     addRule(rule, "DQUOTE", 1, 1);
+    // char-val-sequence = *(%x20-21 / %x23-7E)
+    rule = addChoiceRule(
+        rules, "char-val-sequence", 0, kUnlimited, Element::kOnEnd);
+    addRange(rule, 0x20, 0x21);
+    addRange(rule, 0x23, 0x7e);
 
     // num-val        =  "%" (bin-val / dec-val / hex-val)
     rule = addSequenceRule(rules, "num-val", 1, 1);
@@ -281,58 +299,114 @@ static void getAbnfRules(set<Element> &rules) {
     addRule(elem, "dec-val", 1, 1);
     addRule(elem, "hex-val", 1, 1);
 
-    // bin-val        =  "b" 1*BIT
-    //                 [ 1*("." 1*BIT) / ("-" 1*BIT) ]
-
     // bin-val = "b" (bin-val-simple / bin-val-concatenation
     //      / bin-val-alterntation)
-    // bin-val-simple = 1*BIT
-    // bin-val-concatenation = bin-val-simple 1*("." bin-val-simple)
-    // bin-val-alternation = bin-val-simple "-" bin-val-simple
-
     rule = addSequenceRule(rules, "bin-val", 1, 1);
     addLiteral(rule, "b", 1, 1);
+    elem = addChoice(rule, 1, 1);
+    addRule(elem, "bin-val-simple", 1, 1);
+//    addRule(elem, "bin-val-concatenation", 1, 1);
+//    addRule(elem, "bin-val-alternation", 1, 1);
+    // bin-val-simple = bin-val-base
+    rule = addSequenceRule(rules, "bin-val-simple", 1, 1, Element::kOnEnd);
+    addRule(rule, "bin-val-base", 1, 1);
+    // bin-val-base = 1*BIT
+    rule = addSequenceRule(rules, "bin-val-base", 1, 1, Element::kOnChar);
     addRule(rule, "BIT", 1, kUnlimited);
-    elem = addChoice(rule, 0, 1);
-    elem2 = addSequence(elem, 1, kUnlimited);
-    addLiteral(elem2, ".", 1, 1);
-    addRule(elem2, "BIT", 1, kUnlimited);
-    elem2 = addSequence(elem, 1, 1);
-    addLiteral(elem2, "-", 1, 1);
-    addRule(elem2, "BIT", 1, kUnlimited);
+    // bin-val-concatenation = bin-val-base 1*("." bin-val-base)
+    rule = addSequenceRule(
+        rules,
+        "bin-val-concatenation",
+        1,
+        1,
+        Element::kOnStart | Element::kOnEnd);
+    addRule(rule, "bin-val-base", 1, 1);
+    elem = addSequence(rule, 1, kUnlimited);
+    addLiteral(elem, ".", 1, 1);
+    addRule(elem, "bin-val-base", 1, 1);
+    // bin-val-alternation = bin-val-base "-" bin-val-base
+    rule = addSequenceRule(
+        rules,
+        "bin-val-alternation",
+        1,
+        1,
+        Element::kOnStart | Element::kOnEnd);
+    addRule(rule, "bin-val-base", 1, 1);
+    addLiteral(rule, "-", 1, 1);
+    addRule(rule, "bin-val-base", 1, 1);
 
-    // dec-val        =  "d" 1*DIGIT
-    //                 [ 1*("." 1*DIGIT) / ("-" 1*DIGIT) ]
+    // dec-val = "d" (dec-val-simple / dec-val-concatenation
+    //      / dec-val-alterntation)
     rule = addSequenceRule(rules, "dec-val", 1, 1);
     addLiteral(rule, "d", 1, 1);
+    elem = addChoice(rule, 1, 1);
+    addRule(elem, "dec-val-simple", 1, 1);
+    addRule(elem, "dec-val-concatenation", 1, 1);
+    addRule(elem, "dec-val-alternation", 1, 1);
+    // dec-val-simple = 1*DIGIT
+    rule = addSequenceRule(rules, "dec-val-simple", 1, 1, Element::kOnChar);
     addRule(rule, "DIGIT", 1, kUnlimited);
-    elem = addChoice(rule, 0, 1);
-    elem2 = addSequence(elem, 1, kUnlimited);
-    addLiteral(elem2, ".", 1, 1);
-    addRule(elem2, "DIGIT", 1, kUnlimited);
-    elem2 = addSequence(elem, 1, 1);
-    addLiteral(elem2, "-", 1, 1);
-    addRule(elem2, "DIGIT", 1, kUnlimited);
+    // dec-val-concatenation = dec-val-simple 1*("." dec-val-simple)
+    rule = addSequenceRule(
+        rules,
+        "dec-val-concatenation",
+        1,
+        1,
+        Element::kOnStart | Element::kOnEnd);
+    addRule(rule, "dec-val-simple", 1, 1);
+    elem = addSequence(rule, 1, kUnlimited);
+    addLiteral(elem, ".", 1, 1);
+    addRule(elem, "dec-val-simple", 1, 1);
+    // dec-val-alternation = dec-val-simple "-" dec-val-simple
+    rule = addSequenceRule(
+        rules,
+        "dec-val-alternation",
+        1,
+        1,
+        Element::kOnStart | Element::kOnEnd);
+    addRule(rule, "dec-val-simple", 1, 1);
+    addLiteral(rule, "-", 1, 1);
+    addRule(rule, "dec-val-simple", 1, 1);
 
-    // hex-val        =  "x" 1*HEXDIG
-    //                 [ 1*("." 1*HEXDIG) / ("-" 1*HEXDIG) ]
+    // hex-val = "x" (hex-val-simple / hex-val-concatenation
+    //      / hex-val-alterntation)
     rule = addSequenceRule(rules, "hex-val", 1, 1);
     addLiteral(rule, "x", 1, 1);
+    elem = addChoice(rule, 1, 1);
+    addRule(elem, "hex-val-simple", 1, 1);
+    addRule(elem, "hex-val-concatenation", 1, 1);
+    addRule(elem, "hex-val-alternation", 1, 1);
+    // hex-val-simple = 1*HEXDIG
+    rule = addSequenceRule(rules, "hex-val-simple", 1, 1, Element::kOnChar);
     addRule(rule, "HEXDIG", 1, kUnlimited);
-    elem = addChoice(rule, 0, 1);
-    elem2 = addSequence(elem, 1, kUnlimited);
-    addLiteral(elem2, ".", 1, 1);
-    addRule(elem2, "HEXDIG", 1, kUnlimited);
-    elem2 = addSequence(elem, 1, 1);
-    addLiteral(elem2, "-", 1, 1);
-    addRule(elem2, "HEXDIG", 1, kUnlimited);
+    // hex-val-concatenation = hex-val-simple 1*("." hex-val-simple)
+    rule = addSequenceRule(
+        rules,
+        "hex-val-concatenation",
+        1,
+        1,
+        Element::kOnStart | Element::kOnEnd);
+    addRule(rule, "hex-val-simple", 1, 1);
+    elem = addSequence(rule, 1, kUnlimited);
+    addLiteral(elem, ".", 1, 1);
+    addRule(elem, "hex-val-simple", 1, 1);
+    // hex-val-alternation = hex-val-simple "-" hex-val-simple
+    rule = addSequenceRule(
+        rules,
+        "hex-val-alternation",
+        1,
+        1,
+        Element::kOnStart | Element::kOnEnd);
+    addRule(rule, "hex-val-simple", 1, 1);
+    addLiteral(rule, "-", 1, 1);
+    addRule(rule, "hex-val-simple", 1, 1);
 }
 
 //===========================================================================
-static Element *addElement(Element *rule, unsigned m, unsigned n) {
+static Element * addElement(Element * rule, unsigned m, unsigned n) {
     rule->elements.resize(rule->elements.size() + 1);
     // rule->elements.emplace_back();
-    Element *e = &rule->elements.back();
+    Element * e = &rule->elements.back();
     e->id = ++s_nextElemId;
     e->m = m;
     e->n = n;
@@ -348,20 +422,18 @@ static Element *addElement(Element *rule, unsigned m, unsigned n) {
 namespace {
 class Application : public ITaskNotify {
     int m_argc;
-    char **m_argv;
+    char ** m_argv;
 
   public:
-    Application(int argc, char *argv[]);
+    Application(int argc, char * argv[]);
     void onTask() override;
 };
 } // namespace
 
 //===========================================================================
-Application::Application(int argc, char *argv[])
+Application::Application(int argc, char * argv[])
     : m_argc(argc)
     , m_argv(argv) {}
-
-bool abnfCheckSyntax(const char src[]);
 
 //===========================================================================
 void Application::onTask() {
@@ -382,13 +454,13 @@ void Application::onTask() {
     TimePoint start = Clock::now();
     ofstream oh("abnfsyntax.h");
     ofstream ocpp("abnfsyntax.cpp");
-    writeParser(oh, ocpp, rules, "rulelist");
+    writeParser(oh, ocpp, rules, "bin-val");
     TimePoint finish = Clock::now();
     std::chrono::duration<double> elapsed = finish - start;
     cout << "Elapsed time: " << elapsed.count() << " seconds" << endl;
 
     ostringstream abnf;
-    for (auto &&rule : rules) {
+    for (auto && rule : rules) {
         abnf << rule.name << " = " << rule << '\n';
     }
     AbnfParser parser{nullptr};
@@ -405,7 +477,7 @@ void Application::onTask() {
  ***/
 
 //===========================================================================
-int main(int argc, char *argv[]) {
+int main(int argc, char * argv[]) {
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
     _set_error_mode(_OUT_TO_MSGBOX);
 
@@ -415,66 +487,68 @@ int main(int argc, char *argv[]) {
 }
 
 //===========================================================================
-Element *addSequenceRule(
-    set<Element> &rules,
-    const string &name,
+Element * addSequenceRule(
+    set<Element> & rules,
+    const string & name,
     unsigned m,
     unsigned n,
-    bool recurse) {
-    auto e = addChoiceRule(rules, name, m, n, recurse);
+    unsigned flags // Element::kFlag*
+    ) {
+    auto e = addChoiceRule(rules, name, m, n, flags);
     e = addSequence(e, 1, 1);
     return e;
 }
 
 //===========================================================================
-Element *addChoiceRule(
-    set<Element> &rules,
-    const string &name,
+Element * addChoiceRule(
+    set<Element> & rules,
+    const string & name,
     unsigned m,
     unsigned n,
-    bool recurse) {
+    unsigned flags // Element::kFlag*
+    ) {
     Element e;
     e.id = ++s_nextElemId;
     e.name = name;
     e.m = m;
     e.n = n;
     e.type = Element::kChoice;
-    e.recurse = recurse;
+    e.flags = flags;
     auto ib = rules.insert(e);
     assert(ib.second);
     return const_cast<Element *>(&*ib.first);
 }
 
 //===========================================================================
-Element *addSequence(Element *rule, unsigned m, unsigned n) {
+Element * addSequence(Element * rule, unsigned m, unsigned n) {
     auto e = addElement(rule, m, n);
     e->type = Element::kSequence;
     return e;
 }
 
 //===========================================================================
-Element *addChoice(Element *rule, unsigned m, unsigned n) {
+Element * addChoice(Element * rule, unsigned m, unsigned n) {
     auto e = addElement(rule, m, n);
     e->type = Element::kChoice;
     return e;
 }
 
 //===========================================================================
-void addRule(Element *rule, const string &name, unsigned m, unsigned n) {
+void addRule(Element * rule, const string & name, unsigned m, unsigned n) {
     auto e = addElement(rule, m, n);
     e->type = Element::kRule;
     e->value = name;
 }
 
 //===========================================================================
-void addTerminal(Element *rule, unsigned char ch, unsigned m, unsigned n) {
+void addTerminal(Element * rule, unsigned char ch, unsigned m, unsigned n) {
     auto e = addElement(rule, m, n);
     e->type = Element::kTerminal;
     e->value = ch;
 }
 
 //===========================================================================
-void addLiteral(Element *rule, const string &value, unsigned m, unsigned n) {
+void addLiteral(Element * rule, const string & value, unsigned m, unsigned n) {
     auto c = addChoice(rule, m, n);
     for (unsigned char ch : value) {
         addTerminal(c, ch, 1, 1);
@@ -487,7 +561,7 @@ void addLiteral(Element *rule, const string &value, unsigned m, unsigned n) {
 }
 
 //===========================================================================
-void addRange(Element *rule, unsigned char a, unsigned char b) {
+void addRange(Element * rule, unsigned char a, unsigned char b) {
     assert(a <= b);
     for (; a <= b; ++a) {
         addTerminal(rule, a, 1, 1);

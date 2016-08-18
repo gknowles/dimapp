@@ -12,7 +12,7 @@ using namespace Dim;
 *
 ***/
 
-static void hashCombine(size_t &seed, size_t v);
+static void hashCombine(size_t & seed, size_t v);
 
 
 /****************************************************************************
@@ -32,12 +32,16 @@ static unsigned s_transitions;
 ***/
 
 // forward declarations
-static void normalizeSequence(Element &rule);
+static void normalizeSequence(Element & rule);
 static void addPositions(
-    State *st, StatePosition *sp, bool init, const Element &elem, unsigned rep);
+    State * st,
+    StatePosition * sp,
+    bool init,
+    const Element & elem,
+    unsigned rep);
 
 //===========================================================================
-static void hashCombine(size_t &seed, size_t v) {
+static void hashCombine(size_t & seed, size_t v) {
     seed ^= v + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 }
 
@@ -53,7 +57,23 @@ ElementDone ElementDone::s_elem;
 //===========================================================================
 ElementDone::ElementDone() {
     type = Element::kRule;
-    value = kDoneStateName;
+    value = kDoneElement;
+    rule = this;
+}
+
+
+/****************************************************************************
+*
+*   ElementNull
+*
+***/
+
+ElementNull ElementNull::s_elem;
+
+//===========================================================================
+ElementNull::ElementNull() {
+    type = Element::kTerminal;
+    value = '\0';
 }
 
 
@@ -65,43 +85,47 @@ ElementDone::ElementDone() {
 
 namespace std {
 //===========================================================================
-size_t hash<StateElement>::operator()(const StateElement &val) const {
+size_t hash<StateElement>::operator()(const StateElement & val) const {
     size_t out = val.elem->id;
     hashCombine(out, val.rep);
+    hashCombine(out, val.started);
     return out;
 }
 } // namespace std
 
 //===========================================================================
-int StateElement::compare(const StateElement &right) const {
+int StateElement::compare(const StateElement & right) const {
     if (int rc = (int)(elem->id - right.elem->id))
         return rc;
-    int rc = rep - right.rep;
-    return rc;
+    if (int rc = rep - right.rep)
+        return rc;
+    if (int rc = started - right.started)
+        return rc;
+    return 0;
 }
 
 //===========================================================================
-bool StateElement::operator<(const StateElement &right) const {
+bool StateElement::operator<(const StateElement & right) const {
     return compare(right) < 0;
 }
 
 //===========================================================================
-bool StateElement::operator==(const StateElement &right) const {
+bool StateElement::operator==(const StateElement & right) const {
     return compare(right) == 0;
 }
 
 
 /****************************************************************************
 *
-*   StateElement
+*   StatePosition
 *
 ***/
 
 namespace std {
 //===========================================================================
-size_t hash<StatePosition>::operator()(const StatePosition &val) const {
+size_t hash<StatePosition>::operator()(const StatePosition & val) const {
     size_t out = 0;
-    for (auto &&se : val.elems) {
+    for (auto && se : val.elems) {
         hashCombine(out, hash<StateElement>{}(se));
     }
     return out;
@@ -109,29 +133,66 @@ size_t hash<StatePosition>::operator()(const StatePosition &val) const {
 } // namespace std
 
 //===========================================================================
-bool StatePosition::operator<(const StatePosition &right) const {
+bool StatePosition::operator<(const StatePosition & right) const {
     return recurse < right.recurse ||
            recurse == right.recurse && elems < right.elems;
 }
 
 //===========================================================================
-bool StatePosition::operator==(const StatePosition &right) const {
+bool StatePosition::operator==(const StatePosition & right) const {
     return elems == right.elems && recurse == right.recurse;
 }
 
 
 /****************************************************************************
 *
-*   StateElement
+*   StateEvent
 *
 ***/
 
 namespace std {
 //===========================================================================
-size_t hash<State>::operator()(const State &val) const {
+size_t hash<StateEvent>::operator()(const StateEvent & val) const {
+    size_t out = val.elem->id;
+    hashCombine(out, val.flags);
+    return out;
+}
+} // namespace std
+
+//===========================================================================
+int StateEvent::compare(const StateEvent & right) const {
+    if (int rc = (int)(elem->id - right.elem->id))
+        return rc;
+    int rc = flags - right.flags;
+    return rc;
+}
+
+//===========================================================================
+bool StateEvent::operator<(const StateEvent & right) const {
+    return compare(right) < 0;
+}
+
+//===========================================================================
+bool StateEvent::operator==(const StateEvent & right) const {
+    return compare(right) == 0;
+}
+
+
+/****************************************************************************
+*
+*   State
+*
+***/
+
+namespace std {
+//===========================================================================
+size_t hash<State>::operator()(const State & val) const {
     size_t out = 0;
-    for (auto &&sp : val.positions) {
+    for (auto && sp : val.positions) {
         hashCombine(out, hash<StatePosition>{}(sp));
+    }
+    for (auto && se : val.events) {
+        hashCombine(out, hash<StateEvent>{}(se));
     }
     return out;
 }
@@ -142,15 +203,12 @@ void State::clear() {
     id = 0;
     positions.clear();
     next.clear();
+    events.clear();
 }
 
 //===========================================================================
-bool State::operator==(const State &right) const {
-    return equal(
-        positions.begin(),
-        positions.end(),
-        right.positions.begin(),
-        right.positions.end());
+bool State::operator==(const State & right) const {
+    return positions == right.positions && events == right.events;
 }
 
 
@@ -162,11 +220,11 @@ bool State::operator==(const State &right) const {
 
 //===========================================================================
 static void copyRequiredDeps(
-    set<Element> &rules, const set<Element> &src, const Element &root) {
+    set<Element> & rules, const set<Element> & src, const Element & root) {
     switch (root.type) {
     case Element::kSequence:
     case Element::kChoice:
-        for (auto &&elem : root.elements)
+        for (auto && elem : root.elements)
             copyRequiredDeps(rules, src, elem);
         break;
     case Element::kRule: copyRules(rules, src, root.value, false); break;
@@ -175,9 +233,9 @@ static void copyRequiredDeps(
 
 //===========================================================================
 void copyRules(
-    set<Element> &rules,
-    const set<Element> &src,
-    const string &root,
+    set<Element> & rules,
+    const set<Element> & src,
+    const string & root,
     bool failIfExists) {
     Element key;
     key.name = root;
@@ -204,37 +262,37 @@ void copyRules(
 ***/
 
 //===========================================================================
-static void normalizeChoice(Element &rule) {
+static void normalizeChoice(Element & rule) {
     assert(rule.elements.size() > 1);
     vector<Element> tmp;
-    for (auto &&elem : rule.elements) {
+    for (auto && elem : rule.elements) {
         if (elem.type != Element::kChoice)
             continue;
-        for (auto &&e : elem.elements) {
+        for (auto && e : elem.elements) {
             tmp.push_back(move(e));
-            Element &back = tmp.back();
+            Element & back = tmp.back();
             back.m *= elem.m;
             back.n = max({back.n, elem.n, back.n * elem.n});
         }
         elem = move(tmp.back());
         tmp.pop_back();
     }
-    for (auto &&e : tmp) {
+    for (auto && e : tmp) {
         rule.elements.push_back(move(e));
     }
 }
 
 //===========================================================================
-static void normalizeSequence(Element &rule) {
+static void normalizeSequence(Element & rule) {
     // it's okay to elevate a sub-list if multiplying the ordinals
     // doesn't change them?
     assert(rule.elements.size() > 1);
     for (unsigned i = 0; i < rule.elements.size(); ++i) {
-        Element &elem = rule.elements[i];
+        Element & elem = rule.elements[i];
         if (elem.type != Element::kSequence)
             continue;
         bool skip = false;
-        for (auto &&e : elem.elements) {
+        for (auto && e : elem.elements) {
             if (e.m != elem.m * e.m ||
                 e.n != max({elem.n, e.n, elem.n * e.n})) {
                 skip = true;
@@ -256,16 +314,16 @@ static void normalizeSequence(Element &rule) {
 }
 
 //===========================================================================
-static void normalizeRule(Element &rule, const set<Element> &rules) {
+static void normalizeRule(Element & rule, const set<Element> & rules) {
     Element elem;
     elem.name = rule.value;
     rule.rule = &*rules.find(elem);
 }
 
 //===========================================================================
-static void normalize(Element &rule, const set<Element> &rules) {
+static void normalize(Element & rule, const set<Element> & rules) {
     if (rule.elements.size() == 1) {
-        Element &elem = rule.elements.front();
+        Element & elem = rule.elements.front();
         rule.m *= elem.m;
         rule.n = max({rule.n, elem.n, rule.n * elem.n});
         rule.type = elem.type;
@@ -275,7 +333,7 @@ static void normalize(Element &rule, const set<Element> &rules) {
         return normalize(rule, rules);
     }
 
-    for (auto &&elem : rule.elements)
+    for (auto && elem : rule.elements)
         normalize(elem, rules);
 
     switch (rule.type) {
@@ -286,8 +344,8 @@ static void normalize(Element &rule, const set<Element> &rules) {
 }
 
 //===========================================================================
-void normalize(set<Element> &rules) {
-    for (auto &&rule : rules) {
+void normalize(set<Element> & rules) {
+    for (auto && rule : rules) {
         normalize(const_cast<Element &>(rule), rules);
     }
 }
@@ -295,18 +353,18 @@ void normalize(set<Element> &rules) {
 
 /****************************************************************************
 *
-*   find recursion
+*   mark recursion
 *
 ***/
 
 //===========================================================================
 static void
-findRecursion(set<Element> &rules, Element &rule, vector<bool> &used) {
+markRecursion(set<Element> & rules, Element & rule, vector<bool> & used) {
     switch (rule.type) {
     case Element::kChoice:
     case Element::kSequence:
-        for (auto &&elem : rule.elements) {
-            findRecursion(rules, elem, used);
+        for (auto && elem : rule.elements) {
+            markRecursion(rules, elem, used);
         }
         break;
     case Element::kRule:
@@ -315,20 +373,21 @@ findRecursion(set<Element> &rules, Element &rule, vector<bool> &used) {
         if (rule.rule->recurse)
             return;
         used[rule.rule->id] = true;
-        findRecursion(rules, const_cast<Element &>(*rule.rule), used);
+        markRecursion(rules, const_cast<Element &>(*rule.rule), used);
         used[rule.rule->id] = false;
     }
 }
 
 //===========================================================================
-void findRecursion(set<Element> &rules, Element &rule) {
+void markRecursion(set<Element> & rules, Element & rule, bool reset) {
     size_t maxId = 0;
-    for (auto &&elem : rules) {
-        const_cast<Element &>(elem).recurse = false;
+    for (auto && elem : rules) {
+        if (reset)
+            const_cast<Element &>(elem).recurse = false;
         maxId = max((size_t)elem.id, maxId);
     }
     vector<bool> used(maxId, false);
-    findRecursion(rules, rule, used);
+    markRecursion(rules, rule, used);
 }
 
 
@@ -339,8 +398,8 @@ void findRecursion(set<Element> &rules, Element &rule) {
 ***/
 
 //===========================================================================
-static void addRulePositions(State *st, StatePosition *sp, bool init) {
-    const Element &elem = *sp->elems.back().elem;
+static void addRulePositions(State * st, StatePosition * sp, bool init) {
+    const Element & elem = *sp->elems.back().elem;
 
     // Don't generate states for right recursion when it can be broken with
     // a call. This could also be done for left recursion when the grammar
@@ -353,11 +412,11 @@ static void addRulePositions(State *st, StatePosition *sp, bool init) {
     // check for rule recursion
     size_t depth = sp->elems.size();
     if (depth >= 3) {
-        StateElement *m = sp->elems.data() + depth / 2;
-        StateElement *z = &sp->elems.back();
-        for (StateElement *y = z - 1; y >= m; --y) {
+        StateElement * m = sp->elems.data() + depth / 2;
+        StateElement * z = &sp->elems.back();
+        for (StateElement * y = z - 1; y >= m; --y) {
             if (y->elem == z->elem) {
-                StateElement *x = y - (z - y);
+                StateElement * x = y - (z - y);
                 if (equal(x + 1, y, y + 1, z)) {
                     if (!init) {
                         vector<StateElement> tmp{sp->elems};
@@ -378,10 +437,10 @@ static void addRulePositions(State *st, StatePosition *sp, bool init) {
 
 //===========================================================================
 static void addPositions(
-    State *st,
-    StatePosition *sp,
+    State * st,
+    StatePosition * sp,
     bool init,
-    const Element &rule,
+    const Element & rule,
     unsigned rep) {
     StateElement se;
     se.elem = &rule;
@@ -390,14 +449,14 @@ static void addPositions(
     switch (rule.type) {
     case Element::kChoice:
         // all
-        for (auto &&elem : rule.elements) {
+        for (auto && elem : rule.elements) {
             addPositions(st, sp, true, elem, 0);
         }
         break;
     case Element::kRule: addRulePositions(st, sp, init); break;
     case Element::kSequence:
         // up to first with a minimum
-        for (auto &&elem : rule.elements) {
+        for (auto && elem : rule.elements) {
             addPositions(st, sp, true, elem, 0);
             if (elem.m)
                 goto done;
@@ -414,30 +473,42 @@ done:
 
 //===========================================================================
 static void
-initPositions(State *st, const set<Element> &rules, const string &root) {
+initPositions(State * st, const set<Element> & rules, const string & root) {
     Element key;
     key.name = root;
-    const Element &rule = *rules.find(key);
+    const Element & rule = *rules.find(key);
     st->positions.clear();
     StatePosition sp;
     addPositions(st, &sp, true, rule, 0);
 }
 
 //===========================================================================
-static void addNextPositions(State *st, const StatePosition &sp) {
+static void
+addEvent(State * st, const StateElement & se, Element::Flags flags) {
+    StateEvent sv;
+    sv.elem = se.elem->rule;
+    sv.flags = flags;
+    auto ib = st->events.insert(sv);
+    ib.first->count += 1;
+}
+
+//===========================================================================
+static void addNextPositions(State * st, const StatePosition & sp) {
     if (sp.recurse)
         st->positions.insert(sp);
 
+    bool terminal{false};
+    bool done = sp.elems.front().elem == &ElementDone::s_elem;
     auto it = sp.elems.rbegin();
     auto eit = sp.elems.rend();
     for (; it != eit; ++it) {
-        const StateElement &se = *it;
+        const StateElement & se = *it;
         bool fromRecurse = false;
 
         // advance to next in sequence
         if (se.elem->type == Element::kSequence) {
-            const Element *cur = (it - 1)->elem;
-            const Element *last = &se.elem->elements.back();
+            const Element * cur = (it - 1)->elem;
+            const Element * last = &se.elem->elements.back();
 
             if (cur->type == Element::kRule && cur->rule->recurse)
                 fromRecurse = true;
@@ -455,6 +526,32 @@ static void addNextPositions(State *st, const StatePosition &sp) {
             }
         }
 
+        if (se.elem->type == Element::kRule) {
+            if (se.elem->rule->flags & Element::kOnEnd) {
+                // assert(se.started);
+                addEvent(st, se, Element::kOnEnd);
+            }
+            // when exiting the parser (via a done sentinel) go directly out,
+            // no not pass go, do not honor repititions
+            if (done)
+                continue;
+        }
+
+        if (se.elem->type == Element::kTerminal) {
+            terminal = true;
+            for (auto it2 = it; it2 != eit; ++it2) {
+                if (it2->elem->type == Element::kRule) {
+                    unsigned flags = it2->elem->rule->flags;
+                    if ((flags & Element::kOnStart) && !it2->started) {
+                        addEvent(st, *it2, Element::kOnStart);
+                    }
+                    if (flags & Element::kOnChar) {
+                        addEvent(st, *it2, Element::kOnChar);
+                    }
+                }
+            }
+        }
+
         // repeat and/or advance to next
         unsigned rep = se.rep + 1;
         unsigned m = se.elem->m;
@@ -469,6 +566,12 @@ static void addNextPositions(State *st, const StatePosition &sp) {
             StatePosition nsp;
             nsp.recurse = fromRecurse;
             nsp.elems.assign(sp.elems.begin(), --it.base());
+            if (terminal) {
+                for (auto && se : nsp.elems) {
+                    if (se.elem->type == Element::kRule)
+                        se.started = true;
+                }
+            }
             addPositions(st, &nsp, false, *se.elem, rep);
         }
         // don't advance unless rep >= m
@@ -478,24 +581,37 @@ static void addNextPositions(State *st, const StatePosition &sp) {
         // advance parent
     }
 
+    //-----------------------------------------------------------------------
     // completed parsing
+
     StatePosition nsp;
     StateElement nse;
     nse.elem = &ElementDone::s_elem;
     nse.rep = 0;
     nsp.elems.push_back(nse);
+
+    // add sentinel for the null terminator if it wasn't already encountered
+    if (!done) {
+        for (auto && se : sp.elems) {
+            if (se.elem->type == Element::kRule) 
+                nsp.elems.push_back(se);
+        }
+        nse.elem = &ElementNull::s_elem;
+        nse.rep = 0;
+        nsp.elems.push_back(nse);
+    }
     st->positions.insert(nsp);
 }
 
 //===========================================================================
 static void
-buildStateTree(State *st, string *path, unordered_set<State> &states) {
+buildStateTree(State * st, string * path, unordered_set<State> & states) {
     st->next.assign(257, 0);
     State next;
     for (unsigned i = 0; i < 257; ++i) {
         next.clear();
-        for (auto &&sp : st->positions) {
-            auto &se = sp.elems.back();
+        for (auto && sp : st->positions) {
+            auto & se = sp.elems.back();
             if (se.elem->type == Element::kTerminal) {
                 if ((unsigned char)se.elem->value.front() == i)
                     addNextPositions(&next, sp);
@@ -516,8 +632,9 @@ buildStateTree(State *st, string *path, unordered_set<State> &states) {
         }
         if (next.positions.size()) {
             auto ib = states.insert(move(next));
-            State *st2 = const_cast<State *>(&*ib.first);
+            State * st2 = const_cast<State *>(&*ib.first);
 
+            size_t pathLen = path->size();
             if (i <= ' ' || i == 256) {
                 path->push_back('\\');
                 switch (i) {
@@ -536,7 +653,7 @@ buildStateTree(State *st, string *path, unordered_set<State> &states) {
             if (ib.second) {
                 st2->id = ++s_nextStateId;
                 st2->name = *path;
-                const char *show = path->data();
+                const char * show = path->data();
                 if (path->size() > 40) {
                     show += path->size() - 40;
                 }
@@ -545,9 +662,7 @@ buildStateTree(State *st, string *path, unordered_set<State> &states) {
                              << "(" << path->size() << " chars) ..." << show;
                 buildStateTree(st2, path, states);
             }
-            path->pop_back();
-            if (i <= ' ' || i == 256)
-                path->pop_back();
+            path->resize(pathLen);
 
             st->next[i] = st2->id;
         }
@@ -560,9 +675,9 @@ buildStateTree(State *st, string *path, unordered_set<State> &states) {
 
 //===========================================================================
 void buildStateTree(
-    unordered_set<State> *states,
-    const set<Element> &rules,
-    const string &root,
+    unordered_set<State> * states,
+    const set<Element> & rules,
+    const string & root,
     bool inclDeps) {
     logMsgInfo() << "rule: " << root;
 
@@ -571,7 +686,7 @@ void buildStateTree(
     s_nextStateId = 0;
     s_transitions = 0;
     state.id = ++s_nextStateId;
-    state.name = kDoneStateName;
+    state.name = kDoneElement;
     StatePosition nsp;
     StateElement nse;
     nse.elem = &ElementDone::s_elem;

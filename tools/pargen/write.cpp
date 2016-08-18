@@ -13,7 +13,7 @@ using namespace Dim;
 ***/
 
 //===========================================================================
-ostream &operator<<(ostream &os, const Element &elem) {
+ostream & operator<<(ostream & os, const Element & elem) {
     if (elem.m != 1 || elem.n != 1) {
         if (elem.m)
             os << elem.m;
@@ -25,7 +25,7 @@ ostream &operator<<(ostream &os, const Element &elem) {
     switch (elem.type) {
     case Element::kChoice:
         os << "( ";
-        for (auto &&e : elem.elements) {
+        for (auto && e : elem.elements) {
             if (first) {
                 first = false;
             } else {
@@ -38,7 +38,7 @@ ostream &operator<<(ostream &os, const Element &elem) {
     case Element::kRule: os << elem.value; break;
     case Element::kSequence:
         os << "( ";
-        for (auto &&e : elem.elements) {
+        for (auto && e : elem.elements) {
             if (first) {
                 first = false;
             } else {
@@ -56,8 +56,8 @@ ostream &operator<<(ostream &os, const Element &elem) {
 }
 
 //===========================================================================
-ostream &operator<<(ostream &os, const set<Element> &rules) {
-    for (auto &&rule : rules) {
+ostream & operator<<(ostream & os, const set<Element> & rules) {
+    for (auto && rule : rules) {
         os << "*   " << rule.name;
         if (rule.recurse)
             os << '*';
@@ -67,18 +67,20 @@ ostream &operator<<(ostream &os, const set<Element> &rules) {
 }
 
 //===========================================================================
-ostream &operator<<(ostream &os, const StateElement &se) {
+ostream & operator<<(ostream & os, const StateElement & se) {
     os << *se.elem << '.' << se.rep;
+    if (se.started)
+        os << '+';
     return os;
 }
 
 //===========================================================================
-ostream &operator<<(ostream &os, const StatePosition &sp) {
+ostream & operator<<(ostream & os, const StatePosition & sp) {
     os << "sp";
     if (sp.recurse)
         os << '*';
     os << ':';
-    for (auto &&se : sp.elems) {
+    for (auto && se : sp.elems) {
         os << "\n  " << se;
     }
     os << "\n";
@@ -90,18 +92,18 @@ ostream &operator<<(ostream &os, const StatePosition &sp) {
 // replace spaces, with NL followed by the prefix, if waiting until the next
 //   space would go past the maxWidth
 static void writeWordwrap(
-    ostream &os,
-    size_t &indent,
-    const string &str,
+    ostream & os,
+    size_t & indent,
+    const string & str,
     size_t maxWidth,
-    const string &prefix) {
-    const char *base = str.c_str();
+    const string & prefix) {
+    const char * base = str.c_str();
     for (;;) {
         while (*base == ' ')
             base += 1;
         if (!*base)
             return;
-        const char *ptr = strchr(base, ' ');
+        const char * ptr = strchr(base, ' ');
         if (!ptr) {
             ptr = str.c_str() + str.size();
             while (ptr >= base && ptr[-1] == ' ')
@@ -126,7 +128,10 @@ static void writeWordwrap(
 
 //===========================================================================
 static void writeRule(
-    ostream &os, const Element &rule, size_t maxWidth, const string &prefix) {
+    ostream & os,
+    const Element & rule,
+    size_t maxWidth,
+    const string & prefix) {
     streampos pos = os.tellp();
     os << prefix << rule.name;
     if (rule.recurse)
@@ -141,8 +146,8 @@ static void writeRule(
 }
 
 //===========================================================================
-static void writeRuleName(ostream &os, const string &name, bool capitalize) {
-    for (auto &&ch : name) {
+static void writeRuleName(ostream & os, const string & name, bool capitalize) {
+    for (auto && ch : name) {
         if (ch == '-') {
             capitalize = true;
         } else {
@@ -153,7 +158,7 @@ static void writeRuleName(ostream &os, const string &name, bool capitalize) {
 }
 
 //===========================================================================
-static bool writeSwitchCase(ostream &os, const State &st) {
+static bool writeSwitchCase(ostream & os, const State & st) {
     struct NextState {
         unsigned char ch;
         unsigned state;
@@ -169,14 +174,14 @@ static bool writeSwitchCase(ostream &os, const State &st) {
     sort(
         cases.begin(),
         cases.end(),
-        [](const NextState &e1, const NextState &e2) {
+        [](const NextState & e1, const NextState & e2) {
             return 256 * e1.state + e1.ch < 256 * e2.state + e2.ch;
         });
     const unsigned kCaseColumns = 6;
     os << "    switch (*ptr++) {\n";
     unsigned prev = cases.front().state;
     unsigned pos = 0;
-    for (auto &&ns : cases) {
+    for (auto && ns : cases) {
         if (ns.state != prev) {
             if (pos % kCaseColumns != 0)
                 os << '\n';
@@ -212,18 +217,18 @@ static bool writeSwitchCase(ostream &os, const State &st) {
 
 //===========================================================================
 static void writeParserState(
-    ostream &os,
-    const State &st,
-    const Element *root,
+    ostream & os,
+    const State & st,
+    const Element * root,
     bool inclStatePositions) {
     os << "\nstate" << st.id << ": // " << st.name << "\n";
     if (inclStatePositions) {
-        for (auto &&sp : st.positions) {
+        for (auto && sp : st.positions) {
             os << sp << '\n';
         }
     }
 
-    if (st.name == kDoneStateName) {
+    if (st.name == kDoneElement) {
         os << "    return true;\n";
         return;
     }
@@ -231,16 +236,28 @@ static void writeParserState(
     if (st.next[0] && root) {
         os << "    last = ptr;\n";
     }
+    for (auto && sv : st.events) {
+        os << "    notify->On";
+        writeRuleName(os, sv.elem->name, true);
+        switch (sv.flags) {
+        case Element::kOnChar: os << "Char(ptr[-1])"; break;
+        case Element::kOnEnd: os << "End(ptr)"; break;
+        case Element::kOnStart: os << "Start(ptr)"; break;
+        }
+        os << ";\n";
+    }
     // write switch case
     bool hasSwitch = writeSwitchCase(os, st);
 
     // write calls to recursive states
     bool hasCalls = false;
-    for (auto &&sp : st.positions) {
-        const Element *elem = sp.elems.back().elem;
-        if (elem->type != Element::kTerminal && elem != &ElementDone::s_elem) {
+    for (auto && sp : st.positions) {
+        const Element * elem = sp.elems.back().elem;
+        if (elem->type != Element::kTerminal 
+            && elem != &ElementDone::s_elem) {
             hasCalls = true;
-            assert(elem->type == Element::kRule && elem->rule->recurse);
+            assert(elem->type == Element::kRule);
+            assert(elem->rule->recurse);
             os << "    if (state";
             writeRuleName(os, elem->rule->name, true);
             os << "(";
@@ -256,7 +273,7 @@ static void writeParserState(
 }
 
 //===========================================================================
-static void writeCppfileStart(ostream &os, const set<Element> &rules) {
+static void writeCppfileStart(ostream & os, const set<Element> & rules) {
     os << 1 + R"(
 // abnfsyntax.cpp - pargen
 // clang-format off
@@ -268,11 +285,10 @@ static void writeCppfileStart(ostream &os, const set<Element> &rules) {
 *
 *   AbnfParser
 *
-*   Normalized ABNF of syntax being checked (recursive rules are marked 
-*       with asterisks):
+*   Normalized ABNF of syntax (recursive rules are marked with asterisks):
 )";
 
-    for (auto &&elem : rules) {
+    for (auto && elem : rules) {
         writeRule(os, elem, 79, "*   ");
     }
 
@@ -284,10 +300,10 @@ static void writeCppfileStart(ostream &os, const set<Element> &rules) {
 
 //===========================================================================
 static void writeFunction(
-    ostream &os,
-    const Element *root,
-    const set<Element> &rules,
-    const unordered_set<State> &stateSet,
+    ostream & os,
+    const Element * root,
+    const set<Element> & rules,
+    const unordered_set<State> & stateSet,
     bool inclStatePositions) {
     os << 1 + R"(
 
@@ -299,7 +315,7 @@ bool AbnfParser::)";
     goto state2;
 
 state0: // )"
-           << kFailedStateName << R"(
+           << kFailedElement << R"(
     return false;
 )";
     } else {
@@ -310,7 +326,7 @@ state0: // )"
     goto state2;
 
 state0: // )"
-           << kFailedStateName << R"(
+           << kFailedElement << R"(
     if (last) {
         ptr = last;
         return true;
@@ -320,16 +336,16 @@ state0: // )"
     }
     vector<const State *> states;
     states.resize(stateSet.size());
-    for (auto &&st : stateSet)
+    for (auto && st : stateSet)
         states[st.id - 1] = &st;
-    for (auto &&st : states) {
+    for (auto && st : states) {
         writeParserState(os, *st, root, inclStatePositions);
     }
     os << "}\n";
 }
 
 //===========================================================================
-static void writeHeaderfile(ostream &os, const set<Element> &rules) {
+static void writeHeaderfile(ostream & os, const set<Element> & rules) {
     os << 1 + R"(
 // abnfparser.h - pargen
 // clang-format off
@@ -347,8 +363,28 @@ class IAbnfParserNotify {
 public:
     virtual ~IAbnfParserNotify () {}
 
-    virtual bool startDoc () {}
-    virtual bool endDoc () {}
+    virtual bool onAbnfStart () {}
+    virtual bool onAbnfEnd () {}
+
+)";
+    for (auto && elem : rules) {
+        if (elem.flags & Element::kOnStart) {
+            os << "    virtual bool onAbnf";
+            writeRuleName(os, elem.name, true);
+            os << "Start (const char * ptr) {}\n";
+        }
+        if (elem.flags & Element::kOnChar) {
+            os << "    virtual bool onAbnf";
+            writeRuleName(os, elem.name, true);
+            os << "Char (char ch) {}\n";
+        }
+        if (elem.flags & Element::kOnEnd) {
+            os << "    virtual bool onAbnf";
+            writeRuleName(os, elem.name, true);
+            os << "End (const char * eptr) {}\n";
+        }
+    }
+    os << 1 + R"(
 };
 
 
@@ -367,7 +403,7 @@ public:
 
 private:
 )";
-    for (auto &&elem : rules) {
+    for (auto && elem : rules) {
         if (elem.recurse) {
             os << "    bool state";
             writeRuleName(os, elem.name, true);
@@ -388,25 +424,27 @@ private:
 *
 ***/
 
+static bool s_resetRecursion = false;
 static bool s_markRecursion = true;
 static bool s_buildStateTree = true;
-static bool s_writeStatePositions = false;
+static bool s_writeStatePositions = true;
 
 //===========================================================================
 void writeParser(
-    ostream &hfile,
-    ostream &cppfile,
-    const set<Element> &src,
-    const string &root) {
+    ostream & hfile,
+    ostream & cppfile,
+    const set<Element> & src,
+    const string & root) {
     logMsgInfo() << "parser: " << root;
 
     set<Element> rules;
     copyRules(rules, src, root, true);
-    Element *elem = addChoiceRule(rules, kRootElement, 1, 1);
+    Element * elem = addChoiceRule(rules, kRootElement, 1, 1);
     addRule(elem, root, 1, 1);
+
     normalize(rules);
     if (s_markRecursion)
-        findRecursion(rules, *elem);
+        markRecursion(rules, *elem, s_resetRecursion);
 
     writeHeaderfile(hfile, rules);
 
@@ -416,7 +454,7 @@ void writeParser(
     buildStateTree(&states, rules, kRootElement, s_buildStateTree);
     writeFunction(cppfile, nullptr, rules, states, s_writeStatePositions);
 
-    for (auto &&elem : rules) {
+    for (auto && elem : rules) {
         if (elem.recurse) {
             buildStateTree(&states, rules, elem.name, s_buildStateTree);
             writeFunction(cppfile, &elem, rules, states, s_writeStatePositions);
