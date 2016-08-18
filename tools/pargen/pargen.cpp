@@ -80,7 +80,7 @@ static void getCoreRules(set<Element> & rules) {
     // BIT            =  "0" / "1"
     rule = addChoiceRule(rules, "BIT", 1, 1);
     addLiteral(rule, "0", 1, 1);
-    //addLiteral(rule, "1", 1, 1);
+    //    addLiteral(rule, "1", 1, 1);
 
     // CHAR           =  %x01-7F
 
@@ -305,8 +305,8 @@ static void getAbnfRules(set<Element> & rules) {
     addLiteral(rule, "b", 1, 1);
     elem = addChoice(rule, 1, 1);
     addRule(elem, "bin-val-simple", 1, 1);
-//    addRule(elem, "bin-val-concatenation", 1, 1);
-//    addRule(elem, "bin-val-alternation", 1, 1);
+    //    addRule(elem, "bin-val-concatenation", 1, 1);
+    //    addRule(elem, "bin-val-alternation", 1, 1);
     // bin-val-simple = bin-val-base
     rule = addSequenceRule(rules, "bin-val-simple", 1, 1, Element::kOnEnd);
     addRule(rule, "bin-val-base", 1, 1);

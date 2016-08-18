@@ -593,7 +593,7 @@ static void addNextPositions(State * st, const StatePosition & sp) {
     // add sentinel for the null terminator if it wasn't already encountered
     if (!done) {
         for (auto && se : sp.elems) {
-            if (se.elem->type == Element::kRule) 
+            if (se.elem->type == Element::kRule)
                 nsp.elems.push_back(se);
         }
         nse.elem = &ElementNull::s_elem;

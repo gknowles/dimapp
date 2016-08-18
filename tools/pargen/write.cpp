@@ -253,8 +253,7 @@ static void writeParserState(
     bool hasCalls = false;
     for (auto && sp : st.positions) {
         const Element * elem = sp.elems.back().elem;
-        if (elem->type != Element::kTerminal 
-            && elem != &ElementDone::s_elem) {
+        if (elem->type != Element::kTerminal && elem != &ElementDone::s_elem) {
             hasCalls = true;
             assert(elem->type == Element::kRule);
             assert(elem->rule->recurse);
