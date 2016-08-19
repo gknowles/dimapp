@@ -12,6 +12,9 @@ using namespace Dim;
 *
 ***/
 
+// forward declarations
+static void writeRuleName(ostream & os, const string & name, bool capitalize);
+
 //===========================================================================
 ostream & operator<<(ostream & os, const Element & elem) {
     if (elem.m != 1 || elem.n != 1) {
@@ -82,6 +85,17 @@ ostream & operator<<(ostream & os, const StatePosition & sp) {
     os << ':';
     for (auto && se : sp.elems) {
         os << "\n  " << se;
+    }
+    if (!sp.events.empty())
+        os << "\n  ---";
+    for (auto && sv : sp.events) {
+        os << "\n  On";
+        writeRuleName(os, sv.elem->name, true);
+        switch (sv.flags) {
+        case Element::kOnChar: os << "Char"; break;
+        case Element::kOnEnd: os << "End"; break;
+        case Element::kOnStart: os << "Start"; break;
+        }
     }
     os << "\n";
     return os;
@@ -232,20 +246,25 @@ static void writeParserState(
         os << "    return true;\n";
         return;
     }
+    auto & elems = st.positions.begin()->elems;
+    if (elems.size() == 1 && elems.front().elem == &ElementDone::s_elem) {
+        os << "    goto state1;\n";
+        return;
+    }
 
     if (st.next[0] && root) {
         os << "    last = ptr;\n";
     }
-    for (auto && sv : st.events) {
-        os << "    notify->On";
-        writeRuleName(os, sv.elem->name, true);
-        switch (sv.flags) {
-        case Element::kOnChar: os << "Char(ptr[-1])"; break;
-        case Element::kOnEnd: os << "End(ptr)"; break;
-        case Element::kOnStart: os << "Start(ptr)"; break;
-        }
-        os << ";\n";
-    }
+    // for (auto && sv : st.events) {
+    //    os << "    notify->On";
+    //    writeRuleName(os, sv.elem->name, true);
+    //    switch (sv.flags) {
+    //    case Element::kOnChar: os << "Char(ptr[-1])"; break;
+    //    case Element::kOnEnd: os << "End(ptr)"; break;
+    //    case Element::kOnStart: os << "Start(ptr)"; break;
+    //    }
+    //    os << ";\n";
+    //}
     // write switch case
     bool hasSwitch = writeSwitchCase(os, st);
 

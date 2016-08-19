@@ -7,6 +7,7 @@
 #include <fstream>
 #include <iostream>
 #include <set>
+#include <tuple>
 #include <unordered_set>
 
 #include "abnfsyntax.h"

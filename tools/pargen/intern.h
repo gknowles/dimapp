@@ -101,29 +101,28 @@ struct StateElement {
     bool operator==(const StateElement & right) const;
 };
 
-struct StatePosition {
-    std::vector<StateElement> elems;
-    bool recurse{false};
-
-    bool operator<(const StatePosition & right) const;
-    bool operator==(const StatePosition & right) const;
-};
-
 struct StateEvent {
     const Element * elem;
     unsigned flags{0}; // Element::kOn*
-    mutable unsigned count{0};
 
     int compare(const StateEvent & right) const;
     bool operator<(const StateEvent & right) const;
     bool operator==(const StateEvent & right) const;
 };
 
+struct StatePosition {
+    std::vector<StateElement> elems;
+    std::set<StateEvent> events;
+    bool recurse{false};
+
+    bool operator<(const StatePosition & right) const;
+    bool operator==(const StatePosition & right) const;
+};
+
 struct State {
     unsigned id;
     std::string name;
     std::set<StatePosition> positions;
-    std::set<StateEvent> events;
     std::vector<unsigned> next;
 
     void clear();
@@ -134,11 +133,11 @@ namespace std {
 template <> struct hash<StateElement> {
     size_t operator()(const StateElement & val) const;
 };
-template <> struct hash<StatePosition> {
-    size_t operator()(const StatePosition & val) const;
-};
 template <> struct hash<StateEvent> {
     size_t operator()(const StateEvent & val) const;
+};
+template <> struct hash<StatePosition> {
+    size_t operator()(const StatePosition & val) const;
 };
 template <> struct hash<State> { size_t operator()(const State & val) const; };
 } // namespace std

@@ -128,19 +128,23 @@ size_t hash<StatePosition>::operator()(const StatePosition & val) const {
     for (auto && se : val.elems) {
         hashCombine(out, hash<StateElement>{}(se));
     }
+    for (auto && sv : val.events) {
+        hashCombine(out, hash<StateEvent>{}(sv));
+    }
     return out;
 }
 } // namespace std
 
 //===========================================================================
 bool StatePosition::operator<(const StatePosition & right) const {
-    return recurse < right.recurse ||
-           recurse == right.recurse && elems < right.elems;
+    return make_tuple(recurse, elems, events) <
+           make_tuple(right.recurse, right.elems, right.events);
 }
 
 //===========================================================================
 bool StatePosition::operator==(const StatePosition & right) const {
-    return elems == right.elems && recurse == right.recurse;
+    return recurse == right.recurse && elems == right.elems &&
+           events == right.events;
 }
 
 
@@ -191,9 +195,6 @@ size_t hash<State>::operator()(const State & val) const {
     for (auto && sp : val.positions) {
         hashCombine(out, hash<StatePosition>{}(sp));
     }
-    for (auto && se : val.events) {
-        hashCombine(out, hash<StateEvent>{}(se));
-    }
     return out;
 }
 } // namespace std
@@ -203,12 +204,11 @@ void State::clear() {
     id = 0;
     positions.clear();
     next.clear();
-    events.clear();
 }
 
 //===========================================================================
 bool State::operator==(const State & right) const {
-    return positions == right.positions && events == right.events;
+    return positions == right.positions;
 }
 
 
@@ -483,13 +483,12 @@ initPositions(State * st, const set<Element> & rules, const string & root) {
 }
 
 //===========================================================================
-static void
-addEvent(State * st, const StateElement & se, Element::Flags flags) {
+static void addEvent(
+    set<StateEvent> & events, const StateElement & se, Element::Flags flags) {
     StateEvent sv;
     sv.elem = se.elem->rule;
     sv.flags = flags;
-    auto ib = st->events.insert(sv);
-    ib.first->count += 1;
+    auto ib = events.insert(sv);
 }
 
 //===========================================================================
@@ -498,7 +497,9 @@ static void addNextPositions(State * st, const StatePosition & sp) {
         st->positions.insert(sp);
 
     bool terminal{false};
+    auto terminalStarted = sp.elems.end();
     bool done = sp.elems.front().elem == &ElementDone::s_elem;
+    set<StateEvent> events;
     auto it = sp.elems.rbegin();
     auto eit = sp.elems.rend();
     for (; it != eit; ++it) {
@@ -517,6 +518,7 @@ static void addNextPositions(State * st, const StatePosition & sp) {
                 StatePosition nsp;
                 nsp.recurse = fromRecurse;
                 nsp.elems.assign(sp.elems.begin(), it.base());
+                nsp.events = events;
                 do {
                     cur += 1;
                     addPositions(st, &nsp, false, *cur, 0);
@@ -527,9 +529,9 @@ static void addNextPositions(State * st, const StatePosition & sp) {
         }
 
         if (se.elem->type == Element::kRule) {
-            if (se.elem->rule->flags & Element::kOnEnd) {
+            if ((se.elem->rule->flags & Element::kOnEnd) && se.started) {
                 // assert(se.started);
-                addEvent(st, se, Element::kOnEnd);
+                addEvent(events, se, Element::kOnEnd);
             }
             // when exiting the parser (via a done sentinel) go directly out,
             // no not pass go, do not honor repititions
@@ -540,13 +542,13 @@ static void addNextPositions(State * st, const StatePosition & sp) {
         if (se.elem->type == Element::kTerminal) {
             terminal = true;
             for (auto it2 = it; it2 != eit; ++it2) {
-                if (it2->elem->type == Element::kRule) {
+                if (it2->elem->type == Element::kRule && !done) {
                     unsigned flags = it2->elem->rule->flags;
                     if ((flags & Element::kOnStart) && !it2->started) {
-                        addEvent(st, *it2, Element::kOnStart);
+                        addEvent(events, *it2, Element::kOnStart);
                     }
                     if (flags & Element::kOnChar) {
-                        addEvent(st, *it2, Element::kOnChar);
+                        addEvent(events, *it2, Element::kOnChar);
                     }
                 }
             }
@@ -565,11 +567,15 @@ static void addNextPositions(State * st, const StatePosition & sp) {
             }
             StatePosition nsp;
             nsp.recurse = fromRecurse;
-            nsp.elems.assign(sp.elems.begin(), --it.base());
+            auto se_end = --it.base();
+            if (terminalStarted == sp.elems.end())
+                terminalStarted = se_end;
+            nsp.elems.assign(sp.elems.begin(), se_end);
+            nsp.events = events;
             if (terminal) {
-                for (auto && se : nsp.elems) {
-                    if (se.elem->type == Element::kRule)
-                        se.started = true;
+                for (auto && nse : nsp.elems) {
+                    if (nse.elem->type == Element::kRule)
+                        nse.started = true;
                 }
             }
             addPositions(st, &nsp, false, *se.elem, rep);
@@ -585,22 +591,27 @@ static void addNextPositions(State * st, const StatePosition & sp) {
     // completed parsing
 
     StatePosition nsp;
+    nsp.events = events;
     StateElement nse;
     nse.elem = &ElementDone::s_elem;
     nse.rep = 0;
     nsp.elems.push_back(nse);
-
-    // add sentinel for the null terminator if it wasn't already encountered
-    if (!done) {
-        for (auto && se : sp.elems) {
-            if (se.elem->type == Element::kRule)
-                nsp.elems.push_back(se);
-        }
-        nse.elem = &ElementNull::s_elem;
-        nse.rep = 0;
-        nsp.elems.push_back(nse);
+    if (done) {
+        // add entry for completed done
+        st->positions.insert(nsp);
+        return;
     }
-    st->positions.insert(nsp);
+
+    // add position for null terminator
+    assert(terminal);
+    for (auto && se : sp.elems) {
+        if (se.elem->type == Element::kRule &&
+            (se.started || &se < &*terminalStarted)) {
+            nsp.elems.push_back(se);
+            nsp.elems.back().started = true;
+        }
+    }
+    addPositions(st, &nsp, false, ElementNull::s_elem, 0);
 }
 
 //===========================================================================
