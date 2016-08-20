@@ -484,7 +484,9 @@ initPositions(State * st, const set<Element> & rules, const string & root) {
 
 //===========================================================================
 static void addEvent(
-    vector<StateEvent> & events, const StateElement & se, Element::Flags flags) {
+    vector<StateEvent> & events,
+    const StateElement & se,
+    Element::Flags flags) {
     StateEvent sv;
     sv.elem = se.elem->rule;
     sv.flags = flags;
@@ -494,13 +496,12 @@ static void addEvent(
 //===========================================================================
 template <typename Iter>
 static void setPositionPrefix(
-    StatePosition * sp, 
-    Iter begin, 
+    StatePosition * sp,
+    Iter begin,
     Iter end,
     bool recurse,
     const vector<StateEvent> & events,
-    bool terminal
-) {
+    bool terminal) {
     sp->recurse = recurse;
     sp->elems.assign(begin, end);
     sp->events = events;
@@ -538,11 +539,11 @@ static void addNextPositions(State * st, const StatePosition & sp) {
             if (cur != last) {
                 StatePosition nsp;
                 setPositionPrefix(
-                    &nsp, 
-                    sp.elems.begin(), 
-                    it.base(), 
-                    fromRecurse, 
-                    events, 
+                    &nsp,
+                    sp.elems.begin(),
+                    it.base(),
+                    fromRecurse,
+                    events,
                     terminal);
                 do {
                     cur += 1;
@@ -594,12 +595,7 @@ static void addNextPositions(State * st, const StatePosition & sp) {
                 terminalStarted = se_end;
             StatePosition nsp;
             setPositionPrefix(
-                &nsp, 
-                sp.elems.begin(), 
-                se_end, 
-                fromRecurse, 
-                events, 
-                terminal);
+                &nsp, sp.elems.begin(), se_end, fromRecurse, events, terminal);
             addPositions(st, &nsp, false, *se.elem, rep);
         }
         // don't advance unless rep >= m
@@ -633,23 +629,13 @@ static void addNextPositions(State * st, const StatePosition & sp) {
             nsp.elems.back().started = true;
         }
     }
-    
-    // remove end events generated when unwinding past all terminals, they'll 
-    // be executed by the completed done
-    for (auto it = sp.elems.begin(); it != terminalStarted; ++it) {
-        
-    }
-    
+
     // remove end events, they'll be executed by the completed done
-    auto it2 = remove_if(
-        nsp.events.begin(), 
-        nsp.events.end(), 
-        [=](const auto & a){ 
-            return 0 != (a.flags & Element::kOnEnd) 
-                && a.elem < terminalStarted->elem;
-        }
-    );
-    nsp.events.erase(it2, nsp.events.end());
+    auto sv_end = nsp.events.end();
+    auto it2 = remove_if(nsp.events.begin(), sv_end, [=](const auto & a) {
+        return (a.flags & Element::kOnEnd);
+    });
+    nsp.events.erase(it2, sv_end);
 
     addPositions(st, &nsp, false, ElementNull::s_elem, 0);
 }
@@ -682,23 +668,23 @@ buildStateTree(State * st, string * path, unordered_set<State> & states) {
             }
         }
         if (size_t numpos = next.positions.size()) {
-            map<StateEvent, int> counts;
-            for (auto && sp : next.positions) {
-                for (auto && sv : sp.events) {
-                    counts[sv] += 1;
-                }
-            }
-            
-            for (auto && cnt : counts) {
-                if (cnt.second != numpos) {
-                    if (cnt.first.flags & Element::kOnStart) {
-                        
-                    } else {
-                        logMsgError() << "Conflicting parse events, "
-                            << *path;
-                    }
-                }
-            }
+            // map<StateEvent, int> counts;
+            // for (auto && sp : next.positions) {
+            //    for (auto && sv : sp.events) {
+            //        counts[sv] += 1;
+            //    }
+            //}
+
+            // for (auto && cnt : counts) {
+            //    if (cnt.second != numpos) {
+            //        if (cnt.first.flags & Element::kOnStart) {
+
+            //        } else {
+            //            logMsgError() << "Conflicting parse events, " <<
+            //            *path;
+            //        }
+            //    }
+            //}
 
             auto ib = states.insert(move(next));
             State * st2 = const_cast<State *>(&*ib.first);
