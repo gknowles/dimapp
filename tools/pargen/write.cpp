@@ -79,23 +79,23 @@ ostream & operator<<(ostream & os, const StateElement & se) {
 
 //===========================================================================
 ostream & operator<<(ostream & os, const StatePosition & sp) {
-    os << "sp";
+    os << "    // sp";
     if (sp.recurse)
         os << '*';
     os << ':';
-    for (auto && se : sp.elems) {
-        os << "\n  " << se;
-    }
-    if (!sp.events.empty())
-        os << "\n  ---";
     for (auto && sv : sp.events) {
-        os << "\n  On";
+        os << "\n    //  On";
         writeRuleName(os, sv.elem->name, true);
         switch (sv.flags) {
         case Element::kOnChar: os << "Char"; break;
         case Element::kOnEnd: os << "End"; break;
         case Element::kOnStart: os << "Start"; break;
         }
+    }
+    if (!sp.events.empty())
+        os << "\n    //  ---";
+    for (auto && se : sp.elems) {
+        os << "\n    //  " << se;
     }
     os << "\n";
     return os;
