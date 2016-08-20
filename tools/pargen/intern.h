@@ -112,7 +112,7 @@ struct StateEvent {
 
 struct StatePosition {
     std::vector<StateElement> elems;
-    std::set<StateEvent> events;
+    std::vector<StateEvent> events;
     bool recurse{false};
 
     bool operator<(const StatePosition & right) const;

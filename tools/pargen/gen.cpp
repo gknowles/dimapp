@@ -484,11 +484,32 @@ initPositions(State * st, const set<Element> & rules, const string & root) {
 
 //===========================================================================
 static void addEvent(
-    set<StateEvent> & events, const StateElement & se, Element::Flags flags) {
+    vector<StateEvent> & events, const StateElement & se, Element::Flags flags) {
     StateEvent sv;
     sv.elem = se.elem->rule;
     sv.flags = flags;
-    auto ib = events.insert(sv);
+    events.push_back(sv);
+}
+
+//===========================================================================
+template <typename Iter>
+static void setPositionPrefix(
+    StatePosition * sp, 
+    Iter begin, 
+    Iter end,
+    bool recurse,
+    const vector<StateEvent> & events,
+    bool terminal
+) {
+    sp->recurse = recurse;
+    sp->elems.assign(begin, end);
+    sp->events = events;
+    if (terminal) {
+        for (auto && se : sp->elems) {
+            if (se.elem->type == Element::kRule)
+                se.started = true;
+        }
+    }
 }
 
 //===========================================================================
@@ -499,7 +520,7 @@ static void addNextPositions(State * st, const StatePosition & sp) {
     bool terminal{false};
     auto terminalStarted = sp.elems.end();
     bool done = sp.elems.front().elem == &ElementDone::s_elem;
-    set<StateEvent> events;
+    vector<StateEvent> events;
     auto it = sp.elems.rbegin();
     auto eit = sp.elems.rend();
     for (; it != eit; ++it) {
@@ -516,9 +537,13 @@ static void addNextPositions(State * st, const StatePosition & sp) {
 
             if (cur != last) {
                 StatePosition nsp;
-                nsp.recurse = fromRecurse;
-                nsp.elems.assign(sp.elems.begin(), it.base());
-                nsp.events = events;
+                setPositionPrefix(
+                    &nsp, 
+                    sp.elems.begin(), 
+                    it.base(), 
+                    fromRecurse, 
+                    events, 
+                    terminal);
                 do {
                     cur += 1;
                     addPositions(st, &nsp, false, *cur, 0);
@@ -530,7 +555,6 @@ static void addNextPositions(State * st, const StatePosition & sp) {
 
         if (se.elem->type == Element::kRule) {
             if ((se.elem->rule->flags & Element::kOnEnd) && se.started) {
-                // assert(se.started);
                 addEvent(events, se, Element::kOnEnd);
             }
             // when exiting the parser (via a done sentinel) go directly out,
@@ -565,19 +589,17 @@ static void addNextPositions(State * st, const StatePosition & sp) {
                 // to the same state
                 rep = m;
             }
-            StatePosition nsp;
-            nsp.recurse = fromRecurse;
             auto se_end = --it.base();
             if (terminalStarted == sp.elems.end())
                 terminalStarted = se_end;
-            nsp.elems.assign(sp.elems.begin(), se_end);
-            nsp.events = events;
-            if (terminal) {
-                for (auto && nse : nsp.elems) {
-                    if (nse.elem->type == Element::kRule)
-                        nse.started = true;
-                }
-            }
+            StatePosition nsp;
+            setPositionPrefix(
+                &nsp, 
+                sp.elems.begin(), 
+                se_end, 
+                fromRecurse, 
+                events, 
+                terminal);
             addPositions(st, &nsp, false, *se.elem, rep);
         }
         // don't advance unless rep >= m
@@ -611,6 +633,24 @@ static void addNextPositions(State * st, const StatePosition & sp) {
             nsp.elems.back().started = true;
         }
     }
+    
+    // remove end events generated when unwinding past all terminals, they'll 
+    // be executed by the completed done
+    for (auto it = sp.elems.begin(); it != terminalStarted; ++it) {
+        
+    }
+    
+    // remove end events, they'll be executed by the completed done
+    auto it2 = remove_if(
+        nsp.events.begin(), 
+        nsp.events.end(), 
+        [=](const auto & a){ 
+            return 0 != (a.flags & Element::kOnEnd) 
+                && a.elem < terminalStarted->elem;
+        }
+    );
+    nsp.events.erase(it2, nsp.events.end());
+
     addPositions(st, &nsp, false, ElementNull::s_elem, 0);
 }
 
@@ -641,7 +681,25 @@ buildStateTree(State * st, string * path, unordered_set<State> & states) {
                 }
             }
         }
-        if (next.positions.size()) {
+        if (size_t numpos = next.positions.size()) {
+            map<StateEvent, int> counts;
+            for (auto && sp : next.positions) {
+                for (auto && sv : sp.events) {
+                    counts[sv] += 1;
+                }
+            }
+            
+            for (auto && cnt : counts) {
+                if (cnt.second != numpos) {
+                    if (cnt.first.flags & Element::kOnStart) {
+                        
+                    } else {
+                        logMsgError() << "Conflicting parse events, "
+                            << *path;
+                    }
+                }
+            }
+
             auto ib = states.insert(move(next));
             State * st2 = const_cast<State *>(&*ib.first);
 
