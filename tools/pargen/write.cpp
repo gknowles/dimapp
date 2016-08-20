@@ -73,7 +73,19 @@ ostream & operator<<(ostream & os, const set<Element> & rules) {
 ostream & operator<<(ostream & os, const StateElement & se) {
     os << *se.elem << '.' << se.rep;
     if (se.started)
-        os << '+';
+        os << " (STARTED)";
+    return os;
+}
+
+//===========================================================================
+ostream & operator<<(ostream & os, const StateEvent & sv) {
+    os << "On";
+    writeRuleName(os, sv.elem->name, true);
+    switch (sv.flags) {
+    case Element::kOnChar: os << "Char"; break;
+    case Element::kOnEnd: os << "End"; break;
+    case Element::kOnStart: os << "Start"; break;
+    }
     return os;
 }
 
@@ -83,16 +95,14 @@ ostream & operator<<(ostream & os, const StatePosition & sp) {
     if (sp.recurse)
         os << '*';
     os << ':';
-    for (auto && sv : sp.events) {
-        os << "\n    //  On";
-        writeRuleName(os, sv.elem->name, true);
-        switch (sv.flags) {
-        case Element::kOnChar: os << "Char"; break;
-        case Element::kOnEnd: os << "End"; break;
-        case Element::kOnStart: os << "Start"; break;
-        }
+    for (auto && sv : sp.events)
+        os << "\n    //  " << sv;
+    if (!sp.delayedEvents.empty()) {
+        os << "\n    //  --- delayed";
+        for (auto && sv : sp.delayedEvents)
+            os << "\n    //  " << sv;
     }
-    if (!sp.events.empty())
+    if (!sp.events.empty() || !sp.delayedEvents.empty())
         os << "\n    //  ---";
     for (auto && se : sp.elems) {
         os << "\n    //  " << se;

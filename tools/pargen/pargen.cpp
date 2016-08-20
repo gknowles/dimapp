@@ -305,7 +305,7 @@ static void getAbnfRules(set<Element> & rules) {
     addLiteral(rule, "b", 1, 1);
     elem = addChoice(rule, 1, 1);
     addRule(elem, "bin-val-simple", 1, 1);
-    //    addRule(elem, "bin-val-concatenation", 1, 1);
+    addRule(elem, "bin-val-concatenation", 1, 1);
     addRule(elem, "bin-val-alternation", 1, 1);
     // bin-val-simple = bin-val-base
     rule = addSequenceRule(rules, "bin-val-simple", 1, 1, Element::kOnEnd);
@@ -320,22 +320,23 @@ static void getAbnfRules(set<Element> & rules) {
         1,
         1,
         Element::kOnStart | Element::kOnEnd);
-    addRule(rule, "bin-val-base", 1, 1);
+    addRule(rule, "bin-val-concat-val", 1, 1);
     elem = addSequence(rule, 1, kUnlimited);
     addLiteral(elem, ".", 1, 1);
-    addRule(elem, "bin-val-base", 1, 1);
-    // bin-val-alternation = bin-val-alt-base "-" bin-val-alt-base
-    rule = addSequenceRule(
-        rules,
-        "bin-val-alternation",
-        1,
-        1,
-        Element::kOnStart | Element::kOnEnd);
-    addRule(rule, "bin-val-alt-base", 1, 1);
+    addRule(elem, "bin-val-concat-val", 1, 1);
+    // bin-val-concat-val = bin-val-base
+    rule = addSequenceRule(rules, "bin-val-concat-val", 1, 1, Element::kOnEnd);
+    addRule(rule, "bin-val-base", 1, 1);
+    // bin-val-alternation = bin-val-alt-first "-" bin-val-alt-second
+    rule = addSequenceRule(rules, "bin-val-alternation", 1, 1);
+    addRule(rule, "bin-val-alt-first", 1, 1);
     addLiteral(rule, "-", 1, 1);
-    addRule(rule, "bin-val-alt-base", 1, 1);
-    // bin-val-alt-base = bin-val-base
-    rule = addSequenceRule(rules, "bin-val-alt-base", 1, 1, Element::kOnEnd);
+    addRule(rule, "bin-val-alt-second", 1, 1);
+    // bin-val-alt-first = bin-val-base
+    rule = addSequenceRule(rules, "bin-val-alt-first", 1, 1, Element::kOnEnd);
+    addRule(rule, "bin-val-base", 1, 1);
+    // bin-val-alt-second = bin-val-base
+    rule = addSequenceRule(rules, "bin-val-alt-second", 1, 1, Element::kOnEnd);
     addRule(rule, "bin-val-base", 1, 1);
 
     // dec-val = "d" (dec-val-simple / dec-val-concatenation
