@@ -6,7 +6,7 @@
 
 /****************************************************************************
 *
-*   AbnfParser
+*   AbnfSyntax
 *
 *   Normalized ABNF of syntax being checked (recursive rules are marked 
 *       with asterisks):
@@ -88,7 +88,7 @@
 ***/
 
 //===========================================================================
-bool AbnfParser::checkSyntax (const char src[]) {
+bool AbnfSyntax::checkSyntax (const char src[]) {
     const char * ptr = src;
     goto state2;
 
@@ -1609,7 +1609,7 @@ state77: // A\t;\r
 }
 
 //===========================================================================
-bool AbnfParser::stateAlternation (const char *& ptr) {
+bool AbnfSyntax::stateAlternation (const char *& ptr) {
     const char * last{nullptr};
     goto state2;
 

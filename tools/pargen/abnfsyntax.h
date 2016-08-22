@@ -1,39 +1,21 @@
-// abnfparser.h - pargen
+// abnfsyntax.h - pargen
 // clang-format off
 #pragma once
 
 
 /****************************************************************************
 *
-*   Parser event notifications
-*   Clients inherit from this class to make process parsed results
+*   AbnfSyntax
 *
 ***/
 
-class IAbnfParserNotify {
+class AbnfSyntax {
 public:
-    virtual ~IAbnfParserNotify () {}
-
-    virtual bool startDoc () {}
-    virtual bool endDoc () {}
-};
-
-
-/****************************************************************************
-*
-*   AbnfParser
-*
-***/
-
-class AbnfParser {
-public:
-    AbnfParser (IAbnfParserNotify * notify) : m_notify(notify) {}
-    ~AbnfParser () {}
+    AbnfSyntax () {}
+    ~AbnfSyntax () {}
 
     bool checkSyntax (const char src[]);
 
 private:
     bool stateAlternation (const char *& src);
-
-    IAbnfParserNotify * m_notify{nullptr};
 };

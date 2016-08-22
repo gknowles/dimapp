@@ -68,19 +68,25 @@ static void getTestRules(set<Element> & rules) {
     addTerminal(rule, 'y', 1, 1);
 }
 
+static bool s_allRules = true;
+
 //===========================================================================
 static void getCoreRules(set<Element> & rules) {
     Element * rule;
 
     // ALPHA          =  %x41-5A / %x61-7A   ; A-Z / a-z
     rule = addChoiceRule(rules, "ALPHA", 1, 1);
-    addRange(rule, 0x41, 0x5a);
-    addRange(rule, 0x61, 0x7a);
+    if (s_allRules) {
+        addRange(rule, 0x41, 0x5a);
+        addRange(rule, 0x61, 0x7a);
+    } else {
+        addRange(rule, 0x5a, 0x5a);
+    }
 
     // BIT            =  "0" / "1"
     rule = addChoiceRule(rules, "BIT", 1, 1);
     addLiteral(rule, "0", 1, 1);
-    //    addLiteral(rule, "1", 1, 1);
+    addLiteral(rule, "1", 1, 1);
 
     // CHAR           =  %x01-7F
 
@@ -91,13 +97,19 @@ static void getCoreRules(set<Element> & rules) {
     // CRLF           =  CR LF
     rule = addSequenceRule(rules, "CRLF", 1, 1);
     addRule(rule, "CR", 1, 1);
-    addRule(rule, "LF", 1, 1);
+    if (s_allRules) {
+        addRule(rule, "LF", 1, 1);
+    }
 
     // CTL            =  %x00-1F / %x7F
 
     // DIGIT          =  %x30-39
     rule = addChoiceRule(rules, "DIGIT", 1, 1);
-    addRange(rule, 0x30, 0x39);
+    if (s_allRules) {
+        addRange(rule, 0x30, 0x39);
+    } else {
+        addRange(rule, 0x39, 0x39);
+    }
 
     // DQUOTE         =  %x22
     rule = addChoiceRule(rules, "DQUOTE", 1, 1);
@@ -125,9 +137,12 @@ static void getCoreRules(set<Element> & rules) {
 
     // NEWLINE        =  CR / LF / CRLF
     rule = addChoiceRule(rules, "NEWLINE", 1, 1);
-    addRule(rule, "CR", 1, 1);
-    addRule(rule, "LF", 1, 1);
-    addRule(rule, "CRLF", 1, 1);
+    if (s_allRules) {
+        addRule(rule, "LF", 1, 1);
+        addRule(rule, "CRLF", 1, 1);
+    } else {
+        addRule(rule, "CR", 1, 1);
+    }
 
     // OCTET          =  %x00-FF
 
@@ -142,7 +157,9 @@ static void getCoreRules(set<Element> & rules) {
     // WSP            =  SP / HTAB
     rule = addChoiceRule(rules, "WSP", 1, 1);
     addRule(rule, "SP", 1, 1);
-    addRule(rule, "HTAB", 1, 1);
+    if (s_allRules) {
+        addRule(rule, "HTAB", 1, 1);
+    }
 }
 
 //===========================================================================
@@ -195,13 +212,17 @@ static void getAbnfRules(set<Element> & rules) {
     // c-wsp          =  WSP / (c-nl WSP)
     rule = addChoiceRule(rules, "c-wsp", 1, 1);
     addRule(rule, "WSP", 1, 1);
-    elem = addSequence(rule, 1, 1);
-    addRule(elem, "c-nl", 1, 1);
-    addRule(elem, "WSP", 1, 1);
+    if (s_allRules) {
+        elem = addSequence(rule, 1, 1);
+        addRule(elem, "c-nl", 1, 1);
+        addRule(elem, "WSP", 1, 1);
+    }
 
     // c-nl           =  comment / NEWLINE
     rule = addChoiceRule(rules, "c-nl", 1, 1);
-    addRule(rule, "comment", 1, 1);
+    if (s_allRules) {
+        addRule(rule, "comment", 1, 1);
+    }
     addRule(rule, "NEWLINE", 1, 1);
 
     // comment        =  ";" *(WSP / VCHAR) NEWLINE
@@ -288,8 +309,11 @@ static void getAbnfRules(set<Element> & rules) {
     // char-val-sequence = *(%x20-21 / %x23-7E)
     rule = addChoiceRule(
         rules, "char-val-sequence", 0, kUnlimited, Element::kOnEnd);
-    addRange(rule, 0x20, 0x21);
-    addRange(rule, 0x23, 0x7e);
+    if (s_allRules) {
+        addRange(rule, 0x23, 0x7e);
+    } else {
+        addRange(rule, 0x20, 0x21);
+    }
 
     // num-val        =  "%" (bin-val / dec-val / hex-val)
     rule = addSequenceRule(rules, "num-val", 1, 1);
@@ -313,19 +337,19 @@ static void getAbnfRules(set<Element> & rules) {
     // bin-val-base = 1*BIT
     rule = addSequenceRule(rules, "bin-val-base", 1, 1, Element::kOnChar);
     addRule(rule, "BIT", 1, kUnlimited);
-    // bin-val-concatenation = bin-val-base 1*("." bin-val-base)
+    // bin-val-concatenation = bin-val-concat-each 1*("." bin-val-concat-each)
     rule = addSequenceRule(
         rules,
         "bin-val-concatenation",
         1,
         1,
         Element::kOnStart | Element::kOnEnd);
-    addRule(rule, "bin-val-concat-val", 1, 1);
+    addRule(rule, "bin-val-concat-each", 1, 1);
     elem = addSequence(rule, 1, kUnlimited);
     addLiteral(elem, ".", 1, 1);
-    addRule(elem, "bin-val-concat-val", 1, 1);
-    // bin-val-concat-val = bin-val-base
-    rule = addSequenceRule(rules, "bin-val-concat-val", 1, 1, Element::kOnEnd);
+    addRule(elem, "bin-val-concat-each", 1, 1);
+    // bin-val-concat-each = bin-val-base
+    rule = addSequenceRule(rules, "bin-val-concat-each", 1, 1, Element::kOnEnd);
     addRule(rule, "bin-val-base", 1, 1);
     // bin-val-alternation = bin-val-alt-first "-" bin-val-alt-second
     rule = addSequenceRule(rules, "bin-val-alternation", 1, 1);
@@ -456,9 +480,9 @@ void Application::onTask() {
     getTestRules(rules);
 
     TimePoint start = Clock::now();
-    ofstream oh("abnfsyntax.h");
-    ofstream ocpp("abnfsyntax.cpp");
-    writeParser(oh, ocpp, rules, "bin-val");
+    ofstream oh("abnfparse.h");
+    ofstream ocpp("abnfparse.cpp");
+    writeParser(oh, ocpp, rules, "rulelist");
     TimePoint finish = Clock::now();
     std::chrono::duration<double> elapsed = finish - start;
     cout << "Elapsed time: " << elapsed.count() << " seconds" << endl;
@@ -467,8 +491,8 @@ void Application::onTask() {
     for (auto && rule : rules) {
         abnf << rule.name << " = " << rule << '\n';
     }
-    AbnfParser parser{nullptr};
-    bool valid = parser.checkSyntax(abnf.str().c_str());
+    AbnfSyntax check;
+    bool valid = check.checkSyntax(abnf.str().c_str());
     cout << "Valid: " << valid << endl;
 
     appSignalShutdown(kExitSuccess);
