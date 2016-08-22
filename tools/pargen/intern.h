@@ -71,7 +71,7 @@ void addRange(Element * rule, unsigned char a, unsigned char b);
 void addTerminal(Element * rule, unsigned char ch, unsigned m, unsigned n);
 
 // modify rules
-void copyRules(
+bool copyRules(
     std::set<Element> & rules,
     const std::set<Element> & src,
     const std::string & root,

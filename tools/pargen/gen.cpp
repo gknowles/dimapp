@@ -205,7 +205,7 @@ size_t hash<State>::operator()(const State & val) const {
 
 //===========================================================================
 void State::clear() {
-    // name.clear();
+    name.clear();
     id = 0;
     positions.clear();
     next.clear();
@@ -224,39 +224,50 @@ bool State::operator==(const State & right) const {
 ***/
 
 //===========================================================================
-static void copyRequiredDeps(
+static bool copyRequiredDeps(
     set<Element> & rules, const set<Element> & src, const Element & root) {
     switch (root.type) {
     case Element::kSequence:
     case Element::kChoice:
         for (auto && elem : root.elements)
-            copyRequiredDeps(rules, src, elem);
+            if (!copyRequiredDeps(rules, src, elem))
+                return false;
         break;
-    case Element::kRule: copyRules(rules, src, root.value, false); break;
+    case Element::kRule: 
+        if (!copyRules(rules, src, root.value, false))
+            return false;
     }
+    return true;
 }
 
 //===========================================================================
-void copyRules(
+bool copyRules(
     set<Element> & rules,
     const set<Element> & src,
     const string & root,
     bool failIfExists) {
     Element key;
     key.name = root;
+    key.type = Element::kRule;
     auto it = src.find(key);
     if (it == src.end()) {
         logMsgError() << "Rule not found, " << root;
-        return;
+        return false;
     }
     auto ib = rules.insert(*it);
     if (!ib.second) {
         if (failIfExists) {
             logMsgError() << "Rule already exists, " << root;
+            return false;
         }
-        return;
+        return true;
     }
-    copyRequiredDeps(rules, src, *ib.first);
+    auto & elem = *ib.first;
+    if (elem.recurse && (elem.flags & Element::kOnChar)) {
+        logMsgError() << "Rule with both recurse and onChar, " << elem.value;
+        return false;
+    }
+    return copyRequiredDeps(rules, src, elem);
 }
 
 
@@ -365,6 +376,7 @@ void normalize(set<Element> & rules) {
 //===========================================================================
 static void
 markRecursion(set<Element> & rules, Element & rule, vector<bool> & used) {
+    bool wasUsed;
     switch (rule.type) {
     case Element::kChoice:
     case Element::kSequence:
@@ -373,13 +385,14 @@ markRecursion(set<Element> & rules, Element & rule, vector<bool> & used) {
         }
         break;
     case Element::kRule:
-        if (used[rule.rule->id])
+        wasUsed = used[rule.rule->id];
+        if (wasUsed && (~rule.rule->flags & Element::kOnChar))
             const_cast<Element *>(rule.rule)->recurse = true;
         if (rule.rule->recurse)
             return;
         used[rule.rule->id] = true;
         markRecursion(rules, const_cast<Element &>(*rule.rule), used);
-        used[rule.rule->id] = false;
+        used[rule.rule->id] = wasUsed;
     }
 }
 
@@ -409,7 +422,7 @@ static void addRulePositions(State * st, StatePosition * sp, bool init) {
     // Don't generate states for right recursion when it can be broken with
     // a call. This could also be done for left recursion when the grammar
     // allows it, but that's more difficult to determine.
-    if (elem.rule->recurse && !init) {
+    if (elem.rule->recurse /* && !init */) {
         st->positions.insert(*sp);
         return;
     }
@@ -560,8 +573,10 @@ static void addNextPositions(State * st, const StatePosition & sp) {
         }
 
         if (se.elem->type == Element::kRule) {
-            if ((se.elem->rule->flags & Element::kOnEnd) &&
-                (se.started || !done)) {
+            if ((se.elem->rule->flags & Element::kOnEnd) 
+                && (se.started || !done)
+                && !se.elem->rule->recurse
+            ) {
                 addEvent(events, se, Element::kOnEnd);
             }
             // when exiting the parser (via a done sentinel) go directly out,
@@ -627,7 +642,6 @@ static void addNextPositions(State * st, const StatePosition & sp) {
     }
 
     // add position state for null terminator
-    assert(terminal);
     auto elemBase = sp.elems.begin();
     for (auto it = elemBase; it != terminalStarted; ++it) {
         if (it->elem->type == Element::kRule) {
@@ -663,6 +677,7 @@ static void
 buildStateTree(State * st, string * path, unordered_set<State> & states) {
     st->next.assign(257, 0);
     State next;
+    bool emergency{false};
     for (unsigned i = 0; i < 257; ++i) {
         next.clear();
         for (auto && sp : st->positions) {
@@ -678,6 +693,7 @@ buildStateTree(State * st, string * path, unordered_set<State> & states) {
                     assert(se.elem->type == Element::kRule);
                     assert(se.elem->rule->recurse);
                     if (next.positions.size()) {
+                        emergency = true;
                         logMsgError() << "Multiple recursive targets, "
                                       << *path;
                     }
@@ -697,6 +713,7 @@ buildStateTree(State * st, string * path, unordered_set<State> & states) {
                 if (cnt.second != numpos) {
                     conflicts.insert(cnt.first);
                     if (cnt.first.flags & Element::kOnChar) {
+                        emergency = true;
                         logMsgError() << "Conflicting parse events, " << *path;
                     }
                 }
@@ -748,7 +765,8 @@ buildStateTree(State * st, string * path, unordered_set<State> & states) {
                 logMsgInfo() << s_nextStateId << " states, " << s_transitions
                              << " transitions, "
                              << "(" << path->size() << " chars) ..." << show;
-                buildStateTree(st2, path, states);
+                if (!emergency)
+                    buildStateTree(st2, path, states);
             }
             path->resize(pathLen);
 
