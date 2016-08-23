@@ -233,7 +233,7 @@ static bool copyRequiredDeps(
             if (!copyRequiredDeps(rules, src, elem))
                 return false;
         break;
-    case Element::kRule: 
+    case Element::kRule:
         if (!copyRules(rules, src, root.value, false))
             return false;
     }
@@ -539,9 +539,12 @@ static void addNextPositions(State * st, const StatePosition & sp) {
     bool terminal{false};
     auto terminalStarted = sp.elems.end();
     bool done = sp.elems.front().elem == &ElementDone::s_elem;
-    vector<StateEvent> events = sp.delayedEvents;
+    vector<StateEvent> events;
     auto it = sp.elems.rbegin();
     auto eit = sp.elems.rend();
+    if (it->elem->type == Element::kTerminal || done && sp.elems.size() == 1) {
+        events = sp.delayedEvents;
+    }
     for (; it != eit; ++it) {
         const StateElement & se = *it;
         bool fromRecurse = false;
@@ -573,10 +576,8 @@ static void addNextPositions(State * st, const StatePosition & sp) {
         }
 
         if (se.elem->type == Element::kRule) {
-            if ((se.elem->rule->flags & Element::kOnEnd) 
-                && (se.started || !done)
-                && !se.elem->rule->recurse
-            ) {
+            if ((se.elem->rule->flags & Element::kOnEnd) &&
+                (se.started || !done) && !se.elem->rule->recurse) {
                 addEvent(events, se, Element::kOnEnd);
             }
             // when exiting the parser (via a done sentinel) go directly out,

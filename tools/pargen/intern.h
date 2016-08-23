@@ -53,15 +53,15 @@ Element * addSequenceRule(
     const std::string & name,
     unsigned m,
     unsigned n,
-    unsigned flags = 0 // Element::kOn*
-    );
+    unsigned flags = 0, // Element::kOn*
+    bool recurse = false);
 Element * addChoiceRule(
     std::set<Element> & rules,
     const std::string & name,
     unsigned m,
     unsigned n,
-    unsigned flags = 0 // Element::kOn*
-    );
+    unsigned flags = 0, // Element::kOn*
+    bool recurse = false);
 Element * addSequence(Element * rule, unsigned m, unsigned n);
 Element * addChoice(Element * rule, unsigned m, unsigned n);
 void addRule(Element * rule, const std::string & name, unsigned m, unsigned n);

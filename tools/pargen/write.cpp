@@ -55,6 +55,29 @@ ostream & operator<<(ostream & os, const Element & elem) {
         os << "%x" << hex << (unsigned)elem.value[0] << dec;
         break;
     }
+
+    if (elem.flags) {
+        bool first = true;
+        os << "  { ";
+        if (elem.flags & Element::kOnStart) {
+            first = false;
+            os << "Start";
+        }
+        if (elem.flags & Element::kOnEnd) {
+            if (!first)
+                os << ", ";
+            first = false;
+            os << "End";
+        }
+        if (elem.flags & Element::kOnChar) {
+            if (!first)
+                os << ", ";
+            first = false;
+            os << "Char";
+        }
+        os << " }";
+    }
+
     return os;
 }
 
@@ -64,7 +87,8 @@ ostream & operator<<(ostream & os, const set<Element> & rules) {
         os << "*   " << rule.name;
         if (rule.recurse)
             os << '*';
-        os << " = " << rule << '\n';
+        os << " = " << rule;
+        os << '\n';
     }
     return os;
 }
@@ -204,7 +228,8 @@ static bool writeSwitchCase(ostream & os, const State & st) {
             return 256 * e1.state + e1.ch < 256 * e2.state + e2.ch;
         });
     const unsigned kCaseColumns = 6;
-    os << "    switch (*ptr++) {\n";
+    os << "    ch = *ptr++;\n";
+    os << "    switch (ch) {\n";
     unsigned prev = cases.front().state;
     unsigned pos = 0;
     for (auto && ns : cases) {
@@ -243,16 +268,16 @@ static bool writeSwitchCase(ostream & os, const State & st) {
 
 //===========================================================================
 static void writeEventCallback(
-    ostream & os, 
-    const string & name, 
+    ostream & os,
+    const string & name,
     Element::Flags type,
     const string & prefix) {
     os << prefix << "m_notify->on";
     writeRuleName(os, name, true);
     switch (type) {
-    case Element::kOnChar: os << "Char(ptr[-1])"; break;
+    case Element::kOnChar: os << "Char(ch)"; break;
     case Element::kOnEnd: os << "End(ptr)"; break;
-    case Element::kOnStart: os << "Start(ptr)"; break;
+    case Element::kOnStart: os << "Start(ptr - 1)"; break;
     }
     os << ";\n";
 }
@@ -303,6 +328,10 @@ static void writeParserState(
             hasCalls = true;
             assert(elem->type == Element::kRule);
             assert(elem->rule->recurse);
+            for (auto && sv : sp.delayedEvents) {
+                writeEventCallback(
+                    os, sv.elem->name, Element::Flags(sv.flags), "    ");
+            }
             os << "    if (state";
             writeRuleName(os, elem->rule->name, true);
             os << "(";
@@ -357,6 +386,7 @@ bool AbnfParser::)";
     if (!root) {
         os << R"(parse (const char src[]) {
     const char * ptr = src;
+    char ch;
     goto state2;
 
 state0: // )"
@@ -368,6 +398,7 @@ state0: // )"
         writeRuleName(os, root->name, true);
         os << R"( (const char *& ptr) {
     const char * last{nullptr};
+    char ch;
 )";
         if (root->flags & Element::kOnStart) {
             writeEventCallback(os, root->name, Element::kOnStart, "    ");
@@ -475,6 +506,7 @@ private:
 
 static bool s_resetRecursion = false;
 static bool s_markRecursion = true;
+static bool s_excludeCallbacks = false;
 static bool s_buildStateTree = true;
 static bool s_writeStatePositions = false;
 static bool s_buildRecurseFunctions = true;
@@ -493,6 +525,12 @@ void writeParser(
     Element * elem = addChoiceRule(rules, kRootElement, 1, 1);
     addRule(elem, root, 1, 1);
 
+    if (s_excludeCallbacks) {
+        for (auto && elem : rules) {
+            const_cast<Element &>(elem).flags = 0;
+        }
+    }
+
     normalize(rules);
     if (s_markRecursion)
         markRecursion(rules, *elem, s_resetRecursion);
@@ -509,7 +547,8 @@ void writeParser(
         for (auto && elem : rules) {
             if (elem.recurse) {
                 buildStateTree(&states, rules, elem.name, s_buildStateTree);
-                writeFunction(cppfile, &elem, rules, states, s_writeStatePositions);
+                writeFunction(
+                    cppfile, &elem, rules, states, s_writeStatePositions);
             }
         }
     }
