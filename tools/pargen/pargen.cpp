@@ -210,8 +210,8 @@ static void getAbnfRules(set<Element> & rules) {
     rule = addSequenceRule(rules, "defined-as-set", 1, 1, Element::kOnEnd);
     addLiteral(rule, "=", 1, 1);
     // defined-as-incremental = "=/"
-    rule = addSequenceRule(
-        rules, "defined-as-incremental", 1, 1, Element::kOnEnd);
+    rule =
+        addSequenceRule(rules, "defined-as-incremental", 1, 1, Element::kOnEnd);
     addLiteral(rule, "=/", 1, 1);
 
     // elements       =  alternation *c-wsp
@@ -349,11 +349,11 @@ static void getAbnfRules(set<Element> & rules) {
     addRule(rule, "DQUOTE", 1, 1);
     // char-val-sequence = *(%x20-21 / %x23-7E)
     rule = addChoiceRule(
-        rules, 
-        "char-val-sequence", 
-        0, 
-        kUnlimited, 
-        Element::kOnStart |  Element::kOnChar);
+        rules,
+        "char-val-sequence",
+        0,
+        kUnlimited,
+        Element::kOnStart | Element::kOnChar);
     if (s_allRules) {
         addRange(rule, 0x23, 0x7e);
     } else {
@@ -369,16 +369,13 @@ static void getAbnfRules(set<Element> & rules) {
     addRule(elem, "hex-val", 1, 1);
 
     // bin-val-sequence = 1*BIT
-    rule = addSequenceRule(
-        rules, "bin-val-sequence", 1, 1, Element::kOnChar);
+    rule = addSequenceRule(rules, "bin-val-sequence", 1, 1, Element::kOnChar);
     addRule(rule, "BIT", 1, kUnlimited);
     // dec-val-sequence = 1*DIGIT
-    rule = addSequenceRule(
-        rules, "dec-val-sequence", 1, 1, Element::kOnChar);
+    rule = addSequenceRule(rules, "dec-val-sequence", 1, 1, Element::kOnChar);
     addRule(rule, "DIGIT", 1, kUnlimited);
     // hex-val-sequence = 1*HEXDIG
-    rule = addSequenceRule(
-        rules, "hex-val-sequence", 1, 1, Element::kOnChar);
+    rule = addSequenceRule(rules, "hex-val-sequence", 1, 1, Element::kOnChar);
     addRule(rule, "HEXDIG", 1, kUnlimited);
 
     // bin-val = "b" (bin-val-simple / bin-val-concatenation
@@ -584,8 +581,7 @@ Element * addSequenceRule(
     unsigned m,
     unsigned n,
     unsigned flags, // Element::kFlag*
-    bool recurse
-    ) {
+    bool recurse) {
     auto e = addChoiceRule(rules, name, m, n, flags, recurse);
     e = addSequence(e, 1, 1);
     return e;
@@ -598,8 +594,7 @@ Element * addChoiceRule(
     unsigned m,
     unsigned n,
     unsigned flags, // Element::kFlag*
-    bool recurse
-    ) {
+    bool recurse) {
     Element e;
     e.id = ++s_nextElemId;
     e.name = name;
