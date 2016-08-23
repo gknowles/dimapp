@@ -178,36 +178,75 @@ static void getAbnfRules(set<Element> & rules) {
     // addRule(elem, "WSP", 0, kUnlimited);    // see errata 3076
     addRule(elem, "c-nl", 1, 1);
 
-    // rule           =  rulename defined-as elements c-nl
+    // rule =  rulename [rule-recurse] defined-as elements [actions] c-nl
     rule = addSequenceRule(rules, "rule", 1, 1);
     addRule(rule, "rulename", 1, 1);
     addRule(rule, "defined-as", 1, 1);
     addRule(rule, "elements", 1, 1);
+    addRule(rule, "actions", 0, 1);
     addRule(rule, "c-nl", 1, 1);
 
     // rulename       =  ALPHA *(ALPHA / DIGIT / "-")
-    rule = addSequenceRule(rules, "rulename", 1, 1, Element::kOnEnd);
+    rule = addSequenceRule(
+        rules, "rulename", 1, 1, Element::kOnStart | Element::kOnChar);
     addRule(rule, "ALPHA", 1, 1);
     elem = addChoice(rule, 0, kUnlimited);
     addRule(elem, "ALPHA", 1, 1);
     addRule(elem, "DIGIT", 1, 1);
     addLiteral(elem, "-", 1, 1);
 
-    // defined-as     =  *c-wsp ("=" / "=/") *c-wsp
+    // rule-recurse = "*"
+    rule = addSequenceRule(rules, "rule-recurse", 1, 1, Element::kOnEnd);
+    addLiteral(rule, "*", 1, 1);
+
+    // defined-as =  *c-wsp (defined-as-set / defined-as-incremental) *c-wsp
     rule = addSequenceRule(rules, "defined-as", 1, 1);
     addRule(rule, "c-wsp", 0, kUnlimited);
     elem = addChoice(rule, 1, 1);
-    addLiteral(elem, "=", 1, 1);
-    elem2 = addSequence(elem, 1, 1);
-    addLiteral(elem2, "/", 1, 1);
-    addLiteral(elem2, "=", 1, 1);
+    addRule(elem, "defined-as-set", 1, 1);
+    addRule(elem, "defined-as-incremental", 1, 1);
     addRule(rule, "c-wsp", 0, kUnlimited);
+    // defined-as-set = "="
+    rule = addSequenceRule(rules, "defined-as-set", 1, 1, Element::kOnEnd);
+    addLiteral(rule, "=", 1, 1);
+    // defined-as-incremental = "=/"
+    rule = addSequenceRule(
+        rules, "defined-as-incremental", 1, 1, Element::kOnEnd);
+    addLiteral(rule, "=/", 1, 1);
 
     // elements       =  alternation *c-wsp
     rule = addSequenceRule(rules, "elements", 1, 1);
     addRule(rule, "alternation", 1, 1);
     addRule(rule, "c-wsp", 0, kUnlimited);
     // addRule(rule, "WSP", 0, kUnlimited);        // see errata 2968
+
+    // actions = "{" *c-wsp [action *(*c-wsp "," *c-wsp action)] *c-wsp "}"
+    rule = addSequenceRule(rules, "actions", 1, 1);
+    addLiteral(rule, "{", 1, 1);
+    addRule(rule, "c-wsp", 0, kUnlimited);
+    elem = addSequence(rule, 0, 1);
+    addRule(elem, "action", 1, 1);
+    elem2 = addSequence(elem, 0, kUnlimited);
+    addRule(elem2, "c-wsp", 0, kUnlimited);
+    addLiteral(elem2, ",", 1, 1);
+    addRule(elem2, "c-wsp", 0, kUnlimited);
+    addRule(elem2, "action", 1, 1);
+    addRule(rule, "c-wsp", 0, kUnlimited);
+    addLiteral(rule, "}", 1, 1);
+    // action = action-start / action-end / action-char
+    rule = addChoiceRule(rules, "action", 1, 1);
+    addRule(rule, "action-start", 1, 1);
+    addRule(rule, "action-end", 1, 1);
+    addRule(rule, "action-char", 1, 1);
+    // action-start = "start" {end}
+    rule = addSequenceRule(rules, "action-start", 1, 1, Element::kOnEnd);
+    addLiteral(rule, "start", 1, 1);
+    // action-end = "end" {end}
+    rule = addSequenceRule(rules, "action-end", 1, 1, Element::kOnEnd);
+    addLiteral(rule, "end", 1, 1);
+    // action-char = "char" {end}
+    rule = addSequenceRule(rules, "action-char", 1, 1, Element::kOnEnd);
+    addLiteral(rule, "char", 1, 1);
 
     // c-wsp          =  WSP / (c-nl WSP)
     rule = addChoiceRule(rules, "c-wsp", 1, 1);
@@ -224,7 +263,6 @@ static void getAbnfRules(set<Element> & rules) {
         addRule(rule, "comment", 1, 1);
     }
     addRule(rule, "NEWLINE", 1, 1);
-
     // comment        =  ";" *(WSP / VCHAR) NEWLINE
     rule = addSequenceRule(rules, "comment", 1, 1);
     addLiteral(rule, ";", 1, 1);
@@ -252,7 +290,7 @@ static void getAbnfRules(set<Element> & rules) {
     addRule(elem, "repetition", 1, 1);
 
     // repetition     =  [repeat] element
-    rule = addSequenceRule(rules, "repetition", 1, 1);
+    rule = addSequenceRule(rules, "repetition", 1, 1, Element::kOnStart);
     addRule(rule, "repeat", 0, 1);
     addRule(rule, "element", 1, 1);
 
@@ -275,13 +313,16 @@ static void getAbnfRules(set<Element> & rules) {
     rule = addChoiceRule(rules, "repeat-max", 1, 1, Element::kOnChar);
     addRule(rule, "DIGIT", 1, kUnlimited);
 
-    // element        =  rulename / group / option / char-val / num-val
+    // element        =  ruleref / group / option / char-val / num-val
     rule = addChoiceRule(rules, "element", 1, 1);
-    addRule(rule, "rulename", 1, 1);
+    addRule(rule, "ruleref", 1, 1);
     addRule(rule, "group", 1, 1);
     addRule(rule, "option", 1, 1);
     addRule(rule, "char-val", 1, 1);
     addRule(rule, "num-val", 1, 1);
+    // ruleref = rulename
+    rule = addChoiceRule(rules, "ruleref", 1, 1, Element::kOnEnd);
+    addRule(rule, "rulename", 1, 1);
 
     // group          =  "(" *c-wsp alternation *c-wsp ")"
     rule = addSequenceRule(
@@ -302,13 +343,17 @@ static void getAbnfRules(set<Element> & rules) {
     addLiteral(rule, "]", 1, 1);
 
     // char-val       =  DQUOTE char-val-sequence DQUOTE
-    rule = addSequenceRule(rules, "char-val", 1, 1);
+    rule = addSequenceRule(rules, "char-val", 1, 1, Element::kOnEnd);
     addRule(rule, "DQUOTE", 1, 1);
     addRule(rule, "char-val-sequence", 1, 1);
     addRule(rule, "DQUOTE", 1, 1);
     // char-val-sequence = *(%x20-21 / %x23-7E)
     rule = addChoiceRule(
-        rules, "char-val-sequence", 0, kUnlimited, Element::kOnEnd);
+        rules, 
+        "char-val-sequence", 
+        0, 
+        kUnlimited, 
+        Element::kOnStart |  Element::kOnChar);
     if (s_allRules) {
         addRange(rule, 0x23, 0x7e);
     } else {
@@ -323,6 +368,19 @@ static void getAbnfRules(set<Element> & rules) {
     addRule(elem, "dec-val", 1, 1);
     addRule(elem, "hex-val", 1, 1);
 
+    // bin-val-sequence = 1*BIT
+    rule = addSequenceRule(
+        rules, "bin-val-sequence", 1, 1, Element::kOnChar);
+    addRule(rule, "BIT", 1, kUnlimited);
+    // dec-val-sequence = 1*DIGIT
+    rule = addSequenceRule(
+        rules, "dec-val-sequence", 1, 1, Element::kOnChar);
+    addRule(rule, "DIGIT", 1, kUnlimited);
+    // hex-val-sequence = 1*HEXDIG
+    rule = addSequenceRule(
+        rules, "hex-val-sequence", 1, 1, Element::kOnChar);
+    addRule(rule, "HEXDIG", 1, kUnlimited);
+
     // bin-val = "b" (bin-val-simple / bin-val-concatenation
     //      / bin-val-alterntation)
     rule = addSequenceRule(rules, "bin-val", 1, 1);
@@ -331,12 +389,9 @@ static void getAbnfRules(set<Element> & rules) {
     addRule(elem, "bin-val-simple", 1, 1);
     addRule(elem, "bin-val-concatenation", 1, 1);
     addRule(elem, "bin-val-alternation", 1, 1);
-    // bin-val-simple = bin-val-base
+    // bin-val-simple = bin-val-sequence
     rule = addSequenceRule(rules, "bin-val-simple", 1, 1, Element::kOnEnd);
-    addRule(rule, "bin-val-base", 1, 1);
-    // bin-val-base = 1*BIT
-    rule = addSequenceRule(rules, "bin-val-base", 1, 1, Element::kOnChar);
-    addRule(rule, "BIT", 1, kUnlimited);
+    addRule(rule, "bin-val-sequence", 1, 1);
     // bin-val-concatenation = bin-val-concat-each 1*("." bin-val-concat-each)
     rule = addSequenceRule(
         rules,
@@ -348,20 +403,20 @@ static void getAbnfRules(set<Element> & rules) {
     elem = addSequence(rule, 1, kUnlimited);
     addLiteral(elem, ".", 1, 1);
     addRule(elem, "bin-val-concat-each", 1, 1);
-    // bin-val-concat-each = bin-val-base
+    // bin-val-concat-each = bin-val-sequence
     rule = addSequenceRule(rules, "bin-val-concat-each", 1, 1, Element::kOnEnd);
-    addRule(rule, "bin-val-base", 1, 1);
+    addRule(rule, "bin-val-sequence", 1, 1);
     // bin-val-alternation = bin-val-alt-first "-" bin-val-alt-second
     rule = addSequenceRule(rules, "bin-val-alternation", 1, 1);
     addRule(rule, "bin-val-alt-first", 1, 1);
     addLiteral(rule, "-", 1, 1);
     addRule(rule, "bin-val-alt-second", 1, 1);
-    // bin-val-alt-first = bin-val-base
+    // bin-val-alt-first = bin-val-sequence
     rule = addSequenceRule(rules, "bin-val-alt-first", 1, 1, Element::kOnEnd);
-    addRule(rule, "bin-val-base", 1, 1);
-    // bin-val-alt-second = bin-val-base
+    addRule(rule, "bin-val-sequence", 1, 1);
+    // bin-val-alt-second = bin-val-sequence
     rule = addSequenceRule(rules, "bin-val-alt-second", 1, 1, Element::kOnEnd);
-    addRule(rule, "bin-val-base", 1, 1);
+    addRule(rule, "bin-val-sequence", 1, 1);
 
     // dec-val = "d" (dec-val-simple / dec-val-concatenation
     //      / dec-val-alterntation)
@@ -371,30 +426,34 @@ static void getAbnfRules(set<Element> & rules) {
     addRule(elem, "dec-val-simple", 1, 1);
     addRule(elem, "dec-val-concatenation", 1, 1);
     addRule(elem, "dec-val-alternation", 1, 1);
-    // dec-val-simple = 1*DIGIT
-    rule = addSequenceRule(rules, "dec-val-simple", 1, 1, Element::kOnChar);
-    addRule(rule, "DIGIT", 1, kUnlimited);
-    // dec-val-concatenation = dec-val-simple 1*("." dec-val-simple)
+    // dec-val-simple = dec-val-sequence
+    rule = addSequenceRule(rules, "dec-val-simple", 1, 1, Element::kOnEnd);
+    addRule(rule, "dec-val-sequence", 1, 1);
+    // dec-val-concatenation = dec-val-concat-each 1*("." dec-val-concat-each)
     rule = addSequenceRule(
         rules,
         "dec-val-concatenation",
         1,
         1,
         Element::kOnStart | Element::kOnEnd);
-    addRule(rule, "dec-val-simple", 1, 1);
+    addRule(rule, "dec-val-concat-each", 1, 1);
     elem = addSequence(rule, 1, kUnlimited);
     addLiteral(elem, ".", 1, 1);
-    addRule(elem, "dec-val-simple", 1, 1);
-    // dec-val-alternation = dec-val-simple "-" dec-val-simple
-    rule = addSequenceRule(
-        rules,
-        "dec-val-alternation",
-        1,
-        1,
-        Element::kOnStart | Element::kOnEnd);
-    addRule(rule, "dec-val-simple", 1, 1);
+    addRule(elem, "dec-val-concat-each", 1, 1);
+    // dec-val-concat-each = dec-val-sequence
+    rule = addSequenceRule(rules, "dec-val-concat-each", 1, 1, Element::kOnEnd);
+    addRule(rule, "dec-val-sequence", 1, 1);
+    // dec-val-alternation = dec-val-alt-first "-" dec-val-alt-second
+    rule = addSequenceRule(rules, "dec-val-alternation", 1, 1);
+    addRule(rule, "dec-val-alt-first", 1, 1);
     addLiteral(rule, "-", 1, 1);
-    addRule(rule, "dec-val-simple", 1, 1);
+    addRule(rule, "dec-val-alt-second", 1, 1);
+    // dec-val-alt-first = dec-val-sequence
+    rule = addSequenceRule(rules, "dec-val-alt-first", 1, 1, Element::kOnEnd);
+    addRule(rule, "dec-val-sequence", 1, 1);
+    // dec-val-alt-second = dec-val-sequence
+    rule = addSequenceRule(rules, "dec-val-alt-second", 1, 1, Element::kOnEnd);
+    addRule(rule, "dec-val-sequence", 1, 1);
 
     // hex-val = "x" (hex-val-simple / hex-val-concatenation
     //      / hex-val-alterntation)
@@ -404,30 +463,34 @@ static void getAbnfRules(set<Element> & rules) {
     addRule(elem, "hex-val-simple", 1, 1);
     addRule(elem, "hex-val-concatenation", 1, 1);
     addRule(elem, "hex-val-alternation", 1, 1);
-    // hex-val-simple = 1*HEXDIG
-    rule = addSequenceRule(rules, "hex-val-simple", 1, 1, Element::kOnChar);
-    addRule(rule, "HEXDIG", 1, kUnlimited);
-    // hex-val-concatenation = hex-val-simple 1*("." hex-val-simple)
+    // hex-val-simple = hex-val-sequence
+    rule = addSequenceRule(rules, "hex-val-simple", 1, 1, Element::kOnEnd);
+    addRule(rule, "hex-val-sequence", 1, 1);
+    // hex-val-concatenation = hex-val-concat-each 1*("." hex-val-concat-each)
     rule = addSequenceRule(
         rules,
         "hex-val-concatenation",
         1,
         1,
         Element::kOnStart | Element::kOnEnd);
-    addRule(rule, "hex-val-simple", 1, 1);
+    addRule(rule, "hex-val-concat-each", 1, 1);
     elem = addSequence(rule, 1, kUnlimited);
     addLiteral(elem, ".", 1, 1);
-    addRule(elem, "hex-val-simple", 1, 1);
-    // hex-val-alternation = hex-val-simple "-" hex-val-simple
-    rule = addSequenceRule(
-        rules,
-        "hex-val-alternation",
-        1,
-        1,
-        Element::kOnStart | Element::kOnEnd);
-    addRule(rule, "hex-val-simple", 1, 1);
+    addRule(elem, "hex-val-concat-each", 1, 1);
+    // hex-val-concat-each = hex-val-sequence
+    rule = addSequenceRule(rules, "hex-val-concat-each", 1, 1, Element::kOnEnd);
+    addRule(rule, "hex-val-sequence", 1, 1);
+    // hex-val-alternation = hex-val-alt-first "-" hex-val-alt-second
+    rule = addSequenceRule(rules, "hex-val-alternation", 1, 1);
+    addRule(rule, "hex-val-alt-first", 1, 1);
     addLiteral(rule, "-", 1, 1);
-    addRule(rule, "hex-val-simple", 1, 1);
+    addRule(rule, "hex-val-alt-second", 1, 1);
+    // hex-val-alt-first = hex-val-sequence
+    rule = addSequenceRule(rules, "hex-val-alt-first", 1, 1, Element::kOnEnd);
+    addRule(rule, "hex-val-sequence", 1, 1);
+    // hex-val-alt-second = hex-val-sequence
+    rule = addSequenceRule(rules, "hex-val-alt-second", 1, 1, Element::kOnEnd);
+    addRule(rule, "hex-val-sequence", 1, 1);
 }
 
 //===========================================================================
@@ -520,9 +583,10 @@ Element * addSequenceRule(
     const string & name,
     unsigned m,
     unsigned n,
-    unsigned flags // Element::kFlag*
+    unsigned flags, // Element::kFlag*
+    bool recurse
     ) {
-    auto e = addChoiceRule(rules, name, m, n, flags);
+    auto e = addChoiceRule(rules, name, m, n, flags, recurse);
     e = addSequence(e, 1, 1);
     return e;
 }
@@ -533,7 +597,8 @@ Element * addChoiceRule(
     const string & name,
     unsigned m,
     unsigned n,
-    unsigned flags // Element::kFlag*
+    unsigned flags, // Element::kFlag*
+    bool recurse
     ) {
     Element e;
     e.id = ++s_nextElemId;
@@ -542,6 +607,7 @@ Element * addChoiceRule(
     e.n = n;
     e.type = Element::kChoice;
     e.flags = flags;
+    e.recurse = recurse;
     auto ib = rules.insert(e);
     assert(ib.second);
     return const_cast<Element *>(&*ib.first);
@@ -577,8 +643,9 @@ void addTerminal(Element * rule, unsigned char ch, unsigned m, unsigned n) {
 
 //===========================================================================
 void addLiteral(Element * rule, const string & value, unsigned m, unsigned n) {
-    auto c = addChoice(rule, m, n);
+    auto s = addSequence(rule, m, n);
     for (unsigned char ch : value) {
+        auto c = addChoice(s, 1, 1);
         addTerminal(c, ch, 1, 1);
         if (islower(ch)) {
             addTerminal(c, (unsigned char)toupper(ch), 1, 1);
