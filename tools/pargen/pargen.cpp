@@ -179,7 +179,7 @@ static void getAbnfRules(set<Element> & rules) {
     addRule(elem, "c-nl", 1, 1);
 
     // rule =  rulename [rule-recurse] defined-as elements [actions] c-nl
-    rule = addSequenceRule(rules, "rule", 1, 1);
+    rule = addSequenceRule(rules, "rule", 1, 1, Element::kOnEnd);
     addRule(rule, "rulename", 1, 1);
     addRule(rule, "defined-as", 1, 1);
     addRule(rule, "elements", 1, 1);
@@ -298,49 +298,43 @@ static void getAbnfRules(set<Element> & rules) {
     rule = addChoiceRule(rules, "repeat", 1, 1);
     addRule(rule, "repeat-minmax", 1, 1);
     addRule(rule, "repeat-range", 1, 1);
-    // repeat-minmax = repeat-min
+    // repeat-minmax = dec-val-sequence
     rule = addChoiceRule(rules, "repeat-minmax", 1, 1, Element::kOnEnd);
-    addRule(rule, "repeat-min", 1, 1);
-    // repeat-range = [repeat-min] * [repeat-max]
-    rule = addSequenceRule(rules, "repeat-range", 1, 1, Element::kOnEnd);
-    addRule(rule, "repeat-min", 0, 1);
+    addRule(rule, "dec-val-sequence", 1, 1);
+    // repeat-range = [dec-val-sequence] * [repeat-max]
+    rule = addSequenceRule(rules, "repeat-range", 1, 1, Element::kOnStart);
+    addRule(rule, "dec-val-sequence", 0, 1);
     addLiteral(rule, "*", 1, 1);
     addRule(rule, "repeat-max", 0, 1);
-    // repeat-min = 1*DIGIT
-    rule = addChoiceRule(rules, "repeat-min", 1, 1, Element::kOnChar);
-    addRule(rule, "DIGIT", 1, kUnlimited);
-    // repeat-max = 1*DIGIT
-    rule = addChoiceRule(rules, "repeat-max", 1, 1, Element::kOnChar);
-    addRule(rule, "DIGIT", 1, kUnlimited);
+    // repeat-max = dec-val-sequence
+    rule = addChoiceRule(rules, "repeat-max", 1, 1, Element::kOnEnd);
+    addRule(rule, "dec-val-sequence", 1, 1);
 
-    // element        =  ruleref / group / option / char-val / num-val
+    // element        =  ruleref / group / char-val / num-val
     rule = addChoiceRule(rules, "element", 1, 1);
     addRule(rule, "ruleref", 1, 1);
     addRule(rule, "group", 1, 1);
-    addRule(rule, "option", 1, 1);
     addRule(rule, "char-val", 1, 1);
     addRule(rule, "num-val", 1, 1);
     // ruleref = rulename
     rule = addChoiceRule(rules, "ruleref", 1, 1, Element::kOnEnd);
     addRule(rule, "rulename", 1, 1);
 
-    // group          =  "(" *c-wsp alternation *c-wsp ")"
+    // group =  ( "(" / "[" ) group-tail
     rule = addSequenceRule(
         rules, "group", 1, 1, Element::kOnStart | Element::kOnEnd);
-    addLiteral(rule, "(", 1, 1);
+    elem = addChoice(rule, 1, 1);
+    addLiteral(elem, "(", 1, 1);
+    addLiteral(elem, "[", 1, 1);
+    addRule(rule, "group-tail", 1, 1);
+    // group-tail* =  *c-wsp alternation *c-wsp ( ")" / "]" )
+    rule = addSequenceRule(rules, "group-tail", 1, 1, 0, true);
     addRule(rule, "c-wsp", 0, kUnlimited);
     addRule(rule, "alternation", 1, 1);
     addRule(rule, "c-wsp", 0, kUnlimited);
-    addLiteral(rule, ")", 1, 1);
-
-    // option         =  "[" *c-wsp alternation *c-wsp "]"
-    rule = addSequenceRule(
-        rules, "option", 1, 1, Element::kOnStart | Element::kOnEnd);
-    addLiteral(rule, "[", 1, 1);
-    addRule(rule, "c-wsp", 0, kUnlimited);
-    addRule(rule, "alternation", 1, 1);
-    addRule(rule, "c-wsp", 0, kUnlimited);
-    addLiteral(rule, "]", 1, 1);
+    elem = addChoice(rule, 1, 1);
+    addLiteral(elem, ")", 1, 1);
+    addLiteral(elem, "]", 1, 1);
 
     // char-val       =  DQUOTE char-val-sequence DQUOTE
     rule = addSequenceRule(rules, "char-val", 1, 1, Element::kOnEnd);
@@ -542,7 +536,13 @@ void Application::onTask() {
     TimePoint start = Clock::now();
     ofstream oh("abnfparse.h");
     ofstream ocpp("abnfparse.cpp");
-    writeParser(oh, ocpp, rules, "rulelist");
+    if (s_allRules) {
+        writeParser(oh, ocpp, rules, "rulelist");
+    } else {
+        writeParser(oh, ocpp, rules, "bin-val");
+    }
+    oh.close();
+    ocpp.close();
     TimePoint finish = Clock::now();
     std::chrono::duration<double> elapsed = finish - start;
     cout << "Elapsed time: " << elapsed.count() << " seconds" << endl;
@@ -551,9 +551,22 @@ void Application::onTask() {
     for (auto && rule : rules) {
         abnf << rule.name << " = " << rule << '\n';
     }
-    AbnfSyntax check;
-    bool valid = check.checkSyntax(abnf.str().c_str());
+    rules.clear();
+    bool valid = parseAbnf(&rules, abnf.str());
     cout << "Valid: " << valid << endl;
+
+    ostringstream o1;
+    for (auto && rule : rules) {
+        o1 << rule.name << " = " << rule << '\n';
+    }
+
+    ostringstream o2;
+    rules.clear();
+    valid = parseAbnf(&rules, o1.str());
+    for (auto && rule : rules) {
+        o2 << rule.name << " = " << rule << '\n';
+    }
+    cout << "Round trip: " << (o1.str() == o2.str()) << endl;
 
     appSignalShutdown(kExitSuccess);
 }

@@ -11,5 +11,5 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "abnfsyntax.h"
+#include "abnfparse.h"
 #include "intern.h"

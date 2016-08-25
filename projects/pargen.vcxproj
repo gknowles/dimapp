@@ -117,18 +117,21 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\tools\pargen\abnfsyntax.h" />
+    <ClInclude Include="..\tools\pargen\abnfparse.h" />
     <ClInclude Include="..\tools\pargen\intern.h" />
     <ClInclude Include="..\tools\pargen\pch.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\tools\pargen\abnfsyntax.cpp">
+    <ClCompile Include="..\tools\pargen\abnfparse.cpp">
       <ObjectFileName>$(IntDir)tools\pargen\</ObjectFileName>
     </ClCompile>
     <ClCompile Include="..\tools\pargen\gen.cpp">
       <ObjectFileName>$(IntDir)tools\pargen\</ObjectFileName>
     </ClCompile>
     <ClCompile Include="..\tools\pargen\pargen.cpp">
+      <ObjectFileName>$(IntDir)tools\pargen\</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\tools\pargen\parse.cpp">
       <ObjectFileName>$(IntDir)tools\pargen\</ObjectFileName>
     </ClCompile>
     <ClCompile Include="..\tools\pargen\pch.cpp">

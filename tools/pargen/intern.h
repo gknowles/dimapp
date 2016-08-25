@@ -21,7 +21,7 @@ struct Element {
         kRule,
         kChoice,
         kTerminal,
-    } type;
+    } type{kRule};
     std::string name;
     unsigned m{1};
     unsigned n{1};
@@ -164,3 +164,5 @@ void writeParser(
     std::ostream & cppfile,
     const std::set<Element> & rules,
     const std::string & root);
+
+bool parseAbnf(std::set<Element> * rules, const std::string & src);
