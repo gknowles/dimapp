@@ -271,15 +271,16 @@ static void writeEventCallback(
     ostream & os,
     const string & name,
     Element::Flags type,
-    const string & prefix) {
+    const char * args = nullptr,
+    const string & prefix = "    ") {
     os << prefix << "m_notify->on";
     writeRuleName(os, name, true);
     switch (type) {
-    case Element::kOnChar: os << "Char(ch)"; break;
-    case Element::kOnEnd: os << "End(ptr)"; break;
-    case Element::kOnStart: os << "Start(ptr - 1)"; break;
+    case Element::kOnChar: os << "Char(" << (args ? args : "ch"); break;
+    case Element::kOnEnd: os << "End(" << (args ? args : "ptr"); break;
+    case Element::kOnStart: os << "Start(" << (args ? args : "ptr - 1"); break;
     }
-    os << ";\n";
+    os << ");\n";
 }
 
 //===========================================================================
@@ -297,12 +298,12 @@ static void writeParserState(
 
     // execute notifications
     for (auto && sv : st.positions.begin()->events) {
-        writeEventCallback(os, sv.elem->name, Element::Flags(sv.flags), "    ");
+        writeEventCallback(os, sv.elem->name, Element::Flags(sv.flags));
     }
 
     if (st.name == kDoneElement) {
         if (root && (root->flags & Element::kOnEnd)) {
-            writeEventCallback(os, root->name, Element::kOnEnd, "    ");
+            writeEventCallback(os, root->name, Element::kOnEnd);
         }
         os << "    return true;\n";
         return;
@@ -329,8 +330,7 @@ static void writeParserState(
             assert(elem->type == Element::kRule);
             assert(elem->rule->recurse);
             for (auto && sv : sp.delayedEvents) {
-                writeEventCallback(
-                    os, sv.elem->name, Element::Flags(sv.flags), "    ");
+                writeEventCallback(os, sv.elem->name, Element::Flags(sv.flags));
             }
             os << "    if (state";
             writeRuleName(os, elem->rule->name, true);
@@ -401,7 +401,7 @@ state0: // )"
     char ch;
 )";
         if (root->flags & Element::kOnStart) {
-            writeEventCallback(os, root->name, Element::kOnStart, "    ");
+            writeEventCallback(os, root->name, Element::kOnStart, "ptr");
         }
         os << R"(    goto state2;
 
@@ -443,25 +443,25 @@ class IAbnfParserNotify {
 public:
     virtual ~IAbnfParserNotify () {}
 
-    virtual bool onAbnfStart () {}
-    virtual bool onAbnfEnd () {}
+    virtual bool onStart () { return true; }
+    virtual bool onEnd () { return true; }
 
 )";
     for (auto && elem : rules) {
         if (elem.flags & Element::kOnStart) {
-            os << "    virtual bool onAbnf";
+            os << "    virtual bool on";
             writeRuleName(os, elem.name, true);
-            os << "Start (const char * ptr) {}\n";
+            os << "Start (const char * ptr) { return true; }\n";
         }
         if (elem.flags & Element::kOnChar) {
-            os << "    virtual bool onAbnf";
+            os << "    virtual bool on";
             writeRuleName(os, elem.name, true);
-            os << "Char (char ch) {}\n";
+            os << "Char (char ch) { return true; }\n";
         }
         if (elem.flags & Element::kOnEnd) {
-            os << "    virtual bool onAbnf";
+            os << "    virtual bool on";
             writeRuleName(os, elem.name, true);
-            os << "End (const char * eptr) {}\n";
+            os << "End (const char * eptr) { return true; }\n";
         }
     }
     os << 1 + R"(
