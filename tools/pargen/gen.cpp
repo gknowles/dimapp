@@ -587,14 +587,21 @@ static void addNextPositions(State * st, const StatePosition & sp) {
         }
 
         if (se.elem->type == Element::kTerminal) {
+            assert(it == sp.elems.rbegin());
             terminal = true;
-            for (auto it2 = it; it2 != eit; ++it2) {
-                if (it2->elem->type == Element::kRule && !done) {
-                    unsigned flags = it2->elem->rule->flags;
-                    if ((flags & Element::kOnStart) && !it2->started) {
-                        addEvent(events, *it2, Element::kOnStart);
+            if (!done) {
+                // add OnStart events top to bottom
+                for (auto && se : sp.elems) {
+                    if (se.elem->type == Element::kRule &&
+                        (se.elem->rule->flags & Element::kOnStart) &&
+                        !se.started) {
+                        addEvent(events, se, Element::kOnStart);
                     }
-                    if (flags & Element::kOnChar) {
+                }
+                // bubble up OnChar events bottom to top
+                for (auto it2 = it; it2 != eit; ++it2) {
+                    if (it2->elem->type == Element::kRule &&
+                        (it2->elem->rule->flags & Element::kOnChar)) {
                         addEvent(events, *it2, Element::kOnChar);
                     }
                 }
