@@ -14,64 +14,64 @@ using namespace Dim;
 static unsigned s_nextElemId;
 
 //===========================================================================
-static void getLineRules(set<Element> & rules) {
-    // line = OWS *1(param-list) OWS
-    auto * rule = addSequenceRule(rules, "line", 1, 1);
-    addRule(rule, "ows", 1, 1);
-    addRule(rule, "param-list", 0, 1);
-    addRule(rule, "ows", 1, 1);
-
-    // param-list = param *(ws param)
-    rule = addSequenceRule(rules, "param-list", 1, 1);
-    addRule(rule, "param", 1, 1);
-    auto * elem = addSequence(rule, 0, kUnlimited);
-    addRule(elem, "ws", 1, 1);
-    addRule(elem, "param", 1, 1);
-
-    // param = *fully-quoted [half-quoted] *BSLASH
-    // fully-quoted = *1unquoted active-quote quoted active-quote
-    // half-quoted = *1unquoted active-quote quoted
-    // unquoted = 1*( ptext  / escaped-quote )
-    // quoted = 1*( ptext / dquote-pair / escaped-quote / ws )
-    // ptext = *(pchar / BSLASH) pchar
-    // escaped-quote = *bslash-pair BSLASH DQUOTE
-    // active-quote = *bslash-pair DQUOTE
-    // dquote-pair = DQUOTE DQUOTE
-    // bslash-pair = BSLASH BSLASH
-    // pchar = %x21 / %x23-%x5b / %x5d-%x7e
-    // RWS = 1*(SP / HTAB)
-    // OWS = *(SP / HTAB)
-    // SP = %x20
-    // HTAB = %x9
-    // DQUOTE = %x22
-    // BSLASH = %x5c
-}
-
-//===========================================================================
 static void getTestRules(set<Element> & rules) {
-    Element * rule;
-    Element * elem;
-    rule = addChoiceRule(rules, "left-recurse", 1, 1);
-    elem = addSequence(rule, 1, 1);
-    addRule(elem, "left-recurse", 1, 1);
-    addTerminal(elem, 's', 1, 1);
-    addTerminal(rule, 'y', 1, 1);
-
-    rule = addChoiceRule(rules, "right-recurse", 1, 1);
-    elem = addSequence(rule, 1, 1);
-    addTerminal(elem, 's', 1, 1);
-    addRule(elem, "right-recurse", 1, 1);
-    addTerminal(rule, 'y', 1, 1);
-
-    rule = addChoiceRule(rules, "simple-recurse", 1, 1);
-    addRule(rule, "simple-recurse", 1, 1);
-    addTerminal(rule, 'y', 1, 1);
+    const char s_testRules[] = R"(
+left-recorse = left-recurse %x73 / %x79
+right-recurse = %x73 right-recurse / %x79
+simple-recurse = simple-recurse / %x79
+)";
+    bool valid = parseAbnf(&rules, s_testRules);
+    assert(valid);
+    valid = false;
 }
 
 static bool s_allRules = true;
 
 //===========================================================================
 static void getCoreRules(set<Element> & rules) {
+    const char s_coreRules[] = R"(
+ALPHA   =  %x41-5A / %x61-7A   ; A-Z / a-z
+BIT     =  "0" / "1"
+CHAR    =  %x01-7F
+CR      =  %x0D
+CRLF    =  CR LF
+CTL     =  %x00-1F / %x7F
+DIGIT   =  %x30-39
+DQUOTE  =  %x22
+HEXDIG  =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
+HTAB    =  %x09
+LF      =  %x0A
+LWSP    =  *(WSP / NEWLINE WSP)
+NEWLINE =  LF / CRLF
+OCTET   =  %x00-FF
+SP      =  %x20
+VCHAR   =  %x21-7E
+WSP     =  SP / HTAB
+)";
+    bool valid = parseAbnf(&rules, s_coreRules);
+    assert(valid);
+
+    if (!s_allRules) {
+        const char s_reducedRules[] = R"(
+ALPHA   =  %x5a
+CRLF    =  CR
+DIGIT   =  %x39
+NEWLINE =  CR
+WSP     =  SP
+)";
+        set<Element> replacements;
+        valid = parseAbnf(&replacements, s_reducedRules);
+        assert(valid);
+        for (auto && rule : replacements) {
+            rules.erase(rule);
+            rules.insert(rule);
+        }
+    }
+}
+
+#if 0
+//===========================================================================
+static void x_getCoreRules(set<Element> & rules) {
     Element * rule;
 
     // ALPHA          =  %x41-5A / %x61-7A   ; A-Z / a-z
@@ -138,6 +138,7 @@ static void getCoreRules(set<Element> & rules) {
     // NEWLINE        =  CR / LF / CRLF
     rule = addChoiceRule(rules, "NEWLINE", 1, 1);
     if (s_allRules) {
+        addRule(rule, "CR", 1, 1);
         addRule(rule, "LF", 1, 1);
         addRule(rule, "CRLF", 1, 1);
     } else {
@@ -161,6 +162,7 @@ static void getCoreRules(set<Element> & rules) {
         addRule(rule, "HTAB", 1, 1);
     }
 }
+#endif
 
 //===========================================================================
 static void getAbnfRules(set<Element> & rules) {
@@ -527,8 +529,6 @@ void Application::onTask() {
     //}
 
     set<Element> rules;
-    getLineRules(rules);
-    rules.clear();
     getCoreRules(rules);
     getAbnfRules(rules);
     getTestRules(rules);
@@ -666,7 +666,7 @@ void addLiteral(Element * rule, const string & value, unsigned m, unsigned n) {
 //===========================================================================
 void addRange(Element * rule, unsigned char a, unsigned char b) {
     assert(a <= b);
-    for (; a <= b; ++a) {
-        addTerminal(rule, a, 1, 1);
+    for (unsigned i = a; i <= b; ++i) {
+        addTerminal(rule, (unsigned char)i, 1, 1);
     }
 }
