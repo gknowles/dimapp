@@ -282,20 +282,18 @@ static void normalizeChoice(Element & rule) {
     assert(rule.elements.size() > 1);
     vector<Element> tmp;
     for (auto && elem : rule.elements) {
-        if (elem.type != Element::kChoice)
+        if (elem.type != Element::kChoice) {
+            tmp.push_back(move(elem));
             continue;
+        }
         for (auto && e : elem.elements) {
             tmp.push_back(move(e));
             Element & back = tmp.back();
             back.m *= elem.m;
             back.n = max({back.n, elem.n, back.n * elem.n});
         }
-        elem = move(tmp.back());
-        tmp.pop_back();
     }
-    for (auto && e : tmp) {
-        rule.elements.push_back(move(e));
-    }
+    rule.elements = tmp;
 }
 
 //===========================================================================
