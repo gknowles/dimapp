@@ -140,7 +140,9 @@ bool ParserNotify::onBinValAltFirstEnd(const char * eptr) {
 
 //===========================================================================
 bool ParserNotify::onBinValAltSecondEnd(const char * eptr) {
-    addRange(m_elems.back(), m_first, (unsigned char)m_number);
+    assert(m_number <= UCHAR_MAX);
+    Element * elem = addChoice(m_elems.back(), m_min, m_max);
+    addRange(elem, m_first, (unsigned char)m_number);
     m_number = 0;
     return true;
 }
@@ -321,10 +323,10 @@ bool ParserNotify::onHexValConcatenationEnd(const char * eptr) {
 bool ParserNotify::onHexValSequenceChar(char ch) {
     if (ch <= '9') {
         m_number = 16 * m_number + ch - '0';
-    } else if (ch <= 'A') {
-        m_number = 16 * m_number + ch - 'A';
+    } else if (ch <= 'Z') {
+        m_number = 16 * m_number + ch - 'A' + 10;
     } else {
-        m_number = 16 * m_number + ch - 'a';
+        m_number = 16 * m_number + ch - 'a' + 10;
     }
     return true;
 }
