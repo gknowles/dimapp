@@ -172,9 +172,10 @@ static void getAbnfRules(set<Element> & rules) {
 
     // definitions taken from rfc5234
 
-    // rulelist       =  1*( rule / (*c-wsp c-nl) )
+    // rulelist       =  1*( rule / option / (*c-wsp c-nl) )
     rule = addChoiceRule(rules, "rulelist", 1, kUnlimited);
     addRule(rule, "rule", 1, 1);
+    addRule(rule, "option", 1, 1);
     elem = addSequence(rule, 1, 1);
     addRule(elem, "c-wsp", 0, kUnlimited);
     // addRule(elem, "WSP", 0, kUnlimited);    // see errata 3076
@@ -249,6 +250,55 @@ static void getAbnfRules(set<Element> & rules) {
     // action-char = "char" {end}
     rule = addSequenceRule(rules, "action-char", 1, 1, Element::kOnEnd);
     addLiteral(rule, "char", 1, 1);
+
+    // option = "%" option-tail
+    rule = addSequenceRule(rules, "option", 1, 1);
+    addTerminal(rule, '%', 1, 1);
+    addRule(rule, "option-tail", 1, 1);
+    // option-tail* = optionname defined-as optionlist c-nl
+    rule = addSequenceRule(rules, "option-tail", 1, 1, 0, false);
+    addRule(rule, "optionname", 1, 1);
+    addRule(rule, "defined-as", 1, 1);
+    addRule(rule, "optionlist", 1, 1);
+    addRule(rule, "c-nl", 1, 1);
+    // optionname = ALPHA *(ALPHA / "." / "-") {Char}
+    rule = addSequenceRule(rules, "optionname", 1, 1, Element::kOnChar);
+    addRule(rule, "ALPHA", 1, 1);
+    elem = addChoice(rule, 0, kUnlimited);
+    addRule(elem, "ALPHA", 1, 1);
+    addLiteral(elem, ".", 1, 1);
+    addLiteral(elem, "-", 1, 1);
+    // optionlist = optiondef *(1*c-wsp optiondef) {Start, End}
+    rule = addSequenceRule(
+        rules, "optionlist", 1, 1, Element::kOnStart | Element::kOnEnd);
+    addRule(rule, "optiondef", 1, 1);
+    elem = addSequence(rule, 0, kUnlimited);
+    addRule(elem, "c-wsp", 1, kUnlimited);
+    addRule(elem, "optiondef", 1, 1);
+    // optiondef = option-unquoted / DQUOTE option-quoted DQUOTE {End}
+    rule = addChoiceRule(rules, "optiondef", 1, 1, Element::kOnEnd);
+    addRule(rule, "option-unquoted", 1, 1);
+    elem = addSequence(rule, 1, 1);
+    addRule(elem, "DQUOTE", 1, 1);
+    addRule(elem, "option-quoted", 1, 1);
+    addRule(elem, "DQUOTE", 1, 1);
+    // option-char = ALPHA / DIGIT / "." / "-" / "_" / ":"
+    rule = addChoiceRule(rules, "option-char", 1, 1);
+    addRule(rule, "ALPHA", 1, 1);
+    addRule(rule, "DIGIT", 1, 1);
+    addTerminal(rule, '.', 1, 1);
+    addTerminal(rule, '-', 1, 1);
+    addTerminal(rule, '_', 1, 1);
+    addTerminal(rule, ':', 1, 1);
+    // option-unquoted = 1*option-char {Char}
+    rule = addSequenceRule(rules, "option-unquoted", 1, 1, Element::kOnChar);
+    addRule(rule, "option-char", 1, kUnlimited);
+    // option-quoted = 1*(option-char / " " / "/") {Char}
+    rule =
+        addChoiceRule(rules, "option-quoted", 1, kUnlimited, Element::kOnChar);
+    addRule(rule, "option-char", 1, 1);
+    addTerminal(rule, ' ', 1, 1);
+    addTerminal(rule, '/', 1, 1);
 
     // c-wsp          =  WSP / (c-nl WSP)
     rule = addChoiceRule(rules, "c-wsp", 1, 1);
@@ -351,6 +401,7 @@ static void getAbnfRules(set<Element> & rules) {
         kUnlimited,
         Element::kOnStart | Element::kOnChar);
     if (s_allRules) {
+        addRange(rule, 0x20, 0x21);
         addRange(rule, 0x23, 0x7e);
     } else {
         addRange(rule, 0x20, 0x21);
@@ -533,13 +584,17 @@ void Application::onTask() {
     getAbnfRules(rules);
     getTestRules(rules);
 
+    addOption(rules, "%api.prefix", "Abnf");
+
     TimePoint start = Clock::now();
     ofstream oh("abnfparse.h");
     ofstream ocpp("abnfparse.cpp");
     if (s_allRules) {
-        writeParser(oh, ocpp, rules, "rulelist");
+        addOption(rules, "%root", "rulelist");
+        writeParser(oh, ocpp, rules);
     } else {
-        writeParser(oh, ocpp, rules, "bin-val");
+        addOption(rules, "%root", "bin-val");
+        writeParser(oh, ocpp, rules);
     }
     oh.close();
     ocpp.close();
@@ -585,6 +640,14 @@ int main(int argc, char * argv[]) {
     consoleEnableCtrlC(false);
     Application app(argc, argv);
     return appRun(app);
+}
+
+//===========================================================================
+void addOption(
+    set<Element> & rules, const string & name, const string & value) {
+    auto e = addChoiceRule(rules, name, 1, 1);
+    e->type = Element::kRule;
+    e->value = value;
 }
 
 //===========================================================================
@@ -669,4 +732,18 @@ void addRange(Element * rule, unsigned char a, unsigned char b) {
     for (unsigned i = a; i <= b; ++i) {
         addTerminal(rule, (unsigned char)i, 1, 1);
     }
+}
+
+//===========================================================================
+const char * getOption(const set<Element> & src, const string & name) {
+    Element key;
+    key.name = name;
+    auto it = src.find(key);
+    if (it == src.end())
+        return "";
+    const Element * elem = &*it;
+    while (!elem->elements.empty())
+        elem = &elem->elements.front();
+    assert(elem->type == Element::kRule);
+    return elem->value.c_str();
 }

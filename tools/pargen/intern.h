@@ -47,6 +47,12 @@ struct ElementNull : Element {
     static ElementNull s_elem;
 };
 
+// create options
+void addOption(
+    std::set<Element> & rules,
+    const std::string & name,
+    const std::string & value);
+
 // create rules
 Element * addSequenceRule(
     std::set<Element> & rules,
@@ -86,10 +92,16 @@ void markRecursion(std::set<Element> & rules, Element & rule, bool resetFirst);
 *
 ***/
 
-const char kRootElement[] = "<ROOT>";
-const char kDoneElement[] = "<DONE>";
-const char kFailedElement[] = "<FAILED>";
-const char kNullElement[] = "<NULL>";
+const char kOptionRoot[] = "%root";
+const char kOptionApiPrefix[] = "%api.prefix";
+const char kOptionApiHeaderFile[] = "%api.file.h";
+const char kOptionApiCppFile[] = "%api.file.cpp";
+
+const char kDoneRuleName[] = "%%DONE";
+
+const char kRootStateName[] = "<ROOT>";
+const char kDoneStateName[] = "<DONE>";
+const char kFailedStateName[] = "<FAILED>";
 
 struct StateElement {
     const Element * elem;
@@ -162,7 +174,9 @@ void buildStateTree(
 void writeParser(
     std::ostream & hfile,
     std::ostream & cppfile,
-    const std::set<Element> & rules,
-    const std::string & root);
+    const std::set<Element> & rules);
 
 bool parseAbnf(std::set<Element> * rules, const std::string & src);
+
+const char *
+getOption(const std::set<Element> & rules, const std::string & name);

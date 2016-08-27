@@ -57,7 +57,7 @@ ElementDone ElementDone::s_elem;
 //===========================================================================
 ElementDone::ElementDone() {
     type = Element::kRule;
-    value = kDoneElement;
+    value = kDoneRuleName;
     rule = this;
 }
 
@@ -685,6 +685,21 @@ buildStateTree(State * st, string * path, unordered_set<State> & states) {
     State next;
     bool emergency{false};
     for (unsigned i = 0; i < 257; ++i) {
+        size_t pathLen = path->size();
+        if (i <= ' ' || i == 256) {
+            path->push_back('\\');
+            switch (i) {
+            case 0: path->push_back('0'); break;
+            case 9: path->push_back('t'); break;
+            case 10: path->push_back('n'); break;
+            case 13: path->push_back('r'); break;
+            case 32: path->push_back('s'); break;
+            case 256: path->push_back('*'); break;
+            }
+        } else {
+            path->push_back(unsigned char(i));
+        }
+
         next.clear();
         for (auto && sp : st->positions) {
             auto & se = sp.elems.back();
@@ -720,7 +735,9 @@ buildStateTree(State * st, string * path, unordered_set<State> & states) {
                     conflicts.insert(cnt.first);
                     if (cnt.first.flags & Element::kOnChar) {
                         emergency = true;
-                        logMsgError() << "Conflicting parse events, " << *path;
+                        logMsgError() << "Conflicting parse events, "
+                                      << cnt.first.elem->name << " at "
+                                      << *path;
                     }
                 }
             }
@@ -745,21 +762,6 @@ buildStateTree(State * st, string * path, unordered_set<State> & states) {
             auto ib = states.insert(move(next));
             State * st2 = const_cast<State *>(&*ib.first);
 
-            size_t pathLen = path->size();
-            if (i <= ' ' || i == 256) {
-                path->push_back('\\');
-                switch (i) {
-                case 0: path->push_back('0'); break;
-                case 9: path->push_back('t'); break;
-                case 10: path->push_back('n'); break;
-                case 13: path->push_back('r'); break;
-                case 32: path->push_back('s'); break;
-                case 256: path->push_back('*'); break;
-                }
-            } else {
-                path->push_back(unsigned char(i));
-            }
-
             ++s_transitions;
             if (ib.second) {
                 st2->id = ++s_nextStateId;
@@ -774,10 +776,9 @@ buildStateTree(State * st, string * path, unordered_set<State> & states) {
                 if (!emergency)
                     buildStateTree(st2, path, states);
             }
-            path->resize(pathLen);
-
             st->next[i] = st2->id;
         }
+        path->resize(pathLen);
     }
     if (!path->size()) {
         logMsgInfo() << s_nextStateId << " states, " << s_transitions
@@ -798,7 +799,7 @@ void buildStateTree(
     s_nextStateId = 0;
     s_transitions = 0;
     state.id = ++s_nextStateId;
-    state.name = kDoneElement;
+    state.name = kDoneStateName;
     StatePosition nsp;
     StateElement nse;
     nse.elem = &ElementDone::s_elem;

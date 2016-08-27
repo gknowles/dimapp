@@ -56,6 +56,12 @@ class ParserNotify : public IAbnfParserNotify {
     bool onHexValConcatenationEnd(const char * eptr) final;
     bool onHexValSequenceChar(char ch) final;
     bool onHexValSimpleEnd(const char * eptr) final;
+    bool onOptionQuotedChar(char ch) final;
+    bool onOptionUnquotedChar(char ch) final;
+    bool onOptiondefEnd(const char * eptr) final;
+    bool onOptionlistStart(const char * ptr) final;
+    bool onOptionlistEnd(const char * eptr) final;
+    bool onOptionnameChar(char ch) final;
     bool onRepeatMaxEnd(const char * eptr) final;
     bool onRepeatMinmaxEnd(const char * eptr) final;
     bool onRepeatRangeStart(const char * ptr) final;
@@ -334,6 +340,41 @@ bool ParserNotify::onHexValSequenceChar(char ch) {
 //===========================================================================
 bool ParserNotify::onHexValSimpleEnd(const char * eptr) {
     return onBinValSimpleEnd(eptr);
+}
+
+//===========================================================================
+bool ParserNotify::onOptionQuotedChar(char ch) {
+    return onRulenameChar(ch);
+}
+
+//===========================================================================
+bool ParserNotify::onOptionUnquotedChar(char ch) {
+    return onRulenameChar(ch);
+}
+
+//===========================================================================
+bool ParserNotify::onOptiondefEnd(const char * eptr) {
+    return onRulerefEnd(eptr);
+}
+
+//===========================================================================
+bool ParserNotify::onOptionlistStart(const char * ptr) {
+    m_min = 1;
+    m_max = 1;
+    return true;
+}
+
+//===========================================================================
+bool ParserNotify::onOptionlistEnd(const char * eptr) {
+    return onRuleEnd(eptr);
+}
+
+//===========================================================================
+bool ParserNotify::onOptionnameChar(char ch) {
+    if (m_string.empty()) {
+        m_string.push_back('%');
+    }
+    return onRulenameChar(ch);
 }
 
 //===========================================================================
