@@ -26,10 +26,15 @@ class IFile {
     virtual ~IFile() {}
 };
 
+// on error returns false and sets errno to one of:
+//  EEXIST, ENOENT, EBUSY, EACCES, or EIO
 bool fileOpen(
     std::unique_ptr<IFile> & file,
     const std::experimental::filesystem::path & path,
-    IFile::OpenMode mode);
+    unsigned modeFlags // IFile::OpenMode::*
+    );
+size_t fileSize(IFile * file);
+TimePoint fileLastWriteTime(IFile * file);
 
 class IFileReadNotify {
   public:
@@ -38,8 +43,10 @@ class IFileReadNotify {
     // return false to prevent more reads, otherwise reads continue until the
     // requested length has been received.
     virtual bool
-    onFileRead(char data[], int bytes, int64_t offset, IFile * file) = 0;
+    onFileRead(char data[], int bytes, int64_t offset, IFile * file) { return true; }
 
+    // guaranteed to be called exactly once, when the read is completed 
+    // (or failed)
     virtual void onFileEnd(int64_t offset, IFile * file) = 0;
 };
 void fileRead(
@@ -50,6 +57,10 @@ void fileRead(
     int64_t offset = 0,
     int64_t length = 0 // 0 to read until the end
     );
+void fileReadBinary(
+    IFileReadNotify * notify,
+    std::string & out,
+    const std::experimental::filesystem::path & path);
 
 class IFileWriteNotify {
   public:
@@ -63,15 +74,15 @@ class IFileWriteNotify {
         IFile * file) = 0;
 };
 void fileWrite(
+    IFileWriteNotify * notify,
     IFile * file,
+    int64_t offset,
     const void * buf,
-    size_t bufLen,
-    int64_t offset = 0,
-    IFileWriteNotify * notify = nullptr);
+    size_t bufLen);
 void fileAppend(
+    IFileWriteNotify * notify,
     IFile * file,
     const void * buf,
-    size_t bufLen,
-    IFileWriteNotify * notify = nullptr);
+    size_t bufLen);
 
 } // namespace
