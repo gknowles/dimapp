@@ -197,6 +197,11 @@ void taskPushEvent(ITaskNotify * tasks[], size_t numTasks) {
 }
 
 //===========================================================================
+TaskQueueHandle taskEventQueue() {
+    return s_eventQ;
+}
+
+//===========================================================================
 void taskPushCompute(ITaskNotify & task) {
     ITaskNotify * list[] = {&task};
     taskPushCompute(list, size(list));
@@ -205,6 +210,11 @@ void taskPushCompute(ITaskNotify & task) {
 //===========================================================================
 void taskPushCompute(ITaskNotify * tasks[], size_t numTasks) {
     taskPush(s_computeQ, tasks, numTasks);
+}
+
+//===========================================================================
+TaskQueueHandle taskComputeQueue() {
+    return s_computeQ;
 }
 
 //===========================================================================

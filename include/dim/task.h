@@ -29,9 +29,11 @@ class ITaskNotify {
 
 void taskPushEvent(ITaskNotify & task);
 void taskPushEvent(ITaskNotify * tasks[], size_t numTasks);
+TaskQueueHandle taskEventQueue();
 
 void taskPushCompute(ITaskNotify & task);
 void taskPushCompute(ITaskNotify * tasks[], size_t numTasks);
+TaskQueueHandle taskComputeQueue();
 
 TaskQueueHandle taskCreateQueue(const std::string & name, int threads);
 void taskSetQueueThreads(TaskQueueHandle q, int threads);
