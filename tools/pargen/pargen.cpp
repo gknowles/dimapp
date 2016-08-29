@@ -58,6 +58,7 @@ ALPHA   =  %x5a
 CRLF    =  CR
 DIGIT   =  %x39
 NEWLINE =  CR
+VCHAR   =  %x56
 WSP     =  SP
 )";
         set<Element> replacements;
@@ -80,7 +81,7 @@ static void getAbnfRules(set<Element> & rules) {
     if (s_allRules) {
         addOption(rules, kOptionRoot, "rulelist");
     } else {
-        addOption(rules, kOptionRoot, "bin-val");
+        addOption(rules, kOptionRoot, "option");
     }
 
     // definitions taken from rfc5234
@@ -136,7 +137,7 @@ static void getAbnfRules(set<Element> & rules) {
     addRule(rule, "c-wsp", 0, kUnlimited);
     // addRule(rule, "WSP", 0, kUnlimited);        // see errata 2968
 
-    // actions = "{" *c-wsp [action *(*c-wsp "," *c-wsp action)] *c-wsp "}"
+    // actions = "{" *c-wsp [action *(*c-wsp "," *c-wsp action)] *c-wsp "}" *c-wsp
     rule = addSequenceRule(rules, "actions", 1, 1);
     addLiteral(rule, "{", 1, 1);
     addRule(rule, "c-wsp", 0, kUnlimited);
@@ -149,6 +150,7 @@ static void getAbnfRules(set<Element> & rules) {
     addRule(elem2, "action", 1, 1);
     addRule(rule, "c-wsp", 0, kUnlimited);
     addLiteral(rule, "}", 1, 1);
+    addRule(rule, "c-wsp", 0, kUnlimited);
     // action = action-start / action-end / action-char
     rule = addChoiceRule(rules, "action", 1, 1);
     addRule(rule, "action-start", 1, 1);
@@ -181,13 +183,14 @@ static void getAbnfRules(set<Element> & rules) {
     addRule(elem, "ALPHA", 1, 1);
     addLiteral(elem, ".", 1, 1);
     addLiteral(elem, "-", 1, 1);
-    // optionlist = optiondef *(1*c-wsp optiondef) {Start, End}
+    // optionlist = optiondef *(1*c-wsp optiondef) *c-wsp {Start, End}
     rule = addSequenceRule(
         rules, "optionlist", 1, 1, Element::kOnStart | Element::kOnEnd);
     addRule(rule, "optiondef", 1, 1);
     elem = addSequence(rule, 0, kUnlimited);
     addRule(elem, "c-wsp", 1, kUnlimited);
     addRule(elem, "optiondef", 1, 1);
+    addRule(rule, "c-wsp", 0, kUnlimited);
     // optiondef = option-unquoted / DQUOTE option-quoted DQUOTE {End}
     rule = addChoiceRule(rules, "optiondef", 1, 1, Element::kOnEnd);
     addRule(rule, "option-unquoted", 1, 1);
@@ -313,11 +316,9 @@ static void getAbnfRules(set<Element> & rules) {
         0,
         kUnlimited,
         Element::kOnStart | Element::kOnChar);
+    addRange(rule, 0x20, 0x21);
     if (s_allRules) {
-        addRange(rule, 0x20, 0x21);
         addRange(rule, 0x23, 0x7e);
-    } else {
-        addRange(rule, 0x20, 0x21);
     }
 
     // num-val        =  "%" (bin-val / dec-val / hex-val)
@@ -552,7 +553,6 @@ void Application::onTask() {
 void Application::onFileEnd(int64_t offset, IFile * file) {
     set<Element> rules;
     getCoreRules(rules);
-    m_source = "%a = x ; tmp\r\n%b = 2\n";
     if (parseAbnf(&rules, m_source)) {
         writeParserFiles(rules);
     }
