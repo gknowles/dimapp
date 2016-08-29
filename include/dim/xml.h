@@ -17,7 +17,7 @@ namespace Dim {
 ***/
 
 class IXBuilder {
-  public:
+public:
     virtual ~IXBuilder() {}
 
     IXBuilder & elem(const char name[], const char text[] = nullptr);
@@ -26,12 +26,12 @@ class IXBuilder {
 
     IXBuilder & text(const char text[]);
 
-  protected:
+protected:
     virtual void append(const char text[], size_t count = -1) = 0;
     virtual void appendCopy(size_t pos, size_t count) = 0;
     virtual size_t size() = 0;
 
-  private:
+private:
     template <bool isContent> void addText(const char text[]);
 
     enum State;
@@ -74,11 +74,11 @@ inline IXBuilder & end(IXBuilder & out) {
 }
 
 class XBuilder : public IXBuilder {
-  public:
+public:
     XBuilder(CharBuf & buf)
         : m_buf(buf) {}
 
-  private:
+private:
     void append(const char text[], size_t count = -1) override;
     void appendCopy(size_t pos, size_t count) override;
     size_t size() override;
@@ -96,7 +96,7 @@ class XBuilder : public IXBuilder {
 class XStreamParser;
 
 class IXStreamParserNotify {
-  public:
+public:
     virtual ~IXStreamParserNotify() {}
     virtual bool StartDoc(XStreamParser & parser) = 0;
     virtual bool
@@ -114,14 +114,14 @@ class IXStreamParserNotify {
 };
 
 class XStreamParser {
-  public:
+public:
     void clear();
     bool parse(IXStreamParserNotify & notify, char src[], size_t srcLen);
 
     ITempHeap & heap();
     bool fail(const char errmsg[]);
 
-  private:
+private:
     bool parseNode(IXStreamParserNotify & notify, unsigned char *& ptr);
     bool parseElement(
         IXStreamParserNotify & notify,
@@ -154,14 +154,14 @@ class XStreamParser {
 struct XElem;
 
 class XParser : IXStreamParserNotify {
-  public:
+public:
     void clear();
     XElem * parse(char src[]);
     XElem * setRoot(const char elemName[], const char text[] = nullptr);
 
     ITempHeap & heap();
 
-  private:
+private:
     // IXStreamParserNotify
     bool StartDoc(XStreamParser & parser) override;
     bool StartElem(
@@ -211,7 +211,7 @@ const XElem * nextSibling(const XElem * elem, const char name[]);
 template <typename T> class XElem::Iterator : public ForwardListIterator<T> {
     const char * m_name{nullptr};
 
-  public:
+public:
     Iterator(T * node, const char name[]);
     Iterator operator++();
 };

@@ -10,7 +10,7 @@ enum RunMode;
 class ITaskNotify;
 
 class IAppShutdownNotify {
-  public:
+public:
     virtual ~IAppShutdownNotify() {}
 
     virtual void onAppStartClientCleanup() {}

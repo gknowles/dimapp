@@ -37,18 +37,18 @@ enum ETimerMode {
 };
 
 class MainTimer : public ITimerNotify {
-  public:
+public:
     typedef void (IAppShutdownNotify::*CleanFn)();
     typedef bool (IAppShutdownNotify::*QueryFn)();
 
-  public:
+public:
     bool stopped() const;
     bool queryDestroyFailed(Duration grace);
 
     // ITimerNotify
     Duration onTimer(TimePoint now) override;
 
-  private:
+private:
     void startCleanup(CleanFn notify);
     bool queryDestroy(QueryFn notify);
 

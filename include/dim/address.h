@@ -42,7 +42,7 @@ void copy(Endpoint * out, const sockaddr_storage & storage);
 void addressGetLocal(std::vector<Address> * out);
 
 class IEndpointNotify {
-  public:
+public:
     virtual ~IEndpointNotify() {}
     // count of 0 means either no results or some kind of error occurred
     virtual void onEndpointFound(Endpoint * ptr, int count) = 0;

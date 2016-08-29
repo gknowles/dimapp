@@ -16,7 +16,7 @@ enum LogType {
 };
 
 class ILogNotify {
-  public:
+public:
     virtual void onLog(LogType type, const std::string & msg) = 0;
 };
 
@@ -25,16 +25,16 @@ void logAddNotify(ILogNotify * notify);
 namespace Detail {
 
 class Log : public std::ostringstream {
-  public:
+public:
     Log(LogType type);
     ~Log();
 
-  private:
+private:
     LogType m_type;
 };
 
 class LogCrash : public Log {
-  public:
+public:
     using Log::Log;
     /* [[noreturn]] */ ~LogCrash();
 };

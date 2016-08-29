@@ -38,14 +38,14 @@ struct HandleBase {
 ***/
 
 class HandleMapBase {
-  public:
+public:
     template <typename H, typename T> class Iterator;
     struct Node {
         void * value;
         int next;
     };
 
-  public:
+public:
     HandleMapBase();
     ~HandleMapBase();
     bool empty() const;
@@ -57,7 +57,7 @@ class HandleMapBase {
     template <typename H, typename T> Iterator<H, T> begin();
     template <typename H, typename T> Iterator<H, T> end();
 
-  private:
+private:
     std::vector<Node> m_values;
     int m_numUsed{0};
     int m_firstFree{0};
@@ -68,7 +68,7 @@ template <typename H, typename T> class HandleMapBase::Iterator {
     HandleMapBase::Node * base{nullptr};
     HandleMapBase::Node * end{nullptr};
 
-  public:
+public:
     Iterator() {}
     Iterator(Node * base, Node * end)
         : node{base}
@@ -122,7 +122,7 @@ inline auto HandleMapBase::end() -> Iterator<H, T> {
 ***/
 
 template <typename H, typename T> class HandleMap : public HandleMapBase {
-  public:
+public:
     T * find(H handle) { return static_cast<T *>(HandleMapBase::find(handle)); }
     void clear() {
         for (auto && ht : *this)

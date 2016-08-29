@@ -18,11 +18,11 @@ namespace Dim {
 struct TaskQueueHandle : HandleBase {};
 
 class ITaskNotify {
-  public:
+public:
     virtual ~ITaskNotify() {}
     virtual void onTask() { delete this; }
 
-  private:
+private:
     friend class TaskQueue;
     ITaskNotify * m_taskNext = nullptr;
 };

@@ -15,7 +15,7 @@ enum ConsoleAttr {
 class ConsoleScopedAttr {
     int m_attr;
 
-  public:
+public:
     ConsoleScopedAttr(ConsoleAttr attr);
     ~ConsoleScopedAttr();
 };

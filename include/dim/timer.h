@@ -25,11 +25,11 @@ const auto kTimerInfinite = Duration::max();
 ***/
 
 class ITimerNotify {
-  public:
+public:
     virtual ~ITimerNotify();
     virtual Duration onTimer(TimePoint now) = 0;
 
-  private:
+private:
     friend class Timer;
     std::shared_ptr<Timer> m_timer;
 };

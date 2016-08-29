@@ -25,7 +25,7 @@ struct WinOverlappedEvent {
 ***/
 
 class WinEvent {
-  public:
+public:
     WinEvent();
     ~WinEvent();
 
@@ -34,7 +34,7 @@ class WinEvent {
 
     HANDLE nativeHandle() const { return m_handle; };
 
-  private:
+private:
     HANDLE m_handle;
 };
 
@@ -57,7 +57,7 @@ bool winIocpBindHandle(HANDLE handle);
 ***/
 
 class IWinEventWaitNotify : public ITaskNotify {
-  public:
+public:
     IWinEventWaitNotify();
     ~IWinEventWaitNotify();
 
@@ -75,10 +75,10 @@ class IWinEventWaitNotify : public ITaskNotify {
 ***/
 
 class WinError {
-  public:
+public:
     enum NtStatus;
 
-  public:
+public:
     // default constructor calls GetLastError()
     WinError();
     WinError(NtStatus status);
@@ -90,7 +90,7 @@ class WinError {
 
     operator int() const { return m_value; }
 
-  private:
+private:
     int m_value;
 };
 

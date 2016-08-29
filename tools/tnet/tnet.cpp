@@ -88,7 +88,7 @@ void SocketConn::onSocketDisconnect() {
 ***/
 
 class ConsoleReader : public IFileReadNotify {
-  public:
+public:
     unique_ptr<SocketBuffer> m_buffer;
     unique_ptr<IFile> m_file;
 
@@ -159,7 +159,7 @@ class Application : public ITaskNotify {
     int m_argc;
     char ** m_argv;
 
-  public:
+public:
     Application(int argc, char * argv[]);
     void onTask() override;
 };

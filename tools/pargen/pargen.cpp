@@ -489,7 +489,7 @@ class Application : public ITaskNotify, public IFileReadNotify {
     char ** m_argv;
     string m_source;
 
-  public:
+public:
     Application(int argc, char * argv[]);
     void onTask() override;
 

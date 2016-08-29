@@ -25,25 +25,25 @@ const Duration kConnectTimeout{10s};
 namespace {
 
 class ConnSocket : public SocketBase {
-  public:
+public:
     static void connect(
         ISocketNotify * notify,
         const Endpoint & remoteEnd,
         const Endpoint & localEnd,
         Duration timeout);
 
-  public:
+public:
     using SocketBase::SocketBase;
     void onConnect(int error, int bytes);
 };
 
 class ConnectTask : public IWinEventWaitNotify {
-  public:
+public:
     TimePoint m_expiration;
     unique_ptr<ConnSocket> m_socket;
     list<ConnectTask>::iterator m_iter;
 
-  public:
+public:
     ConnectTask(unique_ptr<ConnSocket> && sock);
     void onTask() override;
 };
@@ -51,7 +51,7 @@ class ConnectTask : public IWinEventWaitNotify {
 class ConnectFailedTask : public ITaskNotify {
     ISocketNotify * m_notify{nullptr};
 
-  public:
+public:
     ConnectFailedTask(ISocketNotify * notify);
     void onTask() override;
 };

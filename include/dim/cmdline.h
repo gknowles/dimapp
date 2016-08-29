@@ -18,7 +18,7 @@ namespace CmdLine {
 ***/
 
 class OptBase {
-  public:
+public:
     OptBase(
         const std::string & names,
         const std::string & desc,
@@ -28,10 +28,10 @@ class OptBase {
 
     bool Explicit() const { return m_explicit; }
 
-  protected:
+protected:
     virtual bool ParseValue(const std::string & value) = 0;
 
-  private:
+private:
     bool m_explicit{false}; // the value was explicitly set
     bool m_bool{false};     // the value is a bool (no separate value)
     bool m_multiple{false}; // there can be multiple values
@@ -45,7 +45,7 @@ class OptBase {
 ***/
 
 template <typename T> class Option : public OptBase {
-  public:
+public:
     Option(
         const std::string & names,
         const std::string & desc,
@@ -53,7 +53,7 @@ template <typename T> class Option : public OptBase {
 
     operator T &() { return m_value; }
 
-  private:
+private:
     bool ParseValue(const std::string & value) override;
 
     T m_value;
@@ -93,12 +93,12 @@ inline bool Option<T>::ParseValue(const std::string & value) {
 ***/
 
 template <typename T> class OptionVector : public OptBase {
-  public:
+public:
     OptionVector(const std::string & names, const std::string & desc);
 
     operator std::vector<T> &() { return m_values; }
 
-  private:
+private:
     bool ParseValue(const std::string & value) override;
 
     std::vector<T> m_values; // the value

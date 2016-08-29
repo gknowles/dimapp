@@ -23,7 +23,7 @@ namespace {
 class FileProxyNotify : public IFileReadNotify {
     IFileReadNotify * m_notify;
 
-  public:
+public:
     FileProxyNotify(IFileReadNotify * notify);
 
     // IFileReadNotify

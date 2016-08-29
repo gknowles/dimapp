@@ -16,18 +16,18 @@ namespace Dim {
 namespace {
 
 class ClientConn : public TlsConnBase {
-  public:
+public:
     ClientConn(
         const char hostName[], const TlsCipherSuite suites[], size_t count);
     void connect(CharBuf * out);
 
-  private:
+private:
     string m_host;
 };
 
 class ServerConn : public TlsConnBase {
-  public:
-  private:
+public:
+private:
     void onTlsHandshake(const TlsClientHelloMsg & msg) override;
 };
 

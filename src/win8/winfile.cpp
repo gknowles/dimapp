@@ -23,7 +23,7 @@ namespace Dim {
 
 namespace {
 class File : public IFile {
-  public:
+public:
     path m_path;
     HANDLE m_handle;
     OpenMode m_mode;
@@ -71,7 +71,7 @@ static bool setErrno(int error) {
 
 namespace {
 class FileReader : public ITaskNotify {
-  public:
+public:
     FileReader(
         IFileReadNotify * notify, File * file, void * outBuf, size_t outBufLen);
     void read(int64_t off, int64_t len);
@@ -79,7 +79,7 @@ class FileReader : public ITaskNotify {
     // ITaskNotify
     void onTask() override;
 
-  private:
+private:
     WinOverlappedEvent m_iocpEvt;
     int64_t m_offset{0};
     int64_t m_length{0};
@@ -120,7 +120,7 @@ void FileReader::read(int64_t off, int64_t len) {
             NULL,
             &m_iocpEvt.overlapped)) {
         WinError err;
-        if (err == ERROR_IO_PENDING) 
+        if (err == ERROR_IO_PENDING)
             return;
         logMsgError() << "ReadFile (" << m_file->m_path << "): " << err;
     }
@@ -161,7 +161,7 @@ void FileReader::onTask() {
 
 namespace {
 class FileWriteBuf : public ITaskNotify {
-  public:
+public:
     FileWriteBuf(
         IFileWriteNotify * notify, File * file, void * buf, size_t bufLen);
     void write(int64_t off);
@@ -169,7 +169,7 @@ class FileWriteBuf : public ITaskNotify {
     // ITaskNotify
     void onTask() override;
 
-  private:
+private:
     WinOverlappedEvent m_iocpEvt;
     int64_t m_offset{0};
 
@@ -208,7 +208,7 @@ void FileWriteBuf::write(int64_t off) {
             &m_written,
             &m_iocpEvt.overlapped)) {
         m_err = WinError{};
-        if (m_err == ERROR_IO_PENDING) 
+        if (m_err == ERROR_IO_PENDING)
             return;
         if (m_err) {
             logMsgError() << "WriteFile (" << m_file->m_path << "): " << m_err;
@@ -230,8 +230,7 @@ void FileWriteBuf::onTask() {
     if (!result) {
         m_err = WinError{};
         if (m_err != ERROR_OPERATION_ABORTED) {
-            logMsgError() << "WriteFile (" << m_file->m_path
-                            << "): " << m_err;
+            logMsgError() << "WriteFile (" << m_file->m_path << "): " << m_err;
         }
         setErrno(m_err);
     }
@@ -272,13 +271,12 @@ void iFileInitialize() {
 ***/
 
 //===========================================================================
-bool fileOpen(
-    unique_ptr<IFile> & out, const path & path, unsigned mode) {
+bool fileOpen(unique_ptr<IFile> & out, const path & path, unsigned mode) {
     using om = IFile::OpenMode;
 
     out.reset();
     auto file = make_unique<File>();
-    file->m_mode = (om) mode;
+    file->m_mode = (om)mode;
     file->m_path = path;
 
     int access = 0;
@@ -344,8 +342,7 @@ size_t fileSize(IFile * ifile) {
     LARGE_INTEGER size;
     if (!GetFileSizeEx(file->m_handle, &size)) {
         WinError err;
-        logMsgError() << "WriteFile (" << file->m_path
-                        << "): " << err;
+        logMsgError() << "WriteFile (" << file->m_path << "): " << err;
         setErrno(err);
         return 0;
     }
@@ -357,11 +354,10 @@ TimePoint fileLastWriteTime(IFile * ifile) {
     File * file = static_cast<File *>(ifile);
     uint64_t ctime, atime, wtime;
     if (!GetFileTime(
-        file->m_handle, 
-        (FILETIME *) &ctime, 
-        (FILETIME *) &atime, 
-        (FILETIME *) &wtime
-    )) {
+            file->m_handle,
+            (FILETIME *)&ctime,
+            (FILETIME *)&atime,
+            (FILETIME *)&wtime)) {
         WinError err;
         logMsgError() << "GetFileTime (" << file->m_path << "): " << err;
         setErrno(err);
@@ -377,8 +373,7 @@ void fileRead(
     size_t outBufLen,
     IFile * ifile,
     int64_t off,
-    int64_t len
-    ) {
+    int64_t len) {
     assert(notify);
     File * file = static_cast<File *>(ifile);
     auto ptr = new FileReader(notify, file, outBuf, outBufLen);
@@ -400,10 +395,7 @@ void fileWrite(
 
 //===========================================================================
 void fileAppend(
-    IFileWriteNotify * notify,
-    IFile * file, 
-    void * buf, 
-    size_t bufLen) {
+    IFileWriteNotify * notify, IFile * file, void * buf, size_t bufLen) {
     assert(notify);
     // file writes to offset 2^64-1 are interpreted as appends to the end
     // of the file.

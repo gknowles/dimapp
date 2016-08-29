@@ -11,7 +11,7 @@
 namespace Dim {
 
 class IFile {
-  public:
+public:
     enum OpenMode {
         kReadOnly = 0x01,
         kReadWrite = 0x02,
@@ -22,7 +22,7 @@ class IFile {
         kDenyNone = 0x40,
     };
 
-  public:
+public:
     virtual ~IFile() {}
 };
 
@@ -37,15 +37,17 @@ size_t fileSize(IFile * file);
 TimePoint fileLastWriteTime(IFile * file);
 
 class IFileReadNotify {
-  public:
+public:
     virtual ~IFileReadNotify() {}
 
     // return false to prevent more reads, otherwise reads continue until the
     // requested length has been received.
     virtual bool
-    onFileRead(char data[], int bytes, int64_t offset, IFile * file) { return true; }
+    onFileRead(char data[], int bytes, int64_t offset, IFile * file) {
+        return true;
+    }
 
-    // guaranteed to be called exactly once, when the read is completed 
+    // guaranteed to be called exactly once, when the read is completed
     // (or failed)
     virtual void onFileEnd(int64_t offset, IFile * file) = 0;
 };
@@ -63,7 +65,7 @@ void fileReadBinary(
     const std::experimental::filesystem::path & path);
 
 class IFileWriteNotify {
-  public:
+public:
     virtual ~IFileWriteNotify() {}
 
     virtual void onFileWrite(
@@ -80,9 +82,6 @@ void fileWrite(
     const void * buf,
     size_t bufLen);
 void fileAppend(
-    IFileWriteNotify * notify,
-    IFile * file,
-    const void * buf,
-    size_t bufLen);
+    IFileWriteNotify * notify, IFile * file, const void * buf, size_t bufLen);
 
 } // namespace

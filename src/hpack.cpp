@@ -46,7 +46,7 @@ struct DecodeItem {
     int16_t one{kDecodeUnused};
 };
 class HuffDecoder {
-  public:
+public:
     HuffDecoder(const EncodeItem items[], size_t count);
 
     bool decode(
@@ -56,7 +56,7 @@ class HuffDecoder {
         const char src[],
         size_t count);
 
-  private:
+private:
     int m_prefixBits{0};
     vector<DecodeItem> m_decodeTable;
 };

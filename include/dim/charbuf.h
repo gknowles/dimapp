@@ -11,7 +11,7 @@
 namespace Dim {
 
 class CharBuf : public ITempHeap {
-  public:
+public:
     CharBuf();
     CharBuf(CharBuf && from);
     ~CharBuf();
@@ -80,7 +80,7 @@ class CharBuf : public ITempHeap {
     // ITempHeap
     char * alloc(size_t bytes, size_t align) override;
 
-  private:
+private:
     struct Buffer;
     static Buffer * allocBuffer();
     static Buffer * allocBuffer(size_t reserve);

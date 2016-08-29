@@ -15,7 +15,7 @@ namespace Dim {
 ***/
 
 class ITempHeap {
-  public:
+public:
     virtual ~ITempHeap() {}
 
     template <typename T, typename... Args> T * emplace(Args &&... args);
@@ -71,14 +71,14 @@ inline char * ITempHeap::alloc(size_t bytes) {
 ***/
 
 class TempHeap : public ITempHeap {
-  public:
+public:
     ~TempHeap();
     void clear();
 
     // ITempHeap
     char * alloc(size_t bytes, size_t align) override;
 
-  private:
+private:
     void * m_buffer{nullptr};
 };
 

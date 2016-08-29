@@ -34,7 +34,7 @@ struct HttpStream {
 };
 
 class HttpConn {
-  public:
+public:
     HttpConn();
 
     // Returns false when no more data will be accepted, either by request
@@ -62,7 +62,7 @@ class HttpConn {
 
     void deleteStream(int stream, HttpStream * sm);
 
-  private:
+private:
     enum class ByteMode;
     enum class FrameMode;
 

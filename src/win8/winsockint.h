@@ -16,7 +16,7 @@ namespace Dim {
 class SocketRequestTaskBase : public ITaskNotify {
     virtual void onTask() override = 0;
 
-  public:
+public:
     RIO_BUF m_rbuf{};
     std::unique_ptr<SocketBuffer> m_buffer;
 
@@ -35,10 +35,10 @@ class SocketWriteTask : public SocketRequestTaskBase {
 };
 
 class SocketBase {
-  public:
+public:
     using Mode = ISocketNotify::Mode;
 
-  public:
+public:
     static SocketBase::Mode getMode(ISocketNotify * notify);
     static void disconnect(ISocketNotify * notify);
     static void write(
@@ -46,7 +46,7 @@ class SocketBase {
         std::unique_ptr<SocketBuffer> buffer,
         size_t bytes);
 
-  public:
+public:
     SocketBase(ISocketNotify * notify);
     virtual ~SocketBase();
 
@@ -60,13 +60,13 @@ class SocketBase {
     void queueWrite_LK(std::unique_ptr<SocketBuffer> buffer, size_t bytes);
     void queueWriteFromUnsent_LK();
 
-  protected:
+protected:
     ISocketNotify * m_notify{nullptr};
     SOCKET m_handle{INVALID_SOCKET};
     SocketConnectInfo m_connInfo;
     Mode m_mode{Mode::kInactive};
 
-  private:
+private:
     RIO_RQ m_rq{};
 
     // used by single read request

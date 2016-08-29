@@ -36,7 +36,7 @@ struct HpackDynField {
 ***/
 
 class HpackEncode {
-  public:
+public:
     HpackEncode(size_t tableSize);
     void setTableSize(size_t tableSize);
 
@@ -54,7 +54,7 @@ class HpackEncode {
         int flags = 0 // DimHpack::*
         );
 
-  private:
+private:
     void write(const char str[]);
     void write(const char str[], size_t len);
     void write(size_t val, char prefix, int prefixBits);
@@ -71,7 +71,7 @@ class HpackEncode {
 ***/
 
 class IHpackDecodeNotify {
-  public:
+public:
     virtual ~IHpackDecodeNotify() {}
 
     virtual void onHpackHeader(
@@ -83,7 +83,7 @@ class IHpackDecodeNotify {
 };
 
 class HpackDecode {
-  public:
+public:
     HpackDecode(size_t tableSize);
     void reset();
     void setTableSize(size_t tableSize);
@@ -94,7 +94,7 @@ class HpackDecode {
         const char src[],
         size_t srcLen);
 
-  private:
+private:
     void pruneDynTable();
 
     bool readInstruction(

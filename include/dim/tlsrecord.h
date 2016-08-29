@@ -41,13 +41,13 @@ struct TlsCipher {
 };
 
 class TlsRecordEncrypt {
-  public:
+public:
     void setCipher(CharBuf * out, TlsCipher * cipher);
 
     void add(CharBuf * out, TlsContentType ct, const void * ptr, size_t count);
     void flush(CharBuf * out);
 
-  private:
+private:
     void writePlaintext(CharBuf * out);
     void writeCiphertext(CharBuf * out);
 
@@ -57,7 +57,7 @@ class TlsRecordEncrypt {
 };
 
 class ITlsRecordDecryptNotify {
-  public:
+public:
     virtual ~ITlsRecordDecryptNotify() {}
     virtual void onTlsAlert(TlsAlertDesc desc, TlsAlertLevel level) = 0;
     virtual void onTlsHandshake(
@@ -65,7 +65,7 @@ class ITlsRecordDecryptNotify {
 };
 
 class TlsRecordDecrypt {
-  public:
+public:
     void setCipher(TlsCipher * cipher);
 
     // on error parse(...) returns false and sets alert level and desc
@@ -80,7 +80,7 @@ class TlsRecordDecrypt {
     TlsAlertLevel alertLevel() const { return m_alertLevel; }
     TlsAlertDesc alertDesc() const { return m_alertDesc; }
 
-  private:
+private:
     bool parseAlerts(ITlsRecordDecryptNotify * notify);
     bool parseHandshakes(ITlsRecordDecryptNotify * notify);
     bool parseError(TlsAlertDesc desc, TlsAlertLevel level = kFatal);

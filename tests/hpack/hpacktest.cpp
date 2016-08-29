@@ -23,10 +23,10 @@ struct NameValue {
 };
 
 class Reader : public IHpackDecodeNotify {
-  public:
+public:
     vector<NameValue> headers;
 
-  private:
+private:
     void onHpackHeader(
         HttpHdr id,
         const char name[],

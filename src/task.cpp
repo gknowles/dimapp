@@ -15,7 +15,7 @@ namespace Dim {
 ***/
 
 class TaskQueue {
-  public:
+public:
     TaskQueueHandle hq;
     string name;
 

@@ -34,12 +34,12 @@ template <typename T> constexpr int maxIntegralChars() {
 }
 
 template <typename T> class IntegralStr {
-  public:
+public:
     IntegralStr(T val);
     const char * set(T val);
     operator const char *() const;
 
-  private:
+private:
     using Signed = typename std::make_signed<T>::type;
     using Unsigned = typename std::make_unsigned<T>::type;
 
@@ -124,10 +124,10 @@ template <typename T> const char * IntegralStr<T>::internalSet(Signed val) {
 ***/
 
 template <typename T> class ForwardListIterator {
-  protected:
+protected:
     T * m_current{nullptr};
 
-  public:
+public:
     ForwardListIterator(T * node)
         : m_current(node) {}
     bool operator!=(const ForwardListIterator & right) {

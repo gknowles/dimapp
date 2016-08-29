@@ -8,7 +8,7 @@
 namespace Dim {
 
 class TokenTable {
-  public:
+public:
     struct Token {
         int id;
         const char * name;
@@ -17,7 +17,7 @@ class TokenTable {
     class Iterator {
         const Token * m_current{nullptr};
 
-      public:
+    public:
         Iterator(const Token * ptr)
             : m_current{ptr} {}
         Iterator & operator++();
@@ -27,7 +27,7 @@ class TokenTable {
         }
     };
 
-  public:
+public:
     TokenTable(const Token * ptr, size_t count);
 
     bool find(int * out, const char name[]) const;
@@ -36,7 +36,7 @@ class TokenTable {
     Iterator begin() const;
     Iterator end() const;
 
-  private:
+private:
     struct Value {
         const char * name{nullptr};
         size_t hash{0};

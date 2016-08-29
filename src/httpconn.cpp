@@ -150,13 +150,13 @@ Duration ResetStreamTimer::onTimer(TimePoint now) {
 ***/
 
 class MsgDecoder : public IHpackDecodeNotify {
-  public:
+public:
     MsgDecoder(HttpMsg & msg);
 
     explicit operator bool() const;
     FrameError Error() const;
 
-  private:
+private:
     void onHpackHeader(
         HttpHdr id,
         const char name[],

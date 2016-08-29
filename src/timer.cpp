@@ -15,7 +15,7 @@ namespace Dim {
 ***/
 
 class Dim::Timer {
-  public:
+public:
     static void update(ITimerNotify * notify, Duration wait, bool onlyIfSooner);
     static void stopSync(ITimerNotify * notify);
 

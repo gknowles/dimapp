@@ -13,11 +13,11 @@ using namespace Dim;
 ***/
 
 class ParserNotify : public IAbnfParserNotify {
-  public:
+public:
     ParserNotify(set<Element> & rules);
     virtual ~ParserNotify() {}
 
-  private:
+private:
     // IAbnfParserNotify
     bool onStart() final { return true; }
     bool onEnd() final { return true; }

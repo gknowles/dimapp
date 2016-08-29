@@ -8,13 +8,13 @@ namespace Dim {
 template <typename T> class List;
 
 template <typename T> class ListMemberHook {
-  public:
+public:
     bool isLinked() const;
     T * next() const;
     T * prev() const;
     void * reset();
 
-  private:
+private:
     friend class List<T>;
 
     T * m_next{nullptr};
@@ -22,7 +22,7 @@ template <typename T> class ListMemberHook {
 };
 
 template <typename T> class List {
-  public:
+public:
     List();
     List(List && from);
     ~List();
@@ -54,7 +54,7 @@ template <typename T> class List {
     T * popFront();
     void swap(List & other);
 
-  private:
+private:
     ListMemberHook m_base;
 };
 

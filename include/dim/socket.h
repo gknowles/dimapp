@@ -22,7 +22,7 @@ struct SocketData {
 };
 
 class ISocketNotify {
-  public:
+public:
     enum Mode {
         kInactive, // not connected
         kAccepting,
@@ -32,7 +32,7 @@ class ISocketNotify {
         kClosed,  // final zero-length read received
     };
 
-  public:
+public:
     virtual ~ISocketNotify() {}
 
     // for connectors
@@ -45,7 +45,7 @@ class ISocketNotify {
     virtual void onSocketRead(const SocketData & data) = 0;
     virtual void onSocketDisconnect(){};
 
-  private:
+private:
     friend class SocketBase;
     SocketBase * m_socket{nullptr};
 };
@@ -67,7 +67,7 @@ void socketConnect(
 // listen
 //===========================================================================
 class ISocketListenNotify {
-  public:
+public:
     virtual ~ISocketListenNotify() {}
     virtual void onListenStop() = 0;
     virtual std::unique_ptr<ISocketNotify> onListenCreateSocket() = 0;

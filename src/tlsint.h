@@ -78,7 +78,7 @@ bool tlsParse(TlsServerHelloMsg * msg, TlsRecordReader & in);
 ***/
 
 class TlsConnBase : public ITlsRecordDecryptNotify {
-  public:
+public:
     TlsConnBase();
     void setSuites(const TlsCipherSuite suites[], size_t count);
     const std::vector<TlsCipherSuite> & suites() const;
@@ -94,7 +94,7 @@ class TlsConnBase : public ITlsRecordDecryptNotify {
     virtual void onTlsHandshake(const TlsServerHelloMsg & msg);
     virtual void onTlsHandshake(const TlsHelloRetryRequestMsg & msg);
 
-  private:
+private:
     friend class TlsRecordWriter;
     friend class TlsRecordReader;
     void addAlert(TlsAlertDesc desc, TlsAlertLevel level = kFatal);
@@ -109,7 +109,7 @@ class TlsConnBase : public ITlsRecordDecryptNotify {
 };
 
 class TlsRecordWriter {
-  public:
+public:
     TlsRecordWriter(TlsConnBase & conn, CharBuf * out);
     ~TlsRecordWriter();
 
@@ -130,7 +130,7 @@ class TlsRecordWriter {
     void start24();
     void end();
 
-  private:
+private:
     CharBuf * m_out{nullptr};
     TlsRecordEncrypt & m_rec;
 
@@ -144,7 +144,7 @@ class TlsRecordWriter {
 };
 
 class TlsRecordReader {
-  public:
+public:
     TlsRecordReader(TlsConnBase & conn, const void * ptr, size_t count);
 
     uint8_t number();
@@ -158,7 +158,7 @@ class TlsRecordReader {
 
     size_t size() const;
 
-  private:
+private:
     bool m_failed{false};
     TlsConnBase & m_conn;
     const uint8_t * m_ptr;

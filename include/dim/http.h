@@ -89,11 +89,11 @@ enum HttpHdr {
 ***/
 
 class HttpMsg {
-  public:
+public:
     struct HdrName;
     struct HdrValue;
 
-  public:
+public:
     virtual ~HttpMsg() {}
 
     void addHeader(HttpHdr id, const char value[]);
@@ -118,7 +118,7 @@ class HttpMsg {
 
     ITempHeap & heap();
 
-  protected:
+protected:
     virtual bool checkPseudoHeaders() const = 0;
 
     enum {
@@ -131,7 +131,7 @@ class HttpMsg {
     };
     int m_flags{0}; // kFlag*
 
-  private:
+private:
     void addHeaderRef(HttpHdr id, const char name[], const char value[]);
 
     CharBuf m_data;
@@ -157,7 +157,7 @@ struct HttpMsg::HdrValue {
 };
 
 class HttpRequest : public HttpMsg {
-  public:
+public:
     const char * method() const;
     const char * scheme() const;
     const char * authority() const;
@@ -169,15 +169,15 @@ class HttpRequest : public HttpMsg {
     const char * query() const;
     const char * fragment() const;
 
-  private:
+private:
     bool checkPseudoHeaders() const override;
 };
 
 class HttpResponse : public HttpMsg {
-  public:
+public:
     int status() const;
 
-  private:
+private:
     bool checkPseudoHeaders() const override;
 };
 

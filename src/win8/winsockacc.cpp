@@ -25,23 +25,23 @@ namespace {
 class ListenSocket;
 
 class AcceptSocket : public SocketBase {
-  public:
+public:
     static void accept(ListenSocket * notify);
 
-  public:
+public:
     using SocketBase::SocketBase;
     void onAccept(ListenSocket * listen, int xferError, int xferBytes);
 };
 
 class ListenSocket : public IWinEventWaitNotify {
-  public:
+public:
     SOCKET m_handle{INVALID_SOCKET};
     Endpoint m_localEnd;
     unique_ptr<AcceptSocket> m_socket;
     ISocketListenNotify * m_notify{nullptr};
     char m_addrBuf[2 * sizeof sockaddr_storage];
 
-  public:
+public:
     ListenSocket(ISocketListenNotify * notify, const Endpoint & end);
 
     void onTask() override;
@@ -50,7 +50,7 @@ class ListenSocket : public IWinEventWaitNotify {
 class ListenStopTask : public ITaskNotify {
     ISocketListenNotify * m_notify{nullptr};
 
-  public:
+public:
     ListenStopTask(ISocketListenNotify * notify);
     void onTask() override;
 };
