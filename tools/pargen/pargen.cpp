@@ -14,12 +14,13 @@ using namespace Dim;
 static unsigned s_nextElemId;
 
 //===========================================================================
-static void getTestRules(set<Element> & rules) {
+void getTestRules(set<Element> & rules, const string & root) {
     const char s_testRules[] = R"(
 left-recorse = left-recurse %x73 / %x79
 right-recurse = %x73 right-recurse / %x79
 simple-recurse = simple-recurse / %x79
 )";
+    addOption(rules, kOptionRoot, root);
     bool valid = parseAbnf(&rules, s_testRules);
     assert(valid);
     valid = false;
@@ -69,106 +70,18 @@ WSP     =  SP
     }
 }
 
-#if 0
-//===========================================================================
-static void x_getCoreRules(set<Element> & rules) {
-    Element * rule;
-
-    // ALPHA          =  %x41-5A / %x61-7A   ; A-Z / a-z
-    rule = addChoiceRule(rules, "ALPHA", 1, 1);
-    if (s_allRules) {
-        addRange(rule, 0x41, 0x5a);
-        addRange(rule, 0x61, 0x7a);
-    } else {
-        addRange(rule, 0x5a, 0x5a);
-    }
-
-    // BIT            =  "0" / "1"
-    rule = addChoiceRule(rules, "BIT", 1, 1);
-    addLiteral(rule, "0", 1, 1);
-    addLiteral(rule, "1", 1, 1);
-
-    // CHAR           =  %x01-7F
-
-    // CR             =  %x0D
-    rule = addChoiceRule(rules, "CR", 1, 1);
-    addRange(rule, 0xd, 0xd);
-
-    // CRLF           =  CR LF
-    rule = addSequenceRule(rules, "CRLF", 1, 1);
-    addRule(rule, "CR", 1, 1);
-    if (s_allRules) {
-        addRule(rule, "LF", 1, 1);
-    }
-
-    // CTL            =  %x00-1F / %x7F
-
-    // DIGIT          =  %x30-39
-    rule = addChoiceRule(rules, "DIGIT", 1, 1);
-    if (s_allRules) {
-        addRange(rule, 0x30, 0x39);
-    } else {
-        addRange(rule, 0x39, 0x39);
-    }
-
-    // DQUOTE         =  %x22
-    rule = addChoiceRule(rules, "DQUOTE", 1, 1);
-    addRange(rule, 0x22, 0x22);
-
-    // HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
-    rule = addChoiceRule(rules, "HEXDIG", 1, 1);
-    addRule(rule, "DIGIT", 1, 1);
-    addLiteral(rule, "A", 1, 1);
-    addLiteral(rule, "B", 1, 1);
-    addLiteral(rule, "C", 1, 1);
-    addLiteral(rule, "D", 1, 1);
-    addLiteral(rule, "E", 1, 1);
-    addLiteral(rule, "F", 1, 1);
-
-    // HTAB           =  %x09
-    rule = addChoiceRule(rules, "HTAB", 1, 1);
-    addRange(rule, 0x9, 0x9);
-
-    // LF             =  %x0A
-    rule = addChoiceRule(rules, "LF", 1, 1);
-    addRange(rule, 0xa, 0xa);
-
-    // LWSP           =  *(WSP / CRLF WSP)
-
-    // NEWLINE        =  CR / LF / CRLF
-    rule = addChoiceRule(rules, "NEWLINE", 1, 1);
-    if (s_allRules) {
-        addRule(rule, "CR", 1, 1);
-        addRule(rule, "LF", 1, 1);
-        addRule(rule, "CRLF", 1, 1);
-    } else {
-        addRule(rule, "CR", 1, 1);
-    }
-
-    // OCTET          =  %x00-FF
-
-    // SP             =  %x20
-    rule = addChoiceRule(rules, "SP", 1, 1);
-    addRange(rule, 0x20, 0x20);
-
-    // VCHAR          =  %x21-7E
-    rule = addChoiceRule(rules, "VCHAR", 1, 1);
-    addRange(rule, 0x21, 0x7e);
-
-    // WSP            =  SP / HTAB
-    rule = addChoiceRule(rules, "WSP", 1, 1);
-    addRule(rule, "SP", 1, 1);
-    if (s_allRules) {
-        addRule(rule, "HTAB", 1, 1);
-    }
-}
-#endif
-
 //===========================================================================
 static void getAbnfRules(set<Element> & rules) {
     Element * rule;
     Element * elem;
     Element * elem2;
+
+    addOption(rules, kOptionApiPrefix, "Abnf");
+    if (s_allRules) {
+        addOption(rules, kOptionRoot, "rulelist");
+    } else {
+        addOption(rules, kOptionRoot, "bin-val");
+    }
 
     // definitions taken from rfc5234
 
@@ -548,6 +461,22 @@ static Element * addElement(Element * rule, unsigned m, unsigned n) {
     return e;
 }
 
+//===========================================================================
+static void writeParserFiles(set<Element> & rules) {
+    TimePoint start = Clock::now();
+    if (processOptions(rules)) {
+        ofstream oh(getOptionString(rules, kOptionApiHeaderFile));
+        ofstream ocpp(getOptionString(rules, kOptionApiCppFile));
+        writeParser(oh, ocpp, rules);
+        oh.close();
+        ocpp.close();
+    }
+    TimePoint finish = Clock::now();
+    std::chrono::duration<double> elapsed = finish - start;
+    cout << "Elapsed time: " << elapsed.count() << " seconds" << endl;
+}
+
+
 /****************************************************************************
  *
  *   Application
@@ -555,13 +484,17 @@ static Element * addElement(Element * rule, unsigned m, unsigned n) {
  ***/
 
 namespace {
-class Application : public ITaskNotify {
+class Application : public ITaskNotify, public IFileReadNotify {
     int m_argc;
     char ** m_argv;
+    string m_source;
 
   public:
     Application(int argc, char * argv[]);
     void onTask() override;
+
+    // IFileReadNotify
+    void onFileEnd(int64_t offset, IFile * file) override;
 };
 } // namespace
 
@@ -579,28 +512,17 @@ void Application::onTask() {
     //    return appSignalShutdown(kExitBadArgs);
     //}
 
+    if (m_argc > 1) {
+        fileReadBinary(this, m_source, m_argv[1]);
+        return;
+    }
+
     set<Element> rules;
     getCoreRules(rules);
     getAbnfRules(rules);
-    getTestRules(rules);
+    // getTestRules(rules, "left-recurse");
 
-    addOption(rules, "%api.prefix", "Abnf");
-
-    TimePoint start = Clock::now();
-    ofstream oh("abnfparse.h");
-    ofstream ocpp("abnfparse.cpp");
-    if (s_allRules) {
-        addOption(rules, "%root", "rulelist");
-        writeParser(oh, ocpp, rules);
-    } else {
-        addOption(rules, "%root", "bin-val");
-        writeParser(oh, ocpp, rules);
-    }
-    oh.close();
-    ocpp.close();
-    TimePoint finish = Clock::now();
-    std::chrono::duration<double> elapsed = finish - start;
-    cout << "Elapsed time: " << elapsed.count() << " seconds" << endl;
+    writeParserFiles(rules);
 
     ostringstream abnf;
     for (auto && rule : rules) {
@@ -625,6 +547,18 @@ void Application::onTask() {
 
     appSignalShutdown(kExitSuccess);
 }
+
+//===========================================================================
+void Application::onFileEnd(int64_t offset, IFile * file) {
+    set<Element> rules;
+    getCoreRules(rules);
+    m_source = "%a = x ; tmp\r\n%b = 2\n";
+    if (parseAbnf(&rules, m_source)) {
+        writeParserFiles(rules);
+    }
+    appSignalShutdown(kExitSuccess);
+}
+
 
 /****************************************************************************
  *
@@ -735,7 +669,7 @@ void addRange(Element * rule, unsigned char a, unsigned char b) {
 }
 
 //===========================================================================
-const char * getOption(const set<Element> & src, const string & name) {
+const char * getOptionString(const set<Element> & src, const string & name) {
     Element key;
     key.name = name;
     auto it = src.find(key);
@@ -746,4 +680,9 @@ const char * getOption(const set<Element> & src, const string & name) {
         elem = &elem->elements.front();
     assert(elem->type == Element::kRule);
     return elem->value.c_str();
+}
+
+//===========================================================================
+unsigned getOptionUnsigned(const set<Element> & src, const string & name) {
+    return (unsigned)strtoul(getOptionString(src, name), nullptr, 10);
 }

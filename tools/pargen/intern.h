@@ -76,6 +76,9 @@ void addLiteral(
 void addRange(Element * rule, unsigned char a, unsigned char b);
 void addTerminal(Element * rule, unsigned char ch, unsigned m, unsigned n);
 
+// modify options
+bool processOptions(std::set<Element> & rules);
+
 // modify rules
 bool copyRules(
     std::set<Element> & rules,
@@ -179,4 +182,6 @@ void writeParser(
 bool parseAbnf(std::set<Element> * rules, const std::string & src);
 
 const char *
-getOption(const std::set<Element> & rules, const std::string & name);
+getOptionString(const std::set<Element> & rules, const std::string & name);
+unsigned
+getOptionUnsigned(const std::set<Element> & rules, const std::string & name);

@@ -219,6 +219,34 @@ bool State::operator==(const State & right) const {
 
 /****************************************************************************
 *
+*   process options
+*
+***/
+
+//===========================================================================
+bool processOptions(std::set<Element> & rules) {
+    if (!*getOptionString(rules, kOptionRoot)) {
+        logMsgError() << "Option not found, " << kOptionRoot;
+        return false;
+    }
+    string prefix = getOptionString(rules, kOptionApiPrefix);
+    if (prefix.empty()) {
+        logMsgError() << "Option not found, " << kOptionApiPrefix;
+        return false;
+    }
+    transform(prefix.begin(), prefix.end(), prefix.begin(), tolower);
+    if (!*getOptionString(rules, kOptionApiHeaderFile)) {
+        addOption(rules, kOptionApiHeaderFile, prefix + "parse.h");
+    }
+    if (!*getOptionString(rules, kOptionApiCppFile)) {
+        addOption(rules, kOptionApiCppFile, prefix + "parse.cpp");
+    }
+    return true;
+}
+
+
+/****************************************************************************
+*
 *   copy rules
 *
 ***/
