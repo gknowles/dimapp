@@ -22,9 +22,10 @@ namespace Dim {
 namespace {
 class FileProxyNotify : public IFileReadNotify {
     IFileReadNotify * m_notify;
+    string & m_out;
 
 public:
-    FileProxyNotify(IFileReadNotify * notify);
+    FileProxyNotify(string & out, IFileReadNotify * notify);
 
     // IFileReadNotify
     bool
@@ -34,12 +35,14 @@ public:
 }
 
 //===========================================================================
-FileProxyNotify::FileProxyNotify(IFileReadNotify * notify)
-    : m_notify(notify) {}
+FileProxyNotify::FileProxyNotify(string & out, IFileReadNotify * notify)
+    : m_out(out)
+    , m_notify(notify) {}
 
 //===========================================================================
 bool FileProxyNotify::onFileRead(
     char data[], int bytes, int64_t offset, IFile * file) {
+    m_out.resize(bytes);
     return false;
 }
 
@@ -68,9 +71,9 @@ void fileReadBinary(
         return;
     }
 
-    auto proxy = new FileProxyNotify(notify);
     size_t bytes = fileSize(file.get());
-    out.reserve(bytes);
+    out.resize(bytes);
+    auto proxy = new FileProxyNotify(out, notify);
     fileRead(proxy, const_cast<char *>(out.data()), bytes, file.release());
 }
 
