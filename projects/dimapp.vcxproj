@@ -156,6 +156,9 @@
     <ClCompile Include="..\src\cmdline.cpp">
       <ObjectFileName>$(IntDir)src\</ObjectFileName>
     </ClCompile>
+    <ClCompile Include="..\src\file.cpp">
+      <ObjectFileName>$(IntDir)src\</ObjectFileName>
+    </ClCompile>
     <ClCompile Include="..\src\handle.cpp">
       <ObjectFileName>$(IntDir)src\</ObjectFileName>
     </ClCompile>

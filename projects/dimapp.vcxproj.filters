@@ -110,6 +110,9 @@
     <ClCompile Include="..\src\cmdline.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\file.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\handle.cpp">
       <Filter>src</Filter>
     </ClCompile>
