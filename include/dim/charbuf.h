@@ -92,10 +92,10 @@ class CharBuf : public ITempHeap {
     int m_size{0};
 };
 
-bool operator==(const CharBuf & left, const std::string & right);
-bool operator==(const std::string & left, const CharBuf & right);
-bool operator==(const CharBuf & left, const CharBuf & right);
-
-std::string to_string(const CharBuf & buf);
-
 } // namespace
+
+bool operator==(const Dim::CharBuf & left, const std::string & right);
+bool operator==(const std::string & left, const Dim::CharBuf & right);
+bool operator==(const Dim::CharBuf & left, const Dim::CharBuf & right);
+
+std::string to_string(const Dim::CharBuf & buf);

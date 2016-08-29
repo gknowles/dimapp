@@ -544,6 +544,27 @@ CharBuf::replace(size_t pos, size_t count, const char src[], size_t srcLen) {
 }
 
 //===========================================================================
+size_t CharBuf::copy(char * out, size_t count, size_t pos) const {
+    assert(pos + count <= size());
+    auto ic = const_cast<CharBuf *>(this)->find(pos);
+    Buffer * pbuf = *ic.first;
+    char * ptr = pbuf->m_data + ic.second;
+    size_t used = pbuf->m_used - ic.second;
+    size_t remaining = count;
+    for (;;) {
+        size_t num = min(used, remaining);
+        memcpy(out, ptr, num);
+        remaining -= num;
+        if (!remaining)
+            break;
+        pbuf = *++ic.first;
+        ptr = pbuf->m_data;
+        used = pbuf->m_used;
+    }
+    return count;
+}
+
+//===========================================================================
 void CharBuf::swap(CharBuf & other) {
     ::swap(m_buffers, other.m_buffers);
     ::swap(m_lastUsed, other.m_lastUsed);
@@ -656,3 +677,19 @@ CharBuf::erase(vector<CharBuf::Buffer *>::iterator it, int pos, int remove) {
 }
 
 } // namespace
+using namespace Dim;
+
+
+/****************************************************************************
+*
+*   Free functions
+*
+***/
+
+//===========================================================================
+std::string to_string(const CharBuf & buf) {
+    string out;
+    out.reserve(buf.size());
+    buf.copy(const_cast<char *>(out.data()), buf.size());
+    return out;
+}
