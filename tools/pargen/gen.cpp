@@ -359,7 +359,12 @@ static void normalizeSequence(Element & rule) {
 static void normalizeRule(Element & rule, const set<Element> & rules) {
     Element elem;
     elem.name = rule.value;
-    rule.rule = &*rules.find(elem);
+    auto bi = rules.find(elem);
+    if (bi == rules.end()) {
+        rule.rule = nullptr;
+    } else {
+        rule.rule = &*bi;
+    }
 }
 
 //===========================================================================
@@ -800,7 +805,8 @@ buildStateTree(State * st, string * path, unordered_set<State> & states) {
                 }
                 logMsgInfo() << s_nextStateId << " states, " << s_transitions
                              << " transitions, "
-                             << "(" << path->size() << " chars) ..." << show;
+                             << "(" << path->size() << " chars, "
+                             << st2->positions.size() << " exits) ..." << show;
                 if (!emergency)
                     buildStateTree(st2, path, states);
             }
