@@ -34,6 +34,7 @@ static unsigned s_transitions;
 // forward declarations
 static void normalizeSequence(Element & rule);
 static void addPositions(
+    bool * skippable,
     State * st,
     StatePosition * sp,
     bool init,
@@ -447,9 +448,10 @@ void markRecursion(set<Element> & rules, Element & rule, bool reset) {
 ***/
 
 //===========================================================================
-static void addRulePositions(State * st, StatePosition * sp, bool init) {
+static void
+addRulePositions(bool * skippable, State * st, StatePosition * sp, bool init) {
     const Element & elem = *sp->elems.back().elem;
-
+    *skippable = false;
     // Don't generate states for right recursion when it can be broken with
     // a call. This could also be done for left recursion when the grammar
     // allows it, but that's more difficult to determine.
@@ -472,7 +474,7 @@ static void addRulePositions(State * st, StatePosition * sp, bool init) {
                         size_t num = y - sp->elems.data() + 1;
                         sp->elems.resize(num);
                         sp->elems.back().rep = 0;
-                        addPositions(st, sp, false, *elem.rule, 0);
+                        addPositions(skippable, st, sp, false, *elem.rule, 0);
                         sp->elems = move(tmp);
                     }
                     return;
@@ -481,16 +483,18 @@ static void addRulePositions(State * st, StatePosition * sp, bool init) {
         }
     }
 
-    addPositions(st, sp, init, *elem.rule, 0);
+    addPositions(skippable, st, sp, init, *elem.rule, 0);
 }
 
 //===========================================================================
 static void addPositions(
+    bool * skippable,
     State * st,
     StatePosition * sp,
     bool init,
     const Element & rule,
     unsigned rep) {
+    *skippable = false;
     StateElement se;
     se.elem = &rule;
     se.rep = rep;
@@ -499,17 +503,22 @@ static void addPositions(
     case Element::kChoice:
         // all
         for (auto && elem : rule.elements) {
-            addPositions(st, sp, true, elem, 0);
+            bool weak;
+            addPositions(&weak, st, sp, true, elem, 0);
+            if (weak)
+                *skippable = true;
         }
         break;
-    case Element::kRule: addRulePositions(st, sp, init); break;
+    case Element::kRule: addRulePositions(skippable, st, sp, init); break;
     case Element::kSequence:
         // up to first with a minimum
         for (auto && elem : rule.elements) {
-            addPositions(st, sp, true, elem, 0);
-            if (elem.m)
+            bool weak;
+            addPositions(&weak, st, sp, true, elem, 0);
+            if (!weak)
                 goto done;
         }
+        *skippable = true;
         break;
     case Element::kTerminal:
         st->positions.insert(*sp);
@@ -517,6 +526,8 @@ static void addPositions(
         break;
     }
 done:
+    if (rule.m == 0)
+        *skippable = true;
     sp->elems.pop_back();
 }
 
@@ -527,8 +538,9 @@ initPositions(State * st, const set<Element> & rules, const string & root) {
     key.name = root;
     const Element & rule = *rules.find(key);
     st->positions.clear();
+    bool skippable;
     StatePosition sp;
-    addPositions(st, &sp, true, rule, 0);
+    addPositions(&skippable, st, &sp, true, rule, 0);
 }
 
 //===========================================================================
@@ -599,8 +611,9 @@ static void addNextPositions(State * st, const StatePosition & sp) {
                     terminal);
                 do {
                     cur += 1;
-                    addPositions(st, &nsp, false, *cur, 0);
-                    if (cur->m)
+                    bool weak;
+                    addPositions(&weak, st, &nsp, false, *cur, 0);
+                    if (!weak)
                         return;
                 } while (cur != last);
             }
@@ -656,7 +669,8 @@ static void addNextPositions(State * st, const StatePosition & sp) {
             StatePosition nsp;
             setPositionPrefix(
                 &nsp, sp.elems.begin(), se_end, fromRecurse, events, terminal);
-            addPositions(st, &nsp, false, *se.elem, rep);
+            bool weak;
+            addPositions(&weak, st, &nsp, false, *se.elem, rep);
         }
         // don't advance unless rep >= m
         if (rep < m)
@@ -708,7 +722,8 @@ static void addNextPositions(State * st, const StatePosition & sp) {
     });
     nsp.events.erase(it2, sv_end);
 
-    addPositions(st, &nsp, false, ElementNull::s_elem, 0);
+    bool weak;
+    addPositions(&weak, st, &nsp, false, ElementNull::s_elem, 0);
 }
 
 //===========================================================================

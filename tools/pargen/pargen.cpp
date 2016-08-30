@@ -137,7 +137,8 @@ static void getAbnfRules(set<Element> & rules) {
     addRule(rule, "c-wsp", 0, kUnlimited);
     // addRule(rule, "WSP", 0, kUnlimited);        // see errata 2968
 
-    // actions = "{" *c-wsp [action *(*c-wsp "," *c-wsp action)] *c-wsp "}" *c-wsp
+    // actions = "{" *c-wsp [action *(*c-wsp "," *c-wsp action)] *c-wsp "}"
+    //   *c-wsp
     rule = addSequenceRule(rules, "actions", 1, 1);
     addLiteral(rule, "{", 1, 1);
     addRule(rule, "c-wsp", 0, kUnlimited);
