@@ -289,9 +289,13 @@ static void writeParserState(
     const State & st,
     const Element * root,
     bool inclStatePositions) {
-    os << "\nstate" << st.id << ": // " 
-        << st.name << ' ' // extra space in case name ends with backslash
-        << '\n';
+    os << "\nstate" << st.id << ": // " << st.name;
+    if (st.name.back() == '\\') {
+        // extra space because a trailing backslash would cause the comment
+        // to be extended to the next line by the c++ compiler
+        os << ' ';
+    }
+    os << '\n';
     if (inclStatePositions) {
         for (auto && sp : st.positions) {
             os << sp << '\n';
