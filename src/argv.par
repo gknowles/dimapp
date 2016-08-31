@@ -1,0 +1,33 @@
+; cmdline-argv.par - dim services
+;
+; rules to parse a command line into an argv array
+%root = test
+%api.prefix = Argv
+%api.file.h = cmdline-argv.h            ; defaults to <%api.prefix>parse.h
+%api.file.cpp = cmdline-argv.cpp        ; defaults to <%api.prefix>parse.cpp
+
+; "core" to include the core rules defined by RFC5234 B.2
+%include = core
+
+; command line to argv grammer rules
+line = OWS param-list OWS
+param-list = param *(RWS param)
+param = *fully-quoted [half-quoted] *BSLASH                     { Start, End }
+fully-quoted = [unquoted] active-quote quoted active-quote
+half-quoted = [unquoted] active-quote quoted
+unquoted = 1*( ptext / escaped-quote )
+quoted = 1*( ptext / dquote-pair / escaped-quote / RWS )
+ptext = 1*( [BSLASH] pchar )
+escaped-quote = BSLASH *bslash-pair DQUOTE
+active-quote = *bslash-pair DQUOTE
+dquote-pair = DQUOTE DQUOTE
+bslash-pair = BSLASH BSLASH
+pchar = %x61 ; %x21 / %x23-5b / %x5d-7e
+RWS = 1*HTAB ; 1*(SP / HTAB)
+OWS = *HTAB ; *(SP / HTAB)
+BSLASH = %x5c
+
+
+test = test-param *(RWS test-param)
+test-param = RWS { Start, End }
+
