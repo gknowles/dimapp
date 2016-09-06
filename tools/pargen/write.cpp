@@ -77,6 +77,8 @@ ostream & operator<<(ostream & os, const Element & elem) {
         }
         os << " }";
     }
+    if (elem.pos)
+        os << '#' << elem.pos;
 
     return os;
 }
@@ -542,7 +544,7 @@ static bool s_resetRecursion = false;
 static bool s_markRecursion = true;
 static bool s_excludeCallbacks = false;
 static bool s_buildStateTree = true;
-static bool s_writeStatePositions = false;
+static bool s_writeStatePositions = true;
 static bool s_buildRecurseFunctions = true;
 
 //===========================================================================

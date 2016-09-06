@@ -26,6 +26,7 @@ struct Element {
     unsigned m{1};
     unsigned n{1};
     unsigned id{0};
+    unsigned pos{0}; // position in sequence, 0 for non-sequences
 
     std::vector<Element> elements;
     std::string value;

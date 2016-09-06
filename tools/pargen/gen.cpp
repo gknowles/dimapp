@@ -323,6 +323,8 @@ static void normalizeChoice(Element & rule) {
         }
     }
     rule.elements = tmp;
+    for (auto && elem : rule.elements)
+        elem.pos = 0;
 }
 
 //===========================================================================
@@ -331,29 +333,33 @@ static void normalizeSequence(Element & rule) {
     // doesn't change them?
     assert(rule.elements.size() > 1);
     for (unsigned i = 0; i < rule.elements.size(); ++i) {
-        Element & elem = rule.elements[i];
-        if (elem.type != Element::kSequence)
+        Element * elem = rule.elements.data() + i;
+        if (elem->type != Element::kSequence)
             continue;
         bool skip = false;
-        for (auto && e : elem.elements) {
-            if (e.m != elem.m * e.m ||
-                e.n != max({elem.n, e.n, elem.n * e.n})) {
+        for (auto && e : elem->elements) {
+            if (e.m != elem->m * e.m ||
+                e.n != max({elem->n, e.n, elem->n * e.n})) {
                 skip = true;
                 break;
             }
         }
         if (skip)
             continue;
-        if (elem.elements.size() > 1) {
+        if (elem->elements.size() > 1) {
             rule.elements.insert(
                 rule.elements.begin() + i + 1,
-                elem.elements.begin() + 1,
-                elem.elements.end());
+                elem->elements.begin() + 1,
+                elem->elements.end());
+            elem = rule.elements.data() + i;
         }
-        Element tmp = move(elem.elements.front());
-        elem = move(tmp);
+        Element tmp = move(elem->elements.front());
+        *elem = move(tmp);
         i -= 1;
     }
+    int pos = 0;
+    for (auto && elem : rule.elements) 
+        elem.pos = ++pos;
 }
 
 //===========================================================================
@@ -727,11 +733,139 @@ static void addNextPositions(State * st, const StatePosition & sp) {
 }
 
 //===========================================================================
+// when positions only vary by the set of events, remove all but the
+// first - which should also be the one with the simplest events.
+static void removeEventPositions(set<StatePosition> & positions) {
+    if (positions.size() < 2)
+        return;
+    auto x = positions.begin();
+    auto y = next(x);
+    auto e = positions.end();
+    while (y != e) {
+        auto n = next(y);
+        if (x->recurse == y->recurse && x->elems == y->elems) {
+            positions.erase(y);
+        } else {
+            x = y;
+        }
+        y = n;
+    }
+}
+
+//===========================================================================
+static bool resolveEventConflicts2(
+    set<StatePosition> & positions, 
+    const string & path
+) {
+    if (positions.size() == 1)
+        return true;
+
+    // allow Char to match by moving forward in list
+    //vector<StateEvent> matched;
+
+    auto b = next(positions.begin());
+    auto e = positions.end();
+    size_t matched = 0;
+    for (auto && sv : positions.begin()->events) {
+        for (auto x = b; x != e; ++x) {
+            if (x->events.size() > matched && x->events[matched] == sv)
+                continue;
+            goto move_delayed;
+        }
+        matched += 1;
+    }
+
+move_delayed:
+    size_t most = 0;
+    for (auto && sp : positions) {
+        most = max({sp.events.size(), most});
+    }
+    if (most == matched)
+        return true;
+
+    bool success = true;
+    set<StatePosition> next;
+    for (auto && sp : positions) {
+        if (sp.events.size() == matched) {
+            next.insert(move(sp));
+            continue;
+        }
+        StatePosition nsp;
+        nsp.elems = move(sp.elems);
+        nsp.recurse = sp.recurse;
+        nsp.events = move(sp.events);
+        auto b = nsp.events.begin() + matched;
+        auto e = nsp.events.end();
+        for (; b != e; ++b) {
+            if (b->flags & Element::kOnChar) {
+                success = false;
+                logMsgError() << "Conflicting parse events, "
+                                << b->elem->name << " at "
+                                << path;
+            }
+            nsp.delayedEvents.push_back(move(*b));
+        }
+        nsp.events.resize(matched);
+        next.insert(move(nsp));
+    }
+    positions = move(next);
+    return success;
+}
+
+//===========================================================================
+// check for conflicting events and delay and/or log errors for 
+// them when they occur
+static bool resolveEventConflicts(
+    set<StatePosition> & positions, 
+    const string & path
+) {
+    size_t numpos = positions.size();
+    bool success = true;
+
+    unordered_map<StateEvent, int> counts;
+    for (auto && sp : positions) {
+        for (auto && sv : sp.events) {
+            counts[sv] += 1;
+        }
+    }
+    unordered_set<StateEvent> conflicts;
+    for (auto && cnt : counts) {
+        if (cnt.second != numpos) {
+            conflicts.insert(cnt.first);
+            if (cnt.first.flags & Element::kOnChar) {
+                success = false;
+                logMsgError() << "Conflicting parse events, "
+                                << cnt.first.elem->name << " at "
+                                << path;
+            }
+        }
+    }
+    if (!conflicts.empty()) {
+        set<StatePosition> next;
+        for (auto && sp : positions) {
+            StatePosition nsp;
+            nsp.elems = sp.elems;
+            nsp.recurse = sp.recurse;
+            for (auto && sv : sp.events) {
+                if (conflicts.count(sv)) {
+                    nsp.delayedEvents.push_back(sv);
+                } else {
+                    nsp.events.push_back(sv);
+                }
+            }
+            next.insert(nsp);
+        }
+        positions = move(next);
+    }
+    return success;
+}
+
+//===========================================================================
 static void
 buildStateTree(State * st, string * path, unordered_set<State> & states) {
     st->next.assign(257, 0);
     State next;
-    bool emergency{false};
+    bool errors{false};
     for (unsigned i = 0; i < 257; ++i) {
         size_t pathLen = path->size();
         if (i <= ' ' || i == 256) {
@@ -762,7 +896,7 @@ buildStateTree(State * st, string * path, unordered_set<State> & states) {
                     assert(se.elem->type == Element::kRule);
                     assert(se.elem->rule->recurse);
                     if (next.positions.size()) {
-                        emergency = true;
+                        errors = true;
                         logMsgError() << "Multiple recursive targets, "
                                       << *path;
                     }
@@ -770,43 +904,16 @@ buildStateTree(State * st, string * path, unordered_set<State> & states) {
                 }
             }
         }
-        if (size_t numpos = next.positions.size()) {
-            unordered_map<StateEvent, int> counts;
-            for (auto && sp : next.positions) {
-                for (auto && sv : sp.events) {
-                    counts[sv] += 1;
-                }
-            }
-            unordered_set<StateEvent> conflicts;
-            for (auto && cnt : counts) {
-                if (cnt.second != numpos) {
-                    conflicts.insert(cnt.first);
-                    if (cnt.first.flags & Element::kOnChar) {
-                        emergency = true;
-                        logMsgError() << "Conflicting parse events, "
-                                      << cnt.first.elem->name << " at "
-                                      << *path;
-                    }
-                }
-            }
-            if (!conflicts.empty()) {
-                set<StatePosition> positions;
-                for (auto && sp : next.positions) {
-                    StatePosition nsp;
-                    nsp.elems = sp.elems;
-                    nsp.recurse = sp.recurse;
-                    for (auto && sv : sp.events) {
-                        if (conflicts.count(sv)) {
-                            nsp.delayedEvents.push_back(sv);
-                        } else {
-                            nsp.events.push_back(sv);
-                        }
-                    }
-                    positions.insert(nsp);
-                }
-                next.positions = move(positions);
+        if (!next.positions.empty()) {
+            removeEventPositions(next.positions);
+
+            if (0) {
+                errors = !resolveEventConflicts(next.positions, *path) || errors;
+            } else {
+                errors = !resolveEventConflicts2(next.positions, *path) || errors;
             }
 
+            // add state and all of it's child states
             auto ib = states.insert(move(next));
             State * st2 = const_cast<State *>(&*ib.first);
 
@@ -822,7 +929,8 @@ buildStateTree(State * st, string * path, unordered_set<State> & states) {
                              << " transitions, "
                              << "(" << path->size() << " chars, "
                              << st2->positions.size() << " exits) ..." << show;
-                if (!emergency)
+                //if (path->size() > 40) errors = true;
+                if (!errors)
                     buildStateTree(st2, path, states);
             }
             st->next[i] = st2->id;
