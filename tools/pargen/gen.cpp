@@ -946,7 +946,7 @@ buildStateTree(State * st, string * path, unordered_set<State> & states) {
                              << " transitions, "
                              << "(" << path->size() << " chars, "
                              << st2->positions.size() << " exits) ..." << show;
-                //if (path->size() > 40) errors = true;
+                if (path->size() > 30) errors = true;
                 if (!errors)
                     buildStateTree(st2, path, states);
             }
