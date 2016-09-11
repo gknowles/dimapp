@@ -299,6 +299,7 @@ static void writeParserState(
     }
     os << '\n';
     if (inclStatePositions) {
+        os << "    // positions: " << st.positions.size() << "\n\n";
         for (auto && sp : st.positions) {
             os << sp << '\n';
         }
@@ -518,17 +519,19 @@ public:
 
 private:
 )";
+    bool hasRecurseRules = false;
     for (auto && elem : rules) {
         if (elem.recurse) {
+            hasRecurseRules = true;
             os << "    bool state";
             writeRuleName(os, elem.name, true);
             os << " (const char *& src);\n";
         }
     }
+    if (hasRecurseRules)
+        os << '\n';
     os << 1 + R"(
-
-    I)" << prefix
-       << R"(ParserNotify * m_notify{nullptr};
+    I)" << prefix << R"(ParserNotify * m_notify{nullptr};
 };
 )";
 }
