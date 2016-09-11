@@ -735,7 +735,7 @@ static void addNextPositions(State * st, const StatePosition & sp) {
 //===========================================================================
 // when positions only vary by the set of events, remove all but the
 // first - which should also be the one with the simplest events.
-static void removeEventPositions(set<StatePosition> & positions) {
+static void removePositionsWithMoreEvents(set<StatePosition> & positions) {
     if (positions.size() < 2)
         return;
     auto x = positions.begin();
@@ -753,7 +753,96 @@ static void removeEventPositions(set<StatePosition> & positions) {
 }
 
 //===========================================================================
-static bool resolveEventConflicts2(
+static void removeConflicts(
+    vector<StateEvent> & matched,
+    const vector<StateEvent> & events
+) {
+    if (matched.empty())
+        return;
+    int numEvents = (int) events.size();
+    vector<bool> used(numEvents);
+    auto mi = matched.begin();
+    int evi = 0;
+    while (mi != matched.end()) {
+        for (evi = 0; evi < numEvents; ++evi) {
+            if (!used[evi])
+                goto found_unused;
+        }
+        matched.erase(mi, matched.end());
+        return;
+
+    found_unused:
+        if (*mi == events[evi]) 
+            goto matched;
+        if (mi->flags & Element::kOnChar) {
+            // char can shift around start events
+            for (;;) {
+                if ((~events[evi].flags & Element::kOnStart)
+                    || ++evi == numEvents
+                ) {
+                    goto unmatched;
+                }
+                if (*mi == events[evi]) 
+                    goto matched;
+            }
+        } else if (mi->flags & Element::kOnStart) {
+            // start events can shift around char events.
+            for (;;) {
+                if ((~events[evi].flags & Element::kOnChar)
+                    || ++evi == numEvents
+                    ) {
+                    goto unmatched;
+                }
+                if (*mi == events[evi]) 
+                    goto matched;
+            }
+        }
+        assert(mi->flags & Element::kOnEnd);
+
+    unmatched:
+        mi = matched.erase(mi);
+        continue;
+
+    matched:
+        used[evi] = true;
+        ++mi;
+    }
+}
+
+//===========================================================================
+// returns false if there are conflicts that can't be delayed
+static bool delayConflicts(
+    StatePosition & nsp,
+    const vector<StateEvent> & matched,
+    const string & path
+) {
+    for (auto && sv : matched) {
+        auto evi = nsp.events.begin();
+        auto e = nsp.events.end();
+        for (; evi != e; ++evi) {
+            if (sv == *evi) {
+                nsp.events.erase(evi);
+                break;
+            }
+        }
+    }
+    nsp.delayedEvents = move(nsp.events);
+    nsp.events = matched;
+
+    bool success = true;
+    for (auto && sv : nsp.delayedEvents) {
+        if (sv.flags & Element::kOnChar) {
+            success = false;
+            logMsgError() << "Conflicting parse events, "
+                << sv.elem->name << " at "
+                << path;
+        }
+    }
+    return success;
+}
+
+//===========================================================================
+static bool resolveEventConflicts(
     set<StatePosition> & positions, 
     const string & path
 ) {
@@ -761,32 +850,22 @@ static bool resolveEventConflicts2(
         return true;
 
     // allow Char to match by moving forward in list
-    //vector<StateEvent> matched;
-
-    auto b = next(positions.begin());
+    vector<StateEvent> matched;
+    auto b = positions.begin();
     auto e = positions.end();
-    size_t matched = 0;
-    for (auto && sv : positions.begin()->events) {
-        for (auto x = b; x != e; ++x) {
-            if (x->events.size() > matched && x->events[matched] == sv)
-                continue;
-            goto move_delayed;
-        }
-        matched += 1;
+    matched = b->events;
+    size_t most = matched.size();
+    for (++b; b != e; ++b) {
+        most = max({ b->events.size(), most });
+        removeConflicts(matched, b->events);
     }
-
-move_delayed:
-    size_t most = 0;
-    for (auto && sp : positions) {
-        most = max({sp.events.size(), most});
-    }
-    if (most == matched)
+    if (most == matched.size())
         return true;
 
     bool success = true;
     set<StatePosition> next;
     for (auto && sp : positions) {
-        if (sp.events.size() == matched) {
+        if (sp.events.size() == matched.size()) {
             next.insert(move(sp));
             continue;
         }
@@ -794,69 +873,11 @@ move_delayed:
         nsp.elems = move(sp.elems);
         nsp.recurse = sp.recurse;
         nsp.events = move(sp.events);
-        auto b = nsp.events.begin() + matched;
-        auto e = nsp.events.end();
-        for (; b != e; ++b) {
-            if (b->flags & Element::kOnChar) {
-                success = false;
-                logMsgError() << "Conflicting parse events, "
-                                << b->elem->name << " at "
-                                << path;
-            }
-            nsp.delayedEvents.push_back(move(*b));
-        }
-        nsp.events.resize(matched);
+        if (!delayConflicts(nsp, matched, path))
+            success = false;
         next.insert(move(nsp));
     }
     positions = move(next);
-    return success;
-}
-
-//===========================================================================
-// check for conflicting events and delay and/or log errors for 
-// them when they occur
-static bool resolveEventConflicts(
-    set<StatePosition> & positions, 
-    const string & path
-) {
-    size_t numpos = positions.size();
-    bool success = true;
-
-    unordered_map<StateEvent, int> counts;
-    for (auto && sp : positions) {
-        for (auto && sv : sp.events) {
-            counts[sv] += 1;
-        }
-    }
-    unordered_set<StateEvent> conflicts;
-    for (auto && cnt : counts) {
-        if (cnt.second != numpos) {
-            conflicts.insert(cnt.first);
-            if (cnt.first.flags & Element::kOnChar) {
-                success = false;
-                logMsgError() << "Conflicting parse events, "
-                                << cnt.first.elem->name << " at "
-                                << path;
-            }
-        }
-    }
-    if (!conflicts.empty()) {
-        set<StatePosition> next;
-        for (auto && sp : positions) {
-            StatePosition nsp;
-            nsp.elems = sp.elems;
-            nsp.recurse = sp.recurse;
-            for (auto && sv : sp.events) {
-                if (conflicts.count(sv)) {
-                    nsp.delayedEvents.push_back(sv);
-                } else {
-                    nsp.events.push_back(sv);
-                }
-            }
-            next.insert(nsp);
-        }
-        positions = move(next);
-    }
     return success;
 }
 
@@ -905,13 +926,9 @@ buildStateTree(State * st, string * path, unordered_set<State> & states) {
             }
         }
         if (!next.positions.empty()) {
-            removeEventPositions(next.positions);
 
-            if (0) {
-                errors = !resolveEventConflicts(next.positions, *path) || errors;
-            } else {
-                errors = !resolveEventConflicts2(next.positions, *path) || errors;
-            }
+            errors = !resolveEventConflicts(next.positions, *path) || errors;
+            removePositionsWithMoreEvents(next.positions);
 
             // add state and all of it's child states
             auto ib = states.insert(move(next));

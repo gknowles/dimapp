@@ -115,6 +115,10 @@ struct StateElement {
     int compare(const StateElement & right) const;
     bool operator<(const StateElement & right) const;
     bool operator==(const StateElement & right) const;
+
+    bool operator!=(const StateElement & right) const { 
+        return !operator==(right); 
+    }
 };
 
 struct StateEvent {
@@ -124,6 +128,10 @@ struct StateEvent {
     int compare(const StateEvent & right) const;
     bool operator<(const StateEvent & right) const;
     bool operator==(const StateEvent & right) const;
+
+    bool operator!=(const StateEvent & right) const {
+        return !operator==(right);
+    }
 };
 
 struct StatePosition {
