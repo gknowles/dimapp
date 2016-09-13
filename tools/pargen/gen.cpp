@@ -17,16 +17,6 @@ static void hashCombine(size_t & seed, size_t v);
 
 /****************************************************************************
 *
-*   Variables
-*
-***/
-
-static unsigned s_nextStateId = 1;
-static unsigned s_transitions;
-
-
-/****************************************************************************
-*
 *   Helpers
 *
 ***/
@@ -453,6 +443,14 @@ void markRecursion(set<Element> & rules, Element & rule, bool reset) {
 *
 ***/
 
+namespace {
+struct StateTreeInfo {
+    string m_path;
+    unsigned m_nextStateId;
+    unsigned m_transitions;
+};
+} // namespace
+
 //===========================================================================
 static void
 addRulePositions(bool * skippable, State * st, StatePosition * sp, bool init) {
@@ -814,7 +812,7 @@ static void removeConflicts(
 static bool delayConflicts(
     StatePosition & nsp,
     const vector<StateEvent> & matched,
-    const string & path
+    const StateTreeInfo & sti
 ) {
     for (auto && sv : matched) {
         auto evi = nsp.events.begin();
@@ -835,7 +833,7 @@ static bool delayConflicts(
             success = false;
             logMsgError() << "Conflicting parse events, "
                 << sv.elem->name << " at "
-                << path;
+                << sti.m_path;
         }
     }
     return success;
@@ -844,7 +842,7 @@ static bool delayConflicts(
 //===========================================================================
 static bool resolveEventConflicts(
     set<StatePosition> & positions, 
-    const string & path
+    const StateTreeInfo & sti
 ) {
     if (positions.size() == 1)
         return true;
@@ -873,7 +871,7 @@ static bool resolveEventConflicts(
         nsp.elems = move(sp.elems);
         nsp.recurse = sp.recurse;
         nsp.events = move(sp.events);
-        if (!delayConflicts(nsp, matched, path))
+        if (!delayConflicts(nsp, matched, sti))
             success = false;
         next.insert(move(nsp));
     }
@@ -883,24 +881,25 @@ static bool resolveEventConflicts(
 
 //===========================================================================
 static void
-buildStateTree(State * st, string * path, unordered_set<State> & states) {
+buildStateTree(State * st, unordered_set<State> & states, StateTreeInfo & sti) {
     st->next.assign(257, 0);
     State next;
     bool errors{false};
     for (unsigned i = 0; i < 257; ++i) {
-        size_t pathLen = path->size();
-        if (i <= ' ' || i == 256) {
-            path->push_back('\\');
+        size_t pathLen = sti.m_path.size();
+        if (i <= ' ' || i == '^' || i == 256) {
+            sti.m_path.push_back('^');
             switch (i) {
-            case 0: path->push_back('0'); break;
-            case 9: path->push_back('t'); break;
-            case 10: path->push_back('n'); break;
-            case 13: path->push_back('r'); break;
-            case 32: path->push_back('s'); break;
-            case 256: path->push_back('*'); break;
+            case 0: sti.m_path.push_back('0'); break;
+            case 9: sti.m_path.push_back('I'); break;
+            case 10: sti.m_path.push_back('J'); break;
+            case 13: sti.m_path.push_back('M'); break;
+            case ' ': sti.m_path.push_back('_'); break;
+            case '^': sti.m_path.push_back('^'); break;
+            case 256: sti.m_path.push_back('*'); break;
             }
         } else {
-            path->push_back(unsigned char(i));
+            sti.m_path.push_back(unsigned char(i));
         }
 
         next.clear();
@@ -919,43 +918,42 @@ buildStateTree(State * st, string * path, unordered_set<State> & states) {
                     if (next.positions.size()) {
                         errors = true;
                         logMsgError() << "Multiple recursive targets, "
-                                      << *path;
+                                      << sti.m_path;
                     }
                     addNextPositions(&next, sp);
                 }
             }
         }
         if (!next.positions.empty()) {
-
-            errors = !resolveEventConflicts(next.positions, *path) || errors;
+            errors = !resolveEventConflicts(next.positions, sti) || errors;
             removePositionsWithMoreEvents(next.positions);
 
-            // add state and all of it's child states
+            // add state and, if it's new, all of its child states
             auto ib = states.insert(move(next));
             State * st2 = const_cast<State *>(&*ib.first);
 
-            ++s_transitions;
+            ++sti.m_transitions;
             if (ib.second) {
-                st2->id = ++s_nextStateId;
-                st2->name = *path;
-                const char * show = path->data();
-                if (path->size() > 40) {
-                    show += path->size() - 40;
+                st2->id = ++sti.m_nextStateId;
+                st2->name = sti.m_path;
+                const char * show = sti.m_path.data();
+                if (sti.m_path.size() > 40) {
+                    show += sti.m_path.size() - 40;
                 }
-                logMsgInfo() << s_nextStateId << " states, " << s_transitions
+                logMsgInfo() << sti.m_nextStateId << " states, " << sti.m_transitions
                              << " transitions, "
-                             << "(" << path->size() << " chars, "
+                             << "(" << sti.m_path.size() << " chars, "
                              << st2->positions.size() << " exits) ..." << show;
-                if (path->size() > 30) errors = true;
+                //if (sti.m_path.size() > 30) errors = true;
                 if (!errors)
-                    buildStateTree(st2, path, states);
+                    buildStateTree(st2, states, sti);
             }
             st->next[i] = st2->id;
         }
-        path->resize(pathLen);
+        sti.m_path.resize(pathLen);
     }
-    if (!path->size()) {
-        logMsgInfo() << s_nextStateId << " states, " << s_transitions
+    if (!sti.m_path.size()) {
+        logMsgInfo() << sti.m_nextStateId << " states, " << sti.m_transitions
                      << " transitions";
     }
 }
@@ -965,14 +963,16 @@ void buildStateTree(
     unordered_set<State> * states,
     const set<Element> & rules,
     const string & root,
-    bool inclDeps) {
+    bool inclDeps,
+    bool dedupStates) {
     logMsgInfo() << "rule: " << root;
 
     states->clear();
     State state;
-    s_nextStateId = 0;
-    s_transitions = 0;
-    state.id = ++s_nextStateId;
+    StateTreeInfo sti;
+    sti.m_nextStateId = 0;
+    sti.m_transitions = 0;
+    state.id = ++sti.m_nextStateId;
     state.name = kDoneStateName;
     StatePosition nsp;
     StateElement nse;
@@ -985,10 +985,87 @@ void buildStateTree(
     state.clear();
     if (inclDeps) {
         initPositions(&state, rules, root);
-        state.id = ++s_nextStateId;
+        state.id = ++sti.m_nextStateId;
         auto ib = states->insert(move(state));
-
-        string path;
-        buildStateTree(const_cast<State *>(&*ib.first), &path, *states);
+        buildStateTree(const_cast<State *>(&*ib.first), *states, sti);
+        if (dedupStates)
+            dedupStateTree(*states);
     }
+}
+
+
+/****************************************************************************
+*
+*   dedup state tree
+*
+***/
+
+namespace {
+struct StateKey {
+    vector<StateEvent> events;
+    unsigned next[257];
+
+    bool operator==(const StateKey & right) const {
+        return events == right.events 
+            && memcmp(next, right.next, sizeof(next)) == 0;
+    }
+};
+struct StateInfo {
+    StateKey key;
+    struct Next {
+        unsigned id;
+        unsigned next;
+
+        bool operator<(const Next & right) const {
+            return make_tuple(id, next) < make_tuple(right.id, right.next);
+        }
+    };
+    set<Next> usedBy;
+};
+} // namespace
+
+namespace std {
+template <> struct hash<StateKey> {
+    size_t operator()(const StateKey & val) const;
+};
+//===========================================================================
+size_t hash<StateKey>::operator()(const StateKey & val) const {
+    size_t out = 0;
+    for (auto && sv : val.events) {
+        hashCombine(out, hash<StateEvent>{}(sv));
+    }
+    for (auto && i : val.next) {
+        hashCombine(out, i);
+    }
+    return out;
+}
+} // namespace std
+
+
+//===========================================================================
+void dedupStateTree(unordered_set<State> & states) {
+    unordered_map<unsigned, StateInfo> info;
+    unordered_map<StateKey, vector<unsigned>> idByKey;
+    for (auto && st : states) {
+        if (st.next.empty())
+            continue;
+        auto &si = info[st.id];
+        si.key.events = st.positions.begin()->events;
+        assert(st.next.size() == 257);
+        unordered_map<unsigned, unsigned> idmap;
+        unsigned nextId = 0;
+        for (unsigned i = 0; i < 257; ++i) {
+            if (unsigned id = st.next[i]) {
+                unsigned & mapped = idmap[id];
+                if (!mapped)
+                    mapped = ++nextId;
+                si.key.next[i] = mapped;
+                info[id].usedBy.insert({st.id, i});
+            } else {
+                si.key.next[i] = 0;
+            }
+        }
+        idByKey[si.key].push_back(st.id);
+    }
+
 }

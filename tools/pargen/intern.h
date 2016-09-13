@@ -173,7 +173,9 @@ void buildStateTree(
     std::unordered_set<State> * states,
     const std::set<Element> & rules,
     const std::string & root,
-    bool inclDeps);
+    bool inclDeps,
+    bool dedupStates);
+void dedupStateTree(std::unordered_set<State> & states);
 
 
 /****************************************************************************

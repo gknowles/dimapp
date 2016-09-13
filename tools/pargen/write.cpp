@@ -346,8 +346,9 @@ static void writeParserState(
             os << "(";
             if (hasSwitch)
                 os << "--";
+            unsigned id = st.next.empty() ? 0 : st.next[256];
             os << "ptr)) {\n"
-               << "        goto state" << st.next[256] << ";\n"
+               << "        goto state" << id << ";\n"
                << "    }\n";
         }
     }
@@ -547,6 +548,7 @@ static bool s_resetRecursion = false;
 static bool s_markRecursion = true;
 static bool s_excludeCallbacks = false;
 static bool s_buildStateTree = true;
+static bool s_dedupStateTree = true;
 static bool s_writeStatePositions = true;
 static bool s_buildRecurseFunctions = true;
 
@@ -575,13 +577,14 @@ void writeParser(ostream & hfile, ostream & cppfile, const set<Element> & src) {
     writeCppfileStart(cppfile, rules, src);
 
     unordered_set<State> states;
-    buildStateTree(&states, rules, kOptionRoot, s_buildStateTree);
+    buildStateTree(&states, rules, kOptionRoot, s_buildStateTree, s_dedupStateTree);
     writeFunction(cppfile, nullptr, rules, states, src, s_writeStatePositions);
 
     if (s_buildRecurseFunctions) {
         for (auto && elem : rules) {
             if (elem.recurse) {
-                buildStateTree(&states, rules, elem.name, s_buildStateTree);
+                buildStateTree(
+                    &states, rules, elem.name, s_buildStateTree, s_dedupStateTree);
                 writeFunction(
                     cppfile, &elem, rules, states, src, s_writeStatePositions);
             }
