@@ -1009,8 +1009,12 @@ struct StateKey {
         return events == right.events 
             && memcmp(next, right.next, sizeof(next)) == 0;
     }
+    bool operator!=(const StateKey & right) const {
+        return !operator==(right);
+    }
 };
 struct StateInfo {
+    State * state{nullptr};
     StateKey key;
     struct Next {
         unsigned id;
@@ -1023,11 +1027,24 @@ struct StateInfo {
     set<Next> usedBy;
 };
 } // namespace
-
 namespace std {
 template <> struct hash<StateKey> {
     size_t operator()(const StateKey & val) const;
 };
+} // namespace std
+namespace {
+struct DedupInfo {
+    unordered_set<State> * states{nullptr};
+    unordered_map<unsigned, StateInfo> info;
+    unordered_map<StateKey, vector<unsigned>> idByKey;
+
+    unsigned lastMapId{0};
+    unordered_map<unsigned, unsigned> pmap;
+    unordered_map<unsigned, unsigned> qmap;
+};
+} // namespace
+
+namespace std {
 //===========================================================================
 size_t hash<StateKey>::operator()(const StateKey & val) const {
     size_t out = 0;
@@ -1041,15 +1058,78 @@ size_t hash<StateKey>::operator()(const StateKey & val) const {
 }
 } // namespace std
 
+//===========================================================================
+static void mergeState(StateInfo & dst, StateInfo & src, DedupInfo & di) {
+    logMsgInfo() << "merging state " << src.state->id << " (" << src.state->name 
+        << ") into " << dst.state->id << " (" << dst.state->name << ')';
+
+    unsigned srcId = src.state->id;
+    unsigned dstId = dst.state->id;
+    auto & ids = di.idByKey[src.key];
+    for (auto it = ids.begin(), e = ids.end(); it != e; ++it) {
+        if (*it == srcId) {
+            ids.erase(it);
+            break;
+        }
+    }
+    for (auto && by : src.usedBy) {
+        auto & p = di.info[by.id];
+        p.state->next[by.next] = dstId;
+        dst.usedBy.insert(by);
+    }
+    dst.state->name.append(1, ' ');
+    dst.state->name.append(src.state->name);
+    src.state->id = 0;
+    //di.states->erase(*src.state);
+    //di.info.erase(srcId);
+}
+
+//===========================================================================
+static bool equalize(
+    unsigned a,
+    unsigned b,
+    DedupInfo & di
+) {
+    if (a > b)
+        swap(a, b);
+    StateInfo & x = di.info[a];
+    StateInfo & y = di.info[b];
+    if (x.key != y.key)
+        return false;
+    size_t n = x.state->next.size();
+    if (n != y.state->next.size())
+        return false;
+    di.pmap[a] = ++di.lastMapId;
+    di.qmap[b] = di.lastMapId;
+    for (unsigned i = 0; i < n; ++i) {
+        unsigned p = x.state->next[i];
+        unsigned q = y.state->next[i];
+        if (p == q)
+            continue;
+        if (!p || !q)
+            return false;
+        if (unsigned alias = di.pmap[p]) {
+            if (alias == di.qmap[q])
+                continue;
+        }
+        di.pmap[p] = ++di.lastMapId;
+        di.qmap[q] = di.lastMapId;
+        if (!equalize(p, q, di))
+            return false;
+    }
+    mergeState(x, y, di);
+    return true;
+}
 
 //===========================================================================
 void dedupStateTree(unordered_set<State> & states) {
-    unordered_map<unsigned, StateInfo> info;
-    unordered_map<StateKey, vector<unsigned>> idByKey;
+    DedupInfo di;
+    di.states = &states;
     for (auto && st : states) {
         if (st.next.empty())
             continue;
-        auto &si = info[st.id];
+        auto &si = di.info[st.id];
+        si.state = const_cast<State *>(&st);
         si.key.events = st.positions.begin()->events;
         assert(st.next.size() == 257);
         unordered_map<unsigned, unsigned> idmap;
@@ -1060,12 +1140,38 @@ void dedupStateTree(unordered_set<State> & states) {
                 if (!mapped)
                     mapped = ++nextId;
                 si.key.next[i] = mapped;
-                info[id].usedBy.insert({st.id, i});
+                di.info[id].usedBy.insert({st.id, i});
             } else {
                 si.key.next[i] = 0;
             }
         }
-        idByKey[si.key].push_back(st.id);
+        di.idByKey[si.key].push_back(st.id);
     }
 
+    for (auto && kv : di.idByKey) {
+        if (kv.second.size() == 1)
+            continue;
+        auto a = kv.second.begin();
+        auto b = next(a);
+        sort(a, kv.second.end());
+        for (;;) {
+            unsigned x = *a;
+            unsigned y = *b;
+            di.lastMapId = 0;
+            di.pmap.clear();
+            di.qmap.clear();
+            equalize(x, y, di);
+            auto e = kv.second.end();
+            b = upper_bound(kv.second.begin(), e, y);
+            if (b == e) {
+                ++a;
+                if (a == e)
+                    break;
+                b = next(a);
+                if (b == e)
+                    break;
+            }
+        }
+    }
 }
+
