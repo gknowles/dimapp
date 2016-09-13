@@ -438,10 +438,13 @@ state0: // )"
     }
     vector<const State *> states;
     states.resize(stateSet.size());
-    for (auto && st : stateSet)
-        states[st.id - 1] = &st;
+    for (auto && st : stateSet) {
+        if (st.id)
+            states[st.id - 1] = &st;
+    }
     for (auto && st : states) {
-        writeParserState(os, *st, root, inclStatePositions);
+        if (st)
+            writeParserState(os, *st, root, inclStatePositions);
     }
     os << "}\n";
 }
