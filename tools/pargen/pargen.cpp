@@ -26,7 +26,11 @@ simple-recurse = simple-recurse / %x79
     valid = false;
 }
 
+#ifdef NDEBUG
 static bool s_allRules = true;
+#else
+static bool s_allRules = false;
+#endif
 
 //===========================================================================
 static void getCoreRules(set<Element> & rules) {
