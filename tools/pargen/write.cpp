@@ -293,33 +293,28 @@ static void writeEventCallback(
 //===========================================================================
 static void writeStateName(
     ostream & os, 
-    const string & srcName, 
+    const string & name, 
     size_t maxWidth,
     const string & prefix
 ) {
-    string name = srcName;
-    if (name.back() == '\\') {
-        // extra space because a trailing backslash would cause the comment
-        // to be extended to the next line by the c++ compiler
-        name += ' ';
-    }
     size_t space = maxWidth - size(prefix);
     size_t count = name.size();
-    if (count <= space) {
-        os << prefix << name;
-    } else {
-        size_t pos = 0;
-        size_t num = space;
-        os << prefix;
-        for (;;) {
-            os.write(name.data() + pos, num);
-            pos += num;
-            count -= num;
-            if (!count)
-                break;
-            os << '\n' << prefix << "  ";
-            num = min({space - 2, count});
+    size_t pos = 0;
+    size_t num = min({space, count});
+    os << prefix;
+    for (;;) {
+        os.write(name.data() + pos, num);
+        if (name[pos + num - 1] == '\\') {
+            // extra space because a trailing backslash would cause the comment
+            // to be extended to the next line by the c++ compiler
+            os << ' ';
         }
+        pos += num;
+        count -= num;
+        if (!count)
+            break;
+        os << '\n' << prefix << "  ";
+        num = min({space - 2, count});
     }
     os << '\n';
 }
