@@ -14,72 +14,11 @@ using namespace Dim;
 
 // forward declarations
 static void writeRuleName(ostream & os, const string & name, bool capitalize);
+static void writeElement(ostream & os, const Element & elem, bool inclPos);
 
 //===========================================================================
 ostream & operator<<(ostream & os, const Element & elem) {
-    if (elem.m != 1 || elem.n != 1) {
-        if (elem.m)
-            os << elem.m;
-        os << '*';
-        if (elem.n != kUnlimited)
-            os << elem.n;
-    }
-    bool first = true;
-    switch (elem.type) {
-    case Element::kChoice:
-        os << "( ";
-        for (auto && e : elem.elements) {
-            if (first) {
-                first = false;
-            } else {
-                os << " / ";
-            }
-            os << e;
-        }
-        os << " )";
-        break;
-    case Element::kRule: os << elem.value; break;
-    case Element::kSequence:
-        os << "( ";
-        for (auto && e : elem.elements) {
-            if (first) {
-                first = false;
-            } else {
-                os << " ";
-            }
-            os << e;
-        }
-        os << " )";
-        break;
-    case Element::kTerminal:
-        os << "%x" << hex << (unsigned)(unsigned char)elem.value[0] << dec;
-        break;
-    }
-
-    if (elem.flags) {
-        bool first = true;
-        os << "  { ";
-        if (elem.flags & Element::kOnStart) {
-            first = false;
-            os << "Start";
-        }
-        if (elem.flags & Element::kOnEnd) {
-            if (!first)
-                os << ", ";
-            first = false;
-            os << "End";
-        }
-        if (elem.flags & Element::kOnChar) {
-            if (!first)
-                os << ", ";
-            first = false;
-            os << "Char";
-        }
-        os << " }";
-    }
-    if (elem.pos)
-        os << '#' << elem.pos;
-
+    writeElement(os, elem, true);
     return os;
 }
 
@@ -138,6 +77,72 @@ ostream & operator<<(ostream & os, const StatePosition & sp) {
 }
 
 //===========================================================================
+static void writeElement(ostream & os, const Element & elem, bool inclPos) {
+    if (elem.m != 1 || elem.n != 1) {
+        if (elem.m)
+            os << elem.m;
+        os << '*';
+        if (elem.n != kUnlimited)
+            os << elem.n;
+    }
+    bool first = true;
+    switch (elem.type) {
+    case Element::kChoice:
+        os << "( ";
+        for (auto && e : elem.elements) {
+            if (first) {
+                first = false;
+            } else {
+                os << " / ";
+            }
+            writeElement(os, e, inclPos);
+        }
+        os << " )";
+        break;
+    case Element::kRule: os << elem.value; break;
+    case Element::kSequence:
+        os << "( ";
+        for (auto && e : elem.elements) {
+            if (first) {
+                first = false;
+            } else {
+                os << " ";
+            }
+            writeElement(os, e, inclPos);
+        }
+        os << " )";
+        break;
+    case Element::kTerminal:
+        os << "%x" << hex << (unsigned)(unsigned char)elem.value[0] << dec;
+        break;
+    }
+
+    if (elem.flags) {
+        bool first = true;
+        os << "  { ";
+        if (elem.flags & Element::kOnStart) {
+            first = false;
+            os << "Start";
+        }
+        if (elem.flags & Element::kOnEnd) {
+            if (!first)
+                os << ", ";
+            first = false;
+            os << "End";
+        }
+        if (elem.flags & Element::kOnChar) {
+            if (!first)
+                os << ", ";
+            first = false;
+            os << "Char";
+        }
+        os << " }";
+    }
+    if (inclPos && elem.pos)
+        os << '#' << elem.pos;
+}
+
+//===========================================================================
 // Remove leading/trailing spaces and replace multiple spaces with one.
 // Replace spaces, with NL followed by the prefix, if waiting until the next
 // space would go past the maxWidth.
@@ -189,7 +194,7 @@ static void writeRule(
     os << " = ";
     size_t indent = os.tellp() - pos;
     ostringstream raw;
-    raw << rule;
+    writeElement(raw, rule, false);
     string vpre = prefix + "    ";
     writeWordwrap(os, indent, raw.str(), maxWidth, vpre);
     os << '\n';
@@ -585,7 +590,7 @@ static bool s_resetRecursion = false;
 static bool s_markRecursion = true;
 static bool s_excludeCallbacks = false;
 static bool s_buildStateTree = true;
-static bool s_dedupStateTree = true;
+static bool s_dedupStateTree = false;
 static bool s_writeStatePositions = false;
 static bool s_buildRecurseFunctions = true;
 
