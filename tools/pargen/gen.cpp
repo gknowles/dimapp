@@ -1005,26 +1005,14 @@ struct StateKey {
     vector<StateEvent> events;
     unsigned next[257];
 
-    bool operator==(const StateKey & right) const {
-        return events == right.events 
-            && memcmp(next, right.next, sizeof(next)) == 0;
-    }
-    bool operator!=(const StateKey & right) const {
-        return !operator==(right);
-    }
+    bool operator==(const StateKey & right) const;
+    bool operator!=(const StateKey & right) const;
+    void assign(const State & st);
 };
 struct StateInfo {
     State * state{nullptr};
     StateKey key;
-    struct Next {
-        unsigned id;
-        unsigned next;
-
-        bool operator<(const Next & right) const {
-            return make_tuple(id, next) < make_tuple(right.id, right.next);
-        }
-    };
-    set<Next> usedBy;
+    map<unsigned, vector<unsigned>> usedBy;
 };
 } // namespace
 namespace std {
@@ -1044,6 +1032,9 @@ struct DedupInfo {
 };
 } // namespace
 
+//===========================================================================
+// StateKey
+//===========================================================================
 namespace std {
 //===========================================================================
 size_t hash<StateKey>::operator()(const StateKey & val) const {
@@ -1059,29 +1050,97 @@ size_t hash<StateKey>::operator()(const StateKey & val) const {
 } // namespace std
 
 //===========================================================================
+bool StateKey::operator==(const StateKey & right) const {
+    return events == right.events 
+        && memcmp(next, right.next, sizeof(next)) == 0;
+}
+
+//===========================================================================
+bool StateKey::operator!=(const StateKey & right) const {
+    return !operator==(right);
+}
+
+//===========================================================================
+static void copy(StateKey & out, const State & st) {
+    out.events = st.positions.begin()->events;
+    assert(st.next.size() == 257);
+    unordered_map<unsigned, unsigned> idmap;
+    unsigned nextId = 0;
+    for (unsigned i = 0; i < 257; ++i) {
+        if (unsigned id = st.next[i]) {
+            unsigned & mapped = idmap[id];
+            if (!mapped)
+                mapped = ++nextId;
+            out.next[i] = mapped;
+        } else {
+            out.next[i] = 0;
+        }
+    }
+}
+
+
+//===========================================================================
+// Helpers
+//===========================================================================
+
+//===========================================================================
+static void insertKeyRef(DedupInfo & di, const StateInfo & val) {
+    auto & ids = di.idByKey[val.key];
+    auto ii = equal_range(ids.begin(), ids.end(), val.state->id);
+    assert(ii.first == ii.second);
+    ids.insert(ii.first, val.state->id);
+}
+
+//===========================================================================
+static void eraseKeyRef(DedupInfo & di, const StateInfo & val) {
+    auto & ids = di.idByKey[val.key];
+    auto ii = equal_range(ids.begin(), ids.end(), val.state->id);
+    assert(ii.first != ii.second);
+    if (ids.size() == 1) {
+        di.idByKey.erase(val.key);
+    } else {
+        ids.erase(ii.first);
+    }
+}
+
+//===========================================================================
 static void mergeState(StateInfo & dst, StateInfo & src, DedupInfo & di) {
-    logMsgInfo() << "merging state " << src.state->id << " (" << src.state->name 
-        << ") into " << dst.state->id << " (" << dst.state->name << ')';
+    logMsgInfo() << "merging state " << src.state->id << " into " 
+        << dst.state->id;
 
     unsigned srcId = src.state->id;
     unsigned dstId = dst.state->id;
-    auto & ids = di.idByKey[src.key];
-    for (auto it = ids.begin(), e = ids.end(); it != e; ++it) {
-        if (*it == srcId) {
-            ids.erase(it);
-            break;
-        }
-    }
+    
+    // move down references from src's parents to point to dst
     for (auto && by : src.usedBy) {
-        auto & p = di.info[by.id];
-        p.state->next[by.next] = dstId;
-        dst.usedBy.insert(by);
+        auto & p = di.info[by.first];
+        auto & dstUsed = dst.usedBy[by.first];
+        for (auto && i : by.second) {
+            p.state->next[i] = dstId;
+            dstUsed.push_back(i);
+        }
+        // update key (and idByKey references) of changed parent
+        eraseKeyRef(di, p);
+        copy(p.key, *p.state);
+        insertKeyRef(di, p);
     }
-    dst.state->name.append(1, ' ');
-    dst.state->name.append(src.state->name);
-    src.state->id = 0;
-    //di.states->erase(*src.state);
-    //di.info.erase(srcId);
+
+    // remove source from idByKey (after the parent are updated so any
+    // recursive references can be handled first).
+    eraseKeyRef(di, src);
+
+    // remove back references to source from it's children
+    for (unsigned i = 0; i < 257; ++i) {
+        if (unsigned id = src.state->next[i])
+            di.info[id].usedBy.erase(srcId);
+    }
+
+    // update dst name with merge history
+    dst.state->aliases.push_back(to_string(srcId) + ": " + src.state->name);
+
+    // delete source state and it's dedup info
+    di.states->erase(*src.state);
+    di.info.erase(srcId);
 }
 
 //===========================================================================
@@ -1104,17 +1163,19 @@ static bool equalize(
     for (unsigned i = 0; i < n; ++i) {
         unsigned p = x.state->next[i];
         unsigned q = y.state->next[i];
-        if (p == q)
+        if (!p && !q)
             continue;
         if (!p || !q)
             return false;
-        if (unsigned alias = di.pmap[p]) {
-            if (alias == di.qmap[q])
-                continue;
-        }
+        unsigned ap = di.pmap[p];
+        unsigned aq = di.qmap[q];
+        if (ap != aq)
+            return false;
+        if (ap)
+            continue;
         di.pmap[p] = ++di.lastMapId;
         di.qmap[q] = di.lastMapId;
-        if (!equalize(p, q, di))
+        if (p != q && !equalize(p, q, di))
             return false;
     }
     mergeState(x, y, di);
@@ -1122,38 +1183,17 @@ static bool equalize(
 }
 
 //===========================================================================
-void dedupStateTree(unordered_set<State> & states) {
-    DedupInfo di;
-    di.states = &states;
-    for (auto && st : states) {
-        if (st.next.empty())
-            continue;
-        auto &si = di.info[st.id];
-        si.state = const_cast<State *>(&st);
-        si.key.events = st.positions.begin()->events;
-        assert(st.next.size() == 257);
-        unordered_map<unsigned, unsigned> idmap;
-        unsigned nextId = 0;
-        for (unsigned i = 0; i < 257; ++i) {
-            if (unsigned id = st.next[i]) {
-                unsigned & mapped = idmap[id];
-                if (!mapped)
-                    mapped = ++nextId;
-                si.key.next[i] = mapped;
-                di.info[id].usedBy.insert({st.id, i});
-            } else {
-                si.key.next[i] = 0;
-            }
-        }
-        di.idByKey[si.key].push_back(st.id);
-    }
+// Makes one pass through all the equal keys and returns true if any of the
+// assoicated states were equivalent (i.e. got it's references merge with 
+// another state and removed).
+static bool dedupStateTreePass(DedupInfo & di) {
+    size_t count = di.states->size();
 
     for (auto && kv : di.idByKey) {
         if (kv.second.size() == 1)
             continue;
         auto a = kv.second.begin();
         auto b = next(a);
-        sort(a, kv.second.end());
         for (;;) {
             unsigned x = *a;
             unsigned y = *b;
@@ -1173,5 +1213,36 @@ void dedupStateTree(unordered_set<State> & states) {
             }
         }
     }
+
+    if (count > di.states->size())
+        return true;
+    return false;
 }
 
+//===========================================================================
+void dedupStateTree(unordered_set<State> & states) {
+    DedupInfo di;
+    di.states = &states;
+    for (auto && st : states) {
+        if (st.next.empty())
+            continue;
+        auto &si = di.info[st.id];
+        si.state = const_cast<State *>(&st);
+        for (unsigned i = 0; i < 257; ++i) {
+            if (unsigned id = st.next[i]) {
+                di.info[id].usedBy[st.id].push_back(i);
+            }
+        }
+        copy(si.key, st);
+        insertKeyRef(di, si);
+    }
+
+    // keep making dedup passes through all the keys until no more dups are 
+    // found.
+    for (unsigned i = 0;; ++i) {
+        logMsgDebug() << "dedup pass #" << i;
+        if (!dedupStateTreePass(di))
+            break;
+    }
+    logMsgDebug() << states.size() << " unique states";
+}

@@ -147,6 +147,7 @@ struct StatePosition {
 struct State {
     unsigned id;
     std::string name;
+    std::vector<std::string> aliases;
     std::set<StatePosition> positions;
     std::vector<unsigned> next;
 
