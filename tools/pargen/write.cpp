@@ -585,7 +585,7 @@ static bool s_resetRecursion = false;
 static bool s_markRecursion = true;
 static bool s_excludeCallbacks = false;
 static bool s_buildStateTree = true;
-static bool s_dedupStateTree = false;
+static bool s_dedupStateTree = true;
 static bool s_writeStatePositions = false;
 static bool s_buildRecurseFunctions = true;
 
