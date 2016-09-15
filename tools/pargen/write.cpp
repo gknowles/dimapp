@@ -138,9 +138,9 @@ ostream & operator<<(ostream & os, const StatePosition & sp) {
 }
 
 //===========================================================================
-// remove leading/trailing spaces and replace multiple spaces with one
-// replace spaces, with NL followed by the prefix, if waiting until the next
-//   space would go past the maxWidth
+// Remove leading/trailing spaces and replace multiple spaces with one.
+// Replace spaces, with NL followed by the prefix, if waiting until the next
+// space would go past the maxWidth.
 static void writeWordwrap(
     ostream & os,
     size_t & indent,
@@ -286,18 +286,49 @@ static void writeEventCallback(
 }
 
 //===========================================================================
+static void writeStateName(
+    ostream & os, 
+    const string & srcName, 
+    size_t maxWidth,
+    const string & prefix
+) {
+    string name = srcName;
+    if (name.back() == '\\') {
+        // extra space because a trailing backslash would cause the comment
+        // to be extended to the next line by the c++ compiler
+        name += ' ';
+    }
+    size_t space = maxWidth - size(prefix);
+    size_t count = name.size();
+    if (count <= space) {
+        os << prefix << name;
+    } else {
+        size_t pos = 0;
+        size_t num = space;
+        os << prefix;
+        for (;;) {
+            os.write(name.data() + pos, num);
+            pos += num;
+            count -= num;
+            if (!count)
+                break;
+            os << '\n' << prefix << "  ";
+            num = min({space - 2, count});
+        }
+    }
+    os << '\n';
+}
+
+//===========================================================================
 static void writeParserState(
     ostream & os,
     const State & st,
     const Element * root,
     bool inclStatePositions) {
-    os << "\nstate" << st.id << ": // " << st.name;
-    if (st.name.back() == '\\') {
-        // extra space because a trailing backslash would cause the comment
-        // to be extended to the next line by the c++ compiler
-        os << ' ';
-    }
-    os << '\n';
+    os << "\nstate" << st.id << ":\n";
+    writeStateName(os, to_string(st.id) + ": " + st.name, 79, "    // ");
+    for (auto && name : st.aliases)
+        writeStateName(os, name, 79, "    // ");
     if (inclStatePositions) {
         os << "    // positions: " << st.positions.size() << "\n\n";
         for (auto && sp : st.positions) {
@@ -411,8 +442,8 @@ bool )" << prefix
     char ch;
     goto state2;
 
-state0: // )"
-           << kFailedStateName << R"(
+state0: 
+    // )" << kFailedStateName << R"(
     return false;
 )";
     } else {
@@ -427,8 +458,8 @@ state0: // )"
         }
         os << R"(    goto state2;
 
-state0: // )"
-           << kFailedStateName << R"(
+state0:
+    // )" << kFailedStateName << R"(
     if (last) {
         ptr = last;
         goto state1;
@@ -439,8 +470,11 @@ state0: // )"
     vector<const State *> states;
     states.resize(stateSet.size());
     for (auto && st : stateSet) {
-        if (st.id)
+        if (st.id) {
+            if (st.id > states.size())
+                states.resize(st.id);
             states[st.id - 1] = &st;
+        }
     }
     for (auto && st : states) {
         if (st)
@@ -552,7 +586,7 @@ static bool s_markRecursion = true;
 static bool s_excludeCallbacks = false;
 static bool s_buildStateTree = true;
 static bool s_dedupStateTree = true;
-static bool s_writeStatePositions = true;
+static bool s_writeStatePositions = false;
 static bool s_buildRecurseFunctions = true;
 
 //===========================================================================
