@@ -1,7 +1,7 @@
 ; cmdline-argv.par - dim services
 ;
 ; rules to parse a command line into an argv array
-%root = t2
+%root = line
 %api.prefix = Argv
 %api.file.h = cmdline-argv.h            ; defaults to <%api.prefix>parse.h
 %api.file.cpp = cmdline-argv.cpp        ; defaults to <%api.prefix>parse.cpp
@@ -31,9 +31,8 @@ BSLASH = %x5c
 t1 = t1-param *(RWS t1-param)
 t1-param = RWS { Start, End }
 
-
+; t2 - requires infinite stack. A series of 10 alphas, may be either 1 (if 
+; followed by quote) or 10 (if followed by EOF) params 
 t2 = *t2-param
-t2-param = *(t2-quoted t2-active-quote) t2-active-quote t2-quoted { Start, End }
-t2-quoted = 1*HTAB
-t2-active-quote = DQUOTE
+t2-param = *(1*ALPHA DQUOTE) ALPHA { Start, End }
 
