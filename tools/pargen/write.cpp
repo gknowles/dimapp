@@ -326,8 +326,14 @@ static void writeParserState(
     const Element * root,
     bool inclStatePositions) {
     os << "\nstate" << st.id << ":\n";
-    writeStateName(os, to_string(st.id) + ": " + st.name, 79, "    // ");
-    for (auto && name : st.aliases)
+    vector<string> aliases = st.aliases;
+    aliases.push_back(to_string(st.id) + ": " + st.name);
+    sort(aliases.begin(), aliases.end(), 
+        [](auto && a, auto && b) {
+            return strtoul(a.c_str(), nullptr, 10) < strtoul(b.c_str(), nullptr, 10);
+        }
+    );
+    for (auto && name : aliases)
         writeStateName(os, name, 79, "    // ");
     if (inclStatePositions) {
         os << "    // positions: " << st.positions.size() << "\n\n";
