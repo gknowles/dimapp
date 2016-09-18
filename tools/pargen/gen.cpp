@@ -940,10 +940,10 @@ buildStateTree(State * st, unordered_set<State> & states, StateTreeInfo & sti) {
                 if (sti.m_path.size() > 40) {
                     show += sti.m_path.size() - 40;
                 }
-                logMsgInfo() << sti.m_nextStateId << " states, " << sti.m_transitions
-                             << " transitions, "
-                             << "(" << sti.m_path.size() << " chars, "
-                             << st2->positions.size() << " exits) ..." << show;
+                logMsgInfo() << sti.m_nextStateId << " states, " 
+                             << sti.m_transitions << " trans, "
+                             << sti.m_path.size() << " chars, "
+                             << st2->positions.size() << " exits, ..." << show;
                 //if (sti.m_path.size() > 10) errors = true;
                 if (!errors)
                     buildStateTree(st2, states, sti);
@@ -1031,8 +1031,6 @@ struct DedupInfo {
 };
 } // namespace
 
-static bool equalize(unsigned a, unsigned b, DedupInfo & di);
-
 
 //===========================================================================
 // StateKey
@@ -1110,9 +1108,9 @@ static void eraseKeyRef(DedupInfo & di, const StateInfo & val) {
 }
 
 //===========================================================================
-static void mergeState(StateInfo & dst, StateInfo & src, DedupInfo & di) {
-    unsigned srcId = src.state->id;
-    unsigned dstId = dst.state->id;
+static void mergeState(unsigned dstId, unsigned srcId, DedupInfo & di) {
+    StateInfo & dst = di.info[dstId];
+    StateInfo & src = di.info[srcId];
 
     logMsgInfo() << "merging state " << srcId << " into " << dstId;
 
@@ -1160,7 +1158,7 @@ static void mergeState(StateInfo & dst, StateInfo & src, DedupInfo & di) {
 }
 
 //===========================================================================
-static bool equalizeSwapped(unsigned a, unsigned b, DedupInfo & di) {
+static bool equalize(unsigned a, unsigned b, DedupInfo & di) {
     StateInfo & x = di.info[a];
     StateInfo & y = di.info[b];
     if (x.key != y.key)
@@ -1168,8 +1166,6 @@ static bool equalizeSwapped(unsigned a, unsigned b, DedupInfo & di) {
     size_t n = x.state->next.size();
     if (n != y.state->next.size())
         return false;
-    di.pmap[a] = ++di.lastMapId;
-    di.qmap[b] = di.lastMapId;
     for (unsigned i = 0; i < n; ++i) {
         unsigned p = x.state->next[i];
         unsigned q = y.state->next[i];
@@ -1188,23 +1184,7 @@ static bool equalizeSwapped(unsigned a, unsigned b, DedupInfo & di) {
         if (p != q && !equalize(p, q, di))
             return false;
     }
-    mergeState(x, y, di);
     return true;
-}
-
-//===========================================================================
-static bool equalize(unsigned a, unsigned b, DedupInfo & di) {
-    bool swapped = false;
-    if (a > b) {
-        swapped = true;
-        swap(a, b);
-        swap(di.pmap, di.qmap);
-    }
-    bool result = equalizeSwapped(a, b, di);
-    if (swapped) {
-        swap(di.pmap, di.qmap);
-    }
-    return result;
 }
 
 //===========================================================================
@@ -1225,7 +1205,10 @@ static bool dedupStateTreePass(DedupInfo & di) {
             di.lastMapId = 0;
             di.pmap.clear();
             di.qmap.clear();
-            equalize(x, y, di);
+            di.pmap[x] = ++di.lastMapId;
+            di.qmap[y] = di.lastMapId;
+            if (equalize(x, y, di))
+                mergeState(x, y, di);
             auto e = kv.second.end();
             a = lower_bound(kv.second.begin(), e, x);
             if (a == e)
@@ -1267,7 +1250,7 @@ void dedupStateTree(unordered_set<State> & states) {
 
     // keep making dedup passes through all the keys until no more dups are 
     // found.
-    for (unsigned i = 0;; ++i) {
+    for (unsigned i = 1;; ++i) {
         logMsgDebug() << "dedup pass #" << i;
         if (!dedupStateTreePass(di))
             break;
