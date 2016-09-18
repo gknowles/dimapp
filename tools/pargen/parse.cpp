@@ -132,6 +132,7 @@ bool ParserNotify::onAlternationStart(const char * ptr) {
 
 //===========================================================================
 bool ParserNotify::onAlternationEnd(const char * eptr) {
+    assert(m_elems.back()->type == Element::kChoice);
     m_elems.pop_back();
     return true;
 }
@@ -170,6 +171,7 @@ bool ParserNotify::onBinValConcatenationStart(const char * ptr) {
 
 //===========================================================================
 bool ParserNotify::onBinValConcatenationEnd(const char * eptr) {
+    assert(m_elems.back()->type == Element::kSequence);
     m_elems.pop_back();
     return true;
 }
@@ -216,6 +218,7 @@ bool ParserNotify::onConcatenationStart(const char * ptr) {
 
 //===========================================================================
 bool ParserNotify::onConcatenationEnd(const char * eptr) {
+    assert(m_elems.back()->type == Element::kSequence);
     m_elems.pop_back();
     return true;
 }
@@ -294,8 +297,10 @@ bool ParserNotify::onGroupStart(const char * ptr) {
 //===========================================================================
 bool ParserNotify::onGroupEnd(const char * eptr) {
     if (eptr[-1] == ']') {
+        assert(m_elems.back()->type == Element::kSequence);
         m_elems.pop_back();
     }
+    assert(m_elems.back()->type == Element::kSequence);
     m_elems.pop_back();
     return true;
 }
