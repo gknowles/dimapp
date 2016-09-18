@@ -1,4 +1,4 @@
-; cmdline-argv.par - dim services
+; cmdline-argv.abnf - dim services
 ;
 ; rules to parse a command line into an argv array
 %root = line
@@ -10,11 +10,11 @@
 %include = core
 
 ; command line to argv grammer rules
-line = OWS param-list OWS
-param-list = param *(RWS param)
-param = *fully-quoted [half-quoted] *BSLASH                     { Start, End }
-fully-quoted = [unquoted] active-quote quoted active-quote
-half-quoted = [unquoted] active-quote quoted
+line = OWS closed-param *(RWS closed-param) [RWS open-param] OWS
+closed-param = *(unquoted / fully-quoted) *BSLASH              { Start, End }
+open-param = *(unquoted / fully-quoted) half-quoted *BSLASH    { Start, End }
+fully-quoted = active-quote quoted active-quote
+half-quoted = active-quote quoted
 unquoted = 1*( ptext / escaped-quote )
 quoted = 1*( ptext / dquote-pair / escaped-quote / RWS )
 ptext = 1*( [BSLASH] pchar )
