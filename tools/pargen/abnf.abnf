@@ -1,0 +1,91 @@
+; abnf.abnf - pargen
+;
+; rules to parse abnf
+%root = rulelist 
+%api.prefix = Abnf
+
+; "core" to include the core rules defined by RFC5234 B.2
+%include = core
+
+; abnf grammer rules for abnf
+action = ( action-start / action-end / action-char ) 
+action-char = ( ( %x63 / %x43 ) ( %x68 / %x48 ) ( %x61 / %x41 ) ( %x72 / 
+    %x52 ) ) { End } 
+action-end = ( ( %x65 / %x45 ) ( %x6e / %x4e ) ( %x64 / %x44 ) ) { End } 
+action-start = ( ( %x73 / %x53 ) ( %x74 / %x54 ) ( %x61 / %x41 ) ( %x72 / 
+    %x52 ) ( %x74 / %x54 ) ) { End } 
+actions = ( %x7b *c-wsp *1( action *( *c-wsp %x2c *c-wsp action ) ) *c-wsp 
+    %x7d *c-wsp ) 
+alternation = ( concatenation *( *c-wsp %x2f *c-wsp concatenation ) ) { 
+    Start, End } 
+bin-val = ( ( %x62 / %x42 ) ( bin-val-simple / bin-val-concatenation / 
+    bin-val-alternation ) ) 
+bin-val-alt-first = bin-val-sequence { End } 
+bin-val-alt-second = bin-val-sequence { End } 
+bin-val-alternation = ( bin-val-alt-first %x2d bin-val-alt-second ) 
+bin-val-concat-each = bin-val-sequence { End } 
+bin-val-concatenation = ( bin-val-concat-each 1*( %x2e bin-val-concat-each 
+    ) ) { Start, End } 
+bin-val-sequence = 1*BIT { Char } 
+bin-val-simple = bin-val-sequence { End } 
+c-nl = ( comment / NEWLINE ) 
+c-wsp = ( WSP / ( c-nl WSP ) ) 
+char-val = ( DQUOTE char-val-sequence DQUOTE ) { End } 
+char-val-sequence = *( %x20 / %x21 / %x23 / %x24 / %x25 / %x26 / %x27 / 
+    %x28 / %x29 / %x2a / %x2b / %x2c / %x2d / %x2e / %x2f / %x30 / %x31 / 
+    %x32 / %x33 / %x34 / %x35 / %x36 / %x37 / %x38 / %x39 / %x3a / %x3b / 
+    %x3c / %x3d / %x3e / %x3f / %x40 / %x41 / %x42 / %x43 / %x44 / %x45 / 
+    %x46 / %x47 / %x48 / %x49 / %x4a / %x4b / %x4c / %x4d / %x4e / %x4f / 
+    %x50 / %x51 / %x52 / %x53 / %x54 / %x55 / %x56 / %x57 / %x58 / %x59 / 
+    %x5a / %x5b / %x5c / %x5d / %x5e / %x5f / %x60 / %x61 / %x62 / %x63 / 
+    %x64 / %x65 / %x66 / %x67 / %x68 / %x69 / %x6a / %x6b / %x6c / %x6d / 
+    %x6e / %x6f / %x70 / %x71 / %x72 / %x73 / %x74 / %x75 / %x76 / %x77 / 
+    %x78 / %x79 / %x7a / %x7b / %x7c / %x7d / %x7e ) { Start, Char } 
+comment = ( %x3b *( WSP / VCHAR ) NEWLINE ) 
+concatenation = ( repetition *( 1*c-wsp repetition ) ) { Start, End } 
+dec-val = ( ( %x64 / %x44 ) ( dec-val-simple / dec-val-concatenation / 
+    dec-val-alternation ) ) 
+dec-val-alt-first = dec-val-sequence { End } 
+dec-val-alt-second = dec-val-sequence { End } 
+dec-val-alternation = ( dec-val-alt-first %x2d dec-val-alt-second ) 
+dec-val-concat-each = dec-val-sequence { End } 
+dec-val-concatenation = ( dec-val-concat-each 1*( %x2e dec-val-concat-each 
+    ) ) { Start, End } 
+dec-val-sequence = 1*DIGIT { Char } 
+dec-val-simple = dec-val-sequence { End } 
+defined-as = ( *c-wsp ( defined-as-set / defined-as-incremental ) *c-wsp ) 
+defined-as-incremental = ( %x3d %x2f ) { End } 
+defined-as-set = %x3d { End } 
+element = ( ruleref / group / char-val / num-val ) 
+elements = ( alternation *c-wsp ) 
+group = ( ( %x28 / %x5b ) group-tail ) { Start, End } 
+group-tail* = ( *c-wsp alternation *c-wsp ( %x29 / %x5d ) ) 
+hex-val = ( ( %x78 / %x58 ) ( hex-val-simple / hex-val-concatenation / 
+    hex-val-alternation ) ) 
+hex-val-alt-first = hex-val-sequence { End } 
+hex-val-alt-second = hex-val-sequence { End } 
+hex-val-alternation = ( hex-val-alt-first %x2d hex-val-alt-second ) 
+hex-val-concat-each = hex-val-sequence { End } 
+hex-val-concatenation = ( hex-val-concat-each 1*( %x2e hex-val-concat-each 
+    ) ) { Start, End } 
+hex-val-sequence = 1*HEXDIG { Char } 
+hex-val-simple = hex-val-sequence { End } 
+num-val = ( %x25 ( bin-val / dec-val / hex-val ) ) 
+option = ( %x25 option-tail ) 
+option-char = ( ALPHA / DIGIT / %x2e / %x2d / %x5f / %x3a ) 
+option-quoted = 1*( option-char / %x20 / %x2f ) { Char } 
+option-tail = ( optionname defined-as optionlist c-nl ) 
+option-unquoted = 1*option-char { Char } 
+optiondef = ( option-unquoted / ( DQUOTE option-quoted DQUOTE ) ) { End } 
+optionlist = ( optiondef *( 1*c-wsp optiondef ) *c-wsp ) { Start, End } 
+optionname = ( ALPHA *( ALPHA / %x2e / %x2d ) ) { Char } 
+repeat = ( repeat-minmax / repeat-range ) 
+repeat-max = dec-val-sequence { End } 
+repeat-minmax = dec-val-sequence { End } 
+repeat-range = ( *1dec-val-sequence %x2a *1repeat-max ) { Start } 
+repetition = ( *1repeat element ) { Start } 
+rule = ( rulename defined-as elements *1actions c-nl ) { End } 
+rulelist = 1*( rule / option / ( *c-wsp c-nl ) ) 
+rulename = ( ALPHA *( ALPHA / DIGIT / %x2d ) ) { Start, Char } 
+ruleref = rulename { End } 
+
