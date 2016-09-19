@@ -1161,12 +1161,6 @@ static void mergeState(StateInfo & dst, StateInfo & src, DedupInfo & di) {
 
 //===========================================================================
 static bool equalizeSwapped(unsigned a, unsigned b, DedupInfo & di) {
-    // The a < b ordering is only for display purposes, it causes merges to
-    // only move downwards -- making the output consistent irrespective of
-    // hashing. Eventually we could do an additional pass to renumber the 
-    // states to be contiguous...
-    assert(a < b);
-
     StateInfo & x = di.info[a];
     StateInfo & y = di.info[b];
     if (x.key != y.key)
