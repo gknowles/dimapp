@@ -3,7 +3,7 @@
 
 #include "dim/config.h"
 
-#include <utility>  // std::pair
+#include <utility> // std::pair
 #include <vector>
 
 namespace Dim {

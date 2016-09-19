@@ -348,7 +348,7 @@ static void normalizeSequence(Element & rule) {
         i -= 1;
     }
     int pos = 0;
-    for (auto && elem : rule.elements) 
+    for (auto && elem : rule.elements)
         elem.pos = ++pos;
 }
 
@@ -752,12 +752,10 @@ static void removePositionsWithMoreEvents(set<StatePosition> & positions) {
 
 //===========================================================================
 static void removeConflicts(
-    vector<StateEvent> & matched,
-    const vector<StateEvent> & events
-) {
+    vector<StateEvent> & matched, const vector<StateEvent> & events) {
     if (matched.empty())
         return;
-    int numEvents = (int) events.size();
+    int numEvents = (int)events.size();
     vector<bool> used(numEvents);
     auto mi = matched.begin();
     int evi = 0;
@@ -770,28 +768,26 @@ static void removeConflicts(
         return;
 
     found_unused:
-        if (*mi == events[evi]) 
+        if (*mi == events[evi])
             goto matched;
         if (mi->flags & Element::kOnChar) {
             // char can shift around start events
             for (;;) {
-                if ((~events[evi].flags & Element::kOnStart)
-                    || ++evi == numEvents
-                ) {
+                if ((~events[evi].flags & Element::kOnStart) ||
+                    ++evi == numEvents) {
                     goto unmatched;
                 }
-                if (*mi == events[evi]) 
+                if (*mi == events[evi])
                     goto matched;
             }
         } else if (mi->flags & Element::kOnStart) {
             // start events can shift around char events.
             for (;;) {
-                if ((~events[evi].flags & Element::kOnChar)
-                    || ++evi == numEvents
-                    ) {
+                if ((~events[evi].flags & Element::kOnChar) ||
+                    ++evi == numEvents) {
                     goto unmatched;
                 }
-                if (*mi == events[evi]) 
+                if (*mi == events[evi])
                     goto matched;
             }
         }
@@ -812,8 +808,7 @@ static void removeConflicts(
 static bool delayConflicts(
     StatePosition & nsp,
     const vector<StateEvent> & matched,
-    const StateTreeInfo & sti
-) {
+    const StateTreeInfo & sti) {
     for (auto && sv : matched) {
         auto evi = nsp.events.begin();
         auto e = nsp.events.end();
@@ -831,9 +826,8 @@ static bool delayConflicts(
     for (auto && sv : nsp.delayedEvents) {
         if (sv.flags & Element::kOnChar) {
             success = false;
-            logMsgError() << "Conflicting parse events, "
-                << sv.elem->name << " at "
-                << sti.m_path;
+            logMsgError() << "Conflicting parse events, " << sv.elem->name
+                          << " at " << sti.m_path;
         }
     }
     return success;
@@ -841,9 +835,7 @@ static bool delayConflicts(
 
 //===========================================================================
 static bool resolveEventConflicts(
-    set<StatePosition> & positions, 
-    const StateTreeInfo & sti
-) {
+    set<StatePosition> & positions, const StateTreeInfo & sti) {
     if (positions.size() == 1)
         return true;
 
@@ -854,7 +846,7 @@ static bool resolveEventConflicts(
     matched = b->events;
     size_t most = matched.size();
     for (++b; b != e; ++b) {
-        most = max({ b->events.size(), most });
+        most = max({b->events.size(), most});
         removeConflicts(matched, b->events);
     }
     if (most == matched.size())
@@ -940,11 +932,11 @@ buildStateTree(State * st, unordered_set<State> & states, StateTreeInfo & sti) {
                 if (sti.m_path.size() > 40) {
                     show += sti.m_path.size() - 40;
                 }
-                logMsgInfo() << sti.m_nextStateId << " states, " 
+                logMsgInfo() << sti.m_nextStateId << " states, "
                              << sti.m_transitions << " trans, "
                              << sti.m_path.size() << " chars, "
                              << st2->positions.size() << " exits, ..." << show;
-                //if (sti.m_path.size() > 10) errors = true;
+                // if (sti.m_path.size() > 10) errors = true;
                 if (!errors)
                     buildStateTree(st2, states, sti);
             }
@@ -1051,8 +1043,8 @@ size_t hash<StateKey>::operator()(const StateKey & val) const {
 
 //===========================================================================
 bool StateKey::operator==(const StateKey & right) const {
-    return events == right.events 
-        && memcmp(next, right.next, sizeof(next)) == 0;
+    return events == right.events &&
+           memcmp(next, right.next, sizeof(next)) == 0;
 }
 
 //===========================================================================
@@ -1148,8 +1140,8 @@ static void mergeState(unsigned dstId, unsigned srcId, DedupInfo & di) {
     // update dst name with merge history
     dst.state->aliases.push_back(to_string(srcId) + ": " + src.state->name);
     dst.state->aliases.insert(
-        dst.state->aliases.end(), 
-        src.state->aliases.begin(), 
+        dst.state->aliases.end(),
+        src.state->aliases.begin(),
         src.state->aliases.end());
 
     // delete source state and it's dedup info
@@ -1189,7 +1181,7 @@ static bool equalize(unsigned a, unsigned b, DedupInfo & di) {
 
 //===========================================================================
 // Makes one pass through all the equal keys and returns true if any of the
-// assoicated states were equivalent (i.e. got it's references merge with 
+// assoicated states were equivalent (i.e. got it's references merge with
 // another state and removed).
 static bool dedupStateTreePass(DedupInfo & di) {
     size_t count = di.states->size();
@@ -1235,7 +1227,7 @@ void dedupStateTree(unordered_set<State> & states) {
     DedupInfo di;
     di.states = &states;
     for (auto && st : states) {
-        auto &si = di.info[st.id];
+        auto & si = di.info[st.id];
         si.state = const_cast<State *>(&st);
         if (!st.next.empty()) {
             for (unsigned i = 0; i < 257; ++i) {
@@ -1248,7 +1240,7 @@ void dedupStateTree(unordered_set<State> & states) {
         insertKeyRef(di, si);
     }
 
-    // keep making dedup passes through all the keys until no more dups are 
+    // keep making dedup passes through all the keys until no more dups are
     // found.
     for (unsigned i = 1;; ++i) {
         logMsgDebug() << "dedup pass #" << i;

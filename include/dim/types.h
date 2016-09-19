@@ -5,7 +5,7 @@
 
 #include <chrono>
 #include <cstdint>
-#include <ctime>    // time_t
+#include <ctime> // time_t
 #include <ratio>
 
 // using namespace std::literals;

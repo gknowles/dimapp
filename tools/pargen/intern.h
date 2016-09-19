@@ -116,8 +116,8 @@ struct StateElement {
     bool operator<(const StateElement & right) const;
     bool operator==(const StateElement & right) const;
 
-    bool operator!=(const StateElement & right) const { 
-        return !operator==(right); 
+    bool operator!=(const StateElement & right) const {
+        return !operator==(right);
     }
 };
 
