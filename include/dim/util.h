@@ -6,6 +6,7 @@
 namespace Dim {
 
 #include <climits>
+#include <limits>
 #include <type_traits>
 
 

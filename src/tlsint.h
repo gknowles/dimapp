@@ -1,6 +1,7 @@
 // tlsint.h - dim core
 #pragma once
 
+#include <cstdint>
 #include <vector>
 
 namespace Dim {
