@@ -8,7 +8,7 @@
 
 #include "dim/config.h"
 
-#include <cassert>
+#include <memory>
 #include <vector>
 
 namespace Dim {

@@ -23,8 +23,8 @@ namespace Dim {
 bool parse(Address * addr, const char src[]);
 bool parse(Endpoint * end, const char src[], int defaultPort);
 
-::std::ostream & operator<<(::std::ostream & os, const Address & addr);
-::std::ostream & operator<<(::std::ostream & os, const Endpoint & end);
+std::ostream & operator<<(std::ostream & os, const Address & addr);
+std::ostream & operator<<(std::ostream & os, const Endpoint & end);
 
 //===========================================================================
 // Native

@@ -7,6 +7,7 @@
 
 #include <experimental/filesystem>
 #include <memory>
+#include <string>
 
 namespace Dim {
 

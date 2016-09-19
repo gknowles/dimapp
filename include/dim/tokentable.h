@@ -4,6 +4,7 @@
 #include "dim/config.h"
 
 #include <cassert>
+#include <vector>
 
 namespace Dim {
 

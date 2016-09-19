@@ -31,8 +31,9 @@ const char * kTextEntityTable[] = {
 };
 static_assert(size(kTextEntityTable) == kTextTypes, "");
 
+// clang-format off
 const char kTextTypeTable[256] = {
-    //  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
+//  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
     2, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, // 0
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 1
     1, 3, 1, 1, 1, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 2
@@ -50,6 +51,7 @@ const char kTextTypeTable[256] = {
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // e
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // f
 };
+// clang-format on
 
 } // namespace
 
