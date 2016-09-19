@@ -8,10 +8,13 @@
 %include = core
 
 ; abnf grammer rules for abnf
-action = ( action-start / action-end / action-char ) 
+action = ( action-start / action-end / action-char / action-func ) 
 action-char = ( ( %x63 / %x43 ) ( %x68 / %x48 ) ( %x61 / %x41 ) ( %x72 / 
     %x52 ) ) { End } 
 action-end = ( ( %x65 / %x45 ) ( %x6e / %x4e ) ( %x64 / %x44 ) ) { End } 
+action-func = ( ( %x66 / %x46 ) ( %x75 / %x55 ) ( %x6e / %x4e ) ( %x63 / 
+    %x43 ) ( %x74 / %x54 ) ( %x69 / %x49 ) ( %x6f / %x4f ) ( %x6e / %x4e ) 
+    ) { End } 
 action-start = ( ( %x73 / %x53 ) ( %x74 / %x54 ) ( %x61 / %x41 ) ( %x72 / 
     %x52 ) ( %x74 / %x54 ) ) { End } 
 actions = ( %x7b *c-wsp *1( action *( *c-wsp %x2c *c-wsp action ) ) *c-wsp 
@@ -59,7 +62,7 @@ defined-as-set = %x3d { End }
 element = ( ruleref / group / char-val / num-val ) 
 elements = ( alternation *c-wsp ) 
 group = ( ( %x28 / %x5b ) group-tail ) { Start, End } 
-group-tail* = ( *c-wsp alternation *c-wsp ( %x29 / %x5d ) ) 
+group-tail = ( *c-wsp alternation *c-wsp ( %x29 / %x5d ) ) { Function }
 hex-val = ( ( %x78 / %x58 ) ( hex-val-simple / hex-val-concatenation / 
     hex-val-alternation ) ) 
 hex-val-alt-first = hex-val-sequence { End } 

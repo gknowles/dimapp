@@ -29,19 +29,19 @@ simple-recurse = simple-recurse / %x79
 #ifdef NDEBUG
 static bool s_allRules = true;
 #else
-static bool s_allRules = false;
+static bool s_allRules = true;
 #endif
 
 //===========================================================================
 static void getCoreRules(set<Element> & rules) {
-    const char s_coreRules[] = R"(
-ALPHA   =  %x41-5A / %x61-7A   ; A-Z / a-z
+	const char s_coreRules [] = R"(
+ALPHA   =  %x41-5A / %x61-7A    ; A-Z / a-z
 BIT     =  "0" / "1"
 CHAR    =  %x01-7F
 CR      =  %x0D
 CRLF    =  CR LF
 CTL     =  %x00-1F / %x7F
-DIGIT   =  %x30-39
+DIGIT   =  %x30-39				; 0-9
 DQUOTE  =  %x22
 HEXDIG  =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
 HTAB    =  %x09
@@ -156,11 +156,12 @@ static void getAbnfRules(set<Element> & rules) {
     addRule(rule, "c-wsp", 0, kUnlimited);
     addLiteral(rule, "}", 1, 1);
     addRule(rule, "c-wsp", 0, kUnlimited);
-    // action = action-start / action-end / action-char
+    // action = action-start / action-end / action-char / action-func
     rule = addChoiceRule(rules, "action", 1, 1);
     addRule(rule, "action-start", 1, 1);
     addRule(rule, "action-end", 1, 1);
     addRule(rule, "action-char", 1, 1);
+	addRule(rule, "action-func", 1, 1);
     // action-start = "start" {end}
     rule = addSequenceRule(rules, "action-start", 1, 1, Element::kOnEnd);
     addLiteral(rule, "start", 1, 1);
@@ -170,6 +171,9 @@ static void getAbnfRules(set<Element> & rules) {
     // action-char = "char" {end}
     rule = addSequenceRule(rules, "action-char", 1, 1, Element::kOnEnd);
     addLiteral(rule, "char", 1, 1);
+	// action-func = "function" {end}
+	rule = addSequenceRule(rules, "action-func", 1, 1, Element::kOnEnd);
+	addLiteral(rule, "function", 1, 1);
 
     // option = "%" option-tail
     rule = addSequenceRule(rules, "option", 1, 1);

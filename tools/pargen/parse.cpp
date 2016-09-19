@@ -23,6 +23,7 @@ private:
     bool onEnd() final { return true; }
     bool onActionCharEnd(const char * eptr) final;
     bool onActionEndEnd(const char * eptr) final;
+	bool onActionFuncEnd(const char * eptr) final;
     bool onActionStartEnd(const char * eptr) final;
     bool onAlternationStart(const char * ptr) final;
     bool onAlternationEnd(const char * eptr) final;
@@ -115,6 +116,12 @@ bool ParserNotify::onActionCharEnd(const char * eptr) {
 bool ParserNotify::onActionEndEnd(const char * eptr) {
     m_elems.back()->flags |= Element::kOnEnd;
     return true;
+}
+
+//===========================================================================
+bool ParserNotify::onActionFuncEnd(const char * eptr) {
+	m_elems.back()->recurse = true;
+	return true;
 }
 
 //===========================================================================

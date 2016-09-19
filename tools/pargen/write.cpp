@@ -26,8 +26,6 @@ ostream & operator<<(ostream & os, const Element & elem) {
 ostream & operator<<(ostream & os, const set<Element> & rules) {
     for (auto && rule : rules) {
         os << "*   " << rule.name;
-        if (rule.recurse)
-            os << '*';
         os << " = " << rule;
         os << '\n';
     }
@@ -117,7 +115,7 @@ static void writeElement(ostream & os, const Element & elem, bool inclPos) {
         break;
     }
 
-    if (elem.flags) {
+    if (elem.flags || elem.recurse) {
         bool first = true;
         os << "  { ";
         if (elem.flags & Element::kOnStart) {
@@ -136,6 +134,12 @@ static void writeElement(ostream & os, const Element & elem, bool inclPos) {
             first = false;
             os << "Char";
         }
+		if (elem.recurse) {
+            if (!first)
+                os << ", ";
+            first = false;
+            os << "Function";
+		}
         os << " }";
     }
     if (inclPos && elem.pos)
@@ -189,8 +193,6 @@ static void writeRule(
     const string & prefix) {
     streampos pos = os.tellp();
     os << prefix << rule.name;
-    if (rule.recurse)
-        os << '*';
     os << " = ";
     size_t indent = os.tellp() - pos;
     ostringstream raw;
@@ -409,8 +411,7 @@ static void writeCppfileStart(
 *   )" << getOptionString(options, kOptionApiPrefix)
        << R"(Parser
 *
-*   Normalized ABNF of syntax (rules broken out into separate functions are
-*   marked with asterisks):
+*   Normalized ABNF of syntax:
 )";
 
     for (auto && elem : rules) {
