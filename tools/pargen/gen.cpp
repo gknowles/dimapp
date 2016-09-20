@@ -1104,7 +1104,8 @@ static void mergeState(unsigned dstId, unsigned srcId, DedupInfo & di) {
     StateInfo & dst = di.info[dstId];
     StateInfo & src = di.info[srcId];
 
-    logMsgInfo() << "merging state " << srcId << " into " << dstId;
+    logMsgInfo() << di.states->size() << " states, merging state " << srcId << 
+		" into " << dstId;
 
     // move down references from src's parents to point to dst
     for (auto && by : src.usedBy) {
@@ -1131,11 +1132,6 @@ static void mergeState(unsigned dstId, unsigned srcId, DedupInfo & di) {
                 di.info[id].usedBy.erase(srcId);
         }
     }
-
-    // update src reference in qmap
-    assert(!di.qmap[dstId]);
-    di.qmap[dstId] = di.qmap[srcId];
-    di.qmap[srcId] = 0;
 
     // update dst name with merge history
     dst.state->aliases.push_back(to_string(srcId) + ": " + src.state->name);
@@ -1184,42 +1180,39 @@ static bool equalize(unsigned a, unsigned b, DedupInfo & di) {
 // assoicated states were equivalent (i.e. got it's references merge with
 // another state and removed).
 static bool dedupStateTreePass(DedupInfo & di) {
-    size_t count = di.states->size();
+    vector<pair<unsigned, unsigned>> matched;
 
     for (auto && kv : di.idByKey) {
-        if (kv.second.size() == 1)
-            continue;
-        auto a = kv.second.begin();
-        auto b = next(a);
-        for (;;) {
-            unsigned x = *a;
-            unsigned y = *b;
-            di.lastMapId = 0;
-            di.pmap.clear();
-            di.qmap.clear();
-            di.pmap[x] = ++di.lastMapId;
-            di.qmap[y] = di.lastMapId;
-            if (equalize(x, y, di))
-                mergeState(x, y, di);
-            auto e = kv.second.end();
-            a = lower_bound(kv.second.begin(), e, x);
-            if (a == e)
-                break;
-            b = upper_bound(next(a), e, y);
-            if (b == e) {
-                ++a;
-                if (a == e)
+        for (size_t b = kv.second.size(); b-- > 0;) {
+            unsigned y = kv.second[b];
+            for (auto && x : kv.second) {
+                if (x == y)
                     break;
-                b = next(a);
-                if (b == e)
+                di.lastMapId = 0;
+                di.pmap.clear();
+                di.qmap.clear();
+                di.pmap[x] = ++di.lastMapId;
+                di.qmap[y] = di.lastMapId;
+                if (equalize(x, y, di)) {
+                    matched.push_back({x,y});
                     break;
+                }
             }
         }
     }
+    if (matched.empty())
+        return false;
 
-    if (count > di.states->size())
-        return true;
-    return false;
+    // Sort descending, by source. Normalizes the processing with respect
+    // to hash functions and makes sure that we never remove a future
+    // target.
+    sort(matched.begin(), matched.end(), [](auto & a, auto & b){
+        return a.second > b.second;
+    });
+    for (auto && xy : matched) {
+        mergeState(xy.first, xy.second, di);
+    }
+    return true;
 }
 
 //===========================================================================
