@@ -14,7 +14,7 @@ using namespace Dim;
 
 class ParserNotify : public IAbnfParserNotify {
 public:
-    ParserNotify(set<Element> & rules);
+    ParserNotify(Grammar & rules);
     virtual ~ParserNotify() {}
 
 private:
@@ -72,7 +72,7 @@ private:
     bool onRulenameChar(char ch) final;
     bool onRulerefEnd(const char * eptr) final;
 
-    set<Element> & m_rules;
+    Grammar & m_rules;
     vector<Element *> m_elems;
     string m_string;
     unsigned m_number{0};
@@ -103,9 +103,11 @@ private:
 ***/
 
 //===========================================================================
-ParserNotify::ParserNotify(set<Element> & rules)
+ParserNotify::ParserNotify(Grammar & rules)
     : m_rules(rules) {}
 
+//===========================================================================
+// IAbnfParserNotify
 //===========================================================================
 bool ParserNotify::onActionCharEnd(const char * eptr) {
     m_elems.back()->flags |= Element::kOnChar;
@@ -132,7 +134,7 @@ bool ParserNotify::onActionStartEnd(const char * eptr) {
 
 //===========================================================================
 bool ParserNotify::onAlternationStart(const char * ptr) {
-    Element * elem = addChoice(m_elems.back(), 1, 1);
+    Element * elem = m_rules.addChoice(m_elems.back(), 1, 1);
     m_elems.push_back(elem);
     return true;
 }
@@ -155,8 +157,8 @@ bool ParserNotify::onBinValAltFirstEnd(const char * eptr) {
 //===========================================================================
 bool ParserNotify::onBinValAltSecondEnd(const char * eptr) {
     assert(m_number <= UCHAR_MAX);
-    Element * elem = addChoice(m_elems.back(), m_min, m_max);
-    addRange(elem, m_first, (unsigned char)m_number);
+    Element * elem = m_rules.addChoice(m_elems.back(), m_min, m_max);
+    m_rules.addRange(elem, m_first, (unsigned char)m_number);
     m_number = 0;
     return true;
 }
@@ -164,14 +166,14 @@ bool ParserNotify::onBinValAltSecondEnd(const char * eptr) {
 //===========================================================================
 bool ParserNotify::onBinValConcatEachEnd(const char * eptr) {
     assert(m_number <= UCHAR_MAX);
-    addTerminal(m_elems.back(), (unsigned char)m_number, 1, 1);
+    m_rules.addTerminal(m_elems.back(), (unsigned char)m_number, 1, 1);
     m_number = 0;
     return true;
 }
 
 //===========================================================================
 bool ParserNotify::onBinValConcatenationStart(const char * ptr) {
-    Element * elem = addSequence(m_elems.back(), m_min, m_max);
+    Element * elem = m_rules.addSequence(m_elems.back(), m_min, m_max);
     m_elems.push_back(elem);
     return true;
 }
@@ -192,14 +194,14 @@ bool ParserNotify::onBinValSequenceChar(char ch) {
 //===========================================================================
 bool ParserNotify::onBinValSimpleEnd(const char * eptr) {
     assert(m_number <= UCHAR_MAX);
-    addTerminal(m_elems.back(), (unsigned char)m_number, m_min, m_max);
+    m_rules.addTerminal(m_elems.back(), (unsigned char)m_number, m_min, m_max);
     m_number = 0;
     return true;
 }
 
 //===========================================================================
 bool ParserNotify::onCharValEnd(const char * eptr) {
-    addLiteral(m_elems.back(), m_string, m_min, m_max);
+    m_rules.addLiteral(m_elems.back(), m_string, m_min, m_max);
     m_string.clear();
     return true;
 }
@@ -218,7 +220,7 @@ bool ParserNotify::onCharValSequenceChar(char ch) {
 
 //===========================================================================
 bool ParserNotify::onConcatenationStart(const char * ptr) {
-    Element * elem = addSequence(m_elems.back(), 1, 1);
+    Element * elem = m_rules.addSequence(m_elems.back(), 1, 1);
     m_elems.push_back(elem);
     return true;
 }
@@ -268,22 +270,18 @@ bool ParserNotify::onDecValSimpleEnd(const char * eptr) {
 
 //===========================================================================
 bool ParserNotify::onDefinedAsIncrementalEnd(const char * eptr) {
-    Element key;
-    swap(key.name, m_string);
-    auto it = m_rules.find(key);
-    if (it == m_rules.end()) {
-        swap(key.name, m_string);
-        return onDefinedAsSetEnd(eptr);
+    if (auto rule = m_rules.element(m_string)) {
+        m_string.clear();
+        assert(m_elems.empty());
+        m_elems.push_back(rule);
+        return true;
     }
-    Element * rule = const_cast<Element *>(&*it);
-    assert(m_elems.empty());
-    m_elems.push_back(rule);
-    return true;
+    return onDefinedAsSetEnd(eptr);
 }
 
 //===========================================================================
 bool ParserNotify::onDefinedAsSetEnd(const char * eptr) {
-    Element * rule = addChoiceRule(m_rules, m_string, 1, 1);
+    Element * rule = m_rules.addChoiceRule(m_string, 1, 1);
     m_string.clear();
     assert(m_elems.empty());
     m_elems.push_back(rule);
@@ -292,10 +290,10 @@ bool ParserNotify::onDefinedAsSetEnd(const char * eptr) {
 
 //===========================================================================
 bool ParserNotify::onGroupStart(const char * ptr) {
-    Element * elem = addSequence(m_elems.back(), m_min, m_max);
+    Element * elem = m_rules.addSequence(m_elems.back(), m_min, m_max);
     m_elems.push_back(elem);
     if (*ptr == '[') {
-        elem = addSequence(elem, 0, 1);
+        elem = m_rules.addSequence(elem, 0, 1);
         m_elems.push_back(elem);
     }
     return true;
@@ -438,7 +436,7 @@ bool ParserNotify::onRulenameChar(char ch) {
 
 //===========================================================================
 bool ParserNotify::onRulerefEnd(const char * eptr) {
-    addRule(m_elems.back(), m_string, m_min, m_max);
+    m_rules.addRule(m_elems.back(), m_string, m_min, m_max);
     m_string.clear();
     return true;
 }
@@ -451,12 +449,12 @@ bool ParserNotify::onRulerefEnd(const char * eptr) {
 ***/
 
 //===========================================================================
-bool parseAbnf(std::set<Element> * rules, const std::string & src) {
-    ParserNotify notify(*rules);
+bool parseAbnf(Grammar & rules, const std::string & src) {
+    ParserNotify notify(rules);
     AbnfParser parser(&notify);
     const char * ptr = src.c_str();
     if (!parser.parse(ptr))
         return false;
-    normalize(*rules);
+    normalize(rules);
     return true;
 }

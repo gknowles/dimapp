@@ -128,6 +128,9 @@
     <ClCompile Include="..\tools\pargen\gen.cpp">
       <ObjectFileName>$(IntDir)tools\pargen\</ObjectFileName>
     </ClCompile>
+    <ClCompile Include="..\tools\pargen\grammar.cpp">
+      <ObjectFileName>$(IntDir)tools\pargen\</ObjectFileName>
+    </ClCompile>
     <ClCompile Include="..\tools\pargen\pargen.cpp">
       <ObjectFileName>$(IntDir)tools\pargen\</ObjectFileName>
     </ClCompile>
@@ -142,6 +145,9 @@
     <ClCompile Include="..\tools\pargen\write.cpp">
       <ObjectFileName>$(IntDir)tools\pargen\</ObjectFileName>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\tools\pargen\abnf.abnf" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="dimapp.vcxproj">

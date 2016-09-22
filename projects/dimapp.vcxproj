@@ -216,6 +216,9 @@
       <ObjectFileName>$(IntDir)src\</ObjectFileName>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\src\argv.abnf" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

@@ -7,6 +7,13 @@
 *
 ***/
 
+const char kOptionRoot[] = "%root";
+const char kOptionApiPrefix[] = "%api.prefix";
+const char kOptionApiHeaderFile[] = "%api.file.h";
+const char kOptionApiCppFile[] = "%api.file.cpp";
+
+const char kDoneRuleName[] = "%%DONE";
+
 const unsigned kUnlimited = unsigned(-1);
 
 struct Element {
@@ -48,46 +55,62 @@ struct ElementNull : Element {
     static ElementNull s_elem;
 };
 
-// create options
-void addOption(
-    std::set<Element> & rules,
-    const std::string & name,
-    const std::string & value);
+class Grammar {
+public:
+    void clear ();
 
-// create rules
-Element * addSequenceRule(
-    std::set<Element> & rules,
-    const std::string & name,
-    unsigned m,
-    unsigned n,
-    unsigned flags = 0, // Element::kOn*
-    bool recurse = false);
-Element * addChoiceRule(
-    std::set<Element> & rules,
-    const std::string & name,
-    unsigned m,
-    unsigned n,
-    unsigned flags = 0, // Element::kOn*
-    bool recurse = false);
-Element * addSequence(Element * rule, unsigned m, unsigned n);
-Element * addChoice(Element * rule, unsigned m, unsigned n);
-void addRule(Element * rule, const std::string & name, unsigned m, unsigned n);
-void addLiteral(
-    Element * rule, const std::string & value, unsigned m, unsigned n);
-void addRange(Element * rule, unsigned char a, unsigned char b);
-void addTerminal(Element * rule, unsigned char ch, unsigned m, unsigned n);
+    void addOption(
+        const std::string & name,
+        const std::string & value);
+    const char * optionString(
+        const std::string & name, 
+        const char * def = "") const;
+    unsigned optionUnsigned(const std::string & name, unsigned def = 0) const;
+
+    Element * addSequenceRule(
+        const std::string & name,
+        unsigned m,
+        unsigned n,
+        unsigned flags = 0, // Element::kOn*
+        bool recurse = false);
+    Element * addChoiceRule(
+        const std::string & name,
+        unsigned m,
+        unsigned n,
+        unsigned flags = 0, // Element::kOn*
+        bool recurse = false);
+    Element * addSequence(Element * rule, unsigned m, unsigned n);
+    Element * addChoice(Element * rule, unsigned m, unsigned n);
+    void addRule(
+        Element * rule, const std::string & name, unsigned m, unsigned n);
+    void addLiteral(
+        Element * rule, const std::string & value, unsigned m, unsigned n);
+    void addRange(Element * rule, unsigned char a, unsigned char b);
+    void addTerminal(Element * rule, unsigned char ch, unsigned m, unsigned n);
+    
+    Element * element(const std::string & name);
+    const Element * element(const std::string & name) const;
+
+    const std::set<Element> & rules () const { return m_rules; }
+
+private:
+    Element * addElement(Element * rule, unsigned m, unsigned n);
+
+    unsigned m_nextElemId{0};
+    std::set<Element> m_rules;
+};
 
 // modify options
-bool processOptions(std::set<Element> & rules);
+bool processOptions(Grammar & rules);
 
 // modify rules
 bool copyRules(
-    std::set<Element> & rules,
-    const std::set<Element> & src,
+    Grammar & out,
+    const Grammar & src,
     const std::string & root,
     bool failIfExists);
-void normalize(std::set<Element> & rules);
-void markRecursion(std::set<Element> & rules, Element & rule, bool resetFirst);
+void normalize(Grammar & rules);
+void markRecursion(Grammar & rules, Element & rule, bool resetFirst);
 
 
 /****************************************************************************
@@ -95,13 +118,6 @@ void markRecursion(std::set<Element> & rules, Element & rule, bool resetFirst);
 *   Parse state
 *
 ***/
-
-const char kOptionRoot[] = "%root";
-const char kOptionApiPrefix[] = "%api.prefix";
-const char kOptionApiHeaderFile[] = "%api.file.h";
-const char kOptionApiCppFile[] = "%api.file.cpp";
-
-const char kDoneRuleName[] = "%%DONE";
 
 const char kRootStateName[] = "<ROOT>";
 const char kDoneStateName[] = "<DONE>";
@@ -172,8 +188,7 @@ template <> struct hash<State> { size_t operator()(const State & val) const; };
 // build state tree
 void buildStateTree(
     std::unordered_set<State> * states,
-    const std::set<Element> & rules,
-    const std::string & root,
+    const Element & root,
     bool inclDeps,
     bool dedupStates);
 void dedupStateTree(std::unordered_set<State> & states);
@@ -189,11 +204,6 @@ void dedupStateTree(std::unordered_set<State> & states);
 void writeParser(
     std::ostream & hfile,
     std::ostream & cppfile,
-    const std::set<Element> & rules);
+    const Grammar & rules);
 
-bool parseAbnf(std::set<Element> * rules, const std::string & src);
-
-const char *
-getOptionString(const std::set<Element> & rules, const std::string & name);
-unsigned
-getOptionUnsigned(const std::set<Element> & rules, const std::string & name);
+bool parseAbnf(Grammar & rules, const std::string & src);

@@ -22,7 +22,6 @@ static void hashCombine(size_t & seed, size_t v);
 ***/
 
 // forward declarations
-static void normalizeSequence(Element & rule);
 static void addPositions(
     bool * skippable,
     State * st,
@@ -34,37 +33,6 @@ static void addPositions(
 //===========================================================================
 static void hashCombine(size_t & seed, size_t v) {
     seed ^= v + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-}
-
-
-/****************************************************************************
-*
-*   ElementDone
-*
-***/
-
-ElementDone ElementDone::s_elem;
-
-//===========================================================================
-ElementDone::ElementDone() {
-    type = Element::kRule;
-    value = kDoneRuleName;
-    rule = this;
-}
-
-
-/****************************************************************************
-*
-*   ElementNull
-*
-***/
-
-ElementNull ElementNull::s_elem;
-
-//===========================================================================
-ElementNull::ElementNull() {
-    type = Element::kTerminal;
-    value = '\0';
 }
 
 
@@ -210,235 +178,6 @@ bool State::operator==(const State & right) const {
 
 /****************************************************************************
 *
-*   process options
-*
-***/
-
-//===========================================================================
-bool processOptions(std::set<Element> & rules) {
-    if (!*getOptionString(rules, kOptionRoot)) {
-        logMsgError() << "Option not found, " << kOptionRoot;
-        return false;
-    }
-    string prefix = getOptionString(rules, kOptionApiPrefix);
-    if (prefix.empty()) {
-        logMsgError() << "Option not found, " << kOptionApiPrefix;
-        return false;
-    }
-    transform(prefix.begin(), prefix.end(), prefix.begin(), tolower);
-    if (!*getOptionString(rules, kOptionApiHeaderFile)) {
-        addOption(rules, kOptionApiHeaderFile, prefix + "parse.h");
-    }
-    if (!*getOptionString(rules, kOptionApiCppFile)) {
-        addOption(rules, kOptionApiCppFile, prefix + "parse.cpp");
-    }
-    return true;
-}
-
-
-/****************************************************************************
-*
-*   copy rules
-*
-***/
-
-//===========================================================================
-static bool copyRequiredDeps(
-    set<Element> & rules, const set<Element> & src, const Element & root) {
-    switch (root.type) {
-    case Element::kSequence:
-    case Element::kChoice:
-        for (auto && elem : root.elements)
-            if (!copyRequiredDeps(rules, src, elem))
-                return false;
-        break;
-    case Element::kRule:
-        if (!copyRules(rules, src, root.value, false))
-            return false;
-    }
-    return true;
-}
-
-//===========================================================================
-bool copyRules(
-    set<Element> & rules,
-    const set<Element> & src,
-    const string & root,
-    bool failIfExists) {
-    Element key;
-    key.name = root;
-    key.type = Element::kRule;
-    auto it = src.find(key);
-    if (it == src.end()) {
-        logMsgError() << "Rule not found, " << root;
-        return false;
-    }
-    auto ib = rules.insert(*it);
-    if (!ib.second) {
-        if (failIfExists) {
-            logMsgError() << "Rule already exists, " << root;
-            return false;
-        }
-        return true;
-    }
-    auto & elem = *ib.first;
-    if (elem.recurse && (elem.flags & Element::kOnChar)) {
-        logMsgError() << "Rule with both recurse and onChar, " << elem.value;
-        return false;
-    }
-    return copyRequiredDeps(rules, src, elem);
-}
-
-
-/****************************************************************************
-*
-*   normalize
-*
-***/
-
-//===========================================================================
-static void normalizeChoice(Element & rule) {
-    assert(rule.elements.size() > 1);
-    vector<Element> tmp;
-    for (auto && elem : rule.elements) {
-        if (elem.type != Element::kChoice) {
-            tmp.push_back(move(elem));
-            continue;
-        }
-        for (auto && e : elem.elements) {
-            tmp.push_back(move(e));
-            Element & back = tmp.back();
-            back.m *= elem.m;
-            back.n = max({back.n, elem.n, back.n * elem.n});
-        }
-    }
-    rule.elements = tmp;
-    for (auto && elem : rule.elements)
-        elem.pos = 0;
-}
-
-//===========================================================================
-static void normalizeSequence(Element & rule) {
-    // it's okay to elevate a sub-list if multiplying the ordinals
-    // doesn't change them?
-    assert(rule.elements.size() > 1);
-    for (unsigned i = 0; i < rule.elements.size(); ++i) {
-        Element * elem = rule.elements.data() + i;
-        if (elem->type != Element::kSequence)
-            continue;
-        bool skip = false;
-        for (auto && e : elem->elements) {
-            if (e.m != elem->m * e.m ||
-                e.n != max({elem->n, e.n, elem->n * e.n})) {
-                skip = true;
-                break;
-            }
-        }
-        if (skip)
-            continue;
-        if (elem->elements.size() > 1) {
-            rule.elements.insert(
-                rule.elements.begin() + i + 1,
-                elem->elements.begin() + 1,
-                elem->elements.end());
-            elem = rule.elements.data() + i;
-        }
-        Element tmp = move(elem->elements.front());
-        *elem = move(tmp);
-        i -= 1;
-    }
-    int pos = 0;
-    for (auto && elem : rule.elements)
-        elem.pos = ++pos;
-}
-
-//===========================================================================
-static void normalizeRule(Element & rule, const set<Element> & rules) {
-    Element elem;
-    elem.name = rule.value;
-    auto bi = rules.find(elem);
-    if (bi == rules.end()) {
-        rule.rule = nullptr;
-    } else {
-        rule.rule = &*bi;
-    }
-}
-
-//===========================================================================
-static void normalize(Element & rule, const set<Element> & rules) {
-    if (rule.elements.size() == 1) {
-        Element & elem = rule.elements.front();
-        rule.m *= elem.m;
-        rule.n = max({rule.n, elem.n, rule.n * elem.n});
-        rule.type = elem.type;
-        rule.value = elem.value;
-        vector<Element> tmp{move(elem.elements)};
-        rule.elements = move(tmp);
-        return normalize(rule, rules);
-    }
-
-    for (auto && elem : rule.elements)
-        normalize(elem, rules);
-
-    switch (rule.type) {
-    case Element::kChoice: normalizeChoice(rule); break;
-    case Element::kSequence: normalizeSequence(rule); break;
-    case Element::kRule: normalizeRule(rule, rules); break;
-    }
-}
-
-//===========================================================================
-void normalize(set<Element> & rules) {
-    for (auto && rule : rules) {
-        normalize(const_cast<Element &>(rule), rules);
-    }
-}
-
-
-/****************************************************************************
-*
-*   mark recursion
-*
-***/
-
-//===========================================================================
-static void
-markRecursion(set<Element> & rules, Element & rule, vector<bool> & used) {
-    bool wasUsed;
-    switch (rule.type) {
-    case Element::kChoice:
-    case Element::kSequence:
-        for (auto && elem : rule.elements) {
-            markRecursion(rules, elem, used);
-        }
-        break;
-    case Element::kRule:
-        wasUsed = used[rule.rule->id];
-        if (wasUsed && (~rule.rule->flags & Element::kOnChar))
-            const_cast<Element *>(rule.rule)->recurse = true;
-        if (rule.rule->recurse)
-            return;
-        used[rule.rule->id] = true;
-        markRecursion(rules, const_cast<Element &>(*rule.rule), used);
-        used[rule.rule->id] = wasUsed;
-    }
-}
-
-//===========================================================================
-void markRecursion(set<Element> & rules, Element & rule, bool reset) {
-    size_t maxId = 0;
-    for (auto && elem : rules) {
-        if (reset)
-            const_cast<Element &>(elem).recurse = false;
-        maxId = max((size_t)elem.id, maxId);
-    }
-    vector<bool> used(maxId, false);
-    markRecursion(rules, rule, used);
-}
-
-
-/****************************************************************************
-*
 *   build state tree
 *
 ***/
@@ -537,14 +276,11 @@ done:
 
 //===========================================================================
 static void
-initPositions(State * st, const set<Element> & rules, const string & root) {
-    Element key;
-    key.name = root;
-    const Element & rule = *rules.find(key);
+initPositions(State * st, const Element & root) {
     st->positions.clear();
     bool skippable;
     StatePosition sp;
-    addPositions(&skippable, st, &sp, true, rule, 0);
+    addPositions(&skippable, st, &sp, true, root, 0);
 }
 
 //===========================================================================
@@ -953,11 +689,10 @@ buildStateTree(State * st, unordered_set<State> & states, StateTreeInfo & sti) {
 //===========================================================================
 void buildStateTree(
     unordered_set<State> * states,
-    const set<Element> & rules,
-    const string & root,
+    const Element & root,
     bool inclDeps,
     bool dedupStates) {
-    logMsgInfo() << "rule: " << root;
+    logMsgInfo() << "rule: " << root.name;
 
     states->clear();
     State state;
@@ -976,7 +711,7 @@ void buildStateTree(
 
     state.clear();
     if (inclDeps) {
-        initPositions(&state, rules, root);
+        initPositions(&state, root);
         state.id = ++sti.m_nextStateId;
         auto ib = states->insert(move(state));
         buildStateTree(const_cast<State *>(&*ib.first), *states, sti);
