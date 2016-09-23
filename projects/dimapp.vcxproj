@@ -138,6 +138,7 @@
     <ClInclude Include="..\include\dim\util.h" />
     <ClInclude Include="..\include\dim\xml.h" />
     <ClInclude Include="..\include\dim\compiler\visualc.h" />
+    <ClInclude Include="..\src\cmdline-argv.h" />
     <ClInclude Include="..\src\httpint.h" />
     <ClInclude Include="..\src\intern.h" />
     <ClInclude Include="..\src\pch.h" />
@@ -151,6 +152,9 @@
       <ObjectFileName>$(IntDir)src\</ObjectFileName>
     </ClCompile>
     <ClCompile Include="..\src\charbuf.cpp">
+      <ObjectFileName>$(IntDir)src\</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\src\cmdline-argv.cpp">
       <ObjectFileName>$(IntDir)src\</ObjectFileName>
     </ClCompile>
     <ClCompile Include="..\src\cmdline.cpp">
