@@ -30,6 +30,7 @@ struct Element {
         kTerminal,
     } type{kRule};
     std::string name;
+    std::string eventName; // only present if different from name
     unsigned m{1};
     unsigned n{1};
     unsigned id{0};
@@ -38,6 +39,7 @@ struct Element {
     std::vector<Element> elements;
     std::string value;
     const Element * rule{nullptr};
+    const Element * eventRule{nullptr}; // only present if different from rule
     unsigned flags{0};
     bool recurse{false};
 

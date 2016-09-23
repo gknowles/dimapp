@@ -21,6 +21,7 @@ private:
     // IAbnfParserNotify
     bool onStart() final { return true; }
     bool onEnd() final { return true; }
+    bool onActionAsEnd(const char * eptr) final;
     bool onActionCharEnd(const char * eptr) final;
     bool onActionEndEnd(const char * eptr) final;
 	bool onActionFuncEnd(const char * eptr) final;
@@ -108,6 +109,13 @@ ParserNotify::ParserNotify(Grammar & rules)
 
 //===========================================================================
 // IAbnfParserNotify
+//===========================================================================
+bool ParserNotify::onActionAsEnd(const char * eptr) {
+    m_elems.back()->eventName = move(m_string);
+    m_string.clear();
+    return true;
+}
+
 //===========================================================================
 bool ParserNotify::onActionCharEnd(const char * eptr) {
     m_elems.back()->flags |= Element::kOnChar;

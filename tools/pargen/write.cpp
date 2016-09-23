@@ -140,6 +140,12 @@ static void writeElement(ostream & os, const Element & elem, bool inclPos) {
             first = false;
             os << "Function";
 		}
+        if (!elem.eventName.empty()) {
+            if (!first)
+                os << ", ";
+            first = false;
+            os << "As=" << elem.eventName;
+        }
         os << " }";
     }
     if (inclPos && elem.pos)
@@ -520,6 +526,8 @@ public:
 
 )";
     for (auto && elem : rules.rules()) {
+        if (!elem.eventName.empty())
+            continue;
         if (elem.flags & Element::kOnStart) {
             os << "    virtual bool on";
             writeRuleName(os, elem.name, true);

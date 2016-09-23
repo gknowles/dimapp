@@ -5,7 +5,10 @@
 %api.prefix = Abnf
 
 ; abnf grammer rules for abnf
-action = ( action-start / action-end / action-char / action-func ) 
+action = ( action-start / action-end / action-char / action-func / 
+    action-as ) 
+action-as = ( ( %x61 / %x41 ) ( %x73 / %x53 ) *c-wsp %x3d *c-wsp rulename 
+    ) { End }
 action-char = ( ( %x63 / %x43 ) ( %x68 / %x48 ) ( %x61 / %x41 ) ( %x72 / 
     %x52 ) ) { End } 
 action-end = ( ( %x65 / %x45 ) ( %x6e / %x4e ) ( %x64 / %x44 ) ) { End } 

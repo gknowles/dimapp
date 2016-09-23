@@ -289,6 +289,8 @@ static void addEvent(
     Element::Flags flags) {
     StateEvent sv;
     sv.elem = se.elem->rule;
+    if (!sv.elem->eventName.empty())
+        sv.elem = sv.elem->eventRule;
     sv.flags = flags;
     events.push_back(sv);
 }

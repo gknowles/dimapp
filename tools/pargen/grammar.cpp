@@ -350,6 +350,9 @@ static void normalize(Element & rule, const Grammar & rules) {
         return normalize(rule, rules);
     }
 
+    if (!rule.eventName.empty())
+        rule.eventRule = rules.element(rule.eventName);
+
     for (auto && elem : rule.elements)
         normalize(elem, rules);
 
