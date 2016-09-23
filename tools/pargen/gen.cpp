@@ -99,9 +99,8 @@ size_t hash<StatePosition>::operator()(const StatePosition & val) const {
 
 //===========================================================================
 bool StatePosition::operator<(const StatePosition & right) const {
-    return make_tuple(recurse, elems, events, delayedEvents) <
-           make_tuple(
-               right.recurse, right.elems, right.events, right.delayedEvents);
+    return tie(recurse, elems, events, delayedEvents) <
+           tie(right.recurse, right.elems, right.events, right.delayedEvents);
 }
 
 //===========================================================================
