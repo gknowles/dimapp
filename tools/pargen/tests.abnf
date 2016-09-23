@@ -1,0 +1,14 @@
+; tests.abnf - pargen
+;
+%root = t2
+%api.prefix = Test
+%api.file.h = test-out.h            ; defaults to <%api.prefix>parse.h
+%api.file.cpp = test-out.cpp        ; defaults to <%api.prefix>parse.cpp
+
+t1 = t1-param *(RWS t1-param)
+t1-param = RWS { Start, End }
+
+; t2 - requires infinite stack. A series of 10 alphas, may be either 1 (if 
+; followed by quote) or 10 (if followed by EOF) params 
+t2 = *t2-param
+t2-param = *(1*ALPHA DQUOTE) ALPHA { Start, End }

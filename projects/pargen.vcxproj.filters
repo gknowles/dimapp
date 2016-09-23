@@ -2,6 +2,7 @@
 <Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <None Include="..\tools\pargen\abnf.abnf" />
+    <None Include="..\tools\pargen\tests.abnf" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\tools\pargen\abnfparse.h" />
