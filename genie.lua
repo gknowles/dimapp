@@ -20,6 +20,7 @@ solution "dimapp"
   }
   targetdir "bin"
   pchheader "pch.h"
+  debugdir "$(TargetDir)"
 
 
 configuration "Debug"
@@ -31,8 +32,6 @@ configuration "Release"
   flags { 
     "Optimize"
   }
-
-print "hello"
 
 project "dimapp"
   kind "StaticLib"
