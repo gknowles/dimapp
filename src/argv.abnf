@@ -6,9 +6,6 @@
 %api.file.h = cmdline-argv.h            ; defaults to <%api.prefix>parse.h
 %api.file.cpp = cmdline-argv.cpp        ; defaults to <%api.prefix>parse.cpp
 
-; "core" to include the core rules defined by RFC5234 B.2
-%include = core
-
 ; command line to argv grammer rules
 line = OWS closed-param *(RWS closed-param) [RWS open-param] OWS
 closed-param = *(unquoted / fully-quoted) *BSLASH              { Start, End }

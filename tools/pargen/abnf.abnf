@@ -4,9 +4,6 @@
 %root = rulelist 
 %api.prefix = Abnf
 
-; "core" to include the core rules defined by RFC5234 B.2
-%include = core
-
 ; abnf grammer rules for abnf
 action = ( action-start / action-end / action-char / action-func ) 
 action-char = ( ( %x63 / %x43 ) ( %x68 / %x48 ) ( %x61 / %x41 ) ( %x72 / 
