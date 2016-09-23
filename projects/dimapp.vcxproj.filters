@@ -12,7 +12,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\src\argv.abnf">
+    <None Include="..\src\cmdline-argv.abnf">
       <Filter>src</Filter>
     </None>
   </ItemGroup>
