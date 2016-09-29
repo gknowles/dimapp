@@ -27,6 +27,8 @@ public:
     bool parse(size_t argc, char ** argv);
 
 private:
+    bool parseValue(ValueBase & val, const char ptr[]);
+
     map<char, ValueBase*> m_shortNames;
     map<string, ValueBase*> m_longNames;
     vector<ValueBase*> m_args;
@@ -66,6 +68,12 @@ void Parser::add(ValueBase & opt) {
 }
 
 //===========================================================================
+bool Parser::parseValue(ValueBase & val, const char ptr[]) {
+    val.m_explicit = true;
+    return val.parseValue(ptr);
+}
+
+//===========================================================================
 bool Parser::parse(size_t argc, char ** argv) {
     clear();
 
@@ -81,9 +89,9 @@ bool Parser::parse(size_t argc, char ** argv) {
 
     for (; argc; --argc, ++argv) {
         ValueBase * val{nullptr};
-        const char * ptr;
-        if (**argv == '-' && moreOpts) {
-            ptr = *argv + 1;
+        const char * ptr = *argv;
+        if (*ptr == '-' && moreOpts) {
+            ptr += 1;
             for (; *ptr && *ptr != '-'; ++ptr) {
                 auto it = m_shortNames.find(*ptr);
                 if (it == m_shortNames.end()) {
@@ -91,9 +99,8 @@ bool Parser::parse(size_t argc, char ** argv) {
                     return false;
                 }
                 val = it->second;
-                val->m_explicit = true;
                 if (val->m_bool) {
-                    val->parseValue("1");
+                    parseValue(*val, "1");
                     continue;
                 }
                 ptr += 1;
@@ -126,12 +133,22 @@ bool Parser::parse(size_t argc, char ** argv) {
         }
 
         // argument
-        pos += 1;
+        if (pos >= size(m_args)) {
+            logMsgError() << "Unexpected argument: " << ptr;
+            return false;
+        }
+        if (!parseValue(*m_args[pos], ptr)) {
+            logMsgError() << "Invalid " << m_args[pos]->m_refName << ": "
+                << ptr;
+            return false;
+        }
+        if (!m_args[pos]->m_multiple)
+            pos += 1;
         continue;
 
     option_value:
         if (*ptr) {
-            if (!val->parseValue(ptr)) {
+            if (!parseValue(*val, ptr)) {
                 logMsgError() << "Invalid option value: " << ptr;
                 return false;
             }
@@ -144,7 +161,7 @@ bool Parser::parse(size_t argc, char ** argv) {
                 << ") option";
             return false;
         }
-        if (!val->parseValue(*argv)) {
+        if (!parseValue(*val, *argv)) {
             logMsgError() << "Invalid option value: " << *argv;
             return false;
         }
