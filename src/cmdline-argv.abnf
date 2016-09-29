@@ -8,21 +8,20 @@
 
 ; command line to argv grammer rules
 line = OWS param *(RWS param) [RWS open-param] OWS
-param = *(unquoted / fully-quoted) *BSLASH                     { Start, End }
-open-param = *(unquoted / fully-quoted) half-quoted *BSLASH    { Start, End, As=param }
+param = *(unquoted / fully-quoted) *BSLASH                     { Char, Start, End }
+open-param = *(unquoted / fully-quoted) half-quoted *BSLASH    { Char, Start, End, As=param }
 fully-quoted = active-quote quoted active-quote
 half-quoted = active-quote quoted
 unquoted = 1*( ptext / escaped-quote )
-quoted = 1*( ptext / dquote-pair / escaped-quote / RWS )
+quoted = 1*( ptext / escaped-quote / RWS )
 ptext = 1*( [BSLASH] pchar )
 escaped-quote = BSLASH *bslash-pair DQUOTE
-active-quote = *bslash-pair DQUOTE
-dquote-pair = DQUOTE DQUOTE
-bslash-pair = BSLASH BSLASH
-;pchar = %x61
-;RWS = 1*HTAB
-;OWS = *HTAB
-pchar = %x21 / %x23-5b / %x5d-7e
-RWS = 1*(SP / HTAB)
-OWS = *(SP / HTAB)
+active-quote = *bslash-pair DQUOTE { End }
+bslash-pair = BSLASH BSLASH { End }
+pchar = %x61
+RWS = 1*HTAB
+OWS = *HTAB
+;pchar = %x21 / %x23-5b / %x5d-7e
+;RWS = 1*(SP / HTAB)
+;OWS = *(SP / HTAB)
 BSLASH = %x5c

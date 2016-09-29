@@ -9,19 +9,178 @@ using namespace Dim::CmdLine;
 
 /****************************************************************************
 *
-*   OptBase
+*   Variables
+*
+***/
+
+
+/****************************************************************************
+*
+*   Parser
+*
+***/
+
+class Dim::CmdLine::Parser {
+public:
+    void clear();
+    void add(ValueBase & opt);
+    bool parse(size_t argc, char ** argv);
+
+private:
+    map<char, ValueBase*> m_shortNames;
+    map<string, ValueBase*> m_longNames;
+    vector<ValueBase*> m_args;
+};
+static Parser s_parser;
+static thread_local Parser * s_currentParser;
+
+//===========================================================================
+void Parser::clear() {
+    for (auto && val : m_shortNames) {
+        val.second->m_explicit = false;
+        val.second->resetValue();
+    }
+    for (auto && val : m_longNames) {
+        val.second->m_explicit = false;
+        val.second->resetValue();
+    }
+    for (auto && val : m_args) {
+        val->m_explicit = false;
+        val->resetValue();
+    }
+}
+
+//===========================================================================
+void Parser::add(ValueBase & opt) {
+    istringstream is(opt.m_names);
+    string name;
+    while (is >> name) {
+        if (name.size() == 1) {
+            m_shortNames[name[0]] = &opt;
+        } else {
+            m_longNames[name] = &opt;
+        }
+    }
+    if (!opt.m_refName.empty()) 
+        m_args.push_back(&opt);
+}
+
+//===========================================================================
+bool Parser::parse(size_t argc, char ** argv) {
+    clear();
+
+    // the 0th (name of this program) arg should always be present
+    assert(argc && *argv);
+    if (argc == 1)
+        return true;
+
+    unsigned pos = 0;
+    bool moreOpts = true;
+    argc -= 1;
+    argv += 1;
+
+    for (; argc; --argc, ++argv) {
+        ValueBase * val{nullptr};
+        const char * ptr;
+        if (**argv == '-' && moreOpts) {
+            ptr = *argv + 1;
+            for (; *ptr && *ptr != '-'; ++ptr) {
+                auto it = m_shortNames.find(*ptr);
+                if (it == m_shortNames.end()) {
+                    logMsgError() << "Unknown option: -" << *ptr;
+                    return false;
+                }
+                val = it->second;
+                val->m_explicit = true;
+                if (val->m_bool) {
+                    val->parseValue("1");
+                    continue;
+                }
+                ptr += 1;
+                goto option_value;
+            }
+            if (!*ptr) {
+                continue;
+            }
+            ptr += 1;
+            if (!*ptr) {
+                // bare "--" found, all remaining args are positional
+                moreOpts = false;
+                continue;
+            }
+            string key;
+            if (const char * equal = strchr(ptr, '=')) {
+                key.assign(ptr, equal);
+                ptr = equal + 1;
+            } else {
+                key = ptr;
+                ptr = "";
+            }
+            auto it = m_longNames.find(key);
+            if (it == m_longNames.end()) {
+                logMsgError() << "Unknown option: --" << key;
+                return false;
+            }
+            val = it->second;
+            goto option_value;
+        }
+
+        // argument
+        pos += 1;
+        continue;
+
+    option_value:
+        if (*ptr) {
+            if (!val->parseValue(ptr)) {
+                logMsgError() << "Invalid option value: " << ptr;
+                return false;
+            }
+            continue;
+        }
+        argc -= 1;
+        argv += 1;
+        if (!argc) {
+            logMsgError() << "No value given for (" << val->m_names 
+                << ") option";
+            return false;
+        }
+        if (!val->parseValue(*argv)) {
+            logMsgError() << "Invalid option value: " << *argv;
+            return false;
+        }
+    }
+    return true;
+}
+
+//===========================================================================
+static Parser * parser() {
+    return s_currentParser ? s_currentParser : &s_parser;
+}
+
+
+/****************************************************************************
+*
+*   ValueBase
 *
 ***/
 
 //===========================================================================
-OptBase::OptBase(
+ValueBase::ValueBase(
     const std::string & names,
-    const std::string & desc,
+    const std::string & refName,
     bool multiple,
-    bool boolean) {}
+    bool boolean
+) 
+    : m_names{names}
+    , m_refName{refName}
+    , m_bool{boolean}
+    , m_multiple{multiple}
+{
+    parser()->add(*this);
+}
 
 //===========================================================================
-OptBase::~OptBase() {}
+ValueBase::~ValueBase() {}
 
 
 /****************************************************************************
@@ -31,132 +190,6 @@ OptBase::~OptBase() {}
 ***/
 
 //===========================================================================
-static bool FindUnescapedQuote(string & arg, const char *& ptr) {
-    // only called when a \ is consumed
-    assert(ptr[-1] == '\\');
-
-    char ch;
-    unsigned num = 1;
-    for (;;) {
-        ch = *ptr;
-        if (ch != '\\')
-            break;
-        ptr += 1;
-        num += 1;
-    }
-    if (ch != '"') {
-        arg.append(num, '\\');
-        // not a quote
-        return false;
-    }
-
-    // consume the quote, it's about to be either copied or skipped
-    ptr += 1;
-
-    arg.append(num / 2, '\\');
-    if (num % 2) {
-        arg.push_back('"');
-        // quote is escaped
-        return false;
-    }
-    // quote is not escaped
-    return true;
+bool Dim::CmdLine::parseOptions(size_t argc, char * argv[]) {
+    return parser()->parse(argc, argv);
 }
-
-//===========================================================================
-static void ParseArg(string & arg, const char *& ptr) {
-    for (;;) {
-        char ch = *ptr++;
-        if (ch == 0 || ch == '\t' || ch == ' ')
-            return;
-        if (ch == '\\') {
-            if (FindUnescapedQuote(arg, ptr)) {
-            }
-            unsigned num = 1;
-            for (;;) {
-                ch = *ptr++;
-                if (ch != '\\')
-                    break;
-                num += 1;
-            }
-            if (ch != '"') {
-                arg.append(num, '\\');
-                if (ch == 0 || ch == '\t' || ch == ' ')
-                    return;
-                arg.push_back(ch);
-                continue;
-            }
-            arg.append(num / 2, '\\');
-            if (num % 2) {
-                arg.push_back('"');
-                continue;
-            }
-            for (;;) {
-                ch = *ptr++;
-                if (ch == 0)
-                    return;
-            }
-        }
-        if (ch == '"') {
-        }
-    }
-}
-
-//===========================================================================
-static void ParseOptions(vector<string> & argv, const char cmdline[]) {
-    argv.resize(0);
-    const char * ptr = cmdline;
-
-    // skip whitespace
-    for (;; ++ptr) {
-        char ch = *ptr;
-        if (ch == 0)
-            return;
-        if (ch == '\t' || ch == ' ')
-            break;
-    }
-
-    // get args
-    string arg;
-    while (*ptr) {
-        ParseArg(arg, ptr);
-        argv.push_back(move(arg));
-    }
-}
-
-//===========================================================================
-static bool ParseOptions(const vector<string> & argv) {
-    return argv.size() || argv.empty();
-}
-
-//===========================================================================
-bool Dim::CmdLine::ParseOptions(int argc, char * argv[]) {
-    ostringstream os;
-    int args = 0;
-    for (char * ptr = *argv; ptr; ptr = *++argv) {
-        if (++args > 1)
-            os << ' ';
-        os << '"';
-        for (; *ptr; ++ptr) {
-            switch (*ptr) {
-            case '\\':
-            case '"': os << '\\';
-            }
-            os << *ptr;
-        }
-        os << '"';
-    }
-    assert(args == argc);
-
-    return ParseOptions(os.str().c_str());
-}
-
-//===========================================================================
-bool Dim::CmdLine::ParseOptions(const char cmdline[]) {
-    vector<string> argv;
-    ::ParseOptions(argv, cmdline);
-    return ::ParseOptions(argv);
-}
-
-void Dim::CmdLine::PrintError(std::ostream & os);
-void Dim::CmdLine::PrintHelp(std::ostream & os);
