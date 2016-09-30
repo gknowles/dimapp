@@ -89,9 +89,6 @@
     <ClInclude Include="..\include\dim\compiler\visualc.h">
       <Filter>config</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\cmdline-argv.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\httpint.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -113,9 +110,6 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\charbuf.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\cmdline-argv.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\cmdline.cpp">

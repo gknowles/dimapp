@@ -3,7 +3,6 @@
 #include "dim/hpack.h"
 #include "dim/tlsrecord.h"
 
-#include "cmdline-argv.h"
 #include "httpint.h"
 #include "intern.h"
 #include "tlsint.h"
