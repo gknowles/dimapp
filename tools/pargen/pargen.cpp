@@ -5,11 +5,12 @@
 using namespace std;
 using namespace Dim;
 
+
 /****************************************************************************
- *
- *   Declarations
- *
- ***/
+*
+*   Declarations
+*
+***/
 
 #ifdef NDEBUG
 static bool s_allRules = true;
@@ -80,11 +81,26 @@ static void writeParserFiles(Grammar & rules) {
 }
 
 
+//===========================================================================
+static void printUsage() {
+    cout << "usage: pargen [<options>] [<source file[.abnf]>]\n";
+}
+
+//===========================================================================
+static void printSyntax() {
+    cout << "pargen v0.1.0 (" __DATE__ ") - simplistic parser generator\n";
+    printUsage();
+    cout << "\n"
+        << "Options:\n"
+        << "  -?, -h, --help    print this message\n"
+        ;
+}
+
 /****************************************************************************
- *
- *   Application
- *
- ***/
+*
+*   Application
+*
+***/
 
 namespace {
 class Application : public ITaskNotify, public IFileReadNotify {
@@ -108,15 +124,19 @@ Application::Application(int argc, char * argv[])
 
 //===========================================================================
 void Application::onTask() {
-    // if (m_argc < 2) {
-    //    cout << "pargen v0.1.0 (" __DATE__ ") - simplistic parser
-    //    generator\n"
-    //        << "usage: pargen\n";
-    //    return appSignalShutdown(kExitBadArgs);
-    //}
+    CmdLine::Argument<string> srcfile("source file");
+    CmdLine::Option<bool> help("? h help");
+    if (!CmdLine::parseOptions(m_argc, m_argv)) {
+        printUsage();
+        return appSignalShutdown(kExitBadArgs);
+    }
+    if (help) {
+        printSyntax();
+        return appSignalShutdown();
+    }
 
-    if (m_argc > 1) {
-        fileReadBinary(this, m_source, m_argv[1]);
+    if (srcfile) {
+        fileReadBinary(this, m_source, *srcfile);
         return;
     }
 
@@ -161,10 +181,10 @@ void Application::onFileEnd(int64_t offset, IFile * file) {
 
 
 /****************************************************************************
- *
- *   Externals
- *
- ***/
+*
+*   Externals
+*
+***/
 
 //===========================================================================
 int main(int argc, char * argv[]) {
