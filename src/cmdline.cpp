@@ -20,19 +20,6 @@ using namespace Dim::CmdLine;
 *
 ***/
 
-class Dim::CmdLine::Parser {
-public:
-    void clear();
-    void add(ValueBase & opt);
-    bool parse(size_t argc, char ** argv);
-
-private:
-    bool parseValue(ValueBase & val, const char ptr[]);
-
-    map<char, ValueBase*> m_shortNames;
-    map<string, ValueBase*> m_longNames;
-    vector<ValueBase*> m_args;
-};
 static Parser s_parser;
 static thread_local Parser * s_currentParser;
 
@@ -183,6 +170,7 @@ static Parser * parser() {
 
 //===========================================================================
 ValueBase::ValueBase(
+    Parser * p,
     const std::string & names,
     const std::string & refName,
     bool multiple,
@@ -193,7 +181,9 @@ ValueBase::ValueBase(
     , m_bool{boolean}
     , m_multiple{multiple}
 {
-    parser()->add(*this);
+    if (!p)
+        p = parser();
+    p->add(*this);
 }
 
 //===========================================================================

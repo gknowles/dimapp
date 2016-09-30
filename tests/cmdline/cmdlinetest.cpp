@@ -19,14 +19,22 @@ int main(int argc, char * argv[]) {
     bool result;
     Option<int> num{"n number", 1};
     Option<bool> special{"s special", false};
-    Option<string> name{"name"};
+    OptionVector<string> name{"name"};
     ArgumentVector<string> key{"key"};
     result = parseTest({ "-n3" });
     result = parseTest({ "--name", "two" });
     result = parseTest({ "--name=three" });
-    result = parseTest({ "-s-name=four", "key" });
+    result = parseTest({ "-s-name=four", "key", "--name", "four" });
     result = parseTest({ "key", "extra" });
     *num += 2;
     *special = name->empty();
+
+    Parser parser;
+    int count;
+    bool help;
+    parser.addOpt(&count, "c count");
+    parser.addOpt(&help, "? h help");
+    char * t1[] = { "test.exe", "-hc2", "-?" };
+    result = parser.parse(size(t1), t1);
     return 0;
 }
