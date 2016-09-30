@@ -237,8 +237,8 @@ public:
     Argument(const std::string & name, const T & def = T{});
     Argument(Parser & p, T * value, const std::string & name, const T & def = T{});
 
-    T & operator* () { return m_value; }
-    T * operator-> () { return &m_value; }
+    T & operator* () { return *m_value; }
+    T * operator-> () { return m_value; }
 
 private:
     bool parseValue(const std::string & value) override;
