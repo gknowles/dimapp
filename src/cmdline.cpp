@@ -103,7 +103,8 @@ bool Parser::parse(size_t argc, char ** argv) {
                 continue;
             }
             string key;
-            if (const char * equal = strchr(ptr, '=')) {
+            const char * equal = strchr(ptr, '=');
+            if (equal) {
                 key.assign(ptr, equal);
                 ptr = equal + 1;
             } else {
@@ -111,11 +112,28 @@ bool Parser::parse(size_t argc, char ** argv) {
                 ptr = "";
             }
             auto it = m_longNames.find(key);
-            if (it == m_longNames.end()) {
+            bool hasPrefix = false;
+            while (it == m_longNames.end()) {
+                if (key.size() > 3 && key.compare(0, 3, "no-") == 0) {
+                    hasPrefix = true;
+                    it = m_longNames.find(key.data() + 3);
+                    continue;
+                }
                 logMsgError() << "Unknown option: --" << key;
                 return false;
             }
             val = it->second;
+            if (val->m_bool) {
+                if (equal) {
+                    logMsgError() << "Unknown option: --" << key << "=";
+                    return false;
+                }
+                parseValue(*val, hasPrefix ? "0" : "1");
+                continue;
+            } else if (hasPrefix) {
+                logMsgError() << "Unknown option: --" << key;
+                return false;
+            }
             goto option_value;
         }
 
