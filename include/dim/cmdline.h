@@ -15,6 +15,10 @@ namespace Dim {
 namespace CmdLine {
 
 class Parser;
+template <typename T> class Option;
+template <typename T> class OptionVector;
+template <typename T> class Argument;
+template <typename T> class ArgumentVector;
 
 
 /****************************************************************************
@@ -69,6 +73,15 @@ public:
     template<typename T>
     void addArgVec(std::vector<T> * values, const std::string & name);
 
+    template<typename T>
+    Option<T> & addOpt(const std::string & names, const T & def = {});
+    template<typename T>
+    OptionVector<T> & addOptVec(const std::string & names);
+    template<typename T>
+    Argument<T> & addArg(const std::string & name, const T & def = {});
+    template<typename T>
+    ArgumentVector<T> & addArgVec(const std::string & name);
+
     void add(ValueBase & opt);
 
 private:
@@ -83,33 +96,65 @@ private:
 //===========================================================================
 template<typename T>
 void Parser::addOpt(T * value, const std::string & names, const T & def) {
-    std::unique_ptr<ValueBase> opt = 
-        std::make_unique<Option<T>>(*this, value, names, def);
-    m_values.push_back(move(opt));
+    auto ptr = std::make_unique<Option<T>>(this, value, names, def);
+    m_values.push_back(move(ptr));
 }
 
 //===========================================================================
 template<typename T>
 void Parser::addOptVec(std::vector<T> * values, const std::string & names) {
-    std::unique_ptr<ValueBase> opt = 
-        std::make_unique<OptionVector<T>>(*this, values, names);
-    m_values.push_back(move(opt));
+    auto ptr = std::make_unique<OptionVector<T>>(this, values, names);
+    m_values.push_back(move(ptr));
 }
 
 //===========================================================================
 template<typename T>
 void Parser::addArg(T * value, const std::string & name, const T & def) {
-    std::unique_ptr<ValueBase> arg = 
-        std::make_unique<Argument<T>>(*this, value, name, def);
-    m_values.push_back(move(arg));
+    auto ptr = std::make_unique<Argument<T>>(this, value, name, def);
+    m_values.push_back(move(ptr));
 }
 
 //===========================================================================
 template<typename T>
 void Parser::addArgVec(std::vector<T> * values, const std::string & name) {
-    std::unique_ptr<ValueBase> arg = 
-        std::make_unique<ArgumentVector<T>>(*this, value, name);
-    m_values.push_back(move(arg));
+    auto ptr = std::make_unique<ArgumentVector<T>>(this, value, name);
+    m_values.push_back(move(ptr));
+}
+
+//===========================================================================
+template<typename T>
+Option<T> & Parser::addOpt(const std::string & names, const T & def) {
+    auto ptr = std::make_unique<Option<T>>(this, nullptr, names, def);
+    auto & opt = *ptr;
+    m_values.push_back(move(ptr));
+    return opt;
+}
+
+//===========================================================================
+template<typename T>
+OptionVector<T> & Parser::addOptVec(const std::string & names) {
+    auto ptr = std::make_unique<OptionVector<T>>(this, nullptr, names);
+    auto & opts = *ptr;
+    m_values.push_back(move(ptr));
+    return opts;
+}
+
+//===========================================================================
+template<typename T>
+Argument<T> & Parser::addArg(const std::string & name, const T & def) {
+    auto ptr = std::make_unique<Argument<T>>(this, nullptr, name, def);
+    auto & arg = *ptr;
+    m_values.push_back(move(ptr));
+    return arg;
+}
+
+//===========================================================================
+template<typename T>
+ArgumentVector<T> & Parser::addArgVec(const std::string & name) {
+    auto ptr = std::make_unique<ArgumentVector<T>>(this, nullptr, name);
+    auto & args = *ptr;
+    m_values.push_back(move(ptr));
+    return args;
 }
 
 
@@ -122,7 +167,13 @@ void Parser::addArgVec(std::vector<T> * values, const std::string & name) {
 template <typename T> class Option : public ValueBase {
 public:
     Option(const std::string & names, const T & def = T{});
-    Option(Parser & p, T * value, const std::string & names, const T & def = T{});
+    Option(
+        Parser * parser, 
+        T * value, 
+        const std::string & names,
+        const T & def = T{});
+    Option(const Option &) = delete;
+    Option & operator=(const Option &) = delete;
 
     T & operator* () { return *m_value; }
     T * operator-> () { return m_value; }
@@ -138,18 +189,16 @@ private:
 
 //===========================================================================
 template <typename T>
-inline Option<T>::Option(
-    const std::string & names, const T & def)
-    : ValueBase{nullptr, names, {}, false, std::is_same<T, bool>::value}
-    , m_value{&m_internal} 
-    , m_defValue{def} {}
+inline Option<T>::Option(const std::string & names, const T & def)
+    : Option(nullptr, nullptr, names, def) 
+{}
 
 //===========================================================================
 template <typename T>
 inline Option<T>::Option(
-    Parser & p, T * value, const std::string & names, const T & def)
-    : ValueBase{&p, names, {}, false, std::is_same<T, bool>::value}
-    , m_value{value} 
+    Parser * p, T * value, const std::string & names, const T & def)
+    : ValueBase{p, names, {}, false, std::is_same<T, bool>::value}
+    , m_value{value ? value : &m_internal} 
     , m_defValue{def} {}
 
 //===========================================================================
@@ -180,7 +229,7 @@ inline void Option<T>::resetValue() {
 template <typename T> class OptionVector : public ValueBase {
 public:
     OptionVector(const std::string & names);
-    OptionVector(Parser & p, std::vector<T> * values, const std::string & names);
+    OptionVector(Parser * p, std::vector<T> * values, const std::string & names);
 
     std::vector<T> & operator* () { return *m_values; }
     std::vector<T> * operator-> () { return m_values; }
@@ -196,15 +245,14 @@ private:
 //===========================================================================
 template <typename T>
 inline OptionVector<T>::OptionVector(const std::string & names)
-    : ValueBase{nullptr, names, {}, true, std::is_same<T, bool>::value} 
-    , m_values(&m_internal) {}
+    : OptionVector(nullptr, nullptr, names) {}
 
 //===========================================================================
 template <typename T>
 inline OptionVector<T>::OptionVector(
-    Parser & p, std::vector<T> * values, const std::string & names)
-    : ValueBase{&p, names, {}, true, std::is_same<T, bool>::value} 
-    , m_values(values) {}
+    Parser * p, std::vector<T> * values, const std::string & names)
+    : ValueBase{p, names, {}, true, std::is_same<T, bool>::value} 
+    , m_values(values ? values : &m_internal) {}
 
 //===========================================================================
 template <typename T>
@@ -235,7 +283,7 @@ inline void OptionVector<T>::resetValue() {
 template <typename T> class Argument : public ValueBase {
 public:
     Argument(const std::string & name, const T & def = T{});
-    Argument(Parser & p, T * value, const std::string & name, const T & def = T{});
+    Argument(Parser * p, T * value, const std::string & name, const T & def = T{});
 
     T & operator* () { return *m_value; }
     T * operator-> () { return m_value; }
@@ -251,18 +299,15 @@ private:
 
 //===========================================================================
 template <typename T>
-inline Argument<T>::Argument(
-    const std::string & name, const T & def)
-    : ValueBase{nullptr, {}, name, false, std::is_same<T, bool>::value}
-    , m_value{&m_internal} 
-    , m_defValue{def} {}
+inline Argument<T>::Argument(const std::string & name, const T & def)
+    : Argument(nullptr, nullptr, name, def) {}
 
 //===========================================================================
 template <typename T>
 inline Argument<T>::Argument(
-    Parser & p, T * value, const std::string & name, const T & def)
-    : ValueBase{&p, {}, name, false, std::is_same<T, bool>::value}
-    , m_value{value} 
+    Parser * p, T * value, const std::string & name, const T & def)
+    : ValueBase{p, {}, name, false, std::is_same<T, bool>::value}
+    , m_value{value ? value : &m_internal} 
     , m_defValue{def} {}
 
 //===========================================================================
@@ -293,7 +338,7 @@ inline void Argument<T>::resetValue() {
 template <typename T> class ArgumentVector : public ValueBase {
 public:
     ArgumentVector(const std::string & name);
-    ArgumentVector(Parser & p, std::vector<T> * values, const std::string & name);
+    ArgumentVector(Parser * p, std::vector<T> * values, const std::string & name);
 
     std::vector<T> & operator* () { return *m_values; }
     std::vector<T> * operator-> () { return m_values; }
@@ -309,15 +354,14 @@ private:
 //===========================================================================
 template <typename T>
 inline ArgumentVector<T>::ArgumentVector(const std::string & name)
-    : ValueBase{nullptr, {}, name, true, std::is_same<T, bool>::value} 
-    , m_values{&m_internal} {}
+    : ArgumentVector(nullptr, nullptr, name) {}
 
 //===========================================================================
 template <typename T>
 inline ArgumentVector<T>::ArgumentVector(
-    Parser & p, std::vector<T> * values, const std::string & name)
-    : ValueBase{&p, {}, name, true, std::is_same<T, bool>::value} 
-    , m_values{values} {}
+    Parser * p, std::vector<T> * values, const std::string & name)
+    : ValueBase{p, {}, name, true, std::is_same<T, bool>::value} 
+    , m_values{values ? values : &m_internal} {}
 
 //===========================================================================
 template <typename T>
