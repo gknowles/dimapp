@@ -59,14 +59,11 @@ struct ElementNull : Element {
 
 class Grammar {
 public:
-    void clear ();
+    void clear();
 
-    void addOption(
-        const std::string & name,
-        const std::string & value);
-    const char * optionString(
-        const std::string & name, 
-        const char * def = "") const;
+    void addOption(const std::string & name, const std::string & value);
+    const char *
+    optionString(const std::string & name, const char * def = "") const;
     unsigned optionUnsigned(const std::string & name, unsigned def = 0) const;
 
     Element * addSequenceRule(
@@ -83,17 +80,17 @@ public:
         bool recurse = false);
     Element * addSequence(Element * rule, unsigned m, unsigned n);
     Element * addChoice(Element * rule, unsigned m, unsigned n);
-    void addRule(
-        Element * rule, const std::string & name, unsigned m, unsigned n);
+    void
+    addRule(Element * rule, const std::string & name, unsigned m, unsigned n);
     void addLiteral(
         Element * rule, const std::string & value, unsigned m, unsigned n);
     void addRange(Element * rule, unsigned char a, unsigned char b);
     void addTerminal(Element * rule, unsigned char ch, unsigned m, unsigned n);
-    
+
     Element * element(const std::string & name);
     const Element * element(const std::string & name) const;
 
-    const std::set<Element> & rules () const { return m_rules; }
+    const std::set<Element> & rules() const { return m_rules; }
 
 private:
     Element * addElement(Element * rule, unsigned m, unsigned n);
@@ -219,5 +216,8 @@ void writeParser(
     const RunOptions & opts);
 
 bool parseAbnf(Grammar & rules, const std::string & src);
-void writeRule(std::ostream & os, const Element & rule, size_t maxWidth, 
+void writeRule(
+    std::ostream & os,
+    const Element & rule,
+    size_t maxWidth,
     const std::string & prefix);

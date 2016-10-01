@@ -274,8 +274,7 @@ done:
 }
 
 //===========================================================================
-static void
-initPositions(State * st, const Element & root) {
+static void initPositions(State * st, const Element & root) {
     st->positions.clear();
     bool skippable;
     StatePosition sp;
@@ -840,8 +839,8 @@ static void mergeState(unsigned dstId, unsigned srcId, DedupInfo & di) {
     StateInfo & dst = di.info[dstId];
     StateInfo & src = di.info[srcId];
 
-    logMsgInfo() << di.states->size() << " states, merging state " << srcId << 
-		" into " << dstId;
+    logMsgInfo() << di.states->size() << " states, merging state " << srcId
+                 << " into " << dstId;
 
     // move down references from src's parents to point to dst
     for (auto && by : src.usedBy) {
@@ -930,7 +929,7 @@ static bool dedupStateTreePass(DedupInfo & di) {
                 di.pmap[x] = ++di.lastMapId;
                 di.qmap[y] = di.lastMapId;
                 if (equalize(x, y, di)) {
-                    matched.push_back({x,y});
+                    matched.push_back({x, y});
                     break;
                 }
             }
@@ -942,7 +941,7 @@ static bool dedupStateTreePass(DedupInfo & di) {
     // Sort descending, by source. Normalizes the processing with respect
     // to hash functions and makes sure that we never remove a future
     // target.
-    sort(matched.begin(), matched.end(), [](auto & a, auto & b){
+    sort(matched.begin(), matched.end(), [](auto & a, auto & b) {
         return a.second > b.second;
     });
     for (auto && xy : matched) {

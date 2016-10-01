@@ -29,7 +29,7 @@ static bool s_allRules = false;
 
 //===========================================================================
 static void getCoreRules(Grammar & rules) {
-	const char * coreRules = R"(
+    const char * coreRules = R"(
 ALPHA   =  %x41-5A / %x61-7A    ; A-Z / a-z
 BIT     =  "0" / "1"
 CHAR    =  %x01-7F
@@ -71,7 +71,7 @@ WSP     =  SP
     }
     [[maybe_unused]] bool valid = parseAbnf(rules, coreRules);
     assert(valid);
-    (void) valid;
+    (void)valid;
 }
 
 //===========================================================================
@@ -90,7 +90,7 @@ static void writeParserFiles(Grammar & rules) {
 }
 
 //===========================================================================
-static bool internalTest () {
+static bool internalTest() {
     bool valid;
     Grammar rules;
     getCoreRules(rules);
@@ -176,16 +176,14 @@ Application::Application(int argc, char * argv[])
     : m_argc(argc)
     , m_argv(argv) {}
 
-enum {
-    kExitTestFailure = kExitFirstAvailable
-};
+enum { kExitTestFailure = kExitFirstAvailable };
 
 //===========================================================================
 void Application::onTask() {
     CmdLine::Parser cmd;
-    auto& srcfile = cmd.addArg<string>("source file");
-    auto& help = cmd.addOpt<bool>("? h help");
-    auto& test = cmd.addOpt<bool>("test");
+    auto & srcfile = cmd.addArg<string>("source file");
+    auto & help = cmd.addOpt<bool>("? h help");
+    auto & test = cmd.addOpt<bool>("test");
     cmd.addOpt(&s_cmdopts.markRecursion, "f mark-functions", 1);
     cmd.addOpt(&s_cmdopts.includeCallbacks, "!C callbacks", true);
     cmd.addOpt(&s_cmdopts.buildStateTree, "!B build-tree", true);
@@ -209,7 +207,8 @@ void Application::onTask() {
         return;
     }
     if (!srcfile) {
-        logMsgError() << "No value given for " << "source file";
+        logMsgError() << "No value given for "
+                      << "source file";
         printUsage();
         return appSignalShutdown(kExitBadArgs);
     }

@@ -44,7 +44,7 @@ ElementNull::ElementNull() {
 ***/
 
 //===========================================================================
-void Grammar::clear () {
+void Grammar::clear() {
     m_nextElemId = 0;
     m_rules.clear();
 }
@@ -57,9 +57,8 @@ void Grammar::addOption(const string & name, const string & value) {
 }
 
 //===========================================================================
-const char * Grammar::optionString(
-    const string & name, 
-    const char * def) const {
+const char *
+Grammar::optionString(const string & name, const char * def) const {
     if (auto elem = element(name)) {
         while (!elem->elements.empty())
             elem = &elem->elements.front();
@@ -72,7 +71,7 @@ const char * Grammar::optionString(
 //===========================================================================
 unsigned Grammar::optionUnsigned(const string & name, unsigned def) const {
     if (auto value = optionString(name, nullptr)) {
-        return (unsigned) strtoul(value, nullptr, 10);
+        return (unsigned)strtoul(value, nullptr, 10);
     }
     return def;
 }
@@ -134,21 +133,24 @@ Element * Grammar::addChoice(Element * rule, unsigned m, unsigned n) {
 }
 
 //===========================================================================
-void Grammar::addRule(Element * rule, const string & name, unsigned m, unsigned n) {
+void Grammar::addRule(
+    Element * rule, const string & name, unsigned m, unsigned n) {
     auto e = addElement(rule, m, n);
     e->type = Element::kRule;
     e->value = name;
 }
 
 //===========================================================================
-void Grammar::addTerminal(Element * rule, unsigned char ch, unsigned m, unsigned n) {
+void Grammar::addTerminal(
+    Element * rule, unsigned char ch, unsigned m, unsigned n) {
     auto e = addElement(rule, m, n);
     e->type = Element::kTerminal;
     e->value = ch;
 }
 
 //===========================================================================
-void Grammar::addLiteral(Element * rule, const string & value, unsigned m, unsigned n) {
+void Grammar::addLiteral(
+    Element * rule, const string & value, unsigned m, unsigned n) {
     auto s = addSequence(rule, m, n);
     for (unsigned char ch : value) {
         auto c = addChoice(s, 1, 1);
@@ -225,8 +227,8 @@ bool processOptions(Grammar & rules) {
 ***/
 
 //===========================================================================
-static bool copyRequiredDeps(
-    Grammar & out, const Grammar & src, const Element & root) {
+static bool
+copyRequiredDeps(Grammar & out, const Grammar & src, const Element & root) {
     switch (root.type) {
     case Element::kSequence:
     case Element::kChoice:

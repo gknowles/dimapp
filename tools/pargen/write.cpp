@@ -134,12 +134,12 @@ static void writeElement(ostream & os, const Element & elem, bool inclPos) {
             first = false;
             os << "Char";
         }
-		if (elem.recurse) {
+        if (elem.recurse) {
             if (!first)
                 os << ", ";
             first = false;
             os << "Function";
-		}
+        }
         if (!elem.eventName.empty()) {
             if (!first)
                 os << ", ";
@@ -476,8 +476,8 @@ state0:
 }
 
 //===========================================================================
-static void writeHeaderfile(
-    ostream & os, const Grammar & rules, const Grammar & options) {
+static void
+writeHeaderfile(ostream & os, const Grammar & rules, const Grammar & options) {
     time_t now = time(nullptr);
     tm tm;
     localtime_s(&tm, &now);
@@ -578,11 +578,10 @@ private:
 
 //===========================================================================
 void writeParser(
-    ostream & hfile, 
-    ostream & cppfile, 
-    const Grammar & src, 
-    const RunOptions & opts
-) {
+    ostream & hfile,
+    ostream & cppfile,
+    const Grammar & src,
+    const RunOptions & opts) {
     const string & rootname = src.optionString(kOptionRoot);
     logMsgInfo() << "parser: " << rootname;
 
@@ -606,18 +605,14 @@ void writeParser(
     writeCppfileStart(cppfile, rules, src);
 
     unordered_set<State> states;
-    buildStateTree(
-        &states, *root, opts.buildStateTree, opts.dedupStateTree);
+    buildStateTree(&states, *root, opts.buildStateTree, opts.dedupStateTree);
     writeFunction(cppfile, nullptr, states, src, opts.writeStatePositions);
 
     if (opts.writeFunctions) {
         for (auto && elem : rules.rules()) {
             if (elem.recurse) {
                 buildStateTree(
-                    &states,
-                    elem,
-                    opts.buildStateTree,
-                    opts.dedupStateTree);
+                    &states, elem, opts.buildStateTree, opts.dedupStateTree);
                 writeFunction(
                     cppfile, &elem, states, src, opts.writeStatePositions);
             }

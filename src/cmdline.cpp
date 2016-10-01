@@ -50,7 +50,7 @@ void Parser::add(ValueBase & opt) {
             m_longNames[name] = &opt;
         }
     }
-    if (!opt.m_refName.empty()) 
+    if (!opt.m_refName.empty())
         m_args.push_back(&opt);
 }
 
@@ -144,7 +144,7 @@ bool Parser::parse(size_t argc, char ** argv) {
         }
         if (!parseValue(*m_args[pos], ptr)) {
             logMsgError() << "Invalid " << m_args[pos]->m_refName << ": "
-                << ptr;
+                          << ptr;
             return false;
         }
         if (!m_args[pos]->m_multiple)
@@ -162,8 +162,8 @@ bool Parser::parse(size_t argc, char ** argv) {
         argc -= 1;
         argv += 1;
         if (!argc) {
-            logMsgError() << "No value given for (" << val->m_names 
-                << ") option";
+            logMsgError() << "No value given for (" << val->m_names
+                          << ") option";
             return false;
         }
         if (!parseValue(*val, *argv)) {
@@ -192,13 +192,11 @@ ValueBase::ValueBase(
     const std::string & names,
     const std::string & refName,
     bool multiple,
-    bool boolean
-) 
+    bool boolean)
     : m_names{names}
     , m_refName{refName}
     , m_bool{boolean}
-    , m_multiple{multiple}
-{
+    , m_multiple{multiple} {
     if (!p)
         p = parser();
     p->add(*this);

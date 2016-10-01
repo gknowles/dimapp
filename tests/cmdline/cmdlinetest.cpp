@@ -21,11 +21,11 @@ int main(int argc, char * argv[]) {
     Option<bool> special{"s special", false};
     OptionVector<string> name{"name"};
     ArgumentVector<string> key{"key"};
-    result = parseTest({ "-n3" });
-    result = parseTest({ "--name", "two" });
-    result = parseTest({ "--name=three" });
-    result = parseTest({ "-s-name=four", "key", "--name", "four" });
-    result = parseTest({ "key", "extra" });
+    result = parseTest({"-n3"});
+    result = parseTest({"--name", "two"});
+    result = parseTest({"--name=three"});
+    result = parseTest({"-s-name=four", "key", "--name", "four"});
+    result = parseTest({"key", "extra"});
     *num += 2;
     *special = name->empty();
 
@@ -34,7 +34,7 @@ int main(int argc, char * argv[]) {
     bool help;
     parser.addOpt(&count, "c count");
     parser.addOpt(&help, "? h help");
-    char * t1[] = { "test.exe", "-hc2", "-?" };
+    char * t1[] = {"test.exe", "-hc2", "-?"};
     result = parser.parse(size(t1), t1);
     return 0;
 }
