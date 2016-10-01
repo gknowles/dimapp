@@ -8,7 +8,16 @@ using namespace Dim;
 
 /****************************************************************************
 *
-*   Declarations
+*   Variables
+*
+***/
+
+static RunOptions s_cmdopts;
+
+
+/****************************************************************************
+*
+*   Helpers
 *
 ***/
 
@@ -71,7 +80,7 @@ static void writeParserFiles(Grammar & rules) {
     if (processOptions(rules)) {
         ofstream oh(rules.optionString(kOptionApiHeaderFile));
         ofstream ocpp(rules.optionString(kOptionApiCppFile));
-        writeParser(oh, ocpp, rules);
+        writeParser(oh, ocpp, rules, s_cmdopts);
         oh.close();
         ocpp.close();
     }
@@ -80,21 +89,66 @@ static void writeParserFiles(Grammar & rules) {
     cout << "Elapsed time: " << elapsed.count() << " seconds" << endl;
 }
 
+//===========================================================================
+static bool internalTest () {
+    bool valid;
+    Grammar rules;
+    getCoreRules(rules);
+    rules.addOption("%root", "LWSP");
+    rules.addOption("%api.prefix", "Test");
+    valid = processOptions(rules);
+    cout << "Process options: " << valid << endl;
+
+    ostringstream abnf;
+    for (auto && rule : rules.rules()) {
+        writeRule(abnf, rule, 79, "");
+    }
+    rules.clear();
+    valid = parseAbnf(rules, abnf.str());
+    cout << "Valid: " << valid << endl;
+    if (!valid)
+        return false;
+
+    ostringstream o1;
+    for (auto && rule : rules.rules()) {
+        writeRule(o1, rule, 79, "");
+    }
+
+    ostringstream o2;
+    rules.clear();
+    valid = parseAbnf(rules, o1.str());
+    for (auto && rule : rules.rules()) {
+        writeRule(o2, rule, 79, "");
+    }
+    valid = valid && (o1.str() == o2.str());
+    cout << "Round trip: " << valid << endl;
+    return valid;
+}
 
 //===========================================================================
 static void printUsage() {
-    cout << "usage: pargen [<options>] [<source file[.abnf]>]\n";
+    cout << "usage: pargen [<options>] <source file[.abnf]>\n";
 }
 
 //===========================================================================
 static void printSyntax() {
     cout << "pargen v0.1.0 (" __DATE__ ") - simplistic parser generator\n";
     printUsage();
-    cout << "\n"
-        << "Options:\n"
-        << "  -?, -h, --help    print this message\n"
-        ;
+    cout << R"(
+Options:
+    -f#, --mark-functions=#
+    -C, --no-callbacks
+    -B, --no-build-tree
+    -D, --no-dedup-tree
+    --[no-]state-detail
+    --[no-]write-functions
+
+   --test            runs internal test of ABNF parsing logic
+
+   -?, -h, --help    print this message
+)";
 }
+
 
 /****************************************************************************
 *
@@ -122,51 +176,45 @@ Application::Application(int argc, char * argv[])
     : m_argc(argc)
     , m_argv(argv) {}
 
+enum {
+    kExitTestFailure = kExitFirstAvailable
+};
+
 //===========================================================================
 void Application::onTask() {
-    CmdLine::Argument<string> srcfile("source file");
-    CmdLine::Option<bool> help("? h help");
-    if (!CmdLine::parseOptions(m_argc, m_argv)) {
+    CmdLine::Parser cmd;
+    auto& srcfile = cmd.addArg<string>("source file");
+    auto& help = cmd.addOpt<bool>("? h help");
+    auto& test = cmd.addOpt<bool>("test");
+    cmd.addOpt(&s_cmdopts.markRecursion, "f mark-functions", 1);
+    cmd.addOpt(&s_cmdopts.includeCallbacks, "!C callbacks", true);
+    cmd.addOpt(&s_cmdopts.buildStateTree, "!B build-tree", true);
+    cmd.addOpt(&s_cmdopts.dedupStateTree, "!D dedup-tree", true);
+    cmd.addOpt(&s_cmdopts.writeStatePositions, "state-detail");
+    cmd.addOpt(&s_cmdopts.writeFunctions, "write-functions", true);
+    if (!cmd.parse(m_argc, m_argv)) {
         printUsage();
         return appSignalShutdown(kExitBadArgs);
     }
-    if (help) {
+    if (*help || m_argc == 1) {
         printSyntax();
-        return appSignalShutdown();
+        return appSignalShutdown(kExitSuccess);
     }
-
-    if (srcfile) {
-        fileReadBinary(this, m_source, *srcfile);
+    if (*test) {
+        if (!internalTest()) {
+            appSignalShutdown(kExitTestFailure);
+        } else {
+            appSignalShutdown(kExitSuccess);
+        }
         return;
     }
-
-    Grammar rules;
-    getCoreRules(rules);
-
-    writeParserFiles(rules);
-
-    ostringstream abnf;
-    for (auto && rule : rules.rules()) {
-        abnf << rule.name << " = " << rule << '\n';
-    }
-    rules.clear();
-    bool valid = parseAbnf(rules, abnf.str());
-    cout << "Valid: " << valid << endl;
-
-    ostringstream o1;
-    for (auto && rule : rules.rules()) {
-        o1 << rule.name << " = " << rule << '\n';
+    if (!srcfile) {
+        logMsgError() << "No value given for " << "source file";
+        printUsage();
+        return appSignalShutdown(kExitBadArgs);
     }
 
-    ostringstream o2;
-    rules.clear();
-    valid = parseAbnf(rules, o1.str());
-    for (auto && rule : rules.rules()) {
-        o2 << rule.name << " = " << rule << '\n';
-    }
-    cout << "Round trip: " << (o1.str() == o2.str()) << endl;
-
-    appSignalShutdown(kExitSuccess);
+    fileReadBinary(this, m_source, *srcfile);
 }
 
 //===========================================================================

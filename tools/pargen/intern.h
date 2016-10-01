@@ -202,10 +202,22 @@ void dedupStateTree(std::unordered_set<State> & states);
 *
 ***/
 
+struct RunOptions {
+    int markRecursion;
+    bool includeCallbacks;
+    bool buildStateTree;
+    bool dedupStateTree;
+    bool writeStatePositions;
+    bool writeFunctions;
+};
+
 // write generated code
 void writeParser(
     std::ostream & hfile,
     std::ostream & cppfile,
-    const Grammar & rules);
+    const Grammar & rules,
+    const RunOptions & opts);
 
 bool parseAbnf(Grammar & rules, const std::string & src);
+void writeRule(std::ostream & os, const Element & rule, size_t maxWidth, 
+    const std::string & prefix);

@@ -192,23 +192,6 @@ static void writeWordwrap(
 }
 
 //===========================================================================
-static void writeRule(
-    ostream & os,
-    const Element & rule,
-    size_t maxWidth,
-    const string & prefix) {
-    streampos pos = os.tellp();
-    os << prefix << rule.name;
-    os << " = ";
-    size_t indent = os.tellp() - pos;
-    ostringstream raw;
-    writeElement(raw, rule, false);
-    string vpre = prefix + "    ";
-    writeWordwrap(os, indent, raw.str(), maxWidth, vpre);
-    os << '\n';
-}
-
-//===========================================================================
 static void writeRuleName(ostream & os, const string & name, bool capitalize) {
     for (auto && ch : name) {
         if (ch == '-') {
@@ -593,16 +576,13 @@ private:
 *
 ***/
 
-static bool s_resetRecursion = false;
-static bool s_markRecursion = true;
-static bool s_excludeCallbacks = false;
-static bool s_buildStateTree = true;
-static bool s_dedupStateTree = true;
-static bool s_writeStatePositions = false;
-static bool s_buildRecurseFunctions = true;
-
 //===========================================================================
-void writeParser(ostream & hfile, ostream & cppfile, const Grammar & src) {
+void writeParser(
+    ostream & hfile, 
+    ostream & cppfile, 
+    const Grammar & src, 
+    const RunOptions & opts
+) {
     const string & rootname = src.optionString(kOptionRoot);
     logMsgInfo() << "parser: " << rootname;
 
@@ -612,36 +592,53 @@ void writeParser(ostream & hfile, ostream & cppfile, const Grammar & src) {
     Element * root = rules.addChoiceRule(kOptionRoot, 1, 1);
     rules.addRule(root, rootname, 1, 1);
 
-    if (s_excludeCallbacks) {
+    if (!opts.includeCallbacks) {
         for (auto && elem : rules.rules()) {
             const_cast<Element &>(elem).flags = 0;
         }
     }
 
     normalize(rules);
-    if (s_markRecursion)
-        markRecursion(rules, *root, s_resetRecursion);
+    if (opts.markRecursion)
+        markRecursion(rules, *root, opts.markRecursion > 1);
 
     writeHeaderfile(hfile, rules, src);
     writeCppfileStart(cppfile, rules, src);
 
     unordered_set<State> states;
     buildStateTree(
-        &states, *root, s_buildStateTree, s_dedupStateTree);
-    writeFunction(cppfile, nullptr, states, src, s_writeStatePositions);
+        &states, *root, opts.buildStateTree, opts.dedupStateTree);
+    writeFunction(cppfile, nullptr, states, src, opts.writeStatePositions);
 
-    if (s_buildRecurseFunctions) {
+    if (opts.writeFunctions) {
         for (auto && elem : rules.rules()) {
             if (elem.recurse) {
                 buildStateTree(
                     &states,
                     elem,
-                    s_buildStateTree,
-                    s_dedupStateTree);
+                    opts.buildStateTree,
+                    opts.dedupStateTree);
                 writeFunction(
-                    cppfile, &elem, states, src, s_writeStatePositions);
+                    cppfile, &elem, states, src, opts.writeStatePositions);
             }
         }
     }
     cppfile << endl;
+}
+
+//===========================================================================
+void writeRule(
+    ostream & os,
+    const Element & rule,
+    size_t maxWidth,
+    const string & prefix) {
+    streampos pos = os.tellp();
+    os << prefix << rule.name;
+    os << " = ";
+    size_t indent = os.tellp() - pos;
+    ostringstream raw;
+    writeElement(raw, rule, false);
+    string vpre = prefix + "    ";
+    writeWordwrap(os, indent, raw.str(), maxWidth, vpre);
+    os << '\n';
 }
