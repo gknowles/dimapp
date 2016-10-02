@@ -136,16 +136,35 @@ static void printSyntax() {
     printUsage();
     cout << R"(
 Options:
-    -f#, --mark-functions=#
+    -f, --mark-functions <0-2>
+        0 - no change to any function markings
+        1 - add function marks to break rule recursion (default)
+        2 - same as #1, but clear existing marks first
     -C, --no-callbacks
+        suppress all callback events, reduces generated parser down to 
+        pass/fail syntax check
+
+Testing options:
+    --[no-]min-core
+        use reduced core rules: ALPHA, DIGIT, CRLF, HEXDIG, NEWLINE, 
+        VCHAR, and WSP are shortened to fewer (usually 1) characters
     -B, --no-build-tree
+        skip building the state tree, only stub versions of parser are
+        generated
     -D, --no-dedup-tree
+        skip purging duplicate entries from the state tree, duplicates
+        occur when multiple paths through the rules end with the same
+        series of transitions
     --[no-]state-detail
+        include details of the states as comments in the generated parser
+        code - may be extremely verbose
     --[no-]write-functions
+        skip generation of recursion breaking dependent functions
+        NOTE: generated files will not be compilable
+    --test
+        runs internal test of ABNF parsing logic
 
-   --test            runs internal test of ABNF parsing logic
-
-   -?, -h, --help    print this message
+    -?, -h, --help    print this message
 )";
 }
 
@@ -181,9 +200,10 @@ enum { kExitTestFailure = kExitFirstAvailable };
 //===========================================================================
 void Application::onTask() {
     CmdLine::Parser cmd;
-    auto & srcfile = cmd.addArg<string>("source file");
+    auto & srcfile = cmd.addArg<experimental::filesystem::path>("source file");
     auto & help = cmd.addOpt<bool>("? h help");
     auto & test = cmd.addOpt<bool>("test");
+    cmd.addOpt(&s_allRules, "min-core", s_allRules);
     cmd.addOpt(&s_cmdopts.markRecursion, "f mark-functions", 1);
     cmd.addOpt(&s_cmdopts.includeCallbacks, "!C callbacks", true);
     cmd.addOpt(&s_cmdopts.buildStateTree, "!B build-tree", true);
@@ -213,6 +233,8 @@ void Application::onTask() {
         return appSignalShutdown(kExitBadArgs);
     }
 
+    if (!srcfile->has_extension())
+        srcfile->replace_extension("abnf");
     fileReadBinary(this, m_source, *srcfile);
 }
 
