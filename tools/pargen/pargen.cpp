@@ -200,7 +200,7 @@ enum { kExitTestFailure = kExitFirstAvailable };
 //===========================================================================
 void Application::onTask() {
     CmdParser cmd;
-    auto & srcfile = cmd.addArg<experimental::filesystem::path>("source file");
+    auto & srcfile = cmd.addRequired<experimental::filesystem::path>("source file");
     auto & help = cmd.addOpt<bool>("? h help");
     auto & test = cmd.addOpt<bool>("test");
     cmd.addOpt(&s_allRules, "min-core", s_allRules);
@@ -226,13 +226,8 @@ void Application::onTask() {
         }
         return;
     }
-    if (!srcfile) {
-        cerr << "No value given for "
-             << "source file";
-        printUsage(cerr);
-        return appSignalShutdown(kExitBadArgs);
-    }
 
+    assert(srcfile);
     if (!srcfile->has_extension())
         srcfile->replace_extension("abnf");
     fileReadBinary(this, m_source, *srcfile);
@@ -240,6 +235,9 @@ void Application::onTask() {
 
 //===========================================================================
 void Application::onFileEnd(int64_t offset, IFile * file) {
+    if (!file) 
+        return appSignalShutdown(kExitBadArgs);
+
     Grammar rules;
     getCoreRules(rules);
     if (parseAbnf(rules, m_source)) {

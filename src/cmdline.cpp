@@ -33,11 +33,13 @@ CmdParser::ValueBase::ValueBase(
     const std::string & names,
     const std::string & refName,
     bool multiple,
+    bool required,
     bool boolean)
     : m_names{names}
     , m_refName{refName}
     , m_bool{boolean}
-    , m_multiple{multiple} {
+    , m_multiple{multiple} 
+    , m_required(required) {
     if (!p)
         p = parser();
     p->add(*this);
@@ -80,8 +82,17 @@ void CmdParser::add(ValueBase & opt) {
             m_longNames[name] = &opt;
         }
     }
-    if (!opt.m_refName.empty())
-        m_args.push_back(&opt);
+    if (!opt.m_refName.empty()) {
+        if (!opt.m_required) {
+            m_args.push_back(&opt);
+        } else {
+            auto where = find_if(
+                m_args.begin(), 
+                m_args.end(), 
+                [](auto&& val){ return !val->m_required; });
+            m_args.insert(where, &opt);
+        }
+    }
 }
 
 //===========================================================================
@@ -198,6 +209,11 @@ bool CmdParser::parse(ostream & os, size_t argc, char ** argv) {
             os << "Invalid option value: " << *argv << endl;
             return false;
         }
+    }
+
+    if (pos < size(m_args) && m_args[pos]->m_required) {
+        os << "No value give for " << m_args[pos]->m_refName << endl;
+        return false;
     }
     return true;
 }
