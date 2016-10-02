@@ -38,7 +38,7 @@ CmdParser::ValueBase::ValueBase(
     : m_names{names}
     , m_refName{refName}
     , m_bool{boolean}
-    , m_multiple{multiple} 
+    , m_multiple{multiple}
     , m_required(required) {
     if (!p)
         p = parser();
@@ -86,10 +86,9 @@ void CmdParser::add(ValueBase & opt) {
         if (!opt.m_required) {
             m_args.push_back(&opt);
         } else {
-            auto where = find_if(
-                m_args.begin(), 
-                m_args.end(), 
-                [](auto&& val){ return !val->m_required; });
+            auto where = find_if(m_args.begin(), m_args.end(), [](auto && val) {
+                return !val->m_required;
+            });
             m_args.insert(where, &opt);
         }
     }

@@ -200,7 +200,8 @@ enum { kExitTestFailure = kExitFirstAvailable };
 //===========================================================================
 void Application::onTask() {
     CmdParser cmd;
-    auto & srcfile = cmd.addRequired<experimental::filesystem::path>("source file");
+    auto & srcfile =
+        cmd.addRequired<experimental::filesystem::path>("source file");
     auto & help = cmd.addOpt<bool>("? h help");
     auto & test = cmd.addOpt<bool>("test");
     cmd.addOpt(&s_allRules, "min-core", s_allRules);
@@ -235,7 +236,7 @@ void Application::onTask() {
 
 //===========================================================================
 void Application::onFileEnd(int64_t offset, IFile * file) {
-    if (!file) 
+    if (!file)
         return appSignalShutdown(kExitBadArgs);
 
     Grammar rules;

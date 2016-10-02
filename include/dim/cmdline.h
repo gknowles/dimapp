@@ -78,11 +78,11 @@ public:
     template <typename T> CmdOptVec<T> & addOptVec(const std::string & names);
     template <typename T>
     CmdArg<T> & addRequired(const std::string & name, const T & def = {});
-    template <typename T> 
+    template <typename T>
     CmdArgVec<T> & addRequiredVec(const std::string & name);
     template <typename T>
     CmdArg<T> & addOptional(const std::string & name, const T & def = {});
-    template <typename T> 
+    template <typename T>
     CmdArgVec<T> & addOptionalVec(const std::string & name);
 
     void add(ValueBase & opt);
@@ -112,28 +112,32 @@ void CmdParser::addOptVec(std::vector<T> * values, const std::string & names) {
 
 //===========================================================================
 template <typename T>
-void CmdParser::addRequired(T * value, const std::string & name, const T & def) {
+void CmdParser::addRequired(
+    T * value, const std::string & name, const T & def) {
     auto ptr = std::make_unique<CmdArg<T>>(this, value, name, def, true);
     m_values.push_back(move(ptr));
 }
 
 //===========================================================================
 template <typename T>
-void CmdParser::addRequiredVec(std::vector<T> * values, const std::string & name) {
+void CmdParser::addRequiredVec(
+    std::vector<T> * values, const std::string & name) {
     auto ptr = std::make_unique<CmdArgVec<T>>(this, value, name, true);
     m_values.push_back(move(ptr));
 }
 
 //===========================================================================
 template <typename T>
-void CmdParser::addOptional(T * value, const std::string & name, const T & def) {
+void CmdParser::addOptional(
+    T * value, const std::string & name, const T & def) {
     auto ptr = std::make_unique<CmdArg<T>>(this, value, name, def, false);
     m_values.push_back(move(ptr));
 }
 
 //===========================================================================
 template <typename T>
-void CmdParser::addOptionalVec(std::vector<T> * values, const std::string & name) {
+void CmdParser::addOptionalVec(
+    std::vector<T> * values, const std::string & name) {
     auto ptr = std::make_unique<CmdArgVec<T>>(this, value, name, false);
     m_values.push_back(move(ptr));
 }
@@ -231,7 +235,12 @@ inline CmdOpt<T>::CmdOpt(const std::string & names, const T & def)
 template <typename T>
 inline CmdOpt<T>::CmdOpt(
     CmdParser * p, T * value, const std::string & names, const T & def)
-    : CmdParser::ValueBase{p, names, {}, false, false, std::is_same<T, bool>::value}
+    : CmdParser::ValueBase{p,
+                           names,
+                           {},
+                           false,
+                           false,
+                           std::is_same<T, bool>::value}
     , m_value{value ? value : &m_internal}
     , m_defValue{def} {}
 
@@ -279,7 +288,12 @@ inline CmdOptVec<T>::CmdOptVec(const std::string & names)
 template <typename T>
 inline CmdOptVec<T>::CmdOptVec(
     CmdParser * p, std::vector<T> * values, const std::string & names)
-    : CmdParser::ValueBase{p, names, {}, true, false, std::is_same<T, bool>::value}
+    : CmdParser::ValueBase{p,
+                           names,
+                           {},
+                           true,
+                           false,
+                           std::is_same<T, bool>::value}
     , m_values(values ? values : &m_internal) {}
 
 //===========================================================================
@@ -307,9 +321,7 @@ template <typename T> inline void CmdOptVec<T>::resetValue() {
 template <typename T> class CmdArg : public CmdParser::ValueBase {
 public:
     CmdArg(
-        const std::string & name, 
-        const T & def = T{}, 
-        bool required = false);
+        const std::string & name, const T & def = T{}, bool required = false);
     CmdArg(
         CmdParser * p,
         T * value,
@@ -337,8 +349,17 @@ inline CmdArg<T>::CmdArg(const std::string & name, const T & def, bool required)
 //===========================================================================
 template <typename T>
 inline CmdArg<T>::CmdArg(
-    CmdParser * p, T * value, const std::string & name, const T & def, bool required)
-    : CmdParser::ValueBase{p, {}, name, false, required, std::is_same<T, bool>::value}
+    CmdParser * p,
+    T * value,
+    const std::string & name,
+    const T & def,
+    bool required)
+    : CmdParser::ValueBase{p,
+                           {},
+                           name,
+                           false,
+                           required,
+                           std::is_same<T, bool>::value}
     , m_value{value ? value : &m_internal}
     , m_defValue{def} {}
 
@@ -364,8 +385,8 @@ template <typename T> class CmdArgVec : public CmdParser::ValueBase {
 public:
     CmdArgVec(const std::string & name, bool required = false);
     CmdArgVec(
-        CmdParser * p, 
-        std::vector<T> * values, 
+        CmdParser * p,
+        std::vector<T> * values,
         const std::string & name,
         bool required = false);
 
@@ -388,8 +409,16 @@ inline CmdArgVec<T>::CmdArgVec(const std::string & name, bool required)
 //===========================================================================
 template <typename T>
 inline CmdArgVec<T>::CmdArgVec(
-    CmdParser * p, std::vector<T> * values, const std::string & name, bool required)
-    : CmdParser::ValueBase{p, {}, name, true, required, std::is_same<T, bool>::value}
+    CmdParser * p,
+    std::vector<T> * values,
+    const std::string & name,
+    bool required)
+    : CmdParser::ValueBase{p,
+                           {},
+                           name,
+                           true,
+                           required,
+                           std::is_same<T, bool>::value}
     , m_values{values ? values : &m_internal} {}
 
 //===========================================================================
