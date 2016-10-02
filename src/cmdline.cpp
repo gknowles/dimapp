@@ -4,7 +4,6 @@
 
 using namespace std;
 using namespace Dim;
-using namespace Dim::CmdLine;
 
 
 /****************************************************************************
@@ -13,18 +12,49 @@ using namespace Dim::CmdLine;
 *
 ***/
 
+static CmdParser s_parser;
+static thread_local CmdParser * s_currentParser;
+
+//===========================================================================
+static CmdParser * parser() {
+    return s_currentParser ? s_currentParser : &s_parser;
+}
+
 
 /****************************************************************************
 *
-*   Parser
+*   CmdParser::ValueBase
 *
 ***/
 
-static Parser s_parser;
-static thread_local Parser * s_currentParser;
+//===========================================================================
+CmdParser::ValueBase::ValueBase(
+    CmdParser * p,
+    const std::string & names,
+    const std::string & refName,
+    bool multiple,
+    bool boolean)
+    : m_names{names}
+    , m_refName{refName}
+    , m_bool{boolean}
+    , m_multiple{multiple} {
+    if (!p)
+        p = parser();
+    p->add(*this);
+}
 
 //===========================================================================
-void Parser::clear() {
+CmdParser::ValueBase::~ValueBase() {}
+
+
+/****************************************************************************
+*
+*   CmdParser
+*
+***/
+
+//===========================================================================
+void CmdParser::clear() {
     for (auto && val : m_shortNames) {
         val.second->m_explicit = false;
         val.second->resetValue();
@@ -40,7 +70,7 @@ void Parser::clear() {
 }
 
 //===========================================================================
-void Parser::add(ValueBase & opt) {
+void CmdParser::add(ValueBase & opt) {
     istringstream is(opt.m_names);
     string name;
     while (is >> name) {
@@ -55,13 +85,13 @@ void Parser::add(ValueBase & opt) {
 }
 
 //===========================================================================
-bool Parser::parseValue(ValueBase & val, const char ptr[]) {
+bool CmdParser::parseValue(ValueBase & val, const char ptr[]) {
     val.m_explicit = true;
     return val.parseValue(ptr);
 }
 
 //===========================================================================
-bool Parser::parse(size_t argc, char ** argv) {
+bool CmdParser::parse(size_t argc, char ** argv) {
     clear();
 
     // the 0th (name of this program) arg should always be present
@@ -174,37 +204,6 @@ bool Parser::parse(size_t argc, char ** argv) {
     return true;
 }
 
-//===========================================================================
-static Parser * parser() {
-    return s_currentParser ? s_currentParser : &s_parser;
-}
-
-
-/****************************************************************************
-*
-*   ValueBase
-*
-***/
-
-//===========================================================================
-ValueBase::ValueBase(
-    Parser * p,
-    const std::string & names,
-    const std::string & refName,
-    bool multiple,
-    bool boolean)
-    : m_names{names}
-    , m_refName{refName}
-    , m_bool{boolean}
-    , m_multiple{multiple} {
-    if (!p)
-        p = parser();
-    p->add(*this);
-}
-
-//===========================================================================
-ValueBase::~ValueBase() {}
-
 
 /****************************************************************************
 *
@@ -213,6 +212,6 @@ ValueBase::~ValueBase() {}
 ***/
 
 //===========================================================================
-bool Dim::CmdLine::parseOptions(size_t argc, char * argv[]) {
+bool Dim::cmdParse(size_t argc, char * argv[]) {
     return parser()->parse(argc, argv);
 }

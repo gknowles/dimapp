@@ -12,54 +12,47 @@
 #include <vector>
 
 namespace Dim {
-namespace CmdLine {
 
-class Parser;
-template <typename T> class Option;
-template <typename T> class OptionVector;
-template <typename T> class Argument;
-template <typename T> class ArgumentVector;
+class CmdParser;
+template <typename T> class CmdOpt;
+template <typename T> class CmdOptVec;
+template <typename T> class CmdArg;
+template <typename T> class CmdArgVec;
 
 
 /****************************************************************************
 *
-*   ValueBase
+*   CmdParser
 *
 ***/
 
-class ValueBase {
+class CmdParser {
 public:
-    ValueBase(
-        Parser * parser,
-        const std::string & names,
-        const std::string & refName,
-        bool multiple,
-        bool boolean);
-    virtual ~ValueBase();
+    class ValueBase {
+    public:
+        ValueBase(
+            CmdParser * parser,
+            const std::string & names,
+            const std::string & refName,
+            bool multiple,
+            bool boolean);
+        virtual ~ValueBase();
 
-    explicit operator bool() const { return m_explicit; }
+        explicit operator bool() const { return m_explicit; }
 
-protected:
-    virtual bool parseValue(const std::string & value) = 0;
-    virtual void resetValue() = 0;
+    protected:
+        virtual bool parseValue(const std::string & value) = 0;
+        virtual void resetValue() = 0;
 
-private:
-    friend class Parser;
-    std::string m_names;
-    std::string m_refName;
-    bool m_explicit{false}; // the value was explicitly set
-    bool m_bool{false};     // the value is a bool (no separate value)
-    bool m_multiple{false}; // there can be multiple values
-};
+    private:
+        friend class CmdParser;
+        std::string m_names;
+        std::string m_refName;
+        bool m_explicit{false}; // the value was explicitly set
+        bool m_bool{false};     // the value is a bool (no separate value)
+        bool m_multiple{false}; // there can be multiple values
+    };
 
-
-/****************************************************************************
-*
-*   Parser
-*
-***/
-
-class Parser {
 public:
     void clear();
     bool parse(size_t argc, char ** argv);
@@ -74,13 +67,13 @@ public:
     void addArgVec(std::vector<T> * values, const std::string & name);
 
     template <typename T>
-    Option<T> & addOpt(const std::string & names, const T & def = {});
+    CmdOpt<T> & addOpt(const std::string & names, const T & def = {});
     template <typename T>
-    OptionVector<T> & addOptVec(const std::string & names);
+    CmdOptVec<T> & addOptVec(const std::string & names);
     template <typename T>
-    Argument<T> & addArg(const std::string & name, const T & def = {});
+    CmdArg<T> & addArg(const std::string & name, const T & def = {});
     template <typename T>
-    ArgumentVector<T> & addArgVec(const std::string & name);
+    CmdArgVec<T> & addArgVec(const std::string & name);
 
     void add(ValueBase & opt);
 
@@ -95,36 +88,36 @@ private:
 
 //===========================================================================
 template <typename T>
-void Parser::addOpt(T * value, const std::string & names, const T & def) {
-    auto ptr = std::make_unique<Option<T>>(this, value, names, def);
+void CmdParser::addOpt(T * value, const std::string & names, const T & def) {
+    auto ptr = std::make_unique<CmdOpt<T>>(this, value, names, def);
     m_values.push_back(move(ptr));
 }
 
 //===========================================================================
 template <typename T>
-void Parser::addOptVec(std::vector<T> * values, const std::string & names) {
-    auto ptr = std::make_unique<OptionVector<T>>(this, values, names);
+void CmdParser::addOptVec(std::vector<T> * values, const std::string & names) {
+    auto ptr = std::make_unique<CmdOptVec<T>>(this, values, names);
     m_values.push_back(move(ptr));
 }
 
 //===========================================================================
 template <typename T>
-void Parser::addArg(T * value, const std::string & name, const T & def) {
-    auto ptr = std::make_unique<Argument<T>>(this, value, name, def);
+void CmdParser::addArg(T * value, const std::string & name, const T & def) {
+    auto ptr = std::make_unique<CmdArg<T>>(this, value, name, def);
     m_values.push_back(move(ptr));
 }
 
 //===========================================================================
 template <typename T>
-void Parser::addArgVec(std::vector<T> * values, const std::string & name) {
-    auto ptr = std::make_unique<ArgumentVector<T>>(this, value, name);
+void CmdParser::addArgVec(std::vector<T> * values, const std::string & name) {
+    auto ptr = std::make_unique<CmdArgVec<T>>(this, value, name);
     m_values.push_back(move(ptr));
 }
 
 //===========================================================================
 template <typename T>
-Option<T> & Parser::addOpt(const std::string & names, const T & def) {
-    auto ptr = std::make_unique<Option<T>>(this, nullptr, names, def);
+CmdOpt<T> & CmdParser::addOpt(const std::string & names, const T & def) {
+    auto ptr = std::make_unique<CmdOpt<T>>(this, nullptr, names, def);
     auto & opt = *ptr;
     m_values.push_back(move(ptr));
     return opt;
@@ -132,8 +125,8 @@ Option<T> & Parser::addOpt(const std::string & names, const T & def) {
 
 //===========================================================================
 template <typename T>
-OptionVector<T> & Parser::addOptVec(const std::string & names) {
-    auto ptr = std::make_unique<OptionVector<T>>(this, nullptr, names);
+CmdOptVec<T> & CmdParser::addOptVec(const std::string & names) {
+    auto ptr = std::make_unique<CmdOptVec<T>>(this, nullptr, names);
     auto & opts = *ptr;
     m_values.push_back(move(ptr));
     return opts;
@@ -141,8 +134,8 @@ OptionVector<T> & Parser::addOptVec(const std::string & names) {
 
 //===========================================================================
 template <typename T>
-Argument<T> & Parser::addArg(const std::string & name, const T & def) {
-    auto ptr = std::make_unique<Argument<T>>(this, nullptr, name, def);
+CmdArg<T> & CmdParser::addArg(const std::string & name, const T & def) {
+    auto ptr = std::make_unique<CmdArg<T>>(this, nullptr, name, def);
     auto & arg = *ptr;
     m_values.push_back(move(ptr));
     return arg;
@@ -150,8 +143,8 @@ Argument<T> & Parser::addArg(const std::string & name, const T & def) {
 
 //===========================================================================
 template <typename T>
-ArgumentVector<T> & Parser::addArgVec(const std::string & name) {
-    auto ptr = std::make_unique<ArgumentVector<T>>(this, nullptr, name);
+CmdArgVec<T> & CmdParser::addArgVec(const std::string & name) {
+    auto ptr = std::make_unique<CmdArgVec<T>>(this, nullptr, name);
     auto & args = *ptr;
     m_values.push_back(move(ptr));
     return args;
@@ -160,20 +153,20 @@ ArgumentVector<T> & Parser::addArgVec(const std::string & name) {
 
 /****************************************************************************
 *
-*   Option
+*   CmdOpt
 *
 ***/
 
-template <typename T> class Option : public ValueBase {
+template <typename T> class CmdOpt : public CmdParser::ValueBase {
 public:
-    Option(const std::string & names, const T & def = T{});
-    Option(
-        Parser * parser,
+    CmdOpt(const std::string & names, const T & def = T{});
+    CmdOpt(
+        CmdParser * parser,
         T * value,
         const std::string & names,
         const T & def = T{});
-    Option(const Option &) = delete;
-    Option & operator=(const Option &) = delete;
+    CmdOpt(const CmdOpt &) = delete;
+    CmdOpt & operator=(const CmdOpt &) = delete;
 
     T & operator*() { return *m_value; }
     T * operator->() { return m_value; }
@@ -189,20 +182,20 @@ private:
 
 //===========================================================================
 template <typename T>
-inline Option<T>::Option(const std::string & names, const T & def)
-    : Option(nullptr, nullptr, names, def) {}
+inline CmdOpt<T>::CmdOpt(const std::string & names, const T & def)
+    : CmdOpt(nullptr, nullptr, names, def) {}
 
 //===========================================================================
 template <typename T>
-inline Option<T>::Option(
-    Parser * p, T * value, const std::string & names, const T & def)
-    : ValueBase{p, names, {}, false, std::is_same<T, bool>::value}
+inline CmdOpt<T>::CmdOpt(
+    CmdParser * p, T * value, const std::string & names, const T & def)
+    : CmdParser::ValueBase{p, names, {}, false, std::is_same<T, bool>::value}
     , m_value{value ? value : &m_internal}
     , m_defValue{def} {}
 
 //===========================================================================
 template <typename T>
-inline bool Option<T>::parseValue(const std::string & value) {
+inline bool CmdOpt<T>::parseValue(const std::string & value) {
     std::stringstream interpreter;
     if (!(interpreter << value) || !(interpreter >> *m_value) ||
         !(interpreter >> std::ws).eof()) {
@@ -213,22 +206,22 @@ inline bool Option<T>::parseValue(const std::string & value) {
 }
 
 //===========================================================================
-template <typename T> inline void Option<T>::resetValue() {
+template <typename T> inline void CmdOpt<T>::resetValue() {
     *m_value = m_defValue;
 }
 
 
 /****************************************************************************
 *
-*   OptionVector
+*   CmdOptVec
 *
 ***/
 
-template <typename T> class OptionVector : public ValueBase {
+template <typename T> class CmdOptVec : public CmdParser::ValueBase {
 public:
-    OptionVector(const std::string & names);
-    OptionVector(
-        Parser * p, std::vector<T> * values, const std::string & names);
+    CmdOptVec(const std::string & names);
+    CmdOptVec(
+        CmdParser * p, std::vector<T> * values, const std::string & names);
 
     std::vector<T> & operator*() { return *m_values; }
     std::vector<T> * operator->() { return m_values; }
@@ -243,19 +236,19 @@ private:
 
 //===========================================================================
 template <typename T>
-inline OptionVector<T>::OptionVector(const std::string & names)
-    : OptionVector(nullptr, nullptr, names) {}
+inline CmdOptVec<T>::CmdOptVec(const std::string & names)
+    : CmdOptVec(nullptr, nullptr, names) {}
 
 //===========================================================================
 template <typename T>
-inline OptionVector<T>::OptionVector(
-    Parser * p, std::vector<T> * values, const std::string & names)
-    : ValueBase{p, names, {}, true, std::is_same<T, bool>::value}
+inline CmdOptVec<T>::CmdOptVec(
+    CmdParser * p, std::vector<T> * values, const std::string & names)
+    : CmdParser::ValueBase{p, names, {}, true, std::is_same<T, bool>::value}
     , m_values(values ? values : &m_internal) {}
 
 //===========================================================================
 template <typename T>
-inline bool OptionVector<T>::parseValue(const std::string & value) {
+inline bool CmdOptVec<T>::parseValue(const std::string & value) {
     std::stringstream interpreter;
     T tmp;
     if (!(interpreter << value) || !(interpreter >> tmp) ||
@@ -267,22 +260,22 @@ inline bool OptionVector<T>::parseValue(const std::string & value) {
 }
 
 //===========================================================================
-template <typename T> inline void OptionVector<T>::resetValue() {
+template <typename T> inline void CmdOptVec<T>::resetValue() {
     m_values->clear();
 }
 
 
 /****************************************************************************
 *
-*   Argument
+*   CmdArg
 *
 ***/
 
-template <typename T> class Argument : public ValueBase {
+template <typename T> class CmdArg : public CmdParser::ValueBase {
 public:
-    Argument(const std::string & name, const T & def = T{});
-    Argument(
-        Parser * p, T * value, const std::string & name, const T & def = T{});
+    CmdArg(const std::string & name, const T & def = T{});
+    CmdArg(
+        CmdParser * p, T * value, const std::string & name, const T & def = T{});
 
     T & operator*() { return *m_value; }
     T * operator->() { return m_value; }
@@ -298,20 +291,20 @@ private:
 
 //===========================================================================
 template <typename T>
-inline Argument<T>::Argument(const std::string & name, const T & def)
-    : Argument(nullptr, nullptr, name, def) {}
+inline CmdArg<T>::CmdArg(const std::string & name, const T & def)
+    : CmdArg(nullptr, nullptr, name, def) {}
 
 //===========================================================================
 template <typename T>
-inline Argument<T>::Argument(
-    Parser * p, T * value, const std::string & name, const T & def)
-    : ValueBase{p, {}, name, false, std::is_same<T, bool>::value}
+inline CmdArg<T>::CmdArg(
+    CmdParser * p, T * value, const std::string & name, const T & def)
+    : CmdParser::ValueBase{p, {}, name, false, std::is_same<T, bool>::value}
     , m_value{value ? value : &m_internal}
     , m_defValue{def} {}
 
 //===========================================================================
 template <typename T>
-inline bool Argument<T>::parseValue(const std::string & value) {
+inline bool CmdArg<T>::parseValue(const std::string & value) {
     std::stringstream interpreter;
     if (!(interpreter << value) || !(interpreter >> *m_value) ||
         !(interpreter >> std::ws).eof()) {
@@ -322,22 +315,22 @@ inline bool Argument<T>::parseValue(const std::string & value) {
 }
 
 //===========================================================================
-template <typename T> inline void Argument<T>::resetValue() {
+template <typename T> inline void CmdArg<T>::resetValue() {
     *m_value = m_defValue;
 }
 
 
 /****************************************************************************
 *
-*   ArgumentVector
+*   CmdArgVec
 *
 ***/
 
-template <typename T> class ArgumentVector : public ValueBase {
+template <typename T> class CmdArgVec : public CmdParser::ValueBase {
 public:
-    ArgumentVector(const std::string & name);
-    ArgumentVector(
-        Parser * p, std::vector<T> * values, const std::string & name);
+    CmdArgVec(const std::string & name);
+    CmdArgVec(
+        CmdParser * p, std::vector<T> * values, const std::string & name);
 
     std::vector<T> & operator*() { return *m_values; }
     std::vector<T> * operator->() { return m_values; }
@@ -352,19 +345,19 @@ private:
 
 //===========================================================================
 template <typename T>
-inline ArgumentVector<T>::ArgumentVector(const std::string & name)
-    : ArgumentVector(nullptr, nullptr, name) {}
+inline CmdArgVec<T>::CmdArgVec(const std::string & name)
+    : CmdArgVec(nullptr, nullptr, name) {}
 
 //===========================================================================
 template <typename T>
-inline ArgumentVector<T>::ArgumentVector(
-    Parser * p, std::vector<T> * values, const std::string & name)
-    : ValueBase{p, {}, name, true, std::is_same<T, bool>::value}
+inline CmdArgVec<T>::CmdArgVec(
+    CmdParser * p, std::vector<T> * values, const std::string & name)
+    : CmdParser::ValueBase{p, {}, name, true, std::is_same<T, bool>::value}
     , m_values{values ? values : &m_internal} {}
 
 //===========================================================================
 template <typename T>
-inline bool ArgumentVector<T>::parseValue(const std::string & value) {
+inline bool CmdArgVec<T>::parseValue(const std::string & value) {
     std::stringstream interpreter;
     T tmp;
     if (!(interpreter << value) || !(interpreter >> tmp) ||
@@ -376,7 +369,7 @@ inline bool ArgumentVector<T>::parseValue(const std::string & value) {
 }
 
 //===========================================================================
-template <typename T> inline void ArgumentVector<T>::resetValue() {
+template <typename T> inline void CmdArgVec<T>::resetValue() {
     m_values->clear();
 }
 
@@ -387,7 +380,6 @@ template <typename T> inline void ArgumentVector<T>::resetValue() {
 *
 ***/
 
-bool parseOptions(size_t argc, char * argv[]);
+bool cmdParse(size_t argc, char * argv[]);
 
-} // namespace
 } // namespace

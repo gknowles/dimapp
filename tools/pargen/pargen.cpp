@@ -143,6 +143,8 @@ Options:
     -C, --no-callbacks
         suppress all callback events, reduces generated parser down to 
         pass/fail syntax check
+    -?, -h, --help    
+        print this message
 
 Testing options:
     --[no-]min-core
@@ -163,8 +165,6 @@ Testing options:
         NOTE: generated files will not be compilable
     --test
         runs internal test of ABNF parsing logic
-
-    -?, -h, --help    print this message
 )";
 }
 
@@ -199,7 +199,7 @@ enum { kExitTestFailure = kExitFirstAvailable };
 
 //===========================================================================
 void Application::onTask() {
-    CmdLine::Parser cmd;
+    CmdParser cmd;
     auto & srcfile = cmd.addArg<experimental::filesystem::path>("source file");
     auto & help = cmd.addOpt<bool>("? h help");
     auto & test = cmd.addOpt<bool>("test");

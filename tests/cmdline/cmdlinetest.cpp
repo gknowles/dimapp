@@ -2,13 +2,13 @@
 #include "pch.h"
 #pragma hdrstop
 
-using namespace Dim::CmdLine;
+using namespace Dim;
 using namespace std;
 
 //===========================================================================
 bool parseTest(vector<char *> args) {
     args.insert(args.begin(), "test.exe");
-    return parseOptions(size(args), data(args));
+    return cmdParse(size(args), data(args));
 }
 
 //===========================================================================
@@ -17,10 +17,10 @@ int main(int argc, char * argv[]) {
     _set_error_mode(_OUT_TO_MSGBOX);
 
     bool result;
-    Option<int> num{"n number", 1};
-    Option<bool> special{"s special", false};
-    OptionVector<string> name{"name"};
-    ArgumentVector<string> key{"key"};
+    CmdOpt<int> num{"n number", 1};
+    CmdOpt<bool> special{"s special", false};
+    CmdOptVec<string> name{"name"};
+    CmdArgVec<string> key{"key"};
     result = parseTest({"-n3"});
     result = parseTest({"--name", "two"});
     result = parseTest({"--name=three"});
@@ -29,7 +29,7 @@ int main(int argc, char * argv[]) {
     *num += 2;
     *special = name->empty();
 
-    Parser parser;
+    CmdParser parser;
     int count;
     bool help;
     parser.addOpt(&count, "c count");
