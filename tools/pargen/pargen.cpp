@@ -137,31 +137,33 @@ static void printSyntax(ostream & os) {
     os << R"(
 Options:
     -f, --mark-functions <0-2>
-        0 - no change to any function tags
-        1 - add function tags to break rule recursion (default)
-        2 - same as #1, but clear existing tags first
+        Function tag preprocessing:
+            0 - no change to function tags
+            1 - add function tags to break rule recursion (default)
+            2 - same as #1, but clear existing tags first
     -C, --no-callbacks
-        suppress all callback events, reduces generated parser down to 
-        pass/fail syntax check
+        Suppress all callback events, reduces generated parser down to 
+        pass/fail syntax check.
     -?, -h, --help    
-        print this message
+        Print this message.
 
 Testing options:
     --[no-]min-core
-        use reduced core rules: ALPHA, DIGIT, CRLF, HEXDIG, NEWLINE, 
+        Use reduced core rules: ALPHA, DIGIT, CRLF, HEXDIG, NEWLINE, 
         VCHAR, and WSP are shortened to fewer (usually 1) characters.
     -B, --no-build-tree
-        skip building the state tree, only stub versions of parser are
-        generated
+        Skip building the state tree, only stub versions of parser are
+        generated.
     -D, --no-dedup-tree
-        skip purging duplicate entries from the state tree, duplicates
+        Skip purging duplicate entries from the state tree, duplicates
         occur when multiple paths through the rules end with the same
-        series of transitions
+        series of transitions.
     --[no-]state-detail
-        include details of the states as comments in the generated parser
-        code - may be extremely verbose
-    --[no-]write-functions
-        skip generation of recursion breaking dependent functions
+        Include details of the states as comments in the generated parser
+        code - may be extremely verbose.
+    --no-write-functions
+        Skip generation of recursion breaking dependent functions (enabled
+        by default).
         NOTE: generated files may not be compilable
     --test
         runs internal test of ABNF parsing logic
@@ -195,8 +197,6 @@ Application::Application(int argc, char * argv[])
     : m_argc(argc)
     , m_argv(argv) {}
 
-enum { kExitTestFailure = kExitFirstAvailable };
-
 //===========================================================================
 void Application::onTask() {
     CmdParser cmd;
@@ -213,17 +213,17 @@ void Application::onTask() {
     cmd.addOpt(&s_cmdopts.writeFunctions, "write-functions", true);
     if (!cmd.parse(cerr, m_argc, m_argv)) {
         printUsage(cerr);
-        return appSignalShutdown(kExitBadArgs);
+        return appSignalShutdown(EX_USAGE);
     }
     if (*help || m_argc == 1) {
         printSyntax(cout);
-        return appSignalShutdown(kExitSuccess);
+        return appSignalShutdown(EX_OK);
     }
     if (*test) {
         if (!internalTest()) {
-            appSignalShutdown(kExitTestFailure);
+            appSignalShutdown(EX_SOFTWARE);
         } else {
-            appSignalShutdown(kExitSuccess);
+            appSignalShutdown(EX_OK);
         }
         return;
     }
@@ -237,14 +237,14 @@ void Application::onTask() {
 //===========================================================================
 void Application::onFileEnd(int64_t offset, IFile * file) {
     if (!file)
-        return appSignalShutdown(kExitBadArgs);
+        return appSignalShutdown(EX_USAGE);
 
     Grammar rules;
     getCoreRules(rules);
     if (parseAbnf(rules, m_source)) {
         writeParserFiles(rules);
     }
-    appSignalShutdown(kExitSuccess);
+    appSignalShutdown(EX_OK);
 }
 
 

@@ -24,15 +24,33 @@ public:
 // returns exit code
 int appRun(ITaskNotify & app);
 
+// program exit codes
+#ifndef EX_OK
 enum {
-    kExitSuccess = 0,
-    kExitBadArgs = 1,
-    kExitCtrlBreak = 2,
+    EX_OK = 0, // success
 
-    // first available for use by application
-    kExitFirstAvailable
+    // 1-2 available for application
+
+    EX_ABORTED = 3, // assert() failure or direct call to abort()
+
+    // 4-63 available for application
+
+    // 64-78 are borrowed from unix's sysexits.h
+    EX_USAGE = 64,       // bad command line
+    EX_DATAERR = 65,     // bad input file
+    EX_UNAVAILABLE = 69, // failed for some other reason
+    EX_SOFTWARE = 70,    // internal software error
+    EX_OSERR = 71,       // some os operation failed
+    EX_IOERR = 74,       // console or file read/write error
+    EX_NOPERM = 77,      // insufficient permission
+    EX_CONFIG = 78,      // configuration error
+
+    // 100+ reserved for application
+    EX__APPBASE = 100,
 };
-void appSignalShutdown(int exitcode = kExitSuccess);
+#endif
+
+void appSignalShutdown(int exitcode = EX_OK);
 
 void appMonitorShutdown(IAppShutdownNotify * cleanup);
 bool appQueryDestroyFailed();

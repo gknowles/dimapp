@@ -12,7 +12,7 @@ using namespace Dim;
 *
 ***/
 
-enum { kExitConnectFailed = kExitFirstAvailable, kExitDisconnect };
+enum { kExitConnectFailed = EX__APPBASE, kExitDisconnect };
 
 
 /****************************************************************************
@@ -177,7 +177,7 @@ void Application::onTask() {
     if (m_argc < 2) {
         cout << "tnet v1.0 (" __DATE__ ")\n"
              << "usage: tnet <remote address> [<local address>]\n";
-        return appSignalShutdown(kExitBadArgs);
+        return appSignalShutdown(EX_USAGE);
     }
 
     consoleEnableEcho(false);
