@@ -28,12 +28,16 @@ size_t strHash(const char src[], size_t maxlen);
 *
 ***/
 
+//===========================================================================
 template <typename T> constexpr int maxIntegralChars() {
     return numeric_limits<T>::is_signed
                ? 1 + ((CHAR_BIT * sizeof(T) - 1) * 301L + 999L) / 1000L
                : (CHAR_BIT * sizeof(T) * 301L + 999L) / 1000L;
 }
 
+//===========================================================================
+// IntegralStr - convert integral type (char, long, uint16_t, etc) to string
+//===========================================================================
 template <typename T> class IntegralStr {
 public:
     IntegralStr(T val);
@@ -115,6 +119,39 @@ template <typename T> const char * IntegralStr<T>::internalSet(Signed val) {
         }
     }
     return data;
+}
+
+
+//===========================================================================
+// stringTo - converts from string to T
+//===========================================================================
+template <typename T>
+auto stringTo_impl(T & out, const std::string & src, int)
+-> decltype(out = src, bool())
+{
+    out = src;
+    return true;
+}
+
+//===========================================================================
+template <typename T>
+bool stringTo_impl(T & out, const std::string & src, long) {
+    std::stringstream interpreter;
+    if (!(interpreter << src) || !(interpreter >> out) ||
+        !(interpreter >> std::ws).eof()) {
+        out = {};
+        return false;
+    }
+    return true;
+}
+
+//===========================================================================
+template <typename T>
+bool stringTo(T & out, const std::string & src) {
+    // prefer the version of stringTo_impl taking an int as it's third 
+    // parameter, if that doesn't exist for T (because no out=src assignment
+    // operator exists) the version taking a long is called.
+    return stringTo_impl(out, src, 0);
 }
 
 
