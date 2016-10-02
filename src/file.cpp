@@ -67,7 +67,8 @@ void fileReadBinary(
     const std::experimental::filesystem::path & path) {
     unique_ptr<IFile> file;
     if (!fileOpen(file, path, IFile::kReadOnly | IFile::kDenyNone)) {
-        logMsgError() << "file open failed, " << path;
+        logMsgError() << "File open failed, " << path;
+        notify->onFileEnd(0, nullptr);
         return;
     }
 
