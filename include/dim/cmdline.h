@@ -238,13 +238,7 @@ inline CmdOpt<T>::CmdOpt(
 //===========================================================================
 template <typename T>
 inline bool CmdOpt<T>::parseValue(const std::string & value) {
-    std::stringstream interpreter;
-    if (!(interpreter << value) || !(interpreter >> *m_value) ||
-        !(interpreter >> std::ws).eof()) {
-        *m_value = {};
-        return false;
-    }
-    return true;
+    return stringTo(*m_value, value);
 }
 
 //===========================================================================
@@ -291,12 +285,9 @@ inline CmdOptVec<T>::CmdOptVec(
 //===========================================================================
 template <typename T>
 inline bool CmdOptVec<T>::parseValue(const std::string & value) {
-    std::stringstream interpreter;
     T tmp;
-    if (!(interpreter << value) || !(interpreter >> tmp) ||
-        !(interpreter >> std::ws).eof()) {
+    if (!stringTo(tmp, value))
         return false;
-    }
     m_values->push_back(std::move(tmp));
     return true;
 }
@@ -354,13 +345,7 @@ inline CmdArg<T>::CmdArg(
 //===========================================================================
 template <typename T>
 inline bool CmdArg<T>::parseValue(const std::string & value) {
-    std::stringstream interpreter;
-    if (!(interpreter << value) || !(interpreter >> *m_value) ||
-        !(interpreter >> std::ws).eof()) {
-        *m_value = {};
-        return false;
-    }
-    return true;
+    return stringTo(*m_value, value);
 }
 
 //===========================================================================
@@ -410,12 +395,9 @@ inline CmdArgVec<T>::CmdArgVec(
 //===========================================================================
 template <typename T>
 inline bool CmdArgVec<T>::parseValue(const std::string & value) {
-    std::stringstream interpreter;
     T tmp;
-    if (!(interpreter << value) || !(interpreter >> tmp) ||
-        !(interpreter >> std::ws).eof()) {
+    if (!stringTo(tmp, value))
         return false;
-    }
     m_values->push_back(std::move(tmp));
     return true;
 }
