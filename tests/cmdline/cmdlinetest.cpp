@@ -35,6 +35,6 @@ int main(int argc, char * argv[]) {
     parser.addOpt(&count, "c count");
     parser.addOpt(&help, "? h help");
     char * t1[] = {"test.exe", "-hc2", "-?"};
-    result = parser.parse(size(t1), t1);
+    result = parser.parse(cerr, size(t1), t1);
     return 0;
 }

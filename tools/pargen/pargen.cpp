@@ -126,20 +126,20 @@ static bool internalTest() {
 }
 
 //===========================================================================
-static void printUsage() {
-    cout << "usage: pargen [<options>] <source file[.abnf]>\n";
+static void printUsage(ostream & os) {
+    os << "usage: pargen [<options>] <source file[.abnf]>\n";
 }
 
 //===========================================================================
-static void printSyntax() {
-    cout << "pargen v0.1.0 (" __DATE__ ") - simplistic parser generator\n";
-    printUsage();
-    cout << R"(
+static void printSyntax(ostream & os) {
+    os << "pargen v0.1.0 (" __DATE__ ") - simplistic parser generator\n";
+    printUsage(os);
+    os << R"(
 Options:
     -f, --mark-functions <0-2>
-        0 - no change to any function markings
-        1 - add function marks to break rule recursion (default)
-        2 - same as #1, but clear existing marks first
+        0 - no change to any function tags
+        1 - add function tags to break rule recursion (default)
+        2 - same as #1, but clear existing tags first
     -C, --no-callbacks
         suppress all callback events, reduces generated parser down to 
         pass/fail syntax check
@@ -149,7 +149,7 @@ Options:
 Testing options:
     --[no-]min-core
         use reduced core rules: ALPHA, DIGIT, CRLF, HEXDIG, NEWLINE, 
-        VCHAR, and WSP are shortened to fewer (usually 1) characters
+        VCHAR, and WSP are shortened to fewer (usually 1) characters.
     -B, --no-build-tree
         skip building the state tree, only stub versions of parser are
         generated
@@ -162,7 +162,7 @@ Testing options:
         code - may be extremely verbose
     --[no-]write-functions
         skip generation of recursion breaking dependent functions
-        NOTE: generated files will not be compilable
+        NOTE: generated files may not be compilable
     --test
         runs internal test of ABNF parsing logic
 )";
@@ -210,12 +210,12 @@ void Application::onTask() {
     cmd.addOpt(&s_cmdopts.dedupStateTree, "!D dedup-tree", true);
     cmd.addOpt(&s_cmdopts.writeStatePositions, "state-detail");
     cmd.addOpt(&s_cmdopts.writeFunctions, "write-functions", true);
-    if (!cmd.parse(m_argc, m_argv)) {
-        printUsage();
+    if (!cmd.parse(cerr, m_argc, m_argv)) {
+        printUsage(cerr);
         return appSignalShutdown(kExitBadArgs);
     }
     if (*help || m_argc == 1) {
-        printSyntax();
+        printSyntax(cout);
         return appSignalShutdown(kExitSuccess);
     }
     if (*test) {
@@ -227,9 +227,9 @@ void Application::onTask() {
         return;
     }
     if (!srcfile) {
-        logMsgError() << "No value given for "
-                      << "source file";
-        printUsage();
+        cerr << "No value given for "
+             << "source file";
+        printUsage(cerr);
         return appSignalShutdown(kExitBadArgs);
     }
 

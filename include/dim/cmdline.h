@@ -55,7 +55,7 @@ public:
 
 public:
     void clear();
-    bool parse(size_t argc, char ** argv);
+    bool parse(std::ostream & os, size_t argc, char ** argv);
 
     template <typename T>
     void addOpt(T * value, const std::string & names, const T & def = {});
@@ -68,12 +68,10 @@ public:
 
     template <typename T>
     CmdOpt<T> & addOpt(const std::string & names, const T & def = {});
-    template <typename T>
-    CmdOptVec<T> & addOptVec(const std::string & names);
+    template <typename T> CmdOptVec<T> & addOptVec(const std::string & names);
     template <typename T>
     CmdArg<T> & addArg(const std::string & name, const T & def = {});
-    template <typename T>
-    CmdArgVec<T> & addArgVec(const std::string & name);
+    template <typename T> CmdArgVec<T> & addArgVec(const std::string & name);
 
     void add(ValueBase & opt);
 
@@ -275,7 +273,10 @@ template <typename T> class CmdArg : public CmdParser::ValueBase {
 public:
     CmdArg(const std::string & name, const T & def = T{});
     CmdArg(
-        CmdParser * p, T * value, const std::string & name, const T & def = T{});
+        CmdParser * p,
+        T * value,
+        const std::string & name,
+        const T & def = T{});
 
     T & operator*() { return *m_value; }
     T * operator->() { return m_value; }
@@ -329,8 +330,7 @@ template <typename T> inline void CmdArg<T>::resetValue() {
 template <typename T> class CmdArgVec : public CmdParser::ValueBase {
 public:
     CmdArgVec(const std::string & name);
-    CmdArgVec(
-        CmdParser * p, std::vector<T> * values, const std::string & name);
+    CmdArgVec(CmdParser * p, std::vector<T> * values, const std::string & name);
 
     std::vector<T> & operator*() { return *m_values; }
     std::vector<T> * operator->() { return m_values; }

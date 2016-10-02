@@ -91,7 +91,7 @@ bool CmdParser::parseValue(ValueBase & val, const char ptr[]) {
 }
 
 //===========================================================================
-bool CmdParser::parse(size_t argc, char ** argv) {
+bool CmdParser::parse(ostream & os, size_t argc, char ** argv) {
     clear();
 
     // the 0th (name of this program) arg should always be present
@@ -112,7 +112,7 @@ bool CmdParser::parse(size_t argc, char ** argv) {
             for (; *ptr && *ptr != '-'; ++ptr) {
                 auto it = m_shortNames.find(*ptr);
                 if (it == m_shortNames.end()) {
-                    logMsgError() << "Unknown option: -" << *ptr;
+                    os << "Unknown option: -" << *ptr << endl;
                     return false;
                 }
                 val = it->second;
@@ -149,19 +149,19 @@ bool CmdParser::parse(size_t argc, char ** argv) {
                     it = m_longNames.find(key.data() + 3);
                     continue;
                 }
-                logMsgError() << "Unknown option: --" << key;
+                os << "Unknown option: --" << key << endl;
                 return false;
             }
             val = it->second;
             if (val->m_bool) {
                 if (equal) {
-                    logMsgError() << "Unknown option: --" << key << "=";
+                    os << "Unknown option: --" << key << "=" << endl;
                     return false;
                 }
                 parseValue(*val, hasPrefix ? "0" : "1");
                 continue;
             } else if (hasPrefix) {
-                logMsgError() << "Unknown option: --" << key;
+                os << "Unknown option: --" << key << endl;
                 return false;
             }
             goto option_value;
@@ -169,12 +169,11 @@ bool CmdParser::parse(size_t argc, char ** argv) {
 
         // argument
         if (pos >= size(m_args)) {
-            logMsgError() << "Unexpected argument: " << ptr;
+            os << "Unexpected argument: " << ptr << endl;
             return false;
         }
         if (!parseValue(*m_args[pos], ptr)) {
-            logMsgError() << "Invalid " << m_args[pos]->m_refName << ": "
-                          << ptr;
+            os << "Invalid " << m_args[pos]->m_refName << ": " << ptr;
             return false;
         }
         if (!m_args[pos]->m_multiple)
@@ -184,7 +183,7 @@ bool CmdParser::parse(size_t argc, char ** argv) {
     option_value:
         if (*ptr) {
             if (!parseValue(*val, ptr)) {
-                logMsgError() << "Invalid option value: " << ptr;
+                os << "Invalid option value: " << ptr << endl;
                 return false;
             }
             continue;
@@ -192,12 +191,11 @@ bool CmdParser::parse(size_t argc, char ** argv) {
         argc -= 1;
         argv += 1;
         if (!argc) {
-            logMsgError() << "No value given for (" << val->m_names
-                          << ") option";
+            os << "No value given for (" << val->m_names << ") option" << endl;
             return false;
         }
         if (!parseValue(*val, *argv)) {
-            logMsgError() << "Invalid option value: " << *argv;
+            os << "Invalid option value: " << *argv << endl;
             return false;
         }
     }
@@ -213,5 +211,5 @@ bool CmdParser::parse(size_t argc, char ** argv) {
 
 //===========================================================================
 bool Dim::cmdParse(size_t argc, char * argv[]) {
-    return parser()->parse(argc, argv);
+    return parser()->parse(cerr, argc, argv);
 }
