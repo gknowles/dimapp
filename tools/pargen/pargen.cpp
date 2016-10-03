@@ -126,16 +126,25 @@ static bool internalTest() {
 }
 
 //===========================================================================
-static void printUsage(ostream & os) {
-    os << "usage: pargen [<options>] <source file[.abnf]>\n";
+static void usageError(ostream & os) {
+    os << 1 + R"(
+usage: pargen [-?|-h|--help] [-f|--mark-functions=#] [-C|--no-callbacks] 
+              [--min-core] [-B|--no-build] [-D|--no-dedup] [--state-detail]
+              [--no-write-functions]
+              <source file[.abnf]>
+)";
+    appSignalShutdown(EX_USAGE);
 }
 
 //===========================================================================
 static void printSyntax(ostream & os) {
-    os << "pargen v0.1.0 (" __DATE__ ") - simplistic parser generator\n";
-    printUsage(os);
+    os << "pargen v0.1.0 (" __DATE__ ") - simplistic parser generator";
     os << R"(
+usage: pargen [<options>] <source file[.abnf]
+
 Options:
+    -?, -h, --help    
+        Print this message.
     -f, --mark-functions <0-2>
         Function tag preprocessing:
             0 - no change to function tags
@@ -144,17 +153,15 @@ Options:
     -C, --no-callbacks
         Suppress all callback events, reduces generated parser down to 
         pass/fail syntax check.
-    -?, -h, --help    
-        Print this message.
 
 Testing options:
     --[no-]min-core
         Use reduced core rules: ALPHA, DIGIT, CRLF, HEXDIG, NEWLINE, 
         VCHAR, and WSP are shortened to fewer (usually 1) characters.
-    -B, --no-build-tree
+    -B, --no-build
         Skip building the state tree, only stub versions of parser are
         generated.
-    -D, --no-dedup-tree
+    -D, --no-dedup
         Skip purging duplicate entries from the state tree, duplicates
         occur when multiple paths through the rules end with the same
         series of transitions.
@@ -167,6 +174,9 @@ Testing options:
         NOTE: generated files may not be compilable
     --test
         runs internal test of ABNF parsing logic
+
+For additional information, see:
+    https://github.com/gknowles/dimapp/tree/master/tools/pargen
 )";
 }
 
@@ -178,7 +188,9 @@ Testing options:
 ***/
 
 namespace {
-class Application : public ITaskNotify, public IFileReadNotify {
+class Application : public ITaskNotify,
+                    public ILogNotify,
+                    public IFileReadNotify {
     int m_argc;
     char ** m_argv;
     string m_source;
@@ -186,6 +198,9 @@ class Application : public ITaskNotify, public IFileReadNotify {
 public:
     Application(int argc, char * argv[]);
     void onTask() override;
+
+    // ILogNotify
+    void onLog(LogType type, const std::string & msg) override;
 
     // IFileReadNotify
     void onFileEnd(int64_t offset, IFile * file) override;
@@ -200,20 +215,18 @@ Application::Application(int argc, char * argv[])
 //===========================================================================
 void Application::onTask() {
     CmdParser cmd;
-    auto & srcfile =
-        cmd.addRequired<experimental::filesystem::path>("source file");
+    auto & srcfile = cmd.addArg<experimental::filesystem::path>("source file");
     auto & help = cmd.addOpt<bool>("? h help");
     auto & test = cmd.addOpt<bool>("test");
     cmd.addOpt(&s_allRules, "min-core", s_allRules);
     cmd.addOpt(&s_cmdopts.markRecursion, "f mark-functions", 1);
     cmd.addOpt(&s_cmdopts.includeCallbacks, "!C callbacks", true);
-    cmd.addOpt(&s_cmdopts.buildStateTree, "!B build-tree", true);
-    cmd.addOpt(&s_cmdopts.dedupStateTree, "!D dedup-tree", true);
+    cmd.addOpt(&s_cmdopts.buildStateTree, "!B build", true);
+    cmd.addOpt(&s_cmdopts.dedupStateTree, "!D dedup", true);
     cmd.addOpt(&s_cmdopts.writeStatePositions, "state-detail");
     cmd.addOpt(&s_cmdopts.writeFunctions, "write-functions", true);
     if (!cmd.parse(cerr, m_argc, m_argv)) {
-        printUsage(cerr);
-        return appSignalShutdown(EX_USAGE);
+        return usageError(cerr);
     }
     if (*help || m_argc == 1) {
         printSyntax(cout);
@@ -227,11 +240,25 @@ void Application::onTask() {
         }
         return;
     }
+    if (!srcfile) {
+        cerr << "No value given for " << srcfile << endl;
+        return usageError(cerr);
+    }
 
     assert(srcfile);
     if (!srcfile->has_extension())
         srcfile->replace_extension("abnf");
     fileReadBinary(this, m_source, *srcfile);
+}
+
+//===========================================================================
+void Application::onLog(LogType type, const std::string & msg) {
+    if (type == kLogError) {
+        ConsoleScopedAttr attr(kConsoleError);
+        cout << "ERROR: " << msg << endl;
+    } else {
+        cout << msg << endl;
+    }
 }
 
 //===========================================================================
@@ -261,5 +288,6 @@ int main(int argc, char * argv[]) {
 
     consoleEnableCtrlC(false);
     Application app(argc, argv);
+    logAddNotify(&app);
     return appRun(app);
 }
