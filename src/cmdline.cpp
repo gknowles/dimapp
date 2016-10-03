@@ -96,8 +96,6 @@ bool CmdParser::parse(ostream & os, size_t argc, char ** argv) {
 
     // the 0th (name of this program) arg should always be present
     assert(argc && *argv);
-    if (argc == 1)
-        return true;
 
     unsigned pos = 0;
     bool moreOpts = true;
