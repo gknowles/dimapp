@@ -148,6 +148,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\tools\pargen\abnf.abnf" />
+    <None Include="..\tools\pargen\README.md" />
     <None Include="..\tools\pargen\tests.abnf" />
   </ItemGroup>
   <ItemGroup>
