@@ -18,10 +18,10 @@ int main(int argc, char * argv[]) {
 
     bool result;
     CmdParser cmd;
-    auto & num = cmd.addOpt<int>("n number", 1);
-    auto & special = cmd.addOpt<bool>("s special", false);
-    auto & name = cmd.addOptVec<string>("name");
-    cmd.addArgVec<string>("key");
+    auto & num = cmd.addArg<int>("n number", 1);
+    auto & special = cmd.addArg<bool>("s special", false);
+    auto & name = cmd.addArgVec<string>("name");
+    cmd.addArgVec<string>("[key]");
     result = parseTest(cmd, {"-n3"});
     result = parseTest(cmd, {"--name", "two"});
     result = parseTest(cmd, {"--name=three"});
@@ -33,8 +33,12 @@ int main(int argc, char * argv[]) {
     cmd = {};
     int count;
     bool help;
-    cmd.addOpt(&count, "c count");
-    cmd.addOpt(&help, "? h help");
+    cmd.addArg(&count, "c count");
+    cmd.addArg(&help, "? h help");
     result = parseTest(cmd, {"-hc2", "-?"});
-    return 0;
+    if (result) {
+        cout << "Last test passed" << endl;
+        return EX_OK;
+    }
+    return EX_SOFTWARE;
 }

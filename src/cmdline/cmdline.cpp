@@ -14,16 +14,10 @@ using namespace Dim;
 
 //===========================================================================
 CmdParser::ValueBase::ValueBase(
-    const std::string & names,
-    const std::string & refName,
-    bool multiple,
-    bool required,
-    bool boolean)
+    const std::string & names, bool multiple, bool boolean)
     : m_names{names}
-    , m_refName{refName}
-    , m_bool{boolean}
     , m_multiple{multiple}
-    , m_required(required) {}
+    , m_bool{boolean} {}
 
 
 /****************************************************************************
@@ -47,51 +41,94 @@ void CmdParser::resetValues() {
         val->resetValue();
     }
     for (unsigned i = 0; i < size(m_args); ++i) {
-        auto val = m_args[i].val;
-        if (val->m_refName.empty())
-            val->m_refName = "arg" + to_string(i + 1);
-        val->m_explicit = false;
-        val->resetValue();
+        auto & key = m_args[i];
+        if (key.name.empty())
+            key.name = "arg" + to_string(i + 1);
+        key.val->m_explicit = false;
+        key.val->m_refName = key.name;
+        key.val->resetValue();
     }
 }
 
 //===========================================================================
-void CmdParser::addValue(std::unique_ptr<ValueBase> ptr) {
-    auto & opt = *ptr;
-    m_values.push_back(std::move(ptr));
-    istringstream is(opt.m_names);
+void CmdParser::addValue(std::unique_ptr<ValueBase> src) {
+    ValueBase * val = src.get();
+    m_values.push_back(std::move(src));
+    const char * ptr = val->m_names.data();
     string name;
-    ValueKey key = {&opt, false, false};
-    while (is >> name) {
-        if (name.size() == 1) {
-            m_shortNames[name[0]] = key;
-        } else if (opt.m_bool && name[0] == '!') {
-            if (name.size() == 2) {
-                m_shortNames[name[1]] = {&opt, true};
-            } else {
-                m_longNames[name.data() + 1] = {&opt, true};
-            }
-        } else if (!opt.m_bool && name[0] == '?') {
-            if (name.size() == 2) {
-                m_shortNames[name[1]] = {&opt, false, true};
-            } else {
-                m_longNames[name.data() + 1] = {&opt, false, true};
-            }
-        } else {
-            m_longNames[name] = key;
+    char close;
+    for (;; ++ptr) {
+        switch (*ptr) {
+        case 0: return;
+        case ' ': continue;
+        case '[': close = ']'; break;
+        case '<': close = '>'; break;
+        default: close = ' '; break;
         }
-    }
-    if (opt.m_names.empty()) {
-        if (!opt.m_required) {
-            m_args.push_back(key);
-        } else {
-            auto where =
-                find_if(m_args.begin(), m_args.end(), [](auto && vkey) {
-                    return !vkey.val->m_required;
-                });
-            m_args.insert(where, key);
+        const char * b = ptr;
+        bool hasEqual = false;
+        while (*ptr && *ptr != close) {
+            if (*ptr == '=')
+                hasEqual = true;
+            ptr += 1;
         }
+        if (hasEqual && close == ' ') {
+            assert(hasEqual && "bad argument name");
+        } else {
+            name = string(b, ptr - b);
+            addKey(name, val);
+        }
+        if (!*ptr)
+            return;
     }
+}
+
+//===========================================================================
+void CmdParser::addKey(const string & name, ValueBase * val) {
+    const bool invert = true;
+    const bool optional = true;
+
+    switch (name[0]) {
+    case '-': assert(name[0] != '-' && "bad argument name"); return;
+    case '[':
+        m_args.push_back({val, !invert, optional, name.data() + 1});
+        return;
+    case '<':
+        auto where = find_if(m_args.begin(), m_args.end(), [](auto && key) {
+            return key.optional;
+        });
+        m_args.insert(where, {val, !invert, !optional, name.data() + 1});
+        return;
+    }
+    if (name.size() == 1) {
+        m_shortNames[name[0]] = {val, !invert, !optional};
+        return;
+    }
+    switch (name[0]) {
+    case '!':
+        if (!val->m_bool) {
+            assert(!val->m_bool && "bad modifier '!' for non-bool argument");
+            return;
+        }
+        if (name.size() == 2) {
+            m_shortNames[name[1]] = {val, invert, !optional};
+        } else {
+            m_longNames[name.data() + 1] = {val, invert, !optional};
+        }
+        return;
+    case '?':
+        if (val->m_bool) {
+            assert(!val->m_bool && "bad modifier '?' for bool argument");
+            return;
+        }
+        if (name.size() == 2) {
+            m_shortNames[name[1]] = {val, !invert, optional};
+        } else {
+            m_longNames[name.data() + 1] = {val, !invert, optional};
+        }
+        return;
+    }
+    m_longNames[name] = {val, !invert, !optional};
 }
 
 //===========================================================================
@@ -151,10 +188,10 @@ bool CmdParser::parse(ostream & os, size_t argc, char ** argv) {
                 ptr = "";
             }
             auto it = m_longNames.find(key);
-            bool hasPrefix = false;
+            bool hasNo = false;
             while (it == m_longNames.end()) {
                 if (key.size() > 3 && key.compare(0, 3, "no-") == 0) {
-                    hasPrefix = true;
+                    hasNo = true;
                     it = m_longNames.find(key.data() + 3);
                     continue;
                 }
@@ -168,9 +205,9 @@ bool CmdParser::parse(ostream & os, size_t argc, char ** argv) {
                     os << "Unknown option: --" << key << "=" << endl;
                     return false;
                 }
-                parseValue(*vkey.val, (hasPrefix ^ vkey.invert) ? "0" : "1");
+                parseValue(*vkey.val, (hasNo ^ vkey.invert) ? "0" : "1");
                 continue;
-            } else if (hasPrefix) {
+            } else if (hasNo) {
                 os << "Unknown option: --" << key << endl;
                 return false;
             }
@@ -183,6 +220,7 @@ bool CmdParser::parse(ostream & os, size_t argc, char ** argv) {
             return false;
         }
         vkey = m_args[pos];
+        vkey.val->m_refName = vkey.name;
         if (!parseValue(*vkey.val, ptr)) {
             os << "Invalid " << vkey.val->m_refName << ": " << ptr;
             return false;
@@ -214,8 +252,8 @@ bool CmdParser::parse(ostream & os, size_t argc, char ** argv) {
         }
     }
 
-    if (pos < size(m_args) && m_args[pos].val->m_required) {
-        os << "No value given for " << m_args[pos].val->m_refName << endl;
+    if (pos < size(m_args) && !m_args[pos].optional) {
+        os << "No value given for " << m_args[pos].name << endl;
         return false;
     }
     return true;

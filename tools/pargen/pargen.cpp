@@ -128,8 +128,8 @@ static bool internalTest() {
 //===========================================================================
 static void usageError(ostream & os) {
     os << 1 + R"(
-usage: pargen [-?|-h|--help] [-f|--mark-functions=#] [-C|--no-callbacks] 
-              [--min-core] [-B|--no-build] [-D|--no-dedup] [--state-detail]
+usage: pargen [-?, -h, --help] [-f, --mark-functions=#] [-C, --no-callbacks] 
+              [--min-core] [-B, --no-build] [-D, --no-dedup] [--state-detail]
               [--no-write-functions]
               <source file[.abnf]>
 )";
@@ -216,17 +216,18 @@ Application::Application(int argc, char * argv[])
 void Application::onTask() {
     CmdParser cmd;
     // positional arguments
-    auto & srcfile = cmd.addArg<experimental::filesystem::path>("source file");
+    auto & srcfile =
+        cmd.addArg<experimental::filesystem::path>("[source file]");
     // option switches
-    auto & help = cmd.addOpt<bool>("? h help");
-    auto & test = cmd.addOpt<bool>("test");
-    cmd.addOpt(&s_allRules, "min-core", s_allRules);
-    cmd.addOpt(&s_cmdopts.markRecursion, "f mark-functions", 1);
-    cmd.addOpt(&s_cmdopts.includeCallbacks, "!C callbacks", true);
-    cmd.addOpt(&s_cmdopts.buildStateTree, "!B build", true);
-    cmd.addOpt(&s_cmdopts.dedupStateTree, "!D dedup", true);
-    cmd.addOpt(&s_cmdopts.writeStatePositions, "state-detail");
-    cmd.addOpt(&s_cmdopts.writeFunctions, "write-functions", true);
+    auto & help = cmd.addArg<bool>("? h help");
+    auto & test = cmd.addArg<bool>("test");
+    cmd.addArg(&s_allRules, "min-core", s_allRules);
+    cmd.addArg(&s_cmdopts.markRecursion, "f mark-functions", 1);
+    cmd.addArg(&s_cmdopts.includeCallbacks, "!C callbacks", true);
+    cmd.addArg(&s_cmdopts.buildStateTree, "!B build", true);
+    cmd.addArg(&s_cmdopts.dedupStateTree, "!D dedup", true);
+    cmd.addArg(&s_cmdopts.writeStatePositions, "state-detail");
+    cmd.addArg(&s_cmdopts.writeFunctions, "write-functions", true);
     if (!cmd.parse(cerr, m_argc, m_argv)) {
         return usageError(cerr);
     }
