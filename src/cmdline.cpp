@@ -46,8 +46,10 @@ void CmdParser::resetValues() {
         val->m_refName.clear();
         val->resetValue();
     }
-    for (auto && v : m_args) {
-        auto val = v.val;
+    for (unsigned i = 0; i < size(m_args); ++i) {
+        auto val = m_args[i].val;
+        if (val->m_refName.empty())
+            val->m_refName = "arg" + to_string(i + 1);
         val->m_explicit = false;
         val->resetValue();
     }
@@ -59,19 +61,27 @@ void CmdParser::addValue(std::unique_ptr<ValueBase> ptr) {
     m_values.push_back(std::move(ptr));
     istringstream is(opt.m_names);
     string name;
-    ValueKey key = {&opt, false};
+    ValueKey key = {&opt, false, false};
     while (is >> name) {
         if (name.size() == 1) {
             m_shortNames[name[0]] = key;
-        } else if (name.size() == 2 && name[0] == '!' && opt.m_bool) {
-            m_shortNames[name[1]] = {&opt, true};
-        } else if (name[0] == '!' && opt.m_bool) {
-            m_longNames[name.data() + 1] = {&opt, true};
+        } else if (opt.m_bool && name[0] == '!') {
+            if (name.size() == 2) {
+                m_shortNames[name[1]] = {&opt, true};
+            } else {
+                m_longNames[name.data() + 1] = {&opt, true};
+            }
+        } else if (!opt.m_bool && name[0] == '?') {
+            if (name.size() == 2) {
+                m_shortNames[name[1]] = {&opt, false, true};
+            } else {
+                m_longNames[name.data() + 1] = {&opt, false, true};
+            }
         } else {
             m_longNames[name] = key;
         }
     }
-    if (!opt.m_refName.empty()) {
+    if (opt.m_names.empty()) {
         if (!opt.m_required) {
             m_args.push_back(key);
         } else {
@@ -105,7 +115,7 @@ bool CmdParser::parse(ostream & os, size_t argc, char ** argv) {
     for (; argc; --argc, ++argv) {
         ValueKey vkey;
         const char * ptr = *argv;
-        if (*ptr == '-' && moreOpts) {
+        if (*ptr == '-' && ptr[1] && moreOpts) {
             ptr += 1;
             for (; *ptr && *ptr != '-'; ++ptr) {
                 auto it = m_shortNames.find(*ptr);
@@ -187,6 +197,9 @@ bool CmdParser::parse(ostream & os, size_t argc, char ** argv) {
                 os << "Invalid option value: " << ptr << endl;
                 return false;
             }
+            continue;
+        }
+        if (vkey.optional) {
             continue;
         }
         argc -= 1;

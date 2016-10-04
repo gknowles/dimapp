@@ -97,7 +97,8 @@ private:
 
     struct ValueKey {
         ValueBase * val;
-        bool invert; // set to false instead of true (only for bools)
+        bool invert;   // set to false instead of true (only for bools)
+        bool optional; // value doesn't have to be present? (non-bools only)
     };
     std::list<std::unique_ptr<ValueBase>> m_values;
     std::map<char, ValueKey> m_shortNames;
@@ -193,7 +194,7 @@ private:
 //===========================================================================
 template <typename T>
 inline CmdOpt<T>::CmdOpt(T * value, const std::string & names, const T & def)
-    : CmdParser::ValueBase{names,
+    : CmdParser::ValueBase{names.empty() ? " " : names,
                            {},
                            false,
                            false,
@@ -238,7 +239,11 @@ private:
 template <typename T>
 inline CmdOptVec<T>::CmdOptVec(
     std::vector<T> * values, const std::string & names)
-    : CmdParser::ValueBase{names, {}, true, false, std::is_same<T, bool>::value}
+    : CmdParser::ValueBase{names.empty() ? " " : names,
+                           {},
+                           true,
+                           false,
+                           std::is_same<T, bool>::value}
     , m_values(values ? values : &m_internal) {}
 
 //===========================================================================

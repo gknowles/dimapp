@@ -12,11 +12,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\src\cmdline-argv.abnf">
-      <Filter>src</Filter>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="..\include\dim.h">
       <Filter>include</Filter>
     </ClInclude>

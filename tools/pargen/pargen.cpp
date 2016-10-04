@@ -140,16 +140,16 @@ usage: pargen [-?|-h|--help] [-f|--mark-functions=#] [-C|--no-callbacks]
 static void printSyntax(ostream & os) {
     os << "pargen v0.1.0 (" __DATE__ ") - simplistic parser generator";
     os << R"(
-usage: pargen [<options>] <source file[.abnf]
+usage: pargen [<options>] <source file[.abnf]>
 
 Options:
     -?, -h, --help    
         Print this message.
-    -f, --mark-functions <0-2>
-        Function tag preprocessing:
+    -f, --mark-functions=LEVEL
+        Function tag preprocessing level:
             0 - no change to function tags
             1 - add function tags to break rule recursion (default)
-            2 - same as #1, but clear existing tags first
+            2 - same as #1, but remove all existing tags first
     -C, --no-callbacks
         Suppress all callback events, reduces generated parser down to 
         pass/fail syntax check.
@@ -215,7 +215,9 @@ Application::Application(int argc, char * argv[])
 //===========================================================================
 void Application::onTask() {
     CmdParser cmd;
+    // positional arguments
     auto & srcfile = cmd.addArg<experimental::filesystem::path>("source file");
+    // option switches
     auto & help = cmd.addOpt<bool>("? h help");
     auto & test = cmd.addOpt<bool>("test");
     cmd.addOpt(&s_allRules, "min-core", s_allRules);
@@ -233,19 +235,15 @@ void Application::onTask() {
         return appSignalShutdown(EX_OK);
     }
     if (*test) {
-        if (!internalTest()) {
-            appSignalShutdown(EX_SOFTWARE);
-        } else {
-            appSignalShutdown(EX_OK);
-        }
-        return;
+        int code = internalTest() ? EX_OK : EX_SOFTWARE;
+        return appSignalShutdown(code);
     }
     if (!srcfile) {
         cerr << "No value given for " << srcfile << endl;
         return usageError(cerr);
     }
 
-    assert(srcfile);
+    // process abnf file
     if (!srcfile->has_extension())
         srcfile->replace_extension("abnf");
     fileReadBinary(this, m_source, *srcfile);
