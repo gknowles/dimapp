@@ -23,6 +23,7 @@ namespace Dim {
 class CmdParser {
 public:
     class ValueBase;
+    template <typename T> class ValueShim;
     template <typename T> class Value;
     template <typename T> class ValueVec;
 
@@ -31,13 +32,13 @@ public:
     bool parse(std::ostream & os, size_t argc, char ** argv);
 
     template <typename T>
-    Value<T> & addArg(T * value, const std::string & keys, const T & def = {});
+    Value<T> & arg(T * value, const std::string & keys, const T & def = {});
     template <typename T>
-    ValueVec<T> & addArgVec(std::vector<T> * values, const std::string & keys);
+    ValueVec<T> & argVec(std::vector<T> * values, const std::string & keys);
 
     template <typename T>
-    Value<T> & addArg(const std::string & keys, const T & def = {});
-    template <typename T> ValueVec<T> & addArgVec(const std::string & keys);
+    Value<T> & arg(const std::string & keys, const T & def = {});
+    template <typename T> ValueVec<T> & argVec(const std::string & keys);
 
 private:
     void addKey(const std::string & name, ValueBase * val);
@@ -59,7 +60,7 @@ private:
 //===========================================================================
 template <typename T>
 CmdParser::Value<T> &
-CmdParser::addArg(T * value, const std::string & keys, const T & def) {
+CmdParser::arg(T * value, const std::string & keys, const T & def) {
     auto ptr = std::make_unique<Value<T>>(value, keys, def);
     auto & opt = *ptr;
     addValue(std::move(ptr));
@@ -69,7 +70,7 @@ CmdParser::addArg(T * value, const std::string & keys, const T & def) {
 //===========================================================================
 template <typename T>
 CmdParser::ValueVec<T> &
-CmdParser::addArgVec(std::vector<T> * values, const std::string & keys) {
+CmdParser::argVec(std::vector<T> * values, const std::string & keys) {
     auto ptr = std::make_unique<ValueVec<T>>(values, keys);
     auto & opt = *ptr;
     addValue(std::move(ptr));
@@ -78,15 +79,14 @@ CmdParser::addArgVec(std::vector<T> * values, const std::string & keys) {
 
 //===========================================================================
 template <typename T>
-CmdParser::Value<T> &
-CmdParser::addArg(const std::string & keys, const T & def) {
-    return addArg<T>(nullptr, keys, def);
+CmdParser::Value<T> & CmdParser::arg(const std::string & keys, const T & def) {
+    return arg<T>(nullptr, keys, def);
 }
 
 //===========================================================================
 template <typename T>
-CmdParser::ValueVec<T> & CmdParser::addArgVec(const std::string & keys) {
-    return addArgVec<T>(nullptr, keys);
+CmdParser::ValueVec<T> & CmdParser::argVec(const std::string & keys) {
+    return argVec<T>(nullptr, keys);
 }
 
 
@@ -101,9 +101,8 @@ public:
     ValueBase(const std::string & keys, bool multiple, bool boolean);
     virtual ~ValueBase() {}
 
-    // for positionals - name of argument
-    // for options - name of the option that populated the value,
-    //      or an empty string if it wasn't populated.
+    // name of the argument that populated the value, or an empty 
+    // string if it wasn't populated.
     const std::string & name() const { return m_refName; }
 
     explicit operator bool() const { return m_explicit; }
@@ -112,6 +111,7 @@ protected:
     virtual bool parseValue(const std::string & value) = 0;
     virtual void resetValue() = 0;       // set to passed in default
     virtual void unspecifiedValue() = 0; // set to default constructed
+    std::string m_desc;
 
 private:
     friend class CmdParser;
@@ -125,15 +125,32 @@ private:
 
 /****************************************************************************
 *
+*   CmdParser::ValueShim
+*
+***/
+
+template <typename T> class CmdParser::ValueShim : public ValueBase {
+public:
+    using ValueBase::ValueBase;
+    ValueShim(const ValueShim &) = delete;
+    ValueShim & operator=(const ValueShim &) = delete;
+
+    T & desc(const std::string & val) {
+        m_desc = val;
+        return static_cast<T &>(*this);
+    }
+};
+
+
+/****************************************************************************
+*
 *   CmdParser::Value
 *
 ***/
 
-template <typename T> class CmdParser::Value : public CmdParser::ValueBase {
+template <typename T> class CmdParser::Value : public ValueShim<Value<T>> {
 public:
     Value(T * value, const std::string & keys, const T & def = T{});
-    Value(const Value &) = delete;
-    Value & operator=(const Value &) = delete;
 
     T & operator*() { return *m_value; }
     T * operator->() { return m_value; }
@@ -152,7 +169,7 @@ private:
 template <typename T>
 inline CmdParser::Value<T>::Value(
     T * value, const std::string & keys, const T & def)
-    : CmdParser::ValueBase{keys, false, std::is_same<T, bool>::value}
+    : ValueShim<Value>{keys, false, std::is_same<T, bool>::value}
     , m_value{value ? value : &m_internal}
     , m_defValue{def} {}
 
@@ -175,11 +192,12 @@ template <typename T> inline void CmdParser::Value<T>::unspecifiedValue() {
 
 /****************************************************************************
 *
-*   ValueVec
+*   CmdParser::ValueVec
 *
 ***/
 
-template <typename T> class CmdParser::ValueVec : public CmdParser::ValueBase {
+template <typename T>
+class CmdParser::ValueVec : public ValueShim<ValueVec<T>> {
 public:
     ValueVec(std::vector<T> * values, const std::string & keys);
 
@@ -199,7 +217,7 @@ private:
 template <typename T>
 inline CmdParser::ValueVec<T>::ValueVec(
     std::vector<T> * values, const std::string & keys)
-    : CmdParser::ValueBase{keys, true, std::is_same<T, bool>::value}
+    : ValueShim<ValueVec>{keys, true, std::is_same<T, bool>::value}
     , m_values(values ? values : &m_internal) {}
 
 //===========================================================================
