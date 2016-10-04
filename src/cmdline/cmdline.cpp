@@ -1,4 +1,4 @@
-// cmdline.cpp - dim services
+// cmdline.cpp - dim cmdline
 #include "pch.h"
 #pragma hdrstop
 

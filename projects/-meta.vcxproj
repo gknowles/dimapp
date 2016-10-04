@@ -128,6 +128,9 @@
     <ProjectReference Include="dimapp-win8.vcxproj">
       <Project>{339A1180-9F4F-8A75-2844-844C94F88079}</Project>
     </ProjectReference>
+    <ProjectReference Include="dimapp-cmdline.vcxproj">
+      <Project>{A990302C-955E-2432-7EF2-94586A5F0097}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
