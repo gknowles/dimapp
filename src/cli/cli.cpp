@@ -257,6 +257,15 @@ bool Cli::parse(size_t argc, char ** argv) {
     return true;
 }
 
+//===========================================================================
+bool Cli::parse(ostream & os, size_t argc, char ** argv) {
+    if (parse(argc, argv)) 
+        return true;
+    if (exitCode())
+        os << errMsg() << endl;
+    return false;
+}
+
 
 /****************************************************************************
 *

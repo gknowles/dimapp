@@ -30,6 +30,7 @@ public:
 public:
     void resetValues();
     bool parse(size_t argc, char ** argv);
+    bool parse(std::ostream & os, size_t argc, char ** argv);
 
     template <typename T>
     Value<T> & arg(T * value, const std::string & keys, const T & def = {});
