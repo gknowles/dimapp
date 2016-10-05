@@ -1,14 +1,13 @@
 # dim-cli
 
-Classes for making unix style command line interfaces.
+Module for making unix style command line interfaces.
 
 Main features:
-- parses directly to variables (or makes proxies for them)
+- parses directly to c++ variables (or makes proxies for them)
 - supports parsing to any type that is:
-  - is default constructable
+  - default constructable
   - assignable from std::string or has an istream extraction operator
 - help page generation
-- composable subcommands (Just kidding!)
 
 What does it look like?
 ```C++
@@ -35,7 +34,7 @@ Hello Unknown!
 Hello Unknown!  
 ```
 
-It automatically generates nicely formatted help pages:
+It automatically generates reasonably formatted help pages:
 ```console
 $ a.out --help
 Usage: a.out [OPTIONS]
@@ -46,8 +45,24 @@ Options:
   --name STRING        who to greet
 ```
 
+## Terminology
+Argument
+  : something appearing in a command line, probably typed by a user, 
+  consisting of a name and/or value.
+Positional argument
+  : argument identified by their position in the command line
+Named argument
+  : argument identifiable by name
+Variable
+  : object that receives values and contains rules about what values
+  can be given to it.
+
+The command line interface (Cli) maps values to variables by name
+and position.
+
+
 ## Basic Usage
-After inspecting args the Cli parser returns false if it thinks the program 
+After inspecting args Cli::parser() returns false if it thinks the program 
 should exit. Cli::exitCode() will be set to either EX_OK (because of an early 
 exit like --help) or EX_USAGE for bad arguments.
 
@@ -101,24 +116,28 @@ $ a.out --help
 Usage: a.out [OPTIONS]  
 
 Options:  
-  --fruit STRING  
   --help          Show this message and exit.  
+  --fruit STRING  
 ```
 
 ## Argument Names
-Names are passed in as a space separated list of names:
-  
-- f - single character (short name) named argument
-- file - multicharacter (long name) named argument
-- [file name] - optional positional argument
-- <file> - required positional argument
+Names are passed in as a space separated list of argument names that look 
+like these:
 
-Names for positionals (inside brackets) may contain spaces, and all names may 
-be preceded by modifiers:
+| Argument Type                       | Example     |
+|-------------------------------------|-------------|
+| short name (single character)       | f           |
+| long name (more than one character) | file        |
+| optional positional                 | [file name] |
+| required positional                 | \<file\>    |
 
-- ! - for boolean values, when setting the value it is first inverted
-- ? - for non-boolean named arguments, makes the value optional (the name can 
-appear without the value)
+Names for positionals (inside angled or square brackets) may contain spaces, 
+and all names may be preceded by modifiers:
+
+| Flag | Description                                                     |
+|------|-----------------------------------------------------------------|
+| !    | for boolean values, when setting the value it is first inverted |
+| ?    | for non-boolean named arguments, makes the value optional       |
 
 Long names for boolean values always get a second "no-" version implicitly
 created.
@@ -127,24 +146,25 @@ For example:
 ```C++
 int main(int argc, char ** argv) {
     Cli cli;
-    cli.arg<string>("f ?foo [foo]").desc("foo the bar");
-    cli.arg<bool>("!b bar").desc("bar the baz");
-    cli.arg<string>("<baz>").desc("all the baz");
+    cli.arg<string>("a ?apple [apple]").desc("apples are red");
+    cli.arg<bool>("!o orange").desc("oranges are orange");
+    cli.arg<string>("<pear>").desc("pears are yellow");
     cli.parse(cerr, argc, argv);
     return EX_OK;
 }
 ```
-Ends up looking like this (note: required positionals always go before any 
-optional ones):
+Ends up looking like this (note: required positionals **always** go before 
+any optional ones):
 ```console
 $ a.out --help  
-Usage: a.out [OPTIONS] <baz> [foo]  
-  baz       all the baz  
-  foo       foo the bar  
+Usage: a.out [OPTIONS] <pear> [apple]  
+  pear      pears are yellow
+  apple     apples are red
 
 Options:  
-  -f, --foo STRING  foo the bar  
-  -b, --[no-]bar    bar the baz  
+  --help              Show this message and exit.  
+  -a, --apple STRING  apples are red
+  -o, --[no-]orange   oranges are orange
 ```
 
 When named arguments are added they replace any previous rule with the same 
@@ -152,18 +172,19 @@ name, therefore these args declare '-n' an inverted bool:
 ```C++
 cli.arg<bool>("n !n");
 ```
-But now '-n' is a string:
+But now it's '-n STRING', a string:
 ```C++
 cli.arg<bool>("n !n");
 cli.arg<string>("n");
 ```
 
 ## Positional Arguments
-- required are placed before optional
-- only one can have nargs = -1
-  - if the -1 nargs arg is required, it prevents optionals from matching
-  - if it's optional, it prevents subsequent optionals from matching
-
+Arguments are positioned by the order they are added, with the exception that
+all required positionals appear before optional ones. If there are multiple
+variadic positionals with unlimited (nargs = -1) arity all but the first will 
+be treated as if they had nargs = 1. Also, if the unlimited one is required
+it will prevent any optional positionals from triggering, since it eats up 
+all the arguments before they get a turn.
 
 ## Boolean Arguments
 Long names for boolean values always get a second "no-" version implicitly
@@ -171,7 +192,7 @@ created.
 
 - feature, using boolValue()
 
-## Vector Arguments
+## Variadic Arguments
 - nargs = -1 for unlimited
 
 ## Special Arguments
