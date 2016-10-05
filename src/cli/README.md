@@ -14,8 +14,8 @@ What does it look like?
 ```C++
 int main(int argc, char ** argv) {
     Cli cli;
-    auto & count = cli.arg<int>("count", 1);
-    auto & name = cli.arg<string>("name", "Unknown");
+    auto & count = cli.arg<int>("c count", 1).desc("times to say hello");
+    auto & name = cli.arg<string>("name", "Unknown").desc("who to greet");
     if (!cli.parse(cerr, argc, argv))
         return cli.exitCode();
     if (!name)
@@ -36,7 +36,15 @@ Hello Unknown!
 ```
 
 It automatically generates nicely formatted help pages:
-> Just kidding, it doesn't do this at all!
+```console
+$ a.out --help
+Usage: a.out [OPTIONS]
+
+Options:
+  --help               Show this message and exit.
+  -c, --count INTEGER  times to say hello
+  --name STRING        who to greet
+```
 
 ## Basic Usage
 After inspecting args the Cli parser returns false if it thinks the program 
@@ -54,7 +62,7 @@ int main(int argc, char ** argv) {
 ```
 
 And what it looks like:
-```
+```console
 $ a.out
 Does the apple have a worm? No!
 $ a.out --help  
@@ -63,18 +71,6 @@ Usage: a.out [OPTIONS]
 Options:  
   --help    Show this message and exit.  
 ```
-
-## How to keep Cli::parse() from doing IO
-For some applications, such as Windows services, it's important not to 
-interact with the console. There some simple steps to stop parse() from doing 
-any console IO:
-
-1. Don't use options (such as Arg<T>::prompt()) that explicitly it to do IO.
-2. Add your own "help" argument to override the default, you can still 
-turn around and call Cli::writeHelp(ostream&) if desired.
-3. Use the two argument version of Cli::parse() so it doesn't output errors 
-immediately. The text of any error that may have occurred during a parse is 
-available via Cli::errMsg()
 
 ## Arguments
 Cli is used by declaring targets to receive arguments. Either via pointer
@@ -98,7 +94,7 @@ int main(int argc, char ** argv) {
 ```
 
 And what it looks like:
-```
+```console
 $ a.out --fruit=orange
 Does the orange have a worm? No!
 $ a.out --help  
@@ -140,7 +136,7 @@ int main(int argc, char ** argv) {
 ```
 Ends up looking like this (note: required positionals always go before any 
 optional ones):
-```
+```console
 $ a.out --help  
 Usage: a.out [OPTIONS] <baz> [foo]  
   baz       all the baz  
@@ -168,17 +164,25 @@ cli.arg<string>("n");
   - if the -1 nargs arg is required, it prevents optionals from matching
   - if it's optional, it prevents subsequent optionals from matching
 
+
 ## Boolean Arguments
 Long names for boolean values always get a second "no-" version implicitly
 created.
 
+- feature, using boolValue()
+
 ## Vector Arguments
+- nargs = -1 for unlimited
 
 ## Special Arguments
-- -
-- --
+- "-"
+- "--"
 
-## Misc
+## External Variables
+- external targets
+- binding targets multiple times
+  - rebinding to internal proxy targets
+
 ```C++
 int main(int argc, char ** argv) {
     bool worm;
@@ -193,7 +197,7 @@ int main(int argc, char ** argv) {
 }
 ```
 And what it looks like:
-```
+```console
 $ a.out --fruit=orange
 Does the orange have a worm? No!
 $ a.out --help  
@@ -203,3 +207,42 @@ Options:
   --fruit STRING  type of fruit
   --help          Show this message and exit.  
 ```
+
+## Life After Parsing
+- dereferencing proxies
+- testing if proxy was triggered
+- getting the name that triggered a proxy
+
+## Variable Modifiers
+- desc
+- implicitValue, using with named arguments with optional values
+- count, -vvv -> 3, must be integral? convertable from integral? :P
+- boolValue(bool isDefault), "feature switch"
+- choice(vector<T>&), value from vector, index in vec for enum?, 
+or vector<pair<string, T>>?
+- prompt(string&, bool hide, bool confirm)
+- argPassword
+- yes, are you sure?
+- range
+- clamp
+
+## How to keep Cli::parse() from doing IO
+For some applications, such as Windows services, it's important not to 
+interact with the console. There some simple steps to stop parse() from doing 
+any console IO:
+
+1. Don't use options (such as Arg<T>::prompt()) that explicitly it to do IO.
+2. Add your own "help" argument to override the default, you can still 
+turn around and call Cli::writeHelp(ostream&) if desired.
+3. Use the two argument version of Cli::parse() so it doesn't output errors 
+immediately. The text of any error that may have occurred during a parse is 
+available via Cli::errMsg()
+
+## Aspirational Roadmap
+- callbacks
+- help text and formatting options
+- environment variables?
+- support /name:value syntax
+- composable subcommands
+- unrecognized named options?
+- tuple arguments
