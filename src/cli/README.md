@@ -1,5 +1,4 @@
-; README.md - dim cli
-# CLI
+# dim-cli
 
 Classes for making unix style command line interfaces.
 
@@ -28,19 +27,21 @@ int main(int argc, char ** argv) {
 ```
 
 What it looks like when run:
-> $ a.out --count=3  
-> Using the unknown name.  
-> Hello Unknown!  
-> Hello Unknown!  
-> Hello Unknown!  
+```console
+$ a.out --count=3  
+Using the unknown name.  
+Hello Unknown!  
+Hello Unknown!  
+Hello Unknown!  
+```
 
 It automatically generates nicely formatted help pages:
 > Just kidding, it doesn't do this at all!
 
 ## Basic Usage
-After inspecting args the Cli parser returns false if it wants the program to 
-exit. exitCode() will be set to either EX_OK (because of an early exit like 
---help / --version) or EX_USAGE for bad arguments.
+After inspecting args the Cli parser returns false if it thinks the program 
+should exit. Cli::exitCode() will be set to either EX_OK (because of an early 
+exit like --help) or EX_USAGE for bad arguments.
 
 ```C++
 int main(int argc, char ** argv) {
@@ -53,18 +54,21 @@ int main(int argc, char ** argv) {
 ```
 
 And what it looks like:
-> $ a.out
-> Does the apple have a worm? No!
-> $ a.out --help  
-> Usage: a.out [OPTIONS]  
->
-> Options:  
->   --help        Show this message and exit.  
+```
+$ a.out
+Does the apple have a worm? No!
+$ a.out --help  
+Usage: a.out [OPTIONS]  
 
-## How to keep Cli::parse from doing IO
+Options:  
+  --help    Show this message and exit.  
+```
+
+## How to keep Cli::parse() from doing IO
 For some applications, such as Windows services, it's important not to 
 interact with the console. There some simple steps to stop parse() from doing 
 any console IO:
+
 1. Don't use options (such as Arg<T>::prompt()) that explicitly it to do IO.
 2. Add your own "help" argument to override the default, you can still 
 turn around and call Cli::writeHelp(ostream&) if desired.
@@ -94,23 +98,28 @@ int main(int argc, char ** argv) {
 ```
 
 And what it looks like:
-> $ a.out --fruit=orange
-> Does the orange have a worm? No!
-> $ a.out --help  
-> Usage: a.out [OPTIONS]  
->
-> Options:  
->   --fruit TEXT  
->   --help        Show this message and exit.  
+```
+$ a.out --fruit=orange
+Does the orange have a worm? No!
+$ a.out --help  
+Usage: a.out [OPTIONS]  
+
+Options:  
+  --fruit STRING  
+  --help          Show this message and exit.  
+```
 
 ## Argument Names
 Names are passed in as a space separated list of names:
+  
 - f - single character (short name) named argument
 - file - multicharacter (long name) named argument
 - [file name] - optional positional argument
 - <file> - required positional argument
+
 Names for positionals (inside brackets) may contain spaces, and all names may 
 be preceded by modifiers:
+
 - ! - for boolean values, when setting the value it is first inverted
 - ? - for non-boolean named arguments, makes the value optional (the name can 
 appear without the value)
@@ -119,7 +128,7 @@ Long names for boolean values always get a second "no-" version implicitly
 created.
 
 For example:
-```
+```C++
 int main(int argc, char ** argv) {
     Cli cli;
     cli.arg<string>("f ?foo [foo]").desc("foo the bar");
@@ -129,19 +138,47 @@ int main(int argc, char ** argv) {
     return EX_OK;
 }
 ```
-> $ a.out --help  
-> Usage: a.out [OPTIONS] <baz> [foo]  
->   baz  all the baz  
->   foo  foo the bar  
->
-> Options:  
->   -f, --foo STRING  foo the bar  
->   -b, --[no-]bar    bar the baz  
+Ends up looking like this (note: required positionals always go before any 
+optional ones):
+```
+$ a.out --help  
+Usage: a.out [OPTIONS] <baz> [foo]  
+  baz       all the baz  
+  foo       foo the bar  
+
+Options:  
+  -f, --foo STRING  foo the bar  
+  -b, --[no-]bar    bar the baz  
+```
+
+When named arguments are added they replace any previous rule with the same 
+name, therefore these args declare '-n' an inverted bool:
+```C++
+cli.arg<bool>("n !n");
+```
+But now '-n' is a string:
+```C++
+cli.arg<bool>("n !n");
+cli.arg<string>("n");
+```
 
 ## Positional Arguments
+- required are placed before optional
+- only one can have nargs = -1
+  - if the -1 nargs arg is required, it prevents optionals from matching
+  - if it's optional, it prevents subsequent optionals from matching
+
 ## Boolean Arguments
+Long names for boolean values always get a second "no-" version implicitly
+created.
+
 ## Vector Arguments
 
+## Special Arguments
+- -
+- --
+
+## Misc
 ```C++
 int main(int argc, char ** argv) {
     bool worm;
@@ -156,11 +193,13 @@ int main(int argc, char ** argv) {
 }
 ```
 And what it looks like:
-> $ a.out --fruit=orange
-> Does the orange have a worm? No!
-> $ a.out --help  
-> Usage: a.out [OPTIONS]  
->
-> Options:  
->   --fruit TEXT  type of fruit
->   --help        Show this message and exit.  
+```
+$ a.out --fruit=orange
+Does the orange have a worm? No!
+$ a.out --help  
+Usage: a.out [OPTIONS]  
+
+Options:  
+  --fruit STRING  type of fruit
+  --help          Show this message and exit.  
+```
