@@ -214,20 +214,20 @@ Application::Application(int argc, char * argv[])
 
 //===========================================================================
 void Application::onTask() {
-    CmdParser cmd;
+    CmdParser cli;
     // positional arguments
-    auto & srcfile = cmd.arg<experimental::filesystem::path>("[source file]");
+    auto & srcfile = cli.arg<experimental::filesystem::path>("[source file]");
     // option switches
-    auto & help = cmd.arg<bool>("? h help").desc("Print this message.");
-    auto & test = cmd.arg<bool>("test");
-    cmd.arg(&s_allRules, "!min-core", s_allRules);
-    cmd.arg(&s_cmdopts.markRecursion, "f mark-functions", 1);
-    cmd.arg(&s_cmdopts.includeCallbacks, "!C callbacks", true);
-    cmd.arg(&s_cmdopts.buildStateTree, "!B build", true);
-    cmd.arg(&s_cmdopts.dedupStateTree, "!D dedup", true);
-    cmd.arg(&s_cmdopts.writeStatePositions, "state-detail");
-    cmd.arg(&s_cmdopts.writeFunctions, "write-functions", true);
-    if (!cmd.parse(cerr, m_argc, m_argv)) {
+    auto & help = cli.arg<bool>("? h help").desc("Print this message.");
+    auto & test = cli.arg<bool>("test");
+    cli.arg(&s_allRules, "!min-core", s_allRules);
+    cli.arg(&s_cmdopts.markRecursion, "f mark-functions", 1);
+    cli.arg(&s_cmdopts.includeCallbacks, "!C callbacks", true);
+    cli.arg(&s_cmdopts.buildStateTree, "!B build", true);
+    cli.arg(&s_cmdopts.dedupStateTree, "!D dedup", true);
+    cli.arg(&s_cmdopts.writeStatePositions, "state-detail");
+    cli.arg(&s_cmdopts.writeFunctions, "write-functions", true);
+    if (!cli.parse(cerr, m_argc, m_argv)) {
         return usageError(cerr);
     }
     cout << "allRules: " << s_allRules << endl;
