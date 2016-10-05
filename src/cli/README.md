@@ -47,14 +47,14 @@ Options:
 
 ## Terminology
 Argument
-  : something appearing in a command line, probably typed by a user, 
+: something appearing in a command line, probably typed by a user, 
   consisting of a name and/or value.
 Positional argument
-  : argument identified by their position in the command line
+: argument identified by their position in the command line
 Named argument
-  : argument identifiable by name
+: argument identifiable by name
 Variable
-  : object that receives values and contains rules about what values
+: object that receives values and contains rules about what values
   can be given to it.
 
 The command line interface (Cli) maps values to variables by name
