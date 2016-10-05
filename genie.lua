@@ -46,14 +46,14 @@ project "dimapp"
   }
   pchsource "src/pch.cpp"
 
-project "dimapp-cmdline"
+project "dimapp-cli"
   kind "StaticLib"
   location "projects"
-  vpaths { ["*"] = "src/cmdline" }
+  vpaths { ["*"] = "src/cli" }
   files { 
-    "src/cmdline/*"
+    "src/cli/*"
   }
-  pchsource "src/cmdline/pch.cpp"
+  pchsource "src/cli/pch.cpp"
 
 project "dimapp-win8"
   kind "StaticLib"
@@ -76,18 +76,18 @@ project "-meta"
     "LICENSE",
     "README.md"
   }
-  links { "dimapp", "dimapp-win8", "dimapp-cmdline" }
+  links { "dimapp", "dimapp-win8", "dimapp-cli" }
 
 
 -- tests
 group "tests"
-project "cmdline"
+project "cli"
   kind "ConsoleApp"
   location "projects"
-  vpaths { ["*"] = "tests/cmdline" }
-  files { "tests/cmdline/**" }
-  pchsource "tests/cmdline/pch.cpp"
-  links { "dimapp", "dimapp-win8", "dimapp-cmdline" }
+  vpaths { ["*"] = "tests/cli" }
+  files { "tests/cli/**" }
+  pchsource "tests/cli/pch.cpp"
+  links { "dimapp", "dimapp-win8", "dimapp-cli" }
 
 project "hpack"
   kind "ConsoleApp"
@@ -95,7 +95,7 @@ project "hpack"
   vpaths { ["*"] = "tests/hpack" }
   files { "tests/hpack/**" }
   pchsource "tests/hpack/pch.cpp"
-  links { "dimapp", "dimapp-win8", "dimapp-cmdline" }
+  links { "dimapp", "dimapp-win8", "dimapp-cli" }
 
 project "http"
   kind "ConsoleApp"
@@ -103,7 +103,7 @@ project "http"
   vpaths { ["*"] = "tests/http" }
   files { "tests/http/**" }
   pchsource "tests/http/pch.cpp"
-  links { "dimapp", "dimapp-win8", "dimapp-cmdline" }
+  links { "dimapp", "dimapp-win8", "dimapp-cli" }
 
 project "tls"
   kind "ConsoleApp"
@@ -111,7 +111,7 @@ project "tls"
   vpaths { ["*"] = "tests/tls" }
   files { "tests/tls/**" }
   pchsource "tests/tls/pch.cpp"
-  links { "dimapp", "dimapp-win8", "dimapp-cmdline" }
+  links { "dimapp", "dimapp-win8", "dimapp-cli" }
 
 
 -- tools
@@ -122,7 +122,7 @@ project "pargen"
   vpaths { ["*"] = "tools/pargen" }
   files { "tools/pargen/**" }
   pchsource "tools/pargen/pch.cpp"
-  links { "dimapp", "dimapp-win8", "dimapp-cmdline" }
+  links { "dimapp", "dimapp-win8", "dimapp-cli" }
 
 project "tnet"
   kind "ConsoleApp"
@@ -130,5 +130,5 @@ project "tnet"
   vpaths { ["*"] = "tools/tnet" }
   files { "tools/tnet/**" }
   pchsource "tools/tnet/pch.cpp"
-  links { "dimapp", "dimapp-win8", "dimapp-cmdline" }
+  links { "dimapp", "dimapp-win8", "dimapp-cli" }
 

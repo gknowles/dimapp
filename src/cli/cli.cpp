@@ -1,4 +1,4 @@
-// cmdline.cpp - dim cmdline
+// cli.cpp - dim cli
 #include "pch.h"
 #pragma hdrstop
 
@@ -8,26 +8,25 @@ using namespace Dim;
 
 /****************************************************************************
 *
-*   CmdParser::ValueBase
+*   Cli::ValueBase
 *
 ***/
 
 //===========================================================================
-CmdParser::ValueBase::ValueBase(
-    const std::string & names, bool multiple, bool boolean)
+Cli::ValueBase::ValueBase(
+    const std::string & names, bool boolean)
     : m_names{names}
-    , m_multiple{multiple}
     , m_bool{boolean} {}
 
 
 /****************************************************************************
 *
-*   CmdParser
+*   Cli
 *
 ***/
 
 //===========================================================================
-void CmdParser::resetValues() {
+void Cli::resetValues() {
     for (auto && kv : m_shortNames) {
         auto val = kv.second.val;
         val->m_explicit = false;
@@ -48,10 +47,12 @@ void CmdParser::resetValues() {
         key.val->m_refName = key.name;
         key.val->resetValue();
     }
+    m_exitCode = EX_OK;
+    m_errMsg.clear();
 }
 
 //===========================================================================
-void CmdParser::addValue(std::unique_ptr<ValueBase> src) {
+void Cli::addValue(std::unique_ptr<ValueBase> src) {
     ValueBase * val = src.get();
     m_values.push_back(std::move(src));
     const char * ptr = val->m_names.data();
@@ -84,7 +85,7 @@ void CmdParser::addValue(std::unique_ptr<ValueBase> src) {
 }
 
 //===========================================================================
-void CmdParser::addKey(const string & name, ValueBase * val) {
+void Cli::addKey(const string & name, ValueBase * val) {
     const bool invert = true;
     const bool optional = true;
 
@@ -132,13 +133,20 @@ void CmdParser::addKey(const string & name, ValueBase * val) {
 }
 
 //===========================================================================
-bool CmdParser::parseValue(ValueBase & val, const char ptr[]) {
+bool Cli::parseValue(ValueBase & val, const char ptr[]) {
     val.m_explicit = true;
     return val.parseValue(ptr);
 }
 
 //===========================================================================
-bool CmdParser::parse(ostream & os, size_t argc, char ** argv) {
+bool Cli::badUsage(const string & msg) {
+    m_errMsg = msg;
+    m_exitCode = EX_USAGE;
+    return false;
+}
+
+//===========================================================================
+bool Cli::parse(size_t argc, char ** argv) {
     resetValues();
 
     // the 0th (name of this program) arg should always be present
@@ -157,11 +165,10 @@ bool CmdParser::parse(ostream & os, size_t argc, char ** argv) {
             for (; *ptr && *ptr != '-'; ++ptr) {
                 auto it = m_shortNames.find(*ptr);
                 if (it == m_shortNames.end()) {
-                    os << "Unknown option: -" << *ptr << endl;
-                    return false;
+                    return badUsage("Unknown option: - "s + *ptr);
                 }
                 vkey = it->second;
-                vkey.val->m_refName = string("-") + *ptr;
+                vkey.val->m_refName = "-"s + *ptr;
                 if (vkey.val->m_bool) {
                     parseValue(*vkey.val, vkey.invert ? "0" : "1");
                     continue;
@@ -195,35 +202,30 @@ bool CmdParser::parse(ostream & os, size_t argc, char ** argv) {
                     it = m_longNames.find(key.data() + 3);
                     continue;
                 }
-                os << "Unknown option: --" << key << endl;
-                return false;
+                return badUsage("Unknown option: --"s + key);
             }
             vkey = it->second;
             vkey.val->m_refName = "--" + key;
             if (vkey.val->m_bool) {
                 if (equal) {
-                    os << "Unknown option: --" << key << "=" << endl;
-                    return false;
+                    return badUsage("Unknown option: --" + key + "=");
                 }
                 parseValue(*vkey.val, (hasNo ^ vkey.invert) ? "0" : "1");
                 continue;
             } else if (hasNo) {
-                os << "Unknown option: --" << key << endl;
-                return false;
+                return badUsage("Unknown option: --" + key);
             }
             goto option_value;
         }
 
-        // argument
+        // positional
         if (pos >= size(m_args)) {
-            os << "Unexpected argument: " << ptr << endl;
-            return false;
+            return badUsage("Unexpected argument: "s + ptr);
         }
         vkey = m_args[pos];
         vkey.val->m_refName = vkey.name;
         if (!parseValue(*vkey.val, ptr)) {
-            os << "Invalid " << vkey.val->m_refName << ": " << ptr;
-            return false;
+            return badUsage("Invalid " + vkey.val->m_refName + ": " + ptr);
         }
         if (!vkey.val->m_multiple)
             pos += 1;
@@ -232,8 +234,7 @@ bool CmdParser::parse(ostream & os, size_t argc, char ** argv) {
     option_value:
         if (*ptr) {
             if (!parseValue(*vkey.val, ptr)) {
-                os << "Invalid option value: " << ptr << endl;
-                return false;
+                return badUsage("Invalid option value: "s + ptr);
             }
             continue;
         }
@@ -243,18 +244,15 @@ bool CmdParser::parse(ostream & os, size_t argc, char ** argv) {
         argc -= 1;
         argv += 1;
         if (!argc) {
-            os << "No value given for " << vkey.val->m_refName << endl;
-            return false;
+            return badUsage("No value given for " + vkey.val->m_refName);
         }
         if (!parseValue(*vkey.val, *argv)) {
-            os << "Invalid option value: " << *argv << endl;
-            return false;
+            return badUsage("Invalid option value: "s + *argv);
         }
     }
 
     if (pos < size(m_args) && !m_args[pos].optional) {
-        os << "No value given for " << m_args[pos].name << endl;
-        return false;
+        return badUsage("No value given for " + m_args[pos].name);
     }
     return true;
 }
@@ -267,6 +265,6 @@ bool CmdParser::parse(ostream & os, size_t argc, char ** argv) {
 ***/
 
 //===========================================================================
-ostream & Dim::operator<<(ostream & os, const CmdParser::ValueBase & val) {
+ostream & Dim::operator<<(ostream & os, const Cli::ValueBase & val) {
     return os << val.name();
 }

@@ -24,7 +24,7 @@
     <ClInclude Include="..\include\dim\charbuf.h">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\dim\cmdline.h">
+    <ClInclude Include="..\include\dim\cli.h">
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="..\include\dim\config.h">

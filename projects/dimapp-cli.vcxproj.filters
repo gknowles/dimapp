@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <None Include="..\src\cmdline\README.md" />
+    <None Include="..\src\cli\README.md" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\cmdline\pch.h" />
+    <ClInclude Include="..\src\cli\pch.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\cmdline\cmdline.cpp" />
-    <ClCompile Include="..\src\cmdline\pch.cpp" />
+    <ClCompile Include="..\src\cli\cli.cpp" />
+    <ClCompile Include="..\src\cli\pch.cpp" />
   </ItemGroup>
 </Project>

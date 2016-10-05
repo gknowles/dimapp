@@ -126,8 +126,8 @@ static bool internalTest() {
 }
 
 //===========================================================================
-static void usageError(ostream & os) {
-    os << 1 + R"(
+static void usageError(ostream & os, const string & msg) {
+    os << msg << R"(
 usage: pargen [-?, -h, --help] [-f, --mark-functions=#] [-C, --no-callbacks] 
               [--min-core] [-B, --no-build] [-D, --no-dedup] [--state-detail]
               [--no-write-functions]
@@ -214,10 +214,10 @@ Application::Application(int argc, char * argv[])
 
 //===========================================================================
 void Application::onTask() {
-    CmdParser cli;
+    Cli cli;
     // positional arguments
     auto & srcfile = cli.arg<experimental::filesystem::path>("[source file]");
-    // option switches
+    // named arguments
     auto & help = cli.arg<bool>("? h help").desc("Print this message.");
     auto & test = cli.arg<bool>("test");
     cli.arg(&s_allRules, "!min-core", s_allRules);
@@ -227,10 +227,14 @@ void Application::onTask() {
     cli.arg(&s_cmdopts.dedupStateTree, "!D dedup", true);
     cli.arg(&s_cmdopts.writeStatePositions, "state-detail");
     cli.arg(&s_cmdopts.writeFunctions, "write-functions", true);
-    if (!cli.parse(cerr, m_argc, m_argv)) {
-        return usageError(cerr);
+    if (!cli.parse(m_argc, m_argv)) {
+        if (int code = cli.exitCode()) {
+            assert(code == EX_USAGE);
+            return usageError(cerr, cli.errMsg());
+        } else {
+            return appSignalShutdown(code);
+        }
     }
-    cout << "allRules: " << s_allRules << endl;
     if (*help || m_argc == 1) {
         printSyntax(cout);
         return appSignalShutdown(EX_OK);
@@ -240,8 +244,7 @@ void Application::onTask() {
         return appSignalShutdown(code);
     }
     if (!srcfile) {
-        cerr << "No value given for " << srcfile << endl;
-        return usageError(cerr);
+        return usageError(cerr, "No value given for " + srcfile.name());
     }
 
     // process abnf file

@@ -11,8 +11,8 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{A990302C-955E-2432-7EF2-94586A5F0097}</ProjectGuid>
-    <RootNamespace>dimapp-cmdline</RootNamespace>
+    <ProjectGuid>{E571F860-D129-3AAE-3A31-130A2608D59E}</ProjectGuid>
+    <RootNamespace>dimapp-cli</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
     <Keyword>Win32Proj</Keyword>
   </PropertyGroup>
@@ -39,14 +39,14 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>..\bin\</OutDir>
-    <IntDir>obj\x64\Debug\dimapp-cmdline\</IntDir>
-    <TargetName>dimapp-cmdline</TargetName>
+    <IntDir>obj\x64\Debug\dimapp-cli\</IntDir>
+    <TargetName>dimapp-cli</TargetName>
     <TargetExt>.lib</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>..\bin\</OutDir>
-    <IntDir>obj\x64\Release\dimapp-cmdline\</IntDir>
-    <TargetName>dimapp-cmdline</TargetName>
+    <IntDir>obj\x64\Release\dimapp-cli\</IntDir>
+    <TargetName>dimapp-cli</TargetName>
     <TargetExt>.lib</TargetExt>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -65,14 +65,14 @@
       <WarningLevel>Level4</WarningLevel>
       <TreatWarningAsError>true</TreatWarningAsError>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
-      <ProgramDataBaseFileName>$(OutDir)dimapp-cmdline.pdb</ProgramDataBaseFileName>
+      <ProgramDataBaseFileName>$(OutDir)dimapp-cli.pdb</ProgramDataBaseFileName>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\include;..\vendor\sodium\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
   <Lib>
-    <OutputFile>$(OutDir)dimapp-cmdline.lib</OutputFile>
+    <OutputFile>$(OutDir)dimapp-cli.lib</OutputFile>
     <TargetMachine>MachineX64</TargetMachine>
   </Lib>
     <Link>
@@ -96,14 +96,14 @@
       <WarningLevel>Level4</WarningLevel>
       <TreatWarningAsError>true</TreatWarningAsError>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <ProgramDataBaseFileName>$(OutDir)dimapp-cmdline.pdb</ProgramDataBaseFileName>
+      <ProgramDataBaseFileName>$(OutDir)dimapp-cli.pdb</ProgramDataBaseFileName>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\include;..\vendor\sodium\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
   <Lib>
-    <OutputFile>$(OutDir)dimapp-cmdline.lib</OutputFile>
+    <OutputFile>$(OutDir)dimapp-cli.lib</OutputFile>
     <TargetMachine>MachineX64</TargetMachine>
   </Lib>
     <Link>
@@ -114,20 +114,20 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\cmdline\pch.h" />
+    <ClInclude Include="..\src\cli\pch.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\cmdline\cmdline.cpp">
-      <ObjectFileName>$(IntDir)src\cmdline\</ObjectFileName>
+    <ClCompile Include="..\src\cli\cli.cpp">
+      <ObjectFileName>$(IntDir)src\cli\</ObjectFileName>
     </ClCompile>
-    <ClCompile Include="..\src\cmdline\pch.cpp">
-      <ObjectFileName>$(IntDir)src\cmdline\</ObjectFileName>
+    <ClCompile Include="..\src\cli\pch.cpp">
+      <ObjectFileName>$(IntDir)src\cli\</ObjectFileName>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\src\cmdline\README.md" />
+    <None Include="..\src\cli\README.md" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,3 +1,4 @@
+; README.md - dim cli
 # cmdline
 
 Classes for making unix style command line interfaces.
@@ -25,18 +26,14 @@ int main(int argc, char ** argv) {
 ```
 
 What it looks like when run:
-```
->hello --count=3
-Using the unknown name.
-Hello Unknown!
-Hello Unknown!
-Hello Unknown!
-```
+> >hello --count=3  
+> Using the unknown name.  
+> Hello Unknown!  
+> Hello Unknown!  
+> Hello Unknown!  
 
 It automatically generates nicely formatted help pages:
-```
-Just kidding, it doesn't do this at all!
-```
+> Just kidding, it doesn't do this at all!
 
 ## Basic Concepts
 Cmdline is used by declaring targets to receive arguments. Either via pointer

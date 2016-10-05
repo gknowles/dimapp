@@ -1,3 +1,3 @@
-// pch.cpp - dim cmdline
+// pch.cpp - dim test cli
 #include "pch.h"
 #pragma hdrstop

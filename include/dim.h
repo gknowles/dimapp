@@ -6,7 +6,7 @@
 #include "dim/address.h"
 #include "dim/app.h"
 #include "dim/charbuf.h"
-#include "dim/cmdline.h"
+#include "dim/cli.h"
 #include "dim/console.h"
 #include "dim/file.h"
 #include "dim/handle.h"
