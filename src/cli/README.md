@@ -25,8 +25,7 @@ int main(int argc, char ** argv) {
 }
 ```
 
-What it looks like when run:
-```console
+What it looks like when run: ```console
 $ a.out --count=3  
 Using the unknown name.  
 Hello Unknown!  
@@ -47,17 +46,17 @@ Options:
 
 ## Terminology
 Argument
-: something appearing in a command line, probably typed by a user, 
-  consisting of a name and/or value.
+  : something appearing in a command line, probably typed by a user, 
+    consisting of a name and/or value.
 Positional argument
-: argument identified by their position in the command line
+  : argument identified by their position in the command line
 Named argument
-: argument identifiable by name
+  : argument identifiable by name (e.g. --name, -n)
 Variable
-: object that receives values and contains rules about what values
-  can be given to it.
+  : object that receives values and contains rules about what values
+    can be given to it.
 
-The command line interface (Cli) maps values to variables by name
+The command line interface (Cli) maps arguments to variables by name
 and position.
 
 
@@ -88,13 +87,13 @@ Options:
 ```
 
 ## Arguments
-Cli is used by declaring targets to receive arguments. Either via pointer
-to a predefined variable or by implicitly creating the variable as part of the 
-call declaring the target.
+Cli is used by declaring variables to receive arguments. Either via pointer
+to a predefined external variable or by implicitly creating the variable as 
+part of declaring it.
 
-Use arg<T>(names, defaultValue) to link a target variable with argument 
-names. It returns a proxy object that can be used like a pointer (* and ->) 
-to access the target directly.
+Use arg<T>(names, defaultValue) to link argument names to a target variable. 
+It returns a proxy object that can be used like a pointer (* and ->) to 
+access the target directly.
 
 ```C++
 int main(int argc, char ** argv) {
@@ -120,11 +119,58 @@ Options:
   --fruit STRING  
 ```
 
+Add a description:
+```C++
+auto & fruit = cli.arg<string>("fruit", apple").desc("type of fruit");
+```
+And you get:
+```console
+$ a.out --help
+Usage: a.out [OPTIONS]
+
+Options:
+  --help          Show this message and exit.  
+  --fruit STRING  type of fruit
+```
+
+## External Variables
+- external targets
+- binding targets multiple times
+  - rebinding to internal proxy targets
+
+```C++
+int main(int argc, char ** argv) {
+    bool worm;
+    Cli cli;
+    cli.arg(&worm, "w worm").desc("make it icky");
+    auto & fruit = cli.arg<string>("fruit", "apple").desc("type of fruit");
+    if (!cli.parse(cerr, argc, argv))
+        return cli.exitCode();
+    cout << "Does the " << *fruit << " have a worm? " 
+        << worm ? "Yes :(" : "No!";
+    return EX_OK;
+}
+```
+And what it looks like:
+```console
+$ a.out --fruit=orange
+Does the orange have a worm? No!
+$ a.out -w
+Does the apple have a worm? Yes :(
+$ a.out --help  
+Usage: a.out [OPTIONS]  
+
+Options:  
+  --help          Show this message and exit.  
+  --fruit STRING  type of fruit
+  -w, --worm      make it icky
+```
+
 ## Argument Names
 Names are passed in as a space separated list of argument names that look 
 like these:
 
-| Argument Type                       | Example     |
+| Type of name                        | Example     |
 |-------------------------------------|-------------|
 | short name (single character)       | f           |
 | long name (more than one character) | file        |
@@ -137,10 +183,10 @@ and all names may be preceded by modifiers:
 | Flag | Description                                                     |
 |------|-----------------------------------------------------------------|
 | !    | for boolean values, when setting the value it is first inverted |
-| ?    | for non-boolean named arguments, makes the value optional       |
+| ?    | for non-boolean named arguments, makes it an [optional value](#Optional Values).|
 
-Long names for boolean values always get a second "no-" version implicitly
-created.
+Long names for boolean values get a second "no-" version implicitly
+created for them.
 
 For example:
 ```C++
@@ -172,87 +218,207 @@ name, therefore these args declare '-n' an inverted bool:
 ```C++
 cli.arg<bool>("n !n");
 ```
-But now it's '-n STRING', a string:
+But with these it's '-n STRING', a string:
 ```C++
 cli.arg<bool>("n !n");
 cli.arg<string>("n");
 ```
 
 ## Positional Arguments
-Arguments are positioned by the order they are added, with the exception that
+Arguments are mapped by the order they are added, with the exception that
 all required positionals appear before optional ones. If there are multiple
 variadic positionals with unlimited (nargs = -1) arity all but the first will 
 be treated as if they had nargs = 1. Also, if the unlimited one is required
-it will prevent any optional positionals from triggering, since it eats up 
-all the arguments before they get a turn.
+it will prevent any optional positionals from getting populated, since it eats 
+up all the arguments before they get a turn.
 
-## Boolean Arguments
-Long names for boolean values always get a second "no-" version implicitly
-created.
 
-- feature, using boolValue()
+## Flag Arguments
+Some (most?) arguments are flags with no associated value, they just set
+a variable to a predefined value. This is the default when you create a 
+variable of type bool. Normally flags set the variable to true, but this can
+be changed in two ways:  
+- make it an inverted bool, which will set it to false
+  - explicitly using the "!" modifier
+  - define a long name and use the implicitly created "no-" prefix version
+- use var<T>::flagValue() to set the value, see [feature switches].
+
 
 ## Variadic Arguments
-- nargs = -1 for unlimited
+Allows for a specific (or unlimited) number of arguments to be returned in a 
+vector. Variadic arguments are declared using Cli::argVec<T>() which binds 
+to a std::vector<T>.
 
-## Special Arguments
-- "-"
-- "--"
+Example: ```C++
+// printing vectors as comma separated is annoying...
+template<typename T> 
+ostream & operator<< (ostream & os, const vector<T> & v) {
+    auto b = v.begin();
+    auto e = v.end();
+    if (b != e) {
+        os << *b++;
+        for (; b != e; ++b) os << ", " << *b;
+    }
+    return os;
+}
 
-## External Variables
-- external targets
-- binding targets multiple times
-  - rebinding to internal proxy targets
-
-```C++
 int main(int argc, char ** argv) {
-    bool worm;
     Cli cli;
-    cli.arg(&worm, "w worm").desc("make it icky");
-    auto & fruit = cli.arg<string>("fruit", "apple").desc("type of fruit");
-    if (!cli.parse(cerr, argc, argv))
+    vector<string> oranges;
+    cli.argVec(&oranges, "o orange").desc("oranges");
+    auto & apples = cli.argVec<string>("[apple]").desc("red fruit");
+    if (!cli.parse(cerr, argc, argv)) {
         return cli.exitCode();
-    cout << "Does the " << *fruit << " have a worm? " 
-        << worm ? "Yes :(" : "No!";
+    }
+    cout << "(" << *apples << ") and (" << *oranges << ") don't compare.";
     return EX_OK;
 }
 ```
-And what it looks like:
+And from the command line:
 ```console
-$ a.out --fruit=orange
-Does the orange have a worm? No!
-$ a.out --help  
-Usage: a.out [OPTIONS]  
+$ a.out -o mandarin -onavel "red delicious" honeycrisp
+(red delicious, honeycrisp) and (mandarin, navel) don't compare.
+$ a.out --help
+Usage: a.out [OPTIONS] [apple...]
+  apple     red fruit
 
-Options:  
-  --fruit STRING  type of fruit
-  --help          Show this message and exit.  
+Options:
+  --help               Show this message and exit.
+  -o, --orange STRING  oranges
+```
+
+
+## Special Arguments
+| Value | Description                                               |
+|-------|-----------------------------------------------------------|
+| "-"   | Passed in as a positional argument.                       |
+| "--"  | Thrown away, but makes all remaining arguments positional |
+
+
+## Feature Switches
+Using flag arguments, feature switches are implemented by setting multiple
+variables that reference the same target and marking them flag values.
+
+To set the default, pass in a value of true to the flagValue() function of 
+the option that should be the default.
+
+```C++
+int main(int argc, char ** argv) {
+    Cli cli;
+    string fruit;
+    cli.arg(&fruit, "o orange", "orange").desc("oranges").flagValue();
+    cli.arg(&fruit, "a", "apple").desc("red fruit").flagValue(true); 
+    if (!cli.parse(cerr, argc, argv)) {
+        return cli.exitCode();
+    }
+    cout << "Does the " << fruit << " have a worm? No!";
+    return EX_OK;
+}
+```
+Which looks like:
+```console
+$ a.out
+Does the apple have a worm? No!
+$ a.out -o
+Does the orange have a worm? No!
+$ a.out --help
+Usage: a.out [OPTIONS]
+
+Options:
+  --help        Show this message and exit.
+  -a            red fruit
+  -o, --orange  oranges
 ```
 
 ## Life After Parsing
-- dereferencing proxies
-- testing if proxy was triggered
-- getting the name that triggered a proxy
+If you are using external varaibles you can just access them directly after 
+using Cli::parse() to populate them.
+
+If you use a proxy variable returned from Cli::arg<T>() you dereference it 
+just like a smart pointer to get at the value. In addition, you can test
+whether it was explicitly set and get the argument name that was used.
+
+```C++
+int main(int argc, char ** argv) {
+    Cli cli;
+    auto & name = cli.arg<string>("n name", "Unknown");
+    if (!cli.parse(cerr, argc, argv))
+        return cli.exitCode();
+    if (!name) {
+        cout << "Using the unknown name." << endl;
+    } else {
+        cout << "Name selected using " << name << endl;
+    }
+    cout << "Hello " << *name << "!" << endl;
+    return EX_OK;
+}
+```
+What it does: ```console
+$ a.out  
+Using the unknown name.  
+Hello Unknown!  
+$ a.out -n John
+Name selected using -n
+Hello John!
+$ a.out --name Mary
+Name selected using --name
+Hello Mary!
+```
+
+## Optional Values
+Named arguments expecting values can make those values optional by using the
+'?' name modifier (see [Argument Names](#Argument Names)). When no argument is
+given the variable is still set to the default in the Cli::arg() call. But 
+when the argument is given without a value, it gets set to the implicit value 
+instead. In order to set an optional value it must be connected to the name. 
+The implicit value is T{}, unless changed with Arg<T>::implicitValue().
+
+```C++
+int main(int argc, char ** argv) {
+    Cli cli;
+    auto & v1 = cli.arg<string>("?o ?optional", "default");
+    auto & v2 = cli.arg<string>("?i ?with-implicit", "default");
+    auto & p = cli.arg<string>("[positional]", "default");
+    v2.implicitValue("implicit");
+    if (!cli.parse(cerr, argc, argv))
+        return cli.exitCode();
+    cout << "v1 = " << *v1 << ", v2 = " << *v2 << ", p = " << *p;
+    return EX_OK;
+}
+```
+What happens: ```console
+$ a.out
+v1 = default, v2 = default, p = default
+$ a.out -oone -i two
+v1 = one, v2 = implicit, p = two
+$ a.out -o one -itwo
+v1 =, v2 = two, p = one
+$ a.out --optional=one --with-implicit two
+v1 = one, v2 = implicit, p = two
+$ a.out --optional one --with-implicit=two
+v1 =, v2 = two, p = one
+```
+
 
 ## Variable Modifiers
-- desc
-- implicitValue, using with named arguments with optional values
-- count, -vvv -> 3, must be integral? convertable from integral? :P
-- boolValue(bool isDefault), "feature switch"
-- choice(vector<T>&), value from vector, index in vec for enum?, 
-or vector<pair<string, T>>?
-- prompt(string&, bool hide, bool confirm)
-- argPassword
-- yes, are you sure?
-- range
-- clamp
+
+| Modifier | Done | Description |
+|----------|------|-------------|
+| count | - | -vvv -> 3, must be integral? convertable from integral? :P |
+| choice | - | value from vector, index in vec for enum? or vector<pair<string, T>>? |
+| prompt | - | prompt(string&, bool hide, bool confirm)
+| argPassword | - | arg<string>("password").prompt("Password", true, true) |
+| yes | - | are you sure? fail if not y |
+| range | - | min/max allowed for variable |
+| clamp | - | clamp variable so it is between min/max |
+
 
 ## How to keep Cli::parse() from doing IO
 For some applications, such as Windows services, it's important not to 
 interact with the console. There some simple steps to stop parse() from doing 
 any console IO:
 
-1. Don't use options (such as Arg<T>::prompt()) that explicitly it to do IO.
+1. Don't use options (such as Arg<T>::prompt()) that explicitly ask for IO.
 2. Add your own "help" argument to override the default, you can still 
 turn around and call Cli::writeHelp(ostream&) if desired.
 3. Use the two argument version of Cli::parse() so it doesn't output errors 
@@ -262,8 +428,8 @@ available via Cli::errMsg()
 ## Aspirational Roadmap
 - callbacks
 - help text and formatting options
-- environment variables?
+- load from environment variables?
 - support /name:value syntax
 - composable subcommands
-- unrecognized named options?
+- access to unrecognized named options?
 - tuple arguments
