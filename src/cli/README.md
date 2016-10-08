@@ -108,7 +108,7 @@ int main(int argc, char * argv[]) {
 }
 ```
 
-And what it looks like:
+And what you get:
 ```console
 $ a.out --fruit=orange
 Does the orange have a worm? No!
@@ -135,10 +135,14 @@ Options:
 ```
 
 ## External Variables
-- external targets
-- binding targets multiple times
-  - rebinding to internal proxy targets
+In addition to using the variable proxies you can bind the arguments directly 
+to predefined variables. This can be used to set a global flag, or populate an
+options struct that you access later.
 
+You can also point multiple arguments at the same variable, as is common with
+[feature switches](#feature_switches).
+
+For example:
 ```C++
 int main(int argc, char * argv[]) {
     bool worm;
@@ -282,7 +286,8 @@ Allows for a specific (or unlimited) number of arguments to be returned in a
 vector. Variadic arguments are declared using Cli::argVec() which binds 
 to a std::vector<T>.
 
-Example: ```C++
+Example: 
+```C++
 // printing vectors as comma separated is annoying...
 template<typename T> 
 ostream & operator<< (ostream & os, const vector<T> & v) {
@@ -349,7 +354,8 @@ int main(int argc, char * argv[]) {
     return EX_OK;
 }
 ```
-What happens: ```console
+What happens: 
+```console
 $ a.out
 v1 = default, v2 = default, p = default
 $ a.out -oone -i two
@@ -455,7 +461,8 @@ int main(int argc, char * argv[]) {
     return EX_OK;
 }
 ```
-What it does: ```console
+What it does: 
+```console
 $ a.out  
 Using the unknown name.  
 Hello Unknown!  
