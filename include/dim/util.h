@@ -3,11 +3,11 @@
 
 #include "dim/config.h"
 
-namespace Dim {
-
 #include <climits>
 #include <limits>
 #include <type_traits>
+
+namespace Dim {
 
 
 /****************************************************************************
