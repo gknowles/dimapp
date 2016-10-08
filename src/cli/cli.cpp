@@ -146,7 +146,7 @@ bool Cli::badUsage(const string & msg) {
 }
 
 //===========================================================================
-bool Cli::parse(size_t argc, char ** argv) {
+bool Cli::parse(size_t argc, char * argv[]) {
     resetValues();
 
     // the 0th (name of this program) arg should always be present
@@ -258,11 +258,11 @@ bool Cli::parse(size_t argc, char ** argv) {
 }
 
 //===========================================================================
-bool Cli::parse(ostream & os, size_t argc, char ** argv) {
+bool Cli::parse(ostream & os, size_t argc, char * argv[]) {
     if (parse(argc, argv)) 
         return true;
     if (exitCode())
-        os << errMsg() << endl;
+        os << argv[0] << ": " << errMsg() << endl;
     return false;
 }
 
