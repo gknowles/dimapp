@@ -140,7 +140,7 @@ to predefined variables. This can be used to set a global flag, or populate an
 options struct that you access later.
 
 You can also point multiple arguments at the same variable, as is common with
-[feature switches](#feature_switches).
+[feature switches](#feature-switches).
 
 For example:
 ```C++
@@ -246,7 +246,7 @@ be changed in two ways:
   - explicitly using the "!" modifier
   - define a long name and use the implicitly created "no-" prefix version
 - use Arg<T>::flagValue() to set the value, see 
-  [feature switches](#feature_switches).
+  [feature switches](#feature-switches).
 
 ```C++
 int main(int argc, char * argv[]) {
