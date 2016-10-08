@@ -27,11 +27,11 @@ int main(int argc, char * argv[]) {
 
 What it looks like when run: 
 ```console
-$ a.out --count=3  
-Using the unknown name.  
-Hello Unknown!  
-Hello Unknown!  
-Hello Unknown!  
+$ a.out --count=3
+Using the unknown name.
+Hello Unknown!
+Hello Unknown!
+Hello Unknown!
 ```
 
 It automatically generates reasonably formatted help pages:
@@ -78,13 +78,13 @@ int main(int argc, char * argv[]) {
 
 And what it looks like:
 ```console
-$ a.out
-Does the apple have a worm? No!
 $ a.out --help  
 Usage: a.out [OPTIONS]  
 
 Options:  
   --help    Show this message and exit.  
+$ a.out
+Does the apple have a worm? No!
 ```
 
 ## Arguments
@@ -110,14 +110,14 @@ int main(int argc, char * argv[]) {
 
 And what you get:
 ```console
-$ a.out --fruit=orange
-Does the orange have a worm? No!
 $ a.out --help  
 Usage: a.out [OPTIONS]  
 
 Options:  
   --help          Show this message and exit.  
   --fruit STRING  
+$ a.out --fruit=orange
+Does the orange have a worm? No!
 ```
 
 Add a description:
@@ -158,10 +158,6 @@ int main(int argc, char * argv[]) {
 ```
 And what it looks like:
 ```console
-$ a.out --fruit=orange
-Does the orange have a worm? No!
-$ a.out -w
-Does the apple have a worm? Yes :(
 $ a.out --help  
 Usage: a.out [OPTIONS]  
 
@@ -169,6 +165,10 @@ Options:
   --help          Show this message and exit.  
   --fruit STRING  type of fruit
   -w, --worm      make it icky
+$ a.out --fruit=orange
+Does the orange have a worm? No!
+$ a.out -w
+Does the apple have a worm? Yes :(
 ```
 
 ## Argument Names
@@ -183,7 +183,7 @@ like these:
 | required positional                 | \<file\>    |
 
 Names for positionals (inside angled or square brackets) may contain spaces, 
-and all names may be preceded by modifiers:
+and all names may be preceded by modifier flags:
 
 | Flag | Description                                                     |
 |------|-----------------------------------------------------------------|
@@ -196,7 +196,7 @@ For example:
 ```C++
 int main(int argc, char * argv[]) {
     Cli cli;
-    cli.arg<string>("a ?apple [apple]").desc("apples are red");
+    cli.arg<string>("a apple [apple]").desc("apples are red");
     cli.arg<bool>("!o orange").desc("oranges are orange");
     cli.arg<string>("<pear>").desc("pears are yellow");
     cli.parse(cerr, argc, argv);
@@ -222,7 +222,7 @@ name, therefore these args declare '-n' an inverted bool:
 ```C++
 cli.arg<bool>("n !n");
 ```
-But with these it's '-n STRING', a string:
+But with these it becomes '-n STRING', a string:
 ```C++
 cli.arg<bool>("n !n");
 cli.arg<string>("n");
@@ -265,12 +265,6 @@ int main(int argc, char * argv[]) {
 ```
 What you see:
 ```console
-$ a.out
-I am a.out
-$ a.out --shout
-I am A.OUT!!!!111
-$ a.out --no-whisper
-I am A.OUT!!!!111
 $ a.out --help
 Usage: a.out [OPTIONS]
 
@@ -278,6 +272,12 @@ Options:
   --help    Show this message and exit. 
   --shout, --no-whisper / --no-shout, --whisper
             I can't hear you!
+$ a.out
+I am a.out
+$ a.out --shout
+I am A.OUT!!!!111
+$ a.out --no-whisper
+I am A.OUT!!!!111
 ```
 
 
@@ -314,8 +314,6 @@ int main(int argc, char * argv[]) {
 ```
 And from the command line:
 ```console
-$ a.out -o mandarin -onavel "red delicious" honeycrisp
-(red delicious, honeycrisp) and (mandarin, navel) don't compare.
 $ a.out --help
 Usage: a.out [OPTIONS] [apple...]
   apple     red fruit
@@ -323,6 +321,8 @@ Usage: a.out [OPTIONS] [apple...]
 Options:
   --help               Show this message and exit.
   -o, --orange STRING  oranges
+$ a.out -o mandarin -onavel "red delicious" honeycrisp
+(red delicious, honeycrisp) and (mandarin, navel) don't compare.
 ```
 
 
@@ -391,10 +391,6 @@ int main(int argc, char * argv[]) {
 ```
 Which looks like:
 ```console
-$ a.out
-Does the apple have a worm? No!
-$ a.out -o
-Does the orange have a worm? No!
 $ a.out --help
 Usage: a.out [OPTIONS]
 
@@ -402,6 +398,10 @@ Options:
   --help        Show this message and exit.
   -a            red fruit
   -o, --orange  oranges
+$ a.out
+Does the apple have a worm? No!
+$ a.out -o
+Does the orange have a worm? No!
 ```
 
 
