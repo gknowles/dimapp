@@ -35,14 +35,12 @@ public:
     template <typename T>
     Value<T> & arg(T * value, const std::string & keys, const T & def = {});
     template <typename T>
-    ValueVec<T> & argVec(
-        std::vector<T> * values, 
-        const std::string & keys, 
-        int nargs = -1);
+    ValueVec<T> &
+    argVec(std::vector<T> * values, const std::string & keys, int nargs = -1);
 
     template <typename T>
     Value<T> & arg(const std::string & keys, const T & def = {});
-    template <typename T> 
+    template <typename T>
     ValueVec<T> & argVec(const std::string & keys, int nargs = -1);
 
     int exitCode() const { return m_exitCode; };
@@ -71,8 +69,7 @@ private:
 
 //===========================================================================
 template <typename T>
-Cli::Value<T> &
-Cli::arg(T * value, const std::string & keys, const T & def) {
+Cli::Value<T> & Cli::arg(T * value, const std::string & keys, const T & def) {
     auto ptr = std::make_unique<Value<T>>(value, keys, def);
     auto & opt = *ptr;
     addValue(std::move(ptr));
@@ -113,7 +110,7 @@ public:
     ValueBase(const std::string & keys, bool boolean);
     virtual ~ValueBase() {}
 
-    // name of the argument that populated the value, or an empty 
+    // name of the argument that populated the value, or an empty
     // string if it wasn't populated.
     const std::string & name() const { return m_refName; }
 
@@ -121,9 +118,9 @@ public:
 
 protected:
     virtual bool parseValue(const std::string & value) = 0;
-    virtual void resetValue() = 0; // set to passed in default
+    virtual void resetValue() = 0;       // set to passed in default
     virtual void unspecifiedValue() = 0; // set to default constructed
-    virtual size_t size() = 0; // number of values, non-vecs are always 1 
+    virtual size_t size() = 0; // number of values, non-vecs are always 1
     std::string m_desc;
     bool m_multiple{false}; // there can be multiple values
     int m_nargs{1};
@@ -182,8 +179,7 @@ private:
 
 //===========================================================================
 template <typename T>
-inline Cli::Value<T>::Value(
-    T * value, const std::string & keys, const T & def)
+inline Cli::Value<T>::Value(T * value, const std::string & keys, const T & def)
     : ValueShim<Value>{keys, std::is_same<T, bool>::value}
     , m_value{value ? value : &m_internal}
     , m_defValue{def} {}
@@ -216,8 +212,7 @@ template <typename T> inline size_t Cli::Value<T>::size() {
 *
 ***/
 
-template <typename T>
-class Cli::ValueVec : public ValueShim<ValueVec<T>> {
+template <typename T> class Cli::ValueVec : public ValueShim<ValueVec<T>> {
 public:
     ValueVec(std::vector<T> * values, const std::string & keys, int nargs);
 
@@ -239,8 +234,7 @@ template <typename T>
 inline Cli::ValueVec<T>::ValueVec(
     std::vector<T> * values, const std::string & keys, int nargs)
     : ValueShim<ValueVec>{keys, std::is_same<T, bool>::value}
-    , m_values(values ? values : &m_internal) 
-{
+    , m_values(values ? values : &m_internal) {
     m_multiple = true;
     m_nargs = nargs;
 }

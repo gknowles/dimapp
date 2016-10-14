@@ -176,7 +176,7 @@ Testing options:
         runs internal test of ABNF parsing logic
 
 For additional information, see:
-    https://github.com/gknowles/dimapp/tree/master/tools/pargen
+https://github.com/gknowles/dimapp/tree/master/tools/pargen
 )";
 }
 
