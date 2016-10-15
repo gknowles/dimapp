@@ -158,7 +158,7 @@ static void writeElement(ostream & os, const Element & elem, bool inclPos) {
 // space would go past the maxWidth.
 static void writeWordwrap(
     ostream & os,
-    size_t & indent,
+    size_t & pos,
     const string & str,
     size_t maxWidth,
     const string & prefix) {
@@ -175,9 +175,9 @@ static void writeWordwrap(
                 ptr -= 1;
         }
         size_t len = ptr - base;
-        if (indent + len >= maxWidth) {
+        if (pos + len >= maxWidth) {
             os << '\n' << prefix;
-            indent = size(prefix);
+            pos = size(prefix);
         }
         if (*ptr) {
             os.write(base, len + 1);
@@ -187,7 +187,7 @@ static void writeWordwrap(
             os << ' ';
             base = ptr;
         }
-        indent += len + 1;
+        pos += len + 1;
     }
 }
 
@@ -627,13 +627,13 @@ void writeRule(
     const Element & rule,
     size_t maxWidth,
     const string & prefix) {
-    streampos pos = os.tellp();
+    streampos base = os.tellp();
     os << prefix << rule.name;
     os << " = ";
-    size_t indent = os.tellp() - pos;
+    size_t pos = os.tellp() - base;
     ostringstream raw;
     writeElement(raw, rule, false);
     string vpre = prefix + "    ";
-    writeWordwrap(os, indent, raw.str(), maxWidth, vpre);
+    writeWordwrap(os, pos, raw.str(), maxWidth, vpre);
     os << '\n';
 }
