@@ -81,14 +81,6 @@ project "-meta"
 
 -- tests
 group "tests"
-project "cli"
-  kind "ConsoleApp"
-  location "projects"
-  vpaths { ["*"] = "tests/cli" }
-  files { "tests/cli/**" }
-  pchsource "tests/cli/pch.cpp"
-  links { "dimapp", "dimapp-win8", "dimapp-cli" }
-
 project "hpack"
   kind "ConsoleApp"
   location "projects"
