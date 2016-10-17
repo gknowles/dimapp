@@ -64,6 +64,15 @@ project "dimapp-win8"
   }
   pchsource "src/win8/pch.cpp"
 
+project "dimapp-xml"
+  kind "StaticLib"
+  location "projects"
+  vpaths { ["*"] = "src/xml" }
+  files { 
+    "src/xml/*"
+  }
+  pchsource "src/xml/pch.cpp"
+
 group "-meta"
 project "-meta"
   kind "StaticLib"
@@ -104,6 +113,14 @@ project "tls"
   files { "tests/tls/**" }
   pchsource "tests/tls/pch.cpp"
   links { "dimapp", "dimapp-win8", "dimapp-cli" }
+
+project "xml"
+  kind "ConsoleApp"
+  location "projects"
+  vpaths { ["*"] = "tests/xml" }
+  files { "tests/xml/**" }
+  pchsource "tests/xml/pch.cpp"
+  links { "dimapp", "dimapp-win8", "dimapp-cli", "dimapp-xml" }
 
 
 -- tools

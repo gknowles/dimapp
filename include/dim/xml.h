@@ -3,6 +3,9 @@
 
 #include "dim/config.h"
 
+#include "dim/charbuf.h"
+#include "dim/util.h"
+
 #include <sstream>
 #include <string>
 #include <vector>

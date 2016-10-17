@@ -1,4 +1,4 @@
-// xmlparser.cpp - dim services
+// xmlparser.cpp - dim xml
 #include "pch.h"
 #pragma hdrstop
 

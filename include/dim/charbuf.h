@@ -2,11 +2,13 @@
 #pragma once
 
 #include "dim/config.h"
+
 #include "dim/tempheap.h"
 
 #include <list>
 #include <string>
 #include <utility> // std::pair
+#include <vector>
 
 namespace Dim {
 
