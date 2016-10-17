@@ -284,6 +284,7 @@ CharBuf & CharBuf::append(const char s[]) {
 
 //===========================================================================
 CharBuf & CharBuf::append(const char src[], size_t srcLen) {
+    assert(m_size + srcLen < numeric_limits<int>::max());
     int add = (int)srcLen;
     if (!add)
         return *this;
@@ -689,7 +690,7 @@ using namespace Dim;
 //===========================================================================
 std::string to_string(const CharBuf & buf) {
     string out;
-    out.reserve(buf.size());
+    out.resize(buf.size());
     buf.copy(const_cast<char *>(out.data()), buf.size());
     return out;
 }
