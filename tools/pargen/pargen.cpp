@@ -218,7 +218,7 @@ void Application::onTask() {
     // positional arguments
     auto & srcfile = cli.arg<experimental::filesystem::path>("[source file]");
     // named arguments
-    auto & help = cli.arg<bool>("? h help").desc("Print this message.");
+    auto & help = cli.arg<bool>("? h help");
     auto & test = cli.arg<bool>("test");
     cli.arg(&s_allRules, "!min-core", s_allRules);
     cli.arg(&s_cmdopts.markRecursion, "f mark-functions", 1);
@@ -244,7 +244,7 @@ void Application::onTask() {
         return appSignalShutdown(code);
     }
     if (!srcfile) {
-        return usageError(cerr, "No value given for " + srcfile.name());
+        return usageError(cerr, "No value given for " + srcfile.from());
     }
 
     // process abnf file

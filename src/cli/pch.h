@@ -1,2 +1,5 @@
 // pch.h - dim cli
-#include "dim.h"
+#include "dim/cli.h"
+
+#include <algorithm>
+#include <iostream>

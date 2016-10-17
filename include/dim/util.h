@@ -3,8 +3,10 @@
 
 #include "dim/config.h"
 
+#include <cassert>
 #include <climits>
 #include <limits>
+#include <sstream>
 #include <type_traits>
 
 namespace Dim {
