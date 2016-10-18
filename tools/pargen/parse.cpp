@@ -469,8 +469,10 @@ bool parseAbnf(Grammar & rules, const std::string & src) {
     ParserNotify notify(rules);
     AbnfParser parser(&notify);
     const char * ptr = src.c_str();
-    if (!parser.parse(ptr))
+    if (!parser.parse(ptr)) {
+        rules.errWhere(parser.errWhere());
         return false;
+    }
     normalize(rules);
     return true;
 }

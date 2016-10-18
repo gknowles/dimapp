@@ -238,12 +238,12 @@ public:
 //===========================================================================
 Application::Application(int argc, char * argv[])
     : m_argc(argc)
-    , m_argv(argv) {
-    m_logQ = taskCreateQueue("Logging", 1);
-}
+    , m_argv(argv) {}
 
 //===========================================================================
 void Application::onTask() {
+    m_logQ = taskCreateQueue("Logging", 1);
+
     Cli cli;
     // positional arguments
     auto & srcfile = cli.arg<experimental::filesystem::path>("[source file]");
@@ -300,8 +300,22 @@ void Application::onFileEnd(int64_t offset, IFile * file) {
     getCoreRules(rules);
     if (parseAbnf(rules, m_source)) {
         writeParserFiles(rules);
+        appSignalShutdown(EX_OK);
     }
-    appSignalShutdown(EX_OK);
+
+    auto pos = rules.errWhere();
+    auto lineNum = 1 + count(m_source.begin(), m_source.begin() + pos, '\n');
+    size_t first = m_source.find_last_of('\n', pos);
+    first = (first == string::npos) ? 0 : first + 1;
+    size_t last = m_source.find_first_of('\n', pos);
+    last = m_source.find_last_not_of(" \t\r\n", last);
+    last = (last == string::npos) ? m_source.size() : last + 1;
+    string line = m_source.substr(first, last - first);
+    logMsgError() << filePath(file) << "(" << lineNum << "): parsing failed"; 
+    logMsgInfo() << line;
+    logMsgInfo() << string(pos - first, ' ') << '^';
+
+    appSignalShutdown(EX_DATAERR);
 }
 
 

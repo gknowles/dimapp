@@ -435,6 +435,7 @@ bool )" << prefix
 state0: 
     // )" << kFailedStateName
            << R"(
+    m_errWhere = ptr - src - 1;
     return false;
 )";
     } else {
@@ -490,6 +491,48 @@ writeHeaderfile(ostream & os, const Grammar & rules, const Grammar & options) {
 // clang-format off
 #pragma once
 
+// forward declarations
+class I)" << prefix << R"(ParserNotify;
+
+
+/****************************************************************************
+*
+*   )" << prefix
+       << R"(Parser
+*
+***/
+
+class )"
+       << prefix << R"(Parser {
+public:
+    )" << prefix
+       << "Parser (I" << prefix
+       << R"(ParserNotify * notify) : m_notify(notify) {}
+    ~)" << prefix
+       << R"(Parser () {}
+
+    bool parse (const char src[]);
+    size_t errWhere () const { return m_errWhere; }
+
+private:
+)";
+    bool hasRecurseRules = false;
+    for (auto && elem : rules.rules()) {
+        if (elem.recurse) {
+            hasRecurseRules = true;
+            os << "    bool state";
+            writeRuleName(os, elem.name, true);
+            os << " (const char *& src);\n";
+        }
+    }
+    if (hasRecurseRules)
+        os << '\n';
+    os << 1 + R"(
+    I)" << prefix
+       << R"(ParserNotify * m_notify{nullptr};
+    size_t m_errWhere{0};
+};
+
 
 /****************************************************************************
 *
@@ -528,43 +571,6 @@ public:
         }
     }
     os << 1 + R"(
-};
-
-
-/****************************************************************************
-*
-*   )" << prefix
-       << R"(Parser
-*
-***/
-
-class )"
-       << prefix << R"(Parser {
-public:
-    )" << prefix
-       << "Parser (I" << prefix
-       << R"(ParserNotify * notify) : m_notify(notify) {}
-    ~)" << prefix
-       << R"(Parser () {}
-
-    bool parse (const char src[]);
-
-private:
-)";
-    bool hasRecurseRules = false;
-    for (auto && elem : rules.rules()) {
-        if (elem.recurse) {
-            hasRecurseRules = true;
-            os << "    bool state";
-            writeRuleName(os, elem.name, true);
-            os << " (const char *& src);\n";
-        }
-    }
-    if (hasRecurseRules)
-        os << '\n';
-    os << 1 + R"(
-    I)" << prefix
-       << R"(ParserNotify * m_notify{nullptr};
 };
 )";
 }
