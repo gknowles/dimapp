@@ -86,7 +86,8 @@ static void writeParserFiles(Grammar & rules) {
     }
     TimePoint finish = Clock::now();
     std::chrono::duration<double> elapsed = finish - start;
-    cout << "Elapsed time: " << elapsed.count() << " seconds" << endl;
+    logMsgDebug() 
+        << "Elapsed time: " << elapsed.count() << " seconds" << endl;
 }
 
 //===========================================================================
@@ -183,17 +184,44 @@ https://github.com/gknowles/dimapp/tree/master/tools/pargen
 
 /****************************************************************************
 *
+*   LogTask
+*
+***/
+
+namespace {
+struct LogTask : public ITaskNotify {
+    LogType m_type;
+    string m_msg;
+
+    // ITaskNotify
+    void onTask() override;
+};
+} // namespace
+
+//===========================================================================
+void LogTask::onTask() {
+    if (m_type == kLogError) {
+        ConsoleScopedAttr attr(kConsoleError);
+        cout << "ERROR: " << m_msg << endl;
+    } else {
+        cout << m_msg << endl;
+    }
+    delete this;
+}
+
+
+/****************************************************************************
+*
 *   Application
 *
 ***/
 
 namespace {
-class Application : public ITaskNotify,
-                    public ILogNotify,
-                    public IFileReadNotify {
+class Application : public ILogNotify, public ITaskNotify, public IFileReadNotify {
     int m_argc;
     char ** m_argv;
     string m_source;
+    TaskQueueHandle m_logQ;
 
 public:
     Application(int argc, char * argv[]);
@@ -210,7 +238,9 @@ public:
 //===========================================================================
 Application::Application(int argc, char * argv[])
     : m_argc(argc)
-    , m_argv(argv) {}
+    , m_argv(argv) {
+    m_logQ = taskCreateQueue("Logging", 1);
+}
 
 //===========================================================================
 void Application::onTask() {
@@ -255,12 +285,10 @@ void Application::onTask() {
 
 //===========================================================================
 void Application::onLog(LogType type, const std::string & msg) {
-    if (type == kLogError) {
-        ConsoleScopedAttr attr(kConsoleError);
-        cout << "ERROR: " << msg << endl;
-    } else {
-        cout << msg << endl;
-    }
+    auto ptr = new LogTask;
+    ptr->m_type = type;
+    ptr->m_msg = msg;
+    taskPush(m_logQ, *ptr);
 }
 
 //===========================================================================
