@@ -35,7 +35,8 @@ private:
     bool onBinValConcatenationEnd(const char * eptr) final;
     bool onBinValSequenceChar(char ch) final;
     bool onBinValSimpleEnd(const char * eptr) final;
-    bool onCharValEnd(const char * eptr) final;
+    bool onCharValInsensitiveEnd(const char * eptr) final;
+    bool onCharValSensitiveEnd(const char * eptr) final;
     bool onCharValSequenceStart(const char * ptr) final;
     bool onCharValSequenceChar(char ch) final;
     bool onConcatenationStart(const char * ptr) final;
@@ -208,7 +209,14 @@ bool ParserNotify::onBinValSimpleEnd(const char * eptr) {
 }
 
 //===========================================================================
-bool ParserNotify::onCharValEnd(const char * eptr) {
+bool ParserNotify::onCharValInsensitiveEnd(const char * eptr) {
+    m_rules.addText(m_elems.back(), m_string, m_min, m_max);
+    m_string.clear();
+    return true;
+}
+
+//===========================================================================
+bool ParserNotify::onCharValSensitiveEnd(const char * eptr) {
     m_rules.addLiteral(m_elems.back(), m_string, m_min, m_max);
     m_string.clear();
     return true;

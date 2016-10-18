@@ -149,7 +149,7 @@ void Grammar::addTerminal(
 }
 
 //===========================================================================
-void Grammar::addLiteral(
+void Grammar::addText(
     Element * rule, const string & value, unsigned m, unsigned n) {
     auto s = addSequence(rule, m, n);
     for (unsigned char ch : value) {
@@ -160,6 +160,16 @@ void Grammar::addLiteral(
         } else if (isupper(ch)) {
             addTerminal(c, (unsigned char)tolower(ch), 1, 1);
         }
+    }
+}
+
+//===========================================================================
+void Grammar::addLiteral(
+    Element * rule, const string & value, unsigned m, unsigned n) {
+    auto s = addSequence(rule, m, n);
+    for (unsigned char ch : value) {
+        auto c = addChoice(s, 1, 1);
+        addTerminal(c, ch, 1, 1);
     }
 }
 

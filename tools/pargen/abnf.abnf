@@ -33,7 +33,9 @@ bin-val-sequence = 1*BIT { Char }
 bin-val-simple = bin-val-sequence { End } 
 c-nl = ( comment / NEWLINE ) 
 c-wsp = ( WSP / ( c-nl WSP ) ) 
-char-val = ( DQUOTE char-val-sequence DQUOTE ) { End } 
+char-val = char-val-sensitive / char-val-insensitive
+char-val-insensitive = ( ["%i"] DQUOTE char-val-sequence DQUOTE ) { End } 
+char-val-sensitive = ( "%s" DQUOTE char-val-sequence DQUOTE ) { End }
 char-val-sequence = *( %x20 / %x21 / %x23 / %x24 / %x25 / %x26 / %x27 / 
     %x28 / %x29 / %x2a / %x2b / %x2c / %x2d / %x2e / %x2f / %x30 / %x31 / 
     %x32 / %x33 / %x34 / %x35 / %x36 / %x37 / %x38 / %x39 / %x3a / %x3b / 

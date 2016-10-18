@@ -82,6 +82,11 @@ public:
     Element * addChoice(Element * rule, unsigned m, unsigned n);
     void
     addRule(Element * rule, const std::string & name, unsigned m, unsigned n);
+
+    // case insensitive
+    void addText(
+        Element * rule, const std::string & value, unsigned m, unsigned n);
+
     void addLiteral(
         Element * rule, const std::string & value, unsigned m, unsigned n);
     void addRange(Element * rule, unsigned char a, unsigned char b);
