@@ -21,10 +21,10 @@ artifacts:
 #  - path: bin\*.pdb
 
 test_script:
-  - bin\cli
   - bin\hpack
   - bin\http
   - bin\pargen --test
+  - bin\xml
 
 deploy:
   tag: dimapp-v$(appveyor_build_version)
