@@ -300,7 +300,7 @@ void Application::onFileEnd(int64_t offset, IFile * file) {
     getCoreRules(rules);
     if (parseAbnf(rules, m_source)) {
         writeParserFiles(rules);
-        appSignalShutdown(EX_OK);
+        return appSignalShutdown(EX_OK);
     }
 
     auto pos = rules.errWhere();
@@ -314,7 +314,6 @@ void Application::onFileEnd(int64_t offset, IFile * file) {
     logMsgError() << filePath(file) << "(" << lineNum << "): parsing failed"; 
     logMsgInfo() << line;
     logMsgInfo() << string(pos - first, ' ') << '^';
-
     appSignalShutdown(EX_DATAERR);
 }
 
