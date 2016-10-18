@@ -3,8 +3,7 @@
 #pragma hdrstop
 
 using namespace std;
-
-namespace Dim {
+using namespace Dim;
 
 
 /****************************************************************************
@@ -64,101 +63,117 @@ const char kTextTypeTable[256] = {
 
 enum IXBuilder::State {
     kStateFail,
-    kStateDocIntro,      //
-    kStateElemNameIntro, // <
+    kStateDocIntro,      // _
     kStateElemName,      // <X_
-    kStateAttrNameIntro, // <X _
     kStateAttrName,      // <X a_
     kStateAttrText,      // <X a="_
     kStateAttrEnd,       // <X a="1"_
     kStateText,          // >_
+    kStateDocEnd,        // </docRoot>_
 };
 
 //===========================================================================
-IXBuilder & IXBuilder::text(const char val[]) {
-    switch (m_state) {
-    case kStateElemNameIntro: m_state = kStateElemName; [[fallthrough]];
-    case kStateElemName: append(val); return *this;
-    case kStateAttrNameIntro: m_state = kStateAttrName; [[fallthrough]];
-    case kStateAttrName: append(val); return *this;
-    case kStateAttrText: addText<false>(val); return *this;
-    case kStateAttrEnd: append(">"); m_state = kStateText;
-    }
-    assert(m_state == kStateText);
-    addText<true>(val);
-    return *this;
-}
+IXBuilder::IXBuilder() : m_state(kStateDocIntro) 
+{}
 
 //===========================================================================
-IXBuilder & IXBuilder::elem(const char name[], const char val[]) {
+IXBuilder & IXBuilder::start(const char name[]) {
     switch (m_state) {
-    case kStateAttrText: append("\">\n<"); break;
     default:
-        assert(m_state == kStateDocIntro || m_state == kStateText);
+        return fail();
+    case kStateAttrText: 
+        append("\""); m_state = kStateAttrEnd; [[fallthrough]];
+    case kStateElemName: 
+    case kStateAttrEnd:
+        append(">\n"); m_state = kStateText; [[fallthrough]];
+    case kStateDocIntro:
+    case kStateText:
         append("<");
         break;
     }
-    m_state = kStateElemNameIntro;
-    m_stack.push_back({size(), 0});
-    if (!name) {
-        assert(val == nullptr);
-    } else {
-        text(name);
-        if (val) {
-            end();
-            text(val);
-            end();
-        }
-    }
-    return *this;
-}
-
-//===========================================================================
-IXBuilder & IXBuilder::attr(const char name[], const char val[]) {
-    switch (m_state) {
-    case kStateElemName: append(" "); break;
-    default:
-        assert(m_state == kStateAttrEnd);
-        append("\" ");
-        break;
-    }
-    m_state = kStateAttrNameIntro;
-    if (!name) {
-        assert(val == nullptr);
-    } else {
-        text(name);
-        if (val) {
-            end();
-            text(val);
-            end();
-        }
-    }
+    size_t base = size();
+    append(name);
+    m_stack.push_back({base, size() - base});
+    m_state = kStateElemName;
     return *this;
 }
 
 //===========================================================================
 IXBuilder & IXBuilder::end() {
     switch (m_state) {
+    default: return fail();
     case kStateElemName:
+    case kStateAttrEnd:
         append("/>\n");
-        m_stack.pop_back();
         m_state = kStateText;
-        return *this;
-    case kStateAttrName: // end attribute name
-        append("=\"");
-        m_state = kStateAttrText;
-        return *this;
-    case kStateAttrText: // end attribute
-        append("\"");
-        m_state = kStateAttrEnd;
-        return *this;
+        break;
+    case kStateText: 
+        append("</");
+        auto & top = m_stack.back();
+        appendCopy(top.pos, top.len);
+        append(">\n");
+        break;
     }
-    assert(m_state == kStateText);
-    append("</");
-    auto & top = m_stack.back();
-    appendCopy(top.pos, top.len);
     m_stack.pop_back();
-    append(">\n");
+    if (m_stack.empty())
+        m_state = kStateDocEnd;
+    return *this;
+}
+
+//===========================================================================
+IXBuilder & IXBuilder::startAttr(const char name[]) {
+    switch (m_state) {
+    default: return fail();
+    case kStateElemName:
+    case kStateAttrEnd:
+        break;
+    }
+    append(" ");
+    append(name);
+    append("=\"");
+    m_state = kStateAttrText;
+    return *this;
+}
+
+//===========================================================================
+IXBuilder & IXBuilder::endAttr() {
+    switch (m_state) {
+    default: return fail();
+    case kStateAttrText:
+        break;
+    }
+    append("\"");
+    m_state = kStateAttrEnd;
+    return *this;
+}
+
+//===========================================================================
+IXBuilder & IXBuilder::elem(const char name[], const char val[]) {
+    start(name);
+    if (val)
+        text(val);
+    return end();
+}
+
+//===========================================================================
+IXBuilder & IXBuilder::attr(const char name[], const char val[]) {
+    startAttr(name);
+    text(val);
+    return endAttr();
+}
+
+//===========================================================================
+IXBuilder & IXBuilder::text(const char val[]) {
+    switch (m_state) {
+    default: return fail();
+    case kStateElemName: 
+    case kStateAttrEnd: 
+        append(">"); 
+        m_state = kStateText; 
+        break;
+    case kStateAttrText: addText<false>(val); return *this;
+    }
+    addText<true>(val);
     return *this;
 }
 
@@ -194,12 +209,26 @@ template <bool isContent> void IXBuilder::addText(const char val[]) {
     }
 }
 
+//===========================================================================
+IXBuilder & IXBuilder::fail() {
+    // Fail is called due to application malfeasence, such as trying to start
+    // a new element while inside an attribute or writing invalid characters.
+    assert(m_state == kStateFail);
+    m_state = kStateFail;
+    return *this;
+}
+
 
 /****************************************************************************
 *
 *   XBuilder
 *
 ***/
+
+//===========================================================================
+void XBuilder::append(const char text[]) {
+    m_buf.append(text);
+}
 
 //===========================================================================
 void XBuilder::append(const char text[], size_t count) {
@@ -224,43 +253,41 @@ size_t XBuilder::size() {
 ***/
 
 //===========================================================================
-IXBuilder & operator<<(IXBuilder & out, int64_t val) {
+IXBuilder & Dim::operator<<(IXBuilder & out, int64_t val) {
     IntegralStr<int64_t> tmp(val);
     return out.text(tmp);
 }
 
 //===========================================================================
-IXBuilder & operator<<(IXBuilder & out, uint64_t val) {
+IXBuilder & Dim::operator<<(IXBuilder & out, uint64_t val) {
     IntegralStr<int64_t> tmp(val);
     return out.text(tmp);
 }
 
 //===========================================================================
-IXBuilder & operator<<(IXBuilder & out, int val) {
+IXBuilder & Dim::operator<<(IXBuilder & out, int val) {
     IntegralStr<int> tmp(val);
     return out.text(tmp);
 }
 
 //===========================================================================
-IXBuilder & operator<<(IXBuilder & out, unsigned val) {
+IXBuilder & Dim::operator<<(IXBuilder & out, unsigned val) {
     IntegralStr<unsigned> tmp(val);
     return out.text(tmp);
 }
 
 //===========================================================================
-IXBuilder & operator<<(IXBuilder & out, char val) {
+IXBuilder & Dim::operator<<(IXBuilder & out, char val) {
     char str[] = {val, 0};
     return out.text(str);
 }
 
 //===========================================================================
-IXBuilder & operator<<(IXBuilder & out, const char val[]) {
+IXBuilder & Dim::operator<<(IXBuilder & out, const char val[]) {
     return out.text(val);
 }
 
 //===========================================================================
-IXBuilder & operator<<(IXBuilder & out, const std::string & val) {
+IXBuilder & Dim::operator<<(IXBuilder & out, const std::string & val) {
     return out.text(val.c_str());
 }
-
-} // namespace

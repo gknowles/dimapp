@@ -1,4 +1,4 @@
-// xml.h - dim services
+// xml.h - dim xml
 #pragma once
 
 #include "dim/config.h"
@@ -21,21 +21,32 @@ namespace Dim {
 
 class IXBuilder {
 public:
+    struct ElemNameProxy { const char * ptr; };
+    struct AttrNameProxy { const char * ptr; };
+
+public:
+    IXBuilder ();
     virtual ~IXBuilder() {}
 
-    IXBuilder & elem(const char name[], const char text[] = nullptr);
-    IXBuilder & attr(const char name[], const char text[] = nullptr);
+    IXBuilder & start(const char name[]);
     IXBuilder & end();
+    IXBuilder & startAttr(const char name[]);
+    IXBuilder & endAttr();
+
+    IXBuilder & elem(const char name[], const char text[] = nullptr);
+    IXBuilder & attr(const char name[], const char text[]);
 
     IXBuilder & text(const char text[]);
 
 protected:
-    virtual void append(const char text[], size_t count = -1) = 0;
+    virtual void append(const char text[]) = 0;
+    virtual void append(const char text[], size_t count) = 0;
     virtual void appendCopy(size_t pos, size_t count) = 0;
     virtual size_t size() = 0;
 
 private:
     template <bool isContent> void addText(const char text[]);
+    IXBuilder & fail();
 
     enum State;
     State m_state;
@@ -65,16 +76,29 @@ inline IXBuilder &
 operator<<(IXBuilder & out, IXBuilder & (*pfn)(IXBuilder &)) {
     return pfn(out);
 }
-
-inline IXBuilder & elem(IXBuilder & out) {
-    return out.elem(nullptr);
-}
-inline IXBuilder & attr(IXBuilder & out) {
-    return out.attr(nullptr);
-}
 inline IXBuilder & end(IXBuilder & out) {
     return out.end();
 }
+inline IXBuilder & endAttr(IXBuilder & out) {
+    return out.endAttr();
+}
+
+inline IXBuilder &
+operator<<(IXBuilder & out, const IXBuilder::ElemNameProxy & name) {
+    return out.start(name.ptr);
+}
+inline IXBuilder::ElemNameProxy start(const char val[]) {
+    return IXBuilder::ElemNameProxy{val};
+}
+
+inline IXBuilder &
+operator<<(IXBuilder & out, const IXBuilder::AttrNameProxy & name) {
+    return out.startAttr(name.ptr);
+}
+inline IXBuilder::AttrNameProxy attr(const char val[]) {
+    return IXBuilder::AttrNameProxy{val};
+}
+
 
 class XBuilder : public IXBuilder {
 public:
@@ -82,7 +106,8 @@ public:
         : m_buf(buf) {}
 
 private:
-    void append(const char text[], size_t count = -1) override;
+    void append(const char text[]) override;
+    void append(const char text[], size_t count) override;
     void appendCopy(size_t pos, size_t count) override;
     size_t size() override;
 
