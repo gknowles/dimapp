@@ -1,0 +1,177 @@
+; xml.abnf - dim xml
+;
+; rules to parse xml
+%root = document
+%api.prefix = Xml
+
+; abnf grammer rules for xml
+
+; Document
+document = prolog element *Misc     ; 1
+
+; Character Range and White Space
+Char = HTAB / CF / LF / %x20-7f     ; 2
+S = 1*(SP / HTAB / CR / LF)         ; 3
+
+; Names and Tokens
+NameStartChar = ":" / ALPHA / "_"   ; 4
+NameChar = NameStartChar / "-" / "." / DIGIT ; 4a
+Name = NameStartChar *(NameChar)    ; 5
+Names = Name *(SP Name)             ; 6
+Nmtoken = 1*NameChar ; 7
+Nmtokens = Nmtoken *(SP Nmtoken) ; 8
+
+; Literals
+EntityValue = ; [9]
+    DQUOTE *(Char-not-PCT-AMP-DQUOTE / PEReference / Reference) DQUOTE
+    / "'" *(Char-not-PCT-AMP-APOS / PEReference / Reference) "'"
+Char-not-PCT-AMP-DQUOTE = HTAB / CR / LF / %x20-21 / %x23-24 / %x27-7f
+Char-not-PCT-AMP-APOS = HTAB / CR / LF / %x20-24 / %x28-7f
+AttValue = DQUOTE *(Char-not-LT-AMP-DQUOTE / Reference) DQUOTE ; [10]
+    / "'" *(Char-not-LT-AMP-APOS / Reference) "'"
+Char-not-LT-AMP-DQUOTE = HTAB / CR / LF / %x20-21 / %x23-24 / %x26-3b 
+    / %x3d-7f
+Char-not-LT-AMP-APOS = HTAB / CR / LF / %x20-24 / %x26 / %x28-3b / %x3d-7f
+SystemLiteral = DQUOTE *Char-not-DQUOTE DQUOTE / "'" *Char-not-APOS "'" ; [11]
+Char-not-DQUOTE = HTAB / CR / LF / %x20-21 / %x23-7f
+Char-not-APOS = HTAB / CR / LF / %x20-26 / %x28-7f
+PubidLiteral = DQUOTE *PubidChar DQUOTE / "'" *PubidChar-not-APOS "'" ; [12]
+PubidChar-not-APOS = SP / CR / LF / ALPHA / DIGIT
+    / "-" / "(" / ")" / "+" / "," / "." / "/" / ":" / "=" / "?" 
+    / ";" / "!" / "*" / "#" / "@" / "$" / "_" / "%"
+PubidChar = PubidChar-not-APOS / "'" ; [13]
+
+; Character Data
+CharData = *(Char-not-LT-AMP-RBRACKET ; [14]
+    / "]" Char-not-LT-AMP-RBRACKET 
+    / 2*"]" Char-not-LT-AMP-GT) 
+    *"]"
+Char-not-LT-AMP-RBRACKET = HTAB / CR / LF / %x20-25 / %x27-3b / %x3d-5a 
+    / %x5c-7f
+Char-not-LT-AMP-GT = HTAB / CR / LF / %x20-25 / %x27-3b / %x3d / %x3f-7f
+
+; Comments
+Comment = "<!--" *Char-not-DASH *("-" Char-not-DASH) "-->" ; [15]
+
+; Processing Instructions
+PI = "<?" PITarget [S *(Char-not-QMARK / "?" Char-not-GT)] "?>" ; [16]
+Char-not-QMARK = HTAB / CF / LF / %x20-3e / %x40-7f
+Char-not-GT = HTAB / CF / LF / %x20-3d / %x3f-7f
+PITarget = NameStartChar-not-X *NameChar ; [17]
+    / "X" [NameChar-not-M *NameChar]
+    / "XM" [NameChar-not-L *NameChar]
+    / "XML" 1*NameChar
+NameStartChar-not-X = %x41-57 / %x59-5a / %x61-77 / %x79-7a / ":" / "_"
+NameChar-not-M = %x41-4c / %x4e-5a / %x61-6c / %x6e-7a / ":" / "_" / "-" 
+    / "." / DIGIT
+NameChar-not-L = %x41-4b / %x4d-5a / %x61-6b / %x6d-7a / ":" / "_" / "-" 
+    / "." / DIGIT
+
+; CData Sections
+CDSect = CDStart CData CDEnd ; [18]
+CDStart = "<![" %x43.44.41.54.41 "[" ; [19]
+CData = *(Char-not-RBRACKET / "]" Char-not-RBRACKET / "]]" Char-not-GT) ; [20]
+    *"]"
+Char-not-RBRACKET = HTAB / CR / LF / %x20-5a / %x5c-7f
+CDEnd = "]]>" ; [21]
+
+; Prolog
+prolog = [XMLDecl] *Misc [doctypedecl *Misc] ; [22]
+XMLDecl = "<?" %x78.6d.6c VersionInfo [EncodingDecl] [SDDecl] [S] "?>" ; [23]
+VersionInfo = S %x76.65.72.73.69.6f.6e Eq ; [24]
+    ("'" VersionNum "'" / DQUOTE VersionNum DQUOTE)
+Eq = [S] "=" [S] ; [25]
+VersionNum = "1." 1*DIGIT ; [26]
+Misc = Comment / PI / S ; [27]
+
+; Document Type Definition
+doctypedecl = "<!" %x44.4f.43.54.59.50.45 S Name [S ExternalID] [S]
+    [ "[" intSubset "]" [S] ] ">" ; [28]
+DeclSep = PEReference / S ; [28a]
+intSubset = *(markupdecl / DeclSep) ; [28b]
+markupdecl = elementdecl / AttlistDecl / EntityDecl / NotationDecl / PI 
+    / Comment ; [29]
+
+; External Subset
+extSubset = [TextDecl] extSubsetDecl ; [30]
+extSubsetDecl = *(markupdecl / conditionalSect / DeclSep) ; [31]
+
+; Standalone Document Declaration
+SDDecl = S %s"standalone" Eq ; [32]
+    ("'" (%s"yes" / %s"no") "'" / DQUOTE (%s"yes" / %s"no") DQUOTE)
+
+; Element
+element = EmptyElemTag / STag content ETag ; [39]
+STag = "<" Name *(S Attribute) [S] ">" ; [40]
+Attribute = Name Eq AttValue ; [41]
+ETag = "</" Name [S] ">" ; [42]
+content = [CharData] *((element / Reference / CDSect / PI / Comment) 
+    [CharData]) ; [43]
+EmptyElemTag = "<" Name *(S Attribute) [S] "/>" ; [44]
+
+; Element Type Declaration
+elementdecl = %s"<!ELEMENT" S Name S contentspec [S] ">" ; [45]
+contentspec = %s"EMPTY" / %s"ANY" / Mixed / children ; [46]
+children = (choice / seq) ["?" / "*" / "+"] ; [47]
+cp = (Name / choice / seq) ["?" / "*" / "+"] ; [48]
+choice = "(" [S] cp 1*([S] "|" [S] cp) [S] ")" ; [49]
+seq = "(" [S] cp *([S] "," [S] cp) [S] ")" ; [50]
+Mixed = "(" [S] %s"#PCDATA" *([S] "|" [S] Name) [S] ")*" ; [51]
+    / "(" [S] %s"#PCDATA" [S] ")"
+
+; Attribute-list Declaration
+AttlistDecl = %s"<!ATTLIST" S Name *AttDef [S] ">" ; [52]
+AttDef = S Name S AttType S DefaultDecl ; [53]
+AttType = StringType / TokenizedType / EnumeratedType ; [54]
+StringType = %s"CDATA" ; [55]
+TokenizedType = %s"ID" / %s"IDREF" / %s"IDREFS" / %s"ENTITY" ; [56]
+    / %s"ENTITIES" / %s"NMTOKEN" / %s"NMTOKENS"
+EnumeratedType = NotationType / Enumeration ; [57]
+NotationType = %s"NOTATION" S "(" [S] Name *([S] "|" [S] Name) [S] ")" ; [58]
+Enumeration = "(" [S] Nmtoken *([S] "|" [S] Nmtoken) [S] ")" ; [59]
+DefaultDecl = %s"#REQUIRED" / %s"#IMPLIED" / [%s"#FIXED" S] AttValue ; [60]
+
+; Conditional Section
+conditionalSect = includeSect / ignoreSect ; [61]
+includeSect = "<![" [S] %s"INCLUDE" [S] "[" extSubsetDecl "]]>" ; [62]
+ignoreSect = "<![" [S] %s"IGNORE" [S] '[' *ignoreSectContents "]]>" ; [63]
+    Ignore)
+ignoreSectContents = Ignore *("<![" ignoreSectContents "]]>" Ignore) ; [64]
+Ignore = *(Char-not-LT-RBRACKET ; [65]
+    / "<" Char-not-BANG / "<!" Char-not-LBRACKET
+    / "]" Char-not-RBRACKET / "]]" Char-not-GT
+    ) ["<" ["!"] / *"]"]
+Char-not-LT-RBRACKET = HTAB / CR / LF / %x20-3b / %x3d-5a / %x5c-7f
+Char-not-BANG = HTAB / CR / LF / %x20 / %x22-7f
+Char-not-RBRACKET = HTAB / CR / LF / %x20-5a / %x5c-7f
+
+; Character and Entity Reference
+CharRef = "&#" 1*DIGIT ";" | "&#" %x78 1*HEXDIG ";" ; [66]
+Reference = EntityRef / CharRef ; [67]
+EntityRef = "&" Name ";" ; [68]
+PEReference = "%" Name ";" ; [69]
+
+; Entity Declaration
+EntityDecl = GEDecl / PEDecl ; [70]
+GEDecl = %s"<!ENTITY" S Name S EntityDef [S] ">" ; [71]
+PEDecl = %s"<!ENTITY" S "%" S Name S PEDef [S] ">" ; [72]
+EntityDef = EntityValue / ExternalID [NDataDecl] ; [73]
+PEDef = EntityValue / ExternalID ; [74]
+ExternalID = %s"SYSTEM" S SystemLiteral ; [75]
+    / %s"PUBLIC" S PubidLiteral S SystemLiteral
+NDataDecl = S %s"NDATA" S Name ; [76]
+
+; Text Declaration
+TextDecl = "<?" %x78.6d.6c [VersionInfo] EncodingDecl [S] "?>" ; [77]
+
+; Well-Formed External Parsed Entity
+extParsedEnt = [TextDecl] content ; [78]
+
+; Encoding Declaration
+EncodingDecl = S %s"encoding" Eq ; [80]
+    (DQUOTE EncName DQUOTE / "'" EncName "'")
+EncName = ALPHA *(ALPHA / DIGIT / "." / "_" / "-") ; [81]
+
+; Notation Declarations
+NotationDecl = %s"<!NOTATION" S Name S (ExternalID / PublicID) [S] ">" ; [82]
+PublicID = %s"PUBLIC" S PubidLiteral ; [83]
