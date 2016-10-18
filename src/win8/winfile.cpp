@@ -367,6 +367,12 @@ TimePoint fileLastWriteTime(IFile * ifile) {
 }
 
 //===========================================================================
+std::experimental::filesystem::path filePath(IFile * ifile) {
+    File * file = static_cast<File *>(ifile);
+    return file->m_path;
+}
+
+//===========================================================================
 void fileRead(
     IFileReadNotify * notify,
     void * outBuf,

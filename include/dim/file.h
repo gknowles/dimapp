@@ -36,6 +36,7 @@ bool fileOpen(
     );
 size_t fileSize(IFile * file);
 TimePoint fileLastWriteTime(IFile * file);
+std::experimental::filesystem::path filePath(IFile * file);
 
 class IFileReadNotify {
 public:
