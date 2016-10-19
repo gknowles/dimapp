@@ -6,9 +6,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\xml\pch.h" />
+    <ClInclude Include="..\src\xml\xmlbaseparse.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\xml\pch.cpp" />
+    <ClCompile Include="..\src\xml\xmlbaseparse.cpp" />
     <ClCompile Include="..\src\xml\xmlbuilder.cpp" />
     <ClCompile Include="..\src\xml\xmlparser.cpp" />
   </ItemGroup>

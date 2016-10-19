@@ -2,3 +2,5 @@
 #include "dim/xml.h"
 
 #include <algorithm>
+
+#include "xmlbaseparse.h"

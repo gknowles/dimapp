@@ -115,12 +115,16 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\src\xml\pch.h" />
+    <ClInclude Include="..\src\xml\xmlbaseparse.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\xml\pch.cpp">
       <ObjectFileName>$(IntDir)src\xml\</ObjectFileName>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\src\xml\xmlbaseparse.cpp">
+      <ObjectFileName>$(IntDir)src\xml\</ObjectFileName>
     </ClCompile>
     <ClCompile Include="..\src\xml\xmlbuilder.cpp">
       <ObjectFileName>$(IntDir)src\xml\</ObjectFileName>

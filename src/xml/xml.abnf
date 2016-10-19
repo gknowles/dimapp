@@ -2,7 +2,7 @@
 ;
 ; rules to parse xml
 %root = document
-%api.prefix = Xml
+%api.prefix = XmlBase
 
 ; abnf grammer rules for xml
 
@@ -102,7 +102,7 @@ SDDecl = S %s"standalone" Eq ; [32]
     ("'" (%s"yes" / %s"no") "'" / DQUOTE (%s"yes" / %s"no") DQUOTE)
 
 ; Element
-element = EmptyElemTag / STag content ETag ; [39]
+element = EmptyElemTag / STag content ETag { Function } ; [39]
 STag = "<" Name *(S Attribute) [S] ">" ; [40]
 Attribute = Name Eq AttValue ; [41]
 ETag = "</" Name [S] ">" ; [42]
@@ -114,7 +114,7 @@ EmptyElemTag = "<" Name *(S Attribute) [S] "/>" ; [44]
 elementdecl = %s"<!ELEMENT" S Name S contentspec [S] ">" ; [45]
 contentspec = %s"EMPTY" / %s"ANY" / Mixed / children ; [46]
 children = (choice / seq) ["?" / "*" / "+"] ; [47]
-cp = (Name / choice / seq) ["?" / "*" / "+"] ; [48]
+cp = (Name / choice / seq) ["?" / "*" / "+"] { Function } ; [48]
 choice = "(" [S] cp 1*([S] "|" [S] cp) [S] ")" ; [49]
 seq = "(" [S] cp *([S] "," [S] cp) [S] ")" ; [50]
 Mixed = "(" [S] %s"#PCDATA" *([S] "|" [S] Name) [S] ")*" ; [51]
