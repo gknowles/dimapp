@@ -75,22 +75,6 @@ WSP     =  SP
 }
 
 //===========================================================================
-static void writeParserFiles(Grammar & rules) {
-    TimePoint start = Clock::now();
-    if (processOptions(rules)) {
-        ofstream oh(rules.optionString(kOptionApiHeaderFile));
-        ofstream ocpp(rules.optionString(kOptionApiCppFile));
-        writeParser(oh, ocpp, rules, s_cmdopts);
-        oh.close();
-        ocpp.close();
-    }
-    TimePoint finish = Clock::now();
-    std::chrono::duration<double> elapsed = finish - start;
-    logMsgDebug() 
-        << "Elapsed time: " << elapsed.count() << " seconds" << endl;
-}
-
-//===========================================================================
 static bool internalTest() {
     bool valid;
     Grammar rules;
@@ -189,14 +173,27 @@ https://github.com/gknowles/dimapp/tree/master/tools/pargen
 ***/
 
 namespace {
-struct LogTask : public ITaskNotify {
-    LogType m_type;
-    string m_msg;
+class LogTask : public ITaskNotify {
+public:
+    LogTask(LogType type, const string & msg);
 
     // ITaskNotify
     void onTask() override;
+
+private:
+    LogType m_type;
+    string m_msg;
 };
+int s_errors;
 } // namespace
+
+//===========================================================================
+LogTask::LogTask(LogType type, const string & msg)
+    : m_type(type)
+    , m_msg(msg) {
+    if (type == kLogError)
+        s_errors += 1;
+}
 
 //===========================================================================
 void LogTask::onTask() {
@@ -217,7 +214,9 @@ void LogTask::onTask() {
 ***/
 
 namespace {
-class Application : public ILogNotify, public ITaskNotify, public IFileReadNotify {
+class Application : public ILogNotify,
+                    public ITaskNotify,
+                    public IFileReadNotify {
     int m_argc;
     char ** m_argv;
     string m_source;
@@ -285,9 +284,7 @@ void Application::onTask() {
 
 //===========================================================================
 void Application::onLog(LogType type, const std::string & msg) {
-    auto ptr = new LogTask;
-    ptr->m_type = type;
-    ptr->m_msg = msg;
+    auto ptr = new LogTask(type, msg);
     taskPush(m_logQ, *ptr);
 }
 
@@ -296,25 +293,44 @@ void Application::onFileEnd(int64_t offset, IFile * file) {
     if (!file)
         return appSignalShutdown(EX_USAGE);
 
+    TimePoint start = Clock::now();
     Grammar rules;
     getCoreRules(rules);
-    if (parseAbnf(rules, m_source)) {
-        writeParserFiles(rules);
-        return appSignalShutdown(EX_OK);
+    if (!parseAbnf(rules, m_source)) {
+        auto pos = rules.errWhere();
+        auto lineNum =
+            1 + count(m_source.begin(), m_source.begin() + pos, '\n');
+        size_t first = m_source.find_last_of('\n', pos);
+        first = (first == string::npos) ? 0 : first + 1;
+        size_t last = m_source.find_first_of('\n', pos);
+        last = m_source.find_last_not_of(" \t\r\n", last);
+        last = (last == string::npos) ? m_source.size() : last + 1;
+        string line = m_source.substr(first, last - first);
+        logMsgError() << filePath(file) << "(" << lineNum
+                      << "): parsing failed";
+        logMsgInfo() << line;
+        logMsgInfo() << string(pos - first, ' ') << '^';
+        return appSignalShutdown(EX_DATAERR);
     }
 
-    auto pos = rules.errWhere();
-    auto lineNum = 1 + count(m_source.begin(), m_source.begin() + pos, '\n');
-    size_t first = m_source.find_last_of('\n', pos);
-    first = (first == string::npos) ? 0 : first + 1;
-    size_t last = m_source.find_first_of('\n', pos);
-    last = m_source.find_last_not_of(" \t\r\n", last);
-    last = (last == string::npos) ? m_source.size() : last + 1;
-    string line = m_source.substr(first, last - first);
-    logMsgError() << filePath(file) << "(" << lineNum << "): parsing failed"; 
-    logMsgInfo() << line;
-    logMsgInfo() << string(pos - first, ' ') << '^';
-    appSignalShutdown(EX_DATAERR);
+    if (!processOptions(rules))
+        return appSignalShutdown(EX_DATAERR);
+
+    ofstream oh(rules.optionString(kOptionApiHeaderFile));
+    ofstream ocpp(rules.optionString(kOptionApiCppFile));
+    writeParser(oh, ocpp, rules, s_cmdopts);
+    oh.close();
+    ocpp.close();
+    TimePoint finish = Clock::now();
+    std::chrono::duration<double> elapsed = finish - start;
+    logMsgDebug() << "Elapsed time: " << elapsed.count() << " seconds";
+
+    if (s_errors) {
+        logMsgError() << "Errors encountered: " << s_errors;
+        return appSignalShutdown(EX_DATAERR);
+    }
+    logMsgDebug() << "Errors encountered: " << s_errors;
+    appSignalShutdown(EX_OK);
 }
 
 
