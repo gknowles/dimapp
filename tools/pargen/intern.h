@@ -84,8 +84,8 @@ public:
     addRule(Element * rule, const std::string & name, unsigned m, unsigned n);
 
     // case insensitive
-    void addText(
-        Element * rule, const std::string & value, unsigned m, unsigned n);
+    void
+    addText(Element * rule, const std::string & value, unsigned m, unsigned n);
 
     void addLiteral(
         Element * rule, const std::string & value, unsigned m, unsigned n);
@@ -97,8 +97,8 @@ public:
 
     const std::set<Element> & rules() const { return m_rules; }
 
-    size_t errWhere () const { return m_errWhere; }
-    void errWhere (size_t where) { m_errWhere = where; }
+    size_t errWhere() const { return m_errWhere; }
+    void errWhere(size_t where) { m_errWhere = where; }
 
 private:
     Element * addElement(Element * rule, unsigned m, unsigned n);

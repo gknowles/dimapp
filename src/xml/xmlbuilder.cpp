@@ -63,33 +63,34 @@ const char kTextTypeTable[256] = {
 
 enum IXBuilder::State {
     kStateFail,
-    kStateDocIntro,      // _
-    kStateElemName,      // <X_
-    kStateAttrName,      // <X a_
-    kStateAttrText,      // <X a="_
-    kStateAttrEnd,       // <X a="1"_
-    kStateText,          // >_
-    kStateDocEnd,        // </docRoot>_
+    kStateDocIntro, // _
+    kStateElemName, // <X_
+    kStateAttrName, // <X a_
+    kStateAttrText, // <X a="_
+    kStateAttrEnd,  // <X a="1"_
+    kStateText,     // >_
+    kStateDocEnd,   // </docRoot>_
 };
 
 //===========================================================================
-IXBuilder::IXBuilder() : m_state(kStateDocIntro) 
-{}
+IXBuilder::IXBuilder()
+    : m_state(kStateDocIntro) {}
 
 //===========================================================================
 IXBuilder & IXBuilder::start(const char name[]) {
     switch (m_state) {
-    default:
-        return fail();
-    case kStateAttrText: 
-        append("\""); m_state = kStateAttrEnd; [[fallthrough]];
-    case kStateElemName: 
+    default: return fail();
+    case kStateAttrText:
+        append("\"");
+        m_state = kStateAttrEnd;
+        [[fallthrough]];
+    case kStateElemName:
     case kStateAttrEnd:
-        append(">\n"); m_state = kStateText; [[fallthrough]];
+        append(">\n");
+        m_state = kStateText;
+        [[fallthrough]];
     case kStateDocIntro:
-    case kStateText:
-        append("<");
-        break;
+    case kStateText: append("<"); break;
     }
     size_t base = size();
     append(name);
@@ -107,7 +108,7 @@ IXBuilder & IXBuilder::end() {
         append("/>\n");
         m_state = kStateText;
         break;
-    case kStateText: 
+    case kStateText:
         append("</");
         auto & top = m_stack.back();
         appendCopy(top.pos, top.len);
@@ -125,8 +126,7 @@ IXBuilder & IXBuilder::startAttr(const char name[]) {
     switch (m_state) {
     default: return fail();
     case kStateElemName:
-    case kStateAttrEnd:
-        break;
+    case kStateAttrEnd: break;
     }
     append(" ");
     append(name);
@@ -139,8 +139,7 @@ IXBuilder & IXBuilder::startAttr(const char name[]) {
 IXBuilder & IXBuilder::endAttr() {
     switch (m_state) {
     default: return fail();
-    case kStateAttrText:
-        break;
+    case kStateAttrText: break;
     }
     append("\"");
     m_state = kStateAttrEnd;
@@ -166,10 +165,10 @@ IXBuilder & IXBuilder::attr(const char name[], const char val[]) {
 IXBuilder & IXBuilder::text(const char val[]) {
     switch (m_state) {
     default: return fail();
-    case kStateElemName: 
-    case kStateAttrEnd: 
-        append(">"); 
-        m_state = kStateText; 
+    case kStateElemName:
+    case kStateAttrEnd:
+        append(">");
+        m_state = kStateText;
         break;
     case kStateAttrText: addText<false>(val); return *this;
     }

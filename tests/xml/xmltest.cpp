@@ -19,10 +19,14 @@ int main(int argc, char * argv[]) {
     CharBuf out;
     XBuilder bld(out);
     bld.start("root");
-    bld << start("value") << attr("attr") << "attr text" << endAttr 
+    bld << start("value") << attr("attr") << "attr text" << endAttr
         << "text content" << end;
-    bld.start("value").startAttr("a").text("atext").endAttr()
-        .attr("b", "btext").end();
+    bld.start("value")
+        .startAttr("a")
+        .text("atext")
+        .endAttr()
+        .attr("b", "btext")
+        .end();
     bld.end();
     cout << to_string(out);
 

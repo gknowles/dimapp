@@ -21,11 +21,15 @@ namespace Dim {
 
 class IXBuilder {
 public:
-    struct ElemNameProxy { const char * ptr; };
-    struct AttrNameProxy { const char * ptr; };
+    struct ElemNameProxy {
+        const char * ptr;
+    };
+    struct AttrNameProxy {
+        const char * ptr;
+    };
 
 public:
-    IXBuilder ();
+    IXBuilder();
     virtual ~IXBuilder() {}
 
     IXBuilder & start(const char name[]);

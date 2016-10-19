@@ -492,7 +492,8 @@ writeHeaderfile(ostream & os, const Grammar & rules, const Grammar & options) {
 #pragma once
 
 // forward declarations
-class I)" << prefix << R"(ParserNotify;
+class I)"
+       << prefix << R"(ParserNotify;
 
 
 /****************************************************************************
@@ -537,7 +538,7 @@ private:
 /****************************************************************************
 *
 *   Parser event notifications
-*   Clients inherit from this class to make process parsed results
+*   Clients inherit from this class to process parse events
 *
 ***/
 
