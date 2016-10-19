@@ -354,13 +354,17 @@ static void writeParserState(
     bool hasSwitch = writeSwitchCase(os, st);
 
     // write calls to independent sub-state parsers
-    bool hasCalls = false;
+    const StatePosition * call = nullptr;
     for (auto && sp : st.positions) {
         const Element * elem = sp.elems.back().elem;
         if (elem->type != Element::kTerminal && elem != &ElementDone::s_elem) {
-            hasCalls = true;
             assert(elem->type == Element::kRule);
             assert(elem->rule->recurse);
+            if (call && elem->rule == call->elems.back().elem->rule &&
+                sp.delayedEvents == call->delayedEvents) {
+                continue;
+            }
+            call = &sp;
             for (auto && sv : sp.delayedEvents) {
                 writeEventCallback(os, sv.elem->name, Element::Flags(sv.flags));
             }

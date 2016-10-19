@@ -643,10 +643,16 @@ buildStateTree(State * st, unordered_set<State> & states, StateTreeInfo & sti) {
                 } else if (i == 256) {
                     assert(se.elem->type == Element::kRule);
                     assert(se.elem->rule->recurse);
-                    if (next.positions.size()) {
-                        errors = true;
-                        logMsgError() << "Multiple recursive targets, "
-                                      << sti.m_path;
+                    for (auto && nsp : next.positions) {
+                        auto && nse = nsp.elems.back();
+                        if (nse.elem->type == Element::kRule &&
+                            (se.elem->rule != nse.elem->rule ||
+                             sp.events != nsp.events)) {
+                            errors = true;
+                            logMsgError() << "Multiple recursive targets, "
+                                          << sti.m_path;
+                            break;
+                        }
                     }
                     addNextPositions(&next, sp);
                 }
