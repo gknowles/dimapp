@@ -18,7 +18,7 @@ Names and Tokens
 [8]   	Nmtokens	   ::=   	Nmtoken (#x20 Nmtoken)*
 Literals
 [9]   	EntityValue	   ::=   	'"' ([^%&"] | PEReference | Reference)* '"'
-|  "'" ([^%&'] | PEReference | Reference)* "'"
+    |  "'" ([^%&'] | PEReference | Reference)* "'"
 [10]   	AttValue	   ::=   	'"' ([^<&"] | Reference)* '"' 
     |  "'" ([^<&'] | Reference)* "'"
 [11]   	SystemLiteral	   ::=   	('"' [^"]* '"') | ("'" [^']* "'")
@@ -114,7 +114,7 @@ Entity Declaration
 [74]   	PEDef	   ::=   	EntityValue | ExternalID
 External Entity Declaration
 [75]   	ExternalID	   ::=   	'SYSTEM' S SystemLiteral
-| 'PUBLIC' S PubidLiteral S SystemLiteral
+    | 'PUBLIC' S PubidLiteral S SystemLiteral
 [76]   	NDataDecl	   ::=   	S 'NDATA' S Name
 Text Declaration
 [77]   	TextDecl	   ::=   	'<?xml' VersionInfo? EncodingDecl S? '?>'
