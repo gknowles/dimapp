@@ -10,8 +10,9 @@
 document = prolog element *Misc     ; 1
 
 ; Character Range and White Space
-Char = HTAB / CF / LF / %x20-7f     ; 2
-S = 1*(SP / HTAB / CR / LF)         ; 3
+ws = SP / HTAB / CR / LF
+Char = ws / %x21-7f     ; 2
+S = 1*ws         ; 3
 
 ; Names and Tokens
 NameStartChar = ":" / ALPHA / "_"   ; 4
@@ -25,16 +26,45 @@ Nmtokens = Nmtoken *(SP Nmtoken) ; 8
 EntityValue = ; [9]
     DQUOTE *(Char-not-PCT-AMP-DQUOTE / PEReference / Reference) DQUOTE
     / "'" *(Char-not-PCT-AMP-APOS / PEReference / Reference) "'"
-Char-not-PCT-AMP-DQUOTE = HTAB / CR / LF / %x20-21 / %x23-24 / %x27-7f
-Char-not-PCT-AMP-APOS = HTAB / CR / LF / %x20-24 / %x28-7f
+Char-not-PCT-AMP-DQUOTE = ws 
+    / %x21 
+    ; 22 - DQUOTE
+    / %x23-24 
+    ; 25 - PCT
+    ; 26 - AMP
+    / %x27-7f
+Char-not-PCT-AMP-APOS = ws
+    / %x21-24 
+    ; 25 - PCT
+    ; 26 - AMP
+    ; 27 - APOS
+    / %x28-7f
 AttValue = DQUOTE *(Char-not-LT-AMP-DQUOTE / Reference) DQUOTE ; [10]
     / "'" *(Char-not-LT-AMP-APOS / Reference) "'"
-Char-not-LT-AMP-DQUOTE = HTAB / CR / LF / %x20-21 / %x23-24 / %x26-3b 
+Char-not-LT-AMP-DQUOTE = ws
+    / %x21 
+    ; 22 - DQUOTE
+    / %x23-25 
+    ; 26 - AMP
+    / %x27-3b 
+    ; 3c - LT
     / %x3d-7f
-Char-not-LT-AMP-APOS = HTAB / CR / LF / %x20-24 / %x26 / %x28-3b / %x3d-7f
+Char-not-LT-AMP-APOS = ws
+    / %x21-25
+    ; 26 - AMP
+    ; 27 - APOS
+    / %x28-3b 
+    ; 3c - LT
+    / %x3d-7f
 SystemLiteral = DQUOTE *Char-not-DQUOTE DQUOTE / "'" *Char-not-APOS "'" ; [11]
-Char-not-DQUOTE = HTAB / CR / LF / %x20-21 / %x23-7f
-Char-not-APOS = HTAB / CR / LF / %x20-26 / %x28-7f
+Char-not-DQUOTE = ws
+    / %x21 
+    ; 22 - DQUOTE
+    / %x23-7f
+Char-not-APOS = ws
+    / %x21-26 
+    ; 27 - APOS
+    / %x28-7f
 PubidLiteral = DQUOTE *PubidChar DQUOTE / "'" *PubidChar-not-APOS "'" ; [12]
 PubidChar-not-APOS = SP / CR / LF / ALPHA / DIGIT
     / "-" / "(" / ")" / "+" / "," / "." / "/" / ":" / "=" / "?" 
@@ -43,21 +73,42 @@ PubidChar = PubidChar-not-APOS / "'" ; [13]
 
 ; Character Data
 CharData = *(Char-not-LT-AMP-RBRACKET ; [14]
-    / "]" Char-not-LT-AMP-RBRACKET 
-    / 2*"]" Char-not-LT-AMP-GT) 
+    / 1*"]" Char-not-LT-AMP-GT) 
     *"]"
-Char-not-LT-AMP-RBRACKET = HTAB / CR / LF / %x20-25 / %x27-3b / %x3d-5a 
-    / %x5c-7f
-Char-not-LT-AMP-GT = HTAB / CR / LF / %x20-25 / %x27-3b / %x3d / %x3f-7f
+Char-not-LT-AMP-RBRACKET = ws
+    / %x21-25 
+    ; 26 - AMP
+    / %x27-3b 
+    ; 3c - LT
+    / %x3d-5c 
+    ; 5d - RBRACKET
+    / %x5e-7f
+Char-not-LT-AMP-GT = ws
+    / %x21-25 
+    ; 26 - AMP
+    / %x27-3b 
+    ; 3c - LT
+    / %x3d 
+    ; 3e - GT
+    / %x3f-7f
 
 ; Comments
 Comment = "<!--" *Char-not-DASH *("-" Char-not-DASH) "-->" ; [15]
-Char-not-DASH = HTAB / CR / LF / %x20-2c / %x2e-7f
+Char-not-DASH = ws
+    / %x21-2c 
+    ; 2d - DASH
+    / %x2e-7f
 
 ; Processing Instructions
 PI = "<?" PITarget [S *(Char-not-QMARK / "?" Char-not-GT)] "?>" ; [16]
-Char-not-QMARK = HTAB / CR / LF / %x20-3e / %x40-7f
-Char-not-GT = HTAB / CR / LF / %x20-3d / %x3f-7f
+Char-not-QMARK = ws
+    / %x21-3e 
+    ; 3f - QMARK
+    / %x40-7f
+Char-not-GT = ws
+    / %x21-3d 
+    ; 3e - GT
+    / %x3f-7f
 PITarget = NameStartChar-not-X *NameChar ; [17]
     / "X" [NameChar-not-M *NameChar]
     / "XM" [NameChar-not-L *NameChar]
@@ -73,7 +124,10 @@ CDSect = CDStart CData CDEnd ; [18]
 CDStart = "<![" %x43.44.41.54.41 "[" ; [19]
 CData = *(Char-not-RBRACKET / "]" Char-not-RBRACKET / "]]" Char-not-GT) ; [20]
     *"]"
-Char-not-RBRACKET = HTAB / CR / LF / %x20-5a / %x5c-7f
+Char-not-RBRACKET = ws
+    / %x21-5c
+    ; 5d - RBRACKET
+    / %x5e-7f
 CDEnd = "]]>" ; [21]
 
 ; Prolog
@@ -102,12 +156,12 @@ SDDecl = S %s"standalone" Eq ; [32]
     ("'" (%s"yes" / %s"no") "'" / DQUOTE (%s"yes" / %s"no") DQUOTE)
 
 ; Element
-element = EmptyElemTag / STag content ETag { Function } ; [39]
+element = EmptyElemTag / STag content ETag ; [39]
 STag = "<" Name *(S Attribute) [S] ">" ; [40]
 Attribute = Name Eq AttValue ; [41]
 ETag = "</" Name [S] ">" ; [42]
 content = [CharData] *((element / Reference / CDSect / PI / Comment) 
-    [CharData]) ; [43]
+    [CharData]) { Function } ; [43]
 EmptyElemTag = "<" Name *(S Attribute) [S] "/>" ; [44]
 
 ; Element Type Declaration
@@ -141,8 +195,15 @@ Ignore = *(Char-not-LT-RBRACKET ; [65]
     / "<" Char-not-BANG / "<!" Char-not-LBRACKET
     / "]" Char-not-RBRACKET / "]]" Char-not-GT
     ) ["<" ["!"] / *"]"]
-Char-not-LT-RBRACKET = HTAB / CR / LF / %x20-3b / %x3d-5a / %x5c-7f
-Char-not-BANG = HTAB / CR / LF / %x20 / %x22-7f
+Char-not-LT-RBRACKET = ws
+    / %x21-3b 
+    ; 3c - LT
+    / %x3d-5c
+    ; 5d - RBRACKET 
+    / %x5e-7f
+Char-not-BANG = ws
+    ; 21 - BANG
+    / %x22-7f
 
 ; Character and Entity Reference
 CharRef = "&#" 1*DIGIT ";" / "&#" %x78 1*HEXDIG ";" ; [66]
