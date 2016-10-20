@@ -40,6 +40,8 @@ public:
     size_t size() const;
     const char * data() const;
     const char * data(size_t pos, size_t count = -1) const;
+    char * data();
+    char * data(size_t pos, size_t count = -1);
     void clear();
     CharBuf & insert(size_t pos, const char s[]);
     CharBuf & insert(size_t pos, const char s[], size_t count);

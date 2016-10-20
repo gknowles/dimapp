@@ -109,21 +109,31 @@ size_t CharBuf::size() const {
 
 //===========================================================================
 const char * CharBuf::data() const {
-    return data(0, m_size);
+    // we need mutable access to rearrange the buffer so that the requested
+    // section is contiguous, but the data itself will stay unchanged
+    return const_cast<CharBuf *>(this)->data();
 }
 
 //===========================================================================
 const char * CharBuf::data(size_t pos, size_t count) const {
+    // we need mutable access to rearrange the buffer so that the requested
+    // section is contiguous, but the data itself will stay unchanged
+    return const_cast<CharBuf *>(this)->data(pos, count);
+}
+
+//===========================================================================
+char * CharBuf::data() {
+    return data(0, m_size);
+}
+
+//===========================================================================
+char * CharBuf::data(size_t pos, size_t count) {
     assert(pos <= m_size);
     if (pos == m_size)
         return nullptr;
 
     count = min(count, m_size - pos);
-
-    // we need mutable access to rearrange the buffer so that the requested
-    // section is contiguous, but the data itself will stay unchanged
-    auto ic = const_cast<CharBuf *>(this)->find(pos);
-
+    auto ic = find(pos);
     size_t need = ic.second + count;
     Buffer * pbuf = *ic.first;
 
