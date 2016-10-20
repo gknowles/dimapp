@@ -6,6 +6,7 @@
 #include "dim/charbuf.h"
 #include "dim/util.h"
 
+#include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -126,13 +127,20 @@ private:
 ***/
 
 class XStreamParser;
+namespace Detail {
+    class XmlBaseParser;
+}
 
 class IXStreamParserNotify {
 public:
     virtual ~IXStreamParserNotify() {}
     virtual bool StartDoc(XStreamParser & parser) = 0;
+    virtual bool EndDoc(XStreamParser & parser) = 0;
+
     virtual bool
-    StartElem(XStreamParser & parser, const char name[], size_t nameLen) = 0;
+        StartElem(XStreamParser & parser, const char name[], size_t nameLen) = 0;
+    virtual bool EndElem(XStreamParser & parser) = 0;
+
     virtual bool Attr(
         XStreamParser & parser,
         const char name[],
@@ -141,39 +149,23 @@ public:
         size_t valueLen) = 0;
     virtual bool
     Text(XStreamParser & parser, const char value[], size_t valueLen) = 0;
-    virtual bool EndElem(XStreamParser & parser) = 0;
-    virtual bool EndDoc(XStreamParser & parser) = 0;
 };
 
 class XStreamParser {
 public:
-    void clear();
-    bool parse(IXStreamParserNotify & notify, char src[], size_t srcLen);
+    XStreamParser(IXStreamParserNotify & notify);
+    ~XStreamParser();
 
-    ITempHeap & heap();
+    void clear();
+    bool parse(char src[]);
+
     bool fail(const char errmsg[]);
 
 private:
-    bool parseNode(IXStreamParserNotify & notify, unsigned char *& ptr);
-    bool parseElement(
-        IXStreamParserNotify & notify,
-        unsigned char *& ptr,
-        unsigned char * nextChar);
-    bool parseElement(
-        IXStreamParserNotify & notify,
-        unsigned char *& ptr,
-        unsigned char * nextChar,
-        unsigned firstChar);
-    bool parsePI(unsigned char *& ptr);
-    bool parseBangNode(IXStreamParserNotify & notify, unsigned char *& ptr);
-    bool parseComment(unsigned char *& ptr);
-    bool parseCData(IXStreamParserNotify & notify, unsigned char *& ptr);
-    bool parseAttrs(IXStreamParserNotify & notify, unsigned char *& ptr);
-    bool parseContent(IXStreamParserNotify & notify, unsigned char *& ptr);
-
-    TempHeap m_heap;
+    IXStreamParserNotify & m_notify;
     unsigned m_line{0};
     bool m_failed{false};
+    std::unique_ptr<Detail::XmlBaseParser> m_base;
 };
 
 
@@ -209,6 +201,7 @@ private:
     bool EndElem(XStreamParser & parser) override;
     bool EndDoc(XStreamParser & parser) override;
 
+    TempHeap m_heap;
     XStreamParser m_parser;
     XElem * m_root{nullptr};
 };

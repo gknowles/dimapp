@@ -4,6 +4,8 @@
 #include "pch.h"
 #pragma hdrstop
 
+using namespace Dim::Detail;
+
 
 /****************************************************************************
 *
@@ -272,6 +274,11 @@
 *   seq = ( %x28 *1S cp *( *1S %x2c *1S cp ) *1S %x29 ) 
 *
 ***/
+
+//===========================================================================
+IXmlBaseParserNotify * XmlBaseParser::notify(IXmlBaseParserNotify * notify) {
+    return m_notify;
+}
 
 //===========================================================================
 bool XmlBaseParser::parse (const char src[]) {

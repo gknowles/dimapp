@@ -3,6 +3,8 @@
 // clang-format off
 #pragma once
 
+namespace Dim::Detail {
+
 // forward declarations
 class IXmlBaseParserNotify;
 
@@ -20,6 +22,11 @@ public:
 
     bool parse (const char src[]);
     size_t errWhere () const { return m_errWhere; }
+
+    IXmlBaseParserNotify * notify() const { return m_notify; }
+
+    // sets notify and returns its previous value
+    IXmlBaseParserNotify * notify(IXmlBaseParserNotify * notify);
 
 private:
     bool stateCp (const char *& src);
@@ -45,3 +52,5 @@ public:
     virtual bool onEnd () { return true; }
 
 };
+
+} // namespace

@@ -1,4 +1,4 @@
-// xmlbuilder.cpp - dim xml
+// xbuilder.cpp - dim xml
 #include "pch.h"
 #pragma hdrstop
 
