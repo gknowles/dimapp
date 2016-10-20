@@ -187,6 +187,9 @@ void Application::onTask() {
 
     endpointQuery(&s_cancelAddrId, &s_socket, m_argv[1], 23);
 
+    HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
+    DWORD type = GetFileType(hIn);
+    (void) type;
     fileOpen(s_console.m_file, "conin$", IFile::kReadWrite);
     s_console.m_buffer = socketGetBuffer();
     fileRead(
