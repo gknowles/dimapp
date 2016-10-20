@@ -34,10 +34,9 @@ XStreamParser::~XStreamParser() {
 
 //===========================================================================
 bool XStreamParser::parse(char src[]) {
-    //auto ptr = (unsigned char *)src;
     m_line = 0;
     m_failed = false;
-    return false;
+    return m_base->parse(src);
 }
 
 #if 0

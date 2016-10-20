@@ -28,7 +28,11 @@ int main(int argc, char * argv[]) {
         .attr("b", "btext")
         .end();
     bld.end();
-    cout << to_string(out);
+    out.pushBack(0);
+    cout << out.data();
+    XParser par;
+    auto root = par.parse(out.data());
+    (void) root;
 
     return EX_OK;
 }

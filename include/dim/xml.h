@@ -179,17 +179,21 @@ struct XElem;
 
 class XParser : IXStreamParserNotify {
 public:
+    XParser();
+
     void clear();
     XElem * parse(char src[]);
     XElem * setRoot(const char elemName[], const char text[] = nullptr);
 
-    ITempHeap & heap();
+    ITempHeap & heap() { return m_heap; }
 
 private:
     // IXStreamParserNotify
     bool StartDoc(XStreamParser & parser) override;
+    bool EndDoc(XStreamParser & parser) override;
     bool StartElem(
         XStreamParser & parser, const char name[], size_t nameLen) override;
+    bool EndElem(XStreamParser & parser) override;
     bool Attr(
         XStreamParser & parser,
         const char name[],
@@ -198,8 +202,6 @@ private:
         size_t valueLen) override;
     bool
     Text(XStreamParser & parser, const char value[], size_t valueLen) override;
-    bool EndElem(XStreamParser & parser) override;
-    bool EndDoc(XStreamParser & parser) override;
 
     TempHeap m_heap;
     XStreamParser m_parser;
