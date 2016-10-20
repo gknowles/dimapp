@@ -21,6 +21,7 @@ solution "dimapp"
   targetdir "bin"
   pchheader "pch.h"
   debugdir "$(TargetDir)"
+  buildoptions { "/std:c++latest" }
 
 
 configuration "Debug"

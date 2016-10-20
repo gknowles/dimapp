@@ -10,8 +10,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\xml\pch.cpp" />
+    <ClCompile Include="..\src\xml\xbuilder.cpp" />
     <ClCompile Include="..\src\xml\xmlbaseparse.cpp" />
-    <ClCompile Include="..\src\xml\xmlbuilder.cpp" />
-    <ClCompile Include="..\src\xml\xmlparser.cpp" />
+    <ClCompile Include="..\src\xml\xparser.cpp" />
+    <ClCompile Include="..\src\xml\xstreamparser.cpp" />
   </ItemGroup>
 </Project>

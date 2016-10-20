@@ -51,7 +51,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalOptions>  %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/std:c++latest  %(AdditionalOptions)</AdditionalOptions>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>..\include;..\vendor\sodium\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -82,7 +82,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalOptions>  %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/std:c++latest  %(AdditionalOptions)</AdditionalOptions>
       <Optimization>Full</Optimization>
       <AdditionalIncludeDirectories>..\include;..\vendor\sodium\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -123,13 +123,16 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\src\xml\xbuilder.cpp">
+      <ObjectFileName>$(IntDir)src\xml\</ObjectFileName>
+    </ClCompile>
     <ClCompile Include="..\src\xml\xmlbaseparse.cpp">
       <ObjectFileName>$(IntDir)src\xml\</ObjectFileName>
     </ClCompile>
-    <ClCompile Include="..\src\xml\xmlbuilder.cpp">
+    <ClCompile Include="..\src\xml\xparser.cpp">
       <ObjectFileName>$(IntDir)src\xml\</ObjectFileName>
     </ClCompile>
-    <ClCompile Include="..\src\xml\xmlparser.cpp">
+    <ClCompile Include="..\src\xml\xstreamparser.cpp">
       <ObjectFileName>$(IntDir)src\xml\</ObjectFileName>
     </ClCompile>
   </ItemGroup>
