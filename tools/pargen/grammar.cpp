@@ -228,7 +228,6 @@ bool processOptions(Grammar & rules) {
     }
     ensureOption(rules, kOptionApiParserClass, prefix + "Parser");
     ensureOption(rules, kOptionApiNotifyClass, "I" + prefix + "ParserNotify");
-    ensureOption(rules, kOptionApiNamespace, "");
     transform(prefix.begin(), prefix.end(), prefix.begin(), tolower);
     ensureOption(rules, kOptionApiHeaderFile, prefix + "parse.h");
     ensureOption(rules, kOptionApiCppFile, prefix + "parse.cpp");
