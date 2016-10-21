@@ -11,6 +11,9 @@ const char kOptionRoot[] = "%root";
 const char kOptionApiPrefix[] = "%api.prefix";
 const char kOptionApiHeaderFile[] = "%api.file.h";
 const char kOptionApiCppFile[] = "%api.file.cpp";
+const char kOptionApiParserClass[] = "%api.parser.className";
+const char kOptionApiNotifyClass[] = "%api.notify.className";
+const char kOptionApiNamespace[] = "%api.namespace";
 
 const char kDoneRuleName[] = "%%DONE";
 

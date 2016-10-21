@@ -209,6 +209,13 @@ const Element * Grammar::element(const std::string & name) const {
 ***/
 
 //===========================================================================
+static void ensureOption(
+    Grammar & rules, const char name[], const string & value) {
+    if (!*rules.optionString(name))
+        rules.addOption(name, value);
+}
+
+//===========================================================================
 bool processOptions(Grammar & rules) {
     if (!*rules.optionString(kOptionRoot)) {
         logMsgError() << "Option not found, " << kOptionRoot;
@@ -219,13 +226,12 @@ bool processOptions(Grammar & rules) {
         logMsgError() << "Option not found, " << kOptionApiPrefix;
         return false;
     }
+    ensureOption(rules, kOptionApiParserClass, prefix + "Parser");
+    ensureOption(rules, kOptionApiNotifyClass, "I" + prefix + "ParserNotify");
+    ensureOption(rules, kOptionApiNamespace, "");
     transform(prefix.begin(), prefix.end(), prefix.begin(), tolower);
-    if (!*rules.optionString(kOptionApiHeaderFile)) {
-        rules.addOption(kOptionApiHeaderFile, prefix + "parse.h");
-    }
-    if (!*rules.optionString(kOptionApiCppFile)) {
-        rules.addOption(kOptionApiCppFile, prefix + "parse.cpp");
-    }
+    ensureOption(rules, kOptionApiHeaderFile, prefix + "parse.h");
+    ensureOption(rules, kOptionApiCppFile, prefix + "parse.cpp");
     return true;
 }
 

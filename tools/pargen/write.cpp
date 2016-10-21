@@ -389,6 +389,9 @@ static void writeCppfileStart(
     time_t now = time(nullptr);
     tm tm;
     localtime_s(&tm, &now);
+    auto parserClass = options.optionString(kOptionApiParserClass);
+    auto notifyClass = options.optionString(kOptionApiNotifyClass);
+    auto ns = options.optionString(kOptionApiNamespace);
     os << 1 + R"(
 // )" << options.optionString(kOptionApiCppFile)
        << R"(
@@ -397,12 +400,15 @@ static void writeCppfileStart(
 // clang-format off
 #include "pch.h"
 #pragma hdrstop
-
+)";
+    if (*ns) {
+        os << "\nusing namespace " << ns << ";\n";
+    }
+    os << R"(
 
 /****************************************************************************
 *
-*   )" << options.optionString(kOptionApiPrefix)
-       << R"(Parser
+*   )" << parserClass << R"(
 *
 *   Normalized ABNF of syntax:
 )";
@@ -414,6 +420,12 @@ static void writeCppfileStart(
     os << 1 + R"(
 *
 ***/
+
+//===========================================================================
+)" << notifyClass << " * " << parserClass << "::notify (" 
+    << notifyClass << R"( * notify) {
+    return notify;
+}
 )";
 }
 
@@ -424,12 +436,14 @@ static void writeFunction(
     const unordered_set<State> & stateSet,
     const Grammar & options,
     bool inclStatePositions) {
-    string prefix = options.optionString(kOptionApiPrefix);
+    auto parserClass = options.optionString(kOptionApiParserClass);
     os << 1 + R"(
 
 //===========================================================================
-bool )" << prefix
-       << "Parser::";
+// Parser function covering:
+//  - )" << stateSet.size() + 1 << R"( states
+bool )" << parserClass
+       << "::";
     if (!root) {
         os << R"(parse (const char src[]) {
     const char * ptr = src;
@@ -486,7 +500,9 @@ writeHeaderfile(ostream & os, const Grammar & rules, const Grammar & options) {
     time_t now = time(nullptr);
     tm tm;
     localtime_s(&tm, &now);
-    string prefix = options.optionString(kOptionApiPrefix);
+    auto parserClass = options.optionString(kOptionApiParserClass);
+    auto notifyClass = options.optionString(kOptionApiNotifyClass);
+    auto ns = options.optionString(kOptionApiNamespace);
     os << 1 + R"(
 // )" << options.optionString(kOptionApiHeaderFile)
        << R"(
@@ -494,30 +510,37 @@ writeHeaderfile(ostream & os, const Grammar & rules, const Grammar & options) {
        << put_time(&tm, "%FT%T%z") << R"(
 // clang-format off
 #pragma once
-
+)";
+    if (*ns) {
+        os << "\nnamespace " << ns << " {\n";
+    }
+    os << R"(
 // forward declarations
-class I)"
-       << prefix << R"(ParserNotify;
+class )" << notifyClass << R"(;
 
 
 /****************************************************************************
 *
-*   )" << prefix
-       << R"(Parser
+*   )" << parserClass << R"(
 *
 ***/
 
 class )"
-       << prefix << R"(Parser {
+       << parserClass << R"( {
 public:
-    )" << prefix
-       << "Parser (I" << prefix
-       << R"(ParserNotify * notify) : m_notify(notify) {}
-    ~)" << prefix
-       << R"(Parser () {}
+    )" << parserClass
+       << " (" << notifyClass
+       << R"( * notify) : m_notify(notify) {}
+    ~)" << parserClass
+       << R"( () {}
 
     bool parse (const char src[]);
     size_t errWhere () const { return m_errWhere; }
+
+    )" << notifyClass << R"( * notify () const { return m_notify; }
+
+    // sets notify and returns its previous value
+    )" << notifyClass << R"( * notify ()" << notifyClass << R"( * notify);
 
 private:
 )";
@@ -533,8 +556,8 @@ private:
     if (hasRecurseRules)
         os << '\n';
     os << 1 + R"(
-    I)" << prefix
-       << R"(ParserNotify * m_notify{nullptr};
+    )" << notifyClass
+       << R"( * m_notify{nullptr};
     size_t m_errWhere{0};
 };
 
@@ -546,19 +569,25 @@ private:
 *
 ***/
 
-class I)"
-       << prefix << R"(ParserNotify {
+class )"
+       << notifyClass << R"( {
 public:
-    virtual ~I)"
-       << prefix << R"(ParserNotify () {}
+    virtual ~)"
+       << notifyClass << R"( () {}
 
     virtual bool onStart () { return true; }
     virtual bool onEnd () { return true; }
-
 )";
+    bool foundEvent = false;
     for (auto && elem : rules.rules()) {
         if (!elem.eventName.empty())
             continue;
+        if (!foundEvent &&
+            (elem.flags & (Element::kOnStart | Element::kOnEnd | Element::kOnChar))
+        ) {
+            os << "\n";
+            foundEvent = true;
+        }
         if (elem.flags & Element::kOnStart) {
             os << "    virtual bool on";
             writeRuleName(os, elem.name, true);
@@ -578,6 +607,9 @@ public:
     os << 1 + R"(
 };
 )";
+    if (*ns) {
+        os << "\n} // namespace\n";
+    }
 }
 
 
