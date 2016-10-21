@@ -38,7 +38,9 @@ Triggering callbacks during parsing:
 - start
 - end
 - char
-- function
 
 Change the name of the callback invoked
-- as = <rulename>
+- as = \<rulename>
+
+Root of separate function that can be recursively called
+- function
