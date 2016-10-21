@@ -3,6 +3,7 @@
 ; rules to parse xml
 %root = document
 %api.prefix = XmlBase
+%api.namespace = Dim::Detail
 
 ; abnf grammer rules for xml
 
