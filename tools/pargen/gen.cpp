@@ -895,6 +895,8 @@ static bool equalize(unsigned a, unsigned b, DedupInfo & di) {
     size_t n = x.state->next.size();
     if (n != y.state->next.size())
         return false;
+    if (x.state->next == y.state->next)
+        return true;
     for (unsigned i = 0; i < n; ++i) {
         unsigned p = x.state->next[i];
         unsigned q = y.state->next[i];
@@ -924,7 +926,7 @@ static bool dedupStateTreePass(DedupInfo & di) {
     vector<pair<unsigned, unsigned>> matched;
 
     for (auto && kv : di.idByKey) {
-        for (size_t b = kv.second.size(); b-- > 0;) {
+        for (size_t b = kv.second.size(); b-- > 1;) {
             unsigned y = kv.second[b];
             for (auto && x : kv.second) {
                 if (x == y)
