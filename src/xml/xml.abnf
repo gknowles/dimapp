@@ -122,7 +122,7 @@ NameChar-not-L = %x41-4b / %x4d-5a / %x61-6b / %x6d-7a / ":" / "_" / "-"
 
 ; CData Sections
 CDSect = CDStart CData CDEnd ; [18]
-CDStart = "<![" %x43.44.41.54.41 "[" ; [19]
+CDStart = %s"<![CDATA[" ; [19]
 CData = *(Char-not-RBRACKET / "]" Char-not-RBRACKET / "]]" Char-not-GT) ; [20]
     *"]"
 Char-not-RBRACKET = ws
@@ -133,15 +133,15 @@ CDEnd = "]]>" ; [21]
 
 ; Prolog
 prolog = [XMLDecl] *Misc [doctypedecl *Misc] ; [22]
-XMLDecl = "<?" %x78.6d.6c VersionInfo [EncodingDecl] [SDDecl] [S] "?>" ; [23]
-VersionInfo = S %x76.65.72.73.69.6f.6e Eq ; [24]
+XMLDecl = %s"<?xml" VersionInfo [EncodingDecl] [SDDecl] [S] "?>" ; [23]
+VersionInfo = S %s"version" Eq ; [24]
     ("'" VersionNum "'" / DQUOTE VersionNum DQUOTE)
 Eq = [S] "=" [S] ; [25]
 VersionNum = "1." 1*DIGIT ; [26]
 Misc = Comment / PI / S ; [27]
 
 ; Document Type Definition
-doctypedecl = "<!" %x44.4f.43.54.59.50.45 S Name [S ExternalID] [S]
+doctypedecl = %s"<!DOCTYPE" S Name [S ExternalID] [S]
     [ "[" intSubset "]" [S] ] ">" ; [28]
 DeclSep = PEReference / S ; [28a]
 intSubset = *(markupdecl / DeclSep) ; [28b]
@@ -223,7 +223,7 @@ ExternalID = %s"SYSTEM" S SystemLiteral ; [75]
 NDataDecl = S %s"NDATA" S Name ; [76]
 
 ; Text Declaration
-TextDecl = "<?" %x78.6d.6c [VersionInfo] EncodingDecl [S] "?>" ; [77]
+TextDecl = %s"<?xml" [VersionInfo] EncodingDecl [S] "?>" ; [77]
 
 ; Well-Formed External Parsed Entity
 extParsedEnt = [TextDecl] content ; [78]
