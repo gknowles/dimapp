@@ -36,7 +36,11 @@ XStreamParser::~XStreamParser() {
 bool XStreamParser::parse(char src[]) {
     m_line = 0;
     m_failed = false;
-    return m_base->parse(src);
+    m_notify.StartDoc(*this);
+    if (!m_base->parse(src))
+        return false;
+    m_notify.EndDoc(*this);
+    return true;
 }
 
 #if 0
