@@ -544,7 +544,8 @@ static void removeConflicts(
 static bool delayConflicts(
     StatePosition & nsp,
     const vector<StateEvent> & matched,
-    const StateTreeInfo & sti) {
+    const StateTreeInfo & sti,
+    bool logError) {
     for (auto && sv : matched) {
         auto evi = nsp.events.begin();
         auto e = nsp.events.end();
@@ -562,8 +563,11 @@ static bool delayConflicts(
     for (auto && sv : nsp.delayedEvents) {
         if (sv.flags & Element::kOnChar) {
             success = false;
-            logMsgError() << "Conflicting parse events, " << sv.elem->name
-                          << " at " << sti.m_path;
+            if (logError) {
+                logMsgError() << "Conflicting parse events, " << sv.elem->name
+                              << " at " << sti.m_path;
+            }
+            break;
         }
     }
     return success;
@@ -599,7 +603,7 @@ static bool resolveEventConflicts(
         nsp.elems = move(sp.elems);
         nsp.recurse = sp.recurse;
         nsp.events = move(sp.events);
-        if (!delayConflicts(nsp, matched, sti))
+        if (!delayConflicts(nsp, matched, sti, success))
             success = false;
         next.insert(move(nsp));
     }
