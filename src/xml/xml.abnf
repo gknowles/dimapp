@@ -19,9 +19,7 @@ S = 1*ws         ; 3
 NameStartChar = ":" / ALPHA / "_"   ; 4
 NameChar = NameStartChar / "-" / "." / DIGIT ; 4a
 Name = NameStartChar *(NameChar)    ; 5
-Names = Name *(SP Name)             ; 6
 Nmtoken = 1*NameChar ; 7
-Nmtokens = Nmtoken *(SP Nmtoken) ; 8
 
 ; Literals
 EntityValue = ; [9]
@@ -94,7 +92,7 @@ Char-not-LT-AMP-GT = ws
     / %x3f-7f
 
 ; Comments
-Comment = "<!--" *Char-not-DASH *("-" Char-not-DASH) "-->" ; [15]
+Comment = "<!--" *(Char-not-DASH  / ("-" Char-not-DASH) ) "-->" ; [15]
 Char-not-DASH = ws
     / %x21-2c 
     ; 2d - DASH
@@ -123,11 +121,19 @@ NameChar-not-L = %x41-4b / %x4d-5a / %x61-6b / %x6d-7a / ":" / "_" / "-"
 ; CData Sections
 CDSect = CDStart CData CDEnd ; [18]
 CDStart = %s"<![CDATA[" ; [19]
-CData = *(Char-not-RBRACKET / "]" Char-not-RBRACKET / "]]" Char-not-GT) ; [20]
+CData = *(Char-not-RBRACKET  ; [20]
+    / "]" Char-not-RBRACKET 
+    / "]]" Char-not-GT-RBRACKET)
     *"]"
 Char-not-RBRACKET = ws
     / %x21-5c
     ; 5d - RBRACKET
+    / %x5e-7f
+Char-not-GT-RBRACKET = ws
+    / %x21-3d 
+    ; 3e - GT
+    / %x3f-5c
+    ; 5d - RBRACKET 
     / %x5e-7f
 CDEnd = "]]>" ; [21]
 
@@ -158,12 +164,13 @@ SDDecl = S %s"standalone" Eq ; [32]
 
 ; Element
 element = EmptyElemTag / STag content ETag ; [39]
-STag = "<" Name *(S Attribute) [S] ">" ; [40]
+STag = "<" elemName *(S Attribute) [S] ">" ; [40]
 Attribute = Name Eq AttValue ; [41]
 ETag = "</" Name [S] ">" ; [42]
 content = [CharData] *((element / Reference / CDSect / PI / Comment) 
     [CharData]) { Function } ; [43]
-EmptyElemTag = "<" Name *(S Attribute) [S] "/>" ; [44]
+EmptyElemTag = "<" elemName *(S Attribute) [S] "/>" ; [44]
+elemName = Name ; { Char }
 
 ; Element Type Declaration
 elementdecl = %s"<!ELEMENT" S Name S contentspec [S] ">" ; [45]
@@ -193,8 +200,8 @@ includeSect = "<![" [S] %s"INCLUDE" [S] "[" extSubsetDecl "]]>" ; [62]
 ignoreSect = "<![" [S] %s"IGNORE" [S] "[" *ignoreSectContents "]]>" ; [63]
 ignoreSectContents = Ignore *("<![" ignoreSectContents "]]>" Ignore) ; [64]
 Ignore = *(Char-not-LT-RBRACKET ; [65]
-    / "<" Char-not-BANG / "<!" Char-not-LBRACKET
-    / "]" Char-not-RBRACKET / "]]" Char-not-GT
+    / "<" Char-not-BANG-RBRACKET / "<!" Char-not-LBRACKET-RBRACKET
+    / "]" Char-not-LT-RBRACKET / "]]" Char-not-LT-GT-RBRACKET
     ) ["<" ["!"] / *"]"]
 Char-not-LT-RBRACKET = ws
     / %x21-3b 
@@ -202,9 +209,25 @@ Char-not-LT-RBRACKET = ws
     / %x3d-5c
     ; 5d - RBRACKET 
     / %x5e-7f
-Char-not-BANG = ws
+Char-not-BANG-RBRACKET = ws
     ; 21 - BANG
-    / %x22-7f
+    / %x22-5c
+    ; 5d - RBRACKET
+    / %x5e-7f
+Char-not-LBRACKET-RBRACKET = ws
+    / %x21-5a
+    ; 5b - LBRACKET
+    / %x5c
+    ; 5d - RBRACKET
+    / %x5e-7f
+Char-not-LT-GT-RBRACKET = ws
+    / %x21-3b 
+    ; 3c - LT
+    / %x3d
+    ; 3e - GT
+    / %x3f-5c
+    ; 5d - RBRACKET 
+    / %x5e-7f
 
 ; Character and Entity Reference
 CharRef = "&#" 1*DIGIT ";" / "&#" %x78 1*HEXDIG ";" ; [66]
