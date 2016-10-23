@@ -21,7 +21,7 @@ included.
 ## Options
 
 | Name | Default | Description |
-|--|--|--|
+|------|---------|-------------|
 | %root | - | Name of the top level rule that matches the input to be parsed |
 | %api.prefix | - | Used in default definitions of other options |
 | %api.file.h | lowercase(%api.prefix) + "parse.h" | Header file to generate |
