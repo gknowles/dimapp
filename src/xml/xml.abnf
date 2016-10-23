@@ -23,24 +23,24 @@ Nmtoken = 1*NameChar ; 7
 
 ; Literals
 EntityValue = ; [9]
-    DQUOTE *(Char-not-PCT-AMP-DQUOTE / PEReference / Reference) DQUOTE
-    / "'" *(Char-not-PCT-AMP-APOS / PEReference / Reference) "'"
-Char-not-PCT-AMP-DQUOTE = ws 
+    DQUOTE *(Char-not-AMP-DQUOTE-PCT / PEReference / Reference) DQUOTE
+    / "'" *(Char-not-AMP-APOS-PCT / PEReference / Reference) "'"
+Char-not-AMP-DQUOTE-PCT = ws 
     / %x21 
     ; 22 - DQUOTE
     / %x23-24 
     ; 25 - PCT
     ; 26 - AMP
     / %x27-7f
-Char-not-PCT-AMP-APOS = ws
+Char-not-AMP-APOS-PCT = ws
     / %x21-24 
     ; 25 - PCT
     ; 26 - AMP
     ; 27 - APOS
     / %x28-7f
-AttValue = DQUOTE *(Char-not-LT-AMP-DQUOTE / Reference) DQUOTE ; [10]
-    / "'" *(Char-not-LT-AMP-APOS / Reference) "'"
-Char-not-LT-AMP-DQUOTE = ws
+AttValue = DQUOTE *(Char-not-AMP-DQUOTE-LT / Reference) DQUOTE ; [10]
+    / "'" *(Char-not-AMP-APOS-LT / Reference) "'"
+Char-not-AMP-DQUOTE-LT = ws
     / %x21 
     ; 22 - DQUOTE
     / %x23-25 
@@ -48,7 +48,7 @@ Char-not-LT-AMP-DQUOTE = ws
     / %x27-3b 
     ; 3c - LT
     / %x3d-7f
-Char-not-LT-AMP-APOS = ws
+Char-not-AMP-APOS-LT = ws
     / %x21-25
     ; 26 - AMP
     ; 27 - APOS
@@ -70,11 +70,20 @@ PubidChar-not-APOS = SP / CR / LF / ALPHA / DIGIT
     / ";" / "!" / "*" / "#" / "@" / "$" / "_" / "%"
 PubidChar = PubidChar-not-APOS / "'" ; [13]
 
+; Attribute Value
+attrValue = DQUOTE attrContent DQUOTE / "'" attrContentApos "'" ; [10]
+attrContent = [attrInPlace] *(Reference [attrCopy]) { End }
+attrInPlace = *(Char-not-AMP-DQUOTE-LT) { Start, End }
+attrCopy = *(Char-not-AMP-DQUOTE-LT) { Char }
+attrContentApos = [attrInPlaceApos] *(Reference [attrCopyApos]) { End, As = attrContent }
+attrInPlaceApos = *(Char-not-AMP-APOS-LT) { Start, End, As = attrInPlace }
+attrCopyApos = *(Char-not-AMP-APOS-LT) { Char, As = attrCopy }
+
 ; Character Data
-CharData = *(Char-not-LT-AMP-RBRACKET ; [14]
-    / 1*"]" Char-not-LT-AMP-GT) 
+CharData = *(Char-not-AMP-LT-RBRACKET ; [14]
+    / 1*"]" Char-not-AMP-GT-LT) 
     *"]"
-Char-not-LT-AMP-RBRACKET = ws
+Char-not-AMP-LT-RBRACKET = ws
     / %x21-25 
     ; 26 - AMP
     / %x27-3b 
@@ -82,7 +91,7 @@ Char-not-LT-AMP-RBRACKET = ws
     / %x3d-5c 
     ; 5d - RBRACKET
     / %x5e-7f
-Char-not-LT-AMP-GT = ws
+Char-not-AMP-GT-LT = ws
     / %x21-25 
     ; 26 - AMP
     / %x27-3b 
@@ -90,6 +99,8 @@ Char-not-LT-AMP-GT = ws
     / %x3d 
     ; 3e - GT
     / %x3f-7f
+charDataInPlace = CharData { End }
+charDataCopy = CharData { Char }
 
 ; Comments
 Comment = "<!--" *(Char-not-DASH  / ("-" Char-not-DASH) ) "-->" ; [15]
@@ -119,8 +130,9 @@ NameChar-not-L = %x41-4b / %x4d-5a / %x61-6b / %x6d-7a / ":" / "_" / "-"
     / "." / DIGIT
 
 ; CData Sections
-CDSect = CDStart CData CDEnd ; [18]
+CDSect = CDStart CDataWithEnd ; [18]
 CDStart = %s"<![CDATA[" ; [19]
+CDataWithEnd = CData CDEnd { Char, End }
 CData = *(Char-not-RBRACKET  ; [20]
     / "]" Char-not-RBRACKET 
     / "]]" Char-not-GT-RBRACKET)
@@ -163,14 +175,15 @@ SDDecl = S %s"standalone" Eq ; [32]
     ("'" (%s"yes" / %s"no") "'" / DQUOTE (%s"yes" / %s"no") DQUOTE)
 
 ; Element
-element = EmptyElemTag / STag content ETag ; [39]
+element = EmptyElemTag / STag content ETag { End } ; [39]
 STag = "<" elemName *(S Attribute) [S] ">" ; [40]
-Attribute = Name Eq AttValue ; [41]
+Attribute = attrName Eq attrValue ; [41]
+attrName = Name { Start, End }
 ETag = "</" Name [S] ">" ; [42]
-content = [CharData] *((element / Reference / CDSect / PI / Comment) 
-    [CharData]) { Function } ; [43]
+content = [charDataInPlace] *((element / Reference / CDSect / PI / Comment) 
+    [charDataCopy]) { Start, Function } ; [43]
 EmptyElemTag = "<" elemName *(S Attribute) [S] "/>" ; [44]
-elemName = Name ; { Char }
+elemName = Name { Start, End }
 
 ; Element Type Declaration
 elementdecl = %s"<!ELEMENT" S Name S contentspec [S] ">" ; [45]
@@ -201,7 +214,7 @@ ignoreSect = "<![" [S] %s"IGNORE" [S] "[" *ignoreSectContents "]]>" ; [63]
 ignoreSectContents = Ignore *("<![" ignoreSectContents "]]>" Ignore) ; [64]
 Ignore = *(Char-not-LT-RBRACKET ; [65]
     / "<" Char-not-BANG-RBRACKET / "<!" Char-not-LBRACKET-RBRACKET
-    / "]" Char-not-LT-RBRACKET / "]]" Char-not-LT-GT-RBRACKET
+    / "]" Char-not-LT-RBRACKET / "]]" Char-not-GT-LT-RBRACKET
     ) ["<" ["!"] / *"]"]
 Char-not-LT-RBRACKET = ws
     / %x21-3b 
@@ -220,7 +233,7 @@ Char-not-LBRACKET-RBRACKET = ws
     / %x5c
     ; 5d - RBRACKET
     / %x5e-7f
-Char-not-LT-GT-RBRACKET = ws
+Char-not-GT-LT-RBRACKET = ws
     / %x21-3b 
     ; 3c - LT
     / %x3d
@@ -232,7 +245,14 @@ Char-not-LT-GT-RBRACKET = ws
 ; Character and Entity Reference
 CharRef = "&#" 1*DIGIT ";" / "&#" %x78 1*HEXDIG ";" ; [66]
 Reference = EntityRef / CharRef ; [67]
-EntityRef = "&" Name ";" ; [68]
+EntityRef = entityApos / entityQuot / entityGt / entityLt / entityAmp ; [68]
+    / entityOther
+entityApos = %s"&apos;" { End }
+entityQuot = %s"&quot;" { End }
+entityGt = %s"&gt;" { End }
+entityLt = %s"&lt;" { End }
+entityAmp = %s"&amp;" { End }
+entityOther = "&" Name ";" { End }
 PEReference = "%" Name ";" ; [69]
 
 ; Entity Declaration
