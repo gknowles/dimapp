@@ -12,6 +12,11 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\src\json.abnf">
+      <Filter>src</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
     <ClInclude Include="..\include\dim.h">
       <Filter>include</Filter>
     </ClInclude>
