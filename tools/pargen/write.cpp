@@ -85,17 +85,34 @@ static void writeElement(ostream & os, const Element & elem, bool inclPos) {
     }
     bool first = true;
     switch (elem.type) {
-    case Element::kChoice:
+    case Element::kChoice: {
         os << "( ";
-        for (auto && e : elem.elements) {
+        auto cur = elem.elements.begin();
+        auto last = elem.elements.end();
+        for (; cur != last; ++cur) {
             if (first) {
                 first = false;
             } else {
                 os << " / ";
             }
-            writeElement(os, e, inclPos);
+            writeElement(os, *cur, inclPos);
+            if (cur->type == Element::kTerminal && !inclPos) {
+                auto next = cur;
+                for (;next + 1 != last; ++next) {
+                    if (next[1].type != Element::kTerminal 
+                        || next->value[0] + 1 != next[1].value[0]
+                    ) {
+                        break;
+                    }
+                }
+                if (cur != next) {
+                    cur = next;
+                    os << '-' << hex << (unsigned)(unsigned char)cur->value[0] << dec;
+                }
+            }
         }
         os << " )";
+        }
         break;
     case Element::kRule: os << elem.value; break;
     case Element::kSequence:

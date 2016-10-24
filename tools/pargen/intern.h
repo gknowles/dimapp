@@ -27,8 +27,8 @@ struct Element {
     };
 
     enum Type : uint8_t {
-        kSequence,
         kRule,
+        kSequence,
         kChoice,
         kTerminal,
     } type{kRule};
