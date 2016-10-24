@@ -96,7 +96,7 @@ static void writeElement(ostream & os, const Element & elem, bool inclPos) {
                 os << " / ";
             }
             writeElement(os, *cur, inclPos);
-            if (cur->type == Element::kTerminal && !inclPos) {
+            if (cur->type == Element::kTerminal) {
                 auto next = cur;
                 for (;next + 1 != last; ++next) {
                     if (next[1].type != Element::kTerminal 
