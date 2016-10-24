@@ -15,7 +15,6 @@ using namespace Dim;
 class ParserNotify : public IAbnfParserNotify {
 public:
     ParserNotify(Grammar & rules);
-    virtual ~ParserNotify() {}
 
 private:
     // IAbnfParserNotify
