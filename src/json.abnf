@@ -26,16 +26,16 @@ Char-not-BLOT-SLASH = WSP / %x20-29 / %x2b-2e / %x30-7f
 
 ; Values
 value = false / null / true / object / array / number / string
-false = %s"false"
-null = %s"null"
-true = %s"true"
+false = %s"false" { End }
+null = %s"null" { End }
+true = %s"true" { End }
 
 ; Objects
-object = begin-object [ member *( value-separator member ) ] end-object
+object = begin-object [ member *(value-separator member) ] end-object { Start, End }
 member = string name-separator value
 
 ; Arrays
-array = begin-array [ value *( value-separator value ) ] end-array
+array = begin-array [ value *(value-separator value) ] end-array { Start, End }
 
 ; Numbers
 number = [minus] int [frac] [exp]
@@ -44,23 +44,24 @@ digit1-9 = %x31-39 ; 1-9
 e = "e" ; e E
 exp = e [minus / plus] 1*DIGIT
 frac = decimal-point 1*DIGIT
-int = zero / (digit1-9 *DIGIT )
+int = zero / (digit1-9 *DIGIT)
 minus = "-"
 plus = "+"
 zero = "0"
 
 ; Strings
 string = DQUOTE *char DQUOTE
-char = unescaped / 
-    escape (
-        DQUOTE / ; "
-        %x5c / ; \
-        %x2f / ; /
-        %x62 / ; b
-        %x66 / ; f
-        %x6e / ; n
-        %x72 / ; r
-        %x74 / ; t
-        %x75 4HEXDIG )
+char = unescaped / escape-single / escape-number
+escape-single = escape (
+    DQUOTE / ; "
+    %x5c / ; \
+    %x2f / ; /
+    %x62 / ; b
+    %x66 / ; f
+    %x6e / ; n
+    %x72 / ; r
+    %x74 ) ; t
+    { End }
+escape-number = escape %x75 4HEXDIG { End }
 escape = %x5c ; \
 unescaped = %x20-21 / %x23-5b / %x5d-7f
