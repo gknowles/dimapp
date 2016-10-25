@@ -1,0 +1,66 @@
+; json.abnf - dim json
+;
+; rules to parse json
+%root = JSON-text
+%api.prefix = Json
+%api.namespace = Dim::Detail
+
+; JSON Grammar
+JSON-text = ws value ws
+begin-array = ws "[" ws
+begin-object = ws "{" ws
+end-array = ws "]" ws
+end-object = ws "}" ws
+name-separator = ws ":" ws
+value-separator = ws "," ws
+ws = *(WSP / CR / LF / comment)
+comment = single-line-comment / multiline-comment
+single-line-comment = "//" *Char-not-CR-LF (CR / LF)
+multiline-comment = "/*" *(Char-not-BLOT / 1*"*" Char-not-BLOT-SLASH) 1*"*" "/"
+
+; Characters
+Char = WSP / CR / LF / %x20-7f
+Char-not-CR-LF = WSP / %x20-7f
+Char-not-BLOT = WSP / %x20-29 / %x2b-7f
+Char-not-BLOT-SLASH = WSP / %x20-29 / %x2b-2e / %x30-7f
+
+; Values
+value = false / null / true / object / array / number / string
+false = %s"false"
+null = %s"null"
+true = %s"true"
+
+; Objects
+object = begin-object [ member *( value-separator member ) ] end-object
+member = string name-separator value
+
+; Arrays
+array = begin-array [ value *( value-separator value ) ] end-array
+
+; Numbers
+number = [minus] int [frac] [exp]
+decimal-point = "."
+digit1-9 = %x31-39 ; 1-9
+e = "e" ; e E
+exp = e [minus / plus] 1*DIGIT
+frac = decimal-point 1*DIGIT
+int = zero / (digit1-9 *DIGIT )
+minus = "-"
+plus = "+"
+zero = "0"
+
+; Strings
+string = DQUOTE *char DQUOTE
+char = unescaped / 
+    escape (
+        DQUOTE / ; "
+        %x5c / ; \
+        %x2f / ; /
+        %x62 / ; b
+        %x66 / ; f
+        %x6e / ; n
+        %x72 / ; r
+        %x74 / ; t
+        %x75 4HEXDIG )
+escape = %x5c ; \
+unescaped = %x20-21 / %x23-5b / %x5d-7f
