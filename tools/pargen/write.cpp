@@ -98,22 +98,21 @@ static void writeElement(ostream & os, const Element & elem, bool inclPos) {
             writeElement(os, *cur, inclPos);
             if (cur->type == Element::kTerminal) {
                 auto next = cur;
-                for (;next + 1 != last; ++next) {
-                    if (next[1].type != Element::kTerminal 
-                        || next->value[0] + 1 != next[1].value[0]
-                    ) {
+                for (; next + 1 != last; ++next) {
+                    if (next[1].type != Element::kTerminal ||
+                        next->value[0] + 1 != next[1].value[0]) {
                         break;
                     }
                 }
                 if (cur != next) {
                     cur = next;
-                    os << '-' << hex << (unsigned)(unsigned char)cur->value[0] << dec;
+                    os << '-' << hex << (unsigned)(unsigned char)cur->value[0]
+                       << dec;
                 }
             }
         }
         os << " )";
-        }
-        break;
+    } break;
     case Element::kRule: os << elem.value; break;
     case Element::kSequence:
         os << "( ";
@@ -425,7 +424,8 @@ static void writeCppfileStart(
 
 /****************************************************************************
 *
-*   )" << parserClass << R"(
+*   )" << parserClass
+       << R"(
 *
 *   Normalized ABNF of syntax:
 )";
@@ -439,8 +439,9 @@ static void writeCppfileStart(
 ***/
 
 //===========================================================================
-)" << notifyClass << " * " << parserClass << "::notify (" 
-    << notifyClass << R"( * notify) {
+)" << notifyClass
+       << " * " << parserClass << "::notify (" << notifyClass
+       << R"( * notify) {
     return notify;
 }
 )";
@@ -458,7 +459,8 @@ static void writeFunction(
 
 //===========================================================================
 // Parser function covering:
-//  - )" << stateSet.size() + 1 << R"( states
+//  - )"
+       << stateSet.size() + 1 << R"( states
 bool )" << parserClass
        << "::";
     if (!root) {
@@ -533,12 +535,14 @@ writeHeaderfile(ostream & os, const Grammar & rules, const Grammar & options) {
     }
     os << R"(
 // forward declarations
-class )" << notifyClass << R"(;
+class )"
+       << notifyClass << R"(;
 
 
 /****************************************************************************
 *
-*   )" << parserClass << R"(
+*   )" << parserClass
+       << R"(
 *
 ***/
 
@@ -546,18 +550,19 @@ class )"
        << parserClass << R"( {
 public:
     )" << parserClass
-       << " (" << notifyClass
-       << R"( * notify) : m_notify(notify) {}
+       << " (" << notifyClass << R"( * notify) : m_notify(notify) {}
     ~)" << parserClass
        << R"( () {}
 
     bool parse (const char src[]);
     size_t errWhere () const { return m_errWhere; }
 
-    )" << notifyClass << R"( * notify () const { return m_notify; }
+    )" << notifyClass
+       << R"( * notify () const { return m_notify; }
 
     // sets notify and returns its previous value
-    )" << notifyClass << R"( * notify ()" << notifyClass << R"( * notify);
+    )" << notifyClass
+       << R"( * notify ()" << notifyClass << R"( * notify);
 
 private:
 )";
@@ -599,9 +604,8 @@ public:
     for (auto && elem : rules.rules()) {
         if (!elem.eventName.empty())
             continue;
-        if (!foundEvent &&
-            (elem.flags & (Element::kOnStart | Element::kOnEnd | Element::kOnChar))
-        ) {
+        if (!foundEvent && (elem.flags & (Element::kOnStart | Element::kOnEnd |
+                                          Element::kOnChar))) {
             os << "\n";
             foundEvent = true;
         }

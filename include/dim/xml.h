@@ -128,7 +128,7 @@ private:
 
 class XStreamParser;
 namespace Detail {
-    class XmlBaseParser;
+class XmlBaseParser;
 }
 
 class IXStreamParserNotify {
@@ -137,8 +137,7 @@ public:
     virtual bool StartDoc() = 0;
     virtual bool EndDoc() = 0;
 
-    virtual bool
-        StartElem(const char name[], size_t nameLen) = 0;
+    virtual bool StartElem(const char name[], size_t nameLen) = 0;
     virtual bool EndElem() = 0;
 
     virtual bool Attr(
@@ -146,8 +145,7 @@ public:
         size_t nameLen,
         const char value[],
         size_t valueLen) = 0;
-    virtual bool
-    Text(const char value[], size_t valueLen) = 0;
+    virtual bool Text(const char value[], size_t valueLen) = 0;
 };
 
 class XStreamParser {
@@ -187,9 +185,10 @@ public:
 
     void clear();
     XElem * parse(char src[]);
-    
+
     XElem * setRoot(const char elemName[], const char text[] = nullptr);
-    XElem * addElem(XElem * parent, const char name[], const char text[] = nullptr);
+    XElem *
+    addElem(XElem * parent, const char name[], const char text[] = nullptr);
     XAttr * addAttr(XElem * elem, const char name[], const char text[]);
 
     ITempHeap & heap() { return m_heap; }

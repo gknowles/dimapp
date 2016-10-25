@@ -32,7 +32,7 @@ int main(int argc, char * argv[]) {
     cout << out.data();
     XParser par;
     auto root = par.parse(out.data());
-    (void) root;
+    (void)root;
 
     return EX_OK;
 }

@@ -209,8 +209,8 @@ const Element * Grammar::element(const std::string & name) const {
 ***/
 
 //===========================================================================
-static void ensureOption(
-    Grammar & rules, const char name[], const string & value) {
+static void
+ensureOption(Grammar & rules, const char name[], const string & value) {
     if (!*rules.optionString(name))
         rules.addOption(name, value);
 }
@@ -312,13 +312,9 @@ static void normalizeChoice(Element & rule) {
     rule.elements = tmp;
     for (auto && elem : rule.elements)
         elem.pos = 0;
-    sort(
-        rule.elements.begin(), 
-        rule.elements.end(),
-        [](auto & a, auto & b) { 
-            return tie(a.name, a.type, a.value) < tie(b.name, b.type, b.value); 
-        }
-    );
+    sort(rule.elements.begin(), rule.elements.end(), [](auto & a, auto & b) {
+        return tie(a.name, a.type, a.value) < tie(b.name, b.type, b.value);
+    });
 }
 
 //===========================================================================

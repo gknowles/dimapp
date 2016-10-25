@@ -26,14 +26,11 @@ public:
     // IXStreamParserNotify
     bool StartDoc() override;
     bool EndDoc() override;
-    bool StartElem(
-        const char name[], size_t nameLen) override;
+    bool StartElem(const char name[], size_t nameLen) override;
     bool EndElem() override;
-    bool Attr(
-        const char name[],
-        size_t nameLen,
-        const char value[],
-        size_t valueLen) override;
+    bool
+    Attr(const char name[], size_t nameLen, const char value[], size_t valueLen)
+        override;
     bool Text(const char value[], size_t valueLen) override;
 
 private:
@@ -52,9 +49,8 @@ private:
 ***/
 
 //===========================================================================
-ParserNotify::ParserNotify(XParser & parser) 
-    : m_parser(parser)
-{}
+ParserNotify::ParserNotify(XParser & parser)
+    : m_parser(parser) {}
 
 //===========================================================================
 bool ParserNotify::StartDoc() {
@@ -79,10 +75,7 @@ bool ParserNotify::EndElem() {
 
 //===========================================================================
 bool ParserNotify::Attr(
-    const char name[],
-    size_t nameLen,
-    const char value[],
-    size_t valueLen) {
+    const char name[], size_t nameLen, const char value[], size_t valueLen) {
     return true;
 }
 
@@ -99,12 +92,10 @@ bool ParserNotify::Text(const char value[], size_t valueLen) {
 ***/
 
 //===========================================================================
-XParser::XParser() 
-{}
+XParser::XParser() {}
 
 //===========================================================================
-void XParser::clear() {
-}
+void XParser::clear() {}
 
 //===========================================================================
 XElem * XParser::parse(char src[]) {
@@ -136,7 +127,6 @@ XElem * XParser::addElem(XElem * parent, const char name[], const char text[]) {
     if (!p->m_firstElem) {
         p->m_firstElem = elem;
     } else {
-        
     }
     return elem;
 }
@@ -152,4 +142,3 @@ XAttr * XParser::addAttr(XElem * elem, const char name[], const char text[]) {
 *   Public API
 *
 ***/
-

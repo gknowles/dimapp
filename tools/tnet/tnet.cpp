@@ -189,7 +189,7 @@ void Application::onTask() {
 
     HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
     DWORD type = GetFileType(hIn);
-    (void) type;
+    (void)type;
     fileOpen(s_console.m_file, "conin$", IFile::kReadWrite);
     s_console.m_buffer = socketGetBuffer();
     fileRead(
