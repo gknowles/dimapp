@@ -172,16 +172,16 @@ private:
 
 /****************************************************************************
 *
-*   Xml dom parser
+*   Xml dom document
 *
 ***/
 
 struct XAttr;
 struct XElem;
 
-class XParser {
+class XDocument {
 public:
-    XParser();
+    XDocument();
 
     void clear();
     XElem * parse(char src[]);

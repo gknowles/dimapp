@@ -1,4 +1,4 @@
-// xparser.cpp - dim xml
+// xdocument.cpp - dim xml
 #include "pch.h"
 #pragma hdrstop
 
@@ -15,13 +15,17 @@ using namespace Dim;
 namespace {
 
 struct XElemInfo : XElem {
+    XElem * m_parent{nullptr};
     XElem * m_firstElem{nullptr};
     XAttr * m_firstAttr{nullptr};
+};
+struct XElemRootInfo : XElemInfo {
+    XDocument * m_document{nullptr};
 };
 
 class ParserNotify : public IXStreamParserNotify {
 public:
-    ParserNotify(XParser & parser);
+    ParserNotify(XDocument & doc);
 
     // IXStreamParserNotify
     bool StartDoc() override;
@@ -34,7 +38,7 @@ public:
     bool Text(const char value[], size_t valueLen) override;
 
 private:
-    XParser & m_parser;
+    XDocument & m_doc;
     XElemInfo * m_curElem{nullptr};
     XAttr * m_curAttr{nullptr};
 };
@@ -49,12 +53,12 @@ private:
 ***/
 
 //===========================================================================
-ParserNotify::ParserNotify(XParser & parser)
-    : m_parser(parser) {}
+ParserNotify::ParserNotify(XDocument & doc)
+    : m_doc(doc) {}
 
 //===========================================================================
 bool ParserNotify::StartDoc() {
-    m_parser.clear();
+    m_doc.clear();
     return true;
 }
 
@@ -87,18 +91,18 @@ bool ParserNotify::Text(const char value[], size_t valueLen) {
 
 /****************************************************************************
 *
-*   Dom parser
+*   Xml document
 *
 ***/
 
 //===========================================================================
-XParser::XParser() {}
+XDocument::XDocument() {}
 
 //===========================================================================
-void XParser::clear() {}
+void XDocument::clear() {}
 
 //===========================================================================
-XElem * XParser::parse(char src[]) {
+XElem * XDocument::parse(char src[]) {
     clear();
     ParserNotify notify(*this);
     XStreamParser parser(notify);
@@ -107,7 +111,7 @@ XElem * XParser::parse(char src[]) {
 }
 
 //===========================================================================
-XElem * XParser::setRoot(const char elemName[], const char text[]) {
+XElem * XDocument::setRoot(const char elemName[], const char text[]) {
     assert(elemName);
     XElemInfo * elem = heap().emplace<XElemInfo>();
     elem->m_name = elemName;
@@ -117,7 +121,7 @@ XElem * XParser::setRoot(const char elemName[], const char text[]) {
 }
 
 //===========================================================================
-XElem * XParser::addElem(XElem * parent, const char name[], const char text[]) {
+XElem * XDocument::addElem(XElem * parent, const char name[], const char text[]) {
     assert(parent);
     assert(name);
     XElemInfo * elem = heap().emplace<XElemInfo>();
@@ -132,7 +136,7 @@ XElem * XParser::addElem(XElem * parent, const char name[], const char text[]) {
 }
 
 //===========================================================================
-XAttr * XParser::addAttr(XElem * elem, const char name[], const char text[]) {
+XAttr * XDocument::addAttr(XElem * elem, const char name[], const char text[]) {
     return nullptr;
 }
 

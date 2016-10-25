@@ -30,8 +30,8 @@ int main(int argc, char * argv[]) {
     bld.end();
     out.pushBack(0);
     cout << out.data();
-    XParser par;
-    auto root = par.parse(out.data());
+    XDocument doc;
+    auto root = doc.parse(out.data());
     (void)root;
 
     return EX_OK;

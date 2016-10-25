@@ -126,10 +126,10 @@
     <ClCompile Include="..\src\xml\xbuilder.cpp">
       <ObjectFileName>$(IntDir)src\xml\</ObjectFileName>
     </ClCompile>
-    <ClCompile Include="..\src\xml\xmlbaseparse.cpp">
+    <ClCompile Include="..\src\xml\xdocument.cpp">
       <ObjectFileName>$(IntDir)src\xml\</ObjectFileName>
     </ClCompile>
-    <ClCompile Include="..\src\xml\xparser.cpp">
+    <ClCompile Include="..\src\xml\xmlbaseparse.cpp">
       <ObjectFileName>$(IntDir)src\xml\</ObjectFileName>
     </ClCompile>
     <ClCompile Include="..\src\xml\xstreamparser.cpp">
