@@ -8,9 +8,125 @@ using namespace Dim;
 
 /****************************************************************************
 *
-*   Private
+*   BaseParserNotify
 *
 ***/
+
+class BaseParserNotify : public Detail::IXmlBaseParserNotify {
+public:
+    BaseParserNotify(XStreamParser & parser);
+
+private:
+    bool onStart () final { return true; }
+    bool onEnd () final { return true; }
+    bool onCDataWithEndChar (char ch) final;
+    bool onCDataWithEndEnd (const char * eptr) final;
+    bool onAttrContentEnd (const char * eptr) final;
+    bool onAttrCopyChar (char ch) final;
+    bool onAttrInPlaceStart (const char * ptr) final;
+    bool onAttrInPlaceEnd (const char * eptr) final;
+    bool onAttrNameStart (const char * ptr) final;
+    bool onAttrNameEnd (const char * eptr) final;
+    bool onCharDataCopyChar (char ch) final;
+    bool onCharDataInPlaceEnd (const char * eptr) final;
+    bool onContentStart (const char * ptr) final;
+    bool onElemNameStart (const char * ptr) final;
+    bool onElemNameEnd (const char * eptr) final;
+    bool onElementEnd (const char * eptr) final;
+    bool onEntityAmpEnd (const char * eptr) final;
+    bool onEntityAposEnd (const char * eptr) final;
+    bool onEntityGtEnd (const char * eptr) final;
+    bool onEntityLtEnd (const char * eptr) final;
+    bool onEntityOtherEnd (const char * eptr) final;
+    bool onEntityQuotEnd (const char * eptr) final;
+
+    XStreamParser & m_parser;
+    IXStreamParserNotify & m_notify;
+    const char * m_base{nullptr};
+    char * m_cur{nullptr};
+};
+
+//===========================================================================
+BaseParserNotify::BaseParserNotify(XStreamParser & parser)
+    : m_parser(parser)
+    , m_notify(parser.notify())
+{
+}
+
+//===========================================================================
+bool BaseParserNotify::onCDataWithEndChar (char ch) { 
+    return true; 
+}
+
+//===========================================================================
+bool BaseParserNotify::onCDataWithEndEnd (const char * eptr) { 
+    return true; 
+}
+
+//===========================================================================
+bool BaseParserNotify::onAttrContentEnd (const char * eptr) { return true; }
+
+//===========================================================================
+bool BaseParserNotify::onAttrCopyChar (char ch) { return true; }
+
+//===========================================================================
+bool BaseParserNotify::onAttrInPlaceStart (const char * ptr)  { return true; }
+
+//===========================================================================
+bool BaseParserNotify::onAttrInPlaceEnd (const char * eptr)  { return true; }
+
+//===========================================================================
+bool BaseParserNotify::onAttrNameStart (const char * ptr)  { return true; }
+
+//===========================================================================
+bool BaseParserNotify::onAttrNameEnd (const char * eptr)  { return true; }
+
+//===========================================================================
+bool BaseParserNotify::onCharDataCopyChar (char ch)  { return true; }
+
+//===========================================================================
+bool BaseParserNotify::onCharDataInPlaceEnd (const char * eptr)  { return true; }
+
+//===========================================================================
+bool BaseParserNotify::onContentStart (const char * ptr)  { return true; }
+
+//===========================================================================
+bool BaseParserNotify::onElemNameStart (const char * ptr)  { 
+    m_base = ptr;
+    return true; 
+}
+
+//===========================================================================
+bool BaseParserNotify::onElemNameEnd (const char * eptr)  { 
+    m_notify.StartElem(m_base, eptr - m_base);
+    return true; 
+}
+
+//===========================================================================
+bool BaseParserNotify::onElementEnd (const char * eptr)  { 
+    m_notify.EndElem();
+    return true; 
+}
+
+//===========================================================================
+bool BaseParserNotify::onEntityAmpEnd (const char * eptr)  { return true; }
+
+//===========================================================================
+bool BaseParserNotify::onEntityAposEnd (const char * eptr)  { return true; }
+
+//===========================================================================
+bool BaseParserNotify::onEntityGtEnd (const char * eptr)  { return true; }
+
+//===========================================================================
+bool BaseParserNotify::onEntityLtEnd (const char * eptr)  { return true; }
+
+//===========================================================================
+bool BaseParserNotify::onEntityOtherEnd (const char * eptr)  { return true; }
+
+//===========================================================================
+bool BaseParserNotify::onEntityQuotEnd (const char * eptr)  { return true; }
+
+
 
 /****************************************************************************
 *
@@ -22,24 +138,23 @@ using namespace Dim;
 XStreamParser::XStreamParser(IXStreamParserNotify & notify)
     : m_notify(notify)
 {
-    auto * baseNotify = new Detail::IXmlBaseParserNotify;
-    m_base = make_unique<Detail::XmlBaseParser>(baseNotify);
 }
 
 //===========================================================================
 XStreamParser::~XStreamParser() {
-    auto * notify = m_base->notify(nullptr);
-    delete notify;
 }
 
 //===========================================================================
 bool XStreamParser::parse(char src[]) {
     m_line = 0;
     m_failed = false;
-    m_notify.StartDoc(*this);
+    m_heap.clear();
+    auto * baseNotify = m_heap.emplace<BaseParserNotify>(*this);
+    m_base = m_heap.emplace<Detail::XmlBaseParser>(baseNotify);
+    m_notify.StartDoc();
     if (!m_base->parse(src))
         return false;
-    m_notify.EndDoc(*this);
+    m_notify.EndDoc();
     return true;
 }
 

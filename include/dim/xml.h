@@ -134,21 +134,20 @@ namespace Detail {
 class IXStreamParserNotify {
 public:
     virtual ~IXStreamParserNotify() {}
-    virtual bool StartDoc(XStreamParser & parser) = 0;
-    virtual bool EndDoc(XStreamParser & parser) = 0;
+    virtual bool StartDoc() = 0;
+    virtual bool EndDoc() = 0;
 
     virtual bool
-        StartElem(XStreamParser & parser, const char name[], size_t nameLen) = 0;
-    virtual bool EndElem(XStreamParser & parser) = 0;
+        StartElem(const char name[], size_t nameLen) = 0;
+    virtual bool EndElem() = 0;
 
     virtual bool Attr(
-        XStreamParser & parser,
         const char name[],
         size_t nameLen,
         const char value[],
         size_t valueLen) = 0;
     virtual bool
-    Text(XStreamParser & parser, const char value[], size_t valueLen) = 0;
+    Text(const char value[], size_t valueLen) = 0;
 };
 
 class XStreamParser {
@@ -161,11 +160,15 @@ public:
 
     bool fail(const char errmsg[]);
 
+    ITempHeap & heap() { return m_heap; }
+    IXStreamParserNotify & notify() { return m_notify; }
+
 private:
     IXStreamParserNotify & m_notify;
     unsigned m_line{0};
     bool m_failed{false};
-    std::unique_ptr<Detail::XmlBaseParser> m_base;
+    TempHeap m_heap;
+    Detail::XmlBaseParser * m_base;
 };
 
 
@@ -175,36 +178,24 @@ private:
 *
 ***/
 
+struct XAttr;
 struct XElem;
 
-class XParser : IXStreamParserNotify {
+class XParser {
 public:
     XParser();
 
     void clear();
     XElem * parse(char src[]);
+    
     XElem * setRoot(const char elemName[], const char text[] = nullptr);
+    XElem * addElem(XElem * parent, const char name[], const char text[] = nullptr);
+    XAttr * addAttr(XElem * elem, const char name[], const char text[]);
 
     ITempHeap & heap() { return m_heap; }
 
 private:
-    // IXStreamParserNotify
-    bool StartDoc(XStreamParser & parser) override;
-    bool EndDoc(XStreamParser & parser) override;
-    bool StartElem(
-        XStreamParser & parser, const char name[], size_t nameLen) override;
-    bool EndElem(XStreamParser & parser) override;
-    bool Attr(
-        XStreamParser & parser,
-        const char name[],
-        size_t nameLen,
-        const char value[],
-        size_t valueLen) override;
-    bool
-    Text(XStreamParser & parser, const char value[], size_t valueLen) override;
-
     TempHeap m_heap;
-    XStreamParser m_parser;
     XElem * m_root{nullptr};
 };
 
