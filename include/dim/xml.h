@@ -289,4 +289,11 @@ auto ForwardListIterator<XAttr>::operator++() {
     return *this;
 }
 
+//===========================================================================
+template <> 
+auto ForwardListIterator<const XAttr>::operator++() {
+    m_current = next(m_current);
+    return *this;
+}
+
 } // namespace

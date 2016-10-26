@@ -97,6 +97,7 @@ bool ParserNotify::Attr(
 //===========================================================================
 bool ParserNotify::Text(const char value[], size_t valueLen) {
 	const_cast<char *>(value)[valueLen] = 0;
+    m_curElem->m_value = value;
 	return true;
 }
 

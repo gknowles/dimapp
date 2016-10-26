@@ -72,11 +72,12 @@ PubidChar = PubidChar-not-APOS / "'" ; [13]
 
 ; Attribute Value
 attrValue = DQUOTE attrContent DQUOTE / "'" attrContentApos "'" ; [10]
-attrContent = [attrInPlace] *(Reference [attrCopy]) { End }
-attrInPlace = *(Char-not-AMP-DQUOTE-LT) { Start, End }
+attrContent = [attrInPlace] *(Reference [attrCopy]) { Start, End }
+attrInPlace = *(Char-not-AMP-DQUOTE-LT) { End }
 attrCopy = *(Char-not-AMP-DQUOTE-LT) { Char }
-attrContentApos = [attrInPlaceApos] *(Reference [attrCopyApos]) { End, As = attrContent }
-attrInPlaceApos = *(Char-not-AMP-APOS-LT) { Start, End, As = attrInPlace }
+attrContentApos = [attrInPlaceApos] *(Reference [attrCopyApos]) 
+    { Start, End, As = attrContent }
+attrInPlaceApos = *(Char-not-AMP-APOS-LT) { End, As = attrInPlace }
 attrCopyApos = *(Char-not-AMP-APOS-LT) { Char, As = attrCopy }
 
 ; Character Data
@@ -181,7 +182,7 @@ Attribute = attrName Eq attrValue ; [41]
 attrName = Name { Start, End }
 ETag = "</" Name [S] ">" ; [42]
 content = [charDataInPlace] *((element / Reference / CDSect / PI / Comment) 
-    [charDataCopy]) { Start, Function } ; [43]
+    [charDataCopy]) { Start, End, Function } ; [43]
 EmptyElemTag = "<" elemName *(S Attribute) [S] "/>" ; [44]
 elemName = Name { Start, End }
 
