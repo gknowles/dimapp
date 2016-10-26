@@ -77,6 +77,12 @@ IXBuilder::IXBuilder()
     : m_state(kStateDocIntro) {}
 
 //===========================================================================
+void IXBuilder::clear() {
+	m_state = kStateDocIntro;
+	m_stack.clear();
+}
+
+//===========================================================================
 IXBuilder & IXBuilder::start(const char name[]) {
     switch (m_state) {
     default: return fail();
@@ -225,6 +231,12 @@ IXBuilder & IXBuilder::fail() {
 ***/
 
 //===========================================================================
+void XBuilder::clear() {
+	IXBuilder::clear();
+	m_buf.clear();
+}
+
+//===========================================================================
 void XBuilder::append(const char text[]) {
     m_buf.append(text);
 }
@@ -289,4 +301,18 @@ IXBuilder & Dim::operator<<(IXBuilder & out, const char val[]) {
 //===========================================================================
 IXBuilder & Dim::operator<<(IXBuilder & out, const std::string & val) {
     return out.text(val.c_str());
+}
+
+//===========================================================================
+IXBuilder & Dim::operator<<(IXBuilder & out, const XElem & elem) {
+	out.start(elem.m_name);
+	for (auto && val : attrs(&elem)) {
+		out.attr(val.m_name, val.m_value);
+	}
+	if (*elem.m_value)
+		out.text(elem.m_value);
+	for (auto && val : elems(&elem)) {
+		out << val;
+	}
+	return out.end();
 }

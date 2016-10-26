@@ -114,7 +114,7 @@ bool BaseParserNotify::onElemNameStart(const char * ptr) {
 
 //===========================================================================
 bool BaseParserNotify::onElemNameEnd(const char * eptr) {
-    m_notify.StartElem(m_base, eptr - m_base);
+    m_notify.StartElem(m_base, eptr - m_base - 1);
     return true;
 }
 
