@@ -19,12 +19,12 @@ public:
 private:
     bool onStart() final { return true; }
     bool onEnd() final { return true; }
-    bool onAttrContentStart(const char * ptr) final;
-    bool onAttrContentEnd(const char * eptr) final;
-    bool onAttrCopyCharChar(char ch) final;
+    bool onAttrCopyChar(char ch) final;
     bool onAttrInPlaceEnd(const char * eptr) final;
     bool onAttrNameStart(const char * ptr) final;
     bool onAttrNameEnd(const char * eptr) final;
+    bool onAttrValueStart(const char * ptr) final;
+    bool onAttrValueEnd(const char * eptr) final;
     bool onCDataWithEndChar(char ch) final;
     bool onCDataWithEndEnd(const char * eptr) final;
     bool onCharDataCopyChar(char ch) final;
@@ -56,24 +56,14 @@ BaseParserNotify::BaseParserNotify(XStreamParser & parser)
     , m_notify(parser.notify()) {}
 
 //===========================================================================
-bool BaseParserNotify::onAttrContentStart(const char * ptr) {
-    m_base = ptr;
-    return true;
-}
-
-//===========================================================================
-bool BaseParserNotify::onAttrContentEnd(const char * eptr) {
-    m_notify.Attr(m_attr, m_attrLen, m_base, eptr - m_base - 1);
-    return true;
-}
-
-//===========================================================================
-bool BaseParserNotify::onAttrCopyCharChar(char ch) {
+bool BaseParserNotify::onAttrCopyChar(char ch) {
+    *m_cur++ = ch;
     return true;
 }
 
 //===========================================================================
 bool BaseParserNotify::onAttrInPlaceEnd(const char * eptr) {
+    m_cur = const_cast<char *>(eptr - 1);
     return true;
 }
 
@@ -86,6 +76,18 @@ bool BaseParserNotify::onAttrNameStart(const char * ptr) {
 //===========================================================================
 bool BaseParserNotify::onAttrNameEnd(const char * eptr) {
     m_attrLen = eptr - m_attr - 1;
+    return true;
+}
+
+//===========================================================================
+bool BaseParserNotify::onAttrValueStart(const char * ptr) {
+    m_base = ptr + 1;
+    return true;
+}
+
+//===========================================================================
+bool BaseParserNotify::onAttrValueEnd(const char * eptr) {
+    m_notify.Attr(m_attr, m_attrLen, m_base, m_cur - m_base);
     return true;
 }
 
@@ -141,36 +143,46 @@ bool BaseParserNotify::onElementEnd(const char * eptr) {
 
 //===========================================================================
 bool BaseParserNotify::onEntityAmpEnd(const char * eptr) {
+    *m_cur++ = '&';
     return true;
 }
 
 //===========================================================================
 bool BaseParserNotify::onEntityAposEnd(const char * eptr) {
+    *m_cur++ = '\'';
     return true;
 }
 
 //===========================================================================
 bool BaseParserNotify::onEntityGtEnd(const char * eptr) {
+    *m_cur++ = '>';
     return true;
 }
 
 //===========================================================================
 bool BaseParserNotify::onEntityLtEnd(const char * eptr) {
+    *m_cur++ = '<';
     return true;
 }
 
 //===========================================================================
 bool BaseParserNotify::onEntityOtherEnd(const char * eptr) {
-    return true;
+    const char * amp = eptr - 1;
+    while (*amp != '&')
+        amp -= 1;
+    string err = "unknown entity '"s + string(amp, eptr - amp) + "'";
+    return m_parser.fail(err.c_str());
 }
 
 //===========================================================================
 bool BaseParserNotify::onEntityQuotEnd(const char * eptr) {
+    *m_cur++ = '"';
     return true;
 }
 
 //===========================================================================
 bool BaseParserNotify::onNormalizableWsChar(char ch) {
+    *m_cur++ = ' ';
     return true;
 }
 
@@ -189,9 +201,15 @@ XStreamParser::XStreamParser(IXStreamParserNotify & notify)
 XStreamParser::~XStreamParser() {}
 
 //===========================================================================
+void XStreamParser::clear() {
+    m_line = 0;
+    m_errMsg = nullptr;
+}
+
+//===========================================================================
 bool XStreamParser::parse(char src[]) {
     m_line = 0;
-    m_failed = false;
+    m_errMsg = nullptr;
     m_heap.clear();
     auto * baseNotify = m_heap.emplace<BaseParserNotify>(*this);
     m_base = m_heap.emplace<Detail::XmlBaseParser>(baseNotify);
@@ -200,6 +218,12 @@ bool XStreamParser::parse(char src[]) {
         return false;
     m_notify.EndDoc();
     return true;
+}
+
+//===========================================================================
+bool XStreamParser::fail(const char errmsg[]) {
+    m_errMsg = m_heap.strDup(errmsg);
+    return false;
 }
 
 #if 0
@@ -286,12 +310,6 @@ static bool isNameChar(unsigned ch) {
     return (range - ranges) % 2 == 1;
 }
 #endif
-
-//===========================================================================
-void XStreamParser::clear() {
-    m_line = 0;
-    m_failed = false;
-}
 
 
 /****************************************************************************

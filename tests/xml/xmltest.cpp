@@ -19,7 +19,7 @@ int main(int argc, char * argv[]) {
     CharBuf out;
     XBuilder bld(out);
     bld.start("root");
-    bld << start("value") << attr("attr") << "attr text" << endAttr
+    bld << start("value") << attr("attr") << "attr text\nwith '&'" << endAttr
         << "text content" << end;
     bld.start("value")
         .startAttr("a")
@@ -27,7 +27,11 @@ int main(int argc, char * argv[]) {
         .endAttr()
         .attr("b", "btext")
         .end();
+    bld.start("non-cdata") << "text: ";
+    bld << "> ]]>" << ']' << ']' << '>' << ']' << "]>" << ']' << '>' << '>' 
+        << end;
     bld.end();
+
 	string str = to_string(out);
     char * data = str.data();
     cout << data;

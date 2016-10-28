@@ -72,17 +72,13 @@ PubidChar = PubidChar-not-APOS / "'" ; [13]
 
 ; Attribute Value
 attrValue = DQUOTE attrContent DQUOTE / "'" attrContentApos "'" ; [10]
-attrContent = [attrInPlace] *(Reference [attrCopy]) { Start, End }
+	{ Start, End }
+attrContent = [attrInPlace] *((Reference / normalizable-ws) [attrCopy])
 attrInPlace = *Char-not-ws-AMP-DQUOTE-LT { End }
-attrCopy = *(attrCopyChar / normalizable-ws)
+attrCopy = *Char-not-ws-AMP-DQUOTE-LT { Char }
 attrContentApos = [attrInPlaceApos] *(Reference [attrCopyApos]) 
-    { Start, End, As = attrContent }
 attrInPlaceApos = *Char-not-ws-AMP-APOS-LT { End, As = attrInPlace }
-attrCopyApos = *(attrCopyCharApos / normalizable-ws)
-
-; Attribute Character Data
-attrCopyChar = Char-not-ws-AMP-DQUOTE-LT { Char }
-attrCopyCharApos = Char-not-ws-AMP-APOS-LT { Char, As = attrCopyChar }
+attrCopyApos = *Char-not-ws-AMP-APOS-LT { Char, As = attrCopy }
 normalizable-ws = ws { Char }
 
 ; Character Data

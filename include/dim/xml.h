@@ -49,7 +49,7 @@ protected:
     virtual void append(const char text[]) = 0;
     virtual void append(const char text[], size_t count) = 0;
     virtual void appendCopy(size_t pos, size_t count) = 0;
-    virtual size_t size() = 0;
+    virtual size_t size() const = 0;
 
 private:
     template <bool isContent> void addText(const char text[]);
@@ -117,7 +117,7 @@ private:
     void append(const char text[]) override;
     void append(const char text[], size_t count) override;
     void appendCopy(size_t pos, size_t count) override;
-    size_t size() override;
+    size_t size() const override;
 
     CharBuf & m_buf;
 };
@@ -167,7 +167,7 @@ public:
 private:
     IXStreamParserNotify & m_notify;
     unsigned m_line{0};
-    bool m_failed{false};
+    const char * m_errMsg{nullptr};
     TempHeap m_heap;
     Detail::XmlBaseParser * m_base;
 };
