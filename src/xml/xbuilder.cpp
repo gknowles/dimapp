@@ -26,7 +26,7 @@ enum TextType : char {
 };
 
 const char * kTextEntityTable[] = {
-    nullptr, nullptr, nullptr, "&quote;", "&amp;", "&lt;", "&gt;",
+    nullptr, nullptr, nullptr, "&quot;", "&amp;", "&lt;", "&gt;",
 };
 static_assert(size(kTextEntityTable) == kTextTypes, "");
 
@@ -35,7 +35,7 @@ const char kTextTypeTable[256] = {
 //  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
     2, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, // 0
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 1
-    1, 3, 1, 1, 1, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 2
+    1, 1, 3, 1, 1, 1, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 2
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5, 1, 6, 1, // 3
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 4
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 5
@@ -45,10 +45,10 @@ const char kTextTypeTable[256] = {
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 9
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // a
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // b
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // c
+    0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // c
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // d
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // e
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // f
+    1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // f
 };
 // clang-format on
 
@@ -63,13 +63,15 @@ const char kTextTypeTable[256] = {
 
 enum IXBuilder::State {
     kStateFail,
-    kStateDocIntro, // _
-    kStateElemName, // <X_
-    kStateAttrName, // <X a_
-    kStateAttrText, // <X a="_
-    kStateAttrEnd,  // <X a="1"_
-    kStateText,     // >_
-    kStateDocEnd,   // </docRoot>_
+    kStateDocIntro,      // _
+    kStateElemName,      // <X_
+    kStateAttrName,      // <X a_
+    kStateAttrText,      // <X a="_
+    kStateAttrEnd,       // <X a="1"_
+    kStateText,          // >_
+    kStateTextRBracket,  // >...]_
+    kStateTextRBracket2, // >...]]_
+    kStateDocEnd,        // </docRoot>_
 };
 
 //===========================================================================
@@ -96,7 +98,10 @@ IXBuilder & IXBuilder::start(const char name[]) {
         m_state = kStateText;
         [[fallthrough]];
     case kStateDocIntro:
-    case kStateText: append("<"); break;
+    case kStateText: 
+    case kStateTextRBracket:
+    case kStateTextRBracket2:
+        append("<"); break;
     }
     size_t base = size();
     append(name);
@@ -115,6 +120,8 @@ IXBuilder & IXBuilder::end() {
         m_state = kStateText;
         break;
     case kStateText:
+    case kStateTextRBracket:
+    case kStateTextRBracket2:
         append("</");
         auto & top = m_stack.back();
         appendCopy(top.pos, top.len);
@@ -177,6 +184,10 @@ IXBuilder & IXBuilder::text(const char val[]) {
         m_state = kStateText;
         break;
     case kStateAttrText: addText<false>(val); return *this;
+    case kStateText:
+    case kStateTextRBracket:
+    case kStateTextRBracket2:
+        break;
     }
     addText<true>(val);
     return *this;
@@ -189,20 +200,56 @@ template <bool isContent> void IXBuilder::addText(const char val[]) {
         TextType type = (TextType)kTextTypeTable[*val];
         switch (type) {
         case kTextTypeGreater:
-            // ">" must be escaped when following "]]"
+            // in content, ">" must be escaped when following "]]"
             if (isContent) {
-                if (val - base >= 2 && val[-1] == ']' && val[-2] == ']') {
-                    break;
+                if (val - base >= 2) {
+                    if (val[-1] == ']' && val[-2] == ']')
+                        break;
+                } else if (val - base == 1) {
+                    if (val[-1] == ']' 
+                        && (m_state == kStateTextRBracket 
+                            || m_state == kStateTextRBracket2)) {
+                        break;
+                    }
+                } else {
+                    if (m_state == kStateTextRBracket2)
+                        break;
                 }
             }
             [[fallthrough]];
-        case kTextTypeNormal: val += 1; continue;
-        case kTextTypeNull: append(base, val - base); return;
+        case kTextTypeNormal: 
+            val += 1; 
+            continue;
+        case kTextTypeNull: 
+            if (size_t num = val - base) {
+                append(base, num); 
+                if (isContent) {
+                    if (val[-1] != ']') {
+                        m_state = kStateText;
+                    } else {
+                        if (num == 1) {
+                            if (m_state == kStateText) {
+                                m_state = kStateTextRBracket;
+                            } else {
+                                m_state = kStateTextRBracket2;
+                            }
+                        } else {
+                            if (val[-2] != ']') {
+                                m_state = kStateTextRBracket;
+                            } else {
+                                m_state = kStateTextRBracket2;
+                            }
+                        }
+                    }
+                }
+            }
+            return;
         case kTextTypeQuote:
             if (isContent) {
                 val += 1;
                 continue;
             }
+            [[fallthrough]]
         case kTextTypeAmp:
         case kTextTypeLess: break;
         case kTextTypeInvalid: m_state = kStateFail; return;
@@ -211,6 +258,8 @@ template <bool isContent> void IXBuilder::addText(const char val[]) {
         append(base, val - base);
         append(kTextEntityTable[type]);
         base = ++val;
+        if (isContent)
+            m_state = kStateText;
     }
 }
 
@@ -252,7 +301,7 @@ void XBuilder::appendCopy(size_t pos, size_t count) {
 }
 
 //===========================================================================
-size_t XBuilder::size() {
+size_t XBuilder::size() const {
     return m_buf.size();
 }
 
