@@ -294,6 +294,7 @@ void Application::onFileEnd(int64_t offset, IFile * file) {
     if (!file)
         return appSignalShutdown(EX_USAGE);
 
+    fileClose(file);
     TimePoint start = Clock::now();
     Grammar rules;
     getCoreRules(rules);
