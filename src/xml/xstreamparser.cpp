@@ -19,14 +19,14 @@ public:
 private:
     bool onStart() final { return true; }
     bool onEnd() final { return true; }
-    bool onCDataWithEndChar(char ch) final;
-    bool onCDataWithEndEnd(const char * eptr) final;
     bool onAttrContentStart(const char * ptr) final;
     bool onAttrContentEnd(const char * eptr) final;
-    bool onAttrCopyChar(char ch) final;
+    bool onAttrCopyCharChar(char ch) final;
     bool onAttrInPlaceEnd(const char * eptr) final;
     bool onAttrNameStart(const char * ptr) final;
     bool onAttrNameEnd(const char * eptr) final;
+    bool onCDataWithEndChar(char ch) final;
+    bool onCDataWithEndEnd(const char * eptr) final;
     bool onCharDataCopyChar(char ch) final;
     bool onCharDataInPlaceEnd(const char * eptr) final;
     bool onContentStart(const char * ptr) final;
@@ -40,6 +40,7 @@ private:
     bool onEntityLtEnd(const char * eptr) final;
     bool onEntityOtherEnd(const char * eptr) final;
     bool onEntityQuotEnd(const char * eptr) final;
+    bool onNormalizableWsChar (char ch) final;
 
     XStreamParser & m_parser;
     IXStreamParserNotify & m_notify;
@@ -55,16 +56,6 @@ BaseParserNotify::BaseParserNotify(XStreamParser & parser)
     , m_notify(parser.notify()) {}
 
 //===========================================================================
-bool BaseParserNotify::onCDataWithEndChar(char ch) {
-    return true;
-}
-
-//===========================================================================
-bool BaseParserNotify::onCDataWithEndEnd(const char * eptr) {
-    return true;
-}
-
-//===========================================================================
 bool BaseParserNotify::onAttrContentStart(const char * ptr) {
     m_base = ptr;
     return true;
@@ -77,7 +68,7 @@ bool BaseParserNotify::onAttrContentEnd(const char * eptr) {
 }
 
 //===========================================================================
-bool BaseParserNotify::onAttrCopyChar(char ch) {
+bool BaseParserNotify::onAttrCopyCharChar(char ch) {
     return true;
 }
 
@@ -95,6 +86,16 @@ bool BaseParserNotify::onAttrNameStart(const char * ptr) {
 //===========================================================================
 bool BaseParserNotify::onAttrNameEnd(const char * eptr) {
     m_attrLen = eptr - m_attr - 1;
+    return true;
+}
+
+//===========================================================================
+bool BaseParserNotify::onCDataWithEndChar(char ch) {
+    return true;
+}
+
+//===========================================================================
+bool BaseParserNotify::onCDataWithEndEnd(const char * eptr) {
     return true;
 }
 
@@ -165,6 +166,11 @@ bool BaseParserNotify::onEntityOtherEnd(const char * eptr) {
 
 //===========================================================================
 bool BaseParserNotify::onEntityQuotEnd(const char * eptr) {
+    return true;
+}
+
+//===========================================================================
+bool BaseParserNotify::onNormalizableWsChar(char ch) {
     return true;
 }
 

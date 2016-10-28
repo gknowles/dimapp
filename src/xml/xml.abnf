@@ -38,18 +38,18 @@ Char-not-AMP-APOS-PCT = ws
     ; 26 - AMP
     ; 27 - APOS
     / %x28-7f
-AttValue = DQUOTE *(Char-not-AMP-DQUOTE-LT / Reference) DQUOTE ; [10]
-    / "'" *(Char-not-AMP-APOS-LT / Reference) "'"
-Char-not-AMP-DQUOTE-LT = ws
-    / %x21 
+AttValue = DQUOTE *(Char-not-ws-AMP-DQUOTE-LT / ws / Reference) DQUOTE ; [10]
+    / "'" *(Char-not-ws-AMP-APOS-LT / ws / Reference) "'"
+Char-not-ws-AMP-DQUOTE-LT = 
+	%x21 
     ; 22 - DQUOTE
     / %x23-25 
     ; 26 - AMP
     / %x27-3b 
     ; 3c - LT
     / %x3d-7f
-Char-not-AMP-APOS-LT = ws
-    / %x21-25
+Char-not-ws-AMP-APOS-LT = 
+	%x21-25
     ; 26 - AMP
     ; 27 - APOS
     / %x28-3b 
@@ -73,12 +73,17 @@ PubidChar = PubidChar-not-APOS / "'" ; [13]
 ; Attribute Value
 attrValue = DQUOTE attrContent DQUOTE / "'" attrContentApos "'" ; [10]
 attrContent = [attrInPlace] *(Reference [attrCopy]) { Start, End }
-attrInPlace = *(Char-not-AMP-DQUOTE-LT) { End }
-attrCopy = *(Char-not-AMP-DQUOTE-LT) { Char }
+attrInPlace = *Char-not-ws-AMP-DQUOTE-LT { End }
+attrCopy = *(attrCopyChar / normalizable-ws)
 attrContentApos = [attrInPlaceApos] *(Reference [attrCopyApos]) 
     { Start, End, As = attrContent }
-attrInPlaceApos = *(Char-not-AMP-APOS-LT) { End, As = attrInPlace }
-attrCopyApos = *(Char-not-AMP-APOS-LT) { Char, As = attrCopy }
+attrInPlaceApos = *Char-not-ws-AMP-APOS-LT { End, As = attrInPlace }
+attrCopyApos = *(attrCopyCharApos / normalizable-ws)
+
+; Attribute Character Data
+attrCopyChar = Char-not-ws-AMP-DQUOTE-LT { Char }
+attrCopyCharApos = Char-not-ws-AMP-APOS-LT { Char, As = attrCopyChar }
+normalizable-ws = ws { Char }
 
 ; Character Data
 CharData = *(Char-not-AMP-LT-RBRACKET ; [14]
