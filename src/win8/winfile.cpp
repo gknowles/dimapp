@@ -337,6 +337,15 @@ bool fileOpen(unique_ptr<IFile> & out, const path & path, unsigned mode) {
 }
 
 //===========================================================================
+void fileClose(IFile * ifile) {
+    File * file = static_cast<File *>(ifile);
+    if (file->m_handle != INVALID_HANDLE_VALUE) {
+        CloseHandle(file->m_handle);
+        file->m_handle = INVALID_HANDLE_VALUE;
+    }
+}
+
+//===========================================================================
 size_t fileSize(IFile * ifile) {
     File * file = static_cast<File *>(ifile);
     LARGE_INTEGER size;
