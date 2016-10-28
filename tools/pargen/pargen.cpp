@@ -221,6 +221,7 @@ class Application : public ILogNotify,
     char ** m_argv;
     string m_source;
     TaskQueueHandle m_logQ;
+    experimental::filesystem::path m_srcfile;
 
 public:
     Application(int argc, char * argv[]);
@@ -245,7 +246,7 @@ void Application::onTask() {
 
     Cli cli;
     // positional arguments
-    auto & srcfile = cli.arg<experimental::filesystem::path>("[source file]");
+    auto & srcfile = cli.arg(&m_srcfile, "[source file]");
     // named arguments
     auto & help = cli.arg<bool>("? h help");
     auto & test = cli.arg<bool>("test");
@@ -300,16 +301,28 @@ void Application::onFileEnd(int64_t offset, IFile * file) {
         auto pos = rules.errWhere();
         auto lineNum =
             1 + count(m_source.begin(), m_source.begin() + pos, '\n');
+        logMsgError() << filePath(file) << "(" << lineNum
+                      << "): parsing failed";
+
+        bool leftTrunc = false;
+        bool rightTrunc = false;
         size_t first = m_source.find_last_of('\n', pos);
         first = (first == string::npos) ? 0 : first + 1;
+        if (pos - first > 50) {
+            leftTrunc = true;
+            first = pos - 50;
+        }
         size_t last = m_source.find_first_of('\n', pos);
         last = m_source.find_last_not_of(" \t\r\n", last);
         last = (last == string::npos) ? m_source.size() : last + 1;
-        string line = m_source.substr(first, last - first);
-        logMsgError() << filePath(file) << "(" << lineNum
-                      << "): parsing failed";
-        logMsgInfo() << line;
-        logMsgInfo() << string(pos - first, ' ') << '^';
+        if (last - first > 78) {
+            rightTrunc = true;
+            last = first + 78;
+        }
+        logMsgInfo() << string(leftTrunc * 3, '.') 
+            << m_source.substr(first, last - first)
+            << string(rightTrunc * 3, '.');
+        logMsgInfo() << string(pos - first + leftTrunc * 3, ' ') << '^';
         return appSignalShutdown(EX_DATAERR);
     }
 
