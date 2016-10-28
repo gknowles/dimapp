@@ -33,7 +33,7 @@ public:
     IXBuilder();
     virtual ~IXBuilder() {}
 
-	virtual void clear();
+    virtual void clear();
 
     IXBuilder & start(const char name[]);
     IXBuilder & end();
@@ -111,7 +111,7 @@ class XBuilder : public IXBuilder {
 public:
     XBuilder(CharBuf & buf)
         : m_buf(buf) {}
-	void clear() override;
+    void clear() override;
 
 private:
     void append(const char text[]) override;
@@ -209,13 +209,14 @@ struct XBase {
     const char * m_name{nullptr};
     const char * m_value{nullptr};
 
-    XBase(XElem * parent) : m_parent(parent) {}
+    XBase(XElem * parent)
+        : m_parent(parent) {}
 
 private:
     friend XDocument;
 };
-struct XAttr : XBase { 
-    using XBase::XBase; 
+struct XAttr : XBase {
+    using XBase::XBase;
     XAttr * m_next{nullptr};
     XAttr * m_prev{nullptr};
 };
@@ -283,15 +284,13 @@ XAttrRange<XAttr> attrs(XElem * elem);
 XAttrRange<const XAttr> attrs(const XElem * elem);
 
 //===========================================================================
-template <> 
-auto ForwardListIterator<XAttr>::operator++() {
+template <> auto ForwardListIterator<XAttr>::operator++() {
     m_current = next(m_current);
     return *this;
 }
 
 //===========================================================================
-template <> 
-auto ForwardListIterator<const XAttr>::operator++() {
+template <> auto ForwardListIterator<const XAttr>::operator++() {
     m_current = next(m_current);
     return *this;
 }

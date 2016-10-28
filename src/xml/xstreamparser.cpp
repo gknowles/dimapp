@@ -40,7 +40,7 @@ private:
     bool onEntityLtEnd(const char * eptr) final;
     bool onEntityOtherEnd(const char * eptr) final;
     bool onEntityQuotEnd(const char * eptr) final;
-    bool onNormalizableWsChar (char ch) final;
+    bool onNormalizableWsChar(char ch) final;
 
     XStreamParser & m_parser;
     IXStreamParserNotify & m_notify;
@@ -113,13 +113,13 @@ bool BaseParserNotify::onCharDataInPlaceEnd(const char * eptr) {
 
 //===========================================================================
 bool BaseParserNotify::onContentStart(const char * ptr) {
-    //m_base = ptr;
+    // m_base = ptr;
     return true;
 }
 
 //===========================================================================
 bool BaseParserNotify::onContentEnd(const char * eptr) {
-    //m_notify.Text(m_base, eptr - m_base);
+    // m_notify.Text(m_base, eptr - m_base);
     return true;
 }
 

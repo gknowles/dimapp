@@ -80,8 +80,8 @@ IXBuilder::IXBuilder()
 
 //===========================================================================
 void IXBuilder::clear() {
-	m_state = kStateDocIntro;
-	m_stack.clear();
+    m_state = kStateDocIntro;
+    m_stack.clear();
 }
 
 //===========================================================================
@@ -98,10 +98,9 @@ IXBuilder & IXBuilder::start(const char name[]) {
         m_state = kStateText;
         [[fallthrough]];
     case kStateDocIntro:
-    case kStateText: 
+    case kStateText:
     case kStateTextRBracket:
-    case kStateTextRBracket2:
-        append("<"); break;
+    case kStateTextRBracket2: append("<"); break;
     }
     size_t base = size();
     append(name);
@@ -186,8 +185,7 @@ IXBuilder & IXBuilder::text(const char val[]) {
     case kStateAttrText: addText<false>(val); return *this;
     case kStateText:
     case kStateTextRBracket:
-    case kStateTextRBracket2:
-        break;
+    case kStateTextRBracket2: break;
     }
     addText<true>(val);
     return *this;
@@ -206,9 +204,8 @@ template <bool isContent> void IXBuilder::addText(const char val[]) {
                     if (val[-1] == ']' && val[-2] == ']')
                         break;
                 } else if (val - base == 1) {
-                    if (val[-1] == ']' 
-                        && (m_state == kStateTextRBracket 
-                            || m_state == kStateTextRBracket2)) {
+                    if (val[-1] == ']' && (m_state == kStateTextRBracket ||
+                                           m_state == kStateTextRBracket2)) {
                         break;
                     }
                 } else {
@@ -217,12 +214,10 @@ template <bool isContent> void IXBuilder::addText(const char val[]) {
                 }
             }
             [[fallthrough]];
-        case kTextTypeNormal: 
-            val += 1; 
-            continue;
-        case kTextTypeNull: 
+        case kTextTypeNormal: val += 1; continue;
+        case kTextTypeNull:
             if (size_t num = val - base) {
-                append(base, num); 
+                append(base, num);
                 if (isContent) {
                     if (val[-1] != ']') {
                         m_state = kStateText;
@@ -249,9 +244,7 @@ template <bool isContent> void IXBuilder::addText(const char val[]) {
                 val += 1;
                 continue;
             }
-            [[fallthrough]]
-        case kTextTypeAmp:
-        case kTextTypeLess: break;
+            [[fallthrough]] case kTextTypeAmp : case kTextTypeLess : break;
         case kTextTypeInvalid: m_state = kStateFail; return;
         }
 
@@ -281,8 +274,8 @@ IXBuilder & IXBuilder::fail() {
 
 //===========================================================================
 void XBuilder::clear() {
-	IXBuilder::clear();
-	m_buf.clear();
+    IXBuilder::clear();
+    m_buf.clear();
 }
 
 //===========================================================================
@@ -354,14 +347,14 @@ IXBuilder & Dim::operator<<(IXBuilder & out, const std::string & val) {
 
 //===========================================================================
 IXBuilder & Dim::operator<<(IXBuilder & out, const XElem & elem) {
-	out.start(elem.m_name);
-	for (auto && val : attrs(&elem)) {
-		out.attr(val.m_name, val.m_value);
-	}
-	if (*elem.m_value)
-		out.text(elem.m_value);
-	for (auto && val : elems(&elem)) {
-		out << val;
-	}
-	return out.end();
+    out.start(elem.m_name);
+    for (auto && val : attrs(&elem)) {
+        out.attr(val.m_name, val.m_value);
+    }
+    if (*elem.m_value)
+        out.text(elem.m_value);
+    for (auto && val : elems(&elem)) {
+        out << val;
+    }
+    return out.end();
 }

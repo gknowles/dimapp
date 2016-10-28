@@ -600,11 +600,12 @@ public:
     virtual bool onStart () { return true; }
     virtual bool onEnd () { return true; }
 )";
-    vector<pair<string,unsigned>> events;
+    vector<pair<string, unsigned>> events;
     for (auto && elem : rules.rules()) {
         if (!elem.eventName.empty())
             continue;
-        if (elem.flags & (Element::kOnStart | Element::kOnEnd | Element::kOnChar)) {
+        if (elem.flags &
+            (Element::kOnStart | Element::kOnEnd | Element::kOnChar)) {
             ostringstream ostr;
             writeRuleName(ostr, elem.name, true);
             events.emplace_back(ostr.str(), elem.flags);
@@ -614,19 +615,19 @@ public:
         os << '\n';
         sort(events.begin(), events.end());
 
-        const struct { 
-            Element::Flags flag; 
-            const char * text; 
+        const struct {
+            Element::Flags flag;
+            const char * text;
         } sigs[] = {
-            { Element::kOnStart, "Start (const char * ptr)" },
-            { Element::kOnChar, "Char (char ch)" },
-            { Element::kOnEnd, "End (const char * eptr)" },
+            {Element::kOnStart, "Start (const char * ptr)"},
+            {Element::kOnChar, "Char (char ch)"},
+            {Element::kOnEnd, "End (const char * eptr)"},
         };
         for (auto && ev : events) {
             for (auto && sig : sigs) {
                 if (ev.second & sig.flag) {
                     os << "    virtual bool on" << ev.first << sig.text
-                        << " { return true; }\n";
+                       << " { return true; }\n";
                 }
             }
         }

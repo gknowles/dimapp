@@ -20,7 +20,8 @@ struct XElemInfo : XElem {
     XAttr * m_firstAttr{nullptr};
 };
 struct XElemRootInfo : XElemInfo {
-    XElemRootInfo() : XElemInfo(this) {}
+    XElemRootInfo()
+        : XElemInfo(this) {}
     XDocument * m_document{nullptr};
 };
 
@@ -70,7 +71,7 @@ bool ParserNotify::EndDoc() {
 
 //===========================================================================
 bool ParserNotify::StartElem(const char name[], size_t nameLen) {
-	const_cast<char *>(name)[nameLen] = 0;
+    const_cast<char *>(name)[nameLen] = 0;
     if (!m_curElem) {
         m_curElem = m_doc.setRoot(name);
     } else {
@@ -88,17 +89,17 @@ bool ParserNotify::EndElem() {
 //===========================================================================
 bool ParserNotify::Attr(
     const char name[], size_t nameLen, const char value[], size_t valueLen) {
-	const_cast<char *>(name)[nameLen] = 0;
-	const_cast<char *>(value)[valueLen] = 0;
-	m_doc.addAttr(m_curElem, name, value);
+    const_cast<char *>(name)[nameLen] = 0;
+    const_cast<char *>(value)[valueLen] = 0;
+    m_doc.addAttr(m_curElem, name, value);
     return true;
 }
 
 //===========================================================================
 bool ParserNotify::Text(const char value[], size_t valueLen) {
-	const_cast<char *>(value)[valueLen] = 0;
+    const_cast<char *>(value)[valueLen] = 0;
     m_curElem->m_value = value;
-	return true;
+    return true;
 }
 
 
@@ -139,7 +140,8 @@ XElem * XDocument::setRoot(const char elemName[], const char text[]) {
 }
 
 //===========================================================================
-XElem * XDocument::addElem(XElem * parent, const char name[], const char text[]) {
+XElem *
+XDocument::addElem(XElem * parent, const char name[], const char text[]) {
     assert(parent);
     assert(name);
     auto * elem = heap().emplace<XElemInfo>(parent);
@@ -264,7 +266,8 @@ XElemRange<XElem> Dim::elems(XElem * elem, const char name[]) {
 //===========================================================================
 XElemRange<const XElem> Dim::elems(const XElem * elem, const char name[]) {
     auto base = static_cast<const XElemInfo *>(elem);
-    auto first = XElem::Iterator<const XElem>(base ? base->m_firstElem : base, name);
+    auto first =
+        XElem::Iterator<const XElem>(base ? base->m_firstElem : base, name);
     return {first};
 }
 
@@ -275,12 +278,12 @@ XAttrRange<XAttr> Dim::attrs(XElem * elem) {
     auto base = static_cast<XElemInfo *>(elem);
     auto first = ForwardListIterator<XAttr>(base ? base->m_firstAttr : nullptr);
     return {first};
-
 }
 
 //===========================================================================
 XAttrRange<const XAttr> Dim::attrs(const XElem * elem) {
     auto base = static_cast<const XElemInfo *>(elem);
-    auto first = ForwardListIterator<const XAttr>(base ? base->m_firstAttr : nullptr);
+    auto first =
+        ForwardListIterator<const XAttr>(base ? base->m_firstAttr : nullptr);
     return {first};
 }

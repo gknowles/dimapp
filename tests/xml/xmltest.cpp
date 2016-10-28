@@ -28,22 +28,22 @@ int main(int argc, char * argv[]) {
         .attr("b", "btext")
         .end();
     bld.start("non-cdata") << "text: ";
-    bld << "> ]]>" << ']' << ']' << '>' << ']' << "]>" << ']' << '>' << '>' 
+    bld << "> ]]>" << ']' << ']' << '>' << ']' << "]>" << ']' << '>' << '>'
         << end;
     bld.end();
 
-	string str = to_string(out);
+    string str = to_string(out);
     char * data = str.data();
     cout << data;
     XDocument doc;
     auto root = doc.parse(data);
     assert(root);
 
-	bld.clear();
-	bld << *root;
-	out.pushBack(0);
-	char * data2 = out.data();
-	cout << data2;
+    bld.clear();
+    bld << *root;
+    out.pushBack(0);
+    char * data2 = out.data();
+    cout << data2;
 
     return EX_OK;
 }
