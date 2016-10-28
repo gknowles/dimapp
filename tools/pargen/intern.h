@@ -68,6 +68,7 @@ public:
     const char *
     optionString(const std::string & name, const char * def = "") const;
     unsigned optionUnsigned(const std::string & name, unsigned def = 0) const;
+    const char * operator[](const std::string & name) const;
 
     Element * addSequenceRule(
         const std::string & name,

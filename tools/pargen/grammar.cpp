@@ -77,6 +77,11 @@ unsigned Grammar::optionUnsigned(const string & name, unsigned def) const {
 }
 
 //===========================================================================
+const char * Grammar::operator[](const std::string & name) const {
+    return optionString(name, "");
+}
+
+//===========================================================================
 Element * Grammar::addSequenceRule(
     const string & name,
     unsigned m,
