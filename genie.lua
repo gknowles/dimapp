@@ -7,7 +7,6 @@ solution "dimapp"
   flags {
     "ExtraWarnings",
     "FatalWarnings",
-    "EnableMinimalRebuild",
     "StaticRuntime",
     "Symbols"
   }
