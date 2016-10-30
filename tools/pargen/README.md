@@ -5,7 +5,7 @@ Generates high performance text parsers from tagged ABNF. The state machine
 is encoded as raw C++ switch statements, think of it as loop unrolling taken 
 to an extreme.
 
-For an example of what this looks like, see the abnfparser.cpp & .h files in 
+For an example of what this looks like, see the abnfparse.cpp & .h files in 
 this project, which were created from abnf.abnf.
 
 The input format follows RFC 5234 (including the RFC 7405 update), with 
