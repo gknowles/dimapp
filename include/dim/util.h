@@ -171,7 +171,7 @@ public:
     bool operator!=(const ForwardListIterator & right) {
         return m_current != right.m_current;
     }
-    auto operator++() {
+    ForwardListIterator & operator++() {
         m_current = m_current->m_next;
         return *this;
     }

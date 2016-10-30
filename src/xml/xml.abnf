@@ -112,15 +112,7 @@ Char-not-DASH = ws
     / %x2e-7f
 
 ; Processing Instructions
-PI = "<?" PITarget [S *(Char-not-QMARK / "?" Char-not-GT)] "?>" ; [16]
-Char-not-QMARK = ws
-    / %x21-3e 
-    ; 3f - QMARK
-    / %x40-7f
-Char-not-GT = ws
-    / %x21-3d 
-    ; 3e - GT
-    / %x3f-7f
+PI = "<?" PITarget [S piValue] "?>" ; [16]
 PITarget = NameStartChar-not-X *NameChar ; [17]
     / "X" [NameChar-not-M *NameChar]
     / "XM" [NameChar-not-L *NameChar]
@@ -130,6 +122,15 @@ NameChar-not-M = %x41-4c / %x4e-5a / %x61-6c / %x6e-7a / ":" / "_" / "-"
     / "." / DIGIT
 NameChar-not-L = %x41-4b / %x4d-5a / %x61-6b / %x6d-7a / ":" / "_" / "-" 
     / "." / DIGIT
+piValue = *(Char-not-QMARK / "?" Char-not-GT)
+Char-not-QMARK = ws
+    / %x21-3e 
+    ; 3f - QMARK
+    / %x40-7f
+Char-not-GT = ws
+    / %x21-3d 
+    ; 3e - GT
+    / %x3f-7f
 
 ; CData Sections
 CDSect = CDStart CDataWithEnd ; [18]

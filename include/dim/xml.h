@@ -180,72 +180,65 @@ private:
 ***/
 
 struct XAttr;
-struct XElem;
+struct XNode;
 
 class XDocument {
 public:
     XDocument();
 
     void clear();
-    XElem * parse(char src[]);
+    XNode * parse(char src[]);
 
-    XElem * setRoot(const char elemName[], const char text[] = nullptr);
-    XElem *
-    addElem(XElem * parent, const char name[], const char text[] = nullptr);
-    XAttr * addAttr(XElem * elem, const char name[], const char text[]);
+    XNode * setRoot(const char elemName[], const char text[] = nullptr);
+    XNode *
+    addElem(XNode * parent, const char name[], const char text[] = nullptr);
+    XAttr * addAttr(XNode * elem, const char name[], const char text[]);
 
     ITempHeap & heap() { return m_heap; }
 
 private:
     TempHeap m_heap;
-    XElem * m_root{nullptr};
+    XNode * m_root{nullptr};
 };
 
 //===========================================================================
-// Attr and elem
+// Attr and node (element, comment, text, etc)
 //===========================================================================
-struct XBase {
-    XElem * const m_parent{nullptr};
-    const char * m_name{nullptr};
-    const char * m_value{nullptr};
-
-    XBase(XElem * parent)
-        : m_parent(parent) {}
-
-private:
-    friend XDocument;
+enum class XType {
+    kInvalid,
+    kElement,
+    kText,
+    kComment,
+    kPI, // processing instruction
 };
-struct XAttr : XBase {
-    using XBase::XBase;
-    XAttr * m_next{nullptr};
-    XAttr * m_prev{nullptr};
-};
-struct XElem : XBase {
-    using XBase::XBase;
-    XElem * m_next{nullptr};
-    XElem * m_prev{nullptr};
 
+
+struct XAttr {
+    const char * const name;
+    const char * const value;
+};
+struct XNode {
     template <typename T> class Iterator;
+
+    const char * const name;
+    const char * const value;
 };
 
-IXBuilder & operator<<(IXBuilder & out, const XElem & elem);
+IXBuilder & operator<<(IXBuilder & out, const XNode & elem);
 
-XElem * firstChild(XElem * elem, const char name[] = nullptr);
-XElem * lastChild(XElem * elem, const char name[] = nullptr);
-const XElem * firstChild(const XElem * elem, const char name[] = nullptr);
-const XElem * lastChild(const XElem * elem, const char name[] = nullptr);
+XType type(const XNode * elem);
 
-XElem * nextSibling(XElem * elem, const char name[]);
-XElem * prevSibling(XElem * elem, const char name[]);
-const XElem * nextSibling(const XElem * elem, const char name[]);
-const XElem * prevSibling(const XElem * elem, const char name[]);
+XNode * firstChild(XNode * elem, const char name[] = nullptr);
+XNode * lastChild(XNode * elem, const char name[] = nullptr);
+const XNode * firstChild(const XNode * elem, const char name[] = nullptr);
+const XNode * lastChild(const XNode * elem, const char name[] = nullptr);
 
-XAttr * next(XAttr * attr);
-XAttr * prev(XAttr * attr);
-const XAttr * next(const XAttr * attr);
-const XAttr * prev(const XAttr * attr);
+XNode * nextSibling(XNode * elem, const char name[]);
+XNode * prevSibling(XNode * elem, const char name[]);
+const XNode * nextSibling(const XNode * elem, const char name[]);
+const XNode * prevSibling(const XNode * elem, const char name[]);
 
-template <typename T> class XElem::Iterator : public ForwardListIterator<T> {
+template <typename T> class XNode::Iterator : public ForwardListIterator<T> {
     const char * m_name{nullptr};
 
 public:
@@ -255,21 +248,21 @@ public:
 
 
 template <typename T> struct XElemRange {
-    XElem::Iterator<T> m_first;
-    XElem::Iterator<T> begin() { return m_first; }
-    XElem::Iterator<T> end() { return {nullptr, nullptr}; }
+    XNode::Iterator<T> m_first;
+    XNode::Iterator<T> begin() { return m_first; }
+    XNode::Iterator<T> end() { return {nullptr, nullptr}; }
 };
-XElemRange<XElem> elems(XElem * elem, const char name[] = nullptr);
-XElemRange<const XElem> elems(const XElem * elem, const char name[] = nullptr);
+XElemRange<XNode> elems(XNode * elem, const char name[] = nullptr);
+XElemRange<const XNode> elems(const XNode * elem, const char name[] = nullptr);
 
 //===========================================================================
 template <typename T>
-XElem::Iterator<T>::Iterator(T * node, const char name[])
+XNode::Iterator<T>::Iterator(T * node, const char name[])
     : ForwardListIterator(node)
     , m_name(name) {}
 
 //===========================================================================
-template <typename T> auto XElem::Iterator<T>::operator++() -> Iterator {
+template <typename T> auto XNode::Iterator<T>::operator++() -> Iterator {
     m_current = nextSibling(m_current, m_name);
     return *this;
 }
@@ -280,19 +273,12 @@ template <typename T> struct XAttrRange {
     ForwardListIterator<T> begin() { return m_first; }
     ForwardListIterator<T> end() { return {nullptr}; }
 };
-XAttrRange<XAttr> attrs(XElem * elem);
-XAttrRange<const XAttr> attrs(const XElem * elem);
+XAttrRange<XAttr> attrs(XNode * elem);
+XAttrRange<const XAttr> attrs(const XNode * elem);
 
-//===========================================================================
-template <> auto ForwardListIterator<XAttr>::operator++() {
-    m_current = next(m_current);
-    return *this;
-}
-
-//===========================================================================
-template <> auto ForwardListIterator<const XAttr>::operator++() {
-    m_current = next(m_current);
-    return *this;
-}
+template <>
+auto ForwardListIterator<XAttr>::operator++() -> ForwardListIterator &;
+template <>
+auto ForwardListIterator<const XAttr>::operator++() -> ForwardListIterator &;
 
 } // namespace

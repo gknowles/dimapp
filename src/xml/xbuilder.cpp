@@ -346,13 +346,24 @@ IXBuilder & Dim::operator<<(IXBuilder & out, const std::string & val) {
 }
 
 //===========================================================================
-IXBuilder & Dim::operator<<(IXBuilder & out, const XElem & elem) {
-    out.start(elem.m_name);
-    for (auto && val : attrs(&elem)) {
-        out.attr(val.m_name, val.m_value);
+IXBuilder & Dim::operator<<(IXBuilder & out, const XNode & elem) {
+    XType t = type(&elem);
+    switch (t) {
+    default:
+        assert(0 && "unknown xml node type");
+        return out;
+    case XType::kText:
+        out.text(elem.value);
+        return out;
     }
-    if (*elem.m_value)
-        out.text(elem.m_value);
+
+    assert(t == XType::kElement);
+    out.start(elem.name);
+    for (auto && val : attrs(&elem)) {
+        out.attr(val.name, val.value);
+    }
+    if (*elem.value)
+        out.text(elem.value);
     for (auto && val : elems(&elem)) {
         out << val;
     }

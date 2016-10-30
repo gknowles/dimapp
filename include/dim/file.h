@@ -38,7 +38,7 @@ size_t fileSize(IFile * file);
 TimePoint fileLastWriteTime(IFile * file);
 std::experimental::filesystem::path filePath(IFile * file);
 
-// Closing the file is normally handled as part of destroying the IFile 
+// Closing the file is normally handled as part of destroying the IFile
 // object, but fileClose() can be used to release the file to the system
 // when the IFile can't be deleted, such as in a callback.
 //

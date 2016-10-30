@@ -320,9 +320,9 @@ void Application::onFileEnd(int64_t offset, IFile * file) {
             rightTrunc = true;
             last = first + 78;
         }
-        logMsgInfo() << string(leftTrunc * 3, '.') 
-            << m_source.substr(first, last - first)
-            << string(rightTrunc * 3, '.');
+        logMsgInfo() << string(leftTrunc * 3, '.')
+                     << m_source.substr(first, last - first)
+                     << string(rightTrunc * 3, '.');
         logMsgInfo() << string(pos - first + leftTrunc * 3, ' ') << '^';
         return appSignalShutdown(EX_DATAERR);
     }
