@@ -25,14 +25,13 @@ private:
     bool onAttrNameEnd(const char * eptr) final;
     bool onAttrValueStart(const char * ptr) final;
     bool onAttrValueEnd(const char * eptr) final;
-    bool onCDataWithEndChar(char ch) final;
+    bool onCDataWithEndStart(const char * ptr) final;
     bool onCDataWithEndEnd(const char * eptr) final;
-    bool onCharDataCopyChar(char ch) final;
-    bool onCharDataInPlaceEnd(const char * eptr) final;
-    bool onContentStart(const char * ptr) final;
-    bool onContentEnd(const char * eptr) final;
+    bool onCharDataChar(char ch) final;
     bool onElemNameStart(const char * ptr) final;
     bool onElemNameEnd(const char * eptr) final;
+    bool onElemTextStart(const char * ptr) final;
+    bool onElemTextEnd(const char * eptr) final;
     bool onElementEnd(const char * eptr) final;
     bool onEntityAmpEnd(const char * eptr) final;
     bool onEntityAposEnd(const char * eptr) final;
@@ -87,39 +86,25 @@ bool BaseParserNotify::onAttrValueStart(const char * ptr) {
 
 //===========================================================================
 bool BaseParserNotify::onAttrValueEnd(const char * eptr) {
-    m_notify.Attr(m_attr, m_attrLen, m_base, m_cur - m_base);
+    m_notify.attr(m_attr, m_attrLen, m_base, m_cur - m_base);
     return true;
 }
 
 //===========================================================================
-bool BaseParserNotify::onCDataWithEndChar(char ch) {
+bool BaseParserNotify::onCDataWithEndStart(const char * ptr) {
+    m_base = ptr;
     return true;
 }
 
 //===========================================================================
 bool BaseParserNotify::onCDataWithEndEnd(const char * eptr) {
+    m_notify.text(eptr, eptr - m_base);
     return true;
 }
 
 //===========================================================================
-bool BaseParserNotify::onCharDataCopyChar(char ch) {
-    return true;
-}
-
-//===========================================================================
-bool BaseParserNotify::onCharDataInPlaceEnd(const char * eptr) {
-    return true;
-}
-
-//===========================================================================
-bool BaseParserNotify::onContentStart(const char * ptr) {
-    // m_base = ptr;
-    return true;
-}
-
-//===========================================================================
-bool BaseParserNotify::onContentEnd(const char * eptr) {
-    // m_notify.Text(m_base, eptr - m_base);
+bool BaseParserNotify::onCharDataChar(char ch) {
+    *m_cur++ = ch;
     return true;
 }
 
@@ -131,13 +116,26 @@ bool BaseParserNotify::onElemNameStart(const char * ptr) {
 
 //===========================================================================
 bool BaseParserNotify::onElemNameEnd(const char * eptr) {
-    m_notify.StartElem(m_base, eptr - m_base - 1);
+    m_notify.startElem(m_base, eptr - m_base - 1);
+    return true;
+}
+
+//===========================================================================
+bool BaseParserNotify::onElemTextStart(const char * ptr) {
+    m_base = ptr;
+    m_cur = const_cast<char *>(ptr);
+    return true;
+}
+
+//===========================================================================
+bool BaseParserNotify::onElemTextEnd(const char * eptr) {
+    m_notify.text(m_base, m_cur - m_base);
     return true;
 }
 
 //===========================================================================
 bool BaseParserNotify::onElementEnd(const char * eptr) {
-    m_notify.EndElem();
+    m_notify.endElem();
     return true;
 }
 
@@ -213,10 +211,10 @@ bool XStreamParser::parse(char src[]) {
     m_heap.clear();
     auto * baseNotify = m_heap.emplace<BaseParserNotify>(*this);
     m_base = m_heap.emplace<Detail::XmlBaseParser>(baseNotify);
-    m_notify.StartDoc();
+    m_notify.startDoc();
     if (!m_base->parse(src))
         return false;
-    m_notify.EndDoc();
+    m_notify.endDoc();
     return true;
 }
 

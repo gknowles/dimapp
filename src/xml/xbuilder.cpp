@@ -355,9 +355,10 @@ IXBuilder & Dim::operator<<(IXBuilder & out, const XNode & elem) {
     case XType::kText:
         out.text(elem.value);
         return out;
+    case XType::kElement:
+        break;
     }
 
-    assert(t == XType::kElement);
     out.start(elem.name);
     for (auto && val : attrs(&elem)) {
         out.attr(val.name, val.value);

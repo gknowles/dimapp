@@ -71,12 +71,12 @@ PubidChar-not-APOS = SP / CR / LF / ALPHA / DIGIT
 PubidChar = PubidChar-not-APOS / "'" ; [13]
 
 ; Attribute Value
-attrValue = DQUOTE attrContent DQUOTE / "'" attrContentApos "'" ; [10]
+attrValue = DQUOTE attrText DQUOTE / "'" attrTextApos "'" ; [10]
 	{ Start, End }
-attrContent = [attrInPlace] *((Reference / normalizable-ws) [attrCopy])
+attrText = [attrInPlace] *((Reference / normalizable-ws) [attrCopy])
 attrInPlace = *Char-not-ws-AMP-DQUOTE-LT { End }
 attrCopy = *Char-not-ws-AMP-DQUOTE-LT { Char }
-attrContentApos = [attrInPlaceApos] *(Reference [attrCopyApos]) 
+attrTextApos = [attrInPlaceApos] *(Reference [attrCopyApos]) 
 attrInPlaceApos = *Char-not-ws-AMP-APOS-LT { End, As = attrInPlace }
 attrCopyApos = *Char-not-ws-AMP-APOS-LT { Char, As = attrCopy }
 normalizable-ws = ws { Char }
@@ -84,7 +84,7 @@ normalizable-ws = ws { Char }
 ; Character Data
 CharData = *(Char-not-AMP-LT-RBRACKET ; [14]
     / 1*"]" Char-not-AMP-GT-LT) 
-    *"]"
+    *"]" { Char }
 Char-not-AMP-LT-RBRACKET = ws
     / %x21-25 
     ; 26 - AMP
@@ -101,8 +101,6 @@ Char-not-AMP-GT-LT = ws
     / %x3d 
     ; 3e - GT
     / %x3f-7f
-charDataInPlace = CharData { End }
-charDataCopy = CharData { Char }
 
 ; Comments
 Comment = "<!--" *(Char-not-DASH  / ("-" Char-not-DASH) ) "-->" ; [15]
@@ -135,7 +133,7 @@ Char-not-GT = ws
 ; CData Sections
 CDSect = CDStart CDataWithEnd ; [18]
 CDStart = %s"<![CDATA[" ; [19]
-CDataWithEnd = CData CDEnd { Char, End }
+CDataWithEnd = CData CDEnd { Start, End }
 CData = *(Char-not-RBRACKET  ; [20]
     / "]" Char-not-RBRACKET 
     / "]]" Char-not-GT-RBRACKET)
@@ -183,8 +181,8 @@ STag = "<" elemName *(S Attribute) [S] ">" ; [40]
 Attribute = attrName Eq attrValue ; [41]
 attrName = Name { Start, End }
 ETag = "</" Name [S] ">" ; [42]
-content = [charDataInPlace] *((element / Reference / CDSect / PI / Comment) 
-    [charDataCopy]) { Start, End, Function } ; [43]
+content = [elemText] *((element / PI / Comment / CDSect) [elemText]) { Function } ; [43]
+elemText = *(CharData / Reference) { Start, End }
 EmptyElemTag = "<" elemName *(S Attribute) [S] "/>" ; [44]
 elemName = Name { Start, End }
 
