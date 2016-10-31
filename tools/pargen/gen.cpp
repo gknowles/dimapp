@@ -189,6 +189,51 @@ struct StateTreeInfo {
 };
 } // namespace
 
+static bool s_simpleRecursion = false;
+
+//===========================================================================
+static size_t findRecursionSimple(StatePosition * sp) {
+    size_t depth = sp->elems.size();
+    if (depth >= 3) {
+        StateElement * first = sp->elems.data();
+        StateElement * m = first + depth / 2;
+        StateElement * z = first + depth;
+        StateElement * y = z - 2;
+        for (; y->elem->type != Element::kRule; --y) {
+            if (y == m)
+                return 0;
+        }
+        y += 1;
+        size_t yz = z - y;
+        for (StateElement * x = y - yz - 1; x > first; --x) {
+            if (equal(x, x + yz, y, z)) {
+                size_t num = x + yz - first;
+                return num;
+            }
+        }
+    }
+    return 0;
+}
+
+//===========================================================================
+static size_t findRecursionFull(StatePosition * sp) {
+    size_t depth = sp->elems.size();
+    if (depth >= 3) {
+        StateElement * m = sp->elems.data() + depth / 2;
+        StateElement * z = &sp->elems.back();
+        for (StateElement * y = z - 1; y >= m; --y) {
+            if (y->elem == z->elem) {
+                StateElement * x = y - (z - y);
+                if (equal(x + 1, y, y + 1, z)) {
+                    size_t num = y - sp->elems.data() + 1;
+                    return num;
+                }
+            }
+        }
+    }
+    return 0;
+}
+
 //===========================================================================
 static void
 addRulePositions(bool * skippable, State * st, StatePosition * sp, bool init) {
@@ -203,26 +248,18 @@ addRulePositions(bool * skippable, State * st, StatePosition * sp, bool init) {
     }
 
     // check for rule recursion
-    size_t depth = sp->elems.size();
-    if (depth >= 3) {
-        StateElement * m = sp->elems.data() + depth / 2;
-        StateElement * z = &sp->elems.back();
-        for (StateElement * y = z - 1; y >= m; --y) {
-            if (y->elem == z->elem) {
-                StateElement * x = y - (z - y);
-                if (equal(x + 1, y, y + 1, z)) {
-                    if (!init) {
-                        vector<StateElement> tmp{sp->elems};
-                        size_t num = y - sp->elems.data() + 1;
-                        sp->elems.resize(num);
-                        sp->elems.back().rep = 0;
-                        addPositions(skippable, st, sp, false, *elem.rule, 0);
-                        sp->elems = move(tmp);
-                    }
-                    return;
-                }
-            }
+    size_t num = s_simpleRecursion 
+        ? findRecursionSimple(sp) 
+        : findRecursionFull(sp);
+    if (num) {
+        if (!init) {
+            vector<StateElement> tmp{sp->elems};
+            sp->elems.resize(num);
+            sp->elems.back().rep = 0;
+            addPositions(skippable, st, sp, false, *elem.rule, 0);
+            sp->elems = move(tmp);
         }
+        return;
     }
 
     addPositions(skippable, st, sp, init, *elem.rule, 0);
