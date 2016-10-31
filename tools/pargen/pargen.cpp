@@ -132,8 +132,8 @@ Options:
         Print this message.
     -f, --mark-functions=LEVEL
         Function tag preprocessing level:
-            0 - no change to function tags
-            1 - add function tags to break rule recursion (default)
+            0 - no change to function tags (default)
+            1 - add function tags to break rule recursion
             2 - same as #1, but remove all existing tags first
     -C, --no-callbacks
         Suppress all callback events, reduces generated parser down to 
@@ -251,7 +251,7 @@ void Application::onTask() {
     auto & help = cli.arg<bool>("? h help");
     auto & test = cli.arg<bool>("test");
     cli.arg(&s_allRules, "!min-core", s_allRules);
-    cli.arg(&s_cmdopts.markRecursion, "f mark-functions", 1);
+    cli.arg(&s_cmdopts.markRecursion, "f mark-functions", 0);
     cli.arg(&s_cmdopts.includeCallbacks, "!C callbacks", true);
     cli.arg(&s_cmdopts.buildStateTree, "!B build", true);
     cli.arg(&s_cmdopts.dedupStateTree, "!D dedup", true);
