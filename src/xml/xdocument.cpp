@@ -31,6 +31,7 @@ struct XNodeInfo : XNode, XBaseInfo {
 struct XElemInfo : XNodeInfo {
     XBaseInfo * firstElem{nullptr};
     XAttrInfo * firstAttr{nullptr};
+    size_t valueLen{0};
     using XNodeInfo::XNodeInfo;
 };
 struct XElemRootInfo : XElemInfo {
@@ -102,6 +103,7 @@ bool ParserNotify::startElem(const char name[], size_t nameLen) {
 
 //===========================================================================
 bool ParserNotify::endElem() {
+    m_doc.normalizeText(m_curElem);
     m_curElem = m_curElem->parent;
     return true;
 }
@@ -210,10 +212,22 @@ XDocument::addText(XNode * parent, const char text[]) {
     auto * node = heap().emplace<XOtherInfo>("", text);
     node->type = XType::kText;
     auto * p = static_cast<XElemInfo *>(parent);
+    p->valueLen += strlen(text);
     linkNode(p, node);
     if (!*p->value)
         *const_cast<const char **>(&p->value) = text;
     return node;
+}
+
+//===========================================================================
+void XDocument::normalizeText(XNode * node) {
+    auto * elem = static_cast<XElemInfo *>(node);
+    if (elem->valueLen == -1)
+        return;
+
+
+
+    elem->valueLen = size_t(-1);
 }
 
 

@@ -193,7 +193,9 @@ public:
     XNode *
     addElem(XNode * parent, const char name[], const char text[] = nullptr);
     XAttr * addAttr(XNode * elem, const char name[], const char text[]);
+
     XNode * addText(XNode * parent, const char text[]);
+    void normalizeText(XNode * elem);
 
     ITempHeap & heap() { return m_heap; }
 
