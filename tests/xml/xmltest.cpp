@@ -82,6 +82,7 @@ int main(int argc, char * argv[]) {
         cerr << "xml: Error reading file: " << *path;
         return EX_DATAERR;
     }
+    in.close();
 
     XDocument doc;
     auto root = doc.parse(content.data());
