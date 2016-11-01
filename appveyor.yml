@@ -24,7 +24,7 @@ test_script:
   - bin\hpack
   - bin\http
   - bin\pargen --test
-  - bin\xml
+  - bin\xml --test
 
 deploy:
   tag: dimapp-v$(appveyor_build_version)
