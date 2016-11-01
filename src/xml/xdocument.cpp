@@ -16,20 +16,23 @@ namespace {
 
 struct XElemInfo;
 
-struct XBaseInfo {
+struct XAttrInfo : XAttr {
     XElemInfo * parent{nullptr};
-    XBaseInfo * prev{nullptr};
-    XBaseInfo * next{nullptr};
-};
-struct XAttrInfo : XAttr, XBaseInfo {
+    XAttrInfo * prev{nullptr};
+    XAttrInfo * next{nullptr};
+
     XAttrInfo(const char name[], const char value[]) : XAttr{name, value} {}
 };
 
-struct XNodeInfo : XNode, XBaseInfo {
+struct XNodeInfo : XNode {
+    XElemInfo * parent{nullptr};
+    XNodeInfo * prev{nullptr};
+    XNodeInfo * next{nullptr};
+
     XNodeInfo(const char name[], const char value[]) : XNode{name, value} {}
 };
 struct XElemInfo : XNodeInfo {
-    XBaseInfo * firstElem{nullptr};
+    XNodeInfo * firstElem{nullptr};
     XAttrInfo * firstAttr{nullptr};
     size_t valueLen{0};
     using XNodeInfo::XNodeInfo;
@@ -145,31 +148,32 @@ XNode * XDocument::parse(char src[]) {
     clear();
     ParserNotify notify(*this);
     XStreamParser parser(notify);
-    parser.parse(src);
+    if (!parser.parse(src))
+        return nullptr;
     return m_root;
 }
 
 //===========================================================================
 XNode * XDocument::setRoot(const char elemName[], const char text[]) {
     assert(elemName);
-    auto * elem = heap().emplace<XElemRootInfo>(elemName, text ? text : "");
-    elem->document = this;
-    elem->prev = elem->next = elem;
-    m_root = elem;
-    return elem;
+    auto * ri = heap().emplace<XElemRootInfo>(elemName, text ? text : "");
+    ri->document = this;
+    ri->prev = ri->next = ri;
+    m_root = ri;
+    return ri;
 }
 
 //===========================================================================
-static void linkNode(XElemInfo * parent, XNodeInfo * node) {
-    node->parent = parent;
+static void linkNode(XElemInfo * parent, XNodeInfo * ni) {
+    ni->parent = parent;
     if (auto first = parent->firstElem) {
-        node->prev = first->prev;
-        node->next = first;
-        first->prev = node;
-        node->prev->next = node;
+        ni->prev = first->prev;
+        ni->next = first;
+        first->prev = ni;
+        ni->prev->next = ni;
     } else {
-        parent->firstElem = node;
-        node->prev = node->next = node;
+        parent->firstElem = ni;
+        ni->prev = ni->next = ni;
     }
 }
 
@@ -178,10 +182,10 @@ XNode *
 XDocument::addElem(XNode * parent, const char name[], const char text[]) {
     assert(parent);
     assert(name);
-    auto * elem = heap().emplace<XElemInfo>(name, text ? text : "");
+    auto * ni = heap().emplace<XElemInfo>(name, text ? text : "");
     auto * p = static_cast<XElemInfo *>(parent);
-    linkNode(p, elem);
-    return elem;
+    linkNode(p, ni);
+    return ni;
 }
 
 //===========================================================================
@@ -189,19 +193,19 @@ XAttr * XDocument::addAttr(XNode * elem, const char name[], const char text[]) {
     assert(elem);
     assert(name);
     assert(text);
-    auto * attr = heap().emplace<XAttrInfo>(name, text);
+    auto * ai = heap().emplace<XAttrInfo>(name, text);
     auto * p = static_cast<XElemInfo *>(elem);
-    attr->parent = p;
+    ai->parent = p;
     if (auto first = p->firstAttr) {
-        attr->prev = first->prev;
-        attr->next = first;
-        first->prev = attr;
-        attr->prev->next = attr;
+        ai->prev = first->prev;
+        ai->next = first;
+        first->prev = ai;
+        ai->prev->next = ai;
     } else {
-        p->firstAttr = attr;
-        attr->prev = attr->next = attr;
+        p->firstAttr = ai;
+        ai->prev = ai->next = ai;
     }
-    return attr;
+    return ai;
 }
 
 //===========================================================================
@@ -209,25 +213,94 @@ XNode *
 XDocument::addText(XNode * parent, const char text[]) {
     assert(parent);
     assert(text);
-    auto * node = heap().emplace<XOtherInfo>("", text);
-    node->type = XType::kText;
+    auto * ni = heap().emplace<XOtherInfo>("", text);
+    ni->type = XType::kText;
     auto * p = static_cast<XElemInfo *>(parent);
     p->valueLen += strlen(text);
-    linkNode(p, node);
+    linkNode(p, ni);
     if (!*p->value)
         *const_cast<const char **>(&p->value) = text;
-    return node;
+    return ni;
 }
 
 //===========================================================================
 void XDocument::normalizeText(XNode * node) {
-    auto * elem = static_cast<XElemInfo *>(node);
-    if (elem->valueLen == -1)
+    assert(nodeType(node) == XType::kElement);
+    auto * ei = static_cast<XElemInfo *>(node);
+    if (ei->valueLen == -1)
         return;
 
+    auto firstNode = firstChild(ei, nullptr, XType::kText);
+    XNode * prev;
+    if (!firstNode) 
+        goto DONE;
+    const char * firstChar = firstNode->value;
+    // skip leading whitespace
+    for (;;) {
+        switch (*firstChar) {
+        case ' ': case '\t': case '\n': case '\r':
+            firstChar += 1;
+            continue;
+        case 0:
+            ei->valueLen -= (firstChar - firstNode->value);
+            prev = firstNode;
+            firstNode = nextSibling(firstNode, nullptr, XType::kText);
+            unlinkNode(prev);
+            if (!firstNode) {
+                *const_cast<const char **>(&ei->value) = "";
+                goto DONE;
+            }
+            firstChar = firstNode->value;
+            continue;
+        }
+        break;
+    }
+    ei->valueLen -= (firstChar - firstNode->value);
 
+    // skip trailing whitespace
+    //  - since the leading whitespace stopped at a non-whitespace, we know
+    //    we'll also find a non-whitespace as we skip trailing.
+    auto lastNode = lastChild(ei, nullptr, XType::kText);
+    const char * lastChar = lastNode->value + strlen(lastNode->value);
+    for (;;) {
+        if (lastChar == lastNode->value) {
+            prev = lastNode;
+            lastNode = prevSibling(lastNode, nullptr, XType::kText);
+            unlinkNode(prev);
+            lastChar = lastNode->value + strlen(lastNode->value);
+        }
+        switch (lastChar[-1]) {
+        case ' ': case '\t': case '\n': case '\r':
+            lastChar -= 1;
+            ei->valueLen -= 1;
+            continue;
+        }
+        break;
+    }
+    if (firstNode == lastNode) {
+        *const_cast<const char **>(&ei->value) = firstChar;
+        *const_cast<char *>(lastChar) = 0;
+    } else {
+        char * ptr = heap().alloc(ei->valueLen + 1);
+        *const_cast<const char **>(&ei->value) = ptr;
+        for (;;) {
+            *ptr++ = *firstChar++;
+            if (firstChar == lastChar) 
+                break;
+            if (!*firstChar) {
+                prev = firstNode;
+                firstNode = nextSibling(firstNode, nullptr, XType::kText);
+                unlinkNode(prev);
+                firstChar = firstNode->value;
+            }
+        }
+        assert(ptr == ei->value + ei->valueLen);
+        *ptr = 0;
+    }
+    unlinkNode(firstNode);
 
-    elem->valueLen = size_t(-1);
+DONE:
+    ei->valueLen = size_t(-1);
 }
 
 
@@ -238,7 +311,16 @@ void XDocument::normalizeText(XNode * node) {
 ***/
 
 //===========================================================================
-XType Dim::type(const XNode * node) {
+static bool matchNode(const XNode * node, const char name[], XType type) {
+    if (type != XType::kInvalid && type != nodeType(node))
+        return false;
+    if (name && strcmp(node->name, name) != 0)
+        return false;
+    return true;
+}
+
+//===========================================================================
+XType Dim::nodeType(const XNode * node) {
     if (!node)
         return XType::kInvalid;
     if (*node->name)
@@ -247,94 +329,172 @@ XType Dim::type(const XNode * node) {
 }
 
 //===========================================================================
-XNode * Dim::nextSibling(XNode * inode, const char name[]) {
-    if (!inode) 
+void Dim::unlinkAttr(XAttr * attr) {
+    if (!attr) 
+        return;
+    auto ai = static_cast<XAttrInfo *>(attr);
+    XElemInfo * parent = ai->parent;
+    ai->parent = nullptr;
+    if (ai == parent->firstAttr) {
+        if (ai == ai->next) {
+            parent->firstAttr = nullptr;
+            return;
+        } else {
+            parent->firstAttr = ai->next;
+        }
+    }
+    ai->next->prev = ai->prev;
+    ai->prev->next = ai->next;
+}
+
+//===========================================================================
+void Dim::unlinkNode(XNode * node) {
+    if (!node) 
+        return;
+    auto ni = static_cast<XNodeInfo *>(node);
+    XElemInfo * parent = ni->parent;
+    ni->parent = nullptr;
+    if (ni == parent->firstElem) {
+        if (ni == ni->next) {
+            parent->firstElem = nullptr;
+            return;
+        } else {
+            parent->firstElem = ni->next;
+        }
+    }
+    ni->next->prev = ni->prev;
+    ni->prev->next = ni->next;
+}
+
+//===========================================================================
+XNode * Dim::firstChild(XNode * elem, const char name[], XType type) {
+    if (nodeType(elem) != XType::kElement) 
         return nullptr;
-    auto node = static_cast<XNodeInfo *>(inode);
-    auto first = node->parent->firstElem;
-    while (node->next != first) {
-        node = static_cast<XNodeInfo *>(node->next);
-        if (!name || strcmp(node->name, name) == 0)
-            return node;
+
+    auto ei = static_cast<XElemInfo *>(elem);
+    elem = static_cast<XElemInfo *>(ei->firstElem);
+    if (!matchNode(elem, name, type)) 
+        elem = nextSibling(elem, name, type);
+    return elem;
+}
+
+//===========================================================================
+XNode * Dim::lastChild(XNode * elem, const char name[], XType type) {
+    if (nodeType(elem) != XType::kElement) 
+        return nullptr;
+
+    auto ei = static_cast<XElemInfo *>(elem);
+    elem = static_cast<XElemInfo *>(ei->firstElem->prev);
+    if (!matchNode(elem, name, type))
+        elem = prevSibling(elem, name, type);
+    return elem;
+}
+
+//===========================================================================
+const XNode * Dim::firstChild(const XNode * elem, const char name[], XType type) {
+    return firstChild(const_cast<XNode *>(elem), name, type);
+}
+
+//===========================================================================
+const XNode * Dim::lastChild(const XNode * elem, const char name[], XType type) {
+    return lastChild(const_cast<XNode *>(elem), name, type);
+}
+
+//===========================================================================
+XNode * Dim::nextSibling(XNode * node, const char name[], XType type) {
+    if (!node) 
+        return nullptr;
+    auto ni = static_cast<XNodeInfo *>(node);
+    auto first = ni->parent->firstElem;
+    while (ni->next != first) {
+        ni = ni->next;
+        if (matchNode(ni, name, type))
+            return ni;
     }
     return nullptr;
 }
 
 //===========================================================================
-XNode * Dim::prevSibling(XNode * inode, const char name[]) {
-    if (!inode)
+XNode * Dim::prevSibling(XNode * node, const char name[], XType type) {
+    if (!node)
         return nullptr;
-    auto node = static_cast<XNodeInfo *>(inode);
-    auto first = node->parent->firstElem;
-    while (node != first) {
-        node = static_cast<XNodeInfo *>(node->prev);
-        if (!name || strcmp(node->name, name) == 0)
-            return node;
+    auto ni = static_cast<XNodeInfo *>(node);
+    auto first = ni->parent->firstElem;
+    while (ni != first) {
+        ni = ni->prev;
+        if (matchNode(ni, name, type))
+            return ni;
     }
     return nullptr;
 }
 
 //===========================================================================
-const XNode * Dim::nextSibling(const XNode * elem, const char name[]) {
-    return nextSibling(const_cast<XNode *>(elem), name);
+const XNode * Dim::nextSibling(const XNode * node, const char name[], XType type) {
+    return nextSibling(const_cast<XNode *>(node), name, type);
 }
 
 //===========================================================================
-const XNode * Dim::prevSibling(const XNode * elem, const char name[]) {
-    return prevSibling(const_cast<XNode *>(elem), name);
+const XNode * Dim::prevSibling(const XNode * node, const char name[], XType type) {
+    return prevSibling(const_cast<XNode *>(node), name, type);
 }
 
 //===========================================================================
-// XElemRange
+// XNodeRange
 //===========================================================================
-XElemRange<XNode> Dim::elems(XNode * inode, const char name[]) {
-    if (type(inode) != XType::kElement) 
-        return {{nullptr, nullptr}};
-
-    auto elem = static_cast<XElemInfo *>(inode);
-    elem = static_cast<XElemInfo *>(elem->firstElem);
-    return {{elem, name}};
+XNodeRange<XNode> Dim::elems(XNode * node, const char name[]) {
+    node = firstChild(node, name);
+    XType type = name ? XType::kInvalid : XType::kElement;
+    return {{node, type, name}};
 }
 
 //===========================================================================
-XElemRange<const XNode> Dim::elems(const XNode * inode, const char name[]) {
-    if (type(inode) != XType::kElement) 
-        return {{nullptr, nullptr}};
+XNodeRange<const XNode> Dim::elems(const XNode * node, const char name[]) {
+    node = firstChild(node, name);
+    XType type = name ? XType::kInvalid : XType::kElement;
+    return {{node, type, name}};
+}
 
-    auto elem = static_cast<const XElemInfo *>(inode);
-    elem = static_cast<XElemInfo *>(elem->firstElem);
-    return {{elem, name}};
+//===========================================================================
+XNodeRange<XNode> Dim::nodes(XNode * node, XType type) {
+    node = firstChild(node, nullptr, type);
+    return {{node, type, nullptr}};
+}
+
+//===========================================================================
+XNodeRange<const XNode> Dim::nodes(const XNode * node, XType type) {
+    node = firstChild(node, nullptr, type);
+    return {{node, type, nullptr}};
 }
 
 //===========================================================================
 // XAttrRange
 //===========================================================================
-XAttrRange<XAttr> Dim::attrs(XNode * inode) {
-    if (type(inode) != XType::kElement) 
+XAttrRange<XAttr> Dim::attrs(XNode * node) {
+    if (nodeType(node) != XType::kElement) 
         return {{nullptr}};
 
-    auto elem = static_cast<XElemInfo *>(inode);
-    return {{elem->firstAttr}};
+    auto ei = static_cast<XElemInfo *>(node);
+    return {{ei->firstAttr}};
 }
 
 //===========================================================================
-XAttrRange<const XAttr> Dim::attrs(const XNode * inode) {
-    if (type(inode) != XType::kElement) 
+XAttrRange<const XAttr> Dim::attrs(const XNode * node) {
+    if (nodeType(node) != XType::kElement) 
         return {{nullptr}};
 
-    auto elem = static_cast<const XElemInfo *>(inode);
-    return {{elem->firstAttr}};
+    auto ei = static_cast<const XElemInfo *>(node);
+    return {{ei->firstAttr}};
 }
 
 //===========================================================================
-static XAttr * next(XAttr * iattr) {
-    if (!iattr)
+static XAttr * next(XAttr * attr) {
+    if (!attr)
         return nullptr;
-    auto attr = static_cast<XAttrInfo *>(iattr);
-    auto first = attr->parent->firstAttr;
-    if (attr->next == first)
+    auto ai = static_cast<XAttrInfo *>(attr);
+    auto first = ai->parent->firstAttr;
+    if (ai->next == first)
         return nullptr;
-    return static_cast<XAttrInfo *>(attr->next);
+    return ai->next;
 }
 
 //===========================================================================

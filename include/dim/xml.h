@@ -83,12 +83,6 @@ inline IXBuilder &
 operator<<(IXBuilder & out, IXBuilder & (*pfn)(IXBuilder &)) {
     return pfn(out);
 }
-inline IXBuilder & end(IXBuilder & out) {
-    return out.end();
-}
-inline IXBuilder & endAttr(IXBuilder & out) {
-    return out.endAttr();
-}
 
 inline IXBuilder &
 operator<<(IXBuilder & out, const IXBuilder::ElemNameProxy & name) {
@@ -97,6 +91,9 @@ operator<<(IXBuilder & out, const IXBuilder::ElemNameProxy & name) {
 inline IXBuilder::ElemNameProxy start(const char val[]) {
     return IXBuilder::ElemNameProxy{val};
 }
+inline IXBuilder & end(IXBuilder & out) {
+    return out.end();
+}
 
 inline IXBuilder &
 operator<<(IXBuilder & out, const IXBuilder::AttrNameProxy & name) {
@@ -104,6 +101,9 @@ operator<<(IXBuilder & out, const IXBuilder::AttrNameProxy & name) {
 }
 inline IXBuilder::AttrNameProxy attr(const char val[]) {
     return IXBuilder::AttrNameProxy{val};
+}
+inline IXBuilder & endAttr(IXBuilder & out) {
+    return out.endAttr();
 }
 
 
@@ -195,6 +195,10 @@ public:
     XAttr * addAttr(XNode * elem, const char name[], const char text[]);
 
     XNode * addText(XNode * parent, const char text[]);
+
+    // Remove all child (not all descendent) text nodes and set the node 
+    // "value" to the concatenation of the removed text with leading 
+    // and trailing spaces removed *after* concatenation. 
     void normalizeText(XNode * elem);
 
     ITempHeap & heap() { return m_heap; }
@@ -221,67 +225,78 @@ struct XAttr {
     const char * const value;
 };
 struct XNode {
-    template <typename T> class Iterator;
-
     const char * const name;
     const char * const value;
 };
 
 IXBuilder & operator<<(IXBuilder & out, const XNode & elem);
 
-XType type(const XNode * elem);
+XType nodeType(const XNode * elem);
 
-XNode * firstChild(XNode * elem, const char name[] = nullptr);
-XNode * lastChild(XNode * elem, const char name[] = nullptr);
-const XNode * firstChild(const XNode * elem, const char name[] = nullptr);
-const XNode * lastChild(const XNode * elem, const char name[] = nullptr);
+void unlinkAttr(XAttr * attr);
+void unlinkNode(XNode * node);
 
-XNode * nextSibling(XNode * elem, const char name[]);
-XNode * prevSibling(XNode * elem, const char name[]);
-const XNode * nextSibling(const XNode * elem, const char name[]);
-const XNode * prevSibling(const XNode * elem, const char name[]);
+XNode * firstChild(XNode * elem, const char name[] = nullptr, XType type = XType::kInvalid);
+XNode * lastChild(XNode * elem, const char name[] = nullptr, XType type = XType::kInvalid);
+const XNode * firstChild(const XNode * elem, const char name[] = nullptr, XType type = XType::kInvalid);
+const XNode * lastChild(const XNode * elem, const char name[] = nullptr, XType type = XType::kInvalid);
 
-template <typename T> class XNode::Iterator : public ForwardListIterator<T> {
+XNode * nextSibling(XNode * elem, const char name[] = nullptr, XType type = XType::kInvalid);
+XNode * prevSibling(XNode * elem, const char name[] = nullptr, XType type = XType::kInvalid);
+const XNode * nextSibling(const XNode * elem, const char name[] = nullptr, XType type = XType::kInvalid);
+const XNode * prevSibling(const XNode * elem, const char name[] = nullptr, XType type = XType::kInvalid);
+
+//===========================================================================
+// Node iteration
+//===========================================================================
+template <typename T> class XNodeIterator : public ForwardListIterator<T> {
     const char * m_name{nullptr};
+    XType m_type{XType::kInvalid};
 
 public:
-    Iterator(T * node, const char name[]);
-    Iterator operator++();
+    XNodeIterator(T * node, XType type, const char name[]);
+    XNodeIterator operator++();
 };
-
-
-template <typename T> struct XElemRange {
-    XNode::Iterator<T> m_first;
-    XNode::Iterator<T> begin() { return m_first; }
-    XNode::Iterator<T> end() { return {nullptr, nullptr}; }
-};
-XElemRange<XNode> elems(XNode * elem, const char name[] = nullptr);
-XElemRange<const XNode> elems(const XNode * elem, const char name[] = nullptr);
 
 //===========================================================================
 template <typename T>
-XNode::Iterator<T>::Iterator(T * node, const char name[])
+XNodeIterator<T>::XNodeIterator(T * node, XType type, const char name[])
     : ForwardListIterator(node)
+    , m_type(type)
     , m_name(name) {}
 
 //===========================================================================
-template <typename T> auto XNode::Iterator<T>::operator++() -> Iterator {
-    m_current = nextSibling(m_current, m_name);
+template <typename T> auto XNodeIterator<T>::operator++() -> XNodeIterator {
+    m_current = nextSibling(m_current, m_name, m_type);
     return *this;
 }
 
+template <typename T> struct XNodeRange {
+    XNodeIterator<T> m_first;
+    XNodeIterator<T> begin() { return m_first; }
+    XNodeIterator<T> end() { return {nullptr, XType::kInvalid, nullptr}; }
+};
+XNodeRange<XNode> elems(XNode * elem, const char name[] = nullptr);
+XNodeRange<const XNode> elems(const XNode * elem, const char name[] = nullptr);
 
+XNodeRange<XNode> nodes(XNode * elem, XType type = XType::kInvalid);
+XNodeRange<const XNode> nodes(const XNode * elem, XType type = XType::kInvalid);
+
+
+//===========================================================================
+// Attribute iteration
+//===========================================================================
 template <typename T> struct XAttrRange {
     ForwardListIterator<T> m_first;
     ForwardListIterator<T> begin() { return m_first; }
     ForwardListIterator<T> end() { return {nullptr}; }
 };
-XAttrRange<XAttr> attrs(XNode * elem);
-XAttrRange<const XAttr> attrs(const XNode * elem);
-
 template <>
 auto ForwardListIterator<XAttr>::operator++() -> ForwardListIterator &;
 template <>
 auto ForwardListIterator<const XAttr>::operator++() -> ForwardListIterator &;
+
+XAttrRange<XAttr> attrs(XNode * elem);
+XAttrRange<const XAttr> attrs(const XNode * elem);
 
 } // namespace
