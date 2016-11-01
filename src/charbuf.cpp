@@ -22,9 +22,6 @@ const unsigned kDefaultBlockSize = 4096;
 *
 ***/
 
-//#pragma warning(disable: 4200) // nonstandard extension used: zero-sized
-// array
-// in struct/union
 struct CharBuf::Buffer {
     int m_used{0};
     int m_reserved{kDefaultBlockSize};
@@ -111,7 +108,7 @@ size_t CharBuf::size() const {
 const char * CharBuf::data() const {
     // we need mutable access to rearrange the buffer so that the requested
     // section is contiguous, but the data itself will stay unchanged
-    return const_cast<CharBuf *>(this)->data();
+    return const_cast<CharBuf *>(this)->data(0, m_size);
 }
 
 //===========================================================================
@@ -701,6 +698,6 @@ using namespace Dim;
 std::string to_string(const CharBuf & buf) {
     string out;
     out.resize(buf.size());
-    buf.copy(const_cast<char *>(out.data()), buf.size());
+    buf.copy(out.data(), buf.size());
     return out;
 }

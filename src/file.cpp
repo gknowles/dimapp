@@ -77,7 +77,7 @@ void fileReadBinary(
     size_t bytes = fileSize(file.get());
     out.resize(bytes);
     auto proxy = new FileProxyNotify(out, notify);
-    fileRead(proxy, const_cast<char *>(out.data()), bytes, file.release());
+    fileRead(proxy, out.data(), bytes, file.release());
 }
 
 } // namespace
