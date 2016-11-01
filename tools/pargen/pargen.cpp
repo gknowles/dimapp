@@ -110,61 +110,6 @@ static bool internalTest() {
     return valid;
 }
 
-//===========================================================================
-static void usageError(ostream & os, const string & msg) {
-    os << msg << R"(
-usage: pargen [-?, -h, --help] [-f, --mark-functions=#] [-C, --no-callbacks] 
-              [--min-core] [-B, --no-build] [-D, --no-dedup] [--state-detail]
-              [--no-write-functions]
-              <source file[.abnf]>
-)";
-    appSignalShutdown(EX_USAGE);
-}
-
-//===========================================================================
-static void printSyntax(ostream & os) {
-    os << "pargen v0.1.0 (" __DATE__ ") - simplistic parser generator";
-    os << R"(
-usage: pargen [<options>] <source file[.abnf]>
-
-Options:
-    -?, -h, --help    
-        Print this message.
-    -f, --mark-functions=LEVEL
-        Function tag preprocessing level:
-            0 - no change to function tags (default)
-            1 - add function tags to break rule recursion
-            2 - same as #1, but remove all existing tags first
-    -C, --no-callbacks
-        Suppress all callback events, reduces generated parser down to 
-        pass/fail syntax check.
-
-Testing options:
-    --[no-]min-core
-        Use reduced core rules: ALPHA, DIGIT, CRLF, HEXDIG, NEWLINE, 
-        VCHAR, and WSP are shortened to fewer (usually 1) characters.
-    -B, --no-build
-        Skip building the state tree, only stub versions of parser are
-        generated.
-    -D, --no-dedup
-        Skip purging duplicate entries from the state tree, duplicates
-        occur when multiple paths through the rules end with the same
-        series of transitions.
-    --[no-]state-detail
-        Include details of the states as comments in the generated parser
-        code - may be extremely verbose.
-    --no-write-functions
-        Skip generation of recursion breaking dependent functions (enabled
-        by default).
-        NOTE: generated files may not be compilable
-    --test
-        runs internal test of ABNF parsing logic
-
-For additional information, see:
-https://github.com/gknowles/dimapp/tree/master/tools/pargen
-)";
-}
-
 
 /****************************************************************************
 *
@@ -209,6 +154,70 @@ void LogTask::onTask() {
 
 /****************************************************************************
 *
+*   Command line syntax
+*
+***/
+
+//===========================================================================
+static void usageError(ostream & os, const string & msg) {
+    os << msg << R"(
+usage: pargen [-?, -h, --help] [-f, --mark-functions=#] [-C, --no-callbacks] 
+              [--min-core] [-B, --no-build] [-D, --no-dedup] [--state-detail]
+              [--no-write-functions]
+              <source file[.abnf]> [<root rule>]
+)";
+    appSignalShutdown(EX_USAGE);
+}
+
+//===========================================================================
+static void printSyntax(ostream & os) {
+    os << "pargen v0.1.0 (" __DATE__ ") - simplistic parser generator";
+    os << R"(
+usage: pargen [<options>] <source file[.abnf]> [<root rule>]
+    <source file>   file containing ABNF rules to process
+    <root rule>     root rule to use, overrides %root in <source file>
+
+Options:
+    -?, -h, --help    
+        Print this message.
+    -f, --mark-functions=LEVEL
+        Function tag preprocessing level:
+            0 - no change to function tags (default)
+            1 - add function tags to break rule recursion
+            2 - same as #1, but remove all existing tags first
+    -C, --no-callbacks
+        Suppress all callback events, reduces generated parser down to 
+        pass/fail syntax check.
+
+Testing options:
+    --[no-]min-core
+        Use reduced core rules: ALPHA, DIGIT, CRLF, HEXDIG, NEWLINE, 
+        VCHAR, and WSP are shortened to fewer (usually 1) characters.
+    -B, --no-build
+        Skip building the state tree, only stub versions of parser are
+        generated.
+    -D, --no-dedup
+        Skip purging duplicate entries from the state tree, duplicates
+        occur when multiple paths through the rules end with the same
+        series of transitions.
+    --[no-]state-detail
+        Include details of the states as comments in the generated parser
+        code - may be extremely verbose.
+    --no-write-functions
+        Skip generation of recursion breaking dependent functions (enabled
+        by default).
+        NOTE: generated files may not be compilable
+    --test
+        runs internal test of ABNF parsing logic
+
+For additional information, see:
+https://github.com/gknowles/dimapp/tree/master/tools/pargen
+)";
+}
+
+
+/****************************************************************************
+*
 *   Application
 *
 ***/
@@ -222,6 +231,7 @@ class Application : public ILogNotify,
     string m_source;
     TaskQueueHandle m_logQ;
     experimental::filesystem::path m_srcfile;
+    string m_root;
 
 public:
     Application(int argc, char * argv[]);
@@ -247,6 +257,7 @@ void Application::onTask() {
     Cli cli;
     // positional arguments
     auto & srcfile = cli.arg(&m_srcfile, "[source file]");
+    cli.arg(&m_root, "[root rule]");
     // named arguments
     auto & help = cli.arg<bool>("? h help");
     auto & test = cli.arg<bool>("test");
@@ -309,6 +320,9 @@ void Application::onFileEnd(int64_t offset, IFile * file) {
 
     if (!processOptions(rules))
         return appSignalShutdown(EX_DATAERR);
+
+    if (m_root.size())
+        rules.setOption(kOptionRoot, m_root);
 
     ofstream oh(rules.optionString(kOptionApiHeaderFile));
     ofstream ocpp(rules.optionString(kOptionApiCppFile));

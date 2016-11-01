@@ -65,6 +65,7 @@ public:
     void clear();
 
     void addOption(const std::string & name, const std::string & value);
+    void setOption(const std::string & name, const std::string & value);
     const char *
     optionString(const std::string & name, const char * def = "") const;
     unsigned optionUnsigned(const std::string & name, unsigned def = 0) const;

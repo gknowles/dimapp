@@ -57,6 +57,21 @@ void Grammar::addOption(const string & name, const string & value) {
 }
 
 //===========================================================================
+void Grammar::setOption(const string & name, const string & value) {
+    // replace value if option already exists
+    if (auto elem = element(name)) {
+        while (!elem->elements.empty())
+            elem = &elem->elements.front();
+        assert(elem->type == Element::kRule);
+        elem->value = value;
+        return;
+    }
+
+    // option doesn't exist, add it
+    addOption(name, value);
+}
+
+//===========================================================================
 const char *
 Grammar::optionString(const string & name, const char * def) const {
     if (auto elem = element(name)) {
