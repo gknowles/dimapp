@@ -472,7 +472,7 @@ bool )" << parserClass
 state0: 
     // )" << kFailedStateName
            << R"(
-    m_errWhere = ptr - src - 1;
+    m_errpos = ptr - src - 1;
     return false;
 )";
     } else {
@@ -555,7 +555,7 @@ public:
        << R"( () {}
 
     bool parse (const char src[]);
-    size_t errWhere () const { return m_errWhere; }
+    size_t errpos () const { return m_errpos; }
 
     )" << notifyClass
        << R"( * notify () const { return m_notify; }
@@ -580,7 +580,7 @@ private:
     os << 1 + R"(
     )" << notifyClass
        << R"( * m_notify{nullptr};
-    size_t m_errWhere{0};
+    size_t m_errpos{0};
 };
 
 

@@ -164,10 +164,13 @@ public:
     ITempHeap & heap() { return m_heap; }
     IXStreamParserNotify & notify() { return m_notify; }
 
+    const char * errmsg() const { return m_errmsg; }
+    size_t errpos() const;
+
 private:
     IXStreamParserNotify & m_notify;
     unsigned m_line{0};
-    const char * m_errMsg{nullptr};
+    const char * m_errmsg{nullptr};
     TempHeap m_heap;
     Detail::XmlBaseParser * m_base;
 };
@@ -203,9 +206,14 @@ public:
 
     ITempHeap & heap() { return m_heap; }
 
+    const char * errmsg() const { return m_errmsg; }
+    size_t errpos() const { return m_errpos; }
+
 private:
     TempHeap m_heap;
     XNode * m_root{nullptr};
+    const char * m_errmsg{nullptr};
+    size_t m_errpos{0};
 };
 
 //===========================================================================

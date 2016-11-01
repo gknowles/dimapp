@@ -299,31 +299,11 @@ void Application::onFileEnd(int64_t offset, IFile * file) {
     Grammar rules;
     getCoreRules(rules);
     if (!parseAbnf(rules, m_source)) {
-        auto pos = rules.errWhere();
-        auto lineNum =
-            1 + count(m_source.begin(), m_source.begin() + pos, '\n');
-        logMsgError() << filePath(file) << "(" << lineNum
-                      << "): parsing failed";
-
-        bool leftTrunc = false;
-        bool rightTrunc = false;
-        size_t first = m_source.find_last_of('\n', pos);
-        first = (first == string::npos) ? 0 : first + 1;
-        if (pos - first > 50) {
-            leftTrunc = true;
-            first = pos - 50;
-        }
-        size_t last = m_source.find_first_of('\n', pos);
-        last = m_source.find_last_not_of(" \t\r\n", last);
-        last = (last == string::npos) ? m_source.size() : last + 1;
-        if (last - first > 78) {
-            rightTrunc = true;
-            last = first + 78;
-        }
-        logMsgInfo() << string(leftTrunc * 3, '.')
-                     << m_source.substr(first, last - first)
-                     << string(rightTrunc * 3, '.');
-        logMsgInfo() << string(pos - first + leftTrunc * 3, ' ') << '^';
+        logParseError(
+            "parsing failed", 
+            filePath(file).string(), 
+            rules.errpos(), 
+            m_source);
         return appSignalShutdown(EX_DATAERR);
     }
 

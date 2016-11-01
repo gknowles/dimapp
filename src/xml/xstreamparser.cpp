@@ -202,13 +202,13 @@ XStreamParser::~XStreamParser() {}
 //===========================================================================
 void XStreamParser::clear() {
     m_line = 0;
-    m_errMsg = nullptr;
+    m_errmsg = nullptr;
 }
 
 //===========================================================================
 bool XStreamParser::parse(char src[]) {
     m_line = 0;
-    m_errMsg = nullptr;
+    m_errmsg = nullptr;
     m_heap.clear();
     auto * baseNotify = m_heap.emplace<BaseParserNotify>(*this);
     m_base = m_heap.emplace<Detail::XmlBaseParser>(baseNotify);
@@ -221,8 +221,13 @@ bool XStreamParser::parse(char src[]) {
 
 //===========================================================================
 bool XStreamParser::fail(const char errmsg[]) {
-    m_errMsg = m_heap.strDup(errmsg);
+    m_errmsg = m_heap.strDup(errmsg);
     return false;
+}
+
+//===========================================================================
+size_t XStreamParser::errpos() const {
+    return m_base->errpos();
 }
 
 #if 0

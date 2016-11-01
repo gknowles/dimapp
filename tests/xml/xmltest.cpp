@@ -74,21 +74,26 @@ int main(int argc, char * argv[]) {
         return cli.writeHelp(cout);
 
     size_t bytes = fs::file_size(*path);
-    auto content = make_unique<char[]>(bytes + 1);
+    string content;
+    content.resize(bytes + 1);
     ifstream in(*path, ios_base::in | ios_base::binary);
-    in.read(content.get(), bytes);
+    in.read(content.data(), bytes);
     if (!in) {
         cerr << "xml: Error reading file: " << *path;
         return EX_DATAERR;
     }
 
     XDocument doc;
-    auto root = doc.parse(content.get());
+    auto root = doc.parse(content.data());
     if (root) {
         cout << "File is well-formed." << endl;
         return EX_OK;
     }
 
-    cerr << "xml: Error parsing file: " << *path << endl;
+    logParseError(
+        "xml: parsing failed", 
+        path->string(), 
+        doc.errpos(), 
+        content);
     return EX_DATAERR;
 }

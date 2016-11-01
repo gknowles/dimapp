@@ -148,8 +148,11 @@ XNode * XDocument::parse(char src[]) {
     clear();
     ParserNotify notify(*this);
     XStreamParser parser(notify);
-    if (!parser.parse(src))
+    if (!parser.parse(src)) {
+        m_errmsg = parser.errmsg();
+        m_errpos = parser.errpos();
         return nullptr;
+    }
     return m_root;
 }
 

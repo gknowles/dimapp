@@ -101,15 +101,15 @@ public:
 
     const std::set<Element> & rules() const { return m_rules; }
 
-    size_t errWhere() const { return m_errWhere; }
-    void errWhere(size_t where) { m_errWhere = where; }
+    size_t errpos() const { return m_errpos; }
+    void errpos(size_t where) { m_errpos = where; }
 
 private:
     Element * addElement(Element * rule, unsigned m, unsigned n);
 
     unsigned m_nextElemId{0};
     std::set<Element> m_rules;
-    size_t m_errWhere{0};
+    size_t m_errpos{0};
 };
 
 // modify options
