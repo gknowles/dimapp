@@ -73,6 +73,19 @@ bool StateElement::operator==(const StateElement & right) const {
     return compare(right) == 0;
 }
 
+//===========================================================================
+bool operator<(const vector<StateElement> & a, const vector<StateElement> & b) {
+    auto a1 = a.data();
+    auto a2 = a1 + a.size();
+    auto b1 = b.data();
+    auto b2 = b1 + b.size();
+    for (; a1 != a2 && b1 != b2; ++a1, ++b1) {
+        if (int rc = a1->compare(*b1))
+            return rc < 0;
+    }
+    return a1 == a2 && b1 != b2;
+}
+
 
 /****************************************************************************
 *
@@ -300,7 +313,7 @@ static void addPositions(
         *skippable = true;
         break;
     case Element::kTerminal:
-        st->positions.insert(*sp);
+        st->positions.insert(st->positions.end(), *sp);
         // cout << *sp << endl;
         break;
     }
@@ -633,7 +646,7 @@ static bool resolveEventConflicts(
     set<StatePosition> next;
     for (auto && sp : positions) {
         if (sp.events.size() == matched.size()) {
-            next.insert(move(sp));
+            next.insert(next.end(), move(sp));
             continue;
         }
         StatePosition nsp;
@@ -642,7 +655,7 @@ static bool resolveEventConflicts(
         nsp.events = move(sp.events);
         if (!delayConflicts(nsp, matched, sti, success))
             success = false;
-        next.insert(move(nsp));
+        next.insert(next.end(), move(nsp));
     }
     positions = move(next);
     return success;
