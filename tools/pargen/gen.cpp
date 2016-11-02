@@ -313,8 +313,9 @@ static void addPositions(
         *skippable = true;
         break;
     case Element::kTerminal:
+        // This insert hint is only right ~25% of the time, it's only a win
+        // as long as the average number of positions stays painfully large.
         st->positions.insert(st->positions.end(), *sp);
-        // cout << *sp << endl;
         break;
     }
 done:
