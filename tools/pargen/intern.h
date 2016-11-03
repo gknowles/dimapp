@@ -76,13 +76,13 @@ public:
         unsigned m,
         unsigned n,
         unsigned flags = 0, // Element::kOn*
-        bool recurse = false);
+        bool function = false);
     Element * addChoiceRule(
         const std::string & name,
         unsigned m,
         unsigned n,
         unsigned flags = 0, // Element::kOn*
-        bool recurse = false);
+        bool function = false);
     Element * addSequence(Element * rule, unsigned m, unsigned n);
     Element * addChoice(Element * rule, unsigned m, unsigned n);
     void

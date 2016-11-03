@@ -102,8 +102,8 @@ Element * Grammar::addSequenceRule(
     unsigned m,
     unsigned n,
     unsigned flags, // Element::kFlag*
-    bool recurse) {
-    auto e = addChoiceRule(name, m, n, flags, recurse);
+    bool function) {
+    auto e = addChoiceRule(name, m, n, flags, function);
     e = addSequence(e, 1, 1);
     return e;
 }
@@ -114,7 +114,7 @@ Element * Grammar::addChoiceRule(
     unsigned m,
     unsigned n,
     unsigned flags, // Element::kFlag*
-    bool recurse) {
+    bool function) {
     Element e;
     e.id = ++m_nextElemId;
     e.name = name;
@@ -122,7 +122,7 @@ Element * Grammar::addChoiceRule(
     e.n = n;
     e.type = Element::kChoice;
     e.flags = flags;
-    e.function = recurse;
+    e.function = function;
     auto ib = m_rules.insert(e);
     assert(ib.second);
     return const_cast<Element *>(&*ib.first);
