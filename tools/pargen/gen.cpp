@@ -346,11 +346,10 @@ static void addEvent(
 }
 
 //===========================================================================
-template <typename Iter>
 static void setPositionPrefix(
     StatePosition * sp,
-    Iter begin,
-    Iter end,
+    vector<StateElement>::const_iterator begin,
+    vector<StateElement>::const_iterator end,
     bool recurse,
     const vector<StateEvent> & events,
     bool started) {
