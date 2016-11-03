@@ -200,7 +200,7 @@ Testing options:
         Skip purging duplicate entries from the state tree, duplicates
         occur when multiple paths through the rules end with the same
         series of transitions.
-    --[no-]state-detail
+    -s, --[no-]state-detail
         Include details of the states as comments in the generated parser
         code - may be extremely verbose.
     --no-write-functions
@@ -266,7 +266,7 @@ void Application::onTask() {
     cli.arg(&s_cmdopts.includeCallbacks, "!C callbacks", true);
     cli.arg(&s_cmdopts.buildStateTree, "!B build", true);
     cli.arg(&s_cmdopts.dedupStateTree, "!D dedup", true);
-    cli.arg(&s_cmdopts.writeStatePositions, "state-detail");
+    cli.arg(&s_cmdopts.writeStatePositions, "s state-detail");
     cli.arg(&s_cmdopts.writeFunctions, "write-functions", true);
     if (!cli.parse(m_argc, m_argv)) {
         if (int code = cli.exitCode()) {
