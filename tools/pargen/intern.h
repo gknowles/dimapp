@@ -33,18 +33,18 @@ struct Element {
         kTerminal,
     } type{kRule};
     std::string name;
-    std::string eventName; // only present if different from name
+    std::string value;
     unsigned m{1};
     unsigned n{1};
     unsigned id{0};
     unsigned pos{0}; // position in sequence, 0 for non-sequences
 
     std::vector<Element> elements;
-    std::string value;
     const Element * rule{nullptr};
     const Element * eventRule{nullptr}; // only present if different from rule
     unsigned flags{0};
-    bool recurse{false};
+    bool function{false};
+    std::string eventName; // only present if different from name
 
     bool operator<(const Element & right) const { return name < right.name; }
 };
@@ -123,7 +123,7 @@ bool copyRules(
     const std::string & root,
     bool failIfExists);
 void normalize(Grammar & rules);
-void markRecursion(Grammar & rules, Element & rule, bool resetFirst);
+void markFunction(Grammar & rules, Element & rule, bool resetFirst);
 
 
 /****************************************************************************
@@ -214,7 +214,7 @@ void dedupStateTree(std::unordered_set<State> & states);
 ***/
 
 struct RunOptions {
-    int markRecursion;
+    int markFunction;
     bool includeCallbacks;
     bool buildStateTree;
     bool dedupStateTree;

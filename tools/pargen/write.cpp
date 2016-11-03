@@ -131,7 +131,7 @@ static void writeElement(ostream & os, const Element & elem, bool inclPos) {
         break;
     }
 
-    if (elem.flags || elem.recurse) {
+    if (elem.flags || elem.function) {
         bool first = true;
         os << "  { ";
         if (elem.flags & Element::kOnStart) {
@@ -150,7 +150,7 @@ static void writeElement(ostream & os, const Element & elem, bool inclPos) {
             first = false;
             os << "Char";
         }
-        if (elem.recurse) {
+        if (elem.function) {
             if (!first)
                 os << ", ";
             first = false;
@@ -375,7 +375,7 @@ static void writeParserState(
         const Element * elem = sp.elems.back().elem;
         if (elem->type != Element::kTerminal && elem != &ElementDone::s_elem) {
             assert(elem->type == Element::kRule);
-            assert(elem->rule->recurse);
+            assert(elem->rule->function);
             if (call && elem->rule == call->elems.back().elem->rule &&
                 sp.delayedEvents == call->delayedEvents) {
                 continue;
@@ -566,16 +566,16 @@ public:
 
 private:
 )";
-    bool hasRecurseRules = false;
+    bool hasFunctionRules = false;
     for (auto && elem : rules.rules()) {
-        if (elem.recurse) {
-            hasRecurseRules = true;
+        if (elem.function) {
+            hasFunctionRules = true;
             os << "    bool state";
             writeRuleName(os, elem.name, true);
             os << " (const char *& src);\n";
         }
     }
-    if (hasRecurseRules)
+    if (hasFunctionRules)
         os << '\n';
     os << 1 + R"(
     )" << notifyClass
@@ -669,8 +669,8 @@ void writeParser(
     }
 
     normalize(rules);
-    if (opts.markRecursion)
-        markRecursion(rules, *root, opts.markRecursion > 1);
+    if (opts.markFunction)
+        markFunction(rules, *root, opts.markFunction > 1);
 
     writeHeaderfile(hfile, rules, src);
     writeCppfileStart(cppfile, rules, src);
@@ -681,7 +681,7 @@ void writeParser(
 
     if (opts.writeFunctions) {
         for (auto && elem : rules.rules()) {
-            if (elem.recurse) {
+            if (elem.function) {
                 buildStateTree(
                     &states, elem, opts.buildStateTree, opts.dedupStateTree);
                 writeFunction(

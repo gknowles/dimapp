@@ -255,7 +255,7 @@ addRulePositions(bool * skippable, State * st, StatePosition * sp, bool init) {
     // Don't generate states for right recursion when it can be broken with
     // a call. This could also be done for left recursion when the grammar
     // allows it, but that's more difficult to determine.
-    if (elem.rule->recurse /* && !init */) {
+    if (elem.rule->function /* && !init */) {
         st->positions.insert(*sp);
         return;
     }
@@ -353,11 +353,11 @@ static void setPositionPrefix(
     Iter end,
     bool recurse,
     const vector<StateEvent> & events,
-    bool terminal) {
+    bool started) {
     sp->recurse = recurse;
     sp->elems.assign(begin, end);
     sp->events = events;
-    if (terminal) {
+    if (started) {
         for (auto && se : sp->elems) {
             if (se.elem->type == Element::kRule)
                 se.started = true;
@@ -388,7 +388,7 @@ static void addNextPositions(State * st, const StatePosition & sp) {
             const Element * cur = (it - 1)->elem;
             const Element * last = &se.elem->elements.back();
 
-            if (cur->type == Element::kRule && cur->rule->recurse)
+            if (cur->type == Element::kRule && cur->rule->function)
                 fromRecurse = true;
 
             if (cur != last) {
@@ -412,7 +412,7 @@ static void addNextPositions(State * st, const StatePosition & sp) {
 
         if (se.elem->type == Element::kRule) {
             if ((se.elem->rule->flags & Element::kOnEnd) &&
-                (se.started || !done) && !se.elem->rule->recurse) {
+                (se.started || !done) && !se.elem->rule->function) {
                 addEvent(events, se, Element::kOnEnd);
             }
             // when exiting the parser (via a done sentinel) go directly out,
@@ -697,7 +697,7 @@ buildStateTree(State * st, unordered_set<State> & states, StateTreeInfo & sti) {
                         st->next[i] = 1;
                 } else if (i == 256) {
                     assert(se.elem->type == Element::kRule);
-                    assert(se.elem->rule->recurse);
+                    assert(se.elem->rule->function);
                     for (auto && nsp : next.positions) {
                         auto && nse = nsp.elems.back();
                         if (nse.elem->type == Element::kRule &&

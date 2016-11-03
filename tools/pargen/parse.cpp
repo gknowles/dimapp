@@ -130,7 +130,7 @@ bool ParserNotify::onActionEndEnd(const char * eptr) {
 
 //===========================================================================
 bool ParserNotify::onActionFuncEnd(const char * eptr) {
-    m_elems.back()->recurse = true;
+    m_elems.back()->function = true;
     return true;
 }
 

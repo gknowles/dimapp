@@ -262,7 +262,7 @@ void Application::onTask() {
     auto & help = cli.arg<bool>("? h help");
     auto & test = cli.arg<bool>("test");
     cli.arg(&s_allRules, "!min-core", s_allRules);
-    cli.arg(&s_cmdopts.markRecursion, "f mark-functions", 0);
+    cli.arg(&s_cmdopts.markFunction, "f mark-functions", 0);
     cli.arg(&s_cmdopts.includeCallbacks, "!C callbacks", true);
     cli.arg(&s_cmdopts.buildStateTree, "!B build", true);
     cli.arg(&s_cmdopts.dedupStateTree, "!D dedup", true);

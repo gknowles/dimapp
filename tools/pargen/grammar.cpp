@@ -122,7 +122,7 @@ Element * Grammar::addChoiceRule(
     e.n = n;
     e.type = Element::kChoice;
     e.flags = flags;
-    e.recurse = recurse;
+    e.function = recurse;
     auto ib = m_rules.insert(e);
     assert(ib.second);
     return const_cast<Element *>(&*ib.first);
@@ -299,8 +299,8 @@ bool copyRules(
         return true;
     }
     auto & elem = *ib.first;
-    if (elem.recurse && (elem.flags & Element::kOnChar)) {
-        logMsgError() << "Rule with both recurse and onChar, " << elem.value;
+    if (elem.function && (elem.flags & Element::kOnChar)) {
+        logMsgError() << "Rule with both function and onChar, " << elem.value;
         return false;
     }
     return copyRequiredDeps(out, src, elem);
@@ -419,35 +419,35 @@ void normalize(Grammar & rules) {
 
 //===========================================================================
 static void
-markRecursion(Grammar & rules, Element & rule, vector<bool> & used) {
+markFunction(Grammar & rules, Element & rule, vector<bool> & used) {
     bool wasUsed;
     switch (rule.type) {
     case Element::kChoice:
     case Element::kSequence:
         for (auto && elem : rule.elements) {
-            markRecursion(rules, elem, used);
+            markFunction(rules, elem, used);
         }
         break;
     case Element::kRule:
         wasUsed = used[rule.rule->id];
         if (wasUsed && (~rule.rule->flags & Element::kOnChar))
-            const_cast<Element *>(rule.rule)->recurse = true;
-        if (rule.rule->recurse)
+            const_cast<Element *>(rule.rule)->function = true;
+        if (rule.rule->function)
             return;
         used[rule.rule->id] = true;
-        markRecursion(rules, const_cast<Element &>(*rule.rule), used);
+        markFunction(rules, const_cast<Element &>(*rule.rule), used);
         used[rule.rule->id] = wasUsed;
     }
 }
 
 //===========================================================================
-void markRecursion(Grammar & rules, Element & rule, bool reset) {
+void markFunction(Grammar & rules, Element & rule, bool reset) {
     size_t maxId = 0;
     for (auto && elem : rules.rules()) {
         if (reset)
-            const_cast<Element &>(elem).recurse = false;
+            const_cast<Element &>(elem).function = false;
         maxId = max((size_t)elem.id, maxId);
     }
     vector<bool> used(maxId, false);
-    markRecursion(rules, rule, used);
+    markFunction(rules, rule, used);
 }
