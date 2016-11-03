@@ -47,9 +47,9 @@ Detail::Log logMsgError();
 Detail::LogCrash logMsgCrash();
 
 void logParseError(
-    const std::string & msg, 
-    const std::string & path, 
-    size_t pos, 
+    const std::string & msg,
+    const std::string & path,
+    size_t pos,
     const std::string & source);
 
 } // namespace

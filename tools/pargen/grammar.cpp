@@ -418,8 +418,7 @@ void normalize(Grammar & rules) {
 ***/
 
 //===========================================================================
-static void
-markFunction(Grammar & rules, Element & rule, vector<bool> & used) {
+static void markFunction(Grammar & rules, Element & rule, vector<bool> & used) {
     bool wasUsed;
     switch (rule.type) {
     case Element::kChoice:

@@ -63,14 +63,14 @@ int main(int argc, char * argv[]) {
     _set_error_mode(_OUT_TO_MSGBOX);
 
     Cli cli;
-    auto & path = cli.arg<fs::path>("[xml file]")
-        .desc("File to check is well-formed");
+    auto & path =
+        cli.arg<fs::path>("[xml file]").desc("File to check is well-formed");
     auto & test = cli.arg<bool>("test.").desc("Run internal unit tests");
     if (!cli.parse(cerr, argc, argv))
         return cli.exitCode();
     if (*test)
         return internalTest();
-    if (path->empty()) 
+    if (path->empty())
         return cli.writeHelp(cout);
 
     size_t bytes = fs::file_size(*path);
@@ -91,10 +91,6 @@ int main(int argc, char * argv[]) {
         return EX_OK;
     }
 
-    logParseError(
-        "xml: parsing failed", 
-        path->string(), 
-        doc.errpos(), 
-        content);
+    logParseError("xml: parsing failed", path->string(), doc.errpos(), content);
     return EX_DATAERR;
 }

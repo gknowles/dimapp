@@ -349,14 +349,9 @@ IXBuilder & Dim::operator<<(IXBuilder & out, const std::string & val) {
 IXBuilder & Dim::operator<<(IXBuilder & out, const XNode & elem) {
     auto type = nodeType(&elem);
     switch (type) {
-    default:
-        assert(0 && "unknown xml node type");
-        return out;
-    case XType::kText:
-        out.text(elem.value);
-        return out;
-    case XType::kElement:
-        break;
+    default: assert(0 && "unknown xml node type"); return out;
+    case XType::kText: out.text(elem.value); return out;
+    case XType::kElement: break;
     }
 
     out.start(elem.name);

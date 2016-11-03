@@ -311,9 +311,9 @@ void Application::onFileEnd(int64_t offset, IFile * file) {
     getCoreRules(rules);
     if (!parseAbnf(rules, m_source)) {
         logParseError(
-            "parsing failed", 
-            filePath(file).string(), 
-            rules.errpos(), 
+            "parsing failed",
+            filePath(file).string(),
+            rules.errpos(),
             m_source);
         return appSignalShutdown(EX_DATAERR);
     }

@@ -199,9 +199,9 @@ public:
 
     XNode * addText(XNode * parent, const char text[]);
 
-    // Remove all child (not all descendent) text nodes and set the node 
-    // "value" to the concatenation of the removed text with leading 
-    // and trailing spaces removed *after* concatenation. 
+    // Remove all child (not all descendent) text nodes and set the node
+    // "value" to the concatenation of the removed text with leading
+    // and trailing spaces removed *after* concatenation.
     void normalizeText(XNode * elem);
 
     ITempHeap & heap() { return m_heap; }
@@ -244,15 +244,31 @@ XType nodeType(const XNode * elem);
 void unlinkAttr(XAttr * attr);
 void unlinkNode(XNode * node);
 
-XNode * firstChild(XNode * elem, const char name[] = nullptr, XType type = XType::kInvalid);
-XNode * lastChild(XNode * elem, const char name[] = nullptr, XType type = XType::kInvalid);
-const XNode * firstChild(const XNode * elem, const char name[] = nullptr, XType type = XType::kInvalid);
-const XNode * lastChild(const XNode * elem, const char name[] = nullptr, XType type = XType::kInvalid);
+XNode * firstChild(
+    XNode * elem, const char name[] = nullptr, XType type = XType::kInvalid);
+XNode * lastChild(
+    XNode * elem, const char name[] = nullptr, XType type = XType::kInvalid);
+const XNode * firstChild(
+    const XNode * elem,
+    const char name[] = nullptr,
+    XType type = XType::kInvalid);
+const XNode * lastChild(
+    const XNode * elem,
+    const char name[] = nullptr,
+    XType type = XType::kInvalid);
 
-XNode * nextSibling(XNode * elem, const char name[] = nullptr, XType type = XType::kInvalid);
-XNode * prevSibling(XNode * elem, const char name[] = nullptr, XType type = XType::kInvalid);
-const XNode * nextSibling(const XNode * elem, const char name[] = nullptr, XType type = XType::kInvalid);
-const XNode * prevSibling(const XNode * elem, const char name[] = nullptr, XType type = XType::kInvalid);
+XNode * nextSibling(
+    XNode * elem, const char name[] = nullptr, XType type = XType::kInvalid);
+XNode * prevSibling(
+    XNode * elem, const char name[] = nullptr, XType type = XType::kInvalid);
+const XNode * nextSibling(
+    const XNode * elem,
+    const char name[] = nullptr,
+    XType type = XType::kInvalid);
+const XNode * prevSibling(
+    const XNode * elem,
+    const char name[] = nullptr,
+    XType type = XType::kInvalid);
 
 //===========================================================================
 // Node iteration

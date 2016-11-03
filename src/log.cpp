@@ -95,13 +95,12 @@ Detail::LogCrash Dim::logMsgCrash() {
 
 //===========================================================================
 void Dim::logParseError(
-    const std::string & msg, 
+    const std::string & msg,
     const std::string & path,
-    size_t pos, 
+    size_t pos,
     const std::string & source) {
 
-    auto lineNum =
-        1 + count(source.begin(), source.begin() + pos, '\n');
+    auto lineNum = 1 + count(source.begin(), source.begin() + pos, '\n');
     logMsgError() << path << "(" << lineNum << "): " << msg;
 
     bool leftTrunc = false;
@@ -125,8 +124,7 @@ void Dim::logParseError(
         if (iscntrl(ch))
             ch = '.';
     }
-    logMsgInfo() << string(leftTrunc * 3, '.')
-        << line
-        << string(rightTrunc * 3, '.');
+    logMsgInfo() << string(leftTrunc * 3, '.') << line
+                 << string(rightTrunc * 3, '.');
     logMsgInfo() << string(pos - first + leftTrunc * 3, ' ') << '^';
 }

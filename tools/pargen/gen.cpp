@@ -261,9 +261,8 @@ addRulePositions(bool * skippable, State * st, StatePosition * sp, bool init) {
     }
 
     // check for rule recursion
-    size_t num = s_simpleRecursion 
-        ? findRecursionSimple(sp) 
-        : findRecursionFull(sp);
+    size_t num =
+        s_simpleRecursion ? findRecursionSimple(sp) : findRecursionFull(sp);
     if (num) {
         if (!init) {
             vector<StateElement> tmp{sp->elems};
