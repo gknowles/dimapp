@@ -196,6 +196,7 @@ void Grammar::addLiteral(
 //===========================================================================
 void Grammar::addRange(Element * rule, unsigned char a, unsigned char b) {
     assert(a <= b);
+    assert(rule->type == Element::kChoice);
     for (unsigned i = a; i <= b; ++i) {
         addTerminal(rule, (unsigned char)i, 1, 1);
     }
