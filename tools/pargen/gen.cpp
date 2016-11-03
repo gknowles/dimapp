@@ -269,7 +269,7 @@ addRulePositions(bool * skippable, State * st, StatePosition * sp, bool init) {
             vector<StateElement> tmp{sp->elems};
             sp->elems.resize(num);
             sp->elems.back().rep = 0;
-            addPositions(skippable, st, sp, false, *elem.rule, 0);
+            addPositions(skippable, st, sp, true, *elem.rule, 0);
             sp->elems = move(tmp);
         }
         return;
@@ -296,7 +296,7 @@ static void addPositions(
         // all
         for (auto && elem : rule.elements) {
             bool weak;
-            addPositions(&weak, st, sp, true, elem, 0);
+            addPositions(&weak, st, sp, init, elem, 0);
             if (weak)
                 *skippable = true;
         }
@@ -306,7 +306,7 @@ static void addPositions(
         // up to first with a minimum
         for (auto && elem : rule.elements) {
             bool weak;
-            addPositions(&weak, st, sp, true, elem, 0);
+            addPositions(&weak, st, sp, init, elem, 0);
             if (!weak)
                 goto done;
         }
