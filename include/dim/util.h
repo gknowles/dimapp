@@ -23,6 +23,11 @@ size_t strHash(const char src[]);
 // calculates hash up to trailing null or maxlen, whichever comes first
 size_t strHash(const char src[], size_t maxlen);
 
+//===========================================================================
+inline void hashCombine(size_t & seed, size_t v) {
+    seed ^= v + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+}
+
 
 /****************************************************************************
 *

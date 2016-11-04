@@ -8,15 +8,6 @@ using namespace Dim;
 
 /****************************************************************************
 *
-*   Declarations
-*
-***/
-
-static void hashCombine(size_t & seed, size_t v);
-
-
-/****************************************************************************
-*
 *   Helpers
 *
 ***/
@@ -29,11 +20,6 @@ static void addPositions(
     bool init,
     const Element & elem,
     unsigned rep);
-
-//===========================================================================
-static void hashCombine(size_t & seed, size_t v) {
-    seed ^= v + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-}
 
 
 /****************************************************************************
