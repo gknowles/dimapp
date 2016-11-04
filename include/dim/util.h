@@ -26,6 +26,45 @@ size_t strHash(const char src[], size_t maxlen);
 
 /****************************************************************************
 *
+*   Math
+*
+***/
+
+//===========================================================================
+inline int digits10(uint32_t val) {
+    const int DeBruijnBitPositionAdjustedForLog10[] = {
+        0, 3, 0, 3, 4, 6, 0, 9, 3, 4, 5, 5, 6, 7, 1, 9,
+        2, 3, 6, 8, 4, 5, 7, 2, 6, 8, 7, 2, 8, 1, 1, 9,
+    };
+
+    // round down to one less than a power of 2
+    uint32_t v = val;
+    v |= v >> 1;
+    v |= v >> 2;
+    v |= v >> 4;
+    v |= v >> 8;
+    v |= v >> 16;
+    int r = DeBruijnBitPositionAdjustedForLog10[(v * 0x07c4acdd) >> 27];
+
+    const uint32_t PowersOf10[] = {
+        1, 
+        10, 
+        100, 
+        1000, 
+        10000, 
+        100000, 
+        1000000, 
+        10000000, 
+        100000000, 
+        1000000000,
+    };
+    r += PowersOf10[r] >= val;
+    return r;
+}
+
+
+/****************************************************************************
+*
 *   String conversions
 *
 ***/
@@ -73,8 +112,9 @@ template <typename T> IntegralStr<T>::operator const char *() const {
 
 //===========================================================================
 template <typename T> const char * IntegralStr<T>::internalSet(Unsigned val) {
-    if (!val) {
-        data[0] = '0';
+    if (val < 10) {
+        // optimize for 0 and 1... and 2 thru 9 since it's no more cost
+        data[0] = static_cast<char>(val) + '0';
         data[1] = 0;
     } else {
         char * ptr = data;
@@ -104,7 +144,9 @@ template <typename T> const char * IntegralStr<T>::internalSet(Signed val) {
         char * ptr = data;
         if (val < 0) {
             *ptr++ = '-';
-            val = -val;
+            // "-val" is undefined for MIN_INT, so use safe equivalent 
+            // (assuming 2's complement math) "~(Unsigned)val + 1"
+            val = ~(Unsigned)val + 1;
         }
         unsigned i = 0;
         for (;;) {
