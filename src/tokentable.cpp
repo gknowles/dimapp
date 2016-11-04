@@ -60,7 +60,7 @@ TokenTable::TokenTable(const Token * src, size_t count) {
         if (num == 1) {
             Value & val = m_names.front();
             m_hashLen = (int)strlen(src->name);
-            val.hash = strHash(src->name);
+            val.hash = hashStr(src->name);
             val.id = src->id;
             val.name = src->name;
         }
@@ -85,7 +85,7 @@ TokenTable::TokenTable(const Token * src, size_t count) {
 
     Value * base = m_names.data();
     for (const Token * a = src; a != eptr; ++a) {
-        size_t hash = strHash(a->name, m_hashLen);
+        size_t hash = hashStr(a->name, m_hashLen);
         size_t pos = hash;
         for (;;) {
             pos %= num;
@@ -105,7 +105,7 @@ TokenTable::TokenTable(const Token * src, size_t count) {
 
 //===========================================================================
 bool TokenTable::find(int * out, const char name[]) const {
-    size_t hash = strHash(name, m_hashLen);
+    size_t hash = hashStr(name, m_hashLen);
     size_t pos = hash;
     size_t num = size(m_names);
     for (;;) {
@@ -125,6 +125,7 @@ bool TokenTable::find(int * out, const char name[]) const {
 
 //===========================================================================
 bool TokenTable::find(const char * const * out, int id) const {
+    assert(0);
     return false;
 }
 

@@ -41,14 +41,14 @@ static_assert(size(s_key) == crypto_shorthash_KEYBYTES, "");
 ***/
 
 //===========================================================================
-size_t Dim::strHash(const char src[]) {
+size_t Dim::hashStr(const char src[]) {
     int64_t hash;
     crypto_shorthash((uint8_t *)&hash, (uint8_t *)src, strlen(src), s_key);
     return hash;
 }
 
 //===========================================================================
-size_t Dim::strHash(const char src[], size_t maxlen) {
+size_t Dim::hashStr(const char src[], size_t maxlen) {
     size_t len = min(strlen(src), maxlen);
     int64_t hash;
     crypto_shorthash((uint8_t *)&hash, (uint8_t *)src, len, s_key);

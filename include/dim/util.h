@@ -18,10 +18,10 @@ namespace Dim {
 *
 ***/
 
-size_t strHash(const char src[]);
+size_t hashStr(const char src[]);
 
 // calculates hash up to trailing null or maxlen, whichever comes first
-size_t strHash(const char src[], size_t maxlen);
+size_t hashStr(const char src[], size_t maxlen);
 
 //===========================================================================
 inline void hashCombine(size_t & seed, size_t v) {
