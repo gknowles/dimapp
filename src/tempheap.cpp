@@ -2,7 +2,7 @@
 #include "pch.h"
 #pragma hdrstop
 
-namespace Dim {
+using namespace Dim;
 
 
 /****************************************************************************
@@ -84,5 +84,3 @@ char * TempHeap::alloc(size_t bytes, size_t align) {
         }
     }
 }
-
-} // namespace

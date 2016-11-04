@@ -4,8 +4,7 @@
 
 using namespace std;
 using namespace std::rel_ops;
-
-namespace Dim {
+using namespace Dim;
 
 
 /****************************************************************************
@@ -14,7 +13,7 @@ namespace Dim {
 *
 ***/
 
-class TaskQueue {
+class Dim::TaskQueue {
 public:
     TaskQueueHandle hq;
     string name;
@@ -154,14 +153,14 @@ void TaskQueue::pop() {
 ***/
 
 //===========================================================================
-void iTaskInitialize() {
+void Dim::iTaskInitialize() {
     s_running = true;
     s_eventQ = taskCreateQueue("Event", 1);
     s_computeQ = taskCreateQueue("Compute", 5);
 }
 
 //===========================================================================
-void iTaskDestroy() {
+void Dim::iTaskDestroy() {
     s_running = false;
     unique_lock<mutex> lk{s_mut};
 
@@ -186,39 +185,39 @@ void iTaskDestroy() {
 ***/
 
 //===========================================================================
-void taskPushEvent(ITaskNotify & task) {
+void Dim::taskPushEvent(ITaskNotify & task) {
     ITaskNotify * list[] = {&task};
     taskPushEvent(list, size(list));
 }
 
 //===========================================================================
-void taskPushEvent(ITaskNotify * tasks[], size_t numTasks) {
+void Dim::taskPushEvent(ITaskNotify * tasks[], size_t numTasks) {
     taskPush(s_eventQ, tasks, numTasks);
 }
 
 //===========================================================================
-TaskQueueHandle taskEventQueue() {
+TaskQueueHandle Dim::taskEventQueue() {
     return s_eventQ;
 }
 
 //===========================================================================
-void taskPushCompute(ITaskNotify & task) {
+void Dim::taskPushCompute(ITaskNotify & task) {
     ITaskNotify * list[] = {&task};
     taskPushCompute(list, size(list));
 }
 
 //===========================================================================
-void taskPushCompute(ITaskNotify * tasks[], size_t numTasks) {
-    taskPush(s_computeQ, tasks, numTasks);
+void Dim::taskPushCompute(ITaskNotify * tasks[], size_t numTasks) {
+    Dim::taskPush(s_computeQ, tasks, numTasks);
 }
 
 //===========================================================================
-TaskQueueHandle taskComputeQueue() {
+TaskQueueHandle Dim::taskComputeQueue() {
     return s_computeQ;
 }
 
 //===========================================================================
-TaskQueueHandle taskCreateQueue(const string & name, int threads) {
+TaskQueueHandle Dim::taskCreateQueue(const string & name, int threads) {
     assert(s_running);
     assert(threads);
     auto * q = new TaskQueue;
@@ -233,7 +232,7 @@ TaskQueueHandle taskCreateQueue(const string & name, int threads) {
 }
 
 //===========================================================================
-void taskSetQueueThreads(TaskQueueHandle hq, int threads) {
+void Dim::taskSetQueueThreads(TaskQueueHandle hq, int threads) {
     assert(s_running || !threads);
 
     lock_guard<mutex> lk{s_mut};
@@ -242,13 +241,13 @@ void taskSetQueueThreads(TaskQueueHandle hq, int threads) {
 }
 
 //===========================================================================
-void taskPush(TaskQueueHandle hq, ITaskNotify & task) {
+void Dim::taskPush(TaskQueueHandle hq, ITaskNotify & task) {
     ITaskNotify * list[] = {&task};
     taskPush(hq, list, size(list));
 }
 
 //===========================================================================
-void taskPush(TaskQueueHandle hq, ITaskNotify * tasks[], size_t numTasks) {
+void Dim::taskPush(TaskQueueHandle hq, ITaskNotify * tasks[], size_t numTasks) {
     assert(s_running);
 
     lock_guard<mutex> lk{s_mut};
@@ -262,5 +261,3 @@ void taskPush(TaskQueueHandle hq, ITaskNotify * tasks[], size_t numTasks) {
         q->cv.notify_one();
     }
 }
-
-} // namespace

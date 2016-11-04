@@ -3,10 +3,9 @@
 #pragma hdrstop
 
 using namespace std;
+using namespace Dim;
 
 #pragma warning(disable : 4996) // deprecated
-
-namespace Dim {
 
 
 /****************************************************************************
@@ -16,7 +15,7 @@ namespace Dim {
 ***/
 
 //===========================================================================
-bool parse(Address * out, const char src[]) {
+bool Dim::parse(Address * out, const char src[]) {
     Endpoint sa;
     if (!parse(&sa, src, 9)) {
         *out = {};
@@ -27,7 +26,7 @@ bool parse(Address * out, const char src[]) {
 }
 
 //===========================================================================
-std::ostream & operator<<(std::ostream & os, const Address & addr) {
+std::ostream & Dim::operator<<(std::ostream & os, const Address & addr) {
     Endpoint sa;
     sa.addr = addr;
     return operator<<(os, sa);
@@ -41,7 +40,7 @@ std::ostream & operator<<(std::ostream & os, const Address & addr) {
 ***/
 
 //===========================================================================
-bool parse(Endpoint * end, const char src[], int defaultPort) {
+bool Dim::parse(Endpoint * end, const char src[], int defaultPort) {
     sockaddr_storage sas;
     int sasLen = sizeof(sas);
     if (SOCKET_ERROR ==
@@ -57,7 +56,7 @@ bool parse(Endpoint * end, const char src[], int defaultPort) {
 }
 
 //===========================================================================
-std::ostream & operator<<(std::ostream & os, const Endpoint & src) {
+std::ostream & Dim::operator<<(std::ostream & os, const Endpoint & src) {
     sockaddr_storage sas;
     copy(&sas, src);
     char tmp[256];
@@ -79,7 +78,7 @@ std::ostream & operator<<(std::ostream & os, const Endpoint & src) {
 ***/
 
 //===========================================================================
-void copy(sockaddr_storage * out, const Endpoint & src) {
+void Dim::copy(sockaddr_storage * out, const Endpoint & src) {
     *out = {};
     auto ia = reinterpret_cast<sockaddr_in *>(out);
     ia->sin_family = AF_INET;
@@ -88,7 +87,7 @@ void copy(sockaddr_storage * out, const Endpoint & src) {
 }
 
 //===========================================================================
-void copy(Endpoint * out, const sockaddr_storage & storage) {
+void Dim::copy(Endpoint * out, const sockaddr_storage & storage) {
     *out = {};
     auto ia = reinterpret_cast<const sockaddr_in &>(storage);
     assert(ia.sin_family == AF_INET);
@@ -163,7 +162,7 @@ void QueryTask::onTask() {
 //===========================================================================
 // Public API
 //===========================================================================
-void endpointQuery(
+void Dim::endpointQuery(
     int * cancelId,
     IEndpointNotify * notify,
     const std::string & name,
@@ -225,14 +224,14 @@ void endpointQuery(
 }
 
 //===========================================================================
-void endpointCancelQuery(int cancelId) {
+void Dim::endpointCancelQuery(int cancelId) {
     auto it = s_tasks.find(cancelId);
     if (it != s_tasks.end())
         GetAddrInfoExCancel(&it->second.cancel);
 }
 
 //===========================================================================
-void addressGetLocal(std::vector<Address> * out) {
+void Dim::addressGetLocal(std::vector<Address> * out) {
     out->resize(0);
     ADDRINFO * result;
     WinError err = getaddrinfo(
@@ -261,5 +260,3 @@ void addressGetLocal(std::vector<Address> * out) {
         out->push_back(end.addr);
     }
 }
-
-} // namespace

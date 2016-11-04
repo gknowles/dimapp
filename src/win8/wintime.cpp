@@ -3,8 +3,7 @@
 #pragma hdrstop
 
 using namespace std;
-
-namespace Dim {
+using namespace Dim;
 
 
 /****************************************************************************
@@ -14,7 +13,7 @@ namespace Dim {
 ***/
 
 //===========================================================================
-int64_t iClockGetTicks() {
+int64_t Dim::iClockGetTicks() {
     LARGE_INTEGER out;
     FILETIME ft;
     GetSystemTimeAsFileTime(&ft);
@@ -22,5 +21,3 @@ int64_t iClockGetTicks() {
     out.LowPart = ft.dwLowDateTime;
     return out.QuadPart;
 }
-
-} // namespace

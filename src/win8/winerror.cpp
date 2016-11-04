@@ -3,8 +3,7 @@
 #pragma hdrstop
 
 using namespace std;
-
-namespace Dim {
+using namespace Dim;
 
 
 /****************************************************************************
@@ -85,7 +84,7 @@ WinError & WinError::operator=(NtStatus status) {
 }
 
 //===========================================================================
-std::ostream & operator<<(std::ostream & os, const WinError & val) {
+std::ostream & Dim::operator<<(std::ostream & os, const WinError & val) {
     char buf[256];
     FormatMessage(
         FORMAT_MESSAGE_FROM_SYSTEM,
@@ -104,5 +103,3 @@ std::ostream & operator<<(std::ostream & os, const WinError & val) {
     os << buf;
     return os;
 }
-
-} // namespace

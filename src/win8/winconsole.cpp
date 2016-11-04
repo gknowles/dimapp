@@ -3,8 +3,7 @@
 #pragma hdrstop
 
 using namespace std;
-
-namespace Dim {
+using namespace Dim;
 
 
 /****************************************************************************
@@ -88,7 +87,7 @@ ConsoleScopedAttr::~ConsoleScopedAttr() {
 ***/
 
 //===========================================================================
-void iConsoleInitialize() {
+void Dim::iConsoleInitialize() {
     // set ctrl-c handler
     SetConsoleCtrlHandler(&controlCallback, true);
 }
@@ -101,7 +100,7 @@ void iConsoleInitialize() {
 ***/
 
 //===========================================================================
-void consoleEnableEcho(bool enable) {
+void Dim::consoleEnableEcho(bool enable) {
     HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
     DWORD mode = 0;
     GetConsoleMode(hInput, &mode);
@@ -114,8 +113,6 @@ void consoleEnableEcho(bool enable) {
 }
 
 //===========================================================================
-void consoleEnableCtrlC(bool enable) {
+void Dim::consoleEnableCtrlC(bool enable) {
     s_controlEnabled = enable;
 }
-
-} // namespace

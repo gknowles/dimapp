@@ -32,12 +32,6 @@ Cli::ArgBase::ArgBase(const std::string & names, bool boolean)
     : m_names{names}
     , m_bool{boolean} {}
 
-//===========================================================================
-// free function
-ostream & Dim::operator<<(ostream & os, const Cli::ArgBase & val) {
-    return os << val.from();
-}
-
 
 /****************************************************************************
 *
@@ -122,8 +116,8 @@ void Cli::addArgName(const string & name, ArgBase * val) {
     case '<':
         auto where =
             find_if(m_argNames.begin(), m_argNames.end(), [](auto && key) {
-            return key.optional;
-        });
+                return key.optional;
+            });
         m_argNames.insert(where, {val, !invert, !optional, name.data() + 1});
         return;
     }
@@ -159,9 +153,9 @@ void Cli::addArgName(const string & name, ArgBase * val) {
 }
 
 //===========================================================================
-Cli::Arg<bool> & 
+Cli::Arg<bool> &
 Cli::versionArg(const std::string & version, const std::string & progName) {
-    auto verAction = [version,progName](auto & cli, auto & arg, auto & val) {
+    auto verAction = [version, progName](auto & cli, auto & arg, auto & val) {
         experimental::filesystem::path prog = progName;
         if (prog.empty()) {
             prog = cli.progName();
@@ -365,14 +359,14 @@ bool Cli::parse(ostream & os, size_t argc, char * argv[]) {
 ***/
 
 namespace {
-    struct WrapPos {
-        size_t pos{0};
-        size_t maxWidth{79};
-        std::string prefix;
-    };
+struct WrapPos {
+    size_t pos{0};
+    size_t maxWidth{79};
+    std::string prefix;
+};
 } // namespace
 
-  //===========================================================================
+//===========================================================================
 static void writeToken(ostream & os, WrapPos & wp, const std::string token) {
     if (wp.pos + token.size() + 1 > wp.maxWidth) {
         if (wp.pos > wp.prefix.size()) {

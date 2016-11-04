@@ -3,8 +3,7 @@
 #pragma hdrstop
 
 using namespace std;
-
-namespace Dim {
+using namespace Dim;
 
 
 /****************************************************************************
@@ -113,10 +112,11 @@ static HandleMap<HttpConnHandle, HttpConn> s_conns;
 const Duration kMaxResetStreamAge = 10s;
 const Duration kMinResetStreamCheckInterval = 2s;
 
+namespace {
 class ResetStreamTimer : public ITimerNotify {
     Duration onTimer(TimePoint now) override;
 };
-
+} // namespace
 static deque<ResetStream> s_resetStreams;
 
 //===========================================================================
@@ -149,6 +149,7 @@ Duration ResetStreamTimer::onTimer(TimePoint now) {
 *
 ***/
 
+namespace {
 class MsgDecoder : public IHpackDecodeNotify {
 public:
     MsgDecoder(HttpMsg & msg);
@@ -167,6 +168,7 @@ private:
     HttpMsg & m_msg;
     FrameError m_error{FrameError::kNoError};
 };
+} // namespace
 
 //===========================================================================
 MsgDecoder::MsgDecoder(HttpMsg & msg)
@@ -997,18 +999,18 @@ void HttpConn::deleteStream(int stream, HttpStream * sm) {
 ***/
 
 //===========================================================================
-HttpConnHandle httpListen() {
+HttpConnHandle Dim::httpListen() {
     auto * conn = new HttpConn;
     return s_conns.insert(conn);
 }
 
 //===========================================================================
-void httpClose(HttpConnHandle hc) {
+void Dim::httpClose(HttpConnHandle hc) {
     s_conns.erase(hc);
 }
 
 //===========================================================================
-bool httpRecv(
+bool Dim::httpRecv(
     HttpConnHandle hc,
     CharBuf * out,
     std::vector<std::unique_ptr<HttpMsg>> * msgs,
@@ -1020,10 +1022,8 @@ bool httpRecv(
 }
 
 //===========================================================================
-void httpReply(
+void Dim::httpReply(
     HttpConnHandle hc, CharBuf * out, int stream, const HttpMsg & msg) {
     auto * conn = s_conns.find(hc);
     conn->reply(out, stream, msg);
 }
-
-} // namespace

@@ -4,8 +4,7 @@
 
 using namespace std;
 // using namespace std::rel_ops;
-
-namespace Dim {
+using namespace Dim;
 
 
 /****************************************************************************
@@ -82,13 +81,15 @@ static ITimerNotify * s_processingNotify; // callback currently in progress
 ***/
 
 //===========================================================================
-class CRunTimers : public ITaskNotify {
+namespace {
+class RunTimers : public ITaskNotify {
     void onTask() override;
 };
-static CRunTimers s_runTimers;
+} // namespace
+static RunTimers s_runTimers;
 
 //===========================================================================
-void CRunTimers::onTask() {
+void RunTimers::onTask() {
     Duration wait;
     TimePoint now{Clock::now()};
     unique_lock<mutex> lk{s_mut};
@@ -286,7 +287,7 @@ bool Timer::connected() const {
 ***/
 
 //===========================================================================
-void iTimerInitialize() {
+void Dim::iTimerInitialize() {
     assert(s_mode == kRunStopped);
     s_mode = kRunRunning;
     thread thr{timerQueueThread};
@@ -294,7 +295,7 @@ void iTimerInitialize() {
 }
 
 //===========================================================================
-void iTimerDestroy() {
+void Dim::iTimerDestroy() {
     {
         lock_guard<mutex> lk{s_mut};
         assert(s_mode == kRunRunning);
@@ -315,13 +316,11 @@ void iTimerDestroy() {
 ***/
 
 //===========================================================================
-void timerUpdate(ITimerNotify * notify, Duration wait, bool onlyIfSooner) {
+void Dim::timerUpdate(ITimerNotify * notify, Duration wait, bool onlyIfSooner) {
     Timer::update(notify, wait, onlyIfSooner);
 }
 
 //===========================================================================
-void timerStopSync(ITimerNotify * notify) {
+void Dim::timerStopSync(ITimerNotify * notify) {
     Timer::stopSync(notify);
 }
-
-} // namespace

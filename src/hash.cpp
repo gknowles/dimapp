@@ -3,8 +3,7 @@
 #pragma hdrstop
 
 using namespace std;
-
-namespace Dim {
+using namespace Dim;
 
 
 /****************************************************************************
@@ -21,9 +20,7 @@ namespace Dim {
 ***/
 
 //===========================================================================
-void iHashInitialize() {
+void Dim::iHashInitialize() {
     if (sodium_init() == -1)
         logMsgCrash() << "sodium_init: failed";
 }
-
-} // namespace

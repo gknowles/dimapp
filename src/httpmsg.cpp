@@ -3,8 +3,7 @@
 #pragma hdrstop
 
 using namespace std;
-
-namespace Dim {
+using namespace Dim;
 
 
 /****************************************************************************
@@ -250,5 +249,3 @@ bool HttpRequest::checkPseudoHeaders() const {
     const int mustNot = kFlagHasStatus;
     return (m_flags & must) == must && (~m_flags & mustNot);
 }
-
-} // namespace

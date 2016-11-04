@@ -3,8 +3,7 @@
 #pragma hdrstop
 
 using namespace std;
-
-namespace Dim {
+using namespace Dim;
 
 
 /****************************************************************************
@@ -25,7 +24,8 @@ namespace {
 enum TlsNameType : uint8_t {
     kHostName = 0,
 };
-}
+
+} // namespace
 
 
 /****************************************************************************
@@ -35,7 +35,7 @@ enum TlsNameType : uint8_t {
 ***/
 
 //===========================================================================
-void tlsSetKeyShare(TlsKeyShare & out, TlsNamedGroup group) {
+void Dim::tlsSetKeyShare(TlsKeyShare & out, TlsNamedGroup group) {
     assert(group == kGroupX25519);
     out.keyExchange.assign(32, 0);
 }
@@ -138,7 +138,7 @@ static void writeDraftVersion(TlsRecordWriter & out, uint16_t version) {
 ***/
 
 //===========================================================================
-void tlsWrite(TlsRecordWriter & out, const TlsClientHelloMsg & msg) {
+void Dim::tlsWrite(TlsRecordWriter & out, const TlsClientHelloMsg & msg) {
     out.contentType(kContentHandshake);
     out.number(kClientHello); // handshake.msg_type
     out.start24();            // handshake.length
@@ -168,7 +168,7 @@ void tlsWrite(TlsRecordWriter & out, const TlsClientHelloMsg & msg) {
 }
 
 //===========================================================================
-void tlsWrite(TlsRecordWriter & out, const TlsServerHelloMsg & msg) {
+void Dim::tlsWrite(TlsRecordWriter & out, const TlsServerHelloMsg & msg) {
     out.contentType(kContentHandshake);
     out.number(kServerHello); // handshake.msg_type
     out.start24();            // handshake.length
@@ -189,7 +189,7 @@ void tlsWrite(TlsRecordWriter & out, const TlsServerHelloMsg & msg) {
 }
 
 //===========================================================================
-void tlsWrite(TlsRecordWriter & out, const TlsHelloRetryRequestMsg & msg) {
+void Dim::tlsWrite(TlsRecordWriter & out, const TlsHelloRetryRequestMsg & msg) {
     out.contentType(kContentHandshake);
     out.number(kHelloRetryRequest); // handshake.msg_type
     out.start24();                  // handshake.length
@@ -343,7 +343,7 @@ template <typename T> static bool parseExts(T * msg, TlsRecordReader & in) {
 ***/
 
 //===========================================================================
-bool tlsParse(TlsClientHelloMsg * msg, TlsRecordReader & in) {
+bool Dim::tlsParse(TlsClientHelloMsg * msg, TlsRecordReader & in) {
     msg->majorVersion = in.number();
     msg->minorVersion = in.number();
     in.fixed(msg->random, size(msg->random));
@@ -379,7 +379,7 @@ bool tlsParse(TlsClientHelloMsg * msg, TlsRecordReader & in) {
 }
 
 //===========================================================================
-bool tlsParse(TlsServerHelloMsg * msg, TlsRecordReader & in) {
+bool Dim::tlsParse(TlsServerHelloMsg * msg, TlsRecordReader & in) {
     msg->majorVersion = in.number();
     msg->minorVersion = in.number();
     in.fixed(msg->random, size(msg->random));
@@ -387,5 +387,3 @@ bool tlsParse(TlsServerHelloMsg * msg, TlsRecordReader & in) {
 
     return parseExts(msg, in);
 }
-
-} // namespace

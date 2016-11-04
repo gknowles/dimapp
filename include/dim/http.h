@@ -8,12 +8,12 @@
 
 #include "dim/config.h"
 
+#include "dim/util.h" // ForwardListIterator
+
 #include <memory>
 #include <vector>
 
 namespace Dim {
-
-template <typename T> class ForwardListIterator;
 
 
 /****************************************************************************

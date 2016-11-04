@@ -10,8 +10,7 @@
 #pragma hdrstop
 
 using namespace std;
-
-namespace Dim {
+using namespace Dim;
 
 
 /****************************************************************************
@@ -27,7 +26,7 @@ namespace Dim {
 *
 ***/
 
-struct HpackFieldView {
+struct Dim::HpackFieldView {
     const char * name;
     const char * value;
 };
@@ -831,5 +830,3 @@ bool HpackDecode::read(
     srcLen -= len;
     return true;
 }
-
-} // namespace

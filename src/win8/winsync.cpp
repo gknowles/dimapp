@@ -4,8 +4,7 @@
 
 using namespace std;
 using namespace std::chrono;
-
-namespace Dim {
+using namespace Dim;
 
 
 /****************************************************************************
@@ -82,5 +81,3 @@ IWinEventWaitNotify::~IWinEventWaitNotify() {
         logMsgError() << "CloseHandle(overlapped.hEvent): " << WinError{};
     }
 }
-
-} // namespace

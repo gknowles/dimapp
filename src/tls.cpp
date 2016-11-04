@@ -3,8 +3,7 @@
 #pragma hdrstop
 
 using namespace std;
-
-namespace Dim {
+using namespace Dim;
 
 
 /****************************************************************************
@@ -353,14 +352,14 @@ void ServerConn::onTlsHandshake(const TlsClientHelloMsg & msg) {}
 ***/
 
 //===========================================================================
-TlsConnHandle tlsAccept(const TlsCipherSuite suites[], size_t count) {
+TlsConnHandle Dim::tlsAccept(const TlsCipherSuite suites[], size_t count) {
     auto conn = new ServerConn;
     conn->setSuites(suites, count);
     return s_conns.insert(conn);
 }
 
 //===========================================================================
-TlsConnHandle tlsConnect(
+TlsConnHandle Dim::tlsConnect(
     CharBuf * out,
     const char hostName[],
     const TlsCipherSuite suites[],
@@ -371,12 +370,12 @@ TlsConnHandle tlsConnect(
 }
 
 //===========================================================================
-void tlsClose(TlsConnHandle h) {
+void Dim::tlsClose(TlsConnHandle h) {
     s_conns.erase(h);
 }
 
 //===========================================================================
-bool tlsRecv(
+bool Dim::tlsRecv(
     TlsConnHandle h,
     CharBuf * out,
     CharBuf * data,
@@ -385,5 +384,3 @@ bool tlsRecv(
     auto conn = s_conns.find(h);
     return conn->recv(out, data, src, srcLen);
 }
-
-} // namespace

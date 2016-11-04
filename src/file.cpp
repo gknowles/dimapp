@@ -3,8 +3,7 @@
 #pragma hdrstop
 
 using namespace std;
-
-namespace Dim {
+using namespace Dim;
 
 
 /****************************************************************************
@@ -63,7 +62,7 @@ void FileProxyNotify::onFileEnd(int64_t offset, IFile * file) {
 ***/
 
 //===========================================================================
-void fileReadBinary(
+void Dim::fileReadBinary(
     IFileReadNotify * notify,
     std::string & out,
     const std::experimental::filesystem::path & path) {
@@ -79,5 +78,3 @@ void fileReadBinary(
     auto proxy = new FileProxyNotify(out, notify);
     fileRead(proxy, out.data(), bytes, file.release());
 }
-
-} // namespace

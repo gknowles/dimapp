@@ -3,8 +3,7 @@
 #pragma hdrstop
 
 using namespace std;
-
-namespace Dim {
+using namespace Dim;
 
 
 /****************************************************************************
@@ -394,7 +393,7 @@ bool ShutdownNotify::onAppQueryConsoleDestroy() {
 ***/
 
 //===========================================================================
-void iSocketInitialize() {
+void Dim::iSocketInitialize() {
     s_mode = kRunStarting;
 
     WSADATA data = {};
@@ -466,7 +465,7 @@ void iSocketInitialize() {
 ***/
 
 //===========================================================================
-SOCKET winSocketCreate() {
+SOCKET Dim::winSocketCreate() {
     SOCKET handle = WSASocketW(
         AF_UNSPEC, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_REGISTERED_IO);
     if (handle == INVALID_SOCKET) {
@@ -519,7 +518,7 @@ SOCKET winSocketCreate() {
 }
 
 //===========================================================================
-SOCKET winSocketCreate(const Endpoint & end) {
+SOCKET Dim::winSocketCreate(const Endpoint & end) {
     SOCKET handle = winSocketCreate();
     if (handle == INVALID_SOCKET)
         return handle;
@@ -543,19 +542,17 @@ SOCKET winSocketCreate(const Endpoint & end) {
 ***/
 
 //===========================================================================
-ISocketNotify::Mode socketGetMode(ISocketNotify * notify) {
+ISocketNotify::Mode Dim::socketGetMode(ISocketNotify * notify) {
     return SocketBase::getMode(notify);
 }
 
 //===========================================================================
-void socketDisconnect(ISocketNotify * notify) {
+void Dim::socketDisconnect(ISocketNotify * notify) {
     SocketBase::disconnect(notify);
 }
 
 //===========================================================================
-void socketWrite(
+void Dim::socketWrite(
     ISocketNotify * notify, unique_ptr<SocketBuffer> buffer, size_t bytes) {
     SocketBase::write(notify, move(buffer), bytes);
 }
-
-} // namespace

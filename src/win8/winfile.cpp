@@ -4,8 +4,7 @@
 
 using namespace std;
 using namespace std::experimental::filesystem;
-
-namespace Dim {
+using namespace Dim;
 
 
 /****************************************************************************
@@ -163,7 +162,10 @@ namespace {
 class FileWriteBuf : public ITaskNotify {
 public:
     FileWriteBuf(
-        IFileWriteNotify * notify, File * file, void * buf, size_t bufLen);
+        IFileWriteNotify * notify,
+        File * file,
+        const void * buf,
+        size_t bufLen);
     void write(int64_t off);
 
     // ITaskNotify
@@ -175,7 +177,7 @@ private:
 
     IFileWriteNotify * m_notify;
     File * m_file;
-    char * m_buf;
+    const char * m_buf;
     int m_bufLen;
 
     WinError m_err{0};
@@ -185,10 +187,10 @@ private:
 
 //===========================================================================
 FileWriteBuf::FileWriteBuf(
-    IFileWriteNotify * notify, File * file, void * buf, size_t bufLen)
+    IFileWriteNotify * notify, File * file, const void * buf, size_t bufLen)
     : m_notify(notify)
     , m_file(file)
-    , m_buf((char *)buf)
+    , m_buf((const char *)buf)
     , m_bufLen((int)bufLen) {
     assert(bufLen <= numeric_limits<int>::max());
     m_iocpEvt.notify = this;
@@ -259,7 +261,7 @@ File::~File() {
 ***/
 
 //===========================================================================
-void iFileInitialize() {
+void Dim::iFileInitialize() {
     winIocpInitialize();
 }
 
@@ -271,7 +273,7 @@ void iFileInitialize() {
 ***/
 
 //===========================================================================
-bool fileOpen(unique_ptr<IFile> & out, const path & path, unsigned mode) {
+bool Dim::fileOpen(unique_ptr<IFile> & out, const path & path, unsigned mode) {
     using om = IFile::OpenMode;
 
     out.reset();
@@ -337,7 +339,7 @@ bool fileOpen(unique_ptr<IFile> & out, const path & path, unsigned mode) {
 }
 
 //===========================================================================
-void fileClose(IFile * ifile) {
+void Dim::fileClose(IFile * ifile) {
     File * file = static_cast<File *>(ifile);
     if (file->m_handle != INVALID_HANDLE_VALUE) {
         CloseHandle(file->m_handle);
@@ -346,7 +348,7 @@ void fileClose(IFile * ifile) {
 }
 
 //===========================================================================
-size_t fileSize(IFile * ifile) {
+size_t Dim::fileSize(IFile * ifile) {
     File * file = static_cast<File *>(ifile);
     LARGE_INTEGER size;
     if (!GetFileSizeEx(file->m_handle, &size)) {
@@ -359,7 +361,7 @@ size_t fileSize(IFile * ifile) {
 }
 
 //===========================================================================
-TimePoint fileLastWriteTime(IFile * ifile) {
+TimePoint Dim::fileLastWriteTime(IFile * ifile) {
     File * file = static_cast<File *>(ifile);
     uint64_t ctime, atime, wtime;
     if (!GetFileTime(
@@ -376,13 +378,13 @@ TimePoint fileLastWriteTime(IFile * ifile) {
 }
 
 //===========================================================================
-std::experimental::filesystem::path filePath(IFile * ifile) {
+std::experimental::filesystem::path Dim::filePath(IFile * ifile) {
     File * file = static_cast<File *>(ifile);
     return file->m_path;
 }
 
 //===========================================================================
-void fileRead(
+void Dim::fileRead(
     IFileReadNotify * notify,
     void * outBuf,
     size_t outBufLen,
@@ -396,11 +398,11 @@ void fileRead(
 }
 
 //===========================================================================
-void fileWrite(
+void Dim::fileWrite(
     IFileWriteNotify * notify,
     IFile * ifile,
     int64_t off,
-    void * buf,
+    const void * buf,
     size_t bufLen) {
     assert(notify);
     File * file = static_cast<File *>(ifile);
@@ -409,12 +411,10 @@ void fileWrite(
 }
 
 //===========================================================================
-void fileAppend(
-    IFileWriteNotify * notify, IFile * file, void * buf, size_t bufLen) {
+void Dim::fileAppend(
+    IFileWriteNotify * notify, IFile * file, const void * buf, size_t bufLen) {
     assert(notify);
     // file writes to offset 2^64-1 are interpreted as appends to the end
     // of the file.
     fileWrite(notify, file, 0xffff'ffff'ffff'ffff, buf, bufLen);
 }
-
-} // namespace

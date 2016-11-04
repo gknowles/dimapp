@@ -3,8 +3,7 @@
 #pragma hdrstop
 
 using namespace std;
-
-namespace Dim {
+using namespace Dim;
 
 
 /****************************************************************************
@@ -113,7 +112,7 @@ bool WinIocpShutdown::onAppQueryConsoleDestroy() {
 ***/
 
 //===========================================================================
-void winIocpInitialize() {
+void Dim::winIocpInitialize() {
     s_mode = kRunStarting;
     appMonitorShutdown(&s_cleanup);
 
@@ -133,7 +132,7 @@ void winIocpInitialize() {
 }
 
 //===========================================================================
-bool winIocpBindHandle(HANDLE handle) {
+bool Dim::winIocpBindHandle(HANDLE handle) {
     assert(s_iocp);
 
     if (!CreateIoCompletionPort(handle, s_iocp, NULL, 0)) {
@@ -143,5 +142,3 @@ bool winIocpBindHandle(HANDLE handle) {
 
     return true;
 }
-
-} // namespace

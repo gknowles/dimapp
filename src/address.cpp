@@ -3,8 +3,7 @@
 #pragma hdrstop
 
 using namespace std;
-
-namespace Dim {
+using namespace Dim;
 
 
 /****************************************************************************
@@ -46,8 +45,3 @@ bool Endpoint::operator==(const Endpoint & right) const {
 Endpoint::operator bool() const {
     return port || addr;
 }
-
-bool parse(Endpoint * out, const char src[]);
-std::ostream & operator<<(std::ostream & os, const Endpoint & src);
-
-} // namespace

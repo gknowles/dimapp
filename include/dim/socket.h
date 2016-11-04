@@ -2,6 +2,7 @@
 #pragma once
 
 #include "dim/config.h"
+
 #include "dim/types.h"
 
 #include <memory>

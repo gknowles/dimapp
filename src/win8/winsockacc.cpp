@@ -3,8 +3,7 @@
 #pragma hdrstop
 
 using namespace std;
-
-namespace Dim {
+using namespace Dim;
 
 
 /****************************************************************************
@@ -293,7 +292,7 @@ void ShutdownNotify::onAppStartConsoleCleanup() {
 ***/
 
 //===========================================================================
-void iSocketAcceptInitialize() {
+void Dim::iSocketAcceptInitialize() {
     appMonitorShutdown(&s_cleanup);
 }
 
@@ -311,7 +310,8 @@ static void pushListenStop(ISocketListenNotify * notify) {
 }
 
 //===========================================================================
-void socketListen(ISocketListenNotify * notify, const Endpoint & localEnd) {
+void Dim::socketListen(
+    ISocketListenNotify * notify, const Endpoint & localEnd) {
     auto hostage = make_unique<ListenSocket>(notify, localEnd);
     auto sock = hostage.get();
     sock->m_handle = winSocketCreate(localEnd);
@@ -334,7 +334,7 @@ void socketListen(ISocketListenNotify * notify, const Endpoint & localEnd) {
 }
 
 //===========================================================================
-void socketStop(ISocketListenNotify * notify, const Endpoint & localEnd) {
+void Dim::socketStop(ISocketListenNotify * notify, const Endpoint & localEnd) {
     lock_guard<mutex> lk{s_mut};
     for (auto && ptr : s_listeners) {
         if (ptr->m_notify == notify && ptr->m_localEnd == localEnd &&
@@ -347,5 +347,3 @@ void socketStop(ISocketListenNotify * notify, const Endpoint & localEnd) {
         }
     }
 }
-
-} // namespace

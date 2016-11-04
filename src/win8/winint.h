@@ -1,7 +1,7 @@
 // winint.h - dim core - windows platform
 #pragma once
 
-#include <iosfwd>
+#include <iostream>
 
 namespace Dim {
 
@@ -94,7 +94,7 @@ private:
     int m_value;
 };
 
-::std::ostream & operator<<(::std::ostream & os, const WinError & val);
+std::ostream & operator<<(std::ostream & os, const WinError & val);
 
 
 /****************************************************************************

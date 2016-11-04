@@ -3,8 +3,7 @@
 #pragma hdrstop
 
 using namespace std;
-
-namespace Dim {
+using namespace Dim;
 
 
 /****************************************************************************
@@ -14,7 +13,7 @@ namespace Dim {
 ***/
 
 // randomly generated key
-static uint8_t s_key[] = {
+const uint8_t s_key[] = {
     0xed,
     0x2e,
     0x24,
@@ -42,18 +41,16 @@ static_assert(size(s_key) == crypto_shorthash_KEYBYTES, "");
 ***/
 
 //===========================================================================
-size_t strHash(const char src[]) {
+size_t Dim::strHash(const char src[]) {
     int64_t hash;
     crypto_shorthash((uint8_t *)&hash, (uint8_t *)src, strlen(src), s_key);
     return hash;
 }
 
 //===========================================================================
-size_t strHash(const char src[], size_t maxlen) {
+size_t Dim::strHash(const char src[], size_t maxlen) {
     size_t len = min(strlen(src), maxlen);
     int64_t hash;
     crypto_shorthash((uint8_t *)&hash, (uint8_t *)src, len, s_key);
     return hash;
 }
-
-} // namespace

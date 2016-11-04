@@ -4,8 +4,7 @@
 
 using namespace std;
 using namespace std::chrono;
-
-namespace Dim {
+using namespace Dim;
 
 
 /****************************************************************************
@@ -169,7 +168,7 @@ bool MainTimer::queryDestroy(QueryFn notify) {
 ***/
 
 //===========================================================================
-int appRun(ITaskNotify & app) {
+int Dim::appRun(ITaskNotify & app) {
     iHashInitialize();
     iConsoleInitialize();
     iTaskInitialize();
@@ -190,7 +189,7 @@ int appRun(ITaskNotify & app) {
 }
 
 //===========================================================================
-void appSignalShutdown(int exitcode) {
+void Dim::appSignalShutdown(int exitcode) {
     if (exitcode > s_exitcode)
         s_exitcode = exitcode;
     s_mainTimer = {};
@@ -198,18 +197,16 @@ void appSignalShutdown(int exitcode) {
 }
 
 //===========================================================================
-void appMonitorShutdown(IAppShutdownNotify * cleaner) {
+void Dim::appMonitorShutdown(IAppShutdownNotify * cleaner) {
     s_cleaners.emplace(s_cleaners.begin(), cleaner);
 }
 
 //===========================================================================
-bool appQueryDestroyFailed() {
+bool Dim::appQueryDestroyFailed() {
     return s_mainTimer.queryDestroyFailed(0ms);
 }
 
 //===========================================================================
-RunMode appMode() {
+RunMode Dim::appMode() {
     return s_runMode;
 }
-
-} // namespace

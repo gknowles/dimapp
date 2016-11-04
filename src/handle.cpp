@@ -3,8 +3,7 @@
 #pragma hdrstop
 
 using namespace std;
-
-namespace Dim {
+using namespace Dim;
 
 
 /****************************************************************************
@@ -67,5 +66,3 @@ void * HandleMapBase::release(HandleBase handle) {
     m_firstFree = handle.pos;
     return value;
 }
-
-} // namespace

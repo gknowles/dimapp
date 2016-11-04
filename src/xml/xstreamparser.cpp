@@ -98,7 +98,7 @@ bool BaseParserNotify::onCDataWithEndStart(const char * ptr) {
 
 //===========================================================================
 bool BaseParserNotify::onCDataWithEndEnd(const char * eptr) {
-    // leave off trailing "]]>" 
+    // leave off trailing "]]>"
     m_notify.text(m_base, eptr - m_base - 3);
     return true;
 }

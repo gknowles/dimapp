@@ -2,9 +2,10 @@
 #pragma once
 
 #include "dim/config.h"
+
 #include "dim/types.h"
 
-#include <iosfwd>
+#include <iostream>
 #include <string>
 #include <vector>
 

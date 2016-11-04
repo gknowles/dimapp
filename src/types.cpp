@@ -3,8 +3,8 @@
 #pragma hdrstop
 
 using namespace std;
+using namespace Dim;
 
-namespace Dim {
 
 /****************************************************************************
 *
@@ -39,5 +39,3 @@ time_t Clock::to_time_t(const time_point & time) noexcept {
 Clock::time_point Clock::from_time_t(time_t tm) noexcept {
     return (time_point(duration(tm * kClockTicksPerTimeT)));
 }
-
-} // namespace

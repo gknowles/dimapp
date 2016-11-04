@@ -3,8 +3,7 @@
 #pragma hdrstop
 
 using namespace std;
-
-namespace Dim {
+using namespace Dim;
 
 
 /****************************************************************************
@@ -684,9 +683,6 @@ CharBuf::erase(vector<CharBuf::Buffer *>::iterator it, int pos, int remove) {
     return *this;
 }
 
-} // namespace
-using namespace Dim;
-
 
 /****************************************************************************
 *
@@ -695,7 +691,7 @@ using namespace Dim;
 ***/
 
 //===========================================================================
-std::string to_string(const CharBuf & buf) {
+std::string Dim::to_string(const CharBuf & buf) {
     string out;
     out.resize(buf.size());
     buf.copy(out.data(), buf.size());

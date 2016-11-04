@@ -67,6 +67,7 @@ void tlsSetKeyShare(TlsKeyShare & out, TlsNamedGroup group);
 
 void tlsWrite(TlsRecordWriter & out, const TlsClientHelloMsg & msg);
 void tlsWrite(TlsRecordWriter & out, const TlsServerHelloMsg & msg);
+void tlsWrite(TlsRecordWriter & out, const TlsHelloRetryRequestMsg & msg);
 
 bool tlsParse(TlsClientHelloMsg * msg, TlsRecordReader & in);
 bool tlsParse(TlsServerHelloMsg * msg, TlsRecordReader & in);

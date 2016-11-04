@@ -3,8 +3,7 @@
 #pragma hdrstop
 
 using namespace std;
-
-namespace Dim {
+using namespace Dim;
 
 
 /****************************************************************************
@@ -219,7 +218,7 @@ bool Shutdown::onAppQueryConsoleDestroy() {
 ***/
 
 //===========================================================================
-void iSocketBufferInitialize(RIO_EXTENSION_FUNCTION_TABLE & rio) {
+void Dim::iSocketBufferInitialize(RIO_EXTENSION_FUNCTION_TABLE & rio) {
     appMonitorShutdown(&s_cleanup);
 
     s_rio = rio;
@@ -236,7 +235,8 @@ void iSocketBufferInitialize(RIO_EXTENSION_FUNCTION_TABLE & rio) {
 }
 
 //===========================================================================
-void iSocketGetRioBuffer(RIO_BUF * out, SocketBuffer * sbuf, size_t bytes) {
+void Dim::iSocketGetRioBuffer(
+    RIO_BUF * out, SocketBuffer * sbuf, size_t bytes) {
     lock_guard<mutex> lk{s_mut};
 
     assert(bytes <= sbuf->len);
@@ -256,7 +256,7 @@ void iSocketGetRioBuffer(RIO_BUF * out, SocketBuffer * sbuf, size_t bytes) {
 ***/
 
 //===========================================================================
-unique_ptr<SocketBuffer> socketGetBuffer() {
+unique_ptr<SocketBuffer> Dim::socketGetBuffer() {
     lock_guard<mutex> lk{s_mut};
 
     // all buffers full? create a new one
@@ -296,5 +296,3 @@ unique_ptr<SocketBuffer> socketGetBuffer() {
 
     return out;
 }
-
-} // namespace

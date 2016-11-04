@@ -3,8 +3,8 @@
 #pragma hdrstop
 
 using namespace std;
+using namespace Dim;
 
-namespace Dim {
 
 /****************************************************************************
 *
@@ -137,5 +137,3 @@ TokenTable::Iterator TokenTable::begin() const {
 TokenTable::Iterator TokenTable::end() const {
     return Iterator{nullptr};
 }
-
-} // namespace

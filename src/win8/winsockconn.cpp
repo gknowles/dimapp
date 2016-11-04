@@ -3,8 +3,7 @@
 #pragma hdrstop
 
 using namespace std;
-
-namespace Dim {
+using namespace Dim;
 
 
 /****************************************************************************
@@ -324,7 +323,7 @@ bool ShutdownNotify::onAppQueryConsoleDestroy() {
 ***/
 
 //===========================================================================
-void iSocketConnectInitialize() {
+void Dim::iSocketConnectInitialize() {
     // Don't register cleanup until all dependents (aka sockbuf) have
     // registered their cleanups (aka been initialized)
     appMonitorShutdown(&s_cleanup);
@@ -338,12 +337,10 @@ void iSocketConnectInitialize() {
 ***/
 
 //===========================================================================
-void socketConnect(
+void Dim::socketConnect(
     ISocketNotify * notify,
     const Endpoint & remoteEnd,
     const Endpoint & localEnd,
     Duration timeout) {
     ConnSocket::connect(notify, remoteEnd, localEnd, timeout);
 }
-
-} // namespace

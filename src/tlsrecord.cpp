@@ -3,8 +3,7 @@
 #pragma hdrstop
 
 using namespace std;
-
-namespace Dim {
+using namespace Dim;
 
 
 /****************************************************************************
@@ -273,5 +272,3 @@ bool TlsRecordDecrypt::parseError(TlsAlertDesc desc, TlsAlertLevel level) {
 *   Public API
 *
 ***/
-
-} // namespace
