@@ -176,12 +176,13 @@ SDDecl = S %s"standalone" Eq ; [32]
     ("'" (%s"yes" / %s"no") "'" / DQUOTE (%s"yes" / %s"no") DQUOTE)
 
 ; Element
-element = EmptyElemTag / STag content ETag { End } ; [39]
+element = EmptyElemTag / STag element-tail { End } ; [39]
+element-tail = content ETag { Function }
 STag = "<" elemName *(S Attribute) [S] ">" ; [40]
 Attribute = attrName Eq attrValue ; [41]
 attrName = Name { Start, End }
 ETag = "</" Name [S] ">" ; [42]
-content = [elemText] *((element / PI / Comment / CDSect) [elemText]) ; { Function } ; [43]
+content = [elemText] *((element / PI / Comment / CDSect) [elemText]) ; [43]
 elemText = *(CharData / Reference) { Start, End }
 EmptyElemTag = "<" elemName *(S Attribute) [S] "/>" ; [44]
 elemName = Name { Start, End }
