@@ -417,11 +417,11 @@ static void addNextPositions(State * st, const StatePosition & sp) {
             terminal = true;
             if (!done) {
                 // add OnStart events top to bottom
-                for (auto && se : sp.elems) {
-                    if (se.elem->type == Element::kRule &&
-                        (se.elem->rule->flags & Element::kOnStart) &&
-                        !se.started) {
-                        addEvent(events, se, Element::kOnStart);
+                for (auto && se2 : sp.elems) {
+                    if (se2.elem->type == Element::kRule &&
+                        (se2.elem->rule->flags & Element::kOnStart) &&
+                        !se2.started) {
+                        addEvent(events, se2, Element::kOnStart);
                     }
                 }
                 // bubble up OnChar events bottom to top
@@ -462,7 +462,7 @@ static void addNextPositions(State * st, const StatePosition & sp) {
     }
 
     //-----------------------------------------------------------------------
-    // completed parsing
+    // no more states
 
     StatePosition nsp;
     nsp.events = events;

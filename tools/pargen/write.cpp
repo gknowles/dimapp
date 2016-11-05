@@ -85,10 +85,10 @@ static void writeElement(ostream & os, const Element & elem, bool inclPos) {
         if (elem.n != kUnlimited)
             os << elem.n;
     }
-    bool first = true;
     switch (elem.type) {
     case Element::kChoice: {
         os << "( ";
+        bool first = true;
         auto cur = elem.elements.begin();
         auto last = elem.elements.end();
         for (; cur != last; ++cur) {
@@ -116,53 +116,41 @@ static void writeElement(ostream & os, const Element & elem, bool inclPos) {
         os << " )";
     } break;
     case Element::kRule: os << elem.value; break;
-    case Element::kSequence:
+    case Element::kSequence: {
         os << "( ";
-        for (auto && e : elem.elements) {
-            if (first) {
-                first = false;
-            } else {
-                os << " ";
-            }
-            writeElement(os, e, inclPos);
+        auto cur = elem.elements.begin();
+        auto last = elem.elements.end();
+        writeElement(os, *cur++, inclPos);
+        for (; cur != last; ++cur) {
+            os << " ";
+            writeElement(os, *cur, inclPos);
         }
         os << " )";
-        break;
+    } break;
     case Element::kTerminal:
         os << "%x" << hex << (unsigned)(unsigned char)elem.value[0] << dec;
         break;
     }
 
     if (elem.flags || elem.function) {
-        bool first = true;
+        const struct {
+            bool incl;
+            const string & text;
+        } tags[] = {
+            { bool(elem.flags & Element::kOnStart), "Start" },
+            { bool(elem.flags & Element::kOnStart), "End" },
+            { bool(elem.flags & Element::kOnStart), "Char" },
+            { elem.function, "Function" },
+            { !elem.eventName.empty(), "As=" + elem.eventName },
+        };
         os << "  { ";
-        if (elem.flags & Element::kOnStart) {
-            first = false;
-            os << "Start";
-        }
-        if (elem.flags & Element::kOnEnd) {
-            if (!first)
-                os << ", ";
-            first = false;
-            os << "End";
-        }
-        if (elem.flags & Element::kOnChar) {
-            if (!first)
-                os << ", ";
-            first = false;
-            os << "Char";
-        }
-        if (elem.function) {
-            if (!first)
-                os << ", ";
-            first = false;
-            os << "Function";
-        }
-        if (!elem.eventName.empty()) {
-            if (!first)
-                os << ", ";
-            first = false;
-            os << "As=" << elem.eventName;
+        bool first = true;
+        for (auto && tag : tags) {
+            if (tag.incl) {
+                if (!first) os << ", ";
+                first = false;
+                os << tag.text;
+            }
         }
         os << " }";
     }
