@@ -52,15 +52,15 @@ inline int digits10(uint32_t val) {
     int r = DeBruijnBitPositionAdjustedForLog10[(v * 0x07c4acdd) >> 27];
 
     const uint32_t PowersOf10[] = {
-        1, 
-        10, 
-        100, 
-        1000, 
-        10000, 
-        100000, 
-        1000000, 
-        10000000, 
-        100000000, 
+        1,
+        10,
+        100,
+        1000,
+        10000,
+        100000,
+        1000000,
+        10000000,
+        100000000,
         1000000000,
     };
     r += PowersOf10[r] >= val;
@@ -80,6 +80,7 @@ template <typename T> constexpr int maxIntegralChars() {
                ? 1 + ((CHAR_BIT * sizeof(T) - 1) * 301L + 999L) / 1000L
                : (CHAR_BIT * sizeof(T) * 301L + 999L) / 1000L;
 }
+
 
 //===========================================================================
 // IntegralStr - convert integral type (char, long, uint16_t, etc) to string
@@ -149,8 +150,8 @@ template <typename T> const char * IntegralStr<T>::internalSet(Signed val) {
         char * ptr = data;
         if (val < 0) {
             *ptr++ = '-';
-            // "-val" is undefined for MIN_INT, so use safe equivalent 
-            // (assuming 2's complement math) "~(Unsigned)val + 1"
+            // "-val" is undefined for MIN_INT, so use safe equivalent
+            // "~(Unsigned)val + 1" (assumes 2's complement)
             val = ~(Unsigned)val + 1;
         }
         unsigned i = 0;
