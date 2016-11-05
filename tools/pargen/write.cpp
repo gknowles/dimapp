@@ -37,6 +37,8 @@ ostream & operator<<(ostream & os, const StateElement & se) {
     os << *se.elem << '.' << se.rep;
     if (se.started)
         os << " (STARTED)";
+    if (se.recurse)
+        os << " (RECURSE)";
     return os;
 }
 
@@ -343,6 +345,8 @@ static void writeParserState(
             os << sp << '\n';
         }
     }
+
+    // os << "    std::cout << " << st.id << " << ' ' << *ptr << std::endl;\n";
 
     // execute notifications
     for (auto && sv : st.positions.begin()->events) {

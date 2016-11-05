@@ -47,6 +47,7 @@ int internalTest() {
     char * data2 = out.data();
     cout << data2;
 
+    cout << "All tests passed" << endl;
     return EX_OK;
 }
 

@@ -19,27 +19,27 @@ public:
 private:
     bool onStart() final { return true; }
     bool onEnd() final { return true; }
-    bool onAttrCopyChar(char ch) final;
-    bool onAttrInPlaceEnd(const char * eptr) final;
-    bool onAttrNameStart(const char * ptr) final;
-    bool onAttrNameEnd(const char * eptr) final;
-    bool onAttrValueStart(const char * ptr) final;
-    bool onAttrValueEnd(const char * eptr) final;
-    bool onCDataWithEndStart(const char * ptr) final;
-    bool onCDataWithEndEnd(const char * eptr) final;
-    bool onCharDataChar(char ch) final;
-    bool onElemNameStart(const char * ptr) final;
-    bool onElemNameEnd(const char * eptr) final;
-    bool onElemTextStart(const char * ptr) final;
-    bool onElemTextEnd(const char * eptr) final;
-    bool onElementEnd(const char * eptr) final;
-    bool onEntityAmpEnd(const char * eptr) final;
-    bool onEntityAposEnd(const char * eptr) final;
-    bool onEntityGtEnd(const char * eptr) final;
-    bool onEntityLtEnd(const char * eptr) final;
-    bool onEntityOtherEnd(const char * eptr) final;
-    bool onEntityQuotEnd(const char * eptr) final;
-    bool onNormalizableWsChar(char ch) final;
+    bool onAttrCopyChar(char ch);
+    bool onAttrInPlaceEnd(const char * eptr);
+    bool onAttrNameStart(const char * ptr);
+    bool onAttrNameEnd(const char * eptr);
+    bool onAttrValueStart(const char * ptr);
+    bool onAttrValueEnd(const char * eptr);
+    bool onCDataWithEndStart(const char * ptr);
+    bool onCDataWithEndEnd(const char * eptr);
+    bool onCharDataChar(char ch);
+    bool onElemNameStart(const char * ptr);
+    bool onElemNameEnd(const char * eptr);
+    bool onElemTextStart(const char * ptr);
+    bool onElemTextEnd(const char * eptr);
+    bool onElementEnd(const char * eptr);
+    bool onEntityAmpEnd(const char * eptr);
+    bool onEntityAposEnd(const char * eptr);
+    bool onEntityGtEnd(const char * eptr);
+    bool onEntityLtEnd(const char * eptr);
+    bool onEntityOtherEnd(const char * eptr);
+    bool onEntityQuotEnd(const char * eptr);
+    bool onNormalizableWsChar(char ch);
 
     XStreamParser & m_parser;
     IXStreamParserNotify & m_notify;

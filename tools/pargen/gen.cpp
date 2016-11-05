@@ -34,6 +34,7 @@ size_t hash<StateElement>::operator()(const StateElement & val) const {
     size_t out = val.elem->id;
     hashCombine(out, val.rep);
     hashCombine(out, val.started);
+    hashCombine(out, val.recurse);
     return out;
 }
 } // namespace std
@@ -45,6 +46,8 @@ int StateElement::compare(const StateElement & right) const {
     if (int rc = rep - right.rep)
         return rc;
     if (int rc = started - right.started)
+        return rc;
+    if (int rc = recurse - right.recurse)
         return rc;
     return 0;
 }
@@ -236,14 +239,16 @@ static size_t findRecursionFull(StatePosition * sp) {
 //===========================================================================
 static void
 addRulePositions(bool * skippable, State * st, StatePosition * sp, bool init) {
-    const Element & elem = *sp->elems.back().elem;
+    auto & se = sp->elems.back();
+    const Element & elem = *se.elem;
     *skippable = false;
-    // Don't generate states for right recursion when it can be broken with
-    // a call. This could also be done for left recursion when the grammar
-    // allows it, but that's more difficult to determine.
-    if (elem.rule->function /* && !init */) {
-        st->positions.insert(*sp);
-        return;
+    if (elem.rule->function) {
+        se.recurse = true;
+        // Don't generate states for right recursion when it can be broken with
+        // a call. This could also be done for left recursion when the grammar
+        // allows it, but that's more difficult to determine.
+        //if (!init)
+            return (void) st->positions.insert(*sp);
     }
 
     // check for rule recursion
@@ -254,6 +259,7 @@ addRulePositions(bool * skippable, State * st, StatePosition * sp, bool init) {
             vector<StateElement> tmp{sp->elems};
             sp->elems.resize(num);
             sp->elems.back().rep = 0;
+            //sp->elems.back().recurse = true;
             addPositions(skippable, st, sp, true, *elem.rule, 0);
             sp->elems = move(tmp);
         }
@@ -369,10 +375,11 @@ static void addNextPositions(State * st, const StatePosition & sp) {
 
         // advance to next in sequence
         if (se.elem->type == Element::kSequence) {
-            const Element * cur = (it - 1)->elem;
+            auto & sePrev = it[-1];
+            const Element * cur = sePrev.elem;
             const Element * last = &se.elem->elements.back();
 
-            if (cur->type == Element::kRule && cur->rule->function)
+            if (cur->type == Element::kRule && sePrev.recurse)
                 fromRecurse = true;
 
             if (cur != last) {

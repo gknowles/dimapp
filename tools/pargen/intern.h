@@ -140,6 +140,7 @@ struct StateElement {
     const Element * elem;
     unsigned rep;
     bool started{false};
+    bool recurse{false};
 
     int compare(const StateElement & right) const;
     bool operator<(const StateElement & right) const;
