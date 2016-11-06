@@ -24,6 +24,20 @@ namespace Dim {
 
 /****************************************************************************
 *
+*   Exit codes
+*
+***/
+
+// These mirror the program exit codes defined in <sysexits.h>
+enum {
+    kExitOk = 0,        // EX_OK
+    kExitUsage = 64,    // EX_USAGE     - bad command line
+    kExitSoftware = 70, // EX_SOFTWARE  - internal software error
+};
+
+
+/****************************************************************************
+*
 *   Cli
 *
 ***/
@@ -44,15 +58,15 @@ public:
     //-----------------------------------------------------------------------
     // Configuration
     template <typename T,
-              typename U,
-              typename = enable_if<is_convertible<U, T>::value>::type>
-    Arg<T> & arg(T * value, const std::string & keys, const U & def);
+        typename U,
+        typename = enable_if<is_convertible<U, T>::value>::type>
+        Arg<T> & arg(T * value, const std::string & keys, const U & def);
 
     template <typename T> Arg<T> & arg(T * value, const std::string & keys);
 
     template <typename T>
     ArgVec<T> &
-    argVec(std::vector<T> * values, const std::string & keys, int nargs = -1);
+        argVec(std::vector<T> * values, const std::string & keys, int nargs = -1);
 
     template <typename T>
     Arg<T> & arg(const std::string & keys, const T & def = {});
@@ -60,10 +74,21 @@ public:
     template <typename T>
     ArgVec<T> & argVec(const std::string & keys, int nargs = -1);
 
+    template <typename T,
+        typename U,
+        typename = enable_if<is_convertible<U, T>::value>::type>
+        Arg<T> & arg(Arg<T> & value, const std::string & keys, const U & def);
+
+    template <typename T> Arg<T> & arg(Arg<T> & value, const std::string & keys);
+
+    template <typename T>
+    ArgVec<T> &
+        argVec(ArgVec<T> & values, const std::string & keys, int nargs = -1);
+
     // Add --version argument that shows "${progName.stem()} version ${ver}"
     // and exits.
     Arg<bool> &
-    versionArg(const std::string & ver, const std::string & progName = {});
+        versionArg(const std::string & ver, const std::string & progName = {});
 
     //-----------------------------------------------------------------------
     // Parsing
@@ -132,7 +157,7 @@ Cli::arg(T * value, const std::string & keys, const U & def) {
 //===========================================================================
 template <typename T>
 inline Cli::Arg<T> & Cli::arg(T * value, const std::string & keys) {
-    return arg<T>(value, keys, T{});
+    return arg(value, keys, T{});
 }
 
 //===========================================================================
@@ -142,6 +167,26 @@ Cli::argVec(std::vector<T> * values, const std::string & keys, int nargs) {
     auto proxy = getProxy<ArgVec<T>, ValueVec<T>>(values);
     auto ptr = std::make_unique<ArgVec<T>>(proxy, keys, nargs);
     return addArg(std::move(ptr));
+}
+
+//===========================================================================
+template <typename T, typename U, typename>
+inline Cli::Arg<T> &
+Cli::arg(Cli::Arg<T> & alias, const std::string & keys, const U & def) {
+    return arg(&*alias, keys, def);
+}
+
+//===========================================================================
+template <typename T>
+inline Cli::Arg<T> & Cli::arg(Cli::Arg<T> & alias, const std::string & keys) {
+    return arg(&*alias, keys, T{});
+}
+
+//===========================================================================
+template <typename T>
+inline Cli::ArgVec<T> &
+Cli::argVec(ArgVec<T> & alias, const std::string & keys, int nargs) {
+    return argVec(&*alias, keys, nargs);
 }
 
 //===========================================================================
@@ -214,7 +259,7 @@ protected:
     template <typename T> void setValueName();
 
     std::string m_desc;
-    std::string m_valueName;
+    std::string m_valueDesc;
 
     // Are multiple values are allowed, and how many there can be (-1 for
     // unlimited).
@@ -235,18 +280,18 @@ private:
 //===========================================================================
 template <typename T> inline void Cli::ArgBase::setValueName() {
     if (is_integral<T>::value) {
-        m_valueName = "NUM";
+        m_valueDesc = "NUM";
     } else if (is_convertible<T, std::string>::value) {
-        m_valueName = "STRING";
+        m_valueDesc = "STRING";
     } else {
-        m_valueName = "VALUE";
+        m_valueDesc = "VALUE";
     }
 }
 
 //===========================================================================
 template <>
 inline void Cli::ArgBase::setValueName<std::experimental::filesystem::path>() {
-    m_valueName = "FILE";
+    m_valueDesc = "FILE";
 }
 
 
@@ -267,7 +312,7 @@ public:
 
     // Set name of meta-variable in writeHelp. For example, in "--count NUM"
     // this is used to change "NUM" to something else.
-    A & descValue(const std::string & val);
+    A & valueDesc(const std::string & val);
 
     // Allows the default to be changed after the arg has been created.
     A & defaultValue(const T & val);
@@ -333,8 +378,8 @@ inline A & Cli::ArgShim<A, T>::desc(const std::string & val) {
 
 //===========================================================================
 template <typename A, typename T>
-inline A & Cli::ArgShim<A, T>::descValue(const std::string & val) {
-    m_valueName = val;
+inline A & Cli::ArgShim<A, T>::valueDesc(const std::string & val) {
+    m_valueDesc = val;
     return static_cast<A &>(*this);
 }
 
@@ -416,9 +461,6 @@ template <typename T> struct Cli::Value {
 ***/
 
 template <typename T> class Cli::Arg : public ArgShim<Arg<T>, T> {
-public:
-    typedef T value_type;
-
 public:
     Arg(std::shared_ptr<Value<T>> value,
         const std::string & keys,
@@ -523,9 +565,6 @@ template <typename T> struct Cli::ValueVec {
 ***/
 
 template <typename T> class Cli::ArgVec : public ArgShim<ArgVec<T>, T> {
-public:
-    using value_type = T;
-
 public:
     ArgVec(
         std::shared_ptr<ValueVec<T>> values,

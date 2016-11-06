@@ -116,8 +116,8 @@ void Cli::addArgName(const string & name, ArgBase * val) {
     case '<':
         auto where =
             find_if(m_argNames.begin(), m_argNames.end(), [](auto && key) {
-                return key.optional;
-            });
+            return key.optional;
+        });
         m_argNames.insert(where, {val, !invert, !optional, name.data() + 1});
         return;
     }
@@ -156,6 +156,7 @@ void Cli::addArgName(const string & name, ArgBase * val) {
 Cli::Arg<bool> &
 Cli::versionArg(const std::string & version, const std::string & progName) {
     auto verAction = [version, progName](auto & cli, auto & arg, auto & val) {
+        ignore = arg, val;
         experimental::filesystem::path prog = progName;
         if (prog.empty()) {
             prog = cli.progName();
@@ -211,7 +212,7 @@ void Cli::resetValues() {
         if (key.name.empty())
             key.name = "arg" + to_string(i + 1);
     }
-    m_exitCode = EX_OK;
+    m_exitCode = kExitOk;
     m_errMsg.clear();
     m_progName.clear();
 }
@@ -231,7 +232,7 @@ bool Cli::parseAction(
 //===========================================================================
 bool Cli::badUsage(const string & msg) {
     m_errMsg = msg;
-    m_exitCode = EX_USAGE;
+    m_exitCode = kExitUsage;
     return false;
 }
 
@@ -366,7 +367,7 @@ struct WrapPos {
 };
 } // namespace
 
-//===========================================================================
+  //===========================================================================
 static void writeToken(ostream & os, WrapPos & wp, const std::string token) {
     if (wp.pos + token.size() + 1 > wp.maxWidth) {
         if (wp.pos > wp.prefix.size()) {
@@ -533,9 +534,9 @@ string Cli::optionList(ArgBase & arg, bool enableOptions) const {
         list += ' ';
     }
     if (optional) {
-        list += "[" + arg.m_valueName + "]";
+        list += "[" + arg.m_valueDesc + "]";
     } else {
-        list += arg.m_valueName;
+        list += arg.m_valueDesc;
     }
     return list;
 }
