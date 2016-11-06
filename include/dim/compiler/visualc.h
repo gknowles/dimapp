@@ -8,16 +8,6 @@
     disable : 4456) // declaration of 'elem' hides previous local declaration
 #pragma warning(disable : 5030) // attribute 'identifier' is not recognized
 
-// alignment changed after including header
-// #pragma warning(disable: 4103)
-// the result of the unary '&' operator may be unaligned
-// #pragma warning(disable: 4366)
-// 'this' pointer for member may not be aligned 8 as expected by the 
-// constructor
-// #pragma warning(disable: 4315)
-// #pragma pack(1)
-
-#define _NO_LOCALES 0
 #define _ITERATOR_DEBUG_LEVEL 0
 
 // program exit codes
