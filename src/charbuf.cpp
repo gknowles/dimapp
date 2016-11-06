@@ -154,7 +154,7 @@ char * CharBuf::data(size_t pos, size_t count) {
             delete ebuf;
         } while (pbuf->m_used < need);
 
-        const_cast<CharBuf *>(this)->m_buffers.erase(ic.first + 1, et);
+        m_buffers.erase(ic.first + 1, et);
     }
 
     return pbuf->base() + ic.second;
