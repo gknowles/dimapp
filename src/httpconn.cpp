@@ -282,14 +282,14 @@ static int ntoh16(const char frame[]) {
 
 //===========================================================================
 static int ntoh24(const char frame[]) {
-    return (uint8_t)(frame[0] << 16) + (uint8_t)(frame[1] << 8) +
-           (uint8_t)frame[2];
+    return (uint8_t)(frame[0] << 16) + (uint8_t)(frame[1] << 8)
+           + (uint8_t)frame[2];
 }
 
 //===========================================================================
 static int ntoh32(const char frame[]) {
-    return (uint8_t)(frame[0] << 24) + (uint8_t)(frame[1] << 16) +
-           (uint8_t)(frame[2] << 8) + (uint8_t)frame[3];
+    return (uint8_t)(frame[0] << 24) + (uint8_t)(frame[1] << 16)
+           + (uint8_t)(frame[2] << 8) + (uint8_t)frame[3];
 }
 
 //===========================================================================
@@ -546,9 +546,9 @@ bool HttpConn::onData(
 
     auto it = m_streams.find(stream);
     auto * sm = (it == m_streams.end()) ? it->second.get() : nullptr;
-    if (!sm ||
-        sm->m_state != HttpStream::kOpen &&
-            sm->m_state != HttpStream::kLocalClosed) {
+    if (!sm
+        || sm->m_state != HttpStream::kOpen
+               && sm->m_state != HttpStream::kLocalClosed) {
         // data frame on non-open stream
         ReplyRstStream(out, stream, sm, FrameError::kStreamClosed);
         return true;
@@ -743,9 +743,8 @@ bool HttpConn::onSettings(
     //      identifier : 16
     //      value : 32
 
-    if (m_frameMode != FrameMode::kNormal &&
-            m_frameMode != FrameMode::kSettings ||
-        stream) {
+    if (m_frameMode != FrameMode::kNormal && m_frameMode != FrameMode::kSettings
+        || stream) {
         // settings frames MUST be on stream 0
         ReplyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
         return false;

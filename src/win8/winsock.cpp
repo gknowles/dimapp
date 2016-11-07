@@ -488,9 +488,9 @@ SOCKET Dim::winSocketCreate() {
     //    logMsgError() << "WSAIoctl(SIO_LOOPBACK_FAST_PATH): " << WinError{};
     //}
 
-    if (SOCKET_ERROR ==
-        setsockopt(
-            handle, SOL_SOCKET, TCP_NODELAY, (char *)&yes, sizeof(yes))) {
+    if (SOCKET_ERROR
+        == setsockopt(
+               handle, SOL_SOCKET, TCP_NODELAY, (char *)&yes, sizeof(yes))) {
         logMsgError() << "WSAIoctl(FIONBIO): " << WinError{};
     }
 

@@ -116,8 +116,8 @@ void Cli::addArgName(const string & name, ArgBase * val) {
     case '<':
         auto where =
             find_if(m_argNames.begin(), m_argNames.end(), [](auto && key) {
-            return key.optional;
-        });
+                return key.optional;
+            });
         m_argNames.insert(where, {val, !invert, !optional, name.data() + 1});
         return;
     }
@@ -367,7 +367,7 @@ struct WrapPos {
 };
 } // namespace
 
-  //===========================================================================
+//===========================================================================
 static void writeToken(ostream & os, WrapPos & wp, const std::string token) {
     if (wp.pos + token.size() + 1 > wp.maxWidth) {
         if (wp.pos > wp.prefix.size()) {
@@ -503,8 +503,8 @@ string Cli::optionList(ArgBase & arg, bool enableOptions) const {
 
     // names
     for (auto && sn : m_shortNames) {
-        if (sn.second.val != &arg ||
-            arg.m_bool && sn.second.invert == enableOptions) {
+        if (sn.second.val != &arg
+            || arg.m_bool && sn.second.invert == enableOptions) {
             continue;
         }
         optional = sn.second.optional;
@@ -514,8 +514,8 @@ string Cli::optionList(ArgBase & arg, bool enableOptions) const {
         list += sn.first;
     }
     for (auto && ln : m_longNames) {
-        if (ln.second.val != &arg ||
-            arg.m_bool && ln.second.invert == enableOptions) {
+        if (ln.second.val != &arg
+            || arg.m_bool && ln.second.invert == enableOptions) {
             continue;
         }
         optional = ln.second.optional;

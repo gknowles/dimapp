@@ -248,9 +248,9 @@ void ConnSocket::onConnect(int error, int bytes) {
 
     //-----------------------------------------------------------------------
     // update socket and start receiving
-    if (SOCKET_ERROR ==
-        setsockopt(
-            m_handle, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, nullptr, 0)) {
+    if (SOCKET_ERROR
+        == setsockopt(
+               m_handle, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, nullptr, 0)) {
         logMsgError() << "setsockopt(SO_UPDATE_CONNECT_CONTEXT): "
                       << WinError{};
         return m_notify->onSocketConnectFailed();

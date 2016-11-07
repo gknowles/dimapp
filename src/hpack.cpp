@@ -674,8 +674,8 @@ bool HpackDecode::readInstruction(
                 return false;
         } else {
             // new name
-            if (!read(&fld.name, heap, ++src, --srcLen) ||
-                !read(&fld.value, heap, src, srcLen)) {
+            if (!read(&fld.name, heap, ++src, --srcLen)
+                || !read(&fld.value, heap, src, srcLen)) {
                 return false;
             }
         }
@@ -699,8 +699,8 @@ bool HpackDecode::readInstruction(
                 return false;
         } else {
             // new name
-            if (!read(&fld.name, heap, ++src, --srcLen) ||
-                !read(&fld.value, heap, src, srcLen)) {
+            if (!read(&fld.name, heap, ++src, --srcLen)
+                || !read(&fld.value, heap, src, srcLen)) {
                 return false;
             }
         }

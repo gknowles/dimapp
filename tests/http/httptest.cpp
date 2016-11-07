@@ -153,8 +153,8 @@ void Application::onTask() {
                         logMsgError() << "expected fewer headers";
                         goto finished_headers;
                     }
-                    if (strcmp(thi->name, hdr.m_name) != 0 ||
-                        strcmp(thi->value, hv.m_value) != 0) {
+                    if (strcmp(thi->name, hdr.m_name) != 0
+                        || strcmp(thi->value, hv.m_value) != 0) {
                         logMsgError() << "header mismatch, '" << hdr.m_name
                                       << ": " << hv.m_value << "', expected '"
                                       << thi->name << ": " << thi->value
