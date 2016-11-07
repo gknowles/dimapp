@@ -344,7 +344,7 @@ const Test s_tests[] = {
 //===========================================================================
 bool NameValue::operator==(const NameValue & right) const {
     return strcmp(name, right.name) == 0 && strcmp(value, right.value) == 0
-           && flags == right.flags;
+        && flags == right.flags;
 }
 
 

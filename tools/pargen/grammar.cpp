@@ -318,7 +318,7 @@ static void normalizeChoice(Element & rule) {
     assert(
         rule.elements.size() > 1
         || rule.elements.size() == 1
-               && rule.elements[0].type == Element::kTerminal);
+            && rule.elements[0].type == Element::kTerminal);
     vector<Element> tmp;
     for (auto && elem : rule.elements) {
         if (elem.type != Element::kChoice) {
@@ -387,7 +387,7 @@ normalize(Element & rule, const Element * parent, const Grammar & rules) {
         Element & elem = rule.elements.front();
         if (elem.type != Element::kTerminal
             || parent && parent->type == Element::kChoice && rule.m == 1
-                   && rule.n == 1) {
+                && rule.n == 1) {
             rule.m *= elem.m;
             rule.n = max({rule.n, elem.n, rule.n * elem.n});
             rule.type = elem.type;

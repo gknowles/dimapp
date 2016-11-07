@@ -208,7 +208,7 @@ bool TimerQueueNode::operator>(const TimerQueueNode & right) const {
 //===========================================================================
 bool TimerQueueNode::operator==(const TimerQueueNode & right) const {
     return expiration == right.expiration && timer == right.timer
-           && instance == right.instance;
+        && instance == right.instance;
 }
 
 

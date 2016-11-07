@@ -77,8 +77,8 @@ inline int digits10(uint32_t val) {
 //===========================================================================
 template <typename T> constexpr int maxIntegralChars() {
     return numeric_limits<T>::is_signed
-               ? 1 + ((CHAR_BIT * sizeof(T) - 1) * 301L + 999L) / 1000L
-               : (CHAR_BIT * sizeof(T) * 301L + 999L) / 1000L;
+        ? 1 + ((CHAR_BIT * sizeof(T) - 1) * 301L + 999L) / 1000L
+        : (CHAR_BIT * sizeof(T) * 301L + 999L) / 1000L;
 }
 
 

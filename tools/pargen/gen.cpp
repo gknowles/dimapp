@@ -102,13 +102,13 @@ size_t hash<StatePosition>::operator()(const StatePosition & val) const {
 //===========================================================================
 bool StatePosition::operator<(const StatePosition & right) const {
     return tie(recurse, elems, events, delayedEvents)
-           < tie(right.recurse, right.elems, right.events, right.delayedEvents);
+        < tie(right.recurse, right.elems, right.events, right.delayedEvents);
 }
 
 //===========================================================================
 bool StatePosition::operator==(const StatePosition & right) const {
     return recurse == right.recurse && elems == right.elems
-           && events == right.events && delayedEvents == right.delayedEvents;
+        && events == right.events && delayedEvents == right.delayedEvents;
 }
 
 
@@ -848,7 +848,7 @@ size_t hash<StateKey>::operator()(const StateKey & val) const {
 //===========================================================================
 bool StateKey::operator==(const StateKey & right) const {
     return events == right.events
-           && memcmp(next, right.next, sizeof(next)) == 0;
+        && memcmp(next, right.next, sizeof(next)) == 0;
 }
 
 //===========================================================================

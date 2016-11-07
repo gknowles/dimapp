@@ -366,7 +366,7 @@ static void writeParserState(
     aliases.push_back(to_string(st.id) + ": " + st.name);
     sort(aliases.begin(), aliases.end(), [](auto && a, auto && b) {
         return strtoul(a.c_str(), nullptr, 10)
-               < strtoul(b.c_str(), nullptr, 10);
+            < strtoul(b.c_str(), nullptr, 10);
     });
     for (auto && name : aliases)
         writeStateName(os, name, 79, "    // ");
