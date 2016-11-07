@@ -161,9 +161,9 @@ void Grammar::addRule(
 }
 
 //===========================================================================
-void Grammar::addTerminal(
-    Element * rule, unsigned char ch, unsigned m, unsigned n) {
-    auto e = addElement(rule, m, n);
+void Grammar::addTerminal(Element * rule, unsigned char ch) {
+    assert(rule->type == Element::kChoice);
+    auto e = addElement(rule, 1, 1);
     e->type = Element::kTerminal;
     e->value = ch;
 }
@@ -174,11 +174,11 @@ void Grammar::addText(
     auto s = addSequence(rule, m, n);
     for (unsigned char ch : value) {
         auto c = addChoice(s, 1, 1);
-        addTerminal(c, ch, 1, 1);
+        addTerminal(c, ch);
         if (islower(ch)) {
-            addTerminal(c, (unsigned char)toupper(ch), 1, 1);
+            addTerminal(c, (unsigned char)toupper(ch));
         } else if (isupper(ch)) {
-            addTerminal(c, (unsigned char)tolower(ch), 1, 1);
+            addTerminal(c, (unsigned char)tolower(ch));
         }
     }
 }
@@ -189,16 +189,15 @@ void Grammar::addLiteral(
     auto s = addSequence(rule, m, n);
     for (unsigned char ch : value) {
         auto c = addChoice(s, 1, 1);
-        addTerminal(c, ch, 1, 1);
+        addTerminal(c, ch);
     }
 }
 
 //===========================================================================
 void Grammar::addRange(Element * rule, unsigned char a, unsigned char b) {
     assert(a <= b);
-    assert(rule->type == Element::kChoice);
     for (unsigned i = a; i <= b; ++i) {
-        addTerminal(rule, (unsigned char)i, 1, 1);
+        addTerminal(rule, (unsigned char)i);
     }
 }
 
@@ -316,7 +315,8 @@ bool copyRules(
 
 //===========================================================================
 static void normalizeChoice(Element & rule) {
-    assert(rule.elements.size() > 1);
+    assert(rule.elements.size() > 1 
+        || rule.elements.size() == 1 && rule.elements[0].type == Element::kTerminal);
     vector<Element> tmp;
     for (auto && elem : rule.elements) {
         if (elem.type != Element::kChoice) {
@@ -379,23 +379,26 @@ static void normalizeRule(Element & rule, const Grammar & rules) {
 }
 
 //===========================================================================
-static void normalize(Element & rule, const Grammar & rules) {
+static void normalize(Element & rule, const Element * parent, const Grammar & rules) {
     if (rule.elements.size() == 1) {
         Element & elem = rule.elements.front();
-        rule.m *= elem.m;
-        rule.n = max({rule.n, elem.n, rule.n * elem.n});
-        rule.type = elem.type;
-        rule.value = elem.value;
-        vector<Element> tmp{move(elem.elements)};
-        rule.elements = move(tmp);
-        return normalize(rule, rules);
+        if (elem.type != Element::kTerminal || 
+            parent && parent->type == Element::kChoice && rule.m == 1 && rule.n == 1) {
+            rule.m *= elem.m;
+            rule.n = max({rule.n, elem.n, rule.n * elem.n});
+            rule.type = elem.type;
+            rule.value = elem.value;
+            vector<Element> tmp{move(elem.elements)};
+            rule.elements = move(tmp);
+            return normalize(rule, parent, rules);
+        }
     }
 
     if (!rule.eventName.empty())
         rule.eventRule = rules.element(rule.eventName);
 
     for (auto && elem : rule.elements)
-        normalize(elem, rules);
+        normalize(elem, &rule, rules);
 
     switch (rule.type) {
     case Element::kChoice: normalizeChoice(rule); break;
@@ -407,7 +410,7 @@ static void normalize(Element & rule, const Grammar & rules) {
 //===========================================================================
 void normalize(Grammar & rules) {
     for (auto && rule : rules.rules()) {
-        normalize(const_cast<Element &>(rule), rules);
+        normalize(const_cast<Element &>(rule), nullptr, rules);
     }
 }
 

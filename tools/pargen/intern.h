@@ -95,7 +95,7 @@ public:
     void addLiteral(
         Element * rule, const std::string & value, unsigned m, unsigned n);
     void addRange(Element * rule, unsigned char a, unsigned char b);
-    void addTerminal(Element * rule, unsigned char ch, unsigned m, unsigned n);
+    void addTerminal(Element * rule, unsigned char ch);
 
     Element * element(const std::string & name);
     const Element * element(const std::string & name) const;
@@ -178,7 +178,11 @@ struct State {
     unsigned id;
     std::string name;
     std::vector<std::string> aliases;
-    std::set<StatePosition> positions;
+
+    // vector.size() is 256 for the possible terminals, or empty() if 
+    // there are no terminals because it's a function.
+    std::map<StatePosition, std::vector<bool>> positions;
+    
     std::vector<unsigned> next;
 
     void clear();

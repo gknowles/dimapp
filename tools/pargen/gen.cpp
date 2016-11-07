@@ -156,8 +156,8 @@ namespace std {
 //===========================================================================
 size_t hash<State>::operator()(const State & val) const {
     size_t out = 0;
-    for (auto && sp : val.positions) {
-        hashCombine(out, hash<StatePosition>{}(sp));
+    for (auto && spt : val.positions) {
+        hashCombine(out, hash<StatePosition>{}(spt.first));
     }
     return out;
 }
@@ -247,8 +247,12 @@ addRulePositions(bool * skippable, State * st, StatePosition * sp, bool init) {
         // Don't generate states for right recursion when it can be broken with
         // a call. This could also be done for left recursion when the grammar
         // allows it, but that's more difficult to determine.
-        //if (!init)
-            return (void) st->positions.insert(*sp);
+        //if (!init) {
+            [[maybe_unused]] auto & terms = st->positions[*sp];
+            assert(terms.empty());
+            ignore = terms;
+            return;
+        //}
     }
 
     // check for rule recursion
@@ -278,6 +282,15 @@ static void addPositions(
     const Element & rule,
     unsigned rep) {
     *skippable = false;
+    if (rule.type == Element::kTerminal) {
+        assert(rule.m == 1 && rule.n == 1);
+        auto & terms = st->positions[*sp];
+        if (terms.empty())
+            terms.resize(256);
+        terms[(unsigned char) rule.value.front()] = true;
+        return;
+    }
+
     StateElement se;
     se.elem = &rule;
     se.rep = rep;
@@ -292,24 +305,23 @@ static void addPositions(
                 *skippable = true;
         }
         break;
-    case Element::kRule: addRulePositions(skippable, st, sp, init); break;
+    case Element::kRule: 
+        addRulePositions(skippable, st, sp, init); 
+        break;
     case Element::kSequence:
         // up to first with a minimum
+        *skippable = true;
         for (auto && elem : rule.elements) {
             bool weak;
             addPositions(&weak, st, sp, init, elem, 0);
-            if (!weak)
-                goto done;
+            if (!weak) {
+                *skippable = false;
+                break;
+            }
         }
-        *skippable = true;
-        break;
-    case Element::kTerminal:
-        // This insert hint is only right ~25% of the time, it's only a win
-        // as long as the average number of positions stays painfully large.
-        st->positions.insert(st->positions.end(), *sp);
         break;
     }
-done:
+
     if (rule.m == 0)
         *skippable = true;
     sp->elems.pop_back();
@@ -356,19 +368,44 @@ static void setPositionPrefix(
 }
 
 //===========================================================================
-static void addNextPositions(State * st, const StatePosition & sp) {
-    if (sp.recurse)
-        st->positions.insert(sp);
+static void addNextPositions(State * st, const StatePosition & sp, unsigned ch) {
+    bool terminal = (ch < 256);
 
-    bool terminal{false};
+    if (sp.recurse) {
+        auto & terms = st->positions[sp];
+        if (terminal) {
+            terms.resize(256);
+            terms[ch] = true;
+        }
+    }
+
     auto terminalStarted = sp.elems.end();
     bool done = sp.elems.front().elem == &ElementDone::s_elem;
     vector<StateEvent> events;
     auto it = sp.elems.rbegin();
     auto eit = sp.elems.rend();
-    if (it->elem->type == Element::kTerminal || done && sp.elems.size() == 1) {
+
+    if (terminal || done && sp.elems.size() == 1) {
         events = sp.delayedEvents;
     }
+    if (terminal && !done) {
+        // add OnStart events top to bottom
+        for (auto && se2 : sp.elems) {
+            if (se2.elem->type == Element::kRule &&
+                (se2.elem->rule->flags & Element::kOnStart) &&
+                !se2.started) {
+                addEvent(events, se2, Element::kOnStart);
+            }
+        }
+        // bubble up OnChar events bottom to top
+        for (auto it2 = it; it2 != eit; ++it2) {
+            if (it2->elem->type == Element::kRule &&
+                (it2->elem->rule->flags & Element::kOnChar)) {
+                addEvent(events, *it2, Element::kOnChar);
+            }
+        }
+    }
+
     for (; it != eit; ++it) {
         const StateElement & se = *it;
         bool fromRecurse = false;
@@ -412,28 +449,6 @@ static void addNextPositions(State * st, const StatePosition & sp) {
                 continue;
         }
 
-        if (se.elem->type == Element::kTerminal) {
-            assert(it == sp.elems.rbegin());
-            terminal = true;
-            if (!done) {
-                // add OnStart events top to bottom
-                for (auto && se2 : sp.elems) {
-                    if (se2.elem->type == Element::kRule &&
-                        (se2.elem->rule->flags & Element::kOnStart) &&
-                        !se2.started) {
-                        addEvent(events, se2, Element::kOnStart);
-                    }
-                }
-                // bubble up OnChar events bottom to top
-                for (auto it2 = it; it2 != eit; ++it2) {
-                    if (it2->elem->type == Element::kRule &&
-                        (it2->elem->rule->flags & Element::kOnChar)) {
-                        addEvent(events, *it2, Element::kOnChar);
-                    }
-                }
-            }
-        }
-
         // repeat and/or advance to next
         unsigned rep = se.rep + 1;
         unsigned m = se.elem->m;
@@ -472,7 +487,7 @@ static void addNextPositions(State * st, const StatePosition & sp) {
     nsp.elems.push_back(nse);
     if (done) {
         // add entry for completed done
-        st->positions.insert(nsp);
+        st->positions[nsp];
         return;
     }
 
@@ -511,16 +526,18 @@ static void addNextPositions(State * st, const StatePosition & sp) {
 //===========================================================================
 // when positions only vary by the set of events, remove all but the
 // first - which should also be the one with the simplest events.
-static void removePositionsWithMoreEvents(set<StatePosition> & positions) {
-    if (positions.size() < 2)
+static void removePositionsWithMoreEvents(State & st) {
+    if (st.positions.size() < 2)
         return;
-    auto x = positions.begin();
+    auto x = st.positions.begin();
     auto y = next(x);
-    auto e = positions.end();
-    while (y != e) {
+    auto last = st.positions.end();
+    while (y != last) {
         auto n = next(y);
-        if (x->recurse == y->recurse && x->elems == y->elems) {
-            positions.erase(y);
+        if (x->first.recurse == y->first.recurse 
+            && x->first.elems == y->first.elems
+            && x->second == y->second) {
+            st.positions.erase(y);
         } else {
             x = y;
         }
@@ -616,40 +633,37 @@ static bool delayConflicts(
 }
 
 //===========================================================================
-static bool resolveEventConflicts(
-    set<StatePosition> & positions, const StateTreeInfo & sti) {
-    if (positions.size() == 1)
+static bool resolveEventConflicts(State & st, const StateTreeInfo & sti) {
+    if (st.positions.size() == 1)
         return true;
 
     // allow Char to match by moving forward in list
     vector<StateEvent> matched;
-    auto b = positions.begin();
-    auto e = positions.end();
-    matched = b->events;
+    auto b = st.positions.begin();
+    auto e = st.positions.end();
+    matched = b->first.events;
     size_t most = matched.size();
     for (++b; b != e; ++b) {
-        most = max({b->events.size(), most});
-        removeConflicts(matched, b->events);
+        auto & evts = b->first.events;
+        most = max({evts.size(), most});
+        removeConflicts(matched, evts);
     }
     if (most == matched.size())
         return true;
 
     bool success = true;
-    set<StatePosition> next;
-    for (auto && sp : positions) {
-        if (sp.events.size() == matched.size()) {
-            next.insert(next.end(), move(sp));
+    map<StatePosition, vector<bool>> next;
+    for (auto && spt : st.positions) {
+        if (spt.first.events.size() == matched.size()) {
+            next.insert(next.end(), move(spt));
             continue;
         }
-        StatePosition nsp;
-        nsp.elems = move(sp.elems);
-        nsp.recurse = sp.recurse;
-        nsp.events = move(sp.events);
+        StatePosition nsp = move(spt.first);
         if (!delayConflicts(nsp, matched, sti, success))
             success = false;
-        next.insert(next.end(), move(nsp));
+        next.insert(next.end(), make_pair(move(nsp), move(spt.second)));
     }
-    positions = move(next);
+    st.positions = move(next);
     return success;
 }
 
@@ -677,36 +691,39 @@ buildStateTree(State * st, unordered_set<State> & states, StateTreeInfo & sti) {
         }
 
         next.clear();
-        for (auto && sp : st->positions) {
-            auto & se = sp.elems.back();
-            if (se.elem->type == Element::kTerminal) {
-                if ((unsigned char)se.elem->value.front() == i)
-                    addNextPositions(&next, sp);
-            } else {
-                if (se.elem == &ElementDone::s_elem) {
-                    if (i == 0)
-                        st->next[i] = 1;
-                } else if (i == 256) {
-                    assert(se.elem->type == Element::kRule);
-                    assert(se.elem->rule->function);
-                    for (auto && nsp : next.positions) {
-                        auto && nse = nsp.elems.back();
-                        if (nse.elem->type == Element::kRule &&
-                            (se.elem->rule != nse.elem->rule ||
-                             sp.events != nsp.events)) {
+        for (auto && spt : st->positions) {
+            if (!spt.second.empty()) {
+                if (i < 256 && spt.second[i])
+                    addNextPositions(&next, spt.first, i);
+                continue;
+            }
+
+            auto elem = spt.first.elems.back().elem;
+            assert(elem->type == Element::kRule);
+            if (elem == &ElementDone::s_elem) {
+                if (i == 0)
+                    st->next[i] = 1;
+            } else if (i == 256) {
+                assert(elem->rule->function);
+                for (auto && nspt : next.positions) {
+                    if (nspt.second.empty()) {
+                        auto && nse = nspt.first.elems.back();
+                        assert(nse.elem->type == Element::kRule);
+                        if ((elem->rule != nse.elem->rule ||
+                                spt.first.events != nspt.first.events)) {
                             errors = true;
                             logMsgError() << "Multiple recursive targets, "
-                                          << sti.m_path;
+                                            << sti.m_path;
                             break;
                         }
                     }
-                    addNextPositions(&next, sp);
                 }
+                addNextPositions(&next, spt.first, i);
             }
         }
         if (!next.positions.empty()) {
-            errors = !resolveEventConflicts(next.positions, sti) || errors;
-            removePositionsWithMoreEvents(next.positions);
+            errors = !resolveEventConflicts(next, sti) || errors;
+            removePositionsWithMoreEvents(next);
 
             // add state and, if it's new, all of its child states
             auto ib = states.insert(move(next));
@@ -758,7 +775,7 @@ void buildStateTree(
     nse.elem = &ElementDone::s_elem;
     nse.rep = 0;
     nsp.elems.push_back(nse);
-    state.positions.insert(nsp);
+    state.positions[nsp];
     states->insert(move(state));
 
     state.clear();
@@ -841,7 +858,7 @@ bool StateKey::operator!=(const StateKey & right) const {
 
 //===========================================================================
 static void copy(StateKey & out, const State & st) {
-    out.events = st.positions.begin()->events;
+    out.events = st.positions.begin()->first.events;
     if (st.next.empty()) {
         memset(out.next, 0, sizeof(out.next));
         return;

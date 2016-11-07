@@ -87,6 +87,10 @@ static void writeElement(ostream & os, const Element & elem, bool inclPos) {
     }
     switch (elem.type) {
     case Element::kChoice: {
+        if (elem.elements.size() == 1) {
+            writeElement(os, elem.elements.front(), inclPos);
+            break;
+        }
         os << "( ";
         bool first = true;
         auto cur = elem.elements.begin();
@@ -135,11 +139,11 @@ static void writeElement(ostream & os, const Element & elem, bool inclPos) {
     if (elem.flags || elem.function) {
         const struct {
             bool incl;
-            const string & text;
+            string text;
         } tags[] = {
-            { bool(elem.flags & Element::kOnStart), "Start" },
-            { bool(elem.flags & Element::kOnStart), "End" },
-            { bool(elem.flags & Element::kOnStart), "Char" },
+            { (elem.flags & Element::kOnStart) != 0, "Start" },
+            { (elem.flags & Element::kOnEnd) != 0, "End" },
+            { (elem.flags & Element::kOnChar) != 0, "Char" },
             { elem.function, "Function" },
             { !elem.eventName.empty(), "As=" + elem.eventName },
         };
@@ -313,6 +317,44 @@ static void writeStateName(
 }
 
 //===========================================================================
+static void writeTerminals(ostream & os, const vector<bool> & terminals) {
+    if (terminals.empty()) {
+        os << "< >\n";
+        return;
+    }
+    assert(terminals.size() == 256);
+
+    os << "< ";
+    unsigned ch = 0;
+    for (; ch < 256; ++ch) {
+        if (terminals[ch])
+            break;
+    }
+    assert(ch < 256);
+
+    os << "%x" << hex << ch << dec;
+    for (;;) {
+        unsigned next = ch + 1;
+        for (; next < 256; ++next) {
+            if (!terminals[next])
+                break;
+        }
+        if (next != ch + 1)
+            os << '-' << hex << next - 1 << dec;
+        ch = next;
+        for (;; ++ch) {
+            if (ch == 256) {
+                os << " >\n";
+                return;
+            }
+            if (terminals[ch])
+                break;
+        }
+        os << " / %x" << hex << ch << dec;
+    }
+}
+
+//===========================================================================
 static void writeParserState(
     ostream & os,
     const State & st,
@@ -329,15 +371,17 @@ static void writeParserState(
         writeStateName(os, name, 79, "    // ");
     if (inclStatePositions) {
         os << "    // positions: " << st.positions.size() << "\n\n";
-        for (auto && sp : st.positions) {
-            os << sp << '\n';
+        for (auto && spt : st.positions) {
+            os << spt.first << "    //  ";
+            writeTerminals(os, spt.second);
+            os << '\n';
         }
     }
 
     // os << "    std::cout << " << st.id << " << ' ' << *ptr << std::endl;\n";
 
     // execute notifications
-    for (auto && sv : st.positions.begin()->events) {
+    for (auto && sv : st.positions.begin()->first.events) {
         writeEventCallback(os, sv.elem->name, Element::Flags(sv.flags));
     }
 
@@ -348,7 +392,7 @@ static void writeParserState(
         os << "    return true;\n";
         return;
     }
-    auto & elems = st.positions.begin()->elems;
+    auto & elems = st.positions.begin()->first.elems;
     if (elems.size() == 1 && elems.front().elem == &ElementDone::s_elem) {
         os << "    goto state1;\n";
         return;
@@ -363,29 +407,31 @@ static void writeParserState(
 
     // write calls to independent sub-state parsers
     const StatePosition * call = nullptr;
-    for (auto && sp : st.positions) {
-        const Element * elem = sp.elems.back().elem;
-        if (elem->type != Element::kTerminal && elem != &ElementDone::s_elem) {
-            assert(elem->type == Element::kRule);
-            assert(elem->rule->function);
-            if (call && elem->rule == call->elems.back().elem->rule &&
-                sp.delayedEvents == call->delayedEvents) {
-                continue;
-            }
-            call = &sp;
-            for (auto && sv : sp.delayedEvents) {
-                writeEventCallback(os, sv.elem->name, Element::Flags(sv.flags));
-            }
-            os << "    if (state";
-            writeRuleName(os, elem->rule->name, true);
-            os << "(";
-            if (hasSwitch)
-                os << "--";
-            unsigned id = st.next.empty() ? 0 : st.next[256];
-            os << "ptr)) {\n"
-               << "        goto state" << id << ";\n"
-               << "    }\n";
+    for (auto && spt : st.positions) {
+        if (!spt.second.empty())
+            continue;
+        const Element * elem = spt.first.elems.back().elem;
+        if (elem == &ElementDone::s_elem)
+            continue;
+        assert(elem->type == Element::kRule);
+        assert(elem->rule->function);
+        if (call && elem->rule == call->elems.back().elem->rule &&
+            spt.first.delayedEvents == call->delayedEvents) {
+            continue;
         }
+        call = &spt.first;
+        for (auto && sv : spt.first.delayedEvents) {
+            writeEventCallback(os, sv.elem->name, Element::Flags(sv.flags));
+        }
+        os << "    if (state";
+        writeRuleName(os, elem->rule->name, true);
+        os << "(";
+        if (hasSwitch)
+            os << "--";
+        unsigned id = st.next.empty() ? 0 : st.next[256];
+        os << "ptr)) {\n"
+            << "        goto state" << id << ";\n"
+            << "    }\n";
     }
 
     os << "    goto state0;\n";

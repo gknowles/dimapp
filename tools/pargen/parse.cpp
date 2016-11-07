@@ -174,7 +174,8 @@ bool ParserNotify::onBinValAltSecondEnd(const char * eptr) {
 //===========================================================================
 bool ParserNotify::onBinValConcatEachEnd(const char * eptr) {
     assert(m_number <= UCHAR_MAX);
-    m_rules.addTerminal(m_elems.back(), (unsigned char)m_number, 1, 1);
+    auto elem = m_rules.addChoice(m_elems.back(), 1, 1);
+    m_rules.addTerminal(elem, (unsigned char)m_number);
     m_number = 0;
     return true;
 }
@@ -202,7 +203,8 @@ bool ParserNotify::onBinValSequenceChar(char ch) {
 //===========================================================================
 bool ParserNotify::onBinValSimpleEnd(const char * eptr) {
     assert(m_number <= UCHAR_MAX);
-    m_rules.addTerminal(m_elems.back(), (unsigned char)m_number, m_min, m_max);
+    auto elem = m_rules.addChoice(m_elems.back(), m_min, m_max);
+    m_rules.addTerminal(elem, (unsigned char)m_number);
     m_number = 0;
     return true;
 }
