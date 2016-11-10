@@ -5,6 +5,7 @@
 
 #include <cassert>
 #include <climits>
+#include <experimental/filesystem>
 #include <limits>
 #include <sstream>
 #include <type_traits>
@@ -65,6 +66,32 @@ inline int digits10(uint32_t val) {
     };
     r += PowersOf10[r] >= val;
     return r;
+}
+
+
+/****************************************************************************
+*
+*   Unicode
+*
+***/
+
+enum UtfType {
+    kUtfUnknown,
+    kUtf8,
+    kUtf16BE,
+    kUtf16LE,
+    kUtf32BE,
+    kUtf32LE,
+};
+
+UtfType utfBomType(const char bytes[], size_t count);
+
+//===========================================================================
+constexpr size_t utfBomSize(UtfType type) {
+    return type == kUtf8 ? 3
+        : (type == kUtf16BE || type == kUtf16LE) ? 2
+        : (type == kUtf32BE || type == kUtf32LE) ? 4
+        : 0;
 }
 
 
@@ -230,3 +257,18 @@ public:
 };
 
 } // namespace
+
+
+/****************************************************************************
+*
+*   filesystem::path
+*
+***/
+
+//===========================================================================
+template<>
+inline std::experimental::filesystem::path::path(
+    const std::string & from
+) {
+    *this = u8path(from);
+}
