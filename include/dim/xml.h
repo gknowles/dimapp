@@ -245,9 +245,13 @@ void unlinkAttr(XAttr * attr);
 void unlinkNode(XNode * node);
 
 XNode * firstChild(
-    XNode * elem, const char name[] = nullptr, XType type = XType::kInvalid);
+    XNode * elem,
+    const char name[] = nullptr,
+    XType type = XType::kInvalid);
 XNode * lastChild(
-    XNode * elem, const char name[] = nullptr, XType type = XType::kInvalid);
+    XNode * elem,
+    const char name[] = nullptr,
+    XType type = XType::kInvalid);
 const XNode * firstChild(
     const XNode * elem,
     const char name[] = nullptr,
@@ -258,9 +262,13 @@ const XNode * lastChild(
     XType type = XType::kInvalid);
 
 XNode * nextSibling(
-    XNode * elem, const char name[] = nullptr, XType type = XType::kInvalid);
+    XNode * elem,
+    const char name[] = nullptr,
+    XType type = XType::kInvalid);
 XNode * prevSibling(
-    XNode * elem, const char name[] = nullptr, XType type = XType::kInvalid);
+    XNode * elem,
+    const char name[] = nullptr,
+    XType type = XType::kInvalid);
 const XNode * nextSibling(
     const XNode * elem,
     const char name[] = nullptr,
@@ -304,7 +312,8 @@ XNodeRange<XNode> elems(XNode * elem, const char name[] = nullptr);
 XNodeRange<const XNode> elems(const XNode * elem, const char name[] = nullptr);
 
 XNodeRange<XNode> nodes(XNode * elem, XType type = XType::kInvalid);
-XNodeRange<const XNode> nodes(const XNode * elem, XType type = XType::kInvalid);
+XNodeRange<const XNode>
+nodes(const XNode * elem, XType type = XType::kInvalid);
 
 
 //===========================================================================

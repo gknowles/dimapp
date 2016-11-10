@@ -102,7 +102,10 @@ static ConsoleReader s_console;
 
 //===========================================================================
 bool ConsoleReader::onFileRead(
-    char * data, int bytes, int64_t offset, IFile * file) {
+    char * data,
+    int bytes,
+    int64_t offset,
+    IFile * file) {
     socketWrite(&s_socket, move(m_buffer), bytes);
     // stop reading (return false) so we can get a new buffer
     return false;

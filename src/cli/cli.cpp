@@ -87,7 +87,10 @@ void Cli::addArg(std::unique_ptr<ArgBase> src) {
 
 //===========================================================================
 void Cli::addLongName(
-    const string & src, ArgBase * val, bool invert, bool optional) {
+    const string & src,
+    ArgBase * val,
+    bool invert,
+    bool optional) {
     bool allowNo = true;
     string key{src};
     if (key.back() == '.') {
@@ -219,7 +222,9 @@ void Cli::resetValues() {
 
 //===========================================================================
 bool Cli::parseAction(
-    ArgBase & val, const std::string & name, const char ptr[]) {
+    ArgBase & val,
+    const std::string & name,
+    const char ptr[]) {
     val.set(name);
     if (ptr) {
         return val.parseAction(*this, ptr);

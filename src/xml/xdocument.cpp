@@ -60,9 +60,11 @@ public:
     bool endDoc() override;
     bool startElem(const char name[], size_t nameLen) override;
     bool endElem() override;
-    bool
-    attr(const char name[], size_t nameLen, const char value[], size_t valueLen)
-        override;
+    bool attr(
+        const char name[],
+        size_t nameLen,
+        const char value[],
+        size_t valueLen) override;
     bool text(const char value[], size_t valueLen) override;
 
 private:
@@ -115,7 +117,10 @@ bool ParserNotify::endElem() {
 
 //===========================================================================
 bool ParserNotify::attr(
-    const char name[], size_t nameLen, const char value[], size_t valueLen) {
+    const char name[],
+    size_t nameLen,
+    const char value[],
+    size_t valueLen) {
     const_cast<char *>(name)[nameLen] = 0;
     const_cast<char *>(value)[valueLen] = 0;
     m_doc.addAttr(m_curElem, name, value);
@@ -194,7 +199,8 @@ XDocument::addElem(XNode * parent, const char name[], const char text[]) {
 }
 
 //===========================================================================
-XAttr * XDocument::addAttr(XNode * elem, const char name[], const char text[]) {
+XAttr *
+XDocument::addAttr(XNode * elem, const char name[], const char text[]) {
     assert(elem);
     assert(name);
     assert(text);

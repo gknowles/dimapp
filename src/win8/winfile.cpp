@@ -72,7 +72,10 @@ namespace {
 class FileReader : public ITaskNotify {
 public:
     FileReader(
-        IFileReadNotify * notify, File * file, void * outBuf, size_t outBufLen);
+        IFileReadNotify * notify,
+        File * file,
+        void * outBuf,
+        size_t outBufLen);
     void read(int64_t off, int64_t len);
 
     // ITaskNotify
@@ -92,7 +95,10 @@ private:
 
 //===========================================================================
 FileReader::FileReader(
-    IFileReadNotify * notify, File * file, void * outBuf, size_t outBufLen)
+    IFileReadNotify * notify,
+    File * file,
+    void * outBuf,
+    size_t outBufLen)
     : m_file(file)
     , m_notify(notify)
     , m_outBuf((char *)outBuf)
@@ -140,8 +146,8 @@ void FileReader::onTask() {
         return;
     }
 
-    bool more =
-        bytes ? m_notify->onFileRead(m_outBuf, bytes, m_offset, m_file) : false;
+    bool more = bytes ? m_notify->onFileRead(m_outBuf, bytes, m_offset, m_file)
+                      : false;
 
     if (!more || m_length && m_length <= bytes) {
         m_notify->onFileEnd(m_offset + bytes, m_file);
@@ -187,7 +193,10 @@ private:
 
 //===========================================================================
 FileWriteBuf::FileWriteBuf(
-    IFileWriteNotify * notify, File * file, const void * buf, size_t bufLen)
+    IFileWriteNotify * notify,
+    File * file,
+    const void * buf,
+    size_t bufLen)
     : m_notify(notify)
     , m_file(file)
     , m_buf((const char *)buf)
@@ -412,7 +421,10 @@ void Dim::fileWrite(
 
 //===========================================================================
 void Dim::fileAppend(
-    IFileWriteNotify * notify, IFile * file, const void * buf, size_t bufLen) {
+    IFileWriteNotify * notify,
+    IFile * file,
+    const void * buf,
+    size_t bufLen) {
     assert(notify);
     // file writes to offset 2^64-1 are interpreted as appends to the end
     // of the file.

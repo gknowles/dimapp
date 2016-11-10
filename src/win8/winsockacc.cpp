@@ -232,7 +232,9 @@ static bool getAcceptInfo(SocketAcceptInfo * out, SOCKET s, void * buffer) {
 
 //===========================================================================
 void AcceptSocket::onAccept(
-    ListenSocket * listen, int xferError, int xferBytes) {
+    ListenSocket * listen,
+    int xferError,
+    int xferBytes) {
     unique_ptr<AcceptSocket> hostage{move(listen->m_socket)};
 
     SocketAcceptInfo info;
@@ -253,7 +255,8 @@ void AcceptSocket::onAccept(
                             SO_UPDATE_ACCEPT_CONTEXT,
                             (char *)&listen->m_handle,
                             sizeof listen->m_handle)) {
-        logMsgError() << "setsockopt(SO_UPDATE_ACCEPT_CONTEXT): " << WinError{};
+        logMsgError() << "setsockopt(SO_UPDATE_ACCEPT_CONTEXT): "
+                      << WinError{};
         return;
     }
 
@@ -311,7 +314,8 @@ static void pushListenStop(ISocketListenNotify * notify) {
 
 //===========================================================================
 void Dim::socketListen(
-    ISocketListenNotify * notify, const Endpoint & localEnd) {
+    ISocketListenNotify * notify,
+    const Endpoint & localEnd) {
     auto hostage = make_unique<ListenSocket>(notify, localEnd);
     auto sock = hostage.get();
     sock->m_handle = winSocketCreate(localEnd);

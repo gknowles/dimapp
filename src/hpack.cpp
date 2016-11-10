@@ -784,7 +784,10 @@ void HpackDecode::pruneDynTable() {
 
 //===========================================================================
 bool HpackDecode::read(
-    size_t * out, size_t prefixBits, const char *& src, size_t & srcLen) {
+    size_t * out,
+    size_t prefixBits,
+    const char *& src,
+    size_t & srcLen) {
     assert(prefixBits >= 1 && prefixBits <= 8);
     if (!srcLen)
         return false;
@@ -811,7 +814,10 @@ bool HpackDecode::read(
 
 //===========================================================================
 bool HpackDecode::read(
-    const char ** out, ITempHeap * heap, const char *& src, size_t & srcLen) {
+    const char ** out,
+    ITempHeap * heap,
+    const char *& src,
+    size_t & srcLen) {
     size_t len;
     bool huffman = (*src & 0x80) != 0;
     if (!read(&len, 7, src, srcLen))

@@ -215,7 +215,10 @@ void httpPushPromise(HttpConnHandle conn, CharBuf * out, const HttpMsg & msg);
 
 // Serializes a reply on the specified stream
 void httpReply(
-    HttpConnHandle conn, CharBuf * out, int stream, const HttpMsg & msg);
+    HttpConnHandle conn,
+    CharBuf * out,
+    int stream,
+    const HttpMsg & msg);
 
 void httpResetStream(HttpConnHandle conn, CharBuf * out, int stream);
 

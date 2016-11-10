@@ -294,7 +294,10 @@ static void writeEventCallback(
 
 //===========================================================================
 static void writeStateName(
-    ostream & os, const string & name, size_t maxWidth, const string & prefix) {
+    ostream & os,
+    const string & name,
+    size_t maxWidth,
+    const string & prefix) {
     size_t space = maxWidth - size(prefix);
     size_t count = name.size();
     size_t pos = 0;
@@ -440,7 +443,9 @@ static void writeParserState(
 
 //===========================================================================
 static void writeCppfileStart(
-    ostream & os, const Grammar & rules, const Grammar & options) {
+    ostream & os,
+    const Grammar & rules,
+    const Grammar & options) {
     time_t now = time(nullptr);
     tm tm;
     localtime_s(&tm, &now);

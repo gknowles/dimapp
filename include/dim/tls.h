@@ -116,6 +116,9 @@ bool tlsRecv(
     size_t srcLen);
 
 void tlsSend(
-    TlsConnHandle conn, CharBuf * out, const void * src, size_t srcLen);
+    TlsConnHandle conn,
+    CharBuf * out,
+    const void * src,
+    size_t srcLen);
 
 } // namespace

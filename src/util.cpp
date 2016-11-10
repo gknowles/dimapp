@@ -63,7 +63,7 @@ UtfType Dim::utfBomType(const char bytes[], size_t count) {
     if (count >= 2) {
         switch (bytes[0]) {
         case 0:
-            if (count >= 4 && bytes[1] == 0 && bytes[2] == '\xfe' 
+            if (count >= 4 && bytes[1] == 0 && bytes[2] == '\xfe'
                 && bytes[3] == '\xff') {
                 return kUtf32BE;
             }

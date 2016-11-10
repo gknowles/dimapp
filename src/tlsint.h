@@ -85,12 +85,15 @@ public:
     void setSuites(const TlsCipherSuite suites[], size_t count);
     const std::vector<TlsCipherSuite> & suites() const;
 
-    bool recv(CharBuf * reply, CharBuf * data, const void * src, size_t srcLen);
+    bool
+    recv(CharBuf * reply, CharBuf * data, const void * src, size_t srcLen);
 
     // ITlsRecordDecryptNotify
     virtual void onTlsAlert(TlsAlertDesc desc, TlsAlertLevel level) override;
     virtual void onTlsHandshake(
-        TlsHandshakeType type, const uint8_t msg[], size_t msgLen) override;
+        TlsHandshakeType type,
+        const uint8_t msg[],
+        size_t msgLen) override;
 
     virtual void onTlsHandshake(const TlsClientHelloMsg & msg);
     virtual void onTlsHandshake(const TlsServerHelloMsg & msg);

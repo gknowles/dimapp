@@ -63,7 +63,9 @@ bool StateElement::operator==(const StateElement & right) const {
 }
 
 //===========================================================================
-bool operator<(const vector<StateElement> & a, const vector<StateElement> & b) {
+bool operator<(
+    const vector<StateElement> & a,
+    const vector<StateElement> & b) {
     auto a1 = a.data();
     auto a2 = a1 + a.size();
     auto b1 = b.data();
@@ -547,7 +549,8 @@ static void removePositionsWithMoreEvents(State & st) {
 
 //===========================================================================
 static void removeConflicts(
-    vector<StateEvent> & matched, const vector<StateEvent> & events) {
+    vector<StateEvent> & matched,
+    const vector<StateEvent> & events) {
     if (matched.empty())
         return;
     int numEvents = (int)events.size();
@@ -668,8 +671,10 @@ static bool resolveEventConflicts(State & st, const StateTreeInfo & sti) {
 }
 
 //===========================================================================
-static void
-buildStateTree(State * st, unordered_set<State> & states, StateTreeInfo & sti) {
+static void buildStateTree(
+    State * st,
+    unordered_set<State> & states,
+    StateTreeInfo & sti) {
     st->next.assign(257, 0);
     State next;
     bool errors{false};

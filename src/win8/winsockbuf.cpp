@@ -236,7 +236,9 @@ void Dim::iSocketBufferInitialize(RIO_EXTENSION_FUNCTION_TABLE & rio) {
 
 //===========================================================================
 void Dim::iSocketGetRioBuffer(
-    RIO_BUF * out, SocketBuffer * sbuf, size_t bytes) {
+    RIO_BUF * out,
+    SocketBuffer * sbuf,
+    size_t bytes) {
     lock_guard<mutex> lk{s_mut};
 
     assert(bytes <= sbuf->len);

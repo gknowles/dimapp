@@ -119,7 +119,8 @@ const Test s_tests[] = {
          {"cache-control", "no-cache"},
      },
      {
-         {"cache-control", "no-cache"}, {":authority", "www.example.com"},
+         {"cache-control", "no-cache"},
+         {":authority", "www.example.com"},
      }},
     {"C.3.3",
      false,
@@ -169,7 +170,8 @@ const Test s_tests[] = {
          {"cache-control", "no-cache"},
      },
      {
-         {"cache-control", "no-cache"}, {":authority", "www.example.com"},
+         {"cache-control", "no-cache"},
+         {":authority", "www.example.com"},
      }},
     {"C.4.3",
      false,

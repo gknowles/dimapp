@@ -17,7 +17,9 @@ namespace {
 class ClientConn : public TlsConnBase {
 public:
     ClientConn(
-        const char hostName[], const TlsCipherSuite suites[], size_t count);
+        const char hostName[],
+        const TlsCipherSuite suites[],
+        size_t count);
     void connect(CharBuf * out);
 
 private:
@@ -66,7 +68,10 @@ const std::vector<TlsCipherSuite> & TlsConnBase::suites() const {
 
 //===========================================================================
 bool TlsConnBase::recv(
-    CharBuf * out, CharBuf * data, const void * src, size_t srcLen) {
+    CharBuf * out,
+    CharBuf * data,
+    const void * src,
+    size_t srcLen) {
     m_reply = out;
     bool success = m_in.parse(data, this, src, srcLen);
     m_reply = nullptr;
@@ -94,7 +99,9 @@ template <typename T> void TlsConnBase::handshake(TlsRecordReader & in) {
 
 //===========================================================================
 void TlsConnBase::onTlsHandshake(
-    TlsHandshakeType type, const uint8_t data[], size_t dataLen) {
+    TlsHandshakeType type,
+    const uint8_t data[],
+    size_t dataLen) {
     TlsRecordReader in(*this, data, dataLen);
     switch (type) {
     case kClientHello: return handshake<TlsClientHelloMsg>(in);
@@ -216,7 +223,9 @@ void TlsRecordWriter::end() {
 
 //===========================================================================
 TlsRecordReader::TlsRecordReader(
-    TlsConnBase & conn, const void * ptr, size_t count)
+    TlsConnBase & conn,
+    const void * ptr,
+    size_t count)
     : m_conn(conn)
     , m_ptr((const uint8_t *)ptr) {
     assert(count < numeric_limits<int>::max());
@@ -310,7 +319,9 @@ const uint8_t kClientVersion[] = {3, 4};
 
 //===========================================================================
 ClientConn::ClientConn(
-    const char hostName[], const TlsCipherSuite suites[], size_t count) {
+    const char hostName[],
+    const TlsCipherSuite suites[],
+    size_t count) {
     if (hostName)
         m_host = hostName;
     setSuites(suites, count);

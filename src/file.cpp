@@ -40,7 +40,10 @@ FileProxyNotify::FileProxyNotify(string & out, IFileReadNotify * notify)
 
 //===========================================================================
 bool FileProxyNotify::onFileRead(
-    char data[], int bytes, int64_t offset, IFile * file) {
+    char data[],
+    int bytes,
+    int64_t offset,
+    IFile * file) {
     // resize the string to match the bytes read, in case it was less than
     // the amount requested
     m_out.resize(bytes);

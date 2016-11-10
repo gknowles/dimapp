@@ -90,7 +90,8 @@ void RioDispatchThread::onTask() {
             break;
         }
 
-        count = s_rio.RIODequeueCompletion(s_cq, results, (ULONG)size(results));
+        count =
+            s_rio.RIODequeueCompletion(s_cq, results, (ULONG)size(results));
         if (count == RIO_CORRUPT_CQ)
             logMsgCrash() << "RIODequeueCompletion: " << WinError{};
 
@@ -172,7 +173,9 @@ void SocketBase::disconnect(ISocketNotify * notify) {
 //===========================================================================
 // static
 void SocketBase::write(
-    ISocketNotify * notify, unique_ptr<SocketBuffer> buffer, size_t bytes) {
+    ISocketNotify * notify,
+    unique_ptr<SocketBuffer> buffer,
+    size_t bytes) {
     assert(bytes <= buffer->len);
     unique_lock<mutex> lk{s_mut};
     SocketBase * sock = notify->m_socket;
@@ -553,6 +556,8 @@ void Dim::socketDisconnect(ISocketNotify * notify) {
 
 //===========================================================================
 void Dim::socketWrite(
-    ISocketNotify * notify, unique_ptr<SocketBuffer> buffer, size_t bytes) {
+    ISocketNotify * notify,
+    unique_ptr<SocketBuffer> buffer,
+    size_t bytes) {
     SocketBase::write(notify, move(buffer), bytes);
 }

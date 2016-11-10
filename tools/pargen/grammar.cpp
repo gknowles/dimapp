@@ -154,7 +154,10 @@ Element * Grammar::addChoice(Element * rule, unsigned m, unsigned n) {
 
 //===========================================================================
 void Grammar::addRule(
-    Element * rule, const string & name, unsigned m, unsigned n) {
+    Element * rule,
+    const string & name,
+    unsigned m,
+    unsigned n) {
     auto e = addElement(rule, m, n);
     e->type = Element::kRule;
     e->value = name;
@@ -170,7 +173,10 @@ void Grammar::addTerminal(Element * rule, unsigned char ch) {
 
 //===========================================================================
 void Grammar::addText(
-    Element * rule, const string & value, unsigned m, unsigned n) {
+    Element * rule,
+    const string & value,
+    unsigned m,
+    unsigned n) {
     auto s = addSequence(rule, m, n);
     for (unsigned char ch : value) {
         auto c = addChoice(s, 1, 1);
@@ -185,7 +191,10 @@ void Grammar::addText(
 
 //===========================================================================
 void Grammar::addLiteral(
-    Element * rule, const string & value, unsigned m, unsigned n) {
+    Element * rule,
+    const string & value,
+    unsigned m,
+    unsigned n) {
     auto s = addSequence(rule, m, n);
     for (unsigned char ch : value) {
         auto c = addChoice(s, 1, 1);
@@ -426,7 +435,8 @@ void normalize(Grammar & rules) {
 ***/
 
 //===========================================================================
-static void markFunction(Grammar & rules, Element & rule, vector<bool> & used) {
+static void
+markFunction(Grammar & rules, Element & rule, vector<bool> & used) {
     bool wasUsed;
     switch (rule.type) {
     case Element::kChoice:

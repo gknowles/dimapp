@@ -189,7 +189,9 @@ void Dim::tlsWrite(TlsRecordWriter & out, const TlsServerHelloMsg & msg) {
 }
 
 //===========================================================================
-void Dim::tlsWrite(TlsRecordWriter & out, const TlsHelloRetryRequestMsg & msg) {
+void Dim::tlsWrite(
+    TlsRecordWriter & out,
+    const TlsHelloRetryRequestMsg & msg) {
     out.contentType(kContentHandshake);
     out.number(kHelloRetryRequest); // handshake.msg_type
     out.start24();                  // handshake.length
@@ -273,8 +275,10 @@ parse(vector<TlsSignatureScheme> * out, TlsRecordReader & in, size_t extLen) {
 }
 
 //===========================================================================
-static bool
-parseKeyShares(vector<TlsKeyShare> * out, TlsRecordReader & in, size_t extLen) {
+static bool parseKeyShares(
+    vector<TlsKeyShare> * out,
+    TlsRecordReader & in,
+    size_t extLen) {
     return false;
 }
 

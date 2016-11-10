@@ -72,7 +72,10 @@ void TlsRecordEncrypt::writeCiphertext(CharBuf * out) {
 
 //===========================================================================
 void TlsRecordEncrypt::add(
-    CharBuf * out, TlsContentType ct, const void * vptr, size_t count) {
+    CharBuf * out,
+    TlsContentType ct,
+    const void * vptr,
+    size_t count) {
     // MUST NOT send zero-length fragments of Handshake or Alert types
     assert(ct != kContentAlert && ct != kContentHandshake || count);
     assert(count <= kMaxPlaintext);

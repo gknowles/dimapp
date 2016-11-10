@@ -80,7 +80,9 @@ public:
         }
         node = nullptr;
     }
-    bool operator!=(const Iterator & right) const { return node != right.node; }
+    bool operator!=(const Iterator & right) const {
+        return node != right.node;
+    }
     std::pair<H, T *> operator*() {
         H handle;
         handle.pos = int(node - base);
@@ -123,7 +125,9 @@ inline auto HandleMapBase::end() -> Iterator<H, T> {
 
 template <typename H, typename T> class HandleMap : public HandleMapBase {
 public:
-    T * find(H handle) { return static_cast<T *>(HandleMapBase::find(handle)); }
+    T * find(H handle) {
+        return static_cast<T *>(HandleMapBase::find(handle));
+    }
     void clear() {
         for (auto && ht : *this)
             erase(ht);

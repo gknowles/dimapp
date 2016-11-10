@@ -91,6 +91,9 @@ void fileWrite(
     const void * buf,
     size_t bufLen);
 void fileAppend(
-    IFileWriteNotify * notify, IFile * file, const void * buf, size_t bufLen);
+    IFileWriteNotify * notify,
+    IFile * file,
+    const void * buf,
+    size_t bufLen);
 
 } // namespace

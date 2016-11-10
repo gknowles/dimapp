@@ -93,7 +93,10 @@ public:
     addText(Element * rule, const std::string & value, unsigned m, unsigned n);
 
     void addLiteral(
-        Element * rule, const std::string & value, unsigned m, unsigned n);
+        Element * rule,
+        const std::string & value,
+        unsigned m,
+        unsigned n);
     void addRange(Element * rule, unsigned char a, unsigned char b);
     void addTerminal(Element * rule, unsigned char ch);
 

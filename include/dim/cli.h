@@ -57,9 +57,10 @@ public:
 
     //-----------------------------------------------------------------------
     // Configuration
-    template <typename T,
-              typename U,
-              typename = enable_if<is_convertible<U, T>::value>::type>
+    template <
+        typename T,
+        typename U,
+        typename = enable_if<is_convertible<U, T>::value>::type>
     Arg<T> & arg(T * value, const std::string & keys, const U & def);
 
     template <typename T> Arg<T> & arg(T * value, const std::string & keys);
@@ -74,9 +75,10 @@ public:
     template <typename T>
     ArgVec<T> & argVec(const std::string & keys, int nargs = -1);
 
-    template <typename T,
-              typename U,
-              typename = enable_if<is_convertible<U, T>::value>::type>
+    template <
+        typename T,
+        typename U,
+        typename = enable_if<is_convertible<U, T>::value>::type>
     Arg<T> & arg(Arg<T> & value, const std::string & keys, const U & def);
 
     template <typename T>
@@ -121,10 +123,14 @@ private:
     bool defaultAction(ArgBase & arg, const std::string & val);
 
     void addLongName(
-        const std::string & name, ArgBase * val, bool invert, bool optional);
+        const std::string & name,
+        ArgBase * val,
+        bool invert,
+        bool optional);
     void addArgName(const std::string & name, ArgBase * val);
     void addArg(std::unique_ptr<ArgBase> ptr);
-    bool parseAction(ArgBase & out, const std::string & name, const char src[]);
+    bool
+    parseAction(ArgBase & out, const std::string & name, const char src[]);
 
     template <typename Arg, typename Value, typename Ptr>
     std::shared_ptr<Value> getProxy(Ptr * ptr);
@@ -491,7 +497,9 @@ private:
 //===========================================================================
 template <typename T>
 inline Cli::Arg<T>::Arg(
-    std::shared_ptr<Value<T>> value, const std::string & keys, const T & def)
+    std::shared_ptr<Value<T>> value,
+    const std::string & keys,
+    const T & def)
     : ArgShim<Arg, T>{keys, std::is_same<T, bool>::value}
     , m_proxy{value} {
     m_defValue = def;
@@ -595,7 +603,9 @@ private:
 //===========================================================================
 template <typename T>
 inline Cli::ArgVec<T>::ArgVec(
-    std::shared_ptr<ValueVec<T>> values, const std::string & keys, int nargs)
+    std::shared_ptr<ValueVec<T>> values,
+    const std::string & keys,
+    int nargs)
     : ArgShim<ArgVec, T>{keys, std::is_same<T, bool>::value}
     , m_proxy(values) {
     m_multiple = true;

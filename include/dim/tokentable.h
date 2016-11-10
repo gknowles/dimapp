@@ -55,7 +55,9 @@ E tokenTableGetEnum(const TokenTable & tbl, const char name[], E defId) {
 
 template <typename E>
 const char * tokenTableGetName(
-    const TokenTable & tbl, E id, const char defName[] = nullptr) {
+    const TokenTable & tbl,
+    E id,
+    const char defName[] = nullptr) {
     const char * name;
     return tbl.find(&name, (int)id) ? name : defName;
 }

@@ -89,9 +89,9 @@ UtfType utfBomType(const char bytes[], size_t count);
 //===========================================================================
 constexpr size_t utfBomSize(UtfType type) {
     return type == kUtf8 ? 3
-        : (type == kUtf16BE || type == kUtf16LE) ? 2
-        : (type == kUtf32BE || type == kUtf32LE) ? 4
-        : 0;
+                         : (type == kUtf16BE || type == kUtf16LE)
+            ? 2
+            : (type == kUtf32BE || type == kUtf32LE) ? 4 : 0;
 }
 
 
@@ -266,9 +266,7 @@ public:
 ***/
 
 //===========================================================================
-template<>
-inline std::experimental::filesystem::path::path(
-    const std::string & from
-) {
+template <>
+inline std::experimental::filesystem::path::path(const std::string & from) {
     *this = u8path(from);
 }

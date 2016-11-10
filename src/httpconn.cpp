@@ -326,7 +326,11 @@ ReplyRstStream(CharBuf * out, int stream, HttpStream * sm, FrameError error) {}
 
 //===========================================================================
 static bool RemovePadding(
-    UnpaddedData * out, const char src[], int frameLen, int hdrLen, int flags) {
+    UnpaddedData * out,
+    const char src[],
+    int frameLen,
+    int hdrLen,
+    int flags) {
     out->hdr = src + kFrameHeaderLen;
     out->data = out->hdr + hdrLen;
     out->dataLen = frameLen - hdrLen;
@@ -508,12 +512,14 @@ bool HttpConn::onFrame(
     case FrameType::kGoAway: return onGoAway(msgs, out, src, stream, flags);
     case FrameType::kHeaders: return onHeaders(msgs, out, src, stream, flags);
     case FrameType::kPing: return onPing(msgs, out, src, stream, flags);
-    case FrameType::kPriority: return onPriority(msgs, out, src, stream, flags);
+    case FrameType::kPriority:
+        return onPriority(msgs, out, src, stream, flags);
     case FrameType::kPushPromise:
         return onPushPromise(msgs, out, src, stream, flags);
     case FrameType::kRstStream:
         return onRstStream(msgs, out, src, stream, flags);
-    case FrameType::kSettings: return onSettings(msgs, out, src, stream, flags);
+    case FrameType::kSettings:
+        return onSettings(msgs, out, src, stream, flags);
     case FrameType::kWindowUpdate:
         return onWindowUpdate(msgs, out, src, stream, flags);
     };
@@ -743,7 +749,8 @@ bool HttpConn::onSettings(
     //      identifier : 16
     //      value : 32
 
-    if (m_frameMode != FrameMode::kNormal && m_frameMode != FrameMode::kSettings
+    if (m_frameMode != FrameMode::kNormal
+            && m_frameMode != FrameMode::kSettings
         || stream) {
         // settings frames MUST be on stream 0
         ReplyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
@@ -881,7 +888,8 @@ bool HttpConn::onContinuation(
     // Continuation frame
     //  headerBlock[]
 
-    if (m_frameMode != FrameMode::kContinuation || stream != m_continueStream) {
+    if (m_frameMode != FrameMode::kContinuation
+        || stream != m_continueStream) {
         ReplyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
         return false;
     }
@@ -1022,7 +1030,10 @@ bool Dim::httpRecv(
 
 //===========================================================================
 void Dim::httpReply(
-    HttpConnHandle hc, CharBuf * out, int stream, const HttpMsg & msg) {
+    HttpConnHandle hc,
+    CharBuf * out,
+    int stream,
+    const HttpMsg & msg) {
     auto * conn = s_conns.find(hc);
     conn->reply(out, stream, msg);
 }

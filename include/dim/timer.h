@@ -43,7 +43,9 @@ private:
 ***/
 
 void timerUpdate(
-    ITimerNotify * notify, Duration wait, bool onlyIfSooner = false);
+    ITimerNotify * notify,
+    Duration wait,
+    bool onlyIfSooner = false);
 void timerStopSync(ITimerNotify * notify);
 
 } // namespace

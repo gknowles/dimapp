@@ -247,7 +247,10 @@ void Dim::taskPush(TaskQueueHandle hq, ITaskNotify & task) {
 }
 
 //===========================================================================
-void Dim::taskPush(TaskQueueHandle hq, ITaskNotify * tasks[], size_t numTasks) {
+void Dim::taskPush(
+    TaskQueueHandle hq,
+    ITaskNotify * tasks[],
+    size_t numTasks) {
     assert(s_running);
 
     lock_guard<mutex> lk{s_mut};

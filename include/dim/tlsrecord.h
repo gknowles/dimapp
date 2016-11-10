@@ -61,7 +61,9 @@ public:
     virtual ~ITlsRecordDecryptNotify() {}
     virtual void onTlsAlert(TlsAlertDesc desc, TlsAlertLevel level) = 0;
     virtual void onTlsHandshake(
-        TlsHandshakeType type, const uint8_t msg[], size_t msgLen) = 0;
+        TlsHandshakeType type,
+        const uint8_t msg[],
+        size_t msgLen) = 0;
 };
 
 class TlsRecordDecrypt {

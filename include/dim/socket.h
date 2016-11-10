@@ -89,6 +89,8 @@ std::unique_ptr<SocketBuffer> socketGetBuffer();
 
 // Writes the data and deletes the buffer.
 void socketWrite(
-    ISocketNotify * notify, std::unique_ptr<SocketBuffer> buffer, size_t bytes);
+    ISocketNotify * notify,
+    std::unique_ptr<SocketBuffer> buffer,
+    size_t bytes);
 
 } // namespace
