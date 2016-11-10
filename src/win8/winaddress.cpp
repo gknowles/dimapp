@@ -43,9 +43,9 @@ std::ostream & Dim::operator<<(std::ostream & os, const Address & addr) {
 bool Dim::parse(Endpoint * end, const char src[], int defaultPort) {
     sockaddr_storage sas;
     int sasLen = sizeof(sas);
-    if (SOCKET_ERROR ==
-        WSAStringToAddress(
-            (char *)src, AF_INET, NULL, (sockaddr *)&sas, &sasLen)) {
+    if (SOCKET_ERROR
+        == WSAStringToAddress(
+               (char *)src, AF_INET, NULL, (sockaddr *)&sas, &sasLen)) {
         *end = {};
         return false;
     }
@@ -61,8 +61,9 @@ std::ostream & Dim::operator<<(std::ostream & os, const Endpoint & src) {
     copy(&sas, src);
     char tmp[256];
     DWORD tmpLen = sizeof(tmp);
-    if (SOCKET_ERROR ==
-        WSAAddressToString((sockaddr *)&sas, sizeof(sas), NULL, tmp, &tmpLen)) {
+    if (SOCKET_ERROR
+        == WSAAddressToString(
+               (sockaddr *)&sas, sizeof(sas), NULL, tmp, &tmpLen)) {
         os << "(bad_sockaddr)";
     } else {
         os << tmp;

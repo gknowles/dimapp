@@ -315,8 +315,10 @@ bool copyRules(
 
 //===========================================================================
 static void normalizeChoice(Element & rule) {
-    assert(rule.elements.size() > 1 
-        || rule.elements.size() == 1 && rule.elements[0].type == Element::kTerminal);
+    assert(
+        rule.elements.size() > 1
+        || rule.elements.size() == 1
+            && rule.elements[0].type == Element::kTerminal);
     vector<Element> tmp;
     for (auto && elem : rule.elements) {
         if (elem.type != Element::kChoice) {
@@ -349,8 +351,8 @@ static void normalizeSequence(Element & rule) {
             continue;
         bool skip = false;
         for (auto && e : elem->elements) {
-            if (e.m != elem->m * e.m ||
-                e.n != max({elem->n, e.n, elem->n * e.n})) {
+            if (e.m != elem->m * e.m
+                || e.n != max({elem->n, e.n, elem->n * e.n})) {
                 skip = true;
                 break;
             }
@@ -379,11 +381,13 @@ static void normalizeRule(Element & rule, const Grammar & rules) {
 }
 
 //===========================================================================
-static void normalize(Element & rule, const Element * parent, const Grammar & rules) {
+static void
+normalize(Element & rule, const Element * parent, const Grammar & rules) {
     if (rule.elements.size() == 1) {
         Element & elem = rule.elements.front();
-        if (elem.type != Element::kTerminal || 
-            parent && parent->type == Element::kChoice && rule.m == 1 && rule.n == 1) {
+        if (elem.type != Element::kTerminal
+            || parent && parent->type == Element::kChoice && rule.m == 1
+                && rule.n == 1) {
             rule.m *= elem.m;
             rule.n = max({rule.n, elem.n, rule.n * elem.n});
             rule.type = elem.type;

@@ -179,10 +179,10 @@ struct State {
     std::string name;
     std::vector<std::string> aliases;
 
-    // vector.size() is 256 for the possible terminals, or empty() if 
+    // vector.size() is 256 for the possible terminals, or empty() if
     // there are no terminals because it's a function.
     std::map<StatePosition, std::vector<bool>> positions;
-    
+
     std::vector<unsigned> next;
 
     void clear();

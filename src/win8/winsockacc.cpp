@@ -337,8 +337,8 @@ void Dim::socketListen(
 void Dim::socketStop(ISocketListenNotify * notify, const Endpoint & localEnd) {
     lock_guard<mutex> lk{s_mut};
     for (auto && ptr : s_listeners) {
-        if (ptr->m_notify == notify && ptr->m_localEnd == localEnd &&
-            ptr->m_handle != INVALID_SOCKET) {
+        if (ptr->m_notify == notify && ptr->m_localEnd == localEnd
+            && ptr->m_handle != INVALID_SOCKET) {
             if (SOCKET_ERROR == closesocket(ptr->m_handle)) {
                 logMsgError() << "closesocket(listen): " << WinError{};
             }

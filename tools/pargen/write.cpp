@@ -105,8 +105,8 @@ static void writeElement(ostream & os, const Element & elem, bool inclPos) {
             if (cur->type == Element::kTerminal) {
                 auto next = cur;
                 for (; next + 1 != last; ++next) {
-                    if (next[1].type != Element::kTerminal ||
-                        next->value[0] + 1 != next[1].value[0]) {
+                    if (next[1].type != Element::kTerminal
+                        || next->value[0] + 1 != next[1].value[0]) {
                         break;
                     }
                 }
@@ -141,17 +141,18 @@ static void writeElement(ostream & os, const Element & elem, bool inclPos) {
             bool incl;
             string text;
         } tags[] = {
-            { (elem.flags & Element::kOnStart) != 0, "Start" },
-            { (elem.flags & Element::kOnEnd) != 0, "End" },
-            { (elem.flags & Element::kOnChar) != 0, "Char" },
-            { elem.function, "Function" },
-            { !elem.eventName.empty(), "As=" + elem.eventName },
+            {(elem.flags & Element::kOnStart) != 0, "Start"},
+            {(elem.flags & Element::kOnEnd) != 0, "End"},
+            {(elem.flags & Element::kOnChar) != 0, "Char"},
+            {elem.function, "Function"},
+            {!elem.eventName.empty(), "As=" + elem.eventName},
         };
         os << "  { ";
         bool first = true;
         for (auto && tag : tags) {
             if (tag.incl) {
-                if (!first) os << ", ";
+                if (!first)
+                    os << ", ";
                 first = false;
                 os << tag.text;
             }
@@ -364,8 +365,8 @@ static void writeParserState(
     vector<string> aliases = st.aliases;
     aliases.push_back(to_string(st.id) + ": " + st.name);
     sort(aliases.begin(), aliases.end(), [](auto && a, auto && b) {
-        return strtoul(a.c_str(), nullptr, 10) <
-               strtoul(b.c_str(), nullptr, 10);
+        return strtoul(a.c_str(), nullptr, 10)
+            < strtoul(b.c_str(), nullptr, 10);
     });
     for (auto && name : aliases)
         writeStateName(os, name, 79, "    // ");
@@ -415,8 +416,8 @@ static void writeParserState(
             continue;
         assert(elem->type == Element::kRule);
         assert(elem->rule->function);
-        if (call && elem->rule == call->elems.back().elem->rule &&
-            spt.first.delayedEvents == call->delayedEvents) {
+        if (call && elem->rule == call->elems.back().elem->rule
+            && spt.first.delayedEvents == call->delayedEvents) {
             continue;
         }
         call = &spt.first;
@@ -430,8 +431,8 @@ static void writeParserState(
             os << "--";
         unsigned id = st.next.empty() ? 0 : st.next[256];
         os << "ptr)) {\n"
-            << "        goto state" << id << ";\n"
-            << "    }\n";
+           << "        goto state" << id << ";\n"
+           << "    }\n";
     }
 
     os << "    goto state0;\n";
@@ -642,8 +643,8 @@ public:
     for (auto && elem : rules.rules()) {
         if (!elem.eventName.empty())
             continue;
-        if (elem.flags &
-            (Element::kOnStart | Element::kOnEnd | Element::kOnChar)) {
+        if (elem.flags
+            & (Element::kOnStart | Element::kOnEnd | Element::kOnChar)) {
             ostringstream ostr;
             writeRuleName(ostr, elem.name, true);
             events.emplace_back(ostr.str(), elem.flags);

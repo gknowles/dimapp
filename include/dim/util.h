@@ -104,8 +104,8 @@ constexpr size_t utfBomSize(UtfType type) {
 //===========================================================================
 template <typename T> constexpr int maxIntegralChars() {
     return numeric_limits<T>::is_signed
-               ? 1 + ((CHAR_BIT * sizeof(T) - 1) * 301L + 999L) / 1000L
-               : (CHAR_BIT * sizeof(T) * 301L + 999L) / 1000L;
+        ? 1 + ((CHAR_BIT * sizeof(T) - 1) * 301L + 999L) / 1000L
+        : (CHAR_BIT * sizeof(T) * 301L + 999L) / 1000L;
 }
 
 
@@ -213,8 +213,8 @@ auto stringTo_impl(T & out, const std::string & src, int)
 template <typename T>
 bool stringTo_impl(T & out, const std::string & src, long) {
     std::stringstream interpreter;
-    if (!(interpreter << src) || !(interpreter >> out) ||
-        !(interpreter >> std::ws).eof()) {
+    if (!(interpreter << src) || !(interpreter >> out)
+        || !(interpreter >> std::ws).eof()) {
         out = {};
         return false;
     }

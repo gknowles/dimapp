@@ -101,14 +101,14 @@ size_t hash<StatePosition>::operator()(const StatePosition & val) const {
 
 //===========================================================================
 bool StatePosition::operator<(const StatePosition & right) const {
-    return tie(recurse, elems, events, delayedEvents) <
-           tie(right.recurse, right.elems, right.events, right.delayedEvents);
+    return tie(recurse, elems, events, delayedEvents)
+        < tie(right.recurse, right.elems, right.events, right.delayedEvents);
 }
 
 //===========================================================================
 bool StatePosition::operator==(const StatePosition & right) const {
-    return recurse == right.recurse && elems == right.elems &&
-           events == right.events && delayedEvents == right.delayedEvents;
+    return recurse == right.recurse && elems == right.elems
+        && events == right.events && delayedEvents == right.delayedEvents;
 }
 
 
@@ -247,11 +247,11 @@ addRulePositions(bool * skippable, State * st, StatePosition * sp, bool init) {
         // Don't generate states for right recursion when it can be broken with
         // a call. This could also be done for left recursion when the grammar
         // allows it, but that's more difficult to determine.
-        //if (!init) {
-            [[maybe_unused]] auto & terms = st->positions[*sp];
-            assert(terms.empty());
-            ignore = terms;
-            return;
+        // if (!init) {
+        [[maybe_unused]] auto & terms = st->positions[*sp];
+        assert(terms.empty());
+        ignore = terms;
+        return;
         //}
     }
 
@@ -263,7 +263,7 @@ addRulePositions(bool * skippable, State * st, StatePosition * sp, bool init) {
             vector<StateElement> tmp{sp->elems};
             sp->elems.resize(num);
             sp->elems.back().rep = 0;
-            //sp->elems.back().recurse = true;
+            // sp->elems.back().recurse = true;
             addPositions(skippable, st, sp, true, *elem.rule, 0);
             sp->elems = move(tmp);
         }
@@ -287,7 +287,7 @@ static void addPositions(
         auto & terms = st->positions[*sp];
         if (terms.empty())
             terms.resize(256);
-        terms[(unsigned char) rule.value.front()] = true;
+        terms[(unsigned char)rule.value.front()] = true;
         return;
     }
 
@@ -305,9 +305,7 @@ static void addPositions(
                 *skippable = true;
         }
         break;
-    case Element::kRule: 
-        addRulePositions(skippable, st, sp, init); 
-        break;
+    case Element::kRule: addRulePositions(skippable, st, sp, init); break;
     case Element::kSequence:
         // up to first with a minimum
         *skippable = true;
@@ -368,7 +366,8 @@ static void setPositionPrefix(
 }
 
 //===========================================================================
-static void addNextPositions(State * st, const StatePosition & sp, unsigned ch) {
+static void
+addNextPositions(State * st, const StatePosition & sp, unsigned ch) {
     bool terminal = (ch < 256);
 
     if (sp.recurse) {
@@ -391,16 +390,16 @@ static void addNextPositions(State * st, const StatePosition & sp, unsigned ch) 
     if (terminal && !done) {
         // add OnStart events top to bottom
         for (auto && se2 : sp.elems) {
-            if (se2.elem->type == Element::kRule &&
-                (se2.elem->rule->flags & Element::kOnStart) &&
-                !se2.started) {
+            if (se2.elem->type == Element::kRule
+                && (se2.elem->rule->flags & Element::kOnStart)
+                && !se2.started) {
                 addEvent(events, se2, Element::kOnStart);
             }
         }
         // bubble up OnChar events bottom to top
         for (auto it2 = it; it2 != eit; ++it2) {
-            if (it2->elem->type == Element::kRule &&
-                (it2->elem->rule->flags & Element::kOnChar)) {
+            if (it2->elem->type == Element::kRule
+                && (it2->elem->rule->flags & Element::kOnChar)) {
                 addEvent(events, *it2, Element::kOnChar);
             }
         }
@@ -439,8 +438,9 @@ static void addNextPositions(State * st, const StatePosition & sp, unsigned ch) 
         }
 
         if (se.elem->type == Element::kRule) {
-            if ((se.elem->rule->flags & Element::kOnEnd) &&
-                (se.started || !done) && !se.elem->rule->function) {
+            if ((se.elem->rule->flags & Element::kOnEnd)
+                && (se.started || !done)
+                && !se.elem->rule->function) {
                 addEvent(events, se, Element::kOnEnd);
             }
             // when exiting the parser (via a done sentinel) go directly out,
@@ -534,7 +534,7 @@ static void removePositionsWithMoreEvents(State & st) {
     auto last = st.positions.end();
     while (y != last) {
         auto n = next(y);
-        if (x->first.recurse == y->first.recurse 
+        if (x->first.recurse == y->first.recurse
             && x->first.elems == y->first.elems
             && x->second == y->second) {
             st.positions.erase(y);
@@ -568,8 +568,8 @@ static void removeConflicts(
         if (mi->flags & Element::kOnChar) {
             // char can shift around start events
             for (;;) {
-                if ((~events[evi].flags & Element::kOnStart) ||
-                    ++evi == numEvents) {
+                if ((~events[evi].flags & Element::kOnStart)
+                    || ++evi == numEvents) {
                     goto unmatched;
                 }
                 if (*mi == events[evi])
@@ -578,8 +578,8 @@ static void removeConflicts(
         } else if (mi->flags & Element::kOnStart) {
             // start events can shift around char events.
             for (;;) {
-                if ((~events[evi].flags & Element::kOnChar) ||
-                    ++evi == numEvents) {
+                if ((~events[evi].flags & Element::kOnChar)
+                    || ++evi == numEvents) {
                     goto unmatched;
                 }
                 if (*mi == events[evi])
@@ -709,11 +709,11 @@ buildStateTree(State * st, unordered_set<State> & states, StateTreeInfo & sti) {
                     if (nspt.second.empty()) {
                         auto && nse = nspt.first.elems.back();
                         assert(nse.elem->type == Element::kRule);
-                        if ((elem->rule != nse.elem->rule ||
-                                spt.first.events != nspt.first.events)) {
+                        if ((elem->rule != nse.elem->rule
+                             || spt.first.events != nspt.first.events)) {
                             errors = true;
                             logMsgError() << "Multiple recursive targets, "
-                                            << sti.m_path;
+                                          << sti.m_path;
                             break;
                         }
                     }
@@ -847,8 +847,8 @@ size_t hash<StateKey>::operator()(const StateKey & val) const {
 
 //===========================================================================
 bool StateKey::operator==(const StateKey & right) const {
-    return events == right.events &&
-           memcmp(next, right.next, sizeof(next)) == 0;
+    return events == right.events
+        && memcmp(next, right.next, sizeof(next)) == 0;
 }
 
 //===========================================================================

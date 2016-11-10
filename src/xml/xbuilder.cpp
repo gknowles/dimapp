@@ -204,8 +204,8 @@ template <bool isContent> void IXBuilder::addText(const char val[]) {
                     if (val[-1] == ']' && val[-2] == ']')
                         break;
                 } else if (val - base == 1) {
-                    if (val[-1] == ']' && (m_state == kStateTextRBracket ||
-                                           m_state == kStateTextRBracket2)) {
+                    if (val[-1] == ']' && (m_state == kStateTextRBracket
+                                           || m_state == kStateTextRBracket2)) {
                         break;
                     }
                 } else {

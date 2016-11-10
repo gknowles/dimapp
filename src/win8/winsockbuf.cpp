@@ -120,8 +120,8 @@ static void createEmptyBuffer() {
     buf.base = (char *)VirtualAlloc(
         nullptr,
         bytes,
-        MEM_COMMIT | MEM_RESERVE |
-            (bytes > s_minLargeAlloc ? MEM_LARGE_PAGES : 0),
+        MEM_COMMIT | MEM_RESERVE
+            | (bytes > s_minLargeAlloc ? MEM_LARGE_PAGES : 0),
         PAGE_READWRITE);
     assert(buf.base);
 

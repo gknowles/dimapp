@@ -140,8 +140,8 @@ void MainShutdown::onAppStartClientCleanup() {
 
 //===========================================================================
 bool MainShutdown::onAppQueryClientDestroy() {
-    if (socketGetMode(&s_socket) != ISocketNotify::kInactive ||
-        !s_console.QueryDestroy()) {
+    if (socketGetMode(&s_socket) != ISocketNotify::kInactive
+        || !s_console.QueryDestroy()) {
         return appQueryDestroyFailed();
     }
     return true;
