@@ -11,14 +11,12 @@ build:
   verbosity: minimal
 
 after_build:
-  - 7z a dimapp-v%appveyor_build_version%.zip bin\*.exe bin\*.pdb
+  - 7z a dimapp-latest.zip bin\*.exe bin\*.pdb
 
 artifacts:
-  - path: dimapp-v$(appveyor_build_version).zip
+  - path: dimapp-latest.zip
     name: dimapp
     type: zip
-#  - path: bin\*.exe
-#  - path: bin\*.pdb
 
 test_script:
   - bin\hpack
@@ -27,10 +25,11 @@ test_script:
   - bin\xml --test
 
 deploy:
-  tag: dimapp-v$(appveyor_build_version)
-  description: continuous trunk build
+  tag: dimapp-latest
+  description: continuous trunk build - $(appveyor_build_version)
   provider: GitHub
   auth_token:
     secure: yheCA/FJ+f7CL84HoPf9MapOlDZQmrGyiqlwFeeIhxvdOudQisUdOyZuWfwq3lUU
   prerelease: true
-  draft: true
+  draft: false
+  force_update: true
