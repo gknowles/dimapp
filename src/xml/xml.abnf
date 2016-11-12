@@ -8,7 +8,8 @@
 ; abnf grammer rules for xml
 
 ; Document
-document = prolog element *Misc     ; 1
+document = [utf8-bom] prolog element *Misc     ; 1
+utf8-bom = %xef.bb.bf
 
 ; Character Range and White Space
 ws = SP / HTAB / CR / LF
