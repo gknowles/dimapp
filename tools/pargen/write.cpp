@@ -510,7 +510,7 @@ bool )" << parserClass
     if (!root) {
         os << R"(parse (const char src[]) {
     const char * ptr = src;
-    char ch;
+    unsigned char ch;
     goto state2;
 
 state0: 
@@ -524,7 +524,7 @@ state0:
         writeRuleName(os, root->name, true);
         os << R"( (const char *& ptr) {
     const char * last{nullptr};
-    char ch;
+    unsigned char ch;
 )";
         if (root->flags & Element::kOnStart) {
             writeEventCallback(os, root->name, Element::kOnStart, "ptr");
