@@ -117,6 +117,9 @@
     <ClInclude Include="..\src\cli\pch.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\cli\argv.cpp">
+      <ObjectFileName>$(IntDir)src\cli\</ObjectFileName>
+    </ClCompile>
     <ClCompile Include="..\src\cli\cli.cpp">
       <ObjectFileName>$(IntDir)src\cli\</ObjectFileName>
     </ClCompile>

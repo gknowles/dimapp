@@ -4,6 +4,7 @@
     <ClInclude Include="..\src\cli\pch.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\cli\argv.cpp" />
     <ClCompile Include="..\src\cli\cli.cpp" />
     <ClCompile Include="..\src\cli\pch.cpp" />
   </ItemGroup>
