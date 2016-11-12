@@ -120,7 +120,7 @@ void Dim::logParseError(
     }
     size_t len = last - first;
     string line = source.substr(first, len);
-    for (auto && ch : line) {
+    for (unsigned char ch : line) {
         if (iscntrl(ch))
             ch = '.';
     }
