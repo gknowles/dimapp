@@ -173,12 +173,12 @@ usage: pargen [-?, -h, --help] [-f, --mark-functions=#] [-C, --no-callbacks]
 static void printSyntax(ostream & os) {
     os << "pargen v0.1.0 (" __DATE__ ") - simplistic parser generator";
     os << R"(
-usage: pargen [<options>] <source file[.abnf]> [<root rule>]
-    <source file>   file containing ABNF rules to process
+usage: pargen [OPTIONS] file[.abnf] [root rule]
+    <file>          file containing ABNF rules to process
     <root rule>     root rule to use, overrides %root in <source file>
 
 Options:
-    -?, -h, --help    
+    -?, -h, --help
         Print this message.
     -f, --mark-functions=LEVEL
         Function tag preprocessing level:
@@ -256,7 +256,7 @@ void Application::onTask() {
 
     Cli cli;
     // positional arguments
-    auto & srcfile = cli.arg(&m_srcfile, "[source file]");
+    auto & srcfile = cli.arg(&m_srcfile, "[file]");
     cli.arg(&m_root, "[root rule]");
     // named arguments
     auto & help = cli.arg<bool>("? h help");
