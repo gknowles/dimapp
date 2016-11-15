@@ -74,13 +74,16 @@ int main(int argc, char * argv[]) {
     if (path->empty())
         return cli.writeHelp(cout);
 
-    size_t bytes = fs::file_size(*path);
+    if (!path->has_extension())
+        path->replace_extension("xml");
+    error_code code;
+    size_t bytes = fs::file_size(*path, code);
     string content;
     content.resize(bytes + 1);
     ifstream in(*path, ios_base::in | ios_base::binary);
     in.read(content.data(), bytes);
     if (!in) {
-        cerr << "xml: Error reading file: " << *path;
+        logMsgError() << "xml: Error reading file: " << *path;
         return EX_DATAERR;
     }
     in.close();
