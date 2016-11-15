@@ -24,7 +24,12 @@ static vector<ILogNotify *> s_notifiers;
 //===========================================================================
 static void LogMsg(LogType type, const string & msg) {
     if (s_notifiers.empty()) {
-        cout << msg << endl;
+        if (type == kLogError) {
+            ConsoleScopedAttr attr(kConsoleError);
+            cout << msg << endl;
+        } else {
+            cout << msg << endl;
+        }
     } else {
         for (auto && notify : s_notifiers) {
             notify->onLog(type, msg);
