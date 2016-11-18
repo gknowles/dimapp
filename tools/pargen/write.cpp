@@ -366,7 +366,7 @@ static void writeParserState(
     bool inclStatePositions) {
     os << "\nstate" << st.id << ":\n";
     vector<string> aliases = st.aliases;
-    aliases.push_back(to_string(st.id) + ": " + st.name);
+    aliases.push_back(to_string(st.id) + ": " + st.name + "...");
     sort(aliases.begin(), aliases.end(), [](auto && a, auto && b) {
         return strtoul(a.c_str(), nullptr, 10)
             < strtoul(b.c_str(), nullptr, 10);

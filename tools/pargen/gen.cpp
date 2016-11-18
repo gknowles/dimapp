@@ -671,6 +671,17 @@ static bool resolveEventConflicts(State & st, const StateTreeInfo & sti) {
 }
 
 //===========================================================================
+static void appendHexChar(string & out, unsigned nibble) {
+    out += nibble > 9 ? 'a' + (char) nibble : '0' + (char) nibble;
+}
+
+//===========================================================================
+static void appendHexByte(string & out, unsigned byte) {
+    appendHexChar(out, byte / 16);
+    appendHexChar(out, byte % 16);
+}
+
+//===========================================================================
 static void buildStateTree(
     State * st,
     unordered_set<State> & states,
@@ -680,16 +691,15 @@ static void buildStateTree(
     bool errors{false};
     for (unsigned i = 0; i < 257; ++i) {
         size_t pathLen = sti.m_path.size();
-        if (i <= ' ' || i == '^' || i == 256) {
+        if (i < ' ' || i == '^' || i >= 127) {
             sti.m_path.push_back('^');
-            switch (i) {
-            case 0: sti.m_path.push_back('0'); break;
-            case 9: sti.m_path.push_back('I'); break;
-            case 10: sti.m_path.push_back('J'); break;
-            case 13: sti.m_path.push_back('M'); break;
-            case ' ': sti.m_path.push_back('_'); break;
-            case '^': sti.m_path.push_back('^'); break;
-            case 256: sti.m_path.push_back('*'); break;
+            if (i < ' ') {
+                sti.m_path.push_back((char) i + '@');
+            } else if (i == 256) {
+                sti.m_path.push_back('*');
+            } else {
+                sti.m_path.push_back('x');
+                appendHexByte(sti.m_path, i);
             }
         } else {
             sti.m_path.push_back(unsigned char(i));
