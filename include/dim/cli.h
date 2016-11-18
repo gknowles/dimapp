@@ -145,10 +145,10 @@ public:
     using ActionFn = int(Cli & cli, const std::string & cmd);
     Cli & action(std::function<ActionFn> fn);
 
-    // Arbitrary text can be added to the generated help for each command, 
+    // Arbitrary text can be added to the generated help for each command,
     // this text can come before the usage (header), between the usage and
-    // the arguments / options (desc), or after the options (footer). Use 
-    // line breaks for semantics, let the automatic line wrapping take care 
+    // the arguments / options (desc), or after the options (footer). Use
+    // line breaks for semantics, let the automatic line wrapping take care
     // of the rest.
     Cli & header(const std::string & val);
     Cli & desc(const std::string & val);

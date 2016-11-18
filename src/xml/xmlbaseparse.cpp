@@ -12038,7 +12038,7 @@ state823:
     goto state0;
 
 state824:
-    // 824: ï
+    // 824: ?
     ch = *ptr++;
     switch (ch) {
     case 187: 
@@ -12047,7 +12047,7 @@ state824:
     goto state0;
 
 state825:
-    // 825: ï»
+    // 825: ?
     ch = *ptr++;
     switch (ch) {
     case 191: 
@@ -12056,7 +12056,7 @@ state825:
     goto state0;
 
 state826:
-    // 826: ï»¿
+    // 826: ?
     ch = *ptr++;
     switch (ch) {
     case 9: case 10: case 13: case ' ': 

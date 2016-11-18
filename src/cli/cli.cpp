@@ -913,11 +913,15 @@ void Cli::writePositionals(ostream & os, const string & cmd) const {
     OptIndex ndx;
     index(ndx, cmd);
     size_t colWidth = 0;
+    bool hasDesc = false;
     for (auto && pa : ndx.argNames) {
         // find widest positional argument name, with space for <>'s
         colWidth = max(colWidth, pa.name.size() + 2);
+        hasDesc = hasDesc || pa.opt->m_desc.size();
     }
     colWidth = max(min(colWidth + 3, kMaxDescCol), kMinDescCol);
+    if (!hasDesc)
+        return;
 
     WrapPos wp;
     for (auto && pa : ndx.argNames) {
