@@ -886,13 +886,14 @@ int Cli::writeUsage(ostream & os, const string & arg0, const string & cmd)
     OptIndex ndx;
     index(ndx, cmd);
     streampos base = os.tellp();
-    os << "usage: " << (arg0.empty() ? progName() : arg0);
+    fs::path prog = arg0.empty() ? progName() : arg0;
+    os << "usage: " << prog.stem();
     WrapPos wp;
     wp.maxWidth = 79;
     wp.pos = os.tellp() - base;
     wp.prefix = string(wp.pos, ' ');
     if (!ndx.shortNames.empty() || !ndx.longNames.empty())
-        writeToken(os, wp, "[OPTIONS]");
+        writeToken(os, wp, " [OPTIONS]");
     for (auto && pa : ndx.argNames) {
         string token =
             pa.name.find(' ') == string::npos ? pa.name : "<" + pa.name + ">";
