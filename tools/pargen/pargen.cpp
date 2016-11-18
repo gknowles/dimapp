@@ -256,18 +256,18 @@ void Application::onTask() {
 
     Cli cli;
     // positional arguments
-    auto & srcfile = cli.arg(&m_srcfile, "[file]");
-    cli.arg(&m_root, "[root rule]");
+    auto & srcfile = cli.opt(&m_srcfile, "[file]");
+    cli.opt(&m_root, "[root rule]");
     // named arguments
-    auto & help = cli.arg<bool>("? h help");
-    auto & test = cli.arg<bool>("test");
-    cli.arg(&s_allRules, "!min-core", s_allRules);
-    cli.arg(&s_cmdopts.markFunction, "f mark-functions", 0);
-    cli.arg(&s_cmdopts.includeCallbacks, "!C callbacks", true);
-    cli.arg(&s_cmdopts.buildStateTree, "!B build", true);
-    cli.arg(&s_cmdopts.dedupStateTree, "!D dedup", true);
-    cli.arg(&s_cmdopts.writeStatePositions, "s state-detail");
-    cli.arg(&s_cmdopts.writeFunctions, "write-functions", true);
+    auto & help = cli.opt<bool>("? h help");
+    auto & test = cli.opt<bool>("test");
+    cli.opt(&s_allRules, "!min-core", s_allRules);
+    cli.opt(&s_cmdopts.markFunction, "f mark-functions", 0);
+    cli.opt(&s_cmdopts.includeCallbacks, "!C callbacks", true);
+    cli.opt(&s_cmdopts.buildStateTree, "!B build", true);
+    cli.opt(&s_cmdopts.dedupStateTree, "!D dedup", true);
+    cli.opt(&s_cmdopts.writeStatePositions, "s state-detail");
+    cli.opt(&s_cmdopts.writeFunctions, "write-functions", true);
     if (!cli.parse(m_argc, m_argv)) {
         if (int code = cli.exitCode()) {
             assert(code == EX_USAGE);

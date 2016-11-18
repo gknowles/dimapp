@@ -1,6 +1,6 @@
 // cli.cpp - dim cli
 //
-// For documentation and examples follow the links at:
+// For documentation and examples:
 // https://github.com/gknowles/dimcli
 
 #include "pch.h"
@@ -29,123 +29,104 @@ const size_t kMaxDescCol = 28;
 ***/
 
 // Name of group containing --help, --version, etc
-const std::string s_internalOptionGroup = "~";
+const string s_internalOptionGroup = "~";
+
+namespace {
+struct OptName {
+    Cli::OptBase * opt;
+    bool invert;      // set to false instead of true (only for bools)
+    bool optional;    // value doesn't have to be present? (non-bools only)
+    std::string name; // name of argument (only for positionals)
+};
+} // namespace
+
+struct Cli::OptIndex {
+    map<char, OptName> shortNames;
+    map<string, OptName> longNames;
+    vector<OptName> argNames;
+};
+
+struct Cli::GroupConfig {
+    string name;
+    string title;
+    string sortKey;
+};
+
+struct Cli::CommandConfig {
+    string name;
+    string desc;
+    string footer;
+    std::function<Cli::ActionFn> action;
+    Opt<bool> * helpOpt{nullptr};
+    map<string, GroupConfig> groups;
+};
+
+struct Cli::Config {
+    bool constructed{false};
+
+    map<string, CommandConfig> cmds;
+    std::list<std::unique_ptr<OptBase>> opts;
+    bool responseFiles{true};
+
+    int exitCode{0};
+    string errMsg;
+    string progName;
+    string command;
+};
 
 
 /****************************************************************************
 *
-*   CliBase::Group
-*
-***/
-
-//===========================================================================
-CliBase::Group::Group(Cli & cli, const std::string & name)
-    : m_cli(cli)
-    , m_name(name)
-    , m_title(name)
-    , m_sortKey(name) {}
-
-//===========================================================================
-CliBase::Group & CliBase::Group::operator=(const Group & from) {
-    m_name = from.m_name;
-    m_title = from.m_title;
-    m_sortKey = from.m_sortKey;
-    return *this;
-}
-
-//===========================================================================
-CliBase::Group & CliBase::Group::title(const std::string & val) {
-    m_title = val;
-    return *this;
-}
-
-//===========================================================================
-CliBase::Group & CliBase::Group::sortKey(const std::string & val) {
-    m_sortKey = val;
-    return *this;
-}
-
-
-/****************************************************************************
-*
-*   CliBase::ArgBase
-*
-***/
-
-//===========================================================================
-CliBase::ArgBase::ArgBase(const std::string & names, bool boolean)
-    : m_names{names}
-    , m_bool{boolean} {}
-
-
-/****************************************************************************
-*
-*   Configure
+*   Helpers
 *
 ***/
 
 // forward declarations
-static bool
-helpAction(Cli & cli, Cli::Arg<bool> & arg, const std::string & val);
+static bool helpAction(Cli & cli, Cli::Opt<bool> & opt, const string & val);
+static int cmdAction(Cli & cli, const string & cmd);
 
 //===========================================================================
-Cli::Cli()
-    : Group{*this, ""} {
-    title("Options");
-    group(s_internalOptionGroup).title("");
-    arg<bool>("help.")
-        .desc("Show this message and exit.")
-        .action(helpAction)
-        .group(s_internalOptionGroup);
-}
-
-//===========================================================================
-CliBase::Group & Cli::group(const std::string & name) {
-    if (name.empty()) {
-        return *this;
-    } else {
-        auto i = m_groups.find(name);
-        if (i == m_groups.end()) {
-            i = m_groups.emplace(make_pair(name, Group(*this, name))).first;
-        }
+static Cli::GroupConfig &
+findGrpAlways(Cli::CommandConfig & cmd, const string & name) {
+    auto i = cmd.groups.find(name);
+    if (i != cmd.groups.end())
         return i->second;
-    }
+    auto & grp = cmd.groups[name];
+    grp.name = grp.sortKey = grp.title = name;
+    return grp;
 }
 
 //===========================================================================
-const CliBase::Group & Cli::group(const std::string & name) const {
-    return const_cast<Cli *>(this)->group(name);
+static Cli::CommandConfig &
+findCmdAlways(Cli::Config & cfg, const string & name) {
+    auto i = cfg.cmds.find(name);
+    if (i != cfg.cmds.end())
+        return i->second;
+    auto & cmd = cfg.cmds[name];
+    cmd.name = name;
+    cmd.action = cmdAction;
+    auto & defGrp = findGrpAlways(cmd, "");
+    defGrp.title = "Options";
+    auto & intGrp = findGrpAlways(cmd, s_internalOptionGroup);
+    intGrp.title.clear();
+    return cmd;
 }
 
-//===========================================================================
-void Cli::responseFiles(bool enable) {
-    m_responseFiles = enable;
-}
+
+/****************************************************************************
+*
+*   Cli::OptBase
+*
+***/
 
 //===========================================================================
-Cli::Arg<bool> &
-Cli::versionArg(const std::string & version, const std::string & progName) {
-    auto verAction = [version, progName](auto & cli, auto & arg, auto & val) {
-        ignore = arg, val;
-        fs::path prog = progName;
-        if (prog.empty()) {
-            prog = cli.progName();
-            prog = prog.stem();
-        }
-        cout << prog << " version " << version << endl;
-        return false;
-    };
-    return group(s_internalOptionGroup)
-        .arg<bool>("version.")
-        .desc("Show version and exit.")
-        .action(verAction);
-}
+Cli::OptBase::OptBase(const string & names, bool boolean)
+    : m_names{names}
+    , m_bool{boolean} {}
 
 //===========================================================================
-void Cli::addArg(std::unique_ptr<ArgBase> src) {
-    ArgBase * arg = src.get();
-    m_args.push_back(std::move(src));
-    const char * ptr = arg->m_names.data();
+void Cli::OptBase::index(OptIndex & ndx) {
+    const char * ptr = m_names.data();
     string name;
     char close;
     bool hasPos = false;
@@ -172,7 +153,7 @@ void Cli::addArg(std::unique_ptr<ArgBase> src) {
             if (close != ' ')
                 hasPos = true;
             name = string(b, ptr - b);
-            addArgName(name, arg);
+            indexName(ndx, name);
         }
         if (!*ptr)
             return;
@@ -180,13 +161,63 @@ void Cli::addArg(std::unique_ptr<ArgBase> src) {
 }
 
 //===========================================================================
-void Cli::addLongName(
-    const string & src,
-    ArgBase * arg,
+void Cli::OptBase::indexName(OptIndex & ndx, const string & name) {
+    const bool invert = true;
+    const bool optional = true;
+
+    switch (name[0]) {
+    case '-': assert(name[0] != '-' && "bad argument name"); return;
+    case '[':
+        ndx.argNames.push_back({this, !invert, optional, name.data() + 1});
+        return;
+    case '<':
+        auto where =
+            find_if(ndx.argNames.begin(), ndx.argNames.end(), [](auto && key) {
+                return key.optional;
+            });
+        ndx.argNames.insert(
+            where, {this, !invert, !optional, name.data() + 1});
+        return;
+    }
+    if (name.size() == 1) {
+        ndx.shortNames[name[0]] = {this, !invert, !optional};
+        return;
+    }
+    switch (name[0]) {
+    case '!':
+        if (!m_bool) {
+            assert(!m_bool && "bad modifier '!' for non-bool argument");
+            return;
+        }
+        if (name.size() == 2) {
+            ndx.shortNames[name[1]] = {this, invert, !optional};
+        } else {
+            indexLongName(ndx, name.substr(1), invert, !optional);
+        }
+        return;
+    case '?':
+        if (m_bool) {
+            assert(!m_bool && "bad modifier '?' for bool argument");
+            return;
+        }
+        if (name.size() == 2) {
+            ndx.shortNames[name[1]] = {this, !invert, optional};
+        } else {
+            indexLongName(ndx, name.substr(1), !invert, optional);
+        }
+        return;
+    }
+    indexLongName(ndx, name, !invert, !optional);
+}
+
+//===========================================================================
+void Cli::OptBase::indexLongName(
+    OptIndex & ndx,
+    const string & name,
     bool invert,
     bool optional) {
     bool allowNo = true;
-    string key{src};
+    string key{name};
     if (key.back() == '.') {
         allowNo = false;
         if (key.size() == 2) {
@@ -195,58 +226,9 @@ void Cli::addLongName(
         }
         key.pop_back();
     }
-    m_longNames[key] = {arg, invert, optional};
-    if (arg->m_bool && allowNo)
-        m_longNames["no-" + key] = {arg, !invert, optional};
-}
-
-//===========================================================================
-void Cli::addArgName(const string & name, ArgBase * arg) {
-    const bool invert = true;
-    const bool optional = true;
-
-    switch (name[0]) {
-    case '-': assert(name[0] != '-' && "bad argument name"); return;
-    case '[':
-        m_argNames.push_back({arg, !invert, optional, name.data() + 1});
-        return;
-    case '<':
-        auto where =
-            find_if(m_argNames.begin(), m_argNames.end(), [](auto && key) {
-            return key.optional;
-        });
-        m_argNames.insert(where, {arg, !invert, !optional, name.data() + 1});
-        return;
-    }
-    if (name.size() == 1) {
-        m_shortNames[name[0]] = {arg, !invert, !optional};
-        return;
-    }
-    switch (name[0]) {
-    case '!':
-        if (!arg->m_bool) {
-            assert(!arg->m_bool && "bad modifier '!' for non-bool argument");
-            return;
-        }
-        if (name.size() == 2) {
-            m_shortNames[name[1]] = {arg, invert, !optional};
-        } else {
-            addLongName(name.substr(1), arg, invert, !optional);
-        }
-        return;
-    case '?':
-        if (arg->m_bool) {
-            assert(!arg->m_bool && "bad modifier '?' for bool argument");
-            return;
-        }
-        if (name.size() == 2) {
-            m_shortNames[name[1]] = {arg, !invert, optional};
-        } else {
-            addLongName(name.substr(1), arg, !invert, optional);
-        }
-        return;
-    }
-    addLongName(name, arg, !invert, !optional);
+    ndx.longNames[key] = {this, invert, optional};
+    if (m_bool && allowNo)
+        ndx.longNames["no-" + key] = {this, !invert, optional};
 }
 
 
@@ -257,21 +239,193 @@ void Cli::addArgName(const string & name, ArgBase * arg) {
 ***/
 
 //===========================================================================
-static bool
-helpAction(Cli & cli, Cli::Arg<bool> & arg, const std::string & val) {
-    stringTo(*arg, val);
-    if (*arg) {
-        cli.writeHelp(cout);
+static bool helpAction(Cli & cli, Cli::Opt<bool> & opt, const string & val) {
+    stringTo(*opt, val);
+    if (*opt) {
+        cli.writeHelp(cout, {}, cli.runCommand());
         return false;
     }
     return true;
 }
 
 //===========================================================================
-bool Cli::defaultAction(ArgBase & arg, const std::string & val) {
-    if (!arg.parseValue(val))
-        return badUsage("Invalid '" + arg.from() + "' value: " + val);
+bool Cli::defaultAction(OptBase & opt, const string & val) {
+    if (!opt.parseValue(val))
+        return badUsage("Invalid '" + opt.from() + "' value: " + val);
     return true;
+}
+
+//===========================================================================
+static int cmdAction(Cli & cli, const string & cmd) {
+    ignore = cli;
+    cerr << "Command '" << cmd << "' has not been implemented." << endl;
+    return kExitSoftware;
+}
+
+
+/****************************************************************************
+*
+*   Cli
+*
+***/
+
+//===========================================================================
+// Default constructor creates a handle to the shared configuration, this
+// allows options to be statically registered from multiple source files.
+Cli::Cli() {
+    static auto s_cfg = make_shared<Config>();
+    m_cfg = s_cfg;
+    helpOpt();
+}
+
+//===========================================================================
+// protected
+Cli::Cli(shared_ptr<Config> cfg, const string & command, const string & group)
+    : m_cfg(cfg)
+    , m_command(command)
+    , m_group(group) {
+    helpOpt();
+}
+
+
+/****************************************************************************
+*
+*   Configuration
+*
+***/
+
+//===========================================================================
+Cli::Opt<bool> &
+Cli::versionOpt(const string & version, const string & progName) {
+    auto verAction = [version, progName](auto & cli, auto & opt, auto & val) {
+        ignore = opt, val;
+        fs::path prog = progName;
+        if (prog.empty()) {
+            prog = cli.progName();
+            prog = prog.stem();
+        }
+        cout << prog << " version " << version << endl;
+        return false;
+    };
+    return opt<bool>("version.")
+        .desc("Show version and exit.")
+        .action(verAction)
+        .group(s_internalOptionGroup);
+}
+
+//===========================================================================
+Cli::Opt<bool> & Cli::helpOpt() {
+    auto & cmd = cmdCfg();
+    if (!cmd.helpOpt) {
+        cmd.helpOpt = &opt<bool>("help.")
+                           .desc("Show this message and exit.")
+                           .action(helpAction)
+                           .group(s_internalOptionGroup);
+        if (!m_command.empty())
+            cmd.helpOpt->show(false);
+    }
+    return *cmd.helpOpt;
+}
+
+//===========================================================================
+Cli Cli::group(const string & name) {
+    return Cli(m_cfg, m_command, name);
+}
+
+//===========================================================================
+Cli & Cli::title(const string & val) {
+    grpCfg().title = val;
+    return *this;
+}
+
+//===========================================================================
+Cli & Cli::sortKey(const string & val) {
+    grpCfg().sortKey = val;
+    return *this;
+}
+
+//===========================================================================
+const string & Cli::title() const {
+    return grpCfg().title;
+}
+
+//===========================================================================
+const string & Cli::sortKey() const {
+    return grpCfg().sortKey;
+}
+
+//===========================================================================
+Cli Cli::command(const string & name, const string & grpName) {
+    return Cli(m_cfg, name, grpName);
+}
+
+//===========================================================================
+Cli & Cli::action(std::function<ActionFn> fn) {
+    cmdCfg().action = fn;
+    return *this;
+}
+
+//===========================================================================
+Cli & Cli::desc(const std::string & val) {
+    cmdCfg().desc = val;
+    return *this;
+}
+
+//===========================================================================
+Cli & Cli::footer(const std::string & val) {
+    cmdCfg().footer = val;
+    return *this;
+}
+
+//===========================================================================
+const string & Cli::desc() const {
+    return cmdCfg().desc;
+}
+
+//===========================================================================
+const string & Cli::footer() const {
+    return cmdCfg().footer;
+}
+
+//===========================================================================
+void Cli::responseFiles(bool enable) {
+    m_cfg->responseFiles = enable;
+}
+
+//===========================================================================
+Cli::GroupConfig & Cli::grpCfg() {
+    return findGrpAlways(cmdCfg(), m_group);
+}
+
+//===========================================================================
+const Cli::GroupConfig & Cli::grpCfg() const {
+    return const_cast<Cli *>(this)->grpCfg();
+}
+
+//===========================================================================
+Cli::CommandConfig & Cli::cmdCfg() {
+    return findCmdAlways(*m_cfg, m_command);
+}
+
+//===========================================================================
+const Cli::CommandConfig & Cli::cmdCfg() const {
+    return const_cast<Cli *>(this)->cmdCfg();
+}
+
+//===========================================================================
+void Cli::addOpt(unique_ptr<OptBase> src) {
+    m_cfg->opts.push_back(move(src));
+}
+
+//===========================================================================
+Cli::OptBase * Cli::findOpt(const void * value) {
+    if (value) {
+        for (auto && opt : m_cfg->opts) {
+            if (opt->sameValue(value))
+                return opt.get();
+        }
+    }
+    return nullptr;
 }
 
 
@@ -385,49 +539,60 @@ static bool expandResponseFiles(
 
 //===========================================================================
 void Cli::resetValues() {
-    for (auto && arg : m_args) {
-        arg->reset();
+    for (auto && opt : m_cfg->opts) {
+        opt->reset();
     }
-    for (unsigned i = 0; i < size(m_argNames); ++i) {
-        auto & key = m_argNames[i];
+    m_cfg->exitCode = kExitOk;
+    m_cfg->errMsg.clear();
+    m_cfg->progName.clear();
+}
+
+//===========================================================================
+void Cli::index(OptIndex & ndx, const std::string & cmd) const {
+    for (auto && opt : m_cfg->opts) {
+        if (opt->m_command == cmd && opt->m_visible)
+            opt->index(ndx);
+    }
+    for (unsigned i = 0; i < size(ndx.argNames); ++i) {
+        auto & key = ndx.argNames[i];
         if (key.name.empty())
             key.name = "arg" + to_string(i + 1);
     }
-    m_exitCode = kExitOk;
-    m_errMsg.clear();
-    m_progName.clear();
 }
 
 //===========================================================================
 bool Cli::parseAction(
-    ArgBase & arg,
-    const std::string & name,
+    OptBase & opt,
+    const string & name,
     int pos,
     const char ptr[]) {
-    arg.set(name, pos);
+    opt.set(name, pos);
     if (ptr) {
-        return arg.parseAction(*this, ptr);
+        return opt.parseAction(*this, ptr);
     } else {
-        arg.unspecifiedValue();
+        opt.unspecifiedValue();
         return true;
     }
 }
 
 //===========================================================================
 bool Cli::fail(int code, const string & msg) {
-    m_errMsg = msg;
-    m_exitCode = code;
+    m_cfg->errMsg = msg;
+    m_cfg->exitCode = code;
     return false;
 }
 
 //===========================================================================
 bool Cli::parse(vector<string> & args) {
-    // the 0th (name of this program) arg should always be present
+    // the 0th (name of this program) opt should always be present
     assert(!args.empty());
+
+    OptIndex ndx;
+    index(ndx, "");
 
     resetValues();
     set<fs::path> ancestors;
-    if (m_responseFiles && !expandResponseFiles(*this, args, ancestors))
+    if (m_cfg->responseFiles && !expandResponseFiles(*this, args, ancestors))
         return false;
 
     auto arg = args.data();
@@ -436,28 +601,28 @@ bool Cli::parse(vector<string> & args) {
     string name;
     unsigned pos = 0;
     bool moreOpts = true;
-    m_progName = *arg;
+    m_cfg->progName = *arg;
     int argPos = 1;
     arg += 1;
 
     for (; argPos < argc; ++argPos, ++arg) {
-        ArgName argName;
+        OptName argName;
         const char * ptr = arg->c_str();
         if (*ptr == '-' && ptr[1] && moreOpts) {
             ptr += 1;
             for (; *ptr && *ptr != '-'; ++ptr) {
-                auto it = m_shortNames.find(*ptr);
-                if (it == m_shortNames.end()) {
+                auto it = ndx.shortNames.find(*ptr);
+                if (it == ndx.shortNames.end()) {
                     return badUsage("Unknown option: -"s + *ptr);
                 }
                 argName = it->second;
                 name = "-"s + *ptr;
-                if (argName.arg->m_bool) {
+                if (argName.opt->m_bool) {
                     if (!parseAction(
-                        *argName.arg,
-                        name,
-                        argPos,
-                        argName.invert ? "0" : "1"))
+                            *argName.opt,
+                            name,
+                            argPos,
+                            argName.invert ? "0" : "1"))
                         return false;
                     continue;
                 }
@@ -482,21 +647,21 @@ bool Cli::parse(vector<string> & args) {
                 key = ptr;
                 ptr = "";
             }
-            auto it = m_longNames.find(key);
-            if (it == m_longNames.end()) {
+            auto it = ndx.longNames.find(key);
+            if (it == ndx.longNames.end()) {
                 return badUsage("Unknown option: --"s + key);
             }
             argName = it->second;
             name = "--" + key;
-            if (argName.arg->m_bool) {
+            if (argName.opt->m_bool) {
                 if (equal) {
                     return badUsage("Unknown option: " + name + "=");
                 }
                 if (!parseAction(
-                    *argName.arg,
-                    name,
-                    argPos,
-                    argName.invert ? "0" : "1"))
+                        *argName.opt,
+                        name,
+                        argPos,
+                        argName.invert ? "0" : "1"))
                     return false;
                 continue;
             }
@@ -504,25 +669,25 @@ bool Cli::parse(vector<string> & args) {
         }
 
         // positional value
-        if (pos >= size(m_argNames)) {
+        if (pos >= size(ndx.argNames)) {
             return badUsage("Unexpected argument: "s + ptr);
         }
-        argName = m_argNames[pos];
+        argName = ndx.argNames[pos];
         name = argName.name;
-        if (!parseAction(*argName.arg, name, argPos, ptr))
+        if (!parseAction(*argName.opt, name, argPos, ptr))
             return false;
-        if (!argName.arg->m_multiple)
+        if (!argName.opt->m_multiple)
             pos += 1;
         continue;
 
     OPTION_VALUE:
         if (*ptr) {
-            if (!parseAction(*argName.arg, name, argPos, ptr))
+            if (!parseAction(*argName.opt, name, argPos, ptr))
                 return false;
             continue;
         }
         if (argName.optional) {
-            if (!parseAction(*argName.arg, name, argPos, nullptr))
+            if (!parseAction(*argName.opt, name, argPos, nullptr))
                 return false;
             continue;
         }
@@ -531,12 +696,12 @@ bool Cli::parse(vector<string> & args) {
         if (argPos == argc) {
             return badUsage("No value given for " + name);
         }
-        if (!parseAction(*argName.arg, name, argPos, arg->c_str()))
+        if (!parseAction(*argName.opt, name, argPos, arg->c_str()))
             return false;
     }
 
-    if (pos < size(m_argNames) && !m_argNames[pos].optional) {
-        return badUsage("No value given for " + m_argNames[pos].name);
+    if (pos < size(ndx.argNames) && !ndx.argNames[pos].optional) {
+        return badUsage("No value given for " + ndx.argNames[pos].name);
     }
     return true;
 }
@@ -565,6 +730,43 @@ bool Cli::parse(ostream & os, size_t argc, char * argv[]) {
 
 /****************************************************************************
 *
+*   Parse results
+*
+***/
+
+//===========================================================================
+int Cli::exitCode() const {
+    return m_cfg->exitCode;
+};
+
+//===========================================================================
+const string & Cli::errMsg() const {
+    return m_cfg->errMsg;
+}
+
+//===========================================================================
+const string & Cli::progName() const {
+    return m_cfg->progName;
+}
+
+//===========================================================================
+const string & Cli::runCommand() const {
+    return m_cfg->command;
+}
+
+//===========================================================================
+int Cli::run() {
+    auto & name = runCommand();
+    assert(m_cfg->cmds.find(name) != m_cfg->cmds.end());
+    auto & cmd = m_cfg->cmds[name];
+    int code = cmd.action(*this, name);
+    fail(code, "");
+    return code;
+}
+
+
+/****************************************************************************
+*
 *   Help
 *
 ***/
@@ -573,13 +775,13 @@ namespace {
 struct WrapPos {
     size_t pos{0};
     size_t maxWidth{79};
-    std::string prefix;
+    string prefix;
 };
 } // namespace
 
-  //===========================================================================
-  // Write token, potentially adding a line break first.
-static void writeToken(ostream & os, WrapPos & wp, const std::string token) {
+//===========================================================================
+// Write token, potentially adding a line break first.
+static void writeToken(ostream & os, WrapPos & wp, const string token) {
     if (wp.pos + token.size() + 1 > wp.maxWidth) {
         if (wp.pos > wp.prefix.size()) {
             os << '\n' << wp.prefix;
@@ -603,12 +805,20 @@ static void writeText(ostream & os, WrapPos & wp, const string & text) {
             base += 1;
         if (!*base)
             return;
+        const char * nl = strchr(base, '\n');
         const char * ptr = strchr(base, ' ');
         if (!ptr) {
             ptr = text.c_str() + text.size();
         }
-        writeToken(os, wp, string(base, ptr));
-        base = ptr;
+        if (nl && nl < ptr) {
+            writeToken(os, wp, string(base, nl));
+            os << '\n';
+            wp.pos = 0;
+            base = nl + 1;
+        } else {
+            writeToken(os, wp, string(base, ptr));
+            base = ptr;
+        }
     }
 }
 
@@ -630,54 +840,100 @@ writeDescCol(ostream & os, WrapPos & wp, const string & text, size_t descCol) {
 }
 
 //===========================================================================
-int Cli::writeHelp(ostream & os, const string & progName) const {
-    writeUsage(os, progName);
-    writePositionals(os);
-    writeOptions(os);
+int Cli::writeHelp(
+    ostream & os,
+    const string & progName,
+    const string & cmdName) const {
+    auto & cmd = findCmdAlways(*m_cfg, cmdName);
+    writeUsage(os, progName, cmdName);
+    if (!cmd.desc.empty()) {
+        WrapPos wp;
+        writeText(os, wp, cmd.desc);
+    }
+    writePositionals(os, cmdName);
+    writeOptions(os, cmdName);
+    if (!cmd.footer.empty()) {
+        WrapPos wp;
+        writeText(os, wp, cmd.footer);
+    }
     return exitCode();
 }
 
 //===========================================================================
-void Cli::writePositionals(ostream & os) const {
+int Cli::writeUsage(ostream & os, const string & arg0, const string & cmd)
+    const {
+    OptIndex ndx;
+    index(ndx, cmd);
+    streampos base = os.tellp();
+    os << "usage: " << (arg0.empty() ? progName() : arg0);
+    WrapPos wp;
+    wp.maxWidth = 79;
+    wp.pos = os.tellp() - base;
+    wp.prefix = string(wp.pos, ' ');
+    if (!ndx.shortNames.empty() || !ndx.longNames.empty())
+        writeToken(os, wp, "[OPTIONS]");
+    for (auto && pa : ndx.argNames) {
+        string token =
+            pa.name.find(' ') == string::npos ? pa.name : "<" + pa.name + ">";
+        if (pa.opt->m_multiple)
+            token += "...";
+        if (pa.optional) {
+            writeToken(os, wp, "[" + token + "]");
+        } else {
+            writeToken(os, wp, token);
+        }
+    }
+    os << '\n';
+    return exitCode();
+}
+
+//===========================================================================
+void Cli::writePositionals(ostream & os, const string & cmd) const {
+    OptIndex ndx;
+    index(ndx, cmd);
     size_t colWidth = 0;
-    for (auto && pa : m_argNames) {
+    for (auto && pa : ndx.argNames) {
         // find widest positional argument name, with space for <>'s
         colWidth = max(colWidth, pa.name.size() + 2);
     }
     colWidth = max(min(colWidth + 3, kMaxDescCol), kMinDescCol);
 
     WrapPos wp;
-    for (auto && pa : m_argNames) {
+    for (auto && pa : ndx.argNames) {
         wp.prefix.assign(4, ' ');
         writeToken(os, wp, "  " + pa.name);
-        writeDescCol(os, wp, pa.arg->m_desc, colWidth);
+        writeDescCol(os, wp, pa.opt->m_desc, colWidth);
         os << '\n';
         wp.pos = 0;
     }
 }
 
 //===========================================================================
-void Cli::writeOptions(ostream & os) const {
+void Cli::writeOptions(ostream & os, const string & cmdName) const {
+    OptIndex ndx;
+    index(ndx, cmdName);
+    auto & cmd = findCmdAlways(*m_cfg, cmdName);
+
     // find named args and the longest name list
     size_t colWidth = 0;
 
     struct ArgKey {
         string sort; // sort key
         string list;
-        ArgBase * arg;
+        OptBase * opt;
     };
     vector<ArgKey> namedArgs;
-    for (auto && arg : m_args) {
-        string list = optionList(*arg);
+    for (auto && opt : m_cfg->opts) {
+        string list = nameList(*opt, ndx);
         if (size_t width = list.size()) {
             colWidth = max(colWidth, width);
             ArgKey key;
-            key.arg = arg.get();
+            key.opt = opt.get();
             key.list = list;
 
-            // sort by group sort key followed by name list with leading 
+            // sort by group sort key followed by name list with leading
             // dashes removed
-            key.sort = group(arg->m_group).sortKey();
+            key.sort = findGrpAlways(cmd, opt->m_group).sortKey;
             key.sort += '\0';
             key.sort += list.substr(list.find_first_not_of('-'));
             namedArgs.push_back(key);
@@ -689,18 +945,18 @@ void Cli::writeOptions(ostream & os) const {
         return;
 
     sort(namedArgs.begin(), namedArgs.end(), [](auto & a, auto & b) {
-        return tie(a.arg->m_group, a.sort) < tie(b.arg->m_group, b.sort);
+        return tie(a.opt->m_group, a.sort) < tie(b.opt->m_group, b.sort);
     });
 
     WrapPos wp;
     const char * gname{nullptr};
     for (auto && key : namedArgs) {
-        if (!gname || key.arg->m_group != gname) {
-            gname = key.arg->m_group.c_str();
+        if (!gname || key.opt->m_group != gname) {
+            gname = key.opt->m_group.c_str();
             os << '\n';
             wp.pos = 0;
-            auto grp = group(key.arg->m_group);
-            string title = grp.title();
+            auto & grp = findGrpAlways(cmd, key.opt->m_group);
+            string title = grp.title;
             if (title.empty() && gname == s_internalOptionGroup
                 && &key == namedArgs.data()) {
                 // First group and it's the internal group, give it a title
@@ -718,42 +974,17 @@ void Cli::writeOptions(ostream & os) const {
         os << ' ';
         wp.pos = 1;
         writeText(os, wp, key.list);
-        writeDescCol(os, wp, key.arg->m_desc, colWidth);
+        writeDescCol(os, wp, key.opt->m_desc, colWidth);
         os << '\n';
         wp.pos = 0;
     }
 }
 
 //===========================================================================
-int Cli::writeUsage(ostream & os, const string & progName) const {
-    streampos base = os.tellp();
-    os << "usage: " << (progName.empty() ? m_progName : progName) << ' ';
-    WrapPos wp;
-    wp.maxWidth = 79;
-    wp.pos = os.tellp() - base;
-    wp.prefix = string(wp.pos, ' ');
-    if (!m_shortNames.empty() || !m_longNames.empty())
-        writeToken(os, wp, "[OPTIONS]");
-    for (auto && pa : m_argNames) {
-        string token = pa.name.find(' ') == string::npos 
-            ? pa.name : "<" + pa.name + ">";
-        if (pa.arg->m_multiple)
-            token += "...";
-        if (pa.optional) {
-            writeToken(os, wp, "[" + token + "]");
-        } else {
-            writeToken(os, wp, token);
-        }
-    }
-    os << '\n';
-    return exitCode();
-}
-
-//===========================================================================
-string Cli::optionList(ArgBase & arg) const {
-    string list = optionList(arg, true);
-    if (arg.m_bool) {
-        string invert = optionList(arg, false);
+string Cli::nameList(const OptBase & opt, const OptIndex & ndx) const {
+    string list = nameList(opt, ndx, true);
+    if (opt.m_bool) {
+        string invert = nameList(opt, ndx, false);
         if (!invert.empty())
             list += " / " + invert;
     }
@@ -761,15 +992,18 @@ string Cli::optionList(ArgBase & arg) const {
 }
 
 //===========================================================================
-string Cli::optionList(ArgBase & arg, bool enableOptions) const {
+string Cli::nameList(
+    const OptBase & opt,
+    const OptIndex & ndx,
+    bool enableOptions) const {
     string list;
     bool foundLong = false;
     bool optional = false;
 
     // names
-    for (auto && sn : m_shortNames) {
-        if (sn.second.arg != &arg
-            || arg.m_bool && sn.second.invert == enableOptions) {
+    for (auto && sn : ndx.shortNames) {
+        if (sn.second.opt != &opt
+            || opt.m_bool && sn.second.invert == enableOptions) {
             continue;
         }
         optional = sn.second.optional;
@@ -778,9 +1012,9 @@ string Cli::optionList(ArgBase & arg, bool enableOptions) const {
         list += '-';
         list += sn.first;
     }
-    for (auto && ln : m_longNames) {
-        if (ln.second.arg != &arg
-            || arg.m_bool && ln.second.invert == enableOptions) {
+    for (auto && ln : ndx.longNames) {
+        if (ln.second.opt != &opt
+            || opt.m_bool && ln.second.invert == enableOptions) {
             continue;
         }
         optional = ln.second.optional;
@@ -789,16 +1023,27 @@ string Cli::optionList(ArgBase & arg, bool enableOptions) const {
         foundLong = true;
         list += "--" + ln.first;
     }
-    if (arg.m_bool || list.empty())
+    if (opt.m_bool || list.empty())
         return list;
 
     // value
     if (optional) {
         list += foundLong ? "[=" : " [";
-        list += arg.m_valueDesc + "]";
+        list += opt.m_valueDesc + "]";
     } else {
         list += foundLong ? '=' : ' ';
-        list += arg.m_valueDesc;
+        list += opt.m_valueDesc;
     }
     return list;
 }
+
+
+/****************************************************************************
+*
+*   CliLocal
+*
+***/
+
+//===========================================================================
+CliLocal::CliLocal()
+    : Cli(make_shared<Config>(), "", "") {}
