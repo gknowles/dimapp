@@ -627,7 +627,7 @@ static bool delayConflicts(
             success = false;
             if (logError) {
                 logMsgError() << "Conflicting parse events, " << sv.elem->name
-                              << " at " << sti.m_path;
+                              << " at " << kLeftQ << sti.m_path << kRightQ;
             }
             break;
         }
@@ -672,7 +672,7 @@ static bool resolveEventConflicts(State & st, const StateTreeInfo & sti) {
 
 //===========================================================================
 static void appendHexChar(string & out, unsigned nibble) {
-    out += nibble > 9 ? 'a' + (char) nibble : '0' + (char) nibble;
+    out += nibble > 9 ? 'a' + (char) nibble - 10 : '0' + (char) nibble;
 }
 
 //===========================================================================
@@ -728,7 +728,7 @@ static void buildStateTree(
                              || spt.first.events != nspt.first.events)) {
                             errors = true;
                             logMsgError() << "Multiple recursive targets, "
-                                          << sti.m_path;
+                                          << kLeftQ << sti.m_path << kRightQ;
                             break;
                         }
                     }
@@ -755,7 +755,7 @@ static void buildStateTree(
                 logMsgInfo() << sti.m_nextStateId << " states, "
                              << sti.m_transitions << " trans, "
                              << sti.m_path.size() << " chars, "
-                             << st2->positions.size() << " exits, ..." << show;
+                             << st2->positions.size() << " exits, " << kLeftQ << show << kRightQ;
                 // if (sti.m_path.size() > 10) errors = true;
                 if (!errors)
                     buildStateTree(st2, states, sti);

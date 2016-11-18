@@ -135,6 +135,9 @@ void markFunction(Grammar & rules, Element & rule, bool resetFirst);
 *
 ***/
 
+const char kLeftQ[] = ": ";
+const char kRightQ[] = " :";
+
 const char kRootStateName[] = "<ROOT>";
 const char kDoneStateName[] = "<DONE>";
 const char kFailedStateName[] = "<FAILED>";

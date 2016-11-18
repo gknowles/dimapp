@@ -299,17 +299,33 @@ static void writeStateName(
     size_t maxWidth,
     const string & prefix) {
     size_t space = maxWidth - size(prefix);
+    assert(space > 4);
     size_t count = name.size();
     size_t pos = 0;
     size_t num = min({space, count});
     os << prefix;
     for (;;) {
+        // don't end a line with ' ', use ^x20 or adjust fit
+        if (name[pos + num - 1] == ' ') {
+            for (;;) {
+                if (num + 3 < space) {
+                    os.write(name.data() + pos, num - 1);
+                    os << "^x20";
+                    goto NEXT_LINE;
+                }
+                num -= 1;
+                if (name[pos + num - 1] != ' ') 
+                    break;
+            }
+        }
         os.write(name.data() + pos, num);
         if (name[pos + num - 1] == '\\') {
             // extra space because a trailing backslash would cause the comment
             // to be extended to the next line by the c++ compiler
             os << ' ';
         }
+
+    NEXT_LINE:
         pos += num;
         count -= num;
         if (!count)
@@ -366,7 +382,11 @@ static void writeParserState(
     bool inclStatePositions) {
     os << "\nstate" << st.id << ":\n";
     vector<string> aliases = st.aliases;
-    aliases.push_back(to_string(st.id) + ": " + st.name + "...");
+    if (st.name.empty()) {
+        aliases.push_back(to_string(st.id) + ":");
+    } else {
+        aliases.push_back(to_string(st.id) + ": " + st.name);
+    }
     sort(aliases.begin(), aliases.end(), [](auto && a, auto && b) {
         return strtoul(a.c_str(), nullptr, 10)
             < strtoul(b.c_str(), nullptr, 10);
