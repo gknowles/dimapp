@@ -22,9 +22,9 @@ static RunOptions s_cmdopts;
 ***/
 
 #ifdef NDEBUG
-static bool s_allRules = true;
+static bool s_minRules = false;
 #else
-static bool s_allRules = false;
+static bool s_minRules = true;
 #endif
 
 //===========================================================================
@@ -48,7 +48,7 @@ SP      =  %x20
 VCHAR   =  %x21-7E
 WSP     =  SP / HTAB
 )";
-    if (!s_allRules) {
+    if (s_minRules) {
         coreRules = R"(
 ALPHA   =  %x5A
 BIT     =  "0" / "1"
@@ -270,7 +270,7 @@ void Application::onTask() {
     auto & help = cli.opt<bool>("? h").desc("Show this message and exit.");
     auto & test =
         cli.opt<bool>("test.").desc("Run internal test of ABNF parsing logic");
-    cli.opt(&s_allRules, "!min-core", s_allRules)
+    cli.opt(&s_minRules, "min-core", s_minRules)
         .desc("Use reduced core rules: ALPHA, DIGIT, CRLF, HEXDIG, NEWLINE, "
               "VCHAR, and WSP are shortened to fewer (usually 1) characters.");
     cli.opt(&s_cmdopts.markFunction, "f mark-functions", 0).valueDesc("LEVEL");
