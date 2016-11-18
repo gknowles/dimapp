@@ -211,7 +211,7 @@ Testing options:
         runs internal test of ABNF parsing logic
 
 For additional information, see:
-https://github.com/gknowles/dimapp/tree/master/tools/pargen
+https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
 )";
 }
 
@@ -256,18 +256,38 @@ void Application::onTask() {
 
     Cli cli;
     // positional arguments
-    auto & srcfile = cli.opt(&m_srcfile, "[file]");
-    cli.opt(&m_root, "[root rule]");
+    auto & srcfile = cli.opt(&m_srcfile, "[file]")
+                         .desc("File containing ABNF rules to process");
+    cli.opt(&m_root, "[root rule]")
+        .desc("Root rule to use, overrides %root in <source file>");
     // named arguments
-    auto & help = cli.opt<bool>("? h help");
-    auto & test = cli.opt<bool>("test");
-    cli.opt(&s_allRules, "!min-core", s_allRules);
-    cli.opt(&s_cmdopts.markFunction, "f mark-functions", 0);
-    cli.opt(&s_cmdopts.includeCallbacks, "!C callbacks", true);
-    cli.opt(&s_cmdopts.buildStateTree, "!B build", true);
-    cli.opt(&s_cmdopts.dedupStateTree, "!D dedup", true);
-    cli.opt(&s_cmdopts.writeStatePositions, "s state-detail");
-    cli.opt(&s_cmdopts.writeFunctions, "write-functions", true);
+    auto & help = cli.opt<bool>("? h").desc("Show this message and exit.");
+    auto & test =
+        cli.opt<bool>("test.").desc("Run internal test of ABNF parsing logic");
+    cli.opt(&s_allRules, "!min-core", s_allRules)
+        .desc("Use reduced core rules: ALPHA, DIGIT, CRLF, HEXDIG, NEWLINE, "
+              "VCHAR, and WSP are shortened to fewer (usually 1) characters.");
+    cli.opt(&s_cmdopts.markFunction, "f mark-functions", 0).valueDesc("LEVEL");
+    cli.opt(&s_cmdopts.includeCallbacks, "!C callbacks", true)
+        .desc("Include callback events, otherwise generated parser reduced "
+              "down to pass/fail syntax check.");
+    cli.opt(&s_cmdopts.buildStateTree, "!B build", true)
+        .desc("Build the state tree, otherwise only stub versions of parser "
+              "are generated.");
+    cli.opt(&s_cmdopts.dedupStateTree, "!D dedup", true)
+        .desc("Purge duplicate entries from the state tree, duplicates occur "
+              "when multiple paths through the rules end with the same series "
+              "of transitions.");
+    cli.opt(&s_cmdopts.writeStatePositions, "s state-detail.")
+        .desc("Include details of the states as comments in the generated "
+              "parser code - may be extremely verbose.");
+    cli.opt(&s_cmdopts.writeFunctions, "write-functions", true)
+        .desc("Generate recursion breaking dependent functions.\n"
+              "NOTE: If disabled generated files may not be compilable.");
+    cli.footer(R"(
+For additional information, see:
+https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
+)");
     if (!cli.parse(m_argc, m_argv)) {
         if (int code = cli.exitCode()) {
             assert(code == EX_USAGE);

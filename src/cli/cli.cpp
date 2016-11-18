@@ -812,8 +812,8 @@ static void writeText(ostream & os, WrapPos & wp, const string & text) {
         }
         if (nl && nl < ptr) {
             writeToken(os, wp, string(base, nl));
-            os << '\n';
-            wp.pos = 0;
+            os << '\n' << wp.prefix;
+            wp.pos = wp.prefix.size();
             base = nl + 1;
         } else {
             writeToken(os, wp, string(base, ptr));
