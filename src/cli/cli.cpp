@@ -54,6 +54,7 @@ struct Cli::GroupConfig {
 
 struct Cli::CommandConfig {
     string name;
+    string header;
     string desc;
     string footer;
     std::function<Cli::ActionFn> action;
@@ -366,6 +367,12 @@ Cli & Cli::action(std::function<ActionFn> fn) {
 }
 
 //===========================================================================
+Cli & Cli::header(const std::string & val) {
+    cmdCfg().header = val;
+    return *this;
+}
+
+//===========================================================================
 Cli & Cli::desc(const std::string & val) {
     cmdCfg().desc = val;
     return *this;
@@ -375,6 +382,11 @@ Cli & Cli::desc(const std::string & val) {
 Cli & Cli::footer(const std::string & val) {
     cmdCfg().footer = val;
     return *this;
+}
+
+//===========================================================================
+const string & Cli::header() const {
+    return cmdCfg().header;
 }
 
 //===========================================================================
@@ -780,12 +792,17 @@ struct WrapPos {
 } // namespace
 
 //===========================================================================
+static void writeNewline(ostream & os, WrapPos & wp) {
+    os << '\n' << wp.prefix;
+    wp.pos = wp.prefix.size();
+}
+
+//===========================================================================
 // Write token, potentially adding a line break first.
 static void writeToken(ostream & os, WrapPos & wp, const string token) {
     if (wp.pos + token.size() + 1 > wp.maxWidth) {
         if (wp.pos > wp.prefix.size()) {
-            os << '\n' << wp.prefix;
-            wp.pos = wp.prefix.size();
+            writeNewline(os, wp);
         }
     }
     if (wp.pos) {
@@ -812,8 +829,7 @@ static void writeText(ostream & os, WrapPos & wp, const string & text) {
         }
         if (nl && nl < ptr) {
             writeToken(os, wp, string(base, nl));
-            os << '\n' << wp.prefix;
-            wp.pos = wp.prefix.size();
+            writeNewline(os, wp);
             base = nl + 1;
         } else {
             writeToken(os, wp, string(base, ptr));
@@ -845,6 +861,11 @@ int Cli::writeHelp(
     const string & progName,
     const string & cmdName) const {
     auto & cmd = findCmdAlways(*m_cfg, cmdName);
+    if (!cmd.header.empty()) {
+        WrapPos wp;
+        writeText(os, wp, cmd.header);
+        writeNewline(os, wp);
+    }
     writeUsage(os, progName, cmdName);
     if (!cmd.desc.empty()) {
         WrapPos wp;
@@ -953,8 +974,7 @@ void Cli::writeOptions(ostream & os, const string & cmdName) const {
     for (auto && key : namedArgs) {
         if (!gname || key.opt->m_group != gname) {
             gname = key.opt->m_group.c_str();
-            os << '\n';
-            wp.pos = 0;
+            writeNewline(os, wp);
             auto & grp = findGrpAlways(cmd, key.opt->m_group);
             string title = grp.title;
             if (title.empty() && gname == s_internalOptionGroup
@@ -966,8 +986,7 @@ void Cli::writeOptions(ostream & os, const string & cmdName) const {
             if (!title.empty()) {
                 wp.prefix.clear();
                 writeText(os, wp, title + ":");
-                os << '\n';
-                wp.pos = 0;
+                writeNewline(os, wp);
             }
         }
         wp.prefix.assign(4, ' ');
@@ -975,8 +994,8 @@ void Cli::writeOptions(ostream & os, const string & cmdName) const {
         wp.pos = 1;
         writeText(os, wp, key.list);
         writeDescCol(os, wp, key.opt->m_desc, colWidth);
-        os << '\n';
-        wp.pos = 0;
+        wp.prefix.clear();
+        writeNewline(os, wp);
     }
 }
 

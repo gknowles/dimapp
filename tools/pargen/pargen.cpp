@@ -255,12 +255,18 @@ void Application::onTask() {
     m_logQ = taskCreateQueue("Logging", 1);
 
     Cli cli;
+    // header
+    const char version[] = "0.1.0";
+    cli.header(
+        "pargen v"s + version + " (" __DATE__
+        + ") simplistic parser generator\n");
     // positional arguments
     auto & srcfile = cli.opt(&m_srcfile, "[file]")
                          .desc("File containing ABNF rules to process");
     cli.opt(&m_root, "[root rule]")
         .desc("Root rule to use, overrides %root in <source file>");
-    // named arguments
+    // options
+    cli.versionOpt(version);
     auto & help = cli.opt<bool>("? h").desc("Show this message and exit.");
     auto & test =
         cli.opt<bool>("test.").desc("Run internal test of ABNF parsing logic");
@@ -284,6 +290,7 @@ void Application::onTask() {
     cli.opt(&s_cmdopts.writeFunctions, "write-functions", true)
         .desc("Generate recursion breaking dependent functions.\n"
               "NOTE: If disabled generated files may not be compilable.");
+    // footer
     cli.footer(R"(
 For additional information, see:
 https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
