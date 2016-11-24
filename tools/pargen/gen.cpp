@@ -672,7 +672,7 @@ static bool resolveEventConflicts(State & st, const StateTreeInfo & sti) {
 
 //===========================================================================
 static void appendHexChar(string & out, unsigned nibble) {
-    out += nibble > 9 ? 'a' + (char) nibble - 10 : '0' + (char) nibble;
+    out += nibble > 9 ? 'a' + (char)nibble - 10 : '0' + (char)nibble;
 }
 
 //===========================================================================
@@ -694,7 +694,7 @@ static void buildStateTree(
         if (i < ' ' || i == '^' || i >= 127) {
             sti.m_path.push_back('^');
             if (i < ' ') {
-                sti.m_path.push_back((char) i + '@');
+                sti.m_path.push_back((char)i + '@');
             } else if (i == 256) {
                 sti.m_path.push_back('*');
             } else {
@@ -752,10 +752,11 @@ static void buildStateTree(
                 if (sti.m_path.size() > 40) {
                     show += sti.m_path.size() - 40;
                 }
-                logMsgInfo() << sti.m_nextStateId << " states, "
-                             << sti.m_transitions << " trans, "
-                             << sti.m_path.size() << " chars, "
-                             << st2->positions.size() << " exits, " << kLeftQ << show << kRightQ;
+                logMsgInfo()
+                    << sti.m_nextStateId << " states, " << sti.m_transitions
+                    << " trans, " << sti.m_path.size() << " chars, "
+                    << st2->positions.size() << " exits, " << kLeftQ << show
+                    << kRightQ;
                 // if (sti.m_path.size() > 10) errors = true;
                 if (!errors)
                     buildStateTree(st2, states, sti);

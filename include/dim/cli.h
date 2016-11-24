@@ -537,7 +537,7 @@ public:
     // of the choices are allowed. Useful for things like enums where there is
     // a controlled set of possible values.
     //
-    // In help text choices are sorted first by sortKey and then by the order 
+    // In help text choices are sorted first by sortKey and then by the order
     // they were added.
     A & choice(
         const T & val,

@@ -947,9 +947,11 @@ writeDescCol(ostream & os, WrapPos & wp, const string & text, size_t descCol) {
 }
 
 //===========================================================================
-static void 
-writeChoices(ostream & os, WrapPos & wp, const 
-    std::unordered_map<std::string, Cli::OptBase::ChoiceDesc> & choices) {
+static void writeChoices(
+    ostream & os,
+    WrapPos & wp,
+    const std::unordered_map<std::string, Cli::OptBase::ChoiceDesc> &
+        choices) {
     if (choices.empty())
         return;
     size_t colWidth = 0;

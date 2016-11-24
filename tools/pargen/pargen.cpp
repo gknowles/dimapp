@@ -159,8 +159,8 @@ void LogTask::onTask() {
 ***/
 
 //===========================================================================
-static void usageError(
-    ostream & os, const string & msg, const string & detail = {}) {
+static void
+usageError(ostream & os, const string & msg, const string & detail = {}) {
     os << msg;
     if (detail.size())
         os << '\n' << detail;
@@ -226,12 +226,13 @@ void Application::onTask() {
     // options
     cli.versionOpt(version);
     auto & help = cli.opt<bool>("? h").desc("Show this message and exit.");
-    auto & test =
-        cli.opt<bool>("test.").desc("Run internal test of ABNF parsing logic.");
+    auto & test = cli.opt<bool>("test.").desc(
+        "Run internal test of ABNF parsing logic.");
     cli.opt(&s_minRules, "min-core", s_minRules)
         .desc("Use reduced core rules: ALPHA, DIGIT, CRLF, HEXDIG, NEWLINE, "
               "VCHAR, and WSP are shortened to fewer (usually 1) characters.");
-    cli.opt(&s_cmdopts.markFunction, "f mark-functions", 0).valueDesc("LEVEL")
+    cli.opt(&s_cmdopts.markFunction, "f mark-functions", 0)
+        .valueDesc("LEVEL")
         .desc("Strength of function tag preprocessing.")
         .choice(0, "0", "No change to function tags (default).")
         .choice(1, "1", "Add function tags to break rule recursion.")

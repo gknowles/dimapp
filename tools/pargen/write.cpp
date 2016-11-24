@@ -314,7 +314,7 @@ static void writeStateName(
                     goto NEXT_LINE;
                 }
                 num -= 1;
-                if (name[pos + num - 1] != ' ') 
+                if (name[pos + num - 1] != ' ')
                     break;
             }
         }
