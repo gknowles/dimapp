@@ -159,60 +159,18 @@ void LogTask::onTask() {
 ***/
 
 //===========================================================================
-static void usageError(ostream & os, const string & msg) {
-    os << msg << R"(
+static void usageError(
+    ostream & os, const string & msg, const string & detail = {}) {
+    os << msg;
+    if (detail.size())
+        os << '\n' << detail;
+    os << R"(
 usage: pargen [-?, -h, --help] [-f, --mark-functions=#] [-C, --no-callbacks] 
               [--min-core] [-B, --no-build] [-D, --no-dedup] [--state-detail]
               [--no-write-functions]
               <source file[.abnf]> [<root rule>]
 )";
     appSignalShutdown(EX_USAGE);
-}
-
-//===========================================================================
-static void printSyntax(ostream & os) {
-    os << "pargen v0.1.0 (" __DATE__ ") - simplistic parser generator";
-    os << R"(
-usage: pargen [OPTIONS] file[.abnf] [root rule]
-    <file>          file containing ABNF rules to process
-    <root rule>     root rule to use, overrides %root in <source file>
-
-Options:
-    -?, -h, --help
-        Print this message.
-    -f, --mark-functions=LEVEL
-        Function tag preprocessing level:
-            0 - no change to function tags (default)
-            1 - add function tags to break rule recursion
-            2 - same as #1, but remove all existing tags first
-    -C, --no-callbacks
-        Suppress all callback events, reduces generated parser down to 
-        pass/fail syntax check.
-
-Testing options:
-    --[no-]min-core
-        Use reduced core rules: ALPHA, DIGIT, CRLF, HEXDIG, NEWLINE, 
-        VCHAR, and WSP are shortened to fewer (usually 1) characters.
-    -B, --no-build
-        Skip building the state tree, only stub versions of parser are
-        generated.
-    -D, --no-dedup
-        Skip purging duplicate entries from the state tree, duplicates
-        occur when multiple paths through the rules end with the same
-        series of transitions.
-    -s, --[no-]state-detail
-        Include details of the states as comments in the generated parser
-        code - may be extremely verbose.
-    --no-write-functions
-        Skip generation of recursion breaking dependent functions (enabled
-        by default).
-        NOTE: generated files may not be compilable
-    --test
-        runs internal test of ABNF parsing logic
-
-For additional information, see:
-https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
-)";
 }
 
 
@@ -262,18 +220,22 @@ void Application::onTask() {
         + ") simplistic parser generator\n");
     // positional arguments
     auto & srcfile = cli.opt(&m_srcfile, "[file]")
-                         .desc("File containing ABNF rules to process");
+                         .desc("File containing ABNF rules to process.");
     cli.opt(&m_root, "[root rule]")
-        .desc("Root rule to use, overrides %root in <source file>");
+        .desc("Root rule to use, overrides %root in <source file>.");
     // options
     cli.versionOpt(version);
     auto & help = cli.opt<bool>("? h").desc("Show this message and exit.");
     auto & test =
-        cli.opt<bool>("test.").desc("Run internal test of ABNF parsing logic");
+        cli.opt<bool>("test.").desc("Run internal test of ABNF parsing logic.");
     cli.opt(&s_minRules, "min-core", s_minRules)
         .desc("Use reduced core rules: ALPHA, DIGIT, CRLF, HEXDIG, NEWLINE, "
               "VCHAR, and WSP are shortened to fewer (usually 1) characters.");
-    cli.opt(&s_cmdopts.markFunction, "f mark-functions", 0).valueDesc("LEVEL");
+    cli.opt(&s_cmdopts.markFunction, "f mark-functions", 0).valueDesc("LEVEL")
+        .desc("Strength of function tag preprocessing.")
+        .choice(0, "0", "No change to function tags (default).")
+        .choice(1, "1", "Add function tags to break rule recursion.")
+        .choice(2, "2", "Same as #1, but remove all existing tags first.");
     cli.opt(&s_cmdopts.includeCallbacks, "!C callbacks", true)
         .desc("Include callback events, otherwise generated parser reduced "
               "down to pass/fail syntax check.");
@@ -291,20 +253,20 @@ void Application::onTask() {
         .desc("Generate recursion breaking dependent functions.\n"
               "NOTE: If disabled generated files may not be compilable.");
     // footer
-    cli.footer(R"(
+    cli.footer(1 + R"(
 For additional information, see:
 https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
 )");
     if (!cli.parse(m_argc, m_argv)) {
         if (int code = cli.exitCode()) {
             assert(code == EX_USAGE);
-            return usageError(cerr, cli.errMsg());
+            return usageError(cerr, cli.errMsg(), cli.errDetail());
         } else {
             return appSignalShutdown(code);
         }
     }
     if (*help || m_argc == 1) {
-        printSyntax(cout);
+        cli.writeHelp(cout);
         return appSignalShutdown(EX_OK);
     }
     if (*test) {
@@ -312,7 +274,7 @@ https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
         return appSignalShutdown(code);
     }
     if (!srcfile) {
-        return usageError(cerr, "No value given for " + srcfile.from());
+        return usageError(cerr, "No value given for <source file[.abnf]>");
     }
 
     // process abnf file
