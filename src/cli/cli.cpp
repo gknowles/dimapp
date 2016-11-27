@@ -34,9 +34,9 @@ const string s_internalOptionGroup = "~";
 namespace {
 struct OptName {
     Cli::OptBase * opt;
-    bool invert;      // set to false instead of true (only for bools)
-    bool optional;    // value doesn't have to be present? (non-bools only)
-    std::string name; // name of argument (only for positionals)
+    bool invert;   // set to false instead of true (only for bools)
+    bool optional; // value doesn't have to be present? (non-bools only)
+    string name;   // name of argument (only for positionals)
 };
 } // namespace
 
@@ -58,7 +58,7 @@ struct Cli::CommandConfig {
     string header;
     string desc;
     string footer;
-    std::function<Cli::ActionFn> action;
+    function<Cli::ActionFn> action;
     Opt<bool> * helpOpt{nullptr};
     unordered_map<string, GroupConfig> groups;
 };
@@ -67,7 +67,7 @@ struct Cli::Config {
     bool constructed{false};
 
     unordered_map<string, CommandConfig> cmds;
-    std::list<std::unique_ptr<OptBase>> opts;
+    list<unique_ptr<OptBase>> opts;
     bool responseFiles{true};
 
     int exitCode{0};
@@ -133,7 +133,27 @@ static fs::path displayName(const fs::path & file) {
 //===========================================================================
 Cli::OptBase::OptBase(const string & names, bool boolean)
     : m_bool{boolean}
-    , m_names{names} {}
+    , m_names{names} {
+    // set m_fromName and assert if names is malformed
+    OptIndex ndx;
+    index(ndx);
+}
+
+//===========================================================================
+void Cli::OptBase::setNameIfEmpty(const string & name) {
+    if (m_fromName.empty())
+        m_fromName = name;
+}
+
+//===========================================================================
+string Cli::OptBase::defaultPrompt() const {
+    string name = m_fromName;
+    while (name.size() && name[0] == '-')
+        name.erase(0, 1);
+    if (name.size())
+        name[0] = (char)toupper(name[0]);
+    return name;
+}
 
 //===========================================================================
 void Cli::OptBase::index(OptIndex & ndx) {
@@ -176,53 +196,59 @@ void Cli::OptBase::indexName(OptIndex & ndx, const string & name) {
     const bool invert = true;
     const bool optional = true;
 
+    auto where = ndx.argNames.end();
     switch (name[0]) {
     case '-': assert(name[0] != '-' && "bad argument name"); return;
     case '[':
         ndx.argNames.push_back({this, !invert, optional, name.data() + 1});
-        if (m_command.empty())
-            ndx.allowCommands = false;
-        return;
+        where = ndx.argNames.end() - 1;
+        goto INDEX_POS_NAME;
     case '<':
-        auto where =
+        where =
             find_if(ndx.argNames.begin(), ndx.argNames.end(), [](auto && key) {
                 return key.optional;
             });
-        ndx.argNames.insert(
+        where = ndx.argNames.insert(
             where, {this, !invert, !optional, name.data() + 1});
+    INDEX_POS_NAME:
+        setNameIfEmpty(where->name);
         if (m_command.empty())
             ndx.allowCommands = false;
         return;
     }
-    if (name.size() == 1) {
-        ndx.shortNames[name[0]] = {this, !invert, !optional};
-        return;
-    }
+    if (name.size() == 1)
+        return indexShortName(ndx, name[0], !invert, !optional);
     switch (name[0]) {
     case '!':
         if (!m_bool) {
             assert(!m_bool && "bad modifier '!' for non-bool argument");
             return;
         }
-        if (name.size() == 2) {
-            ndx.shortNames[name[1]] = {this, invert, !optional};
-        } else {
-            indexLongName(ndx, name.substr(1), invert, !optional);
-        }
+        if (name.size() == 2)
+            return indexShortName(ndx, name[1], invert, !optional);
+        indexLongName(ndx, name.substr(1), invert, !optional);
         return;
     case '?':
         if (m_bool) {
             assert(!m_bool && "bad modifier '?' for bool argument");
             return;
         }
-        if (name.size() == 2) {
-            ndx.shortNames[name[1]] = {this, !invert, optional};
-        } else {
-            indexLongName(ndx, name.substr(1), !invert, optional);
-        }
+        if (name.size() == 2)
+            return indexShortName(ndx, name[1], !invert, optional);
+        indexLongName(ndx, name.substr(1), !invert, optional);
         return;
     }
     indexLongName(ndx, name, !invert, !optional);
+}
+
+//===========================================================================
+void Cli::OptBase::indexShortName(
+    OptIndex & ndx,
+    char name,
+    bool invert,
+    bool optional) {
+    ndx.shortNames[name] = {this, invert, optional};
+    setNameIfEmpty('-' + string(1, name));
 }
 
 //===========================================================================
@@ -241,6 +267,7 @@ void Cli::OptBase::indexLongName(
         }
         key.pop_back();
     }
+    setNameIfEmpty("--" + key);
     ndx.longNames[key] = {this, invert, optional};
     if (m_bool && allowNo)
         ndx.longNames["no-" + key] = {this, !invert, optional};
@@ -264,7 +291,7 @@ static bool helpAction(Cli & cli, Cli::Opt<bool> & opt, const string & val) {
 }
 
 //===========================================================================
-bool Cli::defaultAction(OptBase & opt, const string & val) {
+bool Cli::defaultParse(OptBase & opt, const string & val) {
     if (!opt.parseValue(val)) {
         badUsage("Invalid '" + opt.from() + "' value", val);
         if (!opt.m_choiceDescs.empty()) {
@@ -332,6 +359,38 @@ Cli::Cli(shared_ptr<Config> cfg)
 ***/
 
 //===========================================================================
+Cli::Opt<bool> & Cli::confirmOpt(const string & prompt) {
+    auto & ask = opt<bool>("y yes")
+                     .desc("Suppress prompting to allow execution.")
+                     .check([](auto &, auto & opt, auto &) { return *opt; })
+                     .prompt(prompt.empty() ? "Are you sure?" : prompt);
+    return ask;
+}
+
+//===========================================================================
+Cli::Opt<bool> & Cli::helpOpt() {
+    auto & cmd = cmdCfg();
+    if (cmd.helpOpt)
+        return *cmd.helpOpt;
+
+    auto & hlp = opt<bool>("help.")
+                     .desc("Show this message and exit.")
+                     .parse(helpAction)
+                     .group(s_internalOptionGroup);
+    if (!m_command.empty())
+        hlp.show(false);
+    cmd.helpOpt = &hlp;
+    return hlp;
+}
+
+//===========================================================================
+Cli::Opt<string> & Cli::passwordOpt(bool confirm) {
+    return opt<string>("password.")
+        .desc("Password required for access.")
+        .prompt(kPromptHide | (confirm * kPromptConfirm));
+}
+
+//===========================================================================
 Cli::Opt<bool> &
 Cli::versionOpt(const string & version, const string & progName) {
     auto verAction = [version, progName](auto & cli, auto & opt, auto & val) {
@@ -346,24 +405,8 @@ Cli::versionOpt(const string & version, const string & progName) {
     };
     return opt<bool>("version.")
         .desc("Show version and exit.")
-        .action(verAction)
+        .parse(verAction)
         .group(s_internalOptionGroup);
-}
-
-//===========================================================================
-Cli::Opt<bool> & Cli::helpOpt() {
-    auto & cmd = cmdCfg();
-    if (cmd.helpOpt)
-        return *cmd.helpOpt;
-
-    auto & hlp = opt<bool>("help.")
-                     .desc("Show this message and exit.")
-                     .action(helpAction)
-                     .group(s_internalOptionGroup);
-    if (!m_command.empty())
-        hlp.show(false);
-    cmd.helpOpt = &hlp;
-    return hlp;
 }
 
 //===========================================================================
@@ -403,25 +446,25 @@ Cli & Cli::command(const string & name, const string & grpName) {
 }
 
 //===========================================================================
-Cli & Cli::action(std::function<ActionFn> fn) {
+Cli & Cli::action(function<ActionFn> fn) {
     cmdCfg().action = fn;
     return *this;
 }
 
 //===========================================================================
-Cli & Cli::header(const std::string & val) {
+Cli & Cli::header(const string & val) {
     cmdCfg().header = val;
     return *this;
 }
 
 //===========================================================================
-Cli & Cli::desc(const std::string & val) {
+Cli & Cli::desc(const string & val) {
     cmdCfg().desc = val;
     return *this;
 }
 
 //===========================================================================
-Cli & Cli::footer(const std::string & val) {
+Cli & Cli::footer(const string & val) {
     cmdCfg().footer = val;
     return *this;
 }
@@ -604,7 +647,7 @@ void Cli::resetValues() {
 }
 
 //===========================================================================
-void Cli::index(OptIndex & ndx, const std::string & cmd, bool requireVisible)
+void Cli::index(OptIndex & ndx, const string & cmd, bool requireVisible)
     const {
     ndx.argNames.clear();
     ndx.longNames.clear();
@@ -622,7 +665,40 @@ void Cli::index(OptIndex & ndx, const std::string & cmd, bool requireVisible)
 }
 
 //===========================================================================
-bool Cli::parseAction(
+bool Cli::prompt(OptBase & opt, const string & msg, int flags) {
+    if (!opt.from().empty())
+        return true;
+    struct EnableEcho {
+        ~EnableEcho() { consoleEnableEcho(true); }
+    } enableEcho;
+    cout << msg << ' ';
+    if (~flags & kPromptNoDefault) {
+        if (opt.m_bool)
+            cout << "[y/N]: ";
+    }
+    if (flags & kPromptHide)
+        consoleEnableEcho(false);
+    string val;
+    getline(cin, val);
+    if (flags & kPromptHide)
+        cout << endl;
+    if (flags & kPromptConfirm) {
+        string again;
+        cout << "Enter again to confirm: ";
+        getline(cin, again);
+        if (flags & kPromptHide)
+            cout << endl;
+        if (val != again)
+            return badUsage("Confirm failed, entries not the same.");
+    }
+    if (opt.m_bool) {
+        val = val.size() && (val[0] == 'y' || val[0] == 'Y') ? "1" : "0";
+    }
+    return parseValue(opt, opt.defaultFrom(), 0, val.c_str());
+}
+
+//===========================================================================
+bool Cli::parseValue(
     OptBase & opt,
     const string & name,
     int pos,
@@ -631,30 +707,28 @@ bool Cli::parseAction(
     string val;
     if (ptr) {
         val = ptr;
-        if (!opt.parseAction(*this, val))
+        if (!opt.parseValue(*this, val))
             return false;
     } else {
         opt.unspecifiedValue();
     }
-    if (!opt.checkActions(*this, val)) {
-        if (!exitCode())
-            badUsage("Option check failed for '"s + name + "'", val);
-        return false;
-    }
-    return true;
+    return opt.checkValue(*this, val);
 }
 
 //===========================================================================
 bool Cli::badUsage(const string & prefix, const string & value) {
-    string msg = prefix;
-    auto & cmd = m_cfg->command;
-    if (cmd.empty()) {
-        msg.append(": ");
-    } else {
-        msg.append(" for '").append(cmd).append("' command: ");
-    }
-    msg.append(value);
+    string msg = prefix + ": " + value;
     return badUsage(msg);
+}
+
+//===========================================================================
+bool Cli::badUsage(const string & msg) {
+    string out;
+    string & cmd = m_cfg->command;
+    if (cmd.size())
+        out = "Command '" + cmd + "': ";
+    out += msg;
+    return fail(kExitUsage, out);
 }
 
 //===========================================================================
@@ -705,7 +779,7 @@ bool Cli::parse(vector<string> & args) {
                 argName = it->second;
                 name = "-"s + *ptr;
                 if (argName.opt->m_bool) {
-                    if (!parseAction(
+                    if (!parseValue(
                             *argName.opt,
                             name,
                             argPos,
@@ -742,7 +816,7 @@ bool Cli::parse(vector<string> & args) {
             if (argName.opt->m_bool) {
                 if (equal)
                     return badUsage("Unknown option", name + "=");
-                if (!parseAction(
+                if (!parseValue(
                         *argName.opt,
                         name,
                         argPos,
@@ -769,7 +843,7 @@ bool Cli::parse(vector<string> & args) {
             return badUsage("Unexpected argument", ptr);
         argName = ndx.argNames[pos];
         name = argName.name;
-        if (!parseAction(*argName.opt, name, argPos, ptr))
+        if (!parseValue(*argName.opt, name, argPos, ptr))
             return false;
         if (!argName.opt->m_multiple)
             pos += 1;
@@ -777,12 +851,12 @@ bool Cli::parse(vector<string> & args) {
 
     OPTION_VALUE:
         if (*ptr) {
-            if (!parseAction(*argName.opt, name, argPos, ptr))
+            if (!parseValue(*argName.opt, name, argPos, ptr))
                 return false;
             continue;
         }
         if (argName.optional) {
-            if (!parseAction(*argName.opt, name, argPos, nullptr))
+            if (!parseValue(*argName.opt, name, argPos, nullptr))
                 return false;
             continue;
         }
@@ -790,12 +864,18 @@ bool Cli::parse(vector<string> & args) {
         arg += 1;
         if (argPos == argc)
             return badUsage("Option requires value", name);
-        if (!parseAction(*argName.opt, name, argPos, arg->c_str()))
+        if (!parseValue(*argName.opt, name, argPos, arg->c_str()))
             return false;
     }
 
     if (!needCmd && pos < size(ndx.argNames) && !ndx.argNames[pos].optional)
         return badUsage("Missing argument", ndx.argNames[pos].name);
+
+    for (auto && opt : m_cfg->opts) {
+        if (!opt->afterActions(*this))
+            return false;
+    }
+
     return true;
 }
 
@@ -804,9 +884,9 @@ bool Cli::parse(ostream & os, vector<string> & args) {
     if (parse(args))
         return true;
     if (exitCode()) {
-        os << args[0] << ": " << errMsg() << endl;
+        os << "Error: " << errMsg() << endl;
         if (m_cfg->errDetail.size())
-            os << args[0] << ": " << m_cfg->errDetail << endl;
+            os << "Error: " << m_cfg->errDetail << endl;
     }
     return false;
 }
@@ -950,8 +1030,7 @@ writeDescCol(ostream & os, WrapPos & wp, const string & text, size_t descCol) {
 static void writeChoices(
     ostream & os,
     WrapPos & wp,
-    const std::unordered_map<std::string, Cli::OptBase::ChoiceDesc> &
-        choices) {
+    const unordered_map<string, Cli::OptBase::ChoiceDesc> & choices) {
     if (choices.empty())
         return;
     size_t colWidth = 0;
