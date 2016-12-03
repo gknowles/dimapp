@@ -1,5 +1,5 @@
 // pch.h - pargen
-#include "dim.h"
+#include "dim/dim.h"
 
 #include <crtdbg.h>
 #include <cstdio>

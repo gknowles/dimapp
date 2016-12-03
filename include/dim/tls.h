@@ -4,7 +4,7 @@
 //  rfc5246bis - Transport Layer Security (TLS) Protocol Version 1.3
 #pragma once
 
-#include "dim/config.h"
+#include "config.h"
 
 #include <cstdint>
 

@@ -6,9 +6,9 @@
 
 #pragma once
 
-#include "dim/config.h"
+#include "config.h"
 
-#include "dim/util.h" // ForwardListIterator
+#include "util.h" // ForwardListIterator
 
 #include <memory>
 #include <vector>

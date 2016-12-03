@@ -1,7 +1,7 @@
 // tempheap.h - dim services
 #pragma once
 
-#include "dim/config.h"
+#include "config.h"
 
 #include <cstring>
 

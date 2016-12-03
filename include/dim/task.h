@@ -1,9 +1,9 @@
 // task.h - dim core
 #pragma once
 
-#include "dim/config.h"
+#include "config.h"
 
-#include "dim/handle.h"
+#include "handle.h"
 
 #include <string>
 

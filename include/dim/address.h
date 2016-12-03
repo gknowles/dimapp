@@ -1,9 +1,9 @@
 // address.h - dim services
 #pragma once
 
-#include "dim/config.h"
+#include "config.h"
 
-#include "dim/types.h"
+#include "types.h"
 
 #include <iostream>
 #include <string>

@@ -4,7 +4,7 @@
 //  rfc7541 - HPACK: Header Compression for HTTP/2
 #pragma once
 
-#include "dim/config.h"
+#include "config.h"
 
 #include <deque>
 #include <string>

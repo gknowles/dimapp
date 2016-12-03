@@ -1,7 +1,7 @@
 // handle.h - dim services
 #pragma once
 
-#include "dim/config.h"
+#include "config.h"
 
 #include <utility> // std::pair
 #include <vector>

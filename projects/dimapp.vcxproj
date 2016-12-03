@@ -114,13 +114,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\dim.h" />
     <ClInclude Include="..\include\dim\address.h" />
     <ClInclude Include="..\include\dim\app.h" />
     <ClInclude Include="..\include\dim\charbuf.h" />
     <ClInclude Include="..\include\dim\cli.h" />
     <ClInclude Include="..\include\dim\config.h" />
     <ClInclude Include="..\include\dim\console.h" />
+    <ClInclude Include="..\include\dim\dim.h" />
     <ClInclude Include="..\include\dim\file.h" />
     <ClInclude Include="..\include\dim\handle.h" />
     <ClInclude Include="..\include\dim\hpack.h" />

@@ -17,9 +17,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\dim.h">
-      <Filter>include</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\dim\address.h">
       <Filter>include</Filter>
     </ClInclude>
@@ -36,6 +33,9 @@
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="..\include\dim\console.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\dim\dim.h">
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="..\include\dim\file.h">

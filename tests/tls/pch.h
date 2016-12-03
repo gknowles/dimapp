@@ -1,4 +1,4 @@
 // pch.h - dim test tls
-#include "dim.h"
+#include "dim/dim.h"
 
 #include <iostream>

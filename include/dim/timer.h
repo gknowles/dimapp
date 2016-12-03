@@ -1,9 +1,9 @@
 // timer.h - dim core
 #pragma once
 
-#include "dim/config.h"
+#include "config.h"
 
-#include "dim/types.h"
+#include "types.h"
 
 #include <memory>
 

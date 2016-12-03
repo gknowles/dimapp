@@ -1,5 +1,5 @@
 // pch.h - dim core - windows platform
-#include "dim.h"
+#include "dim/dim.h"
 
 #include "../intern.h"
 

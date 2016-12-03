@@ -1,7 +1,7 @@
 // types.h - dim core
 #pragma once
 
-#include "dim/config.h"
+#include "config.h"
 
 #include <chrono>
 #include <cstdint>

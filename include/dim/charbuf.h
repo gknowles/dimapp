@@ -1,9 +1,9 @@
 // charbuf.h - dim services
 #pragma once
 
-#include "dim/config.h"
+#include "config.h"
 
-#include "dim/tempheap.h"
+#include "tempheap.h"
 
 #include <list>
 #include <string>

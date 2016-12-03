@@ -1,10 +1,10 @@
 // xml.h - dim xml
 #pragma once
 
-#include "dim/config.h"
+#include "config.h"
 
-#include "dim/charbuf.h"
-#include "dim/util.h"
+#include "charbuf.h"
+#include "util.h"
 
 #include <memory>
 #include <sstream>

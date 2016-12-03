@@ -1,7 +1,7 @@
 // log.h - dim core
 #pragma once
 
-#include "dim/config.h"
+#include "config.h"
 
 #include <sstream>
 #include <string>
