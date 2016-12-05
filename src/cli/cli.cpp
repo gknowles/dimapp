@@ -10,6 +10,11 @@ using namespace std;
 using namespace Dim;
 namespace fs = experimental::filesystem;
 
+// getenv triggers the visual c++ security warning
+#if (_MSC_VER >= 1400)
+#pragma warning(disable:4996) // this function or variable may be unsafe.
+#endif
+
 
 /****************************************************************************
 *
@@ -69,6 +74,9 @@ struct Cli::Config {
     unordered_map<string, CommandConfig> cmds;
     list<unique_ptr<OptBase>> opts;
     bool responseFiles{true};
+    string envOpts;
+    istream * conin{&cin};
+    ostream * conout{&cout};
 
     int exitCode{0};
     string errMsg;
@@ -123,6 +131,24 @@ static fs::path displayName(const fs::path & file) {
     return file.filename();
 #endif
 }
+
+//===========================================================================
+// Replaces a set of contiguous values in one vector with the entire contents
+// of another, growing or shrinking it as needed.
+template <typename T>
+static void
+replace(vector<T> & out, size_t pos, size_t count, vector<T> && src) {
+    size_t srcLen = src.size();
+    if (count > srcLen) {
+        out.erase(out.begin() + pos + srcLen, out.begin() + pos + count);
+    } else if (count < srcLen) {
+        out.insert(out.begin() + pos + count, srcLen - count, {});
+    }
+    auto i = out.begin() + pos;
+    for (auto && val : src)
+        *i++ = move(val);
+}
+
 
 /****************************************************************************
 *
@@ -284,7 +310,7 @@ void Cli::OptBase::indexLongName(
 static bool helpAction(Cli & cli, Cli::Opt<bool> & opt, const string & val) {
     stringTo(*opt, val);
     if (*opt) {
-        cli.writeHelp(cout, {}, cli.runCommand());
+        cli.writeHelp(cli.conout(), {}, cli.runCommand());
         return false;
     }
     return true;
@@ -394,13 +420,11 @@ Cli::Opt<string> & Cli::passwordOpt(bool confirm) {
 Cli::Opt<bool> &
 Cli::versionOpt(const string & version, const string & progName) {
     auto verAction = [version, progName](auto & cli, auto & opt, auto & val) {
-        ignore = opt;
-        ignore = val;
         fs::path prog = progName;
         if (prog.empty()) {
             prog = displayName(cli.progName());
         }
-        cout << prog << " version " << version << endl;
+        cli.conout() << prog << " version " << version << endl;
         return false;
     };
     return opt<bool>("version.")
@@ -490,6 +514,27 @@ void Cli::responseFiles(bool enable) {
 }
 
 //===========================================================================
+void Cli::envOpts(const string & var) {
+    m_cfg->envOpts = var;
+}
+
+//===========================================================================
+void Cli::iostreams(std::istream * in, std::ostream * out) {
+    m_cfg->conin = in ? in : &cin;
+    m_cfg->conout = out ? out : &cout;
+}
+
+//===========================================================================
+istream & Cli::conin() {
+    return *m_cfg->conin;
+}
+
+//===========================================================================
+ostream & Cli::conout() {
+    return *m_cfg->conout;
+}
+
+//===========================================================================
 Cli::GroupConfig & Cli::grpCfg() {
     return findGrpAlways(cmdCfg(), m_group);
 }
@@ -545,7 +590,7 @@ static bool loadFileUtf8(string & content, const fs::path & fn) {
     content.clear();
 
     error_code err;
-    auto bytes = fs::file_size(fn, err);
+    auto bytes = (size_t) fs::file_size(fn, err);
     if (err)
         return false;
 
@@ -598,15 +643,9 @@ static bool expandResponseFile(
     auto rargs = cli.toArgv(content);
     if (!expandResponseFiles(cli, rargs, ancestors))
         return false;
-    if (rargs.empty()) {
-        args.erase(args.begin() + pos);
-    } else {
-        args.insert(args.begin() + pos + 1, rargs.size() - 1, {});
-        auto i = args.begin() + pos;
-        for (auto && arg : rargs)
-            *i++ = move(arg);
-        pos += rargs.size();
-    }
+    size_t rargLen = rargs.size();
+    replace(args, pos, 1, move(rargs));
+    pos += rargLen;
     ancestors.erase(ib.first);
     return true;
 }
@@ -671,27 +710,32 @@ bool Cli::prompt(OptBase & opt, const string & msg, int flags) {
     struct EnableEcho {
         ~EnableEcho() { consoleEnableEcho(true); }
     } enableEcho;
-    cout << msg << ' ';
+    auto & is = conin();
+    auto & os = conout();
+    os << msg << ' ';
     if (~flags & kPromptNoDefault) {
         if (opt.m_bool)
-            cout << "[y/N]: ";
+            os << "[y/N]: ";
     }
     if (flags & kPromptHide)
         consoleEnableEcho(false);
     string val;
-    getline(cin, val);
+    os.flush();
+    getline(is, val);
     if (flags & kPromptHide)
-        cout << endl;
+        os << endl;
     if (flags & kPromptConfirm) {
         string again;
-        cout << "Enter again to confirm: ";
-        getline(cin, again);
+        os << "Enter again to confirm: " << flush;
+        getline(is, again);
         if (flags & kPromptHide)
-            cout << endl;
+            os << endl;
         if (val != again)
             return badUsage("Confirm failed, entries not the same.");
     }
     if (opt.m_bool) {
+        // Honor the contract that bool parse functions are only presented
+        // with either "0" or "1".
         val = val.size() && (val[0] == 'y' || val[0] == 'Y') ? "1" : "0";
     }
     return parseValue(opt, opt.defaultFrom(), 0, val.c_str());
@@ -701,7 +745,7 @@ bool Cli::prompt(OptBase & opt, const string & msg, int flags) {
 bool Cli::parseValue(
     OptBase & opt,
     const string & name,
-    int pos,
+    size_t pos,
     const char ptr[]) {
     opt.set(name, pos);
     string val;
@@ -753,6 +797,14 @@ bool Cli::parse(vector<string> & args) {
     assert(ndx.allowCommands || !needCmd);
 
     resetValues();
+
+    // insert environment options
+    if (m_cfg->envOpts.size()) {
+        if (const char * val = getenv(m_cfg->envOpts.c_str()))
+            replace(args, 1, 0, toArgv(val));
+    }
+
+    // expand response files
     unordered_set<string> ancestors;
     if (m_cfg->responseFiles && !expandResponseFiles(*this, args, ancestors))
         return false;
@@ -764,7 +816,7 @@ bool Cli::parse(vector<string> & args) {
     unsigned pos = 0;
     bool moreOpts = true;
     m_cfg->progName = *arg;
-    int argPos = 1;
+    size_t argPos = 1;
     arg += 1;
 
     for (; argPos < argc; ++argPos, ++arg) {

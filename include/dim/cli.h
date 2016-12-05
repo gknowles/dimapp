@@ -2,7 +2,8 @@
 //
 // Command line parser
 //
-// For documentation and examples:
+// Instead of just trying to figure this out from the header take a look
+// at the documentation and examples:
 // https://github.com/gknowles/dimcli
 
 #pragma once
@@ -47,7 +48,7 @@ enum {
 *
 ***/
 
-class Cli {
+class DIM_LIB_DECL Cli {
 public:
     struct Config;
     struct CommandConfig;
@@ -175,6 +176,18 @@ public:
     // form "@file" with the contents of the file.
     void responseFiles(bool enable = true);
 
+    // Environment variable to get initial options from. Defaults to the empty
+    // string, but when set the content of the named variable is parsed into
+    // args which are then inserted into the argument list right after arg0.
+    void envOpts(const std::string & envVar);
+
+    // Changes the streams used for prompting, outputing help messages, etc.
+    // Mainly intended for testing. Setting to null restores the defaults
+    // which are cin and cout respectively.
+    void iostreams(std::istream * in, std::ostream * out);
+    std::istream & conin();
+    std::ostream & conout();
+
     //-----------------------------------------------------------------------
     // Help
 
@@ -247,12 +260,12 @@ public:
     bool parseValue(
         OptBase & out,
         const std::string & name,
-        int pos,
+        size_t pos,
         const char src[]);
 
-    // Prompt sends a prompt message to cout and read a response from cin,
-    // the response is then passed to cli.parseValue() to set the value and
-    // run any actions.
+    // Prompt sends a prompt message to cout and read a response from cin
+    // (unless cli.iostreams() changed the streams to use), the response is
+    // then passed to cli.parseValue() to set the value and run any actions.
     enum {
         kPromptHide = 1,      // hide user input as they type
         kPromptConfirm = 2,   // make the user enter it twice
@@ -273,14 +286,14 @@ public:
     // Program name received in argv[0]
     const std::string & progName() const;
 
-    // Command selected by argv, empty string if there are no commands
-    // defined or none were selected.
+    // Command to run, as selected by argv, empty string if there are no
+    // commands defined or none were selected.
     const std::string & runCommand() const;
 
     // Runs the action of the selected command and returns its exit code;
     // which is also used to set cli.exitCode(). If no command was selected
     // it runs the action of the empty "" command, which can be set via
-    // cli.action() just like for any other command.
+    // cli.action() just like any other command.
     int run();
 
 protected:
@@ -406,7 +419,7 @@ inline std::shared_ptr<V> Cli::getProxy(T * ptr) {
 *
 ***/
 
-class CliLocal : public Cli {
+class DIM_LIB_DECL CliLocal : public Cli {
 public:
     CliLocal();
 };
@@ -421,7 +434,7 @@ public:
 *
 ***/
 
-class Cli::OptBase {
+class DIM_LIB_DECL Cli::OptBase {
 public:
     struct ChoiceDesc {
         std::string desc;
@@ -467,7 +480,7 @@ protected:
     virtual bool parseValue(Cli & cli, const std::string & value) = 0;
     virtual bool checkValue(Cli & cli, const std::string & value) = 0;
     virtual bool afterActions(Cli & cli) = 0;
-    virtual void set(const std::string & name, int pos) = 0;
+    virtual void set(const std::string & name, size_t pos) = 0;
 
     // Allows the type unaware layer to determine if a new option is pointing
     // at the same value as an existing option -- with RTTI disabled
@@ -938,7 +951,7 @@ public:
 
 private:
     friend class Cli;
-    void set(const std::string & name, int pos) final;
+    void set(const std::string & name, size_t pos) final;
     bool sameValue(const void * value) final {
         return value == m_proxy->m_value;
     }
@@ -956,9 +969,9 @@ inline Cli::Opt<T>::Opt(
 
 //===========================================================================
 template <typename T>
-inline void Cli::Opt<T>::set(const std::string & name, int pos) {
+inline void Cli::Opt<T>::set(const std::string & name, size_t pos) {
     m_proxy->m_match.name = name;
-    m_proxy->m_match.pos = pos;
+    m_proxy->m_match.pos = (int) pos;
     m_proxy->m_explicit = true;
 }
 
@@ -1051,13 +1064,15 @@ public:
     void unspecifiedValue() final;
     size_t size() const final;
 
-    // Information about a specific member of the vector of values
+    // Information about a specific member of the vector of values at the 
+    // time it was parsed. If the value vector has been changed (sort, erase, 
+    // insert, etc) by the app these will no longer correspond.
     const std::string & from(size_t index) const;
     int pos(size_t index) const;
 
 private:
     friend class Cli;
-    void set(const std::string & name, int pos) final;
+    void set(const std::string & name, size_t pos) final;
     bool sameValue(const void * value) final {
         return value == m_proxy->m_values;
     }
@@ -1080,10 +1095,10 @@ inline Cli::OptVec<T>::OptVec(
 
 //===========================================================================
 template <typename T>
-inline void Cli::OptVec<T>::set(const std::string & name, int pos) {
+inline void Cli::OptVec<T>::set(const std::string & name, size_t pos) {
     ArgMatch match;
     match.name = name;
-    match.pos = pos;
+    match.pos = (int) pos;
     m_proxy->m_matches.push_back(match);
 }
 
@@ -1141,3 +1156,5 @@ template <typename T> inline size_t Cli::OptVec<T>::size() const {
 }
 
 } // namespace
+
+#include "config_suffix.h"
