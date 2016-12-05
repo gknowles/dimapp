@@ -2,6 +2,9 @@
 #pragma once
 
 #include "config.h"
+#ifdef DIM_LIB_STANDALONE
+#error DIM_LIB_STANDALONE invalid when building entire collection
+#endif
 
 #include "address.h"
 #include "app.h"
@@ -22,3 +25,6 @@
 #include "types.h"
 #include "util.h"
 #include "xml.h"
+
+#define DIM_LIB_STANDALONE
+#include "config_suffix.h"

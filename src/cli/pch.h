@@ -1,4 +1,6 @@
 // pch.h - dim cli
+
+#define DIM_LIB_SOURCE
 #include "dim/cli.h"
 #include "dim/console.h"
 

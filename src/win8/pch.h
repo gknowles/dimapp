@@ -1,4 +1,6 @@
 // pch.h - dim core - windows platform
+
+#define DIM_LIB_SOURCE
 #include "dim/dim.h"
 
 #include "../intern.h"

@@ -119,6 +119,7 @@
     <ClInclude Include="..\include\dim\charbuf.h" />
     <ClInclude Include="..\include\dim\cli.h" />
     <ClInclude Include="..\include\dim\config.h" />
+    <ClInclude Include="..\include\dim\config_suffix.h" />
     <ClInclude Include="..\include\dim\console.h" />
     <ClInclude Include="..\include\dim\dim.h" />
     <ClInclude Include="..\include\dim\file.h" />

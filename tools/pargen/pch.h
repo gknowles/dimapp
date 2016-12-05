@@ -1,4 +1,6 @@
 // pch.h - pargen
+
+#define DIM_LIB_KEEP_MACROS
 #include "dim/dim.h"
 
 #include <crtdbg.h>

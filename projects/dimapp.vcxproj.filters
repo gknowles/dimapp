@@ -32,6 +32,9 @@
     <ClInclude Include="..\include\dim\config.h">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\dim\config_suffix.h">
+      <Filter>include</Filter>
+    </ClInclude>
     <ClInclude Include="..\include\dim\console.h">
       <Filter>include</Filter>
     </ClInclude>

@@ -1,4 +1,6 @@
 // pch.h - dim core
+
+#define DIM_LIB_SOURCE
 #include "dim/dim.h"
 #include "dim/hpack.h"
 #include "dim/tlsrecord.h"
