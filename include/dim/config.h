@@ -1,6 +1,17 @@
 // config.h - dim core
 #pragma once
 
+
+/****************************************************************************
+*
+*   Configuration
+*
+***/
+
+//---------------------------------------------------------------------------
+// Configuration of this installation, these are options that must be the 
+// same when building the app as when building the library.
+
 // DIM_LIB_STANDALONE: Defines this as standalone library that is not 
 // being built as part of the DIM framework.
 //#define DIM_LIB_STANDALONE
@@ -19,9 +30,24 @@
 // variables. Ignored for non-windows builds.
 //#define DIM_LIB_WINAPI_FAMILY_APP
 
-// DIM_LIB_KEEP_MACROS:
+//---------------------------------------------------------------------------
+// Configuration of this compile. These options, if desired, are set by the 
+// application before including the library headers.
+
+// DIM_LIB_KEEP_MACROS: By default the DIM_LIB_* macros defined internally
+// (including in this file) are undef'd so they don't leak out to application
+// code. Setting this macro leaves them available for the application to use.
+// Also included are other platform specific adjustments, such as suppression
+// of specific compiler warnings.
 
 // DIM_LIB_SOURCE:
+
+
+/****************************************************************************
+*
+*   Internal
+*
+***/
 
 #if defined(DIM_LIB_SOURCE) && !defined(DIM_LIB_KEEP_MACROS)
     #define DIM_LIB_KEEP_MACROS
