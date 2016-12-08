@@ -67,6 +67,7 @@ int main(int argc, char * argv[]) {
     auto & path =
         cli.opt<fs::path>("[xml file]").desc("File to check is well-formed");
     auto & test = cli.opt<bool>("test.").desc("Run internal unit tests");
+	cli.versionOpt("1.0 (" __DATE__ ")");
     if (!cli.parse(cerr, argc, argv))
         return cli.exitCode();
     if (*test)
