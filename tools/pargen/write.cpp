@@ -223,9 +223,14 @@ static bool writeSwitchCase(ostream & os, const State & st) {
         unsigned state;
     };
     vector<NextState> cases;
+    map<unsigned, unsigned char> stateKeys;
     for (unsigned i = 0; i < 256; ++i) {
-        if (st.next[i])
-            cases.push_back({unsigned char(i), st.next[i]});
+        if (unsigned next = st.next[i]) {
+            auto ii = stateKeys.equal_range(next);
+            if (ii.first == ii.second)
+                stateKeys.insert(ii.first, make_pair(next, i));
+            cases.push_back({unsigned char(i), next});
+        }
     }
     if (cases.empty())
         return false;
@@ -233,8 +238,9 @@ static bool writeSwitchCase(ostream & os, const State & st) {
     sort(
         cases.begin(),
         cases.end(),
-        [](const NextState & e1, const NextState & e2) {
-            return 256 * e1.state + e1.ch < 256 * e2.state + e2.ch;
+        [&stateKeys](const NextState & e1, const NextState & e2) {
+            return 256 * stateKeys[e1.state] + e1.ch 
+                < 256 * stateKeys[e2.state] + e2.ch;
         });
     const unsigned kCaseColumns = 6;
     os << "    ch = *ptr++;\n";
