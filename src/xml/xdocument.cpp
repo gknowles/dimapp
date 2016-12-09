@@ -244,7 +244,7 @@ void XDocument::normalizeText(XNode * node) {
     auto firstNode = firstChild(ei, nullptr, XType::kText);
     XNode * prev;
     if (!firstNode)
-        goto DONE;
+        goto NO_TEXT;
     const char * firstChar = firstNode->value;
     // skip leading whitespace
     for (;;) {
@@ -260,7 +260,7 @@ void XDocument::normalizeText(XNode * node) {
             unlinkNode(prev);
             if (!firstNode) {
                 *const_cast<const char **>(&ei->value) = "";
-                goto DONE;
+                goto NO_TEXT;
             }
             firstChar = firstNode->value;
             continue;
@@ -302,7 +302,7 @@ void XDocument::normalizeText(XNode * node) {
             *ptr++ = *firstChar++;
             if (firstChar == lastChar)
                 break;
-            if (!*firstChar) {
+            while (!*firstChar) {
                 prev = firstNode;
                 firstNode = nextSibling(firstNode, nullptr, XType::kText);
                 unlinkNode(prev);
@@ -314,7 +314,7 @@ void XDocument::normalizeText(XNode * node) {
     }
     unlinkNode(firstNode);
 
-DONE:
+NO_TEXT:
     ei->valueLen = size_t(-1);
 }
 

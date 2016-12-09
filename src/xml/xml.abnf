@@ -138,7 +138,7 @@ CDStart = %s"<![CDATA[" ; [19]
 CDataWithEnd = CData CDEnd { Start, End }
 CData = *(Char-not-RBRACKET  ; [20]
     / "]" Char-not-RBRACKET 
-    / "]]" Char-not-GT-RBRACKET)
+    / 2*"]" Char-not-GT-RBRACKET)
     *"]"
 Char-not-RBRACKET = ws
     / %x21-5c
