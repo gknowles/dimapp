@@ -107,6 +107,7 @@ inline IXBuilder & endAttr(IXBuilder & out) {
 }
 
 
+//---------------------------------------------------------------------------
 class XBuilder : public IXBuilder {
 public:
     XBuilder(CharBuf & buf)
@@ -129,10 +130,9 @@ private:
 *
 ***/
 
-class XStreamParser;
 namespace Detail {
 class XmlBaseParser;
-}
+} // namespace
 
 class IXStreamParserNotify {
 public:
@@ -226,7 +226,6 @@ enum class XType {
     kComment,
     kPI, // processing instruction
 };
-
 
 struct XAttr {
     const char * const name;

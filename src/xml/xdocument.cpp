@@ -123,7 +123,8 @@ bool ParserNotify::attr(
     size_t valueLen) {
     const_cast<char *>(name)[nameLen] = 0;
     const_cast<char *>(value)[valueLen] = 0;
-    m_doc.addAttr(m_curElem, name, value);
+    if (m_curElem)
+        m_doc.addAttr(m_curElem, name, value);
     return true;
 }
 

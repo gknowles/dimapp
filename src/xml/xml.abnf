@@ -26,6 +26,7 @@ Nmtoken = 1*NameChar ; 7
 EntityValue = ; [9]
     DQUOTE *(Char-not-AMP-DQUOTE-PCT / PEReference / Reference) DQUOTE
     / "'" *(Char-not-AMP-APOS-PCT / PEReference / Reference) "'"
+	{ Start, End }
 Char-not-AMP-DQUOTE-PCT = ws 
     / %x21 
     ; 22 - DQUOTE
@@ -77,7 +78,7 @@ attrValue = DQUOTE attrText DQUOTE / "'" attrTextApos "'" ; [10]
 attrText = [attrInPlace] *((Reference / normalizable-ws) [attrCopy])
 attrInPlace = *Char-not-ws-AMP-DQUOTE-LT { End }
 attrCopy = *Char-not-ws-AMP-DQUOTE-LT { Char }
-attrTextApos = [attrInPlaceApos] *(Reference [attrCopyApos]) 
+attrTextApos = [attrInPlaceApos] *((Reference / normalizable-ws) [attrCopyApos]) 
 attrInPlaceApos = *Char-not-ws-AMP-APOS-LT { End, As = attrInPlace }
 attrCopyApos = *Char-not-ws-AMP-APOS-LT { Char, As = attrCopy }
 normalizable-ws = ws { Char }
@@ -200,7 +201,7 @@ Mixed = "(" [S] %s"#PCDATA" *([S] "|" [S] Name) [S] ")*" ; [51]
 
 ; Attribute-list Declaration
 AttlistDecl = %s"<!ATTLIST" S Name *AttDef [S] ">" ; [52]
-AttDef = S Name S AttType S DefaultDecl ; [53]
+AttDef = S attrName S AttType S DefaultDecl ; [53]
 AttType = StringType / TokenizedType / EnumeratedType ; [54]
 StringType = %s"CDATA" ; [55]
 TokenizedType = %s"ID" / %s"IDREF" / %s"IDREFS" / %s"ENTITY" ; [56]
@@ -208,7 +209,7 @@ TokenizedType = %s"ID" / %s"IDREF" / %s"IDREFS" / %s"ENTITY" ; [56]
 EnumeratedType = NotationType / Enumeration ; [57]
 NotationType = %s"NOTATION" S "(" [S] Name *([S] "|" [S] Name) [S] ")" ; [58]
 Enumeration = "(" [S] Nmtoken *([S] "|" [S] Nmtoken) [S] ")" ; [59]
-DefaultDecl = %s"#REQUIRED" / %s"#IMPLIED" / [%s"#FIXED" S] AttValue ; [60]
+DefaultDecl = %s"#REQUIRED" / %s"#IMPLIED" / [%s"#FIXED" S] attrValue ; [60]
 
 ; Conditional Section
 conditionalSect = includeSect / ignoreSect ; [61]
@@ -246,7 +247,10 @@ Char-not-GT-LT-RBRACKET = ws
     / %x5e-7f
 
 ; Character and Entity Reference
-CharRef = "&#" 1*DIGIT ";" / "&#" %x78 1*HEXDIG ";" ; [66]
+CharRef = "&#" charRefDigit ";" / "&#" %x78 charRefHexdig ";" { Start, End } 
+	; [66]
+charRefDigit = 1*DIGIT { Char }
+charRefHexdig = 1*HEXDIG { Char }
 Reference = EntityRef / CharRef ; [67]
 EntityRef = entityApos / entityQuot / entityGt / entityLt / entityAmp ; [68]
     / entityOther
