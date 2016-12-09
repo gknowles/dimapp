@@ -288,14 +288,15 @@ static void writeEventCallback(
     Element::Flags type,
     const char * args = nullptr,
     const string & prefix = "    ") {
-    os << prefix << "m_notify->on";
+    os << prefix << "if (!m_notify->on";
     writeRuleName(os, name, true);
     switch (type) {
     case Element::kOnChar: os << "Char(" << (args ? args : "ch"); break;
     case Element::kOnEnd: os << "End(" << (args ? args : "ptr"); break;
     case Element::kOnStart: os << "Start(" << (args ? args : "ptr - 1"); break;
     }
-    os << ");\n";
+    os << "))\n";
+    os << prefix << "    goto state0;\n";
 }
 
 //===========================================================================
