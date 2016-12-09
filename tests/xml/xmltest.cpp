@@ -67,6 +67,7 @@ int main(int argc, char * argv[]) {
     auto & path =
         cli.opt<fs::path>("[xml file]").desc("File to check is well-formed");
     auto & test = cli.opt<bool>("test.").desc("Run internal unit tests");
+    auto & echo = cli.opt<bool>("echo").desc("Echo xml if well-formed");
 	cli.versionOpt("1.0 (" __DATE__ ")");
     if (!cli.parse(cerr, argc, argv))
         return cli.exitCode();
@@ -91,8 +92,16 @@ int main(int argc, char * argv[]) {
 
     XDocument doc;
     auto root = doc.parse(content.data());
-    if (root) {
+    if (root && !doc.errmsg()) {
         cout << "File is well-formed." << endl;
+        if (*echo) {
+            cout << endl;
+            CharBuf out;
+            XBuilder bld(out);
+            bld << *root;
+            out.pushBack(0);
+            cout << out.data();
+        }
         return EX_OK;
     }
 
