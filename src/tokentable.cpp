@@ -13,48 +13,8 @@ using namespace Dim;
 ***/
 
 //===========================================================================
-static size_t mathPow2Ceil(size_t num) {
-#if 0
-    unsigned long k;
-    _BitScanReverse64(&k, num);
-    return (size_t) 1 << (k + 1);
-#endif
-#if 0
-    size_t k = 0x8000'0000;
-    k = (k > num) ? k >> 16 : k << 16;
-    k = (k > num) ? k >> 8 : k << 8;
-    k = (k > num) ? k >> 4 : k << 4;
-    k = (k > num) ? k >> 2 : k << 2;
-    k = (k > num) ? k >> 1 : k << 1;
-    return k;
-#endif
-#if 1
-    num -= 1;
-    num |= (num >> 1);
-    num |= (num >> 2);
-    num |= (num >> 4);
-    num |= (num >> 8);
-    num |= (num >> 16);
-    num |= (num >> 32);
-    num += 1;
-    return num;
-#endif
-#if 0
-#pragma warning(disable : 4706) // assignment within conditional expression
-    size_t j, k;
-    (k = num & 0xFFFF'FFFF'0000'0000) || (k = num);
-    (j = k & 0xFFFF'0000'FFFF'0000) || (j = k);
-    (k = j & 0xFF00'FF00'FF00'FF00) || (k = j);
-    (j = k & 0xF0F0'F0F0'F0F0'F0F0) || (j = k);
-    (k = j & 0xCCCC'CCCC'CCCC'CCCC) || (k = j);
-    (j = k & 0xAAAA'AAAA'AAAA'AAAA) || (j = k);
-    return j << 1;
-#endif
-}
-
-//===========================================================================
 TokenTable::TokenTable(const Token * src, size_t count) {
-    size_t num = mathPow2Ceil(2 * count);
+    size_t num = pow2Ceil(2 * count);
     m_names.resize(num);
     if (num < 2) {
         if (num == 1) {

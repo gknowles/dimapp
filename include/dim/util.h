@@ -37,6 +37,7 @@ inline void hashCombine(size_t & seed, size_t v) {
 ***/
 
 //===========================================================================
+// Number of digits required to display a number in decimal
 inline int digits10(uint32_t val) {
     const int DeBruijnBitPositionAdjustedForLog10[] = {
         0, 3, 0, 3, 4, 6, 0, 9, 3, 4, 5, 5, 6, 7, 1, 9,
@@ -66,6 +67,47 @@ inline int digits10(uint32_t val) {
     };
     r += PowersOf10[r] >= val;
     return r;
+}
+
+//===========================================================================
+// Round up to power of 2
+inline size_t pow2Ceil(size_t num) {
+#if 0
+    unsigned long k;
+    _BitScanReverse64(&k, num);
+    return (size_t) 1 << (k + 1);
+#endif
+#if 0
+    size_t k = 0x8000'0000;
+    k = (k > num) ? k >> 16 : k << 16;
+    k = (k > num) ? k >> 8 : k << 8;
+    k = (k > num) ? k >> 4 : k << 4;
+    k = (k > num) ? k >> 2 : k << 2;
+    k = (k > num) ? k >> 1 : k << 1;
+    return k;
+#endif
+#if 1
+    num -= 1;
+    num |= (num >> 1);
+    num |= (num >> 2);
+    num |= (num >> 4);
+    num |= (num >> 8);
+    num |= (num >> 16);
+    num |= (num >> 32);
+    num += 1;
+    return num;
+#endif
+#if 0
+#pragma warning(disable : 4706) // assignment within conditional expression
+    size_t j, k;
+    (k = num & 0xFFFF'FFFF'0000'0000) || (k = num);
+    (j = k & 0xFFFF'0000'FFFF'0000) || (j = k);
+    (k = j & 0xFF00'FF00'FF00'FF00) || (k = j);
+    (j = k & 0xF0F0'F0F0'F0F0'F0F0) || (j = k);
+    (k = j & 0xCCCC'CCCC'CCCC'CCCC) || (k = j);
+    (j = k & 0xAAAA'AAAA'AAAA'AAAA) || (j = k);
+    return j << 1;
+#endif
 }
 
 
@@ -227,6 +269,15 @@ template <typename T> bool stringTo(T & out, const std::string & src) {
     // parameter, if that doesn't exist for T (because no out=src assignment
     // operator exists) the version taking a long is called.
     return stringTo_impl(out, src, 0);
+}
+
+
+//===========================================================================
+// hexToUnsigned - converts hex character (0-9, a-f, A-F) to unsigned (0-15)
+//===========================================================================
+inline unsigned hexToUnsigned(char ch) {
+    unsigned n = (ch * 577) >> 6;
+    return (n ^ (n << 3)) & 15;
 }
 
 
