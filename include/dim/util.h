@@ -276,8 +276,7 @@ template <typename T> bool stringTo(T & out, const std::string & src) {
 // hexToUnsigned - converts hex character (0-9, a-f, A-F) to unsigned (0-15)
 //===========================================================================
 inline unsigned hexToUnsigned(char ch) {
-    unsigned n = (ch * 577) >> 6;
-    return (n ^ (n << 3)) & 15;
+    return ((ch | 432) * 239'217'992 & 0xffff'ffff) >> 28;
 }
 
 
