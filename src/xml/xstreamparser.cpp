@@ -170,13 +170,7 @@ bool BaseParserNotify::onCharRefDigitChar (char ch) {
 
 //===========================================================================
 bool BaseParserNotify::onCharRefHexdigChar (char ch) {
-    if (ch <= '9') {
-        m_char = m_char * 16 + ch - '0';
-    } else if (ch <= 'F') {
-        m_char = m_char * 16 + ch - 'A' + 10;
-    } else {
-        m_char = m_char * 16 + ch - 'a' + 10;
-    }
+    m_char = m_char * 16 + hexToUnsigned(ch);
     return true;
 }
 
