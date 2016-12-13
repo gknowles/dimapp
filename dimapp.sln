@@ -15,6 +15,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "dimapp-win8", "projects\dim
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "dimapp-xml", "projects\dimapp-xml.vcxproj", "{5ECBF860-4A83-3AAE-B38A-130A9F61D59E}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vendor-botan", "projects\vendor-botan.vcxproj", "{148CA8EB-00EF-3790-A974-704695B60313}"
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "-meta", "projects\-meta.vcxproj", "{19D16A0B-85E5-92BC-4E67-361CBA3A8FED}"
 	ProjectSection(ProjectDependencies) = postProject
 		{6061CCF8-4C03-F7CE-35BE-0A2321FF7D1F} = {6061CCF8-4C03-F7CE-35BE-0A2321FF7D1F}
@@ -87,6 +89,10 @@ Global
 		{5ECBF860-4A83-3AAE-B38A-130A9F61D59E}.Debug|x64.Build.0 = Debug|x64
 		{5ECBF860-4A83-3AAE-B38A-130A9F61D59E}.Release|x64.ActiveCfg = Release|x64
 		{5ECBF860-4A83-3AAE-B38A-130A9F61D59E}.Release|x64.Build.0 = Release|x64
+		{148CA8EB-00EF-3790-A974-704695B60313}.Debug|x64.ActiveCfg = Debug|x64
+		{148CA8EB-00EF-3790-A974-704695B60313}.Debug|x64.Build.0 = Debug|x64
+		{148CA8EB-00EF-3790-A974-704695B60313}.Release|x64.ActiveCfg = Release|x64
+		{148CA8EB-00EF-3790-A974-704695B60313}.Release|x64.Build.0 = Release|x64
 		{19D16A0B-85E5-92BC-4E67-361CBA3A8FED}.Debug|x64.ActiveCfg = Debug|x64
 		{19D16A0B-85E5-92BC-4E67-361CBA3A8FED}.Debug|x64.Build.0 = Debug|x64
 		{19D16A0B-85E5-92BC-4E67-361CBA3A8FED}.Release|x64.ActiveCfg = Release|x64
