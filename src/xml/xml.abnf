@@ -131,7 +131,7 @@ Char-not-DQUOTE = mbchar / ws
     / %x21 
     ; 22 - DQUOTE
     / %x23-7f
-Char-not-APOS = ws
+Char-not-APOS = mbchar / ws
     / %x21-26 
     ; 27 - APOS
     / %x28-7f
