@@ -88,16 +88,13 @@ bool BaseParserNotify::onAttrNameEnd(const char * eptr) {
 //===========================================================================
 bool BaseParserNotify::onAttrValueStart(const char * ptr) {
     m_base = ptr + 1;
+    m_cur = const_cast<char *>(m_base);
     return true;
 }
 
 //===========================================================================
 bool BaseParserNotify::onAttrValueEnd(const char * eptr) {
-    if (m_cur) {
-        m_notify.attr(m_attr, m_attrLen, m_base, m_cur - m_base);
-    } else {
-        m_notify.attr(m_attr, m_attrLen, m_base, 0);
-    }
+    m_notify.attr(m_attr, m_attrLen, m_base, m_cur - m_base);
     return true;
 }
 
