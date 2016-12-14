@@ -167,7 +167,7 @@ IXBuilder & IXBuilder::endAttr() {
 //===========================================================================
 IXBuilder & IXBuilder::elem(const char name[], const char val[]) {
     start(name);
-    if (val)
+    if (val && *val)
         text(val);
     return end();
 }

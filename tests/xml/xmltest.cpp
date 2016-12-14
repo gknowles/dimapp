@@ -32,6 +32,8 @@ int internalTest() {
     bld << "> ]]>" << ']' << ']' << '>' << ']' << "]>" << ']' << '>' << '>'
         << end;
 
+    bld.start("value").attr("a", " leading and trailing spaces ").end();
+
     bld.end();
 
     string str = to_string(out);

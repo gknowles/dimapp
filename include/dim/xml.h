@@ -23,10 +23,12 @@ namespace Dim {
 class IXBuilder {
 public:
     struct ElemNameProxy {
-        const char * ptr;
+        const char * name;
+        const char * value;
     };
     struct AttrNameProxy {
-        const char * ptr;
+        const char * name;
+        const char * value;
     };
 
 public:
@@ -85,22 +87,28 @@ operator<<(IXBuilder & out, IXBuilder & (*pfn)(IXBuilder &)) {
 }
 
 inline IXBuilder &
-operator<<(IXBuilder & out, const IXBuilder::ElemNameProxy & name) {
-    return out.start(name.ptr);
+operator<<(IXBuilder & out, const IXBuilder::ElemNameProxy & e) {
+    return e.value ? out.elem(e.name, e.value) : out.start(e.name);
 }
-inline IXBuilder::ElemNameProxy start(const char val[]) {
-    return IXBuilder::ElemNameProxy{val};
+inline IXBuilder::ElemNameProxy start(
+    const char name[], const char val[] = nullptr) {
+    return IXBuilder::ElemNameProxy{name, val};
 }
 inline IXBuilder & end(IXBuilder & out) {
     return out.end();
 }
+inline IXBuilder::ElemNameProxy elem(
+    const char name[], const char val[] = nullptr) {
+    return IXBuilder::ElemNameProxy{name, val ? val : ""};
+}
 
 inline IXBuilder &
-operator<<(IXBuilder & out, const IXBuilder::AttrNameProxy & name) {
-    return out.startAttr(name.ptr);
+operator<<(IXBuilder & out, const IXBuilder::AttrNameProxy & a) {
+    return a.value ? out.attr(a.name, a.value) : out.startAttr(a.name);
 }
-inline IXBuilder::AttrNameProxy attr(const char val[]) {
-    return IXBuilder::AttrNameProxy{val};
+inline IXBuilder::AttrNameProxy attr(
+    const char name[], const char val[] = nullptr) {
+    return IXBuilder::AttrNameProxy{name, val};
 }
 inline IXBuilder & endAttr(IXBuilder & out) {
     return out.endAttr();
