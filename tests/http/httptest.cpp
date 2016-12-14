@@ -111,6 +111,7 @@ class Application : public ITaskNotify, public ILogNotify {
 //===========================================================================
 void Application::onLog(LogType type, const string & msg) {
     if (type >= kLogError) {
+        ConsoleScopedAttr attr(kConsoleError);
         m_errors += 1;
         cout << "ERROR: " << msg << endl;
     } else {
@@ -172,7 +173,8 @@ void Application::onTask() {
     httpClose(conn);
 
     if (m_errors) {
-        cout << "*** " << m_errors << " FAILURES" << endl;
+        ConsoleScopedAttr attr(kConsoleError);
+        cerr << "*** " << m_errors << " FAILURES" << endl;
         appSignalShutdown(1);
     } else {
         cout << "All tests passed" << endl;
