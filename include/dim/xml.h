@@ -54,6 +54,15 @@ protected:
     virtual size_t size() const = 0;
 
 private:
+    template <int N>
+    void addRaw(const char (&text)[N]) { append(text, N - 1); }
+
+    template <typename Char,
+        typename = std::enable_if<std::is_same<Char, char>::value>::type> 
+    void addRaw(Char const * const & text) { append(text); }
+
+    void addRaw(const char text[], size_t count) { append(text, count); }
+
     template <bool isContent> void addText(const char text[]);
     IXBuilder & fail();
 

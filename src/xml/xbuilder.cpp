@@ -95,21 +95,21 @@ IXBuilder & IXBuilder::start(const char name[]) {
     switch (m_state) {
     default: return fail();
     case kStateAttrText:
-        append("\"");
+        addRaw("\"");
         m_state = kStateAttrEnd;
         [[fallthrough]];
     case kStateElemName:
     case kStateAttrEnd:
-        append(">\n");
+        addRaw(">\n");
         m_state = kStateText;
         [[fallthrough]];
     case kStateDocIntro:
     case kStateText:
     case kStateTextRBracket:
-    case kStateTextRBracket2: append("<"); break;
+    case kStateTextRBracket2: addRaw("<"); break;
     }
     size_t base = size();
-    append(name);
+    addRaw(name);
     m_stack.push_back({base, size() - base});
     m_state = kStateElemName;
     return *this;
@@ -121,16 +121,16 @@ IXBuilder & IXBuilder::end() {
     default: return fail();
     case kStateElemName:
     case kStateAttrEnd:
-        append("/>\n");
+        addRaw("/>\n");
         m_state = kStateText;
         break;
     case kStateText:
     case kStateTextRBracket:
     case kStateTextRBracket2:
-        append("</");
+        addRaw("</");
         auto & top = m_stack.back();
         appendCopy(top.pos, top.len);
-        append(">\n");
+        addRaw(">\n");
         break;
     }
     m_stack.pop_back();
@@ -146,9 +146,9 @@ IXBuilder & IXBuilder::startAttr(const char name[]) {
     case kStateElemName:
     case kStateAttrEnd: break;
     }
-    append(" ");
-    append(name);
-    append("=\"");
+    addRaw(" ");
+    addRaw(name);
+    addRaw("=\"");
     m_state = kStateAttrText;
     return *this;
 }
@@ -159,7 +159,7 @@ IXBuilder & IXBuilder::endAttr() {
     default: return fail();
     case kStateAttrText: break;
     }
-    append("\"");
+    addRaw("\"");
     m_state = kStateAttrEnd;
     return *this;
 }
@@ -185,7 +185,7 @@ IXBuilder & IXBuilder::text(const char val[]) {
     default: return fail();
     case kStateElemName:
     case kStateAttrEnd:
-        append(">");
+        addRaw(">");
         m_state = kStateText;
         break;
     case kStateAttrText: addText<false>(val); return *this;
@@ -224,7 +224,7 @@ template <bool isContent> void IXBuilder::addText(const char val[]) {
         case kTextTypeNormal: val += 1; continue;
         case kTextTypeNull:
             if (size_t num = val - base) {
-                append(base, num);
+                addRaw(base, num);
                 if (isContent) {
                     if (val[-1] != ']') {
                         m_state = kStateText;
@@ -255,8 +255,8 @@ template <bool isContent> void IXBuilder::addText(const char val[]) {
         case kTextTypeInvalid: m_state = kStateFail; return;
         }
 
-        append(base, val - base);
-        append(kTextEntityTable[type]);
+        addRaw(base, val - base);
+        addRaw(kTextEntityTable[type]);
         base = ++val;
         if (isContent)
             m_state = kStateText;
