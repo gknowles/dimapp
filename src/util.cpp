@@ -13,6 +13,7 @@ using namespace Dim;
 ***/
 
 // randomly generated key
+// TODO: this should be regenerated at every program start
 const uint8_t s_key[] = {
     0xed,
     0x2e,
