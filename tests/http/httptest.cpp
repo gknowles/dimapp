@@ -89,6 +89,60 @@ const Test s_tests[] = {
 *
 ***/
 
+//===========================================================================
+void oldTest() {
+    CharBuf output;
+    HttpConnHandle conn{};
+    bool result;
+    vector<unique_ptr<HttpMsg>> msgs;
+    for (auto && test : s_tests) {
+        cout << "Test - " << test.name << endl;
+        if (test.reset && conn)
+            httpClose(conn);
+        if (!conn)
+            conn = httpListen();
+        result =
+            httpRecv(conn, &output, &msgs, data(test.input), size(test.input));
+        if (result != test.result) {
+            logMsgError() << "result: " << result << " != " << test.result
+                << " (FAILED)";
+        }
+        if (output.compare(test.output) != 0)
+            logMsgError() << "headers mismatch (FAILED)";
+        auto tmi = test.msgs.begin();
+        for (auto && msg : msgs) {
+            if (tmi == test.msgs.end()) {
+                logMsgError() << "too many messages (FAILED)";
+                break;
+            }
+            if (msg->body().compare(tmi->body) != 0)
+                logMsgError() << "body mismatch (FAILED)";
+            auto thi = tmi->headers.begin(), ethi = tmi->headers.end();
+            for (auto && hdr : *msg) {
+                for (auto && hv : hdr) {
+                    if (thi == ethi) {
+                        logMsgError() << "expected fewer headers";
+                        goto finished_headers;
+                    }
+                    if (strcmp(thi->name, hdr.m_name) != 0
+                        || strcmp(thi->value, hv.m_value) != 0) {
+                        logMsgError() << "header mismatch, '" << hdr.m_name
+                            << ": " << hv.m_value << "', expected '"
+                            << thi->name << ": " << thi->value
+                            << "' (FAILED)";
+                    }
+                    ++thi;
+                }
+            }
+        finished_headers:
+            if (thi != ethi)
+                logMsgError() << "expected more headers (FAILED)";
+        }
+        msgs.clear();
+    }
+    httpClose(conn);
+}
+
 
 /****************************************************************************
 *
@@ -121,56 +175,26 @@ void Application::onLog(LogType type, const string & msg) {
 
 //===========================================================================
 void Application::onTask() {
-    CharBuf output;
-    HttpConnHandle conn{};
+    oldTest();
+
     bool result;
     vector<unique_ptr<HttpMsg>> msgs;
-    for (auto && test : s_tests) {
-        cout << "Test - " << test.name << endl;
-        if (test.reset && conn)
-            httpClose(conn);
-        if (!conn)
-            conn = httpListen();
-        result =
-            httpRecv(conn, &output, &msgs, data(test.input), size(test.input));
-        if (result != test.result) {
-            logMsgError() << "result: " << result << " != " << test.result
-                          << " (FAILED)";
-        }
-        if (output.compare(test.output) != 0)
-            logMsgError() << "headers mismatch (FAILED)";
-        auto tmi = test.msgs.begin();
-        for (auto && msg : msgs) {
-            if (tmi == test.msgs.end()) {
-                logMsgError() << "too many messages (FAILED)";
-                break;
-            }
-            if (msg->body().compare(tmi->body) != 0)
-                logMsgError() << "body mismatch (FAILED)";
-            auto thi = tmi->headers.begin(), ethi = tmi->headers.end();
-            for (auto && hdr : *msg) {
-                for (auto && hv : hdr) {
-                    if (thi == ethi) {
-                        logMsgError() << "expected fewer headers";
-                        goto finished_headers;
-                    }
-                    if (strcmp(thi->name, hdr.m_name) != 0
-                        || strcmp(thi->value, hv.m_value) != 0) {
-                        logMsgError() << "header mismatch, '" << hdr.m_name
-                                      << ": " << hv.m_value << "', expected '"
-                                      << thi->name << ": " << thi->value
-                                      << "' (FAILED)";
-                    }
-                    ++thi;
-                }
-            }
-        finished_headers:
-            if (thi != ethi)
-                logMsgError() << "expected more headers (FAILED)";
-        }
+    CharBuf req;
+    CharBuf res;
+    auto hsrv = httpListen();
+    auto hcli = httpConnect(&req);
+    while (req.size()) {
+        result = httpRecv(hsrv, &res, &msgs, req.data(), req.size());
+        assert(result);
+        msgs.clear();
+        if (res.empty())
+            break;
+        result = httpRecv(hcli, &req, &msgs, res.data(), res.size());
+        assert(result);
         msgs.clear();
     }
-    httpClose(conn);
+    httpClose(hsrv);
+    httpClose(hcli);
 
     if (m_errors) {
         ConsoleScopedAttr attr(kConsoleError);

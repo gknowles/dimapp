@@ -1006,6 +1006,13 @@ void HttpConn::deleteStream(int stream, HttpStream * sm) {
 ***/
 
 //===========================================================================
+HttpConnHandle Dim::httpConnect(CharBuf * out) {
+    auto * conn = new HttpConn;
+    auto h = s_conns.insert(conn);
+    return h;
+}
+
+//===========================================================================
 HttpConnHandle Dim::httpListen() {
     auto * conn = new HttpConn;
     return s_conns.insert(conn);
