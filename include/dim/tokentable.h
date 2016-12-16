@@ -32,7 +32,7 @@ public:
     TokenTable(const Token * ptr, size_t count);
 
     bool find(int * out, const char name[]) const;
-    bool find(const char * const * out, int id) const;
+    bool find(const char ** const out, int id) const;
 
     Iterator begin() const;
     Iterator end() const;
@@ -44,6 +44,7 @@ private:
         int id{0};
     };
     std::vector<Value> m_names;
+    std::vector<Value> m_ids;
     int m_hashLen;
 };
 
