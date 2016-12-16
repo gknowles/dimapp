@@ -344,8 +344,8 @@ static void writeStateName(
 }
 
 //===========================================================================
-static void writeTerminals(ostream & os, const vector<bool> & terminals) {
-    if (terminals.empty()) {
+static void writeTerminals(ostream & os, const bitset<256> & terminals) {
+    if (terminals.none()) {
         os << "< >\n";
         return;
     }
@@ -439,7 +439,7 @@ static void writeParserState(
     // write calls to independent sub-state parsers
     const StatePosition * call = nullptr;
     for (auto && spt : st.positions) {
-        if (!spt.second.empty())
+        if (spt.second.any())
             continue;
         const Element * elem = spt.first.elems.back().elem;
         if (elem == &ElementDone::s_elem)

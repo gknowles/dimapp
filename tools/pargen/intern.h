@@ -185,9 +185,9 @@ struct State {
     std::string name;
     std::vector<std::string> aliases;
 
-    // vector.size() is 256 for the possible terminals, or empty() if
+    // bitset is 256 for the possible terminals, count() == 0 if
     // there are no terminals because it's a function.
-    std::map<StatePosition, std::vector<bool>> positions;
+    std::map<StatePosition, std::bitset<256>> positions;
 
     std::vector<unsigned> next;
 

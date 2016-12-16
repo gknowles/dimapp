@@ -287,8 +287,6 @@ static void addPositions(
     if (rule.type == Element::kTerminal) {
         assert(rule.m == 1 && rule.n == 1);
         auto & terms = st->positions[*sp];
-        if (terms.empty())
-            terms.resize(256);
         terms[(unsigned char)rule.value.front()] = true;
         return;
     }
@@ -375,7 +373,6 @@ addNextPositions(State * st, const StatePosition & sp, unsigned ch) {
     if (sp.recurse) {
         auto & terms = st->positions[sp];
         if (terminal) {
-            terms.resize(256);
             terms[ch] = true;
         }
     }
@@ -655,7 +652,7 @@ static bool resolveEventConflicts(State & st, const StateTreeInfo & sti) {
         return true;
 
     bool success = true;
-    map<StatePosition, vector<bool>> next;
+    map<StatePosition, bitset<256>> next;
     for (auto && spt : st.positions) {
         if (spt.first.events.size() == matched.size()) {
             next.insert(next.end(), move(spt));
@@ -707,7 +704,7 @@ static void buildStateTree(
 
         next.clear();
         for (auto && spt : st->positions) {
-            if (!spt.second.empty()) {
+            if (spt.second.any()) {
                 if (i < 256 && spt.second[i])
                     addNextPositions(&next, spt.first, i);
                 continue;
@@ -721,7 +718,7 @@ static void buildStateTree(
             } else if (i == 256) {
                 assert(elem->rule->function);
                 for (auto && nspt : next.positions) {
-                    if (nspt.second.empty()) {
+                    if (nspt.second.none()) {
                         auto && nse = nspt.first.elems.back();
                         assert(nse.elem->type == Element::kRule);
                         if ((elem->rule != nse.elem->rule
@@ -1026,8 +1023,9 @@ static bool dedupStateTreePass(DedupInfo & di) {
         return false;
 
     // Sort descending, by source. Normalizes the processing with respect
-    // to hash functions and makes sure that we never remove a future
-    // target.
+    // to hash functions and makes sure that we never remove a state that
+    // could be the target of a merge from a subsequent state in the same
+    // pass.
     sort(matched.begin(), matched.end(), [](auto & a, auto & b) {
         return a.second > b.second;
     });
