@@ -254,7 +254,7 @@ addRulePositions(bool * skippable, State * st, StatePosition * sp, bool init) {
         // allows it, but that's more difficult to determine.
         // if (!init) {
         [[maybe_unused]] auto & terms = st->positions[*sp];
-        assert(terms.empty());
+        assert(terms.none());
         ignore = terms;
         return;
         //}
@@ -682,6 +682,23 @@ static void appendHexByte(string & out, unsigned byte) {
 }
 
 //===========================================================================
+static void appendPathChar(string & out, unsigned i) {
+    if (i < ' ' || i == '^' || i >= 127) {
+        out.push_back('^');
+        if (i < ' ') {
+            out.push_back((char)i + '@');
+        } else if (i == 256) {
+            out.push_back('*');
+        } else {
+            out.push_back('x');
+            appendHexByte(out, i);
+        }
+    } else {
+        out.push_back(unsigned char(i));
+    }
+}
+
+//===========================================================================
 static void buildStateTree(
     State * st,
     unordered_set<State> & states,
@@ -691,19 +708,7 @@ static void buildStateTree(
     bool errors{false};
     for (unsigned i = 0; i < 257; ++i) {
         size_t pathLen = sti.m_path.size();
-        if (i < ' ' || i == '^' || i >= 127) {
-            sti.m_path.push_back('^');
-            if (i < ' ') {
-                sti.m_path.push_back((char)i + '@');
-            } else if (i == 256) {
-                sti.m_path.push_back('*');
-            } else {
-                sti.m_path.push_back('x');
-                appendHexByte(sti.m_path, i);
-            }
-        } else {
-            sti.m_path.push_back(unsigned char(i));
-        }
+        appendPathChar(sti.m_path, i);
 
         next.clear();
         for (auto && spt : st->positions) {
