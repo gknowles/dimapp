@@ -70,11 +70,14 @@ bool operator<(
     auto a2 = a1 + a.size();
     auto b1 = b.data();
     auto b2 = b1 + b.size();
-    for (; a1 != a2 && b1 != b2; ++a1, ++b1) {
+    for (;; ++a1, ++b1) {
+        if (a1 == a2) 
+            return b1 != b2;
+        if (b1 == b2)
+            return false;
         if (int rc = a1->compare(*b1))
             return rc < 0;
     }
-    return a1 == a2 && b1 != b2;
 }
 
 
