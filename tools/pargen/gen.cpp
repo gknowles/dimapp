@@ -198,6 +198,11 @@ struct StateTreeInfo {
 
 static bool s_simpleRecursion = false;
 
+static void addChildStates(
+    State * st,
+    unordered_set<State> & states,
+    StateTreeInfo & sti);
+
 //===========================================================================
 static size_t findRecursionSimple(StatePosition * sp) {
     size_t depth = sp->elems.size();
@@ -370,13 +375,15 @@ static void setPositionPrefix(
 
 //===========================================================================
 static void
-addNextPositions(State * st, const StatePosition & sp, unsigned ch) {
-    bool terminal = (ch < 256);
+addNextPositions(
+    State * st, const StatePosition & sp, const bitset<256> & chars) {
+    bool terminal = chars.any();
 
     if (sp.recurse) {
         auto & terms = st->positions[sp];
         if (terminal) {
-            terms[ch] = true;
+            assert(terms.none());
+            terms = chars;
         }
     }
 
@@ -671,6 +678,42 @@ static bool resolveEventConflicts(State & st, const StateTreeInfo & sti) {
 }
 
 //===========================================================================
+static unsigned addState(
+    State * st,
+    unordered_set<State> & states,
+    StateTreeInfo & sti
+) {
+    if (st->positions.empty()) 
+        return 0;
+
+    bool errors = !resolveEventConflicts(*st, sti);
+    removePositionsWithMoreEvents(*st);
+
+    // add state and, if it's new, all of its child states
+    auto ib = states.insert(move(*st));
+    State * st2 = const_cast<State *>(&*ib.first);
+
+    ++sti.m_transitions;
+    if (ib.second) {
+        st2->id = ++sti.m_nextStateId;
+        st2->name = sti.m_path;
+        const char * show = sti.m_path.data();
+        if (sti.m_path.size() > 40) {
+            show += sti.m_path.size() - 40;
+        }
+        logMsgInfo()
+            << sti.m_nextStateId << " states, " << sti.m_transitions
+            << " trans, " << sti.m_path.size() << " chars, "
+            << st2->positions.size() << " exits, " << kLeftQ << show
+            << kRightQ;
+        // if (sti.m_path.size() > 10) errors = true;
+        if (!errors)
+            addChildStates(st2, states, sti);
+    }
+    return st2->id;
+}
+
+//===========================================================================
 static void appendHexChar(string & out, unsigned nibble) {
     out += nibble > 9 ? 'a' + (char)nibble - 10 : '0' + (char)nibble;
 }
@@ -699,77 +742,90 @@ static void appendPathChar(string & out, unsigned i) {
 }
 
 //===========================================================================
-static void buildStateTree(
+static void addChildStates(
     State * st,
     unordered_set<State> & states,
     StateTreeInfo & sti) {
     st->next.assign(257, 0);
     State next;
     bool errors{false};
-    for (unsigned i = 0; i < 257; ++i) {
-        size_t pathLen = sti.m_path.size();
-        appendPathChar(sti.m_path, i);
 
+    // process all terminal combinations
+    bitset<256> avail;
+    avail.set();
+    size_t pathLen = sti.m_path.size();
+    for (;;) {
         next.clear();
+        bitset<256> chars;
+        bool found{false};
         for (auto && spt : st->positions) {
-            if (spt.second.any()) {
-                if (i < 256 && spt.second[i])
-                    addNextPositions(&next, spt.first, i);
-                continue;
-            }
-
-            auto elem = spt.first.elems.back().elem;
-            assert(elem->type == Element::kRule);
-            if (elem == &ElementDone::s_elem) {
-                if (i == 0)
-                    st->next[i] = 1;
-            } else if (i == 256) {
-                assert(elem->rule->function);
-                for (auto && nspt : next.positions) {
-                    if (nspt.second.none()) {
-                        auto && nse = nspt.first.elems.back();
-                        assert(nse.elem->type == Element::kRule);
-                        if ((elem->rule != nse.elem->rule
-                             || spt.first.events != nspt.first.events)) {
-                            errors = true;
-                            logMsgError() << "Multiple recursive targets, "
-                                          << kLeftQ << sti.m_path << kRightQ;
-                            break;
-                        }
-                    }
-                }
-                addNextPositions(&next, spt.first, i);
+            if (!found) {
+                chars = spt.second & avail;
+                found = chars.any();
+            } else {
+                auto tmp = spt.second & chars;
+                if (tmp.any())
+                    chars = tmp;
             }
         }
-        if (!next.positions.empty()) {
-            errors = !resolveEventConflicts(next, sti) || errors;
-            removePositionsWithMoreEvents(next);
+        if (!found)
+            break;
 
-            // add state and, if it's new, all of its child states
-            auto ib = states.insert(move(next));
-            State * st2 = const_cast<State *>(&*ib.first);
+        unsigned i = 0;
+        for (;; ++i) {
+            if (chars.test(i))
+                break;
+        }
+        appendPathChar(sti.m_path, i);
 
-            ++sti.m_transitions;
-            if (ib.second) {
-                st2->id = ++sti.m_nextStateId;
-                st2->name = sti.m_path;
-                const char * show = sti.m_path.data();
-                if (sti.m_path.size() > 40) {
-                    show += sti.m_path.size() - 40;
-                }
-                logMsgInfo()
-                    << sti.m_nextStateId << " states, " << sti.m_transitions
-                    << " trans, " << sti.m_path.size() << " chars, "
-                    << st2->positions.size() << " exits, " << kLeftQ << show
-                    << kRightQ;
-                // if (sti.m_path.size() > 10) errors = true;
-                if (!errors)
-                    buildStateTree(st2, states, sti);
+        for (auto && spt : st->positions) {
+            if ((spt.second & chars).any()) {
+                addNextPositions(&next, spt.first, chars);
             }
-            st->next[i] = st2->id;
+        }
+        avail &= ~chars;
+        unsigned id = addState(&next, states, sti);
+        for (unsigned i = 0; i < chars.size(); ++i) {
+            if (chars[i])
+                st->next[i] = id;
         }
         sti.m_path.resize(pathLen);
     }
+
+    next.clear();
+    appendPathChar(sti.m_path, 256);
+    for (auto && spt : st->positions) {
+        if (spt.second.any())
+            continue;
+        auto elem = spt.first.elems.back().elem;
+        assert(elem->type == Element::kRule);
+
+        if (elem == &ElementDone::s_elem) {
+            st->next[0] = 1;
+            continue;
+        }
+
+        assert(elem->rule->function);
+        for (auto && nspt : next.positions) {
+            if (nspt.second.none()) {
+                auto && nse = nspt.first.elems.back();
+                assert(nse.elem->type == Element::kRule);
+                if ((elem->rule != nse.elem->rule
+                        || spt.first.events != nspt.first.events)) {
+                    errors = true;
+                    logMsgError() << "Multiple recursive targets, "
+                                    << kLeftQ << sti.m_path << kRightQ;
+                    break;
+                }
+            }
+        }
+        bitset<256> chars;
+        addNextPositions(&next, spt.first, chars);
+    }
+    if (!errors) 
+        st->next[256] = addState(&next, states, sti);
+    sti.m_path.resize(pathLen);
+
     if (!sti.m_path.size()) {
         logMsgInfo() << sti.m_nextStateId << " states, " << sti.m_transitions
                      << " transitions";
@@ -804,7 +860,7 @@ void buildStateTree(
         initPositions(&state, root);
         state.id = ++sti.m_nextStateId;
         auto ib = states->insert(move(state));
-        buildStateTree(const_cast<State *>(&*ib.first), *states, sti);
+        addChildStates(const_cast<State *>(&*ib.first), *states, sti);
         if (dedupStates)
             dedupStateTree(*states);
     }
