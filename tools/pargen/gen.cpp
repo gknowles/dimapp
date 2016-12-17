@@ -749,47 +749,47 @@ static void addChildStates(
     st->next.assign(257, 0);
     State next;
     bool errors{false};
-
-    // process all terminal combinations
-    bitset<256> avail;
-    avail.set();
     size_t pathLen = sti.m_path.size();
-    for (;;) {
-        next.clear();
-        bitset<256> chars;
+
+    // process all terminal combinations in order of lowest character value
+    bitset<256> avail;
+    for (auto && spt : st->positions)
+        avail |= spt.second;
+
+    for (unsigned i = 0; i < 256; ++i) {
+        if (!avail.test(i))
+            continue;
+
+        bitset<256> include;
+        bitset<256> exclude = ~avail;
         bool found{false};
         for (auto && spt : st->positions) {
-            if (!found) {
-                chars = spt.second & avail;
-                found = chars.any();
+            if (!spt.second.test(i)) {
+                exclude |= spt.second;
+            } else if (!found) {
+                include = spt.second;
+                found = true;
             } else {
-                auto tmp = spt.second & chars;
-                if (tmp.any())
-                    chars = tmp;
+                include &= spt.second;
             }
         }
-        if (!found)
-            break;
+        if (!include.test(i))
+            continue;
+        include &= ~exclude;
 
-        unsigned i = 0;
-        for (;; ++i) {
-            if (chars.test(i))
-                break;
+        next.clear();
+        for (auto && spt : st->positions) {
+            if ((spt.second & include).any())
+                addNextPositions(&next, spt.first, include);
         }
         appendPathChar(sti.m_path, i);
-
-        for (auto && spt : st->positions) {
-            if ((spt.second & chars).any()) {
-                addNextPositions(&next, spt.first, chars);
-            }
-        }
-        avail &= ~chars;
         unsigned id = addState(&next, states, sti);
-        for (unsigned i = 0; i < chars.size(); ++i) {
-            if (chars[i])
+        sti.m_path.resize(pathLen);
+        for (unsigned i = 0; i < include.size(); ++i) {
+            if (include[i])
                 st->next[i] = id;
         }
-        sti.m_path.resize(pathLen);
+        avail &= ~include;
     }
 
     next.clear();
