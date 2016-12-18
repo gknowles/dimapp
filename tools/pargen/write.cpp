@@ -747,14 +747,23 @@ void writeParser(
     writeCppfileStart(cppfile, rules, src);
 
     unordered_set<State> states;
-    buildStateTree(&states, *root, opts.buildStateTree, opts.dedupStateTree);
+    buildStateTree(
+        &states,
+        *root,
+        opts.buildStateTree,
+        opts.dedupStateTree,
+        opts.stateTreeDepthLimit);
     writeFunction(cppfile, nullptr, states, src, opts.writeStatePositions);
 
     if (opts.writeFunctions) {
         for (auto && elem : rules.rules()) {
             if (elem.function) {
                 buildStateTree(
-                    &states, elem, opts.buildStateTree, opts.dedupStateTree);
+                    &states,
+                    elem,
+                    opts.buildStateTree,
+                    opts.dedupStateTree,
+                    opts.stateTreeDepthLimit);
                 writeFunction(
                     cppfile, &elem, states, src, opts.writeStatePositions);
             }

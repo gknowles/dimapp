@@ -214,7 +214,8 @@ void buildStateTree(
     std::unordered_set<State> * states,
     const Element & root,
     bool inclDeps,
-    bool dedupStates);
+    bool dedupStates,
+    unsigned depthLimit);
 void dedupStateTree(std::unordered_set<State> & states);
 
 
@@ -228,6 +229,7 @@ struct RunOptions {
     int markFunction;
     bool includeCallbacks;
     bool buildStateTree;
+    unsigned stateTreeDepthLimit;
     bool dedupStateTree;
     bool writeStatePositions;
     bool writeFunctions;

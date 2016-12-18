@@ -190,6 +190,8 @@ bool State::operator==(const State & right) const {
 
 namespace {
 struct StateTreeInfo {
+    unsigned m_depth;
+    unsigned m_depthLimit;
     string m_path;
     unsigned m_nextStateId;
     unsigned m_transitions;
@@ -677,38 +679,6 @@ static bool resolveEventConflicts(State & st, const StateTreeInfo & sti) {
 }
 
 //===========================================================================
-static unsigned
-addState(State * st, unordered_set<State> & states, StateTreeInfo & sti) {
-    if (st->positions.empty())
-        return 0;
-
-    bool errors = !resolveEventConflicts(*st, sti);
-    removePositionsWithMoreEvents(*st);
-
-    // add state and, if it's new, all of its child states
-    auto ib = states.insert(move(*st));
-    State * st2 = const_cast<State *>(&*ib.first);
-
-    ++sti.m_transitions;
-    if (ib.second) {
-        st2->id = ++sti.m_nextStateId;
-        st2->name = sti.m_path;
-        const char * show = sti.m_path.data();
-        if (sti.m_path.size() > 40) {
-            show += sti.m_path.size() - 40;
-        }
-        logMsgInfo() << sti.m_nextStateId << " states, " << sti.m_transitions
-                     << " trans, " << sti.m_path.size() << " chars, "
-                     << st2->positions.size() << " exits, " << kLeftQ << show
-                     << kRightQ;
-        // if (sti.m_path.size() > 10) errors = true;
-        if (!errors)
-            addChildStates(st2, states, sti);
-    }
-    return st2->id;
-}
-
-//===========================================================================
 static void appendHexChar(string & out, unsigned nibble) {
     out += nibble > 9 ? 'a' + (char)nibble - 10 : '0' + (char)nibble;
 }
@@ -737,6 +707,47 @@ static void appendPathChar(string & out, unsigned i) {
 }
 
 //===========================================================================
+static unsigned addState(
+    State * st,
+    unordered_set<State> & states,
+    StateTreeInfo & sti,
+    unsigned i) {
+    if (st->positions.empty())
+        return 0;
+
+    size_t pathLen = sti.m_path.size();
+    appendPathChar(sti.m_path, i);
+    sti.m_depth += 1;
+
+    bool errors = !resolveEventConflicts(*st, sti);
+    removePositionsWithMoreEvents(*st);
+
+    // add state and, if it's new, all of its child states
+    auto ib = states.insert(move(*st));
+    State * st2 = const_cast<State *>(&*ib.first);
+
+    ++sti.m_transitions;
+    if (ib.second) {
+        st2->id = ++sti.m_nextStateId;
+        st2->name = sti.m_path;
+        const char * show = sti.m_path.data();
+        if (sti.m_path.size() > 40) {
+            show += sti.m_path.size() - 40;
+        }
+        logMsgInfo() << sti.m_nextStateId << " states, " << sti.m_transitions
+                     << " trans, " << sti.m_depth << " depth, "
+                     << st2->positions.size() << " exits, " << kLeftQ << show
+                     << kRightQ;
+        if (!errors && (!sti.m_depthLimit || sti.m_depth < sti.m_depthLimit))
+            addChildStates(st2, states, sti);
+    }
+
+    sti.m_depth -= 1;
+    sti.m_path.resize(pathLen);
+    return st2->id;
+}
+
+//===========================================================================
 static void addChildStates(
     State * st,
     unordered_set<State> & states,
@@ -744,7 +755,6 @@ static void addChildStates(
     st->next.assign(257, 0);
     State next;
     bool errors{false};
-    size_t pathLen = sti.m_path.size();
 
     // process all terminal combinations in order of lowest character value
     bitset<256> avail;
@@ -777,9 +787,7 @@ static void addChildStates(
             if ((spt.second & include).any())
                 addNextPositions(&next, spt.first, include);
         }
-        appendPathChar(sti.m_path, i);
-        unsigned id = addState(&next, states, sti);
-        sti.m_path.resize(pathLen);
+        unsigned id = addState(&next, states, sti, i);
         for (unsigned i = 0; i < include.size(); ++i) {
             if (include[i])
                 st->next[i] = id;
@@ -788,7 +796,6 @@ static void addChildStates(
     }
 
     next.clear();
-    appendPathChar(sti.m_path, 256);
     for (auto && spt : st->positions) {
         if (spt.second.any())
             continue;
@@ -818,8 +825,7 @@ static void addChildStates(
         addNextPositions(&next, spt.first, chars);
     }
     if (!errors)
-        st->next[256] = addState(&next, states, sti);
-    sti.m_path.resize(pathLen);
+        st->next[256] = addState(&next, states, sti, 256);
 
     if (!sti.m_path.size()) {
         logMsgDebug() << sti.m_nextStateId << " states, " << sti.m_transitions
@@ -832,12 +838,15 @@ void buildStateTree(
     unordered_set<State> * states,
     const Element & root,
     bool inclDeps,
-    bool dedupStates) {
+    bool dedupStates,
+    unsigned depthLimit) {
     logMsgDebug() << "rule: " << root.name;
 
     states->clear();
     State state;
     StateTreeInfo sti;
+    sti.m_depthLimit = depthLimit;
+    sti.m_depth = 0;
     sti.m_nextStateId = 0;
     sti.m_transitions = 0;
     state.id = ++sti.m_nextStateId;

@@ -243,6 +243,9 @@ void Application::onTask() {
     cli.opt(&s_cmdopts.buildStateTree, "!B build", true)
         .desc("Build the state tree, otherwise only stub versions of parser "
               "are generated.");
+    cli.opt(&s_cmdopts.stateTreeDepthLimit, "l depth-limit", 0)
+        .desc("Limit state tree depth, skip anything that would go deeper. "
+              "0 (the default) for unlimited.");
     cli.opt(&s_cmdopts.dedupStateTree, "!D dedup", true)
         .desc("Purge duplicate entries from the state tree, duplicates occur "
               "when multiple paths through the rules end with the same series "
