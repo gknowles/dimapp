@@ -1039,9 +1039,11 @@ static bool equalize(unsigned a, unsigned b, DedupInfo & di) {
         return false;
     if (x.state->next == y.state->next)
         return true;
+    const unsigned * xn = x.state->next.data();
+    const unsigned * yn = y.state->next.data();
     for (unsigned i = 0; i < n; ++i) {
-        unsigned p = x.state->next[i];
-        unsigned q = y.state->next[i];
+        unsigned p = xn[i];
+        unsigned q = yn[i];
         if (!p && !q)
             continue;
         if (!p || !q)
