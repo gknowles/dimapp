@@ -125,30 +125,20 @@ bool BaseParserNotify::onCharRefStart(const char * ptr) {
 
 //===========================================================================
 bool BaseParserNotify::onCharRefEnd(const char * eptr) {
-    if (m_char < 0x20) {
-        if (m_char == '\t' || m_char == '\n' || m_char == '\r') {
-            *m_cur++ = (unsigned char)m_char;
-        } else {
+    if (m_char < 0x80) {
+        if (m_char < 0x20 && m_char != '\t' && m_char != '\n'
+            && m_char != '\r') {
             return m_parser.fail("char ref of invalid code point");
         }
-    } else if (m_char < 0x80) {
         *m_cur++ = (unsigned char)m_char;
     } else if (m_char < 0x800) {
         *m_cur++ = (unsigned char)(m_char >> 6) | 0xc0;
         *m_cur++ = (unsigned char)(m_char & 0xbf | 0x80);
-    } else if (m_char < 0xd800) {
+    } else if (m_char < 0xd800 || m_char >= 0xe000 && m_char < 0xfffe) {
         *m_cur++ = (unsigned char)(m_char >> 12) | 0xe0;
         *m_cur++ = (unsigned char)(m_char >> 6) & 0xbf | 0x80;
         *m_cur++ = (unsigned char)(m_char & 0xbf | 0x80);
-    } else if (m_char < 0xe000) {
-        return m_parser.fail("char ref of invalid code point");
-    } else if (m_char < 0xfffe) {
-        *m_cur++ = (unsigned char)(m_char >> 12) | 0xe0;
-        *m_cur++ = (unsigned char)(m_char >> 6) & 0xbf | 0x80;
-        *m_cur++ = (unsigned char)(m_char & 0xbf | 0x80);
-    } else if (m_char < 0x10000) {
-        return m_parser.fail("char ref of invalid code point");
-    } else if (m_char < 0x110000) {
+    } else if (m_char >= 0x10000 && m_char < 0x110000) {
         *m_cur++ = (unsigned char)(m_char >> 18) | 0xf0;
         *m_cur++ = (unsigned char)(m_char >> 12) & 0xbf | 0x80;
         *m_cur++ = (unsigned char)(m_char >> 6) & 0xbf | 0x80;
