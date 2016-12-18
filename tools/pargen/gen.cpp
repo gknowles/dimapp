@@ -827,7 +827,7 @@ static void addChildStates(
     sti.m_path.resize(pathLen);
 
     if (!sti.m_path.size()) {
-        logMsgInfo() << sti.m_nextStateId << " states, " << sti.m_transitions
+        logMsgDebug() << sti.m_nextStateId << " states, " << sti.m_transitions
                      << " transitions";
     }
 }
@@ -838,7 +838,7 @@ void buildStateTree(
     const Element & root,
     bool inclDeps,
     bool dedupStates) {
-    logMsgInfo() << "rule: " << root.name;
+    logMsgDebug() << "rule: " << root.name;
 
     states->clear();
     State state;
@@ -895,7 +895,7 @@ template <> struct hash<StateKey> {
 namespace {
 struct DedupInfo {
     unordered_set<State> * states{nullptr};
-    unordered_map<unsigned, StateInfo> info;
+    vector<StateInfo> info;
     unordered_map<StateKey, vector<unsigned>> idByKey;
 
     unsigned lastMapId{0};
@@ -1025,7 +1025,7 @@ static void mergeState(unsigned dstId, unsigned srcId, DedupInfo & di) {
 
     // delete source state and it's dedup info
     di.states->erase(*src.state);
-    di.info.erase(srcId);
+    di.info[srcId] = {};
 }
 
 //===========================================================================
@@ -1113,11 +1113,14 @@ static bool dedupStateTreePass(DedupInfo & di) {
 
 //===========================================================================
 void dedupStateTree(unordered_set<State> & states) {
-    unsigned maxId = 0;
     DedupInfo di;
     di.states = &states;
+    unsigned maxId = 0;
     for (auto && st : states) {
         maxId = max(maxId, st.id);
+    }
+    di.info.resize(maxId + 1);
+    for (auto && st : states) {
         auto & si = di.info[st.id];
         si.state = const_cast<State *>(&st);
         if (!st.next.empty()) {
@@ -1130,8 +1133,8 @@ void dedupStateTree(unordered_set<State> & states) {
         copy(si.key, st);
         insertKeyRef(di, si);
     }
-    di.pmap.assign(maxId + 1, 0);
-    di.qmap.assign(maxId + 1, 0);
+    di.pmap.assign(di.info.size(), 0);
+    di.qmap.assign(di.info.size(), 0);
 
     // keep making dedup passes through all the keys until no more dups are
     // found.
