@@ -899,8 +899,10 @@ struct DedupInfo {
     unordered_map<StateKey, vector<unsigned>> idByKey;
 
     unsigned lastMapId{0};
-    unordered_map<unsigned, unsigned> pmap;
-    unordered_map<unsigned, unsigned> qmap;
+    vector<unsigned> pmapped;
+    vector<unsigned> pmap;
+    vector<unsigned> qmapped;
+    vector<unsigned> qmap;
 };
 } // namespace
 
@@ -1051,7 +1053,9 @@ static bool equalize(unsigned a, unsigned b, DedupInfo & di) {
         if (ap)
             continue;
         di.pmap[p] = ++di.lastMapId;
+        di.pmapped.push_back(p);
         di.qmap[q] = di.lastMapId;
+        di.qmapped.push_back(q);
         if (p != q && !equalize(p, q, di))
             return false;
     }
@@ -1072,10 +1076,16 @@ static bool dedupStateTreePass(DedupInfo & di) {
                 if (x == y)
                     break;
                 di.lastMapId = 0;
-                di.pmap.clear();
-                di.qmap.clear();
+                for (auto && id : di.pmapped)
+                    di.pmap[id] = 0;
+                di.pmapped.clear();
+                for (auto && id : di.qmapped)
+                    di.qmap[id] = 0;
+                di.qmapped.clear();
                 di.pmap[x] = ++di.lastMapId;
+                di.pmapped.push_back(x);
                 di.qmap[y] = di.lastMapId;
+                di.qmapped.push_back(y);
                 if (equalize(x, y, di)) {
                     matched.push_back({x, y});
                     break;
@@ -1101,9 +1111,11 @@ static bool dedupStateTreePass(DedupInfo & di) {
 
 //===========================================================================
 void dedupStateTree(unordered_set<State> & states) {
+    unsigned maxId = 0;
     DedupInfo di;
     di.states = &states;
     for (auto && st : states) {
+        maxId = max(maxId, st.id);
         auto & si = di.info[st.id];
         si.state = const_cast<State *>(&st);
         if (!st.next.empty()) {
@@ -1116,6 +1128,8 @@ void dedupStateTree(unordered_set<State> & states) {
         copy(si.key, st);
         insertKeyRef(di, si);
     }
+    di.pmap.assign(maxId + 1, 0);
+    di.qmap.assign(maxId + 1, 0);
 
     // keep making dedup passes through all the keys until no more dups are
     // found.
