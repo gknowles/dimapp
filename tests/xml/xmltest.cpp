@@ -70,7 +70,7 @@ int main(int argc, char * argv[]) {
         cli.opt<fs::path>("[xml file]").desc("File to check is well-formed");
     auto & test = cli.opt<bool>("test.").desc("Run internal unit tests");
     auto & echo = cli.opt<bool>("echo").desc("Echo xml if well-formed");
-	cli.versionOpt("1.0 (" __DATE__ ")");
+    cli.versionOpt("1.0 (" __DATE__ ")");
     if (!cli.parse(cerr, argc, argv))
         return cli.exitCode();
     if (*test)

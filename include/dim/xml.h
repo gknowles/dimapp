@@ -54,12 +54,16 @@ protected:
     virtual size_t size() const = 0;
 
 private:
-    template <int N>
-    void addRaw(const char (&text)[N]) { append(text, N - 1); }
+    template <int N> void addRaw(const char (&text)[N]) {
+        append(text, N - 1);
+    }
 
-    template <typename Char,
-        typename = std::enable_if<std::is_same<Char, char>::value>::type> 
-    void addRaw(Char const * const & text) { append(text); }
+    template <
+        typename Char,
+        typename = std::enable_if<std::is_same<Char, char>::value>::type>
+    void addRaw(Char const * const & text) {
+        append(text);
+    }
 
     void addRaw(const char text[], size_t count) { append(text, count); }
 
@@ -99,15 +103,15 @@ inline IXBuilder &
 operator<<(IXBuilder & out, const IXBuilder::ElemNameProxy & e) {
     return e.value ? out.elem(e.name, e.value) : out.start(e.name);
 }
-inline IXBuilder::ElemNameProxy start(
-    const char name[], const char val[] = nullptr) {
+inline IXBuilder::ElemNameProxy
+start(const char name[], const char val[] = nullptr) {
     return IXBuilder::ElemNameProxy{name, val};
 }
 inline IXBuilder & end(IXBuilder & out) {
     return out.end();
 }
-inline IXBuilder::ElemNameProxy elem(
-    const char name[], const char val[] = nullptr) {
+inline IXBuilder::ElemNameProxy
+elem(const char name[], const char val[] = nullptr) {
     return IXBuilder::ElemNameProxy{name, val ? val : ""};
 }
 
@@ -115,8 +119,8 @@ inline IXBuilder &
 operator<<(IXBuilder & out, const IXBuilder::AttrNameProxy & a) {
     return a.value ? out.attr(a.name, a.value) : out.startAttr(a.name);
 }
-inline IXBuilder::AttrNameProxy attr(
-    const char name[], const char val[] = nullptr) {
+inline IXBuilder::AttrNameProxy
+attr(const char name[], const char val[] = nullptr) {
     return IXBuilder::AttrNameProxy{name, val};
 }
 inline IXBuilder & endAttr(IXBuilder & out) {

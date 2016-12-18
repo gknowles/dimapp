@@ -71,7 +71,7 @@ bool operator<(
     auto b1 = b.data();
     auto b2 = b1 + b.size();
     for (;; ++a1, ++b1) {
-        if (a1 == a2) 
+        if (a1 == a2)
             return b1 != b2;
         if (b1 == b2)
             return false;
@@ -198,10 +198,8 @@ struct StateTreeInfo {
 
 static bool s_simpleRecursion = false;
 
-static void addChildStates(
-    State * st,
-    unordered_set<State> & states,
-    StateTreeInfo & sti);
+static void
+addChildStates(State * st, unordered_set<State> & states, StateTreeInfo & sti);
 
 //===========================================================================
 static size_t findRecursionSimple(StatePosition * sp) {
@@ -374,9 +372,10 @@ static void setPositionPrefix(
 }
 
 //===========================================================================
-static void
-addNextPositions(
-    State * st, const StatePosition & sp, const bitset<256> & chars) {
+static void addNextPositions(
+    State * st,
+    const StatePosition & sp,
+    const bitset<256> & chars) {
     bool terminal = chars.any();
 
     if (sp.recurse) {
@@ -678,12 +677,9 @@ static bool resolveEventConflicts(State & st, const StateTreeInfo & sti) {
 }
 
 //===========================================================================
-static unsigned addState(
-    State * st,
-    unordered_set<State> & states,
-    StateTreeInfo & sti
-) {
-    if (st->positions.empty()) 
+static unsigned
+addState(State * st, unordered_set<State> & states, StateTreeInfo & sti) {
+    if (st->positions.empty())
         return 0;
 
     bool errors = !resolveEventConflicts(*st, sti);
@@ -701,11 +697,10 @@ static unsigned addState(
         if (sti.m_path.size() > 40) {
             show += sti.m_path.size() - 40;
         }
-        logMsgInfo()
-            << sti.m_nextStateId << " states, " << sti.m_transitions
-            << " trans, " << sti.m_path.size() << " chars, "
-            << st2->positions.size() << " exits, " << kLeftQ << show
-            << kRightQ;
+        logMsgInfo() << sti.m_nextStateId << " states, " << sti.m_transitions
+                     << " trans, " << sti.m_path.size() << " chars, "
+                     << st2->positions.size() << " exits, " << kLeftQ << show
+                     << kRightQ;
         // if (sti.m_path.size() > 10) errors = true;
         if (!errors)
             addChildStates(st2, states, sti);
@@ -811,10 +806,10 @@ static void addChildStates(
                 auto && nse = nspt.first.elems.back();
                 assert(nse.elem->type == Element::kRule);
                 if ((elem->rule != nse.elem->rule
-                        || spt.first.events != nspt.first.events)) {
+                     || spt.first.events != nspt.first.events)) {
                     errors = true;
-                    logMsgError() << "Multiple recursive targets, "
-                                    << kLeftQ << sti.m_path << kRightQ;
+                    logMsgError() << "Multiple recursive targets, " << kLeftQ
+                                  << sti.m_path << kRightQ;
                     break;
                 }
             }
@@ -822,13 +817,13 @@ static void addChildStates(
         bitset<256> chars;
         addNextPositions(&next, spt.first, chars);
     }
-    if (!errors) 
+    if (!errors)
         st->next[256] = addState(&next, states, sti);
     sti.m_path.resize(pathLen);
 
     if (!sti.m_path.size()) {
         logMsgDebug() << sti.m_nextStateId << " states, " << sti.m_transitions
-                     << " transitions";
+                      << " transitions";
     }
 }
 

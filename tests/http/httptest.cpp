@@ -105,7 +105,7 @@ void oldTest() {
             httpRecv(conn, &output, &msgs, data(test.input), size(test.input));
         if (result != test.result) {
             logMsgError() << "result: " << result << " != " << test.result
-                << " (FAILED)";
+                          << " (FAILED)";
         }
         if (output.compare(test.output) != 0)
             logMsgError() << "headers mismatch (FAILED)";
@@ -127,9 +127,9 @@ void oldTest() {
                     if (strcmp(thi->name, hdr.m_name) != 0
                         || strcmp(thi->value, hv.m_value) != 0) {
                         logMsgError() << "header mismatch, '" << hdr.m_name
-                            << ": " << hv.m_value << "', expected '"
-                            << thi->name << ": " << thi->value
-                            << "' (FAILED)";
+                                      << ": " << hv.m_value << "', expected '"
+                                      << thi->name << ": " << thi->value
+                                      << "' (FAILED)";
                     }
                     ++thi;
                 }

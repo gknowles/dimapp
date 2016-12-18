@@ -28,11 +28,11 @@ private:
     bool onCDataWithEndStart(const char * ptr);
     bool onCDataWithEndEnd(const char * eptr);
     bool onCharDataChar(char ch);
-	bool onCharRefStart (const char * ptr);
-	bool onCharRefEnd (const char * eptr);
-	bool onCharRefDigitChar (char ch);
-	bool onCharRefHexdigChar (char ch);
-	bool onElemNameStart(const char * ptr);
+    bool onCharRefStart(const char * ptr);
+    bool onCharRefEnd(const char * eptr);
+    bool onCharRefDigitChar(char ch);
+    bool onCharRefHexdigChar(char ch);
+    bool onElemNameStart(const char * ptr);
     bool onElemNameEnd(const char * eptr);
     bool onElemTextStart(const char * ptr);
     bool onElemTextEnd(const char * eptr);
@@ -43,8 +43,8 @@ private:
     bool onEntityLtEnd(const char * eptr);
     bool onEntityOtherEnd(const char * eptr);
     bool onEntityQuotEnd(const char * eptr);
-    bool onEntityValueStart (const char * ptr);
-    bool onEntityValueEnd (const char * eptr);
+    bool onEntityValueStart(const char * ptr);
+    bool onEntityValueEnd(const char * eptr);
     bool onNormalizableWsChar(char ch);
 
     XStreamParser & m_parser;
@@ -53,7 +53,7 @@ private:
     char * m_cur{nullptr};
     const char * m_attr{nullptr};
     size_t m_attrLen{0};
-	unsigned m_char{0};
+    unsigned m_char{0};
 };
 
 //===========================================================================
@@ -118,41 +118,41 @@ bool BaseParserNotify::onCharDataChar(char ch) {
 }
 
 //===========================================================================
-bool BaseParserNotify::onCharRefStart (const char * ptr) {
+bool BaseParserNotify::onCharRefStart(const char * ptr) {
     m_char = 0;
     return true;
 }
 
 //===========================================================================
-bool BaseParserNotify::onCharRefEnd (const char * eptr) {
+bool BaseParserNotify::onCharRefEnd(const char * eptr) {
     if (m_char < 0x20) {
         if (m_char == '\t' || m_char == '\n' || m_char == '\r') {
-            *m_cur++ = (unsigned char) m_char;
+            *m_cur++ = (unsigned char)m_char;
         } else {
             return m_parser.fail("char ref of invalid code point");
         }
     } else if (m_char < 0x80) {
-        *m_cur++ = (unsigned char) m_char;
+        *m_cur++ = (unsigned char)m_char;
     } else if (m_char < 0x800) {
-        *m_cur++ = (unsigned char) (m_char >> 6) | 0xc0;
-        *m_cur++ = (unsigned char) (m_char & 0xbf | 0x80);
+        *m_cur++ = (unsigned char)(m_char >> 6) | 0xc0;
+        *m_cur++ = (unsigned char)(m_char & 0xbf | 0x80);
     } else if (m_char < 0xd800) {
-        *m_cur++ = (unsigned char) (m_char >> 12) | 0xe0;
-        *m_cur++ = (unsigned char) (m_char >> 6) & 0xbf | 0x80;
-        *m_cur++ = (unsigned char) (m_char & 0xbf | 0x80);
+        *m_cur++ = (unsigned char)(m_char >> 12) | 0xe0;
+        *m_cur++ = (unsigned char)(m_char >> 6) & 0xbf | 0x80;
+        *m_cur++ = (unsigned char)(m_char & 0xbf | 0x80);
     } else if (m_char < 0xe000) {
         return m_parser.fail("char ref of invalid code point");
     } else if (m_char < 0xfffe) {
-        *m_cur++ = (unsigned char) (m_char >> 12) | 0xe0;
-        *m_cur++ = (unsigned char) (m_char >> 6) & 0xbf | 0x80;
-        *m_cur++ = (unsigned char) (m_char & 0xbf | 0x80);
+        *m_cur++ = (unsigned char)(m_char >> 12) | 0xe0;
+        *m_cur++ = (unsigned char)(m_char >> 6) & 0xbf | 0x80;
+        *m_cur++ = (unsigned char)(m_char & 0xbf | 0x80);
     } else if (m_char < 0x10000) {
         return m_parser.fail("char ref of invalid code point");
     } else if (m_char < 0x110000) {
-        *m_cur++ = (unsigned char) (m_char >> 18) | 0xf0;
-        *m_cur++ = (unsigned char) (m_char >> 12) & 0xbf | 0x80;
-        *m_cur++ = (unsigned char) (m_char >> 6) & 0xbf | 0x80;
-        *m_cur++ = (unsigned char) (m_char & 0xbf | 0x80);
+        *m_cur++ = (unsigned char)(m_char >> 18) | 0xf0;
+        *m_cur++ = (unsigned char)(m_char >> 12) & 0xbf | 0x80;
+        *m_cur++ = (unsigned char)(m_char >> 6) & 0xbf | 0x80;
+        *m_cur++ = (unsigned char)(m_char & 0xbf | 0x80);
     } else {
         return m_parser.fail("char ref of invalid code point");
     }
@@ -160,13 +160,13 @@ bool BaseParserNotify::onCharRefEnd (const char * eptr) {
 }
 
 //===========================================================================
-bool BaseParserNotify::onCharRefDigitChar (char ch) {
+bool BaseParserNotify::onCharRefDigitChar(char ch) {
     m_char = m_char * 10 + ch - '0';
     return true;
 }
 
 //===========================================================================
-bool BaseParserNotify::onCharRefHexdigChar (char ch) {
+bool BaseParserNotify::onCharRefHexdigChar(char ch) {
     m_char = m_char * 16 + hexToUnsigned(ch);
     return true;
 }
@@ -236,14 +236,14 @@ bool BaseParserNotify::onEntityOtherEnd(const char * eptr) {
 }
 
 //===========================================================================
-bool BaseParserNotify::onEntityValueStart (const char * ptr) {
+bool BaseParserNotify::onEntityValueStart(const char * ptr) {
     m_base = ptr;
     m_cur = const_cast<char *>(ptr);
     return true;
 }
 
 //===========================================================================
-bool BaseParserNotify::onEntityValueEnd (const char * eptr) {
+bool BaseParserNotify::onEntityValueEnd(const char * eptr) {
     return true;
 }
 

@@ -239,7 +239,7 @@ static bool writeSwitchCase(ostream & os, const State & st) {
         cases.begin(),
         cases.end(),
         [&stateKeys](const NextState & e1, const NextState & e2) {
-            return 256 * stateKeys[e1.state] + e1.ch 
+            return 256 * stateKeys[e1.state] + e1.ch
                 < 256 * stateKeys[e2.state] + e2.ch;
         });
     const unsigned kCaseColumns = 6;

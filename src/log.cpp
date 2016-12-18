@@ -126,7 +126,7 @@ void Dim::logParseError(
     size_t len = last - first;
     string line = source.substr(first, len);
     for (char & ch : line) {
-        if (iscntrl((unsigned char) ch))
+        if (iscntrl((unsigned char)ch))
             ch = ch == '\t' ? ' ' : '.';
     }
     logMsgInfo() << string(leftTrunc * 3, '.') << line
