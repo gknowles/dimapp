@@ -253,6 +253,8 @@ void Application::onTask() {
     cli.opt(&s_cmdopts.writeFunctions, "write-functions", true)
         .desc("Generate recursion breaking dependent functions.\n"
               "NOTE: If disabled generated files may not be compilable.");
+    cli.opt(&s_cmdopts.verbose, "v verbose")
+        .desc("Display details of what's happening during processing.");
     // footer
     cli.footer(1 + R"(
 For additional information, see:
@@ -286,8 +288,10 @@ https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
 
 //===========================================================================
 void Application::onLog(LogType type, const std::string & msg) {
-    auto ptr = new LogTask(type, msg);
-    taskPush(m_logQ, *ptr);
+    if (s_cmdopts.verbose || type != kLogInfo) {
+        auto ptr = new LogTask(type, msg);
+        taskPush(m_logQ, *ptr);
+    }
 }
 
 //===========================================================================

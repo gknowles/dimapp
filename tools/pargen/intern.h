@@ -231,6 +231,7 @@ struct RunOptions {
     bool dedupStateTree;
     bool writeStatePositions;
     bool writeFunctions;
+    bool verbose;
 };
 
 // write generated code
