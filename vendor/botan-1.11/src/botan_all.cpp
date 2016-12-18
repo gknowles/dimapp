@@ -57026,7 +57026,6 @@ X509_Certificate X509_CA::make_cert(PK_Signer* signer,
 
    BigInt serial_no(rng, SERIAL_BITS);
 
-   // clang-format off
    return X509_Certificate(X509_Object::make_signed(
       signer, rng, sig_algo,
       DER_Encoder().start_cons(SEQUENCE)
@@ -57055,7 +57054,6 @@ X509_Certificate X509_CA::make_cert(PK_Signer* signer,
       .end_cons()
       .get_contents()
       ));;
-   // clang-format on
    }
 
 /*
@@ -57105,7 +57103,6 @@ X509_CRL X509_CA::make_crl(const std::vector<CRL_Entry>& revoked,
       new Cert_Extension::Authority_Key_ID(m_cert.subject_key_id()));
    extensions.add(new Cert_Extension::CRL_Number(crl_number));
 
-   // clang-format off
    const std::vector<byte> crl = X509_Object::make_signed(
       m_signer, rng, m_ca_sig_algo,
       DER_Encoder().start_cons(SEQUENCE)
@@ -57127,7 +57124,6 @@ X509_CRL X509_CA::make_crl(const std::vector<CRL_Entry>& revoked,
          .end_explicit()
       .end_cons()
       .get_contents());
-   // clang-format on
 
    return X509_CRL(crl);
    }
