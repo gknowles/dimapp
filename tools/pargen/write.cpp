@@ -725,7 +725,7 @@ void writeParser(
     const Grammar & src,
     const RunOptions & opts) {
     const string & rootname = src[kOptionRoot];
-    logMsgInfo() << "parser: " << rootname;
+    logMsgDebug() << "parser: " << rootname;
 
     Grammar rules;
     if (!copyRules(rules, src, rootname, true))

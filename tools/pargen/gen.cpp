@@ -734,7 +734,7 @@ static unsigned addState(
         if (sti.m_path.size() > 40) {
             show += sti.m_path.size() - 40;
         }
-        logMsgInfo() << sti.m_nextStateId << " states, " << sti.m_transitions
+        logMsgDebug() << sti.m_nextStateId << " states, " << sti.m_transitions
                      << " trans, " << sti.m_depth << " depth, "
                      << st2->positions.size() << " exits, " << kLeftQ << show
                      << kRightQ;
@@ -828,7 +828,7 @@ static void addChildStates(
         st->next[256] = addState(&next, states, sti, 256);
 
     if (!sti.m_path.size()) {
-        logMsgDebug() << sti.m_nextStateId << " states, " << sti.m_transitions
+        logMsgInfo() << sti.m_nextStateId << " states, " << sti.m_transitions
                       << " transitions";
     }
 }
@@ -840,7 +840,7 @@ void buildStateTree(
     bool inclDeps,
     bool dedupStates,
     unsigned depthLimit) {
-    logMsgDebug() << "rule: " << root.name;
+    logMsgInfo() << "rule: " << root.name;
 
     states->clear();
     State state;
@@ -991,7 +991,7 @@ static void mergeState(unsigned dstId, unsigned srcId, DedupInfo & di) {
     StateInfo & dst = di.info[dstId];
     StateInfo & src = di.info[srcId];
 
-    logMsgInfo() << di.states->size() << " states, merging state " << srcId
+    logMsgDebug() << di.states->size() << " states, merging state " << srcId
                  << " into " << dstId;
 
     // move down references from src's parents to point to dst
@@ -1143,9 +1143,9 @@ void dedupStateTree(unordered_set<State> & states) {
     // keep making dedup passes through all the keys until no more dups are
     // found.
     for (unsigned i = 1;; ++i) {
-        logMsgDebug() << "dedup pass #" << i;
+        logMsgInfo() << "dedup pass #" << i;
         if (!dedupStateTreePass(di))
             break;
     }
-    logMsgDebug() << states.size() << " unique states";
+    logMsgInfo() << states.size() << " unique states";
 }

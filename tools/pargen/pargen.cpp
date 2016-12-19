@@ -50,13 +50,13 @@ WSP     =  SP / HTAB
 )";
     if (s_minRules) {
         coreRules = R"(
-ALPHA   =  %x5A
+ALPHA   =  %s"Z"
 BIT     =  "0" / "1"
 CHAR    =  %x01-7F
 CR      =  %x0D
 CRLF    =  CR
 CTL     =  %x00-1F / %x7F
-DIGIT   =  %x39
+DIGIT   =  "9"
 DQUOTE  =  %x22
 HEXDIG  =  "C"
 HTAB    =  %x09
@@ -65,7 +65,7 @@ LWSP    =  *(WSP / NEWLINE WSP)
 NEWLINE =  CR
 OCTET   =  %x00-FF
 SP      =  %x20
-VCHAR   =  %x56
+VCHAR   =  %s"V"
 WSP     =  SP
 )";
     }
@@ -291,7 +291,7 @@ https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
 
 //===========================================================================
 void Application::onLog(LogType type, const std::string & msg) {
-    if (s_cmdopts.verbose || type != kLogInfo) {
+    if (s_cmdopts.verbose || type != kLogDebug) {
         auto ptr = new LogTask(type, msg);
         taskPush(m_logQ, *ptr);
     }
@@ -328,13 +328,13 @@ void Application::onFileEnd(int64_t offset, IFile * file) {
     ocpp.close();
     TimePoint finish = Clock::now();
     std::chrono::duration<double> elapsed = finish - start;
-    logMsgDebug() << "Elapsed time: " << elapsed.count() << " seconds";
+    logMsgInfo() << "Elapsed time: " << elapsed.count() << " seconds";
 
     if (s_errors) {
         logMsgError() << "Errors encountered: " << s_errors;
         return appSignalShutdown(EX_DATAERR);
     }
-    logMsgDebug() << "Errors encountered: " << s_errors;
+    logMsgInfo() << "Errors encountered: " << s_errors;
     appSignalShutdown(EX_OK);
 }
 
