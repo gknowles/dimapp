@@ -130,7 +130,7 @@ bool ParserNotify::onActionEndEnd(const char * eptr) {
 
 //===========================================================================
 bool ParserNotify::onActionFuncEnd(const char * eptr) {
-    m_elems.back()->function = true;
+    m_elems.back()->flags |= Element::kFunction;
     return true;
 }
 

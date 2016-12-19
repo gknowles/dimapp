@@ -136,7 +136,7 @@ static void writeElement(ostream & os, const Element & elem, bool inclPos) {
         break;
     }
 
-    if (elem.flags || elem.function) {
+    if (elem.flags) {
         const struct {
             bool incl;
             string text;
@@ -144,7 +144,7 @@ static void writeElement(ostream & os, const Element & elem, bool inclPos) {
             {(elem.flags & Element::kOnStart) != 0, "Start"},
             {(elem.flags & Element::kOnEnd) != 0, "End"},
             {(elem.flags & Element::kOnChar) != 0, "Char"},
-            {elem.function, "Function"},
+            {(elem.flags & Element::kFunction) != 0, "Function"},
             {!elem.eventName.empty(), "As=" + elem.eventName},
         };
         os << "  { ";
@@ -445,7 +445,7 @@ static void writeParserState(
         if (elem == &ElementDone::s_elem)
             continue;
         assert(elem->type == Element::kRule);
-        assert(elem->rule->function);
+        assert(elem->rule->flags & Element::kFunction);
         if (call && elem->rule == call->elems.back().elem->rule
             && spt.first.delayedEvents == call->delayedEvents) {
             continue;
@@ -639,7 +639,7 @@ private:
 )";
     bool hasFunctionRules = false;
     for (auto && elem : rules.rules()) {
-        if (elem.function) {
+        if (elem.flags & Element::kFunction) {
             hasFunctionRules = true;
             os << "    bool state";
             writeRuleName(os, elem.name, true);
@@ -735,7 +735,7 @@ void writeParser(
 
     if (!opts.includeCallbacks) {
         for (auto && elem : rules.rules()) {
-            const_cast<Element &>(elem).flags = 0;
+            const_cast<Element &>(elem).flags &= ~Element::kCallbackFlags;
         }
     }
 
@@ -757,7 +757,7 @@ void writeParser(
 
     if (opts.writeFunctions) {
         for (auto && elem : rules.rules()) {
-            if (elem.function) {
+            if (elem.flags & Element::kFunction) {
                 buildStateTree(
                     &states,
                     elem,

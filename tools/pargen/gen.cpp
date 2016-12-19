@@ -252,7 +252,7 @@ addRulePositions(bool * skippable, State * st, StatePosition * sp, bool init) {
     auto & se = sp->elems.back();
     const Element & elem = *se.elem;
     *skippable = false;
-    if (elem.rule->function) {
+    if (elem.rule->flags & Element::kFunction) {
         se.recurse = true;
         // Don't generate states for right recursion when it can be broken with
         // a call. This could also be done for left recursion when the grammar
@@ -450,7 +450,7 @@ static void addNextPositions(
         if (se.elem->type == Element::kRule) {
             if ((se.elem->rule->flags & Element::kOnEnd)
                 && (se.started || !done)
-                && !se.elem->rule->function) {
+                && (~se.elem->rule->flags & Element::kFunction)) {
                 addEvent(events, se, Element::kOnEnd);
             }
             // when exiting the parser (via a done sentinel) go directly out,
@@ -807,7 +807,7 @@ static void addChildStates(
             continue;
         }
 
-        assert(elem->rule->function);
+        assert(elem->rule->flags & Element::kFunction);
         for (auto && nspt : next.positions) {
             if (nspt.second.none()) {
                 auto && nse = nspt.first.elems.back();

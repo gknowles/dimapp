@@ -101,9 +101,9 @@ Element * Grammar::addSequenceRule(
     const string & name,
     unsigned m,
     unsigned n,
-    unsigned flags, // Element::kFlag*
-    bool function) {
-    auto e = addChoiceRule(name, m, n, flags, function);
+    unsigned flags // Element::kFlag*
+    ) {
+    auto e = addChoiceRule(name, m, n, flags);
     e = addSequence(e, 1, 1);
     return e;
 }
@@ -113,8 +113,8 @@ Element * Grammar::addChoiceRule(
     const string & name,
     unsigned m,
     unsigned n,
-    unsigned flags, // Element::kFlag*
-    bool function) {
+    unsigned flags // Element::kFlag*
+    ) {
     Element e;
     e.id = ++m_nextElemId;
     e.name = name;
@@ -122,7 +122,6 @@ Element * Grammar::addChoiceRule(
     e.n = n;
     e.type = Element::kChoice;
     e.flags = flags;
-    e.function = function;
     auto ib = m_rules.insert(e);
     assert(ib.second);
     return const_cast<Element *>(&*ib.first);
@@ -308,7 +307,7 @@ bool copyRules(
         return true;
     }
     auto & elem = *ib.first;
-    if (elem.function && (elem.flags & Element::kOnChar)) {
+    if ((elem.flags & Element::kFunction) && (elem.flags & Element::kOnChar)) {
         logMsgError() << "Rule with both function and onChar, " << elem.value;
         return false;
     }
@@ -448,8 +447,8 @@ markFunction(Grammar & rules, Element & rule, vector<bool> & used) {
     case Element::kRule:
         wasUsed = used[rule.rule->id];
         if (wasUsed && (~rule.rule->flags & Element::kOnChar))
-            const_cast<Element *>(rule.rule)->function = true;
-        if (rule.rule->function)
+            const_cast<Element *>(rule.rule)->flags |= Element::kFunction;
+        if (rule.rule->flags & Element::kFunction)
             return;
         used[rule.rule->id] = true;
         markFunction(rules, const_cast<Element &>(*rule.rule), used);
@@ -462,7 +461,7 @@ void markFunction(Grammar & rules, Element & rule, bool reset) {
     size_t maxId = 0;
     for (auto && elem : rules.rules()) {
         if (reset)
-            const_cast<Element &>(elem).function = false;
+            const_cast<Element &>(elem).flags &= ~Element::kFunction;
         maxId = max((size_t)elem.id, maxId);
     }
     vector<bool> used(maxId, false);

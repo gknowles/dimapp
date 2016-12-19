@@ -24,6 +24,9 @@ struct Element {
         kOnStart = 1,
         kOnChar = 2,
         kOnEnd = 4,
+        kFunction = 8,
+
+        kCallbackFlags = kOnStart | kOnChar | kOnEnd,
     };
 
     enum Type : uint8_t {
@@ -43,7 +46,6 @@ struct Element {
     const Element * rule{nullptr};
     const Element * eventRule{nullptr}; // only present if different from rule
     unsigned flags{0};
-    bool function{false};
     std::string eventName; // only present if different from name
 
     bool operator<(const Element & right) const { return name < right.name; }
@@ -75,14 +77,14 @@ public:
         const std::string & name,
         unsigned m,
         unsigned n,
-        unsigned flags = 0, // Element::kOn*
-        bool function = false);
+        unsigned flags = 0 // Element::kOn*
+        );
     Element * addChoiceRule(
         const std::string & name,
         unsigned m,
         unsigned n,
-        unsigned flags = 0, // Element::kOn*
-        bool function = false);
+        unsigned flags = 0 // Element::kOn*
+        );
     Element * addSequence(Element * rule, unsigned m, unsigned n);
     Element * addChoice(Element * rule, unsigned m, unsigned n);
     void
