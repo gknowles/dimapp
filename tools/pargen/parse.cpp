@@ -14,9 +14,11 @@ using namespace Dim;
 
 class ParserNotify : public IAbnfParserNotify {
 public:
-    ParserNotify(Grammar & rules);
+    ParserNotify(Grammar & rules, bool minRules);
 
 private:
+    bool startRule();
+
     // IAbnfParserNotify
     bool onStart() final { return true; }
     bool onEnd() final { return true; }
@@ -24,6 +26,8 @@ private:
     bool onActionCharEnd(const char * eptr) final;
     bool onActionEndEnd(const char * eptr) final;
     bool onActionFuncEnd(const char * eptr) final;
+    bool onActionMinEnd(const char * eptr) final;
+    bool onActionNoMinEnd(const char * eptr) final;
     bool onActionStartEnd(const char * eptr) final;
     bool onAlternationStart(const char * ptr) final;
     bool onAlternationEnd(const char * eptr) final;
@@ -74,12 +78,19 @@ private:
     bool onRulerefEnd(const char * eptr) final;
 
     Grammar & m_rules;
+    bool m_minRulesEnabled;
     vector<Element *> m_elems;
     string m_string;
     unsigned m_number{0};
     unsigned m_min{0};
     unsigned m_max{0};
     unsigned char m_first{0};
+
+    // uncommitted info
+    bool m_incremental{false};
+    bool m_mustMatch{false};
+    bool m_minRules{false};
+    Element m_elem;
 };
 
 
@@ -104,39 +115,71 @@ private:
 ***/
 
 //===========================================================================
-ParserNotify::ParserNotify(Grammar & rules)
-    : m_rules(rules) {}
+ParserNotify::ParserNotify(Grammar & rules, bool minRules)
+    : m_rules{rules}
+    , m_minRulesEnabled{minRules} {
+    m_elem = {};
+}
+
+//===========================================================================
+bool ParserNotify::startRule() {
+    m_elem.name = move(m_string);
+    m_elem.flags = 0;
+    m_elem.eventName.clear();
+    m_elem.elements.clear();
+
+    m_string.clear();
+    assert(m_elems.empty());
+    m_elems.push_back(&m_elem);
+
+    m_mustMatch = false;
+    return true;
+}
 
 //===========================================================================
 // IAbnfParserNotify
 //===========================================================================
 bool ParserNotify::onActionAsEnd(const char * eptr) {
-    m_elems.back()->eventName = move(m_string);
+    m_elem.eventName = move(m_string);
     m_string.clear();
     return true;
 }
 
 //===========================================================================
 bool ParserNotify::onActionCharEnd(const char * eptr) {
-    m_elems.back()->flags |= Element::kOnChar;
+    m_elem.flags |= Element::kOnChar;
     return true;
 }
 
 //===========================================================================
 bool ParserNotify::onActionEndEnd(const char * eptr) {
-    m_elems.back()->flags |= Element::kOnEnd;
+    m_elem.flags |= Element::kOnEnd;
     return true;
 }
 
 //===========================================================================
 bool ParserNotify::onActionFuncEnd(const char * eptr) {
-    m_elems.back()->flags |= Element::kFunction;
+    m_elem.flags |= Element::kFunction;
+    return true;
+}
+
+//===========================================================================
+bool ParserNotify::onActionMinEnd(const char * eptr) {
+    m_mustMatch = true;
+    m_minRules = true;
+    return true;
+}
+
+//===========================================================================
+bool ParserNotify::onActionNoMinEnd(const char * eptr) {
+    m_mustMatch = true;
+    m_minRules = false;
     return true;
 }
 
 //===========================================================================
 bool ParserNotify::onActionStartEnd(const char * eptr) {
-    m_elems.back()->flags |= Element::kOnStart;
+    m_elem.flags |= Element::kOnStart;
     return true;
 }
 
@@ -287,22 +330,13 @@ bool ParserNotify::onDecValSimpleEnd(const char * eptr) {
 
 //===========================================================================
 bool ParserNotify::onDefinedAsIncrementalEnd(const char * eptr) {
-    if (auto rule = m_rules.element(m_string)) {
-        m_string.clear();
-        assert(m_elems.empty());
-        m_elems.push_back(rule);
-        return true;
-    }
-    return onDefinedAsSetEnd(eptr);
+    m_incremental = true;
+    return startRule();
 }
 
 //===========================================================================
 bool ParserNotify::onDefinedAsSetEnd(const char * eptr) {
-    Element * rule = m_rules.addChoiceRule(m_string, 1, 1);
-    m_string.clear();
-    assert(m_elems.empty());
-    m_elems.push_back(rule);
-    return true;
+    return startRule();
 }
 
 //===========================================================================
@@ -435,6 +469,24 @@ bool ParserNotify::onRepetitionStart(const char * ptr) {
 
 //===========================================================================
 bool ParserNotify::onRuleEnd(const char * eptr) {
+    if (m_elems.size() == 1) {
+        if (!m_mustMatch || m_minRules == m_minRulesEnabled) {
+            Element * elem{nullptr};
+            if (m_incremental) {
+                elem = m_rules.element(m_elem.name);
+                m_incremental = false;
+            }
+            if (!elem)
+                elem = m_rules.addChoiceRule(m_elem.name, 1, 1);
+            elem->flags |= m_elem.flags;
+            if (m_elem.eventName.size())
+                elem->eventName = m_elem.eventName;
+            elem->elements.insert(
+                elem->elements.end(),
+                m_elem.elements.begin(),
+                m_elem.elements.end());
+        }
+    }
     m_elems.pop_back();
     return true;
 }
@@ -466,8 +518,8 @@ bool ParserNotify::onRulerefEnd(const char * eptr) {
 ***/
 
 //===========================================================================
-bool parseAbnf(Grammar & rules, const std::string & src) {
-    ParserNotify notify(rules);
+bool parseAbnf(Grammar & rules, const std::string & src, bool minRules) {
+    ParserNotify notify(rules, minRules);
     AbnfParser parser(&notify);
     const char * ptr = src.c_str();
     if (!parser.parse(ptr)) {

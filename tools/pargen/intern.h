@@ -77,13 +77,13 @@ public:
         const std::string & name,
         unsigned m,
         unsigned n,
-        unsigned flags = 0 // Element::kOn*
+        unsigned flags = 0 // Element::k*
         );
     Element * addChoiceRule(
         const std::string & name,
         unsigned m,
         unsigned n,
-        unsigned flags = 0 // Element::kOn*
+        unsigned flags = 0 // Element::k*
         );
     Element * addSequence(Element * rule, unsigned m, unsigned n);
     Element * addChoice(Element * rule, unsigned m, unsigned n);
@@ -106,6 +106,7 @@ public:
     const Element * element(const std::string & name) const;
 
     const std::set<Element> & rules() const { return m_rules; }
+    std::set<Element> & rules() { return m_rules; }
 
     size_t errpos() const { return m_errpos; }
     void errpos(size_t where) { m_errpos = where; }
@@ -228,6 +229,7 @@ void dedupStateTree(std::unordered_set<State> & states);
 ***/
 
 struct RunOptions {
+    bool minRules;
     int markFunction;
     bool includeCallbacks;
     bool buildStateTree;
@@ -245,7 +247,7 @@ void writeParser(
     const Grammar & rules,
     const RunOptions & opts);
 
-bool parseAbnf(Grammar & rules, const std::string & src);
+bool parseAbnf(Grammar & rules, const std::string & src, bool minRules);
 void writeRule(
     std::ostream & os,
     const Element & rule,

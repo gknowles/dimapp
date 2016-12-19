@@ -735,9 +735,9 @@ static unsigned addState(
             show += sti.m_path.size() - 40;
         }
         logMsgDebug() << sti.m_nextStateId << " states, " << sti.m_transitions
-                     << " trans, " << sti.m_depth << " depth, "
-                     << st2->positions.size() << " exits, " << kLeftQ << show
-                     << kRightQ;
+                      << " trans, " << sti.m_depth << " depth, "
+                      << st2->positions.size() << " exits, " << kLeftQ << show
+                      << kRightQ;
         if (!errors && (!sti.m_depthLimit || sti.m_depth < sti.m_depthLimit))
             addChildStates(st2, states, sti);
     }
@@ -829,7 +829,7 @@ static void addChildStates(
 
     if (!sti.m_path.size()) {
         logMsgInfo() << sti.m_nextStateId << " states, " << sti.m_transitions
-                      << " transitions";
+                     << " transitions";
     }
 }
 
@@ -992,7 +992,7 @@ static void mergeState(unsigned dstId, unsigned srcId, DedupInfo & di) {
     StateInfo & src = di.info[srcId];
 
     logMsgDebug() << di.states->size() << " states, merging state " << srcId
-                 << " into " << dstId;
+                  << " into " << dstId;
 
     // move down references from src's parents to point to dst
     for (auto && by : src.usedBy) {

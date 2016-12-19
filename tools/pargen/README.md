@@ -36,12 +36,18 @@ All values must be defined either directly or indirectly via their defaults.
 ## Tags
 
 Triggering callbacks during parsing:
-- start
-- end
-- char
+- Start
+- End
+- Char
 
 Change the name of the callback invoked
-- as = \<rulename>
+- As \<rulename>
 
 Root of separate function that can be recursively called
-- function
+- Function
+
+Only include rule if corresponding --min-rules or --no-min-rules is explicitly 
+enabled. This provides a way to have a small set of states to reduce the 
+clutter during development, especially with --state-detail.
+- MinRules
+- NoMinRules

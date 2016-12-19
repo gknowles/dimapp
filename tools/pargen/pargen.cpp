@@ -21,55 +21,36 @@ static RunOptions s_cmdopts;
 *
 ***/
 
-#ifdef NDEBUG
-static bool s_minRules = false;
-#else
-static bool s_minRules = true;
-#endif
-
 //===========================================================================
 static void getCoreRules(Grammar & rules) {
     const char * coreRules = R"(
-ALPHA   =  %x41-5A / %x61-7A    ; A-Z / a-z
+ALPHA   =  %x5A ; Z
+ALPHA   =/ %x41-59 / %x61-7A { NoMinRules } ; A-Y / a-z
 BIT     =  "0" / "1"
 CHAR    =  %x01-7F
 CR      =  %x0D
-CRLF    =  CR LF
-CTL     =  %x00-1F / %x7F
-DIGIT   =  %x30-39				; 0-9
-DQUOTE  =  %x22
-HEXDIG  =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
-HTAB    =  %x09
-LF      =  %x0A
-LWSP    =  *(WSP / NEWLINE WSP)
-NEWLINE =  LF / CRLF
-OCTET   =  %x00-FF
-SP      =  %x20
-VCHAR   =  %x21-7E
-WSP     =  SP / HTAB
-)";
-    if (s_minRules) {
-        coreRules = R"(
-ALPHA   =  %s"Z"
-BIT     =  "0" / "1"
-CHAR    =  %x01-7F
-CR      =  %x0D
-CRLF    =  CR
+CRLF    =  CR LF { NoMinRules }
+CRLF    =  CR { MinRules }
 CTL     =  %x00-1F / %x7F
 DIGIT   =  "9"
+DIGIT   =/ %x30-38 { NoMinRules }   ; 0-8
 DQUOTE  =  %x22
 HEXDIG  =  "C"
+HEXDIG  =/ DIGIT / "A" / "B" / "D" / "E" / "F" { NoMinRules }
 HTAB    =  %x09
 LF      =  %x0A
 LWSP    =  *(WSP / NEWLINE WSP)
-NEWLINE =  CR
+NEWLINE =  LF
+NEWLINE =/ CRLF { NoMinRules }
 OCTET   =  %x00-FF
 SP      =  %x20
-VCHAR   =  %s"V"
+VCHAR   =  %x56 ; V
+VCHAR   =/ %x21-55 / %x57-7E { NoMinRules }
 WSP     =  SP
+WSP     =/ HTAB { NoMinRules }
 )";
-    }
-    [[maybe_unused]] bool valid = parseAbnf(rules, coreRules);
+    [[maybe_unused]] bool valid =
+        parseAbnf(rules, coreRules, s_cmdopts.minRules);
     assert(valid);
     (void)valid;
 }
@@ -89,7 +70,7 @@ static bool internalTest() {
         writeRule(abnf, rule, 79, "");
     }
     rules.clear();
-    valid = parseAbnf(rules, abnf.str());
+    valid = parseAbnf(rules, abnf.str(), s_cmdopts.minRules);
     cout << "Valid: " << valid << endl;
     if (!valid)
         return false;
@@ -101,7 +82,7 @@ static bool internalTest() {
 
     ostringstream o2;
     rules.clear();
-    valid = parseAbnf(rules, o1.str());
+    valid = parseAbnf(rules, o1.str(), s_cmdopts.minRules);
     for (auto && rule : rules.rules()) {
         writeRule(o2, rule, 79, "");
     }
@@ -228,9 +209,10 @@ void Application::onTask() {
     auto & help = cli.opt<bool>("? h").desc("Show this message and exit.");
     auto & test = cli.opt<bool>("test.").desc(
         "Run internal test of ABNF parsing logic.");
-    cli.opt(&s_minRules, "min-core", s_minRules)
+    cli.opt(&s_cmdopts.minRules, "min-rules", false)
         .desc("Use reduced core rules: ALPHA, DIGIT, CRLF, HEXDIG, NEWLINE, "
-              "VCHAR, and WSP are shortened to fewer (usually 1) characters.");
+              "VCHAR, and WSP are shortened to fewer (usually 1) characters. "
+              "And ignores user rules tagged with NoMinRules.");
     cli.opt(&s_cmdopts.markFunction, "f mark-functions", 0)
         .valueDesc("LEVEL")
         .desc("Strength of function tag preprocessing.")
@@ -306,7 +288,7 @@ void Application::onFileEnd(int64_t offset, IFile * file) {
     TimePoint start = Clock::now();
     Grammar rules;
     getCoreRules(rules);
-    if (!parseAbnf(rules, m_source)) {
+    if (!parseAbnf(rules, m_source, s_cmdopts.minRules)) {
         logParseError(
             "parsing failed",
             filePath(file).string(),

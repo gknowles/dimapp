@@ -145,7 +145,7 @@ static void writeElement(ostream & os, const Element & elem, bool inclPos) {
             {(elem.flags & Element::kOnEnd) != 0, "End"},
             {(elem.flags & Element::kOnChar) != 0, "Char"},
             {(elem.flags & Element::kFunction) != 0, "Function"},
-            {!elem.eventName.empty(), "As=" + elem.eventName},
+            {!elem.eventName.empty(), "As " + elem.eventName},
         };
         os << "  { ";
         bool first = true;
