@@ -35,7 +35,8 @@ mbchar = ; multibyte utf-8 character
 S = 1*ws         ; [3]
 
 ; Names and Tokens
-NameStartChar = ":" / ALPHA / "_" / NameStartCharMulti ; [4]
+NameStartChar = ":" / ALPHA / "_" ; [4]
+NameStartChar =/ NameStartCharMulti { NoMinRules }
 NameStartCharMulti =
     ; c0 - d6
     (%xc3 %x80-96)
@@ -78,7 +79,7 @@ NameStartCharMulti =
         / (%xf3 %x80-af %x80-bf %x80-bf)    ; 0c'0000 - 0e'ffff
     
 NameChar = NameStartChar / "-" / "." / DIGIT ; [4a]
-    / NameCharMulti
+NameChar =/ NameCharMulti { NoMinRules }
 NameCharMulti =
     ; b7
     (%xc2 %xb7)
@@ -148,8 +149,8 @@ attrText = [attrInPlace] *((Reference / normalizable-ws) [attrCopy])
 attrInPlace = *Char-not-ws-AMP-DQUOTE-LT { End }
 attrCopy = *Char-not-ws-AMP-DQUOTE-LT { Char }
 attrTextApos = [attrInPlaceApos] *((Reference / normalizable-ws) [attrCopyApos]) 
-attrInPlaceApos = *Char-not-ws-AMP-APOS-LT { End, As = attrInPlace }
-attrCopyApos = *Char-not-ws-AMP-APOS-LT { Char, As = attrCopy }
+attrInPlaceApos = *Char-not-ws-AMP-APOS-LT { End, As attrInPlace }
+attrCopyApos = *Char-not-ws-AMP-APOS-LT { Char, As attrCopy }
 normalizable-ws = ws { Char }
 
 ; Character Data
