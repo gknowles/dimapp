@@ -129,7 +129,7 @@ bool copyRules(
     const std::string & root,
     bool failIfExists);
 void normalize(Grammar & rules);
-void markFunction(Grammar & rules, Element & rule, bool resetFirst);
+void functionTags(Grammar & rules, Element & rule, bool reset, bool mark);
 
 
 /****************************************************************************
@@ -230,7 +230,8 @@ void dedupStateTree(std::unordered_set<State> & states);
 
 struct RunOptions {
     bool minRules;
-    int markFunction;
+    bool resetFunctions;
+    bool markFunctions;
     bool includeCallbacks;
     bool buildStateTree;
     unsigned stateTreeDepthLimit;

@@ -206,19 +206,27 @@ void Application::onTask() {
         .desc("Root rule to use, overrides %root in <source file>.");
     // options
     cli.versionOpt(version);
-    auto & help = cli.opt<bool>("? h").desc("Show this message and exit.");
+    auto & help = cli.opt<bool>("? h help.")
+        .desc("Show this message and exit.")
+        .group("~");
     auto & test = cli.opt<bool>("test.").desc(
         "Run internal test of ABNF parsing logic.");
     cli.opt(&s_cmdopts.minRules, "min-rules", false)
         .desc("Use reduced core rules: ALPHA, DIGIT, CRLF, HEXDIG, NEWLINE, "
               "VCHAR, and WSP are shortened to fewer (usually 1) characters. "
               "And ignores user rules tagged with NoMinRules.");
-    cli.opt(&s_cmdopts.markFunction, "f mark-functions", 0)
+    cli.opt("f mark-functions", 1)
         .valueDesc("LEVEL")
         .desc("Strength of function tag preprocessing.")
-        .choice(0, "0", "No change to function tags (default).")
-        .choice(1, "1", "Add function tags to break rule recursion.")
-        .choice(2, "2", "Same as #1, but remove all existing tags first.");
+        .choice(0, "0", "Remove all function tags.")
+        .choice(1, "1", "No change to function tags (default).")
+        .choice(2, "2", "Add function tags to break rule recursion.")
+        .choice(3, "3", "Same as #2, but remove all existing tags first.")
+        .check([](auto & cli, auto & opt, const string & val) {
+            s_cmdopts.resetFunctions = (*opt == 0 || *opt == 3);
+            s_cmdopts.markFunctions = (*opt == 2 || *opt == 3);
+            return true;
+        });
     cli.opt(&s_cmdopts.includeCallbacks, "!C callbacks", true)
         .desc("Include callback events, otherwise generated parser reduced "
               "down to pass/fail syntax check.");

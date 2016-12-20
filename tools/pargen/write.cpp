@@ -740,8 +740,7 @@ void writeParser(
     }
 
     normalize(rules);
-    if (opts.markFunction)
-        markFunction(rules, *root, opts.markFunction > 1);
+    functionTags(rules, *root, opts.resetFunctions, opts.markFunctions);
 
     writeHeaderfile(hfile, rules, src);
     writeCppfileStart(cppfile, rules, src);

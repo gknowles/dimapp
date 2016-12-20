@@ -435,13 +435,13 @@ void normalize(Grammar & rules) {
 
 //===========================================================================
 static void
-markFunction(Grammar & rules, Element & rule, vector<bool> & used) {
+addFunctionTags(Grammar & rules, Element & rule, vector<bool> & used) {
     bool wasUsed;
     switch (rule.type) {
     case Element::kChoice:
     case Element::kSequence:
         for (auto && elem : rule.elements) {
-            markFunction(rules, elem, used);
+            addFunctionTags(rules, elem, used);
         }
         break;
     case Element::kRule:
@@ -451,19 +451,23 @@ markFunction(Grammar & rules, Element & rule, vector<bool> & used) {
         if (rule.rule->flags & Element::kFunction)
             return;
         used[rule.rule->id] = true;
-        markFunction(rules, const_cast<Element &>(*rule.rule), used);
+        addFunctionTags(rules, const_cast<Element &>(*rule.rule), used);
         used[rule.rule->id] = wasUsed;
     }
 }
 
 //===========================================================================
-void markFunction(Grammar & rules, Element & rule, bool reset) {
-    size_t maxId = 0;
-    for (auto && elem : rules.rules()) {
-        if (reset)
-            const_cast<Element &>(elem).flags &= ~Element::kFunction;
-        maxId = max((size_t)elem.id, maxId);
+void functionTags(Grammar & rules, Element & rule, bool reset, bool mark) {
+    if (reset || mark) {
+        size_t maxId = 0;
+        for (auto && elem : rules.rules()) {
+            if (reset)
+                const_cast<Element &>(elem).flags &= ~Element::kFunction;
+            maxId = max((size_t)elem.id, maxId);
+        }
+        if (mark) {
+            vector<bool> used(maxId, false);
+            addFunctionTags(rules, rule, used);
+        }
     }
-    vector<bool> used(maxId, false);
-    markFunction(rules, rule, used);
 }
