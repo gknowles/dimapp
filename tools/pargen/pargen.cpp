@@ -146,9 +146,10 @@ usageError(ostream & os, const string & msg, const string & detail = {}) {
     if (detail.size())
         os << '\n' << detail;
     os << R"(
-usage: pargen [-?, -h, --help] [-f, --mark-functions=#] [-C, --no-callbacks] 
-              [--min-core] [-B, --no-build] [-D, --no-dedup] [--state-detail]
-              [--no-write-functions]
+usage: pargen [-B, --no-build] [-C, --no-callbacks] [-D, --no-dedup] 
+              [-f, --mark-functions=LEVEL] [-l, --depth-limit=NUM] 
+              [--min-rules] [-s, --state-detail] [-v, --verbose]
+              [--no-write-functions] [-?, -h, --help] [--version]
               <source file[.abnf]> [<root rule>]
 )";
     appSignalShutdown(EX_USAGE);
