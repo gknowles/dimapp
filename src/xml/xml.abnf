@@ -15,8 +15,10 @@ document = [utf8-bom] prolog element *Misc     ; [1]
 utf8-bom = %xef.bb.bf
 
 ; Character Range and White Space
-ws = SP / HTAB / CR / LF
+ws = SP / HTAB / CR / LF { NoMinRules }
+ws = SP { MinRules }
 Char = ws / %x21-7f     ; [2]
+mbchar = %s"Z" { MinRules }
 mbchar = ; multibyte utf-8 character
     ; 2 byte: 0080 - 07ff
     (%xc2-df %x80-bf)                       ; 0080 - 07ff
@@ -32,11 +34,12 @@ mbchar = ; multibyte utf-8 character
     / (%xf0 %x90-bf %x80-bf %x80-bf)        ; 01'0000 - 03'ffff
         / (%xf1-f3 %x80-bf %x80-bf %x80-bf) ; 04'0000 - 0f'ffff 
         / (%xf4 %x80-8f %x80-bf %x80-bf)    ; 10'0000 - 10'ffff
+    { NoMinRules }
 S = 1*ws         ; [3]
 
 ; Names and Tokens
-NameStartChar = ":" / ALPHA / "_" ; [4]
-NameStartChar =/ NameStartCharMulti { NoMinRules }
+NameStartChar = ":" / ALPHA / "_" / NameStartCharMulti ; [4]
+NameStartCharMulti = %s"Z" { MinRules }
 NameStartCharMulti =
     ; c0 - d6
     (%xc3 %x80-96)
@@ -77,18 +80,20 @@ NameStartCharMulti =
     / (%xf0 %x90-bf %x80-bf %x80-bf)        ; 01'0000 - 03'ffff
         / (%xf1-f2 %x80-bf %x80-bf %x80-bf) ; 04'0000 - 0b'ffff
         / (%xf3 %x80-af %x80-bf %x80-bf)    ; 0c'0000 - 0e'ffff
+    { NoMinRules }
     
-NameChar = NameStartChar / "-" / "." / DIGIT ; [4a]
-NameChar =/ NameCharMulti { NoMinRules }
+NameChar = NameStartChar / "-" / "." / DIGIT / NameCharMulti ; [4a]
+NameCharMulti = %s"Z" { MinRules }
 NameCharMulti =
     ; b7
     (%xc2 %xb7)
     ; 300 - 36f
-    / (%xcc %x80-bf) ; 300 - 33f
-        / (%xcd %x80-af) ; 340 - 36f
+    / (%xcc %x80-bf)        ; 300 - 33f
+        / (%xcd %x80-af)    ; 340 - 36f
     ; 203f - 2040
-    / (%xe2 %x80 %xbf) ; 203f
-        / (%xe2 %x81 %x80) ; 2040
+    / (%xe2 %x80 %xbf)      ; 203f
+        / (%xe2 %x81 %x80)  ; 2040
+    { NoMinRules }
 Name = NameStartChar *(NameChar)    ; [5]
 Nmtoken = 1*NameChar ; [7]
 
@@ -180,8 +185,8 @@ PITarget = NameStartChar-not-x *NameChar ; [17] - see errata S01
     / %s"x" [NameChar-not-m *NameChar]
     / %s"xm" [NameChar-not-l *NameChar]
     / %s"xml" 1*NameChar
-NameStartChar-not-x = NameStartCharMulti 
-    / %x41-5a / %x61-77 / %x79-7a / ":" / "_"
+NameStartChar-not-x = %x41-5a / %x61-77 / %x79-7a / ":" / "_"
+    / NameStartCharMulti 
 NameChar-not-m = %x41-5a / %x61-6c / %x6e-7a / ":" / "_" / "-" 
     / "." / DIGIT / NameCharMulti
 NameChar-not-l = %x41-5a / %x61-6b / %x6d-7a / ":" / "_" / "-" 
