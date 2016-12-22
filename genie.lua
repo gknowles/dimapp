@@ -120,6 +120,15 @@ project "-meta"
 
 -- tests
 group "tests"
+project "charbuf"
+  kind "ConsoleApp"
+  location "projects"
+  vpaths { ["*"] = "tests/charbuf" }
+  files { "tests/charbuf/**" }
+  pchheader "pch.h"
+  pchsource "tests/charbuf/pch.cpp"
+  links { "dimapp", "dimapp-win8", "dimapp-cli" }
+
 project "hpack"
   kind "ConsoleApp"
   location "projects"
