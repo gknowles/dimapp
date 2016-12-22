@@ -389,6 +389,7 @@ class Application : public ITaskNotify, public ILogNotify {
 //===========================================================================
 void Application::onLog(LogType type, const string & msg) {
     if (type >= kLogError) {
+        ConsoleScopedAttr attr(kConsoleError);
         m_errors += 1;
         cout << "ERROR: " << msg << endl;
     } else {
