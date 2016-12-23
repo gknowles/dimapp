@@ -460,7 +460,9 @@ void HpackEncode::header(const char name[], const char value[], int flags) {
 }
 
 //===========================================================================
-void HpackEncode::header(HttpHdr name, const char value[], int flags) {}
+void HpackEncode::header(HttpHdr name, const char value[], int flags) {
+    header(to_string(name).c_str(), value, flags);
+}
 
 //===========================================================================
 void HpackEncode::write(const char str[]) {

@@ -81,6 +81,8 @@ enum HttpHdr {
     kHttps
 };
 
+std::string to_string(HttpHdr id);
+
 
 /****************************************************************************
 *
@@ -90,6 +92,7 @@ enum HttpHdr {
 
 class HttpMsg {
 public:
+    struct HdrList;
     struct HdrName;
     struct HdrValue;
 
@@ -105,10 +108,8 @@ public:
     void addHeaderRef(HttpHdr id, const char value[]);
     void addHeaderRef(const char name[], const char value[]);
 
-    ForwardListIterator<HdrName> begin();
-    ForwardListIterator<HdrName> end();
-    ForwardListIterator<const HdrName> begin() const;
-    ForwardListIterator<const HdrName> end() const;
+    HdrList headers();
+    const HdrList headers() const;
 
     HdrName headers(HttpHdr header);
     HdrName headers(const char name[]);
@@ -137,6 +138,15 @@ private:
     CharBuf m_data;
     TempHeap m_heap;
     HdrName * m_firstHeader{nullptr};
+};
+
+struct HttpMsg::HdrList {
+    HdrName * m_firstHeader{nullptr};
+
+    ForwardListIterator<HdrName> begin();
+    ForwardListIterator<HdrName> end();
+    ForwardListIterator<const HdrName> begin() const;
+    ForwardListIterator<const HdrName> end() const;
 };
 
 struct HttpMsg::HdrName {

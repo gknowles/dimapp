@@ -118,7 +118,7 @@ void oldTest() {
             if (msg->body().compare(tmi->body) != 0)
                 logMsgError() << "body mismatch (FAILED)";
             auto thi = tmi->headers.begin(), ethi = tmi->headers.end();
-            for (auto && hdr : *msg) {
+            for (auto && hdr : msg->headers()) {
                 for (auto && hv : hdr) {
                     if (thi == ethi) {
                         logMsgError() << "expected fewer headers";
@@ -179,17 +179,26 @@ void Application::onTask() {
 
     bool result;
     vector<unique_ptr<HttpMsg>> msgs;
-    CharBuf req;
-    CharBuf res;
+    CharBuf cbuf;
+    CharBuf sbuf;
     auto hsrv = httpListen();
-    auto hcli = httpConnect(&req);
-    while (req.size()) {
-        result = httpRecv(hsrv, &res, &msgs, req.data(), req.size());
+    auto hcli = httpConnect(&cbuf);
+    HttpRequest msg;
+    msg.addHeaderRef(kHttp_Method, "get");
+    msg.addHeaderRef(kHttp_Schema, "https");
+    msg.addHeaderRef(kHttp_Path, "/");
+    int streamId = httpRequest(hcli, &cbuf, msg);
+    ignore = streamId;
+
+    while (cbuf.size()) {
+        result = httpRecv(hsrv, &sbuf, &msgs, cbuf.data(), cbuf.size());
+        cbuf.clear();
         assert(result);
         msgs.clear();
-        if (res.empty())
+        if (sbuf.empty())
             break;
-        result = httpRecv(hcli, &req, &msgs, res.data(), res.size());
+        result = httpRecv(hcli, &cbuf, &msgs, sbuf.data(), sbuf.size());
+        sbuf.clear();
         assert(result);
         msgs.clear();
     }

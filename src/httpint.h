@@ -37,6 +37,10 @@ class HttpConn {
 public:
     HttpConn();
 
+    // Initialize as an outgoing connection, must be first method called 
+    // on outgoing connections after construction.
+    void connect(CharBuf * out);
+
     // Returns false when no more data will be accepted, either by request
     // of the input or due to error.
     // Even after an error, out and msgs should be processed.
@@ -67,6 +71,7 @@ private:
     enum class FrameMode;
 
     HttpStream * findAlways(CharBuf * out, int stream);
+    void writeMsg(CharBuf * out, int stream, const HttpMsg & msg);
 
     bool onFrame(
         std::vector<std::unique_ptr<HttpMsg>> * msgs,
@@ -133,6 +138,8 @@ private:
         int stream,
         int flags);
 
+    bool m_outgoing{false};
+
     // byte parsing
     ByteMode m_byteMode;
     int m_inputPos{0};
@@ -148,6 +155,7 @@ private:
     int m_nextOutputStream{0};
     int m_lastOutputStream{0};
     int m_maxOutputFrame{16384};
+    int m_unackSettings{0};
 
     std::unordered_map<int, std::shared_ptr<HttpStream>> m_streams;
     HpackEncode m_encoder;

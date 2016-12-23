@@ -103,6 +103,33 @@ struct HdrNameInfo : HttpMsg::HdrName {
 
 /****************************************************************************
 *
+*   HttpMsg::HdrList
+*
+***/
+
+//===========================================================================
+auto HttpMsg::HdrList::begin() -> ForwardListIterator<HdrName> {
+    return ForwardListIterator<HdrName>{m_firstHeader};
+}
+
+//===========================================================================
+auto HttpMsg::HdrList::end() -> ForwardListIterator<HdrName> {
+    return ForwardListIterator<HdrName>{nullptr};
+}
+
+//===========================================================================
+auto HttpMsg::HdrList::begin() const -> ForwardListIterator<const HdrName> {
+    return ForwardListIterator<const HdrName>{m_firstHeader};
+}
+
+//===========================================================================
+auto HttpMsg::HdrList::end() const -> ForwardListIterator<const HdrName> {
+    return ForwardListIterator<const HdrName>{nullptr};
+}
+
+
+/****************************************************************************
+*
 *   HttpMsg::HdrName
 *
 ***/
@@ -203,23 +230,32 @@ void HttpMsg::addHeaderRef(const char name[], const char value[]) {
 }
 
 //===========================================================================
-auto HttpMsg::begin() -> ForwardListIterator<HdrName> {
-    return ForwardListIterator<HdrName>{m_firstHeader};
+HttpMsg::HdrList HttpMsg::headers() {
+    HdrList hl;
+    hl.m_firstHeader = m_firstHeader;
+    return hl;
 }
 
 //===========================================================================
-auto HttpMsg::end() -> ForwardListIterator<HdrName> {
-    return ForwardListIterator<HdrName>{nullptr};
+const HttpMsg::HdrList HttpMsg::headers() const {
+    HdrList hl;
+    hl.m_firstHeader = m_firstHeader;
+    return hl;
 }
 
 //===========================================================================
-auto HttpMsg::begin() const -> ForwardListIterator<const HdrName> {
-    return ForwardListIterator<const HdrName>{m_firstHeader};
+HttpMsg::HdrName HttpMsg::headers(HttpHdr header) {
+    for (auto && hdr : headers()) {
+        if (hdr.m_id == header)
+            return hdr;
+    }
+    return {};
 }
 
 //===========================================================================
-auto HttpMsg::end() const -> ForwardListIterator<const HdrName> {
-    return ForwardListIterator<const HdrName>{nullptr};
+HttpMsg::HdrName HttpMsg::headers(const char name[]) {
+    HttpHdr id = tokenTableGetEnum(s_hdrNameTbl, name, kHttpInvalid);
+    return headers(id);
 }
 
 //===========================================================================
@@ -244,8 +280,21 @@ ITempHeap & HttpMsg::heap() {
 *
 ***/
 
+//===========================================================================
 bool HttpRequest::checkPseudoHeaders() const {
     const int must = kFlagHasMethod | kFlagHasScheme | kFlagHasPath;
     const int mustNot = kFlagHasStatus;
     return (m_flags & must) == must && (~m_flags & mustNot);
+}
+
+
+/****************************************************************************
+*
+*   Public API
+*
+***/
+
+//===========================================================================
+std::string Dim::to_string(HttpHdr id) {
+    return tokenTableGetName(s_hdrNameTbl, id);
 }
