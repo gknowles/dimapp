@@ -12,6 +12,13 @@ using namespace Dim;
 *
 ***/
 
+#define EXPECT(e) \
+    if (!bool(e)) { \
+    logMsgError() << "Line " \
+        << (line ? line : __LINE__) \
+        << ": EXPECT(" << #e << ") failed"; \
+    }
+
 
 /****************************************************************************
 *
@@ -53,6 +60,29 @@ void Application::onLog(LogType type, const string & msg) {
 
 //===========================================================================
 void Application::onTask() {
+    int line = 0;
+    CharBuf buf;
+    buf.assign("abcdefgh");
+    EXPECT(to_string(buf) == "abcdefgh"); // to_string
+
+    // replace in the middle
+    buf.replace(3, 3, "DEF"); // same size
+    EXPECT(buf == "abcDEFgh"s);
+    buf.replace(3, 3, "MN"); // shrink
+    EXPECT(buf == "abcMNgh"s);
+    buf.replace(3, 2, "def"); // expand
+    EXPECT(buf == "abcdefgh"s);
+
+    // replace at the end
+    buf.replace(5, 3, "FGH"); // same size
+    EXPECT(buf == "abcdeFGH"s);
+    buf.replace(5, 3, "fg"); // shrink
+    EXPECT(buf == "abcdefg"s);
+    buf.replace(5, 2, "FGH"); // expand
+    EXPECT(buf == "abcdeFGH"s);
+
+    buf.replace(3, 3, "XYZ", 3);
+    EXPECT(buf == "abcXYZGH"s);
 
     if (m_errors) {
         ConsoleScopedAttr attr(kConsoleError);

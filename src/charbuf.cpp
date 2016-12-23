@@ -420,32 +420,57 @@ CharBuf & CharBuf::replace(size_t pos, size_t count, const char s[]) {
 
     int remove = (int)count;
     auto ic = find(pos);
-    auto eb = m_buffers.end();
-    Buffer * pbuf = *ic.first;
 
-    vector<Buffer *>::iterator next;
+    // overwrite and/or erase
+    Buffer * pbuf = *ic.first;
     char * base = pbuf->m_data + ic.second;
     char * ptr = base;
-    char * eptr = ptr + min(pbuf->m_used - ic.second, remove);
-    for (;;) {
+    int copied = min(pbuf->m_used - ic.second, remove);
+    char * eptr = ptr + copied;
+    while (remove) {
         if (!*s) {
             return erase(
                 ic.first, int(ptr - pbuf->m_data), remove - int(ptr - base));
         }
         *ptr++ = *s++;
         if (ptr == eptr) {
-            int copied = pbuf->m_reserved - pbuf->m_used;
+            if (!*s)
+                return *this;
             remove -= copied;
-            pbuf->m_used += copied;
-            if (++ic.first == eb)
+            if (!remove) 
                 break;
+           ++ic.first;
             pbuf = *ic.first;
-            ptr = pbuf->m_data;
-            eptr = ptr + min(pbuf->m_used, remove);
+            base = pbuf->m_data;
+            ptr = base;
+            copied = min(pbuf->m_used, remove);
+            eptr = ptr + copied;
         }
     }
 
-    next = ic.first;
+    // insert
+
+    // memchr s for \0 within the number of bytes that will fit in the 
+    // current block
+    copied = pbuf->m_used - int(ptr - base);
+    eptr = (char *) memchr(s, 0, pbuf->m_reserved - pbuf->m_used);
+    if (eptr) {
+        // the string fits inside the current buffer
+        int slen = int(eptr - s);
+        memmove(ptr + slen, ptr, copied);
+        memcpy(ptr, s, slen);
+        pbuf->m_used += slen;
+        m_size += slen;
+        return *this;
+    }
+
+    // the string doesn't fit in the current block, move the data (if any)
+    // after the insertion point in the current block to a new block 
+    // immediately following the current one. Then copy s to the current 
+    // block and insert as many after it (and before the block with the data
+    // that was after the insertion point) as needed.
+    
+    auto next = ic.first;
     ++next;
 
     if (remove) {
@@ -517,7 +542,7 @@ CharBuf::replace(size_t pos, size_t count, const char src[], size_t srcLen) {
         used = pbuf->m_used;
     }
 
-    if (copy + used - replaced <= reserved) {
+    if (copy + used <= reserved) {
         ptr += replaced;
         if (used > replaced)
             memmove(ptr + copy, ptr, used - replaced);
@@ -642,6 +667,9 @@ CharBuf::erase(vector<CharBuf::Buffer *>::iterator it, int pos, int remove) {
     Buffer * pbuf = *it;
     assert(pos <= pbuf->m_used && pos >= 0);
     assert(m_size >= remove && remove >= 0);
+    if (!remove)
+        return *this;
+
     m_size -= remove;
     if (pos) {
         int copied = pbuf->m_used - pos - remove;
@@ -689,6 +717,21 @@ CharBuf::erase(vector<CharBuf::Buffer *>::iterator it, int pos, int remove) {
 *   Free functions
 *
 ***/
+
+//===========================================================================
+bool Dim::operator==(const CharBuf & left, const std::string & right) {
+    return left.compare(right) == 0;
+}
+
+//===========================================================================
+bool Dim::operator==(const std::string & left, const CharBuf & right) {
+    return right.compare(left) == 0;
+}
+
+//===========================================================================
+bool Dim::operator==(const CharBuf & left, const CharBuf & right) {
+    return left.compare(right) == 0;
+}
 
 //===========================================================================
 std::string Dim::to_string(const CharBuf & buf) {
