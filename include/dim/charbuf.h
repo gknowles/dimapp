@@ -89,6 +89,8 @@ private:
     static Buffer * allocBuffer();
     static Buffer * allocBuffer(size_t reserve);
     std::pair<std::vector<Buffer *>::iterator, int> find(size_t pos);
+    CharBuf & insert(
+        std::vector<Buffer *>::iterator it, int pos, const char src[]);
     CharBuf & erase(std::vector<Buffer *>::iterator it, int pos, int count);
 
     std::vector<Buffer *> m_buffers;
