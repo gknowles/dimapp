@@ -199,7 +199,7 @@ void Application::onTask() {
     const char version[] = "0.1.0";
     cli.header(
         "pargen v"s + version + " (" __DATE__
-        + ") simplistic parser generator\n");
+                                ") simplistic parser generator\n");
     // positional arguments
     auto & srcfile = cli.opt(&m_srcfile, "[file]")
                          .desc("File containing ABNF rules to process.");
@@ -208,8 +208,8 @@ void Application::onTask() {
     // options
     cli.versionOpt(version);
     auto & help = cli.opt<bool>("? h help.")
-        .desc("Show this message and exit.")
-        .group("~");
+                      .desc("Show this message and exit.")
+                      .group("~");
     auto & test = cli.opt<bool>("test.").desc(
         "Run internal test of ABNF parsing logic.");
     cli.opt(&s_cmdopts.minRules, "min-rules", false)
