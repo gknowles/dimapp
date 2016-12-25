@@ -12,11 +12,10 @@ using namespace Dim;
 *
 ***/
 
-#define EXPECT(e) \
-    if (!bool(e)) { \
-    logMsgError() << "Line " \
-        << (line ? line : __LINE__) \
-        << ": EXPECT(" << #e << ") failed"; \
+#define EXPECT(e)                                                           \
+    if (!bool(e)) {                                                         \
+        logMsgError() << "Line " << (line ? line : __LINE__) << ": EXPECT(" \
+                      << #e << ") failed";                                  \
     }
 
 
@@ -65,24 +64,37 @@ void Application::onTask() {
     buf.assign("abcdefgh");
     EXPECT(to_string(buf) == "abcdefgh"); // to_string
 
-    // replace in the middle
+    // replace in the middle with sz
     buf.replace(3, 3, "DEF"); // same size
-    EXPECT(buf == "abcDEFgh"s);
+    EXPECT(buf == "abcDEFgh");
     buf.replace(3, 3, "MN"); // shrink
-    EXPECT(buf == "abcMNgh"s);
+    EXPECT(buf == "abcMNgh");
     buf.replace(3, 2, "def"); // expand
-    EXPECT(buf == "abcdefgh"s);
+    EXPECT(buf == "abcdefgh");
 
-    // replace at the end
+    // replace at the end with sz
     buf.replace(5, 3, "FGH"); // same size
-    EXPECT(buf == "abcdeFGH"s);
+    EXPECT(buf == "abcdeFGH");
     buf.replace(5, 3, "fg"); // shrink
-    EXPECT(buf == "abcdefg"s);
+    EXPECT(buf == "abcdefg");
     buf.replace(5, 2, "FGH"); // expand
-    EXPECT(buf == "abcdeFGH"s);
+    EXPECT(buf == "abcdeFGH");
 
-    buf.replace(3, 3, "XYZ", 3);
-    EXPECT(buf == "abcXYZGH"s);
+    // replace in the middle with len
+    buf.replace(3, 3, "XYZ", 3); // same size
+    EXPECT(buf == "abcXYZGH");
+    buf.replace(3, 3, "DE", 2); // shrink
+    EXPECT(buf == "abcDEGH");
+    buf.replace(3, 2, "def", 3); // expand
+    EXPECT(buf == "abcdefGH");
+
+    // replace at the end with len
+    buf.replace(6, 2, "gh", 2); // same size
+    EXPECT(buf == "abcdefgh");
+    buf.replace(5, 3, "FG", 2); // shrink
+    EXPECT(buf == "abcdeFG");
+    buf.replace(5, 2, "fgh", 3); // expand
+    EXPECT(buf == "abcdefgh");
 
     if (m_errors) {
         ConsoleScopedAttr attr(kConsoleError);
