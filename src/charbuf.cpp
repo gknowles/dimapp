@@ -180,7 +180,7 @@ CharBuf & CharBuf::insert(size_t pos, const char s[]) {
 
 //===========================================================================
 CharBuf & CharBuf::insert(size_t pos, const char s[], size_t count) {
-    assert(pos <= pos + count && pos + count <= m_size);
+    assert(pos <= pos + count && pos <= m_size);
 
     // short-circuit to avoid allocs
     if (!count)

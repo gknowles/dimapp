@@ -88,7 +88,11 @@ static bool internalTest() {
     }
     valid = valid && (o1.str() == o2.str());
     cout << "Round trip: " << valid << endl;
-    return valid;
+    if (!valid)
+        return false;
+
+    cout << "All tests passed" << endl;
+    return true;
 }
 
 
