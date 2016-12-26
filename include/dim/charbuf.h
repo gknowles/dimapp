@@ -21,12 +21,14 @@ public:
     CharBuf & operator=(char ch) { return assign(ch); }
     CharBuf & operator=(const char s[]) { return assign(s); }
     CharBuf & operator=(const std::string & str) { return assign(str); }
+    CharBuf & operator=(const CharBuf & buf) { return assign(buf); }
     CharBuf & operator=(CharBuf && buf);
-    CharBuf & operator+=(char ch) { return append(1, ch); }
+    CharBuf & operator+=(char ch) { pushBack(ch); return *this; }
     CharBuf & operator+=(const char s[]) { return append(s); }
     CharBuf & operator+=(const std::string & str) { return append(str); }
     CharBuf & operator+=(const CharBuf & src) { return append(src); }
     CharBuf & assign(char ch) { return assign(&ch, 1); }
+    CharBuf & assign(size_t numCh, char ch);
     CharBuf & assign(const char s[]);
     CharBuf & assign(const char s[], size_t count);
     CharBuf &
@@ -43,6 +45,7 @@ public:
     char * data();
     char * data(size_t pos, size_t count = -1);
     void clear();
+    CharBuf & insert(size_t pos, size_t numCh, char ch);
     CharBuf & insert(size_t pos, const char s[]);
     CharBuf & insert(size_t pos, const char s[], size_t count);
     CharBuf & erase(size_t pos = 0, size_t count = -1);
@@ -50,7 +53,7 @@ public:
     CharBuf & rtrim(char ch);
     void pushBack(char ch);
     void popBack();
-    CharBuf & append(size_t count, char ch);
+    CharBuf & append(size_t numCh, char ch);
     CharBuf & append(const char s[]);
     CharBuf & append(const char s[], size_t count);
     CharBuf &
@@ -69,6 +72,7 @@ public:
         const CharBuf & buf,
         size_t bufPos,
         size_t bufLen) const;
+    CharBuf & replace(size_t pos, size_t count, size_t numCh, char ch);
     CharBuf & replace(size_t pos, size_t count, const char src[]);
     CharBuf &
     replace(size_t pos, size_t count, const char src[], size_t srcLen);
@@ -89,6 +93,9 @@ private:
     static Buffer * allocBuffer();
     static Buffer * allocBuffer(size_t reserve);
     std::pair<std::vector<Buffer *>::iterator, int> find(size_t pos);
+    std::pair<std::vector<Buffer *>::const_iterator, int> find(size_t pos) const;
+    CharBuf &
+    insert(std::vector<Buffer *>::iterator it, int pos, size_t numCh, char ch);
     CharBuf &
     insert(std::vector<Buffer *>::iterator it, int pos, const char src[]);
     CharBuf & insert(
@@ -107,6 +114,6 @@ bool operator==(const CharBuf & left, const std::string & right);
 bool operator==(const std::string & left, const CharBuf & right);
 bool operator==(const CharBuf & left, const CharBuf & right);
 
-std::string to_string(const CharBuf & buf);
+std::string to_string(const CharBuf & buf, size_t pos = 0, size_t count = -1);
 
 } // namespace

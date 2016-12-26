@@ -96,6 +96,16 @@ void Application::onTask() {
     buf.replace(5, 2, "fgh", 3); // expand
     EXPECT(buf == "abcdefgh");
 
+    // insert amount smaller than tail
+    buf.replace(4, 0, "x"); // insert one char
+    EXPECT(buf == "abcdxefgh");
+    buf.replace(4, 1, ""); // erase one char
+    EXPECT(buf == "abcdefgh");
+
+    buf.assign(5000, 'a');
+    buf.insert(4094, "x");
+    EXPECT(buf.compare(4092, 5, "aaxaa") == 0);
+
     if (m_errors) {
         ConsoleScopedAttr attr(kConsoleError);
         cerr << "*** " << m_errors << " FAILURES" << endl;
