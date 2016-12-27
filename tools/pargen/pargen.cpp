@@ -8,6 +8,15 @@ using namespace Dim;
 
 /****************************************************************************
 *
+*   Declarations
+*
+***/
+
+const string kVersion = "0.1.0";
+
+
+/****************************************************************************
+*
 *   Variables
 *
 ***/
@@ -63,7 +72,7 @@ static bool internalTest() {
     rules.addOption("%root", "LWSP");
     rules.addOption("%api.prefix", "Test");
     valid = processOptions(rules);
-    cout << "Process options: " << valid << endl;
+    logMsgInfo() << "Process options: " << valid;
 
     ostringstream abnf;
     for (auto && rule : rules.rules()) {
@@ -71,7 +80,7 @@ static bool internalTest() {
     }
     rules.clear();
     valid = parseAbnf(rules, abnf.str(), s_cmdopts.minRules);
-    cout << "Valid: " << valid << endl;
+    logMsgInfo() << "Valid: " << valid;
     if (!valid)
         return false;
 
@@ -87,11 +96,11 @@ static bool internalTest() {
         writeRule(o2, rule, 79, "");
     }
     valid = valid && (o1.str() == o2.str());
-    cout << "Round trip: " << valid << endl;
+    logMsgInfo() << "Round trip: " << valid;
     if (!valid)
         return false;
 
-    cout << "All tests passed" << endl;
+    logMsgInfo() << "All tests passed";
     return true;
 }
 
@@ -129,7 +138,7 @@ LogTask::LogTask(LogType type, const string & msg)
 void LogTask::onTask() {
     if (m_type == kLogError) {
         ConsoleScopedAttr attr(kConsoleError);
-        cout << "ERROR: " << m_msg << endl;
+        cerr << "ERROR: " << m_msg << endl;
     } else {
         cout << m_msg << endl;
     }
@@ -144,12 +153,12 @@ void LogTask::onTask() {
 ***/
 
 //===========================================================================
-static void
-usageError(ostream & os, const string & msg, const string & detail = {}) {
-    os << msg;
+static void usageError(const string & msg, const string & detail = {}) {
+    if (msg.size())
+        logMsgError() << msg;
     if (detail.size())
-        os << '\n' << detail;
-    os << R"(
+        logMsgInfo() << detail;
+    logMsgInfo() << 1 + R"(
 usage: pargen [-B, --no-build] [-C, --no-callbacks] [-D, --no-dedup] 
               [-f, --mark-functions=LEVEL] [-l, --depth-limit=NUM] 
               [--min-rules] [-s, --state-detail] [-v, --verbose]
@@ -200,9 +209,8 @@ void Application::onTask() {
 
     Cli cli;
     // header
-    const char version[] = "0.1.0";
     cli.header(
-        "pargen v"s + version + " (" __DATE__
+        "pargen v"s + kVersion + " (" __DATE__
                                 ") simplistic parser generator\n");
     // positional arguments
     auto & srcfile = cli.opt(&m_srcfile, "[file]")
@@ -210,7 +218,7 @@ void Application::onTask() {
     cli.opt(&m_root, "[root rule]")
         .desc("Root rule to use, overrides %root in <source file>.");
     // options
-    cli.versionOpt(version);
+    cli.versionOpt(kVersion);
     auto & help = cli.opt<bool>("? h help.")
                       .desc("Show this message and exit.")
                       .group("~");
@@ -261,22 +269,22 @@ https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
     if (!cli.parse(m_argc, m_argv)) {
         if (int code = cli.exitCode()) {
             assert(code == EX_USAGE);
-            return usageError(cerr, cli.errMsg(), cli.errDetail());
+            return usageError(cli.errMsg(), cli.errDetail());
         } else {
             return appSignalShutdown(code);
         }
     }
     if (*help || m_argc == 1) {
-        cli.writeHelp(cout);
+        auto os = logMsgInfo();
+        cli.writeHelp(os);
         return appSignalShutdown(EX_OK);
     }
     if (*test) {
         int code = internalTest() ? EX_OK : EX_SOFTWARE;
         return appSignalShutdown(code);
     }
-    if (!srcfile) {
-        return usageError(cerr, "No value given for <source file[.abnf]>");
-    }
+    if (!srcfile)
+        return usageError("No value given for <source file[.abnf]>");
 
     // process abnf file
     if (!srcfile->has_extension())
@@ -295,7 +303,7 @@ void Application::onLog(LogType type, const std::string & msg) {
 //===========================================================================
 void Application::onFileEnd(int64_t offset, IFile * file) {
     if (!file)
-        return appSignalShutdown(EX_USAGE);
+        return usageError("");
 
     fileClose(file);
     TimePoint start = Clock::now();
