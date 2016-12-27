@@ -27,6 +27,7 @@ namespace Detail {
 class Log : public std::ostringstream {
 public:
     Log(LogType type);
+    Log(Log && from);
     ~Log();
 
 private:

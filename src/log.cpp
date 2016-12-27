@@ -22,17 +22,20 @@ static vector<ILogNotify *> s_notifiers;
 ***/
 
 //===========================================================================
-static void LogMsg(LogType type, const string & msg) {
+static void LogMsg(LogType type, const char msg[], size_t msgLen) {
+    if (msgLen && msg[msgLen - 1] == '\n')
+        msgLen -= 1;
     if (s_notifiers.empty()) {
         if (type == kLogError) {
             ConsoleScopedAttr attr(kConsoleError);
-            cout << msg << endl;
+            cout.write(msg, msgLen);
         } else {
-            cout << msg << endl;
+            cout.write(msg, msgLen);
         }
+        cout << endl;
     } else {
         for (auto && notify : s_notifiers) {
-            notify->onLog(type, msg);
+            notify->onLog(type, string(msg, msgLen));
         }
     }
 
@@ -52,8 +55,14 @@ Detail::Log::Log(LogType type)
     : m_type(type) {}
 
 //===========================================================================
+Detail::Log::Log(Log && from)
+    : ostringstream(static_cast<ostringstream&&>(from))
+    , m_type(from.m_type) {}
+
+//===========================================================================
 Detail::Log::~Log() {
-    LogMsg(m_type, str());
+    auto s = str();
+    LogMsg(m_type, s.data(), s.size());
 }
 
 
