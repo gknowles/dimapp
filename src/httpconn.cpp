@@ -968,7 +968,7 @@ void HttpConn::writeMsg(CharBuf * out, int stream, const HttpMsg & msg) {
         frameHdr,
         stream,
         ftype,
-        int(size(*out) - framePos),
+        int(size(*out) - framePos - kFrameHeaderLen),
         flags | FrameFlag::kEndHeaders);
     out->replace(framePos, size(frameHdr), (char *)frameHdr, size(frameHdr));
 
