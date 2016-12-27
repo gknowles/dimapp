@@ -185,3 +185,10 @@ project "tnet"
   pchsource "tools/tnet/pch.cpp"
   links { "dimapp", "dimapp-win8", "dimapp-cli" }
 
+project "h2srv"
+  kind "ConsoleApp"
+  location "projects"
+  vpaths { ["*"] = "tools/h2srv" }
+  files { "tools/h2srv/**" }
+  pchsource "tools/h2srv/pch.cpp"
+  links { "dimapp", "dimapp-win8", "dimapp-cli" }
