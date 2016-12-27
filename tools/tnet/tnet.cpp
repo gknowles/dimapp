@@ -12,6 +12,8 @@ using namespace Dim;
 *
 ***/
 
+const char kVersion[] = "1.0";
+
 enum { kExitConnectFailed = EX__APPBASE, kExitDisconnect };
 
 
@@ -177,18 +179,26 @@ Application::Application(int argc, char * argv[])
 void Application::onTask() {
     appMonitorShutdown(&s_cleanup);
 
-    if (m_argc < 2) {
-        cout << "tnet v1.0 (" __DATE__ ")\n"
-             << "usage: tnet <remote address> [<local address>]\n";
-        return appSignalShutdown(EX_USAGE);
+    Cli cli;
+    cli.header("tnet v"s + kVersion + " (" __DATE__ ")");
+    cli.versionOpt(kVersion);
+    auto & remote = cli.opt<string>("<remote address>");
+    cli.opt(&s_localEnd, "[local address]");
+    if (!cli.parse(m_argc, m_argv)) {
+        int code = cli.exitCode();
+        if (code) {
+            logMsgError() << "Error: " << cli.errMsg();
+            if (!cli.errDetail().empty())
+                logMsgInfo() << cli.errDetail();
+            auto os = logMsgInfo();
+            cli.writeUsage(os);
+        }
+        return appSignalShutdown(code);
     }
 
     consoleEnableEcho(false);
 
-    if (m_argc > 2)
-        parse(&s_localEnd, m_argv[2], 0);
-
-    endpointQuery(&s_cancelAddrId, &s_socket, m_argv[1], 23);
+    endpointQuery(&s_cancelAddrId, &s_socket, *remote, 23);
 
     HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
     DWORD type = GetFileType(hIn);
