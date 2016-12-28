@@ -148,29 +148,6 @@ void LogTask::onTask() {
 
 /****************************************************************************
 *
-*   Command line syntax
-*
-***/
-
-//===========================================================================
-static void usageError(const string & msg, const string & detail = {}) {
-    if (msg.size())
-        logMsgError() << msg;
-    if (detail.size())
-        logMsgInfo() << detail;
-    logMsgInfo() << 1 + R"(
-usage: pargen [-B, --no-build] [-C, --no-callbacks] [-D, --no-dedup] 
-              [-f, --mark-functions=LEVEL] [-l, --depth-limit=NUM] 
-              [--min-rules] [-s, --state-detail] [-v, --verbose]
-              [--no-write-functions] [-?, -h, --help] [--version]
-              <source file[.abnf]> [<root rule>]
-)";
-    appSignalShutdown(EX_USAGE);
-}
-
-
-/****************************************************************************
-*
 *   Application
 *
 ***/
@@ -211,9 +188,9 @@ void Application::onTask() {
     // header
     cli.header(
         "pargen v"s + kVersion + " (" __DATE__
-                                ") simplistic parser generator\n");
+                                 ") simplistic parser generator\n");
     // positional arguments
-    auto & srcfile = cli.opt(&m_srcfile, "[file]")
+    auto & srcfile = cli.opt(&m_srcfile, "[source file(.abnf)]")
                          .desc("File containing ABNF rules to process.");
     cli.opt(&m_root, "[root rule]")
         .desc("Root rule to use, overrides %root in <source file>.");
@@ -222,7 +199,7 @@ void Application::onTask() {
     auto & help = cli.opt<bool>("? h help.")
                       .desc("Show this message and exit.")
                       .group("~");
-    auto & test = cli.opt<bool>("test.").desc(
+    auto & test = cli.opt<bool>("test.").group("~").desc(
         "Run internal test of ABNF parsing logic.");
     cli.opt(&s_cmdopts.minRules, "min-rules", false)
         .desc("Use reduced core rules: ALPHA, DIGIT, CRLF, HEXDIG, NEWLINE, "
@@ -266,14 +243,8 @@ void Application::onTask() {
 For additional information, see:
 https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
 )");
-    if (!cli.parse(m_argc, m_argv)) {
-        if (int code = cli.exitCode()) {
-            assert(code == EX_USAGE);
-            return usageError(cli.errMsg(), cli.errDetail());
-        } else {
-            return appSignalShutdown(code);
-        }
-    }
+    if (!cli.parse(m_argc, m_argv))
+        return appSignalUsageError();
     if (*help || m_argc == 1) {
         auto os = logMsgInfo();
         cli.writeHelp(os);
@@ -284,7 +255,7 @@ https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
         return appSignalShutdown(code);
     }
     if (!srcfile)
-        return usageError("No value given for <source file[.abnf]>");
+        return appSignalUsageError("No value given for <source file[.abnf]>");
 
     // process abnf file
     if (!srcfile->has_extension())
@@ -303,7 +274,7 @@ void Application::onLog(LogType type, const std::string & msg) {
 //===========================================================================
 void Application::onFileEnd(int64_t offset, IFile * file) {
     if (!file)
-        return usageError("");
+        return appSignalUsageError(EX_USAGE);
 
     fileClose(file);
     TimePoint start = Clock::now();

@@ -184,8 +184,8 @@ void Application::onTask() {
     cli.versionOpt(kVersion);
     auto & remote = cli.opt<string>("<remote address>");
     cli.opt(&s_localEnd, "[local address]");
-    if (!cli.parse(m_argc, m_argv)) 
-        return appSignalUsageError(cli);
+    if (!cli.parse(m_argc, m_argv))
+        return appSignalUsageError();
 
     consoleEnableEcho(false);
 

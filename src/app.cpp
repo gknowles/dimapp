@@ -197,19 +197,28 @@ void Dim::appSignalShutdown(int exitcode) {
 }
 
 //===========================================================================
+void Dim::appSignalUsageError(const string & err, const string & detail) {
+    if (!err.empty())
+        return appSignalUsageError(EX_USAGE, err, detail);
+    Cli cli;
+    appSignalUsageError(cli.exitCode(), err, detail);
+}
+
+//===========================================================================
 void Dim::appSignalUsageError(
-    Cli & cli,
+    int code,
     const string & err,
     const string & detail) {
-    int code = err.empty() ? cli.exitCode() : EX_USAGE;
     if (code) {
+        Cli cli;
         const string & em = err.empty() ? cli.errMsg() : err;
         const string & dm = detail.empty() ? cli.errDetail() : detail;
-        logMsgError() << "Error: " << em;
+        if (!em.empty())
+            logMsgError() << "Error: " << em;
         if (!dm.empty())
             logMsgInfo() << dm;
         auto os = logMsgInfo();
-        cli.writeUsage(os);
+        cli.writeUsageEx(os);
     }
     return appSignalShutdown(code);
 }
