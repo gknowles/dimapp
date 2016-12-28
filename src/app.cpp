@@ -197,6 +197,24 @@ void Dim::appSignalShutdown(int exitcode) {
 }
 
 //===========================================================================
+void Dim::appSignalUsageError(
+    Cli & cli,
+    const string & err,
+    const string & detail) {
+    int code = err.empty() ? cli.exitCode() : EX_USAGE;
+    if (code) {
+        const string & em = err.empty() ? cli.errMsg() : err;
+        const string & dm = detail.empty() ? cli.errDetail() : detail;
+        logMsgError() << "Error: " << em;
+        if (!dm.empty())
+            logMsgInfo() << dm;
+        auto os = logMsgInfo();
+        cli.writeUsage(os);
+    }
+    return appSignalShutdown(code);
+}
+
+//===========================================================================
 void Dim::appMonitorShutdown(IAppShutdownNotify * cleaner) {
     s_cleaners.emplace(s_cleaners.begin(), cleaner);
 }

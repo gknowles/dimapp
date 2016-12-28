@@ -3,6 +3,8 @@
 
 #include "config.h"
 
+#include "cli.h"
+
 namespace Dim {
 
 // forward declarations
@@ -31,6 +33,10 @@ enum {
 };
 
 void appSignalShutdown(int exitcode = EX_OK);
+void appSignalUsageError(
+    Cli & cli,
+    const std::string & err = {},
+    const std::string & detail = {});
 
 void appMonitorShutdown(IAppShutdownNotify * cleanup);
 bool appQueryDestroyFailed();
