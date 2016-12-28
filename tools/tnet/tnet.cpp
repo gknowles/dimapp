@@ -202,8 +202,15 @@ void Application::onTask() {
 
     HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
     DWORD type = GetFileType(hIn);
-    (void)type;
-    fileOpen(s_console.m_file, "conin$", IFile::kReadWrite);
+    wchar_t inpath[MAX_PATH];
+    if (type == FILE_TYPE_DISK) {
+        GetFinalPathNameByHandleW(
+            hIn, inpath, (DWORD)size(inpath), FILE_NAME_OPENED);
+    }
+
+    if (!fileOpen(s_console.m_file, "conin$", IFile::kReadOnly))
+        return appSignalShutdown(EX_IOERR);
+
     s_console.m_buffer = socketGetBuffer();
     fileRead(
         &s_console,
