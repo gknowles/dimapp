@@ -362,11 +362,8 @@ int CharBuf::compare(const char s[], size_t count) const {
 }
 
 //===========================================================================
-int CharBuf::compare(
-    size_t pos, 
-    size_t count, 
-    const char src[], 
-    size_t srcLen) const {
+int CharBuf::compare(size_t pos, size_t count, const char src[], size_t srcLen)
+    const {
     assert(pos <= pos + count && pos + count <= m_size);
     if (!count)
         return srcLen ? 0 : -1;
@@ -601,7 +598,7 @@ CharBuf::Buffer * CharBuf::allocBuffer(size_t reserve) {
 }
 
 //===========================================================================
-pair<vector<CharBuf::Buffer *>::const_iterator, int> 
+pair<vector<CharBuf::Buffer *>::const_iterator, int>
 CharBuf::find(size_t pos) const {
     auto ic = const_cast<CharBuf *>(this)->find(pos);
     return ic;

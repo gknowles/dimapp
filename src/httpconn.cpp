@@ -417,7 +417,7 @@ bool HttpConn::recv(
             StartFrame(out, 0, FrameType::kSettings, 0, 0);
             m_unackSettings += 1;
         }
-        
+
         m_byteMode = ByteMode::kHeader;
     // fall through
 
@@ -955,7 +955,10 @@ void HttpConn::writeMsg(CharBuf * out, int stream, const HttpMsg & msg) {
                 SetFrameHeader(
                     frameHdr, stream, ftype, m_maxOutputFrame, flags);
                 out->replace(
-                    framePos, size(frameHdr), (char *)frameHdr, size(frameHdr));
+                    framePos,
+                    size(frameHdr),
+                    (char *)frameHdr,
+                    size(frameHdr));
                 ftype = FrameType::kContinuation;
                 flags = 0;
                 framePos = maxEndPos;
@@ -1078,8 +1081,7 @@ bool Dim::httpRecv(
 }
 
 //===========================================================================
-int 
-Dim::httpRequest(HttpConnHandle hc, CharBuf * out, const HttpMsg & msg) {
+int Dim::httpRequest(HttpConnHandle hc, CharBuf * out, const HttpMsg & msg) {
     if (auto * conn = s_conns.find(hc))
         return conn->request(out, msg);
     return 0;
@@ -1087,8 +1089,8 @@ Dim::httpRequest(HttpConnHandle hc, CharBuf * out, const HttpMsg & msg) {
 
 //===========================================================================
 void Dim::httpPushPromise(
-    HttpConnHandle hc, 
-    CharBuf * out, 
+    HttpConnHandle hc,
+    CharBuf * out,
     const HttpMsg & msg) {
     if (auto * conn = s_conns.find(hc))
         return conn->pushPromise(out, msg);

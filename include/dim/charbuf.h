@@ -23,7 +23,10 @@ public:
     CharBuf & operator=(const std::string & str) { return assign(str); }
     CharBuf & operator=(const CharBuf & buf) { return assign(buf); }
     CharBuf & operator=(CharBuf && buf);
-    CharBuf & operator+=(char ch) { pushBack(ch); return *this; }
+    CharBuf & operator+=(char ch) {
+        pushBack(ch);
+        return *this;
+    }
     CharBuf & operator+=(const char s[]) { return append(s); }
     CharBuf & operator+=(const std::string & str) { return append(str); }
     CharBuf & operator+=(const CharBuf & src) { return append(src); }
@@ -93,7 +96,8 @@ private:
     static Buffer * allocBuffer();
     static Buffer * allocBuffer(size_t reserve);
     std::pair<std::vector<Buffer *>::iterator, int> find(size_t pos);
-    std::pair<std::vector<Buffer *>::const_iterator, int> find(size_t pos) const;
+    std::pair<std::vector<Buffer *>::const_iterator, int>
+    find(size_t pos) const;
     CharBuf &
     insert(std::vector<Buffer *>::iterator it, int pos, size_t numCh, char ch);
     CharBuf &

@@ -56,7 +56,7 @@ Detail::Log::Log(LogType type)
 
 //===========================================================================
 Detail::Log::Log(Log && from)
-    : ostringstream(static_cast<ostringstream&&>(from))
+    : ostringstream(static_cast<ostringstream &&>(from))
     , m_type(from.m_type) {}
 
 //===========================================================================

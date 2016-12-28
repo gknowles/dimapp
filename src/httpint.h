@@ -37,7 +37,7 @@ class HttpConn {
 public:
     HttpConn();
 
-    // Initialize as an outgoing connection, must be first method called 
+    // Initialize as an outgoing connection, must be first method called
     // on outgoing connections after construction.
     void connect(CharBuf * out);
 

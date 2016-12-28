@@ -19,8 +19,7 @@ class MainShutdown : public IAppShutdownNotify {
 static MainShutdown s_cleanup;
 
 //===========================================================================
-void MainShutdown::onAppStartClientCleanup() {
-}
+void MainShutdown::onAppStartClientCleanup() {}
 
 //===========================================================================
 bool MainShutdown::onAppQueryClientDestroy() {
