@@ -28,16 +28,14 @@ static void addPositions(
 *
 ***/
 
-namespace std {
 //===========================================================================
-size_t hash<StateElement>::operator()(const StateElement & val) const {
+size_t std::hash<StateElement>::operator()(const StateElement & val) const {
     size_t out = val.elem->id;
     hashCombine(out, val.rep);
     hashCombine(out, val.started);
     hashCombine(out, val.recurse);
     return out;
 }
-} // namespace std
 
 //===========================================================================
 int StateElement::compare(const StateElement & right) const {
@@ -87,9 +85,8 @@ bool operator<(
 *
 ***/
 
-namespace std {
 //===========================================================================
-size_t hash<StatePosition>::operator()(const StatePosition & val) const {
+size_t std::hash<StatePosition>::operator()(const StatePosition & val) const {
     size_t out = 0;
     for (auto && se : val.elems) {
         hashCombine(out, hash<StateElement>{}(se));
@@ -102,7 +99,6 @@ size_t hash<StatePosition>::operator()(const StatePosition & val) const {
     }
     return out;
 }
-} // namespace std
 
 //===========================================================================
 bool StatePosition::operator<(const StatePosition & right) const {
@@ -123,14 +119,12 @@ bool StatePosition::operator==(const StatePosition & right) const {
 *
 ***/
 
-namespace std {
 //===========================================================================
-size_t hash<StateEvent>::operator()(const StateEvent & val) const {
+size_t std::hash<StateEvent>::operator()(const StateEvent & val) const {
     size_t out = val.elem->id;
     hashCombine(out, val.flags);
     return out;
 }
-} // namespace std
 
 //===========================================================================
 int StateEvent::compare(const StateEvent & right) const {
@@ -157,16 +151,14 @@ bool StateEvent::operator==(const StateEvent & right) const {
 *
 ***/
 
-namespace std {
 //===========================================================================
-size_t hash<State>::operator()(const State & val) const {
+size_t std::hash<State>::operator()(const State & val) const {
     size_t out = 0;
     for (auto && spt : val.positions) {
         hashCombine(out, hash<StatePosition>{}(spt.first));
     }
     return out;
 }
-} // namespace std
 
 //===========================================================================
 void State::clear() {
@@ -914,9 +906,9 @@ struct DedupInfo {
 //===========================================================================
 // StateKey
 //===========================================================================
-namespace std {
+
 //===========================================================================
-size_t hash<StateKey>::operator()(const StateKey & val) const {
+size_t std::hash<StateKey>::operator()(const StateKey & val) const {
     size_t out = 0;
     for (auto && sv : val.events) {
         hashCombine(out, hash<StateEvent>{}(sv));
@@ -926,7 +918,6 @@ size_t hash<StateKey>::operator()(const StateKey & val) const {
     }
     return out;
 }
-} // namespace std
 
 //===========================================================================
 bool StateKey::operator==(const StateKey & right) const {
