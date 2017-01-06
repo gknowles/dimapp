@@ -8,6 +8,15 @@ using namespace Dim;
 
 /****************************************************************************
 *
+*   Declarations
+*
+***/
+
+const char kVersion[] = "1.0";
+
+
+/****************************************************************************
+*
 *   MainShutdown
 *
 ***/
@@ -53,11 +62,24 @@ Application::Application(int argc, char * argv[])
 void Application::onTask() {
     appMonitorShutdown(&s_cleanup);
 
-    if (m_argc < 2) {
-        cout << "tnet v1.0 (" __DATE__ ")\n"
-             << "usage: h2srv <remote address> [<local address>]\n";
-        return appSignalShutdown(EX_USAGE);
-    }
+    Cli cli;
+    cli.header("h2srv v"s + kVersion + " (" __DATE__ ") "
+        "sample http/2 server");
+    cli.versionOpt(kVersion);
+    if (!cli.parse(m_argc, m_argv))
+        return appSignalUsageError();
+
+    vector<Address> addrs;
+    addressGetLocal(&addrs);
+    cout << "Local Addresses:" << endl;
+    for (auto && addr : addrs) 
+        cout << addr << endl;
+
+    Endpoint end;
+    parse(&end, "127.0.0.1", 8888);
+    //socketListen(&s_listen, end);
+
+    //httpRouteAdd(&s_web, 
 
     appSignalShutdown(EX_OK);
 }
