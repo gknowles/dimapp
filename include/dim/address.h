@@ -1,6 +1,16 @@
 // address.h - dim services
 #pragma once
 
+/****************************************************************************
+*
+*   Networking
+*
+*   Address - machine location (IP)
+*   Endpoint - machine location (IP) and service at location (port)
+*   Network - network location (IP) and size (net mask)
+*
+***/
+
 #include "config.h"
 
 #include "types.h"
@@ -17,9 +27,43 @@ namespace Dim {
 
 /****************************************************************************
 *
-*   Address & Endpoint
+*   Declarations
 *
 ***/
+
+// IP v4 or v6 address
+struct Address {
+    int32_t data[4]{};
+
+    bool operator==(const Address & right) const;
+    explicit operator bool() const;
+};
+struct Endpoint {
+    Address addr;
+    unsigned port{ 0 };
+
+    bool operator==(const Endpoint & right) const;
+    explicit operator bool() const;
+};
+struct Network {
+    Address addr;
+    int mask{ 0 };
+};
+} // namespace
+
+namespace std {
+template <> struct hash<Dim::Address> {
+    size_t operator()(const Dim::Address & val) const;
+};
+template <> struct hash<Dim::Endpoint> {
+    size_t operator()(const Dim::Endpoint & val) const;
+};
+template <> struct hash<Dim::Network> {
+    size_t operator()(const Dim::Network & val) const;
+};
+} // namespace std
+
+namespace Dim {
 
 bool parse(Address * addr, const char src[]);
 bool parse(Endpoint * end, const char src[], int defaultPort);

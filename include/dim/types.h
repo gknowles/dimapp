@@ -39,36 +39,6 @@ typedef Clock::time_point TimePoint;
 
 /****************************************************************************
 *
-*   Networking
-*
-*   Address - machine location (IP)
-*   Endpoint - machine location (IP) and service at location (port)
-*   Network - network location (IP) and size (net mask)
-*
-***/
-
-// IP v4 or v6 address
-struct Address {
-    int32_t data[4]{};
-
-    bool operator==(const Address & right) const;
-    explicit operator bool() const;
-};
-struct Endpoint {
-    Address addr;
-    unsigned port{0};
-
-    bool operator==(const Endpoint & right) const;
-    explicit operator bool() const;
-};
-struct Network {
-    Address addr;
-    int mask{0};
-};
-
-
-/****************************************************************************
-*
 *   Run modes
 *
 ***/

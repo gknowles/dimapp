@@ -18,9 +18,7 @@ using namespace Dim;
 *
 ***/
 
-// clang-format off
 const int64_t kClockTicksPerTimeT{10'000'000};
-// clang-format on
 
 //===========================================================================
 // static
