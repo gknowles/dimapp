@@ -43,6 +43,7 @@ public:
     // for listeners
     virtual void onSocketAccept(const SocketAcceptInfo & info){};
 
+    // for both
     virtual void onSocketRead(const SocketData & data) = 0;
     virtual void onSocketDisconnect(){};
 

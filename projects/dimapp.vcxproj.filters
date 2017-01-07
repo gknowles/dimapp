@@ -23,6 +23,9 @@
     <ClInclude Include="..\include\dim\app.h">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\dim\appsocket.h">
+      <Filter>include</Filter>
+    </ClInclude>
     <ClInclude Include="..\include\dim\charbuf.h">
       <Filter>include</Filter>
     </ClInclude>
@@ -53,6 +56,9 @@
     <ClInclude Include="..\include\dim\http.h">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\dim\httpRoute.h">
+      <Filter>include</Filter>
+    </ClInclude>
     <ClInclude Include="..\include\dim\list.h">
       <Filter>include</Filter>
     </ClInclude>
@@ -60,6 +66,9 @@
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="..\include\dim\socket.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\dim\socketmgr.h">
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="..\include\dim\task.h">
@@ -110,6 +119,9 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\app.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\appsocket.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\charbuf.cpp">

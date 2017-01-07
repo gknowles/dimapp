@@ -175,6 +175,7 @@ int Dim::appRun(ITaskNotify & app) {
     iTimerInitialize();
     iFileInitialize();
     iSocketInitialize();
+    iAppSocketInitialize();
     s_runMode = kRunRunning;
 
     taskPushEvent(app);

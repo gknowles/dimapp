@@ -8,15 +8,18 @@
 
 #include "address.h"
 #include "app.h"
+#include "appsocket.h"
 #include "charbuf.h"
 #include "cli.h"
 #include "console.h"
 #include "file.h"
 #include "handle.h"
 #include "http.h"
+#include "httpRoute.h"
 #include "list.h"
 #include "log.h"
 #include "socket.h"
+#include "socketmgr.h"
 #include "task.h"
 #include "tempheap.h"
 #include "timer.h"
@@ -26,5 +29,5 @@
 #include "util.h"
 #include "xml.h"
 
-#define DIM_LIB_STANDALONE
+#define DIM_LIB_KEEP_MACROS
 #include "config_suffix.h"

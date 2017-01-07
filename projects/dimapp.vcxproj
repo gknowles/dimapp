@@ -116,6 +116,7 @@
   <ItemGroup>
     <ClInclude Include="..\include\dim\address.h" />
     <ClInclude Include="..\include\dim\app.h" />
+    <ClInclude Include="..\include\dim\appsocket.h" />
     <ClInclude Include="..\include\dim\charbuf.h" />
     <ClInclude Include="..\include\dim\cli.h" />
     <ClInclude Include="..\include\dim\config.h" />
@@ -126,9 +127,11 @@
     <ClInclude Include="..\include\dim\handle.h" />
     <ClInclude Include="..\include\dim\hpack.h" />
     <ClInclude Include="..\include\dim\http.h" />
+    <ClInclude Include="..\include\dim\httpRoute.h" />
     <ClInclude Include="..\include\dim\list.h" />
     <ClInclude Include="..\include\dim\log.h" />
     <ClInclude Include="..\include\dim\socket.h" />
+    <ClInclude Include="..\include\dim\socketmgr.h" />
     <ClInclude Include="..\include\dim\task.h" />
     <ClInclude Include="..\include\dim\tempheap.h" />
     <ClInclude Include="..\include\dim\timer.h" />
@@ -149,6 +152,9 @@
       <ObjectFileName>$(IntDir)src\</ObjectFileName>
     </ClCompile>
     <ClCompile Include="..\src\app.cpp">
+      <ObjectFileName>$(IntDir)src\</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\src\appsocket.cpp">
       <ObjectFileName>$(IntDir)src\</ObjectFileName>
     </ClCompile>
     <ClCompile Include="..\src\charbuf.cpp">

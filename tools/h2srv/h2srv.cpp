@@ -17,6 +17,18 @@ const char kVersion[] = "1.0";
 
 /****************************************************************************
 *
+*   TNetConn
+*
+***/
+
+class TnetConn : public IAppSocketNotify {
+public:
+    TnetConn(AppSocket & sock) : IAppSocketNotify(sock) {}
+};
+
+
+/****************************************************************************
+*
 *   MainShutdown
 *
 ***/
@@ -77,11 +89,13 @@ void Application::onTask() {
 
     Endpoint end;
     parse(&end, "127.0.0.1", 8888);
+
+    appSocketAddListen<TnetConn>(AppSocket::kByte, "", end);
     //socketListen(&s_listen, end);
 
     //httpRouteAdd(&s_web, 
 
-    appSignalShutdown(EX_OK);
+    //appSignalShutdown(EX_OK);
 }
 
 
