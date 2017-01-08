@@ -11,6 +11,14 @@
 *.userprefs
 
 # Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+[Xx]64/
+[Xx]86/
+[Bb]uild/
+bld/
 [Bb]in/
 [Oo]bj/
 
@@ -132,7 +140,7 @@ publish/
 *.[Pp]ublish.xml
 *.azurePubxml
 
-# TODO: Un-comment the next line if you do not want to checkin 
+# TODO: Un-comment the next line if you do not want to checkin
 # your web deploy settings because they may include unencrypted
 # passwords
 #*.pubxml
@@ -235,9 +243,5 @@ ModelManifest.xml
 
 # FAKE - F# Make
 .fake/
-/vendor/rapidxml-1.13/rapidxml_utils.hpp
-/vendor/rapidxml-1.13/rapidxml_print.hpp
-/vendor/rapidxml-1.13/rapidxml_iterators.hpp
-/vendor/rapidxml-1.13/rapidxml.hpp
-/vendor/rapidxml-1.13/manual.html
-/vendor/rapidxml-1.13/license.txt
+
+/vendor/rapidxml-1.13/
