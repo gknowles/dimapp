@@ -3,12 +3,15 @@
 cmake_minimum_required (VERSION 3.6)
 project (dimapp)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-set(CMAKE_CONFIGURATION_TYPES Debug Release)
 option(LINK_STATIC_RUNTIME "Link with static c++ runtime" ON)
 option(BUILD_SHARED_LIBS "Build DLLs instead of static libs" OFF)
 
 # Reference to suppress "not used" warning when manually specified
 set(tmp "${CMAKE_BUILD_TYPE}")
+
+set(CMAKE_CONFIGURATION_TYPES Debug Release)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/bin)
 
 # Compare the new contents with the existing file, if it exists and is the 
 # same we don't want to trigger a make by changing its timestamp.
@@ -67,33 +70,40 @@ function(write_user_file prjname)
 ]=])
 endfunction()
 
-function(add_test_project)
-    add_tool_project()
-
-    get_filename_component(prjname "${CMAKE_CURRENT_SOURCE_DIR}" NAME)
-    set_target_properties(${prjname} PROPERTIES FOLDER tests)
-    add_test(NAME ${prjname} COMMAND ${prjname})
+function(install_archive_pdb tgt dstdir)
+    if(BUILD_SHARED_LIBS)
+        install(FILES "$<TARGET_PDB_FILE:${tgt}>" DESTINATION bin)
+    else()
+        # Special handling required to get PDBs of static libraries installed.
+        # I would hope that there's a better way to do this, but I don't know 
+        # what it may be...
+        foreach(cfg ${CMAKE_CONFIGURATION_TYPES})
+            install(FILES 
+                "${CMAKE_CURRENT_BINARY_DIR}/${tgt}.dir/${cfg}/${tgt}.pdb" 
+                DESTINATION ${dstdir} 
+                CONFIGURATIONS ${cfg})
+        endforeach()
+    endif()
 endfunction()
 
-function(add_tool_project)
-    get_filename_component(prjname "${CMAKE_CURRENT_SOURCE_DIR}" NAME)
-    project(${prjname})
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/bin")
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/bin")
-
+function(add_exec_project tgt srcdir)
     if(MSVC)
-        set_property(SOURCE "pch.cpp" APPEND PROPERTY COMPILE_FLAGS "/Ycpch.h")
+        set_property(SOURCE "${srcdir}/pch.cpp" 
+            APPEND PROPERTY COMPILE_FLAGS "/Ycpch.h")
     endif()
-
-    file(GLOB_RECURSE sources LIST_DIRECTORIES false *.h *.cpp)
-    update_deps_file("${sources}")
-
-    add_executable(${prjname} ${sources})
-    set_target_properties(${prjname} PROPERTIES FOLDER tools)
-    target_link_libraries(${prjname} dimapp dimapp-cli dimapp-win8 dimapp-xml)
-    target_link_libraries(${prjname} libsodium)
+    file(GLOB_RECURSE sources LIST_DIRECTORIES false ${srcdir}/*.h ${srcdir}/*.cpp)
+    list(APPEND deps ${sources})
+    set(deps ${deps} PARENT_SCOPE)
+    add_executable(${tgt} ${sources})
+    target_link_libraries(${tgt} ${PROJECT_NAME})
+    foreach(var ${libnames})
+        get_filename_component(libname "${var}" NAME)
+        target_link_libraries(${tgt} ${PROJECT_NAME}-${libname})
+    endforeach()
     source_group("" FILES ${sources})
-    write_user_file(${prjname})
+    write_user_file(${tgt})
+
+    target_link_libraries(${tgt} libsodium)
 endfunction()
 
 
@@ -157,7 +167,8 @@ foreach(var ${config_defines})
     add_definitions(/D${var})
 endforeach()
 
-file(GLOB meta_sources LIST_DIRECTORIES false 
+# meta target
+file(GLOB sources LIST_DIRECTORIES false 
     LICENSE
     .clang-format
     .travis.yml
@@ -165,21 +176,98 @@ file(GLOB meta_sources LIST_DIRECTORIES false
     *.md
     configure.bat
     docs/*)
-add_custom_target("_meta" SOURCES ${meta_sources})
+list(APPEND deps ${sources})
+add_custom_target("_meta" SOURCES ${sources})
 set_target_properties(_meta PROPERTIES FOLDER _meta)
 source_group("docs" REGULAR_EXPRESSION "docs/.*")
 source_group("" FILES configure.bat)
 
-enable_testing()
-add_subdirectory(src)
-file(GLOB subs tests/* tools/*)
-foreach(var ${subs})
-    if(IS_DIRECTORY ${var})
-        add_subdirectory(${var})
+# includes
+# Create modifed config.h to reflect build defines
+set(cfgname "include/dim/config.h")
+file(READ "${cfgname}" content)
+foreach(val ${config_defines})
+    string(REGEX REPLACE 
+        "\n//#define ${val}" "\n#define ${val}" 
+        content "${content}")
+endforeach()
+update_file("${CMAKE_CURRENT_BINARY_DIR}/${cfgname}" "${content}")
+
+install(DIRECTORY include DESTINATION .)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${cfgname}" 
+    DESTINATION include/dim)
+
+# lib targets
+if(MSVC)
+    set_property(SOURCE "src/pch.cpp" 
+        APPEND PROPERTY COMPILE_FLAGS "/Ycpch.h")
+endif()
+file(GLOB_RECURSE global_srcs LIST_DIRECTORIES false include/*)
+file(GLOB local_srcs LIST_DIRECTORIES false src/*.h src/*.cpp)
+set(sources ${global_srcs} ${local_srcs})
+list(APPEND deps ${sources})
+add_library(${PROJECT_NAME} ${sources})
+source_group("" FILES ${sources})
+source_group("compiler" FILES ../include/dim/compiler/visualc.h)
+write_user_file(${PROJECT_NAME})
+
+install(TARGETS ${PROJECT_NAME}
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin)
+install_archive_pdb(${PROJECT_NAME} lib)
+
+file(GLOB allnames src/*)
+foreach(var ${allnames})
+    if(IS_DIRECTORY "${var}")
+        list(APPEND libnames "${var}")
+    endif()
+endforeach()
+foreach(var ${libnames})
+    get_filename_component(prjname "${var}" NAME)
+    set(libname ${PROJECT_NAME}-${prjname})
+    if(MSVC)
+        set_property(SOURCE "${var}/pch.cpp" 
+            APPEND PROPERTY COMPILE_FLAGS "/Ycpch.h")
+    endif()
+    file(GLOB_RECURSE sources LIST_DIRECTORIES false ${var}/*.h ${var}/*.cpp)
+    list(APPEND deps ${sources})
+    add_library(${libname} ${sources})
+    source_group("" FILES ${sources})
+    write_user_file(${libname})
+
+    install(TARGETS ${libname}
+        ARCHIVE DESTINATION lib
+        RUNTIME DESTINATION bin)
+    install_archive_pdb(${libname} lib)
+endforeach()
+
+# tool targets
+file(GLOB allnames tools/*)
+foreach(var ${allnames})
+    if(IS_DIRECTORY "${var}")
+        get_filename_component(prjname "${var}" NAME)
+        add_exec_project(${prjname} "${var}")
+
+        set_target_properties(${prjname} PROPERTIES FOLDER tools)
+        install(TARGETS ${prjname} RUNTIME DESTINATION bin)
     endif()
 endforeach()
 
-update_deps_file(${meta_sources} ${subs})
+# test targets
+enable_testing()
+file(GLOB allnames tests/*)
+foreach(var ${allnames})
+    if(IS_DIRECTORY "${var}")
+        get_filename_component(prjname "${var}" NAME)
+        add_exec_project(${prjname} "${var}")
+
+        set_target_properties(${prjname} PROPERTIES FOLDER tests)
+        add_test(NAME ${prjname} COMMAND ${prjname})
+    endif()
+endforeach()
+
+# update deps file
+update_deps_file(${deps})
 
 
 # The solution file isn't generated until after this script finishes, 
@@ -206,4 +294,3 @@ if(EXISTS ${sln_binpath})
     set(sln_srcpath ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.sln)
     update_file("${sln_srcpath}" "${sln_content}")
 endif()
-
