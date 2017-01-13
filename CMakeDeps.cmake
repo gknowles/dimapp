@@ -39,6 +39,7 @@
 # src/charbuf.cpp
 # src/cli/argv.cpp
 # src/cli/cli.cpp
+# src/cli/console.cpp
 # src/cli/pch.cpp
 # src/cli/pch.h
 # src/file.cpp
