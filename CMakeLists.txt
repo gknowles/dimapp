@@ -1,12 +1,13 @@
-# CMakeLists.txt - dim cli
+# CMakeLists.txt - dim app
 
 cmake_minimum_required (VERSION 3.6)
-project (dimapp)
+project(dimapp)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 option(LINK_STATIC_RUNTIME "Link with static c++ runtime" ON)
 option(BUILD_SHARED_LIBS "Build DLLs instead of static libs" OFF)
 
 # Reference to suppress "not used" warning when manually specified
+# by vcpkg
 set(tmp "${CMAKE_BUILD_TYPE}")
 
 set(CMAKE_CONFIGURATION_TYPES Debug Release)
