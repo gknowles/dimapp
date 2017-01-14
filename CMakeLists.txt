@@ -250,7 +250,7 @@ foreach(var ${allnames})
         add_exec_project(${prjname} "${var}")
 
         set_target_properties(${prjname} PROPERTIES FOLDER tools)
-        install(TARGETS ${prjname} RUNTIME DESTINATION bin)
+        # install(TARGETS ${prjname} RUNTIME DESTINATION bin)
     endif()
 endforeach()
 
