@@ -96,6 +96,7 @@ function(add_exec_project tgt srcdir)
     list(APPEND deps ${sources})
     set(deps ${deps} PARENT_SCOPE)
     add_executable(${tgt} ${sources})
+    set_target_properties(${tgt} PROPERTIES LINK_FLAGS /Debug)
     target_link_libraries(${tgt} ${PROJECT_NAME})
     foreach(var ${libnames})
         get_filename_component(libname "${var}" NAME)
@@ -103,8 +104,6 @@ function(add_exec_project tgt srcdir)
     endforeach()
     source_group("" FILES ${sources})
     write_user_file(${tgt})
-
-    target_link_libraries(${tgt} libsodium)
 endfunction()
 
 
