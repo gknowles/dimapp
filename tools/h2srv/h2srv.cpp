@@ -23,7 +23,8 @@ const char kVersion[] = "1.0";
 
 class TnetConn : public IAppSocketNotify {
 public:
-    TnetConn(AppSocket & sock) : IAppSocketNotify(sock) {}
+    TnetConn(AppSocket & sock)
+        : IAppSocketNotify(sock) {}
 };
 
 
@@ -75,8 +76,9 @@ void Application::onTask() {
     appMonitorShutdown(&s_cleanup);
 
     Cli cli;
-    cli.header("h2srv v"s + kVersion + " (" __DATE__ ") "
-        "sample http/2 server");
+    cli.header(
+        "h2srv v"s + kVersion + " (" __DATE__ ") "
+                                "sample http/2 server");
     cli.versionOpt(kVersion);
     if (!cli.parse(m_argc, m_argv))
         return appSignalUsageError();
@@ -84,18 +86,18 @@ void Application::onTask() {
     vector<Address> addrs;
     addressGetLocal(&addrs);
     cout << "Local Addresses:" << endl;
-    for (auto && addr : addrs) 
+    for (auto && addr : addrs)
         cout << addr << endl;
 
     Endpoint end;
     parse(&end, "127.0.0.1", 8888);
 
     appSocketAddListen<TnetConn>(AppSocket::kByte, "", end);
-    //socketListen(&s_listen, end);
+    // socketListen(&s_listen, end);
 
-    //httpRouteAdd(&s_web, 
+    // httpRouteAdd(&s_web,
 
-    //appSignalShutdown(EX_OK);
+    // appSignalShutdown(EX_OK);
 }
 
 

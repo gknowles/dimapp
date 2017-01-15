@@ -85,14 +85,14 @@ std::string to_string(HttpHdr id);
 
 
 enum HttpMethod {
-    fHttpMethodConnect  = 0x01,
-    fHttpMethodDelete   = 0x02,
-    fHttpMethodGet      = 0x04,
-    fHttpMethodHead     = 0x08,
-    fHttpMethodOptions  = 0x10,
-    fHttpMethodPost     = 0x20,
-    fHttpMethodPut      = 0x40,
-    fHttpMethodTrace    = 0x80,
+    fHttpMethodConnect = 0x01,
+    fHttpMethodDelete = 0x02,
+    fHttpMethodGet = 0x04,
+    fHttpMethodHead = 0x08,
+    fHttpMethodOptions = 0x10,
+    fHttpMethodPost = 0x20,
+    fHttpMethodPut = 0x40,
+    fHttpMethodTrace = 0x80,
 };
 
 std::string to_string(HttpMethod method);

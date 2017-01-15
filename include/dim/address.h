@@ -40,14 +40,14 @@ struct Address {
 };
 struct Endpoint {
     Address addr;
-    unsigned port{ 0 };
+    unsigned port{0};
 
     bool operator==(const Endpoint & right) const;
     explicit operator bool() const;
 };
 struct Network {
     Address addr;
-    int mask{ 0 };
+    int mask{0};
 };
 } // namespace
 

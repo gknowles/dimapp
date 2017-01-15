@@ -79,4 +79,3 @@ size_t std::hash<Network>::operator()(const Network & val) const {
     hashCombine(out, std::hash<int>{}(val.mask));
     return out;
 }
-

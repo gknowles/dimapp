@@ -22,18 +22,16 @@ public:
     virtual ~IHttpRouteNotify() {}
 
     virtual void onHttpRequest(
-        unsigned reqId, 
+        unsigned reqId,
         std::unordered_multimap<std::string, std::string> & params,
-        HttpMsg & msg
-    ) = 0;
+        HttpMsg & msg) = 0;
 };
 
 void httpRouteAdd(
     IHttpRouteNotify * notify,
     const std::string host,
     const std::string path,
-    unsigned methods = fHttpMethodGet
-);
+    unsigned methods = fHttpMethodGet);
 
 void httpRouteReply(unsigned reqId, HttpMsg & msg, bool more = false);
 void httpRouteReply(unsigned reqId, const CharBuf & data, bool more);

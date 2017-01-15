@@ -10,10 +10,7 @@
 
 namespace Dim {
 
-void sockMgrListen(
-    AppSocket::Family fam,
-    std::string type,
-    Endpoint end);
-    
+void sockMgrListen(AppSocket::Family fam, std::string type, Endpoint end);
+
 
 } // namespace

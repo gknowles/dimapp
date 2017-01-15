@@ -44,14 +44,10 @@ static uint64_t get64le(const void * ptr) {
     }
 
     auto * src = static_cast<const uint8_t *>(ptr);
-    uint64_t out = src[0] 
-        | (src[1] << 8)
-        | (src[2] << 16)
-        | ((uint64_t) src[3] << 24)
-        | ((uint64_t) src[4] << 32)
-        | ((uint64_t) src[5] << 40)
-        | ((uint64_t) src[6] << 48)
-        | ((uint64_t) src[7] << 56);
+    uint64_t out = src[0] | (src[1] << 8) | (src[2] << 16)
+        | ((uint64_t)src[3] << 24) | ((uint64_t)src[4] << 32)
+        | ((uint64_t)src[5] << 40) | ((uint64_t)src[6] << 48)
+        | ((uint64_t)src[7] << 56);
     return out;
 }
 
@@ -61,12 +57,8 @@ static uint64_t rotateLeft(uint64_t val, unsigned count) {
 }
 
 //===========================================================================
-static void sipRound(
-    uint64_t & v0, 
-    uint64_t & v1, 
-    uint64_t & v2, 
-    uint64_t & v3
-) {
+static void
+sipRound(uint64_t & v0, uint64_t & v1, uint64_t & v2, uint64_t & v3) {
     v0 += v1;
     v1 = rotateLeft(v1, 13);
     v1 ^= v0;
@@ -85,7 +77,7 @@ static void sipRound(
     v1 ^= v2;
     v2 = rotateLeft(v2, 32);
 }
- 
+
 
 /****************************************************************************
 *
@@ -96,8 +88,8 @@ static void sipRound(
 //===========================================================================
 void Dim::iHashInitialize() {
     random_device rd;
-    uint64_t k0 = ((uint64_t) rd() << 32) + rd();
-    uint64_t k1 = ((uint64_t) rd() << 32) + rd();
+    uint64_t k0 = ((uint64_t)rd() << 32) + rd();
+    uint64_t k1 = ((uint64_t)rd() << 32) + rd();
     s_v0 = 0x736f'6d65'7073'6575 ^ k0;
     s_v1 = 0x646f'7261'6e64'6f6d ^ k1;
     s_v2 = 0x6c79'6765'6e63'7261 ^ k0;
@@ -132,13 +124,13 @@ size_t Dim::hashBytes(const void * ptr, size_t count) {
     uint64_t b = count % 256;
     m = b << 56;
     switch (count & 7) {
-    case 7: m |= (uint64_t) src[6] << 48;
-    case 6: m |= (uint64_t) src[5] << 40;
-    case 5: m |= (uint64_t) src[4] << 32;
-    case 4: m |= (uint64_t) src[3] << 24;
-    case 3: m |= (uint64_t) src[2] << 16;
-    case 2: m |= (uint64_t) src[1] << 8;
-    case 1: m |= (uint64_t) src[0];
+    case 7: m |= (uint64_t)src[6] << 48;
+    case 6: m |= (uint64_t)src[5] << 40;
+    case 5: m |= (uint64_t)src[4] << 32;
+    case 4: m |= (uint64_t)src[3] << 24;
+    case 3: m |= (uint64_t)src[2] << 16;
+    case 2: m |= (uint64_t)src[1] << 8;
+    case 1: m |= (uint64_t)src[0];
     }
     v3 ^= m;
     sipRound(v0, v1, v2, v3);
