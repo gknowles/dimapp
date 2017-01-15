@@ -9,10 +9,6 @@
 #include "intern.h"
 #include "tlsint.h"
 
-#define SODIUM_STATIC
-#include <sodium.h>
-#undef SODIUM_STATIC
-
 #include <array>
 #include <atomic>
 #include <cassert>
@@ -24,5 +20,6 @@
 #include <memory>
 #include <mutex>
 #include <queue>
+#include <random>
 #include <thread>
 #include <vector>

@@ -15,9 +15,20 @@ namespace Dim {
 
 /****************************************************************************
 *
+*   Crypt random
+*
+***/
+
+void cryptRandomBytes(void * ptr, size_t count);
+
+
+/****************************************************************************
+*
 *   Hashing
 *
 ***/
+
+size_t hashBytes(const void * ptr, size_t count);
 
 size_t hashStr(const char src[]);
 

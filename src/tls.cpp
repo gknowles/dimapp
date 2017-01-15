@@ -335,7 +335,7 @@ void ClientConn::connect(CharBuf * outbuf) {
     msg.majorVersion = kClientVersion[0];
     msg.minorVersion = kClientVersion[1];
     msg.draftVersion = 0x3132;
-    randombytes_buf(msg.random, sizeof(msg.random));
+    cryptRandomBytes(msg.random, sizeof(msg.random));
     msg.suites = suites();
     msg.groups.resize(1);
     TlsKeyShare & key = msg.groups.back();

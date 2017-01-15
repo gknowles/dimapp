@@ -12,54 +12,43 @@ using namespace Dim;
 *
 ***/
 
-// randomly generated key
-// TODO: this should be regenerated at every program start
-const uint8_t s_key[] = {
-    0xed,
-    0x2e,
-    0x24,
-    0x9b,
-    0x49,
-    0x5f,
-    0x10,
-    0xf8,
-    0xb8,
-    0xca,
-    0x13,
-    0x3e,
-    0xb4,
-    0x99,
-    0x56,
-    0x5d,
-};
-static_assert(size(s_key) == crypto_shorthash_KEYBYTES, "");
+static random_device s_rdev;
 
 
 /****************************************************************************
 *
-*   Public API
+*   Crypt random
 *
 ***/
 
 //===========================================================================
-size_t Dim::hashStr(const char src[]) {
-    int64_t hash;
-    crypto_shorthash((uint8_t *)&hash, (uint8_t *)src, strlen(src), s_key);
-    return hash;
+void Dim::cryptRandomBytes(void * vptr, size_t count) {
+    auto * ptr = static_cast<char *>(vptr);
+    for (; count >= sizeof(unsigned); count -= sizeof(unsigned)) {
+        unsigned val = s_rdev();
+        memcpy(ptr, &val, sizeof(val));
+        ptr += sizeof(unsigned);
+    }
+    if (count) {
+        unsigned val = s_rdev();
+        switch (count) {
+            case 3: *ptr++ = val & 0xff; val >>= 8;
+            case 2: *ptr++ = val & 0xff; val >>= 8;
+            case 1: *ptr++ = val & 0xff; val >>= 8;
+        }
+    }
 }
 
-//===========================================================================
-size_t Dim::hashStr(const char src[], size_t maxlen) {
-    size_t len = min(strlen(src), maxlen);
-    int64_t hash;
-    crypto_shorthash((uint8_t *)&hash, (uint8_t *)src, len, s_key);
-    return hash;
-}
+
+/****************************************************************************
+*
+*   Unicode
+*
+***/
 
 //===========================================================================
-// How byte order mark detection works:
-//   https://en.wikipedia.org/wiki/Byte_order_mark#Representations_of_byte
-//      _order_marks_by_encoding
+// Wikipedia article on byte order marks:
+//   https://en.wikipedia.org/wiki/Byte_order_mark#Representations_of_byte_order_marks_by_encoding
 UtfType Dim::utfBomType(const char bytes[], size_t count) {
     if (count >= 2) {
         switch (bytes[0]) {
