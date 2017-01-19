@@ -167,8 +167,8 @@ foreach(var ${config_defines})
     add_definitions(/D${var})
 endforeach()
 
-get_property(parent DIRECTORY PROPERTY PARENT)
-if(NOT ${parent} STREQUAL "")
+get_property(parent DIRECTORY PROPERTY PARENT_DIRECTORY)
+if(NOT "${parent}" STREQUAL "")
     set(VENDOR_ONLY true)
 endif()
 
@@ -273,33 +273,34 @@ if(NOT VENDOR_ONLY)
             add_test(NAME ${prjname} COMMAND ${prjname})
         endif()
     endforeach()
+
+    # update deps file
+    update_deps_file(${deps})
 endif()
 
-# update deps file
-update_deps_file(${deps})
+if(NOT VENDOR_ONLY)
+    # The solution file isn't generated until after this script finishes, 
+    # which means that:
+    #   - it might not exist (if this is the first run)
+    #   - you need to run cmake twice to ensure any new solution was copied
+    set(sln_binpath ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.sln)
+    if(EXISTS ${sln_binpath})
+        # Load solution file from bin-dir and change the relative references 
+        # to project files so that the in memory copy is as if it had been 
+        # built in the source dir.
+        file(RELATIVE_PATH prefix 
+            "${CMAKE_CURRENT_SOURCE_DIR}"
+            "${CMAKE_CURRENT_BINARY_DIR}")
+        file(READ ${sln_binpath} sln_content)
+        string(REGEX REPLACE 
+            "\"([^\"]+).vcxproj\""
+            "\"${prefix}/\\1.vcxproj\"" 
+            sln_content
+            "${sln_content}")
 
-
-# The solution file isn't generated until after this script finishes, 
-# which means that:
-#   - it might not exist (if this is the first run)
-#   - you need to run cmake twice to ensure any new solution was copied
-set(sln_binpath ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.sln)
-if(EXISTS ${sln_binpath})
-    # Load solution file from bin-dir and change the relative references to 
-    # project files so that the in memory copy is as if it had been built in 
-    # the source dir.
-    file(RELATIVE_PATH prefix 
-        "${CMAKE_CURRENT_SOURCE_DIR}"
-        "${CMAKE_CURRENT_BINARY_DIR}")
-    file(READ ${sln_binpath} sln_content)
-    string(REGEX REPLACE 
-        "\"([^\"]+).vcxproj\""
-        "\"${prefix}/\\1.vcxproj\"" 
-        sln_content
-        "${sln_content}")
-
-    # Compare the updated contents with the existing source path sln, if it
-    # exists and is the same we don't want to disturb VS by touching it.
-    set(sln_srcpath ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.sln)
-    update_file("${sln_srcpath}" "${sln_content}")
+        # Compare the updated contents with the existing source path sln, if it
+        # exists and is the same we don't want to disturb VS by touching it.
+        set(sln_srcpath ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.sln)
+        update_file("${sln_srcpath}" "${sln_content}")
+    endif()
 endif()
