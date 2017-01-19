@@ -78,7 +78,7 @@ template <typename S>
 inline void appSocketUpdateListen(
     bool add,
     AppSocket::Family fam,
-    std::string type,
+    const std::string & type,
     Endpoint end) {
     static class Factory : public IAppSocketNotifyFactory {
         std::unique_ptr<IAppSocketNotify> create(AppSocket & sock) override {
@@ -94,15 +94,19 @@ inline void appSocketUpdateListen(
 
 //===========================================================================
 template <typename S>
-inline void
-appSocketAddListen(AppSocket::Family fam, std::string type, Endpoint end) {
+inline void appSocketAddListen(
+    AppSocket::Family fam,
+    const std::string & type,
+    Endpoint end) {
     appSocketUpdateListen<S>(true, fam, type, end);
 }
 
 //===========================================================================
 template <typename S>
-inline void
-appSocketRemoveListen(AppSocket::Family fam, std::string type, Endpoint end) {
+inline void appSocketRemoveListen(
+    AppSocket::Family fam,
+    const std::string & type,
+    Endpoint end) {
     appSocketUpdateListen<S>(false, fam, type, end);
 }
 

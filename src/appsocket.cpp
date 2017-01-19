@@ -13,23 +13,21 @@ using namespace Dim;
 ***/
 
 namespace {
-struct ListenKey {
+struct MatchKey {
     AppSocket::Family family;
-    string type;
-    Endpoint end;
-
-    bool operator==(const ListenKey & other) const {
-        return tie(family, type, end)
-            == tie(other.family, other.type, other.end);
-    }
+    IAppSocketMatchNotify * notify;
 };
 
-class ListenNotify : public ISocketListenNotify {
+struct FamilyInfo {
+    unordered_multimap<string, IAppSocketNotifyFactory *> factories;
+};
+
+class EndpointInfo : public ISocketListenNotify {
 public:
     void onListenStop() override;
     std::unique_ptr<ISocketNotify> onListenCreateSocket() override;
 
-    atomic<int> m_count{0};
+    unordered_map<AppSocket::Family, FamilyInfo> families;
 };
 
 class AppSocketNotify : public ISocketNotify {
@@ -39,19 +37,6 @@ public:
 
 } // namespace
 
-namespace std {
-//===========================================================================
-template <> struct hash<ListenKey> {
-    size_t operator()(const ListenKey & val) const {
-        size_t out = 0;
-        hashCombine(out, val.family);
-        hashCombine(out, hash<string>{}(val.type));
-        hashCombine(out, hash<Endpoint>{}(val.end));
-        return out;
-    }
-};
-} // namespace std
-
 
 /****************************************************************************
 *
@@ -59,24 +44,22 @@ template <> struct hash<ListenKey> {
 *
 ***/
 
-unordered_map<AppSocket::Family, IAppSocketMatchNotify *> s_matchers;
-unordered_multimap<ListenKey, IAppSocketNotifyFactory *> s_factories;
-static ListenNotify s_sockNotify;
+static mutex s_mut;
+static vector<MatchKey> s_matchers;
+static unordered_map<Endpoint, EndpointInfo> s_endpoints;
 
 
 /****************************************************************************
 *
-*   ListenNotify
+*   EndpointInfo
 *
 ***/
 
 //===========================================================================
-void ListenNotify::onListenStop() {
-    m_count -= 1;
-}
+void EndpointInfo::onListenStop() {}
 
 //===========================================================================
-std::unique_ptr<ISocketNotify> ListenNotify::onListenCreateSocket() {
+std::unique_ptr<ISocketNotify> EndpointInfo::onListenCreateSocket() {
     return make_unique<AppSocketNotify>();
 }
 
@@ -133,7 +116,15 @@ void Dim::iAppSocketInitialize() {
 void Dim::appSocketAddMatch(
     IAppSocketMatchNotify * notify,
     AppSocket::Family fam) {
-    s_matchers[fam] = notify;
+    lock_guard<mutex> lk{s_mut};
+    for (auto && key : s_matchers) {
+        if (key.family == fam) {
+            key.notify = notify;
+            return;
+        }
+    }
+    MatchKey key{fam, notify};
+    s_matchers.push_back(key);
 }
 
 //===========================================================================
@@ -142,11 +133,17 @@ void Dim::appSocketAddListen(
     AppSocket::Family fam,
     const std::string & type,
     Endpoint end) {
-    ListenKey key;
-    key.family = fam;
-    key.type = type;
-    key.end = end;
-    s_factories.insert(make_pair(key, factory));
+    bool addNew = false;
+    EndpointInfo * epi = nullptr;
+    {
+        lock_guard<mutex> lk{s_mut};
+        epi = &s_endpoints[end];
+        if (epi->families.empty())
+            addNew = true;
+        epi->families[fam].factories.insert(make_pair(type, factory));
+    }
+    if (addNew)
+        socketListen(epi, end);
 }
 
 //===========================================================================
@@ -155,16 +152,29 @@ void Dim::appSocketRemoveListen(
     AppSocket::Family fam,
     const std::string & type,
     Endpoint end) {
-    ListenKey key;
-    key.family = fam;
-    key.type = type;
-    key.end = end;
-    auto ii = s_factories.equal_range(key);
-    while (ii.first != ii.second) {
-        if (ii.first->second == factory) {
-            ii.first = s_factories.erase(ii.first);
-        } else {
-            ++ii.first;
+    EndpointInfo * epi = nullptr;
+    lock_guard<mutex> lk{s_mut};
+    epi = &s_endpoints[end];
+    if (!epi->families.empty()) {
+        auto fi = epi->families.find(fam);
+        if (fi != epi->families.end()) {
+            auto ii = fi->second.factories.equal_range(type);
+            for (; ii.first != ii.second; ++ii.first) {
+                if (ii.first->second == factory) {
+                    fi->second.factories.erase(ii.first);
+                    if (!fi->second.factories.empty())
+                        return;
+                    epi->families.erase(fi);
+                    if (!epi->families.empty())
+                        return;
+                    socketStop(epi, end);
+                    //                    s_stopping.insert(s_endpoints.extract(end));
+                    return;
+                }
+            }
         }
     }
+
+    logMsgError() << "Remove unknown listener, " << end << ", " << fam << ", "
+                  << type;
 }
