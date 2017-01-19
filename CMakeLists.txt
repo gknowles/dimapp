@@ -167,20 +167,27 @@ foreach(var ${config_defines})
     add_definitions(/D${var})
 endforeach()
 
+get_property(parent DIRECTORY PROPERTY PARENT)
+if(NOT ${parent} STREQUAL "")
+    set(VENDOR_ONLY true)
+endif()
+
 # meta target
-file(GLOB sources LIST_DIRECTORIES false 
-    LICENSE
-    .clang-format
-    .travis.yml
-    appveyor.yml
-    *.md
-    configure.bat
-    docs/*)
-list(APPEND deps ${sources})
-add_custom_target("_meta" SOURCES ${sources})
-set_target_properties(_meta PROPERTIES FOLDER _meta)
-source_group("docs" REGULAR_EXPRESSION "docs/.*")
-source_group("" FILES configure.bat)
+if(NOT VENDOR_ONLY)
+    file(GLOB sources LIST_DIRECTORIES false 
+        LICENSE
+        .clang-format
+        .travis.yml
+        appveyor.yml
+        *.md
+        configure.bat
+        docs/*)
+    list(APPEND deps ${sources})
+    add_custom_target("_meta" SOURCES ${sources})
+    set_target_properties(_meta PROPERTIES FOLDER _meta)
+    source_group("docs" REGULAR_EXPRESSION "docs/.*")
+    source_group("" FILES configure.bat)
+endif()
 
 # includes
 # Create modifed config.h to reflect build defines
@@ -207,6 +214,7 @@ file(GLOB local_srcs LIST_DIRECTORIES false src/*.h src/*.cpp)
 set(sources ${global_srcs} ${local_srcs})
 list(APPEND deps ${sources})
 add_library(${PROJECT_NAME} ${sources})
+set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER vendor)
 source_group("" FILES ${sources})
 source_group("compiler" FILES ../include/dim/compiler/visualc.h)
 write_user_file(${PROJECT_NAME})
@@ -232,6 +240,7 @@ foreach(var ${libnames})
     file(GLOB_RECURSE sources LIST_DIRECTORIES false ${var}/*.h ${var}/*.cpp)
     list(APPEND deps ${sources})
     add_library(${libname} ${sources})
+    set_target_properties(${libname} PROPERTIES FOLDER vendor)
     source_group("" FILES ${sources})
     write_user_file(${libname})
 
@@ -241,30 +250,30 @@ foreach(var ${libnames})
     install_archive_pdb(${libname} lib)
 endforeach()
 
-# tool targets
-file(GLOB allnames tools/*)
-foreach(var ${allnames})
-    if(IS_DIRECTORY "${var}")
-        get_filename_component(prjname "${var}" NAME)
-        add_exec_project(${prjname} "${var}")
+if(NOT VENDOR_ONLY)
+    # tool targets
+    file(GLOB allnames tools/*)
+    foreach(var ${allnames})
+        if(IS_DIRECTORY "${var}")
+            get_filename_component(prjname "${var}" NAME)
+            add_exec_project(${prjname} "${var}")
+            set_target_properties(${prjname} PROPERTIES FOLDER tools)
+            # install(TARGETS ${prjname} RUNTIME DESTINATION bin)
+        endif()
+    endforeach()
 
-        set_target_properties(${prjname} PROPERTIES FOLDER tools)
-        # install(TARGETS ${prjname} RUNTIME DESTINATION bin)
-    endif()
-endforeach()
-
-# test targets
-enable_testing()
-file(GLOB allnames tests/*)
-foreach(var ${allnames})
-    if(IS_DIRECTORY "${var}")
-        get_filename_component(prjname "${var}" NAME)
-        add_exec_project(${prjname} "${var}")
-
-        set_target_properties(${prjname} PROPERTIES FOLDER tests)
-        add_test(NAME ${prjname} COMMAND ${prjname})
-    endif()
-endforeach()
+    # test targets
+    enable_testing()
+    file(GLOB allnames tests/*)
+    foreach(var ${allnames})
+        if(IS_DIRECTORY "${var}")
+            get_filename_component(prjname "${var}" NAME)
+            add_exec_project(${prjname} "${var}")
+            set_target_properties(${prjname} PROPERTIES FOLDER tests)
+            add_test(NAME ${prjname} COMMAND ${prjname})
+        endif()
+    endforeach()
+endif()
 
 # update deps file
 update_deps_file(${deps})
