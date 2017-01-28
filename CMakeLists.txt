@@ -6,7 +6,7 @@
 #   /<project_name>/CMakeDeps.cmake - made by this file (source controlled)
 #   /<project_name>/include
 #   /<project_name>/src/{*.h,*.cpp}
-#   /<project_name>/src/<sublibrary>/.../{*.h,*.cpp}
+#   /<project_name>/src/<sublibrary>/**/{*.h,*.cpp}
 #   /<project_name>/tests/<test_project_name>/
 #   /<project_name>/tools/<tool_project_name>/
 #   /<project_name>/vendor/<vendor_project_name>/
@@ -263,10 +263,15 @@ if(NOT VENDOR_ONLY)
 endif()
 
 # includes
+get_filename_component(path include ABSOLUTE)
+if(IS_DIRECTORY "${path}")
+    install(DIRECTORY include DESTINATION .)
+endif()
 # Create modifed config.h to reflect build defines
-set(cfgname "include/dim/config.h")
-if(EXISTS "${cfgname}")
-    file(READ "${cfgname}" content)
+set(cfgname "include/${PROJECT_NAME}/config.h")
+get_filename_component(path ${cfgname} ABSOLUTE)
+if(EXISTS "${path}")
+    file(READ "${path}" content)
     foreach(val ${config_defines})
         string(REGEX REPLACE 
             "\n//#define ${val}" "\n#define ${val}" 
@@ -274,9 +279,8 @@ if(EXISTS "${cfgname}")
     endforeach()
     update_file("${CMAKE_CURRENT_BINARY_DIR}/${cfgname}" "${content}")
 
-    install(DIRECTORY include DESTINATION .)
     install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${cfgname}" 
-        DESTINATION include/dim)
+        DESTINATION include/${PROJECT_NAME})
 endif()
 
 # lib targets
@@ -352,5 +356,3 @@ if(EXISTS ${sln_binpath})
     set(sln_srcpath ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.sln)
     update_file("${sln_srcpath}" "${sln_content}")
 endif()
-
-
