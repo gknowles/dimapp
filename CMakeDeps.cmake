@@ -117,4 +117,3 @@
 # tools/tnet/pch.h
 # tools/tnet/tnet.cpp
 # vendor/botan-1.11
-# vendor/rapidxml-1.13
