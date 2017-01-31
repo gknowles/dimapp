@@ -8,6 +8,27 @@ namespace Dim {
 
 /****************************************************************************
 *
+*   Load DLL Proc
+*
+***/
+
+//===========================================================================
+template<typename FN>
+static void loadProc(FN & fn, const char lib[], const char func[]) {
+    HMODULE mod = LoadLibrary(lib);
+    if (!mod)
+        logMsgCrash() << "LoadLibrary(" << lib << "): " << WinError{};
+
+    fn = (FN)GetProcAddress(mod, func);
+    if (!fn) {
+        logMsgCrash() << "GetProcAddress(" << func << "): "
+                      << WinError{};
+    }
+}
+
+
+/****************************************************************************
+*
 *   Overlapped
 *
 ***/
@@ -76,7 +97,7 @@ public:
 
 class WinError {
 public:
-    enum NtStatus;
+    enum NtStatus : unsigned;
 
 public:
     // default constructor calls GetLastError()
@@ -95,6 +116,8 @@ private:
 };
 
 std::ostream & operator<<(std::ostream & os, const WinError & val);
+
+void winErrorInitialize();
 
 
 /****************************************************************************

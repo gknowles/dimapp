@@ -77,6 +77,7 @@
 # src/win8/winsockconn.cpp
 # src/win8/winsockint.h
 # src/win8/winsync.cpp
+# src/win8/winsystem.cpp
 # src/win8/wintime.cpp
 # src/xml/pch.cpp
 # src/xml/pch.h
@@ -88,6 +89,9 @@
 # tests/charbuf/charbuftest.cpp
 # tests/charbuf/pch.cpp
 # tests/charbuf/pch.h
+# tests/file/file.cpp
+# tests/file/pch.cpp
+# tests/file/pch.h
 # tests/hpack/hpacktest.cpp
 # tests/hpack/pch.cpp
 # tests/hpack/pch.h

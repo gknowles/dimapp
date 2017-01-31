@@ -199,7 +199,8 @@ void Application::onTask() {
             hIn, inpath, (DWORD)size(inpath), FILE_NAME_OPENED);
     }
 
-    if (!fileOpen(s_console.m_file, "conin$", IFile::kReadOnly))
+    s_console.m_file = fileOpen("conin$", IFile::kReadOnly);
+    if (!s_console.m_file)
         return appSignalShutdown(EX_IOERR);
 
     s_console.m_buffer = socketGetBuffer();

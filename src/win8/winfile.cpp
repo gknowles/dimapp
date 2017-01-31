@@ -24,12 +24,45 @@ namespace {
 class File : public IFile {
 public:
     path m_path;
-    HANDLE m_handle;
-    OpenMode m_mode;
+    HANDLE m_handle{INVALID_HANDLE_VALUE};
+    OpenMode m_mode{kReadOnly};
+    const char * m_view{nullptr};
+    size_t m_viewSize{0};
 
     virtual ~File();
 };
 }
+
+using NtCreateSectionFn = DWORD(WINAPI *)(
+    HANDLE * hSec,
+    ACCESS_MASK access,
+    void * objAttrs,
+    LARGE_INTEGER * maxSize,
+    ULONG secProt,
+    ULONG allocAttrs,
+    HANDLE hFile
+);
+enum SECTION_INHERIT {
+    ViewShare = 1,
+    ViewUnmap = 2,
+};
+using NtMapViewOfSectionFn = DWORD(WINAPI *)(
+    HANDLE hSec,
+    HANDLE hProc,
+    const void ** base,
+    ULONG_PTR zeroBits,
+    SIZE_T commitSize,
+    LARGE_INTEGER * secOffset,
+    SIZE_T * viewSize,
+    SECTION_INHERIT ih,
+    ULONG allocType,
+    ULONG pageProt
+);
+using NtUnmapViewOfSectionFn = DWORD(WINAPI *)(
+    HANDLE hProc,
+    const void * base
+);
+using NtCloseFn = DWORD(WINAPI *)(HANDLE h);
 
 
 /****************************************************************************
@@ -37,6 +70,13 @@ public:
 *   Variables
 *
 ***/
+
+static NtCreateSectionFn s_NtCreateSection;
+static NtMapViewOfSectionFn s_NtMapViewOfSection;
+static NtUnmapViewOfSectionFn s_NtUnmapViewOfSection;
+static NtCloseFn s_NtClose;
+
+static size_t s_pageSize;
 
 
 /****************************************************************************
@@ -127,7 +167,7 @@ void FileReader::read(int64_t off, int64_t len) {
         WinError err;
         if (err == ERROR_IO_PENDING)
             return;
-        logMsgError() << "ReadFile (" << m_file->m_path << "): " << err;
+        logMsgError() << "ReadFile(" << m_file->m_path << "): " << err;
     }
 
     m_notify->onFileEnd(m_offset, m_file);
@@ -140,7 +180,7 @@ void FileReader::onTask() {
     if (!GetOverlappedResult(NULL, &m_iocpEvt.overlapped, &bytes, false)) {
         WinError err;
         if (err != ERROR_OPERATION_ABORTED)
-            logMsgError() << "ReadFile (" << m_file->m_path << "): " << err;
+            logMsgError() << "ReadFile(" << m_file->m_path << "): " << err;
         m_notify->onFileEnd(m_offset, m_file);
         delete this;
         return;
@@ -222,7 +262,7 @@ void FileWriteBuf::write(int64_t off) {
         if (m_err == ERROR_IO_PENDING)
             return;
         if (m_err) {
-            logMsgError() << "WriteFile (" << m_file->m_path << "): " << m_err;
+            logMsgError() << "WriteFile(" << m_file->m_path << "): " << m_err;
         }
         setErrno(m_err);
     }
@@ -241,7 +281,7 @@ void FileWriteBuf::onTask() {
     if (!result) {
         m_err = WinError{};
         if (m_err != ERROR_OPERATION_ABORTED) {
-            logMsgError() << "WriteFile (" << m_file->m_path << "): " << m_err;
+            logMsgError() << "WriteFile(" << m_file->m_path << "): " << m_err;
         }
         setErrno(m_err);
     }
@@ -258,8 +298,7 @@ void FileWriteBuf::onTask() {
 
 //===========================================================================
 File::~File() {
-    if (m_handle != INVALID_HANDLE_VALUE)
-        CloseHandle(m_handle);
+    fileClose(this);
 }
 
 
@@ -271,7 +310,14 @@ File::~File() {
 
 //===========================================================================
 void Dim::iFileInitialize() {
-    winIocpInitialize();
+    SYSTEM_INFO si;
+    GetSystemInfo(&si);
+    s_pageSize = si.dwPageSize;
+
+    loadProc(s_NtCreateSection, "ntdll", "NtCreateSection");
+    loadProc(s_NtMapViewOfSection, "ntdll", "NtMapViewOfSection");
+    loadProc(s_NtUnmapViewOfSection, "ntdll", "NtUnmapViewOfSection");
+    loadProc(s_NtClose, "ntdll", "NtClose");
 }
 
 
@@ -282,10 +328,9 @@ void Dim::iFileInitialize() {
 ***/
 
 //===========================================================================
-bool Dim::fileOpen(unique_ptr<IFile> & out, const path & path, unsigned mode) {
+unique_ptr<IFile> Dim::fileOpen(const path & path, unsigned mode) {
     using om = IFile::OpenMode;
 
-    out.reset();
     auto file = make_unique<File>();
     file->m_mode = (om)mode;
     file->m_path = path;
@@ -337,20 +382,37 @@ bool Dim::fileOpen(unique_ptr<IFile> & out, const path & path, unsigned mode) {
         flags,
         NULL // template file
         );
-    if (file->m_handle == INVALID_HANDLE_VALUE)
-        return setErrno(WinError{});
+    if (file->m_handle == INVALID_HANDLE_VALUE) {
+        setErrno(WinError{});
+        return nullptr;
+    }
 
-    if (!winIocpBindHandle(file->m_handle))
-        return setErrno(WinError{});
+    if (!winIocpBindHandle(file->m_handle)) {
+        setErrno(WinError{});
+        return nullptr;
+    }
 
-    out = move(file);
-    return true;
+    if (!SetFileCompletionNotificationModes(file->m_handle,
+        FILE_SKIP_COMPLETION_PORT_ON_SUCCESS)) {
+        setErrno(WinError{});
+        return nullptr;
+    }
+
+    return file;
 }
 
 //===========================================================================
 void Dim::fileClose(IFile * ifile) {
     File * file = static_cast<File *>(ifile);
     if (file->m_handle != INVALID_HANDLE_VALUE) {
+        if (file->m_view) {
+            if (DWORD status = s_NtUnmapViewOfSection(
+                GetCurrentProcess(), file->m_view)) {
+                WinError err{WinError::NtStatus(status)};
+                logMsgError() << "NtUnmapViewOfSection(" 
+                    << file->m_path << "): " << err;
+            }
+        }
         CloseHandle(file->m_handle);
         file->m_handle = INVALID_HANDLE_VALUE;
     }
@@ -362,7 +424,7 @@ size_t Dim::fileSize(IFile * ifile) {
     LARGE_INTEGER size;
     if (!GetFileSizeEx(file->m_handle, &size)) {
         WinError err;
-        logMsgError() << "WriteFile (" << file->m_path << "): " << err;
+        logMsgError() << "WriteFile(" << file->m_path << "): " << err;
         setErrno(err);
         return 0;
     }
@@ -379,7 +441,7 @@ TimePoint Dim::fileLastWriteTime(IFile * ifile) {
             (FILETIME *)&atime,
             (FILETIME *)&wtime)) {
         WinError err;
-        logMsgError() << "GetFileTime (" << file->m_path << "): " << err;
+        logMsgError() << "GetFileTime(" << file->m_path << "): " << err;
         setErrno(err);
         return TimePoint::min();
     }
@@ -429,4 +491,102 @@ void Dim::fileAppend(
     // file writes to offset 2^64-1 are interpreted as appends to the end
     // of the file.
     fileWrite(notify, file, 0xffff'ffff'ffff'ffff, buf, bufLen);
+}
+
+
+/****************************************************************************
+*
+*   Public View API
+*
+***/
+
+//===========================================================================
+size_t Dim::filePageSize() {
+    return s_pageSize;
+}
+
+//===========================================================================
+bool Dim::fileOpenView(
+    const char *& base,
+    IFile * ifile, 
+    int64_t maxLen // maximum viewable offset, rounded up to page size
+) {
+    File * file = static_cast<File *>(ifile);
+    if (file->m_view) {
+        base = file->m_view;
+        return true;
+    }
+    base = nullptr;
+    WinError err{0};
+    HANDLE sec;
+    DWORD status = s_NtCreateSection(
+        &sec, 
+        SECTION_MAP_READ, 
+        nullptr, // object attributes
+        nullptr, // maximum size
+        (file->m_mode & IFile::kReadOnly) ? PAGE_READONLY : PAGE_READWRITE, 
+        SEC_RESERVE, 
+        file->m_handle);
+    if (status) {
+        err = (WinError::NtStatus)status;
+        logMsgError() << "NtCreateSection(" << file->m_path << "): " << err;
+        setErrno(err);
+        return false;
+    }
+
+    SIZE_T viewSize = (file->m_mode & IFile::kReadOnly) ? 0 : maxLen;
+    status = s_NtMapViewOfSection(
+        sec,
+        GetCurrentProcess(),
+        (const void **) &base,
+        0, // zero bits
+        0, // commit size
+        nullptr, // section offset
+        &viewSize,
+        ViewUnmap,
+        (file->m_mode & IFile::kReadOnly) ? 0 : MEM_RESERVE,
+        PAGE_READONLY
+    );
+    if (status) {
+        err = (WinError::NtStatus)status;
+        logMsgError() << "NtMapViewOfSection(" << file->m_path << "): " << err;
+        setErrno(err);
+    }
+    file->m_view = base;
+    file->m_viewSize = viewSize;
+
+    // always close the section whether the map view worked or not
+    status = s_NtClose(sec);
+    if (status) {
+        WinError tmp{(WinError::NtStatus)status};
+        logMsgError() << "NtClose(" << file->m_path << "): " << tmp;
+        if (!err) {
+            setErrno(tmp);
+            err = tmp;
+        }
+    }
+
+    MEMORY_BASIC_INFORMATION bi;
+    if (!VirtualQuery(base + 8192, &bi, sizeof(bi))) {
+        logMsgError() << "VirtualQuery(" << base << "): " << WinError{};
+    }
+
+    return !err;
+}
+
+//===========================================================================
+void Dim::fileExtendView(IFile * ifile, int64_t length) {
+    File * file = static_cast<File *>(ifile);
+    void * ptr = VirtualAlloc(
+        (void *) file->m_view, 
+        length, 
+        MEM_COMMIT, 
+        PAGE_READONLY);
+    if (!ptr) {
+        logMsgCrash() << "VirtualAlloc(" << file->m_path << "): " << WinError{};
+    }
+    if (ptr != file->m_view) {
+        logMsgDebug() << "VirtualAlloc(" << file->m_path << "): " 
+            << ptr << " (expected " << file->m_view << ")";
+    }
 }

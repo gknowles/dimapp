@@ -27,10 +27,9 @@ public:
     virtual ~IFile() {}
 };
 
-// on error returns false and sets errno to one of:
+// on error returns an empty pointer and sets errno to one of:
 //  EEXIST, ENOENT, EBUSY, EACCES, or EIO
-bool fileOpen(
-    std::unique_ptr<IFile> & file,
+std::unique_ptr<IFile> fileOpen(
     const std::experimental::filesystem::path & path,
     unsigned modeFlags // IFile::OpenMode::*
     );
@@ -44,6 +43,13 @@ std::experimental::filesystem::path filePath(IFile * file);
 //
 // filePath still works, but most operations on a closed IFile will fail.
 void fileClose(IFile * file);
+
+
+/****************************************************************************
+*
+*   Read
+*
+***/
 
 class IFileReadNotify {
 public:
@@ -72,6 +78,28 @@ void fileReadBinary(
     IFileReadNotify * notify,
     std::string & out,
     const std::experimental::filesystem::path & path);
+
+// page size is always a power of 2
+size_t filePageSize();
+
+// The maxLen is the maximum offset into the file that view can be extended
+// to cover. A value less than or equal to the size of the file (such as 0)
+// makes a view of the entire file that can't be extended. The value is 
+// rounded up to a multiple of page size.
+bool fileOpenView(const char *& base, IFile * file, int64_t maxLen = 0);
+
+// Extend the view up to maxLen that was set when the view was opened. A
+// view can only be extended if the file (which is also extended) was opened
+// for writing. "Extending" with a length less than the current view has
+// no effect and extending beyond maxLen is an error.
+void fileExtendView(IFile * file, int64_t length);
+
+
+/****************************************************************************
+*
+*   Write
+*
+***/
 
 class IFileWriteNotify {
 public:

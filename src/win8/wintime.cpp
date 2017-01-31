@@ -1,4 +1,4 @@
-// wintypes.cpp - dim core - windows platform
+// wintime.cpp - dim core - windows platform
 #include "pch.h"
 #pragma hdrstop
 
