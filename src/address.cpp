@@ -40,6 +40,15 @@ Address::operator bool() const {
     return data[3] || data[0] || data[1] || data[2];
 }
 
+//===========================================================================
+istream & Dim::operator>>(istream & in, Address & out) {
+    string tmp;
+    in >> tmp;
+    if (!parse(&out, tmp.c_str()))
+        in.setstate(ios_base::failbit);
+    return in;
+}
+
 
 /****************************************************************************
 *
@@ -63,6 +72,15 @@ bool Endpoint::operator==(const Endpoint & right) const {
 //===========================================================================
 Endpoint::operator bool() const {
     return port || addr;
+}
+
+//===========================================================================
+istream & Dim::operator>>(istream & in, Endpoint & out) {
+    string tmp;
+    in >> tmp;
+    if (!parse(&out, tmp.c_str(), 0))
+        in.setstate(ios_base::failbit);
+    return in;
 }
 
 

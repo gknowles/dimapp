@@ -70,6 +70,9 @@ bool parse(Endpoint * end, const char src[], int defaultPort);
 
 std::ostream & operator<<(std::ostream & os, const Address & addr);
 std::ostream & operator<<(std::ostream & os, const Endpoint & end);
+std::istream & operator>>(std::istream & in, Address & out);
+std::istream & operator>>(std::istream & in, Endpoint & out);
+
 
 //===========================================================================
 // Native
