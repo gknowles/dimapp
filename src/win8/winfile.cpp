@@ -566,11 +566,6 @@ bool Dim::fileOpenView(
         }
     }
 
-    MEMORY_BASIC_INFORMATION bi;
-    if (!VirtualQuery(base + 8192, &bi, sizeof(bi))) {
-        logMsgError() << "VirtualQuery(" << base << "): " << WinError{};
-    }
-
     return !err;
 }
 
