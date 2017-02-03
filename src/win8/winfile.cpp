@@ -463,9 +463,10 @@ unique_ptr<IFile> Dim::fileOpen(const path & path, unsigned mode) {
         return nullptr;
     }
 
-    if (!SetFileCompletionNotificationModes(file->m_handle,
-        FILE_SKIP_COMPLETION_PORT_ON_SUCCESS
-            | FILE_SKIP_SET_EVENT_ON_HANDLE)) {
+    if (!SetFileCompletionNotificationModes(
+            file->m_handle,
+            FILE_SKIP_COMPLETION_PORT_ON_SUCCESS
+                | FILE_SKIP_SET_EVENT_ON_HANDLE)) {
         setErrno(WinError{});
         return nullptr;
     }
