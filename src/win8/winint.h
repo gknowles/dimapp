@@ -36,6 +36,7 @@ static void loadProc(FN & fn, const char lib[], const char func[]) {
 struct WinOverlappedEvent {
     OVERLAPPED overlapped{};
     ITaskNotify * notify{nullptr};
+    TaskQueueHandle hq = {};
 };
 
 
