@@ -49,7 +49,7 @@ int internalTest() {
     char * data2 = out.data();
     cout << data2;
 
-    cout << "All tests passed" << endl;
+    cout << "All tests passed? You decide!" << endl;
     return EX_OK;
 }
 

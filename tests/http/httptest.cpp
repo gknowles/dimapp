@@ -208,10 +208,10 @@ void Application::onTask() {
     if (m_errors) {
         ConsoleScopedAttr attr(kConsoleError);
         cerr << "*** " << m_errors << " FAILURES" << endl;
-        appSignalShutdown(1);
+        appSignalShutdown(EX_SOFTWARE);
     } else {
         cout << "All tests passed" << endl;
-        appSignalShutdown(0);
+        appSignalShutdown(EX_OK);
     }
 }
 
