@@ -13,7 +13,7 @@ namespace Dim {
 ***/
 
 //===========================================================================
-template<typename FN>
+template <typename FN>
 static void loadProc(FN & fn, const char lib[], const char func[]) {
     HMODULE mod = LoadLibrary(lib);
     if (!mod)
@@ -21,8 +21,7 @@ static void loadProc(FN & fn, const char lib[], const char func[]) {
 
     fn = (FN)GetProcAddress(mod, func);
     if (!fn) {
-        logMsgCrash() << "GetProcAddress(" << func << "): "
-                      << WinError{};
+        logMsgCrash() << "GetProcAddress(" << func << "): " << WinError{};
     }
 }
 
@@ -49,10 +48,13 @@ struct WinOverlappedEvent {
 class WinEvent {
 public:
     WinEvent();
+    explicit WinEvent(HANDLE evt)
+        : m_handle(evt) {}
     ~WinEvent();
 
     void signal();
     void wait(Duration wait = kTimerInfinite);
+    HANDLE release();
 
     HANDLE nativeHandle() const { return m_handle; };
 

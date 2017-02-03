@@ -16,31 +16,41 @@ using namespace Dim;
 //===========================================================================
 WinEvent::WinEvent() {
     m_handle = CreateEvent(
-        NULL,  // security attributes
-        false, // manual reset
-        false, // initial signaled state
-        NULL   // name
+        nullptr, // security attributes
+        false,   // manual reset
+        false,   // initial signaled state
+        nullptr  // name
         );
 }
 
 //===========================================================================
 WinEvent::~WinEvent() {
-    CloseHandle(m_handle);
+    if (m_handle != INVALID_HANDLE_VALUE)
+        CloseHandle(m_handle);
 }
 
 //===========================================================================
 void WinEvent::signal() {
+    assert(m_handle != INVALID_HANDLE_VALUE);
     SetEvent(m_handle);
 }
 
 //===========================================================================
 void WinEvent::wait(Duration wait) {
+    assert(m_handle != INVALID_HANDLE_VALUE);
     auto waitMs = duration_cast<milliseconds>(wait);
     if (wait <= 0ms || waitMs >= chrono::milliseconds(INFINITE)) {
         WaitForSingleObject(m_handle, INFINITE);
     } else {
         WaitForSingleObject(m_handle, (DWORD)waitMs.count());
     }
+}
+
+//===========================================================================
+HANDLE WinEvent::release() {
+    HANDLE evt = m_handle;
+    m_handle = INVALID_HANDLE_VALUE;
+    return evt;
 }
 
 
