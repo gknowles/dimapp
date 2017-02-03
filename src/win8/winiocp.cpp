@@ -65,7 +65,8 @@ static void iocpDispatchThread() {
             taskPush(evt->hq, *evt->notify);
         } else {
             taskPushEvent(*evt->notify);
-     }
+        }
+    }
 
     lock_guard<mutex> lk{s_mut};
     s_iocp = 0;
