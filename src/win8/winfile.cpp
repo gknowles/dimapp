@@ -156,6 +156,7 @@ FileReader::FileReader(
 void FileReader::queue(int64_t off, int64_t len, bool sync) {
     m_offset = off;
     m_length = len;
+
     if (sync) {
         WinEvent evt;
         m_event = evt.nativeHandle();
@@ -170,9 +171,7 @@ void FileReader::queue(int64_t off, int64_t len, bool sync) {
 void FileReader::read(int64_t off, int64_t len) {
     m_offset = off;
     m_length = len;
-    m_iocpEvt.overlapped = {};
-    m_iocpEvt.overlapped.Offset = (DWORD)off;
-    m_iocpEvt.overlapped.OffsetHigh = (DWORD)(off >> 32);
+    winSetOverlapped(m_iocpEvt, off);
 
     if (!len || len > m_outBufLen)
         len = m_outBufLen;
@@ -307,11 +306,7 @@ void FileWriteBuf::queue(int64_t off, bool sync) {
 //===========================================================================
 void FileWriteBuf::write(int64_t off) {
     m_offset = off;
-    m_iocpEvt.overlapped = {};
-    m_iocpEvt.overlapped.Offset = (DWORD)off;
-    m_iocpEvt.overlapped.OffsetHigh = (DWORD)(off >> 32);
-    if (m_event != INVALID_HANDLE_VALUE)
-        m_iocpEvt.overlapped.hEvent = m_event;
+    winSetOverlapped(m_iocpEvt, off, m_event);
 
     if (!WriteFile(
             m_file->m_handle,
@@ -442,7 +437,7 @@ unique_ptr<IFile> Dim::fileOpen(const path & path, unsigned mode) {
         }
     }
 
-    int flags = FILE_FLAG_OVERLAPPED;
+    int flags = (mode & om::kBlocking) ? 0 : FILE_FLAG_OVERLAPPED;
 
     file->m_handle = CreateFileW(
         path.c_str(),
@@ -458,17 +453,19 @@ unique_ptr<IFile> Dim::fileOpen(const path & path, unsigned mode) {
         return nullptr;
     }
 
-    if (!winIocpBindHandle(file->m_handle)) {
-        setErrno(WinError{});
-        return nullptr;
-    }
+    if (~mode & om::kBlocking) {
+        if (!winIocpBindHandle(file->m_handle)) {
+            setErrno(WinError{});
+            return nullptr;
+        }
 
-    if (!SetFileCompletionNotificationModes(
-            file->m_handle,
-            FILE_SKIP_COMPLETION_PORT_ON_SUCCESS
-                | FILE_SKIP_SET_EVENT_ON_HANDLE)) {
-        setErrno(WinError{});
-        return nullptr;
+        if (!SetFileCompletionNotificationModes(
+                file->m_handle,
+                FILE_SKIP_COMPLETION_PORT_ON_SUCCESS
+                    | FILE_SKIP_SET_EVENT_ON_HANDLE)) {
+            setErrno(WinError{});
+            return nullptr;
+        }
     }
 
     return file;
@@ -548,8 +545,19 @@ void Dim::fileReadSync(
     IFile * ifile,
     int64_t off) {
     File * file = static_cast<File *>(ifile);
-    auto ptr = new FileReader(nullptr, file, outBuf, outBufLen);
-    ptr->queue(off, outBufLen, true);
+    if (file->m_mode & IFile::kBlocking) {
+        WinOverlappedEvent evt;
+        winSetOverlapped(evt, off);
+        DWORD bytes;
+        if (!ReadFile(file->m_handle, outBuf, (DWORD) outBufLen, &bytes, &evt.overlapped)) {
+            WinError err;
+            logMsgError() << "ReadFile(" << file->m_path << "): " << err;
+            setErrno(err);
+        }
+    } else {
+        auto ptr = new FileReader(nullptr, file, outBuf, outBufLen);
+        ptr->queue(off, outBufLen, true);
+    }
 }
 
 //===========================================================================
@@ -572,8 +580,19 @@ void Dim::fileWriteSync(
     const void * buf,
     size_t bufLen) {
     File * file = static_cast<File *>(ifile);
-    auto ptr = new FileWriteBuf(nullptr, file, buf, bufLen);
-    ptr->queue(off, true);
+    if (file->m_mode & IFile::kBlocking) {
+        WinOverlappedEvent evt;
+        winSetOverlapped(evt, off);
+        DWORD bytes;
+        if (!WriteFile(file->m_handle, buf, (DWORD) bufLen, &bytes, &evt.overlapped)) {
+            WinError err;
+            logMsgError() << "ReadFile(" << file->m_path << "): " << err;
+            setErrno(err);
+        }
+    } else {
+        auto ptr = new FileWriteBuf(nullptr, file, buf, bufLen);
+        ptr->queue(off, true);
+    }
 }
 
 //===========================================================================
@@ -682,3 +701,20 @@ void Dim::fileExtendView(IFile * ifile, int64_t length) {
                       << " (expected " << file->m_view << ")";
     }
 }
+
+
+/****************************************************************************
+*
+*   Public Overlapped API
+*
+***/
+
+//===========================================================================
+void Dim::winSetOverlapped(WinOverlappedEvent & evt, int64_t off, HANDLE event) {
+    evt.overlapped = {};
+    evt.overlapped.Offset = (DWORD)off;
+    evt.overlapped.OffsetHigh = (DWORD)(off >> 32);
+    if (event != INVALID_HANDLE_VALUE)
+        evt.overlapped.hEvent = event;
+}
+

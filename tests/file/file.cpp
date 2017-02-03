@@ -69,7 +69,8 @@ void Application::onTask() {
 
     size_t psize = filePageSize();
     auto file =
-        fileOpen(*fn, IFile::kCreat | IFile::kTrunc | IFile::kReadWrite);
+        fileOpen(*fn, IFile::kCreat | IFile::kTrunc | IFile::kReadWrite 
+            | IFile::kBlocking);
     fileWriteSync(file.get(), 0, "aaaa", 4);
     const char * base;
     if (!fileOpenView(base, file.get(), 1001 * psize))

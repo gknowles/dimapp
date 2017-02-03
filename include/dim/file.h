@@ -21,6 +21,11 @@ public:
         kTrunc = 0x10, // truncate if already exists
         kDenyWrite = 0x20,
         kDenyNone = 0x40,
+
+        // Optimize for file*Sync family of functions. Opens file without
+        // FILE_FLAG_OVERLAPPED and does async by posting the requests
+        // to a small taskqueue whos thread use blocking calls.
+        kBlocking = 0x80, 
     };
 
 public:
@@ -36,6 +41,7 @@ std::unique_ptr<IFile> fileOpen(
 size_t fileSize(IFile * file);
 TimePoint fileLastWriteTime(IFile * file);
 std::experimental::filesystem::path filePath(IFile * file);
+unsigned fileMode(IFile * file);
 
 // Closing the file is normally handled as part of destroying the IFile
 // object, but fileClose() can be used to release the file to the system

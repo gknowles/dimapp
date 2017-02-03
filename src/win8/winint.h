@@ -38,6 +38,11 @@ struct WinOverlappedEvent {
     TaskQueueHandle hq = {};
 };
 
+void winSetOverlapped(
+    WinOverlappedEvent & evt, 
+    int64_t off, 
+    HANDLE event = INVALID_HANDLE_VALUE);
+
 
 /****************************************************************************
 *
