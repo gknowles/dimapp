@@ -74,6 +74,11 @@ void fileRead(
     int64_t offset = 0,
     int64_t length = 0 // 0 to read until the end
     );
+void fileReadSync(
+    void * outBuf,
+    size_t outBufLen,
+    IFile * file,
+    int64_t offset);
 void fileReadBinary(
     IFileReadNotify * notify,
     std::string & out,
@@ -84,7 +89,7 @@ size_t filePageSize();
 
 // The maxLen is the maximum offset into the file that view can be extended
 // to cover. A value less than or equal to the size of the file (such as 0)
-// makes a view of the entire file that can't be extended. The value is 
+// makes a view of the entire file that can't be extended. The value is
 // rounded up to a multiple of page size.
 bool fileOpenView(const char *& base, IFile * file, int64_t maxLen = 0);
 
@@ -118,10 +123,16 @@ void fileWrite(
     int64_t offset,
     const void * buf,
     size_t bufLen);
+void fileWriteSync(
+    IFile * file,
+    int64_t offset,
+    const void * buf,
+    size_t bufLen);
 void fileAppend(
     IFileWriteNotify * notify,
     IFile * file,
     const void * buf,
     size_t bufLen);
+void fileAppendSync(IFile * file, const void * buf, size_t bufLen);
 
 } // namespace
