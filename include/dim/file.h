@@ -25,7 +25,7 @@ public:
         // Optimize for file*Sync family of functions. Opens file without
         // FILE_FLAG_OVERLAPPED and does async by posting the requests
         // to a small taskqueue whos thread use blocking calls.
-        kBlocking = 0x80, 
+        kBlocking = 0x80,
     };
 
 public:

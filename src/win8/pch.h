@@ -26,6 +26,7 @@
 #include <MSWSock.h> // Registered IO
 #include <mstcpip.h> // SIO_LOOPBACK_FAST_PATH
 
+#pragma comment(lib, "synchronization.lib")
 #pragma comment(lib, "ws2_32.lib")
 
 #include "winint.h"

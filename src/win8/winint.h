@@ -39,8 +39,8 @@ struct WinOverlappedEvent {
 };
 
 void winSetOverlapped(
-    WinOverlappedEvent & evt, 
-    int64_t off, 
+    WinOverlappedEvent & evt,
+    int64_t off,
     HANDLE event = INVALID_HANDLE_VALUE);
 
 

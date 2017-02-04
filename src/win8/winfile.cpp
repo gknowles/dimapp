@@ -115,24 +115,25 @@ public:
         void * outBuf,
         size_t outBufLen);
     void queue(int64_t off, int64_t len, bool sync);
+    void read(int64_t off, int64_t len);
 
     // ITaskNotify
     void onTask() override;
 
 private:
-    void read(int64_t off, int64_t len);
-    void destroy();
-
     WinOverlappedEvent m_iocpEvt;
     int64_t m_offset{0};
     int64_t m_length{0};
     bool m_started{false};
-    HANDLE m_event{INVALID_HANDLE_VALUE};
+    bool m_trigger{false};
 
     IFileReadNotify * m_notify;
     File * m_file;
     char * m_outBuf;
     int m_outBufLen;
+
+    WinError m_err{0};
+    DWORD m_bytes{0};
 };
 }
 
@@ -142,10 +143,11 @@ FileReader::FileReader(
     File * file,
     void * outBuf,
     size_t outBufLen)
-    : m_file(file)
-    , m_notify(notify)
+    : m_notify(notify)
+    , m_file(file)
     , m_outBuf((char *)outBuf)
     , m_outBufLen((int)outBufLen) {
+    assert(outBufLen && outBufLen <= numeric_limits<int>::max());
     m_iocpEvt.notify = this;
     m_iocpEvt.overlapped = {};
     if (!m_notify)
@@ -157,18 +159,27 @@ void FileReader::queue(int64_t off, int64_t len, bool sync) {
     m_offset = off;
     m_length = len;
 
-    if (sync) {
-        WinEvent evt;
-        m_event = evt.nativeHandle();
-        taskPush(s_hq, *this);
-        evt.wait();
-    } else {
-        taskPush(s_hq, *this);
+    if (!sync)
+        return taskPush(s_hq, *this);
+
+    // Syncronous operations on blocking file handles are never queued,
+    // they are executed inline.
+    assert(~m_file->m_mode & IFile::kBlocking);
+
+    m_trigger = true;
+    bool waiting = true;
+    taskPush(s_hq, *this);
+    while (m_trigger == waiting) {
+        WaitOnAddress(&m_trigger, &waiting, sizeof(m_trigger), INFINITE);
     }
+    if (m_err)
+        setErrno(m_err);
 }
 
 //===========================================================================
 void FileReader::read(int64_t off, int64_t len) {
+    m_started = true;
+
     m_offset = off;
     m_length = len;
     winSetOverlapped(m_iocpEvt, off);
@@ -180,88 +191,93 @@ void FileReader::read(int64_t off, int64_t len) {
             m_file->m_handle,
             m_outBuf,
             (DWORD)len,
-            NULL,
+            &m_bytes,
             &m_iocpEvt.overlapped)) {
         WinError err;
         if (err == ERROR_IO_PENDING)
             return;
-        logMsgError() << "ReadFile(" << m_file->m_path << "): " << err;
     }
 
-    destroy();
-}
-
-//===========================================================================
-void FileReader::destroy() {
-    if (m_notify)
-        m_notify->onFileEnd(m_offset, m_file);
-    if (m_event == INVALID_HANDLE_VALUE) {
-        delete this;
+    if (!m_notify) {
+        // sync read on blocking or non-blocking handle
+        //
+        // set result, signal event (for non-blocking), no callback
+        onTask();
     } else {
-        WinEvent evt(m_event);
-        delete this;
-        evt.signal();
-        evt.release();
+        // async read on blocking or non-blocking handle
+        //
+        // post to task queue, which is where the callback must come from,
+        // then onTask() will:
+        // set result, make callback, delete this
+        taskPushEvent(*this);
     }
 }
 
 //===========================================================================
 void FileReader::onTask() {
-    if (!m_started) {
-        m_started = true;
+    if (!m_started)
         return read(m_offset, m_length);
+
+    if (m_err == ERROR_IO_PENDING) {
+        m_err = 0;
+        if (!GetOverlappedResult(NULL, &m_iocpEvt.overlapped, &m_bytes, false))
+            m_err = WinError{};
     }
 
-    DWORD bytes;
-    if (!GetOverlappedResult(NULL, &m_iocpEvt.overlapped, &bytes, false)) {
-        WinError err;
-        if (err != ERROR_OPERATION_ABORTED)
-            logMsgError() << "ReadFile(" << m_file->m_path << "): " << err;
-        return destroy();
+    if (m_err) {
+        if (m_err != ERROR_OPERATION_ABORTED)
+            logMsgError() << "ReadFile(" << m_file->m_path << "): " << m_err;
+        setErrno(m_err);
     }
 
-    bool more = false;
-    if (bytes) {
-        if (m_notify)
-            m_notify->onFileRead(m_outBuf, bytes, m_offset, m_file);
-        m_offset += bytes;
-        more = true;
+    if (!m_notify) {
+        if (m_trigger) {
+            m_trigger = false;
+            WakeByAddressSingle(&m_trigger);
+        }
+        return;
     }
 
-    if (!more || m_length && m_length <= bytes) {
-        destroy();
-    } else {
-        read(m_offset, m_length ? m_length - bytes : 0);
+    if (m_bytes) {
+        m_notify->onFileRead(m_outBuf, m_bytes, m_offset, m_file);
+        m_offset += m_bytes;
+
+        if (!m_length)
+            return read(m_offset, 0);
+        if (m_length > m_bytes)
+            return read(m_offset, m_length - m_bytes);
     }
+
+    m_notify->onFileEnd(m_offset, m_file);
+    delete this;
 }
 
 
 /****************************************************************************
 *
-*   FileWriteBuf
+*   FileWriter
 *
 ***/
 
 namespace {
-class FileWriteBuf : public ITaskNotify {
+class FileWriter : public ITaskNotify {
 public:
-    FileWriteBuf(
+    FileWriter(
         IFileWriteNotify * notify,
         File * file,
         const void * buf,
         size_t bufLen);
     void queue(int64_t off, bool sync);
+    void write(int64_t off);
 
     // ITaskNotify
     void onTask() override;
 
 private:
-    void write(int64_t off);
-
     WinOverlappedEvent m_iocpEvt;
     int64_t m_offset{0};
     bool m_started{false};
-    HANDLE m_event{INVALID_HANDLE_VALUE};
+    bool m_trigger{false};
 
     IFileWriteNotify * m_notify;
     File * m_file;
@@ -269,12 +285,12 @@ private:
     int m_bufLen;
 
     WinError m_err{0};
-    DWORD m_written{0};
+    DWORD m_bytes{0};
 };
 }
 
 //===========================================================================
-FileWriteBuf::FileWriteBuf(
+FileWriter::FileWriter(
     IFileWriteNotify * notify,
     File * file,
     const void * buf,
@@ -291,65 +307,86 @@ FileWriteBuf::FileWriteBuf(
 }
 
 //===========================================================================
-void FileWriteBuf::queue(int64_t off, bool sync) {
+void FileWriter::queue(int64_t off, bool sync) {
     m_offset = off;
-    if (sync) {
-        WinEvent evt;
-        m_event = evt.nativeHandle();
-        taskPush(s_hq, *this);
-        evt.wait();
-    } else {
-        taskPush(s_hq, *this);
+
+    if (!sync)
+        return taskPush(s_hq, *this);
+
+    // Syncronous operations on blocking file handles are never queued,
+    // they are executed inline.
+    assert(~m_file->m_mode & IFile::kBlocking);
+
+    m_trigger = true;
+    bool waiting = true;
+    taskPush(s_hq, *this);
+    while (m_trigger == waiting) {
+        WaitOnAddress(&m_trigger, &waiting, sizeof(m_trigger), INFINITE);
     }
+    if (m_err)
+        setErrno(m_err);
 }
 
 //===========================================================================
-void FileWriteBuf::write(int64_t off) {
+void FileWriter::write(int64_t off) {
+    m_started = true;
+
     m_offset = off;
-    winSetOverlapped(m_iocpEvt, off, m_event);
+    winSetOverlapped(m_iocpEvt, off);
+    m_err = 0;
 
     if (!WriteFile(
             m_file->m_handle,
             m_buf,
             m_bufLen,
-            &m_written,
+            &m_bytes,
             &m_iocpEvt.overlapped)) {
         m_err = WinError{};
         if (m_err == ERROR_IO_PENDING)
             return;
-        if (m_err) {
-            logMsgError() << "WriteFile(" << m_file->m_path << "): " << m_err;
-        }
-        setErrno(m_err);
     }
 
-    if (m_notify)
-        m_notify->onFileWrite(m_written, m_buf, m_bufLen, m_offset, m_file);
-    delete this;
+    if (!m_notify) {
+        // sync write on blocking or non-blocking handle
+        //
+        // set result, signal event (for non-blocking), no callback
+        onTask();
+    } else {
+        // async write on blocking or non-blocking handle
+        //
+        // post to task queue, which is where the callback must come from,
+        // then onTask() will:
+        // set result, make callback, delete this
+        taskPushEvent(*this);
+    }
 }
 
 //===========================================================================
-void FileWriteBuf::onTask() {
-    if (!m_started) {
-        m_started = true;
+void FileWriter::onTask() {
+    if (!m_started)
         return write(m_offset);
+
+    if (m_err == ERROR_IO_PENDING) {
+        m_err = 0;
+        if (!GetOverlappedResult(NULL, &m_iocpEvt.overlapped, &m_bytes, false))
+            m_err = WinError{};
     }
 
-    DWORD bytes;
-    bool result =
-        !!GetOverlappedResult(NULL, &m_iocpEvt.overlapped, &bytes, false);
-    m_written = bytes;
-
-    if (!result) {
-        m_err = WinError{};
-        if (m_err != ERROR_OPERATION_ABORTED) {
+    if (m_err) {
+        if (m_err != ERROR_OPERATION_ABORTED)
             logMsgError() << "WriteFile(" << m_file->m_path << "): " << m_err;
-        }
         setErrno(m_err);
     }
 
-    if (m_notify)
-        m_notify->onFileWrite(bytes, m_buf, m_bufLen, m_offset, m_file);
+    if (!m_notify) {
+        if (m_trigger) {
+            m_trigger = false;
+            WakeByAddressSingle(&m_trigger);
+        }
+        return;
+    }
+
+    m_notify->onFileWrite(m_bytes, m_buf, m_bufLen, m_offset, m_file);
     delete this;
 }
 
@@ -383,7 +420,7 @@ void Dim::iFileInitialize() {
     loadProc(s_NtUnmapViewOfSection, "ntdll", "NtUnmapViewOfSection");
     loadProc(s_NtClose, "ntdll", "NtClose");
 
-    s_hq = taskCreateQueue("File Sync", 2);
+    s_hq = taskCreateQueue("File IO", 2);
 }
 
 
@@ -545,18 +582,11 @@ void Dim::fileReadSync(
     IFile * ifile,
     int64_t off) {
     File * file = static_cast<File *>(ifile);
+    FileReader op(nullptr, file, outBuf, outBufLen);
     if (file->m_mode & IFile::kBlocking) {
-        WinOverlappedEvent evt;
-        winSetOverlapped(evt, off);
-        DWORD bytes;
-        if (!ReadFile(file->m_handle, outBuf, (DWORD) outBufLen, &bytes, &evt.overlapped)) {
-            WinError err;
-            logMsgError() << "ReadFile(" << file->m_path << "): " << err;
-            setErrno(err);
-        }
+        op.read(off, outBufLen);
     } else {
-        auto ptr = new FileReader(nullptr, file, outBuf, outBufLen);
-        ptr->queue(off, outBufLen, true);
+        op.queue(off, outBufLen, true);
     }
 }
 
@@ -569,7 +599,7 @@ void Dim::fileWrite(
     size_t bufLen) {
     assert(notify);
     File * file = static_cast<File *>(ifile);
-    auto ptr = new FileWriteBuf(notify, file, buf, bufLen);
+    auto ptr = new FileWriter(notify, file, buf, bufLen);
     ptr->queue(off, false);
 }
 
@@ -580,18 +610,11 @@ void Dim::fileWriteSync(
     const void * buf,
     size_t bufLen) {
     File * file = static_cast<File *>(ifile);
+    FileWriter op(nullptr, file, buf, bufLen);
     if (file->m_mode & IFile::kBlocking) {
-        WinOverlappedEvent evt;
-        winSetOverlapped(evt, off);
-        DWORD bytes;
-        if (!WriteFile(file->m_handle, buf, (DWORD) bufLen, &bytes, &evt.overlapped)) {
-            WinError err;
-            logMsgError() << "ReadFile(" << file->m_path << "): " << err;
-            setErrno(err);
-        }
+        op.write(off);
     } else {
-        auto ptr = new FileWriteBuf(nullptr, file, buf, bufLen);
-        ptr->queue(off, true);
+        op.queue(off, true);
     }
 }
 
@@ -710,11 +733,13 @@ void Dim::fileExtendView(IFile * ifile, int64_t length) {
 ***/
 
 //===========================================================================
-void Dim::winSetOverlapped(WinOverlappedEvent & evt, int64_t off, HANDLE event) {
+void Dim::winSetOverlapped(
+    WinOverlappedEvent & evt,
+    int64_t off,
+    HANDLE event) {
     evt.overlapped = {};
     evt.overlapped.Offset = (DWORD)off;
     evt.overlapped.OffsetHigh = (DWORD)(off >> 32);
     if (event != INVALID_HANDLE_VALUE)
         evt.overlapped.hEvent = event;
 }
-
