@@ -251,7 +251,8 @@ template <bool isContent> void IXBuilder::addText(const char val[]) {
                 val += 1;
                 continue;
             }
-            [[fallthrough]] case kTextTypeAmp : case kTextTypeLess : break;
+            [[fallthrough]];
+        case kTextTypeAmp : case kTextTypeLess : break;
         case kTextTypeInvalid: m_state = kStateFail; return;
         }
 
