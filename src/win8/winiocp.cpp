@@ -61,7 +61,11 @@ static void iocpDispatchThread() {
         }
 
         auto evt = (WinOverlappedEvent *)overlapped;
-        taskPushEvent(*evt->notify);
+        if (evt->hq) {
+            taskPush(evt->hq, *evt->notify);
+        } else {
+            taskPushEvent(*evt->notify);
+        }
     }
 
     lock_guard<mutex> lk{s_mut};

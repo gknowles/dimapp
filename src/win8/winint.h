@@ -8,6 +8,26 @@ namespace Dim {
 
 /****************************************************************************
 *
+*   Load DLL Proc
+*
+***/
+
+//===========================================================================
+template <typename FN>
+static void loadProc(FN & fn, const char lib[], const char func[]) {
+    HMODULE mod = LoadLibrary(lib);
+    if (!mod)
+        logMsgCrash() << "LoadLibrary(" << lib << "): " << WinError{};
+
+    fn = (FN)GetProcAddress(mod, func);
+    if (!fn) {
+        logMsgCrash() << "GetProcAddress(" << func << "): " << WinError{};
+    }
+}
+
+
+/****************************************************************************
+*
 *   Overlapped
 *
 ***/
@@ -15,7 +35,13 @@ namespace Dim {
 struct WinOverlappedEvent {
     OVERLAPPED overlapped{};
     ITaskNotify * notify{nullptr};
+    TaskQueueHandle hq = {};
 };
+
+void winSetOverlapped(
+    WinOverlappedEvent & evt,
+    int64_t off,
+    HANDLE event = INVALID_HANDLE_VALUE);
 
 
 /****************************************************************************
@@ -27,10 +53,13 @@ struct WinOverlappedEvent {
 class WinEvent {
 public:
     WinEvent();
+    explicit WinEvent(HANDLE evt)
+        : m_handle(evt) {}
     ~WinEvent();
 
     void signal();
     void wait(Duration wait = kTimerInfinite);
+    HANDLE release();
 
     HANDLE nativeHandle() const { return m_handle; };
 
@@ -76,7 +105,7 @@ public:
 
 class WinError {
 public:
-    enum NtStatus;
+    enum NtStatus : unsigned;
 
 public:
     // default constructor calls GetLastError()
@@ -95,6 +124,8 @@ private:
 };
 
 std::ostream & operator<<(std::ostream & os, const WinError & val);
+
+void winErrorInitialize();
 
 
 /****************************************************************************

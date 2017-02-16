@@ -15,7 +15,7 @@
 #include <unordered_map>
 #include <vector>
 
-#define _WIN32_WINNT _WIN32_WINNT_WIN8
+#define _WIN32_WINNT _WIN32_WINNT_WIN10
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <WS2tcpip.h> // getaddrinfo, GetAddrInfoEx
@@ -26,6 +26,7 @@
 #include <MSWSock.h> // Registered IO
 #include <mstcpip.h> // SIO_LOOPBACK_FAST_PATH
 
+#pragma comment(lib, "synchronization.lib")
 #pragma comment(lib, "ws2_32.lib")
 
 #include "winint.h"

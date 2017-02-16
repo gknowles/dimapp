@@ -244,4 +244,5 @@ ModelManifest.xml
 # FAKE - F# Make
 .fake/
 
-/vendor/rapidxml-1.13/
+vendor/rapidxml-1.13/
+

@@ -21,22 +21,27 @@ public:
         kTrunc = 0x10, // truncate if already exists
         kDenyWrite = 0x20,
         kDenyNone = 0x40,
+
+        // Optimize for file*Sync family of functions. Opens file without
+        // FILE_FLAG_OVERLAPPED and does async by posting the requests
+        // to a small taskqueue whos thread use blocking calls.
+        kBlocking = 0x80,
     };
 
 public:
     virtual ~IFile() {}
 };
 
-// on error returns false and sets errno to one of:
+// on error returns an empty pointer and sets errno to one of:
 //  EEXIST, ENOENT, EBUSY, EACCES, or EIO
-bool fileOpen(
-    std::unique_ptr<IFile> & file,
+std::unique_ptr<IFile> fileOpen(
     const std::experimental::filesystem::path & path,
     unsigned modeFlags // IFile::OpenMode::*
     );
 size_t fileSize(IFile * file);
 TimePoint fileLastWriteTime(IFile * file);
 std::experimental::filesystem::path filePath(IFile * file);
+unsigned fileMode(IFile * file);
 
 // Closing the file is normally handled as part of destroying the IFile
 // object, but fileClose() can be used to release the file to the system
@@ -44,6 +49,13 @@ std::experimental::filesystem::path filePath(IFile * file);
 //
 // filePath still works, but most operations on a closed IFile will fail.
 void fileClose(IFile * file);
+
+
+/****************************************************************************
+*
+*   Read
+*
+***/
 
 class IFileReadNotify {
 public:
@@ -68,10 +80,37 @@ void fileRead(
     int64_t offset = 0,
     int64_t length = 0 // 0 to read until the end
     );
+void fileReadSync(
+    void * outBuf,
+    size_t outBufLen,
+    IFile * file,
+    int64_t offset);
 void fileReadBinary(
     IFileReadNotify * notify,
     std::string & out,
     const std::experimental::filesystem::path & path);
+
+// page size is always a power of 2
+size_t filePageSize();
+
+// The maxLen is the maximum offset into the file that view can be extended
+// to cover. A value less than or equal to the size of the file (such as 0)
+// makes a view of the entire file that can't be extended. The value is
+// rounded up to a multiple of page size.
+bool fileOpenView(const char *& base, IFile * file, int64_t maxLen = 0);
+
+// Extend the view up to maxLen that was set when the view was opened. A
+// view can only be extended if the file (which is also extended) was opened
+// for writing. "Extending" with a length less than the current view has
+// no effect and extending beyond maxLen is an error.
+void fileExtendView(IFile * file, int64_t length);
+
+
+/****************************************************************************
+*
+*   Write
+*
+***/
 
 class IFileWriteNotify {
 public:
@@ -90,10 +129,16 @@ void fileWrite(
     int64_t offset,
     const void * buf,
     size_t bufLen);
+void fileWriteSync(
+    IFile * file,
+    int64_t offset,
+    const void * buf,
+    size_t bufLen);
 void fileAppend(
     IFileWriteNotify * notify,
     IFile * file,
     const void * buf,
     size_t bufLen);
+void fileAppendSync(IFile * file, const void * buf, size_t bufLen);
 
 } // namespace

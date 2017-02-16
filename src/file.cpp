@@ -69,8 +69,8 @@ void Dim::fileReadBinary(
     IFileReadNotify * notify,
     std::string & out,
     const std::experimental::filesystem::path & path) {
-    unique_ptr<IFile> file;
-    if (!fileOpen(file, path, IFile::kReadOnly | IFile::kDenyNone)) {
+    auto file = fileOpen(path, IFile::kReadOnly | IFile::kDenyNone);
+    if (!file) {
         logMsgError() << "File open failed, " << path;
         notify->onFileEnd(0, nullptr);
         return;

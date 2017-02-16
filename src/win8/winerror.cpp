@@ -12,7 +12,7 @@ using namespace Dim;
 *
 ***/
 
-using RtlNtStatusToDosErrorFn = ULONG(WINAPI *)(int ntStatus);
+using RtlNtStatusToDosErrorFn = ULONG(WINAPI *)(DWORD ntStatus);
 
 
 /****************************************************************************
@@ -22,7 +22,6 @@ using RtlNtStatusToDosErrorFn = ULONG(WINAPI *)(int ntStatus);
 ***/
 
 static RtlNtStatusToDosErrorFn s_RtlNtStatusToDosError;
-static once_flag s_loadOnce;
 
 
 /****************************************************************************
@@ -30,20 +29,6 @@ static once_flag s_loadOnce;
 *   Helpers
 *
 ***/
-
-//===========================================================================
-static void loadProc() {
-    HMODULE mod = LoadLibrary("ntdll.dll");
-    if (!mod)
-        logMsgCrash() << "LoadLibrary(ntdll): " << WinError{};
-
-    s_RtlNtStatusToDosError =
-        (RtlNtStatusToDosErrorFn)GetProcAddress(mod, "RtlNtStatusToDosError");
-    if (!s_RtlNtStatusToDosError) {
-        logMsgCrash() << "GetProcAddress(RtlNtStatusToDosError): "
-                      << WinError{};
-    }
-}
 
 
 /****************************************************************************
@@ -77,7 +62,6 @@ WinError & WinError::operator=(NtStatus status) {
     if (!status) {
         m_value = 0;
     } else {
-        call_once(s_loadOnce, loadProc);
         m_value = s_RtlNtStatusToDosError(status);
     }
     return *this;
@@ -102,4 +86,16 @@ std::ostream & Dim::operator<<(std::ostream & os, const WinError & val) {
 
     os << buf;
     return os;
+}
+
+
+/****************************************************************************
+*
+*   Internal API
+*
+***/
+
+//===========================================================================
+void Dim::winErrorInitialize() {
+    loadProc(s_RtlNtStatusToDosError, "ntdll", "RtlNtStatusToDosError");
 }
