@@ -41,6 +41,7 @@ public:
 public:
     static SocketBase::Mode getMode(ISocketNotify * notify);
     static void disconnect(ISocketNotify * notify);
+    static void setNotify(ISocketNotify * notify, ISocketNotify * newNotify);
     static void write(
         ISocketNotify * notify,
         std::unique_ptr<SocketBuffer> buffer,
@@ -51,6 +52,7 @@ public:
     virtual ~SocketBase();
 
     void hardClose();
+    void setNotify_LK(ISocketNotify * newNotify);
 
     bool createQueue();
     void onRead();

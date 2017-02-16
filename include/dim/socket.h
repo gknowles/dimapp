@@ -54,6 +54,7 @@ private:
 
 ISocketNotify::Mode socketGetMode(ISocketNotify * notify);
 void socketDisconnect(ISocketNotify * notify);
+void socketSetNotify(ISocketNotify * notify, ISocketNotify * newNotify);
 
 //===========================================================================
 // connect

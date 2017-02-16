@@ -171,6 +171,14 @@ void SocketBase::disconnect(ISocketNotify * notify) {
 }
 
 //===========================================================================
+// static 
+void SocketBase::setNotify(ISocketNotify * notify, ISocketNotify * newNotify) {
+    unique_lock<mutex> lk{s_mut};
+    if (notify->m_socket)
+        notify->m_socket->setNotify_LK(newNotify);
+}
+
+//===========================================================================
 // static
 void SocketBase::write(
     ISocketNotify * notify,
@@ -216,6 +224,12 @@ void SocketBase::hardClose() {
 
     m_mode = Mode::kClosing;
     m_handle = INVALID_SOCKET;
+}
+
+//===========================================================================
+void SocketBase::setNotify_LK(ISocketNotify * notify) {
+    m_notify = notify;
+    m_notify->m_socket = this;
 }
 
 //===========================================================================
@@ -552,6 +566,11 @@ ISocketNotify::Mode Dim::socketGetMode(ISocketNotify * notify) {
 //===========================================================================
 void Dim::socketDisconnect(ISocketNotify * notify) {
     SocketBase::disconnect(notify);
+}
+
+//===========================================================================
+void Dim::socketSetNotify(ISocketNotify * notify, ISocketNotify * newNotify) {
+    SocketBase::setNotify(notify, newNotify);
 }
 
 //===========================================================================
