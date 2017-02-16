@@ -226,10 +226,11 @@ static bool writeSwitchCase(ostream & os, const State & st) {
     map<unsigned, unsigned char> stateKeys;
     for (unsigned i = 0; i < 256; ++i) {
         if (unsigned next = st.next[i]) {
+            auto ch = (unsigned char)i;
             auto ii = stateKeys.equal_range(next);
             if (ii.first == ii.second)
-                stateKeys.insert(ii.first, make_pair(next, i));
-            cases.push_back({unsigned char(i), next});
+                stateKeys.insert(ii.first, make_pair(next, ch));
+            cases.push_back({ch, next});
         }
     }
     if (cases.empty())

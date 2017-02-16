@@ -256,7 +256,8 @@ bool processOptions(Grammar & rules) {
     }
     ensureOption(rules, kOptionApiParserClass, prefix + "Parser");
     ensureOption(rules, kOptionApiNotifyClass, "I" + prefix + "ParserNotify");
-    transform(prefix.begin(), prefix.end(), prefix.begin(), tolower);
+    auto & f = use_facet<ctype<char>>(locale());
+    f.tolower(prefix.data(), prefix.data() + prefix.size());
     ensureOption(rules, kOptionApiHeaderFile, prefix + "parse.h");
     ensureOption(rules, kOptionApiCppFile, prefix + "parse.cpp");
     return true;
