@@ -38,12 +38,12 @@ public:
 
     // Exclusive matches only if it's unambiguously in the family, connection
     // families that can match anything (such as byte stream) should only
-    // return true when exclusive is false.
+    // return true when definitive is false.
     virtual bool OnMatch(
         AppSocket::Family fam,
         const char ptr[],
         size_t count,
-        bool exclusive) = 0;
+        bool definitive) = 0;
 };
 
 class IAppSocketNotifyFactory {
@@ -61,13 +61,13 @@ public:
 
 void appSocketAddMatch(IAppSocketMatchNotify * notify, AppSocket::Family fam);
 
-void appSocketAddListen(
+void appSocketAddListener(
     IAppSocketNotifyFactory * factory,
     AppSocket::Family fam,
     const std::string & type,
     Endpoint end);
 
-void appSocketRemoveListen(
+void appSocketRemoveListener(
     IAppSocketNotifyFactory * factory,
     AppSocket::Family fam,
     const std::string & type,
@@ -75,7 +75,7 @@ void appSocketRemoveListen(
 
 //===========================================================================
 template <typename S>
-inline void appSocketUpdateListen(
+inline void appSocketUpdateListener(
     bool add,
     AppSocket::Family fam,
     const std::string & type,
@@ -86,28 +86,28 @@ inline void appSocketUpdateListen(
         }
     } s_factory;
     if (add) {
-        appSocketAddListen(&s_factory, fam, type, end);
+        appSocketAddListener(&s_factory, fam, type, end);
     } else {
-        appSocketRemoveListen(&s_factory, fam, type, end);
+        appSocketRemoveListener(&s_factory, fam, type, end);
     }
 }
 
 //===========================================================================
 template <typename S>
-inline void appSocketAddListen(
+inline void appSocketAddListener(
     AppSocket::Family fam,
     const std::string & type,
     Endpoint end) {
-    appSocketUpdateListen<S>(true, fam, type, end);
+    appSocketUpdateListener<S>(true, fam, type, end);
 }
 
 //===========================================================================
 template <typename S>
-inline void appSocketRemoveListen(
+inline void appSocketRemoveListener(
     AppSocket::Family fam,
     const std::string & type,
     Endpoint end) {
-    appSocketUpdateListen<S>(false, fam, type, end);
+    appSocketUpdateListener<S>(false, fam, type, end);
 }
 
 } // namespace

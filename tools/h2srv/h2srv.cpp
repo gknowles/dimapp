@@ -92,7 +92,7 @@ void Application::onTask() {
     Endpoint end;
     parse(&end, "127.0.0.1", 8888);
 
-    appSocketAddListen<TnetConn>(AppSocket::kByte, "", end);
+    appSocketAddListener<TnetConn>(AppSocket::kByte, "", end);
     // socketListen(&s_listen, end);
 
     // httpRouteAdd(&s_web,
