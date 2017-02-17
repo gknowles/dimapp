@@ -48,9 +48,10 @@ public:
 
 class ListenStopTask : public ITaskNotify {
     ISocketListenNotify * m_notify{nullptr};
+    Endpoint m_localEnd;
 
 public:
-    ListenStopTask(ISocketListenNotify * notify);
+    ListenStopTask(ListenSocket * listen);
     void onTask() override;
 };
 
@@ -74,13 +75,21 @@ static list<unique_ptr<ListenSocket>> s_listeners;
 ***/
 
 //===========================================================================
-ListenStopTask::ListenStopTask(ISocketListenNotify * notify)
-    : m_notify(notify) {}
+ListenStopTask::ListenStopTask(ListenSocket * listen)
+    : m_notify(listen->m_notify) 
+    , m_localEnd(listen->m_localEnd)
+    {}
 
 //===========================================================================
 void ListenStopTask::onTask() {
-    m_notify->onListenStop();
+    m_notify->onListenStop(m_localEnd);
     delete this;
+}
+
+//===========================================================================
+static void pushListenStop(ListenSocket * listen) {
+    auto ptr = new ListenStopTask(listen);
+    taskPushEvent(*ptr);
 }
 
 
@@ -118,26 +127,22 @@ void ListenSocket::onTask() {
 ***/
 
 //===========================================================================
-static void pushListenStop(ListenSocket * listen) {
-    auto ptr = new ListenStopTask(listen->m_notify);
+static void pushAcceptStop(ListenSocket * listen) {
+    pushListenStop(listen);
 
-    {
-        lock_guard<mutex> lk{s_mut};
-        if (listen->m_handle != INVALID_SOCKET) {
-            if (SOCKET_ERROR == closesocket(listen->m_handle))
-                logMsgCrash() << "closesocket(listen): " << WinError{};
-            listen->m_handle = INVALID_SOCKET;
-        }
-        auto it = s_listeners.begin();
-        for (; it != s_listeners.end(); ++it) {
-            if (it->get() == listen) {
-                s_listeners.erase(it);
-                break;
-            }
+    lock_guard<mutex> lk{s_mut};
+    if (listen->m_handle != INVALID_SOCKET) {
+        if (SOCKET_ERROR == closesocket(listen->m_handle))
+            logMsgCrash() << "closesocket(listen): " << WinError{};
+        listen->m_handle = INVALID_SOCKET;
+    }
+    auto it = s_listeners.begin();
+    for (; it != s_listeners.end(); ++it) {
+        if (it->get() == listen) {
+            s_listeners.erase(it);
+            break;
         }
     }
-
-    taskPushEvent(*ptr);
 }
 
 //===========================================================================
@@ -145,10 +150,10 @@ static void pushListenStop(ListenSocket * listen) {
 void AcceptSocket::accept(ListenSocket * listen) {
     assert(!listen->m_socket.get());
     auto sock = make_unique<AcceptSocket>(
-        listen->m_notify->onListenCreateSocket().release());
+        listen->m_notify->onListenCreateSocket(listen->m_localEnd).release());
     sock->m_handle = winSocketCreate();
     if (sock->m_handle == INVALID_SOCKET)
-        return pushListenStop(listen);
+        return pushAcceptStop(listen);
 
     // get AcceptEx function
     GUID extId = WSAID_ACCEPTEX;
@@ -166,7 +171,7 @@ void AcceptSocket::accept(ListenSocket * listen) {
             nullptr  // completion routine
             )) {
         logMsgError() << "WSAIoctl(get AcceptEx): " << WinError{};
-        return pushListenStop(listen);
+        return pushAcceptStop(listen);
     }
 
     sock->m_mode = Mode::kAccepting;
@@ -184,7 +189,7 @@ void AcceptSocket::accept(ListenSocket * listen) {
     WinError err;
     if (!error || err != ERROR_IO_PENDING) {
         logMsgError() << "AcceptEx(" << listen->m_localEnd << "): " << err;
-        return pushListenStop(listen);
+        return pushAcceptStop(listen);
     }
 }
 
@@ -307,12 +312,6 @@ void Dim::iSocketAcceptInitialize() {
 ***/
 
 //===========================================================================
-static void pushListenStop(ISocketListenNotify * notify) {
-    auto ptr = new ListenStopTask(notify);
-    taskPushEvent(*ptr);
-}
-
-//===========================================================================
 void Dim::socketListen(
     ISocketListenNotify * notify,
     const Endpoint & localEnd) {
@@ -320,13 +319,13 @@ void Dim::socketListen(
     auto sock = hostage.get();
     sock->m_handle = winSocketCreate(localEnd);
     if (sock->m_handle == INVALID_SOCKET)
-        return pushListenStop(notify);
+        return pushListenStop(sock);
 
     if (SOCKET_ERROR == listen(sock->m_handle, SOMAXCONN)) {
         logMsgError() << "listen(SOMAXCONN): " << WinError{};
         if (SOCKET_ERROR == closesocket(sock->m_handle))
             logMsgError() << "closesocket(listen): " << WinError{};
-        return pushListenStop(notify);
+        return pushListenStop(sock);
     }
 
     {

@@ -72,8 +72,8 @@ void socketConnect(
 class ISocketListenNotify {
 public:
     virtual ~ISocketListenNotify() {}
-    virtual void onListenStop() = 0;
-    virtual std::unique_ptr<ISocketNotify> onListenCreateSocket() = 0;
+    virtual void onListenStop(const Endpoint & local) = 0;
+    virtual std::unique_ptr<ISocketNotify> onListenCreateSocket(const Endpoint & local) = 0;
 };
 void socketListen(ISocketListenNotify * notify, const Endpoint & localEnd);
 void socketStop(ISocketListenNotify * notify, const Endpoint & localEnd);
