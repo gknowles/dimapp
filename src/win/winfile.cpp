@@ -255,8 +255,7 @@ bool FileReader::onRun() {
 
 //===========================================================================
 void FileReader::onNotify() {
-    if (m_bytes) {
-        m_notify->onFileRead(m_buf, m_bytes, m_offset, m_file);
+    if (m_bytes && m_notify->onFileRead(m_buf, m_bytes, m_offset, m_file)) {
         m_offset += m_bytes;
 
         if (m_length > m_bytes)
