@@ -95,12 +95,21 @@ public:
     unique_ptr<IFile> m_file;
 
     bool QueryDestroy() const { return !m_file && !m_buffer; }
+    void read();
 
+private:
     bool
     onFileRead(char * data, int bytes, int64_t offset, IFile * file) override;
     void onFileEnd(int64_t offset, IFile * file) override;
 };
 static ConsoleReader s_console;
+
+//===========================================================================
+void ConsoleReader::read() {
+    assert(m_file);
+    m_buffer = socketGetBuffer();
+    fileRead(this, m_buffer->data, m_buffer->len, m_file.get());
+}
 
 //===========================================================================
 bool ConsoleReader::onFileRead(
@@ -116,8 +125,7 @@ bool ConsoleReader::onFileRead(
 //===========================================================================
 void ConsoleReader::onFileEnd(int64_t offset, IFile * file) {
     if (m_file) {
-        m_buffer = socketGetBuffer();
-        fileRead(this, m_buffer->data, m_buffer->len, file);
+        read();
     } else {
         m_buffer.reset();
     }
@@ -204,12 +212,7 @@ void Application::onTask() {
     if (!s_console.m_file)
         return appSignalShutdown(EX_IOERR);
 
-    s_console.m_buffer = socketGetBuffer();
-    fileRead(
-        &s_console,
-        s_console.m_buffer->data,
-        s_console.m_buffer->len,
-        s_console.m_file.get());
+    s_console.read();
 }
 
 
