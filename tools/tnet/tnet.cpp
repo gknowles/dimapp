@@ -187,6 +187,7 @@ void Application::onTask() {
     if (!cli.parse(m_argc, m_argv))
         return appSignalUsageError();
 
+    consoleEnableCtrlC();
     consoleEnableEcho(false);
 
     endpointQuery(&s_cancelAddrId, &s_socket, *remote, 23);
