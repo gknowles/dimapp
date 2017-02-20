@@ -821,7 +821,7 @@ bool HpackDecode::read(
     const char *& src,
     size_t & srcLen) {
     size_t len;
-    bool huffman = (*src & 0x80) != 0;
+    bool huffman = *src & 0x80;
     if (!read(&len, 7, src, srcLen))
         return false;
     if (srcLen < len)

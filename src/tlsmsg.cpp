@@ -373,7 +373,7 @@ bool Dim::tlsParse(TlsClientHelloMsg * msg, TlsRecordReader & in) {
 
     // legacy_compression_methods
     len = in.number();
-    if (len != 1 || in.number() != 0) {
+    if (len != 1 || in.number()) {
         // MUST contain one byte set to zero (null compression)
         in.setAlert(kIllegalParameter);
         return false;

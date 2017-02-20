@@ -383,7 +383,7 @@ static bool RemovePriority(PriorityData * out, const char hdr[], int hdrLen) {
     if (hdrLen < 5)
         return false;
     unsigned tmp = ntoh32(hdr);
-    out->exclusive = (tmp & 0x80000000) != 0;
+    out->exclusive = tmp & 0x80000000;
     out->stream = tmp & 0x7fffffff;
     if (!out->stream)
         return false;
@@ -796,7 +796,7 @@ bool HttpConn::onSettings(
     }
 
     // must be an even multiple of identifier/value pairs
-    if (m_inputFrameLen % 6 != 0) {
+    if (m_inputFrameLen % 6) {
         ReplyGoAway(out, m_lastInputStream, FrameError::kFrameSizeError);
         return false;
     }

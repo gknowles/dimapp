@@ -249,7 +249,7 @@ bool FileReader::onRun() {
     if (!len || len > m_bufLen)
         len = m_bufLen;
 
-    return !!ReadFile(
+    return ReadFile(
         m_file->m_handle, m_buf, (DWORD)len, &m_bytes, &m_iocpEvt.overlapped);
 }
 
@@ -292,7 +292,7 @@ private:
 
 //===========================================================================
 bool FileWriter::onRun() {
-    return !!WriteFile(
+    return WriteFile(
         m_file->m_handle, m_buf, m_bufLen, &m_bytes, &m_iocpEvt.overlapped);
 }
 

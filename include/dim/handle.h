@@ -22,7 +22,7 @@ namespace Dim {
 struct HandleBase {
     int pos;
 
-    explicit operator bool() const { return pos != 0; }
+    explicit operator bool() const { return pos; }
     template <typename H> H as() const {
         H handle;
         static_cast<HandleBase &>(handle) = *this;

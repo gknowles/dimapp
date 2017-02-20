@@ -250,7 +250,7 @@ static bool writeSwitchCase(ostream & os, const State & st) {
     unsigned pos = 0;
     for (auto && ns : cases) {
         if (ns.state != prev) {
-            if (pos % kCaseColumns != 0)
+            if (pos % kCaseColumns)
                 os << '\n';
             os << "        goto state" << prev << ";\n";
             prev = ns.state;
@@ -274,7 +274,7 @@ static bool writeSwitchCase(ostream & os, const State & st) {
             os << ' ';
         }
     }
-    if (pos % kCaseColumns != 0)
+    if (pos % kCaseColumns)
         os << '\n';
 
     os << "        goto state" << cases.back().state << ";\n"
