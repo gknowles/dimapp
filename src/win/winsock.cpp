@@ -492,18 +492,18 @@ SOCKET Dim::winSocketCreate() {
 
     int yes = 1;
 
-    // DWORD bytes;
-    // if (SOCKET_ERROR == WSAIoctl(
-    //    handle,
-    //    SIO_LOOPBACK_FAST_PATH,
-    //    &yes, sizeof yes,
-    //    nullptr, 0, // output buffer, buffer size
-    //    &bytes,     // bytes returned
-    //    nullptr,    // overlapped
-    //    nullptr     // completion routine
-    //)) {
-    //    logMsgError() << "WSAIoctl(SIO_LOOPBACK_FAST_PATH): " << WinError{};
-    //}
+    DWORD bytes;
+    if (SOCKET_ERROR == WSAIoctl(
+        handle,
+        SIO_LOOPBACK_FAST_PATH,
+        &yes, sizeof yes,
+        nullptr, 0, // output buffer, buffer size
+        &bytes,     // bytes returned
+        nullptr,    // overlapped
+        nullptr     // completion routine
+    )) {
+        logMsgError() << "WSAIoctl(SIO_LOOPBACK_FAST_PATH): " << WinError{};
+    }
 
     if (SOCKET_ERROR
         == setsockopt(
