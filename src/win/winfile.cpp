@@ -174,8 +174,8 @@ void IFileOpBase::run() {
 
     m_err = ERROR_SUCCESS;
     if (!onRun()) {
-        WinError err;
-        if (err == ERROR_IO_PENDING)
+        m_err = WinError{};
+        if (m_err == ERROR_IO_PENDING)
             return;
     }
 
