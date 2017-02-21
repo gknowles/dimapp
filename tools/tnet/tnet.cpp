@@ -17,22 +17,6 @@ const char kVersion[] = "1.0";
 enum { kExitConnectFailed = EX__APPBASE, kExitDisconnect };
 
 
-/****************************************************************************
-*
-*   Variables
-*
-***/
-
-static Endpoint s_localEnd;
-static int s_cancelAddrId;
-
-
-/****************************************************************************
-*
-*   SocketConn
-*
-***/
-
 class SocketConn : public ISocketNotify, public IEndpointNotify {
     // ISocketNotify
     void onSocketConnect(const SocketConnectInfo & info) override;
@@ -45,7 +29,42 @@ class SocketConn : public ISocketNotify, public IEndpointNotify {
 
     unique_ptr<ConsoleScopedAttr> m_connected;
 };
+
+class ConsoleReader : public IFileReadNotify {
+public:
+    unique_ptr<IFile> m_device;
+    bool m_isFile{false};
+
+    bool QueryDestroy() const { return !m_device && !m_buffer; }
+    void read(int64_t offset = 0);
+
+private:
+    bool
+    onFileRead(char * data, int bytes, int64_t offset, IFile * file) override;
+    void onFileEnd(int64_t offset, IFile * file) override;
+
+    unique_ptr<SocketBuffer> m_buffer;
+    int m_bytesRead{0};
+};
+
+
+/****************************************************************************
+*
+*   Variables
+*
+***/
+
+static Endpoint s_localEnd;
+static int s_cancelAddrId;
+static ConsoleReader s_console;
 static SocketConn s_socket;
+
+
+/****************************************************************************
+*
+*   SocketConn
+*
+***/
 
 //===========================================================================
 void SocketConn::onEndpointFound(Endpoint * ends, int count) {
@@ -62,6 +81,7 @@ void SocketConn::onEndpointFound(Endpoint * ends, int count) {
 void SocketConn::onSocketConnect(const SocketConnectInfo & info) {
     m_connected = make_unique<ConsoleScopedAttr>(kConsoleGreen);
     cout << "Connected" << endl;
+    s_console.read();
 }
 
 //===========================================================================
@@ -89,26 +109,12 @@ void SocketConn::onSocketDisconnect() {
 *
 ***/
 
-class ConsoleReader : public IFileReadNotify {
-public:
-    unique_ptr<SocketBuffer> m_buffer;
-    unique_ptr<IFile> m_file;
-
-    bool QueryDestroy() const { return !m_file && !m_buffer; }
-    void read();
-
-private:
-    bool
-    onFileRead(char * data, int bytes, int64_t offset, IFile * file) override;
-    void onFileEnd(int64_t offset, IFile * file) override;
-};
-static ConsoleReader s_console;
-
 //===========================================================================
-void ConsoleReader::read() {
-    assert(m_file);
+void ConsoleReader::read(int64_t offset) {
+    assert(m_device);
+    m_bytesRead = 0;
     m_buffer = socketGetBuffer();
-    fileRead(this, m_buffer->data, m_buffer->len, m_file.get());
+    fileRead(this, m_buffer->data, m_buffer->len, m_device.get(), offset);
 }
 
 //===========================================================================
@@ -117,6 +123,7 @@ bool ConsoleReader::onFileRead(
     int bytes,
     int64_t offset,
     IFile * file) {
+    m_bytesRead = bytes;
     socketWrite(&s_socket, move(m_buffer), bytes);
     // stop reading (return false) so we can get a new buffer
     return false;
@@ -124,8 +131,14 @@ bool ConsoleReader::onFileRead(
 
 //===========================================================================
 void ConsoleReader::onFileEnd(int64_t offset, IFile * file) {
-    if (m_file) {
-        read();
+    if (m_device) {
+        if (m_isFile) {
+            if (!m_bytesRead || (size_t) offset == fileSize(file)) {
+                m_isFile = false;
+                m_device = fileOpen("conin$", IFile::kReadOnly);
+            }
+        }
+        read(offset);
     } else {
         m_buffer.reset();
     }
@@ -146,7 +159,7 @@ static MainShutdown s_cleanup;
 
 //===========================================================================
 void MainShutdown::onAppStartClientCleanup() {
-    s_console.m_file.reset();
+    s_console.m_device.reset();
     endpointCancelQuery(s_cancelAddrId);
     socketDisconnect(&s_socket);
 }
@@ -202,17 +215,17 @@ void Application::onTask() {
 
     HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
     DWORD type = GetFileType(hIn);
-    wchar_t inpath[MAX_PATH];
+    char inpath[MAX_PATH] = "conin$";
     if (type == FILE_TYPE_DISK) {
-        GetFinalPathNameByHandleW(
+        s_console.m_isFile = true;
+        GetFinalPathNameByHandle(
             hIn, inpath, (DWORD)size(inpath), FILE_NAME_OPENED);
     }
+    cout << "Input from: " << inpath << endl;
 
-    s_console.m_file = fileOpen("conin$", IFile::kReadOnly);
-    if (!s_console.m_file)
+    s_console.m_device = fileOpen(inpath, IFile::kReadOnly | IFile::kDenyNone);
+    if (!s_console.m_device)
         return appSignalShutdown(EX_IOERR);
-
-    s_console.read();
 }
 
 
