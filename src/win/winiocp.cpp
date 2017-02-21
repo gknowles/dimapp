@@ -55,6 +55,8 @@ static void iocpDispatchThread() {
                 break;
             } else if (err == ERROR_OPERATION_ABORTED) {
                 // probably file handle was closed
+            } else if (err == ERROR_HANDLE_EOF) {
+                // probably read at end of file
             } else {
                 logMsgCrash() << "GetQueuedCompletionStatus: " << err;
             }

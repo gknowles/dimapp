@@ -360,7 +360,8 @@ void SocketBase::queueWriteFromUnsent_LK() {
         m_numSending += 1;
         auto & task = m_sending.back();
         if (!s_rio.RIOSend(m_rq, &task.m_rbuf, 1, 0, &task)) {
-            logMsgCrash() << "RIOSend: " << WinError{};
+            WinError err;
+            logMsgCrash() << "RIOSend: " << err;
             m_sending.pop_back();
             m_numSending -= 1;
         }
