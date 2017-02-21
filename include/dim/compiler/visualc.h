@@ -14,6 +14,7 @@
     disable : 4324) // structure was padded due to alignment specifier
 #pragma warning( \
     disable : 4456) // declaration of 'elem' hides previous local declaration
+#pragma warning(disable : 4800) // forcing value to bool 'true' or 'false'
 #pragma warning(disable : 5030) // attribute 'identifier' is not recognized
 #ifdef DIM_LIB_DYN_LINK
 // 'identifier': class 'type' needs to have dll-interface to be used
