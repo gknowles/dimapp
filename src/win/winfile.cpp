@@ -255,14 +255,16 @@ bool FileReader::onRun() {
 
 //===========================================================================
 void FileReader::onNotify() {
-    if (m_bytes && m_notify->onFileRead(m_buf, m_bytes, m_offset, m_file)) {
-        m_offset += m_bytes;
+    bool again = m_bytes 
+        && m_notify->onFileRead(m_buf, m_bytes, m_offset, m_file);
 
-        if (m_length > m_bytes)
-            m_length -= m_bytes;
+    m_offset += m_bytes;
 
+    if (m_length > m_bytes)
+        m_length -= m_bytes;
+
+    if (again)
         return run();
-    }
 
     m_notify->onFileEnd(m_offset, m_file);
     delete this;
