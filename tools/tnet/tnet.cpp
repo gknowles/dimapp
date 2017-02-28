@@ -23,6 +23,7 @@ class SocketConn : public ISocketNotify, public IEndpointNotify {
     void onSocketConnectFailed() override;
     void onSocketRead(const SocketData & data) override;
     void onSocketDisconnect() override;
+    void onSocketDestroy() override;
 
     // IDimEndpointNotify
     void onEndpointFound(Endpoint * ends, int count) override;
@@ -100,6 +101,11 @@ void SocketConn::onSocketRead(const SocketData & data) {
 void SocketConn::onSocketDisconnect() {
     m_connected.reset();
     appSignalShutdown(kExitDisconnect);
+}
+
+//===========================================================================
+void SocketConn::onSocketDestroy() {
+    // it's a static, so override the default "delete this;" with a no-op
 }
 
 

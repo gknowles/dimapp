@@ -46,6 +46,7 @@ public:
     // for both
     virtual void onSocketRead(const SocketData & data) = 0;
     virtual void onSocketDisconnect(){};
+    virtual void onSocketDestroy() { delete this; }
 
 private:
     friend class SocketBase;
@@ -73,7 +74,9 @@ class ISocketListenNotify {
 public:
     virtual ~ISocketListenNotify() {}
     virtual void onListenStop(const Endpoint & local) = 0;
-    virtual std::unique_ptr<ISocketNotify> onListenCreateSocket(const Endpoint & local) = 0;
+    virtual std::unique_ptr<ISocketNotify> onListenCreateSocket(
+        const Endpoint & local
+    ) = 0;
 };
 void socketListen(ISocketListenNotify * notify, const Endpoint & localEnd);
 void socketStop(ISocketListenNotify * notify, const Endpoint & localEnd);

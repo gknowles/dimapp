@@ -174,8 +174,10 @@ void SocketBase::disconnect(ISocketNotify * notify) {
 // static 
 void SocketBase::setNotify(ISocketNotify * notify, ISocketNotify * newNotify) {
     unique_lock<mutex> lk{s_mut};
-    if (notify->m_socket)
+    if (notify->m_socket) {
         notify->m_socket->setNotify_LK(newNotify);
+        notify->m_socket = nullptr;
+    }
 }
 
 //===========================================================================

@@ -21,10 +21,9 @@ const char kVersion[] = "1.0";
 *
 ***/
 
-class TnetConn : public IAppSocketNotify {
+class TnetConn : public ISocketNotify {
 public:
-    TnetConn(AppSocket & sock)
-        : IAppSocketNotify(sock) {}
+    void onSocketRead(const SocketData & data) override {}
 };
 
 

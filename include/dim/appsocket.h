@@ -8,6 +8,7 @@
 
 #include <functional>
 #include <memory>
+#include <string_view>
 
 namespace Dim {
 
@@ -18,38 +19,35 @@ namespace Dim {
 *
 ***/
 
-class AppSocket {
-public:
-    enum Family { kTls, kHttp2, kByte };
-};
+namespace AppSocket {
+    enum Family { 
+        kTls, 
+        kHttp2, 
+        kByte 
+    };
 
-class IAppSocketNotify {
-public:
-    IAppSocketNotify(AppSocket & sock);
-    virtual ~IAppSocketNotify() {}
-
-private:
-    AppSocket & m_socket;
-};
+    enum MatchType {
+        kUnknown,       // not enough data to know
+        kPreferred,     // explicitly declared for protocol family 
+        kSupported,     // supported in a generic way (e.g. as byte stream)
+        kUnsupported,   // not valid for protocol family
+    };
+}
 
 class IAppSocketMatchNotify {
 public:
     virtual ~IAppSocketMatchNotify() {}
 
-    // Exclusive matches only if it's unambiguously in the family, connection
-    // families that can match anything (such as byte stream) should only
-    // return true when definitive is false.
-    virtual bool OnMatch(
+    virtual AppSocket::MatchType OnMatch(
         AppSocket::Family fam,
-        const char ptr[],
-        size_t count,
-        bool definitive) = 0;
+        std::string_view view
+    ) = 0;
 };
 
 class IAppSocketNotifyFactory {
 public:
     virtual ~IAppSocketNotifyFactory() {}
-    virtual std::unique_ptr<IAppSocketNotify> create(AppSocket & sock) = 0;
+    virtual std::unique_ptr<ISocketNotify> create() = 0;
 };
 
 
@@ -74,6 +72,9 @@ void appSocketRemoveListener(
     Endpoint end);
 
 //===========================================================================
+// Add and remove listeners with implicitly created factories. Implemented
+// as templates where the template parameter is the class, derived from 
+// IAppSocketNotify, that will be instanciated for incoming connections.
 template <typename S>
 inline void appSocketUpdateListener(
     bool add,
@@ -81,8 +82,8 @@ inline void appSocketUpdateListener(
     const std::string & type,
     Endpoint end) {
     static class Factory : public IAppSocketNotifyFactory {
-        std::unique_ptr<IAppSocketNotify> create(AppSocket & sock) override {
-            return std::make_unique<S>(sock);
+        std::unique_ptr<ISocketNotify> create() override {
+            return std::make_unique<S>();
         }
     } s_factory;
     if (add) {
