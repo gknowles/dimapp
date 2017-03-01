@@ -188,8 +188,12 @@ void AcceptSocket::accept(ListenSocket * listen) {
         &listen->m_overlapped);
     WinError err;
     if (!error || err != ERROR_IO_PENDING) {
-        logMsgError() << "AcceptEx(" << listen->m_localEnd << "): " << err;
-        return pushAcceptStop(listen);
+        if (err == WSAENOTSOCK && listen->m_handle == INVALID_SOCKET) {
+            // socket intentionally closed
+        } else {
+            logMsgError() << "AcceptEx(" << listen->m_localEnd << "): " << err;
+        }
+        pushAcceptStop(listen);
     }
 }
 
@@ -244,11 +248,16 @@ void AcceptSocket::onAccept(
 
     SocketAcceptInfo info;
     bool ok = !xferError && getAcceptInfo(&info, m_handle, listen->m_addrBuf);
+    auto h = listen->m_handle;
 
     accept(listen);
 
     if (xferError) {
-        logMsgError() << "onAccept: " << WinError(xferError);
+        if (xferError == ERROR_OPERATION_ABORTED && h == INVALID_SOCKET) {
+            // socket intentionally closed
+        } else {
+            logMsgError() << "onAccept: " << WinError(xferError);
+        }
         return;
     }
     if (!ok)
