@@ -289,6 +289,7 @@ class ByteMatch : public IAppSocketMatchNotify {
         string_view view) override;
 };
 } // namespace
+static ByteMatch s_byteMatch;
 
 //===========================================================================
 AppSocket::MatchType ByteMatch::OnMatch(
@@ -297,6 +298,38 @@ AppSocket::MatchType ByteMatch::OnMatch(
 ) {
     assert(fam == AppSocket::kByte);
     return AppSocket::kSupported;
+}
+
+
+/****************************************************************************
+*
+*   Http2Match
+*
+***/
+
+namespace {
+    class Http2Match : public IAppSocketMatchNotify {
+        AppSocket::MatchType OnMatch(
+            AppSocket::Family fam, 
+            string_view view) override;
+    };
+} // namespace
+static Http2Match s_http2Match;
+
+//===========================================================================
+AppSocket::MatchType Http2Match::OnMatch(
+    AppSocket::Family fam,
+    string_view view
+) {
+    assert(fam == AppSocket::kHttp2);
+    const char kPrefaceData[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
+    const size_t kPrefaceDataLen = size(kPrefaceData);
+    if (view.size() < kPrefaceDataLen)
+        return AppSocket::kUnknown;
+    if (view.compare(0, kPrefaceDataLen, kPrefaceData, kPrefaceDataLen) == 0)
+        return AppSocket::kPreferred;
+
+    return AppSocket::kUnsupported;
 }
 
 
@@ -351,8 +384,8 @@ bool ShutdownMonitor::onAppQueryConsoleDestroy() {
 //===========================================================================
 void Dim::iAppSocketInitialize() {
     appMonitorShutdown(&s_cleanup);
-    static ByteMatch s_match;
-    appSocketAddMatch(&s_match, AppSocket::kByte);
+    appSocketAddMatch(&s_byteMatch, AppSocket::kByte);
+    appSocketAddMatch(&s_http2Match, AppSocket::kHttp2);
 }
 
 
