@@ -23,7 +23,8 @@ namespace AppSocket {
     enum Family { 
         kTls, 
         kHttp2, 
-        kByte 
+        kByte,
+        kNumFamilies,
     };
 
     enum MatchType {
@@ -63,13 +64,13 @@ void appSocketAddListener(
     IAppSocketNotifyFactory * factory,
     AppSocket::Family fam,
     const std::string & type,
-    Endpoint end);
+    const Endpoint & end);
 
 void appSocketRemoveListener(
     IAppSocketNotifyFactory * factory,
     AppSocket::Family fam,
     const std::string & type,
-    Endpoint end);
+    const Endpoint & end);
 
 //===========================================================================
 // Add and remove listeners with implicitly created factories. Implemented
@@ -80,7 +81,7 @@ inline void appSocketUpdateListener(
     bool add,
     AppSocket::Family fam,
     const std::string & type,
-    Endpoint end) {
+    const Endpoint & end) {
     static class Factory : public IAppSocketNotifyFactory {
         std::unique_ptr<ISocketNotify> create() override {
             return std::make_unique<S>();
@@ -98,7 +99,7 @@ template <typename S>
 inline void appSocketAddListener(
     AppSocket::Family fam,
     const std::string & type,
-    Endpoint end) {
+    const Endpoint & end) {
     appSocketUpdateListener<S>(true, fam, type, end);
 }
 
@@ -107,7 +108,7 @@ template <typename S>
 inline void appSocketRemoveListener(
     AppSocket::Family fam,
     const std::string & type,
-    Endpoint end) {
+    const Endpoint & end) {
     appSocketUpdateListener<S>(false, fam, type, end);
 }
 

@@ -17,14 +17,46 @@ const char kVersion[] = "1.0";
 
 /****************************************************************************
 *
+*   Variables
+*
+***/
+
+static Endpoint s_endpoint;
+
+
+/****************************************************************************
+*
 *   TNetConn
 *
 ***/
 
 class TnetConn : public ISocketNotify {
 public:
-    void onSocketRead(const SocketData & data) override {}
+    void onSocketAccept(const SocketAcceptInfo & accept) override;
+    void onSocketDisconnect() override;
+    void onSocketRead(const SocketData & data) override;
+
+private:
+    SocketAcceptInfo m_accept;
 };
+
+//===========================================================================
+void TnetConn::onSocketAccept(const SocketAcceptInfo & accept) {
+    m_accept = accept;
+    cout << m_accept.remoteEnd << " connected on " 
+        << m_accept.localEnd << endl;
+}
+
+//===========================================================================
+void TnetConn::onSocketDisconnect() {
+    cout << m_accept.remoteEnd << " disconnected" << endl;
+}
+
+//===========================================================================
+void TnetConn::onSocketRead(const SocketData & data) {
+    cout << m_accept.remoteEnd << ": ";
+    cout.write(data.data, data.bytes);
+}
 
 
 /****************************************************************************
@@ -40,7 +72,9 @@ class MainShutdown : public IAppShutdownNotify {
 static MainShutdown s_cleanup;
 
 //===========================================================================
-void MainShutdown::onAppStartClientCleanup() {}
+void MainShutdown::onAppStartClientCleanup() {
+    appSocketRemoveListener<TnetConn>(AppSocket::kByte, "", s_endpoint);
+}
 
 //===========================================================================
 bool MainShutdown::onAppQueryClientDestroy() {
@@ -82,21 +116,20 @@ void Application::onTask() {
     if (!cli.parse(m_argc, m_argv))
         return appSignalUsageError();
 
+    consoleEnableCtrlC();
+
     vector<Address> addrs;
     addressGetLocal(&addrs);
     cout << "Local Addresses:" << endl;
     for (auto && addr : addrs)
         cout << addr << endl;
 
-    Endpoint end;
-    parse(&end, "127.0.0.1", 8888);
+    parse(&s_endpoint, "0.0.0.0", 8888);
 
-    appSocketAddListener<TnetConn>(AppSocket::kByte, "", end);
-    // socketListen(&s_listen, end);
+    appSocketAddListener<TnetConn>(AppSocket::kByte, "", s_endpoint);
 
     // httpRouteAdd(&s_web,
 
-    // appSignalShutdown(EX_OK);
 }
 
 

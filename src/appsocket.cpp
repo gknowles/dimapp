@@ -24,8 +24,7 @@ const Duration kUnmatchedMinWait = 2s;
 
 namespace {
 struct MatchKey {
-    AppSocket::Family family;
-    IAppSocketMatchNotify * notify;
+    IAppSocketMatchNotify * notify{nullptr};
 };
 
 struct FamilyInfo {
@@ -39,6 +38,7 @@ public:
         const Endpoint & local
     ) override;
 
+    Endpoint endpoint;
     unordered_map<AppSocket::Family, FamilyInfo> families;
     bool stopping{false};
 };
@@ -76,8 +76,8 @@ class NoDataTimer : public ITimerNotify {
 ***/
 
 static shared_mutex s_listenMut;
-static vector<MatchKey> s_matchers;
-static unordered_map<Endpoint, EndpointInfo *> s_endpoints;
+static MatchKey s_matchers[AppSocket::kNumFamilies];
+static vector<EndpointInfo *> s_endpoints;
 static vector<EndpointInfo *> s_stopping;
 
 static mutex s_sockMut;
@@ -187,15 +187,50 @@ void AppSocketNotify::onSocketRead(const SocketData & data) {
         view = m_socketData.append(view);
     }
     shared_lock<shared_mutex> lk{s_listenMut};
-    auto i = s_endpoints.find(m_accept.localEnd);
-    auto info = i->second;
+    
+    // find best matching listener endpoint for each family
+    enum {
+        kUnknown,   // no match
+        kWild,      // wildcard listener (0.0.0.0:0)
+        kPort,      // matching port with wildcard addr
+        kAddr,      // matching addr with wildcard port
+        kExact,     // both addr and port explicitly match
+    };
+    struct EndpointKey {
+        IAppSocketNotifyFactory * fact{nullptr};
+        int level{kUnknown};
+    } keys[AppSocket::kNumFamilies];
+    for (auto && ptr : s_endpoints) {
+        int level{kUnknown};
+        if (ptr->endpoint == m_accept.localEnd) {
+            level = kExact;
+        } else if (!ptr->endpoint.addr) {
+            if (ptr->endpoint.port == m_accept.localEnd.port) {
+                level = kPort;
+            } else if (!ptr->endpoint.port) {
+                level = kWild;
+            }
+        } else if (!ptr->endpoint.port 
+            && ptr->endpoint.addr == m_accept.localEnd.addr
+        ) {
+            level = kAddr;
+        }
+        for (auto && fam : ptr->families) {
+            if (level > keys[fam.first].level) {
+                auto i = fam.second.factories.lower_bound("");
+                if (i != fam.second.factories.end()) {
+                    keys[fam.first] = { i->second, level };
+                }
+            }
+        }
+    }
+
     bool unknown = false;
     IAppSocketNotifyFactory * fact = nullptr;
-    for (auto && fam : info->families) {
-        for (auto && key : s_matchers) {
-            if (fam.first != key.family) 
-                continue;
-            auto match = key.notify->OnMatch(key.family, view);
+    for (int i = 0; i < AppSocket::kNumFamilies; ++i) {
+        auto fam = (AppSocket::Family) i;
+        if (auto matcher = s_matchers[fam].notify) {
+            auto match = matcher->OnMatch(fam, view);
             switch (match) {
             case AppSocket::kUnknown:
                 unknown = true;
@@ -205,13 +240,11 @@ void AppSocketNotify::onSocketRead(const SocketData & data) {
             }
 
             // it's at least kSupported, possibly kPreferred
-            auto i = fam.second.factories.lower_bound("");
-            assert(i->first.empty());
-            fact = i->second;
+            fact = keys[fam].fact;
             if (match == AppSocket::kPreferred) {
                 // if it's a preferred match stop looking for better
                 // matches and just use it.
-                goto FOUND;
+                goto FINISH;
             }
         }
     }
@@ -222,13 +255,13 @@ void AppSocketNotify::onSocketRead(const SocketData & data) {
         return;
     }
 
+FINISH:
     if (!fact) {
         socketDisconnect(this);
         m_unmatched = true;
         return;
     }
 
-FOUND:
     // replace this sockets notifier with one from registered factory
     auto sock = fact->create().release();
     socketSetNotify(this, sock);
@@ -275,11 +308,22 @@ AppSocket::MatchType ByteMatch::OnMatch(
 
 namespace {
 class ShutdownMonitor : public IAppShutdownNotify {
+    bool onAppQueryClientDestroy() override;
     void onAppStartConsoleCleanup() override;
     bool onAppQueryConsoleDestroy() override;
 };
 static ShutdownMonitor s_cleanup;
 } // namespace
+
+  //===========================================================================
+bool ShutdownMonitor::onAppQueryClientDestroy() {
+    shared_lock<shared_mutex> lk{s_listenMut};
+    assert(s_endpoints.empty());
+    if (!s_stopping.empty())
+        return appQueryDestroyFailed();
+
+    return true;
+}
 
 //===========================================================================
 void ShutdownMonitor::onAppStartConsoleCleanup() {
@@ -290,15 +334,8 @@ void ShutdownMonitor::onAppStartConsoleCleanup() {
 
 //===========================================================================
 bool ShutdownMonitor::onAppQueryConsoleDestroy() {
-    {
-        lock_guard<mutex> lk{s_sockMut};
-        if (!s_unmatched.empty())
-            return appQueryDestroyFailed();
-    }
-
-    shared_lock<shared_mutex> lk{s_listenMut};
-    assert(s_endpoints.empty());
-    if (!s_stopping.empty())
+    lock_guard<mutex> lk{s_sockMut};
+    if (!s_unmatched.empty())
         return appQueryDestroyFailed();
 
     return true;
@@ -330,14 +367,34 @@ void Dim::appSocketAddMatch(
     IAppSocketMatchNotify * notify,
     AppSocket::Family fam) {
     unique_lock<shared_mutex> lk{s_listenMut};
-    for (auto && key : s_matchers) {
-        if (key.family == fam) {
-            key.notify = notify;
+    s_matchers[fam].notify = notify;
+}
+
+//===========================================================================
+static EndpointInfo * findInfo_LK(const Endpoint & end, bool findAlways) {
+    for (auto && ep : s_endpoints) {
+        if (ep->endpoint == end) 
+            return ep;
+    }
+    if (findAlways) {
+        auto info = new EndpointInfo;
+        info->endpoint = end;
+        s_endpoints.push_back(info);
+        return info;
+    }
+    return nullptr;
+}
+
+//===========================================================================
+static void eraseInfo_LK(const Endpoint & end) {
+    auto i = s_endpoints.begin();
+    auto e = s_endpoints.end();
+    for (; i != e; ++i) {
+        if ((*i)->endpoint == end) {
+            s_endpoints.erase(i);
             return;
         }
     }
-    MatchKey key{fam, notify};
-    s_matchers.push_back(key);
 }
 
 //===========================================================================
@@ -345,18 +402,12 @@ void Dim::appSocketAddListener(
     IAppSocketNotifyFactory * factory,
     AppSocket::Family fam,
     const std::string & type,
-    Endpoint end) {
+    const Endpoint & end) {
     bool addNew = false;
     EndpointInfo * info = nullptr;
     {
         unique_lock<shared_mutex> lk{s_listenMut};
-        auto i = s_endpoints.find(end);
-        if (i != s_endpoints.end()) {
-            info = i->second;
-        } else {
-            info = new EndpointInfo;
-            s_endpoints.insert(i, make_pair(end, info));
-        }
+        info = findInfo_LK(end, true);
         if (info->families.empty())
             addNew = true;
         info->families[fam].factories.insert(make_pair(type, factory));
@@ -370,10 +421,10 @@ void Dim::appSocketRemoveListener(
     IAppSocketNotifyFactory * factory,
     AppSocket::Family fam,
     const std::string & type,
-    Endpoint end) {
+    const Endpoint & end) {
     EndpointInfo * info = nullptr;
     unique_lock<shared_mutex> lk{s_listenMut};
-    info = s_endpoints[end];
+    info = findInfo_LK(end, false);
     if (info && !info->families.empty()) {
         auto fi = info->families.find(fam);
         if (fi != info->families.end()) {
@@ -387,7 +438,7 @@ void Dim::appSocketRemoveListener(
                     if (!info->families.empty())
                         return;
                     socketStop(info, end);
-                    s_endpoints.erase(end);
+                    eraseInfo_LK(end);
                     s_stopping.push_back(info);
                     return;
                 }
@@ -395,8 +446,6 @@ void Dim::appSocketRemoveListener(
         }
     }
 
-    if (!info)
-        s_endpoints.erase(end);
     logMsgError() << "Remove unknown listener, " << end << ", " << fam << ", "
                   << type;
 }
