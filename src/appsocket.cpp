@@ -324,12 +324,13 @@ AppSocket::MatchType Http2Match::OnMatch(
     assert(fam == AppSocket::kHttp2);
     const char kPrefaceData[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
     const size_t kPrefaceDataLen = size(kPrefaceData);
-    if (view.size() < kPrefaceDataLen)
-        return AppSocket::kUnknown;
-    if (view.compare(0, kPrefaceDataLen, kPrefaceData, kPrefaceDataLen) == 0)
+    size_t num = min(kPrefaceDataLen, view.size());
+    if (view.compare(0, num, kPrefaceData, num) != 0)
+        return AppSocket::kUnsupported;
+    if (num == kPrefaceDataLen)
         return AppSocket::kPreferred;
 
-    return AppSocket::kUnsupported;
+    return AppSocket::kUnknown;
 }
 
 
