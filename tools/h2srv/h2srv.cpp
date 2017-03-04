@@ -90,7 +90,6 @@ bool MainShutdown::onAppQueryClientDestroy() {
 
 namespace {
 class Application : public IAppNotify {
-public:
     void onAppRun() override;
 };
 } // namespace
