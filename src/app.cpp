@@ -24,6 +24,7 @@ struct CleanupInfo {
 };
 
 enum ETimerMode {
+    MAIN_RUN,
     MAIN_SC,
     MAIN_QD,
     CLIENT_SC,
@@ -51,7 +52,7 @@ private:
     void startCleanup(CleanFn notify);
     bool queryDestroy(QueryFn notify);
 
-    enum ETimerMode m_mode { MAIN_SC };
+    ETimerMode m_mode { MAIN_RUN };
     const char * m_modeName{nullptr};
     TimePoint m_shutdownStart;
 };
@@ -75,6 +76,7 @@ static Duration s_shutdownTimeout{2min};
 static mutex s_runMut;
 static condition_variable s_stopped;
 static RunMode s_runMode{kRunStopped};
+static IAppNotify * s_app;
 
 
 /****************************************************************************
@@ -87,6 +89,11 @@ static RunMode s_runMode{kRunStopped};
 Duration MainTimer::onTimer(TimePoint now) {
     bool next = true;
     switch (m_mode) {
+    case MAIN_RUN:
+        s_runMode = kRunRunning;
+        s_app->onAppRun();
+        m_mode = MAIN_SC;
+        return kTimerInfinite;
     case MAIN_SC:
         s_runMode = kRunStopping;
         m_shutdownStart = now;
@@ -168,18 +175,21 @@ bool MainTimer::queryDestroy(QueryFn notify) {
 ***/
 
 //===========================================================================
-int Dim::appRun(ITaskNotify & app) {
-    iSystemInitialize();
+int Dim::appRun(IAppNotify & app, int argc, char * argv[]) {
     iHashInitialize();
     iConsoleInitialize();
     iTaskInitialize();
     iTimerInitialize();
+    iSystemInitialize();
     iFileInitialize();
     iSocketInitialize();
     iAppSocketInitialize();
-    s_runMode = kRunRunning;
 
-    taskPushEvent(app);
+    s_app = &app;
+    s_app->m_argc = argc;
+    s_app->m_argv = argv;
+    s_mainTimer = {};
+    timerUpdate(&s_mainTimer, 0ms);
 
     unique_lock<mutex> lk{s_runMut};
     while (!s_mainTimer.stopped())
@@ -194,7 +204,6 @@ int Dim::appRun(ITaskNotify & app) {
 void Dim::appSignalShutdown(int exitcode) {
     if (exitcode > s_exitcode)
         s_exitcode = exitcode;
-    s_mainTimer = {};
     timerUpdate(&s_mainTimer, 0ms);
 }
 

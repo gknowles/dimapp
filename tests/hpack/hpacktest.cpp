@@ -375,9 +375,9 @@ void Reader::onHpackHeader(
 ***/
 
 namespace {
-class Application : public ITaskNotify, public ILogNotify {
-    // ITaskNotify
-    void onTask() override;
+class Application : public IAppNotify, public ILogNotify {
+    // IAppNotify
+    void onAppRun() override;
 
     // ILogNotify
     void onLog(LogType type, const string & msg) override;
@@ -398,7 +398,7 @@ void Application::onLog(LogType type, const string & msg) {
 }
 
 //===========================================================================
-void Application::onTask() {
+void Application::onAppRun() {
     TempHeap heap;
     HpackDecode decode(256);
     Reader out;
@@ -443,5 +443,5 @@ int main(int argc, char * argv[]) {
     _set_error_mode(_OUT_TO_MSGBOX);
     Application app;
     logAddNotify(&app);
-    return appRun(app);
+    return appRun(app, argc, argv);
 }
