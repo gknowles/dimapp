@@ -12,10 +12,10 @@ using namespace Dim;
 *
 ***/
 
-#define EXPECT(e)                                                           \
-    if (!bool(e)) {                                                         \
+#define EXPECT(...)                                                         \
+    if (!bool(__VA_ARGS__)) {                                               \
         logMsgError() << "Line " << (line ? line : __LINE__) << ": EXPECT(" \
-                      << #e << ") failed";                                  \
+                      << #__VA_ARGS__ << ") failed";                        \
     }
 
 
