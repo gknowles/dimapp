@@ -75,7 +75,7 @@ void appSocketRemoveListener(
 //===========================================================================
 // Add and remove listeners with implicitly created factories. Implemented
 // as templates where the template parameter is the class, derived from 
-// IAppSocketNotify, that will be instanciated for incoming connections.
+// ISocketNotify, that will be instanciated for incoming connections.
 template <typename S>
 inline void appSocketUpdateListener(
     bool add,

@@ -49,6 +49,7 @@
 # src/httpconn.cpp
 # src/httpint.h
 # src/httpmsg.cpp
+# src/httproute.cpp
 # src/intern.h
 # src/log.cpp
 # src/pch.cpp
