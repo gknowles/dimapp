@@ -13,18 +13,13 @@ using namespace Dim;
 ***/
 
 namespace {
-class Application : public ITaskNotify,
+class Application : public IAppNotify,
                     public IFileWriteNotify,
                     public IFileReadNotify,
                     public ILogNotify {
-    int m_argc;
-    char ** m_argv;
-
 public:
-    Application(int argc, char * argv[]);
-
-    // ITaskNotify
-    void onTask() override;
+    // IAppNotify
+    void onAppRun() override;
 
     // IFileWriteNotify
     void onFileWrite(
@@ -45,11 +40,6 @@ public:
 } // namespace
 
 //===========================================================================
-Application::Application(int argc, char * argv[])
-    : m_argc(argc)
-    , m_argv(argv) {}
-
-//===========================================================================
 void Application::onLog(LogType type, const string & msg) {
     if (type >= kLogError) {
         ConsoleScopedAttr attr(kConsoleError);
@@ -61,7 +51,7 @@ void Application::onLog(LogType type, const string & msg) {
 }
 
 //===========================================================================
-void Application::onTask() {
+void Application::onAppRun() {
     Cli cli;
     auto & fn = cli.opt<string>("[dat file]", "metrics.dat");
     if (!cli.parse(m_argc, m_argv))
@@ -124,7 +114,7 @@ int main(int argc, char * argv[]) {
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
     _set_error_mode(_OUT_TO_MSGBOX);
 
-    Application app(argc, argv);
-    int code = appRun(app);
+    Application app;
+    int code = appRun(app, argc, argv);
     return code;
 }

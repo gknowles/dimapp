@@ -6,8 +6,18 @@
 namespace Dim {
 
 // forward declarations
-enum RunMode;
-class ITaskNotify;
+enum RunMode : int;
+
+class IAppNotify {
+public:
+    virtual ~IAppNotify() {}
+
+    virtual void onAppRun() = 0;
+
+    // argc & argv are set by the framework before the call to onAppRun 
+    int m_argc;
+    char ** m_argv;
+};
 
 class IAppShutdownNotify {
 public:
@@ -22,7 +32,7 @@ public:
 };
 
 // returns exit code
-int appRun(ITaskNotify & app);
+int appRun(IAppNotify & app, int argc, char * argv[]);
 
 // additional program exit codes
 enum {

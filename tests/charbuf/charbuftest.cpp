@@ -12,10 +12,10 @@ using namespace Dim;
 *
 ***/
 
-#define EXPECT(e)                                                           \
-    if (!bool(e)) {                                                         \
+#define EXPECT(...)                                                         \
+    if (!bool(__VA_ARGS__)) {                                               \
         logMsgError() << "Line " << (line ? line : __LINE__) << ": EXPECT(" \
-                      << #e << ") failed";                                  \
+                      << #__VA_ARGS__ << ") failed";                        \
     }
 
 
@@ -34,9 +34,9 @@ using namespace Dim;
 
 namespace {
 
-class Application : public ITaskNotify, public ILogNotify {
-    // ITaskNotify
-    void onTask() override;
+class Application : public IAppNotify, public ILogNotify {
+    // IAppNotify
+    void onAppRun() override;
 
     // ILogNotify
     void onLog(LogType type, const string & msg) override;
@@ -58,7 +58,7 @@ void Application::onLog(LogType type, const string & msg) {
 }
 
 //===========================================================================
-void Application::onTask() {
+void Application::onAppRun() {
     int line = 0;
     CharBuf buf;
     buf.assign("abcdefgh");
@@ -129,5 +129,5 @@ int main(int argc, char * argv[]) {
     _set_error_mode(_OUT_TO_MSGBOX);
     Application app;
     logAddNotify(&app);
-    return appRun(app);
+    return appRun(app, argc, argv);
 }

@@ -153,19 +153,17 @@ void LogTask::onTask() {
 ***/
 
 namespace {
-class Application : public ILogNotify,
-                    public ITaskNotify,
+class Application : public IAppNotify,
+                    public ILogNotify,
                     public IFileReadNotify {
-    int m_argc;
-    char ** m_argv;
     string m_source;
     TaskQueueHandle m_logQ;
     experimental::filesystem::path m_srcfile;
     string m_root;
 
 public:
-    Application(int argc, char * argv[]);
-    void onTask() override;
+    // IAppNotify
+    void onAppRun() override;
 
     // ILogNotify
     void onLog(LogType type, const std::string & msg) override;
@@ -176,12 +174,7 @@ public:
 } // namespace
 
 //===========================================================================
-Application::Application(int argc, char * argv[])
-    : m_argc(argc)
-    , m_argv(argv) {}
-
-//===========================================================================
-void Application::onTask() {
+void Application::onAppRun() {
     m_logQ = taskCreateQueue("Logging", 1);
 
     Cli cli;
@@ -325,7 +318,7 @@ int main(int argc, char * argv[]) {
     _set_error_mode(_OUT_TO_MSGBOX);
 
     consoleEnableCtrlC(false);
-    Application app(argc, argv);
+    Application app;
     logAddNotify(&app);
-    return appRun(app);
+    return appRun(app, argc, argv);
 }
