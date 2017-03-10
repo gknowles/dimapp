@@ -1,4 +1,8 @@
 // hash.cpp - dim services
+//
+// Implements SipHash-2-4, as described by: 
+//   SipHash: a fast short-input PRF (https://131002.net/siphash/siphash.pdf)
+
 #include "pch.h"
 #pragma hdrstop
 
