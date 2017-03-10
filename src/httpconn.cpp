@@ -186,7 +186,6 @@ void MsgDecoder::onHpackHeader(
     } else {
         m_msg.addHeaderRef(name, value);
     }
-    // m_error = FrameError::kInternalError;
 }
 
 //===========================================================================
@@ -379,15 +378,20 @@ static bool RemovePadding(
 }
 
 //===========================================================================
-static bool RemovePriority(PriorityData * out, const char hdr[], int hdrLen) {
+static bool RemovePriority(
+    PriorityData * out, 
+    int stream, 
+    const char hdr[], 
+    int hdrLen
+) {
     if (hdrLen < 5)
         return false;
     unsigned tmp = ntoh32(hdr);
     out->exclusive = tmp & 0x80000000;
     out->stream = tmp & 0x7fffffff;
-    if (!out->stream)
-        return false;
     out->weight = (unsigned)hdr[4] + 1;
+    if (out->stream == stream)
+        return false;
     return true;
 }
 
@@ -419,7 +423,7 @@ bool HttpConn::recv(
         }
 
         m_byteMode = ByteMode::kHeader;
-    // fall through
+        [[fallthrough]];
 
     case ByteMode::kHeader:
     next_frame:
@@ -637,7 +641,7 @@ bool HttpConn::onHeaders(
     // parse priority
     if (flags & kPriority) {
         PriorityData pri;
-        if (!RemovePriority(&pri, ud.hdr, hdrLen)) {
+        if (!RemovePriority(&pri, stream, ud.hdr, hdrLen)) {
             ReplyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
             return false;
         }
@@ -664,7 +668,7 @@ bool HttpConn::onHeaders(
         } else {
             sm->m_state = HttpStream::kClosed;
         }
-        sm->m_msg = make_unique<HttpRequest>();
+        sm->m_msg = make_unique<HttpResponse>();
         break;
     case HttpStream::kOpen:
     case HttpStream::kLocalClosed:
@@ -676,7 +680,7 @@ bool HttpConn::onHeaders(
             ReplyGoAway(out, stream, FrameError::kProtocolError);
             return false;
         }
-    // fall through
+        [[fallthrough]];
     default:
         // !!! should probably send a stream error and process
         //     the headers (to maintain the connection decompression
@@ -727,7 +731,12 @@ bool HttpConn::onPriority(
     }
 
     PriorityData pri;
-    if (!RemovePriority(&pri, src + kFrameHeaderLen, m_inputFrameLen)) {
+    if (!RemovePriority(
+        &pri, 
+        stream, 
+        src + kFrameHeaderLen, 
+        m_inputFrameLen
+    )) {
         ReplyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
         return false;
     }
@@ -802,8 +811,8 @@ bool HttpConn::onSettings(
     }
 
     for (int pos = 0; pos < m_inputFrameLen; pos += 6) {
-        int identifier = ntoh16(src + kFrameHeaderLen + pos);
-        int value = ntoh32(src + kFrameHeaderLen + pos + 2);
+        unsigned identifier = ntoh16(src + kFrameHeaderLen + pos);
+        unsigned value = ntoh32(src + kFrameHeaderLen + pos + 2);
         (void)identifier;
         (void)value;
     }

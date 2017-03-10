@@ -48,6 +48,7 @@ private:
 ***/
 
 static unordered_map<string, HostInfo> s_hosts;
+static Endpoint s_endpoint;
 
 
 /****************************************************************************
@@ -76,7 +77,18 @@ void RouteConn::onSocketRead(const SocketData & data) {
         //socketWrite(this, 
     }
     if (!result)
-        socketDisconnect(this);
+        return socketDisconnect(this);
+    for (auto && msg : msgs) {
+        if (msg->isRequest()) {
+            auto req = static_cast<HttpRequest *>(msg.get());
+            auto host = req->authority();
+            if (!host)
+                host = req->headers(kHttpHost).begin()->m_value;
+            assert(host);
+            s_hosts.find(host);
+        } else {
+        }
+    }
 }
 
 
@@ -95,11 +107,8 @@ namespace {
 
 //===========================================================================
 void ShutdownMonitor::onAppStartClientCleanup() {
-    while (!s_hosts.empty()) {
-        auto i = s_hosts.begin();
-        appSocketRemoveListener<RouteConn>(AppSocket::kHttp2, i->first, {});
-        s_hosts.erase(i);
-    }
+    if (!s_hosts.empty())
+        appSocketRemoveListener<RouteConn>(AppSocket::kHttp2, "", s_endpoint);
 }
 
 
@@ -111,6 +120,8 @@ void ShutdownMonitor::onAppStartClientCleanup() {
 
 //===========================================================================
 void Dim::iHttpRouteInitialize() {
+    s_endpoint = {};
+    s_endpoint.port = 8888;
     appMonitorShutdown(&s_cleanup);
 }
 
@@ -128,15 +139,16 @@ void Dim::httpRouteAdd(
     const std::string path,
     unsigned methods
 ) {
+    assert(!host.empty());
+    if (s_hosts.empty())
+        appSocketAddListener<RouteConn>(AppSocket::kHttp2, "", s_endpoint);
     PathInfo pi = {notify, path, methods};
     auto & hi = s_hosts[host];
     hi.paths.push_back(pi);
-    if (hi.paths.size() == 1)
-        appSocketAddListener<RouteConn>(AppSocket::kHttp2, host, {});
 }
 
 //===========================================================================
-void Dim::httpRouteReply(unsigned reqId, HttpMsg & msg, bool more) {
+void Dim::httpRouteReply(unsigned reqId, HttpResponse & msg, bool more) {
 }
 
 //===========================================================================

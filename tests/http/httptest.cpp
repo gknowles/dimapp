@@ -185,7 +185,7 @@ void Application::onAppRun() {
     auto hcli = httpConnect(&cbuf);
     HttpRequest msg;
     msg.addHeaderRef(kHttp_Method, "get");
-    msg.addHeaderRef(kHttp_Schema, "https");
+    msg.addHeaderRef(kHttp_Scheme, "https");
     msg.addHeaderRef(kHttp_Path, "/");
     int streamId = httpRequest(hcli, &cbuf, msg);
     ignore = streamId;

@@ -69,7 +69,7 @@ class WebRoute : public IHttpRouteNotify {
     void onHttpRequest(
         unsigned reqId,
         unordered_multimap<string, string> & params,
-        HttpMsg & msg
+        HttpRequest & msg
     ) override;
 };
 static WebRoute s_web;
@@ -78,8 +78,9 @@ static WebRoute s_web;
 void WebRoute::onHttpRequest(
     unsigned reqId,
     unordered_multimap<string, string> & params,
-    HttpMsg & msg
+    HttpRequest & msg
 ) {
+    cout << "http request #" << reqId << endl;
 }
 
 
@@ -142,7 +143,7 @@ void Application::onAppRun() {
 
     appSocketAddListener<TnetConn>(AppSocket::kByte, "", s_endpoint);
 
-    httpRouteAdd(&s_web, "example.com", "/", fHttpMethodGet);
+    httpRouteAdd(&s_web, "127.0.0.1:8888", "/", fHttpMethodGet);
 }
 
 

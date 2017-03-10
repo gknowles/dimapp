@@ -35,10 +35,10 @@ struct HttpHdrInfo {
 
 const TokenTable::Token s_hdrNames[] = {
     {kHttpInvalid, "INVALID"},
-    {KHttp_Authority, ":authority"},
+    {kHttp_Authority, ":authority"},
     {kHttp_Method, ":method"},
     {kHttp_Path, ":path"},
-    {kHttp_Schema, ":schema"},
+    {kHttp_Scheme, ":scheme"},
     {kHttp_Status, ":status"},
     {kHttpAccept, "accept"},
     {kHttpAcceptCharset, "accept-charset"},
@@ -94,10 +94,6 @@ static_assert(size(s_hdrNames) == kHttps, "");
 
 const TokenTable s_hdrNameTbl(s_hdrNames, size(s_hdrNames));
 
-struct HdrNameInfo : HttpMsg::HdrName {
-    HttpMsg::HdrValue m_value;
-};
-
 } // namespace
 
 
@@ -136,8 +132,7 @@ auto HttpMsg::HdrList::end() const -> ForwardListIterator<const HdrName> {
 
 //===========================================================================
 auto HttpMsg::HdrName::begin() -> ForwardListIterator<HdrValue> {
-    auto * hdr = static_cast<HdrNameInfo *>(this);
-    return ForwardListIterator<HdrValue>(&hdr->m_value);
+    return ForwardListIterator<HdrValue>(&m_value);
 }
 
 //===========================================================================
@@ -147,8 +142,7 @@ auto HttpMsg::HdrName::end() -> ForwardListIterator<HdrValue> {
 
 //===========================================================================
 auto HttpMsg::HdrName::begin() const -> ForwardListIterator<const HdrValue> {
-    auto * hdr = static_cast<const HdrNameInfo *>(this);
-    return ForwardListIterator<const HdrValue>(&hdr->m_value);
+    return ForwardListIterator<const HdrValue>(&m_value);
 }
 
 //===========================================================================
@@ -179,11 +173,11 @@ void HttpMsg::addHeader(const char name[], const char value[]) {
 
 //===========================================================================
 void HttpMsg::addHeaderRef(HttpHdr id, const char name[], const char value[]) {
-    auto ni = static_cast<HdrNameInfo *>(m_firstHeader);
+    auto ni = m_firstHeader;
     auto prev = ni;
     for (;;) {
         if (!ni) {
-            ni = m_heap.emplace<HdrNameInfo>();
+            ni = m_heap.emplace<HdrName>();
             if (prev) {
                 prev->m_next = ni;
             } else {
@@ -198,7 +192,7 @@ void HttpMsg::addHeaderRef(HttpHdr id, const char name[], const char value[]) {
             break;
         }
         prev = ni;
-        ni = static_cast<HdrNameInfo *>(ni->m_next);
+        ni = ni->m_next;
     }
 
     // not found
@@ -253,9 +247,19 @@ HttpMsg::HdrName HttpMsg::headers(HttpHdr header) {
 }
 
 //===========================================================================
+const HttpMsg::HdrName HttpMsg::headers(HttpHdr header) const {
+    return const_cast<HttpMsg *>(this)->headers(header);
+}
+
+//===========================================================================
 HttpMsg::HdrName HttpMsg::headers(const char name[]) {
     HttpHdr id = tokenTableGetEnum(s_hdrNameTbl, name, kHttpInvalid);
     return headers(id);
+}
+
+//===========================================================================
+const HttpMsg::HdrName HttpMsg::headers(const char name[]) const {
+    return const_cast<HttpMsg *>(this)->headers(name);
 }
 
 //===========================================================================
@@ -281,9 +285,39 @@ ITempHeap & HttpMsg::heap() {
 ***/
 
 //===========================================================================
+const char * HttpRequest::method() const { 
+    return headers(kHttp_Method).begin()->m_value; 
+}
+
+//===========================================================================
+const char * HttpRequest::scheme() const { 
+    return headers(kHttp_Scheme).begin()->m_value; 
+}
+
+//===========================================================================
+const char * HttpRequest::authority() const { 
+    return headers(kHttp_Authority).begin()->m_value;
+}
+
+//===========================================================================
 bool HttpRequest::checkPseudoHeaders() const {
     const int must = kFlagHasMethod | kFlagHasScheme | kFlagHasPath;
     const int mustNot = kFlagHasStatus;
+    return (m_flags & must) == must && (~m_flags & mustNot);
+}
+
+
+/****************************************************************************
+*
+*   HttpResponse
+*
+***/
+
+//===========================================================================
+bool HttpResponse::checkPseudoHeaders() const {
+    const int must = kFlagHasStatus;
+    const int mustNot = kFlagHasMethod | kFlagHasScheme | kFlagHasAuthority
+        | kFlagHasPath;
     return (m_flags & must) == must && (~m_flags & mustNot);
 }
 
