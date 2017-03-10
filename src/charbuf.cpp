@@ -408,38 +408,9 @@ int CharBuf::compare(const CharBuf & buf) const {
     auto re = buf.m_buffers.end();
     const char * rdata;
     int rcount;
-    goto compare_new_buffers;
 
-    for (;;) {
-        if (mycount < rcount) {
-            int rc = memcmp(mydata, rdata, mycount);
-            if (rc)
-                return rc;
-            if (++myi == mye)
-                return -1;
-            rdata += mycount;
-            rcount -= mycount;
-            mydata = (*myi)->m_data;
-            mycount = (*myi)->m_used;
-            continue;
-        }
-
-        int rc = memcmp(mydata, rdata, rcount);
-        if (rc)
-            return rc;
-        if (mycount > rcount) {
-            if (++ri == re)
-                return 1;
-            mydata += rcount;
-            mycount -= rcount;
-            rdata = (*ri)->m_data;
-            rcount = (*ri)->m_used;
-            continue;
-        }
-        ++myi;
-        ++ri;
-
-    compare_new_buffers:
+    for (;; ++myi, ++ri) {
+        // compare two new buffers
         if (myi == mye)
             return (ri == re) ? 0 : -1;
         if (ri == re)
@@ -448,6 +419,38 @@ int CharBuf::compare(const CharBuf & buf) const {
         mycount = (*myi)->m_used;
         rdata = (*ri)->m_data;
         rcount = (*ri)->m_used;
+
+        for (;;) {
+            if (mycount < rcount) {
+                // compare single remote buffer with as many local buffers
+                // as it can encompass
+                int rc = memcmp(mydata, rdata, mycount);
+                if (rc)
+                    return rc;
+                if (++myi == mye)
+                    return -1;
+                rdata += mycount;
+                rcount -= mycount;
+                mydata = (*myi)->m_data;
+                mycount = (*myi)->m_used;
+                continue;
+            }
+
+            // compare remote buffers as long as they fit within local buffer
+            int rc = memcmp(mydata, rdata, rcount);
+            if (rc)
+                return rc;
+            if (mycount == rcount) {
+                // advance to both a new remote buffer and a new local buffer
+                break;
+            }
+            if (++ri == re)
+                return 1;
+            mydata += rcount;
+            mycount -= rcount;
+            rdata = (*ri)->m_data;
+            rcount = (*ri)->m_used;
+        }
     }
 }
 
