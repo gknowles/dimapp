@@ -315,6 +315,7 @@ public:
         assert(m_current);
         return *m_current;
     }
+    T * operator->() { return m_current; }
 };
 
 } // namespace
