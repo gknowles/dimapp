@@ -18,17 +18,42 @@ using namespace Dim;
 *
 ***/
 
-// siphash default seed
-static uint64_t s_v0 = 0x736f'6d65'7073'6575 ^ 0x0706'0504'0302'0100;
-static uint64_t s_v1 = 0x646f'7261'6e64'6f6d ^ 0x0f0e'0d0c'0b0a'0908;
-static uint64_t s_v2 = 0x6c79'6765'6e65'7261 ^ 0x0706'0504'0302'0100;
-static uint64_t s_v3 = 0x7465'6462'7974'6573 ^ 0x0f0e'0d0c'0b0a'0908;
-
 const unsigned kLittleEndian = 0x1234;
 const unsigned kBigEndian = 0x4321;
 
 const unsigned kByteOrder = kLittleEndian;
 const bool kNativeUnaligned64 = true;
+
+
+/****************************************************************************
+*
+*   Seed
+*
+***/
+
+namespace {
+struct Seed {
+    // siphash default seed
+    uint64_t v0 = 0x736f'6d65'7073'6575 ^ 0x0706'0504'0302'0100;
+    uint64_t v1 = 0x646f'7261'6e64'6f6d ^ 0x0f0e'0d0c'0b0a'0908;
+    uint64_t v2 = 0x6c79'6765'6e65'7261 ^ 0x0706'0504'0302'0100;
+    uint64_t v3 = 0x7465'6462'7974'6573 ^ 0x0f0e'0d0c'0b0a'0908;
+
+    Seed();
+};
+} // namespace
+
+//===========================================================================
+Seed::Seed () {
+    // set to random seed
+    random_device rd;
+    uint64_t k0 = ((uint64_t)rd() << 32) + rd();
+    uint64_t k1 = ((uint64_t)rd() << 32) + rd();
+    v0 = 0x736f'6d65'7073'6575 ^ k0;
+    v1 = 0x646f'7261'6e64'6f6d ^ k1;
+    v2 = 0x6c79'6765'6e63'7261 ^ k0;
+    v3 = 0x7465'6462'7974'6573 ^ k1;
+}
 
 
 /****************************************************************************
@@ -85,35 +110,19 @@ sipRound(uint64_t & v0, uint64_t & v1, uint64_t & v2, uint64_t & v3) {
 
 /****************************************************************************
 *
-*   Internal API
-*
-***/
-
-//===========================================================================
-void Dim::iHashInitialize() {
-    random_device rd;
-    uint64_t k0 = ((uint64_t)rd() << 32) + rd();
-    uint64_t k1 = ((uint64_t)rd() << 32) + rd();
-    s_v0 = 0x736f'6d65'7073'6575 ^ k0;
-    s_v1 = 0x646f'7261'6e64'6f6d ^ k1;
-    s_v2 = 0x6c79'6765'6e63'7261 ^ k0;
-    s_v3 = 0x7465'6462'7974'6573 ^ k1;
-}
-
-
-/****************************************************************************
-*
 *   Public API
 *
 ***/
 
 //===========================================================================
 size_t Dim::hashBytes(const void * ptr, size_t count) {
+    static Seed seed;
+    uint64_t v0 = seed.v0;
+    uint64_t v1 = seed.v1;
+    uint64_t v2 = seed.v2;
+    uint64_t v3 = seed.v3;
+
     auto * src = static_cast<const unsigned char *>(ptr);
-    uint64_t v0 = s_v0;
-    uint64_t v1 = s_v1;
-    uint64_t v2 = s_v2;
-    uint64_t v3 = s_v3;
     size_t wlen = count & ~7;
     auto * esrc = src + wlen;
     uint64_t m;
