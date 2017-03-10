@@ -102,6 +102,9 @@
 # tests/tls/pch.cpp
 # tests/tls/pch.h
 # tests/tls/tlstest.cpp
+# tests/tokentable/pch.cpp
+# tests/tokentable/pch.h
+# tests/tokentable/tokentabletest.cpp
 # tests/xml/pch.cpp
 # tests/xml/pch.h
 # tests/xml/xmltest.cpp

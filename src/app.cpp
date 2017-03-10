@@ -176,7 +176,6 @@ bool MainTimer::queryDestroy(QueryFn notify) {
 
 //===========================================================================
 int Dim::appRun(IAppNotify & app, int argc, char * argv[]) {
-    iHashInitialize();
     iConsoleInitialize();
     iTaskInitialize();
     iTimerInitialize();
