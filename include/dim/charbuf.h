@@ -23,14 +23,11 @@ public:
     CharBuf & operator=(const std::string & str) { return assign(str); }
     CharBuf & operator=(const CharBuf & buf) { return assign(buf); }
     CharBuf & operator=(CharBuf && buf);
-    CharBuf & operator+=(char ch) {
-        pushBack(ch);
-        return *this;
-    }
+    CharBuf & operator+=(char ch) { pushBack(ch); return *this; }
     CharBuf & operator+=(const char s[]) { return append(s); }
     CharBuf & operator+=(const std::string & str) { return append(str); }
     CharBuf & operator+=(const CharBuf & src) { return append(src); }
-    CharBuf & assign(char ch) { return assign(&ch, 1); }
+    CharBuf & assign(char ch) { clear(); pushBack(ch); return *this; }
     CharBuf & assign(size_t numCh, char ch);
     CharBuf & assign(const char s[]);
     CharBuf & assign(const char s[], size_t count);
