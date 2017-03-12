@@ -1,0 +1,47 @@
+language: cpp
+sudo: false
+
+cache:
+  directories:
+    - ${TRAVIS_BUILD_DIR}/deps/cmake
+
+addons:
+  apt:
+    packages:
+      - g++-6
+      - clang-3.9
+    sources: &sources
+      - ubuntu-toolchain-r-test
+      - llvm-toolchain-precise-3.9
+
+# Why must we work so hard to get a recent cmake?
+install:
+  - DEPS_DIR="${TRAVIS_BUILD_DIR}/deps"
+  - mkdir -p ${DEPS_DIR} && cd ${DEPS_DIR}
+  - |
+    if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
+      if [[ -z "$(ls -A ${DEPS_DIR}/cmake/bin)" ]]; then
+        CMAKE_URL="http://www.cmake.org/files/v3.6/cmake-3.6.3-Linux-x86_64.tar.gz"
+        mkdir -p cmake && travis_retry wget --no-check-certificate --quiet -O - ${CMAKE_URL} | tar --strip-components=1 -xz -C cmake
+      fi
+      export PATH=${DEPS_DIR}/cmake/bin:${PATH}
+    else
+      if ! brew ls --version cmake &>/dev/null; then brew install cmake; fi
+    fi
+  - cd ${TRAVIS_BUILD_DIR}
+
+matrix:
+  include:
+    - env: CXX_NAME=clang++-3.9 CC_NAME=clang-3.9
+
+script:
+  - export CXX=${CXX_NAME} CC=${CC_NAME}
+  - mkdir -p build && cd build
+  - cmake ..
+  - cmake --build .
+  - ./cli
+
+notifications:
+  email:
+    on_success: change
+    on_failure: change
