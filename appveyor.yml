@@ -27,7 +27,9 @@ artifacts:
 
 test_script:
   - build\bin\charbuf
+  - build\bin\file
   - build\bin\hpack
   - build\bin\http
   - build\bin\pargen --test
+  - build\bin\tokentable
   - build\bin\xml --test
