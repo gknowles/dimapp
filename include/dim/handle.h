@@ -63,42 +63,6 @@ private:
     int m_firstFree{0};
 };
 
-template <typename H, typename T> class HandleMapBase::Iterator {
-    HandleMapBase::Node * node{nullptr};
-    HandleMapBase::Node * base{nullptr};
-    HandleMapBase::Node * end{nullptr};
-
-public:
-    Iterator() {}
-    Iterator(Node * base, Node * end)
-        : node{base}
-        , base{base}
-        , end{end} {
-        for (; node != end; ++node) {
-            if (node->value)
-                return;
-        }
-        node = nullptr;
-    }
-    bool operator!=(const Iterator & right) const {
-        return node != right.node;
-    }
-    std::pair<H, T *> operator*() {
-        H handle;
-        handle.pos = int(node - base);
-        return make_pair(handle, static_cast<T *>(node->value));
-    }
-    Iterator & operator++() {
-        node += 1;
-        for (; node != end; ++node) {
-            if (node->value)
-                return *this;
-        }
-        node = nullptr;
-        return *this;
-    }
-};
-
 //===========================================================================
 template <typename H, typename T>
 inline auto HandleMapBase::begin() -> Iterator<H, T> {
@@ -110,6 +74,63 @@ inline auto HandleMapBase::begin() -> Iterator<H, T> {
 template <typename H, typename T>
 inline auto HandleMapBase::end() -> Iterator<H, T> {
     return Iterator<H, T>{};
+}
+
+//===========================================================================
+// handle map base iterator - internal only
+//===========================================================================
+template <typename H, typename T> class HandleMapBase::Iterator {
+    HandleMapBase::Node * node{nullptr};
+    HandleMapBase::Node * base{nullptr};
+    HandleMapBase::Node * end{nullptr};
+
+public:
+    Iterator() {}
+    Iterator(Node * base, Node * end);
+
+    bool operator!=(const Iterator & right) const;
+    std::pair<H, T *> operator*();
+    Iterator & operator++();
+};
+
+//===========================================================================
+template<typename H, typename T>
+HandleMapBase::Iterator<H, T>::Iterator(Node * base, Node * end)
+    : node{base}
+    , base{base}
+    , end{end} 
+{
+    for (; node != end; ++node) {
+        if (node->value)
+            return;
+    }
+    node = nullptr;
+}
+
+//===========================================================================
+template<typename H, typename T>
+bool HandleMapBase::Iterator<H, T>::operator!=(const Iterator & right) const {
+    return node != right.node;
+}
+
+//===========================================================================
+template<typename H, typename T>
+std::pair<H, T *> HandleMapBase::Iterator<H, T>::operator*() {
+    H handle;
+    handle.pos = int(node - base);
+    return make_pair(handle, static_cast<T *>(node->value));
+}
+
+//===========================================================================
+template<typename H, typename T>
+auto HandleMapBase::Iterator<H, T>::operator++() -> Iterator<H, T>& {
+    node += 1;
+    for (; node != end; ++node) {
+        if (node->value)
+            return *this;
+    }
+    node = nullptr;
+    return *this;
 }
 
 
