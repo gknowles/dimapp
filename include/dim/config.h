@@ -60,8 +60,8 @@
 
 #if defined _MSC_VER
 #include "compiler/visualc.h"
-#else
-#error "unknown compiler"
+#elif !defined(_WIN32)
+#include "sysexits.h"
 #endif
 
 #ifdef DIM_LIB_DYN_LINK
