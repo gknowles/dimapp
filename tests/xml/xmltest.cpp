@@ -76,7 +76,7 @@ int main(int argc, char * argv[]) {
     if (*test)
         return internalTest();
     if (path->empty())
-        return cli.writeHelp(cout);
+        return cli.printHelp(cout);
 
     if (!path->has_extension())
         path->replace_extension("xml");

@@ -240,7 +240,7 @@ https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
         return appSignalUsageError();
     if (*help || m_argc == 1) {
         auto os = logMsgInfo();
-        cli.writeHelp(os);
+        cli.printHelp(os);
         return appSignalShutdown(EX_OK);
     }
     if (*test) {

@@ -229,7 +229,7 @@ void Dim::appSignalUsageError(
         if (!dm.empty())
             logMsgInfo() << dm;
         auto os = logMsgInfo();
-        cli.writeUsageEx(os);
+        cli.printUsageEx(os);
     }
     return appSignalShutdown(code);
 }
