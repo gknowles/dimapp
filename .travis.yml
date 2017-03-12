@@ -9,10 +9,10 @@ addons:
   apt:
     packages:
       - g++-6
-      - clang-4.0
+      - clang-5.0
     sources: &sources
       - ubuntu-toolchain-r-test
-      - llvm-toolchain-precise-4.0
+      - llvm-toolchain-precise-5.0
 
 # Why must we work so hard to get a recent cmake?
 install:
@@ -32,7 +32,7 @@ install:
 
 matrix:
   include:
-    - env: CXX_NAME=clang++-4.0 CC_NAME=clang-4.0
+    - env: CXX_NAME=clang++-5.0 CC_NAME=clang-5.0
 
 script:
   - export CXX=${CXX_NAME} CC=${CC_NAME}
