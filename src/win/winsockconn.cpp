@@ -27,8 +27,8 @@ class ConnSocket : public SocketBase {
 public:
     static void connect(
         ISocketNotify * notify,
-        const Endpoint & remoteEnd,
-        const Endpoint & localEnd,
+        const Endpoint & remote,
+        const Endpoint & local,
         Duration timeout);
 
 public:
@@ -164,8 +164,8 @@ static void pushConnectFailed(ISocketNotify * notify) {
 // static
 void ConnSocket::connect(
     ISocketNotify * notify,
-    const Endpoint & remoteEnd,
-    const Endpoint & localEnd,
+    const Endpoint & remote,
+    const Endpoint & local,
     Duration timeout) {
     assert(getMode(notify) == Mode::kInactive);
 
@@ -173,7 +173,7 @@ void ConnSocket::connect(
         timeout = kConnectTimeout;
 
     auto sock = make_unique<ConnSocket>(notify);
-    sock->m_handle = winSocketCreate(localEnd);
+    sock->m_handle = winSocketCreate(local);
     if (sock->m_handle == INVALID_SOCKET)
         return pushConnectFailed(notify);
 
@@ -216,7 +216,7 @@ void ConnSocket::connect(
     }
 
     sockaddr_storage sas;
-    copy(&sas, remoteEnd);
+    copy(&sas, remote);
     bool error = !fConnectEx(
         it->m_socket->m_handle,
         (sockaddr *)&sas,
@@ -227,7 +227,7 @@ void ConnSocket::connect(
         &it->m_overlapped);
     WinError err;
     if (!error || err != ERROR_IO_PENDING) {
-        logMsgError() << "ConnectEx(" << remoteEnd << "): " << err;
+        logMsgError() << "ConnectEx(" << remote << "): " << err;
         lock_guard<mutex> lk{s_mut};
         s_connecting.pop_back();
         return pushConnectFailed(notify);
@@ -268,14 +268,14 @@ void ConnSocket::onConnect(int error, int bytes) {
         logMsgError() << "getpeername: " << WinError{};
         return m_notify->onSocketConnectFailed();
     }
-    copy(&m_connInfo.remoteEnd, sas);
+    copy(&m_connInfo.remote, sas);
 
     // locally bound address
     if (SOCKET_ERROR == getsockname(m_handle, (sockaddr *)&sas, &sasLen)) {
         logMsgError() << "getsockname: " << WinError{};
         return m_notify->onSocketConnectFailed();
     }
-    copy(&m_connInfo.localEnd, sas);
+    copy(&m_connInfo.local, sas);
 
     //-----------------------------------------------------------------------
     // create read/write queue
@@ -339,8 +339,8 @@ void Dim::iSocketConnectInitialize() {
 //===========================================================================
 void Dim::socketConnect(
     ISocketNotify * notify,
-    const Endpoint & remoteEnd,
-    const Endpoint & localEnd,
+    const Endpoint & remote,
+    const Endpoint & local,
     Duration timeout) {
-    ConnSocket::connect(notify, remoteEnd, localEnd, timeout);
+    ConnSocket::connect(notify, remote, local, timeout);
 }

@@ -182,8 +182,8 @@ void AcceptSocket::accept(ListenSocket * listen) {
         listen->m_socket->m_handle,
         listen->m_addrBuf,
         0,                       // receive data length
-        sizeof sockaddr_storage, // localEnd length
-        sizeof sockaddr_storage, // remoteEnd length
+        sizeof sockaddr_storage, // local endpoint length
+        sizeof sockaddr_storage, // remote endpoint length
         nullptr,                 // bytes received
         &listen->m_overlapped);
     WinError err;
@@ -233,9 +233,9 @@ static bool getAcceptInfo(SocketAcceptInfo * out, SOCKET s, void * buffer) {
 
     sockaddr_storage sas;
     memcpy(&sas, lsa, lsaLen);
-    copy(&out->localEnd, sas);
+    copy(&out->local, sas);
     memcpy(&sas, rsa, rsaLen);
-    copy(&out->remoteEnd, sas);
+    copy(&out->remote, sas);
     return true;
 }
 
@@ -323,10 +323,10 @@ void Dim::iSocketAcceptInitialize() {
 //===========================================================================
 void Dim::socketListen(
     ISocketListenNotify * notify,
-    const Endpoint & localEnd) {
-    auto hostage = make_unique<ListenSocket>(notify, localEnd);
+    const Endpoint & local) {
+    auto hostage = make_unique<ListenSocket>(notify, local);
     auto sock = hostage.get();
-    sock->m_handle = winSocketCreate(localEnd);
+    sock->m_handle = winSocketCreate(local);
     if (sock->m_handle == INVALID_SOCKET)
         return pushListenStop(sock);
 
@@ -346,10 +346,10 @@ void Dim::socketListen(
 }
 
 //===========================================================================
-void Dim::socketStop(ISocketListenNotify * notify, const Endpoint & localEnd) {
+void Dim::socketStop(ISocketListenNotify * notify, const Endpoint & local) {
     lock_guard<mutex> lk{s_mut};
     for (auto && ptr : s_listeners) {
-        if (ptr->m_notify == notify && ptr->m_localEnd == localEnd
+        if (ptr->m_notify == notify && ptr->m_localEnd == local
             && ptr->m_handle != INVALID_SOCKET) {
             if (SOCKET_ERROR == closesocket(ptr->m_handle)) {
                 logMsgError() << "closesocket(listen): " << WinError{};

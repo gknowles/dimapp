@@ -43,18 +43,18 @@ private:
 //===========================================================================
 void TnetConn::onSocketAccept(const SocketAcceptInfo & accept) {
     m_accept = accept;
-    cout << m_accept.remoteEnd << " connected on " 
-        << m_accept.localEnd << endl;
+    cout << m_accept.remote << " connected on " 
+        << m_accept.local << endl;
 }
 
 //===========================================================================
 void TnetConn::onSocketDisconnect() {
-    cout << m_accept.remoteEnd << " disconnected" << endl;
+    cout << m_accept.remote << " disconnected" << endl;
 }
 
 //===========================================================================
 void TnetConn::onSocketRead(const SocketData & data) {
-    cout << m_accept.remoteEnd << ": ";
+    cout << m_accept.remote << ": ";
     cout.write(data.data, data.bytes);
 }
 

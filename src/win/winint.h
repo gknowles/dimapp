@@ -135,6 +135,6 @@ void winErrorInitialize();
 ***/
 
 SOCKET winSocketCreate();
-SOCKET winSocketCreate(const Endpoint & localEnd);
+SOCKET winSocketCreate(const Endpoint & local);
 
 } // namespace

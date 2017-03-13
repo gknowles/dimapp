@@ -202,16 +202,16 @@ void AppSocketNotify::onSocketRead(const SocketData & data) {
     } keys[AppSocket::kNumFamilies];
     for (auto && ptr : s_endpoints) {
         int level{kUnknown};
-        if (ptr->endpoint == m_accept.localEnd) {
+        if (ptr->endpoint == m_accept.local) {
             level = kExact;
         } else if (!ptr->endpoint.addr) {
-            if (ptr->endpoint.port == m_accept.localEnd.port) {
+            if (ptr->endpoint.port == m_accept.local.port) {
                 level = kPort;
             } else if (!ptr->endpoint.port) {
                 level = kWild;
             }
         } else if (!ptr->endpoint.port 
-            && ptr->endpoint.addr == m_accept.localEnd.addr
+            && ptr->endpoint.addr == m_accept.local.addr
         ) {
             level = kAddr;
         }

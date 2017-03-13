@@ -10,12 +10,12 @@
 namespace Dim {
 
 struct SocketConnectInfo {
-    Endpoint remoteEnd;
-    Endpoint localEnd;
+    Endpoint remote;
+    Endpoint local;
 };
 struct SocketAcceptInfo {
-    Endpoint remoteEnd;
-    Endpoint localEnd;
+    Endpoint remote;
+    Endpoint local;
 };
 struct SocketData {
     char * data;
@@ -62,8 +62,8 @@ void socketSetNotify(ISocketNotify * notify, ISocketNotify * newNotify);
 //===========================================================================
 void socketConnect(
     ISocketNotify * notify,
-    const Endpoint & remoteEnd,
-    const Endpoint & localEnd,
+    const Endpoint & remote,
+    const Endpoint & local,
     Duration timeout = {} // 0 for default timeout
     );
 
@@ -78,8 +78,8 @@ public:
         const Endpoint & local
     ) = 0;
 };
-void socketListen(ISocketListenNotify * notify, const Endpoint & localEnd);
-void socketStop(ISocketListenNotify * notify, const Endpoint & localEnd);
+void socketListen(ISocketListenNotify * notify, const Endpoint & local);
+void socketStop(ISocketListenNotify * notify, const Endpoint & local);
 
 //===========================================================================
 // write
