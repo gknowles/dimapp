@@ -64,7 +64,7 @@ CharBuf & CharBuf::assign(const char s[], size_t count) {
 }
 
 //===========================================================================
-CharBuf & CharBuf::assign(const string & str, size_t pos, size_t count) {
+CharBuf & CharBuf::assign(string_view str, size_t pos, size_t count) {
     assert(pos < str.size());
     return replace(
         0, m_size, str.data() + pos, min(str.size(), pos + count) - pos);
@@ -318,7 +318,7 @@ CharBuf & CharBuf::append(const char src[], size_t srcLen) {
 }
 
 //===========================================================================
-CharBuf & CharBuf::append(const string & str, size_t pos, size_t count) {
+CharBuf & CharBuf::append(string_view str, size_t pos, size_t count) {
     assert(pos < str.size());
     return append(str.data() + pos, min(str.size(), pos + count) - pos);
 }
@@ -389,12 +389,12 @@ int CharBuf::compare(size_t pos, size_t count, const char src[], size_t srcLen)
 }
 
 //===========================================================================
-int CharBuf::compare(const string & str) const {
+int CharBuf::compare(string_view str) const {
     return compare(str.data(), str.size());
 }
 
 //===========================================================================
-int CharBuf::compare(size_t pos, size_t count, const string & str) const {
+int CharBuf::compare(size_t pos, size_t count, string_view str) const {
     return compare(pos, count, str.data(), str.size());
 }
 
@@ -408,38 +408,9 @@ int CharBuf::compare(const CharBuf & buf) const {
     auto re = buf.m_buffers.end();
     const char * rdata;
     int rcount;
-    goto compare_new_buffers;
 
-    for (;;) {
-        if (mycount < rcount) {
-            int rc = memcmp(mydata, rdata, mycount);
-            if (rc)
-                return rc;
-            if (++myi == mye)
-                return -1;
-            rdata += mycount;
-            rcount -= mycount;
-            mydata = (*myi)->m_data;
-            mycount = (*myi)->m_used;
-            continue;
-        }
-
-        int rc = memcmp(mydata, rdata, rcount);
-        if (rc)
-            return rc;
-        if (mycount > rcount) {
-            if (++ri == re)
-                return 1;
-            mydata += rcount;
-            mycount -= rcount;
-            rdata = (*ri)->m_data;
-            rcount = (*ri)->m_used;
-            continue;
-        }
-        ++myi;
-        ++ri;
-
-    compare_new_buffers:
+    for (;; ++myi, ++ri) {
+        // compare two new buffers
         if (myi == mye)
             return (ri == re) ? 0 : -1;
         if (ri == re)
@@ -448,6 +419,38 @@ int CharBuf::compare(const CharBuf & buf) const {
         mycount = (*myi)->m_used;
         rdata = (*ri)->m_data;
         rcount = (*ri)->m_used;
+
+        for (;;) {
+            if (mycount < rcount) {
+                // compare single remote buffer with as many local buffers
+                // as it can encompass
+                int rc = memcmp(mydata, rdata, mycount);
+                if (rc)
+                    return rc;
+                if (++myi == mye)
+                    return -1;
+                rdata += mycount;
+                rcount -= mycount;
+                mydata = (*myi)->m_data;
+                mycount = (*myi)->m_used;
+                continue;
+            }
+
+            // compare remote buffers as long as they fit within local buffer
+            int rc = memcmp(mydata, rdata, rcount);
+            if (rc)
+                return rc;
+            if (mycount == rcount) {
+                // advance to both a new remote buffer and a new local buffer
+                break;
+            }
+            if (++ri == re)
+                return 1;
+            mydata += rcount;
+            mycount -= rcount;
+            rdata = (*ri)->m_data;
+            rcount = (*ri)->m_used;
+        }
     }
 }
 
@@ -857,12 +860,12 @@ CharBuf::erase(vector<CharBuf::Buffer *>::iterator it, int pos, int remove) {
 ***/
 
 //===========================================================================
-bool Dim::operator==(const CharBuf & left, const std::string & right) {
+bool Dim::operator==(const CharBuf & left, string_view right) {
     return left.compare(right) == 0;
 }
 
 //===========================================================================
-bool Dim::operator==(const std::string & left, const CharBuf & right) {
+bool Dim::operator==(string_view left, const CharBuf & right) {
     return right.compare(left) == 0;
 }
 

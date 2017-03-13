@@ -15,7 +15,7 @@ using namespace Dim;
 ***/
 
 //===========================================================================
-bool Dim::parse(Address * out, const char src[]) {
+bool Dim::parse(Address * out, string_view src) {
     Endpoint sa;
     if (!parse(&sa, src, 9)) {
         *out = {};
@@ -40,12 +40,21 @@ std::ostream & Dim::operator<<(std::ostream & os, const Address & addr) {
 ***/
 
 //===========================================================================
-bool Dim::parse(Endpoint * end, const char src[], int defaultPort) {
+bool Dim::parse(Endpoint * end, string_view src, int defaultPort) {
     sockaddr_storage sas;
     int sasLen = sizeof(sas);
-    if (SOCKET_ERROR
-        == WSAStringToAddress(
-               (char *)src, AF_INET, NULL, (sockaddr *)&sas, &sasLen)) {
+    string tmp;
+    if (src[src.size()]) {
+        tmp = src;
+        src = tmp;
+    }
+    if (SOCKET_ERROR == WSAStringToAddress(
+        (char *) src.data(), 
+        AF_INET, 
+        NULL, 
+        (sockaddr *)&sas, 
+        &sasLen
+    )) {
         *end = {};
         return false;
     }
@@ -166,7 +175,7 @@ void QueryTask::onTask() {
 void Dim::endpointQuery(
     int * cancelId,
     IEndpointNotify * notify,
-    const std::string & name,
+    string_view name,
     int defaultPort) {
     QueryTask * task{nullptr};
     for (;;) {
@@ -183,7 +192,7 @@ void Dim::endpointQuery(
 
     // if the name is the string form of an address just return the address
     Endpoint end;
-    if (parse(&end, name.c_str(), defaultPort)) {
+    if (parse(&end, name, defaultPort)) {
         task->ends.push_back(end);
         taskPushEvent(*task);
         return;

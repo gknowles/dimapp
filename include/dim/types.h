@@ -43,7 +43,7 @@ typedef Clock::time_point TimePoint;
 *
 ***/
 
-enum RunMode {
+enum RunMode : int {
     kRunStopped,
     kRunStarting,
     kRunRunning,

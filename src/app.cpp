@@ -176,7 +176,6 @@ bool MainTimer::queryDestroy(QueryFn notify) {
 
 //===========================================================================
 int Dim::appRun(IAppNotify & app, int argc, char * argv[]) {
-    iHashInitialize();
     iConsoleInitialize();
     iTaskInitialize();
     iTimerInitialize();
@@ -184,6 +183,7 @@ int Dim::appRun(IAppNotify & app, int argc, char * argv[]) {
     iFileInitialize();
     iSocketInitialize();
     iAppSocketInitialize();
+    iHttpRouteInitialize();
 
     s_app = &app;
     s_app->m_argc = argc;
@@ -208,7 +208,7 @@ void Dim::appSignalShutdown(int exitcode) {
 }
 
 //===========================================================================
-void Dim::appSignalUsageError(const string & err, const string & detail) {
+void Dim::appSignalUsageError(string_view err, string_view detail) {
     if (!err.empty())
         return appSignalUsageError(EX_USAGE, err, detail);
     Cli cli;
@@ -216,20 +216,17 @@ void Dim::appSignalUsageError(const string & err, const string & detail) {
 }
 
 //===========================================================================
-void Dim::appSignalUsageError(
-    int code,
-    const string & err,
-    const string & detail) {
+void Dim::appSignalUsageError(int code, string_view err, string_view detail) {
     if (code) {
         Cli cli;
-        const string & em = err.empty() ? cli.errMsg() : err;
-        const string & dm = detail.empty() ? cli.errDetail() : detail;
+        auto em = err.empty() ? cli.errMsg() : err;
+        auto dm = detail.empty() ? cli.errDetail() : detail;
         if (!em.empty())
             logMsgError() << "Error: " << em;
         if (!dm.empty())
             logMsgInfo() << dm;
         auto os = logMsgInfo();
-        cli.writeUsageEx(os);
+        cli.printUsageEx(os);
     }
     return appSignalShutdown(code);
 }

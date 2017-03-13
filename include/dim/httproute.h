@@ -23,17 +23,17 @@ public:
 
     virtual void onHttpRequest(
         unsigned reqId,
-        std::unordered_multimap<std::string, std::string> & params,
-        HttpMsg & msg) = 0;
+        std::unordered_multimap<std::string_view, std::string_view> & params,
+        HttpRequest & msg) = 0;
 };
 
 void httpRouteAdd(
     IHttpRouteNotify * notify,
-    const std::string host,
-    const std::string path,
+    std::string_view host,
+    std::string_view path,
     unsigned methods = fHttpMethodGet);
 
-void httpRouteReply(unsigned reqId, HttpMsg & msg, bool more = false);
+void httpRouteReply(unsigned reqId, HttpResponse & msg, bool more = false);
 void httpRouteReply(unsigned reqId, const CharBuf & data, bool more);
 
 } // namespace

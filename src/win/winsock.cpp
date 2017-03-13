@@ -282,16 +282,18 @@ void SocketBase::onRead() {
         m_notify->onSocketRead(data);
 
         lock_guard<mutex> lk{s_mut};
-        queueRead_LK();
+        if (m_mode == Mode::kActive)
+            return queueRead_LK();
+        assert(m_mode == Mode::kClosing);
+    }
+
+    m_notify->onSocketDisconnect();
+    unique_lock<mutex> lk{s_mut};
+    if (m_sending.empty()) {
+        lk.unlock();
+        delete this;
     } else {
-        m_notify->onSocketDisconnect();
-        unique_lock<mutex> lk{s_mut};
-        if (m_sending.empty()) {
-            lk.unlock();
-            delete this;
-        } else {
-            m_mode = Mode::kClosed;
-        }
+        m_mode = Mode::kClosed;
     }
 }
 

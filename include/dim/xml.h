@@ -9,6 +9,7 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace Dim {
@@ -37,15 +38,18 @@ public:
 
     virtual void clear();
 
-    IXBuilder & start(const char name[]);
+    IXBuilder & start(const char name[], size_t count = -1);
+    IXBuilder & start(std::string_view name);
     IXBuilder & end();
-    IXBuilder & startAttr(const char name[]);
+    IXBuilder & startAttr(const char name[], size_t count = -1);
+    IXBuilder & startAttr(std::string_view name);
     IXBuilder & endAttr();
 
     IXBuilder & elem(const char name[], const char text[] = nullptr);
     IXBuilder & attr(const char name[], const char text[]);
 
-    IXBuilder & text(const char text[]);
+    IXBuilder & text(const char text[], size_t count = -1);
+    IXBuilder & text(std::string_view text);
 
 protected:
     virtual void append(const char text[]) = 0;
@@ -65,12 +69,13 @@ private:
         append(text);
     }
 
-    void addRaw(const char text[], size_t count) { append(text, count); }
+    void addRaw(const char text[], size_t count);
 
-    template <bool isContent> void addText(const char text[]);
+    template <bool isContent> 
+    void addText(const char text[], size_t count = -1);
     IXBuilder & fail();
 
-    enum State;
+    enum State : int;
     State m_state;
     struct Pos {
         size_t pos;
@@ -85,7 +90,7 @@ IXBuilder & operator<<(IXBuilder & out, int val);
 IXBuilder & operator<<(IXBuilder & out, unsigned val);
 IXBuilder & operator<<(IXBuilder & out, char val);
 IXBuilder & operator<<(IXBuilder & out, const char val[]);
-IXBuilder & operator<<(IXBuilder & out, const std::string & val);
+IXBuilder & operator<<(IXBuilder & out, std::string_view val);
 
 template <typename T>
 inline IXBuilder & operator<<(IXBuilder & out, const T & val) {

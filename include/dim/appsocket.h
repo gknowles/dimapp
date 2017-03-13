@@ -63,24 +63,24 @@ void appSocketAddMatch(IAppSocketMatchNotify * notify, AppSocket::Family fam);
 void appSocketAddListener(
     IAppSocketNotifyFactory * factory,
     AppSocket::Family fam,
-    const std::string & type,
+    std::string_view type,
     const Endpoint & end);
 
 void appSocketRemoveListener(
     IAppSocketNotifyFactory * factory,
     AppSocket::Family fam,
-    const std::string & type,
+    std::string_view type,
     const Endpoint & end);
 
 //===========================================================================
 // Add and remove listeners with implicitly created factories. Implemented
 // as templates where the template parameter is the class, derived from 
-// IAppSocketNotify, that will be instanciated for incoming connections.
+// ISocketNotify, that will be instanciated for incoming connections.
 template <typename S>
 inline void appSocketUpdateListener(
     bool add,
     AppSocket::Family fam,
-    const std::string & type,
+    std::string_view type,
     const Endpoint & end) {
     static class Factory : public IAppSocketNotifyFactory {
         std::unique_ptr<ISocketNotify> create() override {
@@ -98,7 +98,7 @@ inline void appSocketUpdateListener(
 template <typename S>
 inline void appSocketAddListener(
     AppSocket::Family fam,
-    const std::string & type,
+    std::string_view type,
     const Endpoint & end) {
     appSocketUpdateListener<S>(true, fam, type, end);
 }
@@ -107,7 +107,7 @@ inline void appSocketAddListener(
 template <typename S>
 inline void appSocketRemoveListener(
     AppSocket::Family fam,
-    const std::string & type,
+    std::string_view type,
     const Endpoint & end) {
     appSocketUpdateListener<S>(false, fam, type, end);
 }

@@ -1,12 +1,13 @@
 // cli.h - dim cli
 //
-// Command line parser
+// Command line parser toolkit
 //
-// Instead of just trying to figure this out from the header take a look
-// at the documentation and examples:
+// Instead of trying to figure it all out from just this header please take 
+// a moment and look at the documentation and examples:
 // https://github.com/gknowles/dimcli
 
 #pragma once
+
 
 #include "config.h"
 
@@ -20,6 +21,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
 
 namespace Dim {
 
@@ -63,8 +65,6 @@ public:
     struct ArgMatch;
     template <typename T> struct Value;
     template <typename T> struct ValueVec;
-
-    enum NameListType : int;
 
 public:
     // Creates a handle to the shared command line configuration, this
@@ -195,26 +195,26 @@ public:
     //-----------------------------------------------------------------------
     // Help
 
-    // writeHelp & writeUsage return the current exitCode()
-    int writeHelp(
+    // printHelp & printUsage return the current exitCode()
+    int printHelp(
         std::ostream & os,
         const std::string & progName = {},
         const std::string & cmd = {}) const;
-    int writeUsage(
+    int printUsage(
         std::ostream & os,
         const std::string & progName = {},
         const std::string & cmd = {}) const;
-    // Same as writeUsage(), except lists all non-default options instead of
-    // just the [OPTIONS] catchall.
-    int writeUsageEx(
+    // Same as printUsage(), except individually lists all non-default options 
+    // instead of the [OPTIONS] catchall.
+    int printUsageEx(
         std::ostream & os,
         const std::string & progName = {},
         const std::string & cmd = {}) const;
 
     void
-    writePositionals(std::ostream & os, const std::string & cmd = {}) const;
-    void writeOptions(std::ostream & os, const std::string & cmd = {}) const;
-    void writeCommands(std::ostream & os) const;
+    printPositionals(std::ostream & os, const std::string & cmd = {}) const;
+    void printOptions(std::ostream & os, const std::string & cmd = {}) const;
+    void printCommands(std::ostream & os) const;
 
     //-----------------------------------------------------------------------
     // Parsing
@@ -252,7 +252,9 @@ public:
     static std::vector<std::string> toWindowsArgv(const std::string & cmdline);
 
     template <typename T>
-    static bool stringTo(T & out, const std::string & src);
+    bool fromString(T & out, const std::string & src) const;
+    template <typename T>
+    bool toString(std::string & out, const T & src) const;
 
     //-----------------------------------------------------------------------
     // Support for parsing callbacks
@@ -332,6 +334,7 @@ private:
     GroupConfig & grpCfg();
     const GroupConfig & grpCfg() const;
 
+    std::string descStr(const Cli::OptBase & opt) const;
     int writeUsageImpl(
         std::ostream & os,
         const std::string & arg0,
@@ -344,18 +347,34 @@ private:
         size_t & colWidth,
         const OptIndex & ndx,
         CommandConfig & cmd,
-        NameListType type,
+        int type,
         bool flatten) const;
     std::string nameList(
         const OptIndex & ndx,
         const OptBase & opt,
-        NameListType type) const;
+        int type) const;
 
     bool fail(int code, const std::string & msg);
+
+    template <typename T>
+    auto fromString_impl(T & out, const std::string & src, int, int) const
+        -> decltype(out = src, bool());
+    template <typename T>
+    auto fromString_impl(T & out, const std::string & src, int, long) const
+        -> decltype(std::declval<std::istream &>() >> out, bool());
+    template <typename T>
+    bool fromString_impl(T & out, const std::string & src, long, long) const;
+
+    template <typename T>
+    auto toString_impl(std::string & out, const T & src, int) const
+        -> decltype(std::declval<std::ostream &>() << src, bool());
+    template <typename T>
+    bool toString_impl(std::string & out, const T & src, long) const;
 
     std::shared_ptr<Config> m_cfg;
     std::string m_group;
     std::string m_command;
+    mutable std::stringstream m_interpreter;
 };
 
 //===========================================================================
@@ -436,31 +455,34 @@ inline std::shared_ptr<V> Cli::getProxy(T * ptr) {
 }
 
 //===========================================================================
-// stringTo - converts from string to T
+// fromString - converts from string to T
 //===========================================================================
-// static
-template <typename T> bool Cli::stringTo(T & out, const std::string & src) {
-    // versions of stringTo_impl taking ints as extra parameters are
-    // preferred, if they don't exist for T (because no out=src assignment
-    // operator exists) only then are versions taking a long considered.
-    return CliDetail::stringTo_impl(out, src, 0, 0);
+template <typename T> 
+bool Cli::fromString(T & out, const std::string & src) const {
+    // versions of fromString_impl taking ints as extra parameters are
+    // preferred (better conversion from 0), if they don't exist for T 
+    // (because no out=src assignment operator exists) then the versions 
+    // taking longs are considered.
+    return fromString_impl(out, src, 0, 0);
 }
 
-namespace CliDetail {
 //===========================================================================
 template <typename T>
-auto stringTo_impl(T & out, const std::string & src, int, int)
-    -> decltype(out = src, bool()) {
+auto Cli::fromString_impl(T & out, const std::string & src, int, int) const
+    -> decltype(out = src, bool()) 
+{
     out = src;
     return true;
 }
 
 //===========================================================================
 template <typename T>
-auto stringTo_impl(T & out, const std::string & src, int, long)
-    -> decltype(std::declval<std::stringstream &>() >> out, bool()) {
-    std::stringstream interpreter(src);
-    if (!(interpreter >> out) || !(interpreter >> std::ws).eof()) {
+auto Cli::fromString_impl(T & out, const std::string & src, int, long) const
+    -> decltype(std::declval<std::istream &>() >> out, bool()) 
+{
+    m_interpreter.clear();
+    m_interpreter.str(src);
+    if (!(m_interpreter >> out) || !(m_interpreter >> std::ws).eof()) {
         out = {};
         return false;
     }
@@ -469,7 +491,12 @@ auto stringTo_impl(T & out, const std::string & src, int, long)
 
 //===========================================================================
 template <typename T>
-bool stringTo_impl(T & out, const std::string & src, long, long) {
+bool Cli::fromString_impl(
+    T &, // out 
+    const std::string &, // src
+    long, 
+    long
+) const {
     // In order to parse an argument there must be one of:
     //  - assignment operator for std::string to T
     //  - istream extraction operator for T
@@ -478,7 +505,37 @@ bool stringTo_impl(T & out, const std::string & src, long, long) {
     assert(false && "no assignment from string or stream extraction operator");
     return false;
 }
-} // namespace
+
+//===========================================================================
+// toString - converts to string from T, returns empty string and returns
+// false if conversion fails or no conversion available.
+//===========================================================================
+template <typename T>
+bool Cli::toString(std::string & out, const T & src) const {
+    return toString_impl(out, src, 0);
+}
+
+//===========================================================================
+template <typename T>
+auto Cli::toString_impl(std::string & out, const T & src, int) const 
+    -> decltype(std::declval<std::ostream &>() << src, bool())
+{
+    m_interpreter.clear();
+    m_interpreter.str("");
+    if (!(m_interpreter << src)) {
+        out.clear();
+        return false;
+    }
+    out = m_interpreter.str();
+    return true;
+}
+
+//===========================================================================
+template <typename T>
+bool Cli::toString_impl(std::string & out, const T &, long) const {
+    out.clear();
+    return false;
+}
 
 
 /****************************************************************************
@@ -511,6 +568,7 @@ public:
         std::string desc;
         std::string sortKey;
         size_t pos{0};
+        bool def{false};
     };
 
 public:
@@ -534,7 +592,7 @@ public:
     virtual void reset() = 0;
 
     // parses the string into the value, returns false on error
-    virtual bool parseValue(const std::string & value) = 0;
+    virtual bool parseValue(const std::string & value);
 
     // set to (or add to vec) value for missing optional
     virtual void unspecifiedValue() = 0;
@@ -548,8 +606,14 @@ public:
     std::string defaultPrompt() const;
 
 protected:
-    virtual bool parseValue(Cli & cli, const std::string & value) = 0;
-    virtual bool checkValue(Cli & cli, const std::string & value) = 0;
+    virtual bool fromString(Cli & cli, const std::string & value) = 0;
+    virtual bool defaultValueStr(
+        std::string & out, 
+        const Cli & cli
+    ) const = 0;
+
+    virtual bool parseAction(Cli & cli, const std::string & value) = 0;
+    virtual bool checkAction(Cli & cli, const std::string & value) = 0;
     virtual bool afterActions(Cli & cli) = 0;
     virtual void set(const std::string & name, size_t pos) = 0;
 
@@ -558,7 +622,7 @@ protected:
 
     // Allows the type unaware layer to determine if a new option is pointing
     // at the same value as an existing option -- with RTTI disabled
-    virtual bool sameValue(const void * value) = 0;
+    virtual bool sameValue(const void * value) const = 0;
 
     template <typename T> void setValueName();
 
@@ -643,10 +707,10 @@ public:
     // Set group under which this argument will show up in the help text.
     A & group(const std::string & val);
 
-    // Set desciption to associate with the argument in writeHelp()
+    // Set desciption to associate with the argument in printHelp()
     A & desc(const std::string & val);
 
-    // Set name of meta-variable in writeHelp. For example, in "--count NUM"
+    // Set name of meta-variable in printHelp. For example, in "--count NUM"
     // this is used to change "NUM" to something else.
     A & valueDesc(const std::string & val);
 
@@ -741,9 +805,9 @@ public:
     const T & defaultValue() const { return m_defValue; }
 
 protected:
-    bool parseValue(Cli & cli, const std::string & value) final;
     bool inverted() const final;
-    bool checkValue(Cli & cli, const std::string & value) final;
+    bool parseAction(Cli & cli, const std::string & value) final;
+    bool checkAction(Cli & cli, const std::string & value) final;
     bool afterActions(Cli & cli) final;
     bool exec(
         Cli & cli,
@@ -768,14 +832,6 @@ inline Cli::OptShim<A, T>::OptShim(const std::string & keys, bool boolean)
 
 //===========================================================================
 template <typename A, typename T>
-inline bool
-Cli::OptShim<A, T>::parseValue(Cli & cli, const std::string & val) {
-    auto self = static_cast<A *>(this);
-    return m_parse(cli, *self, val);
-}
-
-//===========================================================================
-template <typename A, typename T>
 inline bool Cli::OptShim<A, T>::inverted() const {
     return this->m_bool && this->m_flagValue && this->m_flagDefault;
 }
@@ -791,7 +847,15 @@ template <> inline bool Cli::OptShim<Cli::Opt<bool>, bool>::inverted() const {
 //===========================================================================
 template <typename A, typename T>
 inline bool
-Cli::OptShim<A, T>::checkValue(Cli & cli, const std::string & val) {
+Cli::OptShim<A, T>::parseAction(Cli & cli, const std::string & val) {
+    auto self = static_cast<A *>(this);
+    return m_parse(cli, *self, val);
+}
+
+//===========================================================================
+template <typename A, typename T>
+inline bool
+Cli::OptShim<A, T>::checkAction(Cli & cli, const std::string & val) {
     return exec(cli, val, m_checks);
 }
 
@@ -854,6 +918,8 @@ inline A & Cli::OptShim<A, T>::valueDesc(const std::string & val) {
 template <typename A, typename T>
 inline A & Cli::OptShim<A, T>::defaultValue(const T & val) {
     m_defValue = val;
+    for (auto && cd : m_choiceDescs)
+        cd.second.def = (val == m_choices[cd.second.pos]);
     return static_cast<A &>(*this);
 }
 
@@ -900,6 +966,7 @@ inline A & Cli::OptShim<A, T>::choice(
     cd.pos = m_choices.size();
     cd.desc = desc;
     cd.sortKey = sortKey;
+    cd.def = (val == this->defaultValue());
     m_choices.push_back(val);
     return static_cast<A &>(*this);
 }
@@ -1034,14 +1101,15 @@ public:
     const std::string & from() const final { return m_proxy->m_match.name; }
     int pos() const final { return m_proxy->m_match.pos; }
     void reset() final;
-    bool parseValue(const std::string & value) final;
     void unspecifiedValue() final;
     size_t size() const final;
 
 private:
     friend class Cli;
+    bool fromString(Cli & cli, const std::string & value) final;
+    bool defaultValueStr(std::string & out, const Cli & cli) const final;
     void set(const std::string & name, size_t pos) final;
-    bool sameValue(const void * value) final {
+    bool sameValue(const void * value) const final {
         return value == m_proxy->m_value;
     }
 
@@ -1075,10 +1143,10 @@ template <typename T> inline void Cli::Opt<T>::reset() {
 
 //===========================================================================
 template <typename T>
-inline bool Cli::Opt<T>::parseValue(const std::string & value) {
+inline bool Cli::Opt<T>::fromString(Cli & cli, const std::string & value) {
     if (this->m_flagValue) {
         bool flagged;
-        if (!Cli::stringTo(flagged, value))
+        if (!cli.fromString(flagged, value))
             return false;
         if (flagged)
             *m_proxy->m_value = this->defaultValue();
@@ -1091,7 +1159,13 @@ inline bool Cli::Opt<T>::parseValue(const std::string & value) {
         *m_proxy->m_value = this->m_choices[i->second.pos];
         return true;
     }
-    return Cli::stringTo(*m_proxy->m_value, value);
+    return cli.fromString(*m_proxy->m_value, value);
+}
+
+//===========================================================================
+template <typename T> inline bool 
+Cli::Opt<T>::defaultValueStr(std::string & out, const Cli & cli) const {
+    return cli.toString(out, this->defaultValue());
 }
 
 //===========================================================================
@@ -1142,6 +1216,8 @@ public:
     std::vector<T> & operator*() { return *m_proxy->m_values; }
     std::vector<T> * operator->() { return m_proxy->m_values; }
 
+    T & operator[](size_t index) { return (*m_proxy->m_values)[index]; }
+
     // True if values where added from the command line
     explicit operator bool() const { return !m_proxy->m_values->empty(); }
 
@@ -1149,7 +1225,6 @@ public:
     const std::string & from() const final { return from(size() - 1); }
     int pos() const final { return pos(size() - 1); }
     void reset() final;
-    bool parseValue(const std::string & value) final;
     void unspecifiedValue() final;
     size_t size() const final;
 
@@ -1161,8 +1236,10 @@ public:
 
 private:
     friend class Cli;
+    bool fromString(Cli & cli, const std::string & value) final;
+    bool defaultValueStr(std::string & out, const Cli & cli) const final;
     void set(const std::string & name, size_t pos) final;
-    bool sameValue(const void * value) final {
+    bool sameValue(const void * value) const final {
         return value == m_proxy->m_values;
     }
 
@@ -1210,10 +1287,10 @@ template <typename T> inline void Cli::OptVec<T>::reset() {
 
 //===========================================================================
 template <typename T>
-inline bool Cli::OptVec<T>::parseValue(const std::string & value) {
+inline bool Cli::OptVec<T>::fromString(Cli & cli, const std::string & value) {
     if (this->m_flagValue) {
         bool flagged;
-        if (!Cli::stringTo(flagged, value))
+        if (!cli.fromString(flagged, value))
             return false;
         if (flagged)
             m_proxy->m_values->push_back(this->defaultValue());
@@ -1228,10 +1305,17 @@ inline bool Cli::OptVec<T>::parseValue(const std::string & value) {
     }
 
     T tmp;
-    if (!Cli::stringTo(tmp, value))
+    if (!cli.fromString(tmp, value))
         return false;
     m_proxy->m_values->push_back(std::move(tmp));
     return true;
+}
+
+//===========================================================================
+template <typename T> inline bool 
+Cli::OptVec<T>::defaultValueStr(std::string & out, const Cli &) const {
+    out.clear();
+    return false;
 }
 
 //===========================================================================
@@ -1245,5 +1329,3 @@ template <typename T> inline size_t Cli::OptVec<T>::size() const {
 }
 
 } // namespace
-
-#include "config_suffix.h"

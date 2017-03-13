@@ -1,4 +1,4 @@
-// charbuftest.cpp - dim test charbuf
+// tokentabletest.cpp - dim test tokentable
 #include "pch.h"
 #pragma hdrstop
 
@@ -60,51 +60,22 @@ void Application::onLog(LogType type, string_view msg) {
 //===========================================================================
 void Application::onAppRun() {
     int line = 0;
-    CharBuf buf;
-    buf.assign("abcdefgh");
-    EXPECT(to_string(buf) == "abcdefgh"); // to_string
 
-    // replace in the middle with sz
-    buf.replace(3, 3, "DEF"); // same size
-    EXPECT(buf == "abcDEFgh");
-    buf.replace(3, 3, "MN"); // shrink
-    EXPECT(buf == "abcMNgh");
-    buf.replace(3, 2, "def"); // expand
-    EXPECT(buf == "abcdefgh");
+    const TokenTable::Token numbers[] = {
+        {1, "one"},
+        {2, "two"},
+        {3, "three"},
+        {4, "four"},
+        {5, "five"},
+        {21, "twenty-one"},
+        {22, "twenty-two"},
+    };
+    const TokenTable numberTbl(numbers, size(numbers));
 
-    // replace at the end with sz
-    buf.replace(5, 3, "FGH"); // same size
-    EXPECT(buf == "abcdeFGH");
-    buf.replace(5, 3, "fg"); // shrink
-    EXPECT(buf == "abcdefg");
-    buf.replace(5, 2, "FGH"); // expand
-    EXPECT(buf == "abcdeFGH");
-
-    // replace in the middle with len
-    buf.replace(3, 3, "XYZ", 3); // same size
-    EXPECT(buf == "abcXYZGH");
-    buf.replace(3, 3, "DE", 2); // shrink
-    EXPECT(buf == "abcDEGH");
-    buf.replace(3, 2, "def", 3); // expand
-    EXPECT(buf == "abcdefGH");
-
-    // replace at the end with len
-    buf.replace(6, 2, "gh", 2); // same size
-    EXPECT(buf == "abcdefgh");
-    buf.replace(5, 3, "FG", 2); // shrink
-    EXPECT(buf == "abcdeFG");
-    buf.replace(5, 2, "fgh", 3); // expand
-    EXPECT(buf == "abcdefgh");
-
-    // insert amount smaller than tail
-    buf.replace(4, 0, "x"); // insert one char
-    EXPECT(buf == "abcdxefgh");
-    buf.replace(4, 1, ""); // erase one char
-    EXPECT(buf == "abcdefgh");
-
-    buf.assign(5000, 'a');
-    buf.insert(4094, "x");
-    EXPECT(buf.compare(4092, 5, "aaxaa") == 0);
+    EXPECT(tokenTableGetEnum(numberTbl, "invalid", 0) == 0);
+    for (auto && tok : numbers) {
+        EXPECT(tokenTableGetEnum(numberTbl, tok.name, 0) == tok.id);
+    }
 
     if (m_errors) {
         ConsoleScopedAttr attr(kConsoleError);

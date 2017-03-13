@@ -24,10 +24,10 @@ namespace Dim {
 
 enum HttpHdr {
     kHttpInvalid,
-    KHttp_Authority,
+    kHttp_Authority,
     kHttp_Method,
     kHttp_Path,
-    kHttp_Schema,
+    kHttp_Scheme,
     kHttp_Status,
     kHttpAccept,
     kHttpAcceptCharset,
@@ -126,12 +126,16 @@ public:
     const HdrList headers() const;
 
     HdrName headers(HttpHdr header);
+    const HdrName headers(HttpHdr header) const;
     HdrName headers(const char name[]);
+    const HdrName headers(const char name[]) const;
 
     CharBuf & body();
     const CharBuf & body() const;
 
     ITempHeap & heap();
+
+    virtual bool isRequest() const = 0;
 
 protected:
     virtual bool checkPseudoHeaders() const = 0;
@@ -154,6 +158,24 @@ private:
     HdrName * m_firstHeader{nullptr};
 };
 
+struct HttpMsg::HdrValue {
+    const char * m_value;
+    HdrValue * m_next{nullptr};
+    HdrValue * m_prev{nullptr};
+};
+
+struct HttpMsg::HdrName {
+    HttpHdr m_id{kHttpInvalid};
+    const char * m_name{nullptr};
+    HdrName * m_next{nullptr};
+    HdrValue m_value;
+
+    ForwardListIterator<HdrValue> begin();
+    ForwardListIterator<HdrValue> end();
+    ForwardListIterator<const HdrValue> begin() const;
+    ForwardListIterator<const HdrValue> end() const;
+};
+
 struct HttpMsg::HdrList {
     HdrName * m_firstHeader{nullptr};
 
@@ -163,22 +185,6 @@ struct HttpMsg::HdrList {
     ForwardListIterator<const HdrName> end() const;
 };
 
-struct HttpMsg::HdrName {
-    HttpHdr m_id{kHttpInvalid};
-    const char * m_name{nullptr};
-    HdrName * m_next{nullptr};
-
-    ForwardListIterator<HdrValue> begin();
-    ForwardListIterator<HdrValue> end();
-    ForwardListIterator<const HdrValue> begin() const;
-    ForwardListIterator<const HdrValue> end() const;
-};
-
-struct HttpMsg::HdrValue {
-    const char * m_value;
-    HdrValue * m_next{nullptr};
-    HdrValue * m_prev{nullptr};
-};
 
 class HttpRequest : public HttpMsg {
 public:
@@ -193,6 +199,8 @@ public:
     const char * query() const;
     const char * fragment() const;
 
+    bool isRequest() const override { return true; }
+
 private:
     bool checkPseudoHeaders() const override;
 };
@@ -200,6 +208,8 @@ private:
 class HttpResponse : public HttpMsg {
 public:
     int status() const;
+
+    bool isRequest() const override { return false; }
 
 private:
     bool checkPseudoHeaders() const override;

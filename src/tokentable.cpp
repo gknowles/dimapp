@@ -35,13 +35,13 @@ TokenTable::TokenTable(const Token * src, size_t count) {
             int pos = 0;
             while (a->name[pos] == b->name[pos]) {
                 if (!a->name[pos])
-                    goto next_a;
+                    goto NEXT_A;
                 pos += 1;
             }
             if (pos >= m_hashLen)
                 m_hashLen = pos + 1;
         }
-    next_a:;
+    NEXT_A:;
     }
 
     Value * base = m_names.data();

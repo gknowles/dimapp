@@ -3,8 +3,17 @@
 // For documentation and examples:
 // https://github.com/gknowles/dimcli
 
-#include "pch.h"
-#pragma hdrstop
+#define DIM_LIB_SOURCE
+#include "dim/cli.h"
+
+#include <algorithm>
+#include <cstdlib>
+#include <cstring>
+#include <fstream>
+#include <iostream>
+#include <locale>
+#include <sstream>
+#include <unordered_set>
 
 using namespace std;
 using namespace Dim;
@@ -43,15 +52,20 @@ struct OptName {
     bool optional; // value doesn't have to be present? (non-bools only)
     string name;   // name of argument (only for positionals)
 };
-} // namespace
 
-// Filter option names for opts that are externally bool
-enum Cli::NameListType {
+// Option name filters for opts that are externally bool
+enum NameListType : int {
     kNameEnable,     // include names that enable the opt
     kNameDisable,    // include names that disable
     kNameAll,        // include all names
     kNameNonDefault, // include names that change from the default
 };
+
+struct CodecvtWchar : codecvt<wchar_t, char, mbstate_t> {
+    // public destructor required for use with wstring_convert
+    ~CodecvtWchar() {}
+};
+} // namespace
 
 struct Cli::ArgKey {
     string sort; // sort key
@@ -138,11 +152,11 @@ findCmdAlways(Cli::Config & cfg, const string & name) {
 }
 
 //===========================================================================
-static fs::path displayName(const fs::path & file) {
+static string displayName(const fs::path & file) {
 #if defined(_WIN32)
-    return file.stem();
+    return file.stem().string();
 #else
-    return file.filename();
+    return file.filename().string();
 #endif
 }
 
@@ -166,6 +180,17 @@ replace(vector<T> & out, size_t pos, size_t count, vector<T> && src) {
 
 /****************************************************************************
 *
+*   CliLocal
+*
+***/
+
+//===========================================================================
+CliLocal::CliLocal()
+    : Cli(make_shared<Config>()) {}
+
+
+/****************************************************************************
+*
 *   Cli::OptBase
 *
 ***/
@@ -183,6 +208,12 @@ Cli::OptBase::OptBase(const string & names, bool boolean)
 void Cli::OptBase::setNameIfEmpty(const string & name) {
     if (m_fromName.empty())
         m_fromName = name;
+}
+
+//===========================================================================
+bool Cli::OptBase::parseValue(const std::string & value) {
+    Cli cli;
+    return fromString(cli, value);
 }
 
 //===========================================================================
@@ -288,7 +319,7 @@ void Cli::OptBase::indexShortName(
     bool invert,
     bool optional) {
     ndx.shortNames[name] = {this, invert, optional};
-    setNameIfEmpty('-' + string(1, name));
+    setNameIfEmpty("-"s += name);
 }
 
 //===========================================================================
@@ -307,10 +338,10 @@ void Cli::OptBase::indexLongName(
         }
         key.pop_back();
     }
-    setNameIfEmpty("--" + key);
+    setNameIfEmpty("--"s += key);
     ndx.longNames[key] = {this, invert, optional};
     if (m_bool && allowNo)
-        ndx.longNames["no-" + key] = {this, !invert, optional};
+        ndx.longNames["no-"s += key] = {this, !invert, optional};
 }
 
 
@@ -322,9 +353,9 @@ void Cli::OptBase::indexLongName(
 
 //===========================================================================
 static bool helpAction(Cli & cli, Cli::Opt<bool> & opt, const string & val) {
-    Cli::stringTo(*opt, val);
+    cli.fromString(*opt, val);
     if (*opt) {
-        cli.writeHelp(cli.conout(), {}, cli.runCommand());
+        cli.printHelp(cli.conout(), {}, cli.runCommand());
         return false;
     }
     return true;
@@ -332,7 +363,7 @@ static bool helpAction(Cli & cli, Cli::Opt<bool> & opt, const string & val) {
 
 //===========================================================================
 bool Cli::defaultParse(OptBase & opt, const string & val) {
-    if (!opt.parseValue(val)) {
+    if (!opt.fromString(*this, val)) {
         badUsage("Invalid '" + opt.from() + "' value", val);
         if (!opt.m_choiceDescs.empty()) {
             ostringstream os;
@@ -433,8 +464,12 @@ Cli::Opt<string> & Cli::passwordOpt(bool confirm) {
 //===========================================================================
 Cli::Opt<bool> &
 Cli::versionOpt(const string & version, const string & progName) {
-    auto verAction = [version, progName](auto & cli, auto & opt, auto & val) {
-        fs::path prog = progName;
+    auto verAction = [version, progName](
+        auto & cli, 
+        auto &, // opt 
+        auto &  // val
+    ) {
+        string prog = progName;
         if (prog.empty()) {
             prog = displayName(cli.progName());
         }
@@ -589,6 +624,374 @@ Cli::OptBase * Cli::findOpt(const void * value) {
 
 /****************************************************************************
 *
+*   Parse argv
+*
+***/
+
+//===========================================================================
+// static
+vector<string> Cli::toArgv(const string & cmdline) {
+#if defined(_WIN32)
+    return toWindowsArgv(cmdline);
+#else
+    return toGnuArgv(cmdline);
+#endif
+}
+
+//===========================================================================
+// static
+std::vector<std::string> Cli::toArgv(size_t argc, char * argv[]) {
+    vector<string> out;
+    out.reserve(argc);
+    for (; *argv; ++argv)
+        out.push_back(*argv);
+    assert(argc == out.size());
+    return out;
+}
+
+//===========================================================================
+// static
+std::vector<std::string> Cli::toArgv(size_t argc, wchar_t * argv[]) {
+    vector<string> out;
+    out.reserve(argc);
+    wstring_convert<CodecvtWchar> wcvt(
+        "BAD_ENCODING");
+    for (; *argv; ++argv) {
+        string tmp = wcvt.to_bytes(*argv);
+        out.push_back(move(tmp));
+    }
+    assert(argc == out.size());
+    return out;
+}
+
+//===========================================================================
+// static
+vector<const char *> Cli::toPtrArgv(const vector<string> & args) {
+    vector<const char *> argv;
+    argv.reserve(args.size() + 1);
+    for (auto && arg : args)
+        argv.push_back(arg.data());
+    argv.push_back(nullptr);
+    return argv;
+}
+
+//===========================================================================
+// These rules where gleaned by inspecting glib's g_shell_parse_argv which
+// takes its rules from the "Shell Command Language" section of the UNIX98
+// spec -- ignoring parameter expansion ("$()" and "${}"), command
+// substitution (backquote `), operators as separators, etc.
+//
+// Arguments are split on whitespace (" \t\r\n\f\v") unless the whitespace
+// is escaped, quoted, or in a comment.
+// - unquoted: any char following a backslash is replaced by that char,
+//   except newline, which is removed. An unquoted '#' starts a comment.
+// - comment: everything up to, but not including, the next newline is ignored 
+// - single quotes: preserve the string exactly, no escape sequences, not
+//   even \'
+// - double quotes: some chars ($ ' " \ and newline) are escaped when
+//   following a backslash, a backslash not followed one of those five chars
+//   is preserved. All other chars are preserved.
+//
+// When escaping it's simplest to not quote and just escape the following:
+//   Must: | & ; < > ( ) $ ` \ " ' SP TAB LF
+//   Should: * ? [ # ~ = %
+//
+//===========================================================================
+// static
+vector<string> Cli::toGlibArgv(const string & cmdline) {
+    vector<string> out;
+    const char * cur = cmdline.c_str();
+    const char * last = cur + cmdline.size();
+
+    string arg;
+
+IN_GAP:
+    while (cur < last) {
+        char ch = *cur++;
+        switch (ch) {
+        case '\\':
+            if (cur < last) {
+                ch = *cur++;
+                if (ch == '\n')
+                    break;
+            }
+            arg += ch;
+            goto IN_UNQUOTED;
+        default: arg += ch; goto IN_UNQUOTED;
+        case '"': goto IN_DQUOTE;
+        case '\'': goto IN_SQUOTE;
+        case '#': goto IN_COMMENT;
+        case ' ':
+        case '\t':
+        case '\r':
+        case '\n':
+        case '\f':
+        case '\v': break;
+        }
+    }
+    return out;
+
+IN_COMMENT:
+    while (cur < last) {
+        char ch = *cur++;
+        switch (ch) {
+        case '\r':
+        case '\n': goto IN_GAP;
+        }
+    }
+    return out;
+
+IN_UNQUOTED:
+    while (cur < last) {
+        char ch = *cur++;
+        switch (ch) {
+        case '\\':
+            if (cur < last) {
+                ch = *cur++;
+                if (ch == '\n')
+                    break;
+            }
+            arg += ch;
+            break;
+        default: arg += ch; break;
+        case '"': goto IN_DQUOTE;
+        case '\'': goto IN_SQUOTE;
+        case ' ':
+        case '\t':
+        case '\r':
+        case '\n':
+        case '\f':
+        case '\v':
+            out.push_back(move(arg));
+            arg.clear();
+            goto IN_GAP;
+        }
+    }
+    out.push_back(move(arg));
+    return out;
+
+IN_SQUOTE:
+    while (cur < last) {
+        char ch = *cur++;
+        if (ch == '\'')
+            goto IN_UNQUOTED;
+        arg += ch;
+    }
+    out.push_back(move(arg));
+    return out;
+
+IN_DQUOTE:
+    while (cur < last) {
+        char ch = *cur++;
+        switch (ch) {
+        case '"': goto IN_UNQUOTED;
+        case '\\':
+            if (cur < last) {
+                ch = *cur++;
+                switch (ch) {
+                case '$':
+                case '\'':
+                case '"':
+                case '\\': break;
+                case '\n': continue;
+                default: arg += '\\';
+                }
+            }
+            arg += ch;
+            break;
+        default: arg += ch; break;
+        }
+    }
+    out.push_back(move(arg));
+    return out;
+}
+
+//===========================================================================
+// Rules from libiberty's buildargv().
+//
+// Arguments split on unquoted whitespace (" \t\r\n\f\v")
+//  - backslashes: always escapes the following character.
+//  - single quotes and double quotes: escape each other and whitespace.
+//
+//===========================================================================
+// static
+vector<string> Cli::toGnuArgv(const string & cmdline) {
+    vector<string> out;
+    const char * cur = cmdline.c_str();
+    const char * last = cur + cmdline.size();
+
+    string arg;
+    char quote;
+
+IN_GAP:
+    while (cur < last) {
+        char ch = *cur++;
+        switch (ch) {
+        case '\\':
+            if (cur < last)
+                ch = *cur++;
+            arg += ch;
+            goto IN_UNQUOTED;
+        default: arg += ch; goto IN_UNQUOTED;
+        case '\'':
+        case '"': quote = ch; goto IN_QUOTED;
+        case ' ':
+        case '\t':
+        case '\r':
+        case '\n':
+        case '\f':
+        case '\v': break;
+        }
+    }
+    return out;
+
+IN_UNQUOTED:
+    while (cur < last) {
+        char ch = *cur++;
+        switch (ch) {
+        case '\\':
+            if (cur < last)
+                ch = *cur++;
+            arg += ch;
+            break;
+        default: arg += ch; break;
+        case '"':
+        case '\'': quote = ch; goto IN_QUOTED;
+        case ' ':
+        case '\t':
+        case '\r':
+        case '\n':
+        case '\f':
+        case '\v':
+            out.push_back(move(arg));
+            arg.clear();
+            goto IN_GAP;
+        }
+    }
+    out.push_back(move(arg));
+    return out;
+
+
+IN_QUOTED:
+    while (cur < last) {
+        char ch = *cur++;
+        if (ch == quote)
+            goto IN_UNQUOTED;
+        if (ch == '\\' && cur < last)
+            ch = *cur++;
+        arg += ch;
+    }
+    out.push_back(move(arg));
+    return out;
+}
+
+//===========================================================================
+// Rules defined in the "Parsing C++ Command-Line Arguments" article on MSDN.
+//
+// Arguments are split on whitespace (" \t") unless the whitespace is quoted.
+// - double quotes: preserves whitespace that would otherwise end the
+//   argument, can occur in the midst of an argument.
+// - backslashes:
+//   - an even number followed by a double quote adds one backslash for each
+//     pair and the quote is a delimiter.
+//   - an odd number followed by a double quote adds one backslash for each
+//     pair, the last one is tossed, and the quote is added to the argument.
+//   - any number not followed by a double quote are literals.
+//
+//===========================================================================
+// static
+vector<string> Cli::toWindowsArgv(const string & cmdline) {
+    vector<string> out;
+    const char * cur = cmdline.c_str();
+    const char * last = cur + cmdline.size();
+
+    string arg;
+    int backslashes = 0;
+
+    auto appendBackslashes = [&arg, &backslashes]() {
+        if (backslashes) {
+            arg.append(backslashes, '\\');
+            backslashes = 0;
+        }
+    };
+
+IN_GAP:
+    while (cur < last) {
+        char ch = *cur++;
+        switch (ch) {
+        case '\\': backslashes += 1; goto IN_UNQUOTED;
+        case '"': goto IN_QUOTED;
+        case ' ':
+        case '\t':
+        case '\r':
+        case '\n': break;
+        default: arg += ch; goto IN_UNQUOTED;
+        }
+    }
+    return out;
+
+IN_UNQUOTED:
+    while (cur < last) {
+        char ch = *cur++;
+        switch (ch) {
+        case '\\': backslashes += 1; break;
+        case '"':
+            if (int num = backslashes) {
+                backslashes = 0;
+                arg.append(num / 2, '\\');
+                if (num % 2 == 1) {
+                    arg += ch;
+                    break;
+                }
+            }
+            goto IN_QUOTED;
+        case ' ':
+        case '\t':
+        case '\r':
+        case '\n':
+            appendBackslashes();
+            out.push_back(move(arg));
+            arg.clear();
+            goto IN_GAP;
+        default:
+            appendBackslashes();
+            arg += ch;
+            break;
+        }
+    }
+    appendBackslashes();
+    out.push_back(move(arg));
+    return out;
+
+IN_QUOTED:
+    while (cur < last) {
+        char ch = *cur++;
+        switch (ch) {
+        case '\\': backslashes += 1; break;
+        case '"':
+            if (int num = backslashes) {
+                backslashes = 0;
+                arg.append(num / 2, '\\');
+                if (num % 2 == 1) {
+                    arg += ch;
+                    break;
+                }
+            }
+            goto IN_UNQUOTED;
+        default:
+            appendBackslashes();
+            arg += ch;
+            break;
+        }
+    }
+    appendBackslashes();
+    out.push_back(move(arg));
+    return out;
+}
+
+
+/****************************************************************************
+*
 *   Response files
 *
 ***/
@@ -612,7 +1015,7 @@ static bool loadFileUtf8(string & content, const fs::path & fn) {
 
     content.resize(bytes);
     ifstream f(fn, ios::binary);
-    f.read(content.data(), content.size());
+    f.read(const_cast<char *>(content.data()), content.size());
     if (!f) {
         content.clear();
         return false;
@@ -622,7 +1025,7 @@ static bool loadFileUtf8(string & content, const fs::path & fn) {
     if (content.size() < 2)
         return true;
     if (content[0] == '\xff' && content[1] == '\xfe') {
-        wstring_convert<codecvt<wchar_t, char, mbstate_t>, wchar_t> wcvt("");
+        wstring_convert<CodecvtWchar> wcvt("");
         const wchar_t * base =
             reinterpret_cast<const wchar_t *>(content.data());
         string tmp = wcvt.to_bytes(base + 1, base + content.size() / 2);
@@ -685,7 +1088,7 @@ static bool expandResponseFiles(
 
 /****************************************************************************
 *
-*   Parse
+*   Parse command line
 *
 ***/
 
@@ -712,7 +1115,7 @@ void Cli::index(OptIndex & ndx, const string & cmd, bool requireVisible)
         if (opt->m_command == cmd && (opt->m_visible || !requireVisible))
             opt->index(ndx);
     }
-    for (unsigned i = 0; i < size(ndx.argNames); ++i) {
+    for (unsigned i = 0; i < ndx.argNames.size(); ++i) {
         auto & key = ndx.argNames[i];
         if (key.name.empty())
             key.name = "arg" + to_string(i + 1);
@@ -769,12 +1172,12 @@ bool Cli::parseValue(
     string val;
     if (ptr) {
         val = ptr;
-        if (!opt.parseValue(*this, val))
+        if (!opt.parseAction(*this, val))
             return false;
     } else {
         opt.unspecifiedValue();
     }
-    return opt.checkValue(*this, val);
+    return opt.checkAction(*this, val);
 }
 
 //===========================================================================
@@ -846,10 +1249,11 @@ bool Cli::parse(vector<string> & args) {
             ptr += 1;
             for (; *ptr && *ptr != '-'; ++ptr) {
                 auto it = ndx.shortNames.find(*ptr);
+                name = '-';
+                name += *ptr;
                 if (it == ndx.shortNames.end())
-                    return badUsage("Unknown option", "-"s + *ptr);
+                    return badUsage("Unknown option", name);
                 argName = it->second;
-                name = "-"s + *ptr;
                 if (argName.opt->m_bool) {
                     if (!parseValue(
                             *argName.opt,
@@ -881,10 +1285,11 @@ bool Cli::parse(vector<string> & args) {
                 ptr = "";
             }
             auto it = ndx.longNames.find(key);
+            name = "--";
+            name += key;
             if (it == ndx.longNames.end())
-                return badUsage("Unknown option", "--"s + key);
+                return badUsage("Unknown option", name);
             argName = it->second;
-            name = "--" + key;
             if (argName.opt->m_bool) {
                 if (equal)
                     return badUsage("Unknown option", name + "=");
@@ -911,7 +1316,7 @@ bool Cli::parse(vector<string> & args) {
             continue;
         }
 
-        if (pos >= size(ndx.argNames))
+        if (pos >= ndx.argNames.size())
             return badUsage("Unexpected argument", ptr);
         argName = ndx.argNames[pos];
         name = argName.name;
@@ -940,7 +1345,7 @@ bool Cli::parse(vector<string> & args) {
             return false;
     }
 
-    if (!needCmd && pos < size(ndx.argNames) && !ndx.argNames[pos].optional)
+    if (!needCmd && pos < ndx.argNames.size() && !ndx.argNames[pos].optional)
         return badUsage("Missing argument", ndx.argNames[pos].name);
 
     for (auto && opt : m_cfg->opts) {
@@ -1099,6 +1504,24 @@ writeDescCol(ostream & os, WrapPos & wp, const string & text, size_t descCol) {
 }
 
 //===========================================================================
+string Cli::descStr(const Cli::OptBase & opt) const {
+    string desc = opt.m_desc;
+    string tmp;
+    if (!opt.m_choiceDescs.empty()) {
+        // "default" tag is added to individual choices later
+    } else if (opt.m_flagValue && opt.m_flagDefault) {
+        desc += " (default)";
+    } else if (!opt.m_multiple 
+        && !opt.m_bool
+        && opt.defaultValueStr(tmp, *this)
+        && !tmp.empty()
+    ) {
+        desc += " (default: " + tmp + ")";
+    }
+    return desc;
+}
+
+//===========================================================================
 static void writeChoices(
     ostream & os,
     WrapPos & wp,
@@ -1111,6 +1534,7 @@ static void writeChoices(
         const char * key;
         const char * desc;
         const char * sortKey;
+        bool def;
     };
     vector<ChoiceKey> keys;
     for (auto && cd : choices) {
@@ -1120,6 +1544,7 @@ static void writeChoices(
         key.key = cd.first.c_str();
         key.desc = cd.second.desc.c_str();
         key.sortKey = cd.second.sortKey.c_str();
+        key.def = cd.second.def;
         keys.push_back(key);
     }
     const size_t indent = 6;
@@ -1130,17 +1555,21 @@ static void writeChoices(
         return a.pos < b.pos;
     });
 
+    string desc;
     for (auto && k : keys) {
         wp.prefix.assign(indent + 2, ' ');
         writeToken(os, wp, string(indent, ' ') + k.key);
-        writeDescCol(os, wp, k.desc, colWidth);
+        desc = k.desc;
+        if (k.def)
+            desc += " (default)";
+        writeDescCol(os, wp, desc, colWidth);
         os << '\n';
         wp.pos = 0;
     }
 }
 
 //===========================================================================
-int Cli::writeHelp(
+int Cli::printHelp(
     ostream & os,
     const string & progName,
     const string & cmdName) const {
@@ -1150,15 +1579,15 @@ int Cli::writeHelp(
         writeText(os, wp, cmd.header);
         writeNewline(os, wp);
     }
-    writeUsage(os, progName, cmdName);
+    printUsage(os, progName, cmdName);
     if (!cmd.desc.empty()) {
         WrapPos wp;
         writeText(os, wp, cmd.desc);
     }
-    writePositionals(os, cmdName);
-    writeOptions(os, cmdName);
+    printPositionals(os, cmdName);
+    printOptions(os, cmdName);
     if (cmdName.empty())
-        writeCommands(os);
+        printCommands(os);
     if (!cmd.footer.empty()) {
         WrapPos wp;
         writeNewline(os, wp);
@@ -1176,12 +1605,12 @@ int Cli::writeUsageImpl(
     OptIndex ndx;
     index(ndx, cmdName, true);
     auto & cmd = findCmdAlways(*m_cfg, cmdName);
-    string prog = displayName(arg0.empty() ? progName() : arg0).string();
+    string prog = displayName(arg0.empty() ? progName() : arg0);
     const string usageStr{"usage: "};
     os << usageStr << prog;
     WrapPos wp;
     wp.maxWidth = 79;
-    wp.pos = prog.size() + size(usageStr);
+    wp.pos = prog.size() + usageStr.size();
     wp.prefix = string(wp.pos, ' ');
     if (cmdName.size())
         writeToken(os, wp, cmdName);
@@ -1219,19 +1648,19 @@ int Cli::writeUsageImpl(
 }
 
 //===========================================================================
-int Cli::writeUsage(ostream & os, const string & arg0, const string & cmd)
+int Cli::printUsage(ostream & os, const string & arg0, const string & cmd)
     const {
     return writeUsageImpl(os, arg0, cmd, false);
 }
 
 //===========================================================================
-int Cli::writeUsageEx(ostream & os, const string & arg0, const string & cmd)
+int Cli::printUsageEx(ostream & os, const string & arg0, const string & cmd)
     const {
     return writeUsageImpl(os, arg0, cmd, true);
 }
 
 //===========================================================================
-void Cli::writePositionals(ostream & os, const string & cmd) const {
+void Cli::printPositionals(ostream & os, const string & cmd) const {
     OptIndex ndx;
     index(ndx, cmd, true);
     size_t colWidth = 0;
@@ -1249,7 +1678,7 @@ void Cli::writePositionals(ostream & os, const string & cmd) const {
     for (auto && pa : ndx.argNames) {
         wp.prefix.assign(4, ' ');
         writeToken(os, wp, "  " + pa.name);
-        writeDescCol(os, wp, pa.opt->m_desc, colWidth);
+        writeDescCol(os, wp, descStr(*pa.opt), colWidth);
         os << '\n';
         wp.pos = 0;
         writeChoices(os, wp, pa.opt->m_choiceDescs);
@@ -1262,7 +1691,7 @@ bool Cli::findNamedArgs(
     size_t & colWidth,
     const OptIndex & ndx,
     CommandConfig & cmd,
-    NameListType type,
+    int type,
     bool flatten) const {
     namedArgs.clear();
     for (auto && opt : m_cfg->opts) {
@@ -1290,7 +1719,7 @@ bool Cli::findNamedArgs(
 }
 
 //===========================================================================
-void Cli::writeOptions(ostream & os, const string & cmdName) const {
+void Cli::printOptions(ostream & os, const string & cmdName) const {
     OptIndex ndx;
     index(ndx, cmdName, true);
     auto & cmd = findCmdAlways(*m_cfg, cmdName);
@@ -1326,7 +1755,7 @@ void Cli::writeOptions(ostream & os, const string & cmdName) const {
         os << ' ';
         wp.pos = 1;
         writeText(os, wp, key.list);
-        writeDescCol(os, wp, key.opt->m_desc, colWidth);
+        writeDescCol(os, wp, descStr(*key.opt), colWidth);
         wp.prefix.clear();
         writeNewline(os, wp);
         writeChoices(os, wp, key.opt->m_choiceDescs);
@@ -1350,7 +1779,7 @@ static string trim(const string & val) {
 }
 
 //===========================================================================
-void Cli::writeCommands(ostream & os) const {
+void Cli::printCommands(ostream & os) const {
     size_t colWidth = 0;
     struct CmdKey {
         const char * name;
@@ -1390,7 +1819,7 @@ void Cli::writeCommands(ostream & os) const {
 //===========================================================================
 static bool includeName(
     const OptName & name,
-    Cli::NameListType type,
+    int type,
     const Cli::OptBase & opt,
     bool boolean,
     bool inverted) {
@@ -1398,10 +1827,12 @@ static bool includeName(
         return false;
     if (boolean) {
         switch (type) {
-        case Cli::kNameEnable: return !name.invert;
-        case Cli::kNameDisable: return name.invert;
-        case Cli::kNameNonDefault: return inverted == name.invert;
+        case kNameEnable: return !name.invert;
+        case kNameDisable: return name.invert;
+        case kNameAll: return true;
+        case kNameNonDefault: return inverted == name.invert;
         }
+        assert(0 && "unknown NameListType");
     }
     return true;
 }
@@ -1410,7 +1841,7 @@ static bool includeName(
 string Cli::nameList(
     const Cli::OptIndex & ndx,
     const Cli::OptBase & opt,
-    NameListType type) const {
+    int type) const {
     string list;
 
     if (type == kNameAll) {
@@ -1445,7 +1876,8 @@ string Cli::nameList(
         if (!list.empty())
             list += ", ";
         foundLong = true;
-        list += "--" + ln.first;
+        list += "--";
+        list += ln.first;
     }
     if (opt.m_bool || list.empty())
         return list;
@@ -1464,10 +1896,51 @@ string Cli::nameList(
 
 /****************************************************************************
 *
-*   CliLocal
+*   Native console API
 *
 ***/
 
+#if defined(DIM_LIB_NO_CONSOLE)
+
 //===========================================================================
-CliLocal::CliLocal()
-    : Cli(make_shared<Config>()) {}
+void Cli::consoleEnableEcho(bool enable) {
+    assert(enable && "disabling console echo not supported");
+}
+
+#elif defined(_WIN32)
+
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <Windows.h>
+
+//===========================================================================
+void Cli::consoleEnableEcho(bool enable) {
+    HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
+    DWORD mode = 0;
+    GetConsoleMode(hInput, &mode);
+    if (enable) {
+        mode |= ENABLE_ECHO_INPUT;
+    } else {
+        mode &= ~ENABLE_ECHO_INPUT;
+    }
+    SetConsoleMode(hInput, mode);
+}
+
+#else
+
+#include <termios.h>
+#include <unistd.h>
+
+//===========================================================================
+void Cli::consoleEnableEcho(bool enable) {
+    termios tty;
+    tcgetattr(STDIN_FILENO, &tty);
+    if (enable) {
+        tty.c_lflag |= ECHO;
+    } else {
+        tty.c_lflag &= ~ECHO;
+    }
+    tcsetattr(STDIN_FILENO, TCSANOW, &tty);
+}
+
+#endif

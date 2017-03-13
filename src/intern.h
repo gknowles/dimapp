@@ -18,8 +18,8 @@ void iConsoleInitialize();
 // File
 void iFileInitialize();
 
-// Hash
-void iHashInitialize();
+// Http
+void iHttpRouteInitialize();
 
 // Socket
 void iSocketInitialize();

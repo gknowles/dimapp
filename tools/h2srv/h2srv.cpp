@@ -61,6 +61,31 @@ void TnetConn::onSocketRead(const SocketData & data) {
 
 /****************************************************************************
 *
+*   WebRoute
+*
+***/
+
+class WebRoute : public IHttpRouteNotify {
+    void onHttpRequest(
+        unsigned reqId,
+        unordered_multimap<string_view, string_view> & params,
+        HttpRequest & msg
+    ) override;
+};
+static WebRoute s_web;
+
+//===========================================================================
+void WebRoute::onHttpRequest(
+    unsigned reqId,
+    unordered_multimap<string_view, string_view> & params,
+    HttpRequest & msg
+) {
+    cout << "http request #" << reqId << endl;
+}
+
+
+/****************************************************************************
+*
 *   MainShutdown
 *
 ***/
@@ -118,8 +143,7 @@ void Application::onAppRun() {
 
     appSocketAddListener<TnetConn>(AppSocket::kByte, "", s_endpoint);
 
-    // httpRouteAdd(&s_web,
-
+    httpRouteAdd(&s_web, "127.0.0.1:8888", "/", fHttpMethodGet);
 }
 
 
