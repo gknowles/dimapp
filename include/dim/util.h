@@ -49,7 +49,7 @@ inline void hashCombine(size_t & seed, size_t v) {
 
 //===========================================================================
 // Number of digits required to display a number in decimal
-inline int digits10(uint32_t val) {
+inline constexpr int digits10(uint32_t val) {
     const int DeBruijnBitPositionAdjustedForLog10[] = {
         0, 3, 0, 3, 4, 6, 0, 9, 3, 4, 5, 5, 6, 7, 1, 9,
         2, 3, 6, 8, 4, 5, 7, 2, 6, 8, 7, 2, 8, 1, 1, 9,
@@ -82,7 +82,7 @@ inline int digits10(uint32_t val) {
 
 //===========================================================================
 // Round up to power of 2
-inline size_t pow2Ceil(uint64_t num) {
+inline constexpr size_t pow2Ceil(uint64_t num) {
 #if 0
     unsigned long k;
     _BitScanReverse64(&k, num);
