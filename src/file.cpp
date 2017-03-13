@@ -67,8 +67,8 @@ void FileProxyNotify::onFileEnd(int64_t offset, IFile * file) {
 //===========================================================================
 void Dim::fileReadBinary(
     IFileReadNotify * notify,
-    std::string & out,
-    const std::experimental::filesystem::path & path) {
+    string & out,
+    string_view path) {
     auto file = fileOpen(path, IFile::kReadOnly | IFile::kDenyNone);
     if (!file) {
         logMsgError() << "File open failed, " << path;

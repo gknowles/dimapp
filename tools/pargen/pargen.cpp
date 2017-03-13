@@ -253,7 +253,7 @@ https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
     // process abnf file
     if (!srcfile->has_extension())
         srcfile->replace_extension("abnf");
-    fileReadBinary(this, m_source, *srcfile);
+    fileReadBinary(this, m_source, srcfile->u8string());
 }
 
 //===========================================================================

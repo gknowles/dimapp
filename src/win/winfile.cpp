@@ -3,8 +3,8 @@
 #pragma hdrstop
 
 using namespace std;
-using namespace std::experimental::filesystem;
 using namespace Dim;
+namespace fs = std::experimental::filesystem;
 
 
 /****************************************************************************
@@ -23,7 +23,7 @@ using namespace Dim;
 namespace {
 class File : public IFile {
 public:
-    path m_path;
+    fs::path m_path;
     HANDLE m_handle{INVALID_HANDLE_VALUE};
     OpenMode m_mode{kReadOnly};
     const char * m_view{nullptr};
@@ -344,12 +344,12 @@ void Dim::iFileInitialize() {
 ***/
 
 //===========================================================================
-unique_ptr<IFile> Dim::fileOpen(const path & path, unsigned mode) {
+unique_ptr<IFile> Dim::fileOpen(string_view path, unsigned mode) {
     using om = IFile::OpenMode;
 
     auto file = make_unique<File>();
     file->m_mode = (om)mode;
-    file->m_path = path;
+    file->m_path = fs::u8path(path.begin(), path.end());
 
     int access = 0;
     if (mode & om::kReadOnly) {
@@ -390,7 +390,7 @@ unique_ptr<IFile> Dim::fileOpen(const path & path, unsigned mode) {
     int flags = (mode & om::kBlocking) ? 0 : FILE_FLAG_OVERLAPPED;
 
     file->m_handle = CreateFileW(
-        path.c_str(),
+        file->m_path.c_str(),
         access,
         share,
         NULL, // security attributes

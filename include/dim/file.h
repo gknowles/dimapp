@@ -8,6 +8,7 @@
 #include <experimental/filesystem>
 #include <memory>
 #include <string>
+#include <string_view>
 
 namespace Dim {
 
@@ -35,7 +36,7 @@ public:
 // on error returns an empty pointer and sets errno to one of:
 //  EEXIST, ENOENT, EBUSY, EACCES, or EIO
 std::unique_ptr<IFile> fileOpen(
-    const std::experimental::filesystem::path & path,
+    std::string_view path,
     unsigned modeFlags // IFile::OpenMode::*
     );
 size_t fileSize(IFile * file);
@@ -88,7 +89,7 @@ void fileReadSync(
 void fileReadBinary(
     IFileReadNotify * notify,
     std::string & out,
-    const std::experimental::filesystem::path & path);
+    std::string_view path);
 
 // page size is always a power of 2
 size_t filePageSize();
