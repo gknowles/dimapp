@@ -16,7 +16,7 @@ using namespace Dim;
 TokenTable::TokenTable(const Token * src, size_t count) {
     // use a prime-ish number of slots so a questionable hash function
     // (such as some low bits usually 0) is less likely to cluster.
-    size_t num = pow2Ceil(6 * count / 5) + 1;
+    size_t num = pow2Ceil(2 * count) + 1;
 
     m_names.resize(num);
     if (num < 2) {
