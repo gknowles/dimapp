@@ -64,7 +64,7 @@ CharBuf & CharBuf::assign(const char s[], size_t count) {
 }
 
 //===========================================================================
-CharBuf & CharBuf::assign(const string & str, size_t pos, size_t count) {
+CharBuf & CharBuf::assign(string_view str, size_t pos, size_t count) {
     assert(pos < str.size());
     return replace(
         0, m_size, str.data() + pos, min(str.size(), pos + count) - pos);
@@ -318,7 +318,7 @@ CharBuf & CharBuf::append(const char src[], size_t srcLen) {
 }
 
 //===========================================================================
-CharBuf & CharBuf::append(const string & str, size_t pos, size_t count) {
+CharBuf & CharBuf::append(string_view str, size_t pos, size_t count) {
     assert(pos < str.size());
     return append(str.data() + pos, min(str.size(), pos + count) - pos);
 }
@@ -389,12 +389,12 @@ int CharBuf::compare(size_t pos, size_t count, const char src[], size_t srcLen)
 }
 
 //===========================================================================
-int CharBuf::compare(const string & str) const {
+int CharBuf::compare(string_view str) const {
     return compare(str.data(), str.size());
 }
 
 //===========================================================================
-int CharBuf::compare(size_t pos, size_t count, const string & str) const {
+int CharBuf::compare(size_t pos, size_t count, string_view str) const {
     return compare(pos, count, str.data(), str.size());
 }
 
@@ -860,12 +860,12 @@ CharBuf::erase(vector<CharBuf::Buffer *>::iterator it, int pos, int remove) {
 ***/
 
 //===========================================================================
-bool Dim::operator==(const CharBuf & left, const std::string & right) {
+bool Dim::operator==(const CharBuf & left, string_view right) {
     return left.compare(right) == 0;
 }
 
 //===========================================================================
-bool Dim::operator==(const std::string & left, const CharBuf & right) {
+bool Dim::operator==(string_view left, const CharBuf & right) {
     return right.compare(left) == 0;
 }
 

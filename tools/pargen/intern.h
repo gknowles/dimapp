@@ -66,21 +66,21 @@ class Grammar {
 public:
     void clear();
 
-    void addOption(const std::string & name, const std::string & value);
-    void setOption(const std::string & name, const std::string & value);
+    void addOption(std::string_view name, std::string_view value);
+    void setOption(std::string_view name, std::string_view value);
     const char *
-    optionString(const std::string & name, const char * def = "") const;
-    unsigned optionUnsigned(const std::string & name, unsigned def = 0) const;
-    const char * operator[](const std::string & name) const;
+    optionString(std::string_view name, const char * def = "") const;
+    unsigned optionUnsigned(std::string_view name, unsigned def = 0) const;
+    const char * operator[](std::string_view name) const;
 
     Element * addSequenceRule(
-        const std::string & name,
+        std::string_view name,
         unsigned m,
         unsigned n,
         unsigned flags = 0 // Element::k*
         );
     Element * addChoiceRule(
-        const std::string & name,
+        std::string_view name,
         unsigned m,
         unsigned n,
         unsigned flags = 0 // Element::k*
@@ -88,22 +88,22 @@ public:
     Element * addSequence(Element * rule, unsigned m, unsigned n);
     Element * addChoice(Element * rule, unsigned m, unsigned n);
     void
-    addRule(Element * rule, const std::string & name, unsigned m, unsigned n);
+    addRule(Element * rule, std::string_view name, unsigned m, unsigned n);
 
     // case insensitive
     void
-    addText(Element * rule, const std::string & value, unsigned m, unsigned n);
+    addText(Element * rule, std::string_view value, unsigned m, unsigned n);
 
     void addLiteral(
         Element * rule,
-        const std::string & value,
+        std::string_view value,
         unsigned m,
         unsigned n);
     void addRange(Element * rule, unsigned char a, unsigned char b);
     void addTerminal(Element * rule, unsigned char ch);
 
-    Element * element(const std::string & name);
-    const Element * element(const std::string & name) const;
+    Element * element(std::string_view name);
+    const Element * element(std::string_view name) const;
 
     const std::set<Element> & rules() const { return m_rules; }
     std::set<Element> & rules() { return m_rules; }
@@ -126,7 +126,7 @@ bool processOptions(Grammar & rules);
 bool copyRules(
     Grammar & out,
     const Grammar & src,
-    const std::string & root,
+    std::string_view root,
     bool failIfExists);
 void normalize(Grammar & rules);
 void functionTags(Grammar & rules, Element & rule, bool reset, bool mark);
@@ -253,4 +253,4 @@ void writeRule(
     std::ostream & os,
     const Element & rule,
     size_t maxWidth,
-    const std::string & prefix);
+    std::string_view prefix);

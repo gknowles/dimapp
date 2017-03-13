@@ -68,7 +68,7 @@ void TnetConn::onSocketRead(const SocketData & data) {
 class WebRoute : public IHttpRouteNotify {
     void onHttpRequest(
         unsigned reqId,
-        unordered_multimap<string, string> & params,
+        unordered_multimap<string_view, string_view> & params,
         HttpRequest & msg
     ) override;
 };
@@ -77,7 +77,7 @@ static WebRoute s_web;
 //===========================================================================
 void WebRoute::onHttpRequest(
     unsigned reqId,
-    unordered_multimap<string, string> & params,
+    unordered_multimap<string_view, string_view> & params,
     HttpRequest & msg
 ) {
     cout << "http request #" << reqId << endl;

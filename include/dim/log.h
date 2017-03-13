@@ -4,7 +4,7 @@
 #include "config.h"
 
 #include <sstream>
-#include <string>
+#include <string_view>
 
 namespace Dim {
 
@@ -17,7 +17,7 @@ enum LogType {
 
 class ILogNotify {
 public:
-    virtual void onLog(LogType type, const std::string & msg) = 0;
+    virtual void onLog(LogType type, std::string_view msg) = 0;
 };
 
 void logAddNotify(ILogNotify * notify);
@@ -48,9 +48,9 @@ Detail::Log logMsgError();
 Detail::LogCrash logMsgCrash();
 
 void logParseError(
-    const std::string & msg,
-    const std::string & path,
+    std::string_view msg,
+    std::string_view path,
     size_t pos,
-    const std::string & source);
+    std::string_view source);
 
 } // namespace

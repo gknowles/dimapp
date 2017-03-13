@@ -50,14 +50,14 @@ void Grammar::clear() {
 }
 
 //===========================================================================
-void Grammar::addOption(const string & name, const string & value) {
+void Grammar::addOption(string_view name, string_view value) {
     auto e = addChoiceRule(name, 1, 1);
     e->type = Element::kRule;
     e->value = value;
 }
 
 //===========================================================================
-void Grammar::setOption(const string & name, const string & value) {
+void Grammar::setOption(string_view name, string_view value) {
     // replace value if option already exists
     if (auto elem = element(name)) {
         while (!elem->elements.empty())
@@ -73,7 +73,7 @@ void Grammar::setOption(const string & name, const string & value) {
 
 //===========================================================================
 const char *
-Grammar::optionString(const string & name, const char * def) const {
+Grammar::optionString(string_view name, const char * def) const {
     if (auto elem = element(name)) {
         while (!elem->elements.empty())
             elem = &elem->elements.front();
@@ -84,7 +84,7 @@ Grammar::optionString(const string & name, const char * def) const {
 }
 
 //===========================================================================
-unsigned Grammar::optionUnsigned(const string & name, unsigned def) const {
+unsigned Grammar::optionUnsigned(string_view name, unsigned def) const {
     if (auto value = optionString(name, nullptr)) {
         return (unsigned)strtoul(value, nullptr, 10);
     }
@@ -92,13 +92,13 @@ unsigned Grammar::optionUnsigned(const string & name, unsigned def) const {
 }
 
 //===========================================================================
-const char * Grammar::operator[](const std::string & name) const {
+const char * Grammar::operator[](string_view name) const {
     return optionString(name, "");
 }
 
 //===========================================================================
 Element * Grammar::addSequenceRule(
-    const string & name,
+    string_view name,
     unsigned m,
     unsigned n,
     unsigned flags // Element::kFlag*
@@ -110,7 +110,7 @@ Element * Grammar::addSequenceRule(
 
 //===========================================================================
 Element * Grammar::addChoiceRule(
-    const string & name,
+    string_view name,
     unsigned m,
     unsigned n,
     unsigned flags // Element::kFlag*
@@ -154,7 +154,7 @@ Element * Grammar::addChoice(Element * rule, unsigned m, unsigned n) {
 //===========================================================================
 void Grammar::addRule(
     Element * rule,
-    const string & name,
+    string_view name,
     unsigned m,
     unsigned n) {
     auto e = addElement(rule, m, n);
@@ -173,7 +173,7 @@ void Grammar::addTerminal(Element * rule, unsigned char ch) {
 //===========================================================================
 void Grammar::addText(
     Element * rule,
-    const string & value,
+    string_view value,
     unsigned m,
     unsigned n) {
     auto s = addSequence(rule, m, n);
@@ -191,7 +191,7 @@ void Grammar::addText(
 //===========================================================================
 void Grammar::addLiteral(
     Element * rule,
-    const string & value,
+    string_view value,
     unsigned m,
     unsigned n) {
     auto s = addSequence(rule, m, n);
@@ -210,7 +210,7 @@ void Grammar::addRange(Element * rule, unsigned char a, unsigned char b) {
 }
 
 //===========================================================================
-Element * Grammar::element(const std::string & name) {
+Element * Grammar::element(string_view name) {
     Element key;
     key.name = name;
     auto it = m_rules.find(key);
@@ -220,7 +220,7 @@ Element * Grammar::element(const std::string & name) {
 }
 
 //===========================================================================
-const Element * Grammar::element(const std::string & name) const {
+const Element * Grammar::element(string_view name) const {
     Element key;
     key.name = name;
     auto it = m_rules.find(key);
@@ -238,7 +238,7 @@ const Element * Grammar::element(const std::string & name) const {
 
 //===========================================================================
 static void
-ensureOption(Grammar & rules, const char name[], const string & value) {
+ensureOption(Grammar & rules, const char name[], string_view value) {
     if (!*rules.optionString(name))
         rules.addOption(name, value);
 }
@@ -291,7 +291,7 @@ copyRequiredDeps(Grammar & out, const Grammar & src, const Element & root) {
 bool copyRules(
     Grammar & out,
     const Grammar & src,
-    const string & rootname,
+    string_view rootname,
     bool failIfExists) {
     auto root = src.element(rootname);
     if (!root) {

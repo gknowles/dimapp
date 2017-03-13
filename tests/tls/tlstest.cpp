@@ -99,7 +99,7 @@ class Application : public IAppNotify, public ILogNotify {
     void onAppRun() override;
 
     // ILogNotify
-    void onLog(LogType type, const string & msg) override;
+    void onLog(LogType type, string_view msg) override;
 
     int m_errors{0};
 };
@@ -107,7 +107,7 @@ class Application : public IAppNotify, public ILogNotify {
 } // namespace
 
 //===========================================================================
-void Application::onLog(LogType type, const string & msg) {
+void Application::onLog(LogType type, string_view msg) {
     if (type >= kLogError) {
         ConsoleScopedAttr attr(kConsoleError);
         m_errors += 1;

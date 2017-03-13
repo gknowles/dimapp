@@ -217,7 +217,7 @@ TaskQueueHandle Dim::taskComputeQueue() {
 }
 
 //===========================================================================
-TaskQueueHandle Dim::taskCreateQueue(const string & name, int threads) {
+TaskQueueHandle Dim::taskCreateQueue(string_view name, int threads) {
     assert(s_running);
     assert(threads);
     auto * q = new TaskQueue;

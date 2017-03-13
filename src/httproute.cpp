@@ -135,15 +135,15 @@ void Dim::iHttpRouteInitialize() {
 //===========================================================================
 void Dim::httpRouteAdd(
     IHttpRouteNotify * notify,
-    const std::string host,
-    const std::string path,
+    std::string_view host,
+    std::string_view path,
     unsigned methods
 ) {
     assert(!host.empty());
     if (s_hosts.empty())
         appSocketAddListener<RouteConn>(AppSocket::kHttp2, "", s_endpoint);
-    PathInfo pi = {notify, path, methods};
-    auto & hi = s_hosts[host];
+    PathInfo pi = {notify, string(path), methods};
+    auto & hi = s_hosts[string(host)];
     hi.paths.push_back(pi);
 }
 

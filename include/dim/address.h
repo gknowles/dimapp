@@ -16,7 +16,7 @@
 #include "types.h"
 
 #include <iostream>
-#include <string>
+#include <string_view>
 #include <vector>
 
 // forward declarations
@@ -65,8 +65,8 @@ template <> struct hash<Dim::Network> {
 
 namespace Dim {
 
-bool parse(Address * addr, const char src[]);
-bool parse(Endpoint * end, const char src[], int defaultPort);
+bool parse(Address * addr, std::string_view src);
+bool parse(Endpoint * end, std::string_view src, int defaultPort);
 
 std::ostream & operator<<(std::ostream & os, const Address & addr);
 std::ostream & operator<<(std::ostream & os, const Endpoint & end);
@@ -99,7 +99,7 @@ public:
 void endpointQuery(
     int * cancelId,
     IEndpointNotify * notify,
-    const std::string & name,
+    std::string_view name,
     int defaultPort);
 void endpointCancelQuery(int cancelId);
 

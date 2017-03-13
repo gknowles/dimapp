@@ -114,7 +114,7 @@ static bool internalTest() {
 namespace {
 class LogTask : public ITaskNotify {
 public:
-    LogTask(LogType type, const string & msg);
+    LogTask(LogType type, string_view msg);
 
     // ITaskNotify
     void onTask() override;
@@ -127,7 +127,7 @@ int s_errors;
 } // namespace
 
 //===========================================================================
-LogTask::LogTask(LogType type, const string & msg)
+LogTask::LogTask(LogType type, string_view msg)
     : m_type(type)
     , m_msg(msg) {
     if (type == kLogError)
@@ -166,7 +166,7 @@ public:
     void onAppRun() override;
 
     // ILogNotify
-    void onLog(LogType type, const std::string & msg) override;
+    void onLog(LogType type, string_view msg) override;
 
     // IFileReadNotify
     void onFileEnd(int64_t offset, IFile * file) override;
@@ -257,7 +257,7 @@ https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
 }
 
 //===========================================================================
-void Application::onLog(LogType type, const std::string & msg) {
+void Application::onLog(LogType type, string_view msg) {
     if (s_cmdopts.verbose || type != kLogDebug) {
         auto ptr = new LogTask(type, msg);
         taskPush(m_logQ, *ptr);

@@ -3,6 +3,8 @@
 
 #include "config.h"
 
+#include <string_view>
+
 namespace Dim {
 
 // forward declarations
@@ -42,12 +44,12 @@ enum {
 
 void appSignalShutdown(int exitcode = EX_OK);
 void appSignalUsageError(
-    const std::string & err = {},
-    const std::string & detail = {});
+    std::string_view err = {},
+    std::string_view detail = {});
 void appSignalUsageError(
     int exitcode,
-    const std::string & err = {},
-    const std::string & detail = {});
+    std::string_view err = {},
+    std::string_view detail = {});
 
 void appMonitorShutdown(IAppShutdownNotify * cleanup);
 bool appQueryDestroyFailed();

@@ -777,14 +777,14 @@ void writeRule(
     ostream & os,
     const Element & rule,
     size_t maxWidth,
-    const string & prefix) {
+    string_view prefix) {
     streampos base = os.tellp();
     os << prefix << rule.name;
     os << " = ";
     size_t pos = os.tellp() - base;
     ostringstream raw;
     writeElement(raw, rule, false);
-    string vpre = prefix + "    ";
+    auto vpre = string(prefix) + "    ";
     writeWordwrap(os, pos, raw.str(), maxWidth, vpre);
     os << '\n';
 }

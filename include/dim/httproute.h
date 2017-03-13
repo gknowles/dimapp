@@ -23,14 +23,14 @@ public:
 
     virtual void onHttpRequest(
         unsigned reqId,
-        std::unordered_multimap<std::string, std::string> & params,
+        std::unordered_multimap<std::string_view, std::string_view> & params,
         HttpRequest & msg) = 0;
 };
 
 void httpRouteAdd(
     IHttpRouteNotify * notify,
-    const std::string host,
-    const std::string path,
+    std::string_view host,
+    std::string_view path,
     unsigned methods = fHttpMethodGet);
 
 void httpRouteReply(unsigned reqId, HttpResponse & msg, bool more = false);

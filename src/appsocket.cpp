@@ -28,7 +28,7 @@ struct MatchKey {
 };
 
 struct FamilyInfo {
-    unordered_multimap<string, IAppSocketNotifyFactory *> factories;
+    multimap<string, IAppSocketNotifyFactory *> factories;
 };
 
 class EndpointInfo : public ISocketListenNotify {
@@ -435,7 +435,7 @@ static void eraseInfo_LK(const Endpoint & end) {
 void Dim::appSocketAddListener(
     IAppSocketNotifyFactory * factory,
     AppSocket::Family fam,
-    const std::string & type,
+    string_view type,
     const Endpoint & end) {
     bool addNew = false;
     EndpointInfo * info = nullptr;
@@ -454,7 +454,7 @@ void Dim::appSocketAddListener(
 void Dim::appSocketRemoveListener(
     IAppSocketNotifyFactory * factory,
     AppSocket::Family fam,
-    const std::string & type,
+    std::string_view type,
     const Endpoint & end) {
     EndpointInfo * info = nullptr;
     unique_lock<shared_mutex> lk{s_listenMut};
@@ -462,7 +462,7 @@ void Dim::appSocketRemoveListener(
     if (info && !info->families.empty()) {
         auto fi = info->families.find(fam);
         if (fi != info->families.end()) {
-            auto ii = fi->second.factories.equal_range(type);
+            auto ii = fi->second.factories.equal_range(string(type));
             for (; ii.first != ii.second; ++ii.first) {
                 if (ii.first->second == factory) {
                     fi->second.factories.erase(ii.first);

@@ -67,7 +67,7 @@ const char kTextTypeTable[256] = {
 *
 ***/
 
-enum IXBuilder::State {
+enum IXBuilder::State : int {
     kStateFail,
     kStateDocIntro,      // _
     kStateElemName,      // <X_
@@ -91,7 +91,7 @@ void IXBuilder::clear() {
 }
 
 //===========================================================================
-IXBuilder & IXBuilder::start(const char name[]) {
+IXBuilder & IXBuilder::start(const char name[], size_t count) {
     switch (m_state) {
     default: return fail();
     case kStateAttrText:
@@ -109,10 +109,15 @@ IXBuilder & IXBuilder::start(const char name[]) {
     case kStateTextRBracket2: addRaw("<"); break;
     }
     size_t base = size();
-    addRaw(name);
+    addRaw(name, count);
     m_stack.push_back({base, size() - base});
     m_state = kStateElemName;
     return *this;
+}
+
+//===========================================================================
+IXBuilder & IXBuilder::start(string_view name) { 
+    return start(name.data(), name.size()); 
 }
 
 //===========================================================================
@@ -140,17 +145,22 @@ IXBuilder & IXBuilder::end() {
 }
 
 //===========================================================================
-IXBuilder & IXBuilder::startAttr(const char name[]) {
+IXBuilder & IXBuilder::startAttr(const char name[], size_t count) {
     switch (m_state) {
     default: return fail();
     case kStateElemName:
     case kStateAttrEnd: break;
     }
     addRaw(" ");
-    addRaw(name);
+    addRaw(name, count);
     addRaw("=\"");
     m_state = kStateAttrText;
     return *this;
+}
+
+//===========================================================================
+IXBuilder & IXBuilder::startAttr(string_view name) {
+    return startAttr(name.data(), name.size());
 }
 
 //===========================================================================
@@ -180,7 +190,7 @@ IXBuilder & IXBuilder::attr(const char name[], const char val[]) {
 }
 
 //===========================================================================
-IXBuilder & IXBuilder::text(const char val[]) {
+IXBuilder & IXBuilder::text(const char val[], size_t count) {
     switch (m_state) {
     default: return fail();
     case kStateElemName:
@@ -188,19 +198,36 @@ IXBuilder & IXBuilder::text(const char val[]) {
         addRaw(">");
         m_state = kStateText;
         break;
-    case kStateAttrText: addText<false>(val); return *this;
+    case kStateAttrText: addText<false>(val, count); return *this;
     case kStateText:
     case kStateTextRBracket:
     case kStateTextRBracket2: break;
     }
-    addText<true>(val);
+    addText<true>(val, count);
     return *this;
 }
 
 //===========================================================================
-template <bool isContent> void IXBuilder::addText(const char val[]) {
+IXBuilder & IXBuilder::text(string_view val) {
+    return text(val.data(), val.size());
+}
+
+//===========================================================================
+void IXBuilder::addRaw(const char text[], size_t count) { 
+    if (count == -1) {
+        append(text);
+    } else {
+        append(text, count);
+    }
+}
+
+//===========================================================================
+template <bool isContent> void IXBuilder::addText(
+    const char val[],
+    size_t count
+) {
     const char * base = val;
-    for (;;) {
+    for (; count; --count, ++val) {
         TextType type = (TextType)kTextTypeTable[*val];
         switch (type) {
         case kTextTypeGreater:
@@ -220,8 +247,9 @@ template <bool isContent> void IXBuilder::addText(const char val[]) {
                         break;
                 }
             }
-            [[fallthrough]];
-        case kTextTypeNormal: val += 1; continue;
+            continue;
+        case kTextTypeNormal: 
+            continue;
         case kTextTypeNull:
             if (size_t num = val - base) {
                 addRaw(base, num);
@@ -247,18 +275,20 @@ template <bool isContent> void IXBuilder::addText(const char val[]) {
             }
             return;
         case kTextTypeQuote:
-            if (isContent) {
-                val += 1;
+            if (isContent)
                 continue;
-            }
-            [[fallthrough]];
-        case kTextTypeAmp : case kTextTypeLess : break;
-        case kTextTypeInvalid: m_state = kStateFail; return;
+            break;
+        case kTextTypeAmp: 
+        case kTextTypeLess: 
+            break;
+        case kTextTypeInvalid: 
+            m_state = kStateFail; 
+            return;
         }
 
         addRaw(base, val - base);
         addRaw(kTextEntityTable[type]);
-        base = ++val;
+        base = val + 1;
         if (isContent)
             m_state = kStateText;
     }
@@ -349,8 +379,8 @@ IXBuilder & Dim::operator<<(IXBuilder & out, const char val[]) {
 }
 
 //===========================================================================
-IXBuilder & Dim::operator<<(IXBuilder & out, const std::string & val) {
-    return out.text(val.c_str());
+IXBuilder & Dim::operator<<(IXBuilder & out, std::string_view val) {
+    return out.text(val);
 }
 
 //===========================================================================

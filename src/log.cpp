@@ -109,10 +109,10 @@ Detail::LogCrash Dim::logMsgCrash() {
 
 //===========================================================================
 void Dim::logParseError(
-    const std::string & msg,
-    const std::string & path,
+    string_view msg,
+    string_view path,
     size_t pos,
-    const std::string & source) {
+    string_view source) {
 
     auto lineNum = 1 + count(source.begin(), source.begin() + pos, '\n');
     logMsgError() << path << "(" << lineNum << "): " << msg;
@@ -133,7 +133,7 @@ void Dim::logParseError(
         last = first + 78;
     }
     size_t len = last - first;
-    string line = source.substr(first, len);
+    auto line = string(source.substr(first, len));
     for (char & ch : line) {
         if (iscntrl((unsigned char)ch))
             ch = ch == '\t' ? ' ' : '.';

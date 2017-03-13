@@ -7,6 +7,7 @@
 
 #include <list>
 #include <string>
+#include <string_view>
 #include <utility> // std::pair
 #include <vector>
 
@@ -20,19 +21,19 @@ public:
 
     CharBuf & operator=(char ch) { return assign(ch); }
     CharBuf & operator=(const char s[]) { return assign(s); }
-    CharBuf & operator=(const std::string & str) { return assign(str); }
+    CharBuf & operator=(std::string_view str) { return assign(str); }
     CharBuf & operator=(const CharBuf & buf) { return assign(buf); }
     CharBuf & operator=(CharBuf && buf);
     CharBuf & operator+=(char ch) { pushBack(ch); return *this; }
     CharBuf & operator+=(const char s[]) { return append(s); }
-    CharBuf & operator+=(const std::string & str) { return append(str); }
+    CharBuf & operator+=(std::string_view str) { return append(str); }
     CharBuf & operator+=(const CharBuf & src) { return append(src); }
     CharBuf & assign(char ch) { clear(); pushBack(ch); return *this; }
     CharBuf & assign(size_t numCh, char ch);
     CharBuf & assign(const char s[]);
     CharBuf & assign(const char s[], size_t count);
     CharBuf &
-    assign(const std::string & str, size_t pos = 0, size_t count = -1);
+    assign(std::string_view str, size_t pos = 0, size_t count = -1);
     CharBuf & assign(const CharBuf & src, size_t pos = 0, size_t count = -1);
     char & front();
     const char & front() const;
@@ -57,13 +58,13 @@ public:
     CharBuf & append(const char s[]);
     CharBuf & append(const char s[], size_t count);
     CharBuf &
-    append(const std::string & str, size_t pos = 0, size_t count = -1);
+    append(std::string_view str, size_t pos = 0, size_t count = -1);
     CharBuf & append(const CharBuf & src, size_t pos = 0, size_t count = -1);
     int compare(const char s[], size_t count) const;
     int
     compare(size_t pos, size_t count, const char src[], size_t srcLen) const;
-    int compare(const std::string & str) const;
-    int compare(size_t pos, size_t count, const std::string & str) const;
+    int compare(std::string_view str) const;
+    int compare(size_t pos, size_t count, std::string_view str) const;
     int compare(const CharBuf & buf) const;
     int compare(size_t pos, size_t count, const CharBuf & buf) const;
     int compare(
@@ -111,8 +112,8 @@ private:
     int m_size{0};
 };
 
-bool operator==(const CharBuf & left, const std::string & right);
-bool operator==(const std::string & left, const CharBuf & right);
+bool operator==(const CharBuf & left, std::string_view right);
+bool operator==(std::string_view left, const CharBuf & right);
 bool operator==(const CharBuf & left, const CharBuf & right);
 
 std::string to_string(const CharBuf & buf, size_t pos = 0, size_t count = -1);

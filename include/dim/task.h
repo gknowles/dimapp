@@ -36,7 +36,7 @@ void taskPushCompute(ITaskNotify & task);
 void taskPushCompute(ITaskNotify * tasks[], size_t numTasks);
 TaskQueueHandle taskComputeQueue();
 
-TaskQueueHandle taskCreateQueue(const std::string & name, int threads);
+TaskQueueHandle taskCreateQueue(std::string_view name, int threads);
 void taskSetQueueThreads(TaskQueueHandle q, int threads);
 void taskPush(TaskQueueHandle q, ITaskNotify & task);
 void taskPush(TaskQueueHandle q, ITaskNotify * tasks[], size_t numTasks);
