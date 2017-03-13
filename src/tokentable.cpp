@@ -14,7 +14,10 @@ using namespace Dim;
 
 //===========================================================================
 TokenTable::TokenTable(const Token * src, size_t count) {
-    size_t num = pow2Ceil(2 * count);
+    // use a prime-ish number of slots so a questionable hash function
+    // (such as some low bits usually 0) is less likely to cluster.
+    size_t num = pow2Ceil(6 * count / 5) + 1;
+
     m_names.resize(num);
     if (num < 2) {
         if (num == 1) {
@@ -46,57 +49,70 @@ TokenTable::TokenTable(const Token * src, size_t count) {
 
     Value * base = m_names.data();
     for (const Token * a = src; a != eptr; ++a) {
-        size_t hash = hashStr(a->name, m_hashLen);
-        size_t pos = hash;
+        Value val;
+        val.hash = hashStr(a->name, m_hashLen);
+        val.id = a->id;
+        val.name = a->name;
+        val.distance = 0;
+        size_t pos = val.hash;
         for (;;) {
             pos %= num;
-            Value & val = base[pos];
-            if (!val.name) {
-                val.hash = hash;
-                val.id = a->id;
-                val.name = a->name;
+            Value & tmp = base[pos];
+            if (!tmp.name) {
+                tmp = val;
                 break;
             }
-            if (val.hash == hash && !strcmp(val.name, a->name))
+            if (tmp.hash == val.hash && !strcmp(tmp.name, val.name))
                 break;
+            if (val.distance > tmp.distance)
+                swap(val, tmp);
             pos += 1;
+            val.distance += 1;
         }
     }
 
     m_ids.resize(num);
     base = m_ids.data();
     for (const Token * a = src; a != eptr; ++a) {
-        size_t pos = a->id;
+        Value val;
+        val.id = a->id;
+        val.name = a->name;
+        val.distance = 0;
+        size_t pos = val.id;
         for (;;) {
             pos %= num;
-            Value & val = base[pos];
-            if (!val.name) {
-                val.id = a->id;
-                val.name = a->name;
+            Value & tmp = base[pos];
+            if (!tmp.name) {
+                tmp = val;
                 break;
             }
             if (val.id == a->id)
                 break;
+            if (val.distance > tmp.distance)
+                swap(val, tmp);
             pos += 1;
+            val.distance += 1;
         }
     }
 }
 
 //===========================================================================
 bool TokenTable::find(int * out, const char name[]) const {
-    size_t hash = hashStr(name, m_hashLen);
-    size_t pos = hash;
     size_t num = size(m_names);
+    size_t hash = hashStr(name, m_hashLen);
+    size_t pos = hash % num;
+    int distance = 0;
     for (;;) {
-        pos %= num;
         const Value & val = m_names[pos];
-        if (!val.name)
+        if (distance > val.distance)
             break;
         if (val.hash == hash && !strcmp(val.name, name)) {
             *out = val.id;
             return true;
         }
-        pos += 1;
+        if (++pos == num) 
+            pos = 0;
+        distance += 1;
     }
     *out = numeric_limits<remove_reference<decltype(*out)>::type>::max();
     return false;
@@ -104,18 +120,20 @@ bool TokenTable::find(int * out, const char name[]) const {
 
 //===========================================================================
 bool TokenTable::find(char const ** const out, int id) const {
-    size_t pos = id;
     size_t num = size(m_ids);
+    size_t pos = id % num;
+    int distance = 0;
     for (;;) {
-        pos %= num;
         const Value & val = m_ids[pos];
-        if (!val.name)
+        if (distance > val.distance)
             break;
         if (val.id == id) {
             *out = val.name;
             return true;
         }
-        pos += 1;
+        if (++pos == num)
+            pos = 0;
+        distance += 1;
     }
     *out = nullptr;
     return false;

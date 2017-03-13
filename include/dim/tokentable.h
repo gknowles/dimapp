@@ -40,8 +40,9 @@ public:
 private:
     struct Value {
         const char * name{nullptr};
-        size_t hash{0};
         int id{0};
+        int distance{-1};
+        size_t hash{0};
     };
     std::vector<Value> m_names;
     std::vector<Value> m_ids;
