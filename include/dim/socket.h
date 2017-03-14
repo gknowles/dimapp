@@ -9,11 +9,7 @@
 
 namespace Dim {
 
-struct SocketConnectInfo {
-    Endpoint remote;
-    Endpoint local;
-};
-struct SocketAcceptInfo {
+struct SocketInfo {
     Endpoint remote;
     Endpoint local;
 };
@@ -37,11 +33,11 @@ public:
     virtual ~ISocketNotify() {}
 
     // for connectors
-    virtual void onSocketConnect(const SocketConnectInfo & info){};
+    virtual void onSocketConnect(const SocketInfo & info){};
     virtual void onSocketConnectFailed(){};
 
     // for listeners
-    virtual void onSocketAccept(const SocketAcceptInfo & info){};
+    virtual void onSocketAccept(const SocketInfo & info){};
 
     // for both
     virtual void onSocketRead(const SocketData & data) = 0;

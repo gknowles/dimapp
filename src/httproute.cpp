@@ -30,7 +30,7 @@ struct HostInfo {
 };
 
 class RouteConn : public ISocketNotify {
-    void onSocketAccept(const SocketAcceptInfo & info) override;
+    void onSocketAccept(const SocketInfo & info) override;
     void onSocketDisconnect() override;
     void onSocketRead(const SocketData & data) override;
 
@@ -58,7 +58,7 @@ static Endpoint s_endpoint;
 ***/
 
 //===========================================================================
-void RouteConn::onSocketAccept(const SocketAcceptInfo & info) {
+void RouteConn::onSocketAccept(const SocketInfo & info) {
     m_conn = httpListen();
 }
 

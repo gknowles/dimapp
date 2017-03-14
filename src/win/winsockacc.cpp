@@ -198,7 +198,7 @@ void AcceptSocket::accept(ListenSocket * listen) {
 }
 
 //===========================================================================
-static bool getAcceptInfo(SocketAcceptInfo * out, SOCKET s, void * buffer) {
+static bool getAcceptInfo(SocketInfo * out, SOCKET s, void * buffer) {
     GUID extId = WSAID_GETACCEPTEXSOCKADDRS;
     LPFN_GETACCEPTEXSOCKADDRS fGetAcceptExSockAddrs;
     DWORD bytes;
@@ -246,7 +246,7 @@ void AcceptSocket::onAccept(
     int xferBytes) {
     unique_ptr<AcceptSocket> hostage{move(listen->m_socket)};
 
-    SocketAcceptInfo info;
+    SocketInfo info;
     bool ok = !xferError && getAcceptInfo(&info, m_handle, listen->m_addrBuf);
     auto h = listen->m_handle;
 

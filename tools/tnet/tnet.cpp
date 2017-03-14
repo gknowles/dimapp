@@ -19,7 +19,7 @@ enum { kExitConnectFailed = EX__APPBASE, kExitDisconnect };
 
 class SocketConn : public ISocketNotify, public IEndpointNotify {
     // ISocketNotify
-    void onSocketConnect(const SocketConnectInfo & info) override;
+    void onSocketConnect(const SocketInfo & info) override;
     void onSocketConnectFailed() override;
     void onSocketRead(const SocketData & data) override;
     void onSocketDisconnect() override;
@@ -79,7 +79,7 @@ void SocketConn::onEndpointFound(Endpoint * ends, int count) {
 }
 
 //===========================================================================
-void SocketConn::onSocketConnect(const SocketConnectInfo & info) {
+void SocketConn::onSocketConnect(const SocketInfo & info) {
     m_connected = make_unique<ConsoleScopedAttr>(kConsoleGreen);
     cout << "Connected" << endl;
     s_console.read();

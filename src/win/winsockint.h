@@ -65,7 +65,7 @@ public:
 protected:
     ISocketNotify * m_notify{nullptr};
     SOCKET m_handle{INVALID_SOCKET};
-    SocketConnectInfo m_connInfo;
+    SocketInfo m_connInfo;
     Mode m_mode{Mode::kInactive};
 
 private:

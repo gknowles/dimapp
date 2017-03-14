@@ -49,13 +49,13 @@ public:
 
     Duration checkTimeout_LK(TimePoint now);
 
-    void onSocketAccept(const SocketAcceptInfo & info) override;
+    void onSocketAccept(const SocketInfo & info) override;
     void onSocketRead(const SocketData & data) override;
     void onSocketDisconnect() override;
 
 private:
     bool m_accepting{false};
-    SocketAcceptInfo m_accept;
+    SocketInfo m_accept;
     TimePoint m_expiration;
     list<AppSocketNotify*>::iterator m_pos;
     string m_socketData;
@@ -159,7 +159,7 @@ Duration AppSocketNotify::checkTimeout_LK(TimePoint now) {
 }
 
 //===========================================================================
-void AppSocketNotify::onSocketAccept(const SocketAcceptInfo & info) {
+void AppSocketNotify::onSocketAccept(const SocketInfo & info) {
     m_accept = info;
     m_accepting = true;
     m_expiration = Clock::now() + kUnmatchedTimeout;
