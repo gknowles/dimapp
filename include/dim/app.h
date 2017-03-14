@@ -25,12 +25,9 @@ class IAppShutdownNotify {
 public:
     virtual ~IAppShutdownNotify() {}
 
-    virtual void onAppStartClientCleanup() {}
-    virtual bool onAppQueryClientDestroy() { return true; }
-    virtual void onAppStartServerCleanup() {}
-    virtual bool onAppQueryServerDestroy() { return true; }
-    virtual void onAppStartConsoleCleanup() {}
-    virtual bool onAppQueryConsoleDestroy() { return true; }
+    virtual bool onAppStopClient(bool retry) { return true; }
+    virtual bool onAppStopServer(bool retry) { return true; }
+    virtual bool onAppStopConsole(bool retry) { return true; }
 };
 
 // returns exit code
@@ -52,7 +49,7 @@ void appSignalUsageError(
     std::string_view detail = {});
 
 void appMonitorShutdown(IAppShutdownNotify * cleanup);
-bool appQueryDestroyFailed();
+bool appStopFailed();
 
 RunMode appMode();
 

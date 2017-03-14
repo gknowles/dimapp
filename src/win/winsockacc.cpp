@@ -291,14 +291,15 @@ void AcceptSocket::onAccept(
 
 namespace {
 class ShutdownNotify : public IAppShutdownNotify {
-    void onAppStartConsoleCleanup() override;
+    bool onAppStopConsole(bool retry) override;
 };
 } // namespace
 static ShutdownNotify s_cleanup;
 
 //===========================================================================
-void ShutdownNotify::onAppStartConsoleCleanup() {
+bool ShutdownNotify::onAppStopConsole(bool retry) {
     assert(s_listeners.empty());
+    return true;
 }
 
 

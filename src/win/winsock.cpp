@@ -383,15 +383,15 @@ void SocketBase::queueWriteFromUnsent_LK() {
 
 namespace {
 class ShutdownNotify : public IAppShutdownNotify {
-    bool onAppQueryConsoleDestroy() override;
+    bool onAppStopConsole(bool retry) override;
 };
 } // namespace
 static ShutdownNotify s_cleanup;
 
 //===========================================================================
-bool ShutdownNotify::onAppQueryConsoleDestroy() {
+bool ShutdownNotify::onAppStopConsole(bool retry) {
     if (s_numSockets)
-        return appQueryDestroyFailed();
+        return appStopFailed();
 
     unique_lock<mutex> lk{s_mut};
     s_mode = kRunStopping;

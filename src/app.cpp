@@ -17,7 +17,7 @@ namespace {
 
 struct CleanupInfo {
     IAppShutdownNotify * notify;
-    bool destroyed = false;
+    bool stopped = false;
 
     CleanupInfo(IAppShutdownNotify * notify)
         : notify(notify) {}
@@ -25,36 +25,30 @@ struct CleanupInfo {
 
 enum ETimerMode {
     MAIN_RUN,
-    MAIN_SC,
-    MAIN_QD,
-    CLIENT_SC,
-    CLIENT_QD,
-    SERVER_SC,
-    SERVER_QD,
-    CONSOLE_SC,
-    CONSOLE_QD,
+    MAIN_STOP,
+    CLIENT_STOP,
+    SERVER_STOP,
+    CONSOLE_STOP,
     DONE
 };
 
 class MainTimer : public ITimerNotify {
 public:
-    typedef void (IAppShutdownNotify::*CleanFn)();
-    typedef bool (IAppShutdownNotify::*QueryFn)();
+    typedef bool (IAppShutdownNotify::*StopFn)(bool retry);
 
 public:
     bool stopped() const;
-    bool queryDestroyFailed(Duration grace);
+    bool stopFailed(Duration grace);
 
     // ITimerNotify
     Duration onTimer(TimePoint now) override;
 
 private:
-    void startCleanup(CleanFn notify);
-    bool queryDestroy(QueryFn notify);
+    bool stop(StopFn notify, bool retry);
 
     ETimerMode m_mode { MAIN_RUN };
-    const char * m_modeName{nullptr};
     TimePoint m_shutdownStart;
+    bool m_retry{false};
 };
 
 } // namespace
@@ -92,30 +86,20 @@ Duration MainTimer::onTimer(TimePoint now) {
     case MAIN_RUN:
         s_runMode = kRunRunning;
         s_app->onAppRun();
-        m_mode = MAIN_SC;
+        m_mode = MAIN_STOP;
         return kTimerInfinite;
-    case MAIN_SC:
+    case MAIN_STOP:
         s_runMode = kRunStopping;
         m_shutdownStart = now;
         break;
-    case MAIN_QD: break;
-    case CLIENT_SC:
-        startCleanup(&IAppShutdownNotify::onAppStartClientCleanup);
+    case CLIENT_STOP:
+        next = stop(&IAppShutdownNotify::onAppStopClient, m_retry);
         break;
-    case CLIENT_QD:
-        next = queryDestroy(&IAppShutdownNotify::onAppQueryClientDestroy);
+    case SERVER_STOP:
+        next = stop(&IAppShutdownNotify::onAppStopServer, m_retry);
         break;
-    case SERVER_SC:
-        startCleanup(&IAppShutdownNotify::onAppStartServerCleanup);
-        break;
-    case SERVER_QD:
-        next = queryDestroy(&IAppShutdownNotify::onAppQueryServerDestroy);
-        break;
-    case CONSOLE_SC:
-        startCleanup(&IAppShutdownNotify::onAppStartConsoleCleanup);
-        break;
-    case CONSOLE_QD:
-        next = queryDestroy(&IAppShutdownNotify::onAppQueryConsoleDestroy);
+    case CONSOLE_STOP:
+        next = stop(&IAppShutdownNotify::onAppStopConsole, m_retry);
         break;
     case DONE:
         s_cleaners.clear();
@@ -124,10 +108,13 @@ Duration MainTimer::onTimer(TimePoint now) {
     }
 
     // some delay when rerunning the same step (i.e. QueryDestroy failed)
-    if (!next)
+    if (!next) {
+        m_retry = true;
         return 10ms;
+    }
 
     m_mode = ETimerMode(m_mode + 1);
+    m_retry = false;
     return 0ms;
 }
 
@@ -137,7 +124,7 @@ bool MainTimer::stopped() const {
 }
 
 //===========================================================================
-bool MainTimer::queryDestroyFailed(Duration grace) {
+bool MainTimer::stopFailed(Duration grace) {
     if (Clock::now() - m_shutdownStart > s_shutdownTimeout + grace) {
         assert(0 && "shutdown timeout");
         terminate();
@@ -146,25 +133,24 @@ bool MainTimer::queryDestroyFailed(Duration grace) {
 }
 
 //===========================================================================
-void MainTimer::startCleanup(CleanFn notify) {
-    for (auto && v : s_cleaners) {
-        (v.notify->*notify)();
-        v.destroyed = false;
+bool MainTimer::stop(StopFn notify, bool retry) {
+    if (!retry) {
+        for (auto && v : s_cleaners) 
+            v.stopped = false;
     }
-}
-
-//===========================================================================
-bool MainTimer::queryDestroy(QueryFn notify) {
+    bool stopped = true;
     for (auto && v : s_cleaners) {
-        if (!v.destroyed) {
-            if ((v.notify->*notify)()) {
-                v.destroyed = true;
+        if (!v.stopped) {
+            if ((v.notify->*notify)(retry)) {
+                v.stopped = true;
             } else {
-                return queryDestroyFailed(5s);
+                stopped = false;
+                if (retry)
+                    return stopFailed(5s);
             }
         }
     }
-    return true;
+    return stopped;
 }
 
 
@@ -237,8 +223,8 @@ void Dim::appMonitorShutdown(IAppShutdownNotify * cleaner) {
 }
 
 //===========================================================================
-bool Dim::appQueryDestroyFailed() {
-    return s_mainTimer.queryDestroyFailed(0ms);
+bool Dim::appStopFailed() {
+    return s_mainTimer.stopFailed(0ms);
 }
 
 //===========================================================================

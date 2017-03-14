@@ -100,15 +100,16 @@ void RouteConn::onSocketRead(const AppSocketData & data) {
 
 namespace {
     class ShutdownMonitor : public IAppShutdownNotify {
-        void onAppStartClientCleanup() override;
+        bool onAppStopClient(bool retry) override;
     };
     static ShutdownMonitor s_cleanup;
 } // namespace
 
 //===========================================================================
-void ShutdownMonitor::onAppStartClientCleanup() {
+bool ShutdownMonitor::onAppStopClient(bool retry) {
     if (!s_hosts.empty())
         appSocketRemoveListener<RouteConn>(AppSocket::kHttp2, "", s_endpoint);
+    return true;
 }
 
 

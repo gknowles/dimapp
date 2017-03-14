@@ -91,18 +91,14 @@ void WebRoute::onHttpRequest(
 ***/
 
 class MainShutdown : public IAppShutdownNotify {
-    void onAppStartClientCleanup() override;
-    bool onAppQueryClientDestroy() override;
+    bool onAppStopClient(bool retry) override;
 };
 static MainShutdown s_cleanup;
 
 //===========================================================================
-void MainShutdown::onAppStartClientCleanup() {
-    appSocketRemoveListener<TnetConn>(AppSocket::kByte, "", s_endpoint);
-}
-
-//===========================================================================
-bool MainShutdown::onAppQueryClientDestroy() {
+bool MainShutdown::onAppStopClient(bool retry) {
+    if (!retry)
+        appSocketRemoveListener<TnetConn>(AppSocket::kByte, "", s_endpoint);
     return true;
 }
 

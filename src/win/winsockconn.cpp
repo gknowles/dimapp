@@ -296,22 +296,18 @@ void ConnSocket::onConnect(int error, int bytes) {
 
 namespace {
 class ShutdownNotify : public IAppShutdownNotify {
-    void onAppStartConsoleCleanup() override;
-    bool onAppQueryConsoleDestroy() override;
+    bool onAppStopConsole(bool retry) override;
 };
 } // namespace
 static ShutdownNotify s_cleanup;
 
 //===========================================================================
-void ShutdownNotify::onAppStartConsoleCleanup() {
+bool ShutdownNotify::onAppStopConsole(bool retry) {
     lock_guard<mutex> lk{s_mut};
-    for (auto && task : s_connecting)
-        task.m_socket->hardClose();
-}
-
-//===========================================================================
-bool ShutdownNotify::onAppQueryConsoleDestroy() {
-    lock_guard<mutex> lk{s_mut};
+    if (!retry) {
+        for (auto && task : s_connecting)
+            task.m_socket->hardClose();
+    }
     return s_connecting.empty() && s_closing.empty();
 }
 
