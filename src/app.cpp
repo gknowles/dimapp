@@ -162,6 +162,7 @@ bool MainTimer::stop(StopFn notify, bool retry) {
 
 //===========================================================================
 int Dim::appRun(IAppNotify & app, int argc, char * argv[]) {
+    s_runMode = kRunStarting;
     iConsoleInitialize();
     iTaskInitialize();
     iTimerInitialize();

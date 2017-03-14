@@ -21,22 +21,3 @@
 // by clients of class 'type2'
 #pragma warning(disable : 4251)
 #endif
-
-// program exit codes
-// On *nix the EX_* constants are defined in <sysexits.h>
-#ifndef EX_OK
-enum {
-    EX_OK = 0,
-    EX_USAGE = 64,       // bad command line
-    EX_DATAERR = 65,     // bad input file
-    EX_UNAVAILABLE = 69, // failed for some other reason
-    EX_SOFTWARE = 70,    // internal software error
-    EX_OSERR = 71,       // some os operation failed
-    EX_IOERR = 74,       // console or file read/write error
-    EX_NOPERM = 77,      // insufficient permission
-    EX_CONFIG = 78,      // configuration error
-
-    // Microsoft specific
-    EX_ABORTED = 3, // assert() failure or direct call to abort()
-};
-#endif
