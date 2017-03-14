@@ -3,7 +3,7 @@
 
 #include "config.h"
 
-#include "socket.h"
+#include "charbuf.h"
 #include "types.h"
 
 #include <functional>
@@ -35,6 +35,56 @@ namespace AppSocket {
     };
 }
 
+struct AppSocketInfo {
+    AppSocket::Family fam;
+    std::string_view type;
+    Endpoint remote;
+    Endpoint local;
+};
+struct AppSocketData {
+    char * data;
+    int bytes;
+};
+
+
+/****************************************************************************
+*
+*   AppSocket notify
+*
+***/
+
+class IAppSocketNotify {
+public:
+    virtual ~IAppSocketNotify() {}
+
+    // for connectors
+    virtual void onSocketConnect(const AppSocketInfo & info){};
+    virtual void onSocketConnectFailed(){};
+
+    // for listeners
+    virtual void onSocketAccept(const AppSocketInfo & info){};
+
+    // for both
+    virtual void onSocketRead(const AppSocketData & data) = 0;
+    virtual void onSocketDisconnect(){};
+    virtual void onSocketDestroy() { delete this; }
+
+private:
+    friend class AppSocketBase;
+    AppSocketBase * m_socket{nullptr};
+};
+
+void appSocketDisconnect(IAppSocketNotify * notify);
+void appSocketWrite(IAppSocketNotify * notify, std::string_view data);
+void appSocketWrite(IAppSocketNotify * notify, const CharBuf & data);
+
+
+/****************************************************************************
+*
+*   AppSocket listen
+*
+***/
+
 class IAppSocketMatchNotify {
 public:
     virtual ~IAppSocketMatchNotify() {}
@@ -48,15 +98,8 @@ public:
 class IAppSocketNotifyFactory {
 public:
     virtual ~IAppSocketNotifyFactory() {}
-    virtual std::unique_ptr<ISocketNotify> create() = 0;
+    virtual std::unique_ptr<IAppSocketNotify> create() = 0;
 };
-
-
-/****************************************************************************
-*
-*   AppSocket listen
-*
-***/
 
 void appSocketAddMatch(IAppSocketMatchNotify * notify, AppSocket::Family fam);
 
@@ -75,7 +118,7 @@ void appSocketRemoveListener(
 //===========================================================================
 // Add and remove listeners with implicitly created factories. Implemented
 // as templates where the template parameter is the class, derived from 
-// ISocketNotify, that will be instanciated for incoming connections.
+// IAppSocketNotify, that will be instantiated for incoming connections.
 template <typename S>
 inline void appSocketUpdateListener(
     bool add,
@@ -83,7 +126,7 @@ inline void appSocketUpdateListener(
     std::string_view type,
     const Endpoint & end) {
     static class Factory : public IAppSocketNotifyFactory {
-        std::unique_ptr<ISocketNotify> create() override {
+        std::unique_ptr<IAppSocketNotify> create() override {
             return std::make_unique<S>();
         }
     } s_factory;

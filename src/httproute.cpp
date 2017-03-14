@@ -29,10 +29,10 @@ struct HostInfo {
     vector<PathInfo> paths;
 };
 
-class RouteConn : public ISocketNotify {
-    void onSocketAccept(const SocketInfo & info) override;
+class RouteConn : public IAppSocketNotify {
+    void onSocketAccept(const AppSocketInfo & info) override;
     void onSocketDisconnect() override;
-    void onSocketRead(const SocketData & data) override;
+    void onSocketRead(const AppSocketData & data) override;
 
 private:
     HttpConnHandle m_conn;
@@ -58,7 +58,7 @@ static Endpoint s_endpoint;
 ***/
 
 //===========================================================================
-void RouteConn::onSocketAccept(const SocketInfo & info) {
+void RouteConn::onSocketAccept(const AppSocketInfo & info) {
     m_conn = httpListen();
 }
 
@@ -69,7 +69,7 @@ void RouteConn::onSocketDisconnect() {
 }
 
 //===========================================================================
-void RouteConn::onSocketRead(const SocketData & data) {
+void RouteConn::onSocketRead(const AppSocketData & data) {
     CharBuf buf;
     vector<unique_ptr<HttpMsg>> msgs;
     bool result = httpRecv(m_conn, &buf, &msgs, data.data, data.bytes);
@@ -77,7 +77,7 @@ void RouteConn::onSocketRead(const SocketData & data) {
         //socketWrite(this, 
     }
     if (!result)
-        return socketDisconnect(this);
+        return appSocketDisconnect(this);
     for (auto && msg : msgs) {
         if (msg->isRequest()) {
             auto req = static_cast<HttpRequest *>(msg.get());

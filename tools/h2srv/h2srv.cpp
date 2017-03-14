@@ -30,18 +30,18 @@ static Endpoint s_endpoint;
 *
 ***/
 
-class TnetConn : public ISocketNotify {
+class TnetConn : public IAppSocketNotify {
 public:
-    void onSocketAccept(const SocketInfo & accept) override;
+    void onSocketAccept(const AppSocketInfo & accept) override;
     void onSocketDisconnect() override;
-    void onSocketRead(const SocketData & data) override;
+    void onSocketRead(const AppSocketData & data) override;
 
 private:
-    SocketInfo m_accept;
+    AppSocketInfo m_accept;
 };
 
 //===========================================================================
-void TnetConn::onSocketAccept(const SocketInfo & accept) {
+void TnetConn::onSocketAccept(const AppSocketInfo & accept) {
     m_accept = accept;
     cout << m_accept.remote << " connected on " 
         << m_accept.local << endl;
@@ -53,7 +53,7 @@ void TnetConn::onSocketDisconnect() {
 }
 
 //===========================================================================
-void TnetConn::onSocketRead(const SocketData & data) {
+void TnetConn::onSocketRead(const AppSocketData & data) {
     cout << m_accept.remote << ": ";
     cout.write(data.data, data.bytes);
 }
