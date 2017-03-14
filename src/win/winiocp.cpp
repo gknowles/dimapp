@@ -28,7 +28,6 @@ namespace {} // namespace
 *
 ***/
 
-static RunMode s_mode{kRunStopped};
 static HANDLE s_iocp;
 static mutex s_mut;
 
@@ -91,7 +90,6 @@ static WinIocpShutdown s_cleanup;
 //===========================================================================
 bool WinIocpShutdown::onAppStopConsole(bool retry) {
     if (!retry) {
-        s_mode = kRunStopping;
         if (!CloseHandle(s_iocp))
             logMsgError() << "CloseHandle(iocp): " << WinError{};
 
@@ -106,7 +104,6 @@ bool WinIocpShutdown::onAppStopConsole(bool retry) {
     if (!closed)
         return appStopFailed();
 
-    s_mode = kRunStopped;
     return true;
 }
 
@@ -119,7 +116,6 @@ bool WinIocpShutdown::onAppStopConsole(bool retry) {
 
 //===========================================================================
 void Dim::winIocpInitialize() {
-    s_mode = kRunStarting;
     appMonitorShutdown(&s_cleanup);
 
     s_iocp = CreateIoCompletionPort(
@@ -133,8 +129,6 @@ void Dim::winIocpInitialize() {
 
     thread thr{iocpDispatchThread};
     thr.detach();
-
-    s_mode = kRunRunning;
 }
 
 //===========================================================================
