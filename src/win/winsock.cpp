@@ -204,8 +204,10 @@ SocketBase::SocketBase(ISocketNotify * notify)
 //===========================================================================
 SocketBase::~SocketBase() {
     lock_guard<mutex> lk{s_mut};
-    if (m_notify)
+    if (m_notify) {
         m_notify->m_socket = nullptr;
+        m_notify->onSocketDestroy();
+    }
 
     hardClose();
 

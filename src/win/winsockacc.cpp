@@ -148,7 +148,7 @@ static void pushAcceptStop(ListenSocket * listen) {
 //===========================================================================
 // static
 void AcceptSocket::accept(ListenSocket * listen) {
-    assert(!listen->m_socket.get());
+    assert(!listen->m_socket);
     auto sock = make_unique<AcceptSocket>(
         listen->m_notify->onListenCreateSocket(listen->m_localEnd).release());
     sock->m_handle = winSocketCreate();
