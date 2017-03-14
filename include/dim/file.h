@@ -89,9 +89,14 @@ void fileReadSync(
 void fileReadBinary(
     IFileReadNotify * notify,
     std::string & out,
-    std::string_view path);
+    std::string_view path,
+    size_t maxSize = 10'000'000);
+void fileReadSyncBinary(
+    std::string & out,
+    std::string_view path,
+    size_t maxSize = 10'000'000);
 
-// page size is always a power of 2
+// page size is determined by the operating system but is always a power of 2
 size_t filePageSize();
 
 // The maxLen is the maximum offset into the file that view can be extended

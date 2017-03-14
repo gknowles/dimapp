@@ -153,9 +153,7 @@ void LogTask::onTask() {
 ***/
 
 namespace {
-class Application : public IAppNotify,
-                    public ILogNotify,
-                    public IFileReadNotify {
+class Application : public IAppNotify, public ILogNotify {
     string m_source;
     TaskQueueHandle m_logQ;
     experimental::filesystem::path m_srcfile;
@@ -167,9 +165,6 @@ public:
 
     // ILogNotify
     void onLog(LogType type, string_view msg) override;
-
-    // IFileReadNotify
-    void onFileEnd(int64_t offset, IFile * file) override;
 };
 } // namespace
 
@@ -253,30 +248,17 @@ https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
     // process abnf file
     if (!srcfile->has_extension())
         srcfile->replace_extension("abnf");
-    fileReadBinary(this, m_source, srcfile->u8string());
-}
-
-//===========================================================================
-void Application::onLog(LogType type, string_view msg) {
-    if (s_cmdopts.verbose || type != kLogDebug) {
-        auto ptr = new LogTask(type, msg);
-        taskPush(m_logQ, *ptr);
-    }
-}
-
-//===========================================================================
-void Application::onFileEnd(int64_t offset, IFile * file) {
-    if (!file)
+    fileReadSyncBinary(m_source, srcfile->u8string());
+    if (m_source.empty())
         return appSignalUsageError(EX_USAGE);
 
-    fileClose(file);
     TimePoint start = Clock::now();
     Grammar rules;
     getCoreRules(rules);
     if (!parseAbnf(rules, m_source, s_cmdopts.minRules)) {
         logParseError(
             "parsing failed",
-            filePath(file).string(),
+            srcfile->u8string(),
             rules.errpos(),
             m_source);
         return appSignalShutdown(EX_DATAERR);
@@ -303,6 +285,14 @@ void Application::onFileEnd(int64_t offset, IFile * file) {
     }
     logMsgInfo() << "Errors encountered: " << s_errors;
     appSignalShutdown(EX_OK);
+}
+
+//===========================================================================
+void Application::onLog(LogType type, string_view msg) {
+    if (s_cmdopts.verbose || type != kLogDebug) {
+        auto ptr = new LogTask(type, msg);
+        taskPush(m_logQ, *ptr);
+    }
 }
 
 

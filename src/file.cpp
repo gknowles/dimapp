@@ -68,7 +68,8 @@ void FileProxyNotify::onFileEnd(int64_t offset, IFile * file) {
 void Dim::fileReadBinary(
     IFileReadNotify * notify,
     string & out,
-    string_view path) {
+    string_view path,
+    size_t maxSize) {
     auto file = fileOpen(path, IFile::kReadOnly | IFile::kDenyNone);
     if (!file) {
         logMsgError() << "File open failed, " << path;
@@ -77,7 +78,28 @@ void Dim::fileReadBinary(
     }
 
     size_t bytes = fileSize(file.get());
+    if (bytes > maxSize)
+        logMsgError() << "File too large, " << bytes << ", " << path;
     out.resize(bytes);
     auto proxy = new FileProxyNotify(out, notify);
     fileRead(proxy, out.data(), bytes, file.release());
+}
+
+//===========================================================================
+void Dim::fileReadSyncBinary(
+    string & out,
+    string_view path,
+    size_t maxSize) {
+    auto file = fileOpen(path, IFile::kReadOnly | IFile::kDenyNone);
+    if (!file) {
+        logMsgError() << "File open failed, " << path;
+        out.clear();
+        return;
+    }
+
+    size_t bytes = fileSize(file.get());
+    if (bytes > maxSize)
+        logMsgError() << "File too large, " << bytes << ", " << path;
+    out.resize(bytes);
+    fileReadSync(out.data(), bytes, file.release(), 0);
 }
