@@ -109,16 +109,16 @@ void appSignalUsageError(
 // consoles (web, text, etc) used to monitor the server.
 // 
 // For each phase one call is made to every onApp*Shutdown() handler with 
-// retry set to false. Each handler begins shutting down and returns false if 
-// it doesn't finish immediately. After the first call each handler that 
-// returned false, will be called periodically, with retry true, until it 
-// returns true. This is done in reverse order of registration, only moving on 
-// to the next handler after the current one succeeds. The phase ends after 
-// all handlers have returned true.
+// retry false. Each handler begins shutting down and returns false if 
+// it doesn't finish immediately. After the first call is made to all handlers
+// the handlers that returned false are processed one at a time in reverse 
+// order of registration. Each of these is called periodically, with retry 
+// true, until it returns true before continuing with the next. The phase ends 
+// after all handlers have returned true.
 //
 // After a handler returns true it will not be called again. When returning 
-// false handlers should return appShutdownFailed(), which is always false, 
-// and helps track shutdown problems.
+// false, handlers must call appShutdownFailed(), which is always false. This
+// can be done directly in the return statement.
 //
 // Do not block in the handler, as it prevents timers from running and things 
 // from shutting down in parallel. This is especially important when it 
@@ -144,7 +144,7 @@ void appMonitorShutdown(IAppShutdownNotify * cleanup);
 bool appShutdownFailed();
 
 // Reset shutdown timeout back to 2 minutes from now. Use with caution, called
-// repeatedly shutdown can be delayed indefinitely.
+// repeatedly shutdown can be delayed indefinitely (aka hang).
 void appDelayShutdown();
 
 } // namespace
