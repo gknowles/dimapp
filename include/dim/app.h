@@ -108,20 +108,24 @@ void appSignalUsageError(
 // connections to servers used to process client requests, and finally 
 // consoles (web, text, etc) used to monitor the server.
 // 
-// For each phase one call is made to every onAppStop* handler with retry set
-// to false. Each handler begins shutting down and returns false if it doesn't 
-// finish immediately. After the first call every handler that returned false 
-// will be called periodically, with retry true, until it returns true. The 
-// phase ends after all handlers have returned true.
+// For each phase one call is made to every onApp*Shutdown handler with retry 
+// set to false. Each handler begins shutting down and returns false if it 
+// doesn't finish immediately. After the first call each handler that 
+// returned false, will be called periodically, with retry true, until it 
+// returns true. This is done in reverse order of registration, only moving on 
+// to the next handler after the current one succeeds. The phase ends after 
+// all handlers have returned true.
 //
-// Handlers are called in the reverse order they were registered with
-// appMonitorShutdown(). And after a handler returns true it will not be 
-// called again. When returning false handlers should return appStopFailed(),
-// which is always false, and helps track shutdown problems.
+// After a handler returns true it will not be called again. When returning 
+// false handlers should return appStopFailed(), which is always false, and 
+// helps track shutdown problems.
 //
-// Do not block in the handler, as it prevents things from shutting down in
-// parallel. This is especially important when it involves file, socket, or 
-// other systems that may block in the OS. 
+// Do not block in the handler, as it prevents timers from running and things 
+// from shutting down in parallel. This is especially important when it 
+// involves file, socket, or other systems that may block in the OS. 
+//
+// NOTE: If the shutdown process takes too long (>2 minutes) the process
+//       is terminated. This can be delayed with appDelayShutdown().
 //===========================================================================
 class IAppShutdownNotify {
 public:
@@ -132,10 +136,15 @@ public:
     virtual bool onAppStopConsole(bool retry) { return true; }
 };
 
+// Used to register shutdown handlers
 void appMonitorShutdown(IAppShutdownNotify * cleanup);
 
 // Helps to track shutdown problems, always returns false. Called from inside 
 // shutdown handlers when they are returning false. 
 bool appStopFailed();
+
+// Reset shutdown timeout back to 2 minutes from now. Use with caution, called
+// repeatedly shutdown can be delayed indefinitely.
+void appDelayShutdown();
 
 } // namespace

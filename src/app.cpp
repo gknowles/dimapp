@@ -39,6 +39,7 @@ public:
 public:
     bool stopped() const;
     bool stopFailed(Duration grace);
+    void resetShutdownTimer();
 
     // ITimerNotify
     Duration onTimer(TimePoint now) override;
@@ -49,6 +50,7 @@ private:
     ETimerMode m_mode { MAIN_RUN };
     TimePoint m_shutdownStart;
     bool m_retry{false};
+    bool m_notifyFinished{false};
 };
 
 } // namespace
@@ -125,11 +127,17 @@ bool MainTimer::stopped() const {
 
 //===========================================================================
 bool MainTimer::stopFailed(Duration grace) {
+    m_notifyFinished = false;
     if (Clock::now() - m_shutdownStart > s_shutdownTimeout + grace) {
         assert(0 && "shutdown timeout");
         terminate();
     }
     return false;
+}
+
+//===========================================================================
+void MainTimer::resetShutdownTimer() {
+    m_shutdownStart = Clock::now();
 }
 
 //===========================================================================
@@ -141,9 +149,14 @@ bool MainTimer::stop(StopFn notify, bool retry) {
     bool stopped = true;
     for (auto && v : s_cleaners) {
         if (!v.stopped) {
+            m_notifyFinished = true;
             if ((v.notify->*notify)(retry)) {
+                // successful handlers better not have called appStopFailed()
+                assert(m_notifyFinished);
                 v.stopped = true;
             } else {
+                // failed handlers MUST have used appStopFailed()
+                assert(!m_notifyFinished);
                 stopped = false;
                 if (retry)
                     return stopFailed(5s);
@@ -156,9 +169,14 @@ bool MainTimer::stop(StopFn notify, bool retry) {
 
 /****************************************************************************
 *
-*   Externals
+*   Public API
 *
 ***/
+
+//===========================================================================
+RunMode Dim::appMode() {
+    return s_runMode;
+}
 
 //===========================================================================
 int Dim::appRun(IAppNotify & app, int argc, char * argv[]) {
@@ -229,6 +247,6 @@ bool Dim::appStopFailed() {
 }
 
 //===========================================================================
-RunMode Dim::appMode() {
-    return s_runMode;
+void Dim::appDelayShutdown() {
+    s_mainTimer.resetShutdownTimer();
 }
