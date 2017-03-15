@@ -296,13 +296,13 @@ void ConnSocket::onConnect(int error, int bytes) {
 
 namespace {
 class ShutdownNotify : public IAppShutdownNotify {
-    bool onAppStopConsole(bool retry) override;
+    bool onAppConsoleShutdown(bool retry) override;
 };
 } // namespace
 static ShutdownNotify s_cleanup;
 
 //===========================================================================
-bool ShutdownNotify::onAppStopConsole(bool retry) {
+bool ShutdownNotify::onAppConsoleShutdown(bool retry) {
     lock_guard<mutex> lk{s_mut};
     if (!retry) {
         for (auto && task : s_connecting)

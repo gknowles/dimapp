@@ -195,13 +195,13 @@ SocketBuffer::~SocketBuffer() {
 
 namespace {
 class Shutdown : public IAppShutdownNotify {
-    bool onAppStopConsole(bool retry) override;
+    bool onAppConsoleShutdown(bool retry) override;
 };
 } // namespace
 static Shutdown s_cleanup;
 
 //===========================================================================
-bool Shutdown::onAppStopConsole(bool retry) {
+bool Shutdown::onAppConsoleShutdown(bool retry) {
     lock_guard<mutex> lk{s_mut};
 
     while (!s_buffers.empty())

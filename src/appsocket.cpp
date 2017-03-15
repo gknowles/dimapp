@@ -432,31 +432,31 @@ AppSocket::MatchType Http2Match::OnMatch(
 
 namespace {
 class ShutdownMonitor : public IAppShutdownNotify {
-    bool onAppStopClient(bool retry) override;
-    bool onAppStopConsole(bool retry) override;
+    bool onAppClientShutdown(bool retry) override;
+    bool onAppConsoleShutdown(bool retry) override;
 };
 static ShutdownMonitor s_cleanup;
 } // namespace
 
   //===========================================================================
-bool ShutdownMonitor::onAppStopClient(bool retry) {
+bool ShutdownMonitor::onAppClientShutdown(bool retry) {
     shared_lock<shared_mutex> lk{s_listenMut};
     assert(s_endpoints.empty());
     if (!s_stopping.empty())
-        return appStopFailed();
+        return appShutdownFailed();
 
     return true;
 }
 
 //===========================================================================
-bool ShutdownMonitor::onAppStopConsole(bool retry) {
+bool ShutdownMonitor::onAppConsoleShutdown(bool retry) {
     lock_guard<mutex> lk{s_unmatchedMut};
     if (!retry) {
         for (auto && info : s_unmatched)
             socketDisconnect(info.notify);
     }
     if (!s_unmatched.empty())
-        return appStopFailed();
+        return appShutdownFailed();
 
     return true;
 }

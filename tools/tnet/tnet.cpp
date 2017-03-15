@@ -158,12 +158,12 @@ void ConsoleReader::onFileEnd(int64_t offset, IFile * file) {
 ***/
 
 class MainShutdown : public IAppShutdownNotify {
-    bool onAppStopClient(bool retry) override;
+    bool onAppClientShutdown(bool retry) override;
 };
 static MainShutdown s_cleanup;
 
 //===========================================================================
-bool MainShutdown::onAppStopClient(bool retry) {
+bool MainShutdown::onAppClientShutdown(bool retry) {
     if (!retry) {
         s_console.m_device.reset();
         endpointCancelQuery(s_cancelAddrId);
@@ -172,7 +172,7 @@ bool MainShutdown::onAppStopClient(bool retry) {
 
     if (socketGetMode(&s_socket) != ISocketNotify::kInactive
         || !s_console.QueryDestroy()) {
-        return appStopFailed();
+        return appShutdownFailed();
     }
     return true;
 }

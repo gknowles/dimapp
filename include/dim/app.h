@@ -39,7 +39,7 @@ public:
 
     virtual void onAppRun() = 0;
 
-    // argc & argv are set by the framework before the call to onAppRun 
+    // argc & argv are set by the framework before the call to onAppRun() 
     int m_argc;
     char ** m_argv;
 };
@@ -108,17 +108,17 @@ void appSignalUsageError(
 // connections to servers used to process client requests, and finally 
 // consoles (web, text, etc) used to monitor the server.
 // 
-// For each phase one call is made to every onApp*Shutdown handler with retry 
-// set to false. Each handler begins shutting down and returns false if it 
-// doesn't finish immediately. After the first call each handler that 
+// For each phase one call is made to every onApp*Shutdown() handler with 
+// retry set to false. Each handler begins shutting down and returns false if 
+// it doesn't finish immediately. After the first call each handler that 
 // returned false, will be called periodically, with retry true, until it 
 // returns true. This is done in reverse order of registration, only moving on 
 // to the next handler after the current one succeeds. The phase ends after 
 // all handlers have returned true.
 //
 // After a handler returns true it will not be called again. When returning 
-// false handlers should return appStopFailed(), which is always false, and 
-// helps track shutdown problems.
+// false handlers should return appShutdownFailed(), which is always false, 
+// and helps track shutdown problems.
 //
 // Do not block in the handler, as it prevents timers from running and things 
 // from shutting down in parallel. This is especially important when it 
@@ -131,9 +131,9 @@ class IAppShutdownNotify {
 public:
     virtual ~IAppShutdownNotify() {}
 
-    virtual bool onAppStopClient(bool retry) { return true; }
-    virtual bool onAppStopServer(bool retry) { return true; }
-    virtual bool onAppStopConsole(bool retry) { return true; }
+    virtual bool onAppClientShutdown(bool retry) { return true; }
+    virtual bool onAppServerShutdown(bool retry) { return true; }
+    virtual bool onAppConsoleShutdown(bool retry) { return true; }
 };
 
 // Used to register shutdown handlers
@@ -141,7 +141,7 @@ void appMonitorShutdown(IAppShutdownNotify * cleanup);
 
 // Helps to track shutdown problems, always returns false. Called from inside 
 // shutdown handlers when they are returning false. 
-bool appStopFailed();
+bool appShutdownFailed();
 
 // Reset shutdown timeout back to 2 minutes from now. Use with caution, called
 // repeatedly shutdown can be delayed indefinitely.

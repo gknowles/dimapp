@@ -82,13 +82,13 @@ static void iocpDispatchThread() {
 
 namespace {
 class WinIocpShutdown : public IAppShutdownNotify {
-    bool onAppStopConsole(bool retry) override;
+    bool onAppConsoleShutdown(bool retry) override;
 };
 static WinIocpShutdown s_cleanup;
 } // namespace
 
 //===========================================================================
-bool WinIocpShutdown::onAppStopConsole(bool retry) {
+bool WinIocpShutdown::onAppConsoleShutdown(bool retry) {
     if (!retry) {
         if (!CloseHandle(s_iocp))
             logMsgError() << "CloseHandle(iocp): " << WinError{};
@@ -102,7 +102,7 @@ bool WinIocpShutdown::onAppStopConsole(bool retry) {
         closed = !s_iocp;
     }
     if (!closed)
-        return appStopFailed();
+        return appShutdownFailed();
 
     return true;
 }

@@ -38,7 +38,7 @@ public:
 
 public:
     bool stopped() const;
-    bool stopFailed(Duration grace);
+    bool shutdownFailed(Duration grace);
     void resetShutdownTimer();
 
     // ITimerNotify
@@ -95,13 +95,13 @@ Duration MainTimer::onTimer(TimePoint now) {
         m_shutdownStart = now;
         break;
     case CLIENT_STOP:
-        next = stop(&IAppShutdownNotify::onAppStopClient, m_retry);
+        next = stop(&IAppShutdownNotify::onAppClientShutdown, m_retry);
         break;
     case SERVER_STOP:
-        next = stop(&IAppShutdownNotify::onAppStopServer, m_retry);
+        next = stop(&IAppShutdownNotify::onAppServerShutdown, m_retry);
         break;
     case CONSOLE_STOP:
-        next = stop(&IAppShutdownNotify::onAppStopConsole, m_retry);
+        next = stop(&IAppShutdownNotify::onAppConsoleShutdown, m_retry);
         break;
     case DONE:
         s_cleaners.clear();
@@ -126,7 +126,7 @@ bool MainTimer::stopped() const {
 }
 
 //===========================================================================
-bool MainTimer::stopFailed(Duration grace) {
+bool MainTimer::shutdownFailed(Duration grace) {
     m_notifyFinished = false;
     if (Clock::now() - m_shutdownStart > s_shutdownTimeout + grace) {
         assert(0 && "shutdown timeout");
@@ -151,15 +151,15 @@ bool MainTimer::stop(StopFn notify, bool retry) {
         if (!v.stopped) {
             m_notifyFinished = true;
             if ((v.notify->*notify)(retry)) {
-                // successful handlers better not have called appStopFailed()
+                // successful handlers can't've called appShutdownFailed()
                 assert(m_notifyFinished);
                 v.stopped = true;
             } else {
-                // failed handlers MUST have used appStopFailed()
+                // failed handlers MUST have used appShutdownFailed()
                 assert(!m_notifyFinished);
                 stopped = false;
                 if (retry)
-                    return stopFailed(5s);
+                    return shutdownFailed(5s);
             }
         }
     }
@@ -242,8 +242,8 @@ void Dim::appMonitorShutdown(IAppShutdownNotify * cleaner) {
 }
 
 //===========================================================================
-bool Dim::appStopFailed() {
-    return s_mainTimer.stopFailed(0ms);
+bool Dim::appShutdownFailed() {
+    return s_mainTimer.shutdownFailed(0ms);
 }
 
 //===========================================================================
