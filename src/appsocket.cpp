@@ -54,7 +54,7 @@ public:
 
 namespace Dim {
     
-class AppSocketBase : public ISocketNotify {
+class AppSocketBase : public ISocketNotify, ITimerNotify {
 public:
     static void disconnect(IAppSocketNotify * notify);
     static void write(IAppSocketNotify * notify, string_view data);
@@ -64,13 +64,16 @@ public:
     ~AppSocketBase();
 
     Duration checkTimeout_LK(TimePoint now);
+    void write(std::string_view data);
 
     void onSocketAccept(const SocketInfo & info) override;
-    void onSocketRead(const SocketData & data) override;
     void onSocketDisconnect() override;
     void onSocketDestroy() override;
+    void onSocketRead(const SocketData & data) override;
 
 private:
+    Duration onTimer(TimePoint now) override;
+
     AppSocketInfo m_accept;
 
     // set to list.end() when matching is successfully or unsuccessfully
@@ -78,6 +81,8 @@ private:
     list<UnmatchedInfo>::iterator m_pos;
 
     IAppSocketNotify * m_notify{nullptr};
+    unique_ptr<SocketBuffer> m_buffer;
+    size_t m_bufferUsed{0};
 };
 
 class UnmatchedTimer : public ITimerNotify {
@@ -164,11 +169,15 @@ void AppSocketBase::disconnect(IAppSocketNotify * notify) {
 }
 
 //===========================================================================
+// static
 void AppSocketBase::write(IAppSocketNotify * notify, std::string_view data) {
+    notify->m_socket->write(data);
 }
 
 //===========================================================================
+// static
 void AppSocketBase::write(IAppSocketNotify * notify, const CharBuf & data) {
+    notify->m_socket->write(to_string(data));
 }
 
 //===========================================================================
@@ -186,6 +195,25 @@ Duration AppSocketBase::checkTimeout_LK(TimePoint now) {
     m_pos = {};
     socketDisconnect(this);
     return 0s;
+}
+
+//===========================================================================
+void AppSocketBase::write(std::string_view data) {
+    bool hadData = m_bufferUsed;
+    while (!data.empty()) {
+        if (!m_buffer) 
+            m_buffer = socketGetBuffer();
+        size_t bytes = min(m_buffer->len - m_bufferUsed, data.size());
+        memcpy(m_buffer->data, data.data(), bytes);
+        data.remove_prefix(bytes);
+        m_bufferUsed += bytes;
+        if (m_bufferUsed == m_buffer->len) {
+            socketWrite(this, move(m_buffer), m_bufferUsed);
+            m_bufferUsed = 0;
+        }
+    }
+    if (!hadData && m_bufferUsed)
+        timerUpdate(this, 1ms, true);
 }
 
 //===========================================================================
@@ -319,12 +347,22 @@ FINISH:
 
     // set notifier with one from registered factory
     m_notify = fact->create().release();
+    m_notify->m_socket = this;
     // replay callbacks received so far
     m_notify->onSocketAccept(m_accept);
     AppSocketData tmp;
     tmp.data = const_cast<char*>(view.data());
     tmp.bytes = (int) view.size();
     m_notify->onSocketRead(tmp);
+}
+
+//===========================================================================
+Duration AppSocketBase::onTimer(TimePoint now) {
+    if (m_bufferUsed) {
+        socketWrite(this, move(m_buffer), m_bufferUsed);
+        m_bufferUsed = 0;
+    }
+    return kTimerInfinite;
 }
 
 

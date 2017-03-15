@@ -73,9 +73,8 @@ void RouteConn::onSocketRead(const AppSocketData & data) {
     CharBuf buf;
     vector<unique_ptr<HttpMsg>> msgs;
     bool result = httpRecv(m_conn, &buf, &msgs, data.data, data.bytes);
-    if (!buf.empty()) {
-        //socketWrite(this, 
-    }
+    if (!buf.empty())
+        appSocketWrite(this, buf);
     if (!result)
         return appSocketDisconnect(this);
     for (auto && msg : msgs) {
