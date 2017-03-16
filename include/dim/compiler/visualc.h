@@ -13,7 +13,9 @@
 #pragma warning( \
     disable : 4324) // structure was padded due to alignment specifier
 #pragma warning( \
-    disable : 4456) // declaration of 'elem' hides previous local declaration
+    disable : 4456) // declaration of 'identifier' hides previous local declaration
+#pragma warning( \
+    disable : 4457) // declaration of 'identifier' hides function parameter
 #pragma warning(disable : 4800) // forcing value to bool 'true' or 'false'
 #pragma warning(disable : 5030) // attribute 'identifier' is not recognized
 #ifdef DIM_LIB_DYN_LINK

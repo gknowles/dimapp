@@ -71,6 +71,11 @@ CharBuf & CharBuf::assign(string_view str, size_t pos, size_t count) {
 }
 
 //===========================================================================
+CharBuf & CharBuf::assign(const CharBuf & buf, size_t pos, size_t count) {
+    return replace(0, m_size, buf, pos, count);
+}
+
+//===========================================================================
 char & CharBuf::front() {
     assert(m_size);
     auto & buf = *m_buffers.front();
@@ -347,45 +352,47 @@ CharBuf & CharBuf::append(const CharBuf & buf, size_t pos, size_t count) {
 
 //===========================================================================
 int CharBuf::compare(const char s[], size_t count) const {
-    for (auto && ptr : m_buffers) {
-        if (count < ptr->m_used) {
-            if (memcmp(ptr->m_data, s, count) < 0)
-                return -1;
-            return 1;
-        }
-        if (int rc = memcmp(ptr->m_data, s, ptr->m_used))
-            return rc;
-        s += ptr->m_used;
-        count -= ptr->m_used;
-    }
-    return count ? -1 : 0;
+    return compare(0, m_size, s, count);
 }
 
 //===========================================================================
-int CharBuf::compare(size_t pos, size_t count, const char src[], size_t srcLen)
-    const {
-    assert(pos <= pos + count && pos + count <= m_size);
-    if (!count)
-        return srcLen ? 0 : -1;
-    int slen = (int)srcLen;
+int CharBuf::compare(
+    size_t pos, 
+    size_t count, 
+    const char s[], 
+    size_t slen
+) const {
+    assert(pos <= m_size);
+    int mymax = (int) min(count, m_size - pos);
+    int rmax = (int) slen;
+    int num = min(mymax, rmax);
+    if (!num)
+        return mymax - rmax;
     auto ic = find(pos);
-    auto pbuf = *ic.first;
-    int cmp = min(slen, pbuf->m_used - ic.second);
-    int rc = memcmp(pbuf->m_data + ic.second, src, cmp);
-    while (!rc) {
-        slen -= cmp;
-        count -= cmp;
-        if (!slen)
-            return (int)count;
-        if (!count)
-            return -1;
-        src += cmp;
-        ++ic.first;
-        pbuf = *ic.first;
-        cmp = min(slen, pbuf->m_used);
-        rc = memcmp(pbuf->m_data, src, cmp);
+    auto myi = ic.first;
+    auto mycount = (*myi)->m_used - ic.second;
+    const char * mydata = (*myi)->m_data + ic.second;
+    const char * rdata = s;
+
+    while (mycount < num) {
+        // compare with entire local buffer
+        int rc = memcmp(mydata, rdata, mycount);
+        if (rc)
+            return rc;
+        num -= mycount;
+        if (!num)
+            return mymax - rmax;
+        // advance to next local buffer
+        rdata += mycount;
+        mydata = (*++myi)->m_data;
+        mycount = (*myi)->m_used;
     }
-    return rc;
+
+    // compare with entire remote buffer
+    int rc = memcmp(mydata, rdata, num);
+    if (rc)
+        return rc;
+    return mymax - rmax;
 }
 
 //===========================================================================
@@ -399,56 +406,54 @@ int CharBuf::compare(size_t pos, size_t count, string_view str) const {
 }
 
 //===========================================================================
-int CharBuf::compare(const CharBuf & buf) const {
-    auto myi = m_buffers.begin();
-    auto mye = m_buffers.end();
-    const char * mydata;
-    int mycount;
-    auto ri = buf.m_buffers.begin();
-    auto re = buf.m_buffers.end();
-    const char * rdata;
-    int rcount;
+int CharBuf::compare(const CharBuf & buf, size_t pos, size_t count) const {
+    return compare(0, m_size, buf, pos, count);
+}
 
-    for (;; ++myi, ++ri) {
-        // compare two new buffers
-        if (myi == mye)
-            return (ri == re) ? 0 : -1;
-        if (ri == re)
-            return 1;
-        mydata = (*myi)->m_data;
-        mycount = (*myi)->m_used;
-        rdata = (*ri)->m_data;
-        rcount = (*ri)->m_used;
+//===========================================================================
+int CharBuf::compare(
+    size_t pos,
+    size_t count,
+    const CharBuf & buf,
+    size_t bufPos,
+    size_t bufLen
+) const {
+    assert(pos <= m_size);
+    assert(bufPos <= buf.size());
+    int mymax = (int) min(count, m_size - pos);
+    int rmax = (int) min(bufLen, buf.size() - bufPos);
+    int num = min(mymax, rmax);
+    if (!num)
+        return mymax - rmax;
+    auto ic = find(pos);
+    auto myi = ic.first;
+    int mycount = (*myi)->m_used - ic.second;
+    const char * mydata = (*myi)->m_data + ic.second;
+    ic = buf.find(bufPos);
+    auto ri = ic.first;
+    int rcount = (*ri)->m_used - ic.second;
+    const char * rdata = (*ri)->m_data + ic.second;
 
-        for (;;) {
-            if (mycount < rcount) {
-                // compare single remote buffer with as many local buffers
-                // as it can encompass
-                int rc = memcmp(mydata, rdata, mycount);
-                if (rc)
-                    return rc;
-                if (++myi == mye)
-                    return -1;
-                rdata += mycount;
-                rcount -= mycount;
-                mydata = (*myi)->m_data;
-                mycount = (*myi)->m_used;
-                continue;
-            }
-
-            // compare remote buffers as long as they fit within local buffer
-            int rc = memcmp(mydata, rdata, rcount);
-            if (rc)
-                return rc;
-            if (mycount == rcount) {
-                // advance to both a new remote buffer and a new local buffer
-                break;
-            }
-            if (++ri == re)
-                return 1;
-            mydata += rcount;
-            mycount -= rcount;
-            rdata = (*ri)->m_data;
+    for (;;) {
+        int bytes = min(num, min(mycount, rcount));
+        int rc = memcmp(mydata, rdata, bytes);
+        if (rc)
+            return rc;
+        num -= bytes;
+        if (!num)
+            return mymax - rmax;
+        if (mycount -= bytes) {
+            mydata += bytes;
+        } else {
+            // advance to next local buffer
+            mydata = (*++myi)->m_data;
+            mycount = (*myi)->m_used;
+        }
+        if (rcount -= bytes) {
+            rdata += bytes;
+        } else {
+            // advance to next remote buffer
+            rdata = (*++ri)->m_data;
             rcount = (*ri)->m_used;
         }
     }
@@ -456,60 +461,64 @@ int CharBuf::compare(const CharBuf & buf) const {
 
 //===========================================================================
 CharBuf & CharBuf::replace(size_t pos, size_t count, size_t numCh, char ch) {
-    assert(pos <= pos + count && pos + count <= m_size);
+    assert(pos <= m_size);
 
     int add = (int)numCh;
-    int remove = (int)count;
+    int remove = (int) min(count, m_size - pos);
+    int num = min(add, remove);
     auto ic = find(pos);
-    Buffer * pbuf = *ic.first;
+    auto myi = ic.first;
+    char * mydata = (*myi)->m_data + ic.second;
+    int mycount = (*myi)->m_used - ic.second;
 
     // overwrite the overlap, then either erase or insert the rest
-    int copied = min({pbuf->m_used - ic.second, remove, add});
-    char * ptr = pbuf->m_data + ic.second;
     for (;;) {
-        memset(ptr, ch, copied);
-        add -= copied;
-        remove -= copied;
-        if (!add)
-            return erase(ic.first, ic.second + copied, remove);
-        if (!remove)
-            return insert(ic.first, ic.second + copied, add, ch);
-        ++ic.first;
-        ic.second = 0;
-        pbuf = *ic.first;
-        ptr = pbuf->m_data;
-        copied = min({pbuf->m_used, remove, add});
+        int bytes = min(num, mycount);
+        memset(mydata, ch, bytes);
+        num -= bytes;
+        if (!num) {
+            int pos = int(mydata - (*myi)->m_data) + bytes;
+            return add > remove
+                ? insert(myi, pos, add - remove, ch)
+                : erase(myi, pos, remove - add);
+        }
+        mydata = (*++myi)->m_data;
+        mycount = (*myi)->m_used;
     }
 }
 
 //===========================================================================
 CharBuf & CharBuf::replace(size_t pos, size_t count, const char s[]) {
-    assert(pos <= pos + count && pos + count <= m_size);
+    assert(pos <= m_size);
 
-    int remove = (int)count;
+    int remove = (int) min(count, m_size - pos);
+    int num = remove;
     auto ic = find(pos);
+    auto myi = ic.first;
+    char * mydata = (*myi)->m_data + ic.second;
+    int mycount = (*myi)->m_used - ic.second;
 
     // copy the overlap, then either erase or insert the rest
-    Buffer * pbuf = *ic.first;
-    char * base = pbuf->m_data + ic.second;
-    char * ptr = base;
-    int copied = min(pbuf->m_used - ic.second, remove);
-    char * eptr = ptr + copied;
+    char * ptr = mydata;
+    int bytes = min(num, mycount);
+    char * eptr = ptr + bytes;
     for (;;) {
         if (!*s) {
             return erase(
-                ic.first, int(ptr - pbuf->m_data), remove - int(ptr - base));
+                ic.first, 
+                int(ptr - (*myi)->m_data), 
+                num - int(ptr - mydata)
+            );
         }
         if (ptr == eptr) {
-            remove -= copied;
-            if (!remove)
-                return insert(ic.first, int(ptr - pbuf->m_data), s);
-            ++ic.first;
-            pbuf = *ic.first;
-            base = pbuf->m_data;
-            ptr = base;
-            copied = min(pbuf->m_used, remove);
-            eptr = ptr + copied;
+            num -= bytes;
+            if (!num)
+                return insert(ic.first, int(ptr - (*myi)->m_data), s);
+            mydata = (*++myi)->m_data;
+            mycount = (*myi)->m_used;
+            ptr = mydata;
+            bytes = min(num, mycount);
+            eptr = ptr + bytes;
         }
         *ptr++ = *s++;
     }
@@ -518,30 +527,84 @@ CharBuf & CharBuf::replace(size_t pos, size_t count, const char s[]) {
 //===========================================================================
 CharBuf &
 CharBuf::replace(size_t pos, size_t count, const char src[], size_t srcLen) {
-    assert(pos <= pos + count && pos + count <= m_size);
+    assert(pos <= m_size);
 
     int add = (int)srcLen;
-    int remove = (int)count;
+    int remove = (int) min(count, m_size - pos);
+    int num = min(add, remove);
     auto ic = find(pos);
-    Buffer * pbuf = *ic.first;
+    auto myi = ic.first;
+    char * mydata = (*myi)->m_data + ic.second;
+    int mycount = (*myi)->m_used - ic.second;
+    const char * rdata = src;
 
     // copy the overlap, then either erase or insert the rest
-    int copied = min({pbuf->m_used - ic.second, remove, add});
-    char * ptr = pbuf->m_data + ic.second;
     for (;;) {
-        memcpy(ptr, src, copied);
-        add -= copied;
-        src += copied;
-        remove -= copied;
-        if (!add)
-            return erase(ic.first, ic.second + copied, remove);
-        if (!remove)
-            return insert(ic.first, ic.second + copied, src, add);
-        ++ic.first;
-        ic.second = 0;
-        pbuf = *ic.first;
-        ptr = pbuf->m_data;
-        copied = min({pbuf->m_used, remove, add});
+        int bytes = min(num, mycount);
+        memcpy(mydata, rdata, bytes);
+        rdata += bytes;
+        num -= bytes;
+        if (!num) {
+            int mypos = int(mydata - (*myi)->m_data) + bytes;
+            return add > remove
+                ? insert(myi, mypos, rdata, add - remove)
+                : erase(myi, mypos, remove - add);
+        }
+        mydata = (*++myi)->m_data;
+        mycount = (*myi)->m_used;
+    }
+
+}
+
+//===========================================================================
+CharBuf & CharBuf::replace(
+    size_t pos,
+    size_t count,
+    const CharBuf & src,
+    size_t srcPos,
+    size_t srcLen
+) {
+    assert(pos <= m_size);
+    assert(srcPos <= src.m_size);
+
+    int add = (int) min(srcLen, src.m_size - srcPos);
+    int remove = (int) min(count, m_size - pos);
+    int num = min(add, remove);
+    auto ic = find(pos);
+    auto myi = ic.first;
+    auto mydata = (*myi)->m_data + ic.second;
+    auto mycount = (*myi)->m_used - ic.second;
+    auto ic2 = src.find(srcPos);
+    auto ri = ic2.first;
+    auto rdata = (*ri)->m_data + ic2.second;
+    auto rcount = (*ri)->m_used - ic2.second;
+
+    // copy the overlap, then either erase or insert the rest
+    for (;;) {
+        int bytes = min(num, min(mycount, rcount));
+        memcpy(mydata, rdata, bytes);
+        num -= bytes;
+        if (!num) {
+            int mypos = int(mydata - (*myi)->m_data) + bytes;
+            int rpos = int(rdata - (*ri)->m_data) + bytes;
+            return add > remove
+                ? insert(myi, mypos, ri, rpos, add - remove)
+                : erase(myi, mypos, remove - add);
+        }
+        if (mycount -= bytes) {
+            mydata += bytes;
+        } else {
+            // advance to next local buffer
+            mydata = (*++myi)->m_data;
+            mycount = (*myi)->m_used;
+        }
+        if (rcount -= bytes) {
+            rdata += bytes;
+        } else {
+            // advance to next remote buffer
+            rdata = (*++ri)->m_data;
+            rcount = (*ri)->m_used;
+        }
     }
 }
 
@@ -690,59 +753,6 @@ CharBuf & CharBuf::insert(
 
 //===========================================================================
 CharBuf & CharBuf::insert(
-    std::vector<Buffer *>::iterator it,
-    int pos,
-    const char s[],
-    size_t slen) {
-
-    Buffer * pbuf = *it;
-    char * ptr = pbuf->m_data + pos;
-    int count = (int)slen;
-    m_size += count;
-
-    int copied = pbuf->m_used - pos;
-    if (count <= pbuf->m_reserved - pbuf->m_used) {
-        // the string fits inside the current buffer
-        if (count) {
-            memmove(ptr + count, ptr, copied);
-            memcpy(ptr, s, count);
-            pbuf->m_used += count;
-        }
-        return *this;
-    }
-
-    // The string doesn't fit in the current block, move the data (if any)
-    // after the insertion point in the current block to a new block
-    // immediately following the current one.
-    if (copied) {
-        it = m_buffers.emplace(++it, allocBuffer());
-        auto nextbuf = *it--;
-        char * dst = nextbuf->m_data;
-        memcpy(dst, ptr, copied);
-        nextbuf->m_used = copied;
-        pbuf->m_used -= copied;
-    }
-
-    // Copy to the rest of the current block and to as many new blocks as
-    // needed. These blocks are inserted after the current block and before
-    // the new block with the data that was after the insertion point.
-    for (;;) {
-        int added = min(count, int(pbuf->m_reserved - pos));
-        memcpy(ptr, s, added);
-        s += added;
-        pbuf->m_used += added;
-        count -= added;
-        if (!count)
-            return *this;
-        it = m_buffers.emplace(++it, allocBuffer());
-        pbuf = *it;
-        pos = 0;
-        ptr = pbuf->m_data;
-    }
-}
-
-//===========================================================================
-CharBuf & CharBuf::insert(
     std::vector<CharBuf::Buffer *>::iterator it,
     int pos,
     const char s[]) {
@@ -764,17 +774,8 @@ CharBuf & CharBuf::insert(
         return *this;
     }
 
-    // The string doesn't fit in the current block, move the data (if any)
-    // after the insertion point in the current block to a new block
-    // immediately following the current one.
-    if (copied) {
-        it = m_buffers.emplace(++it, allocBuffer());
-        auto nextbuf = *it--;
-        char * dst = nextbuf->m_data;
-        memcpy(dst, ptr, copied);
-        nextbuf->m_used = copied;
-        pbuf->m_used -= copied;
-    }
+    // Split the block if we're inserting into the middle of it
+    split(it, pos);
 
     // Copy to the rest of the current block and to as many new blocks as
     // needed. These blocks are inserted after the current block and before
@@ -800,6 +801,78 @@ CharBuf & CharBuf::insert(
             eptr = pbuf->end();
         }
     }
+}
+
+//===========================================================================
+CharBuf & CharBuf::insert(
+    vector<Buffer *>::iterator it,
+    int pos,
+    const char s[],
+    size_t slen) {
+
+    Buffer * pbuf = *it;
+    char * ptr = pbuf->m_data + pos;
+    int count = (int)slen;
+    m_size += count;
+
+    int copied = pbuf->m_used - pos;
+    if (count <= pbuf->m_reserved - pbuf->m_used) {
+        // the string fits inside the current buffer
+        if (count) {
+            memmove(ptr + count, ptr, copied);
+            memcpy(ptr, s, count);
+            pbuf->m_used += count;
+        }
+        return *this;
+    }
+
+    // Split the block if we're inserting into the middle of it
+    split(it, pos);
+
+    // Copy to the rest of the current block and to as many new blocks as
+    // needed. These blocks are inserted after the current block and before
+    // the new block with the data that was after the insertion point.
+    for (;;) {
+        int added = min(count, int(pbuf->m_reserved - pos));
+        memcpy(ptr, s, added);
+        s += added;
+        pbuf->m_used += added;
+        count -= added;
+        if (!count)
+            return *this;
+        it = m_buffers.emplace(++it, allocBuffer());
+        pbuf = *it;
+        pos = 0;
+        ptr = pbuf->m_data;
+    }
+}
+
+//===========================================================================
+// Move the data (if any) after the split point to a new block immediately 
+// following the block being split.
+void CharBuf::split(vector<Buffer *>::iterator it, int pos) {
+    auto buf = *it;
+    assert(pos < buf->m_used);
+    int bytes = buf->m_used - pos;
+    if (!bytes)
+        return;
+    auto nbuf = *m_buffers.emplace(++it, allocBuffer());
+    // ... if buf is a jumbo buffer might need multiple new buffers
+    memcpy(nbuf->m_data, buf->m_data + pos, bytes);
+    nbuf->m_used = bytes;
+    buf->m_used -= bytes;
+}
+
+//===========================================================================
+CharBuf & CharBuf::insert(
+    vector<Buffer *>::iterator it,
+    int pos,
+    vector<Buffer *>::const_iterator srcIt,
+    int srcPos,
+    size_t srcLen
+) {
+    assert(0);
+    return *this;
 }
 
 //===========================================================================

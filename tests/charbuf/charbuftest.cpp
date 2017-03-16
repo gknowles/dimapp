@@ -104,6 +104,7 @@ void Application::onAppRun() {
 
     buf.assign(5000, 'a');
     buf.insert(4094, "x");
+    EXPECT(buf.size() == 5001);
     EXPECT(buf.compare(4092, 5, "aaxaa") == 0);
 
     if (m_errors) {

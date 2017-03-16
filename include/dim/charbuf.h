@@ -23,7 +23,7 @@ public:
     CharBuf & operator=(const char s[]) { return assign(s); }
     CharBuf & operator=(std::string_view str) { return assign(str); }
     CharBuf & operator=(const CharBuf & buf) { return assign(buf); }
-    CharBuf & operator=(CharBuf && buf);
+    CharBuf & operator=(CharBuf && buf) { clear(); swap(buf); return *this; }
     CharBuf & operator+=(char ch) { pushBack(ch); return *this; }
     CharBuf & operator+=(const char s[]) { return append(s); }
     CharBuf & operator+=(std::string_view str) { return append(str); }
@@ -31,10 +31,9 @@ public:
     CharBuf & assign(char ch) { clear(); pushBack(ch); return *this; }
     CharBuf & assign(size_t numCh, char ch);
     CharBuf & assign(const char s[]);
-    CharBuf & assign(const char s[], size_t count);
-    CharBuf &
-    assign(std::string_view str, size_t pos = 0, size_t count = -1);
-    CharBuf & assign(const CharBuf & src, size_t pos = 0, size_t count = -1);
+    CharBuf & assign(const char s[], size_t slen);
+    CharBuf & assign(std::string_view str, size_t pos = 0, size_t count = -1);
+    CharBuf & assign(const CharBuf & buf, size_t pos = 0, size_t count = -1);
     char & front();
     const char & front() const;
     char & back();
@@ -49,6 +48,11 @@ public:
     CharBuf & insert(size_t pos, size_t numCh, char ch);
     CharBuf & insert(size_t pos, const char s[]);
     CharBuf & insert(size_t pos, const char s[], size_t count);
+    CharBuf & insert(
+        size_t pos, 
+        const CharBuf & buf, 
+        size_t bufPos = 0, 
+        size_t bufLen = -1);
     CharBuf & erase(size_t pos = 0, size_t count = -1);
     CharBuf & ltrim(char ch);
     CharBuf & rtrim(char ch);
@@ -56,27 +60,23 @@ public:
     void popBack();
     CharBuf & append(size_t numCh, char ch);
     CharBuf & append(const char s[]);
-    CharBuf & append(const char s[], size_t count);
-    CharBuf &
-    append(std::string_view str, size_t pos = 0, size_t count = -1);
-    CharBuf & append(const CharBuf & src, size_t pos = 0, size_t count = -1);
+    CharBuf & append(const char s[], size_t slen);
+    CharBuf & append(std::string_view str, size_t pos = 0, size_t count = -1);
+    CharBuf & append(const CharBuf & buf, size_t pos = 0, size_t count = -1);
     int compare(const char s[], size_t count) const;
-    int
-    compare(size_t pos, size_t count, const char src[], size_t srcLen) const;
+    int compare(size_t pos, size_t count, const char s[], size_t slen) const;
     int compare(std::string_view str) const;
     int compare(size_t pos, size_t count, std::string_view str) const;
-    int compare(const CharBuf & buf) const;
-    int compare(size_t pos, size_t count, const CharBuf & buf) const;
+    int compare(const CharBuf & buf, size_t pos = 0, size_t count = -1) const;
     int compare(
         size_t pos,
         size_t count,
         const CharBuf & buf,
-        size_t bufPos,
-        size_t bufLen) const;
+        size_t bufPos = 0,
+        size_t bufLen = -1) const;
     CharBuf & replace(size_t pos, size_t count, size_t numCh, char ch);
-    CharBuf & replace(size_t pos, size_t count, const char src[]);
-    CharBuf &
-    replace(size_t pos, size_t count, const char src[], size_t srcLen);
+    CharBuf & replace(size_t pos, size_t count, const char s[]);
+    CharBuf & replace(size_t pos, size_t count, const char s[], size_t slen);
     CharBuf & replace(
         size_t pos,
         size_t count,
@@ -96,6 +96,7 @@ private:
     std::pair<std::vector<Buffer *>::iterator, int> find(size_t pos);
     std::pair<std::vector<Buffer *>::const_iterator, int>
     find(size_t pos) const;
+    void split(std::vector<Buffer *>::iterator it, int pos);
     CharBuf &
     insert(std::vector<Buffer *>::iterator it, int pos, size_t numCh, char ch);
     CharBuf &
@@ -104,6 +105,12 @@ private:
         std::vector<Buffer *>::iterator it,
         int pos,
         const char src[],
+        size_t srcLen);
+    CharBuf & insert(
+        std::vector<Buffer *>::iterator it,
+        int pos,
+        std::vector<Buffer *>::const_iterator srcIt,
+        int srcPos,
         size_t srcLen);
     CharBuf & erase(std::vector<Buffer *>::iterator it, int pos, int count);
 
