@@ -1,4 +1,4 @@
-// httpint.h - dim core
+// httpint.h - dim http
 #pragma once
 
 #include <list>

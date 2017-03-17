@@ -1,4 +1,4 @@
-// hpack.cpp - dim services
+// hpack.cpp - dim http
 //
 // TODO:
 //  * padding strictly longer than 7 bits MUST be treated as a decoding

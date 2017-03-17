@@ -1,4 +1,4 @@
-// httpmsg.cpp - dim services
+// httpmsg.cpp - dim http
 #include "pch.h"
 #pragma hdrstop
 

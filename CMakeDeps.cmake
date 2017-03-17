@@ -42,10 +42,12 @@
 # src/file.cpp
 # src/handle.cpp
 # src/hash.cpp
-# src/hpack.cpp
-# src/httpconn.cpp
-# src/httpint.h
-# src/httpmsg.cpp
+# src/http/hpack.cpp
+# src/http/httpconn.cpp
+# src/http/httpint.h
+# src/http/httpmsg.cpp
+# src/http/pch.cpp
+# src/http/pch.h
 # src/httproute.cpp
 # src/intern.h
 # src/log.cpp
