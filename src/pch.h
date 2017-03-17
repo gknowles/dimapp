@@ -2,10 +2,8 @@
 
 #define DIM_LIB_SOURCE
 #include "dim/dim.h"
-#include "dim/tlsrecord.h"
 
 #include "intern.h"
-#include "tlsint.h"
 
 #include <array>
 #include <atomic>
@@ -19,6 +17,5 @@
 #include <mutex>
 #include <queue>
 #include <random>
-#include <shared_mutex>
 #include <thread>
 #include <vector>
