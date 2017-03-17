@@ -96,7 +96,8 @@ private:
     std::pair<std::vector<Buffer *>::iterator, int> find(size_t pos);
     std::pair<std::vector<Buffer *>::const_iterator, int>
     find(size_t pos) const;
-    void split(std::vector<Buffer *>::iterator it, int pos);
+    std::vector<Buffer *>::iterator 
+    split(std::vector<Buffer *>::iterator it, int pos);
     CharBuf &
     insert(std::vector<Buffer *>::iterator it, int pos, size_t numCh, char ch);
     CharBuf &

@@ -700,8 +700,34 @@ pair<vector<CharBuf::Buffer *>::iterator, int> CharBuf::find(size_t pos) {
 }
 
 //===========================================================================
+// Move the data (if any) after the split point to a new block immediately 
+// following the block being split.
+vector<CharBuf::Buffer *>::iterator CharBuf::split(
+    vector<Buffer *>::iterator it, 
+    int pos
+) {
+    assert(pos <= (*it)->m_used);
+    auto rdata = (*it)->m_data + pos;
+    auto rcount = (*it)->m_used - pos;
+    int nbufs = 0;
+    while (rcount) {
+        nbufs += 1;
+        it = m_buffers.emplace(++it, allocBuffer());
+        auto mydata = (*it)->m_data;
+        auto mycount = (*it)->m_reserved;
+        int bytes = min(mycount, rcount);
+        memcpy(mydata, rdata, bytes);
+        (*it)->m_used = bytes;
+        rcount -= bytes;
+    }
+    it -= nbufs;
+    (*it)->m_used = pos;
+    return it;
+}
+
+//===========================================================================
 CharBuf & CharBuf::insert(
-    std::vector<Buffer *>::iterator it,
+    vector<Buffer *>::iterator it,
     int pos,
     size_t numCh,
     char ch) {
@@ -722,17 +748,10 @@ CharBuf & CharBuf::insert(
         return *this;
     }
 
-    // The source doesn't fit in the current block, move the data (if any)
-    // after the insertion point in the current block to a new block
-    // immediately following the current one.
-    if (copied) {
-        it = m_buffers.emplace(++it, allocBuffer());
-        auto nextbuf = *it--;
-        char * dst = nextbuf->m_data;
-        memcpy(dst, ptr, copied);
-        nextbuf->m_used = copied;
-        pbuf->m_used -= copied;
-    }
+    // Split the block if we're inserting into the middle of it
+    it = split(it, pos);
+    pbuf = *it;
+    ptr = pbuf->m_data + pos;
 
     // Copy to the rest of the current block and to as many new blocks as
     // needed. These blocks are inserted after the current block and before
@@ -753,7 +772,7 @@ CharBuf & CharBuf::insert(
 
 //===========================================================================
 CharBuf & CharBuf::insert(
-    std::vector<CharBuf::Buffer *>::iterator it,
+    vector<CharBuf::Buffer *>::iterator it,
     int pos,
     const char s[]) {
 
@@ -775,7 +794,9 @@ CharBuf & CharBuf::insert(
     }
 
     // Split the block if we're inserting into the middle of it
-    split(it, pos);
+    it = split(it, pos);
+    pbuf = *it;
+    ptr = pbuf->m_data + pos;
 
     // Copy to the rest of the current block and to as many new blocks as
     // needed. These blocks are inserted after the current block and before
@@ -827,7 +848,9 @@ CharBuf & CharBuf::insert(
     }
 
     // Split the block if we're inserting into the middle of it
-    split(it, pos);
+    it = split(it, pos);
+    pbuf = *it;
+    ptr = pbuf->m_data + pos;
 
     // Copy to the rest of the current block and to as many new blocks as
     // needed. These blocks are inserted after the current block and before
@@ -845,22 +868,6 @@ CharBuf & CharBuf::insert(
         pos = 0;
         ptr = pbuf->m_data;
     }
-}
-
-//===========================================================================
-// Move the data (if any) after the split point to a new block immediately 
-// following the block being split.
-void CharBuf::split(vector<Buffer *>::iterator it, int pos) {
-    auto buf = *it;
-    assert(pos < buf->m_used);
-    int bytes = buf->m_used - pos;
-    if (!bytes)
-        return;
-    auto nbuf = *m_buffers.emplace(++it, allocBuffer());
-    // ... if buf is a jumbo buffer might need multiple new buffers
-    memcpy(nbuf->m_data, buf->m_data + pos, bytes);
-    nbuf->m_used = bytes;
-    buf->m_used -= bytes;
 }
 
 //===========================================================================
@@ -948,7 +955,7 @@ bool Dim::operator==(const CharBuf & left, const CharBuf & right) {
 }
 
 //===========================================================================
-std::string Dim::to_string(const CharBuf & buf, size_t pos, size_t count) {
+string Dim::to_string(const CharBuf & buf, size_t pos, size_t count) {
     assert(pos <= buf.size());
     count = min(count, buf.size() - pos);
     string out;
