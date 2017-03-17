@@ -872,14 +872,59 @@ CharBuf & CharBuf::insert(
 
 //===========================================================================
 CharBuf & CharBuf::insert(
-    vector<Buffer *>::iterator it,
+    vector<Buffer *>::iterator myi,
     int pos,
-    vector<Buffer *>::const_iterator srcIt,
-    int srcPos,
-    size_t srcLen
+    vector<Buffer *>::const_iterator ri,
+    int rpos,
+    size_t rlen
 ) {
-    assert(0);
-    return *this;
+    assert(pos <= (*myi)->m_used);
+    assert(rpos <= (*ri)->m_used);
+    auto mycount = (*myi)->m_used - pos;
+    auto rcount = (*ri)->m_used - rpos;
+    auto num = (int) rlen;
+    auto rdata = (*ri)->m_data + rpos;
+
+    if ((*myi)->m_used + num <= (*myi)->m_reserved) {
+        auto mydata = (*myi)->m_data + pos;
+        memmove(mydata + num, mydata, mycount);
+
+        for (;;) {
+            int bytes = min(num, rcount);
+            memcpy(mydata, rdata, bytes);
+            (*myi)->m_used += bytes;
+            num -= bytes;
+            if (!num)
+                return *this;
+            rdata = (*++ri)->m_data;
+            rcount = (*ri)->m_used;
+        }
+    }
+
+    // Split the block if we're inserting into the middle of it
+    myi = split(myi, pos);
+
+    auto mydata = (*myi)->m_data + pos;
+    for (;;) {
+        int bytes = min(num, min(mycount, rcount));
+        memcpy(mydata, rdata, bytes);
+        (*myi)->m_used += bytes;
+        num -= bytes;
+        if (!num)
+            return *this;
+        if (mycount -= bytes) {
+            mydata += bytes;
+        } else {
+            mydata = (*++myi)->m_data;
+            mycount = (*myi)->m_used;
+        }
+        if (rcount -= bytes) {
+            rdata += bytes;
+        } else {
+            rdata = (*++ri)->m_data;
+            rcount = (*ri)->m_used;
+        }
+    }
 }
 
 //===========================================================================
