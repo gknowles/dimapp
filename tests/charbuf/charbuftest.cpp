@@ -107,6 +107,12 @@ void Application::onAppRun() {
     EXPECT(buf.size() == 5001);
     EXPECT(buf.compare(4092, 5, "aaxaa") == 0);
 
+    size_t count = 0;
+    for (auto && view : buf.views()) {
+        count += view.size();
+    }
+    EXPECT(count == buf.size());
+
     if (m_errors) {
         ConsoleScopedAttr attr(kConsoleError);
         cerr << "*** " << m_errors << " FAILURES" << endl;
