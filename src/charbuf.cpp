@@ -242,7 +242,7 @@ CharBuf & CharBuf::insert(
         return *this;
 
     auto ic = find(pos);
-    auto ic2 = buf.find(pos);
+    auto ic2 = buf.find(bufPos);
     auto add = (int) min(bufLen, buf.m_size - bufPos);
     return insert(ic.first, ic.second, ic2.first, ic2.second, add);
 }
@@ -314,36 +314,17 @@ void CharBuf::popBack() {
 
 //===========================================================================
 CharBuf & CharBuf::append(size_t count, char ch) {
-    assert(m_size <= m_size + count);
-    int add = (int)count;
-    if (!add)
-        return *this;
-
-    if (!m_size)
-        m_buffers.emplace_back();
-    m_size += add;
-    for (;;) {
-        auto & buf = m_buffers.back();
-        auto mydata = buf.data + buf.used;
-        auto mycount = buf.reserved - buf.used;
-        int bytes = min(add, mycount);
-        memset(mydata, ch, bytes);
-        buf.used += bytes;
-        add -= bytes;
-        if (!add)
-            return *this;
-        m_buffers.emplace_back();
-    }
+    return insert(m_size, count, ch);
 }
 
 //===========================================================================
 CharBuf & CharBuf::append(const char s[]) {
-    return insert(size(), s);
+    return insert(m_size, s);
 }
 
 //===========================================================================
 CharBuf & CharBuf::append(const char src[], size_t srcLen) {
-    return insert(size(), src, srcLen);
+    return insert(m_size, src, srcLen);
 }
 
 //===========================================================================
@@ -354,7 +335,7 @@ CharBuf & CharBuf::append(string_view str, size_t pos, size_t count) {
 
 //===========================================================================
 CharBuf & CharBuf::append(const CharBuf & buf, size_t pos, size_t count) {
-    return insert(size(), buf, pos, count);
+    return insert(m_size, buf, pos, count);
 }
 
 //===========================================================================
@@ -405,7 +386,7 @@ int CharBuf::compare(
 
 //===========================================================================
 int CharBuf::compare(string_view str) const {
-    return compare(str.data(), str.size());
+    return compare(0, m_size, str.data(), str.size());
 }
 
 //===========================================================================
@@ -880,9 +861,10 @@ CharBuf & CharBuf::insert(
     assert(pos <= myi->used);
     assert(rpos <= ri->used);
     auto mycount = myi->used - pos;
+    auto rdata = ri->data + rpos;
     auto rcount = ri->used - rpos;
     auto num = (int) rlen;
-    auto rdata = ri->data + rpos;
+    m_size += num;
 
     if (myi->used + num <= myi->reserved) {
         auto mydata = myi->data + pos;
@@ -895,6 +877,7 @@ CharBuf & CharBuf::insert(
             num -= bytes;
             if (!num)
                 return *this;
+            mydata += bytes;
             ++ri;
             rdata = ri->data;
             rcount = ri->used;
