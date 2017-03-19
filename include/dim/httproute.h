@@ -29,7 +29,6 @@ public:
 
 void httpRouteAdd(
     IHttpRouteNotify * notify,
-    std::string_view host,
     std::string_view path,
     unsigned methods = fHttpMethodGet);
 

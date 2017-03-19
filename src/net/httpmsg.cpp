@@ -300,6 +300,11 @@ const char * HttpRequest::authority() const {
 }
 
 //===========================================================================
+const char * HttpRequest::pathAbsolute() const { 
+    return headers(kHttp_Path).begin()->m_value;
+}
+
+//===========================================================================
 bool HttpRequest::checkPseudoHeaders() const {
     const int must = kFlagHasMethod | kFlagHasScheme | kFlagHasPath;
     const int mustNot = kFlagHasStatus;

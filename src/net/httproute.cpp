@@ -25,9 +25,6 @@ struct PathInfo {
     string path;
     unsigned methods;
 };
-struct HostInfo {
-    vector<PathInfo> paths;
-};
 
 class RouteConn : public IAppSocketNotify {
     void onSocketAccept(const AppSocketInfo & info) override;
@@ -47,7 +44,7 @@ private:
 *
 ***/
 
-static unordered_map<string, HostInfo> s_hosts;
+static vector<PathInfo> s_paths;
 static Endpoint s_endpoint;
 
 
@@ -80,11 +77,8 @@ void RouteConn::onSocketRead(const AppSocketData & data) {
     for (auto && msg : msgs) {
         if (msg->isRequest()) {
             auto req = static_cast<HttpRequest *>(msg.get());
-            auto host = req->authority();
-            if (!host)
-                host = req->headers(kHttpHost).begin()->m_value;
-            assert(host);
-            s_hosts.find(host);
+            auto path = req->pathAbsolute();
+            assert(path);
         } else {
         }
     }
@@ -106,7 +100,7 @@ namespace {
 
 //===========================================================================
 bool ShutdownMonitor::onAppClientShutdown(bool retry) {
-    if (!s_hosts.empty())
+    if (!s_paths.empty())
         appSocketRemoveListener<RouteConn>(AppSocket::kHttp2, "", s_endpoint);
     return true;
 }
@@ -135,16 +129,14 @@ void Dim::iHttpRouteInitialize() {
 //===========================================================================
 void Dim::httpRouteAdd(
     IHttpRouteNotify * notify,
-    std::string_view host,
     std::string_view path,
     unsigned methods
 ) {
-    assert(!host.empty());
-    if (s_hosts.empty())
+    assert(!path.empty());
+    if (s_paths.empty())
         appSocketAddListener<RouteConn>(AppSocket::kHttp2, "", s_endpoint);
-    PathInfo pi = {notify, string(path), methods};
-    auto & hi = s_hosts[string(host)];
-    hi.paths.push_back(pi);
+    PathInfo pi{notify, string(path), methods};
+    s_paths.push_back(pi);
 }
 
 //===========================================================================

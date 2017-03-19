@@ -139,7 +139,7 @@ void Application::onAppRun() {
 
     appSocketAddListener<TnetConn>(AppSocket::kByte, "", s_endpoint);
 
-    httpRouteAdd(&s_web, "127.0.0.1:8888", "/", fHttpMethodGet);
+    httpRouteAdd(&s_web, "/", fHttpMethodGet);
 }
 
 
