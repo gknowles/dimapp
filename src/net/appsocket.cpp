@@ -177,7 +177,9 @@ void AppSocketBase::write(IAppSocketNotify * notify, std::string_view data) {
 //===========================================================================
 // static
 void AppSocketBase::write(IAppSocketNotify * notify, const CharBuf & data) {
-    notify->m_socket->write(to_string(data));
+    for (auto && v : data.views()) {
+        notify->m_socket->write(v);
+    }
 }
 
 //===========================================================================
