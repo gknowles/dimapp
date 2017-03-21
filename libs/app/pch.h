@@ -1,6 +1,5 @@
 // pch.h - dim core
 
-#define DIM_LIB_SOURCE
 #include "app/app.h"
 #include "cli/cli.h"
 #include "core/log.h"

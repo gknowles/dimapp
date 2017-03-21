@@ -1,6 +1,5 @@
 // pch.h - dim core - windows platform
 
-#define DIM_LIB_SOURCE
 #include "app/app.h"
 #include "core/core.h"
 #include "net/net.h"

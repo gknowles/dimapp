@@ -1,6 +1,5 @@
 // pch.h - dim core
 
-#define DIM_LIB_SOURCE
 #include "core.h"
 #include "platformint.h"
 
