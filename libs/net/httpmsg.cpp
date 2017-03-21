@@ -185,19 +185,22 @@ void HttpMsg::addHeaderRef(HttpHdr id, const char name[], const char value[]) {
     for (;;) {
         if (!ni) {
             ni = m_heap.emplace<HdrName>();
-            if (prev) {
-                prev->m_next = ni;
-            } else {
+            if (name[0] == ':' || !prev) {
+                // insert pseudo headers (or only header) to front of list
+                ni->m_next = m_firstHeader;
                 m_firstHeader = ni;
+            } else {
+                // add regular headers to the back
+                prev->m_next = ni;
             }
             ni->m_id = id;
             ni->m_name = name;
             break;
         }
 
-        if (ni->m_id == id && (id || !strcmp(ni->m_name, name))) {
+        if (ni->m_id == id && (id || strcmp(ni->m_name, name) == 0))
             break;
-        }
+
         prev = ni;
         ni = ni->m_next;
     }
