@@ -206,7 +206,7 @@ void AppSocketBase::write(std::string_view data) {
         if (!m_buffer) 
             m_buffer = socketGetBuffer();
         size_t bytes = min(m_buffer->len - m_bufferUsed, data.size());
-        memcpy(m_buffer->data, data.data(), bytes);
+        memcpy(m_buffer->data + m_bufferUsed, data.data(), bytes);
         data.remove_prefix(bytes);
         m_bufferUsed += bytes;
         if (m_bufferUsed == m_buffer->len) {
