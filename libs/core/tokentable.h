@@ -4,6 +4,7 @@
 #include "config/config.h"
 
 #include <cassert>
+#include <string_view>
 #include <vector>
 
 namespace Dim {
@@ -31,7 +32,7 @@ public:
 public:
     TokenTable(const Token * ptr, size_t count);
 
-    bool find(int * out, const char name[]) const;
+    bool find(int * out, const char name[], size_t nameLen = -1) const;
     bool find(const char ** const out, int id) const;
 
     Iterator begin() const;
@@ -40,6 +41,7 @@ public:
 private:
     struct Value {
         const char * name{nullptr};
+        int nameLen{0};
         int id{0};
         int distance{-1};
         size_t hash{0};
@@ -53,6 +55,12 @@ template <typename E>
 E tokenTableGetEnum(const TokenTable & tbl, const char name[], E defId) {
     int id;
     return tbl.find(&id, name) ? (E)id : defId;
+}
+
+template <typename E>
+E tokenTableGetEnum(const TokenTable & tbl, std::string_view name, E defId) {
+    int id;
+    return tbl.find(&id, name.data(), name.size()) ? (E)id : defId;
 }
 
 template <typename E>

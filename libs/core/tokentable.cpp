@@ -22,10 +22,11 @@ TokenTable::TokenTable(const Token * src, size_t count) {
     if (num < 2) {
         if (num == 1) {
             Value & val = m_names.front();
-            m_hashLen = (int)strlen(src->name);
             val.hash = hashStr(src->name);
             val.id = src->id;
             val.name = src->name;
+            val.nameLen = (int)strlen(src->name);
+            m_hashLen = val.nameLen;
             m_ids.push_back(val);
         }
         return;
@@ -53,6 +54,7 @@ TokenTable::TokenTable(const Token * src, size_t count) {
         val.hash = hashStr(a->name, m_hashLen);
         val.id = a->id;
         val.name = a->name;
+        val.nameLen = (int)strlen(a->name);
         val.distance = 0;
         size_t pos = val.hash;
         for (;;) {
@@ -62,7 +64,7 @@ TokenTable::TokenTable(const Token * src, size_t count) {
                 tmp = val;
                 break;
             }
-            if (tmp.hash == val.hash && !strcmp(tmp.name, val.name))
+            if (tmp.hash == val.hash && strcmp(tmp.name, val.name) == 0)
                 break;
             if (val.distance > tmp.distance)
                 swap(val, tmp);
@@ -77,6 +79,7 @@ TokenTable::TokenTable(const Token * src, size_t count) {
         Value val;
         val.id = a->id;
         val.name = a->name;
+        val.nameLen = (int) strlen(a->name);
         val.distance = 0;
         size_t pos = val.id;
         for (;;) {
@@ -97,16 +100,19 @@ TokenTable::TokenTable(const Token * src, size_t count) {
 }
 
 //===========================================================================
-bool TokenTable::find(int * out, const char name[]) const {
+bool TokenTable::find(int * out, const char name[], size_t nameLen) const {
     size_t num = size(m_names);
-    size_t hash = hashStr(name, m_hashLen);
+    size_t hash = hashStr(name, (int) min((size_t) m_hashLen, nameLen));
     size_t pos = hash % num;
     int distance = 0;
     for (;;) {
         const Value & val = m_names[pos];
         if (distance > val.distance)
             break;
-        if (val.hash == hash && !strcmp(val.name, name)) {
+        if (val.hash == hash 
+            && val.nameLen <= nameLen
+            && strncmp(val.name, name, nameLen) == 0
+        ) {
             *out = val.id;
             return true;
         }
