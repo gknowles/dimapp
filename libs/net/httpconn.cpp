@@ -660,7 +660,7 @@ bool HttpConn::onHeaders(
         } else {
             sm->m_state = HttpStream::kRemoteClosed;
         }
-        sm->m_msg = make_unique<HttpRequest>();
+        sm->m_msg = make_unique<HttpRequest>(stream);
         break;
     case HttpStream::kRemoteReserved:
         if (~flags & kEndStream) {
@@ -668,7 +668,7 @@ bool HttpConn::onHeaders(
         } else {
             sm->m_state = HttpStream::kClosed;
         }
-        sm->m_msg = make_unique<HttpResponse>();
+        sm->m_msg = make_unique<HttpResponse>(stream);
         break;
     case HttpStream::kOpen:
     case HttpStream::kLocalClosed:

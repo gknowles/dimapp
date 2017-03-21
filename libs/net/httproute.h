@@ -30,9 +30,13 @@ public:
 void httpRouteAdd(
     IHttpRouteNotify * notify,
     std::string_view path,
-    unsigned methods = fHttpMethodGet);
+    unsigned methods = fHttpMethodGet,
+    bool recurse = false
+);
 
 void httpRouteReply(unsigned reqId, HttpResponse & msg, bool more = false);
 void httpRouteReply(unsigned reqId, const CharBuf & data, bool more);
+
+void httpRouteReplyNotFound(unsigned reqId);
 
 } // namespace

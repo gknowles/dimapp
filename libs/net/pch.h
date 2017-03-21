@@ -1,9 +1,9 @@
 // pch.h - dim net
 
-#define DIM_LIB_SOURCE
 #include "app/app.h"
 #include "core/core.h"
-#include "net.h"
+#include "net/net.h"
+#include "xml/xml.h"
 #include "hpack.h"
 #include "tlsrecord.h"
 

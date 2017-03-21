@@ -28,11 +28,6 @@ using namespace Dim;
 
 namespace {
 
-struct HttpHdrInfo {
-    HttpHdr header;
-    const char * name;
-};
-
 const TokenTable::Token s_hdrNames[] = {
     {kHttpInvalid, "INVALID"},
     {kHttp_Authority, ":authority"},
@@ -90,9 +85,21 @@ const TokenTable::Token s_hdrNames[] = {
     {kHttpVia, "via"},
     {kHttpWwwAuthenticate, "www-authenticate"},
 };
-static_assert(size(s_hdrNames) == kHttps, "");
-
+static_assert(size(s_hdrNames) == kHttps);
 const TokenTable s_hdrNameTbl(s_hdrNames, size(s_hdrNames));
+
+const TokenTable::Token s_methodNames[] = {
+    {fHttpMethodConnect, "CONNECT"},
+    {fHttpMethodDelete, "DELETE"},
+    {fHttpMethodGet, "GET"},
+    {fHttpMethodHead, "HEAD"},
+    {fHttpMethodOptions, "OPTIONS"},
+    {fHttpMethodPost, "POST"},
+    {fHttpMethodPut, "PUT"},
+    {fHttpMethodTrace, "TRACE"},
+};
+static_assert(size(s_methodNames) == kHttpMethods);
+const TokenTable s_methodNameTbl(s_methodNames, size(s_methodNames));
 
 } // namespace
 
@@ -334,6 +341,21 @@ bool HttpResponse::checkPseudoHeaders() const {
 ***/
 
 //===========================================================================
-std::string Dim::to_string(HttpHdr id) {
+std::string_view Dim::to_view(HttpHdr id) {
     return tokenTableGetName(s_hdrNameTbl, id);
+}
+
+//===========================================================================
+HttpHdr Dim::httpHdrFromString(std::string_view name, HttpHdr def) {
+    return tokenTableGetEnum(s_hdrNameTbl, name, def);
+}
+
+//===========================================================================
+std::string_view Dim::to_view(HttpMethod id) {
+    return tokenTableGetName(s_methodNameTbl, id);
+}
+
+//===========================================================================
+HttpMethod Dim::httpMethodFromString(std::string_view name, HttpMethod def) {
+    return tokenTableGetEnum(s_methodNameTbl, name, def);
 }

@@ -82,10 +82,13 @@ enum HttpHdr {
     kHttps
 };
 
-std::string to_string(HttpHdr id);
-
+std::string_view to_view(HttpHdr id);
+HttpHdr httpHdrFromString(
+    std::string_view name,
+    HttpHdr def = kHttpInvalid);
 
 enum HttpMethod {
+    fHttpMethodInvalid = 0x00,
     fHttpMethodConnect = 0x01,
     fHttpMethodDelete = 0x02,
     fHttpMethodGet = 0x04,
@@ -94,9 +97,13 @@ enum HttpMethod {
     fHttpMethodPost = 0x20,
     fHttpMethodPut = 0x40,
     fHttpMethodTrace = 0x80,
+    kHttpMethods = 8
 };
 
-std::string to_string(HttpMethod method);
+std::string_view to_view(HttpMethod method);
+HttpMethod httpMethodFromString(
+    std::string_view name, 
+    HttpMethod def = fHttpMethodInvalid);
 
 
 /****************************************************************************
@@ -112,6 +119,7 @@ public:
     struct HdrValue;
 
 public:
+    HttpMsg (int stream = 0) : m_stream{stream} {}
     virtual ~HttpMsg() {}
 
     void addHeader(HttpHdr id, const char value[]);
@@ -137,6 +145,7 @@ public:
     ITempHeap & heap();
 
     virtual bool isRequest() const = 0;
+    int stream() const { return m_stream; }
 
 protected:
     virtual bool checkPseudoHeaders() const = 0;
@@ -157,6 +166,7 @@ private:
     CharBuf m_data;
     TempHeap m_heap;
     HdrName * m_firstHeader{nullptr};
+    int m_stream{0};
 };
 
 struct HttpMsg::HdrValue {
@@ -189,6 +199,8 @@ struct HttpMsg::HdrList {
 
 class HttpRequest : public HttpMsg {
 public:
+    using HttpMsg::HttpMsg;
+
     const char * method() const;
     const char * scheme() const;
     const char * authority() const;
@@ -208,6 +220,8 @@ private:
 
 class HttpResponse : public HttpMsg {
 public:
+    using HttpMsg::HttpMsg;
+
     int status() const;
 
     bool isRequest() const override { return false; }
