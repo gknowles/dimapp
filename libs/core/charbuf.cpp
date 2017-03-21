@@ -62,7 +62,7 @@ CharBuf & CharBuf::assign(const char s[], size_t count) {
 
 //===========================================================================
 CharBuf & CharBuf::assign(string_view str, size_t pos, size_t count) {
-    assert(pos < str.size());
+    assert(pos <= str.size());
     return replace(
         0, m_size, str.data() + pos, min(count, str.size() - pos));
 }
@@ -234,25 +234,26 @@ CharBuf & CharBuf::insert(
     size_t bufPos, 
     size_t bufLen
 ) {
-    assert(pos <= pos + bufLen && pos <= m_size);
+    assert(pos <= m_size);
     assert(bufPos <= buf.m_size);
+    auto add = (int) min(bufLen, buf.m_size - bufPos);
 
     // short-circuit to avoid allocs
-    if (!bufLen)
+    if (!add)
         return *this;
 
     auto ic = find(pos);
     auto ic2 = buf.find(bufPos);
-    auto add = (int) min(bufLen, buf.m_size - bufPos);
     return insert(ic.first, ic.second, ic2.first, ic2.second, add);
 }
 
 //===========================================================================
 CharBuf & CharBuf::erase(size_t pos, size_t count) {
-    assert(pos <= pos + count && pos + count <= m_size);
+    assert(pos <= m_size);
+    auto remove = (int) min(count, m_size - pos);
 
     // short-circuit to avoid allocs
-    if (!count)
+    if (!remove)
         return *this;
 
     auto ic = find(pos);
