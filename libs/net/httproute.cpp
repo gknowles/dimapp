@@ -28,7 +28,7 @@ struct PathInfo {
 };
 
 class RouteConn : public IAppSocketNotify {
-    void onSocketAccept(const AppSocketInfo & info) override;
+    bool onSocketAccept(const AppSocketInfo & info) override;
     void onSocketDisconnect() override;
     void onSocketRead(const AppSocketData & data) override;
 
@@ -116,8 +116,9 @@ static unsigned makeRequestInfo (RouteConn * conn, int stream) {
 ***/
 
 //===========================================================================
-void RouteConn::onSocketAccept(const AppSocketInfo & info) {
+bool RouteConn::onSocketAccept(const AppSocketInfo & info) {
     m_conn = httpListen();
+    return true;
 }
 
 //===========================================================================

@@ -55,19 +55,20 @@ struct AppSocketData {
 
 class IAppSocketNotify {
 public:
-    virtual ~IAppSocketNotify() {}
+    virtual ~IAppSocketNotify () {}
 
     // for connectors
-    virtual void onSocketConnect(const AppSocketInfo & info){};
-    virtual void onSocketConnectFailed(){};
+    virtual void onSocketConnect (const AppSocketInfo & info) {};
+    virtual void onSocketConnectFailed (){};
 
     // for listeners
-    virtual void onSocketAccept(const AppSocketInfo & info){};
+    // returns true if the socket is accepted
+    virtual bool onSocketAccept (const AppSocketInfo & info) { return true; };
 
     // for both
-    virtual void onSocketRead(const AppSocketData & data) = 0;
-    virtual void onSocketDisconnect(){};
-    virtual void onSocketDestroy() { delete this; }
+    virtual void onSocketRead (const AppSocketData & data) = 0;
+    virtual void onSocketDisconnect () {};
+    virtual void onSocketDestroy () { delete this; }
 
 private:
     friend class AppSocketBase;

@@ -66,7 +66,7 @@ public:
     Duration checkTimeout_LK(TimePoint now);
     void write(std::string_view data);
 
-    void onSocketAccept(const SocketInfo & info) override;
+    bool onSocketAccept(const SocketInfo & info) override;
     void onSocketDisconnect() override;
     void onSocketDestroy() override;
     void onSocketRead(const SocketData & data) override;
@@ -219,7 +219,7 @@ void AppSocketBase::write(std::string_view data) {
 }
 
 //===========================================================================
-void AppSocketBase::onSocketAccept(const SocketInfo & info) {
+bool AppSocketBase::onSocketAccept(const SocketInfo & info) {
     m_accept.local = info.local;
     m_accept.remote = info.remote;
     auto expiration = Clock::now() + kUnmatchedTimeout;
@@ -234,6 +234,7 @@ void AppSocketBase::onSocketAccept(const SocketInfo & info) {
     }
 
     timerUpdate(&s_unmatchedTimer, kUnmatchedTimeout, true);
+    return true;
 }
 
 //===========================================================================
@@ -347,11 +348,13 @@ FINISH:
     if (!fact)
         return socketDisconnect(this);
 
-    // set notifier with one from registered factory
+    // set notifier from registered factory
     m_notify = fact->create().release();
     m_notify->m_socket = this;
+
     // replay callbacks received so far
-    m_notify->onSocketAccept(m_accept);
+    if (!m_notify->onSocketAccept(m_accept))
+        return socketDisconnect(this);
     AppSocketData tmp;
     tmp.data = const_cast<char*>(view.data());
     tmp.bytes = (int) view.size();

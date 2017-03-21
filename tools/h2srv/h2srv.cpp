@@ -32,7 +32,7 @@ static Endpoint s_endpoint;
 
 class TnetConn : public IAppSocketNotify {
 public:
-    void onSocketAccept(const AppSocketInfo & accept) override;
+    bool onSocketAccept(const AppSocketInfo & accept) override;
     void onSocketDisconnect() override;
     void onSocketRead(const AppSocketData & data) override;
 
@@ -41,10 +41,11 @@ private:
 };
 
 //===========================================================================
-void TnetConn::onSocketAccept(const AppSocketInfo & accept) {
+bool TnetConn::onSocketAccept(const AppSocketInfo & accept) {
     m_accept = accept;
     cout << m_accept.remote << " connected on " 
         << m_accept.local << endl;
+    return true;
 }
 
 //===========================================================================

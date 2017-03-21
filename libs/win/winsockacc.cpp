@@ -264,11 +264,12 @@ void AcceptSocket::onAccept(
         return;
 
     if (SOCKET_ERROR == setsockopt(
-                            m_handle,
-                            SOL_SOCKET,
-                            SO_UPDATE_ACCEPT_CONTEXT,
-                            (char *)&listen->m_handle,
-                            sizeof listen->m_handle)) {
+        m_handle,
+        SOL_SOCKET,
+        SO_UPDATE_ACCEPT_CONTEXT,
+        (char *)&listen->m_handle,
+        sizeof listen->m_handle
+    )) {
         logMsgError() << "setsockopt(SO_UPDATE_ACCEPT_CONTEXT): "
                       << WinError{};
         return;
@@ -278,8 +279,8 @@ void AcceptSocket::onAccept(
     if (!createQueue())
         return;
 
-    hostage.release();
-    m_notify->onSocketAccept(info);
+    if (m_notify->onSocketAccept(info))
+        hostage.release();
 }
 
 
