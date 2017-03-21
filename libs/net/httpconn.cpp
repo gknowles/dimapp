@@ -943,12 +943,17 @@ bool HttpConn::onContinuation(
 ***/
 
 //===========================================================================
-void HttpConn::writeMsg(CharBuf * out, int stream, const HttpMsg & msg) {
+void HttpConn::writeMsg(
+    CharBuf * out, 
+    int stream, 
+    const HttpMsg & msg, 
+    bool more
+) {
     const CharBuf & body = msg.body();
     size_t framePos = out->size();
     size_t maxEndPos = framePos + m_maxOutputFrame + kFrameHeaderLen;
     FrameType ftype = FrameType::kHeaders;
-    int flags = size(body) ? 0 : FrameFlag::kEndStream;
+    int flags = (!body.empty() || more) ? 0 : FrameFlag::kEndStream;
     uint8_t frameHdr[kFrameHeaderLen];
     SetFrameHeader(frameHdr, stream, ftype, 0, 0);
     out->append((char *)frameHdr, size(frameHdr));
@@ -984,44 +989,62 @@ void HttpConn::writeMsg(CharBuf * out, int stream, const HttpMsg & msg) {
         flags | FrameFlag::kEndHeaders);
     out->replace(framePos, size(frameHdr), (char *)frameHdr, size(frameHdr));
 
-    size_t bodyLen = size(body);
-    if (!bodyLen)
-        return;
+    addData(out, stream, body, more);
+}
+
+//===========================================================================
+void HttpConn::addData(
+    CharBuf * out, 
+    int stream, 
+    const CharBuf & data, 
+    bool more
+) {
+    size_t bodyLen = size(data);
 
     size_t bodyPos = 0;
     while (bodyPos + m_maxOutputFrame < bodyLen) {
         StartFrame(out, stream, FrameType::kData, m_maxOutputFrame, 0);
-        out->append(body, bodyPos, m_maxOutputFrame);
+        out->append(data, bodyPos, m_maxOutputFrame);
         bodyPos += m_maxOutputFrame;
     }
+    if (bodyPos == bodyLen && more) 
+        return;
+
     StartFrame(
         out,
         stream,
         FrameType::kData,
         int(bodyLen - bodyPos),
-        FrameFlag::kEndStream);
-    out->append(body, bodyPos);
+        more ? 0 : FrameFlag::kEndStream);
+    out->append(data, bodyPos);
 }
 
 //===========================================================================
 // Serializes a request and returns the stream id used
-int HttpConn::request(CharBuf * out, const HttpMsg & msg) {
+int HttpConn::request(CharBuf * out, const HttpMsg & msg, bool more) {
     auto strm = make_shared<HttpStream>();
     strm->m_state = HttpStream::kOpen;
     unsigned id = m_nextOutputStream;
     m_nextOutputStream += 2;
     m_streams[id] = strm;
-    writeMsg(out, id, msg);
+    writeMsg(out, id, msg, more);
     return id;
 }
 
 //===========================================================================
 // Serializes a push promise
-void HttpConn::pushPromise(CharBuf * out, const HttpMsg & msg) {}
+int HttpConn::pushPromise(CharBuf * out, const HttpMsg & msg, bool more) {
+    return 0;
+}
 
 //===========================================================================
 // Serializes a reply on the specified stream
-void HttpConn::reply(CharBuf * out, int stream, const HttpMsg & msg) {
+void HttpConn::reply(
+    CharBuf * out, 
+    int stream, 
+    const HttpMsg & msg, 
+    bool more
+) {
     auto it = m_streams.find(stream);
     if (it == m_streams.end())
         return;
@@ -1036,7 +1059,7 @@ void HttpConn::reply(CharBuf * out, int stream, const HttpMsg & msg) {
         return;
     }
 
-    writeMsg(out, stream, msg);
+    writeMsg(out, stream, msg, more);
 }
 
 //===========================================================================
@@ -1090,19 +1113,26 @@ bool Dim::httpRecv(
 }
 
 //===========================================================================
-int Dim::httpRequest(HttpConnHandle hc, CharBuf * out, const HttpMsg & msg) {
+int Dim::httpRequest(
+    HttpConnHandle hc, 
+    CharBuf * out, 
+    const HttpMsg & msg,
+    bool more
+) {
     if (auto * conn = s_conns.find(hc))
-        return conn->request(out, msg);
+        return conn->request(out, msg, more);
     return 0;
 }
 
 //===========================================================================
-void Dim::httpPushPromise(
+int Dim::httpPushPromise(
     HttpConnHandle hc,
     CharBuf * out,
-    const HttpMsg & msg) {
+    const HttpMsg & msg,
+    bool more) {
     if (auto * conn = s_conns.find(hc))
-        return conn->pushPromise(out, msg);
+        return conn->pushPromise(out, msg, more);
+    return 0;
 }
 
 //===========================================================================
@@ -1113,7 +1143,19 @@ void Dim::httpReply(
     const HttpMsg & msg,
     bool more) {
     auto * conn = s_conns.find(hc);
-    conn->reply(out, stream, msg);
+    conn->reply(out, stream, msg, more);
+}
+
+//===========================================================================
+void Dim::httpData(
+    HttpConnHandle hc, 
+    CharBuf * out, 
+    int stream, 
+    const CharBuf & data,
+    bool more
+) {
+    if (auto * conn = s_conns.find(hc))
+        conn->addData(out, stream, data, more);
 }
 
 //===========================================================================

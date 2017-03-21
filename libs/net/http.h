@@ -257,10 +257,20 @@ bool httpRecv(
     size_t srcLen);
 
 // Serializes a request and returns the stream id used
-int httpRequest(HttpConnHandle conn, CharBuf * out, const HttpMsg & msg);
+int httpRequest(
+    HttpConnHandle conn, 
+    CharBuf * out, 
+    const HttpMsg & msg,
+    bool more = false
+);
 
-// Serializes a push promise
-void httpPushPromise(HttpConnHandle conn, CharBuf * out, const HttpMsg & msg);
+// Serializes a push promise and returns the stream id used
+int httpPushPromise(
+    HttpConnHandle conn, 
+    CharBuf * out, 
+    const HttpMsg & msg,
+    bool more = false
+);
 
 // Serializes a reply on the specified stream
 void httpReply(
@@ -268,7 +278,17 @@ void httpReply(
     CharBuf * out,
     int stream,
     const HttpMsg & msg,
-    bool more);
+    bool more = false);
+
+// Sends more data on a stream, a stream ends after request, push promise,
+// reply, or data is called with more false.
+void httpData(
+    HttpConnHandle hc, 
+    CharBuf * out, 
+    int stream, 
+    const CharBuf & data,
+    bool more = false
+);
 
 void httpResetStream(HttpConnHandle conn, CharBuf * out, int stream);
 

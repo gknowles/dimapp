@@ -54,13 +54,16 @@ public:
         size_t srcLen);
 
     // Serializes a request and returns the stream id used
-    int request(CharBuf * out, const HttpMsg & msg);
+    int request(CharBuf * out, const HttpMsg & msg, bool more);
 
     // Serializes a push promise
-    void pushPromise(CharBuf * out, const HttpMsg & msg);
+    int pushPromise(CharBuf * out, const HttpMsg & msg, bool more);
 
     // Serializes a reply on the specified stream
-    void reply(CharBuf * out, int stream, const HttpMsg & msg);
+    void reply(CharBuf * out, int stream, const HttpMsg & msg, bool more);
+
+    // Serializes additional data on the stream
+    void addData(CharBuf * out, int stream, const CharBuf & data, bool more);
 
     void resetStream(CharBuf * out, int stream);
 
@@ -71,7 +74,7 @@ private:
     enum class FrameMode;
 
     HttpStream * findAlways(CharBuf * out, int stream);
-    void writeMsg(CharBuf * out, int stream, const HttpMsg & msg);
+    void writeMsg(CharBuf * out, int stream, const HttpMsg & msg, bool more);
 
     bool onFrame(
         std::vector<std::unique_ptr<HttpMsg>> * msgs,
