@@ -416,7 +416,7 @@ bool HttpConn::recv(
             return true;
         }
 
-        // Servers must send a settings frame as the connection preface
+        // Servers must send a settings frame after the connection preface
         if (!m_outgoing) {
             StartFrame(out, 0, FrameType::kSettings, 0, 0);
             m_unackSettings += 1;
@@ -1110,7 +1110,8 @@ void Dim::httpReply(
     HttpConnHandle hc,
     CharBuf * out,
     int stream,
-    const HttpMsg & msg) {
+    const HttpMsg & msg,
+    bool more) {
     auto * conn = s_conns.find(hc);
     conn->reply(out, stream, msg);
 }

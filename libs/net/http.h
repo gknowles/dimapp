@@ -267,7 +267,8 @@ void httpReply(
     HttpConnHandle conn,
     CharBuf * out,
     int stream,
-    const HttpMsg & msg);
+    const HttpMsg & msg,
+    bool more);
 
 void httpResetStream(HttpConnHandle conn, CharBuf * out, int stream);
 

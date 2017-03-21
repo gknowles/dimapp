@@ -28,6 +28,10 @@ struct PathInfo {
 };
 
 class RouteConn : public IAppSocketNotify {
+public:
+    static void reply(unsigned reqId, HttpResponse & msg, bool more);
+
+public:
     bool onSocketAccept(const AppSocketInfo & info) override;
     void onSocketDisconnect() override;
     void onSocketRead(const AppSocketData & data) override;
@@ -84,6 +88,16 @@ static IHttpRouteNotify * find(std::string_view path, HttpMethod method) {
 static void replyNotFound(unsigned reqId, HttpRequest & req) {
     HttpResponse res;
     XBuilder bld(res.body());
+    bld << start("html")
+        << start("head") << elem("title", "404 Not Found") << end
+        << start("body")
+        << elem("h1", "404 Not Found")
+        << start("p") << "Requested URL: " << req.pathAbsolute() << end
+        << end
+        << end;
+    res.addHeader(kHttpContentType, "text/html");
+    res.addHeader(kHttp_Status, "404");
+    httpRouteReply(reqId, res);
 }
 
 //===========================================================================
@@ -116,6 +130,18 @@ static unsigned makeRequestInfo (RouteConn * conn, int stream) {
 ***/
 
 //===========================================================================
+// static 
+void RouteConn::reply(unsigned reqId, HttpResponse & msg, bool more) {
+    auto it = s_requests.find(reqId);
+    if (it == s_requests.end())
+        return;
+    auto conn = it->second.conn;
+    CharBuf out;
+    httpReply(conn->m_conn, &out, it->second.stream, msg, more);
+    appSocketWrite(conn, out);
+}
+
+//===========================================================================
 bool RouteConn::onSocketAccept(const AppSocketInfo & info) {
     m_conn = httpListen();
     return true;
@@ -129,11 +155,11 @@ void RouteConn::onSocketDisconnect() {
 
 //===========================================================================
 void RouteConn::onSocketRead(const AppSocketData & data) {
-    CharBuf buf;
+    CharBuf out;
     vector<unique_ptr<HttpMsg>> msgs;
-    bool result = httpRecv(m_conn, &buf, &msgs, data.data, data.bytes);
-    if (!buf.empty())
-        appSocketWrite(this, buf);
+    bool result = httpRecv(m_conn, &out, &msgs, data.data, data.bytes);
+    if (!out.empty())
+        appSocketWrite(this, out);
     if (!result)
         return appSocketDisconnect(this);
     for (auto && msg : msgs) {
@@ -210,6 +236,7 @@ void Dim::httpRouteAdd(
 
 //===========================================================================
 void Dim::httpRouteReply(unsigned reqId, HttpResponse & msg, bool more) {
+    RouteConn::reply(reqId, msg, more);
 }
 
 //===========================================================================
