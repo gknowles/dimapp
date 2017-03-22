@@ -9,10 +9,11 @@
 namespace Dim {
 
 enum LogType {
-    kLogDebug,
-    kLogInfo,
-    kLogError,
-    kLogCrash,
+    kLogTypeDebug,
+    kLogTypeInfo,
+    kLogTypeError,
+    kLogTypeCrash,
+    kLogTypes
 };
 
 class ILogNotify {
@@ -58,5 +59,8 @@ void logParseError(
     std::string_view objname,
     size_t pos,
     std::string_view source);
+
+// Returns the number of messages of the selected type that have been logged
+int logGetMsgCount(LogType type);
 
 } // namespace

@@ -21,6 +21,7 @@ class DefaultNotify : public ILogNotify {
 static DefaultNotify s_fallback;
 static vector<ILogNotify *> s_notifiers;
 static ILogNotify * s_defaultNotify{&s_fallback};
+static atomic<int> s_counts[kLogTypes];
 
 
 /****************************************************************************
@@ -31,6 +32,8 @@ static ILogNotify * s_defaultNotify{&s_fallback};
 
 //===========================================================================
 static void LogMsg(LogType type, string_view msg) {
+    s_counts[type] += 1;
+
     if (!msg.empty() && msg.back() == '\n')
         msg.remove_suffix(1);
     if (s_notifiers.empty()) {
@@ -41,7 +44,7 @@ static void LogMsg(LogType type, string_view msg) {
         }
     }
 
-    if (type == kLogCrash)
+    if (type == kLogTypeCrash)
         abort();
 }
 
@@ -108,22 +111,22 @@ void Dim::logAddNotify(ILogNotify * notify) {
 
 //===========================================================================
 Detail::Log Dim::logMsgDebug() {
-    return kLogDebug;
+    return kLogTypeDebug;
 }
 
 //===========================================================================
 Detail::Log Dim::logMsgInfo() {
-    return kLogInfo;
+    return kLogTypeInfo;
 }
 
 //===========================================================================
 Detail::Log Dim::logMsgError() {
-    return kLogError;
+    return kLogTypeError;
 }
 
 //===========================================================================
 Detail::LogCrash Dim::logMsgCrash() {
-    return kLogCrash;
+    return kLogTypeCrash;
 }
 
 //===========================================================================
@@ -160,4 +163,10 @@ void Dim::logParseError(
     logMsgInfo() << string(leftTrunc * 3, '.') << line
                  << string(rightTrunc * 3, '.');
     logMsgInfo() << string(pos - first + leftTrunc * 3, ' ') << '^';
+}
+
+//===========================================================================
+int Dim::logGetMsgCount(LogType type) {
+    assert(type < kLogTypes);
+    return s_counts[type];
 }

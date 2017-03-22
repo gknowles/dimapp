@@ -180,7 +180,7 @@ bool MainTimer::stop(StopFn notify, bool retry) {
 
 //===========================================================================
 void ConsoleLogger::onLog(LogType type, string_view msg) {
-    if (type == kLogError) {
+    if (type == kLogTypeError) {
         ConsoleScopedAttr attr(kConsoleError);
         cout.write(msg.data(), msg.size());
     } else {

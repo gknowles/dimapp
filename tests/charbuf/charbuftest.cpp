@@ -34,28 +34,14 @@ using namespace Dim;
 
 namespace {
 
-class Application : public IAppNotify, public ILogNotify {
+class Application : public IAppNotify {
     // IAppNotify
     void onAppRun() override;
-
-    // ILogNotify
-    void onLog(LogType type, string_view msg) override;
 
     int m_errors{0};
 };
 
 } // namespace
-
-//===========================================================================
-void Application::onLog(LogType type, string_view msg) {
-    if (type >= kLogError) {
-        ConsoleScopedAttr attr(kConsoleError);
-        m_errors += 1;
-        cout << "ERROR: " << msg << endl;
-    } else {
-        cout << msg << endl;
-    }
-}
 
 //===========================================================================
 void Application::onAppRun() {
@@ -113,9 +99,9 @@ void Application::onAppRun() {
     }
     EXPECT(count == buf.size());
 
-    if (m_errors) {
+    if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);
-        cerr << "*** " << m_errors << " FAILURES" << endl;
+        cerr << "*** TEST FAILURES: " << errs << endl;
         appSignalShutdown(EX_SOFTWARE);
     } else {
         cout << "All tests passed" << endl;
@@ -135,6 +121,5 @@ int main(int argc, char * argv[]) {
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
     _set_error_mode(_OUT_TO_MSGBOX);
     Application app;
-    logAddNotify(&app);
     return appRun(app, argc, argv);
 }

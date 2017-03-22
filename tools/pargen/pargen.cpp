@@ -123,20 +123,17 @@ private:
     LogType m_type;
     string m_msg;
 };
-int s_errors;
 } // namespace
 
 //===========================================================================
 LogTask::LogTask(LogType type, string_view msg)
     : m_type(type)
-    , m_msg(msg) {
-    if (type == kLogError)
-        s_errors += 1;
-}
+    , m_msg(msg) 
+{}
 
 //===========================================================================
 void LogTask::onTask() {
-    if (m_type == kLogError) {
+    if (m_type == kLogTypeError) {
         ConsoleScopedAttr attr(kConsoleError);
         cerr << "ERROR: " << m_msg << endl;
     } else {
@@ -279,17 +276,17 @@ https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
     std::chrono::duration<double> elapsed = finish - start;
     logMsgInfo() << "Elapsed time: " << elapsed.count() << " seconds";
 
-    if (s_errors) {
-        logMsgError() << "Errors encountered: " << s_errors;
+    if (int errs = logGetMsgCount(kLogTypeError)) {
+        logMsgError() << "Errors encountered: " << errs;
         return appSignalShutdown(EX_DATAERR);
     }
-    logMsgInfo() << "Errors encountered: " << s_errors;
+    logMsgInfo() << "Errors encountered: " << 0;
     appSignalShutdown(EX_OK);
 }
 
 //===========================================================================
 void Application::onLog(LogType type, string_view msg) {
-    if (s_cmdopts.verbose || type != kLogDebug) {
+    if (s_cmdopts.verbose || type != kLogTypeDebug) {
         auto ptr = new LogTask(type, msg);
         taskPush(m_logQ, *ptr);
     }

@@ -15,8 +15,8 @@ using namespace Dim;
 namespace {
 class Application : public IAppNotify,
                     public IFileWriteNotify,
-                    public IFileReadNotify,
-                    public ILogNotify {
+                    public IFileReadNotify
+{
 public:
     // IAppNotify
     void onAppRun() override;
@@ -31,24 +31,8 @@ public:
 
     // IFileReadNotify
     void onFileEnd(int64_t offset, IFile * file) override;
-
-    // ILogNotify
-    void onLog(LogType type, string_view msg) override;
-
-    int m_errors{0};
 };
 } // namespace
-
-//===========================================================================
-void Application::onLog(LogType type, string_view msg) {
-    if (type >= kLogError) {
-        ConsoleScopedAttr attr(kConsoleError);
-        m_errors += 1;
-        cout << "ERROR: " << msg << endl;
-    } else {
-        cout << msg << endl;
-    }
-}
 
 //===========================================================================
 void Application::onAppRun() {
@@ -81,9 +65,9 @@ void Application::onAppRun() {
         fileReadSync(buf, 4, file.get(), psize);
     }
 
-    if (m_errors) {
+    if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);
-        cerr << "*** " << m_errors << " FAILURES" << endl;
+        cerr << "*** TEST FAILURES: " << errs << endl;
         appSignalShutdown(EX_SOFTWARE);
     } else {
         cout << "All tests passed" << endl;
