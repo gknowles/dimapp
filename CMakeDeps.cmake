@@ -34,6 +34,8 @@
 # libs/core/log.h
 # libs/core/pch.cpp
 # libs/core/pch.h
+# libs/core/perf.cpp
+# libs/core/perf.h
 # libs/core/platformint.h
 # libs/core/tempheap.cpp
 # libs/core/tempheap.h

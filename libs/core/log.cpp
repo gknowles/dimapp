@@ -1,4 +1,4 @@
-// log.cpp - dim services
+// log.cpp - dim core
 #include "pch.h"
 #pragma hdrstop
 
@@ -21,7 +21,14 @@ class DefaultNotify : public ILogNotify {
 static DefaultNotify s_fallback;
 static vector<ILogNotify *> s_notifiers;
 static ILogNotify * s_defaultNotify{&s_fallback};
-static atomic<int> s_counts[kLogTypes];
+
+static PerfCounter<int> * s_perfs[] = {
+    &perfInt("log debug"),
+    &perfInt("log info"),
+    &perfInt("log error"),
+    &perfInt("log crash"),
+};
+static_assert(size(s_perfs) == kLogTypes);
 
 
 /****************************************************************************
@@ -32,7 +39,7 @@ static atomic<int> s_counts[kLogTypes];
 
 //===========================================================================
 static void LogMsg(LogType type, string_view msg) {
-    s_counts[type] += 1;
+    *s_perfs[type] += 1;
 
     if (!msg.empty() && msg.back() == '\n')
         msg.remove_suffix(1);
@@ -168,5 +175,5 @@ void Dim::logParseError(
 //===========================================================================
 int Dim::logGetMsgCount(LogType type) {
     assert(type < kLogTypes);
-    return s_counts[type];
+    return *s_perfs[type];
 }

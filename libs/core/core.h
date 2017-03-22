@@ -7,6 +7,7 @@
 #include "handle.h"
 #include "list.h"
 #include "log.h"
+#include "perf.h"
 #include "tempheap.h"
 #include "tokentable.h"
 #include "types.h"
