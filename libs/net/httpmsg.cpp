@@ -182,30 +182,37 @@ void HttpMsg::addHeader(const char name[], const char value[]) {
 void HttpMsg::addHeaderRef(HttpHdr id, const char name[], const char value[]) {
     auto ni = m_firstHeader;
     auto prev = ni;
+    auto pseudo = name[0] == ':';
     for (;;) {
         if (!ni) {
             ni = m_heap.emplace<HdrName>();
-            if (name[0] == ':' || !prev) {
-                // insert pseudo headers (or only header) to front of list
-                ni->m_next = m_firstHeader;
-                m_firstHeader = ni;
-            } else {
-                // add regular headers to the back
-                prev->m_next = ni;
-            }
-            ni->m_id = id;
-            ni->m_name = name;
             break;
         }
-
-        if (ni->m_id == id && (id || strcmp(ni->m_name, name) == 0))
+        if (pseudo && ni->m_name[0] != ':') {
+            auto next = ni;
+            ni = m_heap.emplace<HdrName>();
+            ni->m_next = next;
             break;
+        }
+        if (ni->m_id == id && (id || strcmp(ni->m_name, name) == 0)) 
+            goto ADD_VALUE;
 
         prev = ni;
         ni = ni->m_next;
     }
 
-    // not found
+    // update new header name info
+    if (!prev) {
+        // only header goes to front of list
+        m_firstHeader = ni;
+    } else {
+        // add regular headers to the back
+        prev->m_next = ni;
+    }
+    ni->m_id = id;
+    ni->m_name = name;
+
+ADD_VALUE:
     auto vi = ni->m_value.m_prev;
     if (!vi) {
         vi = &ni->m_value;
