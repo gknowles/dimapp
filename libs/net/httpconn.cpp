@@ -993,30 +993,31 @@ void HttpConn::writeMsg(
 }
 
 //===========================================================================
+template<typename T>
 void HttpConn::addData(
     CharBuf * out, 
     int stream, 
-    const CharBuf & data, 
+    const T & data, 
     bool more
 ) {
-    size_t bodyLen = size(data);
+    size_t count = size(data);
 
-    size_t bodyPos = 0;
-    while (bodyPos + m_maxOutputFrame < bodyLen) {
+    size_t pos = 0;
+    while (pos + m_maxOutputFrame < count) {
         StartFrame(out, stream, FrameType::kData, m_maxOutputFrame, 0);
-        out->append(data, bodyPos, m_maxOutputFrame);
-        bodyPos += m_maxOutputFrame;
+        out->append(data, pos, m_maxOutputFrame);
+        pos += m_maxOutputFrame;
     }
-    if (bodyPos == bodyLen && more) 
+    if (pos == count && more) 
         return;
 
     StartFrame(
         out,
         stream,
         FrameType::kData,
-        int(bodyLen - bodyPos),
+        int(count - pos),
         more ? 0 : FrameFlag::kEndStream);
-    out->append(data, bodyPos);
+    out->append(data, pos);
 }
 
 //===========================================================================
@@ -1152,6 +1153,18 @@ void Dim::httpData(
     CharBuf * out, 
     int stream, 
     const CharBuf & data,
+    bool more
+) {
+    if (auto * conn = s_conns.find(hc))
+        conn->addData(out, stream, data, more);
+}
+
+//===========================================================================
+void Dim::httpData(
+    HttpConnHandle hc, 
+    CharBuf * out, 
+    int stream, 
+    string_view data,
     bool more
 ) {
     if (auto * conn = s_conns.find(hc))

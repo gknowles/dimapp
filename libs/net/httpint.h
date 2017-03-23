@@ -63,7 +63,8 @@ public:
     void reply(CharBuf * out, int stream, const HttpMsg & msg, bool more);
 
     // Serializes additional data on the stream
-    void addData(CharBuf * out, int stream, const CharBuf & data, bool more);
+    template<typename T>
+    void addData(CharBuf * out, int stream, const T & data, bool more);
 
     void resetStream(CharBuf * out, int stream);
 

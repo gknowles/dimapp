@@ -289,6 +289,13 @@ void httpData(
     const CharBuf & data,
     bool more = false
 );
+void httpData(
+    HttpConnHandle hc, 
+    CharBuf * out, 
+    int stream, 
+    std::string_view data,
+    bool more = false
+);
 
 void httpResetStream(HttpConnHandle conn, CharBuf * out, int stream);
 
