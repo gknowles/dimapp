@@ -192,6 +192,16 @@ void CharBuf::clear() {
 }
 
 //===========================================================================
+void CharBuf::resize(size_t count) {
+    if (m_size > count) {
+        erase(count);
+    } else {
+        insert(m_size, count - m_size, 0);
+    }
+    return;
+}
+
+//===========================================================================
 CharBuf & CharBuf::insert(size_t pos, size_t numCh, char ch) {
     assert(pos <= pos + numCh && pos <= m_size);
 

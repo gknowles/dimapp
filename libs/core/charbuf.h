@@ -61,6 +61,7 @@ public:
     std::string_view view(size_t pos, size_t count = -1) const;
     Range views(size_t pos = 0, size_t count = -1) const;
     void clear();
+    void resize(size_t count);
     CharBuf & insert(size_t pos, size_t numCh, char ch);
     CharBuf & insert(size_t pos, const char s[]);
     CharBuf & insert(size_t pos, const char s[], size_t count);
