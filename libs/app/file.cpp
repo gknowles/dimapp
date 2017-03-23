@@ -126,7 +126,7 @@ void Dim::fileStreamBinary(
     string_view path,
     size_t blkSize
 ) {
-    auto notify = new FileStreamNotify(notify, path, blkSize);
+    new FileStreamNotify(notify, path, blkSize);
 }
 
 //===========================================================================
