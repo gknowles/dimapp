@@ -245,7 +245,7 @@ https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
     // process abnf file
     if (!srcfile->has_extension())
         srcfile->replace_extension("abnf");
-    fileReadSyncBinary(m_source, srcfile->u8string());
+    fileLoadSyncBinary(m_source, srcfile->u8string());
     if (m_source.empty())
         return appSignalUsageError(EX_USAGE);
 
