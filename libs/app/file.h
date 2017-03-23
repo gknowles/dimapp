@@ -86,12 +86,18 @@ void fileReadSync(
     size_t outBufLen,
     IFile * file,
     int64_t offset);
-void fileReadBinary(
+
+void fileStreamBinary(
+    IFileReadNotify * notify,
+    std::string_view path,
+    size_t blkSize);
+
+void fileLoadBinary(
     IFileReadNotify * notify,
     std::string & out,
     std::string_view path,
     size_t maxSize = 10'000'000);
-void fileReadSyncBinary(
+void fileLoadSyncBinary(
     std::string & out,
     std::string_view path,
     size_t maxSize = 10'000'000);

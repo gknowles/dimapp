@@ -8,38 +8,94 @@ using namespace Dim;
 
 /****************************************************************************
 *
-*   Private
-*
-***/
-
-/****************************************************************************
-*
-*   ReadNotify
+*   FileStreamNotify
 *
 ***/
 
 namespace {
-class FileProxyNotify : public IFileReadNotify {
+class FileStreamNotify : public IFileReadNotify {
     IFileReadNotify * m_notify;
-    string & m_out;
-
+    string m_out;
 public:
-    FileProxyNotify(string & out, IFileReadNotify * notify);
-
-    // IFileReadNotify
-    bool
-    onFileRead(char data[], int bytes, int64_t offset, IFile * file) override;
+    FileStreamNotify(
+        IFileReadNotify * notify, 
+        string_view path, 
+        size_t blkSize
+    );
+    bool onFileRead(
+        char data[], 
+        int bytes, 
+        int64_t offset, 
+        IFile * file
+    ) override;
     void onFileEnd(int64_t offset, IFile * file) override;
 };
 }
 
 //===========================================================================
-FileProxyNotify::FileProxyNotify(string & out, IFileReadNotify * notify)
+FileStreamNotify::FileStreamNotify(
+    IFileReadNotify * notify, 
+    string_view path,
+    size_t blkSize
+)
+    : m_notify{notify}
+    , m_out(blkSize, 0)
+{
+    auto file = fileOpen(path, IFile::kReadOnly | IFile::kDenyNone);
+    if (!file) {
+        logMsgError() << "File open failed, " << path;
+        onFileEnd(0, nullptr);
+    } else {
+        fileRead(this, m_out.data(), m_out.size(), file.release());
+    }
+}
+
+//===========================================================================
+bool FileStreamNotify::onFileRead(
+    char data[],
+    int bytes,
+    int64_t offset,
+    IFile * file) {
+    return m_notify->onFileRead(m_out.data(), bytes, offset, file);
+}
+
+//===========================================================================
+void FileStreamNotify::onFileEnd(int64_t offset, IFile * file) {
+    m_notify->onFileEnd(offset, file);
+    delete file;
+    delete this;
+}
+
+
+/****************************************************************************
+*
+*   FileLoadNotify
+*
+***/
+
+namespace {
+class FileLoadNotify : public IFileReadNotify {
+    IFileReadNotify * m_notify;
+    string & m_out;
+public:
+    FileLoadNotify(string & out, IFileReadNotify * notify);
+    bool onFileRead(
+        char data[], 
+        int bytes, 
+        int64_t offset, 
+        IFile * file
+    ) override;
+    void onFileEnd(int64_t offset, IFile * file) override;
+};
+}
+
+//===========================================================================
+FileLoadNotify::FileLoadNotify(string & out, IFileReadNotify * notify)
     : m_out(out)
     , m_notify(notify) {}
 
 //===========================================================================
-bool FileProxyNotify::onFileRead(
+bool FileLoadNotify::onFileRead(
     char data[],
     int bytes,
     int64_t offset,
@@ -51,7 +107,7 @@ bool FileProxyNotify::onFileRead(
 }
 
 //===========================================================================
-void FileProxyNotify::onFileEnd(int64_t offset, IFile * file) {
+void FileLoadNotify::onFileEnd(int64_t offset, IFile * file) {
     m_notify->onFileEnd(offset, file);
     delete file;
     delete this;
@@ -65,7 +121,16 @@ void FileProxyNotify::onFileEnd(int64_t offset, IFile * file) {
 ***/
 
 //===========================================================================
-void Dim::fileReadBinary(
+void Dim::fileStreamBinary(
+    IFileReadNotify * notify,
+    string_view path,
+    size_t blkSize
+) {
+    auto notify = new FileStreamNotify(notify, path, blkSize);
+}
+
+//===========================================================================
+void Dim::fileLoadBinary(
     IFileReadNotify * notify,
     string & out,
     string_view path,
@@ -81,12 +146,12 @@ void Dim::fileReadBinary(
     if (bytes > maxSize)
         logMsgError() << "File too large, " << bytes << ", " << path;
     out.resize(bytes);
-    auto proxy = new FileProxyNotify(out, notify);
+    auto proxy = new FileLoadNotify(out, notify);
     fileRead(proxy, out.data(), bytes, file.release());
 }
 
 //===========================================================================
-void Dim::fileReadSyncBinary(
+void Dim::fileLoadSyncBinary(
     string & out,
     string_view path,
     size_t maxSize) {
