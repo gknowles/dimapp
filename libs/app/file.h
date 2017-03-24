@@ -38,7 +38,7 @@ public:
 std::unique_ptr<IFile> fileOpen(
     std::string_view path,
     unsigned modeFlags // IFile::OpenMode::*
-    );
+);
 size_t fileSize(IFile * file);
 TimePoint fileLastWriteTime(IFile * file);
 std::experimental::filesystem::path filePath(IFile * file);
@@ -64,8 +64,12 @@ public:
 
     // return false to prevent more reads, otherwise reads continue until the
     // requested length has been received.
-    virtual bool
-    onFileRead(char data[], int bytes, int64_t offset, IFile * file) {
+    virtual bool onFileRead(
+        char data[], 
+        int bytes, 
+        int64_t offset, 
+        IFile * file
+    ) {
         return true;
     }
 
@@ -80,7 +84,7 @@ void fileRead(
     IFile * file,
     int64_t offset = 0,
     int64_t length = 0 // 0 to read until the end
-    );
+);
 void fileReadSync(
     void * outBuf,
     size_t outBufLen,
