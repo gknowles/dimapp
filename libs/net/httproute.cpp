@@ -278,12 +278,11 @@ struct ReplyWithFileNotify : IFileReadNotify {
     char m_buffer[8'192];
 
     bool onFileRead(
-        char data[], 
-        int bytes, 
+        string_view data, 
         int64_t offset, 
         IFile * file
     ) override {
-        RouteConn::reply(m_reqId, string_view(m_buffer, bytes), true);
+        RouteConn::reply(m_reqId, data, true);
         return true;
     }
     void onFileEnd(int64_t offset, IFile * file) override {

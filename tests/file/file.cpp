@@ -24,8 +24,7 @@ public:
     // IFileWriteNotify
     void onFileWrite(
         int written,
-        const char data[],
-        int bytes,
+        string_view data, 
         int64_t offset,
         IFile * file) override;
 
@@ -78,8 +77,7 @@ void Application::onAppRun() {
 //===========================================================================
 void Application::onFileWrite(
     int written,
-    const char data[],
-    int bytes,
+    string_view data, 
     int64_t offset,
     IFile * file) {}
 

@@ -256,7 +256,7 @@ bool FileReader::onRun() {
 //===========================================================================
 void FileReader::onNotify() {
     bool again = m_bytes 
-        && m_notify->onFileRead(m_buf, m_bytes, m_offset, m_file);
+        && m_notify->onFileRead(string_view(m_buf, m_bytes), m_offset, m_file);
 
     m_offset += m_bytes;
 
@@ -299,7 +299,12 @@ bool FileWriter::onRun() {
 
 //===========================================================================
 void FileWriter::onNotify() {
-    m_notify->onFileWrite(m_bytes, m_buf, m_bufLen, m_offset, m_file);
+    m_notify->onFileWrite(
+        m_bytes, 
+        string_view(m_buf, m_bufLen), 
+        m_offset, 
+        m_file
+    );
     delete this;
 }
 
@@ -472,6 +477,12 @@ TimePoint Dim::fileLastWriteTime(IFile * ifile) {
 std::experimental::filesystem::path Dim::filePath(IFile * ifile) {
     File * file = static_cast<File *>(ifile);
     return file->m_path;
+}
+
+//===========================================================================
+unsigned Dim::fileMode(IFile * ifile) {
+    File * file = static_cast<File *>(ifile);
+    return file->m_mode;
 }
 
 //===========================================================================

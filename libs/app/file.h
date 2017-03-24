@@ -65,8 +65,7 @@ public:
     // return false to prevent more reads, otherwise reads continue until the
     // requested length has been received.
     virtual bool onFileRead(
-        char data[], 
-        int bytes, 
+        std::string_view data, 
         int64_t offset, 
         IFile * file
     ) {
@@ -134,8 +133,7 @@ public:
 
     virtual void onFileWrite(
         int written,
-        const char data[],
-        int bytes,
+        std::string_view data,
         int64_t offset,
         IFile * file) = 0;
 };

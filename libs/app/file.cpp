@@ -23,8 +23,7 @@ public:
         size_t blkSize
     );
     bool onFileRead(
-        char data[], 
-        int bytes, 
+        string_view data, 
         int64_t offset, 
         IFile * file
     ) override;
@@ -52,11 +51,10 @@ FileStreamNotify::FileStreamNotify(
 
 //===========================================================================
 bool FileStreamNotify::onFileRead(
-    char data[],
-    int bytes,
+    string_view data, 
     int64_t offset,
     IFile * file) {
-    return m_notify->onFileRead(m_out.data(), bytes, offset, file);
+    return m_notify->onFileRead(data, offset, file);
 }
 
 //===========================================================================
@@ -80,8 +78,7 @@ class FileLoadNotify : public IFileReadNotify {
 public:
     FileLoadNotify(string & out, IFileReadNotify * notify);
     bool onFileRead(
-        char data[], 
-        int bytes, 
+        string_view data, 
         int64_t offset, 
         IFile * file
     ) override;
@@ -96,13 +93,12 @@ FileLoadNotify::FileLoadNotify(string & out, IFileReadNotify * notify)
 
 //===========================================================================
 bool FileLoadNotify::onFileRead(
-    char data[],
-    int bytes,
+    string_view data, 
     int64_t offset,
     IFile * file) {
     // resize the string to match the bytes read, in case it was less than
     // the amount requested
-    m_out.resize(bytes);
+    m_out.resize(data.size());
     return false;
 }
 
