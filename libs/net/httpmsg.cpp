@@ -181,7 +181,7 @@ void HttpMsg::addHeader(const char name[], const char value[]) {
 //===========================================================================
 void HttpMsg::addHeaderRef(HttpHdr id, const char name[], const char value[]) {
     auto ni = m_firstHeader;
-    auto prev = ni;
+    auto prev = (HdrName *) nullptr;
     auto pseudo = name[0] == ':';
     for (;;) {
         if (!ni) {
