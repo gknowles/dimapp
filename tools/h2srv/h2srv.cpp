@@ -4,6 +4,7 @@
 
 using namespace std;
 using namespace Dim;
+namespace fs = experimental::filesystem;
 
 
 /****************************************************************************
@@ -82,6 +83,13 @@ void WebRoute::onHttpRequest(
     HttpRequest & msg
 ) {
     cout << "http request #" << reqId << endl;
+    string path = "Web";
+    path += msg.pathAbsolute();
+    if (fs::is_regular_file(path)) {
+        httpRouteReplyWithFile(reqId, path);
+    } else {
+        httpRouteReplyNotFound(reqId, msg);
+    }
 }
 
 
@@ -140,7 +148,7 @@ void Application::onAppRun() {
 
     appSocketAddListener<TnetConn>(AppSocket::kByte, "", s_endpoint);
 
-    httpRouteAdd(&s_web, "/", fHttpMethodGet);
+    httpRouteAdd(&s_web, "/", fHttpMethodGet, true);
 }
 
 
