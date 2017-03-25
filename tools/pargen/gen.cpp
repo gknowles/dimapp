@@ -340,7 +340,7 @@ static void addEvent(
     Element::Flags flags) {
     StateEvent sv;
     sv.elem = se.elem->rule;
-    if (!sv.elem->eventName.empty())
+    if (sv.elem->eventName.size())
         sv.elem = sv.elem->eventRule;
     sv.flags = flags;
     events.push_back(sv);

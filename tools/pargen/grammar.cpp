@@ -47,6 +47,13 @@ ElementNull::ElementNull() {
 void Grammar::clear() {
     m_nextElemId = 0;
     m_rules.clear();
+    m_eventNames.clear();
+    m_errpos = 0;
+}
+
+//===========================================================================
+void Grammar::clearEvents() {
+    m_eventNames.clear();
 }
 
 //===========================================================================
@@ -207,6 +214,16 @@ void Grammar::addRange(Element * rule, unsigned char a, unsigned char b) {
     for (unsigned i = a; i <= b; ++i) {
         addTerminal(rule, (unsigned char)i);
     }
+}
+
+//===========================================================================
+const Element * Grammar::eventAlways(std::string_view name) {
+    Element key;
+    key.name = name;
+    auto it = m_rules.find(key);
+    if (it == m_rules.end())
+        it = m_eventNames.insert(key).first;
+    return &*it;
 }
 
 //===========================================================================
@@ -385,13 +402,13 @@ static void normalizeSequence(Element & rule) {
 }
 
 //===========================================================================
-static void normalizeRule(Element & rule, const Grammar & rules) {
+static void normalizeRule(Element & rule, Grammar & rules) {
     rule.rule = rules.element(rule.value);
 }
 
 //===========================================================================
 static void
-normalize(Element & rule, const Element * parent, const Grammar & rules) {
+normalize(Element & rule, const Element * parent, Grammar & rules) {
     if (rule.elements.size() == 1) {
         Element & elem = rule.elements.front();
         if (elem.type != Element::kTerminal
@@ -407,8 +424,8 @@ normalize(Element & rule, const Element * parent, const Grammar & rules) {
         }
     }
 
-    if (!rule.eventName.empty())
-        rule.eventRule = rules.element(rule.eventName);
+    if (rule.eventName.size())
+        rule.eventRule = rules.eventAlways(rule.eventName);
 
     for (auto && elem : rule.elements)
         normalize(elem, &rule, rules);
@@ -422,6 +439,7 @@ normalize(Element & rule, const Element * parent, const Grammar & rules) {
 
 //===========================================================================
 void normalize(Grammar & rules) {
+    rules.clearEvents();
     for (auto && rule : rules.rules()) {
         normalize(const_cast<Element &>(rule), nullptr, rules);
     }

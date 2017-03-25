@@ -672,21 +672,24 @@ public:
     virtual bool onStart () { return true; }
     virtual bool onEnd () { return true; }
 )";
-    vector<pair<string, unsigned>> events;
+    map<string, unsigned> events;
+    ostringstream ostr;
     for (auto && elem : rules.rules()) {
-        if (!elem.eventName.empty())
-            continue;
         if (elem.flags
-            & (Element::kOnStart | Element::kOnEnd | Element::kOnChar)) {
-            ostringstream ostr;
-            writeRuleName(ostr, elem.name, true);
-            events.emplace_back(ostr.str(), elem.flags);
+            & (Element::kOnStart | Element::kOnEnd | Element::kOnChar)
+        ) {
+            ostr.clear();
+            ostr.str("");
+            if (elem.eventName.empty()) {
+                writeRuleName(ostr, elem.name, true);
+            } else {
+                writeRuleName(ostr, elem.eventName, true);
+            }
+            events[ostr.str()] |= elem.flags;
         }
     }
     if (!events.empty()) {
         os << '\n';
-        sort(events.begin(), events.end());
-
         const struct {
             Element::Flags flag;
             const char * text;

@@ -65,6 +65,7 @@ struct ElementNull : Element {
 class Grammar {
 public:
     void clear();
+    void clearEvents();
 
     void addOption(std::string_view name, std::string_view value);
     void setOption(std::string_view name, std::string_view value);
@@ -102,6 +103,8 @@ public:
     void addRange(Element * rule, unsigned char a, unsigned char b);
     void addTerminal(Element * rule, unsigned char ch);
 
+    const Element * eventAlways(std::string_view name);
+
     Element * element(std::string_view name);
     const Element * element(std::string_view name) const;
 
@@ -116,6 +119,7 @@ private:
 
     unsigned m_nextElemId{0};
     std::set<Element> m_rules;
+    std::set<Element> m_eventNames; // names referenced without backing rules
     size_t m_errpos{0};
 };
 
