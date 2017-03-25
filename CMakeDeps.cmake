@@ -69,6 +69,11 @@
 # libs/net/tlsmsg.cpp
 # libs/net/tlsrecord.cpp
 # libs/net/tlsrecord.h
+# libs/uri/pch.cpp
+# libs/uri/pch.h
+# libs/uri/uri.abnf
+# libs/uri/uriparse.cpp
+# libs/uri/uriparse.h
 # libs/win/pch.cpp
 # libs/win/pch.h
 # libs/win/winaddress.cpp
