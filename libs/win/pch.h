@@ -1,4 +1,7 @@
-// pch.h - dim core - windows platform
+// Copyright Glen Knowles 2015 - 2017.
+// Distributed under the Boost Software License, Version 1.0.
+//
+// pch.h - dim windows platform
 
 #include "app/app.h"
 #include "core/core.h"

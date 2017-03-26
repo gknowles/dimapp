@@ -1,4 +1,7 @@
-// main.cpp - h2srv
+// Copyright Glen Knowles 2016 - 2017.
+// Distributed under the Boost Software License, Version 1.0.
+//
+// h2srv.cpp - h2srv
 #include "pch.h"
 #pragma hdrstop
 

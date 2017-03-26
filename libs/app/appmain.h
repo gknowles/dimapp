@@ -1,4 +1,7 @@
-// app.h - dim core
+// Copyright Glen Knowles 2015 - 2017.
+// Distributed under the Boost Software License, Version 1.0.
+//
+// app.h - dim app
 //
 // Application life-cycle
 // 

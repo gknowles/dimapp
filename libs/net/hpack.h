@@ -1,4 +1,7 @@
-// hpack.h - dim services
+// Copyright Glen Knowles 2016 - 2017.
+// Distributed under the Boost Software License, Version 1.0.
+//
+// hpack.h - dim http
 //
 // implements hpack, as defined by:
 //  rfc7541 - HPACK: Header Compression for HTTP/2

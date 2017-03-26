@@ -1,4 +1,7 @@
-// dim.h - dim primary client header
+// Copyright Glen Knowles 2016 - 2017.
+// Distributed under the Boost Software License, Version 1.0.
+//
+// net.h - dim net
 #pragma once
 
 #include "config/config.h"

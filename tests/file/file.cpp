@@ -1,4 +1,7 @@
-// main.cpp - dimapp test file
+// Copyright Glen Knowles 2017.
+// Distributed under the Boost Software License, Version 1.0.
+//
+// file.cpp - dimapp test file
 #include "pch.h"
 #pragma hdrstop
 

@@ -1,4 +1,7 @@
-// pch.h - dim core
+// Copyright Glen Knowles 2017.
+// Distributed under the Boost Software License, Version 1.0.
+//
+// pch.h - dim app
 
 #include "app/app.h"
 #include "cli/cli.h"

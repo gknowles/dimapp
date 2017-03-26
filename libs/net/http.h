@@ -1,4 +1,7 @@
-// http.h - dim services
+// Copyright Glen Knowles 2015 - 2017.
+// Distributed under the Boost Software License, Version 1.0.
+//
+// http.h - dim http
 //
 // implements http/2, as defined by:
 //  rfc7540 - Hypertext Transfer Protocol Version 2 (HTTP/2)

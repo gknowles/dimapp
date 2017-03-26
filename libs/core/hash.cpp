@@ -1,4 +1,7 @@
-// hash.cpp - dim services
+// Copyright Glen Knowles 2016 - 2017.
+// Distributed under the Boost Software License, Version 1.0.
+//
+// hash.cpp - dim core
 //
 // Implements SipHash-2-4, as described by: 
 //   SipHash: a fast short-input PRF (https://131002.net/siphash/siphash.pdf)

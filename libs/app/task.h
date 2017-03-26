@@ -1,4 +1,7 @@
-// task.h - dim core
+// Copyright Glen Knowles 2015 - 2017.
+// Distributed under the Boost Software License, Version 1.0.
+//
+// task.h - dim app
 #pragma once
 
 #include "config/config.h"
