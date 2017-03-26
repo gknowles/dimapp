@@ -176,7 +176,7 @@ void ConnSocket::connect(
         timeout = kConnectTimeout;
 
     auto sock = make_unique<ConnSocket>(notify);
-    sock->m_handle = winSocketCreate(local);
+    sock->m_handle = iSocketCreate(local);
     if (sock->m_handle == INVALID_SOCKET)
         return pushConnectFailed(notify);
 

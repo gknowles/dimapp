@@ -12,7 +12,7 @@ namespace Dim {
 
 /****************************************************************************
 *
-*   DimSocket
+*   SocketBase
 *
 ***/
 
@@ -88,28 +88,17 @@ private:
 
 /****************************************************************************
 *
-*   Socket accept
+*   Internal API
 *
 ***/
+
+SOCKET iSocketCreate();
+SOCKET iSocketCreate(const Endpoint & local);
 
 void iSocketAcceptInitialize();
-
-
-/****************************************************************************
-*
-*   Socket connect
-*
-***/
-
 void iSocketConnectInitialize();
 
-
-/****************************************************************************
-*
-*   Socket buffers
-*
-***/
-
+// Socket buffers
 void iSocketBufferInitialize(RIO_EXTENSION_FUNCTION_TABLE & rio);
 void iSocketGetRioBuffer(RIO_BUF * out, SocketBuffer * buf, size_t bytes);
 

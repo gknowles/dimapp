@@ -4,6 +4,9 @@
 // winint.h - dim windows platform
 #pragma once
 
+#include "app/task.h"
+#include "app/timer.h"
+
 #include <iostream>
 
 namespace Dim {
@@ -108,7 +111,7 @@ public:
 
 class WinError {
 public:
-    enum NtStatus : unsigned;
+    enum NtStatus : unsigned {};
 
 public:
     // default constructor calls GetLastError()
@@ -129,15 +132,5 @@ private:
 std::ostream & operator<<(std::ostream & os, const WinError & val);
 
 void winErrorInitialize();
-
-
-/****************************************************************************
-*
-*   Socket
-*
-***/
-
-SOCKET winSocketCreate();
-SOCKET winSocketCreate(const Endpoint & local);
 
 } // namespace

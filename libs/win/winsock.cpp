@@ -485,14 +485,8 @@ void Dim::iSocketInitialize() {
 }
 
 
-/****************************************************************************
-*
-*   Win socket
-*
-***/
-
 //===========================================================================
-SOCKET Dim::winSocketCreate() {
+SOCKET Dim::iSocketCreate() {
     SOCKET handle = WSASocketW(
         AF_UNSPEC, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_REGISTERED_IO);
     if (handle == INVALID_SOCKET) {
@@ -545,8 +539,8 @@ SOCKET Dim::winSocketCreate() {
 }
 
 //===========================================================================
-SOCKET Dim::winSocketCreate(const Endpoint & end) {
-    SOCKET handle = winSocketCreate();
+SOCKET Dim::iSocketCreate(const Endpoint & end) {
+    SOCKET handle = iSocketCreate();
     if (handle == INVALID_SOCKET)
         return handle;
 

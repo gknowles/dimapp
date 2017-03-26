@@ -154,7 +154,7 @@ void AcceptSocket::accept(ListenSocket * listen) {
     assert(!listen->m_socket);
     auto sock = make_unique<AcceptSocket>(
         listen->m_notify->onListenCreateSocket(listen->m_localEnd).release());
-    sock->m_handle = winSocketCreate();
+    sock->m_handle = iSocketCreate();
     if (sock->m_handle == INVALID_SOCKET)
         return pushAcceptStop(listen);
 
@@ -331,7 +331,7 @@ void Dim::socketListen(
     const Endpoint & local) {
     auto hostage = make_unique<ListenSocket>(notify, local);
     auto sock = hostage.get();
-    sock->m_handle = winSocketCreate(local);
+    sock->m_handle = iSocketCreate(local);
     if (sock->m_handle == INVALID_SOCKET)
         return pushListenStop(sock);
 
