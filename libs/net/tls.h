@@ -9,6 +9,8 @@
 
 #include "config/config.h"
 
+#include "core/handle.h"
+
 #include <cstdint>
 
 namespace Dim {
