@@ -112,6 +112,7 @@ public:
 class WinError {
 public:
     enum NtStatus : unsigned {};
+    enum SecurityStatus : unsigned {};
 
 public:
     // default constructor calls GetLastError()
@@ -122,11 +123,16 @@ public:
     WinError & operator=(int error);
     // sets equivalent standard windows error value
     WinError & operator=(NtStatus status);
+    WinError & operator=(SecurityStatus status);
+
+    WinError & set();   // calls GetLastError()
 
     operator int() const { return m_value; }
 
 private:
     int m_value;
+    int m_ntStatus{0};
+    int m_secStatus{0};
 };
 
 std::ostream & operator<<(std::ostream & os, const WinError & val);

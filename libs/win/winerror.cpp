@@ -15,7 +15,8 @@ using namespace Dim;
 *
 ***/
 
-using RtlNtStatusToDosErrorFn = ULONG(WINAPI *)(DWORD ntStatus);
+using NtStatusToDosErrorFn = ULONG(WINAPI *)(DWORD ntStatus);
+using SecurityStatusToNtStatusFn = ULONG(WINAPI *)(DWORD securityStatus);
 
 
 /****************************************************************************
@@ -24,7 +25,8 @@ using RtlNtStatusToDosErrorFn = ULONG(WINAPI *)(DWORD ntStatus);
 *
 ***/
 
-static RtlNtStatusToDosErrorFn s_RtlNtStatusToDosError;
+static NtStatusToDosErrorFn s_NtStatusToDosError;
+static SecurityStatusToNtStatusFn s_SecurityStatusToNtStatus;
 
 
 /****************************************************************************
@@ -56,23 +58,50 @@ WinError::WinError(NtStatus status) {
 
 //===========================================================================
 WinError & WinError::operator=(int error) {
+    m_secStatus = 0;
+    m_ntStatus = 0;
     m_value = error;
     return *this;
 }
 
 //===========================================================================
 WinError & WinError::operator=(NtStatus status) {
+    m_secStatus = 0;
     if (!status) {
+        m_ntStatus = 0;
         m_value = 0;
     } else {
-        m_value = s_RtlNtStatusToDosError(status);
+        m_ntStatus = status;
+        m_value = s_NtStatusToDosError(status);
     }
     return *this;
 }
 
 //===========================================================================
+WinError & WinError::operator=(SecurityStatus status) {
+    if (!status) {
+        m_secStatus = 0;
+        m_ntStatus = 0;
+        m_value = 0;
+    } else {
+        m_secStatus = status;
+        m_ntStatus = s_SecurityStatusToNtStatus(status);
+        m_value = s_NtStatusToDosError(m_ntStatus);
+    }
+    return *this;
+}
+
+//===========================================================================
+WinError & WinError::set() {
+    m_secStatus = 0;
+    m_ntStatus = 0;
+    m_value = GetLastError();
+    return *this;
+}
+
+//===========================================================================
 std::ostream & Dim::operator<<(std::ostream & os, const WinError & val) {
-    char buf[256];
+    char buf[256] = {};
     FormatMessage(
         FORMAT_MESSAGE_FROM_SYSTEM,
         NULL, // source
@@ -100,5 +129,10 @@ std::ostream & Dim::operator<<(std::ostream & os, const WinError & val) {
 
 //===========================================================================
 void Dim::winErrorInitialize() {
-    loadProc(s_RtlNtStatusToDosError, "ntdll", "RtlNtStatusToDosError");
+    loadProc(s_NtStatusToDosError, "ntdll", "RtlNtStatusToDosError");
+    loadProc(
+        s_SecurityStatusToNtStatus, 
+        "ntoskrnl.exe", 
+        "RtlMapSecurityErrorToNtStatus"
+    );
 }
