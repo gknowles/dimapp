@@ -147,10 +147,10 @@ void Application::onAppRun() {
     for (auto && addr : addrs)
         cout << addr << endl;
 
+    winTlsInitialize();
+
     parse(&s_endpoint, "0.0.0.0", 8888);
-
     appSocketAddListener<TnetConn>(AppSocket::kByte, "", s_endpoint);
-
     httpRouteAdd(&s_web, "/", fHttpMethodGet, true);
 }
 

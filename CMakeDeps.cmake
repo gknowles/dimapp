@@ -90,6 +90,10 @@
 # libs/win/winsockint.h
 # libs/win/winsync.cpp
 # libs/win/wintime.cpp
+# libs/wintls/pch.cpp
+# libs/wintls/pch.h
+# libs/wintls/wintls.cpp
+# libs/wintls/wintls.h
 # libs/xml/pch.cpp
 # libs/xml/pch.h
 # libs/xml/raw-text-from-tr.ebnf
