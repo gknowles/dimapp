@@ -14,10 +14,6 @@
 # libs/app/file.h
 # libs/app/pch.cpp
 # libs/app/pch.h
-# libs/app/task.cpp
-# libs/app/task.h
-# libs/app/timer.cpp
-# libs/app/timer.h
 # libs/cli/cli.cpp
 # libs/cli/cli.h
 # libs/config/compiler/visualc.h
@@ -37,8 +33,12 @@
 # libs/core/perf.cpp
 # libs/core/perf.h
 # libs/core/platformint.h
+# libs/core/task.cpp
+# libs/core/task.h
 # libs/core/tempheap.cpp
 # libs/core/tempheap.h
+# libs/core/timer.cpp
+# libs/core/timer.h
 # libs/core/tokentable.cpp
 # libs/core/tokentable.h
 # libs/core/types.cpp

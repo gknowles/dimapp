@@ -4,8 +4,8 @@
 // winint.h - dim windows platform
 #pragma once
 
-#include "app/task.h"
-#include "app/timer.h"
+#include "core/task.h"
+#include "core/timer.h"
 
 #include <iostream>
 

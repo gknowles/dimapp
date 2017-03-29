@@ -5,7 +5,7 @@
 
 #include "app/app.h"
 #include "cli/cli.h"
-#include "core/log.h"
+#include "core/core.h"
 
 #include "core/platformint.h"
 
