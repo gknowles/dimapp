@@ -25,12 +25,12 @@ public:
     virtual void onLog(LogType type, std::string_view msg) = 0;
 };
 
-void logAddNotify(ILogNotify * notify);
+void logMonitor(ILogNotify * notify);
 
 // The default notifier (whether user supplied or the internal one) is only
 // called if no other notifiers have been added. Setting the default to
 // nullptr sets it to the internal default, which writes to std::cout.
-void logSetDefaultNotify(ILogNotify * notify);
+void logDefaultMonitor(ILogNotify * notify);
 
 namespace Detail {
 

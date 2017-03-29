@@ -309,6 +309,6 @@ int main(int argc, char * argv[]) {
 
     consoleEnableCtrlC(false);
     Application app;
-    logAddNotify(&app);
+    logMonitor(&app);
     return appRun(app, argc, argv);
 }

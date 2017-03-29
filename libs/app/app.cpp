@@ -207,7 +207,7 @@ RunMode Dim::appMode() {
 //===========================================================================
 int Dim::appRun(IAppNotify & app, int argc, char * argv[]) {
     s_runMode = kRunStarting;
-    logSetDefaultNotify(&s_consoleLogger);
+    logDefaultMonitor(&s_consoleLogger);
     iConsoleInitialize();
     iTaskInitialize();
     iTimerInitialize();

@@ -110,12 +110,12 @@ Detail::LogCrash::~LogCrash() {}
 ***/
 
 //===========================================================================
-void Dim::logSetDefaultNotify(ILogNotify * notify) {
+void Dim::logDefaultMonitor(ILogNotify * notify) {
     s_defaultNotify = notify ? notify : &s_fallback;
 }
 
 //===========================================================================
-void Dim::logAddNotify(ILogNotify * notify) {
+void Dim::logMonitor(ILogNotify * notify) {
     s_notifiers.push_back(notify);
 }
 
