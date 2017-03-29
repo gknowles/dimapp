@@ -80,7 +80,7 @@ enum {
     EX_CONFIG = 78,      // configuration error
 
     // Microsoft specific
-    EX_ABORTED = 3, // assert() failure or direct call to abort()
+    EX_ABORTED = 3, // used by CRT in assert() failures and abort()
 
     // 100+ reserved for application
     EX__APPBASE = 100,
@@ -120,8 +120,8 @@ void appSignalUsageError(
 // after all handlers have returned true.
 //
 // After a handler returns true it will not be called again. When returning 
-// false, handlers must call appShutdownFailed(), which is always false. This
-// can be done directly in the return statement.
+// false, handlers must call appShutdownFailed(). Since appShutdownFailed() 
+// returns false it is normally called directly in the return statement.
 //
 // Do not block in the handler, as it prevents timers from running and things 
 // from shutting down in parallel. This is especially important when it 
@@ -142,12 +142,12 @@ public:
 // Used to register shutdown handlers
 void appMonitorShutdown(IAppShutdownNotify * cleanup);
 
-// Helps to track shutdown problems, always returns false. Called from inside 
+// Helps track shutdown problems, always returns false. Called from inside 
 // shutdown handlers when they are returning false. 
 bool appShutdownFailed();
 
 // Reset shutdown timeout back to 2 minutes from now. Use with caution, called
-// repeatedly shutdown can be delayed indefinitely (aka hang).
+// repeatedly it can delayed shutdown indefinitely (aka hang).
 void appDelayShutdown();
 
 } // namespace
