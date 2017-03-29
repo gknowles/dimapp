@@ -224,6 +224,11 @@ XDocument::addAttr(XNode * elem, const char name[], const char text[]) {
 }
 
 //===========================================================================
+static void setValue(XElemInfo * ei, const char val[]) {
+    *const_cast<const char **>(&ei->value) = val;
+}
+
+//===========================================================================
 XNode * XDocument::addText(XNode * parent, const char text[]) {
     assert(parent);
     assert(text);
@@ -233,7 +238,7 @@ XNode * XDocument::addText(XNode * parent, const char text[]) {
     p->valueLen += strlen(text);
     linkNode(p, ni);
     if (!*p->value)
-        *const_cast<const char **>(&p->value) = text;
+        setValue(p, text);
     return ni;
 }
 
@@ -262,7 +267,7 @@ void XDocument::normalizeText(XNode * node) {
             firstNode = nextSibling(firstNode, nullptr, XType::kText);
             unlinkNode(prev);
             if (!firstNode) {
-                *const_cast<const char **>(&ei->value) = "";
+                setValue(ei, "");
                 goto NO_TEXT;
             }
             firstChar = firstNode->value;
@@ -296,11 +301,11 @@ void XDocument::normalizeText(XNode * node) {
         break;
     }
     if (firstNode == lastNode) {
-        *const_cast<const char **>(&ei->value) = firstChar;
+        setValue(ei, firstChar);
         *const_cast<char *>(lastChar) = 0;
     } else {
         char * ptr = heap().alloc(ei->valueLen + 1);
-        *const_cast<const char **>(&ei->value) = ptr;
+        setValue(ei, ptr);
         for (;;) {
             *ptr++ = *firstChar++;
             if (firstChar == lastChar)
