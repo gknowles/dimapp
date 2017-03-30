@@ -4,7 +4,7 @@
 // pch.h - dim core
 
 #include "core.h"
-#include "platformint.h"
+#include "appint.h"
 
 #include <array>
 #include <atomic>

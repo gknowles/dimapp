@@ -19,6 +19,7 @@
 # libs/config/compiler/visualc.h
 # libs/config/config.h
 # libs/config/config_suffix.h
+# libs/core/appint.h
 # libs/core/charbuf.cpp
 # libs/core/charbuf.h
 # libs/core/core.h
@@ -32,7 +33,6 @@
 # libs/core/pch.h
 # libs/core/perf.cpp
 # libs/core/perf.h
-# libs/core/platformint.h
 # libs/core/shutdown.cpp
 # libs/core/shutdown.h
 # libs/core/task.cpp
@@ -50,6 +50,7 @@
 # libs/json/json.abnf
 # libs/net/address.cpp
 # libs/net/address.h
+# libs/net/appint.h
 # libs/net/appsocket.cpp
 # libs/net/appsocket.h
 # libs/net/hpack.cpp
@@ -76,6 +77,7 @@
 # libs/uri/uri.abnf
 # libs/uri/uriparse.cpp
 # libs/uri/uriparse.h
+# libs/win/appint.h
 # libs/win/pch.cpp
 # libs/win/pch.h
 # libs/win/winaddress.cpp

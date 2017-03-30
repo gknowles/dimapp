@@ -1,34 +1,18 @@
 // Copyright Glen Knowles 2015 - 2017.
 // Distributed under the Boost Software License, Version 1.0.
 //
-// platformint.h - dim core
+// appint.h - dim core
+//
+// Initialize and destroy methods called by appRun()
+
 #pragma once
 
 #include <cstdint>
 
 namespace Dim {
 
-// System
-void iPlatformInitialize();
-
-//---------------------------------------------------------------------------
-// AppSocket
-void iAppSocketInitialize();
-
-// Console
-void iConsoleInitialize();
-
-// File
-void iFileInitialize();
-
-// Http
-void iHttpRouteInitialize();
-
 // Shutdown
 void iShutdownDestroy();
-
-// Socket
-void iSocketInitialize();
 
 // Task
 void iTaskInitialize();

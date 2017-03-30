@@ -9,6 +9,7 @@
 #include "core/charbuf.h"
 #include "core/util.h"
 
+#include <cstdint>
 #include <memory>
 #include <sstream>
 #include <string>

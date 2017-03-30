@@ -78,3 +78,12 @@
 #else
 #define DIM_LIB_DECL
 #endif
+
+
+/****************************************************************************
+*
+*   Universally required headers
+*
+***/
+
+#include <cstddef>  // size_t, byte, NULL, offsetof

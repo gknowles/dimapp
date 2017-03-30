@@ -7,6 +7,7 @@
 #include "core/task.h"
 #include "core/timer.h"
 
+#include <cstdint>
 #include <iostream>
 
 namespace Dim {

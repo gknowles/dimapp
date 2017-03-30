@@ -7,7 +7,9 @@
 #include "cli/cli.h"
 #include "core/core.h"
 
-#include "core/platformint.h"
+#include "core/appint.h"
+#include "net/appint.h"
+#include "win/appint.h"
 
 #include <array>
 #include <atomic>

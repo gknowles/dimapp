@@ -7,7 +7,7 @@
 #include "core/core.h"
 #include "net/net.h"
 
-#include "core/platformint.h"
+#include "core/appint.h" // iClockGetTicks
 
 #include <algorithm>
 #include <atomic>
@@ -33,5 +33,6 @@
 #pragma comment(lib, "synchronization.lib") // WaitOnAddress
 #pragma comment(lib, "ws2_32.lib")
 
+#include "appint.h"
 #include "winint.h"
 #include "winsockint.h"

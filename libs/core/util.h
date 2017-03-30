@@ -8,6 +8,7 @@
 
 #include <cassert>
 #include <climits>
+#include <cstdint>
 #include <experimental/filesystem>
 #include <limits>
 #include <sstream>

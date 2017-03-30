@@ -8,6 +8,7 @@
 
 #include "core/types.h"
 
+#include <cstdint>
 #include <experimental/filesystem>
 #include <memory>
 #include <string>

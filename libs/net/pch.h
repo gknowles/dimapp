@@ -10,7 +10,7 @@
 #include "hpack.h"
 #include "tlsrecord.h"
 
-#include "core/platformint.h"
+#include "appint.h"
 #include "httpint.h"
 #include "tlsint.h"
 
