@@ -294,16 +294,15 @@ void AcceptSocket::onAccept(
 ***/
 
 namespace {
-class ShutdownNotify : public IAppShutdownNotify {
-    bool onAppConsoleShutdown(bool retry) override;
+class ShutdownNotify : public IShutdownNotify {
+    void onShutdownConsole(bool retry) override;
 };
 } // namespace
 static ShutdownNotify s_cleanup;
 
 //===========================================================================
-bool ShutdownNotify::onAppConsoleShutdown(bool retry) {
+void ShutdownNotify::onShutdownConsole(bool retry) {
     assert(s_listeners.empty());
-    return true;
 }
 
 
@@ -315,7 +314,7 @@ bool ShutdownNotify::onAppConsoleShutdown(bool retry) {
 
 //===========================================================================
 void Dim::iSocketAcceptInitialize() {
-    appMonitorShutdown(&s_cleanup);
+    shutdownMonitor(&s_cleanup);
 }
 
 

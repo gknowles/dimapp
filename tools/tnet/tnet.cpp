@@ -158,13 +158,13 @@ void ConsoleReader::onFileEnd(int64_t offset, IFile * file) {
 *
 ***/
 
-class MainShutdown : public IAppShutdownNotify {
-    bool onAppClientShutdown(bool retry) override;
+class MainShutdown : public IShutdownNotify {
+    void onShutdownClient(bool retry) override;
 };
 static MainShutdown s_cleanup;
 
 //===========================================================================
-bool MainShutdown::onAppClientShutdown(bool retry) {
+void MainShutdown::onShutdownClient(bool retry) {
     if (!retry) {
         s_console.m_device.reset();
         endpointCancelQuery(s_cancelAddrId);
@@ -172,10 +172,10 @@ bool MainShutdown::onAppClientShutdown(bool retry) {
     }
 
     if (socketGetMode(&s_socket) != ISocketNotify::kInactive
-        || !s_console.QueryDestroy()) {
-        return appShutdownFailed();
+        || !s_console.QueryDestroy()
+    ) {
+        shutdownIncomplete();
     }
-    return true;
 }
 
 
@@ -193,7 +193,7 @@ class Application : public IAppNotify {
 
 //===========================================================================
 void Application::onAppRun() {
-    appMonitorShutdown(&s_cleanup);
+    shutdownMonitor(&s_cleanup);
 
     Cli cli;
     cli.header("tnet v"s + kVersion + " (" __DATE__ ")");

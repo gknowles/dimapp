@@ -197,20 +197,17 @@ SocketBuffer::~SocketBuffer() {
 ***/
 
 namespace {
-class Shutdown : public IAppShutdownNotify {
-    bool onAppConsoleShutdown(bool retry) override;
+class Shutdown : public IShutdownNotify {
+    void onShutdownConsole(bool retry) override;
 };
 } // namespace
 static Shutdown s_cleanup;
 
 //===========================================================================
-bool Shutdown::onAppConsoleShutdown(bool retry) {
+void Shutdown::onShutdownConsole(bool retry) {
     lock_guard<mutex> lk{s_mut};
-
     while (!s_buffers.empty())
         destroyEmptyBuffer();
-
-    return true;
 }
 
 
@@ -222,7 +219,7 @@ bool Shutdown::onAppConsoleShutdown(bool retry) {
 
 //===========================================================================
 void Dim::iSocketBufferInitialize(RIO_EXTENSION_FUNCTION_TABLE & rio) {
-    appMonitorShutdown(&s_cleanup);
+    shutdownMonitor(&s_cleanup);
 
     s_rio = rio;
 

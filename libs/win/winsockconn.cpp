@@ -298,20 +298,21 @@ void ConnSocket::onConnect(int error, int bytes) {
 ***/
 
 namespace {
-class ShutdownNotify : public IAppShutdownNotify {
-    bool onAppConsoleShutdown(bool retry) override;
+class ShutdownNotify : public IShutdownNotify {
+    void onShutdownConsole(bool retry) override;
 };
 } // namespace
 static ShutdownNotify s_cleanup;
 
 //===========================================================================
-bool ShutdownNotify::onAppConsoleShutdown(bool retry) {
+void ShutdownNotify::onShutdownConsole(bool retry) {
     lock_guard<mutex> lk{s_mut};
     if (!retry) {
         for (auto && task : s_connecting)
             task.m_socket->hardClose();
     }
-    return s_connecting.empty() && s_closing.empty();
+    if (!s_connecting.empty() || !s_closing.empty())
+        shutdownIncomplete();
 }
 
 
@@ -325,7 +326,7 @@ bool ShutdownNotify::onAppConsoleShutdown(bool retry) {
 void Dim::iSocketConnectInitialize() {
     // Don't register cleanup until all dependents (aka sockbuf) have
     // registered their cleanups (aka been initialized)
-    appMonitorShutdown(&s_cleanup);
+    shutdownMonitor(&s_cleanup);
 }
 
 

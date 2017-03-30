@@ -385,16 +385,16 @@ void SocketBase::queueWriteFromUnsent_LK() {
 ***/
 
 namespace {
-class ShutdownNotify : public IAppShutdownNotify {
-    bool onAppConsoleShutdown(bool retry) override;
+class ShutdownNotify : public IShutdownNotify {
+    void onShutdownConsole(bool retry) override;
 };
 } // namespace
 static ShutdownNotify s_cleanup;
 
 //===========================================================================
-bool ShutdownNotify::onAppConsoleShutdown(bool retry) {
+void ShutdownNotify::onShutdownConsole(bool retry) {
     if (s_numSockets)
-        return appShutdownFailed();
+        return shutdownIncomplete();
 
     unique_lock<mutex> lk{s_mut};
     s_mode = kRunStopping;
@@ -408,8 +408,6 @@ bool ShutdownNotify::onAppConsoleShutdown(bool retry) {
     s_rio.RIOCloseCompletionQueue(s_cq);
     if (WSACleanup())
         logMsgError() << "WSACleanup: " << WinError{};
-
-    return true;
 }
 
 
@@ -464,7 +462,7 @@ void Dim::iSocketInitialize() {
     iSocketBufferInitialize(s_rio);
     // Don't register cleanup until all dependents (aka sockbuf) have
     // registered their cleanups (aka been initialized)
-    appMonitorShutdown(&s_cleanup);
+    shutdownMonitor(&s_cleanup);
     iSocketAcceptInitialize();
     iSocketConnectInitialize();
 

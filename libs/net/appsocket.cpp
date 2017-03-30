@@ -439,34 +439,30 @@ AppSocket::MatchType Http2Match::OnMatch(
 ***/
 
 namespace {
-class ShutdownMonitor : public IAppShutdownNotify {
-    bool onAppClientShutdown(bool retry) override;
-    bool onAppConsoleShutdown(bool retry) override;
+class ShutdownMonitor : public IShutdownNotify {
+    void onShutdownClient(bool retry) override;
+    void onShutdownConsole(bool retry) override;
 };
 static ShutdownMonitor s_cleanup;
 } // namespace
 
   //===========================================================================
-bool ShutdownMonitor::onAppClientShutdown(bool retry) {
+void ShutdownMonitor::onShutdownClient(bool retry) {
     shared_lock<shared_mutex> lk{s_listenMut};
     assert(s_endpoints.empty());
     if (!s_stopping.empty())
-        return appShutdownFailed();
-
-    return true;
+        shutdownIncomplete();
 }
 
 //===========================================================================
-bool ShutdownMonitor::onAppConsoleShutdown(bool retry) {
+void ShutdownMonitor::onShutdownConsole(bool retry) {
     lock_guard<mutex> lk{s_unmatchedMut};
     if (!retry) {
         for (auto && info : s_unmatched)
             socketDisconnect(info.notify);
     }
     if (!s_unmatched.empty())
-        return appShutdownFailed();
-
-    return true;
+        shutdownIncomplete();
 }
 
 
@@ -478,7 +474,7 @@ bool ShutdownMonitor::onAppConsoleShutdown(bool retry) {
 
 //===========================================================================
 void Dim::iAppSocketInitialize() {
-    appMonitorShutdown(&s_cleanup);
+    shutdownMonitor(&s_cleanup);
     appSocketAddMatch(&s_byteMatch, AppSocket::kByte);
     appSocketAddMatch(&s_http2Match, AppSocket::kHttp2);
 }

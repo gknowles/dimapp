@@ -189,17 +189,16 @@ void RouteConn::onSocketRead(const AppSocketData & data) {
 ***/
 
 namespace {
-    class ShutdownMonitor : public IAppShutdownNotify {
-        bool onAppClientShutdown(bool retry) override;
+    class ShutdownMonitor : public IShutdownNotify {
+        void onShutdownClient(bool retry) override;
     };
     static ShutdownMonitor s_cleanup;
 } // namespace
 
 //===========================================================================
-bool ShutdownMonitor::onAppClientShutdown(bool retry) {
+void ShutdownMonitor::onShutdownClient(bool retry) {
     if (!s_paths.empty())
         appSocketRemoveListener<RouteConn>(AppSocket::kHttp2, "", s_endpoint);
-    return true;
 }
 
 
@@ -213,7 +212,7 @@ bool ShutdownMonitor::onAppClientShutdown(bool retry) {
 void Dim::iHttpRouteInitialize() {
     s_endpoint = {};
     s_endpoint.port = 8888;
-    appMonitorShutdown(&s_cleanup);
+    shutdownMonitor(&s_cleanup);
 }
 
 

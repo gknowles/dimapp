@@ -24,6 +24,9 @@ void iFileInitialize();
 // Http
 void iHttpRouteInitialize();
 
+// Shutdown
+void iShutdownDestroy();
+
 // Socket
 void iSocketInitialize();
 

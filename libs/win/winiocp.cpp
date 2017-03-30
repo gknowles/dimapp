@@ -84,14 +84,14 @@ static void iocpDispatchThread() {
 ***/
 
 namespace {
-class WinIocpShutdown : public IAppShutdownNotify {
-    bool onAppConsoleShutdown(bool retry) override;
+class WinIocpShutdown : public IShutdownNotify {
+    void onShutdownConsole(bool retry) override;
 };
 static WinIocpShutdown s_cleanup;
 } // namespace
 
 //===========================================================================
-bool WinIocpShutdown::onAppConsoleShutdown(bool retry) {
+void WinIocpShutdown::onShutdownConsole(bool retry) {
     if (!retry) {
         if (!CloseHandle(s_iocp))
             logMsgError() << "CloseHandle(iocp): " << WinError{};
@@ -99,15 +99,9 @@ bool WinIocpShutdown::onAppConsoleShutdown(bool retry) {
         Sleep(0);
     }
 
-    bool closed;
-    {
-        unique_lock<mutex> lk(s_mut);
-        closed = !s_iocp;
-    }
-    if (!closed)
-        return appShutdownFailed();
-
-    return true;
+    unique_lock<mutex> lk(s_mut);
+    if (s_iocp)
+        shutdownIncomplete();
 }
 
 
@@ -119,7 +113,7 @@ bool WinIocpShutdown::onAppConsoleShutdown(bool retry) {
 
 //===========================================================================
 void Dim::winIocpInitialize() {
-    appMonitorShutdown(&s_cleanup);
+    shutdownMonitor(&s_cleanup);
 
     s_iocp = CreateIoCompletionPort(
         INVALID_HANDLE_VALUE,
