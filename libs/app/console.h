@@ -4,7 +4,7 @@
 // console.h - dim app
 #pragma once
 
-#include "config/config.h"
+#include "cppconf/cppconf.h"
 
 namespace Dim {
 

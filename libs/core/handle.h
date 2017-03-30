@@ -4,7 +4,7 @@
 // handle.h - dim core
 #pragma once
 
-#include "config/config.h"
+#include "cppconf/cppconf.h"
 
 #include <utility> // std::pair
 #include <vector>

@@ -7,7 +7,7 @@
 //  rfc7541 - HPACK: Header Compression for HTTP/2
 #pragma once
 
-#include "config/config.h"
+#include "cppconf/cppconf.h"
 
 #include "core/charbuf.h"
 #include "net/http.h"

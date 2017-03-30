@@ -16,9 +16,6 @@
 # libs/app/pch.h
 # libs/cli/cli.cpp
 # libs/cli/cli.h
-# libs/config/compiler/visualc.h
-# libs/config/config.h
-# libs/config/config_suffix.h
 # libs/core/appint.h
 # libs/core/charbuf.cpp
 # libs/core/charbuf.h
@@ -47,6 +44,9 @@
 # libs/core/types.h
 # libs/core/util.cpp
 # libs/core/util.h
+# libs/cppconf/compiler/visualc.h
+# libs/cppconf/cppconf.h
+# libs/cppconf/cppconf_suffix.h
 # libs/json/json.abnf
 # libs/net/address.cpp
 # libs/net/address.h

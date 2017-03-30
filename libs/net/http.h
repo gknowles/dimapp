@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "config/config.h"
+#include "cppconf/cppconf.h"
 
 #include "core/handle.h"
 #include "core/util.h" // ForwardListIterator

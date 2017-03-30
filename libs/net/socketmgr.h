@@ -4,7 +4,7 @@
 // socketmgr.h - dim net
 #pragma once
 
-#include "config/config.h"
+#include "cppconf/cppconf.h"
 
 #include "net/address.h"
 #include "net/appsocket.h"

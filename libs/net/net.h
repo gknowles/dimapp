@@ -4,7 +4,7 @@
 // net.h - dim net
 #pragma once
 
-#include "config/config.h"
+#include "cppconf/cppconf.h"
 
 #include "address.h"
 #include "appsocket.h"

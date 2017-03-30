@@ -4,7 +4,7 @@
 // app.h - dim app
 #pragma once
 
-#include "config/config.h"
+#include "cppconf/cppconf.h"
 
 #include "appmain.h"
 #include "console.h"

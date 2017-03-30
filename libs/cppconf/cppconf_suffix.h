@@ -1,7 +1,7 @@
 // Copyright Glen Knowles 2016 - 2017.
 // Distributed under the Boost Software License, Version 1.0.
 //
-// config_suffix.h - dim config
+// cppconf_suffix.h - dim cpp config
 #pragma once
 
 // Restore as many compiler settings as we can so they don't leak into

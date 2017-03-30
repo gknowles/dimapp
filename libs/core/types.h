@@ -4,7 +4,7 @@
 // types.h - dim core
 #pragma once
 
-#include "config/config.h"
+#include "cppconf/cppconf.h"
 
 #include <chrono>
 #include <cstdint>

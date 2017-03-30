@@ -4,7 +4,7 @@
 // perf.h - dim core
 #pragma once
 
-#include "config/config.h"
+#include "cppconf/cppconf.h"
 
 #include <atomic>
 #include <functional>

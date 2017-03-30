@@ -4,7 +4,7 @@
 // log.h - dim core
 #pragma once
 
-#include "config/config.h"
+#include "cppconf/cppconf.h"
 
 #include <sstream>
 #include <string_view>

@@ -4,7 +4,7 @@
 // core.h - dim core primary client header
 #pragma once
 
-#include "config/config.h"
+#include "cppconf/cppconf.h"
 
 #include "charbuf.h"
 #include "handle.h"

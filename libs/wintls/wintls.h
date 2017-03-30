@@ -6,7 +6,7 @@
 // Uses windows SChannel to secure appsocket connections
 #pragma once
 
-#include "config/config.h"
+#include "cppconf/cppconf.h"
 
 #include "core/charbuf.h"
 #include "core/handle.h"
