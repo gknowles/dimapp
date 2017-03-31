@@ -113,22 +113,6 @@ static TaskQueueHandle s_hq;
 *
 ***/
 
-//===========================================================================
-static bool setErrno(int error) {
-    _set_doserrno(error);
-
-    switch (error) {
-    case ERROR_ALREADY_EXISTS:
-    case ERROR_FILE_EXISTS: _set_errno(EEXIST); break;
-    case ERROR_FILE_NOT_FOUND: _set_errno(ENOENT); break;
-    case ERROR_SHARING_VIOLATION: _set_errno(EBUSY); break;
-    case ERROR_ACCESS_DENIED: _set_errno(EACCES); break;
-    default: _set_errno(EIO); break;
-    }
-
-    return false;
-}
-
 
 /****************************************************************************
 *
@@ -167,7 +151,7 @@ void IFileOpBase::start(
         WaitOnAddress(&m_trigger, &waiting, sizeof(m_trigger), INFINITE);
     }
     if (m_err)
-        setErrno(m_err);
+        iFileSetErrno(m_err);
 }
 
 //===========================================================================
@@ -211,7 +195,7 @@ void IFileOpBase::onTask() {
     if (m_err) {
         if (m_err != ERROR_OPERATION_ABORTED)
             logMsgError() << "ReadFile(" << m_file->m_path << "): " << m_err;
-        setErrno(m_err);
+        iFileSetErrno(m_err);
     }
 
     if (!async()) {
@@ -344,6 +328,22 @@ void Dim::iFileInitialize() {
     s_hq = taskCreateQueue("File IO", 2);
 }
 
+//===========================================================================
+bool Dim::iFileSetErrno(int error) {
+    _set_doserrno(error);
+
+    switch (error) {
+    case ERROR_ALREADY_EXISTS:
+    case ERROR_FILE_EXISTS: _set_errno(EEXIST); break;
+    case ERROR_FILE_NOT_FOUND: _set_errno(ENOENT); break;
+    case ERROR_SHARING_VIOLATION: _set_errno(EBUSY); break;
+    case ERROR_ACCESS_DENIED: _set_errno(EACCES); break;
+    default: _set_errno(EIO); break;
+    }
+
+    return false;
+}
+
 
 /****************************************************************************
 *
@@ -410,13 +410,13 @@ unique_ptr<IFile> Dim::fileOpen(string_view path, unsigned mode) {
         NULL // template file
         );
     if (file->m_handle == INVALID_HANDLE_VALUE) {
-        setErrno(WinError{});
+        iFileSetErrno(WinError{});
         return nullptr;
     }
 
     if (~mode & om::kBlocking) {
         if (!winIocpBindHandle(file->m_handle)) {
-            setErrno(WinError{});
+            iFileSetErrno(WinError{});
             return nullptr;
         }
 
@@ -424,7 +424,7 @@ unique_ptr<IFile> Dim::fileOpen(string_view path, unsigned mode) {
                 file->m_handle,
                 FILE_SKIP_COMPLETION_PORT_ON_SUCCESS
                     | FILE_SKIP_SET_EVENT_ON_HANDLE)) {
-            setErrno(WinError{});
+            iFileSetErrno(WinError{});
             return nullptr;
         }
     }
@@ -437,9 +437,11 @@ void Dim::fileClose(IFile * ifile) {
     File * file = static_cast<File *>(ifile);
     if (file->m_handle != INVALID_HANDLE_VALUE) {
         if (file->m_view) {
-            if (DWORD status = s_NtUnmapViewOfSection(
-                    GetCurrentProcess(), file->m_view)) {
-                WinError err{WinError::NtStatus(status)};
+            WinError err = (WinError::NtStatus) s_NtUnmapViewOfSection(
+                GetCurrentProcess(), 
+                file->m_view
+            );
+            if (err) {
                 logMsgError() << "NtUnmapViewOfSection(" << file->m_path
                               << "): " << err;
             }
@@ -456,7 +458,7 @@ size_t Dim::fileSize(IFile * ifile) {
     if (!GetFileSizeEx(file->m_handle, &size)) {
         WinError err;
         logMsgError() << "WriteFile(" << file->m_path << "): " << err;
-        setErrno(err);
+        iFileSetErrno(err);
         return 0;
     }
     return size.QuadPart;
@@ -473,7 +475,7 @@ TimePoint Dim::fileLastWriteTime(IFile * ifile) {
             (FILETIME *)&wtime)) {
         WinError err;
         logMsgError() << "GetFileTime(" << file->m_path << "): " << err;
-        setErrno(err);
+        iFileSetErrno(err);
         return TimePoint::min();
     }
     return TimePoint(Duration(wtime));
@@ -583,7 +585,7 @@ bool Dim::fileOpenView(
     base = nullptr;
     WinError err{0};
     HANDLE sec;
-    DWORD status = s_NtCreateSection(
+    err = (WinError::NtStatus) s_NtCreateSection(
         &sec,
         SECTION_MAP_READ,
         nullptr, // object attributes
@@ -591,15 +593,14 @@ bool Dim::fileOpenView(
         (file->m_mode & IFile::kReadOnly) ? PAGE_READONLY : PAGE_READWRITE,
         SEC_RESERVE,
         file->m_handle);
-    if (status) {
-        err = (WinError::NtStatus)status;
+    if (err) {
         logMsgError() << "NtCreateSection(" << file->m_path << "): " << err;
-        setErrno(err);
+        iFileSetErrno(err);
         return false;
     }
 
     SIZE_T viewSize = (file->m_mode & IFile::kReadOnly) ? 0 : maxLen;
-    status = s_NtMapViewOfSection(
+    err = (WinError::NtStatus) s_NtMapViewOfSection(
         sec,
         GetCurrentProcess(),
         (const void **)&base,
@@ -610,21 +611,19 @@ bool Dim::fileOpenView(
         ViewUnmap,
         (file->m_mode & IFile::kReadOnly) ? 0 : MEM_RESERVE,
         PAGE_READONLY);
-    if (status) {
-        err = (WinError::NtStatus)status;
+    if (err) {
         logMsgError() << "NtMapViewOfSection(" << file->m_path << "): " << err;
-        setErrno(err);
+        iFileSetErrno(err);
     }
     file->m_view = base;
     file->m_viewSize = viewSize;
 
     // always close the section whether the map view worked or not
-    status = s_NtClose(sec);
-    if (status) {
-        WinError tmp{(WinError::NtStatus)status};
+    WinError tmp = (WinError::NtStatus) s_NtClose(sec);
+    if (tmp) {
         logMsgError() << "NtClose(" << file->m_path << "): " << tmp;
         if (!err) {
-            setErrno(tmp);
+            iFileSetErrno(tmp);
             err = tmp;
         }
     }
