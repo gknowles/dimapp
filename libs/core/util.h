@@ -336,3 +336,12 @@ template <>
 inline std::experimental::filesystem::path::path(const std::string & from) {
     *this = u8path(from);
 }
+
+//===========================================================================
+template <>
+inline std::experimental::filesystem::path::path(
+    const char * first, 
+    const char * last
+) {
+    *this = u8path(first, last);
+}
