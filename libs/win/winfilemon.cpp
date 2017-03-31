@@ -28,7 +28,7 @@ public:
     DirInfo(IFileChangeNotify * notify);
     ~DirInfo();
 
-    bool start(string_view path);
+    bool start(string_view path, bool recurse);
     void stopSync ();
 
     void addMonitor(IFileChangeNotify * notify, string_view file);
@@ -46,13 +46,13 @@ private:
     ) const;
     bool queue ();
 
-    string m_base; // ends with '/'
+    string m_base;
+    bool m_recurse{false}; // monitoring includes child directories?
     IFileChangeNotify * m_notify{nullptr};
 
     unordered_map<string, FileInfo> m_files;
     HANDLE m_hDir{INVALID_HANDLE_VALUE};
     WinOverlappedEvent m_evt;
-    FILE_NOTIFY_INFORMATION m_change;
 };
 
 } // namespace
@@ -85,12 +85,13 @@ DirInfo::~DirInfo () {
 }
 
 //===========================================================================
-bool DirInfo::start(string_view path) {
+bool DirInfo::start(string_view path, bool recurse) {
     error_code ec;
     // make sure m_base ends with '/'
     auto fp = fs::u8path(path.begin(), path.end());
     fp = fs::canonical(fp);
     m_base = fp.u8string();
+    m_recurse = recurse;
     fs::create_directories(fp, ec);
 
     m_evt.notify = this;
@@ -107,10 +108,12 @@ bool DirInfo::start(string_view path) {
         WinError err;
         logMsgError() << "CreateFile(FILE_LIST_DIRECTORY), " << m_base 
             << ", " << err;
+        iFileSetErrno(err);
         return false;
     }
     if (!winIocpBindHandle(m_hDir)) {
         CloseHandle(m_hDir);
+        iFileSetErrno(WinError{});
         m_hDir = INVALID_HANDLE_VALUE;
         return false;
     }
@@ -122,9 +125,9 @@ bool DirInfo::start(string_view path) {
 bool DirInfo::queue() {
     if (!ReadDirectoryChangesW(
         m_hDir,
-        NULL, // &m_change, // output buffer
-        0, // sizeof(m_change), // output buffer len
-        false, // include subdirs
+        NULL, // output buffer
+        0, // output buffer len
+        m_recurse, // include subdirs
         FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_LAST_WRITE,
         NULL, // bytes returned (not for async)
         &m_evt.overlapped,
@@ -238,12 +241,14 @@ bool DirInfo::expandPath(
 
 //===========================================================================
 FileMonitorHandle Dim::fileMonitorDir(
-    std::string_view dir,
+    string_view dir,
+    bool recurse,
     IFileChangeNotify * notify
 ) {
     auto di = new DirInfo(notify);
-    di->start(dir);
-    return s_dirs.insert(di);
+    auto h = s_dirs.insert(di);
+    di->start(dir, recurse);
+    return h;
 }
 
 //===========================================================================

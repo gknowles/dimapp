@@ -184,6 +184,7 @@ struct FileMonitorHandle : HandleBase {};
 
 FileMonitorHandle fileMonitorDir(
     std::string_view dir,
+    bool recurse,
     IFileChangeNotify * notify = nullptr
 );
 void fileMonitorDirStopSync(FileMonitorHandle dir);
