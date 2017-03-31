@@ -84,6 +84,7 @@
 # libs/win/winconsole.cpp
 # libs/win/winerror.cpp
 # libs/win/winfile.cpp
+# libs/win/winfilemon.cpp
 # libs/win/winint.h
 # libs/win/winiocp.cpp
 # libs/win/winplatform.cpp

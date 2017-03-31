@@ -166,4 +166,37 @@ void fileAppend(
     size_t bufLen);
 void fileAppendSync(IFile * file, const void * buf, size_t bufLen);
 
+
+/****************************************************************************
+*
+*   Monitor
+*
+***/
+
+class IFileChangeNotify {
+public:
+    virtual ~IFileChangeNotify () {}
+
+    virtual void onFileChange(std::string_view path) = 0;
+};
+
+struct FileMonitorHandle : HandleBase {};
+
+FileMonitorHandle fileMonitorDir(
+    std::string_view dir,
+    IFileChangeNotify * notify = nullptr
+);
+void fileMonitorDirStopSync(FileMonitorHandle dir);
+
+void fileMonitor(
+    IFileChangeNotify * notify, 
+    FileMonitorHandle dir, 
+    std::string_view file
+);
+void fileMonitorStopSync(
+    IFileChangeNotify * notify, 
+    FileMonitorHandle dir,
+    std::string_view file
+);
+
 } // namespace
