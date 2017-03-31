@@ -360,11 +360,14 @@ unique_ptr<IFile> Dim::fileOpen(string_view path, unsigned mode) {
     file->m_path = fs::u8path(path.begin(), path.end());
 
     int access = 0;
-    if (mode & om::kReadOnly) {
-        assert(~mode & om::kReadWrite);
+    if (mode & om::kNoAccess) {
+        assert((~mode & om::kReadOnly) && (~mode & om::kReadWrite));
+    } else if (mode & om::kReadOnly) {
+        assert((~mode & om::kNoAccess) && (~mode & om::kReadWrite));
         access = GENERIC_READ;
     } else {
         assert(mode & om::kReadWrite);
+        assert((~mode & om::kNoAccess) && (~mode & om::kReadOnly));
         access = GENERIC_READ | GENERIC_WRITE;
     }
 
