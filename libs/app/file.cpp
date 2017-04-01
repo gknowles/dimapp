@@ -56,7 +56,8 @@ FileStreamNotify::FileStreamNotify(
 bool FileStreamNotify::onFileRead(
     string_view data, 
     int64_t offset,
-    IFile * file) {
+    IFile * file
+) {
     return m_notify->onFileRead(data, offset, file);
 }
 
@@ -98,7 +99,8 @@ FileLoadNotify::FileLoadNotify(string & out, IFileReadNotify * notify)
 bool FileLoadNotify::onFileRead(
     string_view data, 
     int64_t offset,
-    IFile * file) {
+    IFile * file
+) {
     // resize the string to match the bytes read, in case it was less than
     // the amount requested
     m_out.resize(data.size());
@@ -115,7 +117,7 @@ void FileLoadNotify::onFileEnd(int64_t offset, IFile * file) {
 
 /****************************************************************************
 *
-*   External
+*   Public API
 *
 ***/
 
@@ -133,7 +135,8 @@ void Dim::fileLoadBinary(
     IFileReadNotify * notify,
     string & out,
     string_view path,
-    size_t maxSize) {
+    size_t maxSize
+) {
     auto file = fileOpen(path, IFile::kReadOnly | IFile::kDenyNone);
     if (!file) {
         logMsgError() << "File open failed, " << path;
@@ -153,7 +156,8 @@ void Dim::fileLoadBinary(
 void Dim::fileLoadSyncBinary(
     string & out,
     string_view path,
-    size_t maxSize) {
+    size_t maxSize
+) {
     auto file = fileOpen(path, IFile::kReadOnly | IFile::kDenyNone);
     if (!file) {
         logMsgError() << "File open failed, " << path;
