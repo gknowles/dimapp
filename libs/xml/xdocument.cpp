@@ -334,12 +334,22 @@ NO_TEXT:
 ***/
 
 //===========================================================================
-static bool matchNode(const XNode * node, const char name[], XType type) {
-    if (type != XType::kInvalid && type != nodeType(node))
-        return false;
-    if (name && strcmp(node->name, name) != 0)
-        return false;
-    return true;
+XDocument * Dim::document(XAttr * attr) {
+    if (!attr)
+        return nullptr;
+    auto ai = static_cast<XAttrInfo *>(attr);
+    return document(ai->parent);
+}
+
+//===========================================================================
+XDocument * Dim::document(XNode * node) {
+    if (!node)
+        return nullptr;
+    auto ni = static_cast<XNodeInfo *>(node);
+    while (ni->parent)
+        ni = ni->parent;
+    auto ri = static_cast<XElemRootInfo *>(ni);
+    return ri->document;
 }
 
 //===========================================================================
@@ -387,6 +397,15 @@ void Dim::unlinkNode(XNode * node) {
     }
     ni->next->prev = ni->prev;
     ni->prev->next = ni->next;
+}
+
+//===========================================================================
+static bool matchNode(const XNode * node, const char name[], XType type) {
+    if (type != XType::kInvalid && type != nodeType(node))
+        return false;
+    if (name && strcmp(node->name, name) != 0)
+        return false;
+    return true;
 }
 
 //===========================================================================
@@ -464,6 +483,24 @@ const XNode *
 Dim::prevSibling(const XNode * node, const char name[], XType type) {
     return prevSibling(const_cast<XNode *>(node), name, type);
 }
+
+//===========================================================================
+// XNodeIterator
+//===========================================================================
+template <typename T>
+XNodeIterator<T>::XNodeIterator(T * node, XType type, const char name[])
+    : ForwardListIterator(node)
+    , m_type(type)
+    , m_name(name) {}
+
+//===========================================================================
+template <typename T> auto XNodeIterator<T>::operator++() -> XNodeIterator {
+    m_current = nextSibling(m_current, m_name, m_type);
+    return *this;
+}
+
+template XNodeIterator<XNode>;
+template XNodeIterator<const XNode>;
 
 //===========================================================================
 // XNodeRange

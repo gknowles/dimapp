@@ -223,8 +223,10 @@ public:
     XNode * parse(char src[]);
 
     XNode * setRoot(const char elemName[], const char text[] = nullptr);
-    XNode *
-    addElem(XNode * parent, const char name[], const char text[] = nullptr);
+    XNode * addElem(
+        XNode * parent, 
+        const char name[], 
+        const char text[] = nullptr);
     XAttr * addAttr(XNode * elem, const char name[], const char text[]);
 
     XNode * addText(XNode * parent, const char text[]);
@@ -235,6 +237,9 @@ public:
     void normalizeText(XNode * elem);
 
     ITempHeap & heap() { return m_heap; }
+
+    XNode * root() { return m_root; }
+    const XNode * root() const { return m_root; }
 
     const char * errmsg() const { return m_errmsg; }
     size_t errpos() const { return m_errpos; }
@@ -257,18 +262,21 @@ enum class XType {
     kPI, // processing instruction
 };
 
-struct XAttr {
+struct XNode {
     const char * const name;
     const char * const value;
 };
-struct XNode {
+struct XAttr {
     const char * const name;
     const char * const value;
 };
 
 IXBuilder & operator<<(IXBuilder & out, const XNode & elem);
 
-XType nodeType(const XNode * elem);
+XDocument * document(XNode * node);
+XDocument * document(XAttr * attr);
+
+XType nodeType(const XNode * node);
 
 void unlinkAttr(XAttr * attr);
 void unlinkNode(XNode * node);
@@ -319,19 +327,6 @@ public:
     XNodeIterator operator++();
 };
 
-//===========================================================================
-template <typename T>
-XNodeIterator<T>::XNodeIterator(T * node, XType type, const char name[])
-    : ForwardListIterator(node)
-    , m_type(type)
-    , m_name(name) {}
-
-//===========================================================================
-template <typename T> auto XNodeIterator<T>::operator++() -> XNodeIterator {
-    m_current = nextSibling(m_current, m_name, m_type);
-    return *this;
-}
-
 template <typename T> struct XNodeRange {
     XNodeIterator<T> m_first;
     XNodeIterator<T> begin() { return m_first; }
@@ -341,9 +336,9 @@ XNodeRange<XNode> elems(XNode * elem, const char name[] = nullptr);
 XNodeRange<const XNode> elems(const XNode * elem, const char name[] = nullptr);
 
 XNodeRange<XNode> nodes(XNode * elem, XType type = XType::kInvalid);
-XNodeRange<const XNode>
-nodes(const XNode * elem, XType type = XType::kInvalid);
-
+XNodeRange<const XNode> nodes(
+    const XNode * elem, 
+    XType type = XType::kInvalid);
 
 //===========================================================================
 // Attribute iteration
