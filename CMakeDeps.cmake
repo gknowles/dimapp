@@ -8,6 +8,9 @@
 # configure.bat
 # libs/app/app.cpp
 # libs/app/app.h
+# libs/app/appconfig.cpp
+# libs/app/appconfig.h
+# libs/app/appint.h
 # libs/app/appmain.h
 # libs/app/console.h
 # libs/app/file.cpp

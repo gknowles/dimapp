@@ -105,6 +105,8 @@ int Dim::appRun(IAppNotify & app, int argc, char * argv[], unsigned flags) {
     iTimerInitialize();
     iPlatformInitialize();
     iFileInitialize();
+    if (flags & fAppWithConfig)
+        iAppConfigInitialize();
     iSocketInitialize();
     iAppSocketInitialize();
     iHttpRouteInitialize();

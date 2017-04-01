@@ -7,6 +7,7 @@
 #include "cli/cli.h"
 #include "core/core.h"
 
+#include "app/appint.h"
 #include "core/appint.h"
 #include "net/appint.h"
 #include "win/appint.h"
