@@ -200,7 +200,7 @@ endif()
 if(NOT RECURSIVE_GENERATE AND NOT VENDOR_ONLY)
     message(STATUS "Recursive generate started")
     execute_process(
-        COMMAND cmake 
+        COMMAND ${CMAKE_COMMAND} 
             -DRECURSIVE_GENERATE:BOOL=ON 
             -DLINK_STATIC_RUNTIME:BOOL=${LINK_STATIC_RUNTIME}
             -DBUILD_SHARED_LIBS:BOOL=${BUILD_SHARED_LIBS}
@@ -232,8 +232,6 @@ if(NOT RECURSIVE_GENERATE AND NOT VENDOR_ONLY)
         set(sln_srcpath ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.sln)
         update_file("${sln_srcpath}" "${sln_content}")
     endif()
-
-    return()
 endif()
 
 set(CMAKE_CONFIGURATION_TYPES Debug Release)
