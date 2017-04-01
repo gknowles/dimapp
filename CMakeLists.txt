@@ -20,17 +20,19 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 option(LINK_STATIC_RUNTIME "Link with static c++ runtime" ON)
 option(BUILD_SHARED_LIBS "Build DLLs instead of static libs" OFF)
 
-# get name of project from containing directory
-get_filename_component(prjname "${CMAKE_CURRENT_SOURCE_DIR}" NAME)
-project(${prjname})
+# For internal use by this script
+option(RECURSIVE_GENERATE "Recursive call to cmake" OFF)
 
 # Reference to suppress "not used" warning when manually specified
 # by vcpkg
 set(tmp "${CMAKE_BUILD_TYPE}")
 
-set(CMAKE_CONFIGURATION_TYPES Debug Release)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/bin)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/bin)
+
+#############################################################################
+#
+#   Functions
+#
+####
 
 # Compare the new contents with the existing file, if it exists and is the 
 # same we don't want to trigger a make by changing its timestamp.
@@ -180,10 +182,63 @@ function(add_lib_project tgt srcdir)
 endfunction()
 
 
+#############################################################################
+#
+#   Main
+#
+####
+
+# get name of project from containing directory
+get_filename_component(prjname "${CMAKE_CURRENT_SOURCE_DIR}" NAME)
+project(${prjname})
+
 get_property(parent DIRECTORY PROPERTY PARENT_DIRECTORY)
 if(NOT "${parent}" STREQUAL "")
     set(VENDOR_ONLY true)
 endif()
+
+if(NOT RECURSIVE_GENERATE AND NOT VENDOR_ONLY)
+    message(STATUS "Recursive generate started")
+    execute_process(
+        COMMAND cmake 
+            -DRECURSIVE_GENERATE:BOOL=ON 
+            -DLINK_STATIC_RUNTIME:BOOL=${LINK_STATIC_RUNTIME}
+            -DBUILD_SHARED_LIBS:BOOL=${BUILD_SHARED_LIBS}
+            ${CMAKE_SOURCE_DIR}
+    )
+    message(STATUS "Recursive generate done")
+
+    # The solution file isn't generated until after this script finishes, 
+    # which means that:
+    #   - it might not exist (if this is the first run)
+    #   - you need to run cmake twice to ensure any new solution was copied
+    set(sln_binpath ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.sln)
+    if(EXISTS ${sln_binpath})
+        # Load solution file from bin-dir and change the relative references 
+        # to project files so that the in memory copy is as if it had been 
+        # built in the source dir.
+        file(RELATIVE_PATH prefix 
+            "${CMAKE_CURRENT_SOURCE_DIR}"
+            "${CMAKE_CURRENT_BINARY_DIR}")
+        file(READ ${sln_binpath} sln_content)
+        string(REGEX REPLACE 
+            "\"([^\"]+).vcxproj\""
+            "\"${prefix}/\\1.vcxproj\"" 
+            sln_content
+            "${sln_content}")
+
+        # Compare the updated contents with the existing source path sln, if it
+        # exists and is the same we don't want to disturb VS by touching it.
+        set(sln_srcpath ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.sln)
+        update_file("${sln_srcpath}" "${sln_content}")
+    endif()
+
+    return()
+endif()
+
+set(CMAKE_CONFIGURATION_TYPES Debug Release)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/bin)
 
 if(VENDOR_ONLY)
     set_property(DIRECTORY "${parent}" APPEND PROPERTY INCLUDE_DIRECTORIES 
@@ -338,29 +393,4 @@ if(EXISTS "${path}")
 
     install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${cfgname}" 
         DESTINATION include/${PROJECT_NAME})
-endif()
-
-# The solution file isn't generated until after this script finishes, 
-# which means that:
-#   - it might not exist (if this is the first run)
-#   - you need to run cmake twice to ensure any new solution was copied
-set(sln_binpath ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.sln)
-if(EXISTS ${sln_binpath})
-    # Load solution file from bin-dir and change the relative references 
-    # to project files so that the in memory copy is as if it had been 
-    # built in the source dir.
-    file(RELATIVE_PATH prefix 
-        "${CMAKE_CURRENT_SOURCE_DIR}"
-        "${CMAKE_CURRENT_BINARY_DIR}")
-    file(READ ${sln_binpath} sln_content)
-    string(REGEX REPLACE 
-        "\"([^\"]+).vcxproj\""
-        "\"${prefix}/\\1.vcxproj\"" 
-        sln_content
-        "${sln_content}")
-
-    # Compare the updated contents with the existing source path sln, if it
-    # exists and is the same we don't want to disturb VS by touching it.
-    set(sln_srcpath ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.sln)
-    update_file("${sln_srcpath}" "${sln_content}")
 endif()
