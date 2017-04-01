@@ -11,10 +11,39 @@ using namespace Dim;
 
 /****************************************************************************
 *
-*   ConfigNotify
+*   Private
 *
 ***/
 
+
+/****************************************************************************
+*
+*   Variables
+*
+***/
+
+static FileMonitorHandle s_hDir;
+
+
+/****************************************************************************
+*
+*   Shutdown
+*
+***/
+
+namespace {
+
+class Shutdown : public IShutdownNotify {
+    void onShutdownConsole(bool retry) override;
+};
+static Shutdown s_cleanup;
+
+//===========================================================================
+void Shutdown::onShutdownConsole(bool retry) {
+    fileMonitorStopSync(s_hDir);
+}
+
+} // namespace
 
 
 /****************************************************************************
@@ -25,6 +54,7 @@ using namespace Dim;
 
 //===========================================================================
 void Dim::iAppConfigInitialize () {
+    shutdownMonitor(&s_cleanup);
 }
 
 

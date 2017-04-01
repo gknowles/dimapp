@@ -252,7 +252,7 @@ FileMonitorHandle Dim::fileMonitorDir(
 }
 
 //===========================================================================
-void Dim::fileMonitorDirStopSync(FileMonitorHandle dir) {
+void Dim::fileMonitorStopSync(FileMonitorHandle dir) {
     s_dirs.erase(dir);
 }
 

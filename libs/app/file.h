@@ -187,7 +187,7 @@ FileMonitorHandle fileMonitorDir(
     bool recurse,
     IFileChangeNotify * notify = nullptr
 );
-void fileMonitorDirStopSync(FileMonitorHandle dir);
+void fileMonitorStopSync(FileMonitorHandle dir);
 
 void fileMonitor(
     IFileChangeNotify * notify, 
