@@ -6,6 +6,7 @@
 
 #include "cppconf/cppconf.h"
 
+#include "appconfig.h"
 #include "appmain.h"
 #include "console.h"
 #include "file.h"

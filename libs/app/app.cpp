@@ -44,8 +44,9 @@ static int s_exitcode;
 static mutex s_runMut;
 static condition_variable s_runCv;
 static RunMode s_runMode{kRunStopped};
-static IAppNotify * s_app;
 
+static IAppNotify * s_app;
+static unsigned s_runFlags;
 
 /****************************************************************************
 *
@@ -89,9 +90,16 @@ RunMode Dim::appMode() {
 }
 
 //===========================================================================
-int Dim::appRun(IAppNotify & app, int argc, char * argv[]) {
+unsigned Dim::appRunFlags() {
+    return s_runFlags;
+}
+
+//===========================================================================
+int Dim::appRun(IAppNotify & app, int argc, char * argv[], unsigned flags) {
+    s_runFlags = flags;
     s_runMode = kRunStarting;
-    logDefaultMonitor(&s_consoleLogger);
+    if (flags & fAppWithConsole)
+        logDefaultMonitor(&s_consoleLogger);
     iConsoleInitialize();
     iTaskInitialize();
     iTimerInitialize();

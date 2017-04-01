@@ -165,5 +165,5 @@ int main(int argc, char * argv[]) {
     _set_error_mode(_OUT_TO_MSGBOX);
 
     Application app;
-    return appRun(app, argc, argv);
+    return appRun(app, argc, argv, fAppServer | fAppWithConsole);
 }

@@ -47,8 +47,24 @@ public:
     char ** m_argv;
 };
 
+enum {
+    fAppWithConsole = 0x1,
+
+    fAppWithChdir = 0x2,
+    fAppWithConfig = 0x4,
+    fAppWithLogFiles = 0x8,
+
+    fAppClient = fAppWithConsole,
+    fAppServer = fAppWithChdir | fAppWithConfig | fAppWithLogFiles,
+};
+
 // returns exit code
-int appRun(IAppNotify & app, int argc, char * argv[]);
+int appRun(
+    IAppNotify & app, 
+    int argc, 
+    char * argv[], 
+    unsigned flags = fAppClient
+);
 
 
 /****************************************************************************
@@ -59,6 +75,8 @@ int appRun(IAppNotify & app, int argc, char * argv[]);
 
 RunMode appMode();
 
+// returns flags passed to appRun()
+unsigned appRunFlags(); 
 
 /****************************************************************************
 *
