@@ -13,6 +13,7 @@
 # libs/app/appint.h
 # libs/app/appmain.h
 # libs/app/console.h
+# libs/app/env.h
 # libs/app/file.cpp
 # libs/app/file.h
 # libs/app/pch.cpp
@@ -85,6 +86,7 @@
 # libs/win/pch.h
 # libs/win/winaddress.cpp
 # libs/win/winconsole.cpp
+# libs/win/winenv.cpp
 # libs/win/winerror.cpp
 # libs/win/winfile.cpp
 # libs/win/winfilemon.cpp

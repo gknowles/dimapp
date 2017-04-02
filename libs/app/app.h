@@ -9,4 +9,5 @@
 #include "appconfig.h"
 #include "appmain.h"
 #include "console.h"
+#include "env.h"
 #include "file.h"
