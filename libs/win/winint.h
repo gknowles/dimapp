@@ -110,6 +110,8 @@ public:
 *
 ***/
 
+void winFileMonitorInitialize();
+
 bool iFileSetErrno(int error);
 
 

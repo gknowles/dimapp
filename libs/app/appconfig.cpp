@@ -22,9 +22,14 @@ struct NotifyInfo {
 
 class ConfigFile : public IFileChangeNotify {
 public:
-    void monitor_LK(
-        string_view file,
-        IAppConfigNotify * notify, 
+    void monitor_UNLK(
+        string_view file, 
+        IAppConfigNotify * notify,
+        unique_lock<mutex> & lk
+    );
+    void notify_UNLK(
+        string_view file, 
+        IAppConfigNotify * notify,
         unique_lock<mutex> & lk
     );
 
@@ -57,25 +62,21 @@ static unordered_map<string, ConfigFile> s_files;
 ***/
 
 //===========================================================================
-void ConfigFile::monitor_LK(
-    string_view relpath,
-    IAppConfigNotify * notify, 
+void ConfigFile::monitor_UNLK(
+    string_view relpath, 
+    IAppConfigNotify * notify,
     unique_lock<mutex> & lk
 ) {
     bool empty = m_notifiers.empty();
     NotifyInfo ni = { notify };
     m_notifiers.push_back(ni);
-    lk.unlock();
+
     if (empty) {
+        lk.unlock();
         fileMonitor(s_hDir, relpath, this);
     } else {
-        auto fp = fs::absolute(
-            fs::u8path(string(relpath)), 
-            fs::u8path(s_rootDir)
-        );
-        notify->onConfigChange(fp.u8string());
+        notify_UNLK(relpath, notify, lk);
     }
-    lk.lock();
 }
 
 //===========================================================================
@@ -85,19 +86,31 @@ void ConfigFile::onFileChange(string_view fullpath) {
     // load file
 
     // call notifiers
-    NotifyInfo markerInfo = {};
-    unique_lock<mutex> lk{s_mut};
-    m_notifiers.push_front(markerInfo);
-    auto marker = m_notifiers.begin();
-    while (marker != m_notifiers.end()) {
-        auto it = marker;
-        ++it;
-        auto notify = it->notify;
-        m_notifiers.splice(it, m_notifiers, marker, marker);
-        lk.unlock();
-        notify->onConfigChange(fullpath);
-        lk.lock();
+    appConfigChange(fullpath, nullptr);
+}
+
+//===========================================================================
+void ConfigFile::notify_UNLK(
+    string_view relpath, 
+    IAppConfigNotify * notify,
+    unique_lock<mutex> & lk
+) {
+    auto fp = fs::absolute(
+        fs::u8path(string(relpath)), 
+        fs::u8path(s_rootDir)
+    );
+    auto fullpath = fp.u8string();
+
+    for (auto it = m_notifiers.begin(); it != m_notifiers.end(); ++it) {
+        if (!notify || notify == it->notify) {
+            lk.unlock();
+            it->notify->onConfigChange(fullpath);
+            if (notify)
+                return;
+            lk.lock();
+        }
     }
+    lk.unlock();
 }
 
 
@@ -134,7 +147,7 @@ void Dim::iAppConfigInitialize (string_view dir) {
     auto fp = fs::u8path(dir.begin(), dir.end());
     fp = fs::canonical(fp);
     s_rootDir = fp.u8string();
-    s_hDir = fileMonitorDir(s_rootDir, true);
+    fileMonitorDir(&s_hDir, s_rootDir, true);
 }
 
 
@@ -154,7 +167,7 @@ void Dim::appConfigMonitor(string_view file, IAppConfigNotify * notify) {
 
     unique_lock<mutex> lk{s_mut};
     auto & cf = s_files[path];
-    cf.monitor_LK(path, notify, lk);
+    cf.monitor_UNLK(path, notify, lk);
 }
 
 //===========================================================================
@@ -162,4 +175,13 @@ void Dim::appConfigChange(
     string_view file, 
     IAppConfigNotify * notify // = nullptr
 ) {
+    string path;
+    if (!fileMonitorPath(path, s_hDir, file)) {
+        logMsgError() << "File outside of config directory, " << file;
+        return;
+    }
+
+    unique_lock<mutex> lk{s_mut};
+    auto & cf = s_files[path];
+    cf.notify_UNLK(path, notify, lk);
 }

@@ -182,7 +182,8 @@ public:
 
 struct FileMonitorHandle : HandleBase {};
 
-FileMonitorHandle fileMonitorDir(
+bool fileMonitorDir(
+    FileMonitorHandle * handle,
     std::string_view dir,
     bool recurse,
     IFileChangeNotify * notify = nullptr

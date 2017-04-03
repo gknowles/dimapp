@@ -326,6 +326,8 @@ void Dim::iFileInitialize() {
     loadProc(s_NtClose, "ntdll", "NtClose");
 
     s_hq = taskCreateQueue("File IO", 2);
+
+    winFileMonitorInitialize();
 }
 
 //===========================================================================
