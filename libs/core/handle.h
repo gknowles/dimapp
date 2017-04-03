@@ -23,7 +23,8 @@ namespace Dim {
 ***/
 
 struct HandleBase {
-    int pos;
+    // handles to data >0, 0 means no data, <0 is not allowed
+    int pos{0};
 
     explicit operator bool() const { return pos; }
     template <typename H> H as() const {
@@ -55,6 +56,8 @@ public:
     void * find(HandleBase handle);
 
     HandleBase insert(void * value);
+
+    // Releasing an empty handle is ignored and returns nullptr
     void * release(HandleBase handle);
 
     template <typename H, typename T> Iterator<H, T> begin();

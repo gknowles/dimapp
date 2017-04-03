@@ -32,8 +32,9 @@ bool HandleMapBase::empty() const {
 
 //===========================================================================
 void * HandleMapBase::find(HandleBase handle) {
-    return handle.pos >= (int)m_values.size() 
-        ? NULL
+    assert(handle.pos >= 0);
+    return handle.pos <= 0 || handle.pos >= (int)m_values.size() 
+        ? nullptr
         : m_values[handle.pos].value;
 }
 
