@@ -8,6 +8,7 @@
 using namespace std;
 using namespace std::chrono;
 using namespace Dim;
+namespace fs = std::experimental::filesystem;
 
 
 /****************************************************************************
@@ -101,12 +102,16 @@ int Dim::appRun(IAppNotify & app, int argc, char * argv[], unsigned flags) {
     if (flags & fAppWithConsole)
         logDefaultMonitor(&s_consoleLogger);
     iConsoleInitialize();
+    if (flags & fAppWithChdir) {
+        auto fp = fs::u8path(envGetExecPath());
+        fs::current_path(fp.parent_path());
+    }
     iTaskInitialize();
     iTimerInitialize();
     iPlatformInitialize();
     iFileInitialize();
     if (flags & fAppWithConfig)
-        iAppConfigInitialize();
+        iAppConfigInitialize("conf");
     iSocketInitialize();
     iAppSocketInitialize();
     iHttpRouteInitialize();

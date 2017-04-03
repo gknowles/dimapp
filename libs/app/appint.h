@@ -7,9 +7,11 @@
 
 #pragma once
 
+#include <string_view>
+
 namespace Dim {
 
 // AppConfig
-void iAppConfigInitialize();
+void iAppConfigInitialize(std::string_view dir);
 
 } // namespace
