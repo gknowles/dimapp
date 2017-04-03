@@ -43,32 +43,54 @@ static mutex s_mut;
 
 //===========================================================================
 static void iocpDispatchThread() {
-    OVERLAPPED * overlapped;
-    ULONG_PTR key;
-    ULONG bytes;
+    const int kMaxEntries = 2;
+    OVERLAPPED_ENTRY entries[kMaxEntries];
+    ULONG found;
+    ITaskNotify * tasks[kMaxEntries];
+    bool used[kMaxEntries];
     for (;;) {
-        // TODO: use GetQueuedCompletionStatusEx and array version of
-        // DimTaskPushEvent
-        if (!GetQueuedCompletionStatus(
-                s_iocp, &bytes, &key, &overlapped, INFINITE)) {
+        if (!GetQueuedCompletionStatusEx(
+            s_iocp, 
+            entries, 
+            kMaxEntries, 
+            &found, 
+            INFINITE,   // timeout
+            false       // alertable
+        )) {
             WinError err;
             if (err == ERROR_ABANDONED_WAIT_0) {
                 // completion port was closed
                 break;
-            } else if (err == ERROR_OPERATION_ABORTED) {
-                // probably file handle was closed
-            } else if (err == ERROR_HANDLE_EOF) {
-                // probably read at end of file
             } else {
                 logMsgCrash() << "GetQueuedCompletionStatus: " << err;
             }
         }
 
-        auto evt = (WinOverlappedEvent *)overlapped;
-        if (evt->hq) {
-            taskPush(evt->hq, *evt->notify);
-        } else {
-            taskPushEvent(*evt->notify);
+        memset(used, 0, sizeof(used));
+        for (;;) {
+            int pos = 0;
+            int match = numeric_limits<int>::max();
+            for (unsigned i = 0; i < found; ++i) {
+                if (used[i])
+                    continue;
+                auto evt = (WinOverlappedEvent *) entries[i].lpOverlapped;
+                auto val = evt->hq.pos;
+                if (match == numeric_limits<int>::max())
+                    match = val;
+                if (val == match) {
+                    tasks[pos++] = evt->notify;
+                    used[i] = true;
+                }
+            }
+            if (!pos)
+                break;
+            if (!match) {
+                taskPushEvent(tasks, pos);
+            } else {
+                TaskQueueHandle hq;
+                hq.pos = match;
+                taskPush(hq, tasks, pos);
+            }
         }
     }
 
