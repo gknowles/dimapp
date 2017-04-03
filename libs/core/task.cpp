@@ -253,8 +253,12 @@ void Dim::taskPush(TaskQueueHandle hq, ITaskNotify & task) {
 void Dim::taskPush(
     TaskQueueHandle hq,
     ITaskNotify * tasks[],
-    size_t numTasks) {
+    size_t numTasks
+) {
     assert(s_running);
+
+    if (!numTasks)
+        return;
 
     lock_guard<mutex> lk{s_mut};
     auto * q = s_queues.find(hq);
