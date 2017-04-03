@@ -189,14 +189,26 @@ FileMonitorHandle fileMonitorDir(
 );
 void fileMonitorStopSync(FileMonitorHandle dir);
 
+// Absolute path to directory being monitored
+std::string_view fileMonitorPath(FileMonitorHandle dir);
+
 void fileMonitor(
-    IFileChangeNotify * notify, 
     FileMonitorHandle dir, 
-    std::string_view file
+    std::string_view file,
+    IFileChangeNotify * notify
 );
 void fileMonitorStopSync(
-    IFileChangeNotify * notify, 
     FileMonitorHandle dir,
+    std::string_view file,
+    IFileChangeNotify * notify
+);
+
+// Normalized path that would be monitored for file, relative to base 
+// directory. False for invalid parameters (bad dir, file outside of dir, 
+// etc.)
+bool fileMonitorPath(
+    std::string & out, 
+    FileMonitorHandle dir, 
     std::string_view file
 );
 

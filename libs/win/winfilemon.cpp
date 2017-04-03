@@ -34,16 +34,18 @@ public:
     void addMonitor(IFileChangeNotify * notify, string_view file);
     void removeMonitorSync(IFileChangeNotify * notify, string_view file);
 
-    void onTask () override;
-    Duration onTimer (TimePoint now) override;
-
-private:
+    string_view base() const { return m_base; }
     // returns false if file is outside of base directory
     bool expandPath(
         string & fullpath, 
         string & relpath, 
         string_view file
     ) const;
+
+    void onTask () override;
+    Duration onTimer (TimePoint now) override;
+
+private:
     bool queue ();
 
     string m_base;
@@ -87,7 +89,6 @@ DirInfo::~DirInfo () {
 //===========================================================================
 bool DirInfo::start(string_view path, bool recurse) {
     error_code ec;
-    // make sure m_base ends with '/'
     auto fp = fs::u8path(path.begin(), path.end());
     fp = fs::canonical(fp);
     m_base = fp.u8string();
@@ -257,10 +258,17 @@ void Dim::fileMonitorStopSync(FileMonitorHandle dir) {
 }
 
 //===========================================================================
+string_view Dim::fileMonitorPath(FileMonitorHandle dir) {
+    if (auto di = s_dirs.find(dir))
+        return di->base();
+    return {};
+}
+
+//===========================================================================
 void Dim::fileMonitor(
-    IFileChangeNotify * notify, 
     FileMonitorHandle dir, 
-    string_view file
+    string_view file,
+    IFileChangeNotify * notify
 ) {
     auto di = s_dirs.find(dir);
     assert(di);
@@ -269,10 +277,24 @@ void Dim::fileMonitor(
 
 //===========================================================================
 void Dim::fileMonitorStopSync(
-    IFileChangeNotify * notify, 
     FileMonitorHandle dir,
-    string_view file
+    string_view file,
+    IFileChangeNotify * notify
 ) {
     auto di = s_dirs.find(dir);
     di->removeMonitorSync(notify, file);
+}
+
+//===========================================================================
+bool Dim::fileMonitorPath(
+    string & out, 
+    FileMonitorHandle dir, 
+    string_view file
+) {
+    auto di = s_dirs.find(dir);
+    if (!di)
+        return false;
+
+    string fullpath;
+    return di->expandPath(fullpath, out, file);
 }
