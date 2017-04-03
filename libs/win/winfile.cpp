@@ -423,9 +423,9 @@ unique_ptr<IFile> Dim::fileOpen(string_view path, unsigned mode) {
         }
 
         if (!SetFileCompletionNotificationModes(
-                file->m_handle,
-                FILE_SKIP_COMPLETION_PORT_ON_SUCCESS
-                    | FILE_SKIP_SET_EVENT_ON_HANDLE)) {
+            file->m_handle,
+            FILE_SKIP_COMPLETION_PORT_ON_SUCCESS
+        )) {
             iFileSetErrno(WinError{});
             return nullptr;
         }

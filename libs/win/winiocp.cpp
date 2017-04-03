@@ -164,5 +164,14 @@ bool Dim::winIocpBindHandle(HANDLE handle) {
         return false;
     }
 
+    if (!SetFileCompletionNotificationModes(
+        handle,
+        FILE_SKIP_SET_EVENT_ON_HANDLE
+    )) {
+        logMsgError() << "SetFileCompletionNotificationModes(SKIP_EVENT): "
+            << WinError{};
+        return false;
+    }
+
     return true;
 }
