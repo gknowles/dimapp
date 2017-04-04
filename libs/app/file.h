@@ -34,7 +34,7 @@ public:
         kDenyWrite = 0x100,
         kDenyNone = 0x200,
 
-        // Optimize for file*Sync family of functions. Opens file without
+        // Optimize for file*Wait family of functions. Opens file without
         // FILE_FLAG_OVERLAPPED and does async by posting the requests
         // to a small taskqueue whos thread use blocking calls.
         kBlocking = 0x1000,
@@ -95,7 +95,7 @@ void fileRead(
     int64_t offset = 0,
     int64_t length = 0 // 0 to read until the end
 );
-void fileReadSync(
+void fileReadWait(
     void * outBuf,
     size_t outBufLen,
     IFile * file,
@@ -107,11 +107,11 @@ void fileStreamBinary(
     size_t blkSize);
 
 void fileLoadBinary(
-    IFileReadNotify * notify,
+    IFileReadNotify * notify,   // only onFileEnd() is called
     std::string & out,
     std::string_view path,
     size_t maxSize = 10'000'000);
-void fileLoadSyncBinary(
+void fileLoadBinaryWait(
     std::string & out,
     std::string_view path,
     size_t maxSize = 10'000'000);
@@ -154,7 +154,7 @@ void fileWrite(
     int64_t offset,
     const void * buf,
     size_t bufLen);
-void fileWriteSync(
+void fileWriteWait(
     IFile * file,
     int64_t offset,
     const void * buf,
@@ -164,7 +164,7 @@ void fileAppend(
     IFile * file,
     const void * buf,
     size_t bufLen);
-void fileAppendSync(IFile * file, const void * buf, size_t bufLen);
+void fileAppendWait(IFile * file, const void * buf, size_t bufLen);
 
 
 /****************************************************************************
@@ -177,18 +177,21 @@ class IFileChangeNotify {
 public:
     virtual ~IFileChangeNotify () {}
 
-    virtual void onFileChange(std::string_view path) = 0;
+    virtual void onFileChange(std::string_view fullpath, IFile * file) = 0;
 };
 
 struct FileMonitorHandle : HandleBase {};
 
+// The notifier, if present, is always called with the fullpath of the root
+// directory and a nullptr for the IFile*. This happens for every rename or 
+// change to last write time of any file within it's scope.
 bool fileMonitorDir(
     FileMonitorHandle * handle,
     std::string_view dir,
     bool recurse,
     IFileChangeNotify * notify = nullptr
 );
-void fileMonitorStopSync(FileMonitorHandle dir);
+void fileMonitorStopWait(FileMonitorHandle dir);
 
 // Absolute path to directory being monitored
 std::string_view fileMonitorPath(FileMonitorHandle dir);
@@ -198,7 +201,7 @@ void fileMonitor(
     std::string_view file,
     IFileChangeNotify * notify
 );
-void fileMonitorStopSync(
+void fileMonitorStopWait(
     FileMonitorHandle dir,
     std::string_view file,
     IFileChangeNotify * notify

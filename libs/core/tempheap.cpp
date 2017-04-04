@@ -59,12 +59,14 @@ void TempHeap::clear() {
         free(ptr);
         ptr = next;
     }
+    m_buffer = nullptr;
 }
 
 //===========================================================================
 char * TempHeap::alloc(size_t bytes, size_t align) {
+    Buffer * buf = (Buffer *)m_buffer;
+    Buffer * tmp;
     for (;;) {
-        Buffer * buf = (Buffer *)m_buffer;
         if (buf) {
             void * ptr = (char *)buf + kBufferSize - buf->m_avail;
             if (std::align(align, bytes, ptr, buf->m_avail)) {
@@ -72,18 +74,24 @@ char * TempHeap::alloc(size_t bytes, size_t align) {
                 return (char *)ptr;
             }
         }
-        if (bytes > kBufferSize / 3) {
-            Buffer * tmp = (Buffer *)malloc(sizeof(Buffer) + bytes + align);
+        if (bytes + align > kBufferSize / 3) {
+            tmp = (Buffer *)malloc(sizeof(Buffer) + bytes + align);
             assert(tmp != nullptr);
-            tmp->m_next = buf;
             tmp->m_avail = bytes + align;
-            m_buffer = tmp;
+            if (buf) {
+                tmp->m_next = buf->m_next;
+                buf->m_next = tmp;
+            } else {
+                tmp->m_next = nullptr;
+                m_buffer = tmp;
+            }
         } else {
-            Buffer * tmp = (Buffer *)malloc(kBufferSize);
+            tmp = (Buffer *)malloc(kBufferSize);
             assert(tmp != nullptr);
             tmp->m_next = buf;
             tmp->m_avail = kBufferSize - sizeof(Buffer);
             m_buffer = tmp;
         }
+        buf = tmp;
     }
 }

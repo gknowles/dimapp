@@ -47,7 +47,7 @@ void Application::onAppRun() {
     auto file = fileOpen(
         *fn,
         IFile::kCreat | IFile::kTrunc | IFile::kReadWrite | IFile::kBlocking);
-    fileWriteSync(file.get(), 0, "aaaa", 4);
+    fileWriteWait(file.get(), 0, "aaaa", 4);
     const char * base;
     if (!fileOpenView(base, file.get(), 1001 * psize))
         return appSignalShutdown(EX_DATAERR);
@@ -56,7 +56,7 @@ void Application::onAppRun() {
     static char v;
     for (size_t i = 1; i < 1000; ++i) {
         v = 0;
-        fileWriteSync(file.get(), i * psize, "bbbb", 4);
+        fileWriteWait(file.get(), i * psize, "bbbb", 4);
         v = base[i * psize];
         if (v == 'b')
             num += 1;
@@ -64,7 +64,7 @@ void Application::onAppRun() {
     fileExtendView(file.get(), psize);
     static char buf[5] = {};
     for (unsigned i = 0; i < 100; ++i) {
-        fileReadSync(buf, 4, file.get(), psize);
+        fileReadWait(buf, 4, file.get(), psize);
     }
 
     if (int errs = logGetMsgCount(kLogTypeError)) {

@@ -126,7 +126,8 @@ void IFileOpBase::start(
     void * buf,
     size_t bufLen,
     int64_t off,
-    int64_t len) {
+    int64_t len
+) {
     assert(bufLen && bufLen <= numeric_limits<int>::max());
     m_file = file;
     m_buf = (char *)buf;
@@ -456,6 +457,8 @@ void Dim::fileClose(IFile * ifile) {
 //===========================================================================
 size_t Dim::fileSize(IFile * ifile) {
     File * file = static_cast<File *>(ifile);
+    if (!file)
+        return 0;
     LARGE_INTEGER size;
     if (!GetFileSizeEx(file->m_handle, &size)) {
         WinError err;
@@ -469,6 +472,8 @@ size_t Dim::fileSize(IFile * ifile) {
 //===========================================================================
 TimePoint Dim::fileLastWriteTime(IFile * ifile) {
     File * file = static_cast<File *>(ifile);
+    if (!file)
+        return TimePoint::min();
     uint64_t ctime, atime, wtime;
     if (!GetFileTime(
             file->m_handle,
@@ -502,7 +507,8 @@ void Dim::fileRead(
     size_t outBufLen,
     IFile * ifile,
     int64_t off,
-    int64_t len) {
+    int64_t len
+) {
     assert(notify);
     File * file = static_cast<File *>(ifile);
     auto ptr = new FileReader(notify);
@@ -510,11 +516,12 @@ void Dim::fileRead(
 }
 
 //===========================================================================
-void Dim::fileReadSync(
+void Dim::fileReadWait(
     void * outBuf,
     size_t outBufLen,
     IFile * ifile,
-    int64_t off) {
+    int64_t off
+) {
     File * file = static_cast<File *>(ifile);
     FileReader op(nullptr);
     op.start(file, outBuf, outBufLen, off, outBufLen);
@@ -526,7 +533,8 @@ void Dim::fileWrite(
     IFile * ifile,
     int64_t off,
     const void * buf,
-    size_t bufLen) {
+    size_t bufLen
+) {
     assert(notify);
     File * file = static_cast<File *>(ifile);
     auto ptr = new FileWriter(notify);
@@ -534,11 +542,12 @@ void Dim::fileWrite(
 }
 
 //===========================================================================
-void Dim::fileWriteSync(
+void Dim::fileWriteWait(
     IFile * ifile,
     int64_t off,
     const void * buf,
-    size_t bufLen) {
+    size_t bufLen
+) {
     File * file = static_cast<File *>(ifile);
     FileWriter op(nullptr);
     op.start(file, const_cast<void *>(buf), bufLen, off, bufLen);
@@ -549,7 +558,8 @@ void Dim::fileAppend(
     IFileWriteNotify * notify,
     IFile * file,
     const void * buf,
-    size_t bufLen) {
+    size_t bufLen
+) {
     assert(notify);
     // file writes to offset 2^64-1 are interpreted as appends to the end
     // of the file.
@@ -557,8 +567,8 @@ void Dim::fileAppend(
 }
 
 //===========================================================================
-void Dim::fileAppendSync(IFile * file, const void * buf, size_t bufLen) {
-    fileWriteSync(file, 0xffff'ffff'ffff'ffff, buf, bufLen);
+void Dim::fileAppendWait(IFile * file, const void * buf, size_t bufLen) {
+    fileWriteWait(file, 0xffff'ffff'ffff'ffff, buf, bufLen);
 }
 
 
@@ -578,7 +588,7 @@ bool Dim::fileOpenView(
     const char *& base,
     IFile * ifile,
     int64_t maxLen // maximum viewable offset, rounded up to page size
-    ) {
+) {
     File * file = static_cast<File *>(ifile);
     if (file->m_view) {
         base = file->m_view;

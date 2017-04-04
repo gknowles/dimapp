@@ -20,7 +20,7 @@ class Dim::Timer {
 public:
     static void
     update(ITimerNotify * notify, Duration wait, bool onlyIfSooner);
-    static void stopSync(ITimerNotify * notify);
+    static void stopWait(ITimerNotify * notify);
 
     Timer(ITimerNotify * notify);
 
@@ -181,7 +181,7 @@ static void timerQueueThread() {
 //===========================================================================
 ITimerNotify::~ITimerNotify() {
     if (m_timer)
-        timerStopSync(this);
+        timerStopWait(this);
 }
 
 
@@ -248,7 +248,7 @@ void Timer::update(ITimerNotify * notify, Duration wait, bool onlyIfSooner) {
 
 //===========================================================================
 // static
-void Timer::stopSync(ITimerNotify * notify) {
+void Timer::stopWait(ITimerNotify * notify) {
     if (!notify->m_timer)
         return;
 
@@ -326,6 +326,6 @@ void Dim::timerUpdate(
 }
 
 //===========================================================================
-void Dim::timerStopSync(ITimerNotify * notify) {
-    Timer::stopSync(notify);
+void Dim::timerStopWait(ITimerNotify * notify) {
+    Timer::stopWait(notify);
 }

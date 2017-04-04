@@ -18,7 +18,7 @@ using namespace Dim;
 namespace {
 class FileStreamNotify : public IFileReadNotify {
     IFileReadNotify * m_notify;
-    string m_out;
+    unique_ptr<char[]> m_out;
 public:
     FileStreamNotify(
         IFileReadNotify * notify, 
@@ -41,14 +41,14 @@ FileStreamNotify::FileStreamNotify(
     size_t blkSize
 )
     : m_notify{notify}
-    , m_out(blkSize, 0)
+    , m_out(new char[blkSize])
 {
     auto file = fileOpen(path, IFile::kReadOnly | IFile::kDenyNone);
     if (!file) {
-        logMsgError() << "File open failed, " << path;
+        logMsgError() << "File open failed: " << path;
         onFileEnd(0, nullptr);
     } else {
-        fileRead(this, m_out.data(), m_out.size(), file.release());
+        fileRead(this, m_out.get(), blkSize, file.release());
     }
 }
 
@@ -139,35 +139,35 @@ void Dim::fileLoadBinary(
 ) {
     auto file = fileOpen(path, IFile::kReadOnly | IFile::kDenyNone);
     if (!file) {
-        logMsgError() << "File open failed, " << path;
+        logMsgError() << "File open failed: " << path;
         notify->onFileEnd(0, nullptr);
         return;
     }
 
     size_t bytes = fileSize(file.get());
     if (bytes > maxSize)
-        logMsgError() << "File too large, " << bytes << ", " << path;
+        logMsgError() << "File too large (" << bytes << " bytes): " << path;
     out.resize(bytes);
     auto proxy = new FileLoadNotify(out, notify);
     fileRead(proxy, out.data(), bytes, file.release());
 }
 
 //===========================================================================
-void Dim::fileLoadSyncBinary(
+void Dim::fileLoadBinaryWait(
     string & out,
     string_view path,
     size_t maxSize
 ) {
     auto file = fileOpen(path, IFile::kReadOnly | IFile::kDenyNone);
     if (!file) {
-        logMsgError() << "File open failed, " << path;
+        logMsgError() << "File open failed: " << path;
         out.clear();
         return;
     }
 
     size_t bytes = fileSize(file.get());
     if (bytes > maxSize)
-        logMsgError() << "File too large, " << bytes << ", " << path;
+        logMsgError() << "File too large (" << bytes << " bytes): " << path;
     out.resize(bytes);
-    fileReadSync(out.data(), bytes, file.release(), 0);
+    fileReadWait(out.data(), bytes, file.release(), 0);
 }

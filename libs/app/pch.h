@@ -6,6 +6,7 @@
 #include "app/app.h"
 #include "cli/cli.h"
 #include "core/core.h"
+#include "xml/xml.h"
 
 #include "app/appint.h"
 #include "core/appint.h"

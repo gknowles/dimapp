@@ -6,6 +6,8 @@
 
 #include "cppconf/cppconf.h"
 
+#include "xml/xml.h"
+
 #include <string_view>
 
 namespace Dim {
@@ -21,7 +23,10 @@ class IAppConfigNotify {
 public:
     virtual ~IAppConfigNotify () {}
 
-    virtual void onConfigChange(std::string_view path) = 0;
+    virtual void onConfigChange(
+        std::string_view relpath, 
+        const XNode * root
+    ) = 0;
 };
 
 void appConfigMonitor(std::string_view file, IAppConfigNotify * notify);

@@ -7,6 +7,7 @@
 #include "cppconf/cppconf.h"
 
 #include <cstring>
+#include <string_view>
 
 namespace Dim {
 
@@ -24,11 +25,9 @@ public:
     template <typename T, typename... Args> T * emplace(Args &&... args);
     template <typename T> T * alloc(size_t num);
 
-    char * strDup(const char src[]);
-    char * strDup(
-        const char src[],
-        size_t len // does not include null terminator
-        );
+    char * strdup(const char src[]);
+    char * strdup(std::string_view src);
+    char * strdup(const char src[], size_t len);
 
     char * alloc(size_t bytes);
     virtual char * alloc(size_t bytes, size_t align) = 0;
@@ -48,14 +47,18 @@ template <typename T> inline T * ITempHeap::alloc(size_t num) {
 }
 
 //===========================================================================
-inline char * ITempHeap::strDup(const char src[]) {
-    size_t len = std::strlen(src);
-    return strDup(src, len);
+inline char * ITempHeap::strdup(const char src[]) {
+    return strdup(std::string_view(src));
 }
 
 //===========================================================================
-inline char * ITempHeap::strDup(const char src[], size_t len) {
-    char * out = alloc(sizeof(*src) * (len + 1), alignof(char));
+inline char * ITempHeap::strdup(std::string_view src) {
+    return strdup(src.data(), src.size());
+}
+
+//===========================================================================
+inline char * ITempHeap::strdup(const char src[], size_t len) {
+    char * out = alloc(len + 1, alignof(char));
     std::memcpy(out, src, len);
     out[len] = 0;
     return out;

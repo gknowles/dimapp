@@ -169,7 +169,7 @@ auto HttpMsg::HdrName::end() const -> ForwardListIterator<const HdrValue> {
 
 //===========================================================================
 void HttpMsg::addHeader(HttpHdr id, const char value[]) {
-    addHeaderRef(id, m_heap.strDup(value));
+    addHeaderRef(id, m_heap.strdup(value));
 }
 
 //===========================================================================
@@ -178,7 +178,7 @@ void HttpMsg::addHeader(const char name[], const char value[]) {
     if (s_hdrNameTbl.find((int *)&id, name))
         return addHeader(id, value);
 
-    addHeaderRef(kHttpInvalid, m_heap.strDup(name), m_heap.strDup(value));
+    addHeaderRef(kHttpInvalid, m_heap.strdup(name), m_heap.strdup(value));
 }
 
 //===========================================================================
