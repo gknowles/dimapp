@@ -12,6 +12,15 @@ namespace fs = std::experimental::filesystem;
 
 /****************************************************************************
 *
+*   Tuning parameters
+*
+***/
+
+const unsigned kMaxConfigFileSize = 10'000'000;
+
+
+/****************************************************************************
+*
 *   Private
 *
 ***/
@@ -23,22 +32,26 @@ struct NotifyInfo {
 class ConfigFile : public IFileChangeNotify {
 public:
     void monitor_UNLK(
-        string_view file, 
+        string_view relpath, 
         IAppConfigNotify * notify,
         unique_lock<mutex> & lk
     );
     void notify_UNLK(
-        string_view file, 
         IAppConfigNotify * notify,
         unique_lock<mutex> & lk
     );
 
     // IFileChangeNotify
-    void onFileChange(string_view path) override;
+    void onFileChange(string_view fullpath, IFile * file) override;
 
 private:
     list<NotifyInfo> m_notifiers;
     unsigned m_changes{0};
+
+    string m_content;
+    XDocument m_xml;
+    string_view m_fullpath;
+    string_view m_relpath;
 };
 
 
@@ -75,36 +88,47 @@ void ConfigFile::monitor_UNLK(
         lk.unlock();
         fileMonitor(s_hDir, relpath, this);
     } else {
-        notify_UNLK(relpath, notify, lk);
+        notify_UNLK(notify, lk);
     }
 }
 
 //===========================================================================
-void ConfigFile::onFileChange(string_view fullpath) {
+void ConfigFile::onFileChange(string_view fullpath, IFile * file) {
     m_changes += 1;
 
     // load file
+    size_t bytes = fileSize(file);
+    if (bytes > kMaxConfigFileSize) {
+        logMsgError() << "File too large (" << bytes << " bytes): " 
+            << fullpath;
+        bytes = 0;
+    }
+
+    if (!bytes) {
+        m_content.clear();
+    } else {
+        m_content.resize(bytes);
+        fileReadSync(m_content.data(), m_content.size(), file, 0);
+    }
+
+    m_xml.parse(m_content.data());
+    m_fullpath = m_xml.heap().strDup(fullpath);
+    m_relpath = m_fullpath;
+    m_relpath.remove_prefix(s_rootDir.size() + 1);
 
     // call notifiers
-    appConfigChange(fullpath, nullptr);
+    appConfigChange(m_fullpath, nullptr);
 }
 
 //===========================================================================
 void ConfigFile::notify_UNLK(
-    string_view relpath, 
     IAppConfigNotify * notify,
     unique_lock<mutex> & lk
 ) {
-    auto fp = fs::absolute(
-        fs::u8path(string(relpath)), 
-        fs::u8path(s_rootDir)
-    );
-    auto fullpath = fp.u8string();
-
     for (auto it = m_notifiers.begin(); it != m_notifiers.end(); ++it) {
         if (!notify || notify == it->notify) {
             lk.unlock();
-            it->notify->onConfigChange(fullpath);
+            it->notify->onConfigChange(m_relpath, m_xml.root());
             if (notify)
                 return;
             lk.lock();
@@ -183,5 +207,5 @@ void Dim::appConfigChange(
 
     unique_lock<mutex> lk{s_mut};
     auto & cf = s_files[path];
-    cf.notify_UNLK(path, notify, lk);
+    cf.notify_UNLK(notify, lk);
 }

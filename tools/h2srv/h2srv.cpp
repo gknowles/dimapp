@@ -120,8 +120,9 @@ void MainShutdown::onShutdownClient(bool retry) {
 ***/
 
 namespace {
-class Application : public IAppNotify {
+class Application : public IAppNotify, public IAppConfigNotify {
     void onAppRun() override;
+    void onConfigChange(string_view relpath, const XNode * root) override;
 };
 } // namespace
 
@@ -145,11 +146,16 @@ void Application::onAppRun() {
     for (auto && addr : addrs)
         cout << addr << endl;
 
-    winTlsInitialize();
+    //winTlsInitialize();
+    appConfigMonitor("h2srv.xml", this);
 
     parse(&s_endpoint, "0.0.0.0", 8888);
     appSocketAddListener<TnetConn>(AppSocket::kByte, "", s_endpoint);
     httpRouteAdd(&s_web, "/", fHttpMethodGet, true);
+}
+
+//===========================================================================
+void Application::onConfigChange(string_view relpath, const XNode * root) {
 }
 
 

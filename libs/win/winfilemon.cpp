@@ -173,10 +173,10 @@ void DirInfo::stopSync_LK (FileMonitorHandle dir) {
 }
 
 //===========================================================================
-void DirInfo::addMonitor_LK(IFileChangeNotify * notify, string_view file) {
+void DirInfo::addMonitor_LK(IFileChangeNotify * notify, string_view path) {
     string fullpath;
     string relpath;
-    if (!expandPath(fullpath, relpath, file)) {
+    if (!expandPath(fullpath, relpath, path)) {
         logMsgError() << "Monitor file not in base directory, " 
             << fullpath << ", " << m_base;
         return;
@@ -188,10 +188,9 @@ void DirInfo::addMonitor_LK(IFileChangeNotify * notify, string_view file) {
         if (ntf == notify)
             return;
     }
-    if (fi.notifiers.empty()) {
-        if (auto file = fileOpen(fullpath, IFile::kNoAccess))
-            fi.mtime = fileLastWriteTime(file.get());
-    }
+    unique_ptr<IFile> file = fileOpen(fullpath, IFile::kReadOnly);
+    if (fi.notifiers.empty())
+        fi.mtime = fileLastWriteTime(file.get());
     fi.notifiers.push_back(notify);
 
     // call the notify unless we're in a notify
@@ -201,14 +200,14 @@ void DirInfo::addMonitor_LK(IFileChangeNotify * notify, string_view file) {
 
     if (s_inSyncNotify) {
         lk.unlock();
-        notify->onFileChange(fullpath);
+        notify->onFileChange(fullpath, file.get());
         lk.lock();
     } else {
         s_inThread = this_thread::get_id();
         s_inNotify = notify;
         s_inSyncNotify = true;
         lk.unlock();
-        notify->onFileChange(fullpath);
+        notify->onFileChange(fullpath, file.get());
         lk.lock();
         s_inThread = {};
         s_inNotify = nullptr;
@@ -272,17 +271,29 @@ void DirInfo::onTask () {
 
     queue();
     timerUpdate(this, 5s);
+    if (m_notify)
+        m_notify->onFileChange(m_base, nullptr);
 }
 
 //===========================================================================
 Duration DirInfo::onTimer (TimePoint now) {
+    string fullpath;
+    string relpath;
+
     unique_lock<mutex> lk{s_mut};
     for (auto && kv : m_files) {
-        auto ntfs = kv.second.notifiers;
+        expandPath(fullpath, relpath, kv.first);
+        auto file = fileOpen(fullpath, IFile::kReadOnly);
+        auto mtime = fileLastWriteTime(file.get());
+        if (mtime == kv.second.mtime)
+            continue;
+        kv.second.mtime = mtime;
+
         // Iterate through the list of notifiers by adding a marker that can't 
         // be externally removed to front of the list and advancing it until it 
         // reaches the end. This allows onFileChange() notifiers to safely 
         // modify the list.
+        auto ntfs = kv.second.notifiers;
         ntfs.push_front({});
         auto marker = ntfs.begin();
         for (;;) {
@@ -290,9 +301,9 @@ Duration DirInfo::onTimer (TimePoint now) {
             if (++it == ntfs.end())
                 break;
             auto notify = *it;
-            ntfs.splice(it, ntfs, marker, marker);
+            ntfs.splice(marker, ntfs, it);
             lk.unlock();
-            notify->onFileChange(kv.first);
+            notify->onFileChange(fullpath, file.get());
             lk.lock();
         }
         ntfs.pop_back();
@@ -327,7 +338,7 @@ bool DirInfo::expandPath(
     }
 
     relpath = fullpath;
-    relpath.erase(0, m_base.size());
+    relpath.erase(0, m_base.size() + 1);
     return true;
 }
 

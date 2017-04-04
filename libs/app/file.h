@@ -107,7 +107,7 @@ void fileStreamBinary(
     size_t blkSize);
 
 void fileLoadBinary(
-    IFileReadNotify * notify,
+    IFileReadNotify * notify,   // only onFileEnd() is called
     std::string & out,
     std::string_view path,
     size_t maxSize = 10'000'000);
@@ -177,11 +177,14 @@ class IFileChangeNotify {
 public:
     virtual ~IFileChangeNotify () {}
 
-    virtual void onFileChange(std::string_view path) = 0;
+    virtual void onFileChange(std::string_view fullpath, IFile * file) = 0;
 };
 
 struct FileMonitorHandle : HandleBase {};
 
+// The notifier, if present, is always called with the fullpath of the root
+// directory and a nullptr for the IFile*. This happens for every rename or 
+// change to last write time of any file within it's scope.
 bool fileMonitorDir(
     FileMonitorHandle * handle,
     std::string_view dir,
