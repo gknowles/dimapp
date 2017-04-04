@@ -112,7 +112,7 @@ void ConfigFile::onFileChange(string_view fullpath, IFile * file) {
     }
 
     m_xml.parse(m_content.data());
-    m_fullpath = m_xml.heap().strDup(fullpath);
+    m_fullpath = m_xml.heap().strdup(fullpath);
     m_relpath = m_fullpath;
     m_relpath.remove_prefix(s_rootDir.size() + 1);
 
