@@ -7,6 +7,7 @@
 #include "cppconf/cppconf.h"
 
 #include <cstring>
+#include <string_view>
 
 namespace Dim {
 
@@ -25,10 +26,8 @@ public:
     template <typename T> T * alloc(size_t num);
 
     char * strDup(const char src[]);
-    char * strDup(
-        const char src[],
-        size_t len // does not include null terminator
-        );
+    char * strDup(std::string_view src);
+    char * strDup(const char src[], size_t len);
 
     char * alloc(size_t bytes);
     virtual char * alloc(size_t bytes, size_t align) = 0;
@@ -49,13 +48,17 @@ template <typename T> inline T * ITempHeap::alloc(size_t num) {
 
 //===========================================================================
 inline char * ITempHeap::strDup(const char src[]) {
-    size_t len = std::strlen(src);
-    return strDup(src, len);
+    return strDup(std::string_view(src));
+}
+
+//===========================================================================
+inline char * ITempHeap::strDup(std::string_view src) {
+    return strDup(src.data(), src.size());
 }
 
 //===========================================================================
 inline char * ITempHeap::strDup(const char src[], size_t len) {
-    char * out = alloc(sizeof(*src) * (len + 1), alignof(char));
+    char * out = alloc(len + 1, alignof(char));
     std::memcpy(out, src, len);
     out[len] = 0;
     return out;
