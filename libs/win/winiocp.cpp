@@ -62,7 +62,7 @@ static void iocpDispatchThread() {
                 // completion port was closed
                 break;
             } else {
-                logMsgCrash() << "GetQueuedCompletionStatus: " << err;
+                logMsgCrash() << "GetQueuedCompletionStatusEx: " << err;
             }
         }
 
@@ -147,7 +147,7 @@ void Dim::winIocpInitialize() {
         NULL, // existing port
         NULL, // completion key
         0     // num threads, 0 for default
-        );
+    );
     if (!s_iocp)
         logMsgCrash() << "CreateIoCompletionPort(null): " << WinError{};
 

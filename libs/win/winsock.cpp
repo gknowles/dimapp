@@ -93,8 +93,11 @@ void RioDispatchThread::onTask() {
             break;
         }
 
-        count =
-            s_rio.RIODequeueCompletion(s_cq, results, (ULONG)size(results));
+        count = s_rio.RIODequeueCompletion(
+            s_cq, 
+            results, 
+            (ULONG)size(results)
+        );
         if (count == RIO_CORRUPT_CQ)
             logMsgCrash() << "RIODequeueCompletion: " << WinError{};
 
@@ -188,7 +191,8 @@ void SocketBase::setNotify(ISocketNotify * notify, ISocketNotify * newNotify) {
 void SocketBase::write(
     ISocketNotify * notify,
     unique_ptr<SocketBuffer> buffer,
-    size_t bytes) {
+    size_t bytes
+) {
     assert(bytes <= buffer->len);
     unique_lock<mutex> lk{s_mut};
     SocketBase * sock = notify->m_socket;
@@ -262,7 +266,7 @@ bool SocketBase::createQueue() {
             s_cq,          // recv completion queue
             s_cq,          // send completion queue
             this           // socket context
-            );
+        );
         if (m_rq == RIO_INVALID_RQ) {
             logMsgError() << "RIOCreateRequestQueue: " << WinError{};
             return false;
@@ -305,11 +309,12 @@ void SocketBase::onRead() {
 //===========================================================================
 void SocketBase::queueRead_LK() {
     if (!s_rio.RIOReceive(
-            m_rq,
-            &m_read.m_rbuf,
-            1, // number of RIO_BUFs (must be 1)
-            0, // RIO_MSG_* flags
-            &m_read)) {
+        m_rq,
+        &m_read.m_rbuf,
+        1, // number of RIO_BUFs (must be 1)
+        0, // RIO_MSG_* flags
+        &m_read
+    )) {
         logMsgCrash() << "RIOReceive: " << WinError{};
     }
 }
@@ -435,7 +440,8 @@ void Dim::iSocketInitialize() {
         IPPROTO_TCP,
         NULL, // protocol info (additional creation options)
         0,    // socket group
-        WSA_FLAG_REGISTERED_IO);
+        WSA_FLAG_REGISTERED_IO
+    );
     if (s == INVALID_SOCKET)
         logMsgCrash() << "socket: " << WinError{};
 
@@ -444,16 +450,16 @@ void Dim::iSocketInitialize() {
     s_rio.cbSize = sizeof(s_rio);
     DWORD bytes;
     if (WSAIoctl(
-            s,
-            SIO_GET_MULTIPLE_EXTENSION_FUNCTION_POINTER,
-            &extId,
-            sizeof(extId),
-            &s_rio,
-            sizeof(s_rio),
-            &bytes,
-            nullptr, // overlapped
-            nullptr  // completion routine
-            )) {
+        s,
+        SIO_GET_MULTIPLE_EXTENSION_FUNCTION_POINTER,
+        &extId,
+        sizeof(extId),
+        &s_rio,
+        sizeof(s_rio),
+        &bytes,
+        nullptr, // overlapped
+        nullptr  // completion routine
+    )) {
         logMsgCrash() << "WSAIoctl(get RIO extension): " << WinError{};
     }
     closesocket(s);
@@ -486,7 +492,13 @@ void Dim::iSocketInitialize() {
 //===========================================================================
 SOCKET Dim::iSocketCreate() {
     SOCKET handle = WSASocketW(
-        AF_UNSPEC, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_REGISTERED_IO);
+        AF_UNSPEC, 
+        SOCK_STREAM, 
+        IPPROTO_TCP, 
+        NULL, 
+        0, 
+        WSA_FLAG_REGISTERED_IO
+    );
     if (handle == INVALID_SOCKET) {
         logMsgError() << "WSASocket: " << WinError{};
         return INVALID_SOCKET;
@@ -515,18 +527,20 @@ SOCKET Dim::iSocketCreate() {
 
 #ifdef SO_REUSE_UNICASTPORT
     if (SOCKET_ERROR == setsockopt(
-                            handle,
-                            SOL_SOCKET,
-                            SO_REUSE_UNICASTPORT,
-                            (char *)&yes,
-                            sizeof(yes))) {
+        handle,
+        SOL_SOCKET,
+        SO_REUSE_UNICASTPORT,
+        (char *)&yes,
+        sizeof(yes)
+    )) {
 #endif
         if (SOCKET_ERROR == setsockopt(
-                                handle,
-                                SOL_SOCKET,
-                                SO_PORT_SCALABILITY,
-                                (char *)&yes,
-                                sizeof(yes))) {
+            handle,
+            SOL_SOCKET,
+            SO_PORT_SCALABILITY,
+            (char *)&yes,
+            sizeof(yes)
+        )) {
             logMsgError() << "setsockopt(SO_PORT_SCALABILITY): " << WinError{};
         }
 #ifdef SO_REUSE_UNICASTPORT
