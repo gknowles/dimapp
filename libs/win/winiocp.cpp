@@ -43,7 +43,7 @@ static mutex s_mut;
 
 //===========================================================================
 static void iocpDispatchThread() {
-    const int kMaxEntries = 2;
+    const int kMaxEntries = 8;
     OVERLAPPED_ENTRY entries[kMaxEntries];
     ULONG found;
     ITaskNotify * tasks[kMaxEntries];
@@ -59,7 +59,10 @@ static void iocpDispatchThread() {
         )) {
             WinError err;
             if (err == ERROR_ABANDONED_WAIT_0) {
-                // completion port was closed
+                // Completion port closed while inside get status.
+                break;
+            } else if (err == ERROR_INVALID_HANDLE) {
+                // Completion port closed before call to get status.
                 break;
             } else {
                 logMsgCrash() << "GetQueuedCompletionStatusEx: " << err;
