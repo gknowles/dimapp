@@ -29,10 +29,10 @@ public:
     ~DirInfo();
 
     bool start(string_view path, bool recurse);
-    void stopSync_LK(FileMonitorHandle dir);
+    void stopWait_LK(FileMonitorHandle dir);
 
     void addMonitor_LK(IFileChangeNotify * notify, string_view file);
-    void removeMonitorSync_LK(IFileChangeNotify * notify, string_view file);
+    void removeMonitorWait_LK(IFileChangeNotify * notify, string_view file);
 
     string_view base() const { return m_base; }
     // returns false if file is outside of base directory
@@ -73,7 +73,7 @@ static HandleMap<FileMonitorHandle, DirInfo> s_stopping;
 static thread::id s_inThread; // thread running any current callback
 static condition_variable s_inCv; // when running callback completes
 static IFileChangeNotify * s_inNotify; // notify currently in progress
-static bool s_inSyncNotify; // notify called from inside addMonitor
+static bool s_inAddMonitor; // notify called from inside addMonitor
 
 
 /****************************************************************************
@@ -152,7 +152,7 @@ bool DirInfo::queue() {
 }
 
 //===========================================================================
-void DirInfo::stopSync_LK (FileMonitorHandle dir) {
+void DirInfo::stopWait_LK (FileMonitorHandle dir) {
     if (m_handle == INVALID_HANDLE_VALUE)
         return;
 
@@ -195,23 +195,26 @@ void DirInfo::addMonitor_LK(IFileChangeNotify * notify, string_view path) {
 
     // call the notify unless we're in a notify
     unique_lock<mutex> lk{s_mut, adopt_lock};
-    while (s_inSyncNotify && s_inThread != this_thread::get_id())
+    while (s_inAddMonitor && s_inThread != this_thread::get_id())
         s_inCv.wait(lk);
 
-    if (s_inSyncNotify) {
+    if (s_inAddMonitor) {
+        // In recursive addMonitor call from onFileChange handler. No need to
+        // set the s_in* variables because they're already set and don't clear 
+        // them on exit - because we'll still be in the prior addMonitor call.
         lk.unlock();
         notify->onFileChange(fullpath, file.get());
         lk.lock();
     } else {
         s_inThread = this_thread::get_id();
         s_inNotify = notify;
-        s_inSyncNotify = true;
+        s_inAddMonitor = true;
         lk.unlock();
         notify->onFileChange(fullpath, file.get());
         lk.lock();
         s_inThread = {};
         s_inNotify = nullptr;
-        s_inSyncNotify = false;
+        s_inAddMonitor = false;
         s_inCv.notify_all();
     }
 
@@ -219,7 +222,7 @@ void DirInfo::addMonitor_LK(IFileChangeNotify * notify, string_view path) {
 }
 
 //===========================================================================
-void DirInfo::removeMonitorSync_LK(
+void DirInfo::removeMonitorWait_LK(
     IFileChangeNotify * notify, 
     string_view file
 ) {
@@ -398,11 +401,11 @@ bool Dim::fileMonitorDir(
 }
 
 //===========================================================================
-void Dim::fileMonitorStopSync(FileMonitorHandle dir) {
+void Dim::fileMonitorStopWait(FileMonitorHandle dir) {
     lock_guard<mutex> lk{s_mut};
     auto di = s_dirs.find(dir);
     assert(di);
-    di->stopSync_LK(dir);
+    di->stopWait_LK(dir);
 }
 
 //===========================================================================
@@ -427,7 +430,7 @@ void Dim::fileMonitor(
 }
 
 //===========================================================================
-void Dim::fileMonitorStopSync(
+void Dim::fileMonitorStopWait(
     FileMonitorHandle dir,
     string_view file,
     IFileChangeNotify * notify
@@ -436,7 +439,7 @@ void Dim::fileMonitorStopSync(
     lock_guard<mutex> lk{s_mut};
     auto di = s_dirs.find(dir);
     assert(di);
-    di->removeMonitorSync_LK(notify, file);
+    di->removeMonitorWait_LK(notify, file);
 }
 
 //===========================================================================

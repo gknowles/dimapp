@@ -153,7 +153,7 @@ void Dim::fileLoadBinary(
 }
 
 //===========================================================================
-void Dim::fileLoadSyncBinary(
+void Dim::fileLoadBinaryWait(
     string & out,
     string_view path,
     size_t maxSize
@@ -169,5 +169,5 @@ void Dim::fileLoadSyncBinary(
     if (bytes > maxSize)
         logMsgError() << "File too large (" << bytes << " bytes): " << path;
     out.resize(bytes);
-    fileReadSync(out.data(), bytes, file.release(), 0);
+    fileReadWait(out.data(), bytes, file.release(), 0);
 }

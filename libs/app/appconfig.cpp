@@ -108,7 +108,7 @@ void ConfigFile::onFileChange(string_view fullpath, IFile * file) {
         m_content.clear();
     } else {
         m_content.resize(bytes);
-        fileReadSync(m_content.data(), m_content.size(), file, 0);
+        fileReadWait(m_content.data(), m_content.size(), file, 0);
     }
 
     m_xml.parse(m_content.data());
@@ -153,7 +153,7 @@ static Shutdown s_cleanup;
 
 //===========================================================================
 void Shutdown::onShutdownConsole(bool retry) {
-    fileMonitorStopSync(s_hDir);
+    fileMonitorStopWait(s_hDir);
 }
 
 } // namespace

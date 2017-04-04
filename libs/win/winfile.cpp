@@ -516,7 +516,7 @@ void Dim::fileRead(
 }
 
 //===========================================================================
-void Dim::fileReadSync(
+void Dim::fileReadWait(
     void * outBuf,
     size_t outBufLen,
     IFile * ifile,
@@ -542,7 +542,7 @@ void Dim::fileWrite(
 }
 
 //===========================================================================
-void Dim::fileWriteSync(
+void Dim::fileWriteWait(
     IFile * ifile,
     int64_t off,
     const void * buf,
@@ -567,8 +567,8 @@ void Dim::fileAppend(
 }
 
 //===========================================================================
-void Dim::fileAppendSync(IFile * file, const void * buf, size_t bufLen) {
-    fileWriteSync(file, 0xffff'ffff'ffff'ffff, buf, bufLen);
+void Dim::fileAppendWait(IFile * file, const void * buf, size_t bufLen) {
+    fileWriteWait(file, 0xffff'ffff'ffff'ffff, buf, bufLen);
 }
 
 
