@@ -31,15 +31,8 @@ struct NotifyInfo {
 
 class ConfigFile : public IFileChangeNotify {
 public:
-    void monitor_UNLK(
-        string_view relpath, 
-        IAppConfigNotify * notify,
-        unique_lock<mutex> & lk
-    );
-    void notify_UNLK(
-        IAppConfigNotify * notify,
-        unique_lock<mutex> & lk
-    );
+    void monitor_UNLK(string_view relpath, IAppConfigNotify * notify);
+    void notify_UNLK(IAppConfigNotify * notify);
 
     // IFileChangeNotify
     void onFileChange(string_view fullpath, IFile * file) override;
@@ -75,20 +68,16 @@ static unordered_map<string, ConfigFile> s_files;
 ***/
 
 //===========================================================================
-void ConfigFile::monitor_UNLK(
-    string_view relpath, 
-    IAppConfigNotify * notify,
-    unique_lock<mutex> & lk
-) {
+void ConfigFile::monitor_UNLK(string_view relpath, IAppConfigNotify * notify) {
     bool empty = m_notifiers.empty();
     NotifyInfo ni = { notify };
     m_notifiers.push_back(ni);
 
     if (empty) {
-        lk.unlock();
+        s_mut.unlock();
         fileMonitor(s_hDir, relpath, this);
     } else {
-        notify_UNLK(notify, lk);
+        notify_UNLK(notify);
     }
 }
 
@@ -121,10 +110,8 @@ void ConfigFile::onFileChange(string_view fullpath, IFile * file) {
 }
 
 //===========================================================================
-void ConfigFile::notify_UNLK(
-    IAppConfigNotify * notify,
-    unique_lock<mutex> & lk
-) {
+void ConfigFile::notify_UNLK(IAppConfigNotify * notify) {
+    unique_lock<mutex> lk{s_mut, adopt_lock};
     for (auto it = m_notifiers.begin(); it != m_notifiers.end(); ++it) {
         if (!notify || notify == it->notify) {
             lk.unlock();
@@ -134,7 +121,6 @@ void ConfigFile::notify_UNLK(
             lk.lock();
         }
     }
-    lk.unlock();
 }
 
 
@@ -189,9 +175,9 @@ void Dim::appConfigMonitor(string_view file, IAppConfigNotify * notify) {
         return;
     }
 
-    unique_lock<mutex> lk{s_mut};
+    s_mut.lock();
     auto & cf = s_files[path];
-    cf.monitor_UNLK(path, notify, lk);
+    cf.monitor_UNLK(path, notify);
 }
 
 //===========================================================================
@@ -205,7 +191,7 @@ void Dim::appConfigChange(
         return;
     }
 
-    unique_lock<mutex> lk{s_mut};
+    s_mut.lock();
     auto & cf = s_files[path];
-    cf.notify_UNLK(notify, lk);
+    cf.notify_UNLK(notify);
 }
