@@ -128,7 +128,7 @@ void IFileOpBase::start(
     int64_t off,
     int64_t len
 ) {
-    assert(bufLen && bufLen <= numeric_limits<int>::max());
+    assert(bufLen && bufLen <= (size_t) numeric_limits<int>::max());
     m_file = file;
     m_buf = (char *)buf;
     m_bufLen = (int)bufLen;
@@ -455,7 +455,7 @@ void Dim::fileClose(IFile * ifile) {
 }
 
 //===========================================================================
-size_t Dim::fileSize(IFile * ifile) {
+uint64_t Dim::fileSize(IFile * ifile) {
     File * file = static_cast<File *>(ifile);
     if (!file)
         return 0;

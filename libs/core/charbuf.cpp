@@ -132,8 +132,8 @@ char * CharBuf::data() {
 
 //===========================================================================
 char * CharBuf::data(size_t pos, size_t count) {
-    assert(pos <= m_size);
-    if (pos == m_size)
+    assert(pos <= (size_t) m_size);
+    if (pos == (size_t) m_size)
         return nullptr;
 
     auto need = (int) min(count, m_size - pos);
@@ -181,7 +181,7 @@ string_view CharBuf::view(size_t pos, size_t count) const {
 
 //===========================================================================
 CharBuf::Range CharBuf::views(size_t pos, size_t count) const {
-    assert(pos <= m_size);
+    assert(pos <= (size_t) m_size);
     auto num = min(count, m_size - pos);
     auto ic = find(pos);
     auto r = Range{Iterator{ic.first, (size_t) ic.second, num}};
@@ -196,7 +196,7 @@ void CharBuf::clear() {
 
 //===========================================================================
 void CharBuf::resize(size_t count) {
-    if (m_size > count) {
+    if ((size_t) m_size > count) {
         erase(count);
     } else {
         insert(m_size, count - m_size, 0);
@@ -206,7 +206,7 @@ void CharBuf::resize(size_t count) {
 
 //===========================================================================
 CharBuf & CharBuf::insert(size_t pos, size_t numCh, char ch) {
-    assert(pos <= pos + numCh && pos <= m_size);
+    assert(pos <= pos + numCh && pos <= (size_t) m_size);
 
     // short-circuit to avoid allocs
     if (!numCh)
@@ -218,7 +218,7 @@ CharBuf & CharBuf::insert(size_t pos, size_t numCh, char ch) {
 
 //===========================================================================
 CharBuf & CharBuf::insert(size_t pos, const char s[]) {
-    assert(pos <= m_size);
+    assert(pos <= (size_t) m_size);
 
     // short-circuit to avoid allocs. find() forces allocated buffer to exist
     if (!*s)
@@ -230,7 +230,7 @@ CharBuf & CharBuf::insert(size_t pos, const char s[]) {
 
 //===========================================================================
 CharBuf & CharBuf::insert(size_t pos, const char s[], size_t count) {
-    assert(pos <= pos + count && pos <= m_size);
+    assert(pos <= pos + count && pos <= (size_t) m_size);
 
     // short-circuit to avoid allocs
     if (!count)
@@ -247,8 +247,8 @@ CharBuf & CharBuf::insert(
     size_t bufPos, 
     size_t bufLen
 ) {
-    assert(pos <= m_size);
-    assert(bufPos <= buf.m_size);
+    assert(pos <= (size_t) m_size);
+    assert(bufPos <= (size_t) buf.m_size);
     auto add = (int) min(bufLen, buf.m_size - bufPos);
 
     // short-circuit to avoid allocs
@@ -262,7 +262,7 @@ CharBuf & CharBuf::insert(
 
 //===========================================================================
 CharBuf & CharBuf::erase(size_t pos, size_t count) {
-    assert(pos <= m_size);
+    assert(pos <= (size_t) m_size);
     auto remove = (int) min(count, m_size - pos);
 
     // short-circuit to avoid allocs
@@ -364,7 +364,7 @@ int CharBuf::compare(
     const char s[], 
     size_t slen
 ) const {
-    assert(pos <= m_size);
+    assert(pos <= (size_t) m_size);
     int mymax = (int) min(count, m_size - pos);
     int rmax = (int) slen;
     int num = min(mymax, rmax);
@@ -421,8 +421,8 @@ int CharBuf::compare(
     size_t bufPos,
     size_t bufLen
 ) const {
-    assert(pos <= m_size);
-    assert(bufPos <= buf.size());
+    assert(pos <= (size_t) m_size);
+    assert(bufPos <= (size_t) buf.m_size);
     int mymax = (int) min(count, m_size - pos);
     int rmax = (int) min(bufLen, buf.size() - bufPos);
     int num = min(mymax, rmax);
@@ -466,7 +466,7 @@ int CharBuf::compare(
 
 //===========================================================================
 CharBuf & CharBuf::replace(size_t pos, size_t count, size_t numCh, char ch) {
-    assert(pos <= m_size);
+    assert(pos <= (size_t) m_size);
 
     int add = (int)numCh;
     int remove = (int) min(count, m_size - pos);
@@ -495,7 +495,7 @@ CharBuf & CharBuf::replace(size_t pos, size_t count, size_t numCh, char ch) {
 
 //===========================================================================
 CharBuf & CharBuf::replace(size_t pos, size_t count, const char s[]) {
-    assert(pos <= m_size);
+    assert(pos <= (size_t) m_size);
 
     int remove = (int) min(count, m_size - pos);
     int num = remove;
@@ -529,7 +529,7 @@ CharBuf & CharBuf::replace(size_t pos, size_t count, const char s[]) {
 //===========================================================================
 CharBuf &
 CharBuf::replace(size_t pos, size_t count, const char src[], size_t srcLen) {
-    assert(pos <= m_size);
+    assert(pos <= (size_t) m_size);
 
     int add = (int)srcLen;
     int remove = (int) min(count, m_size - pos);
@@ -567,8 +567,8 @@ CharBuf & CharBuf::replace(
     size_t srcPos,
     size_t srcLen
 ) {
-    assert(pos <= m_size);
-    assert(srcPos <= src.m_size);
+    assert(pos <= (size_t) m_size);
+    assert(srcPos <= (size_t) src.m_size);
 
     int add = (int) min(srcLen, src.m_size - srcPos);
     int remove = (int) min(count, m_size - pos);
@@ -615,7 +615,7 @@ CharBuf & CharBuf::replace(
 
 //===========================================================================
 size_t CharBuf::copy(char * out, size_t count, size_t pos) const {
-    assert(pos <= m_size);
+    assert(pos <= (size_t) m_size);
     count = min(count, m_size - pos);
     auto num = (int) count;
     auto ic = find(pos);
@@ -659,7 +659,7 @@ CharBuf::find(size_t pos) const {
 
 //===========================================================================
 pair<vector<CharBuf::Buffer>::iterator, int> CharBuf::find(size_t pos) {
-    assert(pos <= m_size);
+    assert(pos <= (size_t) m_size);
     int off = (int)pos;
     if (off < m_size / 2) {
         auto it = m_buffers.begin();

@@ -50,7 +50,7 @@ std::unique_ptr<IFile> fileOpen(
     std::string_view path,
     unsigned modeFlags // IFile::OpenMode::*
 );
-size_t fileSize(IFile * file);
+uint64_t fileSize(IFile * file);
 TimePoint fileLastWriteTime(IFile * file);
 std::experimental::filesystem::path filePath(IFile * file);
 unsigned fileMode(IFile * file);

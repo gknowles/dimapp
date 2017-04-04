@@ -86,7 +86,7 @@ constexpr int digits10(uint32_t val) {
 
 //===========================================================================
 // Round up to power of 2
-constexpr size_t pow2Ceil(uint64_t num) {
+constexpr uint64_t pow2Ceil(uint64_t num) {
 #if 0
     unsigned long k;
     _BitScanReverse64(&k, num);

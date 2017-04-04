@@ -149,7 +149,7 @@ void Dim::perfGetValues (std::vector<PerfValue> & out) {
     auto & info = getInfo();
     lock_guard<mutex> lk{info.mut};
     out.resize(info.counters.size());
-    for (int i = 0; i < out.size(); ++i) {
+    for (unsigned i = 0; i < out.size(); ++i) {
         out[i].name = info.counters[i]->name;
         info.counters[i]->toString(out[i].value);
     }

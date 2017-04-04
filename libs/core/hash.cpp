@@ -159,7 +159,7 @@ size_t Dim::hashBytes(const void * ptr, size_t count) {
     sipRound(v0, v1, v2, v3);
     sipRound(v0, v1, v2, v3);
     uint64_t out = v0 ^ v1 ^ v2 ^ v3;
-    return out;
+    return (size_t) out;
 }
 
 //===========================================================================

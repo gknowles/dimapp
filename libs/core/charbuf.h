@@ -179,7 +179,7 @@ inline CharBuf::Iterator::Iterator(
     , m_view{buf->data + pos, std::min(count, buf->used - pos)}
     , m_count{count} 
 {
-    assert(pos <= buf->used);
+    assert(pos <= (size_t) buf->used);
 }
 
 //===========================================================================
