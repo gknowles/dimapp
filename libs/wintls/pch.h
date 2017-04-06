@@ -13,8 +13,10 @@
 #define SECURITY_WIN32
 #include <Security.h>
 #include <schnlsp.h>
+#include <WinDNS.h>
 
 #pragma comment(lib, "crypt32.lib")
+#pragma comment(lib, "dnsapi.lib")
 #pragma comment(lib, "ncrypt.lib")
 #pragma comment(lib, "secur32.lib")
 
