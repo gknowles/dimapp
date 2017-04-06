@@ -266,8 +266,8 @@ void Dim::addressGetLocal(std::vector<Address> * out) {
         result = result->ai_next;
     }
 
-    // if there are no addresses toss on the loopback so we can at least
-    // pretend.
+    // if there are no addresses toss on the loopback with the null port so we 
+    // can at least pretend.
     if (out->empty()) {
         parse(&end, "127.0.0.1", 9);
         out->push_back(end.addr);
