@@ -354,20 +354,18 @@ bool DirInfo::expandPath(
 ***/
 
 namespace {
-
-class Shutdown : public IShutdownNotify {
+class ShutdownNotify : public IShutdownNotify {
     void onShutdownConsole(bool retry) override;
 };
-static Shutdown s_cleanup;
+} // namespace
+static ShutdownNotify s_cleanup;
 
 //===========================================================================
-void Shutdown::onShutdownConsole(bool retry) {
+void ShutdownNotify::onShutdownConsole(bool retry) {
     lock_guard<mutex> lk{s_mut};
     if (!s_dirs.empty() || !s_stopping.empty())
         return shutdownIncomplete();
 }
-
-} // namespace
 
 //===========================================================================
 void Dim::winFileMonitorInitialize() {

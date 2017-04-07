@@ -104,20 +104,20 @@ static void iocpDispatchThread() {
 
 /****************************************************************************
 *
-*   WinIocpShutdown
+*   Shutdown monitor
 *
 ***/
 
 namespace {
-class WinIocpShutdown : public IShutdownNotify {
+class ShutdownNotify : public IShutdownNotify {
     void onShutdownConsole(bool retry) override;
     bool m_closing{false};
 };
-static WinIocpShutdown s_cleanup;
 } // namespace
+static ShutdownNotify s_cleanup;
 
 //===========================================================================
-void WinIocpShutdown::onShutdownConsole(bool retry) {
+void ShutdownNotify::onShutdownConsole(bool retry) {
     if (!retry) 
         return shutdownIncomplete();
     

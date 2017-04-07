@@ -154,17 +154,19 @@ void ConsoleReader::onFileEnd(int64_t offset, IFile * file) {
 
 /****************************************************************************
 *
-*   MainShutdown
+*   ShutdownNotify
 *
 ***/
 
-class MainShutdown : public IShutdownNotify {
+namespace {
+class ShutdownNotify : public IShutdownNotify {
     void onShutdownClient(bool retry) override;
 };
-static MainShutdown s_cleanup;
+} // namespace
+static ShutdownNotify s_cleanup;
 
 //===========================================================================
-void MainShutdown::onShutdownClient(bool retry) {
+void ShutdownNotify::onShutdownClient(bool retry) {
     if (!retry) {
         s_console.m_device.reset();
         endpointCancelQuery(s_cancelAddrId);

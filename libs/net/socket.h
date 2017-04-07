@@ -65,7 +65,7 @@ void socketConnect(
     const Endpoint & remote,
     const Endpoint & local,
     Duration timeout = {} // 0 for default timeout
-    );
+);
 
 //===========================================================================
 // listen
@@ -96,6 +96,7 @@ std::unique_ptr<SocketBuffer> socketGetBuffer();
 void socketWrite(
     ISocketNotify * notify,
     std::unique_ptr<SocketBuffer> buffer,
-    size_t bytes);
+    size_t bytes
+);
 
 } // namespace
