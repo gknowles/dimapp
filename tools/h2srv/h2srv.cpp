@@ -109,7 +109,7 @@ static MainShutdown s_cleanup;
 
 //===========================================================================
 void MainShutdown::onShutdownClient(bool retry) {
-    appSocketRemoveListener<TnetConn>(AppSocket::kByte, "", s_endpoint);
+    socketStop<TnetConn>(AppSocket::kByte, "", s_endpoint);
 }
 
 
@@ -150,7 +150,7 @@ void Application::onAppRun() {
     winTlsInitialize();
 
     parse(&s_endpoint, "0.0.0.0", 8888);
-    appSocketAddListener<TnetConn>(AppSocket::kByte, "", s_endpoint);
+    socketListen<TnetConn>(AppSocket::kByte, "", s_endpoint);
     httpRouteAdd(&s_web, "/", fHttpMethodGet, true);
 }
 

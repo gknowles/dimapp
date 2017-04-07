@@ -120,10 +120,9 @@ static UnmatchedTimer s_unmatchedTimer;
 //===========================================================================
 void EndpointInfo::onListenStop(const Endpoint & local) {
     unique_lock<shared_mutex> lk{s_listenMut};
-    for (auto && ptr : s_stopping) {
-        if (ptr == this) {
-            auto it = s_stopping.begin() + (&ptr - s_stopping.data());
-            s_stopping.erase(it);
+    for (auto i = s_stopping.begin(), e = s_stopping.end(); i != e; ++i) {
+        if (*i == this) {
+            s_stopping.erase(i);
             delete this;
             return;
         }
@@ -401,53 +400,20 @@ AppSocket::MatchType ByteMatch::OnMatch(
 
 /****************************************************************************
 *
-*   Http2Match
-*
-***/
-
-namespace {
-    class Http2Match : public IAppSocketMatchNotify {
-        AppSocket::MatchType OnMatch(
-            AppSocket::Family fam, 
-            string_view view) override;
-    };
-} // namespace
-static Http2Match s_http2Match;
-
-//===========================================================================
-AppSocket::MatchType Http2Match::OnMatch(
-    AppSocket::Family fam,
-    string_view view
-) {
-    assert(fam == AppSocket::kHttp2);
-    const char kPrefaceData[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
-    const size_t kPrefaceDataLen = size(kPrefaceData);
-    size_t num = min(kPrefaceDataLen, view.size());
-    if (view.compare(0, num, kPrefaceData, num) != 0)
-        return AppSocket::kUnsupported;
-    if (num == kPrefaceDataLen)
-        return AppSocket::kPreferred;
-
-    return AppSocket::kUnknown;
-}
-
-
-/****************************************************************************
-*
 *   Shutdown monitor
 *
 ***/
 
 namespace {
-class ShutdownMonitor : public IShutdownNotify {
+class ShutdownNotify : public IShutdownNotify {
     void onShutdownClient(bool retry) override;
     void onShutdownConsole(bool retry) override;
 };
-static ShutdownMonitor s_cleanup;
 } // namespace
+static ShutdownNotify s_cleanup;
 
-  //===========================================================================
-void ShutdownMonitor::onShutdownClient(bool retry) {
+//===========================================================================
+void ShutdownNotify::onShutdownClient(bool retry) {
     shared_lock<shared_mutex> lk{s_listenMut};
     assert(s_endpoints.empty());
     if (!s_stopping.empty())
@@ -455,7 +421,7 @@ void ShutdownMonitor::onShutdownClient(bool retry) {
 }
 
 //===========================================================================
-void ShutdownMonitor::onShutdownConsole(bool retry) {
+void ShutdownNotify::onShutdownConsole(bool retry) {
     lock_guard<mutex> lk{s_unmatchedMut};
     if (!retry) {
         for (auto && info : s_unmatched)
@@ -475,8 +441,7 @@ void ShutdownMonitor::onShutdownConsole(bool retry) {
 //===========================================================================
 void Dim::iAppSocketInitialize() {
     shutdownMonitor(&s_cleanup);
-    appSocketAddMatch(&s_byteMatch, AppSocket::kByte);
-    appSocketAddMatch(&s_http2Match, AppSocket::kHttp2);
+    socketAddFamily(AppSocket::kByte, &s_byteMatch);
 }
 
 
@@ -487,24 +452,25 @@ void Dim::iAppSocketInitialize() {
 ***/
 
 //===========================================================================
-void Dim::appSocketDisconnect(IAppSocketNotify * notify) {
+void Dim::socketDisconnect(IAppSocketNotify * notify) {
     AppSocketBase::disconnect(notify);
 }
 
 //===========================================================================
-void Dim::appSocketWrite(IAppSocketNotify * notify, std::string_view data) {
+void Dim::socketWrite(IAppSocketNotify * notify, std::string_view data) {
     AppSocketBase::write(notify, data);
 }
 
 //===========================================================================
-void Dim::appSocketWrite(IAppSocketNotify * notify, const CharBuf & data) {
+void Dim::socketWrite(IAppSocketNotify * notify, const CharBuf & data) {
     AppSocketBase::write(notify, data);
 }
 
 //===========================================================================
-void Dim::appSocketAddMatch(
-    IAppSocketMatchNotify * notify,
-    AppSocket::Family fam) {
+void Dim::socketAddFamily(
+    AppSocket::Family fam, 
+    IAppSocketMatchNotify * notify
+) {
     unique_lock<shared_mutex> lk{s_listenMut};
     s_matchers[fam].notify = notify;
 }
@@ -537,11 +503,12 @@ static void eraseInfo_LK(const Endpoint & end) {
 }
 
 //===========================================================================
-void Dim::appSocketAddListener(
+void Dim::socketListen(
     IAppSocketNotifyFactory * factory,
     AppSocket::Family fam,
     string_view type,
-    const Endpoint & end) {
+    const Endpoint & end
+) {
     bool addNew = false;
     EndpointInfo * info = nullptr;
     {
@@ -556,11 +523,12 @@ void Dim::appSocketAddListener(
 }
 
 //===========================================================================
-void Dim::appSocketRemoveListener(
+void Dim::socketStop(
     IAppSocketNotifyFactory * factory,
     AppSocket::Family fam,
     std::string_view type,
-    const Endpoint & end) {
+    const Endpoint & end
+) {
     EndpointInfo * info = nullptr;
     unique_lock<shared_mutex> lk{s_listenMut};
     info = findInfo_LK(end, false);

@@ -29,13 +29,6 @@ namespace AppSocket {
         kByte,
         kNumFamilies,
     };
-
-    enum MatchType {
-        kUnknown,       // not enough data to know
-        kPreferred,     // explicitly declared for protocol family 
-        kSupported,     // supported in a generic way (e.g. as byte stream)
-        kUnsupported,   // not valid for protocol family
-    };
 }
 
 struct AppSocketInfo {
@@ -78,16 +71,25 @@ private:
     AppSocketBase * m_socket{nullptr};
 };
 
-void appSocketDisconnect(IAppSocketNotify * notify);
-void appSocketWrite(IAppSocketNotify * notify, std::string_view data);
-void appSocketWrite(IAppSocketNotify * notify, const CharBuf & data);
+void socketDisconnect(IAppSocketNotify * notify);
+void socketWrite(IAppSocketNotify * notify, std::string_view data);
+void socketWrite(IAppSocketNotify * notify, const CharBuf & data);
 
 
 /****************************************************************************
 *
-*   AppSocket listen
+*   AppSocket family
 *
 ***/
+
+namespace AppSocket {
+    enum MatchType {
+        kUnknown,       // not enough data to know
+        kPreferred,     // explicitly declared for protocol family 
+        kSupported,     // supported in a generic way (e.g. as byte stream)
+        kUnsupported,   // not valid for protocol family
+    };
+} // namespace
 
 class IAppSocketMatchNotify {
 public:
@@ -99,64 +101,80 @@ public:
     ) = 0;
 };
 
+void socketAddFamily(AppSocket::Family fam, IAppSocketMatchNotify * notify);
+
+
+/****************************************************************************
+*
+*   AppSocket listen
+*
+***/
+
 class IAppSocketNotifyFactory {
 public:
     virtual ~IAppSocketNotifyFactory() {}
     virtual std::unique_ptr<IAppSocketNotify> create() = 0;
 };
 
-void appSocketAddMatch(IAppSocketMatchNotify * notify, AppSocket::Family fam);
-
-void appSocketAddListener(
+void socketListen(
     IAppSocketNotifyFactory * factory,
     AppSocket::Family fam,
     std::string_view type,
-    const Endpoint & end);
-
-void appSocketRemoveListener(
+    const Endpoint & end
+);
+void socketStop(
     IAppSocketNotifyFactory * factory,
     AppSocket::Family fam,
     std::string_view type,
-    const Endpoint & end);
+    const Endpoint & end
+);
 
 //===========================================================================
 // Add and remove listeners with implicitly created factories. Implemented
 // as templates where the template parameter is the class, derived from 
 // IAppSocketNotify, that will be instantiated for incoming connections.
-template <typename S>
-inline void appSocketUpdateListener(
-    bool add,
-    AppSocket::Family fam,
-    std::string_view type,
-    const Endpoint & end) {
-    static class Factory : public IAppSocketNotifyFactory {
+//===========================================================================
+template <typename S> inline
+std::enable_if_t<
+    std::is_base_of_v<IAppSocketNotify, S>, 
+    IAppSocketNotifyFactory*
+>
+socketFactory() {
+    class Factory : public IAppSocketNotifyFactory {
         std::unique_ptr<IAppSocketNotify> create() override {
             return std::make_unique<S>();
         }
-    } s_factory;
-    if (add) {
-        appSocketAddListener(&s_factory, fam, type, end);
-    } else {
-        appSocketRemoveListener(&s_factory, fam, type, end);
-    }
+    };
+    // As per http://en.cppreference.com/w/cpp/language/inline
+    // "In an inline function, function-local static objects in all function
+    // definitions are shared across all translation units (they all refer to
+    // the same object defined in one translation unit)" 
+    //
+    // Note that this is a difference betwee C and C++
+    static Factory s_factory;
+    return &s_factory;
 }
 
 //===========================================================================
-template <typename S>
-inline void appSocketAddListener(
+template <typename S> inline 
+std::enable_if_t<std::is_base_of_v<IAppSocketNotify, S>, void> socketListen(
     AppSocket::Family fam,
     std::string_view type,
-    const Endpoint & end) {
-    appSocketUpdateListener<S>(true, fam, type, end);
+    const Endpoint & end
+) {
+    auto factory = socketFactory<S>();
+    socketListen(factory, fam, type, end);
 }
 
 //===========================================================================
-template <typename S>
-inline void appSocketRemoveListener(
+template <typename S> inline 
+std::enable_if_t<std::is_base_of_v<IAppSocketNotify, S>, void> socketStop(
     AppSocket::Family fam,
     std::string_view type,
-    const Endpoint & end) {
-    appSocketUpdateListener<S>(false, fam, type, end);
+    const Endpoint & end
+) {
+    auto factory = socketFactory<S>();
+    socketStop(factory, fam, type, end);
 }
 
 } // namespace
