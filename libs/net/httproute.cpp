@@ -23,6 +23,7 @@ using namespace Dim;
 ***/
 
 namespace {
+
 struct PathInfo {
     IHttpRouteNotify * notify;
     bool recurse;
@@ -128,7 +129,7 @@ void RouteConn::reply(unsigned reqId, HttpResponse & msg, bool more) {
     auto conn = it->second.conn;
     CharBuf out;
     httpReply(conn->m_conn, &out, it->second.stream, msg, more);
-    appSocketWrite(conn, out);
+    socketWrite(conn, out);
 }
 
 //===========================================================================
@@ -141,7 +142,7 @@ void RouteConn::reply(unsigned reqId, const T & data, bool more) {
     auto conn = it->second.conn;
     CharBuf out;
     httpData(conn->m_conn, &out, it->second.stream, data, more);
-    appSocketWrite(conn, out);
+    socketWrite(conn, out);
 }
 
 //===========================================================================
@@ -162,9 +163,9 @@ void RouteConn::onSocketRead(const AppSocketData & data) {
     vector<unique_ptr<HttpMsg>> msgs;
     bool result = httpRecv(m_conn, &out, &msgs, data.data, data.bytes);
     if (!out.empty())
-        appSocketWrite(this, out);
+        socketWrite(this, out);
     if (!result)
-        return appSocketDisconnect(this);
+        return socketDisconnect(this);
     for (auto && msg : msgs) {
         if (msg->isRequest()) {
             auto id = makeRequestInfo(this, msg->stream());
@@ -184,21 +185,54 @@ void RouteConn::onSocketRead(const AppSocketData & data) {
 
 /****************************************************************************
 *
+*   Http2Match
+*
+***/
+
+namespace {
+class Http2Match : public IAppSocketMatchNotify {
+    AppSocket::MatchType OnMatch(
+        AppSocket::Family fam, 
+        string_view view) override;
+};
+static Http2Match s_http2Match;
+} // namespace
+
+//===========================================================================
+AppSocket::MatchType Http2Match::OnMatch(
+    AppSocket::Family fam,
+    string_view view
+) {
+    assert(fam == AppSocket::kHttp2);
+    const char kPrefaceData[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
+    const size_t kPrefaceDataLen = size(kPrefaceData);
+    size_t num = min(kPrefaceDataLen, view.size());
+    if (view.compare(0, num, kPrefaceData, num) != 0)
+        return AppSocket::kUnsupported;
+    if (num == kPrefaceDataLen)
+        return AppSocket::kPreferred;
+
+    return AppSocket::kUnknown;
+}
+
+
+/****************************************************************************
+*
 *   Shutdown monitor
 *
 ***/
 
 namespace {
-    class ShutdownMonitor : public IShutdownNotify {
-        void onShutdownClient(bool retry) override;
-    };
-    static ShutdownMonitor s_cleanup;
+class ShutdownMonitor : public IShutdownNotify {
+    void onShutdownClient(bool retry) override;
+};
+static ShutdownMonitor s_cleanup;
 } // namespace
 
 //===========================================================================
 void ShutdownMonitor::onShutdownClient(bool retry) {
     if (!s_paths.empty())
-        appSocketRemoveListener<RouteConn>(AppSocket::kHttp2, "", s_endpoint);
+        socketStop<RouteConn>(AppSocket::kHttp2, "", s_endpoint);
 }
 
 
@@ -210,9 +244,11 @@ void ShutdownMonitor::onShutdownClient(bool retry) {
 
 //===========================================================================
 void Dim::iHttpRouteInitialize() {
+    shutdownMonitor(&s_cleanup);
+    socketAddFamily(AppSocket::kHttp2, &s_http2Match);
+
     s_endpoint = {};
     s_endpoint.port = 8888;
-    shutdownMonitor(&s_cleanup);
 }
 
 
@@ -231,7 +267,7 @@ void Dim::httpRouteAdd(
 ) {
     assert(!path.empty());
     if (s_paths.empty())
-        appSocketAddListener<RouteConn>(AppSocket::kHttp2, "", s_endpoint);
+        socketListen<RouteConn>(AppSocket::kHttp2, "", s_endpoint);
     PathInfo pi;
     pi.notify = notify;
     pi.recurse = recurse;
