@@ -1,7 +1,7 @@
 // Copyright Glen Knowles 2016 - 2017.
 // Distributed under the Boost Software License, Version 1.0.
 //
-// tls.cpp - dim net
+// tls.cpp - dim tls
 #include "pch.h"
 #pragma hdrstop
 

@@ -1,7 +1,7 @@
 // Copyright Glen Knowles 2016 - 2017.
 // Distributed under the Boost Software License, Version 1.0.
 //
-// tls.h - dim net
+// tls.h - dim tls
 //
 // implements tls/1.3, as defined by:
 //  rfc5246bis - Transport Layer Security (TLS) Protocol Version 1.3
