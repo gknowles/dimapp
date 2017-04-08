@@ -110,6 +110,16 @@ static mutex s_unmatchedMut;
 static list<UnmatchedInfo> s_unmatched;
 static UnmatchedTimer s_unmatchedTimer;
 
+// time expired before enough data was received to determine the protocol
+static auto & s_perfNoData = uperf("sock disconnect no data");
+// incoming data didn't match any registered protocol
+static auto & s_perfUnknown = uperf(
+    "sock disconnect unknown protocol");
+// local application called disconnect
+static auto & s_perfExplicit = uperf("sock disconnect app explicit");
+// local application rejected the accept
+static auto & s_perfNotAccepted = uperf("sock disconnect not accepted");
+
 
 /****************************************************************************
 *
@@ -167,6 +177,7 @@ Duration UnmatchedTimer::onTimer(TimePoint now) {
 //===========================================================================
 // static
 void AppSocketBase::disconnect(IAppSocketNotify * notify) {
+    s_perfExplicit += 1;
     socketDisconnect(notify->m_socket);
 }
 
@@ -197,6 +208,7 @@ Duration AppSocketBase::checkTimeout_LK(TimePoint now) {
         return wait;
     s_unmatched.erase(m_pos);
     m_pos = {};
+    s_perfNoData += 1;
     socketDisconnect(this);
     return 0s;
 }
@@ -347,16 +359,20 @@ FINISH:
         m_pos = {};
     }
 
-    if (!fact)
+    if (!fact) {
+        s_perfUnknown += 1;
         return socketDisconnect(this);
+    }
 
     // set notifier from registered factory
     m_notify = fact->create().release();
     m_notify->m_socket = this;
 
     // replay callbacks received so far
-    if (!m_notify->onSocketAccept(m_accept))
+    if (!m_notify->onSocketAccept(m_accept)) {
+        s_perfNotAccepted += 1;
         return socketDisconnect(this);
+    }
     AppSocketData tmp;
     tmp.data = const_cast<char*>(view.data());
     tmp.bytes = (int) view.size();
