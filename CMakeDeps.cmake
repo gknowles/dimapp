@@ -57,6 +57,8 @@
 # libs/net/appint.h
 # libs/net/appsocket.cpp
 # libs/net/appsocket.h
+# libs/net/apptls.cpp
+# libs/net/apptls.h
 # libs/net/hpack.cpp
 # libs/net/hpack.h
 # libs/net/http.h
