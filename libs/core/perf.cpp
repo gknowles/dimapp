@@ -112,27 +112,27 @@ inline void PerfFunc<T>::toString (std::string & out) const {
 ***/
 
 //===========================================================================
-PerfCounter<int> & Dim::perfInt(string_view name) {
+PerfCounter<int> & Dim::iperf(string_view name) {
     return perf<int>(name);
 }
 
 //===========================================================================
-PerfCounter<unsigned> & Dim::perfUnsigned(string_view name) {
+PerfCounter<unsigned> & Dim::uperf(string_view name) {
     return perf<unsigned>(name);
 }
 
 //===========================================================================
-PerfCounter<float> & Dim::perfFloat(string_view name) {
+PerfCounter<float> & Dim::fperf(string_view name) {
     return perf<float>(name);
 }
 
 //===========================================================================
-PerfFunc<int> & Dim::perfInt(string_view name, function<int()> fn) {
+PerfFunc<int> & Dim::iperf(string_view name, function<int()> fn) {
     return perf<int>(name, fn);
 }
 
 //===========================================================================
-PerfFunc<unsigned> & Dim::perfUnsigned(
+PerfFunc<unsigned> & Dim::uperf(
     string_view name, 
     function<unsigned()> fn
 ) {
@@ -140,7 +140,7 @@ PerfFunc<unsigned> & Dim::perfUnsigned(
 }
 
 //===========================================================================
-PerfFunc<float> & Dim::perfFloat(string_view name, function<float()> fn) {
+PerfFunc<float> & Dim::fperf(string_view name, function<float()> fn) {
     return perf<float>(name, fn);
 }
 

@@ -32,16 +32,16 @@ struct PerfFunc : PerfCounterBase {
 };
 
 
-PerfCounter<int> & perfInt(std::string_view name);
-PerfCounter<unsigned> & perfUnsigned(std::string_view name);
-PerfCounter<float> & perfFloat(std::string_view name);
+PerfCounter<int> & iperf(std::string_view name);
+PerfCounter<unsigned> & uperf(std::string_view name);
+PerfCounter<float> & fperf(std::string_view name);
 
-PerfFunc<int> & perfInt(std::string_view name, std::function<int()> fn);
-PerfFunc<unsigned> & perfUnsigned(
+PerfFunc<int> & iperf(std::string_view name, std::function<int()> fn);
+PerfFunc<unsigned> & uperf(
     std::string_view name,
     std::function<unsigned()> fn
 );
-PerfFunc<float> & perfFloat(std::string_view name, std::function<float()> fn);
+PerfFunc<float> & fperf(std::string_view name, std::function<float()> fn);
 
 struct PerfValue {
     std::string_view name;

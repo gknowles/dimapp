@@ -26,10 +26,10 @@ static vector<ILogNotify *> s_notifiers;
 static ILogNotify * s_defaultNotify{&s_fallback};
 
 static PerfCounter<int> * s_perfs[] = {
-    &perfInt("log debug"),
-    &perfInt("log info"),
-    &perfInt("log error"),
-    &perfInt("log crash"),
+    &iperf("log debug"),
+    &iperf("log info"),
+    &iperf("log error"),
+    &iperf("log crash"),
 };
 static_assert(size(s_perfs) == kLogTypes);
 
