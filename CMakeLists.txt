@@ -372,8 +372,6 @@ foreach(var ${config_defines})
     add_definitions(/D${var})
 endforeach()
 
-set(deps, "")
-
 if(ROOT_PROJECT)
     # vendor dependencies
     file(GLOB allnames vendor/*)
@@ -401,6 +399,7 @@ foreach(var ${allnames})
 endforeach()
 
 if(NOT ROOT_PROJECT)
+    set(deps ${deps} PARENT_SCOPE)
     set(libnames ${libnames} PARENT_SCOPE)
     return()
 endif()
