@@ -32,7 +32,7 @@ struct PathInfo {
     unsigned methods;
 };
 
-class RouteConn : public IAppSocketNotify {
+class HttpSocket : public IAppSocketNotify {
 public:
     static void reply(unsigned reqId, HttpResponse & msg, bool more);
     template<typename T>
@@ -49,7 +49,7 @@ private:
 };
 
 struct RequestInfo {
-    RouteConn * conn;
+    HttpSocket * conn;
     int stream;
 };
 
@@ -104,7 +104,7 @@ static void route(unsigned reqId, HttpRequest & req) {
 }
 
 //===========================================================================
-static unsigned makeRequestInfo (RouteConn * conn, int stream) {
+static unsigned makeRequestInfo (HttpSocket * conn, int stream) {
     auto ri = RequestInfo{conn, stream};
     for (;;) {
         auto id = ++s_nextReqId;
@@ -116,13 +116,13 @@ static unsigned makeRequestInfo (RouteConn * conn, int stream) {
 
 /****************************************************************************
 *
-*   RouteConn
+*   HttpSocket
 *
 ***/
 
 //===========================================================================
 // static 
-void RouteConn::reply(unsigned reqId, HttpResponse & msg, bool more) {
+void HttpSocket::reply(unsigned reqId, HttpResponse & msg, bool more) {
     auto it = s_requests.find(reqId);
     if (it == s_requests.end())
         return;
@@ -135,7 +135,7 @@ void RouteConn::reply(unsigned reqId, HttpResponse & msg, bool more) {
 //===========================================================================
 // static 
 template<typename T>
-void RouteConn::reply(unsigned reqId, const T & data, bool more) {
+void HttpSocket::reply(unsigned reqId, const T & data, bool more) {
     auto it = s_requests.find(reqId);
     if (it == s_requests.end())
         return;
@@ -146,19 +146,19 @@ void RouteConn::reply(unsigned reqId, const T & data, bool more) {
 }
 
 //===========================================================================
-bool RouteConn::onSocketAccept(const AppSocketInfo & info) {
+bool HttpSocket::onSocketAccept(const AppSocketInfo & info) {
     m_conn = httpListen();
     return true;
 }
 
 //===========================================================================
-void RouteConn::onSocketDisconnect() {
+void HttpSocket::onSocketDisconnect() {
     httpClose(m_conn);
     m_conn = {};
 }
 
 //===========================================================================
-void RouteConn::onSocketRead(const AppSocketData & data) {
+void HttpSocket::onSocketRead(const AppSocketData & data) {
     CharBuf out;
     vector<unique_ptr<HttpMsg>> msgs;
     bool result = httpRecv(m_conn, &out, &msgs, data.data, data.bytes);
@@ -223,16 +223,16 @@ AppSocket::MatchType Http2Match::OnMatch(
 ***/
 
 namespace {
-class ShutdownMonitor : public IShutdownNotify {
+class ShutdownNotify : public IShutdownNotify {
     void onShutdownClient(bool retry) override;
 };
-static ShutdownMonitor s_cleanup;
+static ShutdownNotify s_cleanup;
 } // namespace
 
 //===========================================================================
-void ShutdownMonitor::onShutdownClient(bool retry) {
+void ShutdownNotify::onShutdownClient(bool retry) {
     if (!s_paths.empty())
-        socketStop<RouteConn>(AppSocket::kHttp2, "", s_endpoint);
+        socketStop<HttpSocket>(AppSocket::kHttp2, "", s_endpoint);
 }
 
 
@@ -267,7 +267,7 @@ void Dim::httpRouteAdd(
 ) {
     assert(!path.empty());
     if (s_paths.empty())
-        socketListen<RouteConn>(AppSocket::kHttp2, "", s_endpoint);
+        socketListen<HttpSocket>(AppSocket::kHttp2, "", s_endpoint);
     PathInfo pi;
     pi.notify = notify;
     pi.recurse = recurse;
@@ -279,17 +279,17 @@ void Dim::httpRouteAdd(
 
 //===========================================================================
 void Dim::httpRouteReply(unsigned reqId, HttpResponse & msg, bool more) {
-    RouteConn::reply(reqId, msg, more);
+    HttpSocket::reply(reqId, msg, more);
 }
 
 //===========================================================================
 void Dim::httpRouteReply(unsigned reqId, const CharBuf & data, bool more) {
-    RouteConn::reply(reqId, data, more);
+    HttpSocket::reply(reqId, data, more);
 }
 
 //===========================================================================
 void Dim::httpRouteReply(unsigned reqId, string_view data, bool more) {
-    RouteConn::reply(reqId, data, more);
+    HttpSocket::reply(reqId, data, more);
 }
 
 //===========================================================================
@@ -320,11 +320,11 @@ struct ReplyWithFileNotify : IFileReadNotify {
         int64_t offset, 
         IFile * file
     ) override {
-        RouteConn::reply(m_reqId, data, true);
+        HttpSocket::reply(m_reqId, data, true);
         return true;
     }
     void onFileEnd(int64_t offset, IFile * file) override {
-        RouteConn::reply(m_reqId, string_view(), false);
+        HttpSocket::reply(m_reqId, string_view(), false);
         delete file;
         delete this;
     }
