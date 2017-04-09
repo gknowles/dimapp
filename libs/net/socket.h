@@ -55,6 +55,9 @@ private:
 
 ISocketNotify::Mode socketGetMode(ISocketNotify * notify);
 void socketDisconnect(ISocketNotify * notify);
+
+// Unlinks notify and links newNotify to the socket, taking ownership of it. 
+// If notify wasn't linked newNotify->onSocketDestroy() is called. 
 void socketSetNotify(ISocketNotify * notify, ISocketNotify * newNotify);
 
 //===========================================================================

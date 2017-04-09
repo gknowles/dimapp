@@ -181,8 +181,13 @@ void SocketBase::disconnect(ISocketNotify * notify) {
 void SocketBase::setNotify(ISocketNotify * notify, ISocketNotify * newNotify) {
     unique_lock<mutex> lk{s_mut};
     if (notify->m_socket) {
-        notify->m_socket->setNotify_LK(newNotify);
+        assert(!newNotify->m_socket);
+        assert(notify == notify->m_socket->m_notify);
+        newNotify->m_socket = notify->m_socket;
+        notify->m_socket->m_notify = newNotify;
         notify->m_socket = nullptr;
+    } else {
+        newNotify->onSocketDestroy();
     }
 }
 
@@ -235,12 +240,6 @@ void SocketBase::hardClose() {
 
     m_mode = Mode::kClosing;
     m_handle = INVALID_SOCKET;
-}
-
-//===========================================================================
-void SocketBase::setNotify_LK(ISocketNotify * notify) {
-    m_notify = notify;
-    m_notify->m_socket = this;
 }
 
 //===========================================================================

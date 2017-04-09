@@ -55,7 +55,6 @@ public:
     virtual ~SocketBase();
 
     void hardClose();
-    void setNotify_LK(ISocketNotify * newNotify);
 
     bool createQueue();
     void onRead();
