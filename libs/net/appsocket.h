@@ -149,4 +149,27 @@ std::enable_if_t<std::is_base_of_v<IAppSocketNotify, S>, void> socketStop(
     socketStop(factory, fam, type, end);
 }
 
+
+/****************************************************************************
+*
+*   AppSocket filter
+*
+***/
+
+void socketAddFilter(
+    IFactory<IAppSocketNotify> * factory,
+    AppSocket::Family fam,
+    std::string_view type
+);
+
+//===========================================================================
+template <typename S> inline 
+std::enable_if_t<std::is_base_of_v<IAppSocketNotify, S>, void> socketAddFilter(
+    AppSocket::Family fam,
+    std::string_view type
+) {
+    auto factory = getFactory<IAppSocketNotify, S>();
+    socketAddFilter(factory, fam, type);
+}
+
 } // namespace

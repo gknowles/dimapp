@@ -11,21 +11,48 @@ using namespace Dim;
 
 /****************************************************************************
 *
-*   Tuning parameters
-*
-***/
-
-/****************************************************************************
-*
 *   Declarations
 *
 ***/
+
+namespace {
+
+class TlsSocket : public IAppSocketNotify {
+public:
+    // IAppSocketNotify
+    bool onSocketAccept (const AppSocketInfo & info) override;
+    void onSocketRead (const AppSocketData & data) override;
+    void onSocketDisconnect () override;
+};
+
+} // namespace
+
 
 /****************************************************************************
 *
 *   Variables
 *
 ***/
+
+
+/****************************************************************************
+*
+*   TlsSocket
+*
+***/
+
+//===========================================================================
+bool TlsSocket::onSocketAccept (const AppSocketInfo & info) {
+    return false;
+}
+
+//===========================================================================
+void TlsSocket::onSocketRead (const AppSocketData & data) {
+}
+
+//===========================================================================
+void TlsSocket::onSocketDisconnect () {
+}
 
 
 /****************************************************************************
@@ -48,8 +75,29 @@ AppSocket::MatchType ByteMatch::OnMatch(
     AppSocket::Family fam,
     string_view view
 ) {
-    assert(fam == AppSocket::kByte);
-    return AppSocket::kSupported;
+    assert(fam == AppSocket::kTls);
+    if (view[0] == 't')
+        return AppSocket::kPreferred;
+
+    return AppSocket::kUnsupported;
+}
+
+
+/****************************************************************************
+*
+*   Shutdown monitor
+*
+***/
+
+namespace {
+class ShutdownNotify : public IShutdownNotify {
+    void onShutdownClient(bool retry) override;
+};
+static ShutdownNotify s_cleanup;
+} // namespace
+
+//===========================================================================
+void ShutdownNotify::onShutdownClient(bool retry) {
 }
 
 
@@ -61,5 +109,7 @@ AppSocket::MatchType ByteMatch::OnMatch(
 
 //===========================================================================
 void Dim::appTlsInitialize() {
-    socketAddFamily(AppSocket::kByte, &s_byteMatch);
+    shutdownMonitor(&s_cleanup);
+    socketAddFamily(AppSocket::kTls, &s_byteMatch);
+    socketAddFilter<TlsSocket>(AppSocket::kTls, "");
 }
