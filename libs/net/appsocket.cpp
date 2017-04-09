@@ -26,12 +26,13 @@ const Duration kUnmatchedMinWait = 2s;
 ***/
 
 namespace {
+
 struct MatchKey {
     IAppSocketMatchNotify * notify{nullptr};
 };
 
 struct FamilyInfo {
-    multimap<string, IAppSocketNotifyFactory *> factories;
+    multimap<string, IFactory<IAppSocketNotify> *> factories;
 };
 
 struct UnmatchedInfo {
@@ -54,10 +55,7 @@ public:
 
 } // namespace
 
-
-namespace Dim {
-    
-class AppSocketBase : public ISocketNotify, ITimerNotify {
+class Dim::AppSocketBase : public ISocketNotify, ITimerNotify {
 public:
     static void disconnect(IAppSocketNotify * notify);
     static void write(IAppSocketNotify * notify, string_view data);
@@ -87,6 +85,9 @@ private:
     unique_ptr<SocketBuffer> m_buffer;
     size_t m_bufferUsed{0};
 };
+
+
+namespace {
 
 class UnmatchedTimer : public ITimerNotify {
     Duration onTimer(TimePoint now) override;
@@ -138,7 +139,7 @@ void EndpointInfo::onListenStop(const Endpoint & local) {
         }
     }
 
-    logMsgError() << "Stopped unknown listener, " << local;
+    logMsgError() << "Stopped unknown listener: " << local;
 }
 
 //===========================================================================
@@ -292,7 +293,7 @@ void AppSocketBase::onSocketRead(const SocketData & data) {
         kExact,     // both addr and port explicitly match
     };
     struct EndpointKey {
-        IAppSocketNotifyFactory * fact{nullptr};
+        IFactory<IAppSocketNotify> * fact{nullptr};
         int level{kUnknown};
     } keys[AppSocket::kNumFamilies];
     for (auto && ptr : s_endpoints) {
@@ -321,7 +322,7 @@ void AppSocketBase::onSocketRead(const SocketData & data) {
     }
 
     bool unknown = false;
-    IAppSocketNotifyFactory * fact = nullptr;
+    IFactory<IAppSocketNotify> * fact = nullptr;
     for (int i = 0; i < AppSocket::kNumFamilies; ++i) {
         auto fam = (AppSocket::Family) i;
         if (auto matcher = s_matchers[fam].notify) {
@@ -520,7 +521,7 @@ static void eraseInfo_LK(const Endpoint & end) {
 
 //===========================================================================
 void Dim::socketListen(
-    IAppSocketNotifyFactory * factory,
+    IFactory<IAppSocketNotify> * factory,
     AppSocket::Family fam,
     string_view type,
     const Endpoint & end
@@ -540,7 +541,7 @@ void Dim::socketListen(
 
 //===========================================================================
 void Dim::socketStop(
-    IAppSocketNotifyFactory * factory,
+    IFactory<IAppSocketNotify> * factory,
     AppSocket::Family fam,
     std::string_view type,
     const Endpoint & end
@@ -569,6 +570,6 @@ void Dim::socketStop(
         }
     }
 
-    logMsgError() << "Remove unknown listener, " << end << ", " << fam << ", "
+    logMsgError() << "Remove unknown listener: " << end << ", " << fam << ", "
                   << type;
 }

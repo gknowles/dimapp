@@ -327,6 +327,52 @@ public:
 
 /****************************************************************************
 *
+*   IFactory
+*
+*   If a service defines Base* and accepts IFactory<Base>* in its interface, 
+*   clients that define their own class (Derived) derived from Base can use
+*   getFactory<Base, Derived>() to get a pointer to a suitable static factory.
+*   
+*   Example usage:
+*   // Service interface
+*   void socketListen(IFactory<ISocketNotify> * fact, const Endpoint & e);
+*
+*   // Client implementation
+*   class MySocket : public ISocketNotify {
+*   };
+*
+*   socketListen(getFactory<ISocketNotify, MySocket>(), endpoint);
+*
+***/
+
+template<typename T>
+class IFactory {
+public:
+    virtual ~IFactory() {}
+    virtual std::unique_ptr<T> create() = 0;
+};
+
+template<typename Base, typename Derived> inline
+std::enable_if_t<std::is_base_of_v<Base, Derived>, IFactory<Base>*>
+getFactory() {
+    class Factory : public IFactory<Base> {
+        std::unique_ptr<Base> create() override {
+            return std::make_unique<Derived>();
+        }
+    };
+    // As per http://en.cppreference.com/w/cpp/language/inline
+    // "In an inline function, function-local static objects in all function
+    // definitions are shared across all translation units (they all refer to
+    // the same object defined in one translation unit)" 
+    //
+    // Note that this is a difference betwee C and C++
+    static Factory s_factory;
+    return &s_factory;
+}
+
+
+/****************************************************************************
+*
 *   filesystem::path
 *
 ***/

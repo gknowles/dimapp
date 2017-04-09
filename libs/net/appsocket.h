@@ -110,20 +110,14 @@ void socketAddFamily(AppSocket::Family fam, IAppSocketMatchNotify * notify);
 *
 ***/
 
-class IAppSocketNotifyFactory {
-public:
-    virtual ~IAppSocketNotifyFactory() {}
-    virtual std::unique_ptr<IAppSocketNotify> create() = 0;
-};
-
 void socketListen(
-    IAppSocketNotifyFactory * factory,
+    IFactory<IAppSocketNotify> * factory,
     AppSocket::Family fam,
     std::string_view type,
     const Endpoint & end
 );
 void socketStop(
-    IAppSocketNotifyFactory * factory,
+    IFactory<IAppSocketNotify> * factory,
     AppSocket::Family fam,
     std::string_view type,
     const Endpoint & end
@@ -134,35 +128,13 @@ void socketStop(
 // as templates where the template parameter is the class, derived from 
 // IAppSocketNotify, that will be instantiated for incoming connections.
 //===========================================================================
-template <typename S> inline
-std::enable_if_t<
-    std::is_base_of_v<IAppSocketNotify, S>, 
-    IAppSocketNotifyFactory*
->
-socketFactory() {
-    class Factory : public IAppSocketNotifyFactory {
-        std::unique_ptr<IAppSocketNotify> create() override {
-            return std::make_unique<S>();
-        }
-    };
-    // As per http://en.cppreference.com/w/cpp/language/inline
-    // "In an inline function, function-local static objects in all function
-    // definitions are shared across all translation units (they all refer to
-    // the same object defined in one translation unit)" 
-    //
-    // Note that this is a difference betwee C and C++
-    static Factory s_factory;
-    return &s_factory;
-}
-
-//===========================================================================
 template <typename S> inline 
 std::enable_if_t<std::is_base_of_v<IAppSocketNotify, S>, void> socketListen(
     AppSocket::Family fam,
     std::string_view type,
     const Endpoint & end
 ) {
-    auto factory = socketFactory<S>();
+    auto factory = getFactory<IAppSocketNotify, S>();
     socketListen(factory, fam, type, end);
 }
 
@@ -173,7 +145,7 @@ std::enable_if_t<std::is_base_of_v<IAppSocketNotify, S>, void> socketStop(
     std::string_view type,
     const Endpoint & end
 ) {
-    auto factory = socketFactory<S>();
+    auto factory = getFactory<IAppSocketNotify, S>();
     socketStop(factory, fam, type, end);
 }
 
