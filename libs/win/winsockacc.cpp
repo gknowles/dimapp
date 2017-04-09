@@ -28,7 +28,7 @@ class ListenSocket;
 
 class AcceptSocket : public SocketBase {
 public:
-    static void accept(ListenSocket * notify);
+    static SOCKET accept(ListenSocket * notify);
 
 public:
     using SocketBase::SocketBase;
@@ -130,7 +130,7 @@ void ListenSocket::onTask() {
 ***/
 
 //===========================================================================
-static void pushAcceptStop(ListenSocket * listen) {
+static SOCKET pushAcceptStop(ListenSocket * listen) {
     pushListenStop(listen);
 
     lock_guard<mutex> lk{s_mut};
@@ -139,19 +139,28 @@ static void pushAcceptStop(ListenSocket * listen) {
             logMsgCrash() << "closesocket(listen): " << WinError{};
         listen->m_handle = INVALID_SOCKET;
     }
-    auto it = s_listeners.begin();
-    for (; it != s_listeners.end(); ++it) {
+    for (auto it = s_listeners.begin(); it != s_listeners.end(); ++it) {
         if (it->get() == listen) {
             s_listeners.erase(it);
             break;
         }
     }
+    return INVALID_SOCKET;
 }
 
 //===========================================================================
 // static
-void AcceptSocket::accept(ListenSocket * listen) {
+SOCKET AcceptSocket::accept(ListenSocket * listen) {
     assert(!listen->m_socket);
+
+    SOCKET h;
+    {
+        lock_guard<mutex> lk{s_mut};
+        h = listen->m_handle;
+    }
+    if (h == INVALID_SOCKET)
+        return pushAcceptStop(listen);
+
     auto sock = make_unique<AcceptSocket>(
         listen->m_notify->onListenCreateSocket(listen->m_localEnd).release());
     sock->m_handle = iSocketCreate();
@@ -196,8 +205,9 @@ void AcceptSocket::accept(ListenSocket * listen) {
         } else {
             logMsgError() << "AcceptEx(" << listen->m_localEnd << "): " << err;
         }
-        pushAcceptStop(listen);
+        return pushAcceptStop(listen);
     }
+    return listen->m_handle;
 }
 
 //===========================================================================
@@ -246,14 +256,11 @@ static bool getAcceptInfo(SocketInfo * out, SOCKET s, void * buffer) {
 void AcceptSocket::onAccept(
     ListenSocket * listen,
     int xferError,
-    int xferBytes) {
+    int xferBytes
+) {
     unique_ptr<AcceptSocket> hostage{move(listen->m_socket)};
 
-    SocketInfo info;
-    bool ok = !xferError && getAcceptInfo(&info, m_handle, listen->m_addrBuf);
-    auto h = listen->m_handle;
-
-    accept(listen);
+    auto h = accept(listen);
 
     if (xferError) {
         if (xferError == ERROR_OPERATION_ABORTED && h == INVALID_SOCKET) {
@@ -263,7 +270,11 @@ void AcceptSocket::onAccept(
         }
         return;
     }
-    if (!ok)
+    if (h == INVALID_SOCKET)
+        return;
+
+    SocketInfo info;
+    if (!getAcceptInfo(&info, m_handle, listen->m_addrBuf))
         return;
 
     if (SOCKET_ERROR == setsockopt(
@@ -279,7 +290,7 @@ void AcceptSocket::onAccept(
     }
 
     // create read/write queue
-    if (!createQueue())
+    if (createQueue())
         return;
 
     if (m_notify->onSocketAccept(info))
