@@ -101,11 +101,8 @@ void RunTimers::onTask() {
         // find next expired timer with notifier to call
         wait = s_timers.empty() ? kTimerInfinite
                                 : s_timers.top().expiration - now;
-        if (wait > 0ms) {
-            s_processingThread = {};
-            s_processing = false;
+        if (wait > 0ms) 
             break;
-        }
         TimerQueueNode node = s_timers.top();
         s_timers.pop();
         if (node.instance != node.timer->instance)
@@ -135,6 +132,9 @@ void RunTimers::onTask() {
             s_timers.push(TimerQueueNode{node.timer});
         }
     }
+    s_processingThread = {};
+    s_processing = false;
+    lk.unlock();
 
     if (wait != kTimerInfinite)
         s_queueCv.notify_one();
