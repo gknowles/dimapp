@@ -131,18 +131,16 @@ void ConfigFile::notify_UNLK(IAppConfigNotify * notify) {
 ***/
 
 namespace {
-
-class Shutdown : public IShutdownNotify {
+class ShutdownNotify : public IShutdownNotify {
     void onShutdownConsole(bool retry) override;
 };
-static Shutdown s_cleanup;
+} // namespace
+static ShutdownNotify s_cleanup;
 
 //===========================================================================
-void Shutdown::onShutdownConsole(bool retry) {
+void ShutdownNotify::onShutdownConsole(bool retry) {
     fileMonitorCloseWait(s_hDir);
 }
-
-} // namespace
 
 
 /****************************************************************************

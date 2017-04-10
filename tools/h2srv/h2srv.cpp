@@ -98,17 +98,19 @@ void WebRoute::onHttpRequest(
 
 /****************************************************************************
 *
-*   MainShutdown
+*   ShutdownNotify
 *
 ***/
 
-class MainShutdown : public IShutdownNotify {
+namespace {
+class ShutdownNotify : public IShutdownNotify {
     void onShutdownClient(bool retry) override;
 };
-static MainShutdown s_cleanup;
+} // namespace
+static ShutdownNotify s_cleanup;
 
 //===========================================================================
-void MainShutdown::onShutdownClient(bool retry) {
+void ShutdownNotify::onShutdownClient(bool retry) {
     socketCloseWait<TnetConn>(AppSocket::kByte, "", s_endpoint);
 }
 

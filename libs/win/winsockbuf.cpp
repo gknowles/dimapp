@@ -197,14 +197,14 @@ SocketBuffer::~SocketBuffer() {
 ***/
 
 namespace {
-class Shutdown : public IShutdownNotify {
+class ShutdownNotify : public IShutdownNotify {
     void onShutdownConsole(bool retry) override;
 };
 } // namespace
-static Shutdown s_cleanup;
+static ShutdownNotify s_cleanup;
 
 //===========================================================================
-void Shutdown::onShutdownConsole(bool retry) {
+void ShutdownNotify::onShutdownConsole(bool retry) {
     lock_guard<mutex> lk{s_mut};
     while (!s_buffers.empty())
         destroyEmptyBuffer();

@@ -226,8 +226,8 @@ namespace {
 class ShutdownNotify : public IShutdownNotify {
     void onShutdownClient(bool retry) override;
 };
-static ShutdownNotify s_cleanup;
 } // namespace
+static ShutdownNotify s_cleanup;
 
 //===========================================================================
 void ShutdownNotify::onShutdownClient(bool retry) {
