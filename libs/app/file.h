@@ -191,7 +191,7 @@ bool fileMonitorDir(
     bool recurse,
     IFileChangeNotify * notify = nullptr
 );
-void fileMonitorStopWait(FileMonitorHandle dir);
+void fileMonitorCloseWait(FileMonitorHandle dir);
 
 // Absolute path to directory being monitored
 std::string_view fileMonitorPath(FileMonitorHandle dir);
@@ -201,7 +201,7 @@ void fileMonitor(
     std::string_view file,
     IFileChangeNotify * notify
 );
-void fileMonitorStopWait(
+void fileMonitorCloseWait(
     FileMonitorHandle dir,
     std::string_view file,
     IFileChangeNotify * notify

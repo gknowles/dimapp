@@ -74,7 +74,7 @@ void socketConnect(
 // listen
 //===========================================================================
 void socketListen(IFactory<ISocketNotify> * factory, const Endpoint & local);
-void socketStopWait(IFactory<ISocketNotify> * factory, const Endpoint & local);
+void socketCloseWait(IFactory<ISocketNotify> * factory, const Endpoint & local);
 
 //===========================================================================
 // write

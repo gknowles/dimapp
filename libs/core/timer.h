@@ -49,6 +49,6 @@ void timerUpdate(
     ITimerNotify * notify,
     Duration wait,
     bool onlyIfSooner = false);
-void timerStopWait(ITimerNotify * notify);
+void timerCloseWait(ITimerNotify * notify);
 
 } // namespace

@@ -139,7 +139,7 @@ static Shutdown s_cleanup;
 
 //===========================================================================
 void Shutdown::onShutdownConsole(bool retry) {
-    fileMonitorStopWait(s_hDir);
+    fileMonitorCloseWait(s_hDir);
 }
 
 } // namespace

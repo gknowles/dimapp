@@ -504,7 +504,7 @@ void Dim::socketListen(
 }
 
 //===========================================================================
-void Dim::socketStopWait(
+void Dim::socketCloseWait(
     IFactory<IAppSocketNotify> * factory,
     AppSocket::Family fam,
     std::string_view type,
@@ -525,7 +525,7 @@ void Dim::socketStopWait(
                     info->families.erase(fi);
                     if (!info->families.empty())
                         return;
-                    socketStopWait(
+                    socketCloseWait(
                         getFactory<ISocketNotify, AppSocketBase>(), 
                         end
                     );

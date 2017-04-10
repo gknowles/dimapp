@@ -116,7 +116,7 @@ void socketListen(
     std::string_view type,
     const Endpoint & end
 );
-void socketStopWait(
+void socketCloseWait(
     IFactory<IAppSocketNotify> * factory,
     AppSocket::Family fam,
     std::string_view type,
@@ -140,13 +140,13 @@ std::enable_if_t<std::is_base_of_v<IAppSocketNotify, S>, void> socketListen(
 
 //===========================================================================
 template <typename S> inline 
-std::enable_if_t<std::is_base_of_v<IAppSocketNotify, S>, void> socketStopWait(
+std::enable_if_t<std::is_base_of_v<IAppSocketNotify, S>, void> socketCloseWait(
     AppSocket::Family fam,
     std::string_view type,
     const Endpoint & end
 ) {
     auto factory = getFactory<IAppSocketNotify, S>();
-    socketStopWait(factory, fam, type, end);
+    socketCloseWait(factory, fam, type, end);
 }
 
 

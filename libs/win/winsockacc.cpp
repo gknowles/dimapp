@@ -376,7 +376,7 @@ void Dim::socketListen(
 }
 
 //===========================================================================
-void Dim::socketStopWait(
+void Dim::socketCloseWait(
     IFactory<ISocketNotify> * factory, 
     const Endpoint & local
 ) {

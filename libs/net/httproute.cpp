@@ -232,7 +232,7 @@ static ShutdownNotify s_cleanup;
 //===========================================================================
 void ShutdownNotify::onShutdownClient(bool retry) {
     if (!s_paths.empty())
-        socketStopWait<HttpSocket>(AppSocket::kHttp2, "", s_endpoint);
+        socketCloseWait<HttpSocket>(AppSocket::kHttp2, "", s_endpoint);
 }
 
 

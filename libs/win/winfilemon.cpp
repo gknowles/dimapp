@@ -29,7 +29,7 @@ public:
     ~DirInfo();
 
     bool start(string_view path, bool recurse);
-    void stopWait_UNLK(FileMonitorHandle dir);
+    void closeWait_UNLK(FileMonitorHandle dir);
 
     void addMonitor_UNLK(IFileChangeNotify * notify, string_view file);
     void removeMonitorWait_UNLK(IFileChangeNotify * notify, string_view file);
@@ -152,7 +152,7 @@ bool DirInfo::queue() {
 }
 
 //===========================================================================
-void DirInfo::stopWait_UNLK (FileMonitorHandle dir) {
+void DirInfo::closeWait_UNLK (FileMonitorHandle dir) {
     {
         unique_lock<mutex> lk{s_mut, adopt_lock};
 
@@ -400,11 +400,11 @@ bool Dim::fileMonitorDir(
 }
 
 //===========================================================================
-void Dim::fileMonitorStopWait(FileMonitorHandle dir) {
+void Dim::fileMonitorCloseWait(FileMonitorHandle dir) {
     s_mut.lock();
     auto di = s_dirs.find(dir);
     assert(di);
-    di->stopWait_UNLK(dir);
+    di->closeWait_UNLK(dir);
 }
 
 //===========================================================================
@@ -429,7 +429,7 @@ void Dim::fileMonitor(
 }
 
 //===========================================================================
-void Dim::fileMonitorStopWait(
+void Dim::fileMonitorCloseWait(
     FileMonitorHandle dir,
     string_view file,
     IFileChangeNotify * notify
