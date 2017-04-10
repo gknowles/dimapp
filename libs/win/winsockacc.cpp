@@ -47,6 +47,7 @@ public:
     IFactory<ISocketNotify> * m_notify{nullptr};
     char m_addrBuf[2 * sizeof sockaddr_storage];
 
+    bool m_inNotify{false};
     thread::id m_inThread;
     condition_variable m_inCv;
 
@@ -98,24 +99,6 @@ void ListenSocket::destroy_LK() {
 
 //===========================================================================
 void ListenSocket::onTask() {
-    {
-        unique_lock<mutex> lk{s_mut};
-        if (m_stopRequested) {
-            if (m_stopDone) {
-                destroy_LK();
-            } else {
-                m_mode = ISocketNotify::kClosed;
-                lk.unlock();
-                m_inCv.notify_all();
-            }
-            return;
-        }
-        if (m_handle == INVALID_SOCKET) {
-            m_mode = ISocketNotify::kClosed;
-            return;
-        }
-    }
-
     DWORD bytes;
     WinError err{0};
     if (!GetOverlappedResult(NULL, &m_overlapped, &bytes, false)) 
@@ -125,10 +108,14 @@ void ListenSocket::onTask() {
     if (!AcceptSocket::accept(this)) {
         assert(m_handle == INVALID_SOCKET);
         unique_lock<mutex> lk{s_mut};
-        m_mode = ISocketNotify::kClosing;
-        if (m_stopRequested && !m_stopDone) {
-            lk.unlock();
-            m_inCv.notify_all();
+        if (m_stopRequested) {
+            if (m_stopDone) {
+                destroy_LK();
+            } else {
+                m_mode = ISocketNotify::kClosed;
+                lk.unlock();
+                m_inCv.notify_all();
+            }
         }
     }
 }
@@ -206,6 +193,7 @@ bool AcceptSocket::accept(ListenSocket * listen) {
         } else {
             logMsgError() << "AcceptEx(" << listen->m_localEnd << "): " << err;
         }
+        listen->m_socket.reset();
         return closeListen(listen);
     }
     return true;
@@ -264,7 +252,7 @@ void AcceptSocket::onAccept(
 
     bool ok = listen->m_handle != INVALID_SOCKET;
     if (xferError) {
-        if (xferError == ERROR_OPERATION_ABORTED && ok) {
+        if (xferError == ERROR_OPERATION_ABORTED && !ok) {
             // socket intentionally closed
         } else {
             logMsgError() << "onAccept: " << WinError(xferError);
@@ -294,6 +282,7 @@ void AcceptSocket::onAccept(
         lock_guard<mutex> lk{s_mut};
         m_notify = listen->m_notify->onFactoryCreate().release();
         listen->m_inThread = this_thread::get_id();
+        listen->m_inNotify = true;
     }
 
     // create read/write queue
@@ -303,6 +292,7 @@ void AcceptSocket::onAccept(
     {
         lock_guard<mutex> lk{s_mut};
         listen->m_inThread = {};
+        listen->m_inNotify = false;
     }
 }
 
@@ -381,22 +371,29 @@ void Dim::socketCloseWait(
     const Endpoint & local
 ) {
     unique_lock<mutex> lk{s_mut};
-    for (auto it = s_listeners.begin(); it != s_listeners.end(); ++it) {
-        auto ptr = it->get();
-        if (ptr->m_notify == factory && ptr->m_localEnd == local) {
-            closeListen_LK(ptr);
-            ptr->m_stopRequested = true;
-            while (ptr->m_mode == ISocketNotify::kActive
-                && ptr->m_inThread != this_thread::get_id()
-            ) {
-                ptr->m_inCv.wait(lk);
-            }
-            if (ptr->m_mode == ISocketNotify::kClosed) {
-                s_listeners.erase(it);
-            } else {
-                ptr->m_stopDone = true;
-            }
+    auto it = s_listeners.begin(),
+        e = s_listeners.end();
+    ListenSocket * ptr;
+    for (;; ++it) {
+        if (it == e)
             return;
-        }
+        ptr = it->get();
+        if (ptr->m_notify == factory && ptr->m_localEnd == local) 
+            break;
+    }
+
+    // found match listener
+    closeListen_LK(ptr);
+    ptr->m_stopRequested = true;
+
+    // Wait until the callback handler returns, unless that would mean 
+    // deadlocking by waiting for ourselves to return.
+    while (ptr->m_inNotify && ptr->m_inThread != this_thread::get_id())
+        ptr->m_inCv.wait(lk);
+
+    if (ptr->m_mode == ISocketNotify::kClosed) {
+        s_listeners.erase(it);
+    } else {
+        ptr->m_stopDone = true;
     }
 }
