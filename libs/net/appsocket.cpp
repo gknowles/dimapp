@@ -500,7 +500,7 @@ void Dim::socketListen(
         info->families[fam].factories.insert(make_pair(type, factory));
     }
     if (addNew)
-        socketListen(getFactory<ISocketNotify, AppSocketBase>(), end);
+        socketListen<AppSocketBase>(end);
 }
 
 //===========================================================================
@@ -525,10 +525,7 @@ void Dim::socketCloseWait(
                     info->families.erase(fi);
                     if (!info->families.empty())
                         return;
-                    socketCloseWait(
-                        getFactory<ISocketNotify, AppSocketBase>(), 
-                        end
-                    );
+                    socketCloseWait<AppSocketBase>(end);
                     eraseInfo_LK(end);
                     return;
                 }

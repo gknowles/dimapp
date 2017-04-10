@@ -77,6 +77,24 @@ void socketListen(IFactory<ISocketNotify> * factory, const Endpoint & local);
 void socketCloseWait(IFactory<ISocketNotify> * factory, const Endpoint & local);
 
 //===========================================================================
+template <typename S> inline 
+std::enable_if_t<std::is_base_of_v<ISocketNotify, S>, void> socketListen(
+    const Endpoint & local
+) {
+    auto factory = getFactory<ISocketNotify, S>();
+    socketListen(factory, local);
+}
+
+//===========================================================================
+template <typename S> inline 
+std::enable_if_t<std::is_base_of_v<ISocketNotify, S>, void> socketCloseWait(
+    const Endpoint & local
+) {
+    auto factory = getFactory<ISocketNotify, S>();
+    socketCloseWait(factory, local);
+}
+
+//===========================================================================
 // write
 //===========================================================================
 struct SocketBuffer {
