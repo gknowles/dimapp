@@ -349,14 +349,14 @@ template<typename T>
 class IFactory {
 public:
     virtual ~IFactory() {}
-    virtual std::unique_ptr<T> create() = 0;
+    virtual std::unique_ptr<T> onFactoryCreate() = 0;
 };
 
 template<typename Base, typename Derived> inline
 std::enable_if_t<std::is_base_of_v<Base, Derived>, IFactory<Base>*>
 getFactory() {
     class Factory : public IFactory<Base> {
-        std::unique_ptr<Base> create() override {
+        std::unique_ptr<Base> onFactoryCreate() override {
             return std::make_unique<Derived>();
         }
     };

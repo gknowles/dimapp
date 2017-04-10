@@ -361,7 +361,7 @@ void Dim::socketListen(
 }
 
 //===========================================================================
-void Dim::socketStop(ISocketListenNotify * notify, const Endpoint & local) {
+void Dim::socketStopWait(ISocketListenNotify * notify, const Endpoint & local) {
     lock_guard<mutex> lk{s_mut};
     for (auto && ptr : s_listeners) {
         if (ptr->m_notify == notify && ptr->m_localEnd == local

@@ -82,7 +82,7 @@ public:
     ) = 0;
 };
 void socketListen(ISocketListenNotify * notify, const Endpoint & local);
-void socketStop(ISocketListenNotify * notify, const Endpoint & local);
+void socketStopWait(ISocketListenNotify * notify, const Endpoint & local);
 
 //===========================================================================
 // write

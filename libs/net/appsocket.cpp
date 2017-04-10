@@ -366,7 +366,7 @@ FINISH:
     }
 
     // set notifier from registered factory
-    m_notify = fact->create().release();
+    m_notify = fact->onFactoryCreate().release();
     m_notify->m_socket = this;
 
     // replay callbacks received so far
@@ -540,7 +540,7 @@ void Dim::socketListen(
 }
 
 //===========================================================================
-void Dim::socketStop(
+void Dim::socketStopWait(
     IFactory<IAppSocketNotify> * factory,
     AppSocket::Family fam,
     std::string_view type,
@@ -561,7 +561,7 @@ void Dim::socketStop(
                     info->families.erase(fi);
                     if (!info->families.empty())
                         return;
-                    socketStop(info, end);
+                    socketStopWait(info, end);
                     eraseInfo_LK(end);
                     s_stopping.push_back(info);
                     return;

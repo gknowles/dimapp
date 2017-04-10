@@ -103,7 +103,7 @@ void RioDispatchThread::onTask() {
 
         for (int i = 0; i < count; ++i) {
             auto && rr = results[i];
-            auto task = (SocketRequestTaskBase *)rr.RequestContext;
+            auto task = (ISocketRequestTaskBase *)rr.RequestContext;
             task->m_socket = (SocketBase *)rr.SocketContext;
             task->m_xferError = (WinError::NtStatus)rr.Status;
             task->m_xferBytes = rr.BytesTransferred;

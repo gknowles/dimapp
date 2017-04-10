@@ -109,7 +109,7 @@ static MainShutdown s_cleanup;
 
 //===========================================================================
 void MainShutdown::onShutdownClient(bool retry) {
-    socketStop<TnetConn>(AppSocket::kByte, "", s_endpoint);
+    socketStopWait<TnetConn>(AppSocket::kByte, "", s_endpoint);
 }
 
 

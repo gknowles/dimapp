@@ -16,7 +16,7 @@ namespace Dim {
 *
 ***/
 
-class SocketRequestTaskBase : public ITaskNotify {
+class ISocketRequestTaskBase : public ITaskNotify {
     virtual void onTask() override = 0;
 
 public:
@@ -29,11 +29,11 @@ public:
     SocketBase * m_socket{nullptr};
 };
 
-class SocketReadTask : public SocketRequestTaskBase {
+class SocketReadTask : public ISocketRequestTaskBase {
     void onTask() override;
 };
 
-class SocketWriteTask : public SocketRequestTaskBase {
+class SocketWriteTask : public ISocketRequestTaskBase {
     void onTask() override;
 };
 
