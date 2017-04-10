@@ -41,13 +41,7 @@ struct UnmatchedInfo {
     AppSocketBase * notify{nullptr};
 };
 
-class EndpointInfo : public ISocketListenNotify {
-public:
-    void onListenStop(const Endpoint & local) override;
-    std::unique_ptr<ISocketNotify> onListenCreateSocket(
-        const Endpoint & local
-    ) override;
-
+struct EndpointInfo {
     Endpoint endpoint;
     unordered_map<AppSocket::Family, FamilyInfo> families;
     bool stopping{false};
@@ -104,8 +98,7 @@ class UnmatchedTimer : public ITimerNotify {
 
 static shared_mutex s_listenMut;
 static MatchKey s_matchers[AppSocket::kNumFamilies];
-static vector<EndpointInfo *> s_endpoints;
-static vector<EndpointInfo *> s_stopping;
+static vector<EndpointInfo> s_endpoints;
 
 static mutex s_unmatchedMut;
 static list<UnmatchedInfo> s_unmatched;
@@ -120,33 +113,6 @@ static auto & s_perfUnknown = uperf(
 static auto & s_perfExplicit = uperf("sock disconnect app explicit");
 // local application rejected the accept
 static auto & s_perfNotAccepted = uperf("sock disconnect not accepted");
-
-
-/****************************************************************************
-*
-*   EndpointInfo
-*
-***/
-
-//===========================================================================
-void EndpointInfo::onListenStop(const Endpoint & local) {
-    unique_lock<shared_mutex> lk{s_listenMut};
-    for (auto i = s_stopping.begin(), e = s_stopping.end(); i != e; ++i) {
-        if (*i == this) {
-            s_stopping.erase(i);
-            delete this;
-            return;
-        }
-    }
-
-    logMsgError() << "Stopped unknown listener: " << local;
-}
-
-//===========================================================================
-std::unique_ptr<ISocketNotify> 
-EndpointInfo::onListenCreateSocket(const Endpoint & local) {
-    return make_unique<AppSocketBase>();
-}
 
 
 /****************************************************************************
@@ -296,22 +262,22 @@ void AppSocketBase::onSocketRead(const SocketData & data) {
         IFactory<IAppSocketNotify> * fact{nullptr};
         int level{kUnknown};
     } keys[AppSocket::kNumFamilies];
-    for (auto && ptr : s_endpoints) {
+    for (auto && info : s_endpoints) {
         int level{kUnknown};
-        if (ptr->endpoint == m_accept.local) {
+        if (info.endpoint == m_accept.local) {
             level = kExact;
-        } else if (!ptr->endpoint.addr) {
-            if (ptr->endpoint.port == m_accept.local.port) {
+        } else if (!info.endpoint.addr) {
+            if (info.endpoint.port == m_accept.local.port) {
                 level = kPort;
-            } else if (!ptr->endpoint.port) {
+            } else if (!info.endpoint.port) {
                 level = kWild;
             }
-        } else if (!ptr->endpoint.port 
-            && ptr->endpoint.addr == m_accept.local.addr
+        } else if (!info.endpoint.port 
+            && info.endpoint.addr == m_accept.local.addr
         ) {
             level = kAddr;
         }
-        for (auto && fam : ptr->families) {
+        for (auto && fam : info.families) {
             if (level > keys[fam.first].level) {
                 auto i = fam.second.factories.lower_bound("");
                 if (i != fam.second.factories.end()) {
@@ -433,8 +399,6 @@ static ShutdownNotify s_cleanup;
 void ShutdownNotify::onShutdownClient(bool retry) {
     shared_lock<shared_mutex> lk{s_listenMut};
     assert(s_endpoints.empty());
-    if (!s_stopping.empty())
-        shutdownIncomplete();
 }
 
 //===========================================================================
@@ -495,14 +459,14 @@ void Dim::socketAddFamily(
 //===========================================================================
 static EndpointInfo * findInfo_LK(const Endpoint & end, bool findAlways) {
     for (auto && ep : s_endpoints) {
-        if (ep->endpoint == end) 
-            return ep;
+        if (ep.endpoint == end) 
+            return &ep;
     }
     if (findAlways) {
-        auto info = new EndpointInfo;
-        info->endpoint = end;
+        EndpointInfo info;
+        info.endpoint = end;
         s_endpoints.push_back(info);
-        return info;
+        return &s_endpoints.back();
     }
     return nullptr;
 }
@@ -512,7 +476,7 @@ static void eraseInfo_LK(const Endpoint & end) {
     auto i = s_endpoints.begin();
     auto e = s_endpoints.end();
     for (; i != e; ++i) {
-        if ((*i)->endpoint == end) {
+        if (i->endpoint == end) {
             s_endpoints.erase(i);
             return;
         }
@@ -536,7 +500,7 @@ void Dim::socketListen(
         info->families[fam].factories.insert(make_pair(type, factory));
     }
     if (addNew)
-        socketListen(info, end);
+        socketListen(getFactory<ISocketNotify, AppSocketBase>(), end);
 }
 
 //===========================================================================
@@ -561,9 +525,11 @@ void Dim::socketStopWait(
                     info->families.erase(fi);
                     if (!info->families.empty())
                         return;
-                    socketStopWait(info, end);
+                    socketStopWait(
+                        getFactory<ISocketNotify, AppSocketBase>(), 
+                        end
+                    );
                     eraseInfo_LK(end);
-                    s_stopping.push_back(info);
                     return;
                 }
             }

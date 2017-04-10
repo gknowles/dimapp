@@ -28,7 +28,7 @@ class ListenSocket;
 
 class AcceptSocket : public SocketBase {
 public:
-    static SOCKET accept(ListenSocket * notify);
+    static bool accept(ListenSocket * notify);
 
 public:
     using SocketBase::SocketBase;
@@ -37,24 +37,24 @@ public:
 
 class ListenSocket : public IWinEventWaitNotify {
 public:
+    bool m_stopRequested{false};
+    bool m_stopDone{false};
+    ISocketNotify::Mode m_mode{ISocketNotify::kInactive};
+
     SOCKET m_handle{INVALID_SOCKET};
     Endpoint m_localEnd;
     unique_ptr<AcceptSocket> m_socket;
-    ISocketListenNotify * m_notify{nullptr};
+    IFactory<ISocketNotify> * m_notify{nullptr};
     char m_addrBuf[2 * sizeof sockaddr_storage];
 
-public:
-    ListenSocket(ISocketListenNotify * notify, const Endpoint & end);
-
-    void onTask() override;
-};
-
-class ListenStopTask : public ITaskNotify {
-    ISocketListenNotify * m_notify{nullptr};
-    Endpoint m_localEnd;
+    thread::id m_inThread;
+    condition_variable m_inCv;
 
 public:
-    ListenStopTask(ListenSocket * listen);
+    ListenSocket(IFactory<ISocketNotify> * notify, const Endpoint & end);
+
+    void destroy_LK();
+
     void onTask() override;
 };
 
@@ -73,53 +73,64 @@ static list<unique_ptr<ListenSocket>> s_listeners;
 
 /****************************************************************************
 *
-*   ListenStopTask
-*
-***/
-
-//===========================================================================
-ListenStopTask::ListenStopTask(ListenSocket * listen)
-    : m_notify(listen->m_notify) 
-    , m_localEnd(listen->m_localEnd)
-    {}
-
-//===========================================================================
-void ListenStopTask::onTask() {
-    m_notify->onListenStop(m_localEnd);
-    delete this;
-}
-
-//===========================================================================
-static void pushListenStop(ListenSocket * listen) {
-    auto ptr = new ListenStopTask(listen);
-    taskPushEvent(*ptr);
-}
-
-
-/****************************************************************************
-*
 *   ListenSocket
 *
 ***/
 
 //===========================================================================
-ListenSocket::ListenSocket(ISocketListenNotify * notify, const Endpoint & end)
+ListenSocket::ListenSocket(
+    IFactory<ISocketNotify> * notify, 
+    const Endpoint & end
+)
     : m_notify{notify}
-    , m_localEnd{end} {}
+    , m_localEnd{end} 
+{}
+
+//===========================================================================
+void ListenSocket::destroy_LK() {
+    for (auto it = s_listeners.begin(); it != s_listeners.end(); ++it) {
+        if (this == it->get()) {
+            s_listeners.erase(it);
+            return;
+        }
+    }
+}
 
 //===========================================================================
 void ListenSocket::onTask() {
-    DWORD bytesTransferred;
-    WinError err{0};
-    if (!GetOverlappedResult(
-            NULL,
-            &m_overlapped,
-            &bytesTransferred,
-            false // wait?
-            )) {
-        err = WinError{};
+    {
+        unique_lock<mutex> lk{s_mut};
+        if (m_stopRequested) {
+            if (m_stopDone) {
+                destroy_LK();
+            } else {
+                m_mode = ISocketNotify::kClosed;
+                lk.unlock();
+                m_inCv.notify_all();
+            }
+            return;
+        }
+        if (m_handle == INVALID_SOCKET) {
+            m_mode = ISocketNotify::kClosed;
+            return;
+        }
     }
-    m_socket->onAccept(this, err, bytesTransferred);
+
+    DWORD bytes;
+    WinError err{0};
+    if (!GetOverlappedResult(NULL, &m_overlapped, &bytes, false)) 
+        err.set();
+    m_socket->onAccept(this, err, bytes);
+
+    if (!AcceptSocket::accept(this)) {
+        assert(m_handle == INVALID_SOCKET);
+        unique_lock<mutex> lk{s_mut};
+        m_mode = ISocketNotify::kClosing;
+        if (m_stopRequested && !m_stopDone) {
+            lk.unlock();
+            m_inCv.notify_all();
+        }
+    }
 }
 
 
@@ -130,60 +141,49 @@ void ListenSocket::onTask() {
 ***/
 
 //===========================================================================
-static SOCKET pushAcceptStop(ListenSocket * listen) {
-    pushListenStop(listen);
-
-    lock_guard<mutex> lk{s_mut};
+static bool closeListen_LK(ListenSocket * listen) {
+    listen->m_mode = ISocketNotify::kClosing;
     if (listen->m_handle != INVALID_SOCKET) {
         if (SOCKET_ERROR == closesocket(listen->m_handle))
             logMsgCrash() << "closesocket(listen): " << WinError{};
         listen->m_handle = INVALID_SOCKET;
     }
-    for (auto it = s_listeners.begin(); it != s_listeners.end(); ++it) {
-        if (it->get() == listen) {
-            s_listeners.erase(it);
-            break;
-        }
-    }
-    return INVALID_SOCKET;
+    return false;
+}
+
+//===========================================================================
+static bool closeListen(ListenSocket * listen) {
+    unique_lock<mutex> lk{s_mut};
+    return closeListen_LK(listen);
 }
 
 //===========================================================================
 // static
-SOCKET AcceptSocket::accept(ListenSocket * listen) {
+bool AcceptSocket::accept(ListenSocket * listen) {
     assert(!listen->m_socket);
 
-    SOCKET h;
-    {
-        lock_guard<mutex> lk{s_mut};
-        h = listen->m_handle;
-    }
-    if (h == INVALID_SOCKET)
-        return pushAcceptStop(listen);
-
-    auto sock = make_unique<AcceptSocket>(
-        listen->m_notify->onListenCreateSocket(listen->m_localEnd).release());
+    auto sock = make_unique<AcceptSocket>(nullptr);
     sock->m_handle = iSocketCreate();
     if (sock->m_handle == INVALID_SOCKET)
-        return pushAcceptStop(listen);
+        return closeListen(listen);
 
     // get AcceptEx function
     GUID extId = WSAID_ACCEPTEX;
     LPFN_ACCEPTEX fAcceptEx;
     DWORD bytes;
     if (WSAIoctl(
-            sock->m_handle,
-            SIO_GET_EXTENSION_FUNCTION_POINTER,
-            &extId,
-            sizeof(extId),
-            &fAcceptEx,
-            sizeof(fAcceptEx),
-            &bytes,
-            nullptr, // overlapped
-            nullptr  // completion routine
-            )) {
+        sock->m_handle,
+        SIO_GET_EXTENSION_FUNCTION_POINTER,
+        &extId,
+        sizeof(extId),
+        &fAcceptEx,
+        sizeof(fAcceptEx),
+        &bytes,
+        nullptr, // overlapped
+        nullptr  // completion routine
+    )) {
         logMsgError() << "WSAIoctl(get AcceptEx): " << WinError{};
-        return pushAcceptStop(listen);
+        return closeListen(listen);
     }
 
     sock->m_mode = Mode::kAccepting;
@@ -197,7 +197,8 @@ SOCKET AcceptSocket::accept(ListenSocket * listen) {
         sizeof sockaddr_storage, // local endpoint length
         sizeof sockaddr_storage, // remote endpoint length
         nullptr,                 // bytes received
-        &listen->m_overlapped);
+        &listen->m_overlapped
+    );
     WinError err;
     if (!error || err != ERROR_IO_PENDING) {
         if (err == WSAENOTSOCK && listen->m_handle == INVALID_SOCKET) {
@@ -205,9 +206,9 @@ SOCKET AcceptSocket::accept(ListenSocket * listen) {
         } else {
             logMsgError() << "AcceptEx(" << listen->m_localEnd << "): " << err;
         }
-        return pushAcceptStop(listen);
+        return closeListen(listen);
     }
-    return listen->m_handle;
+    return true;
 }
 
 //===========================================================================
@@ -216,16 +217,16 @@ static bool getAcceptInfo(SocketInfo * out, SOCKET s, void * buffer) {
     LPFN_GETACCEPTEXSOCKADDRS fGetAcceptExSockAddrs;
     DWORD bytes;
     if (WSAIoctl(
-            s,
-            SIO_GET_EXTENSION_FUNCTION_POINTER,
-            &extId,
-            sizeof(extId),
-            &fGetAcceptExSockAddrs,
-            sizeof(fGetAcceptExSockAddrs),
-            &bytes,
-            nullptr, // overlapped
-            nullptr  // completion routine
-            )) {
+        s,
+        SIO_GET_EXTENSION_FUNCTION_POINTER,
+        &extId,
+        sizeof(extId),
+        &fGetAcceptExSockAddrs,
+        sizeof(fGetAcceptExSockAddrs),
+        &bytes,
+        nullptr, // overlapped
+        nullptr  // completion routine
+    )) {
         logMsgError() << "WSAIoctl(get GetAcceptExSockAddrs): " << WinError{};
         return false;
     }
@@ -242,7 +243,8 @@ static bool getAcceptInfo(SocketInfo * out, SOCKET s, void * buffer) {
         &lsa,
         &lsaLen,
         &rsa,
-        &rsaLen);
+        &rsaLen
+    );
 
     sockaddr_storage sas;
     memcpy(&sas, lsa, lsaLen);
@@ -260,17 +262,16 @@ void AcceptSocket::onAccept(
 ) {
     unique_ptr<AcceptSocket> hostage{move(listen->m_socket)};
 
-    auto h = accept(listen);
-
+    bool ok = listen->m_handle != INVALID_SOCKET;
     if (xferError) {
-        if (xferError == ERROR_OPERATION_ABORTED && h == INVALID_SOCKET) {
+        if (xferError == ERROR_OPERATION_ABORTED && ok) {
             // socket intentionally closed
         } else {
             logMsgError() << "onAccept: " << WinError(xferError);
         }
         return;
     }
-    if (h == INVALID_SOCKET)
+    if (!ok)
         return;
 
     SocketInfo info;
@@ -285,16 +286,24 @@ void AcceptSocket::onAccept(
         sizeof listen->m_handle
     )) {
         logMsgError() << "setsockopt(SO_UPDATE_ACCEPT_CONTEXT): "
-                      << WinError{};
+            << WinError{};
         return;
     }
 
-    // create read/write queue
-    if (createQueue())
-        return;
+    {
+        lock_guard<mutex> lk{s_mut};
+        m_notify = listen->m_notify->onFactoryCreate().release();
+        listen->m_inThread = this_thread::get_id();
+    }
 
-    if (m_notify->onSocketAccept(info))
+    // create read/write queue
+    if (createQueue() && m_notify->onSocketAccept(info))
         hostage.release();
+
+    {
+        lock_guard<mutex> lk{s_mut};
+        listen->m_inThread = {};
+    }
 }
 
 
@@ -313,7 +322,9 @@ static ShutdownNotify s_cleanup;
 
 //===========================================================================
 void ShutdownNotify::onShutdownConsole(bool retry) {
-    assert(s_listeners.empty());
+    lock_guard<mutex> lk{s_mut};
+    if (!s_listeners.empty())
+        return shutdownIncomplete();
 }
 
 
@@ -337,39 +348,54 @@ void Dim::iSocketAcceptInitialize() {
 
 //===========================================================================
 void Dim::socketListen(
-    ISocketListenNotify * notify,
-    const Endpoint & local) {
-    auto hostage = make_unique<ListenSocket>(notify, local);
+    IFactory<ISocketNotify> * factory,
+    const Endpoint & local
+) {
+    auto hostage = make_unique<ListenSocket>(factory, local);
     auto sock = hostage.get();
     sock->m_handle = iSocketCreate(local);
     if (sock->m_handle == INVALID_SOCKET)
-        return pushListenStop(sock);
+        return;
 
     if (SOCKET_ERROR == listen(sock->m_handle, SOMAXCONN)) {
         logMsgError() << "listen(SOMAXCONN): " << WinError{};
         if (SOCKET_ERROR == closesocket(sock->m_handle))
             logMsgError() << "closesocket(listen): " << WinError{};
-        return pushListenStop(sock);
+        return;
     }
+
+    sock->m_mode = ISocketNotify::kActive;
 
     {
         lock_guard<mutex> lk{s_mut};
         s_listeners.push_back(move(hostage));
     }
 
-    AcceptSocket::accept(sock);
+    if (!AcceptSocket::accept(sock))
+        sock->m_mode = ISocketNotify::kClosed;
 }
 
 //===========================================================================
-void Dim::socketStopWait(ISocketListenNotify * notify, const Endpoint & local) {
-    lock_guard<mutex> lk{s_mut};
-    for (auto && ptr : s_listeners) {
-        if (ptr->m_notify == notify && ptr->m_localEnd == local
-            && ptr->m_handle != INVALID_SOCKET) {
-            if (SOCKET_ERROR == closesocket(ptr->m_handle)) {
-                logMsgError() << "closesocket(listen): " << WinError{};
+void Dim::socketStopWait(
+    IFactory<ISocketNotify> * factory, 
+    const Endpoint & local
+) {
+    unique_lock<mutex> lk{s_mut};
+    for (auto it = s_listeners.begin(); it != s_listeners.end(); ++it) {
+        auto ptr = it->get();
+        if (ptr->m_notify == factory && ptr->m_localEnd == local) {
+            closeListen_LK(ptr);
+            ptr->m_stopRequested = true;
+            while (ptr->m_mode == ISocketNotify::kActive
+                && ptr->m_inThread != this_thread::get_id()
+            ) {
+                ptr->m_inCv.wait(lk);
             }
-            ptr->m_handle = INVALID_SOCKET;
+            if (ptr->m_mode == ISocketNotify::kClosed) {
+                s_listeners.erase(it);
+            } else {
+                ptr->m_stopDone = true;
+            }
             return;
         }
     }

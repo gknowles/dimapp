@@ -73,16 +73,8 @@ void socketConnect(
 //===========================================================================
 // listen
 //===========================================================================
-class ISocketListenNotify {
-public:
-    virtual ~ISocketListenNotify() {}
-    virtual void onListenStop(const Endpoint & local) = 0;
-    virtual std::unique_ptr<ISocketNotify> onListenCreateSocket(
-        const Endpoint & local
-    ) = 0;
-};
-void socketListen(ISocketListenNotify * notify, const Endpoint & local);
-void socketStopWait(ISocketListenNotify * notify, const Endpoint & local);
+void socketListen(IFactory<ISocketNotify> * factory, const Endpoint & local);
+void socketStopWait(IFactory<ISocketNotify> * factory, const Endpoint & local);
 
 //===========================================================================
 // write
