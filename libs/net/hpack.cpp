@@ -457,7 +457,7 @@ void HpackEncode::endBlock() {}
 void HpackEncode::header(const char name[], const char value[], int flags) {
     // (0x00) - literal header field without indexing (new name)
     // (0x10) - literal header field never indexed (new name)
-    m_out->append(1, (flags & kNeverIndexed) ? 0x10 : 0x00);
+    m_out->append(1, (flags & fNeverIndexed) ? 0x10 : 0x00);
     write(name);
     write(value);
 }

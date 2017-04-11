@@ -247,7 +247,7 @@ addRulePositions(bool * skippable, State * st, StatePosition * sp, bool init) {
     auto & se = sp->elems.back();
     const Element & elem = *se.elem;
     *skippable = false;
-    if (elem.rule->flags & Element::kFunction) {
+    if (elem.rule->flags & Element::fFunction) {
         se.recurse = true;
         // Don't generate states for right recursion when it can be broken with
         // a call. This could also be done for left recursion when the grammar
@@ -396,16 +396,16 @@ static void addNextPositions(
         // add OnStart events top to bottom
         for (auto && se2 : sp.elems) {
             if (se2.elem->type == Element::kRule
-                && (se2.elem->rule->flags & Element::kOnStart)
+                && (se2.elem->rule->flags & Element::fOnStart)
                 && !se2.started) {
-                addEvent(events, se2, Element::kOnStart);
+                addEvent(events, se2, Element::fOnStart);
             }
         }
         // bubble up OnChar events bottom to top
         for (auto it2 = it; it2 != eit; ++it2) {
             if (it2->elem->type == Element::kRule
-                && (it2->elem->rule->flags & Element::kOnChar)) {
-                addEvent(events, *it2, Element::kOnChar);
+                && (it2->elem->rule->flags & Element::fOnChar)) {
+                addEvent(events, *it2, Element::fOnChar);
             }
         }
     }
@@ -443,10 +443,10 @@ static void addNextPositions(
         }
 
         if (se.elem->type == Element::kRule) {
-            if ((se.elem->rule->flags & Element::kOnEnd)
+            if ((se.elem->rule->flags & Element::fOnEnd)
                 && (se.started || !done)
-                && (~se.elem->rule->flags & Element::kFunction)) {
-                addEvent(events, se, Element::kOnEnd);
+                && (~se.elem->rule->flags & Element::fFunction)) {
+                addEvent(events, se, Element::fOnEnd);
             }
             // when exiting the parser (via a done sentinel) go directly out,
             // no not pass go, do not honor repititions
@@ -514,7 +514,7 @@ static void addNextPositions(
     // be executed by the completed done
     auto sv_end = nsp.events.end();
     auto it2 = remove_if(nsp.events.begin(), sv_end, [&](const auto & a) {
-        if (a.flags & Element::kOnEnd) {
+        if (a.flags & Element::fOnEnd) {
             for (auto it = elemBase; it != terminalStarted; ++it) {
                 if (it->elem == a.elem)
                     return true;
@@ -571,20 +571,20 @@ static void removeConflicts(
     found_unused:
         if (*mi == events[evi])
             goto matched;
-        if (mi->flags & Element::kOnChar) {
+        if (mi->flags & Element::fOnChar) {
             // char can shift around start events
             for (;;) {
-                if ((~events[evi].flags & Element::kOnStart)
+                if ((~events[evi].flags & Element::fOnStart)
                     || ++evi == numEvents) {
                     goto unmatched;
                 }
                 if (*mi == events[evi])
                     goto matched;
             }
-        } else if (mi->flags & Element::kOnStart) {
+        } else if (mi->flags & Element::fOnStart) {
             // start events can shift around char events.
             for (;;) {
-                if ((~events[evi].flags & Element::kOnChar)
+                if ((~events[evi].flags & Element::fOnChar)
                     || ++evi == numEvents) {
                     goto unmatched;
                 }
@@ -592,7 +592,7 @@ static void removeConflicts(
                     goto matched;
             }
         }
-        assert(mi->flags & Element::kOnEnd);
+        assert(mi->flags & Element::fOnEnd);
 
     unmatched:
         mi = matched.erase(mi);
@@ -626,7 +626,7 @@ static bool delayConflicts(
 
     bool success = true;
     for (auto && sv : nsp.delayedEvents) {
-        if (sv.flags & Element::kOnChar) {
+        if (sv.flags & Element::fOnChar) {
             success = false;
             if (logError) {
                 logMsgError() << "Conflicting parse events, " << sv.elem->name
@@ -802,7 +802,7 @@ static void addChildStates(
             continue;
         }
 
-        assert(elem->rule->flags & Element::kFunction);
+        assert(elem->rule->flags & Element::fFunction);
         for (auto && nspt : next.positions) {
             if (nspt.second.none()) {
                 auto && nse = nspt.first.elems.back();

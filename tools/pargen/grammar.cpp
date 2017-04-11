@@ -111,7 +111,7 @@ Element * Grammar::addSequenceRule(
     string_view name,
     unsigned m,
     unsigned n,
-    unsigned flags // Element::kFlag*
+    Element::Flags flags
     ) {
     auto e = addChoiceRule(name, m, n, flags);
     e = addSequence(e, 1, 1);
@@ -123,8 +123,8 @@ Element * Grammar::addChoiceRule(
     string_view name,
     unsigned m,
     unsigned n,
-    unsigned flags // Element::kFlag*
-    ) {
+    Element::Flags flags
+) {
     Element e;
     e.id = ++m_nextElemId;
     e.name = name;
@@ -328,7 +328,7 @@ bool copyRules(
         return true;
     }
     auto & elem = *ib.first;
-    if ((elem.flags & Element::kFunction) && (elem.flags & Element::kOnChar)) {
+    if ((elem.flags & Element::fFunction) && (elem.flags & Element::fOnChar)) {
         logMsgError() << "Rule with both function and onChar, " << elem.value;
         return false;
     }
@@ -468,9 +468,9 @@ addFunctionTags(Grammar & rules, Element & rule, vector<bool> & used) {
         break;
     case Element::kRule:
         wasUsed = used[rule.rule->id];
-        if (wasUsed && (~rule.rule->flags & Element::kOnChar))
-            const_cast<Element *>(rule.rule)->flags |= Element::kFunction;
-        if (rule.rule->flags & Element::kFunction)
+        if (wasUsed && (~rule.rule->flags & Element::fOnChar))
+            const_cast<Element *>(rule.rule)->flags |= Element::fFunction;
+        if (rule.rule->flags & Element::fFunction)
             return;
         used[rule.rule->id] = true;
         addFunctionTags(rules, const_cast<Element &>(*rule.rule), used);
@@ -484,7 +484,7 @@ void functionTags(Grammar & rules, Element & rule, bool reset, bool mark) {
         size_t maxId = 0;
         for (auto && elem : rules.rules()) {
             if (reset)
-                const_cast<Element &>(elem).flags &= ~Element::kFunction;
+                const_cast<Element &>(elem).flags &= ~Element::fFunction;
             maxId = max((size_t)elem.id, maxId);
         }
         if (mark) {

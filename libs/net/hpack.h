@@ -26,7 +26,7 @@ namespace Dim {
 
 struct HpackFieldView;
 enum HpackFlags {
-    kNeverIndexed = 1,
+    fNeverIndexed = 1,
 };
 
 struct HpackDynField {

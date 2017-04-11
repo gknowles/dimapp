@@ -127,7 +127,7 @@ ParserNotify::ParserNotify(Grammar & rules, bool minRules)
 //===========================================================================
 bool ParserNotify::startRule() {
     m_elem.name = move(m_string);
-    m_elem.flags = 0;
+    m_elem.flags = (Element::Flags) 0;
     m_elem.eventName.clear();
     m_elem.elements.clear();
 
@@ -150,19 +150,19 @@ bool ParserNotify::onActionAsEnd(const char * eptr) {
 
 //===========================================================================
 bool ParserNotify::onActionCharEnd(const char * eptr) {
-    m_elem.flags |= Element::kOnChar;
+    m_elem.flags |= Element::fOnChar;
     return true;
 }
 
 //===========================================================================
 bool ParserNotify::onActionEndEnd(const char * eptr) {
-    m_elem.flags |= Element::kOnEnd;
+    m_elem.flags |= Element::fOnEnd;
     return true;
 }
 
 //===========================================================================
 bool ParserNotify::onActionFuncEnd(const char * eptr) {
-    m_elem.flags |= Element::kFunction;
+    m_elem.flags |= Element::fFunction;
     return true;
 }
 
@@ -182,7 +182,7 @@ bool ParserNotify::onActionNoMinEnd(const char * eptr) {
 
 //===========================================================================
 bool ParserNotify::onActionStartEnd(const char * eptr) {
-    m_elem.flags |= Element::kOnStart;
+    m_elem.flags |= Element::fOnStart;
     return true;
 }
 

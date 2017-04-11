@@ -17,14 +17,14 @@ using namespace Dim;
 
 namespace {
 
-enum {
-    kTestReset = 0x01,
-    kTestClient = 0x02,
+enum TestType : unsigned {
+    fTestReset = 0x01,
+    fTestClient = 0x02,
 };
 
 struct Test {
     const char * name;
-    unsigned flags; // kTest*
+    TestType flags; // kTest*
     string input;
     bool result;
     string output;
@@ -42,9 +42,9 @@ struct Test {
 
 // clang-format off
 const Test s_tests[] = {
-    {"connect", kTestReset | kTestClient, {}, true, {}, {}},
+    {"connect", fTestReset | fTestClient, {}, true, {}, {}},
     {"simple client hello",
-     kTestReset,
+     fTestReset,
      {
          kClientHello, // msg_type
          0, 0, 10, // length
@@ -117,11 +117,11 @@ void Application::onAppRun() {
     bool result;
     for (auto && test : s_tests) {
         cout << "Test - " << test.name << endl;
-        TlsConnHandle & conn = (test.flags & kTestClient) ? client : server;
-        if ((test.flags & kTestReset) && conn)
+        TlsConnHandle & conn = (test.flags & fTestClient) ? client : server;
+        if ((test.flags & fTestReset) && conn)
             tlsClose(conn);
         if (!conn) {
-            if (test.flags & kTestClient) {
+            if (test.flags & fTestClient) {
                 conn = tlsConnect(&output, kHost, kCiphers, size(kCiphers));
             } else {
                 conn = tlsAccept(kCiphers, size(kCiphers));

@@ -50,9 +50,9 @@ ostream & operator<<(ostream & os, const StateEvent & sv) {
     os << "on";
     writeRuleName(os, sv.elem->name, true);
     switch (sv.flags) {
-    case Element::kOnChar: os << "Char"; break;
-    case Element::kOnEnd: os << "End"; break;
-    case Element::kOnStart: os << "Start"; break;
+    case Element::fOnChar: os << "Char"; break;
+    case Element::fOnEnd: os << "End"; break;
+    case Element::fOnStart: os << "Start"; break;
     }
     return os;
 }
@@ -144,10 +144,10 @@ static void writeElement(ostream & os, const Element & elem, bool inclPos) {
             bool incl;
             string text;
         } tags[] = {
-            {(elem.flags & Element::kOnStart) != 0, "Start"},
-            {(elem.flags & Element::kOnEnd) != 0, "End"},
-            {(elem.flags & Element::kOnChar) != 0, "Char"},
-            {(elem.flags & Element::kFunction) != 0, "Function"},
+            {(elem.flags & Element::fOnStart) != 0, "Start"},
+            {(elem.flags & Element::fOnEnd) != 0, "End"},
+            {(elem.flags & Element::fOnChar) != 0, "Char"},
+            {(elem.flags & Element::fFunction) != 0, "Function"},
             {!elem.eventName.empty(), "As " + elem.eventName},
         };
         os << "  { ";
@@ -295,9 +295,9 @@ static void writeEventCallback(
     os << prefix << "if (!m_notify->on";
     writeRuleName(os, name, true);
     switch (type) {
-    case Element::kOnChar: os << "Char(" << (args ? args : "ch"); break;
-    case Element::kOnEnd: os << "End(" << (args ? args : "ptr"); break;
-    case Element::kOnStart: os << "Start(" << (args ? args : "ptr - 1"); break;
+    case Element::fOnChar: os << "Char(" << (args ? args : "ch"); break;
+    case Element::fOnEnd: os << "End(" << (args ? args : "ptr"); break;
+    case Element::fOnStart: os << "Start(" << (args ? args : "ptr - 1"); break;
     }
     os << "))\n";
     os << prefix << "    goto state0;\n";
@@ -421,8 +421,8 @@ static void writeParserState(
     }
 
     if (st.name == kDoneStateName) {
-        if (root && (root->flags & Element::kOnEnd)) {
-            writeEventCallback(os, root->name, Element::kOnEnd);
+        if (root && (root->flags & Element::fOnEnd)) {
+            writeEventCallback(os, root->name, Element::fOnEnd);
         }
         os << "    return true;\n";
         return;
@@ -449,7 +449,7 @@ static void writeParserState(
         if (elem == &ElementDone::s_elem)
             continue;
         assert(elem->type == Element::kRule);
-        assert(elem->rule->flags & Element::kFunction);
+        assert(elem->rule->flags & Element::fFunction);
         if (call && elem->rule == call->elems.back().elem->rule
             && spt.first.delayedEvents == call->delayedEvents) {
             continue;
@@ -557,8 +557,8 @@ state0:
     const char * last{nullptr};
     unsigned char ch;
 )";
-        if (root->flags & Element::kOnStart) {
-            writeEventCallback(os, root->name, Element::kOnStart, "ptr");
+        if (root->flags & Element::fOnStart) {
+            writeEventCallback(os, root->name, Element::fOnStart, "ptr");
         }
         os << R"(    goto state2;
 
@@ -643,7 +643,7 @@ private:
 )";
     bool hasFunctionRules = false;
     for (auto && elem : rules.rules()) {
-        if (elem.flags & Element::kFunction) {
+        if (elem.flags & Element::fFunction) {
             hasFunctionRules = true;
             os << "    bool state";
             writeRuleName(os, elem.name, true);
@@ -679,7 +679,7 @@ public:
     ostringstream ostr;
     for (auto && elem : rules.rules()) {
         if (elem.flags
-            & (Element::kOnStart | Element::kOnEnd | Element::kOnChar)
+            & (Element::fOnStart | Element::fOnEnd | Element::fOnChar)
         ) {
             ostr.clear();
             ostr.str("");
@@ -697,9 +697,9 @@ public:
             Element::Flags flag;
             const char * text;
         } sigs[] = {
-            {Element::kOnStart, "Start (const char * ptr)"},
-            {Element::kOnChar, "Char (char ch)"},
-            {Element::kOnEnd, "End (const char * eptr)"},
+            {Element::fOnStart, "Start (const char * ptr)"},
+            {Element::fOnChar, "Char (char ch)"},
+            {Element::fOnEnd, "End (const char * eptr)"},
         };
         for (auto && ev : events) {
             for (auto && sig : sigs) {
@@ -742,7 +742,7 @@ void writeParser(
 
     if (!opts.includeCallbacks) {
         for (auto && elem : rules.rules()) {
-            const_cast<Element &>(elem).flags &= ~Element::kCallbackFlags;
+            const_cast<Element &>(elem).flags &= ~Element::fCallbackFlags;
         }
     }
 
@@ -763,7 +763,7 @@ void writeParser(
 
     if (opts.writeFunctions) {
         for (auto && elem : rules.rules()) {
-            if (elem.flags & Element::kFunction) {
+            if (elem.flags & Element::fFunction) {
                 buildStateTree(
                     &states,
                     elem,

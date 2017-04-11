@@ -24,12 +24,12 @@ const unsigned kUnlimited = unsigned(-1);
 
 struct Element {
     enum Flags : uint8_t {
-        kOnStart = 1,
-        kOnChar = 2,
-        kOnEnd = 4,
-        kFunction = 8,
+        fOnStart = 1,
+        fOnChar = 2,
+        fOnEnd = 4,
+        fFunction = 8,
 
-        kCallbackFlags = kOnStart | kOnChar | kOnEnd,
+        fCallbackFlags = fOnStart | fOnChar | fOnEnd,
     };
 
     enum Type : uint8_t {
@@ -48,7 +48,7 @@ struct Element {
     std::vector<Element> elements;
     const Element * rule{nullptr};
     const Element * eventRule{nullptr}; // only present if different from rule
-    unsigned flags{0};
+    Flags flags = (Flags) 0;
     std::string eventName; // only present if different from name
 
     bool operator<(const Element & right) const { return name < right.name; }
@@ -81,14 +81,12 @@ public:
         std::string_view name,
         unsigned m,
         unsigned n,
-        unsigned flags = 0 // Element::k*
-        );
+        Element::Flags flags = (Element::Flags) 0);
     Element * addChoiceRule(
         std::string_view name,
         unsigned m,
         unsigned n,
-        unsigned flags = 0 // Element::k*
-        );
+        Element::Flags flags = (Element::Flags) 0);
     Element * addSequence(Element * rule, unsigned m, unsigned n);
     Element * addChoice(Element * rule, unsigned m, unsigned n);
     void
@@ -169,7 +167,7 @@ struct StateElement {
 
 struct StateEvent {
     const Element * elem;
-    unsigned flags{0}; // Element::kOn*
+    Element::Flags flags = (Element::Flags) 0;
 
     int compare(const StateEvent & right) const;
     bool operator<(const StateEvent & right) const;

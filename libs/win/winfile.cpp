@@ -355,7 +355,7 @@ bool Dim::iFileSetErrno(int error) {
 ***/
 
 //===========================================================================
-FileHandle Dim::fileOpen(string_view path, unsigned mode) {
+FileHandle Dim::fileOpen(string_view path, File::OpenMode mode) {
     using om = File::OpenMode;
 
     auto file = make_unique<FileInfo>();

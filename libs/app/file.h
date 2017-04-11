@@ -18,7 +18,7 @@
 namespace Dim {
 
 namespace File {
-    enum OpenMode {
+    enum OpenMode : unsigned {
         // content access, one *must* be specified
         fNoAccess = 0x1,    // when you only want metadata (time, size, etc)
         fReadOnly = 0x2,
@@ -46,7 +46,7 @@ struct FileHandle : HandleBase {};
 //  EEXIST, ENOENT, EBUSY, EACCES, or EIO
 FileHandle fileOpen(
     std::string_view path,
-    unsigned modeFlags // File::OpenMode::*
+    File::OpenMode modeFlags
 );
 uint64_t fileSize(FileHandle f);
 TimePoint fileLastWriteTime(FileHandle f);
