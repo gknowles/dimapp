@@ -29,10 +29,10 @@ public:
         int written,
         string_view data, 
         int64_t offset,
-        IFile * file) override;
+        FileHandle f) override;
 
     // IFileReadNotify
-    void onFileEnd(int64_t offset, IFile * file) override;
+    void onFileEnd(int64_t offset, FileHandle f) override;
 };
 } // namespace
 
@@ -46,26 +46,27 @@ void Application::onAppRun() {
     size_t psize = filePageSize();
     auto file = fileOpen(
         *fn,
-        IFile::kCreat | IFile::kTrunc | IFile::kReadWrite | IFile::kBlocking);
-    fileWriteWait(file.get(), 0, "aaaa", 4);
+        File::fCreat | File::fTrunc | File::fReadWrite | File::fBlocking);
+    fileWriteWait(file, 0, "aaaa", 4);
     const char * base;
-    if (!fileOpenView(base, file.get(), 1001 * psize))
+    if (!fileOpenView(base, file, 1001 * psize))
         return appSignalShutdown(EX_DATAERR);
-    fileExtendView(file.get(), 1001 * psize);
+    fileExtendView(file, 1001 * psize);
     unsigned num = 0;
     static char v;
     for (size_t i = 1; i < 1000; ++i) {
         v = 0;
-        fileWriteWait(file.get(), i * psize, "bbbb", 4);
+        fileWriteWait(file, i * psize, "bbbb", 4);
         v = base[i * psize];
         if (v == 'b')
             num += 1;
     }
-    fileExtendView(file.get(), psize);
+    fileExtendView(file, psize);
     static char buf[5] = {};
     for (unsigned i = 0; i < 100; ++i) {
-        fileReadWait(buf, 4, file.get(), psize);
+        fileReadWait(buf, 4, file, psize);
     }
+    fileClose(file);
 
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);
@@ -82,10 +83,10 @@ void Application::onFileWrite(
     int written,
     string_view data, 
     int64_t offset,
-    IFile * file) {}
+    FileHandle f) {}
 
 //===========================================================================
-void Application::onFileEnd(int64_t offset, IFile * file) {}
+void Application::onFileEnd(int64_t offset, FileHandle f) {}
 
 
 /****************************************************************************

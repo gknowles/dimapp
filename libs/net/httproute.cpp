@@ -318,14 +318,14 @@ struct ReplyWithFileNotify : IFileReadNotify {
     bool onFileRead(
         string_view data, 
         int64_t offset, 
-        IFile * file
+        FileHandle f
     ) override {
         HttpSocket::reply(m_reqId, data, true);
         return true;
     }
-    void onFileEnd(int64_t offset, IFile * file) override {
+    void onFileEnd(int64_t offset, FileHandle f) override {
         HttpSocket::reply(m_reqId, string_view(), false);
-        delete file;
+        fileClose(f);
         delete this;
     }
 };
@@ -337,13 +337,13 @@ void Dim::httpRouteReplyWithFile(unsigned reqId, std::string_view path) {
     httpRouteReply(reqId, msg, true);
     auto notify = new ReplyWithFileNotify;
     notify->m_reqId = reqId;
-    auto file = fileOpen(path, IFile::kReadOnly | IFile::kDenyNone);
+    auto file = fileOpen(path, File::fReadOnly | File::fDenyNone);
     if (!file)
-        return notify->onFileEnd(0, nullptr);
+        return notify->onFileEnd(0, file);
     fileRead(
         notify, 
         notify->m_buffer, 
         size(notify->m_buffer), 
-        file.release()
+        file
     );
 }

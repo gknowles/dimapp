@@ -13,7 +13,8 @@
 
 namespace Dim {
 
-void sockMgrListen(AppSocket::Family fam, std::string type, Endpoint end);
+struct SocketMgrHandle : HandleBase {};
 
+SocketMgrHandle sockMgrListen(AppSocket::Family fam);
 
 } // namespace

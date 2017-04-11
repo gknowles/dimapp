@@ -24,21 +24,24 @@ namespace fs = std::experimental::filesystem;
 ***/
 
 namespace {
-class File : public IFile {
-public:
+struct FileInfo {
+    FileHandle m_f;
     fs::path m_path;
     HANDLE m_handle{INVALID_HANDLE_VALUE};
-    OpenMode m_mode{kReadOnly};
+    File::OpenMode m_mode{File::fReadOnly};
     const char * m_view{nullptr};
     size_t m_viewSize{0};
-
-    virtual ~File();
 };
 
 class IFileOpBase : public ITaskNotify {
 public:
-    void
-    start(File * file, void * buf, size_t bufLen, int64_t off, int64_t len);
+    void start(
+        FileInfo * file, 
+        void * buf, 
+        size_t bufLen, 
+        int64_t off, 
+        int64_t len
+    );
     void run();
     virtual void onNotify() = 0;
     virtual bool onRun() = 0;
@@ -54,7 +57,7 @@ protected:
     bool m_started{false};
     bool m_trigger{false};
 
-    File * m_file{nullptr};
+    FileInfo * m_file{nullptr};
     char * m_buf{nullptr};
     int m_bufLen{0};
 
@@ -103,8 +106,10 @@ static NtUnmapViewOfSectionFn s_NtUnmapViewOfSection;
 static NtCloseFn s_NtClose;
 
 static size_t s_pageSize;
-
 static TaskQueueHandle s_hq;
+
+static shared_mutex s_fileMut;
+static HandleMap<FileHandle, FileInfo> s_files;
 
 
 /****************************************************************************
@@ -122,7 +127,7 @@ static TaskQueueHandle s_hq;
 
 //===========================================================================
 void IFileOpBase::start(
-    File * file,
+    FileInfo * file,
     void * buf,
     size_t bufLen,
     int64_t off,
@@ -142,7 +147,7 @@ void IFileOpBase::start(
         return taskPush(s_hq, *this);
 
     m_iocpEvt.hq = s_hq;
-    if (m_file->m_mode & IFile::kBlocking)
+    if (m_file->m_mode & File::fBlocking)
         return run();
 
     m_trigger = true;
@@ -238,13 +243,20 @@ bool FileReader::onRun() {
         len = m_bufLen;
 
     return ReadFile(
-        m_file->m_handle, m_buf, (DWORD)len, &m_bytes, &m_iocpEvt.overlapped);
+        m_file->m_handle, 
+        m_buf, 
+        (DWORD)len, 
+        &m_bytes, 
+        &m_iocpEvt.overlapped
+    );
 }
 
 //===========================================================================
 void FileReader::onNotify() {
-    bool again = m_bytes 
-        && m_notify->onFileRead(string_view(m_buf, m_bytes), m_offset, m_file);
+    bool again = m_bytes && m_notify->onFileRead(
+        string_view(m_buf, m_bytes), 
+        m_offset, 
+        m_file->m_f);
 
     m_offset += m_bytes;
 
@@ -254,7 +266,7 @@ void FileReader::onNotify() {
     if (again)
         return run();
 
-    m_notify->onFileEnd(m_offset, m_file);
+    m_notify->onFileEnd(m_offset, m_file->m_f);
     delete this;
 }
 
@@ -291,21 +303,9 @@ void FileWriter::onNotify() {
         m_bytes, 
         string_view(m_buf, m_bufLen), 
         m_offset, 
-        m_file
+        m_file->m_f
     );
     delete this;
-}
-
-
-/****************************************************************************
-*
-*   File
-*
-***/
-
-//===========================================================================
-File::~File() {
-    fileClose(this);
 }
 
 
@@ -355,53 +355,53 @@ bool Dim::iFileSetErrno(int error) {
 ***/
 
 //===========================================================================
-unique_ptr<IFile> Dim::fileOpen(string_view path, unsigned mode) {
-    using om = IFile::OpenMode;
+FileHandle Dim::fileOpen(string_view path, unsigned mode) {
+    using om = File::OpenMode;
 
-    auto file = make_unique<File>();
+    auto file = make_unique<FileInfo>();
     file->m_mode = (om)mode;
     file->m_path = fs::u8path(path.begin(), path.end());
 
     int access = 0;
-    if (mode & om::kNoAccess) {
-        assert((~mode & om::kReadOnly) && (~mode & om::kReadWrite));
-    } else if (mode & om::kReadOnly) {
-        assert((~mode & om::kNoAccess) && (~mode & om::kReadWrite));
+    if (mode & om::fNoAccess) {
+        assert((~mode & om::fReadOnly) && (~mode & om::fReadWrite));
+    } else if (mode & om::fReadOnly) {
+        assert((~mode & om::fNoAccess) && (~mode & om::fReadWrite));
         access = GENERIC_READ;
     } else {
-        assert(mode & om::kReadWrite);
-        assert((~mode & om::kNoAccess) && (~mode & om::kReadOnly));
+        assert(mode & om::fReadWrite);
+        assert((~mode & om::fNoAccess) && (~mode & om::fReadOnly));
         access = GENERIC_READ | GENERIC_WRITE;
     }
 
     int share = 0;
-    if (mode & om::kDenyWrite) {
-        assert(~mode & om::kDenyNone);
+    if (mode & om::fDenyWrite) {
+        assert(~mode & om::fDenyNone);
         share = FILE_SHARE_READ;
-    } else if (mode & om::kDenyNone) {
+    } else if (mode & om::fDenyNone) {
         share = FILE_SHARE_READ | FILE_SHARE_WRITE;
     }
 
     int creation = 0;
-    if (mode & om::kCreat) {
-        if (mode & om::kExcl) {
-            assert(~mode & om::kTrunc);
+    if (mode & om::fCreat) {
+        if (mode & om::fExcl) {
+            assert(~mode & om::fTrunc);
             creation = CREATE_NEW;
-        } else if (mode & om::kTrunc) {
+        } else if (mode & om::fTrunc) {
             creation = CREATE_ALWAYS;
         } else {
             creation = OPEN_ALWAYS;
         }
     } else {
-        assert(~mode & om::kExcl);
-        if (mode & om::kTrunc) {
+        assert(~mode & om::fExcl);
+        if (mode & om::fTrunc) {
             creation = TRUNCATE_EXISTING;
         } else {
             creation = OPEN_EXISTING;
         }
     }
 
-    int flags = (mode & om::kBlocking) ? 0 : FILE_FLAG_OVERLAPPED;
+    int flags = (mode & om::fBlocking) ? 0 : FILE_FLAG_OVERLAPPED;
 
     file->m_handle = CreateFileW(
         file->m_path.c_str(),
@@ -414,13 +414,13 @@ unique_ptr<IFile> Dim::fileOpen(string_view path, unsigned mode) {
         );
     if (file->m_handle == INVALID_HANDLE_VALUE) {
         iFileSetErrno(WinError{});
-        return nullptr;
+        return {};
     }
 
-    if (~mode & om::kBlocking) {
+    if (~mode & om::fBlocking) {
         if (!winIocpBindHandle(file->m_handle)) {
             iFileSetErrno(WinError{});
-            return nullptr;
+            return {};
         }
 
         if (!SetFileCompletionNotificationModes(
@@ -428,16 +428,26 @@ unique_ptr<IFile> Dim::fileOpen(string_view path, unsigned mode) {
             FILE_SKIP_COMPLETION_PORT_ON_SUCCESS
         )) {
             iFileSetErrno(WinError{});
-            return nullptr;
+            return {};
         }
     }
 
-    return file;
+    unique_lock<shared_mutex> lk{s_fileMut};
+    auto f = file->m_f = s_files.insert(file.release());
+    return f;
 }
 
 //===========================================================================
-void Dim::fileClose(IFile * ifile) {
-    File * file = static_cast<File *>(ifile);
+static FileInfo * getInfo(FileHandle f) {
+    shared_lock<shared_mutex> lk{s_fileMut};
+    return s_files.find(f);
+}
+
+//===========================================================================
+void Dim::fileClose(FileHandle f) {
+    auto file = getInfo(f);
+    if (!file)
+        return;
     if (file->m_handle != INVALID_HANDLE_VALUE) {
         if (file->m_view) {
             WinError err = (WinError::NtStatus) s_NtUnmapViewOfSection(
@@ -452,11 +462,13 @@ void Dim::fileClose(IFile * ifile) {
         CloseHandle(file->m_handle);
         file->m_handle = INVALID_HANDLE_VALUE;
     }
+    unique_lock<shared_mutex> lk{s_fileMut};
+    s_files.erase(f);
 }
 
 //===========================================================================
-uint64_t Dim::fileSize(IFile * ifile) {
-    File * file = static_cast<File *>(ifile);
+uint64_t Dim::fileSize(FileHandle f) {
+    auto file = getInfo(f);
     if (!file)
         return 0;
     LARGE_INTEGER size;
@@ -470,8 +482,8 @@ uint64_t Dim::fileSize(IFile * ifile) {
 }
 
 //===========================================================================
-TimePoint Dim::fileLastWriteTime(IFile * ifile) {
-    File * file = static_cast<File *>(ifile);
+TimePoint Dim::fileLastWriteTime(FileHandle f) {
+    auto file = getInfo(f);
     if (!file)
         return TimePoint::min();
     uint64_t ctime, atime, wtime;
@@ -489,14 +501,14 @@ TimePoint Dim::fileLastWriteTime(IFile * ifile) {
 }
 
 //===========================================================================
-std::experimental::filesystem::path Dim::filePath(IFile * ifile) {
-    File * file = static_cast<File *>(ifile);
+std::experimental::filesystem::path Dim::filePath(FileHandle f) {
+    auto file = getInfo(f);
     return file->m_path;
 }
 
 //===========================================================================
-unsigned Dim::fileMode(IFile * ifile) {
-    File * file = static_cast<File *>(ifile);
+unsigned Dim::fileMode(FileHandle f) {
+    auto file = getInfo(f);
     return file->m_mode;
 }
 
@@ -505,12 +517,12 @@ void Dim::fileRead(
     IFileReadNotify * notify,
     void * outBuf,
     size_t outBufLen,
-    IFile * ifile,
+    FileHandle f,
     int64_t off,
     int64_t len
 ) {
     assert(notify);
-    File * file = static_cast<File *>(ifile);
+    auto file = getInfo(f);
     auto ptr = new FileReader(notify);
     ptr->start(file, outBuf, outBufLen, off, len);
 }
@@ -519,10 +531,10 @@ void Dim::fileRead(
 void Dim::fileReadWait(
     void * outBuf,
     size_t outBufLen,
-    IFile * ifile,
+    FileHandle f,
     int64_t off
 ) {
-    File * file = static_cast<File *>(ifile);
+    auto file = getInfo(f);
     FileReader op(nullptr);
     op.start(file, outBuf, outBufLen, off, outBufLen);
 }
@@ -530,25 +542,25 @@ void Dim::fileReadWait(
 //===========================================================================
 void Dim::fileWrite(
     IFileWriteNotify * notify,
-    IFile * ifile,
+    FileHandle f,
     int64_t off,
     const void * buf,
     size_t bufLen
 ) {
     assert(notify);
-    File * file = static_cast<File *>(ifile);
+    auto file = getInfo(f);
     auto ptr = new FileWriter(notify);
     ptr->start(file, const_cast<void *>(buf), bufLen, off, bufLen);
 }
 
 //===========================================================================
 void Dim::fileWriteWait(
-    IFile * ifile,
+    FileHandle f,
     int64_t off,
     const void * buf,
     size_t bufLen
 ) {
-    File * file = static_cast<File *>(ifile);
+    auto file = getInfo(f);
     FileWriter op(nullptr);
     op.start(file, const_cast<void *>(buf), bufLen, off, bufLen);
 }
@@ -556,19 +568,19 @@ void Dim::fileWriteWait(
 //===========================================================================
 void Dim::fileAppend(
     IFileWriteNotify * notify,
-    IFile * file,
+    FileHandle f,
     const void * buf,
     size_t bufLen
 ) {
     assert(notify);
     // file writes to offset 2^64-1 are interpreted as appends to the end
     // of the file.
-    fileWrite(notify, file, 0xffff'ffff'ffff'ffff, buf, bufLen);
+    fileWrite(notify, f, 0xffff'ffff'ffff'ffff, buf, bufLen);
 }
 
 //===========================================================================
-void Dim::fileAppendWait(IFile * file, const void * buf, size_t bufLen) {
-    fileWriteWait(file, 0xffff'ffff'ffff'ffff, buf, bufLen);
+void Dim::fileAppendWait(FileHandle f, const void * buf, size_t bufLen) {
+    fileWriteWait(f, 0xffff'ffff'ffff'ffff, buf, bufLen);
 }
 
 
@@ -586,10 +598,10 @@ size_t Dim::filePageSize() {
 //===========================================================================
 bool Dim::fileOpenView(
     const char *& base,
-    IFile * ifile,
+    FileHandle f,
     int64_t maxLen // maximum viewable offset, rounded up to page size
 ) {
-    File * file = static_cast<File *>(ifile);
+    auto file = getInfo(f);
     if (file->m_view) {
         base = file->m_view;
         return true;
@@ -602,7 +614,7 @@ bool Dim::fileOpenView(
         SECTION_MAP_READ,
         nullptr, // object attributes
         nullptr, // maximum size
-        (file->m_mode & IFile::kReadOnly) ? PAGE_READONLY : PAGE_READWRITE,
+        (file->m_mode & File::fReadOnly) ? PAGE_READONLY : PAGE_READWRITE,
         SEC_RESERVE,
         file->m_handle);
     if (err) {
@@ -611,7 +623,7 @@ bool Dim::fileOpenView(
         return false;
     }
 
-    SIZE_T viewSize = (file->m_mode & IFile::kReadOnly) ? 0 : maxLen;
+    SIZE_T viewSize = (file->m_mode & File::fReadOnly) ? 0 : maxLen;
     err = (WinError::NtStatus) s_NtMapViewOfSection(
         sec,
         GetCurrentProcess(),
@@ -621,7 +633,7 @@ bool Dim::fileOpenView(
         nullptr, // section offset
         &viewSize,
         ViewUnmap,
-        (file->m_mode & IFile::kReadOnly) ? 0 : MEM_RESERVE,
+        (file->m_mode & File::fReadOnly) ? 0 : MEM_RESERVE,
         PAGE_READONLY);
     if (err) {
         logMsgError() << "NtMapViewOfSection(" << file->m_path << "): " << err;
@@ -644,8 +656,8 @@ bool Dim::fileOpenView(
 }
 
 //===========================================================================
-void Dim::fileExtendView(IFile * ifile, int64_t length) {
-    File * file = static_cast<File *>(ifile);
+void Dim::fileExtendView(FileHandle f, int64_t length) {
+    auto file = getInfo(f);
     void * ptr =
         VirtualAlloc((void *)file->m_view, length, MEM_COMMIT, PAGE_READONLY);
     if (!ptr) {

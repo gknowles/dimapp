@@ -35,7 +35,7 @@ public:
     void notify_UNLK(IAppConfigNotify * notify);
 
     // IFileChangeNotify
-    void onFileChange(string_view fullpath, IFile * file) override;
+    void onFileChange(string_view fullpath, FileHandle f) override;
 
 private:
     list<NotifyInfo> m_notifiers;
@@ -82,11 +82,11 @@ void ConfigFile::monitor_UNLK(string_view relpath, IAppConfigNotify * notify) {
 }
 
 //===========================================================================
-void ConfigFile::onFileChange(string_view fullpath, IFile * file) {
+void ConfigFile::onFileChange(string_view fullpath, FileHandle f) {
     m_changes += 1;
 
     // load file
-    size_t bytes = fileSize(file);
+    size_t bytes = fileSize(f);
     if (bytes > kMaxConfigFileSize) {
         logMsgError() << "File too large (" << bytes << " bytes): " 
             << fullpath;
@@ -97,7 +97,7 @@ void ConfigFile::onFileChange(string_view fullpath, IFile * file) {
         m_content.clear();
     } else {
         m_content.resize(bytes);
-        fileReadWait(m_content.data(), m_content.size(), file, 0);
+        fileReadWait(m_content.data(), m_content.size(), f, 0);
     }
 
     m_xml.parse(m_content.data());

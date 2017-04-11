@@ -28,9 +28,9 @@ public:
     bool onFileRead(
         string_view data, 
         int64_t offset, 
-        IFile * file
+        FileHandle f
     ) override;
-    void onFileEnd(int64_t offset, IFile * file) override;
+    void onFileEnd(int64_t offset, FileHandle f) override;
 };
 }
 
@@ -43,12 +43,12 @@ FileStreamNotify::FileStreamNotify(
     : m_notify{notify}
     , m_out(new char[blkSize])
 {
-    auto file = fileOpen(path, IFile::kReadOnly | IFile::kDenyNone);
+    auto file = fileOpen(path, File::fReadOnly | File::fDenyNone);
     if (!file) {
         logMsgError() << "File open failed: " << path;
-        onFileEnd(0, nullptr);
+        onFileEnd(0, file);
     } else {
-        fileRead(this, m_out.get(), blkSize, file.release());
+        fileRead(this, m_out.get(), blkSize, file);
     }
 }
 
@@ -56,15 +56,15 @@ FileStreamNotify::FileStreamNotify(
 bool FileStreamNotify::onFileRead(
     string_view data, 
     int64_t offset,
-    IFile * file
+    FileHandle f
 ) {
-    return m_notify->onFileRead(data, offset, file);
+    return m_notify->onFileRead(data, offset, f);
 }
 
 //===========================================================================
-void FileStreamNotify::onFileEnd(int64_t offset, IFile * file) {
-    m_notify->onFileEnd(offset, file);
-    delete file;
+void FileStreamNotify::onFileEnd(int64_t offset, FileHandle f) {
+    m_notify->onFileEnd(offset, f);
+    fileClose(f);
     delete this;
 }
 
@@ -84,9 +84,9 @@ public:
     bool onFileRead(
         string_view data, 
         int64_t offset, 
-        IFile * file
+        FileHandle f
     ) override;
-    void onFileEnd(int64_t offset, IFile * file) override;
+    void onFileEnd(int64_t offset, FileHandle f) override;
 };
 }
 
@@ -99,7 +99,7 @@ FileLoadNotify::FileLoadNotify(string & out, IFileReadNotify * notify)
 bool FileLoadNotify::onFileRead(
     string_view data, 
     int64_t offset,
-    IFile * file
+    FileHandle f
 ) {
     // resize the string to match the bytes read, in case it was less than
     // the amount requested
@@ -108,9 +108,9 @@ bool FileLoadNotify::onFileRead(
 }
 
 //===========================================================================
-void FileLoadNotify::onFileEnd(int64_t offset, IFile * file) {
-    m_notify->onFileEnd(offset, file);
-    delete file;
+void FileLoadNotify::onFileEnd(int64_t offset, FileHandle f) {
+    m_notify->onFileEnd(offset, f);
+    fileClose(f);
     delete this;
 }
 
@@ -137,19 +137,19 @@ void Dim::fileLoadBinary(
     string_view path,
     size_t maxSize
 ) {
-    auto file = fileOpen(path, IFile::kReadOnly | IFile::kDenyNone);
+    auto file = fileOpen(path, File::fReadOnly | File::fDenyNone);
     if (!file) {
         logMsgError() << "File open failed: " << path;
-        notify->onFileEnd(0, nullptr);
+        notify->onFileEnd(0, file);
         return;
     }
 
-    size_t bytes = fileSize(file.get());
+    size_t bytes = fileSize(file);
     if (bytes > maxSize)
         logMsgError() << "File too large (" << bytes << " bytes): " << path;
     out.resize(bytes);
     auto proxy = new FileLoadNotify(out, notify);
-    fileRead(proxy, out.data(), bytes, file.release());
+    fileRead(proxy, out.data(), bytes, file);
 }
 
 //===========================================================================
@@ -158,16 +158,17 @@ void Dim::fileLoadBinaryWait(
     string_view path,
     size_t maxSize
 ) {
-    auto file = fileOpen(path, IFile::kReadOnly | IFile::kDenyNone);
+    auto file = fileOpen(path, File::fReadOnly | File::fDenyNone);
     if (!file) {
         logMsgError() << "File open failed: " << path;
         out.clear();
         return;
     }
 
-    size_t bytes = fileSize(file.get());
+    size_t bytes = fileSize(file);
     if (bytes > maxSize)
         logMsgError() << "File too large (" << bytes << " bytes): " << path;
     out.resize(bytes);
-    fileReadWait(out.data(), bytes, file.release(), 0);
+    fileReadWait(out.data(), bytes, file, 0);
+    fileClose(file);
 }

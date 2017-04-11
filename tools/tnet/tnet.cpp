@@ -36,15 +36,15 @@ class SocketConn : public ISocketNotify, public IEndpointNotify {
 
 class ConsoleReader : public IFileReadNotify {
 public:
-    unique_ptr<IFile> m_device;
+    FileHandle m_device;
     bool m_isFile{false};
 
     bool QueryDestroy() const { return !m_device && !m_buffer; }
     void read(int64_t offset = 0);
 
 private:
-    bool onFileRead(string_view data, int64_t offset, IFile * file) override;
-    void onFileEnd(int64_t offset, IFile * file) override;
+    bool onFileRead(string_view data, int64_t offset, FileHandle f) override;
+    void onFileEnd(int64_t offset, FileHandle f) override;
 
     unique_ptr<SocketBuffer> m_buffer;
     int m_bytesRead{0};
@@ -122,14 +122,14 @@ void ConsoleReader::read(int64_t offset) {
     assert(m_device);
     m_bytesRead = 0;
     m_buffer = socketGetBuffer();
-    fileRead(this, m_buffer->data, m_buffer->len, m_device.get(), offset);
+    fileRead(this, m_buffer->data, m_buffer->len, m_device, offset);
 }
 
 //===========================================================================
 bool ConsoleReader::onFileRead(
     string_view data, 
     int64_t offset,
-    IFile * file) {
+    FileHandle f) {
     m_bytesRead = (int) data.size();
     socketWrite(&s_socket, move(m_buffer), m_bytesRead);
     // stop reading (return false) so we can get a new buffer
@@ -137,12 +137,12 @@ bool ConsoleReader::onFileRead(
 }
 
 //===========================================================================
-void ConsoleReader::onFileEnd(int64_t offset, IFile * file) {
+void ConsoleReader::onFileEnd(int64_t offset, FileHandle f) {
     if (m_device) {
         if (m_isFile) {
-            if (!m_bytesRead || (size_t) offset == fileSize(file)) {
+            if (!m_bytesRead || (size_t) offset == fileSize(f)) {
                 m_isFile = false;
-                m_device = fileOpen("conin$", IFile::kReadOnly);
+                m_device = fileOpen("conin$", File::fReadOnly);
             }
         }
         read(offset);
@@ -168,7 +168,8 @@ static ShutdownNotify s_cleanup;
 //===========================================================================
 void ShutdownNotify::onShutdownClient(bool retry) {
     if (!retry) {
-        s_console.m_device.reset();
+        fileClose(s_console.m_device);
+        s_console.m_device = {};
         endpointCancelQuery(s_cancelAddrId);
         socketDisconnect(&s_socket);
     }
@@ -220,7 +221,7 @@ void Application::onAppRun() {
     }
     cout << "Input from: " << inpath << endl;
 
-    s_console.m_device = fileOpen(inpath, IFile::kReadOnly | IFile::kDenyNone);
+    s_console.m_device = fileOpen(inpath, File::fReadOnly | File::fDenyNone);
     if (!s_console.m_device)
         return appSignalShutdown(EX_IOERR);
 }

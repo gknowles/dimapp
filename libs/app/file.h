@@ -17,50 +17,48 @@
 
 namespace Dim {
 
-class IFile {
-public:
+namespace File {
     enum OpenMode {
         // content access, one *must* be specified
-        kNoAccess = 0x1,    // when you only want metadata (time, size, etc)
-        kReadOnly = 0x2,
-        kReadWrite = 0x4,
+        fNoAccess = 0x1,    // when you only want metadata (time, size, etc)
+        fReadOnly = 0x2,
+        fReadWrite = 0x4,
 
         // creation
-        kCreat = 0x10, // create if not exist
-        kExcl = 0x20,  // fail if already exists
-        kTrunc = 0x40, // truncate if already exists
+        fCreat = 0x10, // create if not exist
+        fExcl = 0x20,  // fail if already exists
+        fTrunc = 0x40, // truncate if already exists
         
         // sharing
-        kDenyWrite = 0x100,
-        kDenyNone = 0x200,
+        fDenyWrite = 0x100,
+        fDenyNone = 0x200,
 
         // Optimize for file*Wait family of functions. Opens file without
         // FILE_FLAG_OVERLAPPED and does async by posting the requests
-        // to a small taskqueue whos thread use blocking calls.
-        kBlocking = 0x1000,
+        // to a small taskqueue whos threads use blocking calls.
+        fBlocking = 0x1000,
     };
-
-public:
-    virtual ~IFile() {}
 };
+
+struct FileHandle : HandleBase {};
 
 // on error returns an empty pointer and sets errno to one of:
 //  EEXIST, ENOENT, EBUSY, EACCES, or EIO
-std::unique_ptr<IFile> fileOpen(
+FileHandle fileOpen(
     std::string_view path,
-    unsigned modeFlags // IFile::OpenMode::*
+    unsigned modeFlags // File::OpenMode::*
 );
-uint64_t fileSize(IFile * file);
-TimePoint fileLastWriteTime(IFile * file);
-std::experimental::filesystem::path filePath(IFile * file);
-unsigned fileMode(IFile * file);
+uint64_t fileSize(FileHandle f);
+TimePoint fileLastWriteTime(FileHandle f);
+std::experimental::filesystem::path filePath(FileHandle f);
+unsigned fileMode(FileHandle f);
 
-// Closing the file is normally handled as part of destroying the IFile
+// Closing the file is normally handled as part of destroying the File
 // object, but fileClose() can be used to release the file to the system
-// when the IFile can't be deleted, such as in a callback.
+// when the File can't be deleted, such as in a callback.
 //
-// filePath still works, but most operations on a closed IFile will fail.
-void fileClose(IFile * file);
+// filePath still works, but most operations on a closed File will fail.
+void fileClose(FileHandle f);
 
 
 /****************************************************************************
@@ -78,27 +76,27 @@ public:
     virtual bool onFileRead(
         std::string_view data, 
         int64_t offset, 
-        IFile * file
+        FileHandle f
     ) {
         return true;
     }
 
     // guaranteed to be called exactly once, when the read is completed
     // (or failed)
-    virtual void onFileEnd(int64_t offset, IFile * file) = 0;
+    virtual void onFileEnd(int64_t offset, FileHandle f) = 0;
 };
 void fileRead(
     IFileReadNotify * notify,
     void * outBuf,
     size_t outBufLen,
-    IFile * file,
+    FileHandle f,
     int64_t offset = 0,
     int64_t length = 0 // 0 to read until the end
 );
 void fileReadWait(
     void * outBuf,
     size_t outBufLen,
-    IFile * file,
+    FileHandle f,
     int64_t offset);
 
 void fileStreamBinary(
@@ -123,13 +121,13 @@ size_t filePageSize();
 // to cover. A value less than or equal to the size of the file (such as 0)
 // makes a view of the entire file that can't be extended. The value is
 // rounded up to a multiple of page size.
-bool fileOpenView(const char *& base, IFile * file, int64_t maxLen = 0);
+bool fileOpenView(const char *& base, FileHandle f, int64_t maxLen = 0);
 
 // Extend the view up to maxLen that was set when the view was opened. A
 // view can only be extended if the file (which is also extended) was opened
 // for writing. "Extending" with a length less than the current view has
 // no effect and extending beyond maxLen is an error.
-void fileExtendView(IFile * file, int64_t length);
+void fileExtendView(FileHandle f, int64_t length);
 
 
 /****************************************************************************
@@ -146,25 +144,25 @@ public:
         int written,
         std::string_view data,
         int64_t offset,
-        IFile * file) = 0;
+        FileHandle f) = 0;
 };
 void fileWrite(
     IFileWriteNotify * notify,
-    IFile * file,
+    FileHandle f,
     int64_t offset,
     const void * buf,
     size_t bufLen);
 void fileWriteWait(
-    IFile * file,
+    FileHandle f,
     int64_t offset,
     const void * buf,
     size_t bufLen);
 void fileAppend(
     IFileWriteNotify * notify,
-    IFile * file,
+    FileHandle f,
     const void * buf,
     size_t bufLen);
-void fileAppendWait(IFile * file, const void * buf, size_t bufLen);
+void fileAppendWait(FileHandle f, const void * buf, size_t bufLen);
 
 
 /****************************************************************************
@@ -177,13 +175,13 @@ class IFileChangeNotify {
 public:
     virtual ~IFileChangeNotify () {}
 
-    virtual void onFileChange(std::string_view fullpath, IFile * file) = 0;
+    virtual void onFileChange(std::string_view fullpath, FileHandle f) = 0;
 };
 
 struct FileMonitorHandle : HandleBase {};
 
 // The notifier, if present, is always called with the fullpath of the root
-// directory and a nullptr for the IFile*. This happens for every rename or 
+// directory and a nullptr for the File*. This happens for every rename or 
 // change to last write time of any file within it's scope.
 bool fileMonitorDir(
     FileMonitorHandle * handle,
