@@ -96,7 +96,7 @@ class IEndpointNotify {
 public:
     virtual ~IEndpointNotify() {}
     // count of 0 means either no results or some kind of error occurred
-    virtual void onEndpointFound(Endpoint * ptr, int count) = 0;
+    virtual void onEndpointFound(const Endpoint * ptr, int count) = 0;
 };
 
 void endpointQuery(

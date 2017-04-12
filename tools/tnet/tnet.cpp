@@ -28,8 +28,8 @@ class SocketConn : public ISocketNotify, public IEndpointNotify {
     void onSocketDisconnect() override;
     void onSocketDestroy() override;
 
-    // IDimEndpointNotify
-    void onEndpointFound(Endpoint * ends, int count) override;
+    // IEndpointNotify
+    void onEndpointFound(const Endpoint * ptr, int count) override;
 
     unique_ptr<ConsoleScopedAttr> m_connected;
 };
@@ -70,7 +70,7 @@ static SocketConn s_socket;
 ***/
 
 //===========================================================================
-void SocketConn::onEndpointFound(Endpoint * ends, int count) {
+void SocketConn::onEndpointFound(const Endpoint * ends, int count) {
     if (!count) {
         cout << "Host not found" << endl;
         appSignalShutdown(kExitConnectFailed);
