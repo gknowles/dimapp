@@ -8,6 +8,7 @@
 
 #include "core/charbuf.h"
 #include "core/types.h"
+#include "core/util.h"
 
 #include <functional>
 #include <memory>

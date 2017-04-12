@@ -3,13 +3,15 @@
 //
 // pch.h - dim tls
 
-#include "core/core.h"
+// Public header
 #include "tls/tls.h"
-
 #include "tlsrec.h"
 
-#include "tlsint.h"
+// External library public headers
+#include "core/core.h"
 
+// External library internal headers
+// Standard headers
 #include <cassert>
 #include <cstring>
 #include <deque>
@@ -19,3 +21,7 @@
 #include <mutex>
 #include <shared_mutex>
 #include <vector>
+
+// Platform headers
+// Internal headers
+#include "tlsint.h"

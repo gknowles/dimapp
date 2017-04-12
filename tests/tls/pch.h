@@ -4,8 +4,14 @@
 // pch.h - dim test tls
 
 #define DIM_LIB_KEEP_MACROS
+// Library public headers
 #include "app/app.h"
 #include "core/core.h"
 #include "tls/tls.h"
 
+// Library internal headers
+// Standard headers
 #include <iostream>
+
+// Platform headers
+// Internal headers

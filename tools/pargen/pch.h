@@ -4,10 +4,13 @@
 // pch.h - pargen
 
 #define DIM_LIB_KEEP_MACROS
+// Library public headers
 #include "app/app.h"
 #include "cli/cli.h"
 #include "core/core.h"
 
+// Library internal headers
+// Standard headers
 #include <bitset>
 #include <crtdbg.h>
 #include <cstdio>
@@ -24,5 +27,7 @@
 #include <unordered_set>
 #include <vector>
 
+// Platform headers
+// Internal headers
 #include "abnfparse.h"
 #include "intern.h"

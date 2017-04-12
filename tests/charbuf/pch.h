@@ -4,7 +4,13 @@
 // pch.h - dim test charbuf
 
 #define DIM_LIB_KEEP_MACROS
+// Library public headers
 #include "app/app.h"
 #include "core/core.h"
 
+// Library internal headers
+// Standard headers
 #include <iostream>
+
+// Platform headers
+// Internal headers

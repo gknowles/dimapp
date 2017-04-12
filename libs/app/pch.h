@@ -3,16 +3,20 @@
 //
 // pch.h - dim app
 
+// Public header
 #include "app/app.h"
+
+// External library public headers
 #include "cli/cli.h"
 #include "core/core.h"
 #include "xml/xml.h"
 
+// External library internal headers
 #include "app/appint.h"
 #include "core/appint.h"
 #include "net/appint.h"
-#include "win/appint.h"
 
+// Standard headers
 #include <array>
 #include <atomic>
 #include <cassert>
@@ -27,3 +31,7 @@
 #include <random>
 #include <thread>
 #include <vector>
+
+// Platform headers
+// Internal headers
+#include "win/appint.h"

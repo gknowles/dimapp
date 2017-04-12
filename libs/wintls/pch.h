@@ -3,9 +3,15 @@
 //
 // pch.h - dim windows platform tls
 
-#include "core/core.h"
+// Public header
 #include "wintls/wintls.h"
 
+// External library public headers
+#include "core/core.h"
+
+// External library internal headers
+// Standard headers
+// Platform headers
 #define _WIN32_WINNT _WIN32_WINNT_WIN8
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
@@ -20,4 +26,5 @@
 #pragma comment(lib, "ncrypt.lib")
 #pragma comment(lib, "secur32.lib")
 
+// Internal headers
 #include "win/winint.h"

@@ -3,8 +3,15 @@
 //
 // pch.h - dim uri
 
+// Public header
+// External library public headers
 #include "core/util.h"
-#include "uriparse.h"
 
+// External library internal headers
+// Standard headers
 #include <algorithm>
 #include <iostream>
+
+// Platform headers
+// Internal headers
+#include "uriparse.h"

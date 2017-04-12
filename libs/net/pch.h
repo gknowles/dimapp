@@ -3,16 +3,17 @@
 //
 // pch.h - dim net
 
-#include "app/app.h"
-#include "core/core.h"
+// Public header
 #include "net/net.h"
-#include "xml/xml.h"
-
 #include "hpack.h"
 
-#include "appint.h"
-#include "httpint.h"
+// External library public headers
+#include "app/app.h"
+#include "core/core.h"
+#include "xml/xml.h"
 
+// Externa library internal headers
+// Standard headers
 #include <cassert>
 #include <cstring>
 #include <deque>
@@ -22,3 +23,8 @@
 #include <mutex>
 #include <shared_mutex>
 #include <vector>
+
+// Platform headers
+// Internal headers
+#include "appint.h"
+#include "httpint.h"

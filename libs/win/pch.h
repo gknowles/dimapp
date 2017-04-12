@@ -3,12 +3,16 @@
 //
 // pch.h - dim windows platform
 
+// Public header
+// External library public headers
 #include "app/app.h"
 #include "core/core.h"
 #include "net/net.h"
 
+// External library internal headers
 #include "core/appint.h" // iClockGetTicks
 
+// Standard headers
 #include <algorithm>
 #include <atomic>
 #include <cassert>
@@ -20,6 +24,7 @@
 #include <unordered_map>
 #include <vector>
 
+// Platform headers
 #define _WIN32_WINNT _WIN32_WINNT_WIN8
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
@@ -34,6 +39,7 @@
 #pragma comment(lib, "synchronization.lib") // WaitOnAddress
 #pragma comment(lib, "ws2_32.lib")
 
+// Internal headers
 #include "appint.h"
 #include "winint.h"
 #include "winsockint.h"

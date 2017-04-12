@@ -9,6 +9,7 @@
 
 #include "cppconf/cppconf.h"
 
+#include "core/charbuf.h"
 #include "core/handle.h"
 
 #include <cstdint>

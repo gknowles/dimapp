@@ -3,9 +3,17 @@
 //
 // pch.h - dim xml
 
-#include "core/util.h"
+// Public header
 #include "xml.h"
-#include "xmlbaseparse.h"
 
+// External library public headers
+#include "core/util.h"
+
+// External library internal headers
+// Standard headers
 #include <algorithm>
 #include <iostream>
+
+// Platform headers
+// Internal headers
+#include "xmlbaseparse.h"

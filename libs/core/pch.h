@@ -3,9 +3,12 @@
 //
 // pch.h - dim core
 
+// Public header
 #include "core.h"
-#include "appint.h"
 
+// External library public headers
+// External library internal headers
+// Standard headers
 #include <array>
 #include <atomic>
 #include <cassert>
@@ -20,3 +23,7 @@
 #include <random>
 #include <thread>
 #include <vector>
+
+// Platform headers
+// Internal headers
+#include "appint.h"
