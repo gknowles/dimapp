@@ -70,8 +70,8 @@
 # libs/net/net.h
 # libs/net/pch.cpp
 # libs/net/pch.h
+# libs/net/rawsockmgr.h
 # libs/net/socket.h
-# libs/net/socketmgr.h
 # libs/tls/pch.cpp
 # libs/tls/pch.h
 # libs/tls/tls.cpp

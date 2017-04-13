@@ -1,7 +1,7 @@
 // Copyright Glen Knowles 2017.
 // Distributed under the Boost Software License, Version 1.0.
 //
-// socketmgr.h - dim net
+// rawsockmgr.h - dim net
 #pragma once
 
 #include "cppconf/cppconf.h"
@@ -18,9 +18,9 @@ enum MgrFlags : unsigned {
 };
 } // namespace
 
-struct SocketMgrHandle : HandleBase {};
+struct RawSocketMgrHandle : HandleBase {};
 
-SocketMgrHandle sockMgrListen(
+RawSocketMgrHandle rawSockMgrListen(
     std::string_view mgrName,
     IFactory<IAppSocketNotify> * factory,
     /* security requirements, */
@@ -28,13 +28,13 @@ SocketMgrHandle sockMgrListen(
     AppSocket::MgrFlags flags = (AppSocket::MgrFlags) 0
 );
 
-SocketMgrHandle sockMgrConnect(
+RawSocketMgrHandle rawSockMgrConnect(
     std::string_view mgrName,
     IFactory<IAppSocketNotify> * factory,
     AppSocket::Family fam,
     AppSocket::MgrFlags flags = (AppSocket::MgrFlags) 0
 );
 
-void endpointMonitor(SocketMgrHandle mgr, std::string_view nodeName);
+void endpointMonitor(RawSocketMgrHandle mgr, std::string_view nodeName);
 
 } // namespace
