@@ -372,6 +372,9 @@ foreach(var ${config_defines})
     add_definitions(/D${var})
 endforeach()
 
+source_group(" " REGULAR_EXPRESSION ".*")
+source_group("docs" REGULAR_EXPRESSION "docs/.*")
+
 if(ROOT_PROJECT)
     # vendor dependencies
     file(GLOB allnames vendor/*)
@@ -445,9 +448,6 @@ foreach(var ${allnames})
         endif()
     endif()
 endforeach()
-
-source_group(" " REGULAR_EXPRESSION ".*")
-source_group("docs" REGULAR_EXPRESSION "docs/.*")
 
 # update deps file
 update_deps_file(${deps})
