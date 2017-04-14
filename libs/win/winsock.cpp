@@ -421,6 +421,8 @@ void ShutdownNotify::onShutdownConsole(bool retry) {
 *
 ***/
 
+static WSAPROTOCOL_INFOW s_protocolInfo;
+
 //===========================================================================
 void Dim::iSocketInitialize() {
     s_mode = kRunStarting;
@@ -442,7 +444,7 @@ void Dim::iSocketInitialize() {
         WSA_FLAG_REGISTERED_IO
     );
     if (s == INVALID_SOCKET)
-        logMsgCrash() << "socket: " << WinError{};
+        logMsgCrash() << "WSASocketW: " << WinError{};
 
     // get RIO functions
     GUID extId = WSAID_MULTIPLE_RIO;
@@ -461,6 +463,18 @@ void Dim::iSocketInitialize() {
     )) {
         logMsgCrash() << "WSAIoctl(get RIO extension): " << WinError{};
     }
+
+    int piLen = sizeof(s_protocolInfo);
+    if (getsockopt(
+        s, 
+        SOL_SOCKET, 
+        SO_PROTOCOL_INFOW, 
+        (char *) &s_protocolInfo, 
+        &piLen
+    )) {
+        logMsgCrash() << "getsockopt(SO_PROTOCOL_INFOW): " << WinError{};
+    }
+
     closesocket(s);
 
     // initialize buffer allocator
@@ -494,7 +508,7 @@ SOCKET Dim::iSocketCreate() {
         AF_UNSPEC, 
         SOCK_STREAM, 
         IPPROTO_TCP, 
-        NULL, 
+        &s_protocolInfo, 
         0, 
         WSA_FLAG_REGISTERED_IO
     );
