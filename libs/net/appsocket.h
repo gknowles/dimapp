@@ -27,7 +27,7 @@ namespace AppSocket {
     enum Family { 
         kTls, 
         kHttp2, 
-        kByte,
+        kRaw,
         kNumFamilies,
     };
 }
@@ -68,8 +68,8 @@ public:
     virtual void onSocketDestroy () { delete this; }
 
 private:
-    friend class AppSocketBase;
-    AppSocketBase * m_socket{nullptr};
+    friend class IAppSocket;
+    IAppSocket * m_socket{nullptr};
 };
 
 void socketDisconnect(IAppSocketNotify * notify);
@@ -113,15 +113,13 @@ void socketAddFamily(AppSocket::Family fam, IAppSocketMatchNotify * notify);
 
 void socketListen(
     IFactory<IAppSocketNotify> * factory,
-    AppSocket::Family fam,
-    std::string_view type,
-    const Endpoint & end
+    const Endpoint & end,
+    AppSocket::Family fam
 );
 void socketCloseWait(
     IFactory<IAppSocketNotify> * factory,
-    AppSocket::Family fam,
-    std::string_view type,
-    const Endpoint & end
+    const Endpoint & end,
+    AppSocket::Family fam
 );
 
 //===========================================================================
@@ -131,23 +129,21 @@ void socketCloseWait(
 //===========================================================================
 template <typename S> inline 
 std::enable_if_t<std::is_base_of_v<IAppSocketNotify, S>, void> socketListen(
-    AppSocket::Family fam,
-    std::string_view type,
-    const Endpoint & end
+    const Endpoint & end,
+    AppSocket::Family fam
 ) {
     auto factory = getFactory<IAppSocketNotify, S>();
-    socketListen(factory, fam, type, end);
+    socketListen(factory, end, fam);
 }
 
 //===========================================================================
 template <typename S> inline 
 std::enable_if_t<std::is_base_of_v<IAppSocketNotify, S>, void> socketCloseWait(
-    AppSocket::Family fam,
-    std::string_view type,
-    const Endpoint & end
+    const Endpoint & end,
+    AppSocket::Family fam
 ) {
     auto factory = getFactory<IAppSocketNotify, S>();
-    socketCloseWait(factory, fam, type, end);
+    socketCloseWait(factory, end, fam);
 }
 
 
@@ -155,22 +151,25 @@ std::enable_if_t<std::is_base_of_v<IAppSocketNotify, S>, void> socketCloseWait(
 *
 *   AppSocket filter
 *
+*   Filters are like listeners except that they only apply to endpoints that
+*   are already being listened to, rather than creating additional bindings. 
+*
 ***/
 
 void socketAddFilter(
     IFactory<IAppSocketNotify> * factory,
-    AppSocket::Family fam,
-    std::string_view type
+    const Endpoint & end,
+    AppSocket::Family fam
 );
 
 //===========================================================================
 template <typename S> inline 
 std::enable_if_t<std::is_base_of_v<IAppSocketNotify, S>, void> socketAddFilter(
-    AppSocket::Family fam,
-    std::string_view type
+    const Endpoint & end,
+    AppSocket::Family fam
 ) {
     auto factory = getFactory<IAppSocketNotify, S>();
-    socketAddFilter(factory, fam, type);
+    socketAddFilter(factory, end, fam);
 }
 
 } // namespace

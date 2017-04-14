@@ -111,7 +111,7 @@ static ShutdownNotify s_cleanup;
 
 //===========================================================================
 void ShutdownNotify::onShutdownClient(bool retry) {
-    socketCloseWait<TnetConn>(AppSocket::kByte, "", s_endpoint);
+    socketCloseWait<TnetConn>(s_endpoint, AppSocket::kRaw);
 }
 
 
@@ -150,9 +150,10 @@ void Application::onAppRun() {
 
     appConfigMonitor("h2srv.xml", this);
     winTlsInitialize();
+    appTlsInitialize();
 
     parse(&s_endpoint, "0.0.0.0", 8888);
-    socketListen<TnetConn>(AppSocket::kByte, "", s_endpoint);
+    socketListen<TnetConn>(s_endpoint, AppSocket::kRaw);
     httpRouteAdd(&s_web, "/", fHttpMethodGet, true);
 }
 

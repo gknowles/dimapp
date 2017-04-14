@@ -111,5 +111,5 @@ void ShutdownNotify::onShutdownClient(bool retry) {
 void Dim::appTlsInitialize() {
     shutdownMonitor(&s_cleanup);
     socketAddFamily(AppSocket::kTls, &s_byteMatch);
-    socketAddFilter<TlsSocket>(AppSocket::kTls, "");
+    socketAddFilter<TlsSocket>(Endpoint{}, AppSocket::kTls);
 }

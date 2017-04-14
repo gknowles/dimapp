@@ -232,7 +232,7 @@ static ShutdownNotify s_cleanup;
 //===========================================================================
 void ShutdownNotify::onShutdownClient(bool retry) {
     if (!s_paths.empty())
-        socketCloseWait<HttpSocket>(AppSocket::kHttp2, "", s_endpoint);
+        socketCloseWait<HttpSocket>(s_endpoint, AppSocket::kHttp2);
 }
 
 
@@ -267,7 +267,7 @@ void Dim::httpRouteAdd(
 ) {
     assert(!path.empty());
     if (s_paths.empty())
-        socketListen<HttpSocket>(AppSocket::kHttp2, "", s_endpoint);
+        socketListen<HttpSocket>(s_endpoint, AppSocket::kHttp2);
     PathInfo pi;
     pi.notify = notify;
     pi.recurse = recurse;
