@@ -24,7 +24,7 @@ class SocketConn : public ISocketNotify, public IEndpointNotify {
     // ISocketNotify
     void onSocketConnect(const SocketInfo & info) override;
     void onSocketConnectFailed() override;
-    void onSocketRead(const SocketData & data) override;
+    void onSocketRead(SocketData & data) override;
     void onSocketDisconnect() override;
     void onSocketDestroy() override;
 
@@ -94,7 +94,7 @@ void SocketConn::onSocketConnectFailed() {
 }
 
 //===========================================================================
-void SocketConn::onSocketRead(const SocketData & data) {
+void SocketConn::onSocketRead(SocketData & data) {
     cout.write(data.data, data.bytes);
     cout.flush();
 }

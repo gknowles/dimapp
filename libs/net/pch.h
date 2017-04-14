@@ -27,4 +27,5 @@
 // Platform headers
 // Internal headers
 #include "appint.h"
+#include "appsockint.h"
 #include "httpint.h"

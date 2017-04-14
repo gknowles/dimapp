@@ -49,66 +49,21 @@ struct EndpointInfo {
     unsigned listeners{0};
 };
 
-struct UnmatchedInfo {
-    TimePoint expiration;
-    string socketData;
-    IAppSocket * notify{nullptr};
-};
-
-class UnmatchedTimer : public ITimerNotify {
-    Duration onTimer(TimePoint now) override;
-};
-
-} // namespace
-
-class Dim::IAppSocket {
-public:
-    static void disconnect(IAppSocketNotify * notify);
-    static void write(IAppSocketNotify * notify, string_view data);
-    static void write(IAppSocketNotify * notify, const CharBuf & data);
-
-public:
-    virtual ~IAppSocket();
-
-    virtual void disconnect() = 0;
-    virtual void write(std::string_view data) = 0;
-
-    bool notifyAccept(const SocketInfo & info);
-    void notifyDisconnect();
-    void notifyDestroy();
-    void notifyRead(const SocketData & data);
-
-protected:
-    AppSocketInfo m_accept;
-
-private:
-    friend class UnmatchedTimer;
-    Duration checkTimeout_LK(TimePoint now);
-
-    // set to list.end() when matching is successfully or unsuccessfully
-    // completed.
-    list<UnmatchedInfo>::iterator m_pos;
-
-    IAppSocketNotify * m_notify{nullptr};
-};
-
-
-namespace {
-
-class AppSocketRaw 
+class RawSocket 
     : public IAppSocket
     , public ISocketNotify 
     , ITimerNotify
 {
 public:
     void disconnect() override;
-    void write(std::string_view data) override;
+    void write(string_view data) override;
+    void write(unique_ptr<SocketBuffer> buffer, size_t bytes) override;
 
     // ISocketNotify
     bool onSocketAccept(const SocketInfo & info) override;
     void onSocketDisconnect() override;
     void onSocketDestroy() override;
-    void onSocketRead(const SocketData & data) override;
+    void onSocketRead(SocketData & data) override;
 
 private:
     Duration onTimer(TimePoint now) override;
@@ -131,8 +86,8 @@ static MatchKey s_matchers[AppSocket::kNumFamilies];
 static vector<EndpointInfo> s_endpoints;
 
 static mutex s_unmatchedMut;
-static list<UnmatchedInfo> s_unmatched;
-static UnmatchedTimer s_unmatchedTimer;
+static list<IAppSocket::UnmatchedInfo> s_unmatched;
+static IAppSocket::UnmatchedTimer s_unmatchedTimer;
 
 // time expired before enough data was received to determine the protocol
 static auto & s_perfNoData = uperf("sock disconnect no data");
@@ -147,12 +102,12 @@ static auto & s_perfNotAccepted = uperf("sock disconnect not accepted");
 
 /****************************************************************************
 *
-*   UnmatchedTimer
+*   IAppSocket::UnmatchedTimer
 *
 ***/
 
 //===========================================================================
-Duration UnmatchedTimer::onTimer(TimePoint now) {
+Duration IAppSocket::UnmatchedTimer::onTimer(TimePoint now) {
     lock_guard<mutex> lk{s_unmatchedMut};
     while (!s_unmatched.empty()) {
         auto & info = s_unmatched.front();
@@ -193,6 +148,16 @@ void IAppSocket::write(IAppSocketNotify * notify, const CharBuf & data) {
 }
 
 //===========================================================================
+// static 
+void IAppSocket::write(
+    IAppSocketNotify * notify, 
+    std::unique_ptr<SocketBuffer> buffer, 
+    size_t bytes
+) {
+    notify->m_socket->write(move(buffer), bytes);
+}
+
+//===========================================================================
 IAppSocket::~IAppSocket() {
     assert(m_pos == list<UnmatchedInfo>::iterator{});
 }
@@ -211,9 +176,8 @@ Duration IAppSocket::checkTimeout_LK(TimePoint now) {
 }
 
 //===========================================================================
-bool IAppSocket::notifyAccept(const SocketInfo & info) {
-    m_accept.local = info.local;
-    m_accept.remote = info.remote;
+bool IAppSocket::notifyAccept(const AppSocketInfo & info) {
+    m_accept = info;
     auto expiration = Clock::now() + kUnmatchedTimeout;
 
     {
@@ -243,13 +207,9 @@ void IAppSocket::notifyDestroy() {
 }
 
 //===========================================================================
-void IAppSocket::notifyRead(const SocketData & data) {
-    if (m_notify) {
-        AppSocketData ad = {};
-        ad.data = data.data;
-        ad.bytes = data.bytes;
-        return m_notify->onSocketRead(ad);
-    }
+void IAppSocket::notifyRead(AppSocketData & data) {
+    if (m_notify)
+        return m_notify->onSocketRead(data);
 
     // already queued for disconnect? ignore any incoming data
     if (m_pos == list<UnmatchedInfo>::iterator{})
@@ -357,17 +317,17 @@ FINISH:
 
 /****************************************************************************
 *
-*   AppSocketRaw
+*   RawSocket
 *
 ***/
 
 //===========================================================================
-void AppSocketRaw::disconnect() {
+void RawSocket::disconnect() {
     socketDisconnect(this);
 }
 
 //===========================================================================
-void AppSocketRaw::write(std::string_view data) {
+void RawSocket::write(string_view data) {
     bool hadData = m_bufferUsed;
     while (!data.empty()) {
         if (!m_buffer) 
@@ -386,27 +346,47 @@ void AppSocketRaw::write(std::string_view data) {
 }
 
 //===========================================================================
-bool AppSocketRaw::onSocketAccept(const SocketInfo & info) {
-    return notifyAccept(info);
+void RawSocket::write(unique_ptr<SocketBuffer> buffer, size_t bytes) {
+    bool hadData = m_bufferUsed;
+    if (hadData)
+        socketWrite(this, move(m_buffer), m_bufferUsed);
+    if (bytes == buffer->len) {
+        socketWrite(this, move(buffer), bytes);
+        m_bufferUsed = 0;
+    } else {
+        m_buffer = move(buffer);
+        m_bufferUsed = bytes;
+        if (!hadData)
+            timerUpdate(this, 1ms, true);
+    }
 }
 
 //===========================================================================
-void AppSocketRaw::onSocketDisconnect() {
+bool RawSocket::onSocketAccept(const SocketInfo & info) {
+    AppSocketInfo ai = {};
+    ai.local = info.local;
+    ai.remote = info.remote;
+    return notifyAccept(ai);
+}
+
+//===========================================================================
+void RawSocket::onSocketDisconnect() {
     notifyDisconnect();
 }
 
 //===========================================================================
-void AppSocketRaw::onSocketDestroy() {
+void RawSocket::onSocketDestroy() {
     notifyDestroy();
 }
 
 //===========================================================================
-void AppSocketRaw::onSocketRead(const SocketData & data) {
-    notifyRead(data);
+void RawSocket::onSocketRead(SocketData & data) {
+    AppSocketData ad = { data.data, data.bytes };
+    notifyRead(ad);
 }
 
 //===========================================================================
-Duration AppSocketRaw::onTimer(TimePoint now) {
+Duration RawSocket::onTimer(TimePoint now) {
     if (m_bufferUsed) {
         socketWrite(this, move(m_buffer), m_bufferUsed);
         m_bufferUsed = 0;
@@ -508,6 +488,15 @@ void Dim::socketWrite(IAppSocketNotify * notify, const CharBuf & data) {
 }
 
 //===========================================================================
+void Dim::socketWrite(
+    IAppSocketNotify * notify, 
+    unique_ptr<SocketBuffer> buffer,
+    size_t bytes
+) {
+    IAppSocket::write(notify, move(buffer), bytes);
+}
+
+//===========================================================================
 void Dim::socketAddFamily(
     AppSocket::Family fam, 
     IAppSocketMatchNotify * notify
@@ -556,7 +545,7 @@ void Dim::socketListen(
     AppSocket::Family fam
 ) {
     if (addFactory(factory, true, end, fam))
-        socketListen<AppSocketRaw>(end);
+        socketListen<RawSocket>(end);
 }
 
 //===========================================================================
@@ -597,7 +586,7 @@ void Dim::socketCloseWait(
             );
         }
         lk.unlock();
-        socketCloseWait<AppSocketRaw>(end);
+        socketCloseWait<RawSocket>(end);
         return;
     }
 

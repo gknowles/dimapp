@@ -41,7 +41,7 @@ public:
 public:
     bool onSocketAccept(const AppSocketInfo & info) override;
     void onSocketDisconnect() override;
-    void onSocketRead(const AppSocketData & data) override;
+    void onSocketRead(AppSocketData & data) override;
 
 private:
     HttpConnHandle m_conn;
@@ -158,7 +158,7 @@ void HttpSocket::onSocketDisconnect() {
 }
 
 //===========================================================================
-void HttpSocket::onSocketRead(const AppSocketData & data) {
+void HttpSocket::onSocketRead(AppSocketData & data) {
     CharBuf out;
     vector<unique_ptr<HttpMsg>> msgs;
     bool result = httpRecv(m_conn, &out, &msgs, data.data, data.bytes);

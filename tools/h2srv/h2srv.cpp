@@ -38,7 +38,7 @@ class TnetConn : public IAppSocketNotify {
 public:
     bool onSocketAccept(const AppSocketInfo & accept) override;
     void onSocketDisconnect() override;
-    void onSocketRead(const AppSocketData & data) override;
+    void onSocketRead(AppSocketData & data) override;
 
 private:
     AppSocketInfo m_accept;
@@ -58,7 +58,7 @@ void TnetConn::onSocketDisconnect() {
 }
 
 //===========================================================================
-void TnetConn::onSocketRead(const AppSocketData & data) {
+void TnetConn::onSocketRead(AppSocketData & data) {
     cout << m_accept.remote << ": ";
     cout.write(data.data, data.bytes);
 }

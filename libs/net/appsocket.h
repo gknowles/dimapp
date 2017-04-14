@@ -63,7 +63,7 @@ public:
     virtual bool onSocketAccept (const AppSocketInfo & info) { return true; };
 
     // for both
-    virtual void onSocketRead (const AppSocketData & data) = 0;
+    virtual void onSocketRead (AppSocketData & data) = 0;
     virtual void onSocketDisconnect () {};
     virtual void onSocketDestroy () { delete this; }
 

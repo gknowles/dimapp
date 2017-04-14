@@ -17,12 +17,23 @@ using namespace Dim;
 
 namespace {
 
-class TlsSocket : public IAppSocketNotify {
+class TlsSocket
+    : public IAppSocket
+    , public IAppSocketNotify 
+{
 public:
+    void disconnect() override;
+    void write(string_view data) override;
+    void write(unique_ptr<SocketBuffer> buffer, size_t bytes) override;
+
     // IAppSocketNotify
-    bool onSocketAccept (const AppSocketInfo & info) override;
-    void onSocketRead (const AppSocketData & data) override;
-    void onSocketDisconnect () override;
+    bool onSocketAccept(const AppSocketInfo & info) override;
+    void onSocketDisconnect() override;
+    void onSocketDestroy() override;
+    void onSocketRead(AppSocketData & data) override;
+
+private:
+    bool m_skippedHeader{false};
 };
 
 } // namespace
@@ -42,16 +53,45 @@ public:
 ***/
 
 //===========================================================================
-bool TlsSocket::onSocketAccept (const AppSocketInfo & info) {
-    return false;
+void TlsSocket::disconnect() {
+    socketDisconnect(this);
 }
 
 //===========================================================================
-void TlsSocket::onSocketRead (const AppSocketData & data) {
+void TlsSocket::write(string_view data) {
+    socketWrite(this, data);
+}
+
+//===========================================================================
+void TlsSocket::write(unique_ptr<SocketBuffer> buffer, size_t bytes) {
+    socketWrite(this, move(buffer), bytes);
+}
+
+//===========================================================================
+bool TlsSocket::onSocketAccept (const AppSocketInfo & info) {
+    return notifyAccept(info);
 }
 
 //===========================================================================
 void TlsSocket::onSocketDisconnect () {
+    notifyDisconnect();
+}
+
+//===========================================================================
+void TlsSocket::onSocketDestroy () {
+    notifyDestroy();
+}
+
+//===========================================================================
+void TlsSocket::onSocketRead (AppSocketData & data) {
+    assert(data.bytes);
+    if (!m_skippedHeader) {
+        m_skippedHeader = true;
+        data.data += 1;
+        data.bytes -= 1;
+    }
+
+    notifyRead(data);
 }
 
 
