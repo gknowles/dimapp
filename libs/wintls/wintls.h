@@ -39,13 +39,13 @@ void winTlsClose(WinTlsConnHandle h);
 
 bool winTlsRecv(
     WinTlsConnHandle conn,
-    CharBuf * out,
-    CharBuf * data,
+    CharBuf * sendBack,
+    CharBuf * received,
     std::string_view src);
 
 void winTlsSend(
     WinTlsConnHandle conn,
-    CharBuf * out,
+    CharBuf * send,
     std::string_view src);
 
 } // namespace

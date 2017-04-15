@@ -31,11 +31,15 @@ namespace {
 
 class ServerConn {
 public:
+    ServerConn();
     void accept();
     bool recv(CharBuf * out, CharBuf * data, string_view src);
     void send(CharBuf * out, string_view src);
 private:
-    CtxtHandle m_hctxt;
+    CtxtHandle m_context;
+    bool m_appData{false};
+    SecPkgContext_StreamSizes m_sizes;
+    SecPkgContext_ApplicationProtocol m_alpn;
 };
 
 } // namespace
@@ -120,25 +124,224 @@ static NCRYPT_KEY_HANDLE toNCrypt (BCRYPT_KEY_HANDLE bkey) {
 ***/
 
 //===========================================================================
+ServerConn::ServerConn() {
+    SecInvalidateHandle(&m_context);
+}
+
+//===========================================================================
 void ServerConn::accept() {
-    WinError err{0};
-    //err = (SecStatus) AcceptSecurityContext(
-    //    &s_srvCred,
-    //    NULL, // current context
-    //    NULL, // input buffer
-    //    ASC_REQ_STREAM
-    //    ASC_REQ_CONFIDENTIALITY
-    //    CONNECTION
-    //SECBUFFER_APPLICATION_PROTOCOLS
 }
 
 //===========================================================================
 bool ServerConn::recv(CharBuf * out, CharBuf * data, string_view src) {
-    return false;
+    int err{0};
+
+    // Manually constructed SEC_APPLICATION_PROTOCOLS struct
+    const char alpn_chars[] = {
+        9, 0, 0, 0, // ProtocolListsSize
+        SecApplicationProtocolNegotiationExt_ALPN, 0, 0, 0, // ProtoNegoExt
+        3, 0, // ProtocolListSize
+        2, 'h', '2', // ProtocolList
+        0 // trailing null for the debugger
+    };
+
+NEGOTIATE:
+    while (!m_appData) {
+        unsigned flags = ASC_REQ_STREAM 
+            | ASC_REQ_CONFIDENTIALITY
+            | ASC_REQ_EXTENDED_ERROR
+            | ASC_REQ_ALLOCATE_MEMORY
+            ;
+
+        auto alpn = (SEC_APPLICATION_PROTOCOLS *) alpn_chars;
+        SecBuffer inBufs[] = { 
+            { (unsigned) src.size(), SECBUFFER_TOKEN, (void *) src.data() },
+            { (unsigned) size(alpn_chars), SECBUFFER_APPLICATION_PROTOCOLS, 
+                alpn },
+        };
+        SecBufferDesc inDesc{ 
+            SECBUFFER_VERSION, 
+            (unsigned) size(inBufs), 
+            inBufs 
+        };
+
+        SecBuffer outBufs[] = {
+            { 0, SECBUFFER_TOKEN, nullptr },
+            { 0, SECBUFFER_EXTRA, nullptr },
+            { 0, SECBUFFER_ALERT, nullptr },
+        };
+        SecBufferDesc outDesc{
+            SECBUFFER_VERSION, 
+            (unsigned) size(outBufs), 
+            outBufs
+        };
+
+        ULONG outFlags;
+        err = AcceptSecurityContext(
+            &s_srvCred,
+            SecIsValidHandle(&m_context) ? &m_context : NULL,
+            &inDesc, // input buffer
+            flags,
+            0, // target data representation
+            &m_context,
+            &outDesc,
+            &outFlags, // attributes of established connection, mirrors requirements
+            NULL // remote's cert expiry
+        );
+        if (outBufs[0].cbBuffer && outBufs[0].pvBuffer) {
+            out->append((char *) outBufs[0].pvBuffer, outBufs[0].cbBuffer);
+            FreeContextBuffer(outBufs[0].pvBuffer);
+        }
+        if (outBufs[1].cbBuffer) {
+            // TODO: figure out what is in the buffer, is it crypted data?
+            // uncrypted? ignorable handshake cruft?
+            assert(!outBufs[1].pvBuffer); 
+            data->append((char *) outBufs[1].pvBuffer, outBufs[1].cbBuffer);
+            FreeContextBuffer(outBufs[1].pvBuffer);
+        }
+        if (inBufs[1].BufferType == SECBUFFER_EXTRA && inBufs[1].cbBuffer) {
+            // The pvBuffer field of _EXTRA is not valid
+            src = src.substr(src.size() - inBufs[1].cbBuffer);
+        } else {
+            src = {};
+        }
+        if (err == SEC_E_OK) {
+            m_appData = true;
+            err = QueryContextAttributes(
+                &m_context, 
+                SECPKG_ATTR_STREAM_SIZES, 
+                &m_sizes
+            );
+            if (err) {
+                WinError werr = (SecStatus) err;
+                logMsgError()
+                    << "QueryContextAttributes(SECPKG_ATTR_STREAM_SIZES): "
+                    << werr;
+                return false;
+            }
+            err = QueryContextAttributes(
+                &m_context,
+                SECPKG_ATTR_APPLICATION_PROTOCOL,
+                &m_alpn
+            );
+            if (err) {
+                WinError werr = (SecStatus) err;
+                logMsgError()
+                    << "QueryContextAttributes(SECPKG_ATTR_APPLICATION_PROTOCOL): "
+                    << werr;
+                return false;
+            }
+            break;
+        }
+        if (err == SEC_E_INCOMPLETE_MESSAGE 
+            || err == SEC_E_INCOMPLETE_CREDENTIALS
+        ) {
+            // need to receive more data
+            assert(src.empty());
+            return true;
+        }
+        if (err == SEC_I_CONTINUE_NEEDED) {
+            continue;
+        }
+        WinError werr = (SecStatus) err;
+        logMsgError() << "AcceptSecurityContext: " << werr;
+        if (outBufs[2].cbBuffer) {
+            out->append((char *) outBufs[2].pvBuffer, outBufs[2].cbBuffer);
+            FreeContextBuffer(outBufs[2].pvBuffer);
+        }
+        return false;
+    }
+
+    // Decrypt application data 
+    for (;;) {
+        if (src.empty())
+            return true;
+
+        SecBuffer bufs[] = {
+            { (unsigned) src.size(), SECBUFFER_DATA, (void *) src.data() },
+            { 0, SECBUFFER_EMPTY, nullptr },
+            { 0, SECBUFFER_EMPTY, nullptr },
+            { 0, SECBUFFER_EMPTY, nullptr },
+        };
+        SecBufferDesc desc{
+            SECBUFFER_VERSION, 
+            (unsigned) size(bufs), 
+            bufs
+        };
+        err = DecryptMessage(&m_context, &desc, 0, NULL);
+        if (err == SEC_E_INCOMPLETE_MESSAGE) 
+            return true;
+
+        if (err != SEC_E_OK 
+            && err != SEC_I_CONTEXT_EXPIRED 
+            && err != SEC_I_RENEGOTIATE
+        ) {
+            WinError werr = (SecStatus) err;
+            logMsgError() << "DecryptMessage: " << werr;
+            return false;
+        }
+
+        if (bufs[1].BufferType != SECBUFFER_EMPTY && bufs[1].cbBuffer) {
+            assert(bufs[1].BufferType == SECBUFFER_DATA);
+            data->append((char *) bufs[1].pvBuffer, bufs[1].cbBuffer);
+        }
+        if (bufs[3].BufferType != SECBUFFER_EMPTY && bufs[3].cbBuffer) {
+            assert(bufs[3].BufferType == SECBUFFER_EXTRA);
+            // Again, upon return, the pvBuffer field of _EXTRA is invalid
+            src = src.substr(src.size() - bufs[3].cbBuffer);
+            if (err != SEC_E_OK) 
+                continue;
+            if (err == SEC_I_RENEGOTIATE) {
+                logMsgError() << "DecryptMessage: renegotiate requested with "
+                    "encrypted data";
+                continue;
+            }
+        }
+
+        if (err == SEC_E_OK)
+            return true;
+        if (err == SEC_I_CONTEXT_EXPIRED)
+            return false;
+
+        assert(err == SEC_I_RENEGOTIATE);
+        src = {};
+        m_appData = false;
+        goto NEGOTIATE;
+    }
 }
 
 //===========================================================================
 void ServerConn::send(CharBuf * out, string_view src) {
+    int err{0};
+
+    while (!src.empty()) {
+        auto num = min(src.size(), (size_t) m_sizes.cbMaximumMessage);
+        auto tmp = src.substr(0, num);
+        src.remove_prefix(num);
+
+        auto pos = out->size();
+        out->append(m_sizes.cbHeader, 0);
+        out->append(tmp);
+        out->append(m_sizes.cbTrailer, 0);
+        auto ptr = out->data(pos);
+
+        SecBuffer bufs[] = {
+            { m_sizes.cbHeader, SECBUFFER_STREAM_HEADER, ptr },
+            { (unsigned) tmp.size(), SECBUFFER_DATA, ptr += m_sizes.cbHeader },
+            { m_sizes.cbTrailer, SECBUFFER_STREAM_TRAILER, ptr += tmp.size() },
+            { 0, SECBUFFER_EMPTY, nullptr },
+        };
+        SecBufferDesc desc{
+            SECBUFFER_VERSION, 
+            (unsigned) size(bufs), 
+            bufs
+        };
+        err = EncryptMessage(&m_context, 0, &desc, 0);
+        if (err) {
+            WinError werr = (SecStatus) err;
+            logMsgCrash() << "EncryptMessage(" << num << "): " << werr;
+        }
+    }
 }
 
 
@@ -509,15 +712,16 @@ void Dim::winTlsInitialize() {
     WinError err{0};
 
     unique_ptr<const CERT_CONTEXT> cert;
-
-    SCHANNEL_CRED cred = {};
-    cred.dwVersion = SCHANNEL_CRED_VERSION;
     if (kMakeCert) {
         // cert = 
         makeCert("wintls.dimapp");
     } else {
-        cert = getCert("kpower", false);
+        cert = getCert("kcollege", false);
     }
+
+    SCHANNEL_CRED cred = {};
+    cred.dwVersion = SCHANNEL_CRED_VERSION;
+    cred.dwFlags = SCH_USE_STRONG_CRYPTO;   // optional
     if (cert) {
         const CERT_CONTEXT * certs[] = { cert.get() };
         cred.cCreds = (DWORD) size(certs);
@@ -556,11 +760,11 @@ void Dim::winTlsClose(WinTlsConnHandle h) {
 //===========================================================================
 bool Dim::winTlsRecv(
     WinTlsConnHandle h,
-    CharBuf * out,
+    CharBuf * reply,
     CharBuf * data,
     string_view src) {
     auto conn = s_conns.find(h);
-    return conn->recv(out, data, src);
+    return conn->recv(reply, data, src);
 }
 
 //===========================================================================
