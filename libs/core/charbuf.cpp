@@ -183,6 +183,8 @@ string_view CharBuf::view(size_t pos, size_t count) const {
 CharBuf::Range CharBuf::views(size_t pos, size_t count) const {
     assert(pos <= (size_t) m_size);
     auto num = min(count, m_size - pos);
+    if (!num)
+        return {};
     auto ic = find(pos);
     auto r = Range{Iterator{ic.first, (size_t) ic.second, num}};
     return r;
