@@ -205,7 +205,7 @@ AppSocket::MatchType Http2Match::OnMatch(
 ) {
     assert(fam == AppSocket::kHttp2);
     const char kPrefaceData[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
-    const size_t kPrefaceDataLen = size(kPrefaceData);
+    const size_t kPrefaceDataLen = size(kPrefaceData) - 1;
     size_t num = min(kPrefaceDataLen, view.size());
     if (view.compare(0, num, kPrefaceData, num) != 0)
         return AppSocket::kUnsupported;
@@ -248,7 +248,7 @@ void Dim::iHttpRouteInitialize() {
     socketAddFamily(AppSocket::kHttp2, &s_http2Match);
 
     s_endpoint = {};
-    s_endpoint.port = 8888;
+    s_endpoint.port = 41000;
 }
 
 

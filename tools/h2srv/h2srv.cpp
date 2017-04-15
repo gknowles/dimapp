@@ -152,7 +152,7 @@ void Application::onAppRun() {
     winTlsInitialize();
     appTlsInitialize();
 
-    parse(&s_endpoint, "0.0.0.0", 8888);
+    parse(&s_endpoint, "0.0.0.0", 41000);
     socketListen<TnetConn>(s_endpoint, AppSocket::kRaw);
     httpRouteAdd(&s_web, "/", fHttpMethodGet, true);
 }
