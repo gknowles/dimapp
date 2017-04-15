@@ -173,7 +173,7 @@ SocketBase::Mode SocketBase::getMode(ISocketNotify * notify) {
 void SocketBase::disconnect(ISocketNotify * notify) {
     unique_lock<mutex> lk{s_mut};
     if (notify->m_socket)
-        notify->m_socket->hardClose();
+        notify->m_socket->hardClose_LK();
 }
 
 //===========================================================================
@@ -221,7 +221,7 @@ SocketBase::~SocketBase() {
         m_notify->onSocketDestroy();
     }
 
-    hardClose();
+    hardClose_LK();
 
     if (m_maxSending)
         addCqUsed_LK(-(m_maxSending + kMaxReceiving));
@@ -230,7 +230,7 @@ SocketBase::~SocketBase() {
 }
 
 //===========================================================================
-void SocketBase::hardClose() {
+void SocketBase::hardClose_LK() {
     if (m_handle == INVALID_SOCKET)
         return;
 
@@ -240,6 +240,7 @@ void SocketBase::hardClose() {
 
     m_mode = Mode::kClosing;
     m_handle = INVALID_SOCKET;
+    m_unsent.clear();
 }
 
 //===========================================================================
@@ -341,6 +342,9 @@ void SocketBase::onWrite(SocketWriteTask * task) {
 
 //===========================================================================
 void SocketBase::queueWrite_LK(unique_ptr<SocketBuffer> buffer, size_t bytes) {
+    if (m_mode == Mode::kClosing || m_mode == Mode::kClosed)
+        return;
+
     if (!m_unsent.empty()) {
         auto & back = m_unsent.back();
         int count =

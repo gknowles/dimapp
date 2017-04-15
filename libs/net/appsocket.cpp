@@ -168,11 +168,9 @@ Duration IAppSocket::checkTimeout_LK(TimePoint now) {
     auto wait = m_pos->expiration - now;
     if (wait > 0s)
         return wait;
-    s_unmatched.erase(m_pos);
-    m_pos = {};
     s_perfNoData += 1;
     disconnect();
-    return 0s;
+    return kTimerInfinite;
 }
 
 //===========================================================================
@@ -197,6 +195,10 @@ bool IAppSocket::notifyAccept(const AppSocketInfo & info) {
 void IAppSocket::notifyDisconnect() {
     if (m_notify)
         m_notify->onSocketDisconnect();
+    if (m_pos != list<UnmatchedInfo>::iterator{}) {
+        s_unmatched.erase(m_pos);
+        m_pos = {};
+    }
 }
 
 //===========================================================================
@@ -323,6 +325,10 @@ FINISH:
 
 //===========================================================================
 void RawSocket::disconnect() {
+    if (m_bufferUsed) {
+        socketWrite(this, move(m_buffer), m_bufferUsed);
+        m_bufferUsed = 0;
+    }
     socketDisconnect(this);
 }
 

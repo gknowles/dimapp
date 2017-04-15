@@ -91,7 +91,7 @@ Duration ConnectTimer::onTimer(TimePoint now) {
         if (now < it->m_expiration) {
             return it->m_expiration - now;
         }
-        it->m_socket->hardClose();
+        it->m_socket->hardClose_LK();
         it->m_expiration = TimePoint::max();
         s_closing.splice(s_closing.end(), s_connecting, it);
     }
@@ -309,7 +309,7 @@ void ShutdownNotify::onShutdownConsole(bool retry) {
     lock_guard<mutex> lk{s_mut};
     if (!retry) {
         for (auto && task : s_connecting)
-            task.m_socket->hardClose();
+            task.m_socket->hardClose_LK();
     }
     if (!s_connecting.empty() || !s_closing.empty())
         shutdownIncomplete();
