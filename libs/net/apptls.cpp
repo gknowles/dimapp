@@ -22,6 +22,8 @@ class TlsSocket
     , public IAppSocketNotify 
 {
 public:
+    ~TlsSocket();
+
     void disconnect() override;
     void write(string_view data) override;
     void write(unique_ptr<SocketBuffer> buffer, size_t bytes) override;
@@ -33,7 +35,7 @@ public:
     void onSocketRead(AppSocketData & data) override;
 
 private:
-    bool m_skippedHeader{false};
+    WinTlsConnHandle m_conn;
 };
 
 } // namespace
@@ -53,22 +55,30 @@ private:
 ***/
 
 //===========================================================================
+TlsSocket::~TlsSocket() {
+    winTlsClose(m_conn);
+}
+
+//===========================================================================
 void TlsSocket::disconnect() {
     socketDisconnect(this);
 }
 
 //===========================================================================
 void TlsSocket::write(string_view data) {
-    socketWrite(this, data);
+    CharBuf out;
+    winTlsSend(m_conn, &out, data);
+    socketWrite(this, out);
 }
 
 //===========================================================================
 void TlsSocket::write(unique_ptr<SocketBuffer> buffer, size_t bytes) {
-    socketWrite(this, move(buffer), bytes);
+    write(string_view(buffer->data, bytes));
 }
 
 //===========================================================================
 bool TlsSocket::onSocketAccept (const AppSocketInfo & info) {
+    m_conn = winTlsAccept();
     return notifyAccept(info);
 }
 
@@ -85,13 +95,23 @@ void TlsSocket::onSocketDestroy () {
 //===========================================================================
 void TlsSocket::onSocketRead (AppSocketData & data) {
     assert(data.bytes);
-    if (!m_skippedHeader) {
-        m_skippedHeader = true;
-        data.data += 1;
-        data.bytes -= 1;
+    CharBuf out;
+    CharBuf recv;
+    bool success = winTlsRecv(
+        m_conn, 
+        &out, 
+        &recv, 
+        string_view(data.data, data.bytes)
+    );
+    socketWrite(this, out);
+    AppSocketData tmp;
+    for (auto && v : recv.views()) {
+        tmp.data = (char *) v.data();
+        tmp.bytes = (int) v.size();
+        notifyRead(tmp);
     }
-
-    notifyRead(data);
+    if (!success)
+        disconnect();
 }
 
 
@@ -102,21 +122,28 @@ void TlsSocket::onSocketRead (AppSocketData & data) {
 ***/
 
 namespace {
-class ByteMatch : public IAppSocketMatchNotify {
+class TlsMatch : public IAppSocketMatchNotify {
     AppSocket::MatchType OnMatch(
         AppSocket::Family fam, 
         string_view view) override;
 };
 } // namespace
-static ByteMatch s_byteMatch;
+static TlsMatch s_tlsMatch;
 
 //===========================================================================
-AppSocket::MatchType ByteMatch::OnMatch(
+AppSocket::MatchType TlsMatch::OnMatch(
     AppSocket::Family fam,
     string_view view
 ) {
     assert(fam == AppSocket::kTls);
-    if (view[0] == 't')
+    const char prefix[] = {
+        22, // content-type handshake
+        3,  // legacy major record version
+        // 1,  // legacy minor record version
+    };
+    if (view.size() < size(prefix))
+        return AppSocket::kUnknown;
+    if (memcmp(prefix, view.data(), size(prefix)) == 0)
         return AppSocket::kPreferred;
 
     return AppSocket::kUnsupported;
@@ -150,6 +177,6 @@ void ShutdownNotify::onShutdownClient(bool retry) {
 //===========================================================================
 void Dim::appTlsInitialize() {
     shutdownMonitor(&s_cleanup);
-    socketAddFamily(AppSocket::kTls, &s_byteMatch);
+    socketAddFamily(AppSocket::kTls, &s_tlsMatch);
     socketAddFilter<TlsSocket>(Endpoint{}, AppSocket::kTls);
 }
