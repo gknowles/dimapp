@@ -83,7 +83,7 @@ const Test s_tests[] = {
      "\x74",
      true,
      {
-         {"password", "secret"},
+         {"password", "secret", fNeverIndexed},
      }},
     {"C.2.4",
      true,
