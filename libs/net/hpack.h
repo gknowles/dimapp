@@ -25,7 +25,7 @@ namespace Dim {
 ***/
 
 struct HpackFieldView;
-enum HpackFlags {
+enum HpackFlags : unsigned {
     fNeverIndexed = 1,
 };
 
@@ -52,13 +52,13 @@ public:
     void header(
         const char name[],
         const char value[],
-        int flags = 0 // DimHpack::*
-        );
+        HpackFlags flags = {}
+    );
     void header(
         HttpHdr name,
         const char value[],
-        int flags = 0 // DimHpack::*
-        );
+        HpackFlags flags = {}
+    );
 
 private:
     void write(const char str[]);
@@ -84,8 +84,8 @@ public:
         HttpHdr id,
         const char name[],
         const char value[],
-        int flags // Flags::*
-        ) = 0;
+        HpackFlags flags
+    ) = 0;
 };
 
 class HpackDecode {
@@ -98,7 +98,8 @@ public:
         IHpackDecodeNotify * notify,
         ITempHeap * heap,
         const char src[],
-        size_t srcLen);
+        size_t srcLen
+    );
 
 private:
     void pruneDynTable();
@@ -107,26 +108,34 @@ private:
         IHpackDecodeNotify * notify,
         ITempHeap * heap,
         const char *& src,
-        size_t & srcLen);
+        size_t & srcLen
+    );
     bool readIndexedField(
         HpackFieldView * out,
         ITempHeap * heap,
         size_t prefixBits,
         const char *& src,
-        size_t & srcLen);
+        size_t & srcLen
+    );
     bool readIndexedName(
         HpackFieldView * out,
         ITempHeap * heap,
         size_t prefixBits,
         const char *& src,
-        size_t & srcLen);
-    bool
-    read(size_t * out, size_t prefixBits, const char *& src, size_t & srcLen);
+        size_t & srcLen
+    );
+    bool read(
+        size_t * out, 
+        size_t prefixBits, 
+        const char *& src, 
+        size_t & srcLen
+    );
     bool read(
         const char ** out,
         ITempHeap * heap,
         const char *& src,
-        size_t & srcLen);
+        size_t & srcLen
+    );
 
     size_t m_dynSize{0};
     std::deque<HpackDynField> m_dynTable;

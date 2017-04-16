@@ -24,7 +24,7 @@ enum TestType : unsigned {
 
 struct Test {
     const char * name;
-    TestType flags; // kTest*
+    TestType flags;
     string input;
     bool result;
     string output;

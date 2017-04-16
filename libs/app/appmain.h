@@ -47,7 +47,7 @@ public:
     char ** m_argv;
 };
 
-enum {
+enum AppFlags : unsigned {
     fAppWithConsole = 0x1,
 
     fAppWithChdir = 0x2,
@@ -63,7 +63,7 @@ int appRun(
     IAppNotify & app, 
     int argc, 
     char * argv[], 
-    unsigned flags = fAppClient
+    AppFlags flags = fAppClient
 );
 
 
@@ -76,7 +76,7 @@ int appRun(
 RunMode appMode();
 
 // returns flags passed to appRun()
-unsigned appRunFlags(); 
+AppFlags appRunFlags(); 
 
 /****************************************************************************
 *

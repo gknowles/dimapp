@@ -127,7 +127,7 @@ ParserNotify::ParserNotify(Grammar & rules, bool minRules)
 //===========================================================================
 bool ParserNotify::startRule() {
     m_elem.name = move(m_string);
-    m_elem.flags = (Element::Flags) 0;
+    m_elem.flags = {};
     m_elem.eventName.clear();
     m_elem.elements.clear();
 

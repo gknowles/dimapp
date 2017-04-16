@@ -20,7 +20,7 @@ namespace {
 struct NameValue {
     const char * name;
     const char * value;
-    int flags;
+    HpackFlags flags;
 
     bool operator==(const NameValue & right) const;
 };
@@ -34,8 +34,8 @@ private:
         HttpHdr id,
         const char name[],
         const char value[],
-        int flags // Flags::*
-        ) override;
+        HpackFlags flags
+    ) override;
 };
 
 struct Test {
@@ -348,7 +348,8 @@ const Test s_tests[] = {
 
 //===========================================================================
 bool NameValue::operator==(const NameValue & right) const {
-    return strcmp(name, right.name) == 0 && strcmp(value, right.value) == 0
+    return strcmp(name, right.name) == 0 
+        && strcmp(value, right.value) == 0
         && flags == right.flags;
 }
 
@@ -364,8 +365,8 @@ void Reader::onHpackHeader(
     HttpHdr id,
     const char name[],
     const char value[],
-    int flags // Flags::*
-    ) {
+    HpackFlags flags
+) {
     cout << name << ": " << value << "\n";
     headers.push_back({name, value, flags});
 }

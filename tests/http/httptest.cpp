@@ -20,7 +20,7 @@ namespace {
 struct NameValue {
     const char * name;
     const char * value;
-    int flags;
+    unsigned flags;
 
     bool operator==(const NameValue & right) const;
 };

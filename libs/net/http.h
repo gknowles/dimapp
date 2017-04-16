@@ -153,7 +153,7 @@ public:
 protected:
     virtual bool checkPseudoHeaders() const = 0;
 
-    enum Flag : unsigned {
+    enum Flags : unsigned {
         fFlagHasStatus = 0x01,
         fFlagHasMethod = 0x02,
         fFlagHasScheme = 0x04,
@@ -161,7 +161,7 @@ protected:
         fFlagHasPath = 0x10,
         fFlagHasHeader = 0x20,
     };
-    Flag m_flags = (Flag) 0; // kFlag*
+    Flags m_flags = {};
 
 private:
     void addHeaderRef(HttpHdr id, const char name[], const char value[]);

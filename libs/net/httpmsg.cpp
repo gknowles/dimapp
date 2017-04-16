@@ -326,8 +326,8 @@ const char * HttpRequest::pathAbsolute() const {
 
 //===========================================================================
 bool HttpRequest::checkPseudoHeaders() const {
-    const Flag must = fFlagHasMethod | fFlagHasScheme | fFlagHasPath;
-    const Flag mustNot = fFlagHasStatus;
+    const Flags must = fFlagHasMethod | fFlagHasScheme | fFlagHasPath;
+    const Flags mustNot = fFlagHasStatus;
     return (m_flags & must) == must && (~m_flags & mustNot);
 }
 
@@ -340,8 +340,8 @@ bool HttpRequest::checkPseudoHeaders() const {
 
 //===========================================================================
 bool HttpResponse::checkPseudoHeaders() const {
-    const Flag must = fFlagHasStatus;
-    const Flag mustNot = fFlagHasMethod | fFlagHasScheme | fFlagHasAuthority
+    const Flags must = fFlagHasStatus;
+    const Flags mustNot = fFlagHasMethod | fFlagHasScheme | fFlagHasAuthority
         | fFlagHasPath;
     return (m_flags & must) == must && (~m_flags & mustNot);
 }

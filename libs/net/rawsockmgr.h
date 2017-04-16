@@ -25,14 +25,14 @@ RawSocketMgrHandle rawSockMgrListen(
     IFactory<IAppSocketNotify> * factory,
     /* security requirements, */
     AppSocket::Family fam,
-    AppSocket::MgrFlags flags = (AppSocket::MgrFlags) 0
+    AppSocket::MgrFlags flags = {}
 );
 
 RawSocketMgrHandle rawSockMgrConnect(
     std::string_view mgrName,
     IFactory<IAppSocketNotify> * factory,
     AppSocket::Family fam,
-    AppSocket::MgrFlags flags = (AppSocket::MgrFlags) 0
+    AppSocket::MgrFlags flags = {}
 );
 
 void endpointMonitor(RawSocketMgrHandle mgr, std::string_view nodeName);

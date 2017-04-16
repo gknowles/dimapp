@@ -156,7 +156,8 @@ NEGOTIATE:
         auto alpn = (SEC_APPLICATION_PROTOCOLS *) alpn_chars;
         SecBuffer inBufs[] = { 
             { (unsigned) src.size(), SECBUFFER_TOKEN, (void *) src.data() },
-            { (unsigned) size(alpn_chars), SECBUFFER_APPLICATION_PROTOCOLS, 
+            { (unsigned) size(alpn_chars) - 1, 
+                SECBUFFER_APPLICATION_PROTOCOLS, 
                 alpn },
         };
         SecBufferDesc inDesc{ 
@@ -185,7 +186,7 @@ NEGOTIATE:
             0, // target data representation
             &m_context,
             &outDesc,
-            &outFlags, // attributes of established connection, mirrors requirements
+            &outFlags, // attrs of established connection, mirrors input flags
             NULL // remote's cert expiry
         );
         if (outBufs[0].cbBuffer && outBufs[0].pvBuffer) {
@@ -716,7 +717,7 @@ void Dim::winTlsInitialize() {
         // cert = 
         makeCert("wintls.dimapp");
     } else {
-        cert = getCert("kcollege", false);
+        cert = getCert("kpower", false);
     }
 
     SCHANNEL_CRED cred = {};

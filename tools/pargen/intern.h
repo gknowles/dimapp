@@ -48,7 +48,7 @@ struct Element {
     std::vector<Element> elements;
     const Element * rule{nullptr};
     const Element * eventRule{nullptr}; // only present if different from rule
-    Flags flags = (Flags) 0;
+    Flags flags{};
     std::string eventName; // only present if different from name
 
     bool operator<(const Element & right) const { return name < right.name; }
@@ -81,12 +81,14 @@ public:
         std::string_view name,
         unsigned m,
         unsigned n,
-        Element::Flags flags = (Element::Flags) 0);
+        Element::Flags flags = {}
+    );
     Element * addChoiceRule(
         std::string_view name,
         unsigned m,
         unsigned n,
-        Element::Flags flags = (Element::Flags) 0);
+        Element::Flags flags = {}
+    );
     Element * addSequence(Element * rule, unsigned m, unsigned n);
     Element * addChoice(Element * rule, unsigned m, unsigned n);
     void
@@ -167,7 +169,7 @@ struct StateElement {
 
 struct StateEvent {
     const Element * elem;
-    Element::Flags flags = (Element::Flags) 0;
+    Element::Flags flags{};
 
     int compare(const StateEvent & right) const;
     bool operator<(const StateEvent & right) const;
