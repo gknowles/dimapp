@@ -443,8 +443,10 @@ static ShutdownNotify s_cleanup;
 //===========================================================================
 void ShutdownNotify::onShutdownClient(bool retry) {
     shared_lock<shared_mutex> lk{s_listenMut};
-    for (auto && info : s_endpoints) 
+    for (auto && info : s_endpoints) {
+        (void) sizeof(!info.listeners); // reference when NDEBUG
         assert(!info.listeners);
+    }
 }
 
 //===========================================================================
