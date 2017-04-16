@@ -401,7 +401,7 @@ FileHandle Dim::fileOpen(string_view path, File::OpenMode mode) {
         }
     }
 
-    int flags = (mode & om::fBlocking) ? 0 : FILE_FLAG_OVERLAPPED;
+    int flagsAndAttrs = (mode & om::fBlocking) ? 0 : FILE_FLAG_OVERLAPPED;
 
     file->m_handle = CreateFileW(
         file->m_path.c_str(),
@@ -409,7 +409,7 @@ FileHandle Dim::fileOpen(string_view path, File::OpenMode mode) {
         share,
         NULL, // security attributes
         creation,
-        flags,
+        flagsAndAttrs,
         NULL // template file
         );
     if (file->m_handle == INVALID_HANDLE_VALUE) {
@@ -425,7 +425,8 @@ FileHandle Dim::fileOpen(string_view path, File::OpenMode mode) {
 
         if (!SetFileCompletionNotificationModes(
             file->m_handle,
-            FILE_SKIP_COMPLETION_PORT_ON_SUCCESS
+            FILE_SKIP_COMPLETION_PORT_ON_SUCCESS 
+                | FILE_SKIP_SET_EVENT_ON_HANDLE
         )) {
             iFileSetErrno(WinError{});
             return {};

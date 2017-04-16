@@ -478,6 +478,9 @@ void Dim::iSocketInitialize() {
     )) {
         logMsgCrash() << "getsockopt(SO_PROTOCOL_INFOW): " << WinError{};
     }
+    if (~s_protocolInfo.dwServiceFlags1 & XP1_IFS_HANDLES) {
+        logMsgCrash() << "socket and file handles not compatible";
+    }
 
     closesocket(s);
 
@@ -519,6 +522,15 @@ SOCKET Dim::iSocketCreate() {
     if (handle == INVALID_SOCKET) {
         logMsgError() << "WSASocket: " << WinError{};
         return INVALID_SOCKET;
+    }
+
+    if (!SetFileCompletionNotificationModes(
+        (HANDLE) handle,
+        FILE_SKIP_SET_EVENT_ON_HANDLE
+    )) {
+        logMsgError() 
+            << "SetFileCompletionNotificationModes(SKIP_EVENT_ON_HANDLE)" 
+            << WinError{};
     }
 
     int yes = 1;
