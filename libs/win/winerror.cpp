@@ -48,11 +48,23 @@ WinError::WinError() {
 }
 
 //===========================================================================
+WinError::WinError(const WinError & from)
+    : m_value{from.m_value}
+    , m_ntStatus{from.m_ntStatus}
+    , m_secStatus{from.m_secStatus}
+{}
+
+//===========================================================================
 WinError::WinError(int error)
     : m_value{error} {}
 
 //===========================================================================
 WinError::WinError(NtStatus status) {
+    operator=(status);
+}
+
+//===========================================================================
+WinError::WinError(SecurityStatus status) {
     operator=(status);
 }
 
@@ -103,7 +115,7 @@ WinError & WinError::set() {
 std::ostream & Dim::operator<<(std::ostream & os, const WinError & val) {
     char buf[256] = {};
     FormatMessage(
-        FORMAT_MESSAGE_FROM_SYSTEM,
+        FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
         NULL, // source
         val,
         0, // language
@@ -116,7 +128,7 @@ std::ostream & Dim::operator<<(std::ostream & os, const WinError & val) {
     for (; ptr > buf && isspace((unsigned char)*ptr); --ptr)
         *ptr = 0;
 
-    os << buf;
+    os << buf << " (" << (int) val << ")";
     return os;
 }
 

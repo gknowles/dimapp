@@ -129,7 +129,9 @@ public:
 public:
     // default constructor calls GetLastError()
     WinError();
+    WinError(const WinError & from);
     WinError(NtStatus status);
+    WinError(SecurityStatus status);
     WinError(int error);
 
     WinError & operator=(int error);
