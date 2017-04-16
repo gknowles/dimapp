@@ -22,12 +22,11 @@
 
 #include "cppconf/cppconf.h"
 
+#include "core/types.h"
+
 #include <string_view>
 
 namespace Dim {
-
-// forward declarations
-enum RunMode : int;
 
 
 /****************************************************************************
