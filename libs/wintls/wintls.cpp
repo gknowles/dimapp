@@ -147,13 +147,21 @@ bool ServerConn::recv(CharBuf * out, CharBuf * data, string_view src) {
     int err{0};
 
     // Manually constructed SEC_APPLICATION_PROTOCOLS struct
-    const char alpn_chars[] = {
+    char alpn_chars[] = {
         9, 0, 0, 0, // ProtocolListsSize
         SecApplicationProtocolNegotiationExt_ALPN, 0, 0, 0, // ProtoNegoExt
         3, 0, // ProtocolListSize
         2, 'h', '2', // ProtocolList
         0 // trailing null for the debugger
     };
+
+    // Rebuild the alpn just in case endianness matters, rendering the 
+    // manually constructed little-endian version invalid.
+    auto alpn = (SEC_APPLICATION_PROTOCOLS *) alpn_chars;
+    alpn->ProtocolListsSize = 9;
+    alpn->ProtocolLists[0].ProtoNegoExt = 
+        SecApplicationProtocolNegotiationExt_ALPN;
+    alpn->ProtocolLists[0].ProtocolListSize = 3;
 
 NEGOTIATE:
     while (!m_appData) {
@@ -163,7 +171,6 @@ NEGOTIATE:
             | ASC_REQ_ALLOCATE_MEMORY
             ;
 
-        auto alpn = (SEC_APPLICATION_PROTOCOLS *) alpn_chars;
         SecBuffer inBufs[] = { 
             { (unsigned) src.size(), SECBUFFER_TOKEN, (void *) src.data() },
             { (unsigned) size(alpn_chars) - 1, 
@@ -239,7 +246,8 @@ NEGOTIATE:
             if (err) {
                 WinError werr = (SecStatus) err;
                 logMsgError()
-                    << "QueryContextAttributes(SECPKG_ATTR_APPLICATION_PROTOCOL): "
+                    << "QueryContextAttributes("
+                        "SECPKG_ATTR_APPLICATION_PROTOCOL): "
                     << werr;
                 return false;
             }
