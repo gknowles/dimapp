@@ -187,6 +187,7 @@ void SocketBase::setNotify(ISocketNotify * notify, ISocketNotify * newNotify) {
         notify->m_socket->m_notify = newNotify;
         notify->m_socket = nullptr;
     } else {
+        newNotify->m_socket = nullptr;
         newNotify->onSocketDestroy();
     }
 }

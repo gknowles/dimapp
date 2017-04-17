@@ -203,8 +203,10 @@ void IAppSocket::notifyDisconnect() {
 
 //===========================================================================
 void IAppSocket::notifyDestroy() {
-    if (m_notify)
+    if (m_notify) {
+        m_notify->m_socket = nullptr;
         m_notify->onSocketDestroy();
+    }
     delete this;
 }
 
