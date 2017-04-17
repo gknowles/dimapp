@@ -199,8 +199,13 @@ void IFileOpBase::onTask() {
     }
 
     if (m_err) {
-        if (m_err != ERROR_OPERATION_ABORTED)
+        if (m_err == ERROR_OPERATION_ABORTED) {
+            // explicitly canceled
+        } else if (m_err == ERROR_HANDLE_EOF && !m_length) {
+            // hit eof, when explicitly reading until the end
+        } else {
             logMsgError() << "ReadFile(" << m_file->m_path << "): " << m_err;
+        }
         iFileSetErrno(m_err);
     }
 
