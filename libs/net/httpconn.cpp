@@ -18,6 +18,8 @@ using namespace Dim;
 const unsigned kDefaultBlockSize = 4096;
 const unsigned kDefaultHeaderTableSize = 4096;
 
+const int kMaximumWindowSize = 0x7fff'ffff;
+
 
 /****************************************************************************
 *
@@ -49,7 +51,27 @@ enum FrameParam : int16_t {
     kSettingsMaxHeaderListSize = 6,
 };
 
-enum class FrameError {
+struct PriorityData {
+    int stream;
+    int weight;
+    bool exclusive;
+};
+struct UnpaddedData {
+    const char * hdr;
+    const char * data;
+    int dataLen;
+    int padLen;
+};
+
+struct ResetStream {
+    HttpConnHandle hc;
+    int stream;
+    shared_ptr<HttpStream> sm;
+};
+
+} // namespace
+
+enum class HttpConn::FrameError : int {
     kNoError = 0,
     kProtocolError = 1,
     kInternalError = 2,
@@ -65,27 +87,6 @@ enum class FrameError {
     kInadequateSecurity = 12,
     kHttp11Required = 13,
 };
-
-struct PriorityData {
-    int stream;
-    int weight;
-    bool exclusive;
-};
-struct UnpaddedData {
-    const char * hdr;
-    const char * data;
-    int dataLen;
-    int padLen;
-};
-
-struct ResetStream {
-    TimePoint closed;
-    HttpConnHandle hc;
-    int stream;
-    shared_ptr<HttpStream> sm;
-};
-
-} // namespace
 
 enum HttpConn::FrameFlags : uint8_t {
     fNone = 0x00,
@@ -108,6 +109,68 @@ static HandleMap<HttpConnHandle, HttpConn> s_conns;
 
 /****************************************************************************
 *
+*   Host to/from network translation
+*
+***/
+
+//===========================================================================
+static inline int ntoh16(const char frame[]) {
+    return ((uint32_t)(uint8_t)frame[0] << 8) 
+        + (uint8_t)frame[1];
+}
+
+//===========================================================================
+static inline int ntoh24(const char frame[]) {
+    return ((uint32_t)(uint8_t)frame[0] << 16) 
+        + ((uint32_t)(uint8_t)frame[1] << 8)
+        + (uint8_t)frame[2];
+}
+
+//===========================================================================
+static inline int ntoh32(const char frame[]) {
+    return ((uint32_t)(uint8_t)frame[0] << 24) 
+        + ((uint32_t)(uint8_t)frame[1] << 16)
+        + ((uint32_t)(uint8_t)frame[2] << 8) 
+        + (uint8_t)frame[3];
+}
+
+//===========================================================================
+static inline int ntoh31(const char frame[]) {
+    return ntoh32(frame) & 0x7fff'ffff;
+}
+
+//===========================================================================
+static inline char * hton16(char * out, int val) {
+    *out++ = (val >> 8) & 0xff;
+    *out++ = val & 0xff;
+    return out;
+}
+
+//===========================================================================
+static inline char * hton24(char * out, int val) {
+    *out++ = (val >> 16) & 0xff;
+    *out++ = (val >> 8) & 0xff;
+    *out++ = val & 0xff;
+    return out;
+}
+
+//===========================================================================
+static inline char * hton32(char * out, int val) {
+    *out++ = (unsigned(val) >> 24) & 0xff;
+    *out++ = (val >> 16) & 0xff;
+    *out++ = (val >> 8) & 0xff;
+    *out++ = val & 0xff;
+    return out;
+}
+
+//===========================================================================
+static inline char * hton31(char * out, int val) {
+    return hton32(out, unsigned(val) & 0x7fff'ffff);
+}
+
+
+/****************************************************************************
+*
 *   Reset streams
 *
 ***/
@@ -121,6 +184,7 @@ class ResetStreamTimer : public ITimerNotify {
 };
 } // namespace
 static deque<ResetStream> s_resetStreams;
+static ResetStreamTimer s_resetTimer;
 
 //===========================================================================
 Duration ResetStreamTimer::onTimer(TimePoint now) {
@@ -128,7 +192,7 @@ Duration ResetStreamTimer::onTimer(TimePoint now) {
     Duration sleep;
     while (!empty(s_resetStreams)) {
         auto & rs = s_resetStreams.front();
-        sleep = rs.closed - expire;
+        sleep = rs.sm->m_closed - expire;
         if (sleep > 0s)
             return min(sleep, kMinResetStreamCheckInterval);
 
@@ -158,7 +222,7 @@ public:
     MsgDecoder(HttpMsg & msg);
 
     explicit operator bool() const;
-    FrameError Error() const;
+    HttpConn::FrameError Error() const;
 
 private:
     void onHpackHeader(
@@ -169,7 +233,7 @@ private:
     ) override;
 
     HttpMsg & m_msg;
-    FrameError m_error{FrameError::kNoError};
+    HttpConn::FrameError m_error{HttpConn::FrameError::kNoError};
 };
 } // namespace
 
@@ -193,11 +257,11 @@ void MsgDecoder::onHpackHeader(
 
 //===========================================================================
 MsgDecoder::operator bool() const {
-    return m_error == FrameError::kNoError;
+    return m_error == HttpConn::FrameError::kNoError;
 }
 
 //===========================================================================
-FrameError MsgDecoder::Error() const {
+HttpConn::FrameError MsgDecoder::Error() const {
     return m_error;
 }
 
@@ -212,13 +276,14 @@ const int kFrameHeaderLen = 9;
 const char kPrefaceData[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
 
 //===========================================================================
-static void SetFrameHeader(
+static void setFrameHeader(
     uint8_t out[kFrameHeaderLen],
     unsigned stream,
     FrameType type,
-    unsigned length,
+    size_t length,
     HttpConn::FrameFlags flags
 ) {
+    assert(length <= 0xff'ffff);
     out[0] = (uint8_t)(length >> 16);
     out[1] = (uint8_t)(length >> 8);
     out[2] = (uint8_t)length;
@@ -231,57 +296,35 @@ static void SetFrameHeader(
 }
 
 //===========================================================================
-static void StartFrame(
+static void startFrame(
     CharBuf * out,
     unsigned stream,
     FrameType type,
-    unsigned length,
+    size_t length,
     HttpConn::FrameFlags flags
 ) {
     uint8_t buf[kFrameHeaderLen];
-    SetFrameHeader(buf, stream, type, length, flags);
+    setFrameHeader(buf, stream, type, length, flags);
     out->append((char *)&buf, sizeof(buf));
 }
 
 //===========================================================================
-static int ntoh16(const char frame[]) {
-    return (uint8_t)(frame[0] << 8) + (uint8_t)frame[1];
-}
-
-//===========================================================================
-static int ntoh24(const char frame[]) {
-    return (uint32_t)(frame[0] << 16) + (uint32_t)(frame[1] << 8)
-        + (uint32_t)frame[2];
-}
-
-//===========================================================================
-static int ntoh32(const char frame[]) {
-    return (uint32_t)(frame[0] << 24) + (uint32_t)(frame[1] << 16)
-        + (uint32_t)(frame[2] << 8) + (uint32_t)frame[3];
-}
-
-//===========================================================================
-static int ntoh31(const char frame[]) {
-    return ntoh32(frame) & 0x7fffffff;
-}
-
-//===========================================================================
-static int GetFrameLen(const char frame[kFrameHeaderLen]) {
+static int getFrameLen(const char frame[kFrameHeaderLen]) {
     return ntoh24(frame);
 }
 
 //===========================================================================
-static FrameType GetFrameType(const char frame[kFrameHeaderLen]) {
+static FrameType getFrameType(const char frame[kFrameHeaderLen]) {
     return (FrameType) frame[3];
 }
 
 //===========================================================================
-static HttpConn::FrameFlags GetFrameFlags(const char frame[kFrameHeaderLen]) {
+static HttpConn::FrameFlags getFrameFlags(const char frame[kFrameHeaderLen]) {
     return (HttpConn::FrameFlags) frame[4];
 }
 
 //===========================================================================
-static int GetFrameStream(const char frame[kFrameHeaderLen]) {
+static int getFrameStream(const char frame[kFrameHeaderLen]) {
     return ntoh31(frame + 5);
 }
 
@@ -292,14 +335,14 @@ static int GetFrameStream(const char frame[kFrameHeaderLen]) {
 *
 ***/
 
-enum class HttpConn::ByteMode {
+enum class HttpConn::ByteMode : int {
     kInvalid,
     kPreface,
     kHeader,
     kPayload,
 };
 
-enum class HttpConn::FrameMode {
+enum class HttpConn::FrameMode : int {
     kSettings,
     kNormal,
     kContinuation,
@@ -315,14 +358,21 @@ HttpConn::HttpConn()
 {}
 
 //===========================================================================
-void HttpConn::connect(CharBuf * out) {
+void HttpConn::connect(CharBuf * out, HttpConnHandle h) {
     assert(m_byteMode == ByteMode::kPreface);
+    m_handle = h;
     m_outgoing = true;
     m_nextOutputStream = 1;
     out->append(kPrefaceData);
-    StartFrame(out, 0, FrameType::kSettings, 0, {});
+    startFrame(out, 0, FrameType::kSettings, 0, {});
     m_unackSettings += 1;
     m_byteMode = ByteMode::kHeader;
+}
+
+//===========================================================================
+void HttpConn::accept(HttpConnHandle h) {
+    assert(m_byteMode == ByteMode::kPreface);
+    m_handle = h;
 }
 
 
@@ -333,7 +383,7 @@ void HttpConn::connect(CharBuf * out) {
 ***/
 
 //===========================================================================
-static bool Skip(const char *& ptr, const char * eptr, const char literal[]) {
+static bool skip(const char *& ptr, const char * eptr, const char literal[]) {
     while (ptr != eptr && *literal) {
         if (*ptr++ != *literal++)
             false;
@@ -342,14 +392,23 @@ static bool Skip(const char *& ptr, const char * eptr, const char literal[]) {
 }
 
 //===========================================================================
-static void ReplyGoAway(CharBuf * out, int lastStream, FrameError error) {}
+static void replyGoAway(
+    CharBuf * out, 
+    int lastStream, 
+    HttpConn::FrameError error,
+    string_view msg = {}
+) {
+    msg = msg.substr(0, 256); 
+    char buf[8];
+    hton31(buf, lastStream);
+    hton32(buf + 4, (int) error);
+    startFrame(out, 0, FrameType::kGoAway, sizeof(buf) + msg.size(), {});
+    out->append(buf, sizeof(buf));
+    out->append(msg);
+}
 
 //===========================================================================
-static void
-ReplyRstStream(CharBuf * out, int stream, HttpStream * sm, FrameError error) {}
-
-//===========================================================================
-static bool RemovePadding(
+static bool removePadding(
     UnpaddedData * out,
     const char src[],
     int frameLen,
@@ -385,7 +444,7 @@ static bool RemovePadding(
 }
 
 //===========================================================================
-static bool RemovePriority(
+static bool removePriority(
     PriorityData * out, 
     int stream, 
     const char hdr[], 
@@ -403,7 +462,8 @@ static bool RemovePriority(
 }
 
 //===========================================================================
-static void UpdatePriority() {}
+static void updatePriority() {
+}
 
 //===========================================================================
 bool HttpConn::recv(
@@ -417,7 +477,7 @@ bool HttpConn::recv(
     size_t avail;
     switch (m_byteMode) {
     case ByteMode::kPreface:
-        if (!Skip(ptr, eptr, kPrefaceData + size(m_input)))
+        if (!skip(ptr, eptr, kPrefaceData + size(m_input)))
             return false;
         if (ptr == eptr) {
             m_input.insert(m_input.end(), ptr - srcLen, eptr);
@@ -426,7 +486,7 @@ bool HttpConn::recv(
 
         // Servers must send a settings frame after the connection preface
         if (!m_outgoing) {
-            StartFrame(out, 0, FrameType::kSettings, 0, {});
+            startFrame(out, 0, FrameType::kSettings, 0, {});
             m_unackSettings += 1;
         }
 
@@ -447,7 +507,7 @@ bool HttpConn::recv(
             m_input.insert(m_input.end(), ptr, ptr + need);
             ptr += need;
             avail -= need;
-            m_inputFrameLen = GetFrameLen(data(m_input));
+            m_inputFrameLen = getFrameLen(data(m_input));
             if (avail < m_inputFrameLen) {
                 if (m_inputFrameLen > m_maxInputFrame)
                     return onFrame(msgs, out, data(m_input));
@@ -468,7 +528,7 @@ bool HttpConn::recv(
             return true;
         }
         avail -= kFrameHeaderLen;
-        m_inputFrameLen = GetFrameLen(ptr);
+        m_inputFrameLen = getFrameLen(ptr);
         if (avail < m_inputFrameLen && m_inputFrameLen <= m_maxInputFrame) {
             m_input.assign(ptr, eptr);
             return true;
@@ -501,16 +561,37 @@ bool HttpConn::recv(
 }
 
 //===========================================================================
+void HttpConn::replyRstStream(CharBuf * out, int stream, FrameError error) {
+    char buf[4];
+    hton32(buf, (int) error);
+    startFrame(out, stream, FrameType::kRstStream, 4, {});
+    out->append(buf, sizeof(buf));
+    auto it = m_streams.find(stream);
+    if (it == m_streams.end()) 
+        return;
+
+    auto sm = it->second;
+    sm->m_state = HttpStream::kClosed;
+    sm->m_closed = Clock::now();
+    ResetStream rs;
+    rs.hc = m_handle;
+    rs.stream = stream;
+    rs.sm = sm;
+    s_resetStreams.push_back(rs);
+    timerUpdate(&s_resetTimer, kMaxResetStreamAge, true);
+}
+
+//===========================================================================
 HttpStream * HttpConn::findAlways(CharBuf * out, int stream) {
     auto ib = m_streams.emplace(stream, nullptr);
     if (!ib.second)
         return ib.first->second.get();
     if (stream % 2 == 0) {
-        ReplyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
         return nullptr;
     }
     if (stream < m_lastInputStream) {
-        ReplyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
         return nullptr;
     }
 
@@ -533,12 +614,12 @@ bool HttpConn::onFrame(
     //  stream : 31
 
     auto * hdr = src;
-    auto type = GetFrameType(hdr);
-    auto flags = GetFrameFlags(hdr);
-    int stream = GetFrameStream(hdr);
-    m_inputFrameLen = GetFrameLen(hdr);
+    auto type = getFrameType(hdr);
+    auto flags = getFrameFlags(hdr);
+    int stream = getFrameStream(hdr);
+    m_inputFrameLen = getFrameLen(hdr);
     if (m_inputFrameLen > m_maxInputFrame) {
-        ReplyGoAway(out, m_lastInputStream, FrameError::kFrameSizeError);
+        replyGoAway(out, m_lastInputStream, FrameError::kFrameSizeError);
         return false;
     }
 
@@ -564,7 +645,7 @@ bool HttpConn::onFrame(
     // ignore unknown frames unless a specific frame type is required
     if (m_frameMode == FrameMode::kNormal)
         return true;
-    ReplyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+    replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
     return false;
 }
 
@@ -584,24 +665,26 @@ bool HttpConn::onData(
 
     if (m_frameMode != FrameMode::kNormal || !stream) {
         // data frames aren't allowed on stream 0
-        ReplyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
         return false;
     }
 
+    shared_ptr<HttpStream> sm;
     auto it = m_streams.find(stream);
-    auto * sm = (it == m_streams.end()) ? it->second.get() : nullptr;
+    if (it == m_streams.end()) 
+        sm = it->second;
     if (!sm
         || sm->m_state != HttpStream::kOpen
             && sm->m_state != HttpStream::kLocalClosed) {
         // data frame on non-open stream
-        ReplyRstStream(out, stream, sm, FrameError::kStreamClosed);
+        replyRstStream(out, stream, FrameError::kStreamClosed);
         return true;
     }
 
     // adjust for any included padding
     UnpaddedData data;
-    if (!RemovePadding(&data, src, m_inputFrameLen, 0, flags)) {
-        ReplyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+    if (!removePadding(&data, src, m_inputFrameLen, 0, flags)) {
+        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
         return false;
     }
 
@@ -637,30 +720,30 @@ bool HttpConn::onHeaders(
 
     if (m_frameMode != FrameMode::kNormal || !stream) {
         // header frames aren't allowed on stream 0
-        ReplyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
         return false;
     }
 
     // adjust for any included padding
     UnpaddedData ud;
     int hdrLen = (flags & fPriority) ? 5 : 0;
-    if (!RemovePadding(&ud, src, m_inputFrameLen, hdrLen, flags)) {
-        ReplyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+    if (!removePadding(&ud, src, m_inputFrameLen, hdrLen, flags)) {
+        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
         return false;
     }
 
     // parse priority
     if (flags & fPriority) {
         PriorityData pri;
-        if (!RemovePriority(&pri, stream, ud.hdr, hdrLen)) {
-            ReplyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+        if (!removePriority(&pri, stream, ud.hdr, hdrLen)) {
+            replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
             return false;
         }
-        UpdatePriority();
+        updatePriority();
     }
 
     // find stream
-    HttpStream * sm = findAlways(out, stream);
+    auto sm = findAlways(out, stream);
     if (!sm)
         return false;
 
@@ -688,7 +771,7 @@ bool HttpConn::onHeaders(
             // !!! should probably send a stream error and process
             //     the headers (to maintain the connection decompression
             //     context) instead of dropping the connection.
-            ReplyGoAway(out, stream, FrameError::kProtocolError);
+            replyGoAway(out, stream, FrameError::kProtocolError);
             return false;
         }
         [[fallthrough]];
@@ -696,7 +779,7 @@ bool HttpConn::onHeaders(
         // !!! should probably send a stream error and process
         //     the headers (to maintain the connection decompression
         //     context) instead of dropping the connection.
-        ReplyGoAway(out, stream, FrameError::kProtocolError);
+        replyGoAway(out, stream, FrameError::kProtocolError);
         return false;
     }
 
@@ -706,11 +789,11 @@ bool HttpConn::onHeaders(
     auto * msg = sm->m_msg.get();
     MsgDecoder notify(*msg);
     if (!m_decoder.parse(&notify, &msg->heap(), ud.data, ud.dataLen)) {
-        ReplyGoAway(out, m_lastInputStream, FrameError::kCompressionError);
+        replyGoAway(out, m_lastInputStream, FrameError::kCompressionError);
         return false;
     }
     if (!notify) {
-        ReplyRstStream(out, stream, sm, notify.Error());
+        replyRstStream(out, stream, notify.Error());
     } else {
         if (sm->m_state == HttpStream::kRemoteClosed)
             msgs->push_back(move(sm->m_msg));
@@ -733,23 +816,23 @@ bool HttpConn::onPriority(
 
     if (m_frameMode != FrameMode::kNormal || !stream) {
         // priority frames aren't allowed on stream 0
-        ReplyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
         return false;
     }
 
     if (m_inputFrameLen != 5) {
-        ReplyRstStream(out, stream, nullptr, FrameError::kFrameSizeError);
+        replyRstStream(out, stream, FrameError::kFrameSizeError);
         return true;
     }
 
     PriorityData pri;
-    if (!RemovePriority(
+    if (!removePriority(
         &pri, 
         stream, 
         src + kFrameHeaderLen, 
         m_inputFrameLen
     )) {
-        ReplyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
         return false;
     }
 
@@ -769,12 +852,12 @@ bool HttpConn::onRstStream(
 
     if (m_frameMode != FrameMode::kNormal || !stream) {
         // priority frames aren't allowed on stream 0
-        ReplyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
         return false;
     }
 
     if (m_inputFrameLen != 4) {
-        ReplyGoAway(out, m_lastInputStream, FrameError::kFrameSizeError);
+        replyGoAway(out, m_lastInputStream, FrameError::kFrameSizeError);
         return false;
     }
 
@@ -800,18 +883,18 @@ bool HttpConn::onSettings(
             && m_frameMode != FrameMode::kSettings
         || stream) {
         // settings frames MUST be on stream 0
-        ReplyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
         return false;
     }
     m_frameMode = FrameMode::kNormal;
 
     if (flags & fAck) {
         if (m_inputFrameLen) {
-            ReplyGoAway(out, m_lastInputStream, FrameError::kFrameSizeError);
+            replyGoAway(out, m_lastInputStream, FrameError::kFrameSizeError);
             return false;
         }
         if (!m_unackSettings) {
-            ReplyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+            replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
             return false;
         }
         m_unackSettings -= 1;
@@ -820,7 +903,7 @@ bool HttpConn::onSettings(
 
     // must be an even multiple of identifier/value pairs
     if (m_inputFrameLen % 6) {
-        ReplyGoAway(out, m_lastInputStream, FrameError::kFrameSizeError);
+        replyGoAway(out, m_lastInputStream, FrameError::kFrameSizeError);
         return false;
     }
 
@@ -831,7 +914,7 @@ bool HttpConn::onSettings(
         (void)value;
     }
 
-    StartFrame(out, 0, FrameType::kSettings, 0, fAck);
+    startFrame(out, 0, FrameType::kSettings, 0, fAck);
     return true;
 }
 
@@ -884,7 +967,7 @@ bool HttpConn::onGoAway(
 
     if (!stream) {
         // goaway frames aren't allowed on stream 0
-        ReplyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
         return false;
     }
 
@@ -892,7 +975,7 @@ bool HttpConn::onGoAway(
     FrameError errorCode = (FrameError)ntoh32(src + kFrameHeaderLen + 4);
 
     if (lastStreamId > m_lastOutputStream) {
-        ReplyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
         return false;
     }
 
@@ -904,7 +987,7 @@ bool HttpConn::onGoAway(
         }
     }
 
-    ReplyGoAway(out, m_lastInputStream, FrameError::kNoError);
+    replyGoAway(out, m_lastInputStream, FrameError::kNoError);
     return false;
 }
 
@@ -921,17 +1004,50 @@ bool HttpConn::onWindowUpdate(
     //  increment : 31
 
     if (m_frameMode != FrameMode::kNormal) {
-        ReplyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+        return false;
+    }
+    if (m_inputFrameLen != 4) {
+        replyGoAway(out, m_lastInputStream, FrameError::kFrameSizeError);
         return false;
     }
 
+    int increment = ntoh31(src + kFrameHeaderLen);
+    if (!increment) {
+        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+        return false;
+    }
+
+    if (!stream) {
+        // update window of connection
+        if (kMaximumWindowSize - increment < m_flowWindow) {
+            replyGoAway(out, m_lastInputStream, FrameError::kFlowControlError);
+            return false;
+        }
+        m_flowWindow += increment;
+        // TODO: release blocked data frames
+        return true;
+    }
+
+    // update window of individual stream
     auto it = m_streams.find(stream);
     if (it == m_streams.end()) {
-        ReplyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
-        return false;
+        if (stream > m_lastInputStream) {
+            replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+            return false;
+        }
+        // ignore window updates on completed streams
+        return true;
     }
 
-    return false;
+    auto sm = it->second.get();
+    if (kMaximumWindowSize - increment < sm->m_flowWindow) {
+        replyRstStream(out, stream, FrameError::kFlowControlError);
+        return true;
+    }
+    sm->m_flowWindow += increment;
+    // TODO: release blocked data frames
+    return true;
 }
 
 //===========================================================================
@@ -947,7 +1063,7 @@ bool HttpConn::onContinuation(
 
     if (m_frameMode != FrameMode::kContinuation
         || stream != m_continueStream) {
-        ReplyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
         return false;
     }
 
@@ -974,7 +1090,7 @@ void HttpConn::writeMsg(
     auto ftype = FrameType::kHeaders;
     auto flags = (!body.empty() || more) ? (FrameFlags) 0 : fEndStream;
     uint8_t frameHdr[kFrameHeaderLen];
-    SetFrameHeader(frameHdr, stream, ftype, 0, {});
+    setFrameHeader(frameHdr, stream, ftype, 0, {});
     out->append((char *)frameHdr, size(frameHdr));
     m_encoder.startBlock(out);
     for (auto && hdr : msg.headers()) {
@@ -985,7 +1101,7 @@ void HttpConn::writeMsg(
                 m_encoder.header(hdr.m_name, hv.m_value);
             }
             while (size(*out) > maxEndPos) {
-                SetFrameHeader(
+                setFrameHeader(
                     frameHdr, stream, ftype, m_maxOutputFrame, flags);
                 out->replace(
                     framePos,
@@ -1000,7 +1116,7 @@ void HttpConn::writeMsg(
             }
         }
     }
-    SetFrameHeader(
+    setFrameHeader(
         frameHdr,
         stream,
         ftype,
@@ -1024,14 +1140,14 @@ void HttpConn::addData(
 
     size_t pos = 0;
     while (pos + m_maxOutputFrame < count) {
-        StartFrame(out, stream, FrameType::kData, m_maxOutputFrame, {});
+        startFrame(out, stream, FrameType::kData, m_maxOutputFrame, {});
         out->append(data, pos, m_maxOutputFrame);
         pos += m_maxOutputFrame;
     }
     if (pos == count && more) 
         return;
 
-    StartFrame(
+    startFrame(
         out,
         stream,
         FrameType::kData,
@@ -1107,14 +1223,16 @@ void HttpConn::deleteStream(int stream, HttpStream * sm) {
 HttpConnHandle Dim::httpConnect(CharBuf * out) {
     auto * conn = new HttpConn;
     auto h = s_conns.insert(conn);
-    conn->connect(out);
+    conn->connect(out, h);
     return h;
 }
 
 //===========================================================================
 HttpConnHandle Dim::httpListen() {
     auto * conn = new HttpConn;
-    return s_conns.insert(conn);
+    auto h = s_conns.insert(conn);
+    conn->accept(h);
+    return h;
 }
 
 //===========================================================================

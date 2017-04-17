@@ -18,6 +18,8 @@ namespace Dim {
 *
 ***/
 
+const unsigned kDefaultWindowSize = 65'535;
+
 struct HttpStream {
     enum State {
         kIdle,
@@ -34,18 +36,22 @@ struct HttpStream {
     State m_state{kIdle};
     TimePoint m_closed;
     std::unique_ptr<HttpMsg> m_msg;
+    int m_flowWindow{kDefaultWindowSize};
 };
 
 class HttpConn {
 public:
     enum FrameFlags : uint8_t;
+    enum class FrameError : int;
 
 public:
     HttpConn();
 
     // Initialize as an outgoing connection, must be first method called
     // on outgoing connections after construction.
-    void connect(CharBuf * out);
+    void connect(CharBuf * out, HttpConnHandle hc);
+
+    void accept(HttpConnHandle hc);
 
     // Returns false when no more data will be accepted, either by request
     // of the input or due to error.
@@ -77,9 +83,10 @@ public:
     void deleteStream(int stream, HttpStream * sm);
 
 private:
-    enum class ByteMode;
-    enum class FrameMode;
+    enum class ByteMode : int;
+    enum class FrameMode : int;
 
+    void replyRstStream(CharBuf * out, int stream, FrameError error);
     HttpStream * findAlways(CharBuf * out, int stream);
     void writeMsg(CharBuf * out, int stream, const HttpMsg & msg, bool more);
 
@@ -159,6 +166,7 @@ private:
         FrameFlags flags
     );
 
+    HttpConnHandle m_handle;
     bool m_outgoing{false};
 
     // byte parsing
@@ -177,6 +185,7 @@ private:
     int m_lastOutputStream{0};
     int m_maxOutputFrame{16384};
     int m_unackSettings{0};
+    int m_flowWindow{kDefaultWindowSize};
 
     std::unordered_map<int, std::shared_ptr<HttpStream>> m_streams;
     HpackEncode m_encoder;
