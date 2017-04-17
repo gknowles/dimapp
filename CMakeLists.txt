@@ -319,13 +319,14 @@ if(MSVC)
     # "/Zc:inline" - all inline functions must have definition available
     # "/Zc:rvalueCast" - enforce type conversion rules
     # "/Zc:strictStrings" - disable string literal type conversion to non-const
+    # "/nologo" - suppress startup banner and informational messages
     # "/GR-" (UNUSED) - disable RTTI
     # "/EHsc" - exceptions from c++ only (not from structure or "C")
     # "/GF" - string pooling
     set(CMAKE_CXX_FLAGS "\
         /utf-8 /W4 /WX /Zi \
         /std:c++latest /Zc:inline /Zc:rvalueCast /Zc:strictStrings \
-        /EHsc /GF")
+        /nologo /EHsc /GF")
     if(NOT MSVC_VERSION LESS 2000)
         # /permissive-  // reject non-conforming backward compatibilitisms
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /permissive-")
