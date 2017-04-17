@@ -11,6 +11,8 @@
 
 // External library internal headers
 // Standard headers
+#include <shared_mutex>
+
 // Platform headers
 #define _WIN32_WINNT _WIN32_WINNT_WIN8
 #define WIN32_LEAN_AND_MEAN

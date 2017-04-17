@@ -32,9 +32,11 @@ namespace {
 class ServerConn {
 public:
     ServerConn();
-    void accept();
+    ~ServerConn();
+
     bool recv(CharBuf * out, CharBuf * data, string_view src);
     void send(CharBuf * out, string_view src);
+
 private:
     CtxtHandle m_context;
     bool m_appData{false};
@@ -51,6 +53,7 @@ private:
 *
 ***/
 
+static shared_mutex s_mut;
 static HandleMap<WinTlsConnHandle, ServerConn> s_conns;
 static CredHandle s_srvCred;
 
@@ -129,7 +132,14 @@ ServerConn::ServerConn() {
 }
 
 //===========================================================================
-void ServerConn::accept() {
+ServerConn::~ServerConn() {
+    if (!SecIsValidHandle(&m_context))
+        return;
+
+    if (int err = DeleteSecurityContext(&m_context)) {
+        WinError werr = (SecStatus) err;
+        logMsgCrash() << "DeleteSecurityContext: " << werr;
+    }
 }
 
 //===========================================================================
@@ -189,14 +199,15 @@ NEGOTIATE:
             &outFlags, // attrs of established connection, mirrors input flags
             NULL // remote's cert expiry
         );
-        if (outBufs[0].cbBuffer && outBufs[0].pvBuffer) {
+        if (outBufs[0].cbBuffer) {
+            assert(outBufs[0].pvBuffer);
             out->append((char *) outBufs[0].pvBuffer, outBufs[0].cbBuffer);
             FreeContextBuffer(outBufs[0].pvBuffer);
         }
         if (outBufs[1].cbBuffer) {
             // TODO: figure out what is in the buffer, is it crypted data?
             // uncrypted? ignorable handshake cruft?
-            assert(!outBufs[1].pvBuffer); 
+            assert(!outBufs[1].cbBuffer); 
             data->append((char *) outBufs[1].pvBuffer, outBufs[1].cbBuffer);
             FreeContextBuffer(outBufs[1].pvBuffer);
         }
@@ -290,7 +301,7 @@ NEGOTIATE:
             assert(bufs[3].BufferType == SECBUFFER_EXTRA);
             // Again, upon return, the pvBuffer field of _EXTRA is invalid
             src = src.substr(src.size() - bufs[3].cbBuffer);
-            if (err != SEC_E_OK) 
+            if (err == SEC_E_OK) 
                 continue;
             if (err == SEC_I_RENEGOTIATE) {
                 logMsgError() << "DecryptMessage: renegotiate requested with "
@@ -348,9 +359,29 @@ void ServerConn::send(CharBuf * out, string_view src) {
 
 /****************************************************************************
 *
-*   Private API
+*   ShutdownNotify
 *
 ***/
+
+namespace {
+class ShutdownNotify : public IShutdownNotify {
+    void onShutdownConsole (bool retry) override;
+};
+} // namespace
+static ShutdownNotify s_cleanup;
+
+//===========================================================================
+void ShutdownNotify::onShutdownConsole (bool retry) {
+    shared_lock<shared_mutex> lk{s_mut};
+    if (!s_conns.empty())
+        return shutdownIncomplete();
+
+
+    if (SecIsValidHandle(&s_srvCred)) {
+        FreeCredentialsHandle(&s_srvCred);
+        SecInvalidateHandle(&s_srvCred);
+    }
+}
 
 
 /****************************************************************************
@@ -710,6 +741,8 @@ static unique_ptr<const CERT_CONTEXT> getCert(
 
 //===========================================================================
 void Dim::winTlsInitialize() {
+    shutdownMonitor(&s_cleanup);
+
     WinError err{0};
 
     unique_ptr<const CERT_CONTEXT> cert;
@@ -749,12 +782,13 @@ void Dim::winTlsInitialize() {
 //===========================================================================
 WinTlsConnHandle Dim::winTlsAccept() {
     auto conn = new ServerConn;
-    conn->accept();
+    lock_guard<shared_mutex> lk{s_mut};
     return s_conns.insert(conn);
 }
 
 //===========================================================================
 void Dim::winTlsClose(WinTlsConnHandle h) {
+    lock_guard<shared_mutex> lk{s_mut};
     s_conns.erase(h);
 }
 
@@ -763,7 +797,9 @@ bool Dim::winTlsRecv(
     WinTlsConnHandle h,
     CharBuf * reply,
     CharBuf * data,
-    string_view src) {
+    string_view src
+) {
+    shared_lock<shared_mutex> lk{s_mut};
     auto conn = s_conns.find(h);
     return conn->recv(reply, data, src);
 }
@@ -774,6 +810,7 @@ void Dim::winTlsSend(
     CharBuf * out,
     string_view src
 ) {
+    shared_lock<shared_mutex> lk{s_mut};
     auto conn = s_conns.find(h);
     conn->send(out, src);
 }
