@@ -205,6 +205,9 @@ static ShutdownNotify s_cleanup;
 
 //===========================================================================
 void ShutdownNotify::onShutdownConsole(bool retry) {
+    if (!retry)
+        return shutdownIncomplete();
+
     lock_guard<mutex> lk{s_mut};
     while (!s_buffers.empty())
         destroyEmptyBuffer();
