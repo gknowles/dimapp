@@ -130,6 +130,8 @@ void HttpSocket::reply(unsigned reqId, HttpResponse & msg, bool more) {
     CharBuf out;
     httpReply(conn->m_conn, &out, it->second.stream, msg, more);
     socketWrite(conn, out);
+    if (!more)
+        s_requests.erase(it);
 }
 
 //===========================================================================
@@ -143,6 +145,8 @@ void HttpSocket::reply(unsigned reqId, const T & data, bool more) {
     CharBuf out;
     httpData(conn->m_conn, &out, it->second.stream, data, more);
     socketWrite(conn, out);
+    if (!more)
+        s_requests.erase(it);
 }
 
 //===========================================================================
