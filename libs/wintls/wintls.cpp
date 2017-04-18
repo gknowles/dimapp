@@ -566,7 +566,7 @@ static const CERT_CONTEXT * makeCert(string_view issuerName) {
 }
 
 //===========================================================================
-static bool match(string_view authority, string_view host) {
+static bool matchHost(string_view authority, string_view host) {
     if (!host.size())
         return true;
     if (DnsNameCompare(authority.data(), host.data()))
@@ -578,54 +578,7 @@ static bool match(string_view authority, string_view host) {
 }
 
 //===========================================================================
-static bool match(const CERT_CONTEXT * cert, string_view host) {
-#if 0
-    WinError err{0};
-
-    const char * oid = szOID_SUBJECT_ALT_NAME2;
-    auto ext = CertFindExtension(
-        oid,
-        cert->pCertInfo->cExtension,
-        cert->pCertInfo->rgExtension
-    );
-    if (!ext) {
-        oid = szOID_SUBJECT_ALT_NAME;
-        ext = CertFindExtension(
-            oid,
-            cert->pCertInfo->cExtension,
-            cert->pCertInfo->rgExtension
-        );
-    }
-    if (ext) {
-        CERT_ALT_NAME_INFO * info;
-        DWORD infoLen;
-        if (!CryptDecodeObjectEx(
-            X509_ASN_ENCODING,
-            ext->pszObjId,
-            ext->Value.pbData,
-            ext->Value.cbData,
-            CRYPT_DECODE_ALLOC_FLAG,
-            nullptr,
-            &info, 
-            &infoLen
-        )) {
-            err.set();
-            logMsgCrash() << "CryptDecodeObjectEx: " << err;
-        }
-        int i = 0;
-        for (; i < info->cAltEntry; ++i) {
-            auto & alt = info->rgAltEntry[i];
-            if (alt.dwAltNameChoice == CERT_ALT_NAME_DNS_NAME
-                && match(alt.pwszDNSName, host)
-            ) {
-                break;
-            }
-        }
-        LocalFree(info);
-        return i != info->cAltEntry;
-    }
-#endif
-
+static bool matchHost(const CERT_CONTEXT * cert, string_view host) {
     // get length of Common Name
     auto nameLen = CertGetNameString(
         cert,
@@ -651,7 +604,7 @@ static bool match(const CERT_CONTEXT * cert, string_view host) {
     const char * ptr = name.data();
     while (*ptr) {
         string_view authority{ptr};
-        if (match(authority, host))
+        if (matchHost(authority, host))
             return true;
         ptr += authority.size() + 1;
     }
@@ -716,7 +669,7 @@ static unique_ptr<const CERT_CONTEXT> getCert(
         ));
         if (!cert)
             break;
-        if (!match(cert.get(), host))
+        if (!matchHost(cert.get(), host))
             continue;
 
         // TODO: check cert->pCertInfo->NotBefore & NotAfter
