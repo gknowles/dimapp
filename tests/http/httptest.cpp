@@ -103,7 +103,7 @@ void oldTest() {
         if (test.reset && conn)
             httpClose(conn);
         if (!conn)
-            conn = httpListen();
+            conn = httpAccept();
         result =
             httpRecv(conn, &output, &msgs, data(test.input), size(test.input));
         if (result != test.result) {
@@ -168,7 +168,7 @@ void Application::onAppRun() {
     vector<unique_ptr<HttpMsg>> msgs;
     CharBuf cbuf;
     CharBuf sbuf;
-    auto hsrv = httpListen();
+    auto hsrv = httpAccept();
     auto hcli = httpConnect(&cbuf);
     HttpRequest msg;
     msg.addHeaderRef(kHttp_Method, "get");

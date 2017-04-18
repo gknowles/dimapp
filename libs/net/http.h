@@ -243,7 +243,7 @@ private:
 struct HttpConnHandle : HandleBase {};
 
 HttpConnHandle httpConnect(CharBuf * out);
-HttpConnHandle httpListen();
+HttpConnHandle httpAccept();
 
 void httpClose(HttpConnHandle conn);
 

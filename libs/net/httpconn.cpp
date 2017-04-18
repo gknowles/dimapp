@@ -1228,7 +1228,7 @@ HttpConnHandle Dim::httpConnect(CharBuf * out) {
 }
 
 //===========================================================================
-HttpConnHandle Dim::httpListen() {
+HttpConnHandle Dim::httpAccept() {
     auto * conn = new HttpConn;
     auto h = s_conns.insert(conn);
     conn->accept(h);

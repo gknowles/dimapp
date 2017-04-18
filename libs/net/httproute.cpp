@@ -151,7 +151,7 @@ void HttpSocket::reply(unsigned reqId, const T & data, bool more) {
 
 //===========================================================================
 bool HttpSocket::onSocketAccept(const AppSocketInfo & info) {
-    m_conn = httpListen();
+    m_conn = httpAccept();
     return true;
 }
 
