@@ -211,22 +211,19 @@ void IAppSocket::notifyDestroy() {
 }
 
 //===========================================================================
-void IAppSocket::notifyRead(AppSocketData & data) {
-    if (m_notify)
-        return m_notify->onSocketRead(data);
-
-    // already queued for disconnect? ignore any incoming data
-    if (m_pos == list<UnmatchedInfo>::iterator{})
-        return;
-
-    string_view view(data.data, data.bytes);
-    if (!m_pos->socketData.empty()) {
-        view = m_pos->socketData.append(view);
-    }
+// Returns true if a factory is found or proven to not exist (nullptr). 
+// False means it should be tried again when there's more data.
+static bool findFactory(
+    AppSocket::Family * family,
+    IFactory<IAppSocketNotify> ** fact,
+    const Endpoint & localEnd,
+    string_view data
+) {
     shared_lock<shared_mutex> lk{s_listenMut};
     
     // find best matching listener endpoint for each family
     enum {
+        // match types, in reverse priority order
         kUnknown,   // no match
         kWild,      // wildcard listener (0.0.0.0:0)
         kPort,      // matching port with wildcard addr
@@ -239,16 +236,16 @@ void IAppSocket::notifyRead(AppSocketData & data) {
     } keys[AppSocket::kNumFamilies];
     for (auto && info : s_endpoints) {
         int level{kUnknown};
-        if (info.endpoint == m_accept.local) {
+        if (info.endpoint == localEnd) {
             level = kExact;
         } else if (!info.endpoint.addr) {
-            if (info.endpoint.port == m_accept.local.port) {
+            if (info.endpoint.port == localEnd.port) {
                 level = kPort;
             } else if (!info.endpoint.port) {
                 level = kWild;
             }
         } else if (!info.endpoint.port 
-            && info.endpoint.addr == m_accept.local.addr
+            && info.endpoint.addr == localEnd.addr
         ) {
             level = kAddr;
         }
@@ -259,38 +256,54 @@ void IAppSocket::notifyRead(AppSocketData & data) {
         }
     }
 
-    bool unknown = false;
-    IFactory<IAppSocketNotify> * fact = nullptr;
+    bool known = true;
     for (int i = 0; i < AppSocket::kNumFamilies; ++i) {
         auto fam = (AppSocket::Family) i;
         if (auto matcher = s_matchers[fam].notify) {
-            auto match = matcher->OnMatch(fam, view);
+            auto match = matcher->OnMatch(fam, data);
             switch (match) {
             case AppSocket::kUnknown:
-                unknown = true;
+                known = false;
                 [[fallthrough]];
             case AppSocket::kUnsupported:
                 continue;
             }
 
             // it's at least kSupported, possibly kPreferred
-            fact = keys[fam].fact;
-            m_accept.fam = fam;
+            *family = fam;
+            *fact = keys[fam].fact;
             if (match == AppSocket::kPreferred) {
                 // if it's a preferred match stop looking for better
                 // matches and just use it.
-                goto FINISH;
+                return true;
             }
         }
     }
 
-    if (unknown) {
+    return known;
+}
+
+//===========================================================================
+void IAppSocket::notifyRead(AppSocketData & data) {
+    if (m_notify)
+        return m_notify->onSocketRead(data);
+
+    // already queued for disconnect? ignore any incoming data
+    if (m_pos == list<UnmatchedInfo>::iterator{})
+        return;
+
+    string_view view(data.data, data.bytes);
+    if (!m_pos->socketData.empty()) {
+        view = m_pos->socketData.append(view);
+    }
+
+    IFactory<IAppSocketNotify> * fact;
+    if (!findFactory(&m_accept.fam, &fact, m_accept.local, view)) {
         if (m_pos->socketData.empty())
             m_pos->socketData.assign(data.data, data.bytes);
         return;
     }
 
-FINISH:
     {
         // no longer unmatched - one way or another
         lock_guard<mutex> lk{s_unmatchedMut};
