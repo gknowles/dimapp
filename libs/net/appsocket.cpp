@@ -88,6 +88,7 @@ static vector<EndpointInfo> s_endpoints;
 static mutex s_unmatchedMut;
 static list<IAppSocket::UnmatchedInfo> s_unmatched;
 static IAppSocket::UnmatchedTimer s_unmatchedTimer;
+static bool s_disableNoDataTimeout;
 
 // time expired before enough data was received to determine the protocol
 static auto & s_perfNoData = uperf("sock disconnect no data");
@@ -187,7 +188,8 @@ bool IAppSocket::notifyAccept(const AppSocketInfo & info) {
         m_pos = --s_unmatched.end();
     }
 
-    timerUpdate(&s_unmatchedTimer, kUnmatchedTimeout, true);
+    if (!s_disableNoDataTimeout)
+        timerUpdate(&s_unmatchedTimer, kUnmatchedTimeout, true);
     return true;
 }
 
@@ -442,6 +444,37 @@ AppSocket::MatchType RawMatch::OnMatch(
 
 /****************************************************************************
 *
+*   Config monitor 
+*
+***/
+
+namespace {
+class AppXmlNotify : public IAppConfigNotify {
+    void onConfigChange(string_view relpath, const XNode * root) override;
+};
+} // namespace
+static AppXmlNotify s_appXml;
+
+//===========================================================================
+void AppXmlNotify::onConfigChange(
+    string_view relpath,
+    const XNode * root
+) {
+    auto val = attrValue(
+        firstChild(root, "DisableNoDataTimeout"), 
+        "value", 
+        ""
+    );
+    s_disableNoDataTimeout = strtoul(val, nullptr, 10);
+    timerUpdate(
+        &s_unmatchedTimer, 
+        s_disableNoDataTimeout ? kTimerInfinite : 0ms
+    );
+}
+
+
+/****************************************************************************
+*
 *   Shutdown monitor
 *
 ***/
@@ -484,6 +517,7 @@ void ShutdownNotify::onShutdownConsole(bool retry) {
 //===========================================================================
 void Dim::iAppSocketInitialize() {
     shutdownMonitor(&s_cleanup);
+    appConfigMonitor("app.xml", &s_appXml);
     socketAddFamily(AppSocket::kRaw, &s_rawMatch);
 }
 
