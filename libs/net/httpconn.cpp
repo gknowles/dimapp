@@ -283,7 +283,15 @@ static void setFrameHeader(
     size_t length,
     HttpConn::FrameFlags flags
 ) {
+    // Frame header
+    //  length : 24
+    //  type : 8
+    //  flags : 8
+    //  reserved : 1
+    //  stream : 31
+
     assert(length <= 0xff'ffff);
+    assert((stream >> 31) == 0);
     out[0] = (uint8_t)(length >> 16);
     out[1] = (uint8_t)(length >> 8);
     out[2] = (uint8_t)length;
@@ -398,6 +406,12 @@ static void replyGoAway(
     HttpConn::FrameError error,
     string_view msg = {}
 ) {
+    // GoAway frame
+    //  reserved : 1
+    //  lastStreamId : 31
+    //  errorCode : 32
+    //  data[]
+
     msg = msg.substr(0, 256); 
     char buf[8];
     hton31(buf, lastStream);
@@ -405,6 +419,22 @@ static void replyGoAway(
     startFrame(out, 0, FrameType::kGoAway, sizeof(buf) + msg.size(), {});
     out->append(buf, sizeof(buf));
     out->append(msg);
+}
+
+//===========================================================================
+static void replyWindowUpdate(
+    CharBuf * out,
+    int stream,
+    int increment
+) {
+    // WindowUpdate frame
+    //  reserved : 1
+    //  increment : 31
+
+    char buf[4];
+    hton31(buf, increment);
+    startFrame(out, stream, FrameType::kWindowUpdate, sizeof(buf), {});
+    out->append(buf, sizeof(buf));
 }
 
 //===========================================================================
@@ -540,7 +570,7 @@ bool HttpConn::recv(
 
     default:
         assert(m_byteMode == ByteMode::kPayload);
-    // fall through
+        [[fallthrough]];
 
     case ByteMode::kPayload:
         avail = eptr - ptr;
@@ -562,6 +592,9 @@ bool HttpConn::recv(
 
 //===========================================================================
 void HttpConn::replyRstStream(CharBuf * out, int stream, FrameError error) {
+    // RstStream frame
+    //  errorCode : 32
+
     char buf[4];
     hton32(buf, (int) error);
     startFrame(out, stream, FrameType::kRstStream, 4, {});
@@ -669,6 +702,21 @@ bool HttpConn::onData(
         return false;
     }
 
+    // adjust for any included padding
+    UnpaddedData data;
+    if (!removePadding(&data, src, m_inputFrameLen, 0, flags)) {
+        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+        return false;
+    }
+
+    // TODO: flow control
+    if (data.dataLen) {
+        replyWindowUpdate(out, stream, data.dataLen);
+        replyWindowUpdate(out, 0, data.dataLen);
+    }
+
+    // TODO: check total buffer size
+
     shared_ptr<HttpStream> sm;
     auto it = m_streams.find(stream);
     if (it == m_streams.end()) 
@@ -680,17 +728,6 @@ bool HttpConn::onData(
         replyRstStream(out, stream, FrameError::kStreamClosed);
         return true;
     }
-
-    // adjust for any included padding
-    UnpaddedData data;
-    if (!removePadding(&data, src, m_inputFrameLen, 0, flags)) {
-        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
-        return false;
-    }
-
-    // TODO: flow control
-
-    // TODO: check total buffer size
 
     CharBuf & buf = sm->m_msg->body();
     buf.append(data.data, data.dataLen);
