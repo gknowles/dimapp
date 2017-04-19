@@ -5,6 +5,7 @@
 # LICENSE
 # README.md
 # appveyor.yml
+# bin/conf/h2srv.xml
 # configure.bat
 # libs/app/app.cpp
 # libs/app/app.h

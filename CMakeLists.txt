@@ -241,6 +241,18 @@ function(add_lib_project tgt srcdir)
     write_user_file(${tgt})
 endfunction()
 
+function(add_file_project tgt)
+    file(GLOB sources LIST_DIRECTORIES false ${ARGN})
+    if(NOT sources STREQUAL '')
+        list(APPEND deps ${sources})
+        set(deps ${deps} PARENT_SCOPE)
+        add_custom_target(${tgt} SOURCES ${sources})
+        set_target_properties(${tgt} PROPERTIES
+            FOLDER files
+            EXCLUDE_FROM_ALL false)
+    endif()
+endfunction()
+
 
 #############################################################################
 #
@@ -420,7 +432,7 @@ if(NOT ROOT_PROJECT)
 endif()
 
 # file targets
-file(GLOB sources LIST_DIRECTORIES false 
+add_file_project(about 
     LICENSE
     .clang-format
     .travis.yml
@@ -428,11 +440,8 @@ file(GLOB sources LIST_DIRECTORIES false
     *.md
     configure.bat
     docs/*)
-list(APPEND deps ${sources})
-add_custom_target(about SOURCES ${sources})
-set_target_properties(about PROPERTIES 
-    FOLDER files
-    EXCLUDE_FROM_ALL false)
+add_file_project(conf 
+    bin/conf/*)
 
 # tool targets
 file(GLOB allnames tools/*)
