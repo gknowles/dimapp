@@ -46,6 +46,7 @@
 # libs/core/tokentable.h
 # libs/core/types.cpp
 # libs/core/types.h
+# libs/core/typesint.h
 # libs/core/util.cpp
 # libs/core/util.h
 # libs/cppconf/compiler/visualc.h

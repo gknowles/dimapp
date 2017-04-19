@@ -10,7 +10,7 @@
 #include "net/net.h"
 
 // External library internal headers
-#include "core/appint.h" // iClockGetTicks
+#include "core/typesint.h" // iClockGetTicks
 
 // Standard headers
 #include <algorithm>

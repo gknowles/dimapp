@@ -22,7 +22,4 @@ void iTaskDestroy();
 void iTimerInitialize();
 void iTimerDestroy();
 
-// Types
-int64_t iClockGetTicks();
-
 } // namespace

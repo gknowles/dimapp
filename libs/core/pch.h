@@ -27,3 +27,4 @@
 // Platform headers
 // Internal headers
 #include "appint.h"
+#include "typesint.h"
