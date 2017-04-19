@@ -324,6 +324,8 @@ NEGOTIATE:
             return false;
 
         assert(err == SEC_I_RENEGOTIATE);
+        // Proceed with renegotiate by making another call to 
+        // AcceptSecurityContext with no data.
         src = {};
         m_appData = false;
         goto NEGOTIATE;
@@ -632,8 +634,6 @@ static unique_ptr<const CERT_CONTEXT> getCert(
     string_view host, 
     bool userStore
 ) {
-    unique_ptr<const CERT_CONTEXT> cert;
-
     auto hstore = HCERTSTORE{};
     DWORD flags = userStore
         ? CERT_SYSTEM_STORE_CURRENT_USER
@@ -657,23 +657,23 @@ static unique_ptr<const CERT_CONTEXT> getCert(
     eu.cUsageIdentifier = (DWORD) size(oids);
     eu.rgpszUsageIdentifier = (char **) oids;
     
+    const CERT_CONTEXT * cert{nullptr};
     unique_ptr<const CERT_CONTEXT> selfsigned;
     for (;;) {
-        cert.reset(CertFindCertificateInStore(
+        cert = CertFindCertificateInStore(
             hstore,
             X509_ASN_ENCODING,
             CERT_FIND_OPTIONAL_ENHKEY_USAGE_FLAG,
             CERT_FIND_ENHKEY_USAGE,
             &eu,
-            cert.release()
-        ));
+            cert
+        );
         if (!cert)
             break;
-        if (!matchHost(cert.get(), host))
+        if (!matchHost(cert, host))
             continue;
 
-        // TODO: check cert->pCertInfo->NotBefore & NotAfter
-        // TODO: prefer certs with server auth usage
+        // TODO: check cert->pCertInfo->NotBefore & NotAfter?
 
         if (CertCompareCertificateName(
             X509_ASN_ENCODING,
@@ -683,7 +683,7 @@ static unique_ptr<const CERT_CONTEXT> getCert(
             // self-signed, keep searching for better
             if (!selfsigned) {
                 // keep a copy (aka incref)
-                selfsigned.reset(CertDuplicateCertificateContext(cert.get()));
+                selfsigned.reset(CertDuplicateCertificateContext(cert));
             }
             continue;
         }
@@ -697,7 +697,7 @@ static unique_ptr<const CERT_CONTEXT> getCert(
     // no cert found, try to make a new one?
     if (!cert) {
     }
-    return cert;
+    return unique_ptr<const CERT_CONTEXT>(cert);
 }
 
 //===========================================================================

@@ -55,8 +55,8 @@ private:
     friend class UnmatchedTimer;
     Duration checkTimeout_LK(TimePoint now);
 
-    // set to list.end() when matching is successfully or unsuccessfully
-    // completed.
+    // set to list.end() when matching is completed, either successfully or 
+    // unsuccessfully.
     std::list<UnmatchedInfo>::iterator m_pos;
 
     IAppSocketNotify * m_notify{nullptr};

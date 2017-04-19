@@ -34,11 +34,17 @@ struct PathInfo {
 
 class HttpSocket : public IAppSocketNotify {
 public:
+    static void iReply(
+        unsigned reqId, 
+        function<void(HttpConnHandle h, CharBuf * out, int stream)> fn, 
+        bool more
+    );
     static void reply(unsigned reqId, HttpResponse & msg, bool more);
-    template<typename T>
-    static void reply(unsigned reqId, const T & data, bool more);
+    static void reply(unsigned reqId, std::string_view data, bool more);
+    static void reply(unsigned reqId, const CharBuf & data, bool more);
 
 public:
+    ~HttpSocket ();
     bool onSocketAccept(const AppSocketInfo & info) override;
     void onSocketDisconnect() override;
     void onSocketRead(AppSocketData & data) override;
@@ -105,11 +111,13 @@ static void route(unsigned reqId, HttpRequest & req) {
 
 //===========================================================================
 static unsigned makeRequestInfo (HttpSocket * conn, int stream) {
-    auto ri = RequestInfo{conn, stream};
     for (;;) {
         auto id = ++s_nextReqId;
-        if (id && s_requests.insert({id, ri}).second)
+        auto & found = s_requests[id];
+        if (!found.conn) {
+            found = {conn, stream};
             return id;
+        }
     }
 }
 
@@ -122,31 +130,62 @@ static unsigned makeRequestInfo (HttpSocket * conn, int stream) {
 
 //===========================================================================
 // static 
-void HttpSocket::reply(unsigned reqId, HttpResponse & msg, bool more) {
+void HttpSocket::iReply(
+    unsigned reqId, 
+    function<void(HttpConnHandle h, CharBuf * out, int stream)> fn, 
+    bool more
+) {
     auto it = s_requests.find(reqId);
     if (it == s_requests.end())
         return;
     auto conn = it->second.conn;
     CharBuf out;
-    httpReply(conn->m_conn, &out, it->second.stream, msg, more);
+    fn(conn->m_conn, &out, it->second.stream);
     socketWrite(conn, out);
-    if (!more)
+    if (!more) {
         s_requests.erase(it);
+        auto & ids = conn->m_reqIds;
+        for (auto & id : ids) {
+            if (reqId < id)
+                continue;
+            if (reqId == id)
+                ids.erase(ids.begin() + (&id - ids.data()));
+            break;
+        }
+    }
 }
 
 //===========================================================================
 // static 
-template<typename T>
-void HttpSocket::reply(unsigned reqId, const T & data, bool more) {
-    auto it = s_requests.find(reqId);
-    if (it == s_requests.end())
-        return;
-    auto conn = it->second.conn;
-    CharBuf out;
-    httpData(conn->m_conn, &out, it->second.stream, data, more);
-    socketWrite(conn, out);
-    if (!more)
-        s_requests.erase(it);
+void HttpSocket::reply(unsigned reqId, HttpResponse & msg, bool more) {
+    auto fn = [&](HttpConnHandle h, CharBuf * out, int stream) -> void {
+        httpReply(h, out, stream, msg, more);
+    };
+    iReply(reqId, fn, more);
+}
+
+//===========================================================================
+// static 
+void HttpSocket::reply(unsigned reqId, string_view data, bool more) {
+    auto fn = [&](HttpConnHandle h, CharBuf * out, int stream) -> void {
+        httpData(h, out, stream, data, more);
+    };
+    iReply(reqId, fn, more);
+}
+
+//===========================================================================
+// static 
+void HttpSocket::reply(unsigned reqId, const CharBuf & data, bool more) {
+    auto fn = [&](HttpConnHandle h, CharBuf * out, int stream) -> void {
+        httpData(h, out, stream, data, more);
+    };
+    iReply(reqId, fn, more);
+}
+
+//===========================================================================
+HttpSocket::~HttpSocket () {
+    for (auto && id : m_reqIds)
+        s_requests.erase(id);
 }
 
 //===========================================================================

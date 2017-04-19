@@ -293,9 +293,8 @@ void IAppSocket::notifyRead(AppSocketData & data) {
         return;
 
     string_view view(data.data, data.bytes);
-    if (!m_pos->socketData.empty()) {
+    if (!m_pos->socketData.empty())
         view = m_pos->socketData.append(view);
-    }
 
     IFactory<IAppSocketNotify> * fact;
     if (!findFactory(&m_accept.fam, &fact, m_accept.local, view)) {

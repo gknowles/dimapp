@@ -91,7 +91,7 @@ DirInfo::DirInfo(IFileChangeNotify * notify)
 DirInfo::~DirInfo () {
     if (m_handle != INVALID_HANDLE_VALUE && !CloseHandle(m_handle)) {
         WinError err;
-        logMsgError() << "CloseHandle(hDir), " << m_base << ", " << err;
+        logMsgError() << "CloseHandle(hDir): " << m_base << ", " << err;
     }
 }
 
@@ -116,7 +116,7 @@ bool DirInfo::start(string_view path, bool recurse) {
     );
     if (m_handle == INVALID_HANDLE_VALUE) {
         WinError err;
-        logMsgError() << "CreateFile(FILE_LIST_DIRECTORY), " << m_base 
+        logMsgError() << "CreateFile(FILE_LIST_DIRECTORY): " << m_base 
             << ", " << err;
         iFileSetErrno(err);
         return false;
@@ -144,7 +144,7 @@ bool DirInfo::queue() {
         NULL // completion routine
     )) {
         WinError err;
-        logMsgError() << "ReadDirectoryChangesW(), " << m_base << ", " << err;
+        logMsgError() << "ReadDirectoryChangesW(): " << m_base << ", " << err;
         return false;
     }
 
@@ -168,7 +168,7 @@ void DirInfo::closeWait_UNLK (FileMonitorHandle dir) {
 
     if (!CancelIoEx(m_handle, &m_evt.overlapped)) {
         WinError err;
-        logMsgError() << "CancelIoEx(hDir), " << m_base << ", " << err;
+        logMsgError() << "CancelIoEx(hDir): " << m_base << ", " << err;
     }
 }
 
@@ -258,7 +258,7 @@ void DirInfo::onTask () {
         err = WinError{};
         if (err != ERROR_NOTIFY_ENUM_DIR) {
             if (err != ERROR_OPERATION_ABORTED) {
-                logMsgError() << "ReadDirectoryChangesW() overlapped, " 
+                logMsgError() << "ReadDirectoryChangesW() overlapped: " 
                     << m_base << ", " << err;
             }
             m_handle = INVALID_HANDLE_VALUE;
