@@ -421,6 +421,12 @@ XNode * Dim::firstChild(XNode * elem, const char name[], XType type) {
 }
 
 //===========================================================================
+const XNode *
+Dim::firstChild(const XNode * elem, const char name[], XType type) {
+    return firstChild(const_cast<XNode *>(elem), name, type);
+}
+
+//===========================================================================
 XNode * Dim::lastChild(XNode * elem, const char name[], XType type) {
     if (nodeType(elem) != XType::kElement)
         return nullptr;
@@ -430,12 +436,6 @@ XNode * Dim::lastChild(XNode * elem, const char name[], XType type) {
     if (!matchNode(elem, name, type))
         elem = prevSibling(elem, name, type);
     return elem;
-}
-
-//===========================================================================
-const XNode *
-Dim::firstChild(const XNode * elem, const char name[], XType type) {
-    return firstChild(const_cast<XNode *>(elem), name, type);
 }
 
 //===========================================================================
@@ -459,6 +459,12 @@ XNode * Dim::nextSibling(XNode * node, const char name[], XType type) {
 }
 
 //===========================================================================
+const XNode *
+Dim::nextSibling(const XNode * node, const char name[], XType type) {
+    return nextSibling(const_cast<XNode *>(node), name, type);
+}
+
+//===========================================================================
 XNode * Dim::prevSibling(XNode * node, const char name[], XType type) {
     if (!node)
         return nullptr;
@@ -474,14 +480,42 @@ XNode * Dim::prevSibling(XNode * node, const char name[], XType type) {
 
 //===========================================================================
 const XNode *
-Dim::nextSibling(const XNode * node, const char name[], XType type) {
-    return nextSibling(const_cast<XNode *>(node), name, type);
+Dim::prevSibling(const XNode * node, const char name[], XType type) {
+    return prevSibling(const_cast<XNode *>(node), name, type);
 }
 
 //===========================================================================
-const XNode *
-Dim::prevSibling(const XNode * node, const char name[], XType type) {
-    return prevSibling(const_cast<XNode *>(node), name, type);
+XAttr * Dim::attr(XNode * elem, const char name[]) {
+    if (nodeType(elem) != XType::kElement)
+        return nullptr;
+
+    auto ei = static_cast<XElemInfo *>(elem);
+    if (auto ai = ei->firstAttr) {
+        for (;;) {
+            if (strcmp(name, ai->name) == 0)
+                return ai;
+            ai = ai->next;
+            if (ai == ei->firstAttr)
+                break;
+        }
+    }
+    return nullptr;
+}
+
+//===========================================================================
+const XAttr * Dim::attr(const XNode * elem, const char name[]) {
+    return attr(const_cast<XNode *>(elem), name);
+}
+
+//===========================================================================
+const char * Dim::attrValue(
+    const XNode * elem, 
+    const char name[], 
+    const char val[]
+) {
+    if (auto xa = attr(elem, name))
+        return xa->value;
+    return val;
 }
 
 //===========================================================================

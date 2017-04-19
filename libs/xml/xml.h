@@ -285,12 +285,12 @@ XNode * firstChild(
     XNode * elem,
     const char name[] = nullptr,
     XType type = XType::kInvalid);
-XNode * lastChild(
-    XNode * elem,
-    const char name[] = nullptr,
-    XType type = XType::kInvalid);
 const XNode * firstChild(
     const XNode * elem,
+    const char name[] = nullptr,
+    XType type = XType::kInvalid);
+XNode * lastChild(
+    XNode * elem,
     const char name[] = nullptr,
     XType type = XType::kInvalid);
 const XNode * lastChild(
@@ -302,18 +302,27 @@ XNode * nextSibling(
     XNode * elem,
     const char name[] = nullptr,
     XType type = XType::kInvalid);
-XNode * prevSibling(
-    XNode * elem,
-    const char name[] = nullptr,
-    XType type = XType::kInvalid);
 const XNode * nextSibling(
     const XNode * elem,
+    const char name[] = nullptr,
+    XType type = XType::kInvalid);
+XNode * prevSibling(
+    XNode * elem,
     const char name[] = nullptr,
     XType type = XType::kInvalid);
 const XNode * prevSibling(
     const XNode * elem,
     const char name[] = nullptr,
     XType type = XType::kInvalid);
+
+XAttr * attr(XNode * elem, const char name[]);
+const XAttr * attr(const XNode * elem, const char name[]);
+
+const char * attrValue(
+    const XNode * elem, 
+    const char name[], 
+    const char val[] = nullptr
+);
 
 //===========================================================================
 // Node iteration
