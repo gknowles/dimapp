@@ -32,7 +32,7 @@ struct NotifyInfo {
 class ConfigFile : public IFileChangeNotify {
 public:
     void monitor_UNLK(string_view relpath, IAppConfigNotify * notify);
-    void notify_UNLK(IAppConfigNotify * notify);
+    bool notify_UNLK(IAppConfigNotify * notify);
 
     // IFileChangeNotify
     void onFileChange(string_view fullpath, FileHandle f) override;
@@ -110,17 +110,18 @@ void ConfigFile::onFileChange(string_view fullpath, FileHandle f) {
 }
 
 //===========================================================================
-void ConfigFile::notify_UNLK(IAppConfigNotify * notify) {
+bool ConfigFile::notify_UNLK(IAppConfigNotify * notify) {
     unique_lock<mutex> lk{s_mut, adopt_lock};
     for (auto it = m_notifiers.begin(); it != m_notifiers.end(); ++it) {
         if (!notify || notify == it->notify) {
             lk.unlock();
             it->notify->onConfigChange(m_relpath, m_xml.root());
             if (notify)
-                return;
+                return true;
             lk.lock();
         }
     }
+    return !notify;
 }
 
 
@@ -169,7 +170,7 @@ void Dim::iAppConfigInitialize (string_view dir) {
 void Dim::appConfigMonitor(string_view file, IAppConfigNotify * notify) {
     string path;
     if (!fileMonitorPath(path, s_hDir, file)) {
-        logMsgError() << "File outside of config directory, " << file;
+        logMsgError() << "Monitor file outside of config directory, " << file;
         return;
     }
 
@@ -185,11 +186,12 @@ void Dim::appConfigChange(
 ) {
     string path;
     if (!fileMonitorPath(path, s_hDir, file)) {
-        logMsgError() << "File outside of config directory, " << file;
+        logMsgError() << "Change file outside of config directory, " << file;
         return;
     }
 
     s_mut.lock();
     auto & cf = s_files[path];
-    cf.notify_UNLK(notify);
+    if (!cf.notify_UNLK(notify))
+        logMsgError() << "Change notify not registered, " << file;
 }

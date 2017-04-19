@@ -31,6 +31,9 @@ public:
 
 void appConfigMonitor(std::string_view file, IAppConfigNotify * notify);
 
+// If notify is null, all notifiers monitoring the file are called. Otherwise,
+// the specified monitor is called if it is monitoring the file. An error is
+// logged if a notify is specified and it's not monitoring the file.
 void appConfigChange(
     std::string_view file, 
     IAppConfigNotify * notify = nullptr
