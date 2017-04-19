@@ -122,6 +122,9 @@ function(update_deps_file)
 endfunction()
 
 function(write_user_file prjname)
+    if(NOT MSVC)
+        return()
+    endif()
     set(user_file "${CMAKE_CURRENT_BINARY_DIR}/${prjname}.vcxproj.user")
     file(WRITE ${user_file} [=[
 <?xml version="1.0" encoding="utf-8"?>
@@ -134,8 +137,9 @@ function(write_user_file prjname)
         else()
             set(libpath "${cfgname}/lib")
         endif()
+        set(cfgplat "${cfgname}|${MSVC_CXX_ARCHITECTURE_ID}")
         file(APPEND ${user_file} [=[
-    <PropertyGroup Condition="'$(Configuration)|$(Platform)'==']=] "${cfgname}" [=[|x64'">
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'==']=] "${cfgplat}" [=['">
         <LocalDebuggerWorkingDirectory>$(TargetDir)</LocalDebuggerWorkingDirectory>
         <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
         <VcpkgLibPath>]=] "${libpath}" [=[</VcpkgLibPath>
@@ -148,6 +152,9 @@ function(write_user_file prjname)
 endfunction()
 
 function(install_archive_pdb tgt dstdir)
+    if(NOT MSVC)
+        return()
+    endif()
     if(BUILD_SHARED_LIBS)
         install(FILES "$<TARGET_PDB_FILE:${tgt}>" DESTINATION bin)
     else()
@@ -257,7 +264,7 @@ endif()
 # post generation. But cmake doesn't allow for post generation hooks, so we 
 # launch another instance of cmake and then transform and copy the solution 
 # file after that instance returns.
-if(ROOT_PROJECT AND NOT RECURSIVE_GENERATE)
+if(MSVC AND ROOT_PROJECT AND NOT RECURSIVE_GENERATE)
     message(STATUS "Recursive generate started")
     execute_process(
         COMMAND ${CMAKE_COMMAND} 
@@ -301,8 +308,8 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set_property(GLOBAL PROPERTY PREDEFINED_TARGETS_FOLDER cmake)
 
 set(CMAKE_CONFIGURATION_TYPES Debug Release)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/bin)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_SOURCE_DIR}/bin)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_SOURCE_DIR}/bin)
 
 if(NOT ROOT_PROJECT)
     set_property(DIRECTORY "${parent}" APPEND PROPERTY INCLUDE_DIRECTORIES 
