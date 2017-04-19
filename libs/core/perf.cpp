@@ -25,6 +25,17 @@ struct PerfInfo {
 
 /****************************************************************************
 *
+*   Variables
+*
+***/
+
+// Number of counters declared during static initialization (or anytime 
+// before appRun).
+static size_t s_numStatic;
+
+
+/****************************************************************************
+*
 *   Helpers
 *
 ***/
@@ -102,6 +113,28 @@ inline float PerfFunc<T>::toFloat () const {
 template<typename T>
 inline void PerfFunc<T>::toString (std::string & out) const {
     out = ::to_string(fn());
+}
+
+
+/****************************************************************************
+*
+*   Internal API
+*
+***/
+
+//===========================================================================
+void Dim::iPerfInitialize() {
+    auto & info = getInfo();
+    lock_guard<mutex> lk{info.mut};
+    s_numStatic = info.counters.size();
+}
+
+//===========================================================================
+void Dim::iPerfDestroy() {
+    auto & info = getInfo();
+    lock_guard<mutex> lk{info.mut};
+    assert(info.counters.size() >= s_numStatic);
+    info.counters.resize(s_numStatic);
 }
 
 

@@ -11,6 +11,10 @@
 
 namespace Dim {
 
+// Perf
+void iPerfInitialize();
+void iPerfDestroy();
+
 // Shutdown
 void iShutdownDestroy();
 

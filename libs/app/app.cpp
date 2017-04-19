@@ -99,6 +99,7 @@ AppFlags Dim::appRunFlags() {
 int Dim::appRun(IAppNotify & app, int argc, char * argv[], AppFlags flags) {
     s_appFlags = flags;
     s_runMode = kRunStarting;
+    iPerfInitialize();
     if (flags & fAppWithConsole)
         logDefaultMonitor(&s_consoleLogger);
     iConsoleInitialize();
@@ -129,6 +130,7 @@ int Dim::appRun(IAppNotify & app, int argc, char * argv[], AppFlags flags) {
     iShutdownDestroy();
     iTimerDestroy();
     iTaskDestroy();
+    iPerfDestroy();
     s_runMode = kRunStopped;
     return s_exitcode;
 }
