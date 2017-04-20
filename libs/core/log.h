@@ -11,6 +11,13 @@
 
 namespace Dim {
 
+
+/****************************************************************************
+*
+*   Declarations
+*
+***/
+
 enum LogType {
     kLogTypeDebug,
     kLogTypeInfo,
@@ -18,19 +25,6 @@ enum LogType {
     kLogTypeCrash,
     kLogTypes
 };
-
-class ILogNotify {
-public:
-    virtual ~ILogNotify() {}
-    virtual void onLog(LogType type, std::string_view msg) = 0;
-};
-
-void logMonitor(ILogNotify * notify);
-
-// The default notifier (whether user supplied or the internal one) is only
-// called if no other notifiers have been added. Setting the default to
-// nullptr sets it to the internal default, which writes to std::cout.
-void logDefaultMonitor(ILogNotify * notify);
 
 namespace Detail {
 
@@ -52,18 +46,55 @@ public:
 
 } // namespace
 
+
+/****************************************************************************
+*
+*   Logging messages
+*
+*   Expected usage:
+*   logMsgError() << "It went kablooie";
+*
+***/
+
 Detail::Log logMsgDebug();
 Detail::Log logMsgInfo();
 Detail::Log logMsgError();
 Detail::LogCrash logMsgCrash();
 
+// Logs an error of the form "name(<line no>): msg", followed by two info 
+// lines with part or all of the line of content containing the error 
+// with a caret indicating it's exact position.
+//
+// "content" should be the entire source being parsed and "pos" the failing
+// offset into the content. The line number is calculated from that.
 void logParseError(
     std::string_view msg,
-    std::string_view objname,
+    std::string_view name,
     size_t pos,
-    std::string_view source);
+    std::string_view content
+);
 
 // Returns the number of messages of the selected type that have been logged
 int logGetMsgCount(LogType type);
+
+
+/****************************************************************************
+*
+*   Log monitoring
+*
+***/
+
+class ILogNotify {
+public:
+    virtual ~ILogNotify() {}
+    virtual void onLog(LogType type, std::string_view msg) = 0;
+};
+
+void logMonitor(ILogNotify * notify);
+
+// The default notifier (whether user supplied or the internal one) is only
+// called if no other notifiers have been added. Setting the default to
+// nullptr sets it to the internal default, which writes to std::cout.
+void logDefaultMonitor(ILogNotify * notify);
 
 } // namespace

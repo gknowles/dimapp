@@ -142,30 +142,30 @@ Detail::LogCrash Dim::logMsgCrash() {
 //===========================================================================
 void Dim::logParseError(
     string_view msg,
-    string_view objname,
+    string_view name,
     size_t pos,
-    string_view source) {
+    string_view content) {
 
-    auto lineNum = 1 + count(source.begin(), source.begin() + pos, '\n');
-    logMsgError() << objname << "(" << lineNum << "): " << msg;
+    auto lineNum = 1 + count(content.begin(), content.begin() + pos, '\n');
+    logMsgError() << name << "(" << lineNum << "): " << msg;
 
     bool leftTrunc = false;
     bool rightTrunc = false;
-    size_t first = source.find_last_of('\n', pos);
+    size_t first = content.find_last_of('\n', pos);
     first = (first == string::npos) ? 0 : first + 1;
     if (pos - first > 50) {
         leftTrunc = true;
         first = pos - 50;
     }
-    size_t last = source.find_first_of('\n', pos);
-    last = source.find_last_not_of(" \t\r\n", last);
-    last = (last == string::npos) ? source.size() : last + 1;
+    size_t last = content.find_first_of('\n', pos);
+    last = content.find_last_not_of(" \t\r\n", last);
+    last = (last == string::npos) ? content.size() : last + 1;
     if (last - first > 78) {
         rightTrunc = true;
         last = first + 78;
     }
     size_t len = last - first;
-    auto line = string(source.substr(first, len));
+    auto line = string(content.substr(first, len));
     for (char & ch : line) {
         if (iscntrl((unsigned char)ch))
             ch = ch == '\t' ? ' ' : '.';

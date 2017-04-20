@@ -18,7 +18,7 @@ namespace Dim {
 *   Clients inherit from this class to make different kinds of handles
 *
 *   Expected usage:
-*   struct HWidget : DimHandleBase {};
+*   struct HWidget : HandleBase {};
 *
 ***/
 

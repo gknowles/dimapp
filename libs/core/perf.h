@@ -12,6 +12,12 @@
 
 namespace Dim {
 
+/****************************************************************************
+*
+*   Declarations
+*
+***/
+
 struct PerfCounterBase {
     std::string name;
     virtual void toString (std::string & out) const = 0;
@@ -32,6 +38,12 @@ struct PerfFunc : PerfCounterBase {
 };
 
 
+/****************************************************************************
+*
+*   Register performance counters
+*
+***/
+
 PerfCounter<int> & iperf(std::string_view name);
 PerfCounter<unsigned> & uperf(std::string_view name);
 PerfCounter<float> & fperf(std::string_view name);
@@ -42,6 +54,13 @@ PerfFunc<unsigned> & uperf(
     std::function<unsigned()> fn
 );
 PerfFunc<float> & fperf(std::string_view name, std::function<float()> fn);
+
+
+/****************************************************************************
+*
+*   Get counter values for display
+*
+***/
 
 struct PerfValue {
     std::string_view name;
