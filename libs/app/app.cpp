@@ -113,6 +113,11 @@ int Dim::appRun(IAppNotify & app, int argc, char * argv[], AppFlags flags) {
     iPlatformInitialize();
     iFileInitialize();
     iAppConfigInitialize("conf");
+    if (flags & fAppWithLogFiles) {
+        iLogFileInitialize("log");
+        if (flags & fAppWithConsole)
+            logMonitor(&s_consoleLogger);
+    }
     iSocketInitialize();
     iAppSocketInitialize();
     iHttpRouteInitialize();

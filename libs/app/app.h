@@ -11,3 +11,4 @@
 #include "console.h"
 #include "env.h"
 #include "file.h"
+#include "logfile.h"

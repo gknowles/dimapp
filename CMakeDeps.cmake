@@ -17,6 +17,8 @@
 # libs/app/env.h
 # libs/app/file.cpp
 # libs/app/file.h
+# libs/app/logfile.cpp
+# libs/app/logfile.h
 # libs/app/pch.cpp
 # libs/app/pch.h
 # libs/cli/cli.cpp

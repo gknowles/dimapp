@@ -9,12 +9,13 @@
 // External library public headers
 #include "cli/cli.h"
 #include "core/core.h"
+#include "net/address.h"
 #include "xml/xml.h"
 
 // External library internal headers
-#include "app/appint.h"
 #include "core/appint.h"
 #include "net/appint.h"
+#include "win/appint.h"
 
 // Standard headers
 #include <array>
@@ -34,4 +35,4 @@
 
 // Platform headers
 // Internal headers
-#include "win/appint.h"
+#include "app/appint.h"
