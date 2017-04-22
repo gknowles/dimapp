@@ -24,3 +24,47 @@ int64_t Dim::iClockGetTicks() {
     out.LowPart = ft.dwLowDateTime;
     return out.QuadPart;
 }
+
+//===========================================================================
+bool Dim::iTimeGetDesc(tm & tm, TimePoint time) {
+    LARGE_INTEGER in;
+    in.QuadPart = time.time_since_epoch().count();
+    FILETIME ft;
+    ft.dwHighDateTime = in.HighPart;
+    ft.dwLowDateTime = in.LowPart;
+    SYSTEMTIME st;
+    if (!FileTimeToSystemTime(&ft, &st)) {
+        tm = {};
+        return false;
+    }
+
+    tm.tm_year = st.wYear - 1900;
+    tm.tm_mon = st.wMonth - 1;
+    tm.tm_wday = st.wDayOfWeek;
+    tm.tm_mday = st.wDay;
+    tm.tm_hour = st.wHour;
+    tm.tm_min = st.wMinute;
+    tm.tm_sec = st.wSecond;
+
+    tm.tm_isdst = -1;
+    tm.tm_yday = -1;
+    return true;
+}
+
+//===========================================================================
+int Dim::timeZoneMinutes(TimePoint time) {
+    LARGE_INTEGER in;
+    in.QuadPart = time.time_since_epoch().count();
+    FILETIME ft;
+    ft.dwHighDateTime = in.HighPart;
+    ft.dwLowDateTime = in.LowPart;
+
+    FILETIME local;
+    if (!FileTimeToLocalFileTime(&ft, &local))
+        return 0;
+    LARGE_INTEGER out;
+    out.HighPart = local.dwHighDateTime;
+    out.LowPart = local.dwLowDateTime;
+    int64_t diff = (out.QuadPart - in.QuadPart) / kClockTicksPerSecond / 60;
+    return (int) diff;
+}
