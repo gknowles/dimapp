@@ -11,6 +11,10 @@
 
 namespace Dim {
 
+// Log
+void iLogInitialize();
+void iLogDestroy();
+
 // Perf
 void iPerfInitialize();
 void iPerfDestroy();

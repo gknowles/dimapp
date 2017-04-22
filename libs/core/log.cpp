@@ -16,14 +16,17 @@ using namespace Dim;
 ***/
 
 namespace {
-class DefaultNotify : public ILogNotify {
-    void onLog(LogType type, std::string_view msg) override;
+class DefaultLogger : public ILogNotify {
+    void onLog(LogType type, string_view msg) override;
 };
 } // namespace
 
-static DefaultNotify s_fallback;
-static vector<ILogNotify *> s_notifiers;
-static ILogNotify * s_defaultNotify{&s_fallback};
+static DefaultLogger s_fallback;
+static vector<ILogNotify *> s_loggers;
+static ILogNotify * s_defaultLogger{&s_fallback};
+
+static ILogNotify * s_initialDefault;
+static size_t s_initialNumLoggers;
 
 static PerfCounter<int> * s_perfs[] = {
     &iperf("log debug"),
@@ -46,10 +49,10 @@ static void LogMsg(LogType type, string_view msg) {
 
     if (!msg.empty() && msg.back() == '\n')
         msg.remove_suffix(1);
-    if (s_notifiers.empty()) {
-        s_defaultNotify->onLog(type, msg);
+    if (s_loggers.empty()) {
+        s_defaultLogger->onLog(type, msg);
     } else {
-        for (auto && notify : s_notifiers) {
+        for (auto && notify : s_loggers) {
             notify->onLog(type, msg);
         }
     }
@@ -61,12 +64,12 @@ static void LogMsg(LogType type, string_view msg) {
 
 /****************************************************************************
 *
-*   DefaultNotify
+*   DefaultLogger
 *
 ***/
 
 //===========================================================================
-void DefaultNotify::onLog(LogType type, std::string_view msg) {
+void DefaultLogger::onLog(LogType type, string_view msg) {
     cout.write(msg.data(), msg.size());
 }
 
@@ -105,18 +108,38 @@ Detail::LogCrash::~LogCrash() {}
 
 /****************************************************************************
 *
-*   External
+*   Internal API
+*
+***/
+
+//===========================================================================
+void Dim::iLogInitialize() {
+    s_initialDefault = s_defaultLogger;
+    s_initialNumLoggers = s_loggers.size();
+}
+
+//===========================================================================
+void Dim::iLogDestroy() {
+    s_defaultLogger = s_initialDefault;
+    assert(s_loggers.size() >= s_initialNumLoggers);
+    s_loggers.resize(s_initialNumLoggers);
+}
+
+
+/****************************************************************************
+*
+*   Public API
 *
 ***/
 
 //===========================================================================
 void Dim::logDefaultMonitor(ILogNotify * notify) {
-    s_defaultNotify = notify ? notify : &s_fallback;
+    s_defaultLogger = notify ? notify : &s_fallback;
 }
 
 //===========================================================================
 void Dim::logMonitor(ILogNotify * notify) {
-    s_notifiers.push_back(notify);
+    s_loggers.push_back(notify);
 }
 
 //===========================================================================

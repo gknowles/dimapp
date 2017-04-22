@@ -100,9 +100,10 @@ int Dim::appRun(IAppNotify & app, int argc, char * argv[], AppFlags flags) {
     s_appFlags = flags;
     s_runMode = kRunStarting;
     iPerfInitialize();
+    iLogInitialize();
+    iConsoleInitialize();
     if (flags & fAppWithConsole)
         logDefaultMonitor(&s_consoleLogger);
-    iConsoleInitialize();
     if (flags & fAppWithChdir) {
         auto fp = fs::u8path(envGetExecPath());
         fs::current_path(fp.parent_path());
@@ -111,8 +112,7 @@ int Dim::appRun(IAppNotify & app, int argc, char * argv[], AppFlags flags) {
     iTimerInitialize();
     iPlatformInitialize();
     iFileInitialize();
-    if (flags & fAppWithConfig)
-        iAppConfigInitialize("conf");
+    iAppConfigInitialize("conf");
     iSocketInitialize();
     iAppSocketInitialize();
     iHttpRouteInitialize();
@@ -130,6 +130,7 @@ int Dim::appRun(IAppNotify & app, int argc, char * argv[], AppFlags flags) {
     iShutdownDestroy();
     iTimerDestroy();
     iTaskDestroy();
+    iLogDestroy();
     iPerfDestroy();
     s_runMode = kRunStopped;
     return s_exitcode;
