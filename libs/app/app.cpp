@@ -112,7 +112,7 @@ int Dim::appRun(IAppNotify & app, int argc, char * argv[], AppFlags flags) {
     iTimerInitialize();
     iPlatformInitialize();
     iFileInitialize();
-    iAppConfigInitialize("conf");
+    iConfigInitialize("conf");
     if (flags & fAppWithLogFiles) {
         iLogFileInitialize("log");
         if (flags & fAppWithConsole)

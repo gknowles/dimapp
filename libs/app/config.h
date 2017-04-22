@@ -1,7 +1,7 @@
 // Copyright Glen Knowles 2017.
 // Distributed under the Boost Software License, Version 1.0.
 //
-// appconfig.h - dim app
+// config.h - dim app
 #pragma once
 
 #include "cppconf/cppconf.h"
@@ -19,9 +19,9 @@ namespace Dim {
 *
 ***/
 
-class IAppConfigNotify {
+class IConfigNotify {
 public:
-    virtual ~IAppConfigNotify () {}
+    virtual ~IConfigNotify () {}
 
     virtual void onConfigChange(
         std::string_view relpath, 
@@ -29,14 +29,14 @@ public:
     ) = 0;
 };
 
-void appConfigMonitor(std::string_view file, IAppConfigNotify * notify);
+void configMonitor(std::string_view file, IConfigNotify * notify);
 
 // If notify is null, all notifiers monitoring the file are called. Otherwise,
 // the specified monitor is called if it is monitoring the file. An error is
 // logged if a notify is specified and it's not monitoring the file.
-void appConfigChange(
+void configChange(
     std::string_view file, 
-    IAppConfigNotify * notify = nullptr
+    IConfigNotify * notify = nullptr
 );
 
 } // namespace

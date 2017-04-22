@@ -122,7 +122,7 @@ void ShutdownNotify::onShutdownClient(bool retry) {
 ***/
 
 namespace {
-class Application : public IAppNotify, public IAppConfigNotify {
+class Application : public IAppNotify, public IConfigNotify {
     void onAppRun() override;
     void onConfigChange(string_view relpath, const XNode * root) override;
 };
@@ -148,7 +148,7 @@ void Application::onAppRun() {
     for (auto && addr : addrs)
         cout << addr << endl;
 
-    appConfigMonitor("h2srv.xml", this);
+    configMonitor("h2srv.xml", this);
     winTlsInitialize();
     appTlsInitialize();
 

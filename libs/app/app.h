@@ -6,8 +6,8 @@
 
 #include "cppconf/cppconf.h"
 
-#include "appconfig.h"
 #include "appmain.h"
+#include "config.h"
 #include "console.h"
 #include "env.h"
 #include "file.h"

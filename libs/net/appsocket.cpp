@@ -449,7 +449,7 @@ AppSocket::MatchType RawMatch::OnMatch(
 ***/
 
 namespace {
-class AppXmlNotify : public IAppConfigNotify {
+class AppXmlNotify : public IConfigNotify {
     void onConfigChange(string_view relpath, const XNode * root) override;
 };
 } // namespace
@@ -517,7 +517,7 @@ void ShutdownNotify::onShutdownConsole(bool retry) {
 //===========================================================================
 void Dim::iAppSocketInitialize() {
     shutdownMonitor(&s_cleanup);
-    appConfigMonitor("app.xml", &s_appXml);
+    configMonitor("app.xml", &s_appXml);
     socketAddFamily(AppSocket::kRaw, &s_rawMatch);
 }
 

@@ -11,8 +11,8 @@
 
 namespace Dim {
 
-// AppConfig
-void iAppConfigInitialize(std::string_view dir);
+// Config
+void iConfigInitialize(std::string_view dir);
 
 // LogFile
 void iLogFileInitialize(std::string_view dir);

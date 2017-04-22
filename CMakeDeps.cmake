@@ -9,10 +9,10 @@
 # configure.bat
 # libs/app/app.cpp
 # libs/app/app.h
-# libs/app/appconfig.cpp
-# libs/app/appconfig.h
 # libs/app/appint.h
 # libs/app/appmain.h
+# libs/app/config.cpp
+# libs/app/config.h
 # libs/app/console.h
 # libs/app/env.h
 # libs/app/file.cpp

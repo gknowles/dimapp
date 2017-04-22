@@ -1,7 +1,7 @@
 // Copyright Glen Knowles 2017.
 // Distributed under the Boost Software License, Version 1.0.
 //
-// appconfig.cpp - dim app
+// config.cpp - dim app
 #include "pch.h"
 #pragma hdrstop
 
@@ -26,13 +26,13 @@ const unsigned kMaxConfigFileSize = 10'000'000;
 ***/
 
 struct NotifyInfo {
-    IAppConfigNotify * notify;
+    IConfigNotify * notify;
 };
 
 class ConfigFile : public IFileChangeNotify {
 public:
-    void monitor_UNLK(string_view relpath, IAppConfigNotify * notify);
-    bool notify_UNLK(IAppConfigNotify * notify);
+    void monitor_UNLK(string_view relpath, IConfigNotify * notify);
+    bool notify_UNLK(IConfigNotify * notify);
 
     // IFileChangeNotify
     void onFileChange(string_view fullpath, FileHandle f) override;
@@ -68,7 +68,7 @@ static unordered_map<string, ConfigFile> s_files;
 ***/
 
 //===========================================================================
-void ConfigFile::monitor_UNLK(string_view relpath, IAppConfigNotify * notify) {
+void ConfigFile::monitor_UNLK(string_view relpath, IConfigNotify * notify) {
     bool empty = m_notifiers.empty();
     NotifyInfo ni = { notify };
     m_notifiers.push_back(ni);
@@ -106,11 +106,11 @@ void ConfigFile::onFileChange(string_view fullpath, FileHandle f) {
     m_relpath.remove_prefix(s_rootDir.size() + 1);
 
     // call notifiers
-    appConfigChange(m_fullpath, nullptr);
+    configChange(m_fullpath, nullptr);
 }
 
 //===========================================================================
-bool ConfigFile::notify_UNLK(IAppConfigNotify * notify) {
+bool ConfigFile::notify_UNLK(IConfigNotify * notify) {
     unique_lock<mutex> lk{s_mut, adopt_lock};
     for (auto it = m_notifiers.begin(); it != m_notifiers.end(); ++it) {
         if (!notify || notify == it->notify) {
@@ -151,7 +151,7 @@ void ShutdownNotify::onShutdownConsole(bool retry) {
 ***/
 
 //===========================================================================
-void Dim::iAppConfigInitialize (string_view dir) {
+void Dim::iConfigInitialize (string_view dir) {
     shutdownMonitor(&s_cleanup);
     auto fp = fs::u8path(dir.begin(), dir.end());
     fp = fs::canonical(fp);
@@ -167,7 +167,7 @@ void Dim::iAppConfigInitialize (string_view dir) {
 ***/
 
 //===========================================================================
-void Dim::appConfigMonitor(string_view file, IAppConfigNotify * notify) {
+void Dim::configMonitor(string_view file, IConfigNotify * notify) {
     string path;
     if (!fileMonitorPath(path, s_hDir, file)) {
         logMsgError() << "Monitor file outside of config directory, " << file;
@@ -180,9 +180,9 @@ void Dim::appConfigMonitor(string_view file, IAppConfigNotify * notify) {
 }
 
 //===========================================================================
-void Dim::appConfigChange(
+void Dim::configChange(
     string_view file, 
-    IAppConfigNotify * notify // = nullptr
+    IConfigNotify * notify // = nullptr
 ) {
     string path;
     if (!fileMonitorPath(path, s_hDir, file)) {
