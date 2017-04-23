@@ -39,6 +39,8 @@
 # libs/core/perf.h
 # libs/core/shutdown.cpp
 # libs/core/shutdown.h
+# libs/core/str.cpp
+# libs/core/str.h
 # libs/core/task.cpp
 # libs/core/task.h
 # libs/core/tempheap.cpp

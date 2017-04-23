@@ -5,7 +5,7 @@
 
 // Public header
 #include "net/net.h"
-#include "hpack.h"
+#include "net/hpack.h"
 
 // External library public headers
 #include "app/app.h"

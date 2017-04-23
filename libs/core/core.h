@@ -12,6 +12,7 @@
 #include "log.h"
 #include "perf.h"
 #include "shutdown.h"
+#include "str.h"
 #include "task.h"
 #include "tempheap.h"
 #include "time.h"

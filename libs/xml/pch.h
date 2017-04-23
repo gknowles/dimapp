@@ -4,9 +4,10 @@
 // pch.h - dim xml
 
 // Public header
-#include "xml.h"
+#include "xml/xml.h"
 
 // External library public headers
+#include "core/str.h"
 #include "core/util.h"
 
 // External library internal headers
