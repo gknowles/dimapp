@@ -32,7 +32,7 @@ struct Element {
         fCallbackFlags = fOnStart | fOnChar | fOnEnd,
     };
 
-    enum Type : uint8_t {
+    enum Type : int8_t {
         kRule,
         kSequence,
         kChoice,

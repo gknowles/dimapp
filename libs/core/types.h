@@ -108,7 +108,7 @@ std::enable_if_t<is_flags_v<T>, T> operator| (T left, T right) {
 
 //===========================================================================
 template<typename T> constexpr 
-std::enable_if_t<is_flags_v<T>, T> operator|= (T left, T right) {
+std::enable_if_t<is_flags_v<T>, T> operator|= (T & left, T right) {
     return left = left | right;
 }
 
@@ -120,7 +120,7 @@ std::enable_if_t<is_flags_v<T>, T> operator& (T left, T right) {
 
 //===========================================================================
 template<typename T> constexpr 
-std::enable_if_t<is_flags_v<T>, T> operator&= (T left, T right) {
+std::enable_if_t<is_flags_v<T>, T> operator&= (T & left, T right) {
     return left = left & right;
 }
 
@@ -132,7 +132,7 @@ std::enable_if_t<is_flags_v<T>, T> operator^ (T left, T right) {
 
 //===========================================================================
 template<typename T> constexpr 
-std::enable_if_t<is_flags_v<T>, T> operator^= (T left, T right) {
+std::enable_if_t<is_flags_v<T>, T> operator^= (T & left, T right) {
     return left = left ^ right;
 }
 
