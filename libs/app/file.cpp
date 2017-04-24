@@ -43,7 +43,7 @@ FileStreamNotify::FileStreamNotify(
     : m_notify{notify}
     , m_out(new char[blkSize])
 {
-    auto file = fileOpen(path, File::fReadOnly | File::fDenyNone);
+    auto file = fileOpen(path, File::fReadOnly | File::fAllowWrite);
     if (!file) {
         logMsgError() << "File open failed: " << path;
         onFileEnd(0, file);
@@ -137,7 +137,7 @@ void Dim::fileLoadBinary(
     string_view path,
     size_t maxSize
 ) {
-    auto file = fileOpen(path, File::fReadOnly | File::fDenyNone);
+    auto file = fileOpen(path, File::fReadOnly | File::fAllowWrite);
     if (!file) {
         logMsgError() << "File open failed: " << path;
         notify->onFileEnd(0, file);
@@ -158,7 +158,7 @@ void Dim::fileLoadBinaryWait(
     string_view path,
     size_t maxSize
 ) {
-    auto file = fileOpen(path, File::fReadOnly | File::fDenyNone);
+    auto file = fileOpen(path, File::fReadOnly | File::fAllowWrite);
     if (!file) {
         logMsgError() << "File open failed: " << path;
         out.clear();

@@ -383,12 +383,12 @@ FileHandle Dim::fileOpen(string_view path, File::OpenMode mode) {
     }
 
     int share = 0;
-    if (mode & om::fDenyWrite) {
-        assert(~mode & om::fDenyNone);
-        share = FILE_SHARE_READ;
-    } else if (mode & om::fDenyNone) {
-        share = FILE_SHARE_READ | FILE_SHARE_WRITE;
-    }
+    if (mode & om::fAllowRead) 
+        share |= FILE_SHARE_READ;
+    if (mode & om::fAllowWrite) 
+        share |= FILE_SHARE_READ | FILE_SHARE_WRITE;
+    if (mode & om::fAllowDelete) 
+        share |= FILE_SHARE_DELETE;
 
     int creation = 0;
     if (mode & om::fCreat) {

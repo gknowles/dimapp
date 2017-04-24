@@ -152,6 +152,8 @@ void Application::onAppRun() {
     winTlsInitialize();
     appTlsInitialize();
 
+    logMsgInfo() << "info log app message";
+
     parse(&s_endpoint, "0.0.0.0", 41000);
     socketListen<TnetConn>(s_endpoint, AppSocket::kRaw);
     httpRouteAdd(&s_web, "/", fHttpMethodGet, true);

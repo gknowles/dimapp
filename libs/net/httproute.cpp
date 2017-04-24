@@ -380,7 +380,7 @@ void Dim::httpRouteReplyWithFile(unsigned reqId, std::string_view path) {
     httpRouteReply(reqId, msg, true);
     auto notify = new ReplyWithFileNotify;
     notify->m_reqId = reqId;
-    auto file = fileOpen(path, File::fReadOnly | File::fDenyNone);
+    auto file = fileOpen(path, File::fReadOnly | File::fAllowWrite);
     if (!file)
         return notify->onFileEnd(0, file);
     fileRead(
