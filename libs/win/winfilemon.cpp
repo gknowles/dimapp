@@ -109,7 +109,7 @@ bool DirInfo::start(string_view path, bool recurse) {
         m_base.c_str(), 
         FILE_LIST_DIRECTORY, // access
         FILE_SHARE_READ | FILE_SHARE_WRITE, // share mode
-        NULL, 
+        NULL, // security attributes
         OPEN_EXISTING, 
         FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
         NULL // template 

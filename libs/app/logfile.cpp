@@ -78,8 +78,7 @@ void LogBuffer::writeLog(string_view msg) {
         if (!m_file) {
             m_file = fileOpen(
                 s_logfile, 
-                File::fCreat | File::fReadWrite 
-                    | File::fAllowWrite | File::fAllowDelete
+                File::fCreat | File::fReadWrite | File::fDenyNone
             );
             if (!m_file) {
                 lk.unlock();

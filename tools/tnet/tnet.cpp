@@ -221,7 +221,7 @@ void Application::onAppRun() {
     }
     cout << "Input from: " << inpath << endl;
 
-    s_console.m_device = fileOpen(inpath, File::fReadOnly | File::fAllowWrite);
+    s_console.m_device = fileOpen(inpath, File::fReadOnly | File::fDenyNone);
     if (!s_console.m_device)
         return appSignalShutdown(EX_IOERR);
 }

@@ -268,12 +268,19 @@ AppSocket::MatchType Http2Match::OnMatch(
 namespace {
 class ShutdownNotify : public IShutdownNotify {
     void onShutdownClient(bool firstTry) override;
+    void onShutdownConsole(bool firstTry) override;
 };
 } // namespace
 static ShutdownNotify s_cleanup;
 
 //===========================================================================
 void ShutdownNotify::onShutdownClient(bool firstTry) {
+    if (!s_requests.empty())
+        return shutdownIncomplete();
+}
+
+//===========================================================================
+void ShutdownNotify::onShutdownConsole(bool firstTry) {
     if (!s_paths.empty())
         socketCloseWait<HttpSocket>(s_endpoint, AppSocket::kHttp2);
 }
@@ -380,7 +387,7 @@ void Dim::httpRouteReplyWithFile(unsigned reqId, std::string_view path) {
     httpRouteReply(reqId, msg, true);
     auto notify = new ReplyWithFileNotify;
     notify->m_reqId = reqId;
-    auto file = fileOpen(path, File::fReadOnly | File::fAllowWrite);
+    auto file = fileOpen(path, File::fReadOnly | File::fDenyNone);
     if (!file)
         return notify->onFileEnd(0, file);
     fileRead(

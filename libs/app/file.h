@@ -29,10 +29,9 @@ namespace File {
         fExcl = 0x20,  // fail if already exists
         fTrunc = 0x40, // truncate if already exists
         
-        // sharing
-        fAllowRead = 0x100,
-        fAllowWrite = 0x200,    // implies fAllowRead
-        fAllowDelete = 0x400,
+        // sharing, mutually exclusive, not more than one can be set
+        fDenyWrite = 0x100, // others can read
+        fDenyNone = 0x200,  // others can read, write, or delete
 
         // Optimize for file*Wait family of functions. Opens file without
         // FILE_FLAG_OVERLAPPED and does async by posting the requests
