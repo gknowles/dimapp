@@ -358,7 +358,7 @@ bool Dim::iFileSetErrno(int error) {
 
 /****************************************************************************
 *
-*   Public API
+*   Public Handle API
 *
 ***/
 

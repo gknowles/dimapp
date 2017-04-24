@@ -7,6 +7,7 @@
 
 using namespace std;
 using namespace Dim;
+namespace fs = std::experimental::filesystem;
 
 
 /****************************************************************************
@@ -112,6 +113,36 @@ void FileLoadNotify::onFileEnd(int64_t offset, FileHandle f) {
     m_notify->onFileEnd(offset, f);
     fileClose(f);
     delete this;
+}
+
+
+/****************************************************************************
+*
+*   Public Path API
+*
+***/
+
+//===========================================================================
+TimePoint Dim::fileLastWriteTime(std::string_view path) {
+    error_code ec;
+    auto f = fs::u8path(path.begin(), path.end());
+    auto tp = TimePoint{fs::last_write_time(f, ec).time_since_epoch()};
+    return tp;
+}
+
+//===========================================================================
+uint64_t Dim::fileSize(std::string_view path) {
+    error_code ec;
+    auto f = fs::u8path(path.begin(), path.end());
+    auto len = (uint64_t) fs::file_size(f, ec);
+    if (ec) {
+        auto cond = ec.default_error_condition();
+        _set_errno(cond.value());
+        return len;
+    }
+    if (!len) 
+        _set_errno(0);
+    return len;
 }
 
 
