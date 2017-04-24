@@ -19,12 +19,22 @@ namespace {
 class DefaultLogger : public ILogNotify {
     void onLog(LogType type, string_view msg) override;
 };
+
+class LogMsgScope {
+    LogType m_type;
+    bool m_inProgress;
+public:
+    LogMsgScope(LogType type);
+    ~LogMsgScope();
+    bool inProgress() const { return m_inProgress; }
+};
+
 } // namespace
 
+static shared_mutex s_mut;
 static DefaultLogger s_fallback;
 static vector<ILogNotify *> s_loggers;
 static ILogNotify * s_defaultLogger{&s_fallback};
-
 static ILogNotify * s_initialDefault;
 static size_t s_initialNumLoggers;
 
@@ -36,6 +46,10 @@ static PerfCounter<int> * s_perfs[] = {
 };
 static_assert(size(s_perfs) == kLogTypes);
 
+static auto & s_perfRecurse = uperf("log recursion");
+
+static thread_local bool t_inProgress;
+
 
 /****************************************************************************
 *
@@ -45,8 +59,15 @@ static_assert(size(s_perfs) == kLogTypes);
 
 //===========================================================================
 static void LogMsg(LogType type, string_view msg) {
-    *s_perfs[type] += 1;
+    LogMsgScope scope(type);
 
+    *s_perfs[type] += 1;
+    if (scope.inProgress()) {
+        s_perfRecurse += 1;
+        return;
+    }
+
+    shared_lock<shared_mutex> lk{s_mut};
     if (!msg.empty() && msg.back() == '\n')
         msg.remove_suffix(1);
     if (s_loggers.empty()) {
@@ -56,8 +77,27 @@ static void LogMsg(LogType type, string_view msg) {
             notify->onLog(type, msg);
         }
     }
+}
 
-    if (type == kLogTypeCrash)
+
+/****************************************************************************
+*
+*   LogMsgScope
+*
+***/
+
+//===========================================================================
+LogMsgScope::LogMsgScope(LogType type) 
+    : m_type{type}
+    , m_inProgress{t_inProgress}
+{
+    t_inProgress = true;
+}
+
+//===========================================================================
+LogMsgScope::~LogMsgScope() {
+    t_inProgress = false;
+    if (m_type == kLogTypeCrash)
         abort();
 }
 
@@ -114,12 +154,14 @@ Detail::LogCrash::~LogCrash() {}
 
 //===========================================================================
 void Dim::iLogInitialize() {
+    unique_lock<shared_mutex> lk{s_mut};
     s_initialDefault = s_defaultLogger;
     s_initialNumLoggers = s_loggers.size();
 }
 
 //===========================================================================
 void Dim::iLogDestroy() {
+    unique_lock<shared_mutex> lk{s_mut};
     s_defaultLogger = s_initialDefault;
     assert(s_loggers.size() >= s_initialNumLoggers);
     s_loggers.resize(s_initialNumLoggers);
@@ -134,11 +176,13 @@ void Dim::iLogDestroy() {
 
 //===========================================================================
 void Dim::logDefaultMonitor(ILogNotify * notify) {
+    unique_lock<shared_mutex> lk{s_mut};
     s_defaultLogger = notify ? notify : &s_fallback;
 }
 
 //===========================================================================
 void Dim::logMonitor(ILogNotify * notify) {
+    unique_lock<shared_mutex> lk{s_mut};
     s_loggers.push_back(notify);
 }
 
