@@ -9,9 +9,6 @@
 #include "core/core.h"
 #include "net/net.h"
 
-// External library internal headers
-#include "core/timeint.h" // iClockGetTicks
-
 // Standard headers
 #include <algorithm>
 #include <atomic>
@@ -39,7 +36,10 @@
 #pragma comment(lib, "synchronization.lib") // WaitOnAddress
 #pragma comment(lib, "ws2_32.lib")
 
+// External library internal headers
+#include "core/timeint.h" // iClockGetTicks
+
 // Internal headers
-#include "appint.h"
-#include "winint.h"
-#include "winsockint.h"
+#include "win/appint.h"
+#include "win/winint.h"
+#include "win/winsockint.h"

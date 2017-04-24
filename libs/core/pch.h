@@ -4,10 +4,9 @@
 // pch.h - dim core
 
 // Public header
-#include "core.h"
+#include "core/core.h"
 
 // External library public headers
-// External library internal headers
 // Standard headers
 #include <array>
 #include <atomic>
@@ -26,6 +25,7 @@
 #include <vector>
 
 // Platform headers
+// External library internal headers
 // Internal headers
-#include "appint.h"
-#include "timeint.h"
+#include "core/appint.h"
+#include "core/timeint.h"

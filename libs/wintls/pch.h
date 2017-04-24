@@ -9,7 +9,6 @@
 // External library public headers
 #include "core/core.h"
 
-// External library internal headers
 // Standard headers
 #include <shared_mutex>
 
@@ -28,5 +27,6 @@
 #pragma comment(lib, "ncrypt.lib")
 #pragma comment(lib, "secur32.lib")
 
+// External library internal headers
 // Internal headers
 #include "win/winint.h"

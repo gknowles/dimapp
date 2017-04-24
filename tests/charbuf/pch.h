@@ -8,9 +8,9 @@
 #include "app/app.h"
 #include "core/core.h"
 
-// Library internal headers
 // Standard headers
 #include <iostream>
 
 // Platform headers
+// Library internal headers
 // Internal headers

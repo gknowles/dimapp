@@ -9,9 +9,9 @@
 #include "core/core.h"
 #include "tls/tls.h"
 
-// Library internal headers
 // Standard headers
 #include <iostream>
 
 // Platform headers
+// Library internal headers
 // Internal headers

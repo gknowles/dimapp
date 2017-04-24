@@ -7,11 +7,11 @@
 // External library public headers
 #include "core/util.h"
 
-// External library internal headers
 // Standard headers
 #include <algorithm>
 #include <iostream>
 
 // Platform headers
+// External library internal headers
 // Internal headers
-#include "uriparse.h"
+#include "uri/uriparse.h"

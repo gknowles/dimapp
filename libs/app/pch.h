@@ -12,11 +12,6 @@
 #include "net/address.h"
 #include "xml/xml.h"
 
-// External library internal headers
-#include "core/appint.h"
-#include "net/appint.h"
-#include "win/appint.h"
-
 // Standard headers
 #include <array>
 #include <atomic>
@@ -34,5 +29,10 @@
 #include <vector>
 
 // Platform headers
+// External library internal headers
+#include "core/appint.h"
+#include "net/appint.h"
+#include "win/appint.h"
+
 // Internal headers
 #include "app/appint.h"

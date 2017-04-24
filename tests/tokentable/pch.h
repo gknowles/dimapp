@@ -9,9 +9,9 @@
 #include "core/log.h"
 #include "core/tokentable.h"
 
-// Library internal headers
 // Standard headers
 #include <iostream>
 
 // Platform headers
+// Library internal headers
 // Internal headers

@@ -9,9 +9,9 @@
 #include "core/core.h"
 #include "net/net.h"
 
-// Library internal headers
 // Standard headers
 #include <iostream>
 
 // Platform headers
+// Library internal headers
 // Internal headers

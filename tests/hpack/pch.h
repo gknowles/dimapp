@@ -9,9 +9,9 @@
 #include "core/log.h"
 #include "net/hpack.h"
 
-// Library internal headers
 // Standard headers
 #include <iostream>
 
 // Platform headers
+// Library internal headers
 // Internal headers

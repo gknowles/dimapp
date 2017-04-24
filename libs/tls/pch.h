@@ -5,12 +5,11 @@
 
 // Public header
 #include "tls/tls.h"
-#include "tlsrec.h"
+#include "tls/tlsrec.h"
 
 // External library public headers
 #include "core/core.h"
 
-// External library internal headers
 // Standard headers
 #include <cassert>
 #include <cstring>
@@ -23,5 +22,6 @@
 #include <vector>
 
 // Platform headers
+// External library internal headers
 // Internal headers
-#include "tlsint.h"
+#include "tls/tlsint.h"

@@ -11,7 +11,6 @@
 #include "net/net.h"
 #include "wintls/wintls.h"
 
-// Library internal headers
 // Standard headers
 #include <crtdbg.h>
 #include <cstdio>
@@ -20,4 +19,5 @@
 #include <iostream>
 
 // Platform headers
+// Library internal headers
 // Internal headers

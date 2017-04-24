@@ -9,7 +9,6 @@
 #include "cli/cli.h"
 #include "core/core.h"
 
-// Library internal headers
 // Standard headers
 #include <bitset>
 #include <crtdbg.h>
@@ -28,6 +27,7 @@
 #include <vector>
 
 // Platform headers
+// Library internal headers
 // Internal headers
 #include "abnfparse.h"
 #include "intern.h"

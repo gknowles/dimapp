@@ -10,7 +10,6 @@
 #include "core/core.h"
 #include "net/net.h"
 
-// Library internal headers
 // Standard headers
 #include <crtdbg.h>
 #include <cstdio>
@@ -23,4 +22,5 @@
 #define NOMINMAX
 #include <Windows.h>
 
+// Library internal headers
 // Internal headers

@@ -10,10 +10,10 @@
 #include "core/core.h"
 #include "xml/xml.h"
 
-// Library internal headers
 // Standard headers
 #include <fstream>
 #include <iostream>
 
 // Platform headers
+// Library internal headers
 // Internal headers

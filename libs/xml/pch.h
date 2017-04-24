@@ -10,11 +10,11 @@
 #include "core/str.h"
 #include "core/util.h"
 
-// External library internal headers
 // Standard headers
 #include <algorithm>
 #include <iostream>
 
 // Platform headers
+// External library internal headers
 // Internal headers
-#include "xmlbaseparse.h"
+#include "xml/xmlbaseparse.h"
