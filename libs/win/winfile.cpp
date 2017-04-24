@@ -46,6 +46,7 @@ public:
     virtual void onNotify() = 0;
     virtual bool onRun() = 0;
     virtual bool async() = 0;
+    virtual const char * logOnError() = 0;
 
     // ITaskNotify
     void onTask() override;
@@ -203,8 +204,8 @@ void IFileOpBase::onTask() {
             // explicitly canceled
         } else if (m_err == ERROR_HANDLE_EOF && !m_length) {
             // hit eof, when explicitly reading until the end
-        } else {
-            logMsgError() << "ReadFile(" << m_file->m_path << "): " << m_err;
+        } else if (auto log = logOnError()) {
+            logMsgError() << log << '(' << m_file->m_path << "): " << m_err;
         }
         iFileSetErrno(m_err);
     }
@@ -235,6 +236,7 @@ public:
     bool onRun() override;
     void onNotify() override;
     bool async() override { return m_notify != nullptr; }
+    const char * logOnError() override { return "ReadFile"; }
 
 private:
     IFileReadNotify * m_notify;
@@ -290,6 +292,7 @@ public:
     bool onRun() override;
     void onNotify() override;
     bool async() override { return m_notify != nullptr; }
+    const char * logOnError() override { return "ReadFile"; }
 
 private:
     IFileWriteNotify * m_notify;
@@ -368,14 +371,14 @@ FileHandle Dim::fileOpen(string_view path, File::OpenMode mode) {
     file->m_path = fs::u8path(path.begin(), path.end());
 
     int access = 0;
-    if (mode & om::fNoAccess) {
+    if (mode & om::fNoContent) {
         assert((~mode & om::fReadOnly) && (~mode & om::fReadWrite));
     } else if (mode & om::fReadOnly) {
-        assert((~mode & om::fNoAccess) && (~mode & om::fReadWrite));
+        assert((~mode & om::fNoContent) && (~mode & om::fReadWrite));
         access = GENERIC_READ;
     } else {
         assert(mode & om::fReadWrite);
-        assert((~mode & om::fNoAccess) && (~mode & om::fReadOnly));
+        assert((~mode & om::fNoContent) && (~mode & om::fReadOnly));
         access = GENERIC_READ | GENERIC_WRITE;
     }
 
@@ -462,7 +465,7 @@ void Dim::fileClose(FileHandle f) {
             );
             if (err) {
                 logMsgError() << "NtUnmapViewOfSection(" << file->m_path
-                              << "): " << err;
+                    << "): " << err;
             }
         }
         CloseHandle(file->m_handle);
