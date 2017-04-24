@@ -24,6 +24,10 @@ public:
     LogBuffer();
     void writeLog(string_view msg);
 
+    // returns true if close completed, otherwise try again until no more
+    // writes are pending.
+    bool closeLog();
+
 private:
     void onFileWrite(
         int written,
@@ -36,6 +40,7 @@ private:
     FileHandle m_file;
     string m_pending;
     string m_writing;
+    bool m_closing{false};
 };
 } // namespace
 
@@ -43,7 +48,7 @@ static LogBuffer s_buffer;
 static string s_hostname = "-";
 static string s_logfile;
 
-static auto & s_perfDropped = uperf("log buffer dropped");
+static auto & s_perfDropped = uperf("logfile buffer dropped");
 
 
 /****************************************************************************
@@ -94,6 +99,20 @@ void LogBuffer::writeLog(string_view msg) {
 }
 
 //===========================================================================
+bool LogBuffer::closeLog() {
+    lock_guard<mutex> lk{m_mut};
+    if (m_writing.empty()) {
+        if (m_file) {
+            fileClose(m_file);
+            m_file = {};
+        }
+        return true;
+    }
+    m_closing = true;
+    return false;
+}
+
+//===========================================================================
 void LogBuffer::onFileWrite(
     int written,
     string_view data,
@@ -103,8 +122,13 @@ void LogBuffer::onFileWrite(
     lock_guard<mutex> lk{m_mut};
     m_writing.swap(m_pending);
     m_pending.clear();
-    if (m_writing.empty())
+    if (m_writing.empty()) {
+        if (m_closing) {
+            fileClose(m_file);
+            m_file = {};
+        }
         return;
+    }
     fileAppend(this, m_file, m_writing.data(), m_writing.size());
 }
 
@@ -155,12 +179,44 @@ void Logger::onLog(LogType type, string_view msg) {
 
 /****************************************************************************
 *
+*   ShutdownNotify
+*
+***/
+
+namespace {
+class ShutdownNotify : public IShutdownNotify {
+    void onShutdownConsole(bool retry) override;
+};
+} // namespace
+static ShutdownNotify s_cleanup;
+
+//===========================================================================
+void ShutdownNotify::onShutdownConsole(bool retry) {
+    if (!retry) {
+        vector<PerfValue> perfs;
+        perfGetValues(perfs);
+        for (auto && perf : perfs) {
+            if (perf.value != "0")
+                logMsgInfo() << "perf: " << perf.value << ' ' << perf.name;
+        }
+        return shutdownIncomplete();
+    }
+
+    if (!s_buffer.closeLog())
+        return shutdownIncomplete();
+}
+
+
+/****************************************************************************
+*
 *   Public API
 *
 ***/
 
 //===========================================================================
 void Dim::iLogFileInitialize(string_view logDir) {
+    shutdownMonitor(&s_cleanup);
+
     //vector<Address> addrs;
     //addressGetLocal(&addrs);
     //ostringstream os;
