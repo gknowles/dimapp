@@ -396,7 +396,7 @@ void ShutdownNotify::onShutdownConsole (bool retry) {
 
 /****************************************************************************
 *
-*   Public API
+*   Helpers
 *
 ***/
 
@@ -700,6 +700,13 @@ static unique_ptr<const CERT_CONTEXT> getCert(
     return unique_ptr<const CERT_CONTEXT>(cert);
 }
 
+
+/****************************************************************************
+*
+*   Public API
+*
+***/
+
 //===========================================================================
 void Dim::winTlsInitialize() {
     shutdownMonitor(&s_cleanup);
@@ -711,7 +718,7 @@ void Dim::winTlsInitialize() {
         // cert = 
         makeCert("wintls.dimapp");
     } else {
-        cert = getCert("kpower", false);
+        cert = getCert("", false);
     }
 
     SCHANNEL_CRED cred = {};
