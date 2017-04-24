@@ -35,7 +35,7 @@ public:
     bool notify_UNLK(IConfigNotify * notify);
 
     // IFileChangeNotify
-    void onFileChange(string_view fullpath, FileHandle f) override;
+    void onFileChange(string_view fullpath) override;
 
 private:
     list<NotifyInfo> m_notifiers;
@@ -82,8 +82,9 @@ void ConfigFile::monitor_UNLK(string_view relpath, IConfigNotify * notify) {
 }
 
 //===========================================================================
-void ConfigFile::onFileChange(string_view fullpath, FileHandle f) {
+void ConfigFile::onFileChange(string_view fullpath) {
     m_changes += 1;
+    auto f = fileOpen(fullpath, File::fReadOnly | File::fDenyWrite);
 
     // load file
     size_t bytes = fileSize(f);
@@ -107,6 +108,7 @@ void ConfigFile::onFileChange(string_view fullpath, FileHandle f) {
 
     // call notifiers
     configChange(m_fullpath, nullptr);
+    fileClose(f);
 }
 
 //===========================================================================

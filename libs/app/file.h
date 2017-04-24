@@ -191,7 +191,7 @@ class IFileChangeNotify {
 public:
     virtual ~IFileChangeNotify () {}
 
-    virtual void onFileChange(std::string_view fullpath, FileHandle f) = 0;
+    virtual void onFileChange(std::string_view fullpath) = 0;
 };
 
 struct FileMonitorHandle : HandleBase {};

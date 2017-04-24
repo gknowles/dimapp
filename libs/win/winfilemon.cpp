@@ -188,9 +188,9 @@ void DirInfo::addMonitor_UNLK(IFileChangeNotify * notify, string_view path) {
         if (ntf == notify)
             return;
     }
-    auto file = fileOpen(fullpath, File::fReadOnly);
+    fileSize(fullpath);
     if (fi.notifiers.empty())
-        fi.mtime = fileLastWriteTime(file);
+        fi.mtime = fileLastWriteTime(fullpath);
     fi.notifiers.push_back(notify);
 
     // call the notify unless we're in a notify
@@ -203,8 +203,7 @@ void DirInfo::addMonitor_UNLK(IFileChangeNotify * notify, string_view path) {
         // set the s_in* variables because they're already set and don't clear 
         // them on exit - because we're still in the prior addMonitor call.
         lk.unlock();
-        notify->onFileChange(fullpath, file);
-        fileClose(file);
+        notify->onFileChange(fullpath);
         return;
     }
 
@@ -212,8 +211,7 @@ void DirInfo::addMonitor_UNLK(IFileChangeNotify * notify, string_view path) {
     s_inNotify = notify;
     s_inAddMonitor = true;
     lk.unlock();
-    notify->onFileChange(fullpath, file);
-    fileClose(file);
+    notify->onFileChange(fullpath);
     lk.lock();
     s_inThread = {};
     s_inNotify = nullptr;
@@ -278,7 +276,7 @@ void DirInfo::onTask () {
     queue();
     timerUpdate(this, 5s);
     if (m_notify)
-        m_notify->onFileChange(m_base, {});
+        m_notify->onFileChange(m_base);
 }
 
 //===========================================================================
@@ -289,12 +287,9 @@ Duration DirInfo::onTimer (TimePoint now) {
     unique_lock<mutex> lk{s_mut};
     for (auto && kv : m_files) {
         expandPath(fullpath, relpath, kv.first);
-        auto file = fileOpen(fullpath, File::fReadOnly);
-        auto mtime = fileLastWriteTime(file);
-        if (mtime == kv.second.mtime) {
-            fileClose(file);
+        auto mtime = fileLastWriteTime(fullpath);
+        if (mtime == kv.second.mtime) 
             continue;
-        }
         kv.second.mtime = mtime;
 
         // Iterate through the list of notifiers by adding a marker that can't 
@@ -311,8 +306,7 @@ Duration DirInfo::onTimer (TimePoint now) {
             auto notify = *it;
             ntfs.splice(marker, ntfs, it);
             lk.unlock();
-            notify->onFileChange(fullpath, file);
-            fileClose(file);
+            notify->onFileChange(fullpath);
             lk.lock();
         }
         ntfs.pop_back();
