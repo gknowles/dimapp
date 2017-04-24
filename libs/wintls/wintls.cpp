@@ -57,6 +57,10 @@ static shared_mutex s_mut;
 static HandleMap<WinTlsConnHandle, ServerConn> s_conns;
 static CredHandle s_srvCred;
 
+static auto & s_perfTlsReneg = uperf("tls renegotiate");
+static auto & s_perfTlsExpired = uperf("tls expired context");
+static auto & s_perfTlsFinish = uperf("tls finish");
+
 
 /****************************************************************************
 *
@@ -225,6 +229,7 @@ NEGOTIATE:
             src = {};
         }
         if (err == SEC_E_OK) {
+            s_perfTlsFinish += 1;
             m_appData = true;
             err = QueryContextAttributes(
                 &m_context, 
@@ -320,12 +325,15 @@ NEGOTIATE:
 
         if (err == SEC_E_OK)
             return true;
-        if (err == SEC_I_CONTEXT_EXPIRED)
+        if (err == SEC_I_CONTEXT_EXPIRED) {
+            s_perfTlsExpired += 1;
             return false;
+        }
 
         assert(err == SEC_I_RENEGOTIATE);
         // Proceed with renegotiate by making another call to 
         // AcceptSecurityContext with no data.
+        s_perfTlsReneg += 1;
         src = {};
         m_appData = false;
         goto NEGOTIATE;
@@ -630,7 +638,8 @@ struct default_delete<const CERT_CONTEXT> {
 } // namespace
 
 //===========================================================================
-static unique_ptr<const CERT_CONTEXT> getCert(
+static void getCerts(
+    vector<unique_ptr<const CERT_CONTEXT>> & certs,
     string_view host, 
     bool userStore
 ) {
@@ -659,6 +668,7 @@ static unique_ptr<const CERT_CONTEXT> getCert(
     
     const CERT_CONTEXT * cert{nullptr};
     unique_ptr<const CERT_CONTEXT> selfsigned;
+    unique_ptr<const CERT_CONTEXT> tmpcert;
     for (;;) {
         cert = CertFindCertificateInStore(
             hstore,
@@ -688,16 +698,17 @@ static unique_ptr<const CERT_CONTEXT> getCert(
             continue;
         }
 
-        break;
+        // add copy to list of matches
+        certs.push_back({});
+        certs.back().reset(CertDuplicateCertificateContext(cert));
     }
 
-    if (!cert && selfsigned)
-        return selfsigned;
+    if (certs.empty() && selfsigned) 
+        certs.push_back(move(selfsigned));
 
     // no cert found, try to make a new one?
-    if (!cert) {
+    if (certs.empty()) {
     }
-    return unique_ptr<const CERT_CONTEXT>(cert);
 }
 
 
@@ -713,21 +724,24 @@ void Dim::winTlsInitialize() {
 
     WinError err{0};
 
-    unique_ptr<const CERT_CONTEXT> cert;
+    vector<unique_ptr<const CERT_CONTEXT>> certs;
+    vector<const CERT_CONTEXT *> ptrs;
     if (kMakeCert) {
         // cert = 
         makeCert("wintls.dimapp");
     } else {
-        cert = getCert("", false);
+        getCerts(certs, "", false);
     }
 
     SCHANNEL_CRED cred = {};
     cred.dwVersion = SCHANNEL_CRED_VERSION;
     cred.dwFlags = SCH_USE_STRONG_CRYPTO;   // optional
-    if (cert) {
-        const CERT_CONTEXT * certs[] = { cert.get() };
-        cred.cCreds = (DWORD) size(certs);
-        cred.paCred = certs;
+    if (!certs.empty()) {
+        ptrs.reserve(certs.size());
+        for (auto && cert : certs)
+            ptrs.push_back(cert.get());
+        cred.cCreds = (DWORD) size(ptrs);
+        cred.paCred = data(ptrs);
     }
     TimeStamp expiry;
     err = (SecStatus) AcquireCredentialsHandle(
@@ -744,7 +758,11 @@ void Dim::winTlsInitialize() {
     if (err)
         logMsgCrash() << "AcquireCredentialsHandle: " << err;
 
-    // TODO: log warning if the cred will expire soon
+    TimePoint expires(Duration(expiry.QuadPart));
+    Time8601Str expiryStr(expires, 3, timeZoneMinutes(expires));
+    logMsgInfo() << "Credentials expiration: " << expiryStr.c_str();
+
+    // TODO: log warning if the cred is about to expire?
 }
 
 //===========================================================================

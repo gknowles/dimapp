@@ -25,7 +25,7 @@
 #pragma comment(lib, "crypt32.lib")
 #pragma comment(lib, "dnsapi.lib")
 #pragma comment(lib, "ncrypt.lib")
-#pragma comment(lib, "secur32.lib")
+#pragma comment(lib, "security.lib")
 
 // External library internal headers
 // Internal headers
