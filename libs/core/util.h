@@ -238,7 +238,7 @@ getFactory() {
     // definitions are shared across all translation units (they all refer to
     // the same object defined in one translation unit)" 
     //
-    // Note that this is a difference betwee C and C++
+    // Note that this is a difference between C and C++
     static Factory s_factory;
     return &s_factory;
 }

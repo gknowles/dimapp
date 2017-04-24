@@ -20,7 +20,7 @@ namespace Dim {
 namespace File {
     enum OpenMode : unsigned {
         // content access, one *must* be specified
-        fNoAccess = 0x1,    // when you only want metadata (time, size, etc)
+        fNoContent = 0x1, // when you only want metadata (time, size, etc)
         fReadOnly = 0x2,
         fReadWrite = 0x4,
 
@@ -35,7 +35,7 @@ namespace File {
 
         // Optimize for file*Wait family of functions. Opens file without
         // FILE_FLAG_OVERLAPPED and does async by posting the requests
-        // to a small taskqueue whos threads use blocking calls.
+        // to a small taskqueue whose threads use blocking calls.
         fBlocking = 0x1000,
     };
 };
