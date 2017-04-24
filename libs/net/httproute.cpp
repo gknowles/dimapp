@@ -275,14 +275,14 @@ static ShutdownNotify s_cleanup;
 
 //===========================================================================
 void ShutdownNotify::onShutdownClient(bool firstTry) {
+    if (firstTry && !s_paths.empty())
+        socketCloseWait<HttpSocket>(s_endpoint, AppSocket::kHttp2);
     if (!s_requests.empty())
         return shutdownIncomplete();
 }
 
 //===========================================================================
 void ShutdownNotify::onShutdownConsole(bool firstTry) {
-    if (!s_paths.empty())
-        socketCloseWait<HttpSocket>(s_endpoint, AppSocket::kHttp2);
 }
 
 
