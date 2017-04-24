@@ -19,6 +19,9 @@ namespace Dim {
 *
 *   IAppSocket
 *
+*   Used to make filters that implement stream encapsulation protocols such
+*   as TLS or WebSocket.
+*
 ***/
 
 class IAppSocket {
