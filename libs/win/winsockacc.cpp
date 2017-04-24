@@ -32,6 +32,8 @@ public:
 
 public:
     using SocketBase::SocketBase;
+    ~AcceptSocket();
+
     void onAccept(ListenSocket * listen, int xferError, int xferBytes);
 };
 
@@ -70,6 +72,9 @@ public:
 
 static mutex s_mut;
 static list<unique_ptr<ListenSocket>> s_listeners;
+
+static auto & s_perfAccepted = uperf("sock accepted");
+static auto & s_perfCurAccepted = uperf("sock accepted (current)");
 
 
 /****************************************************************************
@@ -200,6 +205,12 @@ bool AcceptSocket::accept(ListenSocket * listen) {
 }
 
 //===========================================================================
+AcceptSocket::~AcceptSocket() {
+    if (m_mode == Mode::kClosed)
+        s_perfCurAccepted -= 1;
+}
+
+//===========================================================================
 static bool getAcceptInfo(SocketInfo * out, SOCKET s, void * buffer) {
     GUID extId = WSAID_GETACCEPTEXSOCKADDRS;
     LPFN_GETACCEPTEXSOCKADDRS fGetAcceptExSockAddrs;
@@ -286,8 +297,12 @@ void AcceptSocket::onAccept(
     }
 
     // create read/write queue
-    if (createQueue() && m_notify->onSocketAccept(info))
-        hostage.release();
+    if (createQueue()) {
+        s_perfAccepted += 1;
+        s_perfCurAccepted += 1;
+        if (m_notify->onSocketAccept(info))
+            hostage.release();
+    }
 
     {
         lock_guard<mutex> lk{s_mut};

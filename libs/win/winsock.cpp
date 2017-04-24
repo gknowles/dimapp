@@ -210,7 +210,8 @@ void SocketBase::write(
 
 //===========================================================================
 SocketBase::SocketBase(ISocketNotify * notify)
-    : m_notify(notify) {
+    : m_notify(notify) 
+{
     s_numSockets += 1;
 }
 
@@ -299,11 +300,10 @@ void SocketBase::onRead() {
 
     m_notify->onSocketDisconnect();
     unique_lock<mutex> lk{s_mut};
+    m_mode = Mode::kClosed;
     if (m_sending.empty()) {
         lk.unlock();
         delete this;
-    } else {
-        m_mode = Mode::kClosed;
     }
 }
 
