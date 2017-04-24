@@ -481,14 +481,14 @@ void AppXmlNotify::onConfigChange(
 
 namespace {
 class ShutdownNotify : public IShutdownNotify {
-    void onShutdownClient(bool retry) override;
-    void onShutdownConsole(bool retry) override;
+    void onShutdownClient(bool firstTry) override;
+    void onShutdownConsole(bool firstTry) override;
 };
 } // namespace
 static ShutdownNotify s_cleanup;
 
 //===========================================================================
-void ShutdownNotify::onShutdownClient(bool retry) {
+void ShutdownNotify::onShutdownClient(bool firstTry) {
     shared_lock<shared_mutex> lk{s_listenMut};
     for (auto && info : s_endpoints) {
         (void) sizeof(!info.listeners); // reference when NDEBUG
@@ -497,9 +497,9 @@ void ShutdownNotify::onShutdownClient(bool retry) {
 }
 
 //===========================================================================
-void ShutdownNotify::onShutdownConsole(bool retry) {
+void ShutdownNotify::onShutdownConsole(bool firstTry) {
     lock_guard<mutex> lk{s_unmatchedMut};
-    if (!retry) {
+    if (firstTry) {
         for (auto && info : s_unmatched)
             info.notify->disconnect();
     }

@@ -37,7 +37,7 @@ enum ETimerMode {
 
 class MainTimer : public ITimerNotify {
 public:
-    typedef void (IShutdownNotify::*StopFn)(bool retry);
+    typedef void (IShutdownNotify::*StopFn)(bool firstTry);
 
 public:
     bool stopped() const;
@@ -52,7 +52,7 @@ private:
 
     ETimerMode m_mode { MAIN_STOP };
     TimePoint m_shutdownStart;
-    bool m_retry{false};
+    bool m_firstTry{true};
     bool m_incomplete{false};
 };
 
@@ -89,13 +89,13 @@ Duration MainTimer::onTimer(TimePoint now) {
         m_shutdownStart = now;
         break;
     case CLIENT_STOP:
-        next = stop(&IShutdownNotify::onShutdownClient, m_retry);
+        next = stop(&IShutdownNotify::onShutdownClient, m_firstTry);
         break;
     case SERVER_STOP:
-        next = stop(&IShutdownNotify::onShutdownServer, m_retry);
+        next = stop(&IShutdownNotify::onShutdownServer, m_firstTry);
         break;
     case CONSOLE_STOP:
-        next = stop(&IShutdownNotify::onShutdownConsole, m_retry);
+        next = stop(&IShutdownNotify::onShutdownConsole, m_firstTry);
         break;
     case FINALIZE:
         s_cleaners.clear();
@@ -106,12 +106,12 @@ Duration MainTimer::onTimer(TimePoint now) {
 
     // some delay when rerunning the same step (i.e. QueryDestroy failed)
     if (!next) {
-        m_retry = true;
+        m_firstTry = false;
         return 10ms;
     }
 
     m_mode = ETimerMode(m_mode + 1);
-    m_retry = false;
+    m_firstTry = true;
     return 0ms;
 }
 
@@ -135,8 +135,8 @@ void MainTimer::resetTimer() {
 }
 
 //===========================================================================
-bool MainTimer::stop(StopFn notify, bool retry) {
-    if (!retry) {
+bool MainTimer::stop(StopFn notify, bool firstTry) {
+    if (firstTry) {
         for (auto && v : s_cleaners) 
             v.stopped = false;
     }
@@ -144,12 +144,12 @@ bool MainTimer::stop(StopFn notify, bool retry) {
     for (auto && v : s_cleaners) {
         if (!v.stopped) {
             m_incomplete = false;
-            (v.notify->*notify)(retry);
+            (v.notify->*notify)(firstTry);
             if (m_incomplete) {
                 // shutdownIncomplete() was called, handler will have to be 
                 // retried later.
                 stopped = false;
-                if (retry)
+                if (!firstTry)
                     return false;
             } else {
                 v.stopped = true;

@@ -110,15 +110,15 @@ static void iocpDispatchThread() {
 
 namespace {
 class ShutdownNotify : public IShutdownNotify {
-    void onShutdownConsole(bool retry) override;
+    void onShutdownConsole(bool firstTry) override;
     bool m_closing{false};
 };
 } // namespace
 static ShutdownNotify s_cleanup;
 
 //===========================================================================
-void ShutdownNotify::onShutdownConsole(bool retry) {
-    if (!retry) 
+void ShutdownNotify::onShutdownConsole(bool firstTry) {
+    if (firstTry) 
         return shutdownIncomplete();
     
     if (!m_closing) {

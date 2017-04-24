@@ -158,13 +158,13 @@ AppSocket::MatchType TlsMatch::OnMatch(
 
 namespace {
 class ShutdownNotify : public IShutdownNotify {
-    void onShutdownClient(bool retry) override;
+    void onShutdownClient(bool firstTry) override;
 };
 } // namespace
 static ShutdownNotify s_cleanup;
 
 //===========================================================================
-void ShutdownNotify::onShutdownClient(bool retry) {
+void ShutdownNotify::onShutdownClient(bool firstTry) {
 }
 
 

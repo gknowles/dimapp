@@ -360,13 +360,13 @@ bool DirInfo::expandPath(
 
 namespace {
 class ShutdownNotify : public IShutdownNotify {
-    void onShutdownConsole(bool retry) override;
+    void onShutdownConsole(bool firstTry) override;
 };
 } // namespace
 static ShutdownNotify s_cleanup;
 
 //===========================================================================
-void ShutdownNotify::onShutdownConsole(bool retry) {
+void ShutdownNotify::onShutdownConsole(bool firstTry) {
     lock_guard<mutex> lk{s_mut};
     if (!s_dirs.empty() || !s_stopping.empty())
         return shutdownIncomplete();

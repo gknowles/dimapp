@@ -17,12 +17,12 @@ namespace Dim {
 // connections to servers used to process client requests, and finally 
 // consoles (web, text, etc) used to monitor the server.
 // 
-// For each phase one call is made to every onShutdown*() handler with retry 
-// false. Each handler begins shutting down and calls shutdownIncomplete() if 
+// For each phase one call is made to every onShutdown*() handler with firstTry 
+// true. Each handler begins shutting down and calls shutdownIncomplete() if 
 // it doesn't finish immediately. After the first call is made to all handlers 
 // the handlers that signaled incomplete are processed one at a time in 
 // reverse order of registration. Each of these is called periodically, with 
-// retry true, until it returns without calling shutdownIncomplete(). Only 
+// firstTry false, until it returns without calling shutdownIncomplete(). Only 
 // then continuing with the next. The phase ends after all handlers have 
 // completed.
 //
@@ -40,9 +40,9 @@ class IShutdownNotify {
 public:
     virtual ~IShutdownNotify() {}
 
-    virtual void onShutdownClient(bool retry) {}
-    virtual void onShutdownServer(bool retry) {}
-    virtual void onShutdownConsole(bool retry) {}
+    virtual void onShutdownClient(bool firstTry) {}
+    virtual void onShutdownServer(bool firstTry) {}
+    virtual void onShutdownConsole(bool firstTry) {}
 };
 
 // Used to register shutdown handlers

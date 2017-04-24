@@ -375,13 +375,13 @@ void ServerConn::send(CharBuf * out, string_view src) {
 
 namespace {
 class ShutdownNotify : public IShutdownNotify {
-    void onShutdownConsole (bool retry) override;
+    void onShutdownConsole (bool firstTry) override;
 };
 } // namespace
 static ShutdownNotify s_cleanup;
 
 //===========================================================================
-void ShutdownNotify::onShutdownConsole (bool retry) {
+void ShutdownNotify::onShutdownConsole (bool firstTry) {
     shared_lock<shared_mutex> lk{s_mut};
     if (!s_conns.empty())
         return shutdownIncomplete();

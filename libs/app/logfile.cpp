@@ -186,14 +186,14 @@ void Logger::onLog(LogType type, string_view msg) {
 
 namespace {
 class ShutdownNotify : public IShutdownNotify {
-    void onShutdownConsole(bool retry) override;
+    void onShutdownConsole(bool firstTry) override;
 };
 } // namespace
 static ShutdownNotify s_cleanup;
 
 //===========================================================================
-void ShutdownNotify::onShutdownConsole(bool retry) {
-    if (!retry) {
+void ShutdownNotify::onShutdownConsole(bool firstTry) {
+    if (firstTry) {
         vector<PerfValue> perfs;
         perfGetValues(perfs);
         for (auto && perf : perfs) {

@@ -104,13 +104,13 @@ void WebRoute::onHttpRequest(
 
 namespace {
 class ShutdownNotify : public IShutdownNotify {
-    void onShutdownClient(bool retry) override;
+    void onShutdownClient(bool firstTry) override;
 };
 } // namespace
 static ShutdownNotify s_cleanup;
 
 //===========================================================================
-void ShutdownNotify::onShutdownClient(bool retry) {
+void ShutdownNotify::onShutdownClient(bool firstTry) {
     socketCloseWait<TnetConn>(s_endpoint, AppSocket::kRaw);
 }
 
@@ -152,11 +152,11 @@ void Application::onAppRun() {
     winTlsInitialize();
     appTlsInitialize();
 
-    logMsgInfo() << "info log app message";
-
     parse(&s_endpoint, "0.0.0.0", 41000);
     socketListen<TnetConn>(s_endpoint, AppSocket::kRaw);
     httpRouteAdd(&s_web, "/", fHttpMethodGet, true);
+
+    logMsgInfo() << "Server started";
 }
 
 //===========================================================================

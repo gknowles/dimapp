@@ -160,14 +160,14 @@ void ConsoleReader::onFileEnd(int64_t offset, FileHandle f) {
 
 namespace {
 class ShutdownNotify : public IShutdownNotify {
-    void onShutdownClient(bool retry) override;
+    void onShutdownClient(bool firstTry) override;
 };
 } // namespace
 static ShutdownNotify s_cleanup;
 
 //===========================================================================
-void ShutdownNotify::onShutdownClient(bool retry) {
-    if (!retry) {
+void ShutdownNotify::onShutdownClient(bool firstTry) {
+    if (firstTry) {
         fileClose(s_console.m_device);
         s_console.m_device = {};
         endpointCancelQuery(s_cancelAddrId);

@@ -299,15 +299,15 @@ void ConnSocket::onConnect(int error, int bytes) {
 
 namespace {
 class ShutdownNotify : public IShutdownNotify {
-    void onShutdownConsole(bool retry) override;
+    void onShutdownConsole(bool firstTry) override;
 };
 } // namespace
 static ShutdownNotify s_cleanup;
 
 //===========================================================================
-void ShutdownNotify::onShutdownConsole(bool retry) {
+void ShutdownNotify::onShutdownConsole(bool firstTry) {
     lock_guard<mutex> lk{s_mut};
-    if (!retry) {
+    if (firstTry) {
         for (auto && task : s_connecting)
             task.m_socket->hardClose_LK();
     }
