@@ -131,6 +131,7 @@ int Dim::appRun(IAppNotify & app, int argc, char * argv[], AppFlags flags) {
     iPlatformInitialize();
     iFileInitialize();
     iConfigInitialize("conf");
+    configMonitor("app.xml", &s_appXml);
     if (flags & fAppWithLogFiles) {
         iLogFileInitialize("log");
         if (flags & fAppWithConsole)
