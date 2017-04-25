@@ -150,6 +150,8 @@
 # tools/h2srv/h2srv.cpp
 # tools/h2srv/pch.cpp
 # tools/h2srv/pch.h
+# tools/pargen/README.md
+# tools/pargen/abnf.abnf
 # tools/pargen/abnfparse.cpp
 # tools/pargen/abnfparse.h
 # tools/pargen/gen.cpp
@@ -159,6 +161,7 @@
 # tools/pargen/parse.cpp
 # tools/pargen/pch.cpp
 # tools/pargen/pch.h
+# tools/pargen/tests.abnf
 # tools/pargen/write.cpp
 # tools/tnet/pch.cpp
 # tools/tnet/pch.h
