@@ -251,7 +251,7 @@ void XDocument::normalizeText(XNode * node) {
     if (ei->valueLen == -1)
         return;
 
-    auto firstNode = firstChild(ei, nullptr, XType::kText);
+    auto firstNode = firstChild(ei, {}, XType::kText);
     XNode * prev;
     if (!firstNode)
         goto NO_TEXT;
@@ -266,7 +266,7 @@ void XDocument::normalizeText(XNode * node) {
         case 0:
             ei->valueLen -= (firstChar - firstNode->value);
             prev = firstNode;
-            firstNode = nextSibling(firstNode, nullptr, XType::kText);
+            firstNode = nextSibling(firstNode, {}, XType::kText);
             unlinkNode(prev);
             if (!firstNode) {
                 setValue(ei, "");
@@ -282,12 +282,12 @@ void XDocument::normalizeText(XNode * node) {
     // skip trailing whitespace
     //  - since the leading whitespace stopped at a non-whitespace, we know
     //    we'll also find a non-whitespace as we skip trailing.
-    auto lastNode = lastChild(ei, nullptr, XType::kText);
+    auto lastNode = lastChild(ei, {}, XType::kText);
     const char * lastChar = lastNode->value + strlen(lastNode->value);
     for (;;) {
         if (lastChar == lastNode->value) {
             prev = lastNode;
-            lastNode = prevSibling(lastNode, nullptr, XType::kText);
+            lastNode = prevSibling(lastNode, {}, XType::kText);
             unlinkNode(prev);
             lastChar = lastNode->value + strlen(lastNode->value);
         }
@@ -314,7 +314,7 @@ void XDocument::normalizeText(XNode * node) {
                 break;
             while (!*firstChar) {
                 prev = firstNode;
-                firstNode = nextSibling(firstNode, nullptr, XType::kText);
+                firstNode = nextSibling(firstNode, {}, XType::kText);
                 unlinkNode(prev);
                 firstChar = firstNode->value;
             }
@@ -405,7 +405,7 @@ void Dim::unlinkNode(XNode * node) {
 static bool matchNode(const XNode * node, string_view name, XType type) {
     if (type != XType::kInvalid && type != nodeType(node))
         return false;
-    if (name != node->name)
+    if (!name.empty() && name != node->name)
         return false;
     return true;
 }
