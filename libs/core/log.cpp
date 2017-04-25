@@ -175,6 +175,8 @@ void Dim::iLogDestroy() {
 ***/
 
 //===========================================================================
+// Monitor log messages
+//===========================================================================
 void Dim::logDefaultMonitor(ILogNotify * notify) {
     unique_lock<shared_mutex> lk{s_mut};
     s_defaultLogger = notify ? notify : &s_fallback;
@@ -186,6 +188,16 @@ void Dim::logMonitor(ILogNotify * notify) {
     s_loggers.push_back(notify);
 }
 
+//===========================================================================
+// Query log info
+//===========================================================================
+int Dim::logGetMsgCount(LogType type) {
+    assert(type < kLogTypes);
+    return *s_perfs[type];
+}
+
+//===========================================================================
+// Log messages
 //===========================================================================
 Detail::Log Dim::logMsgDebug() {
     return kLogTypeDebug;
@@ -243,7 +255,32 @@ void Dim::logParseError(
 }
 
 //===========================================================================
-int Dim::logGetMsgCount(LogType type) {
-    assert(type < kLogTypes);
-    return *s_perfs[type];
+static ostream & hexbyte(ostream & os, char data) {
+    constexpr char hexChars[] = "0123456789abcdef";
+    os << hexChars[(unsigned char) data >> 4] 
+        << hexChars[(unsigned char) data & 0x0f];
+    return os;
+}
+
+//===========================================================================
+void Dim::logHexDebug(string_view data) {
+    const unsigned char * ptr = (const unsigned char *) data.data();
+    for (unsigned pos = 0; pos < data.size(); pos += 16, ptr += 16) {
+        auto os = logMsgDebug();
+        os << hex;
+        os << setw(6) << pos << ':';
+        for (unsigned i = 0; i < 16; ++i) {
+            if (i % 2 == 0) os.put(' ');
+            if (pos + i < data.size()) {
+                hexbyte(os, ptr[i]);
+            } else {
+                os << "  ";
+            }
+        }
+        os << "  ";
+        for (unsigned i = 0; i < 16; ++i) {
+            if (pos + i < data.size())
+                os.put(isprint(ptr[i]) ? (char) ptr[i] : '.');
+        }
+    }
 }

@@ -49,7 +49,7 @@ public:
 
 /****************************************************************************
 *
-*   Logging messages
+*   Log messages
 *
 *   Expected usage:
 *   logMsgError() << "It went kablooie";
@@ -74,13 +74,24 @@ void logParseError(
     std::string_view content
 );
 
+// Renders data as 16 byte wide hex dump and debug logs each of the resulting
+// lines.
+void logHexDebug(std::string_view data);
+
+
+/****************************************************************************
+*
+*   Query log info
+*
+***/
+
 // Returns the number of messages of the selected type that have been logged
 int logGetMsgCount(LogType type);
 
 
 /****************************************************************************
 *
-*   Log monitoring
+*   Monitor message log
 *
 ***/
 
