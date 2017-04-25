@@ -222,7 +222,7 @@ public:
     void clear();
     XNode * parse(char src[], std::string_view filename = {});
 
-    XNode * setRoot(const char elemName[], const char text[] = nullptr);
+    XNode * setRoot(const char name[], const char text[] = nullptr);
     XNode * addElem(
         XNode * parent, 
         const char name[], 
@@ -285,44 +285,44 @@ void unlinkNode(XNode * node);
 
 XNode * firstChild(
     XNode * elem,
-    const char name[] = nullptr,
+    std::string_view name = {},
     XType type = XType::kInvalid);
 const XNode * firstChild(
     const XNode * elem,
-    const char name[] = nullptr,
+    std::string_view name = {},
     XType type = XType::kInvalid);
 XNode * lastChild(
     XNode * elem,
-    const char name[] = nullptr,
+    std::string_view name = {},
     XType type = XType::kInvalid);
 const XNode * lastChild(
     const XNode * elem,
-    const char name[] = nullptr,
+    std::string_view name = {},
     XType type = XType::kInvalid);
 
 XNode * nextSibling(
     XNode * elem,
-    const char name[] = nullptr,
+    std::string_view name = {},
     XType type = XType::kInvalid);
 const XNode * nextSibling(
     const XNode * elem,
-    const char name[] = nullptr,
+    std::string_view name = {},
     XType type = XType::kInvalid);
 XNode * prevSibling(
     XNode * elem,
-    const char name[] = nullptr,
+    std::string_view name = {},
     XType type = XType::kInvalid);
 const XNode * prevSibling(
     const XNode * elem,
-    const char name[] = nullptr,
+    std::string_view name = {},
     XType type = XType::kInvalid);
 
-XAttr * attr(XNode * elem, const char name[]);
-const XAttr * attr(const XNode * elem, const char name[]);
+XAttr * attr(XNode * elem, std::string_view name);
+const XAttr * attr(const XNode * elem, std::string_view name);
 
 const char * attrValue(
     const XNode * elem, 
-    const char name[], 
+    std::string_view name, 
     const char val[] = nullptr
 );
 
@@ -330,21 +330,21 @@ const char * attrValue(
 // Node iteration
 //===========================================================================
 template <typename T> class XNodeIterator : public ForwardListIterator<T> {
-    const char * m_name{nullptr};
+    std::string_view m_name;
     XType m_type{XType::kInvalid};
 
 public:
-    XNodeIterator(T * node, XType type, const char name[]);
+    XNodeIterator(T * node, XType type, std::string_view name);
     XNodeIterator operator++();
 };
 
 template <typename T> struct XNodeRange {
     XNodeIterator<T> m_first;
     XNodeIterator<T> begin() { return m_first; }
-    XNodeIterator<T> end() { return {nullptr, XType::kInvalid, nullptr}; }
+    XNodeIterator<T> end() { return {nullptr, XType::kInvalid, {}}; }
 };
-XNodeRange<XNode> elems(XNode * elem, const char name[] = nullptr);
-XNodeRange<const XNode> elems(const XNode * elem, const char name[] = nullptr);
+XNodeRange<XNode> elems(XNode * elem, std::string_view name = {});
+XNodeRange<const XNode> elems(const XNode * elem, std::string_view name = {});
 
 XNodeRange<XNode> nodes(XNode * elem, XType type = XType::kInvalid);
 XNodeRange<const XNode> nodes(

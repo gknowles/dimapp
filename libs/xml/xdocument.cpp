@@ -170,9 +170,9 @@ XNode * XDocument::parse(char src[], string_view filename) {
 }
 
 //===========================================================================
-XNode * XDocument::setRoot(const char elemName[], const char text[]) {
-    assert(elemName);
-    auto * ri = heap().emplace<XElemRootInfo>(elemName, text ? text : "");
+XNode * XDocument::setRoot(const char name[], const char text[]) {
+    assert(name);
+    auto * ri = heap().emplace<XElemRootInfo>(name, text ? text : "");
     ri->document = this;
     ri->prev = ri->next = ri;
     m_root = ri;
@@ -402,16 +402,16 @@ void Dim::unlinkNode(XNode * node) {
 }
 
 //===========================================================================
-static bool matchNode(const XNode * node, const char name[], XType type) {
+static bool matchNode(const XNode * node, string_view name, XType type) {
     if (type != XType::kInvalid && type != nodeType(node))
         return false;
-    if (name && strcmp(node->name, name) != 0)
+    if (name != node->name)
         return false;
     return true;
 }
 
 //===========================================================================
-XNode * Dim::firstChild(XNode * elem, const char name[], XType type) {
+XNode * Dim::firstChild(XNode * elem, string_view name, XType type) {
     if (nodeType(elem) != XType::kElement)
         return nullptr;
 
@@ -424,12 +424,12 @@ XNode * Dim::firstChild(XNode * elem, const char name[], XType type) {
 
 //===========================================================================
 const XNode *
-Dim::firstChild(const XNode * elem, const char name[], XType type) {
+Dim::firstChild(const XNode * elem, string_view name, XType type) {
     return firstChild(const_cast<XNode *>(elem), name, type);
 }
 
 //===========================================================================
-XNode * Dim::lastChild(XNode * elem, const char name[], XType type) {
+XNode * Dim::lastChild(XNode * elem, string_view name, XType type) {
     if (nodeType(elem) != XType::kElement)
         return nullptr;
 
@@ -442,12 +442,12 @@ XNode * Dim::lastChild(XNode * elem, const char name[], XType type) {
 
 //===========================================================================
 const XNode *
-Dim::lastChild(const XNode * elem, const char name[], XType type) {
+Dim::lastChild(const XNode * elem, string_view name, XType type) {
     return lastChild(const_cast<XNode *>(elem), name, type);
 }
 
 //===========================================================================
-XNode * Dim::nextSibling(XNode * node, const char name[], XType type) {
+XNode * Dim::nextSibling(XNode * node, string_view name, XType type) {
     if (!node)
         return nullptr;
     auto ni = static_cast<XNodeInfo *>(node);
@@ -462,12 +462,12 @@ XNode * Dim::nextSibling(XNode * node, const char name[], XType type) {
 
 //===========================================================================
 const XNode *
-Dim::nextSibling(const XNode * node, const char name[], XType type) {
+Dim::nextSibling(const XNode * node, string_view name, XType type) {
     return nextSibling(const_cast<XNode *>(node), name, type);
 }
 
 //===========================================================================
-XNode * Dim::prevSibling(XNode * node, const char name[], XType type) {
+XNode * Dim::prevSibling(XNode * node, string_view name, XType type) {
     if (!node)
         return nullptr;
     auto ni = static_cast<XNodeInfo *>(node);
@@ -482,19 +482,19 @@ XNode * Dim::prevSibling(XNode * node, const char name[], XType type) {
 
 //===========================================================================
 const XNode *
-Dim::prevSibling(const XNode * node, const char name[], XType type) {
+Dim::prevSibling(const XNode * node, string_view name, XType type) {
     return prevSibling(const_cast<XNode *>(node), name, type);
 }
 
 //===========================================================================
-XAttr * Dim::attr(XNode * elem, const char name[]) {
+XAttr * Dim::attr(XNode * elem, string_view name) {
     if (nodeType(elem) != XType::kElement)
         return nullptr;
 
     auto ei = static_cast<XElemInfo *>(elem);
     if (auto ai = ei->firstAttr) {
         for (;;) {
-            if (strcmp(name, ai->name) == 0)
+            if (name == ai->name)
                 return ai;
             ai = ai->next;
             if (ai == ei->firstAttr)
@@ -505,14 +505,14 @@ XAttr * Dim::attr(XNode * elem, const char name[]) {
 }
 
 //===========================================================================
-const XAttr * Dim::attr(const XNode * elem, const char name[]) {
+const XAttr * Dim::attr(const XNode * elem, string_view name) {
     return attr(const_cast<XNode *>(elem), name);
 }
 
 //===========================================================================
 const char * Dim::attrValue(
     const XNode * elem, 
-    const char name[], 
+    string_view name, 
     const char val[]
 ) {
     if (auto xa = attr(elem, name))
@@ -524,7 +524,7 @@ const char * Dim::attrValue(
 // XNodeIterator
 //===========================================================================
 template <typename T>
-XNodeIterator<T>::XNodeIterator(T * node, XType type, const char name[])
+XNodeIterator<T>::XNodeIterator(T * node, XType type, string_view name)
     : ForwardListIterator(node)
     , m_type(type)
     , m_name(name) {}
@@ -541,16 +541,16 @@ template XNodeIterator<const XNode>;
 //===========================================================================
 // XNodeRange
 //===========================================================================
-XNodeRange<XNode> Dim::elems(XNode * node, const char name[]) {
+XNodeRange<XNode> Dim::elems(XNode * node, string_view name) {
     node = firstChild(node, name);
-    XType type = name ? XType::kInvalid : XType::kElement;
+    XType type = name.empty() ? XType::kElement : XType::kInvalid;
     return {{node, type, name}};
 }
 
 //===========================================================================
-XNodeRange<const XNode> Dim::elems(const XNode * node, const char name[]) {
+XNodeRange<const XNode> Dim::elems(const XNode * node, string_view name) {
     node = firstChild(node, name);
-    XType type = name ? XType::kInvalid : XType::kElement;
+    XType type = name.empty() ? XType::kElement : XType::kInvalid;
     return {{node, type, name}};
 }
 
