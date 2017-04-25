@@ -17,19 +17,6 @@ namespace fs = std::experimental::filesystem;
 *
 ***/
 
-namespace {
-
-class RunTask : public ITaskNotify {
-public:
-    // ITaskNotify
-    void onTask() override;
-};
-
-class ConsoleLogger : public ILogNotify {
-    void onLog(LogType type, string_view msg) override;
-};
-
-} // namespace
 
 
 /****************************************************************************
@@ -38,8 +25,6 @@ class ConsoleLogger : public ILogNotify {
 *
 ***/
 
-static RunTask s_runTask;
-static ConsoleLogger s_consoleLogger;
 static int s_exitcode;
 
 static mutex s_runMut;
@@ -55,6 +40,13 @@ static AppFlags s_appFlags;
 *
 ***/
 
+namespace {
+class RunTask : public ITaskNotify {
+    void onTask() override;
+};
+} // namespace
+static RunTask s_runTask;
+
 //===========================================================================
 void RunTask::onTask() {
     s_app->onAppRun();
@@ -67,6 +59,13 @@ void RunTask::onTask() {
 *
 ***/
 
+namespace {
+class ConsoleLogger : public ILogNotify {
+    void onLog(LogType type, string_view msg) override;
+};
+} // namespace
+static ConsoleLogger s_consoleLogger;
+
 //===========================================================================
 void ConsoleLogger::onLog(LogType type, string_view msg) {
     if (type == kLogTypeError) {
@@ -76,6 +75,25 @@ void ConsoleLogger::onLog(LogType type, string_view msg) {
         cout.write(msg.data(), msg.size());
     }
     cout << endl;
+}
+
+
+/****************************************************************************
+*
+*   app.xml monitor
+*
+***/
+
+namespace {
+class ConfigAppXml : public IConfigNotify {
+    void onConfigChange(const XDocument & doc) override;
+};
+} // namespace
+static ConfigAppXml s_appXml;
+
+//===========================================================================
+void ConfigAppXml::onConfigChange(const XDocument & doc) {
+    shutdownDisableTimeout(configUnsigned(doc, "DisableShutdownTimeout"));
 }
 
 

@@ -41,7 +41,7 @@ public:
 
 public:
     bool stopped() const;
-    void incomplete(Duration grace);
+    void incomplete();
     void resetTimer();
 
     // ITimerNotify
@@ -73,6 +73,7 @@ static vector<CleanupInfo> s_cleaners;
 static Duration s_shutdownTimeout{2min};
 static mutex s_stopMut;
 static condition_variable s_stopCv;
+static bool s_disableTimeout{false};
 
 
 /****************************************************************************
@@ -121,9 +122,11 @@ bool MainTimer::stopped() const {
 }
 
 //===========================================================================
-void MainTimer::incomplete(Duration grace) {
+void MainTimer::incomplete() {
     m_incomplete = true;
-    if (Clock::now() - m_shutdownStart > s_shutdownTimeout + grace) {
+    if (!s_disableTimeout 
+        && Clock::now() - m_shutdownStart > s_shutdownTimeout
+    ) {
         assert(0 && "shutdown timeout");
         terminate();
     }
@@ -190,10 +193,15 @@ void Dim::shutdownMonitor(IShutdownNotify * cleaner) {
 
 //===========================================================================
 void Dim::shutdownIncomplete() {
-    s_mainTimer.incomplete(0ms);
+    s_mainTimer.incomplete();
 }
 
 //===========================================================================
 void Dim::shutdownDelay() {
     s_mainTimer.resetTimer();
+}
+
+//===========================================================================
+void Dim::shutdownDisableTimeout(bool disable) {
+    s_disableTimeout = disable;
 }

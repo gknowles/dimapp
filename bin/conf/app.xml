@@ -1,3 +1,5 @@
 <App>
   <DisableNoDataTimeout value="0"/>
+  <DisableShutdownTimeout value="0"/>
 </App>
+
