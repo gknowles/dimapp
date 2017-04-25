@@ -457,12 +457,7 @@ static AppXmlNotify s_appXml;
 
 //===========================================================================
 void AppXmlNotify::onConfigChange(const XDocument & doc) {
-    auto val = attrValue(
-        firstChild(doc.root(), "DisableNoDataTimeout"), 
-        "value", 
-        ""
-    );
-    s_disableNoDataTimeout = strtoul(val, nullptr, 10);
+    s_disableNoDataTimeout = configUnsigned(doc, "DisableNoDataTimeout");
     timerUpdate(
         &s_unmatchedTimer, 
         s_disableNoDataTimeout ? kTimerInfinite : 0ms
