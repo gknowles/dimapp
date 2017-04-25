@@ -450,18 +450,15 @@ AppSocket::MatchType RawMatch::OnMatch(
 
 namespace {
 class AppXmlNotify : public IConfigNotify {
-    void onConfigChange(string_view relpath, const XNode * root) override;
+    void onConfigChange(const XDocument & doc) override;
 };
 } // namespace
 static AppXmlNotify s_appXml;
 
 //===========================================================================
-void AppXmlNotify::onConfigChange(
-    string_view relpath,
-    const XNode * root
-) {
+void AppXmlNotify::onConfigChange(const XDocument & doc) {
     auto val = attrValue(
-        firstChild(root, "DisableNoDataTimeout"), 
+        firstChild(doc.root(), "DisableNoDataTimeout"), 
         "value", 
         ""
     );

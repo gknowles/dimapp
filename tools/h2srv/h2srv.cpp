@@ -124,7 +124,7 @@ void ShutdownNotify::onShutdownClient(bool firstTry) {
 namespace {
 class Application : public IAppNotify, public IConfigNotify {
     void onAppRun() override;
-    void onConfigChange(string_view relpath, const XNode * root) override;
+    void onConfigChange(const XDocument & doc) override;
 };
 } // namespace
 
@@ -160,7 +160,7 @@ void Application::onAppRun() {
 }
 
 //===========================================================================
-void Application::onConfigChange(string_view relpath, const XNode * root) {
+void Application::onConfigChange(const XDocument & doc) {
 }
 
 

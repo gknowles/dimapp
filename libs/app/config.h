@@ -23,10 +23,7 @@ class IConfigNotify {
 public:
     virtual ~IConfigNotify () {}
 
-    virtual void onConfigChange(
-        std::string_view relpath, 
-        const XNode * root
-    ) = 0;
+    virtual void onConfigChange(const XDocument & doc) = 0;
 };
 
 void configMonitor(std::string_view file, IConfigNotify * notify);
@@ -37,6 +34,24 @@ void configMonitor(std::string_view file, IConfigNotify * notify);
 void configChange(
     std::string_view file, 
     IConfigNotify * notify = nullptr
+);
+
+
+/****************************************************************************
+*
+*   Config file queries
+*
+***/
+
+unsigned configUnsigned(
+    const XDocument & doc, 
+    std::string_view name, 
+    unsigned defVal = 0
+);
+const char * configString(
+    const XDocument & doc, 
+    std::string_view name, 
+    const char defVal[] = ""
 );
 
 } // namespace

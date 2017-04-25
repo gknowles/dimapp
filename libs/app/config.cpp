@@ -101,10 +101,11 @@ void ConfigFile::onFileChange(string_view fullpath) {
         fileReadWait(m_content.data(), m_content.size(), f, 0);
     }
 
-    m_xml.parse(m_content.data());
-    m_fullpath = m_xml.heap().strdup(fullpath);
-    m_relpath = m_fullpath;
+    m_relpath = fullpath;
     m_relpath.remove_prefix(s_rootDir.size() + 1);
+    m_xml.parse(m_content.data(), m_relpath);
+    m_relpath = m_xml.filename();
+    m_fullpath = m_xml.heap().strdup(fullpath);
 
     // call notifiers
     configChange(m_fullpath, nullptr);
@@ -117,7 +118,7 @@ bool ConfigFile::notify_UNLK(IConfigNotify * notify) {
     for (auto it = m_notifiers.begin(); it != m_notifiers.end(); ++it) {
         if (!notify || notify == it->notify) {
             lk.unlock();
-            it->notify->onConfigChange(m_relpath, m_xml.root());
+            it->notify->onConfigChange(m_xml);
             if (notify)
                 return true;
             lk.lock();
@@ -196,4 +197,35 @@ void Dim::configChange(
     auto & cf = s_files[path];
     if (!cf.notify_UNLK(notify))
         logMsgError() << "Change notify not registered, " << file;
+}
+
+
+/****************************************************************************
+*
+*   Public Query API
+*
+***/
+
+//===========================================================================
+unsigned Dim::configUnsigned(
+    const XDocument & doc, 
+    std::string_view name, 
+    unsigned defVal
+) {
+    auto str = configString(doc, name, nullptr);
+    return str ? strToUint(str, nullptr, 10) : defVal;
+}
+
+//===========================================================================
+const char * Dim::configString(
+    const XDocument & doc, 
+    std::string_view name, 
+    const char defVal[]
+) {
+    auto val = attrValue(
+        firstChild(doc.root(), name.data()), 
+        "value", 
+        defVal
+    );
+    return val;
 }
