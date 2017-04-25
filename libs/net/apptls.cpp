@@ -47,6 +47,8 @@ private:
 *
 ***/
 
+static bool s_dumpInbound = false;
+
 
 /****************************************************************************
 *
@@ -97,12 +99,10 @@ void TlsSocket::onSocketRead (AppSocketData & data) {
     assert(data.bytes);
     CharBuf out;
     CharBuf recv;
-    bool success = winTlsRecv(
-        m_conn, 
-        &out, 
-        &recv, 
-        string_view(data.data, data.bytes)
-    );
+    auto sv = string_view(data.data, data.bytes);
+    if (s_dumpInbound)
+        logHexDebug(sv);
+    bool success = winTlsRecv(m_conn, &out, &recv, sv);
     socketWrite(this, out);
     AppSocketData tmp;
     for (auto && v : recv.views()) {
