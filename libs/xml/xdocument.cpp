@@ -155,8 +155,10 @@ void XDocument::clear() {
 }
 
 //===========================================================================
-XNode * XDocument::parse(char src[]) {
+XNode * XDocument::parse(char src[], string_view filename) {
     clear();
+    if (!filename.empty())
+        m_filename = m_heap.strdup(filename);
     ParserNotify notify(*this);
     XStreamParser parser(notify);
     if (!parser.parse(src)) {

@@ -220,7 +220,7 @@ public:
     XDocument();
 
     void clear();
-    XNode * parse(char src[]);
+    XNode * parse(char src[], std::string_view filename = {});
 
     XNode * setRoot(const char elemName[], const char text[] = nullptr);
     XNode * addElem(
@@ -238,6 +238,7 @@ public:
 
     ITempHeap & heap() { return m_heap; }
 
+    const char * filename() const { return m_filename; }
     XNode * root() { return m_root; }
     const XNode * root() const { return m_root; }
 
@@ -246,6 +247,7 @@ public:
 
 private:
     TempHeap m_heap;
+    const char * m_filename{nullptr};
     XNode * m_root{nullptr};
     const char * m_errmsg{nullptr};
     size_t m_errpos{0};
