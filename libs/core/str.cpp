@@ -290,3 +290,23 @@ int64_t Dim::strToInt64(const char src[], char ** eptr, int base) {
 uint64_t Dim::strToUint64(const char src[], char ** eptr, int base) {
     return iStrToAny<kUint64>(src, eptr, base);
 }
+
+//===========================================================================
+int Dim::strToInt(string_view src, char ** eptr, int base) {
+    return (int) iStrToAny<kInt>(src.data(), eptr, base, src.size());
+}
+
+//===========================================================================
+unsigned Dim::strToUint(string_view src, char ** eptr, int base) {
+    return (unsigned) iStrToAny<kUint>(src.data(), eptr, base, src.size());
+}
+
+//===========================================================================
+int64_t Dim::strToInt64(string_view src, char ** eptr, int base) {
+    return (int64_t) iStrToAny<kInt64>(src.data(), eptr, base, src.size());
+}
+
+//===========================================================================
+uint64_t Dim::strToUint64(string_view src, char ** eptr, int base) {
+    return iStrToAny<kUint64>(src.data(), eptr, base, src.size());
+}

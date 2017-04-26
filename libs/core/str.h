@@ -8,6 +8,7 @@
 
 #include <cstdint>
 #include <limits>
+#include <string_view>
 
 namespace Dim {
 
@@ -124,5 +125,10 @@ int strToInt(const char src[], char ** eptr, int base);
 unsigned strToUint(const char src[], char ** eptr, int base);
 int64_t strToInt64(const char src[], char ** eptr, int base);
 uint64_t strToUint64(const char src[], char ** eptr, int base);
+
+int strToInt(std::string_view src, char ** eptr, int base);
+unsigned strToUint(std::string_view src, char ** eptr, int base);
+int64_t strToInt64(std::string_view src, char ** eptr, int base);
+uint64_t strToUint64(std::string_view src, char ** eptr, int base);
 
 } // namespace

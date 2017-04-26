@@ -40,8 +40,6 @@ namespace {
 class Application : public IAppNotify {
     // IAppNotify
     void onAppRun() override;
-
-    int m_errors{0};
 };
 
 } // namespace
