@@ -79,60 +79,60 @@ public:
 *
 *   To override this behavior the type traits of individual enums can be 
 *   specialized one way or the other:
-*       template<> struct is_flags<enum A : int> : std::true_type {};
-*       template<> struct is_flags<enum B : unsigned> : std::false_type {};
+*       template<> struct is_enum_flags<enum A : int> : std::true_type {};
+*       template<> struct is_enum_flags<enum B : unsigned> : std::false_type {};
 *
 ***/
 
 template<typename T, bool = std::is_enum_v<T>> 
-struct is_flags : std::false_type {};
+struct is_enum_flags : std::false_type {};
 
 template<typename T> 
-struct is_flags<T, true> 
+struct is_enum_flags<T, true> 
     : std::bool_constant< std::is_unsigned_v<std::underlying_type_t<T>> >
 {};
 
-template<typename T> constexpr bool is_flags_v = is_flags<T>::value;
+template<typename T> constexpr bool is_enum_flags_v = is_enum_flags<T>::value;
 
 //===========================================================================
 template<typename T> constexpr 
-std::enable_if_t<is_flags_v<T>, T> operator~ (T val) {
+std::enable_if_t<is_enum_flags_v<T>, T> operator~ (T val) {
     return T(~std::underlying_type_t<T>(val));
 }
 
 //===========================================================================
 template<typename T> constexpr 
-std::enable_if_t<is_flags_v<T>, T> operator| (T left, T right) {
+std::enable_if_t<is_enum_flags_v<T>, T> operator| (T left, T right) {
     return T(std::underlying_type_t<T>(left) | right);
 }
 
 //===========================================================================
 template<typename T> constexpr 
-std::enable_if_t<is_flags_v<T>, T> operator|= (T & left, T right) {
+std::enable_if_t<is_enum_flags_v<T>, T&> operator|= (T & left, T right) {
     return left = left | right;
 }
 
 //===========================================================================
 template<typename T> constexpr 
-std::enable_if_t<is_flags_v<T>, T> operator& (T left, T right) {
+std::enable_if_t<is_enum_flags_v<T>, T> operator& (T left, T right) {
     return T(std::underlying_type_t<T>(left) & right);
 }
 
 //===========================================================================
 template<typename T> constexpr 
-std::enable_if_t<is_flags_v<T>, T> operator&= (T & left, T right) {
+std::enable_if_t<is_enum_flags_v<T>, T&> operator&= (T & left, T right) {
     return left = left & right;
 }
 
 //===========================================================================
 template<typename T> constexpr 
-std::enable_if_t<is_flags_v<T>, T> operator^ (T left, T right) {
+std::enable_if_t<is_enum_flags_v<T>, T> operator^ (T left, T right) {
     return T(std::underlying_type_t<T>(left) ^ right);
 }
 
 //===========================================================================
 template<typename T> constexpr 
-std::enable_if_t<is_flags_v<T>, T> operator^= (T & left, T right) {
+std::enable_if_t<is_enum_flags_v<T>, T&> operator^= (T & left, T right) {
     return left = left ^ right;
 }
 
