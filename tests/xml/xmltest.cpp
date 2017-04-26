@@ -111,6 +111,10 @@ int main(int argc, char * argv[]) {
     }
 
     logParseError(
-        "xml: parsing failed", path->string(), doc.errpos(), content);
+        "xml: parsing failed", 
+        path->string(), 
+        doc.errpos(), 
+        content
+    );
     return EX_DATAERR;
 }

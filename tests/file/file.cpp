@@ -16,9 +16,10 @@ using namespace Dim;
 ***/
 
 namespace {
-class Application : public IAppNotify,
-                    public IFileWriteNotify,
-                    public IFileReadNotify
+class Application 
+    : public IAppNotify
+    , public IFileWriteNotify
+    , public IFileReadNotify
 {
 public:
     // IAppNotify
@@ -83,10 +84,13 @@ void Application::onFileWrite(
     int written,
     string_view data, 
     int64_t offset,
-    FileHandle f) {}
+    FileHandle f
+) {
+}
 
 //===========================================================================
-void Application::onFileEnd(int64_t offset, FileHandle f) {}
+void Application::onFileEnd(int64_t offset, FileHandle f) {
+}
 
 
 /****************************************************************************
