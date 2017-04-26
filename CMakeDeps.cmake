@@ -138,6 +138,9 @@
 # tests/http/httptest.cpp
 # tests/http/pch.cpp
 # tests/http/pch.h
+# tests/list/listtest.cpp
+# tests/list/pch.cpp
+# tests/list/pch.h
 # tests/tls/pch.cpp
 # tests/tls/pch.h
 # tests/tls/tlstest.cpp
