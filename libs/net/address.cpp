@@ -29,7 +29,7 @@ size_t std::hash<Address>::operator()(const Address & val) const {
     hashCombine(out, std::hash<int32_t>{}(val.data[1]));
     hashCombine(out, std::hash<int32_t>{}(val.data[2]));
     hashCombine(out, std::hash<int32_t>{}(val.data[3]));
-    static_assert(sizeof(val.data) == 4 * sizeof(int32_t), "");
+    static_assert(sizeof(val.data) == 4 * sizeof(int32_t));
     return out;
 }
 

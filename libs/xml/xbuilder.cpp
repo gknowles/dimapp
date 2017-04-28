@@ -37,7 +37,7 @@ const char * kTextEntityTable[] = {
     "&lt;",
     "&gt;",
 };
-static_assert(size(kTextEntityTable) == kTextTypes, "");
+static_assert(size(kTextEntityTable) == kTextTypes);
 
 // clang-format off
 const char kTextTypeTable[256] = {

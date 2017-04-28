@@ -138,7 +138,7 @@ const HpackFieldView s_staticTable[] = {
     {"via", ""},
     {"www-authenticate", ""},
 };
-static_assert(size(s_staticTable) == 62, "");
+static_assert(size(s_staticTable) == 62);
 
 // huffman encoding as defined by rfc7541 appendix B
 const EncodeItem s_encodeTable[] = {
@@ -400,7 +400,7 @@ const EncodeItem s_encodeTable[] = {
     {0x3ffffee, 26},  //     (255) |11111111|11111111|11111011|10
     {0x3fffffff, 30}, // EOS (256) |11111111|11111111|11111111|111111
 };
-static_assert(size(s_encodeTable) == 257, "");
+static_assert(size(s_encodeTable) == 257);
 
 
 /****************************************************************************
