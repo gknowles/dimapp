@@ -15,4 +15,7 @@ void iAppSocketInitialize();
 // Http
 void iHttpRouteInitialize();
 
+// Socket Manager
+void iSockMgrInitialize();
+
 } // namespace

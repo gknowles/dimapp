@@ -1,11 +1,12 @@
 // Copyright Glen Knowles 2017.
 // Distributed under the Boost Software License, Version 1.0.
 //
-// rawsockmgr.h - dim net
+// sockmgr.h - dim net
 #pragma once
 
 #include "cppconf/cppconf.h"
 
+#include "core/handle.h"
 #include "net/address.h"
 #include "net/appsocket.h"
 
@@ -18,9 +19,9 @@ enum MgrFlags : unsigned {
 };
 } // namespace
 
-struct RawSocketMgrHandle : HandleBase {};
+struct SockMgrHandle : HandleBase {};
 
-RawSocketMgrHandle rawSockMgrListen(
+SockMgrHandle sockMgrListen(
     std::string_view mgrName,
     IFactory<IAppSocketNotify> * factory,
     /* security requirements, */
@@ -28,13 +29,21 @@ RawSocketMgrHandle rawSockMgrListen(
     AppSocket::MgrFlags flags = {}
 );
 
-RawSocketMgrHandle rawSockMgrConnect(
+SockMgrHandle sockMgrConnect(
     std::string_view mgrName,
     IFactory<IAppSocketNotify> * factory,
     AppSocket::Family fam,
     AppSocket::MgrFlags flags = {}
 );
 
-void endpointMonitor(RawSocketMgrHandle mgr, std::string_view nodeName);
+void sockMgrMonitorEndpoints(SockMgrHandle mgr, std::string_view host);
+
+// Starts closing, no new connections will be allowed. Returns true if all 
+// sockets are closed. May be called multiple times. After shutdown has 
+// completed you must still call sockMgrCloseWait().
+bool sockMgrShutdown(SockMgrHandle mgr);
+
+// Closes all sockets and destroys the manager.
+void sockMgrCloseWait(SockMgrHandle mgr);
 
 } // namespace
