@@ -15,11 +15,6 @@ namespace Dim {
 *
 ***/
 
-template <typename T> struct ListMemberLinkBase {};
-
-template <typename T, ListMemberLinkBase<T> T::*M> 
-class List;
-
 
 /****************************************************************************
 *
@@ -27,139 +22,119 @@ class List;
 *
 ***/
 
-template <typename T, ListMemberLinkBase<T> T::*M> 
-class ListMemberLink : public ListMemberLinkBase<T> {
+template <typename T> 
+class ListMemberLink {
 public:
-    ListMemberLink(decltype(M) ignored);
+    ListMemberLink();
     ~ListMemberLink();
     void reset();
 
     bool linked() const;
+
     T * prev() const;
     T * next() const;
 
 private:
-    friend class List<T,M>;
-
-    static ListMemberLink & getLink(T * node);
+    template <typename T, ListMemberLink<T> T::*P> friend class List;
 
     void construct();
     void detach();
-    void link(T * thisNode, T * next);
+    void linkBefore(T * thisNode, T * next);
     void linkAfter(T * thisNode, T * prev);
 
-    ListMemberLink & prevLink() const;
-    ListMemberLink & nextLink() const;
-    bool isFirst() const;
-    bool isLast() const;
+    ListMemberLink * getLink(
+        const T * node, 
+        const T * otherNode, 
+        const ListMemberLink * otherLink
+    ) const;
 
-    union { T * node; ListMemberLink * link; } m_next;
-    union { T * node; ListMemberLink * link; } m_prev;
+    ListMemberLink * m_prevLink;
+    T * m_nextNode;
 };
 
 //===========================================================================
-// static
-template<typename T, ListMemberLinkBase<T> T::*M>
-ListMemberLink<T,M> & ListMemberLink<T,M>::getLink(T * node) {
-    return ((uintptr_t) node & 1) 
-        ? *(ListMemberLink *)((uintptr_t) node - 1)
-        : static_cast<ListMemberLink &>(node->*M);
-}
-
-//===========================================================================
-template<typename T, ListMemberLinkBase<T> T::*M>
-ListMemberLink<T,M>::ListMemberLink (decltype(M) ignored) {
+template<typename T>
+ListMemberLink<T>::ListMemberLink () {
     construct();
 }
 
 //===========================================================================
-template<typename T, ListMemberLinkBase<T> T::*M>
-ListMemberLink<T,M>::~ListMemberLink () {
+template<typename T>
+ListMemberLink<T>::~ListMemberLink () {
     detach();
 }
 
 //===========================================================================
-template<typename T, ListMemberLinkBase<T> T::*M>
-void ListMemberLink<T,M>::reset() {
+template<typename T>
+void ListMemberLink<T>::reset() {
     detach();
     construct();
 }
 
 //===========================================================================
-template<typename T, ListMemberLinkBase<T> T::*M>
-bool ListMemberLink<T,M>::linked() const {
-    return prevLink() != this;
+template<typename T>
+bool ListMemberLink<T>::linked() const {
+    return m_prevLink != this;
 }
 
 //===========================================================================
-template<typename T, ListMemberLinkBase<T> T::*M>
-T * ListMemberLink<T,M>::prev() const {
-    return isFirst() ? nullptr : m_prev.node;
+template<typename T>
+T * ListMemberLink<T>::prev() const {
+    return m_prevLink->m_prevLink->next();
 }
 
 //===========================================================================
-template<typename T, ListMemberLinkBase<T> T::*M>
-T * ListMemberLink<T,M>::next() const {
-    return isLast() ? nullptr : m_next.node;
+template<typename T>
+T * ListMemberLink<T>::next() const {
+    return ((uintptr_t) m_nextNode & 1) ? nullptr : m_nextNode;
 }
 
 //===========================================================================
-template<typename T, ListMemberLinkBase<T> T::*M>
-void ListMemberLink<T,M>::construct() {
-    m_prev.link = m_next.link = (ListMemberLink *) ((uintptr_t) this + 1);
+template<typename T>
+void ListMemberLink<T>::construct() {
+    m_prevLink = this;
+    m_nextNode = (T *) ((uintptr_t) this + 1);
 }
 
 //===========================================================================
-template<typename T, ListMemberLinkBase<T> T::*M>
-void ListMemberLink<T,M>::detach() {
-    prevLink().m_next = m_next;
-    nextLink().m_prev = m_prev;
+template<typename T>
+void ListMemberLink<T>::detach() {
+    getLink(m_nextNode, m_prevLink->m_nextNode, this)->m_prevLink = m_prevLink;
+    m_prevLink->m_nextNode = m_nextNode;
 }
 
 //===========================================================================
-template<typename T, ListMemberLinkBase<T> T::*M>
-void ListMemberLink<T,M>::link(T * thisNode, T * next) {
+template<typename T>
+void ListMemberLink<T>::linkBefore(T * thisNode, T * next) {
     detach();
-    m_prev = next->m_prev;
-    m_next.node = next;
+    auto nextLink = getLink(next, thisNode, this);
+    m_prevLink = nextLink->m_prevLink;
+    m_nextNode = next;
 
-    prevLink().m_next.node = thisNode;
-    nextLink().m_prev.node = thisNode;
+    m_prevLink->m_nextNode = thisNode;
+    nextLink->m_prevLink = this;
 }
 
 //===========================================================================
-template<typename T, ListMemberLinkBase<T> T::*M>
-void ListMemberLink<T,M>::linkAfter(T * thisNode, T * prev) {
+template<typename T>
+void ListMemberLink<T>::linkAfter(T * thisNode, T * prev) {
     detach();
-    m_prev.node = prev;
-    m_next = prev->m_next;
+    m_prevLink = getLink(prev, thisNode, this);
+    m_nextNode = m_prevLink.m_nextNode;
 
-    prevLink().m_next.node = thisNode;
-    nextLink().m_prev.node = thisNode;
+    m_prevLink->m_nextNode = thisNode;
+    getLink(m_nextNode, thisNode, this)->m_prevLink = this;
 }
 
 //===========================================================================
-template<typename T, ListMemberLinkBase<T> T::*M>
-ListMemberLink<T,M> & ListMemberLink<T,M>::prevLink() const {
-    return getLink(m_prev.node);
-}
-
-//===========================================================================
-template<typename T, ListMemberLinkBase<T> T::*M>
-ListMemberLink<T,M> & ListMemberLink<T,M>::nextLink() const {
-    return getLink(m_next.node);
-}
-
-//===========================================================================
-template<typename T, ListMemberLinkBase<T> T::*M>
-bool ListMemberLink<T,M>::isFirst() const {
-    return (uintptr_t) m_prev.link & 1;
-}
-
-//===========================================================================
-template<typename T, ListMemberLinkBase<T> T::*M>
-bool ListMemberLink<T,M>::isLast() const {
-    return (uintptr_t) m_next.link & 1;
+template<typename T>
+ListMemberLink<T> * ListMemberLink<T>::getLink(
+    const T * node,
+    const T * otherNode,
+    const ListMemberLink * otherLink
+) const {
+    auto off = (uintptr_t) otherLink - ((uintptr_t) otherNode & ~1);
+    return (ListMemberLink *) (((uintptr_t) node & ~1) + off);
 }
 
 
@@ -169,7 +144,7 @@ bool ListMemberLink<T,M>::isLast() const {
 *
 ***/
 
-template <typename T, ListMemberLinkBase<T> T::*M>
+template <typename T, ListMemberLink<T> T::*P>
 class List {
 public:
     List() {}
@@ -184,192 +159,201 @@ public:
     T & back();
     const T & back() const;
     bool empty() const;
-    int size() const;
+    size_t size() const;
     void clear();
-    T * link(const T * pos, T * value);
-    T * link(const T * pos, T * first, T * last);
-    T * link(const T * pos, List && other);
-    T * linkAfter(const T * pos, T * value);
-    T * linkAfter(const T * pos, T * first, T * last);
-    T * linkAfter(const T * pos, List && other);
+    void insert(const T * pos, T * value);
+    void insert(const T * pos, T * first, T * last);
+    void insert(const T * pos, List && other);
+    void insertAfter(const T * pos, T * value);
+    void insertAfter(const T * pos, T * first, T * last);
+    void insertAfter(const T * pos, List && other);
     void unlinkAll();
     void unlink(T * value);
     void unlink(T * first, T * last);
-    void linkBack(T * value);
-    void linkBack(List && other);
-    T * unlinkBack();
-    void linkFront(T * value);
-    void linkFront(List && other);
-    T * unlinkFront();
+    void pushBack(T * value);
+    void pushBack(List && other);
+    T * popBack();
+    void pushFront(T * value);
+    void pushFront(List && other);
+    T * popFront();
     void swap(List & other);
 
 private:
-    ListMemberLink<T,M> m_base;
+    T * thisNode();
+
+    ListMemberLink<T> m_base;
 };
 
 
 //===========================================================================
-template <typename T, ListMemberLinkBase<T> T::*M>
-List<T,M>::List(List && from) {
+template <typename T, ListMemberLink<T> T::*P>
+List<T,P>::List(List && from) {
     swap(from);
 }
 
 //===========================================================================
-template <typename T, ListMemberLinkBase<T> T::*M>
-List<T,M>::~List() {
+template <typename T, ListMemberLink<T> T::*P>
+List<T,P>::~List() {
     unlinkAll();
 }
 
 //===========================================================================
-template <typename T, ListMemberLinkBase<T> T::*M>
-List<T,M> & List<T,M>::operator=(List && from) {
+template <typename T, ListMemberLink<T> T::*P>
+List<T,P> & List<T,P>::operator=(List && from) {
     swap(from);
     from.unlinkAll();
 }
 
 //===========================================================================
-template <typename T, ListMemberLinkBase<T> T::*M>
-bool List<T,M>::operator==(const List & right) const;
+template <typename T, ListMemberLink<T> T::*P>
+bool List<T,P>::operator==(const List & right) const;
 
 //===========================================================================
-template <typename T, ListMemberLinkBase<T> T::*M>
-T & List<T,M>::front() {
+template <typename T, ListMemberLink<T> T::*P>
+T & List<T,P>::front() {
     assert(!empty());
-    return *m_base.m_next.node;
+    return *m_base.next();
 }
 
 //===========================================================================
-template <typename T, ListMemberLinkBase<T> T::*M>
-const T & List<T,M>::front() const {
-    assert(!empty());
-    return *m_base.m_next.node;
+template <typename T, ListMemberLink<T> T::*P>
+const T & List<T,P>::front() const {
+    return const_cast<List *>(this)->front();
 }
 
 //===========================================================================
-template <typename T, ListMemberLinkBase<T> T::*M>
-T & List<T,M>::back() {
+template <typename T, ListMemberLink<T> T::*P>
+T & List<T,P>::back() {
     assert(!empty());
-    return *m_base.m_prev.node;
+    return *m_base.prev();
 }
 
 //===========================================================================
-template <typename T, ListMemberLinkBase<T> T::*M>
-const T & List<T,M>::back() const {
-    assert(!empty());
-    return *m_base.m_prev.node;
+template <typename T, ListMemberLink<T> T::*P>
+const T & List<T,P>::back() const {
+    return const_cast<List *>(this)->back();
 }
 
 //===========================================================================
-template <typename T, ListMemberLinkBase<T> T::*M>
-bool List<T,M>::empty() const {
+template <typename T, ListMemberLink<T> T::*P>
+bool List<T,P>::empty() const {
     return !m_base.linked();
 }
 
 //===========================================================================
-template <typename T, ListMemberLinkBase<T> T::*M>
-int List<T,M>::size() const;
-
-//===========================================================================
-template <typename T, ListMemberLinkBase<T> T::*M>
-void List<T,M>::clear() {
-    while (!empty())
-        delete m_base.m_next.node;
+template <typename T, ListMemberLink<T> T::*P>
+size_t List<T,P>::size() const {
+    size_t num = 0;
+    auto cur = m_base.m_prevLink;
+    for (; cur != &m_base; cur = cur->m_prevLink)
+        num += 1;
+    return num;
 }
 
 //===========================================================================
-template <typename T, ListMemberLinkBase<T> T::*M>
-T * List<T,M>::link(const T * pos, T * value) {
-    m_base.getLink(value).link(value, pos);
+template <typename T, ListMemberLink<T> T::*P>
+void List<T,P>::clear() {
+    while (!empty())
+        delete m_base.m_nextNode;
+}
+
+//===========================================================================
+template <typename T, ListMemberLink<T> T::*P>
+void List<T,P>::insert(const T * pos, T * value) {
+    (value->*P).linkBefore(value, pos);
     return value;
 }
 
 //===========================================================================
-template <typename T, ListMemberLinkBase<T> T::*M>
-T * List<T,M>::link(const T * pos, T * first, T * last);
+template <typename T, ListMemberLink<T> T::*P>
+void List<T,P>::insert(const T * pos, T * first, T * last);
 
 //===========================================================================
-template <typename T, ListMemberLinkBase<T> T::*M>
-T * List<T,M>::link(const T * pos, List && other);
+template <typename T, ListMemberLink<T> T::*P>
+void List<T,P>::insert(const T * pos, List && other);
 
 //===========================================================================
-template <typename T, ListMemberLinkBase<T> T::*M>
-T * List<T,M>::linkAfter(const T * pos, T * value) {
-    m_base.getLink(value).linkAfter(value, pos);
+template <typename T, ListMemberLink<T> T::*P>
+void List<T,P>::insertAfter(const T * pos, T * value) {
+    (value->*P).linkAfter(value, pos);
     return value;
 }
 
 //===========================================================================
-template <typename T, ListMemberLinkBase<T> T::*M>
-T * List<T,M>::linkAfter(const T * pos, T * first, T * last);
+template <typename T, ListMemberLink<T> T::*P>
+void List<T,P>::insertAfter(const T * pos, T * first, T * last);
 
 //===========================================================================
-template <typename T, ListMemberLinkBase<T> T::*M>
-T * List<T,M>::linkAfter(const T * pos, List && other);
+template <typename T, ListMemberLink<T> T::*P>
+void List<T,P>::insertAfter(const T * pos, List && other);
 
 //===========================================================================
-template <typename T, ListMemberLinkBase<T> T::*M>
-void List<T,M>::unlinkAll() {
+template <typename T, ListMemberLink<T> T::*P>
+void List<T,P>::unlinkAll() {
     while (!empty())
-        m_base.getLink(m_base.m_next.node).reset();
+        m_base.m_prevLink->reset();
 }
 
 //===========================================================================
-template <typename T, ListMemberLinkBase<T> T::*M>
-void List<T,M>::unlink(T * value) {
-    m_base.getLink(value).reset();
+template <typename T, ListMemberLink<T> T::*P>
+void List<T,P>::unlink(T * value) {
+    (value->*P).reset();
 }
 
 //===========================================================================
-template <typename T, ListMemberLinkBase<T> T::*M>
-void List<T,M>::unlink(T * first, T * last);
+template <typename T, ListMemberLink<T> T::*P>
+void List<T,P>::unlink(T * first, T * last);
 
 //===========================================================================
-template <typename T, ListMemberLinkBase<T> T::*M>
-void List<T,M>::linkBack(T * value) {
-    m_base.getLink(value).link(value, this);
+template <typename T, ListMemberLink<T> T::*P>
+void List<T,P>::pushBack(T * value) {
+    (value->*P).linkBefore(value, thisNode());
 }
 
 //===========================================================================
-template <typename T, ListMemberLinkBase<T> T::*M>
-void List<T,M>::linkBack(List && other);
+template <typename T, ListMemberLink<T> T::*P>
+void List<T,P>::pushBack(List && other);
 
 //===========================================================================
-template <typename T, ListMemberLinkBase<T> T::*M>
-T * List<T,M>::unlinkBack() {
-    if (empty()) 
-        return nullptr;
-    auto node = m_base.m_prev.node;
-    m_base.getLink(node).reset();
+template <typename T, ListMemberLink<T> T::*P>
+T * List<T,P>::popBack() {
+    auto node = m_base.prev();
+    if (node)
+        m_base.m_prevLink->reset();
     return node;
 }
 
 //===========================================================================
-template <typename T, ListMemberLinkBase<T> T::*M>
-void List<T,M>::linkFront(T * value) {
-    (value->*M).linkAfter(value, this);
+template <typename T, ListMemberLink<T> T::*P>
+void List<T,P>::pushFront(T * value) {
+    (value->*P).linkAfter(value, thisNode());
 }
 
 //===========================================================================
-template <typename T, ListMemberLinkBase<T> T::*M>
-void List<T,M>::linkFront(List && other);
+template <typename T, ListMemberLink<T> T::*P>
+void List<T,P>::pushFront(List && other);
 
 //===========================================================================
-template <typename T, ListMemberLinkBase<T> T::*M>
-T * List<T,M>::unlinkFront() {
-    if (empty()) 
-        return nullptr;
-    auto node = m_base.m_next.node;
-    m_base.getLink(node).reset();
+template <typename T, ListMemberLink<T> T::*P>
+T * List<T,P>::popFront() {
+    auto node = m_base.next();
+    if (node)
+        (node->*P).reset();
     return node;
 }
 
 //===========================================================================
-template <typename T, ListMemberLinkBase<T> T::*M>
-void List<T,M>::swap(List & other) {
+template <typename T, ListMemberLink<T> T::*P>
+void List<T,P>::swap(List & other) {
     swap(m_base.prevLink().m_next, from.m_base.prevLink().m_next);
     swap(m_base.nextLink().m_prev, from.m_base.nextLink().m_prev);
     swap(m_base, from.m_base);
 }
 
+//===========================================================================
+template <typename T, ListMemberLink<T> T::*P>
+T * List<T,P>::thisNode() {
+    return (T*) ((uintptr_t)&m_base - (size_t)&((T*)0->*P));
+}
 
 } // namespace

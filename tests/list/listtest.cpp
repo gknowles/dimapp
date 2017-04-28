@@ -26,18 +26,8 @@ namespace {
 class TestNode {
 public:
     unsigned m_value;
-    ListMemberLinkBase<TestNode> m_base;
-    //ListMemberLink<> m_link(&TestNode::m_base);
+    ListMemberLink<TestNode> m_link;
 };
-
-template <typename T> struct get_class;
-template <typename T, typename V> struct get_class<V T::*> { using type = T; };
-
-//template <ListMemberLinkBase<T> T::*M> 
-//class Thing {
-//public:
-//    Thing(decltype(M) ignore) {}
-//};
 
 } // namespace
 
@@ -64,10 +54,27 @@ class Application : public IAppNotify {
 
 } // namespace
 
+//template <typename T, int T::*P> class L1;
+//
+//template <auto P> class L2;
+//template <typename T, int T::*P> class L2<int T::*P>;
+
 //===========================================================================
 void Application::onAppRun() {
     int line = 0;
-    line += 1;
+
+    List<TestNode, &TestNode::m_link> list;
+    EXPECT(list.empty());
+    {
+        TestNode a;
+        list.pushBack(&a);
+        EXPECT(list.size() == 1);
+    }
+    EXPECT(list.empty());
+    TestNode b;
+    list.pushBack(&b);
+    list.unlinkAll();
+    EXPECT(list.empty());
 
     //Thing<&TestNode::m_base> t(&TestNode::m_base);
 
