@@ -15,6 +15,14 @@ using namespace Dim;
 *
 ***/
 
+namespace Dim::AppSocket {
+
+enum ConfFlags : unsigned {
+    fDisableInactiveTimeout = 0x01,
+};
+
+}
+
 namespace {
 
 class SocketManager;
@@ -44,16 +52,29 @@ private:
 
 class SocketManager 
     : public IFactory<IAppSocketNotify> 
+    , public IConfigNotify
 {
 public:
-    SocketManager(IFactory<IAppSocketNotify> * fact);
+    SocketManager(
+        string_view name,
+        IFactory<IAppSocketNotify> * fact,
+        AppSocket::Family fam,
+        AppSocket::MgrFlags flags
+    );
     ~SocketManager();
 
     // IFactory<MgrSocket>
     unique_ptr<IAppSocketNotify> onFactoryCreate() override;
 
+    // Inherited via IConfigNotify
+    void onConfigChange(const XDocument & doc) override;
+
 private:
+    string m_name;
     IFactory<IAppSocketNotify> * m_cliSockFact;
+    AppSocket::Family m_family;
+    AppSocket::MgrFlags m_mgrFlags;
+    AppSocket::ConfFlags m_confFlags;
 };
 
 } // namespace
@@ -130,8 +151,16 @@ void MgrSocket::onSocketRead (AppSocketData & data) {
 ***/
 
 //===========================================================================
-SocketManager::SocketManager(IFactory<IAppSocketNotify> * fact) 
-    : m_cliSockFact{fact}
+SocketManager::SocketManager(
+    string_view name,
+    IFactory<IAppSocketNotify> * fact,
+    AppSocket::Family fam,
+    AppSocket::MgrFlags flags
+) 
+    : m_name{name}
+    , m_cliSockFact{fact}
+    , m_family{fam}
+    , m_mgrFlags{flags}
 {
 }
 
@@ -142,6 +171,14 @@ SocketManager::~SocketManager() {
 //===========================================================================
 std::unique_ptr<IAppSocketNotify> SocketManager::onFactoryCreate() {
     return make_unique<MgrSocket>(*this, m_cliSockFact->onFactoryCreate());
+}
+
+//===========================================================================
+void SocketManager::onConfigChange(const XDocument & doc) {
+    auto flags = AppSocket::ConfFlags{};
+    if (configUnsigned(doc, "DisableInactiveTimeout"))
+        flags |= AppSocket::fDisableInactiveTimeout;
+    m_confFlags = flags;
 }
 
 
@@ -183,19 +220,24 @@ void Dim::iSockMgrInitialize() {
 
 //===========================================================================
 SockMgrHandle Dim::sockMgrListen(
-    std::string_view mgrName,
+    string_view mgrName,
     IFactory<IAppSocketNotify> * factory,
     /* security requirements, */
     AppSocket::Family fam,
     AppSocket::MgrFlags flags
 ) {
-    auto mgr = new SocketManager(factory);
+    auto mgr = new SocketManager(
+        mgrName,
+        factory,
+        fam,
+        flags
+    );
     return s_mgrs.insert(mgr);
 }
 
 //===========================================================================
 SockMgrHandle Dim::sockMgrConnect(
-    std::string_view mgrName,
+    string_view mgrName,
     IFactory<IAppSocketNotify> * factory,
     AppSocket::Family fam,
     AppSocket::MgrFlags flags
@@ -205,7 +247,17 @@ SockMgrHandle Dim::sockMgrConnect(
 }
 
 //===========================================================================
-void Dim::sockMgrMonitorEndpoints(SockMgrHandle h, std::string_view host) {
+//void sockMgrSetInactiveTimeout(
+//    SockMgrHandle h,
+//    Duration pingInterval,
+//    Duration pingTimeout
+//) {
+//    auto mgr = s_mgrs.find(h);
+//    mgr->setInactiveTimeout(pingInterval, pingTimeout);
+//}
+
+//===========================================================================
+void Dim::sockMgrMonitorEndpoints(SockMgrHandle h, string_view host) {
     //auto mgr = s_mgrs.find(h);
     //return mgr->monitorEndpoints(host);
 }

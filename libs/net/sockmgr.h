@@ -36,6 +36,15 @@ SockMgrHandle sockMgrConnect(
     AppSocket::MgrFlags flags = {}
 );
 
+// Only the connecting side sends pings, and only the accepting side
+// disconnects due to inactivity. Both can be set to kTimerInfinite, in 
+// which case no pings are sent and inactivity causes no disconnects.
+void sockMgrSetInactiveTimeout(
+    SockMgrHandle mgr,
+    Duration pingInterval,  // duration of inactivity that triggers a ping
+    Duration pingTimeout    // inactivity that triggers a disconnect
+);
+
 void sockMgrMonitorEndpoints(SockMgrHandle mgr, std::string_view host);
 
 // Starts closing, no new connections will be allowed. Returns true if all 
