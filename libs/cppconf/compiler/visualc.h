@@ -12,15 +12,24 @@
 #ifndef DIM_LIB_KEEP_MACROS
 #pragma warning(push)
 #endif
-#pragma warning(disable : 4100) // unreferenced formal parameter
-#pragma warning( \
-    disable : 4324) // structure was padded due to alignment specifier
-#pragma warning( \
-    disable : 4456) // declaration of 'identifier' hides previous local declaration
-#pragma warning( \
-    disable : 4457) // declaration of 'identifier' hides function parameter
-#pragma warning(disable : 4800) // forcing value to bool 'true' or 'false'
-#pragma warning(disable : 5030) // attribute 'identifier' is not recognized
+
+#pragma warning(disable: \
+    4100 /* unreferenced formal parameter */ \
+    4324 /* structure was padded due to alignment specifier */ \
+    4456 /* declaration of 'identifier' hides previous local declaration */ \
+    4457 /* declaration of 'identifier' hides function parameter */ \
+    4800 /* forcing value to bool 'true' or 'false' */ \
+    5030 /* attribute 'identifier' is not recognized */ \
+)
+#pragma warning(default: \
+    4265 /* 'class': class has virtual functions, but destructor is not 
+            virtual */ \
+    4431 /* missing type specifier - int assumed */ \
+    4471 /* a forward declaration of an unscoped enumeration must have an 
+            underlying type */ \
+    4826 /* conversion from 'type1' to 'type2' is sign-extended */ \
+) 
+
 #ifdef DIM_LIB_DYN_LINK
 // 'identifier': class 'type' needs to have dll-interface to be used
 // by clients of class 'type2'
