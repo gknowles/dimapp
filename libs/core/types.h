@@ -79,17 +79,23 @@ public:
 *
 *   To override this behavior the type traits of individual enums can be 
 *   specialized one way or the other:
-*       template<> struct is_enum_flags<enum A : int> : std::true_type {};
-*       template<> struct is_enum_flags<enum B : unsigned> : std::false_type {};
+*   template<> struct is_enum_flags<enum A : int> : std::true_type {};
+*   template<> struct is_enum_flags<enum B : unsigned> : std::false_type {};
 *
 ***/
 
+// Filter out non-enums because underlying_type (used below) with them is
+// a compile error.
 template<typename T, bool = std::is_enum_v<T>> 
 struct is_enum_flags : std::false_type {};
 
+// Default unsigned unscoped enums to be flags
 template<typename T> 
 struct is_enum_flags<T, true> 
-    : std::bool_constant< std::is_unsigned_v<std::underlying_type_t<T>> >
+    : std::bool_constant<
+        std::is_unsigned_v<std::underlying_type_t<T>> 
+        && std::is_convertible_v<T, std::underlying_type_t<T>>
+    > 
 {};
 
 template<typename T> constexpr bool is_enum_flags_v = is_enum_flags<T>::value;
