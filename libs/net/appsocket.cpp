@@ -159,8 +159,14 @@ void IAppSocket::write(
 }
 
 //===========================================================================
+IAppSocket::IAppSocket(std::unique_ptr<IAppSocketNotify> notify) {
+    setNotify(move(notify));
+}
+
+//===========================================================================
 IAppSocket::~IAppSocket() {
     assert(m_pos == list<UnmatchedInfo>::iterator{});
+    assert(!m_notify);
 }
 
 //===========================================================================
@@ -175,8 +181,24 @@ Duration IAppSocket::checkTimeout_LK(TimePoint now) {
 }
 
 //===========================================================================
+void IAppSocket::setNotify(unique_ptr<IAppSocketNotify> notify) {
+    assert(!m_notify);
+    m_notify = notify.release();
+    m_notify->m_socket = this;
+}
+
+//===========================================================================
 bool IAppSocket::notifyAccept(const AppSocketInfo & info) {
     m_accept = info;
+    if (m_notify) {
+        if (m_notify->onSocketAccept(m_accept)) 
+            return true;
+
+        s_perfNotAccepted += 1;
+        disconnect();
+        return false;
+    }
+
     auto expiration = Clock::now() + kUnmatchedTimeout;
 
     {
@@ -208,6 +230,7 @@ void IAppSocket::notifyDestroy() {
     if (m_notify) {
         m_notify->m_socket = nullptr;
         m_notify->onSocketDestroy();
+        m_notify = nullptr;
     }
     delete this;
 }
@@ -317,15 +340,13 @@ void IAppSocket::notifyRead(AppSocketData & data) {
         return disconnect();
     }
 
-    // set notifier from registered factory
-    m_notify = fact->onFactoryCreate().release();
-    m_notify->m_socket = this;
+    setNotify(fact->onFactoryCreate());
 
-    // replay callbacks received so far
-    if (!m_notify->onSocketAccept(m_accept)) {
-        s_perfNotAccepted += 1;
-        return disconnect();
-    }
+    // set notifier from registered factory
+    if (!notifyAccept(m_accept))
+        return;
+
+    // replay data received so far
     AppSocketData tmp;
     tmp.data = const_cast<char*>(view.data());
     tmp.bytes = (int) view.size();

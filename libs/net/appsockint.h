@@ -40,6 +40,13 @@ public:
     );
 
 public:
+    // If created with no explicit notify the incoming data will be matched 
+    // against the registered listeners to find a factory and that factory will
+    // be used to create a notify. If the incoming data doesn't map to any
+    // known factory the socket is disconnected.
+    IAppSocket() {}
+    IAppSocket(std::unique_ptr<IAppSocketNotify> notify);
+
     virtual ~IAppSocket();
 
     virtual void disconnect() = 0;
@@ -57,8 +64,9 @@ protected:
 private:
     friend class UnmatchedTimer;
     Duration checkTimeout_LK(TimePoint now);
+    void setNotify(std::unique_ptr<IAppSocketNotify> notify);
 
-    // set to list.end() when matching is completed, either successfully or 
+    // set to {} when matching is completed, either successfully or 
     // unsuccessfully.
     std::list<UnmatchedInfo>::iterator m_pos;
 

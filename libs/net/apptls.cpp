@@ -17,18 +17,16 @@ using namespace Dim;
 
 namespace {
 
-class TlsSocket
-    : public IAppSocket
-    , public IAppSocketNotify 
-{
+class TlsSocket : public IAppSocket, public IAppSocketNotify {
 public:
     ~TlsSocket();
 
+    // Inherited via IAppSocket
     void disconnect() override;
     void write(string_view data) override;
     void write(unique_ptr<SocketBuffer> buffer, size_t bytes) override;
 
-    // IAppSocketNotify
+    // Inherited via IAppSocketNotify
     bool onSocketAccept(const AppSocketInfo & info) override;
     void onSocketDisconnect() override;
     void onSocketDestroy() override;

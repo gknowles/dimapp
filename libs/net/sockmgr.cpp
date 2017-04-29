@@ -17,12 +17,43 @@ using namespace Dim;
 
 namespace {
 
-class MgrSocket : public IAppSocketNotify {
+class SocketManager;
+
+class MgrSocket : public IAppSocket, public IAppSocketNotify {
+public:
+    ListMemberLink<MgrSocket> m_link;
+
+public:
+    MgrSocket(SocketManager & mgr, unique_ptr<IAppSocketNotify> notify);
+    ~MgrSocket();
+
+    // Inherited via IAppSocket
+    void disconnect() override;
+    void write(string_view data) override;
+    void write(unique_ptr<SocketBuffer> buffer, size_t bytes) override;
+
+    // Inherited via IAppSocketNotify
+    bool onSocketAccept(const AppSocketInfo & info) override;
+    void onSocketDisconnect() override;
+    void onSocketDestroy() override;
+    void onSocketRead(AppSocketData & data) override;
+
+private:
+    SocketManager & m_mgr;
 };
 
-class SocketManager {
+class SocketManager 
+    : public IFactory<IAppSocketNotify> 
+{
 public:
+    SocketManager(IFactory<IAppSocketNotify> * fact);
+    ~SocketManager();
+
+    // IFactory<MgrSocket>
+    unique_ptr<IAppSocketNotify> onFactoryCreate() override;
+
 private:
+    IFactory<IAppSocketNotify> * m_cliSockFact;
 };
 
 } // namespace
@@ -39,9 +70,79 @@ static HandleMap<SockMgrHandle, SocketManager> s_mgrs;
 
 /****************************************************************************
 *
-*   TlsSocket
+*   MgrSocket
 *
 ***/
+
+//===========================================================================
+MgrSocket::MgrSocket(
+    SocketManager & mgr, 
+    unique_ptr<IAppSocketNotify> notify
+)
+    : m_mgr(mgr)
+    , IAppSocket(move(notify))
+{}
+
+//===========================================================================
+MgrSocket::~MgrSocket() {
+}
+
+//===========================================================================
+void MgrSocket::disconnect() {
+    socketDisconnect(this);
+}
+
+//===========================================================================
+void MgrSocket::write(string_view data) {
+    socketWrite(this, data);
+}
+
+//===========================================================================
+void MgrSocket::write(unique_ptr<SocketBuffer> buffer, size_t bytes) {
+    socketWrite(this, move(buffer), bytes);
+}
+
+//===========================================================================
+bool MgrSocket::onSocketAccept (const AppSocketInfo & info) {
+    return notifyAccept(info);
+}
+
+//===========================================================================
+void MgrSocket::onSocketDisconnect () {
+    notifyDisconnect();
+}
+
+//===========================================================================
+void MgrSocket::onSocketDestroy () {
+    notifyDestroy();
+}
+
+//===========================================================================
+void MgrSocket::onSocketRead (AppSocketData & data) {
+    notifyRead(data);
+}
+
+
+/****************************************************************************
+*
+*   SocketManager
+*
+***/
+
+//===========================================================================
+SocketManager::SocketManager(IFactory<IAppSocketNotify> * fact) 
+    : m_cliSockFact{fact}
+{
+}
+
+//===========================================================================
+SocketManager::~SocketManager() {
+}
+
+//===========================================================================
+std::unique_ptr<IAppSocketNotify> SocketManager::onFactoryCreate() {
+    return make_unique<MgrSocket>(*this, m_cliSockFact->onFactoryCreate());
+}
 
 
 /****************************************************************************
@@ -80,27 +181,41 @@ void Dim::iSockMgrInitialize() {
 *
 ***/
 
-SockMgrHandle sockMgrListen(
+//===========================================================================
+SockMgrHandle Dim::sockMgrListen(
     std::string_view mgrName,
     IFactory<IAppSocketNotify> * factory,
     /* security requirements, */
     AppSocket::Family fam,
-    AppSocket::MgrFlags flags = {}
-);
+    AppSocket::MgrFlags flags
+) {
+    auto mgr = new SocketManager(factory);
+    return s_mgrs.insert(mgr);
+}
 
-SockMgrHandle sockMgrConnect(
+//===========================================================================
+SockMgrHandle Dim::sockMgrConnect(
     std::string_view mgrName,
     IFactory<IAppSocketNotify> * factory,
     AppSocket::Family fam,
-    AppSocket::MgrFlags flags = {}
-);
+    AppSocket::MgrFlags flags
+) {
+    assert(0 && "Not implemented");
+    return {};
+}
 
-void sockMgrMonitorEndpoints(SockMgrHandle mgr, std::string_view host);
+//===========================================================================
+void Dim::sockMgrMonitorEndpoints(SockMgrHandle h, std::string_view host) {
+    //auto mgr = s_mgrs.find(h);
+    //return mgr->monitorEndpoints(host);
+}
 
-// Starts closing, no new connections will be allowed. Returns true if all 
-// sockets are closed. May be called multiple times. After shutdown has 
-// completed you must still call sockMgrCloseWait().
-bool sockMgrShutdown(SockMgrHandle mgr);
+//===========================================================================
+bool Dim::sockMgrShutdown(SockMgrHandle h) {
+    return true;
+}
 
-// Closes all sockets and destroys the manager.
-void sockMgrCloseWait(SockMgrHandle mgr);
+//===========================================================================
+void Dim::sockMgrCloseWait(SockMgrHandle h) {
+    s_mgrs.erase(h);
+}
