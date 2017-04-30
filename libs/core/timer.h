@@ -41,14 +41,15 @@ private:
 
 /****************************************************************************
 *
-*   Public API
+*   Public Timer API
 *
 ***/
 
-void timerUpdate(
+TimePoint timerUpdate(
     ITimerNotify * notify,
     Duration wait,
-    bool onlyIfSooner = false);
+    bool onlyIfSooner = false
+);
 void timerCloseWait(ITimerNotify * notify);
 
 } // namespace

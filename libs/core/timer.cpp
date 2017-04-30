@@ -18,7 +18,7 @@ using namespace Dim;
 
 class Dim::Timer {
 public:
-    static void update(
+    static TimePoint update(
         ITimerNotify * notify, 
         Duration wait, 
         bool onlyIfSooner
@@ -228,7 +228,11 @@ bool TimerQueueNode::operator==(const TimerQueueNode & right) const {
 
 //===========================================================================
 // static
-void Timer::update(ITimerNotify * notify, Duration wait, bool onlyIfSooner) {
+TimePoint Timer::update(
+    ITimerNotify * notify, 
+    Duration wait, 
+    bool onlyIfSooner
+) {
     TimePoint now{Clock::now()};
     auto expire = wait == kTimerInfinite ? TimePoint::max() : now + wait;
 
@@ -238,18 +242,19 @@ void Timer::update(ITimerNotify * notify, Duration wait, bool onlyIfSooner) {
             new Timer{notify};
         auto & timer = notify->m_timer;
         if (onlyIfSooner && !(expire < timer->expiration))
-            return;
+            return timer->expiration;
         timer->expiration = expire;
         timer->instance += 1;
         if (expire != TimePoint::max()) {
             TimerQueueNode node(timer);
             s_timers.push(node);
             if (!(node == s_timers.top()))
-                return;
+                return expire;
         }
     }
 
     s_queueCv.notify_one();
+    return expire;
 }
 
 //===========================================================================
@@ -319,16 +324,17 @@ void Dim::iTimerDestroy() {
 
 /****************************************************************************
 *
-*   Public API
+*   Public Timer API
 *
 ***/
 
 //===========================================================================
-void Dim::timerUpdate(
+TimePoint Dim::timerUpdate(
     ITimerNotify * notify,
     Duration wait,
-    bool onlyIfSooner) {
-    Timer::update(notify, wait, onlyIfSooner);
+    bool onlyIfSooner
+) {
+    return Timer::update(notify, wait, onlyIfSooner);
 }
 
 //===========================================================================
