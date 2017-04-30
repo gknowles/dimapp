@@ -123,10 +123,10 @@ public:
     List & operator=(List && from);
     bool operator==(const List & right) const;
 
-    T & front();
-    const T & front() const;
-    T & back();
-    const T & back() const;
+    T * front();
+    const T * front() const;
+    T * back();
+    const T * back() const;
     bool empty() const;
     size_t size() const;
     void clear();
@@ -176,27 +176,25 @@ bool List<T,Tag>::operator==(const List & right) const;
 
 //===========================================================================
 template <typename T, typename Tag>
-T & List<T,Tag>::front() {
-    assert(!empty());
-    return *static_cast<T *>(m_base.m_nextLink);
+T * List<T,Tag>::front() {
+    return m_base.linked() ? static_cast<T *>(m_base.m_nextLink) : nullptr;
 }
 
 //===========================================================================
 template <typename T, typename Tag>
-const T & List<T,Tag>::front() const {
+const T * List<T,Tag>::front() const {
     return const_cast<List *>(this)->front();
 }
 
 //===========================================================================
 template <typename T, typename Tag>
-T & List<T,Tag>::back() {
-    assert(!empty());
-    return *static_cast<T *>(m_base.m_prevLink);
+T * List<T,Tag>::back() {
+    return m_base.linked() ? static_cast<T *>(m_base.m_prevLink) : nullptr;
 }
 
 //===========================================================================
 template <typename T, typename Tag>
-const T & List<T,Tag>::back() const {
+const T * List<T,Tag>::back() const {
     return const_cast<List *>(this)->back();
 }
 
@@ -219,8 +217,8 @@ size_t List<T,Tag>::size() const {
 //===========================================================================
 template <typename T, typename Tag>
 void List<T,Tag>::clear() {
-    while (!empty())
-        delete &front();
+    while (auto ptr = front())
+        delete ptr;
 }
 
 //===========================================================================
@@ -254,8 +252,8 @@ void List<T,Tag>::insertAfter(const T * pos, List && other);
 //===========================================================================
 template <typename T, typename Tag>
 void List<T,Tag>::unlinkAll() {
-    while (!empty())
-        unlink(&front());
+    while (auto ptr = front())
+        unlink(ptr);
 }
 
 //===========================================================================
@@ -277,11 +275,10 @@ void List<T,Tag>::pushBack(List && other);
 //===========================================================================
 template <typename T, typename Tag>
 T * List<T,Tag>::popBack() {
-    if (empty())
-        return nullptr;
-    auto link = m_base.m_prevLink;
-    link->reset();
-    return static_cast<T *>(link);
+    auto link = back();
+    if (link)
+        link->reset();
+    return link;
 }
 
 //===========================================================================
@@ -297,10 +294,9 @@ void List<T,Tag>::pushFront(List && other);
 //===========================================================================
 template <typename T, typename Tag>
 T * List<T,Tag>::popFront() {
-    if (empty())
-        return nullptr;
-    auto link = m_base.m_nextLink;
-    link->reset();
+    auto link = front();
+    if (link)
+        link->reset();
     return link;
 }
 
