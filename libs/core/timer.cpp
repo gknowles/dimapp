@@ -18,8 +18,11 @@ using namespace Dim;
 
 class Dim::Timer {
 public:
-    static void
-    update(ITimerNotify * notify, Duration wait, bool onlyIfSooner);
+    static void update(
+        ITimerNotify * notify, 
+        Duration wait, 
+        bool onlyIfSooner
+    );
     static void closeWait(ITimerNotify * notify);
 
     Timer(ITimerNotify * notify);
@@ -67,8 +70,11 @@ static mutex s_mut;
 static condition_variable s_modeCv; // when run mode changes to stopped
 static RunMode s_mode{kRunStopped};
 static condition_variable s_queueCv; // when wait for next timer is reduced
-static priority_queue<TimerQueueNode, vector<TimerQueueNode>, greater<TimerQueueNode>>
-    s_timers;
+static priority_queue<
+    TimerQueueNode, 
+    vector<TimerQueueNode>, 
+    greater<TimerQueueNode>
+> s_timers;
 static bool s_processing; // dispatch task has been queued and isn't done
 
 static thread::id s_processingThread; // thread running any current callback

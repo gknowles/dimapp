@@ -173,11 +173,13 @@ IAppSocket::~IAppSocket() {
 Duration IAppSocket::checkTimeout_LK(TimePoint now) {
     assert(!m_notify);
     auto wait = m_pos->expiration - now;
-    if (wait > 0s)
-        return wait;
-    s_perfNoData += 1;
-    disconnect();
-    return kTimerInfinite;
+    if (wait <= 0s) {
+        s_perfNoData += 1;
+        disconnect();
+        s_unmatched.erase(m_pos);
+        m_pos = {};
+    }
+    return wait;
 }
 
 //===========================================================================
