@@ -31,6 +31,7 @@
 # libs/core/handle.h
 # libs/core/hash.cpp
 # libs/core/list.h
+# libs/core/listmbr.h
 # libs/core/log.cpp
 # libs/core/log.h
 # libs/core/pch.cpp
@@ -50,6 +51,7 @@
 # libs/core/timeint.h
 # libs/core/timer.cpp
 # libs/core/timer.h
+# libs/core/timerlist.cpp
 # libs/core/tokentable.cpp
 # libs/core/tokentable.h
 # libs/core/types.h
