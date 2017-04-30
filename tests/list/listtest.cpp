@@ -23,10 +23,9 @@ using namespace Dim;
 
 namespace {
 
-class TestNode {
+class TestNode : public ListBaseLink<TestNode> {
 public:
     unsigned m_value;
-    ListMemberLink<TestNode> m_link;
 };
 
 } // namespace
@@ -63,7 +62,7 @@ class Application : public IAppNotify {
 void Application::onAppRun() {
     int line = 0;
 
-    List<TestNode, &TestNode::m_link> list;
+    List<TestNode> list;
     EXPECT(list.empty());
     {
         TestNode a;
@@ -72,7 +71,10 @@ void Application::onAppRun() {
     }
     EXPECT(list.empty());
     TestNode b;
+    TestNode c;
     list.pushBack(&b);
+    list.pushBack(&c);
+    EXPECT(list.size() == 2);
     list.unlinkAll();
     EXPECT(list.empty());
 

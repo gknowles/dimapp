@@ -27,10 +27,11 @@ namespace {
 
 class SocketManager;
 
-class MgrSocket : public IAppSocket, public IAppSocketNotify {
-public:
-    ListMemberLink<MgrSocket> m_link;
-
+class MgrSocket 
+    : public ListBaseLink<MgrSocket>
+    , public IAppSocket
+    , public IAppSocketNotify 
+{
 public:
     MgrSocket(SocketManager & mgr, unique_ptr<IAppSocketNotify> notify);
     ~MgrSocket();
@@ -75,6 +76,7 @@ private:
     AppSocket::Family m_family;
     AppSocket::MgrFlags m_mgrFlags;
     AppSocket::ConfFlags m_confFlags;
+    List<MgrSocket> m_sockets;
 };
 
 } // namespace
