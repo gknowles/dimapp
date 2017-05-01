@@ -11,6 +11,16 @@ using namespace Dim;
 
 /****************************************************************************
 *
+*   Tuning parameters
+*
+***/
+
+const auto kDefaultPingInterval = 30s;
+const auto kDefaultInactiveTimeout = 1min;
+
+
+/****************************************************************************
+*
 *   Declarations
 *
 ***/
@@ -28,13 +38,16 @@ namespace {
 class SocketManager;
 
 class MgrSocket 
-    : public ListBaseLink<MgrSocket>
+    : public ITimerListNotify<>
     , public IAppSocket
     , public IAppSocketNotify 
 {
 public:
     MgrSocket(SocketManager & mgr, unique_ptr<IAppSocketNotify> notify);
     ~MgrSocket();
+
+    // Inherited via ITimerListNotify
+    void onTimer(TimePoint now) override;
 
     // Inherited via IAppSocket
     void disconnect() override;
@@ -64,7 +77,9 @@ public:
     );
     ~SocketManager();
 
-    // IFactory<MgrSocket>
+    void setInactiveTimeout(Duration inactiveTimeout, Duration pingInterval);
+
+    // Inherited via IFactory<MgrSocket>
     unique_ptr<IAppSocketNotify> onFactoryCreate() override;
 
     // Inherited via IConfigNotify
@@ -74,9 +89,14 @@ private:
     string m_name;
     IFactory<IAppSocketNotify> * m_cliSockFact;
     AppSocket::Family m_family;
+    vector<Endpoint> m_endpoints;
     AppSocket::MgrFlags m_mgrFlags;
     AppSocket::ConfFlags m_confFlags;
-    List<MgrSocket> m_sockets;
+
+    Duration m_pingInterval = kDefaultPingInterval;
+    Duration m_inactiveTimeout = kDefaultInactiveTimeout;
+
+    TimerList<> m_sockets;
 };
 
 } // namespace
@@ -163,11 +183,26 @@ SocketManager::SocketManager(
     , m_cliSockFact{fact}
     , m_family{fam}
     , m_mgrFlags{flags}
+    , m_sockets{m_inactiveTimeout}
 {
+    configMonitor("app.xml", this);
+
+    socketListen(this, {}, fam);
 }
 
 //===========================================================================
 SocketManager::~SocketManager() {
+    assert(m_sockets.values().empty());
+}
+
+//===========================================================================
+void SocketManager::setInactiveTimeout(
+    Duration inactiveTimeout, 
+    Duration pingInterval
+) {
+    m_inactiveTimeout = inactiveTimeout;
+    m_pingInterval = pingInterval;
+    m_sockets.setTimeout(inactiveTimeout);
 }
 
 //===========================================================================
@@ -180,7 +215,9 @@ void SocketManager::onConfigChange(const XDocument & doc) {
     auto flags = AppSocket::ConfFlags{};
     if (configUnsigned(doc, "DisableInactiveTimeout"))
         flags |= AppSocket::fDisableInactiveTimeout;
+
     m_confFlags = flags;
+
 }
 
 
@@ -249,14 +286,14 @@ SockMgrHandle Dim::sockMgrConnect(
 }
 
 //===========================================================================
-//void sockMgrSetInactiveTimeout(
-//    SockMgrHandle h,
-//    Duration pingInterval,
-//    Duration pingTimeout
-//) {
-//    auto mgr = s_mgrs.find(h);
-//    mgr->setInactiveTimeout(pingInterval, pingTimeout);
-//}
+void Dim::sockMgrSetInactiveTimeout(
+    SockMgrHandle h,
+    Duration pingInterval,
+    Duration pingTimeout
+) {
+    auto mgr = s_mgrs.find(h);
+    mgr->setInactiveTimeout(pingInterval, pingTimeout);
+}
 
 //===========================================================================
 void Dim::sockMgrMonitorEndpoints(SockMgrHandle h, string_view host) {
