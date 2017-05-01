@@ -51,7 +51,7 @@
 # libs/core/timeint.h
 # libs/core/timer.cpp
 # libs/core/timer.h
-# libs/core/timerlist.cpp
+# libs/core/timerlist.h
 # libs/core/tokentable.cpp
 # libs/core/tokentable.h
 # libs/core/types.h
