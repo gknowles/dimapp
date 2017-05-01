@@ -94,6 +94,8 @@ bool ConfigFile::closeWait_UNLK(IConfigNotify * notify) {
     for (auto it = m_notifiers.begin(); it != m_notifiers.end(); ++it) {
         if (notify == it->notify) {
             m_notifiers.erase(it);
+            if (m_notifiers.empty())
+                s_files.erase(string(m_relpath));
             return true;
         }
     }
@@ -121,6 +123,7 @@ void ConfigFile::onFileChange(string_view fullpath) {
         m_content.resize(bytes);
         fileReadWait(m_content.data(), m_content.size(), f, 0);
     }
+    fileClose(f);
 
     m_relpath = fullpath;
     m_relpath.remove_prefix(s_rootDir.size() + 1);
@@ -130,7 +133,6 @@ void ConfigFile::onFileChange(string_view fullpath) {
 
     // call notifiers
     configChange(m_fullpath, nullptr);
-    fileClose(f);
 }
 
 //===========================================================================
