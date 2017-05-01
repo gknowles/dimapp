@@ -39,6 +39,7 @@ struct Address {
     int32_t data[4]{};
 
     bool operator==(const Address & right) const;
+    bool operator<(const Address & right) const;
     explicit operator bool() const;
 };
 struct Endpoint {
@@ -46,6 +47,7 @@ struct Endpoint {
     unsigned port{0};
 
     bool operator==(const Endpoint & right) const;
+    bool operator<(const Endpoint & right) const;
     explicit operator bool() const;
 };
 struct Network {
