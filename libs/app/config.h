@@ -6,11 +6,27 @@
 
 #include "cppconf/cppconf.h"
 
+#include "net/address.h"
 #include "xml/xml.h"
 
 #include <string_view>
 
 namespace Dim {
+
+
+/****************************************************************************
+*
+*   Declarations
+*
+***/
+
+struct ConfigContext {
+    Endpoint endpoint;
+    std::string appName;
+    unsigned appIndex{0};
+    std::string config;
+    std::string module; // socket manager name
+};
 
 
 /****************************************************************************
@@ -47,11 +63,13 @@ void configChange(
 unsigned configUnsigned(
     const XDocument & doc, 
     std::string_view name, 
+    ConfigContext * context = nullptr,
     unsigned defVal = 0
 );
 const char * configString(
     const XDocument & doc, 
     std::string_view name, 
+    ConfigContext * context = nullptr,
     const char defVal[] = ""
 );
 

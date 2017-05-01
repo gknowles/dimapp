@@ -261,6 +261,7 @@ void Dim::configChange(
 unsigned Dim::configUnsigned(
     const XDocument & doc, 
     std::string_view name, 
+    ConfigContext * context,
     unsigned defVal
 ) {
     auto str = configString(doc, name, nullptr);
@@ -271,6 +272,7 @@ unsigned Dim::configUnsigned(
 const char * Dim::configString(
     const XDocument & doc, 
     std::string_view name, 
+    ConfigContext * context,
     const char defVal[]
 ) {
     auto val = attrValue(
