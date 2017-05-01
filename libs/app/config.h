@@ -27,6 +27,7 @@ public:
 };
 
 void configMonitor(std::string_view file, IConfigNotify * notify);
+void configCloseWait(std::string_view file, IConfigNotify * notify);
 
 // If notify is null, all notifiers monitoring the file are called. Otherwise,
 // the specified monitor is called if it is monitoring the file. An error is

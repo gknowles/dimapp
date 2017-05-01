@@ -195,7 +195,7 @@ void DirInfo::addMonitor_UNLK(IFileChangeNotify * notify, string_view path) {
 
     // call the notify unless we're in a notify
     unique_lock<mutex> lk{s_mut, adopt_lock};
-    while (s_inAddMonitor && s_inThread != this_thread::get_id())
+    while (s_inNotify && s_inThread != this_thread::get_id())
         s_inCv.wait(lk);
 
     if (s_inAddMonitor) {
@@ -241,6 +241,8 @@ void DirInfo::removeMonitorWait_UNLK(
             if (fi.notifiers.empty()) {
                 lk.unlock();
                 lk.release();
+                // Queue the timer event, which will notice the the empty 
+                // FileInfo and delete it.
                 timerUpdate(this, 5s, true);
             }
             return;
@@ -268,10 +270,9 @@ void DirInfo::onTask () {
         s_stopping.erase(m_stopping);
         return;
     }
-    lk.unlock();
-
     if (m_handle == INVALID_HANDLE_VALUE)
         return;
+    lk.unlock();
 
     queue();
     timerUpdate(this, 5s);
@@ -283,6 +284,7 @@ void DirInfo::onTask () {
 Duration DirInfo::onTimer (TimePoint now) {
     string fullpath;
     string relpath;
+    unsigned notified = 0;
 
     unique_lock<mutex> lk{s_mut};
     for (auto && kv : m_files) {
@@ -291,6 +293,9 @@ Duration DirInfo::onTimer (TimePoint now) {
         if (mtime == kv.second.mtime) 
             continue;
         kv.second.mtime = mtime;
+
+        while (s_inNotify)
+            s_inCv.wait(lk);
 
         // Iterate through the list of notifiers by adding a marker that can't 
         // be externally removed to front of the list and advancing it until it 
@@ -305,10 +310,15 @@ Duration DirInfo::onTimer (TimePoint now) {
                 break;
             auto notify = *it;
             ntfs.splice(marker, ntfs, it);
+            s_inThread = this_thread::get_id();
+            s_inNotify = notify;
             lk.unlock();
+            notified += 1;
             notify->onFileChange(fullpath);
             lk.lock();
         }
+        s_inThread = {};
+        s_inNotify = nullptr;
         ntfs.pop_back();
     }
 
@@ -323,6 +333,10 @@ Duration DirInfo::onTimer (TimePoint now) {
             m_files.erase(it);
     }
 
+    if (notified) {
+        lk.unlock();
+        s_inCv.notify_all();
+    }
     return kTimerInfinite;
 }
 

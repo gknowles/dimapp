@@ -33,6 +33,7 @@ class ConfigFile : public IFileChangeNotify {
 public:
     void monitor_UNLK(string_view relpath, IConfigNotify * notify);
     bool notify_UNLK(IConfigNotify * notify);
+    bool closeWait_UNLK(IConfigNotify * notify);
 
     // IFileChangeNotify
     void onFileChange(string_view fullpath) override;
@@ -59,6 +60,9 @@ static FileMonitorHandle s_hDir;
 
 static mutex s_mut;
 static unordered_map<string, ConfigFile> s_files;
+static thread::id s_inThread; // thread running any current callback
+static condition_variable s_inCv; // when running callback completes
+static IConfigNotify * s_inNotify; // notify currently in progress
 
 
 /****************************************************************************
@@ -79,6 +83,23 @@ void ConfigFile::monitor_UNLK(string_view relpath, IConfigNotify * notify) {
     } else {
         notify_UNLK(notify);
     }
+}
+
+//===========================================================================
+bool ConfigFile::closeWait_UNLK(IConfigNotify * notify) {
+    unique_lock<mutex> lk{s_mut, adopt_lock};
+    while (s_inNotify && s_inThread != this_thread::get_id()) 
+        s_inCv.wait(lk);
+
+    for (auto it = m_notifiers.begin(); it != m_notifiers.end(); ++it) {
+        if (notify == it->notify) {
+            m_notifiers.erase(it);
+            return true;
+        }
+    }
+
+    // notify not found
+    return false;
 }
 
 //===========================================================================
@@ -114,15 +135,29 @@ void ConfigFile::onFileChange(string_view fullpath) {
 
 //===========================================================================
 bool ConfigFile::notify_UNLK(IConfigNotify * notify) {
+    unsigned found = 0;
     unique_lock<mutex> lk{s_mut, adopt_lock};
+    while (s_inNotify && s_inThread != this_thread::get_id()) 
+        s_inCv.wait(lk);
+
     for (auto it = m_notifiers.begin(); it != m_notifiers.end(); ++it) {
         if (!notify || notify == it->notify) {
+            s_inThread = this_thread::get_id();
+            s_inNotify = it->notify;
             lk.unlock();
+            found += 1;
             it->notify->onConfigChange(m_xml);
-            if (notify)
-                return true;
             lk.lock();
+            if (notify)
+                break;
         }
+    }
+    s_inThread = {};
+    s_inNotify = nullptr;
+    if (found) {
+        lk.unlock();
+        s_inCv.notify_all();
+        return true;
     }
     return !notify;
 }
@@ -180,6 +215,20 @@ void Dim::configMonitor(string_view file, IConfigNotify * notify) {
     s_mut.lock();
     auto & cf = s_files[path];
     cf.monitor_UNLK(path, notify);
+}
+
+//===========================================================================
+void Dim::configCloseWait(string_view file, IConfigNotify * notify) {
+    string path;
+    if (!fileMonitorPath(path, s_hDir, file)) {
+        logMsgError() << "Close file outside of config directory, " << file;
+        return;
+    }
+
+    s_mut.lock();
+    auto & cf = s_files[path];
+    if (!cf.closeWait_UNLK(notify))
+        logMsgError() << "Close notify not registered, " << file;
 }
 
 //===========================================================================
