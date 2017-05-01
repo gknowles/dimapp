@@ -38,7 +38,7 @@ namespace {
 class SocketManager;
 
 class MgrSocket 
-    : public ITimerListNotify<>
+    : public ITimerListNotify<MgrSocket>
     , public IAppSocket
     , public IAppSocketNotify 
 {
@@ -96,7 +96,7 @@ private:
     Duration m_pingInterval = kDefaultPingInterval;
     Duration m_inactiveTimeout = kDefaultInactiveTimeout;
 
-    TimerList<> m_sockets;
+    TimerList<MgrSocket> m_sockets;
 };
 
 } // namespace

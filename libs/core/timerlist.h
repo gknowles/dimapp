@@ -27,27 +27,25 @@ const Duration kTimerDefaultMinWait = (std::chrono::seconds) 2;
 *
 ***/
 
-template <typename Tag> class TimerList;
+template <typename T, typename Tag = LinkDefault> class TimerList;
 
-template <typename Tag = LinkDefault>
-class ITimerListNotify 
-    : public ListBaseLink<ITimerListNotify<Tag>> {
+template <typename T, typename Tag = LinkDefault>
+class ITimerListNotify : public ListBaseLink<T, Tag> {
 public:
     virtual ~ITimerListNotify() {}
-    virtual void onTimer(TimePoint now, Tag) = 0;
+    virtual void onTimer(TimePoint now, Tag tag = {}) = 0;
 private:
-    friend class TimerList<Tag>;
+    friend class TimerList<T, Tag>;
     TimePoint m_lastTouched;
 };
 
-template <>
-class ITimerListNotify<LinkDefault> 
-    : public ListBaseLink<ITimerListNotify<LinkDefault>> {
+template <typename T>
+class ITimerListNotify<T, LinkDefault> : public ListBaseLink<T, LinkDefault> {
 public:
     virtual ~ITimerListNotify() {}
     virtual void onTimer(TimePoint now) = 0;
 private:
-    friend class TimerList<LinkDefault>;
+    friend class TimerList<T, LinkDefault>;
     TimePoint m_lastTouched;
 };
 
@@ -58,11 +56,8 @@ private:
 *
 ***/
 
-template <typename Tag = LinkDefault>
+template <typename T, typename Tag>
 class TimerList : ITimerNotify {
-public:
-    using value_type = ITimerListNotify<Tag>;
-
 public:
     TimerList(Duration timeout, Duration minWait = kTimerDefaultMinWait);
 
@@ -71,29 +66,30 @@ public:
         Duration minWait = kTimerDefaultMinWait
     );
 
-    void touch(value_type * notify);
-    void unlink(value_type * notify);
+    void touch(T * notify);
+    void unlink(T * notify);
 
-    List<value_type> & values() { return m_nodes; }
-    const List<value_type> & values() const { return m_nodes; }
+    List<T, Tag> & values() { return m_nodes; }
+    const List<T, Tag> & values() const { return m_nodes; }
 
 private:
     Duration onTimer(TimePoint now) override;
 
-    List<value_type> m_nodes;
+    List<T, Tag> m_nodes;
     Duration m_timeout;
     Duration m_minWait;
 };
 
 //===========================================================================
-template <typename Tag>
-inline TimerList<Tag>::TimerList(Duration timeout, Duration minWait) {
+template <typename T, typename Tag>
+inline TimerList<T,Tag>::TimerList(Duration timeout, Duration minWait) {
+    static_assert(std::is_base_of_v<ITimerListNotify<T,Tag>, T>);
     setTimeout(timeout, minWait);
 }
 
 //===========================================================================
-template <typename Tag>
-inline void TimerList<Tag>::setTimeout(Duration timeout, Duration minWait) {
+template <typename T, typename Tag>
+inline void TimerList<T,Tag>::setTimeout(Duration timeout, Duration minWait) {
     m_timeout = timeout;
     m_minWait = min(minWait, timeout);
     if (auto node = m_nodes.front())
@@ -101,8 +97,8 @@ inline void TimerList<Tag>::setTimeout(Duration timeout, Duration minWait) {
 }
 
 //===========================================================================
-template <typename Tag>
-inline void TimerList<Tag>::touch(ITimerListNotify<Tag> * notify) {
+template <typename T, typename Tag>
+inline void TimerList<T,Tag>::touch(T * notify) {
     notify->m_lastTouched = Clock::now();
     if (m_nodes.empty())
         timerUpdate(this, m_timeout);
@@ -110,38 +106,23 @@ inline void TimerList<Tag>::touch(ITimerListNotify<Tag> * notify) {
 }
 
 //===========================================================================
-template <typename Tag>
-inline void TimerList<Tag>::unlink(ITimerListNotify<Tag> * notify) {
+template <typename T, typename Tag>
+inline void TimerList<T,Tag>::unlink(T * notify) {
     m_nodes.unlink(notify);
 }
 
 //===========================================================================
-template <typename Tag>
-inline Duration TimerList<Tag>::onTimer(TimePoint now) {
+template <typename T, typename Tag>
+inline Duration TimerList<T,Tag>::onTimer(TimePoint now) {
     auto expire = now - m_timeout;
     while (auto node = m_nodes.front()) {
         auto wait = node->m_lastTouched - expire;
         if (wait > 0s)
             return wait;
         touch(node);
-        node->onTimer(now, {});
+        static_cast<ITimerListNotify<T,Tag>*>(node)->onTimer(now);
     }
     return kTimerInfinite;
 }
-
-//===========================================================================
-template <>
-inline Duration TimerList<LinkDefault>::onTimer(TimePoint now) {
-    auto expire = now - m_timeout;
-    while (auto node = m_nodes.front()) {
-        auto wait = node->m_lastTouched - expire;
-        if (wait > (Duration) 0)
-            return wait;
-        touch(node);
-        node->onTimer(now);
-    }
-    return kTimerInfinite;
-}
-
 
 } // namespace
