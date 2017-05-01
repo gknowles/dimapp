@@ -78,6 +78,7 @@ public:
     ~SocketManager();
 
     void setInactiveTimeout(Duration inactiveTimeout, Duration pingInterval);
+    void touch(MgrSocket * sock);
 
     // Inherited via IFactory<MgrSocket>
     unique_ptr<IAppSocketNotify> onFactoryCreate() override;
@@ -131,6 +132,11 @@ MgrSocket::~MgrSocket() {
 }
 
 //===========================================================================
+void MgrSocket::onTimer(TimePoint now) {
+    disconnect();
+}
+
+//===========================================================================
 void MgrSocket::disconnect() {
     socketDisconnect(this);
 }
@@ -162,6 +168,7 @@ void MgrSocket::onSocketDestroy () {
 
 //===========================================================================
 void MgrSocket::onSocketRead (AppSocketData & data) {
+    m_mgr.touch(this);
     notifyRead(data);
 }
 
@@ -186,13 +193,16 @@ SocketManager::SocketManager(
     , m_sockets{m_inactiveTimeout}
 {
     configMonitor("app.xml", this);
-
-    socketListen(this, {}, fam);
 }
 
 //===========================================================================
 SocketManager::~SocketManager() {
     assert(m_sockets.values().empty());
+}
+
+//===========================================================================
+void SocketManager::touch(MgrSocket * sock) {
+    m_sockets.touch(sock);
 }
 
 //===========================================================================
@@ -207,7 +217,12 @@ void SocketManager::setInactiveTimeout(
 
 //===========================================================================
 std::unique_ptr<IAppSocketNotify> SocketManager::onFactoryCreate() {
-    return make_unique<MgrSocket>(*this, m_cliSockFact->onFactoryCreate());
+    auto ptr = make_unique<MgrSocket>(
+        *this, 
+        m_cliSockFact->onFactoryCreate()
+    );
+    m_sockets.touch(ptr.get());
+    return ptr;
 }
 
 //===========================================================================
@@ -218,6 +233,34 @@ void SocketManager::onConfigChange(const XDocument & doc) {
 
     m_confFlags = flags;
 
+    Endpoint ep;
+    ep.port = configUnsigned(doc, "Port", nullptr, 41000);
+    vector<Endpoint> endpts;
+    endpts.push_back(ep);
+    vector<Endpoint> diff;
+    set_difference(
+        endpts.begin(), 
+        endpts.end(), 
+        m_endpoints.begin(), 
+        m_endpoints.end(), 
+        back_inserter(diff)
+    );
+
+    for (auto && ep : diff) {
+        socketListen(this, ep, m_family);
+    }
+
+    diff.clear();
+    set_difference(
+        m_endpoints.begin(), 
+        m_endpoints.end(), 
+        endpts.begin(), 
+        endpts.end(), 
+        back_inserter(diff)
+    );
+    for (auto && ep : diff) {
+        socketCloseWait(this, ep, m_family);
+    }
 }
 
 

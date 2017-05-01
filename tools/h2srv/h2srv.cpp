@@ -26,6 +26,7 @@ const char kVersion[] = "1.0";
 ***/
 
 static Endpoint s_endpoint;
+static SockMgrHandle s_mgr;
 
 
 /****************************************************************************
@@ -111,7 +112,8 @@ static ShutdownNotify s_cleanup;
 
 //===========================================================================
 void ShutdownNotify::onShutdownClient(bool firstTry) {
-    socketCloseWait<TnetConn>(s_endpoint, AppSocket::kRaw);
+    sockMgrCloseWait(s_mgr);
+    //socketCloseWait<TnetConn>(s_endpoint, AppSocket::kRaw);
 }
 
 
@@ -153,7 +155,12 @@ void Application::onAppRun() {
     appTlsInitialize();
 
     parse(&s_endpoint, "0.0.0.0", 41000);
-    socketListen<TnetConn>(s_endpoint, AppSocket::kRaw);
+    s_mgr = sockMgrListen(
+        "raw", 
+        getFactory<IAppSocketNotify, TnetConn>(), 
+        AppSocket::kRaw
+    );
+    //socketListen<TnetConn>(s_endpoint, AppSocket::kRaw);
     httpRouteAdd(&s_web, "/", fHttpMethodGet, true);
 
     logMsgInfo() << "Server started";
