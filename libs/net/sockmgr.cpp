@@ -79,6 +79,7 @@ public:
 
     void setInactiveTimeout(Duration inactiveTimeout, Duration pingInterval);
     void touch(MgrSocket * sock);
+    bool shutdown();
 
     // Inherited via IFactory<MgrSocket>
     unique_ptr<IAppSocketNotify> onFactoryCreate() override;
@@ -97,6 +98,7 @@ private:
     Duration m_pingInterval = kDefaultPingInterval;
     Duration m_inactiveTimeout = kDefaultInactiveTimeout;
 
+    RunMode m_mode{kRunRunning};
     TimerList<MgrSocket> m_sockets;
 };
 
@@ -216,6 +218,20 @@ void SocketManager::setInactiveTimeout(
 }
 
 //===========================================================================
+bool SocketManager::shutdown() {
+    if (m_mode == kRunRunning) {
+        m_mode = kRunStopping;
+        for (auto && sock : m_sockets.values()) 
+            sock.disconnect();
+        for (auto && ep : m_endpoints) 
+            socketCloseWait(this, ep, m_family);
+    }
+    if (m_sockets.values().empty())
+        m_mode = kRunStopped;
+    return m_mode == kRunStopped;
+}
+
+//===========================================================================
 std::unique_ptr<IAppSocketNotify> SocketManager::onFactoryCreate() {
     auto ptr = make_unique<MgrSocket>(
         *this, 
@@ -261,6 +277,8 @@ void SocketManager::onConfigChange(const XDocument & doc) {
     for (auto && ep : diff) {
         socketCloseWait(this, ep, m_family);
     }
+
+    m_endpoints = move(endpts);
 }
 
 
@@ -279,6 +297,12 @@ static ShutdownNotify s_cleanup;
 
 //===========================================================================
 void ShutdownNotify::onShutdownClient(bool firstTry) {
+    for (auto mgr : s_mgrs) {
+        if (mgr.second->shutdown()) 
+            s_mgrs.erase(mgr.first);
+    }
+    if (!s_mgrs.empty())
+        return shutdownIncomplete();
 }
 
 
@@ -346,10 +370,13 @@ void Dim::sockMgrMonitorEndpoints(SockMgrHandle h, string_view host) {
 
 //===========================================================================
 bool Dim::sockMgrShutdown(SockMgrHandle h) {
-    return true;
+    auto mgr = s_mgrs.find(h);
+    return mgr->shutdown();
 }
 
 //===========================================================================
-void Dim::sockMgrCloseWait(SockMgrHandle h) {
+void Dim::sockMgrDestroy(SockMgrHandle h) {
+    auto mgr = s_mgrs.find(h);
+    assert(!mgr || mgr->shutdown());
     s_mgrs.erase(h);
 }

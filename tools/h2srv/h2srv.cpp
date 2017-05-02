@@ -112,8 +112,6 @@ static ShutdownNotify s_cleanup;
 
 //===========================================================================
 void ShutdownNotify::onShutdownClient(bool firstTry) {
-    sockMgrCloseWait(s_mgr);
-    //socketCloseWait<TnetConn>(s_endpoint, AppSocket::kRaw);
 }
 
 

@@ -49,10 +49,10 @@ void sockMgrMonitorEndpoints(SockMgrHandle mgr, std::string_view host);
 
 // Starts closing, no new connections will be allowed. Returns true if all 
 // sockets are closed. May be called multiple times. After shutdown has 
-// completed you must still call sockMgrCloseWait().
+// completed you must still call sockMgrDestroy().
 bool sockMgrShutdown(SockMgrHandle mgr);
 
-// Closes all sockets and destroys the manager.
-void sockMgrCloseWait(SockMgrHandle mgr);
+// Destroys the manager, all sockets must already be closed.
+void sockMgrDestroy(SockMgrHandle mgr);
 
 } // namespace

@@ -139,6 +139,7 @@ int Dim::appRun(IAppNotify & app, int argc, char * argv[], AppFlags flags) {
     }
     iSocketInitialize();
     iAppSocketInitialize();
+    iSockMgrInitialize();
     iHttpRouteInitialize();
 
     s_app = &app;
