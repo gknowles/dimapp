@@ -262,9 +262,9 @@ void SocketManager::onConfigChange(const XDocument & doc) {
         back_inserter(diff)
     );
 
-    for (auto && ep : diff) {
-        socketListen(this, ep, m_family);
-    }
+    bool console = (m_mgrFlags & AppSocket::fMgrConsole);
+    for (auto && ep : diff) 
+        socketListen(this, ep, m_family, console);
 
     diff.clear();
     set_difference(

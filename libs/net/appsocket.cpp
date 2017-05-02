@@ -27,13 +27,18 @@ const Duration kUnmatchedMinWait = 2s;
 
 namespace {
 
+enum FactoryFlags : unsigned {
+    fListener = 0x01,
+    fConsole = 0x02,
+};
+
 struct MatchKey {
     IAppSocketMatchNotify * notify{nullptr};
 };
 
 struct FactoryInfo {
     IFactory<IAppSocketNotify> * factory;
-    bool listener{false};
+    FactoryFlags flags{};
 };
 
 struct FamilyInfo {
@@ -47,6 +52,7 @@ struct EndpointInfo {
     Endpoint endpoint;
     vector<FamilyInfo> families;
     unsigned listeners{0};
+    unsigned consoles{0};
 };
 
 class RawSocket 
@@ -248,11 +254,11 @@ static bool findFactory(
 ) {
     shared_lock<shared_mutex> lk{s_listenMut};
     
-    // find best matching listener endpoint for each family
+    // find best matching factory endpoint for each family
     enum {
         // match types, in reverse priority order
         kUnknown,   // no match
-        kWild,      // wildcard listener (0.0.0.0:0)
+        kWild,      // wildcard factory (0.0.0.0:0)
         kPort,      // matching port with wildcard addr
         kAddr,      // matching addr with wildcard port
         kExact,     // both addr and port explicitly match
@@ -507,12 +513,20 @@ void ShutdownNotify::onShutdownClient(bool firstTry) {
     shared_lock<shared_mutex> lk{s_listenMut};
     for (auto && info : s_endpoints) {
         (void) sizeof(!info.listeners); // reference when NDEBUG
-        assert(!info.listeners);
+        assert(info.listeners == info.consoles);
     }
 }
 
 //===========================================================================
 void ShutdownNotify::onShutdownConsole(bool firstTry) {
+    {
+        shared_lock<shared_mutex> lk{s_listenMut};
+        for (auto && info : s_endpoints) {
+            (void) sizeof(!info.listeners); // reference when NDEBUG
+            assert(!info.listeners && !info.consoles);
+        }
+    }
+
     lock_guard<mutex> lk{s_unmatchedMut};
     if (firstTry) {
         for (auto && info : s_unmatched)
@@ -594,18 +608,20 @@ static EndpointInfo * findInfo_LK(const Endpoint & end, bool findAlways) {
 //===========================================================================
 static bool addFactory(
     IFactory<IAppSocketNotify> * factory,
-    bool listener,
+    FactoryFlags flags,
     const Endpoint & end,
     AppSocket::Family fam
 ) {
     unique_lock<shared_mutex> lk{s_listenMut};
     auto info = findInfo_LK(end, true);
-    bool addNew = listener && ++info->listeners == 1;
+    bool addNew = (flags & fListener) && ++info->listeners == 1;
+    if (flags & fConsole)
+        info->consoles += 1;
     auto & fams = info->families;
     auto afi = find(fams.begin(), fams.end(), fam);
     if (afi == fams.end())
         afi = fams.emplace(afi, FamilyInfo{fam});
-    afi->factories.push_back(FactoryInfo{factory, listener});
+    afi->factories.push_back(FactoryInfo{factory, flags});
     return addNew;
 }
 
@@ -613,9 +629,13 @@ static bool addFactory(
 void Dim::socketListen(
     IFactory<IAppSocketNotify> * factory,
     const Endpoint & end,
-    AppSocket::Family fam
+    AppSocket::Family fam,
+    bool console
 ) {
-    if (addFactory(factory, true, end, fam))
+    FactoryFlags flags = fListener;
+    if (console)
+        flags |= fConsole;
+    if (addFactory(factory, flags, end, fam))
         socketListen<RawSocket>(end);
 }
 
@@ -636,28 +656,33 @@ void Dim::socketCloseWait(
         auto afi = find(fams.begin(), fams.end(), fam);
         if (afi == fams.end()) 
             break;
+
         auto & facts = afi->factories;
         auto i = find_if(
             facts.begin(), 
             facts.end(), 
-            [=](auto && val) { return val.factory == factory && val.listener; }
+            [=](auto && val) { 
+                return val.factory == factory && (val.flags & fListener); 
+            }
         );
         if (i == facts.end())
             break;
 
+        bool noListeners = --info->listeners == 0;
+        if (i->flags & fConsole)
+            info->consoles -= 1;
         facts.erase(i);
-        if (!facts.empty())
-            return;
-        fams.erase(afi);
-        if (--info->listeners)
-            return;
-        if (fams.empty()) {
-            s_endpoints.erase(
-                s_endpoints.begin() + (info - s_endpoints.data())
-            );
+        if (facts.empty()) {
+            fams.erase(afi);
+            if (fams.empty()) {
+                s_endpoints.erase(
+                    s_endpoints.begin() + (info - s_endpoints.data())
+                );
+            }
         }
         lk.unlock();
-        socketCloseWait<RawSocket>(end);
+        if (noListeners)
+            socketCloseWait<RawSocket>(end);
         return;
     }
 
@@ -670,5 +695,5 @@ void Dim::socketAddFilter(
     const Endpoint & end,
     AppSocket::Family fam
 ) {
-    addFactory(factory, false, end, fam);
+    addFactory(factory, {}, end, fam);
 }

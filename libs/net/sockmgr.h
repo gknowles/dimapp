@@ -16,6 +16,7 @@ namespace Dim {
 
 namespace AppSocket {
 enum MgrFlags : unsigned {
+    fMgrConsole = 0x01, // console connections (for server monitoring)
 };
 } // namespace
 

@@ -114,7 +114,8 @@ void socketAddFamily(AppSocket::Family fam, IAppSocketMatchNotify * notify);
 void socketListen(
     IFactory<IAppSocketNotify> * factory,
     const Endpoint & end,
-    AppSocket::Family fam
+    AppSocket::Family fam,
+    bool console = false // console connections for monitoring
 );
 void socketCloseWait(
     IFactory<IAppSocketNotify> * factory,
@@ -130,10 +131,11 @@ void socketCloseWait(
 template <typename S> inline 
 std::enable_if_t<std::is_base_of_v<IAppSocketNotify, S>, void> socketListen(
     const Endpoint & end,
-    AppSocket::Family fam
+    AppSocket::Family fam,
+    bool console = false
 ) {
     auto factory = getFactory<IAppSocketNotify, S>();
-    socketListen(factory, end, fam);
+    socketListen(factory, end, fam, console);
 }
 
 //===========================================================================
