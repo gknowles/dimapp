@@ -275,14 +275,14 @@ static ShutdownNotify s_cleanup;
 
 //===========================================================================
 void ShutdownNotify::onShutdownClient(bool firstTry) {
-    if (firstTry && !s_paths.empty())
-        socketCloseWait<HttpSocket>(s_endpoint, AppSocket::kHttp2);
-    if (!s_requests.empty())
-        return shutdownIncomplete();
+    //if (firstTry && !s_paths.empty())
+    //    socketCloseWait<HttpSocket>(s_endpoint, AppSocket::kHttp2);
 }
 
 //===========================================================================
 void ShutdownNotify::onShutdownConsole(bool firstTry) {
+    if (!s_requests.empty())
+        return shutdownIncomplete();
 }
 
 
@@ -296,9 +296,6 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
 void Dim::iHttpRouteInitialize() {
     shutdownMonitor(&s_cleanup);
     socketAddFamily(AppSocket::kHttp2, &s_http2Match);
-
-    s_endpoint = {};
-    s_endpoint.port = 41000;
 }
 
 
@@ -316,8 +313,14 @@ void Dim::httpRouteAdd(
     bool recurse
 ) {
     assert(!path.empty());
-    if (s_paths.empty())
-        socketListen<HttpSocket>(s_endpoint, AppSocket::kHttp2);
+    if (s_paths.empty()) {
+        sockMgrListen(
+            "httpRoute", 
+            getFactory<IAppSocketNotify, HttpSocket>(),
+            AppSocket::kHttp2,
+            AppSocket::fMgrConsole
+        );
+    }
     PathInfo pi;
     pi.notify = notify;
     pi.recurse = recurse;
