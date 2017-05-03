@@ -394,7 +394,7 @@ void HttpConn::accept(HttpConnHandle h) {
 static bool skip(const char *& ptr, const char * eptr, const char literal[]) {
     while (ptr != eptr && *literal) {
         if (*ptr++ != *literal++)
-            false;
+            return false;
     }
     return true;
 }
@@ -509,10 +509,11 @@ bool HttpConn::recv(
     case ByteMode::kPreface:
         if (!skip(ptr, eptr, kPrefaceData + size(m_input)))
             return false;
-        if (ptr == eptr) {
+        if (ptr == eptr && srcLen + size(m_input) < size(kPrefaceData) - 1) {
             m_input.insert(m_input.end(), ptr - srcLen, eptr);
             return true;
         }
+        m_input.clear();
 
         // Servers must send a settings frame after the connection preface
         if (!m_outgoing) {
@@ -529,6 +530,7 @@ bool HttpConn::recv(
         if (!avail)
             return true;
         if (size_t used = size(m_input)) {
+            assert(used < kFrameHeaderLen);
             size_t need = kFrameHeaderLen - used;
             if (avail < need) {
                 m_input.insert(m_input.end(), ptr, eptr);
@@ -561,6 +563,7 @@ bool HttpConn::recv(
         m_inputFrameLen = getFrameLen(ptr);
         if (avail < m_inputFrameLen && m_inputFrameLen <= m_maxInputFrame) {
             m_input.assign(ptr, eptr);
+            m_byteMode = ByteMode::kPayload;
             return true;
         }
         if (!onFrame(msgs, out, ptr))
@@ -575,6 +578,8 @@ bool HttpConn::recv(
     case ByteMode::kPayload:
         avail = eptr - ptr;
         size_t used = size(m_input);
+        assert(used >= kFrameHeaderLen);
+        assert(used < kFrameHeaderLen + m_inputFrameLen);
         size_t need = kFrameHeaderLen + m_inputFrameLen - used;
         if (avail < need) {
             m_input.insert(m_input.end(), ptr, eptr);
@@ -1139,12 +1144,18 @@ void HttpConn::writeMsg(
             }
             while (size(*out) > maxEndPos) {
                 setFrameHeader(
-                    frameHdr, stream, ftype, m_maxOutputFrame, flags);
+                    frameHdr, 
+                    stream, 
+                    ftype, 
+                    m_maxOutputFrame, 
+                    flags
+                );
                 out->replace(
                     framePos,
                     size(frameHdr),
                     (char *)frameHdr,
-                    size(frameHdr));
+                    size(frameHdr)
+                );
                 ftype = FrameType::kContinuation;
                 flags = {};
                 framePos = maxEndPos;
