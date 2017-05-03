@@ -23,7 +23,7 @@ WinEvent::WinEvent() {
         false,   // manual reset
         false,   // initial signaled state
         nullptr  // name
-        );
+    );
 }
 
 //===========================================================================
@@ -75,12 +75,13 @@ IWinEventWaitNotify::IWinEventWaitNotify() {
     assert(m_overlapped.hEvent);
 
     if (!RegisterWaitForSingleObject(
-            &m_registeredWait,
-            m_overlapped.hEvent,
-            &eventWaitCallback,
-            this,
-            INFINITE, // timeout
-            WT_EXECUTEINWAITTHREAD)) {
+        &m_registeredWait,
+        m_overlapped.hEvent,
+        &eventWaitCallback,
+        this,
+        INFINITE, // timeout
+        WT_EXECUTEINWAITTHREAD
+    )) {
         logMsgCrash() << "RegisterWaitForSingleObject: " << WinError{};
     }
 }

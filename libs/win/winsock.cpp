@@ -101,6 +101,11 @@ void RioDispatchThread::onTask() {
         if (count == RIO_CORRUPT_CQ)
             logMsgCrash() << "RIODequeueCompletion: " << WinError{};
 
+        if (int error = s_rio.RIONotify(s_cq))
+            logMsgCrash() << "RIONotify: " << WinError{};
+
+        lk.unlock();
+
         for (int i = 0; i < count; ++i) {
             auto && rr = results[i];
             auto task = (ISocketRequestTaskBase *)rr.RequestContext;
@@ -109,11 +114,6 @@ void RioDispatchThread::onTask() {
             task->m_xferBytes = rr.BytesTransferred;
             tasks[i] = task;
         }
-
-        if (int error = s_rio.RIONotify(s_cq))
-            logMsgCrash() << "RIONotify: " << WinError{};
-
-        lk.unlock();
 
         if (count)
             taskPushEvent(tasks, count);

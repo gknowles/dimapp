@@ -25,7 +25,6 @@ const char kVersion[] = "1.0";
 *
 ***/
 
-static Endpoint s_endpoint;
 static SockMgrHandle s_mgr;
 
 
@@ -152,13 +151,11 @@ void Application::onAppRun() {
     winTlsInitialize();
     appTlsInitialize();
 
-    parse(&s_endpoint, "0.0.0.0", 41000);
     s_mgr = sockMgrListen(
         "raw", 
         getFactory<IAppSocketNotify, TnetConn>(), 
         AppSocket::kRaw
     );
-    //socketListen<TnetConn>(s_endpoint, AppSocket::kRaw);
     httpRouteAdd(&s_web, "/", fHttpMethodGet, true);
 
     logMsgInfo() << "Server started";
