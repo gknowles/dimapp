@@ -259,20 +259,20 @@ void Dim::configChange(
 
 //===========================================================================
 unsigned Dim::configUnsigned(
+    const ConfigContext & context,
     const XDocument & doc, 
     std::string_view name, 
-    ConfigContext * context,
     unsigned defVal
 ) {
-    auto str = configString(doc, name, nullptr);
+    auto str = configString(context, doc, name, nullptr);
     return str ? strToUint(str, nullptr, 10) : defVal;
 }
 
 //===========================================================================
 const char * Dim::configString(
+    const ConfigContext & context,
     const XDocument & doc, 
     std::string_view name, 
-    ConfigContext * context,
     const char defVal[]
 ) {
     auto val = attrValue(
@@ -281,4 +281,24 @@ const char * Dim::configString(
         defVal
     );
     return val;
+}
+
+//===========================================================================
+unsigned Dim::configUnsigned(
+    const XDocument & doc, 
+    std::string_view name, 
+    unsigned defVal
+) {
+    ConfigContext context;
+    return configUnsigned(context, doc, name, defVal);
+}
+
+//===========================================================================
+const char * Dim::configString(
+    const XDocument & doc, 
+    std::string_view name, 
+    const char defVal[]
+) {
+    ConfigContext context;
+    return configString(context, doc, name, defVal);
 }

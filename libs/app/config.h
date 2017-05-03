@@ -61,15 +61,26 @@ void configChange(
 ***/
 
 unsigned configUnsigned(
+    const ConfigContext & context,
     const XDocument & doc, 
     std::string_view name, 
-    ConfigContext * context = nullptr,
+    unsigned defVal = 0
+);
+const char * configString(
+    const ConfigContext & context,
+    const XDocument & doc, 
+    std::string_view name, 
+    const char defVal[] = ""
+);
+
+unsigned configUnsigned(
+    const XDocument & doc, 
+    std::string_view name, 
     unsigned defVal = 0
 );
 const char * configString(
     const XDocument & doc, 
     std::string_view name, 
-    ConfigContext * context = nullptr,
     const char defVal[] = ""
 );
 

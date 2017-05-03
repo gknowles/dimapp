@@ -250,7 +250,7 @@ void SocketManager::onConfigChange(const XDocument & doc) {
     m_confFlags = flags;
 
     Endpoint ep;
-    ep.port = configUnsigned(doc, "Port", nullptr, 41000);
+    ep.port = configUnsigned(doc, "Port", 41000);
     vector<Endpoint> endpts;
     endpts.push_back(ep);
     vector<Endpoint> diff;
