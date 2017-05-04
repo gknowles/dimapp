@@ -27,7 +27,7 @@ class ListMemberLink {
 public:
     ListMemberLink();
     ~ListMemberLink();
-    void reset();
+    void unlink();
 
     bool linked() const;
 
@@ -66,7 +66,7 @@ ListMemberLink<T>::~ListMemberLink () {
 
 //===========================================================================
 template<typename T>
-void ListMemberLink<T>::reset() {
+void ListMemberLink<T>::unlink() {
     detach();
     construct();
 }
@@ -291,13 +291,13 @@ void List<T,P>::insertAfter(const T * pos, List && other);
 template <typename T, ListMemberLink<T> T::*P>
 void List<T,P>::unlinkAll() {
     while (!empty())
-        m_base.m_prevLink->reset();
+        m_base.m_prevLink->unlink();
 }
 
 //===========================================================================
 template <typename T, ListMemberLink<T> T::*P>
 void List<T,P>::unlink(T * value) {
-    (value->*P).reset();
+    (value->*P).unlink();
 }
 
 //===========================================================================
@@ -319,7 +319,7 @@ template <typename T, ListMemberLink<T> T::*P>
 T * List<T,P>::popBack() {
     auto node = m_base.prev();
     if (node)
-        m_base.m_prevLink->reset();
+        m_base.m_prevLink->unlink();
     return node;
 }
 
@@ -338,7 +338,7 @@ template <typename T, ListMemberLink<T> T::*P>
 T * List<T,P>::popFront() {
     auto node = m_base.next();
     if (node)
-        (node->*P).reset();
+        (node->*P).unlink();
     return node;
 }
 

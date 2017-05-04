@@ -33,7 +33,7 @@ public:
     ~ListBaseLink();
 
 protected:
-    void reset();
+    void unlink();
     bool linked() const;
 
 private:
@@ -62,7 +62,8 @@ ListBaseLink<T, Tag>::~ListBaseLink () {
 
 //===========================================================================
 template<typename T, typename Tag>
-void ListBaseLink<T, Tag>::reset() {
+void ListBaseLink<T, Tag>::unlink() {
+    assert(linked());
     detach();
     construct();
 }
@@ -111,7 +112,7 @@ void ListBaseLink<T, Tag>::linkAfter(ListBaseLink * prev) {
 
 /****************************************************************************
 *
-*   List
+*   ListIterator
 *
 ***/
 
@@ -121,23 +122,52 @@ class ListIterator {
     T * m_current{nullptr};
 public:
     ListIterator() {}
-    ListIterator(List * container, T * node) 
-        : m_container{container}
-        , m_current{node} {}
-    bool operator!=(const ListIterator & right) {
-        return m_current != right.m_current;
-    }
-    ListIterator & operator++() {
-        m_current = m_container->next(m_current);
-        return *this;
-    }
-    T & operator*() {
-        assert(m_current);
-        return *m_current;
-    }
-    T * operator->() { return m_current; }
+    ListIterator(List * container, T * node);
+    bool operator!=(const ListIterator & right);
+    ListIterator & operator++();
+    T & operator*();
+    T * operator->();
 };
 
+//===========================================================================
+template <typename List, typename T>
+ListIterator<List, T>::ListIterator(List * container, T * node) 
+    : m_container{container}
+    , m_current{node} 
+{}
+
+//===========================================================================
+template <typename List, typename T>
+bool ListIterator<List, T>::operator!=(const ListIterator & right) {
+    return m_current != right.m_current;
+}
+
+//===========================================================================
+template <typename List, typename T>
+ListIterator<List, T> & ListIterator<List, T>::operator++() {
+    m_current = m_container->next(m_current);
+    return *this;
+}
+
+//===========================================================================
+template <typename List, typename T>
+T & ListIterator<List, T>::operator*() {
+    assert(m_current);
+    return *m_current;
+}
+
+//===========================================================================
+template <typename List, typename T>
+T * ListIterator<List, T>::operator->() { 
+    return m_current; 
+}
+
+
+/****************************************************************************
+*
+*   List
+*
+***/
 
 template <typename T, typename Tag = LinkDefault>
 class List {
@@ -149,8 +179,8 @@ public:
     List() {}
     List(List && from);
     ~List();
+    List & operator=(const List & from) = delete;
 
-    List & operator=(List && from);
     bool operator==(const List & right) const;
 
     bool empty() const;
@@ -200,13 +230,6 @@ List<T, Tag>::List(List && from) {
 template <typename T, typename Tag>
 List<T, Tag>::~List() {
     unlinkAll();
-}
-
-//===========================================================================
-template <typename T, typename Tag>
-List<T, Tag> & List<T, Tag>::operator=(List && from) {
-    swap(from);
-    from.unlinkAll();
 }
 
 //===========================================================================
@@ -356,7 +379,7 @@ void List<T, Tag>::unlinkAll() {
 //===========================================================================
 template <typename T, typename Tag>
 void List<T, Tag>::unlink(T * value) {
-    static_cast<ListBaseLink<T, Tag> *>(value)->reset();
+    static_cast<ListBaseLink<T, Tag> *>(value)->unlink();
 }
 
 //===========================================================================
@@ -374,7 +397,7 @@ template <typename T, typename Tag>
 T * List<T, Tag>::popBack() {
     auto link = back();
     if (link)
-        link->reset();
+        link->unlink();
     return link;
 }
 
@@ -393,7 +416,7 @@ template <typename T, typename Tag>
 T * List<T, Tag>::popFront() {
     auto link = front();
     if (link)
-        link->reset();
+        link->unlink();
     return link;
 }
 
