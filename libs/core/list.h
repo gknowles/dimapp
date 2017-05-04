@@ -6,6 +6,8 @@
 
 #include "cppconf/cppconf.h"
 
+#include <algorithm>
+
 namespace Dim {
 
 
@@ -113,10 +115,35 @@ void ListBaseLink<T, Tag>::linkAfter(ListBaseLink * prev) {
 *
 ***/
 
+template <typename List, typename T>
+class ListIterator {
+    List * m_container{nullptr};
+    T * m_current{nullptr};
+public:
+    ListIterator() {}
+    ListIterator(List * container, T * node) 
+        : m_container{container}
+        , m_current{node} {}
+    bool operator!=(const ListIterator & right) {
+        return m_current != right.m_current;
+    }
+    ListIterator & operator++() {
+        m_current = m_container->next(m_current);
+        return *this;
+    }
+    T & operator*() {
+        assert(m_current);
+        return *m_current;
+    }
+    T * operator->() { return m_current; }
+};
+
+
 template <typename T, typename Tag = LinkDefault>
 class List {
 public:
-    class iterator;
+    using iterator = ListIterator<List, T>;
+    using const_iterator = ListIterator<const List, const T>;
 
 public:
     List() {}
@@ -129,8 +156,12 @@ public:
     bool empty() const;
     size_t size() const;
     void clear();
+
     iterator begin();
     iterator end();
+    const_iterator begin() const;
+    const_iterator end() const;
+    
     T * front();
     const T * front() const;
     T * back();
@@ -159,30 +190,6 @@ private:
     ListBaseLink<T, Tag> m_base;
 };
 
-template <typename T, typename Tag>
-class List<T, Tag>::iterator {
-    List * m_container{nullptr};
-    T * m_current{nullptr};
-public:
-    iterator() {}
-    iterator(List * container, T * node) 
-        : m_container{container}
-        , m_current{node} {}
-    bool operator!=(const iterator & right) {
-        return m_current != right.m_current;
-    }
-    iterator & operator++() {
-        m_current = m_container->next(m_current);
-        return *this;
-    }
-    T & operator*() {
-        assert(m_current);
-        return *m_current;
-    }
-    T * operator->() { return m_current; }
-};
-
-
 //===========================================================================
 template <typename T, typename Tag>
 List<T, Tag>::List(List && from) {
@@ -200,6 +207,12 @@ template <typename T, typename Tag>
 List<T, Tag> & List<T, Tag>::operator=(List && from) {
     swap(from);
     from.unlinkAll();
+}
+
+//===========================================================================
+template <typename T, typename Tag>
+bool List<T, Tag>::operator==(const List & right) const {
+    return std::equal(begin(), end(), right.begin(), right.end());
 }
 
 //===========================================================================
@@ -235,6 +248,18 @@ auto List<T, Tag>::begin() -> iterator {
 template <typename T, typename Tag>
 auto List<T, Tag>::end() -> iterator {
     return iterator{};
+}
+
+//===========================================================================
+template <typename T, typename Tag>
+auto List<T, Tag>::begin() const -> const_iterator {
+    return const_iterator{this, front()};
+}
+
+//===========================================================================
+template <typename T, typename Tag>
+auto List<T, Tag>::end() const -> const_iterator {
+    return const_iterator{};
 }
 
 //===========================================================================
