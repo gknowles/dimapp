@@ -10,6 +10,7 @@
 #include "cli/cli.h"
 #include "core/core.h"
 #include "net/address.h"
+#include "net/httproute.h"
 #include "xml/xml.h"
 
 // Standard headers

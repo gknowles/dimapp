@@ -66,38 +66,6 @@ void TnetConn::onSocketRead(AppSocketData & data) {
 
 /****************************************************************************
 *
-*   WebRoute
-*
-***/
-
-class WebRoute : public IHttpRouteNotify {
-    void onHttpRequest(
-        unsigned reqId,
-        unordered_multimap<string_view, string_view> & params,
-        HttpRequest & msg
-    ) override;
-};
-static WebRoute s_web;
-
-//===========================================================================
-void WebRoute::onHttpRequest(
-    unsigned reqId,
-    unordered_multimap<string_view, string_view> & params,
-    HttpRequest & msg
-) {
-    cout << "http request #" << reqId << endl;
-    string path = "Web";
-    path += msg.pathAbsolute();
-    if (fs::is_regular_file(path)) {
-        httpRouteReplyWithFile(reqId, path);
-    } else {
-        httpRouteReplyNotFound(reqId, msg);
-    }
-}
-
-
-/****************************************************************************
-*
 *   ShutdownNotify
 *
 ***/
@@ -156,7 +124,6 @@ void Application::onAppRun() {
         getFactory<IAppSocketNotify, TnetConn>(), 
         AppSocket::kRaw
     );
-    httpRouteAdd(&s_web, "/", fHttpMethodGet, true);
 
     logMsgInfo() << "Server started";
 }

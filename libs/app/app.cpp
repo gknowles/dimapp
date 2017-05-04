@@ -141,6 +141,8 @@ int Dim::appRun(IAppNotify & app, int argc, char * argv[], AppFlags flags) {
     iAppSocketInitialize();
     iSockMgrInitialize();
     iHttpRouteInitialize();
+    if (flags & fAppWithWebAdmin)
+        iWebAdminInitialize();
 
     s_app = &app;
     s_app->m_argc = argc;

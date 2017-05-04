@@ -21,6 +21,7 @@
 # libs/app/logfile.h
 # libs/app/pch.cpp
 # libs/app/pch.h
+# libs/app/webadmin.cpp
 # libs/cli/cli.cpp
 # libs/cli/cli.h
 # libs/core/appint.h

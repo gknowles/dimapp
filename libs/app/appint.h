@@ -17,4 +17,7 @@ void iConfigInitialize(std::string_view dir);
 // LogFile
 void iLogFileInitialize(std::string_view dir);
 
+// WebAdmin
+void iWebAdminInitialize();
+
 } // namespace
