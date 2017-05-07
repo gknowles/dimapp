@@ -118,12 +118,12 @@ bool DirInfo::start(string_view path, bool recurse) {
         WinError err;
         logMsgError() << "CreateFile(FILE_LIST_DIRECTORY): " << m_base 
             << ", " << err;
-        iFileSetErrno(err);
+        winFileSetErrno(err);
         return false;
     }
     if (!winIocpBindHandle(m_handle)) {
         CloseHandle(m_handle);
-        iFileSetErrno(WinError{});
+        winFileSetErrno(WinError{});
         m_handle = INVALID_HANDLE_VALUE;
         return false;
     }

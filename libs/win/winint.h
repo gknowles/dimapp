@@ -112,7 +112,7 @@ public:
 
 void winFileMonitorInitialize();
 
-bool iFileSetErrno(int error);
+bool winFileSetErrno(int error);
 
 
 /****************************************************************************
@@ -120,6 +120,8 @@ bool iFileSetErrno(int error);
 *   Error
 *
 ***/
+
+void winErrorInitialize();
 
 class WinError {
 public:
@@ -150,7 +152,5 @@ private:
 };
 
 std::ostream & operator<<(std::ostream & os, const WinError & val);
-
-void winErrorInitialize();
 
 } // namespace

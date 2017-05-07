@@ -158,7 +158,7 @@ void IFileOpBase::start(
         WaitOnAddress(&m_trigger, &waiting, sizeof(m_trigger), INFINITE);
     }
     if (m_err)
-        iFileSetErrno(m_err);
+        winFileSetErrno(m_err);
 }
 
 //===========================================================================
@@ -207,7 +207,7 @@ void IFileOpBase::onTask() {
         } else if (auto log = logOnError()) {
             logMsgError() << log << '(' << m_file->m_path << "): " << m_err;
         }
-        iFileSetErrno(m_err);
+        winFileSetErrno(m_err);
     }
 
     if (!async()) {
@@ -340,7 +340,7 @@ void Dim::iFileInitialize() {
 }
 
 //===========================================================================
-bool Dim::iFileSetErrno(int error) {
+bool Dim::winFileSetErrno(int error) {
     _set_doserrno(error);
 
     switch (error) {
@@ -421,13 +421,13 @@ FileHandle Dim::fileOpen(string_view path, File::OpenMode mode) {
         NULL // template file
         );
     if (file->m_handle == INVALID_HANDLE_VALUE) {
-        iFileSetErrno(WinError{});
+        winFileSetErrno(WinError{});
         return {};
     }
 
     if (~mode & om::fBlocking) {
         if (!winIocpBindHandle(file->m_handle)) {
-            iFileSetErrno(WinError{});
+            winFileSetErrno(WinError{});
             return {};
         }
 
@@ -436,7 +436,7 @@ FileHandle Dim::fileOpen(string_view path, File::OpenMode mode) {
             FILE_SKIP_COMPLETION_PORT_ON_SUCCESS 
                 | FILE_SKIP_SET_EVENT_ON_HANDLE
         )) {
-            iFileSetErrno(WinError{});
+            winFileSetErrno(WinError{});
             return {};
         }
     }
@@ -484,7 +484,7 @@ uint64_t Dim::fileSize(FileHandle f) {
     if (!GetFileSizeEx(file->m_handle, &size)) {
         WinError err;
         logMsgError() << "WriteFile(" << file->m_path << "): " << err;
-        iFileSetErrno(err);
+        winFileSetErrno(err);
         return 0;
     }
     return size.QuadPart;
@@ -503,7 +503,7 @@ TimePoint Dim::fileLastWriteTime(FileHandle f) {
             (FILETIME *)&wtime)) {
         WinError err;
         logMsgError() << "GetFileTime(" << file->m_path << "): " << err;
-        iFileSetErrno(err);
+        winFileSetErrno(err);
         return TimePoint::min();
     }
     return TimePoint(Duration(wtime));
@@ -628,7 +628,7 @@ bool Dim::fileOpenView(
         file->m_handle);
     if (err) {
         logMsgError() << "NtCreateSection(" << file->m_path << "): " << err;
-        iFileSetErrno(err);
+        winFileSetErrno(err);
         return false;
     }
 
@@ -646,7 +646,7 @@ bool Dim::fileOpenView(
         PAGE_READONLY);
     if (err) {
         logMsgError() << "NtMapViewOfSection(" << file->m_path << "): " << err;
-        iFileSetErrno(err);
+        winFileSetErrno(err);
     }
     file->m_view = base;
     file->m_viewSize = viewSize;
@@ -656,7 +656,7 @@ bool Dim::fileOpenView(
     if (tmp) {
         logMsgError() << "NtClose(" << file->m_path << "): " << tmp;
         if (!err) {
-            iFileSetErrno(tmp);
+            winFileSetErrno(tmp);
             err = tmp;
         }
     }
