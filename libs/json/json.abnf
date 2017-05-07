@@ -5,7 +5,7 @@
 ;
 ; rules to parse json
 %root = JSON-text
-%api.prefix = Json
+%api.prefix = JsonBase
 %api.namespace = Dim::Detail
 
 ; JSON Grammar
@@ -22,10 +22,26 @@ single-line-comment = "//" *Char-not-CR-LF (CR / LF)
 multiline-comment = "/*" *(Char-not-BLOT / 1*"*" Char-not-BLOT-SLASH) 1*"*" "/"
 
 ; Characters
-Char = WSP / CR / LF / %x20-7f
-Char-not-CR-LF = WSP / %x20-7f
-Char-not-BLOT = WSP / %x20-29 / %x2b-7f
-Char-not-BLOT-SLASH = WSP / %x20-29 / %x2b-2e / %x30-7f
+mbchar = %s"Z" { MinRules }
+mbchar = ; multibyte utf-8 characters
+    ; 2 byte: 0080-07ff
+    (%xc2-df %x80-bf)                       ; 0080 - 07ff
+    ; 3 byte: 0800 - d7ff
+    / (%xe0 %xa0-bf %x80-bf)                ; 0800 - 0fff
+        / (%xe1-ec %x80-bf %x80-bf)         ; 1000 - cfff
+        / (%xed %x80-9f %x80-bf)            ; d000 - d7ff
+    ; 3 byte: e000 - ffff
+    / (%xee-ef %x80-bf %x80-bf)             ; e000 - ffff
+    ; 4 byte: 01'0000 - 10'ffff
+    / (%xf0 %x90-bf %x80-bf %x80-bf)        ; 01'0000 - 03'ffff
+        / (%xf1-f3 %x80-bf %x80-bf %x80-bf) ; 04'0000 - 0f'ffff 
+        / (%xf4 %x80-8f %x80-bf %x80-bf)    ; 10'0000 - 10'ffff
+    { NoMinRules }
+
+Char = WSP / CR / LF / %x20-7f / mbchar
+Char-not-CR-LF = WSP / %x20-7f / mbchar
+Char-not-BLOT = WSP / %x20-29 / %x2b-7f / mbchar
+Char-not-BLOT-SLASH = WSP / %x20-29 / %x2b-2e / %x30-7f / mbchar
 
 ; Values
 value = false / null / true / object / array / number / string
@@ -34,20 +50,22 @@ null = %s"null" { End }
 true = %s"true" { End }
 
 ; Objects
-object = begin-object [ member *(value-separator member) ] end-object { Start, End }
+object = begin-object object-tail { Start, End }
+object-tail = [ member *(value-separator member) ] end-object { Function }
 member = string name-separator value
 
 ; Arrays
-array = begin-array [ value *(value-separator value) ] end-array { Start, End }
+array = begin-array array-tail { Start, End }
+array-tail = [ value *(value-separator value) ] end-array { Function }
 
 ; Numbers
-number = [minus] int [frac] [exp]
+number = [minus] int [frac] [exp] { End }
 decimal-point = "."
 digit1-9 = %x31-39 ; 1-9
 e = "e" ; e E
 exp = e [minus / plus] 1*DIGIT
 frac = decimal-point 1*DIGIT
-int = zero / (digit1-9 *DIGIT)
+int = zero / (digit1-9 *DIGIT) { Char }
 minus = "-"
 plus = "+"
 zero = "0"
@@ -67,4 +85,4 @@ escape-single = escape (
     { End }
 escape-number = escape %x75 4HEXDIG { End }
 escape = %x5c ; \
-unescaped = %x20-21 / %x23-5b / %x5d-7f
+unescaped = %x20-21 / %x23-5b / %x5d-7f / mbchar

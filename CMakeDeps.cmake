@@ -62,6 +62,11 @@
 # libs/cppconf/cppconf.h
 # libs/cppconf/cppconf_suffix.h
 # libs/json/json.abnf
+# libs/json/json.h
+# libs/json/jsonbaseparse.cpp
+# libs/json/jsonbaseparse.h
+# libs/json/pch.cpp
+# libs/json/pch.h
 # libs/net/address.cpp
 # libs/net/address.h
 # libs/net/appint.h
