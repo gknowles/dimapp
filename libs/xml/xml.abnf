@@ -27,7 +27,7 @@ mbchar = ; multibyte utf-8 character
     (%xc2-df %x80-bf)                       ; 0080 - 07ff
     ; 3 byte: 0800 - d7ff
     / (%xe0 %xa0-bf %x80-bf)                ; 0800 - 0fff
-    / (%xe1-ec %x80-bf %x80-bf)             ; 1000 - cfff
+        / (%xe1-ec %x80-bf %x80-bf)         ; 1000 - cfff
         / (%xed %x80-9f %x80-bf)            ; d000 - d7ff
     ; 3 byte: e000 - fffd
     / (%xee %x80-bf %x80-bf)                ; e000 - efff

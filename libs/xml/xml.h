@@ -100,7 +100,7 @@ template <typename T>
 inline IXBuilder & operator<<(IXBuilder & out, const T & val) {
     std::ostringstream os;
     os << val;
-    return out.text(os.str().c_str());
+    return out.text(os.str());
 }
 
 inline IXBuilder &
