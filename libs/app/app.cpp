@@ -137,6 +137,7 @@ int Dim::appRun(IAppNotify & app, int argc, char * argv[], AppFlags flags) {
         if (flags & fAppWithConsole)
             logMonitor(&s_consoleLogger);
     }
+    iPlatformConfigInitialize();
     iSocketInitialize();
     iAppSocketInitialize();
     iSockMgrInitialize();

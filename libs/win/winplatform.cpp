@@ -21,3 +21,8 @@ void Dim::iPlatformInitialize() {
     winIocpInitialize();
     winAppInitialize();
 }
+
+//===========================================================================
+void Dim::iPlatformConfigInitialize() {
+    winAppConfigInitialize();
+}

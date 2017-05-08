@@ -11,6 +11,7 @@ namespace Dim {
 
 // Platform
 void iPlatformInitialize();
+void iPlatformConfigInitialize();
 
 // Console
 void iConsoleInitialize();

@@ -140,6 +140,7 @@ void winErrorInitialize();
 ***/
 
 void winAppInitialize();
+void winAppConfigInitialize();
 
 
 /****************************************************************************
