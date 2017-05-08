@@ -6,6 +6,7 @@
 // Public header
 // External library public headers
 #include "app/app.h"
+#include "cli/cli.h"
 #include "core/core.h"
 #include "net/net.h"
 
@@ -29,9 +30,12 @@
 #include <WinSock2.h>
 #include <Windows.h>
 
+// must come after Windows.h
+#include <CommCtrl.h>
+
 // must come after WinSock2.h
-#include <MSWSock.h> // Registered IO
 #include <mstcpip.h> // SIO_LOOPBACK_FAST_PATH
+#include <MSWSock.h> // Registered IO
 
 #pragma comment(lib, "synchronization.lib") // WaitOnAddress
 #pragma comment(lib, "ws2_32.lib")

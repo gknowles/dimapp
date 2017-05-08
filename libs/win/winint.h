@@ -48,7 +48,8 @@ struct WinOverlappedEvent {
 void winSetOverlapped(
     WinOverlappedEvent & evt,
     int64_t off,
-    HANDLE event = INVALID_HANDLE_VALUE);
+    HANDLE event = INVALID_HANDLE_VALUE
+);
 
 
 /****************************************************************************
@@ -77,17 +78,6 @@ private:
 
 /****************************************************************************
 *
-*   Iocp
-*
-***/
-
-void winIocpInitialize();
-
-bool winIocpBindHandle(HANDLE handle);
-
-
-/****************************************************************************
-*
 *   Wait for events
 *
 ***/
@@ -106,22 +96,9 @@ public:
 
 /****************************************************************************
 *
-*   File
-*
-***/
-
-void winFileMonitorInitialize();
-
-bool winFileSetErrno(int error);
-
-
-/****************************************************************************
-*
 *   Error
 *
 ***/
-
-void winErrorInitialize();
 
 class WinError {
 public:
@@ -152,5 +129,39 @@ private:
 };
 
 std::ostream & operator<<(std::ostream & os, const WinError & val);
+
+void winErrorInitialize();
+
+
+/****************************************************************************
+*
+*   App
+*
+***/
+
+void winAppInitialize();
+
+
+/****************************************************************************
+*
+*   File
+*
+***/
+
+void winFileMonitorInitialize();
+
+bool winFileSetErrno(int error);
+
+
+/****************************************************************************
+*
+*   Iocp
+*
+***/
+
+void winIocpInitialize();
+
+bool winIocpBindHandle(HANDLE handle);
+
 
 } // namespace

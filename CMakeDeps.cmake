@@ -106,6 +106,7 @@
 # libs/win/pch.cpp
 # libs/win/pch.h
 # libs/win/winaddress.cpp
+# libs/win/winapp.cpp
 # libs/win/winconsole.cpp
 # libs/win/winenv.cpp
 # libs/win/winerror.cpp

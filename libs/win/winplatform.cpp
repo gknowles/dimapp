@@ -19,4 +19,5 @@ using namespace Dim;
 void Dim::iPlatformInitialize() {
     winErrorInitialize();
     winIocpInitialize();
+    winAppInitialize();
 }
