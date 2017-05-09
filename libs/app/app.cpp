@@ -166,8 +166,10 @@ int Dim::appRun(IAppNotify & app, int argc, char * argv[], AppFlags flags) {
 
 //===========================================================================
 void Dim::appSignalShutdown(int exitcode) {
+    assert(s_runMode != kRunStopped);
     if (exitcode > s_exitcode)
         s_exitcode = exitcode;
+
     s_runMode = kRunStopping;
     s_runCv.notify_one();
 }
