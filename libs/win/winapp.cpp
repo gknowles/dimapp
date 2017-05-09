@@ -28,15 +28,7 @@ const char kPerfWndClass[] = "DimPerfCounters";
 const int kListId = 1;
 const int kTimerId = 1;
 
-
-/****************************************************************************
-*
-*   Variables
-*
-***/
-
-static HWND s_wnd;
-static HWND s_listWnd;
+const unsigned WM_USER_CLOSEWINDOW = WM_USER;
 
 
 /****************************************************************************
@@ -77,7 +69,10 @@ static HWND createList(HWND parent) {
 }
 
 //===========================================================================
-static void moveList(HWND wnd, const RECT & rect) {
+static void moveList(HWND parent) {
+    RECT rect;
+    GetClientRect(parent, &rect);
+    auto wnd = GetDlgItem(parent, kListId);
     MoveWindow(wnd, 0, 0, rect.right, rect.bottom, true);
     ListView_SetColumnWidth(wnd, 0, rect.right / 4);
     ListView_SetColumnWidth(wnd, 1, rect.right - rect.right / 4);
@@ -97,7 +92,9 @@ static void setItemText(HWND wnd, int item, int col, string_view text) {
 }
 
 //===========================================================================
-static void updateList(HWND wnd) {
+static void updateList(HWND parent) {
+    auto wnd = GetDlgItem(parent, kListId);
+
     vector<PerfValue> vals;
     perfGetValues(vals);
     int cvals = (int) vals.size();
@@ -128,24 +125,29 @@ static LRESULT CALLBACK perfWindowProc(
     WPARAM wparam,
     LPARAM lparam
 ) {
-    RECT rect;
-
     switch (msg) {
     case WM_TIMER:
-        updateList(s_listWnd);
+        updateList(wnd);
         return 0;
 
     case WM_CREATE:
-        s_listWnd = createList(wnd);
+        createList(wnd);
         return 0;
 
     case WM_SIZE:
-        GetClientRect(wnd, &rect);
-        moveList(s_listWnd, rect);
+        moveList(wnd);
         return 0;
 
+    case WM_USER_CLOSEWINDOW:
+        // used to close the window but not the app
+        DestroyWindow(wnd);
+        return 0;
+
+    case WM_CLOSE:
+        appSignalShutdown();
+        break;
+
     case WM_DESTROY:
-        s_wnd = NULL;
         PostQuitMessage(0);
         return 0;
     }
@@ -154,12 +156,21 @@ static LRESULT CALLBACK perfWindowProc(
 }
 
 //===========================================================================
-static void createPerfWindow() {
+static HWND createPerfWindow() {
+    WNDCLASSEX wc = {};
+    wc.cbSize = sizeof(wc);
+    wc.style = CS_HREDRAW | CS_VREDRAW;
+    wc.lpfnWndProc = perfWindowProc;
+    wc.hInstance = GetModuleHandle(NULL);
+    wc.lpszClassName = kPerfWndClass;
+    if (!RegisterClassEx(&wc))
+        logMsgCrash() << "RegisterClassEx: " << WinError{};
+
     long val = GetDialogBaseUnits();
     WORD diagX = (WORD) val;
     WORD diagY = val >> 16;
 
-    s_wnd = CreateWindow(
+    auto wnd = CreateWindow(
         kPerfWndClass,
         "Perf Counters",
         WS_OVERLAPPEDWINDOW,
@@ -167,19 +178,20 @@ static void createPerfWindow() {
         50 * diagX, 50 * diagY, // cx, cy
         NULL, // parent
         NULL, // menu
-        GetModuleHandle(NULL),
+        wc.hInstance,
         NULL // user param to WM_CREATE
     );
-    if (!s_wnd)
+    if (!wnd)
         logMsgCrash() << "CreateWindow: " << WinError{};
 
-    ShowWindow(s_wnd, SW_SHOWNORMAL);
+    ShowWindow(wnd, SW_SHOWNORMAL);
     SetTimer(
-        s_wnd, 
+        wnd, 
         kTimerId,
         kUpdateIntervalMS,
         NULL // timer proc
     );
+    return wnd;
 }
 
 
@@ -192,36 +204,66 @@ static void createPerfWindow() {
 namespace {
 class MessageLoopTask : public ITaskNotify {
 public:
-    void enable(bool enable, bool neverAgain = false);
+    enum Authority {
+        kCommandLine,
+        kConfigFile,
+        kShutdown,
+    };
+public:
+    void enable(Authority from, bool enable);
     void onTask() override;
 private:
-    bool m_neverAgain{false};
+    bool m_hasCommand{false};
+    bool m_hasShutdown{false};
+    bool m_fromConfig{false};
+    HWND m_wnd{NULL};
 };
 } // namespace
 static MessageLoopTask s_windowTask;
 static TaskQueueHandle s_taskq;
+static auto & s_cliEnable = Cli{}.opt<bool>("appwin")
+    .desc("Show window UI")
+    .after([](auto & cli, auto & opt, auto & val){
+        if (*s_cliEnable)
+            s_windowTask.enable(MessageLoopTask::kCommandLine, true);
+        return true;
+    });
 
 //===========================================================================
-void MessageLoopTask::enable(bool enable, bool neverAgain) {
-    if (neverAgain) {
+void MessageLoopTask::enable(Authority auth, bool enable) {
+    if (m_hasShutdown || auth == kShutdown) {
         assert(!enable);
-        m_neverAgain = true;
+        m_hasShutdown = true;
+        enable = false;
+    } else {
+        if (auth == kCommandLine) {
+            m_hasCommand = true;
+        } else {
+            assert(auth == kConfigFile);
+            m_fromConfig = enable;
+        }
+        enable = s_cliEnable ? *s_cliEnable : m_fromConfig;
     }
-    if (enable == (s_wnd != NULL)) 
+
+    // don't show window before the command line has been processed
+    if (!m_hasShutdown && !m_hasCommand)
         return;
 
-    if (enable && !m_neverAgain) {
+    if (enable == (m_wnd != NULL)) 
+        return;
+
+    if (enable) {
         // start message loop task
         taskPush(s_taskq, *this);
     } else {
-        KillTimer(s_wnd, kTimerId);
-        PostMessage(s_wnd, WM_CLOSE, 0, 0);
+        KillTimer(m_wnd, kTimerId);
+        PostMessage(m_wnd, WM_USER_CLOSEWINDOW, 0, 0);
     }
 }
 
 //===========================================================================
 void MessageLoopTask::onTask() {
-    createPerfWindow();
+    m_wnd = createPerfWindow();
 
     MSG msg;
     while (BOOL rc = GetMessage(&msg, NULL, 0, 0)) {
@@ -231,6 +273,9 @@ void MessageLoopTask::onTask() {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
+
+    UnregisterClass(kPerfWndClass, GetModuleHandle(NULL));
+    m_wnd = NULL;
 }
 
 
@@ -241,16 +286,26 @@ void MessageLoopTask::onTask() {
 ***/
 
 namespace {
-class AppXmlNotify : public IConfigNotify {
+class EnableNotify 
+    : public IConfigNotify 
+    , public ITaskNotify
+{
     void onConfigChange(const XDocument & doc) override;
+    void onTask() override;
 };
 } // namespace
-static AppXmlNotify s_appXml;
+static EnableNotify s_notify;
 
 //===========================================================================
-void AppXmlNotify::onConfigChange(const XDocument & doc) {
+void EnableNotify::onConfigChange(const XDocument & doc) {
     bool enable = configUnsigned(doc, "EnableAppWindow");
-    s_windowTask.enable(enable);
+    s_windowTask.enable(MessageLoopTask::kConfigFile, enable);
+}
+
+//===========================================================================
+void EnableNotify::onTask() {
+    if (appMode() == kRunRunning)
+        s_windowTask.enable(MessageLoopTask::kCommandLine, *s_cliEnable);
 }
 
 
@@ -272,7 +327,7 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
     if (firstTry)
         return shutdownIncomplete();
 
-    s_windowTask.enable(false, true);
+    s_windowTask.enable(MessageLoopTask::kShutdown, false);
 }
 
 
@@ -285,20 +340,12 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
 //===========================================================================
 void Dim::winAppInitialize() {
     shutdownMonitor(&s_cleanup);
-
+    s_windowTask = {};
     s_taskq = taskCreateQueue("Message Loop", 1);
-
-    WNDCLASSEX wc = {};
-    wc.cbSize = sizeof(wc);
-    wc.style = CS_HREDRAW | CS_VREDRAW;
-    wc.lpfnWndProc = perfWindowProc;
-    wc.hInstance = GetModuleHandle(NULL);
-    wc.lpszClassName = kPerfWndClass;
-    if (!RegisterClassEx(&wc))
-        logMsgCrash() << "RegisterClassEx: " << WinError{};
+    iAppPushStartupTask(s_notify);
 }
 
 //===========================================================================
 void Dim::winAppConfigInitialize() {
-    configMonitor("app.xml", &s_appXml);
+    configMonitor("app.xml", &s_notify);
 }

@@ -41,6 +41,7 @@
 #pragma comment(lib, "ws2_32.lib")
 
 // External library internal headers
+#include "app/appint.h" // iAppPushStartupTask
 #include "core/timeint.h" // iClockGetTicks
 
 // Internal headers
