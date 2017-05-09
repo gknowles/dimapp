@@ -13,14 +13,6 @@ namespace fs = std::experimental::filesystem;
 
 /****************************************************************************
 *
-*   Declarations
-*
-***/
-
-
-
-/****************************************************************************
-*
 *   Variables
 *
 ***/
@@ -33,6 +25,9 @@ static RunMode s_runMode{kRunStopped};
 
 static IAppNotify * s_app;
 static AppFlags s_appFlags;
+
+static vector<ITaskNotify *> s_appTasks;
+
 
 /****************************************************************************
 *
@@ -99,6 +94,19 @@ void ConfigAppXml::onConfigChange(const XDocument & doc) {
 
 /****************************************************************************
 *
+*   Internal API
+*
+***/
+
+//===========================================================================
+void Dim::iAppPushStartupTask(ITaskNotify & task) {
+    assert(appMode() == kRunStarting);
+    s_appTasks.push_back(&task);
+}
+
+
+/****************************************************************************
+*
 *   Public API
 *
 ***/
@@ -117,6 +125,9 @@ AppFlags Dim::appRunFlags() {
 int Dim::appRun(IAppNotify & app, int argc, char * argv[], AppFlags flags) {
     s_appFlags = flags;
     s_runMode = kRunStarting;
+    s_appTasks.clear();
+    s_appTasks.push_back(&s_runTask);
+
     iPerfInitialize();
     iLogInitialize();
     iConsoleInitialize();
@@ -149,7 +160,7 @@ int Dim::appRun(IAppNotify & app, int argc, char * argv[], AppFlags flags) {
     s_app->m_argc = argc;
     s_app->m_argv = argv;
     s_runMode = kRunRunning;
-    taskPushEvent(s_runTask);
+    taskPushEvent(s_appTasks.data(), s_appTasks.size());
 
     unique_lock<mutex> lk{s_runMut};
     while (s_runMode == kRunRunning)

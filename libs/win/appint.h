@@ -1,7 +1,7 @@
 // Copyright Glen Knowles 2015 - 2017.
 // Distributed under the Boost Software License, Version 1.0.
 //
-// platformint.h - dim core
+// appint.h - dim windows platform
 //
 // Initialize and destroy methods called by appRun()
 
