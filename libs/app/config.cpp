@@ -39,6 +39,8 @@ public:
     void onFileChange(string_view fullpath) override;
 
 private:
+    void parseContent(string_view fullpath, string && content);
+
     list<NotifyInfo> m_notifiers;
     unsigned m_changes{0};
 
@@ -79,7 +81,14 @@ void ConfigFile::monitor_UNLK(string_view relpath, IConfigNotify * notify) {
 
     if (empty) {
         s_mut.unlock();
-        fileMonitor(s_hDir, relpath, this);
+        if (appFlags() & fAppWithConfig) {
+            fileMonitor(s_hDir, relpath, this);
+        } else {
+            string fullpath = s_rootDir;
+            fullpath += '/';
+            fullpath += relpath;
+            parseContent(fullpath, {});
+        }
     } else {
         notify_UNLK(notify);
     }
@@ -105,6 +114,19 @@ bool ConfigFile::closeWait_UNLK(IConfigNotify * notify) {
 }
 
 //===========================================================================
+void ConfigFile::parseContent(string_view fullpath, string && content) {
+    m_content = move(content);
+    m_relpath = fullpath;
+    m_relpath.remove_prefix(s_rootDir.size() + 1);
+    m_xml.parse(m_content.data(), m_relpath);
+    m_relpath = m_xml.filename();
+    m_fullpath = m_xml.heap().strdup(fullpath);
+
+    // call notifiers
+    configChange(m_fullpath, nullptr);
+}
+
+//===========================================================================
 void ConfigFile::onFileChange(string_view fullpath) {
     m_changes += 1;
     auto f = fileOpen(fullpath, File::fReadOnly | File::fDenyWrite);
@@ -117,22 +139,14 @@ void ConfigFile::onFileChange(string_view fullpath) {
         bytes = 0;
     }
 
-    if (!bytes) {
-        m_content.clear();
-    } else {
-        m_content.resize(bytes);
-        fileReadWait(m_content.data(), m_content.size(), f, 0);
+    string content;
+    if (bytes) {
+        content.resize(bytes);
+        fileReadWait(content.data(), content.size(), f, 0);
     }
     fileClose(f);
 
-    m_relpath = fullpath;
-    m_relpath.remove_prefix(s_rootDir.size() + 1);
-    m_xml.parse(m_content.data(), m_relpath);
-    m_relpath = m_xml.filename();
-    m_fullpath = m_xml.heap().strdup(fullpath);
-
-    // call notifiers
-    configChange(m_fullpath, nullptr);
+    parseContent(fullpath, move(content));
 }
 
 //===========================================================================
@@ -180,7 +194,8 @@ static ShutdownNotify s_cleanup;
 
 //===========================================================================
 void ShutdownNotify::onShutdownConsole(bool firstTry) {
-    fileMonitorCloseWait(s_hDir);
+    if (s_hDir)
+        fileMonitorCloseWait(s_hDir);
 }
 
 
@@ -196,7 +211,8 @@ void Dim::iConfigInitialize (string_view dir) {
     auto fp = fs::u8path(dir.begin(), dir.end());
     fp = fs::canonical(fp);
     s_rootDir = fp.u8string();
-    fileMonitorDir(&s_hDir, s_rootDir, true);
+    if (appFlags() & fAppWithConfig)
+        fileMonitorDir(&s_hDir, s_rootDir, true);
 }
 
 

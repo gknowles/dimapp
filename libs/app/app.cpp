@@ -117,7 +117,7 @@ RunMode Dim::appMode() {
 }
 
 //===========================================================================
-AppFlags Dim::appRunFlags() {
+AppFlags Dim::appFlags() {
     return s_appFlags;
 }
 

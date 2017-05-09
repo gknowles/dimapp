@@ -77,7 +77,7 @@ int appRun(
 RunMode appMode();
 
 // returns flags passed to appRun()
-AppFlags appRunFlags(); 
+AppFlags appFlags(); 
 
 /****************************************************************************
 *
