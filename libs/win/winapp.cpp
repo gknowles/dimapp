@@ -138,14 +138,15 @@ static LRESULT CALLBACK perfWindowProc(
         moveList(wnd);
         return 0;
 
+    case WM_CLOSE:
+        // the shutdown handler will post a WM_USER_CLOSEWINDOW event
+        appSignalShutdown();
+        return 0;
+
     case WM_USER_CLOSEWINDOW:
         // used to close the window but not the app
         DestroyWindow(wnd);
         return 0;
-
-    case WM_CLOSE:
-        appSignalShutdown();
-        break;
 
     case WM_DESTROY:
         PostQuitMessage(0);
@@ -210,12 +211,18 @@ public:
         kShutdown,
     };
 public:
+    void clear();
+    void setWnd(HWND wnd);
     void enable(Authority from, bool enable);
     void onTask() override;
 private:
     bool m_hasCommand{false};
     bool m_hasShutdown{false};
     bool m_fromConfig{false};
+    bool m_enable{false};
+
+    mutex m_mut;
+    condition_variable m_cv;
     HWND m_wnd{NULL};
 };
 } // namespace
@@ -228,6 +235,24 @@ static auto & s_cliEnable = Cli{}.opt<bool>("appwin")
             s_windowTask.enable(MessageLoopTask::kCommandLine, true);
         return true;
     });
+
+//===========================================================================
+void MessageLoopTask::clear() {
+    assert(m_wnd == NULL);
+    m_hasCommand = false;
+    m_hasShutdown = false;
+    m_fromConfig = false;
+    m_enable = false;
+}
+
+//===========================================================================
+void MessageLoopTask::setWnd(HWND wnd) {
+    {
+        lock_guard<mutex> lk{m_mut};
+        m_wnd = wnd;
+    }
+    m_cv.notify_one();
+}
 
 //===========================================================================
 void MessageLoopTask::enable(Authority auth, bool enable) {
@@ -249,8 +274,14 @@ void MessageLoopTask::enable(Authority auth, bool enable) {
     if (!m_hasShutdown && !m_hasCommand)
         return;
 
-    if (enable == (m_wnd != NULL)) 
+    if (enable == m_enable) 
         return;
+
+    unique_lock<mutex> lk{m_mut};
+    while (m_enable != (m_wnd != NULL))
+        m_cv.wait(lk);
+    m_enable = enable;
+    lk.unlock();
 
     if (enable) {
         // start message loop task
@@ -263,7 +294,8 @@ void MessageLoopTask::enable(Authority auth, bool enable) {
 
 //===========================================================================
 void MessageLoopTask::onTask() {
-    m_wnd = createPerfWindow();
+    auto wnd = createPerfWindow();
+    setWnd(wnd);
 
     MSG msg;
     while (BOOL rc = GetMessage(&msg, NULL, 0, 0)) {
@@ -275,7 +307,7 @@ void MessageLoopTask::onTask() {
     }
 
     UnregisterClass(kPerfWndClass, GetModuleHandle(NULL));
-    m_wnd = NULL;
+    setWnd(NULL);
 }
 
 
@@ -340,7 +372,7 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
 //===========================================================================
 void Dim::winAppInitialize() {
     shutdownMonitor(&s_cleanup);
-    s_windowTask = {};
+    s_windowTask.clear();
     s_taskq = taskCreateQueue("Message Loop", 1);
     iAppPushStartupTask(s_notify);
 }
