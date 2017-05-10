@@ -53,6 +53,13 @@ static uint64_t iStrToAny (
     unsigned radix,
     size_t chars = (size_t) -1
 ) {
+    // the high order partial digit (and the trailing null :P) are not safe
+    constexpr unsigned kMaxSafeCharsBase10 { (Flags & k64Bit) 
+        ? (unsigned) maxIntegralChars<uint64_t>() - 1 
+        : (unsigned) maxIntegralChars<unsigned>() - 1
+    };
+    constexpr unsigned kMaxCharsBase16 { (Flags & k64Bit) ? 16 : 8 };
+
     const char * ptr = source;
     const char * base;
     bool negate = false;
@@ -177,7 +184,6 @@ CHECK_OVERFLOW:
     goto CHECK_NUMBER;
 
 BASE_16:
-    constexpr unsigned kMaxCharsBase16 = (Flags & k64Bit) ? 16 : 8;
     if (chars > kMaxCharsBase16) {
         charLimit = chars;
         chars = kMaxCharsBase16;
@@ -204,10 +210,6 @@ BASE_16:
     goto CHECK_NUMBER;
 
 BASE_10:
-    // the high order partial digit (and the trailing null :P) are not safe
-    constexpr unsigned kMaxSafeCharsBase10 = (Flags & k64Bit) 
-        ? maxIntegralChars<uint64_t>() - 1 
-        : maxIntegralChars<unsigned>() - 1;
     if (chars > kMaxSafeCharsBase10) {
         charLimit = chars;
         chars = kMaxSafeCharsBase10;

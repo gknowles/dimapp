@@ -84,20 +84,19 @@ void TlsRecordEncrypt::add(
     assert(count <= kMaxPlaintext);
 
     auto ptr = static_cast<const char *>(vptr);
+    size_t num;
 
     if (m_plainType != ct || ct == kContentAlert) {
         m_plainType = ct;
-        goto start_text;
+        flush(out);
     }
     for (;;) {
-        size_t num = min(count, size(m_plaintext) - kMaxPlaintext);
+        num = min(count, size(m_plaintext) - kMaxPlaintext);
         m_plaintext.insert(m_plaintext.end(), ptr, ptr + num);
         ptr += num;
         count -= num;
         if (!count)
             break;
-
-    start_text:
         flush(out);
     }
 }

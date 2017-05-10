@@ -251,11 +251,16 @@ void XDocument::normalizeText(XNode * node) {
     if (ei->valueLen == -1)
         return;
 
-    auto firstNode = firstChild(ei, {}, XType::kText);
+    XNode * firstNode;
+    XNode * lastNode;
     XNode * prev;
+    const char * firstChar;
+    const char * lastChar;
+
+    firstNode = firstChild(ei, {}, XType::kText);
     if (!firstNode)
         goto NO_TEXT;
-    const char * firstChar = firstNode->value;
+    firstChar = firstNode->value;
     // skip leading whitespace
     for (;;) {
         switch (*firstChar) {
@@ -282,8 +287,8 @@ void XDocument::normalizeText(XNode * node) {
     // skip trailing whitespace
     //  - since the leading whitespace stopped at a non-whitespace, we know
     //    we'll also find a non-whitespace as we skip trailing.
-    auto lastNode = lastChild(ei, {}, XType::kText);
-    const char * lastChar = lastNode->value + strlen(lastNode->value);
+    lastNode = lastChild(ei, {}, XType::kText);
+    lastChar = lastNode->value + strlen(lastNode->value);
     for (;;) {
         if (lastChar == lastNode->value) {
             prev = lastNode;
@@ -525,13 +530,13 @@ const char * Dim::attrValue(
 //===========================================================================
 template <typename T>
 XNodeIterator<T>::XNodeIterator(T * node, XType type, string_view name)
-    : ForwardListIterator(node)
+    : ForwardListIterator<T>(node)
     , m_type(type)
     , m_name(name) {}
 
 //===========================================================================
 template <typename T> auto XNodeIterator<T>::operator++() -> XNodeIterator {
-    m_current = nextSibling(m_current, m_name, m_type);
+    this->m_current = nextSibling(this->m_current, m_name, m_type);
     return *this;
 }
 
