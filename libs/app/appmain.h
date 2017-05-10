@@ -83,9 +83,13 @@ std::string_view appDataDirectory();
 
 // false if file relative to root is not within the root path. This can happen 
 // if file breaks out via ".." or is an absolute path.
-bool appConfigPath(std::string & out, std::string_view file);
-bool appLogPath(std::string & out, std::string_view file);
-bool appDataPath(std::string & out, std::string_view file);
+bool appConfigPath(
+    std::string & out, 
+    std::string_view file, 
+    bool createIfNotExist = true
+);
+bool appLogPath(std::string & out, std::string_view file, bool cine = true);
+bool appDataPath(std::string & out, std::string_view file, bool cine = true);
 
 
 /****************************************************************************

@@ -220,12 +220,23 @@ void Dim::iConfigInitialize () {
 ***/
 
 //===========================================================================
+static bool getFullpath(string & out, string_view file) {
+    bool result;
+    if (appFlags() & fAppWithFiles) {
+        result = fileMonitorPath(out, s_hDir, file);
+    } else {
+        result = appConfigPath(out, file, false);
+    }
+    if (!result)
+        logMsgError() << "File outside of config directory: " << file;
+    return result;
+}
+
+//===========================================================================
 void Dim::configMonitor(string_view file, IConfigNotify * notify) {
     string path;
-    if (!fileMonitorPath(path, s_hDir, file)) {
-        logMsgError() << "Monitor file outside of config directory, " << file;
+    if (!getFullpath(path, file))
         return;
-    }
 
     s_mut.lock();
     auto & cf = s_files[path];
@@ -235,10 +246,8 @@ void Dim::configMonitor(string_view file, IConfigNotify * notify) {
 //===========================================================================
 void Dim::configCloseWait(string_view file, IConfigNotify * notify) {
     string path;
-    if (!fileMonitorPath(path, s_hDir, file)) {
-        logMsgError() << "Close file outside of config directory, " << file;
+    if (!getFullpath(path, file))
         return;
-    }
 
     s_mut.lock();
     auto & cf = s_files[path];
@@ -252,10 +261,8 @@ void Dim::configChange(
     IConfigNotify * notify // = nullptr
 ) {
     string path;
-    if (!fileMonitorPath(path, s_hDir, file)) {
-        logMsgError() << "Change file outside of config directory, " << file;
+    if (!getFullpath(path, file))
         return;
-    }
 
     s_mut.lock();
     auto & cf = s_files[path];

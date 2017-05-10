@@ -124,7 +124,12 @@ AppFlags Dim::appFlags() {
 }
 
 //===========================================================================
-static bool makeAppPath(string & out, string_view root, string_view file) {
+static bool makeAppPath(
+    string & out, 
+    string_view root, 
+    string_view file,
+    bool createIfNotExist
+) {
     auto fp = fs::u8path(root.begin(), root.end()) 
         / fs::u8path(file.begin(), file.end());
     error_code ec;
@@ -137,7 +142,8 @@ static bool makeAppPath(string & out, string_view root, string_view file) {
     ) {
         return false;
     }
-    fs::create_directories(fp.remove_filename());
+    if (createIfNotExist)
+        fs::create_directories(fp.remove_filename());
     return true;
 }
 
@@ -168,18 +174,18 @@ string_view Dim::appDataDirectory() {
 }
 
 //===========================================================================
-bool Dim::appConfigPath(string & out, string_view file) {
-    return makeAppPath(out, appConfigDirectory(), file);
+bool Dim::appConfigPath(string & out, string_view file, bool cine) {
+    return makeAppPath(out, appConfigDirectory(), file, cine);
 }
 
 //===========================================================================
-bool Dim::appLogPath(string & out, string_view file) {
-    return makeAppPath(out, appLogDirectory(), file);
+bool Dim::appLogPath(string & out, string_view file, bool cine) {
+    return makeAppPath(out, appLogDirectory(), file, cine);
 }
 
 //===========================================================================
-bool Dim::appDataPath(string & out, string_view file) {
-    return makeAppPath(out, appDataDirectory(), file);
+bool Dim::appDataPath(string & out, string_view file, bool cine) {
+    return makeAppPath(out, appDataDirectory(), file, cine);
 }
 
 //===========================================================================
