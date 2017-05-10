@@ -24,9 +24,11 @@ static condition_variable s_runCv;
 static RunMode s_runMode{kRunStopped};
 
 static IAppNotify * s_app;
-static AppFlags s_appFlags;
-
 static vector<ITaskNotify *> s_appTasks;
+static AppFlags s_appFlags;
+static string s_logDir;
+static string s_confDir;
+static string s_dataDir;
 
 
 /****************************************************************************
@@ -122,29 +124,92 @@ AppFlags Dim::appFlags() {
 }
 
 //===========================================================================
+static bool makeAppPath(string & out, string_view root, string_view file) {
+    auto fp = fs::u8path(root.begin(), root.end()) 
+        / fs::u8path(file.begin(), file.end());
+    error_code ec;
+    fp = fs::canonical(fp, ec);
+    out = fp.u8string();
+    replace(out.begin(), out.end(), '\\', '/');
+    if (ec 
+        || out.compare(0, root.size(), root.data(), root.size()) != 0
+        || out[root.size()] != '/'
+    ) {
+        return false;
+    }
+    fs::create_directories(fp.remove_filename());
+    return true;
+}
+
+//===========================================================================
+static string makeAppDir(string_view path) {
+    auto fp = fs::current_path() / fs::u8path(path.begin(), path.end());
+    error_code ec;
+    fp = fs::canonical(fp, ec);
+    assert(!ec);
+    string out = fp.u8string();
+    replace(out.begin(), out.end(), '\\', '/');
+    return out;
+}
+
+//===========================================================================
+string_view Dim::appConfigDirectory() {
+    return s_confDir;
+}
+
+//===========================================================================
+string_view Dim::appLogDirectory() {
+    return s_logDir;
+}
+
+//===========================================================================
+string_view Dim::appDataDirectory() {
+    return s_dataDir;
+}
+
+//===========================================================================
+bool Dim::appConfigPath(string & out, string_view file) {
+    return makeAppPath(out, appConfigDirectory(), file);
+}
+
+//===========================================================================
+bool Dim::appLogPath(string & out, string_view file) {
+    return makeAppPath(out, appLogDirectory(), file);
+}
+
+//===========================================================================
+bool Dim::appDataPath(string & out, string_view file) {
+    return makeAppPath(out, appDataDirectory(), file);
+}
+
+//===========================================================================
 int Dim::appRun(IAppNotify & app, int argc, char * argv[], AppFlags flags) {
     s_appFlags = flags;
     s_runMode = kRunStarting;
     s_appTasks.clear();
     s_appTasks.push_back(&s_runTask);
 
+    if (flags & fAppWithChdir) {
+        auto fp = fs::u8path(envGetExecPath());
+        fs::current_path(fp.parent_path());
+    }
+    s_confDir = makeAppDir("conf");
+    s_logDir = makeAppDir("log");
+    s_dataDir = makeAppDir("data");
+
     iPerfInitialize();
     iLogInitialize();
     iConsoleInitialize();
     if (flags & fAppWithConsole)
         logDefaultMonitor(&s_consoleLogger);
-    if (flags & fAppWithChdir) {
-        auto fp = fs::u8path(envGetExecPath());
-        fs::current_path(fp.parent_path());
-    }
     iTaskInitialize();
     iTimerInitialize();
     iPlatformInitialize();
     iFileInitialize();
-    iConfigInitialize("conf");
+    iConfigInitialize();
     configMonitor("app.xml", &s_appXml);
-    if (flags & fAppWithLogFiles) {
-        iLogFileInitialize("log");
+    if (flags & fAppWithFiles) {
+        iLogFileInitialize();
         if (flags & fAppWithConsole)
             logMonitor(&s_consoleLogger);
     }

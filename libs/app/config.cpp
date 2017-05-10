@@ -57,7 +57,6 @@ private:
 *
 ***/
 
-static string s_rootDir;
 static FileMonitorHandle s_hDir;
 
 static mutex s_mut;
@@ -81,10 +80,11 @@ void ConfigFile::monitor_UNLK(string_view relpath, IConfigNotify * notify) {
 
     if (empty) {
         s_mut.unlock();
-        if (appFlags() & fAppWithConfig) {
+        if (appFlags() & fAppWithFiles) {
             fileMonitor(s_hDir, relpath, this);
         } else {
-            string fullpath = s_rootDir;
+            string fullpath;
+            fullpath = appConfigDirectory();
             fullpath += '/';
             fullpath += relpath;
             parseContent(fullpath, {});
@@ -117,7 +117,7 @@ bool ConfigFile::closeWait_UNLK(IConfigNotify * notify) {
 void ConfigFile::parseContent(string_view fullpath, string && content) {
     m_content = move(content);
     m_relpath = fullpath;
-    m_relpath.remove_prefix(s_rootDir.size() + 1);
+    m_relpath.remove_prefix(appConfigDirectory().size() + 1);
     m_xml.parse(m_content.data(), m_relpath);
     m_relpath = m_xml.filename();
     m_fullpath = m_xml.heap().strdup(fullpath);
@@ -206,13 +206,10 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
 ***/
 
 //===========================================================================
-void Dim::iConfigInitialize (string_view dir) {
+void Dim::iConfigInitialize () {
     shutdownMonitor(&s_cleanup);
-    auto fp = fs::u8path(dir.begin(), dir.end());
-    fp = fs::canonical(fp);
-    s_rootDir = fp.u8string();
-    if (appFlags() & fAppWithConfig)
-        fileMonitorDir(&s_hDir, s_rootDir, true);
+    if (appFlags() & fAppWithFiles)
+        fileMonitorDir(&s_hDir, appConfigDirectory(), true);
 }
 
 

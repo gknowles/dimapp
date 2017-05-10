@@ -214,20 +214,11 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
 ***/
 
 //===========================================================================
-void Dim::iLogFileInitialize(string_view logDir) {
+void Dim::iLogFileInitialize() {
     shutdownMonitor(&s_cleanup);
 
-    //vector<Address> addrs;
-    //addressGetLocal(&addrs);
-    //ostringstream os;
-    //os << addrs.front();
-    //s_hostname = os.str();
-
-    error_code ec;
-    s_logfile = logDir;
-    fs::create_directories(fs::u8path(s_logfile), ec);
-
-    s_logfile += "/server.log";
+    if (!appLogPath(s_logfile, "server.log"))
+        logMsgCrash() << "Invalid log path: " << s_logfile;
 
     logMonitor(&s_logger);
 }

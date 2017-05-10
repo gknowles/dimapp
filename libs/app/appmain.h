@@ -50,13 +50,11 @@ enum AppFlags : unsigned {
     fAppWithConsole = 0x01,
 
     fAppWithChdir = 0x02,
-    fAppWithConfig = 0x04,
-    fAppWithLogFiles = 0x08,
+    fAppWithFiles = 0x04, // conf, log, etc
     fAppWithWebAdmin = 0x10,
 
     fAppClient = fAppWithConsole,
-    fAppServer = fAppWithChdir | fAppWithConfig | fAppWithLogFiles 
-        | fAppWithWebAdmin,
+    fAppServer = fAppWithChdir | fAppWithFiles | fAppWithWebAdmin,
 };
 
 // returns exit code
@@ -78,6 +76,17 @@ RunMode appMode();
 
 // returns flags passed to appRun()
 AppFlags appFlags(); 
+
+std::string_view appConfigDirectory();
+std::string_view appLogDirectory();
+std::string_view appDataDirectory();
+
+// false if file relative to root is not within the root path. This can happen 
+// if file breaks out via ".." or is an absolute path.
+bool appConfigPath(std::string & out, std::string_view file);
+bool appLogPath(std::string & out, std::string_view file);
+bool appDataPath(std::string & out, std::string_view file);
+
 
 /****************************************************************************
 *

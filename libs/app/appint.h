@@ -16,10 +16,10 @@ namespace Dim {
 void iAppPushStartupTask(ITaskNotify & task);
 
 // Config
-void iConfigInitialize(std::string_view dir);
+void iConfigInitialize();
 
 // LogFile
-void iLogFileInitialize(std::string_view dir);
+void iLogFileInitialize();
 
 // WebAdmin
 void iWebAdminInitialize();
