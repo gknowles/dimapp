@@ -78,19 +78,28 @@ IJBuilder & IJBuilder::end() {
     switch (m_state) {
     default: return fail();
     case kStateFirstValue:
+        assert(!m_stack.back());
+        append("]");
+        break;
     case kStateValue:
+        assert(!m_stack.back());
         append("\n]");
         break;
     case kStateFirstMember:
+        assert(m_stack.back());
+        append("}");
+        break;
     case kStateMember:
+        assert(m_stack.back());
         append("\n}");
         break;
     }
-    m_state = m_stack.back() ? kStateMember : kStateValue;
     m_stack.pop_back();
     if (m_stack.empty()) {
         append("\n");
         m_state = kStateDocEnd;
+    } else {
+        m_state = m_stack.back() ? kStateMember : kStateValue;
     }
     return *this;
 }
@@ -131,7 +140,7 @@ IJBuilder & IJBuilder::value(string_view val) {
 }
 
 //===========================================================================
-IJBuilder & IJBuilder::addValue(string_view val) {
+IJBuilder & IJBuilder::valueRaw(string_view val) {
     switch (m_state) {
     default: 
         return fail();
@@ -151,29 +160,29 @@ IJBuilder & IJBuilder::addValue(string_view val) {
 
 //===========================================================================
 IJBuilder & IJBuilder::value(bool val) {
-    return addValue(val ? "true" : "false");
+    return valueRaw(val ? "true" : "false");
 }
 
 //===========================================================================
 IJBuilder & IJBuilder::value(double val) {
-    return addValue("*double*");
+    return valueRaw("*double*");
 }
 
 //===========================================================================
 IJBuilder & IJBuilder::value(int64_t val) {
     IntegralStr<int64_t> tmp(val);
-    return addValue(tmp);
+    return valueRaw(tmp);
 }
 
 //===========================================================================
 IJBuilder & IJBuilder::value(uint64_t val) {
     IntegralStr<uint64_t> tmp(val);
-    return addValue(tmp);
+    return valueRaw(tmp);
 }
 
 //===========================================================================
 IJBuilder & IJBuilder::value(std::nullptr_t) {
-    return addValue("null");
+    return valueRaw("null");
 }
 
 //===========================================================================

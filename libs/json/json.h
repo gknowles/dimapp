@@ -36,14 +36,16 @@ public:
     IJBuilder & array();
 
     IJBuilder & startMember(std::string_view name);
-    IJBuilder & endMember();
 
     template <typename T>
     IJBuilder & member(std::string_view name, const T & val) {
         startMember(name);
         value(val);
-        endMember();
+        return *this;
     }
+
+    // pre-formatted value
+    IJBuilder & valueRaw(std::string_view val);
 
     IJBuilder & value(std::string_view val);
     IJBuilder & value(bool val);
@@ -58,7 +60,6 @@ protected:
 
 private:
     void appendString(std::string_view val);
-    IJBuilder & addValue(std::string_view val);
     IJBuilder & fail();
 
     enum State : int m_state;
