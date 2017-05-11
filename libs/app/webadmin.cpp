@@ -48,11 +48,11 @@ void WebRoot::onHttpRequest(
 
 /****************************************************************************
 *
-*   WebCounters
+*   HtmlCounters
 *
 ***/
 
-class WebCounters : public IHttpRouteNotify {
+class HtmlCounters : public IHttpRouteNotify {
     void onHttpRequest(
         unsigned reqId,
         unordered_multimap<string_view, string_view> & params,
@@ -61,16 +61,17 @@ class WebCounters : public IHttpRouteNotify {
 };
 
 //===========================================================================
-void WebCounters::onHttpRequest(
+void HtmlCounters::onHttpRequest(
     unsigned reqId,
     unordered_multimap<string_view, string_view> & params,
     HttpRequest & msg
 ) {
+    vector<PerfValue> perfs;
+    perfGetValues(perfs);
+
     HttpResponse res;
     XBuilder bld(res.body());
     bld.start("html").start("body");
-    vector<PerfValue> perfs;
-    perfGetValues(perfs);
     bld.start("table");
     bld.start("tr")
         .elem("th", "Value")
@@ -85,6 +86,43 @@ void WebCounters::onHttpRequest(
     bld.end();
     bld.end().end();
     res.addHeader(kHttpContentType, "text/html");
+    res.addHeader(kHttp_Status, "200");
+    httpRouteReply(reqId, res);
+}
+
+
+/****************************************************************************
+*
+*   JsonCounters
+*
+***/
+
+class JsonCounters : public IHttpRouteNotify {
+    void onHttpRequest(
+        unsigned reqId,
+        unordered_multimap<string_view, string_view> & params,
+        HttpRequest & msg
+    ) override;
+};
+
+//===========================================================================
+void JsonCounters::onHttpRequest(
+    unsigned reqId,
+    unordered_multimap<string_view, string_view> & params,
+    HttpRequest & msg
+) {
+    vector<PerfValue> perfs;
+    perfGetValues(perfs);
+
+    HttpResponse res;
+    JBuilder bld(res.body());
+    bld.object();
+    for (auto && perf : perfs) {
+        bld.startMember(perf.name);
+        bld.valueRaw(perf.value);
+    }
+    bld.end();
+    res.addHeader(kHttpContentType, "application/json");
     res.addHeader(kHttp_Status, "200");
     httpRouteReply(reqId, res);
 }
@@ -115,12 +153,14 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
 ***/
 
 static WebRoot s_webRoot;
-static WebCounters s_webCounters;
+static HtmlCounters s_htmlCounters;
+static JsonCounters s_jsonCounters;
 
 //===========================================================================
 void Dim::iWebAdminInitialize() {
     shutdownMonitor(&s_cleanup);
 
     httpRouteAdd(&s_webRoot, "/", fHttpMethodGet, true);
-    httpRouteAdd(&s_webCounters, "/srv/counters", fHttpMethodGet);
+    httpRouteAdd(&s_htmlCounters, "/srv/counters", fHttpMethodGet);
+    httpRouteAdd(&s_jsonCounters, "/srv/counters.json", fHttpMethodGet);
 }

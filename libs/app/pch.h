@@ -9,6 +9,7 @@
 // External library public headers
 #include "cli/cli.h"
 #include "core/core.h"
+#include "json/json.h"
 #include "net/address.h"
 #include "net/httproute.h"
 #include "xml/xml.h"
