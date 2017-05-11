@@ -56,6 +56,7 @@ public:
 
 protected:
     virtual void append(std::string_view text) = 0;
+    virtual void append(char ch) = 0;
     virtual size_t size() const = 0;
 
 private:
@@ -100,6 +101,7 @@ public:
 
 private:
     void append(std::string_view text) override;
+    void append(char ch) override;
     size_t size() const override;
 
     CharBuf & m_buf;
