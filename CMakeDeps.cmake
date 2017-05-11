@@ -61,6 +61,7 @@
 # libs/cppconf/compiler/visualc.h
 # libs/cppconf/cppconf.h
 # libs/cppconf/cppconf_suffix.h
+# libs/json/jbuilder.cpp
 # libs/json/json.abnf
 # libs/json/json.h
 # libs/json/jsonbaseparse.cpp

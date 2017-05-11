@@ -32,7 +32,7 @@ public:
     virtual void clear();
 
     IJBuilder & object();
-    IJBuilder & end();
+    IJBuilder & end(); // used to end both objects and arrays
     IJBuilder & array();
 
     IJBuilder & startMember(std::string_view name);
@@ -57,31 +57,22 @@ protected:
     virtual size_t size() const = 0;
 
 private:
-    template <int N> void addRaw(const char (&text)[N]) {
-        append(text, N - 1);
-    }
-
-    template <
-        typename Char,
-        typename = std::enable_if<std::is_same<Char, char>::value>::type>
-    void addRaw(Char const * const & text) {
-        append(text);
-    }
-
-    void addRaw(const char text[], size_t count);
-
-    template <bool isContent> 
-    void addText(const char text[], size_t count = -1);
+    void appendString(std::string_view val);
+    IJBuilder & addValue(std::string_view val);
     IJBuilder & fail();
 
-    enum State : int;
-    State m_state;
-    struct Pos {
-        size_t pos;
-        size_t len;
-    };
-    std::vector<Pos> m_stack;
+    enum State : int m_state;
+
+    // objects are true, arrays are false
+    std::vector<bool> m_stack;
 };
+
+IJBuilder & operator<<(IJBuilder & out, std::string_view val);
+IJBuilder & operator<<(IJBuilder & out, bool val);
+IJBuilder & operator<<(IJBuilder & out, double val);
+IJBuilder & operator<<(IJBuilder & out, int64_t val);
+IJBuilder & operator<<(IJBuilder & out, uint64_t val);
+IJBuilder & operator<<(IJBuilder & out, std::nullptr_t);
 
 template <typename T>
 inline IJBuilder & operator<<(IJBuilder & out, const T & val) {
