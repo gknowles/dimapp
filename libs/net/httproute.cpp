@@ -57,6 +57,9 @@ private:
 struct RequestInfo {
     HttpSocket * conn;
     int stream;
+
+    RequestInfo(HttpSocket * conn = nullptr, int stream = 0);
+    ~RequestInfo();
 };
 
 } // namespace
@@ -72,6 +75,12 @@ static vector<PathInfo> s_paths;
 static Endpoint s_endpoint;
 static unordered_map<unsigned, RequestInfo> s_requests;
 static unsigned s_nextReqId;
+
+static auto & s_perfRequests = uperf("http requests");
+static auto & s_perfCurrent = uperf("http requests (current)");
+static auto & s_perfInvalid = uperf("http protocol error");
+static auto & s_perfSuccess = uperf("http reply success"); 
+static auto & s_perfError = uperf("http reply error");
 
 
 /****************************************************************************
@@ -115,10 +124,32 @@ static unsigned makeRequestInfo (HttpSocket * conn, int stream) {
         auto id = ++s_nextReqId;
         auto & found = s_requests[id];
         if (!found.conn) {
-            found = {conn, stream};
+            found.conn = conn;
+            found.stream = stream;
             return id;
         }
     }
+}
+
+
+/****************************************************************************
+*
+*   RequestInfo
+*
+***/
+
+//===========================================================================
+RequestInfo::RequestInfo (HttpSocket * conn, int stream) 
+    : conn(conn)
+    , stream(stream)
+{
+    s_perfRequests += 1;
+    s_perfCurrent += 1;
+}
+
+//===========================================================================
+RequestInfo::~RequestInfo () {
+    s_perfCurrent -= 1;
 }
 
 
@@ -158,6 +189,11 @@ void HttpSocket::iReply(
 //===========================================================================
 // static 
 void HttpSocket::reply(unsigned reqId, HttpResponse & msg, bool more) {
+    if (msg.status() == 200) {
+        s_perfSuccess += 1;
+    } else {
+        s_perfError += 1;
+    }
     auto fn = [&](HttpConnHandle h, CharBuf * out, int stream) -> void {
         httpReply(h, out, stream, msg, more);
     };
@@ -207,8 +243,10 @@ void HttpSocket::onSocketRead(AppSocketData & data) {
     bool result = httpRecv(m_conn, &out, &msgs, data.data, data.bytes);
     if (!out.empty())
         socketWrite(this, out);
-    if (!result)
+    if (!result) {
+        s_perfInvalid += 1;
         return socketDisconnect(this);
+    }
     for (auto && msg : msgs) {
         if (msg->isRequest()) {
             auto id = makeRequestInfo(this, msg->stream());
@@ -386,13 +424,15 @@ struct ReplyWithFileNotify : IFileReadNotify {
 //===========================================================================
 void Dim::httpRouteReplyWithFile(unsigned reqId, std::string_view path) {
     HttpResponse msg;
-    msg.addHeader(kHttp_Status, "404");
+    auto file = fileOpen(path, File::fReadOnly | File::fDenyNone);
+    if (!file) {
+        msg.addHeader(kHttp_Status, "404");
+        return HttpSocket::reply(reqId, msg, false);
+    }
+    msg.addHeader(kHttp_Status, "200");
     httpRouteReply(reqId, msg, true);
     auto notify = new ReplyWithFileNotify;
     notify->m_reqId = reqId;
-    auto file = fileOpen(path, File::fReadOnly | File::fDenyNone);
-    if (!file)
-        return notify->onFileEnd(0, file);
     fileRead(
         notify, 
         notify->m_buffer, 

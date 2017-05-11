@@ -339,6 +339,12 @@ bool HttpRequest::checkPseudoHeaders() const {
 ***/
 
 //===========================================================================
+int HttpResponse::status() const { 
+    auto val = headers(kHttp_Status).begin()->m_value; 
+    return strToInt(val);
+}
+
+//===========================================================================
 bool HttpResponse::checkPseudoHeaders() const {
     const Flags must = fFlagHasStatus;
     const Flags mustNot = fFlagHasMethod | fFlagHasScheme | fFlagHasAuthority
