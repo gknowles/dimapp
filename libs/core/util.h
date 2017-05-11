@@ -191,10 +191,17 @@ template <typename T> bool stringTo(T & out, const std::string & src) {
 
 
 //===========================================================================
-// hexToUnsigned - converts hex character (0-9, a-f, A-F) to unsigned (0-15)
+// hexToNibble - converts hex character (0-9, a-f, A-F) to unsigned (0-15)
 //===========================================================================
-constexpr unsigned hexToUnsigned(char ch) {
+constexpr unsigned hexToNibble(char ch) {
     return ((ch | 432) * 239'217'992 & 0xffff'ffff) >> 28;
+}
+
+//===========================================================================
+constexpr char hexFromNibble(unsigned val) {
+    assert(val < 16);
+    const char s_chars[] = "0123456789abcdef";
+    return s_chars[val];
 }
 
 

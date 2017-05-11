@@ -160,7 +160,7 @@ bool BaseParserNotify::onCharRefDigitChar(char ch) {
 
 //===========================================================================
 bool BaseParserNotify::onCharRefHexdigChar(char ch) {
-    m_char = m_char * 16 + hexToUnsigned(ch);
+    m_char = m_char * 16 + hexToNibble(ch);
     return true;
 }
 
