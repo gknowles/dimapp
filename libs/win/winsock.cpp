@@ -81,8 +81,8 @@ static RioDispatchThread s_dispatchThread;
 
 //===========================================================================
 void RioDispatchThread::onTask() {
-    static const int kNumResults = 100;
-    RIORESULT results[kNumResults];
+    static const int kMaxResults = 100;
+    RIORESULT results[kMaxResults];
     ITaskNotify * tasks[size(results)];
     int count;
 
@@ -110,7 +110,7 @@ void RioDispatchThread::onTask() {
             auto && rr = results[i];
             auto task = (ISocketRequestTaskBase *)rr.RequestContext;
             task->m_socket = (SocketBase *)rr.SocketContext;
-            task->m_xferError = (WinError::NtStatus)rr.Status;
+            task->m_xferError = rr.Status;
             task->m_xferBytes = rr.BytesTransferred;
             tasks[i] = task;
         }
