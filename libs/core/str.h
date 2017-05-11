@@ -31,15 +31,15 @@ template <typename T> constexpr int maxIntegralChars() {
 template <typename T> class IntegralStr {
 public:
     IntegralStr(T val);
-    const char * set(T val);
-    operator const char *() const;
+    std::string_view set(T val);
+    operator std::string_view() const;
 
 private:
     using Signed = typename std::make_signed<T>::type;
     using Unsigned = typename std::make_unsigned<T>::type;
 
-    const char * internalSet(Signed val);
-    const char * internalSet(Unsigned val);
+    std::string_view internalSet(Signed val);
+    std::string_view internalSet(Unsigned val);
 
     char data[maxIntegralChars<T>() + 1];
 };
@@ -50,21 +50,23 @@ template <typename T> IntegralStr<T>::IntegralStr(T val) {
 }
 
 //===========================================================================
-template <typename T> const char * IntegralStr<T>::set(T val) {
+template <typename T> std::string_view IntegralStr<T>::set(T val) {
     return internalSet(val);
 }
 
 //===========================================================================
-template <typename T> IntegralStr<T>::operator const char *() const {
-    return data;
+template <typename T> IntegralStr<T>::operator std::string_view() const {
+    return std::string_view(data, data[sizeof(data) - 1]);
 }
 
 //===========================================================================
-template <typename T> const char * IntegralStr<T>::internalSet(Unsigned val) {
+template <typename T> 
+std::string_view IntegralStr<T>::internalSet(Unsigned val) {
     if (val < 10) {
         // optimize for 0 and 1... and 2 thru 9 since it's no more cost
         data[0] = static_cast<char>(val) + '0';
         data[1] = 0;
+        data[sizeof(data) - 1] = 1;
     } else {
         char * ptr = data;
         unsigned i = 0;
@@ -76,19 +78,22 @@ template <typename T> const char * IntegralStr<T>::internalSet(Unsigned val) {
                 break;
         }
         ptr[i] = 0;
+        data[sizeof(data) - 1] = (char) i;
         for (; i > 1; i -= 2) {
             swap(*ptr, ptr[i]);
             ptr += 1;
         }
     }
-    return data;
+    return *this;
 }
 
 //===========================================================================
-template <typename T> const char * IntegralStr<T>::internalSet(Signed val) {
+template <typename T> 
+std::string_view IntegralStr<T>::internalSet(Signed val) {
     if (!val) {
         data[0] = '0';
         data[1] = 0;
+        data[sizeof(data) - 1] = 1;
     } else {
         char * ptr = data;
         if (val < 0) {
@@ -106,12 +111,13 @@ template <typename T> const char * IntegralStr<T>::internalSet(Signed val) {
                 break;
         }
         ptr[i] = 0;
+        data[sizeof(data) - 1] = (char) i;
         for (; i > 1; i -= 2) {
             swap(*ptr, ptr[i]);
             ptr += 1;
         }
     }
-    return data;
+    return *this;
 }
 
 
@@ -121,14 +127,26 @@ template <typename T> const char * IntegralStr<T>::internalSet(Signed val) {
 *
 ***/
 
-int strToInt(const char src[], char ** eptr, int base);
-unsigned strToUint(const char src[], char ** eptr, int base);
-int64_t strToInt64(const char src[], char ** eptr, int base);
-uint64_t strToUint64(const char src[], char ** eptr, int base);
+int strToInt(const char src[], char ** eptr = nullptr, int base = 10);
+unsigned strToUint(const char src[], char ** eptr = nullptr, int base = 10);
+int64_t strToInt64(const char src[], char ** eptr = nullptr, int base = 10);
+uint64_t strToUint64(const char src[], char ** eptr = nullptr, int base = 10);
 
-int strToInt(std::string_view src, char ** eptr, int base);
-unsigned strToUint(std::string_view src, char ** eptr, int base);
-int64_t strToInt64(std::string_view src, char ** eptr, int base);
-uint64_t strToUint64(std::string_view src, char ** eptr, int base);
+int strToInt(std::string_view src, char ** eptr = nullptr, int base = 10);
+unsigned strToUint(
+    std::string_view src, 
+    char ** eptr = nullptr, 
+    int base = 10
+);
+int64_t strToInt64(
+    std::string_view src, 
+    char ** eptr = nullptr, 
+    int base = 10
+);
+uint64_t strToUint64(
+    std::string_view src, 
+    char ** eptr = nullptr, 
+    int base = 10
+);
 
 } // namespace
