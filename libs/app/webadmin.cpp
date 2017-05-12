@@ -118,7 +118,7 @@ void JsonCounters::onHttpRequest(
     JBuilder bld(res.body());
     bld.object();
     for (auto && perf : perfs) {
-        bld.startMember(perf.name);
+        bld.member(perf.name);
         bld.valueRaw(perf.value);
     }
     bld.end();

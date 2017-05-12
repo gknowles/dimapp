@@ -72,7 +72,7 @@ static void addSidRow(JBuilder & out, SID_AND_ATTRIBUTES & sa) {
     out.member("attrs", (uint64_t) sa.Attributes);
     out.member("name", name);
     out.member("domain", dom);
-    out.member("type", use);
+    out.member("type", (int64_t) use);
     out.end();
 }
 

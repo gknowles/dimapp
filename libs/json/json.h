@@ -35,23 +35,23 @@ public:
     IJBuilder & end(); // used to end both objects and arrays
     IJBuilder & array();
 
-    IJBuilder & startMember(std::string_view name);
+    IJBuilder & member(std::string_view name);
 
     template <typename T>
     IJBuilder & member(std::string_view name, T val) {
-        startMember(name) << val;
+        member(name) << val;
         return *this;
     }
 
     // pre-formatted value
     IJBuilder & valueRaw(std::string_view val);
 
-    IJBuilder & string(std::string_view val);
-    IJBuilder & boolean(bool val);
-    IJBuilder & fnumber(double val);
-    IJBuilder & inumber(int64_t val);
-    IJBuilder & unumber(uint64_t val);
-    IJBuilder & null();
+    IJBuilder & value(std::string_view val);
+    IJBuilder & value(bool val);
+    IJBuilder & value(double val);
+    IJBuilder & ivalue(int64_t val);
+    IJBuilder & uvalue(uint64_t val);
+    IJBuilder & value(std::nullptr_t);
 
 protected:
     virtual void append(std::string_view text) = 0;
@@ -75,11 +75,13 @@ IJBuilder & operator<<(IJBuilder & out, int64_t val);
 IJBuilder & operator<<(IJBuilder & out, uint64_t val);
 IJBuilder & operator<<(IJBuilder & out, std::nullptr_t);
 
-template <typename T>
+template <typename T, typename = 
+    std::enable_if_t<!std::is_integral_v<T> && !std::is_enum_v<T>>
+>
 inline IJBuilder & operator<<(IJBuilder & out, const T & val) {
     std::ostringstream os;
     os << val;
-    return out.string(os.str());
+    return out.value(os.str());
 }
 
 inline IJBuilder &
