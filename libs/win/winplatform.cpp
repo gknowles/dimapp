@@ -40,7 +40,7 @@ class HtmlAccount : public IHttpRouteNotify {
 } // namespace
 
 //===========================================================================
-static void addSidRow(XBuilder & out, const SID_AND_ATTRIBUTES & sa) {
+static void addSidRow(JBuilder & out, SID_AND_ATTRIBUTES & sa) {
 	DWORD nameLen;
 	DWORD domLen;
 	SID_NAME_USE use;
@@ -66,12 +66,14 @@ static void addSidRow(XBuilder & out, const SID_AND_ATTRIBUTES & sa) {
 	)) {
 		logMsgCrash() << "LookupAccountSid: " << WinError{};
 	}
-	out << start("tr")
-		<< start("td") << sa.Attributes << end
-		<< elem("td", name.c_str())
-		<< elem("td", dom.c_str())
-		<< start("td") << use << end
-		<< end;
+    name.resize(nameLen);
+    dom.resize(domLen);
+	out.object();
+    out.member("attrs", (uint64_t) sa.Attributes);
+    out.member("name", name);
+    out.member("domain", dom);
+    out.member("type", use);
+    out.end();
 }
 
 //===========================================================================
@@ -105,23 +107,15 @@ void HtmlAccount::onHttpRequest(
 		logMsgCrash() << "GetTokenInformation(TokenGroups): " << WinError{};
 
 	HttpResponse res;
-	XBuilder bld(res.body());
-	bld.start("html").start("body");
-	bld.start("table");
-	bld.start("tr")
-		.elem("th", "Attrs")
-		.elem("th", "Name")
-		.elem("th", "Domain")
-		.elem("th", "Type")
-		.end();
+	JBuilder bld(res.body());
+	bld.array();
 	addSidRow(bld, usr->User);
 	auto * ptr = grps->Groups,
 		*eptr = ptr + grps->GroupCount;
 	for (; ptr != eptr; ++ptr) {
 		addSidRow(bld, *ptr);
 	}
-	bld.end(); // table
-	bld.end().end();
+	bld.end();
 	res.addHeader(kHttpContentType, "text/html");
 	res.addHeader(kHttp_Status, "200");
 	httpRouteReply(reqId, res);
@@ -149,5 +143,5 @@ void Dim::iPlatformConfigInitialize() {
     winAppConfigInitialize();
 
     if (appFlags() & fAppWithWebAdmin)
-        httpRouteAdd(&s_account, "/srv/account");
+        httpRouteAdd(&s_account, "/srv/account.json");
 }

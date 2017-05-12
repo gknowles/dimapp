@@ -38,21 +38,20 @@ public:
     IJBuilder & startMember(std::string_view name);
 
     template <typename T>
-    IJBuilder & member(std::string_view name, const T & val) {
-        startMember(name);
-        value(val);
+    IJBuilder & member(std::string_view name, T val) {
+        startMember(name) << val;
         return *this;
     }
 
     // pre-formatted value
     IJBuilder & valueRaw(std::string_view val);
 
-    IJBuilder & value(std::string_view val);
-    IJBuilder & value(bool val);
-    IJBuilder & value(double val);
-    IJBuilder & value(int64_t val);
-    IJBuilder & value(uint64_t val);
-    IJBuilder & value(std::nullptr_t);
+    IJBuilder & string(std::string_view val);
+    IJBuilder & boolean(bool val);
+    IJBuilder & fnumber(double val);
+    IJBuilder & inumber(int64_t val);
+    IJBuilder & unumber(uint64_t val);
+    IJBuilder & null();
 
 protected:
     virtual void append(std::string_view text) = 0;
@@ -80,7 +79,7 @@ template <typename T>
 inline IJBuilder & operator<<(IJBuilder & out, const T & val) {
     std::ostringstream os;
     os << val;
-    return out.value(os.str());
+    return out.string(os.str());
 }
 
 inline IJBuilder &

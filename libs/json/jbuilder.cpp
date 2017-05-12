@@ -202,7 +202,7 @@ IJBuilder & IJBuilder::startMember(string_view name) {
 }
 
 //===========================================================================
-IJBuilder & IJBuilder::value(string_view val) {
+IJBuilder & IJBuilder::string(string_view val) {
     switch (m_state) {
     default: 
         return fail();
@@ -240,29 +240,29 @@ IJBuilder & IJBuilder::valueRaw(string_view val) {
 }
 
 //===========================================================================
-IJBuilder & IJBuilder::value(bool val) {
+IJBuilder & IJBuilder::boolean(bool val) {
     return valueRaw(val ? "true" : "false");
 }
 
 //===========================================================================
-IJBuilder & IJBuilder::value(double val) {
+IJBuilder & IJBuilder::fnumber(double val) {
     return valueRaw("*double*");
 }
 
 //===========================================================================
-IJBuilder & IJBuilder::value(int64_t val) {
+IJBuilder & IJBuilder::inumber(int64_t val) {
     IntegralStr<int64_t> tmp(val);
     return valueRaw(tmp);
 }
 
 //===========================================================================
-IJBuilder & IJBuilder::value(uint64_t val) {
+IJBuilder & IJBuilder::unumber(uint64_t val) {
     IntegralStr<uint64_t> tmp(val);
     return valueRaw(tmp);
 }
 
 //===========================================================================
-IJBuilder & IJBuilder::value(std::nullptr_t) {
+IJBuilder & IJBuilder::null() {
     return valueRaw("null");
 }
 
@@ -285,7 +285,7 @@ void IJBuilder::appendString(string_view val) {
         }
 
         append({base, size_t(ptr - base)});
-        append(kTextTypeTable[type]);
+        append(kTextEntityTable[type]);
         base = ptr + 1;
     }
 
@@ -340,30 +340,30 @@ size_t JBuilder::size() const {
 
 //===========================================================================
 IJBuilder & Dim::operator<<(IJBuilder & out, std::string_view val) {
-    return out.value(val);
+    return out.string(val);
 }
 
 //===========================================================================
 IJBuilder & Dim::operator<<(IJBuilder & out, int64_t val) {
-    return out.value(val);
+    return out.inumber(val);
 }
 
 //===========================================================================
 IJBuilder & Dim::operator<<(IJBuilder & out, uint64_t val) {
-    return out.value(val);
+    return out.unumber(val);
 }
 
 //===========================================================================
 IJBuilder & Dim::operator<<(IJBuilder & out, bool val) {
-    return out.value(val);
+    return out.boolean(val);
 }
 
 //===========================================================================
 IJBuilder & Dim::operator<<(IJBuilder & out, double val) {
-    return out.value(val);
+    return out.fnumber(val);
 }
 
 //===========================================================================
 IJBuilder & Dim::operator<<(IJBuilder & out, nullptr_t) {
-    return out.value(nullptr);
+    return out.null();
 }
