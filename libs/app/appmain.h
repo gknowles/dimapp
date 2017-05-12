@@ -52,9 +52,11 @@ enum AppFlags : unsigned {
     fAppWithChdir = 0x02,
     fAppWithFiles = 0x04, // conf, log, etc
     fAppWithWebAdmin = 0x08,
+    fAppWithService = 0x10, // can run as service
 
     fAppClient = fAppWithConsole,
-    fAppServer = fAppWithChdir | fAppWithFiles | fAppWithWebAdmin,
+    fAppServer = fAppWithChdir | fAppWithFiles | fAppWithWebAdmin 
+        | fAppWithService,
 };
 
 // returns exit code

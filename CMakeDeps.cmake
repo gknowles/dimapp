@@ -116,6 +116,7 @@
 # libs/win/winint.h
 # libs/win/winiocp.cpp
 # libs/win/winplatform.cpp
+# libs/win/winservice.cpp
 # libs/win/winsock.cpp
 # libs/win/winsockacc.cpp
 # libs/win/winsockbuf.cpp

@@ -165,4 +165,13 @@ void winIocpInitialize();
 bool winIocpBindHandle(HANDLE handle);
 
 
+/****************************************************************************
+*
+*   Service
+*
+***/
+
+void winServiceInitialize();
+
+
 } // namespace

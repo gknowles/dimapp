@@ -136,6 +136,7 @@ void Dim::iPlatformInitialize() {
     winErrorInitialize();
     winIocpInitialize();
     winAppInitialize();
+    winServiceInitialize();
 }
 
 //===========================================================================
