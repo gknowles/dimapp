@@ -51,7 +51,7 @@ enum AppFlags : unsigned {
 
     fAppWithChdir = 0x02,
     fAppWithFiles = 0x04, // conf, log, etc
-    fAppWithWebAdmin = 0x10,
+    fAppWithWebAdmin = 0x08,
 
     fAppClient = fAppWithConsole,
     fAppServer = fAppWithChdir | fAppWithFiles | fAppWithWebAdmin,

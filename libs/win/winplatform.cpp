@@ -148,5 +148,6 @@ void Dim::iPlatformInitialize() {
 void Dim::iPlatformConfigInitialize() {
     winAppConfigInitialize();
 
-    httpRouteAdd(&s_account, "/srv/account");
+    if (appFlags() & fAppWithWebAdmin)
+        httpRouteAdd(&s_account, "/srv/account");
 }
