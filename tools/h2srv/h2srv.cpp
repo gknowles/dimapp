@@ -148,3 +148,19 @@ int main(int argc, char * argv[]) {
     Application app;
     return appRun(app, argc, argv, fAppServer | fAppWithConsole);
 }
+
+#include "Windows.h"
+
+//===========================================================================
+int __stdcall WinMain(
+    HINSTANCE hInstance,
+    HINSTANCE hPrevInstance,
+    char * lpCmdLine,
+    int nShowCmd
+) {
+    auto cmdline = GetCommandLineA();
+    Cli cli;
+    auto args = cli.toArgv(cmdline);
+    auto pargs = cli.toPtrArgv(args);
+    return main((int) pargs.size(), (char **) pargs.data());
+}
