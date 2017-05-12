@@ -331,9 +331,21 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
 ***/
 
 //===========================================================================
+static void startListen() {
+    sockMgrListen(
+        "httpRoute", 
+        getFactory<IAppSocketNotify, HttpSocket>(),
+        AppSocket::kHttp2,
+        AppSocket::fMgrConsole
+    );
+}
+
+//===========================================================================
 void Dim::iHttpRouteInitialize() {
     shutdownMonitor(&s_cleanup);
     socketAddFamily(AppSocket::kHttp2, &s_http2Match);
+    if (!s_paths.empty())
+        startListen();
 }
 
 
@@ -351,14 +363,8 @@ void Dim::httpRouteAdd(
     bool recurse
 ) {
     assert(!path.empty());
-    if (s_paths.empty()) {
-        sockMgrListen(
-            "httpRoute", 
-            getFactory<IAppSocketNotify, HttpSocket>(),
-            AppSocket::kHttp2,
-            AppSocket::fMgrConsole
-        );
-    }
+    if (s_paths.empty() && appMode() == kRunRunning) 
+        startListen();
     PathInfo pi;
     pi.notify = notify;
     pi.recurse = recurse;
