@@ -254,29 +254,7 @@ template <bool isContent> void IXBuilder::addText(
         case kTextTypeNormal: 
             continue;
         case kTextTypeNull:
-            if (size_t num = val - base) {
-                addRaw(base, num);
-                if (isContent) {
-                    if (val[-1] != ']') {
-                        m_state = kStateText;
-                    } else {
-                        if (num == 1) {
-                            if (m_state == kStateText) {
-                                m_state = kStateTextRBracket;
-                            } else {
-                                m_state = kStateTextRBracket2;
-                            }
-                        } else {
-                            if (val[-2] != ']') {
-                                m_state = kStateTextRBracket;
-                            } else {
-                                m_state = kStateTextRBracket2;
-                            }
-                        }
-                    }
-                }
-            }
-            return;
+            goto DONE;
         case kTextTypeQuote:
             if (isContent)
                 continue;
@@ -294,6 +272,30 @@ template <bool isContent> void IXBuilder::addText(
         base = val + 1;
         if (isContent)
             m_state = kStateText;
+    }
+
+DONE:
+    if (size_t num = val - base) {
+        addRaw(base, num);
+        if (isContent) {
+            if (val[-1] != ']') {
+                m_state = kStateText;
+            } else {
+                if (num == 1) {
+                    if (m_state == kStateText) {
+                        m_state = kStateTextRBracket;
+                    } else {
+                        m_state = kStateTextRBracket2;
+                    }
+                } else {
+                    if (val[-2] != ']') {
+                        m_state = kStateTextRBracket;
+                    } else {
+                        m_state = kStateTextRBracket2;
+                    }
+                }
+            }
+        }
     }
 }
 
