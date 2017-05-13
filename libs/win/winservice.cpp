@@ -17,8 +17,7 @@ using namespace Dim;
 
 namespace {
 
-class ServiceDispatchTask : public ITaskNotify {
-public:
+class ReportStatusTask : public ITaskNotify {
     void onTask() override;
 };
 
@@ -32,8 +31,7 @@ public:
 ***/
 
 static SERVICE_STATUS_HANDLE s_hstat;
-static ServiceDispatchTask s_dispatchTask;
-static TaskQueueHandle s_taskq;
+static ReportStatusTask s_reportTask;
 
 static mutex s_mut;
 static bool s_stopped;
@@ -91,7 +89,12 @@ static void WINAPI ServiceMain(DWORD argc, char ** argv) {
     if (!s_hstat)
         logMsgCrash() << "RegisterServiceCtrlHandlerEx: " << WinError{};
 
-    setState(SERVICE_START_PENDING);
+    if (appStarting()) {
+        setState(SERVICE_START_PENDING);
+        iAppPushStartupTask(s_reportTask);
+    } else {
+        setState(SERVICE_RUNNING);
+    }
 }
 
 
@@ -102,7 +105,7 @@ static void WINAPI ServiceMain(DWORD argc, char ** argv) {
 ***/
 
 //===========================================================================
-void ServiceDispatchTask::onTask() {
+static void serviceDispatchTask() {
     assert(!s_stopped);
 
     SERVICE_TABLE_ENTRY st[] = {
@@ -120,6 +123,18 @@ void ServiceDispatchTask::onTask() {
     
     lock_guard<mutex> lk{s_mut};
     s_stopped = true;
+}
+
+
+/****************************************************************************
+*
+*   ReportStatusTask
+*
+***/
+
+//===========================================================================
+void ReportStatusTask::onTask() {
+    setState(SERVICE_RUNNING);
 }
 
 
@@ -160,7 +175,6 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
 void Dim::winServiceInitialize() {
     if (appFlags() & fAppWithService) {
         shutdownMonitor(&s_cleanup);
-        s_taskq = taskCreateQueue("Service Dispatcher", 1);
-        taskPush(s_taskq, s_dispatchTask);
+        taskPushStatic("Service Dispatcher", serviceDispatchTask);
     }
 }
