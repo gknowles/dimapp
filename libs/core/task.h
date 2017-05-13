@@ -31,6 +31,13 @@ private:
     ITaskNotify * m_taskNext = nullptr;
 };
 
+
+/****************************************************************************
+*
+*   Task API
+*
+***/
+
 void taskPushEvent(ITaskNotify & task);
 void taskPushEvent(ITaskNotify * tasks[], size_t numTasks);
 TaskQueueHandle taskEventQueue();
@@ -43,5 +50,9 @@ TaskQueueHandle taskCreateQueue(std::string_view name, int threads);
 void taskSetQueueThreads(TaskQueueHandle q, int threads);
 void taskPush(TaskQueueHandle q, ITaskNotify & task);
 void taskPush(TaskQueueHandle q, ITaskNotify * tasks[], size_t numTasks);
+
+// Generally used for utility tasks the run for the life of the program
+// such as the window message loop, service dispatcher, or timer queue.
+void taskPushStatic(std::string_view name, std::function<void()> fn);
 
 } // namespace

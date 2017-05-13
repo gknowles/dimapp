@@ -46,6 +46,15 @@ namespace {
 
 class EndThreadTask : public ITaskNotify {};
 
+class StaticTask : public ITaskNotify {
+public:
+    StaticTask(string_view name, function<void()> fn);
+private:
+    void onTask() override;
+
+    function<void()> m_fn;
+};
+
 } // namespace
 
 
@@ -151,6 +160,28 @@ void TaskQueue::pop() {
 
 /****************************************************************************
 *
+*   StaticTask
+*
+***/
+
+//===========================================================================
+StaticTask::StaticTask(string_view name, function<void()> fn)
+    : m_fn{fn}
+{
+    auto q = taskCreateQueue(name, 1);
+    taskPush(q, *this);
+    taskSetQueueThreads(q, 0);
+}
+
+//===========================================================================
+void StaticTask::onTask() {
+    m_fn();
+    delete this;
+}
+
+
+/****************************************************************************
+*
 *   Internal API
 *
 ***/
@@ -236,7 +267,7 @@ TaskQueueHandle Dim::taskCreateQueue(string_view name, int threads) {
 
 //===========================================================================
 void Dim::taskSetQueueThreads(TaskQueueHandle hq, int threads) {
-    assert(s_running || !threads);
+    assert(s_running);
 
     lock_guard<mutex> lk{s_mut};
     auto * q = s_queues.find(hq);
@@ -270,4 +301,9 @@ void Dim::taskPush(
     } else {
         q->cv.notify_one();
     }
+}
+
+//===========================================================================
+void Dim::taskPushStatic(string_view name, function<void()> fn) {
+    new StaticTask(name, fn);
 }
