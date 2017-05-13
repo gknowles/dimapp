@@ -113,6 +113,9 @@ void ServiceDispatchTask::onTask() {
         WinError err;
         if (err != ERROR_FAILED_SERVICE_CONTROLLER_CONNECT) 
             logMsgCrash() << "StartServiceCtrlDispatcher: " << err;
+    } else {
+        // Running as a service and services can't have gui windows
+        iAppSetFlags(appFlags() & ~fAppWithGui | fAppIsService);
     }
     
     lock_guard<mutex> lk{s_mut};

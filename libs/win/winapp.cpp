@@ -267,7 +267,9 @@ void MessageLoopTask::enable(Authority auth, bool enable) {
             assert(auth == kConfigFile);
             m_fromConfig = enable;
         }
-        enable = s_cliEnable ? *s_cliEnable : m_fromConfig;
+        enable = (appFlags() & fAppWithGui) 
+            ? s_cliEnable ? *s_cliEnable : m_fromConfig
+            : false;
     }
 
     // don't show window before the command line has been processed

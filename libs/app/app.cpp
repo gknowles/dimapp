@@ -106,6 +106,12 @@ void Dim::iAppPushStartupTask(ITaskNotify & task) {
     s_appTasks.push_back(&task);
 }
 
+//===========================================================================
+void Dim::iAppSetFlags(AppFlags flags) {
+    assert(appStarting());
+    s_appFlags = flags;
+}
+
 
 /****************************************************************************
 *

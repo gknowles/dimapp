@@ -47,16 +47,19 @@ public:
 };
 
 enum AppFlags : unsigned {
-    fAppWithConsole = 0x01,
+    fAppWithChdir = 0x01,
+    fAppWithFiles = 0x02, // conf, log, etc
+    fAppWithWebAdmin = 0x04,
+    fAppWithConsole = 0x10,
+    fAppWithGui = 0x20,
+    fAppWithService = 0x40, // can run as service
+    fAppIsService = 0x100, // is running as service
 
-    fAppWithChdir = 0x02,
-    fAppWithFiles = 0x04, // conf, log, etc
-    fAppWithWebAdmin = 0x08,
-    fAppWithService = 0x10, // can run as service
-
-    fAppClient = fAppWithConsole,
+    fAppClient = fAppWithConsole | fAppWithGui,
     fAppServer = fAppWithChdir | fAppWithFiles | fAppWithWebAdmin 
-        | fAppWithService,
+        | fAppWithGui | fAppWithService,
+
+    fAppReadOnlyFlags = fAppIsService,
 };
 
 // returns exit code
