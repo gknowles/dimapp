@@ -336,7 +336,7 @@ void EnableNotify::onConfigChange(const XDocument & doc) {
 
 //===========================================================================
 void EnableNotify::onTask() {
-    if (appMode() == kRunRunning)
+    if (!appStopping())
         s_windowTask.enable(MessageLoopTask::kCommandLine, *s_cliEnable);
 }
 

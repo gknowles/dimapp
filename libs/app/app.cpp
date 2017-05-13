@@ -102,7 +102,7 @@ void ConfigAppXml::onConfigChange(const XDocument & doc) {
 
 //===========================================================================
 void Dim::iAppPushStartupTask(ITaskNotify & task) {
-    assert(appMode() == kRunStarting);
+    assert(appStarting());
     s_appTasks.push_back(&task);
 }
 

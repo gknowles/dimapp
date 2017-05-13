@@ -75,6 +75,8 @@ int appRun(
 ***/
 
 RunMode appMode();
+inline bool appStarting() { return appMode() == kRunStarting; }
+inline bool appStopping() { return appMode() == kRunStopping; }
 
 // returns flags passed to appRun()
 AppFlags appFlags(); 

@@ -363,7 +363,7 @@ void Dim::httpRouteAdd(
     bool recurse
 ) {
     assert(!path.empty());
-    if (s_paths.empty() && appMode() == kRunRunning) 
+    if (s_paths.empty() && !appStarting()) 
         startListen();
     PathInfo pi;
     pi.notify = notify;
