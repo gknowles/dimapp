@@ -110,14 +110,11 @@ static void taskQueueThread(TaskQueue * ptr) {
 
 //===========================================================================
 static void setThreads_LK(TaskQueue & q, size_t threads) {
+    int num = (int) threads - q.wantThreads;
     q.wantThreads = (int)threads;
-    int num = q.wantThreads - q.curThreads;
     if (num > 0) {
-        q.curThreads = q.wantThreads;
+        q.curThreads += num;
         s_numThreads += num;
-    }
-
-    if (num > 0) {
         for (int i = 0; i < num; ++i) {
             thread thr{taskQueueThread, &q};
             thr.detach();
@@ -256,8 +253,6 @@ TaskQueueHandle Dim::taskCreateQueue(string_view name, int threads) {
     assert(threads);
     auto * q = new TaskQueue;
     q->name = name;
-    q->wantThreads = 0;
-    q->curThreads = 0;
 
     lock_guard<mutex> lk{s_mut};
     q->hq = s_queues.insert(q);
