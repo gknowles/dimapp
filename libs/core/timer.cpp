@@ -148,32 +148,29 @@ void RunTimers::onTask() {
 
 //===========================================================================
 static void timerQueueThread() {
+    unique_lock<mutex> lk{s_mut};
     for (;;) {
-        {
-            unique_lock<mutex> lk{s_mut};
-            for (;;) {
-                if (s_mode == kRunStopping) {
-                    while (!s_timers.empty())
-                        s_timers.pop();
-                    s_mode = kRunStopped;
-                    s_modeCv.notify_one();
-                    return;
-                }
-                if (s_processing || s_timers.empty()) {
-                    s_queueCv.wait(lk);
-                    continue;
-                }
-                Duration wait = s_timers.top().expiration - Clock::now();
-                if (wait <= 0ms) {
-                    s_processing = true;
-                    break;
-                }
-
-                s_queueCv.wait_for(lk, wait);
-            }
+        if (s_mode == kRunStopping) {
+            while (!s_timers.empty())
+                s_timers.pop();
+            s_mode = kRunStopped;
+            s_modeCv.notify_one();
+            return;
+        }
+        if (s_processing || s_timers.empty()) {
+            s_queueCv.wait(lk);
+            continue;
+        }
+        Duration wait = s_timers.top().expiration - Clock::now();
+        if (wait <= 0ms) {
+            s_processing = true;
+            lk.unlock();
+            taskPushEvent(s_runTimers);
+            lk.lock();
+            continue;
         }
 
-        taskPushEvent(s_runTimers);
+        s_queueCv.wait_for(lk, wait);
     }
 }
 
@@ -303,8 +300,7 @@ bool Timer::connected() const {
 void Dim::iTimerInitialize() {
     assert(s_mode == kRunStopped);
     s_mode = kRunRunning;
-    thread thr{timerQueueThread};
-    thr.detach();
+    taskPushStatic("Timer Queue", timerQueueThread);
 }
 
 //===========================================================================

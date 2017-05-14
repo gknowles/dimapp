@@ -37,19 +37,12 @@ static mutex s_mut;
 
 /****************************************************************************
 *
-*   Iocp thread
+*   Iocp completion thread
 *
 ***/
 
-namespace {
-class DispatchTask : public ITaskNotify {
-    void onTask() override;
-};
-} // namespace
-static DispatchTask s_dispatchTask;
-
 //===========================================================================
-void DispatchTask::onTask() {
+static void iocpDispatchThread() {
     const int kMaxEntries = 8;
     OVERLAPPED_ENTRY entries[kMaxEntries];
     ULONG found;
@@ -162,8 +155,7 @@ void Dim::winIocpInitialize() {
         logMsgCrash() << "CreateIoCompletionPort(null): " << WinError{};
 
     // start iocp dispatch task
-    TaskQueueHandle taskq = taskCreateQueue("IOCP Dispatch", 1);
-    taskPush(taskq, s_dispatchTask);
+    taskPushStatic("IOCP Dispatch", iocpDispatchThread);
 }
 
 //===========================================================================

@@ -68,19 +68,12 @@ static void addCqUsed_LK(int delta) {
 
 /****************************************************************************
 *
-*   RioDispatchThread
+*   RIO dispatch thread
 *
 ***/
 
-namespace {
-class RioDispatchThread : public ITaskNotify {
-    void onTask() override;
-};
-}
-static RioDispatchThread s_dispatchThread;
-
 //===========================================================================
-void RioDispatchThread::onTask() {
+static void rioDispatchThread() {
     static const int kMaxResults = 100;
     RIORESULT results[kMaxResults];
     ITaskNotify * tasks[size(results)];
@@ -503,12 +496,10 @@ void Dim::iSocketInitialize() {
         logMsgCrash() << "RIOCreateCompletionQueue: " << WinError{};
 
     // start rio dispatch task
-    TaskQueueHandle taskq = taskCreateQueue("RIO Dispatch", 1);
-    taskPush(taskq, s_dispatchThread);
+    taskPushStatic("RIO Dispatch", rioDispatchThread);
 
     s_mode = kRunRunning;
 }
-
 
 //===========================================================================
 SOCKET Dim::iSocketCreate() {
