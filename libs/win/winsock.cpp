@@ -496,7 +496,7 @@ void Dim::iSocketInitialize() {
         logMsgCrash() << "RIOCreateCompletionQueue: " << WinError{};
 
     // start rio dispatch task
-    taskPushStatic("RIO Dispatch", rioDispatchThread);
+    taskPushOnce("RIO Dispatch", rioDispatchThread);
 
     s_mode = kRunRunning;
 }

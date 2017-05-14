@@ -155,7 +155,7 @@ void Dim::winIocpInitialize() {
         logMsgCrash() << "CreateIoCompletionPort(null): " << WinError{};
 
     // start iocp dispatch task
-    taskPushStatic("IOCP Dispatch", iocpDispatchThread);
+    taskPushOnce("IOCP Dispatch", iocpDispatchThread);
 }
 
 //===========================================================================

@@ -175,6 +175,6 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
 void Dim::winServiceInitialize() {
     if (appFlags() & fAppWithService) {
         shutdownMonitor(&s_cleanup);
-        taskPushStatic("Service Dispatcher", serviceDispatchTask);
+        taskPushOnce("Service Dispatcher", serviceDispatchTask);
     }
 }

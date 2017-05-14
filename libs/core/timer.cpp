@@ -300,7 +300,7 @@ bool Timer::connected() const {
 void Dim::iTimerInitialize() {
     assert(s_mode == kRunStopped);
     s_mode = kRunRunning;
-    taskPushStatic("Timer Queue", timerQueueThread);
+    taskPushOnce("Timer Queue", timerQueueThread);
 }
 
 //===========================================================================

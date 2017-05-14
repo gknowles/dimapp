@@ -46,9 +46,9 @@ namespace {
 
 class EndThreadTask : public ITaskNotify {};
 
-class StaticTask : public ITaskNotify {
+class RunOnceTask : public ITaskNotify {
 public:
-    StaticTask(string_view name, function<void()> fn);
+    RunOnceTask(string_view name, function<void()> fn);
 private:
     void onTask() override;
 
@@ -157,12 +157,12 @@ void TaskQueue::pop() {
 
 /****************************************************************************
 *
-*   StaticTask
+*   RunOnceTask
 *
 ***/
 
 //===========================================================================
-StaticTask::StaticTask(string_view name, function<void()> fn)
+RunOnceTask::RunOnceTask(string_view name, function<void()> fn)
     : m_fn{fn}
 {
     auto q = taskCreateQueue(name, 1);
@@ -171,7 +171,7 @@ StaticTask::StaticTask(string_view name, function<void()> fn)
 }
 
 //===========================================================================
-void StaticTask::onTask() {
+void RunOnceTask::onTask() {
     m_fn();
     delete this;
 }
@@ -299,6 +299,6 @@ void Dim::taskPush(
 }
 
 //===========================================================================
-void Dim::taskPushStatic(string_view name, function<void()> fn) {
-    new StaticTask(name, fn);
+void Dim::taskPushOnce(string_view name, function<void()> fn) {
+    new RunOnceTask(name, fn);
 }
