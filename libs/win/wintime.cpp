@@ -38,10 +38,17 @@ bool Dim::iTimeGetDesc(tm & tm, TimePoint time) {
         return false;
     }
 
-    tm.tm_year = st.wYear - 1900;
-    tm.tm_mon = st.wMonth - 1;
-    tm.tm_wday = st.wDayOfWeek;
-    tm.tm_mday = st.wDay;
+    if (st.wYear > 9999) {
+        tm.tm_year = 9999 - 1900;
+        tm.tm_mon = 11;
+        tm.tm_mday = 31;
+        tm.tm_wday = 5;
+    } else {
+        tm.tm_year = st.wYear - 1900;
+        tm.tm_mon = st.wMonth - 1;
+        tm.tm_mday = st.wDay;
+        tm.tm_wday = st.wDayOfWeek;
+    }
     tm.tm_hour = st.wHour;
     tm.tm_min = st.wMinute;
     tm.tm_sec = st.wSecond;
