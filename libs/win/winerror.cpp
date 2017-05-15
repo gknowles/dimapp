@@ -106,11 +106,16 @@ WinError & WinError::set() {
 
 //===========================================================================
 std::ostream & Dim::operator<<(std::ostream & os, const WinError & val) {
+    int native = val;
+    if (val.m_ntStatus) 
+        native = val.m_ntStatus;
+    if (val.m_secStatus) 
+        native = val.m_secStatus;
     char buf[256] = {};
     FormatMessage(
         FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
         NULL, // source
-        val,
+        native,
         0, // language
         buf,
         (DWORD)size(buf),
@@ -121,7 +126,11 @@ std::ostream & Dim::operator<<(std::ostream & os, const WinError & val) {
     for (; ptr > buf && isspace((unsigned char)*ptr); --ptr)
         *ptr = 0;
 
-    os << buf << " (" << (int) val << ")";
+    os << buf << " (" << (int) val;
+    if (val.m_ntStatus || val.m_secStatus) {
+        os << hex << ':' << val.m_ntStatus << ':' << val.m_secStatus << dec;
+    }
+    os << ')';
     return os;
 }
 

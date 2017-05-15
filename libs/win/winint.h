@@ -123,6 +123,8 @@ public:
     operator int() const { return m_value; }
 
 private:
+    friend std::ostream & operator<<(std::ostream & os, const WinError & val);
+
     int m_value;
     int m_ntStatus{0};
     int m_secStatus{0};
