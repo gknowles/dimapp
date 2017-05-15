@@ -34,7 +34,8 @@ static SERVICE_STATUS_HANDLE s_hstat;
 static ReportStatusTask s_reportTask;
 
 static mutex s_mut;
-static bool s_stopped;
+static condition_variable s_cv;
+static RunMode s_mode{kRunStopped};
 
 
 /****************************************************************************
@@ -81,6 +82,9 @@ static DWORD WINAPI svcCtrlHandler(
 
 //===========================================================================
 static void WINAPI ServiceMain(DWORD argc, char ** argv) {
+    // Running as a service and services can't have gui windows
+    iAppSetFlags(appFlags() & ~fAppWithGui | fAppIsService);
+
     s_hstat = RegisterServiceCtrlHandlerEx(
         "",
         &svcCtrlHandler,
@@ -95,6 +99,10 @@ static void WINAPI ServiceMain(DWORD argc, char ** argv) {
     } else {
         setState(SERVICE_RUNNING);
     }
+
+    lock_guard<mutex> lk{s_mut};
+    s_mode = kRunRunning;
+    s_cv.notify_one();
 }
 
 
@@ -106,7 +114,7 @@ static void WINAPI ServiceMain(DWORD argc, char ** argv) {
 
 //===========================================================================
 static void serviceDispatchTask() {
-    assert(!s_stopped);
+    assert(s_mode == kRunStarting);
 
     SERVICE_TABLE_ENTRY st[] = {
         { (char *) "", &ServiceMain },
@@ -116,13 +124,11 @@ static void serviceDispatchTask() {
         WinError err;
         if (err != ERROR_FAILED_SERVICE_CONTROLLER_CONNECT) 
             logMsgCrash() << "StartServiceCtrlDispatcher: " << err;
-    } else {
-        // Running as a service and services can't have gui windows
-        iAppSetFlags(appFlags() & ~fAppWithGui | fAppIsService);
     }
     
     lock_guard<mutex> lk{s_mut};
-    s_stopped = true;
+    s_mode = kRunStopped;
+    s_cv.notify_one();
 }
 
 
@@ -157,11 +163,8 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
         setState(SERVICE_STOPPED);
 
     lock_guard<mutex> lk{s_mut};
-    if (!s_stopped)
+    if (s_mode != kRunStopped)
         return shutdownIncomplete();
-
-    // reset so app rerun can work
-    s_stopped = false;
 }
 
 
@@ -175,6 +178,13 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
 void Dim::winServiceInitialize() {
     if (appFlags() & fAppWithService) {
         shutdownMonitor(&s_cleanup);
+
+        // Start dispatch thread and wait for it to determine if we're 
+        // running as a service.
+        s_mode = kRunStarting;
         taskPushOnce("Service Dispatcher", serviceDispatchTask);
+        unique_lock<mutex> lk{s_mut};
+        while (s_mode == kRunStarting)
+            s_cv.wait(lk);
     }
 }
