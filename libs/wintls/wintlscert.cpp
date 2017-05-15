@@ -29,37 +29,58 @@ const bool kMakeCert = false;
 
 namespace {
 
-class ServerConn {
+class CertName {
 public:
-    ServerConn();
-    ~ServerConn();
+    CertName() {}
+    CertName(const CertName & from);
+    CertName(CertName && from);
+    ~CertName();
 
-    bool recv(CharBuf * out, CharBuf * data, string_view src);
-    void send(CharBuf * out, string_view src);
+    void reset();
+    void reset(CERT_NAME_BLOB blob);
+    CERT_NAME_BLOB release();
+
+    bool parse(const char src[]);
+    string str() const;
+
+    operator CERT_NAME_BLOB* () { return &m_blob; }
+    operator const CERT_NAME_BLOB* () const { return &m_blob; }
+
+    explicit operator bool() const { return m_blob.cbData; }
 
 private:
-    CtxtHandle m_context;
-    bool m_appData{false};
-    SecPkgContext_StreamSizes m_sizes;
-    SecPkgContext_ApplicationProtocol m_alpn;
+    CERT_NAME_BLOB m_blob{};
 };
 
 } // namespace
 
 
+
 /****************************************************************************
 *
-*   Variables
+*   default_delete
 *
 ***/
 
-static shared_mutex s_mut;
-static HandleMap<WinTlsConnHandle, ServerConn> s_conns;
-static CredHandle s_srvCred;
+//===========================================================================
+void std::default_delete<const CERT_CONTEXT>::operator()(
+    const CERT_CONTEXT * ptr
+) const {
+    if (ptr) {
+        // free (aka decref) always succeeds
+        CertFreeCertificateContext(ptr);
+    }
+}
 
-static auto & s_perfTlsReneg = uperf("tls renegotiate");
-static auto & s_perfTlsExpired = uperf("tls expired context");
-static auto & s_perfTlsFinish = uperf("tls finish");
+//===========================================================================
+void std::default_delete<CredHandle>::operator()(CredHandle * ptr) const {
+    if (SecIsValidHandle(ptr)) {
+        WinError err = (SecStatus) FreeCredentialsHandle(ptr);
+        if (err)
+            logMsgCrash() << "FreeCredentialsHandle: " << err;
+        SecInvalidateHandle(ptr);
+    }
+}
 
 
 /****************************************************************************
@@ -121,284 +142,6 @@ static NCRYPT_KEY_HANDLE toNCrypt (BCRYPT_KEY_HANDLE bkey) {
         logMsgCrash() << "NCryptFreeObject: " << err;
     memset(blob, 0, count);
     return nkey;
-}
-
-
-/****************************************************************************
-*
-*   ServerConn
-*
-***/
-
-//===========================================================================
-ServerConn::ServerConn() {
-    SecInvalidateHandle(&m_context);
-}
-
-//===========================================================================
-ServerConn::~ServerConn() {
-    if (!SecIsValidHandle(&m_context))
-        return;
-
-    if (int err = DeleteSecurityContext(&m_context)) {
-        WinError werr = (SecStatus) err;
-        logMsgCrash() << "DeleteSecurityContext: " << werr;
-    }
-}
-
-//===========================================================================
-bool ServerConn::recv(CharBuf * out, CharBuf * data, string_view src) {
-    int err{0};
-
-    // Manually constructed SEC_APPLICATION_PROTOCOLS struct
-    char alpn_chars[] = {
-        9, 0, 0, 0, // ProtocolListsSize
-        SecApplicationProtocolNegotiationExt_ALPN, 0, 0, 0, // ProtoNegoExt
-        3, 0, // ProtocolListSize
-        2, 'h', '2', // ProtocolList
-        0 // trailing null for the debugger
-    };
-
-    // Rebuild the alpn just in case endianness matters, rendering the 
-    // manually constructed little-endian version invalid.
-    auto alpn = (SEC_APPLICATION_PROTOCOLS *) alpn_chars;
-    alpn->ProtocolListsSize = 9;
-    alpn->ProtocolLists[0].ProtoNegoExt = 
-        SecApplicationProtocolNegotiationExt_ALPN;
-    alpn->ProtocolLists[0].ProtocolListSize = 3;
-
-NEGOTIATE:
-    while (!m_appData) {
-        unsigned flags = ASC_REQ_STREAM 
-            | ASC_REQ_CONFIDENTIALITY
-            | ASC_REQ_EXTENDED_ERROR
-            | ASC_REQ_ALLOCATE_MEMORY
-            ;
-
-        SecBuffer inBufs[] = { 
-            { (unsigned) src.size(), SECBUFFER_TOKEN, (void *) src.data() },
-            { (unsigned) size(alpn_chars) - 1, 
-                SECBUFFER_APPLICATION_PROTOCOLS, 
-                alpn },
-        };
-        SecBufferDesc inDesc{ 
-            SECBUFFER_VERSION, 
-            (unsigned) size(inBufs), 
-            inBufs 
-        };
-
-        SecBuffer outBufs[] = {
-            { 0, SECBUFFER_TOKEN, nullptr },
-            { 0, SECBUFFER_EXTRA, nullptr },
-            { 0, SECBUFFER_ALERT, nullptr },
-        };
-        SecBufferDesc outDesc{
-            SECBUFFER_VERSION, 
-            (unsigned) size(outBufs), 
-            outBufs
-        };
-
-        ULONG outFlags;
-        err = AcceptSecurityContext(
-            &s_srvCred,
-            SecIsValidHandle(&m_context) ? &m_context : NULL,
-            &inDesc, // input buffer
-            flags,
-            0, // target data representation
-            &m_context,
-            &outDesc,
-            &outFlags, // attrs of established connection, mirrors input flags
-            NULL // remote's cert expiry
-        );
-        if (outBufs[0].cbBuffer) {
-            assert(outBufs[0].pvBuffer);
-            out->append((char *) outBufs[0].pvBuffer, outBufs[0].cbBuffer);
-            FreeContextBuffer(outBufs[0].pvBuffer);
-        }
-        if (outBufs[1].cbBuffer) {
-            // TODO: figure out what is in the buffer, is it crypted data?
-            // uncrypted? ignorable handshake cruft?
-            assert(!outBufs[1].cbBuffer); 
-            data->append((char *) outBufs[1].pvBuffer, outBufs[1].cbBuffer);
-            FreeContextBuffer(outBufs[1].pvBuffer);
-        }
-        if (inBufs[1].BufferType == SECBUFFER_EXTRA && inBufs[1].cbBuffer) {
-            // The pvBuffer field of _EXTRA is not valid
-            src = src.substr(src.size() - inBufs[1].cbBuffer);
-        } else {
-            src = {};
-        }
-        if (err == SEC_E_OK) {
-            s_perfTlsFinish += 1;
-            m_appData = true;
-            err = QueryContextAttributes(
-                &m_context, 
-                SECPKG_ATTR_STREAM_SIZES, 
-                &m_sizes
-            );
-            if (err) {
-                WinError werr = (SecStatus) err;
-                logMsgError()
-                    << "QueryContextAttributes(SECPKG_ATTR_STREAM_SIZES): "
-                    << werr;
-                return false;
-            }
-            err = QueryContextAttributes(
-                &m_context,
-                SECPKG_ATTR_APPLICATION_PROTOCOL,
-                &m_alpn
-            );
-            if (err) {
-                WinError werr = (SecStatus) err;
-                logMsgError()
-                    << "QueryContextAttributes("
-                        "SECPKG_ATTR_APPLICATION_PROTOCOL): "
-                    << werr;
-                return false;
-            }
-            break;
-        }
-        if (err == SEC_E_INCOMPLETE_MESSAGE 
-            || err == SEC_E_INCOMPLETE_CREDENTIALS
-        ) {
-            // need to receive more data
-            assert(src.empty());
-            return true;
-        }
-        if (err == SEC_I_CONTINUE_NEEDED) {
-            continue;
-        }
-        WinError werr = (SecStatus) err;
-        logMsgError() << "AcceptSecurityContext: " << werr;
-        if (outBufs[2].cbBuffer) {
-            out->append((char *) outBufs[2].pvBuffer, outBufs[2].cbBuffer);
-            FreeContextBuffer(outBufs[2].pvBuffer);
-        }
-        return false;
-    }
-
-    // Decrypt application data 
-    for (;;) {
-        if (src.empty())
-            return true;
-
-        SecBuffer bufs[] = {
-            { (unsigned) src.size(), SECBUFFER_DATA, (void *) src.data() },
-            { 0, SECBUFFER_EMPTY, nullptr },
-            { 0, SECBUFFER_EMPTY, nullptr },
-            { 0, SECBUFFER_EMPTY, nullptr },
-        };
-        SecBufferDesc desc{
-            SECBUFFER_VERSION, 
-            (unsigned) size(bufs), 
-            bufs
-        };
-        err = DecryptMessage(&m_context, &desc, 0, NULL);
-        if (err == SEC_E_INCOMPLETE_MESSAGE) 
-            return true;
-
-        if (err != SEC_E_OK 
-            && err != SEC_I_CONTEXT_EXPIRED 
-            && err != SEC_I_RENEGOTIATE
-        ) {
-            WinError werr = (SecStatus) err;
-            logMsgError() << "DecryptMessage: " << werr;
-            return false;
-        }
-
-        if (bufs[1].BufferType != SECBUFFER_EMPTY && bufs[1].cbBuffer) {
-            assert(bufs[1].BufferType == SECBUFFER_DATA);
-            data->append((char *) bufs[1].pvBuffer, bufs[1].cbBuffer);
-        }
-        if (bufs[3].BufferType != SECBUFFER_EMPTY && bufs[3].cbBuffer) {
-            assert(bufs[3].BufferType == SECBUFFER_EXTRA);
-            // Again, upon return, the pvBuffer field of _EXTRA is invalid
-            src = src.substr(src.size() - bufs[3].cbBuffer);
-            if (err == SEC_E_OK) 
-                continue;
-            if (err == SEC_I_RENEGOTIATE) {
-                logMsgError() << "DecryptMessage: renegotiate requested with "
-                    "encrypted data";
-                continue;
-            }
-        }
-
-        if (err == SEC_E_OK)
-            return true;
-        if (err == SEC_I_CONTEXT_EXPIRED) {
-            s_perfTlsExpired += 1;
-            return false;
-        }
-
-        assert(err == SEC_I_RENEGOTIATE);
-        // Proceed with renegotiate by making another call to 
-        // AcceptSecurityContext with no data.
-        s_perfTlsReneg += 1;
-        src = {};
-        m_appData = false;
-        goto NEGOTIATE;
-    }
-}
-
-//===========================================================================
-void ServerConn::send(CharBuf * out, string_view src) {
-    int err{0};
-
-    while (!src.empty()) {
-        auto num = min(src.size(), (size_t) m_sizes.cbMaximumMessage);
-        auto tmp = src.substr(0, num);
-        src.remove_prefix(num);
-
-        auto pos = out->size();
-        out->append(m_sizes.cbHeader, 0);
-        out->append(tmp);
-        out->append(m_sizes.cbTrailer, 0);
-        auto ptr = out->data(pos);
-
-        SecBuffer bufs[] = {
-            { m_sizes.cbHeader, SECBUFFER_STREAM_HEADER, ptr },
-            { (unsigned) tmp.size(), SECBUFFER_DATA, ptr += m_sizes.cbHeader },
-            { m_sizes.cbTrailer, SECBUFFER_STREAM_TRAILER, ptr += tmp.size() },
-            { 0, SECBUFFER_EMPTY, nullptr },
-        };
-        SecBufferDesc desc{
-            SECBUFFER_VERSION, 
-            (unsigned) size(bufs), 
-            bufs
-        };
-        err = EncryptMessage(&m_context, 0, &desc, 0);
-        if (err) {
-            WinError werr = (SecStatus) err;
-            logMsgCrash() << "EncryptMessage(" << num << "): " << werr;
-        }
-    }
-}
-
-
-/****************************************************************************
-*
-*   ShutdownNotify
-*
-***/
-
-namespace {
-class ShutdownNotify : public IShutdownNotify {
-    void onShutdownConsole (bool firstTry) override;
-};
-} // namespace
-static ShutdownNotify s_cleanup;
-
-//===========================================================================
-void ShutdownNotify::onShutdownConsole (bool firstTry) {
-    shared_lock<shared_mutex> lk{s_mut};
-    if (!s_conns.empty())
-        return shutdownIncomplete();
-
-
-    if (SecIsValidHandle(&s_srvCred)) {
-        FreeCredentialsHandle(&s_srvCred);
-        SecInvalidateHandle(&s_srvCred);
-    }
 }
 
 
@@ -622,21 +365,6 @@ static bool matchHost(const CERT_CONTEXT * cert, string_view host) {
     return false;
 }
 
-
-namespace std {
-
-template<>
-struct default_delete<const CERT_CONTEXT> {
-    void operator()(const CERT_CONTEXT * ptr) const {
-        if (ptr) {
-            // free (aka decref) always succeeds
-            CertFreeCertificateContext(ptr);
-        }
-    }
-};
-
-} // namespace
-
 //===========================================================================
 static void getCerts(
     vector<unique_ptr<const CERT_CONTEXT>> & certs,
@@ -707,12 +435,142 @@ static void getCerts(
     // closing the store (decref) always succeeds
     CertCloseStore(hstore, 0);
 
-    if (certs.empty() && selfsigned) 
+    if (certs.empty() && selfsigned) {
+        CertName sub;
+        sub.reset(selfsigned->pCertInfo->Subject);
+        logMsgDebug() << "Using self-signed cert by '" << sub.str() << "'";
+        sub.release();
         certs.push_back(move(selfsigned));
+    }
 
     // no cert found, try to make a new one?
     if (certs.empty()) {
+        logMsgCrash() << "No certificates found";
     }
+}
+
+
+/****************************************************************************
+*
+*   CertName
+*
+***/
+
+//===========================================================================
+CertName::CertName(const CertName & from) {
+    if (from) {
+        m_blob.pbData = (BYTE *) malloc(from.m_blob.cbData);
+        memcpy(m_blob.pbData, from.m_blob.pbData, from.m_blob.cbData);
+    }
+}
+
+//===========================================================================
+CertName::CertName(CertName && from) {
+    swap(m_blob, from.m_blob);
+}
+
+//===========================================================================
+CertName::~CertName() {
+    reset();
+}
+
+//===========================================================================
+void CertName::reset() {
+    if (m_blob.cbData) {
+        free(m_blob.pbData);
+        m_blob.pbData = nullptr;
+        m_blob.cbData = 0;
+    }
+}
+
+//===========================================================================
+void CertName::reset(CERT_NAME_BLOB blob) {
+    reset();
+    m_blob = blob;
+}
+
+//===========================================================================
+CERT_NAME_BLOB CertName::release() {
+    auto tmp = m_blob;
+    m_blob.pbData = nullptr;
+    m_blob.cbData = 0;
+    return tmp;
+}
+
+//===========================================================================
+bool CertName::parse(const char src[]) {
+    const char * errstr;
+
+    // get length of blob
+    if (!CertStrToName(
+        X509_ASN_ENCODING,
+        src,
+        CERT_X500_NAME_STR,
+        NULL, // reserved
+        NULL, // pbData
+        &m_blob.cbData,
+        &errstr
+    )) {
+        logMsgDebug() << "CertStrToName(NULL): " << WinError{};
+        return false;
+    }
+    // get blob
+    m_blob.pbData = (BYTE *) malloc(m_blob.cbData);
+    if (!CertStrToName(
+        X509_ASN_ENCODING,
+        src,
+        CERT_X500_NAME_STR,
+        NULL, // reserved
+        m_blob.pbData,
+        &m_blob.cbData,
+        &errstr
+    )) {
+        logMsgDebug() << "CertStrToName(issuer): " << WinError{};
+        return false;
+    }
+
+    return true;
+}
+
+//===========================================================================
+string CertName::str() const {
+    string name;
+    DWORD len = CertNameToStr(
+        X509_ASN_ENCODING, 
+        const_cast<CERT_NAME_BLOB *>(&m_blob), 
+        CERT_SIMPLE_NAME_STR, 
+        NULL, 
+        0
+    );
+    name.resize(len);
+    CertNameToStr(
+        X509_ASN_ENCODING, 
+        const_cast<CERT_NAME_BLOB *>(&m_blob), 
+        CERT_SIMPLE_NAME_STR, 
+        name.data(), 
+        len
+    );
+    assert(len == name.size());
+    name.pop_back();
+    return name;
+}
+
+
+/****************************************************************************
+*
+*   ShutdownNotify
+*
+***/
+
+namespace {
+class ShutdownNotify : public IShutdownNotify {
+    void onShutdownConsole (bool firstTry) override;
+};
+} // namespace
+static ShutdownNotify s_cleanup;
+
+//===========================================================================
+void ShutdownNotify::onShutdownConsole (bool firstTry) {
 }
 
 
@@ -723,9 +581,7 @@ static void getCerts(
 ***/
 
 //===========================================================================
-void Dim::winTlsInitialize() {
-    shutdownMonitor(&s_cleanup);
-
+unique_ptr<CredHandle> Dim::iWinTlsCreateCred() {
     WinError err{0};
 
     vector<unique_ptr<const CERT_CONTEXT>> certs;
@@ -748,6 +604,7 @@ void Dim::winTlsInitialize() {
         cred.paCred = data(ptrs);
     }
 
+    auto handle = make_unique<CredHandle>();
     TimeStamp expiry;
     err = (SecStatus) AcquireCredentialsHandle(
         NULL, // principal - null for schannel
@@ -757,7 +614,7 @@ void Dim::winTlsInitialize() {
         &cred,
         NULL, // get key fn
         NULL, // get key arg
-        &s_srvCred,
+        handle.get(),
         &expiry // expiration time of credentials
     );
     if (err)
@@ -773,40 +630,6 @@ void Dim::winTlsInitialize() {
     logMsgInfo() << "Credentials expiration: " << expiryStr.c_str();
 
     // TODO: log warning if the cred is about to expire?
-}
 
-//===========================================================================
-WinTlsConnHandle Dim::winTlsAccept() {
-    auto conn = new ServerConn;
-    lock_guard<shared_mutex> lk{s_mut};
-    return s_conns.insert(conn);
-}
-
-//===========================================================================
-void Dim::winTlsClose(WinTlsConnHandle h) {
-    lock_guard<shared_mutex> lk{s_mut};
-    s_conns.erase(h);
-}
-
-//===========================================================================
-bool Dim::winTlsRecv(
-    WinTlsConnHandle h,
-    CharBuf * reply,
-    CharBuf * data,
-    string_view src
-) {
-    shared_lock<shared_mutex> lk{s_mut};
-    auto conn = s_conns.find(h);
-    return conn->recv(reply, data, src);
-}
-
-//===========================================================================
-void Dim::winTlsSend(
-    WinTlsConnHandle h,
-    CharBuf * out,
-    string_view src
-) {
-    shared_lock<shared_mutex> lk{s_mut};
-    auto conn = s_conns.find(h);
-    conn->send(out, src);
+    return handle;
 }

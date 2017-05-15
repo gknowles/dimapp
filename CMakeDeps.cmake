@@ -126,8 +126,10 @@
 # libs/win/wintime.cpp
 # libs/wintls/pch.cpp
 # libs/wintls/pch.h
-# libs/wintls/wintls.cpp
 # libs/wintls/wintls.h
+# libs/wintls/wintlscert.cpp
+# libs/wintls/wintlsconn.cpp
+# libs/wintls/wintlsint.h
 # libs/xml/pch.cpp
 # libs/xml/pch.h
 # libs/xml/raw-text-from-tr.ebnf

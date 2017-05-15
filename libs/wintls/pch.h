@@ -29,5 +29,7 @@
 #pragma comment(lib, "security.lib")
 
 // External library internal headers
-// Internal headers
 #include "win/winint.h"
+
+// Internal headers
+#include "wintls/wintlsint.h"
