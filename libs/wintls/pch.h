@@ -7,6 +7,7 @@
 #include "wintls/wintls.h"
 
 // External library public headers
+#include "app/app.h"
 #include "core/core.h"
 
 // Standard headers

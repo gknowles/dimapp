@@ -641,11 +641,12 @@ struct default_delete<const CERT_CONTEXT> {
 static void getCerts(
     vector<unique_ptr<const CERT_CONTEXT>> & certs,
     string_view host, 
-    bool userStore
+    bool serviceStore
 ) {
     auto hstore = HCERTSTORE{};
-    DWORD flags = userStore
-        ? CERT_SYSTEM_STORE_CURRENT_USER
+    DWORD flags = serviceStore
+        ? CERT_SYSTEM_STORE_CURRENT_SERVICE
+        //: CERT_SYSTEM_STORE_CURRENT_USER;
         : CERT_SYSTEM_STORE_LOCAL_MACHINE;
     hstore = CertOpenStore(
         CERT_STORE_PROV_SYSTEM,
@@ -657,7 +658,7 @@ static void getCerts(
     if (!hstore) {
         WinError err;
         logMsgCrash() << "CertOpenStore('MY',"
-            << (userStore ? "CURRENT_USER" : "LOCAL_MACHINE")
+            << (serviceStore ? "CURRENT_SERVICE" : "CURRENT_USER")
             << "): " << err;
     }
 
@@ -703,6 +704,9 @@ static void getCerts(
         certs.back().reset(CertDuplicateCertificateContext(cert));
     }
 
+    // closing the store (decref) always succeeds
+    CertCloseStore(hstore, 0);
+
     if (certs.empty() && selfsigned) 
         certs.push_back(move(selfsigned));
 
@@ -725,24 +729,25 @@ void Dim::winTlsInitialize() {
     WinError err{0};
 
     vector<unique_ptr<const CERT_CONTEXT>> certs;
-    vector<const CERT_CONTEXT *> ptrs;
     if (kMakeCert) {
         // cert = 
         makeCert("wintls.dimapp");
     } else {
-        getCerts(certs, "", false);
+        getCerts(certs, "", appFlags() & fAppIsService);
     }
 
+    vector<const CERT_CONTEXT *> ptrs;
     SCHANNEL_CRED cred = {};
     cred.dwVersion = SCHANNEL_CRED_VERSION;
-    cred.dwFlags = SCH_USE_STRONG_CRYPTO;   // optional
+    cred.dwFlags = SCH_CRED_NO_SYSTEM_MAPPER |
+        SCH_USE_STRONG_CRYPTO;
     if (!certs.empty()) {
-        ptrs.reserve(certs.size());
         for (auto && cert : certs)
             ptrs.push_back(cert.get());
         cred.cCreds = (DWORD) size(ptrs);
         cred.paCred = data(ptrs);
     }
+
     TimeStamp expiry;
     err = (SecStatus) AcquireCredentialsHandle(
         NULL, // principal - null for schannel
@@ -757,6 +762,11 @@ void Dim::winTlsInitialize() {
     );
     if (err)
         logMsgCrash() << "AcquireCredentialsHandle: " << err;
+    // SEC_E_UNKNOWN_CREDENTIALS - 8009'030d
+    // STATUS_NO_SUCH_LOGON_SESSION - c000'005f
+    // ERROR_NO_SUCH_LOGON_SESSION - 1312
+
+    // NTE_BAD_KEYSET - 8009'0016
 
     TimePoint expires(Duration(expiry.QuadPart));
     Time8601Str expiryStr(expires, 3, timeZoneMinutes(expires));
