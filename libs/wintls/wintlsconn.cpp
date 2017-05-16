@@ -76,15 +76,14 @@ ServerConn::~ServerConn() {
     if (!SecIsValidHandle(&m_context))
         return;
 
-    if (int err = DeleteSecurityContext(&m_context)) {
-        WinError werr = (SecStatus) err;
-        logMsgCrash() << "DeleteSecurityContext: " << werr;
+    if (WinError err = (SecStatus) DeleteSecurityContext(&m_context)) {
+        logMsgCrash() << "DeleteSecurityContext: " << err;
     }
 }
 
 //===========================================================================
 bool ServerConn::recv(CharBuf * out, CharBuf * data, string_view src) {
-    int err{0};
+    WinError err{0};
 
     // Manually constructed SEC_APPLICATION_PROTOCOLS struct
     char alpn_chars[] = {
@@ -135,7 +134,7 @@ NEGOTIATE:
         };
 
         ULONG outFlags;
-        err = AcceptSecurityContext(
+        err = (SecStatus) AcceptSecurityContext(
             s_srvCred.get(),
             SecIsValidHandle(&m_context) ? &m_context : NULL,
             &inDesc, // input buffer
@@ -164,48 +163,43 @@ NEGOTIATE:
         } else {
             src = {};
         }
-        if (err == SEC_E_OK) {
+        if (!err) {
             s_perfTlsFinish += 1;
             m_handshake = false;
-            err = QueryContextAttributes(
+            err = (SecStatus) QueryContextAttributes(
                 &m_context, 
                 SECPKG_ATTR_STREAM_SIZES, 
                 &m_sizes
             );
             if (err) {
-                WinError werr = (SecStatus) err;
-                logMsgError()
-                    << "QueryContextAttributes(SECPKG_ATTR_STREAM_SIZES): "
-                    << werr;
+                logMsgError() << "QueryContextAttributes(STREAM_SIZES): " 
+                    << err;
                 return false;
             }
-            err = QueryContextAttributes(
+            err = (SecStatus) QueryContextAttributes(
                 &m_context,
                 SECPKG_ATTR_APPLICATION_PROTOCOL,
                 &m_alpn
             );
             if (err) {
-                WinError werr = (SecStatus) err;
-                logMsgError()
-                    << "QueryContextAttributes("
-                        "SECPKG_ATTR_APPLICATION_PROTOCOL): "
-                    << werr;
+                logMsgError() 
+                    << "QueryContextAttributes(APPLICATION_PROTOCOL): "
+                    << err;
                 return false;
             }
             break;
         }
-        if (err == SEC_E_INCOMPLETE_MESSAGE 
-            || err == SEC_E_INCOMPLETE_CREDENTIALS
+        if ((SecStatus) err == SEC_E_INCOMPLETE_MESSAGE 
+            || (SecStatus) err == SEC_E_INCOMPLETE_CREDENTIALS
         ) {
             // need to receive more data
             assert(src.empty());
             return true;
         }
-        if (err == SEC_I_CONTINUE_NEEDED) {
+        if ((SecStatus) err == SEC_I_CONTINUE_NEEDED) {
             continue;
         }
-        WinError werr = (SecStatus) err;
-        logMsgError() << "AcceptSecurityContext: " << werr;
+        logMsgError() << "AcceptSecurityContext: " << err;
         if (outBufs[2].cbBuffer) {
             out->append((char *) outBufs[2].pvBuffer, outBufs[2].cbBuffer);
             FreeContextBuffer(outBufs[2].pvBuffer);
@@ -229,16 +223,15 @@ NEGOTIATE:
             (unsigned) size(bufs), 
             bufs
         };
-        err = DecryptMessage(&m_context, &desc, 0, NULL);
-        if (err == SEC_E_INCOMPLETE_MESSAGE) 
+        err = (SecStatus) DecryptMessage(&m_context, &desc, 0, NULL);
+        if ((SecStatus) err == SEC_E_INCOMPLETE_MESSAGE) 
             return true;
 
-        if (err != SEC_E_OK 
-            && err != SEC_I_CONTEXT_EXPIRED 
-            && err != SEC_I_RENEGOTIATE
+        if ((SecStatus) err != SEC_E_OK 
+            && (SecStatus) err != SEC_I_CONTEXT_EXPIRED 
+            && (SecStatus) err != SEC_I_RENEGOTIATE
         ) {
-            WinError werr = (SecStatus) err;
-            logMsgError() << "DecryptMessage: " << werr;
+            logMsgError() << "DecryptMessage: " << err;
             return false;
         }
 
@@ -250,23 +243,23 @@ NEGOTIATE:
             assert(bufs[3].BufferType == SECBUFFER_EXTRA);
             // Again, upon return, the pvBuffer field of _EXTRA is invalid
             src = src.substr(src.size() - bufs[3].cbBuffer);
-            if (err == SEC_E_OK) 
+            if ((SecStatus) err == SEC_E_OK) 
                 continue;
-            if (err == SEC_I_RENEGOTIATE) {
+            if ((SecStatus) err == SEC_I_RENEGOTIATE) {
                 logMsgError() << "DecryptMessage: renegotiate requested with "
                     "encrypted data";
                 continue;
             }
         }
 
-        if (err == SEC_E_OK)
+        if ((SecStatus) err == SEC_E_OK)
             return true;
-        if (err == SEC_I_CONTEXT_EXPIRED) {
+        if ((SecStatus) err == SEC_I_CONTEXT_EXPIRED) {
             s_perfTlsExpired += 1;
             return false;
         }
 
-        assert(err == SEC_I_RENEGOTIATE);
+        assert((SecStatus) err == SEC_I_RENEGOTIATE);
         // Proceed with renegotiate by making another call to 
         // AcceptSecurityContext with no data.
         s_perfTlsReneg += 1;
@@ -278,7 +271,7 @@ NEGOTIATE:
 
 //===========================================================================
 void ServerConn::send(CharBuf * out, string_view src) {
-    int err{0};
+    WinError err{0};
 
     while (!src.empty()) {
         auto num = min(src.size(), (size_t) m_sizes.cbMaximumMessage);
@@ -302,11 +295,9 @@ void ServerConn::send(CharBuf * out, string_view src) {
             (unsigned) size(bufs), 
             bufs
         };
-        err = EncryptMessage(&m_context, 0, &desc, 0);
-        if (err) {
-            WinError werr = (SecStatus) err;
-            logMsgCrash() << "EncryptMessage(" << num << "): " << werr;
-        }
+        err = (SecStatus) EncryptMessage(&m_context, 0, &desc, 0);
+        if (err)
+            logMsgCrash() << "EncryptMessage(" << num << "): " << err;
     }
 }
 
