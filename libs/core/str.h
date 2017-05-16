@@ -69,7 +69,7 @@ std::string_view IntegralStr<T>::internalSet(Unsigned val) {
         data[sizeof(data) - 1] = 1;
     } else {
         char * ptr = data;
-        unsigned i = 0;
+        int i = 0;
         for (;;) {
             ptr[i] = (val % 10) + '0';
             val /= 10;
@@ -79,7 +79,7 @@ std::string_view IntegralStr<T>::internalSet(Unsigned val) {
         }
         ptr[i] = 0;
         data[sizeof(data) - 1] = (char) i;
-        for (; i > 1; i -= 2) {
+        for (i -= 1; i > 0; i -= 2) {
             swap(*ptr, ptr[i]);
             ptr += 1;
         }
@@ -102,7 +102,7 @@ std::string_view IntegralStr<T>::internalSet(Signed val) {
             // "~(Unsigned)val + 1" (assumes 2's complement)
             val = ~(Unsigned)val + 1;
         }
-        unsigned i = 0;
+        int i = 0;
         for (;;) {
             ptr[i] = (val % 10) + '0';
             val /= 10;
@@ -112,7 +112,7 @@ std::string_view IntegralStr<T>::internalSet(Signed val) {
         }
         ptr[i] = 0;
         data[sizeof(data) - 1] = (char) i;
-        for (; i > 1; i -= 2) {
+        for (i -= 1; i > 0; i -= 2) {
             swap(*ptr, ptr[i]);
             ptr += 1;
         }
