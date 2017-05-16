@@ -14,15 +14,6 @@ using SecStatus = WinError::SecurityStatus;
 
 /****************************************************************************
 *
-*   Tuning parameters
-*
-***/
-
-const bool kMakeCert = false;
-
-
-/****************************************************************************
-*
 *   Private
 *
 ***/
@@ -80,6 +71,7 @@ void std::default_delete<CredHandle>::operator()(CredHandle * ptr) const {
             logMsgCrash() << "FreeCredentialsHandle: " << err;
         SecInvalidateHandle(ptr);
     }
+    delete ptr;
 }
 
 
@@ -421,9 +413,10 @@ static void getCerts(
         certs.push_back(move(selfsigned));
     }
 
-    // no cert found, try to make a new one?
+    // no certs found? try to make a new one
     if (certs.empty()) {
-        logMsgCrash() << "No certificates found";
+        auto cert = makeCert("wintls.dimapp");
+        certs.push_back(unique_ptr<const CERT_CONTEXT>(cert));
     }
 }
 
@@ -563,12 +556,7 @@ unique_ptr<CredHandle> Dim::iWinTlsCreateCred() {
     WinError err{0};
 
     vector<unique_ptr<const CERT_CONTEXT>> certs;
-    if (!kMakeCert) {
-        auto cert = makeCert("wintls.dimapp");
-        certs.push_back(unique_ptr<const CERT_CONTEXT>(cert));
-    } else {
-        getCerts(certs, "", appFlags() & fAppIsService);
-    }
+    getCerts(certs, "", appFlags() & fAppIsService);
 
     vector<const CERT_CONTEXT *> ptrs;
     SCHANNEL_CRED cred = {};
