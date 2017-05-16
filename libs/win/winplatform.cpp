@@ -116,7 +116,7 @@ void HtmlAccount::onHttpRequest(
 		addSidRow(bld, *ptr);
 	}
 	bld.end();
-	res.addHeader(kHttpContentType, "text/html");
+	res.addHeader(kHttpContentType, "application/json");
 	res.addHeader(kHttp_Status, "200");
 	httpRouteReply(reqId, res);
 }
