@@ -14,15 +14,6 @@ using SecStatus = WinError::SecurityStatus;
 
 /****************************************************************************
 *
-*   Tuning parameters
-*
-***/
-
-const bool kMakeCert = false;
-
-
-/****************************************************************************
-*
 *   Private
 *
 ***/
@@ -39,7 +30,7 @@ public:
 
 private:
     CtxtHandle m_context;
-    bool m_appData{false};
+    bool m_handshake{true};
     SecPkgContext_StreamSizes m_sizes;
     SecPkgContext_ApplicationProtocol m_alpn;
 };
@@ -113,7 +104,7 @@ bool ServerConn::recv(CharBuf * out, CharBuf * data, string_view src) {
     alpn->ProtocolLists[0].ProtocolListSize = 3;
 
 NEGOTIATE:
-    while (!m_appData) {
+    while (m_handshake) {
         unsigned flags = ASC_REQ_STREAM 
             | ASC_REQ_CONFIDENTIALITY
             | ASC_REQ_EXTENDED_ERROR
@@ -175,7 +166,7 @@ NEGOTIATE:
         }
         if (err == SEC_E_OK) {
             s_perfTlsFinish += 1;
-            m_appData = true;
+            m_handshake = false;
             err = QueryContextAttributes(
                 &m_context, 
                 SECPKG_ATTR_STREAM_SIZES, 
@@ -280,7 +271,7 @@ NEGOTIATE:
         // AcceptSecurityContext with no data.
         s_perfTlsReneg += 1;
         src = {};
-        m_appData = false;
+        m_handshake = true;
         goto NEGOTIATE;
     }
 }

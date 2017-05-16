@@ -43,8 +43,8 @@ public:
     bool parse(const char src[]);
     string str() const;
 
-    operator CERT_NAME_BLOB* () { return &m_blob; }
-    operator const CERT_NAME_BLOB* () const { return &m_blob; }
+    operator CERT_NAME_BLOB * () { return &m_blob; }
+    operator const CERT_NAME_BLOB * () const { return &m_blob; }
 
     explicit operator bool() const { return m_blob.cbData; }
 
@@ -90,111 +90,6 @@ void std::default_delete<CredHandle>::operator()(CredHandle * ptr) const {
 ***/
 
 //===========================================================================
-static NCRYPT_KEY_HANDLE toNCrypt (BCRYPT_KEY_HANDLE bkey) {
-    WinError err{0};
-    ULONG count;
-    err = (NtStatus) BCryptExportKey(
-        bkey, 
-        NULL, // export key (if also signing)
-        BCRYPT_RSAPRIVATE_BLOB,
-        NULL, // output buffer
-        0, // output len
-        &count,
-        0 // flags
-    );
-    if (err)
-        logMsgCrash() << "BCryptExportKey(NULL): " << err;
-    auto blob = (BYTE *) alloca(count);
-    err = (NtStatus) BCryptExportKey(
-        bkey,
-        NULL,
-        BCRYPT_RSAPRIVATE_BLOB,
-        blob,
-        count,
-        &count,
-        0 // flags
-    );
-    if (err)
-        logMsgCrash() << "BCryptExportKey: " << err;
-    NCRYPT_PROV_HANDLE hProv;
-    err = (SecStatus) NCryptOpenStorageProvider(
-        &hProv, 
-        MS_KEY_STORAGE_PROVIDER, 
-        0 // flags
-    );
-    if (err)
-        logMsgCrash() << "NCryptOpenStorageProvider: " << err;
-    NCRYPT_KEY_HANDLE nkey = 0;
-    err = (SecStatus) NCryptImportKey(
-        hProv, 
-        NULL, // import key
-        BCRYPT_RSAPRIVATE_BLOB, 
-        NULL, // parameter list,
-        &nkey,
-        blob,
-        count,
-        0 // flags
-    );
-    if (err)
-        logMsgCrash() << "NCryptImportKey: " << err;
-    err = (SecStatus) NCryptFreeObject(hProv);
-    if (err)
-        logMsgCrash() << "NCryptFreeObject: " << err;
-    memset(blob, 0, count);
-    return nkey;
-}
-
-
-/****************************************************************************
-*
-*   Helpers
-*
-***/
-
-//===========================================================================
-static BCRYPT_KEY_HANDLE createBCryptKey() {
-    WinError err{0};
-    BCRYPT_ALG_HANDLE bAlgo;
-    err = (NtStatus) BCryptOpenAlgorithmProvider(
-        &bAlgo,
-        BCRYPT_RSA_ALGORITHM,
-        NULL, // implementation
-        0 // flags
-    );
-    if (err) 
-        logMsgCrash() << "BCryptOpenAlgorithmProvider: " << err;
-
-    BCRYPT_KEY_HANDLE bKey;
-    err = (NtStatus) BCryptGenerateKeyPair(bAlgo, &bKey, 2048, 0);
-    if (err)
-        logMsgCrash() << "BCryptGenerateKeyPair: " << err;
-    err = (NtStatus) BCryptFinalizeKeyPair(bKey, 0);
-    if (err)
-        logMsgCrash() << "BCryptFinalizeKeyPair: " << err;
-
-    err = (NtStatus) BCryptCloseAlgorithmProvider(bAlgo, 0);
-    if (err)
-        logMsgCrash() << "BCryptCloseAlgorithmProvider: " << err;
-
-    return bKey;
-}
-
-//===========================================================================
-static NCRYPT_KEY_HANDLE createKeyViaBCrypt() {
-    WinError err{0};
-    auto bkey = createBCryptKey();
-
-    // Convert to from BCRYPT to NCRYPT
-    auto nkey = toNCrypt(bkey);
-
-    err = (NtStatus) BCryptDestroyKey(bkey);
-    if (err)
-        logMsgCrash() << "BCryptDestroykey: " << err;
-
-    return nkey;
-}
-
-//===========================================================================
 static NCRYPT_KEY_HANDLE createKey() {
     WinError err{0};
     NCRYPT_PROV_HANDLE hProv;
@@ -211,9 +106,9 @@ static NCRYPT_KEY_HANDLE createKey() {
         hProv,
         &nkey,
         BCRYPT_RSA_ALGORITHM,
-        NULL, // L"wintls-dimapp",
+        L"wintls-dimapp",
         AT_SIGNATURE,
-        NCRYPT_OVERWRITE_KEY_FLAG // | NCRYPT_MACHINE_KEY_FLAG
+        NCRYPT_OVERWRITE_KEY_FLAG
     );
     if (err)
         logMsgCrash() << "NCryptCreatePersistedKey: " << err;
@@ -221,6 +116,28 @@ static NCRYPT_KEY_HANDLE createKey() {
     err = (SecStatus) NCryptFreeObject(hProv);
     if (err)
         logMsgCrash() << "NCryptFreeObject(hProv): " << err;
+
+    DWORD val = 2048;
+    err = (SecStatus) NCryptSetProperty(
+        nkey, 
+        NCRYPT_LENGTH_PROPERTY,
+        (BYTE *) &val,
+        sizeof(val),
+        NCRYPT_SILENT_FLAG
+    );
+    if (err)
+        logMsgCrash() << "NCryptSetProperty(LENGTH): " << err;
+
+    val = NCRYPT_ALLOW_EXPORT_FLAG | NCRYPT_ALLOW_PLAINTEXT_EXPORT_FLAG;
+    err = (SecStatus) NCryptSetProperty(
+        nkey, 
+        NCRYPT_EXPORT_POLICY_PROPERTY,
+        (BYTE *) &val,
+        sizeof(val),
+        NCRYPT_SILENT_FLAG
+    );
+    if (err)
+        logMsgCrash() << "NCryptSetProperty(EXPORT_POLICY): " << err;
 
     err = (SecStatus) NCryptFinalizeKey(nkey, NCRYPT_SILENT_FLAG);
     if (err)
@@ -230,42 +147,47 @@ static NCRYPT_KEY_HANDLE createKey() {
 }
 
 //===========================================================================
+static void encodeObject(
+    CRYPT_OBJID_BLOB & out,
+    string & outData,
+    const char structType[],
+    const void * structInfo
+) {
+    if (!CryptEncodeObject(
+        X509_ASN_ENCODING,
+        structType,
+        structInfo,
+        NULL,
+        &out.cbData
+    )) {
+        logMsgCrash() << "CryptEncodeObject(" << structType << ", NULL): " 
+            << WinError{};
+    }
+    outData.resize(out.cbData);
+    if (!CryptEncodeObject(
+        X509_ASN_ENCODING,
+        structType,
+        structInfo,
+        (BYTE *) outData.data(),
+        &out.cbData
+    )) {
+        logMsgCrash() << "CryptEncodeObject(" << structType << ", NULL): " 
+            << WinError{};
+    }
+    assert(out.cbData == outData.size());
+    out.pbData = (BYTE *) outData.data();
+}
+
+//===========================================================================
 static const CERT_CONTEXT * makeCert(string_view issuerName) {
     WinError err{0};
     auto nkey = createKey();
-    if (err)
-        nkey = createKeyViaBCrypt();
 
     string name = "CN=";
     name += issuerName;
-    // get size of issuer blob
-    CERT_NAME_BLOB issuer = {};
-    const char * errstr;
-    if (!CertStrToName(
-        X509_ASN_ENCODING,
-        name.data(),
-        CERT_X500_NAME_STR,
-        NULL, // reserved
-        issuer.pbData,
-        &issuer.cbData,
-        &errstr
-    )) {
-        logMsgCrash() << "CertStrToName(NULL): " << WinError{};
-    }
-    // get issuer blob
-    string blob(issuer.cbData, 0);
-    issuer.pbData = (BYTE *) blob.data();
-    if (!CertStrToName(
-        X509_ASN_ENCODING,
-        name.data(),
-        CERT_X500_NAME_STR,
-        NULL, // reserved
-        issuer.pbData,
-        &issuer.cbData,
-        &errstr
-    )) {
-        logMsgCrash() << "CertStrToName(issuer): " << WinError{};
-    }
+    CertName issuer;
+    if (!issuer.parse(name.c_str()))
+        logMsgCrash() << "CertName.parse failed";
 
     CRYPT_KEY_PROV_INFO kpinfo = {};
     kpinfo.pwszContainerName = (wchar_t *) L"wintls-dimapp";
@@ -278,28 +200,51 @@ static const CERT_CONTEXT * makeCert(string_view issuerName) {
     sigalgo.pszObjId = const_cast<char *>(szOID_RSA_SHA256RSA);
     
     SYSTEMTIME startTime;
+    SYSTEMTIME endTime;
     {
         // set startTime to 1 week ago
+        static const int64_t kStartDelta = 
+            7 * 24 * 60 * 60 * kClockTicksPerSecond;
         LARGE_INTEGER tmp;
         FILETIME ft;
         GetSystemTimeAsFileTime(&ft);
+        // set endTime to 1 year from now
+        FileTimeToSystemTime(&ft, &endTime);
+        endTime.wYear += 1;
+        // set startTime to 1 week ago
         tmp.HighPart = ft.dwHighDateTime;
         tmp.LowPart = ft.dwLowDateTime;
-        tmp.QuadPart -= 7 * 24 * 60 * 60 * 10'000'000ull;
+        tmp.QuadPart -= kStartDelta;
         ft.dwHighDateTime = tmp.HighPart;
         ft.dwLowDateTime = tmp.LowPart;
         FileTimeToSystemTime(&ft, &startTime);
     }
 
+    CERT_ALT_NAME_ENTRY neIssuer;
+    neIssuer.dwAltNameChoice = CERT_ALT_NAME_DNS_NAME;
+    neIssuer.pwszDNSName = const_cast<LPWSTR>(L"kcollege");
+    CERT_ALT_NAME_INFO ni;
+    ni.cAltEntry = 1;
+    ni.rgAltEntry = &neIssuer;
+
+    string extSanData;
+    CERT_EXTENSION extSan;
+    extSan.pszObjId = (char *) szOID_SUBJECT_ALT_NAME2;
+    extSan.fCritical = false;
+    encodeObject(extSan.Value, extSanData, X509_ALTERNATE_NAME, &ni);
+    CERT_EXTENSIONS exts;
+    exts.cExtension = 1;
+    exts.rgExtension = &extSan;
+
     const CERT_CONTEXT * cert = CertCreateSelfSignCertificate(
         nkey,
-        &issuer,
+        issuer,
         0, // flags
-        &kpinfo, // key provider info
+        NULL, // &kpinfo, // key provider info
         &sigalgo,
         &startTime,
-        NULL, // end time - defaults to 1 year
-        NULL // extensions
+        &endTime, // end time - defaults to 1 year
+        &exts // extensions
     );
     if (!cert) {
         WinError err;
@@ -313,6 +258,39 @@ static const CERT_CONTEXT * makeCert(string_view issuerName) {
     if (!CertAddEnhancedKeyUsageIdentifier(cert, szOID_PKIX_KP_SERVER_AUTH)) {
         err.set();
         logMsgCrash() << "CertAddEnhancedKeyUsageIdentifier: " << err;
+    }
+
+    CRYPT_DATA_BLOB data;
+    const wchar_t s_friendlyName[] = L"dimapp-wintls";
+    data.pbData = (BYTE *) s_friendlyName;
+    data.cbData = sizeof(s_friendlyName);
+    if (!CertSetCertificateContextProperty(
+        cert,
+        CERT_FRIENDLY_NAME_PROP_ID,
+        0,
+        &data
+    )) {
+        logMsgCrash() << "CertSetCertificateContextProperty(FRIENDLY_NAME): "
+            << WinError{};
+    }
+
+    // verify access to cert's private key
+    DWORD keySpec;
+    BOOL mustFreeNkey;
+    if (!CryptAcquireCertificatePrivateKey(
+        cert,
+        CRYPT_ACQUIRE_ONLY_NCRYPT_KEY_FLAG, // flags
+        NULL, // parameters
+        &nkey,
+        &keySpec,
+        &mustFreeNkey
+    )) {
+        logMsgCrash() << "CryptAcquireCertificatePrivateKey: " << WinError{};
+    }
+    if (mustFreeNkey) {
+        err = (SecStatus) NCryptFreeObject(nkey);
+        if (err)
+            logMsgCrash() << "NCryptFreeObject: " << err;
     }
 
     return cert;
@@ -438,7 +416,7 @@ static void getCerts(
     if (certs.empty() && selfsigned) {
         CertName sub;
         sub.reset(selfsigned->pCertInfo->Subject);
-        logMsgDebug() << "Using self-signed cert by '" << sub.str() << "'";
+        logMsgDebug() << "Using cert selfsigned by '" << sub.str() << "'";
         sub.release();
         certs.push_back(move(selfsigned));
     }
@@ -585,9 +563,9 @@ unique_ptr<CredHandle> Dim::iWinTlsCreateCred() {
     WinError err{0};
 
     vector<unique_ptr<const CERT_CONTEXT>> certs;
-    if (kMakeCert) {
-        // cert = 
-        makeCert("wintls.dimapp");
+    if (!kMakeCert) {
+        auto cert = makeCert("wintls.dimapp");
+        certs.push_back(unique_ptr<const CERT_CONTEXT>(cert));
     } else {
         getCerts(certs, "", appFlags() & fAppIsService);
     }
@@ -595,8 +573,8 @@ unique_ptr<CredHandle> Dim::iWinTlsCreateCred() {
     vector<const CERT_CONTEXT *> ptrs;
     SCHANNEL_CRED cred = {};
     cred.dwVersion = SCHANNEL_CRED_VERSION;
-    cred.dwFlags = SCH_CRED_NO_SYSTEM_MAPPER |
-        SCH_USE_STRONG_CRYPTO;
+    cred.dwFlags = SCH_CRED_NO_SYSTEM_MAPPER 
+        | SCH_USE_STRONG_CRYPTO;
     if (!certs.empty()) {
         for (auto && cert : certs)
             ptrs.push_back(cert.get());
@@ -620,9 +598,6 @@ unique_ptr<CredHandle> Dim::iWinTlsCreateCred() {
     if (err)
         logMsgCrash() << "AcquireCredentialsHandle: " << err;
     // SEC_E_UNKNOWN_CREDENTIALS - 8009'030d
-    // STATUS_NO_SUCH_LOGON_SESSION - c000'005f
-    // ERROR_NO_SUCH_LOGON_SESSION - 1312
-
     // NTE_BAD_KEYSET - 8009'0016
 
     TimePoint expires(Duration(expiry.QuadPart));
