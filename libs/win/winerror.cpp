@@ -106,11 +106,9 @@ WinError & WinError::set() {
 
 //===========================================================================
 std::ostream & Dim::operator<<(std::ostream & os, const WinError & val) {
-    int native = val;
-    if (val.m_ntStatus) 
-        native = val.m_ntStatus;
-    if (val.m_secStatus) 
-        native = val.m_secStatus;
+    auto ntval = (WinError::NtStatus) val;
+    auto secval = (WinError::SecurityStatus) val;
+    int native = secval ? secval : ntval ? ntval : val;
     char buf[256] = {};
     FormatMessage(
         FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
@@ -127,8 +125,8 @@ std::ostream & Dim::operator<<(std::ostream & os, const WinError & val) {
         *ptr = 0;
 
     os << buf << " (" << (int) val;
-    if (val.m_ntStatus || val.m_secStatus) {
-        os << hex << ':' << val.m_ntStatus << ':' << val.m_secStatus << dec;
+    if (ntval || secval) {
+        os << hex << ':' << ntval << ':' << secval << dec;
     }
     os << ')';
     return os;

@@ -121,10 +121,12 @@ public:
     WinError & set();   // calls GetLastError()
 
     operator int() const { return m_value; }
+    explicit operator NtStatus() const { return (NtStatus) m_ntStatus; }
+    explicit operator SecurityStatus() const { 
+        return (SecurityStatus) m_secStatus; 
+    }
 
 private:
-    friend std::ostream & operator<<(std::ostream & os, const WinError & val);
-
     int m_value;
     int m_ntStatus{0};
     int m_secStatus{0};
