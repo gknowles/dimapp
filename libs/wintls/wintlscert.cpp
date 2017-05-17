@@ -181,13 +181,6 @@ static const CERT_CONTEXT * makeCert(string_view issuerName) {
     if (!issuer.parse(name.c_str()))
         logMsgCrash() << "CertName.parse failed";
 
-    CRYPT_KEY_PROV_INFO kpinfo = {};
-    kpinfo.pwszContainerName = (wchar_t *) L"wintls-dimapp";
-    kpinfo.pwszProvName = (wchar_t *) MS_KEY_STORAGE_PROVIDER;
-    kpinfo.dwProvType = 0;
-    kpinfo.dwFlags = NCRYPT_SILENT_FLAG;
-    kpinfo.dwKeySpec = AT_SIGNATURE;
-
     CRYPT_ALGORITHM_IDENTIFIER sigalgo = {};
     sigalgo.pszObjId = const_cast<char *>(szOID_RSA_SHA256RSA);
     
@@ -212,18 +205,21 @@ static const CERT_CONTEXT * makeCert(string_view issuerName) {
         FileTimeToSystemTime(&ft, &startTime);
     }
 
-    CERT_ALT_NAME_ENTRY neIssuer;
-    neIssuer.dwAltNameChoice = CERT_ALT_NAME_DNS_NAME;
-    neIssuer.pwszDNSName = const_cast<LPWSTR>(L"kcollege");
+    CERT_ALT_NAME_ENTRY altNames[2];
+    altNames[0].dwAltNameChoice = CERT_ALT_NAME_DNS_NAME;
+    altNames[0].pwszDNSName = const_cast<LPWSTR>(L"kcollege");
+    altNames[1].dwAltNameChoice = CERT_ALT_NAME_DNS_NAME;
+    altNames[1].pwszDNSName = const_cast<LPWSTR>(L"kpower");
     CERT_ALT_NAME_INFO ni;
-    ni.cAltEntry = 1;
-    ni.rgAltEntry = &neIssuer;
+    ni.cAltEntry = (DWORD) size(altNames);
+    ni.rgAltEntry = altNames;
 
     string extSanData;
     CERT_EXTENSION extSan;
     extSan.pszObjId = (char *) szOID_SUBJECT_ALT_NAME2;
     extSan.fCritical = false;
     encodeObject(extSan.Value, extSanData, X509_ALTERNATE_NAME, &ni);
+
     CERT_EXTENSIONS exts;
     exts.cExtension = 1;
     exts.rgExtension = &extSan;
@@ -232,7 +228,7 @@ static const CERT_CONTEXT * makeCert(string_view issuerName) {
         nkey,
         issuer,
         0, // flags
-        NULL, // &kpinfo, // key provider info
+        NULL, // key provider info
         &sigalgo,
         &startTime,
         &endTime, // end time - defaults to 1 year
@@ -496,7 +492,7 @@ bool CertName::parse(const char src[]) {
         &m_blob.cbData,
         &errstr
     )) {
-        logMsgDebug() << "CertStrToName(issuer): " << WinError{};
+        logMsgDebug() << "CertStrToName: " << WinError{};
         return false;
     }
 
