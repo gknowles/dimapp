@@ -11,9 +11,12 @@ using namespace Dim;
 
 /****************************************************************************
 *
-*   Helpers
+*   Declarations
 *
 ***/
+
+constexpr auto kUnixTimeDiff = 11'644'473'600ull;
+
 
 /****************************************************************************
 *
@@ -30,13 +33,14 @@ Clock::time_point Clock::now() noexcept {
 //===========================================================================
 // static
 time_t Clock::to_time_t(const time_point & time) noexcept {
-    return ((time_t)(time.time_since_epoch().count() / kClockTicksPerSecond));
+    auto ticks = time.time_since_epoch().count();
+    return (time_t)(ticks / kClockTicksPerSecond - kUnixTimeDiff);
 }
 
 //===========================================================================
 // static
-Clock::time_point Clock::from_time_t(time_t tm) noexcept {
-    return (time_point(duration(tm * kClockTicksPerSecond)));
+Clock::time_point Clock::from_time_t(time_t t) noexcept {
+    return (time_point(duration((t + kUnixTimeDiff) * kClockTicksPerSecond)));
 }
 
 
