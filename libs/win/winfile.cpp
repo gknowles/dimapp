@@ -24,7 +24,7 @@ namespace fs = std::experimental::filesystem;
 ***/
 
 namespace {
-struct FileInfo {
+struct WinFileInfo {
     FileHandle m_f;
     fs::path m_path;
     HANDLE m_handle{INVALID_HANDLE_VALUE};
@@ -36,7 +36,7 @@ struct FileInfo {
 class IFileOpBase : public ITaskNotify {
 public:
     void start(
-        FileInfo * file, 
+        WinFileInfo * file, 
         void * buf, 
         size_t bufLen, 
         int64_t off, 
@@ -58,7 +58,7 @@ protected:
     bool m_started{false};
     bool m_trigger{false};
 
-    FileInfo * m_file{nullptr};
+    WinFileInfo * m_file{nullptr};
     char * m_buf{nullptr};
     int m_bufLen{0};
 
@@ -110,7 +110,7 @@ static size_t s_pageSize;
 static TaskQueueHandle s_hq;
 
 static shared_mutex s_fileMut;
-static HandleMap<FileHandle, FileInfo> s_files;
+static HandleMap<FileHandle, WinFileInfo> s_files;
 
 
 /****************************************************************************
@@ -128,7 +128,7 @@ static HandleMap<FileHandle, FileInfo> s_files;
 
 //===========================================================================
 void IFileOpBase::start(
-    FileInfo * file,
+    WinFileInfo * file,
     void * buf,
     size_t bufLen,
     int64_t off,
@@ -366,7 +366,7 @@ bool Dim::winFileSetErrno(int error) {
 FileHandle Dim::fileOpen(string_view path, File::OpenMode mode) {
     using om = File::OpenMode;
 
-    auto file = make_unique<FileInfo>();
+    auto file = make_unique<WinFileInfo>();
     file->m_mode = (om)mode;
     file->m_path = fs::u8path(path.begin(), path.end());
 
@@ -447,7 +447,7 @@ FileHandle Dim::fileOpen(string_view path, File::OpenMode mode) {
 }
 
 //===========================================================================
-static FileInfo * getInfo(FileHandle f) {
+static WinFileInfo * getInfo(FileHandle f) {
     shared_lock<shared_mutex> lk{s_fileMut};
     return s_files.find(f);
 }
@@ -618,21 +618,49 @@ bool Dim::fileOpenView(
     base = nullptr;
     WinError err{0};
     HANDLE sec;
+
+    SIZE_T viewSize;
+    ULONG access, secProt, allocType, pageProt;
+
+    if (file->m_mode & File::fReadOnly) {
+        // readonly view
+        access = SECTION_MAP_READ;
+        secProt = PAGE_READONLY;
+        viewSize = 0;
+        allocType = 0;
+        pageProt = PAGE_READONLY;
+    } else if (file->m_mode & File::fReadWrite) {
+        // readonly but extendable
+        access = SECTION_MAP_READ;
+        secProt = PAGE_READWRITE;
+        viewSize = maxLen;
+        allocType = MEM_RESERVE;
+        pageProt = PAGE_READONLY;
+    } else {
+        // fully writable and extendable view
+        assert(0 && "fully writable view");
+        access = SECTION_MAP_READ | SECTION_MAP_WRITE;
+        secProt = PAGE_READWRITE;
+        viewSize = maxLen;
+        allocType = MEM_RESERVE;
+        pageProt = PAGE_READWRITE;
+    }
+    
     err = (WinError::NtStatus) s_NtCreateSection(
         &sec,
-        SECTION_MAP_READ,
+        access,
         nullptr, // object attributes
         nullptr, // maximum size
-        (file->m_mode & File::fReadOnly) ? PAGE_READONLY : PAGE_READWRITE,
+        secProt,
         SEC_RESERVE,
-        file->m_handle);
+        file->m_handle
+    );
     if (err) {
         logMsgError() << "NtCreateSection(" << file->m_path << "): " << err;
         winFileSetErrno(err);
         return false;
     }
 
-    SIZE_T viewSize = (file->m_mode & File::fReadOnly) ? 0 : maxLen;
     err = (WinError::NtStatus) s_NtMapViewOfSection(
         sec,
         GetCurrentProcess(),
@@ -642,8 +670,9 @@ bool Dim::fileOpenView(
         nullptr, // section offset
         &viewSize,
         ViewUnmap,
-        (file->m_mode & File::fReadOnly) ? 0 : MEM_RESERVE,
-        PAGE_READONLY);
+        allocType,
+        pageProt
+    );
     if (err) {
         logMsgError() << "NtMapViewOfSection(" << file->m_path << "): " << err;
         winFileSetErrno(err);
