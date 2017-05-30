@@ -32,7 +32,6 @@
 # libs/core/handle.h
 # libs/core/hash.cpp
 # libs/core/list.h
-# libs/core/listmbr.h
 # libs/core/log.cpp
 # libs/core/log.h
 # libs/core/pch.cpp
@@ -56,6 +55,7 @@
 # libs/core/tokentable.cpp
 # libs/core/tokentable.h
 # libs/core/types.h
+# libs/core/uset.h
 # libs/core/util.cpp
 # libs/core/util.h
 # libs/cppconf/compiler/visualc.h
@@ -161,6 +161,9 @@
 # tests/tokentable/pch.cpp
 # tests/tokentable/pch.h
 # tests/tokentable/tokentabletest.cpp
+# tests/uset/pch.cpp
+# tests/uset/pch.h
+# tests/uset/usettest.cpp
 # tests/xml/pch.cpp
 # tests/xml/pch.h
 # tests/xml/xmltest.cpp
