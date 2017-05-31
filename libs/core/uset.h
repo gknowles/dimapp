@@ -6,6 +6,9 @@
 
 #include "cppconf/cppconf.h"
 
+#include <cstdint>
+#include <initializer_list>
+
 namespace Dim {
 
 
@@ -27,10 +30,28 @@ class UnsignedSetIterator {
 
 class UnsignedSet {
 public:
+    enum NodeType {
+        kEmpty,     // contains no values
+        kFull,      // contains all values in node's domain
+        kVector,    // has vector of values
+        kBitmap,    // has bitmap of values
+        kMeta,      // vector of child nodes
+    };
+    struct Node {
+        union {
+            unsigned * values;
+            Node * nodes;
+        };
+        unsigned type : 3;
+        unsigned height : 5;
+        unsigned base : 24;
+        unsigned bytes : 16;
+    };
+    
     using iterator = UnsignedSetIterator;
 
 public:
-    UnsignedSet() {}
+    UnsignedSet();
     UnsignedSet(UnsignedSet && from);
     ~UnsignedSet();
 
@@ -55,6 +76,7 @@ public:
     void erase(const UnsignedSet & other);
     void intersect(UnsignedSet && other);
     void intersect(const UnsignedSet & other);
+    bool contains(const UnsignedSet & other);
     void swap(UnsignedSet & other);
 
     size_t count(unsigned val) const;
@@ -64,55 +86,7 @@ public:
     //upperBound
 
 private:
-    
+    Node m_node;
 };
-
-
-//===========================================================================
-UnsignedSet::UnsignedSet(UnsignedSet && from) {
-    swap(from);
-}
-
-//===========================================================================
-UnsignedSet::~UnsignedSet() {
-    clear();
-}
-
-//===========================================================================
-UnsignedSet & UnsignedSet::operator=(UnsignedSet && from) {
-    clear();
-    swap(from);
-    return *this;
-}
-
-//===========================================================================
-bool UnsignedSet::operator==(const UnsignedSet & right) const;
-
-//===========================================================================
-bool UnsignedSet::empty() const {
-    return true;
-}
-
-//===========================================================================
-size_t UnsignedSet::size() const {
-    size_t num = 0;
-    return num;
-}
-
-//===========================================================================
-void UnsignedSet::clear() {
-}
-
-//===========================================================================
-void UnsignedSet::insert(unsigned value) {
-}
-
-//===========================================================================
-void UnsignedSet::erase(unsigned value) {
-}
-
-//===========================================================================
-void UnsignedSet::swap(UnsignedSet & other) {
-}
 
 } // namespace

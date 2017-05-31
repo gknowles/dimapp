@@ -55,6 +55,7 @@
 # libs/core/tokentable.cpp
 # libs/core/tokentable.h
 # libs/core/types.h
+# libs/core/uset.cpp
 # libs/core/uset.h
 # libs/core/util.cpp
 # libs/core/util.h
