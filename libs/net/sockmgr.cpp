@@ -376,7 +376,8 @@ bool Dim::sockMgrShutdown(SockMgrHandle h) {
 
 //===========================================================================
 void Dim::sockMgrDestroy(SockMgrHandle h) {
-    auto mgr = s_mgrs.find(h);
-    assert(!mgr || mgr->shutdown());
-    s_mgrs.erase(h);
+    if (auto mgr = s_mgrs.find(h)) {
+        assert(mgr->shutdown());
+        s_mgrs.erase(h);
+    }
 }
