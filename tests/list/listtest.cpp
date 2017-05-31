@@ -75,6 +75,9 @@ void Application::onAppRun() {
     list.pushBack(&b);
     list.pushBack(&c);
     EXPECT(list.size() == 2);
+    TestNode d;
+    list.linkAfter(&b, &d);
+    EXPECT(list.size() == 3);
     list.unlinkAll();
     EXPECT(list.empty());
 

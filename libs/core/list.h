@@ -150,6 +150,7 @@ class List {
 public:
     using iterator = ListIterator<List, T>;
     using const_iterator = ListIterator<const List, const T>;
+    using link_type = ListBaseLink<T, Tag>;
 
 public:
     List() {}
@@ -193,18 +194,10 @@ public:
     void swap(List & other);
 
 private:
-    void linkBase(
-        ListBaseLink<T, Tag> * pos, 
-        ListBaseLink<T, Tag> * first,
-        ListBaseLink<T, Tag> * last
-    );
-    void linkBaseAfter(
-        ListBaseLink<T, Tag> * pos, 
-        ListBaseLink<T, Tag> * first,
-        ListBaseLink<T, Tag> * last
-    );
+    void linkBase(link_type * pos, link_type * first, link_type * last);
+    void linkBaseAfter(link_type * pos, link_type * first, link_type * last);
 
-    ListBaseLink<T, Tag> m_base;
+    link_type m_base;
 };
 
 //===========================================================================
@@ -303,9 +296,8 @@ const T * List<T, Tag>::back() const {
 //===========================================================================
 template <typename T, typename Tag>
 T * List<T, Tag>::next(T * node) {
-    return node->m_nextLink == &m_base 
-        ? nullptr 
-        : static_cast<T *>(node->m_nextLink);
+    auto link = static_cast<link_type *>(node);
+    return link->linked() ? static_cast<T *>(link->m_nextLink) : nullptr;
 }
 
 //===========================================================================
@@ -317,9 +309,8 @@ const T * List<T, Tag>::next(const T * node) const {
 //===========================================================================
 template <typename T, typename Tag>
 T * List<T, Tag>::prev(T * node) {
-    return node->m_prevLink == &m_base 
-        ? nullptr 
-        : static_cast<T *>(node->m_prevLink);
+    auto link = static_cast<link_type *>(node);
+    return link->linked() ? static_cast<T *>(link->m_prevLink) : nullptr;
 }
 
 //===========================================================================
@@ -331,9 +322,9 @@ const T * List<T, Tag>::prev(const T * node) const {
 //===========================================================================
 template <typename T, typename Tag>
 void List<T, Tag>::linkBase(
-    ListBaseLink<T, Tag> * next, 
-    ListBaseLink<T, Tag> * first, 
-    ListBaseLink<T, Tag> * last
+    link_type * next, 
+    link_type * first, 
+    link_type * last
 ) {
     auto lastIncl = last->m_prevLink;
 
@@ -353,7 +344,7 @@ void List<T, Tag>::linkBase(
 //===========================================================================
 template <typename T, typename Tag>
 void List<T, Tag>::link(T * pos, T * value) {
-    auto first = static_cast<ListBaseLink<T, Tag> *>(value);
+    auto first = static_cast<link_type *>(value);
     linkBase(pos, first, first->m_nextLink);
 }
 
@@ -372,29 +363,17 @@ void List<T, Tag>::link(T * pos, List && other) {
 //===========================================================================
 template <typename T, typename Tag>
 void List<T, Tag>::linkBaseAfter(
-    ListBaseLink<T, Tag> * prev, 
-    ListBaseLink<T, Tag> * first, 
-    ListBaseLink<T, Tag> * last
+    link_type * prev, 
+    link_type * first, 
+    link_type * last
 ) {
-    auto lastIncl = last->m_prevLink;
-
-    // detach [first, last)
-    last->m_prevLink = first->m_prevLink;
-    first->m_prevLink->m_nextLink = last;
-
-    // update [first, lastIncl] pointers to list
-    first->m_prevLink = prev;
-    lastIncl->m_nextLink = prev->m_nextLink;
-
-    // update list's pointers to [first, lastIncl] segment
-    prev->m_nextLink = first;
-    lastIncl->m_nextLink->m_prevLink = lastIncl;
+    linkBase(prev->m_nextLink, first, last);
 }
 
 //===========================================================================
 template <typename T, typename Tag>
 void List<T, Tag>::linkAfter(T * pos, T * value) {
-    auto first = static_cast<ListBaseLink<T, Tag> *>(value);
+    auto first = static_cast<link_type *>(value);
     linkBaseAfter(pos, first, first->m_nextLink);
 }
 
@@ -413,14 +392,19 @@ void List<T, Tag>::linkAfter(T * pos, List && other) {
 //===========================================================================
 template <typename T, typename Tag>
 void List<T, Tag>::unlinkAll() {
-    while (auto ptr = front())
-        unlink(ptr);
+    auto ptr = m_base.m_nextLink;
+    m_base.construct();
+    while (ptr != &m_base) {
+        auto next = ptr->m_nextLink;
+        ptr->construct();
+        ptr = next;
+    }
 }
 
 //===========================================================================
 template <typename T, typename Tag>
 void List<T, Tag>::unlink(T * value) {
-    static_cast<ListBaseLink<T, Tag> *>(value)->unlink();
+    static_cast<link_type *>(value)->unlink();
 }
 
 //===========================================================================
