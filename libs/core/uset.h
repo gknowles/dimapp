@@ -6,6 +6,9 @@
 
 #include "cppconf/cppconf.h"
 
+#include <cstdint>
+#include <initializer_list>
+
 namespace Dim {
 
 
@@ -27,10 +30,24 @@ class UnsignedSetIterator {
 
 class UnsignedSet {
 public:
+    struct Node {
+        union {
+            unsigned * m_values;
+            Node * m_nodes;
+        };
+        unsigned m_type : 3;
+        unsigned m_depth : 5;
+        unsigned m_base : 24;
+        unsigned m_numBytes : 16;
+        unsigned m_numValues : 16;
+
+        Node();
+    };
+    
     using iterator = UnsignedSetIterator;
 
 public:
-    UnsignedSet() {}
+    UnsignedSet();
     UnsignedSet(UnsignedSet && from);
     ~UnsignedSet();
 
@@ -55,6 +72,7 @@ public:
     void erase(const UnsignedSet & other);
     void intersect(UnsignedSet && other);
     void intersect(const UnsignedSet & other);
+    bool includes(const UnsignedSet & other);
     void swap(UnsignedSet & other);
 
     size_t count(unsigned val) const;
@@ -64,55 +82,7 @@ public:
     //upperBound
 
 private:
-    
+    Node m_node;
 };
-
-
-//===========================================================================
-UnsignedSet::UnsignedSet(UnsignedSet && from) {
-    swap(from);
-}
-
-//===========================================================================
-UnsignedSet::~UnsignedSet() {
-    clear();
-}
-
-//===========================================================================
-UnsignedSet & UnsignedSet::operator=(UnsignedSet && from) {
-    clear();
-    swap(from);
-    return *this;
-}
-
-//===========================================================================
-bool UnsignedSet::operator==(const UnsignedSet & right) const;
-
-//===========================================================================
-bool UnsignedSet::empty() const {
-    return true;
-}
-
-//===========================================================================
-size_t UnsignedSet::size() const {
-    size_t num = 0;
-    return num;
-}
-
-//===========================================================================
-void UnsignedSet::clear() {
-}
-
-//===========================================================================
-void UnsignedSet::insert(unsigned value) {
-}
-
-//===========================================================================
-void UnsignedSet::erase(unsigned value) {
-}
-
-//===========================================================================
-void UnsignedSet::swap(UnsignedSet & other) {
-}
 
 } // namespace

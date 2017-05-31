@@ -40,6 +40,8 @@ class Application : public IAppNotify {
 //===========================================================================
 void Application::onAppRun() {
     //int line = 0;
+    UnsignedSet tmp;
+    assert(tmp.empty());
 
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);

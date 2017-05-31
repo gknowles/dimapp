@@ -20,4 +20,5 @@
 #include "timerlist.h"
 #include "tokentable.h"
 #include "types.h"
+#include "uset.h"
 #include "util.h"
