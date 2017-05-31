@@ -41,8 +41,6 @@ private:
 
     void construct();
     void detach();
-    void linkBefore(ListBaseLink * next);
-    void linkAfter(ListBaseLink * prev);
 
     ListBaseLink * m_prevLink;
     ListBaseLink * m_nextLink;
@@ -85,28 +83,6 @@ template<typename T, typename Tag>
 void ListBaseLink<T, Tag>::detach() {
     m_nextLink->m_prevLink = m_prevLink;
     m_prevLink->m_nextLink = m_nextLink;
-}
-
-//===========================================================================
-template<typename T, typename Tag>
-void ListBaseLink<T, Tag>::linkBefore(ListBaseLink * next) {
-    detach();
-    m_prevLink = next->m_prevLink;
-    m_nextLink = next;
-
-    m_prevLink->m_nextLink = this;
-    next->m_prevLink = this;
-}
-
-//===========================================================================
-template<typename T, typename Tag>
-void ListBaseLink<T, Tag>::linkAfter(ListBaseLink * prev) {
-    detach();
-    m_prevLink = prev;
-    m_nextLink = prev->m_nextLink;
-
-    prev->m_nextLink = this;
-    m_nextLink->m_prevLink = this;
 }
 
 
@@ -200,12 +176,12 @@ public:
     const T * next(const T * node) const;
     T * prev(T * node);
     const T * prev(const T * node) const;
-    void insert(const T * pos, T * value);
-    void insert(const T * pos, T * first, T * last);
-    void insert(const T * pos, List && other);
-    void insertAfter(const T * pos, T * value);
-    void insertAfter(const T * pos, T * first, T * last);
-    void insertAfter(const T * pos, List && other);
+    void link(T * pos, T * value);
+    void link(T * pos, T * first, T * last);
+    void link(T * pos, List && other);
+    void linkAfter(T * pos, T * value);
+    void linkAfter(T * pos, T * first, T * last);
+    void linkAfter(T * pos, List && other);
     void unlinkAll();
     void unlink(T * value);
     void pushBack(T * value);
@@ -217,6 +193,17 @@ public:
     void swap(List & other);
 
 private:
+    void linkBase(
+        ListBaseLink<T, Tag> * pos, 
+        ListBaseLink<T, Tag> * first,
+        ListBaseLink<T, Tag> * last
+    );
+    void linkBaseAfter(
+        ListBaseLink<T, Tag> * pos, 
+        ListBaseLink<T, Tag> * first,
+        ListBaseLink<T, Tag> * last
+    );
+
     ListBaseLink<T, Tag> m_base;
 };
 
@@ -343,31 +330,85 @@ const T * List<T, Tag>::prev(const T * node) const {
 
 //===========================================================================
 template <typename T, typename Tag>
-void List<T, Tag>::insert(const T * pos, T * value) {
-    static_cast<ListBaseLink<T, Tag> *>(value)->linkBefore(pos);
+void List<T, Tag>::linkBase(
+    ListBaseLink<T, Tag> * next, 
+    ListBaseLink<T, Tag> * first, 
+    ListBaseLink<T, Tag> * last
+) {
+    auto lastIncl = last->m_prevLink;
+
+    // detach [first, last)
+    last->m_prevLink = first->m_prevLink;
+    first->m_prevLink->m_nextLink = last;
+
+    // update [first, lastIncl] pointers to list
+    first->m_prevLink = next->m_prevLink;
+    lastIncl->m_nextLink = next;
+
+    // update list's pointers to [first, lastIncl] segment
+    first->m_prevLink->m_nextLink = first;
+    next->m_prevLink = lastIncl;
 }
 
 //===========================================================================
 template <typename T, typename Tag>
-void List<T, Tag>::insert(const T * pos, T * first, T * last);
-
-//===========================================================================
-template <typename T, typename Tag>
-void List<T, Tag>::insert(const T * pos, List && other);
-
-//===========================================================================
-template <typename T, typename Tag>
-void List<T, Tag>::insertAfter(const T * pos, T * value) {
-    static_cast<ListBaseLink<T, Tag> *>(value)->linkAfter(pos);
+void List<T, Tag>::link(T * pos, T * value) {
+    auto first = static_cast<ListBaseLink<T, Tag> *>(value);
+    linkBase(pos, first, first->m_nextLink);
 }
 
 //===========================================================================
 template <typename T, typename Tag>
-void List<T, Tag>::insertAfter(const T * pos, T * first, T * last);
+void List<T, Tag>::link(T * pos, T * first, T * last) {
+    linkBase(pos, first, last);
+}
 
 //===========================================================================
 template <typename T, typename Tag>
-void List<T, Tag>::insertAfter(const T * pos, List && other);
+void List<T, Tag>::link(T * pos, List && other) {
+    linkBase(pos, other.front(), other.back());
+}
+
+//===========================================================================
+template <typename T, typename Tag>
+void List<T, Tag>::linkBaseAfter(
+    ListBaseLink<T, Tag> * prev, 
+    ListBaseLink<T, Tag> * first, 
+    ListBaseLink<T, Tag> * last
+) {
+    auto lastIncl = last->m_prevLink;
+
+    // detach [first, last)
+    last->m_prevLink = first->m_prevLink;
+    first->m_prevLink->m_nextLink = last;
+
+    // update [first, lastIncl] pointers to list
+    first->m_prevLink = prev;
+    lastIncl->m_nextLink = prev->m_nextLink;
+
+    // update list's pointers to [first, lastIncl] segment
+    prev->m_nextLink = first;
+    lastIncl->m_nextLink->m_prevLink = lastIncl;
+}
+
+//===========================================================================
+template <typename T, typename Tag>
+void List<T, Tag>::linkAfter(T * pos, T * value) {
+    auto first = static_cast<ListBaseLink<T, Tag> *>(value);
+    linkBaseAfter(pos, first, first->m_nextLink);
+}
+
+//===========================================================================
+template <typename T, typename Tag>
+void List<T, Tag>::linkAfter(T * pos, T * first, T * last) {
+    linkBaseAfter(pos, first, last);
+}
+
+//===========================================================================
+template <typename T, typename Tag>
+void List<T, Tag>::linkAfter(T * pos, List && other) {
+    linkBaseAfter(pos, other.front(), other.back());
+}
 
 //===========================================================================
 template <typename T, typename Tag>
@@ -385,12 +426,14 @@ void List<T, Tag>::unlink(T * value) {
 //===========================================================================
 template <typename T, typename Tag>
 void List<T, Tag>::pushBack(T * value) {
-    static_cast<ListBaseLink<T, Tag> *>(value)->linkBefore(&m_base);
+    link(static_cast<T *>(&m_base), value);
 }
 
 //===========================================================================
 template <typename T, typename Tag>
-void List<T, Tag>::pushBack(List && other);
+void List<T, Tag>::pushBack(List && other) {
+    link(static_cast<T *>(&m_base), other);
+}
 
 //===========================================================================
 template <typename T, typename Tag>
@@ -404,12 +447,14 @@ T * List<T, Tag>::popBack() {
 //===========================================================================
 template <typename T, typename Tag>
 void List<T, Tag>::pushFront(T * value) {
-    static_cast<ListBaseLink<T, Tag> *>(value)->linkAfter(&m_base);
+    linkAfter(static_cast<T *>(&m_base), value);
 }
 
 //===========================================================================
 template <typename T, typename Tag>
-void List<T, Tag>::pushFront(List && other);
+void List<T, Tag>::pushFront(List && other) {
+    linkAfter(static_cast<T *>(&m_base), other);
+}
 
 //===========================================================================
 template <typename T, typename Tag>
