@@ -177,20 +177,20 @@ public:
     const T * next(const T * node) const;
     T * prev(T * node);
     const T * prev(const T * node) const;
+    void link(T * value);
+    void link(List && other);
+    void linkFront(T * value);
+    void linkFront(List && other);
     void link(T * pos, T * value);
     void link(T * pos, T * first, T * last);
     void link(T * pos, List && other);
     void linkAfter(T * pos, T * value);
     void linkAfter(T * pos, T * first, T * last);
     void linkAfter(T * pos, List && other);
-    void unlinkAll();
     void unlink(T * value);
-    void pushBack(T * value);
-    void pushBack(List && other);
-    T * popBack();
-    void pushFront(T * value);
-    void pushFront(List && other);
-    T * popFront();
+    T * unlinkBack();
+    T * unlinkFront();
+    void unlinkAll();
     void swap(List & other);
 
 private:
@@ -321,28 +321,6 @@ const T * List<T, Tag>::prev(const T * node) const {
 
 //===========================================================================
 template <typename T, typename Tag>
-void List<T, Tag>::linkBase(
-    link_type * next, 
-    link_type * first, 
-    link_type * last
-) {
-    auto lastIncl = last->m_prevLink;
-
-    // detach [first, last)
-    last->m_prevLink = first->m_prevLink;
-    first->m_prevLink->m_nextLink = last;
-
-    // update [first, lastIncl] pointers to list
-    first->m_prevLink = next->m_prevLink;
-    lastIncl->m_nextLink = next;
-
-    // update list's pointers to [first, lastIncl] segment
-    first->m_prevLink->m_nextLink = first;
-    next->m_prevLink = lastIncl;
-}
-
-//===========================================================================
-template <typename T, typename Tag>
 void List<T, Tag>::link(T * pos, T * value) {
     auto first = static_cast<link_type *>(value);
     linkBase(pos, first, first->m_nextLink);
@@ -358,16 +336,6 @@ void List<T, Tag>::link(T * pos, T * first, T * last) {
 template <typename T, typename Tag>
 void List<T, Tag>::link(T * pos, List && other) {
     linkBase(pos, other.front(), other.back());
-}
-
-//===========================================================================
-template <typename T, typename Tag>
-void List<T, Tag>::linkBaseAfter(
-    link_type * prev, 
-    link_type * first, 
-    link_type * last
-) {
-    linkBase(prev->m_nextLink, first, last);
 }
 
 //===========================================================================
@@ -391,6 +359,54 @@ void List<T, Tag>::linkAfter(T * pos, List && other) {
 
 //===========================================================================
 template <typename T, typename Tag>
+void List<T, Tag>::link(T * value) {
+    link(static_cast<T *>(&m_base), value);
+}
+
+//===========================================================================
+template <typename T, typename Tag>
+void List<T, Tag>::link(List && other) {
+    link(static_cast<T *>(&m_base), other);
+}
+
+//===========================================================================
+template <typename T, typename Tag>
+void List<T, Tag>::linkFront(T * value) {
+    linkAfter(static_cast<T *>(&m_base), value);
+}
+
+//===========================================================================
+template <typename T, typename Tag>
+void List<T, Tag>::linkFront(List && other) {
+    linkAfter(static_cast<T *>(&m_base), other);
+}
+
+//===========================================================================
+template <typename T, typename Tag>
+void List<T, Tag>::unlink(T * value) {
+    static_cast<link_type *>(value)->unlink();
+}
+
+//===========================================================================
+template <typename T, typename Tag>
+T * List<T, Tag>::unlinkBack() {
+    auto link = back();
+    if (link)
+        link->unlink();
+    return link;
+}
+
+//===========================================================================
+template <typename T, typename Tag>
+T * List<T, Tag>::unlinkFront() {
+    auto link = front();
+    if (link)
+        link->unlink();
+    return link;
+}
+
+//===========================================================================
+template <typename T, typename Tag>
 void List<T, Tag>::unlinkAll() {
     auto ptr = m_base.m_nextLink;
     m_base.construct();
@@ -403,58 +419,42 @@ void List<T, Tag>::unlinkAll() {
 
 //===========================================================================
 template <typename T, typename Tag>
-void List<T, Tag>::unlink(T * value) {
-    static_cast<link_type *>(value)->unlink();
-}
-
-//===========================================================================
-template <typename T, typename Tag>
-void List<T, Tag>::pushBack(T * value) {
-    link(static_cast<T *>(&m_base), value);
-}
-
-//===========================================================================
-template <typename T, typename Tag>
-void List<T, Tag>::pushBack(List && other) {
-    link(static_cast<T *>(&m_base), other);
-}
-
-//===========================================================================
-template <typename T, typename Tag>
-T * List<T, Tag>::popBack() {
-    auto link = back();
-    if (link)
-        link->unlink();
-    return link;
-}
-
-//===========================================================================
-template <typename T, typename Tag>
-void List<T, Tag>::pushFront(T * value) {
-    linkAfter(static_cast<T *>(&m_base), value);
-}
-
-//===========================================================================
-template <typename T, typename Tag>
-void List<T, Tag>::pushFront(List && other) {
-    linkAfter(static_cast<T *>(&m_base), other);
-}
-
-//===========================================================================
-template <typename T, typename Tag>
-T * List<T, Tag>::popFront() {
-    auto link = front();
-    if (link)
-        link->unlink();
-    return link;
-}
-
-//===========================================================================
-template <typename T, typename Tag>
 void List<T, Tag>::swap(List & other) {
     swap(m_base.m_prevLink->m_nextLink, from.m_base.m_prevLink->m_nextLink);
     swap(m_base.m_nextLink->m_prevLink, from.m_base.m_nextLink->m_prevLink);
     swap(m_base, from.m_base);
+}
+
+//===========================================================================
+template <typename T, typename Tag>
+void List<T, Tag>::linkBase(
+    link_type * next, 
+    link_type * first, 
+    link_type * last
+) {
+    auto lastIncl = last->m_prevLink;
+
+    // detach [first, last)
+    last->m_prevLink = first->m_prevLink;
+    first->m_prevLink->m_nextLink = last;
+
+    // update [first, lastIncl] pointers to list
+    first->m_prevLink = next->m_prevLink;
+    lastIncl->m_nextLink = next;
+
+    // update list's pointers to [first, lastIncl] segment
+    first->m_prevLink->m_nextLink = first;
+    next->m_prevLink = lastIncl;
+}
+
+//===========================================================================
+template <typename T, typename Tag>
+void List<T, Tag>::linkBaseAfter(
+    link_type * prev, 
+    link_type * first, 
+    link_type * last
+) {
+    linkBase(prev->m_nextLink, first, last);
 }
 
 } // namespace

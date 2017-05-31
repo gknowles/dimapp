@@ -66,14 +66,14 @@ void Application::onAppRun() {
     EXPECT(list.empty());
     {
         TestNode a;
-        list.pushBack(&a);
+        list.link(&a);
         EXPECT(list.size() == 1);
     }
     EXPECT(list.empty());
     TestNode b;
     TestNode c;
-    list.pushBack(&b);
-    list.pushBack(&c);
+    list.link(&b);
+    list.link(&c);
     EXPECT(list.size() == 2);
     TestNode d;
     list.linkAfter(&b, &d);

@@ -102,7 +102,7 @@ inline void TimerList<T,Tag>::touch(T * notify) {
     notify->m_lastTouched = Clock::now();
     if (m_nodes.empty())
         timerUpdate(this, m_timeout);
-    m_nodes.pushBack(notify);
+    m_nodes.link(notify);
 }
 
 //===========================================================================
