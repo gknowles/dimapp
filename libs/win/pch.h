@@ -44,6 +44,7 @@
 // External library internal headers
 #include "app/appint.h" // iAppPushStartupTask
 #include "core/timeint.h" // iClockGetTicks
+#include "core/threadint.h" // iThreadSetName
 
 // Internal headers
 #include "win/appint.h"

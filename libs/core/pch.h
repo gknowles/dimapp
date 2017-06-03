@@ -28,4 +28,5 @@
 // External library internal headers
 // Internal headers
 #include "core/appint.h"
+#include "core/threadint.h"
 #include "core/timeint.h"

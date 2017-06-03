@@ -21,14 +21,24 @@ namespace Dim {
 
 //===========================================================================
 template <typename FN>
-static void loadProc(FN & fn, const char lib[], const char func[]) {
+static void loadProc(
+    FN & fn, 
+    const char lib[], 
+    const char func[], 
+    bool optional = false
+) {
     HMODULE mod = LoadLibrary(lib);
-    if (!mod)
-        logMsgCrash() << "LoadLibrary(" << lib << "): " << WinError{};
+    if (!mod) {
+        if (!optional)
+            logMsgCrash() << "LoadLibrary(" << lib << "): " << WinError{};
+        fn = nullptr;
+        return;
+    }
 
     fn = (FN)GetProcAddress(mod, func);
     if (!fn) {
-        logMsgCrash() << "GetProcAddress(" << func << "): " << WinError{};
+        if (!optional)
+            logMsgCrash() << "GetProcAddress(" << func << "): " << WinError{};
     }
 }
 

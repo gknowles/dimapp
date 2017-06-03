@@ -85,6 +85,7 @@ static atomic_bool s_running;
 //===========================================================================
 static void taskQueueThread(TaskQueue * ptr) {
     TaskQueue & q{*ptr};
+    iThreadSetName(q.name);
     bool more{true};
     unique_lock<mutex> lk{s_mut};
     while (more) {

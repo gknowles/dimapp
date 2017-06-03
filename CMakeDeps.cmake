@@ -46,6 +46,7 @@
 # libs/core/task.h
 # libs/core/tempheap.cpp
 # libs/core/tempheap.h
+# libs/core/threadint.h
 # libs/core/time.cpp
 # libs/core/time.h
 # libs/core/timeint.h
@@ -124,6 +125,7 @@
 # libs/win/winsockconn.cpp
 # libs/win/winsockint.h
 # libs/win/winsync.cpp
+# libs/win/winthread.cpp
 # libs/win/wintime.cpp
 # libs/wintls/pch.cpp
 # libs/wintls/pch.h
