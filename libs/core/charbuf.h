@@ -227,6 +227,6 @@ bool operator==(const CharBuf & left, std::string_view right);
 bool operator==(std::string_view left, const CharBuf & right);
 bool operator==(const CharBuf & left, const CharBuf & right);
 
-std::string to_string(const CharBuf & buf, size_t pos = 0, size_t count = -1);
+std::string toString(const CharBuf & buf, size_t pos = 0, size_t count = -1);
 
 } // namespace

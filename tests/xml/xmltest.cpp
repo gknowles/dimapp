@@ -39,7 +39,7 @@ int internalTest() {
 
     bld.end();
 
-    string str = to_string(out);
+    string str = toString(out);
     char * data = str.data();
     cout << data;
     XDocument doc;

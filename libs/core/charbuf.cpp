@@ -1001,7 +1001,7 @@ bool Dim::operator==(const CharBuf & left, const CharBuf & right) {
 }
 
 //===========================================================================
-string Dim::to_string(const CharBuf & buf, size_t pos, size_t count) {
+string Dim::toString(const CharBuf & buf, size_t pos, size_t count) {
     assert(pos <= buf.size());
     count = min(count, buf.size() - pos);
     string out;

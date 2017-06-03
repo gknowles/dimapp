@@ -49,7 +49,7 @@ void Application::onAppRun() {
     int line = 0;
     CharBuf buf;
     buf.assign("abcdefgh");
-    EXPECT(to_string(buf) == "abcdefgh"); // to_string
+    EXPECT(toString(buf) == "abcdefgh"); // to_string
 
     // replace in the middle with sz
     buf.replace(3, 3, "DEF"); // same size
