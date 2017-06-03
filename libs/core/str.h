@@ -177,9 +177,28 @@ constexpr size_t utfBomSize(UtfType type) {
 }
 
 
-size_t unicodeLen(std::string_view src);
+//---------------------------------------------------------------------------
+// utf-8
+//---------------------------------------------------------------------------
 
-std::wstring toWstring(std::string_view src);
+// returns 0 if src doesn't start with a valid utf-8 encoded code point, 
+// which includes being empty.
+char32_t popFrontUnicode(std::string_view & src);
+
+void appendUnicode(std::string & out, char32_t ch);
+size_t unicodeLen(std::string_view src);
 std::string toString(std::wstring_view src);
+
+//---------------------------------------------------------------------------
+// utf-16
+//---------------------------------------------------------------------------
+
+// returns 0 if src doesn't start with a valid utf-16 encoded code point, 
+// which includes being empty.
+char32_t popFrontUnicode(std::wstring_view & src);
+
+void appendUnicode(std::wstring & out, char32_t ch);
+size_t unicodeLen(std::wstring_view src);
+std::wstring toWstring(std::string_view src);
 
 } // namespace
