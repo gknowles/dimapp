@@ -3,8 +3,8 @@
 //
 // appint.h - dim app
 //
-// Initialize and destroy methods called by appRun()
-
+// Initialize and destroy methods called by appRun(), and app*() methods
+// for use by those methods.
 #pragma once
 
 #include <string_view>
