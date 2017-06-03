@@ -32,14 +32,14 @@ class UnsignedSet {
 public:
     struct Node {
         union {
-            unsigned * m_values;
-            Node * m_nodes;
+            unsigned * values;
+            Node * nodes;
         };
-        unsigned m_type : 3;
-        unsigned m_depth : 5;
-        unsigned m_base : 24;
-        unsigned m_numBytes : 16;
-        unsigned m_numValues : 16;
+        unsigned type : 3;
+        unsigned depth : 5;
+        unsigned base : 24;
+        unsigned numBytes : 16;
+        unsigned numValues : 16;
 
         Node();
     };

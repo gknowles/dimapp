@@ -27,10 +27,10 @@ enum NodeType {
     kMeta,      // vector of child nodes
 };
 
-struct NodeBase : UnsignedSet::Node {
-    virtual size_t size() const = 0;
-    virtual void destroy() = 0;
-    virtual bool insert(unsigned value) = 0;
+struct IImplBase {
+    virtual size_t size(const UnsignedSet::Node & node) = 0;
+    virtual void destroy(UnsignedSet::Node & node) = 0;
+    virtual bool insert(UnsignedSet::Node & node, unsigned value) = 0;
 };
 
 } // namespace
@@ -42,121 +42,125 @@ struct NodeBase : UnsignedSet::Node {
 *
 ***/
 
-static NodeBase & nodeType(UnsignedSet::Node & node);
-static const NodeBase & nodeType(const UnsignedSet::Node & node);
+static IImplBase * impl(const UnsignedSet::Node & node);
 
 
 /****************************************************************************
 *
-*   EmptyNode
+*   EmptyImpl
 *
 ***/
 
 namespace {
-struct EmptyNode : NodeBase {
-    size_t size() const override;
-    void destroy() override;
-    bool insert(unsigned value) override;
+struct EmptyImpl : IImplBase {
+    size_t size(const UnsignedSet::Node & node) override;
+    void destroy(UnsignedSet::Node & node) override;
+    bool insert(UnsignedSet::Node & node, unsigned value) override;
 };
 } // namespace
+static EmptyImpl s_emptyImpl;
 
 //===========================================================================
-size_t EmptyNode::size() const {
+size_t EmptyImpl::size(const UnsignedSet::Node & node) {
     return 0;
 }
 
 //===========================================================================
-void EmptyNode::destroy() 
+void EmptyImpl::destroy(UnsignedSet::Node & node) 
 {}
 
 //===========================================================================
-bool EmptyNode::insert(unsigned value) {
-    m_type = kVector;
-    m_numBytes = kDataSize;
-    m_numValues = 1;
-    m_values = (unsigned *) malloc(m_numBytes);
-    m_values[0] = value;
+bool EmptyImpl::insert(UnsignedSet::Node & node, unsigned value) {
+    node.type = kVector;
+    node.numBytes = kDataSize;
+    node.numValues = 1;
+    node.values = (unsigned *) malloc(node.numBytes);
+    node.values[0] = value;
     return true;
 }
 
 
 /****************************************************************************
 *
-*   FullNode
+*   FullImpl
 *
 ***/
 
 namespace {
-struct FullNode : NodeBase {
-    size_t size() const override;
-    void destroy() override;
-    bool insert(unsigned value) override;
+struct FullImpl : IImplBase {
+    size_t size(const UnsignedSet::Node & node) override;
+    void destroy(UnsignedSet::Node & node) override;
+    bool insert(UnsignedSet::Node & node, unsigned value) override;
 };
 } // namespace
+static FullImpl s_fullImpl;
 
 //===========================================================================
-size_t FullNode::size() const {
+size_t FullImpl::size(const UnsignedSet::Node & node) {
     return 0;
 }
 
 //===========================================================================
-void FullNode::destroy() 
+void FullImpl::destroy(UnsignedSet::Node & node) 
 {}
 
 //===========================================================================
-bool FullNode::insert(unsigned value) {
+bool FullImpl::insert(UnsignedSet::Node & node, unsigned value) {
     return false;
 }
 
 
 /****************************************************************************
 *
-*   VectorNode
+*   VectorImpl
 *
 ***/
 
 namespace {
-struct VectorNode : NodeBase {
-    size_t maxValues() const { return kDataSize / sizeof(*m_values); }
+struct VectorImpl : IImplBase {
+    size_t maxValues() const { 
+        return kDataSize / sizeof(UnsignedSet::Node::values); 
+    }
 
-    size_t size() const override;
-    void destroy() override;
-    bool insert(unsigned value) override;
+    size_t size(const UnsignedSet::Node & node) override;
+    void destroy(UnsignedSet::Node & node) override;
+    bool insert(UnsignedSet::Node & node, unsigned value) override;
 };
 } // namespace
+static VectorImpl s_vectorImpl;
 
 //===========================================================================
-size_t VectorNode::size() const {
-    return m_numValues;
+size_t VectorImpl::size(const UnsignedSet::Node & node) {
+    return node.numValues;
 }
 
 //===========================================================================
-void VectorNode::destroy() {
-    if (m_values)
-        free(m_values);
+void VectorImpl::destroy(UnsignedSet::Node & node) {
+    if (node.values)
+        free(node.values);
 }
 
 //===========================================================================
-bool VectorNode::insert(unsigned value) {
-    auto last = m_values + m_numValues;
-    auto ptr = upper_bound(m_values, last, value);
+bool VectorImpl::insert(UnsignedSet::Node & node, unsigned value) {
+    auto last = node.values + node.numValues;
+    auto ptr = upper_bound(node.values, last, value);
     if (ptr == last) {
-        if (m_numValues == maxValues()) {
+        if (node.numValues == maxValues()) {
             assert(0 && "convert to MetaNode (or BitmapNode :P)");
         } else {
             *ptr = value;
-            m_numValues += 1;
+            node.numValues += 1;
         }
         return true;
     }
     if (*ptr == value)
         return false;
-    if (m_numValues == maxValues()) {
+    if (node.numValues == maxValues()) {
         assert(0 && "convert to MetaNode (or BitmapNode :P)");
     } else {
         memmove(ptr + 1, ptr, last - ptr);
         *ptr = value;
-        m_numValues += 1;
+        node.numValues += 1;
     }
     return true;
 }
@@ -164,39 +168,45 @@ bool VectorNode::insert(unsigned value) {
 
 /****************************************************************************
 *
-*   MetaNode
+*   MetaImpl
 *
 ***/
 
 namespace {
-struct MetaNode : NodeBase {
-    size_t maxNodes() const { return kDataSize / sizeof(*m_nodes); }
+struct MetaImpl : IImplBase {
+    size_t maxNodes() const { 
+        return kDataSize / sizeof(UnsignedSet::Node::nodes); 
+    }
 
-    size_t size() const override;
-    void destroy() override;
-    bool insert(unsigned value) override;
+    size_t size(const UnsignedSet::Node & node) override;
+    void destroy(UnsignedSet::Node & node) override;
+    bool insert(UnsignedSet::Node & node, unsigned value) override;
 };
 } // namespace
+static MetaImpl s_metaImpl;
 
 //===========================================================================
-size_t MetaNode::size() const {
+size_t MetaImpl::size(const UnsignedSet::Node & node) {
     size_t num = 0;
-    for (unsigned i = 0; i < m_numValues; ++i)
-        num += nodeType(m_nodes[i]).size();
+    auto * ptr = node.nodes;
+    auto * last = ptr + node.numValues;
+    for (; ptr != last; ++ptr)
+        num += impl(*ptr)->size(*ptr);
     return num;
 }
 
 //===========================================================================
-void MetaNode::destroy() {
-    if (m_nodes) {
-        for (unsigned i = 0; i < m_numValues; ++i)
-            nodeType(m_nodes[i]).destroy();
-        free(m_nodes);
+void MetaImpl::destroy(UnsignedSet::Node & node) {
+    if (auto * ptr = node.nodes) {
+        auto * last = ptr + node.numValues;
+        for (; ptr != last; ++ptr)
+            impl(*ptr)->destroy(*ptr);
+        free(node.nodes);
     }
 }
 
 //===========================================================================
-bool MetaNode::insert(unsigned value) {
+bool MetaImpl::insert(UnsignedSet::Node & node, unsigned value) {
     return false;
 }
 
@@ -208,22 +218,17 @@ bool MetaNode::insert(unsigned value) {
 ***/
 
 //===========================================================================
-static NodeBase & nodeType(UnsignedSet::Node & node) {
-    switch (node.m_type) {
-    case kEmpty: return static_cast<EmptyNode &>(node);
-    case kFull: return static_cast<FullNode &>(node);
-    case kVector: return static_cast<VectorNode &>(node);
+static IImplBase * impl(const UnsignedSet::Node & node) {
+    switch (node.type) {
+    case kEmpty: return &s_emptyImpl;
+    case kFull: return &s_fullImpl;
+    case kVector: return &s_vectorImpl;
     case kBitmap: break;
-    case kMeta: return static_cast<MetaNode &>(node);
+    case kMeta: return &s_metaImpl;
     }
 
-    logMsgCrash() << "invalid node type: " << node.m_type;
-    return static_cast<NodeBase &>(node);
-}
-
-//===========================================================================
-static const NodeBase & nodeType(const UnsignedSet::Node & node) {
-    return nodeType(const_cast<UnsignedSet::Node &>(node));
+    logMsgCrash() << "invalid node type: " << node.type;
+    return nullptr;
 }
 
 
@@ -235,12 +240,12 @@ static const NodeBase & nodeType(const UnsignedSet::Node & node) {
 
 //===========================================================================
 UnsignedSet::Node::Node()
-    : m_type{kEmpty}
-    , m_depth{0}
-    , m_base{0}
-    , m_numBytes{0}
-    , m_numValues{0}
-    , m_values{nullptr}
+    : type{kEmpty}
+    , depth{0}
+    , base{0}
+    , numBytes{0}
+    , numValues{0}
+    , values{nullptr}
 {}
 
 
@@ -272,21 +277,23 @@ UnsignedSet & UnsignedSet::operator=(UnsignedSet && from) {
 }
 
 //===========================================================================
-bool UnsignedSet::operator==(const UnsignedSet & right) const;
+bool UnsignedSet::operator==(const UnsignedSet & right) const {
+    return false;
+}
 
 //===========================================================================
 bool UnsignedSet::empty() const {
-    return m_node.m_type == kEmpty;
+    return m_node.type == kEmpty;
 }
 
 //===========================================================================
 size_t UnsignedSet::size() const {
-    return nodeType(m_node).size();
+    return impl(m_node)->size(m_node);
 }
 
 //===========================================================================
 void UnsignedSet::clear() {
-    nodeType(m_node).destroy();
+    impl(m_node)->destroy(m_node);
     m_node = {};
 }
 
