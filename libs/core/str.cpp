@@ -312,3 +312,83 @@ int64_t Dim::strToInt64(string_view src, char ** eptr, int base) {
 uint64_t Dim::strToUint64(string_view src, char ** eptr, int base) {
     return iStrToAny<kUint64>(src.data(), eptr, base, src.size());
 }
+
+
+/****************************************************************************
+*
+*   utf8 to/from utf16
+*
+***/
+
+//===========================================================================
+inline static bool getChar(uint32_t & out, string_view & src) {
+    if (src.empty())
+        return false;
+    out = src[0];
+    if (out < 0x80) {
+        src.remove_prefix(1);
+        return true;
+    }
+    if (out < 0xe0) {
+        if (out < 0xc2)
+            return false;
+    }
+}
+
+//===========================================================================
+size_t Dim::unicodeLen(string_view src) {
+    static const unsigned width[16] = {
+        1, 1, 1, 1, 1, 1, 1, 1,
+        0, 0, 0, 0, 2, 2, 3, 4,
+    };
+    auto ptr = src.data();
+    auto last = ptr + src.size();
+    size_t len = 0;
+    while (ptr != last) {
+        unsigned char ch = *ptr++;
+        auto num = width[ch >> 4];
+        switch (num) {
+        case 0:
+            return len;
+        case 4:
+            if (ptr == last)
+                return len;
+            ch = *ptr++;
+            if (ch < 0x80 || ch > 0xbf)
+                return len;
+            [[fallthrough]];
+        case 3:
+            if (ptr == last)
+                return len;
+            ch = *ptr++;
+            if (ch < 0x80 || ch > 0xbf)
+                return len;
+            [[fallthrough]];
+        case 2:
+            if (ptr == last)
+                return len;
+            ch = *ptr++;
+            if (ch < 0x80 || ch > 0xbf)
+                return len;
+            [[fallthrough]];
+        case 1:
+            break;
+        }
+        len += num;
+    }
+    return len;
+}
+
+//===========================================================================
+wstring Dim::toWstring(string_view src) {
+    wstring out;
+    auto ptr = src.data();
+    auto last = ptr + src.size();
+    out.resize(last - ptr);
+    return out;
+}
+
+//===========================================================================
+string Dim::toString(wstring_view src) {
+    return {};
+}

@@ -149,4 +149,37 @@ uint64_t strToUint64(
     int base = 10
 );
 
+
+/****************************************************************************
+*
+*   Unicode
+*
+***/
+
+enum UtfType {
+    kUtfUnknown,
+    kUtf8,
+    kUtf16BE,
+    kUtf16LE,
+    kUtf32BE,
+    kUtf32LE,
+};
+
+UtfType utfBomType(const char bytes[], size_t count);
+
+//===========================================================================
+constexpr size_t utfBomSize(UtfType type) {
+    return type == kUtf8 
+        ? 3
+        : (type == kUtf16BE || type == kUtf16LE)
+            ? 2
+            : (type == kUtf32BE || type == kUtf32LE) ? 4 : 0;
+}
+
+
+size_t unicodeLen(std::string_view src);
+
+std::wstring toWstring(std::string_view src);
+std::string toString(std::wstring_view src);
+
 } // namespace
