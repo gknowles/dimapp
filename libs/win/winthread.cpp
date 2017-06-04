@@ -42,8 +42,11 @@ SetName::SetName() {
 
 //===========================================================================
 void SetName::set(string_view name) {
-    if (m_setDesc)
-        m_setDesc(GetCurrentThread(), toWstring(name).c_str());
+    if (m_setDesc) {
+        auto result = m_setDesc(GetCurrentThread(), toWstring(name).c_str());
+        if (FAILED(result))
+            logMsgCrash() << "SetThreadDescription: " << WinError{result};
+    }
 }
 
 
