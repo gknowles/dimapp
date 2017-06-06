@@ -366,16 +366,17 @@ void Dim::appendUnicode(string & out, char32_t ch) {
     } else if (ch < 0x800) {
         out += (unsigned char) ((ch >> 6) + 0xc0);
         out += (unsigned char) ((ch & 0x3f) + 0x80);
-    } else  if (ch < 0xd800 || ch > 0xdfff && ch < 0x10000) {
+    } else  if (ch < 0xd800 || ch > 0xdfff && ch < 0x10'000) {
         out += (unsigned char) ((ch >> 12) + 0xe0);
         out += (unsigned char) (((ch >> 6) & 0x3f) + 0x80);
         out += (unsigned char) ((ch & 0x3f) + 0x80);
-    } else if (ch < 0x11'0000) {
+    } else if (ch >= 0x10'000 && ch < 0x11'0000) {
         out += (unsigned char) ((ch >> 18) + 0xf0);
         out += (unsigned char) (((ch >> 12) & 0x3f) + 0x80);
         out += (unsigned char) (((ch >> 6) & 0x3f) + 0x80);
         out += (unsigned char) ((ch & 0x3f) + 0x80);
     } else {
+        assert(ch >= 0xd800 && ch <= 0xdfff || ch >= 0x11'000);
         assert(0 && "invalid unicode char");
     }
 }
@@ -384,6 +385,8 @@ void Dim::appendUnicode(string & out, char32_t ch) {
 size_t Dim::unicodeLen(string_view src) {
     size_t len = 0;
     for (unsigned char ch : src) {
+        if (!ch)
+            break;
         if ((ch & 0xc0) != 0x80)
             len += 1;
     }
@@ -441,6 +444,8 @@ void Dim::appendUnicode(wstring & out, char32_t ch) {
 size_t Dim::unicodeLen(wstring_view src) {
     size_t len = 0;
     for (auto && ch : src) {
+        if (!ch)
+            break;
         if ((ch & 0xfc00) != 0xdc00)
             len += 1;
     }
