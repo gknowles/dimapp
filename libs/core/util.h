@@ -125,6 +125,22 @@ constexpr uint64_t pow2Ceil(uint64_t num) {
 #endif
 }
 
+//===========================================================================
+// Number of bits in num that are set
+constexpr int hammingWeight(uint64_t x) {
+#if defined(_CountOneBits64)
+    return _CountOneBits64(x);
+#else
+    x = x - ((x >> 1) & 0x5555'5555'5555'5555);
+    x = (x & 0x3333'3333'3333'3333) + ((x >> 2) & 0x3333'3333'3333'3333);
+    x = (x + (x >> 4)) & 0x0f0f'0f0f'0f0f'0f0f;
+    x += x >> 8;
+    x += x >> 16;
+    x += x >> 32;
+    return x & 0x7f;
+#endif
+}
+
 
 /****************************************************************************
 *
