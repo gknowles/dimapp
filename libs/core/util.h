@@ -52,55 +52,81 @@ constexpr void hashCombine(size_t & seed, size_t v) {
 ***/
 
 //===========================================================================
-// Find least significant 1 bit
-// Based on Matt Taylor's folding trick as shown at:
+// Taken from "With separated LS1B" as shown at:
 // http://chessprogramming.wikispaces.com/BitScan
-constexpr int bitScanForward(uint64_t val) {
-    const int table[] = {
-        63, 30,  3, 32, 59, 14, 11, 33,
-        60, 24, 50,  9, 55, 19, 21, 34,
-        61, 29,  2, 53, 51, 23, 41, 18,
-        56, 28,  1, 43, 46, 27,  0, 35,
-        62, 31, 58,  4,  5, 49, 54,  6,
-        15, 52, 12, 40,  7, 42, 45, 16,
-        25, 57, 48, 13, 10, 39,  8, 44,
-        20, 47, 38, 22, 17, 37, 36, 26,
+constexpr int trailingZeroBits(uint64_t val) {
+    const int kTable[] = {
+         0, 47,  1, 56, 48, 27,  2, 60,
+        57, 49, 41, 37, 28, 16,  3, 61,
+        54, 58, 35, 52, 50, 42, 21, 44,
+        38, 32, 29, 23, 17, 11,  4, 62,
+        46, 55, 26, 59, 40, 36, 15, 53,
+        34, 51, 20, 43, 31, 22, 10, 45,
+        25, 39, 14, 33, 19, 30,  9, 24,
+        13, 18,  8, 12,  7,  6,  5, 63,
     };
-    val ^= val - 1;
-    unsigned folded = (int) val ^ (val >> 32);
-    return table[folded * 0x78291acf >> 26];
+    return kTable[((val ^ (val - 1)) * 0x3f79d71b4cb0a89) >> 58];
+}
+
+//===========================================================================
+// Find 1 bit in array of unsigned integrals.
+// Returns true and position of bit, or false if no 1's are found.
+constexpr bool findBit(
+    int * out, 
+    const uint64_t arr[], 
+    size_t arrlen, 
+    int bitpos = 0
+) {
+    const int kIntBits = sizeof(*arr) * 8;
+    int pos = bitpos / kIntBits;
+    if (pos >= arrlen)
+        return false;
+    auto ptr = arr + pos;
+    auto val = *ptr & (std::numeric_limits<uint64_t>::max() << pos % kIntBits);
+    if (!val) {
+        *out = pos * kIntBits + trailingZeroBits(val);
+        return true;
+    }
+    auto last = arr + arrlen;
+    for (; ptr != last; ++ptr) {
+        if (auto val = *ptr) {
+            *out = int(ptr - arr) * kIntBits + trailingZeroBits(val);
+            return true;
+        }
+    }
+    return false;
 }
 
 //===========================================================================
 // Number of digits required to display a number in decimal
 constexpr int digits10(uint32_t val) {
-    const int DeBruijnBitPositionAdjustedForLog10[] = {
+    const int kDeBruijnBitPositionAdjustedForLog10[] = {
         0, 3, 0, 3, 4, 6, 0, 9, 3, 4, 5, 5, 6, 7, 1, 9,
         2, 3, 6, 8, 4, 5, 7, 2, 6, 8, 7, 2, 8, 1, 1, 9,
     };
 
-    // round down to one less than a power of 2
+    // round up to one less than a power of 2
     uint32_t v = val;
     v |= v >> 1;
     v |= v >> 2;
     v |= v >> 4;
     v |= v >> 8;
     v |= v >> 16;
-    int r = DeBruijnBitPositionAdjustedForLog10[(v * 0x07c4acdd) >> 27];
+    int r = kDeBruijnBitPositionAdjustedForLog10[(v * 0x07c4acdd) >> 27];
 
-    const uint32_t PowersOf10[] = {
-        1,
-        10,
-        100,
-        1000,
-        10000,
-        100000,
-        1000000,
-        10000000,
-        100000000,
-        1000000000,
+    const uint32_t kPowersOf10[] = {
+                    1,
+                   10,
+                  100,
+                1'000,
+               10'000,
+              100'000,
+            1'000'000,
+           10'000'000,
+          100'000'000,
+        1'000'000'000,
     };
-    r += PowersOf10[r] >= val;
+    r += val >= kPowersOf10[r];
     return r;
 }
 
@@ -111,17 +137,7 @@ constexpr uint64_t pow2Ceil(uint64_t num) {
     unsigned long k;
     _BitScanReverse64(&k, num);
     return (size_t) 1 << (k + 1);
-#endif
-#if 0
-    size_t k = 0x8000'0000;
-    k = (k > num) ? k >> 16 : k << 16;
-    k = (k > num) ? k >> 8 : k << 8;
-    k = (k > num) ? k >> 4 : k << 4;
-    k = (k > num) ? k >> 2 : k << 2;
-    k = (k > num) ? k >> 1 : k << 1;
-    return k;
-#endif
-#if 1
+#else
     num -= 1;
     num |= (num >> 1);
     num |= (num >> 2);
@@ -132,23 +148,12 @@ constexpr uint64_t pow2Ceil(uint64_t num) {
     num += 1;
     return num;
 #endif
-#if 0
-#pragma warning(disable : 4706) // assignment within conditional expression
-    size_t j, k;
-    (k = num & 0xFFFF'FFFF'0000'0000) || (k = num);
-    (j = k & 0xFFFF'0000'FFFF'0000) || (j = k);
-    (k = j & 0xFF00'FF00'FF00'FF00) || (k = j);
-    (j = k & 0xF0F0'F0F0'F0F0'F0F0) || (j = k);
-    (k = j & 0xCCCC'CCCC'CCCC'CCCC) || (k = j);
-    (j = k & 0xAAAA'AAAA'AAAA'AAAA) || (j = k);
-    return j << 1;
-#endif
 }
 
 //===========================================================================
 // Number of bits in num that are set
 constexpr int hammingWeight(uint64_t x) {
-#if defined(_CountOneBits64)
+#if 0
     return _CountOneBits64(x);
 #else
     x = x - ((x >> 1) & 0x5555'5555'5555'5555);

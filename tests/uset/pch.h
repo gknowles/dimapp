@@ -6,8 +6,7 @@
 #define DIM_LIB_KEEP_MACROS
 // Library public headers
 #include "app/app.h"
-#include "core/log.h"
-#include "core/uset.h"
+#include "core/core.h"
 
 // Standard headers
 #include <iostream>

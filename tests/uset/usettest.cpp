@@ -39,9 +39,20 @@ class Application : public IAppNotify {
 
 //===========================================================================
 void Application::onAppRun() {
-    //int line = 0;
+    int line = 0;
     UnsignedSet tmp;
-    assert(tmp.empty());
+    EXPECT(tmp.empty());
+    tmp.insert(5);
+    EXPECT(tmp.size() == 1);
+    unsigned val = *tmp.begin();
+    EXPECT(val == 5);
+    vector<unsigned> v(tmp.begin(), tmp.end());
+    EXPECT(v == vector<unsigned>{{5}});
+
+    auto num = digits10(1'000'000'000);
+    EXPECT(num == 10);
+    num = digits10(999'999'999);
+    EXPECT(num == 9);
 
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);
