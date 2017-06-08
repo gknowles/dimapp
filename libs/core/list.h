@@ -2,6 +2,36 @@
 // Distributed under the Boost Software License, Version 1.0.
 //
 // list.h - dim core
+//
+// Intrusive linked list
+//  - Member objects inherit from ListBaseLink one or more times (allowing
+//    a single object to be in multiple lists).
+//  - Members remove themselves from the list on destruction
+//  - List unlinks (does NOT delete) members on destruction
+//  - size() is O(N)
+//
+// Example usage:
+// struct MyObj : ListBaseLink<MyObj> {};
+// List<MyObj> list;
+// list.link(new MyObj);
+// list.clear(); // delete's the member
+// 
+// Example of an object in multiple lists:
+// struct Fruit;    // only needs a forward reference, definition not required
+// struct Color;
+// struct MyObj : ListBaseLink<MyObj, Fruit>, ListBaseLink<MyObj, Color> {};
+// List<MyObj, Fruit> fruits;
+// List<MyObj, Color> colors;
+// auto apple = new MyObj;
+// fruits.link(apple);
+// auto red = new MyObj;
+// colors.link(red);
+// auto orange = new MyObj;
+// fruits.link(orange);
+// colors.link(orange);
+// fruits.clear();  // deletes apple & orange, unlinking orange from colors
+// colors.clear();  // deletes red
+
 #pragma once
 
 #include "cppconf/cppconf.h"
@@ -11,12 +41,7 @@
 namespace Dim {
 
 
-/****************************************************************************
-*
-*   Declarations
-*
-***/
-
+// forward declarations
 struct LinkDefault;
 
 
