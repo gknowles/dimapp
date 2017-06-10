@@ -189,4 +189,3 @@
 # tools/tnet/pch.cpp
 # tools/tnet/pch.h
 # tools/tnet/tnet.cpp
-# vendor/botan-1.11

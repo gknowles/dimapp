@@ -12,7 +12,8 @@
 //      stuff, and eventually calls appSignalShutdown(). A command line 
 //      tool might do all its work and signal shutdown from inside onAppRun.
 //      Whereas a server might start listening for socket connections and
-//      return, and use some later event to signal shutdown.
+//      return, calling appSignalShutdown() only in response to some later 
+//      event.
 // 4. Stopping - process all shutdown monitors and shutdown the framework 
 // 5. Stopped - framework is no longer running and returns from appRun call
 //
@@ -39,6 +40,9 @@ class IAppNotify {
 public:
     virtual ~IAppNotify() {}
 
+    // Since this is called on the event thread, servers (especially when 
+    // running as a service) should return promptly to allow event processing
+    // to continue.
     virtual void onAppRun() = 0;
 
     // argc & argv are set by the framework before the call to onAppRun() 
@@ -62,7 +66,10 @@ enum AppFlags : unsigned {
     fAppReadOnlyFlags = fAppIsService,
 };
 
-// returns exit code
+// Returns exit code.
+//
+// When running as a Windows service, the state is initially set to 
+// START_PENDING and only switched to RUNNING after onAppRun returns.
 int appRun(
     IAppNotify & app, 
     int argc, 
@@ -127,6 +134,11 @@ enum {
 
 // Signals shutdown to begin, the exitcode will be return from appRun() after
 // shutdown finishes.
+// 
+// When running as a Windows service, a call to set SERVICE_STOP_PENDING
+// is immediately queued, with a change to SERVICE_STOPPED coming only after
+// all application shutdown handlers (see shutdownMonitor et al) have 
+// completed.
 void appSignalShutdown(int exitcode = EX_OK);
 
 // Intended for use with command line errors, calls appSignalShutdown() after

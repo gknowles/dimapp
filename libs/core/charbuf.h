@@ -27,8 +27,8 @@ namespace Dim {
 
 class CharBuf : public ITempHeap {
 public:
-    class Iterator;
-    struct Range;
+    class ViewIterator;
+    struct ViewRange;
 
 public:
     CharBuf() {}
@@ -62,7 +62,7 @@ public:
     char * data(size_t pos, size_t count = -1);
     std::string_view view() const;
     std::string_view view(size_t pos, size_t count = -1) const;
-    Range views(size_t pos = 0, size_t count = -1) const;
+    ViewRange views(size_t pos = 0, size_t count = -1) const;
     void clear();
     void resize(size_t count);
     CharBuf & insert(size_t pos, size_t numCh, char ch);
@@ -119,27 +119,26 @@ private:
         Buffer();
         Buffer(size_t reserve);
     };
-    std::pair<std::vector<Buffer>::iterator, int> find(size_t pos);
-    std::pair<std::vector<Buffer>::const_iterator, int>
-    find(size_t pos) const;
-    std::vector<Buffer>::iterator 
-    split(std::vector<Buffer>::iterator it, int pos);
-    CharBuf &
-    insert(std::vector<Buffer>::iterator it, int pos, size_t numCh, char ch);
-    CharBuf &
-    insert(std::vector<Buffer>::iterator it, int pos, const char src[]);
+    using buffer_iterator = std::vector<Buffer>::iterator;
+    using const_buffer_iterator = std::vector<Buffer>::const_iterator;
+
+    std::pair<buffer_iterator, int> find(size_t pos);
+    std::pair<const_buffer_iterator, int> find(size_t pos) const;
+    buffer_iterator split(buffer_iterator it, int pos);
+    CharBuf & insert(buffer_iterator it, int pos, size_t numCh, char ch);
+    CharBuf & insert(buffer_iterator it, int pos, const char src[]);
     CharBuf & insert(
-        std::vector<Buffer>::iterator it,
+        buffer_iterator it,
         int pos,
         const char src[],
         size_t srcLen);
     CharBuf & insert(
-        std::vector<Buffer>::iterator it,
+        buffer_iterator it,
         int pos,
-        std::vector<Buffer>::const_iterator srcIt,
+        const_buffer_iterator srcIt,
         int srcPos,
         size_t srcLen);
-    CharBuf & erase(std::vector<Buffer>::iterator it, int pos, int count);
+    CharBuf & erase(buffer_iterator it, int pos, int count);
 
     std::vector<Buffer> m_buffers;
     int m_lastUsed{0};
@@ -149,29 +148,29 @@ private:
 
 /****************************************************************************
 *
-*   CharBuf::Iterator
+*   CharBuf::ViewIterator
 *
 ***/
 
-class CharBuf::Iterator {
-    std::vector<Buffer>::const_iterator m_current;
+class CharBuf::ViewIterator {
+    const_buffer_iterator m_current;
     std::string_view m_view;
     size_t m_count{0};
 public:
-    Iterator() {}
-    Iterator(
-        std::vector<Buffer>::const_iterator buf, 
+    ViewIterator() {}
+    ViewIterator(
+        const_buffer_iterator buf, 
         size_t pos, 
         size_t count);
-    bool operator!= (const Iterator & right);
-    Iterator & operator++();
+    bool operator!= (const ViewIterator & right);
+    ViewIterator & operator++();
     const std::string_view & operator*() const { return m_view; }
     const std::string_view * operator->() const { return &m_view; }
 };
 
 //===========================================================================
-inline CharBuf::Iterator::Iterator(
-    std::vector<CharBuf::Buffer>::const_iterator buf, 
+inline CharBuf::ViewIterator::ViewIterator(
+    const_buffer_iterator buf, 
     size_t pos, 
     size_t count
 )
@@ -183,15 +182,15 @@ inline CharBuf::Iterator::Iterator(
 }
 
 //===========================================================================
-inline bool CharBuf::Iterator::operator!= (const Iterator & right) {
+inline bool CharBuf::ViewIterator::operator!= (const ViewIterator & right) {
     return m_current != right.m_current || m_view != right.m_view;
 }
 
 //===========================================================================
-inline CharBuf::Iterator & CharBuf::Iterator::operator++() {
+inline CharBuf::ViewIterator & CharBuf::ViewIterator::operator++() {
     if (m_count -= m_view.size()) {
         ++m_current;
-        assert(m_current != std::vector<Buffer>::const_iterator{});
+        assert(m_current != const_buffer_iterator{});
         m_view = {
             m_current->data, 
             std::min(m_count, (size_t) m_current->used)
@@ -206,14 +205,14 @@ inline CharBuf::Iterator & CharBuf::Iterator::operator++() {
 
 /****************************************************************************
 *
-*   CharBuf::Range
+*   CharBuf::ViewRange
 *
 ***/
 
-struct CharBuf::Range {
-    Iterator m_first;
-    Iterator begin() { return m_first; }
-    Iterator end() { return {}; }
+struct CharBuf::ViewRange {
+    ViewIterator m_first;
+    ViewIterator begin() { return m_first; }
+    ViewIterator end() { return {}; }
 };
 
 

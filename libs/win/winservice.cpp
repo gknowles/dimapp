@@ -66,18 +66,14 @@ static DWORD WINAPI svcCtrlHandler(
     void * context
 ) {
     switch (control) {
+    default:
+        return ERROR_CALL_NOT_IMPLEMENTED;
     case SERVICE_CONTROL_INTERROGATE:
         return NO_ERROR;
     case SERVICE_CONTROL_STOP:
-        break;
-    default:
-        return ERROR_CALL_NOT_IMPLEMENTED;
+        appSignalShutdown();
+        return NO_ERROR;
     }
-
-    // stop service
-    appSignalShutdown();
-    setState(SERVICE_STOPPED);
-    return NO_ERROR;
 }
 
 //===========================================================================
@@ -93,12 +89,9 @@ static void WINAPI ServiceMain(DWORD argc, char ** argv) {
     if (!s_hstat)
         logMsgCrash() << "RegisterServiceCtrlHandlerEx: " << WinError{};
 
-    if (appStarting()) {
-        setState(SERVICE_START_PENDING);
-        iAppPushStartupTask(s_reportTask);
-    } else {
-        setState(SERVICE_RUNNING);
-    }
+    assert(appStarting());
+    setState(SERVICE_START_PENDING);
+    iAppPushStartupTask(s_reportTask);
 
     lock_guard<mutex> lk{s_mut};
     s_mode = kRunRunning;
@@ -122,8 +115,12 @@ static void serviceDispatchTask() {
     };
     if (!StartServiceCtrlDispatcher(st)) {
         WinError err;
-        if (err != ERROR_FAILED_SERVICE_CONTROLLER_CONNECT) 
+        if (err == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT) {
+            // failed service controller connect means that we're not running
+            // as a service.
+        } else {
             logMsgCrash() << "StartServiceCtrlDispatcher: " << err;
+        }
     }
     
     lock_guard<mutex> lk{s_mut};
@@ -152,14 +149,21 @@ void ReportStatusTask::onTask() {
 
 namespace {
 class ShutdownNotify : public IShutdownNotify {
+    void onShutdownClient(bool firstTry) override;
     void onShutdownConsole(bool firstTry) override;
 };
 } // namespace
 static ShutdownNotify s_cleanup;
 
 //===========================================================================
+void ShutdownNotify::onShutdownClient(bool firstTry) {
+    if (appFlags() & fAppIsService) 
+        setState(SERVICE_STOP_PENDING);
+}
+
+//===========================================================================
 void ShutdownNotify::onShutdownConsole(bool firstTry) {
-    if (firstTry)
+    if (firstTry && (appFlags() & fAppIsService))
         setState(SERVICE_STOPPED);
 
     lock_guard<mutex> lk{s_mut};

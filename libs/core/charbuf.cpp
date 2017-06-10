@@ -180,13 +180,13 @@ string_view CharBuf::view(size_t pos, size_t count) const {
 }
 
 //===========================================================================
-CharBuf::Range CharBuf::views(size_t pos, size_t count) const {
+CharBuf::ViewRange CharBuf::views(size_t pos, size_t count) const {
     assert(pos <= (size_t) m_size);
     auto num = min(count, m_size - pos);
     if (!num)
         return {};
     auto ic = find(pos);
-    auto r = Range{Iterator{ic.first, (size_t) ic.second, num}};
+    auto r = ViewRange{ViewIterator{ic.first, (size_t) ic.second, num}};
     return r;
 }
 
@@ -653,14 +653,13 @@ char * CharBuf::alloc(size_t bytes, size_t align) {
 //===========================================================================
 // private
 //===========================================================================
-pair<vector<CharBuf::Buffer>::const_iterator, int>
-CharBuf::find(size_t pos) const {
+pair<CharBuf::const_buffer_iterator, int> CharBuf::find(size_t pos) const {
     auto ic = const_cast<CharBuf *>(this)->find(pos);
     return ic;
 }
 
 //===========================================================================
-pair<vector<CharBuf::Buffer>::iterator, int> CharBuf::find(size_t pos) {
+pair<CharBuf::buffer_iterator, int> CharBuf::find(size_t pos) {
     assert(pos <= (size_t) m_size);
     int off = (int)pos;
     if (off < m_size / 2) {
@@ -694,10 +693,7 @@ pair<vector<CharBuf::Buffer>::iterator, int> CharBuf::find(size_t pos) {
 //===========================================================================
 // Move the data (if any) after the split point to a new block immediately 
 // following the block being split.
-vector<CharBuf::Buffer>::iterator CharBuf::split(
-    vector<Buffer>::iterator it, 
-    int pos
-) {
+CharBuf::buffer_iterator CharBuf::split(buffer_iterator it, int pos) {
     assert(pos <= it->used);
     auto rdata = it->data + pos;
     auto rcount = it->used - pos;
@@ -719,7 +715,7 @@ vector<CharBuf::Buffer>::iterator CharBuf::split(
 
 //===========================================================================
 CharBuf & CharBuf::insert(
-    vector<Buffer>::iterator it,
+    buffer_iterator it,
     int pos,
     size_t numCh,
     char ch
@@ -765,7 +761,7 @@ CharBuf & CharBuf::insert(
 
 //===========================================================================
 CharBuf & CharBuf::insert(
-    vector<CharBuf::Buffer>::iterator it,
+    buffer_iterator it,
     int pos,
     const char s[]
 ) {
@@ -821,7 +817,7 @@ CharBuf & CharBuf::insert(
 
 //===========================================================================
 CharBuf & CharBuf::insert(
-    vector<Buffer>::iterator it,
+    buffer_iterator it,
     int pos,
     const char s[],
     size_t slen
@@ -868,9 +864,9 @@ CharBuf & CharBuf::insert(
 
 //===========================================================================
 CharBuf & CharBuf::insert(
-    vector<Buffer>::iterator myi,
+    buffer_iterator myi,
     int pos,
-    vector<Buffer>::const_iterator ri,
+    const_buffer_iterator ri,
     int rpos,
     size_t rlen
 ) {
@@ -929,8 +925,7 @@ CharBuf & CharBuf::insert(
 }
 
 //===========================================================================
-CharBuf &
-CharBuf::erase(vector<CharBuf::Buffer>::iterator it, int pos, int remove) {
+CharBuf & CharBuf::erase(buffer_iterator it, int pos, int remove) {
     assert(pos <= it->used);
     assert(m_size >= remove && remove >= 0);
     if (!remove)
