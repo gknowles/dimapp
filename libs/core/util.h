@@ -52,6 +52,26 @@ constexpr void hashCombine(size_t & seed, size_t v) {
 ***/
 
 //===========================================================================
+// Find least significant 1 bit
+// Based on Matt Taylor's folding trick as shown at:
+// http://chessprogramming.wikispaces.com/BitScan
+constexpr int bitScanForward(uint64_t val) {
+    const int table[] = {
+        63, 30,  3, 32, 59, 14, 11, 33,
+        60, 24, 50,  9, 55, 19, 21, 34,
+        61, 29,  2, 53, 51, 23, 41, 18,
+        56, 28,  1, 43, 46, 27,  0, 35,
+        62, 31, 58,  4,  5, 49, 54,  6,
+        15, 52, 12, 40,  7, 42, 45, 16,
+        25, 57, 48, 13, 10, 39,  8, 44,
+        20, 47, 38, 22, 17, 37, 36, 26,
+    };
+    val ^= val - 1;
+    unsigned folded = (int) val ^ (val >> 32);
+    return table[folded * 0x78291acf >> 26];
+}
+
+//===========================================================================
 // Number of digits required to display a number in decimal
 constexpr int digits10(uint32_t val) {
     const int DeBruijnBitPositionAdjustedForLog10[] = {
