@@ -8,14 +8,12 @@
 
 // External library public headers
 // Standard headers
-#include <array>
 #include <atomic>
 #include <cassert>
 #include <condition_variable>
 #include <functional>
 #include <iomanip>
 #include <iostream>
-#include <map>
 #include <memory>
 #include <mutex>
 #include <queue>
