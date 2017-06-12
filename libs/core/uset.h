@@ -34,15 +34,15 @@ public:
 
 public:
     struct Node {
+        unsigned type : 4;
+        unsigned depth : 4;
+        unsigned base : 24;
+        uint16_t numBytes;     // space allocated
+        uint16_t numValues;
         union {
             unsigned * values;
             Node * nodes;
         };
-        unsigned type : 4;
-        unsigned depth : 4;
-        unsigned base : 24;
-        unsigned numBytes : 16;     // space allocated
-        unsigned numValues : 16;
 
         Node();
     };
@@ -53,16 +53,20 @@ public:
     ~UnsignedSet();
 
     UnsignedSet & operator=(UnsignedSet && from);
-    bool operator==(const UnsignedSet & right) const;
 
-    Iterator begin();
-    Iterator end();
+    // iterators
+    iterator begin();
+    iterator end();
+    const_iterator begin() const;
+    const_iterator end() const;
+
     NodeRange nodes();
 
+    // capacity
     bool empty() const;
     size_t size() const;
-    size_t maxSize() const;
 
+    // modify
     void clear();
     void insert(unsigned value);
     template<typename InputIt> void insert(InputIt first, InputIt last);
@@ -75,13 +79,22 @@ public:
     void intersect(const UnsignedSet & other);
     void swap(UnsignedSet & other);
 
-    size_t count(unsigned val) const;
+    // compare
+    bool operator==(const UnsignedSet & right) const;
     bool includes(const UnsignedSet & other) const;
     bool intersects(const UnsignedSet & other) const;
-    //find
-    //equalRange
-    //lowerBound
-    //upperBound
+
+    // search
+    size_t count(unsigned val) const;
+
+    iterator find(unsigned val);
+    const_iterator find(unsigned val) const;
+    std::pair<iterator, iterator> equalRange(unsigned val);
+    std::pair<const_iterator, const_iterator> equalRange(unsigned val) const;
+    iterator lowerBound(unsigned val);
+    const_iterator lowerBound(unsigned val) const;
+    iterator upperBound(unsigned val);
+    const_iterator upperBound(unsigned val) const;
 
 private:
     void iInsert(const unsigned * first, const unsigned * last);
@@ -174,7 +187,7 @@ public:
     using reference = value_type&;
 public:
     Iterator() {}
-    Iterator(Node * node);
+    Iterator(Node * node, value_type value = 0);
     Iterator & operator++();
     explicit operator bool() const { return !!m_node; }
     bool operator!= (const Iterator & right) const;
@@ -182,7 +195,7 @@ public:
     const unsigned * operator->() const { return &m_value; }
 private:
     NodeIterator m_node;
-    unsigned m_value{0};
+    value_type m_value{0};
 };
 
 

@@ -25,7 +25,7 @@ constexpr unsigned kValueMask[] = {
          0x1fff,
 };
 static_assert(kValueMask[size(kValueMask) - 1] + 1 == kDataSize * 8);
-constexpr unsigned kNumNodes[] = {
+constexpr uint16_t kNumNodes[] = {
     0,
     1 << hammingWeight(kValueMask[1] ^ kValueMask[0]),
     1 << hammingWeight(kValueMask[2] ^ kValueMask[1]),
@@ -727,13 +727,23 @@ bool UnsignedSet::operator==(const UnsignedSet & right) const {
 }
 
 //===========================================================================
-UnsignedSet::Iterator UnsignedSet::begin() {
+auto UnsignedSet::begin() -> iterator {
     return {&m_node};
 }
 
 //===========================================================================
-UnsignedSet::Iterator UnsignedSet::end() {
+auto UnsignedSet::end() -> iterator {
     return {};
+}
+
+//===========================================================================
+auto UnsignedSet::begin() const -> const_iterator {
+    return const_cast<UnsignedSet*>(this)->begin();
+}
+
+//===========================================================================
+auto UnsignedSet::end() const -> const_iterator {
+    return const_cast<UnsignedSet*>(this)->end();
 }
 
 //===========================================================================
@@ -772,6 +782,61 @@ void UnsignedSet::swap(UnsignedSet & other) {
     ::swap(m_node, other.m_node);
 }
 
+//===========================================================================
+size_t UnsignedSet::count(unsigned val) const {
+    return (bool) find(val);
+}
+
+//===========================================================================
+auto UnsignedSet::find(unsigned val) -> iterator {
+    auto first = iterator{&m_node, val};
+    return first && *first == val ? first : iterator{};
+}
+
+//===========================================================================
+auto UnsignedSet::find(unsigned val) const -> const_iterator {
+    return const_cast<UnsignedSet*>(this)->find(val);
+}
+
+//===========================================================================
+auto UnsignedSet::equalRange(unsigned val) -> std::pair<iterator, iterator> {
+    auto first = lowerBound(val);
+    auto last = first;
+    if (last && *last == val)
+        ++last;
+    return {first, last};
+}
+
+//===========================================================================
+auto UnsignedSet::equalRange(unsigned val) const 
+    -> std::pair<const_iterator, const_iterator> 
+{
+    return const_cast<UnsignedSet*>(this)->equalRange(val);
+}
+
+//===========================================================================
+auto UnsignedSet::lowerBound(unsigned val) -> iterator {
+    return {&m_node, val};
+}
+
+//===========================================================================
+auto UnsignedSet::lowerBound(unsigned val) const -> const_iterator {
+    return const_cast<UnsignedSet*>(this)->lowerBound(val);
+}
+
+//===========================================================================
+auto UnsignedSet::upperBound(unsigned val) -> iterator {
+    val += 1;
+    return val ? iterator{&m_node, val} : iterator{};
+}
+
+//===========================================================================
+auto UnsignedSet::upperBound(unsigned val) const -> const_iterator {
+    return const_cast<UnsignedSet*>(this)->upperBound(val);
+}
+
+//===========================================================================
+// Private
 //===========================================================================
 void UnsignedSet::iInsert(const unsigned * first, const unsigned * last) {
     impl(m_node)->insert(m_node, first, last);
@@ -826,11 +891,11 @@ UnsignedSet::NodeIterator & UnsignedSet::NodeIterator::operator++() {
 ***/
 
 //===========================================================================
-UnsignedSet::Iterator::Iterator(Node * node) 
+UnsignedSet::Iterator::Iterator(Node * node, value_type value) 
     : m_node(node)
 {
     if (m_node)
-        impl(*m_node)->lowerBound(&m_value, *m_node, 0);
+        impl(*m_node)->lowerBound(&m_value, *m_node, value);
 }
 
 //===========================================================================
@@ -840,7 +905,8 @@ bool UnsignedSet::Iterator::operator!= (const Iterator & right) const {
 
 //===========================================================================
 UnsignedSet::Iterator & UnsignedSet::Iterator::operator++() {
-    if (impl(*m_node)->lowerBound(&m_value, *m_node, m_value + 1))
+    m_value += 1;
+    if (m_value && impl(*m_node)->lowerBound(&m_value, *m_node, m_value))
         return *this;
 
     for (;;) {
