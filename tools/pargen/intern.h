@@ -91,18 +91,27 @@ public:
     );
     Element * addSequence(Element * rule, unsigned m, unsigned n);
     Element * addChoice(Element * rule, unsigned m, unsigned n);
-    void
-    addRule(Element * rule, std::string_view name, unsigned m, unsigned n);
+    void addRule(
+        Element * rule, 
+        std::string_view name, 
+        unsigned m, 
+        unsigned n
+    );
 
     // case insensitive
-    void
-    addText(Element * rule, std::string_view value, unsigned m, unsigned n);
+    void addText(
+        Element * rule, 
+        std::string_view value, 
+        unsigned m, 
+        unsigned n
+    );
 
     void addLiteral(
         Element * rule,
         std::string_view value,
         unsigned m,
-        unsigned n);
+        unsigned n
+    );
     void addRange(Element * rule, unsigned char a, unsigned char b);
     void addTerminal(Element * rule, unsigned char ch);
 
@@ -134,7 +143,8 @@ bool copyRules(
     Grammar & out,
     const Grammar & src,
     std::string_view root,
-    bool failIfExists);
+    bool failIfExists
+);
 void normalize(Grammar & rules);
 void functionTags(Grammar & rules, Element & rule, bool reset, bool mark);
 
@@ -225,7 +235,8 @@ void buildStateTree(
     const Element & root,
     bool inclDeps,
     bool dedupStates,
-    unsigned depthLimit);
+    unsigned depthLimit
+);
 void dedupStateTree(std::unordered_set<State> & states);
 
 
@@ -253,11 +264,13 @@ void writeParser(
     std::ostream & hfile,
     std::ostream & cppfile,
     const Grammar & rules,
-    const RunOptions & opts);
+    const RunOptions & opts
+);
 
 bool parseAbnf(Grammar & rules, const std::string & src, bool minRules);
 void writeRule(
     std::ostream & os,
     const Element & rule,
     size_t maxWidth,
-    std::string_view prefix);
+    std::string_view prefix
+);

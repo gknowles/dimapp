@@ -22,7 +22,8 @@ static void addPositions(
     StatePosition * sp,
     bool init,
     const Element & elem,
-    unsigned rep);
+    unsigned rep
+);
 
 
 /****************************************************************************
@@ -195,8 +196,11 @@ struct StateTreeInfo {
 
 static bool s_simpleRecursion = false;
 
-static void
-addChildStates(State * st, unordered_set<State> & states, StateTreeInfo & sti);
+static void addChildStates(
+    State * st, 
+    unordered_set<State> & states, 
+    StateTreeInfo & sti
+);
 
 //===========================================================================
 static size_t findRecursionSimple(StatePosition * sp) {
@@ -242,8 +246,12 @@ static size_t findRecursionFull(StatePosition * sp) {
 }
 
 //===========================================================================
-static void
-addRulePositions(bool * skippable, State * st, StatePosition * sp, bool init) {
+static void addRulePositions(
+    bool * skippable, 
+    State * st, 
+    StatePosition * sp, 
+    bool init
+) {
     auto & se = sp->elems.back();
     const Element & elem = *se.elem;
     *skippable = false;
@@ -285,7 +293,8 @@ static void addPositions(
     StatePosition * sp,
     bool init,
     const Element & rule,
-    unsigned rep) {
+    unsigned rep
+) {
     *skippable = false;
     if (rule.type == Element::kTerminal) {
         assert(rule.m == 1 && rule.n == 1);
@@ -340,7 +349,8 @@ static void initPositions(State * st, const Element & root) {
 static void addEvent(
     vector<StateEvent> & events,
     const StateElement & se,
-    Element::Flags flags) {
+    Element::Flags flags
+) {
     StateEvent sv;
     sv.elem = se.elem->rule;
     if (sv.elem->eventName.size())
@@ -356,7 +366,8 @@ static void setPositionPrefix(
     vector<StateElement>::const_iterator end,
     bool recurse,
     const vector<StateEvent> & events,
-    bool started) {
+    bool started
+) {
     sp->recurse = recurse;
     sp->elems.assign(begin, end);
     sp->events = events;
@@ -372,7 +383,8 @@ static void setPositionPrefix(
 static void addNextPositions(
     State * st,
     const StatePosition & sp,
-    const bitset<256> & chars) {
+    const bitset<256> & chars
+) {
     bool terminal = chars.any();
 
     if (sp.recurse) {
@@ -397,7 +409,8 @@ static void addNextPositions(
         for (auto && se2 : sp.elems) {
             if (se2.elem->type == Element::kRule
                 && (se2.elem->rule->flags & Element::fOnStart)
-                && !se2.started) {
+                && !se2.started
+            ) {
                 addEvent(events, se2, Element::fOnStart);
             }
         }
@@ -431,7 +444,8 @@ static void addNextPositions(
                     it.base(),
                     fromRecurse,
                     events,
-                    terminal);
+                    terminal
+                );
                 do {
                     cur += 1;
                     bool weak;
@@ -445,7 +459,8 @@ static void addNextPositions(
         if (se.elem->type == Element::kRule) {
             if ((se.elem->rule->flags & Element::fOnEnd)
                 && (se.started || !done)
-                && (~se.elem->rule->flags & Element::fFunction)) {
+                && (~se.elem->rule->flags & Element::fFunction)
+            ) {
                 addEvent(events, se, Element::fOnEnd);
             }
             // when exiting the parser (via a done sentinel) go directly out,
@@ -470,7 +485,13 @@ static void addNextPositions(
                 terminalStarted = se_end;
             StatePosition nsp;
             setPositionPrefix(
-                &nsp, sp.elems.begin(), se_end, fromRecurse, events, terminal);
+                &nsp, 
+                sp.elems.begin(), 
+                se_end, 
+                fromRecurse, 
+                events, 
+                terminal
+            );
             bool weak;
             addPositions(&weak, st, &nsp, false, *se.elem, rep);
         }
@@ -553,7 +574,8 @@ static void removePositionsWithMoreEvents(State & st) {
 //===========================================================================
 static void removeConflicts(
     vector<StateEvent> & matched,
-    const vector<StateEvent> & events) {
+    const vector<StateEvent> & events
+) {
     if (matched.empty())
         return;
     int numEvents = (int)events.size();
@@ -575,7 +597,8 @@ static void removeConflicts(
             // char can shift around start events
             for (;;) {
                 if ((~events[evi].flags & Element::fOnStart)
-                    || ++evi == numEvents) {
+                    || ++evi == numEvents
+                ) {
                     goto unmatched;
                 }
                 if (*mi == events[evi])
@@ -585,7 +608,8 @@ static void removeConflicts(
             // start events can shift around char events.
             for (;;) {
                 if ((~events[evi].flags & Element::fOnChar)
-                    || ++evi == numEvents) {
+                    || ++evi == numEvents
+                ) {
                     goto unmatched;
                 }
                 if (*mi == events[evi])
@@ -610,7 +634,8 @@ static bool delayConflicts(
     StatePosition & nsp,
     const vector<StateEvent> & matched,
     const StateTreeInfo & sti,
-    bool logError) {
+    bool logError
+) {
     for (auto && sv : matched) {
         auto evi = nsp.events.begin();
         auto e = nsp.events.end();
@@ -674,14 +699,9 @@ static bool resolveEventConflicts(State & st, const StateTreeInfo & sti) {
 }
 
 //===========================================================================
-static void appendHexChar(string & out, unsigned nibble) {
-    out += nibble > 9 ? 'a' + (char)nibble - 10 : '0' + (char)nibble;
-}
-
-//===========================================================================
 static void appendHexByte(string & out, unsigned byte) {
-    appendHexChar(out, byte / 16);
-    appendHexChar(out, byte % 16);
+    out += hexFromNibble(byte / 16);
+    out += hexFromNibble(byte % 16);
 }
 
 //===========================================================================
@@ -706,7 +726,8 @@ static unsigned addState(
     State * st,
     unordered_set<State> & states,
     StateTreeInfo & sti,
-    unsigned i) {
+    unsigned i
+) {
     if (st->positions.empty())
         return 0;
 
@@ -746,7 +767,8 @@ static unsigned addState(
 static void addChildStates(
     State * st,
     unordered_set<State> & states,
-    StateTreeInfo & sti) {
+    StateTreeInfo & sti
+) {
     st->next.assign(257, 0);
     State next;
     bool errors{false};
@@ -834,7 +856,8 @@ void buildStateTree(
     const Element & root,
     bool inclDeps,
     bool dedupStates,
-    unsigned depthLimit) {
+    unsigned depthLimit
+) {
     logMsgInfo() << "rule: " << root.name;
 
     states->clear();

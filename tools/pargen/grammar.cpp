@@ -82,8 +82,7 @@ void Grammar::setOption(string_view name, string_view value) {
 }
 
 //===========================================================================
-const char *
-Grammar::optionString(string_view name, const char * def) const {
+const char * Grammar::optionString(string_view name, const char * def) const {
     if (auto elem = element(name)) {
         while (!elem->elements.empty())
             elem = &elem->elements.front();
@@ -257,8 +256,11 @@ const Element * Grammar::element(string_view name) const {
 ***/
 
 //===========================================================================
-static void
-ensureOption(Grammar & rules, const char name[], string_view value) {
+static void ensureOption(
+    Grammar & rules, 
+    const char name[], 
+    string_view value
+) {
     if (!*rules.optionString(name))
         rules.addOption(name, value);
 }
@@ -291,8 +293,11 @@ bool processOptions(Grammar & rules) {
 ***/
 
 //===========================================================================
-static bool
-copyRequiredDeps(Grammar & out, const Grammar & src, const Element & root) {
+static bool copyRequiredDeps(
+    Grammar & out, 
+    const Grammar & src, 
+    const Element & root
+) {
     switch (root.type) {
     case Element::kSequence:
     case Element::kChoice:
@@ -312,7 +317,8 @@ bool copyRules(
     Grammar & out,
     const Grammar & src,
     string_view rootname,
-    bool failIfExists) {
+    bool failIfExists
+) {
     auto root = src.element(rootname);
     if (!root) {
         logMsgError() << "Rule not found, " << rootname;
@@ -410,8 +416,11 @@ static void normalizeRule(Element & rule, Grammar & rules) {
 }
 
 //===========================================================================
-static void
-normalize(Element & rule, const Element * parent, Grammar & rules) {
+static void normalize(
+    Element & rule, 
+    const Element * parent, 
+    Grammar & rules
+) {
     if (rule.elements.size() == 1) {
         Element & elem = rule.elements.front();
         if (elem.type != Element::kTerminal
@@ -456,8 +465,11 @@ void normalize(Grammar & rules) {
 ***/
 
 //===========================================================================
-static void
-addFunctionTags(Grammar & rules, Element & rule, vector<bool> & used) {
+static void addFunctionTags(
+    Grammar & rules, 
+    Element & rule, 
+    vector<bool> & used
+) {
     bool wasUsed;
     switch (rule.type) {
     case Element::kChoice:

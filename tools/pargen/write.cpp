@@ -109,7 +109,8 @@ static void writeElement(ostream & os, const Element & elem, bool inclPos) {
                 auto next = cur;
                 for (; next + 1 != last; ++next) {
                     if (next[1].type != Element::kTerminal
-                        || next->value[0] + 1 != next[1].value[0]) {
+                        || next->value[0] + 1 != next[1].value[0]
+                    ) {
                         break;
                     }
                 }
@@ -175,7 +176,8 @@ static void writeWordwrap(
     size_t & pos,
     const string & str,
     size_t maxWidth,
-    const string & prefix) {
+    const string & prefix
+) {
     const char * base = str.c_str();
     for (;;) {
         while (*base == ' ')
@@ -245,7 +247,8 @@ static bool writeSwitchCase(ostream & os, const State & st) {
         [&stateKeys](const NextState & e1, const NextState & e2) {
             return 256 * stateKeys[e1.state] + e1.ch
                 < 256 * stateKeys[e2.state] + e2.ch;
-        });
+        }
+    );
     const unsigned kCaseColumns = 6;
     os << "    ch = *ptr++;\n";
     os << "    switch (ch) {\n";
@@ -291,7 +294,8 @@ static void writeEventCallback(
     const string & name,
     Element::Flags type,
     const char * args = nullptr,
-    const string & prefix = "    ") {
+    const string & prefix = "    "
+) {
     os << prefix << "if (!m_notify->on";
     writeRuleName(os, name, true);
     switch (type) {
@@ -308,7 +312,8 @@ static void writeStateName(
     ostream & os,
     const string & name,
     size_t maxWidth,
-    const string & prefix) {
+    const string & prefix
+) {
     size_t space = maxWidth - size(prefix);
     assert(space > 4);
     size_t count = name.size();
@@ -390,7 +395,8 @@ static void writeParserState(
     ostream & os,
     const State & st,
     const Element * root,
-    bool inclStatePositions) {
+    bool inclStatePositions
+) {
     os << "\nstate" << st.id << ":\n";
     vector<string> aliases = st.aliases;
     if (st.name.empty()) {
@@ -476,7 +482,8 @@ static void writeParserState(
 static void writeCppfileStart(
     ostream & os,
     const Grammar & rules,
-    const Grammar & options) {
+    const Grammar & options
+) {
     time_t now = time(nullptr);
     tm tm;
     localtime_s(&tm, &now);
@@ -589,8 +596,11 @@ state0:
 }
 
 //===========================================================================
-static void
-writeHeaderfile(ostream & os, const Grammar & rules, const Grammar & options) {
+static void writeHeaderfile(
+    ostream & os, 
+    const Grammar & rules, 
+    const Grammar & options
+) {
     time_t now = time(nullptr);
     tm tm;
     localtime_s(&tm, &now);
@@ -730,7 +740,8 @@ void writeParser(
     ostream & hfile,
     ostream & cppfile,
     const Grammar & src,
-    const RunOptions & opts) {
+    const RunOptions & opts
+) {
     const string & rootname = src[kOptionRoot];
     logMsgDebug() << "parser: " << rootname;
 
@@ -758,7 +769,8 @@ void writeParser(
         *root,
         opts.buildStateTree,
         opts.dedupStateTree,
-        opts.stateTreeDepthLimit);
+        opts.stateTreeDepthLimit
+    );
     writeFunction(cppfile, nullptr, states, src, opts.writeStatePositions);
 
     if (opts.writeFunctions) {
@@ -769,9 +781,15 @@ void writeParser(
                     elem,
                     opts.buildStateTree,
                     opts.dedupStateTree,
-                    opts.stateTreeDepthLimit);
+                    opts.stateTreeDepthLimit
+                );
                 writeFunction(
-                    cppfile, &elem, states, src, opts.writeStatePositions);
+                    cppfile, 
+                    &elem, 
+                    states, 
+                    src, 
+                    opts.writeStatePositions
+                );
             }
         }
     }
@@ -783,7 +801,8 @@ void writeRule(
     ostream & os,
     const Element & rule,
     size_t maxWidth,
-    string_view prefix) {
+    string_view prefix
+) {
     streampos base = os.tellp();
     os << prefix << rule.name;
     os << " = ";
