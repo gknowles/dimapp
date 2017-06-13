@@ -7,6 +7,7 @@
 
 using namespace std;
 using namespace Dim;
+using Node = UnsignedSet::Node;
 
 
 /****************************************************************************
@@ -39,11 +40,11 @@ enum NodeType {
     kVector,    // has vector of values
     kBitmap,    // has bitmap of values
     kMeta,      // vector of nodes
+    kNodeTypes,
     kMetaEnd,   // marks end of node vector
 };
 
 struct IImplBase {
-    using Node = UnsignedSet::Node;
     using value_type = unsigned;
 
     constexpr static unsigned relBase(unsigned value, unsigned depth) {
@@ -85,7 +86,7 @@ struct IImplBase {
 *
 ***/
 
-static IImplBase * impl(const UnsignedSet::Node & node);
+static IImplBase * impl(const Node & node);
 
 
 /****************************************************************************
@@ -663,7 +664,7 @@ bool MetaImpl::lowerBound(
 ***/
 
 //===========================================================================
-static IImplBase * impl(const UnsignedSet::Node & node) {
+static IImplBase * impl(const Node & node) {
     switch (node.type) {
     case kEmpty: return &s_emptyImpl;
     case kFull: return &s_fullImpl;
@@ -674,6 +675,92 @@ static IImplBase * impl(const UnsignedSet::Node & node) {
 
     logMsgCrash() << "invalid node type: " << node.type;
     return nullptr;
+}
+
+
+/****************************************************************************
+*
+*   Compare
+*
+***/
+
+static int compare(const Node & left, const Node & right);
+
+using CompareFn = int(const Node & left, const Node & right);
+
+//===========================================================================
+static int cmpError(const Node & left, const Node & right) {
+    logMsgCrash() << "compare: incompatible node types, " << left.type
+        << ", " << right.type;
+    return 0;
+}
+
+//===========================================================================
+static int cmpLess(const Node & left, const Node & right) { return -1; }
+static int cmpMore(const Node & left, const Node & right) { return 1; }
+static int cmpEqual(const Node & left, const Node & right) { return 0; }
+
+//===========================================================================
+static int cmpIter(const Node & left, const Node & right) {
+    auto li = UnsignedSet::Iterator(&left, 0);
+    auto ri = UnsignedSet::Iterator(&right, 0);
+    for (; li && ri; ++li, ++ri) {
+        if (*li != *ri)
+            return *li > *ri ? 1 : -1;
+    }
+    return (bool) li - (bool) ri;
+}
+
+//===========================================================================
+static int cmpVec(const Node & left, const Node & right) {
+    auto li = left.values;
+    auto le = li + left.numValues;
+    auto ri = right.values;
+    auto re = ri + right.numValues;
+    for (; li != le && ri != re; ++li, ++ri) {
+        if (*li != *ri) 
+            return *li > *ri ? 1 : -1;
+    }
+    return (li == le) - (ri == re);
+}
+
+//===========================================================================
+static int cmpBitmap(const Node & left, const Node & right) {
+    auto li = (uint64_t *) left.values;
+    auto le = li + kDataSize / sizeof(*li);
+    auto ri = (uint64_t *) right.values;
+    auto re = ri + kDataSize / sizeof(*ri);
+    for (; li != le && ri != re; ++li, ++ri) {
+        if (*li != *ri) 
+            return reverseBits(*li) > reverseBits(*ri) ? 1 : -1;
+    }
+    return (li == le) - (ri == re);
+}
+
+//===========================================================================
+static int cmpMeta(const Node & left, const Node & right) {
+    auto li = left.nodes;
+    auto le = li + left.numValues;
+    auto ri = right.nodes;
+    auto re = ri + right.numValues;
+    for (; li != le && ri != re; ++li, ++ri) {
+        if (int rc = compare(*li, *ri))
+            return rc;
+    }
+    return (li == le) - (ri == re);
+}
+
+//===========================================================================
+static int compare(const Node & left, const Node & right) {
+    CompareFn * functs[][kNodeTypes] = {
+        // empty    full      vector   bitmap     meta
+        { cmpEqual, cmpLess,  cmpLess, cmpLess,   cmpLess  }, // empty
+        { cmpMore,  cmpEqual, cmpMore, cmpMore,   cmpMore  }, // full
+        { cmpMore,  cmpLess,  cmpVec,  cmpIter,   cmpIter  }, // vector
+        { cmpMore,  cmpLess,  cmpIter, cmpBitmap, cmpError }, // bitmap
+        { cmpMore,  cmpLess,  cmpIter, cmpError,  cmpMeta  }, // meta
+    };
+    return functs[left.type][right.type](left, right);
 }
 
 
@@ -719,11 +806,6 @@ UnsignedSet & UnsignedSet::operator=(UnsignedSet && from) {
     clear();
     swap(from);
     return *this;
-}
-
-//===========================================================================
-bool UnsignedSet::operator==(const UnsignedSet & right) const {
-    return false;
 }
 
 //===========================================================================
@@ -780,6 +862,46 @@ void UnsignedSet::erase(unsigned value) {
 //===========================================================================
 void UnsignedSet::swap(UnsignedSet & other) {
     ::swap(m_node, other.m_node);
+}
+
+//===========================================================================
+int UnsignedSet::compare(const UnsignedSet & right) const {
+    return ::compare(m_node, right.m_node);
+}
+
+//===========================================================================
+bool UnsignedSet::intersects(const UnsignedSet & other) const {
+    return false;
+}
+
+//===========================================================================
+bool UnsignedSet::operator==(const UnsignedSet & right) const {
+    return compare(right) == 0;
+}
+
+//===========================================================================
+bool UnsignedSet::operator!=(const UnsignedSet & right) const {
+    return compare(right) != 0;
+}
+
+//===========================================================================
+bool UnsignedSet::operator<(const UnsignedSet & right) const {
+    return compare(right) < 0;
+}
+
+//===========================================================================
+bool UnsignedSet::operator>(const UnsignedSet & right) const {
+    return compare(right) > 0;
+}
+
+//===========================================================================
+bool UnsignedSet::operator<=(const UnsignedSet & right) const {
+    return compare(right) <= 0;
+}
+
+//===========================================================================
+bool UnsignedSet::operator>=(const UnsignedSet & right) const {
+    return compare(right) >= 0;
 }
 
 //===========================================================================
@@ -850,7 +972,7 @@ void UnsignedSet::iInsert(const unsigned * first, const unsigned * last) {
 ***/
 
 //===========================================================================
-UnsignedSet::NodeIterator::NodeIterator(Node * node)
+UnsignedSet::NodeIterator::NodeIterator(const Node * node)
     : m_node(node)
 {
     if (m_node && m_node->type == kEmpty)
@@ -891,7 +1013,7 @@ UnsignedSet::NodeIterator & UnsignedSet::NodeIterator::operator++() {
 ***/
 
 //===========================================================================
-UnsignedSet::Iterator::Iterator(Node * node, value_type value) 
+UnsignedSet::Iterator::Iterator(const Node * node, value_type value) 
     : m_node(node)
 {
     if (m_node)

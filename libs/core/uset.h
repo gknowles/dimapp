@@ -80,9 +80,15 @@ public:
     void swap(UnsignedSet & other);
 
     // compare
-    bool operator==(const UnsignedSet & right) const;
+    int compare(const UnsignedSet & right) const;
     bool includes(const UnsignedSet & other) const;
     bool intersects(const UnsignedSet & other) const;
+    bool operator==(const UnsignedSet & right) const;
+    bool operator!=(const UnsignedSet & right) const;
+    bool operator<(const UnsignedSet & right) const;
+    bool operator>(const UnsignedSet & right) const;
+    bool operator<=(const UnsignedSet & right) const;
+    bool operator>=(const UnsignedSet & right) const;
 
     // search
     size_t count(unsigned val) const;
@@ -142,20 +148,20 @@ inline void UnsignedSet::insert(std::initializer_list<unsigned> il) {
 class UnsignedSet::NodeIterator {
 public:
     using iterator_category = std::input_iterator_tag;
-    using value_type = Node;
+    using value_type = const Node;
     using difference_type = ptrdiff_t;
     using pointer = value_type*;
     using reference = value_type&;
 public:
     NodeIterator() {}
-    NodeIterator(Node * node);
+    NodeIterator(const Node * node);
     NodeIterator & operator++();
     explicit operator bool() const { return m_node; }
     bool operator!= (const NodeIterator & right) const;
     const Node & operator*() const { return *m_node; }
     const Node * operator->() const { return m_node; }
 private:
-    Node * m_node{nullptr};
+    const Node * m_node{nullptr};
 };
 
 
@@ -187,7 +193,7 @@ public:
     using reference = value_type&;
 public:
     Iterator() {}
-    Iterator(Node * node, value_type value = 0);
+    Iterator(const Node * node, value_type value = 0);
     Iterator & operator++();
     explicit operator bool() const { return !!m_node; }
     bool operator!= (const Iterator & right) const;
