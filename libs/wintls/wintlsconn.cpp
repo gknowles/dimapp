@@ -123,8 +123,8 @@ NEGOTIATE:
         };
 
         SecBuffer outBufs[] = {
-            { 0, SECBUFFER_TOKEN, nullptr },
-            { 0, SECBUFFER_EXTRA, nullptr },
+            { 0, SECBUFFER_TOKEN, nullptr }, // handshake data
+            { 0, SECBUFFER_EXTRA, nullptr }, // count of unprocessed bytes
             { 0, SECBUFFER_ALERT, nullptr },
         };
         SecBufferDesc outDesc{
@@ -158,7 +158,8 @@ NEGOTIATE:
             FreeContextBuffer(outBufs[1].pvBuffer);
         }
         if (inBufs[1].BufferType == SECBUFFER_EXTRA && inBufs[1].cbBuffer) {
-            // The pvBuffer field of _EXTRA is not valid
+            // The pvBuffer field of _EXTRA is not valid, but cbBuffer is
+            // updated with the number of unprocessed bytes.
             src = src.substr(src.size() - inBufs[1].cbBuffer);
         } else {
             src = {};
@@ -235,6 +236,12 @@ NEGOTIATE:
             return false;
         }
 
+        // Decrypt succeeded, the four buffers in the array should be set to:
+        //  SECBUFFER_STREAM_HEADER - ignore
+        //  SECBUFFER_DATA - points to unencrypted data, might not be present
+        //  SECBUFFER_STREAM_TRAILER - ignore
+        //  SECBUFFER_EXTRA - cbBuffer is count of unprocessed bytes, pvBuffer 
+        //      is invalid, might not be present.
         if (bufs[1].BufferType != SECBUFFER_EMPTY && bufs[1].cbBuffer) {
             assert(bufs[1].BufferType == SECBUFFER_DATA);
             data->append((char *) bufs[1].pvBuffer, bufs[1].cbBuffer);
