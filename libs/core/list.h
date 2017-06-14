@@ -321,8 +321,9 @@ const T * List<T, Tag>::back() const {
 //===========================================================================
 template <typename T, typename Tag>
 T * List<T, Tag>::next(T * node) {
-    auto link = static_cast<link_type *>(node);
-    return link->linked() ? static_cast<T *>(link->m_nextLink) : nullptr;
+    auto link = static_cast<link_type *>(node)->m_nextLink;
+    assert(link->linked());
+    return link != &m_base ? static_cast<T *>(link) : nullptr;
 }
 
 //===========================================================================
@@ -334,8 +335,9 @@ const T * List<T, Tag>::next(const T * node) const {
 //===========================================================================
 template <typename T, typename Tag>
 T * List<T, Tag>::prev(T * node) {
-    auto link = static_cast<link_type *>(node);
-    return link->linked() ? static_cast<T *>(link->m_prevLink) : nullptr;
+    auto link = static_cast<link_type *>(node)->m_prevLink;
+    assert(link->linked());
+    return link != &m_base ? static_cast<T *>(link) : nullptr;
 }
 
 //===========================================================================
@@ -457,19 +459,19 @@ void List<T, Tag>::linkBase(
     link_type * first, 
     link_type * last
 ) {
-    auto lastIncl = last->m_prevLink;
+    auto inclusiveLast = last->m_prevLink;
 
     // detach [first, last)
     last->m_prevLink = first->m_prevLink;
     first->m_prevLink->m_nextLink = last;
 
-    // update [first, lastIncl] pointers to list
+    // update [first, inclusiveLast] pointers to list
     first->m_prevLink = next->m_prevLink;
-    lastIncl->m_nextLink = next;
+    inclusiveLast->m_nextLink = next;
 
-    // update list's pointers to [first, lastIncl] segment
+    // update list's pointers to [first, inclusiveLast] segment
     first->m_prevLink->m_nextLink = first;
-    next->m_prevLink = lastIncl;
+    next->m_prevLink = inclusiveLast;
 }
 
 //===========================================================================
