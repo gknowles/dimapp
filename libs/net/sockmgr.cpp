@@ -79,6 +79,7 @@ public:
 
     void setInactiveTimeout(Duration inactiveTimeout, Duration pingInterval);
     void touch(MgrSocket * sock);
+    void unlink(MgrSocket * sock);
     bool shutdown();
 
     // Inherited via IFactory<MgrSocket>
@@ -131,6 +132,7 @@ MgrSocket::MgrSocket(
 
 //===========================================================================
 MgrSocket::~MgrSocket() {
+    m_mgr.unlink(this);
 }
 
 //===========================================================================
@@ -205,6 +207,11 @@ SocketManager::~SocketManager() {
 //===========================================================================
 void SocketManager::touch(MgrSocket * sock) {
     m_sockets.touch(sock);
+}
+
+//===========================================================================
+void SocketManager::unlink(MgrSocket * sock) {
+    m_sockets.unlink(sock);
 }
 
 //===========================================================================
