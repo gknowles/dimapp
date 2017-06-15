@@ -51,13 +51,7 @@ static unique_ptr<CredHandle> s_srvCred;
 static auto & s_perfTlsReneg = uperf("tls renegotiate");
 static auto & s_perfTlsExpired = uperf("tls expired context");
 static auto & s_perfTlsFinish = uperf("tls finish");
-
-
-/****************************************************************************
-*
-*   Helpers
-*
-***/
+static auto & s_perfTlsStub = uperf("tls encrypt stub trailer");
 
 
 /****************************************************************************
@@ -198,6 +192,8 @@ NEGOTIATE:
             return true;
         }
         if ((SecStatus) err == SEC_I_CONTINUE_NEEDED) {
+            // AcceptSecurityContext must be called again, whether or not 
+            // there is any additional data.
             continue;
         }
         logMsgError() << "AcceptSecurityContext: " << err;
@@ -219,11 +215,7 @@ NEGOTIATE:
             { 0, SECBUFFER_EMPTY, nullptr },
             { 0, SECBUFFER_EMPTY, nullptr },
         };
-        SecBufferDesc desc{
-            SECBUFFER_VERSION, 
-            (unsigned) size(bufs), 
-            bufs
-        };
+        SecBufferDesc desc{ SECBUFFER_VERSION, (unsigned) size(bufs), bufs };
         err = (SecStatus) DecryptMessage(&m_context, &desc, 0, NULL);
         if ((SecStatus) err == SEC_E_INCOMPLETE_MESSAGE) 
             return true;
@@ -297,14 +289,18 @@ void ServerConn::send(CharBuf * out, string_view src) {
             { m_sizes.cbTrailer, SECBUFFER_STREAM_TRAILER, ptr += tmp.size() },
             { 0, SECBUFFER_EMPTY, nullptr },
         };
-        SecBufferDesc desc{
-            SECBUFFER_VERSION, 
-            (unsigned) size(bufs), 
-            bufs
-        };
+        SecBufferDesc desc{ SECBUFFER_VERSION, (unsigned) size(bufs), bufs };
         err = (SecStatus) EncryptMessage(&m_context, 0, &desc, 0);
         if (err)
             logMsgCrash() << "EncryptMessage(" << num << "): " << err;
+
+        assert(bufs[0].cbBuffer == m_sizes.cbHeader);
+        assert(bufs[1].cbBuffer == tmp.size());
+        assert(bufs[2].cbBuffer <= m_sizes.cbTrailer);
+        if (auto extra = m_sizes.cbTrailer - bufs[2].cbBuffer) {
+            s_perfTlsStub += 1;
+            out->resize(out->size() - extra);
+        }
     }
 }
 
