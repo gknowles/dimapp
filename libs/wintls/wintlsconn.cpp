@@ -33,6 +33,7 @@ private:
     bool m_handshake{true};
     SecPkgContext_StreamSizes m_sizes;
     SecPkgContext_ApplicationProtocol m_alpn;
+    string m_extra;
 };
 
 } // namespace
@@ -48,10 +49,11 @@ static shared_mutex s_mut;
 static HandleMap<WinTlsConnHandle, ServerConn> s_conns;
 static unique_ptr<CredHandle> s_srvCred;
 
-static auto & s_perfTlsReneg = uperf("tls renegotiate");
-static auto & s_perfTlsExpired = uperf("tls expired context");
-static auto & s_perfTlsFinish = uperf("tls finish");
-static auto & s_perfTlsStub = uperf("tls encrypt stub trailer");
+static auto & s_perfReneg = uperf("tls renegotiate");
+static auto & s_perfExpired = uperf("tls expired context");
+static auto & s_perfFinish = uperf("tls finish");
+static auto & s_perfStub = uperf("tls encrypt stub trailer");
+static auto & s_perfIncomplete = uperf("tls incomplete");
 
 
 /****************************************************************************
@@ -95,6 +97,11 @@ bool ServerConn::recv(CharBuf * out, CharBuf * data, string_view src) {
     alpn->ProtocolLists[0].ProtoNegoExt = 
         SecApplicationProtocolNegotiationExt_ALPN;
     alpn->ProtocolLists[0].ProtocolListSize = 3;
+
+    if (!m_extra.empty()) {
+        m_extra += src;
+        src = m_extra;
+    }
 
 NEGOTIATE:
     while (m_handshake) {
@@ -159,7 +166,7 @@ NEGOTIATE:
             src = {};
         }
         if (!err) {
-            s_perfTlsFinish += 1;
+            s_perfFinish += 1;
             m_handshake = false;
             err = (SecStatus) QueryContextAttributes(
                 &m_context, 
@@ -188,7 +195,11 @@ NEGOTIATE:
             || (SecStatus) err == SEC_E_INCOMPLETE_CREDENTIALS
         ) {
             // need to receive more data
-            assert(src.empty());
+            if (m_extra.empty()) {
+                m_extra = src;
+            } else {
+                m_extra.erase(0, m_extra.size() - src.size());
+            }
             return true;
         }
         if ((SecStatus) err == SEC_I_CONTINUE_NEEDED) {
@@ -206,8 +217,10 @@ NEGOTIATE:
 
     // Decrypt application data 
     for (;;) {
-        if (src.empty())
+        if (src.empty()) {
+            m_extra.clear();
             return true;
+        }
 
         SecBuffer bufs[] = {
             { (unsigned) src.size(), SECBUFFER_DATA, (void *) src.data() },
@@ -217,54 +230,55 @@ NEGOTIATE:
         };
         SecBufferDesc desc{ SECBUFFER_VERSION, (unsigned) size(bufs), bufs };
         err = (SecStatus) DecryptMessage(&m_context, &desc, 0, NULL);
-        if ((SecStatus) err == SEC_E_INCOMPLETE_MESSAGE) 
-            return true;
 
-        if ((SecStatus) err != SEC_E_OK 
-            && (SecStatus) err != SEC_I_CONTEXT_EXPIRED 
-            && (SecStatus) err != SEC_I_RENEGOTIATE
+        if ((SecStatus) err == SEC_E_OK
+            || (SecStatus) err == SEC_I_CONTEXT_EXPIRED
         ) {
-            logMsgError() << "DecryptMessage: " << err;
-            return false;
-        }
-
-        // Decrypt succeeded, the four buffers in the array should be set to:
-        //  SECBUFFER_STREAM_HEADER - ignore
-        //  SECBUFFER_DATA - points to unencrypted data, might not be present
-        //  SECBUFFER_STREAM_TRAILER - ignore
-        //  SECBUFFER_EXTRA - cbBuffer is count of unprocessed bytes, pvBuffer 
-        //      is invalid, might not be present.
-        if (bufs[1].BufferType != SECBUFFER_EMPTY && bufs[1].cbBuffer) {
+            assert(bufs[0].BufferType == SECBUFFER_STREAM_HEADER);
             assert(bufs[1].BufferType == SECBUFFER_DATA);
-            data->append((char *) bufs[1].pvBuffer, bufs[1].cbBuffer);
-        }
-        if (bufs[3].BufferType != SECBUFFER_EMPTY && bufs[3].cbBuffer) {
-            assert(bufs[3].BufferType == SECBUFFER_EXTRA);
-            // Again, upon return, the pvBuffer field of _EXTRA is invalid
-            src = src.substr(src.size() - bufs[3].cbBuffer);
-            if ((SecStatus) err == SEC_E_OK) 
-                continue;
-            if ((SecStatus) err == SEC_I_RENEGOTIATE) {
-                logMsgError() << "DecryptMessage: renegotiate requested with "
-                    "encrypted data";
+            assert(bufs[2].BufferType == SECBUFFER_STREAM_TRAILER);
+            assert(bufs[3].BufferType == SECBUFFER_EMPTY
+                || bufs[3].BufferType == SECBUFFER_EXTRA);
+
+            if (bufs[1].cbBuffer) 
+                data->append((char *) bufs[1].pvBuffer, bufs[1].cbBuffer);
+
+            if ((SecStatus) err == SEC_E_OK) {
+                if (bufs[3].cbBuffer) {
+                    assert(bufs[3].BufferType == SECBUFFER_EXTRA);
+                    src = src.substr(src.size() - bufs[3].cbBuffer);
+                } else {
+                    src = {};
+                }
                 continue;
             }
-        }
 
-        if ((SecStatus) err == SEC_E_OK)
-            return true;
-        if ((SecStatus) err == SEC_I_CONTEXT_EXPIRED) {
-            s_perfTlsExpired += 1;
+            assert((SecStatus) err == SEC_I_CONTEXT_EXPIRED);
+            s_perfExpired += 1;
             return false;
         }
 
-        assert((SecStatus) err == SEC_I_RENEGOTIATE);
-        // Proceed with renegotiate by making another call to 
-        // AcceptSecurityContext with no data.
-        s_perfTlsReneg += 1;
-        src = {};
-        m_handshake = true;
-        goto NEGOTIATE;
+        if ((SecStatus) err == SEC_E_INCOMPLETE_MESSAGE) {
+            if (m_extra.empty()) {
+                m_extra = src;
+            } else {
+                m_extra.erase(0, m_extra.size() - src.size());
+            }
+            s_perfIncomplete += 1;
+            return true;
+        }
+
+        if ((SecStatus) err == SEC_I_RENEGOTIATE) {
+            // Proceed with renegotiate by making another call to 
+            // AcceptSecurityContext with no data.
+            s_perfReneg += 1;
+            src = {};
+            m_handshake = true;
+            goto NEGOTIATE;
+        }
+
+        logMsgError() << "DecryptMessage: " << err;
+        return false;
     }
 }
 
@@ -298,7 +312,7 @@ void ServerConn::send(CharBuf * out, string_view src) {
         assert(bufs[1].cbBuffer == tmp.size());
         assert(bufs[2].cbBuffer <= m_sizes.cbTrailer);
         if (auto extra = m_sizes.cbTrailer - bufs[2].cbBuffer) {
-            s_perfTlsStub += 1;
+            s_perfStub += 1;
             out->resize(out->size() - extra);
         }
     }
