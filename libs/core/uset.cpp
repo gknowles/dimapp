@@ -766,6 +766,88 @@ static int compare(const Node & left, const Node & right) {
 
 /****************************************************************************
 *
+*   Insert
+*
+***/
+
+static void insert(Node & left, Node && right);
+
+using InsertFn = void(Node & left, Node && right);
+
+//===========================================================================
+static void insError(Node & left, Node && right) {
+    logMsgCrash() << "insert: incompatible node types, " << left.type
+        << ", " << right.type;
+}
+
+//===========================================================================
+static void insSkip(Node & left, Node && right) 
+{}
+
+//===========================================================================
+static void insCopy(Node & left, Node && right) {
+    swap(left, right);
+}
+
+//===========================================================================
+static void insIter(Node & left, Node && right) {
+    auto ri = UnsignedSet::Iterator(&right, 0);
+    for (; ri; ++ri) 
+        impl(left)->insert(left, *ri);
+}
+
+//===========================================================================
+static void insCopyIter(Node & left, Node && right) {
+    swap(left, right);
+    insIter(left, move(right));
+}
+
+//===========================================================================
+static void insVec(Node & left, Node && right) {
+    auto ri = right.values;
+    auto re = ri + right.numValues;
+    for (; ri != re; ++ri) 
+        impl(left)->insert(left, *ri);
+}
+
+//===========================================================================
+static void insBitmap(Node & left, Node && right) {
+    auto li = (uint64_t *) left.values;
+    auto le = li + kDataSize / sizeof(*li);
+    auto ri = (uint64_t *) right.values;
+    left.numValues = 0;
+    for (; li != le; ++li, ++ri) {
+        if (*li |= *ri)
+            left.numValues += 1;
+    }
+}
+
+//===========================================================================
+static void insMeta(Node & left, Node && right) {
+    auto li = left.nodes;
+    auto le = li + left.numValues;
+    auto ri = right.nodes;
+    auto re = ri + right.numValues;
+    for (; li != le && ri != re; ++li, ++ri)
+        insert(*li, move(*ri));
+}
+
+//===========================================================================
+static void insert(Node & left, Node && right) {
+    InsertFn * functs[][kNodeTypes] = {
+        // empty   full     vector   bitmap       meta
+        { insSkip, insCopy, insCopy, insCopy,     insCopy     }, // empty
+        { insSkip, insSkip, insSkip, insSkip,     insSkip     }, // full
+        { insSkip, insCopy, insVec,  insCopyIter, insCopyIter }, // vector
+        { insSkip, insCopy, insIter, insBitmap,   insError    }, // bitmap
+        { insSkip, insCopy, insIter, insError,    insMeta     }, // meta
+    };
+    functs[left.type][right.type](left, move(right));
+}
+
+
+/****************************************************************************
+*
 *   UnsignedSet::Node
 *
 ***/
@@ -852,6 +934,11 @@ void UnsignedSet::clear() {
 //===========================================================================
 void UnsignedSet::insert(unsigned value) {
     impl(m_node)->insert(m_node, value);
+}
+
+//===========================================================================
+void UnsignedSet::insert(UnsignedSet && other) {
+    ::insert(m_node, move(other.m_node));
 }
 
 //===========================================================================
