@@ -1138,6 +1138,11 @@ UnsignedSet::NodeRange UnsignedSet::nodes() {
 }
 
 //===========================================================================
+UnsignedSet::RangeRange UnsignedSet::ranges() {
+    return {&m_node};
+}
+
+//===========================================================================
 bool UnsignedSet::empty() const {
     return m_node.type == kEmpty;
 }
@@ -1357,4 +1362,35 @@ UnsignedSet::Iterator & UnsignedSet::Iterator::operator++() {
             return *this;
         }
     }
+}
+
+
+/****************************************************************************
+*
+*   UnsignedSet::RangeIterator
+*
+***/
+
+//===========================================================================
+UnsignedSet::RangeIterator::RangeIterator(
+    const Node * node, 
+    UnsignedSet::value_type val
+) 
+    : m_iter(node, val)
+{
+    if (m_iter) {
+        m_value.first = *m_iter;
+    }
+}
+
+//===========================================================================
+bool UnsignedSet::RangeIterator::operator!= (
+    const RangeIterator & right
+) const {
+    return m_iter != right.m_iter;
+}
+
+//===========================================================================
+UnsignedSet::RangeIterator & UnsignedSet::RangeIterator::operator++() {
+    return *this;
 }

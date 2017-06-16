@@ -8,6 +8,7 @@
 
 #include <cstdint>
 #include <initializer_list>
+#include <utility> // std::pair
 
 namespace Dim {
 
@@ -22,6 +23,8 @@ class UnsignedSet {
 public:
     class NodeIterator;
     struct NodeRange;
+    class RangeIterator;
+    struct RangeRange;
     class Iterator;
 
     using value_type = unsigned;
@@ -60,6 +63,7 @@ public:
     const_iterator begin() const;
     const_iterator end() const;
 
+    RangeRange ranges();
     NodeRange nodes();
 
     // capacity
@@ -202,6 +206,47 @@ public:
 private:
     NodeIterator m_node;
     value_type m_value{0};
+};
+
+
+/****************************************************************************
+*
+*   UnsignedSet::RangeIterator
+*
+***/
+
+class UnsignedSet::RangeIterator {
+public:
+    using iterator_category = std::input_iterator_tag;
+    using value_type = 
+        std::pair<UnsignedSet::value_type, UnsignedSet::value_type>;
+    using difference_type = ptrdiff_t;
+    using pointer = value_type*;
+    using reference = value_type&;
+public:
+    RangeIterator() {}
+    RangeIterator(const Node * node, UnsignedSet::value_type value = 0);
+    RangeIterator & operator++();
+    explicit operator bool() const { return !!m_iter; }
+    bool operator!= (const RangeIterator & right) const;
+    const value_type & operator*() const { return m_value; }
+    const value_type * operator->() const { return &m_value; }
+private:
+    Iterator m_iter;
+    value_type m_value{};
+};
+
+
+/****************************************************************************
+*
+*   UnsignedSet::RangeRange
+*
+***/
+
+struct UnsignedSet::RangeRange {
+    RangeIterator m_first;
+    RangeIterator begin() { return m_first; }
+    RangeIterator end() { return {}; }
 };
 
 
