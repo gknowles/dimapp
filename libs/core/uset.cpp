@@ -883,25 +883,29 @@ static void eraChange(Node & left, const Node & right) {
 
 //===========================================================================
 static void eraRFind(Node & left, const Node & right) {
-    // Go through values of left vector and remove the ones that aren't
-    // found in right node (values to be erased).
+    // Go through values of left vector and skip (aka remove) the ones that 
+    // are found in right node (values to be erased).
     assert(left.type == kVector);
     auto li = left.values;
-    auto lo = li;
+    auto out = li;
     auto le = li + left.numValues;
     auto ptr = impl(right);
     unsigned val = 0;
     for (; li != le; ++li) {
         if (*li < val) {
-            *lo++ = *li;
+            *out++ = *li;
             continue;
         }
-        if (!ptr->lowerBound(&val, right, *li))
+        if (!ptr->lowerBound(&val, right, *li)) {
+            do {
+                *out++ = *li++;
+            } while (li != le);
             break;
+        }
         if (val != *li)
-            *lo++ = *li;
+            *out++ = *li;
     }
-    left.numValues = uint16_t(lo - left.values);
+    left.numValues = uint16_t(out - left.values);
 }
 
 //===========================================================================
@@ -954,6 +958,111 @@ static void erase(Node & left, const Node & right) {
         { eraSkip, eraEmpty, eraVec,    eraRFind,  eraRFind  }, // vector
         { eraSkip, eraEmpty, eraIter,   eraBitmap, eraError  }, // bitmap
         { eraSkip, eraEmpty, eraIter,   eraError,  eraMeta   }, // meta
+    };
+    functs[left.type][right.type](left, move(right));
+}
+
+
+/****************************************************************************
+*
+*   Intersect
+*
+***/
+
+static void intersect(Node & left, Node && right);
+
+using IsectFn = void(Node & left, Node && right);
+
+//===========================================================================
+static void isecError(Node & left, Node && right) {
+    logMsgCrash() << "intersect: incompatible node types, " << left.type
+        << ", " << right.type;
+}
+
+//===========================================================================
+static void isecSkip(Node & left, Node && right) 
+{}
+
+//===========================================================================
+static void isecEmpty(Node & left, Node && right) {
+    impl(left)->destroy(left);
+    left.type = kEmpty;
+    impl(left)->init(left, false);
+}
+
+//===========================================================================
+static void isecSwap(Node & left, Node && right) {
+    ::swap(left, right);
+}
+
+//===========================================================================
+static void isecFind(Node & left, Node && right) {
+    // Go through values of left vector and remove the ones that aren't
+    // found in right node.
+    assert(left.type == kVector);
+    auto li = left.values;
+    auto out = li;
+    auto le = li + left.numValues;
+    auto ptr = impl(right);
+    unsigned val = 0;
+    for (; li != le; ++li) {
+        if (*li < val) 
+            continue;
+        if (!ptr->lowerBound(&val, right, *li))
+            break;
+        if (val == *li)
+            *out++ = *li;
+    }
+    left.numValues = uint16_t(out - left.values);
+}
+
+//===========================================================================
+static void isecSFind(Node & left, Node && right) {
+    ::swap(left, right);
+    isecFind(left, move(right));
+}
+
+//===========================================================================
+static void isecVec(Node & left, Node && right) {
+    auto le = set_intersection(
+        left.values, left.values + left.numValues,
+        right.values, right.values + right.numValues,
+        left.values
+    );
+    left.numValues = uint16_t(le - left.values);
+}
+
+//===========================================================================
+static void isecBitmap(Node & left, Node && right) {
+    auto li = (uint64_t *) left.values;
+    auto le = li + kDataSize / sizeof(*li);
+    auto ri = (uint64_t *) right.values;
+    left.numValues = 0;
+    for (; li != le; ++li, ++ri) {
+        if (*li &= *ri)
+            left.numValues += 1;
+    }
+}
+
+//===========================================================================
+static void isecMeta(Node & left, Node && right) {
+    auto li = left.nodes;
+    auto le = li + left.numValues;
+    auto ri = right.nodes;
+    auto re = ri + right.numValues;
+    for (; li != le && ri != re; ++li, ++ri)
+        intersect(*li, move(*ri));
+}
+
+//===========================================================================
+static void intersect(Node & left, Node && right) {
+    IsectFn * functs[][kNodeTypes] = {
+        // empty     full      vector     bitmap      meta
+        { isecSkip,  isecSkip, isecEmpty, isecEmpty,  isecEmpty }, // empty
+        { isecEmpty, isecSkip, isecSwap,  isecSwap,   isecSwap  }, // full
+        { isecEmpty, isecSkip, isecVec,   isecFind,   isecFind  }, // vector
+        { isecEmpty, isecSkip, isecSFind, isecBitmap, isecError }, // bitmap
+        { isecEmpty, isecSkip, isecSFind, isecError,  isecMeta  }, // meta
     };
     functs[left.type][right.type](left, move(right));
 }
@@ -1062,6 +1171,11 @@ void UnsignedSet::erase(unsigned value) {
 //===========================================================================
 void UnsignedSet::erase(const UnsignedSet & other) {
     ::erase(m_node, other.m_node);
+}
+
+//===========================================================================
+void UnsignedSet::intersect(UnsignedSet && other) {
+    ::intersect(m_node, move(other.m_node));
 }
 
 //===========================================================================
