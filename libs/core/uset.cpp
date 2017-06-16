@@ -848,6 +848,101 @@ static void insert(Node & left, Node && right) {
 
 /****************************************************************************
 *
+*   Erase
+*
+***/
+
+static void erase(Node & left, const Node & right);
+
+using EraseFn = void(Node & left, const Node & right);
+
+//===========================================================================
+static void eraError(Node & left, const Node & right) {
+    logMsgCrash() << "erase: incompatible node types, " << left.type
+        << ", " << right.type;
+}
+
+//===========================================================================
+static void eraSkip(Node & left, const Node & right) 
+{}
+
+//===========================================================================
+static void eraEmpty(Node & left, const Node & right) {
+    impl(left)->destroy(left);
+    left.type = kEmpty;
+    impl(left)->init(left, false);
+}
+
+//===========================================================================
+static void eraChange(Node & left, const Node & right) {
+    auto ri = UnsignedSet::Iterator(&right, 0);
+    assert(ri);
+    impl(left)->erase(left, *ri);
+    erase(left, right);
+}
+
+//===========================================================================
+static void eraRFind(Node & left, const Node & right) {
+    auto li = left.values;
+    auto le = li + left.numValues;
+    while (li != le) {
+    }
+}
+
+//===========================================================================
+static void eraIter(Node & left, const Node & right) {
+    auto li = left.values;
+    auto le = li + left.numValues;
+    while (li != le) {
+    }
+}
+
+//===========================================================================
+static void eraVec(Node & left, const Node & right) {
+    auto ri = right.values;
+    auto re = ri + right.numValues;
+    for (; ri != re; ++ri) 
+        impl(left)->insert(left, *ri);
+}
+
+//===========================================================================
+static void eraBitmap(Node & left, const Node & right) {
+    auto li = (uint64_t *) left.values;
+    auto le = li + kDataSize / sizeof(*li);
+    auto ri = (uint64_t *) right.values;
+    left.numValues = 0;
+    for (; li != le; ++li, ++ri) {
+        if (*li |= *ri)
+            left.numValues += 1;
+    }
+}
+
+//===========================================================================
+static void eraMeta(Node & left, const Node & right) {
+    auto li = left.nodes;
+    auto le = li + left.numValues;
+    auto ri = right.nodes;
+    auto re = ri + right.numValues;
+    for (; li != le && ri != re; ++li, ++ri)
+        insert(*li, move(*ri));
+}
+
+//===========================================================================
+static void erase(Node & left, const Node & right) {
+    EraseFn * functs[][kNodeTypes] = {
+        // empty   full      vector     bitmap     meta
+        { eraSkip, eraSkip,  eraSkip,   eraSkip,   eraSkip   }, // empty
+        { eraSkip, eraEmpty, eraChange, eraChange, eraChange }, // full
+        { eraSkip, eraEmpty, eraVec,    eraRFind,  eraRFind  }, // vector
+        { eraSkip, eraEmpty, eraIter,   eraBitmap, eraError  }, // bitmap
+        { eraSkip, eraEmpty, eraIter,   eraError,  eraMeta   }, // meta
+    };
+    functs[left.type][right.type](left, move(right));
+}
+
+
+/****************************************************************************
+*
 *   UnsignedSet::Node
 *
 ***/
@@ -944,6 +1039,11 @@ void UnsignedSet::insert(UnsignedSet && other) {
 //===========================================================================
 void UnsignedSet::erase(unsigned value) {
     impl(m_node)->erase(m_node, value);
+}
+
+//===========================================================================
+void UnsignedSet::erase(const UnsignedSet & other) {
+    ::erase(m_node, other.m_node);
 }
 
 //===========================================================================
