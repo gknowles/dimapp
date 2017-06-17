@@ -1133,12 +1133,12 @@ auto UnsignedSet::end() const -> const_iterator {
 }
 
 //===========================================================================
-UnsignedSet::NodeRange UnsignedSet::nodes() {
+UnsignedSet::NodeRange UnsignedSet::nodes() const {
     return {&m_node};
 }
 
 //===========================================================================
-UnsignedSet::RangeRange UnsignedSet::ranges() {
+UnsignedSet::RangeRange UnsignedSet::ranges() const {
     return {&m_node};
 }
 
@@ -1166,6 +1166,34 @@ void UnsignedSet::insert(unsigned value) {
 //===========================================================================
 void UnsignedSet::insert(UnsignedSet && other) {
     ::insert(m_node, move(other.m_node));
+}
+
+//===========================================================================
+void UnsignedSet::insert(string_view src) {
+    char * eptr;
+    auto first = strToUint(src, &eptr);
+    if (!first && (src.data() == eptr || eptr[-1] != '0'))
+        return;
+    for (;;) {
+        if (*eptr == '-') {
+            auto second = strToUint(eptr + 1, &eptr);
+            if (second < first)
+                break;
+            insert(first, second);
+        } else {
+            insert(first);
+        }
+        first = strToUint(eptr + 1, &eptr);
+        if (!first)
+            break;
+    }
+}
+
+//===========================================================================
+void UnsignedSet::insert(unsigned first, unsigned second) {
+    // TODO: make this efficient
+    for (auto i = first; i <= second; ++i)
+        insert(i);
 }
 
 //===========================================================================
@@ -1378,9 +1406,8 @@ UnsignedSet::RangeIterator::RangeIterator(
 ) 
     : m_iter(node, val)
 {
-    if (m_iter) {
-        m_value.first = *m_iter;
-    }
+    if (m_iter) 
+        ++*this;
 }
 
 //===========================================================================
@@ -1392,5 +1419,30 @@ bool UnsignedSet::RangeIterator::operator!= (
 
 //===========================================================================
 UnsignedSet::RangeIterator & UnsignedSet::RangeIterator::operator++() {
+    m_value.first = m_value.second = *m_iter;
+    while (++m_iter && *m_iter == m_value.second + 1) 
+        m_value.second += 1;
     return *this;
+}
+
+
+/****************************************************************************
+*
+*   Free functions
+*
+***/
+
+//===========================================================================
+ostream & operator<<(ostream & os, const UnsignedSet & right) {
+    if (auto v = right.ranges().begin()) {
+        for (;;) {
+            os << v->first;
+            if (v->first != v->second)
+                os << '-' << v->second;
+            if (!++v)
+                break;
+            os << ' ';
+        }
+    }
+    return os;
 }

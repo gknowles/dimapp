@@ -8,6 +8,8 @@
 
 #include <cstdint>
 #include <initializer_list>
+#include <ostream>
+#include <string_view>
 #include <utility> // std::pair
 
 namespace Dim {
@@ -63,8 +65,8 @@ public:
     const_iterator begin() const;
     const_iterator end() const;
 
-    RangeRange ranges();
-    NodeRange nodes();
+    RangeRange ranges() const;
+    NodeRange nodes() const;
 
     // capacity
     bool empty() const;
@@ -77,6 +79,8 @@ public:
     void insert(std::initializer_list<unsigned> il);
     void insert(UnsignedSet && other);
     void insert(const UnsignedSet & other);
+    void insert(std::string_view src); // space separated ranges
+    void insert(unsigned first, unsigned last);
     void erase(unsigned value);
     void erase(const UnsignedSet & other);
     void intersect(UnsignedSet && other);
@@ -248,6 +252,15 @@ struct UnsignedSet::RangeRange {
     RangeIterator begin() { return m_first; }
     RangeIterator end() { return {}; }
 };
+
+
+/****************************************************************************
+*
+*   Free functions
+*
+***/
+
+std::ostream & operator<<(std::ostream & os, const UnsignedSet & right);
 
 
 } // namespace
