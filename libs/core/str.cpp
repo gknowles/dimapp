@@ -145,7 +145,8 @@ BASE_ANY_WITH_OVERFLOW:
         if (ch <= '9') {
             num = ch - '0';
         } else if (ch <= 'Z') {
-            // ensure a too large positive number when ch - 'A' is negative.
+            // Cast to unsigned so that it fails with a too large positive 
+            // number when ch - 'A' is negative.
             num = unsigned char(ch - 'A') + 10;
         } else if (ch <= 'z') {
             num = unsigned char(ch - 'a') + 10;
