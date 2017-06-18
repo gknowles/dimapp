@@ -12,6 +12,13 @@
 
 namespace Dim {
 
+
+/****************************************************************************
+*
+*   TokenTable
+*
+***/
+
 class TokenTable {
 public:
     struct Token {
@@ -21,15 +28,13 @@ public:
 
     class Iterator {
         const Token * m_current{nullptr};
-
     public:
-        Iterator(const Token * ptr)
-            : m_current{ptr} {}
+        Iterator(const Token * ptr);
         Iterator & operator++();
-        const Token & operator*() {
-            assert(m_current);
-            return *m_current;
+        bool operator!=(const Iterator & right) const { 
+            return m_current != right.m_current; 
         }
+        const Token & operator*() { return *m_current; }
     };
 
 public:
@@ -43,14 +48,17 @@ public:
 
 private:
     struct Value {
-        const char * name{nullptr};
+        Token token{0, nullptr};
         int nameLen{0};
-        int id{0};
-        int distance{-1};
         size_t hash{0};
     };
-    std::vector<Value> m_names;
-    std::vector<Value> m_ids;
+    struct Index {
+        int pos{0};
+        int distance{-1};
+    };
+    std::vector<Value> m_values;
+    std::vector<Index> m_byName;
+    std::vector<Index> m_byId;
     int m_hashLen;
 };
 

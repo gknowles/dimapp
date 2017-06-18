@@ -64,6 +64,13 @@ void Application::onAppRun() {
         EXPECT(tokenTableGetEnum(numberTbl, tok.name, 0) == tok.id);
     }
 
+    int num = 0;
+    for (auto && tok : numberTbl) {
+        if (tok.id)
+            num += 1;
+    }
+    EXPECT(num == size(numbers));
+
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);
         cerr << "*** TEST FAILURES: " << errs << endl;
