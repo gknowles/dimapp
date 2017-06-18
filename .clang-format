@@ -37,6 +37,7 @@ BraceWrapping:
 BreakAfterJavaFieldAnnotations: false
 BreakBeforeBinaryOperators: NonAssignment
 BreakBeforeBraces: Attach
+BreakBeforeInheritanceComma: true
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializersBeforeComma: true
 BreakStringLiterals: false
@@ -49,6 +50,7 @@ Cpp11BracedListStyle: true
 DerivePointerAlignment: false
 DisableFormat:   false
 ExperimentalAutoDetectBinPacking: false
+FixNamespaceComments: true
 ForEachMacros:   [ foreach, Q_FOREACH, BOOST_FOREACH ]
 IncludeCategories: 
   - Regex:           '^"(llvm|llvm-c|clang|clang-c)/'
@@ -62,6 +64,7 @@ IndentCaseLabels: false
 IndentWidth:     4
 IndentWrappedFunctionNames: false
 JavaScriptQuotes: Leave
+JavaScriptWrapImports: false
 KeepEmptyLinesAtTheStartOfBlocks: true
 MacroBlockBegin: ''
 MacroBlockEnd:   ''
@@ -80,7 +83,7 @@ PointerAlignment: Middle
 ReflowComments:  true
 SortIncludes:    true
 SpaceAfterCStyleCast: false
-# SpaceAfterTemplateKeyword: true
+SpaceAfterTemplateKeyword: false
 SpaceBeforeAssignmentOperators: true
 SpaceBeforeParens: ControlStatements
 SpaceInEmptyParentheses: false
@@ -88,7 +91,6 @@ SpacesBeforeTrailingComments: 1
 SpacesInAngles:  false
 SpacesInCStyleCastParentheses: false
 SpacesInContainerLiterals: true
-SpacesInCStyleCastParentheses: false
 SpacesInParentheses: false
 SpacesInSquareBrackets: false
 Standard:        Cpp11
