@@ -412,8 +412,7 @@ static int cmdAction(Cli & cli) {
 ***/
 
 //===========================================================================
-// Default constructor creates a handle to the shared configuration, this
-// allows options to be statically registered from multiple source files.
+// Creates a handle to the shared configuration
 Cli::Cli() {
     static auto s_cfg = make_shared<Config>();
     m_cfg = s_cfg;
@@ -421,10 +420,25 @@ Cli::Cli() {
 }
 
 //===========================================================================
+Cli::Cli(const Cli & from) 
+    : m_cfg(from.m_cfg)
+    , m_command(from.m_command)
+    , m_group(from.m_group)
+{}
+
+//===========================================================================
 // protected
 Cli::Cli(shared_ptr<Config> cfg)
     : m_cfg(cfg) {
     helpOpt();
+}
+
+//===========================================================================
+Cli & Cli::operator=(const Cli & from) {
+    m_cfg = from.m_cfg;
+    m_command = from.m_command;
+    m_group = from.m_group;
+    return *this;
 }
 
 
