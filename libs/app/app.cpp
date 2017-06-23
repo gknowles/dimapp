@@ -283,5 +283,5 @@ void Dim::appSignalUsageError(int code, string_view err, string_view detail) {
         auto os = logMsgInfo();
         cli.printUsageEx(os);
     }
-    return appSignalShutdown(code);
+    appSignalShutdown(code);
 }

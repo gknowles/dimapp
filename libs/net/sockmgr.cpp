@@ -370,10 +370,10 @@ void Dim::sockMgrSetInactiveTimeout(
 }
 
 //===========================================================================
-void Dim::sockMgrMonitorEndpoints(SockMgrHandle h, string_view host) {
-    //auto mgr = s_mgrs.find(h);
-    //return mgr->monitorEndpoints(host);
-}
+//void Dim::sockMgrMonitorEndpoints(SockMgrHandle h, string_view host) {
+//    auto mgr = s_mgrs.find(h);
+//    return mgr->monitorEndpoints(host);
+//}
 
 //===========================================================================
 bool Dim::sockMgrShutdown(SockMgrHandle h) {

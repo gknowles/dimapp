@@ -13,7 +13,6 @@
 #include "xml/xml.h"
 #include "wintls/wintls.h"
 
-// Externa library internal headers
 // Standard headers
 #include <cassert>
 #include <cstring>
@@ -26,6 +25,7 @@
 #include <vector>
 
 // Platform headers
+// External library internal headers
 // Internal headers
 #include "appint.h"
 #include "appsockint.h"

@@ -46,6 +46,7 @@ void sockMgrSetInactiveTimeout(
     Duration pingTimeout    // inactivity that triggers a disconnect
 );
 
+// Not implemented
 void sockMgrMonitorEndpoints(SockMgrHandle mgr, std::string_view host);
 
 // Starts closing, no new connections will be allowed. Returns true if all 
