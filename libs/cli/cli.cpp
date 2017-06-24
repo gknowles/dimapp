@@ -1762,7 +1762,7 @@ void Cli::printOptions(ostream & os, const string & cmdName) const {
             writeNewline(os, wp);
             auto & grp = findGrpAlways(cmd, key.opt->m_group);
             string title = grp.title;
-            if (title.empty() && gname == kInternalOptionGroup
+            if (title.empty() && strcmp(gname, kInternalOptionGroup) == 0
                 && &key == namedArgs.data()) {
                 // First group and it's the internal group, give it a title
                 // so it's not just left hanging.
