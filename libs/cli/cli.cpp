@@ -127,7 +127,7 @@ struct Cli::Config {
 
 // forward declarations
 static bool helpAction(Cli & cli, Cli::Opt<bool> & opt, const string & val);
-static int cmdAction(Cli & cli);
+static bool cmdAction(Cli & cli);
 
 //===========================================================================
 static Cli::GroupConfig &
@@ -368,40 +368,40 @@ static bool helpAction(Cli & cli, Cli::Opt<bool> & opt, const string & val) {
 
 //===========================================================================
 bool Cli::defaultParse(OptBase & opt, const string & val) {
-    if (!opt.fromString(*this, val)) {
-        badUsage("Invalid '" + opt.from() + "' value", val);
-        if (!opt.m_choiceDescs.empty()) {
-            ostringstream os;
-            os << "Must be ";
-            size_t pos = 0;
-            for (auto && cd : opt.m_choiceDescs) {
-                pos += 1;
-                os << '"' << cd.first << '"';
-                auto num = opt.m_choiceDescs.size();
-                if (pos == num)
-                    break;
-                if (pos + 1 == num) {
-                    os << ((pos == 1) ? " or " : ", or ");
-                } else {
-                    os << ", ";
-                }
+    if (opt.fromString(*this, val)) 
+        return true;
+
+    badUsage("Invalid '" + opt.from() + "' value", val);
+    if (!opt.m_choiceDescs.empty()) {
+        ostringstream os;
+        os << "Must be ";
+        size_t pos = 0;
+        for (auto && cd : opt.m_choiceDescs) {
+            pos += 1;
+            os << '"' << cd.first << '"';
+            auto num = opt.m_choiceDescs.size();
+            if (pos == num)
+                break;
+            if (pos + 1 == num) {
+                os << ((pos == 1) ? " or " : ", or ");
+            } else {
+                os << ", ";
             }
-            m_cfg->errDetail = os.str();
         }
-        return false;
+        m_cfg->errDetail = os.str();
     }
-    return true;
+    return false;
 }
 
 //===========================================================================
-static int cmdAction(Cli & cli) {
+static bool cmdAction(Cli & cli) {
+    ostringstream os;
     if (cli.runCommand().empty()) {
-        cerr << "No command given." << endl;
+        os << "No command given.";
     } else {
-        cerr << "Command '" << cli.runCommand()
-             << "' has not been implemented." << endl;
+        os << "Command '" << cli.runCommand() << "' has not been implemented.";
     }
-    return kExitSoftware;
+    return cli.fail(kExitSoftware, os.str());
 }
 
 
@@ -1217,9 +1217,10 @@ bool Cli::badUsage(const string & msg) {
 }
 
 //===========================================================================
-bool Cli::fail(int code, const string & msg) {
-    m_cfg->errMsg = msg;
+bool Cli::fail(int code, const string & msg, const string & detail) {
     m_cfg->exitCode = code;
+    m_cfg->errMsg = msg;
+    m_cfg->errDetail = detail;
     return false;
 }
 
@@ -1433,13 +1434,15 @@ const string & Cli::runCommand() const {
 }
 
 //===========================================================================
-int Cli::run() {
+bool Cli::exec() {
     auto & name = runCommand();
     assert(m_cfg->cmds.find(name) != m_cfg->cmds.end());
     auto & cmd = m_cfg->cmds[name];
-    int code = cmd.action(*this);
-    fail(code, "");
-    return code;
+    if (!cmd.action(*this)) {
+        assert(exitCode());
+        return false;
+    }
+    return true;
 }
 
 
