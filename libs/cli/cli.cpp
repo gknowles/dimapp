@@ -48,7 +48,7 @@ const size_t kMaxDescCol = 28;
 ***/
 
 // Name of group containing --help, --version, etc
-const string s_internalOptionGroup = "~";
+const char kInternalOptionGroup[] = "~";
 
 namespace {
 struct OptName {
@@ -151,7 +151,7 @@ findCmdAlways(Cli::Config & cfg, const string & name) {
     cmd.action = cmdAction;
     auto & defGrp = findGrpAlways(cmd, "");
     defGrp.title = "Options";
-    auto & intGrp = findGrpAlways(cmd, s_internalOptionGroup);
+    auto & intGrp = findGrpAlways(cmd, kInternalOptionGroup);
     intGrp.title.clear();
     return cmd;
 }
@@ -466,7 +466,7 @@ Cli::Opt<bool> & Cli::helpOpt() {
     auto & hlp = opt<bool>("help.")
                      .desc("Show this message and exit.")
                      .parse(helpAction)
-                     .group(s_internalOptionGroup);
+                     .group(kInternalOptionGroup);
     if (!m_command.empty())
         hlp.show(false);
     cmd.helpOpt = &hlp;
@@ -498,7 +498,7 @@ Cli::versionOpt(const string & version, const string & progName) {
     return opt<bool>("version.")
         .desc("Show version and exit.")
         .parse(verAction)
-        .group(s_internalOptionGroup);
+        .group(kInternalOptionGroup);
 }
 
 //===========================================================================
@@ -1728,7 +1728,7 @@ bool Cli::findNamedArgs(
             // sort by group sort key followed by name list with leading
             // dashes removed
             key.sort = findGrpAlways(cmd, opt->m_group).sortKey;
-            if (flatten && key.sort != s_internalOptionGroup)
+            if (flatten && key.sort != kInternalOptionGroup)
                 key.sort.clear();
             key.sort += '\0';
             key.sort += list.substr(list.find_first_not_of('-'));
@@ -1762,7 +1762,7 @@ void Cli::printOptions(ostream & os, const string & cmdName) const {
             writeNewline(os, wp);
             auto & grp = findGrpAlways(cmd, key.opt->m_group);
             string title = grp.title;
-            if (title.empty() && gname == s_internalOptionGroup
+            if (title.empty() && gname == kInternalOptionGroup
                 && &key == namedArgs.data()) {
                 // First group and it's the internal group, give it a title
                 // so it's not just left hanging.
