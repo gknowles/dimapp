@@ -186,6 +186,7 @@
 # tools/pargen/pch.h
 # tools/pargen/tests.abnf
 # tools/pargen/write.cpp
+# tools/tnet/README.md
 # tools/tnet/pch.cpp
 # tools/tnet/pch.h
 # tools/tnet/tnet.cpp
