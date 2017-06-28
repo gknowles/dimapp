@@ -10,6 +10,7 @@
 #include "handle.h"
 #include "list.h"
 #include "log.h"
+#include "math.h"
 #include "perf.h"
 #include "shutdown.h"
 #include "str.h"
