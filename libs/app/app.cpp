@@ -33,6 +33,26 @@ static string s_dataDir;
 
 /****************************************************************************
 *
+*   FnProxyAppNotify
+*
+***/
+
+namespace {
+struct FnProxyAppNotify : public IAppNotify {
+    function<void(int, char*[])> fn;
+    void onAppRun() override;
+};
+} // namespace
+static FnProxyAppNotify s_fnProxyApp;
+
+//===========================================================================
+void FnProxyAppNotify::onAppRun() {
+    fn(m_argc, m_argv);
+}
+
+
+/****************************************************************************
+*
 *   RunTask
 *
 ***/
@@ -192,6 +212,17 @@ bool Dim::appLogPath(string & out, string_view file, bool cine) {
 //===========================================================================
 bool Dim::appDataPath(string & out, string_view file, bool cine) {
     return makeAppPath(out, appDataDirectory(), file, cine);
+}
+
+//===========================================================================
+int Dim::appRun(
+    function<void(int argc, char *argv[])> fn,
+    int argc,
+    char * argv[],
+    AppFlags flags
+) {
+    s_fnProxyApp.fn = fn;
+    return appRun(s_fnProxyApp, argc, argv, flags);
 }
 
 //===========================================================================

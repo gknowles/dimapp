@@ -25,6 +25,7 @@
 
 #include "core/types.h"
 
+#include <functional>
 #include <string_view>
 
 namespace Dim {
@@ -74,6 +75,12 @@ int appRun(
     IAppNotify & app, 
     int argc, 
     char * argv[], 
+    AppFlags flags = fAppClient
+);
+int appRun(
+    std::function<void(int argc, char *argv[])> fn,
+    int argc,
+    char * argv[],
     AppFlags flags = fAppClient
 );
 
