@@ -7,6 +7,7 @@
 
 using namespace std;
 using namespace Dim;
+namespace fs = std::experimental::filesystem;
 
 
 /****************************************************************************
@@ -17,6 +18,28 @@ using namespace Dim;
 
 const string kVersion = "0.1.0";
 
+namespace {
+
+class LogTask 
+    : public ITaskNotify 
+    , public ILogNotify
+{
+public:
+    LogTask() {}
+    LogTask(LogType type, string_view msg);
+
+    // ITaskNotify
+    void onTask() override;
+    // ILogNotify
+    void onLog(LogType type, string_view msg) override;
+
+private:
+    LogType m_type;
+    string m_msg;
+};
+
+} // namespace
+
 
 /****************************************************************************
 *
@@ -25,6 +48,7 @@ const string kVersion = "0.1.0";
 ***/
 
 static RunOptions s_cmdopts;
+static TaskQueueHandle s_logQ;
 
 
 /****************************************************************************
@@ -114,25 +138,23 @@ static bool internalTest() {
 *
 ***/
 
-namespace {
-class LogTask : public ITaskNotify {
-public:
-    LogTask(LogType type, string_view msg);
-
-    // ITaskNotify
-    void onTask() override;
-
-private:
-    LogType m_type;
-    string m_msg;
-};
-} // namespace
-
 //===========================================================================
 LogTask::LogTask(LogType type, string_view msg)
     : m_type(type)
     , m_msg(msg) 
 {}
+
+//===========================================================================
+void LogTask::onLog(LogType type, string_view msg) {
+    if (s_cmdopts.verbose || type != kLogTypeDebug) {
+        auto ptr = new LogTask(type, msg);
+        if (s_logQ) {
+            taskPush(s_logQ, *ptr);
+        } else {
+            ptr->onTask();
+        }
+    }
+}
 
 //===========================================================================
 void LogTask::onTask() {
@@ -152,25 +174,9 @@ void LogTask::onTask() {
 *
 ***/
 
-namespace {
-class Application : public IAppNotify, public ILogNotify {
-    string m_source;
-    TaskQueueHandle m_logQ;
-    experimental::filesystem::path m_srcfile;
-    string m_root;
-
-public:
-    // IAppNotify
-    void onAppRun() override;
-
-    // ILogNotify
-    void onLog(LogType type, string_view msg) override;
-};
-} // namespace
-
 //===========================================================================
-void Application::onAppRun() {
-    m_logQ = taskCreateQueue("Logging", 1);
+static void app(int argc, char * argv[]) {
+    s_logQ = taskCreateQueue("Logging", 1);
 
     Cli cli;
     // header
@@ -178,9 +184,9 @@ void Application::onAppRun() {
         "pargen v"s + kVersion + " (" __DATE__
                                  ") simplistic parser generator\n");
     // positional arguments
-    auto & srcfile = cli.opt(&m_srcfile, "[source file(.abnf)]")
+    auto & srcfile = cli.opt<fs::path>("[source file(.abnf)]")
                          .desc("File containing ABNF rules to process.");
-    cli.opt(&m_root, "[root rule]")
+    auto & root = cli.opt<string>("[root rule]")
         .desc("Root rule to use, overrides %root in <source file>.");
     // options
     cli.versionOpt(kVersion);
@@ -231,9 +237,9 @@ void Application::onAppRun() {
 For additional information, see:
 https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
 )");
-    if (!cli.parse(m_argc, m_argv))
+    if (!cli.parse(argc, argv))
         return appSignalUsageError();
-    if (*help || m_argc == 1) {
+    if (*help || argc == 1) {
         auto os = logMsgInfo();
         cli.printHelp(os);
         return appSignalShutdown(EX_OK);
@@ -248,27 +254,28 @@ https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
     // process abnf file
     if (!srcfile->has_extension())
         srcfile->replace_extension("abnf");
-    fileLoadBinaryWait(m_source, srcfile->u8string());
-    if (m_source.empty())
+    string source;
+    fileLoadBinaryWait(source, srcfile->u8string());
+    if (source.empty())
         return appSignalUsageError(EX_USAGE);
 
     TimePoint start = Clock::now();
     Grammar rules;
     getCoreRules(rules);
-    if (!parseAbnf(rules, m_source, s_cmdopts.minRules)) {
+    if (!parseAbnf(rules, source, s_cmdopts.minRules)) {
         logParseError(
             "parsing failed",
             srcfile->u8string(),
             rules.errpos(),
-            m_source);
+            source);
         return appSignalShutdown(EX_DATAERR);
     }
 
     if (!processOptions(rules))
         return appSignalShutdown(EX_DATAERR);
 
-    if (m_root.size())
-        rules.setOption(kOptionRoot, m_root);
+    if (root->size())
+        rules.setOption(kOptionRoot, *root);
 
     ofstream oh(rules.optionString(kOptionApiHeaderFile));
     ofstream ocpp(rules.optionString(kOptionApiCppFile));
@@ -284,15 +291,8 @@ https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
         return appSignalShutdown(EX_DATAERR);
     }
     logMsgInfo() << "Errors encountered: " << 0;
+    s_logQ = {};
     appSignalShutdown(EX_OK);
-}
-
-//===========================================================================
-void Application::onLog(LogType type, string_view msg) {
-    if (s_cmdopts.verbose || type != kLogTypeDebug) {
-        auto ptr = new LogTask(type, msg);
-        taskPush(m_logQ, *ptr);
-    }
 }
 
 
@@ -308,7 +308,7 @@ int main(int argc, char * argv[]) {
     _set_error_mode(_OUT_TO_MSGBOX);
 
     consoleEnableCtrlC(false);
-    Application app;
-    logMonitor(&app);
+    LogTask logger;
+    logMonitor(&logger);
     return appRun(app, argc, argv);
 }

@@ -33,33 +33,12 @@ public:
 
 /****************************************************************************
 *
-*   Helpers
-*
-***/
-
-
-/****************************************************************************
-*
 *   Application
 *
 ***/
 
-namespace {
-
-class Application : public IAppNotify {
-    // IAppNotify
-    void onAppRun() override;
-};
-
-} // namespace
-
-//template <typename T, int T::*P> class L1;
-//
-//template <auto P> class L2;
-//template <typename T, int T::*P> class L2<int T::*P>;
-
 //===========================================================================
-void Application::onAppRun() {
+static void app(int argc, char *argv[]) {
     int line = 0;
 
     List<TestNode> list;
@@ -104,6 +83,5 @@ void Application::onAppRun() {
 int main(int argc, char * argv[]) {
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
     _set_error_mode(_OUT_TO_MSGBOX);
-    Application app;
     return appRun(app, argc, argv);
 }

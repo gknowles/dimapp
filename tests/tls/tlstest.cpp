@@ -84,28 +84,12 @@ const Test s_tests[] = {
 
 /****************************************************************************
 *
-*   Helpers
-*
-***/
-
-
-/****************************************************************************
-*
 *   Application
 *
 ***/
 
-namespace {
-
-class Application : public IAppNotify {
-    // IAppNotify
-    void onAppRun() override;
-};
-
-} // namespace
-
 //===========================================================================
-void Application::onAppRun() {
+static void app(int argc, char *argv[]) {
     const TlsCipherSuite kCiphers[] = {
         TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256};
     const char kHost[] = "example.com";
@@ -160,6 +144,5 @@ void Application::onAppRun() {
 int main(int argc, char * argv[]) {
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
     _set_error_mode(_OUT_TO_MSGBOX);
-    Application app;
     return appRun(app, argc, argv);
 }

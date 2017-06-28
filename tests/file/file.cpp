@@ -15,33 +15,11 @@ using namespace Dim;
 *
 ***/
 
-namespace {
-class Application 
-    : public IAppNotify
-    , public IFileWriteNotify
-    , public IFileReadNotify
-{
-public:
-    // IAppNotify
-    void onAppRun() override;
-
-    // IFileWriteNotify
-    void onFileWrite(
-        int written,
-        string_view data, 
-        int64_t offset,
-        FileHandle f) override;
-
-    // IFileReadNotify
-    void onFileEnd(int64_t offset, FileHandle f) override;
-};
-} // namespace
-
 //===========================================================================
-void Application::onAppRun() {
+static void app(int argc, char *argv[]) {
     Cli cli;
     auto & fn = cli.opt<string>("[dat file]", "metrics.dat");
-    if (!cli.parse(m_argc, m_argv))
+    if (!cli.parse(argc, argv))
         return appSignalUsageError();
 
     size_t psize = filePageSize();
@@ -79,19 +57,6 @@ void Application::onAppRun() {
     }
 }
 
-//===========================================================================
-void Application::onFileWrite(
-    int written,
-    string_view data, 
-    int64_t offset,
-    FileHandle f
-) {
-}
-
-//===========================================================================
-void Application::onFileEnd(int64_t offset, FileHandle f) {
-}
-
 
 /****************************************************************************
 *
@@ -104,7 +69,6 @@ int main(int argc, char * argv[]) {
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
     _set_error_mode(_OUT_TO_MSGBOX);
 
-    Application app;
     int code = appRun(app, argc, argv);
     return code;
 }

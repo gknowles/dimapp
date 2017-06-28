@@ -188,14 +188,8 @@ void ShutdownNotify::onShutdownClient(bool firstTry) {
 *
 ***/
 
-namespace {
-class Application : public IAppNotify {
-    void onAppRun() override;
-};
-} // namespace
-
 //===========================================================================
-void Application::onAppRun() {
+static void app(int argc, char *argv[]) {
     shutdownMonitor(&s_cleanup);
 
     Cli cli;
@@ -203,7 +197,7 @@ void Application::onAppRun() {
     cli.versionOpt(kVersion);
     auto & remote = cli.opt<string>("<remote address>");
     cli.opt(&s_localEnd, "[local address]");
-    if (!cli.parse(m_argc, m_argv))
+    if (!cli.parse(argc, argv))
         return appSignalUsageError();
 
     consoleEnableCtrlC();
@@ -238,6 +232,5 @@ int main(int argc, char * argv[]) {
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
     _set_error_mode(_OUT_TO_MSGBOX);
 
-    Application app;
     return appRun(app, argc, argv);
 }

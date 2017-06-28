@@ -84,19 +84,30 @@ void ShutdownNotify::onShutdownClient(bool firstTry) {
 
 /****************************************************************************
 *
-*   Application
+*   h2srvXml
 *
 ***/
 
 namespace {
-class Application : public IAppNotify, public IConfigNotify {
-    void onAppRun() override;
+class ConfigH2srvXml : public IConfigNotify {
     void onConfigChange(const XDocument & doc) override;
 };
 } // namespace
+static ConfigH2srvXml s_h2srvXml;
 
 //===========================================================================
-void Application::onAppRun() {
+void ConfigH2srvXml::onConfigChange(const XDocument & doc) {
+}
+
+
+/****************************************************************************
+*
+*   Application
+*
+***/
+
+//===========================================================================
+static void app(int argc, char *argv[]) {
     shutdownMonitor(&s_cleanup);
 
     Cli cli;
@@ -104,7 +115,7 @@ void Application::onAppRun() {
         "h2srv v"s + kVersion + " (" __DATE__ ") "
                                 "sample http/2 server");
     cli.versionOpt(kVersion);
-    if (!cli.parse(m_argc, m_argv))
+    if (!cli.parse(argc, argv))
         return appSignalUsageError();
 
     consoleEnableCtrlC();
@@ -115,7 +126,7 @@ void Application::onAppRun() {
     for (auto && addr : addrs)
         cout << addr << endl;
 
-    configMonitor("h2srv.xml", this);
+    configMonitor("h2srv.xml", &s_h2srvXml);
     winTlsInitialize();
     appTlsInitialize();
 
@@ -126,10 +137,6 @@ void Application::onAppRun() {
     );
 
     logMsgInfo() << "Server started";
-}
-
-//===========================================================================
-void Application::onConfigChange(const XDocument & doc) {
 }
 
 
@@ -148,7 +155,6 @@ int main(int argc, char * argv[]) {
     // _CrtSetBreakAlloc(6909);
     _set_error_mode(_OUT_TO_MSGBOX);
 
-    Application app;
     return appRun(app, argc, argv, fAppServer | fAppWithConsole);
 }
 
