@@ -15,8 +15,6 @@
 # libs/app/config.h
 # libs/app/console.h
 # libs/app/env.h
-# libs/app/file.cpp
-# libs/app/file.h
 # libs/app/logfile.cpp
 # libs/app/logfile.h
 # libs/app/pch.cpp
@@ -64,6 +62,14 @@
 # libs/cppconf/compiler/visualc.h
 # libs/cppconf/cppconf.h
 # libs/cppconf/cppconf_suffix.h
+# libs/file/file.cpp
+# libs/file/file.h
+# libs/file/fileio.h
+# libs/file/filemon.h
+# libs/file/path.cpp
+# libs/file/path.h
+# libs/file/pch.cpp
+# libs/file/pch.h
 # libs/json/jbuilder.cpp
 # libs/json/json.abnf
 # libs/json/json.h

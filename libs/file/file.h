@@ -1,13 +1,11 @@
 // Copyright Glen Knowles 2017.
 // Distributed under the Boost Software License, Version 1.0.
 //
-// app.h - dim app
+// file.h - dim file
 #pragma once
 
 #include "cppconf/cppconf.h"
 
-#include "appmain.h"
-#include "config.h"
-#include "console.h"
-#include "env.h"
-#include "logfile.h"
+#include "fileio.h"
+#include "filemon.h"
+#include "path.h"

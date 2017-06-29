@@ -26,7 +26,7 @@ namespace fs = std::experimental::filesystem;
 namespace {
 struct WinFileInfo {
     FileHandle m_f;
-    fs::path m_path;
+    string m_path;
     HANDLE m_handle{INVALID_HANDLE_VALUE};
     File::OpenMode m_mode{File::fReadOnly};
     const char * m_view{nullptr};
@@ -368,7 +368,7 @@ FileHandle Dim::fileOpen(string_view path, File::OpenMode mode) {
 
     auto file = make_unique<WinFileInfo>();
     file->m_mode = (om)mode;
-    file->m_path = fs::u8path(path.begin(), path.end());
+    file->m_path = path;
 
     int access = 0;
     if (mode & om::fNoContent) {
@@ -412,7 +412,7 @@ FileHandle Dim::fileOpen(string_view path, File::OpenMode mode) {
     int flagsAndAttrs = (mode & om::fBlocking) ? 0 : FILE_FLAG_OVERLAPPED;
 
     file->m_handle = CreateFileW(
-        file->m_path.c_str(),
+        toWstring(file->m_path).c_str(),
         access,
         share,
         NULL, // security attributes
@@ -510,7 +510,7 @@ TimePoint Dim::fileLastWriteTime(FileHandle f) {
 }
 
 //===========================================================================
-std::experimental::filesystem::path Dim::filePath(FileHandle f) {
+string_view Dim::filePath(FileHandle f) {
     auto file = getInfo(f);
     return file->m_path;
 }

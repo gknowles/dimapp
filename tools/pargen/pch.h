@@ -8,6 +8,7 @@
 #include "app/app.h"
 #include "cli/cli.h"
 #include "core/core.h"
+#include "file/file.h"
 
 // Standard headers
 #include <bitset>

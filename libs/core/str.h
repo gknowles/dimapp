@@ -13,7 +13,7 @@
 
 namespace Dim {
 
-
+//===========================================================================
 template <typename T> constexpr int maxIntegralChars() {
     return numeric_limits<T>::is_signed
         ? 1 + ((CHAR_BIT * sizeof(T) - 1) * 301L + 999L) / 1000L

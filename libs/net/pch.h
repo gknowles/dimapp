@@ -10,8 +10,9 @@
 // External library public headers
 #include "app/app.h"
 #include "core/core.h"
-#include "xml/xml.h"
+#include "file/file.h"
 #include "wintls/wintls.h"
+#include "xml/xml.h"
 
 // Standard headers
 #include <cassert>
