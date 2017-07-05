@@ -165,6 +165,9 @@
 # tests/list/listtest.cpp
 # tests/list/pch.cpp
 # tests/list/pch.h
+# tests/path/pathtest.cpp
+# tests/path/pch.cpp
+# tests/path/pch.h
 # tests/tls/pch.cpp
 # tests/tls/pch.h
 # tests/tls/tlstest.cpp

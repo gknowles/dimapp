@@ -21,6 +21,8 @@ namespace Dim {
 
 class Path {
 public:
+    Path() {}
+    Path(const char from[]) : Path{std::string_view{from}} {}
     Path(std::string_view from);
     Path(const std::experimental::filesystem::path & from);
 
@@ -34,6 +36,9 @@ public:
         const std::experimental::filesystem::path & path, 
         std::string_view defExt
     );
+    Path & operator=(const char from[]) { 
+        return assign(std::string_view(from)); 
+    }
     Path & operator=(const Path & from) { return assign(from.view()); }
     Path & operator=(std::string_view from) { return assign(from); }
     Path & operator=(const std::experimental::filesystem::path & from) { 
