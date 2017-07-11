@@ -55,9 +55,11 @@ public:
 public:
     UnsignedSet();
     UnsignedSet(UnsignedSet && from);
+    UnsignedSet(const UnsignedSet & from);
     ~UnsignedSet();
 
     UnsignedSet & operator=(UnsignedSet && from);
+    UnsignedSet & operator=(const UnsignedSet & from);
 
     // iterators
     iterator begin();

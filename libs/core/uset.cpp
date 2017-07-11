@@ -60,6 +60,10 @@ struct IImplBase {
     // the node as uninitialized.
     virtual void init(Node & node, bool full) = 0;
 
+    // Requires that type is set, but otherwise treats the target node as
+    // uninitialized.
+    virtual void init(Node & node, const Node & from) = 0;
+
     virtual void destroy(Node & node) = 0;
     virtual bool insert(Node & node, unsigned value) = 0;
     virtual void insert(
@@ -98,6 +102,7 @@ static IImplBase * impl(const Node & node);
 namespace {
 struct EmptyImpl : IImplBase {
     void init(Node & node, bool full) override;
+    void init(Node & node, const Node & from) override;
     void destroy(Node & node) override;
     bool insert(Node & node, unsigned value) override;
     void insert(
@@ -124,6 +129,13 @@ void EmptyImpl::init(Node & node, bool full) {
     node.numBytes = 0;
     node.numValues = 0;
     node.values = nullptr;
+}
+
+//===========================================================================
+void EmptyImpl::init(Node & node, const Node & from) {
+    assert(node.type == kEmpty);
+    assert(from.type == kEmpty);
+    node = from;
 }
 
 //===========================================================================
@@ -182,6 +194,7 @@ bool EmptyImpl::lowerBound(
 namespace {
 struct FullImpl : IImplBase {
     void init(Node & node, bool full) override;
+    void init(Node & node, const Node & from) override;
     void destroy(Node & node) override;
     bool insert(Node & node, unsigned value) override;
     void insert(
@@ -211,6 +224,13 @@ void FullImpl::init(Node & node, bool full) {
     node.numBytes = 0;
     node.numValues = 0;
     node.values = nullptr;
+}
+
+//===========================================================================
+void FullImpl::init(Node & node, const Node & from) {
+    assert(node.type == kFull);
+    assert(from.type == kFull);
+    node = from;
 }
 
 //===========================================================================
@@ -281,6 +301,7 @@ struct VectorImpl : IImplBase {
     }
 
     void init(Node & node, bool full) override;
+    void init(Node & node, const Node & from) override;
     void destroy(Node & node) override;
     bool insert(Node & node, unsigned value) override;
     void insert(
@@ -310,6 +331,15 @@ void VectorImpl::init(Node & node, bool full) {
     node.numBytes = kDataSize;
     node.numValues = 0;
     node.values = (unsigned *) malloc(node.numBytes);
+}
+
+//===========================================================================
+void VectorImpl::init(Node & node, const Node & from) {
+    assert(node.type == kVector);
+    assert(from.type == kVector);
+    node = from;
+    node.values = (unsigned *) malloc(node.numBytes);
+    memcpy(node.values, from.values, node.numBytes);
 }
 
 //===========================================================================
@@ -426,6 +456,7 @@ struct BitmapImpl : IImplBase {
     static constexpr size_t numBits() { return 64 * numInts(); }
 
     void init(Node & node, bool full) override;
+    void init(Node & node, const Node & from) override;
     void destroy(Node & node) override;
     bool insert(Node & node, unsigned value) override;
     void insert(
@@ -447,11 +478,20 @@ static BitmapImpl s_bitmapImpl;
 
 //===========================================================================
 void BitmapImpl::init(Node & node, bool full) {
-    node.type = kBitmap;
+    assert(node.type == kBitmap);
     node.numBytes = kDataSize;
     node.numValues = kDataSize / sizeof(uint64_t);
-    node.values = (unsigned *) malloc(kDataSize);
+    node.values = (unsigned *) malloc(node.numBytes);
     memset(node.values, full ? 0xff : 0, kDataSize);
+}
+
+//===========================================================================
+void BitmapImpl::init(Node & node, const Node & from) {
+    assert(node.type == kBitmap);
+    assert(from.type == kBitmap);
+    node = from;
+    node.values = (unsigned *) malloc(node.numBytes);
+    memcpy(node.values, from.values, node.numBytes);
 }
 
 //===========================================================================
@@ -547,6 +587,7 @@ struct MetaImpl : IImplBase {
     }
 
     void init(Node & node, bool full) override;
+    void init(Node & node, const Node & from) override;
     void destroy(Node & node) override;
     bool insert(Node & node, unsigned value) override;
     void insert(
@@ -568,7 +609,7 @@ static MetaImpl s_metaImpl;
 
 //===========================================================================
 void MetaImpl::init(Node & node, bool full) {
-    node.type = kMeta;
+    assert(node.type == kMeta);
     node.numValues = kNumNodes[node.depth + 1];
     node.numBytes = (node.numValues + 1) * sizeof(*node.nodes);
     node.nodes = (Node *) malloc(node.numBytes);
@@ -590,6 +631,23 @@ void MetaImpl::init(Node & node, bool full) {
     // is really just a pointer back to the parent node.
     *nlast = {};
     nlast->type = kMetaEnd;
+    nlast->nodes = &node;
+}
+
+//===========================================================================
+void MetaImpl::init(Node & node, const Node & from) {
+    assert(node.type == kMeta);
+    assert(from.type == kMeta);
+    node = from;
+    node.nodes = (Node *) malloc(node.numBytes);
+    auto nptr = node.nodes;
+    auto nlast = node.nodes + node.numValues;
+    auto fptr = from.nodes;
+    for (; nptr != nlast; ++nptr, ++fptr) {
+        nptr->type = fptr->type;
+        impl(*nptr)->init(*nptr, *fptr);
+    }
+    *nlast = *fptr;
     nlast->nodes = &node;
 }
 
@@ -686,8 +744,6 @@ static IImplBase * impl(const Node & node) {
 
 static int compare(const Node & left, const Node & right);
 
-using CompareFn = int(const Node & left, const Node & right);
-
 //===========================================================================
 static int cmpError(const Node & left, const Node & right) {
     logMsgCrash() << "compare: incompatible node types, " << left.type
@@ -752,6 +808,7 @@ static int cmpMeta(const Node & left, const Node & right) {
 
 //===========================================================================
 static int compare(const Node & left, const Node & right) {
+    using CompareFn = int(const Node & left, const Node & right);
     CompareFn * functs[][kNodeTypes] = {
         // empty    full      vector   bitmap     meta
         { cmpEqual, cmpLess,  cmpLess, cmpLess,   cmpLess  }, // empty
@@ -766,13 +823,94 @@ static int compare(const Node & left, const Node & right) {
 
 /****************************************************************************
 *
-*   Insert
+*   Insert(Node &, const Node &)
+*
+***/
+
+static void insert(Node & left, const Node & right);
+
+//===========================================================================
+static void insError(Node & left, const Node & right) {
+    logMsgCrash() << "insert: incompatible node types, " << left.type
+        << ", " << right.type;
+}
+
+//===========================================================================
+static void insSkip(Node & left, const Node & right) 
+{}
+
+//===========================================================================
+static void insCopy(Node & left, const Node & right) {
+    impl(left)->destroy(left);
+    left.type = right.type;
+    impl(left)->init(left, right);
+}
+
+//===========================================================================
+static void insIter(Node & left, const Node & right) {
+    auto ri = UnsignedSet::Iterator(&right, 0);
+    for (; ri; ++ri) 
+        impl(left)->insert(left, *ri);
+}
+
+//===========================================================================
+static void insCopyIter(Node & left, const Node & right) {
+    insCopy(left, right);
+    insIter(left, right);
+}
+
+//===========================================================================
+static void insVec(Node & left, const Node & right) {
+    auto ri = right.values;
+    auto re = ri + right.numValues;
+    for (; ri != re; ++ri) 
+        impl(left)->insert(left, *ri);
+}
+
+//===========================================================================
+static void insBitmap(Node & left, const Node & right) {
+    auto li = (uint64_t *) left.values;
+    auto le = li + kDataSize / sizeof(*li);
+    auto ri = (uint64_t *) right.values;
+    left.numValues = 0;
+    for (; li != le; ++li, ++ri) {
+        if (*li |= *ri)
+            left.numValues += 1;
+    }
+}
+
+//===========================================================================
+static void insMeta(Node & left, const Node & right) {
+    auto li = left.nodes;
+    auto le = li + left.numValues;
+    auto ri = right.nodes;
+    auto re = ri + right.numValues;
+    for (; li != le && ri != re; ++li, ++ri)
+        insert(*li, *ri);
+}
+
+//===========================================================================
+static void insert(Node & left, const Node & right) {
+    using InsertFn = void(Node & left, const Node & right);
+    InsertFn * functs[][kNodeTypes] = {
+        // empty   full     vector   bitmap       meta
+        { insSkip, insCopy, insCopy, insCopy,     insCopy     }, // empty
+        { insSkip, insSkip, insSkip, insSkip,     insSkip     }, // full
+        { insSkip, insCopy, insVec,  insCopyIter, insCopyIter }, // vector
+        { insSkip, insCopy, insIter, insBitmap,   insError    }, // bitmap
+        { insSkip, insCopy, insIter, insError,    insMeta     }, // meta
+    };
+    functs[left.type][right.type](left, right);
+}
+
+
+/****************************************************************************
+*
+*   Insert(Node &, Node &&)
 *
 ***/
 
 static void insert(Node & left, Node && right);
-
-using InsertFn = void(Node & left, Node && right);
 
 //===========================================================================
 static void insError(Node & left, Node && right) {
@@ -785,41 +923,29 @@ static void insSkip(Node & left, Node && right)
 {}
 
 //===========================================================================
-static void insCopy(Node & left, Node && right) {
+static void insMove(Node & left, Node && right) {
     swap(left, right);
 }
 
 //===========================================================================
 static void insIter(Node & left, Node && right) {
-    auto ri = UnsignedSet::Iterator(&right, 0);
-    for (; ri; ++ri) 
-        impl(left)->insert(left, *ri);
+    insIter(left, right);
 }
 
 //===========================================================================
-static void insCopyIter(Node & left, Node && right) {
+static void insMoveIter(Node & left, Node && right) {
     swap(left, right);
     insIter(left, move(right));
 }
 
 //===========================================================================
 static void insVec(Node & left, Node && right) {
-    auto ri = right.values;
-    auto re = ri + right.numValues;
-    for (; ri != re; ++ri) 
-        impl(left)->insert(left, *ri);
+    insVec(left, right);
 }
 
 //===========================================================================
 static void insBitmap(Node & left, Node && right) {
-    auto li = (uint64_t *) left.values;
-    auto le = li + kDataSize / sizeof(*li);
-    auto ri = (uint64_t *) right.values;
-    left.numValues = 0;
-    for (; li != le; ++li, ++ri) {
-        if (*li |= *ri)
-            left.numValues += 1;
-    }
+    insBitmap(left, right);
 }
 
 //===========================================================================
@@ -834,13 +960,14 @@ static void insMeta(Node & left, Node && right) {
 
 //===========================================================================
 static void insert(Node & left, Node && right) {
+    using InsertFn = void(Node & left, Node && right);
     InsertFn * functs[][kNodeTypes] = {
         // empty   full     vector   bitmap       meta
-        { insSkip, insCopy, insCopy, insCopy,     insCopy     }, // empty
+        { insSkip, insMove, insMove, insMove,     insMove     }, // empty
         { insSkip, insSkip, insSkip, insSkip,     insSkip     }, // full
-        { insSkip, insCopy, insVec,  insCopyIter, insCopyIter }, // vector
-        { insSkip, insCopy, insIter, insBitmap,   insError    }, // bitmap
-        { insSkip, insCopy, insIter, insError,    insMeta     }, // meta
+        { insSkip, insMove, insVec,  insMoveIter, insMoveIter }, // vector
+        { insSkip, insMove, insIter, insBitmap,   insError    }, // bitmap
+        { insSkip, insMove, insIter, insError,    insMeta     }, // meta
     };
     functs[left.type][right.type](left, move(right));
 }
@@ -853,8 +980,6 @@ static void insert(Node & left, Node && right) {
 ***/
 
 static void erase(Node & left, const Node & right);
-
-using EraseFn = void(Node & left, const Node & right);
 
 //===========================================================================
 static void eraError(Node & left, const Node & right) {
@@ -951,6 +1076,7 @@ static void eraMeta(Node & left, const Node & right) {
 
 //===========================================================================
 static void erase(Node & left, const Node & right) {
+    using EraseFn = void(Node & left, const Node & right);
     EraseFn * functs[][kNodeTypes] = {
         // empty   full      vector     bitmap     meta
         { eraSkip, eraSkip,  eraSkip,   eraSkip,   eraSkip   }, // empty
@@ -970,8 +1096,6 @@ static void erase(Node & left, const Node & right) {
 ***/
 
 static void intersect(Node & left, Node && right);
-
-using IsectFn = void(Node & left, Node && right);
 
 //===========================================================================
 static void isecError(Node & left, Node && right) {
@@ -1056,6 +1180,7 @@ static void isecMeta(Node & left, Node && right) {
 
 //===========================================================================
 static void intersect(Node & left, Node && right) {
+    using IsectFn = void(Node & left, Node && right);
     IsectFn * functs[][kNodeTypes] = {
         // empty     full      vector     bitmap      meta
         { isecSkip,  isecSkip, isecEmpty, isecEmpty,  isecEmpty }, // empty
@@ -1101,6 +1226,11 @@ UnsignedSet::UnsignedSet(UnsignedSet && from) {
 }
 
 //===========================================================================
+UnsignedSet::UnsignedSet(const UnsignedSet & from) {
+    insert(from);
+}
+
+//===========================================================================
 UnsignedSet::~UnsignedSet() {
     clear();
 }
@@ -1109,6 +1239,13 @@ UnsignedSet::~UnsignedSet() {
 UnsignedSet & UnsignedSet::operator=(UnsignedSet && from) {
     clear();
     swap(from);
+    return *this;
+}
+
+//===========================================================================
+UnsignedSet & UnsignedSet::operator=(const UnsignedSet & from) {
+    clear();
+    insert(from);
     return *this;
 }
 
@@ -1166,6 +1303,11 @@ void UnsignedSet::insert(unsigned value) {
 //===========================================================================
 void UnsignedSet::insert(UnsignedSet && other) {
     ::insert(m_node, move(other.m_node));
+}
+
+//===========================================================================
+void UnsignedSet::insert(const UnsignedSet & other) {
+    ::insert(m_node, other.m_node);
 }
 
 //===========================================================================
