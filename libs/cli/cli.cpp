@@ -451,9 +451,9 @@ Cli & Cli::operator=(const Cli & from) {
 //===========================================================================
 Cli::Opt<bool> & Cli::confirmOpt(const string & prompt) {
     auto & ask = opt<bool>("y yes")
-                     .desc("Suppress prompting to allow execution.")
-                     .check([](auto &, auto & opt, auto &) { return *opt; })
-                     .prompt(prompt.empty() ? "Are you sure?" : prompt);
+        .desc("Suppress prompting to allow execution.")
+        .check([](auto &, auto & opt, auto &) { return *opt; })
+        .prompt(prompt.empty() ? "Are you sure?" : prompt);
     return ask;
 }
 
@@ -464,9 +464,9 @@ Cli::Opt<bool> & Cli::helpOpt() {
         return *cmd.helpOpt;
 
     auto & hlp = opt<bool>("help.")
-                     .desc("Show this message and exit.")
-                     .parse(helpAction)
-                     .group(kInternalOptionGroup);
+        .desc("Show this message and exit.")
+        .parse(helpAction)
+        .group(kInternalOptionGroup);
     if (!m_command.empty())
         hlp.show(false);
     cmd.helpOpt = &hlp;
