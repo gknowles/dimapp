@@ -40,10 +40,10 @@ public:
     );
 
 public:
-    // If created with no explicit notify the incoming data will be matched 
-    // against the registered listeners to find a factory and that factory will
-    // be used to create a notify. If the incoming data doesn't map to any
-    // known factory the socket is disconnected.
+    // If constructed without a notify the incoming data will be matched 
+    // against the registered listeners to find a factory and that factory 
+    // will be used to create a notify. If the incoming data doesn't map to 
+    // any known factory the socket is disconnected.
     IAppSocket() {}
     IAppSocket(std::unique_ptr<IAppSocketNotify> notify);
 

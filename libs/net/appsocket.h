@@ -129,7 +129,7 @@ void socketCloseWait(
 // IAppSocketNotify, that will be instantiated for incoming connections.
 //===========================================================================
 template <typename S> inline 
-std::enable_if_t<std::is_base_of_v<IAppSocketNotify, S>, void> socketListen(
+std::enable_if_t<std::is_base_of_v<IAppSocketNotify, S>> socketListen(
     const Endpoint & end,
     AppSocket::Family fam,
     bool console = false
@@ -140,7 +140,7 @@ std::enable_if_t<std::is_base_of_v<IAppSocketNotify, S>, void> socketListen(
 
 //===========================================================================
 template <typename S> inline 
-std::enable_if_t<std::is_base_of_v<IAppSocketNotify, S>, void> socketCloseWait(
+std::enable_if_t<std::is_base_of_v<IAppSocketNotify, S>> socketCloseWait(
     const Endpoint & end,
     AppSocket::Family fam
 ) {
@@ -166,7 +166,7 @@ void socketAddFilter(
 
 //===========================================================================
 template <typename S> inline 
-std::enable_if_t<std::is_base_of_v<IAppSocketNotify, S>, void> socketAddFilter(
+std::enable_if_t<std::is_base_of_v<IAppSocketNotify, S>> socketAddFilter(
     const Endpoint & end,
     AppSocket::Family fam
 ) {

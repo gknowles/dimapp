@@ -68,7 +68,7 @@ private:
 
     template <
         typename Char,
-        typename = std::enable_if<std::is_same<Char, char>::value>::type>
+        typename = std::enable_if_t<std::is_same_v<Char, char>>>
     void addRaw(Char const * const & text) {
         append(text);
     }

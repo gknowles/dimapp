@@ -78,7 +78,7 @@ void socketCloseWait(IFactory<ISocketNotify> * factory, const Endpoint & local);
 
 //===========================================================================
 template <typename S> inline 
-std::enable_if_t<std::is_base_of_v<ISocketNotify, S>, void> socketListen(
+std::enable_if_t<std::is_base_of_v<ISocketNotify, S>> socketListen(
     const Endpoint & local
 ) {
     auto factory = getFactory<ISocketNotify, S>();
@@ -87,7 +87,7 @@ std::enable_if_t<std::is_base_of_v<ISocketNotify, S>, void> socketListen(
 
 //===========================================================================
 template <typename S> inline 
-std::enable_if_t<std::is_base_of_v<ISocketNotify, S>, void> socketCloseWait(
+std::enable_if_t<std::is_base_of_v<ISocketNotify, S>> socketCloseWait(
     const Endpoint & local
 ) {
     auto factory = getFactory<ISocketNotify, S>();
