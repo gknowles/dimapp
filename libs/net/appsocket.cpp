@@ -88,7 +88,7 @@ private:
 ***/
 
 static shared_mutex s_listenMut;
-static MatchKey s_matchers[AppSocket::kNumFamilies];
+static vector<MatchKey> s_matchers;
 static vector<EndpointInfo> s_endpoints;
 
 static mutex s_unmatchedMut;
@@ -290,7 +290,7 @@ static bool findFactory(
     }
 
     bool known = true;
-    for (int i = 0; i < AppSocket::kNumFamilies; ++i) {
+    for (int i = 0; i < s_matchers.size(); ++i) {
         auto fam = (AppSocket::Family) i;
         if (auto matcher = s_matchers[fam].notify) {
             auto match = matcher->OnMatch(fam, data);
@@ -587,6 +587,8 @@ void Dim::socketAddFamily(
     IAppSocketMatchNotify * notify
 ) {
     unique_lock<shared_mutex> lk{s_listenMut};
+    if (fam >= s_matchers.size())
+        s_matchers.resize(fam + 1);
     s_matchers[fam].notify = notify;
 }
 
