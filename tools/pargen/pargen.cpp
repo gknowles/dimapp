@@ -16,7 +16,7 @@ namespace fs = std::experimental::filesystem;
 *
 ***/
 
-const string kVersion = "0.1.0";
+const string kVersion = "1.0.0";
 
 namespace {
 
