@@ -149,6 +149,8 @@
 # libs/xml/xml.h
 # libs/xml/xmlbaseparse.cpp
 # libs/xml/xmlbaseparse.h
+# libs/xml/xmlbaseparsebase.h
+# libs/xml/xmlbaseparseevent.h
 # libs/xml/xstreamparser.cpp
 # tests/charbuf/charbuftest.cpp
 # tests/charbuf/pch.cpp

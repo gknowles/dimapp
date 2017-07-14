@@ -18,3 +18,4 @@
 // External library internal headers
 // Internal headers
 #include "xml/xmlbaseparse.h"
+#include "xml/xmlbaseparseevent.h"
