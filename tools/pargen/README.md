@@ -25,10 +25,11 @@ included.
 |------|---------|-------------|
 | %root | - | Name of the top level rule that matches the input to be parsed |
 | %api.prefix | - | Used in default definitions of other options |
-| %api.file.h | lowercase(%api.prefix) + "parse.h" | Header file to generate |
-| %api.file.cpp | lowercase(%api.prefix) + "parse.cpp" | C++ file to generate |
+| %api.parser.file.h | lowercase(%api.prefix) + "parse.h" | Header file to generate |
+| %api.parser.file.cpp | lowercase(%api.prefix) + "parse.cpp" | C++ file to generate |
 | %api.parser.className | %api.prefix + "Parser" | Name to give parser class |
-| %api.notify.className | "I" + %api.prefix + "ParserNotify" | Name to give notify class |
+| %api.base.file.h | lowercase(%api.prefix) + "parsebase.h" | Header defining base class |
+| %api.base.className | "I" + %api.prefix + "ParserNotify" | Name to give base class |
 | %api.namespace | "" (global) | Namespace to contain parser classes |
 
 All values must be defined either directly or indirectly via their defaults.

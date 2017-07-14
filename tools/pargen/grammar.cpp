@@ -277,11 +277,12 @@ bool processOptions(Grammar & rules) {
         return false;
     }
     ensureOption(rules, kOptionApiParserClass, prefix + "Parser");
-    ensureOption(rules, kOptionApiNotifyClass, "I" + prefix + "ParserNotify");
+    ensureOption(rules, kOptionApiBaseClass, prefix + "ParserBase");
     auto & f = use_facet<ctype<char>>(locale());
     f.tolower(prefix.data(), prefix.data() + prefix.size());
-    ensureOption(rules, kOptionApiHeaderFile, prefix + "parse.h");
-    ensureOption(rules, kOptionApiCppFile, prefix + "parse.cpp");
+    ensureOption(rules, kOptionApiParserHeader, prefix + "parse.h");
+    ensureOption(rules, kOptionApiParserCpp, prefix + "parse.cpp");
+    ensureOption(rules, kOptionApiBaseHeader, prefix + "parsebase.h");
     return true;
 }
 

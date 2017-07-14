@@ -277,8 +277,8 @@ https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
     if (root->size())
         rules.setOption(kOptionRoot, *root);
 
-    ofstream oh(rules.optionString(kOptionApiHeaderFile));
-    ofstream ocpp(rules.optionString(kOptionApiCppFile));
+    ofstream oh(rules.optionString(kOptionApiParserHeader));
+    ofstream ocpp(rules.optionString(kOptionApiParserCpp));
     writeParser(oh, ocpp, rules, s_cmdopts);
     oh.close();
     ocpp.close();
