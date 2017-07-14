@@ -30,5 +30,5 @@
 // Platform headers
 // Library internal headers
 // Internal headers
-#include "abnfparse.h"
 #include "intern.h"
+#include "abnfparseimpl.h"

@@ -58,6 +58,22 @@ static TaskQueueHandle s_logQ;
 ***/
 
 //===========================================================================
+static bool parseAbnf(
+    Grammar & rules, 
+    const string & src, 
+    bool minRules
+) {
+    AbnfParser parser(rules, minRules);
+    const char * ptr = src.c_str();
+    if (!parser.parse(ptr)) {
+        rules.errpos(parser.errpos());
+        return false;
+    }
+    normalize(rules);
+    return true;
+}
+
+//===========================================================================
 static void getCoreRules(Grammar & rules) {
     const char * coreRules = R"(
 ALPHA   =  %x5A ; Z

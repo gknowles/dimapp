@@ -2,6 +2,7 @@
 // Distributed under the Boost Software License, Version 1.0.
 //
 // intern.h - pargen
+#pragma once
 
 
 /****************************************************************************
@@ -268,7 +269,6 @@ void writeParser(
     const RunOptions & opts
 );
 
-bool parseAbnf(Grammar & rules, const std::string & src, bool minRules);
 void writeRule(
     std::ostream & os,
     const Element & rule,

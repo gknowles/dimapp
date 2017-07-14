@@ -150,7 +150,7 @@
 # libs/xml/xmlbaseparse.cpp
 # libs/xml/xmlbaseparse.h
 # libs/xml/xmlbaseparsebase.h
-# libs/xml/xmlbaseparseevent.h
+# libs/xml/xmlbaseparseimpl.h
 # libs/xml/xstreamparser.cpp
 # tests/charbuf/charbuftest.cpp
 # tests/charbuf/pch.cpp
@@ -189,11 +189,12 @@
 # tools/pargen/abnf.abnf
 # tools/pargen/abnfparse.cpp
 # tools/pargen/abnfparse.h
+# tools/pargen/abnfparsebase.h
+# tools/pargen/abnfparseimpl.h
 # tools/pargen/gen.cpp
 # tools/pargen/grammar.cpp
 # tools/pargen/intern.h
 # tools/pargen/pargen.cpp
-# tools/pargen/parse.cpp
 # tools/pargen/pch.cpp
 # tools/pargen/pch.h
 # tools/pargen/tests.abnf

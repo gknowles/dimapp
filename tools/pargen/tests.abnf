@@ -2,8 +2,8 @@
 ;
 %root = t2
 %api.prefix = Test
-%api.file.h = test-out.h            ; defaults to <%api.prefix>parse.h
-%api.file.cpp = test-out.cpp        ; defaults to <%api.prefix>parse.cpp
+%api.parser.file.h = test-out.h         ; defaults to <%api.prefix>parse.h
+%api.parser.file.cpp = test-out.cpp     ; defaults to <%api.prefix>parse.cpp
 
 t1 = t1-param *(RWS t1-param)
 t1-param = RWS { Start, End }
