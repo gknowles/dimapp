@@ -10,8 +10,39 @@ namespace fs = std::experimental::filesystem;
 using namespace Dim;
 
 
+/****************************************************************************
+*
+*   Declarations
+*
+***/
+
+#define EXPECT(...) \
+    if (!bool(__VA_ARGS__)) { \
+        cerr << "Line " << (line ? line : __LINE__) << ": EXPECT(" \
+            << #__VA_ARGS__ << ") failed"; \
+        s_errors += 1; \
+    }
+
+
+/****************************************************************************
+*
+*   Variables
+*
+***/
+
+static int s_errors;
+
+
+/****************************************************************************
+*
+*   Helpers
+*
+***/
+
 //===========================================================================
 int internalTest() {
+    int line = 0;
+
     CharBuf out;
     XBuilder bld(out);
     bld.start("root");
@@ -41,7 +72,16 @@ int internalTest() {
 
     string str = toString(out);
     char * data = str.data();
-    cout << data;
+    EXPECT(str == 1 + R"(
+<root>  ROOT  <cdata> x <![CDATA[text]]> y </cdata>
+<value attr="attr text
+with '&amp;'">text content</value>
+<value a="atext" b="btext"/>
+<non-cdata>text: > ]]&gt;]]&gt;]]&gt;]>></non-cdata>
+<value a=" leading and trailing spaces "/>
+</root>
+)");
+
     XDocument doc;
     auto root = doc.parse(data);
     assert(root);
@@ -50,9 +90,21 @@ int internalTest() {
     bld << *root;
     out.pushBack(0);
     char * data2 = out.data();
-    cout << data2;
+    str = string(data2);
+    EXPECT(str == 1 + R"(
+<root>ROOT<cdata>x text y</cdata>
+<value attr="attr text with '&amp;'">text content</value>
+<value a="atext" b="btext"/>
+<non-cdata>text: > ]]&gt;]]&gt;]]&gt;]>></non-cdata>
+<value a=" leading and trailing spaces "/>
+</root>
+)");
 
-    cout << "All tests passed? You decide!" << endl;
+    if (s_errors) {
+        cerr << "*** TEST FAILURES: " << s_errors << endl;
+        return EX_SOFTWARE;
+    }
+    cout << "All tests passed" << endl;
     return EX_OK;
 }
 
