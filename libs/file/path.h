@@ -46,6 +46,9 @@ public:
     }
     Path & operator=(const Path & from) { return assign(from); }
     Path & operator=(std::string_view from) { return assign(from); }
+    Path & operator=(const std::string & from) { 
+        return assign(std::string_view(from)); 
+    }
     Path & operator=(const std::experimental::filesystem::path & from) { 
         return assign(from); 
     }
