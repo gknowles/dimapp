@@ -141,6 +141,7 @@ void ConsoleReader::onFileEnd(int64_t offset, FileHandle f) {
     if (m_device) {
         if (m_isFile) {
             if (!m_bytesRead || (size_t) offset == fileSize(f)) {
+                fileClose(m_device);
                 m_isFile = false;
                 m_device = fileOpen("conin$", File::fReadOnly);
             }
