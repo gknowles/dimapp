@@ -222,6 +222,17 @@ void Path::swap(Path & from) {
 }
 
 //===========================================================================
+Path & Path::assign(const Path & path) {
+    m_data = path.m_data;
+    return *this;
+}
+
+//===========================================================================
+Path & Path::assign(const Path & path, string_view defExt) {
+    return assign(path).defaultExt(defExt);
+}
+
+//===========================================================================
 Path & Path::assign(string_view path) {
     m_data = path;
     normalize(m_data);

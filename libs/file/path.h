@@ -32,6 +32,8 @@ public:
     Path & clear();
     void swap(Path & from);
 
+    Path & assign(const Path & path);
+    Path & assign(const Path & path, std::string_view defExt);
     Path & assign(std::string_view path);
     Path & assign(std::string_view path, std::string_view defExt);
     Path & assign(const std::experimental::filesystem::path & path);
@@ -42,7 +44,7 @@ public:
     Path & operator=(const char from[]) { 
         return assign(std::string_view(from)); 
     }
-    Path & operator=(const Path & from) { return assign(from.view()); }
+    Path & operator=(const Path & from) { return assign(from); }
     Path & operator=(std::string_view from) { return assign(from); }
     Path & operator=(const std::experimental::filesystem::path & from) { 
         return assign(from); 
