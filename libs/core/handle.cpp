@@ -31,7 +31,7 @@ bool HandleMapBase::empty() const {
 }
 
 //===========================================================================
-void * HandleMapBase::find(HandleBase handle) {
+HandleContent * HandleMapBase::find(HandleBase handle) {
     assert(handle.pos >= 0);
     return handle.pos <= 0 || handle.pos >= (int)m_values.size() 
         ? nullptr
@@ -39,7 +39,7 @@ void * HandleMapBase::find(HandleBase handle) {
 }
 
 //===========================================================================
-HandleBase HandleMapBase::insert(void * value) {
+HandleBase HandleMapBase::insert(HandleContent * value) {
     int pos;
     if (!m_firstFree) {
         m_values.push_back({value, 0});
@@ -56,7 +56,7 @@ HandleBase HandleMapBase::insert(void * value) {
 }
 
 //===========================================================================
-void * HandleMapBase::release(HandleBase handle) {
+HandleContent * HandleMapBase::release(HandleBase handle) {
     if (handle.pos < 0 || handle.pos >= (int)m_values.size()) {
         logMsgCrash() << "release out of range handle, {" << handle.pos << "}";
         return nullptr;
@@ -66,7 +66,7 @@ void * HandleMapBase::release(HandleBase handle) {
         return nullptr;
 
     m_numUsed -= 1;
-    void * value = node.value;
+    auto value = node.value;
     node = {nullptr, m_firstFree};
     m_firstFree = handle.pos;
     return value;

@@ -24,7 +24,7 @@ namespace fs = std::experimental::filesystem;
 ***/
 
 namespace {
-struct WinFileInfo {
+struct WinFileInfo : public HandleContent {
     FileHandle m_f;
     string m_path;
     HANDLE m_handle{INVALID_HANDLE_VALUE};

@@ -82,14 +82,21 @@ bool tlsParse(TlsServerHelloMsg * msg, TlsRecordReader & in);
 *
 ***/
 
-class TlsConnBase : public ITlsRecordDecryptNotify {
+class TlsConnBase 
+    : public ITlsRecordDecryptNotify
+    , public HandleContent
+{
 public:
     TlsConnBase();
     void setSuites(const TlsCipherSuite suites[], size_t count);
     const std::vector<TlsCipherSuite> & suites() const;
 
-    bool
-    recv(CharBuf * reply, CharBuf * data, const void * src, size_t srcLen);
+    bool recv(
+        CharBuf * reply, 
+        CharBuf * data, 
+        const void * src, 
+        size_t srcLen
+    );
 
     // ITlsRecordDecryptNotify
     virtual void onTlsAlert(TlsAlertDesc desc, TlsAlertLevel level) override;

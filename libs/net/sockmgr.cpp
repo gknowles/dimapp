@@ -67,6 +67,7 @@ private:
 class SocketManager 
     : public IFactory<IAppSocketNotify> 
     , public IConfigNotify
+    , public HandleContent
 {
 public:
     SocketManager(

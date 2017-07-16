@@ -34,6 +34,10 @@ struct HandleBase {
     }
 };
 
+struct HandleContent {
+    virtual ~HandleContent() {}
+};
+
 
 /****************************************************************************
 *
@@ -45,7 +49,7 @@ class HandleMapBase {
 public:
     template <typename H, typename T> class Iterator;
     struct Node {
-        void * value;
+        HandleContent * value;
         int next;
     };
 
@@ -53,12 +57,12 @@ public:
     HandleMapBase();
     ~HandleMapBase();
     bool empty() const;
-    void * find(HandleBase handle);
+    HandleContent * find(HandleBase handle);
 
-    HandleBase insert(void * value);
+    HandleBase insert(HandleContent * value);
 
     // Releasing an empty handle is ignored and returns nullptr
-    void * release(HandleBase handle);
+    HandleContent * release(HandleBase handle);
 
     template <typename H, typename T> Iterator<H, T> begin();
     template <typename H, typename T> Iterator<H, T> end();
@@ -146,7 +150,8 @@ auto HandleMapBase::Iterator<H, T>::operator++() -> Iterator<H, T>& {
 *   Container of handles
 *
 *   Expected usage:
-*   DimHandleMap<HWidget, WidgetClass> widgets;
+*   class WidgetClass : public HandleContent { ... }
+*   HandleMap<HWidget, WidgetClass> widgets;
 *
 ***/
 

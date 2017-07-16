@@ -20,7 +20,7 @@ using SecStatus = WinError::SecurityStatus;
 
 namespace {
 
-class ServerConn {
+class ServerConn : public HandleContent {
 public:
     ServerConn();
     ~ServerConn();

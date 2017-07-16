@@ -39,7 +39,7 @@ struct HttpStream {
     int m_flowWindow{kDefaultWindowSize};
 };
 
-class HttpConn {
+class HttpConn : public HandleContent {
 public:
     enum FrameFlags : uint8_t;
     enum class FrameError : int;

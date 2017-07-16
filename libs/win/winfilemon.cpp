@@ -23,7 +23,11 @@ struct FileInfo {
     list<IFileChangeNotify *> notifiers;
 };
 
-class DirInfo : public ITaskNotify, public ITimerNotify {
+class DirInfo 
+    : public ITaskNotify
+    , public ITimerNotify
+    , public HandleContent
+{
 public:
     DirInfo(IFileChangeNotify * notify);
     ~DirInfo();

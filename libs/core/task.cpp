@@ -16,7 +16,7 @@ using namespace Dim;
 *
 ***/
 
-class Dim::TaskQueue {
+class Dim::TaskQueue : public HandleContent {
 public:
     TaskQueueHandle hq;
     string name;
