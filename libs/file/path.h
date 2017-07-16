@@ -9,6 +9,9 @@
 #include <cassert>
 #include <cstdint>
 #include <experimental/filesystem>
+#include <ostream>
+#include <string>
+#include <string_view>
 
 namespace Dim {
 
@@ -91,6 +94,15 @@ public:
 private:
     std::string m_data;
 };
+
+
+/****************************************************************************
+*
+*   Free functions
+*
+***/
+
+std::ostream & operator<<(std::ostream & os, const Path & val);
 
 } // namespace
 

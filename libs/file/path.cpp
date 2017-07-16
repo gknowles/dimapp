@@ -443,3 +443,16 @@ bool Path::hasExt() const {
     Count cnt(m_data);
     return cnt.m_extLen;
 }
+
+
+/****************************************************************************
+*
+*   Free functions
+*
+***/
+
+//===========================================================================
+ostream & Dim::operator<<(ostream & os, const Path & val) {
+    os << val.view();
+    return os;
+}
