@@ -264,9 +264,10 @@ static bool findFactory(
         kExact,     // both addr and port explicitly match
     };
     struct EndpointKey {
-        IFactory<IAppSocketNotify> * fact{nullptr};
-        int level{kUnknown};
-    } keys[AppSocket::kNumFamilies];
+        IFactory<IAppSocketNotify> * fact;
+        int level;
+    };
+    vector<EndpointKey> keys(s_matchers.size(), {nullptr, kUnknown});
     for (auto && info : s_endpoints) {
         int level{kUnknown};
         if (info.endpoint == localEnd) {
