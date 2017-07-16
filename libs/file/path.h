@@ -70,6 +70,7 @@ public:
     Path & operator/=(std::string_view path) { return resolve(path); }
 
     explicit operator bool() const { return !empty(); }
+    operator const std::string() const { return m_data; }
 
     std::experimental::filesystem::path fsPath() const;
     std::string_view view() const;
@@ -101,6 +102,10 @@ private:
 *   Free functions
 *
 ***/
+
+bool operator==(const Path & left, std::string_view right);
+bool operator==(std::string_view left, const Path & right);
+bool operator==(const Path & left, const Path & right);
 
 std::ostream & operator<<(std::ostream & os, const Path & val);
 
