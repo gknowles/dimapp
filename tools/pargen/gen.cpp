@@ -417,7 +417,8 @@ static void addNextPositions(
         // bubble up OnChar events bottom to top
         for (auto it2 = it; it2 != eit; ++it2) {
             if (it2->elem->type == Element::kRule
-                && (it2->elem->rule->flags & Element::fOnChar)) {
+                && (it2->elem->rule->flags & Element::fOnChar)
+            ) {
                 addEvent(events, *it2, Element::fOnChar);
             }
         }
@@ -506,13 +507,14 @@ static void addNextPositions(
     // no more states
 
     StatePosition nsp;
-    nsp.events = events;
+    nsp.events = move(events);
     StateElement nse;
     nse.elem = &ElementDone::s_elem;
     nse.rep = 0;
     nsp.elems.push_back(nse);
     if (done) {
         // add entry for completed done
+        nsp.events = sp.delayedEvents;
         st->positions[nsp];
         return;
     }
@@ -530,20 +532,6 @@ static void addNextPositions(
             nsp.elems.push_back(*it);
         }
     }
-
-    // remove end events generated when unwinding past all terminals, they'll
-    // be executed by the completed done
-    auto sv_end = nsp.events.end();
-    auto it2 = remove_if(nsp.events.begin(), sv_end, [&](const auto & a) {
-        if (a.flags & Element::fOnEnd) {
-            for (auto it = elemBase; it != terminalStarted; ++it) {
-                if (it->elem == a.elem)
-                    return true;
-            }
-        }
-        return false;
-    });
-    nsp.events.erase(it2, sv_end);
 
     bool weak;
     addPositions(&weak, st, &nsp, false, ElementNull::s_elem, 0);
@@ -738,12 +726,13 @@ static unsigned addState(
     bool errors = !resolveEventConflicts(*st, sti);
     removePositionsWithMoreEvents(*st);
 
-    // add state and, if it's new, all of its child states
+    // add state and, if it's new, its child states
     auto ib = states.insert(move(*st));
     State * st2 = const_cast<State *>(&*ib.first);
 
     ++sti.m_transitions;
     if (ib.second) {
+        // it's a new state
         st2->id = ++sti.m_nextStateId;
         st2->name = sti.m_path;
         const char * show = sti.m_path.data();
