@@ -642,11 +642,6 @@ private:
     }
     if (hasFunctionRules)
         os << '\n';
-    os << 1 + R"(
-    // Events
-    bool onStart ();
-    bool onEnd ();
-)";
 
     map<string, unsigned> events;
     ostringstream ostr;
@@ -665,7 +660,7 @@ private:
         }
     }
     if (!events.empty()) {
-        os << '\n';
+        os << "    // Events\n";
         const struct {
             Element::Flags flag;
             const char * text;
