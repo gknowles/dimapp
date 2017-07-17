@@ -19,16 +19,6 @@ namespace Dim::Detail {
 ***/
 
 //===========================================================================
-inline bool XmlBaseParser::onStart() { 
-    return true; 
-}
-
-//===========================================================================
-inline bool XmlBaseParser::onEnd() { 
-    return true; 
-}
-
-//===========================================================================
 inline bool XmlBaseParser::onAttrCopyChar(char ch) {
     *m_cur++ = ch;
     return true;
