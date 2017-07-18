@@ -241,8 +241,18 @@ void SocketBase::hardClose_LK() {
 //===========================================================================
 bool SocketBase::createQueue() {
     m_read.m_buffer = socketGetBuffer();
+
+    // Leave room for extra trailing null. Although not reported in the count
+    // a trailing null is added to the end of the buffer after every read. 
+    // It doesn't cost much and makes parsing easier for some text protocol 
+    // streams.
+    int bytes = m_read.m_buffer->len - 1; 
+
     iSocketGetRioBuffer(
-        &m_read.m_rbuf, m_read.m_buffer.get(), m_read.m_buffer->len);
+        &m_read.m_rbuf, 
+        m_read.m_buffer.get(), 
+        bytes
+    );
 
     {
         unique_lock<mutex> lk{s_mut};
@@ -279,10 +289,14 @@ bool SocketBase::createQueue() {
 
 //===========================================================================
 void SocketBase::onRead() {
-    if (m_read.m_xferBytes) {
+    if (int bytes = m_read.m_xferBytes) {
         SocketData data;
         data.data = (char *)m_read.m_buffer->data;
-        data.bytes = m_read.m_xferBytes;
+        data.bytes = bytes;
+
+        // included uncounted trailing null
+        data.data[bytes] = 0;
+        
         m_notify->onSocketRead(data);
 
         lock_guard<mutex> lk{s_mut};
