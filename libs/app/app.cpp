@@ -312,7 +312,7 @@ void Dim::appSignalUsageError(int code, string_view err, string_view detail) {
         if (!dm.empty())
             logMsgInfo() << dm;
         auto os = logMsgInfo();
-        cli.printUsageEx(os);
+        cli.printUsageEx(os, {}, cli.runCommand());
     }
     appSignalShutdown(code);
 }
