@@ -8,7 +8,8 @@ to an extreme.
 For an example of what this looks like, see the abnfparse.cpp & .h files in 
 this project, which were created from abnf.abnf.
 
-The input format follows RFC 5234 (including the RFC 7405 update), with 
+The input format follows [RFC 5234](https://tools.ietf.org/html/rfc5234) 
+(including the [RFC 7405](https://tools.ietf.org/html/rfc7405) update), with 
 the some modifications. 
 - Special "rules" starting with a percent "%" are options for the generator.
 - Rules can be followed by brace "{}" enclosed tags. Tags are used to tell 
@@ -16,8 +17,8 @@ the some modifications.
 - Prose values containing the rule as a text description such as "\<all nouns>"
   are not allowed.
 
-The "Core Rules" defined in RFC 5234 ("ALPHA", "BIT", etc) are always 
-included.
+The "Core Rules" defined in [RFC 5234](https://tools.ietf.org/html/rfc5234) 
+("ALPHA", "BIT", etc) are always included.
 
 ## Options
 
