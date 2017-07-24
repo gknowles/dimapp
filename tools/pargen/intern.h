@@ -206,8 +206,10 @@ struct StatePosition {
     std::vector<StateElement> elems;
     std::vector<StateEvent> events;
     std::vector<StateEvent> delayedEvents;
-    bool recurse{false};
+    int recurseSe{0}; // state element of recursion entry point (0 for none)
+    int recursePos{-1}; // position in kSequence of recursion entry point
 
+    int compare(const StatePosition & right) const;
     bool operator<(const StatePosition & right) const;
     bool operator==(const StatePosition & right) const;
 };

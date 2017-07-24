@@ -65,20 +65,22 @@ bool StateElement::operator==(const StateElement & right) const {
 }
 
 //===========================================================================
-bool operator<(
-    const vector<StateElement> & a,
-    const vector<StateElement> & b) {
+template<typename T>
+int compare(
+    const vector<T> & a,
+    const vector<T> & b
+) {
     auto a1 = a.data();
     auto a2 = a1 + a.size();
     auto b1 = b.data();
     auto b2 = b1 + b.size();
     for (;; ++a1, ++b1) {
         if (a1 == a2)
-            return b1 != b2;
+            return b1 != b2 ? -1 : 0;
         if (b1 == b2)
-            return false;
+            return 1;
         if (int rc = a1->compare(*b1))
-            return rc < 0;
+            return rc;
     }
 }
 
@@ -105,15 +107,28 @@ size_t std::hash<StatePosition>::operator()(const StatePosition & val) const {
 }
 
 //===========================================================================
+int StatePosition::compare(const StatePosition & right) const {
+    if (int rc = recurseSe - right.recurseSe)
+        return rc;
+    if (int rc = recursePos - right.recursePos)
+        return rc;
+    if (int rc = ::compare(elems, right.elems))
+        return rc;
+    if (int rc = ::compare(events, right.events))
+        return rc;
+    if (int rc = ::compare(delayedEvents, right.delayedEvents))
+        return rc;
+    return 0;
+}
+
+//===========================================================================
 bool StatePosition::operator<(const StatePosition & right) const {
-    return tie(recurse, elems, events, delayedEvents)
-        < tie(right.recurse, right.elems, right.events, right.delayedEvents);
+    return compare(right) < 0;
 }
 
 //===========================================================================
 bool StatePosition::operator==(const StatePosition & right) const {
-    return recurse == right.recurse && elems == right.elems
-        && events == right.events && delayedEvents == right.delayedEvents;
+    return compare(right) == 0;
 }
 
 
@@ -364,12 +379,16 @@ static void setPositionPrefix(
     StatePosition * sp,
     vector<StateElement>::const_iterator begin,
     vector<StateElement>::const_iterator end,
-    bool recurse,
+    int recursePos,
     const vector<StateEvent> & events,
     bool started
 ) {
-    sp->recurse = recurse;
     sp->elems.assign(begin, end);
+    if (recursePos != -1) {
+        sp->recurseSe = (int) sp->elems.size() - 1;
+        sp->recursePos = recursePos;
+        assert(sp->recurseSe);
+    }
     sp->events = events;
     if (started) {
         for (auto && se : sp->elems) {
@@ -387,7 +406,7 @@ static void addNextPositions(
 ) {
     bool terminal = chars.any();
 
-    if (sp.recurse) {
+    if (sp.recurseSe) {
         auto & terms = st->positions[sp];
         if (terminal) {
             assert(terms.none());
@@ -426,7 +445,7 @@ static void addNextPositions(
 
     for (; it != eit; ++it) {
         const StateElement & se = *it;
-        bool fromRecurse = false;
+        int recursePos{-1};
 
         // advance to next in sequence
         if (se.elem->type == Element::kSequence) {
@@ -435,7 +454,7 @@ static void addNextPositions(
             const Element * last = &se.elem->elements.back();
 
             if (cur->type == Element::kRule && sePrev.recurse)
-                fromRecurse = true;
+                recursePos = int(cur - se.elem->elements.data());
 
             if (cur != last) {
                 StatePosition nsp;
@@ -443,7 +462,7 @@ static void addNextPositions(
                     &nsp,
                     sp.elems.begin(),
                     it.base(),
-                    fromRecurse,
+                    recursePos,
                     events,
                     terminal
                 );
@@ -489,7 +508,7 @@ static void addNextPositions(
                 &nsp, 
                 sp.elems.begin(), 
                 se_end, 
-                fromRecurse, 
+                recursePos, 
                 events, 
                 terminal
             );
@@ -548,9 +567,11 @@ static void removePositionsWithMoreEvents(State & st) {
     auto last = st.positions.end();
     while (y != last) {
         auto n = next(y);
-        if (x->first.recurse == y->first.recurse
+        if (x->first.recurseSe == y->first.recurseSe
+            && x->first.recursePos == y->first.recursePos
             && x->first.elems == y->first.elems
-            && x->second == y->second) {
+            && x->second == y->second
+        ) {
             st.positions.erase(y);
         } else {
             x = y;
@@ -605,6 +626,7 @@ static void removeConflicts(
             }
         }
         assert(mi->flags & Element::fOnEnd);
+        // [[fallthrough]];
 
     unmatched:
         mi = matched.erase(mi);

@@ -58,25 +58,27 @@ ostream & operator<<(ostream & os, const StateEvent & sv) {
 }
 
 //===========================================================================
-ostream & operator<<(ostream & os, const StatePosition & sp) {
-    os << "    // sp";
-    if (sp.recurse)
-        os << " (RECURSE)";
-    os << ':';
+static void writeSp(ostream & os, const StatePosition & sp, int pos) {
+    os << "    // ===== #" << pos;
+    if (sp.recurseSe) {
+        os << " (RECURSE " 
+            << sp.recurseSe + 1 << ". "
+            << "#" << sp.recursePos + 1 << ")";
+    }
     for (auto && sv : sp.events)
-        os << "\n    //  " << sv;
+        os << "\n    // " << sv;
     if (!sp.delayedEvents.empty()) {
-        os << "\n    //  --- delayed";
+        os << "\n    // --- delayed";
         for (auto && sv : sp.delayedEvents)
-            os << "\n    //  " << sv;
+            os << "\n    // " << sv;
     }
     if (!sp.events.empty() || !sp.delayedEvents.empty())
-        os << "\n    //  ---";
+        os << "\n    // ---";
+    int sepos = 0;
     for (auto && se : sp.elems) {
-        os << "\n    //  " << se;
+        os << "\n    // " << ++sepos << ". " << se;
     }
     os << "\n";
-    return os;
 }
 
 //===========================================================================
@@ -412,8 +414,10 @@ static void writeParserState(
         writeStateName(os, name, 79, "    // ");
     if (inclStatePositions) {
         os << "    // positions: " << st.positions.size() << "\n\n";
+        int pos = 0;
         for (auto && spt : st.positions) {
-            os << spt.first << "    //  ";
+            writeSp(os, spt.first, ++pos);
+            os << "    // ";
             writeTerminals(os, spt.second);
             os << '\n';
         }
@@ -470,9 +474,8 @@ static void writeParserState(
         if (hasSwitch)
             os << "--";
         unsigned id = st.next.empty() ? 0 : st.next[256];
-        os << "ptr)) {\n"
-           << "        goto state" << id << ";\n"
-           << "    }\n";
+        os << "ptr))\n"
+           << "        goto state" << id << ";\n";
     }
 
     os << "    goto state0;\n";
@@ -676,9 +679,10 @@ private:
                 }
             }
         }
+        os << '\n';
     }
 
-    os << R"(
+    os << 1 + R"(
     // Data members
     size_t m_errpos{0};
 };
