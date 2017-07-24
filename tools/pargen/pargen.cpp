@@ -76,19 +76,15 @@ static bool parseAbnf(
 //===========================================================================
 static void getCoreRules(Grammar & rules) {
     const char * coreRules = R"(
-ALPHA   =  %x5A ; Z
-ALPHA   =/ %x41-59 / %x61-7A { NoMinRules } ; A-Y / a-z
+ALPHA   =  %x41-5A / %x61-7A ; A-Z / a-z
 BIT     =  "0" / "1"
 CHAR    =  %x01-7F
 CR      =  %x0D
-CRLF    =  CR LF { NoMinRules }
-CRLF    =  CR { MinRules }
+CRLF    =  CR LF
 CTL     =  %x00-1F / %x7F
-DIGIT   =  "9"
-DIGIT   =/ %x30-38 { NoMinRules }   ; 0-8
+DIGIT   =  %x30-39 ; 0-9
 DQUOTE  =  %x22
-HEXDIG  =  "C"
-HEXDIG  =/ DIGIT / "A" / "B" / "D" / "E" / "F" { NoMinRules }
+HEXDIG  =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
 HTAB    =  %x09
 LF      =  %x0A
 LWSP    =  *(WSP / NEWLINE WSP)
@@ -96,8 +92,7 @@ NEWLINE =  LF
 NEWLINE =/ CRLF { NoMinRules }
 OCTET   =  %x00-FF
 SP      =  %x20
-VCHAR   =  %x56 ; V
-VCHAR   =/ %x21-55 / %x57-7E { NoMinRules }
+VCHAR   =  %x21-7E
 WSP     =  SP
 WSP     =/ HTAB { NoMinRules }
 )";
