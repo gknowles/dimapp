@@ -352,13 +352,16 @@ inline bool AbnfParser::onRuleEnd(const char * eptr) {
     using namespace Dim;
     if (m_elems.size() == 1) {
         if (!m_mustMatch || m_minRules == m_minRulesEnabled) {
-            Element * elem{nullptr};
-            if (m_incremental) {
-                elem = m_rules.element(m_elem.name);
-                m_incremental = false;
-            }
-            if (!elem)
+            Element * elem = m_rules.element(m_elem.name);
+            if (!elem) {
                 elem = m_rules.addChoiceRule(m_elem.name, 1, 1);
+            } else {
+                if (m_incremental) {
+                    m_incremental = false;
+                } else {
+                    return false;
+                }
+            }
             elem->flags |= m_elem.flags;
             if (m_elem.eventName.size())
                 elem->eventName = m_elem.eventName;
