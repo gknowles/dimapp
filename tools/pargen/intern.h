@@ -31,7 +31,13 @@ struct Element {
         fOnEnd = 4,
         fFunction = 8,
 
+        // If complexity has been tested one of these will be set:
+        fSimple = 16,   // is single terminal or choice of terminals and 
+                        //   no other flags
+        fComplex = 32,  // is not fSimple
+
         fCallbackFlags = fOnStart | fOnChar | fOnEnd,
+        fComplexityFlags = fSimple | fComplex,
     };
 
     enum Type : int8_t {
@@ -39,7 +45,9 @@ struct Element {
         kSequence,
         kChoice,
         kTerminal,
-    } type{kRule};
+    };
+    
+    Type type{kRule};
     std::string name;
     std::string value;
     unsigned m{1};
@@ -74,8 +82,10 @@ public:
 
     void addOption(std::string_view name, std::string_view value);
     void setOption(std::string_view name, std::string_view value);
-    const char *
-    optionString(std::string_view name, const char * def = "") const;
+    const char * optionString(
+        std::string_view name, 
+        const char * def = ""
+    ) const;
     unsigned optionUnsigned(std::string_view name, unsigned def = 0) const;
     const char * operator[](std::string_view name) const;
 

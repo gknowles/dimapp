@@ -345,6 +345,89 @@ bool copyRules(
 
 /****************************************************************************
 *
+*   merge
+*
+***/
+
+static void merge(Element & rule, Grammar & rules);
+static void normalizeChoice(Element & rule);
+
+//===========================================================================
+static void mergeChoice(Element & rule) {
+    normalizeChoice(rule);
+    if (rule.flags || rule.m != 1 || rule.n != 1) {
+        rule.flags |= Element::fComplex;
+        return;
+    }
+    for (auto && e : rule.elements) {
+        if (e.flags & Element::fComplex) {
+            rule.flags |= Element::fComplex;
+            return;
+        }
+    }
+    rule.flags |= Element::fSimple;
+}
+
+//===========================================================================
+static void mergeSequence(Element & rule) {
+    rule.flags |= Element::fComplex;
+}
+
+//===========================================================================
+static void mergeRule(Element & rule, Grammar & rules) {
+    // initially assume fComplex to protect against recursion
+    rule.flags |= Element::fComplex;
+    if (!rule.rule) 
+        return;
+    merge(const_cast<Element &>(*rule.rule), rules);
+    if (rule.rule->flags & Element::fSimple) {
+        assert(rule.rule->type == Element::kChoice);
+        rule.m *= rule.rule->m;
+        rule.n = max({rule.n, rule.rule->n, rule.n * rule.rule->n});
+        rule.type = rule.rule->type;
+        rule.elements = rule.rule->elements;
+        rule.rule = nullptr;
+        rule.flags &= ~Element::fComplex;
+        rule.flags |= rule.flags || rule.m != 1 || rule.n != 1
+            ? Element::fComplex 
+            : Element::fSimple;
+    }
+}
+
+//===========================================================================
+static void mergeTerminal(Element & rule) {
+    rule.flags |= (rule.flags ? Element::fComplex : Element::fSimple);
+}
+
+//===========================================================================
+static void merge(Element & rule, Grammar & rules) {
+    if (rule.flags & Element::fComplexityFlags)
+        return;
+    if (rule.flags)
+        rule.flags |= Element::fComplex;
+
+    for (auto && elem : rule.elements)
+        merge(elem, rules);
+
+    switch (rule.type) {
+    case Element::kChoice: mergeChoice(rule); break;
+    case Element::kSequence: mergeSequence(rule); break;
+    case Element::kRule: mergeRule(rule, rules); break;
+    case Element::kTerminal: mergeTerminal(rule); break;
+    }
+
+}
+
+//===========================================================================
+void merge(Grammar & rules) {
+    for (auto && rule : rules.rules()) {
+        merge(const_cast<Element &>(rule), rules);
+    }
+}
+
+
+/****************************************************************************
+*
 *   normalize
 *
 ***/
@@ -366,6 +449,7 @@ static void normalizeChoice(Element & rule) {
             Element & back = tmp.back();
             back.m *= elem.m;
             back.n = max({back.n, elem.n, back.n * elem.n});
+            assert(back.type != Element::kTerminal || back.n == 1);
         }
     }
     rule.elements = tmp;
@@ -379,7 +463,7 @@ static void normalizeChoice(Element & rule) {
 //===========================================================================
 static void normalizeSequence(Element & rule) {
     // it's okay to elevate a sub-list if multiplying the ordinals
-    // doesn't change them?
+    // doesn't change them
     assert(rule.elements.size() > 1);
     for (unsigned i = 0; i < rule.elements.size(); ++i) {
         Element * elem = rule.elements.data() + i;
@@ -456,6 +540,7 @@ void normalize(Grammar & rules) {
     for (auto && rule : rules.rules()) {
         normalize(const_cast<Element &>(rule), nullptr, rules);
     }
+    //merge(rules);
 }
 
 

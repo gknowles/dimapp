@@ -140,7 +140,7 @@ static void writeElement(ostream & os, const Element & elem, bool inclPos) {
         break;
     }
 
-    if (elem.flags) {
+    if (elem.flags & (Element::fCallbackFlags | Element::fFunction)) {
         const struct {
             bool incl;
             string text;
