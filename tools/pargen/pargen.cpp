@@ -288,8 +288,18 @@ https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
     if (root->size())
         rules.setOption(kOptionRoot, *root);
 
-    ofstream oh(rules.optionString(kOptionApiParserHeader));
-    ofstream ocpp(rules.optionString(kOptionApiParserCpp));
+    auto ohName = rules.optionString(kOptionApiParserHeader);
+    ofstream oh(ohName);
+    if (!oh) {
+        logMsgError() << ohName << ": open failed";
+        return appSignalShutdown(EX_IOERR);
+    }
+    auto ocppName = rules.optionString(kOptionApiParserCpp);
+    ofstream ocpp(ocppName);
+    if (!ocpp) {
+        logMsgError() << ocppName << ": open failed";
+        return appSignalShutdown(EX_IOERR);
+    }
     writeParser(oh, ocpp, rules, s_cmdopts);
     oh.close();
     ocpp.close();
