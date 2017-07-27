@@ -419,7 +419,7 @@ static void addNextPositions(
 ) {
     bool terminal = chars.any();
 
-    if (sp.recurseSe) {
+    if (sp.recurseSe && !sp.recurseSe) {
         assert(terminal);
         assert(sp.recurseSe < sp.elems.size());
         StatePosition nsp;
