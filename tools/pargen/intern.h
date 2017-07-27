@@ -158,6 +158,7 @@ bool copyRules(
     bool failIfExists
 );
 void normalize(Grammar & rules);
+void merge(Grammar & rules);
 void functionTags(Grammar & rules, Element & rule, bool reset, bool mark);
 
 
@@ -262,6 +263,7 @@ void dedupStateTree(std::unordered_set<State> & states);
 
 struct RunOptions {
     bool minRules;
+    bool mergeRules;
     bool resetFunctions;
     bool markFunctions;
     bool includeCallbacks;

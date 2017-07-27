@@ -540,7 +540,6 @@ void normalize(Grammar & rules) {
     for (auto && rule : rules.rules()) {
         normalize(const_cast<Element &>(rule), nullptr, rules);
     }
-    //merge(rules);
 }
 
 

@@ -722,6 +722,8 @@ void writeParser(
     }
 
     normalize(rules);
+    if (opts.mergeRules)
+        merge(rules);
     functionTags(rules, *root, opts.resetFunctions, opts.markFunctions);
 
     writeHeaderfile(hfile, rules, src);

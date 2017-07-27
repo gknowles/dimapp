@@ -210,6 +210,8 @@ static void app(int argc, char * argv[]) {
         .desc("Use reduced core rules: ALPHA, DIGIT, CRLF, HEXDIG, NEWLINE, "
               "VCHAR, and WSP are shortened to fewer (usually 1) characters. "
               "And ignores user rules tagged with NoMinRules.");
+    cli.opt(&s_cmdopts.mergeRules, "m merge-rules", false)
+        .desc("Allow merging of rules that aren't required to be separate.");
     cli.opt("f mark-functions", 1)
         .valueDesc("LEVEL")
         .desc("Strength of function tag preprocessing.")
@@ -230,7 +232,7 @@ static void app(int argc, char * argv[]) {
               "are generated.");
     cli.opt(&s_cmdopts.stateTreeDepthLimit, "l depth-limit", 0)
         .desc("Limit state tree depth, skip anything that would go deeper. "
-              "0 (the default) for unlimited.");
+              "0 for unlimited.");
     cli.opt(&s_cmdopts.dedupStateTree, "!D dedup", true)
         .desc("Purge duplicate entries from the state tree, duplicates occur "
               "when multiple paths through the rules end with the same series "

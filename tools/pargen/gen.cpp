@@ -218,20 +218,20 @@ static void addChildStates(
 );
 
 //===========================================================================
-static size_t findRecursionSimple(StatePosition * sp) {
+static size_t findRecursionSimple(const StatePosition * sp) {
     size_t depth = sp->elems.size();
     if (depth >= 3) {
-        StateElement * first = sp->elems.data();
-        StateElement * m = first + depth / 2;
-        StateElement * z = first + depth;
-        StateElement * y = z - 2;
+        auto first = sp->elems.data();
+        auto m = first + depth / 2;
+        auto z = first + depth;
+        auto y = z - 2;
         for (; y->elem->type != Element::kRule; --y) {
             if (y == m)
                 return 0;
         }
         y += 1;
         size_t yz = z - y;
-        for (StateElement * x = y - yz - 1; x > first; --x) {
+        for (auto x = y - yz - 1; x > first; --x) {
             if (equal(x, x + yz, y, z)) {
                 size_t num = x + yz - first;
                 return num;
@@ -242,14 +242,14 @@ static size_t findRecursionSimple(StatePosition * sp) {
 }
 
 //===========================================================================
-static size_t findRecursionFull(StatePosition * sp) {
+static size_t findRecursionFull(const StatePosition * sp) {
     size_t depth = sp->elems.size();
     if (depth >= 3) {
-        StateElement * m = sp->elems.data() + depth / 2;
-        StateElement * z = &sp->elems.back();
-        for (StateElement * y = z - 1; y >= m; --y) {
+        auto m = sp->elems.data() + depth / 2;
+        auto z = &sp->elems.back();
+        for (auto y = z - 1; y >= m; --y) {
             if (y->elem == z->elem) {
-                StateElement * x = y - (z - y);
+                auto x = y - (z - y);
                 if (equal(x + 1, y, y + 1, z)) {
                     size_t num = y - sp->elems.data() + 1;
                     return num;
@@ -284,8 +284,9 @@ static void addRulePositions(
     }
 
     // check for rule recursion
-    size_t num =
-        s_simpleRecursion ? findRecursionSimple(sp) : findRecursionFull(sp);
+    size_t num = s_simpleRecursion 
+        ? findRecursionSimple(sp) 
+        : findRecursionFull(sp);
     if (num) {
         if (!init) {
             vector<StateElement> tmp{sp->elems};
@@ -332,7 +333,9 @@ static void addPositions(
                 *skippable = true;
         }
         break;
-    case Element::kRule: addRulePositions(skippable, st, sp, init); break;
+    case Element::kRule: 
+        addRulePositions(skippable, st, sp, init); 
+        break;
     case Element::kSequence:
         // up to first with a minimum
         *skippable = true;
@@ -350,6 +353,10 @@ static void addPositions(
     if (rule.m == 0)
         *skippable = true;
     sp->elems.pop_back();
+    if (sp->recurseSe && sp->recurseSe == sp->elems.size()) {
+        sp->recurseSe = 0;
+        sp->recursePos = -1;
+    }
 }
 
 //===========================================================================
@@ -379,15 +386,21 @@ static void setPositionPrefix(
     StatePosition * sp,
     vector<StateElement>::const_iterator begin,
     vector<StateElement>::const_iterator end,
-    int recursePos,
+    int recursePos, // position within sequence
+    bool recurseSeIncluded, // sequence state element included? else 1 past
+                            // the end, ignored if pos == -1
     const vector<StateEvent> & events,
     bool started
 ) {
     sp->elems.assign(begin, end);
     if (recursePos != -1) {
-        sp->recurseSe = (int) sp->elems.size() - 1;
         sp->recursePos = recursePos;
-        assert(sp->recurseSe);
+        if (recurseSeIncluded) {
+            sp->recurseSe = int(sp->elems.size() - 1);
+            assert(sp->elems[sp->recurseSe].elem->type == Element::kSequence);
+        } else {
+            sp->recurseSe = int(sp->elems.size());
+        }
     }
     sp->events = events;
     if (started) {
@@ -407,11 +420,23 @@ static void addNextPositions(
     bool terminal = chars.any();
 
     if (sp.recurseSe) {
-        auto & terms = st->positions[sp];
-        if (terminal) {
-            assert(terms.none());
-            terms = chars;
-        }
+        assert(terminal);
+        assert(sp.recurseSe < sp.elems.size());
+        StatePosition nsp;
+        setPositionPrefix(
+            &nsp,
+            sp.elems.begin(),
+            sp.elems.begin() + sp.recurseSe,
+            -1,
+            false,
+            sp.delayedEvents,
+            false
+        );
+        bool weak;
+        auto & e = *sp.elems[sp.recurseSe].elem;
+        assert(e.type == Element::kSequence);
+        assert(sp.recursePos < e.elements.size());
+        addPositions(&weak, st, &nsp, false, e.elements[sp.recursePos], 0);
     }
 
     auto terminalStarted = sp.elems.end();
@@ -463,6 +488,7 @@ static void addNextPositions(
                     sp.elems.begin(),
                     it.base(),
                     recursePos,
+                    true,
                     events,
                     terminal
                 );
@@ -508,7 +534,8 @@ static void addNextPositions(
                 &nsp, 
                 sp.elems.begin(), 
                 se_end, 
-                recursePos, 
+                recursePos,
+                false,
                 events, 
                 terminal
             );
