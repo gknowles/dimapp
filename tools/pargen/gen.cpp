@@ -142,15 +142,19 @@ bool StatePosition::operator==(const StatePosition & right) const {
 size_t std::hash<StateEvent>::operator()(const StateEvent & val) const {
     size_t out = val.elem->id;
     hashCombine(out, val.flags);
+    hashCombine(out, val.distance);
     return out;
 }
 
 //===========================================================================
 int StateEvent::compare(const StateEvent & right) const {
+    if (int rc = distance - right.distance)
+        return rc;
     if (int rc = (int)(elem->id - right.elem->id))
         return rc;
-    int rc = flags - right.flags;
-    return rc;
+    if (int rc = flags - right.flags)
+        return rc;
+    return 0;
 }
 
 //===========================================================================
@@ -412,6 +416,17 @@ static void setPositionPrefix(
 }
 
 //===========================================================================
+static void addDelayedEvents(
+    vector<StateEvent> & events,
+    const StatePosition & sp
+) {
+    for (auto && sv : sp.delayedEvents) {
+        events.push_back(sv);
+        events.back().distance += 1;
+    }
+}
+
+//===========================================================================
 static void addNextPositions(
     State * st,
     const StatePosition & sp,
@@ -446,7 +461,7 @@ static void addNextPositions(
     auto eit = sp.elems.rend();
 
     if (terminal || done && sp.elems.size() == 1) {
-        events = sp.delayedEvents;
+        addDelayedEvents(events, sp);
     }
     if (terminal && !done) {
         // add OnStart events top to bottom
@@ -560,7 +575,8 @@ static void addNextPositions(
     nsp.elems.push_back(nse);
     if (done) {
         // add entry for completed done
-        nsp.events = sp.delayedEvents;
+        nsp.events.clear();
+        addDelayedEvents(nsp.events, sp);
         st->positions[nsp];
         return;
     }
@@ -674,30 +690,18 @@ static bool delayConflicts(
     bool logError
 ) {
     for (auto && sv : matched) {
-        auto evi = nsp.events.begin();
+        auto svi = nsp.events.begin();
         auto e = nsp.events.end();
-        for (; evi != e; ++evi) {
-            if (sv == *evi) {
-                nsp.events.erase(evi);
+        for (; svi != e; ++svi) {
+            if (sv == *svi) {
+                nsp.events.erase(svi);
                 break;
             }
         }
     }
     nsp.delayedEvents = move(nsp.events);
     nsp.events = matched;
-
-    bool success = true;
-    for (auto && sv : nsp.delayedEvents) {
-        if (sv.flags & Element::fOnChar) {
-            success = false;
-            if (logError) {
-                logMsgError() << "Conflicting parse events, " << sv.elem->name
-                              << " at " << kLeftQ << sti.m_path << kRightQ;
-            }
-            break;
-        }
-    }
-    return success;
+    return true;
 }
 
 //===========================================================================

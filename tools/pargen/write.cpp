@@ -54,6 +54,8 @@ ostream & operator<<(ostream & os, const StateEvent & sv) {
     case Element::fOnEnd: os << "End"; break;
     case Element::fOnStart: os << "Start"; break;
     }
+    if (sv.distance)
+        os << "(-" << sv.distance << ")";
     return os;
 }
 
@@ -300,6 +302,7 @@ static void writeEventCallback(
 ) {
     os << prefix << "if (!on";
     writeRuleName(os, name, true);
+    type &= Element::fCallbackFlags;
     switch (type) {
     case Element::fOnChar: os << "Char(" << (args ? args : "ch"); break;
     case Element::fOnEnd: os << "End(" << (args ? args : "ptr"); break;
@@ -307,6 +310,26 @@ static void writeEventCallback(
     }
     os << "))\n";
     os << prefix << "    goto state0;\n";
+}
+
+//===========================================================================
+static void writeEventCallback(ostream & os, const StateEvent & sv) {
+    ostringstream oargs;
+    if (sv.distance) {
+        oargs << "ptr";
+        switch (sv.flags) {
+        case Element::fOnChar: oargs << "[-"s << sv.distance + 1 << ']'; break;
+        case Element::fOnEnd: oargs << " - " << sv.distance; break;
+        case Element::fOnStart: oargs << " - " << sv.distance + 1; break;
+        }
+    }
+    auto args = oargs.str();
+    writeEventCallback(
+        os,
+        sv.elem->name,
+        sv.flags,
+        args.empty() ? nullptr : args.c_str()
+    );
 }
 
 //===========================================================================
@@ -423,11 +446,9 @@ static void writeParserState(
         }
     }
 
-    // os << "    std::cout << " << st.id << " << ' ' << *ptr << std::endl;\n";
-
-    // execute notifications
+    // execute events
     for (auto && sv : st.positions.begin()->first.events) {
-        writeEventCallback(os, sv.elem->name, Element::Flags(sv.flags));
+        writeEventCallback(os, sv);
     }
 
     if (st.name == kDoneStateName) {
@@ -460,13 +481,15 @@ static void writeParserState(
             continue;
         assert(elem->type == Element::kRule);
         assert(elem->rule->flags & Element::fFunction);
-        if (call && elem->rule == call->elems.back().elem->rule
-            && spt.first.delayedEvents == call->delayedEvents) {
+        if (call 
+            && elem->rule == call->elems.back().elem->rule
+            && spt.first.delayedEvents == call->delayedEvents
+        ) {
             continue;
         }
         call = &spt.first;
         for (auto && sv : spt.first.delayedEvents) {
-            writeEventCallback(os, sv.elem->name, Element::Flags(sv.flags));
+            writeEventCallback(os, sv);
         }
         os << "    if (state";
         writeRuleName(os, elem->rule->name, true);
@@ -530,7 +553,8 @@ static void writeFunction(
     const Element * root,
     const unordered_set<State> & stateSet,
     const Grammar & options,
-    bool inclStatePositions) {
+    bool inclStatePositions
+) {
     auto parserClass = options[kOptionApiParserClass];
     os << 1 + R"(
 

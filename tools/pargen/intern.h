@@ -191,8 +191,9 @@ struct StateElement {
 };
 
 struct StateEvent {
-    const Element * elem;
+    const Element * elem{nullptr};
     Element::Flags flags{};
+    unsigned distance{0};
 
     int compare(const StateEvent & right) const;
     bool operator<(const StateEvent & right) const;
