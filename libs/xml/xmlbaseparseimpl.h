@@ -26,7 +26,7 @@ inline bool XmlBaseParser::onAttrCopyChar(char ch) {
 
 //===========================================================================
 inline bool XmlBaseParser::onAttrInPlaceEnd(const char * eptr) {
-    m_cur = const_cast<char *>(eptr - 1);
+    m_cur = const_cast<char *>(eptr);
     return true;
 }
 
@@ -38,7 +38,7 @@ inline bool XmlBaseParser::onAttrNameStart(const char * ptr) {
 
 //===========================================================================
 inline bool XmlBaseParser::onAttrNameEnd(const char * eptr) {
-    m_attrLen = eptr - m_attr - 1;
+    m_attrLen = eptr - m_attr;
     return true;
 }
 
@@ -127,7 +127,7 @@ inline bool XmlBaseParser::onElemNameStart(const char * ptr) {
 
 //===========================================================================
 inline bool XmlBaseParser::onElemNameEnd(const char * eptr) {
-    m_notify.startElem(m_base, eptr - m_base - 1);
+    m_notify.startElem(m_base, eptr - m_base);
     return true;
 }
 
@@ -176,7 +176,7 @@ inline bool XmlBaseParser::onEntityLtEnd(const char * eptr) {
 
 //===========================================================================
 inline bool XmlBaseParser::onEntityOtherEnd(const char * eptr) {
-    const char * amp = eptr - 1;
+    const char * amp = eptr;
     while (*amp != '&')
         amp -= 1;
     std::string err{"unknown entity '"};
