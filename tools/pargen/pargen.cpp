@@ -16,8 +16,6 @@ namespace fs = std::experimental::filesystem;
 *
 ***/
 
-const string kVersion = "1.0.0";
-
 namespace {
 
 class LogTask 
@@ -188,11 +186,12 @@ void LogTask::onTask() {
 //===========================================================================
 static void app(int argc, char * argv[]) {
     s_logQ = taskCreateQueue("Logging", 1);
+    string version{kVersion};
 
     Cli cli;
     // header
     cli.header(
-        "pargen v"s + kVersion + " (" __DATE__
+        "pargen v"s + version + " (" __DATE__
                                  ") simplistic parser generator\n");
     // positional arguments
     auto & srcfile = cli.opt<fs::path>("[source file(.abnf)]")
@@ -200,7 +199,7 @@ static void app(int argc, char * argv[]) {
     auto & root = cli.opt<string>("[root rule]")
         .desc("Root rule to use, overrides %root in <source file>.");
     // options
-    cli.versionOpt(kVersion);
+    cli.versionOpt(version);
     auto & help = cli.opt<bool>("? h help.")
                       .desc("Show this message and exit.")
                       .group("~");
