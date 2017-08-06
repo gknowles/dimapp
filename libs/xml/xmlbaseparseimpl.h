@@ -50,7 +50,7 @@ inline bool XmlBaseParser::onAttrValueStart(const char * ptr) {
 }
 
 //===========================================================================
-inline bool XmlBaseParser::onAttrValueEnd(const char * eptr) {
+inline bool XmlBaseParser::onAttrValueEnd() {
     m_notify.attr(m_attr, m_attrLen, m_base, m_cur - m_base);
     return true;
 }
@@ -75,13 +75,13 @@ inline bool XmlBaseParser::onCharDataChar(char ch) {
 }
 
 //===========================================================================
-inline bool XmlBaseParser::onCharRefStart(const char * ptr) {
+inline bool XmlBaseParser::onCharRefStart() {
     m_char = 0;
     return true;
 }
 
 //===========================================================================
-inline bool XmlBaseParser::onCharRefEnd(const char * eptr) {
+inline bool XmlBaseParser::onCharRefEnd() {
     if (m_char < 0x80) {
         if (m_char < 0x20 
             && m_char != '\t' && m_char != '\n' && m_char != '\r'
@@ -139,37 +139,37 @@ inline bool XmlBaseParser::onElemTextStart(const char * ptr) {
 }
 
 //===========================================================================
-inline bool XmlBaseParser::onElemTextEnd(const char * eptr) {
+inline bool XmlBaseParser::onElemTextEnd() {
     m_notify.text(m_base, m_cur - m_base);
     return true;
 }
 
 //===========================================================================
-inline bool XmlBaseParser::onElementEnd(const char * eptr) {
+inline bool XmlBaseParser::onElementEnd() {
     m_notify.endElem();
     return true;
 }
 
 //===========================================================================
-inline bool XmlBaseParser::onEntityAmpEnd(const char * eptr) {
+inline bool XmlBaseParser::onEntityAmpEnd() {
     *m_cur++ = '&';
     return true;
 }
 
 //===========================================================================
-inline bool XmlBaseParser::onEntityAposEnd(const char * eptr) {
+inline bool XmlBaseParser::onEntityAposEnd() {
     *m_cur++ = '\'';
     return true;
 }
 
 //===========================================================================
-inline bool XmlBaseParser::onEntityGtEnd(const char * eptr) {
+inline bool XmlBaseParser::onEntityGtEnd() {
     *m_cur++ = '>';
     return true;
 }
 
 //===========================================================================
-inline bool XmlBaseParser::onEntityLtEnd(const char * eptr) {
+inline bool XmlBaseParser::onEntityLtEnd() {
     *m_cur++ = '<';
     return true;
 }
@@ -186,6 +186,12 @@ inline bool XmlBaseParser::onEntityOtherEnd(const char * eptr) {
 }
 
 //===========================================================================
+inline bool XmlBaseParser::onEntityQuotEnd() {
+    *m_cur++ = '"';
+    return true;
+}
+
+//===========================================================================
 inline bool XmlBaseParser::onEntityValueStart(const char * ptr) {
     m_base = ptr;
     m_cur = const_cast<char *>(ptr);
@@ -198,13 +204,7 @@ inline bool XmlBaseParser::onEntityValueEnd(const char * eptr) {
 }
 
 //===========================================================================
-inline bool XmlBaseParser::onEntityQuotEnd(const char * eptr) {
-    *m_cur++ = '"';
-    return true;
-}
-
-//===========================================================================
-inline bool XmlBaseParser::onNormalizableWsChar(char ch) {
+inline bool XmlBaseParser::onNormalizableWsChar() {
     *m_cur++ = ' ';
     return true;
 }

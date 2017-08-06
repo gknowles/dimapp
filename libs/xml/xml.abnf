@@ -104,7 +104,7 @@ Nmtoken = 1*NameChar ; [7]
 EntityValue = ; [9]
     DQUOTE *(Char-not-AMP-DQUOTE-PCT / PEReference / Reference) DQUOTE
     / "'" *(Char-not-AMP-APOS-PCT / PEReference / Reference) "'"
-	{ Start, End }
+	{ Start+, End+ }
 Char-not-AMP-DQUOTE-PCT = mbchar / ws 
     / %x21 
     ; 22 - DQUOTE
@@ -152,18 +152,18 @@ PubidChar = PubidChar-not-APOS / "'" ; [13]
 
 ; Attribute Value
 attrValue = DQUOTE attrText DQUOTE / "'" attrTextApos "'" ; [10]
-	{ Start, End }
+	{ Start+, End }
 attrText = [attrInPlace] *((Reference / normalizable-ws) [attrCopy])
-attrInPlace = *Char-not-ws-AMP-DQUOTE-LT { End }
-attrCopy = *Char-not-ws-AMP-DQUOTE-LT { Char }
+attrInPlace = *Char-not-ws-AMP-DQUOTE-LT { End+ }
+attrCopy = *Char-not-ws-AMP-DQUOTE-LT { Char+ }
 attrTextApos = [attrInPlaceApos] *((Reference / normalizable-ws) [attrCopyApos]) 
-attrInPlaceApos = *Char-not-ws-AMP-APOS-LT { End, As attrInPlace }
-attrCopyApos = *Char-not-ws-AMP-APOS-LT { Char, As attrCopy }
+attrInPlaceApos = *Char-not-ws-AMP-APOS-LT { End+, As attrInPlace }
+attrCopyApos = *Char-not-ws-AMP-APOS-LT { Char+, As attrCopy }
 normalizable-ws = ws { Char }
 
 ; Character Data
 CharData = *( ">" / "]>" / *"]" Char-not-AMP-GT-LT-RBRACKET) ; [14]
-    *"]" { Char }
+    *"]" { Char+ }
 Char-not-AMP-GT-LT-RBRACKET = mbchar / ws
     / %x21-25 
     ; 26 - AMP
@@ -204,7 +204,7 @@ Char-not-GT-QMARK = mbchar / ws
 ; CData Sections
 CDSect = CDStart CDataWithEnd ; [18]
 CDStart = %s"<![CDATA[" ; [19]
-CDataWithEnd = CData CDEnd { Start, End }
+CDataWithEnd = CData CDEnd { Start+, End+ }
 CData = *(">" / "]>" / *"]" Char-not-GT-RBRACKET) *"]"  ; [20]
 Char-not-GT-RBRACKET = mbchar / ws
     / %x21-3d 
@@ -244,12 +244,12 @@ element = EmptyElemTag / STag element-tail { End } ; [39]
 element-tail = content ETag { Function }
 STag = "<" elemName *(S Attribute) [S] ">" ; [40]
 Attribute = attrName Eq attrValue ; [41]
-attrName = Name { Start, End }
+attrName = Name { Start+, End+ }
 ETag = "</" Name [S] ">" ; [42]
 content = [elemText] *((element / PI / Comment / CDSect) [elemText]) ; [43]
-elemText = CharData *(Reference CharData) { Start, End }
+elemText = CharData *(Reference CharData) { Start+, End }
 EmptyElemTag = "<" elemName *(S Attribute) [S] "/>" ; [44]
-elemName = Name { Start, End }
+elemName = Name { Start+, End+ }
 
 ; Element Type Declaration
 elementdecl = %s"<!ELEMENT" S Name S contentspec [S] ">" ; [45]
@@ -301,8 +301,8 @@ Char-not-BANG-GT-LT-LBRACKET-RBRACKET = mbchar / ws
 ; Character and Entity Reference
 CharRef = "&#" charRefDigit ";" / "&#" %x78 charRefHexdig ";" { Start, End } 
 	; [66]
-charRefDigit = 1*DIGIT { Char }
-charRefHexdig = 1*HEXDIG { Char }
+charRefDigit = 1*DIGIT { Char+ }
+charRefHexdig = 1*HEXDIG { Char+ }
 Reference = EntityRef / CharRef ; [67]
 EntityRef = entityApos / entityQuot / entityGt / entityLt / entityAmp ; [68]
     / entityOther
@@ -311,7 +311,7 @@ entityQuot = %s"&quot;" { End }
 entityGt = %s"&gt;" { End }
 entityLt = %s"&lt;" { End }
 entityAmp = %s"&amp;" { End }
-entityOther = "&" Name ";" { End }
+entityOther = "&" Name ";" { End+ }
 PEReference = "%" Name ";" ; [69]
 
 ; Entity Declaration
