@@ -335,8 +335,22 @@ bool copyRules(
         return true;
     }
     auto & elem = *ib.first;
-    if ((elem.flags & Element::fFunction) && (elem.flags & Element::fOnChar)) {
-        logMsgError() << "Rule with both function and onChar, " << elem.value;
+    if ((elem.flags & Element::fFunction) 
+        && (elem.flags & Element::fCharEvents)
+    ) {
+        logMsgError() << "Rule with both Function and Char, " << elem.value;
+        return false;
+    }
+    if ((elem.flags & Element::fStartEvents) == Element::fStartEvents) {
+        logMsgError() << "Rule with both Start and Start+, " << elem.value;
+        return false;
+    }
+    if ((elem.flags & Element::fEndEvents) == Element::fEndEvents) {
+        logMsgError() << "Rule with both End and End+, " << elem.value;
+        return false;
+    }
+    if ((elem.flags & Element::fCharEvents) == Element::fCharEvents) {
+        logMsgError() << "Rule with both Char and Char+, " << elem.value;
         return false;
     }
     return copyRequiredDeps(out, src, elem);
@@ -565,7 +579,7 @@ static void addFunctionTags(
         break;
     case Element::kRule:
         wasUsed = used[rule.rule->id];
-        if (wasUsed && (~rule.rule->flags & Element::fOnChar))
+        if (wasUsed && (~rule.rule->flags & Element::fCharEvents))
             const_cast<Element *>(rule.rule)->flags |= Element::fFunction;
         if (rule.rule->flags & Element::fFunction)
             return;

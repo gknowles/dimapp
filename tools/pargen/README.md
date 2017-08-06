@@ -14,10 +14,10 @@ the some modifications.
 - Special "rules" starting with a percent "%" are options for the generator.
 - Rules can be followed by brace "{}" enclosed tags. Tags are used to tell 
   the generator to do things, just as insert event callbacks.
-- Prose values containing the rule as a text description such as "\<all nouns>"
+- Prose values that define rules via a text description such as "\<all nouns>"
   are not allowed.
 
-The "Core Rules" defined in [RFC 5234](https://tools.ietf.org/html/rfc5234) 
+The "Core Rules" defined in [RFC 5234 B.1](https://tools.ietf.org/html/rfc5234#appendix-B.1) 
 ("ALPHA", "BIT", etc) are always included.
 
 ## Options
@@ -39,8 +39,11 @@ All values must be defined either directly or indirectly via their defaults.
 
 Triggering callbacks during parsing:
 - Start
+- Start+
 - End
+- End+
 - Char
+- Char+
 
 Change the name of the callback invoked
 - As \<rulename>
@@ -48,8 +51,8 @@ Change the name of the callback invoked
 Root of separate function that can be recursively called
 - Function
 
-Only include rule if corresponding --min-rules or --no-min-rules is explicitly 
-enabled. This provides a way to have a small set of states to reduce the 
-clutter during development, especially with --state-detail.
+Rule is only included if corresponding --min-rules or --no-min-rules is 
+explicitly enabled. This provides a way to have a small set of states to 
+reduce the clutter during development, especially with --state-detail.
 - MinRules
 - NoMinRules

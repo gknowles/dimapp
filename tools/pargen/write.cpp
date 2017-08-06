@@ -51,10 +51,13 @@ ostream & operator<<(ostream & os, const StateEvent & sv) {
     writeRuleName(os, sv.elem->name, true);
     switch (sv.flags) {
     case Element::fOnChar: os << "Char"; break;
+    case Element::fOnCharW: os << "CharW"; break;
     case Element::fOnEnd: os << "End"; break;
+    case Element::fOnEndW: os << "EndW"; break;
     case Element::fOnStart: os << "Start"; break;
+    case Element::fOnStartW: os << "StartW"; break;
     }
-    if (sv.distance)
+    if (sv.distance > 0)
         os << "(-" << sv.distance << ")";
     return os;
 }
@@ -144,14 +147,17 @@ static void writeElement(ostream & os, const Element & elem, bool inclPos) {
         break;
     }
 
-    if (elem.flags & (Element::fCallbackFlags | Element::fFunction)) {
+    if (elem.flags & (Element::fEvents | Element::fFunction)) {
         const struct {
             bool incl;
             string text;
         } tags[] = {
             {(elem.flags & Element::fOnStart) != 0, "Start"},
+            {(elem.flags & Element::fOnStartW) != 0, "Start+"},
             {(elem.flags & Element::fOnEnd) != 0, "End"},
+            {(elem.flags & Element::fOnEndW) != 0, "End+"},
             {(elem.flags & Element::fOnChar) != 0, "Char"},
+            {(elem.flags & Element::fOnCharW) != 0, "Char+"},
             {(elem.flags & Element::fFunction) != 0, "Function"},
             {!elem.eventName.empty(), "As " + elem.eventName},
         };
@@ -302,11 +308,14 @@ static void writeEventCallback(
 ) {
     os << prefix << "if (!on";
     writeRuleName(os, name, true);
-    type &= Element::fCallbackFlags;
+    type &= Element::fEvents;
     switch (type) {
-    case Element::fOnChar: os << "Char(" << (args ? args : "ch"); break;
-    case Element::fOnEnd: os << "End(" << (args ? args : "ptr"); break;
-    case Element::fOnStart: os << "Start(" << (args ? args : "ptr - 1"); break;
+    case Element::fOnChar: os << "Char("; break;
+    case Element::fOnCharW: os << "Char(" << (args ? args : "ch"); break;
+    case Element::fOnEnd: os << "End("; break;
+    case Element::fOnEndW: os << "End(" << (args ? args : "ptr"); break;
+    case Element::fOnStart: os << "Start("; break;
+    case Element::fOnStartW: os << "Start(" << (args ? args : "ptr - 1"); break;
     }
     os << "))\n";
     os << prefix << "    goto state0;\n";
@@ -318,9 +327,9 @@ static void writeEventCallback(ostream & os, const StateEvent & sv) {
     if (sv.distance) {
         oargs << "ptr";
         switch (sv.flags) {
-        case Element::fOnChar: oargs << "[-"s << sv.distance + 1 << ']'; break;
-        case Element::fOnEnd: oargs << " - " << sv.distance; break;
-        case Element::fOnStart: oargs << " - " << sv.distance + 1; break;
+        case Element::fOnCharW: oargs << "[-"s << sv.distance + 1 << ']'; break;
+        case Element::fOnEndW: oargs << " - " << sv.distance; break;
+        case Element::fOnStartW: oargs << " - " << sv.distance + 1; break;
         }
     }
     auto args = oargs.str();
@@ -452,8 +461,10 @@ static void writeParserState(
     }
 
     if (st.name == kDoneStateName) {
-        if (root && (root->flags & Element::fOnEnd)) {
-            writeEventCallback(os, root->name, Element::fOnEnd);
+        if (root) {
+            auto flags = root->flags & Element::fEndEvents;
+            if (flags) 
+                writeEventCallback(os, root->name, flags);
         }
         os << "    return true;\n";
         return;
@@ -583,9 +594,10 @@ state0:
     const char * last{nullptr};
     unsigned char ch;
 )";
-        if (root->flags & Element::fOnStart) {
-            writeEventCallback(os, root->name, Element::fOnStart, "ptr");
-        }
+        if (root->flags & Element::fOnStart)
+            writeEventCallback(os, root->name, Element::fOnStart);
+        if (root->flags & Element::fOnStartW)
+            writeEventCallback(os, root->name, Element::fOnStartW, "ptr");
         os << R"(    goto state2;
 
 state0:
@@ -673,9 +685,7 @@ private:
     map<string, unsigned> events;
     ostringstream ostr;
     for (auto && elem : rules.rules()) {
-        if (elem.flags
-            & (Element::fOnStart | Element::fOnEnd | Element::fOnChar)
-        ) {
+        if (elem.flags & Element::fEvents) {
             ostr.clear();
             ostr.str("");
             if (elem.eventName.empty()) {
@@ -692,9 +702,12 @@ private:
             Element::Flags flag;
             const char * text;
         } sigs[] = {
-            {Element::fOnStart, "Start (const char * ptr)"},
-            {Element::fOnChar, "Char (char ch)"},
-            {Element::fOnEnd, "End (const char * eptr)"},
+            {Element::fOnStart, "Start ()"},
+            {Element::fOnStartW, "Start (const char * ptr)"},
+            {Element::fOnChar, "Char ()"},
+            {Element::fOnCharW, "Char (char ch)"},
+            {Element::fOnEnd, "End ()"},
+            {Element::fOnEndW, "End (const char * eptr)"},
         };
         for (auto && ev : events) {
             for (auto && sig : sigs) {
@@ -741,7 +754,7 @@ void writeParser(
 
     if (!opts.includeCallbacks) {
         for (auto && elem : rules.rules()) {
-            const_cast<Element &>(elem).flags &= ~Element::fCallbackFlags;
+            const_cast<Element &>(elem).flags &= ~Element::fEvents;
         }
     }
 

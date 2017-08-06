@@ -422,7 +422,11 @@ static void addDelayedEvents(
 ) {
     for (auto && sv : sp.delayedEvents) {
         events.push_back(sv);
-        events.back().distance += 1;
+        if (sv.flags 
+            & (Element::fOnStartW | Element::fOnEndW | Element::fOnCharW)
+        ) {
+            events.back().distance += 1;
+        }
     }
 }
 
@@ -466,19 +470,18 @@ static void addNextPositions(
     if (terminal && !done) {
         // add OnStart events top to bottom
         for (auto && se2 : sp.elems) {
-            if (se2.elem->type == Element::kRule
-                && (se2.elem->rule->flags & Element::fOnStart)
-                && !se2.started
-            ) {
-                addEvent(events, se2, Element::fOnStart);
+            if (se2.elem->type == Element::kRule && !se2.started) {
+                auto flags = se2.elem->rule->flags & Element::fStartEvents;
+                if (flags)
+                    addEvent(events, se2, flags);
             }
         }
         // bubble up OnChar events bottom to top
         for (auto it2 = it; it2 != eit; ++it2) {
-            if (it2->elem->type == Element::kRule
-                && (it2->elem->rule->flags & Element::fOnChar)
-            ) {
-                addEvent(events, *it2, Element::fOnChar);
+            if (it2->elem->type == Element::kRule) {
+                auto flags = it2->elem->rule->flags & Element::fCharEvents;
+                if (flags)
+                    addEvent(events, *it2, flags);
             }
         }
     }
@@ -518,11 +521,12 @@ static void addNextPositions(
         }
 
         if (se.elem->type == Element::kRule) {
-            if ((se.elem->rule->flags & Element::fOnEnd)
-                && (se.started || !done)
+            if ((se.started || !done)
                 && (~se.elem->rule->flags & Element::fFunction)
             ) {
-                addEvent(events, se, Element::fOnEnd);
+                auto flags = se.elem->rule->flags & Element::fEndEvents;
+                if (flags)
+                    addEvent(events, se, flags);
             }
             // when exiting the parser (via a done sentinel) go directly out,
             // no not pass go, do not honor repititions
@@ -645,10 +649,10 @@ static void removeConflicts(
     found_unused:
         if (*mi == events[evi])
             goto matched;
-        if (mi->flags & Element::fOnChar) {
+        if (mi->flags & Element::fCharEvents) {
             // char can shift around start events
             for (;;) {
-                if ((~events[evi].flags & Element::fOnStart)
+                if ((events[evi].flags & Element::fStartEvents) == 0
                     || ++evi == numEvents
                 ) {
                     goto unmatched;
@@ -656,10 +660,10 @@ static void removeConflicts(
                 if (*mi == events[evi])
                     goto matched;
             }
-        } else if (mi->flags & Element::fOnStart) {
+        } else if (mi->flags & Element::fStartEvents) {
             // start events can shift around char events.
             for (;;) {
-                if ((~events[evi].flags & Element::fOnChar)
+                if ((events[evi].flags & Element::fCharEvents) == 0
                     || ++evi == numEvents
                 ) {
                     goto unmatched;
@@ -668,7 +672,7 @@ static void removeConflicts(
                     goto matched;
             }
         }
-        assert(mi->flags & Element::fOnEnd);
+        assert(mi->flags & Element::fEndEvents);
         // [[fallthrough]];
 
     unmatched:

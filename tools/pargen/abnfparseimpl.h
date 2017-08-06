@@ -15,70 +15,91 @@
 ***/
 
 //===========================================================================
-inline bool AbnfParser::onActionAsEnd(const char * eptr) {
+inline bool AbnfParser::onActionAsEnd() {
     m_elem.eventName = std::move(m_string);
     m_string.clear();
     return true;
 }
 
 //===========================================================================
-inline bool AbnfParser::onActionCharEnd(const char * eptr) {
+inline bool AbnfParser::onActionCharEnd() {
     using namespace Dim;
     m_elem.flags |= Element::fOnChar;
     return true;
 }
 
 //===========================================================================
-inline bool AbnfParser::onActionEndEnd(const char * eptr) {
+inline bool AbnfParser::onActionCharwEnd() {
+    using namespace Dim;
+    m_elem.flags |= Element::fOnCharW;
+    return true;
+}
+
+//===========================================================================
+inline bool AbnfParser::onActionEndEnd() {
     using namespace Dim;
     m_elem.flags |= Element::fOnEnd;
     return true;
 }
 
 //===========================================================================
-inline bool AbnfParser::onActionFuncEnd(const char * eptr) {
+inline bool AbnfParser::onActionEndwEnd() {
+    using namespace Dim;
+    m_elem.flags |= Element::fOnEndW;
+    return true;
+}
+
+//===========================================================================
+inline bool AbnfParser::onActionFuncEnd() {
     using namespace Dim;
     m_elem.flags |= Element::fFunction;
     return true;
 }
 
 //===========================================================================
-inline bool AbnfParser::onActionMinEnd(const char * eptr) {
+inline bool AbnfParser::onActionMinEnd() {
     m_mustMatch = true;
     m_minRules = true;
     return true;
 }
 
 //===========================================================================
-inline bool AbnfParser::onActionNoMinEnd(const char * eptr) {
+inline bool AbnfParser::onActionNoMinEnd() {
     m_mustMatch = true;
     m_minRules = false;
     return true;
 }
 
 //===========================================================================
-inline bool AbnfParser::onActionStartEnd(const char * eptr) {
+inline bool AbnfParser::onActionStartEnd() {
     using namespace Dim;
     m_elem.flags |= Element::fOnStart;
     return true;
 }
 
 //===========================================================================
-inline bool AbnfParser::onAlternationStart(const char * ptr) {
+inline bool AbnfParser::onActionStartwEnd() {
+    using namespace Dim;
+    m_elem.flags |= Element::fOnStartW;
+    return true;
+}
+
+//===========================================================================
+inline bool AbnfParser::onAlternationStart() {
     Element * elem = m_rules.addChoice(m_elems.back(), 1, 1);
     m_elems.push_back(elem);
     return true;
 }
 
 //===========================================================================
-inline bool AbnfParser::onAlternationEnd(const char * eptr) {
+inline bool AbnfParser::onAlternationEnd() {
     assert(m_elems.back()->type == Element::kChoice);
     m_elems.pop_back();
     return true;
 }
 
 //===========================================================================
-inline bool AbnfParser::onBinValAltFirstEnd(const char * eptr) {
+inline bool AbnfParser::onBinValAltFirstEnd() {
     assert(m_number <= UCHAR_MAX);
     m_first = (unsigned char)m_number;
     m_number = 0;
@@ -86,7 +107,7 @@ inline bool AbnfParser::onBinValAltFirstEnd(const char * eptr) {
 }
 
 //===========================================================================
-inline bool AbnfParser::onBinValAltSecondEnd(const char * eptr) {
+inline bool AbnfParser::onBinValAltSecondEnd() {
     assert(m_number <= UCHAR_MAX);
     Element * elem = m_rules.addChoice(m_elems.back(), m_min, m_max);
     m_rules.addRange(elem, m_first, (unsigned char)m_number);
@@ -95,7 +116,7 @@ inline bool AbnfParser::onBinValAltSecondEnd(const char * eptr) {
 }
 
 //===========================================================================
-inline bool AbnfParser::onBinValConcatEachEnd(const char * eptr) {
+inline bool AbnfParser::onBinValConcatEachEnd() {
     assert(m_number <= UCHAR_MAX);
     auto elem = m_rules.addChoice(m_elems.back(), 1, 1);
     m_rules.addTerminal(elem, (unsigned char)m_number);
@@ -104,14 +125,14 @@ inline bool AbnfParser::onBinValConcatEachEnd(const char * eptr) {
 }
 
 //===========================================================================
-inline bool AbnfParser::onBinValConcatenationStart(const char * ptr) {
+inline bool AbnfParser::onBinValConcatenationStart() {
     Element * elem = m_rules.addSequence(m_elems.back(), m_min, m_max);
     m_elems.push_back(elem);
     return true;
 }
 
 //===========================================================================
-inline bool AbnfParser::onBinValConcatenationEnd(const char * eptr) {
+inline bool AbnfParser::onBinValConcatenationEnd() {
     assert(m_elems.back()->type == Element::kSequence);
     m_elems.pop_back();
     return true;
@@ -124,7 +145,7 @@ inline bool AbnfParser::onBinValSequenceChar(char ch) {
 }
 
 //===========================================================================
-inline bool AbnfParser::onBinValSimpleEnd(const char * eptr) {
+inline bool AbnfParser::onBinValSimpleEnd() {
     assert(m_number <= UCHAR_MAX);
     auto elem = m_rules.addChoice(m_elems.back(), m_min, m_max);
     m_rules.addTerminal(elem, (unsigned char)m_number);
@@ -133,21 +154,21 @@ inline bool AbnfParser::onBinValSimpleEnd(const char * eptr) {
 }
 
 //===========================================================================
-inline bool AbnfParser::onCharValInsensitiveEnd(const char * eptr) {
+inline bool AbnfParser::onCharValInsensitiveEnd() {
     m_rules.addText(m_elems.back(), m_string, m_min, m_max);
     m_string.clear();
     return true;
 }
 
 //===========================================================================
-inline bool AbnfParser::onCharValSensitiveEnd(const char * eptr) {
+inline bool AbnfParser::onCharValSensitiveEnd() {
     m_rules.addLiteral(m_elems.back(), m_string, m_min, m_max);
     m_string.clear();
     return true;
 }
 
 //===========================================================================
-inline bool AbnfParser::onCharValSequenceStart(const char * ptr) {
+inline bool AbnfParser::onCharValSequenceStart() {
     assert(m_string.empty());
     return true;
 }
@@ -159,42 +180,42 @@ inline bool AbnfParser::onCharValSequenceChar(char ch) {
 }
 
 //===========================================================================
-inline bool AbnfParser::onConcatenationStart(const char * ptr) {
+inline bool AbnfParser::onConcatenationStart() {
     Element * elem = m_rules.addSequence(m_elems.back(), 1, 1);
     m_elems.push_back(elem);
     return true;
 }
 
 //===========================================================================
-inline bool AbnfParser::onConcatenationEnd(const char * eptr) {
+inline bool AbnfParser::onConcatenationEnd() {
     assert(m_elems.back()->type == Element::kSequence);
     m_elems.pop_back();
     return true;
 }
 
 //===========================================================================
-inline bool AbnfParser::onDecValAltFirstEnd(const char * eptr) {
-    return onBinValAltFirstEnd(eptr);
+inline bool AbnfParser::onDecValAltFirstEnd() {
+    return onBinValAltFirstEnd();
 }
 
 //===========================================================================
-inline bool AbnfParser::onDecValAltSecondEnd(const char * eptr) {
-    return onBinValAltSecondEnd(eptr);
+inline bool AbnfParser::onDecValAltSecondEnd() {
+    return onBinValAltSecondEnd();
 }
 
 //===========================================================================
-inline bool AbnfParser::onDecValConcatEachEnd(const char * eptr) {
-    return onBinValConcatEachEnd(eptr);
+inline bool AbnfParser::onDecValConcatEachEnd() {
+    return onBinValConcatEachEnd();
 }
 
 //===========================================================================
-inline bool AbnfParser::onDecValConcatenationStart(const char * ptr) {
-    return onBinValConcatenationStart(ptr);
+inline bool AbnfParser::onDecValConcatenationStart() {
+    return onBinValConcatenationStart();
 }
 
 //===========================================================================
-inline bool AbnfParser::onDecValConcatenationEnd(const char * eptr) {
-    return onBinValConcatenationEnd(eptr);
+inline bool AbnfParser::onDecValConcatenationEnd() {
+    return onBinValConcatenationEnd();
 }
 
 //===========================================================================
@@ -204,18 +225,18 @@ inline bool AbnfParser::onDecValSequenceChar(char ch) {
 }
 
 //===========================================================================
-inline bool AbnfParser::onDecValSimpleEnd(const char * eptr) {
-    return onBinValSimpleEnd(eptr);
+inline bool AbnfParser::onDecValSimpleEnd() {
+    return onBinValSimpleEnd();
 }
 
 //===========================================================================
-inline bool AbnfParser::onDefinedAsIncrementalEnd(const char * eptr) {
+inline bool AbnfParser::onDefinedAsIncrementalEnd() {
     m_incremental = true;
     return startRule();
 }
 
 //===========================================================================
-inline bool AbnfParser::onDefinedAsSetEnd(const char * eptr) {
+inline bool AbnfParser::onDefinedAsSetEnd() {
     return startRule();
 }
 
@@ -242,28 +263,28 @@ inline bool AbnfParser::onGroupEnd(const char * eptr) {
 }
 
 //===========================================================================
-inline bool AbnfParser::onHexValAltFirstEnd(const char * eptr) {
-    return onBinValAltFirstEnd(eptr);
+inline bool AbnfParser::onHexValAltFirstEnd() {
+    return onBinValAltFirstEnd();
 }
 
 //===========================================================================
-inline bool AbnfParser::onHexValAltSecondEnd(const char * eptr) {
-    return onBinValAltSecondEnd(eptr);
+inline bool AbnfParser::onHexValAltSecondEnd() {
+    return onBinValAltSecondEnd();
 }
 
 //===========================================================================
-inline bool AbnfParser::onHexValConcatEachEnd(const char * eptr) {
-    return onBinValConcatEachEnd(eptr);
+inline bool AbnfParser::onHexValConcatEachEnd() {
+    return onBinValConcatEachEnd();
 }
 
 //===========================================================================
-inline bool AbnfParser::onHexValConcatenationStart(const char * ptr) {
-    return onBinValConcatenationStart(ptr);
+inline bool AbnfParser::onHexValConcatenationStart() {
+    return onBinValConcatenationStart();
 }
 
 //===========================================================================
-inline bool AbnfParser::onHexValConcatenationEnd(const char * eptr) {
-    return onBinValConcatenationEnd(eptr);
+inline bool AbnfParser::onHexValConcatenationEnd() {
+    return onBinValConcatenationEnd();
 }
 
 //===========================================================================
@@ -279,8 +300,8 @@ inline bool AbnfParser::onHexValSequenceChar(char ch) {
 }
 
 //===========================================================================
-inline bool AbnfParser::onHexValSimpleEnd(const char * eptr) {
-    return onBinValSimpleEnd(eptr);
+inline bool AbnfParser::onHexValSimpleEnd() {
+    return onBinValSimpleEnd();
 }
 
 //===========================================================================
@@ -294,20 +315,20 @@ inline bool AbnfParser::onOptionUnquotedChar(char ch) {
 }
 
 //===========================================================================
-inline bool AbnfParser::onOptiondefEnd(const char * eptr) {
-    return onRulerefEnd(eptr);
+inline bool AbnfParser::onOptiondefEnd() {
+    return onRulerefEnd();
 }
 
 //===========================================================================
-inline bool AbnfParser::onOptionlistStart(const char * ptr) {
+inline bool AbnfParser::onOptionlistStart() {
     m_min = 1;
     m_max = 1;
     return true;
 }
 
 //===========================================================================
-inline bool AbnfParser::onOptionlistEnd(const char * eptr) {
-    return onRuleEnd(eptr);
+inline bool AbnfParser::onOptionlistEnd() {
+    return onRuleEnd();
 }
 
 //===========================================================================
@@ -319,21 +340,21 @@ inline bool AbnfParser::onOptionnameChar(char ch) {
 }
 
 //===========================================================================
-inline bool AbnfParser::onRepeatMaxEnd(const char * eptr) {
+inline bool AbnfParser::onRepeatMaxEnd() {
     m_max = m_number;
     m_number = 0;
     return true;
 }
 
 //===========================================================================
-inline bool AbnfParser::onRepeatMinmaxEnd(const char * eptr) {
+inline bool AbnfParser::onRepeatMinmaxEnd() {
     m_min = m_max = m_number;
     m_number = 0;
     return true;
 }
 
 //===========================================================================
-inline bool AbnfParser::onRepeatRangeStart(const char * ptr) {
+inline bool AbnfParser::onRepeatRangeStart() {
     m_min = m_number;
     m_max = kUnlimited;
     m_number = 0;
@@ -341,14 +362,14 @@ inline bool AbnfParser::onRepeatRangeStart(const char * ptr) {
 }
 
 //===========================================================================
-inline bool AbnfParser::onRepetitionStart(const char * ptr) {
+inline bool AbnfParser::onRepetitionStart() {
     m_min = 1;
     m_max = 1;
     return true;
 }
 
 //===========================================================================
-inline bool AbnfParser::onRuleEnd(const char * eptr) {
+inline bool AbnfParser::onRuleEnd() {
     using namespace Dim;
     if (m_elems.size() == 1) {
         if (!m_mustMatch || m_minRules == m_minRulesEnabled) {
@@ -376,7 +397,7 @@ inline bool AbnfParser::onRuleEnd(const char * eptr) {
 }
 
 //===========================================================================
-inline bool AbnfParser::onRulenameStart(const char * ptr) {
+inline bool AbnfParser::onRulenameStart() {
     assert(m_string.empty());
     return true;
 }
@@ -388,7 +409,7 @@ inline bool AbnfParser::onRulenameChar(char ch) {
 }
 
 //===========================================================================
-inline bool AbnfParser::onRulerefEnd(const char * eptr) {
+inline bool AbnfParser::onRulerefEnd() {
     m_rules.addRule(m_elems.back(), m_string, m_min, m_max);
     m_string.clear();
     return true;

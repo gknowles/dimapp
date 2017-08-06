@@ -25,18 +25,30 @@ const char kDoneRuleName[] = "%%DONE";
 const unsigned kUnlimited = unsigned(-1);
 
 struct Element {
-    enum Flags : uint8_t {
+    enum Flags : uint16_t {
+        // Simple events with no context 
         fOnStart = 1,
         fOnChar = 2,
         fOnEnd = 4,
-        fFunction = 8,
+
+        // Events with context data, requires more work tracking internal 
+        // state. Not supported when the grammar allows position to be 
+        // extended indefinitely.
+        fOnStartW = 8,
+        fOnCharW = 16,
+        fOnEndW = 32,
+
+        fFunction = 64,
 
         // If complexity has been tested one of these will be set:
-        fSimple = 16,   // is single terminal or choice of terminals and 
+        fSimple = 128,  // is single terminal or choice of terminals and 
                         //   no other flags
-        fComplex = 32,  // is not fSimple
+        fComplex = 256, // is not fSimple
 
-        fCallbackFlags = fOnStart | fOnChar | fOnEnd,
+        fStartEvents = fOnStart | fOnStartW,
+        fCharEvents = fOnChar | fOnCharW,
+        fEndEvents = fOnEnd | fOnEndW,
+        fEvents = fStartEvents | fCharEvents | fEndEvents,
         fComplexityFlags = fSimple | fComplex,
     };
 
@@ -193,7 +205,7 @@ struct StateElement {
 struct StateEvent {
     const Element * elem{nullptr};
     Element::Flags flags{};
-    unsigned distance{0};
+    int distance{0};
 
     int compare(const StateEvent & right) const;
     bool operator<(const StateEvent & right) const;
@@ -217,7 +229,7 @@ struct StatePosition {
 };
 
 struct State {
-    unsigned id;
+    unsigned id{0};
     std::string name;
     std::vector<std::string> aliases;
 
