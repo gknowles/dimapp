@@ -124,7 +124,7 @@ BASE_LE10_WITH_OVERFLOW:
     shiftLimit = valLimit / radix;
     charLimit = 0;
     for (; chars; ++ptr, --chars) {
-        num = unsigned char(*ptr) - '0';
+        num = (unsigned char) *ptr - '0';
         if (num >= radix)
             break;
         if (val > shiftLimit) 
@@ -145,11 +145,12 @@ BASE_ANY_WITH_OVERFLOW:
         if (ch <= '9') {
             num = ch - '0';
         } else if (ch <= 'Z') {
-            // Cast to unsigned so that it fails with a too large positive 
+            // ch must be unsigned so that it fails with a too large positive 
             // number when ch - 'A' is negative.
-            num = unsigned char(ch - 'A') + 10;
+            static_assert(std::is_unsigned_v<decltype(ch)>);
+            num = ch - 'A' + 10;
         } else if (ch <= 'z') {
-            num = unsigned char(ch - 'a') + 10;
+            num = ch - 'a' + 10;
         } else {
             break;
         }
@@ -216,7 +217,7 @@ BASE_10:
         chars = kMaxSafeCharsBase10;
     }
     for (; chars; ++ptr, --chars) {
-        num = unsigned char(*ptr) - '0';
+        num = (unsigned char) *ptr - '0';
         if (num > 9)
             goto CHECK_NUMBER;
         val = 10 * val + num;
