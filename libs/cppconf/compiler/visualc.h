@@ -9,6 +9,9 @@
 #endif
 #define _ITERATOR_DEBUG_LEVEL 0
 
+// disable std::byte because it conflicts with some of the windows sdk headers
+#define _HAS_STD_BYTE 0
+
 #ifndef DIM_LIB_KEEP_MACROS
 #pragma warning(push)
 #endif
