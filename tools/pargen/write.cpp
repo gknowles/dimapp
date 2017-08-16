@@ -574,6 +574,7 @@ static void writeFunction(
 // Parser function covering:
 //  - )"
        << stateSet.size() + 1 << R"( states
+[[gsl::suppress(bounds)]]
 bool )" << parserClass
        << "::";
     if (!root) {
