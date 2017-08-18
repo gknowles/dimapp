@@ -44,6 +44,10 @@ static void app(int argc, char *argv[]) {
     EXPECT(num == 10);
     num = digits10(999'999'999);
     EXPECT(num == 9);
+    num = hammingWeight(0xffff'ffff'ffff'ffff);
+    EXPECT(num == 64);
+    num = hammingWeight(0xff00'0000'0000'0000);
+    EXPECT(num == 8);
 
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);
