@@ -7,7 +7,6 @@
 
 using namespace std;
 using namespace Dim;
-namespace fs = std::experimental::filesystem;
 
 
 /****************************************************************************
@@ -23,13 +22,13 @@ class LogTask
     , public ILogNotify
 {
 public:
-    LogTask() {}
-    LogTask(LogType type, string_view msg);
+    LogTask () {}
+    LogTask (LogType type, string_view msg);
 
     // ITaskNotify
-    void onTask() override;
+    void onTask () override;
     // ILogNotify
-    void onLog(LogType type, string_view msg) override;
+    void onLog (LogType type, string_view msg) override;
 
 private:
     LogType m_type;
@@ -56,7 +55,7 @@ static TaskQueueHandle s_logQ;
 ***/
 
 //===========================================================================
-static bool parseAbnf(
+static bool parseAbnf (
     Grammar & rules, 
     const string & src, 
     bool minRules
@@ -72,7 +71,7 @@ static bool parseAbnf(
 }
 
 //===========================================================================
-static void getCoreRules(Grammar & rules) {
+static void getCoreRules (Grammar & rules) {
     const char * coreRules = R"(
 ALPHA   =  %x41-5A / %x61-7A ; A-Z / a-z
 BIT     =  "0" / "1"
@@ -94,14 +93,13 @@ VCHAR   =  %x21-7E
 WSP     =  SP
 WSP     =/ HTAB { NoMinRules }
 )";
-    [[maybe_unused]] bool valid =
-        parseAbnf(rules, coreRules, s_cmdopts.minRules);
+    [[maybe_unused]] bool valid 
+        = parseAbnf(rules, coreRules, s_cmdopts.minRules);
     assert(valid);
-    (void)valid;
 }
 
 //===========================================================================
-static bool internalTest() {
+static bool internalTest () {
     bool valid;
     Grammar rules;
     getCoreRules(rules);
@@ -148,13 +146,13 @@ static bool internalTest() {
 ***/
 
 //===========================================================================
-LogTask::LogTask(LogType type, string_view msg)
+LogTask::LogTask (LogType type, string_view msg)
     : m_type(type)
     , m_msg(msg) 
 {}
 
 //===========================================================================
-void LogTask::onLog(LogType type, string_view msg) {
+void LogTask::onLog (LogType type, string_view msg) {
     if (s_cmdopts.verbose || type != kLogTypeDebug) {
         auto ptr = new LogTask(type, msg);
         if (s_logQ) {
@@ -166,7 +164,7 @@ void LogTask::onLog(LogType type, string_view msg) {
 }
 
 //===========================================================================
-void LogTask::onTask() {
+void LogTask::onTask () {
     if (m_type == kLogTypeError) {
         ConsoleScopedAttr attr(kConsoleError);
         cerr << "ERROR: " << m_msg << endl;
@@ -184,25 +182,25 @@ void LogTask::onTask() {
 ***/
 
 //===========================================================================
-static void app(int argc, char * argv[]) {
+static void app (int argc, char * argv[]) {
     s_logQ = taskCreateQueue("Logging", 1);
     string version{kVersion};
 
     Cli cli;
     // header
-    cli.header(
-        "pargen v"s + version + " (" __DATE__
-                                 ") simplistic parser generator\n");
+    cli.header("pargen v"s + version 
+        + " (" __DATE__ ") simplistic parser generator\n"
+    );
     // positional arguments
-    auto & srcfile = cli.opt<fs::path>("[source file(.abnf)]")
-                         .desc("File containing ABNF rules to process.");
+    auto & srcfile = cli.opt<Path>("[source file(.abnf)]")
+        .desc("File containing ABNF rules to process.");
     auto & root = cli.opt<string>("[root rule]")
         .desc("Root rule to use, overrides %root in <source file>.");
     // options
     cli.versionOpt(version);
     auto & help = cli.opt<bool>("? h help.")
-                      .desc("Show this message and exit.")
-                      .group("~");
+        .desc("Show this message and exit.")
+        .group("~");
     auto & test = cli.opt<bool>("test.").group("~").desc(
         "Run internal test of ABNF parsing logic.");
     cli.opt(&s_cmdopts.minRules, "min-rules", false)
@@ -264,10 +262,9 @@ https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
         return appSignalUsageError("No value given for <source file[.abnf]>");
 
     // process abnf file
-    if (!srcfile->has_extension())
-        srcfile->replace_extension("abnf");
+    srcfile->defaultExt("abnf");
     string source;
-    fileLoadBinaryWait(source, srcfile->u8string());
+    fileLoadBinaryWait(source, *srcfile);
     if (source.empty())
         return appSignalUsageError(EX_USAGE);
 
@@ -277,7 +274,7 @@ https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
     if (!parseAbnf(rules, source, s_cmdopts.minRules)) {
         logParseError(
             "parsing failed",
-            srcfile->u8string(),
+            *srcfile,
             rules.errpos(),
             source);
         return appSignalShutdown(EX_DATAERR);
@@ -325,7 +322,7 @@ https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
 ***/
 
 //===========================================================================
-int main(int argc, char * argv[]) {
+int main (int argc, char * argv[]) {
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
     _set_error_mode(_OUT_TO_MSGBOX);
 

@@ -8,6 +8,7 @@
 #include "app/app.h"
 #include "cli/cli.h"
 #include "core/core.h"
+#include "file/file.h"
 #include "xml/xml.h"
 
 // Standard headers

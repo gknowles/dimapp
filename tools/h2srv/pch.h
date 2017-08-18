@@ -15,7 +15,6 @@
 #include <crtdbg.h>
 #include <cstdio>
 #include <cstdlib>
-#include <experimental/filesystem>
 #include <iostream>
 
 // Platform headers

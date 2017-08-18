@@ -6,7 +6,6 @@
 #pragma hdrstop
 
 using namespace std;
-namespace fs = std::experimental::filesystem;
 using namespace Dim;
 
 
@@ -122,7 +121,7 @@ int main(int argc, char * argv[]) {
 
     Cli cli;
     auto & path =
-        cli.opt<fs::path>("[xml file]").desc("File to check is well-formed");
+        cli.opt<Path>("[xml file]").desc("File to check is well-formed");
     auto & test = cli.opt<bool>("test.").desc("Run internal unit tests");
     auto & echo = cli.opt<bool>("echo").desc("Echo xml if well-formed");
     cli.versionOpt("1.0 (" __DATE__ ")");
@@ -133,10 +132,9 @@ int main(int argc, char * argv[]) {
     if (path->empty())
         return cli.printHelp(cout);
 
-    if (!path->has_extension())
-        path->replace_extension("xml");
+    path->defaultExt("xml");
     error_code code;
-    size_t bytes = fs::file_size(*path, code);
+    size_t bytes = fileSize(*path);
     string content;
     content.resize(bytes + 1);
     ifstream in(*path, ios_base::in | ios_base::binary);
@@ -164,7 +162,7 @@ int main(int argc, char * argv[]) {
 
     logParseError(
         "xml: parsing failed", 
-        path->string(), 
+        *path, 
         doc.errpos(), 
         content
     );

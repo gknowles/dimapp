@@ -358,11 +358,6 @@ fs::path Path::fsPath() const {
 }
 
 //===========================================================================
-string_view Path::view() const {
-    return m_data;
-}
-
-//===========================================================================
 const char * Path::c_str() const {
     return m_data.c_str();
 }

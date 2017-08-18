@@ -34,7 +34,7 @@ static void app(int argc, char *argv[]) {
     Path p;
     p = "hello";
     p.defaultExt("txt");
-    EXPECT(p.view() == "hello.txt");
+    EXPECT(p == "hello.txt"sv);
 
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);

@@ -8,7 +8,7 @@
 
 #include <cassert>
 #include <cstdint>
-#include <experimental/filesystem>
+#include <memory>
 
 namespace Dim {
 
