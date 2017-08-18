@@ -32,6 +32,8 @@ using namespace Dim;
 static void app(int argc, char *argv[]) {
     int line = 0;
     Path p;
+    p = "..\\a\\b\\..\\base.ext";
+    EXPECT(p == "../a/base.ext"sv);
     p = "hello";
     p.defaultExt("txt");
     EXPECT(p == "hello.txt"sv);

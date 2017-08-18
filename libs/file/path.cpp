@@ -97,9 +97,9 @@ static void normalize(string & path) {
                             && (ptr[-3] == '/' || ptr[-3] == '\\')
                         ) {
                             auto * obase = out.data() + cnt.m_rootLen;
-                            auto * slash = out.data() + out.size() - 3;
+                            auto * slash = out.data() + out.size() - 4;
                             for (;; --slash) {
-                                if (slash == obase) {
+                                if (slash <= obase) {
                                     out.resize(out.size() - 2);
                                     break;
                                 }
@@ -111,8 +111,10 @@ static void normalize(string & path) {
                             prevChar = kSlash;
                             continue;
                         }
-                        while (!out.empty() && out.back() == '.')
-                            out.pop_back();
+                        if (*base == '/') {
+                            while (!out.empty() && out.back() == '.')
+                                out.pop_back();
+                        }
                     }
                 }
                 break;
