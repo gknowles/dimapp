@@ -154,10 +154,12 @@ void appSignalShutdown(int exitcode = EX_OK);
 // instance. 
 void appSignalUsageError(
     std::string_view err = {},
-    std::string_view detail = {});
+    std::string_view detail = {}
+);
 void appSignalUsageError(
     int exitcode,
     std::string_view err = {},
-    std::string_view detail = {});
+    std::string_view detail = {}
+);
 
 } // namespace

@@ -110,7 +110,8 @@ TlsConnHandle tlsConnect(
     CharBuf * out,
     const char hostName[],
     const TlsCipherSuite suites[],
-    size_t count);
+    size_t count
+);
 TlsConnHandle tlsAccept(const TlsCipherSuite suites[], size_t count);
 void tlsClose(TlsConnHandle h);
 
@@ -119,12 +120,14 @@ bool tlsRecv(
     CharBuf * out,
     CharBuf * data,
     const void * src,
-    size_t srcLen);
+    size_t srcLen
+);
 
 void tlsSend(
     TlsConnHandle conn,
     CharBuf * out,
     const void * src,
-    size_t srcLen);
+    size_t srcLen
+);
 
 } // namespace

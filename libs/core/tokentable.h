@@ -25,17 +25,7 @@ public:
         int id;
         const char * name;
     };
-
-    class Iterator {
-        const Token * m_current{nullptr};
-    public:
-        Iterator(const Token * ptr);
-        Iterator & operator++();
-        bool operator!=(const Iterator & right) const { 
-            return m_current != right.m_current; 
-        }
-        const Token & operator*() { return *m_current; }
-    };
+    class Iterator;
 
 public:
     TokenTable(const Token * ptr, size_t count);
@@ -62,6 +52,39 @@ private:
     int m_hashLen;
 };
 
+
+/****************************************************************************
+*
+*   TokenTable::Iterator
+*
+***/
+
+class TokenTable::Iterator {
+    const Token * m_current{nullptr};
+public:
+    Iterator(const Token * ptr);
+    Iterator & operator++();
+    bool operator!=(const Iterator & right) const;
+    const Token & operator*();
+};
+
+//===========================================================================
+inline bool TokenTable::Iterator::operator!=(const Iterator & right) const { 
+    return m_current != right.m_current; 
+}
+
+//===========================================================================
+inline const TokenTable::Token & TokenTable::Iterator::operator*() { 
+    return *m_current; 
+}
+
+
+/****************************************************************************
+*
+*   Free functions
+*
+***/
+
 template <typename E>
 E tokenTableGetEnum(const TokenTable & tbl, const char name[], E defId) {
     int id;
@@ -78,7 +101,8 @@ template <typename E>
 const char * tokenTableGetName(
     const TokenTable & tbl,
     E id,
-    const char defName[] = nullptr) {
+    const char defName[] = nullptr
+) {
     const char * name;
     return tbl.find(&name, (int)id) ? name : defName;
 }

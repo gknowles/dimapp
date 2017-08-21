@@ -105,7 +105,8 @@ void endpointQuery(
     int * cancelId,
     IEndpointNotify * notify,
     std::string_view name,
-    int defaultPort);
+    int defaultPort
+);
 void endpointCancelQuery(int cancelId);
 
 } // namespace dim

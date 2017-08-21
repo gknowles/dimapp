@@ -66,7 +66,8 @@ public:
     virtual void onTlsHandshake(
         TlsHandshakeType type,
         const uint8_t msg[],
-        size_t msgLen) = 0;
+        size_t msgLen
+    ) = 0;
 };
 
 class TlsRecordDecrypt {
@@ -79,7 +80,8 @@ public:
         CharBuf * data, // decrypted application data
         ITlsRecordDecryptNotify * notify,
         const void * src,
-        size_t srcLen);
+        size_t srcLen
+    );
 
     // alert level and desc are set when parse(...) returns false
     TlsAlertLevel alertLevel() const { return m_alertLevel; }

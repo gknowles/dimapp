@@ -27,11 +27,11 @@ constexpr uint8_t reverseBits(uint8_t x) {
 
 //===========================================================================
 constexpr uint64_t reverseBits(uint64_t x) {
-    x = ((x & 0xaaaa'aaaa'aaaa'aaaa) >> 1) | ((x & 0x5555'5555'5555'5555) << 1);
-    x = ((x & 0xcccc'cccc'cccc'cccc) >> 2) | ((x & 0x3333'3333'3333'3333) << 2);
-    x = ((x & 0xf0f0'f0f0'f0f0'f0f0) >> 4) | ((x & 0x0f0f'0f0f'0f0f'0f0f) << 4);
-    x = ((x & 0xff00'ff00'ff00'ff00) >> 8) | ((x & 0x00ff'00ff'00ff'00ff) << 8);
-    x = ((x & 0xffff'0000'ffff'0000) >>16) | ((x & 0x0000'ffff'0000'ffff) <<16);
+    x = ((x & 0xaaaa'aaaa'aaaa'aaaa) >> 1)|((x & 0x5555'5555'5555'5555) << 1);
+    x = ((x & 0xcccc'cccc'cccc'cccc) >> 2)|((x & 0x3333'3333'3333'3333) << 2);
+    x = ((x & 0xf0f0'f0f0'f0f0'f0f0) >> 4)|((x & 0x0f0f'0f0f'0f0f'0f0f) << 4);
+    x = ((x & 0xff00'ff00'ff00'ff00) >> 8)|((x & 0x00ff'00ff'00ff'00ff) << 8);
+    x = ((x & 0xffff'0000'ffff'0000) >>16)|((x & 0x0000'ffff'0000'ffff) <<16);
     return (x >> 32) | (x << 32);
 }
 

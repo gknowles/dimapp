@@ -27,7 +27,8 @@ public:
     virtual void onHttpRequest(
         unsigned reqId,
         std::unordered_multimap<std::string_view, std::string_view> & params,
-        HttpRequest & msg) = 0;
+        HttpRequest & msg
+    ) = 0;
 };
 
 void httpRouteAdd(

@@ -100,6 +100,7 @@ public:
     // (or failed)
     virtual void onFileEnd(int64_t offset, FileHandle f) = 0;
 };
+
 void fileRead(
     IFileReadNotify * notify,
     void * outBuf,
@@ -112,22 +113,26 @@ void fileReadWait(
     void * outBuf,
     size_t outBufLen,
     FileHandle f,
-    int64_t offset);
+    int64_t offset
+);
 
 void fileStreamBinary(
     IFileReadNotify * notify,
     std::string_view path,
-    size_t blkSize);
+    size_t blkSize
+);
 
 void fileLoadBinary(
     IFileReadNotify * notify,   // only onFileEnd() is called
     std::string & out,
     std::string_view path,
-    size_t maxSize = 10'000'000);
+    size_t maxSize = 10'000'000
+);
 void fileLoadBinaryWait(
     std::string & out,
     std::string_view path,
-    size_t maxSize = 10'000'000);
+    size_t maxSize = 10'000'000
+);
 
 // page size is determined by the operating system but is always a power of 2
 size_t filePageSize();
@@ -159,24 +164,29 @@ public:
         int written,
         std::string_view data,
         int64_t offset,
-        FileHandle f) = 0;
+        FileHandle f
+    ) = 0;
 };
+
 void fileWrite(
     IFileWriteNotify * notify,
     FileHandle f,
     int64_t offset,
     const void * buf,
-    size_t bufLen);
+    size_t bufLen
+);
 void fileWriteWait(
     FileHandle f,
     int64_t offset,
     const void * buf,
-    size_t bufLen);
+    size_t bufLen
+);
 void fileAppend(
     IFileWriteNotify * notify,
     FileHandle f,
     const void * buf,
-    size_t bufLen);
+    size_t bufLen
+);
 void fileAppendWait(FileHandle f, const void * buf, size_t bufLen);
 
 } // namespace

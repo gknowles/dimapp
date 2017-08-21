@@ -86,9 +86,7 @@ enum HttpHdr {
 };
 
 std::string_view to_view(HttpHdr id);
-HttpHdr httpHdrFromString(
-    std::string_view name,
-    HttpHdr def = kHttpInvalid);
+HttpHdr httpHdrFromString(std::string_view name, HttpHdr def = kHttpInvalid);
 
 enum HttpMethod {
     fHttpMethodInvalid = 0x00,
@@ -106,7 +104,8 @@ enum HttpMethod {
 std::string_view to_view(HttpMethod method);
 HttpMethod httpMethodFromString(
     std::string_view name, 
-    HttpMethod def = fHttpMethodInvalid);
+    HttpMethod def = fHttpMethodInvalid
+);
 
 
 /****************************************************************************
@@ -257,7 +256,8 @@ bool httpRecv(
     CharBuf * out,
     std::vector<std::unique_ptr<HttpMsg>> * msgs,
     const void * src,
-    size_t srcLen);
+    size_t srcLen
+);
 
 // Serializes a request and returns the stream id used
 int httpRequest(
@@ -281,7 +281,8 @@ void httpReply(
     CharBuf * out,
     int stream,
     const HttpMsg & msg,
-    bool more = false);
+    bool more = false
+);
 
 // Sends more data on a stream, a stream ends after request, push promise,
 // reply, or data is called with more false.

@@ -140,8 +140,7 @@ inline IXBuilder & endAttr(IXBuilder & out) {
 //---------------------------------------------------------------------------
 class XBuilder : public IXBuilder {
 public:
-    XBuilder(CharBuf & buf)
-        : m_buf(buf) {}
+    XBuilder(CharBuf & buf) : m_buf(buf) {}
     void clear() override;
 
 private:
@@ -226,7 +225,8 @@ public:
     XNode * addElem(
         XNode * parent, 
         const char name[], 
-        const char text[] = nullptr);
+        const char text[] = nullptr
+    );
     XAttr * addAttr(XNode * elem, const char name[], const char text[]);
 
     XNode * addText(XNode * parent, const char text[]);
@@ -286,36 +286,44 @@ void unlinkNode(XNode * node);
 XNode * firstChild(
     XNode * elem,
     std::string_view name = {},
-    XType type = XType::kInvalid);
+    XType type = XType::kInvalid
+);
 const XNode * firstChild(
     const XNode * elem,
     std::string_view name = {},
-    XType type = XType::kInvalid);
+    XType type = XType::kInvalid
+);
 XNode * lastChild(
     XNode * elem,
     std::string_view name = {},
-    XType type = XType::kInvalid);
+    XType type = XType::kInvalid
+);
 const XNode * lastChild(
     const XNode * elem,
     std::string_view name = {},
-    XType type = XType::kInvalid);
+    XType type = XType::kInvalid
+);
 
 XNode * nextSibling(
     XNode * elem,
     std::string_view name = {},
-    XType type = XType::kInvalid);
+    XType type = XType::kInvalid
+);
 const XNode * nextSibling(
     const XNode * elem,
     std::string_view name = {},
-    XType type = XType::kInvalid);
+    XType type = XType::kInvalid
+);
 XNode * prevSibling(
     XNode * elem,
     std::string_view name = {},
-    XType type = XType::kInvalid);
+    XType type = XType::kInvalid
+);
 const XNode * prevSibling(
     const XNode * elem,
     std::string_view name = {},
-    XType type = XType::kInvalid);
+    XType type = XType::kInvalid
+);
 
 XAttr * attr(XNode * elem, std::string_view name);
 const XAttr * attr(const XNode * elem, std::string_view name);
@@ -349,7 +357,8 @@ XNodeRange<const XNode> elems(const XNode * elem, std::string_view name = {});
 XNodeRange<XNode> nodes(XNode * elem, XType type = XType::kInvalid);
 XNodeRange<const XNode> nodes(
     const XNode * elem, 
-    XType type = XType::kInvalid);
+    XType type = XType::kInvalid
+);
 
 //===========================================================================
 // Attribute iteration

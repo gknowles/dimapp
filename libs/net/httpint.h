@@ -63,7 +63,8 @@ public:
         CharBuf * out,
         std::vector<std::unique_ptr<HttpMsg>> * msgs,
         const void * src,
-        size_t srcLen);
+        size_t srcLen
+    );
 
     // Serializes a request and returns the stream id used
     int request(CharBuf * out, const HttpMsg & msg, bool more);

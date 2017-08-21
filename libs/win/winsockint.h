@@ -48,7 +48,8 @@ public:
     static void write(
         ISocketNotify * notify,
         std::unique_ptr<SocketBuffer> buffer,
-        size_t bytes);
+        size_t bytes
+    );
 
 public:
     SocketBase(ISocketNotify * notify);

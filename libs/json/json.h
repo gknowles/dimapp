@@ -132,7 +132,8 @@ public:
         const char name[],
         size_t nameLen,
         const char value[],
-        size_t valueLen) = 0;
+        size_t valueLen
+    ) = 0;
     virtual bool text(const char value[], size_t valueLen) = 0;
 };
 
@@ -180,7 +181,8 @@ public:
     JValue * addValue(
         JValue * parent, 
         const char name[], 
-        const char text[] = nullptr);
+        const char text[] = nullptr
+    );
 
     ITempHeap & heap() { return m_heap; }
 
