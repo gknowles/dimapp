@@ -461,22 +461,21 @@ bool Path::hasExt() const {
 
 //===========================================================================
 bool Dim::operator==(const Path & left, std::string_view right) {
-    return static_cast<const string&>(left) == right;
+    return left.view() == right;
 }
 
 //===========================================================================
 bool Dim::operator==(std::string_view left, const Path & right) {
-    return left == static_cast<const string&>(right);
+    return left == right.view();
 }
 
 //===========================================================================
 bool Dim::operator==(const Path & left, const Path & right) {
-    return static_cast<const string&>(left) 
-        == static_cast<const string&>(right);
+    return left.view() == right.view();
 }
 
 //===========================================================================
 ostream & Dim::operator<<(ostream & os, const Path & val) {
-    os << static_cast<const string&>(val);
+    os << val.view();
     return os;
 }

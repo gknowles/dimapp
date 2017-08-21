@@ -137,7 +137,7 @@ int main(int argc, char * argv[]) {
     size_t bytes = fileSize(*path);
     string content;
     content.resize(bytes + 1);
-    ifstream in(*path, ios_base::in | ios_base::binary);
+    ifstream in(path->str(), ios_base::in | ios_base::binary);
     in.read(content.data(), bytes);
     if (!in) {
         logMsgError() << "xml: Error reading file: " << *path;

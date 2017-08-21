@@ -75,10 +75,11 @@ public:
     Path & operator/=(std::string_view path) { return resolve(path); }
 
     explicit operator bool() const { return !empty(); }
-    operator const std::string() const { return m_data; }
     operator std::string_view() const { return m_data; }
 
     std::experimental::filesystem::path fsPath() const;
+    const std::string & str() const { return m_data; }
+    std::string_view view() const { return m_data; }
     const char * c_str() const;
     size_t size() const;
 
