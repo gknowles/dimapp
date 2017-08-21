@@ -230,7 +230,7 @@ static void writeRuleName(ostream & os, const string & name, bool capitalize) {
 }
 
 //===========================================================================
-static bool writeSwitchCase(ostream & os, const State & st) {
+static bool writeSwitchCase(ostream & os, const State & st, bool setLast) {
     if (st.next.empty())
         return false;
     struct NextState {
@@ -259,8 +259,11 @@ static bool writeSwitchCase(ostream & os, const State & st) {
                 < 256 * stateKeys[e2.state] + e2.ch;
         }
     );
-    const unsigned kCaseColumns = 6;
     os << "    ch = *ptr++;\n";
+    if (setLast && st.next[0])
+        os << "    last = ptr;\n";
+
+    const unsigned kCaseColumns = 6;
     os << "    switch (ch) {\n";
     unsigned prev = cases.front().state;
     unsigned pos = 0;
@@ -465,6 +468,7 @@ static void writeParserState(
             auto flags = root->flags & Element::fEndEvents;
             if (flags) 
                 writeEventCallback(os, root->name, flags);
+            os << "    ptr -= 1;\n";
         }
         os << "    return true;\n";
         return;
@@ -475,12 +479,8 @@ static void writeParserState(
         return;
     }
 
-    if (root && !st.next.empty() && st.next[0]) {
-        os << "    last = ptr;\n";
-    }
-
     // write switch case
-    bool hasSwitch = writeSwitchCase(os, st);
+    bool hasSwitch = writeSwitchCase(os, st, root);
 
     // write calls to independent sub-state parsers
     const StatePosition * call = nullptr;
@@ -560,6 +560,46 @@ static void writeCppfileStart(
 }
 
 //===========================================================================
+static void writeMainFuncIntro(ostream & os) {
+    os << R"(parse (const char src[]) {
+    const char * ptr = src;
+    unsigned char ch;
+    goto state2;
+
+state0: 
+    // )" << kFailedStateName
+           << R"(
+    m_errpos = ptr - src - 1;
+    return false;
+)";
+}
+
+//===========================================================================
+static void writeStateFuncIntro(ostream & os, const Element * root) {
+    os << "state";
+    writeRuleName(os, root->name, true);
+    os << R"( (const char *& ptr) {
+    const char * last{nullptr};
+    unsigned char ch;
+)";
+    if (root->flags & Element::fOnStart)
+        writeEventCallback(os, root->name, Element::fOnStart);
+    if (root->flags & Element::fOnStartW)
+        writeEventCallback(os, root->name, Element::fOnStartW, "ptr");
+    os << R"(    goto state2;
+
+state0:
+    // )" << kFailedStateName
+           << R"(
+    if (last) {
+        ptr = last;
+        goto state1;
+    }
+    return false;
+)";
+}
+
+//===========================================================================
 static void writeFunction(
     ostream & os,
     const Element * root,
@@ -578,39 +618,9 @@ static void writeFunction(
 bool )" << parserClass
        << "::";
     if (!root) {
-        os << R"(parse (const char src[]) {
-    const char * ptr = src;
-    unsigned char ch;
-    goto state2;
-
-state0: 
-    // )" << kFailedStateName
-           << R"(
-    m_errpos = ptr - src - 1;
-    return false;
-)";
+        writeMainFuncIntro(os);
     } else {
-        os << "state";
-        writeRuleName(os, root->name, true);
-        os << R"( (const char *& ptr) {
-    const char * last{nullptr};
-    unsigned char ch;
-)";
-        if (root->flags & Element::fOnStart)
-            writeEventCallback(os, root->name, Element::fOnStart);
-        if (root->flags & Element::fOnStartW)
-            writeEventCallback(os, root->name, Element::fOnStartW, "ptr");
-        os << R"(    goto state2;
-
-state0:
-    // )" << kFailedStateName
-           << R"(
-    if (last) {
-        ptr = last;
-        goto state1;
-    }
-    return false;
-)";
+        writeStateFuncIntro(os, root);
     }
     vector<const State *> states;
     states.resize(stateSet.size());
