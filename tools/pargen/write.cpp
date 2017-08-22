@@ -230,7 +230,12 @@ static void writeRuleName(ostream & os, const string & name, bool capitalize) {
 }
 
 //===========================================================================
-static bool writeSwitchCase(ostream & os, const State & st, bool setLast) {
+static bool writeSwitchCase(
+    ostream & os, 
+    const State & st, 
+    bool setLast,
+    bool hasEvents
+) {
     if (st.next.empty())
         return false;
     struct NextState {
@@ -260,8 +265,13 @@ static bool writeSwitchCase(ostream & os, const State & st, bool setLast) {
         }
     );
     os << "    ch = *ptr++;\n";
-    if (setLast && st.next[0])
-        os << "    last = ptr;\n";
+    if (setLast) {
+        if (st.next[0]) {
+            os << "    last = ptr;\n";
+        } else if (hasEvents) {
+            os << "    last = nullptr;\n";
+        }
+    }
 
     const unsigned kCaseColumns = 6;
     os << "    switch (ch) {\n";
@@ -459,7 +469,8 @@ static void writeParserState(
     }
 
     // execute events
-    for (auto && sv : st.positions.begin()->first.events) {
+    auto & events = st.positions.begin()->first.events;
+    for (auto && sv : events) {
         writeEventCallback(os, sv);
     }
 
@@ -480,7 +491,7 @@ static void writeParserState(
     }
 
     // write switch case
-    bool hasSwitch = writeSwitchCase(os, st, root);
+    bool hasSwitch = writeSwitchCase(os, st, root, !events.empty());
 
     // write calls to independent sub-state parsers
     const StatePosition * call = nullptr;
@@ -512,7 +523,8 @@ static void writeParserState(
            << "        goto state" << id << ";\n";
     }
 
-    os << "    goto state0;\n";
+    unsigned id = root && !st.next.empty() ? st.next[0] : 0;
+    os << "    goto state" << id << ";\n";
 }
 
 //===========================================================================
