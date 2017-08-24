@@ -5,6 +5,7 @@
 #include "pch.h"
 #pragma hdrstop
 
+using namespace std;
 using namespace Dim;
 
 
@@ -14,7 +15,8 @@ using namespace Dim;
 *
 ***/
 
-const unsigned kBufferSize = 4096;
+const unsigned kInitBufferSize = 256;
+const unsigned kMaxBufferSize = 4096;
 
 
 /****************************************************************************
@@ -25,9 +27,12 @@ const unsigned kBufferSize = 4096;
 
 namespace {
 
+static_assert(kMaxBufferSize < numeric_limits<unsigned>::max());
+
 struct Buffer {
     Buffer * m_next;
-    size_t m_avail;
+    unsigned m_avail;
+    unsigned m_reserve;
 };
 
 } // namespace
@@ -66,18 +71,21 @@ void TempHeap::clear() {
 char * TempHeap::alloc(size_t bytes, size_t align) {
     Buffer * buf = (Buffer *)m_buffer;
     Buffer * tmp;
+    constexpr unsigned kBufferLen = sizeof(Buffer);
     for (;;) {
         if (buf) {
-            void * ptr = (char *)buf + kBufferSize - buf->m_avail;
-            if (std::align(align, bytes, ptr, buf->m_avail)) {
-                buf->m_avail -= bytes;
+            void * ptr = (char *)buf + buf->m_reserve - buf->m_avail;
+            size_t avail = buf->m_avail;
+            if (std::align(align, bytes, ptr, avail)) {
+                buf->m_avail = unsigned(avail - bytes);
                 return (char *)ptr;
             }
         }
-        if (bytes + align > kBufferSize / 3) {
-            tmp = (Buffer *)malloc(sizeof(Buffer) + bytes + align);
+        auto required = unsigned(bytes + align);
+        if (required > kMaxBufferSize / 3) {
+            tmp = (Buffer *)malloc(kBufferLen + required);
             assert(tmp != nullptr);
-            tmp->m_avail = bytes + align;
+            tmp->m_avail = tmp->m_reserve = required;
             if (buf) {
                 tmp->m_next = buf->m_next;
                 buf->m_next = tmp;
@@ -86,10 +94,15 @@ char * TempHeap::alloc(size_t bytes, size_t align) {
                 m_buffer = tmp;
             }
         } else {
-            tmp = (Buffer *)malloc(kBufferSize);
+            auto reserve = buf 
+                ? min(kMaxBufferSize - kBufferLen, 2 * buf->m_reserve)
+                : kInitBufferSize - kBufferLen;
+            if (reserve < required)
+                reserve = required;
+            tmp = (Buffer *)malloc(reserve + kBufferLen);
             assert(tmp != nullptr);
             tmp->m_next = buf;
-            tmp->m_avail = kBufferSize - sizeof(Buffer);
+            tmp->m_avail = tmp->m_reserve = reserve;
             m_buffer = tmp;
         }
         buf = tmp;
