@@ -36,6 +36,8 @@
 
 #include "cppconf/cppconf.h"
 
+#include "core/util.h"
+
 #include <algorithm>
 
 namespace Dim {

@@ -57,10 +57,13 @@ static void app(int argc, char *argv[]) {
     TestNode d;
     list.linkAfter(&b, &d);
     EXPECT(list.size() == 3);
+    int num = 0;
+    for (auto && v : list) {
+        num += v.m_value ? 1 : 1;
+    }
+    EXPECT(num == 3);
     list.unlinkAll();
     EXPECT(list.empty());
-
-    //Thing<&TestNode::m_base> t(&TestNode::m_base);
 
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);
