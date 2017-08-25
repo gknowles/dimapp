@@ -52,7 +52,7 @@ struct LinkDefault;
 ***/
 
 template <typename T, typename Tag = LinkDefault> 
-class ListBaseLink {
+class ListBaseLink : public NoCopy {
 public:
     ListBaseLink();
     ~ListBaseLink();
@@ -171,7 +171,7 @@ T * ListIterator<List, T>::operator->() {
 ***/
 
 template <typename T, typename Tag = LinkDefault>
-class List {
+class List : public NoCopy {
 public:
     using iterator = ListIterator<List, T>;
     using const_iterator = ListIterator<const List, const T>;
@@ -181,7 +181,6 @@ public:
     List() {}
     List(List && from);
     ~List();
-    List & operator=(const List & from) = delete;
 
     bool operator==(const List & right) const;
 
