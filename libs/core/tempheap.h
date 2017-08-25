@@ -79,7 +79,11 @@ inline char * ITempHeap::alloc(size_t bytes) {
 class TempHeap : public ITempHeap {
 public:
     ~TempHeap();
+    TempHeap & operator=(const TempHeap & from) = delete;
+    TempHeap & operator=(TempHeap && from);
+
     void clear();
+    void swap(TempHeap & from);
 
     // ITempHeap
     char * alloc(size_t bytes, size_t align) override;

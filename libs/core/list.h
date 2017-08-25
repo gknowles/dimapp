@@ -198,9 +198,9 @@ public:
     const T * front() const;
     T * back();
     const T * back() const;
-    T * next(T * node);
+    T * next(const T * node);
     const T * next(const T * node) const;
-    T * prev(T * node);
+    T * prev(const T * node);
     const T * prev(const T * node) const;
     void link(T * value);
     void link(List && other);
@@ -320,8 +320,8 @@ const T * List<T, Tag>::back() const {
 
 //===========================================================================
 template <typename T, typename Tag>
-T * List<T, Tag>::next(T * node) {
-    auto link = static_cast<link_type *>(node)->m_nextLink;
+T * List<T, Tag>::next(const T * node) {
+    auto link = static_cast<const link_type *>(node)->m_nextLink;
     assert(link->linked());
     return link != &m_base ? static_cast<T *>(link) : nullptr;
 }
@@ -334,8 +334,8 @@ const T * List<T, Tag>::next(const T * node) const {
 
 //===========================================================================
 template <typename T, typename Tag>
-T * List<T, Tag>::prev(T * node) {
-    auto link = static_cast<link_type *>(node)->m_prevLink;
+T * List<T, Tag>::prev(const T * node) {
+    auto link = static_cast<const link_type *>(node)->m_prevLink;
     assert(link->linked());
     return link != &m_base ? static_cast<T *>(link) : nullptr;
 }

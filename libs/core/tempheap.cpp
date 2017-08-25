@@ -57,6 +57,13 @@ TempHeap::~TempHeap() {
 }
 
 //===========================================================================
+TempHeap & TempHeap::operator=(TempHeap && from) {
+    clear();
+    swap(from);
+    return *this;
+}
+
+//===========================================================================
 void TempHeap::clear() {
     Buffer * ptr = (Buffer *)m_buffer;
     while (ptr) {
@@ -65,6 +72,11 @@ void TempHeap::clear() {
         ptr = next;
     }
     m_buffer = nullptr;
+}
+
+//===========================================================================
+void TempHeap::swap(TempHeap & from) {
+    std::swap(m_buffer, from.m_buffer);
 }
 
 //===========================================================================
@@ -85,7 +97,8 @@ char * TempHeap::alloc(size_t bytes, size_t align) {
         if (required > kMaxBufferSize / 3) {
             tmp = (Buffer *)malloc(kBufferLen + required);
             assert(tmp != nullptr);
-            tmp->m_avail = tmp->m_reserve = required;
+            tmp->m_avail = required;
+            tmp->m_reserve = kBufferLen + required;
             if (buf) {
                 tmp->m_next = buf->m_next;
                 buf->m_next = tmp;
@@ -95,14 +108,15 @@ char * TempHeap::alloc(size_t bytes, size_t align) {
             }
         } else {
             auto reserve = buf 
-                ? min(kMaxBufferSize - kBufferLen, 2 * buf->m_reserve)
-                : kInitBufferSize - kBufferLen;
-            if (reserve < required)
-                reserve = required;
-            tmp = (Buffer *)malloc(reserve + kBufferLen);
+                ? min(kMaxBufferSize, 2 * buf->m_reserve)
+                : kInitBufferSize;
+            if (reserve < kBufferLen + required)
+                reserve = kBufferLen + required;
+            tmp = (Buffer *)malloc(reserve);
             assert(tmp != nullptr);
             tmp->m_next = buf;
-            tmp->m_avail = tmp->m_reserve = reserve;
+            tmp->m_avail = reserve - kBufferLen;
+            tmp->m_reserve = reserve;
             m_buffer = tmp;
         }
         buf = tmp;
