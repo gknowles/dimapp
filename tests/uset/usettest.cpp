@@ -39,6 +39,14 @@ static void app(int argc, char *argv[]) {
     EXPECT(val == 5);
     vector<unsigned> v(tmp.begin(), tmp.end());
     EXPECT(v == vector<unsigned>{{5}});
+    tmp.insert(3);
+    v.assign(tmp.begin(), tmp.end());
+    EXPECT(v == vector<unsigned>{{3, 5}});
+    UnsignedSet tmp2;
+    tmp2.insert(5);
+    tmp.intersect(tmp2);
+    v.assign(tmp.begin(), tmp.end());
+    EXPECT(v == vector<unsigned>{{5}});
 
     auto num = digits10(1'000'000'000);
     EXPECT(num == 10);

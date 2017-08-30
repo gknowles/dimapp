@@ -369,7 +369,7 @@ bool VectorImpl::insert(Node & node, unsigned value) {
         convert(node);
         impl(node)->insert(node, value);
     } else {
-        memmove(ptr + 1, ptr, last - ptr);
+        memmove(ptr + 1, ptr, sizeof(*ptr) * (last - ptr));
         *ptr = value;
         node.numValues += 1;
     }
@@ -397,7 +397,7 @@ void VectorImpl::erase(Node & node, unsigned value) {
     if (ptr != last && *ptr == value) {
         if (--node.numValues) {
             // Still has values, shift remaining ones down
-            memmove(ptr, ptr + 1, last - ptr - 1);
+            memmove(ptr, ptr + 1, sizeof(*ptr) * (last - ptr - 1));
         } else {
             // No more values, convert to empty node.
             destroy(node);
@@ -738,7 +738,7 @@ static IImplBase * impl(const Node & node) {
 
 /****************************************************************************
 *
-*   Compare
+*   compare
 *
 ***/
 
@@ -810,12 +810,13 @@ static int cmpMeta(const Node & left, const Node & right) {
 static int compare(const Node & left, const Node & right) {
     using CompareFn = int(const Node & left, const Node & right);
     CompareFn * functs[][kNodeTypes] = {
-        // empty    full      vector   bitmap     meta
-        { cmpEqual, cmpLess,  cmpLess, cmpLess,   cmpLess  }, // empty
-        { cmpMore,  cmpEqual, cmpMore, cmpMore,   cmpMore  }, // full
-        { cmpMore,  cmpLess,  cmpVec,  cmpIter,   cmpIter  }, // vector
-        { cmpMore,  cmpLess,  cmpIter, cmpBitmap, cmpError }, // bitmap
-        { cmpMore,  cmpLess,  cmpIter, cmpError,  cmpMeta  }, // meta
+    // LEFT                         RIGHT
+    //             empty     full      vector   bitmap     meta
+    /* empty  */ { cmpEqual, cmpLess,  cmpLess, cmpLess,   cmpLess  },
+    /* full   */ { cmpMore,  cmpEqual, cmpMore, cmpMore,   cmpMore  },
+    /* vector */ { cmpMore,  cmpLess,  cmpVec,  cmpIter,   cmpIter  },
+    /* bitmap */ { cmpMore,  cmpLess,  cmpIter, cmpBitmap, cmpError },
+    /* meta   */ { cmpMore,  cmpLess,  cmpIter, cmpError,  cmpMeta  },
     };
     return functs[left.type][right.type](left, right);
 }
@@ -823,7 +824,7 @@ static int compare(const Node & left, const Node & right) {
 
 /****************************************************************************
 *
-*   Insert(Node &, const Node &)
+*   insert(Node &, const Node &)
 *
 ***/
 
@@ -855,8 +856,10 @@ static void insIter(Node & left, const Node & right) {
 
 //===========================================================================
 static void insCopyIter(Node & left, const Node & right) {
-    insCopy(left, right);
-    insIter(left, right);
+    Node tmp;
+    insCopy(tmp, right);
+    swap(left, tmp);
+    insIter(left, tmp);
 }
 
 //===========================================================================
@@ -893,12 +896,13 @@ static void insMeta(Node & left, const Node & right) {
 static void insert(Node & left, const Node & right) {
     using InsertFn = void(Node & left, const Node & right);
     InsertFn * functs[][kNodeTypes] = {
-        // empty   full     vector   bitmap       meta
-        { insSkip, insCopy, insCopy, insCopy,     insCopy     }, // empty
-        { insSkip, insSkip, insSkip, insSkip,     insSkip     }, // full
-        { insSkip, insCopy, insVec,  insCopyIter, insCopyIter }, // vector
-        { insSkip, insCopy, insIter, insBitmap,   insError    }, // bitmap
-        { insSkip, insCopy, insIter, insError,    insMeta     }, // meta
+    // LEFT                         RIGHT
+    //             empty    full     vector   bitmap       meta
+    /* empty  */ { insSkip, insCopy, insCopy, insCopy,     insCopy     }, 
+    /* full   */ { insSkip, insSkip, insSkip, insSkip,     insSkip     }, 
+    /* vector */ { insSkip, insCopy, insVec,  insCopyIter, insCopyIter }, 
+    /* bitmap */ { insSkip, insCopy, insIter, insBitmap,   insError    }, 
+    /* meta   */ { insSkip, insCopy, insIter, insError,    insMeta     }, 
     };
     functs[left.type][right.type](left, right);
 }
@@ -906,7 +910,7 @@ static void insert(Node & left, const Node & right) {
 
 /****************************************************************************
 *
-*   Insert(Node &, Node &&)
+*   insert(Node &, Node &&)
 *
 ***/
 
@@ -914,8 +918,7 @@ static void insert(Node & left, Node && right);
 
 //===========================================================================
 static void insError(Node & left, Node && right) {
-    logMsgCrash() << "insert: incompatible node types, " << left.type
-        << ", " << right.type;
+    insError(left, right);
 }
 
 //===========================================================================
@@ -933,7 +936,7 @@ static void insIter(Node & left, Node && right) {
 }
 
 //===========================================================================
-static void insMoveIter(Node & left, Node && right) {
+static void insSIter(Node & left, Node && right) {
     swap(left, right);
     insIter(left, move(right));
 }
@@ -962,12 +965,13 @@ static void insMeta(Node & left, Node && right) {
 static void insert(Node & left, Node && right) {
     using InsertFn = void(Node & left, Node && right);
     InsertFn * functs[][kNodeTypes] = {
-        // empty   full     vector   bitmap       meta
-        { insSkip, insMove, insMove, insMove,     insMove     }, // empty
-        { insSkip, insSkip, insSkip, insSkip,     insSkip     }, // full
-        { insSkip, insMove, insVec,  insMoveIter, insMoveIter }, // vector
-        { insSkip, insMove, insIter, insBitmap,   insError    }, // bitmap
-        { insSkip, insMove, insIter, insError,    insMeta     }, // meta
+    // LEFT                         RIGHT
+    //             empty    full     vector   bitmap     meta
+    /* empty  */ { insSkip, insMove, insMove, insMove,   insMove  }, 
+    /* full   */ { insSkip, insSkip, insSkip, insSkip,   insSkip  }, 
+    /* vector */ { insSkip, insMove, insVec,  insSIter,  insSIter }, 
+    /* bitmap */ { insSkip, insMove, insIter, insBitmap, insError }, 
+    /* meta   */ { insSkip, insMove, insIter, insError,  insMeta  }, 
     };
     functs[left.type][right.type](left, move(right));
 }
@@ -975,7 +979,7 @@ static void insert(Node & left, Node && right) {
 
 /****************************************************************************
 *
-*   Erase
+*   erase(Node &, const Node &)
 *
 ***/
 
@@ -1007,7 +1011,7 @@ static void eraChange(Node & left, const Node & right) {
 }
 
 //===========================================================================
-static void eraRFind(Node & left, const Node & right) {
+static void eraFind(Node & left, const Node & right) {
     // Go through values of left vector and skip (aka remove) the ones that 
     // are found in right node (values to be erased).
     assert(left.type == kVector);
@@ -1078,12 +1082,13 @@ static void eraMeta(Node & left, const Node & right) {
 static void erase(Node & left, const Node & right) {
     using EraseFn = void(Node & left, const Node & right);
     EraseFn * functs[][kNodeTypes] = {
-        // empty   full      vector     bitmap     meta
-        { eraSkip, eraSkip,  eraSkip,   eraSkip,   eraSkip   }, // empty
-        { eraSkip, eraEmpty, eraChange, eraChange, eraChange }, // full
-        { eraSkip, eraEmpty, eraVec,    eraRFind,  eraRFind  }, // vector
-        { eraSkip, eraEmpty, eraIter,   eraBitmap, eraError  }, // bitmap
-        { eraSkip, eraEmpty, eraIter,   eraError,  eraMeta   }, // meta
+    // LEFT                         RIGHT
+    //             empty    full      vector     bitmap     meta
+    /* empty  */ { eraSkip, eraSkip,  eraSkip,   eraSkip,   eraSkip   }, 
+    /* full   */ { eraSkip, eraEmpty, eraIter,   eraChange, eraChange }, 
+    /* vector */ { eraSkip, eraEmpty, eraVec,    eraFind,   eraFind   }, 
+    /* bitmap */ { eraSkip, eraEmpty, eraIter,   eraBitmap, eraError  }, 
+    /* meta   */ { eraSkip, eraEmpty, eraIter,   eraError,  eraMeta   }, 
     };
     functs[left.type][right.type](left, move(right));
 }
@@ -1091,36 +1096,38 @@ static void erase(Node & left, const Node & right) {
 
 /****************************************************************************
 *
-*   Intersect
+*   intersect(Node &, const Node &)
 *
 ***/
 
-static void intersect(Node & left, Node && right);
+static void intersect(Node & left, const Node & right);
 
 //===========================================================================
-static void isecError(Node & left, Node && right) {
+static void isecError(Node & left, const Node & right) {
     logMsgCrash() << "intersect: incompatible node types, " << left.type
         << ", " << right.type;
 }
 
 //===========================================================================
-static void isecSkip(Node & left, Node && right) 
+static void isecSkip(Node & left, const Node & right) 
 {}
 
 //===========================================================================
-static void isecEmpty(Node & left, Node && right) {
+static void isecEmpty(Node & left, const Node & right) {
     impl(left)->destroy(left);
     left.type = kEmpty;
     impl(left)->init(left, false);
 }
 
 //===========================================================================
-static void isecSwap(Node & left, Node && right) {
-    ::swap(left, right);
+static void isecCopy(Node & left, const Node & right) {
+    impl(left)->destroy(left);
+    left.type = right.type;
+    impl(left)->init(left, right);
 }
 
 //===========================================================================
-static void isecFind(Node & left, Node && right) {
+static void isecFind(Node & left, const Node & right) {
     // Go through values of left vector and remove the ones that aren't
     // found in right node.
     assert(left.type == kVector);
@@ -1141,13 +1148,15 @@ static void isecFind(Node & left, Node && right) {
 }
 
 //===========================================================================
-static void isecSFind(Node & left, Node && right) {
-    ::swap(left, right);
-    isecFind(left, move(right));
+static void isecSFind(Node & left, const Node & right) {
+    Node tmp;
+    isecCopy(tmp, right);
+    swap(left, tmp);
+    isecFind(left, tmp);
 }
 
 //===========================================================================
-static void isecVec(Node & left, Node && right) {
+static void isecVec(Node & left, const Node & right) {
     auto le = set_intersection(
         left.values, left.values + left.numValues,
         right.values, right.values + right.numValues,
@@ -1157,7 +1166,7 @@ static void isecVec(Node & left, Node && right) {
 }
 
 //===========================================================================
-static void isecBitmap(Node & left, Node && right) {
+static void isecBitmap(Node & left, const Node & right) {
     auto li = (uint64_t *) left.values;
     auto le = li + kDataSize / sizeof(*li);
     auto ri = (uint64_t *) right.values;
@@ -1166,6 +1175,80 @@ static void isecBitmap(Node & left, Node && right) {
         if (*li &= *ri)
             left.numValues += 1;
     }
+}
+
+//===========================================================================
+static void isecMeta(Node & left, const Node & right) {
+    auto li = left.nodes;
+    auto le = li + left.numValues;
+    auto ri = right.nodes;
+    auto re = ri + right.numValues;
+    for (; li != le && ri != re; ++li, ++ri)
+        intersect(*li, *ri);
+}
+
+//===========================================================================
+static void intersect(Node & left, const Node & right) {
+    using IsectFn = void(Node & left, const Node & right);
+    IsectFn * functs[][kNodeTypes] = {
+    // LEFT                         RIGHT
+    //             empty      full      vector     bitmap      meta
+    /* empty  */ { isecSkip,  isecSkip, isecSkip,  isecSkip,   isecSkip },
+    /* full   */ { isecEmpty, isecSkip, isecCopy,  isecCopy,   isecCopy  },
+    /* vector */ { isecEmpty, isecSkip, isecVec,   isecFind,   isecFind  },
+    /* bitmap */ { isecEmpty, isecSkip, isecSFind, isecBitmap, isecError },
+    /* meta   */ { isecEmpty, isecSkip, isecSFind, isecError,  isecMeta  },
+    };
+    functs[left.type][right.type](left, right);
+}
+
+
+/****************************************************************************
+*
+*   intersect(Node &, Node &&)
+*
+***/
+
+static void intersect(Node & left, Node && right);
+
+//===========================================================================
+static void isecError(Node & left, Node && right) {
+    isecError(left, right);
+}
+
+//===========================================================================
+static void isecSkip(Node & left, Node && right) 
+{}
+
+//===========================================================================
+static void isecEmpty(Node & left, Node && right) {
+    isecEmpty(left, right);
+}
+
+//===========================================================================
+static void isecMove(Node & left, Node && right) {
+    swap(left, right);
+}
+
+//===========================================================================
+static void isecFind(Node & left, Node && right) {
+    isecFind(left, right);
+}
+
+//===========================================================================
+static void isecSFind(Node & left, Node && right) {
+    swap(left, right);
+    isecFind(left, move(right));
+}
+
+//===========================================================================
+static void isecVec(Node & left, Node && right) {
+    isecVec(left, right);
+}
+
+//===========================================================================
+static void isecBitmap(Node & left, Node && right) {
+    isecBitmap(left, right);
 }
 
 //===========================================================================
@@ -1182,12 +1265,13 @@ static void isecMeta(Node & left, Node && right) {
 static void intersect(Node & left, Node && right) {
     using IsectFn = void(Node & left, Node && right);
     IsectFn * functs[][kNodeTypes] = {
-        // empty     full      vector     bitmap      meta
-        { isecSkip,  isecSkip, isecEmpty, isecEmpty,  isecEmpty }, // empty
-        { isecEmpty, isecSkip, isecSwap,  isecSwap,   isecSwap  }, // full
-        { isecEmpty, isecSkip, isecVec,   isecFind,   isecFind  }, // vector
-        { isecEmpty, isecSkip, isecSFind, isecBitmap, isecError }, // bitmap
-        { isecEmpty, isecSkip, isecSFind, isecError,  isecMeta  }, // meta
+    // LEFT                         RIGHT
+    //             empty      full      vector     bitmap      meta
+    /* empty  */ { isecSkip,  isecSkip, isecEmpty, isecEmpty,  isecEmpty }, 
+    /* full   */ { isecEmpty, isecSkip, isecMove,  isecMove,   isecMove  }, 
+    /* vector */ { isecEmpty, isecSkip, isecVec,   isecFind,   isecFind  }, 
+    /* bitmap */ { isecEmpty, isecSkip, isecSFind, isecBitmap, isecError }, 
+    /* meta   */ { isecEmpty, isecSkip, isecSFind, isecError,  isecMeta  }, 
     };
     functs[left.type][right.type](left, move(right));
 }
@@ -1351,6 +1435,11 @@ void UnsignedSet::erase(const UnsignedSet & other) {
 //===========================================================================
 void UnsignedSet::intersect(UnsignedSet && other) {
     ::intersect(m_node, move(other.m_node));
+}
+
+//===========================================================================
+void UnsignedSet::intersect(const UnsignedSet & other) {
+    ::intersect(m_node, other.m_node);
 }
 
 //===========================================================================
