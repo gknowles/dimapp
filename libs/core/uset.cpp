@@ -1652,14 +1652,18 @@ UnsignedSet::RangeIterator::RangeIterator(
 bool UnsignedSet::RangeIterator::operator!= (
     const RangeIterator & right
 ) const {
-    return m_iter != right.m_iter;
+    return m_value != right.m_value;
 }
 
 //===========================================================================
 UnsignedSet::RangeIterator & UnsignedSet::RangeIterator::operator++() {
-    m_value.first = m_value.second = *m_iter;
-    while (++m_iter && *m_iter == m_value.second + 1) 
-        m_value.second += 1;
+    if (!m_iter) {
+        m_value = kEndValue;
+    } else {
+        m_value.first = m_value.second = *m_iter;
+        while (++m_iter && *m_iter == m_value.second + 1) 
+            m_value.second += 1;
+    }
     return *this;
 }
 
@@ -1671,7 +1675,7 @@ UnsignedSet::RangeIterator & UnsignedSet::RangeIterator::operator++() {
 ***/
 
 //===========================================================================
-ostream & operator<<(ostream & os, const UnsignedSet & right) {
+ostream & Dim::operator<<(ostream & os, const UnsignedSet & right) {
     if (auto v = right.ranges().begin()) {
         for (;;) {
             os << v->first;

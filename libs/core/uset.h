@@ -233,13 +233,14 @@ public:
     RangeIterator() {}
     RangeIterator(const Node * node, UnsignedSet::value_type value = 0);
     RangeIterator & operator++();
-    explicit operator bool() const { return !!m_iter; }
+    explicit operator bool() const { return m_value != kEndValue; }
     bool operator!= (const RangeIterator & right) const;
     const value_type & operator*() const { return m_value; }
     const value_type * operator->() const { return &m_value; }
 private:
+    constexpr static value_type kEndValue{1, 0};
     Iterator m_iter;
-    value_type m_value{};
+    value_type m_value{kEndValue};
 };
 
 
