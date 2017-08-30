@@ -45,7 +45,7 @@ static bool isHex(unsigned char ch) {
 //  - isn't quite as bad because it doesn't deal with the C locale settings
 //  - recognizes multiple code points for the digits 0-9
 #pragma warning(push)
-#pragma warning(disable : 4127) // conditional expression is constant
+#pragma warning(disable: 4102)
 template<int Flags>
 static uint64_t iStrToAny (
     const char source[], 
@@ -168,8 +168,8 @@ BASE_ANY_WITH_OVERFLOW:
 
 CHECK_OVERFLOW:
     if (!overflow) {
-        if (Flags & kSigned) {
-            if (Flags & k64Bit) {
+        if constexpr (Flags & kSigned) {
+            if constexpr (Flags & k64Bit) {
                 valLimit = negate ? (uint64_t)-INT64_MIN : INT64_MAX;
             } else {
                 valLimit = negate ? (unsigned)-INT_MIN : INT_MAX;
@@ -313,6 +313,35 @@ int64_t Dim::strToInt64(string_view src, char ** eptr, int base) {
 //===========================================================================
 uint64_t Dim::strToUint64(string_view src, char ** eptr, int base) {
     return iStrToAny<kUint64>(src.data(), eptr, base, src.size());
+}
+
+
+/****************************************************************************
+*
+*   String utilities
+*
+***/
+
+//===========================================================================
+void Dim::strSplit(
+    vector<string_view> & out, 
+    string_view src, 
+    char sep
+) {
+    out.clear();
+    auto ptr = src.data();
+    auto count = src.size();
+    for (;;) {
+        if (auto eptr = (const char *) memchr(ptr, sep, count)) {
+            auto segLen = size_t(eptr - ptr);
+            out.push_back(string_view{ptr, segLen});
+            ptr = eptr + 1;
+            count -= segLen + 1;
+        } else {
+            out.push_back(string_view{ptr, count});
+            break;
+        }
+    }
 }
 
 

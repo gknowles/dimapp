@@ -14,10 +14,11 @@
 namespace Dim {
 
 //===========================================================================
+// Maximum number of characters needed to represent any value of type T in
+// base 10.
 template <typename T> constexpr int maxIntegralChars() {
-    return numeric_limits<T>::is_signed
-        ? 1 + ((CHAR_BIT * sizeof(T) - 1) * 301L + 999L) / 1000L
-        : (CHAR_BIT * sizeof(T) * 301L + 999L) / 1000L;
+    return std::numeric_limits<T>::digits10 + 1 
+        + std::numeric_limits<T>::is_signed;
 }
 
 
@@ -186,6 +187,20 @@ template <typename T> bool stringTo(T & out, const std::string & src) {
     // operator exists) the version taking a long is called.
     return stringTo_impl(out, src, 0);
 }
+
+
+/****************************************************************************
+*
+*   String utilities
+*
+***/
+
+//===========================================================================
+void strSplit(
+    std::vector<std::string_view> & out, 
+    std::string_view src, 
+    char sep = ' '
+);
 
 
 /****************************************************************************
