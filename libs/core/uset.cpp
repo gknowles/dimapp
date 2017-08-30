@@ -727,7 +727,7 @@ static IImplBase * impl(const Node & node) {
     case kEmpty: return &s_emptyImpl;
     case kFull: return &s_fullImpl;
     case kVector: return &s_vectorImpl;
-    case kBitmap: break;
+    case kBitmap: return &s_bitmapImpl;
     case kMeta: return &s_metaImpl;
     }
 
@@ -1364,7 +1364,14 @@ int UnsignedSet::compare(const UnsignedSet & right) const {
 }
 
 //===========================================================================
+bool UnsignedSet::includes(const UnsignedSet & other) const {
+    assert(0 && "not implemented");
+    return false;
+}
+
+//===========================================================================
 bool UnsignedSet::intersects(const UnsignedSet & other) const {
+    assert(0 && "not implemented");
     return false;
 }
 
