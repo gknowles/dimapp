@@ -32,7 +32,8 @@ public:
         ISocketNotify * notify,
         const Endpoint & remote,
         const Endpoint & local,
-        Duration timeout);
+        Duration timeout
+    );
 
 public:
     using SocketBase::SocketBase;
@@ -107,7 +108,8 @@ Duration ConnectTimer::onTimer(TimePoint now) {
 
 //===========================================================================
 ConnectTask::ConnectTask(unique_ptr<ConnSocket> && sock)
-    : m_socket(move(sock)) {
+    : m_socket(move(sock)) 
+{
     m_expiration = Clock::now() + kConnectTimeout;
 }
 
@@ -116,11 +118,11 @@ void ConnectTask::onTask() {
     DWORD bytesTransferred;
     WinError err{0};
     if (!GetOverlappedResult(
-            NULL,
-            &m_overlapped,
-            &bytesTransferred,
-            false // wait?
-            )) {
+        NULL,
+        &m_overlapped,
+        &bytesTransferred,
+        false // wait?
+    )) {
         err = WinError{};
     }
     m_socket.release()->onConnect(err, bytesTransferred);
@@ -169,7 +171,8 @@ void ConnSocket::connect(
     ISocketNotify * notify,
     const Endpoint & remote,
     const Endpoint & local,
-    Duration timeout) {
+    Duration timeout
+) {
     assert(getMode(notify) == Mode::kInactive);
 
     if (timeout == 0ms)
@@ -185,16 +188,16 @@ void ConnSocket::connect(
     LPFN_CONNECTEX fConnectEx;
     DWORD bytes;
     if (WSAIoctl(
-            sock->m_handle,
-            SIO_GET_EXTENSION_FUNCTION_POINTER,
-            &extId,
-            sizeof(extId),
-            &fConnectEx,
-            sizeof(fConnectEx),
-            &bytes,
-            nullptr, // overlapped
-            nullptr  // completion routine
-            )) {
+        sock->m_handle,
+        SIO_GET_EXTENSION_FUNCTION_POINTER,
+        &extId,
+        sizeof(extId),
+        &fConnectEx,
+        sizeof(fConnectEx),
+        &bytes,
+        nullptr, // overlapped
+        nullptr  // completion routine
+    )) {
         logMsgError() << "WSAIoctl(get ConnectEx): " << WinError{};
         return pushConnectFailed(notify);
     }
@@ -209,9 +212,10 @@ void ConnSocket::connect(
 
         // TODO: check if this really puts them in expiration order!
         auto rhint = find_if(
-            s_connecting.rbegin(), s_connecting.rend(), [&](auto && task) {
-                return task.m_expiration <= expiration;
-            });
+            s_connecting.rbegin(), 
+            s_connecting.rend(), 
+            [&](auto && task) { return task.m_expiration <= expiration; }
+        );
         it = s_connecting.emplace(rhint.base(), move(sock));
 
         it->m_iter = it;
@@ -227,7 +231,8 @@ void ConnSocket::connect(
         NULL, // send buffer
         0,    // send buffer length
         NULL, // bytes sent
-        &it->m_overlapped);
+        &it->m_overlapped
+    );
     WinError err;
     if (!error || err != ERROR_IO_PENDING) {
         logMsgError() << "ConnectEx(" << remote << "): " << err;
@@ -251,11 +256,15 @@ void ConnSocket::onConnect(int error, int bytes) {
 
     //-----------------------------------------------------------------------
     // update socket and start receiving
-    if (SOCKET_ERROR
-        == setsockopt(
-               m_handle, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, nullptr, 0)) {
+    if (SOCKET_ERROR == setsockopt(
+        m_handle, 
+        SOL_SOCKET, 
+        SO_UPDATE_CONNECT_CONTEXT, 
+        nullptr, 
+        0
+    )) {
         logMsgError() << "setsockopt(SO_UPDATE_CONNECT_CONTEXT): "
-                      << WinError{};
+            << WinError{};
         return m_notify->onSocketConnectFailed();
     }
 
@@ -341,6 +350,7 @@ void Dim::socketConnect(
     ISocketNotify * notify,
     const Endpoint & remote,
     const Endpoint & local,
-    Duration timeout) {
+    Duration timeout
+) {
     ConnSocket::connect(notify, remote, local, timeout);
 }

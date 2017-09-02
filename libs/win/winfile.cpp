@@ -11,18 +11,12 @@ using namespace Dim;
 
 /****************************************************************************
 *
-*   Incomplete public types
-*
-***/
-
-
-/****************************************************************************
-*
 *   Private declarations
 *
 ***/
 
 namespace {
+
 struct WinFileInfo : public HandleContent {
     FileHandle m_f;
     string m_path;
@@ -64,8 +58,12 @@ protected:
     WinError m_err{0};
     DWORD m_bytes{0};
 };
-}
 
+} // namespace
+
+//---------------------------------------------------------------------------
+// Windows API declarations not available from Windows.h
+//---------------------------------------------------------------------------
 using NtCreateSectionFn = DWORD(WINAPI *)(
     HANDLE * hSec,
     ACCESS_MASK access,
@@ -73,7 +71,8 @@ using NtCreateSectionFn = DWORD(WINAPI *)(
     LARGE_INTEGER * maxSize,
     ULONG secProt,
     ULONG allocAttrs,
-    HANDLE hFile);
+    HANDLE hFile
+);
 enum SECTION_INHERIT {
     ViewShare = 1,
     ViewUnmap = 2,
@@ -88,9 +87,12 @@ using NtMapViewOfSectionFn = DWORD(WINAPI *)(
     SIZE_T * viewSize,
     SECTION_INHERIT ih,
     ULONG allocType,
-    ULONG pageProt);
-using NtUnmapViewOfSectionFn =
-    DWORD(WINAPI *)(HANDLE hProc, const void * base);
+    ULONG pageProt
+);
+using NtUnmapViewOfSectionFn = DWORD(WINAPI *)(
+    HANDLE hProc, 
+    const void * base
+);
 using NtCloseFn = DWORD(WINAPI *)(HANDLE h);
 
 
@@ -110,13 +112,6 @@ static TaskQueueHandle s_hq;
 
 static shared_mutex s_fileMut;
 static HandleMap<FileHandle, WinFileInfo> s_files;
-
-
-/****************************************************************************
-*
-*   Helpers
-*
-***/
 
 
 /****************************************************************************
@@ -228,10 +223,10 @@ void IFileOpBase::onTask() {
 ***/
 
 namespace {
+
 class FileReader : public IFileOpBase {
 public:
-    FileReader(IFileReadNotify * notify)
-        : m_notify{notify} {}
+    FileReader(IFileReadNotify * notify) : m_notify{notify} {}
     bool onRun() override;
     void onNotify() override;
     bool async() override { return m_notify != nullptr; }
@@ -240,7 +235,8 @@ public:
 private:
     IFileReadNotify * m_notify;
 };
-}
+
+} // namespace
 
 //===========================================================================
 bool FileReader::onRun() {
@@ -284,10 +280,10 @@ void FileReader::onNotify() {
 ***/
 
 namespace {
+
 class FileWriter : public IFileOpBase {
 public:
-    FileWriter(IFileWriteNotify * notify)
-        : m_notify{notify} {}
+    FileWriter(IFileWriteNotify * notify) : m_notify{notify} {}
     bool onRun() override;
     void onNotify() override;
     bool async() override { return m_notify != nullptr; }
@@ -296,7 +292,8 @@ public:
 private:
     IFileWriteNotify * m_notify;
 };
-}
+
+} // namespace
 
 //===========================================================================
 bool FileWriter::onRun() {
@@ -418,7 +415,7 @@ FileHandle Dim::fileOpen(string_view path, File::OpenMode mode) {
         creation,
         flagsAndAttrs,
         NULL // template file
-        );
+    );
     if (file->m_handle == INVALID_HANDLE_VALUE) {
         winFileSetErrno(WinError{});
         return {};
@@ -494,18 +491,17 @@ TimePoint Dim::fileLastWriteTime(FileHandle f) {
     auto file = getInfo(f);
     if (!file)
         return TimePoint::min();
-    uint64_t ctime, atime, wtime;
-    if (!GetFileTime(
-            file->m_handle,
-            (FILETIME *)&ctime,
-            (FILETIME *)&atime,
-            (FILETIME *)&wtime)) {
+    FILETIME ctime, atime, wtime;
+    if (!GetFileTime(file->m_handle, &ctime, &atime, &wtime)) {
         WinError err;
         logMsgError() << "GetFileTime(" << file->m_path << "): " << err;
         winFileSetErrno(err);
         return TimePoint::min();
     }
-    return TimePoint(Duration(wtime));
+    ULARGE_INTEGER q;
+    q.LowPart = wtime.dwLowDateTime;
+    q.HighPart = wtime.dwHighDateTime;
+    return TimePoint(Duration(q.QuadPart));
 }
 
 //===========================================================================

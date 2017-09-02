@@ -84,8 +84,11 @@ static BufferSlice * getSlice(const Buffer & buf, int pos) {
 }
 
 //===========================================================================
-static void
-findBufferSlice(BufferSlice ** sliceOut, Buffer ** bufferOut, void * ptr) {
+static void findBufferSlice(
+    BufferSlice ** sliceOut, 
+    Buffer ** bufferOut, 
+    void * ptr
+) {
     auto * slice = (BufferSlice *)ptr - 1;
     assert((size_t)slice->ownerPos < s_buffers.size());
     int rbufPos = slice->ownerPos;
@@ -241,7 +244,8 @@ void Dim::iSocketBufferInitialize(RIO_EXTENSION_FUNCTION_TABLE & rio) {
 void Dim::iSocketGetRioBuffer(
     RIO_BUF * out,
     SocketBuffer * sbuf,
-    size_t bytes) {
+    size_t bytes
+) {
     lock_guard<mutex> lk{s_mut};
 
     assert(bytes <= sbuf->len);
@@ -268,8 +272,9 @@ unique_ptr<SocketBuffer> Dim::socketGetBuffer() {
     if (s_numFull == s_buffers.size())
         createEmptyBuffer();
     // use the last partial or, if there aren't any, the first empty
-    auto & buf = s_numPartial ? s_buffers[s_numFull + s_numPartial - 1]
-                              : s_buffers[s_numFull];
+    auto & buf = s_numPartial 
+        ? s_buffers[s_numFull + s_numPartial - 1]
+        : s_buffers[s_numFull];
 
     BufferSlice * slice;
     if (buf.used < buf.size) {

@@ -113,14 +113,14 @@ void ListenSocket::onTask() {
     if (!AcceptSocket::accept(this)) {
         assert(m_handle == INVALID_SOCKET);
         unique_lock<mutex> lk{s_mut};
-        if (m_stopRequested) {
-            if (m_stopDone) {
-                destroy_LK();
-            } else {
-                m_mode = ISocketNotify::kClosed;
-                lk.unlock();
-                m_inCv.notify_all();
-            }
+        if (!m_stopRequested) 
+            return;
+        if (m_stopDone) {
+            destroy_LK();
+        } else {
+            m_mode = ISocketNotify::kClosed;
+            lk.unlock();
+            m_inCv.notify_all();
         }
     }
 }

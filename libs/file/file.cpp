@@ -17,6 +17,7 @@ namespace fs = std::experimental::filesystem;
 ***/
 
 namespace {
+
 class FileStreamNotify : public IFileReadNotify {
     IFileReadNotify * m_notify;
     unique_ptr<char[]> m_out;
@@ -33,7 +34,8 @@ public:
     ) override;
     void onFileEnd(int64_t offset, FileHandle f) override;
 };
-}
+
+} // namespace
 
 //===========================================================================
 FileStreamNotify::FileStreamNotify(
@@ -77,6 +79,7 @@ void FileStreamNotify::onFileEnd(int64_t offset, FileHandle f) {
 ***/
 
 namespace {
+
 class FileLoadNotify : public IFileReadNotify {
     IFileReadNotify * m_notify;
     string & m_out;
@@ -89,12 +92,14 @@ public:
     ) override;
     void onFileEnd(int64_t offset, FileHandle f) override;
 };
-}
+
+} // namespace
 
 //===========================================================================
 FileLoadNotify::FileLoadNotify(string & out, IFileReadNotify * notify)
     : m_out(out)
-    , m_notify(notify) {}
+    , m_notify(notify) 
+{}
 
 //===========================================================================
 bool FileLoadNotify::onFileRead(
