@@ -87,12 +87,18 @@ public:
     virtual ~IFileReadNotify() {}
 
     // return false to prevent more reads, otherwise reads continue until the
-    // requested length has been received.
+    // requested length has been received. *bytesUsed must be set to how much
+    // data was consumed, when it is less than data.size() the unused portion
+    // will be included as part of the data in the subsequent call. bytesUsed
+    // is initialized to zero and when returning true it must not be left that
+    // way.
     virtual bool onFileRead(
+        size_t * bytesUsed,
         std::string_view data, 
         int64_t offset, 
         FileHandle f
     ) {
+        *bytesUsed = data.size();
         return true;
     }
 

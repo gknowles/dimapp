@@ -413,10 +413,12 @@ struct ReplyWithFileNotify : IFileReadNotify {
     char m_buffer[8'192];
 
     bool onFileRead(
+        size_t * bytesUsed,
         string_view data, 
         int64_t offset, 
         FileHandle f
     ) override {
+        *bytesUsed = data.size();
         HttpSocket::reply(m_reqId, data, true);
         return true;
     }

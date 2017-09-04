@@ -28,6 +28,7 @@ public:
         size_t blkSize
     );
     bool onFileRead(
+        size_t * bytesUsed,
         string_view data, 
         int64_t offset, 
         FileHandle f
@@ -44,7 +45,7 @@ FileStreamNotify::FileStreamNotify(
     size_t blkSize
 )
     : m_notify{notify}
-    , m_out(new char[blkSize])
+    , m_out(new char[blkSize + 1])
 {
     auto file = fileOpen(path, File::fReadOnly | File::fDenyNone);
     if (!file) {
@@ -57,11 +58,14 @@ FileStreamNotify::FileStreamNotify(
 
 //===========================================================================
 bool FileStreamNotify::onFileRead(
+    size_t * bytesUsed,
     string_view data, 
     int64_t offset,
     FileHandle f
 ) {
-    return m_notify->onFileRead(data, offset, f);
+    auto eod = m_out.get() + (&*data.end() - m_out.get());
+    *eod = 0;
+    return m_notify->onFileRead(bytesUsed, data, offset, f);
 }
 
 //===========================================================================
@@ -86,6 +90,7 @@ class FileLoadNotify : public IFileReadNotify {
 public:
     FileLoadNotify(string & out, IFileReadNotify * notify);
     bool onFileRead(
+        size_t * bytesUsed,
         string_view data, 
         int64_t offset, 
         FileHandle f
@@ -103,10 +108,12 @@ FileLoadNotify::FileLoadNotify(string & out, IFileReadNotify * notify)
 
 //===========================================================================
 bool FileLoadNotify::onFileRead(
+    size_t * bytesUsed,
     string_view data, 
     int64_t offset,
     FileHandle f
 ) {
+    *bytesUsed = data.size();
     // resize the string to match the bytes read, in case it was less than
     // the amount requested
     m_out.resize(data.size());

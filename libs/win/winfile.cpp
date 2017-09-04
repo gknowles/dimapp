@@ -54,6 +54,7 @@ protected:
     WinFileInfo * m_file{nullptr};
     char * m_buf{nullptr};
     int m_bufLen{0};
+    int m_bufUnused{0};
 
     WinError m_err{0};
     DWORD m_bytes{0};
@@ -132,6 +133,7 @@ void IFileOpBase::start(
     m_file = file;
     m_buf = (char *)buf;
     m_bufLen = (int)bufLen;
+    m_bufUnused = 0;
     m_offset = off;
     m_length = len;
 
@@ -240,13 +242,14 @@ private:
 
 //===========================================================================
 bool FileReader::onRun() {
+    auto bufLen = m_bufLen - m_bufUnused;
     auto len = m_length;
-    if (!len || len > m_bufLen)
-        len = m_bufLen;
+    if (!len || len > bufLen)
+        len = bufLen;
 
     return ReadFile(
         m_file->m_handle, 
-        m_buf, 
+        m_buf + m_bufUnused, 
         (DWORD)len, 
         &m_bytes, 
         &m_iocpEvt.overlapped
@@ -255,21 +258,32 @@ bool FileReader::onRun() {
 
 //===========================================================================
 void FileReader::onNotify() {
+    auto avail = m_bytes + m_bufUnused;
+    size_t bytesUsed = 0;
     bool again = m_bytes && m_notify->onFileRead(
-        string_view(m_buf, m_bytes), 
+        &bytesUsed,
+        string_view(m_buf, avail), 
         m_offset, 
-        m_file->m_f);
-
+        m_file->m_f
+    );
     m_offset += m_bytes;
+    if (!again) {
+        m_notify->onFileEnd(m_offset, m_file->m_f);
+        delete this;
+        return;
+    }
+
+    // Unless aborting (i.e. returned false) calls to onFileRead must consume
+    // at least some bytes.
+    assert(bytesUsed && bytesUsed <= avail);
+    m_bufUnused = int(avail - bytesUsed);
+    if (m_bufUnused)
+        memmove(m_buf, m_buf + bytesUsed, m_bufUnused);
 
     if (m_length > m_bytes)
         m_length -= m_bytes;
 
-    if (again)
-        return run();
-
-    m_notify->onFileEnd(m_offset, m_file->m_f);
-    delete this;
+    return run();
 }
 
 
@@ -298,7 +312,12 @@ private:
 //===========================================================================
 bool FileWriter::onRun() {
     return WriteFile(
-        m_file->m_handle, m_buf, m_bufLen, &m_bytes, &m_iocpEvt.overlapped);
+        m_file->m_handle, 
+        m_buf, 
+        m_bufLen, 
+        &m_bytes, 
+        &m_iocpEvt.overlapped
+    );
 }
 
 //===========================================================================
