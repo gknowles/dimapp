@@ -43,7 +43,12 @@ public:
     void read(int64_t offset = 0);
 
 private:
-    bool onFileRead(string_view data, int64_t offset, FileHandle f) override;
+    bool onFileRead(
+        size_t * bytesUsed, 
+        string_view data, 
+        int64_t offset, 
+        FileHandle f
+    ) override;
     void onFileEnd(int64_t offset, FileHandle f) override;
 
     unique_ptr<SocketBuffer> m_buffer;
@@ -127,9 +132,12 @@ void ConsoleReader::read(int64_t offset) {
 
 //===========================================================================
 bool ConsoleReader::onFileRead(
+    size_t * bytesRead,
     string_view data, 
     int64_t offset,
-    FileHandle f) {
+    FileHandle f
+) {
+    *bytesRead = data.size();
     m_bytesRead = (int) data.size();
     socketWrite(&s_socket, move(m_buffer), m_bytesRead);
     // stop reading (return false) so we can get a new buffer
