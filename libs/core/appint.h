@@ -4,10 +4,7 @@
 // appint.h - dim core
 //
 // Initialize and destroy methods called by appRun()
-
 #pragma once
-
-#include <cstdint>
 
 namespace Dim {
 

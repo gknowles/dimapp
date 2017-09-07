@@ -4,7 +4,6 @@
 // appint.h - dim windows platform
 //
 // Initialize and destroy methods called by appRun()
-
 #pragma once
 
 namespace Dim {

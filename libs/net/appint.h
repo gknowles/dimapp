@@ -4,7 +4,6 @@
 // appint.h - dim net
 //
 // Initialize and destroy methods called by appRun()
-
 #pragma once
 
 namespace Dim {
