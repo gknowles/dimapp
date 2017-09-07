@@ -149,9 +149,11 @@ enum {
 void appSignalShutdown(int exitcode = EX_OK);
 
 // Intended for use with command line errors, calls appSignalShutdown() after
-// potentially logging an error. Explicit err text implies EX_USAGE, otherwise 
-// exitcode, err, and detail default to being pulled from the global Dim::Cli 
-// instance. 
+// reporting the error. Explicit err text implies EX_USAGE, otherwise exitcode, 
+// err, and detail default to being pulled from the global Dim::Cli instance. 
+//
+// Unless the application is running as a service, the error is logged to the 
+// console in addition to any other log targets.
 void appSignalUsageError(
     std::string_view err = {},
     std::string_view detail = {}

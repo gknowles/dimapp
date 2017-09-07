@@ -102,6 +102,7 @@ public:
 };
 
 void logMonitor(ILogNotify * notify);
+void logMonitorClose(ILogNotify * notify);
 
 // The default notifier (whether user supplied or the internal one) is only
 // called if no other notifiers have been added. Setting the default to

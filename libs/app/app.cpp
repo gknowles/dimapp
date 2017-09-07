@@ -304,6 +304,9 @@ void Dim::appSignalUsageError(string_view err, string_view detail) {
 //===========================================================================
 void Dim::appSignalUsageError(int code, string_view err, string_view detail) {
     if (code) {
+        bool console = ~appFlags() & (fAppWithConsole | fAppIsService);
+        if (console)
+            logMonitor(&s_consoleLogger);
         Cli cli;
         auto em = err.empty() ? cli.errMsg() : err;
         auto dm = detail.empty() ? cli.errDetail() : detail;
@@ -311,8 +314,12 @@ void Dim::appSignalUsageError(int code, string_view err, string_view detail) {
             logMsgError() << "Error: " << em;
         if (!dm.empty())
             logMsgInfo() << dm;
-        auto os = logMsgInfo();
-        cli.printUsageEx(os, {}, cli.runCommand());
+        {
+            auto os = logMsgInfo();
+            cli.printUsageEx(os, {}, cli.runCommand());
+        }
+        if (console)
+            logMonitorClose(&s_consoleLogger);
     }
     appSignalShutdown(code);
 }

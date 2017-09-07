@@ -189,6 +189,12 @@ void Dim::logMonitor(ILogNotify * notify) {
 }
 
 //===========================================================================
+void Dim::logMonitorClose(ILogNotify * notify) {
+    unique_lock<shared_mutex> lk{s_mut};
+    s_loggers.erase(remove(s_loggers.begin(), s_loggers.end(), notify));
+}
+
+//===========================================================================
 // Query log info
 //===========================================================================
 int Dim::logGetMsgCount(LogType type) {
