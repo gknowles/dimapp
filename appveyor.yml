@@ -34,6 +34,9 @@ test_script:
   - bin\file
   - bin\hpack
   - bin\http
+  - bin\list
   - bin\pargen --test
+  - bin\path
   - bin\tokentable
+  - bin\uset
   - bin\xml --test
