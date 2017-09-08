@@ -128,22 +128,21 @@ void socketCloseWait(
 // as templates where the template parameter is the class, derived from 
 // IAppSocketNotify, that will be instantiated for incoming connections.
 //===========================================================================
-template <typename S> inline 
-std::enable_if_t<std::is_base_of_v<IAppSocketNotify, S>> socketListen(
+template <typename S> 
+inline void socketListen(
     const Endpoint & end,
     AppSocket::Family fam,
     bool console = false
 ) {
+    static_assert(std::is_base_of_v<IAppSocketNotify, S>);
     auto factory = getFactory<IAppSocketNotify, S>();
     socketListen(factory, end, fam, console);
 }
 
 //===========================================================================
-template <typename S> inline 
-std::enable_if_t<std::is_base_of_v<IAppSocketNotify, S>> socketCloseWait(
-    const Endpoint & end,
-    AppSocket::Family fam
-) {
+template <typename S> 
+inline void socketCloseWait(const Endpoint & end, AppSocket::Family fam) {
+    static_assert(std::is_base_of_v<IAppSocketNotify, S>);
     auto factory = getFactory<IAppSocketNotify, S>();
     socketCloseWait(factory, end, fam);
 }
@@ -165,11 +164,9 @@ void socketAddFilter(
 );
 
 //===========================================================================
-template <typename S> inline 
-std::enable_if_t<std::is_base_of_v<IAppSocketNotify, S>> socketAddFilter(
-    const Endpoint & end,
-    AppSocket::Family fam
-) {
+template <typename S> 
+inline void socketAddFilter(const Endpoint & end, AppSocket::Family fam) {
+    static_assert(std::is_base_of_v<IAppSocketNotify, S>);
     auto factory = getFactory<IAppSocketNotify, S>();
     socketAddFilter(factory, end, fam);
 }

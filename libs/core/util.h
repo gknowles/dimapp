@@ -89,9 +89,10 @@ public:
 };
 
 //===========================================================================
-template<typename Base, typename Derived> inline
-std::enable_if_t<std::is_base_of_v<Base, Derived>, IFactory<Base>*>
-getFactory() {
+template<typename Base, typename Derived> 
+inline IFactory<Base> * getFactory() {
+    static_assert(std::is_base_of_v<Base, Derived>);
+
     class Factory : public IFactory<Base> {
         std::unique_ptr<Base> onFactoryCreate() override {
             return std::make_unique<Derived>();
