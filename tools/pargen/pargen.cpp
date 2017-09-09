@@ -93,8 +93,11 @@ VCHAR   =  %x21-7E
 WSP     =  SP
 WSP     =/ HTAB { NoMinRules }
 )";
-    [[maybe_unused]] bool valid 
-        = parseAbnf(rules, coreRules, s_cmdopts.minRules);
+    bool valid [[maybe_unused]] = parseAbnf(
+        rules, 
+        coreRules, 
+        s_cmdopts.minRules
+    );
     assert(valid);
 }
 

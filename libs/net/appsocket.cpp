@@ -512,7 +512,7 @@ static ShutdownNotify s_cleanup;
 //===========================================================================
 void ShutdownNotify::onShutdownClient(bool firstTry) {
     shared_lock<shared_mutex> lk{s_listenMut};
-    for ([[maybe_unused]] auto && info : s_endpoints) {
+    for (auto && info [[maybe_unused]] : s_endpoints) {
         assert(info.listeners == info.consoles);
     }
 }
@@ -521,7 +521,7 @@ void ShutdownNotify::onShutdownClient(bool firstTry) {
 void ShutdownNotify::onShutdownConsole(bool firstTry) {
     {
         shared_lock<shared_mutex> lk{s_listenMut};
-        for ([[maybe_unused]] auto && info : s_endpoints) {
+        for (auto && info [[maybe_unused]] : s_endpoints) {
             assert(!info.listeners && !info.consoles);
         }
     }
