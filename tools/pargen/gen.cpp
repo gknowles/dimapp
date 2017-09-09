@@ -280,9 +280,8 @@ static void addRulePositions(
         // a call. This could also be done for left recursion when the grammar
         // allows it, but that's more difficult to determine.
         // if (!init) {
-        [[maybe_unused]] auto & terms = st->positions[*sp];
+        auto & terms [[maybe_unused]] = st->positions[*sp];
         assert(terms.none());
-        ignore = terms;
         return;
         //}
     }
@@ -942,9 +941,10 @@ void buildStateTree(
 ***/
 
 namespace {
+
 struct StateKey {
     vector<StateEvent> events;
-    unsigned next[257];
+    bool next[257];
 
     bool operator==(const StateKey & right) const;
     bool operator!=(const StateKey & right) const;
@@ -972,6 +972,7 @@ struct DedupInfo {
     vector<unsigned> qmapped;
     vector<unsigned> qmap;
 };
+
 } // namespace
 
 
@@ -985,9 +986,7 @@ size_t std::hash<StateKey>::operator()(const StateKey & val) const {
     for (auto && sv : val.events) {
         hashCombine(out, hash<StateEvent>{}(sv));
     }
-    for (auto && i : val.next) {
-        hashCombine(out, i);
-    }
+    hashCombine(out, hashBytes(val.next, sizeof(val.next)));
     return out;
 }
 
@@ -1010,18 +1009,8 @@ static void copy(StateKey & out, const State & st) {
         return;
     }
     assert(st.next.size() == 257);
-    unordered_map<unsigned, unsigned> idmap;
-    unsigned nextId = 0;
-    for (unsigned i = 0; i < 257; ++i) {
-        if (unsigned id = st.next[i]) {
-            unsigned & mapped = idmap[id];
-            if (!mapped)
-                mapped = ++nextId;
-            out.next[i] = mapped;
-        } else {
-            out.next[i] = 0;
-        }
-    }
+    for (unsigned i = 0; i < 257; ++i) 
+        out.next[i] = st.next[i];
 }
 
 
@@ -1099,19 +1088,17 @@ static void mergeState(unsigned dstId, unsigned srcId, DedupInfo & di) {
 static bool equalize(unsigned a, unsigned b, DedupInfo & di) {
     StateInfo & x = di.info[a];
     StateInfo & y = di.info[b];
-    if (x.key != y.key)
+    if (x.key.events != y.key.events)
         return false;
     size_t n = x.state->next.size();
-    if (n != y.state->next.size())
+    if (n != y.state->next.size()) 
         return false;
-    if (x.state->next == y.state->next)
-        return true;
-    const unsigned * xn = x.state->next.data();
-    const unsigned * yn = y.state->next.data();
+    auto xn = x.state->next.data();
+    auto yn = y.state->next.data();
     for (unsigned i = 0; i < n; ++i) {
         unsigned p = xn[i];
         unsigned q = yn[i];
-        if (!p && !q)
+        if (p == q)
             continue;
         if (!p || !q)
             return false;
@@ -1125,7 +1112,7 @@ static bool equalize(unsigned a, unsigned b, DedupInfo & di) {
         di.pmapped.push_back(p);
         di.qmap[q] = di.lastMapId;
         di.qmapped.push_back(q);
-        if (p != q && !equalize(p, q, di))
+        if (!equalize(p, q, di))
             return false;
     }
     return true;
@@ -1182,11 +1169,13 @@ static bool dedupStateTreePass(DedupInfo & di) {
 void dedupStateTree(unordered_set<State> & states) {
     DedupInfo di;
     di.states = &states;
-    unsigned maxId = 0;
-    for (auto && st : states) {
-        maxId = max(maxId, st.id);
-    }
-    di.info.resize(maxId + 1);
+    auto numIds = max_element(
+        states.begin(), 
+        states.end(), 
+        [](auto & a, auto & b){ return a.id < b.id; }
+    )->id + 1;
+    
+    di.info.resize(numIds);
     for (auto && st : states) {
         auto & si = di.info[st.id];
         si.state = const_cast<State *>(&st);
@@ -1200,8 +1189,8 @@ void dedupStateTree(unordered_set<State> & states) {
         copy(si.key, st);
         insertKeyRef(di, si);
     }
-    di.pmap.assign(di.info.size(), 0);
-    di.qmap.assign(di.info.size(), 0);
+    di.pmap.assign(numIds, 0);
+    di.qmap.assign(numIds, 0);
 
     // keep making dedup passes through all the keys until no more dups are
     // found.

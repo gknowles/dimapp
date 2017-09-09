@@ -252,7 +252,9 @@ struct State {
     bool operator==(const State & right) const;
 };
 
+//===========================================================================
 namespace std {
+
 template <> struct hash<StateElement> {
     size_t operator()(const StateElement & val) const;
 };
@@ -262,7 +264,10 @@ template <> struct hash<StateEvent> {
 template <> struct hash<StatePosition> {
     size_t operator()(const StatePosition & val) const;
 };
-template <> struct hash<State> { size_t operator()(const State & val) const; };
+template <> struct hash<State> { 
+    size_t operator()(const State & val) const; 
+};
+
 } // namespace std
 
 
