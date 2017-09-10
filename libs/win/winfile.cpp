@@ -544,6 +544,8 @@ void Dim::fileClose(FileHandle f) {
             }
         }
         if (~file->m_mode & File::fNonOwning) {
+            if (file->m_mode & File::fBlocking)
+                CancelIoEx(file->m_handle, NULL);
             CloseHandle(file->m_handle);
         }
         file->m_handle = INVALID_HANDLE_VALUE;
