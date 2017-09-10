@@ -470,7 +470,7 @@ static FileHandle attachStdHandle(
 ) {
     assert(mode == File::fReadOnly || mode == File::fReadWrite);
     auto file = make_unique<WinFileInfo>();
-    file->m_mode = mode | File::fBlocking | File::fNonOwning;
+    file->m_mode = mode | File::fBlocking;
     file->m_path = path;
     file->m_handle = GetStdHandle(fd);
     if (file->m_handle == NULL) {
@@ -479,6 +479,19 @@ static FileHandle attachStdHandle(
         winFileSetErrno(ERROR_FILE_NOT_FOUND);
         return {};
     } else if (file->m_handle == INVALID_HANDLE_VALUE) {
+        winFileSetErrno(WinError{});
+        return {};
+    }
+    auto proc = GetCurrentProcess();
+    if (!DuplicateHandle(
+        proc,   // source proc
+        file->m_handle,
+        proc,   // target proc
+        &file->m_handle,
+        0,      // access (ignored)
+        FALSE,  // inheritable
+        DUPLICATE_SAME_ACCESS
+    )) {
         winFileSetErrno(WinError{});
         return {};
     }
@@ -504,14 +517,19 @@ FileHandle Dim::fileAttachStderr() {
 }
 
 //===========================================================================
-static WinFileInfo * getInfo(FileHandle f) {
-    shared_lock<shared_mutex> lk{s_fileMut};
-    return s_files.find(f);
+static WinFileInfo * getInfo(FileHandle f, bool release = false) {
+    if (release) {
+        unique_lock<shared_mutex> lk{s_fileMut};
+        return s_files.release(f);
+    } else {
+        shared_lock<shared_mutex> lk{s_fileMut};
+        return s_files.find(f);
+    }
 }
 
 //===========================================================================
 void Dim::fileClose(FileHandle f) {
-    auto file = getInfo(f);
+    auto file = static_cast<unique_ptr<WinFileInfo>>(getInfo(f, true));
     if (!file)
         return;
     if (file->m_handle != INVALID_HANDLE_VALUE) {
@@ -525,12 +543,11 @@ void Dim::fileClose(FileHandle f) {
                     << "): " << err;
             }
         }
-        if (~file->m_mode & File::fNonOwning)
+        if (~file->m_mode & File::fNonOwning) {
             CloseHandle(file->m_handle);
+        }
         file->m_handle = INVALID_HANDLE_VALUE;
     }
-    unique_lock<shared_mutex> lk{s_fileMut};
-    s_files.erase(f);
 }
 
 //===========================================================================

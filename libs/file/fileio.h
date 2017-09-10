@@ -77,7 +77,7 @@ FileHandle fileOpen(
     File::OpenMode modeFlags
 );
 
-// Create readonly references to the standard in/out/err devices. The handle 
+// Create references to the standard in/out/err devices. The handle 
 // should be closed after use, which detaches from the underlying file
 // descriptor. Accessing the same device from multiple handles will have 
 // unpredictable results.
