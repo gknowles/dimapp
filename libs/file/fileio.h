@@ -36,6 +36,19 @@ namespace File {
         // FILE_FLAG_OVERLAPPED and does async by posting the requests
         // to a small taskqueue whose threads use blocking calls.
         fBlocking = 0x1000,
+
+        // INTERNAL USE ONLY
+        // Underlying native file handle is externally owned, and will be 
+        // left open when the file is closed.
+        fNonOwning = 0x2000,
+
+        fInternalFlags = fNonOwning,
+    };
+
+    enum FileType : int {
+        kUnknown,   // bad handle, system error, or unknown file type
+        kRegular,
+        kCharacter,
     };
 };
 
@@ -63,16 +76,27 @@ FileHandle fileOpen(
     std::string_view path,
     File::OpenMode modeFlags
 );
+
+// Create readonly references to the standard in/out/err devices. The handle 
+// should be closed after use, which detaches from the underlying file
+// descriptor. Accessing the same device from multiple handles will have 
+// unpredictable results.
+FileHandle fileAttachStdin();
+FileHandle fileAttachStdout();
+FileHandle fileAttachStderr();
+
 uint64_t fileSize(FileHandle f);
 TimePoint fileLastWriteTime(FileHandle f);
 std::string_view filePath(FileHandle f);
 unsigned fileMode(FileHandle f);
 
-// Closing the file is normally handled as part of destroying the File
-// object, but fileClose() can be used to release the file to the system
-// when the File can't be deleted, such as in a callback.
-//
-// filePath still works, but most operations on a closed File will fail.
+// kUnknown is returned for bad handle and system errors as well as when
+// the type is unknown. If kUnknown was not returned due to error, errno will 
+// set to 0.
+File::FileType fileType(FileHandle f);
+
+// Closing the file invalidates the handle and releases any internal resources
+// associated with the file.
 void fileClose(FileHandle f);
 
 

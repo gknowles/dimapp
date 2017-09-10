@@ -380,6 +380,7 @@ bool Dim::winFileSetErrno(int error) {
 //===========================================================================
 FileHandle Dim::fileOpen(string_view path, File::OpenMode mode) {
     using om = File::OpenMode;
+    assert(~mode & om::fInternalFlags);
 
     auto file = make_unique<WinFileInfo>();
     file->m_mode = (om)mode;
@@ -462,6 +463,47 @@ FileHandle Dim::fileOpen(string_view path, File::OpenMode mode) {
 }
 
 //===========================================================================
+static FileHandle attachStdHandle(
+    int fd, 
+    string_view path, 
+    File::OpenMode mode // must be either fReadOnly or fReadWrite
+) {
+    assert(mode == File::fReadOnly || mode == File::fReadWrite);
+    auto file = make_unique<WinFileInfo>();
+    file->m_mode = mode | File::fBlocking | File::fNonOwning;
+    file->m_path = path;
+    file->m_handle = GetStdHandle(fd);
+    if (file->m_handle == NULL) {
+        // process doesn't have a console or otherwise redirected stdin
+        file->m_handle = INVALID_HANDLE_VALUE;
+        winFileSetErrno(ERROR_FILE_NOT_FOUND);
+        return {};
+    } else if (file->m_handle == INVALID_HANDLE_VALUE) {
+        winFileSetErrno(WinError{});
+        return {};
+    }
+
+    unique_lock<shared_mutex> lk{s_fileMut};
+    auto f = file->m_f = s_files.insert(file.release());
+    return f;
+}
+
+//===========================================================================
+FileHandle Dim::fileAttachStdin() {
+    return attachStdHandle(STD_INPUT_HANDLE, "STDIN", File::fReadOnly);
+}
+
+//===========================================================================
+FileHandle Dim::fileAttachStdout() {
+    return attachStdHandle(STD_OUTPUT_HANDLE, "STDOUT", File::fReadWrite);
+}
+
+//===========================================================================
+FileHandle Dim::fileAttachStderr() {
+    return attachStdHandle(STD_ERROR_HANDLE, "STDERR", File::fReadWrite);
+}
+
+//===========================================================================
 static WinFileInfo * getInfo(FileHandle f) {
     shared_lock<shared_mutex> lk{s_fileMut};
     return s_files.find(f);
@@ -483,7 +525,8 @@ void Dim::fileClose(FileHandle f) {
                     << "): " << err;
             }
         }
-        CloseHandle(file->m_handle);
+        if (~file->m_mode & File::fNonOwning)
+            CloseHandle(file->m_handle);
         file->m_handle = INVALID_HANDLE_VALUE;
     }
     unique_lock<shared_mutex> lk{s_fileMut};
@@ -498,7 +541,7 @@ uint64_t Dim::fileSize(FileHandle f) {
     LARGE_INTEGER size;
     if (!GetFileSizeEx(file->m_handle, &size)) {
         WinError err;
-        logMsgError() << "WriteFile(" << file->m_path << "): " << err;
+        logMsgError() << "GetFileSizeEx(" << file->m_path << "): " << err;
         winFileSetErrno(err);
         return 0;
     }
@@ -533,6 +576,22 @@ string_view Dim::filePath(FileHandle f) {
 unsigned Dim::fileMode(FileHandle f) {
     auto file = getInfo(f);
     return file->m_mode;
+}
+
+//===========================================================================
+File::FileType Dim::fileType(FileHandle f) {
+    auto file = getInfo(f);
+    DWORD type = GetFileType(file->m_handle);
+    switch (type) {
+    case FILE_TYPE_CHAR: return File::kCharacter;
+    case FILE_TYPE_DISK: return File::kRegular;
+    case FILE_TYPE_UNKNOWN:
+        winFileSetErrno(WinError{});
+        return File::kUnknown;
+    default:
+        winFileSetErrno(0);
+        return File::kUnknown;
+    }
 }
 
 //===========================================================================
