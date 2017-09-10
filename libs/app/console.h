@@ -23,6 +23,7 @@ public:
     ~ConsoleScopedAttr();
 };
 
+void consoleEnableLineBuffer(bool enable = true);
 void consoleEnableEcho(bool enable = true);
 void consoleEnableCtrlC(bool enable = true);
 

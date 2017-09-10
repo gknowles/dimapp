@@ -38,6 +38,19 @@ static BOOL WINAPI controlCallback(DWORD ctrl) {
     return false;
 }
 
+//===========================================================================
+static void enableConsoleFlags(bool enable, DWORD flags) {
+    HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
+    DWORD mode = 0;
+    GetConsoleMode(hInput, &mode);
+    if (enable) {
+        mode |= flags;
+    } else {
+        mode &= ~flags;
+    }
+    SetConsoleMode(hInput, mode);
+}
+
 
 /****************************************************************************
 *
@@ -103,16 +116,13 @@ void Dim::iConsoleInitialize() {
 ***/
 
 //===========================================================================
+void Dim::consoleEnableLineBuffer(bool enable) {
+    enableConsoleFlags(enable, ENABLE_LINE_INPUT);
+}
+
+//===========================================================================
 void Dim::consoleEnableEcho(bool enable) {
-    HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
-    DWORD mode = 0;
-    GetConsoleMode(hInput, &mode);
-    if (enable) {
-        mode |= ENABLE_ECHO_INPUT;
-    } else {
-        mode &= ~ENABLE_ECHO_INPUT;
-    }
-    SetConsoleMode(hInput, mode);
+    enableConsoleFlags(enable, ENABLE_ECHO_INPUT);
 }
 
 //===========================================================================
