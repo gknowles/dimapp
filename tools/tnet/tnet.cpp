@@ -20,26 +20,32 @@ const char kVersion[] = "1.0";
 enum { kExitConnectFailed = EX__APPBASE, kExitDisconnect };
 
 
-class SocketConn : public ISocketNotify, public IEndpointNotify {
-    // ISocketNotify
+class SocketConn 
+    : public ISocketNotify
+    , public IEndpointNotify 
+    , public ITimerNotify
+{
+    // Inherited via ISocketNotify
     void onSocketConnect(const SocketInfo & info) override;
     void onSocketConnectFailed() override;
     void onSocketRead(SocketData & data) override;
     void onSocketDisconnect() override;
     void onSocketDestroy() override;
 
-    // IEndpointNotify
+    // Inherited via IEndpointNotify
     void onEndpointFound(const Endpoint * ptr, int count) override;
 
+    // Inherited via ITimerNotify
+    Duration onTimer(TimePoint now) override;
+
+private:
     unique_ptr<ConsoleScopedAttr> m_connected;
 };
 
 class ConsoleReader : public IFileReadNotify {
 public:
-    FileHandle m_device;
-    bool m_isFile{false};
-
-    bool QueryDestroy() const { return !m_device && !m_buffer; }
+    void init();
+    bool queryDestroy();
     void read(int64_t offset = 0);
 
 private:
@@ -51,6 +57,8 @@ private:
     ) override;
     void onFileEnd(int64_t offset, FileHandle f) override;
 
+    FileHandle m_input;
+    bool m_isFile{false};
     unique_ptr<SocketBuffer> m_buffer;
     int m_bytesRead{0};
 };
@@ -89,7 +97,7 @@ void SocketConn::onEndpointFound(const Endpoint * ends, int count) {
 void SocketConn::onSocketConnect(const SocketInfo & info) {
     m_connected = make_unique<ConsoleScopedAttr>(kConsoleGreen);
     cout << "Connected" << endl;
-    s_console.read();
+    timerUpdate(this, 500ms);
 }
 
 //===========================================================================
@@ -115,6 +123,12 @@ void SocketConn::onSocketDestroy() {
     // it's a static, so override the default "delete this;" with a no-op
 }
 
+//===========================================================================
+Duration SocketConn::onTimer(TimePoint now) {
+    s_console.read();
+    return kTimerInfinite;
+}
+
 
 /****************************************************************************
 *
@@ -123,11 +137,30 @@ void SocketConn::onSocketDestroy() {
 ***/
 
 //===========================================================================
+void ConsoleReader::init() {
+    m_input = fileAttachStdin();
+    if (!m_input)
+        return appSignalShutdown(EX_IOERR);
+    m_isFile = (fileType(m_input) == File::kRegular);
+    if (!m_isFile)
+        consoleEnableEcho(false);
+}
+
+//===========================================================================
+bool ConsoleReader::queryDestroy() { 
+    if (m_input) {
+        fileClose(m_input);
+        m_input = {};
+    }
+    return !m_buffer; 
+}
+
+//===========================================================================
 void ConsoleReader::read(int64_t offset) {
-    assert(m_device);
+    assert(m_input);
     m_bytesRead = 0;
     m_buffer = socketGetBuffer();
-    fileRead(this, m_buffer->data, m_buffer->len, m_device, offset);
+    fileRead(this, m_buffer->data, m_buffer->len, m_input, offset);
 }
 
 //===========================================================================
@@ -146,12 +179,17 @@ bool ConsoleReader::onFileRead(
 
 //===========================================================================
 void ConsoleReader::onFileEnd(int64_t offset, FileHandle f) {
-    if (m_device) {
+    if (m_input) {
         if (m_isFile) {
             if (!m_bytesRead || (size_t) offset == fileSize(f)) {
-                fileClose(m_device);
-                m_isFile = false;
-                m_device = fileOpen("conin$", File::fReadOnly);
+                fileClose(m_input);
+                consoleResetStdin();
+                init();
+            }
+        } else {
+            if (!m_bytesRead) {
+                m_buffer.reset();
+                return;
             }
         }
         read(offset);
@@ -177,14 +215,12 @@ static ShutdownNotify s_cleanup;
 //===========================================================================
 void ShutdownNotify::onShutdownClient(bool firstTry) {
     if (firstTry) {
-        fileClose(s_console.m_device);
-        s_console.m_device = {};
         endpointCancelQuery(s_cancelAddrId);
         socketDisconnect(&s_socket);
     }
 
     if (socketGetMode(&s_socket) != ISocketNotify::kInactive
-        || !s_console.QueryDestroy()
+        || !s_console.queryDestroy()
     ) {
         shutdownIncomplete();
     }
@@ -210,23 +246,9 @@ static void app(int argc, char *argv[]) {
         return appSignalUsageError();
 
     consoleEnableCtrlC();
-    consoleEnableEcho(false);
+    s_console.init();
 
     endpointQuery(&s_cancelAddrId, &s_socket, *remote, 23);
-
-    HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
-    DWORD type = GetFileType(hIn);
-    char inpath[MAX_PATH] = "conin$";
-    if (type == FILE_TYPE_DISK) {
-        s_console.m_isFile = true;
-        GetFinalPathNameByHandle(
-            hIn, inpath, (DWORD)size(inpath), FILE_NAME_OPENED);
-    }
-    cout << "Input from: " << inpath << endl;
-
-    s_console.m_device = fileOpen(inpath, File::fReadOnly | File::fDenyNone);
-    if (!s_console.m_device)
-        return appSignalShutdown(EX_IOERR);
 }
 
 
