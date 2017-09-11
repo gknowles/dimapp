@@ -23,8 +23,15 @@ public:
     ~ConsoleScopedAttr();
 };
 
-void consoleEnableLineBuffer(bool enable = true);
+// Also enables/disables line buffering.
 void consoleEnableEcho(bool enable = true);
+
 void consoleEnableCtrlC(bool enable = true);
+
+// If the standard io has been redirected these functions will reset them 
+// back to point to the console, if the process has a console.
+void consoleResetStdin();
+void consoleResetStdout();
+void consoleResetStderr();
 
 } // namespace

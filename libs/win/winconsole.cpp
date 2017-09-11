@@ -38,19 +38,6 @@ static BOOL WINAPI controlCallback(DWORD ctrl) {
     return false;
 }
 
-//===========================================================================
-static void enableConsoleFlags(bool enable, DWORD flags) {
-    HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
-    DWORD mode = 0;
-    GetConsoleMode(hInput, &mode);
-    if (enable) {
-        mode |= flags;
-    } else {
-        mode &= ~flags;
-    }
-    SetConsoleMode(hInput, mode);
-}
-
 
 /****************************************************************************
 *
@@ -116,16 +103,55 @@ void Dim::iConsoleInitialize() {
 ***/
 
 //===========================================================================
-void Dim::consoleEnableLineBuffer(bool enable) {
-    enableConsoleFlags(enable, ENABLE_LINE_INPUT);
+static void enableConsoleFlags(bool enable, DWORD flags) {
+    HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
+    DWORD mode = 0;
+    if (!GetConsoleMode(hInput, &mode)) {
+        logMsgError() << "GetConsoleMode(): " << WinError{};
+        return;
+    }
+    if (enable) {
+        mode |= flags;
+    } else {
+        mode &= ~flags;
+    }
+    if (!SetConsoleMode(hInput, mode))
+        logMsgError() << "SetConsoleMode(): " << WinError{};
 }
 
 //===========================================================================
 void Dim::consoleEnableEcho(bool enable) {
-    enableConsoleFlags(enable, ENABLE_ECHO_INPUT);
+    enableConsoleFlags(enable, ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT);
 }
 
 //===========================================================================
 void Dim::consoleEnableCtrlC(bool enable) {
     s_controlEnabled = enable;
+}
+
+//===========================================================================
+void Dim::consoleResetStdin() {
+    static const unsigned STDIN_FILENO = 0;
+
+    HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
+    DWORD mode = 0;
+    if (GetConsoleMode(hInput, &mode))
+        return;
+
+    // Create explicit handle to console and duplicate it into stdin
+    hInput = CreateFileW(
+        L"conin$",
+        GENERIC_READ | GENERIC_WRITE,
+        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+        NULL, // security attributes
+        OPEN_EXISTING,
+        0, // flags and attributes
+        NULL // template file
+    );
+    if (hInput == INVALID_HANDLE_VALUE) {
+        logMsgError() << "CreateFileW(conin$): " << WinError{};
+        return;
+    }
+    if (!SetStdHandle(STD_INPUT_HANDLE, hInput))
+        logMsgError() << "SetStdHandle(hInput): " << WinError{};
 }
