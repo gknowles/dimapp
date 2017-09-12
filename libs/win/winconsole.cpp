@@ -98,7 +98,7 @@ void Dim::iConsoleInitialize() {
 
 /****************************************************************************
 *
-*   Public API
+*   Console flags
 *
 ***/
 
@@ -106,17 +106,15 @@ void Dim::iConsoleInitialize() {
 static void enableConsoleFlags(bool enable, DWORD flags) {
     HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
     DWORD mode = 0;
-    if (!GetConsoleMode(hInput, &mode)) {
-        logMsgError() << "GetConsoleMode(): " << WinError{};
+    if (!GetConsoleMode(hInput, &mode))
         return;
-    }
     if (enable) {
         mode |= flags;
     } else {
         mode &= ~flags;
     }
     if (!SetConsoleMode(hInput, mode))
-        logMsgError() << "SetConsoleMode(): " << WinError{};
+        logMsgCrash() << "SetConsoleMode(): " << WinError{};
 }
 
 //===========================================================================
@@ -129,10 +127,19 @@ void Dim::consoleEnableCtrlC(bool enable) {
     s_controlEnabled = enable;
 }
 
+
+/****************************************************************************
+*
+*   Console handle
+*
+***/
+
 //===========================================================================
 void Dim::consoleResetStdin() {
-    static const unsigned STDIN_FILENO = 0;
-
+    if (GetConsoleWindow() == NULL) {
+        // process isn't attached to a console
+        return;
+    }
     HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
     DWORD mode = 0;
     if (GetConsoleMode(hInput, &mode))
@@ -153,5 +160,5 @@ void Dim::consoleResetStdin() {
         return;
     }
     if (!SetStdHandle(STD_INPUT_HANDLE, hInput))
-        logMsgError() << "SetStdHandle(hInput): " << WinError{};
+        logMsgError() << "SetStdHandle(in): " << WinError{};
 }
