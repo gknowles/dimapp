@@ -101,18 +101,20 @@ static void WINAPI ServiceMain(DWORD argc, char ** argv) {
 
 /****************************************************************************
 *
-*   ServiceDispatchTask
+*   Service dispatch thread
 *
 ***/
 
 //===========================================================================
-static void serviceDispatchTask() {
+static void serviceDispatchThread() {
     assert(s_mode == kRunStarting);
 
     SERVICE_TABLE_ENTRY st[] = {
         { (char *) "", &ServiceMain },
         { NULL, NULL },
     };
+    // StartServiceCtrlDispatcher starts the service message loop and doesn't
+    // return until the service ends
     if (!StartServiceCtrlDispatcher(st)) {
         WinError err;
         if (err == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT) {
@@ -186,7 +188,7 @@ void Dim::winServiceInitialize() {
         // Start dispatch thread and wait for it to determine if we're 
         // running as a service.
         s_mode = kRunStarting;
-        taskPushOnce("Service Dispatcher", serviceDispatchTask);
+        taskPushOnce("Service Dispatcher", serviceDispatchThread);
         unique_lock<mutex> lk{s_mut};
         while (s_mode == kRunStarting)
             s_cv.wait(lk);
