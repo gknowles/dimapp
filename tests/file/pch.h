@@ -3,7 +3,6 @@
 //
 // pch.h - dimapp test file
 
-#define DIM_LIB_KEEP_MACROS
 // Library public headers
 #include "app/app.h"
 #include "cli/cli.h"

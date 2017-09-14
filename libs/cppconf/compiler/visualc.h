@@ -12,7 +12,7 @@
 // disable std::byte because it conflicts with some of the windows sdk headers
 #define _HAS_STD_BYTE 0
 
-#ifndef DIM_LIB_KEEP_MACROS
+#ifndef DIMAPP_LIB_KEEP_MACROS
 #pragma warning(push)
 #endif
 
@@ -33,7 +33,7 @@
     4826 /* conversion from 'type1' to 'type2' is sign-extended */ \
 ) 
 
-#ifdef DIM_LIB_DYN_LINK
+#ifdef DIMAPP_LIB_DYN_LINK
 // 'identifier': class 'type' needs to have dll-interface to be used
 // by clients of class 'type2'
 #pragma warning(disable : 4251)

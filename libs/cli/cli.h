@@ -52,7 +52,7 @@ enum {
 *
 ***/
 
-class DIM_LIB_DECL Cli {
+class DIMAPP_LIB_DECL Cli {
 public:
     struct Config;
     struct CommandConfig;
@@ -183,7 +183,7 @@ public:
     // form "@file" with the contents of the file.
     void responseFiles(bool enable = true);
 
-#if !defined(DIM_LIB_NO_ENV)
+#if !defined(DIMAPP_LIB_NO_ENV)
     // Environment variable to get initial options from. Defaults to the empty
     // string, but when set the content of the named variable is parsed into
     // args which are then inserted into the argument list right after arg0.
@@ -556,7 +556,7 @@ bool Cli::toString_impl(std::string & out, const T &, long) const {
 *
 ***/
 
-class DIM_LIB_DECL CliLocal : public Cli {
+class DIMAPP_LIB_DECL CliLocal : public Cli {
 public:
     CliLocal();
 };
@@ -571,7 +571,7 @@ public:
 *
 ***/
 
-class DIM_LIB_DECL Cli::OptBase {
+class DIMAPP_LIB_DECL Cli::OptBase {
 public:
     struct ChoiceDesc {
         std::string desc;

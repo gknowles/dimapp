@@ -3,7 +3,6 @@
 //
 // pch.h - dim test http
 
-#define DIM_LIB_KEEP_MACROS
 // Library public headers
 #include "app/app.h"
 #include "core/core.h"

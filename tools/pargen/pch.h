@@ -3,7 +3,7 @@
 //
 // pch.h - pargen
 
-#define DIM_LIB_KEEP_MACROS
+#define DIMAPP_LIB_KEEP_MACROS
 // Library public headers
 #include "app/app.h"
 #include "cli/cli.h"
