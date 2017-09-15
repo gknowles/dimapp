@@ -1,0 +1,3 @@
+[submodule "vendor/dimcli"]
+	path = vendor/dimcli
+	url = https://github.com/gknowles/dimcli.git

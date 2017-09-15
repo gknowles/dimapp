@@ -5,8 +5,8 @@
 
 // Library public headers
 #include "app/app.h"
-#include "cli/cli.h"
 #include "core/core.h"
+#include "dimcli/cli.h"
 #include "file/file.h"
 #include "xml/xml.h"
 

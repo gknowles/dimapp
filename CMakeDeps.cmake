@@ -20,8 +20,6 @@
 # libs/app/pch.cpp
 # libs/app/pch.h
 # libs/app/webadmin.cpp
-# libs/cli/cli.cpp
-# libs/cli/cli.h
 # libs/core/appint.h
 # libs/core/charbuf.cpp
 # libs/core/charbuf.h
@@ -62,6 +60,7 @@
 # libs/cppconf/compiler/visualc.h
 # libs/cppconf/cppconf.h
 # libs/cppconf/cppconf_suffix.h
+# libs/cppconf/dimcli_userconfig.h
 # libs/file/file.cpp
 # libs/file/file.h
 # libs/file/fileio.h
@@ -203,3 +202,6 @@
 # tools/tnet/pch.cpp
 # tools/tnet/pch.h
 # tools/tnet/tnet.cpp
+# vendor/dimcli
+# vendor/dimcli/libs/dimcli/cli.cpp
+# vendor/dimcli/libs/dimcli/cli.h

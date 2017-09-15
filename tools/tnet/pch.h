@@ -6,7 +6,7 @@
 #define DIMAPP_LIB_KEEP_MACROS
 // Library public headers
 #include "app/app.h"
-#include "cli/cli.h"
+#include "dimcli/cli.h"
 #include "core/core.h"
 #include "file/file.h"
 #include "net/net.h"

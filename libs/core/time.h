@@ -69,6 +69,8 @@ public:
     std::string_view view() const;
 };
 
+bool timeParse8601(TimePoint * out, std::string_view str);
+
 
 /****************************************************************************
 *
