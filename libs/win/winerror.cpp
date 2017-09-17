@@ -41,36 +41,12 @@ WinError::WinError() {
 }
 
 //===========================================================================
-WinError::WinError(const WinError & from)
-    : m_value{from.m_value}
-    , m_ntStatus{from.m_ntStatus}
-    , m_secStatus{from.m_secStatus}
+WinError::WinError(int error)
+    : m_value{error} 
 {}
 
 //===========================================================================
-WinError::WinError(int error)
-    : m_value{error} {}
-
-//===========================================================================
 WinError::WinError(NtStatus status) {
-    operator=(status);
-}
-
-//===========================================================================
-WinError::WinError(SecurityStatus status) {
-    operator=(status);
-}
-
-//===========================================================================
-WinError & WinError::operator=(int error) {
-    m_secStatus = 0;
-    m_ntStatus = 0;
-    m_value = error;
-    return *this;
-}
-
-//===========================================================================
-WinError & WinError::operator=(NtStatus status) {
     m_secStatus = 0;
     if (!status) {
         m_ntStatus = 0;
@@ -79,11 +55,10 @@ WinError & WinError::operator=(NtStatus status) {
         m_ntStatus = status;
         m_value = s_NtStatusToDosError(status);
     }
-    return *this;
 }
 
 //===========================================================================
-WinError & WinError::operator=(SecurityStatus status) {
+WinError::WinError(SecurityStatus status) {
     if (!status) {
         m_secStatus = 0;
         m_ntStatus = 0;
@@ -93,7 +68,6 @@ WinError & WinError::operator=(SecurityStatus status) {
         m_ntStatus = s_SecurityStatusToNtStatus(status);
         m_value = s_NtStatusToDosError(m_ntStatus);
     }
-    return *this;
 }
 
 //===========================================================================

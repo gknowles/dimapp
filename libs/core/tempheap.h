@@ -80,7 +80,7 @@ class TempHeap : public ITempHeap {
 public:
     ~TempHeap();
     TempHeap & operator=(const TempHeap & from) = delete;
-    TempHeap & operator=(TempHeap && from);
+    TempHeap & operator=(TempHeap && from) = default;
 
     void clear();
     void swap(TempHeap & from);

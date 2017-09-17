@@ -345,7 +345,7 @@ Path & Path::concat(string_view path) {
 
 //===========================================================================
 Path & Path::resolve(const Path & base) {
-    return resolve(base.m_data);
+    return resolve(string_view{base.m_data});
 }
 
 //===========================================================================

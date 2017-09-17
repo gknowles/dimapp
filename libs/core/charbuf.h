@@ -32,14 +32,15 @@ public:
 
 public:
     CharBuf() {}
-    CharBuf(CharBuf && from) { swap(from); }
+    CharBuf(const CharBuf & from) { insert(0, from); }
+    CharBuf(CharBuf && from) = default;
     ~CharBuf();
 
+    CharBuf & operator=(const CharBuf & buf) { return assign(buf); }
+    CharBuf & operator=(CharBuf && buf) = default;
     CharBuf & operator=(char ch) { return assign(ch); }
     CharBuf & operator=(const char s[]) { return assign(s); }
     CharBuf & operator=(std::string_view str) { return assign(str); }
-    CharBuf & operator=(const CharBuf & buf) { return assign(buf); }
-    CharBuf & operator=(CharBuf && buf) { clear(); swap(buf); return *this; }
     CharBuf & operator+=(char ch) { pushBack(ch); return *this; }
     CharBuf & operator+=(const char s[]) { return append(s); }
     CharBuf & operator+=(std::string_view str) { return append(str); }

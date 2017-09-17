@@ -100,7 +100,7 @@ static IImplBase * impl(const Node & node);
 ***/
 
 namespace {
-struct EmptyImpl : IImplBase {
+struct EmptyImpl final : IImplBase {
     void init(Node & node, bool full) override;
     void init(Node & node, const Node & from) override;
     void destroy(Node & node) override;
@@ -192,7 +192,7 @@ bool EmptyImpl::lowerBound(
 ***/
 
 namespace {
-struct FullImpl : IImplBase {
+struct FullImpl final : IImplBase {
     void init(Node & node, bool full) override;
     void init(Node & node, const Node & from) override;
     void destroy(Node & node) override;
@@ -295,7 +295,7 @@ void FullImpl::convert(Node & node) {
 ***/
 
 namespace {
-struct VectorImpl : IImplBase {
+struct VectorImpl final : IImplBase {
     static constexpr size_t maxValues() { 
         return kDataSize / sizeof(*Node::values); 
     }
@@ -451,7 +451,7 @@ void VectorImpl::convert(Node & node) {
 ***/
 
 namespace {
-struct BitmapImpl : IImplBase {
+struct BitmapImpl final : IImplBase {
     static constexpr size_t numInts() { return kDataSize / sizeof(uint64_t); }
     static constexpr size_t numBits() { return 64 * numInts(); }
 
@@ -581,7 +581,7 @@ bool BitmapImpl::lowerBound(
 ***/
 
 namespace {
-struct MetaImpl : IImplBase {
+struct MetaImpl final : IImplBase {
     static constexpr size_t maxNodes() { 
         return kDataSize / sizeof(*Node::nodes); 
     }
@@ -855,7 +855,7 @@ static void insIter(Node & left, const Node & right) {
 }
 
 //===========================================================================
-static void insCopyIter(Node & left, const Node & right) {
+static void insRIter(Node & left, const Node & right) {
     Node tmp;
     insCopy(tmp, right);
     swap(left, tmp);
@@ -897,12 +897,12 @@ static void insert(Node & left, const Node & right) {
     using InsertFn = void(Node & left, const Node & right);
     InsertFn * functs[][kNodeTypes] = {
     // LEFT                         RIGHT
-    //             empty    full     vector   bitmap       meta
-    /* empty  */ { insSkip, insCopy, insCopy, insCopy,     insCopy     }, 
-    /* full   */ { insSkip, insSkip, insSkip, insSkip,     insSkip     }, 
-    /* vector */ { insSkip, insCopy, insVec,  insCopyIter, insCopyIter }, 
-    /* bitmap */ { insSkip, insCopy, insIter, insBitmap,   insError    }, 
-    /* meta   */ { insSkip, insCopy, insIter, insError,    insMeta     }, 
+    //             empty    full     vector   bitmap     meta
+    /* empty  */ { insSkip, insCopy, insCopy, insCopy,   insCopy  }, 
+    /* full   */ { insSkip, insSkip, insSkip, insSkip,   insSkip  }, 
+    /* vector */ { insSkip, insCopy, insVec,  insRIter,  insRIter }, 
+    /* bitmap */ { insSkip, insCopy, insIter, insBitmap, insError }, 
+    /* meta   */ { insSkip, insCopy, insIter, insError,  insMeta  }, 
     };
     functs[left.type][right.type](left, right);
 }
@@ -936,7 +936,7 @@ static void insIter(Node & left, Node && right) {
 }
 
 //===========================================================================
-static void insSIter(Node & left, Node && right) {
+static void insRIter(Node & left, Node && right) {
     swap(left, right);
     insIter(left, move(right));
 }
@@ -969,7 +969,7 @@ static void insert(Node & left, Node && right) {
     //             empty    full     vector   bitmap     meta
     /* empty  */ { insSkip, insMove, insMove, insMove,   insMove  }, 
     /* full   */ { insSkip, insSkip, insSkip, insSkip,   insSkip  }, 
-    /* vector */ { insSkip, insMove, insVec,  insSIter,  insSIter }, 
+    /* vector */ { insSkip, insMove, insVec,  insRIter,  insRIter }, 
     /* bitmap */ { insSkip, insMove, insIter, insBitmap, insError }, 
     /* meta   */ { insSkip, insMove, insIter, insError,  insMeta  }, 
     };
@@ -1006,7 +1006,10 @@ static void eraEmpty(Node & left, const Node & right) {
 static void eraChange(Node & left, const Node & right) {
     auto ri = UnsignedSet::Iterator(&right, 0);
     assert(ri);
-    impl(left)->erase(left, *ri);
+
+    // convert from full to either bitmap or meta
+    impl(left)->erase(left, *ri); 
+    
     erase(left, right);
 }
 
@@ -1114,16 +1117,12 @@ static void isecSkip(Node & left, const Node & right)
 
 //===========================================================================
 static void isecEmpty(Node & left, const Node & right) {
-    impl(left)->destroy(left);
-    left.type = kEmpty;
-    impl(left)->init(left, false);
+    eraEmpty(left, right);
 }
 
 //===========================================================================
 static void isecCopy(Node & left, const Node & right) {
-    impl(left)->destroy(left);
-    left.type = right.type;
-    impl(left)->init(left, right);
+    insCopy(left, right);
 }
 
 //===========================================================================
@@ -1236,7 +1235,7 @@ static void isecFind(Node & left, Node && right) {
 }
 
 //===========================================================================
-static void isecSFind(Node & left, Node && right) {
+static void isecRFind(Node & left, Node && right) {
     swap(left, right);
     isecFind(left, move(right));
 }
@@ -1270,8 +1269,8 @@ static void intersect(Node & left, Node && right) {
     /* empty  */ { isecSkip,  isecSkip, isecEmpty, isecEmpty,  isecEmpty }, 
     /* full   */ { isecEmpty, isecSkip, isecMove,  isecMove,   isecMove  }, 
     /* vector */ { isecEmpty, isecSkip, isecVec,   isecFind,   isecFind  }, 
-    /* bitmap */ { isecEmpty, isecSkip, isecSFind, isecBitmap, isecError }, 
-    /* meta   */ { isecEmpty, isecSkip, isecSFind, isecError,  isecMeta  }, 
+    /* bitmap */ { isecEmpty, isecSkip, isecRFind, isecBitmap, isecError }, 
+    /* meta   */ { isecEmpty, isecSkip, isecRFind, isecError,  isecMeta  }, 
     };
     functs[left.type][right.type](left, move(right));
 }

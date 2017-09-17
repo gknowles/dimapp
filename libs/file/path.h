@@ -25,12 +25,28 @@ namespace Dim {
 class Path {
 public:
     Path() {}
+    Path(const Path & from) = default;
+    Path(Path && from) = default;
     Path(const char from[]) : Path{std::string_view{from}} {}
     Path(std::string_view from);
+    Path(const std::string & from) : Path{std::string_view{from}} {}
     Path(const std::experimental::filesystem::path & from);
 
     Path & clear();
     void swap(Path & from);
+
+    Path & operator=(const Path & from) = default;
+    Path & operator=(Path && from) = default;
+    Path & operator=(const char from[]) { 
+        return assign(std::string_view(from)); 
+    }
+    Path & operator=(std::string_view from) { return assign(from); }
+    Path & operator=(const std::string & from) { 
+        return assign(std::string_view(from)); 
+    }
+    Path & operator=(const std::experimental::filesystem::path & from) { 
+        return assign(from); 
+    }
 
     Path & assign(const Path & path);
     Path & assign(const Path & path, std::string_view defExt);
@@ -41,17 +57,6 @@ public:
         const std::experimental::filesystem::path & path, 
         std::string_view defExt
     );
-    Path & operator=(const char from[]) { 
-        return assign(std::string_view(from)); 
-    }
-    Path & operator=(const Path & from) { return assign(from); }
-    Path & operator=(std::string_view from) { return assign(from); }
-    Path & operator=(const std::string & from) { 
-        return assign(std::string_view(from)); 
-    }
-    Path & operator=(const std::experimental::filesystem::path & from) { 
-        return assign(from); 
-    }
 
     Path & setRootName(char drive);
     Path & setRootName(std::string_view root);

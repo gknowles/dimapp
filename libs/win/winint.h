@@ -118,15 +118,18 @@ public:
 public:
     // default constructor calls GetLastError()
     WinError();
-    WinError(const WinError & from);
+    WinError(const WinError & from) = default;
+    WinError(int error);
+    // sets equivalent standard windows error value
     WinError(NtStatus status);
     WinError(SecurityStatus status);
-    WinError(int error);
 
-    WinError & operator=(int error);
-    // sets equivalent standard windows error value
-    WinError & operator=(NtStatus status);
-    WinError & operator=(SecurityStatus status);
+    WinError & operator=(const WinError & from) = default;
+    WinError & operator=(int error) { return *this = WinError{error}; }
+    WinError & operator=(NtStatus status) { return *this = WinError{status}; }
+    WinError & operator=(SecurityStatus status) { 
+        return *this = WinError{status}; 
+    }
 
     WinError & set();   // calls GetLastError()
 
