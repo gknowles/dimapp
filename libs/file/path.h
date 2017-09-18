@@ -120,6 +120,23 @@ bool operator==(const Path & left, const Path & right);
 
 std::ostream & operator<<(std::ostream & os, const Path & val);
 
+
+/****************************************************************************
+*
+*   Dim::Cli
+*
+***/
+
+#ifdef DIMCLI_LIB_DECL
+
+//===========================================================================
+template <>
+inline void Cli::OptBase::setValueDesc<Path>() {
+    m_valueDesc = "FILE";
+}
+
+#endif
+
 } // namespace
 
 
