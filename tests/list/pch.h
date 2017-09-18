@@ -3,14 +3,15 @@
 //
 // pch.h - dim test list
 
-// Library public headers
+// Public header
+// External library public headers
 #include "app/app.h"
-#include "core/log.h"
 #include "core/list.h"
+#include "core/log.h"
 
 // Standard headers
 #include <iostream>
 
 // Platform headers
-// Library internal headers
+// External library internal headers
 // Internal headers

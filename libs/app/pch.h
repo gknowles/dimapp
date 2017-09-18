@@ -7,8 +7,9 @@
 #include "app/app.h"
 
 // External library public headers
-#include "core/core.h"
 #include "dimcli/cli.h"
+
+#include "core/core.h"
 #include "file/file.h"
 #include "json/json.h"
 #include "net/address.h"

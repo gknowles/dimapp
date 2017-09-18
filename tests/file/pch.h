@@ -3,10 +3,12 @@
 //
 // pch.h - dimapp test file
 
-// Library public headers
+// Public header
+// External library public headers
+#include "dimcli/cli.h"
+
 #include "app/app.h"
 #include "core/core.h"
-#include "dimcli/cli.h"
 #include "file/file.h"
 
 // Standard headers
@@ -16,5 +18,5 @@
 #include <iostream>
 
 // Platform headers
-// Library internal headers
+// External library internal headers
 // Internal headers

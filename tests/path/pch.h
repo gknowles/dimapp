@@ -3,7 +3,8 @@
 //
 // pch.h - dimapp test path
 
-// Library public headers
+// Public header
+// External library public headers
 #include "app/app.h"
 #include "core/core.h"
 #include "file/file.h"
@@ -15,5 +16,5 @@
 #include <iostream>
 
 // Platform headers
-// Library internal headers
+// External library internal headers
 // Internal headers

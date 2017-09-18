@@ -3,7 +3,8 @@
 //
 // pch.h - dim test uset
 
-// Library public headers
+// Public header
+// External library public headers
 #include "app/app.h"
 #include "core/core.h"
 
@@ -11,5 +12,5 @@
 #include <iostream>
 
 // Platform headers
-// Library internal headers
+// External library internal headers
 // Internal headers

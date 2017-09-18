@@ -5,9 +5,10 @@
 
 // Public header
 // External library public headers
+#include "dimcli/cli.h"
+
 #include "app/app.h"
 #include "core/core.h"
-#include "dimcli/cli.h"
 #include "file/file.h"
 #include "json/json.h"
 #include "net/net.h"

@@ -3,11 +3,13 @@
 //
 // pch.h - h2srv
 
+// Public header
+// External library public headers
+#include "dimcli/cli.h"
+
 #define DIMAPP_LIB_KEEP_MACROS
-// Library public headers
 #include "app/app.h"
 #include "core/core.h"
-#include "dimcli/cli.h"
 #include "net/net.h"
 #include "wintls/wintls.h"
 
@@ -18,5 +20,5 @@
 #include <iostream>
 
 // Platform headers
-// Library internal headers
+// External library internal headers
 // Internal headers

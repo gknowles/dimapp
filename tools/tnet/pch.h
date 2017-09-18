@@ -3,10 +3,12 @@
 //
 // pch.h - tnet
 
-#define DIMAPP_LIB_KEEP_MACROS
-// Library public headers
-#include "app/app.h"
+// Public header
+// External library public headers
 #include "dimcli/cli.h"
+
+#define DIMAPP_LIB_KEEP_MACROS
+#include "app/app.h"
 #include "core/core.h"
 #include "file/file.h"
 #include "net/net.h"
@@ -23,5 +25,5 @@
 #define NOMINMAX
 #include <Windows.h>
 
-// Library internal headers
+// External library internal headers
 // Internal headers
