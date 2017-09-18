@@ -5,5 +5,3 @@
 #pragma once
 
 #include "cppconf.h"
-
-#define DIMCLI_LIB_KEEP_MACROS
