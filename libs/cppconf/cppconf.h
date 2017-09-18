@@ -87,12 +87,3 @@
 ***/
 
 #include <cstddef>  // size_t, byte, NULL, offsetof
-
-
-/****************************************************************************
-*
-*   Dependent library defines
-*
-***/
-
-#define DIMCLI_LIB_KEEP_MACROS
