@@ -132,7 +132,7 @@ constexpr int digits10(uint32_t val) {
     v |= v >> 4;
     v |= v >> 8;
     v |= v >> 16;
-    int r = kDeBruijnBitPositionAdjustedForLog10[(v * 0x07c4acdd) >> 27];
+    int r = kDeBruijnBitPositionAdjustedForLog10[(v * 0x07c4'acdd) >> 27];
 
     const uint32_t kPowersOf10[] = {
                     1,

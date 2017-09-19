@@ -37,8 +37,10 @@ test_script:
   - bin\hpack
   - bin\http
   - bin\list
+  - bin\math
   - bin\pargen --test
   - bin\path
+  - bin\str
   - bin\tokentable
   - bin\uset
   - bin\xml --test

@@ -166,9 +166,15 @@
 # tests/list/listtest.cpp
 # tests/list/pch.cpp
 # tests/list/pch.h
+# tests/math/mathtest.cpp
+# tests/math/pch.cpp
+# tests/math/pch.h
 # tests/path/pathtest.cpp
 # tests/path/pch.cpp
 # tests/path/pch.h
+# tests/str/pch.cpp
+# tests/str/pch.h
+# tests/str/strtest.cpp
 # tests/tls/pch.cpp
 # tests/tls/pch.h
 # tests/tls/tlstest.cpp
