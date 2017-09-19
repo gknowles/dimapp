@@ -4,6 +4,8 @@
 // pch.h - dim test charbuf
 
 // Public header
+#include "core/charbuf.h"
+
 // External library public headers
 #include "app/app.h"
 #include "core/core.h"

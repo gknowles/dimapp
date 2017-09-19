@@ -4,9 +4,11 @@
 // pch.h - dim test uset
 
 // Public header
+#include "core/uset.h"
+
 // External library public headers
 #include "app/app.h"
-#include "core/core.h"
+#include "core/log.h"
 
 // Standard headers
 #include <iostream>

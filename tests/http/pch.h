@@ -4,10 +4,11 @@
 // pch.h - dim test http
 
 // Public header
+#include "net/http.h"
+
 // External library public headers
 #include "app/app.h"
 #include "core/core.h"
-#include "net/net.h"
 
 // Standard headers
 #include <iostream>

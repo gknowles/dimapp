@@ -4,9 +4,10 @@
 // pch.h - dim test list
 
 // Public header
+#include "core/list.h"
+
 // External library public headers
 #include "app/app.h"
-#include "core/list.h"
 #include "core/log.h"
 
 // Standard headers

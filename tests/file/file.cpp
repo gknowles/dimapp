@@ -17,15 +17,13 @@ using namespace Dim;
 
 //===========================================================================
 static void app(int argc, char *argv[]) {
-    Cli cli;
-    auto & fn = cli.opt<string>("[dat file]", "metrics.dat");
-    if (!cli.parse(argc, argv))
-        return appSignalUsageError();
+    string fn = "filetest.tmp";
 
     size_t psize = filePageSize();
     auto file = fileOpen(
-        *fn,
-        File::fCreat | File::fTrunc | File::fReadWrite | File::fBlocking);
+        fn,
+        File::fCreat | File::fTrunc | File::fReadWrite | File::fBlocking
+    );
     fileWriteWait(file, 0, "aaaa", 4);
     const char * base;
     if (!fileOpenView(base, file, 1001 * psize))

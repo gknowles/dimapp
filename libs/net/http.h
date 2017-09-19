@@ -11,8 +11,9 @@
 
 #include "cppconf/cppconf.h"
 
+#include "core/charbuf.h"
 #include "core/handle.h"
-#include "core/util.h" // ForwardListIterator
+#include "core/types.h" // ForwardListIterator
 
 #include <memory>
 #include <vector>

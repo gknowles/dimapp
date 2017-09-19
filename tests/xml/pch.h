@@ -4,13 +4,14 @@
 // pch.h - dim test xml
 
 // Public header
+#include "xml/xml.h"
+
 // External library public headers
 #include "dimcli/cli.h"
 
 #include "app/app.h"
 #include "core/core.h"
 #include "file/file.h"
-#include "xml/xml.h"
 
 // Standard headers
 #include <fstream>

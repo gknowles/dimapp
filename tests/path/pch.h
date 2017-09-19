@@ -4,10 +4,11 @@
 // pch.h - dimapp test path
 
 // Public header
+#include "file/path.h"
+
 // External library public headers
 #include "app/app.h"
 #include "core/core.h"
-#include "file/file.h"
 
 // Standard headers
 #include <crtdbg.h>

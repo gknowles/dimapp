@@ -4,10 +4,11 @@
 // pch.h - dim test tokentable
 
 // Public header
+#include "core/tokentable.h"
+
 // External library public headers
 #include "app/app.h"
 #include "core/log.h"
-#include "core/tokentable.h"
 
 // Standard headers
 #include <iostream>

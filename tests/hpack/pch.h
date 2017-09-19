@@ -4,10 +4,11 @@
 // pch.h - dim test hpack
 
 // Public header
+#include "net/hpack.h"
+
 // External library public headers
 #include "app/app.h"
 #include "core/log.h"
-#include "net/hpack.h"
 
 // Standard headers
 #include <iostream>
