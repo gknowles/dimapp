@@ -133,6 +133,8 @@ BASE_LE10_WITH_OVERFLOW:
             val = next;
             continue;
         }
+        if (next == 0 && val == 0) 
+            continue;
         overflow = true;
     }
     goto CHECK_OVERFLOW;
@@ -161,6 +163,8 @@ BASE_ANY_WITH_OVERFLOW:
             val = next;
             continue;
         }
+        if (next == 0 && val == 0) 
+            continue;
         overflow = true;
     }
     goto CHECK_OVERFLOW;
@@ -203,7 +207,7 @@ BASE_16:
         val = (val << 4) + num;
     }
     if (charLimit) {
-        if (!isHex(*ptr))
+        if (!*ptr)
             goto RETURN_VALUE;
         chars = charLimit - kMaxCharsBase16;
         goto BASE_ANY_WITH_OVERFLOW;
@@ -270,11 +274,8 @@ CHECK_NUMBER:
 RETURN_VALUE:
     if (endPtr)
         *endPtr = const_cast<char *>(ptr);
-    if (negate) {
-        return (Flags & f64Bit) 
-            ? -(int64_t)val 
-            : (uint64_t)-(int)val;
-    }
+    if (negate) 
+        return (Flags & f64Bit) ? -(int64_t)val : (uint64_t)-(int)val;
     return val;
 }
 #pragma warning(pop)

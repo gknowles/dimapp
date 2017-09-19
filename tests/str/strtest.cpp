@@ -34,7 +34,7 @@ static void app(int argc, char *argv[]) {
     char * eptr;
 
     //-----------------------------------------------------------------------
-    // int
+    // dec int
     EXPECT(strToInt("1234", &eptr) == 1234 && *eptr == 0);
     EXPECT(strToInt(" 1234 ", &eptr) == 1234 && *eptr == ' ');
     EXPECT(strToInt("+1234") == 1234);
@@ -53,7 +53,7 @@ static void app(int argc, char *argv[]) {
     EXPECT(num == INT_MIN && *eptr == 0);
 
     //-----------------------------------------------------------------------
-    // int64
+    // dec int64
     EXPECT(strToInt64("1234", &eptr) == 1234 && !*eptr);
 
     // clamp int64 overflow
@@ -61,6 +61,20 @@ static void app(int argc, char *argv[]) {
     EXPECT(strToInt64("9223372036854775808", &eptr) == INT64_MAX && !*eptr); 
     EXPECT(strToInt64("12345678901234567890", &eptr) == INT64_MAX && !*eptr); 
     EXPECT(strToInt64("-12345678901234567890", &eptr) == INT64_MIN && !*eptr);
+
+    //-----------------------------------------------------------------------
+    // oct & hex
+    EXPECT(strToInt("1234", &eptr, 8) == 668 && *eptr == 0);
+    EXPECT(strToInt("0678", &eptr, 0) == 55 && *eptr == '8');
+    EXPECT(strToInt("0678", &eptr, 8) == 55 && *eptr == '8');
+    EXPECT(strToInt("67", &eptr, 8) == 55 && *eptr == 0);
+    EXPECT(strToInt("0x8aceg", &eptr, 0) == 0x8ace && *eptr == 'g');
+    EXPECT(strToInt("0x1234", &eptr, 0) == 0x1234 && !*eptr);
+    EXPECT(strToInt("0x1234", &eptr, 16) == 0x1234 && !*eptr);
+    EXPECT(strToInt("1234", &eptr, 16) == 0x1234 && !*eptr);
+    EXPECT(strToInt("12345678", &eptr, 16) == 0x12345678 && !*eptr);
+    EXPECT(strToInt("012345678", &eptr, 16) == 0x12345678 && !*eptr);
+    EXPECT(strToInt("123456789", &eptr, 16) == INT_MAX && !*eptr);
 
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);
