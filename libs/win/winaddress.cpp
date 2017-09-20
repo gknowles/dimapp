@@ -8,8 +8,6 @@
 using namespace std;
 using namespace Dim;
 
-#pragma warning(disable : 4996) // deprecated
-
 
 /****************************************************************************
 *
@@ -46,15 +44,11 @@ std::ostream & Dim::operator<<(std::ostream & os, const Address & addr) {
 bool Dim::parse(Endpoint * end, string_view src, int defaultPort) {
     sockaddr_storage sas;
     int sasLen = sizeof(sas);
-    string tmp;
-    if (src[src.size()]) {
-        tmp = src;
-        src = tmp;
-    }
-    if (SOCKET_ERROR == WSAStringToAddress(
-        (char *) src.data(), 
+    auto tmp = toWstring(src);
+    if (SOCKET_ERROR == WSAStringToAddressW(
+        tmp.data(), 
         AF_INET, 
-        NULL, 
+        NULL, // protocol info
         (sockaddr *)&sas, 
         &sasLen
     )) {
@@ -71,14 +65,18 @@ bool Dim::parse(Endpoint * end, string_view src, int defaultPort) {
 std::ostream & Dim::operator<<(std::ostream & os, const Endpoint & src) {
     sockaddr_storage sas;
     copy(&sas, src);
-    char tmp[256];
+    wchar_t tmp[256];
     DWORD tmpLen = sizeof(tmp);
-    if (SOCKET_ERROR
-        == WSAAddressToString(
-               (sockaddr *)&sas, sizeof(sas), NULL, tmp, &tmpLen)) {
+    if (SOCKET_ERROR == WSAAddressToStringW(
+        (sockaddr *)&sas, 
+        sizeof(sas), 
+        NULL, // protocol info
+        tmp, 
+        &tmpLen
+    )) {
         os << "(bad_sockaddr)";
     } else {
-        os << tmp;
+        os << toString(wstring_view(tmp, tmpLen));
     }
     return os;
 }
