@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <ctime> // time_t
 #include <ratio>
+#include <string_view>
 
 namespace Dim {
 
@@ -49,7 +50,7 @@ typedef Clock::time_point TimePoint;
 *   covers a subset of time points and no coverage of durations.
 *
 *   YYYY-MM-DDThh:mm:ss[.nnnnnnn]Z
-*   YYYY-MM-DDThh:mm:ss[.nnnnnnn]+hh:mm
+*   YYYY-MM-DDThh:mm:ss[.nnnnnnn]{+,-}hh:mm
 *
 ***/
 
@@ -59,6 +60,7 @@ public:
     Time8601Str();
     Time8601Str(TimePoint time, unsigned precision = 0, int tzMinutes = 0);
 
+    // asserts if precision > 7
     Time8601Str & set(
         TimePoint time, 
         unsigned precision = 0, 
@@ -69,6 +71,10 @@ public:
     std::string_view view() const;
 };
 
+// In addition to the forms above, also accepts:
+//  YYYY-MM-DD
+//  YYYY-MM-DD{t, }hh:mm:ss[.nnnnnnn]{Z,z}
+//  YYYY-MM-DD{t, }hh:mm:ss[.nnnnnnn]{+,-}hh:mm
 bool timeParse8601(TimePoint * out, std::string_view str);
 
 
@@ -81,6 +87,19 @@ bool timeParse8601(TimePoint * out, std::string_view str);
 // Returns the local timezone delta from UTC, uses time to determine if
 // daylight savings time is in effect.
 int timeZoneMinutes(TimePoint time);
+
+
+/****************************************************************************
+*
+*   Time conversions
+*
+***/
+
+// Day of year (tm_yday) and daylight savings time flag (tm_isdst) are not
+// supported and set to -1.
+bool timeToDesc(tm & tm, TimePoint time);
+
+bool timeFromDesc(TimePoint & time, const tm & tm);
 
 
 } // namespace

@@ -13,8 +13,4 @@ namespace Dim {
 // Time
 int64_t iClockGetTicks();
 
-// Day of year (tm_yday) and daylight savings time flag (tm_isdst) are not
-// support and set to -1.
-bool iTimeGetDesc(std::tm & tm, TimePoint time);
-
 } // namespace

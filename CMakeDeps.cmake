@@ -175,6 +175,9 @@
 # tests/str/pch.cpp
 # tests/str/pch.h
 # tests/str/strtest.cpp
+# tests/time/pch.cpp
+# tests/time/pch.h
+# tests/time/timetest.cpp
 # tests/tls/pch.cpp
 # tests/tls/pch.h
 # tests/tls/tlstest.cpp

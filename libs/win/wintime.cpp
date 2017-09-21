@@ -26,39 +26,6 @@ int64_t Dim::iClockGetTicks() {
 }
 
 //===========================================================================
-bool Dim::iTimeGetDesc(tm & tm, TimePoint time) {
-    LARGE_INTEGER in;
-    in.QuadPart = time.time_since_epoch().count();
-    FILETIME ft;
-    ft.dwHighDateTime = in.HighPart;
-    ft.dwLowDateTime = in.LowPart;
-    SYSTEMTIME st;
-    if (!FileTimeToSystemTime(&ft, &st)) {
-        tm = {};
-        return false;
-    }
-
-    if (st.wYear > 9999) {
-        tm.tm_year = 9999 - 1900;
-        tm.tm_mon = 11;
-        tm.tm_mday = 31;
-        tm.tm_wday = 5;
-    } else {
-        tm.tm_year = st.wYear - 1900;
-        tm.tm_mon = st.wMonth - 1;
-        tm.tm_mday = st.wDay;
-        tm.tm_wday = st.wDayOfWeek;
-    }
-    tm.tm_hour = st.wHour;
-    tm.tm_min = st.wMinute;
-    tm.tm_sec = st.wSecond;
-
-    tm.tm_isdst = -1;
-    tm.tm_yday = -1;
-    return true;
-}
-
-//===========================================================================
 int Dim::timeZoneMinutes(TimePoint time) {
     LARGE_INTEGER in;
     in.QuadPart = time.time_since_epoch().count();
@@ -66,12 +33,34 @@ int Dim::timeZoneMinutes(TimePoint time) {
     ft.dwHighDateTime = in.HighPart;
     ft.dwLowDateTime = in.LowPart;
 
-    FILETIME local;
-    if (!FileTimeToLocalFileTime(&ft, &local))
+    SYSTEMTIME st;
+    if (!FileTimeToSystemTime(&ft, &st))
         return 0;
+    SYSTEMTIME lst;
+    if (!SystemTimeToTzSpecificLocalTime(NULL, &st, &lst))
+        return 0;
+    FILETIME local;
+    if (!SystemTimeToFileTime(&lst, &local))
+        return 0;
+
+    //FILETIME local;
+    //if (!FileTimeToLocalFileTime(&ft, &local))
+    //    return 0;
     LARGE_INTEGER out;
     out.HighPart = local.dwHighDateTime;
     out.LowPart = local.dwLowDateTime;
     int64_t diff = (out.QuadPart - in.QuadPart) / kClockTicksPerSecond / 60;
     return (int) diff;
+}
+
+//===========================================================================
+bool Dim::timeFromDesc(TimePoint & time, const tm & tm) {
+    auto src = tm;
+    auto t = _mkgmtime(&src); // microsoft extension, libc has timegm()
+    if (t == -1) {
+        time = {};
+        return false;
+    }
+    time = Clock::from_time_t(t);
+    return true;
 }
