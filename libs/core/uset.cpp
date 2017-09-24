@@ -16,22 +16,34 @@ using Node = UnsignedSet::Node;
 *
 ***/
 
-const unsigned kDataSize = 1024;
+const unsigned kDataSize = 256;
+static_assert(hammingWeight(kDataSize) == 1);
+static_assert(kDataSize >= 256);
 
 const unsigned kBitWidth = 32;
-constexpr unsigned kValueMask[] = {
-    0xffff'ffff,
-     0x7ff'ffff,
-       0xf'ffff,
-         0x1fff,
-};
-static_assert(kValueMask[size(kValueMask) - 1] + 1 == kDataSize * 8);
-constexpr uint16_t kNumNodes[] = {
-    0,
-    1 << hammingWeight(kValueMask[1] ^ kValueMask[0]),
-    1 << hammingWeight(kValueMask[2] ^ kValueMask[1]),
-    1 << hammingWeight(kValueMask[3] ^ kValueMask[2]),
-};
+
+const unsigned kLeafBits = hammingWeight(8 * kDataSize - 1);
+const unsigned kStepBits = hammingWeight(pow2Ceil(kDataSize / sizeof(void*) + 1) / 2 - 1);
+const unsigned kMaxDepth = (kBitWidth - kLeafBits + kStepBits - 1) / kStepBits;
+
+constexpr unsigned maxDepth() {
+    return kMaxDepth;
+}
+
+constexpr unsigned valueMask(unsigned depth) {
+    assert(depth <= kMaxDepth);
+    unsigned bits = kLeafBits + kStepBits * (kMaxDepth - depth);
+    if (bits >= kBitWidth)
+        return numeric_limits<unsigned>::max();
+    return (1 << bits) - 1;
+}
+
+constexpr uint16_t numNodes(unsigned depth) {
+    uint16_t ret = 0;
+    if (depth)
+        ret = (uint16_t) 1 << hammingWeight(valueMask(depth) ^ valueMask(depth - 1));
+    return ret;
+}
 
 namespace {
 enum NodeType {
@@ -48,12 +60,10 @@ struct IImplBase {
     using value_type = unsigned;
 
     constexpr static unsigned relBase(unsigned value, unsigned depth) {
-        assert(depth < ::size(kValueMask));
-        return value & ~kValueMask[depth];
+        return (value & ~valueMask(depth)) >> 8;
     }
     constexpr static unsigned relValue(unsigned value, unsigned depth) {
-        assert(depth < ::size(kValueMask));
-        return value & kValueMask[depth];
+        return value & valueMask(depth);
     }
 
     // Requires that type, base, and depth are set, but otherwise treats
@@ -260,8 +270,7 @@ void FullImpl::erase(Node & node, unsigned value) {
 
 //===========================================================================
 size_t FullImpl::size(const Node & node) const {
-    assert(node.depth < ::size(kValueMask));
-    return kValueMask[node.depth] + 1;
+    return valueMask(node.depth) + 1;
 }
 
 //===========================================================================
@@ -279,7 +288,7 @@ bool FullImpl::lowerBound(
 
 //===========================================================================
 void FullImpl::convert(Node & node) {
-    if (node.depth == ::size(kValueMask) - 1) {
+    if (node.depth == maxDepth()) {
         node.type = kBitmap;
     } else {
         node.type = kMeta;
@@ -432,7 +441,7 @@ bool VectorImpl::lowerBound(
 void VectorImpl::convert(Node & node) {
     auto ptr = node.values;
     auto last = ptr + node.numValues;
-    if (node.depth == ::size(kValueMask) - 1) {
+    if (node.depth == maxDepth()) {
         node.type = kBitmap;
     } else {
         node.type = kMeta;
@@ -480,9 +489,14 @@ static BitmapImpl s_bitmapImpl;
 void BitmapImpl::init(Node & node, bool full) {
     assert(node.type == kBitmap);
     node.numBytes = kDataSize;
-    node.numValues = kDataSize / sizeof(uint64_t);
     node.values = (unsigned *) malloc(node.numBytes);
-    memset(node.values, full ? 0xff : 0, kDataSize);
+    if (full) {
+        node.numValues = kDataSize / sizeof(uint64_t);
+        memset(node.values, 0xff, kDataSize);
+    } else {
+        node.numValues = 0;
+        memset(node.values, 0, kDataSize);
+    }
 }
 
 //===========================================================================
@@ -610,22 +624,21 @@ static MetaImpl s_metaImpl;
 //===========================================================================
 void MetaImpl::init(Node & node, bool full) {
     assert(node.type == kMeta);
-    node.numValues = kNumNodes[node.depth + 1];
+    node.numValues = numNodes(node.depth + 1);
     node.numBytes = (node.numValues + 1) * sizeof(*node.nodes);
     node.nodes = (Node *) malloc(node.numBytes);
     auto nptr = node.nodes;
     auto nlast = node.nodes + node.numValues;
-    auto base = node.base << 8;
-    auto depth = node.depth + 1;
-    auto domain = kValueMask[depth] + 1;
-    for (; nptr != nlast; ++nptr, base += domain) {
-        nptr->base = base >> 8;
-        nptr->depth = depth;
-        nptr->type = full ? kFull : kEmpty;
-        nptr->numBytes = 0;
-        nptr->numValues = 0;
-        nptr->values = nullptr;
-    }
+    Node def;
+    def.type = full ? kFull : kEmpty;
+    def.depth = node.depth + 1;
+    def.base = node.base;
+    def.numBytes = 0;
+    def.numValues = 0;
+    def.values = nullptr;
+    auto domain = (valueMask(def.depth) + 1) >> 8;
+    for (; nptr != nlast; ++nptr, def.base += domain)
+        *nptr = def;
 
     // Internally arrays of nodes contain a trailing "node" at the end that
     // is really just a pointer back to the parent node.
@@ -664,7 +677,7 @@ void MetaImpl::destroy(Node & node) {
 //===========================================================================
 bool MetaImpl::insert(Node & node, unsigned value) {
     assert(relBase(value, node.depth) == node.base);
-    auto pos = relValue(value, node.depth) / node.numValues;
+    auto pos = relValue(value, node.depth) / (valueMask(node.depth + 1) + 1);
     auto & rnode = node.nodes[pos];
     return impl(rnode)->insert(rnode, value);
 }

@@ -49,6 +49,15 @@ static void app(int argc, char *argv[]) {
     v.assign(tmp.begin(), tmp.end());
     EXPECT(v == vector<unsigned>{{5}});
 
+    tmp.clear();
+    EXPECT(tmp.empty());
+    tmp.insert(0u, 63u);
+    EXPECT(tmp.size() == 64);
+    tmp.insert(4096u, 4096u + 63u);
+    EXPECT(tmp.size() == 128);
+    tmp.insert(64);
+    EXPECT(tmp.size() == 129);
+
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);
         cerr << "*** TEST FAILURES: " << errs << endl;
