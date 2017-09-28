@@ -66,11 +66,13 @@ constexpr bool findBit(
     if (pos >= arrlen)
         return false;
     auto ptr = arr + pos;
-    auto val = *ptr & (std::numeric_limits<uint64_t>::max() << pos % kIntBits);
-    if (!val) {
+    auto val = *ptr & 
+        (std::numeric_limits<uint64_t>::max() << bitpos % kIntBits);
+    if (val) {
         *out = pos * kIntBits + trailingZeroBits(val);
         return true;
     }
+    ptr += 1;
     auto last = arr + arrlen;
     for (; ptr != last; ++ptr) {
         if (auto val = *ptr) {
