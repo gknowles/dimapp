@@ -10,5 +10,6 @@ namespace Dim {
 
 // Thread
 void iThreadSetName(std::string_view name);
+std::string iThreadGetName();
 
 } // namespace

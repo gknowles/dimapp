@@ -104,8 +104,8 @@ static void taskQueueThread(TaskQueue * ptr) {
 
     if (!s_numThreads) {
         s_numDestroyed += 1;
-        s_destroyed.notify_one();
         lk.unlock();
+        s_destroyed.notify_one();
     }
 }
 
