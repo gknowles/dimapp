@@ -448,18 +448,19 @@ string Dim::toString(wstring_view src) {
 char32_t Dim::popFrontUnicode(wstring_view & src) {
     if (src.empty())
         return 0;
-    if (src[0] < 0xd800 || src[0] > 0xdfff) {
+    char32_t out = src[0];
+    if (out < 0xd800 || out > 0xdfff) {
         src.remove_prefix(1);
-        return src[0];
+        return out;
     }
     // surrogate pair, first contains high 10 bits encoded as d800 - dbff,
     // second contains low 10 bits encoded as dc00 - dfff.
-    if (src.size() < 2 || src[0] >= 0xdc00 
+    if (src.size() < 2 || out >= 0xdc00 
         || src[1] < 0xdc00 || src[1] > 0xdfff
     ) {
         return 0;
     }
-    char32_t out = ((src[0] - 0xd800) << 10) + (src[1] - 0xdc00);
+    out = ((out - 0xd800) << 10) + (src[1] - 0xdc00);
     src.remove_prefix(2);
     return out;
 }
