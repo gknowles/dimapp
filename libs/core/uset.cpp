@@ -16,14 +16,14 @@ using Node = UnsignedSet::Node;
 *
 ***/
 
-const unsigned kDataSize = 256;
+const unsigned kDataSize = 512;
 static_assert(hammingWeight(kDataSize) == 1);
 static_assert(kDataSize >= 256);
 
 const unsigned kBitWidth = 32;
 
 const unsigned kLeafBits = hammingWeight(8 * kDataSize - 1);
-const unsigned kStepBits = hammingWeight(pow2Ceil(kDataSize / sizeof(void*) + 1) / 2 - 1);
+const unsigned kStepBits = hammingWeight(pow2Ceil(kDataSize / sizeof(Node) + 1) / 2 - 1);
 const unsigned kMaxDepth = (kBitWidth - kLeafBits + kStepBits - 1) / kStepBits;
 
 constexpr unsigned maxDepth() {
@@ -578,7 +578,7 @@ bool BitmapImpl::lowerBound(
 ) const {
     assert(relBase(first, node.depth) == node.base);
     auto base = (uint64_t *) node.values;
-    auto rel = relValue(first + 1, node.depth);
+    auto rel = relValue(first, node.depth);
     assert(rel < numBits());
     int pos;
     if (!findBit(&pos, base, numInts(), rel)) 
@@ -617,6 +617,9 @@ struct MetaImpl final : IImplBase {
         const Node & node, 
         unsigned first
     ) const override;
+
+private:
+    unsigned nodePos(const Node & node, unsigned value) const;
 };
 } // namespace
 static MetaImpl s_metaImpl;
@@ -675,9 +678,16 @@ void MetaImpl::destroy(Node & node) {
 }
 
 //===========================================================================
-bool MetaImpl::insert(Node & node, unsigned value) {
+unsigned MetaImpl::nodePos(const Node & node, unsigned value) const {
     assert(relBase(value, node.depth) == node.base);
     auto pos = relValue(value, node.depth) / (valueMask(node.depth + 1) + 1);
+    assert(pos < node.numValues);
+    return pos;
+}
+
+//===========================================================================
+bool MetaImpl::insert(Node & node, unsigned value) {
+    auto pos = nodePos(node, value);
     auto & rnode = node.nodes[pos];
     return impl(rnode)->insert(rnode, value);
 }
@@ -694,8 +704,7 @@ void MetaImpl::insert(
 
 //===========================================================================
 void MetaImpl::erase(Node & node, unsigned value) {
-    assert(relBase(value, node.depth) == node.base);
-    auto pos = relValue(value, node.depth) / node.numValues;
+    auto pos = nodePos(node, value);
     auto & rnode = node.nodes[pos];
     return impl(rnode)->erase(rnode, value);
 }
@@ -716,8 +725,7 @@ bool MetaImpl::lowerBound(
     const Node & node,
     unsigned first
 ) const {
-    assert(relBase(first, node.depth) == node.base);
-    auto pos = relValue(first, node.depth) / node.numValues;
+    auto pos = nodePos(node, first);
     auto ptr = node.nodes + pos;
     auto last = node.nodes + node.numValues;
     for (; ptr != last; ++ptr) {
