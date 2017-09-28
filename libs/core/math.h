@@ -72,9 +72,8 @@ constexpr bool findBit(
         *out = pos * kIntBits + trailingZeroBits(val);
         return true;
     }
-    ptr += 1;
     auto last = arr + arrlen;
-    for (; ptr != last; ++ptr) {
+    while (++ptr != last) {
         if (auto val = *ptr) {
             *out = int(ptr - arr) * kIntBits + trailingZeroBits(val);
             return true;
