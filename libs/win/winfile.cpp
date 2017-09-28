@@ -28,6 +28,7 @@ struct WinFileInfo : public HandleContent {
 
 class IFileOpBase : public ITaskNotify {
 public:
+    ~IFileOpBase() { m_destroyed = true; }
     void start(
         WinFileInfo * file, 
         void * buf, 
@@ -45,6 +46,7 @@ public:
     void onTask() override;
 
 protected:
+    bool m_destroyed{false};
     WinOverlappedEvent m_iocpEvt;
     int64_t m_offset{0};
     int64_t m_length{0};
@@ -199,7 +201,7 @@ void IFileOpBase::onTask() {
         if (m_err == ERROR_OPERATION_ABORTED) {
             // explicitly canceled
         } else if (m_err == ERROR_HANDLE_EOF && !m_length) {
-            // hit eof, when explicitly reading until the end
+            // hit eof, expected when explicitly reading until the end
         } else if (auto log = logOnError()) {
             logMsgError() << log << '(' << m_file->m_path << "): " << m_err;
         }
@@ -301,7 +303,7 @@ public:
     bool onRun() override;
     void onNotify() override;
     bool async() override { return m_notify != nullptr; }
-    const char * logOnError() override { return "ReadFile"; }
+    const char * logOnError() override { return "WriteFile"; }
 
 private:
     IFileWriteNotify * m_notify;
@@ -788,8 +790,12 @@ bool Dim::fileOpenView(
 //===========================================================================
 void Dim::fileExtendView(FileHandle f, int64_t length) {
     auto file = getInfo(f);
-    void * ptr =
-        VirtualAlloc((void *)file->m_view, length, MEM_COMMIT, PAGE_READONLY);
+    void * ptr = VirtualAlloc(
+        (void *)file->m_view, 
+        length, 
+        MEM_COMMIT, 
+        PAGE_READONLY
+    );
     if (!ptr) {
         logMsgCrash() << "VirtualAlloc(" << file->m_path
                       << "): " << WinError{};
