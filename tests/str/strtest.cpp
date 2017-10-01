@@ -29,7 +29,7 @@ using namespace Dim;
 ***/
 
 //===========================================================================
-static void app(int argc, char *argv[]) {
+static void testStrToInt() {
     int line = 0;
     char * eptr;
 
@@ -75,6 +75,30 @@ static void app(int argc, char *argv[]) {
     EXPECT(strToInt("12345678", &eptr, 16) == 0x12345678 && !*eptr);
     EXPECT(strToInt("012345678", &eptr, 16) == 0x12345678 && !*eptr);
     EXPECT(strToInt("123456789", &eptr, 16) == INT_MAX && !*eptr);
+}
+
+//===========================================================================
+static void testIntegralStr() {
+    int line = 0;
+
+    //-----------------------------------------------------------------------
+    // unsigned
+    EXPECT(IntegralStr<unsigned>(1234) == "1234"sv);
+    EXPECT(IntegralStr<unsigned>(0xffff'ffff) == "4294967295"sv);
+    EXPECT(IntegralStr<unsigned>(3) == "3"sv);
+
+    //-----------------------------------------------------------------------
+    // char
+    EXPECT(IntegralStr<char>(1) == "1"sv);
+    EXPECT(IntegralStr<char>(127) == "127"sv);
+    EXPECT(IntegralStr<char>(-3) == "-3"sv);
+    EXPECT(IntegralStr<char>(-128) == "-128"sv);
+}
+
+//===========================================================================
+static void app(int argc, char *argv[]) {
+    testStrToInt();
+    testIntegralStr();
 
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);

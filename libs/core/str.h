@@ -27,7 +27,7 @@ template <typename T> constexpr int maxIntegralChars() {
 *
 *   IntegralStr
 *
-*   Convert integral type (char, long, uint16_t, etc) to char array
+*   Convert integral type (char, long, uint16_t, etc) to string_view
 *
 ***/
 
@@ -36,91 +36,75 @@ public:
     IntegralStr(T val);
     std::string_view set(T val);
     operator std::string_view() const;
+    const char * c_str() const;
 
 private:
     using Signed = typename std::make_signed<T>::type;
     using Unsigned = typename std::make_unsigned<T>::type;
 
-    std::string_view internalSet(Signed val);
-    std::string_view internalSet(Unsigned val);
+    int internalSet(char * ptr, Unsigned val);
 
     char data[maxIntegralChars<T>() + 1];
 };
 
 //===========================================================================
 template <typename T> IntegralStr<T>::IntegralStr(T val) {
-    internalSet(val);
+    set(val);
 }
 
 //===========================================================================
 template <typename T> std::string_view IntegralStr<T>::set(T val) {
-    return internalSet(val);
+    if constexpr (std::numeric_limits<T>::is_signed) {
+        if (val < 0) {
+            *data = '-';
+            // "-val" is undefined for MIN_INT, so use safe equivalent
+            // "~(Unsigned)val + 1" (assumes 2's complement)
+            int used = internalSet(data + 1, ~(Unsigned)val + 1);
+            data[sizeof(data) - 1] = (char) (sizeof(data) - used - 2);
+            return *this;
+        }
+    }
+
+    int used = internalSet(data, val);
+    data[sizeof(data) - 1] = (char) (sizeof(data) - used - 1);
+    return *this;
 }
 
 //===========================================================================
 template <typename T> IntegralStr<T>::operator std::string_view() const {
-    return std::string_view(data, data[sizeof(data) - 1]);
+    return std::string_view(data, sizeof(data) - data[sizeof(data) - 1] - 1);
+}
+
+//===========================================================================
+template <typename T> const char * IntegralStr<T>::c_str() const {
+    return data;
 }
 
 //===========================================================================
 template <typename T> 
-std::string_view IntegralStr<T>::internalSet(Unsigned val) {
+int IntegralStr<T>::internalSet(char * ptr, Unsigned val) {
     if (val < 10) {
         // optimize for 0 and 1... and 2 thru 9 since it's no more cost
-        data[0] = static_cast<char>(val) + '0';
-        data[1] = 0;
-        data[sizeof(data) - 1] = 1;
-    } else {
-        char * ptr = data;
-        int i = 0;
-        for (;;) {
-            ptr[i] = (val % 10) + '0';
-            val /= 10;
-            i += 1;
-            if (!val)
-                break;
-        }
-        ptr[i] = 0;
-        data[sizeof(data) - 1] = (char) i;
-        for (i -= 1; i > 0; i -= 2) {
-            swap(*ptr, ptr[i]);
-            ptr += 1;
-        }
+        ptr[0] = static_cast<char>(val) + '0';
+        ptr[1] = 0;
+        return 1;
     }
-    return *this;
-}
 
-//===========================================================================
-template <typename T> 
-std::string_view IntegralStr<T>::internalSet(Signed val) {
-    if (!val) {
-        data[0] = '0';
-        data[1] = 0;
-        data[sizeof(data) - 1] = 1;
-    } else {
-        char * ptr = data;
-        if (val < 0) {
-            *ptr++ = '-';
-            // "-val" is undefined for MIN_INT, so use safe equivalent
-            // "~(Unsigned)val + 1" (assumes 2's complement)
-            val = ~(Unsigned)val + 1;
-        }
-        int i = 0;
-        for (;;) {
-            ptr[i] = (val % 10) + '0';
-            val /= 10;
-            i += 1;
-            if (!val)
-                break;
-        }
-        ptr[i] = 0;
-        data[sizeof(data) - 1] = (char) i;
-        for (i -= 1; i > 0; i -= 2) {
-            swap(*ptr, ptr[i]);
-            ptr += 1;
-        }
+    int i = 0;
+    for (;;) {
+        ptr[i] = (val % 10) + '0';
+        val /= 10;
+        i += 1;
+        if (!val)
+            break;
     }
-    return *this;
+    ptr[i] = 0;
+    auto num = i;
+    for (i -= 1; i > 0; i -= 2) {
+        swap(*ptr, ptr[i]);
+        ptr += 1;
+    }
+    return num;
 }
 
 
