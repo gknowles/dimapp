@@ -6,7 +6,11 @@
 
 #include "cppconf/cppconf.h"
 
+#include "math.h"
+
+#include <cassert>
 #include <cstdint>
+#include <cstdio>
 #include <limits>
 #include <string>
 #include <string_view>
@@ -15,28 +19,53 @@
 namespace Dim {
 
 //===========================================================================
-// Maximum number of characters needed to represent any value of type T in
-// base 10.
-template <typename T> constexpr int maxIntegralChars() {
-    return std::numeric_limits<T>::digits10 + 1 
-        + std::numeric_limits<T>::is_signed;
+// Maximum number of characters needed to represent any integral value of 
+// type T in base 10.
+template <typename T> constexpr 
+std::enable_if_t<std::is_integral_v<T>, int>
+maxIntegralChars() {
+    return std::numeric_limits<T>::is_signed
+        + std::numeric_limits<T>::digits10 + 1;
+}
+
+//===========================================================================
+// Maximum number of characters needed to represent any floating point value
+// of type T in base 10.
+template <typename T> constexpr 
+std::enable_if_t<std::is_floating_point_v<T>, int>
+maxFloatChars() {
+    auto cnt = 1 // sign
+        + std::numeric_limits<T>::max_digits10 + 1 // digits + decimal point
+        + digits10(std::numeric_limits<T>::max_exponent10) + 2; // "e+"
+    return (int) cnt;
 }
 
 
 /****************************************************************************
 *
-*   IntegralStr
+*   StrFrom<>
+*
+***/
+
+template <typename T, typename Enable = void> class StrFrom {};
+
+
+/****************************************************************************
+*
+*   StrFrom<is_integral_v<T>>
 *
 *   Convert integral type (char, long, uint16_t, etc) to string_view
 *
 ***/
 
-template <typename T> class IntegralStr {
+template <typename T> 
+class StrFrom<T, std::enable_if_t<std::is_integral_v<T>>> {
 public:
-    IntegralStr(T val);
+    StrFrom();
+    StrFrom(T val) { set(val); }
     std::string_view set(T val);
     operator std::string_view() const;
-    const char * c_str() const;
+    const char * c_str() const { return data; }
 
 private:
     using Signed = typename std::make_signed<T>::type;
@@ -48,12 +77,16 @@ private:
 };
 
 //===========================================================================
-template <typename T> IntegralStr<T>::IntegralStr(T val) {
-    set(val);
+template <typename T> 
+StrFrom<T, std::enable_if_t<std::is_integral_v<T>>>::StrFrom() {
+    data[0] = 0;
+    data[sizeof(data) - 1] = (char) (sizeof(data) - 1);
 }
 
 //===========================================================================
-template <typename T> std::string_view IntegralStr<T>::set(T val) {
+template <typename T> 
+std::string_view StrFrom<T, std::enable_if_t<std::is_integral_v<T>>>
+::set(T val) {
     if constexpr (std::numeric_limits<T>::is_signed) {
         if (val < 0) {
             *data = '-';
@@ -71,18 +104,16 @@ template <typename T> std::string_view IntegralStr<T>::set(T val) {
 }
 
 //===========================================================================
-template <typename T> IntegralStr<T>::operator std::string_view() const {
+template <typename T> 
+StrFrom<T, std::enable_if_t<std::is_integral_v<T>>>
+::operator std::string_view() const {
     return std::string_view(data, sizeof(data) - data[sizeof(data) - 1] - 1);
 }
 
 //===========================================================================
-template <typename T> const char * IntegralStr<T>::c_str() const {
-    return data;
-}
-
-//===========================================================================
 template <typename T> 
-int IntegralStr<T>::internalSet(char * ptr, Unsigned val) {
+int StrFrom<T, std::enable_if_t<std::is_integral_v<T>>>
+::internalSet(char * ptr, Unsigned val) {
     if (val < 10) {
         // optimize for 0 and 1... and 2 thru 9 since it's no more cost
         ptr[0] = static_cast<char>(val) + '0';
@@ -105,6 +136,58 @@ int IntegralStr<T>::internalSet(char * ptr, Unsigned val) {
         ptr += 1;
     }
     return num;
+}
+
+
+/****************************************************************************
+*
+*   StrFrom<is_float_point_v>
+*
+*   Convert floating point type (float, double, long double) to string_view
+*
+***/
+
+template <typename T>
+class StrFrom<T, std::enable_if_t<std::is_floating_point_v<T>>> {
+public:
+    StrFrom();
+    StrFrom(T val) { set(val); }
+    std::string_view set(T val);
+    operator std::string_view() const;
+    const char * c_str() const { return data; }
+
+private:
+    char data[maxFloatChars<T>() + 1];
+};
+
+//===========================================================================
+template <typename T> 
+StrFrom<T, std::enable_if_t<std::is_floating_point_v<T>>>::StrFrom() {
+    data[0] = 0;
+    data[sizeof(data) - 1] = (char) (sizeof(data) - 1);
+}
+
+//===========================================================================
+template <typename T> 
+std::string_view StrFrom<T, std::enable_if_t<std::is_floating_point_v<T>>>
+::set(T val) {
+    auto used = std::snprintf(
+        data, 
+        sizeof(data), 
+        "%.*g", 
+        numeric_limits<T>::max_digits10, 
+        val
+    );
+    assert(used < sizeof(data));
+    data[sizeof(data) - 1] = (char) (sizeof(data) - used - 1);
+    return *this;
+}
+
+//===========================================================================
+template <typename T> 
+StrFrom<T, std::enable_if_t<std::is_floating_point_v<T>>>
+::operator std::string_view() const {
+    return std::string_view(data, sizeof(data) - data[sizeof(data) - 1] - 1);
 }
 
 
@@ -147,7 +230,7 @@ uint64_t strToUint64(
 // stringTo - converts from string to T
 //===========================================================================
 template <typename T> bool stringTo(T & out, const std::string & src) {
-    if constexpr(std::is_assignable_v<T, const std::string&>) {
+    if constexpr (std::is_assignable_v<T, const std::string&>) {
         out = src;
     } else {
         std::stringstream interpreter;

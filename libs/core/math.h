@@ -121,7 +121,7 @@ constexpr int hammingWeight(uint64_t x) {
 //===========================================================================
 // Number of digits required to display a number in decimal
 constexpr int digits10(uint32_t val) {
-    const int kDeBruijnBitPositionAdjustedForLog10[] = {
+    const int kDeBruijnBitPosAdjustedForLog10[] = {
         0, 3, 0, 3, 4, 6, 0, 9, 3, 4, 5, 5, 6, 7, 1, 9,
         2, 3, 6, 8, 4, 5, 7, 2, 6, 8, 7, 2, 8, 1, 1, 9,
     };
@@ -133,7 +133,9 @@ constexpr int digits10(uint32_t val) {
     v |= v >> 4;
     v |= v >> 8;
     v |= v >> 16;
-    int r = kDeBruijnBitPositionAdjustedForLog10[(v * 0x07c4'acdd) >> 27];
+    int r = kDeBruijnBitPosAdjustedForLog10[
+        uint32_t(v * UINT64_C(0x07c4'acdd)) >> 27
+    ];
 
     const uint32_t kPowersOf10[] = {
                     1,

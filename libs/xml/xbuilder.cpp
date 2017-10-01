@@ -350,25 +350,25 @@ size_t XBuilder::size() const {
 
 //===========================================================================
 IXBuilder & Dim::operator<<(IXBuilder & out, int64_t val) {
-    IntegralStr<int64_t> tmp(val);
+    StrFrom<int64_t> tmp(val);
     return out.text(tmp);
 }
 
 //===========================================================================
 IXBuilder & Dim::operator<<(IXBuilder & out, uint64_t val) {
-    IntegralStr<int64_t> tmp(val);
+    StrFrom<int64_t> tmp(val);
     return out.text(tmp);
 }
 
 //===========================================================================
 IXBuilder & Dim::operator<<(IXBuilder & out, int val) {
-    IntegralStr<int> tmp(val);
+    StrFrom<int> tmp(val);
     return out.text(tmp);
 }
 
 //===========================================================================
 IXBuilder & Dim::operator<<(IXBuilder & out, unsigned val) {
-    IntegralStr<unsigned> tmp(val);
+    StrFrom<unsigned> tmp(val);
     return out.text(tmp);
 }
 

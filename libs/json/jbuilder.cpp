@@ -251,13 +251,13 @@ IJBuilder & IJBuilder::value(double val) {
 
 //===========================================================================
 IJBuilder & IJBuilder::ivalue(int64_t val) {
-    IntegralStr<int64_t> tmp(val);
+    StrFrom<int64_t> tmp(val);
     return valueRaw(tmp);
 }
 
 //===========================================================================
 IJBuilder & IJBuilder::uvalue(uint64_t val) {
-    IntegralStr<uint64_t> tmp(val);
+    StrFrom<uint64_t> tmp(val);
     return valueRaw(tmp);
 }
 
