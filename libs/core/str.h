@@ -49,6 +49,12 @@ maxFloatChars() {
 
 template <typename T, typename Enable = void> class StrFrom {};
 
+//===========================================================================
+template <typename T>
+std::ostream & operator<<(std::ostream & os, const StrFrom<T> & str) {
+    os << (std::string_view) str;
+    return os;
+}
 
 /****************************************************************************
 *
