@@ -64,6 +64,7 @@ namespace File {
 //---------------------------------------------------------------------------
 uint64_t fileSize(std::string_view path);
 TimePoint fileLastWriteTime(std::string_view path);
+bool fileRemove(std::string_view path);
 
 //---------------------------------------------------------------------------
 // With handle

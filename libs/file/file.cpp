@@ -149,12 +149,22 @@ uint64_t Dim::fileSize(std::string_view path) {
     auto len = (uint64_t) fs::file_size(f, ec);
     if (ec) {
         auto cond = ec.default_error_condition();
-        _set_errno(cond.value());
+        errno = cond.value();
         return len;
     }
     if (!len) 
-        _set_errno(0);
+        errno = 0;
     return len;
+}
+
+//===========================================================================
+bool Dim::fileRemove(std::string_view path) {
+    error_code ec;
+    auto f = fs::u8path(path.begin(), path.end());
+    if (fs::remove(f, ec))
+        return true;
+    errno = ec.default_error_condition().value();
+    return false;
 }
 
 
