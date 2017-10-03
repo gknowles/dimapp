@@ -28,7 +28,7 @@ struct WinFileInfo : public HandleContent {
 
 class IFileOpBase : public ITaskNotify {
 public:
-    ~IFileOpBase() { m_destroyed = true; }
+    virtual ~IFileOpBase();
     void start(
         WinFileInfo * file, 
         void * buf, 
@@ -39,18 +39,18 @@ public:
     void run();
     virtual void onNotify() = 0;
     virtual bool onRun() = 0;
-    virtual bool async() = 0;
+    virtual bool asyncOp() = 0;
     virtual const char * logOnError() = 0;
 
     // ITaskNotify
     void onTask() override;
 
 protected:
-    bool m_destroyed{false};
+    enum State { kUnstarted, kRunning, kDestroyed };
+    State m_state{kUnstarted};
     WinOverlappedEvent m_iocpEvt;
     int64_t m_offset{0};
     int64_t m_length{0};
-    bool m_started{false};
     bool m_trigger{false};
 
     WinFileInfo * m_file{nullptr};
@@ -124,6 +124,12 @@ static HandleMap<FileHandle, WinFileInfo> s_files;
 ***/
 
 //===========================================================================
+IFileOpBase::~IFileOpBase() {
+    assert(m_state >= 0 && m_state < kDestroyed);
+    m_state = kDestroyed; 
+}
+
+//===========================================================================
 void IFileOpBase::start(
     WinFileInfo * file,
     void * buf,
@@ -142,7 +148,7 @@ void IFileOpBase::start(
     m_iocpEvt.notify = this;
     m_iocpEvt.overlapped = {};
 
-    if (async())
+    if (asyncOp())
         return taskPush(s_hq, *this);
 
     m_iocpEvt.hq = s_hq;
@@ -161,17 +167,23 @@ void IFileOpBase::start(
 
 //===========================================================================
 void IFileOpBase::run() {
-    m_started = true;
+    m_state = kRunning;
     winSetOverlapped(m_iocpEvt, m_offset);
 
-    m_err = ERROR_SUCCESS;
-    if (!onRun()) {
-        m_err = WinError{};
-        if (m_err == ERROR_IO_PENDING)
+    m_err = ERROR_IO_PENDING;
+    if (onRun()) {
+        m_err = ERROR_SUCCESS;
+    } else {
+        WinError err;
+        if (err == ERROR_IO_PENDING) 
             return;
+
+        // Only now that we know it's not being processed (and then deleted!)
+        // asyncronously is it safe to modify "this".
+        m_err = err;
     }
 
-    if (async()) {
+    if (asyncOp()) {
         // async operation on blocking or non-blocking handle
         //
         // post to task queue, which is where the callback must come from,
@@ -181,14 +193,15 @@ void IFileOpBase::run() {
     } else {
         // sync operation on blocking or non-blocking handle
         //
-        // set result, signal event (for non-blocking), no callback
+        // set result, signal event (for non-blocking handle), no callback
         onTask();
     }
 }
 
 //===========================================================================
 void IFileOpBase::onTask() {
-    if (!m_started)
+    assert(m_state >= 0 && m_state < kDestroyed);
+    if (m_state == kUnstarted)
         return run();
 
     if (m_err == ERROR_IO_PENDING) {
@@ -208,7 +221,7 @@ void IFileOpBase::onTask() {
         winFileSetErrno(m_err);
     }
 
-    if (!async()) {
+    if (!asyncOp()) {
         if (m_trigger) {
             m_trigger = false;
             WakeByAddressSingle(&m_trigger);
@@ -233,7 +246,7 @@ public:
     FileReader(IFileReadNotify * notify) : m_notify{notify} {}
     bool onRun() override;
     void onNotify() override;
-    bool async() override { return m_notify != nullptr; }
+    bool asyncOp() override { return m_notify != nullptr; }
     const char * logOnError() override { return "ReadFile"; }
 
 private:
@@ -302,7 +315,7 @@ public:
     FileWriter(IFileWriteNotify * notify) : m_notify{notify} {}
     bool onRun() override;
     void onNotify() override;
-    bool async() override { return m_notify != nullptr; }
+    bool asyncOp() override { return m_notify != nullptr; }
     const char * logOnError() override { return "WriteFile"; }
 
 private:
@@ -817,7 +830,8 @@ void Dim::fileExtendView(FileHandle f, int64_t length) {
 void Dim::winSetOverlapped(
     WinOverlappedEvent & evt,
     int64_t off,
-    HANDLE event) {
+    HANDLE event
+) {
     evt.overlapped = {};
     evt.overlapped.Offset = (DWORD)off;
     evt.overlapped.OffsetHigh = (DWORD)(off >> 32);
