@@ -178,8 +178,8 @@ void IFileOpBase::run() {
         if (err == ERROR_IO_PENDING) 
             return;
 
-        // Only now that we know it's not being processed (and then deleted!)
-        // asyncronously is it safe to modify "this".
+        // Only now that we know it's not being processed (and perhaps 
+        // already deleted!) asyncronously is it safe to modify "this".
         m_err = err;
     }
 
