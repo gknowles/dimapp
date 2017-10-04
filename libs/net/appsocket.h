@@ -25,6 +25,7 @@ namespace Dim {
 
 namespace AppSocket {
     enum Family { 
+        kInvalid,
         kTls, 
         kHttp2, 
         kRaw,

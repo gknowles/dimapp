@@ -332,9 +332,8 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
 
 //===========================================================================
 static void startListen() {
-    sockMgrListen(
+    sockMgrListen<HttpSocket>(
         "httpRoute", 
-        getFactory<IAppSocketNotify, HttpSocket>(),
         AppSocket::kHttp2,
         AppSocket::fMgrConsole
     );

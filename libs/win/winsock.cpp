@@ -248,11 +248,7 @@ bool SocketBase::createQueue() {
     // streams.
     int bytes = m_read.m_buffer->len - 1; 
 
-    iSocketGetRioBuffer(
-        &m_read.m_rbuf, 
-        m_read.m_buffer.get(), 
-        bytes
-    );
+    iSocketGetRioBuffer(&m_read.m_rbuf, m_read.m_buffer.get(), bytes);
 
     {
         unique_lock<mutex> lk{s_mut};
@@ -500,7 +496,7 @@ void Dim::iSocketInitialize() {
     iSocketAcceptInitialize();
     iSocketConnectInitialize();
 
-    // create RIO completion queue
+    // create rio completion queue
     RIO_NOTIFICATION_COMPLETION ctype = {};
     ctype.Type = RIO_EVENT_COMPLETION;
     ctype.Event.EventHandle = s_cqReady.nativeHandle();
@@ -628,6 +624,7 @@ void Dim::socketSetNotify(ISocketNotify * notify, ISocketNotify * newNotify) {
 void Dim::socketWrite(
     ISocketNotify * notify,
     unique_ptr<SocketBuffer> buffer,
-    size_t bytes) {
+    size_t bytes
+) {
     SocketBase::write(notify, move(buffer), bytes);
 }

@@ -129,11 +129,7 @@ static void app(int argc, char *argv[]) {
     winTlsInitialize();
     appTlsInitialize();
 
-    s_mgr = sockMgrListen(
-        "raw", 
-        getFactory<IAppSocketNotify, TnetConn>(), 
-        AppSocket::kRaw
-    );
+    s_mgr = sockMgrListen<TnetConn>("raw", AppSocket::kRaw);
 
     logMsgInfo() << "Server started";
 }
