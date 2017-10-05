@@ -41,7 +41,7 @@ namespace Dim {
 
 class IShutdownNotify {
 public:
-    virtual ~IShutdownNotify() {}
+    virtual ~IShutdownNotify() = default;
 
     virtual void onShutdownClient(bool firstTry) {}
     virtual void onShutdownServer(bool firstTry) {}

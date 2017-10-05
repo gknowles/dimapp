@@ -20,7 +20,7 @@ namespace Dim {
 
 class ITempHeap {
 public:
-    virtual ~ITempHeap() {}
+    virtual ~ITempHeap() = default;
 
     template <typename T, typename... Args> T * emplace(Args &&... args);
     template <typename T> T * alloc(size_t num);

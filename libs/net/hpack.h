@@ -78,7 +78,7 @@ private:
 
 class IHpackDecodeNotify {
 public:
-    virtual ~IHpackDecodeNotify() {}
+    virtual ~IHpackDecodeNotify() = default;
 
     virtual void onHpackHeader(
         HttpHdr id,

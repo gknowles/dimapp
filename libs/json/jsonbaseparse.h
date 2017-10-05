@@ -46,7 +46,7 @@ private:
 
 class IJsonBaseParserNotify {
 public:
-    virtual ~IJsonBaseParserNotify () {}
+    virtual ~IJsonBaseParserNotify () = default;
 
     virtual bool onStart () { return true; }
     virtual bool onEnd () { return true; }

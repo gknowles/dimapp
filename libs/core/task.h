@@ -23,7 +23,7 @@ struct TaskQueueHandle : HandleBase {};
 
 class ITaskNotify {
 public:
-    virtual ~ITaskNotify() {}
+    virtual ~ITaskNotify() = default;
     virtual void onTask() { delete this; }
 
 private:

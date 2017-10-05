@@ -84,7 +84,7 @@ constexpr char hexFromNibble(unsigned val) {
 template<typename T>
 class IFactory {
 public:
-    virtual ~IFactory() {}
+    virtual ~IFactory() = default;
     virtual std::unique_ptr<T> onFactoryCreate() = 0;
 };
 

@@ -33,7 +33,7 @@ public:
     };
 
 public:
-    virtual ~ISocketNotify() {}
+    virtual ~ISocketNotify() = default;
 
     // for connectors
     virtual void onSocketConnect (const SocketInfo & info) {};

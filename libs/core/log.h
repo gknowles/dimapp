@@ -97,7 +97,7 @@ int logGetMsgCount(LogType type);
 
 class ILogNotify {
 public:
-    virtual ~ILogNotify() {}
+    virtual ~ILogNotify() = default;
     virtual void onLog(LogType type, std::string_view msg) = 0;
 };
 

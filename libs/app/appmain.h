@@ -39,7 +39,7 @@ namespace Dim {
 
 class IAppNotify {
 public:
-    virtual ~IAppNotify() {}
+    virtual ~IAppNotify() = default;
 
     // Since this is called on the event thread, servers (especially when 
     // running as a service) should return promptly to allow event processing

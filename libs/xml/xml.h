@@ -38,7 +38,7 @@ public:
 
 public:
     IXBuilder();
-    virtual ~IXBuilder() {}
+    virtual ~IXBuilder() = default;
 
     virtual void clear();
 
@@ -165,7 +165,7 @@ class XmlBaseParser;
 
 class IXStreamParserNotify {
 public:
-    virtual ~IXStreamParserNotify() {}
+    virtual ~IXStreamParserNotify() = default;
     virtual bool startDoc() = 0;
     virtual bool endDoc() = 0;
 

@@ -43,7 +43,7 @@ private:
 
 class IUriParserNotify {
 public:
-    virtual ~IUriParserNotify () {}
+    virtual ~IUriParserNotify () = default;
 
     virtual bool onStart () { return true; }
     virtual bool onEnd () { return true; }

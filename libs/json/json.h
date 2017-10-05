@@ -27,7 +27,7 @@ namespace Dim {
 class IJBuilder {
 public:
     IJBuilder();
-    virtual ~IJBuilder() {}
+    virtual ~IJBuilder() = default;
 
     virtual void clear();
 
@@ -121,7 +121,7 @@ class JsonBaseParser;
 
 class IJsonStreamNotify {
 public:
-    virtual ~IJsonStreamNotify() {}
+    virtual ~IJsonStreamNotify() = default;
     virtual bool startDoc() = 0;
     virtual bool endDoc() = 0;
 

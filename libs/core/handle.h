@@ -35,7 +35,7 @@ struct HandleBase {
 };
 
 struct HandleContent {
-    virtual ~HandleContent() {}
+    virtual ~HandleContent() = default;
 };
 
 

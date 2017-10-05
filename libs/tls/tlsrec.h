@@ -61,7 +61,7 @@ private:
 
 class ITlsRecordDecryptNotify {
 public:
-    virtual ~ITlsRecordDecryptNotify() {}
+    virtual ~ITlsRecordDecryptNotify() = default;
     virtual void onTlsAlert(TlsAlertDesc desc, TlsAlertLevel level) = 0;
     virtual void onTlsHandshake(
         TlsHandshakeType type,

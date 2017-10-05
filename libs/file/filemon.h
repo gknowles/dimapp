@@ -24,7 +24,7 @@ namespace Dim {
 
 class IFileChangeNotify {
 public:
-    virtual ~IFileChangeNotify () {}
+    virtual ~IFileChangeNotify () = default;
 
     virtual void onFileChange(std::string_view fullpath) = 0;
 };

@@ -21,7 +21,7 @@ namespace Dim {
 struct PerfCounterBase {
     std::string name;
 
-    virtual ~PerfCounterBase() {}
+    virtual ~PerfCounterBase() = default;
     virtual void toString (std::string & out) const = 0;
     virtual float toFloat () const = 0;
 };

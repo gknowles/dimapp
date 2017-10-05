@@ -32,7 +32,7 @@ template <typename T, typename Tag = LinkDefault> class TimerList;
 template <typename T, typename Tag = LinkDefault>
 class ITimerListNotify : public ListBaseLink<T, Tag> {
 public:
-    virtual ~ITimerListNotify() {}
+    virtual ~ITimerListNotify() = default;
     virtual void onTimer(TimePoint now, Tag tag = {}) = 0;
 private:
     friend class TimerList<T, Tag>;
@@ -42,7 +42,7 @@ private:
 template <typename T>
 class ITimerListNotify<T, LinkDefault> : public ListBaseLink<T, LinkDefault> {
 public:
-    virtual ~ITimerListNotify() {}
+    virtual ~ITimerListNotify() = default;
     virtual void onTimer(TimePoint now) = 0;
 private:
     friend class TimerList<T, LinkDefault>;

@@ -37,7 +37,7 @@ struct ConfigContext {
 
 class IConfigNotify {
 public:
-    virtual ~IConfigNotify () {}
+    virtual ~IConfigNotify () = default;
 
     virtual void onConfigChange(const XDocument & doc) = 0;
 };

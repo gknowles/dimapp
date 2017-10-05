@@ -22,7 +22,7 @@ namespace Dim {
 
 class IHttpRouteNotify {
 public:
-    virtual ~IHttpRouteNotify() {}
+    virtual ~IHttpRouteNotify() = default;
 
     virtual void onHttpRequest(
         unsigned reqId,

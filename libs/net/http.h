@@ -123,7 +123,7 @@ public:
 
 public:
     HttpMsg (int stream = 0) : m_stream{stream} {}
-    virtual ~HttpMsg() {}
+    virtual ~HttpMsg() = default;
 
     void addHeader(HttpHdr id, const char value[]);
     void addHeader(const char name[], const char value[]);

@@ -109,7 +109,7 @@ void fileClose(FileHandle f);
 
 class IFileReadNotify {
 public:
-    virtual ~IFileReadNotify() {}
+    virtual ~IFileReadNotify() = default;
 
     // return false to prevent more reads, otherwise reads continue until the
     // requested length has been received. *bytesUsed must be set to how much
@@ -189,7 +189,7 @@ void fileExtendView(FileHandle f, int64_t length);
 
 class IFileWriteNotify {
 public:
-    virtual ~IFileWriteNotify() {}
+    virtual ~IFileWriteNotify() = default;
 
     virtual void onFileWrite(
         int written,

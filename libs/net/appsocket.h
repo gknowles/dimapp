@@ -53,7 +53,7 @@ struct AppSocketData {
 
 class IAppSocketNotify {
 public:
-    virtual ~IAppSocketNotify () {}
+    virtual ~IAppSocketNotify () = default;
 
     // for connectors
     virtual void onSocketConnect (const AppSocketInfo & info) {};
@@ -95,7 +95,7 @@ namespace AppSocket {
 
 class IAppSocketMatchNotify {
 public:
-    virtual ~IAppSocketMatchNotify() {}
+    virtual ~IAppSocketMatchNotify() = default;
 
     virtual AppSocket::MatchType OnMatch(
         AppSocket::Family fam,

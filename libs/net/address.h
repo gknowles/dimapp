@@ -96,7 +96,7 @@ void addressGetLocal(std::vector<Address> * out);
 
 class IEndpointNotify {
 public:
-    virtual ~IEndpointNotify() {}
+    virtual ~IEndpointNotify() = default;
     // count of 0 means either no results or some kind of error occurred
     virtual void onEndpointFound(const Endpoint * ptr, int count) = 0;
 };
