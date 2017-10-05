@@ -8,6 +8,7 @@
 
 #include "charbuf.h"
 #include "handle.h"
+#include "hash.h"
 #include "list.h"
 #include "log.h"
 #include "math.h"

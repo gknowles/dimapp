@@ -24,25 +24,6 @@ void cryptRandomBytes(void * ptr, size_t count);
 
 /****************************************************************************
 *
-*   Hashing
-*
-***/
-
-size_t hashBytes(const void * ptr, size_t count);
-
-size_t hashStr(const char src[]);
-
-// calculates hash up to trailing null or maxlen, whichever comes first
-size_t hashStr(const char src[], size_t maxlen);
-
-//===========================================================================
-constexpr void hashCombine(size_t & seed, size_t v) {
-    seed ^= v + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-}
-
-
-/****************************************************************************
-*
 *   Hex nibble conversions
 *
 ***/

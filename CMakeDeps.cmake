@@ -27,6 +27,7 @@
 # libs/core/handle.cpp
 # libs/core/handle.h
 # libs/core/hash.cpp
+# libs/core/hash.h
 # libs/core/list.h
 # libs/core/log.cpp
 # libs/core/log.h
