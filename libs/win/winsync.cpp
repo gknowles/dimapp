@@ -64,7 +64,7 @@ HANDLE WinEvent::release() {
 ***/
 
 //===========================================================================
-static void __stdcall eventWaitCallback(void * param, uint8_t timeout) {
+static VOID CALLBACK eventWaitCallback(PVOID param, BOOLEAN timeout) {
     auto notify = reinterpret_cast<IWinEventWaitNotify *>(param);
     taskPushEvent(*notify);
 }

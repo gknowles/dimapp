@@ -62,8 +62,8 @@ static void setState(unsigned status) {
 static DWORD WINAPI svcCtrlHandler(
     DWORD control,
     DWORD type,
-    void * data,
-    void * context
+    LPVOID data,
+    LPVOID context
 ) {
     switch (control) {
     default:
@@ -77,7 +77,7 @@ static DWORD WINAPI svcCtrlHandler(
 }
 
 //===========================================================================
-static void WINAPI ServiceMain(DWORD argc, char ** argv) {
+static VOID WINAPI ServiceMain(DWORD argc, LPTSTR * argv) {
     // Running as a service and services can't have gui windows
     iAppSetFlags(appFlags() & ~fAppWithGui | fAppIsService);
 
