@@ -20,6 +20,7 @@
 # libs/app/pch.cpp
 # libs/app/pch.h
 # libs/app/webadmin.cpp
+# libs/core/algo.h
 # libs/core/appint.h
 # libs/core/charbuf.cpp
 # libs/core/charbuf.h

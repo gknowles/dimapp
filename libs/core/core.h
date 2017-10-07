@@ -6,6 +6,7 @@
 
 #include "cppconf/cppconf.h"
 
+#include "algo.h"
 #include "charbuf.h"
 #include "handle.h"
 #include "hash.h"
