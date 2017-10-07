@@ -37,7 +37,10 @@ public:
     void onAccept(ListenSocket * listen, int xferError, int xferBytes);
 };
 
-class ListenSocket : public IWinEventWaitNotify {
+class ListenSocket 
+    : public ListBaseLink<ListenSocket>
+    , public IWinEventWaitNotify 
+{
 public:
     bool m_stopRequested{false};
     bool m_stopDone{false};
@@ -56,8 +59,6 @@ public:
 public:
     ListenSocket(IFactory<ISocketNotify> * notify, const Endpoint & end);
 
-    void destroy_LK();
-
     void onTask() override;
 };
 
@@ -71,7 +72,7 @@ public:
 ***/
 
 static mutex s_mut;
-static list<unique_ptr<ListenSocket>> s_listeners;
+static List<ListenSocket> s_listeners;
 
 static auto & s_perfAccepted = uperf("sock accepted");
 static auto & s_perfCurAccepted = uperf("sock accepted (current)");
@@ -93,16 +94,6 @@ ListenSocket::ListenSocket(
 {}
 
 //===========================================================================
-void ListenSocket::destroy_LK() {
-    for (auto it = s_listeners.begin(); it != s_listeners.end(); ++it) {
-        if (this == it->get()) {
-            s_listeners.erase(it);
-            return;
-        }
-    }
-}
-
-//===========================================================================
 void ListenSocket::onTask() {
     DWORD bytes;
     WinError err{0};
@@ -116,7 +107,7 @@ void ListenSocket::onTask() {
         if (!m_stopRequested) 
             return;
         if (m_stopDone) {
-            destroy_LK();
+            delete this;
         } else {
             m_mode = ISocketNotify::kClosed;
             lk.unlock();
@@ -141,6 +132,26 @@ static bool closeListen_LK(ListenSocket * listen) {
         listen->m_handle = INVALID_SOCKET;
     }
     return false;
+}
+
+//===========================================================================
+static void closeListenWait_LK(
+    ListenSocket * listen, 
+    unique_lock<mutex> & lk
+) {
+    closeListen_LK(listen);
+    listen->m_stopRequested = true;
+
+    // Wait until the callback handler returns, unless that would mean 
+    // deadlocking by waiting for ourselves to return.
+    while (listen->m_inNotify && listen->m_inThread != this_thread::get_id())
+        listen->m_inCv.wait(lk);
+
+    if (listen->m_mode == ISocketNotify::kClosed) {
+        delete listen;
+    } else {
+        listen->m_stopDone = true;
+    }
 }
 
 //===========================================================================
@@ -373,7 +384,7 @@ void Dim::socketListen(
 
     {
         lock_guard<mutex> lk{s_mut};
-        s_listeners.push_back(move(hostage));
+        s_listeners.link(hostage.release());
     }
 
     if (!AcceptSocket::accept(sock))
@@ -386,29 +397,11 @@ void Dim::socketCloseWait(
     const Endpoint & local
 ) {
     unique_lock<mutex> lk{s_mut};
-    auto it = s_listeners.begin(),
-        e = s_listeners.end();
-    ListenSocket * ptr;
-    for (;; ++it) {
-        if (it == e)
+
+    for (auto && ls : s_listeners) {
+        if (ls.m_notify == factory && ls.m_localEnd == local) {
+            closeListenWait_LK(&ls, lk);
             return;
-        ptr = it->get();
-        if (ptr->m_notify == factory && ptr->m_localEnd == local) 
-            break;
-    }
-
-    // found match listener
-    closeListen_LK(ptr);
-    ptr->m_stopRequested = true;
-
-    // Wait until the callback handler returns, unless that would mean 
-    // deadlocking by waiting for ourselves to return.
-    while (ptr->m_inNotify && ptr->m_inThread != this_thread::get_id())
-        ptr->m_inCv.wait(lk);
-
-    if (ptr->m_mode == ISocketNotify::kClosed) {
-        s_listeners.erase(it);
-    } else {
-        ptr->m_stopDone = true;
+        }
     }
 }

@@ -74,7 +74,7 @@ static void addCqUsed_LK(int delta) {
 
 //===========================================================================
 static void rioDispatchThread() {
-    static const int kMaxResults = 100;
+    static constexpr int kMaxResults = 100;
     RIORESULT results[kMaxResults];
     ITaskNotify * tasks[size(results)];
     int count;
