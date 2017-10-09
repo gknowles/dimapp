@@ -9,6 +9,8 @@
 #include "core/list.h"
 #include "core/timer.h"
 
+#include <chrono>
+
 namespace Dim {
 
 
@@ -117,7 +119,7 @@ inline Duration TimerList<T,Tag>::onTimer(TimePoint now) {
     auto expire = now - m_timeout;
     while (auto node = m_nodes.front()) {
         auto wait = node->m_lastTouched - expire;
-        if (wait > 0s)
+        if (wait > (std::chrono::seconds) 0)
             return wait;
         touch(node);
         static_cast<ITimerListNotify<T,Tag>*>(node)->onTimer(now);
