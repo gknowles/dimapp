@@ -36,17 +36,17 @@ public:
     virtual ~ISocketNotify() = default;
 
     // for connectors
-    virtual void onSocketConnect (const SocketInfo & info) {};
-    virtual void onSocketConnectFailed () {};
+    virtual void onSocketConnect(const SocketInfo & info) {};
+    virtual void onSocketConnectFailed() {};
 
     // for listeners
     // returns true if the socket is accepted
-    virtual bool onSocketAccept (const SocketInfo & info) { return true; };
+    virtual bool onSocketAccept(const SocketInfo & info) { return true; };
 
     // for both
-    virtual void onSocketRead (SocketData & data) = 0;
-    virtual void onSocketDisconnect () {};
-    virtual void onSocketDestroy () { delete this; }
+    virtual void onSocketRead(SocketData & data) = 0;
+    virtual void onSocketDisconnect() {};
+    virtual void onSocketDestroy() { delete this; }
 
 private:
     friend class SocketBase;

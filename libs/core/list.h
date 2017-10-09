@@ -17,7 +17,7 @@
 // list.clear(); // delete's the member
 // 
 // Example of an object in multiple lists:
-// struct Fruit;    // only needs a forward reference, definition not required
+// struct Fruit; // tags only need a forward reference, definition not required
 // struct Color;
 // struct MyObj : ListBaseLink<MyObj, Fruit>, ListBaseLink<MyObj, Color> {};
 // List<MyObj, Fruit> fruits;
@@ -29,8 +29,8 @@
 // auto orange = new MyObj;
 // fruits.link(orange);
 // colors.link(orange);
-// fruits.clear();  // deletes apple & orange, unlinking orange from colors
-// colors.clear();  // deletes red
+// fruits.clear(); // deletes apple & orange, unlinking orange from colors
+// colors.clear(); // deletes red
 
 #pragma once
 

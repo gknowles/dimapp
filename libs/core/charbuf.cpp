@@ -67,7 +67,11 @@ CharBuf & CharBuf::assign(const char s[], size_t count) {
 CharBuf & CharBuf::assign(string_view str, size_t pos, size_t count) {
     assert(pos <= str.size());
     return replace(
-        0, m_size, str.data() + pos, min(count, str.size() - pos));
+        0, 
+        m_size, 
+        str.data() + pos, 
+        min(count, str.size() - pos)
+    );
 }
 
 //===========================================================================
@@ -203,7 +207,6 @@ void CharBuf::resize(size_t count) {
     } else {
         insert(m_size, count - m_size, 0);
     }
-    return;
 }
 
 //===========================================================================

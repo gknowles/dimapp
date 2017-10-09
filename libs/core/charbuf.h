@@ -73,7 +73,8 @@ public:
         size_t pos, 
         const CharBuf & buf, 
         size_t bufPos = 0, 
-        size_t bufLen = -1);
+        size_t bufLen = -1
+    );
     CharBuf & erase(size_t pos = 0, size_t count = -1);
     CharBuf & ltrim(char ch);
     CharBuf & rtrim(char ch);
@@ -94,7 +95,8 @@ public:
         size_t count,
         const CharBuf & buf,
         size_t bufPos = 0,
-        size_t bufLen = -1) const;
+        size_t bufLen = -1
+    ) const;
     CharBuf & replace(size_t pos, size_t count, size_t numCh, char ch);
     CharBuf & replace(size_t pos, size_t count, const char s[]);
     CharBuf & replace(size_t pos, size_t count, const char s[], size_t slen);
@@ -103,7 +105,8 @@ public:
         size_t count,
         const CharBuf & src,
         size_t srcPos = 0,
-        size_t srcLen = -1);
+        size_t srcLen = -1
+    );
     size_t copy(char * out, size_t count, size_t pos = 0) const;
     void swap(CharBuf & other);
 
@@ -132,13 +135,15 @@ private:
         buffer_iterator it,
         int pos,
         const char src[],
-        size_t srcLen);
+        size_t srcLen
+    );
     CharBuf & insert(
         buffer_iterator it,
         int pos,
         const_buffer_iterator srcIt,
         int srcPos,
-        size_t srcLen);
+        size_t srcLen
+    );
     CharBuf & erase(buffer_iterator it, int pos, int count);
 
     std::vector<Buffer> m_buffers;
@@ -162,7 +167,8 @@ public:
     ViewIterator(
         const_buffer_iterator buf, 
         size_t pos, 
-        size_t count);
+        size_t count
+    );
     bool operator!= (const ViewIterator & right);
     ViewIterator & operator++();
     const std::string_view & operator*() const { return m_view; }
