@@ -237,7 +237,7 @@ void ConnSocket::connect(
     if (!error || err != ERROR_IO_PENDING) {
         logMsgError() << "ConnectEx(" << remote << "): " << err;
         lock_guard<mutex> lk{s_mut};
-        s_connecting.pop_back();
+        s_connecting.erase(it);
         return pushConnectFailed(notify);
     }
 }
