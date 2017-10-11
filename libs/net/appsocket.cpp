@@ -196,6 +196,17 @@ void IAppSocket::setNotify(unique_ptr<IAppSocketNotify> notify) {
 }
 
 //===========================================================================
+void IAppSocket::notifyConnect(const AppSocketInfo & info) {
+    m_accept = info;
+    m_notify->onSocketConnect(m_accept);
+}
+
+//===========================================================================
+void IAppSocket::notifyConnectFailed() {
+    m_notify->onSocketConnectFailed();
+}
+
+//===========================================================================
 bool IAppSocket::notifyAccept(const AppSocketInfo & info) {
     m_accept = info;
     if (m_notify) {
@@ -234,13 +245,14 @@ void IAppSocket::notifyDisconnect() {
 }
 
 //===========================================================================
-void IAppSocket::notifyDestroy() {
+void IAppSocket::notifyDestroy(bool deleteThis) {
     if (m_notify) {
         m_notify->m_socket = nullptr;
         m_notify->onSocketDestroy();
         m_notify = nullptr;
     }
-    delete this;
+    if (deleteThis)
+        delete this;
 }
 
 //===========================================================================

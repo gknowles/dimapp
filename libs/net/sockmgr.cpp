@@ -11,141 +11,22 @@ using namespace Dim;
 
 /****************************************************************************
 *
-*   Tuning parameters
-*
-***/
-
-const auto kDefaultPingInterval = 30s;
-const auto kDefaultInactiveTimeout = 1min;
-
-
-/****************************************************************************
-*
-*   Declarations
-*
-***/
-
-namespace Dim::AppSocket {
-
-enum ConfFlags : unsigned {
-    fDisableInactiveTimeout = 0x01,
-};
-
-}
-
-namespace {
-
-class ISocketManager;
-
-class MgrSocket 
-    : public ITimerListNotify<MgrSocket>
-    , public IAppSocket
-    , public IAppSocketNotify 
-{
-public:
-    MgrSocket(ISocketManager & mgr, unique_ptr<IAppSocketNotify> notify);
-    ~MgrSocket();
-
-    // Inherited via ITimerListNotify
-    void onTimer(TimePoint now) override;
-
-    // Inherited via IAppSocket
-    void disconnect() override;
-    void write(string_view data) override;
-    void write(unique_ptr<SocketBuffer> buffer, size_t bytes) override;
-
-    // Inherited via IAppSocketNotify
-    bool onSocketAccept(const AppSocketInfo & info) override;
-    void onSocketDisconnect() override;
-    void onSocketDestroy() override;
-    void onSocketRead(AppSocketData & data) override;
-
-private:
-    ISocketManager & m_mgr;
-};
-
-class ISocketManager 
-    : public IFactory<IAppSocketNotify> 
-    , public IConfigNotify
-    , public HandleContent
-{
-public:
-    ISocketManager(
-        bool listening,
-        string_view name,
-        IFactory<IAppSocketNotify> * fact,
-        AppSocket::Family fam,
-        AppSocket::MgrFlags flags
-    );
-    virtual ~ISocketManager();
-
-    void setInactiveTimeout(Duration inactiveTimeout, Duration pingInterval);
-    void touch(MgrSocket * sock);
-    void unlink(MgrSocket * sock);
-    bool shutdown();
-
-    virtual bool listening() const = 0;
-
-    // Inherited via IFactory<MgrSocket>
-    unique_ptr<IAppSocketNotify> onFactoryCreate() override;
-
-    // Inherited via IConfigNotify
-    virtual void onConfigChange(const XDocument & doc) override = 0;
-
-protected:
-    void init();
-
-    string m_name;
-    IFactory<IAppSocketNotify> * m_cliSockFact;
-    AppSocket::Family m_family;
-    vector<Endpoint> m_endpoints;
-    AppSocket::MgrFlags m_mgrFlags;
-    AppSocket::ConfFlags m_confFlags;
-
-    Duration m_pingInterval = kDefaultPingInterval;
-    Duration m_inactiveTimeout = kDefaultInactiveTimeout;
-
-    RunMode m_mode{kRunRunning};
-    TimerList<MgrSocket> m_sockets;
-};
-
-class ListenManager : public ISocketManager {
-public:
-    ListenManager(
-        string_view name,
-        IFactory<IAppSocketNotify> * fact,
-        AppSocket::Family fam,
-        AppSocket::MgrFlags flags
-    );
-
-    // Inherited via ISocketManager
-    bool listening() const override { return true; }
-
-    // Inherited via IConfigNotify
-    void onConfigChange(const XDocument & doc) override;
-};
-
-} // namespace
-
-
-/****************************************************************************
-*
 *   Variables
 *
 ***/
 
-static HandleMap<SockMgrHandle, ISocketManager> s_mgrs;
+static HandleMap<SockMgrHandle, ISockMgrBase> s_mgrs;
 
 
 /****************************************************************************
 *
-*   MgrSocket
+*   ISockMgrSocket
 *
 ***/
 
 //===========================================================================
-MgrSocket::MgrSocket(
-    ISocketManager & mgr, 
+ISockMgrSocket::ISockMgrSocket(
+    ISockMgrBase & mgr, 
     unique_ptr<IAppSocketNotify> notify
 )
     : m_mgr(mgr)
@@ -153,63 +34,44 @@ MgrSocket::MgrSocket(
 {}
 
 //===========================================================================
-MgrSocket::~MgrSocket() {
-    m_mgr.unlink(this);
-}
-
-//===========================================================================
-void MgrSocket::onTimer(TimePoint now) {
-    disconnect();
-}
-
-//===========================================================================
-void MgrSocket::disconnect() {
+void ISockMgrSocket::disconnect() {
     socketDisconnect(this);
 }
 
 //===========================================================================
-void MgrSocket::write(string_view data) {
+void ISockMgrSocket::write(string_view data) {
     socketWrite(this, data);
 }
 
 //===========================================================================
-void MgrSocket::write(unique_ptr<SocketBuffer> buffer, size_t bytes) {
+void ISockMgrSocket::write(unique_ptr<SocketBuffer> buffer, size_t bytes) {
     socketWrite(this, move(buffer), bytes);
 }
 
 //===========================================================================
-bool MgrSocket::onSocketAccept (const AppSocketInfo & info) {
-    return notifyAccept(info);
-}
-
-//===========================================================================
-void MgrSocket::onSocketDisconnect () {
+void ISockMgrSocket::onSocketDisconnect () {
     notifyDisconnect();
 }
 
 //===========================================================================
-void MgrSocket::onSocketDestroy () {
-    notifyDestroy();
-}
-
-//===========================================================================
-void MgrSocket::onSocketRead (AppSocketData & data) {
-    m_mgr.touch(this);
+void ISockMgrSocket::onSocketRead (AppSocketData & data) {
+    if (m_mode != kRunStarting)
+        m_mgr.touch(this);
     notifyRead(data);
 }
 
 
 /****************************************************************************
 *
-*   ISocketManager
+*   ISockMgrBase
 *
 ***/
 
 //===========================================================================
-ISocketManager::ISocketManager(
-    bool listening,
+ISockMgrBase::ISockMgrBase(
     string_view name,
     IFactory<IAppSocketNotify> * fact,
+    Duration inactiveTimeout,
     AppSocket::Family fam,
     AppSocket::MgrFlags flags
 ) 
@@ -217,120 +79,48 @@ ISocketManager::ISocketManager(
     , m_cliSockFact{fact}
     , m_family{fam}
     , m_mgrFlags{flags}
-    , m_sockets{listening ? m_inactiveTimeout : m_pingInterval}
+    , m_connected{inactiveTimeout}
 {}
 
 //===========================================================================
-void ISocketManager::init() {
+void ISockMgrBase::init() {
     configMonitor("app.xml", this);
 }
 
 //===========================================================================
-ISocketManager::~ISocketManager() {
-    assert(m_sockets.values().empty());
+ISockMgrBase::~ISockMgrBase() {
+    assert(m_connected.values().empty());
 }
 
 //===========================================================================
-void ISocketManager::touch(MgrSocket * sock) {
-    m_sockets.touch(sock);
+void ISockMgrBase::touch(ISockMgrSocket * sock) {
+    m_connected.touch(sock);
 }
 
 //===========================================================================
-void ISocketManager::unlink(MgrSocket * sock) {
-    m_sockets.unlink(sock);
+void ISockMgrBase::unlink(ISockMgrSocket * sock) {
+    m_connected.unlink(sock);
 }
 
 //===========================================================================
-void ISocketManager::setInactiveTimeout(
-    Duration inactiveTimeout, 
-    Duration pingInterval
-) {
-    m_inactiveTimeout = inactiveTimeout;
-    m_pingInterval = pingInterval;
-    m_sockets.setTimeout(listening() ? inactiveTimeout : pingInterval);
+void ISockMgrBase::setInactiveTimeout(Duration timeout) {
+    m_connected.setTimeout(timeout);
 }
 
 //===========================================================================
-bool ISocketManager::shutdown() {
+bool ISockMgrBase::shutdown() {
+    bool stopped = false;
     if (m_mode == kRunRunning) {
         m_mode = kRunStopping;
-        for (auto && sock : m_sockets.values()) 
+        stopped = onShutdown(true);
+        for (auto && sock : m_connected.values()) 
             sock.disconnect();
-        for (auto && ep : m_endpoints) 
-            socketCloseWait(this, ep, m_family);
+    } else {
+        stopped = onShutdown(false);
     }
-    if (m_sockets.values().empty())
+    if (stopped && m_connected.values().empty())
         m_mode = kRunStopped;
     return m_mode == kRunStopped;
-}
-
-//===========================================================================
-std::unique_ptr<IAppSocketNotify> ISocketManager::onFactoryCreate() {
-    auto ptr = make_unique<MgrSocket>(
-        *this, 
-        m_cliSockFact->onFactoryCreate()
-    );
-    m_sockets.touch(ptr.get());
-    return ptr;
-}
-
-
-/****************************************************************************
-*
-*   ListenManager
-*
-***/
-
-//===========================================================================
-ListenManager::ListenManager(
-    string_view name,
-    IFactory<IAppSocketNotify> * fact,
-    AppSocket::Family fam,
-    AppSocket::MgrFlags flags
-)
-    : ISocketManager(true, name, fact, fam, flags)
-{
-    init();
-}
-
-//===========================================================================
-void ListenManager::onConfigChange(const XDocument & doc) {
-    auto flags = AppSocket::ConfFlags{};
-    if (configUnsigned(doc, "DisableInactiveTimeout"))
-        flags |= AppSocket::fDisableInactiveTimeout;
-
-    m_confFlags = flags;
-
-    Endpoint ep;
-    ep.port = configUnsigned(doc, "Port", 41000);
-    vector<Endpoint> endpts;
-    endpts.push_back(ep);
-    vector<Endpoint> diff;
-    set_difference(
-        endpts.begin(), 
-        endpts.end(), 
-        m_endpoints.begin(), 
-        m_endpoints.end(), 
-        back_inserter(diff)
-    );
-
-    bool console = (m_mgrFlags & AppSocket::fMgrConsole);
-    for (auto && ep : diff) 
-        socketListen(this, ep, m_family, console);
-
-    diff.clear();
-    set_difference(
-        m_endpoints.begin(), 
-        m_endpoints.end(), 
-        endpts.begin(), 
-        endpts.end(), 
-        back_inserter(diff)
-    );
-    for (auto && ep : diff) {
-        socketCloseWait(this, ep, m_family);
-    }
-
-    m_endpoints = move(endpts);
 }
 
 
@@ -369,6 +159,11 @@ void Dim::iSockMgrInitialize() {
     shutdownMonitor(&s_cleanup);
 }
 
+//===========================================================================
+SockMgrHandle Dim::iSockMgrAdd(ISockMgrBase * mgr) {
+    return s_mgrs.insert(mgr);
+}
+
 
 /****************************************************************************
 *
@@ -377,44 +172,18 @@ void Dim::iSockMgrInitialize() {
 ***/
 
 //===========================================================================
-SockMgrHandle Dim::sockMgrListen(
-    string_view mgrName,
-    IFactory<IAppSocketNotify> * factory,
-    /* security requirements, */
-    AppSocket::Family fam,
-    AppSocket::MgrFlags flags
-) {
-    auto mgr = new ListenManager(mgrName, factory, fam, flags);
-    return s_mgrs.insert(mgr);
-}
-
-//===========================================================================
-SockMgrHandle Dim::sockMgrConnect(
-    string_view mgrName,
-    IFactory<IAppSocketNotify> * factory,
-    AppSocket::MgrFlags flags
-) {
-    //auto mgr = new ISocketManager(mgrName, factory, flags);
-    assert(!"Not implemented");
-    return {};
-}
-
-//===========================================================================
-void Dim::sockMgrSetInactiveTimeout(
-    SockMgrHandle h,
-    Duration pingInterval,
-    Duration pingTimeout
-) {
+void Dim::sockMgrSetInactiveTimeout(SockMgrHandle h, Duration timeout) {
     auto mgr = s_mgrs.find(h);
-    mgr->setInactiveTimeout(pingInterval, pingTimeout);
+    mgr->setInactiveTimeout(timeout);
 }
 
 //===========================================================================
 void Dim::sockMgrSetEndpoints(
-    SockMgrHandle mgr, 
+    SockMgrHandle h, 
     const vector<Endpoint> & addrs
 ) {
-    assert(!"Not implemented");
+    auto mgr = s_mgrs.find(h);
+    mgr->setEndpoints(addrs);
 }
 
 //===========================================================================

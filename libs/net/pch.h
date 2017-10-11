@@ -31,3 +31,4 @@
 #include "appint.h"
 #include "appsockint.h"
 #include "httpint.h"
+#include "sockmgrint.h"

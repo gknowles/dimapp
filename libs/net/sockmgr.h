@@ -76,14 +76,14 @@ SockMgrHandle sockMgrConnect(
 *
 ***/
 
-// Only the connecting side sends pings, and only the accepting side
-// disconnects due to inactivity. Both can be set to kTimerInfinite, in 
-// which case no pings are sent and inactivity causes no disconnects.
-void sockMgrSetInactiveTimeout(
-    SockMgrHandle mgr,
-    Duration pingInterval,  // duration of inactivity that triggers a ping
-    Duration pingTimeout    // inactivity that triggers a disconnect
-);
+// Inactivity causes the connecting side to send pings and the listening side
+// to disconnect. It can be set to kTimerInfinite, in which case no pings are 
+// sent or disconnects initiated.
+//
+// Defaults for connectors and listeners are 30s and 1min respectively. The
+// listeners timeout must be longer than the connectors so that pings can 
+// reliably stave off disconnection.
+void sockMgrSetInactiveTimeout(SockMgrHandle mgr, Duration timeout);
 
 // Not implemented
 void sockMgrSetEndpoints(

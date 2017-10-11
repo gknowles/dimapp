@@ -56,17 +56,17 @@ public:
     virtual ~IAppSocketNotify () = default;
 
     // for connectors
-    virtual void onSocketConnect (const AppSocketInfo & info) {};
-    virtual void onSocketConnectFailed (){};
+    virtual void onSocketConnect(const AppSocketInfo & info) {};
+    virtual void onSocketConnectFailed() {};
 
     // for listeners
-    // returns true if the socket is accepted
-    virtual bool onSocketAccept (const AppSocketInfo & info) { return true; };
+    // returns true if the socket is accepted, false to disconnect
+    virtual bool onSocketAccept(const AppSocketInfo & info) { return true; };
 
     // for both
-    virtual void onSocketRead (AppSocketData & data) = 0;
-    virtual void onSocketDisconnect () {};
-    virtual void onSocketDestroy () { delete this; }
+    virtual void onSocketRead(AppSocketData & data) = 0;
+    virtual void onSocketDisconnect() {};
+    virtual void onSocketDestroy() { delete this; }
 
 private:
     friend class IAppSocket;
@@ -76,6 +76,19 @@ private:
 void socketDisconnect(IAppSocketNotify * notify);
 void socketWrite(IAppSocketNotify * notify, std::string_view data);
 void socketWrite(IAppSocketNotify * notify, const CharBuf & data);
+
+
+/****************************************************************************
+*
+*   AppSocket connect
+*
+***/
+
+void socketConnect(
+    IAppSocketNotify * notify,
+    const Endpoint & remote,
+    const Endpoint & local
+);
 
 
 /****************************************************************************
@@ -153,8 +166,9 @@ inline void socketCloseWait(const Endpoint & end, AppSocket::Family fam) {
 *
 *   AppSocket filter
 *
-*   Filters are like listeners except that they only apply to endpoints that
-*   are already being listened to, rather than creating additional bindings. 
+*   Factory filters are like listeners except they only apply to endpoints 
+*   that are already being listened to, rather than creating additional 
+*   bindings. 
 *
 ***/
 
@@ -171,5 +185,8 @@ inline void socketAddFilter(const Endpoint & end, AppSocket::Family fam) {
     auto factory = getFactory<IAppSocketNotify, S>();
     socketAddFilter(factory, end, fam);
 }
+
+// Add socket filter to already created socket
+void socketAddFilter(IAppSocketNotify * notify, AppSocket::Family fam);
 
 } // namespace

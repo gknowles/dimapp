@@ -53,9 +53,11 @@ public:
     virtual void write(std::string_view data) = 0;
     virtual void write(std::unique_ptr<SocketBuffer> buffer, size_t bytes) = 0;
 
+    void notifyConnect(const AppSocketInfo & info);
+    void notifyConnectFailed();
     bool notifyAccept(const AppSocketInfo & info);
     void notifyDisconnect();
-    void notifyDestroy();
+    void notifyDestroy(bool deleteThis = true);
     void notifyRead(AppSocketData & data);
 
 protected:

@@ -100,6 +100,9 @@
 # libs/net/socket.h
 # libs/net/sockmgr.cpp
 # libs/net/sockmgr.h
+# libs/net/sockmgracc.cpp
+# libs/net/sockmgrconn.cpp
+# libs/net/sockmgrint.h
 # libs/tls/pch.cpp
 # libs/tls/pch.h
 # libs/tls/tls.cpp
