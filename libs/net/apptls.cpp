@@ -123,7 +123,8 @@ namespace {
 class TlsMatch : public IAppSocketMatchNotify {
     AppSocket::MatchType OnMatch(
         AppSocket::Family fam, 
-        string_view view) override;
+        string_view view
+    ) override;
 };
 } // namespace
 static TlsMatch s_tlsMatch;
@@ -150,31 +151,12 @@ AppSocket::MatchType TlsMatch::OnMatch(
 
 /****************************************************************************
 *
-*   Shutdown monitor
-*
-***/
-
-namespace {
-class ShutdownNotify : public IShutdownNotify {
-    void onShutdownClient(bool firstTry) override;
-};
-} // namespace
-static ShutdownNotify s_cleanup;
-
-//===========================================================================
-void ShutdownNotify::onShutdownClient(bool firstTry) {
-}
-
-
-/****************************************************************************
-*
 *   Public API
 *
 ***/
 
 //===========================================================================
 void Dim::appTlsInitialize() {
-    shutdownMonitor(&s_cleanup);
     socketAddFamily(AppSocket::kTls, &s_tlsMatch);
     socketAddFilter<TlsSocket>(Endpoint{}, AppSocket::kTls);
 }
