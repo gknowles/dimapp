@@ -6,7 +6,6 @@
 #pragma hdrstop
 
 using namespace std;
-// using namespace std::rel_ops;
 using namespace Dim;
 
 
@@ -147,7 +146,7 @@ void RunTimers::onTask() {
 }
 
 //===========================================================================
-static void timerQueueThread() {
+static void timerDispatchThread() {
     unique_lock<mutex> lk{s_mut};
     for (;;) {
         if (s_mode == kRunStopping) {
@@ -300,7 +299,7 @@ bool Timer::connected() const {
 void Dim::iTimerInitialize() {
     assert(s_mode == kRunStopped);
     s_mode = kRunRunning;
-    taskPushOnce("Timer Queue", timerQueueThread);
+    taskPushOnce("Timer Dispatch", timerDispatchThread);
 }
 
 //===========================================================================
