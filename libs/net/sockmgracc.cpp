@@ -68,6 +68,7 @@ public:
     // Inherited via IAppSocketNotify
     bool onSocketAccept(const AppSocketInfo & info) override;
     void onSocketDestroy() override;
+    void onSocketRead(AppSocketData & data) override;
 };
 
 } // namespace
@@ -85,9 +86,7 @@ AccMgrSocket::AccMgrSocket(
     unique_ptr<IAppSocketNotify> notify
 )
     : ISockMgrSocket{mgr, move(notify)}
-{
-    m_mode = kRunStarting;
-}
+{}
 
 //===========================================================================
 AcceptManager & AccMgrSocket::mgr() { 
@@ -107,7 +106,6 @@ void AccMgrSocket::onTimer(TimePoint now) {
 //===========================================================================
 bool AccMgrSocket::onSocketAccept (const AppSocketInfo & info) {
     if (notifyAccept(info)) {
-        m_mode = kRunRunning;
         mgr().touch(this);
         return true;
     }
@@ -117,6 +115,12 @@ bool AccMgrSocket::onSocketAccept (const AppSocketInfo & info) {
 //===========================================================================
 void AccMgrSocket::onSocketDestroy () {
     notifyDestroy();
+}
+
+//===========================================================================
+void AccMgrSocket::onSocketRead (AppSocketData & data) {
+    mgr().touch(this);
+    ISockMgrSocket::onSocketRead(data);
 }
 
 

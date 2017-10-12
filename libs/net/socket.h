@@ -44,9 +44,9 @@ public:
     virtual bool onSocketAccept(const SocketInfo & info) { return true; };
 
     // for both
-    virtual void onSocketRead(SocketData & data) = 0;
     virtual void onSocketDisconnect() {};
     virtual void onSocketDestroy() { delete this; }
+    virtual void onSocketRead(SocketData & data) = 0;
 
 private:
     friend class SocketBase;

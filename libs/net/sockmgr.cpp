@@ -55,8 +55,6 @@ void ISockMgrSocket::onSocketDisconnect () {
 
 //===========================================================================
 void ISockMgrSocket::onSocketRead (AppSocketData & data) {
-    if (m_mode != kRunStarting)
-        m_mgr.touch(this);
     notifyRead(data);
 }
 
@@ -79,7 +77,7 @@ ISockMgrBase::ISockMgrBase(
     , m_cliSockFact{fact}
     , m_family{fam}
     , m_mgrFlags{flags}
-    , m_connected{inactiveTimeout}
+    , m_inactivity{inactiveTimeout}
 {}
 
 //===========================================================================
@@ -89,22 +87,22 @@ void ISockMgrBase::init() {
 
 //===========================================================================
 ISockMgrBase::~ISockMgrBase() {
-    assert(m_connected.values().empty());
+    assert(m_inactivity.values().empty());
 }
 
 //===========================================================================
 void ISockMgrBase::touch(ISockMgrSocket * sock) {
-    m_connected.touch(sock);
+    m_inactivity.touch(sock);
 }
 
 //===========================================================================
 void ISockMgrBase::unlink(ISockMgrSocket * sock) {
-    m_connected.unlink(sock);
+    m_inactivity.unlink(sock);
 }
 
 //===========================================================================
 void ISockMgrBase::setInactiveTimeout(Duration timeout) {
-    m_connected.setTimeout(timeout);
+    m_inactivity.setTimeout(timeout);
 }
 
 //===========================================================================
@@ -113,12 +111,12 @@ bool ISockMgrBase::shutdown() {
     if (m_mode == kRunRunning) {
         m_mode = kRunStopping;
         stopped = onShutdown(true);
-        for (auto && sock : m_connected.values()) 
+        for (auto && sock : m_inactivity.values()) 
             sock.disconnect();
     } else {
         stopped = onShutdown(false);
     }
-    if (stopped && m_connected.values().empty())
+    if (stopped && m_inactivity.values().empty())
         m_mode = kRunStopped;
     return m_mode == kRunStopped;
 }

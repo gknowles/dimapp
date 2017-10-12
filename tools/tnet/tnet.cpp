@@ -28,9 +28,9 @@ class SocketConn
     // Inherited via ISocketNotify
     void onSocketConnect(const SocketInfo & info) override;
     void onSocketConnectFailed() override;
-    void onSocketRead(SocketData & data) override;
     void onSocketDisconnect() override;
     void onSocketDestroy() override;
+    void onSocketRead(SocketData & data) override;
 
     // Inherited via IEndpointNotify
     void onEndpointFound(const Endpoint * ptr, int count) override;
@@ -107,12 +107,6 @@ void SocketConn::onSocketConnectFailed() {
 }
 
 //===========================================================================
-void SocketConn::onSocketRead(SocketData & data) {
-    cout.write(data.data, data.bytes);
-    cout.flush();
-}
-
-//===========================================================================
 void SocketConn::onSocketDisconnect() {
     m_connected.reset();
     appSignalShutdown(kExitDisconnect);
@@ -121,6 +115,12 @@ void SocketConn::onSocketDisconnect() {
 //===========================================================================
 void SocketConn::onSocketDestroy() {
     // it's a static, so override the default "delete this;" with a no-op
+}
+
+//===========================================================================
+void SocketConn::onSocketRead(SocketData & data) {
+    cout.write(data.data, data.bytes);
+    cout.flush();
 }
 
 //===========================================================================

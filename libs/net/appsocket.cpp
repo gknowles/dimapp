@@ -142,7 +142,7 @@ void IAppSocket::disconnect(IAppSocketNotify * notify) {
 
 //===========================================================================
 // static
-void IAppSocket::write(IAppSocketNotify * notify, std::string_view data) {
+void IAppSocket::write(IAppSocketNotify * notify, string_view data) {
     notify->m_socket->write(data);
 }
 
@@ -158,14 +158,14 @@ void IAppSocket::write(IAppSocketNotify * notify, const CharBuf & data) {
 // static 
 void IAppSocket::write(
     IAppSocketNotify * notify, 
-    std::unique_ptr<SocketBuffer> buffer, 
+    unique_ptr<SocketBuffer> buffer, 
     size_t bytes
 ) {
     notify->m_socket->write(move(buffer), bytes);
 }
 
 //===========================================================================
-IAppSocket::IAppSocket(std::unique_ptr<IAppSocketNotify> notify) {
+IAppSocket::IAppSocket(unique_ptr<IAppSocketNotify> notify) {
     setNotify(move(notify));
 }
 
@@ -204,6 +204,11 @@ void IAppSocket::notifyConnect(const AppSocketInfo & info) {
 //===========================================================================
 void IAppSocket::notifyConnectFailed() {
     m_notify->onSocketConnectFailed();
+}
+
+//===========================================================================
+void IAppSocket::notifyPingRequired() {
+    m_notify->onSocketPingRequired();
 }
 
 //===========================================================================
@@ -574,7 +579,7 @@ void Dim::socketDisconnect(IAppSocketNotify * notify) {
 }
 
 //===========================================================================
-void Dim::socketWrite(IAppSocketNotify * notify, std::string_view data) {
+void Dim::socketWrite(IAppSocketNotify * notify, string_view data) {
     IAppSocket::write(notify, data);
 }
 

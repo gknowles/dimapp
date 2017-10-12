@@ -55,6 +55,7 @@ public:
 
     void notifyConnect(const AppSocketInfo & info);
     void notifyConnectFailed();
+    void notifyPingRequired();
     bool notifyAccept(const AppSocketInfo & info);
     void notifyDisconnect();
     void notifyDestroy(bool deleteThis = true);

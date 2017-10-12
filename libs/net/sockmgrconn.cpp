@@ -52,11 +52,19 @@ public:
     void onConfigChange(const XDocument & doc) override;
 
 private:
-    TimerList<ISockMgrSocket> m_unconnected;
+    TimerList<ISockMgrSocket> m_recent;
     unordered_map<Endpoint, ConnMgrSocket> m_sockets;
 };
 
 class ConnMgrSocket final : public ISockMgrSocket {
+public:
+    enum Mode { 
+        kUnconnected = 0x02,
+        kConnecting = 0x04,
+        kConnected = 0x06,
+        kStopping = 0x08,
+    };
+
 public:
     ConnMgrSocket(
         ISockMgrBase & mgr,
@@ -64,7 +72,10 @@ public:
         const Endpoint & addr
     );
 
+    bool recentConnect() const { return m_recentConnect; }
+    Mode mode() const { return m_mode; }
     const Endpoint & targetAddress() const { return m_targetAddress; }
+    void connect();
 
     // Inherited via ISockMgrSocket
     ConnectManager & mgr() override;
@@ -72,6 +83,10 @@ public:
 
     // Inherited via ITimerListNotify
     void onTimer(TimePoint now) override;
+
+    // Inherited via IAppSocket
+    void write(string_view data) override;
+    void write(unique_ptr<SocketBuffer> buffer, size_t bytes) override;
 
     // Inherited via IAppSocketNotify
     void onSocketConnect(const AppSocketInfo & info) override;
@@ -81,17 +96,11 @@ public:
 
 private:
     Endpoint m_targetAddress;
-    bool m_connected{false};
+    Mode m_mode{kUnconnected};
+    bool m_recentConnect{false};
 };
 
 } // namespace
-
-
-/****************************************************************************
-*
-*   Variables
-*
-***/
 
 
 /****************************************************************************
@@ -112,41 +121,72 @@ ConnMgrSocket::ConnMgrSocket(
 
 //===========================================================================
 void ConnMgrSocket::shutdown() {
-    m_mode = kRunStopping;
     disconnect();
 }
 
 //===========================================================================
-void ConnMgrSocket::onTimer(TimePoint now) {
-    if (m_mode != kRunStarting)
-        return disconnect();
+void ConnMgrSocket::connect() {
+    assert(m_mode == kUnconnected);
+    m_mode = kConnecting;
+    mgr().connect(*this);
+    m_recentConnect = true;
+}
 
-    if (m_connected) {
-        m_mode = kRunRunning;
+//===========================================================================
+void ConnMgrSocket::onTimer(TimePoint now) {
+    switch (m_mode) {
+    case kUnconnected:
+        m_recentConnect = false;
+        connect();
+        break;
+    case kConnecting:
+        m_recentConnect = false;
         mgr().touch(this);
-    } else {
-        mgr().connect(*this);
+        break;
+    case kConnected:
+        if (m_recentConnect) {
+            m_recentConnect = false;
+            mgr().touch(this);
+        }
+        notifyPingRequired();
+        break;
     }
 }
 
 //===========================================================================
+void ConnMgrSocket::write(string_view data) {
+    if (!m_recentConnect)
+        mgr().touch(this);
+    ISockMgrSocket::write(data);
+}
+
+//===========================================================================
+void ConnMgrSocket::write(unique_ptr<SocketBuffer> buffer, size_t bytes) {
+    if (!m_recentConnect)
+        mgr().touch(this);
+    ISockMgrSocket::write(move(buffer), bytes);
+}
+
+//===========================================================================
 void ConnMgrSocket::onSocketConnect (const AppSocketInfo & info) {
-    assert(!m_connected);
-    m_connected = true;
-    if (m_mode != kRunStarting)
+    assert(m_mode == kConnecting);
+    if (!m_recentConnect)
         mgr().touch(this);
     notifyConnect(info);
+    m_mode = kConnected;
 }
 
 //===========================================================================
 void ConnMgrSocket::onSocketConnectFailed () {
+    assert(m_mode == kConnecting);
+    m_mode = kUnconnected;
     notifyConnectFailed();
 }
 
 //===========================================================================
 void ConnMgrSocket::onSocketDisconnect () {
-    assert(m_connected);
-    m_connected = false;
+    assert(m_mode == kConnected);
+    m_mode = kUnconnected;
     ISockMgrSocket::onSocketDisconnect();
 }
 
@@ -180,7 +220,7 @@ ConnectManager::ConnectManager(
         AppSocket::kInvalid, 
         flags
     )
-    , m_unconnected{kReconnectInterval}
+    , m_recent{kReconnectInterval}
 {
     init();
 }
@@ -198,8 +238,8 @@ void ConnectManager::connect(const Endpoint & addr) {
 
 //===========================================================================
 void ConnectManager::connect(ConnMgrSocket & sock) {
-    m_mode = kRunStarting;
-    m_unconnected.touch(&sock);
+    assert(sock.mode() == ConnMgrSocket::kConnecting);
+    m_recent.touch(&sock);
     socketConnect(&sock, sock.targetAddress(), {});
 }
 
@@ -213,12 +253,13 @@ void ConnectManager::shutdown(const Endpoint & addr) {
 //===========================================================================
 void ConnectManager::destroy(ConnMgrSocket & sock) {
     switch (sock.mode()) {
-    case kRunStarting:
+    case ConnMgrSocket::kUnconnected:
+        return sock.connect();
+    case ConnMgrSocket::kStopping:
+        break;
+    default:
         return;
-    case kRunRunning:
-        return connect(sock);
     }
-    assert(sock.mode() == kRunStopping);
     sock.notifyDestroy(false);
     [[maybe_unused]] auto num = m_sockets.erase(sock.targetAddress());
     assert(num);
@@ -244,10 +285,10 @@ void ConnectManager::setEndpoints(const vector<Endpoint> & src) {
 //===========================================================================
 bool ConnectManager::onShutdown(bool firstTry) {
     if (firstTry) {
-        for (auto && sock : m_unconnected.values())
+        for (auto && sock : m_recent.values())
             sock.shutdown();
     }
-    return m_unconnected.values().empty();
+    return m_recent.values().empty();
 }
 
 //===========================================================================

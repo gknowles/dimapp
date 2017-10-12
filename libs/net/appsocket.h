@@ -58,15 +58,16 @@ public:
     // for connectors
     virtual void onSocketConnect(const AppSocketInfo & info) {};
     virtual void onSocketConnectFailed() {};
+    virtual void onSocketPingRequired() {};
 
     // for listeners
     // returns true if the socket is accepted, false to disconnect
     virtual bool onSocketAccept(const AppSocketInfo & info) { return true; };
 
     // for both
-    virtual void onSocketRead(AppSocketData & data) = 0;
     virtual void onSocketDisconnect() {};
     virtual void onSocketDestroy() { delete this; }
+    virtual void onSocketRead(AppSocketData & data) = 0;
 
 private:
     friend class IAppSocket;

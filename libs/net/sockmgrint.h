@@ -33,7 +33,6 @@ public:
         ISockMgrBase & mgr, 
         std::unique_ptr<IAppSocketNotify> notify
     );
-    RunMode mode() const { return m_mode; }
 
     virtual ISockMgrBase & mgr() { return m_mgr; }
     virtual void shutdown() = 0;
@@ -47,9 +46,6 @@ public:
     void onSocketDisconnect() override;
     void onSocketDestroy() override = 0;
     void onSocketRead(AppSocketData & data) override;
-
-protected:
-    RunMode m_mode{kRunStopped};
 
 private:
     ISockMgrBase & m_mgr;
@@ -89,7 +85,7 @@ protected:
     AppSocket::ConfFlags m_confFlags;
 
     RunMode m_mode{kRunRunning};
-    TimerList<ISockMgrSocket> m_connected;
+    TimerList<ISockMgrSocket> m_inactivity;
 };
 
 // Adds manager to handle set.
