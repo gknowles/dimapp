@@ -11,15 +11,15 @@
 //  - size() is O(N)
 //
 // Example usage:
-// struct MyObj : ListBaseLink<MyObj> {};
+// struct MyObj : ListBaseLink<> {};
 // List<MyObj> list;
 // list.link(new MyObj);
-// list.clear(); // delete's the member
+// list.clear(); // delete all the member
 // 
 // Example of an object in multiple lists:
-// struct Fruit; // tags only need a forward reference, definition not required
-// struct Color;
-// struct MyObj : ListBaseLink<MyObj, Fruit>, ListBaseLink<MyObj, Color> {};
+// struct Fruit; // tags only need to be a forward reference, the definition 
+// struct Color; //   is not required.
+// struct MyObj : ListBaseLink<Fruit>, ListBaseLink<Color> {};
 // List<MyObj, Fruit> fruits;
 // List<MyObj, Color> colors;
 // auto apple = new MyObj;
@@ -53,7 +53,7 @@ struct LinkDefault;
 *
 ***/
 
-template <typename T, typename Tag = LinkDefault> 
+template <typename Tag = LinkDefault> 
 class ListBaseLink : public NoCopy {
 public:
     ListBaseLink();
@@ -74,40 +74,40 @@ private:
 };
 
 //===========================================================================
-template<typename T, typename Tag>
-ListBaseLink<T, Tag>::ListBaseLink () {
+template<typename Tag>
+ListBaseLink<Tag>::ListBaseLink () {
     construct();
 }
 
 //===========================================================================
-template<typename T, typename Tag>
-ListBaseLink<T, Tag>::~ListBaseLink () {
+template<typename Tag>
+ListBaseLink<Tag>::~ListBaseLink () {
     detach();
 }
 
 //===========================================================================
-template<typename T, typename Tag>
-void ListBaseLink<T, Tag>::unlink() {
+template<typename Tag>
+void ListBaseLink<Tag>::unlink() {
     assert(linked());
     detach();
     construct();
 }
 
 //===========================================================================
-template<typename T, typename Tag>
-bool ListBaseLink<T, Tag>::linked() const {
+template<typename Tag>
+bool ListBaseLink<Tag>::linked() const {
     return m_prevLink != this;
 }
 
 //===========================================================================
-template<typename T, typename Tag>
-void ListBaseLink<T, Tag>::construct() {
+template<typename Tag>
+void ListBaseLink<Tag>::construct() {
     m_prevLink = m_nextLink = this;
 }
 
 //===========================================================================
-template<typename T, typename Tag>
-void ListBaseLink<T, Tag>::detach() {
+template<typename Tag>
+void ListBaseLink<Tag>::detach() {
     m_nextLink->m_prevLink = m_prevLink;
     m_prevLink->m_nextLink = m_nextLink;
 }
@@ -177,7 +177,11 @@ class List : public NoCopy {
 public:
     using iterator = ListIterator<List, T>;
     using const_iterator = ListIterator<const List, const T>;
-    using link_type = ListBaseLink<T, Tag>;
+    using link_type = ListBaseLink<Tag>;
+    static_assert(
+        std::is_base_of_v<link_type, T>, 
+        "List member type must be derived from ListBaseLink<Tag>"
+    );
 
 public:
     List() {}
