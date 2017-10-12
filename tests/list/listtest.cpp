@@ -23,7 +23,7 @@ using namespace Dim;
 
 namespace {
 
-class TestNode : public ListBaseLink<TestNode> {
+class TestNode : public ListBaseLink<> {
 public:
     unsigned m_value;
 };

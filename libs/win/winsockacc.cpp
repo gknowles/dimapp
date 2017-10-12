@@ -38,7 +38,7 @@ public:
 };
 
 class ListenSocket 
-    : public ListBaseLink<ListenSocket>
+    : public ListBaseLink<>
     , public IWinEventWaitNotify 
 {
 public:

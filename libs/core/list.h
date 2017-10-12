@@ -53,7 +53,7 @@ struct LinkDefault;
 *
 ***/
 
-template <typename T, typename Tag = LinkDefault> 
+template <typename Tag = LinkDefault> 
 class ListBaseLink : public NoCopy {
 public:
     ListBaseLink();
@@ -74,40 +74,40 @@ private:
 };
 
 //===========================================================================
-template<typename T, typename Tag>
-ListBaseLink<T, Tag>::ListBaseLink () {
+template<typename Tag>
+ListBaseLink<Tag>::ListBaseLink () {
     construct();
 }
 
 //===========================================================================
-template<typename T, typename Tag>
-ListBaseLink<T, Tag>::~ListBaseLink () {
+template<typename Tag>
+ListBaseLink<Tag>::~ListBaseLink () {
     detach();
 }
 
 //===========================================================================
-template<typename T, typename Tag>
-void ListBaseLink<T, Tag>::unlink() {
+template<typename Tag>
+void ListBaseLink<Tag>::unlink() {
     assert(linked());
     detach();
     construct();
 }
 
 //===========================================================================
-template<typename T, typename Tag>
-bool ListBaseLink<T, Tag>::linked() const {
+template<typename Tag>
+bool ListBaseLink<Tag>::linked() const {
     return m_prevLink != this;
 }
 
 //===========================================================================
-template<typename T, typename Tag>
-void ListBaseLink<T, Tag>::construct() {
+template<typename Tag>
+void ListBaseLink<Tag>::construct() {
     m_prevLink = m_nextLink = this;
 }
 
 //===========================================================================
-template<typename T, typename Tag>
-void ListBaseLink<T, Tag>::detach() {
+template<typename Tag>
+void ListBaseLink<Tag>::detach() {
     m_nextLink->m_prevLink = m_prevLink;
     m_prevLink->m_nextLink = m_nextLink;
 }
@@ -177,7 +177,11 @@ class List : public NoCopy {
 public:
     using iterator = ListIterator<List, T>;
     using const_iterator = ListIterator<const List, const T>;
-    using link_type = ListBaseLink<T, Tag>;
+    using link_type = ListBaseLink<Tag>;
+    static_assert(
+        std::is_base_of_v<link_type, T>, 
+        "List member type must be derived from ListBaseLink<Tag>"
+    );
 
 public:
     List() {}

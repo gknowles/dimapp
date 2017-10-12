@@ -32,7 +32,7 @@ const Duration kTimerDefaultMinWait = (std::chrono::seconds) 2;
 template <typename T, typename Tag = LinkDefault> class TimerList;
 
 template <typename T, typename Tag = LinkDefault>
-class ITimerListNotify : public ListBaseLink<T, Tag> {
+class ITimerListNotify : public ListBaseLink<Tag> {
 public:
     virtual ~ITimerListNotify() = default;
     virtual void onTimer(TimePoint now, Tag tag = {}) = 0;
@@ -42,7 +42,7 @@ private:
 };
 
 template <typename T>
-class ITimerListNotify<T, LinkDefault> : public ListBaseLink<T, LinkDefault> {
+class ITimerListNotify<T, LinkDefault> : public ListBaseLink<LinkDefault> {
 public:
     virtual ~ITimerListNotify() = default;
     virtual void onTimer(TimePoint now) = 0;
