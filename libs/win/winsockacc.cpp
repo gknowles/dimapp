@@ -293,9 +293,10 @@ void AcceptSocket::onAccept(
         return;
     }
 
+    auto notify = listen->m_notify->onFactoryCreate();
     {
         lock_guard<mutex> lk{s_mut};
-        m_notify = listen->m_notify->onFactoryCreate().release();
+        m_notify = notify.release();
         listen->m_inThread = this_thread::get_id();
         listen->m_inNotify = true;
     }
