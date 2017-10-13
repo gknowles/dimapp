@@ -307,10 +307,13 @@ void ConnSocket::onConnect(int error, int bytes) {
 ***/
 
 namespace {
+
 class ShutdownNotify : public IShutdownNotify {
     void onShutdownConsole(bool firstTry) override;
 };
+
 } // namespace
+
 static ShutdownNotify s_cleanup;
 
 //===========================================================================

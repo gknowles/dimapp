@@ -15,39 +15,32 @@ namespace Dim {
 
 /****************************************************************************
 *
-*   Load DLL Proc
+*   Util
 *
 ***/
+
+//---------------------------------------------------------------------------
+// Load DLL Proc
+
+FARPROC winLoadProc(const char lib[], const char proc[], bool optional);
 
 //===========================================================================
 template <typename FN>
-static void loadProc(
+static void winLoadProc(
     FN & fn, 
     const char lib[], 
-    const char func[], 
+    const char proc[], 
     bool optional = false
 ) {
-    HMODULE mod = LoadLibrary(lib);
-    if (!mod) {
-        if (!optional)
-            logMsgCrash() << "LoadLibrary(" << lib << "): " << WinError{};
-        fn = nullptr;
-        return;
-    }
-
-    fn = (FN)GetProcAddress(mod, func);
-    if (!fn) {
-        if (!optional)
-            logMsgCrash() << "GetProcAddress(" << func << "): " << WinError{};
-    }
+    // FN must be pointer to function, which will be set to the address of
+    // the lib/proc being loaded.
+    static_assert(std::is_pointer_v<FN>);
+    static_assert(std::is_function_v<std::pointer_traits<FN>::element_type>);
+    fn = (FN) winLoadProc(lib, proc, optional);
 }
 
-
-/****************************************************************************
-*
-*   Overlapped
-*
-***/
+//---------------------------------------------------------------------------
+// Overlapped
 
 struct WinOverlappedEvent {
     OVERLAPPED overlapped{};

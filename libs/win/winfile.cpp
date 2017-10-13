@@ -170,6 +170,9 @@ void IFileOpBase::run() {
     m_state = kRunning;
     winSetOverlapped(m_iocpEvt, m_offset);
 
+    // Set m_err to pending now, because if onRun() launches it asyncronously 
+    // there's no chance to change it. If it's not async, m_err will be set to 
+    // something appropriate after onRun() returns.
     m_err = ERROR_IO_PENDING;
     if (onRun()) {
         m_err = ERROR_SUCCESS;
@@ -359,10 +362,10 @@ void Dim::iFileInitialize() {
     GetSystemInfo(&si);
     s_pageSize = si.dwPageSize;
 
-    loadProc(s_NtCreateSection, "ntdll", "NtCreateSection");
-    loadProc(s_NtMapViewOfSection, "ntdll", "NtMapViewOfSection");
-    loadProc(s_NtUnmapViewOfSection, "ntdll", "NtUnmapViewOfSection");
-    loadProc(s_NtClose, "ntdll", "NtClose");
+    winLoadProc(s_NtCreateSection, "ntdll", "NtCreateSection");
+    winLoadProc(s_NtMapViewOfSection, "ntdll", "NtMapViewOfSection");
+    winLoadProc(s_NtUnmapViewOfSection, "ntdll", "NtUnmapViewOfSection");
+    winLoadProc(s_NtClose, "ntdll", "NtClose");
 
     s_hq = taskCreateQueue("File IO", 2);
 
@@ -817,24 +820,4 @@ void Dim::fileExtendView(FileHandle f, int64_t length) {
         logMsgDebug() << "VirtualAlloc(" << file->m_path << "): " << ptr
                       << " (expected " << file->m_view << ")";
     }
-}
-
-
-/****************************************************************************
-*
-*   Public Overlapped API
-*
-***/
-
-//===========================================================================
-void Dim::winSetOverlapped(
-    WinOverlappedEvent & evt,
-    int64_t off,
-    HANDLE event
-) {
-    evt.overlapped = {};
-    evt.overlapped.Offset = (DWORD)off;
-    evt.overlapped.OffsetHigh = (DWORD)(off >> 32);
-    if (event != INVALID_HANDLE_VALUE)
-        evt.overlapped.hEvent = event;
 }

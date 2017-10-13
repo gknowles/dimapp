@@ -11,22 +11,6 @@ using namespace Dim;
 
 /****************************************************************************
 *
-*   Incomplete public types
-*
-***/
-
-
-/****************************************************************************
-*
-*   Private declarations
-*
-***/
-
-namespace {} // namespace
-
-
-/****************************************************************************
-*
 *   Variables
 *
 ***/
@@ -76,7 +60,9 @@ static void iocpDispatchThread() {
             for (unsigned i = 0; i < found; ++i) {
                 if (used[i])
                     continue;
-                auto evt = (WinOverlappedEvent *) entries[i].lpOverlapped;
+                auto evt = reinterpret_cast<WinOverlappedEvent *>(
+                    entries[i].lpOverlapped
+                );
                 auto val = evt->hq.pos;
                 if (match == numeric_limits<int>::max())
                     match = val;
@@ -109,11 +95,14 @@ static void iocpDispatchThread() {
 ***/
 
 namespace {
+
 class ShutdownNotify : public IShutdownNotify {
     void onShutdownConsole(bool firstTry) override;
     bool m_closing{false};
 };
+
 } // namespace
+
 static ShutdownNotify s_cleanup;
 
 //===========================================================================

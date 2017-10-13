@@ -91,7 +91,8 @@ std::ostream & Dim::operator<<(std::ostream & os, const WinError & val) {
         0, // language
         buf,
         (DWORD)size(buf),
-        NULL);
+        NULL
+    );
 
     // trim trailing whitespace (i.e. \r\n)
     char * ptr = buf + strlen(buf) - 1;
@@ -115,8 +116,8 @@ std::ostream & Dim::operator<<(std::ostream & os, const WinError & val) {
 
 //===========================================================================
 void Dim::winErrorInitialize() {
-    loadProc(s_NtStatusToDosError, "ntdll", "RtlNtStatusToDosError");
-    loadProc(
+    winLoadProc(s_NtStatusToDosError, "ntdll", "RtlNtStatusToDosError");
+    winLoadProc(
         s_SecurityStatusToNtStatus, 
         "ntoskrnl.exe", 
         "RtlMapSecurityErrorToNtStatus"

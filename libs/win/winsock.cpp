@@ -171,7 +171,10 @@ void SocketBase::disconnect(ISocketNotify * notify) {
 
 //===========================================================================
 // static 
-void SocketBase::setNotify(ISocketNotify * notify, ISocketNotify * newNotify) {
+void SocketBase::setNotify(
+    ISocketNotify * notify, 
+    ISocketNotify * newNotify
+) {
     unique_lock<mutex> lk{s_mut};
     if (notify->m_socket) {
         assert(!newNotify->m_socket);
@@ -327,9 +330,11 @@ void SocketBase::queueRead_LK() {
 void SocketBase::onWrite(SocketWriteTask * task) {
     unique_lock<mutex> lk{s_mut};
 
-    auto it = find_if(m_sending.begin(), m_sending.end(), [task](auto && val) {
-        return &val == task;
-    });
+    auto it = find_if(
+        m_sending.begin(), 
+        m_sending.end(), 
+        [task](auto && val) { return &val == task; }
+    );
     assert(it != m_sending.end());
     m_sending.erase(it);
     m_numSending -= 1;
@@ -351,11 +356,15 @@ void SocketBase::queueWrite_LK(unique_ptr<SocketBuffer> buffer, size_t bytes) {
 
     if (!m_unsent.empty()) {
         auto & back = m_unsent.back();
-        int count =
-            min(back.m_buffer->len - (int)back.m_rbuf.Length, (int)bytes);
-        if (count) {
+        if (int count = min(
+            back.m_buffer->len - (int)back.m_rbuf.Length, 
+            (int)bytes
+        )) {
             memcpy(
-                back.m_buffer->data + back.m_rbuf.Length, buffer->data, count);
+                back.m_buffer->data + back.m_rbuf.Length, 
+                buffer->data, 
+                count
+            );
             back.m_rbuf.Length += count;
             bytes -= count;
             if (bytes) {
@@ -397,10 +406,13 @@ void SocketBase::queueWriteFromUnsent_LK() {
 ***/
 
 namespace {
+
 class ShutdownNotify : public IShutdownNotify {
     void onShutdownConsole(bool firstTry) override;
 };
+
 } // namespace
+
 static ShutdownNotify s_cleanup;
 
 //===========================================================================
@@ -439,7 +451,7 @@ void Dim::iSocketInitialize() {
     WinError err = WSAStartup(WINSOCK_VERSION, &data);
     if (err || data.wVersion != WINSOCK_VERSION) {
         logMsgCrash() << "WSAStartup(version=" << hex << WINSOCK_VERSION
-                      << "): " << err << ", version " << data.wVersion;
+            << "): " << err << ", version " << data.wVersion;
     }
 
     // get extension functions
@@ -550,9 +562,13 @@ SOCKET Dim::iSocketCreate() {
         logMsgError() << "WSAIoctl(SIO_LOOPBACK_FAST_PATH): " << WinError{};
     }
 
-    if (SOCKET_ERROR
-        == setsockopt(
-               handle, SOL_SOCKET, TCP_NODELAY, (char *)&yes, sizeof(yes))) {
+    if (SOCKET_ERROR == setsockopt(
+        handle, 
+        SOL_SOCKET, 
+        TCP_NODELAY, 
+        (char *)&yes, 
+        sizeof(yes)
+    )) {
         logMsgError() << "WSAIoctl(FIONBIO): " << WinError{};
     }
 

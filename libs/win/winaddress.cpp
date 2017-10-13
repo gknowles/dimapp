@@ -114,6 +114,7 @@ void Dim::copy(Endpoint * out, const sockaddr_storage & storage) {
 ***/
 
 namespace {
+
 struct QueryTask : ITaskNotify {
     WinOverlappedEvent evt{};
     ADDRINFOEXW * results{nullptr};
@@ -126,6 +127,7 @@ struct QueryTask : ITaskNotify {
 
     void onTask() override;
 };
+
 } // namespace
 
 //===========================================================================
@@ -137,10 +139,13 @@ static unordered_map<int, QueryTask> s_tasks;
 //===========================================================================
 // Callback
 //===========================================================================
-static void CALLBACK
-addressQueryCallback(DWORD error, DWORD bytes, OVERLAPPED * overlapped) {
-    QueryTask * task =
-        static_cast<QueryTask *>(((WinOverlappedEvent *)overlapped)->notify);
+static void CALLBACK addressQueryCallback(
+    DWORD error, 
+    DWORD bytes, 
+    OVERLAPPED * overlapped
+) {
+    auto evt = reinterpret_cast<WinOverlappedEvent *>(overlapped);
+    auto task = static_cast<QueryTask *>(evt->notify);
     task->err = error;
     if (task->results) {
         ADDRINFOEXW * result = task->results;
@@ -177,7 +182,8 @@ void Dim::endpointQuery(
     int * cancelId,
     IEndpointNotify * notify,
     string_view name,
-    int defaultPort) {
+    int defaultPort
+) {
     QueryTask * task{nullptr};
     for (;;) {
         *cancelId = ++s_lastCancelId;
@@ -200,17 +206,8 @@ void Dim::endpointQuery(
     }
 
     // Async completion requires wchar version of
-    wstring wname;
+    wstring wname{toWstring(name)};
     wstring wport{to_wstring(defaultPort)};
-    wname.resize(name.size() + 1);
-    int chars = MultiByteToWideChar(
-        CP_UTF8,
-        0,
-        name.data(),
-        (int)name.size(),
-        (wchar_t *)wname.data(),
-        (int)wname.size());
-    wname.resize(chars);
 
     // extract non-default port if present in name
     size_t pos = wname.rfind(L':');
@@ -229,7 +226,8 @@ void Dim::endpointQuery(
         NULL, // timeout
         &task->evt.overlapped,
         &addressQueryCallback,
-        &task->cancel);
+        &task->cancel
+    );
     if (err != ERROR_IO_PENDING)
         addressQueryCallback(err, 0, &task->evt.overlapped);
 }
@@ -249,7 +247,8 @@ void Dim::addressGetLocal(std::vector<Address> * out) {
         "..localmachine",
         NULL, // service name
         NULL, // hints
-        &result);
+        &result
+    );
     if (err)
         logMsgCrash() << "getaddrinfo(..localmachine): " << err;
 

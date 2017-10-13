@@ -124,6 +124,7 @@
 # libs/win/winconsole.cpp
 # libs/win/winenv.cpp
 # libs/win/winerror.cpp
+# libs/win/winevent.cpp
 # libs/win/winfile.cpp
 # libs/win/winfilemon.cpp
 # libs/win/winint.h
@@ -135,9 +136,9 @@
 # libs/win/winsockbuf.cpp
 # libs/win/winsockconn.cpp
 # libs/win/winsockint.h
-# libs/win/winsync.cpp
 # libs/win/winthread.cpp
 # libs/win/wintime.cpp
+# libs/win/winutil.cpp
 # libs/wintls/pch.cpp
 # libs/wintls/pch.h
 # libs/wintls/wintls.h

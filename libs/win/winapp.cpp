@@ -129,25 +129,20 @@ static LRESULT CALLBACK perfWindowProc(
     case WM_TIMER:
         updateList(wnd);
         return 0;
-
     case WM_CREATE:
         createList(wnd);
         return 0;
-
     case WM_SIZE:
         moveList(wnd);
         return 0;
-
     case WM_CLOSE:
         // the shutdown handler will post a WM_USER_CLOSEWINDOW event
         appSignalShutdown();
         return 0;
-
     case WM_USER_CLOSEWINDOW:
         // used to close the window but not the app
         DestroyWindow(wnd);
         return 0;
-
     case WM_DESTROY:
         PostQuitMessage(0);
         return 0;
@@ -203,6 +198,7 @@ static HWND createPerfWindow() {
 ***/
 
 namespace {
+
 class MessageLoopTask : public ITaskNotify {
 public:
     enum Authority {
@@ -225,7 +221,9 @@ private:
     condition_variable m_cv;
     HWND m_wnd{NULL};
 };
+
 } // namespace
+
 static MessageLoopTask s_windowTask;
 static TaskQueueHandle s_taskq;
 static auto & s_cliEnable = Cli{}.opt<bool>("appwin")
@@ -320,14 +318,14 @@ void MessageLoopTask::onTask() {
 ***/
 
 namespace {
-class EnableNotify 
-    : public IConfigNotify 
-    , public ITaskNotify
-{
+
+class EnableNotify : public IConfigNotify, public ITaskNotify {
     void onConfigChange(const XDocument & doc) override;
     void onTask() override;
 };
+
 } // namespace
+
 static EnableNotify s_notify;
 
 //===========================================================================
@@ -350,10 +348,13 @@ void EnableNotify::onTask() {
 ***/
 
 namespace {
+
 class ShutdownNotify : public IShutdownNotify {
     void onShutdownConsole(bool firstTry) override;
 };
+
 } // namespace
+
 static ShutdownNotify s_cleanup;
 
 //===========================================================================

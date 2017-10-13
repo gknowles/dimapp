@@ -27,7 +27,6 @@ const unsigned kDefaultBufferSliceSize = 4096;
 
 static void destroyBufferSlice(void * ptr);
 
-//===========================================================================
 namespace {
 
 struct BufferSlice {
@@ -128,7 +127,8 @@ static void createEmptyBuffer() {
         bytes,
         MEM_COMMIT | MEM_RESERVE
             | (bytes > s_minLargeAlloc ? MEM_LARGE_PAGES : 0),
-        PAGE_READWRITE);
+        PAGE_READWRITE
+    );
     assert(buf.base);
 
     buf.id = s_rio.RIORegisterBuffer(buf.base, (DWORD)bytes);
@@ -200,10 +200,13 @@ SocketBuffer::~SocketBuffer() {
 ***/
 
 namespace {
+
 class ShutdownNotify : public IShutdownNotify {
     void onShutdownConsole(bool firstTry) override;
 };
+
 } // namespace
+
 static ShutdownNotify s_cleanup;
 
 //===========================================================================
