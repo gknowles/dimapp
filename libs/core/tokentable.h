@@ -42,6 +42,10 @@ private:
         int nameLen{0};
         size_t hash{0};
     };
+    // Allow reinterpret_cast to/from Token
+    static_assert(std::is_standard_layout_v<Value>);
+    static_assert(offsetof(Value, token) == 0);
+
     struct Index {
         int pos{0};
         int distance{-1};

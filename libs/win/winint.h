@@ -47,6 +47,9 @@ struct WinOverlappedEvent {
     ITaskNotify * notify{nullptr};
     TaskQueueHandle hq = {};
 };
+// Allow reinterpret_cast to/from OVERLAPPED
+static_assert(std::is_standard_layout_v<WinOverlappedEvent>);
+static_assert(offsetof(WinOverlappedEvent, overlapped) == 0);
 
 void winSetOverlapped(
     WinOverlappedEvent & evt,
