@@ -232,7 +232,9 @@ void SocketBase::hardClose_LK() {
     if (m_handle == INVALID_SOCKET)
         return;
 
+    // force immediate close by enabling shutdown timeout and setting it to 0
     linger opt = {};
+    opt.l_linger = true;
     setsockopt(m_handle, SOL_SOCKET, SO_LINGER, (char *)&opt, sizeof(opt));
     closesocket(m_handle);
 
