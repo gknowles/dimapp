@@ -185,27 +185,26 @@ bool AcceptSocket::accept(ListenSocket * listen) {
     sock->m_mode = Mode::kAccepting;
     listen->m_socket = move(sock);
 
-    bool error = !fAcceptEx(
-        listen->m_handle,
-        listen->m_socket->m_handle,
-        listen->m_addrBuf,
-        0,                       // receive data length
-        sizeof sockaddr_storage, // local endpoint length
-        sizeof sockaddr_storage, // remote endpoint length
-        nullptr,                 // bytes received
-        &listen->m_overlapped
-    );
-    WinError err;
-    if (!error || err != ERROR_IO_PENDING) {
-        if (err == WSAENOTSOCK && listen->m_handle == INVALID_SOCKET) {
-            // socket intentionally closed
-        } else {
-            logMsgError() << "AcceptEx(" << listen->m_localEnd << "): " << err;
-        }
-        listen->m_socket.reset();
-        return closeListen(listen);
+    if (listen->m_handle != INVALID_SOCKET) {
+        bool error = !fAcceptEx(
+            listen->m_handle,
+            listen->m_socket->m_handle,
+            listen->m_addrBuf,
+            0,                       // receive data length
+            sizeof sockaddr_storage, // local endpoint length
+            sizeof sockaddr_storage, // remote endpoint length
+            nullptr,                 // bytes received
+            &listen->m_overlapped
+        );
+        WinError err;
+        if (error && err == ERROR_IO_PENDING)
+            return true;
+
+        logMsgError() << "AcceptEx(" << listen->m_localEnd << "): " << err;
     }
-    return true;
+
+    listen->m_socket.reset();
+    return closeListen(listen);
 }
 
 //===========================================================================
