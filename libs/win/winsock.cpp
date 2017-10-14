@@ -545,7 +545,7 @@ SOCKET Dim::iSocketCreate() {
         FILE_SKIP_SET_EVENT_ON_HANDLE
     )) {
         logMsgError() 
-            << "SetFileCompletionNotificationModes(SKIP_EVENT_ON_HANDLE)" 
+            << "SetFileCompletionNotificationModes(SKIP_EVENT_ON_HANDLE): " 
             << WinError{};
     }
 
@@ -571,7 +571,7 @@ SOCKET Dim::iSocketCreate() {
         (char *)&yes, 
         sizeof(yes)
     )) {
-        logMsgError() << "WSAIoctl(FIONBIO): " << WinError{};
+        logMsgError() << "WSAIoctl(TCP_NODELAY): " << WinError{};
     }
 
 #ifdef SO_REUSE_UNICASTPORT
