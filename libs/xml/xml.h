@@ -186,7 +186,9 @@ public:
     ~XStreamParser();
 
     void clear();
-    bool parse(char src[]);
+
+    // Parses a document without first clearing the temp heap
+    bool parseMore(char src[]);
 
     bool fail(const char errmsg[]);
 

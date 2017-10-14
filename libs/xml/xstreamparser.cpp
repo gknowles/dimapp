@@ -29,10 +29,9 @@ void XStreamParser::clear() {
 }
 
 //===========================================================================
-bool XStreamParser::parse(char src[]) {
+bool XStreamParser::parseMore(char src[]) {
     m_line = 0;
     m_errmsg = nullptr;
-    m_heap.clear();
     m_base = m_heap.emplace<Detail::XmlBaseParser>(*this);
     m_notify.startDoc();
     if (!m_base->parse(src))

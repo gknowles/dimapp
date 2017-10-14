@@ -146,9 +146,9 @@ int main(int argc, char * argv[]) {
     in.close();
 
     XDocument doc;
-    auto root = doc.parse(content.data());
+    auto root = doc.parse(content.data(), *path);
     if (root && !doc.errmsg()) {
-        cout << "File is well-formed." << endl;
+        cout << "File '" << doc.filename() << "' is well-formed." << endl;
         if (*echo) {
             cout << endl;
             CharBuf out;

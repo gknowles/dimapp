@@ -90,7 +90,6 @@ ParserNotify::ParserNotify(XDocument & doc)
 
 //===========================================================================
 bool ParserNotify::startDoc() {
-    m_doc.clear();
     m_curElem = nullptr;
     return true;
 }
@@ -161,7 +160,7 @@ XNode * XDocument::parse(char src[], string_view filename) {
         m_filename = m_heap.strdup(filename);
     ParserNotify notify(*this);
     XStreamParser parser(notify);
-    if (!parser.parse(src)) {
+    if (!parser.parseMore(src)) {
         m_errmsg = parser.errmsg();
         m_errpos = parser.errpos();
         return nullptr;
