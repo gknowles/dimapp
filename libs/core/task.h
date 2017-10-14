@@ -21,6 +21,8 @@ namespace Dim {
 
 struct TaskQueueHandle : HandleBase {};
 
+class TaskQueue;
+
 class ITaskNotify {
 public:
     virtual ~ITaskNotify() = default;

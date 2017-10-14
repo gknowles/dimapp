@@ -21,6 +21,8 @@ struct SocketData {
     int bytes;
 };
 
+class SocketBase;
+
 class ISocketNotify {
 public:
     enum Mode {

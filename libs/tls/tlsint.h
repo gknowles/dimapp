@@ -82,6 +82,9 @@ bool tlsParse(TlsServerHelloMsg * msg, TlsRecordReader & in);
 *
 ***/
 
+class TlsRecordWriter;
+class TlsRecordReader;
+
 class TlsConnBase 
     : public ITlsRecordDecryptNotify
     , public HandleContent

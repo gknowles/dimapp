@@ -28,6 +28,8 @@ const auto kTimerInfinite = Duration::max();
 *
 ***/
 
+class Timer;
+
 class ITimerNotify {
 public:
     virtual ~ITimerNotify();

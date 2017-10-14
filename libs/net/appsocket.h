@@ -51,6 +51,8 @@ struct AppSocketData {
 *
 ***/
 
+class IAppSocket;
+
 class IAppSocketNotify {
 public:
     virtual ~IAppSocketNotify () = default;

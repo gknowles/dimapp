@@ -65,7 +65,6 @@ protected:
     AppSocketInfo m_accept;
 
 private:
-    friend class UnmatchedTimer;
     Duration checkTimeout_LK(TimePoint now);
     void setNotify(std::unique_ptr<IAppSocketNotify> notify);
 
