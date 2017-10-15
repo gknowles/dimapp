@@ -42,6 +42,10 @@ public:
     using Mode = ISocketNotify::Mode;
 
 public:
+    static LPFN_ACCEPTEX s_AcceptEx;
+    static LPFN_GETACCEPTEXSOCKADDRS s_GetAcceptExSockaddrs;
+    static LPFN_CONNECTEX s_ConnectEx;
+
     static SocketBase::Mode getMode(ISocketNotify * notify);
     static void disconnect(ISocketNotify * notify);
     static void setNotify(ISocketNotify * notify, ISocketNotify * newNotify);

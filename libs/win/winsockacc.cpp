@@ -163,30 +163,11 @@ bool AcceptSocket::accept(ListenSocket * listen) {
     if (sock->m_handle == INVALID_SOCKET)
         return closeListen(listen);
 
-    // get AcceptEx function
-    GUID extId = WSAID_ACCEPTEX;
-    LPFN_ACCEPTEX fAcceptEx;
-    DWORD bytes;
-    if (WSAIoctl(
-        sock->m_handle,
-        SIO_GET_EXTENSION_FUNCTION_POINTER,
-        &extId,
-        sizeof(extId),
-        &fAcceptEx,
-        sizeof(fAcceptEx),
-        &bytes,
-        nullptr, // overlapped
-        nullptr  // completion routine
-    )) {
-        logMsgError() << "WSAIoctl(get AcceptEx): " << WinError{};
-        return closeListen(listen);
-    }
-
     sock->m_mode = Mode::kAccepting;
     listen->m_socket = move(sock);
 
     if (listen->m_handle != INVALID_SOCKET) {
-        bool error = !fAcceptEx(
+        bool error = !s_AcceptEx(
             listen->m_handle,
             listen->m_socket->m_handle,
             listen->m_addrBuf,
@@ -215,29 +196,11 @@ AcceptSocket::~AcceptSocket() {
 
 //===========================================================================
 static bool getAcceptInfo(SocketInfo * out, SOCKET s, void * buffer) {
-    GUID extId = WSAID_GETACCEPTEXSOCKADDRS;
-    LPFN_GETACCEPTEXSOCKADDRS fGetAcceptExSockAddrs;
-    DWORD bytes;
-    if (WSAIoctl(
-        s,
-        SIO_GET_EXTENSION_FUNCTION_POINTER,
-        &extId,
-        sizeof(extId),
-        &fGetAcceptExSockAddrs,
-        sizeof(fGetAcceptExSockAddrs),
-        &bytes,
-        nullptr, // overlapped
-        nullptr  // completion routine
-    )) {
-        logMsgError() << "WSAIoctl(get GetAcceptExSockAddrs): " << WinError{};
-        return false;
-    }
-
     sockaddr * lsa;
     int lsaLen;
     sockaddr * rsa;
     int rsaLen;
-    fGetAcceptExSockAddrs(
+    SocketBase::s_GetAcceptExSockaddrs(
         buffer,
         0,
         sizeof(sockaddr_storage),

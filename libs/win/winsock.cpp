@@ -151,6 +151,11 @@ void SocketWriteTask::onTask() {
 *
 ***/
 
+// static
+LPFN_ACCEPTEX SocketBase::s_AcceptEx;
+LPFN_GETACCEPTEXSOCKADDRS SocketBase::s_GetAcceptExSockaddrs;
+LPFN_CONNECTEX SocketBase::s_ConnectEx;
+
 //===========================================================================
 // static
 SocketBase::Mode SocketBase::getMode(ISocketNotify * notify) {
@@ -483,7 +488,54 @@ void Dim::iSocketInitialize() {
         nullptr, // overlapped
         nullptr  // completion routine
     )) {
-        logMsgCrash() << "WSAIoctl(get RIO extension): " << WinError{};
+        logMsgCrash() << "WSAIoctl(get RIO functions): " << WinError{};
+    }
+
+    // get AcceptEx function
+    extId = WSAID_ACCEPTEX;
+    if (WSAIoctl(
+        s,
+        SIO_GET_EXTENSION_FUNCTION_POINTER,
+        &extId,
+        sizeof(extId),
+        &SocketBase::s_AcceptEx,
+        sizeof(SocketBase::s_AcceptEx),
+        &bytes,
+        nullptr, // overlapped
+        nullptr  // completion routine
+    )) {
+        logMsgCrash() << "WSAIoctl(get AcceptEx): " << WinError{};
+    }
+
+    extId = WSAID_GETACCEPTEXSOCKADDRS;
+    if (WSAIoctl(
+        s,
+        SIO_GET_EXTENSION_FUNCTION_POINTER,
+        &extId,
+        sizeof(extId),
+        &SocketBase::s_GetAcceptExSockaddrs,
+        sizeof(SocketBase::s_GetAcceptExSockaddrs),
+        &bytes,
+        nullptr, // overlapped
+        nullptr  // completion routine
+    )) {
+        logMsgCrash() << "WSAIoctl(get GetAcceptExSockAddrs): " << WinError{};
+    }
+
+    // get ConnectEx function
+    extId = WSAID_CONNECTEX;
+    if (WSAIoctl(
+        s,
+        SIO_GET_EXTENSION_FUNCTION_POINTER,
+        &extId,
+        sizeof(extId),
+        &SocketBase::s_ConnectEx,
+        sizeof(SocketBase::s_ConnectEx),
+        &bytes,
+        nullptr, // overlapped
+        nullptr  // completion routine
+    )) {
+        logMsgCrash() << "WSAIoctl(get ConnectEx): " << WinError{};
     }
 
     int piLen = sizeof(s_protocolInfo);

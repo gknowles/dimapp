@@ -183,25 +183,6 @@ void ConnSocket::connect(
     if (sock->m_handle == INVALID_SOCKET)
         return pushConnectFailed(notify);
 
-    // get ConnectEx function
-    GUID extId = WSAID_CONNECTEX;
-    LPFN_CONNECTEX fConnectEx;
-    DWORD bytes;
-    if (WSAIoctl(
-        sock->m_handle,
-        SIO_GET_EXTENSION_FUNCTION_POINTER,
-        &extId,
-        sizeof(extId),
-        &fConnectEx,
-        sizeof(fConnectEx),
-        &bytes,
-        nullptr, // overlapped
-        nullptr  // completion routine
-    )) {
-        logMsgError() << "WSAIoctl(get ConnectEx): " << WinError{};
-        return pushConnectFailed(notify);
-    }
-
     sock->m_mode = Mode::kConnecting;
     list<ConnectTask>::iterator it;
     timerUpdate(&s_connectTimer, timeout, true);
@@ -224,7 +205,7 @@ void ConnSocket::connect(
 
     sockaddr_storage sas;
     copy(&sas, remote);
-    bool error = !fConnectEx(
+    bool error = !s_ConnectEx(
         it->m_socket->m_handle,
         (sockaddr *)&sas,
         sizeof(sas),
