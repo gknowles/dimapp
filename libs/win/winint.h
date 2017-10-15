@@ -42,20 +42,31 @@ static void winLoadProc(
 //---------------------------------------------------------------------------
 // Overlapped
 
+void winSetOverlapped(
+    OVERLAPPED & overlapped,
+    int64_t off,
+    HANDLE event = INVALID_HANDLE_VALUE
+);
+
 struct WinOverlappedEvent {
     OVERLAPPED overlapped{};
     ITaskNotify * notify{nullptr};
-    TaskQueueHandle hq = {};
+    TaskQueueHandle hq{};
 };
 // Allow reinterpret_cast to/from OVERLAPPED
 static_assert(std::is_standard_layout_v<WinOverlappedEvent>);
 static_assert(offsetof(WinOverlappedEvent, overlapped) == 0);
 
-void winSetOverlapped(
-    WinOverlappedEvent & evt,
-    int64_t off,
-    HANDLE event = INVALID_HANDLE_VALUE
-);
+class IWinOverlappedNotify : public ITaskNotify {
+public:
+    IWinOverlappedNotify(TaskQueueHandle hq = {});
+    OVERLAPPED & overlapped() { return m_evt.overlapped; }
+
+    virtual void onTask() override = 0;
+
+private:
+    WinOverlappedEvent m_evt;
+};
 
 
 /****************************************************************************
@@ -96,6 +107,8 @@ public:
     virtual void onTask() override = 0;
 
     OVERLAPPED m_overlapped{};
+
+private:
     HANDLE m_registeredWait{nullptr};
 };
 

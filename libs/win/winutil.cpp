@@ -42,13 +42,26 @@ FARPROC Dim::winLoadProc(const char lib[], const char proc[], bool optional) {
 
 //===========================================================================
 void Dim::winSetOverlapped(
-    WinOverlappedEvent & evt,
+    OVERLAPPED & overlapped,
     int64_t off,
     HANDLE event
 ) {
-    evt.overlapped = {};
-    evt.overlapped.Offset = (DWORD)off;
-    evt.overlapped.OffsetHigh = (DWORD)(off >> 32);
+    overlapped = {};
+    overlapped.Offset = (DWORD)off;
+    overlapped.OffsetHigh = (DWORD)(off >> 32);
     if (event != INVALID_HANDLE_VALUE)
-        evt.overlapped.hEvent = event;
+        overlapped.hEvent = event;
+}
+
+
+/****************************************************************************
+*
+*   IWinOverlappedNotify
+*
+***/
+
+//===========================================================================
+IWinOverlappedNotify::IWinOverlappedNotify(TaskQueueHandle hq) {
+    m_evt.notify = this;
+    m_evt.hq = hq;
 }

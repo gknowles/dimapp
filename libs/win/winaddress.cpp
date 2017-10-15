@@ -115,8 +115,7 @@ void Dim::copy(Endpoint * out, const sockaddr_storage & storage) {
 
 namespace {
 
-struct QueryTask : ITaskNotify {
-    WinOverlappedEvent evt{};
+struct QueryTask : IWinOverlappedNotify {
     ADDRINFOEXW * results{nullptr};
     IEndpointNotify * notify{nullptr};
     HANDLE cancel{nullptr};
@@ -193,7 +192,6 @@ void Dim::endpointQuery(
             break;
         }
     }
-    task->evt.notify = task;
     task->id = *cancelId;
     task->notify = notify;
 
@@ -224,12 +222,12 @@ void Dim::endpointQuery(
         NULL, // hints
         &task->results,
         NULL, // timeout
-        &task->evt.overlapped,
+        &task->overlapped(),
         &addressQueryCallback,
         &task->cancel
     );
     if (err != ERROR_IO_PENDING)
-        addressQueryCallback(err, 0, &task->evt.overlapped);
+        addressQueryCallback(err, 0, &task->overlapped());
 }
 
 //===========================================================================

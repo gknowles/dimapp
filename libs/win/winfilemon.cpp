@@ -24,7 +24,7 @@ struct FileInfo {
 };
 
 class DirInfo 
-    : public ITaskNotify
+    : public IWinOverlappedNotify
     , public ITimerNotify
     , public HandleContent
 {
@@ -55,7 +55,6 @@ private:
     string m_base;
     bool m_recurse{false}; // monitoring includes child directories?
     IFileChangeNotify * m_notify{nullptr};
-    WinOverlappedEvent m_evt;
 
     unordered_map<string, FileInfo> m_files;
     HANDLE m_handle{INVALID_HANDLE_VALUE};
@@ -108,7 +107,6 @@ bool DirInfo::start(string_view path, bool recurse) {
     m_recurse = recurse;
     fs::create_directories(fp, ec);
 
-    m_evt.notify = this;
     m_handle = CreateFile(
         m_base.c_str(), 
         FILE_LIST_DIRECTORY, // access
@@ -144,7 +142,7 @@ bool DirInfo::queue() {
         m_recurse, // include subdirs
         FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_LAST_WRITE,
         NULL, // bytes returned (not for async)
-        &m_evt.overlapped,
+        &overlapped(),
         NULL // completion routine
     )) {
         WinError err;
@@ -170,7 +168,7 @@ void DirInfo::closeWait_UNLK (FileMonitorHandle dir) {
         m_stopping = s_stopping.insert(this);
     }
 
-    if (!CancelIoEx(m_handle, &m_evt.overlapped)) {
+    if (!CancelIoEx(m_handle, &overlapped())) {
         WinError err;
         logMsgError() << "CancelIoEx(hDir): " << m_base << ", " << err;
     }
@@ -258,7 +256,7 @@ void DirInfo::removeMonitorWait_UNLK(
 void DirInfo::onTask () {
     DWORD bytes;
     WinError err{0};
-    if (!GetOverlappedResult(NULL, &m_evt.overlapped, &bytes, false)) {
+    if (!GetOverlappedResult(NULL, &overlapped(), &bytes, false)) {
         err = WinError{};
         if (err != ERROR_NOTIFY_ENUM_DIR) {
             if (err != ERROR_OPERATION_ABORTED) {

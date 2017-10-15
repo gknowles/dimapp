@@ -26,8 +26,9 @@ struct WinFileInfo : public HandleContent {
     size_t m_viewSize{0};
 };
 
-class IFileOpBase : public ITaskNotify {
+class IFileOpBase : public IWinOverlappedNotify {
 public:
+    IFileOpBase();
     virtual ~IFileOpBase();
     void start(
         WinFileInfo * file, 
@@ -42,13 +43,12 @@ public:
     virtual bool asyncOp() = 0;
     virtual const char * logOnError() = 0;
 
-    // ITaskNotify
+    // IWinOverlappedNotify
     void onTask() override;
 
 protected:
     enum State { kUnstarted, kRunning, kDestroyed };
     State m_state{kUnstarted};
-    WinOverlappedEvent m_iocpEvt;
     int64_t m_offset{0};
     int64_t m_length{0};
     bool m_trigger{false};
@@ -124,6 +124,11 @@ static HandleMap<FileHandle, WinFileInfo> s_files;
 ***/
 
 //===========================================================================
+IFileOpBase::IFileOpBase() 
+    : IWinOverlappedNotify{s_hq}
+{}
+
+//===========================================================================
 IFileOpBase::~IFileOpBase() {
     assert(m_state >= 0 && m_state < kDestroyed);
     m_state = kDestroyed; 
@@ -145,13 +150,11 @@ void IFileOpBase::start(
     m_offset = off;
     m_length = len;
 
-    m_iocpEvt.notify = this;
-    m_iocpEvt.overlapped = {};
+    overlapped() = {};
 
     if (asyncOp())
         return taskPush(s_hq, *this);
 
-    m_iocpEvt.hq = s_hq;
     if (m_file->m_mode & File::fBlocking)
         return run();
 
@@ -168,7 +171,7 @@ void IFileOpBase::start(
 //===========================================================================
 void IFileOpBase::run() {
     m_state = kRunning;
-    winSetOverlapped(m_iocpEvt, m_offset);
+    winSetOverlapped(overlapped(), m_offset);
 
     // Set m_err to pending now, because if onRun() launches it asyncronously 
     // there's no chance to change it. If it's not async, m_err will be set to 
@@ -209,7 +212,7 @@ void IFileOpBase::onTask() {
 
     if (m_err == ERROR_IO_PENDING) {
         m_err = 0;
-        if (!GetOverlappedResult(NULL, &m_iocpEvt.overlapped, &m_bytes, false))
+        if (!GetOverlappedResult(NULL, &overlapped(), &m_bytes, false))
             m_err = WinError{};
     }
 
@@ -270,7 +273,7 @@ bool FileReader::onRun() {
         m_buf + m_bufUnused, 
         (DWORD)len, 
         &m_bytes, 
-        &m_iocpEvt.overlapped
+        &overlapped()
     );
 }
 
@@ -334,7 +337,7 @@ bool FileWriter::onRun() {
         m_buf, 
         m_bufLen, 
         &m_bytes, 
-        &m_iocpEvt.overlapped
+        &overlapped()
     );
 }
 
