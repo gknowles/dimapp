@@ -98,9 +98,17 @@ inline void socketCloseWait(const Endpoint & local) {
 // write
 //===========================================================================
 struct SocketBuffer {
-    char * data;
-    int len;
+    char * const data;
+    const int capacity;
 
+    // for internal use
+    const int owner;
+
+    SocketBuffer(char * const data, int capacity, int owner) 
+        : data{data}
+        , capacity{capacity} 
+        , owner{owner}
+    {}
     ~SocketBuffer();
 };
 std::unique_ptr<SocketBuffer> socketGetBuffer();

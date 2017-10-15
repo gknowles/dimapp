@@ -160,7 +160,7 @@ void ConsoleReader::read(int64_t offset) {
     assert(m_input);
     m_bytesRead = 0;
     m_buffer = socketGetBuffer();
-    fileRead(this, m_buffer->data, m_buffer->len, m_input, offset);
+    fileRead(this, m_buffer->data, m_buffer->capacity, m_input, offset);
 }
 
 //===========================================================================

@@ -195,7 +195,7 @@ void SocketBase::write(
     unique_ptr<SocketBuffer> buffer,
     size_t bytes
 ) {
-    assert(bytes <= buffer->len);
+    assert(bytes <= buffer->capacity);
     unique_lock<mutex> lk{s_mut};
     SocketBase * sock = notify->m_socket;
     if (!sock)
@@ -251,9 +251,9 @@ bool SocketBase::createQueue() {
     // a trailing null is added to the end of the buffer after every read. 
     // It doesn't cost much and makes parsing easier for some text protocol 
     // streams.
-    int bytes = m_read.m_buffer->len - 1; 
+    int bytes = m_read.m_buffer->capacity - 1; 
 
-    iSocketGetRioBuffer(&m_read.m_rbuf, m_read.m_buffer.get(), bytes);
+    copy(&m_read.m_rbuf, *m_read.m_buffer, bytes);
 
     {
         unique_lock<mutex> lk{s_mut};
@@ -359,7 +359,7 @@ void SocketBase::queueWrite_LK(unique_ptr<SocketBuffer> buffer, size_t bytes) {
     if (!m_unsent.empty()) {
         auto & back = m_unsent.back();
         if (int count = min(
-            back.m_buffer->len - (int)back.m_rbuf.Length, 
+            back.m_buffer->capacity - (int)back.m_rbuf.Length, 
             (int)bytes
         )) {
             memcpy(
@@ -378,7 +378,7 @@ void SocketBase::queueWrite_LK(unique_ptr<SocketBuffer> buffer, size_t bytes) {
     if (bytes) {
         m_unsent.emplace_back();
         auto & task = m_unsent.back();
-        iSocketGetRioBuffer(&task.m_rbuf, buffer.get(), bytes);
+        copy(&task.m_rbuf, *buffer, bytes);
         task.m_buffer = move(buffer);
     }
 

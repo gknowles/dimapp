@@ -401,11 +401,11 @@ void RawSocket::write(string_view data) {
     while (!data.empty()) {
         if (!m_buffer) 
             m_buffer = socketGetBuffer();
-        size_t bytes = min(m_buffer->len - m_bufferUsed, data.size());
+        size_t bytes = min(m_buffer->capacity - m_bufferUsed, data.size());
         memcpy(m_buffer->data + m_bufferUsed, data.data(), bytes);
         data.remove_prefix(bytes);
         m_bufferUsed += bytes;
-        if (m_bufferUsed == m_buffer->len) {
+        if (m_bufferUsed == m_buffer->capacity) {
             socketWrite(this, move(m_buffer), m_bufferUsed);
             m_bufferUsed = 0;
         }
@@ -419,7 +419,7 @@ void RawSocket::write(unique_ptr<SocketBuffer> buffer, size_t bytes) {
     bool hadData = m_bufferUsed;
     if (hadData)
         socketWrite(this, move(m_buffer), m_bufferUsed);
-    if (bytes == buffer->len) {
+    if (bytes == buffer->capacity) {
         socketWrite(this, move(buffer), bytes);
         m_bufferUsed = 0;
     } else {

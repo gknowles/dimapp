@@ -100,6 +100,7 @@ void iSocketConnectInitialize();
 
 // Socket buffers
 void iSocketBufferInitialize(RIO_EXTENSION_FUNCTION_TABLE & rio);
-void iSocketGetRioBuffer(RIO_BUF * out, SocketBuffer * buf, size_t bytes);
+
+void copy(RIO_BUF * out, const SocketBuffer & buf, size_t bytes);
 
 } // namespace

@@ -25,15 +25,10 @@ const unsigned kDefaultBufferSliceSize = 4096;
 *
 ***/
 
-static void destroyBufferSlice(void * ptr);
-
 namespace {
 
 struct BufferSlice {
-    union {
-        int ownerPos;
-        int nextPos;
-    };
+    int nextPos;
 };
 struct Buffer {
     RIO_BUFFERID id;
@@ -86,12 +81,11 @@ static BufferSlice * getSlice(const Buffer & buf, int pos) {
 static void findBufferSlice(
     BufferSlice ** sliceOut, 
     Buffer ** bufferOut, 
-    void * ptr
+    const SocketBuffer & sbuf
 ) {
-    auto * slice = (BufferSlice *)ptr - 1;
-    assert((size_t)slice->ownerPos < s_buffers.size());
-    int rbufPos = slice->ownerPos;
-    auto * buf = &s_buffers[rbufPos];
+    auto * slice = (BufferSlice *) sbuf.data;
+    assert(sbuf.owner < s_buffers.size());
+    auto * buf = &s_buffers[sbuf.owner];
     // BufferSlice must be aligned within the owning registered buffer
     assert((char *)slice >= buf->base && slice < getSlice(*buf, buf->size));
     assert(((char *)slice - buf->base) % buf->sliceSize == 0);
@@ -148,13 +142,12 @@ static void destroyEmptyBuffer() {
 }
 
 //===========================================================================
-static void destroyBufferSlice(void * ptr) {
+static void destroyBufferSlice(const SocketBuffer & sbuf) {
     // get the header
     BufferSlice * slice;
     Buffer * pbuf;
-    findBufferSlice(&slice, &pbuf, ptr);
+    findBufferSlice(&slice, &pbuf, sbuf);
     auto & buf = *pbuf;
-    int rbufPos = slice->ownerPos;
 
     slice->nextPos = buf.firstFree;
     buf.firstFree = int((char *)slice - buf.base) / buf.sliceSize;
@@ -162,7 +155,7 @@ static void destroyBufferSlice(void * ptr) {
 
     if (buf.used == buf.reserved - 1) {
         // no longer full: move to partial list
-        if (rbufPos != s_numFull - 1)
+        if (sbuf.owner != s_numFull - 1)
             swap(buf, s_buffers[s_numFull - 1]);
         s_numFull -= 1;
         s_numPartial += 1;
@@ -170,7 +163,7 @@ static void destroyBufferSlice(void * ptr) {
         // newly empty: move to empty list
         buf.lastUsed = Clock::now();
         int pos = s_numFull + s_numPartial - 1;
-        if (rbufPos != pos)
+        if (sbuf.owner != pos)
             swap(buf, s_buffers[pos]);
         s_numPartial -= 1;
 
@@ -189,7 +182,7 @@ static void destroyBufferSlice(void * ptr) {
 
 //===========================================================================
 SocketBuffer::~SocketBuffer() {
-    destroyBufferSlice(data);
+    destroyBufferSlice(*this);
 }
 
 
@@ -244,19 +237,19 @@ void Dim::iSocketBufferInitialize(RIO_EXTENSION_FUNCTION_TABLE & rio) {
 }
 
 //===========================================================================
-void Dim::iSocketGetRioBuffer(
+void Dim::copy(
     RIO_BUF * out,
-    SocketBuffer * sbuf,
+    const SocketBuffer & sbuf,
     size_t bytes
 ) {
     lock_guard<mutex> lk{s_mut};
 
-    assert(bytes <= sbuf->len);
+    assert(bytes <= sbuf.capacity);
     BufferSlice * slice;
     Buffer * pbuf;
-    findBufferSlice(&slice, &pbuf, sbuf->data);
+    findBufferSlice(&slice, &pbuf, sbuf);
     out->BufferId = pbuf->id;
-    out->Offset = ULONG((char *)sbuf->data - (char *)pbuf->base);
+    out->Offset = ULONG((char *)sbuf.data - (char *)pbuf->base);
     out->Length = (int)bytes;
 }
 
@@ -288,13 +281,14 @@ unique_ptr<SocketBuffer> Dim::socketGetBuffer() {
         slice = getSlice(buf, buf.size);
         buf.size += 1;
     }
-    slice->ownerPos = int(&buf - s_buffers.data());
     buf.used += 1;
 
     // set pointer to just passed the header
-    auto out = make_unique<SocketBuffer>();
-    out->data = (char *)(slice + 1);
-    out->len = buf.sliceSize - sizeof(*slice);
+    auto out = make_unique<SocketBuffer>(
+        (char *) slice, 
+        buf.sliceSize,
+        int(&buf - s_buffers.data())
+    );
 
     // if the registered buffer is full move it to the back of the list
     if (buf.used == buf.reserved) {
