@@ -123,6 +123,12 @@ bool appDataPath(std::string & out, std::string_view file, bool cine = true);
 // On *nix the EX_* constants are defined in <sysexits.h>
 enum {
     EX_OK = 0,
+
+    // Exit code is being set by an asyncronously event that hasn't completed
+    EX_PENDING = 32,
+
+    // sysexits.h
+    EX__BASE = 64,       // base value for standard error codes
     EX_USAGE = 64,       // bad command line
     EX_DATAERR = 65,     // bad input file
     EX_UNAVAILABLE = 69, // failed for some other reason
@@ -134,9 +140,6 @@ enum {
 
     // Microsoft specific
     EX_ABORTED = 3, // used by CRT in assert() failures and abort()
-
-    // 100+ reserved for application
-    EX__APPBASE = 100,
 };
 
 // Signals shutdown to begin, the exitcode will be return from appRun() after
