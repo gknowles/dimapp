@@ -349,6 +349,21 @@ void Dim::strSplit(
     }
 }
 
+//===========================================================================
+string_view Dim::strTrim(string_view src) {
+    const char * first = src.data();
+    const char * last = first + src.size();
+    while (isspace(*first))
+        ++first;
+    if (!*first)
+        return {};
+    while (isspace(*--last)) {
+        if (last == first)
+            break;
+    }
+    return string_view(first, last - first + 1);
+}
+
 
 /****************************************************************************
 *

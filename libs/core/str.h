@@ -256,12 +256,12 @@ template <typename T> bool stringTo(T & out, const std::string & src) {
 *
 ***/
 
-//===========================================================================
 void strSplit(
     std::vector<std::string_view> & out, 
     std::string_view src, 
     char sep = ' '
 );
+std::string_view strTrim(std::string_view src);
 
 
 /****************************************************************************
