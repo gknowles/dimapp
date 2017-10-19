@@ -140,7 +140,7 @@ void fileRead(
     int64_t offset = 0,
     int64_t length = 0 // 0 to read until the end
 );
-void fileReadWait(
+size_t fileReadWait(
     void * outBuf,
     size_t outBufLen,
     FileHandle f,
@@ -206,7 +206,7 @@ void fileWrite(
     const void * buf,
     size_t bufLen
 );
-void fileWriteWait(
+size_t fileWriteWait(
     FileHandle f,
     int64_t offset,
     const void * buf,
@@ -218,6 +218,6 @@ void fileAppend(
     const void * buf,
     size_t bufLen
 );
-void fileAppendWait(FileHandle f, const void * buf, size_t bufLen);
+size_t fileAppendWait(FileHandle f, const void * buf, size_t bufLen);
 
 } // namespace
