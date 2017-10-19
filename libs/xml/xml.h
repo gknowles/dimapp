@@ -92,13 +92,18 @@ IXBuilder & operator<<(IXBuilder & out, int64_t val);
 IXBuilder & operator<<(IXBuilder & out, uint64_t val);
 IXBuilder & operator<<(IXBuilder & out, int val);
 IXBuilder & operator<<(IXBuilder & out, unsigned val);
+IXBuilder & operator<<(IXBuilder & out, float val);
+IXBuilder & operator<<(IXBuilder & out, double val);
+IXBuilder & operator<<(IXBuilder & out, long double val);
 IXBuilder & operator<<(IXBuilder & out, char val);
 IXBuilder & operator<<(IXBuilder & out, const char val[]);
 IXBuilder & operator<<(IXBuilder & out, std::string_view val);
 
 template <typename T>
 inline IXBuilder & operator<<(IXBuilder & out, const T & val) {
-    std::ostringstream os;
+    thread_local std::ostringstream os;
+    os.clear();
+    os.str({});
     os << val;
     return out.text(os.str());
 }

@@ -79,7 +79,9 @@ template <typename T, typename =
     std::enable_if_t<!std::is_integral_v<T> && !std::is_enum_v<T>>
 >
 inline IJBuilder & operator<<(IJBuilder & out, const T & val) {
-    std::ostringstream os;
+    thread_local std::ostringstream os;
+    os.clear();
+    os.str({});
     os << val;
     return out.value(os.str());
 }

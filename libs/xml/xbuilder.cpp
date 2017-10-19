@@ -373,6 +373,24 @@ IXBuilder & Dim::operator<<(IXBuilder & out, unsigned val) {
 }
 
 //===========================================================================
+IXBuilder & Dim::operator<<(IXBuilder & out, float val) {
+    StrFrom<float> tmp(val);
+    return out.text(tmp);
+}
+
+//===========================================================================
+IXBuilder & Dim::operator<<(IXBuilder & out, double val) {
+    StrFrom<double> tmp(val);
+    return out.text(tmp);
+}
+
+//===========================================================================
+IXBuilder & Dim::operator<<(IXBuilder & out, long double val) {
+    StrFrom<long double> tmp(val);
+    return out.text(tmp);
+}
+
+//===========================================================================
 IXBuilder & Dim::operator<<(IXBuilder & out, char val) {
     char str[] = {val, 0};
     return out.text(str);

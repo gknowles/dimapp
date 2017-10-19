@@ -246,7 +246,8 @@ IJBuilder & IJBuilder::value(bool val) {
 
 //===========================================================================
 IJBuilder & IJBuilder::value(double val) {
-    return valueRaw("*double*");
+    StrFrom<double> tmp(val);
+    return valueRaw(tmp);
 }
 
 //===========================================================================
