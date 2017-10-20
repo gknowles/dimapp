@@ -45,7 +45,7 @@ public:
     // will be used to create a notify. If the incoming data doesn't map to 
     // any known factory the socket is disconnected.
     IAppSocket() {}
-    IAppSocket(std::unique_ptr<IAppSocketNotify> notify);
+    IAppSocket(IAppSocketNotify * notify);
 
     virtual ~IAppSocket();
 
@@ -66,7 +66,7 @@ protected:
 
 private:
     Duration checkTimeout_LK(TimePoint now);
-    void setNotify(std::unique_ptr<IAppSocketNotify> notify);
+    void setNotify(IAppSocketNotify * notify);
 
     // set to {} when matching is completed, either successfully or 
     // unsuccessfully.

@@ -61,6 +61,9 @@ class RawSocket
     , ITimerNotify
 {
 public:
+    RawSocket() {}
+    RawSocket(IAppSocketNotify * notify);
+
     void disconnect() override;
     void write(string_view data) override;
     void write(unique_ptr<SocketBuffer> buffer, size_t bytes) override;
@@ -165,8 +168,8 @@ void IAppSocket::write(
 }
 
 //===========================================================================
-IAppSocket::IAppSocket(unique_ptr<IAppSocketNotify> notify) {
-    setNotify(move(notify));
+IAppSocket::IAppSocket(IAppSocketNotify * notify) {
+    setNotify(notify);
 }
 
 //===========================================================================
@@ -189,9 +192,9 @@ Duration IAppSocket::checkTimeout_LK(TimePoint now) {
 }
 
 //===========================================================================
-void IAppSocket::setNotify(unique_ptr<IAppSocketNotify> notify) {
-    assert(!m_notify);
-    m_notify = notify.release();
+void IAppSocket::setNotify(IAppSocketNotify * notify) {
+    assert(!m_notify && notify);
+    m_notify = notify;
     m_notify->m_socket = this;
 }
 
@@ -366,7 +369,7 @@ void IAppSocket::notifyRead(AppSocketData & data) {
         return disconnect();
     }
 
-    setNotify(fact->onFactoryCreate());
+    setNotify(fact->onFactoryCreate().release());
 
     // set notifier from registered factory
     if (!notifyAccept(m_accept))
@@ -385,6 +388,11 @@ void IAppSocket::notifyRead(AppSocketData & data) {
 *   RawSocket
 *
 ***/
+
+//===========================================================================
+RawSocket::RawSocket(IAppSocketNotify * notify) 
+    : IAppSocket(notify) 
+{}
 
 //===========================================================================
 void RawSocket::disconnect() {
@@ -595,6 +603,16 @@ void Dim::socketWrite(
     size_t bytes
 ) {
     IAppSocket::write(notify, move(buffer), bytes);
+}
+
+//===========================================================================
+void Dim::socketConnect(
+    IAppSocketNotify * notify,
+    const Endpoint & remote,
+    const Endpoint & local
+) {
+    auto sock = make_unique<RawSocket>(notify);
+    socketConnect(sock.release(), remote, local);
 }
 
 //===========================================================================

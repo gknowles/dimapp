@@ -30,7 +30,7 @@ ISockMgrSocket::ISockMgrSocket(
     unique_ptr<IAppSocketNotify> notify
 )
     : m_mgr(mgr)
-    , IAppSocket(move(notify))
+    , IAppSocket(notify.release())
 {}
 
 //===========================================================================
