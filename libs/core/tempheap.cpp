@@ -57,6 +57,13 @@ TempHeap::~TempHeap() {
 }
 
 //===========================================================================
+TempHeap & TempHeap::operator=(TempHeap && from) {
+    swap(from);
+    from.clear();
+    return *this;
+}
+
+//===========================================================================
 void TempHeap::clear() {
     Buffer * ptr = (Buffer *)m_buffer;
     while (ptr) {
