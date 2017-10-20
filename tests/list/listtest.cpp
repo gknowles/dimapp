@@ -59,7 +59,7 @@ static void app(int argc, char *argv[]) {
     EXPECT(list.size() == 3);
     int num = 0;
     for (auto && v : list) {
-        num += v.m_value ? 1 : 1;
+        num += v.m_value ? (bool) v.m_value : 1;
     }
     EXPECT(num == 3);
     list.unlinkAll();
