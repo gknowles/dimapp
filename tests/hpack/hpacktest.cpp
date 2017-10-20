@@ -353,6 +353,12 @@ bool NameValue::operator==(const NameValue & right) const {
         && flags == right.flags;
 }
 
+//===========================================================================
+bool operator==(const NameValue & left, const Dim::HpackDynField & right) {
+    return right.name == left.name
+        && right.value == left.value;
+}
+
 
 /****************************************************************************
 *
@@ -397,8 +403,15 @@ static void app(int argc, char *argv[]) {
         }
         if (test.headers != out.headers)
             logMsgError() << "headers mismatch (FAILED)";
-        // if (test.dynTable != decode.DynamicTable())
-        //    cout << "dynamic table mismatch (FAILED)" << endl;
+        if (!equal(
+            test.dynTable.begin(), 
+            test.dynTable.end(),
+            decode.dynamicTable().begin(),
+            decode.dynamicTable().end(),
+            ::operator==
+        )) {
+            cout << "dynamic table mismatch (FAILED)" << endl;
+        }
     }
 
     if (int errs = logGetMsgCount(kLogTypeError)) {

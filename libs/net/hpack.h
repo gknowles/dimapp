@@ -100,6 +100,7 @@ public:
         const char src[],
         size_t srcLen
     );
+    auto & dynamicTable() const { return m_dynTable; }
 
 private:
     void pruneDynTable();
