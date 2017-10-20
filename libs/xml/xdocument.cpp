@@ -40,10 +40,12 @@ struct XElemInfo : XNodeInfo {
     XNodeInfo * firstElem{nullptr};
     XAttrInfo * firstAttr{nullptr};
     size_t valueLen{0};
+
     using XNodeInfo::XNodeInfo;
 };
 struct XElemRootInfo : XElemInfo {
     XDocument * document{nullptr};
+
     using XElemInfo::XElemInfo;
 };
 
@@ -51,12 +53,13 @@ struct XElemRootInfo : XElemInfo {
 // comment, processing instruction, etc)
 struct XOtherInfo : XNodeInfo {
     XType type;
+
     using XNodeInfo::XNodeInfo;
 };
 
 class ParserNotify : public IXStreamParserNotify {
 public:
-    ParserNotify(XDocument & doc);
+    explicit ParserNotify(XDocument & doc);
 
     // IXStreamParserNotify
     bool startDoc() override;
@@ -122,7 +125,8 @@ bool ParserNotify::attr(
     const char name[],
     size_t nameLen,
     const char value[],
-    size_t valueLen) {
+    size_t valueLen
+) {
     const_cast<char *>(name)[nameLen] = 0;
     const_cast<char *>(value)[valueLen] = 0;
     if (m_curElem)
@@ -193,8 +197,11 @@ static void linkNode(XElemInfo * parent, XNodeInfo * ni) {
 }
 
 //===========================================================================
-XNode *
-XDocument::addElem(XNode * parent, const char name[], const char text[]) {
+XNode * XDocument::addElem(
+    XNode * parent, 
+    const char name[], 
+    const char text[]
+) {
     assert(parent);
     assert(name);
     auto * ni = heap().emplace<XElemInfo>(name, text ? text : "");
@@ -204,8 +211,11 @@ XDocument::addElem(XNode * parent, const char name[], const char text[]) {
 }
 
 //===========================================================================
-XAttr *
-XDocument::addAttr(XNode * elem, const char name[], const char text[]) {
+XAttr * XDocument::addAttr(
+    XNode * elem, 
+    const char name[], 
+    const char text[]
+) {
     assert(elem);
     assert(name);
     assert(text);
@@ -427,8 +437,11 @@ XNode * Dim::firstChild(XNode * elem, string_view name, XType type) {
 }
 
 //===========================================================================
-const XNode *
-Dim::firstChild(const XNode * elem, string_view name, XType type) {
+const XNode * Dim::firstChild(
+    const XNode * elem, 
+    string_view name, 
+    XType type
+) {
     return firstChild(const_cast<XNode *>(elem), name, type);
 }
 
@@ -445,8 +458,11 @@ XNode * Dim::lastChild(XNode * elem, string_view name, XType type) {
 }
 
 //===========================================================================
-const XNode *
-Dim::lastChild(const XNode * elem, string_view name, XType type) {
+const XNode * Dim::lastChild(
+    const XNode * elem, 
+    string_view name, 
+    XType type
+) {
     return lastChild(const_cast<XNode *>(elem), name, type);
 }
 
@@ -465,8 +481,11 @@ XNode * Dim::nextSibling(XNode * node, string_view name, XType type) {
 }
 
 //===========================================================================
-const XNode *
-Dim::nextSibling(const XNode * node, string_view name, XType type) {
+const XNode * Dim::nextSibling(
+    const XNode * node, 
+    string_view name, 
+    XType type
+) {
     return nextSibling(const_cast<XNode *>(node), name, type);
 }
 
@@ -485,8 +504,11 @@ XNode * Dim::prevSibling(XNode * node, string_view name, XType type) {
 }
 
 //===========================================================================
-const XNode *
-Dim::prevSibling(const XNode * node, string_view name, XType type) {
+const XNode * Dim::prevSibling(
+    const XNode * node, 
+    string_view name, 
+    XType type
+) {
     return prevSibling(const_cast<XNode *>(node), name, type);
 }
 
@@ -534,7 +556,8 @@ XNodeIterator<T>::XNodeIterator(T * node, XType type, string_view name)
     , m_name(name) {}
 
 //===========================================================================
-template <typename T> auto XNodeIterator<T>::operator++() -> XNodeIterator {
+template <typename T> 
+auto XNodeIterator<T>::operator++() -> XNodeIterator {
     this->m_current = nextSibling(this->m_current, m_name, m_type);
     return *this;
 }

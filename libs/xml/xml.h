@@ -101,11 +101,11 @@ IXBuilder & operator<<(IXBuilder & out, std::string_view val);
 
 template <typename T>
 inline IXBuilder & operator<<(IXBuilder & out, const T & val) {
-    thread_local std::ostringstream os;
-    os.clear();
-    os.str({});
-    os << val;
-    return out.text(os.str());
+    thread_local std::ostringstream t_os;
+    t_os.clear();
+    t_os.str({});
+    t_os << val;
+    return out.text(t_os.str());
 }
 
 inline IXBuilder &

@@ -626,7 +626,6 @@ SOCKET Dim::iSocketCreate() {
         logMsgError() << "WSAIoctl(TCP_NODELAY): " << WinError{};
     }
 
-#ifdef SO_REUSE_UNICASTPORT
     if (SOCKET_ERROR == setsockopt(
         handle,
         SOL_SOCKET,
@@ -634,7 +633,6 @@ SOCKET Dim::iSocketCreate() {
         (char *)&yes,
         sizeof(yes)
     )) {
-#endif
         if (SOCKET_ERROR == setsockopt(
             handle,
             SOL_SOCKET,
@@ -644,9 +642,7 @@ SOCKET Dim::iSocketCreate() {
         )) {
             logMsgError() << "setsockopt(SO_PORT_SCALABILITY): " << WinError{};
         }
-#ifdef SO_REUSE_UNICASTPORT
     }
-#endif
 
     return handle;
 }

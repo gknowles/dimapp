@@ -21,12 +21,15 @@ class DefaultLogger : public ILogNotify {
 };
 
 class LogMsgScope {
+public:
+    explicit LogMsgScope(LogType type);
+    ~LogMsgScope();
+
+    bool inProgress() const { return m_inProgress; }
+
+private:
     LogType m_type;
     bool m_inProgress;
-public:
-    LogMsgScope(LogType type);
-    ~LogMsgScope();
-    bool inProgress() const { return m_inProgress; }
 };
 
 } // namespace

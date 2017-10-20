@@ -24,7 +24,7 @@ public:
     );
     static void closeWait(ITimerNotify * notify);
 
-    Timer(ITimerNotify * notify);
+    explicit Timer(ITimerNotify * notify);
 
     // is the notify still pointing back at this timer?
     bool connected() const;
@@ -50,7 +50,7 @@ struct TimerQueueNode {
     TimePoint expiration;
     unsigned instance;
 
-    TimerQueueNode(shared_ptr<Timer> & timer);
+    explicit TimerQueueNode(shared_ptr<Timer> & timer);
     bool operator<(const TimerQueueNode & right) const;
     bool operator>(const TimerQueueNode & right) const;
     bool operator==(const TimerQueueNode & right) const;
@@ -87,12 +87,14 @@ static ITimerNotify * s_processingNotify; // callback currently in progress
 *
 ***/
 
-//===========================================================================
 namespace {
+
 class RunTimers : public ITaskNotify {
     void onTask() override;
 };
+
 } // namespace
+
 static RunTimers s_runTimers;
 
 //===========================================================================
@@ -197,7 +199,8 @@ ITimerNotify::~ITimerNotify() {
 TimerQueueNode::TimerQueueNode(shared_ptr<Timer> & timer)
     : timer{timer}
     , expiration{timer->expiration}
-    , instance{timer->instance} {}
+    , instance{timer->instance} 
+{}
 
 //===========================================================================
 bool TimerQueueNode::operator<(const TimerQueueNode & right) const {
@@ -277,8 +280,9 @@ void Timer::closeWait(ITimerNotify * notify) {
 }
 
 //===========================================================================
-Timer::Timer(ITimerNotify * notify)
-    : notify(notify) {
+Timer::Timer(ITimerNotify * a_notify)
+    : notify(a_notify) 
+{
     assert(!notify->m_timer);
     notify->m_timer.reset(this);
 }

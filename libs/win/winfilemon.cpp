@@ -29,7 +29,7 @@ class DirInfo
     , public HandleContent
 {
 public:
-    DirInfo(IFileChangeNotify * notify);
+    explicit DirInfo(IFileChangeNotify * notify);
     ~DirInfo();
 
     bool start(string_view path, bool recurse);

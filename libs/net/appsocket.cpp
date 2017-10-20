@@ -62,7 +62,7 @@ class RawSocket
 {
 public:
     RawSocket() {}
-    RawSocket(IAppSocketNotify * notify);
+    explicit RawSocket(IAppSocketNotify * notify);
 
     void disconnect() override;
     void write(string_view data) override;

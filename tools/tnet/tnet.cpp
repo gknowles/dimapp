@@ -42,6 +42,7 @@ private:
     unique_ptr<ConsoleScopedAttr> m_connected;
 };
 
+// cppcheck-suppress noExplicitConstructor
 class ConsoleReader : public IFileReadNotify {
 public:
     void init();

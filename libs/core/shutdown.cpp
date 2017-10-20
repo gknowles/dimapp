@@ -20,9 +20,9 @@ namespace {
 
 struct CleanupInfo {
     IShutdownNotify * notify;
-    bool stopped = false;
+    bool stopped{false};
 
-    CleanupInfo(IShutdownNotify * notify)
+    explicit CleanupInfo(IShutdownNotify * notify) 
         : notify(notify) {}
 };
 
@@ -50,7 +50,7 @@ public:
 private:
     bool stop(StopFn notify, bool retry);
 
-    ETimerMode m_mode { MAIN_STOP };
+    ETimerMode m_mode{MAIN_STOP};
     TimePoint m_shutdownStart;
     bool m_firstTry{true};
     bool m_incomplete{false};

@@ -52,11 +52,12 @@ public:
 };
 
 class ConnectFailedTask : public ITaskNotify {
-    ISocketNotify * m_notify{nullptr};
-
 public:
-    ConnectFailedTask(ISocketNotify * notify);
+    explicit ConnectFailedTask(ISocketNotify * notify);
     void onTask() override;
+
+private:
+    ISocketNotify * m_notify{nullptr};
 };
 
 class ConnectTimer : public ITimerNotify {

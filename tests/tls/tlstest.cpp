@@ -91,14 +91,15 @@ const Test s_tests[] = {
 //===========================================================================
 static void app(int argc, char *argv[]) {
     const TlsCipherSuite kCiphers[] = {
-        TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256};
+        TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
+    };
     const char kHost[] = "example.com";
 
     CharBuf output;
     CharBuf plain;
     TlsConnHandle client{};
     TlsConnHandle server{};
-    bool result;
+    bool result; // cppcheck-suppress variableScope
     for (auto && test : s_tests) {
         cout << "Test - " << test.name << endl;
         TlsConnHandle & conn = (test.flags & fTestClient) ? client : server;
@@ -111,11 +112,16 @@ static void app(int argc, char *argv[]) {
                 conn = tlsAccept(kCiphers, size(kCiphers));
             }
         }
-        result =
-            tlsRecv(conn, &output, &plain, data(test.input), size(test.input));
+        result = tlsRecv(
+            conn, 
+            &output, 
+            &plain, 
+            data(test.input), 
+            size(test.input)
+        );
         if (result != test.result) {
             logMsgError() << "result: " << result << " != " << test.result
-                          << " (FAILED)";
+                << " (FAILED)";
         }
         if (output.compare(test.output) != 0)
             logMsgError() << "headers mismatch (FAILED)";
