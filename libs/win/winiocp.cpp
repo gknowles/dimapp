@@ -96,8 +96,10 @@ static void iocpDispatchThread() {
 
 namespace {
 
+// cppcheck-suppress noConstructor
 class ShutdownNotify : public IShutdownNotify {
     void onShutdownConsole(bool firstTry) override;
+
     bool m_closing{false};
 };
 

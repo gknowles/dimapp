@@ -157,9 +157,7 @@ void oldTest() {
 static void app(int argc, char *argv[]) {
     oldTest();
 
-    // cppcheck-suppress variableScope
-    bool result;
-
+    bool result = 0;
     vector<unique_ptr<HttpMsg>> msgs;
     CharBuf cbuf;
     CharBuf sbuf;

@@ -75,9 +75,9 @@ static void addCqUsed_LK(int delta) {
 //===========================================================================
 static void rioDispatchThread() {
     static constexpr int kMaxResults = 100;
-    RIORESULT results[kMaxResults];
-    ITaskNotify * tasks[size(results)];
-    int count;
+    RIORESULT results[kMaxResults] = {};
+    ITaskNotify * tasks[size(results)] = {};
+    int count = 0;
 
     for (;;) {
         unique_lock<mutex> lk{s_mut};

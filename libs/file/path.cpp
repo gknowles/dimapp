@@ -24,7 +24,7 @@ struct Count {
     unsigned m_stemLen;
     unsigned m_extLen;
 
-    Count(string_view path);
+    explicit Count(string_view path);
 };
 
 } // namespace

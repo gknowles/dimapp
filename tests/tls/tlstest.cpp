@@ -99,7 +99,7 @@ static void app(int argc, char *argv[]) {
     CharBuf plain;
     TlsConnHandle client{};
     TlsConnHandle server{};
-    bool result; // cppcheck-suppress variableScope
+    bool result = 0;
     for (auto && test : s_tests) {
         cout << "Test - " << test.name << endl;
         TlsConnHandle & conn = (test.flags & fTestClient) ? client : server;

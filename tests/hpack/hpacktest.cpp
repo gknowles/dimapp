@@ -389,7 +389,7 @@ static void app(int argc, char *argv[]) {
     TempHeap heap;
     HpackDecode decode(256);
     Reader out;
-    // cppcheck-suppress variableScope
+    //cppcheck-suppress variableScope
     bool result;
     for (auto && test : s_tests) {
         cout << "Test - " << test.name << endl;
