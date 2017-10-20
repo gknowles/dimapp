@@ -77,6 +77,8 @@ static void rioDispatchThread() {
     static constexpr int kMaxResults = 100;
     RIORESULT results[kMaxResults] = {};
     ITaskNotify * tasks[size(results)] = {};
+
+    // cppcheck-suppress variableScope
     int count = 0;
 
     for (;;) {
