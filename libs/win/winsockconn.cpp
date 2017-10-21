@@ -118,8 +118,14 @@ ConnectTask::ConnectTask(unique_ptr<ConnSocket> && sock)
 void ConnectTask::onTask() {
     DWORD bytes;
     WinError err{0};
-    if (!GetOverlappedResult(NULL, &m_overlapped, &bytes, false))
+    if (!GetOverlappedResult(
+        INVALID_HANDLE_VALUE, 
+        &m_overlapped, 
+        &bytes, 
+        false
+    )) {
         err = WinError{};
+    }
     m_socket.release()->onConnect(err, bytes);
 
     lock_guard<mutex> lk{s_mut};

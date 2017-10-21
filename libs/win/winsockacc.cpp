@@ -90,8 +90,14 @@ ListenSocket::ListenSocket(
 void ListenSocket::onTask() {
     DWORD bytes;
     WinError err{0};
-    if (!GetOverlappedResult(NULL, &m_overlapped, &bytes, false)) 
+    if (!GetOverlappedResult(
+        INVALID_HANDLE_VALUE, 
+        &m_overlapped, 
+        &bytes, 
+        false
+    )) {
         err.set();
+    }
     m_socket->onAccept(this, err, bytes);
 
     if (!AcceptSocket::accept(this)) {

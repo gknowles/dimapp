@@ -234,8 +234,14 @@ void IFileOpBase::onTask() {
 
     if (m_err == ERROR_IO_PENDING) {
         m_err = 0;
-        if (!GetOverlappedResult(NULL, &overlapped(), &m_bytes, false))
+        if (!GetOverlappedResult(
+            INVALID_HANDLE_VALUE, 
+            &overlapped(), 
+            &m_bytes, 
+            false
+        )) {
             m_err = WinError{};
+        }
     }
 
     if (m_err) {

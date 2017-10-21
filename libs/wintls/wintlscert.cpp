@@ -235,7 +235,7 @@ static const CERT_CONTEXT * makeCert(string_view issuerName) {
         &exts // extensions
     );
     if (!cert) {
-        WinError err;
+        err.set();
         logMsgCrash() << "CertCreateSelfSignCertificate: " << err;
         abort();
     }
