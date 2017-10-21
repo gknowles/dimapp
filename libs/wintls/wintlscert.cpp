@@ -237,6 +237,7 @@ static const CERT_CONTEXT * makeCert(string_view issuerName) {
     if (!cert) {
         WinError err;
         logMsgCrash() << "CertCreateSelfSignCertificate: " << err;
+        abort();
     }
 
     err = (SecStatus) NCryptFreeObject(nkey);
@@ -354,6 +355,7 @@ static void getCerts(
         logMsgCrash() << "CertOpenStore('MY',"
             << (serviceStore ? "CURRENT_SERVICE" : "CURRENT_USER")
             << "): " << err;
+        abort();
     }
 
     const char * oids[] = { szOID_PKIX_KP_SERVER_AUTH };
@@ -427,6 +429,7 @@ static void getCerts(
 CertName::CertName(const CertName & from) {
     if (from) {
         m_blob.pbData = (BYTE *) malloc(from.m_blob.cbData);
+        assert(m_blob.pbData);
         memcpy(m_blob.pbData, from.m_blob.pbData, from.m_blob.cbData);
     }
 }

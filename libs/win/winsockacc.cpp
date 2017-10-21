@@ -167,6 +167,7 @@ bool AcceptSocket::accept(ListenSocket * listen) {
     listen->m_socket = move(sock);
 
     if (listen->m_handle != INVALID_SOCKET) {
+        DWORD bytes; // ignored, only here for analyzer
         bool error = !s_AcceptEx(
             listen->m_handle,
             listen->m_socket->m_handle,
@@ -174,7 +175,7 @@ bool AcceptSocket::accept(ListenSocket * listen) {
             0,                       // receive data length
             sizeof sockaddr_storage, // local endpoint length
             sizeof sockaddr_storage, // remote endpoint length
-            nullptr,                 // bytes received
+            &bytes,                  // bytes received (ignored)
             &listen->m_overlapped
         );
         WinError err;

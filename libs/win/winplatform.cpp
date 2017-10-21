@@ -27,8 +27,8 @@ class HtmlAccount : public IHttpRouteNotify {
 
 //===========================================================================
 static void addSidRow(JBuilder & out, SID_AND_ATTRIBUTES & sa) {
-	DWORD nameLen;
-	DWORD domLen;
+	DWORD nameLen = 0;
+	DWORD domLen = 0;
 	SID_NAME_USE use;
 	if (!LookupAccountSid(
 		NULL,

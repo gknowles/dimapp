@@ -348,6 +348,7 @@ void VectorImpl::init(Node & node, const Node & from) {
     assert(from.type == kVector);
     node = from;
     node.values = (unsigned *) malloc(node.numBytes);
+    assert(node.values);
     memcpy(node.values, from.values, node.numBytes);
 }
 
@@ -490,6 +491,7 @@ void BitmapImpl::init(Node & node, bool full) {
     assert(node.type == kBitmap);
     node.numBytes = kDataSize;
     node.values = (unsigned *) malloc(node.numBytes);
+    assert(node.values);
     if (full) {
         node.numValues = kDataSize / sizeof(uint64_t);
         memset(node.values, 0xff, kDataSize);
@@ -505,6 +507,7 @@ void BitmapImpl::init(Node & node, const Node & from) {
     assert(from.type == kBitmap);
     node = from;
     node.values = (unsigned *) malloc(node.numBytes);
+    assert(node.values);
     memcpy(node.values, from.values, node.numBytes);
 }
 
@@ -630,6 +633,7 @@ void MetaImpl::init(Node & node, bool full) {
     node.numValues = numNodes(node.depth + 1);
     node.numBytes = (node.numValues + 1) * sizeof(*node.nodes);
     node.nodes = (Node *) malloc(node.numBytes);
+    assert(node.nodes);
     auto nptr = node.nodes;
     auto nlast = node.nodes + node.numValues;
     Node def;
@@ -656,6 +660,7 @@ void MetaImpl::init(Node & node, const Node & from) {
     assert(from.type == kMeta);
     node = from;
     node.nodes = (Node *) malloc(node.numBytes);
+    assert(node.nodes);
     auto nptr = node.nodes;
     auto nlast = node.nodes + node.numValues;
     auto fptr = from.nodes;

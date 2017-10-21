@@ -50,8 +50,10 @@ static HWND createList(HWND parent) {
         GetModuleHandle(NULL),
         NULL // user param to WM_CREATE
     );
-    if (!wnd)
+    if (!wnd) {
         logMsgCrash() << "CreateWindow(WC_LISTVIEW): " << WinError{};
+        abort();
+    }
 
     LVCOLUMN lc = {};
     lc.mask = LVCF_FMT | LVCF_TEXT;
@@ -177,8 +179,10 @@ static HWND createPerfWindow() {
         wc.hInstance,
         NULL // user param to WM_CREATE
     );
-    if (!wnd)
+    if (!wnd) {
         logMsgCrash() << "CreateWindow: " << WinError{};
+        abort();
+    }
 
     ShowWindow(wnd, SW_SHOWNORMAL);
     SetTimer(

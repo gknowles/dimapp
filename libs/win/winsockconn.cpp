@@ -116,17 +116,11 @@ ConnectTask::ConnectTask(unique_ptr<ConnSocket> && sock)
 
 //===========================================================================
 void ConnectTask::onTask() {
-    DWORD bytesTransferred;
+    DWORD bytes;
     WinError err{0};
-    if (!GetOverlappedResult(
-        NULL,
-        &m_overlapped,
-        &bytesTransferred,
-        false // wait?
-    )) {
+    if (!GetOverlappedResult(NULL, &m_overlapped, &bytes, false))
         err = WinError{};
-    }
-    m_socket.release()->onConnect(err, bytesTransferred);
+    m_socket.release()->onConnect(err, bytes);
 
     lock_guard<mutex> lk{s_mut};
     if (m_expiration == TimePoint::max()) {
@@ -206,13 +200,14 @@ void ConnSocket::connect(
 
     sockaddr_storage sas;
     copy(&sas, remote);
+    DWORD bytes; // ignored, only here for analyzer
     bool error = !s_ConnectEx(
         it->m_socket->m_handle,
         (sockaddr *)&sas,
         sizeof(sas),
-        NULL, // send buffer
-        0,    // send buffer length
-        NULL, // bytes sent
+        NULL,   // send buffer
+        0,      // send buffer length
+        &bytes, // bytes sent (ignored)
         &it->m_overlapped
     );
     WinError err;

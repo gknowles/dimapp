@@ -30,13 +30,13 @@ static void iocpDispatchThread() {
     const int kMaxEntries = 8;
     OVERLAPPED_ENTRY entries[kMaxEntries];
     ULONG found;
-    ITaskNotify * tasks[kMaxEntries];
-    bool used[kMaxEntries];
+    ITaskNotify * tasks[size(entries)];
+    bool used[size(entries)];
     for (;;) {
         if (!GetQueuedCompletionStatusEx(
             s_iocp, 
             entries, 
-            kMaxEntries, 
+            (ULONG) size(entries), 
             &found, 
             INFINITE,   // timeout
             false       // alertable
@@ -117,6 +117,7 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
         if (!CloseHandle(s_iocp))
             logMsgError() << "CloseHandle(iocp): " << WinError{};
 
+        s_iocp = INVALID_HANDLE_VALUE;
         Sleep(0);
     }
 
