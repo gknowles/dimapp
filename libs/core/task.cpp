@@ -48,7 +48,8 @@ class EndThreadTask : public ITaskNotify {};
 
 class RunOnceTask : public ITaskNotify {
 public:
-    RunOnceTask(string_view name, function<void()> fn);
+    RunOnceTask(string_view name, function<void()> && fn);
+
 private:
     void onTask() override;
 
@@ -163,7 +164,7 @@ void TaskQueue::pop() {
 ***/
 
 //===========================================================================
-RunOnceTask::RunOnceTask(string_view name, function<void()> fn)
+RunOnceTask::RunOnceTask(string_view name, function<void()> && fn)
     : m_fn{fn}
 {
     auto q = taskCreateQueue(name, 1);
@@ -301,5 +302,5 @@ void Dim::taskPush(
 
 //===========================================================================
 void Dim::taskPushOnce(string_view name, function<void()> fn) {
-    new RunOnceTask(name, fn);
+    new RunOnceTask(name, move(fn));
 }

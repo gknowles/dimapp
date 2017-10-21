@@ -36,7 +36,7 @@ class HttpSocket : public IAppSocketNotify {
 public:
     static void iReply(
         unsigned reqId, 
-        function<void(HttpConnHandle h, CharBuf * out, int stream)> fn, 
+        const function<void(HttpConnHandle h, CharBuf * out, int stream)> & fn, 
         bool more
     );
     static void reply(unsigned reqId, HttpResponse & msg, bool more);
@@ -163,7 +163,7 @@ RequestInfo::~RequestInfo () {
 // static 
 void HttpSocket::iReply(
     unsigned reqId, 
-    function<void(HttpConnHandle h, CharBuf * out, int stream)> fn, 
+    const function<void(HttpConnHandle h, CharBuf * out, int stream)> & fn, 
     bool more
 ) {
     auto it = s_requests.find(reqId);

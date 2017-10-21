@@ -40,6 +40,7 @@ static string s_dataDir;
 namespace {
 struct FnProxyAppNotify : public IAppNotify {
     function<void(int, char*[])> fn;
+
     void onAppRun() override;
 };
 } // namespace
@@ -221,7 +222,7 @@ int Dim::appRun(
     char * argv[],
     AppFlags flags
 ) {
-    s_fnProxyApp.fn = fn;
+    s_fnProxyApp.fn = move(fn);
     return appRun(s_fnProxyApp, argc, argv, flags);
 }
 

@@ -59,7 +59,7 @@ static PerfCounter<T> & perf(string_view name) {
 
 //===========================================================================
 template <typename T>
-static PerfFunc<T> & perf(string_view name, function<T()> fn) {
+static PerfFunc<T> & perf(string_view name, function<T()> && fn) {
     auto & info = getInfo();
     lock_guard<mutex> lk{info.mut};
     info.counters.push_back(make_unique<PerfFunc<T>>());
@@ -161,7 +161,7 @@ PerfCounter<float> & Dim::fperf(string_view name) {
 
 //===========================================================================
 PerfFunc<int> & Dim::iperf(string_view name, function<int()> fn) {
-    return perf<int>(name, fn);
+    return perf<int>(name, move(fn));
 }
 
 //===========================================================================
@@ -169,12 +169,12 @@ PerfFunc<unsigned> & Dim::uperf(
     string_view name, 
     function<unsigned()> fn
 ) {
-    return perf<unsigned>(name, fn);
+    return perf<unsigned>(name, move(fn));
 }
 
 //===========================================================================
 PerfFunc<float> & Dim::fperf(string_view name, function<float()> fn) {
-    return perf<float>(name, fn);
+    return perf<float>(name, move(fn));
 }
 
 //===========================================================================
