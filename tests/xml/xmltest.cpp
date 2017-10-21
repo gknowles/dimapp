@@ -18,7 +18,7 @@ using namespace Dim;
 #define EXPECT(...) \
     if (!bool(__VA_ARGS__)) { \
         cerr << "Line " << (line ? line : __LINE__) << ": EXPECT(" \
-            << #__VA_ARGS__ << ") failed"; \
+            << #__VA_ARGS__ << ") failed\n"; \
         s_errors += 1; \
     }
 
@@ -98,6 +98,12 @@ with '&amp;'">text content</value>
 <value a=" leading and trailing spaces "/>
 </root>
 )");
+    unsigned num = 0;
+    for (auto && node : nodes(root, XType::kElement)) {
+        assert(node.name);
+        num += 1;
+    }
+    EXPECT(num == 5);
 
     if (s_errors) {
         cerr << "*** TEST FAILURES: " << s_errors << endl;

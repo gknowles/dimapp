@@ -583,14 +583,14 @@ XNodeRange<const XNode> Dim::elems(const XNode * node, string_view name) {
 
 //===========================================================================
 XNodeRange<XNode> Dim::nodes(XNode * node, XType type) {
-    node = firstChild(node, nullptr, type);
-    return {{node, type, nullptr}};
+    node = firstChild(node, {}, type);
+    return {{node, type, {}}};
 }
 
 //===========================================================================
 XNodeRange<const XNode> Dim::nodes(const XNode * node, XType type) {
-    node = firstChild(node, nullptr, type);
-    return {{node, type, nullptr}};
+    node = firstChild(node, {}, type);
+    return {{node, type, {}}};
 }
 
 //===========================================================================
