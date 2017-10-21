@@ -66,7 +66,7 @@ std::ostream & Dim::operator<<(std::ostream & os, const Endpoint & src) {
     sockaddr_storage sas;
     copy(&sas, src);
     wchar_t tmp[256];
-    DWORD tmpLen = sizeof(tmp);
+    DWORD tmpLen = (DWORD) size(tmp);
     if (SOCKET_ERROR == WSAAddressToStringW(
         (sockaddr *)&sas, 
         sizeof(sas), 
