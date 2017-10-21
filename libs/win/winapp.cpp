@@ -199,6 +199,7 @@ static HWND createPerfWindow() {
 
 namespace {
 
+// cppcheck-suppress noConstructor
 class MessageLoopTask : public ITaskNotify {
 public:
     enum Authority {

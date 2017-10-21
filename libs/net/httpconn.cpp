@@ -219,7 +219,7 @@ Duration ResetStreamTimer::onTimer(TimePoint now) {
 namespace {
 class MsgDecoder : public IHpackDecodeNotify {
 public:
-    MsgDecoder(HttpMsg & msg);
+    explicit MsgDecoder(HttpMsg & msg);
 
     explicit operator bool() const;
     HttpConn::FrameError Error() const;

@@ -65,7 +65,7 @@ static PerfFunc<T> & perf(string_view name, function<T()> fn) {
     info.counters.push_back(make_unique<PerfFunc<T>>());
     auto & cnt = static_cast<PerfFunc<T>&>(*info.counters.back());
     cnt.name = name;
-    cnt.fn = fn;
+    cnt.fn = move(fn);
     return cnt;
 }
 

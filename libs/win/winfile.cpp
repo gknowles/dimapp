@@ -271,7 +271,7 @@ namespace {
 
 class FileReader : public IFileOpBase {
 public:
-    FileReader(IFileReadNotify * notify);
+    explicit FileReader(IFileReadNotify * notify);
     bool onRun() override;
     void onNotify() override;
     bool asyncOp() override { return m_notify != nullptr; }
@@ -346,7 +346,7 @@ namespace {
 
 class FileWriter : public IFileOpBase {
 public:
-    FileWriter(IFileWriteNotify * notify);
+    explicit FileWriter(IFileWriteNotify * notify);
     bool onRun() override;
     void onNotify() override;
     bool asyncOp() override { return m_notify != nullptr; }

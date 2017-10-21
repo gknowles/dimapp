@@ -241,12 +241,11 @@ bool Dim::timeParse8601(TimePoint * out, std::string_view str) {
     // fractional seconds
     unsigned frac = 0;
     if (str[0] == '.') {
-        unsigned num;
         size_t i = 1;
         for (;; ++i) {
             if (i >= str.size()) 
                 break;
-            num = (unsigned char) str[i] - '0';
+            unsigned num = (unsigned char) str[i] - '0';
             if (num > 9)
                 break;
             if (i <= 7)

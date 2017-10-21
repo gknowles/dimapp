@@ -47,7 +47,7 @@ public:
     list<ConnectTask>::iterator m_iter;
 
 public:
-    ConnectTask(unique_ptr<ConnSocket> && sock);
+    explicit ConnectTask(unique_ptr<ConnSocket> && sock);
     void onTask() override;
 };
 

@@ -30,7 +30,10 @@ static void app(int argc, char *argv[]) {
         return appSignalShutdown(EX_DATAERR);
     fileExtendView(file, 1001 * psize);
     unsigned num = 0;
+
+    // cppcheck-suppress variableScope
     static char v = 0;
+
     for (size_t i = 1; i < 1000; ++i) {
         v = 0;
         fileWriteWait(file, i * psize, "bbbb", 4);
