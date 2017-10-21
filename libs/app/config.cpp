@@ -28,7 +28,6 @@ struct NotifyInfo {
     IConfigNotify * notify;
 };
 
-// cppcheck-suppress noConstructor
 class ConfigFile : public IFileChangeNotify {
 public:
     void monitor_UNLK(string_view relpath, IConfigNotify * notify);

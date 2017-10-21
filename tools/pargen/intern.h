@@ -96,7 +96,6 @@ struct ElementNull : Element {
     static ElementNull s_elem;
 };
 
-// cppcheck-suppress noConstructor
 class Grammar {
 public:
     void clear();

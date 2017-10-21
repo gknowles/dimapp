@@ -25,15 +25,14 @@ static void app(int argc, char *argv[]) {
         File::fCreat | File::fTrunc | File::fReadWrite | File::fBlocking
     );
     fileWriteWait(file, 0, "aaaa", 4);
+
     const char * base;
     if (!fileOpenView(base, file, 1001 * psize))
         return appSignalShutdown(EX_DATAERR);
+
     fileExtendView(file, 1001 * psize);
     unsigned num = 0;
-
-    // cppcheck-suppress variableScope
     static char v = 0;
-
     for (size_t i = 1; i < 1000; ++i) {
         v = 0;
         fileWriteWait(file, i * psize, "bbbb", 4);
@@ -41,11 +40,13 @@ static void app(int argc, char *argv[]) {
         if (v == 'b')
             num += 1;
     }
+
     fileExtendView(file, psize);
     static char buf[5] = {};
     for (unsigned i = 0; i < 100; ++i) {
         fileReadWait(buf, 4, file, psize);
     }
+
     fileClose(file);
 
     if (int errs = logGetMsgCount(kLogTypeError)) {

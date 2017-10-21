@@ -35,7 +35,6 @@ enum ETimerMode {
     DONE
 };
 
-// cppcheck-suppress noConstructor
 class MainTimer : public ITimerNotify {
 public:
     typedef void (IShutdownNotify::*StopFn)(bool firstTry);
