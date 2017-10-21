@@ -43,9 +43,6 @@ int Dim::timeZoneMinutes(TimePoint time) {
     if (!SystemTimeToFileTime(&lst, &local))
         return 0;
 
-    //FILETIME local;
-    //if (!FileTimeToLocalFileTime(&ft, &local))
-    //    return 0;
     LARGE_INTEGER out;
     out.HighPart = local.dwHighDateTime;
     out.LowPart = local.dwLowDateTime;
@@ -56,7 +53,7 @@ int Dim::timeZoneMinutes(TimePoint time) {
 //===========================================================================
 bool Dim::timeFromDesc(TimePoint & time, const tm & tm) {
     auto src = tm;
-    auto t = _mkgmtime(&src); // microsoft extension, libc has timegm()
+    auto t = _mkgmtime(&src); // Microsoft extension, libc has timegm()
     if (t == -1) {
         time = {};
         return false;

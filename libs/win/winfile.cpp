@@ -131,7 +131,7 @@ static HandleMap<FileHandle, WinFileInfo> s_files;
 // Completions only apply to non-blocking handles and are posted to a queue
 // depending on the type of request:
 //  Async - completions go to the event thread and make the callback
-//  Sync  - completions go to an io thread and signal the waiting thread, 
+//  Sync  - completions go to an IO thread and signal the waiting thread, 
 //          which might be the event thread.
 IFileOpBase::IFileOpBase(bool asyncOp) 
     : IWinOverlappedNotify{asyncOp ? TaskQueueHandle{} : s_hq}
@@ -180,13 +180,13 @@ size_t IFileOpBase::start(
 void IFileOpBase::run() {
     // Threadpool this thread is in:
     // sync + blocking - request thread
-    // sync + non-blocking - io thread, request thread waiting
-    // async + blocking - io thread
-    // async + non-blocking - io thread
+    // sync + non-blocking - IO thread, request thread waiting
+    // async + blocking - IO thread
+    // async + non-blocking - IO thread
     m_state = kRunning;
     winSetOverlapped(overlapped(), m_offset);
 
-    // Set m_err to pending now, because if onRun() launches it asyncronously 
+    // Set m_err to pending now, because if onRun() launches it asynchronously 
     // there's no chance to change it. If it's not async, m_err will be set to 
     // something appropriate after onRun() returns.
     m_err = ERROR_IO_PENDING;
@@ -198,7 +198,7 @@ void IFileOpBase::run() {
             return;
 
         // Only now that we know it's not being processed (and perhaps 
-        // already deleted!) asyncronously is it safe to modify "this".
+        // already deleted!) asynchronously is it safe to modify "this".
         m_err = err;
     }
 
@@ -228,7 +228,7 @@ void IFileOpBase::onTask() {
     // 
     // threadpool this thread is in:
     // sync + blocking - request thread
-    // sync + non-blocking - io thread, request thread waiting
+    // sync + non-blocking - IO thread, request thread waiting
     // async + blocking - event thread
     // async + non-blocking - event thread
 
@@ -248,7 +248,7 @@ void IFileOpBase::onTask() {
         if (m_err == ERROR_OPERATION_ABORTED) {
             // explicitly canceled
         } else if (m_err == ERROR_HANDLE_EOF && !m_length) {
-            // hit eof, expected when explicitly reading until the end
+            // hit EOF, expected when explicitly reading until the end
         } else if (auto log = logOnError()) {
             logMsgError() << log << '(' << m_file->m_path << "): " << m_err;
         }
@@ -535,7 +535,8 @@ static FileHandle attachStdHandle(
     file->m_path = path;
     file->m_handle = GetStdHandle(fd);
     if (file->m_handle == NULL) {
-        // process doesn't have a console or otherwise redirected stdin
+        // Process doesn't have a console or otherwise redirected standard
+        // input/output.
         file->m_handle = INVALID_HANDLE_VALUE;
         winFileSetErrno(ERROR_FILE_NOT_FOUND);
         return {};
@@ -545,9 +546,9 @@ static FileHandle attachStdHandle(
     }
     auto proc = GetCurrentProcess();
     if (!DuplicateHandle(
-        proc,   // source proc
+        proc,   // source process
         file->m_handle,
-        proc,   // target proc
+        proc,   // target process
         &file->m_handle,
         0,      // access (ignored)
         FALSE,  // inheritable

@@ -279,11 +279,11 @@ static void addRulePositions(
         // Don't generate states for right recursion when it can be broken with
         // a call. This could also be done for left recursion when the grammar
         // allows it, but that's more difficult to determine.
-        // if (!init) {
-        auto & terms [[maybe_unused]] = st->positions[*sp];
-        assert(terms.none());
-        return;
-        //}
+        if constexpr (true || !init) {
+            auto & terms [[maybe_unused]] = st->positions[*sp];
+            assert(terms.none());
+            return;
+        }
     }
 
     // check for rule recursion
@@ -391,7 +391,7 @@ static void setPositionPrefix(
     vector<StateElement>::const_iterator end,
     int recursePos, // position within sequence
     bool recurseSeIncluded, // sequence state element included? else 1 past
-                            // the end, ignored if pos == -1
+                            //   the end, ignored if pos == -1
     const vector<StateEvent> & events,
     bool started
 ) {
@@ -528,7 +528,7 @@ static void addNextPositions(
                     addEvent(events, se, flags);
             }
             // when exiting the parser (via a done sentinel) go directly out,
-            // no not pass go, do not honor repititions
+            // no not pass go, do not honor repetitions
             if (done)
                 continue;
         }
@@ -1120,7 +1120,7 @@ static bool equalize(unsigned a, unsigned b, DedupInfo & di) {
 
 //===========================================================================
 // Makes one pass through all the equal keys and returns true if any of the
-// assoicated states were equivalent (i.e. got it's references merge with
+// associated states were equivalent (i.e. got it's references merge with
 // another state and removed).
 static bool dedupStateTreePass(DedupInfo & di) {
     vector<pair<unsigned, unsigned>> matched;

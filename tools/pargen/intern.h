@@ -243,8 +243,8 @@ struct State {
     std::string name;
     std::vector<std::string> aliases;
 
-    // bitset is 256 for the possible terminals, count() == 0 if
-    // there are no terminals because it's a function.
+    // bitset is 256 to allow space for all possible terminals, count() == 0 
+    // if there are no terminals because it's a function.
     std::map<StatePosition, std::bitset<256>> positions;
 
     std::vector<unsigned> next;

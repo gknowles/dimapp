@@ -36,7 +36,7 @@ const bool kNativeUnaligned64 = true;
 
 namespace {
 struct Seed {
-    // siphash default seed
+    // SipHash default seed
     uint64_t v0 = 0x736f'6d65'7073'6575 ^ 0x0706'0504'0302'0100;
     uint64_t v1 = 0x646f'7261'6e64'6f6d ^ 0x0f0e'0d0c'0b0a'0908;
     uint64_t v2 = 0x6c79'6765'6e65'7261 ^ 0x0706'0504'0302'0100;

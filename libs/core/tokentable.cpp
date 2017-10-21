@@ -42,7 +42,7 @@ TokenTable::TokenTable(const Token * src, size_t count) {
         vals->nameLen = (int)strlen(ptr->name);
     }
 
-    // use a prime-ish number of slots so a questionable hash function
+    // use a semi-prime number of slots so a questionable hash function
     // (such as some low bits usually 0) is less likely to cluster.
     size_t num = 2 * count + 1;
 
@@ -50,10 +50,9 @@ TokenTable::TokenTable(const Token * src, size_t count) {
     Index * base = m_byName.data();
     for (auto i = 0; i < m_values.size(); ++i) {
         auto & val = m_values[i];
-        size_t pos = val.hash;
+        size_t pos = val.hash % num;
         Index ndx = { i, 0 };
         for (;;) {
-            pos %= num;
             Index & tmp = base[pos];
             if (tmp.distance == -1) {
                 tmp = ndx;
@@ -67,7 +66,8 @@ TokenTable::TokenTable(const Token * src, size_t count) {
             }
             if (ndx.distance > tmp.distance)
                 swap(ndx, tmp);
-            pos += 1;
+            if (++pos == num)
+                pos = 0;
             ndx.distance += 1;
         }
     }

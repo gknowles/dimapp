@@ -319,8 +319,6 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
 
 //===========================================================================
 void Dim::iSocketConnectInitialize() {
-    // Don't register cleanup until all dependents (aka sockbuf) have
-    // registered their cleanups (aka been initialized)
     shutdownMonitor(&s_cleanup);
 }
 

@@ -138,7 +138,7 @@ bool DirInfo::queue() {
     if (!ReadDirectoryChangesW(
         m_handle,
         NULL, // output buffer
-        0, // output buffer len
+        0, // output buffer length
         m_recurse, // include subdirs
         FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_LAST_WRITE,
         NULL, // bytes returned (not for async)
@@ -243,8 +243,8 @@ void DirInfo::removeMonitorWait_UNLK(
             if (fi.notifiers.empty()) {
                 lk.unlock();
                 lk.release();
-                // Queue the timer event, which will notice the the empty 
-                // FileInfo and delete it.
+                // Queue the timer event, which will notice the empty FileInfo 
+                // and delete it.
                 timerUpdate(this, 5s, true);
             }
             return;

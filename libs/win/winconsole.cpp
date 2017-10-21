@@ -91,7 +91,7 @@ ConsoleScopedAttr::~ConsoleScopedAttr() {
 
 //===========================================================================
 void Dim::iConsoleInitialize() {
-    // set ctrl-c handler
+    // set control-c handler
     SetConsoleCtrlHandler(&controlCallback, true);
 }
 

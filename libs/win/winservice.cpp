@@ -78,7 +78,7 @@ static DWORD WINAPI svcCtrlHandler(
 
 //===========================================================================
 static VOID WINAPI ServiceMain(DWORD argc, LPTSTR * argv) {
-    // Running as a service and services can't have gui windows
+    // Running as a service and services can't have GUI windows
     iAppSetFlags(appFlags() & ~fAppWithGui | fAppIsService);
 
     s_hstat = RegisterServiceCtrlHandlerEx(

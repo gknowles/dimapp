@@ -129,7 +129,7 @@ public:
     void addHeader(const char name[], const char value[]);
 
     // When adding references the memory referenced by the name and value
-    // pointers must be valid for the life of the http msg, such as constants
+    // pointers must be valid for the life of the HttpMsg, such as constants
     // or strings allocated from this messages Heap().
     void addHeaderRef(HttpHdr id, const char value[]);
     void addHeaderRef(const char name[], const char value[]);
@@ -250,7 +250,7 @@ void httpClose(HttpConnHandle conn);
 // Returns false when no more data will be accepted, either by request
 // of the input or due to error.
 // Even after an error, msgs and out should be processed.
-//  - msg: zero or more requests, push promises, and/or replies are appended
+//  - msgs: zero or more requests, push promises, and/or replies are appended
 //  - out: data to send to the remote endpoint is appended
 bool httpRecv(
     HttpConnHandle conn,

@@ -367,7 +367,7 @@ string_view Dim::strTrim(string_view src) {
 
 /****************************************************************************
 *
-*   utf-8
+*   UTF-8
 *
 ***/
 
@@ -428,7 +428,7 @@ void Dim::appendUnicode(string & out, char32_t ch) {
         out += (unsigned char) ((ch & 0x3f) + 0x80);
     } else {
         assert(ch >= 0xd800 && ch <= 0xdfff || ch >= 0x11'000);
-        assert(0 && "invalid unicode char");
+        assert(0 && "invalid Unicode char");
     }
 }
 
@@ -455,7 +455,7 @@ string Dim::toString(wstring_view src) {
 
 /****************************************************************************
 *
-*   utf-16
+*   UTF-16
 *
 ***/
 
@@ -488,7 +488,7 @@ void Dim::appendUnicode(wstring & out, char32_t ch) {
         out += (wchar_t) ((ch >> 10) + 0xd800);
         out += (wchar_t) ((ch & 0x3ff) + 0xdc00);
     } else {
-        assert(0 && "invalid unicode char");
+        assert(0 && "invalid Unicode char");
     }
 }
 

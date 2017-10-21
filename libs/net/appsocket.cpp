@@ -279,9 +279,9 @@ static bool findFactory(
         // match types, in reverse priority order
         kUnknown,   // no match
         kWild,      // wildcard factory (0.0.0.0:0)
-        kPort,      // matching port with wildcard addr
-        kAddr,      // matching addr with wildcard port
-        kExact,     // both addr and port explicitly match
+        kPort,      // matching port with wildcard address
+        kAddr,      // matching address with wildcard port
+        kExact,     // both address and port explicitly match
     };
     struct EndpointKey {
         IFactory<IAppSocketNotify> * fact;

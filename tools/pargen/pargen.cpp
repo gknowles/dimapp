@@ -264,7 +264,7 @@ https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
     if (!srcfile)
         return appSignalUsageError("No value given for <source file[.abnf]>");
 
-    // process abnf file
+    // process ABNF file
     srcfile->defaultExt("abnf");
     string source;
     fileLoadBinaryWait(source, *srcfile);

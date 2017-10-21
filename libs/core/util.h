@@ -94,7 +94,7 @@ inline IFactory<Base> * getFactory() {
 *
 *   NoCopy base class
 *
-*   Prevents any class dervied from NoCopy from being copy constructed or
+*   Prevents any class derived from NoCopy from being copy constructed or
 *   copy assigned.
 *
 ***/

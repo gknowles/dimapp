@@ -213,7 +213,7 @@ void CharBuf::resize(size_t count) {
 CharBuf & CharBuf::insert(size_t pos, size_t numCh, char ch) {
     assert(pos <= pos + numCh && pos <= (size_t) m_size);
 
-    // short-circuit to avoid allocs
+    // short-circuit to avoid allocations
     if (!numCh)
         return *this;
 
@@ -225,7 +225,7 @@ CharBuf & CharBuf::insert(size_t pos, size_t numCh, char ch) {
 CharBuf & CharBuf::insert(size_t pos, const char s[]) {
     assert(pos <= (size_t) m_size);
 
-    // short-circuit to avoid allocs. find() forces allocated buffer to exist
+    // short-circuit to avoid allocations. find() forces buffer to exist
     if (!*s)
         return *this;
 
@@ -237,7 +237,7 @@ CharBuf & CharBuf::insert(size_t pos, const char s[]) {
 CharBuf & CharBuf::insert(size_t pos, const char s[], size_t count) {
     assert(pos <= pos + count && pos <= (size_t) m_size);
 
-    // short-circuit to avoid allocs
+    // short-circuit to avoid allocations
     if (!count)
         return *this;
 
@@ -256,7 +256,7 @@ CharBuf & CharBuf::insert(
     assert(bufPos <= (size_t) buf.m_size);
     auto add = (int) min(bufLen, buf.m_size - bufPos);
 
-    // short-circuit to avoid allocs
+    // short-circuit to avoid allocations
     if (!add)
         return *this;
 
@@ -270,7 +270,7 @@ CharBuf & CharBuf::erase(size_t pos, size_t count) {
     assert(pos <= (size_t) m_size);
     auto remove = (int) min(count, m_size - pos);
 
-    // short-circuit to avoid allocs
+    // short-circuit to avoid allocations
     if (!remove)
         return *this;
 

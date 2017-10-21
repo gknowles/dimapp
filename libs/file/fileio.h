@@ -32,9 +32,9 @@ namespace File {
         fDenyWrite = 0x100, // others can read
         fDenyNone = 0x200,  // others can read, write, or delete
 
-        // Optimize for file*Wait family of functions. Opens file without
-        // FILE_FLAG_OVERLAPPED and does async by posting the requests
-        // to a small taskqueue whose threads use blocking calls.
+        // Optimize for the file*Wait family of functions. Opens file without
+        // FILE_FLAG_OVERLAPPED and does asynchronous by posting the requests
+        // to a small task queue whose threads use blocking calls.
         fBlocking = 0x1000,
 
         // INTERNAL USE ONLY

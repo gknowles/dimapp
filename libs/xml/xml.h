@@ -21,7 +21,7 @@ namespace Dim {
 
 /****************************************************************************
 *
-*   Xml builder
+*   XML builder
 *
 ***/
 
@@ -160,7 +160,7 @@ private:
 
 /****************************************************************************
 *
-*   Xml stream parser
+*   XML stream parser
 *
 ***/
 
@@ -214,7 +214,7 @@ private:
 
 /****************************************************************************
 *
-*   Xml dom document
+*   XML DOM document
 *
 ***/
 
@@ -238,7 +238,7 @@ public:
 
     XNode * addText(XNode * parent, const char text[]);
 
-    // Remove all child (not all descendent) text nodes and set the node
+    // Remove all child (not all descendant) text nodes and set the node
     // "value" to the concatenation of the removed text with leading
     // and trailing spaces removed *after* concatenation.
     void normalizeText(XNode * elem);
@@ -261,7 +261,7 @@ private:
 };
 
 //===========================================================================
-// Attr and node (element, comment, text, etc)
+// Nodes (element, comment, text, etc) and attributes
 //===========================================================================
 enum class XType {
     kInvalid,

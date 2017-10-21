@@ -90,7 +90,7 @@ bool ServerConn::recv(CharBuf * out, CharBuf * data, string_view src) {
         0 // trailing null for the debugger
     };
 
-    // Rebuild the alpn just in case endianness matters, rendering the 
+    // Rebuild the ALPN just in case endianness matters, rendering the 
     // manually constructed little-endian version invalid.
     auto alpn = (SEC_APPLICATION_PROTOCOLS *) alpn_chars;
     alpn->ProtocolListsSize = 9;
@@ -152,8 +152,8 @@ NEGOTIATE:
             FreeContextBuffer(outBufs[0].pvBuffer);
         }
         if (outBufs[1].cbBuffer) {
-            // TODO: figure out what is in the buffer, is it crypted data?
-            // uncrypted? ignorable handshake cruft?
+            // TODO: figure out what is in the buffer, is it encrypted?
+            // unencrypted? ignorable handshake cruft?
             assert(!outBufs[1].cbBuffer); 
             data->append((char *) outBufs[1].pvBuffer, outBufs[1].cbBuffer);
             FreeContextBuffer(outBufs[1].pvBuffer);

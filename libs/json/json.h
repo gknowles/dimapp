@@ -43,7 +43,7 @@ public:
         return *this;
     }
 
-    // pre-formatted value
+    // preformatted value
     IJBuilder & valueRaw(std::string_view val);
 
     IJBuilder & value(std::string_view val);
@@ -204,7 +204,7 @@ private:
 };
 
 //===========================================================================
-// Attr and node (array, object, string, bool, etc)
+// Types (array, object, string, bool, etc)
 //===========================================================================
 enum class JType {
     kInvalid,

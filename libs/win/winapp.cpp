@@ -189,7 +189,7 @@ static HWND createPerfWindow() {
         wnd, 
         kTimerId,
         kUpdateIntervalMS,
-        NULL // timer proc
+        NULL // timer function
     );
     return wnd;
 }

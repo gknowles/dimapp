@@ -144,7 +144,7 @@ bool ParserNotify::text(const char value[], size_t valueLen) {
 
 /****************************************************************************
 *
-*   Xml document
+*   XML document
 *
 ***/
 

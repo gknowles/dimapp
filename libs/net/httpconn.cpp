@@ -1008,7 +1008,7 @@ bool HttpConn::onGoAway(
     //  data[]
 
     if (!stream) {
-        // goaway frames aren't allowed on stream 0
+        // GoAway frames aren't allowed on stream 0
         replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
         return false;
     }

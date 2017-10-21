@@ -272,11 +272,11 @@ bool SocketBase::createQueue() {
         // create request queue
         m_rq = s_rio.RIOCreateRequestQueue(
             m_handle,
-            kMaxReceiving, // max outstanding recv requests
-            1,             // max recv buffers (must be 1)
+            kMaxReceiving, // max outstanding receive requests
+            1,             // max receive buffers (must be 1)
             m_maxSending,  // max outstanding send requests
             1,             // max send buffers (must be 1)
-            s_cq,          // recv completion queue
+            s_cq,          // receive completion queue
             s_cq,          // send completion queue
             this           // socket context
         );
@@ -564,7 +564,7 @@ void Dim::iSocketInitialize() {
     iSocketAcceptInitialize();
     iSocketConnectInitialize();
 
-    // create rio completion queue
+    // create RIO completion queue
     RIO_NOTIFICATION_COMPLETION ctype = {};
     ctype.Type = RIO_EVENT_COMPLETION;
     ctype.Event.EventHandle = s_cqReady.nativeHandle();
@@ -573,7 +573,7 @@ void Dim::iSocketInitialize() {
     if (s_cq == RIO_INVALID_CQ)
         logMsgCrash() << "RIOCreateCompletionQueue: " << WinError{};
 
-    // start rio dispatch task
+    // start RIO dispatch task
     taskPushOnce("RIO Dispatch", rioDispatchThread);
 
     s_mode = kRunRunning;

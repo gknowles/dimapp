@@ -28,7 +28,7 @@ void consoleEnableEcho(bool enable = true);
 
 void consoleEnableCtrlC(bool enable = true);
 
-// If the standard io has been redirected these functions will reset them 
+// If the standard IO has been redirected these functions will reset them 
 // back to point to the console, if the process has a console.
 void consoleResetStdin();
 void consoleResetStdout();

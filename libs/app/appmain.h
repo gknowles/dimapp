@@ -129,7 +129,7 @@ enum {
     // Start of exit codes defined by this application
     EX__APPBASE = 10,
 
-    // Exit code is being set by an asyncronously event that hasn't completed,
+    // Exit code is being set by an asynchronously event that hasn't completed,
     // prevents appSignalUsageError() from taking action.
     EX_PENDING = 63,
 
@@ -143,7 +143,7 @@ enum {
     EX_NOHOST = 68,      // host doesn't exist (not merely connect failed)
     EX_UNAVAILABLE = 69, // failed for some other reason
     EX_SOFTWARE = 70,    // internal software error
-    EX_OSERR = 71,       // some os operation failed
+    EX_OSERR = 71,       // some OS operation failed
     EX_OSFILE = 72,      // some operation on a system file failed
     EX_CANTCREAT = 73,   // can't create user supplied output file
     EX_IOERR = 74,       // console or file read/write error
@@ -153,18 +153,17 @@ enum {
     EX_CONFIG = 78,      // configuration error
 };
 
-// Signals shutdown to begin, the exitcode will be return from appRun() after
-// shutdown finishes.
+// Signals shutdown to begin, the exitcode will be returned from appRun() 
+// after shutdown finishes.
 // 
 // When running as a Windows service, a call to set SERVICE_STOP_PENDING
 // is immediately queued, with a change to SERVICE_STOPPED coming only after
-// all application shutdown handlers (see shutdownMonitor et al) have 
-// completed.
+// all application shutdown handlers (see shutdownMonitor) have completed.
 void appSignalShutdown(int exitcode = EX_OK);
 
 // Intended for use with command line errors, calls appSignalShutdown() after
-// reporting the error. Explicit err text implies EX_USAGE, otherwise exitcode, 
-// err, and detail default to being pulled from the global Dim::Cli instance. 
+// reporting the error. Explicit err text implies EX_USAGE, otherwise defaults
+// for exitcode, err, and detail are pulled from the global Dim::Cli instance. 
 //
 // Unless the application is running as a service, the error is logged to the 
 // console in addition to any other log targets.

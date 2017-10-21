@@ -203,7 +203,7 @@ void Dim::endpointQuery(
         return;
     }
 
-    // Async completion requires wchar version of
+    // Asynchronous completion requires wchar version of:
     wstring wname{toWstring(name)};
     wstring wport{to_wstring(defaultPort)};
 

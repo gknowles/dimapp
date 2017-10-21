@@ -68,7 +68,7 @@ private:
 
 /****************************************************************************
 *
-*   Contants
+*   Constants
 *
 ***/
 
@@ -140,7 +140,7 @@ const HpackFieldView s_staticTable[] = {
 };
 static_assert(size(s_staticTable) == 62);
 
-// huffman encoding as defined by rfc7541 appendix B
+// Huffman encoding as defined by rfc7541 appendix B
 const EncodeItem s_encodeTable[] = {
     {0x1ff8, 13},     //     (  0) |11111111|11000
     {0x7fffd8, 23},   //     (  1) |11111111|11111111|1011000
@@ -479,7 +479,7 @@ void HpackEncode::write(const char str[]) {
 
 //===========================================================================
 void HpackEncode::write(const char str[], size_t len) {
-    // high bit 0 - encode as raw bytes (not huffman)
+    // high bit 0 - encode as raw bytes (not Huffman)
     write(len, 0x00, 7);
     m_out->append(str, len);
 }

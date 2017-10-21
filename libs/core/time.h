@@ -46,7 +46,7 @@ typedef Clock::time_point TimePoint;
 *
 *   Time8601Str
 *
-*   Time format as defined by RFC3339, an internet profile of ISO 8601 that
+*   Time format as defined by RFC3339, an Internet profile of ISO 8601 that
 *   covers a subset of time points and no coverage of durations.
 *
 *   YYYY-MM-DDThh:mm:ss[.nnnnnnn]Z

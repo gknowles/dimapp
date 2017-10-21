@@ -406,7 +406,7 @@ static void getCerts(
     if (certs.empty() && selfsigned) {
         CertName sub;
         sub.reset(selfsigned->pCertInfo->Subject);
-        logMsgDebug() << "Using cert selfsigned by '" << sub.str() << "'";
+        logMsgDebug() << "Using cert self-signed by '" << sub.str() << "'";
         sub.release();
         certs.push_back(move(selfsigned));
     }
@@ -554,13 +554,13 @@ unique_ptr<CredHandle> Dim::iWinTlsCreateCred() {
     auto handle = make_unique<CredHandle>();
     TimeStamp expiry;
     err = (SecStatus) AcquireCredentialsHandle(
-        NULL, // principal - null for schannel
+        NULL, // principal - null for SChannel
         const_cast<LPSTR>(UNISP_NAME), // package
         SECPKG_CRED_INBOUND,
-        NULL, // logon id - null for schannel
+        NULL, // login id - null for SChannel
         &cred,
-        NULL, // get key fn
-        NULL, // get key arg
+        NULL, // get key function
+        NULL, // get key argument
         handle.get(),
         &expiry // expiration time of credentials
     );
@@ -573,7 +573,7 @@ unique_ptr<CredHandle> Dim::iWinTlsCreateCred() {
     Time8601Str expiryStr(expires, 3, timeZoneMinutes(expires));
     logMsgInfo() << "Credentials expiration: " << expiryStr.c_str();
 
-    // TODO: log warning if the cred is about to expire?
+    // TODO: log warning if the credential is about to expire?
 
     return handle;
 }

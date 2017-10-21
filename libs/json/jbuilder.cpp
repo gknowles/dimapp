@@ -297,8 +297,8 @@ void IJBuilder::appendString(string_view val) {
 
 //===========================================================================
 IJBuilder & IJBuilder::fail() {
-    // Fail is called due to application malfeasence, such as trying to start
-    // a new element while inside an attribute or writing invalid characters.
+    // Fail is called due to application malfeasance, such as writing
+    // invalid characters.
     assert(m_state == kStateFail);
     m_state = kStateFail;
     return *this;

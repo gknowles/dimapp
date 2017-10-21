@@ -121,7 +121,7 @@ template <typename T>
 int StrFrom<T, std::enable_if_t<std::is_integral_v<T>>>
 ::internalSet(char * ptr, Unsigned val) {
     if (val < 10) {
-        // optimize for 0 and 1... and 2 thru 9 since it's no more cost
+        // optimize for 0 and 1... and 2 through 9 since it's no more cost
         ptr[0] = static_cast<char>(val) + '0';
         ptr[1] = 0;
         return 1;
@@ -292,10 +292,10 @@ constexpr size_t utfBomSize(UtfType type) {
 
 
 //---------------------------------------------------------------------------
-// utf-8
+// UTF-8
 //---------------------------------------------------------------------------
 
-// returns 0 if src doesn't start with a valid utf-8 encoded code point, 
+// returns 0 if src doesn't start with a valid UTF-8 encoded code point, 
 // which includes being empty.
 char32_t popFrontUnicode(std::string_view & src);
 
@@ -304,10 +304,10 @@ size_t unicodeLen(std::string_view src);
 std::string toString(std::wstring_view src);
 
 //---------------------------------------------------------------------------
-// utf-16
+// UTF-16
 //---------------------------------------------------------------------------
 
-// returns 0 if src doesn't start with a valid utf-16 encoded code point, 
+// returns 0 if src doesn't start with a valid UTF-16 encoded code point, 
 // which includes being empty.
 char32_t popFrontUnicode(std::wstring_view & src);
 

@@ -44,7 +44,7 @@ SockMgrHandle sockMgrConnect(
 
 //===========================================================================
 // Helpers to implicitly create factories for connect and listen. Templated
-// on socket class derived from IAppSocketNotify.
+// on a socket class derived from IAppSocketNotify.
 //===========================================================================
 template <typename S>
 SockMgrHandle sockMgrListen(

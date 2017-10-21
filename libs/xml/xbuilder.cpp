@@ -301,7 +301,7 @@ DONE:
 
 //===========================================================================
 IXBuilder & IXBuilder::fail() {
-    // Fail is called due to application malfeasence, such as trying to start
+    // Fail is called due to application malfeasance, such as trying to start
     // a new element while inside an attribute or writing invalid characters.
     assert(m_state == kStateFail);
     m_state = kStateFail;
@@ -410,7 +410,7 @@ IXBuilder & Dim::operator<<(IXBuilder & out, std::string_view val) {
 IXBuilder & Dim::operator<<(IXBuilder & out, const XNode & elem) {
     auto type = nodeType(&elem);
     switch (type) {
-    default: assert(0 && "unknown xml node type"); return out;
+    default: assert(0 && "unknown XML node type"); return out;
     case XType::kText: out.text(elem.value); return out;
     case XType::kElement: break;
     }

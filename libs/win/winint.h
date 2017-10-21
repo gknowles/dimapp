@@ -20,7 +20,7 @@ namespace Dim {
 ***/
 
 //---------------------------------------------------------------------------
-// Load DLL Proc
+// Load DLL Procedure
 
 FARPROC winLoadProc(const char lib[], const char proc[], bool optional);
 
@@ -33,7 +33,7 @@ static void winLoadProc(
     bool optional = false
 ) {
     // FN must be pointer to function, which will be set to the address of
-    // the lib/proc being loaded.
+    // the procedure being loaded.
     static_assert(std::is_pointer_v<FN>);
     static_assert(std::is_function_v<std::pointer_traits<FN>::element_type>);
     fn = (FN) winLoadProc(lib, proc, optional);
@@ -182,7 +182,7 @@ bool winFileSetErrno(int error);
 
 /****************************************************************************
 *
-*   Iocp
+*   IOCP
 *
 ***/
 

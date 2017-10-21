@@ -21,7 +21,7 @@ static mutex s_mut;
 
 /****************************************************************************
 *
-*   Iocp completion thread
+*   IOCP completion thread
 *
 ***/
 
@@ -115,7 +115,7 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
     if (!m_closing) {
         m_closing = true;
         if (!CloseHandle(s_iocp))
-            logMsgError() << "CloseHandle(iocp): " << WinError{};
+            logMsgError() << "CloseHandle(IOCP): " << WinError{};
 
         s_iocp = INVALID_HANDLE_VALUE;
         Sleep(0);
@@ -141,12 +141,12 @@ void Dim::winIocpInitialize() {
         INVALID_HANDLE_VALUE,
         NULL, // existing port
         NULL, // completion key
-        0     // num threads, 0 for default
+        0     // concurrent threads, 0 for default
     );
     if (!s_iocp)
         logMsgCrash() << "CreateIoCompletionPort(null): " << WinError{};
 
-    // start iocp dispatch task
+    // Start IOCP dispatch task
     taskPushOnce("IOCP Dispatch", iocpDispatchThread);
 }
 

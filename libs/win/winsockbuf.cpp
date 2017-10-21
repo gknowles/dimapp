@@ -167,7 +167,7 @@ static void destroyBufferSlice(const SocketBuffer & sbuf) {
             swap(buf, s_buffers[pos]);
         s_numPartial -= 1;
 
-        // over half the rbufs are empty? destroy one
+        // over half the buffers are empty? destroy one
         if (s_buffers.size() > 2 * (s_numFull + s_numPartial))
             destroyEmptyBuffer();
     }

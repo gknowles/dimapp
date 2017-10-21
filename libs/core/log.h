@@ -69,8 +69,8 @@ Detail::LogCrash logMsgCrash();
 // lines with part or all of the line of content containing the error 
 // with a caret indicating it's exact position.
 //
-// "content" should be the entire source being parsed and "pos" the failing
-// offset into the content. The line number is calculated from that.
+// "content" should be the entire source being parsed and "pos" the offset 
+// into the content of the error. The line number is calculated from that.
 void logParseError(
     std::string_view msg,
     std::string_view name,

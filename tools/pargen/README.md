@@ -1,3 +1,8 @@
+<!--
+Copyright Glen Knowles 2016 - 2017.
+Distributed under the Boost Software License, Version 1.0.
+-->
+
 # pargen
 Simplistic parser generator
 
@@ -13,7 +18,7 @@ The input format follows [RFC 5234](https://tools.ietf.org/html/rfc5234)
 the some modifications. 
 - Special "rules" starting with a percent "%" are options for the generator.
 - Rules can be followed by brace "{}" enclosed tags. Tags are used to tell 
-  the generator to do things, just as insert event callbacks.
+  the generator to do things, such as insert event callbacks.
 - Prose values that define rules via a text description such as "\<all nouns>"
   are not allowed.
 

@@ -17,5 +17,4 @@ namespace Dim {
 
 void appTlsInitialize();
 
-
 } // namespace
