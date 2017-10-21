@@ -28,6 +28,11 @@ enum LogType {
 
 namespace Detail {
 
+class Crash {
+public:
+    [[noreturn]] ~Crash();
+};
+
 class Log : public std::ostringstream {
 public:
     Log(LogType type);
@@ -38,10 +43,9 @@ private:
     LogType m_type;
 };
 
-class LogCrash : public Log {
+class LogCrash : Crash, public Log {
 public:
     using Log::Log;
-    [[noreturn]] ~LogCrash();
 };
 
 } // namespace

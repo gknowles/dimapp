@@ -16,6 +16,7 @@ using namespace Dim;
 ***/
 
 namespace {
+
 class DefaultLogger : public ILogNotify {
     void onLog(LogType type, string_view msg) override;
 };
@@ -141,12 +142,15 @@ Detail::Log::~Log() {
 
 /****************************************************************************
 *
-*   LogCrash
+*   Crash
 *
 ***/
 
 //===========================================================================
-Detail::LogCrash::~LogCrash() {}
+Detail::Crash::~Crash() {
+    this_thread::sleep_for(3s);
+    abort();
+}
 
 
 /****************************************************************************
