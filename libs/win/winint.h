@@ -15,6 +15,52 @@ namespace Dim {
 
 /****************************************************************************
 *
+*   Error
+*
+***/
+
+class WinError {
+public:
+    enum NtStatus : unsigned {};
+    enum SecurityStatus : unsigned {};
+
+public:
+    // default constructor calls GetLastError()
+    WinError();
+    WinError(const WinError & from) = default;
+    WinError(int error);
+    // sets equivalent standard windows error value
+    WinError(NtStatus status);
+    WinError(SecurityStatus status);
+
+    WinError & operator=(const WinError & from) = default;
+    WinError & operator=(int error) { return *this = WinError{error}; }
+    WinError & operator=(NtStatus status) { return *this = WinError{status}; }
+    WinError & operator=(SecurityStatus status) { 
+        return *this = WinError{status}; 
+    }
+
+    WinError & set();   // calls GetLastError()
+
+    operator int() const { return m_value; }
+    explicit operator NtStatus() const { return (NtStatus) m_ntStatus; }
+    explicit operator SecurityStatus() const { 
+        return (SecurityStatus) m_secStatus; 
+    }
+
+private:
+    int m_value;
+    int m_ntStatus{0};
+    int m_secStatus{0};
+};
+
+std::ostream & operator<<(std::ostream & os, const WinError & val);
+
+void winErrorInitialize();
+
+
+/****************************************************************************
+*
 *   Util
 *
 ***/
@@ -61,6 +107,11 @@ class IWinOverlappedNotify : public ITaskNotify {
 public:
     IWinOverlappedNotify(TaskQueueHandle hq = {});
     OVERLAPPED & overlapped() { return m_evt.overlapped; }
+    void pushOverlappedTask();
+
+    // Get error and number of bytes transferred for the operation
+    struct WinOverlappedResult { WinError err; DWORD bytes; };
+    WinOverlappedResult getOverlappedResult();
 
     virtual void onTask() override = 0;
 
@@ -92,71 +143,16 @@ private:
     HANDLE m_handle;
 };
 
-
-/****************************************************************************
-*
-*   Wait for events
-*
-***/
-
-class IWinEventWaitNotify : public ITaskNotify {
+class IWinEventWaitNotify : public IWinOverlappedNotify {
 public:
-    IWinEventWaitNotify();
+    IWinEventWaitNotify(TaskQueueHandle hq = {});
     ~IWinEventWaitNotify();
 
     virtual void onTask() override = 0;
 
-    OVERLAPPED m_overlapped{};
-
 private:
     HANDLE m_registeredWait{nullptr};
 };
-
-
-/****************************************************************************
-*
-*   Error
-*
-***/
-
-class WinError {
-public:
-    enum NtStatus : unsigned {};
-    enum SecurityStatus : unsigned {};
-
-public:
-    // default constructor calls GetLastError()
-    WinError();
-    WinError(const WinError & from) = default;
-    WinError(int error);
-    // sets equivalent standard windows error value
-    WinError(NtStatus status);
-    WinError(SecurityStatus status);
-
-    WinError & operator=(const WinError & from) = default;
-    WinError & operator=(int error) { return *this = WinError{error}; }
-    WinError & operator=(NtStatus status) { return *this = WinError{status}; }
-    WinError & operator=(SecurityStatus status) { 
-        return *this = WinError{status}; 
-    }
-
-    WinError & set();   // calls GetLastError()
-
-    operator int() const { return m_value; }
-    explicit operator NtStatus() const { return (NtStatus) m_ntStatus; }
-    explicit operator SecurityStatus() const { 
-        return (SecurityStatus) m_secStatus; 
-    }
-
-private:
-    int m_value;
-    int m_ntStatus{0};
-    int m_secStatus{0};
-};
-
-std::ostream & operator<<(std::ostream & os, const WinError & val);
-
-void winErrorInitialize();
 
 
 /****************************************************************************

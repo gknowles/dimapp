@@ -65,3 +65,27 @@ IWinOverlappedNotify::IWinOverlappedNotify(TaskQueueHandle hq) {
     m_evt.notify = this;
     m_evt.hq = hq;
 }
+
+//===========================================================================
+void IWinOverlappedNotify::pushOverlappedTask() {
+    if (m_evt.hq) {
+        taskPush(m_evt.hq, *m_evt.notify);
+    } else {
+        taskPushEvent(*m_evt.notify);
+    }
+}
+
+//===========================================================================
+IWinOverlappedNotify::WinOverlappedResult 
+IWinOverlappedNotify::getOverlappedResult() {
+    DWORD bytes = 0;
+    if (!GetOverlappedResult(
+        INVALID_HANDLE_VALUE,
+        &m_evt.overlapped,
+        &bytes,
+        false
+    )) {
+        return {{}, bytes};
+    }
+    return {0, bytes};
+}

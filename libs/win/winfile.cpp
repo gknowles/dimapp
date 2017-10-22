@@ -233,15 +233,9 @@ void IFileOpBase::onTask() {
     // async + non-blocking - event thread
 
     if (m_err == ERROR_IO_PENDING) {
-        m_err = 0;
-        if (!GetOverlappedResult(
-            INVALID_HANDLE_VALUE, 
-            &overlapped(), 
-            &m_bytes, 
-            false
-        )) {
-            m_err = WinError{};
-        }
+        auto [err, bytes] = getOverlappedResult();
+        m_err = err;
+        m_bytes = bytes;
     }
 
     if (m_err) {

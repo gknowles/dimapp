@@ -254,15 +254,7 @@ void DirInfo::removeMonitorWait_UNLK(
 
 //===========================================================================
 void DirInfo::onTask () {
-    DWORD bytes;
-    WinError err{0};
-    if (!GetOverlappedResult(
-        INVALID_HANDLE_VALUE, 
-        &overlapped(), 
-        &bytes, 
-        false
-    )) {
-        err = WinError{};
+    if (auto err = getOverlappedResult().err) {
         if (err != ERROR_NOTIFY_ENUM_DIR) {
             if (err != ERROR_OPERATION_ABORTED) {
                 logMsgError() << "ReadDirectoryChangesW() overlapped: " 

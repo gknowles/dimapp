@@ -66,17 +66,20 @@ HANDLE WinEvent::release() {
 //===========================================================================
 static VOID CALLBACK eventWaitCallback(PVOID param, BOOLEAN timeout) {
     auto notify = reinterpret_cast<IWinEventWaitNotify *>(param);
-    taskPushEvent(*notify);
+    notify->pushOverlappedTask();
 }
 
 //===========================================================================
-IWinEventWaitNotify::IWinEventWaitNotify() {
-    m_overlapped.hEvent = CreateEvent(nullptr, 0, 0, nullptr);
-    assert(m_overlapped.hEvent);
+IWinEventWaitNotify::IWinEventWaitNotify(TaskQueueHandle hq) 
+    : IWinOverlappedNotify{hq}
+{
+    auto & hevt = overlapped().hEvent;
+    hevt = CreateEvent(nullptr, 0, 0, nullptr);
+    assert(hevt);
 
     if (!RegisterWaitForSingleObject(
         &m_registeredWait,
-        m_overlapped.hEvent,
+        hevt,
         &eventWaitCallback,
         this,
         INFINITE, // timeout
@@ -91,7 +94,7 @@ IWinEventWaitNotify::~IWinEventWaitNotify() {
     if (m_registeredWait && !UnregisterWaitEx(m_registeredWait, nullptr)) {
         logMsgError() << "UnregisterWaitEx: " << WinError{};
     }
-    if (m_overlapped.hEvent && !CloseHandle(m_overlapped.hEvent)) {
+    if (overlapped().hEvent && !CloseHandle(overlapped().hEvent)) {
         logMsgError() << "CloseHandle(overlapped.hEvent): " << WinError{};
     }
 }

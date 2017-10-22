@@ -116,16 +116,7 @@ ConnectTask::ConnectTask(unique_ptr<ConnSocket> && sock)
 
 //===========================================================================
 void ConnectTask::onTask() {
-    DWORD bytes;
-    WinError err{0};
-    if (!GetOverlappedResult(
-        INVALID_HANDLE_VALUE, 
-        &m_overlapped, 
-        &bytes, 
-        false
-    )) {
-        err = WinError{};
-    }
+    auto [err, bytes] = getOverlappedResult();
     m_socket.release()->onConnect(err, bytes);
 
     lock_guard<mutex> lk{s_mut};
@@ -214,7 +205,7 @@ void ConnSocket::connect(
         NULL,   // send buffer
         0,      // send buffer length
         &bytes, // bytes sent (ignored)
-        &it->m_overlapped
+        &it->overlapped()
     );
     WinError err;
     if (!error || err != ERROR_IO_PENDING) {

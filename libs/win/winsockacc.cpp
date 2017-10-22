@@ -88,16 +88,7 @@ ListenSocket::ListenSocket(
 
 //===========================================================================
 void ListenSocket::onTask() {
-    DWORD bytes;
-    WinError err{0};
-    if (!GetOverlappedResult(
-        INVALID_HANDLE_VALUE, 
-        &m_overlapped, 
-        &bytes, 
-        false
-    )) {
-        err.set();
-    }
+    auto [err, bytes] = getOverlappedResult();
     m_socket->onAccept(this, err, bytes);
 
     if (!AcceptSocket::accept(this)) {
@@ -182,7 +173,7 @@ bool AcceptSocket::accept(ListenSocket * listen) {
             sizeof sockaddr_storage, // local endpoint length
             sizeof sockaddr_storage, // remote endpoint length
             &bytes,                  // bytes received (ignored)
-            &listen->m_overlapped
+            &listen->overlapped()
         );
         WinError err;
         if (error && err == ERROR_IO_PENDING)

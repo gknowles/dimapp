@@ -34,7 +34,7 @@
 #include <Windows.h>
 
 // must come after Windows.h
-#include <CommCtrl.h>
+#include <CommCtrl.h> // ListView
 
 // must come after WinSock2.h
 #include <mstcpip.h> // SIO_LOOPBACK_FAST_PATH
