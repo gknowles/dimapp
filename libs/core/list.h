@@ -218,6 +218,7 @@ public:
     void linkAfter(T * pos, T * first, T * last);
     void linkAfter(T * pos, List && other);
     void unlink(T * value);
+    bool linked(const T * value) const;
     T * unlinkBack();
     T * unlinkFront();
     void unlinkAll();
@@ -417,6 +418,12 @@ void List<T, Tag>::linkFront(List && other) {
 template <typename T, typename Tag>
 void List<T, Tag>::unlink(T * value) {
     static_cast<link_type *>(value)->unlink();
+}
+
+//===========================================================================
+template <typename T, typename Tag>
+bool List<T, Tag>::linked(const T * value) const {
+    return static_cast<link_type *>(value)->linked();
 }
 
 //===========================================================================
