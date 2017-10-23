@@ -217,18 +217,26 @@ SocketBase::SocketBase(ISocketNotify * notify)
 
 //===========================================================================
 SocketBase::~SocketBase() {
-    lock_guard<mutex> lk{s_mut};
-    if (m_notify) {
-        m_notify->m_socket = nullptr;
-        m_notify->onSocketDestroy();
+    ISocketNotify * notify{nullptr};
+
+    {
+        lock_guard<mutex> lk{s_mut};
+        if (m_notify) {
+            notify = m_notify;
+            m_notify->m_socket = nullptr;
+        }
+
+        hardClose_LK();
+
+        if (m_maxSending)
+            addCqUsed_LK(-(m_maxSending + kMaxReceiving));
+
+        s_numSockets -= 1;
     }
 
-    hardClose_LK();
-
-    if (m_maxSending)
-        addCqUsed_LK(-(m_maxSending + kMaxReceiving));
-
-    s_numSockets -= 1;
+    // release the lock before making the calling the notify
+    if (notify)
+        notify->onSocketDestroy();
 }
 
 //===========================================================================
