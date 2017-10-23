@@ -29,6 +29,7 @@ const auto kReconnectInterval = 5s;
 namespace {
 
 class ConnMgrSocket;
+struct RecentLink;
 
 class ConnectManager final : public ISockMgrBase {
 public:
@@ -40,6 +41,7 @@ public:
 
     void connect(const Endpoint & addr);
     void connect(ConnMgrSocket & sock);
+    void stable(ConnMgrSocket & sock);
     void shutdown(const Endpoint & addr);
     void destroy(ConnMgrSocket & sock);
 
@@ -52,11 +54,14 @@ public:
     void onConfigChange(const XDocument & doc) override;
 
 private:
-    TimerList<ISockMgrSocket> m_recent;
+    TimerList<ConnMgrSocket, RecentLink> m_recent;
     unordered_map<Endpoint, ConnMgrSocket> m_sockets;
 };
 
-class ConnMgrSocket final : public ISockMgrSocket {
+class ConnMgrSocket final 
+    : public ISockMgrSocket 
+    , public ITimerListNotify<RecentLink>
+{
 public:
     enum Mode { 
         kUnconnected = 0x02,
@@ -72,7 +77,6 @@ public:
         const Endpoint & addr
     );
 
-    bool recentConnect() const { return m_recentConnect; }
     Mode mode() const { return m_mode; }
     const Endpoint & targetAddress() const { return m_targetAddress; }
     void connect();
@@ -83,6 +87,7 @@ public:
 
     // Inherited via ITimerListNotify
     void onTimer(TimePoint now) override;
+    void onTimer(TimePoint now, RecentLink*) override;
 
     // Inherited via IAppSocket
     void write(string_view data) override;
@@ -97,7 +102,6 @@ public:
 private:
     Endpoint m_targetAddress;
     Mode m_mode{kUnconnected};
-    bool m_recentConnect{false};
 };
 
 } // namespace
@@ -129,51 +133,42 @@ void ConnMgrSocket::connect() {
     assert(m_mode == kUnconnected);
     m_mode = kConnecting;
     mgr().connect(*this);
-    m_recentConnect = true;
 }
 
 //===========================================================================
+// notify by inactivity timer list
 void ConnMgrSocket::onTimer(TimePoint now) {
-    switch (m_mode) {
-    case kUnconnected:
-        m_recentConnect = false;
+    notifyPingRequired();
+}
+
+//===========================================================================
+// notify by recent timer list
+void ConnMgrSocket::onTimer(TimePoint now, RecentLink*) {
+    if (m_mode == kUnconnected) {
         connect();
-        break;
-    case kConnecting:
-        m_recentConnect = false;
-        mgr().touch(this);
-        break;
-    case kConnected:
-        if (m_recentConnect) {
-            m_recentConnect = false;
-            mgr().touch(this);
-        }
-        notifyPingRequired();
-        break;
+    } else {
+        mgr().stable(*this);
     }
 }
 
 //===========================================================================
 void ConnMgrSocket::write(string_view data) {
-    if (!m_recentConnect)
-        mgr().touch(this);
+    mgr().touch(this);
     ISockMgrSocket::write(data);
 }
 
 //===========================================================================
 void ConnMgrSocket::write(unique_ptr<SocketBuffer> buffer, size_t bytes) {
-    if (!m_recentConnect)
-        mgr().touch(this);
+    mgr().touch(this);
     ISockMgrSocket::write(move(buffer), bytes);
 }
 
 //===========================================================================
 void ConnMgrSocket::onSocketConnect (const AppSocketInfo & info) {
     assert(m_mode == kConnecting);
-    if (!m_recentConnect)
-        mgr().touch(this);
-    notifyConnect(info);
+    mgr().touch(this);
     m_mode = kConnected;
+    notifyConnect(info);
 }
 
 //===========================================================================
@@ -220,7 +215,7 @@ ConnectManager::ConnectManager(
         AppSocket::kInvalid, 
         flags
     )
-    , m_recent{kReconnectInterval}
+    , m_recent{kReconnectInterval, 0s}
 {
     init();
 }
@@ -233,7 +228,7 @@ void ConnectManager::connect(const Endpoint & addr) {
         m_cliSockFact->onFactoryCreate(),
         addr
     );
-    connect(ib.first->second);
+    ib.first->second.connect();
 }
 
 //===========================================================================
@@ -241,6 +236,11 @@ void ConnectManager::connect(ConnMgrSocket & sock) {
     assert(sock.mode() == ConnMgrSocket::kConnecting);
     m_recent.touch(&sock);
     socketConnect(&sock, sock.targetAddress(), {});
+}
+
+//===========================================================================
+void ConnectManager::stable(ConnMgrSocket & sock) {
+    m_recent.unlink(&sock);
 }
 
 //===========================================================================
