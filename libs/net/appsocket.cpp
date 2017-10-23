@@ -69,6 +69,8 @@ public:
     void write(unique_ptr<SocketBuffer> buffer, size_t bytes) override;
 
     // ISocketNotify
+    void onSocketConnect(const SocketInfo & info) override;
+    void onSocketConnectFailed() override;
     bool onSocketAccept(const SocketInfo & info) override;
     void onSocketDisconnect() override;
     void onSocketDestroy() override;
@@ -439,11 +441,24 @@ void RawSocket::write(unique_ptr<SocketBuffer> buffer, size_t bytes) {
 }
 
 //===========================================================================
+void RawSocket::onSocketConnect(const SocketInfo & info) {
+    AppSocketInfo tmp = {};
+    tmp.local = info.local;
+    tmp.remote = info.remote;
+    return notifyConnect(tmp);
+}
+
+//===========================================================================
+void RawSocket::onSocketConnectFailed() {
+    notifyConnectFailed();
+}
+
+//===========================================================================
 bool RawSocket::onSocketAccept(const SocketInfo & info) {
-    AppSocketInfo ai = {};
-    ai.local = info.local;
-    ai.remote = info.remote;
-    return notifyAccept(ai);
+    AppSocketInfo tmp = {};
+    tmp.local = info.local;
+    tmp.remote = info.remote;
+    return notifyAccept(tmp);
 }
 
 //===========================================================================

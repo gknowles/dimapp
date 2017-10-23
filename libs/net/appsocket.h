@@ -35,7 +35,6 @@ namespace AppSocket {
 
 struct AppSocketInfo {
     AppSocket::Family fam;
-    std::string_view type;
     Endpoint remote;
     Endpoint local;
 };
