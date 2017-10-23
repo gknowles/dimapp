@@ -178,10 +178,6 @@ public:
     using iterator = ListIterator<List, T>;
     using const_iterator = ListIterator<const List, const T>;
     using link_type = ListBaseLink<Tag>;
-    static_assert(
-        std::is_base_of_v<link_type, T>, 
-        "List member type must be derived from ListBaseLink<Tag>"
-    );
 
 public:
     List() {}
@@ -225,6 +221,11 @@ public:
     void swap(List & other);
 
 private:
+    link_type * cast(T * node) const;
+    const link_type * cast(const T * node) const;
+    T * cast(link_type * link) const;
+    const T * cast(const link_type * link) const;
+
     void linkBase(link_type * pos, link_type * first, link_type * last);
     void linkBaseAfter(link_type * pos, link_type * first, link_type * last);
 
@@ -303,7 +304,7 @@ bool List<T, Tag>::operator==(const List & right) const;
 //===========================================================================
 template <typename T, typename Tag>
 T * List<T, Tag>::front() {
-    return m_base.linked() ? static_cast<T *>(m_base.m_nextLink) : nullptr;
+    return m_base.linked() ? cast(m_base.m_nextLink) : nullptr;
 }
 
 //===========================================================================
@@ -315,7 +316,7 @@ const T * List<T, Tag>::front() const {
 //===========================================================================
 template <typename T, typename Tag>
 T * List<T, Tag>::back() {
-    return m_base.linked() ? static_cast<T *>(m_base.m_prevLink) : nullptr;
+    return m_base.linked() ? cast(m_base.m_prevLink) : nullptr;
 }
 
 //===========================================================================
@@ -327,9 +328,9 @@ const T * List<T, Tag>::back() const {
 //===========================================================================
 template <typename T, typename Tag>
 T * List<T, Tag>::next(const T * node) {
-    auto link = static_cast<const link_type *>(node)->m_nextLink;
+    auto link = cast(node)->m_nextLink;
     assert(link->linked());
-    return link != &m_base ? static_cast<T *>(link) : nullptr;
+    return link != &m_base ? cast(link) : nullptr;
 }
 
 //===========================================================================
@@ -341,9 +342,9 @@ const T * List<T, Tag>::next(const T * node) const {
 //===========================================================================
 template <typename T, typename Tag>
 T * List<T, Tag>::prev(const T * node) {
-    auto link = static_cast<const link_type *>(node)->m_prevLink;
+    auto link = cast(node)->m_prevLink;
     assert(link->linked());
-    return link != &m_base ? static_cast<T *>(link) : nullptr;
+    return link != &m_base ? cast(link) : nullptr;
 }
 
 //===========================================================================
@@ -355,7 +356,7 @@ const T * List<T, Tag>::prev(const T * node) const {
 //===========================================================================
 template <typename T, typename Tag>
 void List<T, Tag>::link(T * pos, T * value) {
-    auto first = static_cast<link_type *>(value);
+    auto first = cast(value);
     linkBase(pos, first, first->m_nextLink);
 }
 
@@ -374,7 +375,7 @@ void List<T, Tag>::link(T * pos, List && other) {
 //===========================================================================
 template <typename T, typename Tag>
 void List<T, Tag>::linkAfter(T * pos, T * value) {
-    auto first = static_cast<link_type *>(value);
+    auto first = cast(value);
     linkBaseAfter(pos, first, first->m_nextLink);
 }
 
@@ -393,37 +394,39 @@ void List<T, Tag>::linkAfter(T * pos, List && other) {
 //===========================================================================
 template <typename T, typename Tag>
 void List<T, Tag>::link(T * value) {
-    link(static_cast<T *>(&m_base), value);
+    auto first = cast(value);
+    linkBase(&m_base, first, first->m_nextLink);
 }
 
 //===========================================================================
 template <typename T, typename Tag>
 void List<T, Tag>::link(List && other) {
-    link(static_cast<T *>(&m_base), other);
+    linkBase(&m_base, other.front(), other.back());
 }
 
 //===========================================================================
 template <typename T, typename Tag>
 void List<T, Tag>::linkFront(T * value) {
-    linkAfter(static_cast<T *>(&m_base), value);
+    auto first = cast(value);
+    linkBaseAfter(&m_base, first, first->m_nextLink);
 }
 
 //===========================================================================
 template <typename T, typename Tag>
 void List<T, Tag>::linkFront(List && other) {
-    linkAfter(static_cast<T *>(&m_base), other);
+    linkBaseAfter(&m_base, other.front(), other.back());
 }
 
 //===========================================================================
 template <typename T, typename Tag>
 void List<T, Tag>::unlink(T * value) {
-    static_cast<link_type *>(value)->unlink();
+    cast(value)->unlink();
 }
 
 //===========================================================================
 template <typename T, typename Tag>
 bool List<T, Tag>::linked(const T * value) const {
-    return static_cast<link_type *>(value)->linked();
+    return cast(value)->linked();
 }
 
 //===========================================================================
@@ -462,6 +465,38 @@ void List<T, Tag>::swap(List & other) {
     swap(m_base.m_prevLink->m_nextLink, from.m_base.m_prevLink->m_nextLink);
     swap(m_base.m_nextLink->m_prevLink, from.m_base.m_nextLink->m_prevLink);
     swap(m_base, from.m_base);
+}
+
+//===========================================================================
+template <typename T, typename Tag>
+auto List<T, Tag>::cast(T * node) const -> link_type * {
+    static_assert(
+        std::is_base_of_v<link_type, T>, 
+        "List member type must be derived from ListBaseLink<Tag>"
+    );
+    return node;
+}
+
+//===========================================================================
+template <typename T, typename Tag>
+auto List<T, Tag>::cast(const T * node) const -> const link_type * {
+    static_assert(
+        std::is_base_of_v<link_type, T>, 
+        "List member type must be derived from ListBaseLink<Tag>"
+    );
+    return node;
+}
+
+//===========================================================================
+template <typename T, typename Tag>
+T * List<T, Tag>::cast(link_type * link) const {
+    return static_cast<T *>(link);
+}
+
+//===========================================================================
+template <typename T, typename Tag>
+const T * List<T, Tag>::cast(const link_type * link) const {
+    return static_cast<const T *>(link);
 }
 
 //===========================================================================
