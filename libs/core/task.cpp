@@ -48,7 +48,7 @@ class EndThreadTask : public ITaskNotify {};
 
 class RunOnceTask : public ITaskNotify {
 public:
-    explicit RunOnceTask(string_view name, function<void()> && fn);
+    RunOnceTask(string_view name, function<void()> && fn);
 
 private:
     void onTask() override;

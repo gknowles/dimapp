@@ -31,23 +31,23 @@ const Duration kTimerDefaultMinWait = (std::chrono::seconds) 2;
 
 template <typename T, typename Tag = LinkDefault> class TimerList;
 
-template <typename T, typename Tag = LinkDefault>
+template <typename Tag = LinkDefault>
 class ITimerListNotify : public ListBaseLink<Tag> {
 public:
     virtual ~ITimerListNotify() = default;
-    virtual void onTimer(TimePoint now, Tag tag = {}) = 0;
+    virtual void onTimer(TimePoint now, Tag * tag = nullptr) = 0;
 private:
-    friend class TimerList<T, Tag>;
+    template <typename T, typename Tag> friend class TimerList;
     TimePoint m_lastTouched;
 };
 
-template <typename T>
-class ITimerListNotify<T, LinkDefault> : public ListBaseLink<LinkDefault> {
+template <>
+class ITimerListNotify<LinkDefault> : public ListBaseLink<LinkDefault> {
 public:
     virtual ~ITimerListNotify() = default;
     virtual void onTimer(TimePoint now) = 0;
 private:
-    friend class TimerList<T, LinkDefault>;
+    template <typename T, typename Tag> friend class TimerList;
     TimePoint m_lastTouched;
 };
 
@@ -85,7 +85,7 @@ private:
 //===========================================================================
 template <typename T, typename Tag>
 inline TimerList<T,Tag>::TimerList(Duration timeout, Duration minWait) {
-    static_assert(std::is_base_of_v<ITimerListNotify<T,Tag>, T>);
+    static_assert(std::is_base_of_v<ITimerListNotify<Tag>, T>);
     setTimeout(timeout, minWait);
 }
 
@@ -94,23 +94,26 @@ template <typename T, typename Tag>
 inline void TimerList<T,Tag>::setTimeout(Duration timeout, Duration minWait) {
     m_timeout = timeout;
     m_minWait = min(minWait, timeout);
-    if (auto node = m_nodes.front())
-        timerUpdate(this, node->m_lastTouched + timeout - Clock::now());
+    if (auto node = m_nodes.front()) {
+        auto notify = static_cast<ITimerListNotify<Tag>*>(node);
+        timerUpdate(this, notify->m_lastTouched + timeout - Clock::now());
+    }
 }
 
 //===========================================================================
 template <typename T, typename Tag>
-inline void TimerList<T,Tag>::touch(T * notify) {
+inline void TimerList<T,Tag>::touch(T * node) {
+    auto notify = static_cast<ITimerListNotify<Tag>*>(node);
     notify->m_lastTouched = Clock::now();
     if (m_nodes.empty())
         timerUpdate(this, m_timeout);
-    m_nodes.link(notify);
+    m_nodes.link(node);
 }
 
 //===========================================================================
 template <typename T, typename Tag>
-inline void TimerList<T,Tag>::unlink(T * notify) {
-    m_nodes.unlink(notify);
+inline void TimerList<T,Tag>::unlink(T * node) {
+    m_nodes.unlink(node);
 }
 
 //===========================================================================
@@ -118,11 +121,12 @@ template <typename T, typename Tag>
 inline Duration TimerList<T,Tag>::onTimer(TimePoint now) {
     auto expire = now - m_timeout;
     while (auto node = m_nodes.front()) {
-        auto wait = node->m_lastTouched - expire;
+        auto notify = static_cast<ITimerListNotify<Tag>*>(node);
+        auto wait = notify->m_lastTouched - expire;
         if (wait > (std::chrono::seconds) 0)
             return wait;
         touch(node);
-        static_cast<ITimerListNotify<T,Tag>*>(node)->onTimer(now);
+        notify->onTimer(now);
     }
     return kTimerInfinite;
 }

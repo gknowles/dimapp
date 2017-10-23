@@ -24,7 +24,7 @@ enum ConfFlags : unsigned {
 class ISockMgrBase;
 
 class ISockMgrSocket 
-    : public ITimerListNotify<ISockMgrSocket>
+    : public ITimerListNotify<>
     , public IAppSocket
     , public IAppSocketNotify 
 {
