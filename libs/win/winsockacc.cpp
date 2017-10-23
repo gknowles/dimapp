@@ -27,7 +27,7 @@ public:
     using SocketBase::SocketBase;
     ~AcceptSocket();
 
-    void onAccept(ListenSocket * listen, int xferError, int xferBytes);
+    void onAccept(ListenSocket * listen, WinError xferError, int xferBytes);
 };
 
 class ListenSocket 
@@ -220,7 +220,7 @@ static bool getAcceptInfo(SocketInfo * out, SOCKET s, void * buffer) {
 //===========================================================================
 void AcceptSocket::onAccept(
     ListenSocket * listen,
-    int xferError,
+    WinError xferError,
     int xferBytes
 ) {
     unique_ptr<AcceptSocket> hostage{move(listen->m_socket)};
@@ -230,7 +230,7 @@ void AcceptSocket::onAccept(
         if (xferError == ERROR_OPERATION_ABORTED && !ok) {
             // socket intentionally closed
         } else {
-            logMsgError() << "onAccept: " << WinError(xferError);
+            logMsgError() << "onAccept: " << xferError;
         }
         return;
     }

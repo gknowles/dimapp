@@ -37,7 +37,11 @@ public:
 
 public:
     using SocketBase::SocketBase;
-    void onConnect(int error, int bytes);
+    ~ConnSocket();
+    void onConnect(WinError error, int bytes);
+
+private:
+    void connectFailed();
 };
 
 class ConnectTask : public IWinEventWaitNotify {
@@ -77,6 +81,10 @@ static mutex s_mut;
 static list<ConnectTask> s_connecting;
 static list<ConnectTask> s_closing;
 static ConnectTimer s_connectTimer;
+
+static auto & s_perfConnected = uperf("sock connected");
+static auto & s_perfCurConnected = uperf("sock connected (current)");
+static auto & s_perfConnectFailed = uperf("sock connect failed");
 
 
 /****************************************************************************
@@ -217,16 +225,28 @@ void ConnSocket::connect(
 }
 
 //===========================================================================
-void ConnSocket::onConnect(int error, int bytes) {
+ConnSocket::~ConnSocket() {
+    if (m_mode == Mode::kClosed)
+        s_perfCurConnected -= 1;
+}
+
+//===========================================================================
+void ConnSocket::connectFailed() {
+    s_perfConnectFailed += 1;
+    m_notify->onSocketConnectFailed();
+}
+
+//===========================================================================
+void ConnSocket::onConnect(WinError error, int bytes) {
     unique_ptr<ConnSocket> hostage(this);
 
     if (m_mode == ISocketNotify::kClosing)
-        return m_notify->onSocketConnectFailed();
+        return connectFailed();
 
     assert(m_mode == ISocketNotify::kConnecting);
 
     if (error)
-        return m_notify->onSocketConnectFailed();
+        return connectFailed();
 
     //-----------------------------------------------------------------------
     // update socket and start receiving
@@ -239,7 +259,7 @@ void ConnSocket::onConnect(int error, int bytes) {
     )) {
         logMsgError() << "setsockopt(SO_UPDATE_CONNECT_CONTEXT): "
             << WinError{};
-        return m_notify->onSocketConnectFailed();
+        return connectFailed();
     }
 
     //-----------------------------------------------------------------------
@@ -252,23 +272,25 @@ void ConnSocket::onConnect(int error, int bytes) {
     int sasLen = sizeof(sas);
     if (SOCKET_ERROR == getpeername(m_handle, (sockaddr *)&sas, &sasLen)) {
         logMsgError() << "getpeername: " << WinError{};
-        return m_notify->onSocketConnectFailed();
+        return connectFailed();
     }
     copy(&m_connInfo.remote, sas);
 
     // locally bound address
     if (SOCKET_ERROR == getsockname(m_handle, (sockaddr *)&sas, &sasLen)) {
         logMsgError() << "getsockname: " << WinError{};
-        return m_notify->onSocketConnectFailed();
+        return connectFailed();
     }
     copy(&m_connInfo.local, sas);
 
     //-----------------------------------------------------------------------
     // create read/write queue
-    if (!createQueue())
-        return m_notify->onSocketConnectFailed();
+    if (!createQueue()) 
+        return connectFailed();
 
     // notify socket connect event
+    s_perfConnected += 1;
+    s_perfCurConnected += 1;
     hostage.release();
     m_notify->onSocketConnect(m_connInfo);
 }
