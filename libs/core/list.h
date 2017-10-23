@@ -180,7 +180,7 @@ public:
     using link_type = ListBaseLink<Tag>;
 
 public:
-    List() {}
+    List();
     List(List && from);
     ~List();
 
@@ -234,7 +234,20 @@ private:
 
 //===========================================================================
 template <typename T, typename Tag>
+List<T, Tag>::List() {
+    static_assert(
+        std::is_base_of_v<link_type, T>, 
+        "List member type must be derived from ListBaseLink<Tag>"
+    );
+}
+
+//===========================================================================
+template <typename T, typename Tag>
 List<T, Tag>::List(List && from) {
+    static_assert(
+        std::is_base_of_v<link_type, T>, 
+        "List member type must be derived from ListBaseLink<Tag>"
+    );
     swap(from);
 }
 
@@ -470,20 +483,12 @@ void List<T, Tag>::swap(List & other) {
 //===========================================================================
 template <typename T, typename Tag>
 auto List<T, Tag>::cast(T * node) const -> link_type * {
-    static_assert(
-        std::is_base_of_v<link_type, T>, 
-        "List member type must be derived from ListBaseLink<Tag>"
-    );
     return node;
 }
 
 //===========================================================================
 template <typename T, typename Tag>
 auto List<T, Tag>::cast(const T * node) const -> const link_type * {
-    static_assert(
-        std::is_base_of_v<link_type, T>, 
-        "List member type must be derived from ListBaseLink<Tag>"
-    );
     return node;
 }
 
