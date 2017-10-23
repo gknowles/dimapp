@@ -34,11 +34,6 @@ ISockMgrSocket::ISockMgrSocket(
 {}
 
 //===========================================================================
-void ISockMgrSocket::disconnect() {
-    socketDisconnect(this);
-}
-
-//===========================================================================
 void ISockMgrSocket::write(string_view data) {
     socketWrite(this, data);
 }
@@ -107,18 +102,14 @@ void ISockMgrBase::setInactiveTimeout(Duration timeout) {
 
 //===========================================================================
 bool ISockMgrBase::shutdown() {
-    bool stopped = false;
-    if (m_mode == kRunRunning) {
-        m_mode = kRunStopping;
-        stopped = onShutdown(true);
-        for (auto && sock : m_inactivity.values()) 
-            sock.disconnect();
-    } else {
-        stopped = onShutdown(false);
-    }
-    if (stopped && m_inactivity.values().empty())
+    bool firstTry = (m_mode == kRunRunning);
+
+    m_mode = kRunStopping;
+    if (onShutdown(firstTry)) {
         m_mode = kRunStopped;
-    return m_mode == kRunStopped;
+        return true;
+    }
+    return false;
 }
 
 

@@ -80,16 +80,17 @@ public:
     Mode mode() const { return m_mode; }
     const Endpoint & targetAddress() const { return m_targetAddress; }
     void connect();
+    void shutdown();
 
     // Inherited via ISockMgrSocket
     ConnectManager & mgr() override;
-    void shutdown() override;
 
     // Inherited via ITimerListNotify
     void onTimer(TimePoint now) override;
     void onTimer(TimePoint now, RecentLink*) override;
 
     // Inherited via IAppSocket
+    void disconnect() override;
     void write(string_view data) override;
     void write(unique_ptr<SocketBuffer> buffer, size_t bytes) override;
 
@@ -125,7 +126,13 @@ ConnMgrSocket::ConnMgrSocket(
 
 //===========================================================================
 void ConnMgrSocket::shutdown() {
-    disconnect();
+    auto mode = m_mode;
+    m_mode = kStopping;
+    if (mode == kUnconnected) {
+        onSocketDestroy();
+    } else {
+        disconnect();
+    }
 }
 
 //===========================================================================
@@ -149,6 +156,12 @@ void ConnMgrSocket::onTimer(TimePoint now, RecentLink*) {
     } else {
         mgr().stable(*this);
     }
+}
+
+//===========================================================================
+void ConnMgrSocket::disconnect() {
+    if (m_mode != kUnconnected)
+        socketDisconnect(this);
 }
 
 //===========================================================================
@@ -254,15 +267,17 @@ void ConnectManager::shutdown(const Endpoint & addr) {
 void ConnectManager::destroy(ConnMgrSocket & sock) {
     switch (sock.mode()) {
     case ConnMgrSocket::kUnconnected:
-        return sock.connect();
+        if (!m_recent.values().linked(&sock))
+            sock.connect();
+        return;
     case ConnMgrSocket::kStopping:
-        break;
-    default:
+        sock.notifyDestroy(false);
+        if (auto num = m_sockets.erase(sock.targetAddress()); !num)
+            logMsgCrash() << "ConnectManager::destroy(): socket not found";
         return;
     }
-    sock.notifyDestroy(false);
-    [[maybe_unused]] auto num = m_sockets.erase(sock.targetAddress());
-    assert(num);
+
+    logMsgCrash() << "ConnectManager::destroy(): invalid socket mode";
 }
 
 //===========================================================================
@@ -285,10 +300,15 @@ void ConnectManager::setEndpoints(const vector<Endpoint> & src) {
 //===========================================================================
 bool ConnectManager::onShutdown(bool firstTry) {
     if (firstTry) {
-        for (auto && sock : m_recent.values())
-            sock.shutdown();
+        auto pos = m_sockets.begin(),
+            epos = m_sockets.end();
+        while (pos != epos) {
+            auto next = std::next(pos);
+            pos->second.shutdown();
+            pos = next;
+        }
     }
-    return m_recent.values().empty();
+    return m_sockets.empty();
 }
 
 //===========================================================================
