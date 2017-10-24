@@ -141,7 +141,6 @@ Duration IAppSocket::UnmatchedTimer::onTimer(TimePoint now) {
 //===========================================================================
 // static
 void IAppSocket::disconnect(IAppSocketNotify * notify) {
-    s_perfExplicit += 1;
     notify->m_socket->disconnect();
 }
 
@@ -219,14 +218,8 @@ void IAppSocket::notifyPingRequired() {
 //===========================================================================
 bool IAppSocket::notifyAccept(const AppSocketInfo & info) {
     m_accept = info;
-    if (m_notify) {
-        if (m_notify->onSocketAccept(m_accept)) 
-            return true;
-
-        s_perfNotAccepted += 1;
-        disconnect();
-        return false;
-    }
+    if (m_notify)
+        return m_notify->onSocketAccept(m_accept);
 
     auto expiration = Clock::now() + kUnmatchedTimeout;
 
@@ -398,6 +391,7 @@ RawSocket::RawSocket(IAppSocketNotify * notify)
 
 //===========================================================================
 void RawSocket::disconnect() {
+    s_perfExplicit += 1;
     if (m_bufferUsed) {
         socketWrite(this, move(m_buffer), m_bufferUsed);
         m_bufferUsed = 0;
@@ -458,7 +452,11 @@ bool RawSocket::onSocketAccept(const SocketInfo & info) {
     AppSocketInfo tmp = {};
     tmp.local = info.local;
     tmp.remote = info.remote;
-    return notifyAccept(tmp);
+    if (notifyAccept(tmp)) 
+        return true;
+
+    s_perfNotAccepted += 1;
+    return false;
 }
 
 //===========================================================================
