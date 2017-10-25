@@ -15,8 +15,7 @@ using namespace Dim;
 *
 ***/
 
-// includes space for BufferSlice header
-const unsigned kDefaultBufferSliceSize = 4096;
+const unsigned kDefaultBufferSliceSize = 1460;
 
 
 /****************************************************************************
