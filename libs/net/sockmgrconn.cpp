@@ -64,10 +64,9 @@ class ConnMgrSocket final
 {
 public:
     enum Mode { 
-        kUnconnected = 0x02,
-        kConnecting = 0x04,
-        kConnected = 0x06,
-        kStopping = 0x08,
+        kUnconnected,
+        kConnecting,
+        kConnected,
     };
 
 public:
@@ -78,6 +77,7 @@ public:
     );
 
     Mode mode() const { return m_mode; }
+    bool stopping() const { return m_stopping; }
     const Endpoint & targetAddress() const { return m_targetAddress; }
     void connect();
     void shutdown();
@@ -103,6 +103,7 @@ public:
 private:
     Endpoint m_targetAddress;
     Mode m_mode{kUnconnected};
+    bool m_stopping{false};
 };
 
 } // namespace
@@ -126,9 +127,8 @@ ConnMgrSocket::ConnMgrSocket(
 
 //===========================================================================
 void ConnMgrSocket::shutdown() {
-    auto mode = m_mode;
-    m_mode = kStopping;
-    if (mode == kUnconnected) {
+    m_stopping = true;
+    if (m_mode == kUnconnected) {
         onSocketDestroy();
     } else {
         disconnect();
@@ -265,19 +265,15 @@ void ConnectManager::shutdown(const Endpoint & addr) {
 
 //===========================================================================
 void ConnectManager::destroy(ConnMgrSocket & sock) {
-    switch (sock.mode()) {
-    case ConnMgrSocket::kUnconnected:
+    assert(sock.mode() == ConnMgrSocket::kUnconnected);
+    if (!sock.stopping()) {
         if (!m_recent.values().linked(&sock))
             sock.connect();
-        return;
-    case ConnMgrSocket::kStopping:
+    } else {
         sock.notifyDestroy(false);
         if (auto num = m_sockets.erase(sock.targetAddress()); !num)
             logMsgCrash() << "ConnectManager::destroy(): socket not found";
-        return;
     }
-
-    logMsgCrash() << "ConnectManager::destroy(): invalid socket mode";
 }
 
 //===========================================================================
