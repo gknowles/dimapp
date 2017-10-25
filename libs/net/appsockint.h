@@ -60,6 +60,7 @@ public:
     void notifyDisconnect();
     void notifyDestroy(bool deleteThis = true);
     void notifyRead(AppSocketData & data);
+    void notifyBufferChanged(const AppSocketBufferInfo & info);
 
 protected:
     AppSocketInfo m_accept;

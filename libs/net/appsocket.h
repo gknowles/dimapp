@@ -42,6 +42,10 @@ struct AppSocketData {
     char * data;
     int bytes;
 };
+struct AppSocketBufferInfo {
+    size_t incomplete;
+    size_t waiting;
+};
 
 
 /****************************************************************************
@@ -69,6 +73,7 @@ public:
     virtual void onSocketDisconnect() {};
     virtual void onSocketDestroy() { delete this; }
     virtual void onSocketRead(AppSocketData & data) = 0;
+    virtual void onSocketBufferChanged(const AppSocketBufferInfo & info) {}
 
 private:
     friend class IAppSocket;

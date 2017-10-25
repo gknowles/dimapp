@@ -17,8 +17,6 @@ namespace Dim {
 ***/
 
 class ISocketRequestTaskBase : public ITaskNotify {
-    virtual void onTask() override = 0;
-
 public:
     RIO_BUF m_rbuf{};
     std::unique_ptr<SocketBuffer> m_buffer;
@@ -27,6 +25,9 @@ public:
     WinError m_xferError{(WinError::NtStatus)0};
     int m_xferBytes{0};
     SocketBase * m_socket{nullptr};
+
+private:
+    void onTask() override = 0;
 };
 
 class SocketReadTask : public ISocketRequestTaskBase {
@@ -34,6 +35,10 @@ class SocketReadTask : public ISocketRequestTaskBase {
 };
 
 class SocketWriteTask : public ISocketRequestTaskBase {
+public:
+    TimePoint m_qtime{};
+
+private:
     void onTask() override;
 };
 
@@ -66,7 +71,7 @@ public:
     void onWrite(SocketWriteTask * task);
 
     void queueRead_LK();
-    void queueWrite_LK(std::unique_ptr<SocketBuffer> buffer, size_t bytes);
+    void queueWrite_UNLK(std::unique_ptr<SocketBuffer> buffer, size_t bytes);
     void queueWriteFromUnsent_LK();
 
 protected:
@@ -87,6 +92,7 @@ private:
     int m_numSending{0};
     int m_maxSending{0};
     std::list<SocketWriteTask> m_unsent;
+    SocketBufferInfo m_bufInfo{};
 };
 
 

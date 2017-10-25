@@ -21,6 +21,17 @@ struct SocketData {
     int bytes;
 };
 
+// incomplete/pending
+//   0 /  0   All bytes successfully received by peer, closing the 
+//              socket won't lose any outgoing data.
+//  >0 /  0   Data is in flight, but more can still be sent immediately.
+//  >0 / >0   There is data both in flight and waiting. Acknowledgment must
+//              come from peer before more can be sent.
+struct SocketBufferInfo {
+    size_t incomplete;  // bytes sent but not yet ack'd by peer
+    size_t waiting;     // bytes waiting to be sent
+};
+
 class SocketBase;
 
 class ISocketNotify {
@@ -49,6 +60,14 @@ public:
     virtual void onSocketDisconnect() {};
     virtual void onSocketDestroy() { delete this; }
     virtual void onSocketRead(SocketData & data) = 0;
+
+    // Called when incomplete falls to zero or waiting transitions between
+    // zero and non-zero.
+    //
+    // Happens inside the socketWrite() call that causes the waiting bytes
+    // to exceed zero. Runs as a normal asynchronous event when the buffers
+    // empty.
+    virtual void onSocketBufferChanged(const SocketBufferInfo & info) {}
 
 private:
     friend class SocketBase;

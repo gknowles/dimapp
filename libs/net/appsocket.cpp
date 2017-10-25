@@ -75,6 +75,7 @@ public:
     void onSocketDisconnect() override;
     void onSocketDestroy() override;
     void onSocketRead(SocketData & data) override;
+    void onSocketBufferChanged(const SocketBufferInfo & info) override;
 
 private:
     Duration onTimer(TimePoint now) override;
@@ -377,6 +378,12 @@ void IAppSocket::notifyRead(AppSocketData & data) {
     m_notify->onSocketRead(tmp);
 }
 
+//===========================================================================
+void IAppSocket::notifyBufferChanged(const AppSocketBufferInfo & info) {
+    if (m_notify)
+        m_notify->onSocketBufferChanged(info);
+}
+
 
 /****************************************************************************
 *
@@ -473,6 +480,14 @@ void RawSocket::onSocketDestroy() {
 void RawSocket::onSocketRead(SocketData & data) {
     AppSocketData ad = { data.data, data.bytes };
     notifyRead(ad);
+}
+
+//===========================================================================
+void RawSocket::onSocketBufferChanged(const SocketBufferInfo & info) {
+    AppSocketBufferInfo ai;
+    ai.incomplete = info.incomplete;
+    ai.waiting = info.waiting;
+    notifyBufferChanged(ai);
 }
 
 //===========================================================================

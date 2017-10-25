@@ -53,6 +53,11 @@ void ISockMgrSocket::onSocketRead (AppSocketData & data) {
     notifyRead(data);
 }
 
+//===========================================================================
+void ISockMgrSocket::onSocketBufferChanged(const AppSocketBufferInfo & info) {
+    notifyBufferChanged(info);
+}
+
 
 /****************************************************************************
 *

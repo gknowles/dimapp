@@ -31,6 +31,7 @@ public:
     void onSocketDisconnect() override;
     void onSocketDestroy() override;
     void onSocketRead(AppSocketData & data) override;
+    void onSocketBufferChanged(const AppSocketBufferInfo & info) override;
 
 private:
     WinTlsConnHandle m_conn;
@@ -110,6 +111,11 @@ void TlsSocket::onSocketRead (AppSocketData & data) {
     }
     if (!success)
         disconnect();
+}
+
+//===========================================================================
+void TlsSocket::onSocketBufferChanged(const AppSocketBufferInfo & info) {
+    notifyBufferChanged(info);
 }
 
 

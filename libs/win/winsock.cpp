@@ -37,6 +37,9 @@ static int s_cqUsed;
 
 static atomic_int s_numSockets;
 
+static auto & s_perfIncomplete = uperf("sock write bytes (incomplete)");
+static auto & s_perfWaiting = uperf("sock write bytes (waiting)");
+
 
 /****************************************************************************
 *
@@ -200,12 +203,15 @@ void SocketBase::write(
     size_t bytes
 ) {
     assert(bytes <= buffer->capacity);
+    if (!bytes)
+        return;
     unique_lock<mutex> lk{s_mut};
     SocketBase * sock = notify->m_socket;
     if (!sock)
         return;
 
-    sock->queueWrite_LK(move(buffer), bytes);
+    lk.release();
+    sock->queueWrite_UNLK(move(buffer), bytes);
 }
 
 //===========================================================================
@@ -352,8 +358,11 @@ void SocketBase::onWrite(SocketWriteTask * task) {
         [task](auto && val) { return &val == task; }
     );
     assert(it != m_sending.end());
+    auto bytes = it->m_rbuf.Length;
     m_sending.erase(it);
     m_numSending -= 1;
+    s_perfIncomplete -= bytes;
+    m_bufInfo.incomplete -= bytes;
 
     // already disconnected and this was the last unresolved write? delete
     if (m_mode == Mode::kClosed && m_sending.empty()) {
@@ -363,12 +372,29 @@ void SocketBase::onWrite(SocketWriteTask * task) {
     }
 
     queueWriteFromUnsent_LK();
+    if (m_numSending == m_maxSending - 1 // send queue no longer full
+        || !m_numSending                 // send queue is empty
+    ) {
+        assert(!m_bufInfo.waiting);
+        assert(m_numSending || !m_bufInfo.incomplete);
+        auto info = m_bufInfo;
+        lk.unlock();
+        m_notify->onSocketBufferChanged(info);
+    }
 }
 
 //===========================================================================
-void SocketBase::queueWrite_LK(unique_ptr<SocketBuffer> buffer, size_t bytes) {
+void SocketBase::queueWrite_UNLK(
+    unique_ptr<SocketBuffer> buffer, 
+    size_t bytes
+) {
+    assert(bytes);
+    unique_lock<mutex> lk{s_mut, adopt_lock};
     if (m_mode == Mode::kClosing || m_mode == Mode::kClosed)
         return;
+
+    s_perfWaiting += (unsigned) bytes;
+    m_bufInfo.waiting += bytes;
 
     if (!m_unsent.empty()) {
         auto & back = m_unsent.back();
@@ -383,9 +409,8 @@ void SocketBase::queueWrite_LK(unique_ptr<SocketBuffer> buffer, size_t bytes) {
             );
             back.m_rbuf.Length += count;
             bytes -= count;
-            if (bytes) {
+            if (bytes)
                 memmove(buffer->data, buffer->data + count, bytes);
-            }
         }
     }
 
@@ -397,6 +422,13 @@ void SocketBase::queueWrite_LK(unique_ptr<SocketBuffer> buffer, size_t bytes) {
     }
 
     queueWriteFromUnsent_LK();
+    if (m_numSending == m_maxSending && m_unsent.empty()) {
+        // send queue has become full
+        assert(m_bufInfo.waiting <= bytes);
+        auto info = m_bufInfo;
+        lk.unlock();
+        m_notify->onSocketBufferChanged(info);
+    }
 }
 
 //===========================================================================
@@ -405,11 +437,17 @@ void SocketBase::queueWriteFromUnsent_LK() {
         m_sending.splice(m_sending.end(), m_unsent, m_unsent.begin());
         m_numSending += 1;
         auto & task = m_sending.back();
+        auto bytes = task.m_rbuf.Length;
+        s_perfWaiting -= bytes;
+        m_bufInfo.waiting -= bytes;
         if (!s_rio.RIOSend(m_rq, &task.m_rbuf, 1, 0, &task)) {
             WinError err;
             logMsgCrash() << "RIOSend: " << err;
             m_sending.pop_back();
             m_numSending -= 1;
+        } else {
+            s_perfIncomplete += bytes;
+            m_bufInfo.incomplete += bytes;
         }
     }
 }

@@ -45,6 +45,7 @@ public:
     void onSocketDisconnect() override;
     void onSocketDestroy() override = 0;
     void onSocketRead(AppSocketData & data) override;
+    void onSocketBufferChanged(const AppSocketBufferInfo & info) override;
 
 private:
     ISockMgrBase & m_mgr;
