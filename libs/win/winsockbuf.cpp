@@ -26,18 +26,24 @@ const unsigned kDefaultBufferSliceSize = 1460;
 
 namespace {
 
-struct BufferSlice {
-    int nextPos;
+struct BufferHandle : HandleBase {
+    BufferHandle() {}
+    explicit BufferHandle(const SocketBuffer & sbuf) { pos = sbuf.owner; }
 };
-struct Buffer {
+
+struct Buffer : HandleContent, ListBaseLink<> {
     RIO_BUFFERID id;
     char * base;
-    TimePoint lastUsed;
     int sliceSize;
     int reserved;
     int size;
     int used;
     int firstFree;
+    BufferHandle h;
+};
+
+struct BufferSlice {
+    int nextPos;
 };
 
 } // namespace
@@ -58,9 +64,10 @@ static size_t s_minAlloc;
 static size_t s_pageSize;
 
 // buffers are kept sorted by state (full, partial, empty)
-static vector<Buffer> s_buffers;
-static int s_numPartial;
-static int s_numFull;
+static HandleMap<BufferHandle, Buffer> s_buffers;
+static List<Buffer> s_fullBufs;
+static List<Buffer> s_partialBufs;
+static List<Buffer> s_emptyBufs;
 static mutex s_mut;
 
 
@@ -83,8 +90,9 @@ static void findBufferSlice(
     const SocketBuffer & sbuf
 ) {
     auto * slice = (BufferSlice *) sbuf.data;
-    assert(sbuf.owner < s_buffers.size());
-    auto * buf = &s_buffers[sbuf.owner];
+    BufferHandle h{sbuf};
+    auto * buf = s_buffers.find(h);
+    assert(h == buf->h);
     // BufferSlice must be aligned within the owning registered buffer
     assert((char *)slice >= buf->base && slice < getSlice(*buf, buf->size));
     assert(((char *)slice - buf->base) % buf->sliceSize == 0);
@@ -107,37 +115,38 @@ static void createEmptyBuffer() {
         bytes = numeric_limits<DWORD>::max() / granularity * granularity;
     }
 
-    s_buffers.emplace_back();
-    Buffer & buf = s_buffers.back();
-    buf.sliceSize = s_sliceSize;
-    buf.reserved = int(bytes / s_sliceSize);
-    buf.lastUsed = TimePoint::min();
-    buf.size = 0;
-    buf.used = 0;
-    buf.firstFree = 0;
-    buf.base = (char *)VirtualAlloc(
+    auto buf = new Buffer;
+    buf->h = s_buffers.insert(buf);
+    s_emptyBufs.link(buf);
+    buf->sliceSize = s_sliceSize;
+    buf->reserved = int(bytes / s_sliceSize);
+    buf->size = 0;
+    buf->used = 0;
+    buf->firstFree = 0;
+    buf->base = (char *)VirtualAlloc(
         nullptr,
         bytes,
         MEM_COMMIT | MEM_RESERVE
             | (bytes > s_minLargeAlloc ? MEM_LARGE_PAGES : 0),
         PAGE_READWRITE
     );
-    assert(buf.base);
+    assert(buf->base);
 
-    buf.id = s_rio.RIORegisterBuffer(buf.base, (DWORD)bytes);
-    if (buf.id == RIO_INVALID_BUFFERID) {
+    buf->id = s_rio.RIORegisterBuffer(buf->base, (DWORD)bytes);
+    if (buf->id == RIO_INVALID_BUFFERID) {
         logMsgCrash() << "RIORegisterBuffer failed, " << WinError();
     }
 }
 
 //===========================================================================
 static void destroyEmptyBuffer() {
-    assert(!s_buffers.empty());
-    Buffer & buf = s_buffers.back();
-    assert(!buf.used);
-    s_rio.RIODeregisterBuffer(buf.id);
-    VirtualFree(buf.base, 0, MEM_RELEASE);
-    s_buffers.pop_back();
+    assert(!s_emptyBufs.empty());
+    auto buf = s_emptyBufs.unlinkFront();
+    [[maybe_unused]] auto buf2 = s_buffers.release(buf->h);
+    assert(buf == buf2);
+    assert(!buf->used);
+    s_rio.RIODeregisterBuffer(buf->id);
+    VirtualFree(buf->base, 0, MEM_RELEASE);
 }
 
 //===========================================================================
@@ -154,20 +163,13 @@ static void destroyBufferSlice(const SocketBuffer & sbuf) {
 
     if (buf.used == buf.reserved - 1) {
         // no longer full: move to partial list
-        if (sbuf.owner != s_numFull - 1)
-            swap(buf, s_buffers[s_numFull - 1]);
-        s_numFull -= 1;
-        s_numPartial += 1;
+        s_partialBufs.linkFront(pbuf);
     } else if (!buf.used) {
         // newly empty: move to empty list
-        buf.lastUsed = Clock::now();
-        int pos = s_numFull + s_numPartial - 1;
-        if (sbuf.owner != pos)
-            swap(buf, s_buffers[pos]);
-        s_numPartial -= 1;
+        s_emptyBufs.linkFront(pbuf);
 
         // over half the buffers are empty? destroy one
-        if (s_buffers.size() > 2 * (s_numFull + s_numPartial))
+        if (s_emptyBufs.size() > s_fullBufs.size() + s_partialBufs.size())
             destroyEmptyBuffer();
     }
 }
@@ -263,13 +265,16 @@ void Dim::copy(
 unique_ptr<SocketBuffer> Dim::socketGetBuffer() {
     lock_guard<mutex> lk{s_mut};
 
-    // all buffers full? create a new one
-    if (s_numFull == s_buffers.size())
+    // use the first partial or, if there aren't any, the first empty
+    auto pbuf = s_partialBufs.front();
+    if (!pbuf)
+        pbuf = s_emptyBufs.front();
+    if (!pbuf) {
+        // all buffers full? create a new one
         createEmptyBuffer();
-    // use the last partial or, if there aren't any, the first empty
-    auto & buf = s_numPartial 
-        ? s_buffers[s_numFull + s_numPartial - 1]
-        : s_buffers[s_numFull];
+        pbuf = s_emptyBufs.front();
+    }
+    auto & buf = *pbuf;
 
     BufferSlice * slice;
     if (buf.used < buf.size) {
@@ -286,18 +291,15 @@ unique_ptr<SocketBuffer> Dim::socketGetBuffer() {
     auto out = make_unique<SocketBuffer>(
         (char *) slice, 
         buf.sliceSize,
-        int(&buf - s_buffers.data())
+        buf.h.pos
     );
 
-    // if the registered buffer is full move it to the back of the list
     if (buf.used == buf.reserved) {
-        if (s_numPartial > 1)
-            swap(buf, s_buffers[s_numFull]);
-        s_numFull += 1;
-        s_numPartial -= 1;
+        // no longer partial: move to full list
+        s_fullBufs.linkFront(pbuf);
     } else if (buf.used == 1) {
-        // no longer empty: it's in the right place, just update the count
-        s_numPartial += 1;
+        // no longer empty: move to partials
+        s_partialBufs.linkFront(pbuf);
     }
 
     return out;
