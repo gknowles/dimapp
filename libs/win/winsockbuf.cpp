@@ -142,8 +142,8 @@ static void createEmptyBuffer() {
 static void destroyEmptyBuffer() {
     assert(!s_emptyBufs.empty());
     auto buf = s_emptyBufs.unlinkFront();
-    [[maybe_unused]] auto buf2 = s_buffers.release(buf->h);
-    assert(buf == buf2);
+    auto hostage = unique_ptr<Buffer>(s_buffers.release(buf->h));
+    assert(buf == hostage.get());
     assert(!buf->used);
     s_rio.RIODeregisterBuffer(buf->id);
     VirtualFree(buf->base, 0, MEM_RELEASE);
