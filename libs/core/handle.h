@@ -14,11 +14,13 @@ namespace Dim {
 
 /****************************************************************************
 *
-*   Base handle class
-*   Clients inherit from this class to make different kinds of handles
+*   Base classes
+*   Clients inherit from these classes to make different kinds of handle
+*   and content pairs.
 *
 *   Expected usage:
-*   struct HWidget : HandleBase {};
+*   struct WidgetHandle : HandleBase {};
+*   class Widget : public HandleContent { ... };
 *
 ***/
 
@@ -27,6 +29,7 @@ struct HandleBase {
     int pos{0};
 
     explicit operator bool() const { return pos; }
+    bool operator==(HandleBase right) const { return pos == right.pos; }
     template <typename H> H as() const {
         H handle;
         static_cast<HandleBase &>(handle) = *this;
@@ -54,9 +57,11 @@ public:
     };
 
 public:
+    bool empty() const;
+
+protected:
     HandleMapBase();
     ~HandleMapBase();
-    bool empty() const;
     HandleContent * find(HandleBase handle);
 
     HandleBase insert(HandleContent * value);
@@ -150,28 +155,77 @@ auto HandleMapBase::Iterator<H, T>::operator++() -> Iterator<H, T>& {
 *   Container of handles
 *
 *   Expected usage:
+*   struct WidgetHandle : HandleBase {};
 *   class WidgetClass : public HandleContent { ... }
-*   HandleMap<HWidget, WidgetClass> widgets;
+*   HandleMap<WidgetHandle, WidgetClass> widgets;
 *
 ***/
 
-template <typename H, typename T> class HandleMap : public HandleMapBase {
+template <typename H, typename T>
+class HandleMap : public HandleMapBase {
 public:
-    T * find(H handle) {
-        return static_cast<T *>(HandleMapBase::find(handle));
-    }
-    void clear() {
-        for (auto && ht : *this)
-            erase(ht);
-    }
-    H insert(T * value) { return HandleMapBase::insert(value).as<H>(); }
-    void erase(H handle) { delete release(handle); }
-    T * release(H handle) {
-        return static_cast<T *>(HandleMapBase::release(handle));
-    }
+    HandleMap();
 
-    Iterator<H, T> begin() { return HandleMapBase::begin<H, T>(); }
-    Iterator<H, T> end() { return HandleMapBase::end<H, T>(); }
+    T * find(H handle);
+
+    void clear();
+    H insert(T * value);
+    void erase(H handle);
+    T * release(H handle);
+
+    Iterator<H, T> begin();
+    Iterator<H, T> end();
 };
+
+//===========================================================================
+template<typename H, typename T>
+HandleMap<H, T>::HandleMap() {
+    static_assert(std::is_base_of_v<HandleBase, H>);
+    static_assert(std::is_base_of_v<HandleContent, T>);
+    static_assert(sizeof(HandleBase) == sizeof(H));
+}
+
+//===========================================================================
+template<typename H, typename T>
+T * HandleMap<H, T>::find(H handle) {
+    return static_cast<T *>(HandleMapBase::find(handle));
+}
+
+//===========================================================================
+template<typename H, typename T>
+void HandleMap<H, T>::clear() {
+    for (auto && ht : *this)
+        erase(ht);
+}
+
+//===========================================================================
+template<typename H, typename T>
+H HandleMap<H, T>::insert(T * value) {
+    return HandleMapBase::insert(value).as<H>();
+}
+
+//===========================================================================
+template<typename H, typename T>
+void HandleMap<H, T>::erase(H handle) {
+    delete release(handle);
+}
+
+//===========================================================================
+template<typename H, typename T>
+T * HandleMap<H, T>::release(H handle) {
+    return static_cast<T *>(HandleMapBase::release(handle));
+}
+
+//===========================================================================
+template<typename H, typename T>
+auto HandleMap<H, T>::begin() -> Iterator<H, T> {
+    return HandleMapBase::begin<H, T>();
+}
+
+//===========================================================================
+template<typename H, typename T>
+auto HandleMap<H, T>::end() -> Iterator<H, T> {
+    return HandleMapBase::end<H, T>();
+}
 
 } // namespace
