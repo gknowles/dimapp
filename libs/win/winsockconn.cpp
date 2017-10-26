@@ -44,11 +44,10 @@ private:
     void connectFailed();
 };
 
-class ConnectTask : public IWinEventWaitNotify {
+class ConnectTask : public IWinEventWaitNotify, public ListBaseLink<> {
 public:
     TimePoint m_expiration;
     unique_ptr<ConnSocket> m_socket;
-    list<ConnectTask>::iterator m_iter;
 
 public:
     explicit ConnectTask(unique_ptr<ConnSocket> && sock);
@@ -78,8 +77,8 @@ class ConnectTimer : public ITimerNotify {
 ***/
 
 static mutex s_mut;
-static list<ConnectTask> s_connecting;
-static list<ConnectTask> s_closing;
+static List<ConnectTask> s_connecting;
+static List<ConnectTask> s_closing;
 static ConnectTimer s_connectTimer;
 
 static auto & s_perfConnected = uperf("sock connected");
@@ -96,14 +95,12 @@ static auto & s_perfConnectFailed = uperf("sock connect failed");
 //===========================================================================
 Duration ConnectTimer::onTimer(TimePoint now) {
     lock_guard<mutex> lk{s_mut};
-    while (!s_connecting.empty()) {
-        auto it = s_connecting.begin();
-        if (now < it->m_expiration) {
-            return it->m_expiration - now;
-        }
-        it->m_socket->hardClose_LK();
-        it->m_expiration = TimePoint::max();
-        s_closing.splice(s_closing.end(), s_connecting, it);
+    while (auto task = s_connecting.front()) {
+        if (now < task->m_expiration) 
+            return task->m_expiration - now;
+        task->m_socket->hardClose_LK();
+        task->m_expiration = TimePoint::max();
+        s_closing.link(task);
     }
     return kTimerInfinite;
 }
@@ -127,12 +124,11 @@ void ConnectTask::onTask() {
     auto [err, bytes] = getOverlappedResult();
     m_socket.release()->onConnect(err, bytes);
 
-    lock_guard<mutex> lk{s_mut};
-    if (m_expiration == TimePoint::max()) {
-        s_closing.erase(m_iter);
-    } else {
-        s_connecting.erase(m_iter);
+    {
+        lock_guard<mutex> lk{s_mut};
+        unlink();
     }
+    delete this;
 }
 
 
@@ -184,44 +180,45 @@ void ConnSocket::connect(
         return pushConnectFailed(notify);
 
     sock->m_mode = Mode::kConnecting;
-    list<ConnectTask>::iterator it;
+    auto hostage = make_unique<ConnectTask>(move(sock));
+    auto task = hostage.get();
     timerUpdate(&s_connectTimer, timeout, true);
 
     {
         lock_guard<mutex> lk{s_mut};
-        TimePoint expiration = Clock::now() + timeout;
+        task->m_expiration = Clock::now() + timeout;
 
-        // TODO: check if this really puts them in expiration order!
-        auto rhint = find_if(
-            s_connecting.rbegin(), 
-            s_connecting.rend(), 
-            [&](auto && task) { return task.m_expiration <= expiration; }
-        );
-        it = s_connecting.emplace(rhint.base(), move(sock));
-
-        it->m_iter = it;
-        it->m_expiration = expiration;
+        s_connecting.link(task);
+        while (auto prev = s_connecting.prev(task)) {
+            if (prev->m_expiration <= task->m_expiration)
+                break;
+            s_connecting.link(prev, task);
+        }
     }
 
     sockaddr_storage sas;
     copy(&sas, remote);
     DWORD bytes; // ignored, only here for analyzer
     bool error = !s_ConnectEx(
-        it->m_socket->m_handle,
+        task->m_socket->m_handle,
         (sockaddr *)&sas,
         sizeof(sas),
         NULL,   // send buffer
         0,      // send buffer length
         &bytes, // bytes sent (ignored)
-        &it->overlapped()
+        &task->overlapped()
     );
     WinError err;
     if (!error || err != ERROR_IO_PENDING) {
         logMsgError() << "ConnectEx(" << remote << "): " << err;
-        lock_guard<mutex> lk{s_mut};
-        s_connecting.erase(it);
+        {
+            lock_guard<mutex> lk{s_mut};
+            s_connecting.unlink(task);
+        }
         return pushConnectFailed(notify);
     }
+
+    hostage.release();
 }
 
 //===========================================================================

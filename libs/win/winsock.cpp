@@ -352,14 +352,8 @@ void SocketBase::queueRead_LK() {
 void SocketBase::onWrite(SocketWriteTask * task) {
     unique_lock<mutex> lk{s_mut};
 
-    auto it = find_if(
-        m_sending.begin(), 
-        m_sending.end(), 
-        [task](auto && val) { return &val == task; }
-    );
-    assert(it != m_sending.end());
-    auto bytes = it->m_rbuf.Length;
-    m_sending.erase(it);
+    auto bytes = task->m_rbuf.Length;
+    delete task;
     m_numSending -= 1;
     s_perfIncomplete -= bytes;
     m_bufInfo.incomplete -= bytes;
@@ -397,17 +391,17 @@ void SocketBase::queueWrite_UNLK(
     m_bufInfo.waiting += bytes;
 
     if (!m_unsent.empty()) {
-        auto & back = m_unsent.back();
+        auto back = m_unsent.back();
         if (int count = min(
-            back.m_buffer->capacity - (int)back.m_rbuf.Length, 
+            back->m_buffer->capacity - (int)back->m_rbuf.Length, 
             (int)bytes
         )) {
             memcpy(
-                back.m_buffer->data + back.m_rbuf.Length, 
+                back->m_buffer->data + back->m_rbuf.Length, 
                 buffer->data, 
                 count
             );
-            back.m_rbuf.Length += count;
+            back->m_rbuf.Length += count;
             bytes -= count;
             if (bytes)
                 memmove(buffer->data, buffer->data + count, bytes);
@@ -415,10 +409,10 @@ void SocketBase::queueWrite_UNLK(
     }
 
     if (bytes) {
-        m_unsent.emplace_back();
-        auto & task = m_unsent.back();
-        copy(&task.m_rbuf, *buffer, bytes);
-        task.m_buffer = move(buffer);
+        m_unsent.link(new SocketWriteTask);
+        auto task = m_unsent.back();
+        copy(&task->m_rbuf, *buffer, bytes);
+        task->m_buffer = move(buffer);
     }
 
     queueWriteFromUnsent_LK();
@@ -434,16 +428,16 @@ void SocketBase::queueWrite_UNLK(
 //===========================================================================
 void SocketBase::queueWriteFromUnsent_LK() {
     while (m_numSending < m_maxSending && !m_unsent.empty()) {
-        m_sending.splice(m_sending.end(), m_unsent, m_unsent.begin());
+        m_sending.link(m_unsent.front());
         m_numSending += 1;
-        auto & task = m_sending.back();
-        auto bytes = task.m_rbuf.Length;
+        auto task = m_sending.back();
+        auto bytes = task->m_rbuf.Length;
         s_perfWaiting -= bytes;
         m_bufInfo.waiting -= bytes;
-        if (!s_rio.RIOSend(m_rq, &task.m_rbuf, 1, 0, &task)) {
+        if (!s_rio.RIOSend(m_rq, &task->m_rbuf, 1, 0, task)) {
             WinError err;
             logMsgCrash() << "RIOSend: " << err;
-            m_sending.pop_back();
+            delete task;
             m_numSending -= 1;
         } else {
             s_perfIncomplete += bytes;

@@ -16,7 +16,7 @@ namespace Dim {
 *
 ***/
 
-class ISocketRequestTaskBase : public ITaskNotify {
+class ISocketRequestTaskBase : public ITaskNotify, public ListBaseLink<> {
 public:
     RIO_BUF m_rbuf{};
     std::unique_ptr<SocketBuffer> m_buffer;
@@ -88,10 +88,10 @@ private:
     static const int kMaxReceiving{1};
 
     // used by write requests
-    std::list<SocketWriteTask> m_sending;
+    List<SocketWriteTask> m_sending;
     int m_numSending{0};
     int m_maxSending{0};
-    std::list<SocketWriteTask> m_unsent;
+    List<SocketWriteTask> m_unsent;
     SocketBufferInfo m_bufInfo{};
 };
 
