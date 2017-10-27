@@ -28,7 +28,7 @@ struct SocketData {
 //  >0 / >0   There is data both in flight and waiting. Acknowledgment must
 //              come from peer before more can be sent.
 struct SocketBufferInfo {
-    size_t incomplete;  // bytes sent but not yet ack'd by peer
+    size_t incomplete;  // bytes sent but not yet ACK'd by peer
     size_t waiting;     // bytes waiting to be sent
 };
 
@@ -64,9 +64,9 @@ public:
     // Called when incomplete falls to zero or waiting transitions between
     // zero and non-zero.
     //
-    // Happens inside the socketWrite() call that causes the waiting bytes
-    // to exceed zero. Runs as a normal asynchronous event when the buffers
-    // empty.
+    // Method invoked inside the socketWrite() call that causes the waiting
+    // bytes to exceed zero. Runs as a normal asynchronous event when the
+    // buffers empty.
     virtual void onSocketBufferChanged(const SocketBufferInfo & info) {}
 
 private:

@@ -366,8 +366,9 @@ void SocketBase::onWrite(SocketWriteTask * task) {
         return;
     }
 
+    bool wasUnsent = !m_unsent.empty();
     queueWriteFromUnsent_LK();
-    if (m_numSending == m_maxSending - 1 // send queue no longer full
+    if (wasUnsent && m_unsent.empty()    // data no longer waiting
         || !m_numSending                 // send queue is empty
     ) {
         assert(!m_bufInfo.waiting);
@@ -390,8 +391,9 @@ void SocketBase::queueWrite_UNLK(
 
     s_perfWaiting += (unsigned) bytes;
     m_bufInfo.waiting += bytes;
+    bool wasUnsent = !m_unsent.empty();
 
-    if (!m_unsent.empty()) {
+    if (wasUnsent) {
         auto back = m_unsent.back();
         if (int count = min(
             back->m_buffer->capacity - (int)back->m_rbuf.Length, 
@@ -417,8 +419,8 @@ void SocketBase::queueWrite_UNLK(
     }
 
     queueWriteFromUnsent_LK();
-    if (m_numSending == m_maxSending && m_unsent.empty()) {
-        // send queue has become full
+    if (!wasUnsent && !m_unsent.empty()) {
+        // data is now waiting
         assert(m_bufInfo.waiting <= bytes);
         auto info = m_bufInfo;
         lk.unlock();
