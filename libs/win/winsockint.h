@@ -89,7 +89,7 @@ private:
 
     // used by single read request
     List<SocketReadTask> m_reads;
-    int m_maxReads{1};
+    int m_maxReads{0};
     RIO_CQ m_readCq{RIO_INVALID_CQ};
 
     // used by write requests
