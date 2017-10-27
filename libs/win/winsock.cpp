@@ -249,7 +249,7 @@ SocketBase::~SocketBase() {
     ISocketNotify * notify{nullptr};
 
     {
-        lock_guard<mutex> lk{s_mut};
+        scoped_lock<mutex> lk{s_mut};
         if (m_notify) {
             notify = m_notify;
             m_notify->m_socket = nullptr;

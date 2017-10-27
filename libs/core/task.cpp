@@ -256,7 +256,7 @@ TaskQueueHandle Dim::taskCreateQueue(string_view name, int threads) {
     auto * q = new TaskQueue;
     q->name = name;
 
-    lock_guard<mutex> lk{s_mut};
+    scoped_lock<mutex> lk{s_mut};
     q->hq = s_queues.insert(q);
     setThreads_LK(*q, threads);
     return q->hq;
@@ -266,7 +266,7 @@ TaskQueueHandle Dim::taskCreateQueue(string_view name, int threads) {
 void Dim::taskSetQueueThreads(TaskQueueHandle hq, int threads) {
     assert(s_running);
 
-    lock_guard<mutex> lk{s_mut};
+    scoped_lock<mutex> lk{s_mut};
     auto * q = s_queues.find(hq);
     setThreads_LK(*q, threads);
 }
@@ -288,7 +288,7 @@ void Dim::taskPush(
     if (!numTasks)
         return;
 
-    lock_guard<mutex> lk{s_mut};
+    scoped_lock<mutex> lk{s_mut};
     auto * q = s_queues.find(hq);
     for (int i = 0; i < numTasks; ++tasks, ++i)
         q->push(**tasks);

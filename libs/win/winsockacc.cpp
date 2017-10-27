@@ -255,7 +255,7 @@ void AcceptSocket::onAccept(
 
     auto notify = listen->m_notify->onFactoryCreate();
     {
-        lock_guard<mutex> lk{s_mut};
+        scoped_lock<mutex> lk{s_mut};
         m_notify = notify.release();
         listen->m_inThread = this_thread::get_id();
         listen->m_inNotify = true;
@@ -270,7 +270,7 @@ void AcceptSocket::onAccept(
     }
 
     {
-        lock_guard<mutex> lk{s_mut};
+        scoped_lock<mutex> lk{s_mut};
         listen->m_inThread = {};
         listen->m_inNotify = false;
     }
@@ -295,7 +295,7 @@ static ShutdownNotify s_cleanup;
 
 //===========================================================================
 void ShutdownNotify::onShutdownConsole(bool firstTry) {
-    lock_guard<mutex> lk{s_mut};
+    scoped_lock<mutex> lk{s_mut};
     if (!s_listeners.empty())
         return shutdownIncomplete();
 }
@@ -340,7 +340,7 @@ void Dim::socketListen(
     sock->m_mode = ISocketNotify::kActive;
 
     {
-        lock_guard<mutex> lk{s_mut};
+        scoped_lock<mutex> lk{s_mut};
         s_listeners.link(hostage.release());
     }
 

@@ -94,7 +94,7 @@ static auto & s_perfConnectFailed = uperf("sock connect failed");
 
 //===========================================================================
 Duration ConnectTimer::onTimer(TimePoint now) {
-    lock_guard<mutex> lk{s_mut};
+    scoped_lock<mutex> lk{s_mut};
     while (auto task = s_connecting.front()) {
         if (now < task->m_expiration) 
             return task->m_expiration - now;
@@ -125,7 +125,7 @@ void ConnectTask::onTask() {
     m_socket.release()->onConnect(err, bytes);
 
     {
-        lock_guard<mutex> lk{s_mut};
+        scoped_lock<mutex> lk{s_mut};
         unlink();
     }
     delete this;
@@ -185,7 +185,7 @@ void ConnSocket::connect(
     timerUpdate(&s_connectTimer, timeout, true);
 
     {
-        lock_guard<mutex> lk{s_mut};
+        scoped_lock<mutex> lk{s_mut};
         task->m_expiration = Clock::now() + timeout;
 
         s_connecting.link(task);
@@ -212,7 +212,7 @@ void ConnSocket::connect(
     if (!error || err != ERROR_IO_PENDING) {
         logMsgError() << "ConnectEx(" << remote << "): " << err;
         {
-            lock_guard<mutex> lk{s_mut};
+            scoped_lock<mutex> lk{s_mut};
             s_connecting.unlink(task);
         }
         return pushConnectFailed(notify);
@@ -311,7 +311,7 @@ static ShutdownNotify s_cleanup;
 
 //===========================================================================
 void ShutdownNotify::onShutdownConsole(bool firstTry) {
-    lock_guard<mutex> lk{s_mut};
+    scoped_lock<mutex> lk{s_mut};
     if (firstTry) {
         for (auto && task : s_connecting)
             task.m_socket->hardClose_LK();

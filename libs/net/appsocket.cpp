@@ -121,7 +121,7 @@ static auto & s_perfNotAccepted = uperf("sock disconnect not accepted");
 
 //===========================================================================
 Duration IAppSocket::UnmatchedTimer::onTimer(TimePoint now) {
-    lock_guard<mutex> lk{s_unmatchedMut};
+    scoped_lock<mutex> lk{s_unmatchedMut};
     while (!s_unmatched.empty()) {
         auto & info = s_unmatched.front();
         auto wait = info.notify->checkTimeout_LK(now);
@@ -225,7 +225,7 @@ bool IAppSocket::notifyAccept(const AppSocketInfo & info) {
     auto expiration = Clock::now() + kUnmatchedTimeout;
 
     {
-        lock_guard<mutex> lk{s_unmatchedMut};
+        scoped_lock<mutex> lk{s_unmatchedMut};
         UnmatchedInfo ui;
         ui.notify = this;
         ui.expiration = expiration;
@@ -355,7 +355,7 @@ void IAppSocket::notifyRead(AppSocketData & data) {
 
     {
         // no longer unmatched - one way or another
-        lock_guard<mutex> lk{s_unmatchedMut};
+        scoped_lock<mutex> lk{s_unmatchedMut};
         s_unmatched.erase(m_pos);
         m_pos = {};
     }
@@ -579,7 +579,7 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
         }
     }
 
-    lock_guard<mutex> lk{s_unmatchedMut};
+    scoped_lock<mutex> lk{s_unmatchedMut};
     if (firstTry) {
         for (auto && info : s_unmatched)
             info.notify->disconnect();

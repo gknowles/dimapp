@@ -377,7 +377,7 @@ static ShutdownNotify s_cleanup;
 
 //===========================================================================
 void ShutdownNotify::onShutdownConsole(bool firstTry) {
-    lock_guard<mutex> lk{s_mut};
+    scoped_lock<mutex> lk{s_mut};
     if (!s_dirs.empty() || !s_stopping.empty())
         return shutdownIncomplete();
 }
@@ -405,7 +405,7 @@ bool Dim::fileMonitorDir(
     FileMonitorHandle h;
     auto hostage = make_unique<DirInfo>(notify);
     if (hostage->start(dir, recurse)) {
-        lock_guard<mutex> lk{s_mut};
+        scoped_lock<mutex> lk{s_mut};
         h = s_dirs.insert(hostage.release());
         success = true;
     }
@@ -424,7 +424,7 @@ void Dim::fileMonitorCloseWait(FileMonitorHandle dir) {
 
 //===========================================================================
 string_view Dim::fileMonitorPath(FileMonitorHandle dir) {
-    lock_guard<mutex> lk{s_mut};
+    scoped_lock<mutex> lk{s_mut};
     if (auto di = s_dirs.find(dir))
         return di->base();
     return {};
@@ -462,7 +462,7 @@ bool Dim::fileMonitorPath(
     FileMonitorHandle dir, 
     string_view file
 ) {
-    lock_guard<mutex> lk{s_mut};
+    scoped_lock<mutex> lk{s_mut};
     auto di = s_dirs.find(dir);
     if (!di)
         return false;

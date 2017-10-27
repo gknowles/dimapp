@@ -84,7 +84,7 @@ static void iocpDispatchThread() {
         }
     }
 
-    lock_guard<mutex> lk{s_mut};
+    scoped_lock<mutex> lk{s_mut};
     s_iocp = 0;
 }
 

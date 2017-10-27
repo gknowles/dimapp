@@ -250,7 +250,7 @@ void MessageLoopTask::clear() {
 //===========================================================================
 void MessageLoopTask::setWnd(HWND wnd) {
     {
-        lock_guard<mutex> lk{m_mut};
+        scoped_lock<mutex> lk{m_mut};
         m_wnd = wnd;
     }
     m_cv.notify_one();

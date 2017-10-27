@@ -358,13 +358,13 @@ void Dim::winTlsInitialize() {
 //===========================================================================
 WinTlsConnHandle Dim::winTlsAccept() {
     auto conn = new ServerConn;
-    lock_guard<shared_mutex> lk{s_mut};
+    scoped_lock<shared_mutex> lk{s_mut};
     return s_conns.insert(conn);
 }
 
 //===========================================================================
 void Dim::winTlsClose(WinTlsConnHandle h) {
-    lock_guard<shared_mutex> lk{s_mut};
+    scoped_lock<shared_mutex> lk{s_mut};
     s_conns.erase(h);
 }
 

@@ -50,7 +50,7 @@ static PerfInfo & getInfo () {
 template <typename T>
 static PerfCounter<T> & perf(string_view name) {
     auto & info = getInfo();
-    lock_guard<mutex> lk{info.mut};
+    scoped_lock<mutex> lk{info.mut};
     info.counters.push_back(make_unique<PerfCounter<T>>());
     auto & cnt = static_cast<PerfCounter<T>&>(*info.counters.back());
     cnt.name = name;
@@ -61,7 +61,7 @@ static PerfCounter<T> & perf(string_view name) {
 template <typename T>
 static PerfFunc<T> & perf(string_view name, function<T()> && fn) {
     auto & info = getInfo();
-    lock_guard<mutex> lk{info.mut};
+    scoped_lock<mutex> lk{info.mut};
     info.counters.push_back(make_unique<PerfFunc<T>>());
     auto & cnt = static_cast<PerfFunc<T>&>(*info.counters.back());
     cnt.name = name;
@@ -125,14 +125,14 @@ inline void PerfFunc<T>::toString (std::string & out) const {
 //===========================================================================
 void Dim::iPerfInitialize() {
     auto & info = getInfo();
-    lock_guard<mutex> lk{info.mut};
+    scoped_lock<mutex> lk{info.mut};
     s_numStatic = info.counters.size();
 }
 
 //===========================================================================
 void Dim::iPerfDestroy() {
     auto & info = getInfo();
-    lock_guard<mutex> lk{info.mut};
+    scoped_lock<mutex> lk{info.mut};
     assert(info.counters.size() >= s_numStatic);
     info.counters.resize(s_numStatic);
 }
@@ -180,7 +180,7 @@ PerfFunc<float> & Dim::fperf(string_view name, function<float()> fn) {
 //===========================================================================
 void Dim::perfGetValues (std::vector<PerfValue> & out) {
     auto & info = getInfo();
-    lock_guard<mutex> lk{info.mut};
+    scoped_lock<mutex> lk{info.mut};
     out.resize(info.counters.size());
     for (unsigned i = 0; i < out.size(); ++i) {
         out[i].name = info.counters[i]->name;

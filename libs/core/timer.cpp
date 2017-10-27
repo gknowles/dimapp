@@ -236,7 +236,7 @@ TimePoint Timer::update(
     auto expire = wait == kTimerInfinite ? TimePoint::max() : now + wait;
 
     {
-        lock_guard<mutex> lk{s_mut};
+        scoped_lock<mutex> lk{s_mut};
         if (!notify->m_timer)
             new Timer{notify};
         auto & timer = notify->m_timer;
@@ -309,7 +309,7 @@ void Dim::iTimerInitialize() {
 //===========================================================================
 void Dim::iTimerDestroy() {
     {
-        lock_guard<mutex> lk{s_mut};
+        scoped_lock<mutex> lk{s_mut};
         assert(s_mode == kRunRunning);
         s_mode = kRunStopping;
     }

@@ -54,7 +54,7 @@ ConsoleScopedAttr::ConsoleScopedAttr(ConsoleAttr attr) {
         logMsgCrash() << "GetConsoleScreenBufferInfo: " << GetLastError();
     }
 
-    lock_guard<mutex> lk{s_mut};
+    scoped_lock<mutex> lk{s_mut};
     s_consoleAttrs.push_back(info.wAttributes);
     switch (attr) {
     case kConsoleNormal:
@@ -77,7 +77,7 @@ ConsoleScopedAttr::ConsoleScopedAttr(ConsoleAttr attr) {
 //===========================================================================
 ConsoleScopedAttr::~ConsoleScopedAttr() {
     HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-    lock_guard<mutex> lk{s_mut};
+    scoped_lock<mutex> lk{s_mut};
     SetConsoleTextAttribute(hOutput, s_consoleAttrs.back());
     s_consoleAttrs.pop_back();
 }
