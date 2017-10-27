@@ -15,7 +15,7 @@ using namespace Dim;
 *
 ***/
 
-const int kReadQueueSize = 1;
+const int kReadQueueSize = 10;
 const int kSendQueueSize = 100;
 
 const int kSendCompletionQueueSize = 10 * kSendQueueSize;
