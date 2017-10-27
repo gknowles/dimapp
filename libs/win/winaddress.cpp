@@ -52,8 +52,16 @@ bool Dim::parse(Endpoint * end, string_view src, int defaultPort) {
         (sockaddr *)&sas, 
         &sasLen
     )) {
-        *end = {};
-        return false;
+        if (SOCKET_ERROR == WSAStringToAddressW(
+            tmp.data(), 
+            AF_INET6,
+            NULL, // protocol info
+            (sockaddr *)&sas, 
+            &sasLen
+        )) {
+            *end = {};
+            return false;
+        }
     }
     copy(end, sas);
     if (!end->port)
@@ -91,19 +99,44 @@ std::ostream & Dim::operator<<(std::ostream & os, const Endpoint & src) {
 //===========================================================================
 void Dim::copy(sockaddr_storage * out, const Endpoint & src) {
     *out = {};
-    auto ia = reinterpret_cast<sockaddr_in *>(out);
-    ia->sin_family = AF_INET;
-    ia->sin_port = htons((short)src.port);
-    ia->sin_addr.s_addr = htonl(src.addr.data[3]);
+    if (!src.addr.data[0] 
+        && !src.addr.data[1] 
+        && src.addr.data[2] == kIPv4MappedAddress
+    ) {
+        auto ia = reinterpret_cast<sockaddr_in *>(out);
+        ia->sin_family = AF_INET;
+        ia->sin_port = htons((short)src.port);
+        ia->sin_addr.s_addr = htonl(src.addr.data[3]);
+    } else {
+        auto ia = reinterpret_cast<sockaddr_in6 *>(out);
+        ia->sin6_family = AF_INET6;
+        ia->sin6_port = htons((short)src.port);
+        auto uint32addr = reinterpret_cast<uint32_t *>(ia->sin6_addr.u.Byte);
+        uint32addr[0] = htonl(src.addr.data[0]);
+        uint32addr[1] = htonl(src.addr.data[1]);
+        uint32addr[2] = htonl(src.addr.data[2]);
+        uint32addr[3] = htonl(src.addr.data[3]);
+    }
 }
 
 //===========================================================================
 void Dim::copy(Endpoint * out, const sockaddr_storage & storage) {
     *out = {};
-    auto ia = reinterpret_cast<const sockaddr_in &>(storage);
-    assert(ia.sin_family == AF_INET);
-    out->port = ntohs(ia.sin_port);
-    out->addr.data[3] = ntohl(ia.sin_addr.s_addr);
+    if (storage.ss_family == AF_INET) {
+        auto ia = reinterpret_cast<const sockaddr_in &>(storage);
+        out->port = ntohs(ia.sin_port);
+        out->addr.data[2] = kIPv4MappedAddress;
+        out->addr.data[3] = ntohl(ia.sin_addr.s_addr);
+    } else {
+        assert(storage.ss_family == AF_INET6);
+        auto ia = reinterpret_cast<const sockaddr_in6 &>(storage);
+        out->port = ntohs(ia.sin6_port);
+        auto uint32addr = reinterpret_cast<uint32_t *>(ia.sin6_addr.u.Byte);
+        out->addr.data[0] = ntohl(uint32addr[0]);
+        out->addr.data[1] = ntohl(uint32addr[1]);
+        out->addr.data[2] = ntohl(uint32addr[2]);
+        out->addr.data[3] = ntohl(uint32addr[3]);
+    }
 }
 
 

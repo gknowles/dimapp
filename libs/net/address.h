@@ -34,9 +34,12 @@ namespace Dim {
 *
 ***/
 
+// ::ffff:0:0/96 reserved for IPv4-mapped Address [RFC4291]
+static constexpr uint32_t kIPv4MappedAddress = 0xffff0000;
+
 // IP v4 or v6 address
 struct Address {
-    int32_t data[4]{};
+    uint32_t data[4] = { 0, 0, kIPv4MappedAddress, 0 };
 
     bool operator==(const Address & right) const;
     bool operator<(const Address & right) const;
