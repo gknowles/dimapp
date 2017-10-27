@@ -69,14 +69,15 @@ public:
     bool createQueue();
     void onReadQueue();
 
-    // NOTE: If onRead or onWrite return false you must immediately delete 
-    //       this socket.
+    // NOTE: If onRead or onWrite return false the socket has been deleted.
+    //       The task is completed and may be deleted whether or not false
+    //       is returned.
     bool onRead(SocketReadTask * task);
     bool onWrite(SocketWriteTask * task);
 
     void queueRead_LK(SocketReadTask * task);
     void queueWrite_UNLK(std::unique_ptr<SocketBuffer> buffer, size_t bytes);
-    void queueWriteFromUnsent_LK();
+    void queueWriteFromPrewrites_LK();
 
 protected:
     ISocketNotify * m_notify{nullptr};
@@ -86,18 +87,18 @@ protected:
 
 private:
     RIO_RQ m_rq{RIO_INVALID_RQ};
+    SocketBufferInfo m_bufInfo{};
 
-    // used by single read request
+    // used by read requests
     List<SocketReadTask> m_reads;
     int m_maxReads{0};
     RIO_CQ m_readCq{RIO_INVALID_CQ};
 
     // used by write requests
-    List<SocketWriteTask> m_sending;
-    int m_numSending{0};
-    int m_maxSending{0};
-    List<SocketWriteTask> m_unsent;
-    SocketBufferInfo m_bufInfo{};
+    List<SocketWriteTask> m_writes;
+    int m_numWrites{0};
+    int m_maxWrites{0};
+    List<SocketWriteTask> m_prewrites;
 };
 
 
