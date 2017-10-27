@@ -67,6 +67,7 @@ public:
         kUnconnected,
         kConnecting,
         kConnected,
+        kClosing,
     };
 
 public:
@@ -160,7 +161,7 @@ void ConnMgrSocket::onTimer(TimePoint now, RecentLink*) {
 
 //===========================================================================
 void ConnMgrSocket::disconnect() {
-    if (m_mode != kUnconnected)
+    if (m_mode == kConnecting || m_mode == kConnected)
         socketDisconnect(this);
 }
 
@@ -194,12 +195,14 @@ void ConnMgrSocket::onSocketConnectFailed () {
 //===========================================================================
 void ConnMgrSocket::onSocketDisconnect () {
     assert(m_mode == kConnected);
-    m_mode = kUnconnected;
+    m_mode = kClosing;
     ISockMgrSocket::onSocketDisconnect();
 }
 
 //===========================================================================
 void ConnMgrSocket::onSocketDestroy () {
+    assert(m_mode == kClosing || m_mode == kUnconnected);
+    m_mode = kUnconnected;
     mgr().destroy(*this);
 }
 
