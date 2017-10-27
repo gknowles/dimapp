@@ -63,6 +63,7 @@ static void iocpDispatchThread() {
                 auto evt = reinterpret_cast<WinOverlappedEvent *>(
                     entries[i].lpOverlapped
                 );
+                evt->completionKey = (void *) entries[i].lpCompletionKey;
                 auto val = evt->hq.pos;
                 if (match == numeric_limits<int>::max())
                     match = val;
@@ -147,6 +148,12 @@ void Dim::winIocpInitialize() {
 
     // Start IOCP dispatch task
     taskPushOnce("IOCP Dispatch", iocpDispatchThread);
+}
+
+//===========================================================================
+HANDLE Dim::winIocpHandle() {
+    assert(s_iocp);
+    return s_iocp;
 }
 
 //===========================================================================

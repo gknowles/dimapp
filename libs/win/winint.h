@@ -96,6 +96,7 @@ void winSetOverlapped(
 
 struct WinOverlappedEvent {
     OVERLAPPED overlapped{};
+    void * completionKey{};
     ITaskNotify * notify{nullptr};
     TaskQueueHandle hq{};
 };
@@ -107,6 +108,7 @@ class IWinOverlappedNotify : public ITaskNotify {
 public:
     IWinOverlappedNotify(TaskQueueHandle hq = {});
     OVERLAPPED & overlapped() { return m_evt.overlapped; }
+    void * overlappedKey() { return m_evt.completionKey; }
     void pushOverlappedTask();
 
     // Get error and number of bytes transferred for the operation
@@ -184,6 +186,7 @@ bool winFileSetErrno(int error);
 
 void winIocpInitialize();
 
+HANDLE winIocpHandle();
 bool winIocpBindHandle(HANDLE handle);
 
 
