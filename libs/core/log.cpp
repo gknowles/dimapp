@@ -147,6 +147,7 @@ Detail::Log::~Log() {
 ***/
 
 //===========================================================================
+#pragma warning(suppress: 4722)
 Detail::Crash::~Crash() {
     this_thread::sleep_for(3s);
     abort();
