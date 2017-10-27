@@ -42,7 +42,7 @@ public:
         kConnecting,
         kActive,  // actively reading
         kClosing, // closed the handle
-        kClosed,  // final zero-length read received
+        kClosed,  // final zero-length read and all completions received
     };
 
 public:

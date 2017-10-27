@@ -15,8 +15,8 @@ using namespace Dim;
 *
 ***/
 
-const int kInitialCompletionQueueSize = 100;
-const int kInitialSendQueueSize = 10;
+const int kInitialSendQueueSize = 100;
+const int kInitialCompletionQueueSize = 10 * kInitialSendQueueSize;
 
 
 /****************************************************************************
@@ -60,8 +60,8 @@ static void addCqUsed_LK(int delta) {
     }
     if (size != s_cqSize) {
         if (!s_rio.RIOResizeCompletionQueue(s_cq, size)) {
-            logMsgError() << "RIOResizeCompletionQueue(" << size
-                          << "): " << WinError{};
+            logMsgError() << "RIOResizeCompletionQueue(" 
+                << s_cqSize << " -> " << size << "): " << WinError{};
         } else {
             s_cqSize = size;
         }
@@ -223,6 +223,7 @@ SocketBase::SocketBase(ISocketNotify * notify)
 
 //===========================================================================
 SocketBase::~SocketBase() {
+    assert(m_sending.empty());
     ISocketNotify * notify{nullptr};
 
     {
