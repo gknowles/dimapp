@@ -28,11 +28,6 @@ enum LogType {
 
 namespace Detail {
 
-class Crash {
-public:
-    [[noreturn]] ~Crash();
-};
-
 class Log : public std::ostringstream {
 public:
     Log(LogType type);
@@ -41,11 +36,6 @@ public:
 
 private:
     LogType m_type;
-};
-
-class LogCrash : Crash, public Log {
-public:
-    using Log::Log;
 };
 
 } // namespace
@@ -63,7 +53,7 @@ public:
 Detail::Log logMsgDebug();
 Detail::Log logMsgInfo();
 Detail::Log logMsgError();
-Detail::LogCrash logMsgCrash();
+Detail::Log logMsgCrash();
 
 // Logs an error of the form "name(<line no>): msg", followed by two info 
 // lines with part or all of the line of content containing the error 
