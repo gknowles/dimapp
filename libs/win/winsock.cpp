@@ -15,8 +15,10 @@ using namespace Dim;
 *
 ***/
 
-const int kInitialSendQueueSize = 100;
-const int kInitialCompletionQueueSize = 10 * kInitialSendQueueSize;
+const int kReadQueueSize = 1;
+const int kSendQueueSize = 100;
+
+const int kSendCompletionQueueSize = 10 * kSendQueueSize;
 
 
 /****************************************************************************
@@ -31,8 +33,8 @@ static mutex s_mut;
 static condition_variable s_modeCv; // when run mode changes to stopped
 static RunMode s_mode{kRunStopped};
 static WinEvent s_cqReady;
-static RIO_CQ s_cq;
-static int s_cqSize = 10; // kInitialCompletionQueueSize;
+static RIO_CQ s_cq{RIO_INVALID_CQ};
+static int s_cqSize = kSendCompletionQueueSize;
 static int s_cqUsed;
 
 static atomic_int s_numSockets;
@@ -56,7 +58,7 @@ static void addCqUsed_LK(int delta) {
     if (s_cqUsed > s_cqSize) {
         size = max(s_cqSize * 3 / 2, s_cqUsed);
     } else if (s_cqUsed < s_cqSize / 3) {
-        size = max(s_cqSize / 2, kInitialCompletionQueueSize);
+        size = max(s_cqSize / 2, kSendCompletionQueueSize);
     }
     if (size != s_cqSize) {
         if (!s_rio.RIOResizeCompletionQueue(s_cq, size)) {
@@ -91,20 +93,19 @@ static void rioDispatchThread() {
         count = s_rio.RIODequeueCompletion(
             s_cq, 
             results, 
-            (ULONG)size(results)
+            (ULONG) size(results)
         );
         if (count == RIO_CORRUPT_CQ)
             logMsgCrash() << "RIODequeueCompletion: " << WinError{};
 
         if (int error = s_rio.RIONotify(s_cq))
-            logMsgCrash() << "RIONotify: " << WinError{};
+            logMsgCrash() << "RIONotify: " << WinError{error};
 
         lk.unlock();
 
         for (int i = 0; i < count; ++i) {
             auto && rr = results[i];
             auto task = (ISocketRequestTaskBase *)rr.RequestContext;
-            task->m_socket = (SocketBase *)rr.SocketContext;
             task->m_xferError = rr.Status;
             task->m_xferBytes = rr.BytesTransferred;
             tasks[i] = task;
@@ -122,15 +123,36 @@ static void rioDispatchThread() {
 
 /****************************************************************************
 *
+*   ReadDequeueTask
+*
+***/
+
+namespace {
+
+class ReadCompletionTask : public IWinOverlappedNotify {
+    void onTask() override;
+};
+
+} // namespace
+
+static ReadCompletionTask s_readCqTask;
+
+//===========================================================================
+void ReadCompletionTask::onTask() {
+    auto socket = static_cast<SocketBase *>(overlappedKey());
+    socket->onReadQueue();
+}
+
+
+/****************************************************************************
+*
 *   SocketReadTask
 *
 ***/
 
 //===========================================================================
 void SocketReadTask::onTask() {
-    m_socket->onRead();
-    // task object is a member of SocketBase and will be deleted when the
-    // socket is deleted
+    abort();
 }
 
 
@@ -142,7 +164,7 @@ void SocketReadTask::onTask() {
 
 //===========================================================================
 void SocketWriteTask::onTask() {
-    // deleted via containing list
+    // This task - and maybe the socket - is deleted inside onWrite.
     m_socket->onWrite(this);
 }
 
@@ -223,7 +245,7 @@ SocketBase::SocketBase(ISocketNotify * notify)
 
 //===========================================================================
 SocketBase::~SocketBase() {
-    assert(m_sending.empty());
+    assert(m_reads.empty() && m_sending.empty());
     ISocketNotify * notify{nullptr};
 
     {
@@ -236,10 +258,13 @@ SocketBase::~SocketBase() {
         hardClose_LK();
 
         if (m_maxSending)
-            addCqUsed_LK(-(m_maxSending + kMaxReceiving));
+            addCqUsed_LK(-(m_maxSending + m_maxReads));
 
         s_numSockets -= 1;
     }
+
+    if (m_maxReads)
+        s_rio.RIOCloseCompletionQueue(m_readCq);
 
     // release the lock before making the calling the notify
     if (notify)
@@ -266,33 +291,49 @@ void SocketBase::hardClose_LK() {
 
 //===========================================================================
 bool SocketBase::createQueue() {
-    m_read.m_buffer = socketGetBuffer();
+    m_maxReads = kReadQueueSize;
 
-    // Leave room for extra trailing null. Although not reported in the count
-    // a trailing null is added to the end of the buffer after every read. 
-    // It doesn't cost much and makes parsing easier for some text protocol 
-    // streams.
-    int bytes = m_read.m_buffer->capacity - 1; 
+    for (int i = 0; i < m_maxReads; ++i) {
+        m_reads.link(new SocketReadTask);
+        auto task = m_reads.back();
+        task->m_socket = this;
+        task->m_buffer = socketGetBuffer();
 
-    copy(&m_read.m_rbuf, *m_read.m_buffer, bytes);
+        // Leave room for extra trailing null. Although not reported in the count
+        // a trailing null is added to the end of the buffer after every read. 
+        // It doesn't cost much and makes parsing easier for some text protocol 
+        // streams.
+        int bytes = task->m_buffer->capacity - 1; 
+        copy(&task->m_rbuf, *task->m_buffer, bytes);
+    }
+
+    // create completion queue for reads
+    RIO_NOTIFICATION_COMPLETION ctype = {};
+    ctype.Type = RIO_IOCP_COMPLETION;
+    ctype.Iocp.IocpHandle = winIocpHandle();
+    ctype.Iocp.CompletionKey = this;
+    ctype.Iocp.Overlapped = &s_readCqTask.overlapped();
+    m_readCq = s_rio.RIOCreateCompletionQueue(m_maxReads, &ctype);
+    if (m_readCq == RIO_INVALID_CQ)
+        logMsgCrash() << "RIOCreateCompletionQueue(readCq): " << WinError{};
 
     {
         unique_lock<mutex> lk{s_mut};
 
-        // adjust size of completion queue if required
-        m_maxSending = kInitialSendQueueSize;
-        addCqUsed_LK(m_maxSending + kMaxReceiving);
+        // adjust size of shared completion queue if required
+        m_maxSending = kSendQueueSize;
+        addCqUsed_LK(m_maxSending + m_maxReads);
 
         // create request queue
         m_rq = s_rio.RIOCreateRequestQueue(
             m_handle,
-            kMaxReceiving, // max outstanding receive requests
-            1,             // max receive buffers (must be 1)
-            m_maxSending,  // max outstanding send requests
-            1,             // max send buffers (must be 1)
-            s_cq,          // receive completion queue
-            s_cq,          // send completion queue
-            this           // socket context
+            m_maxReads,     // max outstanding receive requests
+            1,              // max receive buffers (must be 1)
+            m_maxSending,   // max outstanding send requests
+            1,              // max send buffers (must be 1)
+            m_readCq,       // receive completion queue
+            s_cq,           // send completion queue
+            nullptr         // socket context
         );
         if (m_rq == RIO_INVALID_RQ) {
             logMsgError() << "RIOCreateRequestQueue: " << WinError{};
@@ -303,54 +344,99 @@ bool SocketBase::createQueue() {
         m_notify->m_socket = this;
 
         // start reading from socket
-        queueRead_LK();
+        for (auto && task : m_reads) 
+            queueRead_LK(&task);
     }
 
+    onReadQueue();
     return true;
 }
 
 //===========================================================================
-void SocketBase::onRead() {
-    if (int bytes = m_read.m_xferBytes) {
+void SocketBase::onReadQueue() {
+    static constexpr int kMaxResults = 10;
+    RIORESULT results[kMaxResults];
+    int count = s_rio.RIODequeueCompletion(
+        m_readCq,
+        results,
+        (ULONG) size(results)
+    );
+    if (count == RIO_CORRUPT_CQ)
+        logMsgCrash() << "RIODequeueCompletion(readCq): " << WinError{};
+
+    for (int i = 0; i < count; ++i) {
+        auto && rr = results[i];
+        auto task = (SocketReadTask *) rr.RequestContext;
+        task->m_xferError = rr.Status;
+        task->m_xferBytes = rr.BytesTransferred;
+        
+        // This task and the socket may be deleted inside onRead.
+        if (!onRead(task)) 
+            return;
+    }
+
+    if (int error = s_rio.RIONotify(m_readCq))
+        logMsgCrash() << "RIONotify: " << WinError{error};
+}
+
+//===========================================================================
+bool SocketBase::onRead(SocketReadTask * task) {
+    int bytes = task->m_xferBytes;
+    if (bytes) {
         SocketData data;
-        data.data = (char *)m_read.m_buffer->data;
+        data.data = (char *)task->m_buffer->data;
         data.bytes = bytes;
 
         // included uncounted trailing null
         data.data[bytes] = 0;
         
         m_notify->onSocketRead(data);
-
-        lock_guard<mutex> lk{s_mut};
-        if (m_mode == Mode::kActive)
-            return queueRead_LK();
-        assert(m_mode == Mode::kClosing);
     }
 
-    m_notify->onSocketDisconnect();
-    unique_lock<mutex> lk{s_mut};
-    m_mode = Mode::kClosed;
-    if (m_sending.empty()) {
-        lk.unlock();
+    bool mustDelete = false;
+    {
+        unique_lock<mutex> lk{s_mut};
+        if (bytes) {
+            if (m_mode == Mode::kActive) {
+                queueRead_LK(task);
+                return true;
+            }
+
+            assert(m_mode == Mode::kClosing || m_mode == Mode::kClosed);
+        }
+        delete task;
+
+        mustDelete = m_reads.empty() && m_sending.empty();
+
+        if (m_mode != Mode::kClosed) {
+            m_mode = Mode::kClosed;
+            lk.unlock();
+            m_notify->onSocketDisconnect();
+        }
+    }
+
+    if (mustDelete) {
         delete this;
+        return false;
     }
+    return true;
 }
 
 //===========================================================================
-void SocketBase::queueRead_LK() {
+void SocketBase::queueRead_LK(SocketReadTask * task) {
     if (!s_rio.RIOReceive(
         m_rq,
-        &m_read.m_rbuf,
+        &task->m_rbuf,
         1, // number of RIO_BUFs (must be 1)
         0, // RIO_MSG_* flags
-        &m_read
+        task
     )) {
         logMsgCrash() << "RIOReceive: " << WinError{};
     }
 }
 
 //===========================================================================
-void SocketBase::onWrite(SocketWriteTask * task) {
+bool SocketBase::onWrite(SocketWriteTask * task) {
     unique_lock<mutex> lk{s_mut};
 
     auto bytes = task->m_rbuf.Length;
@@ -360,10 +446,10 @@ void SocketBase::onWrite(SocketWriteTask * task) {
     m_bufInfo.incomplete -= bytes;
 
     // already disconnected and this was the last unresolved write? delete
-    if (m_mode == Mode::kClosed && m_sending.empty()) {
+    if (m_reads.empty() && m_sending.empty()) {
         lk.unlock();
         delete this;
-        return;
+        return false;
     }
 
     bool wasUnsent = !m_unsent.empty();
@@ -377,6 +463,7 @@ void SocketBase::onWrite(SocketWriteTask * task) {
         lk.unlock();
         m_notify->onSocketBufferChanged(info);
     }
+    return true;
 }
 
 //===========================================================================
@@ -414,12 +501,16 @@ void SocketBase::queueWrite_UNLK(
     if (bytes) {
         m_unsent.link(new SocketWriteTask);
         auto task = m_unsent.back();
-        copy(&task->m_rbuf, *buffer, bytes);
+        task->m_socket = this;
         task->m_buffer = move(buffer);
+        copy(&task->m_rbuf, *task->m_buffer, bytes);
     }
 
     queueWriteFromUnsent_LK();
-    if (!wasUnsent && !m_unsent.empty()) {
+    if (auto task = m_unsent.back()) {
+        if (task->m_qtime == TimePoint::min())
+            task->m_qtime = Clock::now();
+    } else if (!wasUnsent) {
         // data is now waiting
         assert(m_bufInfo.waiting <= bytes);
         auto info = m_bufInfo;

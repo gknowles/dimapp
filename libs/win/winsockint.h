@@ -67,10 +67,14 @@ public:
     void hardClose_LK();
 
     bool createQueue();
-    void onRead();
-    void onWrite(SocketWriteTask * task);
+    void onReadQueue();
 
-    void queueRead_LK();
+    // NOTE: If onRead or onWrite return false you must immediately delete 
+    //       this socket.
+    bool onRead(SocketReadTask * task);
+    bool onWrite(SocketWriteTask * task);
+
+    void queueRead_LK(SocketReadTask * task);
     void queueWrite_UNLK(std::unique_ptr<SocketBuffer> buffer, size_t bytes);
     void queueWriteFromUnsent_LK();
 
@@ -81,11 +85,12 @@ protected:
     Mode m_mode{Mode::kInactive};
 
 private:
-    RIO_RQ m_rq{};
+    RIO_RQ m_rq{RIO_INVALID_RQ};
 
     // used by single read request
-    SocketReadTask m_read;
-    static const int kMaxReceiving{1};
+    List<SocketReadTask> m_reads;
+    int m_maxReads{1};
+    RIO_CQ m_readCq{RIO_INVALID_CQ};
 
     // used by write requests
     List<SocketWriteTask> m_sending;
