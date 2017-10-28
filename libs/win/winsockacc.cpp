@@ -31,8 +31,8 @@ public:
 };
 
 class ListenSocket 
-    : public ListBaseLink<>
-    , public IWinEventWaitNotify 
+    : public IWinOverlappedNotify
+    , public ListBaseLink<>
 {
 public:
     bool m_stopRequested{false};
@@ -328,6 +328,8 @@ void Dim::socketListen(
     auto sock = hostage.get();
     sock->m_handle = iSocketCreate(local);
     if (sock->m_handle == INVALID_SOCKET)
+        return;
+    if (!winIocpBindHandle((HANDLE) sock->m_handle))
         return;
 
     if (SOCKET_ERROR == listen(sock->m_handle, SOMAXCONN)) {

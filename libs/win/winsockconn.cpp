@@ -44,7 +44,10 @@ private:
     void connectFailed();
 };
 
-class ConnectTask : public IWinEventWaitNotify, public ListBaseLink<> {
+class ConnectTask 
+    : public IWinOverlappedNotify
+    , public ListBaseLink<> 
+{
 public:
     TimePoint m_expiration;
     unique_ptr<ConnSocket> m_socket;
@@ -177,6 +180,8 @@ void ConnSocket::connect(
     auto sock = make_unique<ConnSocket>(notify);
     sock->m_handle = iSocketCreate(local);
     if (sock->m_handle == INVALID_SOCKET)
+        return pushConnectFailed(notify);
+    if (!winIocpBindHandle((HANDLE) sock->m_handle))
         return pushConnectFailed(notify);
 
     sock->m_mode = Mode::kConnecting;
