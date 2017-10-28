@@ -487,6 +487,7 @@ void RawSocket::onSocketBufferChanged(const SocketBufferInfo & info) {
     AppSocketBufferInfo ai;
     ai.incomplete = info.incomplete;
     ai.waiting = info.waiting;
+    ai.total = info.total;
     notifyBufferChanged(ai);
 }
 

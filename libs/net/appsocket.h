@@ -45,6 +45,7 @@ struct AppSocketData {
 struct AppSocketBufferInfo {
     size_t incomplete;
     size_t waiting;
+    size_t total;
 };
 
 
