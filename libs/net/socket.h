@@ -30,6 +30,7 @@ struct SocketData {
 struct SocketBufferInfo {
     size_t incomplete;  // bytes sent but not yet ACK'd by peer
     size_t waiting;     // bytes waiting to be sent
+    size_t total;       // total bytes sent to socket
 };
 
 class SocketBase;

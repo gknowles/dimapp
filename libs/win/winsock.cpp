@@ -469,6 +469,7 @@ void SocketBase::queueWrite_UNLK(
 
     s_perfWaiting += (unsigned) bytes;
     m_bufInfo.waiting += bytes;
+    m_bufInfo.total += bytes;
     bool wasUnsent = !m_prewrites.empty();
 
     if (wasUnsent) {
