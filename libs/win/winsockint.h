@@ -16,9 +16,9 @@ namespace Dim {
 *
 ***/
 
-class SocketRequest;
+struct SocketRequest;
 
-class SocketBase {
+class SocketBase : IWinOverlappedNotify {
 public:
     using Mode = ISocketNotify::Mode;
 
@@ -29,7 +29,6 @@ public:
 
     static SocketBase::Mode getMode(ISocketNotify * notify);
     static void disconnect(ISocketNotify * notify);
-    static void setNotify(ISocketNotify * notify, ISocketNotify * newNotify);
     static void write(
         ISocketNotify * notify,
         std::unique_ptr<SocketBuffer> buffer,
@@ -40,20 +39,8 @@ public:
     SocketBase(ISocketNotify * notify);
     virtual ~SocketBase();
 
-    void hardClose_LK();
-
+    void hardClose();
     bool createQueue();
-    void onReadQueue();
-
-    // NOTE: If onRead or onWrite return false the socket has been deleted.
-    //       The task is completed and may be deleted whether or not false
-    //       is returned.
-    bool onRead(SocketRequest * task);
-    bool onWrite(SocketRequest * task);
-
-    void queueRead_LK(SocketRequest * task);
-    void queueWrite_UNLK(std::unique_ptr<SocketBuffer> buffer, size_t bytes);
-    void queueWriteFromPrewrites_LK();
 
 protected:
     ISocketNotify * m_notify{nullptr};
@@ -62,13 +49,28 @@ protected:
     Mode m_mode{Mode::kInactive};
 
 private:
+    void hardClose_LK();
+
+    void onTask() override;
+
+    // NOTE: If onRead or onWrite return false the socket has been deleted.
+    //       The task is completed and may be deleted whether or not false
+    //       is returned.
+    bool onRead(SocketRequest * task);
+    bool onWrite(SocketRequest * task);
+
+    void queueRead_LK(SocketRequest * task);
+    void queueWrite(std::unique_ptr<SocketBuffer> buffer, size_t bytes);
+    void queueWriteFromPrewrites_LK();
+
+    std::mutex m_mut;
     RIO_RQ m_rq{RIO_INVALID_RQ};
+    RIO_CQ m_cq{RIO_INVALID_CQ};
     SocketBufferInfo m_bufInfo{};
 
     // used by read requests
     List<SocketRequest> m_reads;
     int m_maxReads{0};
-    RIO_CQ m_readCq{RIO_INVALID_CQ};
 
     // used by write requests
     List<SocketRequest> m_writes;

@@ -18,8 +18,6 @@ using namespace Dim;
 const int kReadQueueSize = 10;
 const int kWriteQueueSize = 100;
 
-const int kWriteCompletionQueueSize = 10 * kWriteQueueSize;
-
 
 /****************************************************************************
 *
@@ -27,8 +25,18 @@ const int kWriteCompletionQueueSize = 10 * kWriteQueueSize;
 *
 ***/
 
-class Dim::SocketRequest : public ListBaseLink<> {
-public:
+namespace {
+
+enum RequestType {
+    kReqInvalid,
+    kReqRead,
+    kReqWrite,
+};
+
+} // namespace
+    
+struct Dim::SocketRequest : ListBaseLink<> {
+    RequestType m_type{kReqInvalid};
     RIO_BUF m_rbuf{};
     std::unique_ptr<SocketBuffer> m_buffer;
     TimePoint m_qtime{};
@@ -47,11 +55,6 @@ public:
 
 static RIO_EXTENSION_FUNCTION_TABLE s_rio;
 
-static mutex s_mut;
-static RIO_CQ s_cq{RIO_INVALID_CQ};
-static int s_cqSize = kWriteCompletionQueueSize;
-static int s_cqUsed;
-
 static atomic_int s_numSockets;
 
 static auto & s_perfIncomplete = uperf("sock write bytes (incomplete)");
@@ -63,101 +66,6 @@ static auto & s_perfWaiting = uperf("sock write bytes (waiting)");
 *   Helpers
 *
 ***/
-
-//===========================================================================
-static void addCqUsed_LK(int delta) {
-    s_cqUsed += delta;
-    assert(s_cqUsed >= 0);
-
-    int size = s_cqSize;
-    if (s_cqUsed > s_cqSize) {
-        size = max(s_cqSize * 3 / 2, s_cqUsed);
-    } else if (s_cqUsed < s_cqSize / 3) {
-        size = max(s_cqSize / 2, kWriteCompletionQueueSize);
-    }
-    if (size != s_cqSize) {
-        if (!s_rio.RIOResizeCompletionQueue(s_cq, size)) {
-            logMsgError() << "RIOResizeCompletionQueue(" 
-                << s_cqSize << " -> " << size << "): " << WinError{};
-        } else {
-            s_cqSize = size;
-        }
-    }
-}
-
-
-/****************************************************************************
-*
-*   ReadCompletionTask
-*
-*   Calls indicated socket to process its private completion queue of 
-*   read events
-*
-***/
-
-namespace {
-
-class ReadCompletionTask : public IWinOverlappedNotify {
-    void onTask() override;
-};
-
-} // namespace
-
-static ReadCompletionTask s_readCqTask;
-
-//===========================================================================
-void ReadCompletionTask::onTask() {
-    auto socket = static_cast<SocketBase *>(overlappedKey());
-    socket->onReadQueue();
-}
-
-
-/****************************************************************************
-*
-*   WriteCompletionTask
-*
-*   Processes shared completion queue containing completed writes from 
-*   all sockets.
-*
-***/
-
-namespace {
-
-class WriteCompletionTask : public IWinOverlappedNotify {
-public:
-    void onTask() override;
-};
-
-} // namespace
-
-static WriteCompletionTask s_writeCqTask;
-
-//===========================================================================
-void WriteCompletionTask::onTask() {
-    static constexpr int kMaxResults = 10;
-    RIORESULT results[kMaxResults];
-    int count = s_rio.RIODequeueCompletion(
-        s_cq,
-        results,
-        (ULONG) size(results)
-    );
-    if (count == RIO_CORRUPT_CQ)
-        logMsgCrash() << "RIODequeueCompletion: " << WinError{};
-
-    for (int i = 0; i < count; ++i) {
-        auto && rr = results[i];
-        auto task = (SocketRequest *) rr.RequestContext;
-        task->m_xferError = rr.Status;
-        task->m_xferBytes = rr.BytesTransferred;
-        auto socket = (SocketBase *) rr.SocketContext;
-
-        // This task - and maybe the socket - is deleted inside onWrite.
-        socket->onWrite(task);
-    }
-
-    if (int error = s_rio.RIONotify(s_cq))
-        logMsgCrash() << "RIONotify: " << WinError{error};
-}
 
 
 /****************************************************************************
@@ -174,8 +82,7 @@ LPFN_CONNECTEX SocketBase::s_ConnectEx;
 //===========================================================================
 // static
 SocketBase::Mode SocketBase::getMode(ISocketNotify * notify) {
-    unique_lock<mutex> lk{s_mut};
-    if (auto * sock = notify->m_socket)
+    if (auto sock = notify->m_socket)
         return sock->m_mode;
 
     return Mode::kInactive;
@@ -184,28 +91,8 @@ SocketBase::Mode SocketBase::getMode(ISocketNotify * notify) {
 //===========================================================================
 // static
 void SocketBase::disconnect(ISocketNotify * notify) {
-    unique_lock<mutex> lk{s_mut};
-    if (notify->m_socket)
-        notify->m_socket->hardClose_LK();
-}
-
-//===========================================================================
-// static 
-void SocketBase::setNotify(
-    ISocketNotify * notify, 
-    ISocketNotify * newNotify
-) {
-    unique_lock<mutex> lk{s_mut};
-    if (notify->m_socket) {
-        assert(!newNotify->m_socket);
-        assert(notify == notify->m_socket->m_notify);
-        newNotify->m_socket = notify->m_socket;
-        notify->m_socket->m_notify = newNotify;
-        notify->m_socket = nullptr;
-    } else {
-        newNotify->m_socket = nullptr;
-        newNotify->onSocketDestroy();
-    }
+    if (auto sock = notify->m_socket)
+        sock->hardClose();
 }
 
 //===========================================================================
@@ -218,13 +105,8 @@ void SocketBase::write(
     assert(bytes <= buffer->capacity);
     if (!bytes)
         return;
-    unique_lock<mutex> lk{s_mut};
-    SocketBase * sock = notify->m_socket;
-    if (!sock)
-        return;
-
-    lk.release();
-    sock->queueWrite_UNLK(move(buffer), bytes);
+    if (auto sock = notify->m_socket)
+        sock->queueWrite(move(buffer), bytes);
 }
 
 //===========================================================================
@@ -240,7 +122,7 @@ SocketBase::~SocketBase() {
     ISocketNotify * notify{nullptr};
 
     {
-        scoped_lock<mutex> lk{s_mut};
+        scoped_lock<mutex> lk{m_mut};
         if (m_notify) {
             notify = m_notify;
             m_notify->m_socket = nullptr;
@@ -248,18 +130,24 @@ SocketBase::~SocketBase() {
 
         hardClose_LK();
 
-        if (m_maxWrites)
-            addCqUsed_LK(-(m_maxWrites + m_maxReads));
-
         s_numSockets -= 1;
     }
 
-    if (m_maxReads)
-        s_rio.RIOCloseCompletionQueue(m_readCq);
+    if (m_cq != RIO_INVALID_CQ)
+        s_rio.RIOCloseCompletionQueue(m_cq);
 
     // release the lock before making the calling the notify
     if (notify)
         notify->onSocketDestroy();
+}
+
+//===========================================================================
+void SocketBase::hardClose() {
+    if (m_handle == INVALID_SOCKET)
+        return;
+
+    scoped_lock<mutex> lk{m_mut};
+    hardClose_LK();
 }
 
 //===========================================================================
@@ -283,10 +171,12 @@ void SocketBase::hardClose_LK() {
 //===========================================================================
 bool SocketBase::createQueue() {
     m_maxReads = kReadQueueSize;
+    m_maxWrites = kWriteQueueSize;
 
     for (int i = 0; i < m_maxReads; ++i) {
         m_reads.link(new SocketRequest);
         auto task = m_reads.back();
+        task->m_type = kReqRead;
         task->m_buffer = socketGetBuffer();
 
         // Leave room for extra trailing null. Although not reported in the
@@ -297,63 +187,57 @@ bool SocketBase::createQueue() {
         copy(&task->m_rbuf, *task->m_buffer, bytes);
     }
 
-    // create completion queue for reads
+    // create completion queue
     RIO_NOTIFICATION_COMPLETION ctype = {};
     ctype.Type = RIO_IOCP_COMPLETION;
     ctype.Iocp.IocpHandle = winIocpHandle();
-    ctype.Iocp.CompletionKey = this;
-    ctype.Iocp.Overlapped = &s_readCqTask.overlapped();
-    m_readCq = s_rio.RIOCreateCompletionQueue(m_maxReads, &ctype);
-    if (m_readCq == RIO_INVALID_CQ)
-        logMsgCrash() << "RIOCreateCompletionQueue(readCq): " << WinError{};
+    ctype.Iocp.Overlapped = &overlapped();
+    m_cq = s_rio.RIOCreateCompletionQueue(m_maxReads + m_maxWrites, &ctype);
+    if (m_cq == RIO_INVALID_CQ)
+        logMsgCrash() << "RIOCreateCompletionQueue: " << WinError{};
+
+    // create request queue
+    m_rq = s_rio.RIOCreateRequestQueue(
+        m_handle,
+        m_maxReads,     // max outstanding receive requests
+        1,              // max receive buffers (must be 1)
+        m_maxWrites,    // max outstanding send requests
+        1,              // max send buffers (must be 1)
+        m_cq,           // receive completion queue
+        m_cq,           // send completion queue
+        this            // socket context
+    );
+    if (m_rq == RIO_INVALID_RQ) {
+        logMsgError() << "RIOCreateRequestQueue: " << WinError{};
+        return false;
+    }
+
+    m_mode = Mode::kActive;
+    m_notify->m_socket = this;
 
     {
-        unique_lock<mutex> lk{s_mut};
-
-        // adjust size of shared completion queue if required
-        m_maxWrites = kWriteQueueSize;
-        addCqUsed_LK(m_maxWrites + m_maxReads);
-
-        // create request queue
-        m_rq = s_rio.RIOCreateRequestQueue(
-            m_handle,
-            m_maxReads,     // max outstanding receive requests
-            1,              // max receive buffers (must be 1)
-            m_maxWrites,    // max outstanding send requests
-            1,              // max send buffers (must be 1)
-            m_readCq,       // receive completion queue
-            s_cq,           // send completion queue
-            this            // socket context
-        );
-        if (m_rq == RIO_INVALID_RQ) {
-            logMsgError() << "RIOCreateRequestQueue: " << WinError{};
-            return false;
-        }
-
-        m_mode = Mode::kActive;
-        m_notify->m_socket = this;
-
         // start reading from socket
+        unique_lock<mutex> lk{m_mut};
         for (auto && task : m_reads) 
             queueRead_LK(&task);
     }
 
     // trigger first RIONotify
-    onReadQueue();
+    onTask();
     return true;
 }
 
 //===========================================================================
-void SocketBase::onReadQueue() {
+void SocketBase::onTask() {
     static constexpr int kMaxResults = 10;
     RIORESULT results[kMaxResults];
     int count = s_rio.RIODequeueCompletion(
-        m_readCq,
+        m_cq,
         results,
         (ULONG) size(results)
     );
     if (count == RIO_CORRUPT_CQ)
-        logMsgCrash() << "RIODequeueCompletion(readCq): " << WinError{};
+        logMsgCrash() << "RIODequeueCompletion: " << WinError{};
 
     for (int i = 0; i < count; ++i) {
         auto && rr = results[i];
@@ -361,13 +245,19 @@ void SocketBase::onReadQueue() {
         task->m_xferError = rr.Status;
         task->m_xferBytes = rr.BytesTransferred;
         
-        // This task and the socket may be deleted inside onRead.
-        if (!onRead(task)) 
-            return;
+        // This task - and the socket - may be deleted inside onRead/onWrite.
+        if (task->m_type == kReqRead) {
+            if (!onRead(task)) 
+                return;
+        } else {
+            assert(task->m_type == kReqWrite);
+            if (!onWrite(task)) 
+                return;
+        }
     }
 
-    if (int error = s_rio.RIONotify(m_readCq))
-        logMsgCrash() << "RIONotify(readCq): " << WinError{error};
+    if (int error = s_rio.RIONotify(m_cq))
+        logMsgCrash() << "RIONotify: " << WinError{error};
 }
 
 //===========================================================================
@@ -386,7 +276,7 @@ bool SocketBase::onRead(SocketRequest * task) {
 
     bool mustDelete = false;
     {
-        unique_lock<mutex> lk{s_mut};
+        unique_lock<mutex> lk{m_mut};
         if (bytes) {
             if (m_mode == Mode::kActive) {
                 queueRead_LK(task);
@@ -428,7 +318,7 @@ void SocketBase::queueRead_LK(SocketRequest * task) {
 
 //===========================================================================
 bool SocketBase::onWrite(SocketRequest * task) {
-    unique_lock<mutex> lk{s_mut};
+    unique_lock<mutex> lk{m_mut};
 
     auto bytes = task->m_rbuf.Length;
     delete task;
@@ -443,10 +333,10 @@ bool SocketBase::onWrite(SocketRequest * task) {
         return false;
     }
 
-    bool wasUnsent = !m_prewrites.empty();
+    bool wasPrewrites = !m_prewrites.empty();
     queueWriteFromPrewrites_LK();
-    if (wasUnsent && m_prewrites.empty()    // data no longer waiting
-        || !m_numWrites                 // send queue is empty
+    if (wasPrewrites && m_prewrites.empty() // data no longer waiting
+        || !m_numWrites                     // send queue is empty
     ) {
         assert(!m_bufInfo.waiting);
         assert(m_numWrites || !m_bufInfo.incomplete);
@@ -458,21 +348,21 @@ bool SocketBase::onWrite(SocketRequest * task) {
 }
 
 //===========================================================================
-void SocketBase::queueWrite_UNLK(
+void SocketBase::queueWrite(
     unique_ptr<SocketBuffer> buffer, 
     size_t bytes
 ) {
     assert(bytes);
-    unique_lock<mutex> lk{s_mut, adopt_lock};
+    unique_lock<mutex> lk{m_mut};
     if (m_mode == Mode::kClosing || m_mode == Mode::kClosed)
         return;
 
     s_perfWaiting += (unsigned) bytes;
     m_bufInfo.waiting += bytes;
     m_bufInfo.total += bytes;
-    bool wasUnsent = !m_prewrites.empty();
+    bool wasPrewrites = !m_prewrites.empty();
 
-    if (wasUnsent) {
+    if (wasPrewrites) {
         auto back = m_prewrites.back();
         if (int count = min(
             back->m_buffer->capacity - (int)back->m_rbuf.Length, 
@@ -493,6 +383,7 @@ void SocketBase::queueWrite_UNLK(
     if (bytes) {
         m_prewrites.link(new SocketRequest);
         auto task = m_prewrites.back();
+        task->m_type = kReqWrite;
         task->m_buffer = move(buffer);
         copy(&task->m_rbuf, *task->m_buffer, bytes);
     }
@@ -501,7 +392,7 @@ void SocketBase::queueWrite_UNLK(
     if (auto task = m_prewrites.back()) {
         if (task->m_qtime == TimePoint::min())
             task->m_qtime = Clock::now();
-    } else if (!wasUnsent) {
+    } else if (!wasPrewrites) {
         // data is now waiting
         assert(m_bufInfo.waiting <= bytes);
         auto info = m_bufInfo;
@@ -554,7 +445,6 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
         return shutdownIncomplete();
 
     // close windows sockets
-    s_rio.RIOCloseCompletionQueue(s_cq);
     if (WSACleanup())
         logMsgError() << "WSACleanup: " << WinError{};
 }
@@ -677,18 +567,6 @@ void Dim::iSocketInitialize() {
     shutdownMonitor(&s_cleanup);
     iSocketAcceptInitialize();
     iSocketConnectInitialize();
-
-    // create RIO completion queue
-    RIO_NOTIFICATION_COMPLETION ctype = {};
-    ctype.Type = RIO_IOCP_COMPLETION;
-    ctype.Iocp.IocpHandle = winIocpHandle();
-    ctype.Iocp.Overlapped = &s_writeCqTask.overlapped();
-    s_cq = s_rio.RIOCreateCompletionQueue(s_cqSize, &ctype);
-    if (s_cq == RIO_INVALID_CQ)
-        logMsgCrash() << "RIOCreateCompletionQueue: " << WinError{};
-
-    // trigger first RIONotify
-    s_writeCqTask.onTask();
 }
 
 //===========================================================================
@@ -793,11 +671,6 @@ ISocketNotify::Mode Dim::socketGetMode(ISocketNotify * notify) {
 //===========================================================================
 void Dim::socketDisconnect(ISocketNotify * notify) {
     SocketBase::disconnect(notify);
-}
-
-//===========================================================================
-void Dim::socketSetNotify(ISocketNotify * notify, ISocketNotify * newNotify) {
-    SocketBase::setNotify(notify, newNotify);
 }
 
 //===========================================================================
