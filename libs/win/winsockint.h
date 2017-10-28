@@ -16,31 +16,7 @@ namespace Dim {
 *
 ***/
 
-class ISocketRequestTaskBase : public ITaskNotify, public ListBaseLink<> {
-public:
-    RIO_BUF m_rbuf{};
-    std::unique_ptr<SocketBuffer> m_buffer;
-
-    // filled in after completion
-    WinError m_xferError{(WinError::NtStatus)0};
-    int m_xferBytes{0};
-    SocketBase * m_socket{nullptr};
-
-private:
-    void onTask() override = 0;
-};
-
-class SocketReadTask : public ISocketRequestTaskBase {
-    void onTask() override;
-};
-
-class SocketWriteTask : public ISocketRequestTaskBase {
-public:
-    TimePoint m_qtime{};
-
-private:
-    void onTask() override;
-};
+class SocketRequest;
 
 class SocketBase {
 public:
@@ -72,10 +48,10 @@ public:
     // NOTE: If onRead or onWrite return false the socket has been deleted.
     //       The task is completed and may be deleted whether or not false
     //       is returned.
-    bool onRead(SocketReadTask * task);
-    bool onWrite(SocketWriteTask * task);
+    bool onRead(SocketRequest * task);
+    bool onWrite(SocketRequest * task);
 
-    void queueRead_LK(SocketReadTask * task);
+    void queueRead_LK(SocketRequest * task);
     void queueWrite_UNLK(std::unique_ptr<SocketBuffer> buffer, size_t bytes);
     void queueWriteFromPrewrites_LK();
 
@@ -90,15 +66,15 @@ private:
     SocketBufferInfo m_bufInfo{};
 
     // used by read requests
-    List<SocketReadTask> m_reads;
+    List<SocketRequest> m_reads;
     int m_maxReads{0};
     RIO_CQ m_readCq{RIO_INVALID_CQ};
 
     // used by write requests
-    List<SocketWriteTask> m_writes;
+    List<SocketRequest> m_writes;
     int m_numWrites{0};
     int m_maxWrites{0};
-    List<SocketWriteTask> m_prewrites;
+    List<SocketRequest> m_prewrites;
 };
 
 
