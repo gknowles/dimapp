@@ -105,7 +105,9 @@ static void findBufferSlice(
 static void createEmptyBuffer() {
     size_t bytes = s_bufferSize;
     size_t granularity = s_minAlloc;
+    DWORD fLargePages = 0;
     if (s_minLargeAlloc && s_bufferSize >= s_minLargeAlloc) {
+        fLargePages = MEM_LARGE_PAGES;
         granularity = s_minLargeAlloc;
     }
     // round up, but not to exceed DWORD
@@ -126,16 +128,15 @@ static void createEmptyBuffer() {
     buf->base = (char *)VirtualAlloc(
         nullptr,
         bytes,
-        MEM_COMMIT | MEM_RESERVE
-            | (bytes > s_minLargeAlloc ? MEM_LARGE_PAGES : 0),
+        MEM_COMMIT | MEM_RESERVE | fLargePages,
         PAGE_READWRITE
     );
-    assert(buf->base);
+    if (!buf->base)
+        logMsgCrash() << "VirtualAlloc(sockbuf): " << WinError{};
 
     buf->id = s_rio.RIORegisterBuffer(buf->base, (DWORD)bytes);
-    if (buf->id == RIO_INVALID_BUFFERID) {
-        logMsgCrash() << "RIORegisterBuffer failed, " << WinError();
-    }
+    if (buf->id == RIO_INVALID_BUFFERID) 
+        logMsgCrash() << "RIORegisterBuffer: " << WinError();
 }
 
 //===========================================================================
@@ -226,15 +227,20 @@ void Dim::iSocketBufferInitialize(RIO_EXTENSION_FUNCTION_TABLE & rio) {
 
     s_rio = rio;
 
-    s_minLargeAlloc = GetLargePageMinimum();
     SYSTEM_INFO info;
     GetSystemInfo(&info);
     s_pageSize = info.dwPageSize;
     s_minAlloc = info.dwAllocationGranularity;
 
-    // if large pages are available make sure the buffers are at least
-    // that big
-    s_bufferSize = max(s_minLargeAlloc, s_bufferSize);
+    if (winEnablePrivilege(SE_LOCK_MEMORY_NAME)) {
+        // We have the right to allocate large pages, now get how big they are
+        // and see if they are supported at all (non-zero).
+        s_minLargeAlloc = GetLargePageMinimum();
+
+        // If large pages are available make sure the buffers are at least
+        // that big.
+        s_bufferSize = max(s_minLargeAlloc, s_bufferSize);
+    }
 }
 
 //===========================================================================
