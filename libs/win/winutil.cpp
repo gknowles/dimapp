@@ -36,6 +36,46 @@ FARPROC Dim::winLoadProc(const char lib[], const char proc[], bool optional) {
 
 /****************************************************************************
 *
+*   Public Privileges API
+*
+***/
+
+//===========================================================================
+bool Dim::winEnablePrivilege(string_view name, bool enable) {
+    auto proc = GetCurrentProcess();
+    HANDLE token;
+    if (!OpenProcessToken(proc, TOKEN_ADJUST_PRIVILEGES, &token)) 
+        return false;
+
+    bool success = false;
+    auto wname = toWstring(name);
+    TOKEN_PRIVILEGES tp;
+    tp.PrivilegeCount = 1;
+    tp.Privileges[0].Attributes = enable ? SE_PRIVILEGE_ENABLED : 0;
+    if (LookupPrivilegeValueW(
+        NULL, 
+        wname.c_str(),
+        &tp.Privileges[0].Luid
+    )) {
+        if (AdjustTokenPrivileges(
+            token,
+            false,  // disable all
+            &tp,
+            0,      // size of buffer to receive previous state
+            NULL,   // pointer to buffer to previous state
+            NULL    // size of previous state placed in buffer
+        )) {
+            WinError err;
+            success = (err == ERROR_SUCCESS);
+        }
+    }
+    CloseHandle(token);
+    return success;
+}
+
+
+/****************************************************************************
+*
 *   Public Overlapped API
 *
 ***/

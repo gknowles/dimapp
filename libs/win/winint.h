@@ -86,6 +86,10 @@ static void winLoadProc(
 }
 
 //---------------------------------------------------------------------------
+// Privileges
+bool winEnablePrivilege(std::string_view name, bool enable = true);
+
+//---------------------------------------------------------------------------
 // Overlapped
 
 void winSetOverlapped(
