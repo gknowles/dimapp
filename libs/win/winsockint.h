@@ -61,8 +61,8 @@ private:
     bool onWrite(SocketRequest * task);
 
     void queueRead_LK(SocketRequest * task);
-    void queueWrite(std::unique_ptr<SocketBuffer> buffer, size_t bytes);
-    void queueWriteFromPrewrites_LK();
+    void queuePrewrite(std::unique_ptr<SocketBuffer> buffer, size_t bytes);
+    void queueWrites_LK();
 
     std::mutex m_mut;
     RIO_RQ m_rq{RIO_INVALID_RQ};

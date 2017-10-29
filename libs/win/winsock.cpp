@@ -18,6 +18,12 @@ using namespace Dim;
 const int kReadQueueSize = 10;
 const int kWriteQueueSize = 100;
 
+// How long data can wait to be sent. When the queue time exceeds this value
+// the socket is disconnected, the assumption being that the end consumer, if
+// they still care, has a retry in flight and would discard it anyway as 
+// being expired.
+const auto kMaxPrewriteQueueTime = 2min;
+
 
 /****************************************************************************
 *
@@ -61,6 +67,7 @@ static auto & s_perfReadTotal = uperf("sock read bytes (total)");
 static auto & s_perfIncomplete = uperf("sock write bytes (incomplete)");
 static auto & s_perfWaiting = uperf("sock write bytes (waiting)");
 static auto & s_perfWriteTotal = uperf("sock write bytes (total)");
+static auto & s_perfBacklog = uperf("sock disconnect write backlog");
 
 
 /****************************************************************************
@@ -108,7 +115,7 @@ void SocketBase::write(
     if (!bytes)
         return;
     if (auto sock = notify->m_socket)
-        sock->queueWrite(move(buffer), bytes);
+        sock->queuePrewrite(move(buffer), bytes);
 }
 
 //===========================================================================
@@ -342,7 +349,7 @@ bool SocketBase::onWrite(SocketRequest * task) {
     }
 
     bool wasPrewrites = !m_prewrites.empty();
-    queueWriteFromPrewrites_LK();
+    queueWrites_LK();
     if (wasPrewrites && m_prewrites.empty() // data no longer waiting
         || !m_numWrites                     // send queue is empty
     ) {
@@ -356,7 +363,7 @@ bool SocketBase::onWrite(SocketRequest * task) {
 }
 
 //===========================================================================
-void SocketBase::queueWrite(
+void SocketBase::queuePrewrite(
     unique_ptr<SocketBuffer> buffer, 
     size_t bytes
 ) {
@@ -397,10 +404,15 @@ void SocketBase::queueWrite(
         copy(&task->m_rbuf, *task->m_buffer, bytes);
     }
 
-    queueWriteFromPrewrites_LK();
+    queueWrites_LK();
     if (auto task = m_prewrites.back()) {
-        if (task->m_qtime == TimePoint::min())
-            task->m_qtime = Clock::now();
+        if (task->m_qtime == TimePoint::min()) {
+            auto now = Clock::now();
+            task->m_qtime = now;
+            auto maxQTime = now - m_prewrites.front()->m_qtime;
+            if (maxQTime > kMaxPrewriteQueueTime)
+                return hardClose_LK();
+        }
         if (!wasPrewrites) {
             // data is now waiting
             assert(m_bufInfo.waiting <= bytes);
@@ -412,7 +424,7 @@ void SocketBase::queueWrite(
 }
 
 //===========================================================================
-void SocketBase::queueWriteFromPrewrites_LK() {
+void SocketBase::queueWrites_LK() {
     while (m_numWrites < m_maxWrites && !m_prewrites.empty()) {
         m_writes.link(m_prewrites.front());
         m_numWrites += 1;
