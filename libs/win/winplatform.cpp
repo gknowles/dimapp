@@ -17,46 +17,46 @@ using namespace Dim;
 
 namespace {
 class HtmlAccount : public IHttpRouteNotify {
-	void onHttpRequest(
-		unsigned reqId,
-		unordered_multimap<string_view, string_view> & params,
-		HttpRequest & msg
-	) override;
+    void onHttpRequest(
+        unsigned reqId,
+        unordered_multimap<string_view, string_view> & params,
+        HttpRequest & msg
+    ) override;
 };
 } // namespace
 
 //===========================================================================
 static void addSidRow(JBuilder & out, SID_AND_ATTRIBUTES & sa) {
-	DWORD nameLen = 0;
-	DWORD domLen = 0;
-	SID_NAME_USE use;
-	if (!LookupAccountSid(
-		NULL,
-		sa.Sid,
-		NULL, &nameLen,
-		NULL, &domLen,
-		&use
-	)) {
+    DWORD nameLen = 0;
+    DWORD domLen = 0;
+    SID_NAME_USE use;
+    if (!LookupAccountSid(
+        NULL,
+        sa.Sid,
+        NULL, &nameLen,
+        NULL, &domLen,
+        &use
+    )) {
         WinError err;
         if (err != ERROR_INSUFFICIENT_BUFFER)
-		    logMsgCrash() << "LookupAccountSid(NULL): " << err;
-	}
+            logMsgCrash() << "LookupAccountSid(NULL): " << err;
+    }
     nameLen += 1;
     domLen += 1;
-	string name(nameLen, 0);
-	string dom(domLen, 0);
-	if (!LookupAccountSid(
-		NULL,
-		sa.Sid,
-		name.data(), &nameLen,
-		dom.data(), &domLen,
-		&use
-	)) {
-		logMsgCrash() << "LookupAccountSid: " << WinError{};
-	}
+    string name(nameLen, 0);
+    string dom(domLen, 0);
+    if (!LookupAccountSid(
+        NULL,
+        sa.Sid,
+        name.data(), &nameLen,
+        dom.data(), &domLen,
+        &use
+    )) {
+        logMsgCrash() << "LookupAccountSid: " << WinError{};
+    }
     name.resize(nameLen);
     dom.resize(domLen);
-	out.object();
+    out.object();
     out.member("attrs", (uint64_t) sa.Attributes);
     out.member("name", name);
     out.member("domain", dom);
@@ -66,48 +66,48 @@ static void addSidRow(JBuilder & out, SID_AND_ATTRIBUTES & sa) {
 
 //===========================================================================
 void HtmlAccount::onHttpRequest(
-	unsigned reqId,
-	unordered_multimap<string_view, string_view> & params,
-	HttpRequest & msg
+    unsigned reqId,
+    unordered_multimap<string_view, string_view> & params,
+    HttpRequest & msg
 ) {
-	auto proc = GetCurrentProcess();
-	HANDLE token;
-	if (!OpenProcessToken(proc, TOKEN_QUERY, &token))
-		logMsgCrash() << "OpenProcessToken: " << WinError{};
-	DWORD len;
-	BOOL result = GetTokenInformation(token, TokenUser, NULL, 0, &len);
+    auto proc = GetCurrentProcess();
+    HANDLE token;
+    if (!OpenProcessToken(proc, TOKEN_QUERY, &token))
+        logMsgCrash() << "OpenProcessToken: " << WinError{};
+    DWORD len;
+    BOOL result = GetTokenInformation(token, TokenUser, NULL, 0, &len);
     WinError err;
     if (result || err != ERROR_INSUFFICIENT_BUFFER) {
-		logMsgCrash() << "GetTokenInformation(TokenUser, NULL): " 
+        logMsgCrash() << "GetTokenInformation(TokenUser, NULL): " 
             << WinError{};
     }
     auto usr = unique_ptr<TOKEN_USER>((TOKEN_USER *) malloc(len));
-	if (!GetTokenInformation(token, TokenUser, usr.get(), len, &len))
-		logMsgCrash() << "GetTokenInformation(TokenUser): " << WinError{};
-	result = GetTokenInformation(token, TokenGroups, NULL, 0, &len);
+    if (!GetTokenInformation(token, TokenUser, usr.get(), len, &len))
+        logMsgCrash() << "GetTokenInformation(TokenUser): " << WinError{};
+    result = GetTokenInformation(token, TokenGroups, NULL, 0, &len);
     err.set();
     if (result || err != ERROR_INSUFFICIENT_BUFFER) {
-		logMsgCrash() << "GetTokenInformation(TokenGroups, NULL): " 
+        logMsgCrash() << "GetTokenInformation(TokenGroups, NULL): " 
             << WinError{};
     }
-	auto grps = unique_ptr<TOKEN_GROUPS>((TOKEN_GROUPS *) malloc(len));
-	if (!GetTokenInformation(token, TokenGroups, grps.get(), len, &len))
-		logMsgCrash() << "GetTokenInformation(TokenGroups): " << WinError{};
+    auto grps = unique_ptr<TOKEN_GROUPS>((TOKEN_GROUPS *) malloc(len));
+    if (!GetTokenInformation(token, TokenGroups, grps.get(), len, &len))
+        logMsgCrash() << "GetTokenInformation(TokenGroups): " << WinError{};
     CloseHandle(token);
 
-	HttpResponse res;
-	JBuilder bld(res.body());
-	bld.array();
-	addSidRow(bld, usr->User);
-	auto * ptr = grps->Groups,
-		*eptr = ptr + grps->GroupCount;
-	for (; ptr != eptr; ++ptr) {
-		addSidRow(bld, *ptr);
-	}
-	bld.end();
-	res.addHeader(kHttpContentType, "application/json");
-	res.addHeader(kHttp_Status, "200");
-	httpRouteReply(reqId, res);
+    HttpResponse res;
+    JBuilder bld(res.body());
+    bld.array();
+    addSidRow(bld, usr->User);
+    auto * ptr = grps->Groups,
+        *eptr = ptr + grps->GroupCount;
+    for (; ptr != eptr; ++ptr) {
+        addSidRow(bld, *ptr);
+    }
+    bld.end();
+    res.addHeader(kHttpContentType, "application/json");
+    res.addHeader(kHttp_Status, "200");
+    httpRouteReply(reqId, res);
 }
 
 
