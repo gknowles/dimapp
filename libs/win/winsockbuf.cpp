@@ -15,7 +15,8 @@ using namespace Dim;
 *
 ***/
 
-const unsigned kDefaultBufferSliceSize = 1460;
+const unsigned kDefaultBufferSliceSize = 4096;
+const unsigned kDefaultBufferSize = 256 * kDefaultBufferSliceSize;
 
 
 /****************************************************************************
@@ -57,8 +58,8 @@ struct BufferSlice {
 
 static RIO_EXTENSION_FUNCTION_TABLE s_rio;
 
-static int s_sliceSize{kDefaultBufferSliceSize + 1};
-static size_t s_bufferSize{256 * (kDefaultBufferSliceSize + 1)};
+static int s_sliceSize = kDefaultBufferSliceSize;
+static size_t s_bufferSize = kDefaultBufferSize;
 static size_t s_minLargeAlloc;
 static size_t s_minAlloc;
 static size_t s_pageSize;
