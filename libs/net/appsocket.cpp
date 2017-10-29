@@ -105,8 +105,7 @@ static bool s_disableNoDataTimeout;
 // time expired before enough data was received to determine the protocol
 static auto & s_perfNoData = uperf("sock disconnect no data");
 // incoming data didn't match any registered protocol
-static auto & s_perfUnknown = uperf(
-    "sock disconnect unknown protocol");
+static auto & s_perfUnknown = uperf("sock disconnect unknown protocol");
 // local application called disconnect
 static auto & s_perfExplicit = uperf("sock disconnect app explicit");
 // local application rejected the accept
