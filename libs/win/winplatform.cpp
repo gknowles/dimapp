@@ -37,7 +37,9 @@ static void addSidRow(JBuilder & out, SID_AND_ATTRIBUTES & sa) {
 		NULL, &domLen,
 		&use
 	)) {
-		logMsgCrash() << "LookupAccountSid(NULL): " << WinError{};
+        WinError err;
+        if (err != ERROR_INSUFFICIENT_BUFFER)
+		    logMsgCrash() << "LookupAccountSid(NULL): " << err;
 	}
     nameLen += 1;
     domLen += 1;
@@ -91,6 +93,7 @@ void HtmlAccount::onHttpRequest(
 	auto grps = unique_ptr<TOKEN_GROUPS>((TOKEN_GROUPS *) malloc(len));
 	if (!GetTokenInformation(token, TokenGroups, grps.get(), len, &len))
 		logMsgCrash() << "GetTokenInformation(TokenGroups): " << WinError{};
+    CloseHandle(token);
 
 	HttpResponse res;
 	JBuilder bld(res.body());
