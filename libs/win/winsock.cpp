@@ -57,8 +57,10 @@ static RIO_EXTENSION_FUNCTION_TABLE s_rio;
 
 static atomic_int s_numSockets;
 
+static auto & s_perfReadTotal = uperf("sock read bytes (total)");
 static auto & s_perfIncomplete = uperf("sock write bytes (incomplete)");
 static auto & s_perfWaiting = uperf("sock write bytes (waiting)");
+static auto & s_perfWriteTotal = uperf("sock write bytes (total)");
 
 
 /****************************************************************************
@@ -173,20 +175,6 @@ bool SocketBase::createQueue() {
     m_maxReads = kReadQueueSize;
     m_maxWrites = kWriteQueueSize;
 
-    for (int i = 0; i < m_maxReads; ++i) {
-        m_reads.link(new SocketRequest);
-        auto task = m_reads.back();
-        task->m_type = kReqRead;
-        task->m_buffer = socketGetBuffer();
-
-        // Leave room for extra trailing null. Although not reported in the
-        // count a trailing null is added to the end of the buffer after every
-        // read. It doesn't cost much and makes parsing easier for some text
-        // protocol streams.
-        int bytes = task->m_buffer->capacity - 1; 
-        copy(&task->m_rbuf, *task->m_buffer, bytes);
-    }
-
     // create completion queue
     RIO_NOTIFICATION_COMPLETION ctype = {};
     ctype.Type = RIO_IOCP_COMPLETION;
@@ -212,20 +200,39 @@ bool SocketBase::createQueue() {
         return false;
     }
 
+    for (int i = 0; i < m_maxReads; ++i) {
+        m_reads.link(new SocketRequest);
+        auto task = m_reads.back();
+        task->m_type = kReqRead;
+        task->m_buffer = socketGetBuffer();
+
+        // Leave room for extra trailing null. Although not reported in the
+        // count a trailing null is added to the end of the buffer after every
+        // read. It doesn't cost much and makes parsing easier for some text
+        // protocol streams.
+        int bytes = task->m_buffer->capacity;
+        copy(&task->m_rbuf, *task->m_buffer, bytes);
+    }
+
     m_mode = Mode::kActive;
     m_notify->m_socket = this;
 
+    return true;
+}
+
+//===========================================================================
+void SocketBase::enableEvents() {
     {
-        // start reading from socket
         unique_lock<mutex> lk{m_mut};
         for (auto && task : m_reads) 
             queueRead_LK(&task);
     }
 
     // trigger first RIONotify
-    onTask();
-    return true;
+    if (int error = s_rio.RIONotify(m_cq))
+        logMsgCrash() << "RIONotify: " << WinError{error};
 }
+
 
 //===========================================================================
 void SocketBase::onTask() {
@@ -264,6 +271,7 @@ void SocketBase::onTask() {
 bool SocketBase::onRead(SocketRequest * task) {
     int bytes = task->m_xferBytes;
     if (bytes) {
+        s_perfReadTotal += bytes;
         SocketData data;
         data.data = (char *)task->m_buffer->data;
         data.bytes = bytes;
@@ -358,6 +366,7 @@ void SocketBase::queueWrite(
         return;
 
     s_perfWaiting += (unsigned) bytes;
+    s_perfWriteTotal += (unsigned) bytes;
     m_bufInfo.waiting += bytes;
     m_bufInfo.total += bytes;
     bool wasPrewrites = !m_prewrites.empty();
@@ -392,12 +401,13 @@ void SocketBase::queueWrite(
     if (auto task = m_prewrites.back()) {
         if (task->m_qtime == TimePoint::min())
             task->m_qtime = Clock::now();
-    } else if (!wasPrewrites) {
-        // data is now waiting
-        assert(m_bufInfo.waiting <= bytes);
-        auto info = m_bufInfo;
-        lk.unlock();
-        m_notify->onSocketBufferChanged(info);
+        if (!wasPrewrites) {
+            // data is now waiting
+            assert(m_bufInfo.waiting <= bytes);
+            auto info = m_bufInfo;
+            lk.unlock();
+            m_notify->onSocketBufferChanged(info);
+        }
     }
 }
 

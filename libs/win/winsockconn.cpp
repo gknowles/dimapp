@@ -295,6 +295,7 @@ void ConnSocket::onConnect(WinError error, int bytes) {
     s_perfCurConnected += 1;
     hostage.release();
     m_notify->onSocketConnect(m_connInfo);
+    enableEvents();
 }
 
 

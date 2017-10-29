@@ -41,6 +41,7 @@ public:
 
     void hardClose();
     bool createQueue();
+    void enableEvents();
 
 protected:
     ISocketNotify * m_notify{nullptr};

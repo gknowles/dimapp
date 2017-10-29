@@ -265,8 +265,10 @@ void AcceptSocket::onAccept(
     if (createQueue()) {
         s_perfAccepted += 1;
         s_perfCurAccepted += 1;
-        if (m_notify->onSocketAccept(info))
-            hostage.release();
+        hostage.release();
+        if (!m_notify->onSocketAccept(info))
+            hardClose();
+        enableEvents();
     }
 
     {
