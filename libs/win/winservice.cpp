@@ -93,8 +93,10 @@ static VOID WINAPI ServiceMain(DWORD argc, LPTSTR * argv) {
     setState(SERVICE_START_PENDING);
     iAppPushStartupTask(s_reportTask);
 
-    scoped_lock<mutex> lk{s_mut};
-    s_mode = kRunRunning;
+    {
+        scoped_lock<mutex> lk{s_mut};
+        s_mode = kRunRunning;
+    }
     s_cv.notify_one();
 }
 

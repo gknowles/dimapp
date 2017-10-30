@@ -134,6 +134,18 @@ static void app(int argc, char *argv[]) {
     logMsgInfo() << "Server started";
 }
 
+//===========================================================================
+static int doMain(int argc, char * argv[]) {
+    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF 
+        | _CRTDBG_LEAK_CHECK_DF
+        | _CRTDBG_DELAY_FREE_MEM_DF
+    );
+    // _CrtSetBreakAlloc(6909);
+    _set_error_mode(_OUT_TO_MSGBOX);
+
+    return appRun(app, argc, argv, fAppServer | fAppWithConsole);
+}
+
 
 /****************************************************************************
 *
@@ -143,14 +155,7 @@ static void app(int argc, char *argv[]) {
 
 //===========================================================================
 int main(int argc, char * argv[]) {
-    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF 
-        | _CRTDBG_LEAK_CHECK_DF
-        | _CRTDBG_DELAY_FREE_MEM_DF
-    );
-    // _CrtSetBreakAlloc(6909);
-    _set_error_mode(_OUT_TO_MSGBOX);
-
-    return appRun(app, argc, argv, fAppServer | fAppWithConsole);
+    return doMain(argc, argv);
 }
 
 #include "Windows.h"
@@ -163,8 +168,7 @@ int WINAPI WinMain(
     _In_ int nShowCmd
 ) {
     auto cmdline = GetCommandLineA();
-    Cli cli;
-    auto args = cli.toArgv(cmdline);
-    auto pargs = cli.toPtrArgv(args);
-    return main((int) pargs.size(), (char **) pargs.data());
+    auto args = Cli::toArgv(cmdline);
+    auto pargs = Cli::toPtrArgv(args);
+    return doMain((int) pargs.size(), (char **) pargs.data());
 }
