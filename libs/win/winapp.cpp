@@ -121,6 +121,20 @@ static void updateList(HWND parent) {
 }
 
 //===========================================================================
+static void enableTimer(HWND wnd, bool enable) {
+    if (enable) {
+        SetTimer(
+            wnd, 
+            kTimerId,
+            kUpdateIntervalMS,
+            NULL // timer function
+        );
+    } else {
+        KillTimer(wnd, kTimerId);
+    }
+}
+
+//===========================================================================
 static LRESULT CALLBACK perfWindowProc(
     HWND wnd,
     UINT msg,
@@ -128,6 +142,9 @@ static LRESULT CALLBACK perfWindowProc(
     LPARAM lparam
 ) {
     switch (msg) {
+    case WM_SHOWWINDOW:
+        enableTimer(wnd, wparam);
+        break;
     case WM_TIMER:
         updateList(wnd);
         return 0;
@@ -135,6 +152,7 @@ static LRESULT CALLBACK perfWindowProc(
         createList(wnd);
         return 0;
     case WM_SIZE:
+        enableTimer(wnd, wparam != SIZE_MINIMIZED);
         moveList(wnd);
         return 0;
     case WM_CLOSE:
@@ -185,12 +203,6 @@ static HWND createPerfWindow() {
     }
 
     ShowWindow(wnd, SW_SHOWNORMAL);
-    SetTimer(
-        wnd, 
-        kTimerId,
-        kUpdateIntervalMS,
-        NULL // timer function
-    );
     return wnd;
 }
 
@@ -291,7 +303,6 @@ void MessageLoopTask::enable(Authority auth, bool enable) {
         // start message loop task
         taskPush(s_taskq, *this);
     } else {
-        KillTimer(m_wnd, kTimerId);
         PostMessage(m_wnd, WM_USER_CLOSEWINDOW, 0, 0);
     }
 }
