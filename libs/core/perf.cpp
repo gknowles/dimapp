@@ -16,10 +16,13 @@ using namespace Dim;
 ***/
 
 namespace {
+
 struct PerfInfo {
-    mutex mut;
+    // mutex only needed for the vector itself.
+    shared_mutex mut;
     vector<unique_ptr<PerfCounterBase>> counters;
 };
+
 } // namespace
 
 
@@ -50,7 +53,7 @@ static PerfInfo & getInfo () {
 template <typename T>
 static PerfCounter<T> & perf(string_view name) {
     auto & info = getInfo();
-    scoped_lock<mutex> lk{info.mut};
+    unique_lock<shared_mutex> lk{info.mut};
     info.counters.push_back(make_unique<PerfCounter<T>>());
     auto & cnt = static_cast<PerfCounter<T>&>(*info.counters.back());
     cnt.name = name;
@@ -61,12 +64,27 @@ static PerfCounter<T> & perf(string_view name) {
 template <typename T>
 static PerfFunc<T> & perf(string_view name, function<T()> && fn) {
     auto & info = getInfo();
-    scoped_lock<mutex> lk{info.mut};
+    unique_lock<shared_mutex> lk{info.mut};
     info.counters.push_back(make_unique<PerfFunc<T>>());
     auto & cnt = static_cast<PerfFunc<T>&>(*info.counters.back());
     cnt.name = name;
     cnt.fn = move(fn);
     return cnt;
+}
+
+//===========================================================================
+template <typename T>
+static void valueToString(std::string & out, T val, bool pretty) {
+    if (!pretty) {
+        StrFrom<T> str{val};
+        out = str;
+        return;
+    }
+
+    ostringstream os;
+    os.imbue(locale(""));
+    os << val;
+    out = os.str();
 }
 
 
@@ -88,8 +106,8 @@ inline float PerfCounter<T>::toFloat () const {
 
 //===========================================================================
 template<typename T>
-inline void PerfCounter<T>::toString (std::string & out) const {
-    out = ::to_string(*this);
+inline void PerfCounter<T>::toString (std::string & out, bool pretty) const {
+    valueToString(out, (T) *this, pretty);
 }
 
 
@@ -111,8 +129,8 @@ inline float PerfFunc<T>::toFloat () const {
 
 //===========================================================================
 template<typename T>
-inline void PerfFunc<T>::toString (std::string & out) const {
-    out = ::to_string(fn());
+inline void PerfFunc<T>::toString (std::string & out, bool pretty) const {
+    valueToString(out, fn(), pretty);
 }
 
 
@@ -125,14 +143,14 @@ inline void PerfFunc<T>::toString (std::string & out) const {
 //===========================================================================
 void Dim::iPerfInitialize() {
     auto & info = getInfo();
-    scoped_lock<mutex> lk{info.mut};
+    unique_lock<shared_mutex> lk{info.mut};
     s_numStatic = info.counters.size();
 }
 
 //===========================================================================
 void Dim::iPerfDestroy() {
     auto & info = getInfo();
-    scoped_lock<mutex> lk{info.mut};
+    unique_lock<shared_mutex> lk{info.mut};
     assert(info.counters.size() >= s_numStatic);
     info.counters.resize(s_numStatic);
 }
@@ -178,12 +196,21 @@ PerfFunc<float> & Dim::fperf(string_view name, function<float()> fn) {
 }
 
 //===========================================================================
-void Dim::perfGetValues (std::vector<PerfValue> & out) {
+void Dim::perfGetValues (std::vector<PerfValue> & out, bool pretty) {
     auto & info = getInfo();
-    scoped_lock<mutex> lk{info.mut};
-    out.resize(info.counters.size());
-    for (unsigned i = 0; i < out.size(); ++i) {
-        out[i].name = info.counters[i]->name;
-        info.counters[i]->toString(out[i].value);
+    {
+        shared_lock<shared_mutex> lk{info.mut};
+        out.resize(info.counters.size());
+        for (unsigned i = 0; i < out.size(); ++i) {
+            out[i].name = info.counters[i]->name;
+            info.counters[i]->toString(out[i].value, pretty);
+        }
+    }
+    if (pretty) {
+        sort(
+            out.begin(), 
+            out.end(),
+            [](auto & a, auto & b){ return a.name < b.name; }
+        );
     }
 }

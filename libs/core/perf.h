@@ -22,20 +22,20 @@ struct PerfCounterBase {
     std::string name;
 
     virtual ~PerfCounterBase() = default;
-    virtual void toString (std::string & out) const = 0;
+    virtual void toString (std::string & out, bool pretty) const = 0;
     virtual float toFloat () const = 0;
 };
 
 template<typename T>
 struct PerfCounter : PerfCounterBase, std::atomic<T> {
-    void toString (std::string & out) const override;
+    void toString (std::string & out, bool pretty) const override;
     float toFloat () const override;
 };
 
 template<typename T>
 struct PerfFunc : PerfCounterBase {
     std::function<T()> fn;
-    void toString (std::string & out) const override;
+    void toString (std::string & out, bool pretty) const override;
     float toFloat () const override;
 };
 
@@ -68,6 +68,8 @@ struct PerfValue {
     std::string_view name;
     std::string value;
 };
-void perfGetValues (std::vector<PerfValue> & out);
+
+// The pretty output has localizes the numbers (e.g. commas) and is sorted.
+void perfGetValues (std::vector<PerfValue> & out, bool pretty = false);
 
 } // namespace

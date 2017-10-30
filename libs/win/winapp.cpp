@@ -48,7 +48,7 @@ static HWND createList(HWND parent) {
         parent,
         (HMENU) (intptr_t) kListId,
         GetModuleHandle(NULL),
-        NULL // user param to WM_CREATE
+        NULL // user parameter to WM_CREATE
     );
     if (!wnd) {
         logMsgCrash() << "CreateWindow(WC_LISTVIEW): " << WinError{};
@@ -56,7 +56,7 @@ static HWND createList(HWND parent) {
     }
 
     LVCOLUMN lc = {};
-    lc.mask = LVCF_FMT | LVCF_TEXT;
+    lc.mask = LVCF_FMT | LVCF_TEXT | LVCF_SUBITEM;
     lc.fmt = LVCFMT_RIGHT;
     lc.pszText = (LPSTR) "Value";
     lc.iSubItem = 0;
@@ -98,7 +98,7 @@ static void updateList(HWND parent) {
     auto wnd = GetDlgItem(parent, kListId);
 
     vector<PerfValue> vals;
-    perfGetValues(vals);
+    perfGetValues(vals, true);
     int cvals = (int) vals.size();
 
     LVITEM li = {};

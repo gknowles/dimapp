@@ -67,7 +67,7 @@ void HtmlCounters::onHttpRequest(
     HttpRequest & msg
 ) {
     vector<PerfValue> perfs;
-    perfGetValues(perfs);
+    perfGetValues(perfs, true);
 
     HttpResponse res;
     XBuilder bld(res.body());
