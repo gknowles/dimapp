@@ -60,7 +60,7 @@ public:
 
     // Inherited via ISockMgrSocket
     AcceptManager & mgr() override;
-    void disconnect() override;
+    void disconnect(AppSocket::Disconnect why) override;
 
     // Inherited via ITimerListNotify
     void onTimer(TimePoint now) override;
@@ -94,13 +94,13 @@ AcceptManager & AccMgrSocket::mgr() {
 }
 
 //===========================================================================
-void AccMgrSocket::disconnect() {
-    socketDisconnect(this);
+void AccMgrSocket::disconnect(AppSocket::Disconnect why) {
+    socketDisconnect(this, why);
 }
 
 //===========================================================================
 void AccMgrSocket::onTimer(TimePoint now) {
-    disconnect();
+    disconnect(AppSocket::Disconnect::kInactivity);
 }
 
 //===========================================================================
@@ -165,7 +165,7 @@ bool AcceptManager::onShutdown(bool firstTry) {
         for (auto && ep : m_endpoints) 
             socketCloseWait(this, ep, m_family);
         for (auto && sock : m_inactivity.values()) 
-            sock.disconnect();
+            sock.disconnect(AppSocket::Disconnect::kAppRequest);
     }
     return m_inactivity.values().empty();
 }

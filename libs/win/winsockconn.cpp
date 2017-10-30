@@ -84,8 +84,8 @@ static List<ConnectTask> s_connecting;
 static List<ConnectTask> s_closing;
 static ConnectTimer s_connectTimer;
 
-static auto & s_perfConnected = uperf("sock connected");
-static auto & s_perfCurConnected = uperf("sock connected (current)");
+static auto & s_perfConnected = uperf("sock connections");
+static auto & s_perfCurConnected = uperf("sock connections (current)");
 static auto & s_perfConnectFailed = uperf("sock connect failed");
 
 

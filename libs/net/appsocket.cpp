@@ -64,7 +64,7 @@ public:
     RawSocket() {}
     explicit RawSocket(IAppSocketNotify * notify);
 
-    void disconnect() override;
+    void disconnect(AppSocket::Disconnect why) override;
     void write(string_view data) override;
     void write(unique_ptr<SocketBuffer> buffer, size_t bytes) override;
 
@@ -102,14 +102,11 @@ static list<IAppSocket::UnmatchedInfo> s_unmatched;
 static IAppSocket::UnmatchedTimer s_unmatchedTimer;
 static bool s_disableNoDataTimeout;
 
-// time expired before enough data was received to determine the protocol
-static auto & s_perfNoData = uperf("sock disconnect no data");
-// incoming data didn't match any registered protocol
-static auto & s_perfUnknown = uperf("sock disconnect unknown protocol");
-// local application called disconnect
-static auto & s_perfExplicit = uperf("sock disconnect app explicit");
-// local application rejected the accept
-static auto & s_perfNotAccepted = uperf("sock disconnect not accepted");
+static auto & s_perfRequest = uperf("sock disconnect (app request)");
+static auto & s_perfNoData = uperf("sock disconnect (no data)");
+static auto & s_perfUnknown = uperf("sock disconnect (unknown protocol)");
+static auto & s_perfCrypt = uperf("sock disconnect (crypt error)");
+static auto & s_perfInactive = uperf("sock disconnect (inactivity)");
 
 
 /****************************************************************************
@@ -140,8 +137,11 @@ Duration IAppSocket::UnmatchedTimer::onTimer(TimePoint now) {
 
 //===========================================================================
 // static
-void IAppSocket::disconnect(IAppSocketNotify * notify) {
-    notify->m_socket->disconnect();
+void IAppSocket::disconnect(
+    IAppSocketNotify * notify, 
+    AppSocket::Disconnect why
+) {
+    notify->m_socket->disconnect(why);
 }
 
 //===========================================================================
@@ -184,8 +184,7 @@ Duration IAppSocket::checkTimeout_LK(TimePoint now) {
     assert(!m_notify);
     auto wait = m_pos->expiration - now;
     if (wait <= 0s) {
-        s_perfNoData += 1;
-        disconnect();
+        disconnect(AppSocket::Disconnect::kNoData);
         s_unmatched.erase(m_pos);
         m_pos = {};
     }
@@ -359,10 +358,8 @@ void IAppSocket::notifyRead(AppSocketData & data) {
         m_pos = {};
     }
 
-    if (!fact) {
-        s_perfUnknown += 1;
-        return disconnect();
-    }
+    if (!fact) 
+        return disconnect(AppSocket::Disconnect::kUnknownProtocol);
 
     setNotify(fact->onFactoryCreate().release());
 
@@ -396,11 +393,17 @@ RawSocket::RawSocket(IAppSocketNotify * notify)
 {}
 
 //===========================================================================
-void RawSocket::disconnect() {
-    s_perfExplicit += 1;
+void RawSocket::disconnect(AppSocket::Disconnect why) {
     if (m_bufferUsed) {
         socketWrite(this, move(m_buffer), m_bufferUsed);
         m_bufferUsed = 0;
+    }
+    switch (why) {
+    case AppSocket::Disconnect::kAppRequest: s_perfRequest += 1; break;
+    case AppSocket::Disconnect::kNoData: s_perfNoData += 1; break;
+    case AppSocket::Disconnect::kUnknownProtocol: s_perfUnknown += 1; break;
+    case AppSocket::Disconnect::kCryptError: s_perfCrypt += 1; break;
+    case AppSocket::Disconnect::kInactivity: s_perfInactive += 1; break;
     }
     socketDisconnect(this);
 }
@@ -458,11 +461,7 @@ bool RawSocket::onSocketAccept(const SocketInfo & info) {
     AppSocketInfo tmp = {};
     tmp.local = info.local;
     tmp.remote = info.remote;
-    if (notifyAccept(tmp)) 
-        return true;
-
-    s_perfNotAccepted += 1;
-    return false;
+    return notifyAccept(tmp);
 }
 
 //===========================================================================
@@ -582,7 +581,7 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
     scoped_lock<mutex> lk{s_unmatchedMut};
     if (firstTry) {
         for (auto && info : s_unmatched)
-            info.notify->disconnect();
+            info.notify->disconnect(AppSocket::Disconnect::kAppRequest);
     }
     if (!s_unmatched.empty())
         shutdownIncomplete();
@@ -611,7 +610,15 @@ void Dim::iAppSocketInitialize() {
 
 //===========================================================================
 void Dim::socketDisconnect(IAppSocketNotify * notify) {
-    IAppSocket::disconnect(notify);
+    IAppSocket::disconnect(notify, AppSocket::Disconnect::kAppRequest);
+}
+
+//===========================================================================
+void Dim::socketDisconnect(
+    IAppSocketNotify * notify, 
+    AppSocket::Disconnect why
+) {
+    IAppSocket::disconnect(notify, why);
 }
 
 //===========================================================================

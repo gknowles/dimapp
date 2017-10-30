@@ -37,7 +37,7 @@ public:
     virtual ISockMgrBase & mgr() { return m_mgr; }
 
     // Inherited via IAppSocket
-    void disconnect() override = 0;
+    void disconnect(AppSocket::Disconnect why) override = 0;
     void write(std::string_view data) override;
     void write(std::unique_ptr<SocketBuffer> buffer, size_t bytes) override;
 

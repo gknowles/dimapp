@@ -67,7 +67,9 @@ static auto & s_perfReadTotal = uperf("sock read bytes (total)");
 static auto & s_perfIncomplete = uperf("sock write bytes (incomplete)");
 static auto & s_perfWaiting = uperf("sock write bytes (waiting)");
 static auto & s_perfWriteTotal = uperf("sock write bytes (total)");
-static auto & s_perfBacklog = uperf("sock disconnect write backlog");
+
+// The data in the send queue is either too massive or too old.
+static auto & s_perfBacklog = uperf("sock disconnect (write backlog)");
 
 
 /****************************************************************************
@@ -410,8 +412,10 @@ void SocketBase::queuePrewrite(
             auto now = Clock::now();
             task->m_qtime = now;
             auto maxQTime = now - m_prewrites.front()->m_qtime;
-            if (maxQTime > kMaxPrewriteQueueTime)
+            if (maxQTime > kMaxPrewriteQueueTime) {
+                s_perfBacklog += 1;
                 return hardClose_LK();
+            }
         }
         if (!wasPrewrites) {
             // data is now waiting

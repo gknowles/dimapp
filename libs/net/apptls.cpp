@@ -22,7 +22,7 @@ public:
     ~TlsSocket();
 
     // Inherited via IAppSocket
-    void disconnect() override;
+    void disconnect(AppSocket::Disconnect why) override;
     void write(string_view data) override;
     void write(unique_ptr<SocketBuffer> buffer, size_t bytes) override;
 
@@ -61,8 +61,8 @@ TlsSocket::~TlsSocket() {
 }
 
 //===========================================================================
-void TlsSocket::disconnect() {
-    socketDisconnect(this);
+void TlsSocket::disconnect(AppSocket::Disconnect why) {
+    socketDisconnect(this, why);
 }
 
 //===========================================================================
@@ -110,7 +110,7 @@ void TlsSocket::onSocketRead (AppSocketData & data) {
         notifyRead(tmp);
     }
     if (!success)
-        disconnect();
+        disconnect(AppSocket::Disconnect::kCryptError);
 }
 
 //===========================================================================

@@ -67,8 +67,9 @@ public:
 static mutex s_mut;
 static List<ListenSocket> s_listeners;
 
-static auto & s_perfAccepted = uperf("sock accepted");
-static auto & s_perfCurAccepted = uperf("sock accepted (current)");
+static auto & s_perfAccepts = uperf("sock accepts");
+static auto & s_perfCurAccepts = uperf("sock accepts (current)");
+static auto & s_perfNotAccepted = uperf("sock disconnect (not accepted)");
 
 
 /****************************************************************************
@@ -189,7 +190,7 @@ bool AcceptSocket::accept(ListenSocket * listen) {
 //===========================================================================
 AcceptSocket::~AcceptSocket() {
     if (m_mode == Mode::kClosed)
-        s_perfCurAccepted -= 1;
+        s_perfCurAccepts -= 1;
 }
 
 //===========================================================================
@@ -263,11 +264,13 @@ void AcceptSocket::onAccept(
 
     // create read/write queue
     if (createQueue()) {
-        s_perfAccepted += 1;
-        s_perfCurAccepted += 1;
+        s_perfAccepts += 1;
+        s_perfCurAccepts += 1;
         hostage.release();
-        if (!m_notify->onSocketAccept(info))
+        if (!m_notify->onSocketAccept(info)) {
+            s_perfNotAccepted += 1;
             hardClose();
+        }
         enableEvents();
     }
 

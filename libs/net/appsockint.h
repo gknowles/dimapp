@@ -14,6 +14,29 @@
 
 namespace Dim {
 
+namespace AppSocket {
+
+enum class Disconnect {
+    // The application called disconnect.
+    kAppRequest,
+
+    // Time expired before enough data was received to determine the 
+    // protocol of an inbound connection.
+    kNoData,            
+
+    // Data received from inbound connection didn't match any registered 
+    // protocol.
+    kUnknownProtocol,
+
+    // Unable to decrypt cipher text
+    kCryptError,
+
+    // It's been too long since the far side has been heard from.
+    kInactivity,
+};
+
+} // namespace
+
 
 /****************************************************************************
 *
@@ -30,7 +53,10 @@ public:
     class UnmatchedTimer;
 
 public:
-    static void disconnect(IAppSocketNotify * notify);
+    static void disconnect(
+        IAppSocketNotify * notify, 
+        AppSocket::Disconnect why
+    );
     static void write(IAppSocketNotify * notify, std::string_view data);
     static void write(IAppSocketNotify * notify, const CharBuf & data);
     static void write(
@@ -49,7 +75,7 @@ public:
 
     virtual ~IAppSocket();
 
-    virtual void disconnect() = 0;
+    virtual void disconnect(AppSocket::Disconnect why) = 0;
     virtual void write(std::string_view data) = 0;
     virtual void write(std::unique_ptr<SocketBuffer> buffer, size_t bytes) = 0;
 
@@ -92,6 +118,8 @@ class IAppSocket::UnmatchedTimer : public ITimerNotify {
 *   AppSocket notify
 *
 ***/
+
+void socketDisconnect(IAppSocketNotify * notify, AppSocket::Disconnect why);
 
 void socketWrite(
     IAppSocketNotify * notify, 

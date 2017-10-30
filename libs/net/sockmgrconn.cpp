@@ -91,7 +91,7 @@ public:
     void onTimer(TimePoint now, RecentLink*) override;
 
     // Inherited via IAppSocket
-    void disconnect() override;
+    void disconnect(AppSocket::Disconnect why) override;
     void write(string_view data) override;
     void write(unique_ptr<SocketBuffer> buffer, size_t bytes) override;
 
@@ -132,7 +132,7 @@ void ConnMgrSocket::shutdown() {
     if (m_mode == kUnconnected) {
         onSocketDestroy();
     } else {
-        disconnect();
+        disconnect(AppSocket::Disconnect::kAppRequest);
     }
 }
 
@@ -160,9 +160,9 @@ void ConnMgrSocket::onTimer(TimePoint now, RecentLink*) {
 }
 
 //===========================================================================
-void ConnMgrSocket::disconnect() {
+void ConnMgrSocket::disconnect(AppSocket::Disconnect why) {
     if (m_mode == kConnecting || m_mode == kConnected)
-        socketDisconnect(this);
+        socketDisconnect(this, why);
 }
 
 //===========================================================================
