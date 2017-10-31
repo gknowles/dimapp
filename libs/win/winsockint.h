@@ -87,11 +87,12 @@ private:
 *
 ***/
 
-SOCKET iSocketCreate();
-SOCKET iSocketCreate(const Endpoint & local);
-
 void iSocketAcceptInitialize();
 void iSocketConnectInitialize();
+
+SOCKET iSocketCreate();
+SOCKET iSocketCreate(const Endpoint & local);
+void iSocketSetConnectTimeout(SOCKET s, Duration wait);
 
 // Socket buffers
 void iSocketBufferInitialize(RIO_EXTENSION_FUNCTION_TABLE & rio);

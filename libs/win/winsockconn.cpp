@@ -66,10 +66,6 @@ private:
     ISocketNotify * m_notify{nullptr};
 };
 
-class ConnectTimer : public ITimerNotify {
-    Duration onTimer(TimePoint now) override;
-};
-
 } // namespace
 
 
@@ -81,32 +77,10 @@ class ConnectTimer : public ITimerNotify {
 
 static mutex s_mut;
 static List<ConnectTask> s_connecting;
-static List<ConnectTask> s_closing;
-static ConnectTimer s_connectTimer;
 
 static auto & s_perfConnected = uperf("sock connections");
 static auto & s_perfCurConnected = uperf("sock connections (current)");
 static auto & s_perfConnectFailed = uperf("sock connect failed");
-
-
-/****************************************************************************
-*
-*   ConnectTimer
-*
-***/
-
-//===========================================================================
-Duration ConnectTimer::onTimer(TimePoint now) {
-    scoped_lock<mutex> lk{s_mut};
-    while (auto task = s_connecting.front()) {
-        if (now < task->m_expiration) 
-            return task->m_expiration - now;
-        task->m_socket->hardClose();
-        task->m_expiration = TimePoint::max();
-        s_closing.link(task);
-    }
-    return kTimerInfinite;
-}
 
 
 /****************************************************************************
@@ -187,19 +161,7 @@ void ConnSocket::connect(
     sock->m_mode = Mode::kConnecting;
     auto hostage = make_unique<ConnectTask>(move(sock));
     auto task = hostage.get();
-    timerUpdate(&s_connectTimer, timeout, true);
-
-    {
-        scoped_lock<mutex> lk{s_mut};
-        task->m_expiration = Clock::now() + timeout;
-
-        s_connecting.link(task);
-        while (auto prev = s_connecting.prev(task)) {
-            if (prev->m_expiration <= task->m_expiration)
-                break;
-            s_connecting.link(prev, task);
-        }
-    }
+    iSocketSetConnectTimeout(task->m_socket->m_handle, timeout);
 
     sockaddr_storage sas;
     copy(&sas, remote);
@@ -216,12 +178,11 @@ void ConnSocket::connect(
     WinError err;
     if (!error || err != ERROR_IO_PENDING) {
         logMsgError() << "ConnectEx(" << remote << "): " << err;
-        {
-            scoped_lock<mutex> lk{s_mut};
-            s_connecting.unlink(task);
-        }
         return pushConnectFailed(notify);
     }
+
+    scoped_lock<mutex> lk{s_mut};
+    s_connecting.link(task);
 
     hostage.release();
 }
@@ -322,7 +283,7 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
         for (auto && task : s_connecting)
             task.m_socket->hardClose();
     }
-    if (!s_connecting.empty() || !s_closing.empty())
+    if (!s_connecting.empty())
         shutdownIncomplete();
 }
 
@@ -336,6 +297,35 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
 //===========================================================================
 void Dim::iSocketConnectInitialize() {
     shutdownMonitor(&s_cleanup);
+}
+
+//===========================================================================
+void Dim::iSocketSetConnectTimeout(SOCKET s, Duration wait) {
+    // Since there are up to two retransmissions and their back off is 
+    // exponential the total wait time is equal to seven times the initial 
+    // round trip time:
+    //  - try, wait rtt, try, wait 2*rtt, try, wait 4*rtt
+    // 
+    // Also note that Windows clamps the rtt to [300, 3000] (in milliseconds),
+    // *except* that 0 and 65535 have special meaning!
+    auto rtt = chrono::duration_cast<chrono::milliseconds>(wait).count() / 7;
+    rtt = clamp((size_t) rtt, (size_t) 1, (size_t) 65534);
+
+    TCP_INITIAL_RTO_PARAMETERS params[2] = {};
+    params[0].Rtt = (unsigned short) rtt;
+    params[0].MaxSynRetransmissions = 2;
+    DWORD bytes;
+    if (SOCKET_ERROR == WSAIoctl(
+        s,
+        SIO_TCP_INITIAL_RTO,
+        &params[0], sizeof(params),
+        nullptr, 0, // output buffer, buffer size
+        &bytes,     // bytes returned
+        nullptr,    // overlapped
+        nullptr     // completion routine
+    )) {
+        logMsgError() << "WSAIoctl(SIO_TCP_INITIAL_RTO): " << WinError{};
+    }
 }
 
 
