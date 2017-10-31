@@ -625,7 +625,7 @@ SOCKET Dim::iSocketCreate() {
     if (SOCKET_ERROR == WSAIoctl(
         handle,
         SIO_LOOPBACK_FAST_PATH,
-        &yes, sizeof yes,
+        &yes, sizeof(yes),
         nullptr, 0, // output buffer, buffer size
         &bytes,     // bytes returned
         nullptr,    // overlapped
@@ -634,32 +634,43 @@ SOCKET Dim::iSocketCreate() {
         logMsgError() << "WSAIoctl(SIO_LOOPBACK_FAST_PATH): " << WinError{};
     }
 
+    // Nagling isn't relevant for RIO, but we should be allowed to set it.
     if (SOCKET_ERROR == setsockopt(
         handle, 
         SOL_SOCKET, 
         TCP_NODELAY, 
-        (char *)&yes, 
+        (char *) &yes, 
         sizeof(yes)
     )) {
-        logMsgError() << "WSAIoctl(TCP_NODELAY): " << WinError{};
+        logMsgError() << "setsockopt(TCP_NODELAY): " << WinError{};
     }
 
     if (SOCKET_ERROR == setsockopt(
         handle,
         SOL_SOCKET,
         SO_REUSE_UNICASTPORT,
-        (char *)&yes,
+        (char *) &yes,
         sizeof(yes)
     )) {
         if (SOCKET_ERROR == setsockopt(
             handle,
             SOL_SOCKET,
             SO_PORT_SCALABILITY,
-            (char *)&yes,
+            (char *) &yes,
             sizeof(yes)
         )) {
             logMsgError() << "setsockopt(SO_PORT_SCALABILITY): " << WinError{};
         }
+    }
+
+    if (SOCKET_ERROR == setsockopt(
+        handle, 
+        IPPROTO_TCP, 
+        TCP_FASTOPEN, 
+        (char *) &yes, 
+        sizeof(yes)
+    )) {
+        logMsgDebug() << "setsockopt(TCP_FASTOPEN): " << WinError{};
     }
 
     return handle;

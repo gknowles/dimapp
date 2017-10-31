@@ -526,7 +526,7 @@ AppSocket::MatchType RawMatch::OnMatch(
 
 /****************************************************************************
 *
-*   Config monitor 
+*   Configuration monitor 
 *
 ***/
 
@@ -644,10 +644,12 @@ void Dim::socketWrite(
 void Dim::socketConnect(
     IAppSocketNotify * notify,
     const Endpoint & remote,
-    const Endpoint & local
+    const Endpoint & local,
+    string_view data,
+    Duration wait
 ) {
     auto sock = make_unique<RawSocket>(notify);
-    socketConnect(sock.release(), remote, local);
+    socketConnect(sock.release(), remote, local, data, wait);
 }
 
 //===========================================================================

@@ -7,6 +7,7 @@
 #include "cppconf/cppconf.h"
 
 #include "core/charbuf.h"
+#include "core/time.h"
 #include "core/types.h"
 #include "core/util.h"
 
@@ -95,7 +96,9 @@ void socketWrite(IAppSocketNotify * notify, const CharBuf & data);
 void socketConnect(
     IAppSocketNotify * notify,
     const Endpoint & remote,
-    const Endpoint & local
+    const Endpoint & local = {},
+    std::string_view initialData = {},
+    Duration timeout = {}
 );
 
 

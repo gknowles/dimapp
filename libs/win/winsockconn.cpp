@@ -32,6 +32,7 @@ public:
         ISocketNotify * notify,
         const Endpoint & remote,
         const Endpoint & local,
+        string_view initialData,
         Duration timeout
     );
 
@@ -144,6 +145,7 @@ void ConnSocket::connect(
     ISocketNotify * notify,
     const Endpoint & remote,
     const Endpoint & local,
+    string_view data,
     Duration timeout
 ) {
     assert(getMode(notify) == Mode::kInactive);
@@ -168,11 +170,11 @@ void ConnSocket::connect(
     DWORD bytes; // ignored, only here for analyzer
     bool error = !s_ConnectEx(
         task->m_socket->m_handle,
-        (sockaddr *)&sas,
+        (sockaddr *) &sas,
         sizeof(sas),
-        NULL,   // send buffer
-        0,      // send buffer length
-        &bytes, // bytes sent (ignored)
+        (void *) data.data(), // send buffer
+        (DWORD) data.size(),  // send buffer length
+        &bytes, // bytes sent
         &task->overlapped()
     );
     WinError err;
@@ -304,9 +306,9 @@ void Dim::iSocketSetConnectTimeout(SOCKET s, Duration wait) {
     // Since there are up to two retransmissions and their back off is 
     // exponential the total wait time is equal to seven times the initial 
     // round trip time:
-    //  - try, wait rtt, try, wait 2*rtt, try, wait 4*rtt
+    //  - try, wait RTT, try, wait 2*RTT, try, wait 4*RTT
     // 
-    // Also note that Windows clamps the rtt to [300, 3000] (in milliseconds),
+    // Also note that Windows clamps the RTT to [300, 3000] (in milliseconds),
     // *except* that 0 and 65535 have special meaning!
     auto rtt = chrono::duration_cast<chrono::milliseconds>(wait).count() / 7;
     rtt = clamp((size_t) rtt, (size_t) 1, (size_t) 65534);
@@ -340,7 +342,8 @@ void Dim::socketConnect(
     ISocketNotify * notify,
     const Endpoint & remote,
     const Endpoint & local,
+    string_view data,
     Duration timeout
 ) {
-    ConnSocket::connect(notify, remote, local, timeout);
+    ConnSocket::connect(notify, remote, local, data, timeout);
 }

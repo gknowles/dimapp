@@ -85,10 +85,13 @@ void socketSetNotify(ISocketNotify * notify, ISocketNotify * newNotify);
 //===========================================================================
 // connect
 //===========================================================================
+// The data, if present, is sent if connect succeeds. This is done via 
+// TCP_FASTOPEN if possible so try to keep the data <= 1460 bytes.
 void socketConnect(
     ISocketNotify * notify,
     const Endpoint & remote,
-    const Endpoint & local,
+    const Endpoint & local = {}, // 0 for OS selected
+    std::string_view data = {},
     Duration timeout = {} // 0 for default timeout
 );
 
