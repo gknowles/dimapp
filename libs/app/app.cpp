@@ -276,6 +276,15 @@ int Dim::appRun(IAppNotify & app, int argc, char * argv[], AppFlags flags) {
         s_runCv.wait(lk);
 
     iShutdownDestroy();
+
+    //-----------------------------------------------------------------------
+    // No external effects should happen after this point. Any sockets, pipes,
+    // files, or other shared resources MUST ALREADY be closed. When running 
+    // as a service the SERVICE_STOPPED status has been reported and the 
+    // Service Control Manager may have already suspended us indefinitely as
+    // it spun up another instance of the service.
+    //-----------------------------------------------------------------------
+
     iTimerDestroy();
     iTaskDestroy();
     iLogDestroy();

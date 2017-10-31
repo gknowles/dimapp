@@ -127,8 +127,10 @@ static void serviceDispatchThread() {
         }
     }
     
-    scoped_lock<mutex> lk{s_mut};
-    s_mode = kRunStopped;
+    {
+        scoped_lock<mutex> lk{s_mut};
+        s_mode = kRunStopped;
+    }
     s_cv.notify_one();
 }
 

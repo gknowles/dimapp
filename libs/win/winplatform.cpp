@@ -124,8 +124,8 @@ static HtmlAccount s_account;
 void Dim::iPlatformInitialize() {
     winErrorInitialize();
     winIocpInitialize();
-    winAppInitialize();
     winServiceInitialize();
+    winAppInitialize();
 }
 
 //===========================================================================

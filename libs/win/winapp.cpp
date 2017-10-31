@@ -222,18 +222,23 @@ public:
         kConfigFile,
         kShutdown,
     };
+
 public:
     void clear();
     void setWnd(HWND wnd);
     void enable(Authority from, bool enable);
-    void onTask() override;
+    bool stopping() const { return m_hasShutdown; }
+    bool enabled() const;
+
 private:
+    void onTask() override;
+
     bool m_hasCommand{false};
     bool m_hasShutdown{false};
     bool m_fromConfig{false};
     bool m_enable{false};
 
-    mutex m_mut;
+    mutable mutex m_mut;
     condition_variable m_cv;
     HWND m_wnd{NULL};
 };
@@ -308,6 +313,12 @@ void MessageLoopTask::enable(Authority auth, bool enable) {
 }
 
 //===========================================================================
+bool MessageLoopTask::enabled() const {
+    unique_lock<mutex> lk{m_mut};
+    return m_wnd;    
+}
+
+//===========================================================================
 void MessageLoopTask::onTask() {
     auto wnd = createPerfWindow();
     setWnd(wnd);
@@ -377,7 +388,10 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
     if (firstTry)
         return shutdownIncomplete();
 
-    s_windowTask.enable(MessageLoopTask::kShutdown, false);
+    if (!s_windowTask.stopping())
+        s_windowTask.enable(MessageLoopTask::kShutdown, false);
+    if (s_windowTask.enabled())
+        return shutdownIncomplete();
 }
 
 
