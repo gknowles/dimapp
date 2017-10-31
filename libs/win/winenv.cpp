@@ -11,12 +11,44 @@ using namespace Dim;
 
 /****************************************************************************
 *
+*   Variables
+*
+***/
+
+static EnvMemoryConfig s_memCfg;
+static unsigned s_numCpus;
+
+
+/****************************************************************************
+*
+*   Private API
+*
+***/
+
+//===========================================================================
+void Dim::winEnvInitialize() {
+    SYSTEM_INFO info;
+    GetSystemInfo(&info);
+    s_memCfg = {};
+    s_memCfg.pageSize = info.dwPageSize;
+    s_memCfg.allocAlign = info.dwAllocationGranularity;
+    if (winEnablePrivilege(SE_LOCK_MEMORY_NAME)) {
+        // We have the right to allocate large pages, now get how big they are
+        // and see if they are supported at all (non-zero).
+        s_memCfg.minLargeAlloc = GetLargePageMinimum();
+    }
+    s_numCpus = info.dwNumberOfProcessors;
+}
+
+
+/****************************************************************************
+*
 *   Public API
 *
 ***/
 
 //===========================================================================
-string Dim::envGetExecPath() {
+string Dim::envExecPath() {
     string out;
     DWORD num = 0;
     while (num == out.size()) {
@@ -25,4 +57,14 @@ string Dim::envGetExecPath() {
     }
     out.resize(num);
     return out;
+}
+
+//===========================================================================
+const EnvMemoryConfig & Dim::envMemoryConfig() {
+    return s_memCfg;
+}
+
+//===========================================================================
+unsigned Dim::envCpus() {
+    return s_numCpus;
 }

@@ -60,9 +60,7 @@ static RIO_EXTENSION_FUNCTION_TABLE s_rio;
 
 static int s_sliceSize = kDefaultBufferSliceSize;
 static size_t s_bufferSize = kDefaultBufferSize;
-static size_t s_minLargeAlloc;
-static size_t s_minAlloc;
-static size_t s_pageSize;
+static EnvMemoryConfig s_memcfg;
 
 // buffers are kept sorted by state (full, partial, empty)
 static HandleMap<BufferHandle, Buffer> s_buffers;
@@ -105,11 +103,11 @@ static void findBufferSlice(
 //===========================================================================
 static void createEmptyBuffer() {
     size_t bytes = s_bufferSize;
-    size_t granularity = s_minAlloc;
+    size_t granularity = s_memcfg.allocAlign;
     DWORD fLargePages = 0;
-    if (s_minLargeAlloc && s_bufferSize >= s_minLargeAlloc) {
+    if (s_memcfg.minLargeAlloc && s_bufferSize >= s_memcfg.minLargeAlloc) {
         fLargePages = MEM_LARGE_PAGES;
-        granularity = s_minLargeAlloc;
+        granularity = s_memcfg.minLargeAlloc;
     }
     // round up, but not to exceed DWORD
     bytes += granularity - 1;
@@ -228,20 +226,8 @@ void Dim::iSocketBufferInitialize(RIO_EXTENSION_FUNCTION_TABLE & rio) {
 
     s_rio = rio;
 
-    SYSTEM_INFO info;
-    GetSystemInfo(&info);
-    s_pageSize = info.dwPageSize;
-    s_minAlloc = info.dwAllocationGranularity;
-
-    if (winEnablePrivilege(SE_LOCK_MEMORY_NAME)) {
-        // We have the right to allocate large pages, now get how big they are
-        // and see if they are supported at all (non-zero).
-        s_minLargeAlloc = GetLargePageMinimum();
-
-        // If large pages are available make sure the buffers are at least
-        // that big.
-        s_bufferSize = max(s_minLargeAlloc, s_bufferSize);
-    }
+    s_memcfg = envMemoryConfig();
+    s_bufferSize = max(s_memcfg.minLargeAlloc, s_bufferSize);
 }
 
 //===========================================================================

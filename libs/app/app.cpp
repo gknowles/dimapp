@@ -234,7 +234,7 @@ int Dim::appRun(IAppNotify & app, int argc, char * argv[], AppFlags flags) {
     s_appTasks.push_back(&s_runTask);
 
     if (flags & fAppWithChdir) {
-        auto fp = fs::u8path(envGetExecPath());
+        auto fp = fs::u8path(envExecPath());
         fs::current_path(fp.parent_path());
     }
     s_confDir = makeAppDir("conf");

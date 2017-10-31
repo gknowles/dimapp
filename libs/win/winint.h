@@ -86,10 +86,6 @@ static void winLoadProc(
 }
 
 //---------------------------------------------------------------------------
-// Privileges
-bool winEnablePrivilege(std::string_view name, bool enable = true);
-
-//---------------------------------------------------------------------------
 // Overlapped
 
 void winSetOverlapped(
@@ -124,6 +120,10 @@ public:
 private:
     WinOverlappedEvent m_evt;
 };
+
+//---------------------------------------------------------------------------
+// Privileges
+bool winEnablePrivilege(std::string_view name, bool enable = true);
 
 
 /****************************************************************************
@@ -201,6 +201,15 @@ bool winIocpBindHandle(HANDLE handle);
 ***/
 
 void winServiceInitialize();
+
+
+/****************************************************************************
+*
+*   Env
+*
+***/
+
+void winEnvInitialize();
 
 
 } // namespace
