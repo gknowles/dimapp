@@ -37,10 +37,14 @@ namespace File {
         // to a small task queue whose threads use blocking calls.
         fBlocking = 0x1000,
 
+        // Unbuffered but all application buffers must be system page aligned 
+        // and a multiple of page size.
+        fAligned = 0x2000,
+
         // INTERNAL USE ONLY
         // Underlying native file handle is externally owned, and will be 
         // left open when the file is closed.
-        fNonOwning = 0x2000,
+        fNonOwning = 0x4000,
 
         fInternalFlags = fNonOwning,
     };

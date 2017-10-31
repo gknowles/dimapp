@@ -480,7 +480,11 @@ FileHandle Dim::fileOpen(string_view path, File::OpenMode mode) {
         }
     }
 
-    int flagsAndAttrs = (mode & om::fBlocking) ? 0 : FILE_FLAG_OVERLAPPED;
+    int flagsAndAttrs = 0;
+    if (mode & om::fBlocking)
+        flagsAndAttrs |= FILE_FLAG_OVERLAPPED;
+    if (mode & om::fAligned)
+        flagsAndAttrs |= FILE_FLAG_NO_BUFFERING;
 
     file->m_handle = CreateFileW(
         toWstring(file->m_path).c_str(),
