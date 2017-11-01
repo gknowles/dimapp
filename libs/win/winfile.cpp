@@ -414,9 +414,11 @@ bool Dim::winFileSetErrno(int error) {
     _set_doserrno(error);
 
     switch (error) {
+    case NO_ERROR: errno = 0; break;
     case ERROR_ALREADY_EXISTS:
     case ERROR_FILE_EXISTS: errno = EEXIST; break;
-    case ERROR_FILE_NOT_FOUND: errno = ENOENT; break;
+    case ERROR_FILE_NOT_FOUND: 
+    case ERROR_PATH_NOT_FOUND: errno = ENOENT; break;
     case ERROR_SHARING_VIOLATION: errno = EBUSY; break;
     case ERROR_ACCESS_DENIED: errno = EACCES; break;
     case ERROR_INVALID_PARAMETER: errno = EINVAL; break;
@@ -669,7 +671,7 @@ uint64_t Dim::fileSize(FileHandle f) {
         return 0;
     }
     if (!size.QuadPart)
-        winFileSetErrno(0);
+        winFileSetErrno(NO_ERROR);
     return size.QuadPart;
 }
 
@@ -691,7 +693,7 @@ TimePoint Dim::fileLastWriteTime(FileHandle f) {
     q.LowPart = wtime.dwLowDateTime;
     q.HighPart = wtime.dwHighDateTime;
     if (!q.QuadPart)
-        winFileSetErrno(0);
+        winFileSetErrno(NO_ERROR);
     return TimePoint(Duration(q.QuadPart));
 }
 
@@ -722,7 +724,7 @@ File::FileType Dim::fileType(FileHandle f) {
         winFileSetErrno(WinError{});
         return File::kUnknown;
     default:
-        winFileSetErrno(0);
+        winFileSetErrno(NO_ERROR);
         return File::kUnknown;
     }
 }
