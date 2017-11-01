@@ -61,10 +61,12 @@ string Dim::envExecPath() {
 
 //===========================================================================
 const EnvMemoryConfig & Dim::envMemoryConfig() {
+    assert(s_numCpus);
     return s_memCfg;
 }
 
 //===========================================================================
 unsigned Dim::envCpus() {
+    assert(s_numCpus);
     return s_numCpus;
 }
