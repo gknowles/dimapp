@@ -26,7 +26,9 @@ public:
 // Also enables/disables line buffering.
 void consoleEnableEcho(bool enable = true);
 
-void consoleEnableCtrlC(bool enable = true);
+// When enabled a control-c sent to the console triggers a graceful shutdown, 
+// by calling appSignalShutdown(EX_IOERR), instead of immediate termination.
+void consoleCatchCtrlC(bool enable = true);
 
 // If the standard IO has been redirected these functions will reset them 
 // back to point to the console, if the process has a console.

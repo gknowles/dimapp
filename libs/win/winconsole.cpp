@@ -17,7 +17,7 @@ using namespace Dim;
 
 static mutex s_mut;
 static vector<WORD> s_consoleAttrs;
-static bool s_controlEnabled = false;
+static bool s_catchEnabled = false;
 
 
 /****************************************************************************
@@ -28,7 +28,7 @@ static bool s_controlEnabled = false;
 
 //===========================================================================
 static BOOL WINAPI controlCallback(DWORD ctrl) {
-    if (s_controlEnabled) {
+    if (s_catchEnabled) {
         switch (ctrl) {
         case CTRL_C_EVENT:
         case CTRL_BREAK_EVENT: appSignalShutdown(EX_IOERR); return true;
@@ -123,8 +123,8 @@ void Dim::consoleEnableEcho(bool enable) {
 }
 
 //===========================================================================
-void Dim::consoleEnableCtrlC(bool enable) {
-    s_controlEnabled = enable;
+void Dim::consoleCatchCtrlC(bool enable) {
+    s_catchEnabled = enable;
 }
 
 
