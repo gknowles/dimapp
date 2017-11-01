@@ -117,7 +117,7 @@ static void app(int argc, char *argv[]) {
     if (!cli.parse(argc, argv))
         return appSignalUsageError();
 
-    consoleEnableCtrlC();
+    consoleCatchCtrlC();
 
     vector<Address> addrs;
     addressGetLocal(&addrs);

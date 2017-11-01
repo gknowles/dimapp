@@ -245,7 +245,7 @@ static void app(int argc, char *argv[]) {
     if (!cli.parse(argc, argv))
         return appSignalUsageError();
 
-    consoleEnableCtrlC();
+    consoleCatchCtrlC();
     s_console.init();
 
     endpointQuery(&s_cancelAddrId, &s_socket, *remote, 23);
