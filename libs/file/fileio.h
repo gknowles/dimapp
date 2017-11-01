@@ -90,19 +90,34 @@ FileHandle fileAttachStdin();
 FileHandle fileAttachStdout();
 FileHandle fileAttachStderr();
 
+// Closing the file invalidates the handle and releases any internal resources
+// associated with the file.
+void fileClose(FileHandle f);
+
+// Changes the files size by either growing or shrinking it. Returns false on
+// errors. 
+bool fileResize(FileHandle f, size_t size);
+
+// Flushes pending writes from the file cache to disk.
+bool fileFlush(FileHandle f);
+
+// On error returns 0 and sets errno to a non-zero value. Otherwise the 
+// function returns the size and, if the size was 0, clears errno.
 uint64_t fileSize(FileHandle f);
+
+// On error returns TimePoint::min() and sets errno to a non-zero value. If 
+// the time was min(), errno is cleared.
 TimePoint fileLastWriteTime(FileHandle f);
+
+// On error returns empty and sets errno to a non-zero value.
 std::string_view filePath(FileHandle f);
+
 unsigned fileMode(FileHandle f);
 
 // kUnknown is returned for bad handle and system errors as well as when
 // the type is unknown. If kUnknown was not returned due to error, errno will 
 // set to 0.
 File::FileType fileType(FileHandle f);
-
-// Closing the file invalidates the handle and releases any internal resources
-// associated with the file.
-void fileClose(FileHandle f);
 
 
 /****************************************************************************

@@ -415,10 +415,11 @@ bool Dim::winFileSetErrno(int error) {
 
     switch (error) {
     case ERROR_ALREADY_EXISTS:
-    case ERROR_FILE_EXISTS: _set_errno(EEXIST); break;
-    case ERROR_FILE_NOT_FOUND: _set_errno(ENOENT); break;
-    case ERROR_SHARING_VIOLATION: _set_errno(EBUSY); break;
-    case ERROR_ACCESS_DENIED: _set_errno(EACCES); break;
+    case ERROR_FILE_EXISTS: errno = EEXIST; break;
+    case ERROR_FILE_NOT_FOUND: errno = ENOENT; break;
+    case ERROR_SHARING_VIOLATION: errno = EBUSY; break;
+    case ERROR_ACCESS_DENIED: errno = EACCES; break;
+    case ERROR_INVALID_PARAMETER: errno = EINVAL; break;
     default: _set_errno(EIO); break;
     }
 
@@ -481,7 +482,7 @@ FileHandle Dim::fileOpen(string_view path, File::OpenMode mode) {
     }
 
     int flagsAndAttrs = 0;
-    if (mode & om::fBlocking)
+    if (~mode & om::fBlocking)
         flagsAndAttrs |= FILE_FLAG_OVERLAPPED;
     if (mode & om::fAligned)
         flagsAndAttrs |= FILE_FLAG_NO_BUFFERING;
@@ -588,6 +589,47 @@ static WinFileInfo * getInfo(FileHandle f, bool release = false) {
 }
 
 //===========================================================================
+bool Dim::fileResize(FileHandle f, size_t size) {
+    auto file = static_cast<unique_ptr<WinFileInfo>>(getInfo(f, true));
+    if (!file) {
+        winFileSetErrno(ERROR_INVALID_PARAMETER);
+        return false;
+    }
+    LARGE_INTEGER tmp;
+    tmp.QuadPart = size;
+    if (!SetFilePointerEx(file->m_handle, tmp, nullptr, FILE_BEGIN)) {
+        WinError err;
+        logMsgError() << "SetFilePointerEx(" << file->m_path << "): " << err;
+        winFileSetErrno(err);
+        return false;
+    }
+    if (!SetEndOfFile(file->m_handle)) {
+        WinError err;
+        logMsgError() << "SetEndOfFile(" << file->m_path << "): " << err;
+        winFileSetErrno(err);
+        return false;
+    }
+
+    return true;
+}
+
+//===========================================================================
+bool Dim::fileFlush(FileHandle f) {
+    auto file = static_cast<unique_ptr<WinFileInfo>>(getInfo(f, true));
+    if (!file) {
+        winFileSetErrno(ERROR_INVALID_PARAMETER);
+        return false;
+    }
+    if (!FlushFileBuffers(file->m_handle)) {
+        WinError err;
+        logMsgError() << "FlushFileBuffers(" << file->m_path << "): " << err;
+        winFileSetErrno(err);
+        return false;
+    }
+    return true;
+}
+
+//===========================================================================
 void Dim::fileClose(FileHandle f) {
     auto file = static_cast<unique_ptr<WinFileInfo>>(getInfo(f, true));
     if (!file)
@@ -615,8 +657,10 @@ void Dim::fileClose(FileHandle f) {
 //===========================================================================
 uint64_t Dim::fileSize(FileHandle f) {
     auto file = getInfo(f);
-    if (!file)
+    if (!file) {
+        winFileSetErrno(ERROR_INVALID_PARAMETER);
         return 0;
+    }
     LARGE_INTEGER size;
     if (!GetFileSizeEx(file->m_handle, &size)) {
         WinError err;
@@ -624,14 +668,18 @@ uint64_t Dim::fileSize(FileHandle f) {
         winFileSetErrno(err);
         return 0;
     }
+    if (!size.QuadPart)
+        winFileSetErrno(0);
     return size.QuadPart;
 }
 
 //===========================================================================
 TimePoint Dim::fileLastWriteTime(FileHandle f) {
     auto file = getInfo(f);
-    if (!file)
+    if (!file) {
+        winFileSetErrno(ERROR_INVALID_PARAMETER);
         return TimePoint::min();
+    }
     FILETIME ctime, atime, wtime;
     if (!GetFileTime(file->m_handle, &ctime, &atime, &wtime)) {
         WinError err;
@@ -642,19 +690,25 @@ TimePoint Dim::fileLastWriteTime(FileHandle f) {
     ULARGE_INTEGER q;
     q.LowPart = wtime.dwLowDateTime;
     q.HighPart = wtime.dwHighDateTime;
+    if (!q.QuadPart)
+        winFileSetErrno(0);
     return TimePoint(Duration(q.QuadPart));
 }
 
 //===========================================================================
 string_view Dim::filePath(FileHandle f) {
-    auto file = getInfo(f);
-    return file->m_path;
+    if (auto file = getInfo(f))
+        return file->m_path;
+    winFileSetErrno(ERROR_INVALID_PARAMETER);
+    return {};
 }
 
 //===========================================================================
 unsigned Dim::fileMode(FileHandle f) {
-    auto file = getInfo(f);
-    return file->m_mode;
+    if (auto file = getInfo(f))
+        return file->m_mode;
+    winFileSetErrno(ERROR_INVALID_PARAMETER);
+    return 0;
 }
 
 //===========================================================================
