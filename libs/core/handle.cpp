@@ -57,10 +57,9 @@ HandleBase HandleMapBase::insert(HandleContent * value) {
 
 //===========================================================================
 HandleContent * HandleMapBase::release(HandleBase handle) {
-    if (handle.pos < 0 || handle.pos >= (int)m_values.size()) {
-        logMsgCrash() << "release out of range handle, {" << handle.pos << "}";
+    assert(handle.pos >= 0);
+    if (handle.pos <= 0 || handle.pos >= (int)m_values.size()) 
         return nullptr;
-    }
     Node & node = m_values[handle.pos];
     if (!node.value)
         return nullptr;
