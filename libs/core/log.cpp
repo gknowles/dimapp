@@ -46,7 +46,7 @@ static PerfCounter<int> * s_perfs[] = {
     &iperf("log debug"),
     &iperf("log info"),
     &iperf("log error"),
-    &iperf("log crash"),
+    nullptr, // log crash
 };
 static_assert(size(s_perfs) == kLogTypes);
 
@@ -65,7 +65,8 @@ static thread_local bool t_inProgress;
 static void LogMsg(LogType type, string_view msg) {
     LogMsgScope scope(type);
 
-    *s_perfs[type] += 1;
+    if (auto perf = s_perfs[type])
+        *perf += 1;
     if (scope.inProgress()) {
         s_perfRecurse += 1;
         return;
@@ -193,7 +194,9 @@ void Dim::logMonitorClose(ILogNotify * notify) {
 //===========================================================================
 int Dim::logGetMsgCount(LogType type) {
     assert(type < kLogTypes);
-    return *s_perfs[type];
+    if (auto perf = s_perfs[type])
+        return *perf;
+    return 0;
 }
 
 //===========================================================================
