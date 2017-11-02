@@ -24,6 +24,7 @@ class FileStreamNotify : public IFileReadNotify {
 public:
     FileStreamNotify(
         IFileReadNotify * notify, 
+        TaskQueueHandle hq,
         string_view path, 
         size_t blkSize
     );
@@ -41,6 +42,7 @@ public:
 //===========================================================================
 FileStreamNotify::FileStreamNotify(
     IFileReadNotify * notify, 
+    TaskQueueHandle hq,
     string_view path,
     size_t blkSize
 )
@@ -52,7 +54,7 @@ FileStreamNotify::FileStreamNotify(
         logMsgError() << "File open failed: " << path;
         onFileEnd(0, file);
     } else {
-        fileRead(this, m_out.get(), blkSize, file);
+        fileRead(this, m_out.get(), blkSize, file, 0, 0, hq);
     }
 }
 
@@ -178,9 +180,10 @@ bool Dim::fileRemove(std::string_view path) {
 void Dim::fileStreamBinary(
     IFileReadNotify * notify,
     string_view path,
-    size_t blkSize
+    size_t blkSize,
+    TaskQueueHandle hq
 ) {
-    new FileStreamNotify(notify, path, blkSize);
+    new FileStreamNotify(notify, hq, path, blkSize);
 }
 
 //===========================================================================
@@ -188,7 +191,8 @@ void Dim::fileLoadBinary(
     IFileReadNotify * notify,
     string & out,
     string_view path,
-    size_t maxSize
+    size_t maxSize,
+    TaskQueueHandle hq
 ) {
     auto file = fileOpen(path, File::fReadOnly | File::fDenyNone);
     if (!file) {
@@ -202,7 +206,7 @@ void Dim::fileLoadBinary(
         logMsgError() << "File too large (" << bytes << " bytes): " << path;
     out.resize(bytes);
     auto proxy = new FileLoadNotify(out, notify);
-    fileRead(proxy, out.data(), bytes, file);
+    fileRead(proxy, out.data(), bytes, file, 0, 0, hq);
 }
 
 //===========================================================================

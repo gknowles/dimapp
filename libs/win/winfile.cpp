@@ -28,7 +28,7 @@ struct WinFileInfo : public HandleContent {
 
 class IFileOpBase : protected IWinOverlappedNotify {
 public:
-    IFileOpBase(bool asyncOp);
+    IFileOpBase(TaskQueueHandle hq);
     virtual ~IFileOpBase() = default;
 
     size_t start(
@@ -130,11 +130,12 @@ static HandleMap<FileHandle, WinFileInfo> s_files;
 //===========================================================================
 // Completions only apply to non-blocking handles and are posted to a queue
 // depending on the type of request:
-//  Async - completions go to the event thread and make the callback
+//  Async - completions go to the selected (usually event) thread and make the 
+//          callback from there.
 //  Sync  - completions go to an IO thread and signal the waiting thread, 
 //          which might be the event thread.
-IFileOpBase::IFileOpBase(bool asyncOp) 
-    : IWinOverlappedNotify{asyncOp ? TaskQueueHandle{} : s_hq}
+IFileOpBase::IFileOpBase(TaskQueueHandle hq) 
+    : IWinOverlappedNotify{hq}
 {}
 
 //===========================================================================
@@ -209,7 +210,7 @@ void IFileOpBase::run() {
         // post to task queue, which is where the callback must come from,
         // then onTask() will:
         //   set result, make callback, delete this
-        taskPushEvent(*this);
+        pushOverlappedTask();
     } else {
         // sync operation on blocking or non-blocking handle
         //
@@ -271,7 +272,7 @@ namespace {
 
 class FileReader : public IFileOpBase {
 public:
-    explicit FileReader(IFileReadNotify * notify);
+    explicit FileReader(IFileReadNotify * notify, TaskQueueHandle hq);
     bool onRun() override;
     void onNotify() override;
     bool asyncOp() override { return m_notify != nullptr; }
@@ -284,8 +285,8 @@ private:
 } // namespace
 
 //===========================================================================
-FileReader::FileReader(IFileReadNotify * notify) 
-    : IFileOpBase{notify}
+FileReader::FileReader(IFileReadNotify * notify, TaskQueueHandle hq) 
+    : IFileOpBase{hq}
     , m_notify{notify} 
 {}
 
@@ -346,7 +347,7 @@ namespace {
 
 class FileWriter : public IFileOpBase {
 public:
-    explicit FileWriter(IFileWriteNotify * notify);
+    explicit FileWriter(IFileWriteNotify * notify, TaskQueueHandle hq);
     bool onRun() override;
     void onNotify() override;
     bool asyncOp() override { return m_notify != nullptr; }
@@ -359,8 +360,8 @@ private:
 } // namespace
 
 //===========================================================================
-FileWriter::FileWriter(IFileWriteNotify * notify) 
-    : IFileOpBase{notify}
+FileWriter::FileWriter(IFileWriteNotify * notify, TaskQueueHandle hq) 
+    : IFileOpBase{hq}
     , m_notify{notify} 
 {}
 
@@ -736,11 +737,12 @@ void Dim::fileRead(
     size_t outBufLen,
     FileHandle f,
     int64_t off,
-    int64_t len
+    int64_t len,
+    TaskQueueHandle hq
 ) {
     assert(notify);
     auto file = getInfo(f);
-    auto ptr = new FileReader(notify);
+    auto ptr = new FileReader{notify, hq};
     ptr->start(file, outBuf, outBufLen, off, len);
 }
 
@@ -752,7 +754,7 @@ size_t Dim::fileReadWait(
     int64_t off
 ) {
     auto file = getInfo(f);
-    FileReader op(nullptr);
+    FileReader op{nullptr, s_hq};
     return op.start(file, outBuf, outBufLen, off, outBufLen);
 }
 
@@ -762,11 +764,12 @@ void Dim::fileWrite(
     FileHandle f,
     int64_t off,
     const void * buf,
-    size_t bufLen
+    size_t bufLen,
+    TaskQueueHandle hq
 ) {
     assert(notify);
     auto file = getInfo(f);
-    auto ptr = new FileWriter(notify);
+    auto ptr = new FileWriter(notify, hq);
     ptr->start(file, const_cast<void *>(buf), bufLen, off, bufLen);
 }
 
@@ -778,7 +781,7 @@ size_t Dim::fileWriteWait(
     size_t bufLen
 ) {
     auto file = getInfo(f);
-    FileWriter op(nullptr);
+    FileWriter op(nullptr, s_hq);
     return op.start(file, const_cast<void *>(buf), bufLen, off, bufLen);
 }
 
@@ -787,12 +790,13 @@ void Dim::fileAppend(
     IFileWriteNotify * notify,
     FileHandle f,
     const void * buf,
-    size_t bufLen
+    size_t bufLen,
+    TaskQueueHandle hq
 ) {
     assert(notify);
     // file writes to offset 2^64-1 are interpreted as appends to the end
     // of the file.
-    fileWrite(notify, f, 0xffff'ffff'ffff'ffff, buf, bufLen);
+    fileWrite(notify, f, 0xffff'ffff'ffff'ffff, buf, bufLen, hq);
 }
 
 //===========================================================================

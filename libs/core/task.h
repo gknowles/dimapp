@@ -8,6 +8,7 @@
 
 #include "core/handle.h"
 
+#include <functional>
 #include <string>
 
 namespace Dim {

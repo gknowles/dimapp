@@ -7,6 +7,7 @@
 #include "cppconf/cppconf.h"
 
 #include "core/handle.h"
+#include "core/task.h"
 #include "core/time.h"
 
 #include <cstdint>
@@ -157,7 +158,8 @@ void fileRead(
     size_t outBufLen,
     FileHandle f,
     int64_t offset = 0,
-    int64_t length = 0 // 0 to read until the end
+    int64_t length = 0, // 0 to read until the end
+    TaskQueueHandle hq = {} // queue to notify
 );
 size_t fileReadWait(
     void * outBuf,
@@ -169,14 +171,16 @@ size_t fileReadWait(
 void fileStreamBinary(
     IFileReadNotify * notify,
     std::string_view path,
-    size_t blkSize
+    size_t blkSize,
+    TaskQueueHandle hq = {} // queue to notify
 );
 
 void fileLoadBinary(
     IFileReadNotify * notify,   // only onFileEnd() is called
     std::string & out,
     std::string_view path,
-    size_t maxSize = 10'000'000
+    size_t maxSize = 10'000'000,
+    TaskQueueHandle hq = {} // queue to notify
 );
 void fileLoadBinaryWait(
     std::string & out,
@@ -223,7 +227,9 @@ void fileWrite(
     FileHandle f,
     int64_t offset,
     const void * buf,
-    size_t bufLen
+    size_t bufLen,
+    TaskQueueHandle hq = {} // queue to notify
+
 );
 size_t fileWriteWait(
     FileHandle f,
@@ -235,7 +241,9 @@ void fileAppend(
     IFileWriteNotify * notify,
     FileHandle f,
     const void * buf,
-    size_t bufLen
+    size_t bufLen,
+    TaskQueueHandle hq = {} // queue to notify
+
 );
 size_t fileAppendWait(FileHandle f, const void * buf, size_t bufLen);
 
