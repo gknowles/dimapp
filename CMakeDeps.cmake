@@ -160,7 +160,7 @@
 # tests/charbuf/charbuftest.cpp
 # tests/charbuf/pch.cpp
 # tests/charbuf/pch.h
-# tests/file/file.cpp
+# tests/file/filetest.cpp
 # tests/file/pch.cpp
 # tests/file/pch.h
 # tests/hpack/hpacktest.cpp

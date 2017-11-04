@@ -27,10 +27,10 @@ static void app(int argc, char *argv[]) {
     fileWriteWait(file, 0, "aaaa", 4);
 
     const char * base;
-    if (!fileOpenView(base, file, 1001 * psize))
+    if (!fileOpenView(base, file, File::kViewReadOnly, 0, 0, 1001 * psize))
         return appSignalShutdown(EX_DATAERR);
 
-    fileExtendView(file, 1001 * psize);
+    fileExtendView(file, base, 1001 * psize);
     unsigned num = 0;
     static char v = 0;
     for (size_t i = 1; i < 1000; ++i) {
@@ -41,12 +41,13 @@ static void app(int argc, char *argv[]) {
             num += 1;
     }
 
-    fileExtendView(file, psize);
+    fileExtendView(file, base, psize);
     static char buf[5] = {};
     for (unsigned i = 0; i < 100; ++i) {
         fileReadWait(buf, 4, file, psize);
     }
 
+    fileCloseView(file, base);
     fileClose(file);
 
     if (int errs = logGetMsgCount(kLogTypeError)) {
@@ -68,7 +69,9 @@ static void app(int argc, char *argv[]) {
 
 //===========================================================================
 int main(int argc, char * argv[]) {
-    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF 
+        | _CRTDBG_LEAK_CHECK_DF 
+        | _CRTDBG_DELAY_FREE_MEM_DF);
     _set_error_mode(_OUT_TO_MSGBOX);
 
     int code = appRun(app, argc, argv);
