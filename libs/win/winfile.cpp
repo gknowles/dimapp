@@ -22,8 +22,7 @@ struct WinFileInfo : public HandleContent {
     string m_path;
     HANDLE m_handle{INVALID_HANDLE_VALUE};
     File::OpenMode m_mode{File::fReadOnly};
-    const char * m_view{nullptr};
-    size_t m_viewSize{0};
+    unordered_set<const void *> m_views;
 };
 
 class IFileOpBase : protected IWinOverlappedNotify {
@@ -114,7 +113,6 @@ static NtMapViewOfSectionFn s_NtMapViewOfSection;
 static NtUnmapViewOfSectionFn s_NtUnmapViewOfSection;
 static NtCloseFn s_NtClose;
 
-static size_t s_pageSize;
 static TaskQueueHandle s_hq;
 
 static shared_mutex s_fileMut;
@@ -396,10 +394,6 @@ void FileWriter::onNotify() {
 
 //===========================================================================
 void Dim::iFileInitialize() {
-    SYSTEM_INFO si;
-    GetSystemInfo(&si);
-    s_pageSize = si.dwPageSize;
-
     winLoadProc(s_NtCreateSection, "ntdll", "NtCreateSection");
     winLoadProc(s_NtMapViewOfSection, "ntdll", "NtMapViewOfSection");
     winLoadProc(s_NtUnmapViewOfSection, "ntdll", "NtUnmapViewOfSection");
@@ -638,15 +632,9 @@ void Dim::fileClose(FileHandle f) {
     if (!file)
         return;
     if (file->m_handle != INVALID_HANDLE_VALUE) {
-        if (file->m_view) {
-            WinError err = (WinError::NtStatus) s_NtUnmapViewOfSection(
-                GetCurrentProcess(), 
-                file->m_view
-            );
-            if (err) {
-                logMsgError() << "NtUnmapViewOfSection(" << file->m_path
-                    << "): " << err;
-            }
+        if (!file->m_views.empty()) {
+            logMsgCrash() << "fileClose(" << file->m_path 
+                << "): has views that are still open";
         }
         if (~file->m_mode & File::fNonOwning) {
             if (file->m_mode & File::fBlocking)
@@ -813,56 +801,94 @@ size_t Dim::fileAppendWait(FileHandle f, const void * buf, size_t bufLen) {
 
 //===========================================================================
 size_t Dim::filePageSize() {
-    return s_pageSize;
+    auto pageSize = envMemoryConfig().pageSize;
+
+    // must be a power of 2
+    assert(hammingWeight(pageSize) == 1);
+
+    return pageSize;
 }
 
 //===========================================================================
-bool Dim::fileOpenView(
-    const char *& base,
+size_t Dim::fileViewAlignment() {
+    auto mem = envMemoryConfig();
+
+    // must be a multiple of the page size
+    assert(mem.allocAlign % mem.pageSize == 0);
+    // must be a power of 2
+    assert(hammingWeight(mem.allocAlign) == 1);
+
+    return mem.allocAlign;
+}
+
+//===========================================================================
+static bool openView(
+    char *& base,
     FileHandle f,
-    int64_t maxLen // maximum viewable offset, rounded up to page size
+    File::ViewMode mode,
+    int64_t offset,
+    int64_t length,
+    int64_t maxLength
 ) {
-    auto file = getInfo(f);
-    if (file->m_view) {
-        base = file->m_view;
-        return true;
-    }
+    assert(length % filePageSize() == 0);
+    assert(maxLength % filePageSize() == 0);
+    assert(offset % fileViewAlignment() == 0);
+
     base = nullptr;
+    auto file = getInfo(f);
+
     WinError err{0};
     HANDLE sec;
-
     SIZE_T viewSize;
     ULONG access, secProt, allocType, pageProt;
 
-    if (file->m_mode & File::fReadOnly) {
-        // readonly view
-        access = SECTION_MAP_READ;
-        secProt = PAGE_READONLY;
-        viewSize = 0;
-        allocType = 0;
-        pageProt = PAGE_READONLY;
-    } else if (file->m_mode & File::fReadWrite) {
-        // readonly but extendable
-        access = SECTION_MAP_READ;
-        secProt = PAGE_READWRITE;
-        viewSize = maxLen;
-        allocType = MEM_RESERVE;
-        pageProt = PAGE_READONLY;
+    if (mode == File::kViewReadOnly) {
+        if (!maxLength || (file->m_mode & File::fReadOnly)) {
+            assert(!maxLength);
+            // read only view
+            access = SECTION_MAP_READ;
+            secProt = PAGE_READONLY;
+            viewSize = length;
+            allocType = 0;
+            pageProt = PAGE_READONLY;
+        } else {
+            assert(file->m_mode & File::fReadWrite);
+            assert(maxLength >= length);
+            // read only but extendable
+            access = SECTION_MAP_READ;
+            secProt = PAGE_READWRITE;
+            viewSize = maxLength;
+            allocType = MEM_RESERVE;
+            pageProt = PAGE_READONLY;
+        }
     } else {
-        // fully writable and extendable view
-        assert(0 && "fully writable view");
-        access = SECTION_MAP_READ | SECTION_MAP_WRITE;
-        secProt = PAGE_READWRITE;
-        viewSize = maxLen;
-        allocType = MEM_RESERVE;
-        pageProt = PAGE_READWRITE;
+        assert(mode == File::kViewReadWrite);
+        assert(file->m_mode & File::fReadWrite);
+        if (!maxLength) {
+            // writable view
+            access = SECTION_MAP_READ | SECTION_MAP_WRITE;
+            secProt = PAGE_READWRITE;
+            viewSize = length;
+            allocType = 0;
+            pageProt = PAGE_READWRITE;
+        } else {
+            assert(maxLength >= length);
+            // fully writable and extendable view
+            access = SECTION_MAP_READ | SECTION_MAP_WRITE;
+            secProt = PAGE_READWRITE;
+            viewSize = maxLength;
+            allocType = MEM_RESERVE;
+            pageProt = PAGE_READWRITE;
+        }
     }
     
+    LARGE_INTEGER sectionMax;
+    sectionMax.QuadPart = offset + viewSize;
     err = (WinError::NtStatus) s_NtCreateSection(
         &sec,
         access,
-        nullptr, // object attributes
-        nullptr, // maximum size
+        nullptr,        // object attributes
+        &sectionMax,    // maximum size
         secProt,
         SEC_RESERVE,
         file->m_handle
@@ -873,13 +899,15 @@ bool Dim::fileOpenView(
         return false;
     }
 
+    LARGE_INTEGER viewOffset;
+    viewOffset.QuadPart = offset;
     err = (WinError::NtStatus) s_NtMapViewOfSection(
         sec,
         GetCurrentProcess(),
         (const void **)&base,
-        0,       // zero bits
-        0,       // commit size
-        nullptr, // section offset
+        0,  // number of high order address bits that must be zero
+        0,  // commit size
+        &viewOffset,
         &viewSize,
         ViewUnmap,
         allocType,
@@ -888,9 +916,9 @@ bool Dim::fileOpenView(
     if (err) {
         logMsgError() << "NtMapViewOfSection(" << file->m_path << "): " << err;
         winFileSetErrno(err);
+    } else {
+        file->m_views.insert(base);
     }
-    file->m_view = base;
-    file->m_viewSize = viewSize;
 
     // always close the section whether the map view worked or not
     WinError tmp = (WinError::NtStatus) s_NtClose(sec);
@@ -906,20 +934,68 @@ bool Dim::fileOpenView(
 }
 
 //===========================================================================
-void Dim::fileExtendView(FileHandle f, int64_t length) {
+bool Dim::fileOpenView(
+    const char *& base,
+    FileHandle f,
+    File::ViewMode mode,
+    int64_t offset,
+    int64_t length,
+    int64_t maxLength
+) {
+    assert(mode == File::kViewReadOnly);
+    return openView((char *&) base, f, mode, offset, length, maxLength);
+}
+
+//===========================================================================
+bool Dim::fileOpenView(
+    char *& base,
+    FileHandle f,
+    File::ViewMode mode,
+    int64_t offset,
+    int64_t length,
+    int64_t maxLength
+) {
+    assert(mode == File::kViewReadWrite);
+    return openView(base, f, mode, offset, length, maxLength);
+}
+
+//===========================================================================
+void Dim::fileCloseView(FileHandle f, const void * view) {
     auto file = getInfo(f);
+    auto found = file->m_views.erase(view);
+    if (!found) {
+        logMsgError() << "fileCloseView(" << file->m_path 
+            << "): unknown view, " << (void *) view;
+    }
+    WinError err = (WinError::NtStatus) s_NtUnmapViewOfSection(
+        GetCurrentProcess(), 
+        view
+    );
+    if (err) {
+        logMsgError() << "NtUnmapViewOfSection(" << file->m_path
+            << "): " << err;
+    }
+}
+
+//===========================================================================
+void Dim::fileExtendView(FileHandle f, const void * view, int64_t length) {
+    auto file = getInfo(f);
+    if (file->m_views.count(view) == 0) {
+        logMsgCrash() << "fileExtendView(" << file->m_path
+            << "): unknown view, " << (void *) view;
+    }
     void * ptr = VirtualAlloc(
-        (void *)file->m_view, 
+        (void *) view, 
         length, 
         MEM_COMMIT, 
         PAGE_READONLY
     );
     if (!ptr) {
         logMsgCrash() << "VirtualAlloc(" << file->m_path
-                      << "): " << WinError{};
+            << "): " << WinError{};
     }
-    if (ptr != file->m_view) {
+    if (ptr != view) {
         logMsgDebug() << "VirtualAlloc(" << file->m_path << "): " << ptr
-                      << " (expected " << file->m_view << ")";
+            << " (expected " << view << ")";
     }
 }

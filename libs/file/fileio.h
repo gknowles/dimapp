@@ -50,7 +50,7 @@ namespace File {
         fInternalFlags = fNonOwning,
     };
 
-    enum FileType : int {
+    enum FileType {
         kUnknown,   // bad handle, system error, or unknown file type
         kRegular,
         kCharacter,
@@ -188,21 +188,6 @@ void fileLoadBinaryWait(
     size_t maxSize = 10'000'000
 );
 
-// page size is determined by the operating system but is always a power of 2
-size_t filePageSize();
-
-// The maxLen is the maximum offset into the file that view can be extended
-// to cover. A value less than or equal to the size of the file (such as 0)
-// makes a view of the entire file that can't be extended. The value is
-// rounded up to a multiple of page size.
-bool fileOpenView(const char *& base, FileHandle f, int64_t maxLen = 0);
-
-// Extend the view up to maxLen that was set when the view was opened. A
-// view can only be extended if the file (which is also extended) was opened
-// for writing. "Extending" with a length less than the current view has
-// no effect and extending beyond maxLen is an error.
-void fileExtendView(FileHandle f, int64_t length);
-
 
 /****************************************************************************
 *
@@ -246,5 +231,56 @@ void fileAppend(
 
 );
 size_t fileAppendWait(FileHandle f, const void * buf, size_t bufLen);
+
+
+/****************************************************************************
+*
+*   Views
+*
+***/
+
+namespace File {
+
+enum ViewMode {
+    kViewReadOnly,
+    kViewReadWrite,
+};
+
+} // namespace
+
+// page size is determined by the operating system but is always a power of 2
+size_t filePageSize();
+
+// Offset to the start of a view must be a multiple of the view alignment, it
+// is always a multiple of the page size.
+size_t fileViewAlignment();
+
+// The maxLength is the maximum length into the file that view can be extended
+// to cover. A value less than or equal to the length (such as 0) makes a view 
+// that can't be extended. The value is rounded up to a multiple of page size.
+bool fileOpenView(
+    const char *& view, 
+    FileHandle f, 
+    File::ViewMode modeFlags, // must be kViewReadOnly
+    int64_t offset = 0,
+    int64_t length = 0,     // defaults to current length of file
+    int64_t maxLength = 0   // defaults to not extendable
+);
+bool fileOpenView(
+    char *& view, 
+    FileHandle f, 
+    File::ViewMode modeFlags, // must be kViewReadWrite
+    int64_t offset = 0,
+    int64_t length = 0,     // defaults to current length of file
+    int64_t maxLength = 0   // defaults to not extendable
+);
+
+void fileCloseView(FileHandle f, const void * view);
+
+// Extend the view up to maxLen that was set when the view was opened. A
+// view can only be extended if the file (which is also extended) was opened
+// for writing. "Extending" with a length less than the current view has
+// no effect and extending beyond maxLen is an error.
+void fileExtendView(FileHandle f, const void * view, int64_t length);
 
 } // namespace
