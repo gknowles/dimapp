@@ -200,10 +200,8 @@ static void app (int argc, char * argv[]) {
     auto & root = cli.opt<string>("[root rule]")
         .desc("Root rule to use, overrides %root in <source file>.");
     // options
-    cli.versionOpt(version);
-    auto & help = cli.opt<bool>("? h help.")
-        .desc("Show this message and exit.")
-        .group("~");
+    cli.versionOpt(version, "pargen");
+    cli.helpNoArgs();
     auto & test = cli.opt<bool>("test.").group("~").desc(
         "Run internal test of ABNF parsing logic.");
     cli.opt(&s_cmdopts.minRules, "min-rules", false)
@@ -252,11 +250,6 @@ https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
 )");
     if (!cli.parse(argc, argv))
         return appSignalUsageError();
-    if (*help || argc == 1) {
-        auto os = logMsgInfo();
-        cli.printHelp(os);
-        return appSignalShutdown(EX_OK);
-    }
     if (*test) {
         int code = internalTest() ? EX_OK : EX_SOFTWARE;
         return appSignalShutdown(code);

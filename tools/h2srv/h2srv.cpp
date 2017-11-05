@@ -110,10 +110,8 @@ static void app(int argc, char *argv[]) {
     shutdownMonitor(&s_cleanup);
 
     Cli cli;
-    cli.header(
-        "h2srv v"s + kVersion + " (" __DATE__ ") "
-                                "sample http/2 server");
-    cli.versionOpt(kVersion);
+    cli.header("h2srv v"s + kVersion + " (" __DATE__ ") sample http/2 server");
+    cli.versionOpt(kVersion, "h2srv");
     if (!cli.parse(argc, argv))
         return appSignalUsageError();
 

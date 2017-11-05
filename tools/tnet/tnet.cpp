@@ -238,8 +238,9 @@ static void app(int argc, char *argv[]) {
     shutdownMonitor(&s_cleanup);
 
     Cli cli;
-    cli.header("tnet v"s + kVersion + " (" __DATE__ ")");
-    cli.versionOpt(kVersion);
+    cli.header("tnet v"s + kVersion + " (" __DATE__ ")")
+        .helpNoArgs()
+        .versionOpt(kVersion, "tnet");
     auto & remote = cli.opt<string>("<remote address>");
     cli.opt(&s_localEnd, "[local address]");
     if (!cli.parse(argc, argv))
