@@ -317,7 +317,7 @@ void Dim::appSignalUsageError(int code, string_view err, string_view detail) {
         return;
 
     if (code) {
-        bool console = ~appFlags() & (fAppWithConsole | fAppIsService);
+        bool console = !(appFlags() & (fAppWithConsole | fAppIsService));
         if (console)
             logMonitor(&s_consoleLogger);
         Cli cli;
