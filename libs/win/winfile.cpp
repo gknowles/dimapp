@@ -830,8 +830,9 @@ static bool openView(
     int64_t length,
     int64_t maxLength
 ) {
-    assert(length % filePageSize() == 0);
-    assert(maxLength % filePageSize() == 0);
+    auto pageSize = filePageSize();
+    assert(length % pageSize == 0);
+    assert(maxLength % pageSize == 0);
     assert(offset % fileViewAlignment() == 0);
 
     base = nullptr;
@@ -883,7 +884,7 @@ static bool openView(
     }
     
     LARGE_INTEGER sectionMax;
-    sectionMax.QuadPart = offset + viewSize;
+    sectionMax.QuadPart = offset + pageSize;
     err = (WinError::NtStatus) s_NtCreateSection(
         &sec,
         access,
