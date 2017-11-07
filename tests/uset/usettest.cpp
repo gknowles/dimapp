@@ -55,15 +55,46 @@ static void app(int argc, char *argv[]) {
 
     tmp.clear();
     EXPECT(tmp.empty());
-    tmp.insert(0u, 63u);
+    tmp.insert(0, 63);
     EXPECT(tmp.size() == 64);
-    tmp.insert(4096u, 4096u + 63u);
+    tmp.insert(4096, 4096 + 63);
     EXPECT(tmp.size() == 128);
     tmp.insert(64);
     EXPECT(tmp.size() == 129);
     r = tmp.ranges();
     vr.assign(r.begin(), r.end());
     EXPECT(vr == vector<pair<unsigned,unsigned>>{{0,64},{4096,4159}});
+    tmp.insert(4095);
+    EXPECT(tmp.size() == 130);
+    r = tmp.ranges();
+    vr.assign(r.begin(), r.end());
+    EXPECT(vr == vector<pair<unsigned,unsigned>>{{0,64},{4095,4159}});
+    tmp.erase(4096);
+    EXPECT(tmp.size() == 129);
+    r = tmp.ranges();
+    vr.assign(r.begin(), r.end());
+    EXPECT(vr == vector<pair<unsigned,unsigned>>{
+        {0,64},
+        {4095,4095},
+        {4097,4159}
+    });
+    tmp.insert(65,4094);
+    EXPECT(tmp.size() == 4159);
+    r = tmp.ranges();
+    vr.assign(r.begin(), r.end());
+    EXPECT(vr == vector<pair<unsigned,unsigned>>{{0,4095},{4097,4159}});
+    tmp2.clear();
+    tmp2.insert(4097,4159);
+    tmp.erase(tmp2);
+    EXPECT(tmp.size() == 4096);
+    r = tmp.ranges();
+    vr.assign(r.begin(), r.end());
+    EXPECT(vr == vector<pair<unsigned,unsigned>>{{0,4095}});
+    tmp.erase(4095);
+    r = tmp.ranges();
+    vr.assign(r.begin(), r.end());
+    EXPECT(vr == vector<pair<unsigned,unsigned>>{{0,4094}});
+
 
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);

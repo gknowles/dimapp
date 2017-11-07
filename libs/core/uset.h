@@ -23,8 +23,6 @@ namespace Dim {
 
 class UnsignedSet {
 public:
-    class NodeIterator;
-    struct NodeRange;
     class RangeIterator;
     struct RangeRange;
     class Iterator;
@@ -65,7 +63,6 @@ public:
     iterator end() const;
 
     RangeRange ranges() const;
-    NodeRange nodes() const;
 
     // capacity
     bool empty() const;
@@ -74,7 +71,14 @@ public:
     // modify
     void clear();
     void insert(unsigned value);
-    template<typename InputIt> void insert(InputIt first, InputIt last);
+    
+    template <typename InputIt, 
+        typename = std::enable_if_t<
+            std::is_convertible_v<*std::declval<InputIt>(), unsigned> 
+        >
+    >
+    void insert(InputIt first, InputIt last);
+    
     void insert(std::initializer_list<unsigned> il);
     void insert(UnsignedSet && other);
     void insert(const UnsignedSet & other);
@@ -113,76 +117,20 @@ private:
 };
 
 //===========================================================================
-template<typename InputIt> 
+template<typename InputIt, typename>
 inline void UnsignedSet::insert(InputIt first, InputIt last) {
-    for (; first != last; ++first)
-        insert(*first);
-}
-
-//===========================================================================
-template<> 
-inline void UnsignedSet::insert<unsigned *>(
-    unsigned * first, 
-    unsigned * last
-) {
-    iInsert(first, last);
-}
-
-//===========================================================================
-template<> 
-inline void UnsignedSet::insert<const unsigned *>(
-    const unsigned * first, 
-    const unsigned * last
-) {
-    iInsert(first, last);
+    if constexpr (std::is_convertible_v<InputIt, const unsigned *>) {
+        iInsert(first, last);
+    } else {
+        for (; first != last; ++first)
+            insert(*first);
+    }
 }
 
 //===========================================================================
 inline void UnsignedSet::insert(std::initializer_list<unsigned> il) {
     iInsert(il.begin(), il.end());
 }
-
-
-/****************************************************************************
-*
-*   UnsignedSet::NodeIterator
-*
-***/
-
-class UnsignedSet::NodeIterator {
-public:
-    using iterator_category = std::input_iterator_tag;
-    using value_type = const Node;
-    using difference_type = ptrdiff_t;
-    using pointer = value_type*;
-    using reference = value_type&;
-public:
-    NodeIterator() {}
-    NodeIterator(const NodeIterator & from) = default;
-    NodeIterator(const Node * node);
-    NodeIterator & operator++();
-    explicit operator bool() const { return m_node; }
-    bool operator!= (const NodeIterator & right) const;
-    const Node & operator*() const { return *m_node; }
-    const Node * operator->() const { return m_node; }
-
-    NodeIterator nextNotFull() const;
-private:
-    const Node * m_node{nullptr};
-};
-
-
-/****************************************************************************
-*
-*   UnsignedSet::NodeRange
-*
-***/
-
-struct UnsignedSet::NodeRange {
-    NodeIterator m_first;
-    NodeIterator begin() { return m_first; }
-    NodeIterator end() { return {}; }
-};
 
 
 /****************************************************************************
@@ -210,8 +158,8 @@ public:
 
     Iterator lastContiguous() const;
 private:
-    NodeIterator m_node;
-    value_type m_value{0};
+    const Node * m_node = nullptr;
+    value_type m_value = 0;
 };
 
 
@@ -232,7 +180,7 @@ public:
 public:
     RangeIterator() {}
     RangeIterator(const RangeIterator & from) = default;
-    RangeIterator(const Node * node, UnsignedSet::value_type value);
+    RangeIterator(Iterator where);
     RangeIterator & operator++();
     explicit operator bool() const { return m_value != kEndValue; }
     bool operator!= (const RangeIterator & right) const;
@@ -252,7 +200,7 @@ private:
 ***/
 
 struct UnsignedSet::RangeRange {
-    RangeIterator m_first;
+    Iterator m_first;
     RangeIterator begin() { return m_first; }
     RangeIterator end() { return {}; }
 };
