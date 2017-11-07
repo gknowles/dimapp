@@ -83,6 +83,36 @@ constexpr bool findBit(
 }
 
 //===========================================================================
+// Find 0 bit in array of unsigned integrals.
+// Returns true and position of bit, or false if no 0's are found.
+constexpr bool findZeroBit(
+    int * out, 
+    const uint64_t arr[], 
+    size_t arrlen, 
+    int bitpos = 0
+) {
+    const int kIntBits = sizeof(*arr) * 8;
+    int pos = bitpos / kIntBits;
+    if (pos >= arrlen)
+        return false;
+    auto ptr = arr + pos;
+    auto val = ~*ptr & 
+        (std::numeric_limits<uint64_t>::max() << bitpos % kIntBits);
+    if (val) {
+        *out = pos * kIntBits + trailingZeroBits(val);
+        return true;
+    }
+    auto last = arr + arrlen;
+    while (++ptr != last) {
+        if (val = ~*ptr; val) {
+            *out = int(ptr - arr) * kIntBits + trailingZeroBits(val);
+            return true;
+        }
+    }
+    return false;
+}
+
+//===========================================================================
 // Round up to power of 2
 constexpr uint64_t pow2Ceil(uint64_t num) {
 #if 0
