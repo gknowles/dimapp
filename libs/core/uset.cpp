@@ -23,8 +23,10 @@ static_assert(kDataSize >= 256);
 const unsigned kBitWidth = 32;
 
 const unsigned kLeafBits = hammingWeight(8 * kDataSize - 1);
-const unsigned kStepBits = hammingWeight(pow2Ceil(kDataSize / sizeof(Node) + 1) / 2 - 1);
-const unsigned kMaxDepth = (kBitWidth - kLeafBits + kStepBits - 1) / kStepBits;
+const unsigned kStepBits = 
+    hammingWeight(pow2Ceil(kDataSize / sizeof(Node) + 1) / 2 - 1);
+const unsigned kMaxDepth = 
+    (kBitWidth - kLeafBits + kStepBits - 1) / kStepBits;
 
 constexpr unsigned maxDepth() {
     return kMaxDepth;
@@ -40,9 +42,21 @@ constexpr unsigned valueMask(unsigned depth) {
 
 constexpr uint16_t numNodes(unsigned depth) {
     uint16_t ret = 0;
-    if (depth)
-        ret = (uint16_t) 1 << hammingWeight(valueMask(depth) ^ valueMask(depth - 1));
+    if (depth) {
+        ret = (uint16_t) 1 
+            << hammingWeight(valueMask(depth) ^ valueMask(depth - 1));
+    }
     return ret;
+}
+
+constexpr unsigned relBase(unsigned value, unsigned depth) {
+    return (value & ~valueMask(depth)) >> 8;
+}
+constexpr unsigned relValue(unsigned value, unsigned depth) {
+    return value & valueMask(depth);
+}
+constexpr unsigned absBase(const Node & node) {
+    return node.base << 8;
 }
 
 namespace {
@@ -58,13 +72,6 @@ enum NodeType {
 
 struct IImplBase {
     using value_type = unsigned;
-
-    constexpr static unsigned relBase(unsigned value, unsigned depth) {
-        return (value & ~valueMask(depth)) >> 8;
-    }
-    constexpr static unsigned relValue(unsigned value, unsigned depth) {
-        return value & valueMask(depth);
-    }
 
     // Requires that type, base, and depth are set, but otherwise treats
     // the node as uninitialized.
@@ -84,9 +91,14 @@ struct IImplBase {
     virtual void erase(Node & node, unsigned value) = 0;
 
     virtual size_t size(const Node & node) const = 0;
-    virtual bool lowerBound(
+    virtual bool findFirst(
         unsigned * out, 
         const Node & node, 
+        unsigned first
+    ) const = 0;
+    virtual bool findGap(
+        unsigned * out,
+        const Node & node,
         unsigned first
     ) const = 0;
 };
@@ -123,7 +135,12 @@ struct EmptyImpl final : IImplBase {
     void erase(Node & node, unsigned value) override;
 
     size_t size(const Node & node) const override;
-    bool lowerBound(
+    bool findFirst(
+        unsigned * out, 
+        const Node & node, 
+        unsigned first
+    ) const override;
+    bool findGap(
         unsigned * out, 
         const Node & node, 
         unsigned first
@@ -186,11 +203,24 @@ size_t EmptyImpl::size(const Node & node) const {
 }
 
 //===========================================================================
-bool EmptyImpl::lowerBound(
+bool EmptyImpl::findFirst(
     unsigned * out, 
     const Node & node, 
     unsigned first
 ) const {
+    return false;
+}
+
+//===========================================================================
+bool EmptyImpl::findGap(
+    unsigned * out, 
+    const Node & node, 
+    unsigned first
+) const {
+    if (first < size(node)) {
+        *out = first;
+        return true;
+    }
     return false;
 }
 
@@ -215,7 +245,12 @@ struct FullImpl final : IImplBase {
     void erase(Node & node, unsigned value) override;
 
     size_t size(const Node & node) const override;
-    bool lowerBound(
+    bool findFirst(
+        unsigned * out, 
+        const Node & node, 
+        unsigned first
+    ) const override;
+    bool findGap(
         unsigned * out, 
         const Node & node, 
         unsigned first
@@ -274,7 +309,7 @@ size_t FullImpl::size(const Node & node) const {
 }
 
 //===========================================================================
-bool FullImpl::lowerBound(
+bool FullImpl::findFirst(
     unsigned * out, 
     const Node & node, 
     unsigned first
@@ -283,6 +318,15 @@ bool FullImpl::lowerBound(
         *out = first;
         return true;
     }
+    return false;
+}
+
+//===========================================================================
+bool FullImpl::findGap(
+    unsigned * out, 
+    const Node & node, 
+    unsigned first
+) const {
     return false;
 }
 
@@ -321,7 +365,12 @@ struct VectorImpl final : IImplBase {
     void erase(Node & node, unsigned value) override;
 
     size_t size(const Node & node) const override;
-    bool lowerBound(
+    bool findFirst(
+        unsigned * out, 
+        const Node & node, 
+        unsigned first
+    ) const override;
+    bool findGap(
         unsigned * out, 
         const Node & node, 
         unsigned first
@@ -423,7 +472,7 @@ size_t VectorImpl::size(const Node & node) const {
 }
 
 //===========================================================================
-bool VectorImpl::lowerBound(
+bool VectorImpl::findFirst(
     unsigned * out, 
     const Node & node,
     unsigned first
@@ -433,6 +482,30 @@ bool VectorImpl::lowerBound(
     auto ptr = lower_bound(node.values, last, first);
     if (ptr != last) {
         *out = *ptr;
+        return true;
+    }
+    return false;
+}
+
+//===========================================================================
+bool VectorImpl::findGap(
+    unsigned * out, 
+    const Node & node,
+    unsigned first
+) const {
+    assert(relBase(first, node.depth) == node.base);
+    auto last = node.values + node.numValues;
+    auto ptr = lower_bound(node.values, last, first);
+    while (ptr != last) {
+        if (*ptr != first) {
+            *out = first;
+            return true;
+        }
+        first += 1;
+        ptr += 1;
+    }
+    if (first <= absBase(node) + valueMask(node.depth)) {
+        *out = first;
         return true;
     }
     return false;
@@ -477,7 +550,12 @@ struct BitmapImpl final : IImplBase {
     void erase(Node & node, unsigned value) override;
 
     size_t size(const Node & node) const override;
-    bool lowerBound(
+    bool findFirst(
+        unsigned * out, 
+        const Node & node, 
+        unsigned first
+    ) const override;
+    bool findGap(
         unsigned * out, 
         const Node & node, 
         unsigned first
@@ -574,7 +652,7 @@ size_t BitmapImpl::size(const Node & node) const {
 }
 
 //===========================================================================
-bool BitmapImpl::lowerBound(
+bool BitmapImpl::findFirst(
     unsigned * out, 
     const Node & node,
     unsigned first
@@ -585,6 +663,23 @@ bool BitmapImpl::lowerBound(
     assert(rel < numBits());
     int pos;
     if (!findBit(&pos, base, numInts(), rel)) 
+        return false;
+    *out = pos + (node.base << 8);
+    return true;
+}
+
+//===========================================================================
+bool BitmapImpl::findGap(
+    unsigned * out, 
+    const Node & node,
+    unsigned first
+) const {
+    assert(relBase(first, node.depth) == node.base);
+    auto base = (uint64_t *) node.values;
+    auto rel = relValue(first, node.depth);
+    assert(rel < numBits());
+    int pos;
+    if (!findZeroBit(&pos, base, numInts(), rel)) 
         return false;
     *out = pos + (node.base << 8);
     return true;
@@ -615,7 +710,12 @@ struct MetaImpl final : IImplBase {
     void erase(Node & node, unsigned value) override;
 
     size_t size(const Node & node) const override;
-    bool lowerBound(
+    bool findFirst(
+        unsigned * out, 
+        const Node & node, 
+        unsigned first
+    ) const override;
+    bool findGap(
         unsigned * out, 
         const Node & node, 
         unsigned first
@@ -725,7 +825,7 @@ size_t MetaImpl::size(const Node & node) const {
 }
 
 //===========================================================================
-bool MetaImpl::lowerBound(
+bool MetaImpl::findFirst(
     unsigned * out, 
     const Node & node,
     unsigned first
@@ -733,11 +833,31 @@ bool MetaImpl::lowerBound(
     auto pos = nodePos(node, first);
     auto ptr = node.nodes + pos;
     auto last = node.nodes + node.numValues;
-    for (; ptr != last; ++ptr) {
-        if (impl(*ptr)->lowerBound(out, *ptr, first))
+    for (;;) {
+        if (impl(*ptr)->findFirst(out, *ptr, first))
             return true;
+        if (++ptr == last)
+            return false;
+        first = absBase(*ptr);
     }
-    return false;
+}
+
+//===========================================================================
+bool MetaImpl::findGap(
+    unsigned * out, 
+    const Node & node,
+    unsigned first
+) const {
+    auto pos = nodePos(node, first);
+    auto ptr = node.nodes + pos;
+    auto last = node.nodes + node.numValues;
+    for (;;) {
+        if (impl(*ptr)->findGap(out, *ptr, first))
+            return true;
+        if (++ptr == last)
+            return false;
+        first = absBase(*ptr);
+    }
 }
 
 
@@ -1054,7 +1174,7 @@ static void eraFind(Node & left, const Node & right) {
             *out++ = *li;
             continue;
         }
-        if (!ptr->lowerBound(&val, right, *li)) {
+        if (!ptr->findFirst(&val, right, *li)) {
             do {
                 *out++ = *li++;
             } while (li != le);
@@ -1164,7 +1284,7 @@ static void isecFind(Node & left, const Node & right) {
     for (; li != le; ++li) {
         if (*li < val) 
             continue;
-        if (!ptr->lowerBound(&val, right, *li))
+        if (!ptr->findFirst(&val, right, *li))
             break;
         if (val == *li)
             *out++ = *li;
@@ -1359,23 +1479,13 @@ UnsignedSet & UnsignedSet::operator=(const UnsignedSet & from) {
 }
 
 //===========================================================================
-auto UnsignedSet::begin() -> iterator {
-    return {&m_node};
+UnsignedSet::iterator UnsignedSet::begin() const {
+    return {&m_node, 0};
 }
 
 //===========================================================================
-auto UnsignedSet::end() -> iterator {
+UnsignedSet::iterator UnsignedSet::end() const {
     return {};
-}
-
-//===========================================================================
-auto UnsignedSet::begin() const -> const_iterator {
-    return const_cast<UnsignedSet*>(this)->begin();
-}
-
-//===========================================================================
-auto UnsignedSet::end() const -> const_iterator {
-    return const_cast<UnsignedSet*>(this)->end();
 }
 
 //===========================================================================
@@ -1385,7 +1495,7 @@ UnsignedSet::NodeRange UnsignedSet::nodes() const {
 
 //===========================================================================
 UnsignedSet::RangeRange UnsignedSet::ranges() const {
-    return {&m_node};
+    return {{&m_node, 0}};
 }
 
 //===========================================================================
@@ -1479,13 +1589,13 @@ int UnsignedSet::compare(const UnsignedSet & right) const {
 
 //===========================================================================
 bool UnsignedSet::includes(const UnsignedSet & other) const {
-    assert(0 && "not implemented");
+    assert(!"not implemented");
     return false;
 }
 
 //===========================================================================
 bool UnsignedSet::intersects(const UnsignedSet & other) const {
-    assert(0 && "not implemented");
+    assert(!"not implemented");
     return false;
 }
 
@@ -1525,18 +1635,13 @@ size_t UnsignedSet::count(unsigned val) const {
 }
 
 //===========================================================================
-auto UnsignedSet::find(unsigned val) -> iterator {
-    auto first = iterator{&m_node, val};
+auto UnsignedSet::find(unsigned val) const -> iterator {
+    auto first = lowerBound(val);
     return first && *first == val ? first : iterator{};
 }
 
 //===========================================================================
-auto UnsignedSet::find(unsigned val) const -> const_iterator {
-    return const_cast<UnsignedSet*>(this)->find(val);
-}
-
-//===========================================================================
-auto UnsignedSet::equalRange(unsigned val) -> std::pair<iterator, iterator> {
+auto UnsignedSet::equalRange(unsigned val) const -> pair<iterator, iterator> {
     auto first = lowerBound(val);
     auto last = first;
     if (last && *last == val)
@@ -1545,31 +1650,19 @@ auto UnsignedSet::equalRange(unsigned val) -> std::pair<iterator, iterator> {
 }
 
 //===========================================================================
-auto UnsignedSet::equalRange(unsigned val) const 
-    -> std::pair<const_iterator, const_iterator> 
-{
-    return const_cast<UnsignedSet*>(this)->equalRange(val);
-}
-
-//===========================================================================
-auto UnsignedSet::lowerBound(unsigned val) -> iterator {
+auto UnsignedSet::lowerBound(unsigned val) const -> iterator {
     return {&m_node, val};
 }
 
 //===========================================================================
-auto UnsignedSet::lowerBound(unsigned val) const -> const_iterator {
-    return const_cast<UnsignedSet*>(this)->lowerBound(val);
-}
-
-//===========================================================================
-auto UnsignedSet::upperBound(unsigned val) -> iterator {
+auto UnsignedSet::upperBound(unsigned val) const -> iterator {
     val += 1;
-    return val ? iterator{&m_node, val} : iterator{};
+    return val ? lowerBound(val) : iterator{};
 }
 
 //===========================================================================
-auto UnsignedSet::upperBound(unsigned val) const -> const_iterator {
-    return const_cast<UnsignedSet*>(this)->upperBound(val);
+auto UnsignedSet::lastContiguous(iterator where) const -> iterator {
+    return where.lastContiguous();
 }
 
 //===========================================================================
@@ -1602,22 +1695,32 @@ bool UnsignedSet::NodeIterator::operator!= (
 }
 
 //===========================================================================
-UnsignedSet::NodeIterator & UnsignedSet::NodeIterator::operator++() {
-    assert(m_node->type != kMetaEnd);
+static const UnsignedSet::Node * nextNot(
+    const UnsignedSet::Node * node, 
+    NodeType notType
+) {
+    assert(node->type != kMetaEnd);
     for (;;) {
-        if (!m_node->depth) {
-            m_node = nullptr;
-        } else {
-            do {
-                m_node += 1;
-            } while (m_node->type == kEmpty);
-            if (m_node->type == kMetaEnd) {
-                m_node = m_node->nodes;
-                continue;
-            }
-        }
-        return *this;
+        if (!node->depth)
+            return nullptr;
+        do {
+            node += 1;
+        } while ((NodeType) node->type == notType);
+        if (node->type != kMetaEnd) 
+            return node;
+        node = node->nodes;
     }
+}
+
+//===========================================================================
+UnsignedSet::NodeIterator & UnsignedSet::NodeIterator::operator++() {
+    m_node = nextNot(m_node, kEmpty);
+    return *this;
+}
+
+//===========================================================================
+UnsignedSet::NodeIterator UnsignedSet::NodeIterator::nextNotFull() const {
+    return nextNot(m_node, kFull);
 }
 
 
@@ -1632,7 +1735,7 @@ UnsignedSet::Iterator::Iterator(const Node * node, value_type value)
     : m_node(node)
 {
     if (m_node)
-        impl(*m_node)->lowerBound(&m_value, *m_node, value);
+        impl(*m_node)->findFirst(&m_value, *m_node, value);
 }
 
 //===========================================================================
@@ -1643,16 +1746,37 @@ bool UnsignedSet::Iterator::operator!= (const Iterator & right) const {
 //===========================================================================
 UnsignedSet::Iterator & UnsignedSet::Iterator::operator++() {
     m_value += 1;
-    if (m_value && impl(*m_node)->lowerBound(&m_value, *m_node, m_value))
+    if (m_value && impl(*m_node)->findFirst(&m_value, *m_node, m_value))
         return *this;
 
     for (;;) {
         ++m_node;
-        if (!m_node || impl(*m_node)->lowerBound(&m_value, *m_node, 0)) {
+        if (!m_node) {
             m_value = 0;
             return *this;
         }
+        if (impl(*m_node)->findFirst(&m_value, *m_node, 0))
+            return *this;
     }
+}
+
+//===========================================================================
+UnsignedSet::Iterator UnsignedSet::Iterator::lastContiguous() const {
+    auto node = m_node;
+    auto value = m_value;
+    if (!impl(*node)->findGap(&value, *node, value)) {
+        for (;;) {
+            node = node.nextNotFull();
+            if (!node)
+                return *this;
+            if (impl(*node)->findGap(&value, *node, 0)) 
+                break;
+        }
+    }
+    Iterator out;
+    out.m_node = node;
+    out.m_value = value - 1;
+    return out;
 }
 
 
@@ -1685,9 +1809,10 @@ UnsignedSet::RangeIterator & UnsignedSet::RangeIterator::operator++() {
     if (!m_iter) {
         m_value = kEndValue;
     } else {
-        m_value.first = m_value.second = *m_iter;
-        while (++m_iter && *m_iter == m_value.second + 1) 
-            m_value.second += 1;
+        m_value.first = *m_iter;
+        m_iter = m_iter.lastContiguous();
+        m_value.second = *m_iter;
+        ++m_iter;
     }
     return *this;
 }

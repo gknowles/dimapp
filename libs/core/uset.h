@@ -33,7 +33,6 @@ public:
     using reference = value_type&;
     using const_reference = const value_type&;
     using iterator = Iterator;
-    using const_iterator = Iterator;
     using difference_type = ptrdiff_t;
     using size_type = size_t;
 
@@ -62,10 +61,8 @@ public:
     UnsignedSet & operator=(const UnsignedSet & from);
 
     // iterators
-    iterator begin();
-    iterator end();
-    const_iterator begin() const;
-    const_iterator end() const;
+    iterator begin() const;
+    iterator end() const;
 
     RangeRange ranges() const;
     NodeRange nodes() const;
@@ -103,14 +100,11 @@ public:
     // search
     size_t count(unsigned val) const;
 
-    iterator find(unsigned val);
-    const_iterator find(unsigned val) const;
-    std::pair<iterator, iterator> equalRange(unsigned val);
-    std::pair<const_iterator, const_iterator> equalRange(unsigned val) const;
-    iterator lowerBound(unsigned val);
-    const_iterator lowerBound(unsigned val) const;
-    iterator upperBound(unsigned val);
-    const_iterator upperBound(unsigned val) const;
+    iterator find(unsigned val) const;
+    std::pair<iterator, iterator> equalRange(unsigned val) const;
+    iterator lowerBound(unsigned val) const;
+    iterator upperBound(unsigned val) const;
+    iterator lastContiguous(iterator where) const;
 
 private:
     void iInsert(const unsigned * first, const unsigned * last);
@@ -164,12 +158,15 @@ public:
     using reference = value_type&;
 public:
     NodeIterator() {}
+    NodeIterator(const NodeIterator & from) = default;
     NodeIterator(const Node * node);
     NodeIterator & operator++();
     explicit operator bool() const { return m_node; }
     bool operator!= (const NodeIterator & right) const;
     const Node & operator*() const { return *m_node; }
     const Node * operator->() const { return m_node; }
+
+    NodeIterator nextNotFull() const;
 private:
     const Node * m_node{nullptr};
 };
@@ -199,16 +196,19 @@ public:
     using iterator_category = std::input_iterator_tag;
     using value_type = UnsignedSet::value_type;
     using difference_type = UnsignedSet::difference_type;
-    using pointer = value_type*;
-    using reference = value_type&;
+    using pointer = const value_type*;
+    using reference = value_type;
 public:
     Iterator() {}
-    Iterator(const Node * node, value_type value = 0);
+    Iterator(const Iterator & from) = default;
+    Iterator(const Node * node, value_type value);
     Iterator & operator++();
-    explicit operator bool() const { return !!m_node; }
+    explicit operator bool() const { return (bool) m_node; }
     bool operator!= (const Iterator & right) const;
-    unsigned operator*() const { return m_value; }
-    const unsigned * operator->() const { return &m_value; }
+    value_type operator*() const { return m_value; }
+    const value_type * operator->() const { return &m_value; }
+
+    Iterator lastContiguous() const;
 private:
     NodeIterator m_node;
     value_type m_value{0};
@@ -227,11 +227,12 @@ public:
     using value_type = 
         std::pair<UnsignedSet::value_type, UnsignedSet::value_type>;
     using difference_type = ptrdiff_t;
-    using pointer = value_type*;
-    using reference = value_type&;
+    using pointer = const value_type*;
+    using reference = const value_type&;
 public:
     RangeIterator() {}
-    RangeIterator(const Node * node, UnsignedSet::value_type value = 0);
+    RangeIterator(const RangeIterator & from) = default;
+    RangeIterator(const Node * node, UnsignedSet::value_type value);
     RangeIterator & operator++();
     explicit operator bool() const { return m_value != kEndValue; }
     bool operator!= (const RangeIterator & right) const;

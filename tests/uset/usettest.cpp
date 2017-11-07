@@ -43,6 +43,10 @@ static void app(int argc, char *argv[]) {
     tmp.insert(3);
     v.assign(tmp.begin(), tmp.end());
     EXPECT(v == vector<unsigned>{{3, 5}});
+    auto r = tmp.ranges();
+    vector<pair<unsigned,unsigned>> vr(r.begin(), r.end());
+    EXPECT(vr == vector<pair<unsigned,unsigned>>{{3,3},{5,5}});
+
     UnsignedSet tmp2;
     tmp2.insert(5);
     tmp.intersect(tmp2);
@@ -57,6 +61,9 @@ static void app(int argc, char *argv[]) {
     EXPECT(tmp.size() == 128);
     tmp.insert(64);
     EXPECT(tmp.size() == 129);
+    r = tmp.ranges();
+    vr.assign(r.begin(), r.end());
+    EXPECT(vr == vector<pair<unsigned,unsigned>>{{0,64},{4096,4159}});
 
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);
