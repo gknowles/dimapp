@@ -42,10 +42,14 @@ namespace File {
         // and a multiple of page size.
         fAligned = 0x2000,
 
+        // Optimize for random or sequential access
+        fRandom = 0x4000,
+        fSequential = 0x8000,
+
         // INTERNAL USE ONLY
         // Underlying native file handle is externally owned, and will be 
         // left open when the file is closed.
-        fNonOwning = 0x4000,
+        fNonOwning = 0x10000,
 
         fInternalFlags = fNonOwning,
     };

@@ -483,6 +483,10 @@ FileHandle Dim::fileOpen(string_view path, File::OpenMode mode) {
         flagsAndAttrs |= FILE_FLAG_OVERLAPPED;
     if (mode & om::fAligned)
         flagsAndAttrs |= FILE_FLAG_NO_BUFFERING;
+    if (mode & om::fRandom)
+        flagsAndAttrs |= FILE_FLAG_RANDOM_ACCESS;
+    if (mode & om::fSequential)
+        flagsAndAttrs |= FILE_FLAG_SEQUENTIAL_SCAN;
 
     file->m_handle = CreateFileW(
         toWstring(file->m_path).c_str(),
@@ -840,6 +844,7 @@ static bool openView(
 
     WinError err{0};
     HANDLE sec;
+    LARGE_INTEGER secSize;
     SIZE_T viewSize;
     ULONG access, secProt, allocType, pageProt;
 
@@ -849,6 +854,7 @@ static bool openView(
             // read only view
             access = SECTION_MAP_READ;
             secProt = PAGE_READONLY;
+            secSize.QuadPart = 0;
             viewSize = length;
             allocType = 0;
             pageProt = PAGE_READONLY;
@@ -858,6 +864,7 @@ static bool openView(
             // read only but extendable
             access = SECTION_MAP_READ;
             secProt = PAGE_READWRITE;
+            secSize.QuadPart = offset + max(pageSize, (size_t) length);
             viewSize = maxLength;
             allocType = MEM_RESERVE;
             pageProt = PAGE_READONLY;
@@ -869,6 +876,7 @@ static bool openView(
             // writable view
             access = SECTION_MAP_READ | SECTION_MAP_WRITE;
             secProt = PAGE_READWRITE;
+            secSize.QuadPart = 0;
             viewSize = length;
             allocType = 0;
             pageProt = PAGE_READWRITE;
@@ -877,19 +885,18 @@ static bool openView(
             // fully writable and extendable view
             access = SECTION_MAP_READ | SECTION_MAP_WRITE;
             secProt = PAGE_READWRITE;
+            secSize.QuadPart = offset + max(pageSize, (size_t) length);
             viewSize = maxLength;
             allocType = MEM_RESERVE;
             pageProt = PAGE_READWRITE;
         }
     }
     
-    LARGE_INTEGER sectionMax;
-    sectionMax.QuadPart = offset + pageSize;
     err = (WinError::NtStatus) s_NtCreateSection(
         &sec,
         access,
         nullptr,        // object attributes
-        &sectionMax,    // maximum size
+        &secSize,
         secProt,
         SEC_RESERVE,
         file->m_handle
