@@ -315,6 +315,9 @@ static bool findFactory(
                 [[fallthrough]];
             case AppSocket::kUnsupported:
                 continue;
+            case AppSocket::kSupported:
+            case AppSocket::kPreferred:
+                break;
             }
 
             // it's at least kSupported, possibly kPreferred

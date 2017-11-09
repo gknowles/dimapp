@@ -26,18 +26,17 @@ struct CleanupInfo {
         : notify(notify) {}
 };
 
-enum ETimerMode {
-    MAIN_STOP,
-    CLIENT_STOP,
-    SERVER_STOP,
-    CONSOLE_STOP,
-    FINALIZE,
-    DONE
-};
-
 class MainTimer : public ITimerNotify {
 public:
     typedef void (IShutdownNotify::*StopFn)(bool firstTry);
+    enum TimerMode {
+        kMainStop,
+        kClientStop,
+        kServerStop,
+        kConsoleStop,
+        kFinalize,
+        kDone,
+    };
 
 public:
     bool stopped() const;
@@ -50,7 +49,7 @@ public:
 private:
     bool stop(StopFn notify, bool retry);
 
-    ETimerMode m_mode{MAIN_STOP};
+    TimerMode m_mode{kMainStop};
     TimePoint m_shutdownStart;
     bool m_firstTry{true};
     bool m_incomplete{false};
@@ -86,23 +85,25 @@ static bool s_disableTimeout{false};
 Duration MainTimer::onTimer(TimePoint now) {
     bool next = true;
     switch (m_mode) {
-    case MAIN_STOP:
+    case kMainStop:
         m_shutdownStart = now;
         break;
-    case CLIENT_STOP:
+    case kClientStop:
         next = stop(&IShutdownNotify::onShutdownClient, m_firstTry);
         break;
-    case SERVER_STOP:
+    case kServerStop:
         next = stop(&IShutdownNotify::onShutdownServer, m_firstTry);
         break;
-    case CONSOLE_STOP:
+    case kConsoleStop:
         next = stop(&IShutdownNotify::onShutdownConsole, m_firstTry);
         break;
-    case FINALIZE:
+    case kFinalize:
         s_cleaners.clear();
-        m_mode = DONE;
+        m_mode = kDone;
         s_stopCv.notify_one();
         return kTimerInfinite;
+    case kDone:
+        break;
     }
 
     // some delay when rerunning the same step (i.e. QueryDestroy failed)
@@ -111,14 +112,14 @@ Duration MainTimer::onTimer(TimePoint now) {
         return 10ms;
     }
 
-    m_mode = ETimerMode(m_mode + 1);
+    m_mode = TimerMode(m_mode + 1);
     m_firstTry = true;
     return 0ms;
 }
 
 //===========================================================================
 bool MainTimer::stopped() const {
-    return m_mode == DONE;
+    return m_mode == kDone;
 }
 
 //===========================================================================

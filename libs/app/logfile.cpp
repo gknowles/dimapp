@@ -157,6 +157,7 @@ void Logger::onLog(LogType type, string_view msg) {
     case kLogTypeError: pri += 3; break;
     case kLogTypeInfo: pri += 6; break;
     case kLogTypeDebug: pri += 7; break;
+    default: break;
     }
     TimePoint now = Clock::now();
     int tzMinutes = timeZoneMinutes(now);

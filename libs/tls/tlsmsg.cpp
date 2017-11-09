@@ -296,7 +296,8 @@ static bool parseExt(
     TlsClientHelloMsg * msg,
     TlsRecordReader & in,
     TlsExtensionType type,
-    size_t extLen) {
+    size_t extLen
+) {
     switch (type) {
     case kServerName: return parseSni(&msg->hostName, in, extLen);
     case kSupportedGroups: return parseGroups(&msg->groups, in, extLen);
@@ -304,9 +305,10 @@ static bool parseExt(
     case kKeyShare: return parseKeyShares(&msg->groups, in, extLen);
     case kDraftVersion:
         return parseDraftVersion(&msg->draftVersion, in, extLen);
+    default:
+        in.skip(extLen);
+        return true;
     }
-    in.skip(extLen);
-    return true;
 }
 
 //===========================================================================
@@ -314,13 +316,15 @@ static bool parseExt(
     TlsServerHelloMsg * msg,
     TlsRecordReader & in,
     TlsExtensionType type,
-    size_t extLen) {
+    size_t extLen
+) {
     switch (type) {
     case kDraftVersion:
         return parseDraftVersion(&msg->draftVersion, in, extLen);
+    default:
+        in.skip(extLen);
+        return true;
     }
-    in.skip(extLen);
-    return true;
 }
 
 //===========================================================================

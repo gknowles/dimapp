@@ -351,6 +351,9 @@ static void addPositions(
             }
         }
         break;
+    case Element::kTerminal:
+        // already handled in if-test above
+        assert(0);
     }
 
     if (rule.m == 0)

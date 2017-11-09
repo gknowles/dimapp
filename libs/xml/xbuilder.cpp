@@ -265,6 +265,8 @@ template <bool isContent> void IXBuilder::addText(
         case kTextTypeInvalid: 
             m_state = kStateFail; 
             return;
+        default:
+            assert(!"invalid XML text type enum value");
         }
 
         addRaw(base, val - base);

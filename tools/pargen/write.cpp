@@ -56,6 +56,8 @@ ostream & operator<<(ostream & os, const StateEvent & sv) {
     case Element::fOnEndW: os << "EndW"; break;
     case Element::fOnStart: os << "Start"; break;
     case Element::fOnStartW: os << "StartW"; break;
+    default: 
+        assert(0);
     }
     if (sv.distance > 0)
         os << "(-" << sv.distance << ")";
@@ -328,7 +330,11 @@ static void writeEventCallback(
     case Element::fOnEnd: os << "End("; break;
     case Element::fOnEndW: os << "End(" << (args ? args : "ptr"); break;
     case Element::fOnStart: os << "Start("; break;
-    case Element::fOnStartW: os << "Start(" << (args ? args : "ptr - 1"); break;
+    case Element::fOnStartW: 
+        os << "Start(" << (args ? args : "ptr - 1"); 
+        break;
+    default: 
+        assert(0);
     }
     os << "))\n";
     os << prefix << "    goto state0;\n";
@@ -340,9 +346,16 @@ static void writeEventCallback(ostream & os, const StateEvent & sv) {
     if (sv.distance) {
         oargs << "ptr";
         switch (sv.flags) {
-        case Element::fOnCharW: oargs << "[-"s << sv.distance + 1 << ']'; break;
+        case Element::fOnChar: break;
+        case Element::fOnCharW: 
+            oargs << "[-"s << sv.distance + 1 << ']'; 
+            break;
+        case Element::fOnEnd: break;
         case Element::fOnEndW: oargs << " - " << sv.distance; break;
+        case Element::fOnStart: break;
         case Element::fOnStartW: oargs << " - " << sv.distance + 1; break;
+        default:
+            assert(0);
         }
     }
     auto args = oargs.str();

@@ -309,6 +309,9 @@ static bool copyRequiredDeps(
     case Element::kRule:
         if (!copyRules(out, src, root.value, false))
             return false;
+        break;
+    case Element::kTerminal:
+        break;
     }
     return true;
 }
@@ -545,6 +548,7 @@ static void normalize(
     case Element::kChoice: normalizeChoice(rule); break;
     case Element::kSequence: normalizeSequence(rule); break;
     case Element::kRule: normalizeRule(rule, rules); break;
+    case Element::kTerminal: break;
     }
 }
 
@@ -586,6 +590,9 @@ static void addFunctionTags(
         used[rule.rule->id] = true;
         addFunctionTags(rules, const_cast<Element &>(*rule.rule), used);
         used[rule.rule->id] = wasUsed;
+        break;
+    case Element::kTerminal:
+        break;
     }
 }
 

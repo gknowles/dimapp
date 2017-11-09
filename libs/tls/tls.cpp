@@ -109,6 +109,16 @@ void TlsConnBase::onTlsHandshake(
     switch (type) {
     case kClientHello: return handshake<TlsClientHelloMsg>(in);
     case kServerHello: return handshake<TlsServerHelloMsg>(in);
+    case kSessionTicket:
+    case kHelloRetryRequest:
+    case kEncryptedExtensions:
+    case kCertificate:
+    case kCertificateRequest:
+    case kCertificateVerify:
+    case kServerConfiguration:
+    case kFinished:
+    case kKeyUpdate:
+        assert(0);
     };
 }
 
