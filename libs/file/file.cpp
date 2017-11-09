@@ -104,8 +104,8 @@ public:
 
 //===========================================================================
 FileLoadNotify::FileLoadNotify(string & out, IFileReadNotify * notify)
-    : m_out(out)
-    , m_notify(notify) 
+    : m_notify(notify) 
+    , m_out(out)
 {}
 
 //===========================================================================

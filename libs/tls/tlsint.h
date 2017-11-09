@@ -128,7 +128,7 @@ private:
 
 class TlsRecordWriter {
 public:
-    TlsRecordWriter(TlsConnBase & conn, CharBuf * out);
+    TlsRecordWriter(CharBuf * out, TlsConnBase & conn);
     ~TlsRecordWriter();
 
     void contentType(TlsContentType type);
@@ -183,6 +183,7 @@ private:
     int m_count;
 };
 
+//===========================================================================
 template <typename T> inline T TlsRecordReader::number() {
     if constexpr (sizeof(T) == 1) {
         return (T)number();

@@ -129,9 +129,10 @@ void TlsConnBase::onTlsHandshake(const TlsHelloRetryRequestMsg & msg) {}
 ***/
 
 //===========================================================================
-TlsRecordWriter::TlsRecordWriter(TlsConnBase & conn, CharBuf * out)
-    : m_rec(conn.m_encrypt)
-    , m_out(out) {}
+TlsRecordWriter::TlsRecordWriter(CharBuf * out, TlsConnBase & conn)
+    : m_out(out) 
+    , m_rec(conn.m_encrypt)
+{}
 
 //===========================================================================
 TlsRecordWriter::~TlsRecordWriter() {
@@ -332,7 +333,7 @@ ClientConn::ClientConn(
 
 //===========================================================================
 void ClientConn::connect(CharBuf * outbuf) {
-    TlsRecordWriter out(*this, outbuf);
+    TlsRecordWriter out(outbuf, *this);
 
     TlsClientHelloMsg msg;
     msg.majorVersion = kClientVersion[0];

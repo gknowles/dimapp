@@ -360,9 +360,9 @@ enum class HttpConn::FrameMode : int {
 HttpConn::HttpConn()
     : m_byteMode{ByteMode::kPreface}
     , m_frameMode{FrameMode::kSettings}
+    , m_nextOutputStream(2) 
     , m_encoder{kDefaultHeaderTableSize}
     , m_decoder{kDefaultHeaderTableSize}
-    , m_nextOutputStream(2) 
 {}
 
 //===========================================================================

@@ -29,8 +29,8 @@ ISockMgrSocket::ISockMgrSocket(
     ISockMgrBase & mgr, 
     unique_ptr<IAppSocketNotify> notify
 )
-    : m_mgr(mgr)
-    , IAppSocket(notify.release())
+    : IAppSocket(notify.release())
+    , m_mgr(mgr)
 {}
 
 //===========================================================================

@@ -31,6 +31,8 @@
     4471 /* a forward declaration of an unscoped enumeration must have an 
             underlying type */ \
     4826 /* conversion from 'type1' to 'type2' is sign-extended */ \
+    5038 /* data member 'ident1' will be initialized after data member 
+            'ident2' */ \
 ) 
 
 #ifdef DIMAPP_LIB_DYN_LINK

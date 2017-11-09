@@ -40,9 +40,9 @@ public:
     ISocketNotify::Mode m_mode{ISocketNotify::kInactive};
 
     SOCKET m_handle{INVALID_SOCKET};
-    Endpoint m_localEnd;
     unique_ptr<AcceptSocket> m_socket;
     IFactory<ISocketNotify> * m_notify{nullptr};
+    Endpoint m_localEnd;
     char m_addrBuf[2 * sizeof sockaddr_storage];
 
     bool m_inNotify{false};

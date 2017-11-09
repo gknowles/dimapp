@@ -31,8 +31,8 @@ CharBuf::Buffer::Buffer ()
 
 //===========================================================================
 CharBuf::Buffer::Buffer (size_t reserve) 
-    : reserved{(int) reserve}
-    , data{reserve ? new char[reserve] : nullptr}
+    : data{reserve ? new char[reserve] : nullptr}
+    , reserved{(int) reserve}
 {}
 
 

@@ -552,8 +552,9 @@ const char * Dim::attrValue(
 template <typename T>
 XNodeIterator<T>::XNodeIterator(T * node, XType type, string_view name)
     : ForwardListIterator<T>(node)
+    , m_name(name)
     , m_type(type)
-    , m_name(name) {}
+{}
 
 //===========================================================================
 template <typename T> 
