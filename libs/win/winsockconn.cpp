@@ -231,9 +231,13 @@ void ConnSocket::onConnect(WinError error, int bytes) {
 
     //-----------------------------------------------------------------------
     // get local and remote addresses
-    sockaddr_storage sas = {};
 
-    // TODO: use getsockopt(SO_BSP_STATE) instead of getpeername & getsockname
+    // There doesn't seem to be a better way to get the local and remote
+    // addresses than making two calls (getpeername & getsockname):
+    //  - getsockopt(SO_BSP_STATE) returns address passed to connect as local
+    //  - Use RIOReceiveEx and wait (forever?) for data
+
+    sockaddr_storage sas = {};
 
     // address of remote node
     int sasLen = sizeof(sas);
