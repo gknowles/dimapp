@@ -634,10 +634,9 @@ SOCKET Dim::iSocketCreate() {
         logMsgError() << "WSAIoctl(SIO_LOOPBACK_FAST_PATH): " << WinError{};
     }
 
-    // Nagling isn't relevant for RIO, but we should be allowed to set it.
     if (SOCKET_ERROR == setsockopt(
         handle, 
-        SOL_SOCKET, 
+        IPPROTO_TCP, 
         TCP_NODELAY, 
         (char *) &yes, 
         sizeof(yes)
