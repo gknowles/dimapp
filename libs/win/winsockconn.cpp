@@ -15,7 +15,9 @@ using namespace Dim;
 *
 ***/
 
-const Duration kConnectTimeout{10s};
+// Set to 9 seconds to align with the default initial RTO of 3 seconds, 
+// see iSocketSetConnectTimeout() below for details.
+const Duration kConnectTimeout{9s};
 
 
 /****************************************************************************
@@ -303,6 +305,8 @@ void Dim::iSocketConnectInitialize() {
 
 //===========================================================================
 void Dim::iSocketSetConnectTimeout(SOCKET s, Duration wait) {
+    using namespace std::chrono;
+
     // Since there are up to two retransmissions and their back off is 
     // exponential the total wait time is equal to seven times the initial 
     // round trip time:
@@ -310,7 +314,7 @@ void Dim::iSocketSetConnectTimeout(SOCKET s, Duration wait) {
     // 
     // Also note that Windows clamps the RTT to [300, 3000] (in milliseconds),
     // *except* that 0 and 65535 have special meaning!
-    auto rtt = chrono::duration_cast<chrono::milliseconds>(wait).count() / 7;
+    auto rtt = duration_cast<milliseconds>(wait).count() / 7 + 1;
     rtt = clamp((size_t) rtt, (size_t) 1, (size_t) 65534);
 
     TCP_INITIAL_RTO_PARAMETERS params[2] = {};
@@ -327,6 +331,22 @@ void Dim::iSocketSetConnectTimeout(SOCKET s, Duration wait) {
         nullptr     // completion routine
     )) {
         logMsgError() << "WSAIoctl(SIO_TCP_INITIAL_RTO): " << WinError{};
+    }
+
+    // Also set the connection timeout since:
+    //  - SIO_TCP_INITIAL_RTO is only supported since Windows 8 and TCP_MAXRT
+    //    is available since Windows Vista.
+    //  - The RTT can be overridden at the system level, in a way we can't
+    //    detect, potentially making the above call into something silly.
+    DWORD val = (DWORD) duration_cast<seconds>(wait).count();
+    if (SOCKET_ERROR == setsockopt(
+        s, 
+        IPPROTO_TCP, 
+        TCP_MAXRT, 
+        (char *) &val, 
+        sizeof(val)
+    )) {
+        logMsgError() << "setsockopt(TCP_MAXRT): " << WinError{};
     }
 }
 
