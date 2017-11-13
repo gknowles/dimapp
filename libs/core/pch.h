@@ -17,6 +17,7 @@
 #include <limits>
 #include <memory>
 #include <mutex>
+#include <numeric>
 #include <queue>
 #include <random>
 #include <shared_mutex>

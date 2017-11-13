@@ -672,12 +672,9 @@ void BitmapImpl::erase(Node & node, unsigned value) {
 
 //===========================================================================
 size_t BitmapImpl::size(const Node & node) const {
-    size_t num = 0;
-    auto ptr = (uint64_t *) node.values;
-    auto last = ptr + numInt64s();
-    for (; ptr != last; ++ptr) 
-        num += hammingWeight(*ptr);
-    return num;
+    auto base = (uint64_t *) node.values;
+    BitView bits{base, numInt64s()};
+    return bits.count();
 }
 
 //===========================================================================
@@ -691,10 +688,10 @@ bool BitmapImpl::findFirst(
     auto base = (uint64_t *) node.values;
     auto rel = relValue(first, node.depth);
     assert(rel < numBits());
-    int pos;
-    if (findBit(&pos, base, numInt64s(), rel)) {
+    BitView bits{base, numInt64s()};
+    if (auto pos = bits.find(rel); pos != bits.npos) {
         *onode = &node;
-        *ovalue = pos + absBase(node);
+        *ovalue = (unsigned) pos + absBase(node);
         return true;
     }
     return false;
@@ -711,17 +708,17 @@ bool BitmapImpl::lastContiguous(
     auto base = (uint64_t *) node.values;
     auto rel = relValue(first, node.depth);
     assert(rel < numBits());
-    int pos;
-    if (!findZeroBit(&pos, base, numInt64s(), rel)) {
-        *onode = &node;
-        *ovalue = absBase(node) + valueMask(node.depth);
-        return false;
+    BitView bits{base, numInt64s()};
+    if (auto pos = bits.findZero(rel); pos != bits.npos) {
+        if (auto val = (unsigned) pos + absBase(node); val != first) {
+            *onode = &node;
+            *ovalue = val - 1;
+        }
+        return true;
     }
-    if (unsigned val = pos + absBase(node); val != first) {
-        *onode = &node;
-        *ovalue = val - 1;
-    }
-    return true;
+    *onode = &node;
+    *ovalue = absBase(node) + valueMask(node.depth);
+    return false;
 }
 
 

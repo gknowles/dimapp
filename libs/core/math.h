@@ -49,67 +49,32 @@ constexpr int trailingZeroBits(uint64_t val) {
         25, 39, 14, 33, 19, 30,  9, 24,
         13, 18,  8, 12,  7,  6,  5, 63,
     };
+    assert(val != 0);
     return kTable[((val ^ (val - 1)) * 0x3f79d71b4cb0a89) >> 58];
 }
 
 //===========================================================================
-// Find 1 bit in array of unsigned integrals.
-// Returns true and position of bit, or false if no 1's are found.
-constexpr bool findBit(
-    int * out, 
-    const uint64_t arr[], 
-    size_t arrlen, 
-    int bitpos = 0
-) {
-    const int kIntBits = sizeof(*arr) * 8;
-    int pos = bitpos / kIntBits;
-    if (pos >= arrlen)
-        return false;
-    auto ptr = arr + pos;
-    auto val = *ptr & 
-        (std::numeric_limits<uint64_t>::max() << bitpos % kIntBits);
-    if (val) {
-        *out = pos * kIntBits + trailingZeroBits(val);
-        return true;
-    }
-    auto last = arr + arrlen;
-    while (++ptr != last) {
-        if (val = *ptr; val) {
-            *out = int(ptr - arr) * kIntBits + trailingZeroBits(val);
-            return true;
-        }
-    }
-    return false;
-}
-
-//===========================================================================
-// Find 0 bit in array of unsigned integrals.
-// Returns true and position of bit, or false if no 0's are found.
-constexpr bool findZeroBit(
-    int * out, 
-    const uint64_t arr[], 
-    size_t arrlen, 
-    int bitpos = 0
-) {
-    const int kIntBits = sizeof(*arr) * 8;
-    int pos = bitpos / kIntBits;
-    if (pos >= arrlen)
-        return false;
-    auto ptr = arr + pos;
-    auto val = ~*ptr & 
-        (std::numeric_limits<uint64_t>::max() << bitpos % kIntBits);
-    if (val) {
-        *out = pos * kIntBits + trailingZeroBits(val);
-        return true;
-    }
-    auto last = arr + arrlen;
-    while (++ptr != last) {
-        if (val = ~*ptr; val) {
-            *out = int(ptr - arr) * kIntBits + trailingZeroBits(val);
-            return true;
-        }
-    }
-    return false;
+// Taken from "MS1B separation" as shown at:
+// http://chessprogramming.wikispaces.com/BitScan
+constexpr int leadingZeroBits(uint64_t val) {
+    const int kTable[] = {
+         0, 47,  1, 56, 48, 27,  2, 60,
+        57, 49, 41, 37, 28, 16,  3, 61,
+        54, 58, 35, 52, 50, 42, 21, 44,
+        38, 32, 29, 23, 17, 11,  4, 62,
+        46, 55, 26, 59, 40, 36, 15, 53,
+        34, 51, 20, 43, 31, 22, 10, 45,
+        25, 39, 14, 33, 19, 30,  9, 24,
+        13, 18,  8, 12,  7,  6,  5, 63,
+    };
+    assert(val != 0);
+    val |= val >> 1;
+    val |= val >> 2;
+    val |= val >> 4;
+    val |= val >> 8;
+    val |= val >> 16;
+    val |= val >> 32;
+    return kTable[(val * 0x3f79d71b4cb0a89) >> 58];
 }
 
 //===========================================================================

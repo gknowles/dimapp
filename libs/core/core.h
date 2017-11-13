@@ -7,6 +7,7 @@
 #include "cppconf/cppconf.h"
 
 #include "algo.h"
+#include "bitview.h"
 #include "charbuf.h"
 #include "handle.h"
 #include "hash.h"
