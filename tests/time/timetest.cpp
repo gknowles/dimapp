@@ -46,7 +46,7 @@ static void parseTest(int line, string_view src, string_view dst) {
 
 //===========================================================================
 static void app(int argc, char *argv[]) {
-    [[maybe_unused]] int line = 0;
+    int line [[maybe_unused]] = 0;
 
     //-----------------------------------------------------------------------
     EXPECT2("1970-01-01", "1970-01-01T00:00:00.0000000Z");

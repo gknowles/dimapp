@@ -99,7 +99,7 @@ with '&amp;'">text content</value>
 </root>
 )");
     unsigned num = 0;
-    for (auto && node : nodes(root, XType::kElement)) {
+    for (auto && node [[maybe_unused]] : nodes(root, XType::kElement)) {
         assert(node.name);
         num += 1;
     }
