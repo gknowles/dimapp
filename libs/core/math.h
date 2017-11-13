@@ -6,6 +6,7 @@
 
 #include "cppconf/cppconf.h"
 
+#include <cassert>
 #include <cstdint>
 #include <limits>
 

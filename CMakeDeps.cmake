@@ -22,6 +22,8 @@
 # libs/app/webadmin.cpp
 # libs/core/algo.h
 # libs/core/appint.h
+# libs/core/bitview.cpp
+# libs/core/bitview.h
 # libs/core/charbuf.cpp
 # libs/core/charbuf.h
 # libs/core/core.h
