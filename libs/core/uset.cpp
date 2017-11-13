@@ -849,7 +849,19 @@ void MetaImpl::insert(
 void MetaImpl::erase(Node & node, unsigned value) {
     auto pos = nodePos(node, value);
     auto & rnode = node.nodes[pos];
-    return impl(rnode)->erase(rnode, value);
+    if (rnode.type == kEmpty) 
+        return;
+    impl(rnode)->erase(rnode, value);
+    if (rnode.type != kEmpty) 
+        return;
+    for (unsigned i = 0; i < node.numValues; ++i) {
+        if (node.nodes[i].type != kEmpty)
+            return;
+    }
+    // convert to empty
+    destroy(node);
+    node.type = kEmpty;
+    impl(node)->init(node, false);
 }
 
 //===========================================================================
