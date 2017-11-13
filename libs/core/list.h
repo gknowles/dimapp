@@ -36,7 +36,7 @@
 
 #include "cppconf/cppconf.h"
 
-#include "core/util.h"
+#include "core/types.h"
 
 #include <algorithm>
 

@@ -89,23 +89,4 @@ inline IFactory<Base> * getFactory() {
     return &s_factory;
 }
 
-
-/****************************************************************************
-*
-*   NoCopy base class
-*
-*   Prevents any class derived from NoCopy from being copy constructed or
-*   copy assigned.
-*
-***/
-
-class NoCopy {
-protected:
-    NoCopy() = default;
-    ~NoCopy() = default;
-
-    NoCopy(const NoCopy &) = delete;
-    NoCopy & operator=(const NoCopy &) = delete;
-};
-
 } // namespace
