@@ -167,6 +167,7 @@ size_t IFileOpBase::start(
     m_trigger = true;
     bool waiting = true;
     taskPush(s_hq, *this);
+    this_thread::yield();
     while (m_trigger == waiting) {
         WaitOnAddress(&m_trigger, &waiting, sizeof(m_trigger), INFINITE);
     }
