@@ -197,7 +197,7 @@ void HttpMsg::addHeaderRef(HttpHdr id, const char name[], const char value[]) {
             ni->m_next = next;
             break;
         }
-        if (ni->m_id == id && (id || strcmp(ni->m_name, name) == 0)) 
+        if (ni->m_id == id && (id || strcmp(ni->m_name, name) == 0))
             goto ADD_VALUE;
 
         prev = ni;
@@ -305,22 +305,22 @@ ITempHeap & HttpMsg::heap() {
 ***/
 
 //===========================================================================
-const char * HttpRequest::method() const { 
-    return headers(kHttp_Method).begin()->m_value; 
+const char * HttpRequest::method() const {
+    return headers(kHttp_Method).begin()->m_value;
 }
 
 //===========================================================================
-const char * HttpRequest::scheme() const { 
-    return headers(kHttp_Scheme).begin()->m_value; 
+const char * HttpRequest::scheme() const {
+    return headers(kHttp_Scheme).begin()->m_value;
 }
 
 //===========================================================================
-const char * HttpRequest::authority() const { 
+const char * HttpRequest::authority() const {
     return headers(kHttp_Authority).begin()->m_value;
 }
 
 //===========================================================================
-const char * HttpRequest::pathAbsolute() const { 
+const char * HttpRequest::pathAbsolute() const {
     return headers(kHttp_Path).begin()->m_value;
 }
 
@@ -339,8 +339,8 @@ bool HttpRequest::checkPseudoHeaders() const {
 ***/
 
 //===========================================================================
-int HttpResponse::status() const { 
-    auto val = headers(kHttp_Status).begin()->m_value; 
+int HttpResponse::status() const {
+    auto val = headers(kHttp_Status).begin()->m_value;
     return strToInt(val);
 }
 

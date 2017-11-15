@@ -96,7 +96,7 @@ void ConfigFile::monitor_UNLK(string_view relpath, IConfigNotify * notify) {
 //===========================================================================
 bool ConfigFile::closeWait_UNLK(IConfigNotify * notify) {
     unique_lock<mutex> lk{s_mut, adopt_lock};
-    while (s_inNotify && s_inThread != this_thread::get_id()) 
+    while (s_inNotify && s_inThread != this_thread::get_id())
         s_inCv.wait(lk);
 
     for (auto it = m_notifiers.begin(); it != m_notifiers.end(); ++it) {
@@ -133,7 +133,7 @@ void ConfigFile::onFileChange(string_view fullpath) {
     // load file
     size_t bytes = fileSize(f);
     if (bytes > kMaxConfigFileSize) {
-        logMsgError() << "File too large (" << bytes << " bytes): " 
+        logMsgError() << "File too large (" << bytes << " bytes): "
             << fullpath;
         bytes = 0;
     }
@@ -152,7 +152,7 @@ void ConfigFile::onFileChange(string_view fullpath) {
 bool ConfigFile::notify_UNLK(IConfigNotify * notify) {
     unsigned found = 0;
     unique_lock<mutex> lk{s_mut, adopt_lock};
-    while (s_inNotify && s_inThread != this_thread::get_id()) 
+    while (s_inNotify && s_inThread != this_thread::get_id())
         s_inCv.wait(lk);
 
     for (auto it = m_notifiers.begin(); it != m_notifiers.end(); ++it) {
@@ -256,7 +256,7 @@ void Dim::configCloseWait(string_view file, IConfigNotify * notify) {
 
 //===========================================================================
 void Dim::configChange(
-    string_view file, 
+    string_view file,
     IConfigNotify * notify // = nullptr
 ) {
     string path;
@@ -279,8 +279,8 @@ void Dim::configChange(
 //===========================================================================
 unsigned Dim::configUnsigned(
     const ConfigContext & context,
-    const XDocument & doc, 
-    std::string_view name, 
+    const XDocument & doc,
+    std::string_view name,
     unsigned defVal
 ) {
     auto str = configString(context, doc, name, nullptr);
@@ -290,13 +290,13 @@ unsigned Dim::configUnsigned(
 //===========================================================================
 const char * Dim::configString(
     const ConfigContext & context,
-    const XDocument & doc, 
-    std::string_view name, 
+    const XDocument & doc,
+    std::string_view name,
     const char defVal[]
 ) {
     auto val = attrValue(
-        firstChild(doc.root(), name.data()), 
-        "value", 
+        firstChild(doc.root(), name.data()),
+        "value",
         defVal
     );
     return val;
@@ -304,8 +304,8 @@ const char * Dim::configString(
 
 //===========================================================================
 unsigned Dim::configUnsigned(
-    const XDocument & doc, 
-    std::string_view name, 
+    const XDocument & doc,
+    std::string_view name,
     unsigned defVal
 ) {
     ConfigContext context;
@@ -314,8 +314,8 @@ unsigned Dim::configUnsigned(
 
 //===========================================================================
 const char * Dim::configString(
-    const XDocument & doc, 
-    std::string_view name, 
+    const XDocument & doc,
+    std::string_view name,
     const char defVal[]
 ) {
     ConfigContext context;

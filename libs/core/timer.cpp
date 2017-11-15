@@ -18,8 +18,8 @@ using namespace Dim;
 class Dim::Timer {
 public:
     static TimePoint update(
-        ITimerNotify * notify, 
-        Duration wait, 
+        ITimerNotify * notify,
+        Duration wait,
         bool onlyIfSooner
     );
     static void closeWait(ITimerNotify * notify);
@@ -70,8 +70,8 @@ static condition_variable s_modeCv; // when run mode changes to stopped
 static RunMode s_mode{kRunStopped};
 static condition_variable s_queueCv; // when wait for next timer is reduced
 static priority_queue<
-    TimerQueueNode, 
-    vector<TimerQueueNode>, 
+    TimerQueueNode,
+    vector<TimerQueueNode>,
     greater<TimerQueueNode>
 > s_timers;
 static bool s_processing; // dispatch task has been queued and isn't done
@@ -108,7 +108,7 @@ void RunTimers::onTask() {
         // find next expired timer with notifier to call
         wait = s_timers.empty() ? kTimerInfinite
                                 : s_timers.top().expiration - now;
-        if (wait > 0ms) 
+        if (wait > 0ms)
             break;
         TimerQueueNode node = s_timers.top();
         s_timers.pop();
@@ -199,7 +199,7 @@ ITimerNotify::~ITimerNotify() {
 TimerQueueNode::TimerQueueNode(shared_ptr<Timer> & timer)
     : timer{timer}
     , expiration{timer->expiration}
-    , instance{timer->instance} 
+    , instance{timer->instance}
 {}
 
 //===========================================================================
@@ -228,8 +228,8 @@ bool TimerQueueNode::operator==(const TimerQueueNode & right) const {
 //===========================================================================
 // static
 TimePoint Timer::update(
-    ITimerNotify * notify, 
-    Duration wait, 
+    ITimerNotify * notify,
+    Duration wait,
     bool onlyIfSooner
 ) {
     TimePoint now{Clock::now()};
@@ -281,7 +281,7 @@ void Timer::closeWait(ITimerNotify * notify) {
 
 //===========================================================================
 Timer::Timer(ITimerNotify * a_notify)
-    : notify(a_notify) 
+    : notify(a_notify)
 {
     assert(!notify->m_timer);
     notify->m_timer.reset(this);

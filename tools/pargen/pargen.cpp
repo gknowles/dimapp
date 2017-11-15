@@ -17,8 +17,8 @@ using namespace Dim;
 
 namespace {
 
-class LogTask 
-    : public ITaskNotify 
+class LogTask
+    : public ITaskNotify
     , public ILogNotify
 {
 public:
@@ -56,8 +56,8 @@ static TaskQueueHandle s_logQ;
 
 //===========================================================================
 static bool parseAbnf (
-    Grammar & rules, 
-    const string & src, 
+    Grammar & rules,
+    const string & src,
     bool minRules
 ) {
     AbnfParser parser(rules, minRules);
@@ -94,8 +94,8 @@ WSP     =  SP
 WSP     =/ HTAB { NoMinRules }
 )";
     bool valid [[maybe_unused]] = parseAbnf(
-        rules, 
-        coreRules, 
+        rules,
+        coreRules,
         s_cmdopts.minRules
     );
     assert(valid);
@@ -151,7 +151,7 @@ static bool internalTest () {
 //===========================================================================
 LogTask::LogTask (LogType type, string_view msg)
     : m_type(type)
-    , m_msg(msg) 
+    , m_msg(msg)
 {}
 
 //===========================================================================
@@ -191,7 +191,7 @@ static void app (int argc, char * argv[]) {
 
     Cli cli;
     // header
-    cli.header("pargen v"s + version 
+    cli.header("pargen v"s + version
         + " (" __DATE__ ") simplistic parser generator\n"
     );
     // positional arguments

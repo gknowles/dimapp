@@ -62,8 +62,8 @@ public:
 
     // asserts if precision > 7
     Time8601Str & set(
-        TimePoint time, 
-        unsigned precision = 0, 
+        TimePoint time,
+        unsigned precision = 0,
         int tzMinutes = 0
     );
 

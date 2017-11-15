@@ -113,7 +113,7 @@ template<typename H, typename T>
 HandleMapBase::Iterator<H, T>::Iterator(Node * base, Node * end)
     : node{base}
     , base{base}
-    , end{end} 
+    , end{end}
 {
     for (; node != end; ++node) {
         if (node->value)

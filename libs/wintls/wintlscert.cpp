@@ -86,8 +86,8 @@ static NCRYPT_KEY_HANDLE createKey() {
     WinError err{0};
     NCRYPT_PROV_HANDLE hProv;
     err = (SecStatus) NCryptOpenStorageProvider(
-        &hProv, 
-        MS_KEY_STORAGE_PROVIDER, 
+        &hProv,
+        MS_KEY_STORAGE_PROVIDER,
         0 // flags
     );
     if (err)
@@ -111,7 +111,7 @@ static NCRYPT_KEY_HANDLE createKey() {
 
     DWORD val = 2048;
     err = (SecStatus) NCryptSetProperty(
-        nkey, 
+        nkey,
         NCRYPT_LENGTH_PROPERTY,
         (BYTE *) &val,
         sizeof(val),
@@ -122,7 +122,7 @@ static NCRYPT_KEY_HANDLE createKey() {
 
     val = NCRYPT_ALLOW_EXPORT_FLAG | NCRYPT_ALLOW_PLAINTEXT_EXPORT_FLAG;
     err = (SecStatus) NCryptSetProperty(
-        nkey, 
+        nkey,
         NCRYPT_EXPORT_POLICY_PROPERTY,
         (BYTE *) &val,
         sizeof(val),
@@ -152,7 +152,7 @@ static void encodeObject(
         NULL,
         &out.cbData
     )) {
-        logMsgCrash() << "CryptEncodeObject(" << structType << ", NULL): " 
+        logMsgCrash() << "CryptEncodeObject(" << structType << ", NULL): "
             << WinError{};
     }
     outData.resize(out.cbData);
@@ -163,7 +163,7 @@ static void encodeObject(
         (BYTE *) outData.data(),
         &out.cbData
     )) {
-        logMsgCrash() << "CryptEncodeObject(" << structType << ", NULL): " 
+        logMsgCrash() << "CryptEncodeObject(" << structType << ", NULL): "
             << WinError{};
     }
     assert(out.cbData == outData.size());
@@ -183,12 +183,12 @@ static const CERT_CONTEXT * makeCert(string_view issuerName) {
 
     CRYPT_ALGORITHM_IDENTIFIER sigalgo = {};
     sigalgo.pszObjId = const_cast<char *>(szOID_RSA_SHA256RSA);
-    
+
     SYSTEMTIME startTime;
     SYSTEMTIME endTime;
     {
         // set startTime to 1 week ago
-        static const int64_t kStartDelta = 
+        static const int64_t kStartDelta =
             7 * 24 * 60 * 60 * kClockTicksPerSecond;
         LARGE_INTEGER tmp;
         FILETIME ft;
@@ -304,7 +304,7 @@ static bool matchHost(const CERT_CONTEXT * cert, string_view host) {
         cert,
         CERT_NAME_DNS_TYPE,
         CERT_NAME_SEARCH_ALL_NAMES_FLAG,
-        (void *) szOID_SUBJECT_ALT_NAME2, 
+        (void *) szOID_SUBJECT_ALT_NAME2,
         0, // pszName
         0 // cchName
     );
@@ -317,7 +317,7 @@ static bool matchHost(const CERT_CONTEXT * cert, string_view host) {
         cert,
         CERT_NAME_DNS_TYPE,
         CERT_NAME_SEARCH_ALL_NAMES_FLAG,
-        (void *) szOID_SUBJECT_ALT_NAME2, 
+        (void *) szOID_SUBJECT_ALT_NAME2,
         name.data(),
         (DWORD) name.size()
     );
@@ -335,7 +335,7 @@ static bool matchHost(const CERT_CONTEXT * cert, string_view host) {
 //===========================================================================
 static void getCerts(
     vector<unique_ptr<const CERT_CONTEXT>> & certs,
-    string_view host, 
+    string_view host,
     bool serviceStore
 ) {
     auto hstore = HCERTSTORE{};
@@ -362,7 +362,7 @@ static void getCerts(
     CERT_ENHKEY_USAGE eu = {};
     eu.cUsageIdentifier = (DWORD) size(oids);
     eu.rgpszUsageIdentifier = (char **) oids;
-    
+
     const CERT_CONTEXT * cert{nullptr};
     unique_ptr<const CERT_CONTEXT> selfsigned;
     unique_ptr<const CERT_CONTEXT> tmpcert;
@@ -506,18 +506,18 @@ bool CertName::parse(const char src[]) {
 string CertName::str() const {
     string name;
     DWORD len = CertNameToStr(
-        X509_ASN_ENCODING, 
-        const_cast<CERT_NAME_BLOB *>(&m_blob), 
-        CERT_SIMPLE_NAME_STR, 
-        NULL, 
+        X509_ASN_ENCODING,
+        const_cast<CERT_NAME_BLOB *>(&m_blob),
+        CERT_SIMPLE_NAME_STR,
+        NULL,
         0
     );
     name.resize(len);
     CertNameToStr(
-        X509_ASN_ENCODING, 
-        const_cast<CERT_NAME_BLOB *>(&m_blob), 
-        CERT_SIMPLE_NAME_STR, 
-        name.data(), 
+        X509_ASN_ENCODING,
+        const_cast<CERT_NAME_BLOB *>(&m_blob),
+        CERT_SIMPLE_NAME_STR,
+        name.data(),
         len
     );
     assert(len == name.size());
@@ -542,7 +542,7 @@ unique_ptr<CredHandle> Dim::iWinTlsCreateCred() {
     vector<const CERT_CONTEXT *> ptrs;
     SCHANNEL_CRED cred = {};
     cred.dwVersion = SCHANNEL_CRED_VERSION;
-    cred.dwFlags = SCH_CRED_NO_SYSTEM_MAPPER 
+    cred.dwFlags = SCH_CRED_NO_SYSTEM_MAPPER
         | SCH_USE_STRONG_CRYPTO;
     if (!certs.empty()) {
         for (auto && cert : certs)

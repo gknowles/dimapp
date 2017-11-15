@@ -26,7 +26,7 @@ static HandleMap<SockMgrHandle, ISockMgrBase> s_mgrs;
 
 //===========================================================================
 ISockMgrSocket::ISockMgrSocket(
-    ISockMgrBase & mgr, 
+    ISockMgrBase & mgr,
     unique_ptr<IAppSocketNotify> notify
 )
     : IAppSocket(notify.release())
@@ -72,7 +72,7 @@ ISockMgrBase::ISockMgrBase(
     Duration inactiveTimeout,
     AppSocket::Family fam,
     AppSocket::MgrFlags flags
-) 
+)
     : m_name{name}
     , m_cliSockFact{fact}
     , m_family{fam}
@@ -134,7 +134,7 @@ static ShutdownNotify s_cleanup;
 //===========================================================================
 void ShutdownNotify::onShutdownClient(bool firstTry) {
     for (auto mgr : s_mgrs) {
-        if (mgr.second->shutdown()) 
+        if (mgr.second->shutdown())
             s_mgrs.erase(mgr.first);
     }
     if (!s_mgrs.empty())
@@ -173,7 +173,7 @@ void Dim::sockMgrSetInactiveTimeout(SockMgrHandle h, Duration timeout) {
 
 //===========================================================================
 void Dim::sockMgrSetEndpoints(
-    SockMgrHandle h, 
+    SockMgrHandle h,
     const vector<Endpoint> & addrs
 ) {
     auto mgr = s_mgrs.find(h);

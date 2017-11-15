@@ -22,7 +22,7 @@ struct CleanupInfo {
     IShutdownNotify * notify;
     bool stopped{false};
 
-    explicit CleanupInfo(IShutdownNotify * notify) 
+    explicit CleanupInfo(IShutdownNotify * notify)
         : notify(notify) {}
 };
 
@@ -125,7 +125,7 @@ bool MainTimer::stopped() const {
 //===========================================================================
 void MainTimer::incomplete() {
     m_incomplete = true;
-    if (!s_disableTimeout 
+    if (!s_disableTimeout
         && Clock::now() - m_shutdownStart > s_shutdownTimeout
     ) {
         assert(0 && "shutdown timeout");
@@ -141,7 +141,7 @@ void MainTimer::resetTimer() {
 //===========================================================================
 bool MainTimer::stop(StopFn notify, bool firstTry) {
     if (firstTry) {
-        for (auto && v : s_cleaners) 
+        for (auto && v : s_cleaners)
             v.stopped = false;
     }
     bool stopped = true;
@@ -150,7 +150,7 @@ bool MainTimer::stop(StopFn notify, bool firstTry) {
             m_incomplete = false;
             (v.notify->*notify)(firstTry);
             if (m_incomplete) {
-                // shutdownIncomplete() was called, handler will have to be 
+                // shutdownIncomplete() was called, handler will have to be
                 // retried later.
                 stopped = false;
                 if (!firstTry)

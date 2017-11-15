@@ -15,9 +15,9 @@
 // List<MyObj> list;
 // list.link(new MyObj);
 // list.clear(); // delete all the member
-// 
+//
 // Example of an object in multiple lists:
-// struct Fruit; // tags only need to be a forward reference, the definition 
+// struct Fruit; // tags only need to be a forward reference, the definition
 // struct Color; //   is not required.
 // struct MyObj : ListBaseLink<Fruit>, ListBaseLink<Color> {};
 // List<MyObj, Fruit> fruits;
@@ -53,7 +53,7 @@ struct LinkDefault;
 *
 ***/
 
-template <typename Tag = LinkDefault> 
+template <typename Tag = LinkDefault>
 class ListBaseLink : public NoCopy {
 public:
     ListBaseLink();
@@ -134,9 +134,9 @@ public:
 
 //===========================================================================
 template <typename List, typename T>
-ListIterator<List, T>::ListIterator(List * container, T * node) 
+ListIterator<List, T>::ListIterator(List * container, T * node)
     : m_container{container}
-    , m_current{node} 
+    , m_current{node}
 {}
 
 //===========================================================================
@@ -161,8 +161,8 @@ T & ListIterator<List, T>::operator*() {
 
 //===========================================================================
 template <typename List, typename T>
-T * ListIterator<List, T>::operator->() { 
-    return m_current; 
+T * ListIterator<List, T>::operator->() {
+    return m_current;
 }
 
 
@@ -194,7 +194,7 @@ public:
     iterator end();
     const_iterator begin() const;
     const_iterator end() const;
-    
+
     T * front();
     const T * front() const;
     T * back();
@@ -236,7 +236,7 @@ private:
 template <typename T, typename Tag>
 List<T, Tag>::List() {
     static_assert(
-        std::is_base_of_v<link_type, T>, 
+        std::is_base_of_v<link_type, T>,
         "List member type must be derived from ListBaseLink<Tag>"
     );
 }
@@ -245,7 +245,7 @@ List<T, Tag>::List() {
 template <typename T, typename Tag>
 List<T, Tag>::List(List && from) {
     static_assert(
-        std::is_base_of_v<link_type, T>, 
+        std::is_base_of_v<link_type, T>,
         "List member type must be derived from ListBaseLink<Tag>"
     );
     swap(from);
@@ -507,8 +507,8 @@ const T * List<T, Tag>::cast(const link_type * link) const {
 //===========================================================================
 template <typename T, typename Tag>
 void List<T, Tag>::linkBase(
-    link_type * next, 
-    link_type * first, 
+    link_type * next,
+    link_type * first,
     link_type * last
 ) {
     auto inclusiveLast = last->m_prevLink;
@@ -529,8 +529,8 @@ void List<T, Tag>::linkBase(
 //===========================================================================
 template <typename T, typename Tag>
 void List<T, Tag>::linkBaseAfter(
-    link_type * prev, 
-    link_type * first, 
+    link_type * prev,
+    link_type * first,
     link_type * last
 ) {
     linkBase(prev->m_nextLink, first, last);

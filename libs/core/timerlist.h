@@ -64,7 +64,7 @@ public:
     TimerList(Duration timeout, Duration minWait = kTimerDefaultMinWait);
 
     void setTimeout(
-        Duration timeout, 
+        Duration timeout,
         Duration minWait = kTimerDefaultMinWait
     );
 

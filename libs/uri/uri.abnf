@@ -67,8 +67,8 @@ pchar         = unreserved / pct-encoded / sub-delims / ":" / "@"
 query       = [ qry-pair ] *("&" qry-pair)
 qry-pair    = qry-name [ "=" qry-value ]
 qry-name    = 1*qchar { Start, End }
-qry-value   = *(qchar / "=") { Start, End } 
-qchar       = unreserved / pct-encoded / qry-delims / qry-plus 
+qry-value   = *(qchar / "=") { Start, End }
+qchar       = unreserved / pct-encoded / qry-delims / qry-plus
             / ":" / "@" / "/" / "?"
 qry-plus    = "+" { Char }
 

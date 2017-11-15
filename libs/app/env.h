@@ -18,7 +18,7 @@ struct EnvMemoryConfig {
     size_t allocAlign;      // virtual memory allocation alignment
 
     // Access to large pages requires SeLockMemoryPrivilege, if large pages
-    // are not supported (or the process is unprivileged) minLargeAlloc is set 
+    // are not supported (or the process is unprivileged) minLargeAlloc is set
     // to 0.
     size_t minLargeAlloc;   // min large page allocation
 };

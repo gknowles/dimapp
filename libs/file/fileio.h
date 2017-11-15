@@ -28,7 +28,7 @@ namespace File {
         fCreat = 0x10, // create if not exist
         fExcl = 0x20,  // fail if already exists
         fTrunc = 0x40, // truncate if already exists
-        
+
         // sharing, mutually exclusive, not more than one can be set
         fDenyWrite = 0x100, // others can read
         fDenyNone = 0x200,  // others can read, write, or delete
@@ -38,7 +38,7 @@ namespace File {
         // to a small task queue whose threads use blocking calls.
         fBlocking = 0x1000,
 
-        // Unbuffered but all application buffers must be system page aligned 
+        // Unbuffered but all application buffers must be system page aligned
         // and a multiple of page size.
         fAligned = 0x2000,
 
@@ -47,7 +47,7 @@ namespace File {
         fSequential = 0x8000,
 
         // INTERNAL USE ONLY
-        // Underlying native file handle is externally owned, and will be 
+        // Underlying native file handle is externally owned, and will be
         // left open when the file is closed.
         fNonOwning = 0x10000,
 
@@ -87,9 +87,9 @@ FileHandle fileOpen(
     File::OpenMode modeFlags
 );
 
-// Create references to the standard in/out/err devices. The handle 
+// Create references to the standard in/out/err devices. The handle
 // should be closed after use, which detaches from the underlying file
-// descriptor. Accessing the same device from multiple handles will have 
+// descriptor. Accessing the same device from multiple handles will have
 // unpredictable results.
 FileHandle fileAttachStdin();
 FileHandle fileAttachStdout();
@@ -100,17 +100,17 @@ FileHandle fileAttachStderr();
 void fileClose(FileHandle f);
 
 // Changes the files size by either growing or shrinking it. Returns false on
-// errors. 
+// errors.
 bool fileResize(FileHandle f, size_t size);
 
 // Flushes pending writes from the file cache to disk.
 bool fileFlush(FileHandle f);
 
-// On error returns 0 and sets errno to a non-zero value. Otherwise the 
+// On error returns 0 and sets errno to a non-zero value. Otherwise the
 // function returns the size and, if the size was 0, clears errno.
 uint64_t fileSize(FileHandle f);
 
-// On error returns TimePoint::min() and sets errno to a non-zero value. If 
+// On error returns TimePoint::min() and sets errno to a non-zero value. If
 // the time was min(), errno is cleared.
 TimePoint fileLastWriteTime(FileHandle f);
 
@@ -120,7 +120,7 @@ std::string_view filePath(FileHandle f);
 unsigned fileMode(FileHandle f);
 
 // kUnknown is returned for bad handle and system errors as well as when
-// the type is unknown. If kUnknown was not returned due to error, errno will 
+// the type is unknown. If kUnknown was not returned due to error, errno will
 // set to 0.
 File::FileType fileType(FileHandle f);
 
@@ -143,8 +143,8 @@ public:
     // way.
     virtual bool onFileRead(
         size_t * bytesUsed,
-        std::string_view data, 
-        int64_t offset, 
+        std::string_view data,
+        int64_t offset,
         FileHandle f
     ) {
         *bytesUsed = data.size();
@@ -260,19 +260,19 @@ size_t filePageSize();
 size_t fileViewAlignment();
 
 // The maxLength is the maximum length into the file that view can be extended
-// to cover. A value less than or equal to the length (such as 0) makes a view 
+// to cover. A value less than or equal to the length (such as 0) makes a view
 // that can't be extended. The value is rounded up to a multiple of page size.
 bool fileOpenView(
-    const char *& view, 
-    FileHandle f, 
+    const char *& view,
+    FileHandle f,
     File::ViewMode modeFlags, // must be kViewReadOnly
     int64_t offset = 0,
     int64_t length = 0,     // defaults to current length of file
     int64_t maxLength = 0   // defaults to not extendable
 );
 bool fileOpenView(
-    char *& view, 
-    FileHandle f, 
+    char *& view,
+    FileHandle f,
     File::ViewMode modeFlags, // must be kViewReadWrite
     int64_t offset = 0,
     int64_t length = 0,     // defaults to current length of file

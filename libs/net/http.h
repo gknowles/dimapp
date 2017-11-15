@@ -104,7 +104,7 @@ enum HttpMethod {
 
 std::string_view to_view(HttpMethod method);
 HttpMethod httpMethodFromString(
-    std::string_view name, 
+    std::string_view name,
     HttpMethod def = fHttpMethodInvalid
 );
 
@@ -262,16 +262,16 @@ bool httpRecv(
 
 // Serializes a request and returns the stream id used
 int httpRequest(
-    HttpConnHandle conn, 
-    CharBuf * out, 
+    HttpConnHandle conn,
+    CharBuf * out,
     const HttpMsg & msg,
     bool more = false
 );
 
 // Serializes a push promise and returns the stream id used
 int httpPushPromise(
-    HttpConnHandle conn, 
-    CharBuf * out, 
+    HttpConnHandle conn,
+    CharBuf * out,
     const HttpMsg & msg,
     bool more = false
 );
@@ -288,16 +288,16 @@ void httpReply(
 // Sends more data on a stream, a stream ends after request, push promise,
 // reply, or data is called with more false.
 void httpData(
-    HttpConnHandle hc, 
-    CharBuf * out, 
-    int stream, 
+    HttpConnHandle hc,
+    CharBuf * out,
+    int stream,
     const CharBuf & data,
     bool more = false
 );
 void httpData(
-    HttpConnHandle hc, 
-    CharBuf * out, 
-    int stream, 
+    HttpConnHandle hc,
+    CharBuf * out,
+    int stream,
     std::string_view data,
     bool more = false
 );

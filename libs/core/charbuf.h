@@ -70,9 +70,9 @@ public:
     CharBuf & insert(size_t pos, const char s[]);
     CharBuf & insert(size_t pos, const char s[], size_t count);
     CharBuf & insert(
-        size_t pos, 
-        const CharBuf & buf, 
-        size_t bufPos = 0, 
+        size_t pos,
+        const CharBuf & buf,
+        size_t bufPos = 0,
         size_t bufLen = -1
     );
     CharBuf & erase(size_t pos = 0, size_t count = -1);
@@ -165,8 +165,8 @@ class CharBuf::ViewIterator {
 public:
     ViewIterator() {}
     ViewIterator(
-        const_buffer_iterator buf, 
-        size_t pos, 
+        const_buffer_iterator buf,
+        size_t pos,
         size_t count
     );
     bool operator!= (const ViewIterator & right);
@@ -177,13 +177,13 @@ public:
 
 //===========================================================================
 inline CharBuf::ViewIterator::ViewIterator(
-    const_buffer_iterator buf, 
-    size_t pos, 
+    const_buffer_iterator buf,
+    size_t pos,
     size_t count
 )
     : m_current{buf}
     , m_view{buf->data + pos, std::min(count, buf->used - pos)}
-    , m_count{count} 
+    , m_count{count}
 {
     assert(pos <= (size_t) buf->used);
 }
@@ -199,7 +199,7 @@ inline CharBuf::ViewIterator & CharBuf::ViewIterator::operator++() {
         ++m_current;
         assert(m_current != const_buffer_iterator{});
         m_view = {
-            m_current->data, 
+            m_current->data,
             std::min(m_count, (size_t) m_current->used)
         };
     } else {

@@ -76,7 +76,7 @@ void LogBuffer::writeLog(string_view msg) {
         m_writing.push_back('\n');
         if (!m_file) {
             m_file = fileOpen(
-                s_logfile, 
+                s_logfile,
                 File::fCreat | File::fReadWrite | File::fDenyNone
             );
             if (!m_file) {
@@ -162,8 +162,8 @@ void Logger::onLog(LogType type, string_view msg) {
     TimePoint now = Clock::now();
     int tzMinutes = timeZoneMinutes(now);
     Time8601Str nowStr{now, 3, tzMinutes};
-    snprintf(tmp, size(tmp), "<%d>1 %s %s %s %s %s %s %.*s", 
-        pri, 
+    snprintf(tmp, size(tmp), "<%d>1 %s %s %s %s %s %s %.*s",
+        pri,
         nowStr.c_str(),
         s_hostname.c_str(),
         "appName",

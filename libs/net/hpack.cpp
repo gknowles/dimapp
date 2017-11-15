@@ -455,8 +455,8 @@ void HpackEncode::endBlock() {}
 
 //===========================================================================
 void HpackEncode::header(
-    const char name[], 
-    const char value[], 
+    const char name[],
+    const char value[],
     HpackFlags flags
 ) {
     // (0x00) - literal header field without indexing (new name)

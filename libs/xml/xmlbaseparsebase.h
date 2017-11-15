@@ -29,7 +29,7 @@ struct XmlBaseParserBase {
 //===========================================================================
 inline XmlBaseParserBase::XmlBaseParserBase(XStreamParser & parser)
     : m_parser(parser)
-    , m_notify(parser.notify()) 
+    , m_notify(parser.notify())
 {}
 
 } // namespace

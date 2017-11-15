@@ -78,14 +78,14 @@ private:
 ISocketNotify::Mode socketGetMode(ISocketNotify * notify);
 void socketDisconnect(ISocketNotify * notify);
 
-// Unlinks notify and links newNotify to the socket, taking ownership of it. 
-// If notify wasn't linked newNotify->onSocketDestroy() is called. 
+// Unlinks notify and links newNotify to the socket, taking ownership of it.
+// If notify wasn't linked newNotify->onSocketDestroy() is called.
 void socketSetNotify(ISocketNotify * notify, ISocketNotify * newNotify);
 
 //===========================================================================
 // connect
 //===========================================================================
-// The data, if present, is sent if connect succeeds. This is done via 
+// The data, if present, is sent if connect succeeds. This is done via
 // TCP_FASTOPEN if possible so try to keep the data <= 1460 bytes.
 void socketConnect(
     ISocketNotify * notify,
@@ -102,7 +102,7 @@ void socketListen(IFactory<ISocketNotify> * factory, const Endpoint & local);
 void socketCloseWait(IFactory<ISocketNotify> * factory, const Endpoint & local);
 
 //===========================================================================
-template <typename S> 
+template <typename S>
 inline void socketListen(const Endpoint & local) {
     static_assert(std::is_base_of_v<ISocketNotify, S>);
     auto factory = getFactory<ISocketNotify, S>();
@@ -110,7 +110,7 @@ inline void socketListen(const Endpoint & local) {
 }
 
 //===========================================================================
-template <typename S> 
+template <typename S>
 inline void socketCloseWait(const Endpoint & local) {
     static_assert(std::is_base_of_v<ISocketNotify, S>);
     auto factory = getFactory<ISocketNotify, S>();
@@ -127,9 +127,9 @@ struct SocketBuffer {
     // for internal use
     const int owner;
 
-    SocketBuffer(char * const data, int capacity, int owner) 
+    SocketBuffer(char * const data, int capacity, int owner)
         : data{data}
-        , capacity{capacity} 
+        , capacity{capacity}
         , owner{owner}
     {}
     ~SocketBuffer();

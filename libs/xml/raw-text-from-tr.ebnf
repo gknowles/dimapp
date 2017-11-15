@@ -1,16 +1,16 @@
 Document
 [1]   	document	   ::=   	prolog element Misc*
 Character Range
-[2]   	Char	   ::=   	#x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] 
+[2]   	Char	   ::=   	#x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD]
     | [#x10000-#x10FFFF]
 White Space
 [3]   	S	   ::=   	(#x20 | #x9 | #xD | #xA)+
 Names and Tokens
-[4]   	NameStartChar	   ::=   	":" | [A-Z] | "_" | [a-z] | [#xC0-#xD6] 
-    | [#xD8-#xF6] | [#xF8-#x2FF] | [#x370-#x37D] | [#x37F-#x1FFF] | [#x200C-#x200D] 
-    | [#x2070-#x218F] | [#x2C00-#x2FEF] | [#x3001-#xD7FF] | [#xF900-#xFDCF] 
+[4]   	NameStartChar	   ::=   	":" | [A-Z] | "_" | [a-z] | [#xC0-#xD6]
+    | [#xD8-#xF6] | [#xF8-#x2FF] | [#x370-#x37D] | [#x37F-#x1FFF] | [#x200C-#x200D]
+    | [#x2070-#x218F] | [#x2C00-#x2FEF] | [#x3001-#xD7FF] | [#xF900-#xFDCF]
     | [#xFDF0-#xFFFD] | [#x10000-#xEFFFF]
-[4a]   	NameChar	   ::=   	NameStartChar | "-" | "." | [0-9] | #xB7 
+[4a]   	NameChar	   ::=   	NameStartChar | "-" | "." | [0-9] | #xB7
     | [#x0300-#x036F] | [#x203F-#x2040]
 [5]   	Name	   ::=   	NameStartChar (NameChar)*
 [6]   	Names	   ::=   	Name (#x20 Name)*
@@ -19,7 +19,7 @@ Names and Tokens
 Literals
 [9]   	EntityValue	   ::=   	'"' ([^%&"] | PEReference | Reference)* '"'
     |  "'" ([^%&'] | PEReference | Reference)* "'"
-[10]   	AttValue	   ::=   	'"' ([^<&"] | Reference)* '"' 
+[10]   	AttValue	   ::=   	'"' ([^<&"] | Reference)* '"'
     |  "'" ([^<&'] | Reference)* "'"
 [11]   	SystemLiteral	   ::=   	('"' [^"]* '"') | ("'" [^']* "'")
 [12]   	PubidLiteral	   ::=   	'"' PubidChar* '"' | "'" (PubidChar - "'")* "'"
@@ -44,17 +44,17 @@ Prolog
 [26]   	VersionNum	   ::=   	'1.' [0-9]+
 [27]   	Misc	   ::=   	Comment | PI | S
 Document Type Definition
-[28]   	doctypedecl	   ::=   	'<!DOCTYPE' S Name (S ExternalID)? S? 
+[28]   	doctypedecl	   ::=   	'<!DOCTYPE' S Name (S ExternalID)? S?
     ('[' intSubset ']' S?)? '>'
 [28a]   	DeclSep	   ::=   	PEReference | S
 [28b]   	intSubset	   ::=   	(markupdecl | DeclSep)*
-[29]   	markupdecl	   ::=   	elementdecl | AttlistDecl | EntityDecl | NotationDecl 
+[29]   	markupdecl	   ::=   	elementdecl | AttlistDecl | EntityDecl | NotationDecl
     | PI | Comment
 External Subset
 [30]   	extSubset	   ::=   	TextDecl? extSubsetDecl
 [31]   	extSubsetDecl	   ::=   	( markupdecl | conditionalSect | DeclSep)*
 Standalone Document Declaration
-[32]   	SDDecl	   ::=   	S 'standalone' Eq (("'" ('yes' | 'no') "'") 
+[32]   	SDDecl	   ::=   	S 'standalone' Eq (("'" ('yes' | 'no') "'")
     | ('"' ('yes' | 'no') '"'))
 (Productions 33 through 38 have been removed.)
 Element
@@ -65,7 +65,7 @@ Start-tag
 End-tag
 [42]   	ETag	   ::=   	'</' Name S? '>'
 Content of Elements
-[43]   	content	   ::=   	CharData? ((element | Reference | CDSect | PI | Comment) 
+[43]   	content	   ::=   	CharData? ((element | Reference | CDSect | PI | Comment)
     CharData?)*
 Tags for Empty Elements
 [44]   	EmptyElemTag	   ::=   	'<' Name (S Attribute)* S? '/>'
@@ -86,7 +86,7 @@ Attribute-list Declaration
 Attribute Types
 [54]   	AttType	   ::=   	StringType | TokenizedType | EnumeratedType
 [55]   	StringType	   ::=   	'CDATA'
-[56]   	TokenizedType	   ::=   	'ID' | 'IDREF' | 'IDREFS' | 'ENTITY' 
+[56]   	TokenizedType	   ::=   	'ID' | 'IDREF' | 'IDREFS' | 'ENTITY'
     | 'ENTITIES' | 'NMTOKEN' | 'NMTOKENS'
 Enumerated Attribute Types
 [57]   	EnumeratedType	   ::=   	NotationType | Enumeration

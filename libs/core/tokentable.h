@@ -73,13 +73,13 @@ public:
 };
 
 //===========================================================================
-inline bool TokenTable::Iterator::operator!=(const Iterator & right) const { 
-    return m_current != right.m_current; 
+inline bool TokenTable::Iterator::operator!=(const Iterator & right) const {
+    return m_current != right.m_current;
 }
 
 //===========================================================================
-inline const TokenTable::Token & TokenTable::Iterator::operator*() { 
-    return *m_current; 
+inline const TokenTable::Token & TokenTable::Iterator::operator*() {
+    return *m_current;
 }
 
 

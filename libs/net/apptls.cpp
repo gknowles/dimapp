@@ -128,7 +128,7 @@ void TlsSocket::onSocketBufferChanged(const AppSocketBufferInfo & info) {
 namespace {
 class TlsMatch : public IAppSocketMatchNotify {
     AppSocket::MatchType OnMatch(
-        AppSocket::Family fam, 
+        AppSocket::Family fam,
         string_view view
     ) override;
 };

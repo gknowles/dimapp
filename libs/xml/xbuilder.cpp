@@ -119,8 +119,8 @@ IXBuilder & IXBuilder::start(const char name[], size_t count) {
 }
 
 //===========================================================================
-IXBuilder & IXBuilder::start(string_view name) { 
-    return start(name.data(), name.size()); 
+IXBuilder & IXBuilder::start(string_view name) {
+    return start(name.data(), name.size());
 }
 
 //===========================================================================
@@ -216,7 +216,7 @@ IXBuilder & IXBuilder::text(string_view val) {
 }
 
 //===========================================================================
-void IXBuilder::addRaw(const char text[], size_t count) { 
+void IXBuilder::addRaw(const char text[], size_t count) {
     if (count == -1) {
         append(text);
     } else {
@@ -251,7 +251,7 @@ template <bool isContent> void IXBuilder::addText(
                 }
             }
             continue;
-        case kTextTypeNormal: 
+        case kTextTypeNormal:
             continue;
         case kTextTypeNull:
             goto DONE;
@@ -259,11 +259,11 @@ template <bool isContent> void IXBuilder::addText(
             if (isContent)
                 continue;
             break;
-        case kTextTypeAmp: 
-        case kTextTypeLess: 
+        case kTextTypeAmp:
+        case kTextTypeLess:
             break;
-        case kTextTypeInvalid: 
-            m_state = kStateFail; 
+        case kTextTypeInvalid:
+            m_state = kStateFail;
             return;
         default:
             assert(!"invalid XML text type enum value");

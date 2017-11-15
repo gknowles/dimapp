@@ -44,7 +44,7 @@ FARPROC Dim::winLoadProc(const char lib[], const char proc[], bool optional) {
 bool Dim::winEnablePrivilege(string_view name, bool enable) {
     auto proc = GetCurrentProcess();
     HANDLE token;
-    if (!OpenProcessToken(proc, TOKEN_ADJUST_PRIVILEGES, &token)) 
+    if (!OpenProcessToken(proc, TOKEN_ADJUST_PRIVILEGES, &token))
         return false;
 
     bool success = false;
@@ -53,7 +53,7 @@ bool Dim::winEnablePrivilege(string_view name, bool enable) {
     tp.PrivilegeCount = 1;
     tp.Privileges[0].Attributes = enable ? SE_PRIVILEGE_ENABLED : 0;
     if (LookupPrivilegeValueW(
-        NULL, 
+        NULL,
         wname.c_str(),
         &tp.Privileges[0].Luid
     )) {
@@ -116,7 +116,7 @@ void IWinOverlappedNotify::pushOverlappedTask() {
 }
 
 //===========================================================================
-IWinOverlappedNotify::WinOverlappedResult 
+IWinOverlappedNotify::WinOverlappedResult
 IWinOverlappedNotify::getOverlappedResult() {
     DWORD bytes = 0;
     if (!GetOverlappedResult(

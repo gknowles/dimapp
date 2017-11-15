@@ -42,7 +42,7 @@ WinError::WinError() {
 
 //===========================================================================
 WinError::WinError(int error)
-    : m_value{error} 
+    : m_value{error}
 {}
 
 //===========================================================================
@@ -118,8 +118,8 @@ std::ostream & Dim::operator<<(std::ostream & os, const WinError & val) {
 void Dim::winErrorInitialize() {
     winLoadProc(s_NtStatusToDosError, "ntdll", "RtlNtStatusToDosError");
     winLoadProc(
-        s_SecurityStatusToNtStatus, 
-        "ntoskrnl.exe", 
+        s_SecurityStatusToNtStatus,
+        "ntoskrnl.exe",
         "RtlMapSecurityErrorToNtStatus"
     );
 }

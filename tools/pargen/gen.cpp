@@ -216,8 +216,8 @@ struct StateTreeInfo {
 static bool s_simpleRecursion = false;
 
 static void addChildStates(
-    State * st, 
-    unordered_set<State> & states, 
+    State * st,
+    unordered_set<State> & states,
     StateTreeInfo & sti
 );
 
@@ -266,9 +266,9 @@ static size_t findRecursionFull(const StatePosition * sp) {
 
 //===========================================================================
 static void addRulePositions(
-    bool * skippable, 
-    State * st, 
-    StatePosition * sp, 
+    bool * skippable,
+    State * st,
+    StatePosition * sp,
     bool init
 ) {
     auto & se = sp->elems.back();
@@ -287,8 +287,8 @@ static void addRulePositions(
     }
 
     // check for rule recursion
-    size_t num = s_simpleRecursion 
-        ? findRecursionSimple(sp) 
+    size_t num = s_simpleRecursion
+        ? findRecursionSimple(sp)
         : findRecursionFull(sp);
     if (num) {
         if (!init) {
@@ -336,8 +336,8 @@ static void addPositions(
                 *skippable = true;
         }
         break;
-    case Element::kRule: 
-        addRulePositions(skippable, st, sp, init); 
+    case Element::kRule:
+        addRulePositions(skippable, st, sp, init);
         break;
     case Element::kSequence:
         // up to first with a minimum
@@ -424,7 +424,7 @@ static void addDelayedEvents(
 ) {
     for (auto && sv : sp.delayedEvents) {
         events.push_back(sv);
-        if (sv.flags 
+        if (sv.flags
             & (Element::fOnStartW | Element::fOnEndW | Element::fOnCharW)
         ) {
             events.back().distance += 1;
@@ -552,12 +552,12 @@ static void addNextPositions(
                 terminalStarted = se_end;
             StatePosition nsp;
             setPositionPrefix(
-                &nsp, 
-                sp.elems.begin(), 
-                se_end, 
+                &nsp,
+                sp.elems.begin(),
+                se_end,
                 recursePos,
                 false,
-                events, 
+                events,
                 terminal
             );
             bool weak;
@@ -1012,7 +1012,7 @@ static void copy(StateKey & out, const State & st) {
         return;
     }
     assert(st.next.size() == 257);
-    for (unsigned i = 0; i < 257; ++i) 
+    for (unsigned i = 0; i < 257; ++i)
         out.next[i] = st.next[i];
 }
 
@@ -1094,7 +1094,7 @@ static bool equalize(unsigned a, unsigned b, DedupInfo & di) {
     if (x.key.events != y.key.events)
         return false;
     size_t n = x.state->next.size();
-    if (n != y.state->next.size()) 
+    if (n != y.state->next.size())
         return false;
     auto xn = x.state->next.data();
     auto yn = y.state->next.data();
@@ -1173,11 +1173,11 @@ void dedupStateTree(unordered_set<State> & states) {
     DedupInfo di;
     di.states = &states;
     auto numIds = max_element(
-        states.begin(), 
-        states.end(), 
+        states.begin(),
+        states.end(),
         [](auto & a, auto & b){ return a.id < b.id; }
     )->id + 1;
-    
+
     di.info.resize(numIds);
     for (auto && st : states) {
         auto & si = di.info[st.id];

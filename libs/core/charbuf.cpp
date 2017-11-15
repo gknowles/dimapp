@@ -25,12 +25,12 @@ const unsigned kDefaultBlockSize = 4096;
 ***/
 
 //===========================================================================
-CharBuf::Buffer::Buffer () 
+CharBuf::Buffer::Buffer ()
     : Buffer{kDefaultBlockSize}
 {}
 
 //===========================================================================
-CharBuf::Buffer::Buffer (size_t reserve) 
+CharBuf::Buffer::Buffer (size_t reserve)
     : data{reserve ? new char[reserve] : nullptr}
     , reserved{(int) reserve}
 {}
@@ -67,9 +67,9 @@ CharBuf & CharBuf::assign(const char s[], size_t count) {
 CharBuf & CharBuf::assign(string_view str, size_t pos, size_t count) {
     assert(pos <= str.size());
     return replace(
-        0, 
-        m_size, 
-        str.data() + pos, 
+        0,
+        m_size,
+        str.data() + pos,
         min(count, str.size() - pos)
     );
 }
@@ -247,9 +247,9 @@ CharBuf & CharBuf::insert(size_t pos, const char s[], size_t count) {
 
 //===========================================================================
 CharBuf & CharBuf::insert(
-    size_t pos, 
-    const CharBuf & buf, 
-    size_t bufPos, 
+    size_t pos,
+    const CharBuf & buf,
+    size_t bufPos,
     size_t bufLen
 ) {
     assert(pos <= (size_t) m_size);
@@ -364,9 +364,9 @@ int CharBuf::compare(const char s[], size_t count) const {
 
 //===========================================================================
 int CharBuf::compare(
-    size_t pos, 
-    size_t count, 
-    const char s[], 
+    size_t pos,
+    size_t count,
+    const char s[],
     size_t slen
 ) const {
     assert(pos <= (size_t) m_size);
@@ -694,7 +694,7 @@ pair<CharBuf::buffer_iterator, int> CharBuf::find(size_t pos) {
 }
 
 //===========================================================================
-// Move the data (if any) after the split point to a new block immediately 
+// Move the data (if any) after the split point to a new block immediately
 // following the block being split.
 CharBuf::buffer_iterator CharBuf::split(buffer_iterator it, int pos) {
     assert(pos <= it->used);

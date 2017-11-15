@@ -83,7 +83,7 @@ const char kTextTypeTable[256] = {
     35, 35, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, // c
     32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, // d
     32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, // e
-    32, 32, 32, 32, 32, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, // f     
+    32, 32, 32, 32, 32, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, // f
 };
 // clang-format on
 
@@ -99,7 +99,7 @@ const char kTextTypeTable[256] = {
 enum IJBuilder::State : int {
     kStateFail,
     kStateFirstValue,
-    kStateValue,    
+    kStateValue,
     kStateFirstMember,
     kStateMember,
     kStateMemberValue,
@@ -119,7 +119,7 @@ void IJBuilder::clear() {
 //===========================================================================
 IJBuilder & IJBuilder::object() {
     switch (m_state) {
-    default: 
+    default:
         return fail();
     case kStateValue:
         append(",\n");
@@ -135,7 +135,7 @@ IJBuilder & IJBuilder::object() {
 }
 
 //===========================================================================
-IJBuilder & IJBuilder::array() { 
+IJBuilder & IJBuilder::array() {
     switch (m_state) {
     default:
         return fail();
@@ -188,7 +188,7 @@ IJBuilder & IJBuilder::end() {
 //===========================================================================
 IJBuilder & IJBuilder::member(string_view name) {
     switch (m_state) {
-    default: 
+    default:
         return fail();
     case kStateMember:
         append(",\n");
@@ -204,7 +204,7 @@ IJBuilder & IJBuilder::member(string_view name) {
 //===========================================================================
 IJBuilder & IJBuilder::value(string_view val) {
     switch (m_state) {
-    default: 
+    default:
         return fail();
     case kStateValue:
         append(",\n");
@@ -223,7 +223,7 @@ IJBuilder & IJBuilder::value(string_view val) {
 //===========================================================================
 IJBuilder & IJBuilder::valueRaw(string_view val) {
     switch (m_state) {
-    default: 
+    default:
         return fail();
     case kStateValue:
         append(",\n");

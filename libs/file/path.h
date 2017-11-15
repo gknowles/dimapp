@@ -37,15 +37,15 @@ public:
 
     Path & operator=(const Path & from) = default;
     Path & operator=(Path && from) = default;
-    Path & operator=(const char from[]) { 
-        return assign(std::string_view(from)); 
+    Path & operator=(const char from[]) {
+        return assign(std::string_view(from));
     }
     Path & operator=(std::string_view from) { return assign(from); }
-    Path & operator=(const std::string & from) { 
-        return assign(std::string_view(from)); 
+    Path & operator=(const std::string & from) {
+        return assign(std::string_view(from));
     }
-    Path & operator=(const std::experimental::filesystem::path & from) { 
-        return assign(from); 
+    Path & operator=(const std::experimental::filesystem::path & from) {
+        return assign(from);
     }
 
     Path & assign(const Path & path);
@@ -54,7 +54,7 @@ public:
     Path & assign(std::string_view path, std::string_view defExt);
     Path & assign(const std::experimental::filesystem::path & path);
     Path & assign(
-        const std::experimental::filesystem::path & path, 
+        const std::experimental::filesystem::path & path,
         std::string_view defExt
     );
 
@@ -155,7 +155,7 @@ inline std::experimental::filesystem::path::path(const std::string & from) {
 //===========================================================================
 template <>
 inline std::experimental::filesystem::path::path(
-    const char * first, 
+    const char * first,
     const char * last
 ) {
     *this = u8path(first, last);

@@ -57,8 +57,8 @@ void taskPush(TaskQueueHandle q, ITaskNotify * tasks[], size_t numTasks);
 // Generally used for utility tasks the run for the life of the program
 // such as the window message loop, service dispatcher, or timer queue.
 //
-// Creates a task queue with one thread task, runs the task, and then stops 
-// the thread. After the task completes the queue is leaked around until 
+// Creates a task queue with one thread task, runs the task, and then stops
+// the thread. After the task completes the queue is leaked around until
 // shutdown, so this shouldn't be used for anything that runs repeatedly.
 void taskPushOnce(std::string_view name, std::function<void()> fn);
 

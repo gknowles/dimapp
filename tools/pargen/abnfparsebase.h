@@ -36,7 +36,7 @@ struct AbnfParserBase {
 //===========================================================================
 inline AbnfParserBase::AbnfParserBase(Grammar & rules, bool minRules)
     : m_rules{rules}
-    , m_minRulesEnabled{minRules} 
+    , m_minRulesEnabled{minRules}
 {
     m_elem = {};
 }

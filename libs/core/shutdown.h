@@ -12,27 +12,27 @@ namespace Dim {
 /****************************************************************************
 *
 *   Monitor shutdown
-* 
-*   Application shutdown happens in three phases, client, server, and finally 
-*   console. The intent is that client connections are shutdown, then 
-*   connections to servers used to process client requests, and finally 
+*
+*   Application shutdown happens in three phases, client, server, and finally
+*   console. The intent is that client connections are shutdown, then
+*   connections to servers used to process client requests, and finally
 *   consoles (web, text, etc) used to monitor the server.
-*   
-*   For each phase one call is made to every onShutdown*() handler with 
-*   firstTry true. Each handler begins shutting down and calls 
-*   shutdownIncomplete() if it doesn't finish immediately. After the first 
-*   call is made to all handlers the handlers that signaled incomplete are 
-*   processed one at a time in reverse order of registration. Each of these is 
-*   called periodically, with firstTry false, until it returns without calling 
-*   shutdownIncomplete(). Only then continuing with the next. The phase ends 
+*
+*   For each phase one call is made to every onShutdown*() handler with
+*   firstTry true. Each handler begins shutting down and calls
+*   shutdownIncomplete() if it doesn't finish immediately. After the first
+*   call is made to all handlers the handlers that signaled incomplete are
+*   processed one at a time in reverse order of registration. Each of these is
+*   called periodically, with firstTry false, until it returns without calling
+*   shutdownIncomplete(). Only then continuing with the next. The phase ends
 *   after all handlers have completed.
 *
-*   After a handler returns without calling shutdownIncomplete() it will not 
-*   be called again. 
+*   After a handler returns without calling shutdownIncomplete() it will not
+*   be called again.
 *
-*   Do not block in the handler, as it prevents timers from running and things 
-*   from shutting down in parallel. This is especially important when it 
-*   involves file, socket, or other systems that may block in the OS. 
+*   Do not block in the handler, as it prevents timers from running and things
+*   from shutting down in parallel. This is especially important when it
+*   involves file, socket, or other systems that may block in the OS.
 *
 *   NOTE: If the shutdown process takes too long (>2 minutes) the process
 *         is terminated. This can be delayed with shutdownDelay().
@@ -65,7 +65,7 @@ void shutdownDelay();
 *
 ***/
 
-// FOR DEBUGGING ONLY. Completely disables the timer, allowing shutdown process 
+// FOR DEBUGGING ONLY. Completely disables the timer, allowing shutdown process
 // to run indefinitely. Intended to be controlled by user config.
 void shutdownDisableTimeout(bool disable = true);
 

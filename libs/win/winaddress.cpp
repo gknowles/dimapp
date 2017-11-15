@@ -46,17 +46,17 @@ bool Dim::parse(Endpoint * end, string_view src, int defaultPort) {
     int sasLen = sizeof(sas);
     auto tmp = toWstring(src);
     if (SOCKET_ERROR == WSAStringToAddressW(
-        tmp.data(), 
-        AF_INET, 
+        tmp.data(),
+        AF_INET,
         NULL, // protocol info
-        (sockaddr *)&sas, 
+        (sockaddr *)&sas,
         &sasLen
     )) {
         if (SOCKET_ERROR == WSAStringToAddressW(
-            tmp.data(), 
+            tmp.data(),
             AF_INET6,
             NULL, // protocol info
-            (sockaddr *)&sas, 
+            (sockaddr *)&sas,
             &sasLen
         )) {
             *end = {};
@@ -76,10 +76,10 @@ std::ostream & Dim::operator<<(std::ostream & os, const Endpoint & src) {
     wchar_t tmp[256];
     DWORD tmpLen = (DWORD) size(tmp);
     if (SOCKET_ERROR == WSAAddressToStringW(
-        (sockaddr *)&sas, 
-        sizeof(sas), 
+        (sockaddr *)&sas,
+        sizeof(sas),
         NULL, // protocol info
-        tmp, 
+        tmp,
         &tmpLen
     )) {
         os << "(bad_sockaddr)";
@@ -99,8 +99,8 @@ std::ostream & Dim::operator<<(std::ostream & os, const Endpoint & src) {
 //===========================================================================
 void Dim::copy(sockaddr_storage * out, const Endpoint & src) {
     *out = {};
-    if (!src.addr.data[0] 
-        && !src.addr.data[1] 
+    if (!src.addr.data[0]
+        && !src.addr.data[1]
         && src.addr.data[2] == kIPv4MappedAddress
     ) {
         auto ia = reinterpret_cast<sockaddr_in *>(out);
@@ -172,8 +172,8 @@ static unordered_map<int, QueryTask> s_tasks;
 // Callback
 //===========================================================================
 static void CALLBACK addressQueryCallback(
-    DWORD error, 
-    DWORD bytes, 
+    DWORD error,
+    DWORD bytes,
     OVERLAPPED * overlapped
 ) {
     auto evt = reinterpret_cast<WinOverlappedEvent *>(overlapped);
@@ -294,7 +294,7 @@ void Dim::addressGetLocal(std::vector<Address> * out) {
         result = result->ai_next;
     }
 
-    // if there are no addresses toss on the loopback with the null port so we 
+    // if there are no addresses toss on the loopback with the null port so we
     // can at least pretend.
     if (out->empty()) {
         parse(&end, "127.0.0.1", 9);

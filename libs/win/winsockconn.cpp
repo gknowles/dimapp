@@ -15,7 +15,7 @@ using namespace Dim;
 *
 ***/
 
-// Set to 9 seconds to align with the default initial RTO of 3 seconds, 
+// Set to 9 seconds to align with the default initial RTO of 3 seconds,
 // see iSocketSetConnectTimeout() below for details.
 const Duration kConnectTimeout{9s};
 
@@ -47,9 +47,9 @@ private:
     void connectFailed();
 };
 
-class ConnectTask 
+class ConnectTask
     : public IWinOverlappedNotify
-    , public ListBaseLink<> 
+    , public ListBaseLink<>
 {
 public:
     TimePoint m_expiration;
@@ -94,7 +94,7 @@ static auto & s_perfConnectFailed = uperf("sock connect failed");
 
 //===========================================================================
 ConnectTask::ConnectTask(unique_ptr<ConnSocket> && sock)
-    : m_socket(move(sock)) 
+    : m_socket(move(sock))
 {
     m_expiration = Clock::now() + kConnectTimeout;
 }
@@ -218,10 +218,10 @@ void ConnSocket::onConnect(WinError error, int bytes) {
     //-----------------------------------------------------------------------
     // update socket and start receiving
     if (SOCKET_ERROR == setsockopt(
-        m_handle, 
-        SOL_SOCKET, 
-        SO_UPDATE_CONNECT_CONTEXT, 
-        nullptr, 
+        m_handle,
+        SOL_SOCKET,
+        SO_UPDATE_CONNECT_CONTEXT,
+        nullptr,
         0
     )) {
         logMsgError() << "setsockopt(SO_UPDATE_CONNECT_CONTEXT): "
@@ -256,7 +256,7 @@ void ConnSocket::onConnect(WinError error, int bytes) {
 
     //-----------------------------------------------------------------------
     // create read/write queue
-    if (!createQueue()) 
+    if (!createQueue())
         return connectFailed();
 
     // notify socket connect event
@@ -311,11 +311,11 @@ void Dim::iSocketConnectInitialize() {
 void Dim::iSocketSetConnectTimeout(SOCKET s, Duration wait) {
     using namespace std::chrono;
 
-    // Since there are up to two retransmissions and their back off is 
-    // exponential the total wait time is equal to seven times the initial 
+    // Since there are up to two retransmissions and their back off is
+    // exponential the total wait time is equal to seven times the initial
     // round trip time:
     //  - try, wait RTT, try, wait 2*RTT, try, wait 4*RTT
-    // 
+    //
     // Also note that Windows clamps the RTT to [300, 3000] (in milliseconds),
     // *except* that 0 and 65535 have special meaning!
     auto rtt = duration_cast<milliseconds>(wait).count() / 7 + 1;
@@ -344,10 +344,10 @@ void Dim::iSocketSetConnectTimeout(SOCKET s, Duration wait) {
     //    detect, potentially making the above call into something silly.
     DWORD val = (DWORD) duration_cast<seconds>(wait).count();
     if (SOCKET_ERROR == setsockopt(
-        s, 
-        IPPROTO_TCP, 
-        TCP_MAXRT, 
-        (char *) &val, 
+        s,
+        IPPROTO_TCP,
+        TCP_MAXRT,
+        (char *) &val,
         sizeof(val)
     )) {
         logMsgError() << "setsockopt(TCP_MAXRT): " << WinError{};

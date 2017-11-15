@@ -20,11 +20,11 @@ enum class Disconnect {
     // The application called disconnect.
     kAppRequest,
 
-    // Time expired before enough data was received to determine the 
+    // Time expired before enough data was received to determine the
     // protocol of an inbound connection.
-    kNoData,            
+    kNoData,
 
-    // Data received from inbound connection didn't match any registered 
+    // Data received from inbound connection didn't match any registered
     // protocol.
     kUnknownProtocol,
 
@@ -54,21 +54,21 @@ public:
 
 public:
     static void disconnect(
-        IAppSocketNotify * notify, 
+        IAppSocketNotify * notify,
         AppSocket::Disconnect why
     );
     static void write(IAppSocketNotify * notify, std::string_view data);
     static void write(IAppSocketNotify * notify, const CharBuf & data);
     static void write(
-        IAppSocketNotify * notify, 
-        std::unique_ptr<SocketBuffer> buffer, 
+        IAppSocketNotify * notify,
+        std::unique_ptr<SocketBuffer> buffer,
         size_t bytes
     );
 
 public:
-    // If constructed without a notify the incoming data will be matched 
-    // against the registered listeners to find a factory and that factory 
-    // will be used to create a notify. If the incoming data doesn't map to 
+    // If constructed without a notify the incoming data will be matched
+    // against the registered listeners to find a factory and that factory
+    // will be used to create a notify. If the incoming data doesn't map to
     // any known factory the socket is disconnected.
     IAppSocket() {}
     IAppSocket(IAppSocketNotify * notify);
@@ -95,7 +95,7 @@ private:
     Duration checkTimeout_LK(TimePoint now);
     void setNotify(IAppSocketNotify * notify);
 
-    // set to {} when matching is completed, either successfully or 
+    // set to {} when matching is completed, either successfully or
     // unsuccessfully.
     std::list<UnmatchedInfo>::iterator m_pos;
 
@@ -122,7 +122,7 @@ class IAppSocket::UnmatchedTimer : public ITimerNotify {
 void socketDisconnect(IAppSocketNotify * notify, AppSocket::Disconnect why);
 
 void socketWrite(
-    IAppSocketNotify * notify, 
+    IAppSocketNotify * notify,
     std::unique_ptr<SocketBuffer> buffer,
     size_t bytes
 );

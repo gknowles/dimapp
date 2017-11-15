@@ -65,7 +65,7 @@ Time8601Str::Time8601Str(TimePoint time, unsigned precision, int tzMinutes) {
 //===========================================================================
 string_view Time8601Str::view() const {
     return string_view(
-        m_data, 
+        m_data,
         sizeof(m_data) - 1 - m_data[sizeof(m_data) - 1]
     );
 }
@@ -102,8 +102,8 @@ static char * add2Digit(char * out, int val, char suffix) {
 
 //===========================================================================
 Time8601Str & Time8601Str::set(
-    TimePoint time, 
-    unsigned precision, 
+    TimePoint time,
+    unsigned precision,
     int tzMinutes
 ) {
     assert(precision <= 7);
@@ -227,7 +227,7 @@ bool Dim::timeParse8601(TimePoint * out, std::string_view str) {
         return timeFromDesc(*out, desc);
 
     // time
-    if (str[0] != 'T' && str[0] != ' ' && str[0] != 't') 
+    if (str[0] != 'T' && str[0] != ' ' && str[0] != 't')
         return false;
     str.remove_prefix(1);
     if (str.size() < 9
@@ -243,7 +243,7 @@ bool Dim::timeParse8601(TimePoint * out, std::string_view str) {
     if (str[0] == '.') {
         size_t i = 1;
         for (;; ++i) {
-            if (i >= str.size()) 
+            if (i >= str.size())
                 break;
             unsigned num = (unsigned char) str[i] - '0';
             if (num > 9)

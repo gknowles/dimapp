@@ -257,8 +257,8 @@ const Element * Grammar::element(string_view name) const {
 
 //===========================================================================
 static void ensureOption(
-    Grammar & rules, 
-    const char name[], 
+    Grammar & rules,
+    const char name[],
     string_view value
 ) {
     if (!*rules.optionString(name))
@@ -295,8 +295,8 @@ bool processOptions(Grammar & rules) {
 
 //===========================================================================
 static bool copyRequiredDeps(
-    Grammar & out, 
-    const Grammar & src, 
+    Grammar & out,
+    const Grammar & src,
     const Element & root
 ) {
     switch (root.type) {
@@ -338,7 +338,7 @@ bool copyRules(
         return true;
     }
     auto & elem = *ib.first;
-    if ((elem.flags & Element::fFunction) 
+    if ((elem.flags & Element::fFunction)
         && (elem.flags & Element::fCharEvents)
     ) {
         logMsgError() << "Rule with both Function and Char, " << elem.value;
@@ -394,7 +394,7 @@ static void mergeSequence(Element & rule) {
 static void mergeRule(Element & rule, Grammar & rules) {
     // initially assume fComplex to protect against recursion
     rule.flags |= Element::fComplex;
-    if (!rule.rule) 
+    if (!rule.rule)
         return;
     merge(const_cast<Element &>(*rule.rule), rules);
     if (rule.rule->flags & Element::fSimple) {
@@ -406,7 +406,7 @@ static void mergeRule(Element & rule, Grammar & rules) {
         rule.rule = nullptr;
         rule.flags &= ~Element::fComplex;
         rule.flags |= rule.flags || rule.m != 1 || rule.n != 1
-            ? Element::fComplex 
+            ? Element::fComplex
             : Element::fSimple;
     }
 }
@@ -519,8 +519,8 @@ static void normalizeRule(Element & rule, Grammar & rules) {
 
 //===========================================================================
 static void normalize(
-    Element & rule, 
-    const Element * parent, 
+    Element & rule,
+    const Element * parent,
     Grammar & rules
 ) {
     if (rule.elements.size() == 1) {
@@ -569,8 +569,8 @@ void normalize(Grammar & rules) {
 
 //===========================================================================
 static void addFunctionTags(
-    Grammar & rules, 
-    Element & rule, 
+    Grammar & rules,
+    Element & rule,
     vector<bool> & used
 ) {
     bool wasUsed;

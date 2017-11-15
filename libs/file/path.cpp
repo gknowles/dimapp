@@ -52,7 +52,7 @@ static void addStem(string & out, string_view stem) {
 
 //===========================================================================
 static void addExt(string & out, string_view ext) {
-    if (ext.empty()) 
+    if (ext.empty())
         return;
 
     if (ext[0] != '.')
@@ -93,7 +93,7 @@ static void normalize(string & path) {
                             prevChar = kSlash;
                             continue;
                         }
-                        if (ptr[-2] == '.' && pos >= 3 
+                        if (ptr[-2] == '.' && pos >= 3
                             && (ptr[-3] == '/' || ptr[-3] == '\\')
                         ) {
                             auto * obase = out.data() + cnt.m_rootLen;
@@ -199,14 +199,14 @@ Count::Count(string_view path) {
 ***/
 
 //===========================================================================
-Path::Path(string_view from) 
+Path::Path(string_view from)
     : m_data(from)
 {
     normalize(m_data);
 }
 
 //===========================================================================
-Path::Path(const fs::path & from) 
+Path::Path(const fs::path & from)
     : m_data(from.generic_u8string())
 {
     normalize(m_data);
@@ -391,7 +391,7 @@ string_view Path::parentPath() const {
 string_view Path::filename() const {
     Count cnt(m_data);
     return {
-        m_data.data() + cnt.m_rootLen + cnt.m_dirLen, 
+        m_data.data() + cnt.m_rootLen + cnt.m_dirLen,
         cnt.m_stemLen + cnt.m_extLen
     };
 }

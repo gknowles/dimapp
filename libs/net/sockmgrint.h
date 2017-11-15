@@ -23,14 +23,14 @@ enum ConfFlags : unsigned {
 
 class ISockMgrBase;
 
-class ISockMgrSocket 
+class ISockMgrSocket
     : public ITimerListNotify<>
     , public IAppSocket
-    , public IAppSocketNotify 
+    , public IAppSocketNotify
 {
 public:
     ISockMgrSocket(
-        ISockMgrBase & mgr, 
+        ISockMgrBase & mgr,
         std::unique_ptr<IAppSocketNotify> notify
     );
 

@@ -46,9 +46,9 @@ static void testStrToInt() {
 
     // clamp overflow
     EXPECT(strToInt("2147483647") == INT_MAX);
-    EXPECT(strToInt("2147483648", &eptr) == INT_MAX && *eptr == 0); 
+    EXPECT(strToInt("2147483648", &eptr) == INT_MAX && *eptr == 0);
     auto num = strToInt("9876543210", &eptr);
-    EXPECT(num == INT_MAX && *eptr == 0); 
+    EXPECT(num == INT_MAX && *eptr == 0);
     num = strToInt("-9876543210", &eptr);
     EXPECT(num == INT_MIN && *eptr == 0);
 
@@ -58,8 +58,8 @@ static void testStrToInt() {
 
     // clamp int64 overflow
     EXPECT(strToInt64("9223372036854775807") == INT64_MAX);
-    EXPECT(strToInt64("9223372036854775808", &eptr) == INT64_MAX && !*eptr); 
-    EXPECT(strToInt64("12345678901234567890", &eptr) == INT64_MAX && !*eptr); 
+    EXPECT(strToInt64("9223372036854775808", &eptr) == INT64_MAX && !*eptr);
+    EXPECT(strToInt64("12345678901234567890", &eptr) == INT64_MAX && !*eptr);
     EXPECT(strToInt64("-12345678901234567890", &eptr) == INT64_MIN && !*eptr);
 
     //-----------------------------------------------------------------------
@@ -96,7 +96,7 @@ static void testIntegralStr() {
 
     //-----------------------------------------------------------------------
     // double
-    EXPECT(StrFrom<double>(-0.101234567890123456789e+101) == 
+    EXPECT(StrFrom<double>(-0.101234567890123456789e+101) ==
         "-1.0123456789012345e+100"sv);
 
     //-----------------------------------------------------------------------
@@ -130,8 +130,8 @@ static void app(int argc, char *argv[]) {
 
 //===========================================================================
 int main(int argc, char * argv[]) {
-    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF 
-        | _CRTDBG_LEAK_CHECK_DF 
+    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF
+        | _CRTDBG_LEAK_CHECK_DF
         | _CRTDBG_DELAY_FREE_MEM_DF);
     _set_error_mode(_OUT_TO_MSGBOX);
     return appRun(app, argc, argv);

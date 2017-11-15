@@ -59,7 +59,7 @@ string ThreadName::get() const {
     if (m_getDesc) {
         wchar_t * name;
         auto result = m_getDesc(GetCurrentThread(), &name);
-        if (FAILED(result)) 
+        if (FAILED(result))
             logMsgCrash() << "GetThreadDescription: " << WinError{result};
         out = toString(wstring_view(name));
         LocalFree(name);

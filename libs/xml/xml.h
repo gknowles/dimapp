@@ -75,7 +75,7 @@ private:
 
     void addRaw(const char text[], size_t count);
 
-    template <bool isContent> 
+    template <bool isContent>
     void addText(const char text[], size_t count = -1);
     IXBuilder & fail();
 
@@ -230,8 +230,8 @@ public:
 
     XNode * setRoot(const char name[], const char text[] = nullptr);
     XNode * addElem(
-        XNode * parent, 
-        const char name[], 
+        XNode * parent,
+        const char name[],
         const char text[] = nullptr
     );
     XAttr * addAttr(XNode * elem, const char name[], const char text[]);
@@ -336,8 +336,8 @@ XAttr * attr(XNode * elem, std::string_view name);
 const XAttr * attr(const XNode * elem, std::string_view name);
 
 const char * attrValue(
-    const XNode * elem, 
-    std::string_view name, 
+    const XNode * elem,
+    std::string_view name,
     const char val[] = nullptr
 );
 
@@ -363,7 +363,7 @@ XNodeRange<const XNode> elems(const XNode * elem, std::string_view name = {});
 
 XNodeRange<XNode> nodes(XNode * elem, XType type = XType::kInvalid);
 XNodeRange<const XNode> nodes(
-    const XNode * elem, 
+    const XNode * elem,
     XType type = XType::kInvalid
 );
 

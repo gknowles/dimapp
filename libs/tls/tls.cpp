@@ -140,7 +140,7 @@ void TlsConnBase::onTlsHandshake(const TlsHelloRetryRequestMsg & msg) {}
 
 //===========================================================================
 TlsRecordWriter::TlsRecordWriter(CharBuf * out, TlsConnBase & conn)
-    : m_out(out) 
+    : m_out(out)
     , m_rec(conn.m_encrypt)
 {}
 

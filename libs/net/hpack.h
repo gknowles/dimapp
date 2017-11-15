@@ -126,9 +126,9 @@ private:
         size_t & srcLen
     );
     bool read(
-        size_t * out, 
-        size_t prefixBits, 
-        const char *& src, 
+        size_t * out,
+        size_t prefixBits,
+        const char *& src,
         size_t & srcLen
     );
     bool read(

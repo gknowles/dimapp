@@ -26,9 +26,9 @@ const auto kDefaultInactiveTimeout = 1min;
 
 namespace {
 
-class AcceptManager final 
-    : public ISockMgrBase 
-    , public IFactory<IAppSocketNotify> 
+class AcceptManager final
+    : public ISockMgrBase
+    , public IFactory<IAppSocketNotify>
 {
 public:
     AcceptManager(
@@ -89,8 +89,8 @@ AccMgrSocket::AccMgrSocket(
 {}
 
 //===========================================================================
-AcceptManager & AccMgrSocket::mgr() { 
-    return static_cast<AcceptManager &>(ISockMgrSocket::mgr()); 
+AcceptManager & AccMgrSocket::mgr() {
+    return static_cast<AcceptManager &>(ISockMgrSocket::mgr());
 }
 
 //===========================================================================
@@ -162,9 +162,9 @@ void AcceptManager::setEndpoints(const vector<Endpoint> & src) {
 //===========================================================================
 bool AcceptManager::onShutdown(bool firstTry) {
     if (firstTry) {
-        for (auto && ep : m_endpoints) 
+        for (auto && ep : m_endpoints)
             socketCloseWait(this, ep, m_family);
-        for (auto && sock : m_inactivity.values()) 
+        for (auto && sock : m_inactivity.values())
             sock.disconnect(AppSocket::Disconnect::kAppRequest);
     }
     return m_inactivity.values().empty();
@@ -188,7 +188,7 @@ void AcceptManager::onConfigChange(const XDocument & doc) {
 //===========================================================================
 std::unique_ptr<IAppSocketNotify> AcceptManager::onFactoryCreate() {
     auto ptr = make_unique<AccMgrSocket>(
-        *this, 
+        *this,
         m_cliSockFact->onFactoryCreate()
     );
     return ptr;

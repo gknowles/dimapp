@@ -59,7 +59,7 @@ TokenTable::TokenTable(const Token * src, size_t count) {
                 break;
             }
             auto & tval = m_values[tmp.pos];
-            if (tval.hash == val.hash 
+            if (tval.hash == val.hash
                 && strcmp(tval.token.name, val.token.name) == 0
             ) {
                 break;
@@ -107,14 +107,14 @@ bool TokenTable::find(int * out, const char name[], size_t nameLen) const {
         if (distance > ndx.distance)
             break;
         const Value & val = m_values[ndx.pos];
-        if (val.hash == hash 
+        if (val.hash == hash
             && val.nameLen <= nameLen
             && strncmp(val.token.name, name, nameLen) == 0
         ) {
             *out = val.token.id;
             return true;
         }
-        if (++pos == num) 
+        if (++pos == num)
             pos = 0;
         distance += 1;
     }
@@ -163,7 +163,7 @@ TokenTable::Iterator TokenTable::end() const {
 
 //===========================================================================
 TokenTable::Iterator::Iterator(const Token * ptr)
-    : m_current{ptr} 
+    : m_current{ptr}
 {}
 
 //===========================================================================

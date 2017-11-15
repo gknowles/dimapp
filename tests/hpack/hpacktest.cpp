@@ -348,7 +348,7 @@ const Test s_tests[] = {
 
 //===========================================================================
 bool NameValue::operator==(const NameValue & right) const {
-    return strcmp(name, right.name) == 0 
+    return strcmp(name, right.name) == 0
         && strcmp(value, right.value) == 0
         && flags == right.flags;
 }
@@ -404,7 +404,7 @@ static void app(int argc, char *argv[]) {
         if (test.headers != out.headers)
             logMsgError() << "headers mismatch (FAILED)";
         if (!equal(
-            test.dynTable.begin(), 
+            test.dynTable.begin(),
             test.dynTable.end(),
             decode.dynamicTable().begin(),
             decode.dynamicTable().end(),
@@ -433,8 +433,8 @@ static void app(int argc, char *argv[]) {
 
 //===========================================================================
 int main(int argc, char * argv[]) {
-    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF 
-        | _CRTDBG_LEAK_CHECK_DF 
+    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF
+        | _CRTDBG_LEAK_CHECK_DF
         | _CRTDBG_DELAY_FREE_MEM_DF);
     _set_error_mode(_OUT_TO_MSGBOX);
     return appRun(app, argc, argv);

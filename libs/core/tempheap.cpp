@@ -107,7 +107,7 @@ char * TempHeap::alloc(size_t bytes, size_t align) {
                 m_buffer = tmp;
             }
         } else {
-            auto reserve = buf 
+            auto reserve = buf
                 ? min(kMaxBufferSize, 2 * buf->m_reserve)
                 : kInitBufferSize;
             if (reserve < kBufferLen + required)

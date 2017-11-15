@@ -23,9 +23,9 @@ static_assert(kDataSize >= 256);
 const unsigned kBitWidth = 32;
 
 const unsigned kLeafBits = hammingWeight(8 * kDataSize - 1);
-const unsigned kStepBits = 
+const unsigned kStepBits =
     hammingWeight(pow2Ceil(kDataSize / sizeof(Node) + 1) / 2 - 1);
-const unsigned kMaxDepth = 
+const unsigned kMaxDepth =
     (kBitWidth - kLeafBits + kStepBits - 1) / kStepBits;
 
 constexpr unsigned maxDepth() {
@@ -43,7 +43,7 @@ constexpr unsigned valueMask(unsigned depth) {
 constexpr uint16_t numNodes(unsigned depth) {
     uint16_t ret = 0;
     if (depth) {
-        ret = (uint16_t) 1 
+        ret = (uint16_t) 1
             << hammingWeight(valueMask(depth) ^ valueMask(depth - 1));
     }
     return ret;
@@ -84,8 +84,8 @@ struct IImplBase {
     virtual void destroy(Node & node) = 0;
     virtual bool insert(Node & node, unsigned value) = 0;
     virtual void insert(
-        Node & node, 
-        const unsigned * first, 
+        Node & node,
+        const unsigned * first,
         const unsigned * last
     ) = 0;
     virtual void erase(Node & node, unsigned value) = 0;
@@ -134,8 +134,8 @@ struct EmptyImpl final : IImplBase {
     void destroy(Node & node) override;
     bool insert(Node & node, unsigned value) override;
     void insert(
-        Node & node, 
-        const unsigned * first, 
+        Node & node,
+        const unsigned * first,
         const unsigned * last
     ) override;
     void erase(Node & node, unsigned value) override;
@@ -174,7 +174,7 @@ void EmptyImpl::init(Node & node, const Node & from) {
 }
 
 //===========================================================================
-void EmptyImpl::destroy(Node & node) 
+void EmptyImpl::destroy(Node & node)
 {}
 
 //===========================================================================
@@ -189,8 +189,8 @@ bool EmptyImpl::insert(Node & node, unsigned value) {
 
 //===========================================================================
 void EmptyImpl::insert(
-    Node & node, 
-    const unsigned * first, 
+    Node & node,
+    const unsigned * first,
     const unsigned * last
 ) {
     if (first != last) {
@@ -244,8 +244,8 @@ struct FullImpl final : IImplBase {
     void destroy(Node & node) override;
     bool insert(Node & node, unsigned value) override;
     void insert(
-        Node & node, 
-        const unsigned * first, 
+        Node & node,
+        const unsigned * first,
         const unsigned * last
     ) override;
     void erase(Node & node, unsigned value) override;
@@ -287,7 +287,7 @@ void FullImpl::init(Node & node, const Node & from) {
 }
 
 //===========================================================================
-void FullImpl::destroy(Node & node) 
+void FullImpl::destroy(Node & node)
 {}
 
 //===========================================================================
@@ -298,10 +298,10 @@ bool FullImpl::insert(Node & node, unsigned value) {
 
 //===========================================================================
 void FullImpl::insert(
-    Node & node, 
-    const unsigned * first, 
+    Node & node,
+    const unsigned * first,
     const unsigned * last
-) 
+)
 {}
 
 //===========================================================================
@@ -362,8 +362,8 @@ void FullImpl::convert(Node & node) {
 
 namespace {
 struct VectorImpl final : IImplBase {
-    static constexpr size_t maxValues() { 
-        return kDataSize / sizeof(*Node::values); 
+    static constexpr size_t maxValues() {
+        return kDataSize / sizeof(*Node::values);
     }
 
     void init(Node & node, bool full) override;
@@ -371,8 +371,8 @@ struct VectorImpl final : IImplBase {
     void destroy(Node & node) override;
     bool insert(Node & node, unsigned value) override;
     void insert(
-        Node & node, 
-        const unsigned * first, 
+        Node & node,
+        const unsigned * first,
         const unsigned * last
     ) override;
     void erase(Node & node, unsigned value) override;
@@ -452,8 +452,8 @@ bool VectorImpl::insert(Node & node, unsigned value) {
 
 //===========================================================================
 void VectorImpl::insert(
-    Node & node, 
-    const unsigned * first, 
+    Node & node,
+    const unsigned * first,
     const unsigned * last
 ) {
     while (first != last) {
@@ -560,8 +560,8 @@ void VectorImpl::convert(Node & node) {
 
 namespace {
 struct BitmapImpl final : IImplBase {
-    static constexpr size_t numInt64s() { 
-        return kDataSize / sizeof(uint64_t); 
+    static constexpr size_t numInt64s() {
+        return kDataSize / sizeof(uint64_t);
     }
     static constexpr size_t numBits() { return 64 * numInt64s(); }
 
@@ -570,8 +570,8 @@ struct BitmapImpl final : IImplBase {
     void destroy(Node & node) override;
     bool insert(Node & node, unsigned value) override;
     void insert(
-        Node & node, 
-        const unsigned * first, 
+        Node & node,
+        const unsigned * first,
         const unsigned * last
     ) override;
     void erase(Node & node, unsigned value) override;
@@ -643,8 +643,8 @@ bool BitmapImpl::insert(Node & node, unsigned value) {
 
 //===========================================================================
 void BitmapImpl::insert(
-    Node & node, 
-    const unsigned * first, 
+    Node & node,
+    const unsigned * first,
     const unsigned * last
 ) {
     for (; first != last; ++first)
@@ -730,8 +730,8 @@ bool BitmapImpl::lastContiguous(
 
 namespace {
 struct MetaImpl final : IImplBase {
-    static constexpr size_t maxNodes() { 
-        return kDataSize / sizeof(*Node::nodes); 
+    static constexpr size_t maxNodes() {
+        return kDataSize / sizeof(*Node::nodes);
     }
 
     void init(Node & node, bool full) override;
@@ -739,8 +739,8 @@ struct MetaImpl final : IImplBase {
     void destroy(Node & node) override;
     bool insert(Node & node, unsigned value) override;
     void insert(
-        Node & node, 
-        const unsigned * first, 
+        Node & node,
+        const unsigned * first,
         const unsigned * last
     ) override;
     void erase(Node & node, unsigned value) override;
@@ -837,8 +837,8 @@ bool MetaImpl::insert(Node & node, unsigned value) {
 
 //===========================================================================
 void MetaImpl::insert(
-    Node & node, 
-    const unsigned * first, 
+    Node & node,
+    const unsigned * first,
     const unsigned * last
 ) {
     for (; first != last; ++first)
@@ -849,10 +849,10 @@ void MetaImpl::insert(
 void MetaImpl::erase(Node & node, unsigned value) {
     auto pos = nodePos(node, value);
     auto & rnode = node.nodes[pos];
-    if (rnode.type == kEmpty) 
+    if (rnode.type == kEmpty)
         return;
     impl(rnode)->erase(rnode, value);
-    if (rnode.type != kEmpty) 
+    if (rnode.type != kEmpty)
         return;
     for (unsigned i = 0; i < node.numValues; ++i) {
         if (node.nodes[i].type != kEmpty)
@@ -885,7 +885,7 @@ bool MetaImpl::findFirst(
     auto ptr = (const Node *) node.nodes + pos;
     auto last = node.nodes + node.numValues;
     for (;;) {
-        if (impl(*ptr)->findFirst(onode, ovalue, *ptr, first)) 
+        if (impl(*ptr)->findFirst(onode, ovalue, *ptr, first))
             return true;
         if (++ptr == last)
             return false;
@@ -974,7 +974,7 @@ static int cmpVec(const Node & left, const Node & right) {
     auto ri = right.values;
     auto re = ri + right.numValues;
     for (; li != le && ri != re; ++li, ++ri) {
-        if (*li != *ri) 
+        if (*li != *ri)
             return *li > *ri ? 1 : -1;
     }
     return (li == le) - (ri == re);
@@ -987,7 +987,7 @@ static int cmpBitmap(const Node & left, const Node & right) {
     auto ri = (uint64_t *) right.values;
     auto re = ri + kDataSize / sizeof(*ri);
     for (; li != le && ri != re; ++li, ++ri) {
-        if (*li != *ri) 
+        if (*li != *ri)
             return reverseBits(*li) > reverseBits(*ri) ? 1 : -1;
     }
     return (li == le) - (ri == re);
@@ -1037,7 +1037,7 @@ static void insError(Node & left, const Node & right) {
 }
 
 //===========================================================================
-static void insSkip(Node & left, const Node & right) 
+static void insSkip(Node & left, const Node & right)
 {}
 
 //===========================================================================
@@ -1050,7 +1050,7 @@ static void insCopy(Node & left, const Node & right) {
 //===========================================================================
 static void insIter(Node & left, const Node & right) {
     auto ri = UnsignedSet::Iterator(&right, 0);
-    for (; ri; ++ri) 
+    for (; ri; ++ri)
         impl(left)->insert(left, *ri);
 }
 
@@ -1067,7 +1067,7 @@ static void insVec(Node & left, const Node & right) {
     assert(right.type == kVector);
     auto ri = right.values;
     auto re = ri + right.numValues;
-    for (; ri != re; ++ri) 
+    for (; ri != re; ++ri)
         impl(left)->insert(left, *ri);
 }
 
@@ -1099,11 +1099,11 @@ static void insert(Node & left, const Node & right) {
     InsertFn * functs[][kNodeTypes] = {
     // LEFT                         RIGHT
     //             empty    full     vector   bitmap     meta
-    /* empty  */ { insSkip, insCopy, insCopy, insCopy,   insCopy  }, 
-    /* full   */ { insSkip, insSkip, insSkip, insSkip,   insSkip  }, 
-    /* vector */ { insSkip, insCopy, insVec,  insRIter,  insRIter }, 
-    /* bitmap */ { insSkip, insCopy, insIter, insBitmap, insError }, 
-    /* meta   */ { insSkip, insCopy, insIter, insError,  insMeta  }, 
+    /* empty  */ { insSkip, insCopy, insCopy, insCopy,   insCopy  },
+    /* full   */ { insSkip, insSkip, insSkip, insSkip,   insSkip  },
+    /* vector */ { insSkip, insCopy, insVec,  insRIter,  insRIter },
+    /* bitmap */ { insSkip, insCopy, insIter, insBitmap, insError },
+    /* meta   */ { insSkip, insCopy, insIter, insError,  insMeta  },
     };
     functs[left.type][right.type](left, right);
 }
@@ -1123,7 +1123,7 @@ static void insError(Node & left, Node && right) {
 }
 
 //===========================================================================
-static void insSkip(Node & left, Node && right) 
+static void insSkip(Node & left, Node && right)
 {}
 
 //===========================================================================
@@ -1168,11 +1168,11 @@ static void insert(Node & left, Node && right) {
     InsertFn * functs[][kNodeTypes] = {
     // LEFT                         RIGHT
     //             empty    full     vector   bitmap     meta
-    /* empty  */ { insSkip, insMove, insMove, insMove,   insMove  }, 
-    /* full   */ { insSkip, insSkip, insSkip, insSkip,   insSkip  }, 
-    /* vector */ { insSkip, insMove, insVec,  insRIter,  insRIter }, 
-    /* bitmap */ { insSkip, insMove, insIter, insBitmap, insError }, 
-    /* meta   */ { insSkip, insMove, insIter, insError,  insMeta  }, 
+    /* empty  */ { insSkip, insMove, insMove, insMove,   insMove  },
+    /* full   */ { insSkip, insSkip, insSkip, insSkip,   insSkip  },
+    /* vector */ { insSkip, insMove, insVec,  insRIter,  insRIter },
+    /* bitmap */ { insSkip, insMove, insIter, insBitmap, insError },
+    /* meta   */ { insSkip, insMove, insIter, insError,  insMeta  },
     };
     functs[left.type][right.type](left, move(right));
 }
@@ -1193,7 +1193,7 @@ static void eraError(Node & left, const Node & right) {
 }
 
 //===========================================================================
-static void eraSkip(Node & left, const Node & right) 
+static void eraSkip(Node & left, const Node & right)
 {}
 
 //===========================================================================
@@ -1209,14 +1209,14 @@ static void eraChange(Node & left, const Node & right) {
     assert(ri);
 
     // convert from full to either bitmap or meta
-    impl(left)->erase(left, *ri); 
-    
+    impl(left)->erase(left, *ri);
+
     erase(left, right);
 }
 
 //===========================================================================
 static void eraFind(Node & left, const Node & right) {
-    // Go through values of left vector and skip (aka remove) the ones that 
+    // Go through values of left vector and skip (aka remove) the ones that
     // are found in right node (values to be erased).
     assert(left.type == kVector);
     auto li = left.values;
@@ -1289,11 +1289,11 @@ static void erase(Node & left, const Node & right) {
     EraseFn * functs[][kNodeTypes] = {
     // LEFT                         RIGHT
     //             empty    full      vector     bitmap     meta
-    /* empty  */ { eraSkip, eraSkip,  eraSkip,   eraSkip,   eraSkip   }, 
-    /* full   */ { eraSkip, eraEmpty, eraIter,   eraChange, eraChange }, 
-    /* vector */ { eraSkip, eraEmpty, eraVec,    eraFind,   eraFind   }, 
-    /* bitmap */ { eraSkip, eraEmpty, eraIter,   eraBitmap, eraError  }, 
-    /* meta   */ { eraSkip, eraEmpty, eraIter,   eraError,  eraMeta   }, 
+    /* empty  */ { eraSkip, eraSkip,  eraSkip,   eraSkip,   eraSkip   },
+    /* full   */ { eraSkip, eraEmpty, eraIter,   eraChange, eraChange },
+    /* vector */ { eraSkip, eraEmpty, eraVec,    eraFind,   eraFind   },
+    /* bitmap */ { eraSkip, eraEmpty, eraIter,   eraBitmap, eraError  },
+    /* meta   */ { eraSkip, eraEmpty, eraIter,   eraError,  eraMeta   },
     };
     functs[left.type][right.type](left, right);
 }
@@ -1314,7 +1314,7 @@ static void isecError(Node & left, const Node & right) {
 }
 
 //===========================================================================
-static void isecSkip(Node & left, const Node & right) 
+static void isecSkip(Node & left, const Node & right)
 {}
 
 //===========================================================================
@@ -1339,7 +1339,7 @@ static void isecFind(Node & left, const Node & right) {
     const Node * node = nullptr;
     unsigned value = 0;
     for (; li != le; ++li) {
-        if (*li < value) 
+        if (*li < value)
             continue;
         if (!ptr->findFirst(&node, &value, right, *li))
             break;
@@ -1419,7 +1419,7 @@ static void isecError(Node & left, Node && right) {
 }
 
 //===========================================================================
-static void isecSkip(Node & left, Node && right) 
+static void isecSkip(Node & left, Node && right)
 {}
 
 //===========================================================================
@@ -1469,11 +1469,11 @@ static void intersect(Node & left, Node && right) {
     IsectFn * functs[][kNodeTypes] = {
     // LEFT                         RIGHT
     //             empty      full      vector     bitmap      meta
-    /* empty  */ { isecSkip,  isecSkip, isecEmpty, isecEmpty,  isecEmpty }, 
-    /* full   */ { isecEmpty, isecSkip, isecMove,  isecMove,   isecMove  }, 
-    /* vector */ { isecEmpty, isecSkip, isecVec,   isecFind,   isecFind  }, 
-    /* bitmap */ { isecEmpty, isecSkip, isecRFind, isecBitmap, isecError }, 
-    /* meta   */ { isecEmpty, isecSkip, isecRFind, isecError,  isecMeta  }, 
+    /* empty  */ { isecSkip,  isecSkip, isecEmpty, isecEmpty,  isecEmpty },
+    /* full   */ { isecEmpty, isecSkip, isecMove,  isecMove,   isecMove  },
+    /* vector */ { isecEmpty, isecSkip, isecVec,   isecFind,   isecFind  },
+    /* bitmap */ { isecEmpty, isecSkip, isecRFind, isecBitmap, isecError },
+    /* meta   */ { isecEmpty, isecSkip, isecRFind, isecError,  isecMeta  },
     };
     functs[left.type][right.type](left, move(right));
 }
@@ -1503,7 +1503,7 @@ UnsignedSet::Node::Node()
 ***/
 
 //===========================================================================
-UnsignedSet::UnsignedSet() 
+UnsignedSet::UnsignedSet()
 {}
 
 //===========================================================================
@@ -1732,7 +1732,7 @@ void UnsignedSet::iInsert(const unsigned * first, const unsigned * last) {
 ***/
 
 //===========================================================================
-UnsignedSet::Iterator::Iterator(const Node * node, value_type value) 
+UnsignedSet::Iterator::Iterator(const Node * node, value_type value)
     : m_node{node}
     , m_value{value}
 {
@@ -1753,7 +1753,7 @@ bool UnsignedSet::Iterator::operator!= (const Iterator & right) const {
 UnsignedSet::Iterator & UnsignedSet::Iterator::operator++() {
     if (m_value < absBase(*m_node) + valueMask(m_node->depth)) {
         m_value += 1;
-        if (impl(*m_node)->findFirst(&m_node, &m_value, *m_node, m_value)) 
+        if (impl(*m_node)->findFirst(&m_node, &m_value, *m_node, m_value))
             return *this;
     }
 
@@ -1783,7 +1783,7 @@ UnsignedSet::Iterator UnsignedSet::Iterator::lastContiguous() const {
 
     auto ptr = node;
     for (;;) {
-        if (!ptr->depth) 
+        if (!ptr->depth)
             break;
         ptr += 1;
         if (ptr->type == kMetaEnd) {
@@ -1791,7 +1791,7 @@ UnsignedSet::Iterator UnsignedSet::Iterator::lastContiguous() const {
             assert(ptr->type != kMetaEnd);
             continue;
         }
-        if (impl(*ptr)->lastContiguous(&node, &value, *ptr, absBase(*ptr))) 
+        if (impl(*ptr)->lastContiguous(&node, &value, *ptr, absBase(*ptr)))
             break;
     }
     return {node, value};
@@ -1808,7 +1808,7 @@ UnsignedSet::Iterator UnsignedSet::Iterator::lastContiguous() const {
 UnsignedSet::RangeIterator::RangeIterator(Iterator where)
     : m_iter(where)
 {
-    if (m_iter) 
+    if (m_iter)
         ++*this;
 }
 

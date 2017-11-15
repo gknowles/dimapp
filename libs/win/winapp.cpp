@@ -124,7 +124,7 @@ static void updateList(HWND parent) {
 static void enableTimer(HWND wnd, bool enable) {
     if (enable) {
         SetTimer(
-            wnd, 
+            wnd,
             kTimerId,
             kUpdateIntervalMS,
             NULL // timer function
@@ -286,7 +286,7 @@ void MessageLoopTask::enable(Authority auth, bool enable) {
             assert(auth == kConfigFile);
             m_fromConfig = enable;
         }
-        enable = (appFlags() & fAppWithGui) 
+        enable = (appFlags() & fAppWithGui)
             ? s_cliEnable ? *s_cliEnable : m_fromConfig
             : false;
     }
@@ -295,7 +295,7 @@ void MessageLoopTask::enable(Authority auth, bool enable) {
     if (!m_hasShutdown && !m_hasCommand)
         return;
 
-    if (enable == m_enable) 
+    if (enable == m_enable)
         return;
 
     unique_lock<mutex> lk{m_mut};
@@ -315,7 +315,7 @@ void MessageLoopTask::enable(Authority auth, bool enable) {
 //===========================================================================
 bool MessageLoopTask::enabled() const {
     unique_lock<mutex> lk{m_mut};
-    return m_wnd;    
+    return m_wnd;
 }
 
 //===========================================================================
@@ -327,7 +327,7 @@ void MessageLoopTask::onTask() {
     while (BOOL rc = GetMessage(&msg, NULL, 0, 0)) {
         if (rc == -1)
             logMsgCrash() << "GetMessage: " << WinError{};
-        
+
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
@@ -339,7 +339,7 @@ void MessageLoopTask::onTask() {
 
 /****************************************************************************
 *
-*   Config monitor 
+*   Config monitor
 *
 ***/
 

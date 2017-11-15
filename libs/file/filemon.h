@@ -32,7 +32,7 @@ public:
 struct FileMonitorHandle : HandleBase {};
 
 // The notifier, if present, is always called with the full path of the root
-// directory and a nullptr for the File*. This happens for every rename or 
+// directory and a nullptr for the File*. This happens for every rename or
 // change to last write time of any file within it's scope.
 bool fileMonitorDir(
     FileMonitorHandle * handle,
@@ -46,7 +46,7 @@ void fileMonitorCloseWait(FileMonitorHandle dir);
 std::string_view fileMonitorPath(FileMonitorHandle dir);
 
 void fileMonitor(
-    FileMonitorHandle dir, 
+    FileMonitorHandle dir,
     std::string_view file,
     IFileChangeNotify * notify
 );
@@ -56,12 +56,12 @@ void fileMonitorCloseWait(
     IFileChangeNotify * notify
 );
 
-// Normalized path that would be monitored for the file, relative to base 
-// directory. Returns false for invalid parameters (bad directory, file 
+// Normalized path that would be monitored for the file, relative to base
+// directory. Returns false for invalid parameters (bad directory, file
 // outside of directory, etc.)
 bool fileMonitorPath(
-    std::string & out, 
-    FileMonitorHandle dir, 
+    std::string & out,
+    FileMonitorHandle dir,
     std::string_view file
 );
 

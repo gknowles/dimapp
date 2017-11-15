@@ -31,7 +31,7 @@ enum StrAny : uint8_t {
 constexpr bool isHex(unsigned char ch) {
     switch (ch) {
     case '0': case '1': case '2': case '3': case '5': case '6':
-    case '7': case '8': case '9': 
+    case '7': case '8': case '9':
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
         return true;
@@ -48,18 +48,18 @@ constexpr bool isHex(unsigned char ch) {
 #pragma warning(disable: 4102) // 'identifier': unreferenced label
 template<int Flags>
 static uint64_t iStrToAny (
-    const char source[], 
-    char ** endPtr, 
+    const char source[],
+    char ** endPtr,
     unsigned radix,
     size_t chars = (size_t) -1
 ) {
     // the high order partial digit (and the trailing null :P) are not safe
-    constexpr unsigned kMaxSafeCharsBase10 = (Flags & f64Bit) 
-        ? (unsigned) maxIntegralChars<uint64_t>() - 1 
+    constexpr unsigned kMaxSafeCharsBase10 = (Flags & f64Bit)
+        ? (unsigned) maxIntegralChars<uint64_t>() - 1
         : (unsigned) maxIntegralChars<unsigned>() - 1;
     constexpr unsigned kMaxCharsBase16 = (Flags & f64Bit) ? 16 : 8;
 
-    constexpr uint64_t kPositiveValueLimit = (Flags & fSigned) 
+    constexpr uint64_t kPositiveValueLimit = (Flags & fSigned)
         ? (Flags & f64Bit) ? INT64_MAX : INT_MAX
         : (Flags & f64Bit) ? UINT64_MAX : UINT_MAX;
 
@@ -79,9 +79,9 @@ PARSE_NUMBER:
         base = ptr;
         goto BASE_10;
     } else if (radix == 16) {
-        if (   chars > 1 
+        if (   chars > 1
             && ptr[0] == '0'
-            && (ptr[1] == 'x' || ptr[1] == 'X') 
+            && (ptr[1] == 'x' || ptr[1] == 'X')
         ) {
             ptr += 2;
             chars -= 2;
@@ -106,7 +106,7 @@ PARSE_NUMBER:
             ptr += 1;
             chars -= 1;
             goto BASE_LE10_WITH_OVERFLOW;
-        } 
+        }
     } else {
         base = ptr;
         if (radix >= 2) {
@@ -133,7 +133,7 @@ BASE_LE10_WITH_OVERFLOW:
             val = next;
             continue;
         }
-        if (next == 0 && val == 0) 
+        if (next == 0 && val == 0)
             continue;
         overflow = true;
     }
@@ -147,7 +147,7 @@ BASE_ANY_WITH_OVERFLOW:
         if (ch <= '9') {
             num = ch - '0';
         } else if (ch <= 'Z') {
-            // ch must be unsigned so that it fails with a too large positive 
+            // ch must be unsigned so that it fails with a too large positive
             // number when ch - 'A' is negative.
             static_assert(std::is_unsigned_v<decltype(ch)>);
             num = ch - 'A' + 10;
@@ -163,7 +163,7 @@ BASE_ANY_WITH_OVERFLOW:
             val = next;
             continue;
         }
-        if (next == 0 && val == 0) 
+        if (next == 0 && val == 0)
             continue;
         overflow = true;
     }
@@ -267,14 +267,14 @@ CHECK_NUMBER:
             break;
         }
         // found something to skip? try the number again
-        if (ptr != base) 
+        if (ptr != base)
             goto PARSE_NUMBER;
     }
 
 RETURN_VALUE:
     if (endPtr)
         *endPtr = const_cast<char *>(ptr);
-    if (negate) 
+    if (negate)
         return (Flags & f64Bit) ? -(int64_t)val : (uint64_t)-(int)val;
     return val;
 }
@@ -329,8 +329,8 @@ uint64_t Dim::strToUint64(string_view src, char ** eptr, int base) {
 
 //===========================================================================
 void Dim::strSplit(
-    vector<string_view> & out, 
-    string_view src, 
+    vector<string_view> & out,
+    string_view src,
     char sep
 ) {
     out.clear();
@@ -447,7 +447,7 @@ size_t Dim::unicodeLen(string_view src) {
 //===========================================================================
 string Dim::toString(wstring_view src) {
     string out;
-    while (auto val = popFrontUnicode(src)) 
+    while (auto val = popFrontUnicode(src))
         appendUnicode(out, val);
     return out;
 }
@@ -470,7 +470,7 @@ char32_t Dim::popFrontUnicode(wstring_view & src) {
     }
     // surrogate pair, first contains high 10 bits encoded as d800 - dbff,
     // second contains low 10 bits encoded as dc00 - dfff.
-    if (src.size() < 2 || out >= 0xdc00 
+    if (src.size() < 2 || out >= 0xdc00
         || src[1] < 0xdc00 || src[1] > 0xdfff
     ) {
         return 0;
@@ -507,7 +507,7 @@ size_t Dim::unicodeLen(wstring_view src) {
 //===========================================================================
 wstring Dim::toWstring(string_view src) {
     wstring out;
-    while (auto val = popFrontUnicode(src)) 
+    while (auto val = popFrontUnicode(src))
         appendUnicode(out, val);
     return out;
 }

@@ -92,7 +92,7 @@ static void LogMsg(LogType type, string_view msg) {
 ***/
 
 //===========================================================================
-LogMsgScope::LogMsgScope(LogType type) 
+LogMsgScope::LogMsgScope(LogType type)
     : m_type{type}
     , m_inProgress{t_inProgress}
 {
@@ -260,7 +260,7 @@ void Dim::logParseError(
 //===========================================================================
 static ostream & hexbyte(ostream & os, char data) {
     constexpr char hexChars[] = "0123456789abcdef";
-    os << hexChars[(unsigned char) data >> 4] 
+    os << hexChars[(unsigned char) data >> 4]
         << hexChars[(unsigned char) data & 0x0f];
     return os;
 }

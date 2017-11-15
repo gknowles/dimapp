@@ -70,7 +70,7 @@ static VOID CALLBACK eventWaitCallback(PVOID param, BOOLEAN timeout) {
 }
 
 //===========================================================================
-IWinEventWaitNotify::IWinEventWaitNotify(TaskQueueHandle hq) 
+IWinEventWaitNotify::IWinEventWaitNotify(TaskQueueHandle hq)
     : IWinOverlappedNotify{hq}
 {
     auto & hevt = overlapped().hEvent;

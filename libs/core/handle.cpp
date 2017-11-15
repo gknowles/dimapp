@@ -33,7 +33,7 @@ bool HandleMapBase::empty() const {
 //===========================================================================
 HandleContent * HandleMapBase::find(HandleBase handle) {
     assert(handle.pos >= 0);
-    return handle.pos <= 0 || handle.pos >= (int)m_values.size() 
+    return handle.pos <= 0 || handle.pos >= (int)m_values.size()
         ? nullptr
         : m_values[handle.pos].value;
 }
@@ -58,7 +58,7 @@ HandleBase HandleMapBase::insert(HandleContent * value) {
 //===========================================================================
 HandleContent * HandleMapBase::release(HandleBase handle) {
     assert(handle.pos >= 0);
-    if (handle.pos <= 0 || handle.pos >= (int)m_values.size()) 
+    if (handle.pos <= 0 || handle.pos >= (int)m_values.size())
         return nullptr;
     Node & node = m_values[handle.pos];
     if (!node.value)

@@ -49,7 +49,7 @@ void configCloseWait(std::string_view file, IConfigNotify * notify);
 // the specified monitor is called if it is monitoring the file. An error is
 // logged if a notify is specified and it's not monitoring the file.
 void configChange(
-    std::string_view file, 
+    std::string_view file,
     IConfigNotify * notify = nullptr
 );
 
@@ -62,25 +62,25 @@ void configChange(
 
 unsigned configUnsigned(
     const ConfigContext & context,
-    const XDocument & doc, 
-    std::string_view name, 
+    const XDocument & doc,
+    std::string_view name,
     unsigned defVal = 0
 );
 const char * configString(
     const ConfigContext & context,
-    const XDocument & doc, 
-    std::string_view name, 
+    const XDocument & doc,
+    std::string_view name,
     const char defVal[] = ""
 );
 
 unsigned configUnsigned(
-    const XDocument & doc, 
-    std::string_view name, 
+    const XDocument & doc,
+    std::string_view name,
     unsigned defVal = 0
 );
 const char * configString(
-    const XDocument & doc, 
-    std::string_view name, 
+    const XDocument & doc,
+    std::string_view name,
     const char defVal[] = ""
 );
 

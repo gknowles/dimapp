@@ -58,12 +58,12 @@ private:
     unordered_map<Endpoint, ConnMgrSocket> m_sockets;
 };
 
-class ConnMgrSocket final 
-    : public ISockMgrSocket 
+class ConnMgrSocket final
+    : public ISockMgrSocket
     , public ITimerListNotify<RecentLink>
 {
 public:
-    enum Mode { 
+    enum Mode {
         kUnconnected,
         kConnecting,
         kConnected,
@@ -207,8 +207,8 @@ void ConnMgrSocket::onSocketDestroy () {
 }
 
 //===========================================================================
-ConnectManager & ConnMgrSocket::mgr() { 
-    return static_cast<ConnectManager &>(ISockMgrSocket::mgr()); 
+ConnectManager & ConnMgrSocket::mgr() {
+    return static_cast<ConnectManager &>(ISockMgrSocket::mgr());
 }
 
 
@@ -225,10 +225,10 @@ ConnectManager::ConnectManager(
     AppSocket::MgrFlags flags
 )
     : ISockMgrBase(
-        name, 
-        fact, 
-        kDefaultPingInterval, 
-        AppSocket::kInvalid, 
+        name,
+        fact,
+        kDefaultPingInterval,
+        AppSocket::kInvalid,
         flags
     )
     , m_recent{kReconnectInterval, 0s}
@@ -239,8 +239,8 @@ ConnectManager::ConnectManager(
 //===========================================================================
 void ConnectManager::connect(const Endpoint & addr) {
     auto ib = m_sockets.try_emplace(
-        addr, 
-        *this, 
+        addr,
+        *this,
         m_cliSockFact->onFactoryCreate(),
         addr
     );

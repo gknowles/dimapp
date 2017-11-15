@@ -152,18 +152,18 @@ AppFlags Dim::appFlags() {
 
 //===========================================================================
 static bool makeAppPath(
-    string & out, 
-    string_view root, 
+    string & out,
+    string_view root,
     string_view file,
     bool createIfNotExist
 ) {
-    auto fp = fs::u8path(root.begin(), root.end()) 
+    auto fp = fs::u8path(root.begin(), root.end())
         / fs::u8path(file.begin(), file.end());
     error_code ec;
     fp = fs::canonical(fp, ec);
     out = fp.u8string();
     replace(out.begin(), out.end(), '\\', '/');
-    if (ec 
+    if (ec
         || out.compare(0, root.size(), root.data(), root.size()) != 0
         || out[root.size()] != '/'
     ) {
@@ -279,8 +279,8 @@ int Dim::appRun(IAppNotify & app, int argc, char * argv[], AppFlags flags) {
 
     //-----------------------------------------------------------------------
     // No external effects should happen after this point. Any sockets, pipes,
-    // files, or other shared resources MUST ALREADY be closed. When running 
-    // as a service the SERVICE_STOPPED status has been reported and the 
+    // files, or other shared resources MUST ALREADY be closed. When running
+    // as a service the SERVICE_STOPPED status has been reported and the
     // Service Control Manager may have already suspended us indefinitely as
     // it spun up another instance of the service.
     //-----------------------------------------------------------------------

@@ -9,8 +9,8 @@
 %api.namespace = Dim::Detail
 
 ; abnf grammer rules for xml
-; The number notations, such as "[1]" refer to the same numbered ABNF 
-; lines in the xml spec fifth edition at: 
+; The number notations, such as "[1]" refer to the same numbered ABNF
+; lines in the xml spec fifth edition at:
 ;   https://www.w3.org/TR/2008/REC-xml-20081126/
 
 ; Document
@@ -35,7 +35,7 @@ mbchar = ; multibyte utf-8 character
         / (%xef %xbf %x80-bd)               ; ffc0 - fffd
     ; 4 byte: 01'0000 - 10'ffff
     / (%xf0 %x90-bf %x80-bf %x80-bf)        ; 01'0000 - 03'ffff
-        / (%xf1-f3 %x80-bf %x80-bf %x80-bf) ; 04'0000 - 0f'ffff 
+        / (%xf1-f3 %x80-bf %x80-bf %x80-bf) ; 04'0000 - 0f'ffff
         / (%xf4 %x80-8f %x80-bf %x80-bf)    ; 10'0000 - 10'ffff
     { NoMinRules }
 S = 1*ws         ; [3]
@@ -84,7 +84,7 @@ NameStartCharMulti =
         / (%xf1-f2 %x80-bf %x80-bf %x80-bf) ; 04'0000 - 0b'ffff
         / (%xf3 %x80-af %x80-bf %x80-bf)    ; 0c'0000 - 0e'ffff
     { NoMinRules }
-    
+
 NameChar = NameStartChar / "-" / "." / DIGIT / NameCharMulti ; [4a]
 NameCharMulti = %s"Z" { MinRules }
 NameCharMulti =
@@ -105,15 +105,15 @@ EntityValue = ; [9]
     DQUOTE *(Char-not-AMP-DQUOTE-PCT / PEReference / Reference) DQUOTE
     / "'" *(Char-not-AMP-APOS-PCT / PEReference / Reference) "'"
 	{ Start+, End+ }
-Char-not-AMP-DQUOTE-PCT = mbchar / ws 
-    / %x21 
+Char-not-AMP-DQUOTE-PCT = mbchar / ws
+    / %x21
     ; 22 - DQUOTE
-    / %x23-24 
+    / %x23-24
     ; 25 - PCT
     ; 26 - AMP
     / %x27-7f
 Char-not-AMP-APOS-PCT = mbchar / ws
-    / %x21-24 
+    / %x21-24
     ; 25 - PCT
     ; 26 - AMP
     ; 27 - APOS
@@ -121,32 +121,32 @@ Char-not-AMP-APOS-PCT = mbchar / ws
 AttValue = DQUOTE *(Char-not-ws-AMP-DQUOTE-LT / ws / Reference) DQUOTE ; [10]
     / "'" *(Char-not-ws-AMP-APOS-LT / ws / Reference) "'"
 Char-not-ws-AMP-DQUOTE-LT = mbchar
-	/ %x21 
+	/ %x21
     ; 22 - DQUOTE
-    / %x23-25 
+    / %x23-25
     ; 26 - AMP
-    / %x27-3b 
+    / %x27-3b
     ; 3c - LT
     / %x3d-7f
 Char-not-ws-AMP-APOS-LT = mbchar
 	/ %x21-25
     ; 26 - AMP
     ; 27 - APOS
-    / %x28-3b 
+    / %x28-3b
     ; 3c - LT
     / %x3d-7f
 SystemLiteral = DQUOTE *Char-not-DQUOTE DQUOTE / "'" *Char-not-APOS "'" ; [11]
 Char-not-DQUOTE = mbchar / ws
-    / %x21 
+    / %x21
     ; 22 - DQUOTE
     / %x23-7f
 Char-not-APOS = mbchar / ws
-    / %x21-26 
+    / %x21-26
     ; 27 - APOS
     / %x28-7f
 PubidLiteral = DQUOTE *PubidChar DQUOTE / "'" *PubidChar-not-APOS "'" ; [12]
 PubidChar-not-APOS = SP / CR / LF / ALPHA / DIGIT
-    / "-" / "(" / ")" / "+" / "," / "." / "/" / ":" / "=" / "?" 
+    / "-" / "(" / ")" / "+" / "," / "." / "/" / ":" / "=" / "?"
     / ";" / "!" / "*" / "#" / "@" / "$" / "_" / "%"
 PubidChar = PubidChar-not-APOS / "'" ; [13]
 
@@ -156,7 +156,7 @@ attrValue = DQUOTE attrText DQUOTE / "'" attrTextApos "'" ; [10]
 attrText = [attrInPlace] *((Reference / normalizable-ws) [attrCopy])
 attrInPlace = *Char-not-ws-AMP-DQUOTE-LT { End+ }
 attrCopy = *Char-not-ws-AMP-DQUOTE-LT { Char+ }
-attrTextApos = [attrInPlaceApos] *((Reference / normalizable-ws) [attrCopyApos]) 
+attrTextApos = [attrInPlaceApos] *((Reference / normalizable-ws) [attrCopyApos])
 attrInPlaceApos = *Char-not-ws-AMP-APOS-LT { End+, As attrInPlace }
 attrCopyApos = *Char-not-ws-AMP-APOS-LT { Char+, As attrCopy }
 normalizable-ws = ws { Char }
@@ -165,11 +165,11 @@ normalizable-ws = ws { Char }
 CharData = *( ">" / "]>" / *"]" Char-not-AMP-GT-LT-RBRACKET) ; [14]
     *"]" { Char+ }
 Char-not-AMP-GT-LT-RBRACKET = mbchar / ws
-    / %x21-25 
+    / %x21-25
     ; 26 - AMP
-    / %x27-3b 
+    / %x27-3b
     ; 3c - LT
-    / %x3d 
+    / %x3d
     ; 3e - GT
     / %x3f-5c
     ; 5d - RBRACKET
@@ -178,7 +178,7 @@ Char-not-AMP-GT-LT-RBRACKET = mbchar / ws
 ; Comments
 Comment = "<!--" *(Char-not-DASH  / ("-" Char-not-DASH) ) "-->" ; [15]
 Char-not-DASH = mbchar / ws
-    / %x21-2c 
+    / %x21-2c
     ; 2d - DASH
     / %x2e-7f
 
@@ -189,14 +189,14 @@ PITarget = NameStartChar-not-x *NameChar ; [17] - see errata S01
     / %s"xm" [NameChar-not-l *NameChar]
     / %s"xml" 1*NameChar
 NameStartChar-not-x = %x41-5a / %x61-77 / %x79-7a / ":" / "_"
-    / NameStartCharMulti 
-NameChar-not-m = %x41-5a / %x61-6c / %x6e-7a / ":" / "_" / "-" 
+    / NameStartCharMulti
+NameChar-not-m = %x41-5a / %x61-6c / %x6e-7a / ":" / "_" / "-"
     / "." / DIGIT / NameCharMulti
-NameChar-not-l = %x41-5a / %x61-6b / %x6d-7a / ":" / "_" / "-" 
+NameChar-not-l = %x41-5a / %x61-6b / %x6d-7a / ":" / "_" / "-"
     / "." / DIGIT / NameCharMulti
 piValue = *(">" / *"?" Char-not-GT-QMARK) *"?"
 Char-not-GT-QMARK = mbchar / ws
-    / %x21-3d 
+    / %x21-3d
     ; 3e - GT
     ; 3f - QMARK
     / %x40-7f
@@ -207,10 +207,10 @@ CDStart = %s"<![CDATA[" ; [19]
 CDataWithEnd = CData CDEnd { Start+, End+ }
 CData = *(">" / "]>" / *"]" Char-not-GT-RBRACKET) *"]"  ; [20]
 Char-not-GT-RBRACKET = mbchar / ws
-    / %x21-3d 
+    / %x21-3d
     ; 3e - GT
     / %x3f-5c
-    ; 5d - RBRACKET 
+    ; 5d - RBRACKET
     / %x5e-7f
 CDEnd = "]]>" ; [21]
 
@@ -228,7 +228,7 @@ doctypedecl = %s"<!DOCTYPE" S Name [S ExternalID] [S]
     [ "[" intSubset "]" [S] ] ">" ; [28]
 DeclSep = PEReference / S ; [28a]
 intSubset = *(markupdecl / DeclSep) ; [28b]
-markupdecl = elementdecl / AttlistDecl / EntityDecl / NotationDecl / PI 
+markupdecl = elementdecl / AttlistDecl / EntityDecl / NotationDecl / PI
     / Comment ; [29]
 
 ; External Subset
@@ -277,7 +277,7 @@ DefaultDecl = %s"#REQUIRED" / %s"#IMPLIED" / [%s"#FIXED" S] attrValue ; [60]
 conditionalSect = includeSect / ignoreSect ; [61]
 includeSect = "<![" [S] %s"INCLUDE" [S] "[" extSubsetDecl "]]>" ; [62]
 ignoreSect = "<![" [S] %s"IGNORE" [S] "[" *ignoreSectContents "]]>" ; [63]
-ignoreSectContents = Ignore *("<![" ignoreSectContents "]]>" Ignore) 
+ignoreSectContents = Ignore *("<![" ignoreSectContents "]]>" Ignore)
     { Function } ; [64]
 Ignore = ; char sequence with no "<![" or "]]>" ; [65]
     *(Char-not-BANG-GT-LT-LBRACKET-RBRACKET / "!" / ">" / "["
@@ -288,18 +288,18 @@ Ignore = ; char sequence with no "<![" or "]]>" ; [65]
     ) (*"<" ["!" / "]"]  /  *"]" ["<"])
 Char-not-BANG-GT-LT-LBRACKET-RBRACKET = mbchar / ws
     ; 21 - BANG
-    / %x22-3b 
+    / %x22-3b
     ; 3c - LT
     / %x3d
     ; 3e - GT
     / %x3f-5a
     ; 5b - LBRACKET
     / %x5c
-    ; 5d - RBRACKET 
+    ; 5d - RBRACKET
     / %x5e-7f
 
 ; Character and Entity Reference
-CharRef = "&#" charRefDigit ";" / "&#" %x78 charRefHexdig ";" { Start, End } 
+CharRef = "&#" charRefDigit ";" / "&#" %x78 charRefHexdig ";" { Start, End }
 	; [66]
 charRefDigit = 1*DIGIT { Char+ }
 charRefHexdig = 1*HEXDIG { Char+ }

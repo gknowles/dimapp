@@ -31,10 +31,10 @@ public:
     virtual ~IFileOpBase() = default;
 
     size_t start(
-        WinFileInfo * file, 
-        void * buf, 
-        size_t bufLen, 
-        int64_t off, 
+        WinFileInfo * file,
+        void * buf,
+        size_t bufLen,
+        int64_t off,
         int64_t len
     );
 
@@ -96,7 +96,7 @@ using NtMapViewOfSectionFn = DWORD(WINAPI *)(
     ULONG pageProt
 );
 using NtUnmapViewOfSectionFn = DWORD(WINAPI *)(
-    HANDLE hProc, 
+    HANDLE hProc,
     const void * base
 );
 using NtCloseFn = DWORD(WINAPI *)(HANDLE h);
@@ -128,11 +128,11 @@ static HandleMap<FileHandle, WinFileInfo> s_files;
 //===========================================================================
 // Completions only apply to non-blocking handles and are posted to a queue
 // depending on the type of request:
-//  Async - completions go to the selected (usually event) thread and make the 
+//  Async - completions go to the selected (usually event) thread and make the
 //          callback from there.
-//  Sync  - completions go to an IO thread and signal the waiting thread, 
+//  Sync  - completions go to an IO thread and signal the waiting thread,
 //          which might be the event thread.
-IFileOpBase::IFileOpBase(TaskQueueHandle hq) 
+IFileOpBase::IFileOpBase(TaskQueueHandle hq)
     : IWinOverlappedNotify{hq}
 {}
 
@@ -186,18 +186,18 @@ void IFileOpBase::run() {
     m_state = kRunning;
     winSetOverlapped(overlapped(), m_offset);
 
-    // Set m_err to pending now, because if onRun() launches it asynchronously 
-    // there's no chance to change it. If it's not async, m_err will be set to 
+    // Set m_err to pending now, because if onRun() launches it asynchronously
+    // there's no chance to change it. If it's not async, m_err will be set to
     // something appropriate after onRun() returns.
     m_err = ERROR_IO_PENDING;
     if (onRun()) {
         m_err = ERROR_SUCCESS;
     } else {
         WinError err;
-        if (err == ERROR_IO_PENDING) 
+        if (err == ERROR_IO_PENDING)
             return;
 
-        // Only now that we know it's not being processed (and perhaps 
+        // Only now that we know it's not being processed (and perhaps
         // already deleted!) asynchronously is it safe to modify "this".
         m_err = err;
     }
@@ -225,7 +225,7 @@ void IFileOpBase::onTask() {
 
     //-----------------------------------------------------------------------
     // IO complete, report result
-    // 
+    //
     // threadpool this thread is in:
     // sync + blocking - request thread
     // sync + non-blocking - IO thread, request thread waiting
@@ -284,9 +284,9 @@ private:
 } // namespace
 
 //===========================================================================
-FileReader::FileReader(IFileReadNotify * notify, TaskQueueHandle hq) 
+FileReader::FileReader(IFileReadNotify * notify, TaskQueueHandle hq)
     : IFileOpBase{hq}
-    , m_notify{notify} 
+    , m_notify{notify}
 {}
 
 //===========================================================================
@@ -297,10 +297,10 @@ bool FileReader::onRun() {
         len = bufLen;
 
     return ReadFile(
-        m_file->m_handle, 
-        m_buf + m_bufUnused, 
-        (DWORD)len, 
-        &m_bytes, 
+        m_file->m_handle,
+        m_buf + m_bufUnused,
+        (DWORD)len,
+        &m_bytes,
         &overlapped()
     );
 }
@@ -311,8 +311,8 @@ void FileReader::onNotify() {
     size_t bytesUsed = 0;
     bool again = m_bytes && m_notify->onFileRead(
         &bytesUsed,
-        string_view(m_buf, avail), 
-        m_offset, 
+        string_view(m_buf, avail),
+        m_offset,
         m_file->m_f
     );
     m_offset += m_bytes;
@@ -359,18 +359,18 @@ private:
 } // namespace
 
 //===========================================================================
-FileWriter::FileWriter(IFileWriteNotify * notify, TaskQueueHandle hq) 
+FileWriter::FileWriter(IFileWriteNotify * notify, TaskQueueHandle hq)
     : IFileOpBase{hq}
-    , m_notify{notify} 
+    , m_notify{notify}
 {}
 
 //===========================================================================
 bool FileWriter::onRun() {
     return WriteFile(
-        m_file->m_handle, 
-        m_buf, 
-        m_bufLen, 
-        &m_bytes, 
+        m_file->m_handle,
+        m_buf,
+        m_bufLen,
+        &m_bytes,
         &overlapped()
     );
 }
@@ -378,9 +378,9 @@ bool FileWriter::onRun() {
 //===========================================================================
 void FileWriter::onNotify() {
     m_notify->onFileWrite(
-        m_bytes, 
-        string_view(m_buf, m_bufLen), 
-        m_offset, 
+        m_bytes,
+        string_view(m_buf, m_bufLen),
+        m_offset,
         m_file->m_f
     );
     delete this;
@@ -413,7 +413,7 @@ bool Dim::winFileSetErrno(int error) {
     case NO_ERROR: errno = 0; break;
     case ERROR_ALREADY_EXISTS:
     case ERROR_FILE_EXISTS: errno = EEXIST; break;
-    case ERROR_FILE_NOT_FOUND: 
+    case ERROR_FILE_NOT_FOUND:
     case ERROR_PATH_NOT_FOUND: errno = ENOENT; break;
     case ERROR_SHARING_VIOLATION: errno = EBUSY; break;
     case ERROR_ACCESS_DENIED: errno = EACCES; break;
@@ -511,7 +511,7 @@ FileHandle Dim::fileOpen(string_view path, File::OpenMode mode) {
 
         if (!SetFileCompletionNotificationModes(
             file->m_handle,
-            FILE_SKIP_COMPLETION_PORT_ON_SUCCESS 
+            FILE_SKIP_COMPLETION_PORT_ON_SUCCESS
                 | FILE_SKIP_SET_EVENT_ON_HANDLE
         )) {
             winFileSetErrno(WinError{});
@@ -526,8 +526,8 @@ FileHandle Dim::fileOpen(string_view path, File::OpenMode mode) {
 
 //===========================================================================
 static FileHandle attachStdHandle(
-    int fd, 
-    string_view path, 
+    int fd,
+    string_view path,
     File::OpenMode mode // must be either fReadOnly or fReadWrite
 ) {
     assert(mode == File::fReadOnly || mode == File::fReadWrite);
@@ -638,7 +638,7 @@ void Dim::fileClose(FileHandle f) {
         return;
     if (file->m_handle != INVALID_HANDLE_VALUE) {
         if (!file->m_views.empty()) {
-            logMsgCrash() << "fileClose(" << file->m_path 
+            logMsgCrash() << "fileClose(" << file->m_path
                 << "): has views that are still open";
         }
         if (~file->m_mode & File::fNonOwning) {
@@ -892,7 +892,7 @@ static bool openView(
             pageProt = PAGE_READWRITE;
         }
     }
-    
+
     err = (WinError::NtStatus) s_NtCreateSection(
         &sec,
         access,
@@ -973,11 +973,11 @@ void Dim::fileCloseView(FileHandle f, const void * view) {
     auto file = getInfo(f);
     auto found = file->m_views.erase(view);
     if (!found) {
-        logMsgError() << "fileCloseView(" << file->m_path 
+        logMsgError() << "fileCloseView(" << file->m_path
             << "): unknown view, " << (void *) view;
     }
     WinError err = (WinError::NtStatus) s_NtUnmapViewOfSection(
-        GetCurrentProcess(), 
+        GetCurrentProcess(),
         view
     );
     if (err) {
@@ -994,9 +994,9 @@ void Dim::fileExtendView(FileHandle f, const void * view, int64_t length) {
             << "): unknown view, " << (void *) view;
     }
     void * ptr = VirtualAlloc(
-        (void *) view, 
-        length, 
-        MEM_COMMIT, 
+        (void *) view,
+        length,
+        MEM_COMMIT,
         PAGE_READONLY
     );
     if (!ptr) {

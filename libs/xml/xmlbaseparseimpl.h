@@ -83,7 +83,7 @@ inline bool XmlBaseParser::onCharRefStart() {
 //===========================================================================
 inline bool XmlBaseParser::onCharRefEnd() {
     if (m_char < 0x80) {
-        if (m_char < 0x20 
+        if (m_char < 0x20
             && m_char != '\t' && m_char != '\n' && m_char != '\r'
         ) {
             return m_parser.fail("char ref of invalid code point");

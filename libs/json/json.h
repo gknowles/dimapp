@@ -75,7 +75,7 @@ IJBuilder & operator<<(IJBuilder & out, int64_t val);
 IJBuilder & operator<<(IJBuilder & out, uint64_t val);
 IJBuilder & operator<<(IJBuilder & out, std::nullptr_t);
 
-template <typename T, typename = 
+template <typename T, typename =
     std::enable_if_t<!std::is_integral_v<T> && !std::is_enum_v<T>>
 >
 inline IJBuilder & operator<<(IJBuilder & out, const T & val) {
@@ -181,8 +181,8 @@ public:
 
     JValue * setRoot(const char name[], const char text[] = nullptr);
     JValue * addValue(
-        JValue * parent, 
-        const char name[], 
+        JValue * parent,
+        const char name[],
         const char text[] = nullptr
     );
 

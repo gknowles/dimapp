@@ -77,23 +77,23 @@ SockMgrHandle sockMgrConnect(
 ***/
 
 // Inactivity causes the connecting side to send pings and the listening side
-// to disconnect. It can be set to kTimerInfinite, in which case no pings are 
+// to disconnect. It can be set to kTimerInfinite, in which case no pings are
 // sent or disconnects initiated.
 //
 // Defaults for connectors and listeners are 30s and 1min respectively. The
-// listeners timeout must be longer than the connectors so that pings can 
+// listeners timeout must be longer than the connectors so that pings can
 // reliably stave off disconnection.
 void sockMgrSetInactiveTimeout(SockMgrHandle mgr, Duration timeout);
 
 // Not implemented
 void sockMgrSetEndpoints(
-    SockMgrHandle mgr, 
+    SockMgrHandle mgr,
     const std::vector<Endpoint> & addrs
 );
 void sockMgrMonitorEndpoints(SockMgrHandle mgr, std::string_view host);
 
-// Starts closing, no new connections will be allowed. Returns true if all 
-// sockets are closed. May be called multiple times. After shutdown has 
+// Starts closing, no new connections will be allowed. Returns true if all
+// sockets are closed. May be called multiple times. After shutdown has
 // completed you must still call sockMgrDestroy().
 bool sockMgrShutdown(SockMgrHandle mgr);
 

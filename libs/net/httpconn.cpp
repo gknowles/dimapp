@@ -115,22 +115,22 @@ static HandleMap<HttpConnHandle, HttpConn> s_conns;
 
 //===========================================================================
 static inline int ntoh16(const char frame[]) {
-    return ((uint32_t)(uint8_t)frame[0] << 8) 
+    return ((uint32_t)(uint8_t)frame[0] << 8)
         + (uint8_t)frame[1];
 }
 
 //===========================================================================
 static inline int ntoh24(const char frame[]) {
-    return ((uint32_t)(uint8_t)frame[0] << 16) 
+    return ((uint32_t)(uint8_t)frame[0] << 16)
         + ((uint32_t)(uint8_t)frame[1] << 8)
         + (uint8_t)frame[2];
 }
 
 //===========================================================================
 static inline int ntoh32(const char frame[]) {
-    return ((uint32_t)(uint8_t)frame[0] << 24) 
+    return ((uint32_t)(uint8_t)frame[0] << 24)
         + ((uint32_t)(uint8_t)frame[1] << 16)
-        + ((uint32_t)(uint8_t)frame[2] << 8) 
+        + ((uint32_t)(uint8_t)frame[2] << 8)
         + (uint8_t)frame[3];
 }
 
@@ -360,7 +360,7 @@ enum class HttpConn::FrameMode : int {
 HttpConn::HttpConn()
     : m_byteMode{ByteMode::kPreface}
     , m_frameMode{FrameMode::kSettings}
-    , m_nextOutputStream(2) 
+    , m_nextOutputStream(2)
     , m_encoder{kDefaultHeaderTableSize}
     , m_decoder{kDefaultHeaderTableSize}
 {}
@@ -401,8 +401,8 @@ static bool skip(const char *& ptr, const char * eptr, const char literal[]) {
 
 //===========================================================================
 static void replyGoAway(
-    CharBuf * out, 
-    int lastStream, 
+    CharBuf * out,
+    int lastStream,
     HttpConn::FrameError error,
     string_view msg = {}
 ) {
@@ -412,7 +412,7 @@ static void replyGoAway(
     //  errorCode : 32
     //  data[]
 
-    msg = msg.substr(0, 256); 
+    msg = msg.substr(0, 256);
     char buf[8];
     hton31(buf, lastStream);
     hton32(buf + 4, (int) error);
@@ -475,9 +475,9 @@ static bool removePadding(
 
 //===========================================================================
 static bool removePriority(
-    PriorityData * out, 
-    int stream, 
-    const char hdr[], 
+    PriorityData * out,
+    int stream,
+    const char hdr[],
     int hdrLen
 ) {
     if (hdrLen < 5)
@@ -605,7 +605,7 @@ void HttpConn::replyRstStream(CharBuf * out, int stream, FrameError error) {
     startFrame(out, stream, FrameType::kRstStream, 4, {});
     out->append(buf, sizeof(buf));
     auto it = m_streams.find(stream);
-    if (it == m_streams.end()) 
+    if (it == m_streams.end())
         return;
 
     auto sm = it->second;
@@ -724,7 +724,7 @@ bool HttpConn::onData(
 
     shared_ptr<HttpStream> sm;
     auto it = m_streams.find(stream);
-    if (it == m_streams.end()) 
+    if (it == m_streams.end())
         sm = it->second;
     if (!sm
         || sm->m_state != HttpStream::kOpen
@@ -869,9 +869,9 @@ bool HttpConn::onPriority(
 
     PriorityData pri;
     if (!removePriority(
-        &pri, 
-        stream, 
-        src + kFrameHeaderLen, 
+        &pri,
+        stream,
+        src + kFrameHeaderLen,
         m_inputFrameLen
     )) {
         replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
@@ -1121,9 +1121,9 @@ bool HttpConn::onContinuation(
 
 //===========================================================================
 void HttpConn::writeMsg(
-    CharBuf * out, 
-    int stream, 
-    const HttpMsg & msg, 
+    CharBuf * out,
+    int stream,
+    const HttpMsg & msg,
     bool more
 ) {
     const CharBuf & body = msg.body();
@@ -1144,10 +1144,10 @@ void HttpConn::writeMsg(
             }
             while (size(*out) > maxEndPos) {
                 setFrameHeader(
-                    frameHdr, 
-                    stream, 
-                    ftype, 
-                    m_maxOutputFrame, 
+                    frameHdr,
+                    stream,
+                    ftype,
+                    m_maxOutputFrame,
                     flags
                 );
                 out->replace(
@@ -1179,9 +1179,9 @@ void HttpConn::writeMsg(
 //===========================================================================
 template<typename T>
 void HttpConn::addData(
-    CharBuf * out, 
-    int stream, 
-    const T & data, 
+    CharBuf * out,
+    int stream,
+    const T & data,
     bool more
 ) {
     size_t count = size(data);
@@ -1192,7 +1192,7 @@ void HttpConn::addData(
         out->append(data, pos, m_maxOutputFrame);
         pos += m_maxOutputFrame;
     }
-    if (pos == count && more) 
+    if (pos == count && more)
         return;
 
     startFrame(
@@ -1226,9 +1226,9 @@ int HttpConn::pushPromise(CharBuf * out, const HttpMsg & msg, bool more) {
 //===========================================================================
 // Serializes a reply on the specified stream
 void HttpConn::reply(
-    CharBuf * out, 
-    int stream, 
-    const HttpMsg & msg, 
+    CharBuf * out,
+    int stream,
+    const HttpMsg & msg,
     bool more
 ) {
     auto it = m_streams.find(stream);
@@ -1303,8 +1303,8 @@ bool Dim::httpRecv(
 
 //===========================================================================
 int Dim::httpRequest(
-    HttpConnHandle hc, 
-    CharBuf * out, 
+    HttpConnHandle hc,
+    CharBuf * out,
     const HttpMsg & msg,
     bool more
 ) {
@@ -1338,9 +1338,9 @@ void Dim::httpReply(
 
 //===========================================================================
 void Dim::httpData(
-    HttpConnHandle hc, 
-    CharBuf * out, 
-    int stream, 
+    HttpConnHandle hc,
+    CharBuf * out,
+    int stream,
     const CharBuf & data,
     bool more
 ) {
@@ -1350,9 +1350,9 @@ void Dim::httpData(
 
 //===========================================================================
 void Dim::httpData(
-    HttpConnHandle hc, 
-    CharBuf * out, 
-    int stream, 
+    HttpConnHandle hc,
+    CharBuf * out,
+    int stream,
     string_view data,
     bool more
 ) {

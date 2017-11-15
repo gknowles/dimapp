@@ -84,8 +84,8 @@ static BufferSlice * getSlice(const Buffer & buf, int pos) {
 
 //===========================================================================
 static void findBufferSlice(
-    BufferSlice ** sliceOut, 
-    Buffer ** bufferOut, 
+    BufferSlice ** sliceOut,
+    Buffer ** bufferOut,
     const SocketBuffer & sbuf
 ) {
     auto * slice = (BufferSlice *) sbuf.data;
@@ -134,7 +134,7 @@ static void createEmptyBuffer() {
         logMsgCrash() << "VirtualAlloc(sockbuf): " << WinError{};
 
     buf->id = s_rio.RIORegisterBuffer(buf->base, (DWORD)bytes);
-    if (buf->id == RIO_INVALID_BUFFERID) 
+    if (buf->id == RIO_INVALID_BUFFERID)
         logMsgCrash() << "RIORegisterBuffer: " << WinError();
 }
 
@@ -282,7 +282,7 @@ unique_ptr<SocketBuffer> Dim::socketGetBuffer() {
 
     // set pointer to just passed the header
     auto out = make_unique<SocketBuffer>(
-        (char *) slice, 
+        (char *) slice,
         buf.sliceSize - 1,
         buf.h.pos
     );

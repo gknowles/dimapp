@@ -126,7 +126,7 @@ static void serviceDispatchThread() {
             logMsgCrash() << "StartServiceCtrlDispatcher: " << err;
         }
     }
-    
+
     {
         scoped_lock<mutex> lk{s_mut};
         s_mode = kRunStopped;
@@ -163,7 +163,7 @@ static ShutdownNotify s_cleanup;
 
 //===========================================================================
 void ShutdownNotify::onShutdownClient(bool firstTry) {
-    if (appFlags() & fAppIsService) 
+    if (appFlags() & fAppIsService)
         setState(SERVICE_STOP_PENDING);
 }
 
@@ -189,7 +189,7 @@ void Dim::winServiceInitialize() {
     if (appFlags() & fAppWithService) {
         shutdownMonitor(&s_cleanup);
 
-        // Start dispatch thread and wait for it to determine if we're 
+        // Start dispatch thread and wait for it to determine if we're
         // running as a service.
         s_mode = kRunStarting;
         taskPushOnce("Service Dispatcher", serviceDispatchThread);

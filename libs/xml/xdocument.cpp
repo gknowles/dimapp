@@ -198,8 +198,8 @@ static void linkNode(XElemInfo * parent, XNodeInfo * ni) {
 
 //===========================================================================
 XNode * XDocument::addElem(
-    XNode * parent, 
-    const char name[], 
+    XNode * parent,
+    const char name[],
     const char text[]
 ) {
     assert(parent);
@@ -212,8 +212,8 @@ XNode * XDocument::addElem(
 
 //===========================================================================
 XAttr * XDocument::addAttr(
-    XNode * elem, 
-    const char name[], 
+    XNode * elem,
+    const char name[],
     const char text[]
 ) {
     assert(elem);
@@ -438,8 +438,8 @@ XNode * Dim::firstChild(XNode * elem, string_view name, XType type) {
 
 //===========================================================================
 const XNode * Dim::firstChild(
-    const XNode * elem, 
-    string_view name, 
+    const XNode * elem,
+    string_view name,
     XType type
 ) {
     return firstChild(const_cast<XNode *>(elem), name, type);
@@ -459,8 +459,8 @@ XNode * Dim::lastChild(XNode * elem, string_view name, XType type) {
 
 //===========================================================================
 const XNode * Dim::lastChild(
-    const XNode * elem, 
-    string_view name, 
+    const XNode * elem,
+    string_view name,
     XType type
 ) {
     return lastChild(const_cast<XNode *>(elem), name, type);
@@ -482,8 +482,8 @@ XNode * Dim::nextSibling(XNode * node, string_view name, XType type) {
 
 //===========================================================================
 const XNode * Dim::nextSibling(
-    const XNode * node, 
-    string_view name, 
+    const XNode * node,
+    string_view name,
     XType type
 ) {
     return nextSibling(const_cast<XNode *>(node), name, type);
@@ -505,8 +505,8 @@ XNode * Dim::prevSibling(XNode * node, string_view name, XType type) {
 
 //===========================================================================
 const XNode * Dim::prevSibling(
-    const XNode * node, 
-    string_view name, 
+    const XNode * node,
+    string_view name,
     XType type
 ) {
     return prevSibling(const_cast<XNode *>(node), name, type);
@@ -537,8 +537,8 @@ const XAttr * Dim::attr(const XNode * elem, string_view name) {
 
 //===========================================================================
 const char * Dim::attrValue(
-    const XNode * elem, 
-    string_view name, 
+    const XNode * elem,
+    string_view name,
     const char val[]
 ) {
     if (auto xa = attr(elem, name))
@@ -557,7 +557,7 @@ XNodeIterator<T>::XNodeIterator(T * node, XType type, string_view name)
 {}
 
 //===========================================================================
-template <typename T> 
+template <typename T>
 auto XNodeIterator<T>::operator++() -> XNodeIterator {
     this->m_current = nextSibling(this->m_current, m_name, m_type);
     return *this;

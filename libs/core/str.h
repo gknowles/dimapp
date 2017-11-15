@@ -19,9 +19,9 @@
 namespace Dim {
 
 //===========================================================================
-// Maximum number of characters needed to represent any integral value of 
+// Maximum number of characters needed to represent any integral value of
 // type T in base 10.
-template <typename T> constexpr 
+template <typename T> constexpr
 std::enable_if_t<std::is_integral_v<T>, int>
 maxIntegralChars() {
     return std::numeric_limits<T>::is_signed
@@ -31,7 +31,7 @@ maxIntegralChars() {
 //===========================================================================
 // Maximum number of characters needed to represent any floating point value
 // of type T in base 10.
-template <typename T> constexpr 
+template <typename T> constexpr
 std::enable_if_t<std::is_floating_point_v<T>, int>
 maxFloatChars() {
     auto cnt = 1 // sign
@@ -64,7 +64,7 @@ std::ostream & operator<<(std::ostream & os, const StrFrom<T> & str) {
 *
 ***/
 
-template <typename T> 
+template <typename T>
 class StrFrom<T, std::enable_if_t<std::is_integral_v<T>>> {
 public:
     StrFrom();
@@ -83,14 +83,14 @@ private:
 };
 
 //===========================================================================
-template <typename T> 
+template <typename T>
 StrFrom<T, std::enable_if_t<std::is_integral_v<T>>>::StrFrom() {
     data[0] = 0;
     data[sizeof(data) - 1] = (char) (sizeof(data) - 1);
 }
 
 //===========================================================================
-template <typename T> 
+template <typename T>
 std::string_view StrFrom<T, std::enable_if_t<std::is_integral_v<T>>>
 ::set(T val) {
     if constexpr (std::numeric_limits<T>::is_signed) {
@@ -110,14 +110,14 @@ std::string_view StrFrom<T, std::enable_if_t<std::is_integral_v<T>>>
 }
 
 //===========================================================================
-template <typename T> 
+template <typename T>
 StrFrom<T, std::enable_if_t<std::is_integral_v<T>>>
 ::operator std::string_view() const {
     return std::string_view(data, sizeof(data) - data[sizeof(data) - 1] - 1);
 }
 
 //===========================================================================
-template <typename T> 
+template <typename T>
 int StrFrom<T, std::enable_if_t<std::is_integral_v<T>>>
 ::internalSet(char * ptr, Unsigned val) {
     if (val < 10) {
@@ -167,21 +167,21 @@ private:
 };
 
 //===========================================================================
-template <typename T> 
+template <typename T>
 StrFrom<T, std::enable_if_t<std::is_floating_point_v<T>>>::StrFrom() {
     data[0] = 0;
     data[sizeof(data) - 1] = (char) (sizeof(data) - 1);
 }
 
 //===========================================================================
-template <typename T> 
+template <typename T>
 std::string_view StrFrom<T, std::enable_if_t<std::is_floating_point_v<T>>>
 ::set(T val) {
     auto used = std::snprintf(
-        data, 
-        sizeof(data), 
-        "%.*g", 
-        numeric_limits<T>::max_digits10, 
+        data,
+        sizeof(data),
+        "%.*g",
+        numeric_limits<T>::max_digits10,
         val
     );
     assert(used < sizeof(data));
@@ -190,7 +190,7 @@ std::string_view StrFrom<T, std::enable_if_t<std::is_floating_point_v<T>>>
 }
 
 //===========================================================================
-template <typename T> 
+template <typename T>
 StrFrom<T, std::enable_if_t<std::is_floating_point_v<T>>>
 ::operator std::string_view() const {
     return std::string_view(data, sizeof(data) - data[sizeof(data) - 1] - 1);
@@ -210,18 +210,18 @@ uint64_t strToUint64(const char src[], char ** eptr = nullptr, int base = 10);
 
 int strToInt(std::string_view src, char ** eptr = nullptr, int base = 10);
 unsigned strToUint(
-    std::string_view src, 
-    char ** eptr = nullptr, 
+    std::string_view src,
+    char ** eptr = nullptr,
     int base = 10
 );
 int64_t strToInt64(
-    std::string_view src, 
-    char ** eptr = nullptr, 
+    std::string_view src,
+    char ** eptr = nullptr,
     int base = 10
 );
 uint64_t strToUint64(
-    std::string_view src, 
-    char ** eptr = nullptr, 
+    std::string_view src,
+    char ** eptr = nullptr,
     int base = 10
 );
 
@@ -257,8 +257,8 @@ template <typename T> bool stringTo(T & out, const std::string & src) {
 ***/
 
 void strSplit(
-    std::vector<std::string_view> & out, 
-    std::string_view src, 
+    std::vector<std::string_view> & out,
+    std::string_view src,
     char sep = ' '
 );
 std::string_view strTrim(std::string_view src);
@@ -283,7 +283,7 @@ UtfType utfBomType(const char bytes[], size_t count);
 
 //===========================================================================
 constexpr size_t utfBomSize(UtfType type) {
-    return type == kUtf8 
+    return type == kUtf8
         ? 3
         : (type == kUtf16BE || type == kUtf16LE)
             ? 2
@@ -295,7 +295,7 @@ constexpr size_t utfBomSize(UtfType type) {
 // UTF-8
 //---------------------------------------------------------------------------
 
-// returns 0 if src doesn't start with a valid UTF-8 encoded code point, 
+// returns 0 if src doesn't start with a valid UTF-8 encoded code point,
 // which includes being empty.
 char32_t popFrontUnicode(std::string_view & src);
 
@@ -307,7 +307,7 @@ std::string toString(std::wstring_view src);
 // UTF-16
 //---------------------------------------------------------------------------
 
-// returns 0 if src doesn't start with a valid UTF-16 encoded code point, 
+// returns 0 if src doesn't start with a valid UTF-16 encoded code point,
 // which includes being empty.
 char32_t popFrontUnicode(std::wstring_view & src);
 

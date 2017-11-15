@@ -25,10 +25,10 @@ namespace Dim {
 ***/
 
 namespace AppSocket {
-    enum Family { 
+    enum Family {
         kInvalid,
-        kTls, 
-        kHttp2, 
+        kTls,
+        kHttp2,
         kRaw,
         kNumFamilies,
     };
@@ -111,7 +111,7 @@ void socketConnect(
 namespace AppSocket {
     enum MatchType {
         kUnknown,       // not enough data to know
-        kPreferred,     // explicitly declared for protocol family 
+        kPreferred,     // explicitly declared for protocol family
         kSupported,     // supported in a generic way (e.g. as byte stream)
         kUnsupported,   // not valid for protocol family
     };
@@ -150,10 +150,10 @@ void socketCloseWait(
 
 //===========================================================================
 // Add and remove listeners with implicitly created factories. Implemented
-// as templates where the template parameter is the class, derived from 
+// as templates where the template parameter is the class, derived from
 // IAppSocketNotify, that will be instantiated for incoming connections.
 //===========================================================================
-template <typename S> 
+template <typename S>
 inline void socketListen(
     const Endpoint & end,
     AppSocket::Family fam,
@@ -165,7 +165,7 @@ inline void socketListen(
 }
 
 //===========================================================================
-template <typename S> 
+template <typename S>
 inline void socketCloseWait(const Endpoint & end, AppSocket::Family fam) {
     static_assert(std::is_base_of_v<IAppSocketNotify, S>);
     auto factory = getFactory<IAppSocketNotify, S>();
@@ -177,9 +177,9 @@ inline void socketCloseWait(const Endpoint & end, AppSocket::Family fam) {
 *
 *   AppSocket filter
 *
-*   Factory filters are like listeners except they only apply to endpoints 
-*   that are already being listened to, rather than creating additional 
-*   bindings. 
+*   Factory filters are like listeners except they only apply to endpoints
+*   that are already being listened to, rather than creating additional
+*   bindings.
 *
 ***/
 
@@ -190,7 +190,7 @@ void socketAddFilter(
 );
 
 //===========================================================================
-template <typename S> 
+template <typename S>
 inline void socketAddFilter(const Endpoint & end, AppSocket::Family fam) {
     static_assert(std::is_base_of_v<IAppSocketNotify, S>);
     auto factory = getFactory<IAppSocketNotify, S>();

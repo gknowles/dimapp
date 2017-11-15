@@ -55,9 +55,9 @@ struct EndpointInfo {
     unsigned consoles{0};
 };
 
-class RawSocket 
+class RawSocket
     : public IAppSocket
-    , public ISocketNotify 
+    , public ISocketNotify
     , ITimerNotify
 {
 public:
@@ -138,7 +138,7 @@ Duration IAppSocket::UnmatchedTimer::onTimer(TimePoint now) {
 //===========================================================================
 // static
 void IAppSocket::disconnect(
-    IAppSocketNotify * notify, 
+    IAppSocketNotify * notify,
     AppSocket::Disconnect why
 ) {
     notify->m_socket->disconnect(why);
@@ -159,10 +159,10 @@ void IAppSocket::write(IAppSocketNotify * notify, const CharBuf & data) {
 }
 
 //===========================================================================
-// static 
+// static
 void IAppSocket::write(
-    IAppSocketNotify * notify, 
-    unique_ptr<SocketBuffer> buffer, 
+    IAppSocketNotify * notify,
+    unique_ptr<SocketBuffer> buffer,
     size_t bytes
 ) {
     notify->m_socket->write(move(buffer), bytes);
@@ -258,7 +258,7 @@ void IAppSocket::notifyDestroy(bool deleteThis) {
 }
 
 //===========================================================================
-// Returns true if a factory is found or proven to not exist (nullptr). 
+// Returns true if a factory is found or proven to not exist (nullptr).
 // False means it should be tried again when there's more data.
 static bool findFactory(
     AppSocket::Family * family,
@@ -267,7 +267,7 @@ static bool findFactory(
     string_view data
 ) {
     shared_lock<shared_mutex> lk{s_listenMut};
-    
+
     // find best matching factory endpoint for each family
     enum {
         // match types, in reverse priority order
@@ -292,7 +292,7 @@ static bool findFactory(
             } else if (!info.endpoint.port) {
                 level = kWild;
             }
-        } else if (!info.endpoint.port 
+        } else if (!info.endpoint.port
             && info.endpoint.addr == localEnd.addr
         ) {
             level = kAddr;
@@ -361,7 +361,7 @@ void IAppSocket::notifyRead(AppSocketData & data) {
         m_pos = {};
     }
 
-    if (!fact) 
+    if (!fact)
         return disconnect(AppSocket::Disconnect::kUnknownProtocol);
 
     setNotify(fact->onFactoryCreate().release());
@@ -391,8 +391,8 @@ void IAppSocket::notifyBufferChanged(const AppSocketBufferInfo & info) {
 ***/
 
 //===========================================================================
-RawSocket::RawSocket(IAppSocketNotify * notify) 
-    : IAppSocket(notify) 
+RawSocket::RawSocket(IAppSocketNotify * notify)
+    : IAppSocket(notify)
 {}
 
 //===========================================================================
@@ -415,7 +415,7 @@ void RawSocket::disconnect(AppSocket::Disconnect why) {
 void RawSocket::write(string_view data) {
     bool hadData = m_bufferUsed;
     while (!data.empty()) {
-        if (!m_buffer) 
+        if (!m_buffer)
             m_buffer = socketGetBuffer();
         size_t bytes = min(m_buffer->capacity - m_bufferUsed, data.size());
         memcpy(m_buffer->data + m_bufferUsed, data.data(), bytes);
@@ -511,7 +511,7 @@ Duration RawSocket::onTimer(TimePoint now) {
 namespace {
 class RawMatch : public IAppSocketMatchNotify {
     AppSocket::MatchType OnMatch(
-        AppSocket::Family fam, 
+        AppSocket::Family fam,
         string_view view) override;
 };
 } // namespace
@@ -529,7 +529,7 @@ AppSocket::MatchType RawMatch::OnMatch(
 
 /****************************************************************************
 *
-*   Configuration monitor 
+*   Configuration monitor
 *
 ***/
 
@@ -544,7 +544,7 @@ static AppXmlNotify s_appXml;
 void AppXmlNotify::onConfigChange(const XDocument & doc) {
     s_disableNoDataTimeout = configUnsigned(doc, "DisableNoDataTimeout");
     timerUpdate(
-        &s_unmatchedTimer, 
+        &s_unmatchedTimer,
         s_disableNoDataTimeout ? kTimerInfinite : 0ms
     );
 }
@@ -618,7 +618,7 @@ void Dim::socketDisconnect(IAppSocketNotify * notify) {
 
 //===========================================================================
 void Dim::socketDisconnect(
-    IAppSocketNotify * notify, 
+    IAppSocketNotify * notify,
     AppSocket::Disconnect why
 ) {
     IAppSocket::disconnect(notify, why);
@@ -636,7 +636,7 @@ void Dim::socketWrite(IAppSocketNotify * notify, const CharBuf & data) {
 
 //===========================================================================
 void Dim::socketWrite(
-    IAppSocketNotify * notify, 
+    IAppSocketNotify * notify,
     unique_ptr<SocketBuffer> buffer,
     size_t bytes
 ) {
@@ -657,7 +657,7 @@ void Dim::socketConnect(
 
 //===========================================================================
 void Dim::socketAddFamily(
-    AppSocket::Family fam, 
+    AppSocket::Family fam,
     IAppSocketMatchNotify * notify
 ) {
     unique_lock<shared_mutex> lk{s_listenMut};
@@ -669,7 +669,7 @@ void Dim::socketAddFamily(
 //===========================================================================
 static EndpointInfo * findInfo_LK(const Endpoint & end, bool findAlways) {
     for (auto && ep : s_endpoints) {
-        if (ep.endpoint == end) 
+        if (ep.endpoint == end)
             return &ep;
     }
     if (findAlways) {
@@ -727,18 +727,18 @@ void Dim::socketCloseWait(
         if (!info)
             break;
         auto & fams = info->families;
-        if (fams.empty()) 
+        if (fams.empty())
             break;
         auto afi = find(fams.begin(), fams.end(), fam);
-        if (afi == fams.end()) 
+        if (afi == fams.end())
             break;
 
         auto & facts = afi->factories;
         auto i = find_if(
-            facts.begin(), 
-            facts.end(), 
-            [=](auto && val) { 
-                return val.factory == factory && (val.flags & fListener); 
+            facts.begin(),
+            facts.end(),
+            [=](auto && val) {
+                return val.factory == factory && (val.flags & fListener);
             }
         );
         if (i == facts.end())

@@ -71,14 +71,14 @@ public:
     // modify
     void clear();
     void insert(unsigned value);
-    
-    template <typename InputIt, 
+
+    template <typename InputIt,
         typename = std::enable_if_t<
-            std::is_convertible_v<*std::declval<InputIt>(), unsigned> 
+            std::is_convertible_v<*std::declval<InputIt>(), unsigned>
         >
     >
     void insert(InputIt first, InputIt last);
-    
+
     void insert(std::initializer_list<unsigned> il);
     void insert(UnsignedSet && other);
     void insert(const UnsignedSet & other);
@@ -172,7 +172,7 @@ private:
 class UnsignedSet::RangeIterator {
 public:
     using iterator_category = std::input_iterator_tag;
-    using value_type = 
+    using value_type =
         std::pair<UnsignedSet::value_type, UnsignedSet::value_type>;
     using difference_type = ptrdiff_t;
     using pointer = const value_type*;

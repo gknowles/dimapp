@@ -34,10 +34,10 @@ static void iocpDispatchThread() {
     bool used[size(entries)];
     for (;;) {
         if (!GetQueuedCompletionStatusEx(
-            s_iocp, 
-            entries, 
-            (ULONG) size(entries), 
-            &found, 
+            s_iocp,
+            entries,
+            (ULONG) size(entries),
+            &found,
             INFINITE,   // timeout
             false       // alertable
         )) {
@@ -109,9 +109,9 @@ static ShutdownNotify s_cleanup;
 
 //===========================================================================
 void ShutdownNotify::onShutdownConsole(bool firstTry) {
-    if (firstTry) 
+    if (firstTry)
         return shutdownIncomplete();
-    
+
     if (!m_closing) {
         m_closing = true;
         if (!CloseHandle(s_iocp))

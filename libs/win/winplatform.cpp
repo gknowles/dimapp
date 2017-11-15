@@ -78,7 +78,7 @@ void HtmlAccount::onHttpRequest(
     BOOL result = GetTokenInformation(token, TokenUser, NULL, 0, &len);
     WinError err;
     if (result || err != ERROR_INSUFFICIENT_BUFFER) {
-        logMsgCrash() << "GetTokenInformation(TokenUser, NULL): " 
+        logMsgCrash() << "GetTokenInformation(TokenUser, NULL): "
             << WinError{};
     }
     auto usr = unique_ptr<TOKEN_USER>((TOKEN_USER *) malloc(len));
@@ -87,7 +87,7 @@ void HtmlAccount::onHttpRequest(
     result = GetTokenInformation(token, TokenGroups, NULL, 0, &len);
     err.set();
     if (result || err != ERROR_INSUFFICIENT_BUFFER) {
-        logMsgCrash() << "GetTokenInformation(TokenGroups, NULL): " 
+        logMsgCrash() << "GetTokenInformation(TokenGroups, NULL): "
             << WinError{};
     }
     auto grps = unique_ptr<TOKEN_GROUPS>((TOKEN_GROUPS *) malloc(len));

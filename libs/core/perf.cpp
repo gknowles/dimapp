@@ -32,7 +32,7 @@ struct PerfInfo {
 *
 ***/
 
-// Number of counters declared during static initialization (or anytime 
+// Number of counters declared during static initialization (or anytime
 // before appRun).
 static size_t s_numStatic;
 
@@ -184,7 +184,7 @@ PerfFunc<int> & Dim::iperf(string_view name, function<int()> fn) {
 
 //===========================================================================
 PerfFunc<unsigned> & Dim::uperf(
-    string_view name, 
+    string_view name,
     function<unsigned()> fn
 ) {
     return perf<unsigned>(name, move(fn));
@@ -208,7 +208,7 @@ void Dim::perfGetValues (std::vector<PerfValue> & out, bool pretty) {
     }
     if (pretty) {
         sort(
-            out.begin(), 
+            out.begin(),
             out.end(),
             [](auto & a, auto & b){ return a.name < b.name; }
         );

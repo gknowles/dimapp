@@ -1,89 +1,89 @@
 ; abnf.abnf - pargen
 ;
 ; rules to parse abnf
-%root = rulelist 
+%root = rulelist
 %api.prefix = Abnf
 
 ; abnf grammer rules for abnf
-; Rules are based on rfc's 5234 and 7405, see the pargen README.md 
+; Rules are based on rfc's 5234 and 7405, see the pargen README.md
 ; for details.
-action = ( action-start / action-startw / action-end / action-endw / 
-    action-char / action-charw / action-func / action-as / action-min / 
-    action-no-min ) 
+action = ( action-start / action-startw / action-end / action-endw /
+    action-char / action-charw / action-func / action-as / action-min /
+    action-no-min )
 action-as = ( %s"As" 1*c-wsp rulename ) { End }
-action-char = ( %s"Char" ) { End } 
-action-charw = ( %s"Char+" ) { End } 
-action-end = ( %s"End" ) { End } 
-action-endw = ( %s"End+" ) { End } 
-action-func = ( %s"Function" ) { End } 
+action-char = ( %s"Char" ) { End }
+action-charw = ( %s"Char+" ) { End }
+action-end = ( %s"End" ) { End }
+action-endw = ( %s"End+" ) { End }
+action-func = ( %s"Function" ) { End }
 action-min = ( %s"MinRules" ) { End }
 action-no-min = ( %s"NoMinRules" ) { End }
-action-start = ( %s"Start" ) { End } 
-action-startw = ( %s"Start+" ) { End } 
-actions = ( "{" *c-wsp *1( action *( *c-wsp "," *c-wsp action ) ) *c-wsp 
-    "}" *c-wsp ) 
-alternation = ( concatenation *( *c-wsp "/" *c-wsp concatenation ) ) { 
-    Start, End } 
-bin-val = ( "b" ( bin-val-simple / bin-val-concatenation / 
-    bin-val-alternation ) ) 
-bin-val-alt-first = bin-val-sequence { End } 
-bin-val-alt-second = bin-val-sequence { End } 
-bin-val-alternation = ( bin-val-alt-first "-" bin-val-alt-second ) 
-bin-val-concat-each = bin-val-sequence { End } 
-bin-val-concatenation = ( bin-val-concat-each 1*( "." bin-val-concat-each 
-    ) ) { Start, End } 
-bin-val-sequence = 1*BIT { Char+ } 
-bin-val-simple = bin-val-sequence { End } 
-c-nl = ( comment / NEWLINE ) 
-c-wsp = ( WSP / ( c-nl WSP ) ) 
+action-start = ( %s"Start" ) { End }
+action-startw = ( %s"Start+" ) { End }
+actions = ( "{" *c-wsp *1( action *( *c-wsp "," *c-wsp action ) ) *c-wsp
+    "}" *c-wsp )
+alternation = ( concatenation *( *c-wsp "/" *c-wsp concatenation ) ) {
+    Start, End }
+bin-val = ( "b" ( bin-val-simple / bin-val-concatenation /
+    bin-val-alternation ) )
+bin-val-alt-first = bin-val-sequence { End }
+bin-val-alt-second = bin-val-sequence { End }
+bin-val-alternation = ( bin-val-alt-first "-" bin-val-alt-second )
+bin-val-concat-each = bin-val-sequence { End }
+bin-val-concatenation = ( bin-val-concat-each 1*( "." bin-val-concat-each
+    ) ) { Start, End }
+bin-val-sequence = 1*BIT { Char+ }
+bin-val-simple = bin-val-sequence { End }
+c-nl = ( comment / NEWLINE )
+c-wsp = ( WSP / ( c-nl WSP ) )
 char-val = char-val-sensitive / char-val-insensitive
-char-val-insensitive = ( ["%i"] DQUOTE char-val-sequence DQUOTE ) { End } 
+char-val-insensitive = ( ["%i"] DQUOTE char-val-sequence DQUOTE ) { End }
 char-val-sensitive = ( "%s" DQUOTE char-val-sequence DQUOTE ) { End }
-char-val-sequence = *( %x20-21 / %x23-7e ) { Start, Char+ } 
-comment = ( ";" *( WSP / VCHAR ) NEWLINE ) 
-concatenation = ( repetition *( 1*c-wsp repetition ) ) { Start, End } 
-dec-val = ( "d" ( dec-val-simple / dec-val-concatenation / 
-    dec-val-alternation ) ) 
-dec-val-alt-first = dec-val-sequence { End } 
-dec-val-alt-second = dec-val-sequence { End } 
-dec-val-alternation = ( dec-val-alt-first "-" dec-val-alt-second ) 
-dec-val-concat-each = dec-val-sequence { End } 
-dec-val-concatenation = ( dec-val-concat-each 1*( "." dec-val-concat-each 
-    ) ) { Start, End } 
-dec-val-sequence = 1*DIGIT { Char+ } 
-dec-val-simple = dec-val-sequence { End } 
-defined-as = ( *c-wsp ( defined-as-set / defined-as-incremental ) *c-wsp ) 
-defined-as-incremental = ( "=/" ) { End } 
-defined-as-set = "=" { End } 
-element = ( ruleref / group / char-val / num-val ) 
-elements = ( alternation *c-wsp ) 
-group = ( ( "(" / "[" ) group-tail ) { Start+, End+ } 
+char-val-sequence = *( %x20-21 / %x23-7e ) { Start, Char+ }
+comment = ( ";" *( WSP / VCHAR ) NEWLINE )
+concatenation = ( repetition *( 1*c-wsp repetition ) ) { Start, End }
+dec-val = ( "d" ( dec-val-simple / dec-val-concatenation /
+    dec-val-alternation ) )
+dec-val-alt-first = dec-val-sequence { End }
+dec-val-alt-second = dec-val-sequence { End }
+dec-val-alternation = ( dec-val-alt-first "-" dec-val-alt-second )
+dec-val-concat-each = dec-val-sequence { End }
+dec-val-concatenation = ( dec-val-concat-each 1*( "." dec-val-concat-each
+    ) ) { Start, End }
+dec-val-sequence = 1*DIGIT { Char+ }
+dec-val-simple = dec-val-sequence { End }
+defined-as = ( *c-wsp ( defined-as-set / defined-as-incremental ) *c-wsp )
+defined-as-incremental = ( "=/" ) { End }
+defined-as-set = "=" { End }
+element = ( ruleref / group / char-val / num-val )
+elements = ( alternation *c-wsp )
+group = ( ( "(" / "[" ) group-tail ) { Start+, End+ }
 group-tail = ( *c-wsp alternation *c-wsp ( ")" / "]" ) ) { Function }
-hex-val = ( "x" ( hex-val-simple / hex-val-concatenation / 
-    hex-val-alternation ) ) 
-hex-val-alt-first = hex-val-sequence { End } 
-hex-val-alt-second = hex-val-sequence { End } 
-hex-val-alternation = ( hex-val-alt-first "-" hex-val-alt-second ) 
-hex-val-concat-each = hex-val-sequence { End } 
-hex-val-concatenation = ( hex-val-concat-each 1*( "." hex-val-concat-each 
-    ) ) { Start, End } 
-hex-val-sequence = 1*HEXDIG { Char+ } 
-hex-val-simple = hex-val-sequence { End } 
-num-val = ( "%" ( bin-val / dec-val / hex-val ) ) 
-option = ( "%" option-tail ) 
-option-char = ( ALPHA / DIGIT / "." / "-" / "_" / ":" ) 
-option-quoted = 1*( option-char / SP / "/" ) { Char+ } 
-option-tail = ( optionname defined-as optionlist c-nl ) 
-option-unquoted = 1*option-char { Char+ } 
-optiondef = ( option-unquoted / ( DQUOTE option-quoted DQUOTE ) ) { End } 
-optionlist = ( optiondef *( 1*c-wsp optiondef ) *c-wsp ) { Start, End } 
-optionname = ( ALPHA *( ALPHA / "." / "-" ) ) { Char+ } 
-repeat = ( repeat-minmax / repeat-range ) 
-repeat-max = dec-val-sequence { End } 
-repeat-minmax = dec-val-sequence { End } 
-repeat-range = ( *1dec-val-sequence "*" *1repeat-max ) { Start } 
-repetition = ( *1repeat element ) { Start } 
-rule = ( rulename defined-as elements *1actions c-nl ) { End } 
-rulelist = 1*( rule / option / ( *c-wsp c-nl ) ) 
-rulename = ( ALPHA *( ALPHA / DIGIT / "-" ) ) { Start, Char+ } 
-ruleref = rulename { End } 
+hex-val = ( "x" ( hex-val-simple / hex-val-concatenation /
+    hex-val-alternation ) )
+hex-val-alt-first = hex-val-sequence { End }
+hex-val-alt-second = hex-val-sequence { End }
+hex-val-alternation = ( hex-val-alt-first "-" hex-val-alt-second )
+hex-val-concat-each = hex-val-sequence { End }
+hex-val-concatenation = ( hex-val-concat-each 1*( "." hex-val-concat-each
+    ) ) { Start, End }
+hex-val-sequence = 1*HEXDIG { Char+ }
+hex-val-simple = hex-val-sequence { End }
+num-val = ( "%" ( bin-val / dec-val / hex-val ) )
+option = ( "%" option-tail )
+option-char = ( ALPHA / DIGIT / "." / "-" / "_" / ":" )
+option-quoted = 1*( option-char / SP / "/" ) { Char+ }
+option-tail = ( optionname defined-as optionlist c-nl )
+option-unquoted = 1*option-char { Char+ }
+optiondef = ( option-unquoted / ( DQUOTE option-quoted DQUOTE ) ) { End }
+optionlist = ( optiondef *( 1*c-wsp optiondef ) *c-wsp ) { Start, End }
+optionname = ( ALPHA *( ALPHA / "." / "-" ) ) { Char+ }
+repeat = ( repeat-minmax / repeat-range )
+repeat-max = dec-val-sequence { End }
+repeat-minmax = dec-val-sequence { End }
+repeat-range = ( *1dec-val-sequence "*" *1repeat-max ) { Start }
+repetition = ( *1repeat element ) { Start }
+rule = ( rulename defined-as elements *1actions c-nl ) { End }
+rulelist = 1*( rule / option / ( *c-wsp c-nl ) )
+rulename = ( ALPHA *( ALPHA / DIGIT / "-" ) ) { Start, Char+ }
+ruleref = rulename { End }

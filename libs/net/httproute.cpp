@@ -35,8 +35,8 @@ struct PathInfo {
 class HttpSocket : public IAppSocketNotify {
 public:
     static void iReply(
-        unsigned reqId, 
-        const function<void(HttpConnHandle h, CharBuf * out, int stream)> & fn, 
+        unsigned reqId,
+        const function<void(HttpConnHandle h, CharBuf * out, int stream)> & fn,
         bool more
     );
     static void reply(unsigned reqId, HttpResponse & msg, bool more);
@@ -79,7 +79,7 @@ static unsigned s_nextReqId;
 static auto & s_perfRequests = uperf("http requests");
 static auto & s_perfCurrent = uperf("http requests (current)");
 static auto & s_perfInvalid = uperf("http protocol error");
-static auto & s_perfSuccess = uperf("http reply success"); 
+static auto & s_perfSuccess = uperf("http reply success");
 static auto & s_perfError = uperf("http reply error");
 
 
@@ -94,7 +94,7 @@ static IHttpRouteNotify * find(std::string_view path, HttpMethod method) {
     IHttpRouteNotify * best = nullptr;
     size_t bestSegs = 0;
     for (auto && pi : s_paths) {
-        if (path == pi.path 
+        if (path == pi.path
             || pi.recurse && path.compare(0, pi.path.size(), pi.path) == 0
         ) {
             if (pi.segs >= bestSegs) {
@@ -139,7 +139,7 @@ static unsigned makeRequestInfo (HttpSocket * conn, int stream) {
 ***/
 
 //===========================================================================
-RequestInfo::RequestInfo (HttpSocket * conn, int stream) 
+RequestInfo::RequestInfo (HttpSocket * conn, int stream)
     : conn(conn)
     , stream(stream)
 {
@@ -160,10 +160,10 @@ RequestInfo::~RequestInfo () {
 ***/
 
 //===========================================================================
-// static 
+// static
 void HttpSocket::iReply(
-    unsigned reqId, 
-    const function<void(HttpConnHandle h, CharBuf * out, int stream)> & fn, 
+    unsigned reqId,
+    const function<void(HttpConnHandle h, CharBuf * out, int stream)> & fn,
     bool more
 ) {
     auto it = s_requests.find(reqId);
@@ -187,7 +187,7 @@ void HttpSocket::iReply(
 }
 
 //===========================================================================
-// static 
+// static
 void HttpSocket::reply(unsigned reqId, HttpResponse & msg, bool more) {
     if (msg.status() == 200) {
         s_perfSuccess += 1;
@@ -201,7 +201,7 @@ void HttpSocket::reply(unsigned reqId, HttpResponse & msg, bool more) {
 }
 
 //===========================================================================
-// static 
+// static
 void HttpSocket::reply(unsigned reqId, string_view data, bool more) {
     auto fn = [&](HttpConnHandle h, CharBuf * out, int stream) -> void {
         httpData(h, out, stream, data, more);
@@ -210,7 +210,7 @@ void HttpSocket::reply(unsigned reqId, string_view data, bool more) {
 }
 
 //===========================================================================
-// static 
+// static
 void HttpSocket::reply(unsigned reqId, const CharBuf & data, bool more) {
     auto fn = [&](HttpConnHandle h, CharBuf * out, int stream) -> void {
         httpData(h, out, stream, data, more);
@@ -273,7 +273,7 @@ void HttpSocket::onSocketRead(AppSocketData & data) {
 namespace {
 class Http2Match : public IAppSocketMatchNotify {
     AppSocket::MatchType OnMatch(
-        AppSocket::Family fam, 
+        AppSocket::Family fam,
         string_view view) override;
 };
 static Http2Match s_http2Match;
@@ -333,7 +333,7 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
 //===========================================================================
 static void startListen() {
     sockMgrListen<HttpSocket>(
-        "httpRoute", 
+        "httpRoute",
         AppSocket::kHttp2,
         AppSocket::fMgrConsole
     );
@@ -362,7 +362,7 @@ void Dim::httpRouteAdd(
     bool recurse
 ) {
     assert(!path.empty());
-    if (s_paths.empty() && !appStarting()) 
+    if (s_paths.empty() && !appStarting())
         startListen();
     PathInfo pi;
     pi.notify = notify;
@@ -413,8 +413,8 @@ struct ReplyWithFileNotify : IFileReadNotify {
 
     bool onFileRead(
         size_t * bytesUsed,
-        string_view data, 
-        int64_t offset, 
+        string_view data,
+        int64_t offset,
         FileHandle f
     ) override {
         *bytesUsed = data.size();
@@ -441,9 +441,9 @@ void Dim::httpRouteReplyWithFile(unsigned reqId, std::string_view path) {
     auto notify = new ReplyWithFileNotify;
     notify->m_reqId = reqId;
     fileRead(
-        notify, 
-        notify->m_buffer, 
-        size(notify->m_buffer), 
+        notify,
+        notify->m_buffer,
+        size(notify->m_buffer),
         file
     );
 }

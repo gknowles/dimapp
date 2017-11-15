@@ -23,7 +23,7 @@ BitView::BitView(uint64_t * src, size_t srcLen)
 
 //===========================================================================
 bool BitView::operator==(const BitView & right) const {
-    return m_size == right.m_size 
+    return m_size == right.m_size
         && memcmp(m_data, right.m_data, m_size) == 0;
 }
 
@@ -76,9 +76,9 @@ bool BitView::none() const {
 //===========================================================================
 size_t BitView::count() const {
     return accumulate(
-        m_data, 
-        m_data + m_size, 
-        0, 
+        m_data,
+        m_data + m_size,
+        0,
         [](auto a, auto b) { return a + hammingWeight(b); }
     );
 }
@@ -132,7 +132,7 @@ size_t BitView::find(size_t bitpos) {
     if (pos >= m_size)
         return npos;
     auto ptr = m_data + pos;
-    if (auto val = *ptr & (kWordMax << bitpos % kWordBits)) 
+    if (auto val = *ptr & (kWordMax << bitpos % kWordBits))
         return pos * kWordBits + trailingZeroBits(val);
     auto last = m_data + m_size;
     while (++ptr != last) {
@@ -148,7 +148,7 @@ size_t BitView::findZero(size_t bitpos) {
     if (pos >= m_size)
         return npos;
     auto ptr = m_data + pos;
-    if (auto val = ~*ptr & (kWordMax << bitpos % kWordBits)) 
+    if (auto val = ~*ptr & (kWordMax << bitpos % kWordBits))
         return pos * kWordBits + trailingZeroBits(val);
     auto last = m_data + m_size;
     while (++ptr != last) {

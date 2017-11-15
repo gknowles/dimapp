@@ -23,15 +23,15 @@ class FileStreamNotify : public IFileReadNotify {
     unique_ptr<char[]> m_out;
 public:
     FileStreamNotify(
-        IFileReadNotify * notify, 
+        IFileReadNotify * notify,
         TaskQueueHandle hq,
-        string_view path, 
+        string_view path,
         size_t blkSize
     );
     bool onFileRead(
         size_t * bytesUsed,
-        string_view data, 
-        int64_t offset, 
+        string_view data,
+        int64_t offset,
         FileHandle f
     ) override;
     void onFileEnd(int64_t offset, FileHandle f) override;
@@ -41,7 +41,7 @@ public:
 
 //===========================================================================
 FileStreamNotify::FileStreamNotify(
-    IFileReadNotify * notify, 
+    IFileReadNotify * notify,
     TaskQueueHandle hq,
     string_view path,
     size_t blkSize
@@ -61,7 +61,7 @@ FileStreamNotify::FileStreamNotify(
 //===========================================================================
 bool FileStreamNotify::onFileRead(
     size_t * bytesUsed,
-    string_view data, 
+    string_view data,
     int64_t offset,
     FileHandle f
 ) {
@@ -93,8 +93,8 @@ public:
     FileLoadNotify(string & out, IFileReadNotify * notify);
     bool onFileRead(
         size_t * bytesUsed,
-        string_view data, 
-        int64_t offset, 
+        string_view data,
+        int64_t offset,
         FileHandle f
     ) override;
     void onFileEnd(int64_t offset, FileHandle f) override;
@@ -104,14 +104,14 @@ public:
 
 //===========================================================================
 FileLoadNotify::FileLoadNotify(string & out, IFileReadNotify * notify)
-    : m_notify(notify) 
+    : m_notify(notify)
     , m_out(out)
 {}
 
 //===========================================================================
 bool FileLoadNotify::onFileRead(
     size_t * bytesUsed,
-    string_view data, 
+    string_view data,
     int64_t offset,
     FileHandle f
 ) {
@@ -154,7 +154,7 @@ uint64_t Dim::fileSize(std::string_view path) {
         errno = cond.value();
         return len;
     }
-    if (!len) 
+    if (!len)
         errno = 0;
     return len;
 }

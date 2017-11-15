@@ -90,11 +90,11 @@ bool ServerConn::recv(CharBuf * out, CharBuf * data, string_view src) {
         0 // trailing null for the debugger
     };
 
-    // Rebuild the ALPN just in case endianness matters, rendering the 
+    // Rebuild the ALPN just in case endianness matters, rendering the
     // manually constructed little-endian version invalid.
     auto alpn = (SEC_APPLICATION_PROTOCOLS *) alpn_chars;
     alpn->ProtocolListsSize = 9;
-    alpn->ProtocolLists[0].ProtoNegoExt = 
+    alpn->ProtocolLists[0].ProtoNegoExt =
         SecApplicationProtocolNegotiationExt_ALPN;
     alpn->ProtocolLists[0].ProtocolListSize = 3;
 
@@ -105,22 +105,22 @@ bool ServerConn::recv(CharBuf * out, CharBuf * data, string_view src) {
 
 NEGOTIATE:
     while (m_handshake) {
-        unsigned flags = ASC_REQ_STREAM 
+        unsigned flags = ASC_REQ_STREAM
             | ASC_REQ_CONFIDENTIALITY
             | ASC_REQ_EXTENDED_ERROR
             | ASC_REQ_ALLOCATE_MEMORY
             ;
 
-        SecBuffer inBufs[] = { 
+        SecBuffer inBufs[] = {
             { (unsigned) src.size(), SECBUFFER_TOKEN, (void *) src.data() },
-            { (unsigned) size(alpn_chars) - 1, 
-                SECBUFFER_APPLICATION_PROTOCOLS, 
+            { (unsigned) size(alpn_chars) - 1,
+                SECBUFFER_APPLICATION_PROTOCOLS,
                 alpn },
         };
-        SecBufferDesc inDesc{ 
-            SECBUFFER_VERSION, 
-            (unsigned) size(inBufs), 
-            inBufs 
+        SecBufferDesc inDesc{
+            SECBUFFER_VERSION,
+            (unsigned) size(inBufs),
+            inBufs
         };
 
         SecBuffer outBufs[] = {
@@ -129,8 +129,8 @@ NEGOTIATE:
             { 0, SECBUFFER_ALERT, nullptr },
         };
         SecBufferDesc outDesc{
-            SECBUFFER_VERSION, 
-            (unsigned) size(outBufs), 
+            SECBUFFER_VERSION,
+            (unsigned) size(outBufs),
             outBufs
         };
 
@@ -154,7 +154,7 @@ NEGOTIATE:
         if (outBufs[1].cbBuffer) {
             // TODO: figure out what is in the buffer, is it encrypted?
             // unencrypted? ignorable handshake cruft?
-            assert(!outBufs[1].cbBuffer); 
+            assert(!outBufs[1].cbBuffer);
             data->append((char *) outBufs[1].pvBuffer, outBufs[1].cbBuffer);
             FreeContextBuffer(outBufs[1].pvBuffer);
         }
@@ -169,12 +169,12 @@ NEGOTIATE:
             s_perfFinish += 1;
             m_handshake = false;
             err = (SecStatus) QueryContextAttributes(
-                &m_context, 
-                SECPKG_ATTR_STREAM_SIZES, 
+                &m_context,
+                SECPKG_ATTR_STREAM_SIZES,
                 &m_sizes
             );
             if (err) {
-                logMsgError() << "QueryContextAttributes(STREAM_SIZES): " 
+                logMsgError() << "QueryContextAttributes(STREAM_SIZES): "
                     << err;
                 return false;
             }
@@ -184,14 +184,14 @@ NEGOTIATE:
                 &m_alpn
             );
             if (err) {
-                logMsgError() 
+                logMsgError()
                     << "QueryContextAttributes(APPLICATION_PROTOCOL): "
                     << err;
                 return false;
             }
             break;
         }
-        if ((SecStatus) err == SEC_E_INCOMPLETE_MESSAGE 
+        if ((SecStatus) err == SEC_E_INCOMPLETE_MESSAGE
             || (SecStatus) err == SEC_E_INCOMPLETE_CREDENTIALS
         ) {
             // need to receive more data
@@ -203,7 +203,7 @@ NEGOTIATE:
             return true;
         }
         if ((SecStatus) err == SEC_I_CONTINUE_NEEDED) {
-            // AcceptSecurityContext must be called again, whether or not 
+            // AcceptSecurityContext must be called again, whether or not
             // there is any additional data.
             continue;
         }
@@ -215,7 +215,7 @@ NEGOTIATE:
         return false;
     }
 
-    // Decrypt application data 
+    // Decrypt application data
     for (;;) {
         if (src.empty()) {
             m_extra.clear();
@@ -240,7 +240,7 @@ NEGOTIATE:
             assert(bufs[3].BufferType == SECBUFFER_EMPTY
                 || bufs[3].BufferType == SECBUFFER_EXTRA);
 
-            if (bufs[1].cbBuffer) 
+            if (bufs[1].cbBuffer)
                 data->append((char *) bufs[1].pvBuffer, bufs[1].cbBuffer);
 
             if ((SecStatus) err == SEC_E_OK) {
@@ -269,7 +269,7 @@ NEGOTIATE:
         }
 
         if ((SecStatus) err == SEC_I_RENEGOTIATE) {
-            // Proceed with renegotiate by making another call to 
+            // Proceed with renegotiate by making another call to
             // AcceptSecurityContext with no data.
             s_perfReneg += 1;
             src = {};

@@ -35,13 +35,13 @@ const unsigned kUnlimited = unsigned(-1);
 
 struct Element {
     enum Flags : uint16_t {
-        // Simple events with no context 
+        // Simple events with no context
         fOnStart = 1,
         fOnChar = 2,
         fOnEnd = 4,
 
-        // Events with context data, requires more work tracking internal 
-        // state. Not supported when the grammar allows position to be 
+        // Events with context data, requires more work tracking internal
+        // state. Not supported when the grammar allows position to be
         // extended indefinitely.
         fOnStartW = 8,
         fOnCharW = 16,
@@ -50,7 +50,7 @@ struct Element {
         fFunction = 64,
 
         // If complexity has been tested one of these will be set:
-        fSimple = 128,  // is single terminal or choice of terminals and 
+        fSimple = 128,  // is single terminal or choice of terminals and
                         //   no other flags
         fComplex = 256, // is not fSimple
 
@@ -67,7 +67,7 @@ struct Element {
         kChoice,
         kTerminal,
     };
-    
+
     Type type{kRule};
     std::string name;
     std::string value;
@@ -104,7 +104,7 @@ public:
     void addOption(std::string_view name, std::string_view value);
     void setOption(std::string_view name, std::string_view value);
     const char * optionString(
-        std::string_view name, 
+        std::string_view name,
         const char * def = ""
     ) const;
     unsigned optionUnsigned(std::string_view name, unsigned def = 0) const;
@@ -125,17 +125,17 @@ public:
     Element * addSequence(Element * rule, unsigned m, unsigned n);
     Element * addChoice(Element * rule, unsigned m, unsigned n);
     void addRule(
-        Element * rule, 
-        std::string_view name, 
-        unsigned m, 
+        Element * rule,
+        std::string_view name,
+        unsigned m,
         unsigned n
     );
 
     // case insensitive
     void addText(
-        Element * rule, 
-        std::string_view value, 
-        unsigned m, 
+        Element * rule,
+        std::string_view value,
+        unsigned m,
         unsigned n
     );
 
@@ -242,7 +242,7 @@ struct State {
     std::string name;
     std::vector<std::string> aliases;
 
-    // bitset is 256 to allow space for all possible terminals, count() == 0 
+    // bitset is 256 to allow space for all possible terminals, count() == 0
     // if there are no terminals because it's a function.
     std::map<StatePosition, std::bitset<256>> positions;
 
@@ -264,8 +264,8 @@ template <> struct hash<StateEvent> {
 template <> struct hash<StatePosition> {
     size_t operator()(const StatePosition & val) const;
 };
-template <> struct hash<State> { 
-    size_t operator()(const State & val) const; 
+template <> struct hash<State> {
+    size_t operator()(const State & val) const;
 };
 
 } // namespace std

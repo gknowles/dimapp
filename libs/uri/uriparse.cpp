@@ -12,47 +12,47 @@ using namespace Dim::Detail;
 *   UriParser
 *
 *   Normalized ABNF of syntax:
-*   %root = URI 
-*   ALPHA = ( %x41-5a / %x61-7a ) 
-*   DIGIT = ( %x30-39 ) 
-*   HEXDIG = ( DIGIT / %x41-46 / %x61-66 ) 
-*   IP-literal = ( %x5b ( IPv6address / IPvFuture ) %x5d ) 
-*   IPv4address = ( dec-octet %x2e dec-octet %x2e dec-octet %x2e dec-octet ) 
-*   IPv6address = ( ( 6*6( h16 %x3a ) ls32 ) / ( %x3a %x3a 5*5( h16 %x3a ) 
-*       ls32 ) / ( *1h16 %x3a %x3a 4*4( h16 %x3a ) ls32 ) / ( *1( *1( h16 %x3a 
-*       ) h16 ) %x3a %x3a 3*3( h16 %x3a ) ls32 ) / ( *1( *2( h16 %x3a ) h16 ) 
-*       %x3a %x3a 2*2( h16 %x3a ) ls32 ) / ( *1( *3( h16 %x3a ) h16 ) %x3a 
-*       %x3a h16 %x3a ls32 ) / ( *1( *4( h16 %x3a ) h16 ) %x3a %x3a ls32 ) / ( 
-*       *1( *5( h16 %x3a ) h16 ) %x3a %x3a h16 ) / ( *1( *6( h16 %x3a ) h16 ) 
-*       %x3a %x3a ) ) 
-*   IPvFuture = ( ( %x56 / %x76 ) 1*HEXDIG %x2e 1*( sub-delims / unreserved / 
-*       %x3a ) ) 
-*   URI = ( scheme %x3a %x2f %x2f authority path-abempty *1( %x3f query ) *1( 
-*       %x23 fragment ) ) 
-*   authority = ( host *1( %x3a port ) ) 
-*   dec-octet = ( DIGIT / ( ( %x31-39 ) DIGIT ) / ( %x31 2*2DIGIT ) / ( %x32 ( 
-*       %x30-34 ) DIGIT ) / ( %x32 %x35 ( %x30-35 ) ) ) 
-*   fragment = *( pchar / %x2f / %x3f ) { Start, End } 
-*   h16 = 1*4HEXDIG 
-*   host = ( IP-literal / IPv4address / reg-name ) { Start, End } 
-*   ls32 = ( IPv4address / ( h16 %x3a h16 ) ) 
-*   path-abempty = *( %x2f segment ) 
-*   pchar = ( pct-encoded / sub-delims / unreserved / %x3a / %x40 ) 
-*   pct-encoded = ( %x25 HEXDIG HEXDIG ) 
-*   port = *DIGIT { Start, Char } 
-*   qchar = ( pct-encoded / qry-delims / qry-plus / unreserved / %x2f / %x3a / 
-*       %x3f-40 ) 
-*   qry-delims = ( %x21 / %x24 / %x27-2a / %x2c / %x3b ) 
-*   qry-name = 1*qchar { Start, End } 
-*   qry-pair = ( qry-name *1( %x3d qry-value ) ) 
-*   qry-plus = %x2b 
-*   qry-value = *( qchar / %x3d ) { Start, End } 
-*   query = ( *1qry-pair *( %x26 qry-pair ) ) 
-*   reg-name = *( pct-encoded / sub-delims / unreserved ) 
-*   scheme = ( ALPHA *( ALPHA / DIGIT / %x2b / %x2d-2e ) ) { Start, End } 
-*   segment = *pchar { Start, End } 
-*   sub-delims = ( qry-delims / %x26 / %x2b / %x3d ) 
-*   unreserved = ( ALPHA / DIGIT / %x2d-2e / %x5f / %x7e ) 
+*   %root = URI
+*   ALPHA = ( %x41-5a / %x61-7a )
+*   DIGIT = ( %x30-39 )
+*   HEXDIG = ( DIGIT / %x41-46 / %x61-66 )
+*   IP-literal = ( %x5b ( IPv6address / IPvFuture ) %x5d )
+*   IPv4address = ( dec-octet %x2e dec-octet %x2e dec-octet %x2e dec-octet )
+*   IPv6address = ( ( 6*6( h16 %x3a ) ls32 ) / ( %x3a %x3a 5*5( h16 %x3a )
+*       ls32 ) / ( *1h16 %x3a %x3a 4*4( h16 %x3a ) ls32 ) / ( *1( *1( h16 %x3a
+*       ) h16 ) %x3a %x3a 3*3( h16 %x3a ) ls32 ) / ( *1( *2( h16 %x3a ) h16 )
+*       %x3a %x3a 2*2( h16 %x3a ) ls32 ) / ( *1( *3( h16 %x3a ) h16 ) %x3a
+*       %x3a h16 %x3a ls32 ) / ( *1( *4( h16 %x3a ) h16 ) %x3a %x3a ls32 ) / (
+*       *1( *5( h16 %x3a ) h16 ) %x3a %x3a h16 ) / ( *1( *6( h16 %x3a ) h16 )
+*       %x3a %x3a ) )
+*   IPvFuture = ( ( %x56 / %x76 ) 1*HEXDIG %x2e 1*( sub-delims / unreserved /
+*       %x3a ) )
+*   URI = ( scheme %x3a %x2f %x2f authority path-abempty *1( %x3f query ) *1(
+*       %x23 fragment ) )
+*   authority = ( host *1( %x3a port ) )
+*   dec-octet = ( DIGIT / ( ( %x31-39 ) DIGIT ) / ( %x31 2*2DIGIT ) / ( %x32 (
+*       %x30-34 ) DIGIT ) / ( %x32 %x35 ( %x30-35 ) ) )
+*   fragment = *( pchar / %x2f / %x3f ) { Start, End }
+*   h16 = 1*4HEXDIG
+*   host = ( IP-literal / IPv4address / reg-name ) { Start, End }
+*   ls32 = ( IPv4address / ( h16 %x3a h16 ) )
+*   path-abempty = *( %x2f segment )
+*   pchar = ( pct-encoded / sub-delims / unreserved / %x3a / %x40 )
+*   pct-encoded = ( %x25 HEXDIG HEXDIG )
+*   port = *DIGIT { Start, Char }
+*   qchar = ( pct-encoded / qry-delims / qry-plus / unreserved / %x2f / %x3a /
+*       %x3f-40 )
+*   qry-delims = ( %x21 / %x24 / %x27-2a / %x2c / %x3b )
+*   qry-name = 1*qchar { Start, End }
+*   qry-pair = ( qry-name *1( %x3d qry-value ) )
+*   qry-plus = %x2b
+*   qry-value = *( qchar / %x3d ) { Start, End }
+*   query = ( *1qry-pair *( %x26 qry-pair ) )
+*   reg-name = *( pct-encoded / sub-delims / unreserved )
+*   scheme = ( ALPHA *( ALPHA / DIGIT / %x2b / %x2d-2e ) ) { Start, End }
+*   segment = *pchar { Start, End }
+*   sub-delims = ( qry-delims / %x26 / %x2b / %x3d )
+*   unreserved = ( ALPHA / DIGIT / %x2d-2e / %x5f / %x7e )
 *
 ***/
 
@@ -69,7 +69,7 @@ bool UriParser::parse (const char src[]) {
     unsigned char ch;
     goto state2;
 
-state0: 
+state0:
     // <FAILED>
     m_errpos = ptr - src - 1;
     return false;
@@ -90,7 +90,7 @@ state2:
     case 'e': case 'f': case 'g': case 'h': case 'i': case 'j':
     case 'k': case 'l': case 'm': case 'n': case 'o': case 'p':
     case 'q': case 'r': case 's': case 't': case 'u': case 'v':
-    case 'w': case 'x': case 'y': case 'z': 
+    case 'w': case 'x': case 'y': case 'z':
         goto state3;
     }
     goto state0;
@@ -111,9 +111,9 @@ state3:
     case 'd': case 'e': case 'f': case 'g': case 'h': case 'i':
     case 'j': case 'k': case 'l': case 'm': case 'n': case 'o':
     case 'p': case 'q': case 'r': case 's': case 't': case 'u':
-    case 'v': case 'w': case 'x': case 'y': case 'z': 
+    case 'v': case 'w': case 'x': case 'y': case 'z':
         goto state4;
-    case ':': 
+    case ':':
         goto state5;
     }
     goto state0;
@@ -132,9 +132,9 @@ state4:
     case 'd': case 'e': case 'f': case 'g': case 'h': case 'i':
     case 'j': case 'k': case 'l': case 'm': case 'n': case 'o':
     case 'p': case 'q': case 'r': case 's': case 't': case 'u':
-    case 'v': case 'w': case 'x': case 'y': case 'z': 
+    case 'v': case 'w': case 'x': case 'y': case 'z':
         goto state4;
-    case ':': 
+    case ':':
         goto state5;
     }
     goto state0;
@@ -145,7 +145,7 @@ state5:
         goto state0;
     ch = *ptr++;
     switch (ch) {
-    case '/': 
+    case '/':
         goto state6;
     }
     goto state0;
@@ -154,7 +154,7 @@ state6:
     // 6: A+:/
     ch = *ptr++;
     switch (ch) {
-    case '/': 
+    case '/':
         goto state7;
     }
     goto state0;
@@ -163,7 +163,7 @@ state7:
     // 7: A+://
     ch = *ptr++;
     switch (ch) {
-    case 0: 
+    case 0:
         goto state1;
     case '!': case '$': case '&': case '\'': case '(': case ')':
     case '*': case '+': case ',': case '-': case '.': case '0':
@@ -177,19 +177,19 @@ state7:
     case 'e': case 'f': case 'g': case 'h': case 'i': case 'j':
     case 'k': case 'l': case 'm': case 'n': case 'o': case 'p':
     case 'q': case 'r': case 's': case 't': case 'u': case 'v':
-    case 'w': case 'x': case 'y': case 'z': case '~': 
+    case 'w': case 'x': case 'y': case 'z': case '~':
         goto state8;
-    case '#': 
+    case '#':
         goto state31;
-    case '%': 
+    case '%':
         goto state77;
-    case '/': 
+    case '/':
         goto state33;
-    case ':': 
+    case ':':
         goto state114;
-    case '?': 
+    case '?':
         goto state34;
-    case '[': 
+    case '[':
         goto state115;
     }
     goto state0;
@@ -204,7 +204,7 @@ state8:
         goto state0;
     ch = *ptr++;
     switch (ch) {
-    case 0: 
+    case 0:
         goto state9;
     case '!': case '$': case '&': case '\'': case '(': case ')':
     case '*': case '+': case ',': case '-': case '.': case '0':
@@ -218,17 +218,17 @@ state8:
     case 'e': case 'f': case 'g': case 'h': case 'i': case 'j':
     case 'k': case 'l': case 'm': case 'n': case 'o': case 'p':
     case 'q': case 'r': case 's': case 't': case 'u': case 'v':
-    case 'w': case 'x': case 'y': case 'z': case '~': 
+    case 'w': case 'x': case 'y': case 'z': case '~':
         goto state10;
-    case '#': 
+    case '#':
         goto state11;
-    case '%': 
+    case '%':
         goto state19;
-    case '/': 
+    case '/':
         goto state22;
-    case ':': 
+    case ':':
         goto state73;
-    case '?': 
+    case '?':
         goto state76;
     }
     goto state0;
@@ -276,7 +276,7 @@ state10:
     // 112: A+://25
     ch = *ptr++;
     switch (ch) {
-    case 0: 
+    case 0:
         goto state9;
     case '!': case '$': case '&': case '\'': case '(': case ')':
     case '*': case '+': case ',': case '-': case '.': case '0':
@@ -290,17 +290,17 @@ state10:
     case 'e': case 'f': case 'g': case 'h': case 'i': case 'j':
     case 'k': case 'l': case 'm': case 'n': case 'o': case 'p':
     case 'q': case 'r': case 's': case 't': case 'u': case 'v':
-    case 'w': case 'x': case 'y': case 'z': case '~': 
+    case 'w': case 'x': case 'y': case 'z': case '~':
         goto state10;
-    case '#': 
+    case '#':
         goto state11;
-    case '%': 
+    case '%':
         goto state19;
-    case '/': 
+    case '/':
         goto state22;
-    case ':': 
+    case ':':
         goto state73;
-    case '?': 
+    case '?':
         goto state76;
     }
     goto state0;
@@ -311,7 +311,7 @@ state11:
         goto state0;
     ch = *ptr++;
     switch (ch) {
-    case 0: 
+    case 0:
         goto state1;
     case '!': case '$': case '&': case '\'': case '(': case ')':
     case '*': case '+': case ',': case '-': case '.': case '/':
@@ -326,9 +326,9 @@ state11:
     case 'g': case 'h': case 'i': case 'j': case 'k': case 'l':
     case 'm': case 'n': case 'o': case 'p': case 'q': case 'r':
     case 's': case 't': case 'u': case 'v': case 'w': case 'x':
-    case 'y': case 'z': case '~': 
+    case 'y': case 'z': case '~':
         goto state12;
-    case '%': 
+    case '%':
         goto state18;
     }
     goto state0;
@@ -339,7 +339,7 @@ state12:
         goto state0;
     ch = *ptr++;
     switch (ch) {
-    case 0: 
+    case 0:
         goto state13;
     case '!': case '$': case '&': case '\'': case '(': case ')':
     case '*': case '+': case ',': case '-': case '.': case '/':
@@ -354,9 +354,9 @@ state12:
     case 'g': case 'h': case 'i': case 'j': case 'k': case 'l':
     case 'm': case 'n': case 'o': case 'p': case 'q': case 'r':
     case 's': case 't': case 'u': case 'v': case 'w': case 'x':
-    case 'y': case 'z': case '~': 
+    case 'y': case 'z': case '~':
         goto state14;
-    case '%': 
+    case '%':
         goto state15;
     }
     goto state0;
@@ -374,7 +374,7 @@ state14:
     // 17: A+://!!#!!%00
     ch = *ptr++;
     switch (ch) {
-    case 0: 
+    case 0:
         goto state13;
     case '!': case '$': case '&': case '\'': case '(': case ')':
     case '*': case '+': case ',': case '-': case '.': case '/':
@@ -389,9 +389,9 @@ state14:
     case 'g': case 'h': case 'i': case 'j': case 'k': case 'l':
     case 'm': case 'n': case 'o': case 'p': case 'q': case 'r':
     case 's': case 't': case 'u': case 'v': case 'w': case 'x':
-    case 'y': case 'z': case '~': 
+    case 'y': case 'z': case '~':
         goto state14;
-    case '%': 
+    case '%':
         goto state15;
     }
     goto state0;
@@ -403,7 +403,7 @@ state15:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state16;
     }
     goto state0;
@@ -415,7 +415,7 @@ state16:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state14;
     }
     goto state0;
@@ -429,7 +429,7 @@ state18:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state16;
     }
     goto state0;
@@ -441,7 +441,7 @@ state19:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state20;
     }
     goto state0;
@@ -453,7 +453,7 @@ state20:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state10;
     }
     goto state0;
@@ -464,7 +464,7 @@ state22:
         goto state0;
     ch = *ptr++;
     switch (ch) {
-    case 0: 
+    case 0:
         goto state1;
     case '!': case '$': case '&': case '\'': case '(': case ')':
     case '*': case '+': case ',': case '-': case '.': case '0':
@@ -479,15 +479,15 @@ state22:
     case 'i': case 'j': case 'k': case 'l': case 'm': case 'n':
     case 'o': case 'p': case 'q': case 'r': case 's': case 't':
     case 'u': case 'v': case 'w': case 'x': case 'y': case 'z':
-    case '~': 
+    case '~':
         goto state23;
-    case '#': 
+    case '#':
         goto state31;
-    case '%': 
+    case '%':
         goto state32;
-    case '/': 
+    case '/':
         goto state33;
-    case '?': 
+    case '?':
         goto state34;
     }
     goto state0;
@@ -498,7 +498,7 @@ state23:
         goto state0;
     ch = *ptr++;
     switch (ch) {
-    case 0: 
+    case 0:
         goto state24;
     case '!': case '$': case '&': case '\'': case '(': case ')':
     case '*': case '+': case ',': case '-': case '.': case '0':
@@ -513,15 +513,15 @@ state23:
     case 'i': case 'j': case 'k': case 'l': case 'm': case 'n':
     case 'o': case 'p': case 'q': case 'r': case 's': case 't':
     case 'u': case 'v': case 'w': case 'x': case 'y': case 'z':
-    case '~': 
+    case '~':
         goto state25;
-    case '#': 
+    case '#':
         goto state26;
-    case '%': 
+    case '%':
         goto state27;
-    case '/': 
+    case '/':
         goto state30;
-    case '?': 
+    case '?':
         goto state72;
     }
     goto state0;
@@ -539,7 +539,7 @@ state25:
     // 29: A+://!!%00/!!%00
     ch = *ptr++;
     switch (ch) {
-    case 0: 
+    case 0:
         goto state24;
     case '!': case '$': case '&': case '\'': case '(': case ')':
     case '*': case '+': case ',': case '-': case '.': case '0':
@@ -554,15 +554,15 @@ state25:
     case 'i': case 'j': case 'k': case 'l': case 'm': case 'n':
     case 'o': case 'p': case 'q': case 'r': case 's': case 't':
     case 'u': case 'v': case 'w': case 'x': case 'y': case 'z':
-    case '~': 
+    case '~':
         goto state25;
-    case '#': 
+    case '#':
         goto state26;
-    case '%': 
+    case '%':
         goto state27;
-    case '/': 
+    case '/':
         goto state30;
-    case '?': 
+    case '?':
         goto state72;
     }
     goto state0;
@@ -573,7 +573,7 @@ state26:
         goto state0;
     ch = *ptr++;
     switch (ch) {
-    case 0: 
+    case 0:
         goto state1;
     case '!': case '$': case '&': case '\'': case '(': case ')':
     case '*': case '+': case ',': case '-': case '.': case '/':
@@ -588,9 +588,9 @@ state26:
     case 'g': case 'h': case 'i': case 'j': case 'k': case 'l':
     case 'm': case 'n': case 'o': case 'p': case 'q': case 'r':
     case 's': case 't': case 'u': case 'v': case 'w': case 'x':
-    case 'y': case 'z': case '~': 
+    case 'y': case 'z': case '~':
         goto state12;
-    case '%': 
+    case '%':
         goto state18;
     }
     goto state0;
@@ -602,7 +602,7 @@ state27:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state28;
     }
     goto state0;
@@ -614,7 +614,7 @@ state28:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state25;
     }
     goto state0;
@@ -625,7 +625,7 @@ state30:
         goto state0;
     ch = *ptr++;
     switch (ch) {
-    case 0: 
+    case 0:
         goto state1;
     case '!': case '$': case '&': case '\'': case '(': case ')':
     case '*': case '+': case ',': case '-': case '.': case '0':
@@ -640,15 +640,15 @@ state30:
     case 'i': case 'j': case 'k': case 'l': case 'm': case 'n':
     case 'o': case 'p': case 'q': case 'r': case 's': case 't':
     case 'u': case 'v': case 'w': case 'x': case 'y': case 'z':
-    case '~': 
+    case '~':
         goto state23;
-    case '#': 
+    case '#':
         goto state31;
-    case '%': 
+    case '%':
         goto state32;
-    case '/': 
+    case '/':
         goto state33;
-    case '?': 
+    case '?':
         goto state34;
     }
     goto state0;
@@ -657,7 +657,7 @@ state31:
     // 31: A+://!!%00/!!%00/#
     ch = *ptr++;
     switch (ch) {
-    case 0: 
+    case 0:
         goto state1;
     case '!': case '$': case '&': case '\'': case '(': case ')':
     case '*': case '+': case ',': case '-': case '.': case '/':
@@ -672,9 +672,9 @@ state31:
     case 'g': case 'h': case 'i': case 'j': case 'k': case 'l':
     case 'm': case 'n': case 'o': case 'p': case 'q': case 'r':
     case 's': case 't': case 'u': case 'v': case 'w': case 'x':
-    case 'y': case 'z': case '~': 
+    case 'y': case 'z': case '~':
         goto state12;
-    case '%': 
+    case '%':
         goto state18;
     }
     goto state0;
@@ -688,7 +688,7 @@ state32:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state28;
     }
     goto state0;
@@ -697,7 +697,7 @@ state33:
     // 33: A+://!!%00/!!%00//
     ch = *ptr++;
     switch (ch) {
-    case 0: 
+    case 0:
         goto state1;
     case '!': case '$': case '&': case '\'': case '(': case ')':
     case '*': case '+': case ',': case '-': case '.': case '0':
@@ -712,15 +712,15 @@ state33:
     case 'i': case 'j': case 'k': case 'l': case 'm': case 'n':
     case 'o': case 'p': case 'q': case 'r': case 's': case 't':
     case 'u': case 'v': case 'w': case 'x': case 'y': case 'z':
-    case '~': 
+    case '~':
         goto state23;
-    case '#': 
+    case '#':
         goto state31;
-    case '%': 
+    case '%':
         goto state32;
-    case '/': 
+    case '/':
         goto state33;
-    case '?': 
+    case '?':
         goto state34;
     }
     goto state0;
@@ -729,7 +729,7 @@ state34:
     // 34: A+://!!%00/!!%00//?
     ch = *ptr++;
     switch (ch) {
-    case 0: 
+    case 0:
         goto state1;
     case '!': case '$': case '\'': case '(': case ')': case '*':
     case '+': case ',': case '-': case '.': case '/': case '0':
@@ -744,13 +744,13 @@ state34:
     case 'i': case 'j': case 'k': case 'l': case 'm': case 'n':
     case 'o': case 'p': case 'q': case 'r': case 's': case 't':
     case 'u': case 'v': case 'w': case 'x': case 'y': case 'z':
-    case '~': 
+    case '~':
         goto state35;
-    case '#': 
+    case '#':
         goto state31;
-    case '%': 
+    case '%':
         goto state57;
-    case '&': 
+    case '&':
         goto state61;
     }
     goto state0;
@@ -762,7 +762,7 @@ state35:
         goto state0;
     ch = *ptr++;
     switch (ch) {
-    case 0: 
+    case 0:
         goto state36;
     case '!': case '$': case '\'': case '(': case ')': case '*':
     case '+': case ',': case '-': case '.': case '/': case '0':
@@ -777,15 +777,15 @@ state35:
     case 'i': case 'j': case 'k': case 'l': case 'm': case 'n':
     case 'o': case 'p': case 'q': case 'r': case 's': case 't':
     case 'u': case 'v': case 'w': case 'x': case 'y': case 'z':
-    case '~': 
+    case '~':
         goto state37;
-    case '#': 
+    case '#':
         goto state38;
-    case '%': 
+    case '%':
         goto state39;
-    case '&': 
+    case '&':
         goto state42;
-    case '=': 
+    case '=':
         goto state48;
     }
     goto state0;
@@ -807,7 +807,7 @@ state37:
     // 71: A+://!!%00/!!%00//?%00
     ch = *ptr++;
     switch (ch) {
-    case 0: 
+    case 0:
         goto state36;
     case '!': case '$': case '\'': case '(': case ')': case '*':
     case '+': case ',': case '-': case '.': case '/': case '0':
@@ -822,15 +822,15 @@ state37:
     case 'i': case 'j': case 'k': case 'l': case 'm': case 'n':
     case 'o': case 'p': case 'q': case 'r': case 's': case 't':
     case 'u': case 'v': case 'w': case 'x': case 'y': case 'z':
-    case '~': 
+    case '~':
         goto state37;
-    case '#': 
+    case '#':
         goto state38;
-    case '%': 
+    case '%':
         goto state39;
-    case '&': 
+    case '&':
         goto state42;
-    case '=': 
+    case '=':
         goto state48;
     }
     goto state0;
@@ -841,7 +841,7 @@ state38:
         goto state0;
     ch = *ptr++;
     switch (ch) {
-    case 0: 
+    case 0:
         goto state1;
     case '!': case '$': case '&': case '\'': case '(': case ')':
     case '*': case '+': case ',': case '-': case '.': case '/':
@@ -856,9 +856,9 @@ state38:
     case 'g': case 'h': case 'i': case 'j': case 'k': case 'l':
     case 'm': case 'n': case 'o': case 'p': case 'q': case 'r':
     case 's': case 't': case 'u': case 'v': case 'w': case 'x':
-    case 'y': case 'z': case '~': 
+    case 'y': case 'z': case '~':
         goto state12;
-    case '%': 
+    case '%':
         goto state18;
     }
     goto state0;
@@ -871,7 +871,7 @@ state39:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state40;
     }
     goto state0;
@@ -886,7 +886,7 @@ state40:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state37;
     }
     goto state0;
@@ -910,9 +910,9 @@ state42:
     case 'i': case 'j': case 'k': case 'l': case 'm': case 'n':
     case 'o': case 'p': case 'q': case 'r': case 's': case 't':
     case 'u': case 'v': case 'w': case 'x': case 'y': case 'z':
-    case '~': 
+    case '~':
         goto state35;
-    case '%': 
+    case '%':
         goto state57;
     }
     goto state0;
@@ -924,7 +924,7 @@ state48:
         goto state0;
     ch = *ptr++;
     switch (ch) {
-    case 0: 
+    case 0:
         goto state1;
     case '!': case '$': case '\'': case '(': case ')': case '*':
     case '+': case ',': case '-': case '.': case '/': case '0':
@@ -939,13 +939,13 @@ state48:
     case 'h': case 'i': case 'j': case 'k': case 'l': case 'm':
     case 'n': case 'o': case 'p': case 'q': case 'r': case 's':
     case 't': case 'u': case 'v': case 'w': case 'x': case 'y':
-    case 'z': case '~': 
+    case 'z': case '~':
         goto state49;
-    case '#': 
+    case '#':
         goto state31;
-    case '%': 
+    case '%':
         goto state60;
-    case '&': 
+    case '&':
         goto state61;
     }
     goto state0;
@@ -957,7 +957,7 @@ state49:
         goto state0;
     ch = *ptr++;
     switch (ch) {
-    case 0: 
+    case 0:
         goto state50;
     case '!': case '$': case '\'': case '(': case ')': case '*':
     case '+': case ',': case '-': case '.': case '/': case '0':
@@ -972,13 +972,13 @@ state49:
     case 'h': case 'i': case 'j': case 'k': case 'l': case 'm':
     case 'n': case 'o': case 'p': case 'q': case 'r': case 's':
     case 't': case 'u': case 'v': case 'w': case 'x': case 'y':
-    case 'z': case '~': 
+    case 'z': case '~':
         goto state51;
-    case '#': 
+    case '#':
         goto state52;
-    case '%': 
+    case '%':
         goto state53;
-    case '&': 
+    case '&':
         goto state56;
     }
     goto state0;
@@ -998,7 +998,7 @@ state51:
     // 67: A+://!!%00/!!%00//?!!%00=!!%00
     ch = *ptr++;
     switch (ch) {
-    case 0: 
+    case 0:
         goto state50;
     case '!': case '$': case '\'': case '(': case ')': case '*':
     case '+': case ',': case '-': case '.': case '/': case '0':
@@ -1013,13 +1013,13 @@ state51:
     case 'h': case 'i': case 'j': case 'k': case 'l': case 'm':
     case 'n': case 'o': case 'p': case 'q': case 'r': case 's':
     case 't': case 'u': case 'v': case 'w': case 'x': case 'y':
-    case 'z': case '~': 
+    case 'z': case '~':
         goto state51;
-    case '#': 
+    case '#':
         goto state52;
-    case '%': 
+    case '%':
         goto state53;
-    case '&': 
+    case '&':
         goto state56;
     }
     goto state0;
@@ -1030,7 +1030,7 @@ state52:
         goto state0;
     ch = *ptr++;
     switch (ch) {
-    case 0: 
+    case 0:
         goto state1;
     case '!': case '$': case '&': case '\'': case '(': case ')':
     case '*': case '+': case ',': case '-': case '.': case '/':
@@ -1045,9 +1045,9 @@ state52:
     case 'g': case 'h': case 'i': case 'j': case 'k': case 'l':
     case 'm': case 'n': case 'o': case 'p': case 'q': case 'r':
     case 's': case 't': case 'u': case 'v': case 'w': case 'x':
-    case 'y': case 'z': case '~': 
+    case 'y': case 'z': case '~':
         goto state12;
-    case '%': 
+    case '%':
         goto state18;
     }
     goto state0;
@@ -1060,7 +1060,7 @@ state53:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state54;
     }
     goto state0;
@@ -1073,7 +1073,7 @@ state54:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state51;
     }
     goto state0;
@@ -1097,9 +1097,9 @@ state56:
     case 'i': case 'j': case 'k': case 'l': case 'm': case 'n':
     case 'o': case 'p': case 'q': case 'r': case 's': case 't':
     case 'u': case 'v': case 'w': case 'x': case 'y': case 'z':
-    case '~': 
+    case '~':
         goto state35;
-    case '%': 
+    case '%':
         goto state57;
     }
     goto state0;
@@ -1114,7 +1114,7 @@ state57:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state40;
     }
     goto state0;
@@ -1129,7 +1129,7 @@ state60:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state54;
     }
     goto state0;
@@ -1151,9 +1151,9 @@ state61:
     case 'i': case 'j': case 'k': case 'l': case 'm': case 'n':
     case 'o': case 'p': case 'q': case 'r': case 's': case 't':
     case 'u': case 'v': case 'w': case 'x': case 'y': case 'z':
-    case '~': 
+    case '~':
         goto state35;
-    case '%': 
+    case '%':
         goto state57;
     }
     goto state0;
@@ -1164,7 +1164,7 @@ state72:
         goto state0;
     ch = *ptr++;
     switch (ch) {
-    case 0: 
+    case 0:
         goto state1;
     case '!': case '$': case '\'': case '(': case ')': case '*':
     case '+': case ',': case '-': case '.': case '/': case '0':
@@ -1179,13 +1179,13 @@ state72:
     case 'i': case 'j': case 'k': case 'l': case 'm': case 'n':
     case 'o': case 'p': case 'q': case 'r': case 's': case 't':
     case 'u': case 'v': case 'w': case 'x': case 'y': case 'z':
-    case '~': 
+    case '~':
         goto state35;
-    case '#': 
+    case '#':
         goto state31;
-    case '%': 
+    case '%':
         goto state57;
-    case '&': 
+    case '&':
         goto state61;
     }
     goto state0;
@@ -1196,16 +1196,16 @@ state73:
         goto state0;
     ch = *ptr++;
     switch (ch) {
-    case 0: 
+    case 0:
         goto state1;
-    case '#': 
+    case '#':
         goto state31;
-    case '/': 
+    case '/':
         goto state33;
     case '0': case '1': case '2': case '3': case '4': case '5':
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state74;
-    case '?': 
+    case '?':
         goto state34;
     }
     goto state0;
@@ -1218,16 +1218,16 @@ state74:
         goto state0;
     ch = *ptr++;
     switch (ch) {
-    case 0: 
+    case 0:
         goto state1;
-    case '#': 
+    case '#':
         goto state31;
-    case '/': 
+    case '/':
         goto state33;
     case '0': case '1': case '2': case '3': case '4': case '5':
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state75;
-    case '?': 
+    case '?':
         goto state34;
     }
     goto state0;
@@ -1238,16 +1238,16 @@ state75:
         goto state0;
     ch = *ptr++;
     switch (ch) {
-    case 0: 
+    case 0:
         goto state1;
-    case '#': 
+    case '#':
         goto state31;
-    case '/': 
+    case '/':
         goto state33;
     case '0': case '1': case '2': case '3': case '4': case '5':
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state75;
-    case '?': 
+    case '?':
         goto state34;
     }
     goto state0;
@@ -1258,7 +1258,7 @@ state76:
         goto state0;
     ch = *ptr++;
     switch (ch) {
-    case 0: 
+    case 0:
         goto state1;
     case '!': case '$': case '\'': case '(': case ')': case '*':
     case '+': case ',': case '-': case '.': case '/': case '0':
@@ -1273,13 +1273,13 @@ state76:
     case 'i': case 'j': case 'k': case 'l': case 'm': case 'n':
     case 'o': case 'p': case 'q': case 'r': case 's': case 't':
     case 'u': case 'v': case 'w': case 'x': case 'y': case 'z':
-    case '~': 
+    case '~':
         goto state35;
-    case '#': 
+    case '#':
         goto state31;
-    case '%': 
+    case '%':
         goto state57;
-    case '&': 
+    case '&':
         goto state61;
     }
     goto state0;
@@ -1293,7 +1293,7 @@ state77:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state20;
     }
     goto state0;
@@ -1302,16 +1302,16 @@ state114:
     // 114: A+://:
     ch = *ptr++;
     switch (ch) {
-    case 0: 
+    case 0:
         goto state1;
-    case '#': 
+    case '#':
         goto state31;
-    case '/': 
+    case '/':
         goto state33;
     case '0': case '1': case '2': case '3': case '4': case '5':
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state74;
-    case '?': 
+    case '?':
         goto state34;
     }
     goto state0;
@@ -1325,11 +1325,11 @@ state115:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state116;
-    case ':': 
+    case ':':
         goto state537;
-    case 'V': case 'v': 
+    case 'V': case 'v':
         goto state649;
     }
     goto state0;
@@ -1341,9 +1341,9 @@ state116:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state117;
-    case ':': 
+    case ':':
         goto state120;
     }
     goto state0;
@@ -1355,9 +1355,9 @@ state117:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state118;
-    case ':': 
+    case ':':
         goto state120;
     }
     goto state0;
@@ -1369,9 +1369,9 @@ state118:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state119;
-    case ':': 
+    case ':':
         goto state120;
     }
     goto state0;
@@ -1380,7 +1380,7 @@ state119:
     // 119: A+://[0000
     ch = *ptr++;
     switch (ch) {
-    case ':': 
+    case ':':
         goto state120;
     }
     goto state0;
@@ -1392,9 +1392,9 @@ state120:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state121;
-    case ':': 
+    case ':':
         goto state440;
     }
     goto state0;
@@ -1406,9 +1406,9 @@ state121:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state122;
-    case ':': 
+    case ':':
         goto state125;
     }
     goto state0;
@@ -1420,9 +1420,9 @@ state122:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state123;
-    case ':': 
+    case ':':
         goto state125;
     }
     goto state0;
@@ -1434,9 +1434,9 @@ state123:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state124;
-    case ':': 
+    case ':':
         goto state125;
     }
     goto state0;
@@ -1445,7 +1445,7 @@ state124:
     // 124: A+://[0000:0000
     ch = *ptr++;
     switch (ch) {
-    case ':': 
+    case ':':
         goto state125;
     }
     goto state0;
@@ -1457,9 +1457,9 @@ state125:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state126;
-    case ':': 
+    case ':':
         goto state357;
     }
     goto state0;
@@ -1471,9 +1471,9 @@ state126:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state127;
-    case ':': 
+    case ':':
         goto state130;
     }
     goto state0;
@@ -1485,9 +1485,9 @@ state127:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state128;
-    case ':': 
+    case ':':
         goto state130;
     }
     goto state0;
@@ -1499,9 +1499,9 @@ state128:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state129;
-    case ':': 
+    case ':':
         goto state130;
     }
     goto state0;
@@ -1510,7 +1510,7 @@ state129:
     // 129: A+://[0000:0000:0000
     ch = *ptr++;
     switch (ch) {
-    case ':': 
+    case ':':
         goto state130;
     }
     goto state0;
@@ -1522,9 +1522,9 @@ state130:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state131;
-    case ':': 
+    case ':':
         goto state288;
     }
     goto state0;
@@ -1536,9 +1536,9 @@ state131:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state132;
-    case ':': 
+    case ':':
         goto state135;
     }
     goto state0;
@@ -1550,9 +1550,9 @@ state132:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state133;
-    case ':': 
+    case ':':
         goto state135;
     }
     goto state0;
@@ -1564,9 +1564,9 @@ state133:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state134;
-    case ':': 
+    case ':':
         goto state135;
     }
     goto state0;
@@ -1575,7 +1575,7 @@ state134:
     // 134: A+://[0000:0000:0000:0000
     ch = *ptr++;
     switch (ch) {
-    case ':': 
+    case ':':
         goto state135;
     }
     goto state0;
@@ -1587,9 +1587,9 @@ state135:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state136;
-    case ':': 
+    case ':':
         goto state233;
     }
     goto state0;
@@ -1601,9 +1601,9 @@ state136:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state137;
-    case ':': 
+    case ':':
         goto state140;
     }
     goto state0;
@@ -1615,9 +1615,9 @@ state137:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state138;
-    case ':': 
+    case ':':
         goto state140;
     }
     goto state0;
@@ -1629,9 +1629,9 @@ state138:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state139;
-    case ':': 
+    case ':':
         goto state140;
     }
     goto state0;
@@ -1640,7 +1640,7 @@ state139:
     // 139: A+://[0000:0000:0000:0000:0000
     ch = *ptr++;
     switch (ch) {
-    case ':': 
+    case ':':
         goto state140;
     }
     goto state0;
@@ -1652,9 +1652,9 @@ state140:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state141;
-    case ':': 
+    case ':':
         goto state192;
     }
     goto state0;
@@ -1666,9 +1666,9 @@ state141:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state142;
-    case ':': 
+    case ':':
         goto state145;
     }
     goto state0;
@@ -1680,9 +1680,9 @@ state142:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state143;
-    case ':': 
+    case ':':
         goto state145;
     }
     goto state0;
@@ -1694,9 +1694,9 @@ state143:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state144;
-    case ':': 
+    case ':':
         goto state145;
     }
     goto state0;
@@ -1705,7 +1705,7 @@ state144:
     // 144: A+://[0000:0000:0000:0000:0000:0000
     ch = *ptr++;
     switch (ch) {
-    case ':': 
+    case ':':
         goto state145;
     }
     goto state0;
@@ -1714,16 +1714,16 @@ state145:
     // 145: A+://[0000:0000:0000:0000:0000:0000:
     ch = *ptr++;
     switch (ch) {
-    case '0': 
+    case '0':
         goto state146;
-    case '1': 
+    case '1':
         goto state179;
-    case '2': 
+    case '2':
         goto state182;
     case '3': case '4': case '5': case '6': case '7': case '8':
-    case '9': 
+    case '9':
         goto state186;
-    case ':': 
+    case ':':
         goto state187;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
@@ -1735,14 +1735,14 @@ state146:
     // 146: A+://[0000:0000:0000:0000:0000:0000:0
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state172;
-    case ':': 
+    case ':':
         goto state175;
     }
     goto state0;
@@ -1757,14 +1757,14 @@ state147:
     // 565: A+://[::0000:0000:0000:0000:0000:0.
     ch = *ptr++;
     switch (ch) {
-    case '0': 
+    case '0':
         goto state148;
-    case '1': 
+    case '1':
         goto state166;
-    case '2': 
+    case '2':
         goto state168;
     case '3': case '4': case '5': case '6': case '7': case '8':
-    case '9': 
+    case '9':
         goto state167;
     }
     goto state0;
@@ -1779,7 +1779,7 @@ state148:
     // 566: A+://[::0000:0000:0000:0000:0000:0.0
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state149;
     }
     goto state0;
@@ -1794,14 +1794,14 @@ state149:
     // 567: A+://[::0000:0000:0000:0000:0000:0.0.
     ch = *ptr++;
     switch (ch) {
-    case '0': 
+    case '0':
         goto state150;
-    case '1': 
+    case '1':
         goto state160;
-    case '2': 
+    case '2':
         goto state162;
     case '3': case '4': case '5': case '6': case '7': case '8':
-    case '9': 
+    case '9':
         goto state161;
     }
     goto state0;
@@ -1816,7 +1816,7 @@ state150:
     // 568: A+://[::0000:0000:0000:0000:0000:0.0.0
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state151;
     }
     goto state0;
@@ -1831,14 +1831,14 @@ state151:
     // 569: A+://[::0000:0000:0000:0000:0000:0.0.0.
     ch = *ptr++;
     switch (ch) {
-    case '0': 
+    case '0':
         goto state152;
-    case '1': 
+    case '1':
         goto state154;
-    case '2': 
+    case '2':
         goto state156;
     case '3': case '4': case '5': case '6': case '7': case '8':
-    case '9': 
+    case '9':
         goto state155;
     }
     goto state0;
@@ -1847,7 +1847,7 @@ state152:
     // 152: A+://[0000:0000:0000:0000:0000:0000:0.0.0.0
     ch = *ptr++;
     switch (ch) {
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -1856,15 +1856,15 @@ state153:
     // 153: A+://[0000:0000:0000:0000:0000:0000:0.0.0.0]
     ch = *ptr++;
     switch (ch) {
-    case 0: 
+    case 0:
         goto state9;
-    case '#': 
+    case '#':
         goto state11;
-    case '/': 
+    case '/':
         goto state22;
-    case ':': 
+    case ':':
         goto state73;
-    case '?': 
+    case '?':
         goto state76;
     }
     goto state0;
@@ -1880,9 +1880,9 @@ state154:
     ch = *ptr++;
     switch (ch) {
     case '0': case '1': case '2': case '3': case '4': case '5':
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state155;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -1912,9 +1912,9 @@ state155:
     ch = *ptr++;
     switch (ch) {
     case '0': case '1': case '2': case '3': case '4': case '5':
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state152;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -1929,13 +1929,13 @@ state156:
     // 572: A+://[::0000:0000:0000:0000:0000:0.0.0.2
     ch = *ptr++;
     switch (ch) {
-    case '0': case '1': case '2': case '3': case '4': 
+    case '0': case '1': case '2': case '3': case '4':
         goto state155;
-    case '5': 
+    case '5':
         goto state158;
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state152;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -1952,7 +1952,7 @@ state158:
     switch (ch) {
     case '0': case '1': case '2': case '3': case '4': case '5':
         goto state152;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -1967,10 +1967,10 @@ state160:
     // 576: A+://[::0000:0000:0000:0000:0000:0.0.1
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state151;
     case '0': case '1': case '2': case '3': case '4': case '5':
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state161;
     }
     goto state0;
@@ -1999,10 +1999,10 @@ state161:
     // 581: A+://[::0000:0000:0000:0000:0000:0.0.3
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state151;
     case '0': case '1': case '2': case '3': case '4': case '5':
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state150;
     }
     goto state0;
@@ -2017,13 +2017,13 @@ state162:
     // 578: A+://[::0000:0000:0000:0000:0000:0.0.2
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state151;
-    case '0': case '1': case '2': case '3': case '4': 
+    case '0': case '1': case '2': case '3': case '4':
         goto state161;
-    case '5': 
+    case '5':
         goto state164;
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state150;
     }
     goto state0;
@@ -2038,7 +2038,7 @@ state164:
     // 580: A+://[::0000:0000:0000:0000:0000:0.0.25
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state151;
     case '0': case '1': case '2': case '3': case '4': case '5':
         goto state150;
@@ -2055,10 +2055,10 @@ state166:
     // 582: A+://[::0000:0000:0000:0000:0000:0.1
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state149;
     case '0': case '1': case '2': case '3': case '4': case '5':
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state167;
     }
     goto state0;
@@ -2087,10 +2087,10 @@ state167:
     // 587: A+://[::0000:0000:0000:0000:0000:0.3
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state149;
     case '0': case '1': case '2': case '3': case '4': case '5':
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state148;
     }
     goto state0;
@@ -2105,13 +2105,13 @@ state168:
     // 584: A+://[::0000:0000:0000:0000:0000:0.2
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state149;
-    case '0': case '1': case '2': case '3': case '4': 
+    case '0': case '1': case '2': case '3': case '4':
         goto state167;
-    case '5': 
+    case '5':
         goto state170;
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state148;
     }
     goto state0;
@@ -2126,7 +2126,7 @@ state170:
     // 586: A+://[::0000:0000:0000:0000:0000:0.25
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state149;
     case '0': case '1': case '2': case '3': case '4': case '5':
         goto state148;
@@ -2140,9 +2140,9 @@ state172:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state173;
-    case ':': 
+    case ':':
         goto state175;
     }
     goto state0;
@@ -2154,9 +2154,9 @@ state173:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state174;
-    case ':': 
+    case ':':
         goto state175;
     }
     goto state0;
@@ -2165,7 +2165,7 @@ state174:
     // 174: A+://[0000:0000:0000:0000:0000:0000:0000
     ch = *ptr++;
     switch (ch) {
-    case ':': 
+    case ':':
         goto state175;
     }
     goto state0;
@@ -2177,9 +2177,9 @@ state175:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state176;
-    case ':': 
+    case ':':
         goto state152;
     }
     goto state0;
@@ -2198,9 +2198,9 @@ state176:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state177;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -2219,9 +2219,9 @@ state177:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state178;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -2240,9 +2240,9 @@ state178:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state152;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -2251,12 +2251,12 @@ state179:
     // 179: A+://[0000:0000:0000:0000:0000:0000:1
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state180;
-    case ':': 
+    case ':':
         goto state175;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
@@ -2269,12 +2269,12 @@ state180:
     // 183: A+://[0000:0000:0000:0000:0000:0000:20
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state181;
-    case ':': 
+    case ':':
         goto state175;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
@@ -2286,14 +2286,14 @@ state181:
     // 181: A+://[0000:0000:0000:0000:0000:0000:100
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state174;
-    case ':': 
+    case ':':
         goto state175;
     }
     goto state0;
@@ -2302,15 +2302,15 @@ state182:
     // 182: A+://[0000:0000:0000:0000:0000:0000:2
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
-    case '0': case '1': case '2': case '3': case '4': 
+    case '0': case '1': case '2': case '3': case '4':
         goto state180;
-    case '5': 
+    case '5':
         goto state184;
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state185;
-    case ':': 
+    case ':':
         goto state175;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
@@ -2322,15 +2322,15 @@ state184:
     // 184: A+://[0000:0000:0000:0000:0000:0000:25
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
         goto state181;
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state173;
-    case ':': 
+    case ':':
         goto state175;
     }
     goto state0;
@@ -2339,14 +2339,14 @@ state185:
     // 185: A+://[0000:0000:0000:0000:0000:0000:26
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state173;
-    case ':': 
+    case ':':
         goto state175;
     }
     goto state0;
@@ -2355,12 +2355,12 @@ state186:
     // 186: A+://[0000:0000:0000:0000:0000:0000:3
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state185;
-    case ':': 
+    case ':':
         goto state175;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
@@ -2375,9 +2375,9 @@ state187:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state176;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -2389,9 +2389,9 @@ state191:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state172;
-    case ':': 
+    case ':':
         goto state175;
     }
     goto state0;
@@ -2400,19 +2400,19 @@ state192:
     // 192: A+://[0000:0000:0000:0000:0000::
     ch = *ptr++;
     switch (ch) {
-    case '0': 
+    case '0':
         goto state193;
-    case '1': 
+    case '1':
         goto state224;
-    case '2': 
+    case '2':
         goto state227;
     case '3': case '4': case '5': case '6': case '7': case '8':
-    case '9': 
+    case '9':
         goto state231;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
         goto state232;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -2426,16 +2426,16 @@ state193:
     // 564: A+://[::0000:0000:0000:0000:0000:0
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state217;
-    case ':': 
+    case ':':
         goto state220;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -2452,11 +2452,11 @@ state217:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state218;
-    case ':': 
+    case ':':
         goto state220;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -2473,11 +2473,11 @@ state218:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state219;
-    case ':': 
+    case ':':
         goto state220;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -2491,9 +2491,9 @@ state219:
     // 590: A+://[::0000:0000:0000:0000:0000:0000
     ch = *ptr++;
     switch (ch) {
-    case ':': 
+    case ':':
         goto state220;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -2510,7 +2510,7 @@ state220:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state176;
     }
     goto state0;
@@ -2524,17 +2524,17 @@ state224:
     // 595: A+://[::0000:0000:0000:0000:0000:1
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state225;
-    case ':': 
+    case ':':
         goto state220;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
         goto state217;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -2554,17 +2554,17 @@ state225:
     // 599: A+://[::0000:0000:0000:0000:0000:20
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state226;
-    case ':': 
+    case ':':
         goto state220;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
         goto state218;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -2578,16 +2578,16 @@ state226:
     // 597: A+://[::0000:0000:0000:0000:0000:100
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state219;
-    case ':': 
+    case ':':
         goto state220;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -2601,20 +2601,20 @@ state227:
     // 598: A+://[::0000:0000:0000:0000:0000:2
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
-    case '0': case '1': case '2': case '3': case '4': 
+    case '0': case '1': case '2': case '3': case '4':
         goto state225;
-    case '5': 
+    case '5':
         goto state229;
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state230;
-    case ':': 
+    case ':':
         goto state220;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
         goto state217;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -2628,17 +2628,17 @@ state229:
     // 600: A+://[::0000:0000:0000:0000:0000:25
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
         goto state226;
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state218;
-    case ':': 
+    case ':':
         goto state220;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -2652,16 +2652,16 @@ state230:
     // 601: A+://[::0000:0000:0000:0000:0000:26
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state218;
-    case ':': 
+    case ':':
         goto state220;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -2675,17 +2675,17 @@ state231:
     // 602: A+://[::0000:0000:0000:0000:0000:3
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state230;
-    case ':': 
+    case ':':
         goto state220;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
         goto state217;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -2702,11 +2702,11 @@ state232:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state217;
-    case ':': 
+    case ':':
         goto state220;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -2715,19 +2715,19 @@ state233:
     // 233: A+://[0000:0000:0000:0000::
     ch = *ptr++;
     switch (ch) {
-    case '0': 
+    case '0':
         goto state234;
-    case '1': 
+    case '1':
         goto state279;
-    case '2': 
+    case '2':
         goto state282;
     case '3': case '4': case '5': case '6': case '7': case '8':
-    case '9': 
+    case '9':
         goto state286;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
         goto state287;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -2740,16 +2740,16 @@ state234:
     // 559: A+://[::0000:0000:0000:0000:0
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state235;
-    case ':': 
+    case ':':
         goto state238;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -2765,11 +2765,11 @@ state235:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state236;
-    case ':': 
+    case ':':
         goto state238;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -2785,11 +2785,11 @@ state236:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state237;
-    case ':': 
+    case ':':
         goto state238;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -2802,9 +2802,9 @@ state237:
     // 562: A+://[::0000:0000:0000:0000:0000
     ch = *ptr++;
     switch (ch) {
-    case ':': 
+    case ':':
         goto state238;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -2817,14 +2817,14 @@ state238:
     // 563: A+://[::0000:0000:0000:0000:0000:
     ch = *ptr++;
     switch (ch) {
-    case '0': 
+    case '0':
         goto state193;
-    case '1': 
+    case '1':
         goto state224;
-    case '2': 
+    case '2':
         goto state227;
     case '3': case '4': case '5': case '6': case '7': case '8':
-    case '9': 
+    case '9':
         goto state231;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
@@ -2840,17 +2840,17 @@ state279:
     // 604: A+://[::0000:0000:0000:0000:1
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state280;
-    case ':': 
+    case ':':
         goto state238;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
         goto state235;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -2868,17 +2868,17 @@ state280:
     // 608: A+://[::0000:0000:0000:0000:20
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state281;
-    case ':': 
+    case ':':
         goto state238;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
         goto state236;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -2891,16 +2891,16 @@ state281:
     // 606: A+://[::0000:0000:0000:0000:100
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state237;
-    case ':': 
+    case ':':
         goto state238;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -2913,20 +2913,20 @@ state282:
     // 607: A+://[::0000:0000:0000:0000:2
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
-    case '0': case '1': case '2': case '3': case '4': 
+    case '0': case '1': case '2': case '3': case '4':
         goto state280;
-    case '5': 
+    case '5':
         goto state284;
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state285;
-    case ':': 
+    case ':':
         goto state238;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
         goto state235;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -2939,17 +2939,17 @@ state284:
     // 609: A+://[::0000:0000:0000:0000:25
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
         goto state281;
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state236;
-    case ':': 
+    case ':':
         goto state238;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -2962,16 +2962,16 @@ state285:
     // 610: A+://[::0000:0000:0000:0000:26
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state236;
-    case ':': 
+    case ':':
         goto state238;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -2984,17 +2984,17 @@ state286:
     // 611: A+://[::0000:0000:0000:0000:3
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state285;
-    case ':': 
+    case ':':
         goto state238;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
         goto state235;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3010,11 +3010,11 @@ state287:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state235;
-    case ':': 
+    case ':':
         goto state238;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3023,19 +3023,19 @@ state288:
     // 288: A+://[0000:0000:0000::
     ch = *ptr++;
     switch (ch) {
-    case '0': 
+    case '0':
         goto state289;
-    case '1': 
+    case '1':
         goto state348;
-    case '2': 
+    case '2':
         goto state351;
     case '3': case '4': case '5': case '6': case '7': case '8':
-    case '9': 
+    case '9':
         goto state355;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
         goto state356;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3047,16 +3047,16 @@ state289:
     // 554: A+://[::0000:0000:0000:0
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state290;
-    case ':': 
+    case ':':
         goto state293;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3071,11 +3071,11 @@ state290:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state291;
-    case ':': 
+    case ':':
         goto state293;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3090,11 +3090,11 @@ state291:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state292;
-    case ':': 
+    case ':':
         goto state293;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3106,9 +3106,9 @@ state292:
     // 557: A+://[::0000:0000:0000:0000
     ch = *ptr++;
     switch (ch) {
-    case ':': 
+    case ':':
         goto state293;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3120,14 +3120,14 @@ state293:
     // 558: A+://[::0000:0000:0000:0000:
     ch = *ptr++;
     switch (ch) {
-    case '0': 
+    case '0':
         goto state234;
-    case '1': 
+    case '1':
         goto state279;
-    case '2': 
+    case '2':
         goto state282;
     case '3': case '4': case '5': case '6': case '7': case '8':
-    case '9': 
+    case '9':
         goto state286;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
@@ -3142,17 +3142,17 @@ state348:
     // 613: A+://[::0000:0000:0000:1
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state349;
-    case ':': 
+    case ':':
         goto state293;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
         goto state290;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3168,17 +3168,17 @@ state349:
     // 617: A+://[::0000:0000:0000:20
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state350;
-    case ':': 
+    case ':':
         goto state293;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
         goto state291;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3190,16 +3190,16 @@ state350:
     // 615: A+://[::0000:0000:0000:100
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state292;
-    case ':': 
+    case ':':
         goto state293;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3211,20 +3211,20 @@ state351:
     // 616: A+://[::0000:0000:0000:2
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
-    case '0': case '1': case '2': case '3': case '4': 
+    case '0': case '1': case '2': case '3': case '4':
         goto state349;
-    case '5': 
+    case '5':
         goto state353;
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state354;
-    case ':': 
+    case ':':
         goto state293;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
         goto state290;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3236,17 +3236,17 @@ state353:
     // 618: A+://[::0000:0000:0000:25
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
         goto state350;
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state291;
-    case ':': 
+    case ':':
         goto state293;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3258,16 +3258,16 @@ state354:
     // 619: A+://[::0000:0000:0000:26
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state291;
-    case ':': 
+    case ':':
         goto state293;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3279,17 +3279,17 @@ state355:
     // 620: A+://[::0000:0000:0000:3
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state354;
-    case ':': 
+    case ':':
         goto state293;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
         goto state290;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3304,11 +3304,11 @@ state356:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state290;
-    case ':': 
+    case ':':
         goto state293;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3317,19 +3317,19 @@ state357:
     // 357: A+://[0000:0000::
     ch = *ptr++;
     switch (ch) {
-    case '0': 
+    case '0':
         goto state358;
-    case '1': 
+    case '1':
         goto state431;
-    case '2': 
+    case '2':
         goto state434;
     case '3': case '4': case '5': case '6': case '7': case '8':
-    case '9': 
+    case '9':
         goto state438;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
         goto state439;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3340,16 +3340,16 @@ state358:
     // 549: A+://[::0000:0000:0
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state359;
-    case ':': 
+    case ':':
         goto state362;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3363,11 +3363,11 @@ state359:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state360;
-    case ':': 
+    case ':':
         goto state362;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3381,11 +3381,11 @@ state360:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state361;
-    case ':': 
+    case ':':
         goto state362;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3396,9 +3396,9 @@ state361:
     // 552: A+://[::0000:0000:0000
     ch = *ptr++;
     switch (ch) {
-    case ':': 
+    case ':':
         goto state362;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3409,14 +3409,14 @@ state362:
     // 553: A+://[::0000:0000:0000:
     ch = *ptr++;
     switch (ch) {
-    case '0': 
+    case '0':
         goto state289;
-    case '1': 
+    case '1':
         goto state348;
-    case '2': 
+    case '2':
         goto state351;
     case '3': case '4': case '5': case '6': case '7': case '8':
-    case '9': 
+    case '9':
         goto state355;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
@@ -3430,17 +3430,17 @@ state431:
     // 622: A+://[::0000:0000:1
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state432;
-    case ':': 
+    case ':':
         goto state362;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
         goto state359;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3454,17 +3454,17 @@ state432:
     // 626: A+://[::0000:0000:20
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state433;
-    case ':': 
+    case ':':
         goto state362;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
         goto state360;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3475,16 +3475,16 @@ state433:
     // 624: A+://[::0000:0000:100
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state361;
-    case ':': 
+    case ':':
         goto state362;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3495,20 +3495,20 @@ state434:
     // 625: A+://[::0000:0000:2
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
-    case '0': case '1': case '2': case '3': case '4': 
+    case '0': case '1': case '2': case '3': case '4':
         goto state432;
-    case '5': 
+    case '5':
         goto state436;
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state437;
-    case ':': 
+    case ':':
         goto state362;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
         goto state359;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3519,17 +3519,17 @@ state436:
     // 627: A+://[::0000:0000:25
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
         goto state433;
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state360;
-    case ':': 
+    case ':':
         goto state362;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3540,16 +3540,16 @@ state437:
     // 628: A+://[::0000:0000:26
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state360;
-    case ':': 
+    case ':':
         goto state362;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3560,17 +3560,17 @@ state438:
     // 629: A+://[::0000:0000:3
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state437;
-    case ':': 
+    case ':':
         goto state362;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
         goto state359;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3584,11 +3584,11 @@ state439:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state359;
-    case ':': 
+    case ':':
         goto state362;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3597,19 +3597,19 @@ state440:
     // 440: A+://[0000::
     ch = *ptr++;
     switch (ch) {
-    case '0': 
+    case '0':
         goto state441;
-    case '1': 
+    case '1':
         goto state528;
-    case '2': 
+    case '2':
         goto state531;
     case '3': case '4': case '5': case '6': case '7': case '8':
-    case '9': 
+    case '9':
         goto state535;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
         goto state536;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3619,16 +3619,16 @@ state441:
     // 544: A+://[::0000:0
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state442;
-    case ':': 
+    case ':':
         goto state445;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3641,11 +3641,11 @@ state442:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state443;
-    case ':': 
+    case ':':
         goto state445;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3658,11 +3658,11 @@ state443:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state444;
-    case ':': 
+    case ':':
         goto state445;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3672,9 +3672,9 @@ state444:
     // 547: A+://[::0000:0000
     ch = *ptr++;
     switch (ch) {
-    case ':': 
+    case ':':
         goto state445;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3684,14 +3684,14 @@ state445:
     // 548: A+://[::0000:0000:
     ch = *ptr++;
     switch (ch) {
-    case '0': 
+    case '0':
         goto state358;
-    case '1': 
+    case '1':
         goto state431;
-    case '2': 
+    case '2':
         goto state434;
     case '3': case '4': case '5': case '6': case '7': case '8':
-    case '9': 
+    case '9':
         goto state438;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
@@ -3704,17 +3704,17 @@ state528:
     // 631: A+://[::0000:1
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state529;
-    case ':': 
+    case ':':
         goto state445;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
         goto state442;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3726,17 +3726,17 @@ state529:
     // 635: A+://[::0000:20
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state530;
-    case ':': 
+    case ':':
         goto state445;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
         goto state443;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3746,16 +3746,16 @@ state530:
     // 633: A+://[::0000:100
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state444;
-    case ':': 
+    case ':':
         goto state445;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3765,20 +3765,20 @@ state531:
     // 634: A+://[::0000:2
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
-    case '0': case '1': case '2': case '3': case '4': 
+    case '0': case '1': case '2': case '3': case '4':
         goto state529;
-    case '5': 
+    case '5':
         goto state533;
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state534;
-    case ':': 
+    case ':':
         goto state445;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
         goto state442;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3788,17 +3788,17 @@ state533:
     // 636: A+://[::0000:25
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
         goto state530;
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state443;
-    case ':': 
+    case ':':
         goto state445;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3808,16 +3808,16 @@ state534:
     // 637: A+://[::0000:26
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state443;
-    case ':': 
+    case ':':
         goto state445;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3827,17 +3827,17 @@ state535:
     // 638: A+://[::0000:3
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state534;
-    case ':': 
+    case ':':
         goto state445;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
         goto state442;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3850,11 +3850,11 @@ state536:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state442;
-    case ':': 
+    case ':':
         goto state445;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3863,7 +3863,7 @@ state537:
     // 537: A+://[:
     ch = *ptr++;
     switch (ch) {
-    case ':': 
+    case ':':
         goto state538;
     }
     goto state0;
@@ -3872,19 +3872,19 @@ state538:
     // 538: A+://[::
     ch = *ptr++;
     switch (ch) {
-    case '0': 
+    case '0':
         goto state539;
-    case '1': 
+    case '1':
         goto state640;
-    case '2': 
+    case '2':
         goto state643;
     case '3': case '4': case '5': case '6': case '7': case '8':
-    case '9': 
+    case '9':
         goto state647;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
         goto state648;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3893,16 +3893,16 @@ state539:
     // 539: A+://[::0
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state540;
-    case ':': 
+    case ':':
         goto state543;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3914,11 +3914,11 @@ state540:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state541;
-    case ':': 
+    case ':':
         goto state543;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3930,11 +3930,11 @@ state541:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state542;
-    case ':': 
+    case ':':
         goto state543;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3943,9 +3943,9 @@ state542:
     // 542: A+://[::0000
     ch = *ptr++;
     switch (ch) {
-    case ':': 
+    case ':':
         goto state543;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3954,14 +3954,14 @@ state543:
     // 543: A+://[::0000:
     ch = *ptr++;
     switch (ch) {
-    case '0': 
+    case '0':
         goto state441;
-    case '1': 
+    case '1':
         goto state528;
-    case '2': 
+    case '2':
         goto state531;
     case '3': case '4': case '5': case '6': case '7': case '8':
-    case '9': 
+    case '9':
         goto state535;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
@@ -3973,17 +3973,17 @@ state640:
     // 640: A+://[::1
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state641;
-    case ':': 
+    case ':':
         goto state543;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
         goto state540;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -3993,17 +3993,17 @@ state641:
     // 644: A+://[::20
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state642;
-    case ':': 
+    case ':':
         goto state543;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
         goto state541;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -4012,16 +4012,16 @@ state642:
     // 642: A+://[::100
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state542;
-    case ':': 
+    case ':':
         goto state543;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -4030,20 +4030,20 @@ state643:
     // 643: A+://[::2
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
-    case '0': case '1': case '2': case '3': case '4': 
+    case '0': case '1': case '2': case '3': case '4':
         goto state641;
-    case '5': 
+    case '5':
         goto state645;
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state646;
-    case ':': 
+    case ':':
         goto state543;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
         goto state540;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -4052,17 +4052,17 @@ state645:
     // 645: A+://[::25
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
         goto state642;
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state541;
-    case ':': 
+    case ':':
         goto state543;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -4071,16 +4071,16 @@ state646:
     // 646: A+://[::26
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state541;
-    case ':': 
+    case ':':
         goto state543;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -4089,17 +4089,17 @@ state647:
     // 647: A+://[::3
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state147;
     case '0': case '1': case '2': case '3': case '4': case '5':
-    case '6': case '7': case '8': case '9': 
+    case '6': case '7': case '8': case '9':
         goto state646;
-    case ':': 
+    case ':':
         goto state543;
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
         goto state540;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -4111,11 +4111,11 @@ state648:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state540;
-    case ':': 
+    case ':':
         goto state543;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;
@@ -4127,7 +4127,7 @@ state649:
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state650;
     }
     goto state0;
@@ -4136,12 +4136,12 @@ state650:
     // 650: A+://[V0
     ch = *ptr++;
     switch (ch) {
-    case '.': 
+    case '.':
         goto state651;
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9': case 'A': case 'B':
     case 'C': case 'D': case 'E': case 'F': case 'a': case 'b':
-    case 'c': case 'd': case 'e': case 'f': 
+    case 'c': case 'd': case 'e': case 'f':
         goto state650;
     }
     goto state0;
@@ -4185,7 +4185,7 @@ state652:
     case 'p': case 'q': case 'r': case 's': case 't': case 'u':
     case 'v': case 'w': case 'x': case 'y': case 'z': case '~':
         goto state652;
-    case ']': 
+    case ']':
         goto state153;
     }
     goto state0;

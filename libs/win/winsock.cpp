@@ -20,7 +20,7 @@ const int kWriteQueueSize = 100;
 
 // How long data can wait to be sent. When the queue time exceeds this value
 // the socket is disconnected, the assumption being that the end consumer, if
-// they still care, has a retry in flight and would discard it anyway as 
+// they still care, has a retry in flight and would discard it anyway as
 // being expired.
 const auto kMaxPrewriteQueueTime = 2min;
 
@@ -40,7 +40,7 @@ enum RequestType {
 };
 
 } // namespace
-    
+
 struct Dim::SocketRequest : ListBaseLink<> {
     RequestType m_type{kReqInvalid};
     RIO_BUF m_rbuf{};
@@ -122,7 +122,7 @@ void SocketBase::write(
 
 //===========================================================================
 SocketBase::SocketBase(ISocketNotify * notify)
-    : m_notify(notify) 
+    : m_notify(notify)
 {
     s_numSockets += 1;
 }
@@ -166,7 +166,7 @@ void SocketBase::hardClose_LK() {
     if (m_handle == INVALID_SOCKET)
         return;
 
-    // force immediate close by enabling shutdown timeout and setting the 
+    // force immediate close by enabling shutdown timeout and setting the
     // timeout to 0 seconds
     linger opt = {};
     opt.l_onoff = true;
@@ -233,7 +233,7 @@ bool SocketBase::createQueue() {
 void SocketBase::enableEvents() {
     {
         unique_lock<mutex> lk{m_mut};
-        for (auto && task : m_reads) 
+        for (auto && task : m_reads)
             queueRead_LK(&task);
     }
 
@@ -260,14 +260,14 @@ void SocketBase::onTask() {
         auto task = (SocketRequest *) rr.RequestContext;
         task->m_xferError = rr.Status;
         task->m_xferBytes = rr.BytesTransferred;
-        
+
         // This task - and the socket - may be deleted inside onRead/onWrite.
         if (task->m_type == kReqRead) {
-            if (!onRead(task)) 
+            if (!onRead(task))
                 return;
         } else {
             assert(task->m_type == kReqWrite);
-            if (!onWrite(task)) 
+            if (!onWrite(task))
                 return;
         }
     }
@@ -287,7 +287,7 @@ bool SocketBase::onRead(SocketRequest * task) {
 
         // included uncounted trailing null
         data.data[bytes] = 0;
-        
+
         m_notify->onSocketRead(data);
     }
 
@@ -366,7 +366,7 @@ bool SocketBase::onWrite(SocketRequest * task) {
 
 //===========================================================================
 void SocketBase::queuePrewrite(
-    unique_ptr<SocketBuffer> buffer, 
+    unique_ptr<SocketBuffer> buffer,
     size_t bytes
 ) {
     assert(bytes);
@@ -383,12 +383,12 @@ void SocketBase::queuePrewrite(
     if (wasPrewrites) {
         auto back = m_prewrites.back();
         if (int count = min(
-            back->m_buffer->capacity - (int)back->m_rbuf.Length, 
+            back->m_buffer->capacity - (int)back->m_rbuf.Length,
             (int)bytes
         )) {
             memcpy(
-                back->m_buffer->data + back->m_rbuf.Length, 
-                buffer->data, 
+                back->m_buffer->data + back->m_rbuf.Length,
+                buffer->data,
                 count
             );
             back->m_rbuf.Length += count;
@@ -572,10 +572,10 @@ void Dim::iSocketInitialize() {
 
     int piLen = sizeof(s_protocolInfo);
     if (getsockopt(
-        s, 
-        SOL_SOCKET, 
-        SO_PROTOCOL_INFOW, 
-        (char *) &s_protocolInfo, 
+        s,
+        SOL_SOCKET,
+        SO_PROTOCOL_INFOW,
+        (char *) &s_protocolInfo,
         &piLen
     )) {
         logMsgCrash() << "getsockopt(SO_PROTOCOL_INFOW): " << WinError{};
@@ -598,11 +598,11 @@ void Dim::iSocketInitialize() {
 //===========================================================================
 SOCKET Dim::iSocketCreate() {
     SOCKET handle = WSASocketW(
-        AF_UNSPEC, 
-        SOCK_STREAM, 
-        IPPROTO_TCP, 
-        &s_protocolInfo, 
-        0, 
+        AF_UNSPEC,
+        SOCK_STREAM,
+        IPPROTO_TCP,
+        &s_protocolInfo,
+        0,
         WSA_FLAG_REGISTERED_IO
     );
     if (handle == INVALID_SOCKET) {
@@ -614,8 +614,8 @@ SOCKET Dim::iSocketCreate() {
         (HANDLE) handle,
         FILE_SKIP_SET_EVENT_ON_HANDLE
     )) {
-        logMsgError() 
-            << "SetFileCompletionNotificationModes(SKIP_EVENT_ON_HANDLE): " 
+        logMsgError()
+            << "SetFileCompletionNotificationModes(SKIP_EVENT_ON_HANDLE): "
             << WinError{};
     }
 
@@ -635,10 +635,10 @@ SOCKET Dim::iSocketCreate() {
     }
 
     if (SOCKET_ERROR == setsockopt(
-        handle, 
-        IPPROTO_TCP, 
-        TCP_NODELAY, 
-        (char *) &yes, 
+        handle,
+        IPPROTO_TCP,
+        TCP_NODELAY,
+        (char *) &yes,
         sizeof(yes)
     )) {
         logMsgError() << "setsockopt(TCP_NODELAY): " << WinError{};
@@ -663,10 +663,10 @@ SOCKET Dim::iSocketCreate() {
     }
 
     if (SOCKET_ERROR == setsockopt(
-        handle, 
-        IPPROTO_TCP, 
-        TCP_FASTOPEN, 
-        (char *) &yes, 
+        handle,
+        IPPROTO_TCP,
+        TCP_FASTOPEN,
+        (char *) &yes,
         sizeof(yes)
     )) {
         logMsgDebug() << "setsockopt(TCP_FASTOPEN): " << WinError{};

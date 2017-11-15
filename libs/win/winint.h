@@ -36,16 +36,16 @@ public:
     WinError & operator=(const WinError & from) = default;
     WinError & operator=(int error) { return *this = WinError{error}; }
     WinError & operator=(NtStatus status) { return *this = WinError{status}; }
-    WinError & operator=(SecurityStatus status) { 
-        return *this = WinError{status}; 
+    WinError & operator=(SecurityStatus status) {
+        return *this = WinError{status};
     }
 
     WinError & set();   // calls GetLastError()
 
     operator int() const { return m_value; }
     explicit operator NtStatus() const { return (NtStatus) m_ntStatus; }
-    explicit operator SecurityStatus() const { 
-        return (SecurityStatus) m_secStatus; 
+    explicit operator SecurityStatus() const {
+        return (SecurityStatus) m_secStatus;
     }
 
 private:
@@ -73,9 +73,9 @@ FARPROC winLoadProc(const char lib[], const char proc[], bool optional);
 //===========================================================================
 template <typename FN>
 static void winLoadProc(
-    FN & fn, 
-    const char lib[], 
-    const char proc[], 
+    FN & fn,
+    const char lib[],
+    const char proc[],
     bool optional = false
 ) {
     // FN must be pointer to function, which will be set to the address of

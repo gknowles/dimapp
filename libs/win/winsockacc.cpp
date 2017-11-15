@@ -30,7 +30,7 @@ public:
     void onAccept(ListenSocket * listen, WinError xferError, int xferBytes);
 };
 
-class ListenSocket 
+class ListenSocket
     : public IWinOverlappedNotify
     , public ListBaseLink<>
 {
@@ -80,11 +80,11 @@ static auto & s_perfNotAccepted = uperf("sock disconnect (not accepted)");
 
 //===========================================================================
 ListenSocket::ListenSocket(
-    IFactory<ISocketNotify> * notify, 
+    IFactory<ISocketNotify> * notify,
     const Endpoint & end
 )
     : m_notify{notify}
-    , m_localEnd{end} 
+    , m_localEnd{end}
 {}
 
 //===========================================================================
@@ -95,7 +95,7 @@ void ListenSocket::onTask() {
     if (!AcceptSocket::accept(this)) {
         assert(m_handle == INVALID_SOCKET);
         unique_lock<mutex> lk{s_mut};
-        if (!m_stopRequested) 
+        if (!m_stopRequested)
             return;
         if (m_stopDone) {
             delete this;
@@ -127,13 +127,13 @@ static bool closeListen_LK(ListenSocket * listen) {
 
 //===========================================================================
 static void closeListenWait_LK(
-    ListenSocket * listen, 
+    ListenSocket * listen,
     unique_lock<mutex> & lk
 ) {
     closeListen_LK(listen);
     listen->m_stopRequested = true;
 
-    // Wait until the callback handler returns, unless that would mean 
+    // Wait until the callback handler returns, unless that would mean
     // deadlocking by waiting for ourselves to return.
     while (listen->m_inNotify && listen->m_inThread != this_thread::get_id())
         listen->m_inCv.wait(lk);
@@ -357,7 +357,7 @@ void Dim::socketListen(
 
 //===========================================================================
 void Dim::socketCloseWait(
-    IFactory<ISocketNotify> * factory, 
+    IFactory<ISocketNotify> * factory,
     const Endpoint & local
 ) {
     unique_lock<mutex> lk{s_mut};

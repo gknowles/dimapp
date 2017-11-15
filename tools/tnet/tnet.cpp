@@ -20,9 +20,9 @@ const char kVersion[] = "1.0";
 enum { kExitConnectFailed = EX__APPBASE, kExitDisconnect };
 
 
-class SocketConn 
+class SocketConn
     : public ISocketNotify
-    , public IEndpointNotify 
+    , public IEndpointNotify
     , public ITimerNotify
 {
     // Inherited via ISocketNotify
@@ -50,9 +50,9 @@ public:
 
 private:
     bool onFileRead(
-        size_t * bytesUsed, 
-        string_view data, 
-        int64_t offset, 
+        size_t * bytesUsed,
+        string_view data,
+        int64_t offset,
         FileHandle f
     ) override;
     void onFileEnd(int64_t offset, FileHandle f) override;
@@ -147,12 +147,12 @@ void ConsoleReader::init() {
 }
 
 //===========================================================================
-bool ConsoleReader::queryDestroy() { 
+bool ConsoleReader::queryDestroy() {
     if (m_input) {
         fileClose(m_input);
         m_input = {};
     }
-    return !m_buffer; 
+    return !m_buffer;
 }
 
 //===========================================================================
@@ -166,7 +166,7 @@ void ConsoleReader::read(int64_t offset) {
 //===========================================================================
 bool ConsoleReader::onFileRead(
     size_t * bytesRead,
-    string_view data, 
+    string_view data,
     int64_t offset,
     FileHandle f
 ) {

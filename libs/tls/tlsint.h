@@ -85,7 +85,7 @@ bool tlsParse(TlsServerHelloMsg * msg, TlsRecordReader & in);
 class TlsRecordWriter;
 class TlsRecordReader;
 
-class TlsConnBase 
+class TlsConnBase
     : public ITlsRecordDecryptNotify
     , public HandleContent
 {
@@ -95,9 +95,9 @@ public:
     const std::vector<TlsCipherSuite> & suites() const;
 
     bool recv(
-        CharBuf * reply, 
-        CharBuf * data, 
-        const void * src, 
+        CharBuf * reply,
+        CharBuf * data,
+        const void * src,
         size_t srcLen
     );
 

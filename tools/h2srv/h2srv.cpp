@@ -46,7 +46,7 @@ private:
 //===========================================================================
 bool TnetConn::onSocketAccept(const AppSocketInfo & accept) {
     m_accept = accept;
-    cout << m_accept.remote << " connected on " 
+    cout << m_accept.remote << " connected on "
         << m_accept.local << endl;
     return true;
 }
@@ -134,7 +134,7 @@ static void app(int argc, char *argv[]) {
 
 //===========================================================================
 static int doMain(int argc, char * argv[]) {
-    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF 
+    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF
         | _CRTDBG_LEAK_CHECK_DF
         | _CRTDBG_DELAY_FREE_MEM_DF
     );

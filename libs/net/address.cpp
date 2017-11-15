@@ -45,9 +45,9 @@ bool Address::operator<(const Address & right) const {
 
 //===========================================================================
 Address::operator bool() const {
-    return data[3] 
-        || data[0] 
-        || data[1] 
+    return data[3]
+        || data[0]
+        || data[1]
         || data[2] && data[2] != kIPv4MappedAddress;
 }
 

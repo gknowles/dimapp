@@ -23,7 +23,7 @@ struct FileInfo {
     list<IFileChangeNotify *> notifiers;
 };
 
-class DirInfo 
+class DirInfo
     : public IWinOverlappedNotify
     , public ITimerNotify
     , public HandleContent
@@ -41,8 +41,8 @@ public:
     string_view base() const { return m_base; }
     // returns false if file is outside of base directory
     bool expandPath(
-        string & fullpath, 
-        string & relpath, 
+        string & fullpath,
+        string & relpath,
         string_view file
     ) const;
 
@@ -86,7 +86,7 @@ static bool s_inAddMonitor; // notify called from inside addMonitor
 ***/
 
 //===========================================================================
-DirInfo::DirInfo(IFileChangeNotify * notify) 
+DirInfo::DirInfo(IFileChangeNotify * notify)
     : m_notify{notify}
 {}
 
@@ -108,17 +108,17 @@ bool DirInfo::start(string_view path, bool recurse) {
     fs::create_directories(fp, ec);
 
     m_handle = CreateFile(
-        m_base.c_str(), 
+        m_base.c_str(),
         FILE_LIST_DIRECTORY, // access
         FILE_SHARE_READ | FILE_SHARE_WRITE, // share mode
         NULL, // security attributes
-        OPEN_EXISTING, 
+        OPEN_EXISTING,
         FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
-        NULL // template 
+        NULL // template
     );
     if (m_handle == INVALID_HANDLE_VALUE) {
         WinError err;
-        logMsgError() << "CreateFile(FILE_LIST_DIRECTORY): " << m_base 
+        logMsgError() << "CreateFile(FILE_LIST_DIRECTORY): " << m_base
             << ", " << err;
         winFileSetErrno(err);
         return false;
@@ -179,7 +179,7 @@ void DirInfo::addMonitor_UNLK(IFileChangeNotify * notify, string_view path) {
     string fullpath;
     string relpath;
     if (!expandPath(fullpath, relpath, path)) {
-        logMsgError() << "Monitor file not in base directory, " 
+        logMsgError() << "Monitor file not in base directory, "
             << fullpath << ", " << m_base;
         return;
     }
@@ -202,7 +202,7 @@ void DirInfo::addMonitor_UNLK(IFileChangeNotify * notify, string_view path) {
 
     if (s_inAddMonitor) {
         // In recursive addMonitor call from onFileChange handler. No need to
-        // set the s_in* variables because they're already set and don't clear 
+        // set the s_in* variables because they're already set and don't clear
         // them on exit - because we're still in the prior addMonitor call.
         lk.unlock();
         notify->onFileChange(fullpath);
@@ -224,7 +224,7 @@ void DirInfo::addMonitor_UNLK(IFileChangeNotify * notify, string_view path) {
 
 //===========================================================================
 void DirInfo::removeMonitorWait_UNLK(
-    IFileChangeNotify * notify, 
+    IFileChangeNotify * notify,
     string_view file
 ) {
     string fullpath;
@@ -243,7 +243,7 @@ void DirInfo::removeMonitorWait_UNLK(
             if (fi.notifiers.empty()) {
                 lk.unlock();
                 lk.release();
-                // Queue the timer event, which will notice the empty FileInfo 
+                // Queue the timer event, which will notice the empty FileInfo
                 // and delete it.
                 timerUpdate(this, 5s, true);
             }
@@ -257,7 +257,7 @@ void DirInfo::onTask () {
     if (auto err = getOverlappedResult().err) {
         if (err != ERROR_NOTIFY_ENUM_DIR) {
             if (err != ERROR_OPERATION_ABORTED) {
-                logMsgError() << "ReadDirectoryChangesW() overlapped: " 
+                logMsgError() << "ReadDirectoryChangesW() overlapped: "
                     << m_base << ", " << err;
             }
             m_handle = INVALID_HANDLE_VALUE;
@@ -289,16 +289,16 @@ Duration DirInfo::onTimer (TimePoint now) {
     for (auto && kv : m_files) {
         expandPath(fullpath, relpath, kv.first);
         auto mtime = fileLastWriteTime(fullpath);
-        if (mtime == kv.second.mtime) 
+        if (mtime == kv.second.mtime)
             continue;
         kv.second.mtime = mtime;
 
         while (s_inNotify)
             s_inCv.wait(lk);
 
-        // Iterate through the list of notifiers by adding a marker that can't 
-        // be externally removed to front of the list and advancing it until it 
-        // reaches the end. This allows onFileChange() notifiers to safely 
+        // Iterate through the list of notifiers by adding a marker that can't
+        // be externally removed to front of the list and advancing it until it
+        // reaches the end. This allows onFileChange() notifiers to safely
         // modify the list.
         auto ntfs = kv.second.notifiers;
         ntfs.push_front({});
@@ -321,14 +321,14 @@ Duration DirInfo::onTimer (TimePoint now) {
         ntfs.pop_back();
     }
 
-    // Removals of files aren't allowed during the callbacks, just their 
-    // notifiers. So we make a pass to delete the file entries that no one 
+    // Removals of files aren't allowed during the callbacks, just their
+    // notifiers. So we make a pass to delete the file entries that no one
     // cares about anymore.
     auto next = m_files.begin(),
         e = m_files.end();
     while (next != e) {
         auto it = next++;
-        if (it->second.notifiers.empty()) 
+        if (it->second.notifiers.empty())
             m_files.erase(it);
     }
 
@@ -341,8 +341,8 @@ Duration DirInfo::onTimer (TimePoint now) {
 
 //===========================================================================
 bool DirInfo::expandPath(
-    string & fullpath, 
-    string & relpath, 
+    string & fullpath,
+    string & relpath,
     string_view file
 ) const {
     auto fp = fs::u8path(file.begin(), file.end());
@@ -396,7 +396,7 @@ void Dim::winFileMonitorInitialize() {
 
 //===========================================================================
 bool Dim::fileMonitorDir(
-    FileMonitorHandle * handle,    
+    FileMonitorHandle * handle,
     string_view dir,
     bool recurse,
     IFileChangeNotify * notify
@@ -432,7 +432,7 @@ string_view Dim::fileMonitorPath(FileMonitorHandle dir) {
 
 //===========================================================================
 void Dim::fileMonitor(
-    FileMonitorHandle dir, 
+    FileMonitorHandle dir,
     string_view file,
     IFileChangeNotify * notify
 ) {
@@ -458,8 +458,8 @@ void Dim::fileMonitorCloseWait(
 
 //===========================================================================
 bool Dim::fileMonitorPath(
-    string & out, 
-    FileMonitorHandle dir, 
+    string & out,
+    FileMonitorHandle dir,
     string_view file
 ) {
     scoped_lock<mutex> lk{s_mut};
