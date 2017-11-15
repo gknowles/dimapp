@@ -191,31 +191,27 @@ static void writeWordwrap(
     const string & prefix
 ) {
     const char * base = str.c_str();
+    bool startOfLine = true;
     for (;;) {
         while (*base == ' ')
             base += 1;
         if (!*base)
             return;
         const char * ptr = strchr(base, ' ');
-        if (!ptr) {
+        if (!ptr)
             ptr = str.c_str() + str.size();
-            while (ptr >= base && ptr[-1] == ' ')
-                ptr -= 1;
-        }
         size_t len = ptr - base;
-        if (pos + len >= maxWidth) {
+        if (pos + len + !startOfLine > maxWidth) {
             os << '\n' << prefix;
             pos = size(prefix);
+            startOfLine = true;
         }
-        if (*ptr) {
-            os.write(base, len + 1);
-            base = ptr + 1;
-        } else {
-            os.write(base, len);
+        if (!startOfLine)
             os << ' ';
-            base = ptr;
-        }
+        os.write(base, len);
+        base = ptr + (bool) *ptr;
         pos += len + 1;
+        startOfLine = false;
     }
 }
 
@@ -266,7 +262,6 @@ static bool writeSwitchCase(
                 < 256 * stateKeys[e2.state] + e2.ch;
         }
     );
-    os << "    ch = *ptr++;\n";
     if (setLast) {
         if (st.next[0]) {
             os << "    last = ptr;\n";
@@ -274,12 +269,14 @@ static bool writeSwitchCase(
             os << "    last = nullptr;\n";
         }
     }
+    os << "    ch = *ptr++;\n";
 
     const unsigned kCaseColumns = 6;
     os << "    switch (ch) {\n";
     unsigned prev = cases.front().state;
     unsigned pos = 0;
-    for (auto && ns : cases) {
+    for (unsigned i = 0; i < cases.size(); ++i) {
+        auto && ns = cases[i];
         if (ns.state != prev) {
             if (pos % kCaseColumns)
                 os << '\n';
@@ -301,7 +298,7 @@ static bool writeSwitchCase(
         os << ':';
         if (++pos % kCaseColumns == 0) {
             os << '\n';
-        } else {
+        } else if (i != cases.size() && cases[i + 1].state == ns.state) {
             os << ' ';
         }
     }
@@ -381,25 +378,21 @@ static void writeStateName(
     size_t num = min({space, count});
     os << prefix;
     for (;;) {
-        // don't end a line with ' ', use ^x20 or adjust fit
-        if (name[pos + num - 1] == ' ') {
-            for (;;) {
-                if (num + 3 < space) {
-                    os.write(name.data() + pos, num - 1);
-                    os << "^x20";
-                    goto NEXT_LINE;
-                }
-                num -= 1;
-                if (name[pos + num - 1] != ' ')
-                    break;
+        // Don't end a line with ' ' or '\', use ^x20, ^x5c, or adjust fit
+        //  - spaces at the end of a line can't be seen
+        //  - trailing backslash causes the c++ compiler to extend the
+        //    comment to the next line
+        char ch = name[pos + num - 1];
+        while (ch == ' ' || ch == '\\') {
+            if (num + 3 < space) {
+                os.write(name.data() + pos, num - 1);
+                os << (ch == ' ' ? "^x20" : "^x5c");
+                goto NEXT_LINE;
             }
+            num -= 1;
+            ch = name[pos + num - 1];
         }
         os.write(name.data() + pos, num);
-        if (name[pos + num - 1] == '\\') {
-            // extra space because a trailing backslash would cause the comment
-            // to be extended to the next line by the c++ compiler
-            os << ' ';
-        }
 
     NEXT_LINE:
         pos += num;
