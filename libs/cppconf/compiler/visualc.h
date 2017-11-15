@@ -16,6 +16,17 @@
 #pragma warning(push)
 #endif
 
+#ifdef DIMAPP_PACK_ALIGNMENT
+#pragma pack(1)
+
+#pragma warning(disable: \
+    4103 /* alignment changed after including header */ \
+    4315 /* 'identifier' may not be aligned 8 as expected by the
+            constructor */ \
+    4366 /* The result of the unary '&' operator may be unaligned */ \
+)
+#endif
+
 #pragma warning(disable: \
     4100 /* unreferenced formal parameter */ \
     4324 /* structure was padded due to alignment specifier */ \
@@ -27,17 +38,17 @@
 #pragma warning(default: \
     4062 /* enumerator 'identifier' in a switch of enum 'enumeration' is not
             explicitly handled by a case label */ \
-    4265 /* 'class': class has virtual functions, but destructor is not 
+    4265 /* 'class': class has virtual functions, but destructor is not
             virtual */ \
     4431 /* missing type specifier - int assumed */ \
-    4471 /* a forward declaration of an unscoped enumeration must have an 
+    4471 /* a forward declaration of an unscoped enumeration must have an
             underlying type */ \
     4826 /* conversion from 'type1' to 'type2' is sign-extended */ \
     4928 /* illegal copy-initialization; more than one user-defined conversion
             has been implicitly applied */ \
-    5038 /* data member 'ident1' will be initialized after data member 
+    5038 /* data member 'ident1' will be initialized after data member
             'ident2' */ \
-) 
+)
 
 #ifdef DIMAPP_LIB_DYN_LINK
 // 'identifier': class 'type' needs to have dll-interface to be used
