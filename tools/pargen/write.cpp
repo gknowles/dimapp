@@ -132,7 +132,17 @@ static void writeElement(ostream & os, const Element & elem, bool inclPos) {
         }
         os << " )";
     } break;
-    case Element::kRule: os << elem.value; break;
+    case Element::kRule:
+        os << elem.value;
+        if (elem.value == kDoneRuleName) {
+            if (&elem == &ElementDone::s_consume) {
+                os << "(consume)";
+            } else {
+                assert(&elem == &ElementDone::s_abort);
+                os << "(abort)";
+            }
+        }
+        break;
     case Element::kSequence: {
         os << "( ";
         auto cur = elem.elements.begin();
@@ -245,6 +255,8 @@ static bool writeSwitchCase(
     for (unsigned i = 0; i < 256; ++i) {
         if (unsigned next = st.next[i]) {
             auto ch = (unsigned char)i;
+            if (setLast && i == 0 && st.next[0] == 1)
+                next = 0;
             auto ii = stateKeys.equal_range(next);
             if (ii.first == ii.second)
                 stateKeys.insert(ii.first, make_pair(next, ch));
@@ -485,13 +497,15 @@ static void writeParserState(
             auto flags = root->flags & Element::fEndEvents;
             if (flags)
                 writeEventCallback(os, root->name, flags);
-            os << "    ptr -= 1;\n";
         }
         os << "    return true;\n";
         return;
     }
     auto & elems = st.positions.begin()->first.elems;
-    if (elems.size() == 1 && elems.front().elem == &ElementDone::s_elem) {
+    if (elems.size() == 1 && elems.front().elem->value == kDoneRuleName) {
+        if (elems.front().elem == &ElementDone::s_abort) {
+            os << "    ptr -= 1;\n";
+        }
         os << "    goto state1;\n";
         return;
     }
@@ -505,7 +519,7 @@ static void writeParserState(
         if (spt.second.any())
             continue;
         const Element * elem = spt.first.elems.back().elem;
-        if (elem == &ElementDone::s_elem)
+        if (elem->value == kDoneRuleName)
             continue;
         assert(elem->type == Element::kRule);
         assert(elem->rule->flags & Element::fFunction);
@@ -530,6 +544,9 @@ static void writeParserState(
     }
 
     unsigned id = root && !st.next.empty() ? st.next[0] : 0;
+    if (id == 1) {
+        os << "    ptr -= 1;\n";
+    }
     os << "    goto state" << id << ";\n";
 }
 

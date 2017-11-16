@@ -461,7 +461,7 @@ static void addNextPositions(
     }
 
     auto terminalStarted = sp.elems.end();
-    bool done = sp.elems.front().elem == &ElementDone::s_elem;
+    auto done = sp.elems.front().elem->value == kDoneRuleName;
     vector<StateEvent> events;
     auto it = sp.elems.rbegin();
     auto eit = sp.elems.rend();
@@ -576,7 +576,7 @@ static void addNextPositions(
     StatePosition nsp;
     nsp.events = move(events);
     StateElement nse;
-    nse.elem = &ElementDone::s_elem;
+    nse.elem = done ? &ElementDone::s_abort : &ElementDone::s_consume;
     nse.rep = 0;
     nsp.elems.push_back(nse);
     if (done) {
@@ -867,7 +867,7 @@ static void addChildStates(
         auto elem = spt.first.elems.back().elem;
         assert(elem->type == Element::kRule);
 
-        if (elem == &ElementDone::s_elem) {
+        if (elem->value == kDoneRuleName) {
             st->next[0] = 1;
             continue;
         }
@@ -919,7 +919,7 @@ void buildStateTree(
     state.name = kDoneStateName;
     StatePosition nsp;
     StateElement nse;
-    nse.elem = &ElementDone::s_elem;
+    nse.elem = &ElementDone::s_consume;
     nse.rep = 0;
     nsp.elems.push_back(nse);
     state.positions[nsp];

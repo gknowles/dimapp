@@ -15,7 +15,8 @@ using namespace Dim;
 *
 ***/
 
-ElementDone ElementDone::s_elem;
+ElementDone ElementDone::s_consume;
+ElementDone ElementDone::s_abort;
 
 //===========================================================================
 ElementDone::ElementDone() {

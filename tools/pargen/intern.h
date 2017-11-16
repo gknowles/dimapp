@@ -88,7 +88,8 @@ std::ostream & operator<<(std::ostream & os, const Element & elem);
 
 struct ElementDone : Element {
     ElementDone();
-    static ElementDone s_elem;
+    static ElementDone s_consume;
+    static ElementDone s_abort;
 };
 
 struct ElementNull : Element {
