@@ -361,8 +361,12 @@ void IAppSocket::notifyRead(AppSocketData & data) {
         m_pos = {};
     }
 
-    if (!fact)
+    if (!fact) {
+        logMsgDebug() << "AppSocket: unknown protocol";
+        auto len = max(data.bytes, 256);
+        logHexDebug(string_view(data.data, len));
         return disconnect(AppSocket::Disconnect::kUnknownProtocol);
+    }
 
     setNotify(fact->onFactoryCreate().release());
 
