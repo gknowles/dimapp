@@ -80,6 +80,12 @@
 #define DIMAPP_LIB_DECL
 #endif
 
+#if defined(NDEBUG)
+#define DIMAPP_LIB_BUILD_DEBUG 0
+#else
+#define DIMAPP_LIB_BUILD_DEBUG 1
+#endif
+
 
 /****************************************************************************
 *

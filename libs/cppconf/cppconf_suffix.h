@@ -14,6 +14,8 @@
 #undef DIMAPP_LIB_SOURCE
 #undef DIMAPP_LIB_DECL
 
+#undef DIMAPP_LIB_BUILD_DEBUG
+
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
