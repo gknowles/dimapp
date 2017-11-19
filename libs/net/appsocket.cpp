@@ -305,8 +305,12 @@ static bool findFactory(
     }
 
     bool known = true;
+    *fact = nullptr;
+
     for (int i = 0; i < s_matchers.size(); ++i) {
         auto fam = (AppSocket::Family) i;
+        if (!keys[fam].fact)
+            continue;
         if (auto matcher = s_matchers[fam].notify) {
             auto match = matcher->OnMatch(fam, data);
             switch (match) {
@@ -363,8 +367,7 @@ void IAppSocket::notifyRead(AppSocketData & data) {
 
     if (!fact) {
         logMsgDebug() << "AppSocket: unknown protocol";
-        auto len = max(data.bytes, 256);
-        logHexDebug(string_view(data.data, len));
+        logHexDebug(view.substr(0, 128));
         return disconnect(AppSocket::Disconnect::kUnknownProtocol);
     }
 
