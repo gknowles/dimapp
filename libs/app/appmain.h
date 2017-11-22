@@ -70,7 +70,9 @@ enum AppFlags : unsigned {
 // Returns exit code.
 //
 // When running as a Windows service, the state is initially set to
-// START_PENDING and only switched to RUNNING after onAppRun returns.
+// START_PENDING and only switched to RUNNING after calling either the
+// onAppRun() method (for notifier version) or the function (for the function
+// version).
 int appRun(
     IAppNotify & app,
     int argc,
