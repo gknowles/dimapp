@@ -85,6 +85,7 @@ public:
     void insert(std::string_view src); // space separated ranges
     void insert(unsigned first, unsigned last);
     void erase(unsigned value);
+    void erase(iterator where);
     void erase(const UnsignedSet & other);
     void intersect(UnsignedSet && other);
     void intersect(const UnsignedSet & other);
@@ -158,6 +159,7 @@ public:
 
     Iterator lastContiguous() const;
 private:
+    friend class UnsignedSet;
     const Node * m_node = nullptr;
     value_type m_value = 0;
 };

@@ -1615,6 +1615,12 @@ void UnsignedSet::erase(unsigned value) {
 }
 
 //===========================================================================
+void UnsignedSet::erase(UnsignedSet::iterator where) {
+    assert(where);
+    erase(*where);
+}
+
+//===========================================================================
 void UnsignedSet::erase(const UnsignedSet & other) {
     ::erase(m_node, other.m_node);
 }
