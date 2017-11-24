@@ -40,6 +40,14 @@ static void app(int argc, char *argv[]) {
     EXPECT(num == 64);
     num = hammingWeight(0xff00'0000'0000'0000);
     EXPECT(num == 8);
+    num = trailingZeroBits(1);
+    EXPECT(num == 0);
+    num = trailingZeroBits(0x8000'0000'0000'0000);
+    EXPECT(num == 63);
+    num = leadingZeroBits(1);
+    EXPECT(num == 63);
+    num = leadingZeroBits(0x8000'0000'0000'0000);
+    EXPECT(num == 0);
 
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);

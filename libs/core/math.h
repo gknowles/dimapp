@@ -37,45 +37,42 @@ constexpr uint64_t reverseBits(uint64_t x) {
 }
 
 //===========================================================================
-// Taken from "With separated LS1B" as shown at:
-// http://chessprogramming.wikispaces.com/BitScan
 constexpr int trailingZeroBits(uint64_t val) {
-    const uint8_t kTable[] = {
-         0, 47,  1, 56, 48, 27,  2, 60,
-        57, 49, 41, 37, 28, 16,  3, 61,
-        54, 58, 35, 52, 50, 42, 21, 44,
-        38, 32, 29, 23, 17, 11,  4, 62,
-        46, 55, 26, 59, 40, 36, 15, 53,
-        34, 51, 20, 43, 31, 22, 10, 45,
-        25, 39, 14, 33, 19, 30,  9, 24,
-        13, 18,  8, 12,  7,  6,  5, 63,
-    };
     assert(val != 0);
-    return kTable[((val ^ (val - 1)) * 0x3f79d71b4cb0a89) >> 58];
+#if 0
+    unsigned long count = 0;
+    _BitScanForward64(&count, val);
+    return count;
+#else
+    int i = 0;
+    for (;;) {
+        if (val & 1)
+            break;
+        if (val & 2)
+            return i + 1;
+        val >>= 2;
+        i += 2;
+    }
+    return i;
+#endif
 }
 
 //===========================================================================
-// Taken from "MS1B separation" as shown at:
-// http://chessprogramming.wikispaces.com/BitScan
 constexpr int leadingZeroBits(uint64_t val) {
-    const uint8_t kTable[] = {
-         0, 47,  1, 56, 48, 27,  2, 60,
-        57, 49, 41, 37, 28, 16,  3, 61,
-        54, 58, 35, 52, 50, 42, 21, 44,
-        38, 32, 29, 23, 17, 11,  4, 62,
-        46, 55, 26, 59, 40, 36, 15, 53,
-        34, 51, 20, 43, 31, 22, 10, 45,
-        25, 39, 14, 33, 19, 30,  9, 24,
-        13, 18,  8, 12,  7,  6,  5, 63,
-    };
     assert(val != 0);
-    val |= val >> 1;
-    val |= val >> 2;
-    val |= val >> 4;
-    val |= val >> 8;
-    val |= val >> 16;
-    val |= val >> 32;
-    return kTable[(val * 0x3f79d71b4cb0a89) >> 58];
+#if 0
+    return _CountLeadingZeros64(val);
+#else
+    auto mask = (uint64_t) 1 << 63;
+    int i = 0;
+    for (;;) {
+        if (val & mask)
+            break;
+         val <<= 1;
+         i += 1;
+    }
+    return i;
+#endif
 }
 
 //===========================================================================
