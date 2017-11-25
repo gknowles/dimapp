@@ -20,7 +20,7 @@ namespace Dim {
 *
 ***/
 
-const Duration kTimerDefaultMinWait = (std::chrono::seconds) 2;
+constexpr Duration kTimerDefaultMinWait = (std::chrono::seconds) 2;
 
 
 /****************************************************************************

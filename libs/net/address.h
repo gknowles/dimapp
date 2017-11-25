@@ -35,7 +35,7 @@ namespace Dim {
 ***/
 
 // ::ffff:0:0/96 reserved for IPv4-mapped Address [RFC4291]
-static constexpr uint32_t kIPv4MappedAddress = 0xffff0000;
+constexpr uint32_t kIPv4MappedAddress = 0xffff0000;
 
 // IP v4 or v6 address
 struct Address {

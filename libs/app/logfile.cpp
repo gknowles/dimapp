@@ -15,9 +15,10 @@ using namespace Dim;
 *
 ***/
 
-const unsigned kLogBufferSize = 65'536;
+constexpr unsigned kLogBufferSize = 65'536;
 
 namespace {
+
 class LogBuffer : IFileWriteNotify {
 public:
     LogBuffer();
@@ -41,6 +42,7 @@ private:
     string m_writing;
     bool m_closing{false};
 };
+
 } // namespace
 
 static LogBuffer s_buffer;
@@ -49,12 +51,6 @@ static string s_logfile;
 
 static auto & s_perfDropped = uperf("logfile buffer dropped");
 
-
-/****************************************************************************
-*
-*   Helpers
-*
-***/
 
 /****************************************************************************
 *

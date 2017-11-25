@@ -259,7 +259,7 @@ void Dim::logParseError(
 
 //===========================================================================
 static ostream & hexbyte(ostream & os, char data) {
-    constexpr char hexChars[] = "0123456789abcdef";
+    static constexpr char hexChars[] = "0123456789abcdef";
     os << hexChars[(unsigned char) data >> 4]
         << hexChars[(unsigned char) data & 0x0f];
     return os;

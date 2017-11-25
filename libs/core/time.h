@@ -21,7 +21,7 @@ namespace Dim {
 *
 ***/
 
-const int64_t kClockTicksPerSecond = 10'000'000;
+constexpr int64_t kClockTicksPerSecond = 10'000'000;
 
 struct Clock {
     typedef int64_t rep;
@@ -38,8 +38,8 @@ struct Clock {
     static time_point from_time_t(time_t tm) noexcept;
 };
 
-typedef Clock::duration Duration;
-typedef Clock::time_point TimePoint;
+using Duration = Clock::duration;
+using TimePoint = Clock::time_point;
 
 
 /****************************************************************************

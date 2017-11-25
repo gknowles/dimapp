@@ -19,7 +19,7 @@ namespace Dim {
 *
 ***/
 
-const auto kTimerInfinite = Duration::max();
+constexpr auto kTimerInfinite = Duration::max();
 
 
 /****************************************************************************
