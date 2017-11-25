@@ -10,4 +10,3 @@
 #include "config.h"
 #include "console.h"
 #include "env.h"
-#include "logfile.h"

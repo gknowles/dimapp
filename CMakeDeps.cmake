@@ -16,7 +16,6 @@
 # libs/app/console.h
 # libs/app/env.h
 # libs/app/logfile.cpp
-# libs/app/logfile.h
 # libs/app/pch.cpp
 # libs/app/pch.h
 # libs/app/webadmin.cpp
