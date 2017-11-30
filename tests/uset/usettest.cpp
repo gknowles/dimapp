@@ -95,6 +95,16 @@ static void app(int argc, char *argv[]) {
     vr.assign(r.begin(), r.end());
     EXPECT(vr == vector<pair<unsigned,unsigned>>{{0,4094}});
 
+    tmp.assign("1-2");
+    tmp2.assign("1 3");
+    int rc = tmp.compare(tmp2);
+    EXPECT(rc == -1);
+    tmp2.assign("1-3");
+    rc = tmp.compare(tmp2);
+    EXPECT(rc == -2);
+    tmp.assign("1-2 1000-1100");
+    rc = tmp.compare(tmp2);
+    EXPECT(rc == 1);
 
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);

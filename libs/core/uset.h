@@ -70,23 +70,30 @@ public:
 
     // modify
     void clear();
+    void fill();
+    void assign(unsigned value);
+    template <typename InputIt, typename = std::enable_if_t<
+        std::is_convertible_v<*std::declval<InputIt>(), unsigned> >>
+        void assign(InputIt first, InputIt last);
+    void assign(std::initializer_list<unsigned> il);
+    void assign(UnsignedSet && from);
+    void assign(const UnsignedSet & from);
+    void assign(std::string_view src); // space separated ranges
     void insert(unsigned value);
-
-    template <typename InputIt,
-        typename = std::enable_if_t<
-            std::is_convertible_v<*std::declval<InputIt>(), unsigned>
-        >
-    >
-    void insert(InputIt first, InputIt last);
-
+    template <typename InputIt, typename = std::enable_if_t<
+        std::is_convertible_v<*std::declval<InputIt>(), unsigned> >>
+        void insert(InputIt first, InputIt last);
     void insert(std::initializer_list<unsigned> il);
     void insert(UnsignedSet && other);
     void insert(const UnsignedSet & other);
     void insert(std::string_view src); // space separated ranges
-    void insert(unsigned first, unsigned last);
+    void insert(unsigned low, unsigned high);
     void erase(unsigned value);
     void erase(iterator where);
+    void erase(unsigned low, unsigned high);
     void erase(const UnsignedSet & other);
+    unsigned pop_back();
+    unsigned pop_front();
     void intersect(UnsignedSet && other);
     void intersect(const UnsignedSet & other);
     void swap(UnsignedSet & other);
@@ -104,7 +111,6 @@ public:
 
     // search
     size_t count(unsigned val) const;
-
     iterator find(unsigned val) const;
     std::pair<iterator, iterator> equalRange(unsigned val) const;
     iterator lowerBound(unsigned val) const;
@@ -116,6 +122,19 @@ private:
 
     Node m_node;
 };
+
+//===========================================================================
+template<typename InputIt, typename>
+inline void UnsignedSet::assign(InputIt first, InputIt last) {
+    clear();
+    insert(first, last);
+}
+
+//===========================================================================
+inline void UnsignedSet::assign(std::initializer_list<unsigned> il) {
+    clear();
+    insert(il);
+}
 
 //===========================================================================
 template<typename InputIt, typename>

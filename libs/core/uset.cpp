@@ -58,6 +58,9 @@ constexpr unsigned relValue(unsigned value, unsigned depth) {
 constexpr unsigned absBase(const Node & node) {
     return node.base << 8;
 }
+constexpr unsigned absSize(const Node & node) {
+    return valueMask(node.depth) + 1;
+}
 
 namespace {
 enum NodeType {
@@ -781,12 +784,12 @@ void MetaImpl::init(Node & node, bool full) {
     def.numBytes = 0;
     def.numValues = 0;
     def.values = nullptr;
-    auto domain = (valueMask(def.depth) + 1) >> 8;
+    auto domain = absSize(def) >> 8;
     for (; nptr != nlast; ++nptr, def.base += domain)
         *nptr = def;
 
-    // Internally arrays of nodes contain a trailing "node" at the end that
-    // is really just a pointer back to the parent node.
+    // Internally the array of nodes contains a trailing "node" at the end that
+    // is just a pointer to the parent node.
     *nlast = {};
     nlast->type = kMetaEnd;
     nlast->nodes = &node;
@@ -940,6 +943,13 @@ static IImplBase * impl(const Node & node) {
 *
 *   compare
 *
+*   Return values:
+*      -2: left < right, unless left has following non-empty nodes
+*      -1: left < right
+*       0: left == right
+*       1: left > right
+*       2: left > right, unless right has following non-empty nodes
+*
 ***/
 
 static int compare(const Node & left, const Node & right);
@@ -952,9 +962,57 @@ static int cmpError(const Node & left, const Node & right) {
 }
 
 //===========================================================================
-static int cmpLess(const Node & left, const Node & right) { return -1; }
-static int cmpMore(const Node & left, const Node & right) { return 1; }
+static int cmpLessIf(const Node & left, const Node & right) { return -2; }
+static int cmpMoreIf(const Node & left, const Node & right) { return 2; }
 static int cmpEqual(const Node & left, const Node & right) { return 0; }
+
+//===========================================================================
+static int cmpVecIf(const Node & left, const Node & right) {
+    auto minMax = absBase(right) + right.numValues - 1;
+    if (minMax == right.values[right.numValues - 1]) {
+        return 2;
+    } else {
+        return -1;
+    }
+}
+
+//===========================================================================
+static int cmpBitIf(const Node & left, const Node & right) {
+    auto base = (uint64_t *) right.values;
+    BitView bits{base, BitmapImpl::numInt64s()};
+    auto i = bits.findZero();
+    if (i && bits.find(i) == BitView::npos) {
+        return 2;
+    } else {
+        return -1;
+    }
+}
+
+//===========================================================================
+static int cmpMetaIf(const Node & left, const Node & right) {
+    auto i = UnsignedSet::Iterator{&right, absBase(right)};
+    auto ri = UnsignedSet::RangeIterator{i};
+    if (ri->first == absBase(right) && !++ri) {
+        return 2;
+    } else {
+        return -1;
+    }
+}
+
+//===========================================================================
+static int cmpRVecIf(const Node & left, const Node & right) {
+    return -cmpVecIf(right, left);
+}
+
+//===========================================================================
+static int cmpRBitIf(const Node & left, const Node & right) {
+    return -cmpBitIf(right, left);
+}
+
+//===========================================================================
+static int cmpRMetaIf(const Node & left, const Node & right) {
+    return -cmpMetaIf(right, left);
+}
 
 //===========================================================================
 static int cmpIter(const Node & left, const Node & right) {
@@ -964,7 +1022,7 @@ static int cmpIter(const Node & left, const Node & right) {
         if (*li != *ri)
             return *li > *ri ? 1 : -1;
     }
-    return (bool) li - (bool) ri;
+    return 2 * ((bool) ri - (bool) li);
 }
 
 //===========================================================================
@@ -977,20 +1035,46 @@ static int cmpVec(const Node & left, const Node & right) {
         if (*li != *ri)
             return *li > *ri ? 1 : -1;
     }
-    return (li == le) - (ri == re);
+    return 2 * ((ri == re) - (li == le));
 }
 
 //===========================================================================
-static int cmpBitmap(const Node & left, const Node & right) {
+static int cmpBit(uint64_t left, uint64_t right) {
+    if (left == right)
+        return 0;
+    auto a = reverseBits(left);
+    auto b = reverseBits(right);
+    uint64_t mask = numeric_limits<uint64_t>::max();
+    if (a < b) {
+        return a == (b & (mask << trailingZeroBits(a))) ? -2 : 1;
+    } else {
+        return b == (a & (mask << trailingZeroBits(b))) ? 2 : -1;
+    }
+}
+
+//===========================================================================
+static int cmpBit(const Node & left, const Node & right) {
     auto li = (uint64_t *) left.values;
     auto le = li + kDataSize / sizeof(*li);
     auto ri = (uint64_t *) right.values;
     auto re = ri + kDataSize / sizeof(*ri);
     for (; li != le && ri != re; ++li, ++ri) {
-        if (*li != *ri)
-            return reverseBits(*li) > reverseBits(*ri) ? 1 : -1;
+        if (int rc = cmpBit(*li, *ri)) {
+            if (rc == -2) {
+                while (++li != le) {
+                    if (*li)
+                        return 1;
+                }
+            } else if (rc == 2) {
+                while (++ri != re) {
+                    if (*ri)
+                        return -1;
+                }
+            }
+            return rc;
+        }
     }
-    return (li == le) - (ri == re);
+    return 2 * ((ri == re) - (li == le));
 }
 
 //===========================================================================
@@ -1000,23 +1084,37 @@ static int cmpMeta(const Node & left, const Node & right) {
     auto ri = right.nodes;
     auto re = ri + right.numValues;
     for (; li != le && ri != re; ++li, ++ri) {
-        if (int rc = compare(*li, *ri))
+        if (int rc = compare(*li, *ri)) {
+            if (rc == -2) {
+                while (++li != le) {
+                    if (li->type != kEmpty)
+                        return 1;
+                }
+            } else if (rc == 2) {
+                while (++ri != re) {
+                    if (ri->type != kEmpty)
+                        return -1;
+                }
+            }
             return rc;
+        }
     }
-    return (li == le) - (ri == re);
+    return 2 * ((ri == re) - (li == le));
 }
 
 //===========================================================================
+// FIXME: node compare needs to consider whether or not all following nodes
+//        are empty. For example: 1-2 < 1-3, but not if it's 1-2,100000
 static int compare(const Node & left, const Node & right) {
     using CompareFn = int(const Node & left, const Node & right);
     CompareFn * functs[][kNodeTypes] = {
     // LEFT                         RIGHT
-    //             empty     full      vector   bitmap     meta
-    /* empty  */ { cmpEqual, cmpLess,  cmpLess, cmpLess,   cmpLess  },
-    /* full   */ { cmpMore,  cmpEqual, cmpMore, cmpMore,   cmpMore  },
-    /* vector */ { cmpMore,  cmpLess,  cmpVec,  cmpIter,   cmpIter  },
-    /* bitmap */ { cmpMore,  cmpLess,  cmpIter, cmpBitmap, cmpError },
-    /* meta   */ { cmpMore,  cmpLess,  cmpIter, cmpError,  cmpMeta  },
+    //             empty      full        vector     bitmap     meta
+    /* empty  */ { cmpEqual,  cmpLessIf,  cmpLessIf, cmpLessIf, cmpLessIf },
+    /* full   */ { cmpMoreIf, cmpEqual,   cmpVecIf,  cmpBitIf,  cmpMetaIf },
+    /* vector */ { cmpMoreIf, cmpRVecIf,  cmpVec,    cmpIter,   cmpIter   },
+    /* bitmap */ { cmpMoreIf, cmpRBitIf,  cmpIter,   cmpBit,    cmpError  },
+    /* meta   */ { cmpMoreIf, cmpRMetaIf, cmpIter,   cmpError,  cmpMeta   },
     };
     return functs[left.type][right.type](left, right);
 }
@@ -1567,6 +1665,37 @@ void UnsignedSet::clear() {
 }
 
 //===========================================================================
+void UnsignedSet::fill() {
+    clear();
+    m_node.type = kFull;
+    impl(m_node)->init(m_node, true);
+}
+
+//===========================================================================
+void UnsignedSet::assign(unsigned value) {
+    clear();
+    insert(value);
+}
+
+//===========================================================================
+void UnsignedSet::assign(UnsignedSet && from) {
+    clear();
+    insert(move(from));
+}
+
+//===========================================================================
+void UnsignedSet::assign(const UnsignedSet & from) {
+    clear();
+    insert(from);
+}
+
+//===========================================================================
+void UnsignedSet::assign(std::string_view src) {
+    clear();
+    insert(src);
+}
+
+//===========================================================================
 void UnsignedSet::insert(unsigned value) {
     impl(m_node)->insert(m_node, value);
 }
@@ -1596,16 +1725,16 @@ void UnsignedSet::insert(string_view src) {
         } else {
             insert(first);
         }
-        first = strToUint(eptr + 1, &eptr);
+        first = strToUint(eptr, &eptr);
         if (!first)
             break;
     }
 }
 
 //===========================================================================
-void UnsignedSet::insert(unsigned first, unsigned second) {
+void UnsignedSet::insert(unsigned low, unsigned high) {
     // TODO: make this efficient
-    for (auto i = first; i <= second; ++i)
+    for (auto i = low; i <= high; ++i)
         insert(i);
 }
 
@@ -1623,6 +1752,14 @@ void UnsignedSet::erase(UnsignedSet::iterator where) {
 //===========================================================================
 void UnsignedSet::erase(const UnsignedSet & other) {
     ::erase(m_node, other.m_node);
+}
+
+//===========================================================================
+unsigned UnsignedSet::pop_front() {
+    auto i = begin();
+    auto val = *i;
+    erase(i);
+    return val;
 }
 
 //===========================================================================
