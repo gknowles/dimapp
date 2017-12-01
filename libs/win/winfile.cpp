@@ -22,7 +22,7 @@ struct WinFileInfo : public HandleContent {
     string m_path;
     HANDLE m_handle{INVALID_HANDLE_VALUE};
     File::OpenMode m_mode{File::fReadOnly};
-    unordered_set<const void *> m_views;
+    unordered_map<const void *, File::ViewMode> m_views;
 };
 
 class IFileOpBase : protected IWinOverlappedNotify {
@@ -926,7 +926,7 @@ static bool openView(
         logMsgError() << "NtMapViewOfSection(" << file->m_path << "): " << err;
         winFileSetErrno(err);
     } else {
-        file->m_views.insert(base);
+        file->m_views[base] = mode;
     }
 
     // always close the section whether the map view worked or not
@@ -989,15 +989,23 @@ void Dim::fileCloseView(FileHandle f, const void * view) {
 //===========================================================================
 void Dim::fileExtendView(FileHandle f, const void * view, int64_t length) {
     auto file = getInfo(f);
-    if (file->m_views.count(view) == 0) {
+    auto i = file->m_views.find(view);
+    if (i == file->m_views.end()) {
         logMsgCrash() << "fileExtendView(" << file->m_path
             << "): unknown view, " << (void *) view;
+    }
+    ULONG pageProt;
+    if (i->second == File::kViewReadOnly) {
+        pageProt = PAGE_READONLY;
+    } else {
+        assert(i->second == File::kViewReadWrite);
+        pageProt = PAGE_READWRITE;
     }
     void * ptr = VirtualAlloc(
         (void *) view,
         length,
         MEM_COMMIT,
-        PAGE_READONLY
+        pageProt
     );
     if (!ptr) {
         logMsgCrash() << "VirtualAlloc(" << file->m_path

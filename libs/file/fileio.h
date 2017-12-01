@@ -265,7 +265,7 @@ size_t fileViewAlignment();
 bool fileOpenView(
     const char *& view,
     FileHandle f,
-    File::ViewMode modeFlags, // must be kViewReadOnly
+    File::ViewMode mode,    // must be kViewReadOnly
     int64_t offset = 0,
     int64_t length = 0,     // defaults to current length of file
     int64_t maxLength = 0   // defaults to not extendable
@@ -273,7 +273,7 @@ bool fileOpenView(
 bool fileOpenView(
     char *& view,
     FileHandle f,
-    File::ViewMode modeFlags, // must be kViewReadWrite
+    File::ViewMode mode,    // must be kViewReadWrite
     int64_t offset = 0,
     int64_t length = 0,     // defaults to current length of file
     int64_t maxLength = 0   // defaults to not extendable

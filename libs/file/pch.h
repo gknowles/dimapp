@@ -11,8 +11,9 @@
 
 // Standard headers
 #include <cassert>
+#include <cstdlib>
 #include <memory>
-#include <stdlib.h>
+#include <unordered_map>
 #include <vector>
 
 // Platform headers
