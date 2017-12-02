@@ -34,6 +34,16 @@ private:
     ITaskNotify * m_taskNext{nullptr};
 };
 
+class TaskProxy : public ITaskNotify {
+public:
+    TaskProxy(std::function<void()> && fn) : m_fn{std::move(fn)} {}
+
+private:
+    void onTask() override { m_fn(); }
+
+    std::function<void()> m_fn;
+};
+
 
 /****************************************************************************
 *

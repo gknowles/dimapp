@@ -8,6 +8,7 @@
 
 #include "core/types.h"
 
+#include <functional>
 #include <memory>
 
 namespace Dim {
@@ -38,6 +39,15 @@ public:
 private:
     friend class Timer;
     std::shared_ptr<Timer> m_timer;
+};
+
+class TimerProxy : public ITimerNotify {
+public:
+    TimerProxy(std::function<Duration(TimePoint)> && fn)
+        : m_fn{std::move(fn)} {}
+
+private:
+    std::function<Duration(TimePoint)> m_fn;
 };
 
 
