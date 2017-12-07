@@ -56,7 +56,7 @@
 #pragma warning(disable : 4251)
 #endif
 
-#if _MSC_FULL_VER <= 191225828
+#if _MSC_FULL_VER <= 191225830
 // aligned_alloc added in c++17
 #define aligned_alloc(alignment, size) _aligned_malloc(size, alignment)
 #define aligned_free(ptr) _aligned_free(ptr)
