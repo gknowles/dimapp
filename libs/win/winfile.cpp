@@ -856,7 +856,8 @@ static bool openView(
             access = SECTION_MAP_READ;
             secProt = PAGE_READONLY;
             secSize.QuadPart = 0;
-            viewSize = length;
+            viewSize = (SIZE_T) length;
+            assert((uint64_t) viewSize == (uint64_t) length);
             allocType = 0;
             pageProt = PAGE_READONLY;
         } else {
@@ -866,7 +867,8 @@ static bool openView(
             access = SECTION_MAP_READ;
             secProt = PAGE_READWRITE;
             secSize.QuadPart = offset + max(pageSize, (size_t) length);
-            viewSize = maxLength;
+            viewSize = (SIZE_T) maxLength;
+            assert((uint64_t) viewSize == (uint64_t) maxLength);
             allocType = MEM_RESERVE;
             pageProt = PAGE_READONLY;
         }
@@ -878,7 +880,8 @@ static bool openView(
             access = SECTION_MAP_READ | SECTION_MAP_WRITE;
             secProt = PAGE_READWRITE;
             secSize.QuadPart = 0;
-            viewSize = length;
+            viewSize = (SIZE_T) length;
+            assert((uint64_t) viewSize == (uint64_t) length);
             allocType = 0;
             pageProt = PAGE_READWRITE;
         } else {
@@ -887,7 +890,8 @@ static bool openView(
             access = SECTION_MAP_READ | SECTION_MAP_WRITE;
             secProt = PAGE_READWRITE;
             secSize.QuadPart = offset + max(pageSize, (size_t) length);
-            viewSize = maxLength;
+            viewSize = (SIZE_T) maxLength;
+            assert((uint64_t) viewSize == (uint64_t) maxLength);
             allocType = MEM_RESERVE;
             pageProt = PAGE_READWRITE;
         }
@@ -1001,9 +1005,10 @@ void Dim::fileExtendView(FileHandle f, const void * view, int64_t length) {
         assert(i->second == File::kViewReadWrite);
         pageProt = PAGE_READWRITE;
     }
+    assert((uint64_t) length == (uint64_t) (SIZE_T) length);
     void * ptr = VirtualAlloc(
         (void *) view,
-        length,
+        (SIZE_T) length,
         MEM_COMMIT,
         pageProt
     );

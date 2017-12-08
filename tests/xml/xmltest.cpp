@@ -142,7 +142,7 @@ int main(int argc, char * argv[]) {
 
     path->defaultExt("xml");
     error_code code;
-    size_t bytes = fileSize(*path);
+    auto bytes = (size_t) fileSize(*path);
     string content;
     content.resize(bytes + 1);
     ifstream in(path->str(), ios_base::in | ios_base::binary);

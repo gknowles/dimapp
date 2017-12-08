@@ -181,7 +181,7 @@ Count::Count(string_view path) {
         m_rootLen = (colon && colon < slash) ? unsigned(colon - base + 1) : 0;
         m_dirLen = unsigned(slash - base + 1 - m_rootLen);
     }
-    if (!dot || dot - base <= m_rootLen + m_dirLen) {
+    if (!dot || unsigned(dot - base) <= m_rootLen + m_dirLen) {
         m_stemLen = unsigned(path.size() - m_rootLen - m_dirLen);
         m_extLen = 0;
     } else {

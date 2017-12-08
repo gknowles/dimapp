@@ -119,7 +119,7 @@ void Dim::winErrorInitialize() {
     winLoadProc(s_NtStatusToDosError, "ntdll", "RtlNtStatusToDosError");
     winLoadProc(
         s_SecurityStatusToNtStatus,
-        "ntoskrnl.exe",
+        "ntdll",
         "RtlMapSecurityErrorToNtStatus"
     );
 }

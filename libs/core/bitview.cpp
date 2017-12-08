@@ -52,7 +52,7 @@ bool BitView::operator[](size_t bitpos) const {
 
 //===========================================================================
 bool BitView::all() const {
-    for (auto i = 0; i < m_size; ++i) {
+    for (auto i = 0; (size_t) i < m_size; ++i) {
         if (m_data[i] != kWordMax)
             return false;
     }
@@ -66,7 +66,7 @@ bool BitView::any() const {
 
 //===========================================================================
 bool BitView::none() const {
-    for (auto i = 0; i < m_size; ++i) {
+    for (auto i = 0; (size_t) i < m_size; ++i) {
         if (m_data[i])
             return false;
     }
@@ -113,7 +113,7 @@ BitView & BitView::reset(size_t bitpos) {
 
 //===========================================================================
 BitView & BitView::flip() {
-    for (auto i = 0; i < m_size; ++i)
+    for (auto i = 0; (size_t) i < m_size; ++i)
         m_data[i] = ~m_data[i];
     return *this;
 }

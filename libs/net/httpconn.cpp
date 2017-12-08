@@ -540,7 +540,7 @@ bool HttpConn::recv(
             ptr += need;
             avail -= need;
             m_inputFrameLen = getFrameLen(data(m_input));
-            if (avail < m_inputFrameLen) {
+            if (avail < (size_t) m_inputFrameLen) {
                 if (m_inputFrameLen > m_maxInputFrame)
                     return onFrame(msgs, out, data(m_input));
                 m_input.insert(m_input.end(), ptr, eptr);
@@ -561,7 +561,9 @@ bool HttpConn::recv(
         }
         avail -= kFrameHeaderLen;
         m_inputFrameLen = getFrameLen(ptr);
-        if (avail < m_inputFrameLen && m_inputFrameLen <= m_maxInputFrame) {
+        if (avail < (size_t) m_inputFrameLen
+            && m_inputFrameLen <= m_maxInputFrame
+        ) {
             m_input.assign(ptr, eptr);
             m_byteMode = ByteMode::kPayload;
             return true;
@@ -579,7 +581,7 @@ bool HttpConn::recv(
         avail = eptr - ptr;
         size_t used = size(m_input);
         assert(used >= kFrameHeaderLen);
-        assert(used < kFrameHeaderLen + m_inputFrameLen);
+        assert(used < (size_t) kFrameHeaderLen + m_inputFrameLen);
         size_t need = kFrameHeaderLen + m_inputFrameLen - used;
         if (avail < need) {
             m_input.insert(m_input.end(), ptr, eptr);

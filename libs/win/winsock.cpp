@@ -113,7 +113,7 @@ void SocketBase::write(
     unique_ptr<SocketBuffer> buffer,
     size_t bytes
 ) {
-    assert(bytes <= buffer->capacity);
+    assert(bytes <= (size_t) buffer->capacity);
     if (!bytes)
         return;
     if (auto sock = notify->m_socket)

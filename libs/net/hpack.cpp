@@ -488,7 +488,7 @@ void HpackEncode::write(const char str[], size_t len) {
 void HpackEncode::write(size_t val, char prefix, int prefixBits) {
     assert(prefixBits >= 1 && prefixBits <= 8);
     int limit = (1 << prefixBits) - 1;
-    if (val < limit) {
+    if (val < (size_t) limit) {
         prefix |= (char)val;
         m_out->append(1, prefix);
         return;
@@ -532,7 +532,7 @@ HuffDecoder::HuffDecoder(const EncodeItem items[], size_t count) {
         int mask = 1 << (ptr->bits - m_prefixBits - 1);
 
         for (;;) {
-            assert(pos >= 0 && pos < size(m_decodeTable));
+            assert(pos >= 0 && (size_t) pos < size(m_decodeTable));
             DecodeItem & item = m_decodeTable[pos];
             int16_t & key = (~ptr->code & mask) ? item.zero : item.one;
             mask >>= 1;
@@ -559,7 +559,8 @@ static bool read(
     int bits,
     int & availBits,
     const char *& ptr,
-    const char * eptr) {
+    const char * eptr
+) {
     if (ptr == eptr) {
         assert(availBits == 8);
         return false;
@@ -596,7 +597,8 @@ bool HuffDecoder::decode(
     ITempHeap * heap,
     size_t unusedBits,
     const char src[],
-    size_t count) {
+    size_t count
+) {
     assert(count);
     int avail = (int)unusedBits;
     const char * ptr = src;
@@ -649,7 +651,8 @@ bool HpackDecode::parse(
     IHpackDecodeNotify * notify,
     ITempHeap * heap,
     const char src[],
-    size_t srcLen) {
+    size_t srcLen
+) {
     while (srcLen) {
         if (!readInstruction(notify, heap, src, srcLen))
             return false;
@@ -662,7 +665,8 @@ bool HpackDecode::readInstruction(
     IHpackDecodeNotify * notify,
     ITempHeap * heap,
     const char *& src,
-    size_t & srcLen) {
+    size_t & srcLen
+) {
     enum {
         kNeverIndexed,
         kNotIndexed,
@@ -739,7 +743,8 @@ bool HpackDecode::readIndexedField(
     ITempHeap * heap,
     size_t prefixBits,
     const char *& src,
-    size_t & srcLen) {
+    size_t & srcLen
+) {
     size_t index;
     if (!read(&index, prefixBits, src, srcLen))
         return false;
@@ -764,7 +769,8 @@ bool HpackDecode::readIndexedName(
     ITempHeap * heap,
     size_t prefixBits,
     const char *& src,
-    size_t & srcLen) {
+    size_t & srcLen
+) {
     size_t index;
     if (!read(&index, prefixBits, src, srcLen))
         return false;
@@ -797,7 +803,8 @@ bool HpackDecode::read(
     size_t * out,
     size_t prefixBits,
     const char *& src,
-    size_t & srcLen) {
+    size_t & srcLen
+) {
     assert(prefixBits >= 1 && prefixBits <= 8);
     if (!srcLen)
         return false;
@@ -805,7 +812,7 @@ bool HpackDecode::read(
     int limit = (1 << prefixBits) - 1;
     size_t val = (unsigned char)*src++ & limit;
     srcLen -= 1;
-    if (val < limit) {
+    if (val < (size_t) limit) {
         *out = val;
         return true;
     }
@@ -827,7 +834,8 @@ bool HpackDecode::read(
     const char ** out,
     ITempHeap * heap,
     const char *& src,
-    size_t & srcLen) {
+    size_t & srcLen
+) {
     size_t len;
     bool huffman = *src & 0x80;
     if (!read(&len, 7, src, srcLen))

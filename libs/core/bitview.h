@@ -64,7 +64,7 @@ private:
     size_t m_size = 0;
 
     static constexpr size_t kWordBits = sizeof(uint64_t) * 8;
-    static constexpr size_t kWordMax = (uint64_t) -1;
+    static constexpr uint64_t kWordMax = (uint64_t) -1;
 };
 
 //===========================================================================

@@ -307,7 +307,7 @@ static bool findFactory(
     bool known = true;
     *fact = nullptr;
 
-    for (int i = 0; i < s_matchers.size(); ++i) {
+    for (auto i = 0; (size_t) i < s_matchers.size(); ++i) {
         auto fam = (AppSocket::Family) i;
         if (!keys[fam].fact)
             continue;
@@ -428,7 +428,7 @@ void RawSocket::write(string_view data) {
         memcpy(m_buffer->data + m_bufferUsed, data.data(), bytes);
         data.remove_prefix(bytes);
         m_bufferUsed += bytes;
-        if (m_bufferUsed == m_buffer->capacity) {
+        if (m_bufferUsed == (size_t) m_buffer->capacity) {
             socketWrite(this, move(m_buffer), m_bufferUsed);
             m_bufferUsed = 0;
         }
@@ -442,7 +442,7 @@ void RawSocket::write(unique_ptr<SocketBuffer> buffer, size_t bytes) {
     bool hadData = m_bufferUsed;
     if (hadData)
         socketWrite(this, move(m_buffer), m_bufferUsed);
-    if (bytes == buffer->capacity) {
+    if (bytes == (size_t) buffer->capacity) {
         socketWrite(this, move(buffer), bytes);
         m_bufferUsed = 0;
     } else {
@@ -668,7 +668,7 @@ void Dim::socketAddFamily(
     IAppSocketMatchNotify * notify
 ) {
     unique_lock<shared_mutex> lk{s_listenMut};
-    if (fam >= s_matchers.size())
+    if ((size_t) fam >= s_matchers.size())
         s_matchers.resize(fam + 1);
     s_matchers[fam].notify = notify;
 }

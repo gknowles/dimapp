@@ -131,7 +131,7 @@ void ConfigFile::onFileChange(string_view fullpath) {
     auto f = fileOpen(fullpath, File::fReadOnly | File::fDenyWrite);
 
     // load file
-    size_t bytes = fileSize(f);
+    auto bytes = fileSize(f);
     if (bytes > kMaxConfigFileSize) {
         logMsgError() << "File too large (" << bytes << " bytes): "
             << fullpath;
@@ -140,7 +140,7 @@ void ConfigFile::onFileChange(string_view fullpath) {
 
     string content;
     if (bytes) {
-        content.resize(bytes);
+        content.resize((size_t) bytes);
         fileReadWait(content.data(), content.size(), f, 0);
     }
     fileClose(f);

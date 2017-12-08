@@ -152,7 +152,7 @@ Time8601Str & Time8601Str::set(
 
 //===========================================================================
 bool parse4Digits(int * out, string_view & src, char suffix) {
-    assert(src.size() >= 4 + (bool) suffix);
+    assert(src.size() >= 4u + (bool) suffix);
     const char * data = src.data();
     unsigned num = (unsigned char) *data++ - '0';
     if (num > 9)
@@ -184,7 +184,7 @@ bool parse4Digits(int * out, string_view & src, char suffix) {
 
 //===========================================================================
 bool parse2Digits(int * out, string_view & src, char suffix) {
-    assert(src.size() >= 2 + (bool) suffix);
+    assert(src.size() >= 2u + (bool) suffix);
     unsigned num = (unsigned char) src[0] - '0';
     if (num > 9)
         return false;

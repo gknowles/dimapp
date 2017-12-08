@@ -857,7 +857,7 @@ void writeRule(
     streampos base = os.tellp();
     os << prefix << rule.name;
     os << " = ";
-    size_t pos = os.tellp() - base;
+    auto pos = (size_t) (os.tellp() - base);
     ostringstream raw;
     writeElement(raw, rule, false);
     auto vpre = string(prefix) + "    ";

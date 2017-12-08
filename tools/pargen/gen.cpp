@@ -359,7 +359,7 @@ static void addPositions(
     if (rule.m == 0)
         *skippable = true;
     sp->elems.pop_back();
-    if (sp->recurseSe && sp->recurseSe == sp->elems.size()) {
+    if (sp->recurseSe && (size_t) sp->recurseSe == sp->elems.size()) {
         sp->recurseSe = 0;
         sp->recursePos = -1;
     }
@@ -442,7 +442,7 @@ static void addNextPositions(
 
     if constexpr (false && sp.recurseSe) {
         assert(terminal);
-        assert(sp.recurseSe < sp.elems.size());
+        assert((size_t) sp.recurseSe < sp.elems.size());
         StatePosition nsp;
         setPositionPrefix(
             &nsp,
@@ -456,7 +456,7 @@ static void addNextPositions(
         bool weak;
         auto & e = *sp.elems[sp.recurseSe].elem;
         assert(e.type == Element::kSequence);
-        assert(sp.recursePos < e.elements.size());
+        assert((size_t) sp.recursePos < e.elements.size());
         addPositions(&weak, st, &nsp, false, e.elements[sp.recursePos], 0);
     }
 

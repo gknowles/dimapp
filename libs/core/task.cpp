@@ -290,7 +290,7 @@ void Dim::taskPush(
 
     scoped_lock<mutex> lk{s_mut};
     auto * q = s_queues.find(hq);
-    for (int i = 0; i < numTasks; ++tasks, ++i)
+    for (auto i = 0; (size_t) i < numTasks; ++tasks, ++i)
         q->push(**tasks);
 
     if (numTasks > 1 && q->curThreads > 1) {

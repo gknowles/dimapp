@@ -239,10 +239,12 @@ void TlsRecordWriter::end() {
 TlsRecordReader::TlsRecordReader(
     TlsConnBase & conn,
     const void * ptr,
-    size_t count)
+    size_t count
+)
     : m_conn(conn)
-    , m_ptr((const uint8_t *)ptr) {
-    assert(count < numeric_limits<int>::max());
+    , m_ptr((const uint8_t *)ptr)
+{
+    assert(count < (size_t) numeric_limits<int>::max());
     m_count = (int)count;
 }
 
@@ -335,7 +337,8 @@ const uint8_t kClientVersion[] = {3, 4};
 ClientConn::ClientConn(
     const char hostName[],
     const TlsCipherSuite suites[],
-    size_t count) {
+    size_t count
+) {
     if (hostName)
         m_host = hostName;
     setSuites(suites, count);
@@ -388,7 +391,8 @@ TlsConnHandle Dim::tlsConnect(
     CharBuf * out,
     const char hostName[],
     const TlsCipherSuite suites[],
-    size_t count) {
+    size_t count
+) {
     auto conn = new ClientConn(hostName, suites, count);
     conn->connect(out);
     return s_conns.insert(conn);
@@ -405,7 +409,8 @@ bool Dim::tlsRecv(
     CharBuf * out,
     CharBuf * data,
     const void * src,
-    size_t srcLen) {
+    size_t srcLen
+) {
     auto conn = s_conns.find(h);
     return conn->recv(out, data, src, srcLen);
 }

@@ -48,7 +48,7 @@ TokenTable::TokenTable(const Token * src, size_t count) {
 
     m_byName.resize(num);
     Index * base = m_byName.data();
-    for (auto i = 0; i < m_values.size(); ++i) {
+    for (auto i = 0; (size_t) i < m_values.size(); ++i) {
         auto & val = m_values[i];
         size_t pos = val.hash % num;
         Index ndx = { i, 0 };
@@ -74,7 +74,7 @@ TokenTable::TokenTable(const Token * src, size_t count) {
 
     m_byId.resize(num);
     base = m_byId.data();
-    for (auto i = 0; i < m_values.size(); ++i) {
+    for (auto i = 0; (size_t) i < m_values.size(); ++i) {
         auto & val = m_values[i];
         size_t pos = val.token.id;
         Index ndx = { i, 0 };
@@ -108,7 +108,7 @@ bool TokenTable::find(int * out, const char name[], size_t nameLen) const {
             break;
         const Value & val = m_values[ndx.pos];
         if (val.hash == hash
-            && val.nameLen <= nameLen
+            && (size_t) val.nameLen <= nameLen
             && strncmp(val.token.name, name, nameLen) == 0
         ) {
             *out = val.token.id;

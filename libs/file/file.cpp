@@ -201,12 +201,12 @@ void Dim::fileLoadBinary(
         return;
     }
 
-    size_t bytes = fileSize(file);
+    auto bytes = fileSize(file);
     if (bytes > maxSize)
         logMsgError() << "File too large (" << bytes << " bytes): " << path;
-    out.resize(bytes);
+    out.resize((size_t) bytes);
     auto proxy = new FileLoadNotify(out, notify);
-    fileRead(proxy, out.data(), bytes, file, 0, 0, hq);
+    fileRead(proxy, out.data(), (size_t) bytes, file, 0, 0, hq);
 }
 
 //===========================================================================
@@ -222,10 +222,10 @@ void Dim::fileLoadBinaryWait(
         return;
     }
 
-    size_t bytes = fileSize(file);
+    auto bytes = fileSize(file);
     if (bytes > maxSize)
         logMsgError() << "File too large (" << bytes << " bytes): " << path;
-    out.resize(bytes);
-    fileReadWait(out.data(), bytes, file, 0);
+    out.resize((size_t) bytes);
+    fileReadWait(out.data(), (size_t) bytes, file, 0);
     fileClose(file);
 }

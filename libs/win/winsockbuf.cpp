@@ -238,7 +238,7 @@ void Dim::copy(
 ) {
     scoped_lock<mutex> lk{s_mut};
 
-    assert(bytes <= sbuf.capacity);
+    assert(bytes <= (size_t) sbuf.capacity);
     BufferSlice * slice;
     Buffer * pbuf;
     findBufferSlice(&slice, &pbuf, sbuf);
