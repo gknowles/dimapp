@@ -47,6 +47,8 @@ public:
         : m_fn{std::move(fn)} {}
 
 private:
+    Duration onTimer(TimePoint now) override { return m_fn(now); }
+
     std::function<Duration(TimePoint)> m_fn;
 };
 
