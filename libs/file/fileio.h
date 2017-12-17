@@ -105,6 +105,7 @@ bool fileResize(FileHandle f, size_t size);
 
 // Flushes pending writes from the file cache to disk.
 bool fileFlush(FileHandle f);
+bool fileFlushViews(FileHandle f);
 
 // On error returns 0 and sets errno to a non-zero value. Otherwise the
 // function returns the size and, if the size was 0, clears errno.

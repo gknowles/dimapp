@@ -421,7 +421,7 @@ bool Dim::winFileSetErrno(int error) {
     default: _set_errno(EIO); break;
     }
 
-    return false;
+    return !error;
 }
 
 
@@ -592,43 +592,52 @@ static WinFileInfo * getInfo(FileHandle f, bool release = false) {
 
 //===========================================================================
 bool Dim::fileResize(FileHandle f, size_t size) {
-    auto file = static_cast<unique_ptr<WinFileInfo>>(getInfo(f, true));
-    if (!file) {
-        winFileSetErrno(ERROR_INVALID_PARAMETER);
-        return false;
-    }
+    auto file = getInfo(f);
+    if (!file)
+        return winFileSetErrno(ERROR_INVALID_PARAMETER);
     LARGE_INTEGER tmp;
     tmp.QuadPart = size;
     if (!SetFilePointerEx(file->m_handle, tmp, nullptr, FILE_BEGIN)) {
         WinError err;
         logMsgError() << "SetFilePointerEx(" << file->m_path << "): " << err;
-        winFileSetErrno(err);
-        return false;
+        return winFileSetErrno(err);
     }
     if (!SetEndOfFile(file->m_handle)) {
         WinError err;
         logMsgError() << "SetEndOfFile(" << file->m_path << "): " << err;
-        winFileSetErrno(err);
-        return false;
+        return winFileSetErrno(err);
     }
-
     return true;
 }
 
 //===========================================================================
 bool Dim::fileFlush(FileHandle f) {
-    auto file = static_cast<unique_ptr<WinFileInfo>>(getInfo(f, true));
+    auto file = getInfo(f);
+    if (!file)
+        return winFileSetErrno(ERROR_INVALID_PARAMETER);
+    if (!FlushFileBuffers(file->m_handle)) {
+        WinError err;
+        logMsgError() << "FlushFileBuffers(" << file->m_path << "): " << err;
+        return winFileSetErrno(err);
+    }
+    return true;
+}
+
+//===========================================================================
+bool Dim::fileFlushViews(FileHandle f) {
+    auto file = getInfo(f);
     if (!file) {
         winFileSetErrno(ERROR_INVALID_PARAMETER);
         return false;
     }
-    if (!FlushFileBuffers(file->m_handle)) {
-        WinError err;
-        logMsgError() << "FlushFileBuffers(" << file->m_path << "): " << err;
-        winFileSetErrno(err);
-        return false;
+    WinError err{0};
+    for (auto && kv : file->m_views) {
+        if (!FlushViewOfFile(kv.first, 0)) {
+            err.set();
+            logMsgError() << "FlushViewOfFile(" << file->m_path << "): " << err;
+        }
     }
-    return true;
+    return winFileSetErrno(err);
 }
 
 //===========================================================================
