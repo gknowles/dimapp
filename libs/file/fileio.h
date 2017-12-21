@@ -46,10 +46,14 @@ namespace File {
         fRandom = 0x4000,
         fSequential = 0x8000,
 
+        // Temporary file, will be deleted when closed, also a hint to file
+        // caching.
+        fTemp = 0x10000,
+
         // INTERNAL USE ONLY
         // Underlying native file handle is externally owned, and will be
         // left open when the file is closed.
-        fNonOwning = 0x10000,
+        fNonOwning = 0x20000,
 
         fInternalFlags = fNonOwning,
     };

@@ -488,6 +488,10 @@ FileHandle Dim::fileOpen(string_view path, File::OpenMode mode) {
         flagsAndAttrs |= FILE_FLAG_RANDOM_ACCESS;
     if (mode & om::fSequential)
         flagsAndAttrs |= FILE_FLAG_SEQUENTIAL_SCAN;
+    if (mode & om::fTemp) {
+        assert(mode & om::fReadWrite);
+        flagsAndAttrs |= FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE;
+    }
 
     file->m_handle = CreateFileW(
         toWstring(file->m_path).c_str(),
