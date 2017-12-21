@@ -22,7 +22,7 @@ namespace {
 class LogBuffer : IFileWriteNotify {
 public:
     LogBuffer();
-    void writeLog(string_view msg);
+    void writeLog(string_view msg, bool wait);
 
     // returns true if close completed, otherwise try again until no more
     // writes are pending.
@@ -65,7 +65,7 @@ LogBuffer::LogBuffer() {
 }
 
 //===========================================================================
-void LogBuffer::writeLog(string_view msg) {
+void LogBuffer::writeLog(string_view msg, bool wait) {
     unique_lock<mutex> lk{m_mut};
     if (m_writing.empty()) {
         m_writing.append(msg);
@@ -81,7 +81,12 @@ void LogBuffer::writeLog(string_view msg) {
                 return;
             }
         }
-        fileAppend(this, m_file, m_writing.data(), m_writing.size());
+        if (wait) {
+            fileAppendWait(m_file, m_writing.data(), m_writing.size());
+            m_writing.clear();
+        } else {
+            fileAppend(this, m_file, m_writing.data(), m_writing.size());
+        }
         return;
     }
     if (m_pending.size() + msg.size() > kLogBufferSize) {
@@ -91,6 +96,10 @@ void LogBuffer::writeLog(string_view msg) {
         m_pending.append(msg);
     }
     m_pending.push_back('\n');
+    if (wait) {
+        fileAppendWait(m_file, m_pending.data(), m_pending.size());
+        m_pending.clear();
+    }
 }
 
 //===========================================================================
@@ -169,7 +178,7 @@ void Logger::onLog(LogType type, string_view msg) {
         (int) msg.size(),
         msg.data()
     );
-    s_buffer.writeLog(tmp);
+    s_buffer.writeLog(tmp, type == kLogTypeCrash);
 }
 
 
