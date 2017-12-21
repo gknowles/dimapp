@@ -418,7 +418,7 @@ bool Dim::winFileSetErrno(int error) {
     case ERROR_SHARING_VIOLATION: errno = EBUSY; break;
     case ERROR_ACCESS_DENIED: errno = EACCES; break;
     case ERROR_INVALID_PARAMETER: errno = EINVAL; break;
-    default: _set_errno(EIO); break;
+    default: errno = EIO; break;
     }
 
     return !error;
