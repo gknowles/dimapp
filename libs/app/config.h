@@ -72,6 +72,11 @@ const char * configString(
     std::string_view name,
     const char defVal[] = ""
 );
+const XNode * configElement(
+    const ConfigContext & context,
+    const XDocument & doc,
+    std::string_view name
+);
 
 unsigned configUnsigned(
     const XDocument & doc,
@@ -82,6 +87,10 @@ const char * configString(
     const XDocument & doc,
     std::string_view name,
     const char defVal[] = ""
+);
+const XNode * configElement(
+    const XDocument & doc,
+    std::string_view name
 );
 
 } // namespace

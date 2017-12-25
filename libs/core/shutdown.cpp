@@ -106,7 +106,7 @@ Duration MainTimer::onTimer(TimePoint now) {
         break;
     }
 
-    // some delay when rerunning the same step (i.e. QueryDestroy failed)
+    // some delay when rerunning the same step
     if (!next) {
         m_firstTry = false;
         return 10ms;

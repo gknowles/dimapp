@@ -294,12 +294,18 @@ const char * Dim::configString(
     std::string_view name,
     const char defVal[]
 ) {
-    auto val = attrValue(
-        firstChild(doc.root(), name.data()),
-        "value",
-        defVal
-    );
+    auto elem = configElement(context, doc, name);
+    auto val = attrValue(elem, "value", defVal);
     return val;
+}
+
+//===========================================================================
+const XNode * Dim::configElement(
+    const ConfigContext & context,
+    const XDocument & doc,
+    std::string_view name
+) {
+    return firstChild(doc.root(), name);
 }
 
 //===========================================================================
@@ -320,4 +326,13 @@ const char * Dim::configString(
 ) {
     ConfigContext context;
     return configString(context, doc, name, defVal);
+}
+
+//===========================================================================
+const XNode * Dim::configElement(
+    const XDocument & doc,
+    std::string_view name
+) {
+    ConfigContext context;
+    return configElement(context, doc, name);
 }
