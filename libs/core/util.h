@@ -9,6 +9,8 @@
 #include <cassert>
 #include <cstdint>
 #include <memory>
+#include <string>
+#include <string_view>
 
 namespace Dim {
 
@@ -24,7 +26,7 @@ void cryptRandomBytes(void * ptr, size_t count);
 
 /****************************************************************************
 *
-*   Hex nibble conversions
+*   Hex conversions
 *
 ***/
 
@@ -40,6 +42,9 @@ constexpr char hexFromNibble(unsigned val) {
     const char s_chars[] = "0123456789abcdef";
     return s_chars[val];
 }
+
+bool hexToBytes(std::string & out, std::string_view src, bool append);
+void hexFromBytes(std::string & out, std::string_view src, bool append);
 
 
 /****************************************************************************

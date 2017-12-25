@@ -45,38 +45,57 @@ void Dim::cryptRandomBytes(void * vptr, size_t count) {
 
 /****************************************************************************
 *
-*   Unicode
+*   Hex conversions
 *
 ***/
 
+static const unsigned char s_hexToNibble[256] = {
+    16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
+    16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
+    16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
+    0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  16, 16, 16, 16, 16, 16,
+    16, 10, 11, 12, 13, 14, 15, 16, 16, 16, 16, 16, 16, 16, 16, 16,
+    16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
+    16, 10, 11, 12, 13, 14, 15, 16, 16, 16, 16, 16, 16, 16, 16, 16,
+    16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
+    16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
+    16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
+    16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
+    16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
+    16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
+    16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
+    16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
+    16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
+};
+
 //===========================================================================
-// Wikipedia article on byte order marks:
-//   https://en.wikipedia.org/wiki/Byte_order_mark#Representations_of_byte_order_marks_by_encoding
-UtfType Dim::utfBomType(const char bytes[], size_t count) {
-    if (count >= 2) {
-        switch (bytes[0]) {
-        case 0:
-            if (count >= 4 && bytes[1] == 0 && bytes[2] == '\xfe'
-                && bytes[3] == '\xff') {
-                return kUtf32BE;
-            }
-            break;
-        case '\xef':
-            if (count >= 3 && bytes[1] == '\xbb' && bytes[2] == '\xbf')
-                return kUtf8;
-            break;
-        case '\xfe':
-            if (bytes[1] == '\xff')
-                return kUtf16BE;
-            break;
-        case '\xff':
-            if (bytes[1] == '\xfe') {
-                if (count >= 4 && bytes[2] == 0 && bytes[3] == 0)
-                    return kUtf32LE;
-                return kUtf16LE;
-            }
-            break;
-        }
+bool Dim::hexToBytes(string & out, string_view src, bool append) {
+    if (src.size() % 2)
+        return false;
+    if (!append)
+        out.clear();
+
+    auto pos = out.size();
+    out.resize(pos + src.size() / 2);
+    for (size_t i = 0; i < src.size(); i += 2) {
+        int high = s_hexToNibble[src[i]];
+        int low = s_hexToNibble[src[i + 1]];
+        if ((high | low) & 0x10)
+            return false;
+        out[pos++] = uint8_t((high << 4) + low);
     }
-    return kUtfUnknown;
+    return true;
+}
+
+//===========================================================================
+void Dim::hexFromBytes(string & out, string_view src, bool append) {
+    if (!append)
+        out.clear();
+
+    auto pos = out.size();
+    out.resize(pos + 2 * src.size());
+    for (int ch : src) {
+        out[pos++] = hexFromNibble(ch >> 4);
+        out[pos++] = hexFromNibble(ch & 0x0f);
+    }
 }
