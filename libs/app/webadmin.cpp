@@ -58,6 +58,8 @@ class HtmlCounters : public IHttpRouteNotify {
         unordered_multimap<string_view, string_view> & params,
         HttpRequest & msg
     ) override;
+
+    vector<PerfValue> m_values;
 };
 
 //===========================================================================
@@ -66,8 +68,7 @@ void HtmlCounters::onHttpRequest(
     unordered_multimap<string_view, string_view> & params,
     HttpRequest & msg
 ) {
-    vector<PerfValue> perfs;
-    perfGetValues(perfs, true);
+    perfGetValues(m_values, true);
 
     HttpResponse res;
     XBuilder bld(res.body());
@@ -77,7 +78,7 @@ void HtmlCounters::onHttpRequest(
         .elem("th", "Value")
         .elem("th", "Name")
         .end();
-    for (auto && perf : perfs) {
+    for (auto && perf : m_values) {
         bld.start("tr")
             .elem("td", perf.value.c_str())
             .elem("td", perf.name.data())
@@ -103,6 +104,8 @@ class JsonCounters : public IHttpRouteNotify {
         unordered_multimap<string_view, string_view> & params,
         HttpRequest & msg
     ) override;
+
+    vector<PerfValue> m_values;
 };
 
 //===========================================================================
@@ -111,13 +114,12 @@ void JsonCounters::onHttpRequest(
     unordered_multimap<string_view, string_view> & params,
     HttpRequest & msg
 ) {
-    vector<PerfValue> perfs;
-    perfGetValues(perfs);
+    perfGetValues(m_values);
 
     HttpResponse res;
     JBuilder bld(res.body());
     bld.object();
-    for (auto && perf : perfs) {
+    for (auto && perf : m_values) {
         bld.member(perf.name);
         bld.valueRaw(perf.value);
     }

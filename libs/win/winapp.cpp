@@ -97,7 +97,7 @@ static void setItemText(HWND wnd, int item, int col, string_view text) {
 static void updateList(HWND parent) {
     auto wnd = GetDlgItem(parent, kListId);
 
-    vector<PerfValue> vals;
+    static vector<PerfValue> vals;
     perfGetValues(vals, true);
     int cvals = (int) vals.size();
 

@@ -75,16 +75,29 @@ static PerfFunc<T> & perf(string_view name, function<T()> && fn) {
 //===========================================================================
 template <typename T>
 static void valueToString(std::string & out, T val, bool pretty) {
+    auto str = StrFrom<T>{val};
     if (!pretty) {
-        StrFrom<T> str{val};
         out = str;
         return;
     }
 
-    ostringstream os;
-    os.imbue(locale(""));
-    os << val;
-    out = os.str();
+    auto v = string_view{str};
+    auto num = (v.size() - 1) % 3 + 1;
+    out.resize(v.size() + (v.size() - num) / 3);
+    auto optr = out.data();
+    auto ptr = v.data();
+    auto eptr = ptr + v.size();
+    switch (num) {
+        case 3: *optr++ = *ptr++;
+        case 2: *optr++ = *ptr++;
+        case 1: *optr++ = *ptr++;
+    }
+    while (ptr != eptr) {
+        *optr++ = ',';
+        *optr++ = *ptr++;
+        *optr++ = *ptr++;
+        *optr++ = *ptr++;
+    }
 }
 
 
