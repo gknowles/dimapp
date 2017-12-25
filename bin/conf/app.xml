@@ -4,4 +4,32 @@
   <DisableInactiveTimeout value="0"/>
   <Port value="41000"/>
   <EnableAppWindow value="1"/>
+
+  <!--
+  Multiple certificates may be included from multiple stores. Each store
+  has a name and location from the lists below. For more about what those are,
+  go trolling through the windows docs :P
+
+  Names:
+    My (default)
+    Root
+    Trust
+    CA
+  Locations:
+    Current User (default)
+    Local Machine
+    Current Service
+    Current User Group Policy
+    Local Machine Group Policy
+    Local Machine Enterprise
+  -->
+  <Certificates>
+    <Store name="My" location="Current User">
+      <Certificate subjectKeyId="a935a622900e2f093d93faa974fcdb6bd88c8fe7"/>
+    </Store>
+    <Store name="CA" location="Current User">
+      <!-- CertReq Test Root -->
+      <Certificate subjectKeyId="73777128b65b38cfc886be1be9731e315fad05a2"/>
+    </Store>
+  </Certificates>
 </App>

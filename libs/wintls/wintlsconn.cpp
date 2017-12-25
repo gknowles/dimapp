@@ -321,6 +321,40 @@ void ServerConn::send(CharBuf * out, string_view src) {
 
 /****************************************************************************
 *
+*   Configuration monitor
+*
+***/
+
+namespace {
+class AppXmlNotify : public IConfigNotify {
+    void onConfigChange(const XDocument & doc) override;
+};
+} // namespace
+static AppXmlNotify s_appXml;
+
+//===========================================================================
+void AppXmlNotify::onConfigChange(const XDocument & doc) {
+    vector<CertKey> keys;
+    auto xcerts = configElement(doc, "Certificates");
+    for (auto && xstore : elems(xcerts, "Store")) {
+        CertKey key;
+        key.storeName = attrValue(&xstore, "name", "My");
+        key.storeLoc = attrValue(&xstore, "location", "Current User");
+        for (auto && xcert : elems(&xstore, "Certificate")) {
+            key.subjectKeyIdentifier = attrValue(&xcert, "subjectKeyId", "");
+            keys.push_back(key);
+        }
+    }
+
+    auto cred = iWinTlsCreateCred(keys.data(), keys.size());
+
+    scoped_lock<shared_mutex> lk{s_mut};
+    s_srvCred = move(cred);
+}
+
+
+/****************************************************************************
+*
 *   ShutdownNotify
 *
 ***/
@@ -334,10 +368,13 @@ static ShutdownNotify s_cleanup;
 
 //===========================================================================
 void ShutdownNotify::onShutdownConsole (bool firstTry) {
-    shared_lock<shared_mutex> lk{s_mut};
-    if (!s_conns.empty())
-        return shutdownIncomplete();
+    {
+        shared_lock<shared_mutex> lk{s_mut};
+        if (!s_conns.empty())
+            return shutdownIncomplete();
+    }
 
+    scoped_lock<shared_mutex> lk{s_mut};
     s_srvCred.reset();
 }
 
@@ -351,8 +388,7 @@ void ShutdownNotify::onShutdownConsole (bool firstTry) {
 //===========================================================================
 void Dim::winTlsInitialize() {
     shutdownMonitor(&s_cleanup);
-
-    s_srvCred = iWinTlsCreateCred();
+    configMonitor("app.xml", &s_appXml);
 }
 
 //===========================================================================

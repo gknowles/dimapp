@@ -46,35 +46,6 @@ private:
 } // namespace
 
 
-
-/****************************************************************************
-*
-*   default_delete
-*
-***/
-
-//===========================================================================
-void std::default_delete<const CERT_CONTEXT>::operator()(
-    const CERT_CONTEXT * ptr
-) const {
-    if (ptr) {
-        // free (aka decref) always succeeds
-        CertFreeCertificateContext(ptr);
-    }
-}
-
-//===========================================================================
-void std::default_delete<CredHandle>::operator()(CredHandle * ptr) const {
-    if (SecIsValidHandle(ptr)) {
-        WinError err = (SecStatus) FreeCredentialsHandle(ptr);
-        if (err)
-            logMsgCrash() << "FreeCredentialsHandle: " << err;
-        SecInvalidateHandle(ptr);
-    }
-    delete ptr;
-}
-
-
 /****************************************************************************
 *
 *   Helpers
@@ -139,8 +110,9 @@ static NCRYPT_KEY_HANDLE createKey() {
 }
 
 //===========================================================================
-static void encodeObject(
-    CRYPT_OBJID_BLOB & out,
+template<typename T>
+static void encodeBlob(
+    T & out,
     string & outData,
     const char structType[],
     const void * structInfo
@@ -163,7 +135,7 @@ static void encodeObject(
         (BYTE *) outData.data(),
         &out.cbData
     )) {
-        logMsgCrash() << "CryptEncodeObject(" << structType << ", NULL): "
+        logMsgCrash() << "CryptEncodeObject(" << structType << "): "
             << WinError{};
     }
     assert(out.cbData == outData.size());
@@ -218,7 +190,7 @@ static const CERT_CONTEXT * makeCert(string_view issuerName) {
     CERT_EXTENSION extSan;
     extSan.pszObjId = (char *) szOID_SUBJECT_ALT_NAME2;
     extSan.fCritical = false;
-    encodeObject(extSan.Value, extSanData, X509_ALTERNATE_NAME, &ni);
+    encodeBlob(extSan.Value, extSanData, X509_ALTERNATE_NAME, &ni);
 
     CERT_EXTENSIONS exts;
     exts.cExtension = 1;
@@ -333,67 +305,121 @@ static bool matchHost(const CERT_CONTEXT * cert, string_view host) {
 }
 
 //===========================================================================
-static void getCerts(
+static bool isSelfSigned(const CERT_CONTEXT * cert) {
+    return CertCompareCertificateName(
+        X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,
+        &cert->pCertInfo->Subject,
+        &cert->pCertInfo->Issuer
+    );
+}
+
+
+//===========================================================================
+static bool hasEnhancedUsage(const CERT_CONTEXT * cert, string_view oid) {
+    DWORD cb;
+    if (!CertGetEnhancedKeyUsage(
+        cert,
+        0, // flags
+        nullptr,
+        &cb
+    )) {
+        logMsgCrash()
+            << "CertGetCertificateContextProperty(ENHKEY_USAGE, NULL): "
+            << WinError{};
+    }
+    string eudata(cb, '\0');
+    auto eu = (CERT_ENHKEY_USAGE *) eudata.data();
+    if (!CertGetEnhancedKeyUsage(cert, 0, eu, &cb)) {
+        WinError err;
+        if (err == CRYPT_E_NOT_FOUND) {
+            // good for all uses
+            return true;
+        }
+        logMsgCrash()
+            << "CertGetCertificateContextProperty(ENHKEY_USAGE): "
+            << WinError{};
+    }
+    for (unsigned i = 0; i < eu->cUsageIdentifier; ++i) {
+        if (eu->rgpszUsageIdentifier[i] == oid)
+            return true;
+    }
+    return false;
+}
+
+//===========================================================================
+static void addCerts(
     vector<unique_ptr<const CERT_CONTEXT>> & certs,
-    string_view host,
-    bool serviceStore
+    string_view storeName,
+    CertLocation storeLoc,
+    string_view subjectKeyId
 ) {
+    string subjectKeyBytes;
+    if (!hexToBytes(subjectKeyBytes, subjectKeyId, false)) {
+        logMsgError() << "findCert, malformed subject key identifier, {"
+            << subjectKeyId << "}";
+        return;
+    }
+    CRYPT_DATA_BLOB subKeyBlob;
+    subKeyBlob.cbData = (DWORD) subjectKeyBytes.size();
+    subKeyBlob.pbData = (BYTE *) subjectKeyBytes.data();
+
+    auto wstore = toWstring(storeName);
     auto hstore = HCERTSTORE{};
-    DWORD flags = serviceStore
-        ? CERT_SYSTEM_STORE_CURRENT_SERVICE
-        //: CERT_SYSTEM_STORE_CURRENT_USER;
-        : CERT_SYSTEM_STORE_LOCAL_MACHINE;
+    DWORD flags = (storeLoc << CERT_SYSTEM_STORE_LOCATION_SHIFT);
     hstore = CertOpenStore(
         CERT_STORE_PROV_SYSTEM,
         NULL,
         NULL,
         flags | CERT_STORE_OPEN_EXISTING_FLAG | CERT_STORE_READONLY_FLAG,
-        L"MY"
+        wstore.data()
     );
     if (!hstore) {
         WinError err;
-        logMsgCrash() << "CertOpenStore('MY',"
-            << (serviceStore ? "CURRENT_SERVICE" : "CURRENT_USER")
-            << "): " << err;
-        abort();
+        logMsgError() << "CertOpenStore('" << storeName << "',"
+            << storeLoc.view() << "): " << err;
+        return;
     }
 
-    const char * oids[] = { szOID_PKIX_KP_SERVER_AUTH };
-    CERT_ENHKEY_USAGE eu = {};
-    eu.cUsageIdentifier = (DWORD) size(oids);
-    eu.rgpszUsageIdentifier = (char **) oids;
-
     const CERT_CONTEXT * cert{nullptr};
-    unique_ptr<const CERT_CONTEXT> selfsigned;
-    unique_ptr<const CERT_CONTEXT> tmpcert;
     for (;;) {
         cert = CertFindCertificateInStore(
             hstore,
-            X509_ASN_ENCODING,
-            CERT_FIND_OPTIONAL_ENHKEY_USAGE_FLAG,
-            CERT_FIND_ENHKEY_USAGE,
-            &eu,
+            X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,
+            0, // flags
+            CERT_FIND_KEY_IDENTIFIER,
+            &subKeyBlob,
             cert
         );
-        if (!cert)
+        if (!cert) {
+            WinError err;
+            if (err != CRYPT_E_NOT_FOUND)
+                logMsgError() << "CertFindCertificateInStore: " << err;
             break;
-        if (!matchHost(cert, host))
-            continue;
-
-        // TODO: check cert->pCertInfo->NotBefore & NotAfter?
-
-        if (CertCompareCertificateName(
-            X509_ASN_ENCODING,
-            &cert->pCertInfo->Subject,
-            &cert->pCertInfo->Issuer
-        )) {
-            // self-signed, keep searching for better
-            if (!selfsigned) {
-                // keep a copy (aka incref)
-                selfsigned.reset(CertDuplicateCertificateContext(cert));
-            }
-            continue;
         }
+
+        if (!hasEnhancedUsage(cert, szOID_PKIX_KP_SERVER_AUTH))
+            continue;
+
+        // has usable private key?
+        NCRYPT_KEY_HANDLE nkey;
+        DWORD keySpec;
+        BOOL mustFree;
+        if (!CryptAcquireCertificatePrivateKey(
+            cert,
+            CRYPT_ACQUIRE_CACHE_FLAG | CRYPT_ACQUIRE_SILENT_FLAG
+                | CRYPT_ACQUIRE_COMPARE_KEY_FLAG
+                | CRYPT_ACQUIRE_ONLY_NCRYPT_KEY_FLAG,
+            NULL,
+            &nkey,
+            &keySpec,
+            &mustFree
+        )) {
+            WinError err;
+            continue;
+            // NTE_BAD_PUBLIC_KEY - 8009'0015
+            // NTE_SILENT_CONTEXT - 8009'0022
+        }
+        assert(!mustFree);
 
         // add copy to list of matches
         certs.push_back({});
@@ -402,20 +428,60 @@ static void getCerts(
 
     // closing the store (decref) always succeeds
     CertCloseStore(hstore, 0);
+}
 
-    if (certs.empty() && selfsigned) {
-        CertName sub;
-        sub.reset(selfsigned->pCertInfo->Subject);
-        logMsgDebug() << "Using cert self-signed by '" << sub.str() << "'";
-        sub.release();
-        certs.push_back(move(selfsigned));
+//===========================================================================
+static void getCerts(
+    vector<unique_ptr<const CERT_CONTEXT>> & certs,
+    const CertKey keys[],
+    size_t numKeys
+) {
+    certs.clear();
+    auto ekeys = keys + numKeys;
+    for (auto ptr = keys; ptr != ekeys; ++ptr) {
+        addCerts(
+            certs,
+            ptr->storeName,
+            ptr->storeLoc,
+            ptr->subjectKeyIdentifier
+        );
     }
 
     // no certs found? try to make a new one
     if (certs.empty()) {
+        logMsgError() << "No valid Certificate found, creating temporary "
+            "self-signed cert.";
         auto cert = makeCert("wintls.dimapp");
         certs.push_back(unique_ptr<const CERT_CONTEXT>(cert));
     }
+}
+
+
+/****************************************************************************
+*
+*   default_delete
+*
+***/
+
+//===========================================================================
+void std::default_delete<const CERT_CONTEXT>::operator()(
+    const CERT_CONTEXT * ptr
+) const {
+    if (ptr) {
+        // free (aka decref) always succeeds
+        CertFreeCertificateContext(ptr);
+    }
+}
+
+//===========================================================================
+void std::default_delete<CredHandle>::operator()(CredHandle * ptr) const {
+    if (SecIsValidHandle(ptr)) {
+        WinError err = (SecStatus) FreeCredentialsHandle(ptr);
+        if (err)
+            logMsgCrash() << "FreeCredentialsHandle: " << err;
+        SecInvalidateHandle(ptr);
+    }
+    delete ptr;
 }
 
 
@@ -528,16 +594,48 @@ string CertName::str() const {
 
 /****************************************************************************
 *
+*   CredLocation
+*
+***/
+
+static const TokenTable::Token s_storeLocs[] = {
+    { CertLocation::kCurrentService,          "Current Service" },
+    { CertLocation::kCurrentUser,             "Current User" },
+    { CertLocation::kCurrentUserGroupPolicy,  "Current User Group Policy" },
+    { CertLocation::kLocalMachine,            "Local Machine" },
+    { CertLocation::kLocalMachineEnterprise,  "Local Machine Enterprise" },
+    { CertLocation::kLocalMachineGroupPolicy, "Local Machine Group Policy" },
+};
+static const TokenTable s_storeLocTbl(s_storeLocs, size(s_storeLocs));
+
+
+//===========================================================================
+CertLocation & CertLocation::operator=(std::string_view name) {
+    m_value = tokenTableGetEnum(s_storeLocTbl, name, kInvalid);
+    return *this;
+}
+
+//===========================================================================
+std::string_view CertLocation::view() const {
+    return tokenTableGetName(s_storeLocTbl, m_value, "");
+}
+
+
+/****************************************************************************
+*
 *   Public API
 *
 ***/
 
 //===========================================================================
-unique_ptr<CredHandle> Dim::iWinTlsCreateCred() {
+unique_ptr<CredHandle> Dim::iWinTlsCreateCred(
+    const CertKey keys[],
+    size_t numKeys
+) {
     WinError err{0};
 
     vector<unique_ptr<const CERT_CONTEXT>> certs;
-    getCerts(certs, "", appFlags() & fAppIsService);
+    getCerts(certs, keys, numKeys);
 
     vector<const CERT_CONTEXT *> ptrs;
     SCHANNEL_CRED cred = {};
@@ -573,7 +671,15 @@ unique_ptr<CredHandle> Dim::iWinTlsCreateCred() {
     Time8601Str expiryStr(expires, 3, timeZoneMinutes(expires));
     logMsgInfo() << "Credentials expiration: " << expiryStr.c_str();
 
-    // TODO: log warning if the credential is about to expire?
-
     return handle;
+}
+
+//===========================================================================
+bool Dim::iWinTlsIsSelfSigned(const CERT_CONTEXT * cert) {
+    return isSelfSigned(cert);
+}
+
+//===========================================================================
+bool Dim::iWinTlsMatchHost(const CERT_CONTEXT * cert, string_view host) {
+    return matchHost(cert, host);
 }
