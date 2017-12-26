@@ -417,7 +417,7 @@ void Dim::unlinkNode(XNode * node) {
 
 //===========================================================================
 static bool matchNode(const XNode * node, string_view name, XType type) {
-    if (type != XType::kInvalid && type != nodeType(node))
+    if (!node || type != XType::kInvalid && type != nodeType(node))
         return false;
     if (!name.empty() && name != node->name)
         return false;
