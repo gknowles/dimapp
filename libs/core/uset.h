@@ -53,6 +53,8 @@ public:
     UnsignedSet();
     UnsignedSet(UnsignedSet && from);
     UnsignedSet(const UnsignedSet & from);
+    UnsignedSet(std::initializer_list<unsigned> from);
+    UnsignedSet(std::string_view from);
     ~UnsignedSet();
 
     UnsignedSet & operator=(UnsignedSet && from);
@@ -73,7 +75,7 @@ public:
     void fill();
     void assign(unsigned value);
     template <typename InputIt, typename = std::enable_if_t<
-        std::is_convertible_v<*std::declval<InputIt>(), unsigned> >>
+            std::is_convertible_v<*std::declval<InputIt>(), unsigned> >>
         void assign(InputIt first, InputIt last);
     void assign(std::initializer_list<unsigned> il);
     void assign(UnsignedSet && from);
@@ -81,7 +83,7 @@ public:
     void assign(std::string_view src); // space separated ranges
     void insert(unsigned value);
     template <typename InputIt, typename = std::enable_if_t<
-        std::is_convertible_v<*std::declval<InputIt>(), unsigned> >>
+            std::is_convertible_v<*std::declval<InputIt>(), unsigned> >>
         void insert(InputIt first, InputIt last);
     void insert(std::initializer_list<unsigned> il);
     void insert(UnsignedSet && other);
@@ -122,6 +124,11 @@ private:
 
     Node m_node;
 };
+
+//===========================================================================
+inline UnsignedSet::UnsignedSet(std::initializer_list<unsigned> il) {
+    insert(il);
+}
 
 //===========================================================================
 template<typename InputIt, typename>

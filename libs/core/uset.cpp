@@ -1615,6 +1615,11 @@ UnsignedSet::UnsignedSet(const UnsignedSet & from) {
 }
 
 //===========================================================================
+UnsignedSet::UnsignedSet(string_view from) {
+    insert(from);
+}
+
+//===========================================================================
 UnsignedSet::~UnsignedSet() {
     clear();
 }
