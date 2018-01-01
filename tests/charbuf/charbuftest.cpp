@@ -81,16 +81,23 @@ static void app(int argc, char *argv[]) {
     buf.replace(4, 1, ""); // erase one char
     EXPECT(buf == "abcdefgh");
 
-    buf.assign(5000, 'a');
-    buf.insert(4094, "x");
-    EXPECT(buf.size() == 5001);
-    EXPECT(buf.compare(4092, 5, "aaxaa") == 0);
+    auto blkLen = buf.defaultBlockSize();
+    auto len = 3 * blkLen / 2;
+    buf.assign(len, 'a');
+    buf.insert(blkLen - 2, "x");
+    EXPECT(buf.size() == len + 1);
+    EXPECT(buf.compare(blkLen - 4, 5, "aaxaa") == 0);
 
     size_t count = 0;
     for (auto && view : buf.views()) {
         count += view.size();
     }
     EXPECT(count == buf.size());
+
+    CharBuf buf2;
+    buf2.assign(2 * blkLen, 'b');
+    buf.insert(blkLen / 2, buf2);
+    EXPECT(buf.size() == count + buf2.size());
 
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);

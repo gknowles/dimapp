@@ -95,6 +95,7 @@ const char & CharBuf::front() const {
 char & CharBuf::back() {
     assert(m_size);
     auto & buf = m_buffers.back();
+    assert(buf.used);
     return buf.data[buf.used - 1];
 }
 
@@ -102,6 +103,7 @@ char & CharBuf::back() {
 const char & CharBuf::back() const {
     assert(m_size);
     auto & buf = m_buffers.back();
+    assert(buf.used);
     return buf.data[buf.used - 1];
 }
 
@@ -307,13 +309,13 @@ CharBuf & CharBuf::rtrim(char ch) {
 
 //===========================================================================
 void CharBuf::pushBack(char ch) {
-    if (!m_size)
-        m_buffers.emplace_back();
-
-    auto buf = &m_buffers.back();
-    if (buf->reserved == buf->used) {
-        m_buffers.emplace_back();
+    Buffer * buf{nullptr};
+    if (!m_size) {
+        buf = &m_buffers.emplace_back();
+    } else {
         buf = &m_buffers.back();
+        if (buf->reserved == buf->used)
+            buf = &m_buffers.emplace_back();
     }
 
     m_size += 1;
@@ -324,7 +326,7 @@ void CharBuf::pushBack(char ch) {
 void CharBuf::popBack() {
     assert(m_size);
     m_size -= 1;
-    Buffer & buf = m_buffers.back();
+    auto & buf = m_buffers.back();
     if (--buf.used)
         return;
 
@@ -648,6 +650,11 @@ void CharBuf::swap(CharBuf & other) {
 }
 
 //===========================================================================
+size_t CharBuf::defaultBlockSize() const {
+    return kDefaultBlockSize;
+}
+
+//===========================================================================
 // ITempHeap
 char * CharBuf::alloc(size_t bytes, size_t align) {
     return nullptr;
@@ -725,7 +732,7 @@ CharBuf & CharBuf::insert(
 ) {
     assert(pos <= it->used);
     auto mydata = it->data + pos;
-    auto mycount = it->used - pos;
+    auto myafter = it->used - pos;
     auto myavail = it->reserved - it->used;
     auto add = (int) numCh;
     m_size += add;
@@ -733,7 +740,7 @@ CharBuf & CharBuf::insert(
     if (add <= myavail) {
         // fits inside the current buffer
         if (add) {
-            memmove(mydata + add, mydata, mycount);
+            memmove(mydata + add, mydata, myafter);
             memset(mydata, ch, add);
             it->used += add;
         }
@@ -743,7 +750,7 @@ CharBuf & CharBuf::insert(
     // Split the block if we're inserting into the middle of it
     it = split(it, pos);
     mydata = it->data + pos;
-    mycount = 0;
+    myafter = 0;
     myavail = it->reserved - it->used;
 
     // Copy to the rest of the current block and to as many new blocks as
@@ -770,7 +777,7 @@ CharBuf & CharBuf::insert(
 ) {
     assert(pos <= it->used);
     auto mydata = it->data + pos;
-    auto mycount = it->used - pos;
+    auto myafter = it->used - pos;
     auto myavail = it->reserved - it->used;
 
     // memchr s for \0 within the number of bytes that will fit in the
@@ -779,7 +786,7 @@ CharBuf & CharBuf::insert(
     if (eptr) {
         // the string fits inside the current buffer
         if (int add = int(eptr - s)) {
-            memmove(mydata + add, mydata, mycount);
+            memmove(mydata + add, mydata, myafter);
             memcpy(mydata, s, add);
             it->used += add;
             m_size += add;
@@ -790,7 +797,7 @@ CharBuf & CharBuf::insert(
     // Split the block if we're inserting into the middle of it
     it = split(it, pos);
     mydata = it->data + pos;
-    mycount = 0;
+    myafter = 0;
     myavail = it->reserved - it->used;
 
     // Copy to the rest of the current block and to as many new blocks as
@@ -827,7 +834,7 @@ CharBuf & CharBuf::insert(
 ) {
     assert(pos <= it->used);
     auto mydata = it->data + pos;
-    auto mycount = it->used - pos;
+    auto myafter = it->used - pos;
     auto myavail = it->reserved - it->used;
     auto add = (int) slen;
     m_size += add;
@@ -835,7 +842,7 @@ CharBuf & CharBuf::insert(
     if (add <= myavail) {
         // the string fits inside the current buffer
         if (add) {
-            memmove(mydata + add, mydata, mycount);
+            memmove(mydata + add, mydata, myafter);
             memcpy(mydata, s, add);
             it->used += add;
         }
@@ -845,7 +852,7 @@ CharBuf & CharBuf::insert(
     // Split the block if we're inserting into the middle of it
     it = split(it, pos);
     mydata = it->data + pos;
-    mycount = 0;
+    myafter = 0;
     myavail = it->reserved - it->used;
 
     // Copy to the rest of the current block and to as many new blocks as
@@ -875,22 +882,23 @@ CharBuf & CharBuf::insert(
 ) {
     assert(pos <= myi->used);
     assert(rpos <= ri->used);
-    auto mycount = myi->used - pos;
+    auto mydata = myi->data + pos;
+    auto myafter = myi->used - pos;
+    auto myavail = myi->reserved - myi->used;
     auto rdata = ri->data + rpos;
     auto rcount = ri->used - rpos;
-    auto num = (int) rlen;
-    m_size += num;
+    auto add = (int) rlen;
+    m_size += add;
 
-    if (myi->used + num <= myi->reserved) {
-        auto mydata = myi->data + pos;
-        memmove(mydata + num, mydata, mycount);
+    if (add <= myavail) {
+        memmove(mydata + add, mydata, myafter);
 
         for (;;) {
-            int bytes = min(num, rcount);
+            int bytes = min(add, rcount);
             memcpy(mydata, rdata, bytes);
             myi->used += bytes;
-            num -= bytes;
-            if (!num)
+            add -= bytes;
+            if (!add)
                 return *this;
             mydata += bytes;
             ++ri;
@@ -901,21 +909,23 @@ CharBuf & CharBuf::insert(
 
     // Split the block if we're inserting into the middle of it
     myi = split(myi, pos);
+    mydata = myi->data + pos;
+    myafter = 0;
+    myavail = myi->reserved - myi->used;
 
-    auto mydata = myi->data + pos;
     for (;;) {
-        int bytes = min(num, min(mycount, rcount));
+        int bytes = min(add, min(myavail, rcount));
         memcpy(mydata, rdata, bytes);
         myi->used += bytes;
-        num -= bytes;
-        if (!num)
+        add -= bytes;
+        if (!add)
             return *this;
-        if (mycount -= bytes) {
+        if (myavail -= bytes) {
             mydata += bytes;
         } else {
-            ++myi;
+            myi = m_buffers.emplace(++myi);
             mydata = myi->data;
-            mycount = myi->used;
+            myavail = myi->reserved;
         }
         if (rcount -= bytes) {
             rdata += bytes;

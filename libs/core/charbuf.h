@@ -110,6 +110,8 @@ public:
     size_t copy(char * out, size_t count, size_t pos = 0) const;
     void swap(CharBuf & other);
 
+    size_t defaultBlockSize() const;
+
     // ITempHeap
     char * alloc(size_t bytes, size_t align) override;
 
