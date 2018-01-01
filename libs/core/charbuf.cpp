@@ -142,6 +142,7 @@ char * CharBuf::data(size_t pos, size_t count) {
     if (pos == (size_t) m_size)
         return nullptr;
 
+    count = min<size_t>(count, m_size);
     auto need = (int) min(count, m_size - pos);
     auto ic = find(pos);
     auto myi = ic.first;
