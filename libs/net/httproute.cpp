@@ -407,6 +407,8 @@ void Dim::httpRouteReplyNotFound(unsigned reqId, const HttpRequest & req) {
 //===========================================================================
 // ReplyWithFile
 //===========================================================================
+namespace {
+
 struct ReplyWithFileNotify : IFileReadNotify {
     unsigned m_reqId{0};
     char m_buffer[8'192];
@@ -427,6 +429,8 @@ struct ReplyWithFileNotify : IFileReadNotify {
         delete this;
     }
 };
+
+} // namespace
 
 //===========================================================================
 void Dim::httpRouteReplyWithFile(unsigned reqId, std::string_view path) {

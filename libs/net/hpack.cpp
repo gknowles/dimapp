@@ -18,23 +18,10 @@ using namespace Dim;
 
 /****************************************************************************
 *
-*   Tuning parameters
-*
-***/
-
-
-/****************************************************************************
-*
 *   Declarations
 *
 ***/
 
-struct Dim::HpackFieldView {
-    const char * name;
-    const char * value;
-};
-
-//===========================================================================
 namespace {
 
 struct EncodeItem {
@@ -43,6 +30,7 @@ struct EncodeItem {
 };
 
 const int16_t kDecodeUnused = numeric_limits<int16_t>::max();
+
 struct DecodeItem {
     int16_t zero{kDecodeUnused};
     int16_t one{kDecodeUnused};
@@ -56,7 +44,8 @@ public:
         ITempHeap * heap,
         size_t unusedBits,
         const char src[],
-        size_t count);
+        size_t count
+    ) const;
 
 private:
     int m_prefixBits{0};
@@ -64,6 +53,11 @@ private:
 };
 
 } // namespace
+
+struct Dim::HpackFieldView {
+    const char * name;
+    const char * value;
+};
 
 
 /****************************************************************************
@@ -74,7 +68,7 @@ private:
 
 // static table has the following 61 members (not counting 0) as defined by
 // rfc7541 appendix A
-const HpackFieldView s_staticTable[] = {
+const HpackFieldView kStaticTable[] = {
     {},
     {":authority", ""},
     {":method", "GET"},
@@ -138,10 +132,10 @@ const HpackFieldView s_staticTable[] = {
     {"via", ""},
     {"www-authenticate", ""},
 };
-static_assert(size(s_staticTable) == 62);
+static_assert(size(kStaticTable) == 62);
 
 // Huffman encoding as defined by rfc7541 appendix B
-const EncodeItem s_encodeTable[] = {
+const EncodeItem kEncodeTable[] = {
     {0x1ff8, 13},     //     (  0) |11111111|11000
     {0x7fffd8, 23},   //     (  1) |11111111|11111111|1011000
     {0xfffffe2, 28},  //     (  2) |11111111|11111111|11111110|0010
@@ -400,7 +394,7 @@ const EncodeItem s_encodeTable[] = {
     {0x3ffffee, 26},  //     (255) |11111111|11111111|11111011|10
     {0x3fffffff, 30}, // EOS (256) |11111111|11111111|11111111|111111
 };
-static_assert(size(s_encodeTable) == 257);
+static_assert(size(kEncodeTable) == 257);
 
 
 /****************************************************************************
@@ -409,7 +403,7 @@ static_assert(size(s_encodeTable) == 257);
 *
 ***/
 
-static HuffDecoder s_decode(s_encodeTable, size(s_encodeTable));
+const HuffDecoder s_decode{kEncodeTable, size(kEncodeTable)};
 
 
 /****************************************************************************
@@ -598,7 +592,7 @@ bool HuffDecoder::decode(
     size_t unusedBits,
     const char src[],
     size_t count
-) {
+) const {
     assert(count);
     int avail = (int)unusedBits;
     const char * ptr = src;
@@ -611,7 +605,7 @@ bool HuffDecoder::decode(
         if (!read(&key, m_prefixBits, avail, ptr, eptr))
             goto done;
         do {
-            DecodeItem & di = m_decodeTable[key];
+            auto & di = m_decodeTable[key];
             if (!read(&key, 1, avail, ptr, eptr))
                 goto done;
             val = (key & 1) ? di.one : di.zero;
@@ -748,12 +742,12 @@ bool HpackDecode::readIndexedField(
     size_t index;
     if (!read(&index, prefixBits, src, srcLen))
         return false;
-    if (index < size(s_staticTable)) {
+    if (index < size(kStaticTable)) {
         if (!index)
             return false;
-        *out = s_staticTable[index];
+        *out = kStaticTable[index];
     } else {
-        index -= size(s_staticTable);
+        index -= size(kStaticTable);
         if (index >= size(m_dynTable))
             return false;
         HpackDynField & dfld = m_dynTable[index];
@@ -774,12 +768,12 @@ bool HpackDecode::readIndexedName(
     size_t index;
     if (!read(&index, prefixBits, src, srcLen))
         return false;
-    if (index < size(s_staticTable)) {
+    if (index < size(kStaticTable)) {
         if (!index)
             return false;
-        out->name = s_staticTable[index].name;
+        out->name = kStaticTable[index].name;
     } else {
-        index -= size(s_staticTable);
+        index -= size(kStaticTable);
         if (index >= size(m_dynTable))
             return false;
         HpackDynField & dfld = m_dynTable[index];

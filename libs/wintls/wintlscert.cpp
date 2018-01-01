@@ -598,7 +598,7 @@ string CertName::str() const {
 *
 ***/
 
-static const TokenTable::Token s_storeLocs[] = {
+constexpr TokenTable::Token kStoreLocs[] = {
     { CertLocation::kCurrentService,          "Current Service" },
     { CertLocation::kCurrentUser,             "Current User" },
     { CertLocation::kCurrentUserGroupPolicy,  "Current User Group Policy" },
@@ -606,8 +606,7 @@ static const TokenTable::Token s_storeLocs[] = {
     { CertLocation::kLocalMachineEnterprise,  "Local Machine Enterprise" },
     { CertLocation::kLocalMachineGroupPolicy, "Local Machine Group Policy" },
 };
-static const TokenTable s_storeLocTbl(s_storeLocs, size(s_storeLocs));
-
+const TokenTable s_storeLocTbl(kStoreLocs, size(kStoreLocs));
 
 //===========================================================================
 CertLocation & CertLocation::operator=(std::string_view name) {

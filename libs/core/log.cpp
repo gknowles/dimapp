@@ -62,7 +62,7 @@ static thread_local bool t_inProgress;
 ***/
 
 //===========================================================================
-static void LogMsg(LogType type, string_view msg) {
+static void logMsg(LogType type, string_view msg) {
     LogMsgScope scope(type);
 
     if (auto perf = s_perfs[type])
@@ -137,7 +137,7 @@ Detail::Log::Log(Log && from)
 //===========================================================================
 Detail::Log::~Log() {
     auto s = str();
-    LogMsg(m_type, s);
+    logMsg(m_type, s);
 }
 
 

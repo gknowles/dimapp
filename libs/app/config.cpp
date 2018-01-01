@@ -24,6 +24,8 @@ const unsigned kMaxConfigFileSize = 10'000'000;
 *
 ***/
 
+namespace {
+
 struct NotifyInfo {
     IConfigNotify * notify;
 };
@@ -48,6 +50,8 @@ private:
     string_view m_fullpath;
     string_view m_relpath;
 };
+
+} // namespace
 
 
 /****************************************************************************
