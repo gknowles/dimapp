@@ -176,7 +176,11 @@ void SocketBase::hardClose_LK() {
 
     m_mode = Mode::kClosing;
     m_handle = INVALID_SOCKET;
-    m_prewrites.clear();
+    while (auto req = m_prewrites.unlinkFront()) {
+        auto bytes = req->m_rbuf.Length;
+        m_bufInfo.waiting -= bytes;
+        s_perfWaiting -= bytes;
+    }
 }
 
 //===========================================================================
