@@ -46,6 +46,7 @@ public:
     // preformatted value
     IJBuilder & valueRaw(std::string_view val);
 
+    IJBuilder & value(const char val[]);
     IJBuilder & value(std::string_view val);
     IJBuilder & value(bool val);
     IJBuilder & value(double val);

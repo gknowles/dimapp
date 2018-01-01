@@ -240,6 +240,11 @@ IJBuilder & IJBuilder::valueRaw(string_view val) {
 }
 
 //===========================================================================
+IJBuilder & IJBuilder::value(const char val[]) {
+    return value(string_view{val});
+}
+
+//===========================================================================
 IJBuilder & IJBuilder::value(bool val) {
     return valueRaw(val ? "true" : "false");
 }
