@@ -12,16 +12,11 @@ namespace fs = std::experimental::filesystem;
 
 /****************************************************************************
 *
-*   Private
-*
-***/
-
-/****************************************************************************
-*
 *   WebRoot
 *
 ***/
 
+namespace {
 class WebRoot : public IHttpRouteNotify {
     void onHttpRequest(
         unsigned reqId,
@@ -29,6 +24,7 @@ class WebRoot : public IHttpRouteNotify {
         HttpRequest & msg
     ) override;
 };
+} // namespace
 
 //===========================================================================
 void WebRoot::onHttpRequest(
@@ -52,6 +48,7 @@ void WebRoot::onHttpRequest(
 *
 ***/
 
+namespace {
 class HtmlCounters : public IHttpRouteNotify {
     void onHttpRequest(
         unsigned reqId,
@@ -61,6 +58,7 @@ class HtmlCounters : public IHttpRouteNotify {
 
     vector<PerfValue> m_values;
 };
+} // namespace
 
 //===========================================================================
 void HtmlCounters::onHttpRequest(
@@ -98,6 +96,7 @@ void HtmlCounters::onHttpRequest(
 *
 ***/
 
+namespace {
 class JsonCounters : public IHttpRouteNotify {
     void onHttpRequest(
         unsigned reqId,
@@ -107,6 +106,7 @@ class JsonCounters : public IHttpRouteNotify {
 
     vector<PerfValue> m_values;
 };
+} // namespace
 
 //===========================================================================
 void JsonCounters::onHttpRequest(
@@ -132,24 +132,6 @@ void JsonCounters::onHttpRequest(
 
 /****************************************************************************
 *
-*   ShutdownNotify
-*
-***/
-
-namespace {
-class ShutdownNotify : public IShutdownNotify {
-    void onShutdownConsole(bool firstTry) override;
-};
-} // namespace
-static ShutdownNotify s_cleanup;
-
-//===========================================================================
-void ShutdownNotify::onShutdownConsole(bool firstTry) {
-}
-
-
-/****************************************************************************
-*
 *   Public API
 *
 ***/
@@ -160,8 +142,6 @@ static JsonCounters s_jsonCounters;
 
 //===========================================================================
 void Dim::iWebAdminInitialize() {
-    shutdownMonitor(&s_cleanup);
-
     httpRouteAdd(&s_webRoot, "/", fHttpMethodGet, true);
     httpRouteAdd(&s_htmlCounters, "/srv/counters", fHttpMethodGet);
     httpRouteAdd(&s_jsonCounters, "/srv/counters.json", fHttpMethodGet);
