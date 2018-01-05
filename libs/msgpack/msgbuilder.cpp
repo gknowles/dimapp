@@ -316,7 +316,7 @@ IMsgBuilder & IMsgBuilder::uvalue(uint64_t val) {
         unsigned char * in = (unsigned char *) &val;
         uint8_t out[3] = { kUint16, in[1], in[0] };
         return valueRaw({(char *) &out, ::size(out)});
-    } else if (val >= 0xffff'ffff) {
+    } else if (val <= 0xffff'ffff) {
         unsigned char * in = (unsigned char *) &val;
         uint8_t out[5] = { kUint32, in[3], in[2], in[1], in[0] };
         return valueRaw({(char *) &out, ::size(out)});
