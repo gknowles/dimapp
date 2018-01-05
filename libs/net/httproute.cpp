@@ -93,13 +93,17 @@ static auto & s_perfError = uperf("http reply error");
 static IHttpRouteNotify * find(std::string_view path, HttpMethod method) {
     IHttpRouteNotify * best = nullptr;
     size_t bestSegs = 0;
+    size_t bestLen = 0;
     for (auto && pi : s_paths) {
         if (path == pi.path
             || pi.recurse && path.compare(0, pi.path.size(), pi.path) == 0
         ) {
-            if (pi.segs >= bestSegs) {
+            if (pi.segs > bestSegs
+                || pi.segs == bestSegs && pi.path.size() > bestLen
+            ) {
                 best = pi.notify;
                 bestSegs = pi.segs;
+                bestLen = path.size();
             }
         }
     }
