@@ -43,7 +43,7 @@ static string_view urlDecode(string_view src, ITempHeap & heap, bool query) {
     auto eptr = base + outlen;
     for (auto ptr = base; ptr != eptr;) {
         int ch = *ptr++;
-        if (ch == '%' && ptr + 2 < eptr) {
+        if (ch == '%' && ptr + 2 <= eptr) {
             if (auto val = hexToByte(ptr[0], ptr[1]); val < 256) {
                 *optr++ = (char) val;
                 ptr += 2;
@@ -123,7 +123,7 @@ static void addParamValue(
     param->values.link(val);
     val->value = {base, count};
     if (pcts) {
-        val->value = urlDecode(val->value, heap, false);
+        val->value = urlDecode(val->value, heap, true);
         pcts = 0;
     }
     base = eptr;
