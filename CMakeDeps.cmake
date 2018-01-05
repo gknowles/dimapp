@@ -79,6 +79,10 @@
 # libs/json/jsonbaseparse.h
 # libs/json/pch.cpp
 # libs/json/pch.h
+# libs/msgpack/msgbuilder.cpp
+# libs/msgpack/msgpack.h
+# libs/msgpack/pch.cpp
+# libs/msgpack/pch.h
 # libs/net/address.cpp
 # libs/net/address.h
 # libs/net/appint.h
