@@ -320,8 +320,17 @@ const char * HttpRequest::authority() const {
 }
 
 //===========================================================================
-const char * HttpRequest::pathAbsolute() const {
+const char * HttpRequest::pathRaw() const {
     return headers(kHttp_Path).begin()->m_value;
+}
+
+//===========================================================================
+const HttpQuery & HttpRequest::query() const {
+    if (!m_query) {
+        auto self = const_cast<HttpRequest *>(this);
+        self->m_query = urlParseHttpPath(pathRaw(), self->heap());
+    }
+    return *m_query;
 }
 
 //===========================================================================

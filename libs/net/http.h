@@ -14,6 +14,7 @@
 #include "core/charbuf.h"
 #include "core/handle.h"
 #include "core/types.h" // ForwardListIterator
+#include "net/url.h"
 
 #include <memory>
 #include <vector>
@@ -209,16 +210,15 @@ public:
     const char * authority() const;
 
     // includes path, query, and fragment
-    const char * pathAbsolute() const;
-
-    const char * path() const;
-    const char * query() const;
-    const char * fragment() const;
+    const char * pathRaw() const;
+    const HttpQuery & query() const;
 
     bool isRequest() const override { return true; }
 
 private:
     bool checkPseudoHeaders() const override;
+
+    HttpQuery * m_query{nullptr};
 };
 
 class HttpResponse : public HttpMsg {

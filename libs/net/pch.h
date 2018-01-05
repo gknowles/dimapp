@@ -22,6 +22,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <numeric>
 #include <shared_mutex>
 #include <vector>
 

@@ -3,16 +3,21 @@
 ;
 ; uri.abnf - dim uri
 ;
-; rules to parse uri
+; Rules to parse uri, based on the ABNF in the spec at:
+;   https://tools.ietf.org/html/rfc3986
+
 %root = URI
 %api.prefix = Uri
 %api.namespace = Dim::Detail
 
 ; Characters
-gen-delims  = ":" / "/" / "?" / "#" / "[" / "]" / "@" { Char, As copy }
-qry-delims  = "!" / "$" / "'" / "(" / ")" / "*" / "," / ";" { Char, As copy }
+gen-delims  = ":" / "/" / "?" / "#" / "[" / "]" / "@"
+qry-delims  = "!" / "$" / "'" / "(" / ")" / "*" / "," / ";"
 sub-delims  = qry-delims / "&" / "=" / "+"
 unreserved  = ALPHA / DIGIT / "-" / "." / "_" / "~" { Char }
+
+gen-delims-copy = gen-delims { Char, As copy }
+
 
 pct-encoded = "%" pct-high pct-low
 pct-high    = HEXDIG { Char }
@@ -21,17 +26,21 @@ pct-low     = HEXDIG { Char }
 ; URI Grammar
 URI = scheme "://" authority path-abempty [ "?" query ] [ "#" fragment ]
 
+http-path = "*" / origin-form
+origin-form = absolute-path [ "?" query ]
+
 ; Scheme
-scheme      = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." ) { Start, End }
+scheme      = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." ) { Start+, End+ }
 
 ; Authority
 authority   = [ userinfo "@" ] host [ ":" port ]
 userinfo    = *( unreserved / pct-encoded / sub-delims / ":" )
-host        = IP-literal / IPv4address / reg-name { Start, End }
-port        = *DIGIT { Start, Char }
+host        = IP-literal / IPv4address / reg-name { End+ }
+port        = *5DIGIT { Char+ }
 
-IP-literal  = "[" ( IPv6address / IPvFuture  ) "]"
+IP-literal  = "[" ( IPv6address ["%25" ZoneId] / IPvFuture  ) "]"
 IPvFuture   = "v" 1*HEXDIG "." 1*( unreserved / sub-delims / ":" )
+ZoneId      = 1*( unreserved / pct-encoded )
 
 IPv6address =                            6( h16 ":" ) ls32
             /                       "::" 5( h16 ":" ) ls32
@@ -59,15 +68,16 @@ dec-octet   = DIGIT                 ; 0-9
 reg-name    = *( unreserved / pct-encoded / sub-delims )
 
 ; Path
+absolute-path = 1*( "/" segment )
 path-abempty  = *( "/" segment )
-segment       = *pchar { Start, End }
+segment       = *pchar { Start+, End+ }
 pchar         = unreserved / pct-encoded / sub-delims / ":" / "@"
 
 ; Query
 query       = [ qry-pair ] *("&" qry-pair)
 qry-pair    = qry-name [ "=" qry-value ]
-qry-name    = 1*qchar { Start, End }
-qry-value   = *(qchar / "=") { Start, End }
+qry-name    = 1*qchar { Start+, End+ }
+qry-value   = *(qchar / "=") { Start+, End+ }
 qchar       = unreserved / pct-encoded / qry-delims / qry-plus
             / ":" / "@" / "/" / "?"
 qry-plus    = "+" { Char }

@@ -13,3 +13,4 @@
 #include "httproute.h"
 #include "socket.h"
 #include "sockmgr.h"
+#include "url.h"

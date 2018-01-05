@@ -18,22 +18,14 @@ namespace fs = std::experimental::filesystem;
 
 namespace {
 class WebRoot : public IHttpRouteNotify {
-    void onHttpRequest(
-        unsigned reqId,
-        unordered_multimap<string_view, string_view> & params,
-        HttpRequest & msg
-    ) override;
+    void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
 };
 } // namespace
 
 //===========================================================================
-void WebRoot::onHttpRequest(
-    unsigned reqId,
-    unordered_multimap<string_view, string_view> & params,
-    HttpRequest & msg
-) {
+void WebRoot::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     string path = "Web";
-    path += msg.pathAbsolute();
+    path += msg.query().path;
     if (fs::is_regular_file(path)) {
         httpRouteReplyWithFile(reqId, path);
     } else {
@@ -50,22 +42,14 @@ void WebRoot::onHttpRequest(
 
 namespace {
 class HtmlCounters : public IHttpRouteNotify {
-    void onHttpRequest(
-        unsigned reqId,
-        unordered_multimap<string_view, string_view> & params,
-        HttpRequest & msg
-    ) override;
+    void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
 
     vector<PerfValue> m_values;
 };
 } // namespace
 
 //===========================================================================
-void HtmlCounters::onHttpRequest(
-    unsigned reqId,
-    unordered_multimap<string_view, string_view> & params,
-    HttpRequest & msg
-) {
+void HtmlCounters::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     perfGetValues(m_values, true);
 
     HttpResponse res;
@@ -98,22 +82,14 @@ void HtmlCounters::onHttpRequest(
 
 namespace {
 class JsonCounters : public IHttpRouteNotify {
-    void onHttpRequest(
-        unsigned reqId,
-        unordered_multimap<string_view, string_view> & params,
-        HttpRequest & msg
-    ) override;
+    void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
 
     vector<PerfValue> m_values;
 };
 } // namespace
 
 //===========================================================================
-void JsonCounters::onHttpRequest(
-    unsigned reqId,
-    unordered_multimap<string_view, string_view> & params,
-    HttpRequest & msg
-) {
+void JsonCounters::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     perfGetValues(m_values);
 
     HttpResponse res;

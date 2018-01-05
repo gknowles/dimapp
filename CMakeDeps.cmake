@@ -104,6 +104,9 @@
 # libs/net/sockmgracc.cpp
 # libs/net/sockmgrconn.cpp
 # libs/net/sockmgrint.h
+# libs/net/uri.abnf
+# libs/net/url.cpp
+# libs/net/url.h
 # libs/tls/pch.cpp
 # libs/tls/pch.h
 # libs/tls/tls.cpp
@@ -112,11 +115,6 @@
 # libs/tls/tlsmsg.cpp
 # libs/tls/tlsrec.cpp
 # libs/tls/tlsrec.h
-# libs/uri/pch.cpp
-# libs/uri/pch.h
-# libs/uri/uri.abnf
-# libs/uri/uriparse.cpp
-# libs/uri/uriparse.h
 # libs/win/appint.h
 # libs/win/pch.cpp
 # libs/win/pch.h

@@ -7,6 +7,7 @@
 #include "cppconf/cppconf.h"
 
 #include "net/http.h"
+#include "net/url.h"
 
 #include <string>
 #include <unordered_map>
@@ -24,11 +25,7 @@ class IHttpRouteNotify {
 public:
     virtual ~IHttpRouteNotify() = default;
 
-    virtual void onHttpRequest(
-        unsigned reqId,
-        std::unordered_multimap<std::string_view, std::string_view> & params,
-        HttpRequest & msg
-    ) = 0;
+    virtual void onHttpRequest(unsigned reqId, HttpRequest & msg) = 0;
 };
 
 void httpRouteAdd(

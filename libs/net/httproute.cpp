@@ -108,14 +108,13 @@ static IHttpRouteNotify * find(std::string_view path, HttpMethod method) {
 
 //===========================================================================
 static void route(unsigned reqId, HttpRequest & req) {
-    auto path = string_view(req.pathAbsolute());
+    auto & params = req.query();
     auto method = httpMethodFromString(req.method());
-    auto notify = find(path, method);
+    auto notify = find(params.path, method);
     if (!notify)
         return httpRouteReplyNotFound(reqId, req);
 
-    unordered_multimap<string_view, string_view> params;
-    notify->onHttpRequest(reqId, params, req);
+    notify->onHttpRequest(reqId, req);
 }
 
 //===========================================================================
@@ -396,7 +395,7 @@ void Dim::httpRouteReplyNotFound(unsigned reqId, const HttpRequest & req) {
         << start("head") << elem("title", "404 Not Found") << end
         << start("body")
         << elem("h1", "404 Not Found")
-        << start("p") << "Requested URL: " << req.pathAbsolute() << end
+        << start("p") << "Requested URL: " << req.pathRaw() << end
         << end
         << end;
     res.addHeader(kHttpContentType, "text/html");
