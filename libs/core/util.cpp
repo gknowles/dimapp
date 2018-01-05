@@ -69,6 +69,20 @@ static const unsigned char s_hexToNibble[256] = {
 };
 
 //===========================================================================
+unsigned Dim::hexToNibble(unsigned char val) {
+    return s_hexToNibble[val];
+}
+
+//===========================================================================
+unsigned Dim::hexToByte(unsigned char high, unsigned char low) {
+    int highbyte = hexToNibble(high);
+    int lowbyte = hexToNibble(low);
+    if (highbyte == 16 || lowbyte == 16)
+        return 256;
+    return 16 * highbyte + lowbyte;
+}
+
+//===========================================================================
 bool Dim::hexToBytes(string & out, string_view src, bool append) {
     if (src.size() % 2)
         return false;
@@ -78,11 +92,10 @@ bool Dim::hexToBytes(string & out, string_view src, bool append) {
     auto pos = out.size();
     out.resize(pos + src.size() / 2);
     for (size_t i = 0; i < src.size(); i += 2) {
-        int high = s_hexToNibble[src[i]];
-        int low = s_hexToNibble[src[i + 1]];
-        if ((high | low) & 0x10)
+        auto val = hexToByte(src[i], src[i + 1]);
+        if (val == 256)
             return false;
-        out[pos++] = uint8_t((high << 4) + low);
+        out[pos++] = (char) val;
     }
     return true;
 }

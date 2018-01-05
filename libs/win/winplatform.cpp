@@ -17,11 +17,7 @@ using namespace Dim;
 
 namespace {
 class HtmlAccount : public IHttpRouteNotify {
-    void onHttpRequest(
-        unsigned reqId,
-        unordered_multimap<string_view, string_view> & params,
-        HttpRequest & msg
-    ) override;
+    void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
 };
 } // namespace
 
@@ -65,11 +61,7 @@ static void addSidRow(JBuilder & out, SID_AND_ATTRIBUTES & sa) {
 }
 
 //===========================================================================
-void HtmlAccount::onHttpRequest(
-    unsigned reqId,
-    unordered_multimap<string_view, string_view> & params,
-    HttpRequest & msg
-) {
+void HtmlAccount::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     auto proc = GetCurrentProcess();
     HANDLE token;
     if (!OpenProcessToken(proc, TOKEN_QUERY, &token))

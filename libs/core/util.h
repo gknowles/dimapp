@@ -32,7 +32,7 @@ void cryptRandomBytes(void * ptr, size_t count);
 
 //===========================================================================
 // hexToNibble - converts hex character (0-9, a-f, A-F) to unsigned (0-15)
-constexpr unsigned hexToNibble(char ch) {
+constexpr unsigned hexToNibbleUnsafe(char ch) {
     return ((ch | 432) * 239'217'992 & 0xffff'ffff) >> 28;
 }
 
@@ -42,6 +42,10 @@ constexpr char hexFromNibble(unsigned val) {
     const char s_chars[] = "0123456789abcdef";
     return s_chars[val];
 }
+
+// On invalid input these return 16 and 256 respectively
+unsigned hexToNibble(unsigned char val);
+unsigned hexToByte(unsigned char high, unsigned char low);
 
 bool hexToBytes(std::string & out, std::string_view src, bool append);
 void hexFromBytes(std::string & out, std::string_view src, bool append);

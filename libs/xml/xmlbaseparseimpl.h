@@ -115,7 +115,7 @@ inline bool XmlBaseParser::onCharRefDigitChar(char ch) {
 
 //===========================================================================
 inline bool XmlBaseParser::onCharRefHexdigChar(char ch) {
-    m_char = m_char * 16 + hexToNibble(ch);
+    m_char = m_char * 16 + hexToNibbleUnsafe(ch);
     return true;
 }
 
