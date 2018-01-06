@@ -408,6 +408,35 @@ void Dim::httpRouteReplyNotFound(unsigned reqId, const HttpRequest & req) {
 }
 
 //===========================================================================
+void Dim::httpRouteReply(
+    unsigned reqId,
+    const HttpRequest & req,
+    unsigned status,
+    const string & msg
+) {
+    StrFrom<unsigned> st{status};
+    HttpResponse res;
+    XBuilder bld(res.body());
+    bld.start("html")
+        .start("head").elem("title", st.c_str()).end()
+        .start("body")
+            .elem("h1", st.c_str())
+            .start("dl")
+                .elem("dt", "Description")
+                .elem("dd", msg.c_str())
+                .elem("dt", "Requested URL: ")
+                .elem("dd", req.pathRaw())
+            .end()
+        .end()
+        .end();
+
+    res.addHeader(kHttpContentType, "text/html");
+    res.addHeader(kHttp_Status, st.c_str());
+    httpRouteReply(reqId, res);
+}
+
+
+//===========================================================================
 // ReplyWithFile
 //===========================================================================
 namespace {

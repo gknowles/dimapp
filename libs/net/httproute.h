@@ -38,8 +38,14 @@ void httpRouteAdd(
 void httpRouteReply(unsigned reqId, HttpResponse & msg, bool more = false);
 void httpRouteReply(unsigned reqId, const CharBuf & data, bool more);
 void httpRouteReply(unsigned reqId, std::string_view data, bool more);
+void httpRouteReplyWithFile(unsigned reqId, std::string_view path);
 
 void httpRouteReplyNotFound(unsigned reqId, const HttpRequest & req);
-void httpRouteReplyWithFile(unsigned reqId, std::string_view path);
+void httpRouteReply(
+    unsigned reqId,
+    const HttpRequest & req,
+    unsigned status,
+    const std::string & msg = {}
+);
 
 } // namespace
