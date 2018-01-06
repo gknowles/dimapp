@@ -83,37 +83,44 @@ void IMsgBuilder::clear() {
 }
 
 //===========================================================================
+bool IMsgBuilder::pop() {
+    assert(m_remaining);
+    if (--m_remaining)
+        return false;
+    m_state = m_stack.back().first;
+    m_remaining = m_stack.back().second;
+    m_stack.pop_back();
+    return true;
+}
+
+//===========================================================================
 IMsgBuilder & IMsgBuilder::array(size_t count) {
     assert(unsigned(count) == count);
     switch (m_state) {
     case State::kValue:
         break;
     case State::kArray:
-        assert(m_remaining);
-        if (!--m_remaining) {
-            m_state = m_stack.back().first;
-            m_remaining = m_stack.back().second;
-        }
+        pop();
         break;
     case State::kElement:
         assert(!"adding array when element key was expected");
         return *this;
     case State::kElementValue:
         assert(m_remaining);
-        if (!--m_remaining) {
-            m_state = m_stack.back().first;
-            m_remaining = m_stack.back().second;
-        } else {
+        if (!pop())
             m_state = State::kElement;
-        }
         break;
     }
 
-    m_stack.push_back({m_state, m_remaining});
+    m_stack.emplace_back(m_state, m_remaining);
     m_remaining = unsigned(count);
     m_state = State::kArray;
     if (count <= 0xf) {
         append(char(count | kFixArrayMask));
+        if (!count) {
+            m_remaining = 1;
+            pop();
+        }
     } else if (count <= 0xffff) {
         uint8_t out[3] = { kArray16, uint8_t(count >> 8), uint8_t(count) };
         append(string_view{(char *) out, ::size(out)});
@@ -138,31 +145,26 @@ IMsgBuilder & IMsgBuilder::map(size_t count) {
     case State::kValue:
         break;
     case State::kArray:
-        assert(m_remaining);
-        if (!--m_remaining) {
-            m_state = m_stack.back().first;
-            m_remaining = m_stack.back().second;
-        }
+        pop();
         break;
     case State::kElement:
         assert(!"adding map when element key was expected");
         return *this;
     case State::kElementValue:
-        assert(m_remaining);
-        if (!--m_remaining) {
-            m_state = m_stack.back().first;
-            m_remaining = m_stack.back().second;
-        } else {
+        if (!pop())
             m_state = State::kElement;
-        }
         break;
     }
 
-    m_stack.push_back({m_state, m_remaining});
+    m_stack.emplace_back(m_state, m_remaining);
     m_remaining = unsigned(count);
     m_state = State::kElement;
     if (count <= 0xf) {
         append(char(count | kFixMapMask));
+        if (!count) {
+            m_remaining = 1;
+            pop();
+        }
     } else if (count <= 0xffff) {
         uint8_t out[3] = { kMap16, uint8_t(count >> 8), uint8_t(count) };
         append(string_view{(char *) out, ::size(out)});
@@ -196,23 +198,14 @@ IMsgBuilder & IMsgBuilder::value(string_view val) {
     case State::kValue:
         break;
     case State::kArray:
-        assert(m_remaining);
-        if (!--m_remaining) {
-            m_state = m_stack.back().first;
-            m_remaining = m_stack.back().second;
-        }
+        pop();
         break;
     case State::kElement:
         assert(!"adding value when element key was expected");
         return *this;
     case State::kElementValue:
-        assert(m_remaining);
-        if (!--m_remaining) {
-            m_state = m_stack.back().first;
-            m_remaining = m_stack.back().second;
-        } else {
+        if (!pop())
             m_state = State::kElement;
-        }
         break;
     }
 
@@ -226,23 +219,14 @@ IMsgBuilder & IMsgBuilder::valueRaw(string_view val) {
     case State::kValue:
         break;
     case State::kArray:
-        assert(m_remaining);
-        if (!--m_remaining) {
-            m_state = m_stack.back().first;
-            m_remaining = m_stack.back().second;
-        }
+        pop();
         break;
     case State::kElement:
         assert(!"adding value when element key was expected");
         return *this;
     case State::kElementValue:
-        assert(m_remaining);
-        if (!--m_remaining) {
-            m_state = m_stack.back().first;
-            m_remaining = m_stack.back().second;
-        } else {
+        if (!pop())
             m_state = State::kElement;
-        }
         break;
     }
 
