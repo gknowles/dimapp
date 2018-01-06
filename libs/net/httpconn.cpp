@@ -906,7 +906,6 @@ bool HttpConn::onRstStream(
     }
 
     // TODO: actually close the stream...
-
     return true;
 }
 
@@ -925,7 +924,8 @@ bool HttpConn::onSettings(
 
     if (m_frameMode != FrameMode::kNormal
             && m_frameMode != FrameMode::kSettings
-        || stream) {
+        || stream
+    ) {
         // settings frames MUST be on stream 0
         replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
         return false;
@@ -978,6 +978,13 @@ bool HttpConn::onPushPromise(
     //  headerBlock[]
     //  padding[]
 
+    if (m_frameMode != FrameMode::kNormal || !stream) {
+        // Push promise isn't allowed on stream 0
+        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+        return false;
+    }
+
+    // TODO: actually process the promise
     return false;
 }
 
@@ -992,7 +999,21 @@ bool HttpConn::onPing(
     // Ping frame
     //  data[8]
 
-    return false;
+    if (m_frameMode != FrameMode::kNormal || stream) {
+        // Ping frames MUST be on stream 0
+        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+        return false;
+    }
+    if (m_inputFrameLen != 8) {
+        replyGoAway(out, m_lastInputStream, FrameError::kFrameSizeError);
+        return false;
+    }
+
+    if (~flags & fAck) {
+        startFrame(out, 0, FrameType::kPing, 8, fAck);
+        out->append(src + kFrameHeaderLen, m_inputFrameLen);
+    }
+    return true;
 }
 
 //===========================================================================
@@ -1009,8 +1030,8 @@ bool HttpConn::onGoAway(
     //  errorCode : 32
     //  data[]
 
-    if (!stream) {
-        // GoAway frames aren't allowed on stream 0
+    if (stream) {
+        // GoAway frames MUST be on stream 0
         replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
         return false;
     }
@@ -1106,11 +1127,13 @@ bool HttpConn::onContinuation(
     //  headerBlock[]
 
     if (m_frameMode != FrameMode::kContinuation
-        || stream != m_continueStream) {
+        || stream != m_continueStream
+    ) {
         replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
         return false;
     }
 
+    // TODO: actually process the continuation
     return false;
 }
 
