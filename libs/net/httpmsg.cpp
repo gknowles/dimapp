@@ -168,6 +168,14 @@ auto HttpMsg::HdrName::end() const -> ForwardListIterator<const HdrValue> {
 ***/
 
 //===========================================================================
+void HttpMsg::clear() {
+    m_data.clear();
+    m_heap.clear();
+    m_firstHeader = nullptr;
+    m_stream = 0;
+}
+
+//===========================================================================
 void HttpMsg::addHeader(HttpHdr id, const char value[]) {
     addHeaderRef(id, m_heap.strdup(value));
 }
