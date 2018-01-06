@@ -24,10 +24,15 @@ namespace Dim {
 constexpr int64_t kClockTicksPerSecond = 10'000'000;
 
 struct Clock {
-    typedef int64_t rep;
-    typedef std::ratio<1, kClockTicksPerSecond> period;
-    typedef std::chrono::duration<rep, period> duration;
-    typedef std::chrono::time_point<Clock> time_point;
+    using rep = int64_t;
+    using period = std::ratio<1, kClockTicksPerSecond>;
+    using duration = std::chrono::duration<rep, period>;
+    class time_point : public std::chrono::time_point<Clock> {
+    public:
+        using std::chrono::time_point<Clock>::time_point;
+        explicit operator bool() const noexcept;
+    };
+
     static const bool is_monotonic = false;
     static const bool is_steady = false;
 
@@ -37,6 +42,11 @@ struct Clock {
     static time_t to_time_t(const time_point & time) noexcept;
     static time_point from_time_t(time_t tm) noexcept;
 };
+
+//===========================================================================
+inline Clock::time_point::operator bool() const noexcept {
+    return *this != time_point{};
+}
 
 using Duration = Clock::duration;
 using TimePoint = Clock::time_point;
