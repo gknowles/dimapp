@@ -77,7 +77,13 @@ public:
 
     // Serializes additional data on the stream
     template<typename T>
-    void addData(CharBuf * out, int stream, const T & data, bool more);
+    void addData(
+        CharBuf * out,
+        int stream,
+        HttpStream * strm,
+        const T & data,
+        bool more
+    );
 
     void resetStream(CharBuf * out, int stream);
 
@@ -89,7 +95,13 @@ private:
 
     void replyRstStream(CharBuf * out, int stream, FrameError error);
     HttpStream * findAlways(CharBuf * out, int stream);
-    void writeMsg(CharBuf * out, int stream, const HttpMsg & msg, bool more);
+    void writeMsg(
+        CharBuf * out,
+        int stream,
+        HttpStream * strm,
+        const HttpMsg & msg,
+        bool more
+    );
 
     bool onFrame(
         std::vector<std::unique_ptr<HttpMsg>> * msgs,

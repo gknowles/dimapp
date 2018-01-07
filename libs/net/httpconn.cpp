@@ -613,11 +613,10 @@ void HttpConn::replyRstStream(CharBuf * out, int stream, FrameError error) {
     auto sm = it->second;
     sm->m_state = HttpStream::kClosed;
     sm->m_closed = Clock::now();
-    ResetStream rs;
+    auto & rs = s_resetStreams.emplace_back();
     rs.hc = m_handle;
     rs.stream = stream;
     rs.sm = sm;
-    s_resetStreams.push_back(rs);
     timerUpdate(&s_resetTimer, kMaxResetStreamAge, true);
 }
 
@@ -666,10 +665,14 @@ bool HttpConn::onFrame(
     switch (type) {
     case FrameType::kContinuation:
         return onContinuation(msgs, out, src, stream, flags);
-    case FrameType::kData: return onData(msgs, out, src, stream, flags);
-    case FrameType::kGoAway: return onGoAway(msgs, out, src, stream, flags);
-    case FrameType::kHeaders: return onHeaders(msgs, out, src, stream, flags);
-    case FrameType::kPing: return onPing(msgs, out, src, stream, flags);
+    case FrameType::kData:
+        return onData(msgs, out, src, stream, flags);
+    case FrameType::kGoAway:
+        return onGoAway(msgs, out, src, stream, flags);
+    case FrameType::kHeaders:
+        return onHeaders(msgs, out, src, stream, flags);
+    case FrameType::kPing:
+        return onPing(msgs, out, src, stream, flags);
     case FrameType::kPriority:
         return onPriority(msgs, out, src, stream, flags);
     case FrameType::kPushPromise:
@@ -716,13 +719,11 @@ bool HttpConn::onData(
         return false;
     }
 
-    // TODO: flow control
+    // TODO: recv flow control, check total buffer size?
     if (data.dataLen) {
         replyWindowUpdate(out, stream, data.dataLen);
         replyWindowUpdate(out, 0, data.dataLen);
     }
-
-    // TODO: check total buffer size
 
     shared_ptr<HttpStream> sm;
     auto it = m_streams.find(stream);
@@ -899,13 +900,22 @@ bool HttpConn::onRstStream(
         replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
         return false;
     }
-
     if (m_inputFrameLen != 4) {
         replyGoAway(out, m_lastInputStream, FrameError::kFrameSizeError);
         return false;
     }
+    // find stream to reset
+    auto it = m_streams.find(stream);
+    if (it == m_streams.end()) {
+        if (stream > m_lastInputStream) {
+            replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+            return false;
+        }
+        // ignore reset on closed streams
+        return true;
+    }
 
-    // TODO: actually close the stream...
+    m_streams.erase(it);
     return true;
 }
 
@@ -984,7 +994,7 @@ bool HttpConn::onPushPromise(
         return false;
     }
 
-    // TODO: actually process the promise
+    // TODO: actually process promises
     return false;
 }
 
@@ -1090,7 +1100,7 @@ bool HttpConn::onWindowUpdate(
             return false;
         }
         m_flowWindow += increment;
-        // TODO: release blocked data frames
+        // TODO: send flow control, release blocked data frames
         return true;
     }
 
@@ -1111,7 +1121,7 @@ bool HttpConn::onWindowUpdate(
         return true;
     }
     sm->m_flowWindow += increment;
-    // TODO: release blocked data frames
+    // TODO: send flow control, release blocked data frames
     return true;
 }
 
@@ -1133,7 +1143,7 @@ bool HttpConn::onContinuation(
         return false;
     }
 
-    // TODO: actually process the continuation
+    // TODO: actually process continuations
     return false;
 }
 
@@ -1148,6 +1158,7 @@ bool HttpConn::onContinuation(
 void HttpConn::writeMsg(
     CharBuf * out,
     int stream,
+    HttpStream * strm,
     const HttpMsg & msg,
     bool more
 ) {
@@ -1198,7 +1209,24 @@ void HttpConn::writeMsg(
     );
     out->replace(framePos, size(frameHdr), (char *)frameHdr, size(frameHdr));
 
-    addData(out, stream, body, more);
+    switch (strm->m_state) {
+    case HttpStream::kIdle:
+        strm->m_state = HttpStream::kOpen;
+        break;
+    case HttpStream::kOpen:
+        break;
+    case HttpStream::kLocalReserved:
+        if (more)
+            strm->m_state = HttpStream::kRemoteClosed;
+        break;
+    case HttpStream::kRemoteClosed:
+        break;
+    default:
+        logMsgCrash() << "httpReply invalid state, {" << strm->m_state << "}";
+        return;
+    }
+
+    addData(out, stream, strm, body, more);
 }
 
 //===========================================================================
@@ -1206,9 +1234,18 @@ template<typename T>
 void HttpConn::addData(
     CharBuf * out,
     int stream,
+    HttpStream * strm,
     const T & data,
     bool more
 ) {
+    if (!strm) {
+        auto it = m_streams.find(stream);
+        if (it == m_streams.end())
+            return;
+        strm = it->second.get();
+    }
+
+    // TODO: send flow control, update window and/or queue data
     size_t count = size(data);
 
     size_t pos = 0;
@@ -1217,28 +1254,45 @@ void HttpConn::addData(
         out->append(data, pos, m_maxOutputFrame);
         pos += m_maxOutputFrame;
     }
-    if (pos == count && more)
-        return;
+    if (pos != count || more) {
+        startFrame(
+            out,
+            stream,
+            FrameType::kData,
+            int(count - pos),
+            more ? (FrameFlags) 0 : fEndStream
+        );
+        out->append(data, pos);
+    }
 
-    startFrame(
-        out,
-        stream,
-        FrameType::kData,
-        int(count - pos),
-        more ? (FrameFlags) 0 : fEndStream
-    );
-    out->append(data, pos);
+    switch (strm->m_state) {
+    case HttpStream::kOpen:
+        if (!more)
+            strm->m_state = HttpStream::kLocalClosed;
+        break;
+    case HttpStream::kRemoteClosed:
+        if (!more)
+            strm->m_state = HttpStream::kClosed;
+        break;
+    default:
+        logMsgCrash() << "httpData invalid state, {" << strm->m_state << "}";
+        return;
+    }
+
+    // TODO: send flow control, don't erase if pending data frames
+    if (strm->m_state == HttpStream::kClosed)
+        m_streams.erase(stream);
 }
 
 //===========================================================================
 // Serializes a request and returns the stream id used
 int HttpConn::request(CharBuf * out, const HttpMsg & msg, bool more) {
     auto strm = make_shared<HttpStream>();
-    strm->m_state = HttpStream::kOpen;
+    strm->m_state = HttpStream::kIdle;
     unsigned id = m_nextOutputStream;
     m_nextOutputStream += 2;
     m_streams[id] = strm;
-    writeMsg(out, id, msg, more);
+    writeMsg(out, id, strm.get(), msg, more);
     return id;
 }
 
@@ -1259,22 +1313,15 @@ void HttpConn::reply(
     auto it = m_streams.find(stream);
     if (it == m_streams.end())
         return;
-
     HttpStream * strm = it->second.get();
-    switch (strm->m_state) {
-    case HttpStream::kOpen: strm->m_state = HttpStream::kLocalClosed; break;
-    case HttpStream::kLocalReserved:
-    case HttpStream::kRemoteClosed: strm->m_state = HttpStream::kClosed; break;
-    default:
-        logMsgCrash() << "httpReply invalid state, {" << strm->m_state << "}";
-        return;
-    }
 
-    writeMsg(out, stream, msg, more);
+    writeMsg(out, stream, strm, msg, more);
 }
 
 //===========================================================================
-void HttpConn::resetStream(CharBuf * out, int stream) {}
+void HttpConn::resetStream(CharBuf * out, int stream) {
+    replyRstStream(out, stream, FrameError::kCancel);
+}
 
 //===========================================================================
 void HttpConn::deleteStream(int stream, HttpStream * sm) {
@@ -1370,7 +1417,7 @@ void Dim::httpData(
     bool more
 ) {
     if (auto * conn = s_conns.find(hc))
-        conn->addData(out, stream, data, more);
+        conn->addData(out, stream, nullptr, data, more);
 }
 
 //===========================================================================
@@ -1382,7 +1429,7 @@ void Dim::httpData(
     bool more
 ) {
     if (auto * conn = s_conns.find(hc))
-        conn->addData(out, stream, data, more);
+        conn->addData(out, stream, nullptr, data, more);
 }
 
 //===========================================================================
