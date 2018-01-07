@@ -53,6 +53,8 @@ public:
     IMsgBuilder & uvalue(uint64_t val);
     IMsgBuilder & value(std::nullptr_t);
 
+    size_t depth() const { return m_stack.size(); }
+
 protected:
     virtual void append(std::string_view text) = 0;
     virtual void append(char ch) = 0;
