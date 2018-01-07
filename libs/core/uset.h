@@ -188,6 +188,7 @@ private:
     friend class UnsignedSet;
     const Node * m_node = nullptr;
     value_type m_value = 0;
+    unsigned m_minDepth = 0;
 };
 
 
