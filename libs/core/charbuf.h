@@ -7,6 +7,7 @@
 #include "cppconf/cppconf.h"
 
 #include "core/tempheap.h"
+#include "core/types.h"
 
 #include <algorithm>
 #include <cassert>
@@ -116,7 +117,7 @@ public:
     char * alloc(size_t bytes, size_t align) override;
 
 private:
-    struct Buffer {
+    struct Buffer : public NoCopy {
         char * data;
         int used{0};
         int reserved;
@@ -124,6 +125,9 @@ private:
 
         Buffer();
         Buffer(size_t reserve);
+        Buffer(Buffer && from);
+        ~Buffer();
+        Buffer & operator=(Buffer && from);
     };
     using buffer_iterator = std::vector<Buffer>::iterator;
     using const_buffer_iterator = std::vector<Buffer>::const_iterator;

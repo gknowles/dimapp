@@ -35,6 +35,36 @@ CharBuf::Buffer::Buffer (size_t reserve)
     , reserved{(int) reserve}
 {}
 
+//===========================================================================
+CharBuf::Buffer::Buffer(Buffer && from)
+    : data{from.data}
+    , used{from.used}
+    , reserved{from.reserved}
+    , heapUsed{from.heapUsed}
+{
+    from.data = nullptr;
+}
+
+//===========================================================================
+CharBuf::Buffer & CharBuf::Buffer::operator=(Buffer && from) {
+    if (data)
+        delete[] data;
+    data = from.data;
+    used = from.used;
+    reserved = from.reserved;
+    heapUsed = from.heapUsed;
+    from.data = nullptr;
+    return *this;
+}
+
+//===========================================================================
+CharBuf::Buffer::~Buffer () {
+    if (data) {
+        delete[] data;
+        data = nullptr;
+    }
+}
+
 
 /****************************************************************************
 *
@@ -43,10 +73,8 @@ CharBuf::Buffer::Buffer (size_t reserve)
 ***/
 
 //===========================================================================
-CharBuf::~CharBuf() {
-    for (auto && buf : m_buffers)
-        delete buf.data;
-}
+CharBuf::~CharBuf()
+{}
 
 //===========================================================================
 CharBuf & CharBuf::assign(size_t count, char ch) {
@@ -155,7 +183,7 @@ char * CharBuf::data(size_t pos, size_t count) {
             Buffer tmp(bufsize);
             memcpy(tmp.data, myi->data, myi->used);
             tmp.used = myi->used;
-            ::swap(tmp, *myi);
+            *myi = move(tmp);
         }
         num -= myi->used;
         auto mydata = myi->data + myi->used;
