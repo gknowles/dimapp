@@ -234,16 +234,16 @@ NEGOTIATE:
         if ((SecStatus) err == SEC_E_OK
             || (SecStatus) err == SEC_I_CONTEXT_EXPIRED
         ) {
-            assert(bufs[0].BufferType == SECBUFFER_STREAM_HEADER);
-            assert(bufs[1].BufferType == SECBUFFER_DATA);
-            assert(bufs[2].BufferType == SECBUFFER_STREAM_TRAILER);
-            assert(bufs[3].BufferType == SECBUFFER_EMPTY
-                || bufs[3].BufferType == SECBUFFER_EXTRA);
-
             if (bufs[1].cbBuffer)
                 data->append((char *) bufs[1].pvBuffer, bufs[1].cbBuffer);
 
             if ((SecStatus) err == SEC_E_OK) {
+                assert(bufs[0].BufferType == SECBUFFER_STREAM_HEADER);
+                assert(bufs[1].BufferType == SECBUFFER_DATA);
+                assert(bufs[2].BufferType == SECBUFFER_STREAM_TRAILER);
+                assert(bufs[3].BufferType == SECBUFFER_EMPTY
+                    || bufs[3].BufferType == SECBUFFER_EXTRA);
+
                 if (bufs[3].cbBuffer) {
                     assert(bufs[3].BufferType == SECBUFFER_EXTRA);
                     src = src.substr(src.size() - bufs[3].cbBuffer);
