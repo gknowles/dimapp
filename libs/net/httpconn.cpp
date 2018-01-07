@@ -339,6 +339,25 @@ static int getFrameStream(const char frame[kFrameHeaderLen]) {
 
 /****************************************************************************
 *
+*   HttpStream
+*
+***/
+
+auto & s_perfStreams = uperf("http streams (current)");
+
+//===========================================================================
+HttpStream::HttpStream() {
+    s_perfStreams += 1;
+}
+
+//===========================================================================
+HttpStream::~HttpStream() {
+    s_perfStreams -= 1;
+}
+
+
+/****************************************************************************
+*
 *   Connection initialization
 *
 ***/
@@ -636,7 +655,9 @@ HttpStream * HttpConn::findAlways(CharBuf * out, int stream) {
 
     m_lastInputStream = stream;
     ib.first->second = make_shared<HttpStream>();
-    return ib.first->second.get();
+    auto sm = ib.first->second.get();
+    sm->m_flowWindow = m_initialFlowWindow;
+    return sm;
 }
 
 //===========================================================================
@@ -964,11 +985,34 @@ bool HttpConn::onSettings(
     for (int pos = 0; pos < m_inputFrameLen; pos += 6) {
         unsigned identifier = ntoh16(src + kFrameHeaderLen + pos);
         unsigned value = ntoh32(src + kFrameHeaderLen + pos + 2);
-        (void)identifier;
-        (void)value;
+        switch (identifier) {
+        case kSettingsInitialWindowSize:
+            if (!setInitialWindowSize(out, value))
+                return false;
+            break;
+        }
     }
 
     startFrame(out, 0, FrameType::kSettings, 0, fAck);
+    return true;
+}
+
+//===========================================================================
+bool HttpConn::setInitialWindowSize(CharBuf * out, unsigned value) {
+    if (value > kMaximumWindowSize) {
+        replyGoAway(out, m_lastInputStream, FrameError::kFlowControlError);
+        return false;
+    }
+    m_initialFlowWindow = (int) value;
+    auto diff = (int) value - m_initialFlowWindow;
+    for (auto & sm : m_streams) {
+        auto & win = sm.second->m_flowWindow;
+        if (diff > 0 && win > kMaximumWindowSize - diff) {
+            replyGoAway(out, m_lastInputStream, FrameError::kFlowControlError);
+            return false;
+        }
+        sm.second->m_flowWindow += diff;
+    }
     return true;
 }
 
@@ -1100,7 +1144,11 @@ bool HttpConn::onWindowUpdate(
             return false;
         }
         m_flowWindow += increment;
-        // TODO: send flow control, release blocked data frames
+        for (auto && [id, sm] : m_streams) {
+            if (!m_flowWindow)
+                break;
+            writeUnsent(out, id, sm.get());
+        }
         return true;
     }
 
@@ -1121,7 +1169,7 @@ bool HttpConn::onWindowUpdate(
         return true;
     }
     sm->m_flowWindow += increment;
-    // TODO: send flow control, release blocked data frames
+    writeUnsent(out, stream, sm);
     return true;
 }
 
@@ -1158,7 +1206,7 @@ bool HttpConn::onContinuation(
 void HttpConn::writeMsg(
     CharBuf * out,
     int stream,
-    HttpStream * strm,
+    HttpStream * sm,
     const HttpMsg & msg,
     bool more
 ) {
@@ -1209,24 +1257,24 @@ void HttpConn::writeMsg(
     );
     out->replace(framePos, size(frameHdr), (char *)frameHdr, size(frameHdr));
 
-    switch (strm->m_state) {
+    switch (sm->m_state) {
     case HttpStream::kIdle:
-        strm->m_state = HttpStream::kOpen;
+        sm->m_state = HttpStream::kOpen;
         break;
     case HttpStream::kOpen:
         break;
     case HttpStream::kLocalReserved:
         if (more)
-            strm->m_state = HttpStream::kRemoteClosed;
+            sm->m_state = HttpStream::kRemoteClosed;
         break;
     case HttpStream::kRemoteClosed:
         break;
     default:
-        logMsgCrash() << "httpReply invalid state, {" << strm->m_state << "}";
+        logMsgCrash() << "httpReply invalid state, {" << sm->m_state << "}";
         return;
     }
 
-    addData(out, stream, strm, body, more);
+    addData(out, stream, sm, body, more);
 }
 
 //===========================================================================
@@ -1234,65 +1282,121 @@ template<typename T>
 void HttpConn::addData(
     CharBuf * out,
     int stream,
-    HttpStream * strm,
+    HttpStream * sm,
     const T & data,
     bool more
 ) {
-    if (!strm) {
+    if (!sm) {
         auto it = m_streams.find(stream);
         if (it == m_streams.end())
             return;
-        strm = it->second.get();
+        sm = it->second.get();
     }
 
-    // TODO: send flow control, update window and/or queue data
-    size_t count = size(data);
-
+    size_t dataLen = size(data);
+    size_t count = dataLen;
+    if (!sm->m_unsent.empty()) {
+        count = 0;
+    } else {
+        auto windowAvail = min(m_flowWindow, sm->m_flowWindow);
+        if (windowAvail < dataLen)
+            count = (windowAvail < 0) ? 0 : windowAvail;
+    }
     size_t pos = 0;
     while (pos + m_maxOutputFrame < count) {
         startFrame(out, stream, FrameType::kData, m_maxOutputFrame, {});
         out->append(data, pos, m_maxOutputFrame);
         pos += m_maxOutputFrame;
     }
-    if (pos != count || more) {
+    if (pos != count || !more && count == dataLen) {
         startFrame(
             out,
             stream,
             FrameType::kData,
             int(count - pos),
-            more ? (FrameFlags) 0 : fEndStream
+            (!more && count == dataLen) ? fEndStream : (FrameFlags) 0
         );
-        out->append(data, pos);
+        out->append(data, pos, count - pos);
+        pos = count;
     }
 
-    switch (strm->m_state) {
+    m_flowWindow -= (int) count;
+    sm->m_flowWindow -= (int) count;
+    if (auto unsent = dataLen - count)
+        sm->m_unsent.append(data, pos, unsent);
+
+    switch (sm->m_state) {
     case HttpStream::kOpen:
         if (!more)
-            strm->m_state = HttpStream::kLocalClosed;
+            sm->m_state = HttpStream::kLocalClosed;
         break;
     case HttpStream::kRemoteClosed:
         if (!more)
-            strm->m_state = HttpStream::kClosed;
+            sm->m_state = HttpStream::kClosed;
         break;
     default:
-        logMsgCrash() << "httpData invalid state, {" << strm->m_state << "}";
+        logMsgCrash() << "httpData invalid state, {" << sm->m_state << "}";
         return;
     }
 
-    // TODO: send flow control, don't erase if pending data frames
-    if (strm->m_state == HttpStream::kClosed)
+    // don't erase if pending data frames
+    if (sm->m_state == HttpStream::kClosed && sm->m_unsent.empty())
+        m_streams.erase(stream);
+}
+
+//===========================================================================
+void HttpConn::writeUnsent(
+    CharBuf * out,
+    int stream,
+    HttpStream * sm
+) {
+    bool more = sm->m_state != HttpStream::kClosed
+        && sm->m_state != HttpStream::kLocalClosed;
+
+    size_t dataLen = size(sm->m_unsent);
+    size_t count = dataLen;
+    auto windowAvail = min(m_flowWindow, sm->m_flowWindow);
+    if (windowAvail < dataLen) {
+        if (windowAvail < m_maxOutputFrame)
+            return;
+        count = windowAvail;
+    }
+    size_t pos = 0;
+    while (pos + m_maxOutputFrame < count) {
+        startFrame(out, stream, FrameType::kData, m_maxOutputFrame, {});
+        out->append(sm->m_unsent, pos, m_maxOutputFrame);
+        pos += m_maxOutputFrame;
+    }
+    if (pos != count || !more && count == dataLen) {
+        startFrame(
+            out,
+            stream,
+            FrameType::kData,
+            int(count - pos),
+            (!more && count == dataLen) ? fEndStream : (FrameFlags) 0
+        );
+        out->append(sm->m_unsent, pos, count - pos);
+        pos = count;
+    }
+
+    m_flowWindow -= (int) count;
+    sm->m_flowWindow -= (int) count;
+    sm->m_unsent.erase(0, count);
+
+    // don't erase if pending data frames
+    if (sm->m_state == HttpStream::kClosed && sm->m_unsent.empty())
         m_streams.erase(stream);
 }
 
 //===========================================================================
 // Serializes a request and returns the stream id used
 int HttpConn::request(CharBuf * out, const HttpMsg & msg, bool more) {
-    auto strm = make_shared<HttpStream>();
-    strm->m_state = HttpStream::kIdle;
+    auto sm = make_shared<HttpStream>();
+    sm->m_state = HttpStream::kIdle;
     unsigned id = m_nextOutputStream;
     m_nextOutputStream += 2;
-    m_streams[id] = strm;
-    writeMsg(out, id, strm.get(), msg, more);
+    m_streams[id] = sm;
+    writeMsg(out, id, sm.get(), msg, more);
     return id;
 }
 
@@ -1313,9 +1417,9 @@ void HttpConn::reply(
     auto it = m_streams.find(stream);
     if (it == m_streams.end())
         return;
-    HttpStream * strm = it->second.get();
+    HttpStream * sm = it->second.get();
 
-    writeMsg(out, stream, strm, msg, more);
+    writeMsg(out, stream, sm, msg, more);
 }
 
 //===========================================================================

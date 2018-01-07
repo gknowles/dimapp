@@ -36,7 +36,11 @@ struct HttpStream {
     State m_state{kIdle};
     TimePoint m_closed;
     std::unique_ptr<HttpMsg> m_msg;
-    int m_flowWindow{kDefaultWindowSize};
+    int m_flowWindow{0};
+    CharBuf m_unsent;
+
+    HttpStream();
+    ~HttpStream();
 };
 
 class HttpConn : public HandleContent {
@@ -102,6 +106,8 @@ private:
         const HttpMsg & msg,
         bool more
     );
+    void writeUnsent(CharBuf * out, int stream, HttpStream * strm);
+    bool setInitialWindowSize(CharBuf * out, unsigned value);
 
     bool onFrame(
         std::vector<std::unique_ptr<HttpMsg>> * msgs,
@@ -199,6 +205,7 @@ private:
     int m_maxOutputFrame{16384};
     int m_unackSettings{0};
     int m_flowWindow{kDefaultWindowSize};
+    int m_initialFlowWindow{kDefaultWindowSize};
 
     std::unordered_map<int, std::shared_ptr<HttpStream>> m_streams;
     HpackEncode m_encoder;
