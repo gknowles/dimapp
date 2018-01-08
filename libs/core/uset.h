@@ -176,7 +176,8 @@ public:
 public:
     Iterator() {}
     Iterator(const Iterator & from) = default;
-    Iterator(const Node * node, value_type value);
+    Iterator(const Node * node);
+    Iterator(const Node * node, value_type value, unsigned minDepth);
     Iterator & operator++();
     explicit operator bool() const { return (bool) m_node; }
     bool operator!= (const Iterator & right) const;

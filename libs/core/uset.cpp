@@ -990,7 +990,7 @@ static int cmpBitIf(const Node & left, const Node & right) {
 
 //===========================================================================
 static int cmpMetaIf(const Node & left, const Node & right) {
-    auto i = UnsignedSet::Iterator{&right, absBase(right)};
+    auto i = UnsignedSet::Iterator{&right};
     auto ri = UnsignedSet::RangeIterator{i};
     if (ri->first == absBase(right) && !++ri) {
         return 2;
@@ -1016,8 +1016,8 @@ static int cmpRMetaIf(const Node & left, const Node & right) {
 
 //===========================================================================
 static int cmpIter(const Node & left, const Node & right) {
-    auto li = UnsignedSet::Iterator(&left, absBase(left));
-    auto ri = UnsignedSet::Iterator(&right, absBase(right));
+    auto li = UnsignedSet::Iterator(&left);
+    auto ri = UnsignedSet::Iterator(&right);
     for (; li && ri; ++li, ++ri) {
         if (*li != *ri)
             return *li > *ri ? 1 : -1;
@@ -1147,7 +1147,7 @@ static void insCopy(Node & left, const Node & right) {
 
 //===========================================================================
 static void insIter(Node & left, const Node & right) {
-    auto ri = UnsignedSet::Iterator(&right, absBase(right));
+    auto ri = UnsignedSet::Iterator(&right);
     for (; ri; ++ri)
         impl(left)->insert(left, *ri);
 }
@@ -1303,7 +1303,7 @@ static void eraEmpty(Node & left, const Node & right) {
 
 //===========================================================================
 static void eraChange(Node & left, const Node & right) {
-    auto ri = UnsignedSet::Iterator(&right, absBase(right));
+    auto ri = UnsignedSet::Iterator(&right);
     assert(ri);
 
     // convert from full to either bitmap or meta
@@ -1640,7 +1640,7 @@ UnsignedSet & UnsignedSet::operator=(const UnsignedSet & from) {
 
 //===========================================================================
 UnsignedSet::iterator UnsignedSet::begin() const {
-    return {&m_node, 0};
+    return {&m_node};
 }
 
 //===========================================================================
@@ -1851,7 +1851,7 @@ auto UnsignedSet::equalRange(unsigned val) const -> pair<iterator, iterator> {
 
 //===========================================================================
 auto UnsignedSet::lowerBound(unsigned val) const -> iterator {
-    return {&m_node, val};
+    return {&m_node, val, m_node.depth};
 }
 
 //===========================================================================
@@ -1880,10 +1880,19 @@ void UnsignedSet::iInsert(const unsigned * first, const unsigned * last) {
 ***/
 
 //===========================================================================
-UnsignedSet::Iterator::Iterator(const Node * node, value_type value)
+UnsignedSet::Iterator::Iterator(const Node * node)
+    : Iterator{node, absBase(*node), node->depth}
+{}
+
+//===========================================================================
+UnsignedSet::Iterator::Iterator(
+    const Node * node,
+    value_type value,
+    unsigned minDepth
+)
     : m_node{node}
     , m_value{value}
-    , m_minDepth{node ? node->depth : 0}
+    , m_minDepth{minDepth}
 {
     if (!m_node) {
         assert(!m_value);
@@ -1928,7 +1937,7 @@ UnsignedSet::Iterator UnsignedSet::Iterator::lastContiguous() const {
     auto node = m_node;
     auto value = m_value;
     if (impl(*node)->lastContiguous(&node, &value, *node, value))
-        return {node, value};
+        return {node, value, m_minDepth};
 
     auto ptr = node;
     for (;;) {
@@ -1943,7 +1952,7 @@ UnsignedSet::Iterator UnsignedSet::Iterator::lastContiguous() const {
         if (impl(*ptr)->lastContiguous(&node, &value, *ptr, absBase(*ptr)))
             break;
     }
-    return {node, value};
+    return {node, value, m_minDepth};
 }
 
 
