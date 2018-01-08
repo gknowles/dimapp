@@ -182,11 +182,13 @@ void EmptyImpl::destroy(Node & node)
 
 //===========================================================================
 bool EmptyImpl::insert(Node & node, unsigned value) {
+    assert(node.type == kEmpty);
     assert(relBase(value, node.depth) == node.base);
+    destroy(node);
     node.type = kVector;
-    auto ptr = impl(node);
-    ptr->init(node, false);
-    ptr->insert(node, value);
+    auto iptr = impl(node);
+    iptr->init(node, false);
+    iptr->insert(node, value);
     return true;
 }
 
@@ -348,6 +350,7 @@ bool FullImpl::lastContiguous(
 
 //===========================================================================
 void FullImpl::convert(Node & node) {
+    destroy(node);
     if (node.depth == maxDepth()) {
         node.type = kBitmap;
     } else {
@@ -421,8 +424,8 @@ void VectorImpl::init(Node & node, const Node & from) {
 
 //===========================================================================
 void VectorImpl::destroy(Node & node) {
-    if (node.values)
-        free(node.values);
+    assert(node.values);
+    free(node.values);
 }
 
 //===========================================================================
@@ -541,9 +544,10 @@ bool VectorImpl::lastContiguous(
 
 //===========================================================================
 void VectorImpl::convert(Node & node) {
-    auto ptr = node.values;
-    auto last = ptr + node.numValues;
-    if (node.depth == maxDepth()) {
+    Node tmp{node};
+    auto ptr = tmp.values;
+    auto last = ptr + tmp.numValues;
+    if (tmp.depth == maxDepth()) {
         node.type = kBitmap;
     } else {
         node.type = kMeta;
@@ -551,7 +555,7 @@ void VectorImpl::convert(Node & node) {
     auto iptr = impl(node);
     iptr->init(node, false);
     iptr->insert(node, ptr, last);
-    free(ptr);
+    destroy(tmp);
 }
 
 
@@ -623,8 +627,8 @@ void BitmapImpl::init(Node & node, const Node & from) {
 
 //===========================================================================
 void BitmapImpl::destroy(Node & node) {
-    if (node.values)
-        free(node.values);
+    assert(node.values);
+    free(node.values);
 }
 
 //===========================================================================
@@ -636,12 +640,20 @@ bool BitmapImpl::insert(Node & node, unsigned value) {
     auto ptr = base + value / 64;
     auto tmp = *ptr;
     *ptr |= 1ull << (value % 64);
-    if (tmp != *ptr) {
-        if (!tmp)
-            node.numValues += 1;
+    if (tmp == *ptr)
+        return false;
+    if (!tmp) {
+        node.numValues += 1;
         return true;
     }
-    return false;
+    for (unsigned i = 0; i < numInt64s(); ++i) {
+        if (base[i] != 0xffff'ffff'ffff'ffff)
+            return true;
+    }
+    destroy(node);
+    node.type = kFull;
+    impl(node)->init(node, true);
+    return true;
 }
 
 //===========================================================================
@@ -663,14 +675,12 @@ void BitmapImpl::erase(Node & node, unsigned value) {
     auto ptr = base + value / 64;
     auto tmp = *ptr;
     *ptr &= ~(1ull << (value % 64));
-    if (tmp != *ptr && !*ptr) {
-        if (!--node.numValues) {
-            // convert to empty
-            destroy(node);
-            node.type = kEmpty;
-            impl(node)->init(node, false);
-        }
-    }
+    if (tmp == *ptr || *ptr || --node.numValues)
+        return;
+    // convert to empty
+    destroy(node);
+    node.type = kEmpty;
+    impl(node)->init(node, false);
 }
 
 //===========================================================================
@@ -789,7 +799,7 @@ void MetaImpl::init(Node & node, bool full) {
         *nptr = def;
 
     // Internally the array of nodes contains a trailing "node" at the end that
-    // is just a pointer to the parent node.
+    // is a pointer to the parent node.
     *nlast = {};
     nlast->type = kMetaEnd;
     nlast->nodes = &node;
@@ -815,12 +825,12 @@ void MetaImpl::init(Node & node, const Node & from) {
 
 //===========================================================================
 void MetaImpl::destroy(Node & node) {
-    if (auto * ptr = node.nodes) {
-        auto * last = ptr + node.numValues;
-        for (; ptr != last; ++ptr)
-            impl(*ptr)->destroy(*ptr);
-        free(node.nodes);
-    }
+    assert(node.nodes);
+    auto * ptr = node.nodes;
+    auto * last = ptr + node.numValues;
+    for (; ptr != last; ++ptr)
+        impl(*ptr)->destroy(*ptr);
+    free(node.nodes);
 }
 
 //===========================================================================
@@ -835,7 +845,21 @@ unsigned MetaImpl::nodePos(const Node & node, unsigned value) const {
 bool MetaImpl::insert(Node & node, unsigned value) {
     auto pos = nodePos(node, value);
     auto & rnode = node.nodes[pos];
-    return impl(rnode)->insert(rnode, value);
+    if (rnode.type == kFull)
+        return false;
+    if (!impl(rnode)->insert(rnode, value))
+        return false;
+    if (rnode.type != kFull)
+        return true;
+    for (unsigned i = 0; i < node.numValues; ++i) {
+        if (node.nodes[i].type != kFull)
+            return true;
+    }
+    // convert to full
+    destroy(node);
+    node.type = kFull;
+    impl(node)->init(node, true);
+    return true;
 }
 
 //===========================================================================

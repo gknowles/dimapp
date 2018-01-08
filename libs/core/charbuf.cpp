@@ -50,10 +50,10 @@ CharBuf::Buffer & CharBuf::Buffer::operator=(Buffer && from) {
     if (data)
         delete[] data;
     data = from.data;
+    from.data = nullptr;
     used = from.used;
     reserved = from.reserved;
     heapUsed = from.heapUsed;
-    from.data = nullptr;
     return *this;
 }
 
