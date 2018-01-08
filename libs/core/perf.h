@@ -23,20 +23,20 @@ struct PerfCounterBase {
 
     virtual ~PerfCounterBase() = default;
     virtual void toString (std::string & out, bool pretty) const = 0;
-    virtual float toFloat () const = 0;
+    virtual double toDouble () const = 0;
 };
 
 template<typename T>
 struct PerfCounter : PerfCounterBase, std::atomic<T> {
     void toString (std::string & out, bool pretty) const override;
-    float toFloat () const override;
+    double toDouble () const override;
 };
 
 template<typename T>
 struct PerfFunc : PerfCounterBase {
     std::function<T()> fn;
     void toString (std::string & out, bool pretty) const override;
-    float toFloat () const override;
+    double toDouble () const override;
 };
 
 
@@ -67,9 +67,14 @@ PerfFunc<float> & fperf(std::string_view name, std::function<float()> fn);
 struct PerfValue {
     std::string_view name;
     std::string value;
+    double raw;
+    int pos;
 };
 
 // The pretty output has localizes the numbers (e.g. commas) and is sorted.
+//
+// NOTE: If the passed in array is not empty it is assumed to still have the
+//       contents returned by a previous call to this function.
 void perfGetValues (std::vector<PerfValue> & out, bool pretty = false);
 
 } // namespace

@@ -113,8 +113,8 @@ template PerfCounter<float>;
 
 //===========================================================================
 template<typename T>
-inline float PerfCounter<T>::toFloat () const {
-    return (float) *this;
+inline double PerfCounter<T>::toDouble () const {
+    return (double) *this;
 }
 
 //===========================================================================
@@ -136,8 +136,8 @@ template PerfFunc<float>;
 
 //===========================================================================
 template<typename T>
-inline float PerfFunc<T>::toFloat () const {
-    return (float) fn();
+inline double PerfFunc<T>::toDouble () const {
+    return (double) fn();
 }
 
 //===========================================================================
@@ -211,15 +211,32 @@ PerfFunc<float> & Dim::fperf(string_view name, function<float()> fn) {
 //===========================================================================
 void Dim::perfGetValues (std::vector<PerfValue> & out, bool pretty) {
     auto & info = getInfo();
+    bool mustSort = false;
     {
         shared_lock<shared_mutex> lk{info.mut};
-        out.resize(info.counters.size());
+        if (out.size() != info.counters.size()) {
+            mustSort = true;
+            out.clear();
+            out.resize(info.counters.size());
+            for (int i = 0; i < out.size(); ++i)
+                out[i].pos = i;
+        }
         for (unsigned i = 0; i < out.size(); ++i) {
-            out[i].name = info.counters[i]->name;
-            info.counters[i]->toString(out[i].value, pretty);
+            auto pos = out[i].pos;
+            auto cnt = info.counters[pos].get();
+            if (out[i].name.data() != cnt->name.data()) {
+                out[i].name = cnt->name;
+                out[i].value.clear();
+            }
+            if (out[i].value.empty()
+                || out[i].raw != cnt->toDouble()
+            ) {
+                cnt->toString(out[i].value, pretty);
+                out[i].raw = cnt->toDouble();
+            }
         }
     }
-    if (pretty) {
+    if (mustSort) {
         sort(
             out.begin(),
             out.end(),

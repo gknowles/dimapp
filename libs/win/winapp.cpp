@@ -97,12 +97,15 @@ static void setItemText(HWND wnd, int item, int col, string_view text) {
 static void updateList(HWND parent) {
     auto wnd = GetDlgItem(parent, kListId);
 
+    static vector<PerfValue> oldVals;
     static vector<PerfValue> vals;
     perfGetValues(vals, true);
     int cvals = (int) vals.size();
 
     LVITEM li = {};
     int num = ListView_GetItemCount(wnd);
+    oldVals.resize(num);
+    oldVals.resize(cvals);
 
     // add and/or update lines
     for (int i = 0; i < cvals; ++i) {
@@ -110,8 +113,14 @@ static void updateList(HWND parent) {
             li.iItem = i;
             ListView_InsertItem(wnd, &li);
         }
-        setItemText(wnd, i, 0, vals[i].value);
-        setItemText(wnd, i, 1, vals[i].name);
+        if (vals[i].value != oldVals[i].value) {
+            setItemText(wnd, i, 0, vals[i].value);
+            oldVals[i].value = vals[i].value;
+        }
+        if (vals[i].name != oldVals[i].name) {
+            setItemText(wnd, i, 1, vals[i].name);
+            oldVals[i].name = vals[i].name;
+        }
     }
 
     // remove extra lines
