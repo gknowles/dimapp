@@ -1362,6 +1362,8 @@ static void eraFind(Node & left, const Node & right) {
             *out++ = *li;
     }
     left.numValues = uint16_t(out - left.values);
+    if (!left.numValues)
+        eraEmpty(left, right);
 }
 
 //===========================================================================
@@ -1381,6 +1383,8 @@ static void eraVec(Node & left, const Node & right) {
         left.values
     );
     left.numValues = uint16_t(le - left.values);
+    if (!left.numValues)
+        eraEmpty(left, right);
 }
 
 //===========================================================================
@@ -1393,6 +1397,8 @@ static void eraBitmap(Node & left, const Node & right) {
         if (*li &= ~*ri)
             left.numValues += 1;
     }
+    if (!left.numValues)
+        eraEmpty(left, right);
 }
 
 //===========================================================================
@@ -1469,6 +1475,8 @@ static void isecFind(Node & left, const Node & right) {
             *out++ = *li;
     }
     left.numValues = uint16_t(out - left.values);
+    if (!left.numValues)
+        isecEmpty(left, right);
 }
 
 //===========================================================================
@@ -1487,6 +1495,8 @@ static void isecVec(Node & left, const Node & right) {
         left.values
     );
     left.numValues = uint16_t(le - left.values);
+    if (!left.numValues)
+        isecEmpty(left, right);
 }
 
 //===========================================================================
@@ -1499,6 +1509,8 @@ static void isecBitmap(Node & left, const Node & right) {
         if (*li &= *ri)
             left.numValues += 1;
     }
+    if (!left.numValues)
+        isecEmpty(left, right);
 }
 
 //===========================================================================
