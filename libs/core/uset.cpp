@@ -328,12 +328,10 @@ bool FullImpl::findFirst(
     const Node & node,
     unsigned first
 ) const {
-    if (first < size(node)) {
-        *onode = &node;
-        *ovalue = first;
-        return true;
-    }
-    return false;
+    assert(relBase(first, node.depth) == node.base);
+    *onode = &node;
+    *ovalue = first;
+    return true;
 }
 
 //===========================================================================
@@ -343,6 +341,7 @@ bool FullImpl::lastContiguous(
     const Node & node,
     unsigned first
 ) const {
+    assert(relBase(first, node.depth) == node.base);
     *onode = &node;
     *ovalue = absBase(node) + valueMask(node.depth);
     return false;
@@ -1935,7 +1934,7 @@ UnsignedSet::Iterator::Iterator(
     , m_minDepth{minDepth}
 {
     if (!m_node) {
-        assert(!m_value);
+        assert(!m_value && !m_minDepth);
     } else {
         if (!impl(*m_node)->findFirst(&m_node, &m_value, *m_node, m_value))
             *this = {};
