@@ -29,7 +29,16 @@ using namespace Dim;
 ***/
 
 //===========================================================================
-static void app(int argc, char *argv[]) {
+static void memleak() {
+    // test.eight.seven.*
+    UnsignedSet c0, c1;
+    c0.assign("1-10000");
+    c1.assign("801-900 8001-9000");
+    c0.intersect(c1);
+}
+
+//===========================================================================
+static void test() {
     int line = 0;
 
     UnsignedSet tmp;
@@ -105,6 +114,13 @@ static void app(int argc, char *argv[]) {
     tmp.assign("1-2 1000-1100");
     rc = tmp.compare(tmp2);
     EXPECT(rc == 1);
+}
+
+//===========================================================================
+static void app(int argc, char *argv[]) {
+    memleak();
+    test();
+
 
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);
@@ -127,7 +143,8 @@ static void app(int argc, char *argv[]) {
 int main(int argc, char * argv[]) {
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF
         | _CRTDBG_LEAK_CHECK_DF
-        | _CRTDBG_DELAY_FREE_MEM_DF);
+        | _CRTDBG_DELAY_FREE_MEM_DF
+        );
     _set_error_mode(_OUT_TO_MSGBOX);
     return appRun(app, argc, argv);
 }

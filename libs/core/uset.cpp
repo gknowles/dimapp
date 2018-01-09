@@ -646,6 +646,8 @@ bool BitmapImpl::insert(Node & node, unsigned value) {
         node.numValues += 1;
         return true;
     }
+    if (*ptr != 0xffff'ffff'ffff'ffff)
+        return true;
     for (unsigned i = 0; i < numInt64s(); ++i) {
         if (base[i] != 0xffff'ffff'ffff'ffff)
             return true;
@@ -1181,7 +1183,8 @@ static void insRIter(Node & left, const Node & right) {
     Node tmp;
     insCopy(tmp, right);
     swap(left, tmp);
-    insIter(left, tmp);
+    insIter(left, move(tmp));
+    impl(tmp)->destroy(tmp);
 }
 
 //===========================================================================
@@ -1480,11 +1483,12 @@ static void isecFind(Node & left, const Node & right) {
 }
 
 //===========================================================================
-static void isecSFind(Node & left, const Node & right) {
+static void isecRFind(Node & left, const Node & right) {
     Node tmp;
     isecCopy(tmp, right);
     swap(left, tmp);
-    isecFind(left, tmp);
+    isecFind(left, move(tmp));
+    impl(tmp)->destroy(tmp);
 }
 
 //===========================================================================
@@ -1532,8 +1536,8 @@ static void intersect(Node & left, const Node & right) {
     /* empty  */ { isecSkip,  isecSkip, isecSkip,  isecSkip,   isecSkip },
     /* full   */ { isecEmpty, isecSkip, isecCopy,  isecCopy,   isecCopy  },
     /* vector */ { isecEmpty, isecSkip, isecVec,   isecFind,   isecFind  },
-    /* bitmap */ { isecEmpty, isecSkip, isecSFind, isecBitmap, isecError },
-    /* meta   */ { isecEmpty, isecSkip, isecSFind, isecError,  isecMeta  },
+    /* bitmap */ { isecEmpty, isecSkip, isecRFind, isecBitmap, isecError },
+    /* meta   */ { isecEmpty, isecSkip, isecRFind, isecError,  isecMeta  },
     };
     functs[left.type][right.type](left, right);
 }
