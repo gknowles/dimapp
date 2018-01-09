@@ -121,7 +121,6 @@ static void app(int argc, char *argv[]) {
     memleak();
     test();
 
-
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);
         cerr << "*** TEST FAILURES: " << errs << endl;
