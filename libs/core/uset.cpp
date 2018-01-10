@@ -632,6 +632,7 @@ void BitmapImpl::destroy(Node & node) {
 
 //===========================================================================
 bool BitmapImpl::insert(Node & node, unsigned value) {
+    assert(node.type == kBitmap);
     assert(relBase(value, node.depth) == node.base);
     auto base = (uint64_t *) node.values;
     value = relValue(value, node.depth);
@@ -1128,8 +1129,6 @@ static int cmpMeta(const Node & left, const Node & right) {
 }
 
 //===========================================================================
-// FIXME: node compare needs to consider whether or not all following nodes
-//        are empty. For example: 1-2 < 1-3, but not if it's 1-2,100000
 static int compare(const Node & left, const Node & right) {
     using CompareFn = int(const Node & left, const Node & right);
     CompareFn * functs[][kNodeTypes] = {
@@ -1162,6 +1161,13 @@ static void insError(Node & left, const Node & right) {
 //===========================================================================
 static void insSkip(Node & left, const Node & right)
 {}
+
+//===========================================================================
+static void insFull(Node & left, const Node & right) {
+    impl(left)->destroy(left);
+    left.type = kFull;
+    impl(left)->init(left, true);
+}
 
 //===========================================================================
 static void insCopy(Node & left, const Node & right) {
@@ -1205,6 +1211,8 @@ static void insBitmap(Node & left, const Node & right) {
         if (*li |= *ri)
             left.numValues += 1;
     }
+    if (left.numValues == BitmapImpl::numInt64s())
+        insFull(left, right);
 }
 
 //===========================================================================
@@ -1213,8 +1221,14 @@ static void insMeta(Node & left, const Node & right) {
     auto le = li + left.numValues;
     auto ri = right.nodes;
     auto re = ri + right.numValues;
-    for (; li != le && ri != re; ++li, ++ri)
+    for (; li != le && ri != re; ++li, ++ri) {
         insert(*li, *ri);
+    }
+    for (li = left.nodes; li != le; ++li) {
+        if (li->type != kFull)
+            return;
+    }
+    insFull(left, right);
 }
 
 //===========================================================================
@@ -1223,11 +1237,11 @@ static void insert(Node & left, const Node & right) {
     InsertFn * functs[][kNodeTypes] = {
     // LEFT                         RIGHT
     //             empty    full     vector   bitmap     meta
-    /* empty  */ { insSkip, insCopy, insCopy, insCopy,   insCopy  },
+    /* empty  */ { insSkip, insFull, insCopy, insCopy,   insCopy  },
     /* full   */ { insSkip, insSkip, insSkip, insSkip,   insSkip  },
-    /* vector */ { insSkip, insCopy, insVec,  insRIter,  insRIter },
-    /* bitmap */ { insSkip, insCopy, insIter, insBitmap, insError },
-    /* meta   */ { insSkip, insCopy, insIter, insError,  insMeta  },
+    /* vector */ { insSkip, insFull, insVec,  insRIter,  insRIter },
+    /* bitmap */ { insSkip, insFull, insIter, insBitmap, insError },
+    /* meta   */ { insSkip, insFull, insIter, insError,  insMeta  },
     };
     functs[left.type][right.type](left, right);
 }
@@ -1249,6 +1263,11 @@ static void insError(Node & left, Node && right) {
 //===========================================================================
 static void insSkip(Node & left, Node && right)
 {}
+
+//===========================================================================
+static void insFull(Node & left, Node && right) {
+    insFull(left, right);
+}
 
 //===========================================================================
 static void insMove(Node & left, Node && right) {
@@ -1284,6 +1303,11 @@ static void insMeta(Node & left, Node && right) {
     auto re = ri + right.numValues;
     for (; li != le && ri != re; ++li, ++ri)
         insert(*li, move(*ri));
+    for (li = left.nodes; li != le; ++li) {
+        if (li->type != kFull)
+            return;
+    }
+    insFull(left, right);
 }
 
 //===========================================================================
@@ -1292,11 +1316,11 @@ static void insert(Node & left, Node && right) {
     InsertFn * functs[][kNodeTypes] = {
     // LEFT                         RIGHT
     //             empty    full     vector   bitmap     meta
-    /* empty  */ { insSkip, insMove, insMove, insMove,   insMove  },
+    /* empty  */ { insSkip, insFull, insMove, insMove,   insMove  },
     /* full   */ { insSkip, insSkip, insSkip, insSkip,   insSkip  },
-    /* vector */ { insSkip, insMove, insVec,  insRIter,  insRIter },
-    /* bitmap */ { insSkip, insMove, insIter, insBitmap, insError },
-    /* meta   */ { insSkip, insMove, insIter, insError,  insMeta  },
+    /* vector */ { insSkip, insFull, insVec,  insRIter,  insRIter },
+    /* bitmap */ { insSkip, insFull, insIter, insBitmap, insError },
+    /* meta   */ { insSkip, insFull, insIter, insError,  insMeta  },
     };
     functs[left.type][right.type](left, move(right));
 }
