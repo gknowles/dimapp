@@ -85,11 +85,12 @@ SockMgrHandle sockMgrConnect(
 // reliably stave off disconnection.
 void sockMgrSetInactiveTimeout(SockMgrHandle mgr, Duration timeout);
 
-// Not implemented
 void sockMgrSetEndpoints(
     SockMgrHandle mgr,
-    const std::vector<Endpoint> & addrs
+    const Endpoint * addrs,
+    size_t numAddrs
 );
+// Not implemented
 void sockMgrMonitorEndpoints(SockMgrHandle mgr, std::string_view host);
 
 // Starts closing, no new connections will be allowed. Returns true if all

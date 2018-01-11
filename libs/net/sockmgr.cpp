@@ -174,10 +174,11 @@ void Dim::sockMgrSetInactiveTimeout(SockMgrHandle h, Duration timeout) {
 //===========================================================================
 void Dim::sockMgrSetEndpoints(
     SockMgrHandle h,
-    const vector<Endpoint> & addrs
+    const Endpoint * addrs,
+    size_t count
 ) {
     auto mgr = s_mgrs.find(h);
-    mgr->setEndpoints(addrs);
+    mgr->setEndpoints(addrs, count);
 }
 
 //===========================================================================

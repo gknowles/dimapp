@@ -68,7 +68,7 @@ public:
     bool shutdown();
 
     virtual bool listening() const = 0;
-    virtual void setEndpoints(const std::vector<Endpoint> & endpts) = 0;
+    virtual void setEndpoints(const Endpoint * addrs, size_t count) = 0;
     virtual bool onShutdown(bool firstTry) = 0;
 
     // Inherited via IConfigNotify

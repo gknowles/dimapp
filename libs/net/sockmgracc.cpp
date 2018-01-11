@@ -41,7 +41,7 @@ public:
     // Inherited via ISockMgrBase
     bool listening() const override { return true; }
 
-    void setEndpoints(const vector<Endpoint> & endpts) override;
+    void setEndpoints(const Endpoint * addrs, size_t count) override;
     bool onShutdown(bool firstTry) override;
 
     // Inherited via IConfigNotify via ISockMgrBase
@@ -143,8 +143,8 @@ AcceptManager::AcceptManager(
 }
 
 //===========================================================================
-void AcceptManager::setEndpoints(const vector<Endpoint> & src) {
-    vector<Endpoint> endpts{src.begin(), src.end()};
+void AcceptManager::setEndpoints(const Endpoint * addrs, size_t count) {
+    vector<Endpoint> endpts{addrs, addrs + count};
     sort(endpts.begin(), endpts.end());
     sort(m_endpoints.begin(), m_endpoints.end());
 
@@ -178,11 +178,9 @@ void AcceptManager::onConfigChange(const XDocument & doc) {
 
     m_confFlags = flags;
 
-    Endpoint ep;
-    ep.port = configUnsigned(doc, "Port", 41000);
-    vector<Endpoint> endpts;
-    endpts.push_back(ep);
-    setEndpoints(endpts);
+    Endpoint addr;
+    addr.port = configUnsigned(doc, "Port", 41000);
+    setEndpoints(&addr, 1);
 }
 
 //===========================================================================
