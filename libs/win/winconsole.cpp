@@ -45,8 +45,26 @@ static BOOL WINAPI controlCallback(DWORD ctrl) {
 *
 ***/
 
+static unordered_map<ConsoleAttr, int> s_attrs = {
+    { kConsoleNormal,    // normal white
+        FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE },
+    { kConsoleGreen,     // bright green
+        FOREGROUND_INTENSITY | FOREGROUND_GREEN },
+    { kConsoleHighlight, // bright cyan
+        FOREGROUND_INTENSITY | FOREGROUND_GREEN | FOREGROUND_BLUE },
+    { kConsoleWarn,      // bright yellow
+        FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN },
+    { kConsoleError,     // bright red
+        FOREGROUND_INTENSITY | FOREGROUND_RED },
+};
+
 //===========================================================================
 ConsoleScopedAttr::ConsoleScopedAttr(ConsoleAttr attr) {
+    if (!consoleAttached()) {
+        m_active = false;
+        return;
+    }
+
     // save console text attributes
     HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
     CONSOLE_SCREEN_BUFFER_INFO info;
@@ -56,30 +74,20 @@ ConsoleScopedAttr::ConsoleScopedAttr(ConsoleAttr attr) {
 
     scoped_lock<mutex> lk{s_mut};
     s_consoleAttrs.push_back(info.wAttributes);
-    switch (attr) {
-    case kConsoleNormal:
-        info.wAttributes = FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_RED;
-        break;
-    case kConsoleGreen:
-        info.wAttributes = FOREGROUND_INTENSITY | FOREGROUND_GREEN;
-        break;
-    case kConsoleHighlight:
-        info.wAttributes =
-            FOREGROUND_INTENSITY | FOREGROUND_BLUE | FOREGROUND_GREEN;
-        break;
-    case kConsoleError:
-        info.wAttributes = FOREGROUND_INTENSITY | FOREGROUND_RED;
-        break;
+    if (auto i = s_attrs.find(attr); i != s_attrs.end()) {
+        info.wAttributes = (WORD) i->second;
+        SetConsoleTextAttribute(hOutput, info.wAttributes);
     }
-    SetConsoleTextAttribute(hOutput, info.wAttributes);
 }
 
 //===========================================================================
 ConsoleScopedAttr::~ConsoleScopedAttr() {
-    HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-    scoped_lock<mutex> lk{s_mut};
-    SetConsoleTextAttribute(hOutput, s_consoleAttrs.back());
-    s_consoleAttrs.pop_back();
+    if (m_active) {
+        HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+        scoped_lock<mutex> lk{s_mut};
+        SetConsoleTextAttribute(hOutput, s_consoleAttrs.back());
+        s_consoleAttrs.pop_back();
+    }
 }
 
 
@@ -101,6 +109,11 @@ void Dim::iConsoleInitialize() {
 *   Console flags
 *
 ***/
+
+//===========================================================================
+bool Dim::consoleAttached() {
+    return GetConsoleWindow() != NULL;
+}
 
 //===========================================================================
 static void enableConsoleFlags(bool enable, DWORD flags) {
@@ -136,7 +149,7 @@ void Dim::consoleCatchCtrlC(bool enable) {
 
 //===========================================================================
 void Dim::consoleResetStdin() {
-    if (GetConsoleWindow() == NULL) {
+    if (!consoleAttached()) {
         // process isn't attached to a console
         return;
     }

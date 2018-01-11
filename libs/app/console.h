@@ -12,16 +12,20 @@ enum ConsoleAttr {
     kConsoleNormal,
     kConsoleGreen,
     kConsoleHighlight,
+    kConsoleWarn,
     kConsoleError,
 };
 
 class ConsoleScopedAttr {
-    int m_attr;
+    int m_active{true};
 
 public:
     ConsoleScopedAttr(ConsoleAttr attr);
     ~ConsoleScopedAttr();
 };
+
+// Is there a console attached?
+bool consoleAttached();
 
 // Also enables/disables line buffering.
 void consoleEnableEcho(bool enable = true);
