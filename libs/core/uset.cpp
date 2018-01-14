@@ -121,7 +121,7 @@ struct IImplBase {
 *
 ***/
 
-inline static IImplBase * impl(const Node & node);
+static IImplBase * impl(const Node & node);
 
 
 /****************************************************************************
@@ -950,18 +950,19 @@ bool MetaImpl::lastContiguous(
 *
 ***/
 
-//===========================================================================
-inline static IImplBase * impl(const Node & node) {
-    switch (node.type) {
-    case kEmpty: return &s_emptyImpl;
-    case kFull: return &s_fullImpl;
-    case kVector: return &s_vectorImpl;
-    case kBitmap: return &s_bitmapImpl;
-    case kMeta: return &s_metaImpl;
-    }
+static IImplBase * s_impls[] = {
+    &s_emptyImpl,
+    &s_fullImpl,
+    &s_vectorImpl,
+    &s_bitmapImpl,
+    &s_metaImpl,
+};
+static_assert(size(s_impls) == kNodeTypes);
 
-    logMsgCrash() << "invalid node type: " << node.type;
-    return nullptr;
+//===========================================================================
+static IImplBase * impl(const Node & node) {
+    assert(node.type < size(s_impls));
+    return s_impls[node.type];
 }
 
 
