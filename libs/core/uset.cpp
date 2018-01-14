@@ -121,7 +121,7 @@ struct IImplBase {
 *
 ***/
 
-static IImplBase * impl(const Node & node);
+inline static IImplBase * impl(const Node & node);
 
 
 /****************************************************************************
@@ -951,7 +951,7 @@ bool MetaImpl::lastContiguous(
 ***/
 
 //===========================================================================
-static IImplBase * impl(const Node & node) {
+inline static IImplBase * impl(const Node & node) {
     switch (node.type) {
     case kEmpty: return &s_emptyImpl;
     case kFull: return &s_fullImpl;
