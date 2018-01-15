@@ -12,22 +12,33 @@
 
 namespace Dim {
 
+
 /****************************************************************************
 *
 *   Declarations
 *
 ***/
 
+enum class PerfType {
+    kInvalid,
+    kInt,
+    kUnsigned,
+    kFloat,
+    kNumTypes,
+};
+
 struct PerfCounterBase {
     std::string name;
 
     virtual ~PerfCounterBase() = default;
+    virtual PerfType type () const = 0;
     virtual void toString (std::string & out, bool pretty) const = 0;
     virtual double toDouble () const = 0;
 };
 
 template<typename T>
 struct PerfCounter : PerfCounterBase, std::atomic<T> {
+    PerfType type () const override;
     void toString (std::string & out, bool pretty) const override;
     double toDouble () const override;
 };
@@ -35,6 +46,8 @@ struct PerfCounter : PerfCounterBase, std::atomic<T> {
 template<typename T>
 struct PerfFunc : PerfCounterBase {
     std::function<T()> fn;
+
+    PerfType type () const override;
     void toString (std::string & out, bool pretty) const override;
     double toDouble () const override;
 };
@@ -69,6 +82,7 @@ struct PerfValue {
     std::string value;
     double raw;
     int pos;
+    PerfType type;
 };
 
 // The pretty output has localizes the numbers (e.g. commas) and is sorted.

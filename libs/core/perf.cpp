@@ -74,6 +74,21 @@ static PerfFunc<T> & perf(string_view name, function<T()> && fn) {
 
 //===========================================================================
 template <typename T>
+static PerfType perfType() {
+    if constexpr (is_same_v<T, int>) {
+        return PerfType::kInt;
+    } else if constexpr (is_same_v<T, unsigned>) {
+        return PerfType::kUnsigned;
+    } else if constexpr (is_same_v<T, float>) {
+        return PerfType::kFloat;
+    } else {
+        static_assert(!is_same_v<T, T>, "unknown perf counter type");
+        return PerfType::kInvalid;
+    }
+}
+
+//===========================================================================
+template <typename T>
 static void valueToString(std::string & out, T val, bool pretty) {
     auto str = StrFrom<T>{val};
     if (!pretty) {
@@ -123,6 +138,12 @@ inline void PerfCounter<T>::toString (std::string & out, bool pretty) const {
     valueToString(out, (T) *this, pretty);
 }
 
+//===========================================================================
+template<typename T>
+inline PerfType PerfCounter<T>::type () const {
+    return perfType<T>();
+}
+
 
 /****************************************************************************
 *
@@ -144,6 +165,12 @@ inline double PerfFunc<T>::toDouble () const {
 template<typename T>
 inline void PerfFunc<T>::toString (std::string & out, bool pretty) const {
     valueToString(out, fn(), pretty);
+}
+
+//===========================================================================
+template<typename T>
+inline PerfType PerfFunc<T>::type () const {
+    return perfType<T>();
 }
 
 
@@ -233,6 +260,7 @@ void Dim::perfGetValues (std::vector<PerfValue> & out, bool pretty) {
             ) {
                 cnt->toString(out[i].value, pretty);
                 out[i].raw = cnt->toDouble();
+                out[i].type = cnt->type();
             }
         }
     }
