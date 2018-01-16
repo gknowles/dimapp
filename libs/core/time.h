@@ -54,6 +54,20 @@ using TimePoint = Clock::time_point;
 
 /****************************************************************************
 *
+*   Duration to/from string
+*
+***/
+
+enum class DurationFormat {
+    kTwoPart,   // two units (s + ms, m + s, h + m, etc), no decimal
+    kOnePart,   // one unit, three decimals
+};
+std::string toString(Duration val, DurationFormat fmt);
+bool parse(Dim::Duration * out, std::string_view src);
+
+
+/****************************************************************************
+*
 *   Time8601Str
 *
 *   Time format as defined by RFC3339, an Internet profile of ISO 8601 that

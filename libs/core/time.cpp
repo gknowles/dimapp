@@ -47,6 +47,97 @@ Clock::time_point Clock::from_time_t(time_t t) noexcept {
 
 /****************************************************************************
 *
+*   Duration to/from string
+*
+***/
+
+//===========================================================================
+// ms, s, min, h, d, w, mon, y
+static bool interpret(Duration * out, string_view * units, double val) {
+    auto ptr = units->data();
+    auto eptr = ptr + units->size();
+    if (ptr == eptr)
+        return false;
+    switch (*ptr++) {
+    case 'm':
+        if (ptr == eptr)
+            return false;
+        switch (*ptr++) {
+        case 's':
+            *out = duration_cast<Duration>(
+                (chrono::duration<double, milli>) val
+            );
+            break;
+        case 'i':
+            if (ptr == eptr || *ptr++ != 'n')
+                return false;
+            *out = duration_cast<Duration>(
+                (chrono::duration<double, ratio<60>>) val
+            );
+            break;
+        case 'o':
+            if (ptr == eptr || *ptr++ != 'n')
+                return false;
+            *out = duration_cast<Duration>(
+                (chrono::duration<double, ratio<30 * 24 * 60 * 60>>) val
+            );
+            break;
+        default:
+            return false;
+        }
+    case 's':
+        *out = duration_cast<Duration>((chrono::duration<double>) val);
+        break;
+    case 'h':
+        *out = duration_cast<Duration>(
+            (chrono::duration<double, ratio<60 * 60>>) val
+        );
+        break;
+    case 'd':
+        *out = duration_cast<Duration>(
+            (chrono::duration<double, ratio<24 * 60 * 60>>) val
+        );
+        break;
+    case 'w':
+        *out = duration_cast<Duration>(
+            (chrono::duration<double, ratio<7 * 24 * 60 * 60>>) val
+        );
+        break;
+    case 'y':
+        *out = duration_cast<Duration>(
+            (chrono::duration<double, ratio<365 * 24 * 60 * 60>>) val
+        );
+        break;
+    default:
+        return false;
+    }
+
+    *units = string_view{ptr, size_t(eptr - ptr)};
+    return true;
+}
+
+//===========================================================================
+string Dim::toString(Duration val, DurationFormat fmt);
+
+//===========================================================================
+bool Dim::parse(Duration * out, string_view src) {
+    char buf[maxFloatChars<double>()];
+    buf[src.copy(buf, src.size())] = 0;
+    char * ptr;
+    auto val = strtod(buf, &ptr);
+    if (!*ptr)
+        return false;
+    src = src.substr(ptr - buf);
+    if (!interpret(out, &src, val))
+        return false;
+    if (!src[0])
+        return true;
+    return false;
+}
+
+
+/****************************************************************************
+*
 *   Time8601Str
 *
 ***/
