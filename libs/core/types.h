@@ -26,6 +26,10 @@ enum RunMode {
     kRunStopping,
 };
 
+const char * toString(RunMode mode, const char def[] = nullptr);
+RunMode fromString(std::string_view src, RunMode def);
+
+
 
 /****************************************************************************
 *
