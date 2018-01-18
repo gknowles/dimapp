@@ -8,6 +8,7 @@
 
 #include <cassert>
 #include <cstdint>
+#include <string_view>
 #include <type_traits>
 
 namespace Dim {
@@ -26,9 +27,8 @@ enum RunMode {
     kRunStopping,
 };
 
-const char * toString(RunMode mode, const char def[] = nullptr);
+const char * toString(RunMode mode, const char def[] = "");
 RunMode fromString(std::string_view src, RunMode def);
-
 
 
 /****************************************************************************

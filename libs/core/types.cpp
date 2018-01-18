@@ -24,11 +24,11 @@ static TokenTable::Token s_runModes[] = {
 static TokenTable s_runModeTbl{s_runModes, size(s_runModes)};
 
 //===========================================================================
-const char * toString(RunMode mode, const char def[]) {
+const char * Dim::toString(RunMode mode, const char def[]) {
     return tokenTableGetName(s_runModeTbl, mode, def);
 }
 
 //===========================================================================
-RunMode fromString(std::string_view src, RunMode def) {
+RunMode Dim::fromString(std::string_view src, RunMode def) {
     return tokenTableGetEnum(s_runModeTbl, src, def);
 }
