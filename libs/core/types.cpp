@@ -25,7 +25,7 @@ static TokenTable s_runModeTbl{s_runModes, size(s_runModes)};
 
 //===========================================================================
 const char * toString(RunMode mode, const char def[]) {
-    return tokenTableGetName(s_runModeTbl, type, def);
+    return tokenTableGetName(s_runModeTbl, mode, def);
 }
 
 //===========================================================================
