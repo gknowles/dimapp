@@ -114,6 +114,13 @@ static IHttpRouteNotify * find(std::string_view path, HttpMethod method) {
 static void route(unsigned reqId, HttpRequest & req) {
     auto & params = req.query();
     auto method = httpMethodFromString(req.method());
+    for (auto && param : params.parameters) {
+        if (param.name == "_method") {
+            if (auto val = param.values.front())
+                method = httpMethodFromString(val->value);
+            break;
+        }
+    }
     auto notify = find(params.path, method);
     if (!notify)
         return httpRouteReplyNotFound(reqId, req);
