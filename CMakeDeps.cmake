@@ -10,7 +10,6 @@
 # libs/app/app.cpp
 # libs/app/app.h
 # libs/app/appint.h
-# libs/app/appmain.h
 # libs/app/config.cpp
 # libs/app/config.h
 # libs/app/console.h
@@ -55,6 +54,7 @@
 # libs/core/timerlist.h
 # libs/core/tokentable.cpp
 # libs/core/tokentable.h
+# libs/core/types.cpp
 # libs/core/types.h
 # libs/core/uset.cpp
 # libs/core/uset.h
