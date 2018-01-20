@@ -10,8 +10,10 @@
 #include "core/task.h"
 #include "core/time.h"
 
+#include <condition_variable>
 #include <cstdint>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <string_view>
 
@@ -223,7 +225,6 @@ void fileWrite(
     const void * buf,
     size_t bufLen,
     TaskQueueHandle hq = {} // queue to notify
-
 );
 size_t fileWriteWait(
     FileHandle f,
@@ -231,15 +232,95 @@ size_t fileWriteWait(
     const void * buf,
     size_t bufLen
 );
+
 void fileAppend(
     IFileWriteNotify * notify,
     FileHandle f,
     const void * buf,
     size_t bufLen,
     TaskQueueHandle hq = {} // queue to notify
-
 );
 size_t fileAppendWait(FileHandle f, const void * buf, size_t bufLen);
+
+
+/****************************************************************************
+*
+*   FileAppendQueue
+*
+***/
+
+class FileAppendQueue : Dim::IFileWriteNotify {
+public:
+    FileAppendQueue();
+    FileAppendQueue(int numBufs, int maxWrites, size_t pageSize);
+    ~FileAppendQueue();
+    void init(int numBufs, int maxWrites, size_t pageSize);
+
+    explicit operator bool() const { return (bool) m_file; }
+
+    enum OpenExisting {
+        kFail,
+        kAppend,
+        kTrunc,
+    };
+    bool open(std::string_view path, OpenExisting mode);
+    bool attach(Dim::FileHandle f);
+    void close();
+
+    void append(std::string_view data);
+
+private:
+    void write_LK();
+
+    void onFileWrite(
+        int written,
+        std::string_view data,
+        int64_t offset,
+        Dim::FileHandle f
+    ) override;
+
+    std::mutex m_mut;
+    std::condition_variable m_cv;
+    int m_fullBufs = 0;     // ready to be written
+    int m_lockedBufs = 0;   // being written
+    int m_numBufs = 0;
+    int m_maxWrites = 0;
+    int m_numWrites = 0;
+    char * m_buffers = nullptr;  // aligned to page boundary
+    size_t m_bufLen = 0;
+
+    Dim::FileHandle m_file;
+    std::string_view m_buf;
+    size_t m_filePos = 0;
+};
+
+
+/****************************************************************************
+*
+*   Copy
+*
+***/
+
+class IFileCopyNotify {
+public:
+    virtual ~IFileCopyNotify() = default;
+
+    virtual bool onFileCopy(int64_t offset, int64_t copied, int64_t total) {
+        return true;
+    }
+    // guaranteed to be called exactly once, when the copy is completed
+    // (or failed)
+    virtual void onFileEnd(int64_t offset, int64_t total) = 0;
+};
+
+// !!! Never been used, never been tested (beyond knowing that it requires
+//     exclusive file access to both the source and target)!
+void fileCopy(
+    IFileCopyNotify * notify,
+    std::string_view dstPath,
+    std::string_view srcPath,
+    TaskQueueHandle hq = {} // queue to notify
+);
 
 
 /****************************************************************************

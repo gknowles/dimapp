@@ -813,6 +813,104 @@ size_t Dim::fileAppendWait(FileHandle f, const void * buf, size_t bufLen) {
 
 /****************************************************************************
 *
+*   Copy
+*
+***/
+
+namespace {
+
+struct ProgressTask : ITaskNotify {
+    IFileCopyNotify * m_notify{nullptr};
+    wstring m_wdst;
+    wstring m_wsrc;
+    TaskQueueHandle m_hq;
+    int64_t m_offset{0};
+    int64_t m_copied{0};
+    int64_t m_total{0};
+    BOOL m_cancel{false};
+    RunMode m_mode{kRunStarting};
+
+    void onTask() override;
+};
+
+} // namespace
+
+//===========================================================================
+static DWORD CALLBACK copyProgress(
+    LARGE_INTEGER totalBytes,
+    LARGE_INTEGER totalBytesXfer,
+    LARGE_INTEGER streamBytes,
+    LARGE_INTEGER streamBytesXfer,
+    DWORD stream,
+    DWORD reason,
+    HANDLE src,
+    HANDLE dst,
+    void * param
+) {
+    if (reason == CALLBACK_CHUNK_FINISHED) {
+        auto task = (ProgressTask *) param;
+        task->m_copied = totalBytesXfer.QuadPart - task->m_offset;
+        task->m_total = totalBytes.QuadPart;
+        taskPush(task->m_hq, *task);
+    }
+    return PROGRESS_CONTINUE;
+}
+
+//===========================================================================
+void ProgressTask::onTask() {
+    if (m_mode == kRunStarting) {
+        m_mode = kRunRunning;
+        if (!CopyFileExW(
+            m_wsrc.c_str(),
+            m_wdst.c_str(),
+            copyProgress,
+            this,
+            &m_cancel,
+            COPY_FILE_OPEN_SOURCE_FOR_WRITE
+        )) {
+            WinError err;
+            m_cancel = true;
+        }
+
+        m_mode = kRunStopped;
+        taskPush(m_hq, *this);
+        return;
+    }
+
+    if (m_mode == kRunRunning) {
+        if (m_copied) {
+            if (!m_notify->onFileCopy(m_offset, m_copied, m_total))
+                m_cancel = true;
+            m_offset += m_copied;
+            m_copied = 0;
+        }
+        return;
+    }
+
+    assert(m_mode == kRunStopped);
+    m_notify->onFileEnd(m_offset, m_total);
+    delete this;
+}
+
+//===========================================================================
+void Dim::fileCopy(
+    IFileCopyNotify * notify,
+    std::string_view dst,
+    std::string_view src,
+    TaskQueueHandle hq
+) {
+    assert(notify);
+    auto task = new ProgressTask;
+    task->m_notify = notify;
+    task->m_wdst = toWstring(dst);
+    task->m_wsrc = toWstring(src);
+    task->m_hq = hq ? hq : taskEventQueue();
+    taskPush(s_hq, *task);
+}
+
+
+/****************************************************************************
+*
 *   Public View API
 *
 ***/
