@@ -68,8 +68,8 @@ void taskPush(TaskQueueHandle q, ITaskNotify * tasks[], size_t numTasks);
 // such as the window message loop, service dispatcher, or timer queue.
 //
 // Creates a task queue with one thread task, runs the task, and then stops
-// the thread. After the task completes the queue is leaked around until
-// shutdown, so this shouldn't be used for anything that runs repeatedly.
+// the thread. After the task completes the queue is "leaked" until shutdown,
+// so this shouldn't be used for anything that runs repeatedly.
 void taskPushOnce(std::string_view name, std::function<void()> fn);
 
 } // namespace
