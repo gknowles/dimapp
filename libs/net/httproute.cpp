@@ -95,6 +95,8 @@ static IHttpRouteNotify * find(std::string_view path, HttpMethod method) {
     size_t bestSegs = 0;
     size_t bestLen = 0;
     for (auto && pi : s_paths) {
+        if (~pi.methods & method)
+            continue;
         if (path == pi.path
             || pi.recurse && path.compare(0, pi.path.size(), pi.path) == 0
         ) {
@@ -103,7 +105,7 @@ static IHttpRouteNotify * find(std::string_view path, HttpMethod method) {
             ) {
                 best = pi.notify;
                 bestSegs = pi.segs;
-                bestLen = path.size();
+                bestLen = pi.path.size();
             }
         }
     }
