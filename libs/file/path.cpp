@@ -274,12 +274,32 @@ Path & Path::setRootName(string_view root) {
 //===========================================================================
 Path & Path::setDir(string_view dir) {
     Count cnt(m_data);
+    string out;
+    out.append(m_data, 0, cnt.m_rootLen);
+    out.append(dir);
+    if (cnt.m_stemLen || cnt.m_extLen) {
+        auto old = string_view{m_data};
+        out += '/';
+        old.remove_prefix(cnt.m_rootLen + cnt.m_dirLen);
+        addStem(out, old.substr(0, cnt.m_stemLen));
+        addExt(out, old.substr(cnt.m_stemLen));
+    }
+    out.swap(m_data);
     return *this;
 }
 
 //===========================================================================
 Path & Path::setParentPath(string_view path) {
     Count cnt(m_data);
+    string out{path};
+    if (cnt.m_stemLen || cnt.m_extLen) {
+        auto old = string_view{m_data};
+        out += '/';
+        old.remove_prefix(cnt.m_rootLen + cnt.m_dirLen);
+        addStem(out, old.substr(0, cnt.m_stemLen));
+        addExt(out, old.substr(cnt.m_stemLen));
+    }
+    out.swap(m_data);
     return *this;
 }
 
