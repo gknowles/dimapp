@@ -609,13 +609,13 @@ constexpr TokenTable::Token kStoreLocs[] = {
 const TokenTable s_storeLocTbl(kStoreLocs, size(kStoreLocs));
 
 //===========================================================================
-CertLocation & CertLocation::operator=(std::string_view name) {
+CertLocation & CertLocation::operator=(string_view name) {
     m_value = tokenTableGetEnum(s_storeLocTbl, name, kInvalid);
     return *this;
 }
 
 //===========================================================================
-std::string_view CertLocation::view() const {
+string_view CertLocation::view() const {
     return tokenTableGetName(s_storeLocTbl, m_value, "");
 }
 

@@ -155,7 +155,7 @@ size_t IFileOpBase::start(
     overlapped() = {};
 
     if (asyncOp()) {
-        taskPush(s_hq, *this);
+        taskPush(s_hq, this);
         return m_bytes;
     }
 
@@ -166,7 +166,7 @@ size_t IFileOpBase::start(
 
     m_trigger = true;
     bool waiting = true;
-    taskPush(s_hq, *this);
+    taskPush(s_hq, this);
     this_thread::yield();
     while (m_trigger == waiting) {
         WaitOnAddress(&m_trigger, &waiting, sizeof(m_trigger), INFINITE);
@@ -851,7 +851,7 @@ static DWORD CALLBACK copyProgress(
         auto task = (ProgressTask *) param;
         task->m_copied = totalBytesXfer.QuadPart - task->m_offset;
         task->m_total = totalBytes.QuadPart;
-        taskPush(task->m_hq, *task);
+        taskPush(task->m_hq, task);
     }
     return PROGRESS_CONTINUE;
 }
@@ -873,7 +873,7 @@ void ProgressTask::onTask() {
         }
 
         m_mode = kRunStopped;
-        taskPush(m_hq, *this);
+        taskPush(m_hq, this);
         return;
     }
 
@@ -895,8 +895,8 @@ void ProgressTask::onTask() {
 //===========================================================================
 void Dim::fileCopy(
     IFileCopyNotify * notify,
-    std::string_view dst,
-    std::string_view src,
+    string_view dst,
+    string_view src,
     TaskQueueHandle hq
 ) {
     assert(notify);
@@ -905,7 +905,7 @@ void Dim::fileCopy(
     task->m_wdst = toWstring(dst);
     task->m_wsrc = toWstring(src);
     task->m_hq = hq ? hq : taskEventQueue();
-    taskPush(s_hq, *task);
+    taskPush(s_hq, task);
 }
 
 

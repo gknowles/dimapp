@@ -113,9 +113,9 @@ static void app(int argc, char *argv[]) {
             }
         }
         result = tlsRecv(
-            conn,
             &output,
             &plain,
+            conn,
             data(test.input),
             size(test.input)
         );

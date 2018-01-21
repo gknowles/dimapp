@@ -38,9 +38,9 @@ enum TlsNameType : uint8_t {
 ***/
 
 //===========================================================================
-void Dim::tlsSetKeyShare(TlsKeyShare & out, TlsNamedGroup group) {
+void Dim::tlsSetKeyShare(TlsKeyShare * out, TlsNamedGroup group) {
     assert(group == kGroupX25519);
-    out.keyExchange.assign(32, 0);
+    out->keyExchange.assign(32, 0);
 }
 
 
@@ -51,86 +51,95 @@ void Dim::tlsSetKeyShare(TlsKeyShare & out, TlsNamedGroup group) {
 ***/
 
 //===========================================================================
-static void
-write(TlsRecordWriter & out, const std::vector<TlsKeyShare> & keys) {
+static void write(
+    TlsRecordWriter * out,
+    const vector<TlsKeyShare> & keys
+) {
     if (keys.empty())
         return;
 
-    out.number16(kSupportedGroups); // extensions.extension_type
-    out.start16();                  // extensions.extension_data
+    out->number16(kSupportedGroups); // extensions.extension_type
+    out->start16();                  // extensions.extension_data
     // supported_groups
-    out.start16();
+    out->start16();
     for (auto && key : keys) {
-        out.number16(key.group);
+        out->number16(key.group);
     }
-    out.end();
-    out.end(); // extension_data
+    out->end();
+    out->end(); // extension_data
 
-    out.number16(kKeyShare); // extensions.extension_type
-    out.start16();           // extensions.extension_data
+    out->number16(kKeyShare); // extensions.extension_type
+    out->start16();           // extensions.extension_data
     // client_shares
-    out.start16();
+    out->start16();
     for (auto && key : keys) {
-        out.number16(key.group); // client_shares.group
-        out.start16();           // client_shares.key_exchange
-        out.var(key.keyExchange.data(), key.keyExchange.size());
-        out.end();
+        out->number16(key.group); // client_shares.group
+        out->start16();           // client_shares.key_exchange
+        out->var(key.keyExchange.data(), key.keyExchange.size());
+        out->end();
     }
-    out.end();
-    out.end(); // extension_data
+    out->end();
+    out->end(); // extension_data
 }
 
 //===========================================================================
-static void write(TlsRecordWriter & out, const TlsKeyShare & key) {}
+static void write(TlsRecordWriter * out, const TlsKeyShare & key) {
+}
 
 //===========================================================================
-static void
-write(TlsRecordWriter & out, const std::vector<TlsPresharedKey> & keys) {}
+static void write(
+    TlsRecordWriter * out,
+    const vector<TlsPresharedKey> & keys
+) {
+}
 
 //===========================================================================
-static void write(TlsRecordWriter & out, const TlsPresharedKey & key) {}
+static void write(TlsRecordWriter * out, const TlsPresharedKey & key) {
+}
 
 //===========================================================================
-static void
-write(TlsRecordWriter & out, const std::vector<TlsSignatureScheme> & schemes) {
+static void write(
+    TlsRecordWriter * out,
+    const vector<TlsSignatureScheme> & schemes
+) {
     if (schemes.empty())
         return;
 
-    out.number16(kSignatureAlgorithms); // extensions.extension_type
-    out.start16();                      // extensions.extension_data
+    out->number16(kSignatureAlgorithms); // extensions.extension_type
+    out->start16();                      // extensions.extension_data
     // supported_signature_algorithms
-    out.start16();
+    out->start16();
     for (auto && sch : schemes) {
-        out.number16(sch);
+        out->number16(sch);
     }
-    out.end();
-    out.end(); // extension_data
+    out->end();
+    out->end(); // extension_data
 }
 
 //===========================================================================
-static void writeSni(TlsRecordWriter & out, const vector<uint8_t> & host) {
+static void writeSni(TlsRecordWriter * out, const vector<uint8_t> & host) {
     if (host.empty())
         return;
 
-    out.number16(kServerName); // extensions.extension_type
-    out.start16();             // extensions.extension_data
+    out->number16(kServerName); // extensions.extension_type
+    out->start16();             // extensions.extension_data
     // server_name_list
-    out.start16();
-    out.number(kHostName);
-    out.var16(host.data(), host.size());
-    out.end();
-    out.end(); // extension_data
+    out->start16();
+    out->number(kHostName);
+    out->var16(host.data(), host.size());
+    out->end();
+    out->end(); // extension_data
 }
 
 //===========================================================================
-static void writeDraftVersion(TlsRecordWriter & out, uint16_t version) {
+static void writeDraftVersion(TlsRecordWriter * out, uint16_t version) {
     if (!version)
         return;
 
-    out.number16(kDraftVersion);
-    out.start16(); // extensions.extension_data
-    out.number16(version);
-    out.end(); // extension_data
+    out->number16(kDraftVersion);
+    out->start16(); // extensions.extension_data
+    out->number16(version);
+    out->end(); // extension_data
 };
 
 
@@ -141,75 +150,76 @@ static void writeDraftVersion(TlsRecordWriter & out, uint16_t version) {
 ***/
 
 //===========================================================================
-void Dim::tlsWrite(TlsRecordWriter & out, const TlsClientHelloMsg & msg) {
-    out.contentType(kContentHandshake);
-    out.number(kClientHello); // handshake.msg_type
-    out.start24();            // handshake.length
+void Dim::tlsWrite(TlsRecordWriter * out, const TlsClientHelloMsg & msg) {
+    out->contentType(kContentHandshake);
+    out->number(kClientHello); // handshake.msg_type
+    out->start24();            // handshake.length
 
     // client_hello
-    out.number(msg.majorVersion);
-    out.number(msg.minorVersion);
-    out.fixed(msg.random, size(msg.random));
-    out.number(0); // legacy_session_id
-    out.start16(); // cipher_suites
+    out->number(msg.majorVersion);
+    out->number(msg.minorVersion);
+    out->fixed(msg.random, size(msg.random));
+    out->number(0); // legacy_session_id
+    out->start16(); // cipher_suites
     for (auto && suite : msg.suites)
-        out.number16(suite);
-    out.end();
-    out.start(); // legacy_compression_methods
-    out.number(0);
-    out.end();
+        out->number16(suite);
+    out->end();
+    out->start(); // legacy_compression_methods
+    out->number(0);
+    out->end();
 
-    out.start16(); // extensions
+    out->start16(); // extensions
     write(out, msg.groups);
     write(out, msg.identities);
     write(out, msg.sigSchemes);
     writeSni(out, msg.hostName);
     writeDraftVersion(out, msg.draftVersion);
-    out.end(); // extensions
+    out->end(); // extensions
 
-    out.end(); // handshake
+    out->end(); // handshake
 }
 
 //===========================================================================
-void Dim::tlsWrite(TlsRecordWriter & out, const TlsServerHelloMsg & msg) {
-    out.contentType(kContentHandshake);
-    out.number(kServerHello); // handshake.msg_type
-    out.start24();            // handshake.length
+void Dim::tlsWrite(TlsRecordWriter * out, const TlsServerHelloMsg & msg) {
+    out->contentType(kContentHandshake);
+    out->number(kServerHello); // handshake.msg_type
+    out->start24();            // handshake.length
 
     // server_hello
-    out.number(msg.majorVersion);
-    out.number(msg.minorVersion);
-    out.fixed(msg.random, size(msg.random));
-    out.number16(msg.suite);
+    out->number(msg.majorVersion);
+    out->number(msg.minorVersion);
+    out->fixed(msg.random, size(msg.random));
+    out->number16(msg.suite);
 
-    out.start16(); // extensions
+    out->start16(); // extensions
     writeDraftVersion(out, msg.draftVersion);
     write(out, msg.keyShare);
     write(out, msg.identity);
-    out.end(); // extensions
+    out->end(); // extensions
 
-    out.end(); // handshake
+    out->end(); // handshake
 }
 
 //===========================================================================
 void Dim::tlsWrite(
-    TlsRecordWriter & out,
-    const TlsHelloRetryRequestMsg & msg) {
-    out.contentType(kContentHandshake);
-    out.number(kHelloRetryRequest); // handshake.msg_type
-    out.start24();                  // handshake.length
+    TlsRecordWriter * out,
+    const TlsHelloRetryRequestMsg & msg
+) {
+    out->contentType(kContentHandshake);
+    out->number(kHelloRetryRequest); // handshake.msg_type
+    out->start24();                  // handshake.length
 
     // server_hello
-    out.number(msg.majorVersion);
-    out.number(msg.minorVersion);
-    out.number16(msg.suite);
-    out.number16(msg.group);
+    out->number(msg.majorVersion);
+    out->number(msg.minorVersion);
+    out->number16(msg.suite);
+    out->number16(msg.group);
 
-    out.start16(); // extensions
+    out->start16(); // extensions
     writeDraftVersion(out, msg.draftVersion);
-    out.end(); // extensions
+    out->end(); // extensions
 
-    out.end(); // handshake
+    out->end(); // handshake
 }
 
 
@@ -220,8 +230,11 @@ void Dim::tlsWrite(
 ***/
 
 //===========================================================================
-static bool
-parseSni(std::vector<uint8_t> * out, TlsRecordReader & in, size_t extLen) {
+static bool parseSni(
+    vector<uint8_t> * out,
+    TlsRecordReader & in,
+    size_t extLen
+) {
     int listLen = in.number16();
     while (listLen >= 3) {
         auto type = in.number<TlsNameType>();
@@ -238,8 +251,11 @@ parseSni(std::vector<uint8_t> * out, TlsRecordReader & in, size_t extLen) {
 }
 
 //===========================================================================
-static bool
-parseGroups(vector<TlsKeyShare> * out, TlsRecordReader & in, size_t extLen) {
+static bool parseGroups(
+    vector<TlsKeyShare> * out,
+    TlsRecordReader & in,
+    size_t extLen
+) {
     int listLen = in.number16();
     vector<TlsKeyShare> groups(listLen);
     for (auto && group : groups) {
@@ -272,8 +288,11 @@ parseGroups(vector<TlsKeyShare> * out, TlsRecordReader & in, size_t extLen) {
 }
 
 //===========================================================================
-static bool
-parse(vector<TlsSignatureScheme> * out, TlsRecordReader & in, size_t extLen) {
+static bool parse(
+    vector<TlsSignatureScheme> * out,
+    TlsRecordReader & in,
+    size_t extLen
+) {
     return false;
 }
 
@@ -281,13 +300,17 @@ parse(vector<TlsSignatureScheme> * out, TlsRecordReader & in, size_t extLen) {
 static bool parseKeyShares(
     vector<TlsKeyShare> * out,
     TlsRecordReader & in,
-    size_t extLen) {
+    size_t extLen
+) {
     return false;
 }
 
 //===========================================================================
-static bool
-parseDraftVersion(uint16_t * out, TlsRecordReader & in, size_t extLen) {
+static bool parseDraftVersion(
+    uint16_t * out,
+    TlsRecordReader & in,
+    size_t extLen
+) {
     return false;
 }
 

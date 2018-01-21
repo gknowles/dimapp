@@ -65,7 +65,7 @@ void TlsConnBase::setSuites(const TlsCipherSuite suites[], size_t count) {
 }
 
 //===========================================================================
-const std::vector<TlsCipherSuite> & TlsConnBase::suites() const {
+const vector<TlsCipherSuite> & TlsConnBase::suites() const {
     return m_suites;
 }
 
@@ -356,10 +356,10 @@ void ClientConn::connect(CharBuf * outbuf) {
     msg.suites = suites();
     msg.groups.resize(1);
     TlsKeyShare & key = msg.groups.back();
-    tlsSetKeyShare(key, kGroupX25519);
+    tlsSetKeyShare(&key, kGroupX25519);
     msg.sigSchemes.push_back(kSigEd25519);
     msg.hostName.assign(m_host.begin(), m_host.end());
-    tlsWrite(out, msg);
+    tlsWrite(&out, msg);
 }
 
 
@@ -405,9 +405,9 @@ void Dim::tlsClose(TlsConnHandle h) {
 
 //===========================================================================
 bool Dim::tlsRecv(
-    TlsConnHandle h,
     CharBuf * out,
     CharBuf * data,
+    TlsConnHandle h,
     const void * src,
     size_t srcLen
 ) {

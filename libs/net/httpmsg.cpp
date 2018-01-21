@@ -377,21 +377,21 @@ bool HttpResponse::checkPseudoHeaders() const {
 ***/
 
 //===========================================================================
-std::string_view Dim::to_view(HttpHdr id) {
+string_view Dim::to_view(HttpHdr id) {
     return tokenTableGetName(s_hdrNameTbl, id);
 }
 
 //===========================================================================
-HttpHdr Dim::httpHdrFromString(std::string_view name, HttpHdr def) {
+HttpHdr Dim::httpHdrFromString(string_view name, HttpHdr def) {
     return tokenTableGetEnum(s_hdrNameTbl, name, def);
 }
 
 //===========================================================================
-std::string_view Dim::to_view(HttpMethod id) {
+string_view Dim::to_view(HttpMethod id) {
     return tokenTableGetName(s_methodNameTbl, id);
 }
 
 //===========================================================================
-HttpMethod Dim::httpMethodFromString(std::string_view name, HttpMethod def) {
+HttpMethod Dim::httpMethodFromString(string_view name, HttpMethod def) {
     return tokenTableGetEnum(s_methodNameTbl, name, def);
 }

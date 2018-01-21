@@ -109,9 +109,9 @@ IWinOverlappedNotify::IWinOverlappedNotify(TaskQueueHandle hq) {
 //===========================================================================
 void IWinOverlappedNotify::pushOverlappedTask() {
     if (m_evt.hq) {
-        taskPush(m_evt.hq, *m_evt.notify);
+        taskPush(m_evt.hq, m_evt.notify);
     } else {
-        taskPushEvent(*m_evt.notify);
+        taskPushEvent(m_evt.notify);
     }
 }
 

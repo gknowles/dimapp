@@ -35,9 +35,9 @@ static void addPositions(
 //===========================================================================
 size_t std::hash<StateElement>::operator()(const StateElement & val) const {
     size_t out = val.elem->id;
-    hashCombine(out, val.rep);
-    hashCombine(out, val.started);
-    hashCombine(out, val.recurse);
+    hashCombine(&out, val.rep);
+    hashCombine(&out, val.started);
+    hashCombine(&out, val.recurse);
     return out;
 }
 
@@ -95,13 +95,13 @@ int compare(
 size_t std::hash<StatePosition>::operator()(const StatePosition & val) const {
     size_t out = 0;
     for (auto && se : val.elems) {
-        hashCombine(out, hash<StateElement>{}(se));
+        hashCombine(&out, hash<StateElement>{}(se));
     }
     for (auto && sv : val.events) {
-        hashCombine(out, hash<StateEvent>{}(sv));
+        hashCombine(&out, hash<StateEvent>{}(sv));
     }
     for (auto && sv : val.delayedEvents) {
-        hashCombine(out, hash<StateEvent>{}(sv));
+        hashCombine(&out, hash<StateEvent>{}(sv));
     }
     return out;
 }
@@ -141,8 +141,8 @@ bool StatePosition::operator==(const StatePosition & right) const {
 //===========================================================================
 size_t std::hash<StateEvent>::operator()(const StateEvent & val) const {
     size_t out = val.elem->id;
-    hashCombine(out, val.flags);
-    hashCombine(out, val.distance);
+    hashCombine(&out, val.flags);
+    hashCombine(&out, val.distance);
     return out;
 }
 
@@ -178,7 +178,7 @@ bool StateEvent::operator==(const StateEvent & right) const {
 size_t std::hash<State>::operator()(const State & val) const {
     size_t out = 0;
     for (auto && spt : val.positions) {
-        hashCombine(out, hash<StatePosition>{}(spt.first));
+        hashCombine(&out, hash<StatePosition>{}(spt.first));
     }
     return out;
 }
@@ -987,9 +987,9 @@ struct DedupInfo {
 size_t std::hash<StateKey>::operator()(const StateKey & val) const {
     size_t out = 0;
     for (auto && sv : val.events) {
-        hashCombine(out, hash<StateEvent>{}(sv));
+        hashCombine(&out, hash<StateEvent>{}(sv));
     }
-    hashCombine(out, hashBytes(val.next, sizeof(val.next)));
+    hashCombine(&out, hashBytes(val.next, sizeof(val.next)));
     return out;
 }
 

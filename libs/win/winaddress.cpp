@@ -27,7 +27,7 @@ bool Dim::parse(Address * out, string_view src) {
 }
 
 //===========================================================================
-std::ostream & Dim::operator<<(std::ostream & os, const Address & addr) {
+ostream & Dim::operator<<(ostream & os, const Address & addr) {
     Endpoint sa;
     sa.addr = addr;
     return operator<<(os, sa);
@@ -70,7 +70,7 @@ bool Dim::parse(Endpoint * end, string_view src, int defaultPort) {
 }
 
 //===========================================================================
-std::ostream & Dim::operator<<(std::ostream & os, const Endpoint & src) {
+ostream & Dim::operator<<(ostream & os, const Endpoint & src) {
     sockaddr_storage sas;
     copy(&sas, src);
     wchar_t tmp[256];
@@ -193,7 +193,7 @@ static void CALLBACK addressQueryCallback(
         }
         FreeAddrInfoExW(task->results);
     }
-    taskPushEvent(*task);
+    taskPushEvent(task);
 }
 
 //===========================================================================
@@ -232,7 +232,7 @@ void Dim::endpointQuery(
     Endpoint end;
     if (parse(&end, name, defaultPort)) {
         task->ends.push_back(end);
-        taskPushEvent(*task);
+        taskPushEvent(task);
         return;
     }
 
@@ -271,7 +271,7 @@ void Dim::endpointCancelQuery(int cancelId) {
 }
 
 //===========================================================================
-void Dim::addressGetLocal(std::vector<Address> * out) {
+void Dim::addressGetLocal(vector<Address> * out) {
     out->resize(0);
     ADDRINFO * result;
     WinError err = getaddrinfo(

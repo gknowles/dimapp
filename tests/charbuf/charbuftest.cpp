@@ -34,9 +34,9 @@ static void app(int argc, char *argv[]) {
 
     string to0;
     int to1;
-    bool result = stringTo(to0, "100"s);
+    bool result = stringTo(&to0, "100"s);
     EXPECT(result && to0 == "100");
-    result = stringTo(to1, "100"s);
+    result = stringTo(&to1, "100"s);
     EXPECT(result && to1 == 100);
 
     CharBuf buf;

@@ -17,6 +17,7 @@ using namespace Dim;
 
 static EnvMemoryConfig s_memCfg;
 static unsigned s_numCpus;
+static string s_execPath;
 
 
 /****************************************************************************
@@ -48,15 +49,20 @@ void Dim::winEnvInitialize() {
 ***/
 
 //===========================================================================
-string Dim::envExecPath() {
-    string out;
-    DWORD num = 0;
-    while (num == out.size()) {
-        out.resize(out.size() + MAX_PATH);
-        num = GetModuleFileName(NULL, out.data(), (DWORD) out.size());
+const string & Dim::envExecPath() {
+    if (s_execPath.empty()) {
+        DWORD num = 0;
+        while (num == s_execPath.size()) {
+            s_execPath.resize(s_execPath.size() + MAX_PATH);
+            num = GetModuleFileName(
+                NULL,
+                s_execPath.data(),
+                (DWORD) s_execPath.size()
+            );
+        }
+        s_execPath.resize(num);
     }
-    out.resize(num);
-    return out;
+    return s_execPath;
 }
 
 //===========================================================================

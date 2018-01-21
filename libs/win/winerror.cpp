@@ -79,7 +79,7 @@ WinError & WinError::set() {
 }
 
 //===========================================================================
-std::ostream & Dim::operator<<(std::ostream & os, const WinError & val) {
+ostream & Dim::operator<<(ostream & os, const WinError & val) {
     auto ntval = (WinError::NtStatus) val;
     auto secval = (WinError::SecurityStatus) val;
     int native = secval ? secval : ntval ? ntval : val;

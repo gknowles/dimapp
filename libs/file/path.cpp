@@ -37,38 +37,38 @@ struct Count {
 ***/
 
 //===========================================================================
-static void addRoot(string & out, string_view val) {
+static void addRoot(string * out, string_view val) {
     if (val.empty())
         return;
-    out.append(val);
-    if (out.back() != ':')
-        out.push_back(':');
+    out->append(val);
+    if (out->back() != ':')
+        out->push_back(':');
 }
 
 //===========================================================================
-static void addStem(string & out, string_view stem) {
-    out.append(stem);
+static void addStem(string * out, string_view stem) {
+    out->append(stem);
 }
 
 //===========================================================================
-static void addExt(string & out, string_view ext) {
+static void addExt(string * out, string_view ext) {
     if (ext.empty())
         return;
 
     if (ext[0] != '.')
-        out.push_back('.');
-    out.append(ext);
-    while (!out.empty() && out.back() == '.')
-        out.pop_back();
+        out->push_back('.');
+    out->append(ext);
+    while (!out->empty() && out->back() == '.')
+        out->pop_back();
 }
 
 //===========================================================================
-static void normalize(string & path) {
+static void normalize(string * path) {
     string out;
-    out.reserve(path.size());
-    Count cnt(path);
-    out.append(path, 0, cnt.m_rootLen);
-    auto * base = path.data() + cnt.m_rootLen;
+    out.reserve(path->size());
+    Count cnt(*path);
+    out.append(*path, 0, cnt.m_rootLen);
+    auto * base = path->data() + cnt.m_rootLen;
     auto * ptr = base;
     auto * eptr = ptr + cnt.m_dirLen;
     enum {
@@ -140,7 +140,7 @@ static void normalize(string & path) {
     auto pos = ocnt.m_rootLen + ocnt.m_dirLen;
     while (out.size() > pos && out.back() == '.')
         out.pop_back();
-    out.swap(path);
+    out.swap(*path);
 }
 
 
@@ -202,14 +202,14 @@ Count::Count(string_view path) {
 Path::Path(string_view from)
     : m_data(from)
 {
-    normalize(m_data);
+    normalize(&m_data);
 }
 
 //===========================================================================
 Path::Path(const fs::path & from)
     : m_data(from.generic_u8string())
 {
-    normalize(m_data);
+    normalize(&m_data);
 }
 
 //===========================================================================
@@ -237,7 +237,7 @@ Path & Path::assign(const Path & path, string_view defExt) {
 //===========================================================================
 Path & Path::assign(string_view path) {
     m_data = path;
-    normalize(m_data);
+    normalize(&m_data);
     return *this;
 }
 
@@ -264,7 +264,7 @@ Path & Path::setRootName(char drive) {
 //===========================================================================
 Path & Path::setRootName(string_view root) {
     string out;
-    addRoot(out, root);
+    addRoot(&out, root);
     Count cnt(m_data);
     out.append(m_data, cnt.m_rootLen);
     out.swap(m_data);
@@ -281,8 +281,8 @@ Path & Path::setDir(string_view dir) {
         auto old = string_view{m_data};
         out += '/';
         old.remove_prefix(cnt.m_rootLen + cnt.m_dirLen);
-        addStem(out, old.substr(0, cnt.m_stemLen));
-        addExt(out, old.substr(cnt.m_stemLen));
+        addStem(&out, old.substr(0, cnt.m_stemLen));
+        addExt(&out, old.substr(cnt.m_stemLen));
     }
     out.swap(m_data);
     return *this;
@@ -296,8 +296,8 @@ Path & Path::setParentPath(string_view path) {
         auto old = string_view{m_data};
         out += '/';
         old.remove_prefix(cnt.m_rootLen + cnt.m_dirLen);
-        addStem(out, old.substr(0, cnt.m_stemLen));
-        addExt(out, old.substr(cnt.m_stemLen));
+        addStem(&out, old.substr(0, cnt.m_stemLen));
+        addExt(&out, old.substr(cnt.m_stemLen));
     }
     out.swap(m_data);
     return *this;
@@ -309,8 +309,8 @@ Path & Path::setFilename(string_view filename) {
     m_data.resize(cnt.m_rootLen + cnt.m_dirLen);
     Count scnt(filename);
     filename.remove_prefix(scnt.m_rootLen + scnt.m_dirLen);
-    addStem(m_data, filename.substr(0, scnt.m_stemLen));
-    addExt(m_data, filename.substr(scnt.m_stemLen));
+    addStem(&m_data, filename.substr(0, scnt.m_stemLen));
+    addExt(&m_data, filename.substr(scnt.m_stemLen));
     return *this;
 }
 
@@ -326,8 +326,8 @@ Path & Path::setStem(string_view stem) {
     m_data.resize(cnt.m_rootLen + cnt.m_dirLen);
     Count scnt(stem);
     stem = stem.substr(scnt.m_rootLen + scnt.m_dirLen, scnt.m_stemLen);
-    addStem(m_data, stem);
-    addExt(m_data, ext);
+    addStem(&m_data, stem);
+    addExt(&m_data, ext);
     return *this;
 }
 
@@ -335,8 +335,8 @@ Path & Path::setStem(string_view stem) {
 Path & Path::setStem(string_view stem, string_view ext) {
     Count cnt(m_data);
     m_data.resize(cnt.m_rootLen + cnt.m_dirLen);
-    addStem(m_data, stem);
-    addExt(m_data, ext);
+    addStem(&m_data, stem);
+    addExt(&m_data, ext);
     return *this;
 }
 
@@ -345,21 +345,21 @@ Path & Path::setExt(string_view ext) {
     Count cnt(m_data);
     if (cnt.m_extLen)
         m_data.resize(cnt.m_rootLen + cnt.m_dirLen + cnt.m_stemLen);
-    addExt(m_data, ext);
+    addExt(&m_data, ext);
     return *this;
 }
 
 //===========================================================================
 Path & Path::defaultExt(string_view defExt) {
     if (!hasExt())
-        addExt(m_data, defExt);
+        addExt(&m_data, defExt);
     return *this;
 }
 
 //===========================================================================
 Path & Path::concat(string_view path) {
     m_data.append(path);
-    normalize(m_data);
+    normalize(&m_data);
     return *this;
 }
 
@@ -480,12 +480,12 @@ bool Path::hasExt() const {
 ***/
 
 //===========================================================================
-bool Dim::operator==(const Path & left, std::string_view right) {
+bool Dim::operator==(const Path & left, string_view right) {
     return left.view() == right;
 }
 
 //===========================================================================
-bool Dim::operator==(std::string_view left, const Path & right) {
+bool Dim::operator==(string_view left, const Path & right) {
     return left == right.view();
 }
 

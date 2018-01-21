@@ -25,10 +25,10 @@ using namespace Dim;
 //===========================================================================
 size_t std::hash<Address>::operator()(const Address & val) const {
     size_t out = 0;
-    hashCombine(out, std::hash<int32_t>{}(val.data[0]));
-    hashCombine(out, std::hash<int32_t>{}(val.data[1]));
-    hashCombine(out, std::hash<int32_t>{}(val.data[2]));
-    hashCombine(out, std::hash<int32_t>{}(val.data[3]));
+    hashCombine(&out, std::hash<int32_t>{}(val.data[0]));
+    hashCombine(&out, std::hash<int32_t>{}(val.data[1]));
+    hashCombine(&out, std::hash<int32_t>{}(val.data[2]));
+    hashCombine(&out, std::hash<int32_t>{}(val.data[3]));
     static_assert(sizeof(val.data) == 4 * sizeof(int32_t));
     return out;
 }
@@ -70,8 +70,8 @@ istream & Dim::operator>>(istream & in, Address & out) {
 //===========================================================================
 size_t std::hash<Endpoint>::operator()(const Endpoint & val) const {
     size_t out = 0;
-    hashCombine(out, std::hash<Address>{}(val.addr));
-    hashCombine(out, std::hash<unsigned>{}(val.port));
+    hashCombine(&out, std::hash<Address>{}(val.addr));
+    hashCombine(&out, std::hash<unsigned>{}(val.port));
     return out;
 }
 
@@ -109,7 +109,7 @@ istream & Dim::operator>>(istream & in, Endpoint & out) {
 //===========================================================================
 size_t std::hash<Network>::operator()(const Network & val) const {
     size_t out = 0;
-    hashCombine(out, std::hash<Address>{}(val.addr));
-    hashCombine(out, std::hash<int>{}(val.mask));
+    hashCombine(&out, std::hash<Address>{}(val.addr));
+    hashCombine(&out, std::hash<int>{}(val.mask));
     return out;
 }

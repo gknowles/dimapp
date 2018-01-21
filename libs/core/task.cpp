@@ -6,7 +6,6 @@
 #pragma hdrstop
 
 using namespace std;
-using namespace std::rel_ops;
 using namespace Dim;
 
 
@@ -168,7 +167,7 @@ RunOnceTask::RunOnceTask(string_view name, function<void()> && fn)
     : m_fn{fn}
 {
     auto q = taskCreateQueue(name, 1);
-    taskPush(q, *this);
+    taskPush(q, this);
     taskSetQueueThreads(q, 0);
 }
 
@@ -218,8 +217,8 @@ void Dim::iTaskDestroy() {
 ***/
 
 //===========================================================================
-void Dim::taskPushEvent(ITaskNotify & task) {
-    ITaskNotify * list[] = {&task};
+void Dim::taskPushEvent(ITaskNotify * task) {
+    ITaskNotify * list[] = {task};
     taskPushEvent(list, size(list));
 }
 
@@ -234,8 +233,8 @@ TaskQueueHandle Dim::taskEventQueue() {
 }
 
 //===========================================================================
-void Dim::taskPushCompute(ITaskNotify & task) {
-    ITaskNotify * list[] = {&task};
+void Dim::taskPushCompute(ITaskNotify * task) {
+    ITaskNotify * list[] = {task};
     taskPushCompute(list, size(list));
 }
 
@@ -272,8 +271,8 @@ void Dim::taskSetQueueThreads(TaskQueueHandle hq, int threads) {
 }
 
 //===========================================================================
-void Dim::taskPush(TaskQueueHandle hq, ITaskNotify & task) {
-    ITaskNotify * list[] = {&task};
+void Dim::taskPush(TaskQueueHandle hq, ITaskNotify * task) {
+    ITaskNotify * list[] = {task};
     taskPush(hq, list, size(list));
 }
 

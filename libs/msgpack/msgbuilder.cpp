@@ -376,7 +376,7 @@ size_t MsgBuilder::size() const {
 ***/
 
 //===========================================================================
-IMsgBuilder & Dim::operator<<(IMsgBuilder & out, std::string_view val) {
+IMsgBuilder & Dim::operator<<(IMsgBuilder & out, string_view val) {
     return out.value(val);
 }
 

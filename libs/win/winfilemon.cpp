@@ -35,14 +35,14 @@ public:
     bool start(string_view path, bool recurse);
     void closeWait_UNLK(FileMonitorHandle dir);
 
-    void addMonitor_UNLK(IFileChangeNotify * notify, string_view file);
-    void removeMonitorWait_UNLK(IFileChangeNotify * notify, string_view file);
+    void addMonitor_UNLK(string_view file, IFileChangeNotify * notify);
+    void removeMonitorWait_UNLK(string_view file, IFileChangeNotify * notify);
 
     string_view base() const { return m_base; }
     // returns false if file is outside of base directory
     bool expandPath(
-        string & fullpath,
-        string & relpath,
+        string * fullpath,
+        string * relpath,
         string_view file
     ) const;
 
@@ -175,10 +175,10 @@ void DirInfo::closeWait_UNLK (FileMonitorHandle dir) {
 }
 
 //===========================================================================
-void DirInfo::addMonitor_UNLK(IFileChangeNotify * notify, string_view path) {
+void DirInfo::addMonitor_UNLK(string_view path, IFileChangeNotify * notify) {
     string fullpath;
     string relpath;
-    if (!expandPath(fullpath, relpath, path)) {
+    if (!expandPath(&fullpath, &relpath, path)) {
         logMsgError() << "Monitor file not in base directory, "
             << fullpath << ", " << m_base;
         return;
@@ -224,12 +224,12 @@ void DirInfo::addMonitor_UNLK(IFileChangeNotify * notify, string_view path) {
 
 //===========================================================================
 void DirInfo::removeMonitorWait_UNLK(
-    IFileChangeNotify * notify,
-    string_view file
+    string_view file,
+    IFileChangeNotify * notify
 ) {
     string fullpath;
     string relpath;
-    if (!expandPath(fullpath, relpath, file))
+    if (!expandPath(&fullpath, &relpath, file))
         return;
 
     unique_lock<mutex> lk{s_mut, adopt_lock};
@@ -287,7 +287,7 @@ Duration DirInfo::onTimer (TimePoint now) {
 
     unique_lock<mutex> lk{s_mut};
     for (auto && kv : m_files) {
-        expandPath(fullpath, relpath, kv.first);
+        expandPath(&fullpath, &relpath, kv.first);
         auto mtime = fileLastWriteTime(fullpath);
         if (mtime == kv.second.mtime)
             continue;
@@ -341,20 +341,20 @@ Duration DirInfo::onTimer (TimePoint now) {
 
 //===========================================================================
 bool DirInfo::expandPath(
-    string & fullpath,
-    string & relpath,
+    string * fullpath,
+    string * relpath,
     string_view file
 ) const {
     auto fp = fs::u8path(file.begin(), file.end());
     fp = fs::absolute(fp, fs::u8path(m_base));
-    fullpath = fp.u8string();
-    if (fullpath.compare(0, m_base.size(), m_base) != 0) {
-        relpath.clear();
+    *fullpath = fp.u8string();
+    if (fullpath->compare(0, m_base.size(), m_base) != 0) {
+        relpath->clear();
         return false;
     }
 
-    relpath = fullpath;
-    relpath.erase(0, m_base.size() + 1);
+    *relpath = *fullpath;
+    relpath->erase(0, m_base.size() + 1);
     return true;
 }
 
@@ -440,7 +440,7 @@ void Dim::fileMonitor(
     s_mut.lock();
     auto di = s_dirs.find(dir);
     assert(di);
-    di->addMonitor_UNLK(notify, file);
+    di->addMonitor_UNLK(file, notify);
 }
 
 //===========================================================================
@@ -453,12 +453,12 @@ void Dim::fileMonitorCloseWait(
     s_mut.lock();
     auto di = s_dirs.find(dir);
     assert(di);
-    di->removeMonitorWait_UNLK(notify, file);
+    di->removeMonitorWait_UNLK(file, notify);
 }
 
 //===========================================================================
 bool Dim::fileMonitorPath(
-    string & out,
+    string * out,
     FileMonitorHandle dir,
     string_view file
 ) {
@@ -468,5 +468,5 @@ bool Dim::fileMonitorPath(
         return false;
 
     string fullpath;
-    return di->expandPath(fullpath, out, file);
+    return di->expandPath(&fullpath, out, file);
 }

@@ -345,7 +345,7 @@ size_t JBuilder::size() const {
 ***/
 
 //===========================================================================
-IJBuilder & Dim::operator<<(IJBuilder & out, std::string_view val) {
+IJBuilder & Dim::operator<<(IJBuilder & out, string_view val) {
     return out.value(val);
 }
 

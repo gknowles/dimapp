@@ -138,7 +138,7 @@ void ConnectFailedTask::onTask() {
 //===========================================================================
 static void pushConnectFailed(ISocketNotify * notify) {
     auto ptr = new ConnectFailedTask(notify);
-    taskPushEvent(*ptr);
+    taskPushEvent(ptr);
 }
 
 //===========================================================================

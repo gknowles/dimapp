@@ -110,76 +110,76 @@ private:
     bool setInitialWindowSize(CharBuf * out, unsigned value);
 
     bool onFrame(
-        std::vector<std::unique_ptr<HttpMsg>> * msgs,
         CharBuf * out,
+        std::vector<std::unique_ptr<HttpMsg>> * msgs,
         const char src[]
     );
     bool onContinuation(
-        std::vector<std::unique_ptr<HttpMsg>> * msgs,
         CharBuf * out,
+        std::vector<std::unique_ptr<HttpMsg>> * msgs,
         const char src[],
         int stream,
         FrameFlags flags
     );
     bool onData(
-        std::vector<std::unique_ptr<HttpMsg>> * msgs,
         CharBuf * out,
+        std::vector<std::unique_ptr<HttpMsg>> * msgs,
         const char src[],
         int stream,
         FrameFlags flags
     );
     bool onGoAway(
-        std::vector<std::unique_ptr<HttpMsg>> * msgs,
         CharBuf * out,
+        std::vector<std::unique_ptr<HttpMsg>> * msgs,
         const char src[],
         int stream,
         FrameFlags flags
     );
     bool onHeaders(
-        std::vector<std::unique_ptr<HttpMsg>> * msgs,
         CharBuf * out,
+        std::vector<std::unique_ptr<HttpMsg>> * msgs,
         const char src[],
         int stream,
         FrameFlags flags
     );
     bool onPing(
-        std::vector<std::unique_ptr<HttpMsg>> * msgs,
         CharBuf * out,
+        std::vector<std::unique_ptr<HttpMsg>> * msgs,
         const char src[],
         int stream,
         FrameFlags flags
     );
     bool onPriority(
-        std::vector<std::unique_ptr<HttpMsg>> * msgs,
         CharBuf * out,
+        std::vector<std::unique_ptr<HttpMsg>> * msgs,
         const char src[],
         int stream,
         FrameFlags flags
     );
     bool onPushPromise(
-        std::vector<std::unique_ptr<HttpMsg>> * msgs,
         CharBuf * out,
+        std::vector<std::unique_ptr<HttpMsg>> * msgs,
         const char src[],
         int stream,
         FrameFlags flags
     );
     bool onRstStream(
-        std::vector<std::unique_ptr<HttpMsg>> * msgs,
         CharBuf * out,
+        std::vector<std::unique_ptr<HttpMsg>> * msgs,
         const char src[],
         int stream,
         FrameFlags flags
     );
     bool onSettings(
-        std::vector<std::unique_ptr<HttpMsg>> * msgs,
         CharBuf * out,
+        std::vector<std::unique_ptr<HttpMsg>> * msgs,
         const char src[],
         int stream,
         FrameFlags flags
     );
     bool onWindowUpdate(
-        std::vector<std::unique_ptr<HttpMsg>> * msgs,
         CharBuf * out,
+        std::vector<std::unique_ptr<HttpMsg>> * msgs,
         const char src[],
         int stream,
         FrameFlags flags

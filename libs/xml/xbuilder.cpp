@@ -404,7 +404,7 @@ IXBuilder & Dim::operator<<(IXBuilder & out, const char val[]) {
 }
 
 //===========================================================================
-IXBuilder & Dim::operator<<(IXBuilder & out, std::string_view val) {
+IXBuilder & Dim::operator<<(IXBuilder & out, string_view val) {
     return out.text(val);
 }
 

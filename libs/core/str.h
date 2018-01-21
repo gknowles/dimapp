@@ -235,14 +235,14 @@ uint64_t strToUint64(
 //===========================================================================
 // stringTo - converts from string to T
 //===========================================================================
-template <typename T> bool stringTo(T & out, const std::string & src) {
+template <typename T> bool stringTo(T * out, const std::string & src) {
     if constexpr (std::is_assignable_v<T, const std::string&>) {
-        out = src;
+        *out = src;
     } else {
         std::stringstream interpreter;
-        if (!(interpreter << src) || !(interpreter >> out)
+        if (!(interpreter << src) || !(interpreter >> *out)
             || !(interpreter >> std::ws).eof()) {
-            out = {};
+            *out = {};
             return false;
         }
     }
@@ -257,7 +257,7 @@ template <typename T> bool stringTo(T & out, const std::string & src) {
 ***/
 
 void strSplit(
-    std::vector<std::string_view> & out,
+    std::vector<std::string_view> * out,
     std::string_view src,
     char sep = ' '
 );
@@ -297,9 +297,9 @@ constexpr size_t utfBomSize(UtfType type) {
 
 // returns 0 if src doesn't start with a valid UTF-8 encoded code point,
 // which includes being empty.
-char32_t popFrontUnicode(std::string_view & src);
+char32_t popFrontUnicode(std::string_view * src);
 
-void appendUnicode(std::string & out, char32_t ch);
+void appendUnicode(std::string * out, char32_t ch);
 size_t unicodeLen(std::string_view src);
 std::string toString(std::wstring_view src);
 
@@ -309,9 +309,9 @@ std::string toString(std::wstring_view src);
 
 // returns 0 if src doesn't start with a valid UTF-16 encoded code point,
 // which includes being empty.
-char32_t popFrontUnicode(std::wstring_view & src);
+char32_t popFrontUnicode(std::wstring_view * src);
 
-void appendUnicode(std::wstring & out, char32_t ch);
+void appendUnicode(std::wstring * out, char32_t ch);
 size_t unicodeLen(std::wstring_view src);
 std::wstring toWstring(std::string_view src);
 

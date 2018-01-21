@@ -11,7 +11,7 @@
 namespace Dim {
 
 // Returns path to this executable being run
-std::string envExecPath();
+const std::string & envExecPath();
 
 struct EnvMemoryConfig {
     size_t pageSize;        // memory page size

@@ -199,7 +199,7 @@ static ShutdownNotify s_cleanup;
 void ShutdownNotify::onShutdownConsole(bool firstTry) {
     if (firstTry) {
         vector<PerfValue> perfs;
-        perfGetValues(perfs, true);
+        perfGetValues(&perfs, true);
         for (auto && perf : perfs) {
             if (perf.value != "0")
                 logMsgInfo() << "perf: " << perf.value << ' ' << perf.name;
@@ -222,7 +222,7 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
 void Dim::iLogFileInitialize() {
     shutdownMonitor(&s_cleanup);
 
-    if (!appLogPath(s_logfile, "server.log"))
+    if (!appLogPath(&s_logfile, "server.log"))
         logMsgCrash() << "Invalid log path: " << s_logfile;
 
     logMonitor(&s_logger);

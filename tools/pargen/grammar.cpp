@@ -220,7 +220,7 @@ void Grammar::addRange(Element * rule, unsigned char a, unsigned char b) {
 }
 
 //===========================================================================
-const Element * Grammar::eventAlways(std::string_view name) {
+const Element * Grammar::eventAlways(string_view name) {
     Element key;
     key.name = name;
     auto it = m_rules.find(key);

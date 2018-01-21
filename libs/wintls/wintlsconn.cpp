@@ -406,9 +406,9 @@ void Dim::winTlsClose(WinTlsConnHandle h) {
 
 //===========================================================================
 bool Dim::winTlsRecv(
-    WinTlsConnHandle h,
     CharBuf * reply,
     CharBuf * data,
+    WinTlsConnHandle h,
     string_view src
 ) {
     shared_lock<shared_mutex> lk{s_mut};
@@ -418,8 +418,8 @@ bool Dim::winTlsRecv(
 
 //===========================================================================
 void Dim::winTlsSend(
-    WinTlsConnHandle h,
     CharBuf * out,
+    WinTlsConnHandle h,
     string_view src
 ) {
     shared_lock<shared_mutex> lk{s_mut};

@@ -184,7 +184,7 @@ void AcceptManager::onConfigChange(const XDocument & doc) {
 }
 
 //===========================================================================
-std::unique_ptr<IAppSocketNotify> AcceptManager::onFactoryCreate() {
+unique_ptr<IAppSocketNotify> AcceptManager::onFactoryCreate() {
     auto ptr = make_unique<AccMgrSocket>(
         *this,
         m_cliSockFact->onFactoryCreate()

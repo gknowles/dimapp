@@ -121,9 +121,9 @@ int timeZoneMinutes(TimePoint time);
 
 // Day of year (tm_yday) and daylight savings time flag (tm_isdst) are not
 // supported and set to -1.
-bool timeToDesc(tm & tm, TimePoint time);
+bool timeToDesc(tm * tm, TimePoint time);
 
-bool timeFromDesc(TimePoint & time, const tm & tm);
+bool timeFromDesc(TimePoint * time, const tm & tm);
 
 
 } // namespace

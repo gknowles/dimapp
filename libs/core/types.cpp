@@ -29,6 +29,6 @@ const char * Dim::toString(RunMode mode, const char def[]) {
 }
 
 //===========================================================================
-RunMode Dim::fromString(std::string_view src, RunMode def) {
+RunMode Dim::fromString(string_view src, RunMode def) {
     return tokenTableGetEnum(s_runModeTbl, src, def);
 }

@@ -188,13 +188,13 @@ void fileStreamBinary(
 
 void fileLoadBinary(
     IFileReadNotify * notify,   // only onFileEnd() is called
-    std::string & out,
+    std::string * out,
     std::string_view path,
     size_t maxSize = 10'000'000,
     TaskQueueHandle hq = {} // queue to notify
 );
 void fileLoadBinaryWait(
-    std::string & out,
+    std::string * out,
     std::string_view path,
     size_t maxSize = 10'000'000
 );

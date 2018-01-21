@@ -250,37 +250,37 @@ void httpClose(HttpConnHandle conn);
 
 // Returns false when no more data will be accepted, either by request
 // of the input or due to error.
-// Even after an error, msgs and out should be processed.
-//  - msgs: zero or more requests, push promises, and/or replies are appended
+// Even after an error, out and msgs should be processed.
 //  - out: data to send to the remote endpoint is appended
+//  - msgs: zero or more requests, push promises, and/or replies are appended
 bool httpRecv(
-    HttpConnHandle conn,
     CharBuf * out,
     std::vector<std::unique_ptr<HttpMsg>> * msgs,
+    HttpConnHandle conn,
     const void * src,
     size_t srcLen
 );
 
 // Serializes a request and returns the stream id used
 int httpRequest(
-    HttpConnHandle conn,
     CharBuf * out,
+    HttpConnHandle conn,
     const HttpMsg & msg,
     bool more = false
 );
 
 // Serializes a push promise and returns the stream id used
 int httpPushPromise(
-    HttpConnHandle conn,
     CharBuf * out,
+    HttpConnHandle conn,
     const HttpMsg & msg,
     bool more = false
 );
 
 // Serializes a reply on the specified stream
 void httpReply(
-    HttpConnHandle conn,
     CharBuf * out,
+    HttpConnHandle conn,
     int stream,
     const HttpMsg & msg,
     bool more = false
@@ -289,20 +289,20 @@ void httpReply(
 // Sends more data on a stream, a stream ends after request, push promise,
 // reply, or data is called with more false.
 void httpData(
-    HttpConnHandle hc,
     CharBuf * out,
+    HttpConnHandle conn,
     int stream,
     const CharBuf & data,
     bool more = false
 );
 void httpData(
-    HttpConnHandle hc,
     CharBuf * out,
+    HttpConnHandle conn,
     int stream,
     std::string_view data,
     bool more = false
 );
 
-void httpResetStream(HttpConnHandle conn, CharBuf * out, int stream);
+void httpResetStream(CharBuf * out, HttpConnHandle conn, int stream);
 
 } // namespace

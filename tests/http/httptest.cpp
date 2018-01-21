@@ -105,7 +105,7 @@ void oldTest() {
         if (!conn)
             conn = httpAccept();
         result =
-            httpRecv(conn, &output, &msgs, data(test.input), size(test.input));
+            httpRecv(&output, &msgs, conn, data(test.input), size(test.input));
         if (result != test.result) {
             logMsgError() << "result: " << result << " != " << test.result
                           << " (FAILED)";
@@ -167,17 +167,17 @@ static void app(int argc, char *argv[]) {
     msg.addHeaderRef(kHttp_Method, "get");
     msg.addHeaderRef(kHttp_Scheme, "https");
     msg.addHeaderRef(kHttp_Path, "/");
-    int streamId = httpRequest(hcli, &cbuf, msg);
+    int streamId = httpRequest(&cbuf, hcli, msg);
     ignore = streamId;
 
     while (cbuf.size()) {
-        result = httpRecv(hsrv, &sbuf, &msgs, cbuf.data(), cbuf.size());
+        result = httpRecv(&sbuf, &msgs, hsrv, cbuf.data(), cbuf.size());
         cbuf.clear();
         assert(result);
         msgs.clear();
         if (sbuf.empty())
             break;
-        result = httpRecv(hcli, &cbuf, &msgs, sbuf.data(), sbuf.size());
+        result = httpRecv(&cbuf, &msgs, hcli, sbuf.data(), sbuf.size());
         sbuf.clear();
         assert(result);
         msgs.clear();

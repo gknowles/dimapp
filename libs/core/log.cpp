@@ -217,7 +217,7 @@ Detail::Log Dim::logMsgError() {
 }
 
 //===========================================================================
-Detail::Log Dim::logMsgCrash() {
+Detail::LogCrash Dim::logMsgCrash() {
     return kLogTypeCrash;
 }
 

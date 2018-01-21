@@ -99,7 +99,7 @@ static void updateList(HWND parent) {
 
     static vector<PerfValue> oldVals;
     static vector<PerfValue> vals;
-    perfGetValues(vals, true);
+    perfGetValues(&vals, true);
     int cvals = (int) vals.size();
 
     LVITEM li = {};
@@ -315,7 +315,7 @@ void MessageLoopTask::enable(Authority auth, bool enable) {
 
     if (enable) {
         // start message loop task
-        taskPush(s_taskq, *this);
+        taskPush(s_taskq, this);
     } else {
         PostMessage(m_wnd, WM_USER_CLOSEWINDOW, 0, 0);
     }
@@ -415,7 +415,7 @@ void Dim::winAppInitialize() {
     shutdownMonitor(&s_cleanup);
     s_windowTask.clear();
     s_taskq = taskCreateQueue("Message Loop", 1);
-    iAppPushStartupTask(s_notify);
+    iAppPushStartupTask(&s_notify);
 }
 
 //===========================================================================

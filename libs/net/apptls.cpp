@@ -68,7 +68,7 @@ void TlsSocket::disconnect(AppSocket::Disconnect why) {
 //===========================================================================
 void TlsSocket::write(string_view data) {
     CharBuf out;
-    winTlsSend(m_conn, &out, data);
+    winTlsSend(&out, m_conn, data);
     socketWrite(this, out);
 }
 
@@ -101,7 +101,7 @@ void TlsSocket::onSocketRead (AppSocketData & data) {
     auto sv = string_view(data.data, data.bytes);
     if (s_dumpInbound)
         logHexDebug(sv);
-    bool success = winTlsRecv(m_conn, &out, &recv, sv);
+    bool success = winTlsRecv(&out, &recv, m_conn, sv);
     socketWrite(this, out);
     AppSocketData tmp;
     for (auto && v : recv.views()) {

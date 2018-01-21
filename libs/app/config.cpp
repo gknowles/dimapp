@@ -223,7 +223,7 @@ void Dim::iConfigInitialize () {
 ***/
 
 //===========================================================================
-static bool getFullpath(string & out, string_view file) {
+static bool getFullpath(string * out, string_view file) {
     bool result;
     if (appFlags() & fAppWithFiles) {
         result = fileMonitorPath(out, s_hDir, file);
@@ -238,7 +238,7 @@ static bool getFullpath(string & out, string_view file) {
 //===========================================================================
 void Dim::configMonitor(string_view file, IConfigNotify * notify) {
     string path;
-    if (!getFullpath(path, file))
+    if (!getFullpath(&path, file))
         return;
 
     s_mut.lock();
@@ -249,7 +249,7 @@ void Dim::configMonitor(string_view file, IConfigNotify * notify) {
 //===========================================================================
 void Dim::configCloseWait(string_view file, IConfigNotify * notify) {
     string path;
-    if (!getFullpath(path, file))
+    if (!getFullpath(&path, file))
         return;
 
     s_mut.lock();
@@ -264,7 +264,7 @@ void Dim::configChange(
     IConfigNotify * notify // = nullptr
 ) {
     string path;
-    if (!getFullpath(path, file))
+    if (!getFullpath(&path, file))
         return;
 
     s_mut.lock();
@@ -284,7 +284,7 @@ void Dim::configChange(
 unsigned Dim::configUnsigned(
     const ConfigContext & context,
     const XDocument & doc,
-    std::string_view name,
+    string_view name,
     unsigned defVal
 ) {
     auto str = configString(context, doc, name, nullptr);
@@ -295,7 +295,7 @@ unsigned Dim::configUnsigned(
 const char * Dim::configString(
     const ConfigContext & context,
     const XDocument & doc,
-    std::string_view name,
+    string_view name,
     const char defVal[]
 ) {
     auto elem = configElement(context, doc, name);
@@ -307,7 +307,7 @@ const char * Dim::configString(
 const XNode * Dim::configElement(
     const ConfigContext & context,
     const XDocument & doc,
-    std::string_view name
+    string_view name
 ) {
     return firstChild(doc.root(), name);
 }
@@ -315,7 +315,7 @@ const XNode * Dim::configElement(
 //===========================================================================
 unsigned Dim::configUnsigned(
     const XDocument & doc,
-    std::string_view name,
+    string_view name,
     unsigned defVal
 ) {
     ConfigContext context;
@@ -325,7 +325,7 @@ unsigned Dim::configUnsigned(
 //===========================================================================
 const char * Dim::configString(
     const XDocument & doc,
-    std::string_view name,
+    string_view name,
     const char defVal[]
 ) {
     ConfigContext context;
@@ -335,7 +335,7 @@ const char * Dim::configString(
 //===========================================================================
 const XNode * Dim::configElement(
     const XDocument & doc,
-    std::string_view name
+    string_view name
 ) {
     ConfigContext context;
     return configElement(context, doc, name);

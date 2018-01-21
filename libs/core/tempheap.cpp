@@ -76,7 +76,7 @@ void TempHeap::clear() {
 
 //===========================================================================
 void TempHeap::swap(TempHeap & from) {
-    std::swap(m_buffer, from.m_buffer);
+    ::swap(m_buffer, from.m_buffer);
 }
 
 //===========================================================================
@@ -88,7 +88,7 @@ char * TempHeap::alloc(size_t bytes, size_t align) {
         if (buf) {
             void * ptr = (char *)buf + buf->m_reserve - buf->m_avail;
             size_t avail = buf->m_avail;
-            if (std::align(align, bytes, ptr, avail)) {
+            if (::align(align, bytes, ptr, avail)) {
                 buf->m_avail = unsigned(avail - bytes);
                 return (char *)ptr;
             }

@@ -89,17 +89,17 @@ static PerfType perfType() {
 
 //===========================================================================
 template <typename T>
-static void valueToString(std::string & out, T val, bool pretty) {
+static void valueToString(string * out, T val, bool pretty) {
     auto str = StrFrom<T>{val};
     if (!pretty) {
-        out = str;
+        *out = str;
         return;
     }
 
     auto v = string_view{str};
     auto num = (v.size() - 1) % 3 + 1;
-    out.resize(v.size() + (v.size() - num) / 3);
-    auto optr = out.data();
+    out->resize(v.size() + (v.size() - num) / 3);
+    auto optr = out->data();
     auto ptr = v.data();
     auto eptr = ptr + v.size();
     switch (num) {
@@ -134,7 +134,7 @@ inline double PerfCounter<T>::toDouble () const {
 
 //===========================================================================
 template<typename T>
-inline void PerfCounter<T>::toString (std::string & out, bool pretty) const {
+inline void PerfCounter<T>::toString (string * out, bool pretty) const {
     valueToString(out, (T) *this, pretty);
 }
 
@@ -163,7 +163,7 @@ inline double PerfFunc<T>::toDouble () const {
 
 //===========================================================================
 template<typename T>
-inline void PerfFunc<T>::toString (std::string & out, bool pretty) const {
+inline void PerfFunc<T>::toString (string * out, bool pretty) const {
     valueToString(out, fn(), pretty);
 }
 
@@ -236,7 +236,8 @@ PerfFunc<float> & Dim::fperf(string_view name, function<float()> fn) {
 }
 
 //===========================================================================
-void Dim::perfGetValues (std::vector<PerfValue> & out, bool pretty) {
+void Dim::perfGetValues (vector<PerfValue> * outptr, bool pretty) {
+    auto & out = *outptr;
     auto & info = getInfo();
     bool mustSort = false;
     {
@@ -249,18 +250,17 @@ void Dim::perfGetValues (std::vector<PerfValue> & out, bool pretty) {
                 out[i].pos = i;
         }
         for (unsigned i = 0; i < out.size(); ++i) {
-            auto pos = out[i].pos;
+            auto & oval = out[i];
+            auto pos = oval.pos;
             auto cnt = info.counters[pos].get();
-            if (out[i].name.data() != cnt->name.data()) {
-                out[i].name = cnt->name;
-                out[i].value.clear();
+            if (oval.name.data() != cnt->name.data()) {
+                oval.name = cnt->name;
+                oval.value.clear();
             }
-            if (out[i].value.empty()
-                || out[i].raw != cnt->toDouble()
-            ) {
-                cnt->toString(out[i].value, pretty);
-                out[i].raw = cnt->toDouble();
-                out[i].type = cnt->type();
+            if (oval.value.empty() || oval.raw != cnt->toDouble()) {
+                cnt->toString(&oval.value, pretty);
+                oval.raw = cnt->toDouble();
+                oval.type = cnt->type();
             }
         }
     }

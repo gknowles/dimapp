@@ -38,6 +38,12 @@ private:
     LogType m_type;
 };
 
+class LogCrash : public Log {
+public:
+    using Log::Log;
+    [[noreturn]] ~LogCrash() {}
+};
+
 } // namespace
 
 
@@ -53,7 +59,7 @@ private:
 Detail::Log logMsgDebug();
 Detail::Log logMsgInfo();
 Detail::Log logMsgError();
-Detail::Log logMsgCrash();
+Detail::LogCrash logMsgCrash();
 
 // Logs an error of the form "name(<line no>): msg", followed by two info
 // lines with part or all of the line of content containing the error

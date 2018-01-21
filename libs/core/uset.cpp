@@ -1759,7 +1759,7 @@ void UnsignedSet::assign(const UnsignedSet & from) {
 }
 
 //===========================================================================
-void UnsignedSet::assign(std::string_view src) {
+void UnsignedSet::assign(string_view src) {
     clear();
     insert(src);
 }

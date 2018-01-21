@@ -11,7 +11,7 @@ namespace Dim {
 
 // App
 // Add task to be run immediately after onAppRun()
-void iAppPushStartupTask(ITaskNotify & task);
+void iAppPushStartupTask(ITaskNotify * task);
 void iAppSetFlags(AppFlags flags);
 
 // Config

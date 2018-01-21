@@ -40,7 +40,7 @@ public:
         bool more
     );
     static void reply(unsigned reqId, HttpResponse & msg, bool more);
-    static void reply(unsigned reqId, std::string_view data, bool more);
+    static void reply(unsigned reqId, string_view data, bool more);
     static void reply(unsigned reqId, const CharBuf & data, bool more);
 
 public:
@@ -90,7 +90,7 @@ static auto & s_perfError = uperf("http reply error");
 ***/
 
 //===========================================================================
-static IHttpRouteNotify * find(std::string_view path, HttpMethod method) {
+static IHttpRouteNotify * find(string_view path, HttpMethod method) {
     IHttpRouteNotify * best = nullptr;
     size_t bestSegs = 0;
     size_t bestLen = 0;
@@ -207,7 +207,7 @@ void HttpSocket::reply(unsigned reqId, HttpResponse & msg, bool more) {
         s_perfError += 1;
     }
     auto fn = [&](HttpConnHandle h, CharBuf * out, int stream) -> void {
-        httpReply(h, out, stream, msg, more);
+        httpReply(out, h, stream, msg, more);
     };
     iReply(reqId, fn, more);
 }
@@ -216,7 +216,7 @@ void HttpSocket::reply(unsigned reqId, HttpResponse & msg, bool more) {
 // static
 void HttpSocket::reply(unsigned reqId, string_view data, bool more) {
     auto fn = [&](HttpConnHandle h, CharBuf * out, int stream) -> void {
-        httpData(h, out, stream, data, more);
+        httpData(out, h, stream, data, more);
     };
     iReply(reqId, fn, more);
 }
@@ -225,7 +225,7 @@ void HttpSocket::reply(unsigned reqId, string_view data, bool more) {
 // static
 void HttpSocket::reply(unsigned reqId, const CharBuf & data, bool more) {
     auto fn = [&](HttpConnHandle h, CharBuf * out, int stream) -> void {
-        httpData(h, out, stream, data, more);
+        httpData(out, h, stream, data, more);
     };
     iReply(reqId, fn, more);
 }
@@ -252,7 +252,7 @@ void HttpSocket::onSocketDisconnect() {
 void HttpSocket::onSocketRead(AppSocketData & data) {
     CharBuf out;
     vector<unique_ptr<HttpMsg>> msgs;
-    bool result = httpRecv(m_conn, &out, &msgs, data.data, data.bytes);
+    bool result = httpRecv(&out, &msgs, m_conn, data.data, data.bytes);
     if (!out.empty())
         socketWrite(this, out);
     if (!result) {
@@ -369,7 +369,7 @@ void Dim::iHttpRouteInitialize() {
 //===========================================================================
 void Dim::httpRouteAdd(
     IHttpRouteNotify * notify,
-    std::string_view path,
+    string_view path,
     unsigned methods,
     bool recurse
 ) {
@@ -474,7 +474,7 @@ struct ReplyWithFileNotify : IFileReadNotify {
 } // namespace
 
 //===========================================================================
-void Dim::httpRouteReplyWithFile(unsigned reqId, std::string_view path) {
+void Dim::httpRouteReplyWithFile(unsigned reqId, string_view path) {
     HttpResponse msg;
     auto file = fileOpen(path, File::fReadOnly | File::fDenyNone);
     if (!file) {

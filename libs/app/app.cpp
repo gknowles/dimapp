@@ -122,9 +122,9 @@ void ConfigAppXml::onConfigChange(const XDocument & doc) {
 ***/
 
 //===========================================================================
-void Dim::iAppPushStartupTask(ITaskNotify & task) {
+void Dim::iAppPushStartupTask(ITaskNotify * task) {
     assert(appStarting());
-    s_appTasks.push_back(&task);
+    s_appTasks.push_back(task);
 }
 
 //===========================================================================
@@ -152,7 +152,7 @@ AppFlags Dim::appFlags() {
 
 //===========================================================================
 static bool makeAppPath(
-    string & out,
+    string * out,
     string_view root,
     string_view file,
     bool createIfNotExist
@@ -161,11 +161,11 @@ static bool makeAppPath(
         / fs::u8path(file.begin(), file.end());
     error_code ec;
     fp = fs::canonical(fp, ec);
-    out = fp.u8string();
-    replace(out.begin(), out.end(), '\\', '/');
+    *out = fp.u8string();
+    replace(out->begin(), out->end(), '\\', '/');
     if (ec
-        || out.compare(0, root.size(), root.data(), root.size()) != 0
-        || out[root.size()] != '/'
+        || out->compare(0, root.size(), root.data(), root.size()) != 0
+        || (*out)[root.size()] != '/'
     ) {
         return false;
     }
@@ -201,17 +201,17 @@ string_view Dim::appDataDirectory() {
 }
 
 //===========================================================================
-bool Dim::appConfigPath(string & out, string_view file, bool cine) {
+bool Dim::appConfigPath(string * out, string_view file, bool cine) {
     return makeAppPath(out, appConfigDirectory(), file, cine);
 }
 
 //===========================================================================
-bool Dim::appLogPath(string & out, string_view file, bool cine) {
+bool Dim::appLogPath(string * out, string_view file, bool cine) {
     return makeAppPath(out, appLogDirectory(), file, cine);
 }
 
 //===========================================================================
-bool Dim::appDataPath(string & out, string_view file, bool cine) {
+bool Dim::appDataPath(string * out, string_view file, bool cine) {
     return makeAppPath(out, appDataDirectory(), file, cine);
 }
 
@@ -223,11 +223,11 @@ int Dim::appRun(
     AppFlags flags
 ) {
     s_fnProxyApp.fn = move(fn);
-    return appRun(s_fnProxyApp, argc, argv, flags);
+    return appRun(&s_fnProxyApp, argc, argv, flags);
 }
 
 //===========================================================================
-int Dim::appRun(IAppNotify & app, int argc, char * argv[], AppFlags flags) {
+int Dim::appRun(IAppNotify * app, int argc, char * argv[], AppFlags flags) {
     s_appFlags = flags;
     s_runMode = kRunStarting;
     s_appTasks.clear();
@@ -265,7 +265,7 @@ int Dim::appRun(IAppNotify & app, int argc, char * argv[], AppFlags flags) {
     if (flags & fAppWithWebAdmin)
         iWebAdminInitialize();
 
-    s_app = &app;
+    s_app = app;
     s_app->m_argc = argc;
     s_app->m_argv = argv;
     s_runMode = kRunRunning;

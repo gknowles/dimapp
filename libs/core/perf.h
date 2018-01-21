@@ -32,14 +32,14 @@ struct PerfCounterBase {
 
     virtual ~PerfCounterBase() = default;
     virtual PerfType type () const = 0;
-    virtual void toString (std::string & out, bool pretty) const = 0;
+    virtual void toString (std::string * out, bool pretty) const = 0;
     virtual double toDouble () const = 0;
 };
 
 template<typename T>
 struct PerfCounter : PerfCounterBase, std::atomic<T> {
     PerfType type () const override;
-    void toString (std::string & out, bool pretty) const override;
+    void toString (std::string * out, bool pretty) const override;
     double toDouble () const override;
 };
 
@@ -48,7 +48,7 @@ struct PerfFunc : PerfCounterBase {
     std::function<T()> fn;
 
     PerfType type () const override;
-    void toString (std::string & out, bool pretty) const override;
+    void toString (std::string * out, bool pretty) const override;
     double toDouble () const override;
 };
 
@@ -89,6 +89,6 @@ struct PerfValue {
 //
 // NOTE: If the passed in array is not empty it is assumed to still have the
 //       contents returned by a previous call to this function.
-void perfGetValues (std::vector<PerfValue> & out, bool pretty = false);
+void perfGetValues (std::vector<PerfValue> * out, bool pretty = false);
 
 } // namespace

@@ -116,16 +116,16 @@ TlsConnHandle tlsAccept(const TlsCipherSuite suites[], size_t count);
 void tlsClose(TlsConnHandle h);
 
 bool tlsRecv(
-    TlsConnHandle conn,
     CharBuf * out,
     CharBuf * data,
+    TlsConnHandle conn,
     const void * src,
     size_t srcLen
 );
 
 void tlsSend(
-    TlsConnHandle conn,
     CharBuf * out,
+    TlsConnHandle conn,
     const void * src,
     size_t srcLen
 );

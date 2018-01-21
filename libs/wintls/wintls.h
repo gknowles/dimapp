@@ -38,15 +38,15 @@ WinTlsConnHandle winTlsAccept();
 void winTlsClose(WinTlsConnHandle h);
 
 bool winTlsRecv(
-    WinTlsConnHandle conn,
     CharBuf * sendBack,
     CharBuf * received,
+    WinTlsConnHandle conn,
     std::string_view src
 );
 
 void winTlsSend(
-    WinTlsConnHandle conn,
     CharBuf * send,
+    WinTlsConnHandle conn,
     std::string_view src
 );
 

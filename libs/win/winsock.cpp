@@ -44,7 +44,7 @@ enum RequestType {
 struct Dim::SocketRequest : ListBaseLink<> {
     RequestType m_type{kReqInvalid};
     RIO_BUF m_rbuf{};
-    std::unique_ptr<SocketBuffer> m_buffer;
+    unique_ptr<SocketBuffer> m_buffer;
     TimePoint m_qtime{};
 
     // filled in after completion

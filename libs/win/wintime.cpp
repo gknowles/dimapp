@@ -51,13 +51,13 @@ int Dim::timeZoneMinutes(TimePoint time) {
 }
 
 //===========================================================================
-bool Dim::timeFromDesc(TimePoint & time, const tm & tm) {
+bool Dim::timeFromDesc(TimePoint * time, const tm & tm) {
     auto src = tm;
     auto t = _mkgmtime(&src); // Microsoft extension, libc has timegm()
     if (t == -1) {
-        time = {};
+        *time = {};
         return false;
     }
-    time = Clock::from_time_t(t);
+    *time = Clock::from_time_t(t);
     return true;
 }

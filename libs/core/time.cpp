@@ -200,7 +200,7 @@ Time8601Str & Time8601Str::set(
     assert(precision <= 7);
     time += (minutes) tzMinutes;
     tm desc;
-    timeToDesc(desc, time);
+    timeToDesc(&desc, time);
     char * out = add4Digit(m_data, desc.tm_year + 1900, '-');
     out = add2Digit(out, desc.tm_mon + 1, '-');
     out = add2Digit(out, desc.tm_mday, 'T');
@@ -300,7 +300,7 @@ bool parse2Digits(int * out, string_view & src, char suffix) {
 //  YYYY-MM-DD
 //  YYYY-MM-DD{T,t, }hh:mm:ss[.nnnnnnn]{Z,z}
 //  YYYY-MM-DD{T,t, }hh:mm:ss[.nnnnnnn]{+,-}hh:mm
-bool Dim::timeParse8601(TimePoint * out, std::string_view str) {
+bool Dim::timeParse8601(TimePoint * out, string_view str) {
     *out = {};
     tm desc = {};
 
@@ -315,7 +315,7 @@ bool Dim::timeParse8601(TimePoint * out, std::string_view str) {
     desc.tm_year -= 1900;
     desc.tm_mon -= 1;
     if (str.empty())
-        return timeFromDesc(*out, desc);
+        return timeFromDesc(out, desc);
 
     // time
     if (str[0] != 'T' && str[0] != ' ' && str[0] != 't')
@@ -380,7 +380,7 @@ bool Dim::timeParse8601(TimePoint * out, std::string_view str) {
     }
 
     // combine date, time, fractional seconds, and timezone
-    if (!timeFromDesc(*out, desc))
+    if (!timeFromDesc(out, desc))
         return false;
     Duration d = -(minutes) tzMinutes + (Duration) frac;
     *out += d;
@@ -395,16 +395,16 @@ bool Dim::timeParse8601(TimePoint * out, std::string_view str) {
 ***/
 
 //===========================================================================
-bool Dim::timeToDesc(tm & tm, TimePoint time) {
+bool Dim::timeToDesc(tm * tm, TimePoint time) {
     auto t = Clock::to_time_t(time);
 #pragma warning(suppress : 4996) // deprecated
     if (auto tmp = gmtime(&t)) {
-        tm = *tmp;
-        tm.tm_isdst = -1;
-        tm.tm_yday = -1;
+        *tm = *tmp;
+        tm->tm_isdst = -1;
+        tm->tm_yday = -1;
         return true;
     } else {
-        tm = {};
+        *tm = {};
         return false;
     }
 }

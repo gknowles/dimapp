@@ -50,7 +50,7 @@ class HtmlCounters : public IHttpRouteNotify {
 
 //===========================================================================
 void HtmlCounters::onHttpRequest(unsigned reqId, HttpRequest & msg) {
-    perfGetValues(m_values, true);
+    perfGetValues(&m_values, true);
 
     HttpResponse res;
     XBuilder bld(res.body());
@@ -90,7 +90,7 @@ class JsonCounters : public IHttpRouteNotify {
 
 //===========================================================================
 void JsonCounters::onHttpRequest(unsigned reqId, HttpRequest & msg) {
-    perfGetValues(m_values);
+    perfGetValues(&m_values);
 
     HttpResponse res;
     JBuilder bld(res.body());

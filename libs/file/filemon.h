@@ -60,7 +60,7 @@ void fileMonitorCloseWait(
 // directory. Returns false for invalid parameters (bad directory, file
 // outside of directory, etc.)
 bool fileMonitorPath(
-    std::string & out,
+    std::string * out,
     FileMonitorHandle dir,
     std::string_view file
 );

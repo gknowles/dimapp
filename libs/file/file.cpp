@@ -42,7 +42,7 @@ void FileAppendQueue::init(int numBufs, int maxWrites, size_t pageSize) {
 }
 
 //===========================================================================
-bool FileAppendQueue::open(std::string_view path, OpenExisting mode) {
+bool FileAppendQueue::open(string_view path, OpenExisting mode) {
     auto flags = File::fReadWrite | File::fAligned;
     switch (mode) {
     case kFail: flags |= File::fCreat | File::fExcl; break;
@@ -101,7 +101,7 @@ void FileAppendQueue::close() {
 }
 
 //===========================================================================
-void FileAppendQueue::append(std::string_view data) {
+void FileAppendQueue::append(string_view data) {
     if (!m_file)
         return;
 
@@ -261,9 +261,9 @@ namespace {
 
 class FileLoadNotify : public IFileReadNotify {
     IFileReadNotify * m_notify;
-    string & m_out;
+    string * m_out;
 public:
-    FileLoadNotify(string & out, IFileReadNotify * notify);
+    FileLoadNotify(string * out, IFileReadNotify * notify);
     bool onFileRead(
         size_t * bytesUsed,
         string_view data,
@@ -276,7 +276,7 @@ public:
 } // namespace
 
 //===========================================================================
-FileLoadNotify::FileLoadNotify(string & out, IFileReadNotify * notify)
+FileLoadNotify::FileLoadNotify(string * out, IFileReadNotify * notify)
     : m_notify(notify)
     , m_out(out)
 {}
@@ -291,7 +291,7 @@ bool FileLoadNotify::onFileRead(
     *bytesUsed = data.size();
     // resize the string to match the bytes read, in case it was less than
     // the amount requested
-    m_out.resize(data.size());
+    m_out->resize(data.size());
     return false;
 }
 
@@ -310,7 +310,7 @@ void FileLoadNotify::onFileEnd(int64_t offset, FileHandle f) {
 ***/
 
 //===========================================================================
-TimePoint Dim::fileLastWriteTime(std::string_view path) {
+TimePoint Dim::fileLastWriteTime(string_view path) {
     error_code ec;
     auto f = fs::u8path(path.begin(), path.end());
     auto tp = TimePoint{fs::last_write_time(f, ec).time_since_epoch()};
@@ -318,7 +318,7 @@ TimePoint Dim::fileLastWriteTime(std::string_view path) {
 }
 
 //===========================================================================
-uint64_t Dim::fileSize(std::string_view path) {
+uint64_t Dim::fileSize(string_view path) {
     error_code ec;
     auto f = fs::u8path(path.begin(), path.end());
     auto len = (uint64_t) fs::file_size(f, ec);
@@ -333,7 +333,7 @@ uint64_t Dim::fileSize(std::string_view path) {
 }
 
 //===========================================================================
-bool Dim::fileRemove(std::string_view path) {
+bool Dim::fileRemove(string_view path) {
     error_code ec;
     auto f = fs::u8path(path.begin(), path.end());
     if (fs::remove(f, ec))
@@ -362,7 +362,7 @@ void Dim::fileStreamBinary(
 //===========================================================================
 void Dim::fileLoadBinary(
     IFileReadNotify * notify,
-    string & out,
+    string * out,
     string_view path,
     size_t maxSize,
     TaskQueueHandle hq
@@ -377,28 +377,28 @@ void Dim::fileLoadBinary(
     auto bytes = fileSize(file);
     if (bytes > maxSize)
         logMsgError() << "File too large (" << bytes << " bytes): " << path;
-    out.resize((size_t) bytes);
+    out->resize((size_t) bytes);
     auto proxy = new FileLoadNotify(out, notify);
-    fileRead(proxy, out.data(), (size_t) bytes, file, 0, 0, hq);
+    fileRead(proxy, out->data(), (size_t) bytes, file, 0, 0, hq);
 }
 
 //===========================================================================
 void Dim::fileLoadBinaryWait(
-    string & out,
+    string * out,
     string_view path,
     size_t maxSize
 ) {
     auto file = fileOpen(path, File::fReadOnly | File::fDenyNone);
     if (!file) {
         logMsgError() << "File open failed: " << path;
-        out.clear();
+        out->clear();
         return;
     }
 
     auto bytes = fileSize(file);
     if (bytes > maxSize)
         logMsgError() << "File too large (" << bytes << " bytes): " << path;
-    out.resize((size_t) bytes);
-    fileReadWait(out.data(), (size_t) bytes, file, 0);
+    out->resize((size_t) bytes);
+    fileReadWait(out->data(), (size_t) bytes, file, 0);
     fileClose(file);
 }

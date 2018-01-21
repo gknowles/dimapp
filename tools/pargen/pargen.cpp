@@ -159,7 +159,7 @@ void LogTask::onLog (LogType type, string_view msg) {
     if (s_cmdopts.verbose || type != kLogTypeDebug) {
         auto ptr = new LogTask(type, msg);
         if (s_logQ) {
-            taskPush(s_logQ, *ptr);
+            taskPush(s_logQ, ptr);
         } else {
             ptr->onTask();
         }
@@ -260,7 +260,7 @@ https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
     // process ABNF file
     srcfile->defaultExt("abnf");
     string source;
-    fileLoadBinaryWait(source, *srcfile);
+    fileLoadBinaryWait(&source, *srcfile);
     if (source.empty())
         return appSignalUsageError(EX_USAGE);
 

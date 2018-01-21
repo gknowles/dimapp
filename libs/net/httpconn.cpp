@@ -517,7 +517,7 @@ static void updatePriority() {
 //===========================================================================
 bool HttpConn::recv(
     CharBuf * out,
-    std::vector<std::unique_ptr<HttpMsg>> * msgs,
+    vector<unique_ptr<HttpMsg>> * msgs,
     const void * src,
     size_t srcLen
 ) {
@@ -561,14 +561,14 @@ bool HttpConn::recv(
             m_inputFrameLen = getFrameLen(data(m_input));
             if (avail < (size_t) m_inputFrameLen) {
                 if (m_inputFrameLen > m_maxInputFrame)
-                    return onFrame(msgs, out, data(m_input));
+                    return onFrame(out, msgs, data(m_input));
                 m_input.insert(m_input.end(), ptr, eptr);
                 m_byteMode = ByteMode::kPayload;
                 return true;
             }
             m_input.insert(m_input.end(), ptr, ptr + m_inputFrameLen);
             ptr += m_inputFrameLen;
-            if (!onFrame(msgs, out, data(m_input)))
+            if (!onFrame(out, msgs, data(m_input)))
                 return false;
             m_input.clear();
             goto next_frame;
@@ -587,7 +587,7 @@ bool HttpConn::recv(
             m_byteMode = ByteMode::kPayload;
             return true;
         }
-        if (!onFrame(msgs, out, ptr))
+        if (!onFrame(out, msgs, ptr))
             return false;
         ptr += kFrameHeaderLen + m_inputFrameLen;
         goto next_frame;
@@ -608,7 +608,7 @@ bool HttpConn::recv(
         }
         m_input.insert(m_input.end(), ptr, ptr + need);
         ptr += need;
-        if (!onFrame(msgs, out, data(m_input)))
+        if (!onFrame(out, msgs, data(m_input)))
             return false;
         m_input.clear();
         m_byteMode = ByteMode::kHeader;
@@ -662,8 +662,8 @@ HttpStream * HttpConn::findAlways(CharBuf * out, int stream) {
 
 //===========================================================================
 bool HttpConn::onFrame(
-    std::vector<std::unique_ptr<HttpMsg>> * msgs,
     CharBuf * out,
+    vector<unique_ptr<HttpMsg>> * msgs,
     const char src[]
 ) {
     // Frame header
@@ -685,25 +685,25 @@ bool HttpConn::onFrame(
 
     switch (type) {
     case FrameType::kContinuation:
-        return onContinuation(msgs, out, src, stream, flags);
+        return onContinuation(out, msgs, src, stream, flags);
     case FrameType::kData:
-        return onData(msgs, out, src, stream, flags);
+        return onData(out, msgs, src, stream, flags);
     case FrameType::kGoAway:
-        return onGoAway(msgs, out, src, stream, flags);
+        return onGoAway(out, msgs, src, stream, flags);
     case FrameType::kHeaders:
-        return onHeaders(msgs, out, src, stream, flags);
+        return onHeaders(out, msgs, src, stream, flags);
     case FrameType::kPing:
-        return onPing(msgs, out, src, stream, flags);
+        return onPing(out, msgs, src, stream, flags);
     case FrameType::kPriority:
-        return onPriority(msgs, out, src, stream, flags);
+        return onPriority(out, msgs, src, stream, flags);
     case FrameType::kPushPromise:
-        return onPushPromise(msgs, out, src, stream, flags);
+        return onPushPromise(out, msgs, src, stream, flags);
     case FrameType::kRstStream:
-        return onRstStream(msgs, out, src, stream, flags);
+        return onRstStream(out, msgs, src, stream, flags);
     case FrameType::kSettings:
-        return onSettings(msgs, out, src, stream, flags);
+        return onSettings(out, msgs, src, stream, flags);
     case FrameType::kWindowUpdate:
-        return onWindowUpdate(msgs, out, src, stream, flags);
+        return onWindowUpdate(out, msgs, src, stream, flags);
     };
 
     // ignore unknown frames unless a specific frame type is required
@@ -715,8 +715,8 @@ bool HttpConn::onFrame(
 
 //===========================================================================
 bool HttpConn::onData(
-    std::vector<std::unique_ptr<HttpMsg>> * msgs,
     CharBuf * out,
+    vector<unique_ptr<HttpMsg>> * msgs,
     const char src[],
     int stream,
     FrameFlags flags
@@ -768,8 +768,8 @@ bool HttpConn::onData(
 
 //===========================================================================
 bool HttpConn::onHeaders(
-    std::vector<std::unique_ptr<HttpMsg>> * msgs,
     CharBuf * out,
+    vector<unique_ptr<HttpMsg>> * msgs,
     const char src[],
     int stream,
     FrameFlags flags
@@ -869,8 +869,8 @@ bool HttpConn::onHeaders(
 
 //===========================================================================
 bool HttpConn::onPriority(
-    std::vector<std::unique_ptr<HttpMsg>> * msgs,
     CharBuf * out,
+    vector<unique_ptr<HttpMsg>> * msgs,
     const char src[],
     int stream,
     FrameFlags flags
@@ -907,8 +907,8 @@ bool HttpConn::onPriority(
 
 //===========================================================================
 bool HttpConn::onRstStream(
-    std::vector<std::unique_ptr<HttpMsg>> * msgs,
     CharBuf * out,
+    vector<unique_ptr<HttpMsg>> * msgs,
     const char src[],
     int stream,
     FrameFlags flags
@@ -942,8 +942,8 @@ bool HttpConn::onRstStream(
 
 //===========================================================================
 bool HttpConn::onSettings(
-    std::vector<std::unique_ptr<HttpMsg>> * msgs,
     CharBuf * out,
+    vector<unique_ptr<HttpMsg>> * msgs,
     const char src[],
     int stream,
     FrameFlags flags
@@ -1018,8 +1018,8 @@ bool HttpConn::setInitialWindowSize(CharBuf * out, unsigned value) {
 
 //===========================================================================
 bool HttpConn::onPushPromise(
-    std::vector<std::unique_ptr<HttpMsg>> * msgs,
     CharBuf * out,
+    vector<unique_ptr<HttpMsg>> * msgs,
     const char src[],
     int stream,
     FrameFlags flags
@@ -1044,8 +1044,8 @@ bool HttpConn::onPushPromise(
 
 //===========================================================================
 bool HttpConn::onPing(
-    std::vector<std::unique_ptr<HttpMsg>> * msgs,
     CharBuf * out,
+    vector<unique_ptr<HttpMsg>> * msgs,
     const char src[],
     int stream,
     FrameFlags flags
@@ -1072,8 +1072,8 @@ bool HttpConn::onPing(
 
 //===========================================================================
 bool HttpConn::onGoAway(
-    std::vector<std::unique_ptr<HttpMsg>> * msgs,
     CharBuf * out,
+    vector<unique_ptr<HttpMsg>> * msgs,
     const char src[],
     int stream,
     FrameFlags flags
@@ -1112,8 +1112,8 @@ bool HttpConn::onGoAway(
 
 //===========================================================================
 bool HttpConn::onWindowUpdate(
-    std::vector<std::unique_ptr<HttpMsg>> * msgs,
     CharBuf * out,
+    vector<unique_ptr<HttpMsg>> * msgs,
     const char src[],
     int stream,
     FrameFlags flags
@@ -1175,8 +1175,8 @@ bool HttpConn::onWindowUpdate(
 
 //===========================================================================
 bool HttpConn::onContinuation(
-    std::vector<std::unique_ptr<HttpMsg>> * msgs,
     CharBuf * out,
+    vector<unique_ptr<HttpMsg>> * msgs,
     const char src[],
     int stream,
     FrameFlags flags
@@ -1466,9 +1466,9 @@ void Dim::httpClose(HttpConnHandle hc) {
 
 //===========================================================================
 bool Dim::httpRecv(
-    HttpConnHandle hc,
     CharBuf * out,
-    std::vector<std::unique_ptr<HttpMsg>> * msgs,
+    vector<unique_ptr<HttpMsg>> * msgs,
+    HttpConnHandle hc,
     const void * src,
     size_t srcLen
 ) {
@@ -1479,8 +1479,8 @@ bool Dim::httpRecv(
 
 //===========================================================================
 int Dim::httpRequest(
-    HttpConnHandle hc,
     CharBuf * out,
+    HttpConnHandle hc,
     const HttpMsg & msg,
     bool more
 ) {
@@ -1491,10 +1491,11 @@ int Dim::httpRequest(
 
 //===========================================================================
 int Dim::httpPushPromise(
-    HttpConnHandle hc,
     CharBuf * out,
+    HttpConnHandle hc,
     const HttpMsg & msg,
-    bool more) {
+    bool more
+) {
     if (auto * conn = s_conns.find(hc))
         return conn->pushPromise(out, msg, more);
     return 0;
@@ -1502,8 +1503,8 @@ int Dim::httpPushPromise(
 
 //===========================================================================
 void Dim::httpReply(
-    HttpConnHandle hc,
     CharBuf * out,
+    HttpConnHandle hc,
     int stream,
     const HttpMsg & msg,
     bool more
@@ -1514,8 +1515,8 @@ void Dim::httpReply(
 
 //===========================================================================
 void Dim::httpData(
-    HttpConnHandle hc,
     CharBuf * out,
+    HttpConnHandle hc,
     int stream,
     const CharBuf & data,
     bool more
@@ -1526,8 +1527,8 @@ void Dim::httpData(
 
 //===========================================================================
 void Dim::httpData(
-    HttpConnHandle hc,
     CharBuf * out,
+    HttpConnHandle hc,
     int stream,
     string_view data,
     bool more
@@ -1537,7 +1538,7 @@ void Dim::httpData(
 }
 
 //===========================================================================
-void Dim::httpResetStream(HttpConnHandle hc, CharBuf * out, int stream) {
+void Dim::httpResetStream(CharBuf * out, HttpConnHandle hc, int stream) {
     if (auto * conn = s_conns.find(hc))
         return conn->resetStream(out, stream);
 }

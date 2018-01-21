@@ -166,7 +166,7 @@ static void timerDispatchThread() {
         if (wait <= 0ms) {
             s_processing = true;
             lk.unlock();
-            taskPushEvent(s_runTimers);
+            taskPushEvent(&s_runTimers);
             lk.lock();
             continue;
         }
@@ -270,7 +270,7 @@ void Timer::closeWait(ITimerNotify * notify) {
     }
 
     unique_lock<mutex> lk{s_mut};
-    shared_ptr<Timer> timer{std::move(notify->m_timer)};
+    shared_ptr<Timer> timer{move(notify->m_timer)};
     timer->instance += 1;
     if (this_thread::get_id() == s_processingThread)
         return;
