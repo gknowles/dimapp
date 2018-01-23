@@ -23,17 +23,14 @@ const unsigned kDefaultWindowSize = 65'535;
 struct HttpStream {
     enum State {
         kIdle,
-        kLocalReserved,
-        kRemoteReserved,
+        kReserved,
         kOpen,
-        kLocalClosed,
-        kRemoteClosed,
-        kReset, // sent RST_STREAM, not yet confirmed
         kClosed,
         kDeleted, // waiting for garbage collection
     };
 
-    State m_state{kIdle};
+    State m_localState{kIdle};
+    State m_remoteState{kIdle};
     TimePoint m_closed;
     std::unique_ptr<HttpMsg> m_msg;
     int m_flowWindow{0};
@@ -77,11 +74,11 @@ public:
     int pushPromise(CharBuf * out, const HttpMsg & msg, bool more);
 
     // Serializes a reply on the specified stream
-    void reply(CharBuf * out, int stream, const HttpMsg & msg, bool more);
+    bool reply(CharBuf * out, int stream, const HttpMsg & msg, bool more);
 
     // Serializes additional data on the stream
     template<typename T>
-    void addData(
+    bool addData(
         CharBuf * out,
         int stream,
         HttpStream * strm,
@@ -99,7 +96,7 @@ private:
 
     void replyRstStream(CharBuf * out, int stream, FrameError error);
     HttpStream * findAlways(CharBuf * out, int stream);
-    void writeMsg(
+    bool writeMsg(
         CharBuf * out,
         int stream,
         HttpStream * strm,

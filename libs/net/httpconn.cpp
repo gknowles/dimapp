@@ -196,11 +196,13 @@ Duration ResetStreamTimer::onTimer(TimePoint now) {
         if (sleep > 0s)
             return min(sleep, kMinResetStreamCheckInterval);
 
-        if (rs.sm->m_state == HttpStream::kClosed) {
-            HttpConn * conn = s_conns.find(rs.hc);
-            conn->deleteStream(rs.stream, rs.sm.get());
+        if (rs.sm->m_localState == HttpStream::kClosed
+            && rs.sm->m_remoteState == HttpStream::kClosed
+        ) {
+            if (HttpConn * conn = s_conns.find(rs.hc))
+                conn->deleteStream(rs.stream, rs.sm.get());
         } else {
-            assert(rs.sm->m_state == HttpStream::kDeleted);
+            assert(rs.sm->m_localState == HttpStream::kDeleted);
         }
 
         s_resetStreams.pop_front();
@@ -630,7 +632,8 @@ void HttpConn::replyRstStream(CharBuf * out, int stream, FrameError error) {
         return;
 
     auto sm = it->second;
-    sm->m_state = HttpStream::kClosed;
+    sm->m_localState = HttpStream::kClosed;
+    sm->m_remoteState = HttpStream::kClosed;
     sm->m_closed = Clock::now();
     auto & rs = s_resetStreams.emplace_back();
     rs.hc = m_handle;
@@ -748,11 +751,9 @@ bool HttpConn::onData(
 
     shared_ptr<HttpStream> sm;
     auto it = m_streams.find(stream);
-    if (it == m_streams.end())
+    if (it != m_streams.end())
         sm = it->second;
-    if (!sm
-        || sm->m_state != HttpStream::kOpen
-            && sm->m_state != HttpStream::kLocalClosed) {
+    if (!sm || sm->m_remoteState != HttpStream::kOpen) {
         // data frame on non-open stream
         replyRstStream(out, stream, FrameError::kStreamClosed);
         return true;
@@ -813,25 +814,34 @@ bool HttpConn::onHeaders(
     if (!sm)
         return false;
 
-    switch (sm->m_state) {
+    switch (sm->m_remoteState) {
     case HttpStream::kIdle:
-        if (~flags & fEndStream) {
-            sm->m_state = HttpStream::kOpen;
-        } else {
-            sm->m_state = HttpStream::kRemoteClosed;
+        sm->m_remoteState = (flags & fEndStream)
+            ? HttpStream::kClosed
+            : HttpStream::kOpen;
+        switch (sm->m_localState) {
+        case HttpStream::kIdle:
+            sm->m_msg = make_unique<HttpRequest>(stream);
+            break;
+        case HttpStream::kReserved:
+            assert(!"mismatched states, local reserved, remote idle");
+            return false;
+        case HttpStream::kOpen:
+        case HttpStream::kClosed:
+            sm->m_msg = make_unique<HttpResponse>(stream);
+            break;
+        case HttpStream::kDeleted:
+            assert(!"mismatched states, local deleted, remote idle");
+            return false;
         }
-        sm->m_msg = make_unique<HttpRequest>(stream);
         break;
-    case HttpStream::kRemoteReserved:
-        if (~flags & fEndStream) {
-            sm->m_state = HttpStream::kLocalClosed;
-        } else {
-            sm->m_state = HttpStream::kClosed;
-        }
+    case HttpStream::kReserved:
+        sm->m_remoteState = (flags & fEndStream)
+            ? HttpStream::kClosed
+            : HttpStream::kOpen;
         sm->m_msg = make_unique<HttpResponse>(stream);
         break;
     case HttpStream::kOpen:
-    case HttpStream::kLocalClosed:
         if (flags & fEndStream) {
             // trailing headers not supported
             // !!! should probably send a stream error and process
@@ -853,15 +863,15 @@ bool HttpConn::onHeaders(
         m_frameMode = FrameMode::kContinuation;
 
     auto * msg = sm->m_msg.get();
-    MsgDecoder notify(*msg);
-    if (!m_decoder.parse(&notify, &msg->heap(), ud.data, ud.dataLen)) {
+    MsgDecoder mdec(*msg);
+    if (!m_decoder.parse(&mdec, &msg->heap(), ud.data, ud.dataLen)) {
         replyGoAway(out, m_lastInputStream, FrameError::kCompressionError);
         return false;
     }
-    if (!notify) {
-        replyRstStream(out, stream, notify.Error());
+    if (!mdec) {
+        replyRstStream(out, stream, mdec.Error());
     } else {
-        if (sm->m_state == HttpStream::kRemoteClosed)
+        if (sm->m_remoteState == HttpStream::kClosed)
             msgs->push_back(move(sm->m_msg));
     }
     return true;
@@ -1203,18 +1213,22 @@ bool HttpConn::onContinuation(
 ***/
 
 //===========================================================================
-void HttpConn::writeMsg(
+bool HttpConn::writeMsg(
     CharBuf * out,
     int stream,
     HttpStream * sm,
     const HttpMsg & msg,
     bool more
 ) {
+    if (sm->m_localState == HttpStream::kClosed)
+        return false;
+
     const CharBuf & body = msg.body();
     size_t framePos = out->size();
     size_t maxEndPos = framePos + m_maxOutputFrame + kFrameHeaderLen;
+    bool headersOnly = body.empty() && !more;
     auto ftype = FrameType::kHeaders;
-    auto flags = (!body.empty() || more) ? (FrameFlags) 0 : fEndStream;
+    auto flags = headersOnly ? fEndStream : (FrameFlags) 0;
     uint8_t frameHdr[kFrameHeaderLen];
     setFrameHeader(frameHdr, stream, ftype, 0, {});
     out->append((char *)frameHdr, size(frameHdr));
@@ -1257,29 +1271,27 @@ void HttpConn::writeMsg(
     );
     out->replace(framePos, size(frameHdr), (char *)frameHdr, size(frameHdr));
 
-    switch (sm->m_state) {
+    switch (sm->m_localState) {
     case HttpStream::kIdle:
-        sm->m_state = HttpStream::kOpen;
-        break;
+    case HttpStream::kReserved:
+        sm->m_localState = HttpStream::kOpen;
+        [[fallthrough]];
     case HttpStream::kOpen:
-        break;
-    case HttpStream::kLocalReserved:
-        if (more)
-            sm->m_state = HttpStream::kRemoteClosed;
-        break;
-    case HttpStream::kRemoteClosed:
+        if (headersOnly)
+            sm->m_localState = HttpStream::kClosed;
         break;
     default:
-        logMsgCrash() << "httpReply invalid state, {" << sm->m_state << "}";
-        return;
+        logMsgCrash() << "httpReply invalid state, {"
+            << sm->m_localState << "}";
+        return false;
     }
 
-    addData(out, stream, sm, body, more);
+    return headersOnly || addData(out, stream, sm, body, more);
 }
 
 //===========================================================================
 template<typename T>
-void HttpConn::addData(
+bool HttpConn::addData(
     CharBuf * out,
     int stream,
     HttpStream * sm,
@@ -1289,7 +1301,7 @@ void HttpConn::addData(
     if (!sm) {
         auto it = m_streams.find(stream);
         if (it == m_streams.end())
-            return;
+            return false;
         sm = it->second.get();
     }
 
@@ -1325,23 +1337,24 @@ void HttpConn::addData(
     if (auto unsent = dataLen - count)
         sm->m_unsent.append(data, pos, unsent);
 
-    switch (sm->m_state) {
+    switch (sm->m_localState) {
     case HttpStream::kOpen:
         if (!more)
-            sm->m_state = HttpStream::kLocalClosed;
-        break;
-    case HttpStream::kRemoteClosed:
-        if (!more)
-            sm->m_state = HttpStream::kClosed;
+            sm->m_localState = HttpStream::kClosed;
         break;
     default:
-        logMsgCrash() << "httpData invalid state, {" << sm->m_state << "}";
-        return;
+        logMsgCrash() << "httpData invalid state, {" << sm->m_localState << "}";
+        return false;
     }
 
-    // don't erase if pending data frames
-    if (sm->m_state == HttpStream::kClosed && sm->m_unsent.empty())
+    // erase if fully closed and no pending data frames
+    if (sm->m_localState == HttpStream::kClosed
+        && sm->m_unsent.empty()
+        && sm->m_remoteState == HttpStream::kClosed
+    ) {
         m_streams.erase(stream);
+    }
+    return true;
 }
 
 //===========================================================================
@@ -1350,8 +1363,7 @@ void HttpConn::writeUnsent(
     int stream,
     HttpStream * sm
 ) {
-    bool more = sm->m_state != HttpStream::kClosed
-        && sm->m_state != HttpStream::kLocalClosed;
+    bool more = sm->m_localState != HttpStream::kClosed;
 
     size_t dataLen = size(sm->m_unsent);
     size_t count = dataLen;
@@ -1383,16 +1395,19 @@ void HttpConn::writeUnsent(
     sm->m_flowWindow -= (int) count;
     sm->m_unsent.erase(0, count);
 
-    // don't erase if pending data frames
-    if (sm->m_state == HttpStream::kClosed && sm->m_unsent.empty())
+    // erase if fully closed and no pending data frames
+    if (sm->m_localState == HttpStream::kClosed
+        && sm->m_unsent.empty()
+        && sm->m_remoteState == HttpStream::kClosed
+    ) {
         m_streams.erase(stream);
+    }
 }
 
 //===========================================================================
 // Serializes a request and returns the stream id used
 int HttpConn::request(CharBuf * out, const HttpMsg & msg, bool more) {
     auto sm = make_shared<HttpStream>();
-    sm->m_state = HttpStream::kIdle;
     unsigned id = m_nextOutputStream;
     m_nextOutputStream += 2;
     m_streams[id] = sm;
@@ -1403,12 +1418,13 @@ int HttpConn::request(CharBuf * out, const HttpMsg & msg, bool more) {
 //===========================================================================
 // Serializes a push promise
 int HttpConn::pushPromise(CharBuf * out, const HttpMsg & msg, bool more) {
+    assert(!"push promises not implemented");
     return 0;
 }
 
 //===========================================================================
 // Serializes a reply on the specified stream
-void HttpConn::reply(
+bool HttpConn::reply(
     CharBuf * out,
     int stream,
     const HttpMsg & msg,
@@ -1416,10 +1432,10 @@ void HttpConn::reply(
 ) {
     auto it = m_streams.find(stream);
     if (it == m_streams.end())
-        return;
+        return false;
     HttpStream * sm = it->second.get();
 
-    writeMsg(out, stream, sm, msg, more);
+    return writeMsg(out, stream, sm, msg, more);
 }
 
 //===========================================================================
@@ -1431,7 +1447,8 @@ void HttpConn::resetStream(CharBuf * out, int stream) {
 void HttpConn::deleteStream(int stream, HttpStream * sm) {
     auto it = m_streams.find(stream);
     if (it != m_streams.end() && sm == it->second.get()) {
-        sm->m_state = sm->kDeleted;
+        sm->m_localState = HttpStream::kDeleted;
+        sm->m_remoteState = HttpStream::kDeleted;
         m_streams.erase(it);
     }
 }
@@ -1502,7 +1519,7 @@ int Dim::httpPushPromise(
 }
 
 //===========================================================================
-void Dim::httpReply(
+bool Dim::httpReply(
     CharBuf * out,
     HttpConnHandle hc,
     int stream,
@@ -1510,11 +1527,11 @@ void Dim::httpReply(
     bool more
 ) {
     auto * conn = s_conns.find(hc);
-    conn->reply(out, stream, msg, more);
+    return conn->reply(out, stream, msg, more);
 }
 
 //===========================================================================
-void Dim::httpData(
+bool Dim::httpData(
     CharBuf * out,
     HttpConnHandle hc,
     int stream,
@@ -1522,11 +1539,12 @@ void Dim::httpData(
     bool more
 ) {
     if (auto * conn = s_conns.find(hc))
-        conn->addData(out, stream, nullptr, data, more);
+        return conn->addData(out, stream, nullptr, data, more);
+    return false;
 }
 
 //===========================================================================
-void Dim::httpData(
+bool Dim::httpData(
     CharBuf * out,
     HttpConnHandle hc,
     int stream,
@@ -1534,11 +1552,12 @@ void Dim::httpData(
     bool more
 ) {
     if (auto * conn = s_conns.find(hc))
-        conn->addData(out, stream, nullptr, data, more);
+        return conn->addData(out, stream, nullptr, data, more);
+    return false;
 }
 
 //===========================================================================
 void Dim::httpResetStream(CharBuf * out, HttpConnHandle hc, int stream) {
     if (auto * conn = s_conns.find(hc))
-        return conn->resetStream(out, stream);
+        conn->resetStream(out, stream);
 }

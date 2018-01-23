@@ -277,8 +277,9 @@ int httpPushPromise(
     bool more = false
 );
 
-// Serializes a reply on the specified stream
-void httpReply(
+// Serializes a reply on the specified stream, returns false if the stream has
+// been closed.
+bool httpReply(
     CharBuf * out,
     HttpConnHandle conn,
     int stream,
@@ -287,15 +288,16 @@ void httpReply(
 );
 
 // Sends more data on a stream, a stream ends after request, push promise,
-// reply, or data is called with more false.
-void httpData(
+// reply, or data is called with more false. Returns false if the stream has
+// been closed.
+bool httpData(
     CharBuf * out,
     HttpConnHandle conn,
     int stream,
     const CharBuf & data,
     bool more = false
 );
-void httpData(
+bool httpData(
     CharBuf * out,
     HttpConnHandle conn,
     int stream,
