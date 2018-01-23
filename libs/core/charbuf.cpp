@@ -205,6 +205,25 @@ char * CharBuf::data(size_t pos, size_t count) {
 }
 
 //===========================================================================
+const char * CharBuf::c_str() const {
+    // we need mutable access to rearrange the buffer so that the requested
+    // section is contiguous, but the data itself will stay unchanged
+    return const_cast<CharBuf *>(this)->c_str();
+}
+
+//===========================================================================
+char * CharBuf::c_str() {
+    if (empty()) {
+        m_empty = '\0';
+        return &m_empty;
+    }
+    pushBack(0);
+    auto ptr = data();
+    popBack();
+    return ptr;
+}
+
+//===========================================================================
 string_view CharBuf::view() const {
     return view(0, m_size);
 }

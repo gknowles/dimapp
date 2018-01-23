@@ -62,6 +62,8 @@ public:
     const char * data(size_t pos, size_t count = -1) const;
     char * data();
     char * data(size_t pos, size_t count = -1);
+    const char * c_str() const;
+    char * c_str();
     std::string_view view() const;
     std::string_view view(size_t pos, size_t count = -1) const;
     ViewRange views(size_t pos = 0, size_t count = -1) const;
@@ -155,6 +157,7 @@ private:
     std::vector<Buffer> m_buffers;
     int m_lastUsed{0};
     int m_size{0};
+    char m_empty{0};
 };
 
 
