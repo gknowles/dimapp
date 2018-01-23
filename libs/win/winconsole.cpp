@@ -38,6 +38,21 @@ static BOOL WINAPI controlCallback(DWORD ctrl) {
     return false;
 }
 
+//===========================================================================
+static void enableConsoleFlags(bool enable, DWORD flags) {
+    HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
+    DWORD mode = 0;
+    if (!GetConsoleMode(hInput, &mode))
+        return;
+    if (enable) {
+        mode |= flags;
+    } else {
+        mode &= ~flags;
+    }
+    if (!SetConsoleMode(hInput, mode))
+        logMsgCrash() << "SetConsoleMode(): " << WinError{};
+}
+
 
 /****************************************************************************
 *
@@ -106,28 +121,13 @@ void Dim::iConsoleInitialize() {
 
 /****************************************************************************
 *
-*   Console flags
+*   Console manipulation
 *
 ***/
 
 //===========================================================================
 bool Dim::consoleAttached() {
     return GetConsoleWindow() != NULL;
-}
-
-//===========================================================================
-static void enableConsoleFlags(bool enable, DWORD flags) {
-    HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
-    DWORD mode = 0;
-    if (!GetConsoleMode(hInput, &mode))
-        return;
-    if (enable) {
-        mode |= flags;
-    } else {
-        mode &= ~flags;
-    }
-    if (!SetConsoleMode(hInput, mode))
-        logMsgCrash() << "SetConsoleMode(): " << WinError{};
 }
 
 //===========================================================================
@@ -138,6 +138,28 @@ void Dim::consoleEnableEcho(bool enable) {
 //===========================================================================
 void Dim::consoleCatchCtrlC(bool enable) {
     s_catchEnabled = enable;
+}
+
+//===========================================================================
+void Dim::consoleRedoLine() {
+    HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_SCREEN_BUFFER_INFO info;
+    if (!GetConsoleScreenBufferInfo(hOutput, &info)) {
+        logMsgCrash() << "GetConsoleScreenBufferInfo: " << GetLastError();
+    }
+    if (info.dwCursorPosition.Y != 0) {
+        info.dwCursorPosition.Y -= 1;
+        info.dwCursorPosition.X = 0;
+        SetConsoleCursorPosition(hOutput, info.dwCursorPosition);
+    }
+    DWORD count;
+    FillConsoleOutputCharacter(
+        hOutput,
+        ' ',
+        info.dwMaximumWindowSize.X,
+        info.dwCursorPosition,
+        &count
+    );
 }
 
 

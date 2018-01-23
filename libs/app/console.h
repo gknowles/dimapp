@@ -30,6 +30,9 @@ bool consoleAttached();
 // Also enables/disables line buffering.
 void consoleEnableEcho(bool enable = true);
 
+// Replace previous line with spaces and set the cursor at its beginning.
+void consoleRedoLine();
+
 // When enabled a control-c sent to the console triggers a graceful shutdown,
 // by calling appSignalShutdown(EX_IOERR), instead of immediate termination.
 void consoleCatchCtrlC(bool enable = true);
