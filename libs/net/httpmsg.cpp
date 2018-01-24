@@ -337,6 +337,14 @@ const HttpQuery & HttpRequest::query() const {
     if (!m_query) {
         auto self = const_cast<HttpRequest *>(this);
         self->m_query = urlParseHttpPath(pathRaw(), self->heap());
+        if (!body().empty()) {
+            auto hdr = headers(kHttpContentType);
+            if (auto val = hdr.m_value.m_value;
+                strcmp(val, "application/x-www-form-urlencoded") == 0
+            ) {
+                urlAddQueryString(self->m_query, body().c_str(), self->heap());
+            }
+        }
     }
     return *m_query;
 }

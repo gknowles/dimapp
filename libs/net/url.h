@@ -39,10 +39,14 @@ struct HttpQuery {
 };
 
 HttpQuery * urlParseHttpPath(std::string_view path, ITempHeap & heap);
+void urlAddQueryString(HttpQuery * out, std::string_view src, ITempHeap & heap);
 
 size_t urlEncodePathComponent(char * out, size_t outLen, std::string_view src);
 size_t urlEncodeQueryComponent(char * out, size_t outLen, std::string_view src);
 std::string_view urlDecodePathComponent(std::string_view src, ITempHeap & heap);
-std::string_view urlDecodeQueryComponent(std::string_view src, ITempHeap & heap);
+std::string_view urlDecodeQueryComponent(
+    std::string_view src,
+    ITempHeap & heap
+);
 
 } // namespace

@@ -138,35 +138,35 @@ static void addParamValue(
 
 //===========================================================================
 HttpQuery * Dim::urlParseHttpPath(string_view path, ITempHeap & heap) {
-    auto hp = heap.emplace<HttpQuery>();
+    auto qry = heap.emplace<HttpQuery>();
     if (path.empty())
-        return hp;
+        return qry;
     if (path.size() == 1 && path[0] == '*') {
-        hp->asterisk = true;
-        return hp;
+        qry->asterisk = true;
+        return qry;
     }
     auto ptr = path.data();
     auto eptr = ptr + path.size();
 
-    HttpPathParam * param{nullptr};
     unsigned pcts = 0;
     unsigned char ch = *ptr++;
     auto base = ptr;
     if (ch == '/')
         goto SEGMENTS;
     if (ch == '?')
-        goto QUERY_PARAM;
-    return hp;
+        urlAddQueryString(qry, path, heap);
+    return qry;
 
 SEGMENTS:
     while (ptr != eptr) {
         ch = *ptr++;
         if (ch == '/') {
-            addSeg(hp, heap, base, ptr, pcts);
+            addSeg(qry, heap, base, ptr, pcts);
         } else if (ch == '?') {
-            addSeg(hp, heap, base, ptr, pcts);
-            setPath(hp, heap);
-            goto QUERY_PARAM;
+            addSeg(qry, heap, base, ptr, pcts);
+            setPath(qry, heap);
+            urlAddQueryString(qry, string_view(ptr, eptr - ptr), heap);
+            return qry;
         } else if (ch == '%') {
             pcts += 1;
         } else if (ch == '#' || ch == 0) {
@@ -174,17 +174,33 @@ SEGMENTS:
             break;
         }
     }
-    addSeg(hp, heap, base, ptr + 1, pcts);
-    setPath(hp, heap);
-    return hp;
+    addSeg(qry, heap, base, ptr + 1, pcts);
+    setPath(qry, heap);
+    return qry;
+}
+
+//===========================================================================
+void Dim::urlAddQueryString(HttpQuery * out, string_view src, ITempHeap & heap) {
+    if (src.empty())
+        return;
+
+    auto ptr = src.data();
+    auto eptr = ptr + src.size();
+
+    HttpPathParam * param{nullptr};
+    unsigned pcts = 0;
+    unsigned char ch = *ptr;
+    if (ch == '?')
+        ptr += 1;
+    auto base = ptr;
 
 QUERY_PARAM:
     while (ptr != eptr) {
         ch = *ptr++;
         if (ch == '&') {
-            param = addParam(hp, heap, base, ptr, pcts);
+            param = addParam(out, heap, base, ptr, pcts);
         } else if (ch == '=') {
-            param = addParam(hp, heap, base, ptr, pcts);
+            param = addParam(out, heap, base, ptr, pcts);
             goto QUERY_VALUE;
         } else if (ch == '%') {
             pcts += 1;
@@ -193,8 +209,8 @@ QUERY_PARAM:
             break;
         }
     }
-    addParam(hp, heap, base, ptr + 1, pcts);
-    return hp;
+    addParam(out, heap, base, ptr + 1, pcts);
+    return;
 
 QUERY_VALUE:
     while (ptr != eptr) {
@@ -210,7 +226,7 @@ QUERY_VALUE:
         }
     }
     addParamValue(param, heap, base, ptr + 1, pcts);
-    return hp;
+    return;
 }
 
 //===========================================================================
