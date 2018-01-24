@@ -26,12 +26,12 @@ const unsigned kDefaultBlockSize = 4096;
 
 //===========================================================================
 CharBuf::Buffer::Buffer ()
-    : Buffer{kDefaultBlockSize}
+    : Buffer{kDefaultBlockSize + 1}
 {}
 
 //===========================================================================
 CharBuf::Buffer::Buffer (size_t reserve)
-    : data{reserve ? new char[reserve] : nullptr}
+    : data{reserve ? new char[reserve + 1] : nullptr}
     , reserved{(int) reserve}
 {}
 
@@ -1031,6 +1031,51 @@ CharBuf & CharBuf::erase(buffer_iterator it, int pos, int remove) {
     int num = mycount - remove;
     memmove(mydata, mydata + remove, num);
     it->used -= remove;
+    return *this;
+}
+
+
+/****************************************************************************
+*
+*   CharBuf::ViewIterator
+*
+***/
+
+//===========================================================================
+CharBuf::ViewIterator::ViewIterator(
+    const_buffer_iterator buf,
+    size_t pos,
+    size_t count
+)
+    : m_current{buf}
+    , m_view{buf->data + pos, std::min(count, buf->used - pos)}
+    , m_count{count}
+{
+    assert(pos <= (size_t) buf->used);
+    if (count + pos == buf->used)
+        buf->data[buf->used] = 0;
+}
+
+//===========================================================================
+bool CharBuf::ViewIterator::operator!= (const ViewIterator & right) {
+    return m_current != right.m_current || m_view != right.m_view;
+}
+
+//===========================================================================
+CharBuf::ViewIterator & CharBuf::ViewIterator::operator++() {
+    if (m_count -= m_view.size()) {
+        ++m_current;
+        assert(m_current != const_buffer_iterator{});
+        m_view = {
+            m_current->data,
+            std::min(m_count, (size_t) m_current->used)
+        };
+        if (m_count >= m_current->used)
+            m_current->data[m_current->used] = 0;
+    } else {
+        m_current = {};
+        m_view = {};
+    }
     return *this;
 }
 
