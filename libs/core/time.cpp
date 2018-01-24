@@ -85,6 +85,7 @@ static bool interpret(Duration * out, string_view * units, double val) {
         default:
             return false;
         }
+        break;
     case 's':
         *out = duration_cast<Duration>((chrono::duration<double>) val);
         break;
@@ -128,9 +129,11 @@ bool Dim::parse(Duration * out, string_view src) {
     if (!*ptr)
         return false;
     src = src.substr(ptr - buf);
-    if (!interpret(out, &src, val))
+    if (!interpret(out, &src, val)) {
+        *out = {};
         return false;
-    if (!src[0])
+    }
+    if (src.empty())
         return true;
     return false;
 }
