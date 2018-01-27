@@ -84,41 +84,46 @@ char * TempHeap::alloc(size_t bytes, size_t align) {
     Buffer * buf = (Buffer *)m_buffer;
     Buffer * tmp;
     constexpr unsigned kBufferLen = sizeof(Buffer);
-    for (;;) {
-        if (buf) {
-            void * ptr = (char *)buf + buf->m_reserve - buf->m_avail;
-            size_t avail = buf->m_avail;
-            if (::align(align, bytes, ptr, avail)) {
-                buf->m_avail = unsigned(avail - bytes);
-                return (char *)ptr;
-            }
+
+    if (buf) {
+        void * ptr = (char *)buf + buf->m_reserve - buf->m_avail;
+        size_t avail = buf->m_avail;
+        if (::align(align, bytes, ptr, avail)) {
+            buf->m_avail = unsigned(avail - bytes);
+            return (char *)ptr;
         }
-        auto required = unsigned(bytes + align);
-        if (required > kMaxBufferSize / 3) {
-            tmp = (Buffer *)malloc(kBufferLen + required);
-            assert(tmp != nullptr);
-            tmp->m_avail = required;
-            tmp->m_reserve = kBufferLen + required;
-            if (buf) {
-                tmp->m_next = buf->m_next;
-                buf->m_next = tmp;
-            } else {
-                tmp->m_next = nullptr;
-                m_buffer = tmp;
-            }
+    }
+    auto required = unsigned(bytes + align);
+    if (required > kMaxBufferSize / 3) {
+        tmp = (Buffer *)malloc(kBufferLen + required);
+        assert(tmp != nullptr);
+        tmp->m_avail = required;
+        tmp->m_reserve = kBufferLen + required;
+        if (buf) {
+            tmp->m_next = buf->m_next;
+            buf->m_next = tmp;
         } else {
-            auto reserve = buf
-                ? min(kMaxBufferSize, 2 * buf->m_reserve)
-                : kInitBufferSize;
-            if (reserve < kBufferLen + required)
-                reserve = kBufferLen + required;
-            tmp = (Buffer *)malloc(reserve);
-            assert(tmp != nullptr);
-            tmp->m_next = buf;
-            tmp->m_avail = reserve - kBufferLen;
-            tmp->m_reserve = reserve;
+            tmp->m_next = nullptr;
             m_buffer = tmp;
         }
-        buf = tmp;
+    } else {
+        auto reserve = buf
+            ? min(kMaxBufferSize, 2 * buf->m_reserve)
+            : kInitBufferSize;
+        if (reserve < kBufferLen + required)
+            reserve = kBufferLen + required;
+        tmp = (Buffer *)malloc(reserve);
+        assert(tmp != nullptr);
+        tmp->m_next = buf;
+        tmp->m_avail = reserve - kBufferLen;
+        tmp->m_reserve = reserve;
+        m_buffer = tmp;
     }
+    buf = tmp;
+
+    void * ptr = (char *)buf + buf->m_reserve - buf->m_avail;
+    size_t avail = buf->m_avail;
+    ::align(align, bytes, ptr, avail);
+    buf->m_avail = unsigned(avail - bytes);
+    return (char *)ptr;
 }
