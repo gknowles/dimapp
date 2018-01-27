@@ -228,16 +228,19 @@ uint64_t strToUint64(
 
 /****************************************************************************
 *
-*   Convert string to arbitrary type
+*   Parse string into arbitrary type
 *
 ***/
 
 //===========================================================================
-// stringTo - converts from string to T
+// parse - converts from string to T
 //===========================================================================
-template <typename T> bool stringTo(T * out, const std::string & src) {
-    if constexpr (std::is_assignable_v<T, const std::string&>) {
+template <typename T>
+[[nodiscard]] bool parse(T * out, std::string_view src) {
+    if constexpr (std::is_assignable_v<T, std::string_view>) {
         *out = src;
+    } else if constexpr (std::is_assignable_v<T, std::string>) {
+        *out = string(src);
     } else {
         std::stringstream interpreter;
         if (!(interpreter << src) || !(interpreter >> *out)

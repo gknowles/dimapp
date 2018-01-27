@@ -73,8 +73,8 @@ template <> struct hash<Dim::Network> {
 
 namespace Dim {
 
-bool parse(Address * addr, std::string_view src);
-bool parse(Endpoint * end, std::string_view src, int defaultPort);
+[[nodiscard]] bool parse(Address * addr, std::string_view src);
+[[nodiscard]] bool parse(Endpoint * end, std::string_view src, int defaultPort);
 
 std::ostream & operator<<(std::ostream & os, const Address & addr);
 std::ostream & operator<<(std::ostream & os, const Endpoint & end);

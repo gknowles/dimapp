@@ -297,7 +297,7 @@ void Dim::addressGetLocal(vector<Address> * out) {
     // if there are no addresses toss on the loopback with the null port so we
     // can at least pretend.
     if (out->empty()) {
-        parse(&end, "127.0.0.1", 9);
+        (void) parse(&end, "127.0.0.1", 9);
         out->push_back(end.addr);
     }
 }

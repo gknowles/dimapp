@@ -63,7 +63,7 @@ enum class DurationFormat {
     kOnePart,   // one unit, three decimals
 };
 std::string toString(Duration val, DurationFormat fmt);
-bool parse(Dim::Duration * out, std::string_view src);
+[[nodiscard]] bool parse(Dim::Duration * out, std::string_view src);
 
 
 /****************************************************************************

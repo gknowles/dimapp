@@ -350,7 +350,7 @@ Duration Dim::configDuration(
     Duration defVal
 ) {
     if (auto str = configString(context, doc, name, nullptr))
-        parse(&defVal, str);
+        (void) parse(&defVal, str);
     return defVal;
 }
 

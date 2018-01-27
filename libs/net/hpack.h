@@ -94,7 +94,7 @@ public:
     void reset();
     void setTableSize(size_t tableSize);
 
-    bool parse(
+    [[nodiscard]] bool parse(
         IHpackDecodeNotify * notify,
         ITempHeap * heap,
         const char src[],
