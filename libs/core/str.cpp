@@ -170,9 +170,9 @@ BASE_ANY_WITH_OVERFLOW:
     goto CHECK_OVERFLOW;
 
 CHECK_OVERFLOW:
-    if constexpr (Flags & fSigned) {
+    if constexpr ((Flags & fSigned) != 0) {
         if (negate) {
-            if constexpr (Flags & f64Bit) {
+            if constexpr ((Flags & f64Bit) != 0) {
                 valLimit = (uint64_t)-INT64_MIN;
             } else {
                 valLimit = (unsigned)-INT_MIN;
