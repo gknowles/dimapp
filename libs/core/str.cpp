@@ -323,6 +323,43 @@ uint64_t Dim::strToUint64(string_view src, char ** eptr, int base) {
 
 /****************************************************************************
 *
+*   Parse string into arbitrary type
+*
+***/
+
+//===========================================================================
+bool Dim::parse(double * out, std::string_view src) {
+    char buf[maxFloatChars<double>()];
+    buf[src.copy(buf, src.size())] = 0;
+    char * ptr;
+    *out = strtod(buf, &ptr);
+    switch (*ptr) {
+    case 'k': case 'K':
+        *out *= (ptr[1] == 'i') ? 1024 : 1000;
+        break;
+    case 'M':
+        *out *= (ptr[1] == 'i') ? 1024 * 1024 : 1'000'000;
+        break;
+    case 'G':
+        *out *= (ptr[1] == 'i') ? 1024 * 1024 * 1024 : 1'000'000'000;
+        break;
+    case 'T':
+        *out *= (ptr[1] == 'i')
+            ? INT64_C(1024) * 1024 * 1024 * 1024
+            : 1'000'000'000'000;
+        break;
+    case 'P':
+        *out *= (ptr[1] == 'i')
+            ? INT64_C(1024) * 1024 * 1024 * 1024 * 1024
+            : 1'000'000'000'000;
+        break;
+    }
+    return true;
+}
+
+
+/****************************************************************************
+*
 *   String utilities
 *
 ***/

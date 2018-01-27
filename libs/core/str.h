@@ -252,6 +252,9 @@ template <typename T>
     return true;
 }
 
+// Uses strtod, but also supports k/K, ki/Ki, M, Mi, suffixes
+[[nodiscard]] bool parse(double * out, std::string_view src);
+
 
 /****************************************************************************
 *

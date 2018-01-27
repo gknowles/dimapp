@@ -328,7 +328,7 @@ double Dim::configNumber(
     double defVal
 ) {
     if (auto str = configString(context, doc, name, nullptr))
-        defVal = strtod(str, nullptr);
+        (void) parse(&defVal, str);
     return defVal;
 }
 
