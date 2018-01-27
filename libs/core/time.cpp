@@ -126,15 +126,12 @@ bool Dim::parse(Duration * out, string_view src) {
     buf[src.copy(buf, src.size())] = 0;
     char * ptr;
     auto val = strtod(buf, &ptr);
-    if (!*ptr)
-        return false;
-    src = src.substr(ptr - buf);
-    if (!interpret(out, &src, val)) {
-        *out = {};
-        return false;
+    if (*ptr) {
+        src = src.substr(ptr - buf);
+        if (interpret(out, &src, val) && src.empty())
+            return true;
     }
-    if (src.empty())
-        return true;
+    *out = {};
     return false;
 }
 

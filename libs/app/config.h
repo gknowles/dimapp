@@ -6,6 +6,7 @@
 
 #include "cppconf/cppconf.h"
 
+#include "core/time.h"
 #include "net/address.h"
 #include "xml/xml.h"
 
@@ -60,11 +61,10 @@ void configChange(
 *
 ***/
 
-unsigned configUnsigned(
+const XNode * configElement(
     const ConfigContext & context,
     const XDocument & doc,
-    std::string_view name,
-    unsigned defVal = 0
+    std::string_view name
 );
 const char * configString(
     const ConfigContext & context,
@@ -72,25 +72,37 @@ const char * configString(
     std::string_view name,
     const char defVal[] = ""
 );
-const XNode * configElement(
+double configNumber(
     const ConfigContext & context,
     const XDocument & doc,
-    std::string_view name
+    std::string_view name,
+    double defVal = 0
+);
+Duration configDuration(
+    const ConfigContext & context,
+    const XDocument & doc,
+    std::string_view name,
+    Duration defVal = {}
 );
 
-unsigned configUnsigned(
+const XNode * configElement(
     const XDocument & doc,
-    std::string_view name,
-    unsigned defVal = 0
+    std::string_view name
 );
 const char * configString(
     const XDocument & doc,
     std::string_view name,
     const char defVal[] = ""
 );
-const XNode * configElement(
+double configNumber(
     const XDocument & doc,
-    std::string_view name
+    std::string_view name,
+    double defVal = 0
+);
+Duration configDuration(
+    const XDocument & doc,
+    std::string_view name,
+    Duration defVal = {}
 );
 
 } // namespace

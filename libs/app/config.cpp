@@ -281,14 +281,21 @@ void Dim::configChange(
 ***/
 
 //===========================================================================
-unsigned Dim::configUnsigned(
+const XNode * Dim::configElement(
     const ConfigContext & context,
     const XDocument & doc,
-    string_view name,
-    unsigned defVal
+    string_view name
 ) {
-    auto str = configString(context, doc, name, nullptr);
-    return str ? strToUint(str, nullptr, 10) : defVal;
+    return firstChild(doc.root(), name);
+}
+
+//===========================================================================
+const XNode * Dim::configElement(
+    const XDocument & doc,
+    string_view name
+) {
+    ConfigContext context;
+    return configElement(context, doc, name);
 }
 
 //===========================================================================
@@ -304,25 +311,6 @@ const char * Dim::configString(
 }
 
 //===========================================================================
-const XNode * Dim::configElement(
-    const ConfigContext & context,
-    const XDocument & doc,
-    string_view name
-) {
-    return firstChild(doc.root(), name);
-}
-
-//===========================================================================
-unsigned Dim::configUnsigned(
-    const XDocument & doc,
-    string_view name,
-    unsigned defVal
-) {
-    ConfigContext context;
-    return configUnsigned(context, doc, name, defVal);
-}
-
-//===========================================================================
 const char * Dim::configString(
     const XDocument & doc,
     string_view name,
@@ -333,10 +321,45 @@ const char * Dim::configString(
 }
 
 //===========================================================================
-const XNode * Dim::configElement(
+double Dim::configNumber(
+    const ConfigContext & context,
     const XDocument & doc,
-    string_view name
+    string_view name,
+    double defVal
+) {
+    if (auto str = configString(context, doc, name, nullptr))
+        defVal = strtod(str, nullptr);
+    return defVal;
+}
+
+//===========================================================================
+double Dim::configNumber(
+    const XDocument & doc,
+    string_view name,
+    double defVal
 ) {
     ConfigContext context;
-    return configElement(context, doc, name);
+    return configNumber(context, doc, name, defVal);
+}
+
+//===========================================================================
+Duration Dim::configDuration(
+    const ConfigContext & context,
+    const XDocument & doc,
+    std::string_view name,
+    Duration defVal
+) {
+    if (auto str = configString(context, doc, name, nullptr))
+        parse(&defVal, str);
+    return defVal;
+}
+
+//===========================================================================
+Duration Dim::configDuration(
+    const XDocument & doc,
+    std::string_view name,
+    Duration defVal
+) {
+    ConfigContext context;
+    return configDuration(context, doc, name, defVal);
 }

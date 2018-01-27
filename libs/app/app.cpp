@@ -111,7 +111,7 @@ static ConfigAppXml s_appXml;
 
 //===========================================================================
 void ConfigAppXml::onConfigChange(const XDocument & doc) {
-    shutdownDisableTimeout(configUnsigned(doc, "DisableShutdownTimeout"));
+    shutdownDisableTimeout(configNumber(doc, "DisableShutdownTimeout"));
 }
 
 

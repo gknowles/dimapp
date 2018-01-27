@@ -365,7 +365,7 @@ static EnableNotify s_notify;
 
 //===========================================================================
 void EnableNotify::onConfigChange(const XDocument & doc) {
-    bool enable = configUnsigned(doc, "EnableAppWindow");
+    bool enable = configNumber(doc, "EnableAppWindow");
     s_windowTask.enable(MessageLoopTask::kConfigFile, enable);
 }
 

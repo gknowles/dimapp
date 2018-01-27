@@ -313,7 +313,7 @@ bool ConnectManager::onShutdown(bool firstTry) {
 //===========================================================================
 void ConnectManager::onConfigChange(const XDocument & doc) {
     auto flags = AppSocket::ConfFlags{};
-    if (configUnsigned(doc, "DisableInactiveTimeout"))
+    if (configNumber(doc, "DisableInactiveTimeout"))
         flags |= AppSocket::fDisableInactiveTimeout;
     m_confFlags = flags;
 }

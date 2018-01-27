@@ -173,13 +173,13 @@ bool AcceptManager::onShutdown(bool firstTry) {
 //===========================================================================
 void AcceptManager::onConfigChange(const XDocument & doc) {
     auto flags = AppSocket::ConfFlags{};
-    if (configUnsigned(doc, "DisableInactiveTimeout"))
+    if (configNumber(doc, "DisableInactiveTimeout"))
         flags |= AppSocket::fDisableInactiveTimeout;
 
     m_confFlags = flags;
 
     Endpoint addr;
-    addr.port = configUnsigned(doc, "Port", 41000);
+    addr.port = (unsigned) configNumber(doc, "Port", 41000);
     setEndpoints(&addr, 1);
 }
 
