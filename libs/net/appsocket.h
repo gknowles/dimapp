@@ -28,6 +28,7 @@ namespace AppSocket {
     enum Family {
         kInvalid,
         kTls,
+        kHttp1,
         kHttp2,
         kRaw,
         kNumFamilies,

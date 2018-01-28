@@ -81,6 +81,7 @@ static auto & s_perfCurrent = uperf("http requests (current)");
 static auto & s_perfInvalid = uperf("http protocol error");
 static auto & s_perfSuccess = uperf("http reply success");
 static auto & s_perfError = uperf("http reply error");
+static auto & s_perfRejects = uperf("http1 connections rejected");
 
 
 /****************************************************************************
@@ -286,7 +287,8 @@ namespace {
 class Http2Match : public IAppSocketMatchNotify {
     AppSocket::MatchType OnMatch(
         AppSocket::Family fam,
-        string_view view) override;
+        string_view view
+    ) override;
 };
 static Http2Match s_http2Match;
 } // namespace
@@ -311,23 +313,101 @@ AppSocket::MatchType Http2Match::OnMatch(
 
 /****************************************************************************
 *
+*   Http1 Rejection
+*
+***/
+
+namespace {
+
+class Http1Reject : public IAppSocketMatchNotify, public IAppSocketNotify {
+    AppSocket::MatchType OnMatch(
+        AppSocket::Family fam,
+        string_view view
+    ) override;
+
+    bool onSocketAccept(const AppSocketInfo & info) override;
+    void onSocketRead(AppSocketData & data) override;
+
+private:
+    AppSocketInfo m_info;
+};
+
+} // namespace
+
+static Http1Reject s_http1Match;
+
+//===========================================================================
+AppSocket::MatchType Http1Reject::OnMatch(
+    AppSocket::Family fam,
+    string_view view
+) {
+    assert(fam == AppSocket::kHttp1);
+    auto ptr = view.data();
+    auto eptr = ptr + view.size();
+    while (isupper(*ptr)) {
+        if (++ptr == eptr)
+            return AppSocket::kUnknown;
+    }
+    if (*ptr != ' ')
+        return AppSocket::kUnsupported;
+    if (++ptr == eptr)
+        return AppSocket::kUnknown;
+    while (*ptr != ' ') {
+        if (!isprint(*ptr))
+            return AppSocket::kUnsupported;
+        if (++ptr == eptr)
+            return AppSocket::kUnknown;
+    }
+    ptr += 1;
+    const char kVersion[] = "HTTP/1.";
+    const size_t kVersionLen = size(kVersion) - 1;
+    size_t num = min(kVersionLen, size_t(eptr - ptr));
+    if (memcmp(ptr, kVersion, num) != 0)
+        return AppSocket::kUnsupported;
+    if (num == kVersionLen)
+        return AppSocket::kPreferred;
+
+    return AppSocket::kUnknown;
+}
+
+//===========================================================================
+bool Http1Reject::onSocketAccept(const AppSocketInfo & info) {
+    m_info = info;
+    s_perfRejects += 1;
+    return true;
+}
+
+//===========================================================================
+void Http1Reject::onSocketRead(AppSocketData & data) {
+    const char kBody[] = R"(
+<html><body>
+<h1>505 Version Not Supported</h1>
+<p>This service requires use of the HTTP/2 protocol</p>
+</body></html>
+)";
+    const auto kBodyLen = size(kBody) - 1;
+    ostringstream os;
+    os << "HTTP/1.1 505 Version Not Supported\r\n"
+        "Content-Length: " << kBodyLen << "\r\n"
+        "Content-Type: text/html\r\n"
+        "\r\n"
+        << kBody;
+    socketWrite(this, os.str());
+}
+
+
+/****************************************************************************
+*
 *   Shutdown monitor
 *
 ***/
 
 namespace {
 class ShutdownNotify : public IShutdownNotify {
-    void onShutdownClient(bool firstTry) override;
     void onShutdownConsole(bool firstTry) override;
 };
 } // namespace
 static ShutdownNotify s_cleanup;
-
-//===========================================================================
-void ShutdownNotify::onShutdownClient(bool firstTry) {
-    //if (firstTry && !s_paths.empty())
-    //    socketCloseWait<HttpSocket>(s_endpoint, AppSocket::kHttp2);
-}
 
 //===========================================================================
 void ShutdownNotify::onShutdownConsole(bool firstTry) {
@@ -349,12 +429,14 @@ static void startListen() {
         AppSocket::kHttp2,
         AppSocket::fMgrConsole
     );
+    sockMgrListen<Http1Reject>("http1Reject", AppSocket::kHttp1);
 }
 
 //===========================================================================
 void Dim::iHttpRouteInitialize() {
     shutdownMonitor(&s_cleanup);
     socketAddFamily(AppSocket::kHttp2, &s_http2Match);
+    socketAddFamily(AppSocket::kHttp1, &s_http1Match);
     if (!s_paths.empty())
         startListen();
 }
