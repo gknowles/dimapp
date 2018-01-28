@@ -32,13 +32,6 @@ using namespace Dim;
 static void app(int argc, char *argv[]) {
     int line = 0;
 
-    string to0;
-    int to1;
-    bool result = stringTo(&to0, "100"s);
-    EXPECT(result && to0 == "100");
-    result = stringTo(&to1, "100"s);
-    EXPECT(result && to1 == 100);
-
     CharBuf buf;
     buf.assign("abcdefgh");
     EXPECT(toString(buf) == "abcdefgh"); // to_string

@@ -107,7 +107,22 @@ static void testIntegralStr() {
 }
 
 //===========================================================================
+static void testParse() {
+    int line = 0;
+
+    //-----------------------------------------------------------------------
+    // parse
+    string to0;
+    int to1;
+    bool result = parse(&to0, "100");
+    EXPECT(result && to0 == "100");
+    result = parse(&to1, "100");
+    EXPECT(result && to1 == 100);
+}
+
+//===========================================================================
 static void app(int argc, char *argv[]) {
+    testParse();
     testStrToInt();
     testIntegralStr();
 
