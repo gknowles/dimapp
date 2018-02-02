@@ -81,7 +81,7 @@ static auto & s_perfCurrent = uperf("http requests (current)");
 static auto & s_perfInvalid = uperf("http protocol error");
 static auto & s_perfSuccess = uperf("http reply success");
 static auto & s_perfError = uperf("http reply error");
-static auto & s_perfRejects = uperf("http1 connections rejected");
+static auto & s_perfRejects = uperf("http1 requests rejected");
 
 
 /****************************************************************************
@@ -285,7 +285,7 @@ void HttpSocket::onSocketRead(AppSocketData & data) {
 
 namespace {
 class Http2Match : public IAppSocketMatchNotify {
-    AppSocket::MatchType OnMatch(
+    AppSocket::MatchType onMatch(
         AppSocket::Family fam,
         string_view view
     ) override;
@@ -294,7 +294,7 @@ static Http2Match s_http2Match;
 } // namespace
 
 //===========================================================================
-AppSocket::MatchType Http2Match::OnMatch(
+AppSocket::MatchType Http2Match::onMatch(
     AppSocket::Family fam,
     string_view view
 ) {
@@ -320,7 +320,7 @@ AppSocket::MatchType Http2Match::OnMatch(
 namespace {
 
 class Http1Reject : public IAppSocketMatchNotify, public IAppSocketNotify {
-    AppSocket::MatchType OnMatch(
+    AppSocket::MatchType onMatch(
         AppSocket::Family fam,
         string_view view
     ) override;
@@ -337,7 +337,7 @@ private:
 static Http1Reject s_http1Match;
 
 //===========================================================================
-AppSocket::MatchType Http1Reject::OnMatch(
+AppSocket::MatchType Http1Reject::onMatch(
     AppSocket::Family fam,
     string_view view
 ) {
@@ -373,12 +373,13 @@ AppSocket::MatchType Http1Reject::OnMatch(
 //===========================================================================
 bool Http1Reject::onSocketAccept(const AppSocketInfo & info) {
     m_info = info;
-    s_perfRejects += 1;
     return true;
 }
 
 //===========================================================================
 void Http1Reject::onSocketRead(AppSocketData & data) {
+    s_perfRejects += 1;
+
     const char kBody[] = R"(
 <html><body>
 <h1>505 Version Not Supported</h1>

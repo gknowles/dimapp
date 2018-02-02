@@ -312,7 +312,7 @@ static bool findFactory(
         if (!keys[fam].fact)
             continue;
         if (auto matcher = s_matchers[fam].notify) {
-            auto match = matcher->OnMatch(fam, data);
+            auto match = matcher->onMatch(fam, data);
             switch (match) {
             case AppSocket::kUnknown:
                 known = false;
@@ -517,7 +517,7 @@ Duration RawSocket::onTimer(TimePoint now) {
 
 namespace {
 class RawMatch : public IAppSocketMatchNotify {
-    AppSocket::MatchType OnMatch(
+    AppSocket::MatchType onMatch(
         AppSocket::Family fam,
         string_view view) override;
 };
@@ -525,7 +525,7 @@ class RawMatch : public IAppSocketMatchNotify {
 static RawMatch s_rawMatch;
 
 //===========================================================================
-AppSocket::MatchType RawMatch::OnMatch(
+AppSocket::MatchType RawMatch::onMatch(
     AppSocket::Family fam,
     string_view view
 ) {

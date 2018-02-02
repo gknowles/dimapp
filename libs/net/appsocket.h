@@ -122,7 +122,7 @@ class IAppSocketMatchNotify {
 public:
     virtual ~IAppSocketMatchNotify() = default;
 
-    virtual AppSocket::MatchType OnMatch(
+    virtual AppSocket::MatchType onMatch(
         AppSocket::Family fam,
         std::string_view view
     ) = 0;
