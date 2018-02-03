@@ -86,7 +86,7 @@ public:
         bool more
     );
 
-    void resetStream(CharBuf * out, int stream);
+    void resetStream(CharBuf * out, int stream, FrameError error);
 
     void deleteStream(int stream, HttpStream * sm);
 
@@ -94,7 +94,6 @@ private:
     enum class ByteMode : int;
     enum class FrameMode : int;
 
-    void replyRstStream(CharBuf * out, int stream, FrameError error);
     HttpStream * findAlways(CharBuf * out, int stream);
     bool writeMsg(
         CharBuf * out,

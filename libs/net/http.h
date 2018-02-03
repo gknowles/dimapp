@@ -305,6 +305,12 @@ bool httpData(
     bool more = false
 );
 
-void httpResetStream(CharBuf * out, HttpConnHandle conn, int stream);
+// Resets stream with either INTERNAL_ERROR or CANCEL
+void httpResetStream(
+    CharBuf * out,
+    HttpConnHandle conn,
+    int stream,
+    bool internal
+);
 
 } // namespace

@@ -619,7 +619,7 @@ bool HttpConn::recv(
 }
 
 //===========================================================================
-void HttpConn::replyRstStream(CharBuf * out, int stream, FrameError error) {
+void HttpConn::resetStream(CharBuf * out, int stream, FrameError error) {
     // RstStream frame
     //  errorCode : 32
 
@@ -743,7 +743,7 @@ bool HttpConn::onData(
         return false;
     }
 
-    // TODO: recv flow control, check total buffer size?
+    // TODO: receive flow control, check total buffer size?
     if (data.dataLen) {
         replyWindowUpdate(out, stream, data.dataLen);
         replyWindowUpdate(out, 0, data.dataLen);
@@ -755,7 +755,7 @@ bool HttpConn::onData(
         sm = it->second;
     if (!sm || sm->m_remoteState != HttpStream::kOpen) {
         // data frame on non-open stream
-        replyRstStream(out, stream, FrameError::kStreamClosed);
+        resetStream(out, stream, FrameError::kStreamClosed);
         return true;
     }
 
@@ -869,7 +869,7 @@ bool HttpConn::onHeaders(
         return false;
     }
     if (!mdec) {
-        replyRstStream(out, stream, mdec.Error());
+        resetStream(out, stream, mdec.Error());
     } else {
         if (sm->m_remoteState == HttpStream::kClosed)
             msgs->push_back(move(sm->m_msg));
@@ -897,7 +897,7 @@ bool HttpConn::onPriority(
     }
 
     if (m_inputFrameLen != 5) {
-        replyRstStream(out, stream, FrameError::kFrameSizeError);
+        resetStream(out, stream, FrameError::kFrameSizeError);
         return true;
     }
 
@@ -1175,7 +1175,7 @@ bool HttpConn::onWindowUpdate(
 
     auto sm = it->second.get();
     if (kMaximumWindowSize - increment < sm->m_flowWindow) {
-        replyRstStream(out, stream, FrameError::kFlowControlError);
+        resetStream(out, stream, FrameError::kFlowControlError);
         return true;
     }
     sm->m_flowWindow += increment;
@@ -1439,11 +1439,6 @@ bool HttpConn::reply(
 }
 
 //===========================================================================
-void HttpConn::resetStream(CharBuf * out, int stream) {
-    replyRstStream(out, stream, FrameError::kCancel);
-}
-
-//===========================================================================
 void HttpConn::deleteStream(int stream, HttpStream * sm) {
     auto it = m_streams.find(stream);
     if (it != m_streams.end() && sm == it->second.get()) {
@@ -1557,7 +1552,19 @@ bool Dim::httpData(
 }
 
 //===========================================================================
-void Dim::httpResetStream(CharBuf * out, HttpConnHandle hc, int stream) {
-    if (auto * conn = s_conns.find(hc))
-        conn->resetStream(out, stream);
+void Dim::httpResetStream(
+    CharBuf * out,
+    HttpConnHandle hc,
+    int stream,
+    bool internal
+) {
+    if (auto * conn = s_conns.find(hc)) {
+        conn->resetStream(
+            out,
+            stream,
+            internal
+                ? HttpConn::FrameError::kInternalError
+                : HttpConn::FrameError::kCancel
+        );
+    }
 }

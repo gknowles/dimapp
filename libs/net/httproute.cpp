@@ -42,6 +42,7 @@ public:
     static void reply(unsigned reqId, HttpResponse & msg, bool more);
     static void reply(unsigned reqId, string_view data, bool more);
     static void reply(unsigned reqId, const CharBuf & data, bool more);
+    static void resetReply(unsigned reqId, bool internal);
 
 public:
     ~HttpSocket ();
@@ -229,6 +230,15 @@ void HttpSocket::reply(unsigned reqId, const CharBuf & data, bool more) {
         httpData(out, h, stream, data, more);
     };
     iReply(reqId, fn, more);
+}
+
+//===========================================================================
+// static
+void HttpSocket::resetReply(unsigned reqId, bool internal) {
+    auto fn = [&](HttpConnHandle h, CharBuf * out, int stream) -> void {
+        httpResetStream(out, h, stream, internal);
+    };
+    iReply(reqId, fn, false);
 }
 
 //===========================================================================
@@ -481,6 +491,16 @@ void Dim::httpRouteReply(unsigned reqId, const CharBuf & data, bool more) {
 //===========================================================================
 void Dim::httpRouteReply(unsigned reqId, string_view data, bool more) {
     HttpSocket::reply(reqId, data, more);
+}
+
+//===========================================================================
+void Dim::httpRouteCancel(unsigned reqId) {
+    HttpSocket::resetReply(reqId, false);
+}
+
+//===========================================================================
+void Dim::httpRouteInternalError(unsigned reqId) {
+    HttpSocket::resetReply(reqId, true);
 }
 
 //===========================================================================
