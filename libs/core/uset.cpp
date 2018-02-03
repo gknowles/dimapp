@@ -91,7 +91,7 @@ struct IImplBase {
         const unsigned * first,
         const unsigned * last
     ) = 0;
-    virtual void erase(Node & node, unsigned value) = 0;
+    virtual bool erase(Node & node, unsigned value) = 0;
 
     virtual size_t size(const Node & node) const = 0;
     virtual bool findFirst(
@@ -141,7 +141,7 @@ struct EmptyImpl final : IImplBase {
         const unsigned * first,
         const unsigned * last
     ) override;
-    void erase(Node & node, unsigned value) override;
+    bool erase(Node & node, unsigned value) override;
 
     size_t size(const Node & node) const override;
     bool findFirst(
@@ -206,8 +206,9 @@ void EmptyImpl::insert(
 }
 
 //===========================================================================
-void EmptyImpl::erase(Node & node, unsigned value) {
+bool EmptyImpl::erase(Node & node, unsigned value) {
     assert(relBase(value, node.depth) == node.base);
+    return false;
 }
 
 //===========================================================================
@@ -253,7 +254,7 @@ struct FullImpl final : IImplBase {
         const unsigned * first,
         const unsigned * last
     ) override;
-    void erase(Node & node, unsigned value) override;
+    bool erase(Node & node, unsigned value) override;
 
     size_t size(const Node & node) const override;
     bool findFirst(
@@ -310,10 +311,10 @@ void FullImpl::insert(
 {}
 
 //===========================================================================
-void FullImpl::erase(Node & node, unsigned value) {
+bool FullImpl::erase(Node & node, unsigned value) {
     assert(relBase(value, node.depth) == node.base);
     convert(node);
-    impl(node)->erase(node, value);
+    return impl(node)->erase(node, value);
 }
 
 //===========================================================================
@@ -380,7 +381,7 @@ struct VectorImpl final : IImplBase {
         const unsigned * first,
         const unsigned * last
     ) override;
-    void erase(Node & node, unsigned value) override;
+    bool erase(Node & node, unsigned value) override;
 
     size_t size(const Node & node) const override;
     bool findFirst(
@@ -469,21 +470,23 @@ void VectorImpl::insert(
 }
 
 //===========================================================================
-void VectorImpl::erase(Node & node, unsigned value) {
+bool VectorImpl::erase(Node & node, unsigned value) {
     assert(relBase(value, node.depth) == node.base);
     auto last = node.values + node.numValues;
     auto ptr = lower_bound(node.values, last, value);
-    if (ptr != last && *ptr == value) {
-        if (--node.numValues) {
-            // Still has values, shift remaining ones down
-            memmove(ptr, ptr + 1, sizeof(*ptr) * (last - ptr - 1));
-        } else {
-            // No more values, convert to empty node.
-            destroy(node);
-            node.type = kEmpty;
-            impl(node)->init(node, false);
-        }
+    if (ptr == last || *ptr != value)
+        return false;
+
+    if (--node.numValues) {
+        // Still has values, shift remaining ones down
+        memmove(ptr, ptr + 1, sizeof(*ptr) * (last - ptr - 1));
+    } else {
+        // No more values, convert to empty node.
+        destroy(node);
+        node.type = kEmpty;
+        impl(node)->init(node, false);
     }
+    return true;
 }
 
 //===========================================================================
@@ -580,7 +583,7 @@ struct BitmapImpl final : IImplBase {
         const unsigned * first,
         const unsigned * last
     ) override;
-    void erase(Node & node, unsigned value) override;
+    bool erase(Node & node, unsigned value) override;
 
     size_t size(const Node & node) const override;
     bool findFirst(
@@ -669,7 +672,7 @@ void BitmapImpl::insert(
 }
 
 //===========================================================================
-void BitmapImpl::erase(Node & node, unsigned value) {
+bool BitmapImpl::erase(Node & node, unsigned value) {
     assert(relBase(value, node.depth) == node.base);
     auto base = (uint64_t *) node.values;
     value = relValue(value, node.depth);
@@ -677,12 +680,16 @@ void BitmapImpl::erase(Node & node, unsigned value) {
     auto ptr = base + value / 64;
     auto tmp = *ptr;
     *ptr &= ~(1ull << (value % 64));
-    if (tmp == *ptr || *ptr || --node.numValues)
-        return;
+    if (tmp == *ptr)
+        return false;
+    if (*ptr || --node.numValues)
+        return true;
+
     // convert to empty
     destroy(node);
     node.type = kEmpty;
     impl(node)->init(node, false);
+    return true;
 }
 
 //===========================================================================
@@ -758,7 +765,7 @@ struct MetaImpl final : IImplBase {
         const unsigned * first,
         const unsigned * last
     ) override;
-    void erase(Node & node, unsigned value) override;
+    bool erase(Node & node, unsigned value) override;
 
     size_t size(const Node & node) const override;
     bool findFirst(
@@ -875,22 +882,22 @@ void MetaImpl::insert(
 }
 
 //===========================================================================
-void MetaImpl::erase(Node & node, unsigned value) {
+bool MetaImpl::erase(Node & node, unsigned value) {
     auto pos = nodePos(node, value);
     auto & rnode = node.nodes[pos];
-    if (rnode.type == kEmpty)
-        return;
-    impl(rnode)->erase(rnode, value);
+    if (!impl(rnode)->erase(rnode, value))
+        return false;
     if (rnode.type != kEmpty)
-        return;
+        return true;
     for (unsigned i = 0; i < node.numValues; ++i) {
         if (node.nodes[i].type != kEmpty)
-            return;
+            return true;
     }
     // convert to empty
     destroy(node);
     node.type = kEmpty;
     impl(node)->init(node, false);
+    return true;
 }
 
 //===========================================================================
@@ -1765,8 +1772,8 @@ void UnsignedSet::assign(string_view src) {
 }
 
 //===========================================================================
-void UnsignedSet::insert(unsigned value) {
-    impl(m_node)->insert(m_node, value);
+bool UnsignedSet::insert(unsigned value) {
+    return impl(m_node)->insert(m_node, value);
 }
 
 //===========================================================================
@@ -1808,8 +1815,8 @@ void UnsignedSet::insert(unsigned low, unsigned high) {
 }
 
 //===========================================================================
-void UnsignedSet::erase(unsigned value) {
-    impl(m_node)->erase(m_node, value);
+bool UnsignedSet::erase(unsigned value) {
+    return impl(m_node)->erase(m_node, value);
 }
 
 //===========================================================================

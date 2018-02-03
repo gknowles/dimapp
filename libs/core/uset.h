@@ -81,7 +81,7 @@ public:
     void assign(UnsignedSet && from);
     void assign(const UnsignedSet & from);
     void assign(std::string_view src); // space separated ranges
-    void insert(unsigned value);
+    bool insert(unsigned value); // returns true if inserted
     template <typename InputIt, typename = std::enable_if_t<
             std::is_convertible_v<*std::declval<InputIt>(), unsigned> >>
         void insert(InputIt first, InputIt last);
@@ -90,7 +90,7 @@ public:
     void insert(const UnsignedSet & other);
     void insert(std::string_view src); // space separated ranges
     void insert(unsigned low, unsigned high);
-    void erase(unsigned value);
+    bool erase(unsigned value); // returns true if erased
     void erase(iterator where);
     void erase(unsigned low, unsigned high);
     void erase(const UnsignedSet & other);
