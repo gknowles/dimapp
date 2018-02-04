@@ -80,6 +80,7 @@ public:
 private:
     Duration onTimer(TimePoint now) override;
 
+    mutex m_mut;
     unique_ptr<SocketBuffer> m_buffer;
     size_t m_bufferUsed{0};
 };
@@ -404,6 +405,7 @@ RawSocket::RawSocket(IAppSocketNotify * notify)
 
 //===========================================================================
 void RawSocket::disconnect(AppSocket::Disconnect why) {
+    scoped_lock<mutex> lk{m_mut};
     if (m_bufferUsed) {
         socketWrite(this, move(m_buffer), m_bufferUsed);
         m_bufferUsed = 0;
@@ -420,6 +422,7 @@ void RawSocket::disconnect(AppSocket::Disconnect why) {
 
 //===========================================================================
 void RawSocket::write(string_view data) {
+    scoped_lock<mutex> lk{m_mut};
     bool hadData = m_bufferUsed;
     while (!data.empty()) {
         if (!m_buffer)
@@ -439,6 +442,7 @@ void RawSocket::write(string_view data) {
 
 //===========================================================================
 void RawSocket::write(unique_ptr<SocketBuffer> buffer, size_t bytes) {
+    scoped_lock<mutex> lk{m_mut};
     bool hadData = m_bufferUsed;
     if (hadData)
         socketWrite(this, move(m_buffer), m_bufferUsed);
@@ -501,6 +505,7 @@ void RawSocket::onSocketBufferChanged(const SocketBufferInfo & info) {
 
 //===========================================================================
 Duration RawSocket::onTimer(TimePoint now) {
+    scoped_lock<mutex> lk{m_mut};
     if (m_bufferUsed) {
         socketWrite(this, move(m_buffer), m_bufferUsed);
         m_bufferUsed = 0;
