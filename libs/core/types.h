@@ -8,6 +8,7 @@
 
 #include <cassert>
 #include <cstdint>
+#include <functional>
 #include <string_view>
 #include <type_traits>
 
@@ -52,30 +53,72 @@ protected:
 
 /****************************************************************************
 *
+*   Finally
+*
+***/
+
+struct Finally : public std::function<void()> {
+    using function::function;
+    ~Finally();
+};
+
+//===========================================================================
+inline Finally::~Finally() {
+    if (*this)
+        (*this)();
+}
+
+
+/****************************************************************************
+*
 *   ForwardListIterator
 *
 ***/
 
-template <typename T> class ForwardListIterator {
+template <typename T>
+class ForwardListIterator {
+public:
+    ForwardListIterator(T * node);
+    bool operator!=(const ForwardListIterator & right);
+    ForwardListIterator & operator++();
+    T & operator*();
+    T * operator->();
+
 protected:
     T * m_current{nullptr};
-
-public:
-    ForwardListIterator(T * node)
-        : m_current(node) {}
-    bool operator!=(const ForwardListIterator & right) {
-        return m_current != right.m_current;
-    }
-    ForwardListIterator & operator++() {
-        m_current = m_current->m_next;
-        return *this;
-    }
-    T & operator*() {
-        assert(m_current);
-        return *m_current;
-    }
-    T * operator->() { return m_current; }
 };
+
+//===========================================================================
+template <typename T>
+ForwardListIterator<T>::ForwardListIterator(T * node)
+    : m_current(node)
+{}
+
+//===========================================================================
+template <typename T>
+bool ForwardListIterator<T>::operator!=(const ForwardListIterator & right) {
+    return m_current != right.m_current;
+}
+
+//===========================================================================
+template <typename T>
+ForwardListIterator<T> & ForwardListIterator<T>::operator++() {
+    m_current = m_current->m_next;
+    return *this;
+}
+
+//===========================================================================
+template <typename T>
+T & ForwardListIterator<T>::operator*() {
+    assert(m_current);
+    return *m_current;
+}
+
+//===========================================================================
+template <typename T>
+T * ForwardListIterator<T>::operator->() {
+    return m_current;
+}
 
 
 /****************************************************************************
