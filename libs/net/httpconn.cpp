@@ -743,7 +743,7 @@ bool HttpConn::onData(
         return false;
     }
 
-    // TODO: receive flow control, check total buffer size?
+    // TODO: receive flow control, check for misbehaving peer
     if (data.dataLen) {
         replyWindowUpdate(out, stream, data.dataLen);
         replyWindowUpdate(out, 0, data.dataLen);
@@ -762,6 +762,7 @@ bool HttpConn::onData(
     CharBuf & buf = sm->m_msg->body();
     buf.append(data.data, data.dataLen);
     if (flags & fEndStream) {
+        sm->m_remoteState = HttpStream::kClosed;
         msgs->push_back(move(sm->m_msg));
     }
     return true;
