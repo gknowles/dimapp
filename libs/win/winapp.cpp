@@ -195,9 +195,11 @@ static HWND createPerfWindow() {
     WORD diagX = (WORD) val;
     WORD diagY = val >> 16;
 
+    auto name = appName();
+    name += " - Counters";
     auto wnd = CreateWindow(
         kPerfWndClass,
-        "Perf Counters",
+        name.c_str(),
         WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, CW_USEDEFAULT, // x, y
         50 * diagX, 50 * diagY, // cx, cy

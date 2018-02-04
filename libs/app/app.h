@@ -45,9 +45,10 @@ class IAppNotify {
 public:
     virtual ~IAppNotify() = default;
 
-    // Since this is called on the event thread, servers (especially when
-    // running as a service) should return promptly to allow event processing
-    // to continue.
+    // Since this is called on the event thread, servers should return promptly
+    // to allow event processing to continue. This is especially when running
+    // as a service because the Windows SCM expects regular progress reports
+    // during startup.
     virtual void onAppRun() = 0;
 
     // argc & argv are set by the framework before the call to onAppRun()
@@ -97,6 +98,7 @@ int appRun(
 *
 ***/
 
+const std::string & appName();
 RunMode appMode();
 inline bool appStarting() { return appMode() == kRunStarting; }
 inline bool appStopping() { return appMode() == kRunStopping; }
@@ -104,9 +106,9 @@ inline bool appStopping() { return appMode() == kRunStopping; }
 // returns flags passed to appRun()
 AppFlags appFlags();
 
-std::string_view appConfigDirectory();
-std::string_view appLogDirectory();
-std::string_view appDataDirectory();
+const std::string & appConfigDirectory();
+const std::string & appLogDirectory();
+const std::string & appDataDirectory();
 
 // false if file relative to root is not within the root path. This can happen
 // if file breaks out via ".." or is an absolute path.

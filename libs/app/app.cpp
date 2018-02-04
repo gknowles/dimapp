@@ -24,6 +24,7 @@ static condition_variable s_runCv;
 static RunMode s_runMode{kRunStopped};
 
 static IAppNotify * s_app;
+static string s_appName;
 static vector<ITaskNotify *> s_appTasks;
 static AppFlags s_appFlags;
 static string s_logDir;
@@ -141,6 +142,11 @@ void Dim::iAppSetFlags(AppFlags flags) {
 ***/
 
 //===========================================================================
+const string & Dim::appName() {
+    return s_appName;
+}
+
+//===========================================================================
 RunMode Dim::appMode() {
     return s_runMode;
 }
@@ -186,17 +192,17 @@ static string makeAppDir(string_view path) {
 }
 
 //===========================================================================
-string_view Dim::appConfigDirectory() {
+const string & Dim::appConfigDirectory() {
     return s_confDir;
 }
 
 //===========================================================================
-string_view Dim::appLogDirectory() {
+const string & Dim::appLogDirectory() {
     return s_logDir;
 }
 
 //===========================================================================
-string_view Dim::appDataDirectory() {
+const string & Dim::appDataDirectory() {
     return s_dataDir;
 }
 
@@ -233,8 +239,11 @@ int Dim::appRun(IAppNotify * app, int argc, char * argv[], AppFlags flags) {
     s_appTasks.clear();
     s_appTasks.push_back(&s_runTask);
 
+    Path exeName = envExecPath();
+    s_appName = exeName.stem();
+
     if (flags & fAppWithChdir) {
-        auto fp = fs::u8path(envExecPath());
+        auto fp = fs::u8path(exeName.c_str());
         fs::current_path(fp.parent_path());
     }
     s_confDir = makeAppDir("conf");
