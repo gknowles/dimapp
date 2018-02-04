@@ -82,6 +82,7 @@ static auto & s_perfCurrent = uperf("http requests (current)");
 static auto & s_perfInvalid = uperf("http protocol error");
 static auto & s_perfSuccess = uperf("http reply success");
 static auto & s_perfError = uperf("http reply error");
+static auto & s_perfReset = uperf("http reply canceled");
 static auto & s_perfRejects = uperf("http1 requests rejected");
 
 
@@ -235,6 +236,7 @@ void HttpSocket::reply(unsigned reqId, const CharBuf & data, bool more) {
 //===========================================================================
 // static
 void HttpSocket::resetReply(unsigned reqId, bool internal) {
+    s_perfReset += 1;
     auto fn = [&](HttpConnHandle h, CharBuf * out, int stream) -> void {
         httpResetStream(out, h, stream, internal);
     };
@@ -520,31 +522,50 @@ void Dim::httpRouteReplyNotFound(unsigned reqId, const HttpRequest & req) {
 }
 
 //===========================================================================
-void Dim::httpRouteReply(
+static void routeReply(
     unsigned reqId,
-    const HttpRequest & req,
+    const char url[],
     unsigned status,
-    const string & msg
+    std::string_view msg
 ) {
     StrFrom<unsigned> st{status};
     HttpResponse res;
     XBuilder bld(res.body());
     bld.start("html")
         .start("head").elem("title", st.c_str()).end()
-        .start("body")
-            .elem("h1", st.c_str())
-            .start("dl")
-                .elem("dt", "Description")
-                .elem("dd", msg.c_str())
-                .elem("dt", "Requested URL: ")
-                .elem("dd", req.pathRaw())
-            .end()
-        .end()
-        .end();
+        .start("body");
+    bld.elem("h1", st.c_str());
+    bld.start("dl")
+        .elem("dt", "Description")
+        .elem("dd", string(msg).c_str());
+    if (url) {
+        bld.elem("dt", "Requested URL: ")
+            .elem("dd", url);
+    }
+    bld.end().end().end();
 
     res.addHeader(kHttpContentType, "text/html");
     res.addHeader(kHttp_Status, st.c_str());
     httpRouteReply(reqId, res);
+}
+
+//===========================================================================
+void Dim::httpRouteReply(
+    unsigned reqId,
+    const HttpRequest & req,
+    unsigned status,
+    std::string_view msg
+) {
+    routeReply(reqId, req.pathRaw(), status, msg);
+}
+
+//===========================================================================
+void Dim::httpRouteReply(
+    unsigned reqId,
+    unsigned status,
+    std::string_view msg
+) {
+    routeReply(reqId, nullptr, status, msg);
 }
 
 

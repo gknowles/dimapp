@@ -50,7 +50,8 @@ void httpRouteReply(
     unsigned reqId,
     const HttpRequest & req,
     unsigned status,
-    const std::string & msg = {}
+    std::string_view msg = {}
 );
+void httpRouteReply(unsigned reqId, unsigned status, std::string_view msg = {});
 
 } // namespace
