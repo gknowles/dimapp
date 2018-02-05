@@ -49,6 +49,7 @@ public:
     bool onSocketAccept(const AppSocketInfo & info) override;
     void onSocketDisconnect() override;
     void onSocketRead(AppSocketData & data) override;
+    void onSocketDestroy() override;
 
 private:
     HttpConnHandle m_conn;
@@ -72,8 +73,8 @@ struct RequestInfo {
 *
 ***/
 
+static mutex s_mut;
 static vector<PathInfo> s_paths;
-static Endpoint s_endpoint;
 static unordered_map<unsigned, RequestInfo> s_requests;
 static unsigned s_nextReqId;
 
@@ -94,6 +95,7 @@ static auto & s_perfRejects = uperf("http1 requests rejected");
 
 //===========================================================================
 static IHttpRouteNotify * find(string_view path, HttpMethod method) {
+    scoped_lock<mutex> lk{s_mut};
     IHttpRouteNotify * best = nullptr;
     size_t bestSegs = 0;
     size_t bestLen = 0;
@@ -135,6 +137,7 @@ static void route(unsigned reqId, HttpRequest & req) {
 
 //===========================================================================
 static unsigned makeRequestInfo (HttpSocket * conn, int stream) {
+    scoped_lock<mutex> lk{s_mut};
     for (;;) {
         auto id = ++s_nextReqId;
         auto & found = s_requests[id];
@@ -181,6 +184,7 @@ void HttpSocket::iReply(
     const function<void(HttpConnHandle h, CharBuf * out, int stream)> & fn,
     bool more
 ) {
+    scoped_lock<mutex> lk{s_mut};
     auto it = s_requests.find(reqId);
     if (it == s_requests.end())
         return;
@@ -247,6 +251,12 @@ void HttpSocket::resetReply(unsigned reqId, bool internal) {
 HttpSocket::~HttpSocket () {
     for (auto && id : m_reqIds)
         s_requests.erase(id);
+}
+
+//===========================================================================
+void HttpSocket::onSocketDestroy() {
+    scoped_lock<mutex> lk{s_mut};
+    delete this;
 }
 
 //===========================================================================
@@ -424,6 +434,7 @@ static ShutdownNotify s_cleanup;
 
 //===========================================================================
 void ShutdownNotify::onShutdownConsole(bool firstTry) {
+    scoped_lock<mutex> lk{s_mut};
     if (!s_requests.empty())
         return shutdownIncomplete();
 }
@@ -468,6 +479,7 @@ void Dim::httpRouteAdd(
     unsigned methods,
     bool recurse
 ) {
+    scoped_lock<mutex> lk{s_mut};
     assert(!path.empty());
     if (s_paths.empty() && !appStarting())
         startListen();
