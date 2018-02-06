@@ -183,6 +183,7 @@ static void destroyBufferSlice(const SocketBuffer & sbuf) {
 
 //===========================================================================
 SocketBuffer::~SocketBuffer() {
+    scoped_lock<mutex> lk{s_mut};
     destroyBufferSlice(*this);
 }
 
