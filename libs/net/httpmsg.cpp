@@ -43,7 +43,7 @@ const TokenTable::Token s_hdrNames[] = {
     {kHttpAcceptEncoding, "accept-encoding"},
     {kHttpAcceptLanguage, "accept-language"},
     {kHttpAcceptRanges, "accept-ranges"},
-    {kHttpAccessControlAllowOrigin, "accept-control-allow-origin"},
+    {kHttpAccessControlAllowOrigin, "access-control-allow-origin"},
     {kHttpAge, "age"},
     {kHttpAllow, "allow"},
     {kHttpAuthorization, "authorization"},
