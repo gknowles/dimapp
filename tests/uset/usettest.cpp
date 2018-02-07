@@ -114,6 +114,11 @@ static void test() {
     tmp.assign("1-2 1000-1100");
     rc = tmp.compare(tmp2);
     EXPECT(rc == 1);
+
+    tmp.assign("1-5000");
+    tmp2.assign("10001-15000");
+    tmp.intersect(tmp2);
+    EXPECT(tmp.empty());
 }
 
 //===========================================================================

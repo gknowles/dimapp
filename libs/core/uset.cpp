@@ -1437,12 +1437,17 @@ static void eraBitmap(Node & left, const Node & right) {
 
 //===========================================================================
 static void eraMeta(Node & left, const Node & right) {
+    assert(left.numValues == right.numValues);
     auto li = left.nodes;
     auto le = li + left.numValues;
     auto ri = right.nodes;
-    auto re = ri + right.numValues;
-    for (; li != le && ri != re; ++li, ++ri)
+    bool empty = true;
+    for (; li != le; ++li, ++ri) {
         erase(*li, *ri);
+        empty = empty && (li->type == kEmpty);
+    }
+    if (empty)
+        eraEmpty(left, right);
 }
 
 //===========================================================================
@@ -1554,8 +1559,13 @@ static void isecMeta(Node & left, const Node & right) {
     auto le = li + left.numValues;
     auto ri = right.nodes;
     auto re = ri + right.numValues;
-    for (; li != le && ri != re; ++li, ++ri)
+    bool empty = true;
+    for (; li != le && ri != re; ++li, ++ri) {
         intersect(*li, *ri);
+        empty = empty && li->type == kEmpty;
+    }
+    if (empty)
+        isecEmpty(left, right);
 }
 
 //===========================================================================
