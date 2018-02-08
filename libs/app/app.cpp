@@ -87,13 +87,15 @@ static ConsoleLogger s_consoleLogger;
 
 //===========================================================================
 void ConsoleLogger::onLog(LogType type, string_view msg) {
+    auto buf = (char *) alloca(msg.size() + 1);
+    memcpy(buf, msg.data(), msg.size());
+    buf[msg.size()] = '\n';
     if (type == kLogTypeError) {
         ConsoleScopedAttr attr(kConsoleError);
-        cout.write(msg.data(), msg.size());
+        cout.write(buf, msg.size() + 1);
     } else {
-        cout.write(msg.data(), msg.size());
+        cout.write(buf, msg.size() + 1);
     }
-    cout << endl;
 }
 
 
