@@ -59,6 +59,7 @@ private:
 *
 ***/
 
+// Returns time at which the timer will fire
 TimePoint timerUpdate(
     ITimerNotify * notify,
     Duration wait,
