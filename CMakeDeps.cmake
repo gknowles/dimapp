@@ -66,7 +66,6 @@
 # libs/cppconf/dimcli_userconfig.h
 # libs/file/file.cpp
 # libs/file/file.h
-# libs/file/fileio.h
 # libs/file/filemon.h
 # libs/file/path.cpp
 # libs/file/path.h
