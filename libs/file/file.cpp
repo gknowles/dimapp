@@ -12,28 +12,28 @@ namespace fs = std::experimental::filesystem;
 
 /****************************************************************************
 *
-*   FileAppendQueue
+*   FileAppendStream
 *
 ***/
 
 //===========================================================================
-FileAppendQueue::FileAppendQueue()
+FileAppendStream::FileAppendStream()
 {}
 
 //===========================================================================
-FileAppendQueue::FileAppendQueue(int numBufs, int maxWrites, size_t pageSize) {
+FileAppendStream::FileAppendStream(int numBufs, int maxWrites, size_t pageSize) {
     init(numBufs, maxWrites, pageSize);
 }
 
 //===========================================================================
-FileAppendQueue::~FileAppendQueue() {
+FileAppendStream::~FileAppendStream() {
     close();
     if (m_buffers)
         aligned_free(m_buffers);
 }
 
 //===========================================================================
-void FileAppendQueue::init(int numBufs, int maxWrites, size_t pageSize) {
+void FileAppendStream::init(int numBufs, int maxWrites, size_t pageSize) {
     assert(!m_numBufs);
     m_numBufs = numBufs;
     m_maxWrites = maxWrites;
@@ -42,7 +42,7 @@ void FileAppendQueue::init(int numBufs, int maxWrites, size_t pageSize) {
 }
 
 //===========================================================================
-bool FileAppendQueue::open(string_view path, OpenExisting mode) {
+bool FileAppendStream::open(string_view path, OpenExisting mode) {
     auto flags = File::fReadWrite | File::fAligned;
     switch (mode) {
     case kFail: flags |= File::fCreat | File::fExcl; break;
@@ -55,7 +55,7 @@ bool FileAppendQueue::open(string_view path, OpenExisting mode) {
 }
 
 //===========================================================================
-bool FileAppendQueue::attach(Dim::FileHandle f) {
+bool FileAppendStream::attach(Dim::FileHandle f) {
     assert(m_bufLen);
     close();
     m_filePos = fileSize(f);
@@ -75,7 +75,7 @@ bool FileAppendQueue::attach(Dim::FileHandle f) {
 }
 
 //===========================================================================
-void FileAppendQueue::close() {
+void FileAppendStream::close() {
     if (!m_file)
         return;
 
@@ -101,7 +101,7 @@ void FileAppendQueue::close() {
 }
 
 //===========================================================================
-void FileAppendQueue::append(string_view data) {
+void FileAppendStream::append(string_view data) {
     if (!m_file)
         return;
 
@@ -128,7 +128,7 @@ void FileAppendQueue::append(string_view data) {
 }
 
 //===========================================================================
-void FileAppendQueue::write_LK() {
+void FileAppendStream::write_LK() {
     if (m_numWrites == m_maxWrites)
         return;
 
@@ -164,7 +164,7 @@ void FileAppendQueue::write_LK() {
 }
 
 //===========================================================================
-void FileAppendQueue::onFileWrite(
+void FileAppendStream::onFileWrite(
     int written,
     string_view data,
     int64_t offset,

@@ -248,15 +248,15 @@ size_t fileAppendWait(FileHandle f, const void * buf, size_t bufLen);
 
 /****************************************************************************
 *
-*   FileAppendQueue
+*   FileAppendStream
 *
 ***/
 
-class FileAppendQueue : Dim::IFileWriteNotify {
+class FileAppendStream : Dim::IFileWriteNotify {
 public:
-    FileAppendQueue();
-    FileAppendQueue(int numBufs, int maxWrites, size_t pageSize);
-    ~FileAppendQueue();
+    FileAppendStream();
+    FileAppendStream(int numBufs, int maxWrites, size_t pageSize);
+    ~FileAppendStream();
     void init(int numBufs, int maxWrites, size_t pageSize);
 
     explicit operator bool() const { return (bool) m_file; }
