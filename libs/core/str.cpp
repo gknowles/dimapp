@@ -401,6 +401,14 @@ string_view Dim::strTrim(string_view src) {
     return string_view(first, last - first + 1);
 }
 
+//===========================================================================
+unique_ptr<char[]> Dim::strDup(string_view src) {
+    auto ptr = unique_ptr<char[]>(new char[src.size() + 1]);
+    memcpy(ptr.get(), src.data(), src.size());
+    ptr[src.size()] = 0;
+    return move(ptr);
+}
+
 
 /****************************************************************************
 *

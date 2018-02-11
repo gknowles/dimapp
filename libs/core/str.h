@@ -269,6 +269,8 @@ void strSplit(
 );
 std::string_view strTrim(std::string_view src);
 
+std::unique_ptr<char[]> strDup(std::string_view src);
+
 
 /****************************************************************************
 *
