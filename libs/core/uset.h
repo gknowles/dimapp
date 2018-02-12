@@ -180,6 +180,7 @@ public:
     Iterator(const Node * node, value_type value, unsigned minDepth);
     Iterator & operator++();
     explicit operator bool() const { return (bool) m_node; }
+    bool operator== (const Iterator & right) const;
     bool operator!= (const Iterator & right) const;
     value_type operator*() const { return m_value; }
     const value_type * operator->() const { return &m_value; }
@@ -213,6 +214,7 @@ public:
     RangeIterator(Iterator where);
     RangeIterator & operator++();
     explicit operator bool() const { return m_value != kEndValue; }
+    bool operator== (const RangeIterator & right) const;
     bool operator!= (const RangeIterator & right) const;
     const value_type & operator*() const { return m_value; }
     const value_type * operator->() const { return &m_value; }

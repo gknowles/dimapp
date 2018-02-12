@@ -1984,8 +1984,13 @@ UnsignedSet::Iterator::Iterator(
 }
 
 //===========================================================================
+bool UnsignedSet::Iterator::operator== (const Iterator & right) const {
+    return m_value == right.m_value && m_node == right.m_node;
+}
+
+//===========================================================================
 bool UnsignedSet::Iterator::operator!= (const Iterator & right) const {
-    return m_value != right.m_value || m_node != right.m_node;
+    return !(*this == right);
 }
 
 //===========================================================================
@@ -2052,10 +2057,17 @@ UnsignedSet::RangeIterator::RangeIterator(Iterator where)
 }
 
 //===========================================================================
+bool UnsignedSet::RangeIterator::operator== (
+    const RangeIterator & right
+) const {
+    return m_value == right.m_value;
+}
+
+//===========================================================================
 bool UnsignedSet::RangeIterator::operator!= (
     const RangeIterator & right
 ) const {
-    return m_value != right.m_value;
+    return !(*this == right);
 }
 
 //===========================================================================

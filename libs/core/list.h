@@ -126,6 +126,7 @@ class ListIterator {
 public:
     ListIterator() {}
     ListIterator(List * container, T * node);
+    bool operator==(const ListIterator & right);
     bool operator!=(const ListIterator & right);
     ListIterator & operator++();
     T & operator*();
@@ -141,8 +142,14 @@ ListIterator<List, T>::ListIterator(List * container, T * node)
 
 //===========================================================================
 template <typename List, typename T>
+bool ListIterator<List, T>::operator==(const ListIterator & right) {
+    return m_current == right.m_current;
+}
+
+//===========================================================================
+template <typename List, typename T>
 bool ListIterator<List, T>::operator!=(const ListIterator & right) {
-    return m_current != right.m_current;
+    return !(*this == right);
 }
 
 //===========================================================================
