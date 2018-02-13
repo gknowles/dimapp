@@ -63,6 +63,7 @@ constexpr unsigned absSize(const Node & node) {
 }
 
 namespace {
+
 enum NodeType {
     kEmpty,     // contains no values
     kFull,      // contains all values in node's domain
@@ -112,25 +113,6 @@ struct IImplBase {
     ) const = 0;
 };
 
-} // namespace
-
-
-/****************************************************************************
-*
-*   Helpers
-*
-***/
-
-static IImplBase * impl(const Node & node);
-
-
-/****************************************************************************
-*
-*   EmptyImpl
-*
-***/
-
-namespace {
 struct EmptyImpl final : IImplBase {
     void init(Node & node, bool full) override;
     void init(Node & node, const Node & from) override;
@@ -157,8 +139,170 @@ struct EmptyImpl final : IImplBase {
         unsigned first
     ) const override;
 };
+
+struct FullImpl final : IImplBase {
+    void init(Node & node, bool full) override;
+    void init(Node & node, const Node & from) override;
+    void destroy(Node & node) override;
+    bool insert(Node & node, unsigned value) override;
+    void insert(
+        Node & node,
+        const unsigned * first,
+        const unsigned * last
+    ) override;
+    bool erase(Node & node, unsigned value) override;
+
+    size_t size(const Node & node) const override;
+    bool findFirst(
+        const Node ** onode,
+        unsigned * ovalue,
+        const Node & node,
+        unsigned first
+    ) const override;
+    bool lastContiguous(
+        const Node ** onode,
+        unsigned * ovalue,
+        const Node & node,
+        unsigned first
+    ) const override;
+};
+
+struct VectorImpl final : IImplBase {
+    static constexpr size_t maxValues() {
+        return kDataSize / sizeof(*Node::values);
+    }
+
+    void init(Node & node, bool full) override;
+    void init(Node & node, const Node & from) override;
+    void destroy(Node & node) override;
+    bool insert(Node & node, unsigned value) override;
+    void insert(
+        Node & node,
+        const unsigned * first,
+        const unsigned * last
+    ) override;
+    bool erase(Node & node, unsigned value) override;
+
+    size_t size(const Node & node) const override;
+    bool findFirst(
+        const Node ** onode,
+        unsigned * ovalue,
+        const Node & node,
+        unsigned first
+    ) const override;
+    bool lastContiguous(
+        const Node ** onode,
+        unsigned * ovalue,
+        const Node & node,
+        unsigned first
+    ) const override;
+
+private:
+    void convertAndInsert(Node & node, unsigned value);
+};
+
+struct BitmapImpl final : IImplBase {
+    static constexpr size_t numInt64s() {
+        return kDataSize / sizeof(uint64_t);
+    }
+    static constexpr size_t numBits() { return 64 * numInt64s(); }
+
+    void init(Node & node, bool full) override;
+    void init(Node & node, const Node & from) override;
+    void destroy(Node & node) override;
+    bool insert(Node & node, unsigned value) override;
+    void insert(
+        Node & node,
+        const unsigned * first,
+        const unsigned * last
+    ) override;
+    bool erase(Node & node, unsigned value) override;
+
+    size_t size(const Node & node) const override;
+    bool findFirst(
+        const Node ** onode,
+        unsigned * ovalue,
+        const Node & node,
+        unsigned first
+    ) const override;
+    bool lastContiguous(
+        const Node ** onode,
+        unsigned * ovalue,
+        const Node & node,
+        unsigned first
+    ) const override;
+};
+
+struct MetaImpl final : IImplBase {
+    static constexpr size_t maxNodes() {
+        return kDataSize / sizeof(*Node::nodes);
+    }
+
+    void init(Node & node, bool full) override;
+    void init(Node & node, const Node & from) override;
+    void destroy(Node & node) override;
+    bool insert(Node & node, unsigned value) override;
+    void insert(
+        Node & node,
+        const unsigned * first,
+        const unsigned * last
+    ) override;
+    bool erase(Node & node, unsigned value) override;
+
+    size_t size(const Node & node) const override;
+    bool findFirst(
+        const Node ** onode,
+        unsigned * ovalue,
+        const Node & node,
+        unsigned first
+    ) const override;
+    bool lastContiguous(
+        const Node ** onode,
+        unsigned * ovalue,
+        const Node & node,
+        unsigned first
+    ) const override;
+
+private:
+    unsigned nodePos(const Node & node, unsigned value) const;
+};
+
 } // namespace
+
+
+/****************************************************************************
+*
+*   Helpers
+*
+***/
+
 static EmptyImpl s_emptyImpl;
+static FullImpl s_fullImpl;
+static VectorImpl s_vectorImpl;
+static BitmapImpl s_bitmapImpl;
+static MetaImpl s_metaImpl;
+
+static IImplBase * s_impls[] = {
+    &s_emptyImpl,
+    &s_fullImpl,
+    &s_vectorImpl,
+    &s_bitmapImpl,
+    &s_metaImpl,
+};
+static_assert(size(s_impls) == kNodeTypes);
+
+//===========================================================================
+static IImplBase * impl(const Node & node) {
+    assert(node.type < size(s_impls));
+    return s_impls[node.type];
+}
+
+
+/****************************************************************************
+*
+*   EmptyImpl
+*
+***/
 
 //===========================================================================
 void EmptyImpl::init(Node & node, bool full) {
@@ -186,9 +330,8 @@ bool EmptyImpl::insert(Node & node, unsigned value) {
     assert(relBase(value, node.depth) == node.base);
     destroy(node);
     node.type = kVector;
-    auto iptr = impl(node);
-    iptr->init(node, false);
-    iptr->insert(node, value);
+    s_vectorImpl.init(node, false);
+    s_vectorImpl.insert(node, value);
     return true;
 }
 
@@ -201,7 +344,7 @@ void EmptyImpl::insert(
     if (first != last) {
         insert(node, *first++);
         if (first != last)
-            impl(node)->insert(node, first, last);
+            s_vectorImpl.insert(node, first, last);
     }
 }
 
@@ -243,39 +386,6 @@ bool EmptyImpl::lastContiguous(
 *
 ***/
 
-namespace {
-struct FullImpl final : IImplBase {
-    void init(Node & node, bool full) override;
-    void init(Node & node, const Node & from) override;
-    void destroy(Node & node) override;
-    bool insert(Node & node, unsigned value) override;
-    void insert(
-        Node & node,
-        const unsigned * first,
-        const unsigned * last
-    ) override;
-    bool erase(Node & node, unsigned value) override;
-
-    size_t size(const Node & node) const override;
-    bool findFirst(
-        const Node ** onode,
-        unsigned * ovalue,
-        const Node & node,
-        unsigned first
-    ) const override;
-    bool lastContiguous(
-        const Node ** onode,
-        unsigned * ovalue,
-        const Node & node,
-        unsigned first
-    ) const override;
-
-private:
-    void convert(Node & node);
-};
-} // namespace
-static FullImpl s_fullImpl;
-
 //===========================================================================
 void FullImpl::init(Node & node, bool full) {
     assert(node.type == kFull);
@@ -313,8 +423,16 @@ void FullImpl::insert(
 //===========================================================================
 bool FullImpl::erase(Node & node, unsigned value) {
     assert(relBase(value, node.depth) == node.base);
-    convert(node);
-    return impl(node)->erase(node, value);
+    destroy(node);
+    if (node.depth == maxDepth()) {
+        node.type = kBitmap;
+        s_bitmapImpl.init(node, true);
+        return s_bitmapImpl.erase(node, value);
+    } else {
+        node.type = kMeta;
+        s_metaImpl.init(node, true);
+        return s_metaImpl.erase(node, value);
+    }
 }
 
 //===========================================================================
@@ -348,60 +466,12 @@ bool FullImpl::lastContiguous(
     return false;
 }
 
-//===========================================================================
-void FullImpl::convert(Node & node) {
-    destroy(node);
-    if (node.depth == maxDepth()) {
-        node.type = kBitmap;
-    } else {
-        node.type = kMeta;
-    }
-    impl(node)->init(node, true);
-}
-
 
 /****************************************************************************
 *
 *   VectorImpl
 *
 ***/
-
-namespace {
-struct VectorImpl final : IImplBase {
-    static constexpr size_t maxValues() {
-        return kDataSize / sizeof(*Node::values);
-    }
-
-    void init(Node & node, bool full) override;
-    void init(Node & node, const Node & from) override;
-    void destroy(Node & node) override;
-    bool insert(Node & node, unsigned value) override;
-    void insert(
-        Node & node,
-        const unsigned * first,
-        const unsigned * last
-    ) override;
-    bool erase(Node & node, unsigned value) override;
-
-    size_t size(const Node & node) const override;
-    bool findFirst(
-        const Node ** onode,
-        unsigned * ovalue,
-        const Node & node,
-        unsigned first
-    ) const override;
-    bool lastContiguous(
-        const Node ** onode,
-        unsigned * ovalue,
-        const Node & node,
-        unsigned first
-    ) const override;
-
-private:
-    void convert(Node & node);
-};
-} // namespace
-static VectorImpl s_vectorImpl;
 
 //===========================================================================
 void VectorImpl::init(Node & node, bool full) {
@@ -435,8 +505,7 @@ bool VectorImpl::insert(Node & node, unsigned value) {
     auto ptr = lower_bound(node.values, last, value);
     if (ptr == last) {
         if (node.numValues == maxValues()) {
-            convert(node);
-            impl(node)->insert(node, value);
+            convertAndInsert(node, value);
         } else {
             *ptr = value;
             node.numValues += 1;
@@ -446,8 +515,7 @@ bool VectorImpl::insert(Node & node, unsigned value) {
     if (*ptr == value)
         return false;
     if (node.numValues == maxValues()) {
-        convert(node);
-        impl(node)->insert(node, value);
+        convertAndInsert(node, value);
     } else {
         memmove(ptr + 1, ptr, sizeof(*ptr) * (last - ptr));
         *ptr = value;
@@ -484,7 +552,7 @@ bool VectorImpl::erase(Node & node, unsigned value) {
         // No more values, convert to empty node.
         destroy(node);
         node.type = kEmpty;
-        impl(node)->init(node, false);
+        s_emptyImpl.init(node, false);
     }
     return true;
 }
@@ -545,18 +613,21 @@ bool VectorImpl::lastContiguous(
 }
 
 //===========================================================================
-void VectorImpl::convert(Node & node) {
+void VectorImpl::convertAndInsert(Node & node, unsigned value) {
     Node tmp{node};
     auto ptr = tmp.values;
     auto last = ptr + tmp.numValues;
     if (tmp.depth == maxDepth()) {
         node.type = kBitmap;
+        s_bitmapImpl.init(node, false);
+        s_bitmapImpl.insert(node, ptr, last);
+        s_bitmapImpl.insert(node, value);
     } else {
         node.type = kMeta;
+        s_metaImpl.init(node, false);
+        s_metaImpl.insert(node, ptr, last);
+        s_metaImpl.insert(node, value);
     }
-    auto iptr = impl(node);
-    iptr->init(node, false);
-    iptr->insert(node, ptr, last);
     destroy(tmp);
 }
 
@@ -566,41 +637,6 @@ void VectorImpl::convert(Node & node) {
 *   BitmapImpl
 *
 ***/
-
-namespace {
-struct BitmapImpl final : IImplBase {
-    static constexpr size_t numInt64s() {
-        return kDataSize / sizeof(uint64_t);
-    }
-    static constexpr size_t numBits() { return 64 * numInt64s(); }
-
-    void init(Node & node, bool full) override;
-    void init(Node & node, const Node & from) override;
-    void destroy(Node & node) override;
-    bool insert(Node & node, unsigned value) override;
-    void insert(
-        Node & node,
-        const unsigned * first,
-        const unsigned * last
-    ) override;
-    bool erase(Node & node, unsigned value) override;
-
-    size_t size(const Node & node) const override;
-    bool findFirst(
-        const Node ** onode,
-        unsigned * ovalue,
-        const Node & node,
-        unsigned first
-    ) const override;
-    bool lastContiguous(
-        const Node ** onode,
-        unsigned * ovalue,
-        const Node & node,
-        unsigned first
-    ) const override;
-};
-} // namespace
-static BitmapImpl s_bitmapImpl;
 
 //===========================================================================
 void BitmapImpl::init(Node & node, bool full) {
@@ -657,7 +693,7 @@ bool BitmapImpl::insert(Node & node, unsigned value) {
     }
     destroy(node);
     node.type = kFull;
-    impl(node)->init(node, true);
+    s_fullImpl.init(node, true);
     return true;
 }
 
@@ -688,7 +724,7 @@ bool BitmapImpl::erase(Node & node, unsigned value) {
     // convert to empty
     destroy(node);
     node.type = kEmpty;
-    impl(node)->init(node, false);
+    s_emptyImpl.init(node, false);
     return true;
 }
 
@@ -749,43 +785,6 @@ bool BitmapImpl::lastContiguous(
 *   MetaImpl
 *
 ***/
-
-namespace {
-struct MetaImpl final : IImplBase {
-    static constexpr size_t maxNodes() {
-        return kDataSize / sizeof(*Node::nodes);
-    }
-
-    void init(Node & node, bool full) override;
-    void init(Node & node, const Node & from) override;
-    void destroy(Node & node) override;
-    bool insert(Node & node, unsigned value) override;
-    void insert(
-        Node & node,
-        const unsigned * first,
-        const unsigned * last
-    ) override;
-    bool erase(Node & node, unsigned value) override;
-
-    size_t size(const Node & node) const override;
-    bool findFirst(
-        const Node ** onode,
-        unsigned * ovalue,
-        const Node & node,
-        unsigned first
-    ) const override;
-    bool lastContiguous(
-        const Node ** onode,
-        unsigned * ovalue,
-        const Node & node,
-        unsigned first
-    ) const override;
-
-private:
-    unsigned nodePos(const Node & node, unsigned value) const;
-};
-} // namespace
-static MetaImpl s_metaImpl;
 
 //===========================================================================
 void MetaImpl::init(Node & node, bool full) {
@@ -854,8 +853,6 @@ unsigned MetaImpl::nodePos(const Node & node, unsigned value) const {
 bool MetaImpl::insert(Node & node, unsigned value) {
     auto pos = nodePos(node, value);
     auto & rnode = node.nodes[pos];
-    if (rnode.type == kFull)
-        return false;
     if (!impl(rnode)->insert(rnode, value))
         return false;
     if (rnode.type != kFull)
@@ -867,7 +864,7 @@ bool MetaImpl::insert(Node & node, unsigned value) {
     // convert to full
     destroy(node);
     node.type = kFull;
-    impl(node)->init(node, true);
+    s_fullImpl.init(node, true);
     return true;
 }
 
@@ -896,7 +893,7 @@ bool MetaImpl::erase(Node & node, unsigned value) {
     // convert to empty
     destroy(node);
     node.type = kEmpty;
-    impl(node)->init(node, false);
+    s_emptyImpl.init(node, false);
     return true;
 }
 
@@ -948,28 +945,6 @@ bool MetaImpl::lastContiguous(
             return false;
         first = absBase(*ptr);
     }
-}
-
-
-/****************************************************************************
-*
-*   Helpers
-*
-***/
-
-static IImplBase * s_impls[] = {
-    &s_emptyImpl,
-    &s_fullImpl,
-    &s_vectorImpl,
-    &s_bitmapImpl,
-    &s_metaImpl,
-};
-static_assert(size(s_impls) == kNodeTypes);
-
-//===========================================================================
-static IImplBase * impl(const Node & node) {
-    assert(node.type < size(s_impls));
-    return s_impls[node.type];
 }
 
 
@@ -1174,7 +1149,7 @@ static void insSkip(Node & left, const Node & right)
 static void insFull(Node & left, const Node & right) {
     impl(left)->destroy(left);
     left.type = kFull;
-    impl(left)->init(left, true);
+    s_fullImpl.init(left, true);
 }
 
 //===========================================================================
@@ -1205,8 +1180,7 @@ static void insVec(Node & left, const Node & right) {
     assert(right.type == kVector);
     auto ri = right.values;
     auto re = ri + right.numValues;
-    for (; ri != re; ++ri)
-        impl(left)->insert(left, *ri);
+    s_vectorImpl.insert(left, ri, re);
 }
 
 //===========================================================================
@@ -1363,7 +1337,7 @@ static void eraSkip(Node & left, const Node & right)
 static void eraEmpty(Node & left, const Node & right) {
     impl(left)->destroy(left);
     left.type = kEmpty;
-    impl(left)->init(left, false);
+    s_emptyImpl.init(left, false);
 }
 
 //===========================================================================
@@ -1779,7 +1753,7 @@ void UnsignedSet::clear() {
 void UnsignedSet::fill() {
     clear();
     m_node.type = kFull;
-    impl(m_node)->init(m_node, true);
+    s_fullImpl.init(m_node, true);
 }
 
 //===========================================================================
