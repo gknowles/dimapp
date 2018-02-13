@@ -142,20 +142,24 @@ void IAppSocket::disconnect(
     IAppSocketNotify * notify,
     AppSocket::Disconnect why
 ) {
-    notify->m_socket->disconnect(why);
+    if (auto sock = notify->m_socket)
+        sock->disconnect(why);
 }
 
 //===========================================================================
 // static
 void IAppSocket::write(IAppSocketNotify * notify, string_view data) {
-    notify->m_socket->write(data);
+    if (auto sock = notify->m_socket)
+        sock->write(data);
 }
 
 //===========================================================================
 // static
 void IAppSocket::write(IAppSocketNotify * notify, const CharBuf & data) {
-    for (auto && v : data.views()) {
-        notify->m_socket->write(v);
+    if (auto sock = notify->m_socket) {
+        for (auto && v : data.views()) {
+            sock->write(v);
+        }
     }
 }
 
@@ -166,7 +170,8 @@ void IAppSocket::write(
     unique_ptr<SocketBuffer> buffer,
     size_t bytes
 ) {
-    notify->m_socket->write(move(buffer), bytes);
+    if (auto sock = notify->m_socket)
+        sock->write(move(buffer), bytes);
 }
 
 //===========================================================================
