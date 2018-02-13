@@ -1228,15 +1228,18 @@ static void insMeta(Node & left, const Node & right) {
     auto li = left.nodes;
     auto le = li + left.numValues;
     auto ri = right.nodes;
-    auto re = ri + right.numValues;
-    for (; li != le && ri != re; ++li, ++ri) {
+    for (; li != le; ++li, ++ri) {
         insert(*li, *ri);
-    }
-    for (li = left.nodes; li != le; ++li) {
         if (li->type != kFull)
-            return;
+            goto NOT_FULL;
     }
     insFull(left, right);
+    return;
+
+    for (; li != le; ++li, ++ri) {
+        insert(*li, *ri);
+NOT_FULL: ;
+    }
 }
 
 //===========================================================================
@@ -1308,14 +1311,18 @@ static void insMeta(Node & left, Node && right) {
     auto li = left.nodes;
     auto le = li + left.numValues;
     auto ri = right.nodes;
-    auto re = ri + right.numValues;
-    for (; li != le && ri != re; ++li, ++ri)
+    for (; li != le; ++li, ++ri) {
         insert(*li, move(*ri));
-    for (li = left.nodes; li != le; ++li) {
         if (li->type != kFull)
-            return;
+            goto NOT_FULL;
     }
-    insFull(left, right);
+    insFull(left, move(right));
+    return;
+
+    for (; li != le; ++li, ++ri) {
+        insert(*li, move(*ri));
+NOT_FULL: ;
+    }
 }
 
 //===========================================================================
@@ -1441,13 +1448,18 @@ static void eraMeta(Node & left, const Node & right) {
     auto li = left.nodes;
     auto le = li + left.numValues;
     auto ri = right.nodes;
-    bool empty = true;
     for (; li != le; ++li, ++ri) {
         erase(*li, *ri);
-        empty = empty && (li->type == kEmpty);
+        if (li->type != kEmpty)
+            goto NOT_EMPTY;
     }
-    if (empty)
-        eraEmpty(left, right);
+    eraEmpty(left, right);
+    return;
+
+    for (; li != le; ++li, ++ri) {
+        erase(*li, *ri);
+NOT_EMPTY: ;
+    }
 }
 
 //===========================================================================
@@ -1558,14 +1570,18 @@ static void isecMeta(Node & left, const Node & right) {
     auto li = left.nodes;
     auto le = li + left.numValues;
     auto ri = right.nodes;
-    auto re = ri + right.numValues;
-    bool empty = true;
-    for (; li != le && ri != re; ++li, ++ri) {
+    for (; li != le; ++li, ++ri) {
         intersect(*li, *ri);
-        empty = empty && li->type == kEmpty;
+        if (li->type != kEmpty)
+            goto NOT_EMPTY;
     }
-    if (empty)
-        isecEmpty(left, right);
+    isecEmpty(left, right);
+    return;
+
+    for (; li != le; ++li, ++ri) {
+        intersect(*li, *ri);
+NOT_EMPTY: ;
+    }
 }
 
 //===========================================================================
@@ -1637,9 +1653,18 @@ static void isecMeta(Node & left, Node && right) {
     auto li = left.nodes;
     auto le = li + left.numValues;
     auto ri = right.nodes;
-    auto re = ri + right.numValues;
-    for (; li != le && ri != re; ++li, ++ri)
+    for (; li != le; ++li, ++ri) {
         intersect(*li, move(*ri));
+        if (li->type != kEmpty)
+            goto NOT_EMPTY;
+    }
+    isecEmpty(left, move(right));
+    return;
+
+    for (; li != le; ++li, ++ri) {
+        intersect(*li, move(*ri));
+NOT_EMPTY: ;
+    }
 }
 
 //===========================================================================
