@@ -251,6 +251,8 @@ IJBuilder & IJBuilder::value(bool val) {
 
 //===========================================================================
 IJBuilder & IJBuilder::value(double val) {
+    if (isnan(val) || isinf(val))
+        return fail();
     StrFrom<double> tmp(val);
     return valueRaw(tmp);
 }
