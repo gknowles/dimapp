@@ -1,7 +1,7 @@
 // Copyright Glen Knowles 2017 - 2018.
 // Distributed under the Boost Software License, Version 1.0.
 //
-// winapp.cpp - dim windows platform
+// wingui.cpp - dim windows platform
 #include "pch.h"
 #pragma hdrstop
 
@@ -258,7 +258,7 @@ private:
 
 static MessageLoopTask s_windowTask;
 static TaskQueueHandle s_taskq;
-static auto & s_cliEnable = Cli{}.opt<bool>("appwin")
+static auto & s_cliEnable = Cli{}.opt<bool>("gui")
     .desc("Show window UI")
     .after([](auto & cli, auto & opt, auto & val){
         if (*opt)
@@ -367,7 +367,7 @@ static EnableNotify s_notify;
 
 //===========================================================================
 void EnableNotify::onConfigChange(const XDocument & doc) {
-    bool enable = configNumber(doc, "EnableAppWindow");
+    bool enable = configNumber(doc, "EnableGui");
     s_windowTask.enable(MessageLoopTask::kConfigFile, enable);
 }
 
@@ -413,7 +413,7 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
 ***/
 
 //===========================================================================
-void Dim::winAppInitialize() {
+void Dim::winGuiInitialize() {
     shutdownMonitor(&s_cleanup);
     s_windowTask.clear();
     s_taskq = taskCreateQueue("Message Loop", 1);
@@ -421,6 +421,6 @@ void Dim::winAppInitialize() {
 }
 
 //===========================================================================
-void Dim::winAppConfigInitialize() {
+void Dim::winGuiConfigInitialize() {
     configMonitor("app.xml", &s_notify);
 }

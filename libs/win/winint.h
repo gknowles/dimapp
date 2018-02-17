@@ -163,12 +163,12 @@ private:
 
 /****************************************************************************
 *
-*   App
+*   Gui
 *
 ***/
 
-void winAppInitialize();
-void winAppConfigInitialize();
+void winGuiInitialize();
+void winGuiConfigInitialize();
 
 
 /****************************************************************************

@@ -118,12 +118,12 @@ void Dim::iPlatformInitialize() {
     winEnvInitialize();
     winIocpInitialize();
     winServiceInitialize();
-    winAppInitialize();
+    winGuiInitialize();
 }
 
 //===========================================================================
 void Dim::iPlatformConfigInitialize() {
-    winAppConfigInitialize();
+    winGuiConfigInitialize();
 
     if (appFlags() & fAppWithWebAdmin)
         httpRouteAdd(&s_account, "/srv/account.json");
