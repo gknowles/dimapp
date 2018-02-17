@@ -11,15 +11,54 @@ using namespace Dim;
 
 /****************************************************************************
 *
-*   User info
+*   Performance counters
 *
 ***/
 
+//===========================================================================
+
+
+/****************************************************************************
+*
+*   Web console
+*
+***/
+
+//===========================================================================
+// User info
+//===========================================================================
 namespace {
-class HtmlAccount : public IHttpRouteNotify {
+class WebAccount : public IHttpRouteNotify {
     void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
 };
 } // namespace
+
+const TokenTable::Token s_attrs[] = {
+    { (int) SE_GROUP_MANDATORY,           "MANDATORY" },
+    { (int) SE_GROUP_ENABLED_BY_DEFAULT,  "ENABLED_BY_DEFAULT" },
+    { (int) SE_GROUP_ENABLED,             "ENABLED" },
+    { (int) SE_GROUP_OWNER,               "OWNER" },
+    { (int) SE_GROUP_USE_FOR_DENY_ONLY,   "USE_FOR_DENY_ONLY" },
+    { (int) SE_GROUP_INTEGRITY,           "INTEGRITY" },
+    { (int) SE_GROUP_INTEGRITY_ENABLED,   "INTEGRITY_ENABLED" },
+    { (int) SE_GROUP_LOGON_ID,            "LOGON_ID" },
+    { (int) SE_GROUP_RESOURCE,            "RESOURCE" },
+};
+const TokenTable s_attrTbl(s_attrs, size(s_attrs));
+
+const TokenTable::Token s_sidTypes[] = {
+    { SidTypeUser,              "User" },
+    { SidTypeGroup,             "Group" },
+    { SidTypeDomain,            "Domain" },
+    { SidTypeAlias,             "Alias" },
+    { SidTypeWellKnownGroup,    "WellKnownGroup" },
+    { SidTypeDeletedAccount,    "DeletedAccount" },
+    { SidTypeInvalid,           "Invalid" },
+    { SidTypeUnknown,           "Unknown" },
+    { SidTypeComputer,          "Computer" },
+    { SidTypeLabel,             "Label" },
+};
+const TokenTable s_sidTypeTbl(s_sidTypes, size(s_sidTypes));
 
 //===========================================================================
 static void addSidRow(JBuilder & out, SID_AND_ATTRIBUTES & sa) {
@@ -52,16 +91,39 @@ static void addSidRow(JBuilder & out, SID_AND_ATTRIBUTES & sa) {
     }
     name.resize(nameLen);
     dom.resize(domLen);
+
     out.object();
-    out.member("attrs", (uint64_t) sa.Attributes);
+    out.member("attrs");
+    out.array();
+    unsigned found = {};
+    for (auto && attr : s_attrTbl) {
+        if (attr.id & sa.Attributes) {
+            found |= attr.id;
+            out.value(attr.name);
+        }
+    }
+    if (auto unknown = ~found & sa.Attributes) {
+        auto unk = "UNKNOWN("s;
+        unk += StrFrom<unsigned>(unknown);
+        unk += ')';
+        out.value(unk);
+    }
+    out.end();
     out.member("name", name);
     out.member("domain", dom);
-    out.member("type", (int64_t) use);
+    if (auto name = tokenTableGetName(s_sidTypeTbl, use)) {
+        out.member("type", name);
+    } else {
+        auto unk = "UNKNOWN("s;
+        unk += StrFrom<underlying_type_t<decltype(use)>>(use);
+        unk += ')';
+        out.member("type", unk);
+    }
     out.end();
 }
 
 //===========================================================================
-void HtmlAccount::onHttpRequest(unsigned reqId, HttpRequest & msg) {
+void WebAccount::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     auto proc = GetCurrentProcess();
     HANDLE token;
     if (!OpenProcessToken(proc, TOKEN_QUERY, &token))
@@ -102,8 +164,15 @@ void HtmlAccount::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     httpRouteReply(reqId, res);
 }
 
+//===========================================================================
+// Register Admin UI
+//===========================================================================
+static WebAccount s_account;
 
-static HtmlAccount s_account;
+//===========================================================================
+static void registerWebAdmin() {
+    httpRouteAdd(&s_account, "/srv/account.json");
+}
 
 
 /****************************************************************************
@@ -126,5 +195,5 @@ void Dim::iPlatformConfigInitialize() {
     winGuiConfigInitialize();
 
     if (appFlags() & fAppWithWebAdmin)
-        httpRouteAdd(&s_account, "/srv/account.json");
+        registerWebAdmin();
 }
