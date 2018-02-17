@@ -106,8 +106,9 @@ void RunTimers::onTask() {
     s_processingThread = this_thread::get_id();
     for (;;) {
         // find next expired timer with notifier to call
-        wait = s_timers.empty() ? kTimerInfinite
-                                : s_timers.top().expiration - now;
+        wait = s_timers.empty()
+            ? kTimerInfinite
+            : s_timers.top().expiration - now;
         if (wait > 0ms)
             break;
         TimerQueueNode node = s_timers.top();

@@ -189,11 +189,9 @@ static ResetStreamTimer s_resetTimer;
 //===========================================================================
 Duration ResetStreamTimer::onTimer(TimePoint now) {
     TimePoint expire = now - kMaxResetStreamAge;
-    Duration sleep;
     while (!empty(s_resetStreams)) {
         auto & rs = s_resetStreams.front();
-        sleep = rs.sm->m_closed - expire;
-        if (sleep > 0s)
+        if (auto sleep = rs.sm->m_closed - expire; sleep > 0s)
             return min(sleep, kMinResetStreamCheckInterval);
 
         if (rs.sm->m_localState == HttpStream::kClosed
