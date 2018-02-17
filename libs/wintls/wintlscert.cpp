@@ -606,7 +606,7 @@ constexpr TokenTable::Token kStoreLocs[] = {
     { CertLocation::kLocalMachineEnterprise,  "Local Machine Enterprise" },
     { CertLocation::kLocalMachineGroupPolicy, "Local Machine Group Policy" },
 };
-const TokenTable s_storeLocTbl(kStoreLocs, size(kStoreLocs));
+const TokenTable s_storeLocTbl(kStoreLocs);
 
 //===========================================================================
 CertLocation & CertLocation::operator=(string_view name) {

@@ -29,6 +29,8 @@ public:
 
 public:
     TokenTable(const Token * ptr, size_t count);
+    template<int N>
+    TokenTable(const Token (&tokens)[N]) : TokenTable(tokens, N) {}
 
     bool find(int * out, const char name[], size_t nameLen = -1) const;
     bool find(const char ** const out, int id) const;

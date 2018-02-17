@@ -21,7 +21,7 @@ static TokenTable::Token s_runModes[] = {
     { kRunRunning,  "running" },
     { kRunStopping, "stopping" },
 };
-static TokenTable s_runModeTbl{s_runModes, size(s_runModes)};
+static TokenTable s_runModeTbl{s_runModes};
 
 //===========================================================================
 const char * Dim::toString(RunMode mode, const char def[]) {

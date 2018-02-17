@@ -44,7 +44,7 @@ const TokenTable::Token s_attrs[] = {
     { (int) SE_GROUP_LOGON_ID,            "LOGON_ID" },
     { (int) SE_GROUP_RESOURCE,            "RESOURCE" },
 };
-const TokenTable s_attrTbl(s_attrs, size(s_attrs));
+const TokenTable s_attrTbl(s_attrs);
 
 const TokenTable::Token s_sidTypes[] = {
     { SidTypeUser,              "User" },
@@ -58,7 +58,7 @@ const TokenTable::Token s_sidTypes[] = {
     { SidTypeComputer,          "Computer" },
     { SidTypeLabel,             "Label" },
 };
-const TokenTable s_sidTypeTbl(s_sidTypes, size(s_sidTypes));
+const TokenTable s_sidTypeTbl(s_sidTypes);
 
 //===========================================================================
 static void addSidRow(JBuilder & out, SID_AND_ATTRIBUTES & sa) {

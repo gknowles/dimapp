@@ -89,7 +89,7 @@ const TokenTable::Token s_hdrNames[] = {
     {kHttpWwwAuthenticate, "www-authenticate"},
 };
 static_assert(size(s_hdrNames) == kHttps);
-const TokenTable s_hdrNameTbl(s_hdrNames, size(s_hdrNames));
+const TokenTable s_hdrNameTbl(s_hdrNames);
 
 const TokenTable::Token s_methodNames[] = {
     {fHttpMethodConnect, "CONNECT"},
@@ -102,7 +102,7 @@ const TokenTable::Token s_methodNames[] = {
     {fHttpMethodTrace, "TRACE"},
 };
 static_assert(size(s_methodNames) == kHttpMethods);
-const TokenTable s_methodNameTbl(s_methodNames, size(s_methodNames));
+const TokenTable s_methodNameTbl(s_methodNames);
 
 } // namespace
 
