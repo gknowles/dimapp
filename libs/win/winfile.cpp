@@ -748,6 +748,7 @@ void Dim::fileRead(
 ) {
     assert(notify);
     auto file = getInfo(f);
+    assert(file);
     auto ptr = new FileReader{notify, hq};
     ptr->start(file, outBuf, outBufLen, off, len);
 }
@@ -760,6 +761,7 @@ size_t Dim::fileReadWait(
     int64_t off
 ) {
     auto file = getInfo(f);
+    assert(file);
     FileReader op{nullptr, s_hq};
     return op.start(file, outBuf, outBufLen, off, outBufLen);
 }
@@ -775,6 +777,7 @@ void Dim::fileWrite(
 ) {
     assert(notify);
     auto file = getInfo(f);
+    assert(file);
     auto ptr = new FileWriter(notify, hq);
     ptr->start(file, const_cast<void *>(buf), bufLen, off, bufLen);
 }
@@ -787,6 +790,7 @@ size_t Dim::fileWriteWait(
     size_t bufLen
 ) {
     auto file = getInfo(f);
+    assert(file);
     FileWriter op(nullptr, s_hq);
     return op.start(file, const_cast<void *>(buf), bufLen, off, bufLen);
 }
