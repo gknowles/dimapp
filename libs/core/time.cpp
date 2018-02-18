@@ -118,7 +118,9 @@ static bool interpret(Duration * out, string_view * units, double val) {
 }
 
 //===========================================================================
-string Dim::toString(Duration val, DurationFormat fmt);
+string Dim::toString(Duration val, DurationFormat fmt) {
+    return "<duration>";
+}
 
 //===========================================================================
 bool Dim::parse(Duration * out, string_view src) {
