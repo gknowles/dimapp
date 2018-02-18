@@ -259,7 +259,7 @@ private:
 static MessageLoopTask s_windowTask;
 static TaskQueueHandle s_taskq;
 static auto & s_cliEnable = Cli{}.opt<bool>("gui")
-    .desc("Show window UI")
+    .desc("Show UI window")
     .after([](auto & cli, auto & opt, auto & val){
         if (*opt)
             s_windowTask.enable(MessageLoopTask::kCommandLine, true);
