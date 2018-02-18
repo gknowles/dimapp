@@ -97,21 +97,35 @@ static void valueToString(string * out, T val, bool pretty) {
     }
 
     auto v = string_view{str};
-    auto num = (v.size() - 1) % 3 + 1;
+    auto num = v.size();
+    auto ptr = v.data();
+    auto eptr = ptr + num;
+    auto ecomma = eptr;
+    if constexpr (is_same_v<T, float>) {
+        if (auto pos = v.find('.'); pos != string_view::npos) {
+            num = pos;
+            ecomma = ptr + pos;
+        }
+    }
+    num = (num - 1) % 3 + 1;
     out->resize(v.size() + (v.size() - num) / 3);
     auto optr = out->data();
-    auto ptr = v.data();
-    auto eptr = ptr + v.size();
     switch (num) {
         case 3: *optr++ = *ptr++;
         case 2: *optr++ = *ptr++;
         case 1: *optr++ = *ptr++;
     }
-    while (ptr != eptr) {
+    while (ptr != ecomma) {
         *optr++ = ',';
         *optr++ = *ptr++;
         *optr++ = *ptr++;
         *optr++ = *ptr++;
+    }
+    if constexpr (is_same_v<T, float>) {
+        // Include decimal point and up to three more digits
+        for (auto i = 0; i < 4 && ptr != eptr; ++i)
+            *optr++ = *ptr++;
+        out->resize(optr - out->data());
     }
 }
 
