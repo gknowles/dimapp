@@ -102,6 +102,10 @@ static void valueToString(string * out, T val, bool pretty) {
     auto eptr = ptr + num;
     auto ecomma = eptr;
     if constexpr (is_same_v<T, float>) {
+        if (v.find('e') != string_view::npos) {
+            *out = str;
+            return;
+        }
         if (auto pos = v.find('.'); pos != string_view::npos) {
             num = pos;
             ecomma = ptr + pos;
