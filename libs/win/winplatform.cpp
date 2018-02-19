@@ -84,10 +84,10 @@ static float getUserTime() {
     return s_userPct;
 }
 
-static auto & s_perfWorkMem = fperf("proc memory (working)", getWorkMem);
-static auto & s_perfPrivateMem = fperf("proc memory (private)", getPrivateMem);
-static auto & s_perfKernelTime = fperf("proc time (kernel)", getKernelTime);
-static auto & s_perfUserTime = fperf("proc time (user)", getUserTime);
+static auto & s_perfWorkMem = fperf("proc.memory (working)", getWorkMem);
+static auto & s_perfPrivateMem = fperf("proc.memory (private)", getPrivateMem);
+static auto & s_perfKernelTime = fperf("proc.time (kernel)", getKernelTime);
+static auto & s_perfUserTime = fperf("proc.time (user)", getUserTime);
 
 
 /****************************************************************************

@@ -49,11 +49,11 @@ static shared_mutex s_mut;
 static HandleMap<WinTlsConnHandle, ServerConn> s_conns;
 static unique_ptr<CredHandle> s_srvCred;
 
-static auto & s_perfReneg = uperf("tls renegotiate");
-static auto & s_perfExpired = uperf("tls expired context");
-static auto & s_perfFinish = uperf("tls finish");
-static auto & s_perfStub = uperf("tls encrypt stub trailer");
-static auto & s_perfIncomplete = uperf("tls incomplete");
+static auto & s_perfReneg = uperf("tls.renegotiate");
+static auto & s_perfExpired = uperf("tls.expired context");
+static auto & s_perfFinish = uperf("tls.finish");
+static auto & s_perfStub = uperf("tls.encrypt stub trailer");
+static auto & s_perfIncomplete = uperf("tls.incomplete");
 
 
 /****************************************************************************

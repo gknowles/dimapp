@@ -78,13 +78,13 @@ static vector<PathInfo> s_paths;
 static unordered_map<unsigned, RequestInfo> s_requests;
 static unsigned s_nextReqId;
 
-static auto & s_perfRequests = uperf("http requests");
-static auto & s_perfCurrent = uperf("http requests (current)");
-static auto & s_perfInvalid = uperf("http protocol error");
-static auto & s_perfSuccess = uperf("http reply success");
-static auto & s_perfError = uperf("http reply error");
-static auto & s_perfReset = uperf("http reply canceled");
-static auto & s_perfRejects = uperf("http1 requests rejected");
+static auto & s_perfRequests = uperf("http.requests");
+static auto & s_perfCurrent = uperf("http.requests (current)");
+static auto & s_perfInvalid = uperf("http.protocol error");
+static auto & s_perfSuccess = uperf("http.reply success");
+static auto & s_perfError = uperf("http.reply error");
+static auto & s_perfReset = uperf("http.reply canceled");
+static auto & s_perfRejects = uperf("http.http1 requests rejected");
 
 
 /****************************************************************************

@@ -81,9 +81,9 @@ private:
 static mutex s_mut;
 static List<ConnectTask> s_connecting;
 
-static auto & s_perfConnected = uperf("sock connections");
-static auto & s_perfCurConnected = uperf("sock connections (current)");
-static auto & s_perfConnectFailed = uperf("sock connect failed");
+static auto & s_perfConnected = uperf("sock.connections");
+static auto & s_perfCurConnected = uperf("sock.connections (current)");
+static auto & s_perfConnectFailed = uperf("sock.connect failed");
 
 
 /****************************************************************************

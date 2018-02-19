@@ -67,9 +67,9 @@ public:
 static mutex s_mut;
 static List<ListenSocket> s_listeners;
 
-static auto & s_perfAccepts = uperf("sock accepts");
-static auto & s_perfCurAccepts = uperf("sock accepts (current)");
-static auto & s_perfNotAccepted = uperf("sock disconnect (not accepted)");
+static auto & s_perfAccepts = uperf("sock.accepts");
+static auto & s_perfCurAccepts = uperf("sock.accepts (current)");
+static auto & s_perfNotAccepted = uperf("sock.disconnect (not accepted)");
 
 
 /****************************************************************************

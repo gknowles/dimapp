@@ -63,13 +63,13 @@ static RIO_EXTENSION_FUNCTION_TABLE s_rio;
 
 static atomic_int s_numSockets;
 
-static auto & s_perfReadTotal = uperf("sock read bytes (total)");
-static auto & s_perfIncomplete = uperf("sock write bytes (incomplete)");
-static auto & s_perfWaiting = uperf("sock write bytes (waiting)");
-static auto & s_perfWriteTotal = uperf("sock write bytes (total)");
+static auto & s_perfReadTotal = uperf("sock.read bytes (total)");
+static auto & s_perfIncomplete = uperf("sock.write bytes (incomplete)");
+static auto & s_perfWaiting = uperf("sock.write bytes (waiting)");
+static auto & s_perfWriteTotal = uperf("sock.write bytes (total)");
 
 // The data in the send queue is either too massive or too old.
-static auto & s_perfBacklog = uperf("sock disconnect (write backlog)");
+static auto & s_perfBacklog = uperf("sock.disconnect (write backlog)");
 
 
 /****************************************************************************

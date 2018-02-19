@@ -43,14 +43,14 @@ static ILogNotify * s_initialDefault;
 static size_t s_initialNumLoggers;
 
 static PerfCounter<int> * s_perfs[] = {
-    &iperf("log debug"),
-    &iperf("log info"),
-    &iperf("log error"),
+    &iperf("log.debug"),
+    &iperf("log.info"),
+    &iperf("log.error"),
     nullptr, // log crash
 };
 static_assert(size(s_perfs) == kLogTypes);
 
-static auto & s_perfRecurse = uperf("log recursion");
+static auto & s_perfRecurse = uperf("log.recursion");
 
 static thread_local bool t_inProgress;
 

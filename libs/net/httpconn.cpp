@@ -343,7 +343,7 @@ static int getFrameStream(const char frame[kFrameHeaderLen]) {
 *
 ***/
 
-auto & s_perfStreams = uperf("http streams (current)");
+auto & s_perfStreams = uperf("http.streams (current)");
 
 //===========================================================================
 HttpStream::HttpStream() {

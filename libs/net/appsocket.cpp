@@ -103,11 +103,11 @@ static list<IAppSocket::UnmatchedInfo> s_unmatched;
 static IAppSocket::UnmatchedTimer s_unmatchedTimer;
 static bool s_disableNoDataTimeout;
 
-static auto & s_perfRequest = uperf("sock disconnect (app request)");
-static auto & s_perfNoData = uperf("sock disconnect (no data)");
-static auto & s_perfUnknown = uperf("sock disconnect (unknown protocol)");
-static auto & s_perfCrypt = uperf("sock disconnect (crypt error)");
-static auto & s_perfInactive = uperf("sock disconnect (inactivity)");
+static auto & s_perfRequest = uperf("sock.disconnect (app request)");
+static auto & s_perfNoData = uperf("sock.disconnect (no data)");
+static auto & s_perfUnknown = uperf("sock.disconnect (unknown protocol)");
+static auto & s_perfCrypt = uperf("sock.disconnect (crypt error)");
+static auto & s_perfInactive = uperf("sock.disconnect (inactivity)");
 
 
 /****************************************************************************
