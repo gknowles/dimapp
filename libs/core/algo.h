@@ -25,47 +25,65 @@ void for_each_diff(
     Remove remove   // unary function called for each in src but not dst
 ) {
     if (src == esrc)
-        goto REST_OF_NEXT;
+        goto REST_OF_DST;
     if (dst == edst)
-        goto REST_OF_PREV;
+        goto REST_OF_SRC;
     for (;;) {
         while (*dst < *src) {
-        MORE_NEXT:
+        MORE_DST:
             add(*dst);
             if (++dst == edst)
-                goto REST_OF_PREV;
+                goto REST_OF_SRC;
         }
         while (*src < *dst) {
             remove(*src);
             if (++src == esrc)
-                goto REST_OF_NEXT;
+                goto REST_OF_DST;
         }
         if (*dst < *src)
-            goto MORE_NEXT;
+            goto MORE_DST;
 
         ++src, ++dst;
         if (src == esrc) {
             if (dst == edst)
                 return;
-            goto REST_OF_NEXT;
+            goto REST_OF_DST;
         }
         if (dst == edst)
-            goto REST_OF_PREV;
+            goto REST_OF_SRC;
     }
 
-REST_OF_NEXT:
+REST_OF_DST:
     for (;;) {
         add(*dst);
         if (++dst == edst)
             return;
     }
 
-REST_OF_PREV:
+REST_OF_SRC:
     for (;;) {
         remove(*src);
         if (++src == esrc)
             return;
     }
 }
+
+//===========================================================================
+template<typename Container, typename Pred>
+void erase_unordered_if(Container c, Pred p) {
+    auto i = c.begin(),
+        ei = c.end();
+    while (i != ei) {
+        if (!p(*i)) {
+            i += 1;
+        } else {
+            if (--ei == i)
+                break;
+            *i = move(*ei);
+        }
+    }
+    c.erase(ei, c.end());
+}
+
 
 } // namespace
