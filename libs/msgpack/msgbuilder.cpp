@@ -236,7 +236,7 @@ IMsgBuilder & IMsgBuilder::valueRaw(string_view val) {
 
 //===========================================================================
 IMsgBuilder & IMsgBuilder::value(const char val[]) {
-    return value(string_view{val});
+    return val ? value(string_view{val}) : value(nullptr);
 }
 
 //===========================================================================
@@ -247,7 +247,9 @@ IMsgBuilder & IMsgBuilder::value(bool val) {
 
 //===========================================================================
 IMsgBuilder & IMsgBuilder::value(double val) {
-    if (auto fval = float(val); fval == val) {
+    if (auto ival = int(val); ival == val) {
+        return ivalue(ival);
+    } else if (auto fval = float(val); fval == val) {
         unsigned char * in = (unsigned char *) &fval;
         uint8_t out[5] = { kFloat32, in[3], in[2], in[1], in[0] };
         return valueRaw({(char *) &out, ::size(out)});
