@@ -114,57 +114,12 @@ static HandleMap<HttpConnHandle, HttpConn> s_conns;
 ***/
 
 //===========================================================================
-static inline int ntoh16(const char frame[]) {
-    return ((uint32_t)(uint8_t)frame[0] << 8)
-        + (uint8_t)frame[1];
-}
-
-//===========================================================================
-static inline int ntoh24(const char frame[]) {
-    return ((uint32_t)(uint8_t)frame[0] << 16)
-        + ((uint32_t)(uint8_t)frame[1] << 8)
-        + (uint8_t)frame[2];
-}
-
-//===========================================================================
-static inline int ntoh32(const char frame[]) {
-    return ((uint32_t)(uint8_t)frame[0] << 24)
-        + ((uint32_t)(uint8_t)frame[1] << 16)
-        + ((uint32_t)(uint8_t)frame[2] << 8)
-        + (uint8_t)frame[3];
-}
-
-//===========================================================================
-static inline int ntoh31(const char frame[]) {
+constexpr int ntoh31(const char frame[]) {
     return ntoh32(frame) & 0x7fff'ffff;
 }
 
 //===========================================================================
-static inline char * hton16(char * out, int val) {
-    *out++ = (val >> 8) & 0xff;
-    *out++ = val & 0xff;
-    return out;
-}
-
-//===========================================================================
-static inline char * hton24(char * out, int val) {
-    *out++ = (val >> 16) & 0xff;
-    *out++ = (val >> 8) & 0xff;
-    *out++ = val & 0xff;
-    return out;
-}
-
-//===========================================================================
-static inline char * hton32(char * out, int val) {
-    *out++ = (unsigned(val) >> 24) & 0xff;
-    *out++ = (val >> 16) & 0xff;
-    *out++ = (val >> 8) & 0xff;
-    *out++ = val & 0xff;
-    return out;
-}
-
-//===========================================================================
-static inline char * hton31(char * out, int val) {
+constexpr char * hton31(char * out, int val) {
     return hton32(out, unsigned(val) & 0x7fff'ffff);
 }
 

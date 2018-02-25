@@ -53,6 +53,147 @@ void hexFromBytes(std::string & out, std::string_view src, bool append);
 
 /****************************************************************************
 *
+*   Byte swap
+*
+***/
+
+//===========================================================================
+constexpr int16_t byteSwap16(int ival) {
+    auto val = (uint16_t) ival;
+    return ((val & 0xff00) >> 8)
+        | (val << 8);
+}
+
+//===========================================================================
+constexpr int32_t byteSwap32(int ival) {
+    auto val = (uint32_t) ival;
+    return ((val & 0xff000000) >> 24)
+        | ((val & 0x00ff0000) >> 8)
+        | ((val & 0x0000ff00) << 8)
+        | (val << 24);
+}
+
+//===========================================================================
+constexpr int64_t byteSwap64(int64_t ival) {
+    auto val = (uint64_t) ival;
+    return ((val & 0xff00'0000'0000'0000) >> 56)
+        | ((val & 0x00ff'0000'0000'0000) >> 40)
+        | ((val & 0x0000'ff00'0000'0000) >> 24)
+        | ((val & 0x0000'00ff'0000'0000) >> 8)
+        | ((val & 0x0000'0000'ff00'0000) << 8)
+        | ((val & 0x0000'0000'00ff'0000) << 24)
+        | ((val & 0x0000'0000'0000'ff00) << 40)
+        | (val << 56);
+}
+
+
+/****************************************************************************
+*
+*   Endian conversions
+*
+***/
+
+//===========================================================================
+constexpr int ntoh8(const void * vptr) {
+    auto ptr = static_cast<const char *>(vptr);
+    return (uint32_t)(uint8_t)ptr[0];
+}
+
+//===========================================================================
+constexpr int ntoh16(const void * vptr) {
+    auto val = *static_cast<const uint16_t *>(vptr);
+    return byteSwap16(val);
+}
+
+//===========================================================================
+constexpr int ntoh24(const void * vptr) {
+    auto ptr = static_cast<const char *>(vptr);
+    return ((uint32_t)(uint8_t)ptr[0] << 16)
+        + ((uint32_t)(uint8_t)ptr[1] << 8)
+        + (uint8_t)ptr[2];
+}
+
+//===========================================================================
+constexpr int ntoh32(const void * vptr) {
+    auto val = *static_cast<const int32_t *>(vptr);
+    return byteSwap32(val);
+}
+
+//===========================================================================
+constexpr int64_t ntoh64(const void * vptr) {
+    auto val = *static_cast<const uint64_t *>(vptr);
+    return byteSwap64(val);
+}
+
+//===========================================================================
+constexpr float ntohf32(const void * vptr) {
+    static_assert(sizeof(float) == 4 && std::numeric_limits<float>::is_iec559);
+    float val = 0;
+    *((uint32_t*) &val) = ntoh32(vptr);
+    return val;
+}
+
+//===========================================================================
+constexpr double ntohf64(const void * vptr) {
+    static_assert(sizeof(double) == 8 && std::numeric_limits<float>::is_iec559);
+    double val = 0;
+    *((uint64_t*) &val) = ntoh64(vptr);
+    return val;
+}
+
+//===========================================================================
+constexpr char * hton16(char * out, int val) {
+    *(int16_t *)out = byteSwap16(val);
+    return out;
+}
+
+//===========================================================================
+constexpr char * hton24(char * out, int val) {
+    *out++ = (val >> 16) & 0xff;
+    *out++ = (val >> 8) & 0xff;
+    *out++ = val & 0xff;
+    return out;
+}
+
+//===========================================================================
+constexpr char * hton32(char * out, int val) {
+    *(int32_t *)out = byteSwap32(val);
+    return out;
+}
+
+//===========================================================================
+constexpr char * hton64(char * out, int64_t val) {
+    *(int64_t *)out = byteSwap64(val);
+    return out;
+}
+
+//===========================================================================
+constexpr char * htonf32(char * out, float val) {
+    auto in = (unsigned char *) &val;
+    out[0] = in[3];
+    out[1] = in[2];
+    out[2] = in[1];
+    out[3] = in[0];
+    return out;
+}
+
+//===========================================================================
+constexpr char * htonf64(char * out, double val) {
+    auto in = (unsigned char *) &val;
+    out[0] = in[7];
+    out[1] = in[6];
+    out[2] = in[5];
+    out[3] = in[4];
+    out[4] = in[3];
+    out[5] = in[2];
+    out[6] = in[1];
+    out[7] = in[0];
+    return out;
+}
+
+
+/****************************************************************************
+*
 *   IFactory
 *
 *   If a service defines Base* and accepts IFactory<Base>* in its interface,
