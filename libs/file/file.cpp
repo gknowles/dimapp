@@ -89,7 +89,7 @@ void FileAppendStream::close() {
         } else {
             // Since the old file handle was opened with fAligned we can't use
             // it to write the trailing partial buffer.
-            Path path = filePath(m_file);
+            auto path = (Path) filePath(m_file);
             fileClose(m_file);
             m_file = fileOpen(path, File::fReadWrite | File::fBlocking);
             if (m_file)

@@ -241,7 +241,7 @@ int Dim::appRun(IAppNotify * app, int argc, char * argv[], AppFlags flags) {
     s_appTasks.clear();
     s_appTasks.push_back(&s_runTask);
 
-    Path exeName = envExecPath();
+    auto exeName = (Path) envExecPath();
     s_appName = exeName.stem();
 
     if (flags & fAppWithChdir) {
