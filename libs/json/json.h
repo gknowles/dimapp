@@ -50,9 +50,12 @@ public:
     IJBuilder & value(std::string_view val);
     IJBuilder & value(bool val);
     IJBuilder & value(double val);
-    IJBuilder & ivalue(int64_t val);
-    IJBuilder & uvalue(uint64_t val);
+    IJBuilder & value(int64_t val);
+    IJBuilder & value(uint64_t val);
     IJBuilder & value(std::nullptr_t);
+
+    template<typename T>
+    IJBuilder & value(const T & val);
 
 protected:
     virtual void append(std::string_view text) = 0;
@@ -69,29 +72,41 @@ private:
     std::vector<bool> m_stack;
 };
 
-IJBuilder & operator<<(IJBuilder & out, std::string_view val);
-IJBuilder & operator<<(IJBuilder & out, bool val);
-IJBuilder & operator<<(IJBuilder & out, double val);
-IJBuilder & operator<<(IJBuilder & out, int64_t val);
-IJBuilder & operator<<(IJBuilder & out, uint64_t val);
-IJBuilder & operator<<(IJBuilder & out, std::nullptr_t);
-
-template <typename T, typename =
-    std::enable_if_t<!std::is_integral_v<T> && !std::is_enum_v<T>>
->
-inline IJBuilder & operator<<(IJBuilder & out, const T & val) {
-    thread_local std::ostringstream t_os;
-    t_os.clear();
-    t_os.str({});
-    t_os << val;
-    return out.value(t_os.str());
+//===========================================================================
+template<typename T>
+inline IJBuilder & IJBuilder::value(const T & val) {
+    if constexpr (std::is_convertible_v<T, uint64_t>
+        && !std::is_same_v<T, uint64_t>
+    ) {
+        return value(uint64_t(val));
+    } else if constexpr (std::is_convertible_v<T, int64_t>
+        && !std::is_same_v<T, int64_t>
+    ) {
+        return value(int64_t(val));
+    } else {
+        thread_local std::ostringstream t_os;
+        t_os.clear();
+        t_os.str({});
+        t_os << val;
+        return value(string_view{t_os.str()});
+    }
 }
 
-inline IJBuilder &
-operator<<(IJBuilder & out, IJBuilder & (*pfn)(IJBuilder &)) {
+//===========================================================================
+template <typename T>
+inline IJBuilder & operator<<(IJBuilder & out, const T & val) {
+    return out.value(val);
+}
+
+//===========================================================================
+inline IJBuilder & operator<<(
+    IJBuilder & out,
+    IJBuilder & (*pfn)(IJBuilder &)
+) {
     return pfn(out);
 }
 
+//===========================================================================
 inline IJBuilder & end(IJBuilder & out) {
     return out.end();
 }

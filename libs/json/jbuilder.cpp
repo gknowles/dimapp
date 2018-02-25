@@ -258,13 +258,13 @@ IJBuilder & IJBuilder::value(double val) {
 }
 
 //===========================================================================
-IJBuilder & IJBuilder::ivalue(int64_t val) {
+IJBuilder & IJBuilder::value(int64_t val) {
     StrFrom<int64_t> tmp(val);
     return valueRaw(tmp);
 }
 
 //===========================================================================
-IJBuilder & IJBuilder::uvalue(uint64_t val) {
+IJBuilder & IJBuilder::value(uint64_t val) {
     StrFrom<uint64_t> tmp(val);
     return valueRaw(tmp);
 }
@@ -337,41 +337,4 @@ void JBuilder::append(char val) {
 //===========================================================================
 size_t JBuilder::size() const {
     return m_buf.size();
-}
-
-
-/****************************************************************************
-*
-*   Public API
-*
-***/
-
-//===========================================================================
-IJBuilder & Dim::operator<<(IJBuilder & out, string_view val) {
-    return out.value(val);
-}
-
-//===========================================================================
-IJBuilder & Dim::operator<<(IJBuilder & out, int64_t val) {
-    return out.ivalue(val);
-}
-
-//===========================================================================
-IJBuilder & Dim::operator<<(IJBuilder & out, uint64_t val) {
-    return out.uvalue(val);
-}
-
-//===========================================================================
-IJBuilder & Dim::operator<<(IJBuilder & out, bool val) {
-    return out.value(val);
-}
-
-//===========================================================================
-IJBuilder & Dim::operator<<(IJBuilder & out, double val) {
-    return out.value(val);
-}
-
-//===========================================================================
-IJBuilder & Dim::operator<<(IJBuilder & out, nullptr_t) {
-    return out.value(nullptr);
 }
