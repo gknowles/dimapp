@@ -15,7 +15,7 @@
 #include <utility> // std::pair
 #include <vector>
 
-namespace Dim {
+namespace Dim::MsgPack {
 
 
 /****************************************************************************
@@ -24,34 +24,38 @@ namespace Dim {
 *
 ***/
 
-class IMsgBuilder {
+enum Format : uint8_t;
+
+class IBuilder {
 public:
-    IMsgBuilder();
-    virtual ~IMsgBuilder() = default;
+    IBuilder();
+    virtual ~IBuilder() = default;
 
     virtual void clear();
 
-    IMsgBuilder & array(size_t count);
-    IMsgBuilder & map(size_t count);
+    IBuilder & array(size_t count);
+    IBuilder & map(size_t count);
 
-    IMsgBuilder & element(std::string_view key);
+    IBuilder & element(std::string_view key);
 
     template <typename T>
-    IMsgBuilder & element(std::string_view key, T val) {
-        element(key) << val;
-        return *this;
+    IBuilder & element(std::string_view key, T val) {
+        return element(key).value(val);
     }
 
     // preformatted value
-    IMsgBuilder & valueRaw(std::string_view val);
+    IBuilder & valueRaw(std::string_view val);
 
-    IMsgBuilder & value(const char val[]);
-    IMsgBuilder & value(std::string_view val);
-    IMsgBuilder & value(bool val);
-    IMsgBuilder & value(double val);
-    IMsgBuilder & ivalue(int64_t val);
-    IMsgBuilder & uvalue(uint64_t val);
-    IMsgBuilder & value(std::nullptr_t);
+    IBuilder & value(const char val[]);
+    IBuilder & value(std::string_view val);
+    IBuilder & value(bool val);
+    IBuilder & value(double val);
+    IBuilder & value(int64_t val);
+    IBuilder & value(uint64_t val);
+    IBuilder & value(std::nullptr_t);
+
+    template<typename T>
+    IBuilder & value(const T & val);
 
     size_t depth() const { return m_stack.size(); }
 
@@ -66,39 +70,48 @@ private:
 
     enum class State : int m_state;
     unsigned m_remaining{0};
-
-    // maps are true, arrays are false
     std::vector<std::pair<State,unsigned>> m_stack;
 };
 
-IMsgBuilder & operator<<(IMsgBuilder & out, std::string_view val);
-IMsgBuilder & operator<<(IMsgBuilder & out, bool val);
-IMsgBuilder & operator<<(IMsgBuilder & out, double val);
-IMsgBuilder & operator<<(IMsgBuilder & out, int64_t val);
-IMsgBuilder & operator<<(IMsgBuilder & out, uint64_t val);
-IMsgBuilder & operator<<(IMsgBuilder & out, std::nullptr_t);
-
-template <typename T, typename =
-    std::enable_if_t<!std::is_integral_v<T> && !std::is_enum_v<T>>
->
-inline IMsgBuilder & operator<<(IMsgBuilder & out, const T & val) {
-    thread_local std::ostringstream t_os;
-    t_os.clear();
-    t_os.str({});
-    t_os << val;
-    return out.value(t_os.str());
+//===========================================================================
+template<typename T>
+inline IBuilder & IBuilder::value(const T & val) {
+    if constexpr (std::is_convertible_v<T, uint64_t>
+        && !std::is_same_v<T, uint64_t>
+    ) {
+        return value(uint64_t(val));
+    } else if constexpr (std::is_convertible_v<T, int64_t>
+        && !std::is_same_v<T, int64_t>
+    ) {
+        return value(int64_t(val));
+    } else {
+        thread_local std::ostringstream t_os;
+        t_os.clear();
+        t_os.str({});
+        t_os << val;
+        return value(string_view{t_os.str()});
+    }
 }
 
-inline IMsgBuilder &
-operator<<(IMsgBuilder & out, IMsgBuilder & (*pfn)(IMsgBuilder &)) {
+//===========================================================================
+template<typename T>
+inline IBuilder & operator<<(IBuilder & out, const T & val) {
+    return out.value(val);
+}
+
+//===========================================================================
+inline IBuilder & operator<<(
+    IBuilder & out,
+    IBuilder & (*pfn)(IBuilder &)
+) {
     return pfn(out);
 }
 
 //---------------------------------------------------------------------------
-class MsgBuilder : public IMsgBuilder {
+class Builder : public IBuilder {
 public:
-    MsgBuilder(CharBuf & buf)
-        : m_buf(buf) {}
+    Builder(CharBuf * buf)
+        : m_buf(*buf) {}
     void clear() override;
 
 private:
@@ -109,5 +122,99 @@ private:
     CharBuf & m_buf;
 };
 
+
+/****************************************************************************
+*
+*   MsgPack stream parser
+*
+***/
+
+class IStreamParserNotify {
+public:
+    virtual ~IStreamParserNotify() = default;
+    virtual bool startDoc() = 0;
+    virtual bool endDoc() = 0;
+
+    virtual bool startArray(size_t length) = 0;
+    virtual bool startMap(size_t length) = 0;
+
+    virtual bool valuePrefix(std::string_view val, bool first) = 0;
+    virtual bool value(std::string_view val) = 0;
+
+    virtual bool value(bool val) = 0;
+    virtual bool value(double val) = 0;
+    virtual bool value(int64_t val) = 0;
+    virtual bool value(uint64_t val) = 0;
+    virtual bool value(std::nullptr_t) = 0;
+};
+
+class StreamParser {
+public:
+    StreamParser(IStreamParserNotify * notify);
+    explicit operator bool() const { return m_errmsg.empty(); }
+
+    void clear();
+
+    // invalid_argument - EINVAL
+    // operation_in_progress - EINPROGRESS
+    std::error_code parse(unsigned * used, std::string_view src);
+
+    bool fail(std::string_view errmsg);
+
+    IStreamParserNotify & notify() { return m_notify; }
+
+    std::string_view errmsg() const { return m_errmsg; };
+    size_t errpos() const;
+
+private:
+    std::error_code invalid(int pos);
+    std::error_code inProgress(int pos);
+
+    std::error_code notifyArray(
+        unsigned * pos,
+        std::string_view src,
+        size_t width
+    );
+    std::error_code notifyMap(
+        unsigned * pos,
+        std::string_view src,
+        size_t width
+    );
+    template<typename T>
+    std::error_code notifyInt(
+        unsigned * pos,
+        std::string_view src,
+        size_t width
+    );
+    std::error_code notifyFloat(
+        unsigned * pos,
+        std::string_view src,
+        size_t width
+    );
+    std::error_code notifyStr(
+        unsigned * pos,
+        std::string_view src,
+        size_t width
+    );
+    std::error_code notifyExt(
+        unsigned * pos,
+        std::string_view src,
+        size_t width
+    );
+    std::error_code notifyFixExt(
+        unsigned * pos,
+        std::string_view src,
+        size_t width
+    );
+
+    IStreamParserNotify & m_notify;
+    std::string m_errmsg;
+    unsigned m_pos{0};
+    CharBuf m_buf;
+
+    Format m_fmt{};
+    unsigned m_bytes{0};    // bytes remaining in current object
+    int m_objects{1};  // objects remaining in current document
+};
 
 } // namespace

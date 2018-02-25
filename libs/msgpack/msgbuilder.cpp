@@ -1,71 +1,22 @@
 // Copyright Glen Knowles 2018.
 // Distributed under the Boost Software License, Version 1.0.
 //
-// jbuilder.cpp - dim msgpack
+// msgbuilder.cpp - dim msgpack
 #include "pch.h"
 #pragma hdrstop
 
 using namespace std;
 using namespace Dim;
+using namespace MsgPack;
 
 
 /****************************************************************************
 *
-*   Private
+*   IBuilder
 *
 ***/
 
-namespace {
-
-enum Format : uint8_t {
-    kFixArrayMask = 0x90,
-    kArray16 = 0xdc,
-    kArray32 = 0xdd,
-    kFixMapMask = 0x80,
-    kMap16 = 0xde,
-    kMap32 = 0xdf,
-    kNil = 0xc0,
-    kFalse = 0xc2,
-    kTrue = 0xc3,
-    kPositiveFixIntMask = 0x00,
-    kNegativeFixIntMask = 0xe0,
-    kInt8 = 0xd0,
-    kInt16 = 0xd1,
-    kInt32 = 0xd2,
-    kInt64 = 0xd3,
-    kUint8 = 0xcc,
-    kUint16 = 0xcd,
-    kUint32 = 0xce,
-    kUint64 = 0xcf,
-    kFloat32 = 0xca,
-    kFloat64 = 0xcb,
-    kFixStrMask = 0xa0,
-    kStr8 = 0xd9,
-    kStr16 = 0xda,
-    kStr32 = 0xdb,
-    kBin8 = 0xc4,
-    kBin16 = 0xc5,
-    kBin32 = 0xc6,
-    kExt8 = 0xc7,
-    kExt16 = 0xc8,
-    kExt32 = 0xc9,
-    kFixExt1 = 0xd4,
-    kFixExt2 = 0xd5,
-    kFixExt4 = 0xd6,
-    kFixExt8 = 0xd7,
-    kkFixExt16 = 0xd8,
-};
-
-} // namespace
-
-
-/****************************************************************************
-*
-*   IMsgBuilder
-*
-***/
-
-enum class IMsgBuilder::State : int {
+enum class IBuilder::State : int {
     kValue,
     kArray,
     kElement,
@@ -73,17 +24,18 @@ enum class IMsgBuilder::State : int {
 };
 
 //===========================================================================
-IMsgBuilder::IMsgBuilder()
-    : m_state(State::kValue) {}
+IBuilder::IBuilder()
+    : m_state(State::kValue)
+{}
 
 //===========================================================================
-void IMsgBuilder::clear() {
+void IBuilder::clear() {
     m_state = State::kValue;
     m_stack.clear();
 }
 
 //===========================================================================
-bool IMsgBuilder::pop() {
+bool IBuilder::pop() {
     assert(m_remaining);
     if (--m_remaining)
         return false;
@@ -94,7 +46,7 @@ bool IMsgBuilder::pop() {
 }
 
 //===========================================================================
-IMsgBuilder & IMsgBuilder::array(size_t count) {
+IBuilder & IBuilder::array(size_t count) {
     assert(unsigned(count) == count);
     switch (m_state) {
     case State::kValue:
@@ -139,7 +91,7 @@ IMsgBuilder & IMsgBuilder::array(size_t count) {
 }
 
 //===========================================================================
-IMsgBuilder & IMsgBuilder::map(size_t count) {
+IBuilder & IBuilder::map(size_t count) {
     assert(unsigned(count) == count);
     switch (m_state) {
     case State::kValue:
@@ -183,7 +135,7 @@ IMsgBuilder & IMsgBuilder::map(size_t count) {
 }
 
 //===========================================================================
-IMsgBuilder & IMsgBuilder::element(string_view key) {
+IBuilder & IBuilder::element(string_view key) {
     assert(m_state == State::kElement);
     assert(m_remaining);
     m_state = State::kElementValue;
@@ -193,7 +145,7 @@ IMsgBuilder & IMsgBuilder::element(string_view key) {
 }
 
 //===========================================================================
-IMsgBuilder & IMsgBuilder::value(string_view val) {
+IBuilder & IBuilder::value(string_view val) {
     switch (m_state) {
     case State::kValue:
         break;
@@ -214,7 +166,7 @@ IMsgBuilder & IMsgBuilder::value(string_view val) {
 }
 
 //===========================================================================
-IMsgBuilder & IMsgBuilder::valueRaw(string_view val) {
+IBuilder & IBuilder::valueRaw(string_view val) {
     switch (m_state) {
     case State::kValue:
         break;
@@ -235,20 +187,20 @@ IMsgBuilder & IMsgBuilder::valueRaw(string_view val) {
 }
 
 //===========================================================================
-IMsgBuilder & IMsgBuilder::value(const char val[]) {
+IBuilder & IBuilder::value(const char val[]) {
     return val ? value(string_view{val}) : value(nullptr);
 }
 
 //===========================================================================
-IMsgBuilder & IMsgBuilder::value(bool val) {
+IBuilder & IBuilder::value(bool val) {
     uint8_t out[1] = { val ? kTrue : kFalse };
     return valueRaw({(char *) &out, ::size(out)});
 }
 
 //===========================================================================
-IMsgBuilder & IMsgBuilder::value(double val) {
+IBuilder & IBuilder::value(double val) {
     if (auto ival = int(val); ival == val) {
-        return ivalue(ival);
+        return value(ival);
     } else if (auto fval = float(val); fval == val) {
         unsigned char * in = (unsigned char *) &fval;
         uint8_t out[5] = { kFloat32, in[3], in[2], in[1], in[0] };
@@ -263,9 +215,9 @@ IMsgBuilder & IMsgBuilder::value(double val) {
 }
 
 //===========================================================================
-IMsgBuilder & IMsgBuilder::ivalue(int64_t val) {
+IBuilder & IBuilder::value(int64_t val) {
     if (val >= 0)
-        return uvalue(val);
+        return value(uint64_t(val));
 
     if (val >= -0x1f) {
         uint8_t out[1] = { uint8_t(kNegativeFixIntMask | -val) };
@@ -291,7 +243,7 @@ IMsgBuilder & IMsgBuilder::ivalue(int64_t val) {
 }
 
 //===========================================================================
-IMsgBuilder & IMsgBuilder::uvalue(uint64_t val) {
+IBuilder & IBuilder::value(uint64_t val) {
     if (val <= 0x7f) {
         uint8_t out[1] = { uint8_t(val) };
         return valueRaw({(char *) &out, ::size(out)});
@@ -316,13 +268,13 @@ IMsgBuilder & IMsgBuilder::uvalue(uint64_t val) {
 }
 
 //===========================================================================
-IMsgBuilder & IMsgBuilder::value(nullptr_t) {
+IBuilder & IBuilder::value(nullptr_t) {
     uint8_t out[1] = { kNil };
     return valueRaw({(char *) &out, ::size(out)});
 }
 
 //===========================================================================
-void IMsgBuilder::appendString(string_view val) {
+void IBuilder::appendString(string_view val) {
     auto count = val.size();
     if (count <= 0x1f) {
         append(kFixStrMask | uint8_t(count));
@@ -345,64 +297,27 @@ void IMsgBuilder::appendString(string_view val) {
 
 /****************************************************************************
 *
-*   MsgBuilder
+*   Builder
 *
 ***/
 
 //===========================================================================
-void MsgBuilder::clear() {
-    IMsgBuilder::clear();
+void Builder::clear() {
+    IBuilder::clear();
     m_buf.clear();
 }
 
 //===========================================================================
-void MsgBuilder::append(string_view val) {
+void Builder::append(string_view val) {
     m_buf.append(val);
 }
 
 //===========================================================================
-void MsgBuilder::append(char val) {
+void Builder::append(char val) {
     m_buf.append(1, val);
 }
 
 //===========================================================================
-size_t MsgBuilder::size() const {
+size_t Builder::size() const {
     return m_buf.size();
-}
-
-
-/****************************************************************************
-*
-*   Public API
-*
-***/
-
-//===========================================================================
-IMsgBuilder & Dim::operator<<(IMsgBuilder & out, string_view val) {
-    return out.value(val);
-}
-
-//===========================================================================
-IMsgBuilder & Dim::operator<<(IMsgBuilder & out, int64_t val) {
-    return out.ivalue(val);
-}
-
-//===========================================================================
-IMsgBuilder & Dim::operator<<(IMsgBuilder & out, uint64_t val) {
-    return out.uvalue(val);
-}
-
-//===========================================================================
-IMsgBuilder & Dim::operator<<(IMsgBuilder & out, bool val) {
-    return out.value(val);
-}
-
-//===========================================================================
-IMsgBuilder & Dim::operator<<(IMsgBuilder & out, double val) {
-    return out.value(val);
-}
-
-//===========================================================================
-IMsgBuilder & Dim::operator<<(IMsgBuilder & out, nullptr_t) {
-    return out.value(nullptr);
 }

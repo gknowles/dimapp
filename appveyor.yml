@@ -38,6 +38,7 @@ test_script:
   - bin\http
   - bin\list
   - bin\math
+  - bin\msgpack
   - bin\pargen --test
   - bin\path
   - bin\str

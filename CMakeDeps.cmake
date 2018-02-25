@@ -78,8 +78,10 @@
 # libs/json/jsonbaseparse.h
 # libs/json/pch.cpp
 # libs/json/pch.h
+# libs/msgpack/intern.h
 # libs/msgpack/msgbuilder.cpp
 # libs/msgpack/msgpack.h
+# libs/msgpack/msgparser.cpp
 # libs/msgpack/pch.cpp
 # libs/msgpack/pch.h
 # libs/net/address.cpp
@@ -122,13 +124,13 @@
 # libs/win/pch.cpp
 # libs/win/pch.h
 # libs/win/winaddress.cpp
-# libs/win/winapp.cpp
 # libs/win/winconsole.cpp
 # libs/win/winenv.cpp
 # libs/win/winerror.cpp
 # libs/win/winevent.cpp
 # libs/win/winfile.cpp
 # libs/win/winfilemon.cpp
+# libs/win/wingui.cpp
 # libs/win/winint.h
 # libs/win/winiocp.cpp
 # libs/win/winplatform.cpp
@@ -177,6 +179,9 @@
 # tests/math/mathtest.cpp
 # tests/math/pch.cpp
 # tests/math/pch.h
+# tests/msgpack/msgpacktest.cpp
+# tests/msgpack/pch.cpp
+# tests/msgpack/pch.h
 # tests/path/pathtest.cpp
 # tests/path/pch.cpp
 # tests/path/pch.h
