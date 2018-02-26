@@ -169,26 +169,12 @@ constexpr char * hton64(char * out, int64_t val) {
 
 //===========================================================================
 constexpr char * htonf32(char * out, float val) {
-    auto in = (unsigned char *) &val;
-    out[0] = in[3];
-    out[1] = in[2];
-    out[2] = in[1];
-    out[3] = in[0];
-    return out;
+    return hton32(out, *(uint32_t *) &val);
 }
 
 //===========================================================================
 constexpr char * htonf64(char * out, double val) {
-    auto in = (unsigned char *) &val;
-    out[0] = in[7];
-    out[1] = in[6];
-    out[2] = in[5];
-    out[3] = in[4];
-    out[4] = in[3];
-    out[5] = in[2];
-    out[6] = in[1];
-    out[7] = in[0];
-    return out;
+    return hton64(out, *(uint64_t *) &val);
 }
 
 
