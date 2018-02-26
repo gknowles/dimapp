@@ -136,13 +136,20 @@ public:
     virtual bool startArray(size_t length) = 0;
     virtual bool startMap(size_t length) = 0;
 
+    // Strings longer than 31 bytes are returned via zero or more valuePrefix
+    // calls followed by a final call to value.
     virtual bool valuePrefix(std::string_view val, bool first) = 0;
     virtual bool value(std::string_view val) = 0;
 
-    virtual bool value(bool val) = 0;
+    // Numbers are encoded in the most compact format possible, this means
+    // that they could come out in a different format than how they went in.
+    // For example, a double going in could come out as an int, as long as it
+    // was exactly equivalent.
     virtual bool value(double val) = 0;
-    virtual bool negativeValue(int64_t val) = 0;
-    virtual bool positiveValue(uint64_t val) = 0;
+    virtual bool value(int64_t val) = 0;
+    virtual bool value(uint64_t val) = 0;
+
+    virtual bool value(bool val) = 0;
     virtual bool value(std::nullptr_t) = 0;
 };
 
@@ -178,12 +185,8 @@ private:
         std::string_view src,
         size_t width
     );
-    std::error_code notifyPositive(
-        size_t * pos,
-        std::string_view src,
-        size_t width
-    );
-    std::error_code notifyNegative(
+    template<typename T>
+    std::error_code notifyInt(
         size_t * pos,
         std::string_view src,
         size_t width

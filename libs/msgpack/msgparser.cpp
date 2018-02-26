@@ -70,7 +70,7 @@ error_code StreamParser::notifyArray(
     auto len = getSize(src.data() + *pos + 1, width);
     if (!m_notify.startArray(len))
         return invalid(*pos);
-    *pos += (unsigned) width;
+    *pos += width;
     m_objects += (unsigned) len - 1;
     return {};
 }
@@ -87,13 +87,14 @@ error_code StreamParser::notifyMap(
     auto len = getSize(src.data() + *pos + 1, width);
     if (!m_notify.startMap(len))
         return invalid(*pos);
-    *pos += (unsigned) width;
+    *pos += width;
     m_objects += 2 * (unsigned) len - 1;
     return {};
 }
 
 //===========================================================================
-error_code StreamParser::notifyPositive(
+template<typename T>
+error_code StreamParser::notifyInt(
     size_t * pos,
     string_view src,
     size_t width
@@ -101,31 +102,9 @@ error_code StreamParser::notifyPositive(
     auto count = src.size();
     if (count - *pos < 1 + width)
         return inProgress(*pos);
-    if (!m_notify.positiveValue(
-        (uint64_t) getSize(src.data() + *pos + 1, width))
-    ) {
+    if (!m_notify.value((T) getSize(src.data() + *pos + 1, width)))
         return invalid(*pos);
-    }
-    *pos += (unsigned) width;
-    m_objects -= 1;
-    return {};
-}
-
-//===========================================================================
-error_code StreamParser::notifyNegative(
-    size_t * pos,
-    string_view src,
-    size_t width
-) {
-    auto count = src.size();
-    if (count - *pos < 1 + width)
-        return inProgress(*pos);
-    if (!m_notify.negativeValue(
-        (int64_t) getSize(src.data() + *pos + 1, width))
-    ) {
-        return invalid(*pos);
-    }
-    *pos += (unsigned) width;
+    *pos += width;
     m_objects -= 1;
     return {};
 }
@@ -145,7 +124,7 @@ error_code StreamParser::notifyFloat(
         : ntohf64(base + *pos + 1);
     if (!m_notify.value((double) payload))
         return invalid(*pos);
-    *pos += (unsigned) width;
+    *pos += width;
     m_objects -= 1;
     return {};
 }
@@ -165,7 +144,7 @@ error_code StreamParser::notifyStr(
     if (payload <= avail) {
         if (!m_notify.value(src.substr(*pos + prefix, payload)))
             return invalid(*pos);
-        *pos += (unsigned) prefix + (unsigned) payload - 1;
+        *pos += prefix + payload - 1;
         m_objects -= 1;
         return {};
     } else if (payload <= 31) {
@@ -176,8 +155,9 @@ error_code StreamParser::notifyStr(
         return invalid(*pos);
     m_fmt = kStr8;
     m_bytes = unsigned(payload - avail);
+    *pos = count;
     m_objects -= 1;
-    return inProgress((int) count - 1);
+    return inProgress(*pos);
 }
 
 //===========================================================================
@@ -199,8 +179,9 @@ error_code StreamParser::notifyExt(
     } else {
         m_fmt = kExt8;
         m_bytes = unsigned(payload - avail);
+        *pos = count;
         m_objects -= 1;
-        return inProgress((int) count - 1);
+        return inProgress(*pos);
     }
 }
 
@@ -213,7 +194,7 @@ error_code StreamParser::notifyFixExt(
     auto count = src.size();
     if (count - *pos < 2 + width)
         return inProgress(*pos);
-    *pos += 1 + (unsigned) width;
+    *pos += 1 + width;
     m_objects -= 1;
     return {};
 }
@@ -231,7 +212,8 @@ error_code StreamParser::parse(size_t * used, std::string_view src) {
                         return invalid(pos);
                 }
                 m_bytes -= (unsigned) avail;
-                return inProgress((unsigned) count - 1);
+                pos = count;
+                return inProgress(pos);
             }
 
             if (m_fmt == kStr8) {
@@ -247,7 +229,7 @@ error_code StreamParser::parse(size_t * used, std::string_view src) {
         switch (ch >> 4) {
         case 0: case 1: case 2: case 3:
         case 4: case 5: case 6: case 7: // positive fixint
-            if (!m_notify.positiveValue((uint64_t) ch & 0x7f))
+            if (!m_notify.value((uint64_t) ch & 0x7f))
                 return invalid(pos);
             m_objects -= 1;
             continue;
@@ -273,7 +255,7 @@ error_code StreamParser::parse(size_t * used, std::string_view src) {
         case 12: case 13:
             break;
         case 14: case 15: // negative fixint
-            if (!m_notify.negativeValue((int64_t) ch & 0x1f))
+            if (!m_notify.value((int64_t) ch & 0x1f))
                 return invalid(pos);
             m_objects -= 1;
             continue;
@@ -301,14 +283,14 @@ error_code StreamParser::parse(size_t * used, std::string_view src) {
                 return invalid(pos);
             m_objects -= 1;
             continue;
-        case kInt8: ec = notifyNegative(&pos, src, 1); break;
-        case kInt16: ec = notifyNegative(&pos, src, 2); break;
-        case kInt32: ec = notifyNegative(&pos, src, 4); break;
-        case kInt64: ec = notifyNegative(&pos, src, 8); break;
-        case kUint8: ec = notifyPositive(&pos, src, 1); break;
-        case kUint16: ec = notifyPositive(&pos, src, 2); break;
-        case kUint32: ec = notifyPositive(&pos, src, 4); break;
-        case kUint64: ec = notifyPositive(&pos, src, 8); break;
+        case kInt8: ec = notifyInt<int64_t>(&pos, src, 1); break;
+        case kInt16: ec = notifyInt<int64_t>(&pos, src, 2); break;
+        case kInt32: ec = notifyInt<int64_t>(&pos, src, 4); break;
+        case kInt64: ec = notifyInt<int64_t>(&pos, src, 8); break;
+        case kUint8: ec = notifyInt<uint64_t>(&pos, src, 1); break;
+        case kUint16: ec = notifyInt<uint64_t>(&pos, src, 2); break;
+        case kUint32: ec = notifyInt<uint64_t>(&pos, src, 4); break;
+        case kUint64: ec = notifyInt<uint64_t>(&pos, src, 8); break;
         case kFloat32: ec = notifyFloat(&pos, src, 4); break;
         case kFloat64: ec = notifyFloat(&pos, src, 8); break;
         case kStr8: case kBin8: ec = notifyStr(&pos, src, 1); break;
