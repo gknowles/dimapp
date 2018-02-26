@@ -41,10 +41,10 @@ private:
     bool valuePrefix(std::string_view val, bool first) override;
     bool value(std::string_view val) override;
     bool value(bool val) override;
-    bool value(double val) override;
-    bool negativeValue(int64_t val) override;
-    bool positiveValue(uint64_t val) override;
     bool value(std::nullptr_t) override;
+    bool value(double val) override;
+    bool value(int64_t val) override;
+    bool value(uint64_t val) override;
 
     template<typename T>
     bool addValue(T val);
@@ -139,12 +139,12 @@ bool MsgPack2Json::value(double val) {
 }
 
 //===========================================================================
-bool MsgPack2Json::negativeValue(int64_t val) {
+bool MsgPack2Json::value(int64_t val) {
     return addValue(val);
 }
 
 //===========================================================================
-bool MsgPack2Json::positiveValue(uint64_t val) {
+bool MsgPack2Json::value(uint64_t val) {
     return addValue(val);
 }
 
