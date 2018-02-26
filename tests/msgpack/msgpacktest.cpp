@@ -30,22 +30,20 @@ using namespace Dim;
 
 namespace {
 
-class MsgPack2Json : public MsgPack::IStreamParserNotify {
+class MsgPack2Json : public MsgPack::IParserNotify {
 public:
     MsgPack2Json(CharBuf * out);
 
 private:
     // Inherited via IStreamParserNotify
-    bool startDoc() override;
-    bool endDoc() override;
     bool startArray(size_t length) override;
     bool startMap(size_t length) override;
     bool valuePrefix(std::string_view val, bool first) override;
     bool value(std::string_view val) override;
     bool value(bool val) override;
     bool value(double val) override;
-    bool value(int64_t val) override;
-    bool value(uint64_t val) override;
+    bool negativeValue(int64_t val) override;
+    bool positiveValue(uint64_t val) override;
     bool value(std::nullptr_t) override;
 
     template<typename T>
@@ -64,17 +62,6 @@ MsgPack2Json::MsgPack2Json(CharBuf * out)
     : m_buf{*out}
     , m_bld{m_buf}
 {}
-
-//===========================================================================
-bool MsgPack2Json::startDoc() {
-    m_buf.clear();
-    return true;
-}
-
-//===========================================================================
-bool MsgPack2Json::endDoc() {
-    return true;
-}
 
 //===========================================================================
 bool MsgPack2Json::startArray(size_t length) {
@@ -152,12 +139,12 @@ bool MsgPack2Json::value(double val) {
 }
 
 //===========================================================================
-bool MsgPack2Json::value(int64_t val) {
+bool MsgPack2Json::negativeValue(int64_t val) {
     return addValue(val);
 }
 
 //===========================================================================
-bool MsgPack2Json::value(uint64_t val) {
+bool MsgPack2Json::positiveValue(uint64_t val) {
     return addValue(val);
 }
 
@@ -190,7 +177,7 @@ static void app(int argc, char *argv[]) {
     CharBuf buf2;
     MsgPack2Json m2j(&buf2);
     MsgPack::StreamParser parser(&m2j);
-    unsigned used;
+    size_t used;
     parser.parse(&used, buf.view());
     EXPECT(buf2.view() == "{\"compact\":true,\n\"schema\":0\n}\n");
 

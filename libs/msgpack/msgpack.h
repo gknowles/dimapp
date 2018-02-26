@@ -129,11 +129,9 @@ private:
 *
 ***/
 
-class IStreamParserNotify {
+class IParserNotify {
 public:
-    virtual ~IStreamParserNotify() = default;
-    virtual bool startDoc() = 0;
-    virtual bool endDoc() = 0;
+    virtual ~IParserNotify() = default;
 
     virtual bool startArray(size_t length) = 0;
     virtual bool startMap(size_t length) = 0;
@@ -143,73 +141,77 @@ public:
 
     virtual bool value(bool val) = 0;
     virtual bool value(double val) = 0;
-    virtual bool value(int64_t val) = 0;
-    virtual bool value(uint64_t val) = 0;
+    virtual bool negativeValue(int64_t val) = 0;
+    virtual bool positiveValue(uint64_t val) = 0;
     virtual bool value(std::nullptr_t) = 0;
 };
 
 class StreamParser {
 public:
-    StreamParser(IStreamParserNotify * notify);
+    StreamParser(IParserNotify * notify);
     explicit operator bool() const { return m_errmsg.empty(); }
 
     void clear();
 
     // invalid_argument - EINVAL
     // operation_in_progress - EINPROGRESS
-    std::error_code parse(unsigned * used, std::string_view src);
+    std::error_code parse(size_t * used, std::string_view src);
 
     bool fail(std::string_view errmsg);
 
-    IStreamParserNotify & notify() { return m_notify; }
+    IParserNotify & notify() { return m_notify; }
 
     std::string_view errmsg() const { return m_errmsg; };
     size_t errpos() const;
 
 private:
-    std::error_code invalid(int pos);
-    std::error_code inProgress(int pos);
+    std::error_code invalid(size_t pos);
+    std::error_code inProgress(size_t pos);
 
     std::error_code notifyArray(
-        unsigned * pos,
+        size_t * pos,
         std::string_view src,
         size_t width
     );
     std::error_code notifyMap(
-        unsigned * pos,
+        size_t * pos,
         std::string_view src,
         size_t width
     );
-    template<typename T>
-    std::error_code notifyInt(
-        unsigned * pos,
+    std::error_code notifyPositive(
+        size_t * pos,
+        std::string_view src,
+        size_t width
+    );
+    std::error_code notifyNegative(
+        size_t * pos,
         std::string_view src,
         size_t width
     );
     std::error_code notifyFloat(
-        unsigned * pos,
+        size_t * pos,
         std::string_view src,
         size_t width
     );
     std::error_code notifyStr(
-        unsigned * pos,
+        size_t * pos,
         std::string_view src,
         size_t width
     );
     std::error_code notifyExt(
-        unsigned * pos,
+        size_t * pos,
         std::string_view src,
         size_t width
     );
     std::error_code notifyFixExt(
-        unsigned * pos,
+        size_t * pos,
         std::string_view src,
         size_t width
     );
 
-    IStreamParserNotify & m_notify;
+    IParserNotify & m_notify;
     std::string m_errmsg;
-    unsigned m_pos{0};
+    size_t m_pos{0};
     CharBuf m_buf;
 
     Format m_fmt{};
