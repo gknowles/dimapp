@@ -6,6 +6,8 @@
 
 #include "cppconf/cppconf.h"
 
+#include "math.h"
+
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -53,42 +55,6 @@ void hexFromBytes(std::string & out, std::string_view src, bool append);
 
 /****************************************************************************
 *
-*   Byte swap
-*
-***/
-
-//===========================================================================
-constexpr int16_t byteSwap16(int ival) {
-    auto val = (uint16_t) ival;
-    return ((val & 0xff00) >> 8)
-        | (val << 8);
-}
-
-//===========================================================================
-constexpr int32_t byteSwap32(int ival) {
-    auto val = (uint32_t) ival;
-    return ((val & 0xff000000) >> 24)
-        | ((val & 0x00ff0000) >> 8)
-        | ((val & 0x0000ff00) << 8)
-        | (val << 24);
-}
-
-//===========================================================================
-constexpr int64_t byteSwap64(int64_t ival) {
-    auto val = (uint64_t) ival;
-    return ((val & 0xff00'0000'0000'0000) >> 56)
-        | ((val & 0x00ff'0000'0000'0000) >> 40)
-        | ((val & 0x0000'ff00'0000'0000) >> 24)
-        | ((val & 0x0000'00ff'0000'0000) >> 8)
-        | ((val & 0x0000'0000'ff00'0000) << 8)
-        | ((val & 0x0000'0000'00ff'0000) << 24)
-        | ((val & 0x0000'0000'0000'ff00) << 40)
-        | (val << 56);
-}
-
-
-/****************************************************************************
-*
 *   Endian conversions
 *
 ***/
@@ -102,7 +68,7 @@ constexpr int ntoh8(const void * vptr) {
 //===========================================================================
 constexpr int ntoh16(const void * vptr) {
     auto val = *static_cast<const uint16_t *>(vptr);
-    return byteSwap16(val);
+    return bswap16(val);
 }
 
 //===========================================================================
@@ -116,13 +82,13 @@ constexpr int ntoh24(const void * vptr) {
 //===========================================================================
 constexpr int ntoh32(const void * vptr) {
     auto val = *static_cast<const int32_t *>(vptr);
-    return byteSwap32(val);
+    return bswap32(val);
 }
 
 //===========================================================================
 constexpr int64_t ntoh64(const void * vptr) {
     auto val = *static_cast<const uint64_t *>(vptr);
-    return byteSwap64(val);
+    return bswap64(val);
 }
 
 //===========================================================================
@@ -143,7 +109,7 @@ constexpr double ntohf64(const void * vptr) {
 
 //===========================================================================
 constexpr char * hton16(char * out, int val) {
-    *(int16_t *)out = byteSwap16(val);
+    *(int16_t *)out = bswap16(val);
     return out;
 }
 
@@ -157,13 +123,13 @@ constexpr char * hton24(char * out, int val) {
 
 //===========================================================================
 constexpr char * hton32(char * out, int val) {
-    *(int32_t *)out = byteSwap32(val);
+    *(int32_t *)out = bswap32(val);
     return out;
 }
 
 //===========================================================================
 constexpr char * hton64(char * out, int64_t val) {
-    *(int64_t *)out = byteSwap64(val);
+    *(int64_t *)out = bswap64(val);
     return out;
 }
 

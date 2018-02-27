@@ -5,6 +5,7 @@
 
 // Public header
 #include "core/math.h"
+#include "core/util.h"
 
 // External library public headers
 #include "app/app.h"

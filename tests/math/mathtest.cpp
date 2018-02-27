@@ -49,6 +49,12 @@ static void app(int argc, char *argv[]) {
     num = leadingZeroBits(0x8000'0000'0000'0000);
     EXPECT(num == 0);
 
+    char buf[100];
+    double dval = 1.0f;
+    auto ptr = htonf64(buf, dval);
+    auto dout = ntohf64(ptr);
+    EXPECT(dval == dout);
+
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);
         cerr << "*** TEST FAILURES: " << errs << endl;
