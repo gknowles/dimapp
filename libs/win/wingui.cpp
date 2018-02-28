@@ -82,7 +82,7 @@ static void moveList(HWND parent) {
 
 //===========================================================================
 static void setItemText(HWND wnd, int item, int col, string_view text) {
-    char tmp[256];
+    char tmp[256] = {};
     LVITEM li = {};
     li.iItem = item;
     li.iSubItem = col;

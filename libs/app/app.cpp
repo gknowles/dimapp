@@ -87,7 +87,13 @@ static ConsoleLogger s_consoleLogger;
 
 //===========================================================================
 void ConsoleLogger::onLog(LogType type, string_view msg) {
-    auto buf = (char *) alloca(msg.size() + 1);
+    char stkbuf[256];
+    unique_ptr<char[]> heapbuf;
+    auto buf = stkbuf;
+    if (msg.size() >= size(stkbuf)) {
+        heapbuf.reset(new char[msg.size() + 1]);
+        buf = heapbuf.get();
+    }
     memcpy(buf, msg.data(), msg.size());
     buf[msg.size()] = '\n';
     if (type == kLogTypeError) {

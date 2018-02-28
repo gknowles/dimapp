@@ -316,7 +316,7 @@ static bool isSelfSigned(const CERT_CONTEXT * cert) {
 
 //===========================================================================
 static bool hasEnhancedUsage(const CERT_CONTEXT * cert, string_view oid) {
-    DWORD cb;
+    DWORD cb{0};
     if (!CertGetEnhancedKeyUsage(
         cert,
         0, // flags

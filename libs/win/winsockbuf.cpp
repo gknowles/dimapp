@@ -130,8 +130,10 @@ static void createEmptyBuffer() {
         MEM_COMMIT | MEM_RESERVE | fLargePages,
         PAGE_READWRITE
     );
-    if (!buf->base)
+    if (!buf->base) {
         logMsgCrash() << "VirtualAlloc(sockbuf): " << WinError{};
+        __assume(0);
+    }
 
     buf->id = s_rio.RIORegisterBuffer(buf->base, (DWORD)bytes);
     if (buf->id == RIO_INVALID_BUFFERID)

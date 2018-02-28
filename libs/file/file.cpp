@@ -63,8 +63,10 @@ bool FileAppendStream::attach(Dim::FileHandle f) {
         return false;
 
     m_file = f;
-    if (!m_buffers)
+    if (!m_buffers) {
         m_buffers = (char *) aligned_alloc(m_bufLen, m_numBufs * m_bufLen);
+        __assume(m_buffers);
+    }
 
     auto used = m_filePos % m_bufLen;
     m_buf = string_view{m_buffers + used, m_bufLen - used};

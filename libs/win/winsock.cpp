@@ -194,8 +194,10 @@ bool SocketBase::createQueue() {
     ctype.Iocp.IocpHandle = winIocpHandle();
     ctype.Iocp.Overlapped = &overlapped();
     m_cq = s_rio.RIOCreateCompletionQueue(m_maxReads + m_maxWrites, &ctype);
-    if (m_cq == RIO_INVALID_CQ)
+    if (m_cq == RIO_INVALID_CQ) {
         logMsgCrash() << "RIOCreateCompletionQueue: " << WinError{};
+        __assume(0);
+    }
 
     // create request queue
     m_rq = s_rio.RIOCreateRequestQueue(
