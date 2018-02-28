@@ -261,12 +261,14 @@ void HttpSocket::onSocketDestroy() {
 
 //===========================================================================
 bool HttpSocket::onSocketAccept(const AppSocketInfo & info) {
+    scoped_lock<mutex> lk{s_mut};
     m_conn = httpAccept();
     return true;
 }
 
 //===========================================================================
 void HttpSocket::onSocketDisconnect() {
+    scoped_lock<mutex> lk{s_mut};
     httpClose(m_conn);
     m_conn = {};
 }
@@ -275,7 +277,11 @@ void HttpSocket::onSocketDisconnect() {
 void HttpSocket::onSocketRead(AppSocketData & data) {
     CharBuf out;
     vector<unique_ptr<HttpMsg>> msgs;
-    bool result = httpRecv(&out, &msgs, m_conn, data.data, data.bytes);
+    bool result;
+    {
+        scoped_lock<mutex> lk{s_mut};
+        result = httpRecv(&out, &msgs, m_conn, data.data, data.bytes);
+    }
     if (!out.empty())
         socketWrite(this, out);
     if (!result) {
