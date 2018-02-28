@@ -54,6 +54,13 @@ static void app(int argc, char *argv[]) {
     auto ptr = htonf64(buf, dval);
     auto dout = ntohf64(ptr);
     EXPECT(dval == dout);
+    ptr = hton16(buf, 32000);
+    auto o16 = ntoh16(ptr);
+    EXPECT(o16 == 32000);
+    o16 = ntoh16(hton16(buf, 33000));
+    EXPECT(o16 == 33000);
+    o16 = ntoh16(hton16(buf, (unsigned) -2));
+    EXPECT(o16 == 65534);
 
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);

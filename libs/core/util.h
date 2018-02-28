@@ -60,19 +60,19 @@ void hexFromBytes(std::string & out, std::string_view src, bool append);
 ***/
 
 //===========================================================================
-constexpr int ntoh8(const void * vptr) {
+constexpr uint8_t ntoh8(const void * vptr) {
     auto ptr = static_cast<const char *>(vptr);
-    return (uint32_t)(uint8_t)ptr[0];
+    return (uint8_t)ptr[0];
 }
 
 //===========================================================================
-constexpr int ntoh16(const void * vptr) {
+constexpr uint16_t ntoh16(const void * vptr) {
     auto val = *static_cast<const uint16_t *>(vptr);
     return bswap16(val);
 }
 
 //===========================================================================
-constexpr int ntoh24(const void * vptr) {
+constexpr uint32_t ntoh24(const void * vptr) {
     auto ptr = static_cast<const char *>(vptr);
     return ((uint32_t)(uint8_t)ptr[0] << 16)
         + ((uint32_t)(uint8_t)ptr[1] << 8)
@@ -80,13 +80,13 @@ constexpr int ntoh24(const void * vptr) {
 }
 
 //===========================================================================
-constexpr int ntoh32(const void * vptr) {
-    auto val = *static_cast<const int32_t *>(vptr);
+constexpr uint32_t ntoh32(const void * vptr) {
+    auto val = *static_cast<const uint32_t *>(vptr);
     return bswap32(val);
 }
 
 //===========================================================================
-constexpr int64_t ntoh64(const void * vptr) {
+constexpr uint64_t ntoh64(const void * vptr) {
     auto val = *static_cast<const uint64_t *>(vptr);
     return bswap64(val);
 }
@@ -108,13 +108,13 @@ constexpr double ntohf64(const void * vptr) {
 }
 
 //===========================================================================
-constexpr char * hton16(char * out, int val) {
-    *(int16_t *)out = bswap16(val);
+constexpr char * hton16(char * out, unsigned val) {
+    *(uint16_t *)out = bswap16(val);
     return out;
 }
 
 //===========================================================================
-constexpr char * hton24(char * out, int val) {
+constexpr char * hton24(char * out, unsigned val) {
     *out++ = (val >> 16) & 0xff;
     *out++ = (val >> 8) & 0xff;
     *out++ = val & 0xff;
@@ -122,14 +122,14 @@ constexpr char * hton24(char * out, int val) {
 }
 
 //===========================================================================
-constexpr char * hton32(char * out, int val) {
-    *(int32_t *)out = bswap32(val);
+constexpr char * hton32(char * out, unsigned val) {
+    *(uint32_t *)out = bswap32(val);
     return out;
 }
 
 //===========================================================================
-constexpr char * hton64(char * out, int64_t val) {
-    *(int64_t *)out = bswap64(val);
+constexpr char * hton64(char * out, uint64_t val) {
+    *(uint64_t *)out = bswap64(val);
     return out;
 }
 

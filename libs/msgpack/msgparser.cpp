@@ -17,14 +17,26 @@ using namespace MsgPack;
 ***/
 
 //===========================================================================
-constexpr size_t getSize(const void * ptr, size_t width) {
+constexpr uint64_t getUnsigned(const void * ptr, size_t width) {
     switch (width) {
     case 1: return *(uint8_t*) ptr;
     case 2: return ntoh16(ptr);
     case 4: return ntoh32(ptr);
     case 8: return ntoh64(ptr);
     }
-    assert(!"size has invalid bit-width");
+    assert(!"unsigned int has invalid bit-width");
+    return 0;
+}
+
+//===========================================================================
+constexpr int64_t getSigned(const void * ptr, size_t width) {
+    switch (width) {
+    case 1: return *(int8_t*) ptr;
+    case 2: return (int16_t) ntoh16(ptr);
+    case 4: return (int32_t) ntoh32(ptr);
+    case 8: return ntoh64(ptr);
+    }
+    assert(!"signed int has invalid bit-width");
     return 0;
 }
 
@@ -67,7 +79,7 @@ error_code StreamParser::notifyArray(
     auto count = src.size();
     if (count - *pos < 1 + width)
         return inProgress(*pos);
-    auto len = getSize(src.data() + *pos + 1, width);
+    auto len = getUnsigned(src.data() + *pos + 1, width);
     if (!m_notify.startArray(len))
         return invalid(*pos);
     *pos += width;
@@ -84,7 +96,7 @@ error_code StreamParser::notifyMap(
     auto count = src.size();
     if (count - *pos < 1 + width)
         return inProgress(*pos);
-    auto len = getSize(src.data() + *pos + 1, width);
+    auto len = getUnsigned(src.data() + *pos + 1, width);
     if (!m_notify.startMap(len))
         return invalid(*pos);
     *pos += width;
@@ -102,7 +114,13 @@ error_code StreamParser::notifyInt(
     auto count = src.size();
     if (count - *pos < 1 + width)
         return inProgress(*pos);
-    if (!m_notify.value((T) getSize(src.data() + *pos + 1, width)))
+    T val;
+    if constexpr (is_same_v<T, uint64_t>) {
+        val = getUnsigned(src.data() + *pos + 1, width);
+    } else {
+        val = getSigned(src.data() + *pos + 1, width);
+    }
+    if (!m_notify.value(val))
         return invalid(*pos);
     *pos += width;
     m_objects -= 1;
@@ -140,7 +158,7 @@ error_code StreamParser::notifyStr(
     auto avail = count - *pos - prefix;
     if ((int) avail < 0)
         return inProgress(*pos);
-    auto payload = getSize(src.data() + *pos + 1, width);
+    auto payload = getUnsigned(src.data() + *pos + 1, width);
     if (payload <= avail) {
         if (!m_notify.value(src.substr(*pos + prefix, payload)))
             return invalid(*pos);
@@ -171,7 +189,7 @@ error_code StreamParser::notifyExt(
     auto avail = count - *pos - prefix;
     if ((int) avail < 0)
         return inProgress(*pos);
-    auto payload = getSize(src.data() + *pos + 1, width);
+    auto payload = getUnsigned(src.data() + *pos + 1, width);
     if (payload <= avail) {
         *pos += prefix + payload - 1;
         m_objects -= 1;
