@@ -341,8 +341,31 @@ void AppXmlNotify::onConfigChange(const XDocument & doc) {
         key.storeName = attrValue(&xstore, "name", "My");
         key.storeLoc = attrValue(&xstore, "location", "Current User");
         for (auto && xcert : elems(&xstore, "Certificate")) {
-            key.subjectKeyIdentifier = attrValue(&xcert, "subjectKeyId", "");
-            keys.push_back(key);
+            if (auto val = attrValue(&xcert, "thumbprint")) {
+                key.type = CertKey::kThumbprint;
+                key.value = val;
+                keys.push_back(key);
+            }
+            if (auto val = attrValue(&xcert, "subjectKeyId")) {
+                key.type = CertKey::kSubjectKeyIdentifier;
+                key.value = val;
+                keys.push_back(key);
+            }
+            if (auto val = attrValue(&xcert, "serialNumber")) {
+                if (auto issuer = attrValue(&xcert, "issuer")) {
+                    key.type = CertKey::kSerialNumber;
+                    key.value = val;
+                    key.issuer = issuer;
+                    keys.push_back(key);
+                    key.issuer = {};
+                } else {
+                    logMsgError() << "Certificate reference with @issuer "
+                        "but no @serialNUmber";
+                }
+            } else {
+                    logMsgError() << "Certificate reference with @serialNumber "
+                        "but no @issuer";
+            }
         }
     }
 

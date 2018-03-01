@@ -177,25 +177,6 @@ static const CERT_CONTEXT * makeCert(string_view issuerName) {
         FileTimeToSystemTime(&ft, &startTime);
     }
 
-    CERT_ALT_NAME_ENTRY altNames[2];
-    altNames[0].dwAltNameChoice = CERT_ALT_NAME_DNS_NAME;
-    altNames[0].pwszDNSName = const_cast<LPWSTR>(L"kcollege");
-    altNames[1].dwAltNameChoice = CERT_ALT_NAME_DNS_NAME;
-    altNames[1].pwszDNSName = const_cast<LPWSTR>(L"kpower");
-    CERT_ALT_NAME_INFO ni;
-    ni.cAltEntry = (DWORD) size(altNames);
-    ni.rgAltEntry = altNames;
-
-    string extSanData;
-    CERT_EXTENSION extSan;
-    extSan.pszObjId = (char *) szOID_SUBJECT_ALT_NAME2;
-    extSan.fCritical = false;
-    encodeBlob(extSan.Value, extSanData, X509_ALTERNATE_NAME, &ni);
-
-    CERT_EXTENSIONS exts;
-    exts.cExtension = 1;
-    exts.rgExtension = &extSan;
-
     const CERT_CONTEXT * cert = CertCreateSelfSignCertificate(
         nkey,
         issuer,
@@ -204,7 +185,7 @@ static const CERT_CONTEXT * makeCert(string_view issuerName) {
         &sigalgo,
         &startTime,
         &endTime, // end time - defaults to 1 year
-        &exts // extensions
+        NULL // extensions
     );
     if (!cert) {
         err.set();
@@ -349,23 +330,47 @@ static bool hasEnhancedUsage(const CERT_CONTEXT * cert, string_view oid) {
 //===========================================================================
 static void addCerts(
     vector<unique_ptr<const CERT_CONTEXT>> & certs,
-    string_view storeName,
-    CertLocation storeLoc,
-    string_view subjectKeyId
+    const CertKey & key
 ) {
-    string subjectKeyBytes;
-    if (!hexToBytes(subjectKeyBytes, subjectKeyId, false)) {
-        logMsgError() << "findCert, malformed subject key identifier, {"
-            << subjectKeyId << "}";
+    string idBytes;
+    if (!hexToBytes(idBytes, key.value, false)) {
+        logMsgError() << "findCert, malformed search key, {"
+            << key.value << "}";
         return;
     }
-    CRYPT_DATA_BLOB subKeyBlob;
-    subKeyBlob.cbData = (DWORD) subjectKeyBytes.size();
-    subKeyBlob.pbData = (BYTE *) subjectKeyBytes.data();
+    string issuerBytes;
+    CertName issuer;
+    CERT_ID certId;
+    switch (key.type) {
+    case CertKey::kSubjectKeyIdentifier:
+        certId.dwIdChoice = CERT_ID_KEY_IDENTIFIER;
+        certId.KeyId.cbData = (DWORD) idBytes.size();
+        certId.KeyId.pbData = (BYTE *) idBytes.data();
+        break;
+    case CertKey::kThumbprint:
+        certId.dwIdChoice = CERT_ID_SHA1_HASH;
+        certId.HashId.cbData = (DWORD) idBytes.size();
+        certId.HashId.pbData = (BYTE *) idBytes.data();
+        break;
+    case CertKey::kSerialNumber:
+        certId.dwIdChoice = CERT_ID_ISSUER_SERIAL_NUMBER;
+        reverse(idBytes.begin(), idBytes.end());
+        certId.IssuerSerialNumber.SerialNumber.cbData = (DWORD) idBytes.size();
+        certId.IssuerSerialNumber.SerialNumber.pbData = (BYTE *) idBytes.data();
+        if (!issuer.parse(key.issuer.data())) {
+            logMsgError() << "findCert, malformed issuer, {"
+                << key.issuer << "}";
+            return;
+        }
+        certId.IssuerSerialNumber.Issuer = *issuer;
+        break;
+    default:
+        return;
+    }
 
-    auto wstore = toWstring(storeName);
+    auto wstore = toWstring(key.storeName);
     auto hstore = HCERTSTORE{};
-    DWORD flags = (storeLoc << CERT_SYSTEM_STORE_LOCATION_SHIFT);
+    DWORD flags = (key.storeLoc << CERT_SYSTEM_STORE_LOCATION_SHIFT);
     hstore = CertOpenStore(
         CERT_STORE_PROV_SYSTEM,
         NULL,
@@ -375,8 +380,8 @@ static void addCerts(
     );
     if (!hstore) {
         WinError err;
-        logMsgError() << "CertOpenStore('" << storeName << "',"
-            << storeLoc.view() << "): " << err;
+        logMsgError() << "CertOpenStore('" << key.storeName << "',"
+            << key.storeLoc.view() << "): " << err;
         return;
     }
 
@@ -386,8 +391,8 @@ static void addCerts(
             hstore,
             X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,
             0, // flags
-            CERT_FIND_KEY_IDENTIFIER,
-            &subKeyBlob,
+            CERT_FIND_CERT_ID,
+            &certId,
             cert
         );
         if (!cert) {
@@ -438,14 +443,8 @@ static void getCerts(
 ) {
     certs.clear();
     auto ekeys = keys + numKeys;
-    for (auto ptr = keys; ptr != ekeys; ++ptr) {
-        addCerts(
-            certs,
-            ptr->storeName,
-            ptr->storeLoc,
-            ptr->subjectKeyIdentifier
-        );
-    }
+    for (auto ptr = keys; ptr != ekeys; ++ptr)
+        addCerts(certs, *ptr);
 
     // no certs found? try to make a new one
     if (certs.empty()) {
@@ -482,6 +481,34 @@ void std::default_delete<CredHandle>::operator()(CredHandle * ptr) const {
         SecInvalidateHandle(ptr);
     }
     delete ptr;
+}
+
+
+/****************************************************************************
+*
+*   CertKey
+*
+***/
+
+namespace {
+
+constexpr TokenTable::Token s_certKeyTypes[] = {
+    { CertKey::kSubjectKeyIdentifier, "subjectKeyId" },
+    { CertKey::kThumbprint, "thumbprint" },
+    { CertKey::kSerialNumber, "serialNumber" },
+};
+const TokenTable s_certKeyTbl(s_certKeyTypes);
+
+} // namespace
+
+//===========================================================================
+const char * Dim::toString(CertKey::Type type, const char def[]) {
+    return tokenTableGetName(s_certKeyTbl, type, def);
+}
+
+//===========================================================================
+CertKey::Type Dim::fromString(std::string_view src, CertKey::Type def) {
+    return tokenTableGetEnum(s_certKeyTbl, src, def);
 }
 
 
@@ -535,13 +562,14 @@ CERT_NAME_BLOB CertName::release() {
 
 //===========================================================================
 bool CertName::parse(const char src[]) {
-    const char * errstr;
+    const wchar_t * errstr;
+    auto wsrc = toWstring(src);
 
     // get length of blob
-    if (!CertStrToName(
+    if (!CertStrToNameW(
         X509_ASN_ENCODING,
-        src,
-        CERT_X500_NAME_STR,
+        wsrc.data(),
+        CERT_X500_NAME_STR | CERT_NAME_STR_FORCE_UTF8_DIR_STR_FLAG,
         NULL, // reserved
         NULL, // pbData
         &m_blob.cbData,
@@ -552,10 +580,10 @@ bool CertName::parse(const char src[]) {
     }
     // get blob
     m_blob.pbData = (BYTE *) malloc(m_blob.cbData);
-    if (!CertStrToName(
+    if (!CertStrToNameW(
         X509_ASN_ENCODING,
-        src,
-        CERT_X500_NAME_STR,
+        wsrc.data(),
+        CERT_X500_NAME_STR | CERT_NAME_STR_FORCE_UTF8_DIR_STR_FLAG,
         NULL, // reserved
         m_blob.pbData,
         &m_blob.cbData,

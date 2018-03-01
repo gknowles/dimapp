@@ -66,10 +66,21 @@ private:
 };
 
 struct CertKey {
+    enum Type {
+        kInvalid,
+        kSubjectKeyIdentifier,
+        kSerialNumber,
+        kThumbprint,
+    };
+
     std::string_view storeName;
     CertLocation storeLoc;
-    std::string_view subjectKeyIdentifier;
+    Type type{kInvalid};
+    std::string_view value;
+    std::string_view issuer; // used with kSerialNumber
 };
+const char * toString(CertKey::Type type, const char def[] = nullptr);
+CertKey::Type fromString(std::string_view src, CertKey::Type def);
 
 std::unique_ptr<CredHandle> iWinTlsCreateCred(
     const CertKey keys[],
