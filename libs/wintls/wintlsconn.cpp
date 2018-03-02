@@ -362,7 +362,7 @@ void AppXmlNotify::onConfigChange(const XDocument & doc) {
                     logMsgError() << "Certificate reference with @issuer "
                         "but no @serialNUmber";
                 }
-            } else {
+            } else if (auto issuer = attrValue(&xcert, "issuer")) {
                     logMsgError() << "Certificate reference with @serialNumber "
                         "but no @issuer";
             }
