@@ -17,9 +17,11 @@
 #include <algorithm>
 #include <atomic>
 #include <cassert>
+#include <csignal>
 #include <limits>
 #include <list>
 #include <mutex>
+#include <new.h>
 #include <shared_mutex>
 #include <thread>
 #include <unordered_map>
@@ -38,12 +40,14 @@
 
 // must come after Windows.h
 #include <CommCtrl.h> // ListView
+#include <DbgHelp.h>
 #include <Psapi.h>
 
 // must come after WinSock2.h
 #include <mstcpip.h> // SIO_LOOPBACK_FAST_PATH
 #include <MSWSock.h> // Registered IO
 
+#pragma comment(lib, "Dbghelp.lib")
 #pragma comment(lib, "synchronization.lib") // WaitOnAddress
 #pragma comment(lib, "ws2_32.lib")
 #pragma pack(pop)

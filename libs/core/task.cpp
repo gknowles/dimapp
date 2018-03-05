@@ -84,6 +84,7 @@ static atomic_bool s_running;
 
 //===========================================================================
 static void taskQueueThread(TaskQueue * ptr) {
+    iThreadInitialize();
     TaskQueue & q{*ptr};
     iThreadSetName(q.name);
     bool more{true};

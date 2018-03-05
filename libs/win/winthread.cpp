@@ -75,6 +75,11 @@ string ThreadName::get() const {
 ***/
 
 //===========================================================================
+void Dim::iThreadInitialize() {
+    winCrashThreadInitialize();
+}
+
+//===========================================================================
 void Dim::iThreadSetName(string_view name) {
     static ThreadName s_name;
     s_name.set(name);

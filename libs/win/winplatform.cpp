@@ -257,6 +257,7 @@ static void registerWebAdmin() {
 void Dim::iPlatformInitialize() {
     winErrorInitialize();
     winEnvInitialize();
+    winCrashInitialize();
     winIocpInitialize();
     winServiceInitialize();
     winGuiInitialize();

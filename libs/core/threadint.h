@@ -9,6 +9,8 @@
 namespace Dim {
 
 // Thread
+void iThreadInitialize();
+
 void iThreadSetName(std::string_view name);
 std::string iThreadGetName();
 

@@ -128,6 +128,25 @@ bool winEnablePrivilege(std::string_view name, bool enable = true);
 
 /****************************************************************************
 *
+*   Crash
+*
+***/
+
+void winCrashInitialize();
+void winCrashThreadInitialize();
+
+
+/****************************************************************************
+*
+*   Env
+*
+***/
+
+void winEnvInitialize();
+
+
+/****************************************************************************
+*
 *   Event
 *
 ***/
@@ -201,15 +220,6 @@ bool winIocpBindHandle(HANDLE handle);
 ***/
 
 void winServiceInitialize();
-
-
-/****************************************************************************
-*
-*   Env
-*
-***/
-
-void winEnvInitialize();
 
 
 } // namespace

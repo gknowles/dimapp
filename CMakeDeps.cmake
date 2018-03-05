@@ -125,6 +125,7 @@
 # libs/win/pch.h
 # libs/win/winaddress.cpp
 # libs/win/winconsole.cpp
+# libs/win/wincrash.cpp
 # libs/win/winenv.cpp
 # libs/win/winerror.cpp
 # libs/win/winevent.cpp

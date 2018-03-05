@@ -139,7 +139,6 @@ static int doMain(int argc, char * argv[]) {
         | _CRTDBG_DELAY_FREE_MEM_DF
     );
     // _CrtSetBreakAlloc(6909);
-    _set_error_mode(_OUT_TO_MSGBOX);
 
     return appRun(app, argc, argv, fAppServer | fAppWithConsole);
 }
