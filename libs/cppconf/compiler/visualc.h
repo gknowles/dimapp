@@ -11,6 +11,7 @@
 
 // disable std::byte because it conflicts with some of the Windows SDK headers
 #define _HAS_STD_BYTE 0
+#define _SILENCE_CXX17_STRSTREAM_DEPRECATION_WARNING
 
 #ifndef DIMAPP_LIB_KEEP_MACROS
 #pragma warning(push)

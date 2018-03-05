@@ -6,8 +6,8 @@
 
 #include "cppconf/cppconf.h"
 
-#include <sstream>
 #include <string_view>
+#include <strstream>
 
 namespace Dim {
 
@@ -28,7 +28,7 @@ enum LogType {
 
 namespace Detail {
 
-class Log : public std::ostringstream {
+class Log : public std::ostrstream {
 public:
     Log(LogType type);
     Log(Log && from);
@@ -36,6 +36,7 @@ public:
 
 private:
     LogType m_type;
+    char m_buf[256];
 };
 
 class LogCrash : public Log {

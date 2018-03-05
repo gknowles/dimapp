@@ -116,6 +116,8 @@ LogMsgScope::~LogMsgScope() {
 //===========================================================================
 void DefaultLogger::onLog(LogType type, string_view msg) {
     cout.write(msg.data(), msg.size());
+    if (type == kLogTypeCrash)
+        cout.flush();
 }
 
 
@@ -127,15 +129,19 @@ void DefaultLogger::onLog(LogType type, string_view msg) {
 
 //===========================================================================
 Detail::Log::Log(LogType type)
-    : m_type(type) {}
+    : ostrstream(m_buf, size(m_buf) - 1)
+    , m_type(type)
+{}
 
 //===========================================================================
 Detail::Log::Log(Log && from)
-    : ostringstream(static_cast<ostringstream &&>(from))
-    , m_type(from.m_type) {}
+    : ostrstream(static_cast<ostrstream &&>(from))
+    , m_type(from.m_type)
+{}
 
 //===========================================================================
 Detail::Log::~Log() {
+    put(0);
     auto s = str();
     logMsg(m_type, s);
 }
