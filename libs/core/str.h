@@ -308,9 +308,42 @@ constexpr size_t utfBomSize(UtfType type) {
 // which includes being empty.
 char32_t popFrontUnicode(std::string_view * src);
 
-void appendUnicode(std::string * out, char32_t ch);
 size_t unicodeLen(std::string_view src);
 std::string toString(std::wstring_view src);
+
+struct ostream_utf8_return { std::wstring_view src; };
+constexpr ostream_utf8_return utf8(std::wstring_view src) {
+    return {src};
+}
+std::ostream & operator<<(std::ostream & os, const ostream_utf8_return & out);
+
+//===========================================================================
+template<typename OutIt>
+constexpr OutIt copy_char(std::wstring_view in, OutIt out) {
+    char32_t popFrontUnicode(std::wstring_view * src);
+    while (auto ch = popFrontUnicode(&in)) {
+        if (ch < 0x80) {
+            *out++ = (unsigned char) ch;
+        } else if (ch < 0x800) {
+            *out++ = (unsigned char) ((ch >> 6) + 0xc0);
+            *out++ = (unsigned char) ((ch & 0x3f) + 0x80);
+        } else  if (ch < 0xd800 || ch > 0xdfff && ch < 0x10'000) {
+            *out++ = (unsigned char) ((ch >> 12) + 0xe0);
+            *out++ = (unsigned char) (((ch >> 6) & 0x3f) + 0x80);
+            *out++ = (unsigned char) ((ch & 0x3f) + 0x80);
+        } else if (ch >= 0x10'000 && ch < 0x11'0000) {
+            *out++ = (unsigned char) ((ch >> 18) + 0xf0);
+            *out++ = (unsigned char) (((ch >> 12) & 0x3f) + 0x80);
+            *out++ = (unsigned char) (((ch >> 6) & 0x3f) + 0x80);
+            *out++ = (unsigned char) ((ch & 0x3f) + 0x80);
+        } else {
+            assert(ch >= 0xd800 && ch <= 0xdfff || ch >= 0x11'000);
+            assert(!"invalid Unicode char");
+        }
+    }
+    return out;
+}
+
 
 //---------------------------------------------------------------------------
 // UTF-16
@@ -320,8 +353,23 @@ std::string toString(std::wstring_view src);
 // which includes being empty.
 char32_t popFrontUnicode(std::wstring_view * src);
 
-void appendUnicode(std::wstring * out, char32_t ch);
 size_t unicodeLen(std::wstring_view src);
 std::wstring toWstring(std::string_view src);
+
+//===========================================================================
+template<typename OutIt>
+constexpr OutIt copy_wchar(std::string_view in, OutIt out) {
+    while (auto ch = popFrontUnicode(&in)) {
+        if (ch <= 0xffff) {
+            *out++ = (wchar_t) ch;
+        } else if (ch <= 0x10ffff) {
+            *out++ = (wchar_t) ((ch >> 10) + 0xd800);
+            *out++ = (wchar_t) ((ch & 0x3ff) + 0xdc00);
+        } else {
+            assert(!"invalid Unicode char");
+        }
+    }
+    return out;
+}
 
 } // namespace

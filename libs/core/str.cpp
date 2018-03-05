@@ -495,28 +495,6 @@ char32_t Dim::popFrontUnicode(string_view * src) {
 }
 
 //===========================================================================
-void Dim::appendUnicode(string * out, char32_t ch) {
-    if (ch < 0x80) {
-        *out += (unsigned char) ch;
-    } else if (ch < 0x800) {
-        *out += (unsigned char) ((ch >> 6) + 0xc0);
-        *out += (unsigned char) ((ch & 0x3f) + 0x80);
-    } else  if (ch < 0xd800 || ch > 0xdfff && ch < 0x10'000) {
-        *out += (unsigned char) ((ch >> 12) + 0xe0);
-        *out += (unsigned char) (((ch >> 6) & 0x3f) + 0x80);
-        *out += (unsigned char) ((ch & 0x3f) + 0x80);
-    } else if (ch >= 0x10'000 && ch < 0x11'0000) {
-        *out += (unsigned char) ((ch >> 18) + 0xf0);
-        *out += (unsigned char) (((ch >> 12) & 0x3f) + 0x80);
-        *out += (unsigned char) (((ch >> 6) & 0x3f) + 0x80);
-        *out += (unsigned char) ((ch & 0x3f) + 0x80);
-    } else {
-        assert(ch >= 0xd800 && ch <= 0xdfff || ch >= 0x11'000);
-        assert(!"invalid Unicode char");
-    }
-}
-
-//===========================================================================
 size_t Dim::unicodeLen(string_view src) {
     size_t len = 0;
     for (unsigned char ch : src) {
@@ -531,9 +509,14 @@ size_t Dim::unicodeLen(string_view src) {
 //===========================================================================
 string Dim::toString(wstring_view src) {
     string out;
-    while (auto val = popFrontUnicode(&src))
-        appendUnicode(&out, val);
+    copy_char(src, back_inserter(out));
     return out;
+}
+
+//===========================================================================
+ostream & Dim::operator<<(ostream & os, const ostream_utf8_return & out) {
+    copy_char(out.src, ostreambuf_iterator<char>(os));
+    return os;
 }
 
 
@@ -565,18 +548,6 @@ char32_t Dim::popFrontUnicode(wstring_view * src) {
 }
 
 //===========================================================================
-void Dim::appendUnicode(wstring * out, char32_t ch) {
-    if (ch <= 0xffff) {
-        *out += (wchar_t) ch;
-    } else if (ch <= 0x10ffff) {
-        *out += (wchar_t) ((ch >> 10) + 0xd800);
-        *out += (wchar_t) ((ch & 0x3ff) + 0xdc00);
-    } else {
-        assert(!"invalid Unicode char");
-    }
-}
-
-//===========================================================================
 size_t Dim::unicodeLen(wstring_view src) {
     size_t len = 0;
     for (auto && ch : src) {
@@ -591,7 +562,6 @@ size_t Dim::unicodeLen(wstring_view src) {
 //===========================================================================
 wstring Dim::toWstring(string_view src) {
     wstring out;
-    while (auto val = popFrontUnicode(&src))
-        appendUnicode(&out, val);
+    copy_wchar(src, back_inserter(out));
     return out;
 }
