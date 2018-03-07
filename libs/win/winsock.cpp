@@ -675,7 +675,8 @@ SOCKET Dim::iSocketCreate() {
         (char *) &yes,
         sizeof(yes)
     )) {
-        logMsgDebug() << "setsockopt(TCP_FASTOPEN): " << WinError{};
+        if (IsWindowsVersionOrGreater(10, 0, 1607))
+            logMsgDebug() << "setsockopt(TCP_FASTOPEN): " << WinError{};
     }
 
     return handle;

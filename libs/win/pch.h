@@ -37,6 +37,7 @@
 #include <WS2tcpip.h> // getaddrinfo, GetAddrInfoEx
 #include <WinSock2.h>
 #include <Windows.h>
+#include <VersionHelpers.h>
 
 // must come after Windows.h
 #include <CommCtrl.h> // ListView
