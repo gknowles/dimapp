@@ -34,46 +34,6 @@ static string s_dataDir;
 
 /****************************************************************************
 *
-*   FnProxyAppNotify
-*
-***/
-
-namespace {
-struct FnProxyAppNotify : public IAppNotify {
-    function<void(int, char*[])> fn;
-
-    void onAppRun() override;
-};
-} // namespace
-static FnProxyAppNotify s_fnProxyApp;
-
-//===========================================================================
-void FnProxyAppNotify::onAppRun() {
-    fn(m_argc, m_argv);
-}
-
-
-/****************************************************************************
-*
-*   RunTask
-*
-***/
-
-namespace {
-class RunTask : public ITaskNotify {
-    void onTask() override;
-};
-} // namespace
-static RunTask s_runTask;
-
-//===========================================================================
-void RunTask::onTask() {
-    s_app->onAppRun();
-}
-
-
-/****************************************************************************
-*
 *   ConsoleLogger
 *
 ***/
@@ -121,6 +81,66 @@ static ConfigAppXml s_appXml;
 //===========================================================================
 void ConfigAppXml::onConfigChange(const XDocument & doc) {
     shutdownDisableTimeout(configNumber(doc, "DisableShutdownTimeout"));
+}
+
+
+/****************************************************************************
+*
+*   FnProxyAppNotify
+*
+***/
+
+namespace {
+struct FnProxyAppNotify : public IAppNotify {
+    function<void(int, char*[])> fn;
+
+    void onAppRun() override;
+};
+} // namespace
+static FnProxyAppNotify s_fnProxyApp;
+
+//===========================================================================
+void FnProxyAppNotify::onAppRun() {
+    fn(m_argc, m_argv);
+}
+
+
+/****************************************************************************
+*
+*   RunTask
+*
+***/
+
+namespace {
+class RunTask : public ITaskNotify {
+    void onTask() override;
+};
+} // namespace
+static RunTask s_runTask;
+
+//===========================================================================
+void RunTask::onTask() {
+    iPlatformInitialize();
+    iFileInitialize();
+    iConfigInitialize();
+    configMonitor("app.xml", &s_appXml);
+    if (s_appFlags & fAppWithFiles) {
+        iLogFileInitialize();
+        if (s_appFlags & fAppWithConsole)
+            logMonitor(&s_consoleLogger);
+    }
+    iPlatformConfigInitialize();
+    iSocketInitialize();
+    iAppSocketInitialize();
+    iSockMgrInitialize();
+    iHttpRouteInitialize();
+    if (s_appFlags & fAppWithWebAdmin)
+        iWebAdminInitialize();
+
+    taskPushEvent(s_appTasks.data(), s_appTasks.size());
+
+    s_runMode = kRunRunning;
+    s_app->onAppRun();
 }
 
 
@@ -245,7 +265,6 @@ int Dim::appRun(IAppNotify * app, int argc, char * argv[], AppFlags flags) {
     s_appFlags = flags;
     s_runMode = kRunStarting;
     s_appTasks.clear();
-    s_appTasks.push_back(&s_runTask);
 
     auto exeName = (Path) envExecPath();
     s_appName = exeName.stem();
@@ -265,31 +284,14 @@ int Dim::appRun(IAppNotify * app, int argc, char * argv[], AppFlags flags) {
         logDefaultMonitor(&s_consoleLogger);
     iTaskInitialize();
     iTimerInitialize();
-    iPlatformInitialize();
-    iFileInitialize();
-    iConfigInitialize();
-    configMonitor("app.xml", &s_appXml);
-    if (flags & fAppWithFiles) {
-        iLogFileInitialize();
-        if (flags & fAppWithConsole)
-            logMonitor(&s_consoleLogger);
-    }
-    iPlatformConfigInitialize();
-    iSocketInitialize();
-    iAppSocketInitialize();
-    iSockMgrInitialize();
-    iHttpRouteInitialize();
-    if (flags & fAppWithWebAdmin)
-        iWebAdminInitialize();
 
     s_app = app;
     s_app->m_argc = argc;
     s_app->m_argv = argv;
-    s_runMode = kRunRunning;
-    taskPushEvent(s_appTasks.data(), s_appTasks.size());
+    taskPushEvent(&s_runTask);
 
     unique_lock<mutex> lk{s_runMut};
-    while (s_runMode == kRunRunning)
+    while (s_runMode == kRunStarting || s_runMode == kRunRunning)
         s_runCv.wait(lk);
 
     iShutdownDestroy();
