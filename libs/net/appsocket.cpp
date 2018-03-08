@@ -80,7 +80,6 @@ public:
 private:
     Duration onTimer(TimePoint now) override;
 
-    mutex m_mut;
     unique_ptr<SocketBuffer> m_buffer;
     size_t m_bufferUsed{0};
 };
@@ -94,11 +93,9 @@ private:
 *
 ***/
 
-static shared_mutex s_listenMut;
 static vector<MatchKey> s_matchers;
 static vector<EndpointInfo> s_endpoints;
 
-static mutex s_unmatchedMut;
 static list<IAppSocket::UnmatchedInfo> s_unmatched;
 static IAppSocket::UnmatchedTimer s_unmatchedTimer;
 static bool s_disableNoDataTimeout;
@@ -118,7 +115,6 @@ static auto & s_perfInactive = uperf("sock.disconnect (inactivity)");
 
 //===========================================================================
 Duration IAppSocket::UnmatchedTimer::onTimer(TimePoint now) {
-    scoped_lock<mutex> lk{s_unmatchedMut};
     while (!s_unmatched.empty()) {
         auto & info = s_unmatched.front();
         auto wait = info.notify->checkTimeout_LK(now);
@@ -228,14 +224,11 @@ bool IAppSocket::notifyAccept(const AppSocketInfo & info) {
 
     auto expiration = Clock::now() + kUnmatchedTimeout;
 
-    {
-        scoped_lock<mutex> lk{s_unmatchedMut};
-        UnmatchedInfo ui;
-        ui.notify = this;
-        ui.expiration = expiration;
-        s_unmatched.push_back(ui);
-        m_pos = --s_unmatched.end();
-    }
+    UnmatchedInfo ui;
+    ui.notify = this;
+    ui.expiration = expiration;
+    s_unmatched.push_back(ui);
+    m_pos = --s_unmatched.end();
 
     if (!s_disableNoDataTimeout)
         timerUpdate(&s_unmatchedTimer, kUnmatchedTimeout, true);
@@ -272,8 +265,6 @@ static bool findFactory(
     const Endpoint & localEnd,
     string_view data
 ) {
-    shared_lock<shared_mutex> lk{s_listenMut};
-
     // find best matching factory endpoint for each family
     enum {
         // match types, in reverse priority order
@@ -364,12 +355,9 @@ void IAppSocket::notifyRead(AppSocketData & data) {
         return;
     }
 
-    {
-        // no longer unmatched - one way or another
-        scoped_lock<mutex> lk{s_unmatchedMut};
-        s_unmatched.erase(m_pos);
-        m_pos = {};
-    }
+    // no longer unmatched - one way or another
+    s_unmatched.erase(m_pos);
+    m_pos = {};
 
     if (!fact) {
         logMsgDebug() << "AppSocket: unknown protocol";
@@ -410,7 +398,6 @@ RawSocket::RawSocket(IAppSocketNotify * notify)
 
 //===========================================================================
 void RawSocket::disconnect(AppSocket::Disconnect why) {
-    scoped_lock<mutex> lk{m_mut};
     if (m_bufferUsed) {
         socketWrite(this, move(m_buffer), m_bufferUsed);
         m_bufferUsed = 0;
@@ -427,7 +414,6 @@ void RawSocket::disconnect(AppSocket::Disconnect why) {
 
 //===========================================================================
 void RawSocket::write(string_view data) {
-    scoped_lock<mutex> lk{m_mut};
     bool hadData = m_bufferUsed;
     while (!data.empty()) {
         if (!m_buffer)
@@ -447,7 +433,6 @@ void RawSocket::write(string_view data) {
 
 //===========================================================================
 void RawSocket::write(unique_ptr<SocketBuffer> buffer, size_t bytes) {
-    scoped_lock<mutex> lk{m_mut};
     bool hadData = m_bufferUsed;
     if (hadData)
         socketWrite(this, move(m_buffer), m_bufferUsed);
@@ -510,7 +495,6 @@ void RawSocket::onSocketBufferChanged(const SocketBufferInfo & info) {
 
 //===========================================================================
 Duration RawSocket::onTimer(TimePoint now) {
-    scoped_lock<mutex> lk{m_mut};
     if (m_bufferUsed) {
         socketWrite(this, move(m_buffer), m_bufferUsed);
         m_bufferUsed = 0;
@@ -583,22 +567,15 @@ static ShutdownNotify s_cleanup;
 
 //===========================================================================
 void ShutdownNotify::onShutdownClient(bool firstTry) {
-    shared_lock<shared_mutex> lk{s_listenMut};
-    for (auto && info [[maybe_unused]] : s_endpoints) {
+    for (auto && info [[maybe_unused]] : s_endpoints)
         assert(info.listeners == info.consoles);
-    }
 }
 
 //===========================================================================
 void ShutdownNotify::onShutdownConsole(bool firstTry) {
-    {
-        shared_lock<shared_mutex> lk{s_listenMut};
-        for (auto && info [[maybe_unused]] : s_endpoints) {
-            assert(!info.listeners && !info.consoles);
-        }
-    }
+    for (auto && info [[maybe_unused]] : s_endpoints)
+        assert(!info.listeners && !info.consoles);
 
-    scoped_lock<mutex> lk{s_unmatchedMut};
     if (firstTry) {
         for (auto && info : s_unmatched)
             info.notify->disconnect(AppSocket::Disconnect::kAppRequest);
@@ -677,7 +654,6 @@ void Dim::socketAddFamily(
     AppSocket::Family fam,
     IAppSocketMatchNotify * notify
 ) {
-    unique_lock<shared_mutex> lk{s_listenMut};
     if ((size_t) fam >= s_matchers.size())
         s_matchers.resize(fam + 1);
     s_matchers[fam].notify = notify;
@@ -705,7 +681,6 @@ static bool addFactory(
     const Endpoint & end,
     AppSocket::Family fam
 ) {
-    unique_lock<shared_mutex> lk{s_listenMut};
     auto info = findInfo_LK(end, true);
     bool addNew = (flags & fListener) && ++info->listeners == 1;
     if (flags & fConsole)
@@ -739,7 +714,6 @@ void Dim::socketCloseWait(
     AppSocket::Family fam
 ) {
     for (;;) {
-        unique_lock<shared_mutex> lk{s_listenMut};
         auto info = findInfo_LK(end, false);
         if (!info)
             break;
@@ -773,7 +747,6 @@ void Dim::socketCloseWait(
                 );
             }
         }
-        lk.unlock();
         if (noListeners)
             socketCloseWait<RawSocket>(end);
         return;

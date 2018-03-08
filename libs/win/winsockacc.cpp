@@ -45,10 +45,6 @@ public:
     Endpoint m_localEnd;
     char m_addrBuf[2 * sizeof sockaddr_storage];
 
-    bool m_inNotify{false};
-    thread::id m_inThread;
-    condition_variable m_inCv;
-
 public:
     ListenSocket(IFactory<ISocketNotify> * notify, const Endpoint & end);
 
@@ -64,7 +60,6 @@ public:
 *
 ***/
 
-static mutex s_mut;
 static List<ListenSocket> s_listeners;
 
 static auto & s_perfAccepts = uperf("sock.accepts");
@@ -94,15 +89,12 @@ void ListenSocket::onTask() {
 
     if (!AcceptSocket::accept(this)) {
         assert(m_handle == INVALID_SOCKET);
-        unique_lock<mutex> lk{s_mut};
         if (!m_stopRequested)
             return;
         if (m_stopDone) {
             delete this;
         } else {
             m_mode = ISocketNotify::kClosed;
-            lk.unlock();
-            m_inCv.notify_all();
         }
     }
 }
@@ -115,7 +107,7 @@ void ListenSocket::onTask() {
 ***/
 
 //===========================================================================
-static bool closeListen_LK(ListenSocket * listen) {
+static bool closeListenHandle(ListenSocket * listen) {
     listen->m_mode = ISocketNotify::kClosing;
     if (listen->m_handle != INVALID_SOCKET) {
         if (SOCKET_ERROR == closesocket(listen->m_handle))
@@ -126,29 +118,15 @@ static bool closeListen_LK(ListenSocket * listen) {
 }
 
 //===========================================================================
-static void closeListenWait_LK(
-    ListenSocket * listen,
-    unique_lock<mutex> & lk
-) {
-    closeListen_LK(listen);
+static void closeListen(ListenSocket * listen) {
+    closeListenHandle(listen);
     listen->m_stopRequested = true;
-
-    // Wait until the callback handler returns, unless that would mean
-    // deadlocking by waiting for ourselves to return.
-    while (listen->m_inNotify && listen->m_inThread != this_thread::get_id())
-        listen->m_inCv.wait(lk);
 
     if (listen->m_mode == ISocketNotify::kClosed) {
         delete listen;
     } else {
         listen->m_stopDone = true;
     }
-}
-
-//===========================================================================
-static bool closeListen(ListenSocket * listen) {
-    unique_lock<mutex> lk{s_mut};
-    return closeListen_LK(listen);
 }
 
 //===========================================================================
@@ -159,7 +137,7 @@ bool AcceptSocket::accept(ListenSocket * listen) {
     auto sock = make_unique<AcceptSocket>(nullptr);
     sock->m_handle = iSocketCreate();
     if (sock->m_handle == INVALID_SOCKET)
-        return closeListen(listen);
+        return closeListenHandle(listen);
 
     sock->m_mode = Mode::kAccepting;
     listen->m_socket = move(sock);
@@ -184,7 +162,7 @@ bool AcceptSocket::accept(ListenSocket * listen) {
     }
 
     listen->m_socket.reset();
-    return closeListen(listen);
+    return closeListenHandle(listen);
 }
 
 //===========================================================================
@@ -255,12 +233,7 @@ void AcceptSocket::onAccept(
     }
 
     auto notify = listen->m_notify->onFactoryCreate();
-    {
-        scoped_lock<mutex> lk{s_mut};
-        m_notify = notify.release();
-        listen->m_inThread = this_thread::get_id();
-        listen->m_inNotify = true;
-    }
+    m_notify = notify.release();
 
     // create read/write queue
     if (createQueue()) {
@@ -272,12 +245,6 @@ void AcceptSocket::onAccept(
             hardClose();
         }
         enableEvents();
-    }
-
-    {
-        scoped_lock<mutex> lk{s_mut};
-        listen->m_inThread = {};
-        listen->m_inNotify = false;
     }
 }
 
@@ -300,7 +267,6 @@ static ShutdownNotify s_cleanup;
 
 //===========================================================================
 void ShutdownNotify::onShutdownConsole(bool firstTry) {
-    scoped_lock<mutex> lk{s_mut};
     if (!s_listeners.empty())
         return shutdownIncomplete();
 }
@@ -329,6 +295,8 @@ void Dim::socketListen(
     IFactory<ISocketNotify> * factory,
     const Endpoint & local
 ) {
+    iSocketCheckThread();
+
     auto hostage = make_unique<ListenSocket>(factory, local);
     auto sock = hostage.get();
     sock->m_handle = iSocketCreate(local);
@@ -345,11 +313,7 @@ void Dim::socketListen(
     }
 
     sock->m_mode = ISocketNotify::kActive;
-
-    {
-        scoped_lock<mutex> lk{s_mut};
-        s_listeners.link(hostage.release());
-    }
+    s_listeners.link(hostage.release());
 
     if (!AcceptSocket::accept(sock))
         sock->m_mode = ISocketNotify::kClosed;
@@ -360,11 +324,11 @@ void Dim::socketCloseWait(
     IFactory<ISocketNotify> * factory,
     const Endpoint & local
 ) {
-    unique_lock<mutex> lk{s_mut};
+    iSocketCheckThread();
 
     for (auto && ls : s_listeners) {
         if (ls.m_notify == factory && ls.m_localEnd == local) {
-            closeListenWait_LK(&ls, lk);
+            closeListen(&ls);
             return;
         }
     }

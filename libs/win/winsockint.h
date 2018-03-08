@@ -50,21 +50,18 @@ protected:
     Mode m_mode{Mode::kInactive};
 
 private:
-    void hardClose_LK();
-
     void onTask() override;
 
     // NOTE: If onRead or onWrite return false the socket has been deleted.
-    //       The task is completed and may be deleted whether or not false
-    //       is returned.
+    //       Additionally the task is completed and may be deleted whether or
+    //       not false is returned.
     bool onRead(SocketRequest * task);
     bool onWrite(SocketRequest * task);
 
-    void queueRead_LK(SocketRequest * task);
+    void queueRead(SocketRequest * task);
     void queuePrewrite(std::unique_ptr<SocketBuffer> buffer, size_t bytes);
-    void queueWrites_LK();
+    void queueWrites();
 
-    std::mutex m_mut;
     RIO_RQ m_rq{RIO_INVALID_RQ};
     RIO_CQ m_cq{RIO_INVALID_CQ};
     SocketBufferInfo m_bufInfo{};
@@ -90,6 +87,7 @@ private:
 void iSocketAcceptInitialize();
 void iSocketConnectInitialize();
 
+void iSocketCheckThread();
 SOCKET iSocketCreate();
 SOCKET iSocketCreate(const Endpoint & local);
 void iSocketSetConnectTimeout(SOCKET s, Duration wait);

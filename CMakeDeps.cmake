@@ -6,6 +6,7 @@
 # README.md
 # appveyor.yml
 # bin/conf/app.xml
+# bin/conf/app.xml.md
 # configure.bat
 # libs/app/app.cpp
 # libs/app/app.h

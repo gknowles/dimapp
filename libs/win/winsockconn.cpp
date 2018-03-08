@@ -78,7 +78,6 @@ private:
 *
 ***/
 
-static mutex s_mut;
 static List<ConnectTask> s_connecting;
 
 static auto & s_perfConnected = uperf("sock.connections");
@@ -103,11 +102,6 @@ ConnectTask::ConnectTask(unique_ptr<ConnSocket> && sock)
 void ConnectTask::onTask() {
     auto [err, bytes] = getOverlappedResult();
     m_socket.release()->onConnect(err, bytes);
-
-    {
-        scoped_lock<mutex> lk{s_mut};
-        unlink();
-    }
     delete this;
 }
 
@@ -185,9 +179,7 @@ void ConnSocket::connect(
         return pushConnectFailed(notify);
     }
 
-    scoped_lock<mutex> lk{s_mut};
     s_connecting.link(task);
-
     hostage.release();
 }
 
@@ -286,7 +278,6 @@ static ShutdownNotify s_cleanup;
 
 //===========================================================================
 void ShutdownNotify::onShutdownConsole(bool firstTry) {
-    scoped_lock<mutex> lk{s_mut};
     if (firstTry) {
         for (auto && task : s_connecting)
             task.m_socket->hardClose();
@@ -369,5 +360,6 @@ void Dim::socketConnect(
     string_view data,
     Duration timeout
 ) {
+    iSocketCheckThread();
     ConnSocket::connect(notify, remote, local, data, timeout);
 }

@@ -132,17 +132,13 @@ SocketBase::~SocketBase() {
     assert(m_reads.empty() && m_writes.empty());
     ISocketNotify * notify{nullptr};
 
-    {
-        scoped_lock<mutex> lk{m_mut};
-        if (m_notify) {
-            notify = m_notify;
-            m_notify->m_socket = nullptr;
-        }
-
-        hardClose_LK();
-
-        s_numSockets -= 1;
+    if (m_notify) {
+        notify = m_notify;
+        m_notify->m_socket = nullptr;
     }
+    hardClose();
+
+    s_numSockets -= 1;
 
     if (m_cq != RIO_INVALID_CQ)
         s_rio.RIOCloseCompletionQueue(m_cq);
@@ -157,15 +153,6 @@ void SocketBase::hardClose() {
     if (m_handle == INVALID_SOCKET)
         return;
 
-    scoped_lock<mutex> lk{m_mut};
-    hardClose_LK();
-}
-
-//===========================================================================
-void SocketBase::hardClose_LK() {
-    if (m_handle == INVALID_SOCKET)
-        return;
-
     // force immediate close by enabling shutdown timeout and setting the
     // timeout to 0 seconds
     linger opt = {};
@@ -176,10 +163,11 @@ void SocketBase::hardClose_LK() {
 
     m_mode = Mode::kClosing;
     m_handle = INVALID_SOCKET;
-    while (auto req = m_prewrites.unlinkFront()) {
+    while (auto req = m_prewrites.front()) {
         auto bytes = req->m_rbuf.Length;
         m_bufInfo.waiting -= bytes;
         s_perfWaiting -= bytes;
+        delete req;
     }
 }
 
@@ -237,11 +225,8 @@ bool SocketBase::createQueue() {
 
 //===========================================================================
 void SocketBase::enableEvents() {
-    {
-        unique_lock<mutex> lk{m_mut};
-        for (auto && task : m_reads)
-            queueRead_LK(&task);
-    }
+    for (auto && task : m_reads)
+        queueRead(&task);
 
     // trigger first RIONotify
     if (int error = s_rio.RIONotify(m_cq))
@@ -297,29 +282,22 @@ bool SocketBase::onRead(SocketRequest * task) {
         m_notify->onSocketRead(data);
     }
 
-    bool mustDelete = false;
-    {
-        unique_lock<mutex> lk{m_mut};
-        if (bytes) {
-            if (m_mode == Mode::kActive) {
-                queueRead_LK(task);
-                return true;
-            }
-
-            assert(m_mode == Mode::kClosing || m_mode == Mode::kClosed);
+    if (bytes) {
+        if (m_mode == Mode::kActive) {
+            queueRead(task);
+            return true;
         }
-        delete task;
 
-        mustDelete = m_reads.empty() && m_writes.empty();
+        assert(m_mode == Mode::kClosing || m_mode == Mode::kClosed);
+    }
+    delete task;
 
-        if (m_mode != Mode::kClosed) {
-            m_mode = Mode::kClosed;
-            lk.unlock();
-            m_notify->onSocketDisconnect();
-        }
+    if (m_mode != Mode::kClosed) {
+        m_mode = Mode::kClosed;
+        m_notify->onSocketDisconnect();
     }
 
-    if (mustDelete) {
+    if (m_reads.empty() && m_writes.empty()) {
         delete this;
         return false;
     }
@@ -327,7 +305,7 @@ bool SocketBase::onRead(SocketRequest * task) {
 }
 
 //===========================================================================
-void SocketBase::queueRead_LK(SocketRequest * task) {
+void SocketBase::queueRead(SocketRequest * task) {
     if (!s_rio.RIOReceive(
         m_rq,
         &task->m_rbuf,
@@ -341,8 +319,6 @@ void SocketBase::queueRead_LK(SocketRequest * task) {
 
 //===========================================================================
 bool SocketBase::onWrite(SocketRequest * task) {
-    unique_lock<mutex> lk{m_mut};
-
     auto bytes = task->m_rbuf.Length;
     delete task;
     m_numWrites -= 1;
@@ -351,20 +327,18 @@ bool SocketBase::onWrite(SocketRequest * task) {
 
     // already disconnected and this was the last unresolved write? delete
     if (m_reads.empty() && m_writes.empty()) {
-        lk.unlock();
         delete this;
         return false;
     }
 
     bool wasPrewrites = !m_prewrites.empty();
-    queueWrites_LK();
+    queueWrites();
     if (wasPrewrites && m_prewrites.empty() // data no longer waiting
         || !m_numWrites                     // send queue is empty
     ) {
         assert(!m_bufInfo.waiting);
         assert(m_numWrites || !m_bufInfo.incomplete);
         auto info = m_bufInfo;
-        lk.unlock();
         m_notify->onSocketBufferChanged(info);
     }
     return true;
@@ -376,7 +350,6 @@ void SocketBase::queuePrewrite(
     size_t bytes
 ) {
     assert(bytes);
-    unique_lock<mutex> lk{m_mut};
     if (m_mode == Mode::kClosing || m_mode == Mode::kClosed)
         return;
 
@@ -412,7 +385,7 @@ void SocketBase::queuePrewrite(
         copy(&task->m_rbuf, *task->m_buffer, bytes);
     }
 
-    queueWrites_LK();
+    queueWrites();
     if (auto task = m_prewrites.back()) {
         if (task->m_qtime == TimePoint::min()) {
             auto now = Clock::now();
@@ -420,21 +393,20 @@ void SocketBase::queuePrewrite(
             auto maxQTime = now - m_prewrites.front()->m_qtime;
             if (maxQTime > kMaxPrewriteQueueTime) {
                 s_perfBacklog += 1;
-                return hardClose_LK();
+                return hardClose();
             }
         }
         if (!wasPrewrites) {
             // data is now waiting
             assert(m_bufInfo.waiting <= bytes);
             auto info = m_bufInfo;
-            lk.unlock();
             m_notify->onSocketBufferChanged(info);
         }
     }
 }
 
 //===========================================================================
-void SocketBase::queueWrites_LK() {
+void SocketBase::queueWrites() {
     while (m_numWrites < m_maxWrites && !m_prewrites.empty()) {
         m_writes.link(m_prewrites.front());
         m_numWrites += 1;
@@ -488,10 +460,19 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
 *
 ***/
 
+thread_local bool t_socketInitialized;
 static WSAPROTOCOL_INFOW s_protocolInfo;
 
 //===========================================================================
+void Dim::iSocketCheckThread() {
+    if (!t_socketInitialized)
+        logMsgCrash() << "Socket services must be called on the event thread";
+}
+
+//===========================================================================
 void Dim::iSocketInitialize() {
+    t_socketInitialized = true;
+
     WSADATA data = {};
     WinError err = WSAStartup(WINSOCK_VERSION, &data);
     if (err || data.wVersion != WINSOCK_VERSION) {
@@ -708,11 +689,13 @@ SOCKET Dim::iSocketCreate(const Endpoint & end) {
 
 //===========================================================================
 ISocketNotify::Mode Dim::socketGetMode(ISocketNotify * notify) {
+    iSocketCheckThread();
     return SocketBase::getMode(notify);
 }
 
 //===========================================================================
 void Dim::socketDisconnect(ISocketNotify * notify) {
+    iSocketCheckThread();
     SocketBase::disconnect(notify);
 }
 
@@ -722,5 +705,6 @@ void Dim::socketWrite(
     unique_ptr<SocketBuffer> buffer,
     size_t bytes
 ) {
+    iSocketCheckThread();
     SocketBase::write(notify, move(buffer), bytes);
 }

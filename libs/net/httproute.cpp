@@ -73,7 +73,6 @@ struct RequestInfo {
 *
 ***/
 
-static mutex s_mut;
 static vector<PathInfo> s_paths;
 static unordered_map<unsigned, RequestInfo> s_requests;
 static unsigned s_nextReqId;
@@ -95,7 +94,6 @@ static auto & s_perfRejects = uperf("http.http1 requests rejected");
 
 //===========================================================================
 static IHttpRouteNotify * find(string_view path, HttpMethod method) {
-    scoped_lock<mutex> lk{s_mut};
     IHttpRouteNotify * best = nullptr;
     size_t bestSegs = 0;
     size_t bestLen = 0;
@@ -137,7 +135,6 @@ static void route(unsigned reqId, HttpRequest & req) {
 
 //===========================================================================
 static unsigned makeRequestInfo (HttpSocket * conn, int stream) {
-    scoped_lock<mutex> lk{s_mut};
     for (;;) {
         auto id = ++s_nextReqId;
         auto & found = s_requests[id];
@@ -184,7 +181,6 @@ void HttpSocket::iReply(
     const function<void(HttpConnHandle h, CharBuf * out, int stream)> & fn,
     bool more
 ) {
-    scoped_lock<mutex> lk{s_mut};
     auto it = s_requests.find(reqId);
     if (it == s_requests.end())
         return;
@@ -255,20 +251,17 @@ HttpSocket::~HttpSocket () {
 
 //===========================================================================
 void HttpSocket::onSocketDestroy() {
-    scoped_lock<mutex> lk{s_mut};
     delete this;
 }
 
 //===========================================================================
 bool HttpSocket::onSocketAccept(const AppSocketInfo & info) {
-    scoped_lock<mutex> lk{s_mut};
     m_conn = httpAccept();
     return true;
 }
 
 //===========================================================================
 void HttpSocket::onSocketDisconnect() {
-    scoped_lock<mutex> lk{s_mut};
     httpClose(m_conn);
     m_conn = {};
 }
@@ -277,11 +270,7 @@ void HttpSocket::onSocketDisconnect() {
 void HttpSocket::onSocketRead(AppSocketData & data) {
     CharBuf out;
     vector<unique_ptr<HttpMsg>> msgs;
-    bool result;
-    {
-        scoped_lock<mutex> lk{s_mut};
-        result = httpRecv(&out, &msgs, m_conn, data.data, data.bytes);
-    }
+    bool result = httpRecv(&out, &msgs, m_conn, data.data, data.bytes);
     if (!out.empty())
         socketWrite(this, out);
     if (!result) {
@@ -440,7 +429,6 @@ static ShutdownNotify s_cleanup;
 
 //===========================================================================
 void ShutdownNotify::onShutdownConsole(bool firstTry) {
-    scoped_lock<mutex> lk{s_mut};
     if (!s_requests.empty())
         return shutdownIncomplete();
 }
@@ -485,7 +473,6 @@ void Dim::httpRouteAdd(
     unsigned methods,
     bool recurse
 ) {
-    scoped_lock<mutex> lk{s_mut};
     assert(!path.empty());
     if (s_paths.empty() && !appStarting())
         startListen();
