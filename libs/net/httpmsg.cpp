@@ -176,6 +176,16 @@ void HttpMsg::clear() {
 }
 
 //===========================================================================
+void HttpMsg::swap(HttpMsg & other) {
+    assert(isRequest() == other.isRequest());
+    ::swap(m_flags, other.m_flags);
+    m_data.swap(other.m_data);
+    m_heap.swap(other.m_heap);
+    ::swap(m_firstHeader, other.m_firstHeader);
+    ::swap(m_stream, other.m_stream);
+}
+
+//===========================================================================
 void HttpMsg::addHeader(HttpHdr id, const char value[]) {
     addHeaderRef(id, m_heap.strdup(value));
 }
@@ -311,6 +321,12 @@ ITempHeap & HttpMsg::heap() {
 *   HttpRequest
 *
 ***/
+
+//===========================================================================
+void HttpRequest::swap(HttpMsg & other) {
+    HttpMsg::swap(other);
+    ::swap(m_query, static_cast<HttpRequest &>(other).m_query);
+}
 
 //===========================================================================
 const char * HttpRequest::method() const {

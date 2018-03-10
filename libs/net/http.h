@@ -124,8 +124,11 @@ public:
 
 public:
     HttpMsg (int stream = 0) : m_stream{stream} {}
+    HttpMsg (HttpMsg && from) = default;
     virtual ~HttpMsg() = default;
+    HttpMsg & operator= (HttpMsg && from) = default;
     void clear();
+    virtual void swap(HttpMsg & other);
 
     void addHeader(HttpHdr id, const char value[]);
     void addHeader(const char name[], const char value[]);
@@ -205,6 +208,7 @@ struct HttpMsg::HdrList {
 class HttpRequest : public HttpMsg {
 public:
     using HttpMsg::HttpMsg;
+    void swap(HttpMsg & other) override;
 
     const char * method() const;
     const char * scheme() const;
