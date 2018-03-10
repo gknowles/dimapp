@@ -31,6 +31,7 @@ class SocketConn
     void onSocketDisconnect() override;
     void onSocketDestroy() override;
     void onSocketRead(SocketData & data) override;
+    void onSocketBufferChanged(const SocketBufferInfo & info) override;
 
     // Inherited via IEndpointNotify
     void onEndpointFound(const Endpoint * ptr, int count) override;
@@ -47,6 +48,7 @@ public:
     void init();
     bool queryDestroy();
     void read(int64_t offset = 0);
+    void suspend(bool suspend);
 
 private:
     bool onFileRead(
@@ -61,6 +63,9 @@ private:
     bool m_isFile{false};
     unique_ptr<SocketBuffer> m_buffer;
     int m_bytesRead{0};
+
+    bool m_suspended{false};
+    int64_t m_offset{0};
 };
 
 
@@ -124,6 +129,11 @@ void SocketConn::onSocketRead(SocketData & data) {
 }
 
 //===========================================================================
+void SocketConn::onSocketBufferChanged(const SocketBufferInfo & info) {
+    s_console.suspend(info.waiting);
+}
+
+//===========================================================================
 Duration SocketConn::onTimer(TimePoint now) {
     s_console.read();
     return kTimerInfinite;
@@ -164,6 +174,16 @@ void ConsoleReader::read(int64_t offset) {
 }
 
 //===========================================================================
+void ConsoleReader::suspend(bool suspend) {
+    assert(m_input);
+    if (suspend == m_suspended)
+        return;
+    m_suspended = suspend;
+    if (!suspend)
+        read(m_offset);
+}
+
+//===========================================================================
 bool ConsoleReader::onFileRead(
     size_t * bytesRead,
     string_view data,
@@ -192,7 +212,11 @@ void ConsoleReader::onFileEnd(int64_t offset, FileHandle f) {
                 return;
             }
         }
-        read(offset);
+        if (m_suspended) {
+            m_offset = offset;
+        } else {
+            read(offset);
+        }
     } else {
         m_buffer.reset();
     }
