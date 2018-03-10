@@ -1411,7 +1411,7 @@ void HttpConn::deleteStream(int stream, HttpStream * sm) {
 
 //===========================================================================
 HttpConnHandle Dim::httpConnect(CharBuf * out) {
-    auto * conn = new HttpConn;
+    auto conn = new HttpConn;
     auto h = s_conns.insert(conn);
     conn->connect(out, h);
     return h;
@@ -1419,7 +1419,7 @@ HttpConnHandle Dim::httpConnect(CharBuf * out) {
 
 //===========================================================================
 HttpConnHandle Dim::httpAccept() {
-    auto * conn = new HttpConn;
+    auto conn = new HttpConn;
     auto h = s_conns.insert(conn);
     conn->accept(h);
     return h;
@@ -1438,7 +1438,7 @@ bool Dim::httpRecv(
     const void * src,
     size_t srcLen
 ) {
-    if (auto * conn = s_conns.find(hc))
+    if (auto conn = s_conns.find(hc))
         return conn->recv(out, msgs, src, srcLen);
     return false;
 }
@@ -1450,7 +1450,7 @@ int Dim::httpRequest(
     const HttpMsg & msg,
     bool more
 ) {
-    if (auto * conn = s_conns.find(hc))
+    if (auto conn = s_conns.find(hc))
         return conn->request(out, msg, more);
     return 0;
 }
@@ -1462,7 +1462,7 @@ int Dim::httpPushPromise(
     const HttpMsg & msg,
     bool more
 ) {
-    if (auto * conn = s_conns.find(hc))
+    if (auto conn = s_conns.find(hc))
         return conn->pushPromise(out, msg, more);
     return 0;
 }
@@ -1475,8 +1475,9 @@ bool Dim::httpReply(
     const HttpMsg & msg,
     bool more
 ) {
-    auto * conn = s_conns.find(hc);
-    return conn->reply(out, stream, msg, more);
+    if (auto conn = s_conns.find(hc))
+        return conn->reply(out, stream, msg, more);
+    return false;
 }
 
 //===========================================================================
@@ -1487,7 +1488,7 @@ bool Dim::httpData(
     const CharBuf & data,
     bool more
 ) {
-    if (auto * conn = s_conns.find(hc))
+    if (auto conn = s_conns.find(hc))
         return conn->addData(out, stream, nullptr, data, more);
     return false;
 }
@@ -1500,7 +1501,7 @@ bool Dim::httpData(
     string_view data,
     bool more
 ) {
-    if (auto * conn = s_conns.find(hc))
+    if (auto conn = s_conns.find(hc))
         return conn->addData(out, stream, nullptr, data, more);
     return false;
 }
@@ -1512,7 +1513,7 @@ void Dim::httpResetStream(
     int stream,
     bool internal
 ) {
-    if (auto * conn = s_conns.find(hc)) {
+    if (auto conn = s_conns.find(hc)) {
         conn->resetStream(
             out,
             stream,
