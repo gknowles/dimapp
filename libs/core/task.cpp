@@ -45,14 +45,17 @@ namespace {
 
 class EndThreadTask : public ITaskNotify {};
 
-class RunOnceTask : public ITaskNotify {
+class FunctionTask : public ITaskNotify {
 public:
-    explicit RunOnceTask(string_view name, function<void()> && fn);
-
+    explicit FunctionTask(function<void()> && fn);
 private:
     void onTask() override;
-
     function<void()> m_fn;
+};
+
+class RunOnceTask : public FunctionTask {
+public:
+    explicit RunOnceTask(string_view name, function<void()> && fn);
 };
 
 } // namespace
@@ -162,23 +165,35 @@ void TaskQueue::pop() {
 
 /****************************************************************************
 *
+*   FunctionTask
+*
+***/
+
+//===========================================================================
+FunctionTask::FunctionTask(function<void()> && fn)
+    : m_fn{fn}
+{}
+
+//===========================================================================
+void FunctionTask::onTask() {
+    m_fn();
+    delete this;
+}
+
+
+/****************************************************************************
+*
 *   RunOnceTask
 *
 ***/
 
 //===========================================================================
 RunOnceTask::RunOnceTask(string_view name, function<void()> && fn)
-    : m_fn{fn}
+    : FunctionTask{move(fn)}
 {
     auto q = taskCreateQueue(name, 1);
     taskPush(q, this);
     taskSetQueueThreads(q, 0);
-}
-
-//===========================================================================
-void RunOnceTask::onTask() {
-    m_fn();
-    delete this;
 }
 
 
@@ -221,9 +236,13 @@ void Dim::iTaskDestroy() {
 ***/
 
 //===========================================================================
+void Dim::taskPushEvent(function<void()> && fn) {
+    taskPush(s_eventQ, move(fn));
+}
+
+//===========================================================================
 void Dim::taskPushEvent(ITaskNotify * task) {
-    ITaskNotify * list[] = {task};
-    taskPushEvent(list, size(list));
+    taskPush(s_eventQ, task);
 }
 
 //===========================================================================
@@ -242,14 +261,18 @@ bool Dim::taskInEventThread() {
 }
 
 //===========================================================================
+void Dim::taskPushCompute(function<void()> && fn) {
+    taskPush(s_computeQ, move(fn));
+}
+
+//===========================================================================
 void Dim::taskPushCompute(ITaskNotify * task) {
-    ITaskNotify * list[] = {task};
-    taskPushCompute(list, size(list));
+    taskPush(s_computeQ, task);
 }
 
 //===========================================================================
 void Dim::taskPushCompute(ITaskNotify * tasks[], size_t numTasks) {
-    Dim::taskPush(s_computeQ, tasks, numTasks);
+    taskPush(s_computeQ, tasks, numTasks);
 }
 
 //===========================================================================
@@ -277,6 +300,11 @@ void Dim::taskSetQueueThreads(TaskQueueHandle hq, int threads) {
     scoped_lock<mutex> lk{s_mut};
     auto * q = s_queues.find(hq);
     setThreads_LK(*q, threads);
+}
+
+//===========================================================================
+void Dim::taskPush(TaskQueueHandle hq, function<void()> && fn) {
+    taskPush(hq, new FunctionTask{move(fn)});
 }
 
 //===========================================================================
@@ -309,6 +337,6 @@ void Dim::taskPush(
 }
 
 //===========================================================================
-void Dim::taskPushOnce(string_view name, function<void()> fn) {
+void Dim::taskPushOnce(string_view name, function<void()> && fn) {
     new RunOnceTask(name, move(fn));
 }

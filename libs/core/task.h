@@ -51,17 +51,20 @@ private:
 *
 ***/
 
+void taskPushEvent(std::function<void()> && fn);
 void taskPushEvent(ITaskNotify * task);
 void taskPushEvent(ITaskNotify * tasks[], size_t numTasks);
 TaskQueueHandle taskEventQueue();
 bool taskInEventThread();
 
+void taskPushCompute(std::function<void()> && fn);
 void taskPushCompute(ITaskNotify * task);
 void taskPushCompute(ITaskNotify * tasks[], size_t numTasks);
 TaskQueueHandle taskComputeQueue();
 
 TaskQueueHandle taskCreateQueue(std::string_view name, int threads);
 void taskSetQueueThreads(TaskQueueHandle q, int threads);
+void taskPush(TaskQueueHandle q, std::function<void()> && fn);
 void taskPush(TaskQueueHandle q, ITaskNotify * task);
 void taskPush(TaskQueueHandle q, ITaskNotify * tasks[], size_t numTasks);
 
@@ -71,6 +74,6 @@ void taskPush(TaskQueueHandle q, ITaskNotify * tasks[], size_t numTasks);
 // Creates a task queue with one thread task, runs the task, and then stops
 // the thread. After the task completes the queue is "leaked" until shutdown,
 // so this shouldn't be used for anything that runs repeatedly.
-void taskPushOnce(std::string_view name, std::function<void()> fn);
+void taskPushOnce(std::string_view name, std::function<void()> && fn);
 
 } // namespace
