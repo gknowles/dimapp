@@ -78,6 +78,8 @@ inline char * ITempHeap::alloc(size_t bytes) {
 
 class TempHeap : public ITempHeap {
 public:
+    TempHeap() = default;
+    TempHeap(TempHeap && from);
     ~TempHeap();
     TempHeap & operator=(const TempHeap & from) = delete;
     TempHeap & operator=(TempHeap && from);
