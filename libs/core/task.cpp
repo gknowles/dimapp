@@ -72,6 +72,7 @@ static int s_numDestroyed;
 static int s_numEnded;
 
 static TaskQueueHandle s_eventQ;
+thread_local bool t_inEventThread;
 static TaskQueueHandle s_computeQ;
 static atomic_bool s_running;
 
@@ -87,6 +88,8 @@ static void taskQueueThread(TaskQueue * ptr) {
     iThreadInitialize();
     TaskQueue & q{*ptr};
     iThreadSetName(q.name);
+    if (q.hq == s_eventQ)
+        t_inEventThread = true;
     bool more{true};
     unique_lock<mutex> lk{s_mut};
     while (more) {
@@ -231,6 +234,11 @@ void Dim::taskPushEvent(ITaskNotify * tasks[], size_t numTasks) {
 //===========================================================================
 TaskQueueHandle Dim::taskEventQueue() {
     return s_eventQ;
+}
+
+//===========================================================================
+bool Dim::taskInEventThread() {
+    return t_inEventThread;
 }
 
 //===========================================================================

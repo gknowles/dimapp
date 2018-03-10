@@ -54,6 +54,7 @@ private:
 void taskPushEvent(ITaskNotify * task);
 void taskPushEvent(ITaskNotify * tasks[], size_t numTasks);
 TaskQueueHandle taskEventQueue();
+bool taskInEventThread();
 
 void taskPushCompute(ITaskNotify * task);
 void taskPushCompute(ITaskNotify * tasks[], size_t numTasks);
