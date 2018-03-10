@@ -70,7 +70,7 @@ void HtmlCounters::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     bld.end().end();
     res.addHeader(kHttpContentType, "text/html");
     res.addHeader(kHttp_Status, "200");
-    httpRouteReply(reqId, res);
+    httpRouteReply(reqId, move(res));
 }
 
 
@@ -102,7 +102,7 @@ void JsonCounters::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     bld.end();
     res.addHeader(kHttpContentType, "application/json");
     res.addHeader(kHttp_Status, "200");
-    httpRouteReply(reqId, res);
+    httpRouteReply(reqId, move(res));
 }
 
 

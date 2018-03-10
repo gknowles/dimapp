@@ -39,9 +39,9 @@ public:
         const function<void(HttpConnHandle h, CharBuf * out, int stream)> & fn,
         bool more
     );
-    static void reply(unsigned reqId, HttpResponse & msg, bool more);
+    static void reply(unsigned reqId, HttpResponse && msg, bool more);
     static void reply(unsigned reqId, string_view data, bool more);
-    static void reply(unsigned reqId, const CharBuf & data, bool more);
+    static void reply(unsigned reqId, CharBuf && data, bool more);
     static void resetReply(unsigned reqId, bool internal);
 
 public:
@@ -170,6 +170,42 @@ RequestInfo::~RequestInfo () {
 
 /****************************************************************************
 *
+*   ReplyTask
+*
+***/
+
+namespace {
+
+template<typename T>
+struct ReplyTask : ITaskNotify {
+    ReplyTask(unsigned reqId, bool more);
+    void onTask() override;
+
+    function<void(HttpConnHandle h, CharBuf * out, int stream)> fn;
+    unsigned reqId;
+    T data;
+    bool more;
+};
+
+} // namespace
+
+//===========================================================================
+template<typename T>
+ReplyTask<T>::ReplyTask(unsigned reqId, bool more)
+    : reqId{reqId}
+    , more{more}
+{}
+
+//===========================================================================
+template<typename T>
+void ReplyTask<T>::onTask() {
+    HttpSocket::iReply(reqId, fn, more);
+    delete this;
+}
+
+
+/****************************************************************************
+*
 *   HttpSocket
 *
 ***/
@@ -203,34 +239,62 @@ void HttpSocket::iReply(
 
 //===========================================================================
 // static
-void HttpSocket::reply(unsigned reqId, HttpResponse & msg, bool more) {
+void HttpSocket::reply(unsigned reqId, HttpResponse && msg, bool more) {
     if (msg.status() == 200) {
         s_perfSuccess += 1;
     } else {
         s_perfError += 1;
     }
-    auto fn = [&](HttpConnHandle h, CharBuf * out, int stream) -> void {
-        httpReply(out, h, stream, msg, more);
+
+    if (taskInEventThread()) {
+        auto fn = [&](HttpConnHandle h, CharBuf * out, int stream) {
+            httpReply(out, h, stream, msg, more);
+        };
+        return iReply(reqId, fn, more);
+    }
+
+    auto task = new ReplyTask<HttpResponse>(reqId, more);
+    task->data = move(msg);
+    task->fn = [task](HttpConnHandle h, CharBuf * out, int stream) {
+        httpReply(out, h, stream, task->data, task->more);
     };
-    iReply(reqId, fn, more);
+    taskPushEvent(task);
 }
 
 //===========================================================================
 // static
 void HttpSocket::reply(unsigned reqId, string_view data, bool more) {
-    auto fn = [&](HttpConnHandle h, CharBuf * out, int stream) -> void {
-        httpData(out, h, stream, data, more);
+    if (taskInEventThread()) {
+        auto fn = [&](HttpConnHandle h, CharBuf * out, int stream) {
+            httpData(out, h, stream, data, more);
+        };
+        return iReply(reqId, fn, more);
+    }
+
+    auto task = new ReplyTask<string>(reqId, more);
+    task->data = data;
+    task->fn = [task](HttpConnHandle h, CharBuf * out, int stream) {
+        httpData(out, h, stream, task->data, task->more);
     };
-    iReply(reqId, fn, more);
+    taskPushEvent(task);
 }
 
 //===========================================================================
 // static
-void HttpSocket::reply(unsigned reqId, const CharBuf & data, bool more) {
-    auto fn = [&](HttpConnHandle h, CharBuf * out, int stream) -> void {
-        httpData(out, h, stream, data, more);
+void HttpSocket::reply(unsigned reqId, CharBuf && data, bool more) {
+    if (taskInEventThread()) {
+        auto fn = [&](HttpConnHandle h, CharBuf * out, int stream) -> void {
+            httpData(out, h, stream, data, more);
+        };
+        return iReply(reqId, fn, more);
+    }
+
+    auto task = new ReplyTask<CharBuf>{reqId, more};
+    task->data = move(data);
+    task->fn = [task](HttpConnHandle h, CharBuf * out, int stream) -> void {
+        httpData(out, h, stream, task->data, task->more);
     };
-    iReply(reqId, fn, more);
+    taskPushEvent(task);
 }
 
 //===========================================================================
@@ -467,13 +531,12 @@ void Dim::iHttpRouteInitialize() {
 ***/
 
 //===========================================================================
-void Dim::httpRouteAdd(
+static void routeAdd(
     IHttpRouteNotify * notify,
     string_view path,
     unsigned methods,
     bool recurse
 ) {
-    assert(!path.empty());
     if (s_paths.empty() && !appStarting())
         startListen();
     PathInfo pi;
@@ -486,28 +549,63 @@ void Dim::httpRouteAdd(
 }
 
 //===========================================================================
-void Dim::httpRouteReply(unsigned reqId, HttpResponse & msg, bool more) {
-    HttpSocket::reply(reqId, msg, more);
+void Dim::httpRouteAdd(
+    IHttpRouteNotify * notify,
+    string_view path,
+    unsigned methods,
+    bool recurse
+) {
+    assert(!path.empty());
+    if (taskInEventThread())
+        return routeAdd(notify, path, methods, recurse);
+
+    string tpath{path};
+    auto fn = [=]() { routeAdd(notify, tpath, methods, recurse); };
+    taskPushEvent(fn);
 }
 
 //===========================================================================
-void Dim::httpRouteReply(unsigned reqId, const CharBuf & data, bool more) {
-    HttpSocket::reply(reqId, data, more);
+void Dim::httpRouteReply(unsigned reqId, HttpResponse && msg, bool more) {
+    HttpSocket::reply(reqId, move(msg), more);
 }
 
 //===========================================================================
-void Dim::httpRouteReply(unsigned reqId, string_view data, bool more) {
-    HttpSocket::reply(reqId, data, more);
+void Dim::httpRouteReply(unsigned reqId, CharBuf && data, bool more) {
+    HttpSocket::reply(reqId, move(data), more);
+}
+
+//===========================================================================
+void Dim::httpRouteReply(unsigned reqId, string_view view, bool more) {
+    HttpSocket::reply(reqId, view, more);
+}
+
+//===========================================================================
+static void routeReset(unsigned reqId, bool internal) {
+    if (taskInEventThread())
+        return HttpSocket::resetReply(reqId, internal);
+
+    struct Task : ITaskNotify {
+        unsigned m_reqId;
+        bool m_internal;
+        void onTask() override {
+            HttpSocket::resetReply(m_reqId, m_internal);
+            delete this;
+        }
+    };
+    auto task = new Task;
+    task->m_reqId = reqId;
+    task->m_internal = internal;
+    taskPushEvent(task);
 }
 
 //===========================================================================
 void Dim::httpRouteCancel(unsigned reqId) {
-    HttpSocket::resetReply(reqId, false);
+    routeReset(reqId, false);
 }
 
 //===========================================================================
 void Dim::httpRouteInternalError(unsigned reqId) {
-    HttpSocket::resetReply(reqId, true);
+    routeReset(reqId, true);
 }
 
 //===========================================================================
@@ -523,7 +621,7 @@ void Dim::httpRouteReplyNotFound(unsigned reqId, const HttpRequest & req) {
         << end;
     res.addHeader(kHttpContentType, "text/html");
     res.addHeader(kHttp_Status, "404");
-    httpRouteReply(reqId, res);
+    httpRouteReply(reqId, move(res));
 }
 
 //===========================================================================
@@ -551,7 +649,7 @@ static void routeReply(
 
     res.addHeader(kHttpContentType, "text/html");
     res.addHeader(kHttp_Status, st.c_str());
-    httpRouteReply(reqId, res);
+    httpRouteReply(reqId, move(res));
 }
 
 //===========================================================================
@@ -608,10 +706,10 @@ void Dim::httpRouteReplyWithFile(unsigned reqId, string_view path) {
     auto file = fileOpen(path, File::fReadOnly | File::fDenyNone);
     if (!file) {
         msg.addHeader(kHttp_Status, "404");
-        return HttpSocket::reply(reqId, msg, false);
+        return httpRouteReply(reqId, move(msg), false);
     }
     msg.addHeader(kHttp_Status, "200");
-    httpRouteReply(reqId, msg, true);
+    httpRouteReply(reqId, move(msg), true);
     auto notify = new ReplyWithFileNotify;
     notify->m_reqId = reqId;
     fileRead(

@@ -35,8 +35,8 @@ void httpRouteAdd(
     bool recurse = false
 );
 
-void httpRouteReply(unsigned reqId, HttpResponse & msg, bool more = false);
-void httpRouteReply(unsigned reqId, const CharBuf & data, bool more);
+void httpRouteReply(unsigned reqId, HttpResponse && msg, bool more = false);
+void httpRouteReply(unsigned reqId, CharBuf && data, bool more);
 void httpRouteReply(unsigned reqId, std::string_view data, bool more);
 
 // Aborts incomplete reply with CANCEL or INTERNAL_ERROR
