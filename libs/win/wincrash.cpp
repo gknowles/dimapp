@@ -66,6 +66,10 @@ extern "C" void abortHandler(int sig) {
     WinError err;
     printf("abnormal abort, sig %d\n", sig);
     scoped_lock<mutex> lk{s_mut};
+
+    if (IsDebuggerPresent())
+        DebugBreak();
+
     auto f = CreateFile(
         s_crashFile.c_str(),
         GENERIC_READ | GENERIC_WRITE,
@@ -78,7 +82,7 @@ extern "C" void abortHandler(int sig) {
     if (f == INVALID_HANDLE_VALUE) {
         err.set();
         _CrtSetDbgFlag(0);
-        _Exit(3);
+        TerminateProcess(GetCurrentProcess(), 3);
     }
     MINIDUMP_EXCEPTION_INFORMATION mei = {};
     EXCEPTION_RECORD record = {};
@@ -116,7 +120,7 @@ extern "C" void abortHandler(int sig) {
     }
     CloseHandle(f);
     _CrtSetDbgFlag(0);
-    _Exit(3);
+    TerminateProcess(GetCurrentProcess(), 3);
 }
 
 //===========================================================================
