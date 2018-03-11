@@ -91,8 +91,6 @@ static void taskQueueThread(TaskQueue * ptr) {
     iThreadInitialize();
     TaskQueue & q{*ptr};
     iThreadSetName(q.name);
-    if (q.hq == s_eventQ)
-        t_inEventThread = true;
     bool more{true};
     unique_lock<mutex> lk{s_mut};
     while (more) {
@@ -207,6 +205,7 @@ RunOnceTask::RunOnceTask(string_view name, function<void()> && fn)
 void Dim::iTaskInitialize() {
     s_running = true;
     s_eventQ = taskCreateQueue("Event", 1);
+    taskPush(s_eventQ, [](){ t_inEventThread = true; });
     s_computeQ = taskCreateQueue("Compute", 5);
 }
 
