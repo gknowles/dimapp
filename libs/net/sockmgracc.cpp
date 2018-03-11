@@ -68,7 +68,7 @@ public:
     // Inherited via IAppSocketNotify
     bool onSocketAccept(const AppSocketInfo & info) override;
     void onSocketDestroy() override;
-    void onSocketRead(AppSocketData & data) override;
+    bool onSocketRead(AppSocketData & data) override;
 };
 
 } // namespace
@@ -118,9 +118,10 @@ void AccMgrSocket::onSocketDestroy () {
 }
 
 //===========================================================================
-void AccMgrSocket::onSocketRead (AppSocketData & data) {
+bool AccMgrSocket::onSocketRead (AppSocketData & data) {
     mgr().touch(this);
     ISockMgrSocket::onSocketRead(data);
+    return true;
 }
 
 

@@ -25,12 +25,13 @@ public:
     void disconnect(AppSocket::Disconnect why) override;
     void write(string_view data) override;
     void write(unique_ptr<SocketBuffer> buffer, size_t bytes) override;
+    void read() override;
 
     // Inherited via IAppSocketNotify
     bool onSocketAccept(const AppSocketInfo & info) override;
     void onSocketDisconnect() override;
     void onSocketDestroy() override;
-    void onSocketRead(AppSocketData & data) override;
+    bool onSocketRead(AppSocketData & data) override;
     void onSocketBufferChanged(const AppSocketBufferInfo & info) override;
 
 private:
@@ -78,6 +79,11 @@ void TlsSocket::write(unique_ptr<SocketBuffer> buffer, size_t bytes) {
 }
 
 //===========================================================================
+void TlsSocket::read() {
+    socketRead(this);
+}
+
+//===========================================================================
 bool TlsSocket::onSocketAccept (const AppSocketInfo & info) {
     m_conn = winTlsAccept();
     return notifyAccept(info);
@@ -94,7 +100,7 @@ void TlsSocket::onSocketDestroy () {
 }
 
 //===========================================================================
-void TlsSocket::onSocketRead (AppSocketData & data) {
+bool TlsSocket::onSocketRead (AppSocketData & data) {
     assert(data.bytes);
     CharBuf out;
     CharBuf recv;
@@ -111,6 +117,7 @@ void TlsSocket::onSocketRead (AppSocketData & data) {
     }
     if (!success)
         disconnect(AppSocket::Disconnect::kCryptError);
+    return true;
 }
 
 //===========================================================================

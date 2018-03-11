@@ -64,6 +64,7 @@ public:
         std::unique_ptr<SocketBuffer> buffer,
         size_t bytes
     );
+    static void read(IAppSocketNotify * notify);
 
 public:
     // If constructed without a notify the incoming data will be matched
@@ -78,6 +79,7 @@ public:
     virtual void disconnect(AppSocket::Disconnect why) = 0;
     virtual void write(std::string_view data) = 0;
     virtual void write(std::unique_ptr<SocketBuffer> buffer, size_t bytes) = 0;
+    virtual void read() = 0;
 
     void notifyConnect(const AppSocketInfo & info);
     void notifyConnectFailed();
@@ -85,7 +87,7 @@ public:
     bool notifyAccept(const AppSocketInfo & info);
     void notifyDisconnect();
     void notifyDestroy(bool deleteThis = true);
-    void notifyRead(AppSocketData & data);
+    bool notifyRead(AppSocketData & data);
     void notifyBufferChanged(const AppSocketBufferInfo & info);
 
 protected:

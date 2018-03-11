@@ -40,11 +40,12 @@ public:
     void disconnect(AppSocket::Disconnect why) override = 0;
     void write(std::string_view data) override;
     void write(std::unique_ptr<SocketBuffer> buffer, size_t bytes) override;
+    void read() override;
 
     // Inherited via IAppSocketNotify
     void onSocketDisconnect() override;
     void onSocketDestroy() override = 0;
-    void onSocketRead(AppSocketData & data) override;
+    bool onSocketRead(AppSocketData & data) override;
     void onSocketBufferChanged(const AppSocketBufferInfo & info) override;
 
 private:

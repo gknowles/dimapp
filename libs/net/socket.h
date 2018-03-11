@@ -49,18 +49,25 @@ public:
 public:
     virtual ~ISocketNotify() = default;
 
+    //-----------------------------------------------------------------------
     // for connectors
     virtual void onSocketConnect(const SocketInfo & info) {};
     virtual void onSocketConnectFailed() {};
 
+    //-----------------------------------------------------------------------
     // for listeners
     // returns true if the socket is accepted
     virtual bool onSocketAccept(const SocketInfo & info) { return true; };
 
+    //-----------------------------------------------------------------------
     // for both
     virtual void onSocketDisconnect() {};
     virtual void onSocketDestroy() { delete this; }
-    virtual void onSocketRead(SocketData & data) = 0;
+
+    // Return true to immediately queue up another read, or return false and
+    // call socketQueueRead later. For every time false is returned
+    // socketQueueRead MUST be called exactly once.
+    virtual bool onSocketRead(SocketData & data) = 0;
 
     // Called when incomplete falls to zero or waiting transitions between
     // zero and non-zero.
@@ -118,8 +125,13 @@ inline void socketCloseWait(const Endpoint & local) {
 }
 
 //===========================================================================
-// write
+// read/write
 //===========================================================================
+
+// Queues up a read on the socket. Only allowed (and required!) after the
+// notifier has returned false from its onSocketRead handler.
+void socketRead(ISocketNotify * notify);
+
 struct SocketBuffer {
     char * const data;
     const int capacity;

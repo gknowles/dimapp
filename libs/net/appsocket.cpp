@@ -67,6 +67,7 @@ public:
     void disconnect(AppSocket::Disconnect why) override;
     void write(string_view data) override;
     void write(unique_ptr<SocketBuffer> buffer, size_t bytes) override;
+    void read() override;
 
     // ISocketNotify
     void onSocketConnect(const SocketInfo & info) override;
@@ -74,7 +75,7 @@ public:
     bool onSocketAccept(const SocketInfo & info) override;
     void onSocketDisconnect() override;
     void onSocketDestroy() override;
-    void onSocketRead(SocketData & data) override;
+    bool onSocketRead(SocketData & data) override;
     void onSocketBufferChanged(const SocketBufferInfo & info) override;
 
 private:
@@ -168,6 +169,13 @@ void IAppSocket::write(
 ) {
     if (auto sock = notify->m_socket)
         sock->write(move(buffer), bytes);
+}
+
+//===========================================================================
+// static
+void IAppSocket::read(IAppSocketNotify * notify) {
+    if (auto sock = notify->m_socket)
+        sock->read();
 }
 
 //===========================================================================
@@ -336,13 +344,13 @@ static bool findFactory(
 }
 
 //===========================================================================
-void IAppSocket::notifyRead(AppSocketData & data) {
+bool IAppSocket::notifyRead(AppSocketData & data) {
     if (m_notify)
         return m_notify->onSocketRead(data);
 
     // already queued for disconnect? ignore any incoming data
     if (m_pos == list<UnmatchedInfo>::iterator{})
-        return;
+        return true;
 
     string_view view(data.data, data.bytes);
     if (!m_pos->socketData.empty())
@@ -352,7 +360,7 @@ void IAppSocket::notifyRead(AppSocketData & data) {
     if (!findFactory(&m_accept.fam, &fact, m_accept.local, view)) {
         if (m_pos->socketData.empty())
             m_pos->socketData.assign(data.data, data.bytes);
-        return;
+        return true;
     }
 
     // no longer unmatched - one way or another
@@ -362,20 +370,21 @@ void IAppSocket::notifyRead(AppSocketData & data) {
     if (!fact) {
         logMsgDebug() << "AppSocket: unknown protocol";
         logHexDebug(view.substr(0, 128));
-        return disconnect(AppSocket::Disconnect::kUnknownProtocol);
+        disconnect(AppSocket::Disconnect::kUnknownProtocol);
+        return true;
     }
 
     setNotify(fact->onFactoryCreate().release());
 
     // set notifier from registered factory
     if (!notifyAccept(m_accept))
-        return;
+        return true;
 
     // replay data received so far
     AppSocketData tmp;
     tmp.data = const_cast<char*>(view.data());
     tmp.bytes = (int) view.size();
-    m_notify->onSocketRead(tmp);
+    return m_notify->onSocketRead(tmp);
 }
 
 //===========================================================================
@@ -448,6 +457,11 @@ void RawSocket::write(unique_ptr<SocketBuffer> buffer, size_t bytes) {
 }
 
 //===========================================================================
+void RawSocket::read() {
+    socketRead(this);
+}
+
+//===========================================================================
 void RawSocket::onSocketConnect(const SocketInfo & info) {
     AppSocketInfo tmp = {};
     tmp.local = info.local;
@@ -479,9 +493,9 @@ void RawSocket::onSocketDestroy() {
 }
 
 //===========================================================================
-void RawSocket::onSocketRead(SocketData & data) {
+bool RawSocket::onSocketRead(SocketData & data) {
     AppSocketData ad = { data.data, data.bytes };
-    notifyRead(ad);
+    return notifyRead(ad);
 }
 
 //===========================================================================
@@ -635,6 +649,11 @@ void Dim::socketWrite(
     size_t bytes
 ) {
     IAppSocket::write(notify, move(buffer), bytes);
+}
+
+//===========================================================================
+void Dim::socketRead(IAppSocketNotify * notify) {
+    IAppSocket::read(notify);
 }
 
 //===========================================================================

@@ -44,13 +44,18 @@ void ISockMgrSocket::write(unique_ptr<SocketBuffer> buffer, size_t bytes) {
 }
 
 //===========================================================================
+void ISockMgrSocket::read() {
+    socketRead(this);
+}
+
+//===========================================================================
 void ISockMgrSocket::onSocketDisconnect () {
     notifyDisconnect();
 }
 
 //===========================================================================
-void ISockMgrSocket::onSocketRead (AppSocketData & data) {
-    notifyRead(data);
+bool ISockMgrSocket::onSocketRead (AppSocketData & data) {
+    return notifyRead(data);
 }
 
 //===========================================================================

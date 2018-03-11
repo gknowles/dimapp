@@ -34,6 +34,7 @@ public:
         std::unique_ptr<SocketBuffer> buffer,
         size_t bytes
     );
+    static void read(ISocketNotify * notify);
 
 public:
     SocketBase(ISocketNotify * notify);
@@ -69,6 +70,7 @@ private:
     // used by read requests
     List<SocketRequest> m_reads;
     int m_maxReads{0};
+    List<SocketRequest> m_prereads;
 
     // used by write requests
     List<SocketRequest> m_writes;

@@ -30,7 +30,7 @@ class SocketConn
     void onSocketConnectFailed() override;
     void onSocketDisconnect() override;
     void onSocketDestroy() override;
-    void onSocketRead(SocketData & data) override;
+    bool onSocketRead(SocketData & data) override;
     void onSocketBufferChanged(const SocketBufferInfo & info) override;
 
     // Inherited via IEndpointNotify
@@ -123,9 +123,10 @@ void SocketConn::onSocketDestroy() {
 }
 
 //===========================================================================
-void SocketConn::onSocketRead(SocketData & data) {
+bool SocketConn::onSocketRead(SocketData & data) {
     cout.write(data.data, data.bytes);
     cout.flush();
+    return true;
 }
 
 //===========================================================================

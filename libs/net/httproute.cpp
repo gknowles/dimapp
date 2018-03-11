@@ -48,7 +48,7 @@ public:
     ~HttpSocket ();
     bool onSocketAccept(const AppSocketInfo & info) override;
     void onSocketDisconnect() override;
-    void onSocketRead(AppSocketData & data) override;
+    bool onSocketRead(AppSocketData & data) override;
     void onSocketDestroy() override;
 
 private:
@@ -331,7 +331,7 @@ void HttpSocket::onSocketDisconnect() {
 }
 
 //===========================================================================
-void HttpSocket::onSocketRead(AppSocketData & data) {
+bool HttpSocket::onSocketRead(AppSocketData & data) {
     CharBuf out;
     vector<unique_ptr<HttpMsg>> msgs;
     bool result = httpRecv(&out, &msgs, m_conn, data.data, data.bytes);
@@ -339,7 +339,8 @@ void HttpSocket::onSocketRead(AppSocketData & data) {
         socketWrite(this, out);
     if (!result) {
         s_perfInvalid += 1;
-        return socketDisconnect(this);
+        socketDisconnect(this);
+        return true;
     }
     for (auto && msg : msgs) {
         if (msg->isRequest()) {
@@ -355,6 +356,7 @@ void HttpSocket::onSocketRead(AppSocketData & data) {
         } else {
         }
     }
+    return true;
 }
 
 
@@ -407,7 +409,7 @@ class Http1Reject : public IAppSocketMatchNotify, public IAppSocketNotify {
     ) override;
 
     bool onSocketAccept(const AppSocketInfo & info) override;
-    void onSocketRead(AppSocketData & data) override;
+    bool onSocketRead(AppSocketData & data) override;
 
 private:
     AppSocketInfo m_info;
@@ -458,7 +460,7 @@ bool Http1Reject::onSocketAccept(const AppSocketInfo & info) {
 }
 
 //===========================================================================
-void Http1Reject::onSocketRead(AppSocketData & data) {
+bool Http1Reject::onSocketRead(AppSocketData & data) {
     s_perfRejects += 1;
 
     const char kBody[] = R"(
@@ -475,6 +477,7 @@ void Http1Reject::onSocketRead(AppSocketData & data) {
         "\r\n"
         << kBody;
     socketWrite(this, os.str());
+    return true;
 }
 
 

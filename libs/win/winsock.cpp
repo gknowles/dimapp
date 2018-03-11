@@ -121,6 +121,21 @@ void SocketBase::write(
 }
 
 //===========================================================================
+// static
+void SocketBase::read(ISocketNotify * notify) {
+    if (auto sock = notify->m_socket) {
+        auto task = sock->m_prereads.front();
+
+        // Queuing reads is only allowed after an automatic requeuing was
+        // rejected via returning false from onSocketRead.
+        assert(task);
+
+        sock->m_reads.link(task);
+        sock->queueRead(task);
+    }
+}
+
+//===========================================================================
 SocketBase::SocketBase(ISocketNotify * notify)
     : m_notify(notify)
 {
@@ -269,8 +284,7 @@ void SocketBase::onTask() {
 
 //===========================================================================
 bool SocketBase::onRead(SocketRequest * task) {
-    int bytes = task->m_xferBytes;
-    if (bytes) {
+    if (int bytes = task->m_xferBytes) {
         s_perfReadTotal += bytes;
         SocketData data;
         data.data = (char *)task->m_buffer->data;
@@ -279,17 +293,20 @@ bool SocketBase::onRead(SocketRequest * task) {
         // included uncounted trailing null
         data.data[bytes] = 0;
 
-        m_notify->onSocketRead(data);
-    }
+        bool more = m_notify->onSocketRead(data);
 
-    if (bytes) {
         if (m_mode == Mode::kActive) {
-            queueRead(task);
+            if (more) {
+                queueRead(task);
+            } else {
+                m_prereads.link(task);
+            }
             return true;
         }
 
         assert(m_mode == Mode::kClosing || m_mode == Mode::kClosed);
     }
+
     delete task;
 
     if (m_mode != Mode::kClosed) {
@@ -707,4 +724,10 @@ void Dim::socketWrite(
 ) {
     iSocketCheckThread();
     SocketBase::write(notify, move(buffer), bytes);
+}
+
+//===========================================================================
+void Dim::socketRead(ISocketNotify * notify) {
+    iSocketCheckThread();
+    SocketBase::read(notify);
 }

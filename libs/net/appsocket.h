@@ -75,7 +75,7 @@ public:
     // for both
     virtual void onSocketDisconnect() {};
     virtual void onSocketDestroy() { delete this; }
-    virtual void onSocketRead(AppSocketData & data) = 0;
+    virtual bool onSocketRead(AppSocketData & data) = 0;
     virtual void onSocketBufferChanged(const AppSocketBufferInfo & info) {}
 
 private:
@@ -86,6 +86,7 @@ private:
 void socketDisconnect(IAppSocketNotify * notify);
 void socketWrite(IAppSocketNotify * notify, std::string_view data);
 void socketWrite(IAppSocketNotify * notify, const CharBuf & data);
+void socketRead(IAppSocketNotify * notify);
 
 
 /****************************************************************************
