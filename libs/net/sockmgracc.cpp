@@ -120,8 +120,7 @@ void AccMgrSocket::onSocketDestroy () {
 //===========================================================================
 bool AccMgrSocket::onSocketRead (AppSocketData & data) {
     mgr().touch(this);
-    ISockMgrSocket::onSocketRead(data);
-    return true;
+    return ISockMgrSocket::onSocketRead(data);
 }
 
 

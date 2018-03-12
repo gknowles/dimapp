@@ -35,6 +35,7 @@ public:
     void onSocketBufferChanged(const AppSocketBufferInfo & info) override;
 
 private:
+    deque<unsigned> m_delayedReads;
     WinTlsConnHandle m_conn;
 };
 
@@ -80,6 +81,10 @@ void TlsSocket::write(unique_ptr<SocketBuffer> buffer, size_t bytes) {
 
 //===========================================================================
 void TlsSocket::read() {
+    assert(!m_delayedReads.empty());
+    if (--m_delayedReads.front())
+        return;
+    m_delayedReads.pop_front();
     socketRead(this);
 }
 
@@ -110,13 +115,19 @@ bool TlsSocket::onSocketRead (AppSocketData & data) {
     bool success = winTlsRecv(&out, &recv, m_conn, sv);
     socketWrite(this, out);
     AppSocketData tmp;
+    unsigned delayedReads = 0;
     for (auto && v : recv.views()) {
         tmp.data = (char *) v.data();
         tmp.bytes = (int) v.size();
-        notifyRead(tmp);
+        if (!notifyRead(tmp))
+            delayedReads += 1;
     }
     if (!success)
         disconnect(AppSocket::Disconnect::kCryptError);
+    if (delayedReads) {
+        m_delayedReads.push_back(delayedReads);
+        return false;
+    }
     return true;
 }
 

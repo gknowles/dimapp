@@ -152,13 +152,13 @@ SocketBase::~SocketBase() {
         m_notify->m_socket = nullptr;
     }
     hardClose();
+    m_prereads.clear();
 
     s_numSockets -= 1;
 
     if (m_cq != RIO_INVALID_CQ)
         s_rio.RIOCloseCompletionQueue(m_cq);
 
-    // release the lock before making the calling the notify
     if (notify)
         notify->onSocketDestroy();
 }
@@ -343,7 +343,7 @@ bool SocketBase::onWrite(SocketRequest * task) {
     m_bufInfo.incomplete -= bytes;
 
     // already disconnected and this was the last unresolved write? delete
-    if (m_reads.empty() && m_writes.empty()) {
+    if (m_mode == Mode::kClosed && m_reads.empty() && m_writes.empty()) {
         delete this;
         return false;
     }
