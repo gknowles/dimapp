@@ -141,7 +141,6 @@ int main(int argc, char * argv[]) {
         return cli.printHelp(cout);
 
     path->defaultExt("xml");
-    error_code code;
     auto bytes = (size_t) fileSize(*path);
     string content;
     content.resize(bytes + 1);
