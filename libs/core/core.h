@@ -15,6 +15,7 @@
 #include "log.h"
 #include "math.h"
 #include "perf.h"
+#include "process.h"
 #include "shutdown.h"
 #include "str.h"
 #include "task.h"
