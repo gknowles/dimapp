@@ -98,7 +98,8 @@ extern "C" void abortHandler(int sig) {
         RtlCaptureContext(&context);
         record.ExceptionCode = EXCEPTION_BREAKPOINT;
     }
-    auto type = MINIDUMP_TYPE(MiniDumpWithDataSegs
+    auto type = MINIDUMP_TYPE(MiniDumpNormal
+        | MiniDumpWithDataSegs
         | MiniDumpWithIndirectlyReferencedMemory
         | MiniDumpWithProcessThreadData
         | MiniDumpIgnoreInaccessibleMemory
@@ -217,7 +218,6 @@ void Dim::winCrashInitialize() {
     for (auto && [sig, handler] : s_oldHandlers)
         handler = signal(sig, abortHandler);
 
-    //SetErrorMode(
     s_oldErrorMode = _set_error_mode(_OUT_TO_STDERR);
     s_oldAbortBehavior = _set_abort_behavior(0, kAbortBehaviorMask);
     s_oldInval = _set_invalid_parameter_handler(invalidParameterHandler);
