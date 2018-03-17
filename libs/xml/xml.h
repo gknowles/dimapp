@@ -332,13 +332,20 @@ const XNode * prevSibling(
     XType type = XType::kInvalid
 );
 
+const char * text(const XNode * elem, const char def[] = nullptr);
+
 XAttr * attr(XNode * elem, std::string_view name);
 const XAttr * attr(const XNode * elem, std::string_view name);
 
 const char * attrValue(
     const XNode * elem,
     std::string_view name,
-    const char val[] = nullptr
+    const char def[] = nullptr
+);
+bool attrValue(
+    const XNode * elem,
+    std::string_view name,
+    bool def
 );
 
 //===========================================================================

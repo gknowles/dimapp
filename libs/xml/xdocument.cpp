@@ -276,7 +276,9 @@ void XDocument::normalizeText(XNode * node) {
         case ' ':
         case '\t':
         case '\n':
-        case '\r': firstChar += 1; continue;
+        case '\r':
+            firstChar += 1;
+            continue;
         case 0:
             ei->valueLen -= (firstChar - firstNode->value);
             prev = firstNode;
@@ -513,6 +515,13 @@ const XNode * Dim::prevSibling(
 }
 
 //===========================================================================
+const char * Dim::text(const XNode * elem, const char def[]) {
+    if (elem && elem->value)
+        return elem->value;
+    return def;
+}
+
+//===========================================================================
 XAttr * Dim::attr(XNode * elem, string_view name) {
     if (nodeType(elem) != XType::kElement)
         return nullptr;
@@ -544,6 +553,17 @@ const char * Dim::attrValue(
     if (auto xa = attr(elem, name))
         return xa->value;
     return val;
+}
+
+//===========================================================================
+bool Dim::attrValue(
+    const XNode * elem,
+    std::string_view name,
+    bool def
+) {
+    if (auto xa = attr(elem, name))
+        return xa->value == "true"sv || xa->value == "1"sv;
+    return def;
 }
 
 //===========================================================================
