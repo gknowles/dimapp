@@ -57,6 +57,7 @@ std::ostream & operator<<(std::ostream & os, const StrFrom<T> & str) {
     return os;
 }
 
+
 /****************************************************************************
 *
 *   StrFrom<is_integral_v<T>>
