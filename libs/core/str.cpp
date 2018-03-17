@@ -365,7 +365,7 @@ bool Dim::parse(double * out, std::string_view src) {
 ***/
 
 //===========================================================================
-void Dim::strSplit(
+void Dim::split(
     vector<string_view> * out,
     string_view src,
     char sep
@@ -387,18 +387,70 @@ void Dim::strSplit(
 }
 
 //===========================================================================
-string_view Dim::strTrim(string_view src) {
+string_view Dim::trim(string_view src) {
     const char * first = src.data();
     const char * last = first + src.size();
-    while (isspace(*first))
+    while (first < last && isspace(*first))
         ++first;
-    if (!*first)
-        return {};
-    while (isspace(*--last)) {
-        if (last == first)
+    for (; first < last; --last) {
+        if (!isspace(last[-1]))
             break;
     }
-    return string_view(first, last - first + 1);
+    return {first, size_t(last - first)};
+}
+
+//===========================================================================
+string_view Dim::ltrim(std::string_view src) {
+    const char * first = src.data();
+    const char * last = first + src.size();
+    while (first < last && isspace(*first))
+        ++first;
+    return {first, size_t(last - first)};
+}
+
+//===========================================================================
+string_view Dim::rtrim(std::string_view src) {
+    const char * first = src.data();
+    const char * last = first + src.size();
+    for (; first < last; --last) {
+        if (!isspace(last[-1]))
+            break;
+    }
+    return {first, size_t(last - first)};
+}
+
+//===========================================================================
+string Dim::trimBlock(string_view src) {
+    vector<string_view> lines;
+    split(&lines, src, '\n');
+    // remove trailing whitespace
+    for (auto && line : lines)
+        line = rtrim(line);
+
+    // remove leading and trailing blank lines
+    while (!lines.empty() && lines.back().empty())
+        lines.pop_back();
+    while (!lines.empty() && lines.front().empty())
+        lines.erase(lines.begin());
+    if (lines.empty())
+        return {};
+
+    // remove common leading whitespace
+    auto prefix = lines.front().size();
+    for (auto && line : lines)
+        prefix = min(prefix, line.size() - ltrim(line).size());
+    if (prefix) {
+        for (auto && line : lines)
+            line.remove_prefix(prefix);
+    }
+
+    // combined lines into new string
+    auto out = string(lines.front());
+    for (auto i = lines.begin() + 1; i != lines.end(); ++i) {
+        out += '\n';
+        out += *i;
+    }
+    return out;
 }
 
 //===========================================================================

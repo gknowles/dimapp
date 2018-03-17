@@ -263,12 +263,20 @@ template <typename T>
 *
 ***/
 
-void strSplit(
+void split(
     std::vector<std::string_view> * out,
     std::string_view src,
     char sep = ' '
 );
-std::string_view strTrim(std::string_view src);
+std::string_view trim(std::string_view src);
+std::string_view ltrim(std::string_view src);
+std::string_view rtrim(std::string_view src);
+
+// Splits source into lines, trims trailing spaces, leading and trailing
+// blank lines, and removes a number of leading whitespace characters from
+// each line equal to the smallest number of leading whitespace characters of
+// any line.
+std::string trimBlock(std::string_view src);
 
 std::unique_ptr<char[]> strDup(std::string_view src);
 
