@@ -1,0 +1,128 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright Glen Knowles 2018.
+Distributed under the Boost Software License, Version 1.0.
+-->
+<Schema xmlns="http://github.com/gknowles/dimapp/xsdgen.xsd">
+  <Output xsdNamespace="http://github.com/gknowles/dimapp/xsdgen.xsd"/>
+  <Overview><![CDATA[
+Definition of xml schema used to generate an xsd and help files.
+]]></Overview>
+
+  <Root name="Schema" desc="Top level element.">
+    <Element name="Output" require="true" single="true"
+        desc="Outputs to be generated.">
+      <Overview>
+        <![CDATA[
+Specifies the outputs to be generated and their options.
+]]>
+      </Overview>
+      <Attr name="xsdNamespace" content="string" require="true"
+          desc="Target namespace of generated xsd."/>
+    </Element>
+
+    <Element name="Overview" content="string" single="true"
+        desc="Overall structure and purpose of the schema.">
+      <Overview>
+        <![CDATA[
+Descriptive text about the structure and purpose of the schema as a whole.">
+]]>
+      </Overview>
+    </Element>
+
+    <Element id="elem0" name="Root" content="xml" require="true" single="true"
+        desc="Root element of schema being defined.">
+      <Overview>
+        <![CDATA[
+The element @name and @content must be specified explicitly or indirectly
+from another element referenced via @ref.
+]]>
+      </Overview>
+      <Attr name="id" content="string"
+          desc="Unique key used to reference this Element's content."/>
+      <Attr name="ref" content="string"
+          desc="Use content definition of referenced element.">
+        <Overview>
+          <![CDATA[
+The content definition of the referenced element (the element with an @id
+attribute that matches this @ref) is used, and its @name is copied if the
+referencing element doesn't have an explicit @name.
+]]>
+        </Overview>
+      </Attr>
+      <Attr name="name" content="string"
+          desc="Name of element in schema."/>
+      <Attr name="content" content="enum" default="xml"
+          desc="Type of content contained by element">
+        <Enum name="bool" desc="Must be 'true', 'false', '1', or '0'"/>
+        <Enum name="enum" desc="One of a preset list of values."/>
+        <Enum name="string" desc="Text content, including CDATA."/>
+        <Enum name="unsigned" desc="Positive integer less than 2^32"/>
+        <Enum name="xml" desc="Specific XML nodes, not mixed content."/>
+      </Attr>
+      <Attr name="require" content="bool"/>
+      <Attr name="single" content="bool"/>
+      <Attr name="default" content="string"/>
+      <Attr name="desc" content="string"/>
+      <Element name="Overview" content="string" single="true"/>
+      <Element ref="attr0"/>
+      <Element ref="enum0"/>
+      <Element name="Note">
+        <Attr name="column" content="enum" require="true">
+          <Enum name="name"/>
+          <Enum name="content"/>
+          <Enum name="desc"/>
+          <Enum name="quantity"/>
+          <Enum name="default"/>
+        </Attr>
+        <Attr name="text" content="string" require="true"/>
+      </Element>
+      <Element ref="elem1" desc="Descendent element.">
+      </Element>
+    </Element>
+  </Root>
+
+  <Content id="elem1" ref="elem0">
+    <Overview>
+      <![CDATA[
+The element @name and @content must be specified explicitly or indirectly
+from another element referenced via @ref.
+]]>
+    </Overview>
+    <Attr name="require" content="bool"/>
+    <Attr name="single" content="bool"/>
+  </Content>
+
+  <Content id="attr0" name="Attr">
+    <Attr name="name" content="string" require="true"/>
+    <Attr name="content" content="enum" require="true">
+      <Enum name="bool" desc="Must be 'true', 'false', '1', or '0'"/>
+      <Enum name="enum" desc="One of a preset list of values."/>
+      <Enum name="string" desc="Text content, including CDATA."/>
+      <Enum name="unsigned" desc="Integer in [0, 2^32)"/>
+    </Attr>
+    <Attr name="require" content="bool"/>
+    <Attr name="default" content="string"/>
+    <Attr name="desc" content="string"/>
+    <Element name="Overview" content="string" single="true"/>
+    <Element ref="enum0"/>
+    <Element id="enum0" name="Enum" desc="Individual enum value.">
+      <Attr name="name" content="string" require="true"/>
+      <Attr name="desc" content="string"/>
+      <Note column="quantity"
+          text="Required, and only allowed, when @content is 'enum'"/>
+    </Element>
+    <Element name="Note"
+        desc="Descriptive note that applies to one or more attributes.">
+      <Attr name="column" content="enum" require="true">
+        <Enum name="name"/>
+        <Enum name="content"/>
+        <Enum name="desc"/>
+        <Enum name="require"/>
+      </Attr>
+      <Attr name="text" content="string" require="true"
+          desc="Text of the note."/>
+    </Element>
+  </Content>
+
+</Schema>

@@ -227,6 +227,13 @@
 # tools/tnet/pch.cpp
 # tools/tnet/pch.h
 # tools/tnet/tnet.cpp
+# tools/xsdgen/README.md
+# tools/xsdgen/intern.h
+# tools/xsdgen/pch.cpp
+# tools/xsdgen/pch.h
+# tools/xsdgen/schema.xsdgen.xml
+# tools/xsdgen/writexsd.cpp
+# tools/xsdgen/xsdgen.cpp
 # vendor/dimcli
 # vendor/dimcli/libs/dimcli/cli.cpp
 # vendor/dimcli/libs/dimcli/cli.h
