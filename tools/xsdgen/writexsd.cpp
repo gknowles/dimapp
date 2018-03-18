@@ -37,5 +37,16 @@ using namespace Dim;
 
 //===========================================================================
 bool writeXsd(IXBuilder * out, const Schema & schema) {
+    out->start("schema")
+        .attr("xmlns", "http://www.w3.org.2001.XMLSchema")
+        .attr("xmlns:def", "http://github.com/gknowles/dimapp/xsdgen.xsd")
+        .attr("targetNamespace", "http://github.com/gknowles/dimapp/xsdgen.xsd")
+        .attr("elementFormDefault", "qualified");
+    out->start("element")
+        .attr("name", "Schema")
+        .attr("type", "def:tSchema")
+        .end();
+    // complexType per element
+    out->end();
     return false;
 }
