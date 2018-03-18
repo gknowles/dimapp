@@ -42,28 +42,25 @@ public:
 
     virtual void clear();
 
-    IXBuilder & start(const char name[], size_t count = -1);
     IXBuilder & start(std::string_view name);
     IXBuilder & end();
-    IXBuilder & startAttr(const char name[], size_t count = -1);
     IXBuilder & startAttr(std::string_view name);
     IXBuilder & endAttr();
 
-    IXBuilder & elem(const char name[], const char text[] = nullptr);
-    IXBuilder & attr(const char name[], const char text[]);
+    IXBuilder & elem(std::string_view name);
+    IXBuilder & elem(std::string_view name, std::string_view text);
+    IXBuilder & attr(std::string_view name, std::string_view text);
 
-    IXBuilder & text(const char text[], size_t count = -1);
     IXBuilder & text(std::string_view text);
 
 protected:
-    virtual void append(const char text[]) = 0;
-    virtual void append(const char text[], size_t count) = 0;
+    virtual void append(std::string_view text) = 0;
     virtual void appendCopy(size_t pos, size_t count) = 0;
     virtual size_t size() const = 0;
 
 private:
     template <int N> void addRaw(const char (&text)[N]) {
-        append(text, N - 1);
+        append({text, N - 1});
     }
 
     template <
@@ -73,7 +70,9 @@ private:
         append(text);
     }
 
-    void addRaw(const char text[], size_t count);
+    void addRaw(std::string_view text) {
+        append(text);
+    }
 
     template <bool isContent>
     void addText(const char text[], size_t count = -1);
@@ -149,8 +148,7 @@ public:
     void clear() override;
 
 private:
-    void append(const char text[]) override;
-    void append(const char text[], size_t count) override;
+    void append(std::string_view text) override;
     void appendCopy(size_t pos, size_t count) override;
     size_t size() const override;
 

@@ -94,7 +94,7 @@ void IXBuilder::clear() {
 }
 
 //===========================================================================
-IXBuilder & IXBuilder::start(const char name[], size_t count) {
+IXBuilder & IXBuilder::start(string_view name) {
     switch (m_state) {
     default: return fail();
     case kStateAttrText:
@@ -109,18 +109,15 @@ IXBuilder & IXBuilder::start(const char name[], size_t count) {
     case kStateDocIntro:
     case kStateText:
     case kStateTextRBracket:
-    case kStateTextRBracket2: addRaw("<"); break;
+    case kStateTextRBracket2:
+        addRaw("<");
+        break;
     }
     size_t base = size();
-    addRaw(name, count);
+    addRaw(name);
     m_stack.push_back({base, size() - base});
     m_state = kStateElemName;
     return *this;
-}
-
-//===========================================================================
-IXBuilder & IXBuilder::start(string_view name) {
-    return start(name.data(), name.size());
 }
 
 //===========================================================================
@@ -148,22 +145,17 @@ IXBuilder & IXBuilder::end() {
 }
 
 //===========================================================================
-IXBuilder & IXBuilder::startAttr(const char name[], size_t count) {
+IXBuilder & IXBuilder::startAttr(string_view name) {
     switch (m_state) {
     default: return fail();
     case kStateElemName:
     case kStateAttrEnd: break;
     }
     addRaw(" ");
-    addRaw(name, count);
+    addRaw(name);
     addRaw("=\"");
     m_state = kStateAttrText;
     return *this;
-}
-
-//===========================================================================
-IXBuilder & IXBuilder::startAttr(string_view name) {
-    return startAttr(name.data(), name.size());
 }
 
 //===========================================================================
@@ -178,22 +170,28 @@ IXBuilder & IXBuilder::endAttr() {
 }
 
 //===========================================================================
-IXBuilder & IXBuilder::elem(const char name[], const char val[]) {
+IXBuilder & IXBuilder::elem(string_view name) {
     start(name);
-    if (val && *val)
+    return end();
+}
+
+//===========================================================================
+IXBuilder & IXBuilder::elem(string_view name, string_view val) {
+    start(name);
+    if (!val.empty())
         text(val);
     return end();
 }
 
 //===========================================================================
-IXBuilder & IXBuilder::attr(const char name[], const char val[]) {
+IXBuilder & IXBuilder::attr(string_view name, string_view val) {
     startAttr(name);
     text(val);
     return endAttr();
 }
 
 //===========================================================================
-IXBuilder & IXBuilder::text(const char val[], size_t count) {
+IXBuilder & IXBuilder::text(string_view val) {
     switch (m_state) {
     default: return fail();
     case kStateElemName:
@@ -201,27 +199,16 @@ IXBuilder & IXBuilder::text(const char val[], size_t count) {
         addRaw(">");
         m_state = kStateText;
         break;
-    case kStateAttrText: addText<false>(val, count); return *this;
+    case kStateAttrText:
+        addText<false>(val.data(), val.size());
+        return *this;
     case kStateText:
     case kStateTextRBracket:
-    case kStateTextRBracket2: break;
+    case kStateTextRBracket2:
+        break;
     }
-    addText<true>(val, count);
+    addText<true>(val.data(), val.size());
     return *this;
-}
-
-//===========================================================================
-IXBuilder & IXBuilder::text(string_view val) {
-    return text(val.data(), val.size());
-}
-
-//===========================================================================
-void IXBuilder::addRaw(const char text[], size_t count) {
-    if (count == -1) {
-        append(text);
-    } else {
-        append(text, count);
-    }
 }
 
 //===========================================================================
@@ -269,7 +256,7 @@ template <bool isContent> void IXBuilder::addText(
             assert(!"invalid XML text type enum value");
         }
 
-        addRaw(base, val - base);
+        addRaw({base, size_t(val - base)});
         addRaw(kTextEntityTable[type]);
         base = val + 1;
         if (isContent)
@@ -278,7 +265,7 @@ template <bool isContent> void IXBuilder::addText(
 
 DONE:
     if (size_t num = val - base) {
-        addRaw(base, num);
+        addRaw({base, num});
         if (isContent) {
             if (val[-1] != ']') {
                 m_state = kStateText;
@@ -324,13 +311,8 @@ void XBuilder::clear() {
 }
 
 //===========================================================================
-void XBuilder::append(const char text[]) {
+void XBuilder::append(string_view text) {
     m_buf.append(text);
-}
-
-//===========================================================================
-void XBuilder::append(const char text[], size_t count) {
-    m_buf.append(text, count);
 }
 
 //===========================================================================
