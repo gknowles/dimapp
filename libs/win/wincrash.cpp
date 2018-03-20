@@ -81,47 +81,48 @@ extern "C" void abortHandler(int sig) {
     );
     if (f == INVALID_HANDLE_VALUE) {
         err.set();
-        _CrtSetDbgFlag(0);
-        TerminateProcess(GetCurrentProcess(), 3);
-    }
-    MINIDUMP_EXCEPTION_INFORMATION mei = {};
-    EXCEPTION_RECORD record = {};
-    CONTEXT context = {};
-    EXCEPTION_POINTERS newptrs = { &record, &context };
-
-    mei.ThreadId = GetCurrentThreadId();
-    mei.ClientPointers = true;
-    if (auto ptrs = (EXCEPTION_POINTERS *) _pxcptinfoptrs) {
-        mei.ExceptionPointers = ptrs;
     } else {
-        mei.ExceptionPointers = &newptrs;
-        RtlCaptureContext(&context);
-        record.ExceptionCode = EXCEPTION_BREAKPOINT;
+        MINIDUMP_EXCEPTION_INFORMATION mei = {};
+        EXCEPTION_RECORD record = {};
+        CONTEXT context = {};
+        EXCEPTION_POINTERS newptrs = { &record, &context };
+
+        mei.ThreadId = GetCurrentThreadId();
+        mei.ClientPointers = true;
+        if (auto ptrs = (EXCEPTION_POINTERS *) _pxcptinfoptrs) {
+            mei.ExceptionPointers = ptrs;
+        } else {
+            mei.ExceptionPointers = &newptrs;
+            RtlCaptureContext(&context);
+            record.ExceptionCode = EXCEPTION_BREAKPOINT;
+        }
+        auto type = MINIDUMP_TYPE(MiniDumpNormal
+            | MiniDumpWithDataSegs
+            | MiniDumpWithIndirectlyReferencedMemory
+            | MiniDumpWithProcessThreadData
+            | MiniDumpIgnoreInaccessibleMemory
+            | MiniDumpWithFullMemoryInfo
+            | MiniDumpWithThreadInfo
+        );
+        if (!MiniDumpWriteDump(
+            GetCurrentProcess(),
+            GetCurrentProcessId(),
+            f,
+            type,
+            &mei,
+            NULL,
+            NULL
+        )) {
+            err.set();
+            cout << "Writing crash dump failed: " << err;
+            cout.flush();
+        }
+        CloseHandle(f);
     }
-    auto type = MINIDUMP_TYPE(MiniDumpNormal
-        | MiniDumpWithDataSegs
-        | MiniDumpWithIndirectlyReferencedMemory
-        | MiniDumpWithProcessThreadData
-        | MiniDumpIgnoreInaccessibleMemory
-        | MiniDumpWithFullMemoryInfo
-        | MiniDumpWithThreadInfo
-    );
-    if (!MiniDumpWriteDump(
-        GetCurrentProcess(),
-        GetCurrentProcessId(),
-        f,
-        type,
-        &mei,
-        NULL,
-        NULL
-    )) {
-        err.set();
-        cout << "Writing crash dump failed: " << err;
-        cout.flush();
-    }
-    CloseHandle(f);
+
     _CrtSetDbgFlag(0);
     TerminateProcess(GetCurrentProcess(), 3);
+    Sleep(INFINITE);
 }
 
 //===========================================================================
