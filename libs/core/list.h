@@ -44,7 +44,7 @@ namespace Dim {
 
 
 // forward declarations
-struct LinkDefault;
+struct DefaultTag;
 
 
 /****************************************************************************
@@ -53,7 +53,7 @@ struct LinkDefault;
 *
 ***/
 
-template <typename Tag = LinkDefault>
+template <typename Tag = DefaultTag>
 class ListBaseLink : public NoCopy {
 public:
     ListBaseLink();
@@ -179,7 +179,7 @@ T * ListIterator<List, T>::operator->() {
 *
 ***/
 
-template <typename T, typename Tag = LinkDefault>
+template <typename T, typename Tag = DefaultTag>
 class List : public NoCopy {
 public:
     using iterator = ListIterator<List, T>;
