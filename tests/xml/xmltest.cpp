@@ -43,7 +43,7 @@ int internalTest() {
     int line = 0;
 
     CharBuf out;
-    XBuilder bld(out);
+    XBuilder bld(&out);
     bld.start("root");
     bld.text("  ROOT  ");
 
@@ -159,7 +159,7 @@ int main(int argc, char * argv[]) {
         if (*echo) {
             cout << endl;
             CharBuf out;
-            XBuilder bld(out);
+            XBuilder bld(&out);
             bld << *root;
             out.pushBack(0);
             cout << out.data();

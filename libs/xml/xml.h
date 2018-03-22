@@ -144,7 +144,7 @@ inline IXBuilder & endAttr(IXBuilder & out) {
 //---------------------------------------------------------------------------
 class XBuilder : public IXBuilder {
 public:
-    XBuilder(CharBuf & buf) : m_buf(buf) {}
+    XBuilder(CharBuf * buf) : m_buf(*buf) {}
     void clear() override;
 
 private:
@@ -185,7 +185,7 @@ public:
 
 class XStreamParser {
 public:
-    XStreamParser(IXStreamParserNotify & notify);
+    XStreamParser(IXStreamParserNotify * notify);
     ~XStreamParser();
 
     void clear();

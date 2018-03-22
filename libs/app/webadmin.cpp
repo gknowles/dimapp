@@ -53,7 +53,7 @@ void HtmlCounters::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     perfGetValues(&m_values, true);
 
     HttpResponse res;
-    XBuilder bld(res.body());
+    XBuilder bld(&res.body());
     bld.start("html").start("body");
     bld.start("table");
     bld.start("tr")

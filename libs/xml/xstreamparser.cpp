@@ -16,11 +16,13 @@ using namespace Dim;
 ***/
 
 //===========================================================================
-XStreamParser::XStreamParser(IXStreamParserNotify & notify)
-    : m_notify(notify) {}
+XStreamParser::XStreamParser(IXStreamParserNotify * notify)
+    : m_notify(*notify)
+{}
 
 //===========================================================================
-XStreamParser::~XStreamParser() {}
+XStreamParser::~XStreamParser()
+{}
 
 //===========================================================================
 void XStreamParser::clear() {

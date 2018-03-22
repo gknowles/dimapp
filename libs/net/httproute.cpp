@@ -614,7 +614,7 @@ void Dim::httpRouteInternalError(unsigned reqId) {
 //===========================================================================
 void Dim::httpRouteReplyNotFound(unsigned reqId, const HttpRequest & req) {
     HttpResponse res;
-    XBuilder bld(res.body());
+    XBuilder bld(&res.body());
     bld << start("html")
         << start("head") << elem("title", "404 Not Found") << end
         << start("body")
@@ -636,7 +636,7 @@ static void routeReply(
 ) {
     StrFrom<unsigned> st{status};
     HttpResponse res;
-    XBuilder bld(res.body());
+    XBuilder bld(&res.body());
     bld.start("html")
         .start("head").elem("title", st.c_str()).end()
         .start("body");

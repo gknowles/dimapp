@@ -163,7 +163,7 @@ XNode * XDocument::parse(char src[], string_view filename) {
     if (!filename.empty())
         m_filename = m_heap.strdup(filename);
     ParserNotify notify(*this);
-    XStreamParser parser(notify);
+    XStreamParser parser(&notify);
     if (!parser.parseMore(src)) {
         m_errmsg = parser.errmsg();
         m_errpos = parser.errpos();

@@ -273,7 +273,7 @@ bool writeXsd(CharBuf * out, const Schema & schema) {
             .append(" at ").append(Time8601Str().set().view()).pushBack('\n')
         .append("-->\n");
 
-    XBuilder bld(*out);
+    XBuilder bld(out);
     bld.start("schema")
         .attr("xmlns", "http://www.w3.org/2001/XMLSchema")
         .attr("xmlns:def", schema.xmlns)

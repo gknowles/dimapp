@@ -110,8 +110,7 @@ inline IBuilder & operator<<(
 //---------------------------------------------------------------------------
 class Builder : public IBuilder {
 public:
-    Builder(CharBuf * buf)
-        : m_buf(*buf) {}
+    Builder(CharBuf * buf) : m_buf(*buf) {}
     void clear() override;
 
 private:
