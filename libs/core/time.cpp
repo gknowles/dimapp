@@ -194,6 +194,12 @@ static char * add2Digit(char * out, int val, char suffix) {
 }
 
 //===========================================================================
+Time8601Str & Time8601Str::set() {
+    auto now = Clock::now();
+    return set(now, 0, timeZoneMinutes(now));
+}
+
+//===========================================================================
 Time8601Str & Time8601Str::set(
     TimePoint time,
     unsigned precision,

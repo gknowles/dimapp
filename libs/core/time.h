@@ -84,6 +84,9 @@ public:
     Time8601Str();
     Time8601Str(TimePoint time, unsigned precision = 0, int tzMinutes = 0);
 
+    // sets to current time and time zone
+    Time8601Str & set();
+
     // asserts if precision > 7
     Time8601Str & set(
         TimePoint time,
