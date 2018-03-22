@@ -81,8 +81,8 @@ public:
     CharBuf & erase(size_t pos = 0, size_t count = -1);
     CharBuf & ltrim(char ch);
     CharBuf & rtrim(char ch);
-    void pushBack(char ch);
-    void popBack();
+    CharBuf & pushBack(char ch);
+    CharBuf & popBack();
     CharBuf & append(size_t numCh, char ch);
     CharBuf & append(const char s[]);
     CharBuf & append(const char s[], size_t slen);
@@ -209,5 +209,7 @@ bool operator==(std::string_view left, const CharBuf & right);
 bool operator==(const CharBuf & left, const CharBuf & right);
 
 std::string toString(const CharBuf & buf, size_t pos = 0, size_t count = -1);
+
+std::ostream & operator<<(std::ostream & os, const CharBuf & buf);
 
 } // namespace

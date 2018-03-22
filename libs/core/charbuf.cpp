@@ -26,7 +26,7 @@ const unsigned kDefaultBlockSize = 4096;
 
 //===========================================================================
 CharBuf::Buffer::Buffer ()
-    : Buffer{kDefaultBlockSize + 1}
+    : Buffer{kDefaultBlockSize}
 {}
 
 //===========================================================================
@@ -356,7 +356,7 @@ CharBuf & CharBuf::rtrim(char ch) {
 }
 
 //===========================================================================
-void CharBuf::pushBack(char ch) {
+CharBuf & CharBuf::pushBack(char ch) {
     Buffer * buf{nullptr};
     if (!m_size) {
         buf = &m_buffers.emplace_back();
@@ -368,17 +368,17 @@ void CharBuf::pushBack(char ch) {
 
     m_size += 1;
     buf->data[buf->used++] = ch;
+    return *this;
 }
 
 //===========================================================================
-void CharBuf::popBack() {
+CharBuf & CharBuf::popBack() {
     assert(m_size);
     m_size -= 1;
     auto & buf = m_buffers.back();
-    if (--buf.used)
-        return;
-
-    m_buffers.pop_back();
+    if (!--buf.used)
+        m_buffers.pop_back();
+    return *this;
 }
 
 //===========================================================================
@@ -582,8 +582,12 @@ CharBuf & CharBuf::replace(size_t pos, size_t count, const char s[]) {
 }
 
 //===========================================================================
-CharBuf &
-CharBuf::replace(size_t pos, size_t count, const char src[], size_t srcLen) {
+CharBuf & CharBuf::replace(
+    size_t pos,
+    size_t count,
+    const char src[],
+    size_t srcLen
+) {
     assert(pos <= (size_t) m_size);
 
     int add = (int)srcLen;
@@ -683,6 +687,7 @@ size_t CharBuf::copy(char * out, size_t count, size_t pos) const {
         num -= bytes;
         if (!num)
             break;
+        out += bytes;
         ++myi;
         mydata = myi->data;
         mycount = myi->used;
@@ -764,6 +769,7 @@ CharBuf::buffer_iterator CharBuf::split(buffer_iterator it, int pos) {
         int bytes = min(mycount, rcount);
         memcpy(mydata, rdata, bytes);
         it->used = bytes;
+        rdata += bytes;
         rcount -= bytes;
     }
     it -= nbufs;
@@ -1109,4 +1115,11 @@ string Dim::toString(const CharBuf & buf, size_t pos, size_t count) {
     out.resize(count);
     buf.copy(out.data(), count, pos);
     return out;
+}
+
+//===========================================================================
+ostream & Dim::operator<<(ostream & os, const CharBuf & buf) {
+    for (auto && v : buf.views())
+        os << v;
+    return os;
 }
