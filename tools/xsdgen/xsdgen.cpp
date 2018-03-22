@@ -237,6 +237,13 @@ static bool loadElem(
         if (!loadNote(schema, &note, &e))
             return false;
     }
+    if (firstChild(root, "Element")
+        && elem->content != Element::Content::kXml
+    ) {
+        logMsgError() << "Element[@name='" << elem->name << "']/@content "
+            << "conflicts with child Element nodes";
+        return false;
+    }
     for (auto && e : elems(root, "Element")) {
         if (auto i = schema->elementByNode.find(&e);
             i != schema->elementByNode.end()
@@ -257,7 +264,7 @@ static bool loadElem(
         }
         if (elem->content == Element::Content::kInvalid) {
             logMsgError() << "Missing Element[@name='" << elem->name << "']"
-                "/@content  attribute";
+                "/@content attribute";
             return false;
         }
         if (elem->content == Element::Content::kEnum
@@ -321,11 +328,9 @@ static bool loadSchema(Schema * schema, XNode * root) {
         logMsgError() << "Missing require element: Schema/Root";
         return false;
     }
-    if (!loadContents(schema, root))
-        return false;
-    if (!loadIds(schema, e))
-        return false;
-    return loadElem(schema, &schema->root, e, true);
+    return loadContents(schema, root)
+        && loadIds(schema, e)
+        && loadElem(schema, &schema->root, e, true);
 }
 
 
@@ -361,10 +366,16 @@ static void app(int argc, char * argv[]) {
     Schema schema;
     if (!loadSchema(&schema, root))
         return appSignalShutdown(EX_DATAERR);
+    schema.xsdFile = *specfile;
+    if (schema.xsdFile.extension() == ".xml")
+        schema.xsdFile.setExt("");
+    schema.xsdFile.setExt(".xsd");
+
     CharBuf buf;
-    XBuilder bld{buf};
-    if (!writeXsd(&bld, schema))
+    if (!writeXsd(&buf, schema))
         return appSignalShutdown(EX_DATAERR);
+
+    updateXmlFile(schema.xsdFile, buf);
 
     appSignalShutdown(EX_OK);
 }
@@ -381,4 +392,51 @@ int main(int argc, char * argv[]) {
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 
     return appRun(app, argc, argv);
+}
+
+//===========================================================================
+Attr::Content convert(Element::Content ec) {
+    return tokenTableGetEnum(
+        s_attrContents,
+        tokenTableGetName(s_elemContentTbl, ec, ""),
+        Attr::Content::kInvalid
+    );
+}
+
+//===========================================================================
+bool compareXmlContent(const Path & name, const CharBuf & content) {
+    auto nc = toString(content);
+    XDocument ndoc;
+    auto nroot = ndoc.parse(nc.data());
+    if (!nroot)
+        return false;
+    nc = toString(*nroot);
+
+    string ocontent;
+    if (!fileLoadBinaryWait(&ocontent, name))
+        return false;
+    XDocument odoc;
+    auto oroot = odoc.parse(ocontent.data());
+    if (!oroot)
+        return false;
+    ocontent = toString(*oroot);
+
+    return nc == ocontent;
+}
+
+//===========================================================================
+void updateXmlFile(const Path & name, const CharBuf & content) {
+    cout << name << "... " << flush;
+    if (compareXmlContent(name, content)) {
+        cout << "unchanged" << endl;
+        return;
+    }
+
+    auto f = fileOpen(name, File::fReadWrite | File::fCreat | File::fTrunc);
+    if (!f)
+        return appSignalShutdown(EX_DATAERR);
+    fileWriteWait(f, 0, content.data(), content.size());
+    fileClose(f);
+    ConsoleScopedAttr color(kConsoleHighlight);
+    cout << "UPDATED" << endl;
 }

@@ -39,6 +39,7 @@
 # libs/core/perf.cpp
 # libs/core/perf.h
 # libs/core/process.h
+# libs/core/refcount.h
 # libs/core/shutdown.cpp
 # libs/core/shutdown.h
 # libs/core/str.cpp
@@ -231,6 +232,7 @@
 # tools/xsdgen/intern.h
 # tools/xsdgen/pch.cpp
 # tools/xsdgen/pch.h
+# tools/xsdgen/schema.xsd
 # tools/xsdgen/schema.xsdgen.xml
 # tools/xsdgen/writexsd.cpp
 # tools/xsdgen/xsdgen.cpp

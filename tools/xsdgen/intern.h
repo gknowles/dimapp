@@ -94,6 +94,8 @@ struct Schema {
     Element root;
     std::unordered_map<std::string, Dim::XNode*> contentById;
     std::unordered_map<Dim::XNode *, Element> elementByNode;
+
+    Dim::Path xsdFile;
 };
 
 
@@ -103,4 +105,8 @@ struct Schema {
 *
 ***/
 
-bool writeXsd(Dim::IXBuilder * out, const Schema & schema);
+bool writeXsd(Dim::CharBuf * out, const Schema & schema);
+
+Attr::Content convert(Element::Content ec);
+
+void updateXmlFile(const Dim::Path & name, const Dim::CharBuf & content);
