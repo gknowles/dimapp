@@ -1,0 +1,40 @@
+<!--
+Copyright Glen Knowles 2017 - 2018.
+Distributed under the Boost Software License, Version 1.0.
+
+Should be locally copied to app.xml
+-->
+<App>
+  <DisableNoDataTimeout value="0"/>
+  <DisableShutdownTimeout value="0"/>
+  <DisableInactiveTimeout value="0"/>
+  <Port value="41000"/>
+  <EnableAppWindow value="1"/>
+
+  <!--
+  Multiple certificates may be included from multiple stores. Each store
+  has a name and location from the lists below. For more about what those are,
+  go trolling through the windows docs :P
+
+  Names:
+    My (default)
+    Root
+    Trust
+    CA
+  Locations:
+    Current User (default)
+    Local Machine
+    Current Service
+    Current User Group Policy
+    Local Machine Group Policy
+    Local Machine Enterprise
+  -->
+  <Certificates>
+    <Store name="My" location="Current User">
+      <Certificate issuer="CN=Local Signer"
+                   serialNumber="1c517945372858b34f5256ab1d3c660a"/>
+      <Certificate thumbprint="09d137ac66960e30903d254cfab92d2e9ec8be93"/>
+      <Certificate subjectKeyId="4d9db905781bfacac0748324ed7c01d34adf4947"/>
+    </Store>
+  </Certificates>
+</App>

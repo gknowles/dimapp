@@ -7,6 +7,7 @@
 # appveyor.yml
 # bin/conf/app.xml
 # bin/conf/app.xml.md
+# bin/conf/app.xml.sample
 # configure.bat
 # libs/app/app.cpp
 # libs/app/app.h
