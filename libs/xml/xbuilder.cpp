@@ -410,3 +410,11 @@ IXBuilder & Dim::operator<<(IXBuilder & out, const XNode & elem) {
     }
     return out.end();
 }
+
+//===========================================================================
+string Dim::toString(const XNode & elem) {
+    CharBuf buf;
+    XBuilder bld(buf);
+    bld << elem;
+    return toString(buf);
+}

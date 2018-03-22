@@ -279,6 +279,7 @@ struct XAttr {
 };
 
 IXBuilder & operator<<(IXBuilder & out, const XNode & elem);
+std::string toString(const XNode & elem);
 
 XDocument * document(XNode * node);
 XDocument * document(XAttr * attr);
