@@ -12,8 +12,6 @@
 using namespace std;
 using namespace Dim;
 
-#pragma warning(disable : 4127) // conditional expression is constant
-
 
 /****************************************************************************
 *
@@ -67,20 +65,23 @@ Seed::Seed () {
 
 //===========================================================================
 static uint64_t get64le(const void * ptr) {
-    if (kByteOrder == kLittleEndian) {
-        if (kNativeUnaligned64)
+    if constexpr (kByteOrder == kLittleEndian) {
+        if constexpr (kNativeUnaligned64) {
             return *static_cast<const uint64_t *>(ptr);
-        uint64_t out;
-        memcpy(&out, ptr, sizeof(out));
-        return out;
+        } else {
+            uint64_t out;
+            memcpy(&out, ptr, sizeof(out));
+            return out;
+        }
+    } else {
+        if constexpr (kNativeUnaligned64) {
+            return bswap64(*static_cast<const uint64_t *>(ptr));
+        } else {
+            uint64_t out;
+            memcpy(&out, ptr, sizeof(out));
+            return bswap64(out);
+        }
     }
-
-    if (kNativeUnaligned64)
-        return bswap64(*static_cast<const uint64_t *>(ptr));
-
-    uint64_t out;
-    memcpy(&out, ptr, sizeof(out));
-    return bswap64(out);
 }
 
 //===========================================================================
