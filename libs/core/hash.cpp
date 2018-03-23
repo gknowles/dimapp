@@ -75,12 +75,12 @@ static uint64_t get64le(const void * ptr) {
         return out;
     }
 
-    auto * src = static_cast<const uint8_t *>(ptr);
-    uint64_t out = src[0] | (src[1] << 8) | (src[2] << 16)
-        | ((uint64_t)src[3] << 24) | ((uint64_t)src[4] << 32)
-        | ((uint64_t)src[5] << 40) | ((uint64_t)src[6] << 48)
-        | ((uint64_t)src[7] << 56);
-    return out;
+    if (kNativeUnaligned64)
+        return bswap64(*static_cast<const uint64_t *>(ptr));
+
+    uint64_t out;
+    memcpy(&out, ptr, sizeof(out));
+    return bswap64(out);
 }
 
 //===========================================================================
@@ -89,8 +89,12 @@ static uint64_t rotateLeft(uint64_t val, unsigned count) {
 }
 
 //===========================================================================
-static void
-sipRound(uint64_t & v0, uint64_t & v1, uint64_t & v2, uint64_t & v3) {
+static void sipRound(
+    uint64_t & v0,
+    uint64_t & v1,
+    uint64_t & v2,
+    uint64_t & v3
+) {
     v0 += v1;
     v1 = rotateLeft(v1, 13);
     v1 ^= v0;
