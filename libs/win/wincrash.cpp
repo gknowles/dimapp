@@ -204,7 +204,7 @@ void Dim::winCrashInitialize() {
     // Make sure DbgHelp.dll gets loaded early, otherwise it could deadlock
     // in the loader lock if we're processing a crash in DllMain.
     winLoadProc(
-        s_writeDump,
+        &s_writeDump,
         "Dbghelp",
         "MiniDumpWriteDump"
     );

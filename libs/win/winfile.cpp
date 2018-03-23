@@ -395,10 +395,10 @@ void FileWriter::onNotify() {
 
 //===========================================================================
 void Dim::iFileInitialize() {
-    winLoadProc(s_NtCreateSection, "ntdll", "NtCreateSection");
-    winLoadProc(s_NtMapViewOfSection, "ntdll", "NtMapViewOfSection");
-    winLoadProc(s_NtUnmapViewOfSection, "ntdll", "NtUnmapViewOfSection");
-    winLoadProc(s_NtClose, "ntdll", "NtClose");
+    winLoadProc(&s_NtCreateSection, "ntdll", "NtCreateSection");
+    winLoadProc(&s_NtMapViewOfSection, "ntdll", "NtMapViewOfSection");
+    winLoadProc(&s_NtUnmapViewOfSection, "ntdll", "NtUnmapViewOfSection");
+    winLoadProc(&s_NtClose, "ntdll", "NtClose");
 
     s_hq = taskCreateQueue("File IO", 2);
 

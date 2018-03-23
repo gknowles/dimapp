@@ -73,7 +73,7 @@ FARPROC winLoadProc(const char lib[], const char proc[], bool optional);
 //===========================================================================
 template <typename FN>
 static void winLoadProc(
-    FN & fn,
+    FN * fn,
     const char lib[],
     const char proc[],
     bool optional = false
@@ -82,7 +82,7 @@ static void winLoadProc(
     // the procedure being loaded.
     static_assert(std::is_pointer_v<FN>);
     static_assert(std::is_function_v<std::pointer_traits<FN>::element_type>);
-    fn = (FN) winLoadProc(lib, proc, optional);
+    *fn = (FN) winLoadProc(lib, proc, optional);
 }
 
 //---------------------------------------------------------------------------

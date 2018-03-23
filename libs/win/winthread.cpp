@@ -40,8 +40,8 @@ public:
 
 //===========================================================================
 ThreadName::ThreadName() {
-    winLoadProc(m_setDesc, "kernelbase", "SetThreadDescription", true);
-    winLoadProc(m_getDesc, "kernelbase", "GetThreadDescription", true);
+    winLoadProc(&m_setDesc, "kernelbase", "SetThreadDescription", true);
+    winLoadProc(&m_getDesc, "kernelbase", "GetThreadDescription", true);
 }
 
 //===========================================================================

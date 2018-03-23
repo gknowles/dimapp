@@ -116,9 +116,9 @@ ostream & Dim::operator<<(ostream & os, const WinError & val) {
 
 //===========================================================================
 void Dim::winErrorInitialize() {
-    winLoadProc(s_NtStatusToDosError, "ntdll", "RtlNtStatusToDosError");
+    winLoadProc(&s_NtStatusToDosError, "ntdll", "RtlNtStatusToDosError");
     winLoadProc(
-        s_SecurityStatusToNtStatus,
+        &s_SecurityStatusToNtStatus,
         "ntdll",
         "RtlMapSecurityErrorToNtStatus"
     );
