@@ -108,25 +108,31 @@ inline bool appStopping() { return appMode() == kRunStopping; }
 AppFlags appFlags();
 
 const std::string & appConfigDirectory();
-const std::string & appLogDirectory();
+const std::string & appCrashDirectory();
 const std::string & appDataDirectory();
+const std::string & appLogDirectory();
 
 // false if file relative to root is not within the root path. This can happen
 // if file breaks out via ".." or is an absolute path.
 bool appConfigPath(
     std::string * out,
     std::string_view file,
-    bool createIfNotExist = true
+    bool createDirIfNotExist = true
 );
-bool appLogPath(
+bool appCrashPath(
     std::string * out,
     std::string_view file,
-    bool createIfNotExist = true
+    bool createDirIfNotExist = true
 );
 bool appDataPath(
     std::string * out,
     std::string_view file,
-    bool createIfNotExist = true
+    bool createDirIfNotExist = true
+);
+bool appLogPath(
+    std::string * out,
+    std::string_view file,
+    bool createDirIfNotExist = true
 );
 
 

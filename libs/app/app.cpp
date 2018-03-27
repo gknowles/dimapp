@@ -30,6 +30,7 @@ static AppFlags s_appFlags;
 static string s_logDir;
 static string s_confDir;
 static string s_dataDir;
+static string s_crashDir; // where to place crash dumps
 
 
 /****************************************************************************
@@ -189,7 +190,7 @@ static bool makeAppPath(
     string * out,
     string_view root,
     string_view file,
-    bool createIfNotExist
+    bool createDirIfNotExist
 ) {
     auto fp = fs::u8path(root.begin(), root.end())
         / fs::u8path(file.begin(), file.end());
@@ -203,7 +204,7 @@ static bool makeAppPath(
     ) {
         return false;
     }
-    if (createIfNotExist)
+    if (createDirIfNotExist)
         fs::create_directories(fp.remove_filename());
     return true;
 }
@@ -225,18 +226,13 @@ const string & Dim::appConfigDirectory() {
 }
 
 //===========================================================================
-const string & Dim::appLogDirectory() {
-    return s_logDir;
-}
-
-//===========================================================================
-const string & Dim::appDataDirectory() {
-    return s_dataDir;
-}
-
-//===========================================================================
 bool Dim::appConfigPath(string * out, string_view file, bool cine) {
     return makeAppPath(out, appConfigDirectory(), file, cine);
+}
+
+//===========================================================================
+const string & Dim::appLogDirectory() {
+    return s_logDir;
 }
 
 //===========================================================================
@@ -245,8 +241,23 @@ bool Dim::appLogPath(string * out, string_view file, bool cine) {
 }
 
 //===========================================================================
+const string & Dim::appDataDirectory() {
+    return s_dataDir;
+}
+
+//===========================================================================
 bool Dim::appDataPath(string * out, string_view file, bool cine) {
     return makeAppPath(out, appDataDirectory(), file, cine);
+}
+
+//===========================================================================
+const string & Dim::appCrashDirectory() {
+    return s_crashDir;
+}
+
+//===========================================================================
+bool Dim::appCrashPath(string * out, string_view file, bool cine) {
+    return makeAppPath(out, appCrashDirectory(), file, cine);
 }
 
 //===========================================================================
@@ -276,6 +287,7 @@ int Dim::appRun(IAppNotify * app, int argc, char * argv[], AppFlags flags) {
     s_confDir = makeAppDir("conf");
     s_logDir = makeAppDir("log");
     s_dataDir = makeAppDir("data");
+    s_crashDir = makeAppDir("crash");
 
     iPerfInitialize();
     iLogInitialize();
