@@ -38,6 +38,41 @@ static void app(int argc, char * argv[]) {
     p.defaultExt("txt");
     EXPECT(p == "hello.txt"sv);
 
+    struct {
+        string_view base;
+        string_view rel;
+        string_view out;
+        int line;
+    } resolveTests[] = {
+        { "base",    "rel",    "base/rel",      __LINE__ },
+        { "base",    "/rel",   "/rel",          __LINE__ },
+        { "base",    "c:rel",  "c:rel",         __LINE__ },
+        { "base",    "c:/rel", "c:/rel",        __LINE__ },
+        { "/base",   "rel",    "/base/rel",      __LINE__ },
+        { "/base",   "/rel",   "/rel",          __LINE__ },
+        { "/base",   "c:rel",  "c:rel",         __LINE__ },
+        { "/base",   "c:/rel", "c:/rel",        __LINE__ },
+        { "c:base",  "rel",    "c:base/rel",    __LINE__ },
+        { "c:base",  "/rel",   "c:/rel",        __LINE__ },
+        { "c:base",  "c:rel",  "c:base/rel",    __LINE__ },
+        { "c:base",  "c:/rel", "c:/rel",        __LINE__ },
+        { "c:base",  "a:rel",  "a:rel",         __LINE__ },
+        { "c:base",  "a:/rel", "a:/rel",        __LINE__ },
+        { "c:/base", "rel",    "c:/base/rel",   __LINE__ },
+        { "c:/base", "/rel",   "c:/rel",        __LINE__ },
+        { "c:/base", "c:rel",  "c:/base/rel",   __LINE__ },
+        { "c:/base", "c:/rel", "c:/rel",        __LINE__ },
+        { "c:/base", "a:rel",  "a:rel",         __LINE__ },
+        { "c:/base", "a:/rel", "a:/rel",        __LINE__ },
+    };
+    for (auto && t : resolveTests) {
+        p.assign(t.rel);
+        p.resolve(t.base);
+        line = t.line;
+        EXPECT(p == t.out);
+    }
+    line = 0;
+
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);
         cerr << "*** TEST FAILURES: " << errs << endl;

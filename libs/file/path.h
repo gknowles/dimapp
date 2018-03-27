@@ -50,8 +50,20 @@ public:
 
     Path & assign(const Path & path);
     Path & assign(const Path & path, std::string_view defExt);
+    Path & assign(const char path[]) {
+        return assign(std::string_view{path});
+    }
+    Path & assign(const char path[], std::string_view defExt) {
+        return assign(std::string_view{path}, defExt);
+    }
     Path & assign(std::string_view path);
     Path & assign(std::string_view path, std::string_view defExt);
+    Path & assign(const std::string & path) {
+        return assign(std::string_view{path});
+    }
+    Path & assign(const std::string & path, std::string_view defExt) {
+        return assign(std::string_view{path}, defExt);
+    }
     Path & assign(const std::experimental::filesystem::path & path);
     Path & assign(
         const std::experimental::filesystem::path & path,

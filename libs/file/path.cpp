@@ -369,9 +369,29 @@ Path & Path::resolve(const Path & base) {
 }
 
 //===========================================================================
-Path & Path::resolve(string_view base) {
-    assert(0 && "Path::resolve() not implemented");
-    return *this;
+Path & Path::resolve(string_view basePath) {
+    string out;
+    Path base;
+    base.setParentPath(basePath);
+
+    if (hasRootDir()) {
+        if (!hasRootName()) {
+            addRoot(&out, base.rootName());
+            out += m_data;
+        } else {
+            return *this;
+        }
+    } else {
+        if (rootName() != base.rootName() && hasRootName())
+            return *this;
+
+        out += base;
+        out += '/';
+        out += dir();
+        out += '/';
+        out += filename();
+    }
+    return assign(out);
 }
 
 //===========================================================================
