@@ -73,6 +73,49 @@ namespace File {
 
 /****************************************************************************
 *
+*   Directory search
+*
+***/
+
+class FileIterator {
+public:
+    struct Info;
+
+    enum Flags : unsigned {
+        fRecurse,
+        fDirsFirst,
+        fDirsLast,
+        fDirsOnly,
+    };
+    struct Entry {
+        Path path;
+        bool isdir{false};
+    };
+
+public:
+    FileIterator() {}
+    FileIterator(
+        std::string_view dir,
+        std::string_view name = {},
+        Flags flags = {}
+    );
+
+    bool operator== (const FileIterator & right) const;
+    bool operator!= (const FileIterator & right) const;
+    const Entry & operator* () const;
+    const Entry * operator-> () const;
+    FileIterator & operator++ ();
+
+private:
+    std::shared_ptr<Info> m_info;
+};
+
+FileIterator begin (FileIterator iter);
+FileIterator end (const FileIterator & iter);
+
+
+/****************************************************************************
+*
 *   Metadata
 *
 ***/
@@ -83,6 +126,7 @@ namespace File {
 uint64_t fileSize(std::string_view path);
 TimePoint fileLastWriteTime(std::string_view path);
 bool fileRemove(std::string_view path);
+
 
 //---------------------------------------------------------------------------
 // With handle
