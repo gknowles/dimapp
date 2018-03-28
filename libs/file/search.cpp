@@ -24,7 +24,7 @@ namespace {
 
 /****************************************************************************
 *
-*   FileIterator::Info
+*   FileIter::Info
 *
 ***/
 
@@ -35,7 +35,7 @@ namespace {
     };
 } // namespace
 
-struct FileIterator::Info {
+struct FileIter::Info {
     Path path;
     Flags flags;
     vector<DirInfo> pos;
@@ -43,12 +43,12 @@ struct FileIterator::Info {
 };
 
 //===========================================================================
-static bool match(const FileIterator::Info & info) {
+static bool match(const FileIter::Info & info) {
     if (info.entry.isdir) {
-        if (info.flags & FileIterator::fDirsOnly)
+        if ((info.flags & (FileIter::fDirsFirst | FileIter::fDirsLast)) == 0)
             return false;
     } else {
-        if (~info.flags & (FileIterator::fDirsFirst | FileIterator::fDirsLast))
+        if (info.flags & FileIter::fDirsOnly)
             return false;
     }
 
@@ -57,108 +57,122 @@ static bool match(const FileIterator::Info & info) {
 }
 
 //===========================================================================
-static void copy(FileIterator::Entry * entry, fs::directory_iterator p) {
+static void copy(FileIter::Entry * entry, fs::directory_iterator p) {
     entry->path = p->path();
     entry->isdir = fs::is_directory(p->status());
 }
 
-
-/****************************************************************************
-*
-*   FileIterator
-*
-***/
-
 //===========================================================================
-FileIterator::FileIterator(
-    string_view dir,
-    string_view name,
-    FileIterator::Flags flags
-) {
-    m_info = make_shared<Info>();
-    m_info->path = dir.empty() ? "." : dir;
-    m_info->path /= name.empty() ? "*" : name;
-    m_info->flags = flags;
-    error_code ec;
-    auto it = fs::directory_iterator{m_info->path.fsPath(), ec};
-    if (it != end(it)) {
-        m_info->pos.push_back({it});
-        m_info->entry.path = *it;
-    }
-}
+static bool find(FileIter::Info * info, bool fromNext) {
+    auto cur = &info->pos.back();
+    auto p = cur->iter;
 
-//===========================================================================
-bool FileIterator::operator== (const FileIterator & right) const {
-    return m_info == right.m_info;
-}
+    if (!fromNext)
+        goto CHECK_CURRENT;
 
-//===========================================================================
-bool FileIterator::operator!= (const FileIterator & right) const {
-    return m_info != right.m_info;
-}
-
-//===========================================================================
-const FileIterator::Entry & FileIterator::operator* () const {
-    return m_info->entry;
-}
-
-//===========================================================================
-const FileIterator::Entry * FileIterator::operator-> () const {
-    return &m_info->entry;
-}
-
-//===========================================================================
-FileIterator & FileIterator::operator++ () {
-    auto pos = &m_info->pos.back();
-    auto p = pos->iter;
-
-    if (pos->firstPass
-        && (m_info->flags & fDirsFirst)
+    if (cur->firstPass
+        && (info->flags & FileIter::fDirsFirst)
         && fs::is_directory(p->status())
     ) {
-STEP_INTO:
+INTO_DIR:
         // we were at the directory, now start it's contents
         error_code ec;
         auto q = fs::directory_iterator(*p, ec);
         if (q == end(q))
-            goto TRY_NEXT;
-        m_info->pos.push_back({q});
-        pos = &m_info->pos.back();
+            goto OUT_OF_DIR;
+        info->pos.push_back({q});
+        cur = &info->pos.back();
+        p = q;
         goto CHECK_CURRENT;
     }
 
 TRY_NEXT:
-    p = ++pos->iter;
-    pos->firstPass = true;
+    p = ++cur->iter;
+    cur->firstPass = true;
 
 CHECK_CURRENT:
     // make for valid entry
     if (p == end(p)) {
-        m_info->pos.pop_back();
-        if (m_info->pos.empty()) {
-            m_info.reset();
-            return *this;
-        }
-        pos = &m_info->pos.back();
-        p = pos->iter;
-        if (m_info->flags & fDirsLast) {
-            pos->firstPass = false;
-            copy(&m_info->entry, p);
-            return *this;
+        info->pos.pop_back();
+        if (info->pos.empty())
+            return false;
+        cur = &info->pos.back();
+        p = cur->iter;
+
+OUT_OF_DIR:
+        if (info->flags & FileIter::fDirsLast) {
+            cur->firstPass = false;
+            copy(&info->entry, p);
+            return true;
         }
         goto TRY_NEXT;
     }
 
     // check filter
-    if (!(m_info->flags & fDirsFirst)
+    if (!(info->flags & FileIter::fDirsFirst)
         && fs::is_directory(p->status())
     ) {
-        goto STEP_INTO;
+        goto INTO_DIR;
     }
-    copy(&m_info->entry, p);
-    if (!match(*m_info))
-        goto CHECK_CURRENT;
+    copy(&info->entry, p);
+    if (!match(*info))
+        goto TRY_NEXT;
 
+    return true;
+}
+
+
+/****************************************************************************
+*
+*   FileIter
+*
+***/
+
+//===========================================================================
+FileIter::FileIter(
+    string_view dir,
+    string_view name,
+    FileIter::Flags flags
+) {
+    m_info = make_shared<Info>();
+    m_info->path = dir;
+    m_info->path /= name.empty() ? "*" : name;
+    m_info->flags = flags;
+    error_code ec;
+    auto path = Path{m_info->path.parentPath()};
+    auto it = fs::directory_iterator{path.empty() ? "." : path.fsPath(), ec};
+    if (it != end(it)) {
+        m_info->pos.push_back({it});
+        if (!find(m_info.get(), false))
+            m_info.reset();
+    }
+}
+
+//===========================================================================
+bool FileIter::operator== (const FileIter & right) const {
+    return m_info == right.m_info;
+}
+
+//===========================================================================
+bool FileIter::operator!= (const FileIter & right) const {
+    return m_info != right.m_info;
+}
+
+//===========================================================================
+const FileIter::Entry & FileIter::operator* () const {
+    return m_info->entry;
+}
+
+//===========================================================================
+const FileIter::Entry * FileIter::operator-> () const {
+    return &m_info->entry;
+}
+
+//===========================================================================
+FileIter & FileIter::operator++ () {
+    assert(m_info);
+    if (!find(m_info.get(), true))
+        m_info.reset();
     return *this;
 }
 
@@ -168,4 +182,3 @@ CHECK_CURRENT:
 *   Public API
 *
 ***/
-

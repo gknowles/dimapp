@@ -11,6 +11,18 @@ using namespace Dim;
 
 /****************************************************************************
 *
+*   Helpers
+*
+***/
+
+//===========================================================================
+static void createEmptyFile(string_view path) {
+    if (auto f = fileOpen(path, File::fCreat | File::fReadWrite))
+        fileClose(f);
+}
+
+/****************************************************************************
+*
 *   Application
 *
 ***/
@@ -49,6 +61,52 @@ static void app(int argc, char *argv[]) {
 
     fileCloseView(file, base);
     fileClose(file);
+
+    fileRemove("filetest", true);
+    fileCreateDirs("filetest");
+    createEmptyFile("filetest/a.txt");
+    fileCreateDirs("filetest/b");
+    createEmptyFile("filetest/b/ba.txt");
+    createEmptyFile("filetest/b.txt");
+    fileCreateDirs("filetest/c");
+    createEmptyFile("filetest/c.txt");
+    vector<pair<Path, bool>> found;
+    for (auto && e : FileIter(
+        "filetest",
+        "a.txt",
+        FileIter::fDirsFirst | FileIter::fDirsLast
+    )) {
+        found.push_back({e.path, e.isdir});
+    }
+    vector<pair<Path, bool>> expected = {
+        { Path{"filetest/a.txt"}, false },
+        { Path{"filetest/b"}, true },
+        { Path{"filetest/b/ba.txt"}, false },
+        { Path{"filetest/b"}, true },
+        { Path{"filetest/b.txt"}, false },
+        { Path{"filetest/c"}, true },
+        { Path{"filetest/c"}, true },
+        { Path{"filetest/c.txt"}, false },
+    };
+    if (found != expected) {
+        logMsgError() << "File search didn't match";
+        for (auto i = 0; i < found.size() || i < expected.size(); ++i) {
+            auto os = logMsgInfo();
+            if (i < expected.size()) {
+                os.width(30);
+                os << expected[i].first;
+                os << (expected[i].second ? '*' : ' ');
+            } else {
+                os.width(31);
+                os << ' ';
+            }
+            if (i < found.size()) {
+                os.width(30);
+                os << found[i].first;
+                os << (found[i].second ? '*' : ' ');
+            }
+        }
+    }
 
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);

@@ -73,19 +73,18 @@ namespace File {
 
 /****************************************************************************
 *
-*   Directory search
+*   Directory
 *
 ***/
 
-class FileIterator {
+class FileIter {
 public:
     struct Info;
 
     enum Flags : unsigned {
-        fRecurse,
-        fDirsFirst,
-        fDirsLast,
-        fDirsOnly,
+        fDirsFirst = 0x01,
+        fDirsLast  = 0x02,
+        fDirsOnly  = 0x04,
     };
     struct Entry {
         Path path;
@@ -93,25 +92,25 @@ public:
     };
 
 public:
-    FileIterator() {}
-    FileIterator(
+    FileIter() {}
+    FileIter(
         std::string_view dir,
         std::string_view name = {},
         Flags flags = {}
     );
 
-    bool operator== (const FileIterator & right) const;
-    bool operator!= (const FileIterator & right) const;
+    bool operator== (const FileIter & right) const;
+    bool operator!= (const FileIter & right) const;
     const Entry & operator* () const;
     const Entry * operator-> () const;
-    FileIterator & operator++ ();
+    FileIter & operator++ ();
 
 private:
     std::shared_ptr<Info> m_info;
 };
 
-FileIterator begin (FileIterator iter);
-FileIterator end (const FileIterator & iter);
+inline FileIter begin (FileIter iter) { return iter; }
+inline FileIter end (const FileIter & iter) { return {}; }
 
 
 /****************************************************************************
@@ -125,7 +124,8 @@ FileIterator end (const FileIterator & iter);
 //---------------------------------------------------------------------------
 uint64_t fileSize(std::string_view path);
 TimePoint fileLastWriteTime(std::string_view path);
-bool fileRemove(std::string_view path);
+bool fileRemove(std::string_view path, bool recurse = false);
+bool fileCreateDirs(std::string_view path);
 
 
 //---------------------------------------------------------------------------

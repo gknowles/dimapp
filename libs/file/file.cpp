@@ -325,8 +325,7 @@ uint64_t Dim::fileSize(string_view path) {
     auto f = fs::u8path(path.begin(), path.end());
     auto len = (uint64_t) fs::file_size(f, ec);
     if (ec) {
-        auto cond = ec.default_error_condition();
-        errno = cond.value();
+        errno = ec.value();
         return len;
     }
     if (!len)
@@ -335,12 +334,30 @@ uint64_t Dim::fileSize(string_view path) {
 }
 
 //===========================================================================
-bool Dim::fileRemove(string_view path) {
+bool Dim::fileRemove(string_view path, bool recurse) {
     error_code ec;
     auto f = fs::u8path(path.begin(), path.end());
-    if (fs::remove(f, ec))
+    if (recurse) {
+        fs::remove_all(f, ec);
+    } else {
+        fs::remove(f, ec);
+    }
+    if (!ec)
         return true;
-    errno = ec.default_error_condition().value();
+    logMsgError() << "Remove failed: " << path;
+    errno = ec.value();
+    return false;
+}
+
+//===========================================================================
+bool Dim::fileCreateDirs(std::string_view path) {
+    auto fp = fs::u8path(path.begin(), path.end());
+    error_code ec;
+    fs::create_directories(fp, ec);
+    if (!ec)
+        return true;
+    logMsgError() << "Create directories failed: " << path;
+    errno = ec.value();
     return false;
 }
 

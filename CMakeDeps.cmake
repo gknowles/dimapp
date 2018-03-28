@@ -31,6 +31,7 @@
 # libs/core/handle.h
 # libs/core/hash.cpp
 # libs/core/hash.h
+# libs/core/hash_crc32c.cpp
 # libs/core/list.h
 # libs/core/log.cpp
 # libs/core/log.h
@@ -75,6 +76,7 @@
 # libs/file/path.h
 # libs/file/pch.cpp
 # libs/file/pch.h
+# libs/file/search.cpp
 # libs/json/jbuilder.cpp
 # libs/json/json.abnf
 # libs/json/json.h
