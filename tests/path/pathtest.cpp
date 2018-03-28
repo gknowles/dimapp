@@ -44,11 +44,12 @@ static void app(int argc, char * argv[]) {
         string_view out;
         int line;
     } resolveTests[] = {
+        { "",        "rel",    "rel",           __LINE__ },
         { "base",    "rel",    "base/rel",      __LINE__ },
         { "base",    "/rel",   "/rel",          __LINE__ },
         { "base",    "c:rel",  "c:rel",         __LINE__ },
         { "base",    "c:/rel", "c:/rel",        __LINE__ },
-        { "/base",   "rel",    "/base/rel",      __LINE__ },
+        { "/base",   "rel",    "/base/rel",     __LINE__ },
         { "/base",   "/rel",   "/rel",          __LINE__ },
         { "/base",   "c:rel",  "c:rel",         __LINE__ },
         { "/base",   "c:/rel", "c:/rel",        __LINE__ },

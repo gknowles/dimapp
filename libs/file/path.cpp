@@ -19,10 +19,10 @@ namespace fs = std::experimental::filesystem;
 namespace {
 
 struct Count {
-    unsigned m_rootLen;
-    unsigned m_dirLen;
+    unsigned m_rootLen;     // includes trailing ':'
+    unsigned m_dirLen;      // includes leading and/or trailing '/'
     unsigned m_stemLen;
-    unsigned m_extLen;
+    unsigned m_extLen;      // includes leading '.'
 
     explicit Count(string_view path);
 };
@@ -87,7 +87,11 @@ static void normalize(string * path) {
             case kDot:
                 {
                     auto pos = ptr - base;
-                    if (pos >= 2) {
+                    if (pos == 1) {
+                        out.pop_back();
+                        prevChar = kSlash;
+                        continue;
+                    } else if (pos > 1) {
                         if (ptr[-2] == '/' || ptr[-2] == '\\') {
                             out.pop_back();
                             prevChar = kSlash;
@@ -257,12 +261,12 @@ Path & Path::assign(const fs::path & path, string_view defExt) {
 }
 
 //===========================================================================
-Path & Path::setRootName(char drive) {
-    return setRootName(string_view(&drive, 1));
+Path & Path::setDrive(char drive) {
+    return setDrive(string_view(&drive, 1));
 }
 
 //===========================================================================
-Path & Path::setRootName(string_view root) {
+Path & Path::setDrive(string_view root) {
     string out;
     addRoot(&out, root);
     Count cnt(m_data);
@@ -364,6 +368,13 @@ Path & Path::concat(string_view path) {
 }
 
 //===========================================================================
+Path & Path::append(string_view path) {
+    auto p = Path{path}.resolve(*this);
+    swap(p);
+    return *this;
+}
+
+//===========================================================================
 Path & Path::resolve(const Path & base) {
     return resolve(string_view{base.m_data});
 }
@@ -375,20 +386,22 @@ Path & Path::resolve(string_view basePath) {
     base.setParentPath(basePath);
 
     if (hasRootDir()) {
-        if (!hasRootName()) {
-            addRoot(&out, base.rootName());
+        if (!hasDrive()) {
+            addRoot(&out, base.drive());
             out += m_data;
         } else {
             return *this;
         }
     } else {
-        if (rootName() != base.rootName() && hasRootName())
+        if (drive() != base.drive() && hasDrive())
             return *this;
 
         out += base;
-        out += '/';
+        if (!out.empty())
+            out += '/';
         out += dir();
-        out += '/';
+        if (!out.empty())
+            out += '/';
         out += filename();
     }
     return assign(out);
@@ -410,7 +423,7 @@ size_t Path::size() const {
 }
 
 //===========================================================================
-string_view Path::rootName() const {
+string_view Path::drive() const {
     Count cnt(m_data);
     return {m_data.data(), cnt.m_rootLen};
 }
@@ -457,7 +470,7 @@ bool Path::empty() const {
 }
 
 //===========================================================================
-bool Path::hasRootName() const {
+bool Path::hasDrive() const {
     Count cnt(m_data);
     return cnt.m_rootLen;
 }

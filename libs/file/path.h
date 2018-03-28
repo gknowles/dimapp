@@ -70,8 +70,8 @@ public:
         std::string_view defExt
     );
 
-    Path & setRootName(char drive);
-    Path & setRootName(std::string_view root);
+    Path & setDrive(char drive);
+    Path & setDrive(std::string_view root);
     Path & setDir(std::string_view dir);
     Path & setParentPath(std::string_view path);
     Path & setFilename(std::string_view filename);
@@ -86,10 +86,12 @@ public:
     Path & concat(std::string_view path);
     Path & operator+=(std::string_view path) { return concat(path); }
 
+    Path & append(std::string_view path);
+    Path & operator/=(std::string_view path) { return append(path); }
+
     // resolve path relative to base
     Path & resolve(const Path & base);
     Path & resolve(std::string_view base);
-    Path & operator/=(std::string_view path) { return resolve(path); }
 
     explicit operator bool() const { return !empty(); }
     operator std::string_view() const { return m_data; }
@@ -100,7 +102,7 @@ public:
     const char * c_str() const;
     size_t size() const;
 
-    std::string_view rootName() const;
+    std::string_view drive() const;
     std::string_view dir() const;
     std::string_view parentPath() const;
     std::string_view filename() const;
@@ -108,7 +110,7 @@ public:
     std::string_view extension() const;
 
     bool empty() const;
-    bool hasRootName() const;
+    bool hasDrive() const;
     bool hasRootDir() const;
     bool hasDir() const;
     bool hasFilename() const;
