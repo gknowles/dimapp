@@ -60,6 +60,7 @@ static bool match(const FileIter::Info & info) {
 static void copy(FileIter::Entry * entry, fs::directory_iterator p) {
     entry->path = p->path();
     entry->isdir = fs::is_directory(p->status());
+    entry->mtime = fileLastWriteTime(entry->path);
 }
 
 //===========================================================================
