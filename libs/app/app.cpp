@@ -221,43 +221,43 @@ static string makeAppDir(string_view path) {
 }
 
 //===========================================================================
-const string & Dim::appConfigDirectory() {
+const string & Dim::appConfigDir() {
     return s_confDir;
 }
 
 //===========================================================================
 bool Dim::appConfigPath(string * out, string_view file, bool cine) {
-    return makeAppPath(out, appConfigDirectory(), file, cine);
+    return makeAppPath(out, appConfigDir(), file, cine);
 }
 
 //===========================================================================
-const string & Dim::appLogDirectory() {
+const string & Dim::appLogDir() {
     return s_logDir;
 }
 
 //===========================================================================
 bool Dim::appLogPath(string * out, string_view file, bool cine) {
-    return makeAppPath(out, appLogDirectory(), file, cine);
+    return makeAppPath(out, appLogDir(), file, cine);
 }
 
 //===========================================================================
-const string & Dim::appDataDirectory() {
+const string & Dim::appDataDir() {
     return s_dataDir;
 }
 
 //===========================================================================
 bool Dim::appDataPath(string * out, string_view file, bool cine) {
-    return makeAppPath(out, appDataDirectory(), file, cine);
+    return makeAppPath(out, appDataDir(), file, cine);
 }
 
 //===========================================================================
-const string & Dim::appCrashDirectory() {
+const string & Dim::appCrashDir() {
     return s_crashDir;
 }
 
 //===========================================================================
 bool Dim::appCrashPath(string * out, string_view file, bool cine) {
-    return makeAppPath(out, appCrashDirectory(), file, cine);
+    return makeAppPath(out, appCrashDir(), file, cine);
 }
 
 //===========================================================================

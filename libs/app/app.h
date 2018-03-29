@@ -107,10 +107,10 @@ inline bool appStopping() { return appMode() == kRunStopping; }
 // returns flags passed to appRun()
 AppFlags appFlags();
 
-const std::string & appConfigDirectory();
-const std::string & appCrashDirectory();
-const std::string & appDataDirectory();
-const std::string & appLogDirectory();
+const std::string & appConfigDir();
+const std::string & appCrashDir();
+const std::string & appDataDir();
+const std::string & appLogDir();
 
 // false if file relative to root is not within the root path. This can happen
 // if file breaks out via ".." or is an absolute path.

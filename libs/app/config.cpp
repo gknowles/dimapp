@@ -87,7 +87,7 @@ void ConfigFile::monitor_UNLK(string_view relpath, IConfigNotify * notify) {
             fileMonitor(s_hDir, relpath, this);
         } else {
             string fullpath;
-            fullpath = appConfigDirectory();
+            fullpath = appConfigDir();
             fullpath += '/';
             fullpath += relpath;
             parseContent(fullpath, {});
@@ -120,7 +120,7 @@ bool ConfigFile::closeWait_UNLK(IConfigNotify * notify) {
 void ConfigFile::parseContent(string_view fullpath, string && content) {
     m_content = move(content);
     m_relpath = fullpath;
-    m_relpath.remove_prefix(appConfigDirectory().size() + 1);
+    m_relpath.remove_prefix(appConfigDir().size() + 1);
     m_xml.parse(m_content.data(), m_relpath);
     m_relpath = m_xml.filename();
     m_fullpath = m_xml.heap().strdup(fullpath);
@@ -212,7 +212,7 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
 void Dim::iConfigInitialize () {
     shutdownMonitor(&s_cleanup);
     if (appFlags() & fAppWithFiles)
-        fileMonitorDir(&s_hDir, appConfigDirectory(), true);
+        fileMonitorDir(&s_hDir, appConfigDir(), true);
 }
 
 

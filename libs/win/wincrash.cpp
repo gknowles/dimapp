@@ -211,7 +211,7 @@ void Dim::winCrashInitialize() {
 
     shutdownMonitor(&s_cleanup);
 
-    auto crashDir = appCrashDirectory();
+    auto crashDir = appCrashDir();
     vector<FileIter::Entry> found;
     for (auto && e : FileIter{crashDir})
         found.push_back(e);
