@@ -211,7 +211,26 @@ void Dim::winCrashInitialize() {
 
     shutdownMonitor(&s_cleanup);
 
-    s_crashFile = "crash/crash.dmp";
+    auto crashDir = appCrashDirectory();
+    vector<FileIter::Entry> found;
+    for (auto && e : FileIter{crashDir})
+        found.push_back(e);
+    static const int kMaxKeepFiles = 10;
+    if (found.size() > kMaxKeepFiles) {
+        auto nth = found.end() - kMaxKeepFiles;
+        nth_element(
+            found.begin(),
+            nth,
+            found.end(),
+            [](auto & a, auto & b) { return a.mtime < b.mtime; }
+        );
+        for (auto p = found.begin(); p != nth; ++p)
+            fileRemove(p->path);
+    }
+    s_crashFile = crashDir;
+    s_crashFile /= "crash";
+    s_crashFile += StrFrom<time_t>(Clock::to_time_t(Clock::now()));
+    s_crashFile += ".dmp";
 
     RegisterApplicationRecoveryCallback(appRecoveryCallback, NULL, 30'000, 0);
     SetUnhandledExceptionFilter(unhandledExceptionFilter);
