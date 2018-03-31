@@ -57,19 +57,13 @@ static Path s_crashFile;
 
 /****************************************************************************
 *
-*   Handlers
+*   Helpers
 *
 ***/
 
 //===========================================================================
-extern "C" void abortHandler(int sig) {
+static void writeDump() {
     WinError err;
-    printf("abnormal abort, sig %d\n", sig);
-    scoped_lock<mutex> lk{s_mut};
-
-    if (IsDebuggerPresent())
-        DebugBreak();
-
     auto f = CreateFile(
         s_crashFile.c_str(),
         GENERIC_READ | GENERIC_WRITE,
@@ -119,6 +113,25 @@ extern "C" void abortHandler(int sig) {
         }
         CloseHandle(f);
     }
+}
+
+
+/****************************************************************************
+*
+*   Handlers
+*
+***/
+
+//===========================================================================
+extern "C" void abortHandler(int sig) {
+    printf("abnormal abort, sig %d\n", sig);
+    scoped_lock<mutex> lk{s_mut};
+
+    if (IsDebuggerPresent())
+        DebugBreak();
+
+    if (appFlags() & fAppWithFiles)
+        writeDump();
 
     _CrtSetDbgFlag(0);
     TerminateProcess(GetCurrentProcess(), 3);
@@ -211,26 +224,28 @@ void Dim::winCrashInitialize() {
 
     shutdownMonitor(&s_cleanup);
 
-    auto crashDir = appCrashDir();
-    vector<FileIter::Entry> found;
-    for (auto && e : FileIter{crashDir})
-        found.push_back(e);
-    static const int kMaxKeepFiles = 10;
-    if (found.size() > kMaxKeepFiles) {
-        auto nth = found.end() - kMaxKeepFiles;
-        nth_element(
-            found.begin(),
-            nth,
-            found.end(),
-            [](auto & a, auto & b) { return a.mtime < b.mtime; }
-        );
-        for (auto p = found.begin(); p != nth; ++p)
-            fileRemove(p->path);
+    if (appFlags() & fAppWithFiles) {
+        auto crashDir = appCrashDir();
+        vector<FileIter::Entry> found;
+        for (auto && e : FileIter{crashDir})
+            found.push_back(e);
+        static const int kMaxKeepFiles = 10;
+        if (found.size() > kMaxKeepFiles) {
+            auto nth = found.end() - kMaxKeepFiles;
+            nth_element(
+                found.begin(),
+                nth,
+                found.end(),
+                [](auto & a, auto & b) { return a.mtime < b.mtime; }
+            );
+            for (auto p = found.begin(); p != nth; ++p)
+                fileRemove(p->path);
+        }
+        s_crashFile = crashDir;
+        s_crashFile /= "crash";
+        s_crashFile += StrFrom<time_t>(Clock::to_time_t(Clock::now()));
+        s_crashFile += ".dmp";
     }
-    s_crashFile = crashDir;
-    s_crashFile /= "crash";
-    s_crashFile += StrFrom<time_t>(Clock::to_time_t(Clock::now()));
-    s_crashFile += ".dmp";
 
     RegisterApplicationRecoveryCallback(appRecoveryCallback, NULL, 30'000, 0);
     SetUnhandledExceptionFilter(unhandledExceptionFilter);
