@@ -8,6 +8,10 @@
 using namespace std;
 using namespace Dim;
 
+#define ANON_NAMESPACE namespace Dim::Anon::Test::List
+ANON_NAMESPACE {}
+using ANON_NAMESPACE;
+
 
 /****************************************************************************
 *
@@ -21,7 +25,7 @@ using namespace Dim;
                       << #__VA_ARGS__ << ") failed";                        \
     }
 
-namespace {
+ANON_NAMESPACE {
 
 class TestNode : public ListBaseLink<> {
 public:

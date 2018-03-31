@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <!-- TimePoint and Duration -->
+  <Type Name="Dim::Clock::time_point">
+    <DisplayString>{(double)_MyDur._MyRep / 10000000000} seconds</DisplayString>
+  </Type>
+  <Type Name="Dim::Clock::duration">
+    <DisplayString>{(double)_MyRep / 10000000000} seconds</DisplayString>
+  </Type>
+
+  <!-- List<T, Tag> -->
+  <Type Name="Dim::List&lt;*,*&gt;">
+    <DisplayString Condition="m_base.m_prevLink == &amp;m_base">
+      {{ size = 0 }}
+    </DisplayString>
+    <DisplayString Condition="m_base.m_prevLink == m_base.m_nextLink">
+      {{ size = 1 }}
+    </DisplayString>
+    <DisplayString>{{ size >= 2 }}</DisplayString>
+    <Expand>
+      <CustomListItems MaxItemsPerView="100">
+        <Variable Name="base" InitialValue="&amp;m_base"/>
+        <Variable Name="ptr" InitialValue="m_base.m_nextLink"/>
+        <Loop>
+          <Break Condition="ptr == base"/>
+          <Item>($T1 *) ptr</Item>
+          <Exec>ptr = ptr->m_nextLink</Exec>
+        </Loop>
+      </CustomListItems>
+    </Expand>
+  </Type>
+  <Type Name="Dim::List&lt;*,*&gt;">
+    <!-- fallback definition when template type is in anonymous namespace -->
+    <DisplayString Condition="m_base.m_prevLink == &amp;m_base">
+      {{ size = 0 }}
+    </DisplayString>
+    <DisplayString Condition="m_base.m_prevLink == m_base.m_nextLink">
+      {{ size = 1 }}
+    </DisplayString>
+    <DisplayString>{{ size >= 2 }}</DisplayString>
+    <Expand>
+      <CustomListItems MaxItemsPerView="100">
+        <Variable Name="base" InitialValue="&amp;m_base"/>
+        <Variable Name="ptr" InitialValue="m_base.m_nextLink"/>
+        <Loop>
+          <Break Condition="ptr == base"/>
+          <Item>ptr</Item>
+          <Exec>ptr = ptr->m_nextLink</Exec>
+        </Loop>
+      </CustomListItems>
+    </Expand>
+  </Type>
+
+  <Type Name="Dim::ListBaseLink&lt;*&gt;" Inheritable="false">
+    <DisplayString Condition="m_prevLink == this">{{ not linked }}</DisplayString>
+    <DisplayString>{{ linked }}</DisplayString>
+  </Type>
+</AutoVisualizer>

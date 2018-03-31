@@ -27,6 +27,7 @@
 # libs/core/charbuf.cpp
 # libs/core/charbuf.h
 # libs/core/core.h
+# libs/core/core.natvis
 # libs/core/handle.cpp
 # libs/core/handle.h
 # libs/core/hash.cpp
