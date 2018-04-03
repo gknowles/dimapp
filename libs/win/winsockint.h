@@ -59,6 +59,7 @@ private:
     bool onRead(SocketRequest * task);
     bool onWrite(SocketRequest * task);
 
+    void requeueRead();
     void queueRead(SocketRequest * task);
     void queuePrewrite(std::unique_ptr<SocketBuffer> buffer, size_t bytes);
     void queueWrites();

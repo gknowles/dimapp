@@ -107,35 +107,6 @@ void SocketBase::disconnect(ISocketNotify * notify) {
 }
 
 //===========================================================================
-// static
-void SocketBase::write(
-    ISocketNotify * notify,
-    unique_ptr<SocketBuffer> buffer,
-    size_t bytes
-) {
-    assert(bytes <= (size_t) buffer->capacity);
-    if (!bytes)
-        return;
-    if (auto sock = notify->m_socket)
-        sock->queuePrewrite(move(buffer), bytes);
-}
-
-//===========================================================================
-// static
-void SocketBase::read(ISocketNotify * notify) {
-    if (auto sock = notify->m_socket) {
-        auto task = sock->m_prereads.front();
-
-        // Queuing reads is only allowed after an automatic requeuing was
-        // rejected via returning false from onSocketRead.
-        assert(task);
-
-        sock->m_reads.link(task);
-        sock->queueRead(task);
-    }
-}
-
-//===========================================================================
 SocketBase::SocketBase(ISocketNotify * notify)
     : m_notify(notify)
 {
@@ -219,8 +190,8 @@ bool SocketBase::createQueue() {
     }
 
     for (int i = 0; i < m_maxReads; ++i) {
-        m_reads.link(new SocketRequest);
-        auto task = m_reads.back();
+        m_prereads.link(new SocketRequest);
+        auto task = m_prereads.back();
         task->m_type = kReqRead;
         task->m_buffer = socketGetBuffer();
 
@@ -240,8 +211,8 @@ bool SocketBase::createQueue() {
 
 //===========================================================================
 void SocketBase::enableEvents() {
-    for (auto && task : m_reads)
-        queueRead(&task);
+    while (!m_prereads.empty())
+        requeueRead();
 
     // trigger first RIONotify
     if (int error = s_rio.RIONotify(m_cq))
@@ -280,6 +251,45 @@ void SocketBase::onTask() {
 
     if (int error = s_rio.RIONotify(m_cq))
         logMsgCrash() << "RIONotify: " << WinError{error};
+}
+
+//===========================================================================
+// static
+void SocketBase::read(ISocketNotify * notify) {
+    if (auto sock = notify->m_socket)
+        sock->requeueRead();
+}
+
+//===========================================================================
+void SocketBase::requeueRead() {
+    auto task = m_prereads.front();
+
+    // Queuing reads is only allowed after an automatic requeuing was
+    // rejected via returning false from onSocketRead.
+    assert(task);
+
+    if (m_mode == Mode::kActive) {
+        m_reads.link(task);
+        queueRead(task);
+    } else {
+        assert(m_mode == Mode::kClosing || m_mode == Mode::kClosed);
+        task->m_xferBytes = 0;
+        task->m_xferError = 0;
+        onRead(task);
+    }
+}
+
+//===========================================================================
+void SocketBase::queueRead(SocketRequest * task) {
+    if (!s_rio.RIOReceive(
+        m_rq,
+        &task->m_rbuf,
+        1, // number of RIO_BUFs (must be 1)
+        0, // RIO_MSG_* flags
+        task
+    )) {
+        logMsgCrash() << "RIOReceive: " << WinError{};
+    }
 }
 
 //===========================================================================
@@ -322,43 +332,17 @@ bool SocketBase::onRead(SocketRequest * task) {
 }
 
 //===========================================================================
-void SocketBase::queueRead(SocketRequest * task) {
-    if (!s_rio.RIOReceive(
-        m_rq,
-        &task->m_rbuf,
-        1, // number of RIO_BUFs (must be 1)
-        0, // RIO_MSG_* flags
-        task
-    )) {
-        logMsgCrash() << "RIOReceive: " << WinError{};
-    }
-}
-
-//===========================================================================
-bool SocketBase::onWrite(SocketRequest * task) {
-    auto bytes = task->m_rbuf.Length;
-    delete task;
-    m_numWrites -= 1;
-    s_perfIncomplete -= bytes;
-    m_bufInfo.incomplete -= bytes;
-
-    // already disconnected and this was the last unresolved write? delete
-    if (m_mode == Mode::kClosed && m_reads.empty() && m_writes.empty()) {
-        delete this;
-        return false;
-    }
-
-    bool wasPrewrites = !m_prewrites.empty();
-    queueWrites();
-    if (wasPrewrites && m_prewrites.empty() // data no longer waiting
-        || !m_numWrites                     // send queue is empty
-    ) {
-        assert(!m_bufInfo.waiting);
-        assert(m_numWrites || !m_bufInfo.incomplete);
-        auto info = m_bufInfo;
-        m_notify->onSocketBufferChanged(info);
-    }
-    return true;
+// static
+void SocketBase::write(
+    ISocketNotify * notify,
+    unique_ptr<SocketBuffer> buffer,
+    size_t bytes
+) {
+    assert(bytes <= (size_t) buffer->capacity);
+    if (!bytes)
+        return;
+    if (auto sock = notify->m_socket)
+        sock->queuePrewrite(move(buffer), bytes);
 }
 
 //===========================================================================
@@ -441,6 +425,33 @@ void SocketBase::queueWrites() {
             m_bufInfo.incomplete += bytes;
         }
     }
+}
+
+//===========================================================================
+bool SocketBase::onWrite(SocketRequest * task) {
+    auto bytes = task->m_rbuf.Length;
+    delete task;
+    m_numWrites -= 1;
+    s_perfIncomplete -= bytes;
+    m_bufInfo.incomplete -= bytes;
+
+    // already disconnected and this was the last unresolved write? delete
+    if (m_mode == Mode::kClosed && m_reads.empty() && m_writes.empty()) {
+        delete this;
+        return false;
+    }
+
+    bool wasPrewrites = !m_prewrites.empty();
+    queueWrites();
+    if (wasPrewrites && m_prewrites.empty() // data no longer waiting
+        || !m_numWrites                     // send queue is empty
+    ) {
+        assert(!m_bufInfo.waiting);
+        assert(m_numWrites || !m_bufInfo.incomplete);
+        auto info = m_bufInfo;
+        m_notify->onSocketBufferChanged(info);
+    }
+    return true;
 }
 
 
