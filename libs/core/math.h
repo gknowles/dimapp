@@ -8,6 +8,7 @@
 
 #include <cassert>
 #include <cstdint>
+#include <intrin.h>
 #include <limits>
 
 namespace Dim {
@@ -61,7 +62,9 @@ constexpr int trailingZeroBits(uint64_t val) {
 constexpr int leadingZeroBits(uint64_t val) {
     assert(val != 0);
 #if 0
-    return _CountLeadingZeros64(val);
+    unsigned long count = 0;
+    _BitScanReverse64(&count, val);
+    return count;
 #else
     auto mask = (uint64_t) 1 << 63;
     int i = 0;
