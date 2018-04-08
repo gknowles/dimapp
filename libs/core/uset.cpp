@@ -1114,7 +1114,7 @@ static int cmpMeta(const Node & left, const Node & right) {
 //===========================================================================
 static int compare(const Node & left, const Node & right) {
     using CompareFn = int(const Node & left, const Node & right);
-    CompareFn * functs[][kNodeTypes] = {
+    static CompareFn * const functs[][kNodeTypes] = {
     // LEFT                         RIGHT
     //             empty      full        vector     bitmap     meta
     /* empty  */ { cmpEqual,  cmpLessIf,  cmpLessIf, cmpLessIf, cmpLessIf },
@@ -1219,7 +1219,7 @@ NOT_FULL: ;
 //===========================================================================
 static void insert(Node & left, const Node & right) {
     using InsertFn = void(Node & left, const Node & right);
-    InsertFn * functs[][kNodeTypes] = {
+    static InsertFn * const functs[][kNodeTypes] = {
     // LEFT                         RIGHT
     //             empty    full     vector   bitmap     meta
     /* empty  */ { insSkip, insFull, insCopy, insCopy,   insCopy  },
@@ -1302,7 +1302,7 @@ NOT_FULL: ;
 //===========================================================================
 static void insert(Node & left, Node && right) {
     using InsertFn = void(Node & left, Node && right);
-    InsertFn * functs[][kNodeTypes] = {
+    static InsertFn * const functs[][kNodeTypes] = {
     // LEFT                         RIGHT
     //             empty    full     vector   bitmap     meta
     /* empty  */ { insSkip, insFull, insMove, insMove,   insMove  },
@@ -1439,7 +1439,7 @@ NOT_EMPTY: ;
 //===========================================================================
 static void erase(Node & left, const Node & right) {
     using EraseFn = void(Node & left, const Node & right);
-    EraseFn * functs[][kNodeTypes] = {
+    static EraseFn * const functs[][kNodeTypes] = {
     // LEFT                         RIGHT
     //             empty    full      vector     bitmap     meta
     /* empty  */ { eraSkip, eraSkip,  eraSkip,   eraSkip,   eraSkip   },
@@ -1561,7 +1561,7 @@ NOT_EMPTY: ;
 //===========================================================================
 static void intersect(Node & left, const Node & right) {
     using IsectFn = void(Node & left, const Node & right);
-    IsectFn * functs[][kNodeTypes] = {
+    static IsectFn * const functs[][kNodeTypes] = {
     // LEFT                         RIGHT
     //             empty      full      vector     bitmap      meta
     /* empty  */ { isecSkip,  isecSkip, isecSkip,  isecSkip,   isecSkip },
@@ -1644,7 +1644,7 @@ NOT_EMPTY: ;
 //===========================================================================
 static void intersect(Node & left, Node && right) {
     using IsectFn = void(Node & left, Node && right);
-    IsectFn * functs[][kNodeTypes] = {
+    static IsectFn * const functs[][kNodeTypes] = {
     // LEFT                         RIGHT
     //             empty      full      vector     bitmap      meta
     /* empty  */ { isecSkip,  isecSkip, isecEmpty, isecEmpty,  isecEmpty },
