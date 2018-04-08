@@ -92,6 +92,11 @@ static void app(int argc, char *argv[]) {
     buf.insert(blkLen / 2, buf2);
     EXPECT(buf.size() == count + buf2.size());
 
+    buf.assign("a");
+    buf.resize(0);
+    buf.pushBack('b');
+    EXPECT(buf == "b");
+
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);
         cerr << "*** TEST FAILURES: " << errs << endl;
