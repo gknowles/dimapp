@@ -325,7 +325,7 @@ CharBuf & CharBuf::erase(size_t pos, size_t count) {
         return *this;
 
     auto ic = find(pos);
-    return erase(ic.first, ic.second, (int)count);
+    return erase(ic.first, ic.second, remove);
 }
 
 //===========================================================================
