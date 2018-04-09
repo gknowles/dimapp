@@ -483,7 +483,7 @@ FileHandle Dim::fileOpen(string_view path, File::OpenMode mode) {
     if (~mode & om::fBlocking)
         flagsAndAttrs |= FILE_FLAG_OVERLAPPED;
     if (mode & om::fAligned)
-        flagsAndAttrs |= FILE_FLAG_NO_BUFFERING | FILE_FLAG_WRITE_THROUGH;
+        flagsAndAttrs |= FILE_FLAG_NO_BUFFERING;
     if (mode & om::fRandom)
         flagsAndAttrs |= FILE_FLAG_RANDOM_ACCESS;
     if (mode & om::fSequential)
