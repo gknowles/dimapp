@@ -90,10 +90,18 @@ public:
 
     void deleteStream(int stream, HttpStream * sm);
 
+    std::string_view errmsg() const { return m_errmsg; }
+
 private:
     enum class ByteMode : int;
     enum class FrameMode : int;
 
+    void replyGoAway(
+        Dim::CharBuf * out,
+        int lastStream,
+        HttpConn::FrameError error,
+        std::string_view msg = {}
+    );
     HttpStream * findAlways(CharBuf * out, int stream);
     bool writeMsg(
         CharBuf * out,
@@ -206,6 +214,7 @@ private:
     std::unordered_map<int, std::shared_ptr<HttpStream>> m_streams;
     HpackEncode m_encoder;
     HpackDecode m_decoder;
+    std::string m_errmsg;
 };
 
 } // namespace

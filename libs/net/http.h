@@ -251,6 +251,7 @@ HttpConnHandle httpConnect(CharBuf * out);
 HttpConnHandle httpAccept();
 
 void httpClose(HttpConnHandle conn);
+std::string_view httpGetError(HttpConnHandle conn);
 
 // Returns false when no more data will be accepted, either by request
 // of the input or due to error.

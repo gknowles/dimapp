@@ -374,11 +374,11 @@ static bool skip(const char *& ptr, const char * eptr, const char literal[]) {
 }
 
 //===========================================================================
-static void replyGoAway(
+void HttpConn::replyGoAway(
     CharBuf * out,
     int lastStream,
     HttpConn::FrameError error,
-    string_view msg = {}
+    string_view msg
 ) {
     // GoAway frame
     //  reserved : 1
@@ -386,7 +386,7 @@ static void replyGoAway(
     //  errorCode : 32
     //  data[]
 
-    msg = msg.substr(0, 256);
+    m_errmsg = msg = msg.substr(0, 256);
     char buf[8];
     hton31(buf, lastStream);
     hton32(buf + 4, (int) error);
@@ -601,11 +601,21 @@ HttpStream * HttpConn::findAlways(CharBuf * out, int stream) {
     if (!ib.second)
         return ib.first->second.get();
     if (stream % 2 == 0) {
-        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+        replyGoAway(
+            out, 
+            m_lastInputStream, 
+            FrameError::kProtocolError,
+            "recv headers frame on even stream id"
+        );
         return nullptr;
     }
     if (stream < m_lastInputStream) {
-        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+        replyGoAway(
+            out, 
+            m_lastInputStream, 
+            FrameError::kProtocolError,
+            "headers frame on closed stream"
+        );
         return nullptr;
     }
 
@@ -635,7 +645,12 @@ bool HttpConn::onFrame(
     int stream = getFrameStream(hdr);
     m_inputFrameLen = getFrameLen(hdr);
     if (m_inputFrameLen > m_maxInputFrame) {
-        replyGoAway(out, m_lastInputStream, FrameError::kFrameSizeError);
+        replyGoAway(
+            out, 
+            m_lastInputStream, 
+            FrameError::kFrameSizeError,
+            "frame size too large"
+        );
         return false;
     }
 
@@ -662,10 +677,29 @@ bool HttpConn::onFrame(
         return onWindowUpdate(out, msgs, src, stream, flags);
     };
 
-    // ignore unknown frames unless a specific frame type is required
-    if (m_frameMode == FrameMode::kNormal)
+    switch (m_frameMode) {
+    case FrameMode::kContinuation:
+        replyGoAway(
+            out, 
+            m_lastInputStream, 
+            FrameError::kProtocolError,
+            "unknown frame, expected continuation"
+        );
+        return false;
+    case FrameMode::kNormal:
+        // ignore unknown frames unless a specific frame type is required
         return true;
-    replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+    case FrameMode::kSettings:
+        replyGoAway(
+            out, 
+            m_lastInputStream, 
+            FrameError::kProtocolError,
+            "unknown frame, expected settings"
+        );
+        return false;
+    }
+
+    assert(!"unreachable");
     return false;
 }
 
@@ -684,15 +718,24 @@ bool HttpConn::onData(
     //  padding[]
 
     if (m_frameMode != FrameMode::kNormal || !stream) {
-        // data frames aren't allowed on stream 0
-        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+        replyGoAway(
+            out, 
+            m_lastInputStream, 
+            FrameError::kProtocolError,
+            "data frame on stream 0"
+        );
         return false;
     }
 
     // adjust for any included padding
     UnpaddedData data;
     if (!removePadding(&data, src, m_inputFrameLen, 0, flags)) {
-        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+        replyGoAway(
+            out, 
+            m_lastInputStream, 
+            FrameError::kProtocolError,
+            "data frame with too much or non-zero padding"
+        );
         return false;
     }
 
@@ -741,7 +784,12 @@ bool HttpConn::onHeaders(
 
     if (m_frameMode != FrameMode::kNormal || !stream) {
         // header frames aren't allowed on stream 0
-        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+        replyGoAway(
+            out, 
+            m_lastInputStream, 
+            FrameError::kProtocolError,
+            "headers frame on stream 0"
+        );
         return false;
     }
 
@@ -749,7 +797,12 @@ bool HttpConn::onHeaders(
     UnpaddedData ud;
     int hdrLen = (flags & fPriority) ? 5 : 0;
     if (!removePadding(&ud, src, m_inputFrameLen, hdrLen, flags)) {
-        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+        replyGoAway(
+            out, 
+            m_lastInputStream, 
+            FrameError::kProtocolError,
+            "headers frame with too much or non-zero padding"
+        );
         return false;
     }
 
@@ -757,7 +810,12 @@ bool HttpConn::onHeaders(
     if (flags & fPriority) {
         PriorityData pri;
         if (!removePriority(&pri, stream, ud.hdr, hdrLen)) {
-            replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+            replyGoAway(
+                out, 
+                m_lastInputStream, 
+                FrameError::kProtocolError,
+                "headers frame with invalid priority"
+            );
             return false;
         }
         updatePriority();
@@ -801,15 +859,26 @@ bool HttpConn::onHeaders(
             // !!! should probably send a stream error and process
             //     the headers (to maintain the connection decompression
             //     context) instead of dropping the connection.
-            replyGoAway(out, stream, FrameError::kProtocolError);
+            replyGoAway(
+                out, 
+                stream, 
+                FrameError::kProtocolError,
+                "trailing headers not supported"
+            );
             return false;
         }
         [[fallthrough]];
-    default:
+    case HttpStream::kClosed:
+    case HttpStream::kDeleted:
         // !!! should probably send a stream error and process
         //     the headers (to maintain the connection decompression
         //     context) instead of dropping the connection.
-        replyGoAway(out, stream, FrameError::kProtocolError);
+        replyGoAway(
+            out, 
+            stream, 
+            FrameError::kProtocolError,
+            "headers frame on closed stream"
+        );
         return false;
     }
 
@@ -819,7 +888,12 @@ bool HttpConn::onHeaders(
     auto * msg = sm->m_msg.get();
     MsgDecoder mdec(*msg);
     if (!m_decoder.parse(&mdec, &msg->heap(), ud.data, ud.dataLen)) {
-        replyGoAway(out, m_lastInputStream, FrameError::kCompressionError);
+        replyGoAway(
+            out, 
+            m_lastInputStream, 
+            FrameError::kCompressionError,
+            "header decoding failure"
+        );
         return false;
     }
     if (!mdec) {
@@ -846,7 +920,12 @@ bool HttpConn::onPriority(
 
     if (m_frameMode != FrameMode::kNormal || !stream) {
         // priority frames aren't allowed on stream 0
-        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+        replyGoAway(
+            out, 
+            m_lastInputStream, 
+            FrameError::kProtocolError,
+            "priority frame on stream 0"
+        );
         return false;
     }
 
@@ -862,7 +941,12 @@ bool HttpConn::onPriority(
         src + kFrameHeaderLen,
         m_inputFrameLen
     )) {
-        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+        replyGoAway(
+            out, 
+            m_lastInputStream, 
+            FrameError::kProtocolError,
+            "invalid priority on priority frame"
+        );
         return false;
     }
 
@@ -881,19 +965,33 @@ bool HttpConn::onRstStream(
     //  errorCode : 32
 
     if (m_frameMode != FrameMode::kNormal || !stream) {
-        // priority frames aren't allowed on stream 0
-        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+        replyGoAway(
+            out, 
+            m_lastInputStream, 
+            FrameError::kProtocolError,
+            "rststream frame on stream 0"
+        );
         return false;
     }
     if (m_inputFrameLen != 4) {
-        replyGoAway(out, m_lastInputStream, FrameError::kFrameSizeError);
+        replyGoAway(
+            out, 
+            m_lastInputStream, 
+            FrameError::kFrameSizeError,
+            "rststream frame size must be 4"
+        );
         return false;
     }
     // find stream to reset
     auto it = m_streams.find(stream);
     if (it == m_streams.end()) {
         if (stream > m_lastInputStream) {
-            replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+            replyGoAway(
+                out, 
+                m_lastInputStream, 
+                FrameError::kProtocolError,
+                "rststream frame on idle stream"
+            );
             return false;
         }
         // ignore reset on closed streams
@@ -921,19 +1019,33 @@ bool HttpConn::onSettings(
             && m_frameMode != FrameMode::kSettings
         || stream
     ) {
-        // settings frames MUST be on stream 0
-        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+        replyGoAway(
+            out, 
+            m_lastInputStream, 
+            FrameError::kProtocolError,
+            "settings frames must be on stream 0"
+        );
         return false;
     }
     m_frameMode = FrameMode::kNormal;
 
     if (flags & fAck) {
         if (m_inputFrameLen) {
-            replyGoAway(out, m_lastInputStream, FrameError::kFrameSizeError);
+            replyGoAway(
+                out, 
+                m_lastInputStream, 
+                FrameError::kFrameSizeError,
+                "settings ack must not have settings changes"
+            );
             return false;
         }
         if (!m_unackSettings) {
-            replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+            replyGoAway(
+                out, 
+                m_lastInputStream, 
+                FrameError::kProtocolError,
+                "unmatched settings ack"
+            );
             return false;
         }
         m_unackSettings -= 1;
@@ -942,7 +1054,12 @@ bool HttpConn::onSettings(
 
     // must be an even multiple of identifier/value pairs
     if (m_inputFrameLen % 6) {
-        replyGoAway(out, m_lastInputStream, FrameError::kFrameSizeError);
+        replyGoAway(
+            out, 
+            m_lastInputStream, 
+            FrameError::kFrameSizeError,
+            "settings frame size must be a multiple of 6"
+        );
         return false;
     }
 
@@ -964,7 +1081,12 @@ bool HttpConn::onSettings(
 //===========================================================================
 bool HttpConn::setInitialWindowSize(CharBuf * out, unsigned value) {
     if (value > kMaximumWindowSize) {
-        replyGoAway(out, m_lastInputStream, FrameError::kFlowControlError);
+        replyGoAway(
+            out, 
+            m_lastInputStream, 
+            FrameError::kFlowControlError,
+            "initial window size too large"
+        );
         return false;
     }
     m_initialFlowWindow = (int) value;
@@ -972,7 +1094,12 @@ bool HttpConn::setInitialWindowSize(CharBuf * out, unsigned value) {
     for (auto & sm : m_streams) {
         auto & win = sm.second->m_flowWindow;
         if (diff > 0 && win > kMaximumWindowSize - diff) {
-            replyGoAway(out, m_lastInputStream, FrameError::kFlowControlError);
+            replyGoAway(
+                out, 
+                m_lastInputStream, 
+                FrameError::kFlowControlError,
+                "initial window size too large for existing streams"
+            );
             return false;
         }
         sm.second->m_flowWindow += diff;
@@ -997,12 +1124,22 @@ bool HttpConn::onPushPromise(
     //  padding[]
 
     if (m_frameMode != FrameMode::kNormal || !stream) {
-        // Push promise isn't allowed on stream 0
-        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+        replyGoAway(
+            out, 
+            m_lastInputStream, 
+            FrameError::kProtocolError,
+            "push promise frame on stream 0"
+        );
         return false;
     }
 
     // TODO: actually process promises
+    replyGoAway(
+        out,
+        m_lastInputStream,
+        FrameError::kProtocolError,
+        "push promise not supported"
+    );
     return false;
 }
 
@@ -1019,11 +1156,21 @@ bool HttpConn::onPing(
 
     if (m_frameMode != FrameMode::kNormal || stream) {
         // Ping frames MUST be on stream 0
-        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+        replyGoAway(
+            out, 
+            m_lastInputStream, 
+            FrameError::kProtocolError,
+            "ping frame must be on stream 0"
+        );
         return false;
     }
     if (m_inputFrameLen != 8) {
-        replyGoAway(out, m_lastInputStream, FrameError::kFrameSizeError);
+        replyGoAway(
+            out, 
+            m_lastInputStream, 
+            FrameError::kFrameSizeError,
+            "ping frame size must be multiple of 8"
+        );
         return false;
     }
 
@@ -1050,15 +1197,25 @@ bool HttpConn::onGoAway(
 
     if (stream) {
         // GoAway frames MUST be on stream 0
-        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+        replyGoAway(
+            out, 
+            m_lastInputStream, 
+            FrameError::kProtocolError,
+            "goaway frame must be on stream 0"
+        );
         return false;
     }
 
     int lastStreamId = ntoh31(src + kFrameHeaderLen);
     FrameError errorCode = (FrameError)ntoh32(src + kFrameHeaderLen + 4);
 
-    if (lastStreamId > m_lastOutputStream) {
-        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+    if (m_lastOutputStream && lastStreamId > m_lastOutputStream) {
+        replyGoAway(
+            out, 
+            m_lastInputStream, 
+            FrameError::kProtocolError,
+            "multiple goaway frames must have decreasing last stream ids"
+        );
         return false;
     }
 
@@ -1070,7 +1227,12 @@ bool HttpConn::onGoAway(
         }
     }
 
-    replyGoAway(out, m_lastInputStream, FrameError::kNoError);
+    replyGoAway(
+        out, 
+        m_lastInputStream, 
+        FrameError::kNoError,
+        "graceful shutdown"
+    );
     return false;
 }
 
@@ -1087,24 +1249,44 @@ bool HttpConn::onWindowUpdate(
     //  increment : 31
 
     if (m_frameMode != FrameMode::kNormal) {
-        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+        replyGoAway(
+            out, 
+            m_lastInputStream, 
+            FrameError::kProtocolError,
+            "windowupdate unexpected"
+        );
         return false;
     }
     if (m_inputFrameLen != 4) {
-        replyGoAway(out, m_lastInputStream, FrameError::kFrameSizeError);
+        replyGoAway(
+            out, 
+            m_lastInputStream, 
+            FrameError::kFrameSizeError,
+            "windowupdate frame size must be 4"
+        );
         return false;
     }
 
     int increment = ntoh31(src + kFrameHeaderLen);
     if (!increment) {
-        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+        replyGoAway(
+            out, 
+            m_lastInputStream, 
+            FrameError::kProtocolError,
+            "windowupdate with 0 increment"
+        );
         return false;
     }
 
     if (!stream) {
         // update window of connection
         if (kMaximumWindowSize - increment < m_flowWindow) {
-            replyGoAway(out, m_lastInputStream, FrameError::kFlowControlError);
+            replyGoAway(
+                out, 
+                m_lastInputStream, 
+                FrameError::kFlowControlError,
+                "windowupdate with increment too large"
+            );
             return false;
         }
         m_flowWindow += increment;
@@ -1120,7 +1302,12 @@ bool HttpConn::onWindowUpdate(
     auto it = m_streams.find(stream);
     if (it == m_streams.end()) {
         if (stream > m_lastInputStream) {
-            replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+            replyGoAway(
+                out, 
+                m_lastInputStream, 
+                FrameError::kProtocolError,
+                "windowupdate on idle stream"
+            );
             return false;
         }
         // ignore window updates on completed streams
@@ -1151,11 +1338,22 @@ bool HttpConn::onContinuation(
     if (m_frameMode != FrameMode::kContinuation
         || stream != m_continueStream
     ) {
-        replyGoAway(out, m_lastInputStream, FrameError::kProtocolError);
+        replyGoAway(
+            out, 
+            m_lastInputStream, 
+            FrameError::kProtocolError,
+            "continuation unexpected"
+        );
         return false;
     }
 
     // TODO: actually process continuations
+    replyGoAway(
+        out,
+        m_lastInputStream,
+        FrameError::kProtocolError,
+        "continuation frames not supported"
+    );
     return false;
 }
 
@@ -1428,6 +1626,13 @@ HttpConnHandle Dim::httpAccept() {
 //===========================================================================
 void Dim::httpClose(HttpConnHandle hc) {
     s_conns.erase(hc);
+}
+
+//===========================================================================
+string_view Dim::httpGetError(HttpConnHandle hc) {
+    if (auto conn = s_conns.find(hc))
+        return conn->errmsg();
+    return {};
 }
 
 //===========================================================================

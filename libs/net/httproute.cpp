@@ -339,6 +339,11 @@ bool HttpSocket::onSocketRead(AppSocketData & data) {
         socketWrite(this, out);
     if (!result) {
         s_perfInvalid += 1;
+        auto em = httpGetError(m_conn);
+        if (em.empty())
+            em = "no error";
+        logMsgDebug() << "HttpSocket: " << em;
+        logHexDebug(string_view{data.data, (size_t) data.bytes}.substr(0, 128));
         socketDisconnect(this);
         return true;
     }
