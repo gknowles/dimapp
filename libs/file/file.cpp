@@ -43,7 +43,7 @@ void FileAppendStream::init(int numBufs, int maxWrites, size_t pageSize) {
 
 //===========================================================================
 bool FileAppendStream::open(string_view path, OpenExisting mode) {
-    auto flags = File::fReadWrite | File::fAligned;
+    auto flags = File::fReadWrite | File::fAligned | File::fDenyWrite;
     switch (mode) {
     case kFail: flags |= File::fCreat | File::fExcl; break;
     case kAppend: flags |= File::fCreat; break;
