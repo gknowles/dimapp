@@ -206,7 +206,11 @@ void AcceptSocket::onAccept(
 
     bool ok = listen->m_handle != INVALID_SOCKET;
     if (xferError) {
-        if (xferError == ERROR_OPERATION_ABORTED && !ok) {
+        if (!ok 
+            && (xferError == ERROR_OPERATION_ABORTED 
+                || xferError == ERROR_NETNAME_DELETED
+                )
+        ) {
             // socket intentionally closed
         } else {
             logMsgError() << "onAccept: " << xferError;
