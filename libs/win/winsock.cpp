@@ -303,14 +303,14 @@ bool SocketBase::onRead(SocketRequest * task) {
         // included uncounted trailing null
         data.data[bytes] = 0;
 
-        bool more = m_notify->onSocketRead(data);
+        if (!m_notify->onSocketRead(data)) {
+            // new read will be explicitly requested by application
+            m_prereads.link(task);
+            return true;
+        }
 
         if (m_mode == Mode::kActive) {
-            if (more) {
-                queueRead(task);
-            } else {
-                m_prereads.link(task);
-            }
+            queueRead(task);
             return true;
         }
 
