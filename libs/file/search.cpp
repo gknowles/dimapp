@@ -142,7 +142,9 @@ FileIter::FileIter(
     error_code ec;
     auto path = Path{m_info->path.parentPath()};
     auto it = fs::directory_iterator{path.empty() ? "." : path.fsPath(), ec};
-    if (it != end(it)) {
+    if (it == end(it)) {
+        m_info.reset();
+    } else {
         m_info->pos.push_back({it});
         if (!find(m_info.get(), false))
             m_info.reset();
