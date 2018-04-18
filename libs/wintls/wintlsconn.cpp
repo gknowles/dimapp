@@ -368,8 +368,22 @@ void AppXmlNotify::onConfigChange(const XDocument & doc) {
             }
         }
     }
+    vector<string_view> dnsNames;
+    vector<string_view> ipAddrs;
+    auto xself = firstChild(xcerts, "SelfSigned");
+    for (auto && xalt : elems(xself, "SubjectAltName")) {
+        if (auto val = attrValue(&xalt, "dnsName"))
+            dnsNames.push_back(val);
+        if (auto val = attrValue(&xalt, "ipAddr"))
+            ipAddrs.push_back(val);
+    }
 
-    auto cred = iWinTlsCreateCred(keys.data(), keys.size());
+    auto cred = iWinTlsCreateCred(
+        keys.data(),
+        keys.size(),
+        dnsNames,
+        ipAddrs
+    );
 
     scoped_lock<shared_mutex> lk{s_mut};
     s_srvCred = move(cred);

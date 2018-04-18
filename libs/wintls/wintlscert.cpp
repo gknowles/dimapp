@@ -143,7 +143,99 @@ static void encodeBlob(
 }
 
 //===========================================================================
-static const CERT_CONTEXT * makeCert(string_view issuerName) {
+static bool hasEnhancedUsage(const CERT_CONTEXT * cert, string_view oid) {
+    DWORD cb{0};
+    if (!CertGetEnhancedKeyUsage(
+        cert,
+        0, // flags
+        nullptr,
+        &cb
+    )) {
+        logMsgCrash()
+            << "CertGetEnhancedKeyUsage(NULL): "
+            << WinError{};
+    }
+    string eudata(cb, '\0');
+    auto eu = (CERT_ENHKEY_USAGE *) eudata.data();
+    if (!CertGetEnhancedKeyUsage(cert, 0, eu, &cb)) {
+        WinError err;
+        if (err == CRYPT_E_NOT_FOUND) {
+            // good for all uses
+            return true;
+        }
+        logMsgCrash()
+            << "CertGetEnhancedKeyUsage: "
+            << WinError{};
+    }
+    for (unsigned i = 0; i < eu->cUsageIdentifier; ++i) {
+        if (eu->rgpszUsageIdentifier[i] == oid)
+            return true;
+    }
+    return false;
+}
+
+//===========================================================================
+static void addAltNameExt(
+    vector<CERT_EXTENSION> * extVec,
+    vector<string> * blobBufs,
+    const vector<string_view> & dnsNames,
+    const vector<string_view> & ipAddrs
+) {
+    if (dnsNames.empty() && ipAddrs.empty())
+        return;
+
+    vector<CERT_ALT_NAME_ENTRY> anes;
+    vector<wstring> dnames;
+    for (auto && n : dnsNames) {
+        dnames.push_back(toWstring(n));
+        auto & ane = anes.emplace_back();
+        ane.dwAltNameChoice = CERT_ALT_NAME_DNS_NAME;
+        ane.pwszDNSName = dnames.back().data();
+    }
+    vector<string> ipBytes;
+    for (auto && n : ipAddrs) {
+        Address ip;
+        if (!parse(&ip, n)) {
+            logMsgError() << "makeCert: invalid IP address: " << n;
+            continue;
+        }
+        auto & bytes = ipBytes.emplace_back();
+        if (ip.isIpv4()) {
+            bytes.resize(4);
+            hton32(bytes.data(), ip.getIpv4());
+        } else {
+            bytes.resize(16);
+            hton32(bytes.data(), ip.data[0]);
+            hton32(bytes.data() + 4, ip.data[1]);
+            hton32(bytes.data() + 8, ip.data[2]);
+            hton32(bytes.data() + 12, ip.data[3]);
+        }
+        auto & ane = anes.emplace_back();
+        ane.dwAltNameChoice = CERT_ALT_NAME_IP_ADDRESS;
+        ane.IPAddress.cbData = (DWORD) bytes.size();
+        ane.IPAddress.pbData = (BYTE *) bytes.data();
+    }
+    CERT_ALT_NAME_INFO ani = {};
+    ani.cAltEntry = (DWORD) anes.size();
+    ani.rgAltEntry = anes.data();
+
+    auto & ce = extVec->emplace_back();
+    ce.pszObjId = (char *) szOID_SUBJECT_ALT_NAME2;
+    ce.fCritical = false;
+    encodeBlob(
+        ce.Value,
+        blobBufs->emplace_back(),
+        X509_ALTERNATE_NAME,
+        &ani
+    );
+}
+
+//===========================================================================
+static const CERT_CONTEXT * makeCert(
+    string_view issuerName,
+    const vector<string_view> & dnsNames,
+    const vector<string_view> & ipAddrs
+) {
     WinError err{0};
     auto nkey = createKey();
 
@@ -177,6 +269,14 @@ static const CERT_CONTEXT * makeCert(string_view issuerName) {
         FileTimeToSystemTime(&ft, &startTime);
     }
 
+    vector<CERT_EXTENSION> extVec;
+    vector<string> blobBufs;
+    addAltNameExt(&extVec, &blobBufs, dnsNames, ipAddrs);
+
+    CERT_EXTENSIONS exts;
+    exts.cExtension = (DWORD) extVec.size();
+    exts.rgExtension = extVec.data();
+
     const CERT_CONTEXT * cert = CertCreateSelfSignCertificate(
         nkey,
         issuer,
@@ -185,7 +285,7 @@ static const CERT_CONTEXT * makeCert(string_view issuerName) {
         &sigalgo,
         &startTime,
         &endTime, // end time - defaults to 1 year
-        NULL // extensions
+        &exts // extensions
     );
     if (!cert) {
         err.set();
@@ -292,39 +392,6 @@ static bool isSelfSigned(const CERT_CONTEXT * cert) {
         &cert->pCertInfo->Subject,
         &cert->pCertInfo->Issuer
     );
-}
-
-
-//===========================================================================
-static bool hasEnhancedUsage(const CERT_CONTEXT * cert, string_view oid) {
-    DWORD cb{0};
-    if (!CertGetEnhancedKeyUsage(
-        cert,
-        0, // flags
-        nullptr,
-        &cb
-    )) {
-        logMsgCrash()
-            << "CertGetCertificateContextProperty(ENHKEY_USAGE, NULL): "
-            << WinError{};
-    }
-    string eudata(cb, '\0');
-    auto eu = (CERT_ENHKEY_USAGE *) eudata.data();
-    if (!CertGetEnhancedKeyUsage(cert, 0, eu, &cb)) {
-        WinError err;
-        if (err == CRYPT_E_NOT_FOUND) {
-            // good for all uses
-            return true;
-        }
-        logMsgCrash()
-            << "CertGetCertificateContextProperty(ENHKEY_USAGE): "
-            << WinError{};
-    }
-    for (unsigned i = 0; i < eu->cUsageIdentifier; ++i) {
-        if (eu->rgpszUsageIdentifier[i] == oid)
-            return true;
-    }
-    return false;
 }
 
 //===========================================================================
@@ -439,7 +506,9 @@ static void addCerts(
 static void getCerts(
     vector<unique_ptr<const CERT_CONTEXT>> & certs,
     const CertKey keys[],
-    size_t numKeys
+    size_t numKeys,
+    const vector<string_view> & dnsNames,
+    const vector<string_view> & ipAddrs
 ) {
     certs.clear();
     auto ekeys = keys + numKeys;
@@ -450,7 +519,7 @@ static void getCerts(
     if (certs.empty()) {
         logMsgError() << "No valid Certificate found, creating temporary "
             "self-signed cert.";
-        auto cert = makeCert("wintls.dimapp");
+        auto cert = makeCert("wintls.dimapp", dnsNames, ipAddrs);
         certs.push_back(unique_ptr<const CERT_CONTEXT>(cert));
     }
 }
@@ -657,12 +726,14 @@ string_view CertLocation::view() const {
 //===========================================================================
 unique_ptr<CredHandle> Dim::iWinTlsCreateCred(
     const CertKey keys[],
-    size_t numKeys
+    size_t numKeys,
+    const vector<string_view> & dnsNamesForSelfSigned,
+    const vector<string_view> & ipAddrsForSelfSigned
 ) {
     WinError err{0};
 
     vector<unique_ptr<const CERT_CONTEXT>> certs;
-    getCerts(certs, keys, numKeys);
+    getCerts(certs, keys, numKeys, dnsNamesForSelfSigned, ipAddrsForSelfSigned);
 
     vector<const CERT_CONTEXT *> ptrs;
     SCHANNEL_CRED cred = {};

@@ -84,7 +84,9 @@ CertKey::Type fromString(std::string_view src, CertKey::Type def);
 
 std::unique_ptr<CredHandle> iWinTlsCreateCred(
     const CertKey keys[],
-    size_t numKeys
+    size_t numKeys,
+    const std::vector<std::string_view> & dnsNamesForSelfSigned = {},
+    const std::vector<std::string_view> & ipAddrsForSelfSigned = {}
 );
 
 bool iWinTlsIsSelfSigned(const CERT_CONTEXT * cert);
