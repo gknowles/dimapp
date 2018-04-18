@@ -101,7 +101,7 @@ void Dim::copy(sockaddr_storage * out, const Endpoint & src) {
     *out = {};
     if (!src.addr.data[0]
         && !src.addr.data[1]
-        && src.addr.data[2] == kIPv4MappedAddress
+        && src.addr.data[2] == kIpv4MappedAddress
     ) {
         auto ia = reinterpret_cast<sockaddr_in *>(out);
         ia->sin_family = AF_INET;
@@ -125,7 +125,7 @@ void Dim::copy(Endpoint * out, const sockaddr_storage & storage) {
     if (storage.ss_family == AF_INET) {
         auto ia = reinterpret_cast<const sockaddr_in &>(storage);
         out->port = ntohs(ia.sin_port);
-        out->addr.data[2] = kIPv4MappedAddress;
+        out->addr.data[2] = kIpv4MappedAddress;
         out->addr.data[3] = ntohl(ia.sin_addr.s_addr);
     } else {
         assert(storage.ss_family == AF_INET6);

@@ -44,11 +44,21 @@ bool Address::operator<(const Address & right) const {
 }
 
 //===========================================================================
+bool Address::isIpv4() const {
+    return data[2] == kIpv4MappedAddress;
+}
+
+//===========================================================================
+uint32_t Address::getIpv4() const {
+    return data[3];
+}
+
+//===========================================================================
 Address::operator bool() const {
     return data[3]
         || data[0]
         || data[1]
-        || data[2] && data[2] != kIPv4MappedAddress;
+        || data[2] && data[2] != kIpv4MappedAddress;
 }
 
 //===========================================================================
