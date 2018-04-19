@@ -27,13 +27,19 @@ public:
 
     virtual void onHttpRequest(unsigned reqId, HttpRequest & msg) = 0;
 };
-
 void httpRouteAdd(
     IHttpRouteNotify * notify,
     std::string_view path,
     unsigned methods = fHttpMethodGet,
     bool recurse = false
 );
+
+
+struct MimeType {
+    const char * fileExt;
+    const char * type;
+    const char * charSet;
+};
 
 void httpRouteReply(unsigned reqId, HttpResponse && msg, bool more = false);
 void httpRouteReply(unsigned reqId, CharBuf && data, bool more);

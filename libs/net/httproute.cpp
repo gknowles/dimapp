@@ -708,6 +708,18 @@ struct ReplyWithFileNotify : IFileReadNotify {
 
 } // namespace
 
+static MimeType s_mimeTypes[] = {
+    { ".css",  "text/css"                         },
+    { ".html", "text/html"                        },
+    { ".js",   "application/javascript"           },
+    { ".svg",  "image/svg+xml"                    },
+    { ".tsd",  "application/octet-stream"         },
+    { ".tsl",  "application/octet-stream"         },
+    { ".tsw",  "application/octet-stream"         },
+    { ".xml",  "application/xml",         "utf-8" },
+    { ".xsl",  "application/xslt+xml",    "utf-8" },
+};
+
 //===========================================================================
 void Dim::httpRouteReplyWithFile(unsigned reqId, string_view path) {
     HttpResponse msg;
@@ -717,6 +729,19 @@ void Dim::httpRouteReplyWithFile(unsigned reqId, string_view path) {
         return httpRouteReply(reqId, move(msg), false);
     }
     msg.addHeader(kHttp_Status, "200");
+    Path tmp{path};
+    auto ext = tmp.extension();
+    for (auto && mt : s_mimeTypes) {
+        if (ext == mt.fileExt) {
+            string value(mt.type);
+            if (mt.charSet) {
+                value += ";charset=";
+                value += mt.charSet;
+            }
+            msg.addHeader(kHttpContentType, value.c_str());
+            break;
+        }
+    }
     httpRouteReply(reqId, move(msg), true);
     auto notify = new ReplyWithFileNotify;
     notify->m_reqId = reqId;
