@@ -301,6 +301,16 @@ const HttpMsg::HdrName HttpMsg::headers(const char name[]) const {
 }
 
 //===========================================================================
+bool HttpMsg::hasHeader(HttpHdr header) const {
+    return headers(header).m_id;
+}
+
+//===========================================================================
+bool HttpMsg::hasHeader(const char name[]) const {
+    return headers(name).m_id;
+}
+
+//===========================================================================
 CharBuf & HttpMsg::body() {
     return m_data;
 }

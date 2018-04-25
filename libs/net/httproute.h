@@ -60,4 +60,13 @@ void httpRouteReply(
 );
 void httpRouteReply(unsigned reqId, unsigned status, std::string_view msg = {});
 
+void httpRouteSetDefaultReplyHeader(
+    HttpHdr hdr,
+    const char value[] = nullptr
+);
+void httpRouteSetDefaultReplyHeader(
+    const char name[],
+    const char value[] = nullptr
+);
+
 } // namespace

@@ -149,6 +149,59 @@ static unsigned makeRequestInfo (HttpSocket * conn, int stream) {
 
 /****************************************************************************
 *
+*   Default reply headers
+*
+***/
+
+namespace {
+
+struct DefaultHeader {
+    HttpHdr id;
+    string name;
+    string value;
+};
+
+} // namespace
+
+static vector<DefaultHeader> s_defaultHeaders;
+
+//===========================================================================
+static void setDefaultReplyHeader(const DefaultHeader & val) {
+    auto ii = equal_range(
+        s_defaultHeaders.begin(),
+        s_defaultHeaders.end(),
+        val,
+        [](auto & a, auto & b) {
+            return a.id < b.id || a.id == b.id && a.name < b.name;
+        }
+    );
+    if (!val.value.empty()) {
+        if (ii.first == ii.second) {
+            s_defaultHeaders.insert(ii.first, val);
+        } else {
+            ii.first->value = val.value;
+        }
+    } if (ii.first != ii.second) {
+        s_defaultHeaders.erase(ii.first);
+    }
+}
+
+//===========================================================================
+static void addDefaultHeaders(HttpResponse & msg) {
+    for (auto && h : s_defaultHeaders) {
+        if (h.id) {
+            if (!msg.hasHeader(h.id))
+                msg.addHeader(h.id, h.value.c_str());
+        } else {
+            if (!msg.hasHeader(h.name.c_str()))
+                msg.addHeader(h.name.c_str(), h.value.c_str());
+        }
+    }
+}
+
+
+/****************************************************************************
+*
 *   RequestInfo
 *
 ***/
@@ -245,6 +298,7 @@ void HttpSocket::reply(unsigned reqId, HttpResponse && msg, bool more) {
     } else {
         s_perfError += 1;
     }
+    addDefaultHeaders(msg);
 
     if (taskInEventThread()) {
         auto fn = [&](HttpConnHandle h, CharBuf * out, int stream) {
@@ -677,6 +731,28 @@ void Dim::httpRouteReply(
     std::string_view msg
 ) {
     routeReply(reqId, nullptr, status, msg);
+}
+
+
+//===========================================================================
+// AddDefaultReplyHeader
+//===========================================================================
+void Dim::httpRouteSetDefaultReplyHeader(HttpHdr hdr, const char value[]) {
+    if (hdr == kHttpInvalid)
+        return;
+    auto key = DefaultHeader{hdr, {}, value ? value : ""};
+    setDefaultReplyHeader(key);
+}
+
+//===========================================================================
+void Dim::httpRouteSetDefaultReplyHeader(
+    const char name[],
+    const char value[]
+) {
+    if (auto hdr = httpHdrFromString(name))
+        return httpRouteSetDefaultReplyHeader(hdr, value);
+    auto key = DefaultHeader{ {}, name, value ? value : "" };
+    setDefaultReplyHeader(key);
 }
 
 

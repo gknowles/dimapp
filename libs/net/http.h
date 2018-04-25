@@ -147,6 +147,9 @@ public:
     HdrName headers(const char name[]);
     const HdrName headers(const char name[]) const;
 
+    bool hasHeader(HttpHdr header) const;
+    bool hasHeader(const char name[]) const;
+
     CharBuf & body();
     const CharBuf & body() const;
 
