@@ -19,6 +19,7 @@ namespace Dim {
 ***/
 
 enum LogType {
+    kLogTypeInvalid,
     kLogTypeDebug,
     kLogTypeInfo,
     kLogTypeWarn,

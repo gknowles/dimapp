@@ -43,9 +43,10 @@ static ILogNotify * s_initialDefault;
 static size_t s_initialNumLoggers;
 
 static PerfCounter<int> * s_perfs[] = {
+    nullptr, // log invalid
     &iperf("log.debug"),
-    &iperf("log.warn"),
     &iperf("log.info"),
+    &iperf("log.warn"),
     &iperf("log.error"),
     nullptr, // log fatal
 };
