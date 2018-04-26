@@ -517,8 +517,14 @@ static void getCerts(
 
     // no certs found? try to make a new one
     if (certs.empty()) {
-        logMsgError() << "No valid Certificate found, creating temporary "
-            "self-signed cert.";
+        if (dnsNames.empty() && ipAddrs.empty()) {
+            logMsgWarn() << "No valid Certificate found, creating temporary "
+                "self-signed cert.";
+        } else {
+            // Don't warn if there are explicit parameters for self-signing
+            // under the assumption that it's intentional.
+            logMsgInfo() << "Creating temporary self-signed certificate.";
+        }
         auto cert = makeCert("wintls.dimapp", dnsNames, ipAddrs);
         certs.push_back(unique_ptr<const CERT_CONTEXT>(cert));
     }
