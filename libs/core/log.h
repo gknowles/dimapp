@@ -21,8 +21,9 @@ namespace Dim {
 enum LogType {
     kLogTypeDebug,
     kLogTypeInfo,
+    kLogTypeWarn,
     kLogTypeError,
-    kLogTypeCrash,
+    kLogTypeFatal,
     kLogTypes
 };
 
@@ -39,10 +40,10 @@ private:
     char m_buf[256];
 };
 
-class LogCrash : public Log {
+class LogFatal : public Log {
 public:
     using Log::Log;
-    [[noreturn]] ~LogCrash() {}
+    [[noreturn]] ~LogFatal();
 };
 
 } // namespace
@@ -59,8 +60,9 @@ public:
 
 Detail::Log logMsgDebug();
 Detail::Log logMsgInfo();
+Detail::Log logMsgWarn();
 Detail::Log logMsgError();
-Detail::LogCrash logMsgCrash();
+Detail::LogFatal logMsgFatal();
 
 // Logs an error of the form "name(<line no>): msg", followed by two info
 // lines with part or all of the line of content containing the error

@@ -21,14 +21,14 @@ FARPROC Dim::winLoadProc(const char lib[], const char proc[], bool optional) {
     HMODULE mod = LoadLibrary(lib);
     if (!mod) {
         if (!optional)
-            logMsgCrash() << "LoadLibrary(" << lib << "): " << WinError{};
+            logMsgFatal() << "LoadLibrary(" << lib << "): " << WinError{};
         return fn;
     }
 
     fn = GetProcAddress(mod, proc);
     if (!fn) {
         if (!optional)
-            logMsgCrash() << "GetProcAddress(" << proc << "): " << WinError{};
+            logMsgFatal() << "GetProcAddress(" << proc << "): " << WinError{};
     }
     return fn;
 }

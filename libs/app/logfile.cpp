@@ -158,8 +158,9 @@ void Logger::onLog(LogType type, string_view msg) {
     const unsigned kFacility = 3; // system daemons
     int pri = 8 * kFacility;
     switch (type) {
-    case kLogTypeCrash: pri += 2; break;
+    case kLogTypeFatal: pri += 2; break;
     case kLogTypeError: pri += 3; break;
+    case kLogTypeWarn: pri += 4; break;
     case kLogTypeInfo: pri += 6; break;
     case kLogTypeDebug: pri += 7; break;
     default: break;
@@ -178,7 +179,7 @@ void Logger::onLog(LogType type, string_view msg) {
         (int) msg.size(),
         msg.data()
     );
-    s_buffer.writeLog(tmp, type == kLogTypeCrash);
+    s_buffer.writeLog(tmp, type == kLogTypeFatal);
 }
 
 
@@ -223,7 +224,7 @@ void Dim::iLogFileInitialize() {
     shutdownMonitor(&s_cleanup);
 
     if (!appLogPath(&s_logfile, "server.log"))
-        logMsgCrash() << "Invalid log path: " << s_logfile;
+        logMsgFatal() << "Invalid log path: " << s_logfile;
 
     logMonitor(&s_logger);
 }

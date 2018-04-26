@@ -87,7 +87,7 @@ static VOID WINAPI ServiceMain(DWORD argc, LPTSTR * argv) {
         NULL
     );
     if (!s_hstat)
-        logMsgCrash() << "RegisterServiceCtrlHandlerEx: " << WinError{};
+        logMsgFatal() << "RegisterServiceCtrlHandlerEx: " << WinError{};
 
     assert(appStarting());
     setState(SERVICE_START_PENDING);
@@ -123,7 +123,7 @@ static void serviceDispatchThread() {
             // failed service controller connect means that we're not running
             // as a service.
         } else {
-            logMsgCrash() << "StartServiceCtrlDispatcher: " << err;
+            logMsgFatal() << "StartServiceCtrlDispatcher: " << err;
         }
     }
 

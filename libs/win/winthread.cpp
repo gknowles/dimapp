@@ -49,7 +49,7 @@ void ThreadName::set(string_view name) {
     if (m_setDesc) {
         auto result = m_setDesc(GetCurrentThread(), toWstring(name).c_str());
         if (FAILED(result))
-            logMsgCrash() << "SetThreadDescription: " << WinError{result};
+            logMsgFatal() << "SetThreadDescription: " << WinError{result};
     }
 }
 
@@ -60,7 +60,7 @@ string ThreadName::get() const {
         wchar_t * name;
         auto result = m_getDesc(GetCurrentThread(), &name);
         if (FAILED(result))
-            logMsgCrash() << "GetThreadDescription: " << WinError{result};
+            logMsgFatal() << "GetThreadDescription: " << WinError{result};
         out = toString(wstring_view(name));
         LocalFree(name);
     }

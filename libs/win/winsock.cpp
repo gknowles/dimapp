@@ -169,7 +169,7 @@ bool SocketBase::createQueue() {
     ctype.Iocp.Overlapped = &overlapped();
     m_cq = s_rio.RIOCreateCompletionQueue(m_maxReads + m_maxWrites, &ctype);
     if (m_cq == RIO_INVALID_CQ) {
-        logMsgCrash() << "RIOCreateCompletionQueue: " << WinError{};
+        logMsgFatal() << "RIOCreateCompletionQueue: " << WinError{};
         __assume(0);
     }
 
@@ -216,7 +216,7 @@ void SocketBase::enableEvents() {
 
     // trigger first RIONotify
     if (int error = s_rio.RIONotify(m_cq))
-        logMsgCrash() << "RIONotify: " << WinError{error};
+        logMsgFatal() << "RIONotify: " << WinError{error};
 }
 
 
@@ -230,7 +230,7 @@ void SocketBase::onTask() {
         (ULONG) size(results)
     );
     if (count == RIO_CORRUPT_CQ)
-        logMsgCrash() << "RIODequeueCompletion: " << WinError{};
+        logMsgFatal() << "RIODequeueCompletion: " << WinError{};
 
     for (int i = 0; i < count; ++i) {
         auto && rr = results[i];
@@ -250,7 +250,7 @@ void SocketBase::onTask() {
     }
 
     if (int error = s_rio.RIONotify(m_cq))
-        logMsgCrash() << "RIONotify: " << WinError{error};
+        logMsgFatal() << "RIONotify: " << WinError{error};
 }
 
 //===========================================================================
@@ -288,7 +288,7 @@ void SocketBase::queueRead(SocketRequest * task) {
         0, // RIO_MSG_* flags
         task
     )) {
-        logMsgCrash() << "RIOReceive: " << WinError{};
+        logMsgFatal() << "RIOReceive: " << WinError{};
     }
 }
 
@@ -417,7 +417,7 @@ void SocketBase::queueWrites() {
         m_bufInfo.waiting -= bytes;
         if (!s_rio.RIOSend(m_rq, &task->m_rbuf, 1, 0, task)) {
             WinError err;
-            logMsgCrash() << "RIOSend: " << err;
+            logMsgFatal() << "RIOSend: " << err;
             delete task;
             m_numWrites -= 1;
         } else {
@@ -494,7 +494,7 @@ static WSAPROTOCOL_INFOW s_protocolInfo;
 //===========================================================================
 void Dim::iSocketCheckThread() {
     if (!t_socketInitialized)
-        logMsgCrash() << "Socket services must be called on the event thread";
+        logMsgFatal() << "Socket services must be called on the event thread";
 }
 
 //===========================================================================
@@ -504,7 +504,7 @@ void Dim::iSocketInitialize() {
     WSADATA data = {};
     WinError err = WSAStartup(WINSOCK_VERSION, &data);
     if (err || data.wVersion != WINSOCK_VERSION) {
-        logMsgCrash() << "WSAStartup(version=" << hex << WINSOCK_VERSION
+        logMsgFatal() << "WSAStartup(version=" << hex << WINSOCK_VERSION
             << "): " << err << ", version " << data.wVersion;
     }
 
@@ -518,7 +518,7 @@ void Dim::iSocketInitialize() {
         WSA_FLAG_REGISTERED_IO
     );
     if (s == INVALID_SOCKET)
-        logMsgCrash() << "WSASocketW: " << WinError{};
+        logMsgFatal() << "WSASocketW: " << WinError{};
 
     // get RIO functions
     GUID extId = WSAID_MULTIPLE_RIO;
@@ -535,7 +535,7 @@ void Dim::iSocketInitialize() {
         nullptr, // overlapped
         nullptr  // completion routine
     )) {
-        logMsgCrash() << "WSAIoctl(get RIO functions): " << WinError{};
+        logMsgFatal() << "WSAIoctl(get RIO functions): " << WinError{};
     }
 
     // get AcceptEx function
@@ -551,7 +551,7 @@ void Dim::iSocketInitialize() {
         nullptr, // overlapped
         nullptr  // completion routine
     )) {
-        logMsgCrash() << "WSAIoctl(get AcceptEx): " << WinError{};
+        logMsgFatal() << "WSAIoctl(get AcceptEx): " << WinError{};
     }
 
     extId = WSAID_GETACCEPTEXSOCKADDRS;
@@ -566,7 +566,7 @@ void Dim::iSocketInitialize() {
         nullptr, // overlapped
         nullptr  // completion routine
     )) {
-        logMsgCrash() << "WSAIoctl(get GetAcceptExSockAddrs): " << WinError{};
+        logMsgFatal() << "WSAIoctl(get GetAcceptExSockAddrs): " << WinError{};
     }
 
     // get ConnectEx function
@@ -582,7 +582,7 @@ void Dim::iSocketInitialize() {
         nullptr, // overlapped
         nullptr  // completion routine
     )) {
-        logMsgCrash() << "WSAIoctl(get ConnectEx): " << WinError{};
+        logMsgFatal() << "WSAIoctl(get ConnectEx): " << WinError{};
     }
 
     int piLen = sizeof(s_protocolInfo);
@@ -593,10 +593,10 @@ void Dim::iSocketInitialize() {
         (char *) &s_protocolInfo,
         &piLen
     )) {
-        logMsgCrash() << "getsockopt(SO_PROTOCOL_INFOW): " << WinError{};
+        logMsgFatal() << "getsockopt(SO_PROTOCOL_INFOW): " << WinError{};
     }
     if (~s_protocolInfo.dwServiceFlags1 & XP1_IFS_HANDLES) {
-        logMsgCrash() << "socket and file handles not compatible";
+        logMsgFatal() << "socket and file handles not compatible";
     }
 
     closesocket(s);

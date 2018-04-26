@@ -651,7 +651,7 @@ void Dim::fileClose(FileHandle f) {
         return;
     if (file->m_handle != INVALID_HANDLE_VALUE) {
         if (!file->m_views.empty()) {
-            logMsgCrash() << "fileClose(" << file->m_path
+            logMsgFatal() << "fileClose(" << file->m_path
                 << "): has views that are still open";
         }
         if (~file->m_mode & File::fNonOwning) {
@@ -1110,7 +1110,7 @@ void Dim::fileExtendView(FileHandle f, const void * view, int64_t length) {
     auto file = getInfo(f);
     auto i = file->m_views.find(view);
     if (i == file->m_views.end()) {
-        logMsgCrash() << "fileExtendView(" << file->m_path
+        logMsgFatal() << "fileExtendView(" << file->m_path
             << "): unknown view, " << (void *) view;
     }
     ULONG pageProt;
@@ -1128,7 +1128,7 @@ void Dim::fileExtendView(FileHandle f, const void * view, int64_t length) {
         pageProt
     );
     if (!ptr) {
-        logMsgCrash() << "VirtualAlloc(" << file->m_path
+        logMsgFatal() << "VirtualAlloc(" << file->m_path
             << "): " << WinError{};
     }
     if (ptr != view) {

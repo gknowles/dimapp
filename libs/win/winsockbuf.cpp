@@ -131,13 +131,13 @@ static void createEmptyBuffer() {
         PAGE_READWRITE
     );
     if (!buf->base) {
-        logMsgCrash() << "VirtualAlloc(sockbuf): " << WinError{};
+        logMsgFatal() << "VirtualAlloc(sockbuf): " << WinError{};
         __assume(0);
     }
 
     buf->id = s_rio.RIORegisterBuffer(buf->base, (DWORD)bytes);
     if (buf->id == RIO_INVALID_BUFFERID)
-        logMsgCrash() << "RIORegisterBuffer: " << WinError();
+        logMsgFatal() << "RIORegisterBuffer: " << WinError();
 }
 
 //===========================================================================

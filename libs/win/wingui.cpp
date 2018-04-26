@@ -51,7 +51,7 @@ static HWND createList(HWND parent) {
         NULL // user parameter to WM_CREATE
     );
     if (!wnd) {
-        logMsgCrash() << "CreateWindow(WC_LISTVIEW): " << WinError{};
+        logMsgFatal() << "CreateWindow(WC_LISTVIEW): " << WinError{};
         abort();
     }
 
@@ -61,12 +61,12 @@ static HWND createList(HWND parent) {
     lc.pszText = (LPSTR) "Value";
     lc.iSubItem = 0;
     if (ListView_InsertColumn(wnd, 1, &lc) == -1)
-        logMsgCrash() << "ListView_InsertColumn(1): " << WinError{};
+        logMsgFatal() << "ListView_InsertColumn(1): " << WinError{};
     lc.fmt = LVCFMT_LEFT;
     lc.pszText = (LPSTR) "Name";
     lc.iSubItem = 1;
     if (ListView_InsertColumn(wnd, 2, &lc) == -1)
-        logMsgCrash() << "ListView_InsertColumn(2): " << WinError{};
+        logMsgFatal() << "ListView_InsertColumn(2): " << WinError{};
     return wnd;
 }
 
@@ -189,7 +189,7 @@ static HWND createPerfWindow() {
     wc.hInstance = GetModuleHandle(NULL);
     wc.lpszClassName = kPerfWndClass;
     if (!RegisterClassEx(&wc))
-        logMsgCrash() << "RegisterClassEx: " << WinError{};
+        logMsgFatal() << "RegisterClassEx: " << WinError{};
 
     long val = GetDialogBaseUnits();
     WORD diagX = (WORD) val;
@@ -209,7 +209,7 @@ static HWND createPerfWindow() {
         NULL // user param to WM_CREATE
     );
     if (!wnd) {
-        logMsgCrash() << "CreateWindow: " << WinError{};
+        logMsgFatal() << "CreateWindow: " << WinError{};
         abort();
     }
 
@@ -337,7 +337,7 @@ void MessageLoopTask::onTask() {
     MSG msg;
     while (BOOL rc = GetMessage(&msg, NULL, 0, 0)) {
         if (rc == -1)
-            logMsgCrash() << "GetMessage: " << WinError{};
+            logMsgFatal() << "GetMessage: " << WinError{};
 
         TranslateMessage(&msg);
         DispatchMessage(&msg);

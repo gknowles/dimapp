@@ -73,7 +73,7 @@ ServerConn::~ServerConn() {
         return;
 
     if (WinError err = (SecStatus) DeleteSecurityContext(&m_context)) {
-        logMsgCrash() << "DeleteSecurityContext: " << err;
+        logMsgFatal() << "DeleteSecurityContext: " << err;
     }
 }
 
@@ -306,7 +306,7 @@ void ServerConn::send(CharBuf * out, string_view src) {
         SecBufferDesc desc{ SECBUFFER_VERSION, (unsigned) size(bufs), bufs };
         err = (SecStatus) EncryptMessage(&m_context, 0, &desc, 0);
         if (err)
-            logMsgCrash() << "EncryptMessage(" << num << "): " << err;
+            logMsgFatal() << "EncryptMessage(" << num << "): " << err;
 
         assert(bufs[0].cbBuffer == m_sizes.cbHeader);
         assert(bufs[1].cbBuffer == tmp.size());

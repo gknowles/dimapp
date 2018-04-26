@@ -146,31 +146,31 @@ void invalidParameterHandler(
     unsigned line,
     uintptr_t reserved
 ) {
-    logMsgCrash() << "Invalid parameter: "
+    logMsgFatal() << "Invalid parameter: "
         << utf8(function) << '(' << utf8(expression) << ")"
         << ", " << utf8(file) << ':' << line;
 }
 
 //===========================================================================
 void pureCallHandler() {
-    logMsgCrash() << "Pure virtual function called";
+    logMsgFatal() << "Pure virtual function called";
 }
 
 //===========================================================================
 void newHandler() {
-    logMsgCrash() << "Out of heap memory";
+    logMsgFatal() << "Out of heap memory";
 }
 
 //===========================================================================
 DWORD WINAPI appRecoveryCallback(void * param) {
-    logMsgCrash() << "Application recovery callback";
+    logMsgFatal() << "Application recovery callback";
     return 0;
 }
 
 //===========================================================================
 LONG WINAPI unhandledExceptionFilter(EXCEPTION_POINTERS * ei) {
     _pxcptinfoptrs = ei;
-    logMsgCrash() << "Unhandled exception";
+    logMsgFatal() << "Unhandled exception";
     return EXCEPTION_CONTINUE_SEARCH;
 }
 

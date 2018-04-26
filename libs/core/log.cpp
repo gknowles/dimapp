@@ -44,9 +44,10 @@ static size_t s_initialNumLoggers;
 
 static PerfCounter<int> * s_perfs[] = {
     &iperf("log.debug"),
+    &iperf("log.warn"),
     &iperf("log.info"),
     &iperf("log.error"),
-    nullptr, // log crash
+    nullptr, // log fatal
 };
 static_assert(size(s_perfs) == kLogTypes);
 
@@ -102,7 +103,7 @@ LogMsgScope::LogMsgScope(LogType type)
 //===========================================================================
 LogMsgScope::~LogMsgScope() {
     t_inProgress = false;
-    if (m_type == kLogTypeCrash)
+    if (m_type == kLogTypeFatal)
         abort();
 }
 
@@ -116,7 +117,7 @@ LogMsgScope::~LogMsgScope() {
 //===========================================================================
 void DefaultLogger::onLog(LogType type, string_view msg) {
     cout.write(msg.data(), msg.size());
-    if (type == kLogTypeCrash)
+    if (type == kLogTypeFatal)
         cout.flush();
 }
 
@@ -144,6 +145,11 @@ Detail::Log::~Log() {
     put(0);
     auto s = str();
     logMsg(m_type, s);
+}
+
+//===========================================================================
+Detail::LogFatal::~LogFatal() {
+    abort();
 }
 
 
@@ -218,13 +224,18 @@ Detail::Log Dim::logMsgInfo() {
 }
 
 //===========================================================================
+Detail::Log Dim::logMsgWarn() {
+    return kLogTypeWarn;
+}
+
+//===========================================================================
 Detail::Log Dim::logMsgError() {
     return kLogTypeError;
 }
 
 //===========================================================================
-Detail::LogCrash Dim::logMsgCrash() {
-    return kLogTypeCrash;
+Detail::LogFatal Dim::logMsgFatal() {
+    return kLogTypeFatal;
 }
 
 //===========================================================================

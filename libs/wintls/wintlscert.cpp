@@ -62,7 +62,7 @@ static NCRYPT_KEY_HANDLE createKey() {
         0 // flags
     );
     if (err)
-        logMsgCrash() << "NCryptOpenStorageProvider: " << err;
+        logMsgFatal() << "NCryptOpenStorageProvider: " << err;
 
     NCRYPT_KEY_HANDLE nkey;
     err = (SecStatus) NCryptCreatePersistedKey(
@@ -74,11 +74,11 @@ static NCRYPT_KEY_HANDLE createKey() {
         NCRYPT_OVERWRITE_KEY_FLAG
     );
     if (err)
-        logMsgCrash() << "NCryptCreatePersistedKey: " << err;
+        logMsgFatal() << "NCryptCreatePersistedKey: " << err;
 
     err = (SecStatus) NCryptFreeObject(hProv);
     if (err)
-        logMsgCrash() << "NCryptFreeObject(hProv): " << err;
+        logMsgFatal() << "NCryptFreeObject(hProv): " << err;
 
     DWORD val = 2048;
     err = (SecStatus) NCryptSetProperty(
@@ -89,7 +89,7 @@ static NCRYPT_KEY_HANDLE createKey() {
         NCRYPT_SILENT_FLAG
     );
     if (err)
-        logMsgCrash() << "NCryptSetProperty(LENGTH): " << err;
+        logMsgFatal() << "NCryptSetProperty(LENGTH): " << err;
 
     val = NCRYPT_ALLOW_EXPORT_FLAG | NCRYPT_ALLOW_PLAINTEXT_EXPORT_FLAG;
     err = (SecStatus) NCryptSetProperty(
@@ -100,11 +100,11 @@ static NCRYPT_KEY_HANDLE createKey() {
         NCRYPT_SILENT_FLAG
     );
     if (err)
-        logMsgCrash() << "NCryptSetProperty(EXPORT_POLICY): " << err;
+        logMsgFatal() << "NCryptSetProperty(EXPORT_POLICY): " << err;
 
     err = (SecStatus) NCryptFinalizeKey(nkey, NCRYPT_SILENT_FLAG);
     if (err)
-        logMsgCrash() << "NCryptFinalizeKey: " << err;
+        logMsgFatal() << "NCryptFinalizeKey: " << err;
 
     return nkey;
 }
@@ -124,7 +124,7 @@ static void encodeBlob(
         NULL,
         &out.cbData
     )) {
-        logMsgCrash() << "CryptEncodeObject(" << structType << ", NULL): "
+        logMsgFatal() << "CryptEncodeObject(" << structType << ", NULL): "
             << WinError{};
     }
     outData.resize(out.cbData);
@@ -135,7 +135,7 @@ static void encodeBlob(
         (BYTE *) outData.data(),
         &out.cbData
     )) {
-        logMsgCrash() << "CryptEncodeObject(" << structType << "): "
+        logMsgFatal() << "CryptEncodeObject(" << structType << "): "
             << WinError{};
     }
     assert(out.cbData == outData.size());
@@ -151,7 +151,7 @@ static bool hasEnhancedUsage(const CERT_CONTEXT * cert, string_view oid) {
         nullptr,
         &cb
     )) {
-        logMsgCrash()
+        logMsgFatal()
             << "CertGetEnhancedKeyUsage(NULL): "
             << WinError{};
     }
@@ -163,7 +163,7 @@ static bool hasEnhancedUsage(const CERT_CONTEXT * cert, string_view oid) {
             // good for all uses
             return true;
         }
-        logMsgCrash()
+        logMsgFatal()
             << "CertGetEnhancedKeyUsage: "
             << WinError{};
     }
@@ -243,7 +243,7 @@ static const CERT_CONTEXT * makeCert(
     name += issuerName;
     CertName issuer;
     if (!issuer.parse(name.c_str()))
-        logMsgCrash() << "CertName.parse failed";
+        logMsgFatal() << "CertName.parse failed";
 
     CRYPT_ALGORITHM_IDENTIFIER sigalgo = {};
     sigalgo.pszObjId = const_cast<char *>(szOID_RSA_SHA256RSA);
@@ -289,17 +289,17 @@ static const CERT_CONTEXT * makeCert(
     );
     if (!cert) {
         err.set();
-        logMsgCrash() << "CertCreateSelfSignCertificate: " << err;
+        logMsgFatal() << "CertCreateSelfSignCertificate: " << err;
         abort();
     }
 
     err = (SecStatus) NCryptFreeObject(nkey);
     if (err)
-        logMsgCrash() << "NCryptFreeObject: " << err;
+        logMsgFatal() << "NCryptFreeObject: " << err;
 
     if (!CertAddEnhancedKeyUsageIdentifier(cert, szOID_PKIX_KP_SERVER_AUTH)) {
         err.set();
-        logMsgCrash() << "CertAddEnhancedKeyUsageIdentifier: " << err;
+        logMsgFatal() << "CertAddEnhancedKeyUsageIdentifier: " << err;
     }
 
     CRYPT_DATA_BLOB data;
@@ -312,7 +312,7 @@ static const CERT_CONTEXT * makeCert(
         0,
         &data
     )) {
-        logMsgCrash() << "CertSetCertificateContextProperty(FRIENDLY_NAME): "
+        logMsgFatal() << "CertSetCertificateContextProperty(FRIENDLY_NAME): "
             << WinError{};
     }
 
@@ -327,12 +327,12 @@ static const CERT_CONTEXT * makeCert(
         &keySpec,
         &mustFreeNkey
     )) {
-        logMsgCrash() << "CryptAcquireCertificatePrivateKey: " << WinError{};
+        logMsgFatal() << "CryptAcquireCertificatePrivateKey: " << WinError{};
     }
     if (mustFreeNkey) {
         err = (SecStatus) NCryptFreeObject(nkey);
         if (err)
-            logMsgCrash() << "NCryptFreeObject: " << err;
+            logMsgFatal() << "NCryptFreeObject: " << err;
     }
 
     return cert;
@@ -546,7 +546,7 @@ void std::default_delete<CredHandle>::operator()(CredHandle * ptr) const {
     if (SecIsValidHandle(ptr)) {
         WinError err = (SecStatus) FreeCredentialsHandle(ptr);
         if (err)
-            logMsgCrash() << "FreeCredentialsHandle: " << err;
+            logMsgFatal() << "FreeCredentialsHandle: " << err;
         SecInvalidateHandle(ptr);
     }
     delete ptr;
@@ -761,7 +761,7 @@ unique_ptr<CredHandle> Dim::iWinTlsCreateCred(
         &expiry // expiration time of credentials
     );
     if (err)
-        logMsgCrash() << "AcquireCredentialsHandle: " << err;
+        logMsgFatal() << "AcquireCredentialsHandle: " << err;
     // SEC_E_UNKNOWN_CREDENTIALS - 8009'030d
     // NTE_BAD_KEYSET - 8009'0016
 

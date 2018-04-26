@@ -146,7 +146,7 @@ static void addSidRow(JBuilder & out, SID_AND_ATTRIBUTES & sa) {
     )) {
         WinError err;
         if (err != ERROR_INSUFFICIENT_BUFFER)
-            logMsgCrash() << "LookupAccountSid(NULL): " << err;
+            logMsgFatal() << "LookupAccountSid(NULL): " << err;
     }
     nameLen += 1;
     domLen += 1;
@@ -159,7 +159,7 @@ static void addSidRow(JBuilder & out, SID_AND_ATTRIBUTES & sa) {
         dom.data(), &domLen,
         &use
     )) {
-        logMsgCrash() << "LookupAccountSid: " << WinError{};
+        logMsgFatal() << "LookupAccountSid: " << WinError{};
     }
     name.resize(nameLen);
     dom.resize(domLen);
@@ -199,26 +199,26 @@ void WebAccount::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     auto proc = GetCurrentProcess();
     HANDLE token;
     if (!OpenProcessToken(proc, TOKEN_QUERY, &token))
-        logMsgCrash() << "OpenProcessToken: " << WinError{};
+        logMsgFatal() << "OpenProcessToken: " << WinError{};
     DWORD len;
     BOOL result = GetTokenInformation(token, TokenUser, NULL, 0, &len);
     WinError err;
     if (result || err != ERROR_INSUFFICIENT_BUFFER) {
-        logMsgCrash() << "GetTokenInformation(TokenUser, NULL): "
+        logMsgFatal() << "GetTokenInformation(TokenUser, NULL): "
             << WinError{};
     }
     auto usr = unique_ptr<TOKEN_USER>((TOKEN_USER *) malloc(len));
     if (!GetTokenInformation(token, TokenUser, usr.get(), len, &len))
-        logMsgCrash() << "GetTokenInformation(TokenUser): " << WinError{};
+        logMsgFatal() << "GetTokenInformation(TokenUser): " << WinError{};
     result = GetTokenInformation(token, TokenGroups, NULL, 0, &len);
     err.set();
     if (result || err != ERROR_INSUFFICIENT_BUFFER) {
-        logMsgCrash() << "GetTokenInformation(TokenGroups, NULL): "
+        logMsgFatal() << "GetTokenInformation(TokenGroups, NULL): "
             << WinError{};
     }
     auto grps = unique_ptr<TOKEN_GROUPS>((TOKEN_GROUPS *) malloc(len));
     if (!GetTokenInformation(token, TokenGroups, grps.get(), len, &len))
-        logMsgCrash() << "GetTokenInformation(TokenGroups): " << WinError{};
+        logMsgFatal() << "GetTokenInformation(TokenGroups): " << WinError{};
     CloseHandle(token);
 
     HttpResponse res;

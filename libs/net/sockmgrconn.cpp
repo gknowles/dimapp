@@ -275,7 +275,7 @@ void ConnectManager::destroy(ConnMgrSocket & sock) {
     } else {
         sock.notifyDestroy(false);
         if (auto num = m_sockets.erase(sock.targetAddress()); !num)
-            logMsgCrash() << "ConnectManager::destroy(): socket not found";
+            logMsgFatal() << "ConnectManager::destroy(): socket not found";
     }
 }
 

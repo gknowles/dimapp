@@ -602,8 +602,8 @@ HttpStream * HttpConn::findAlways(CharBuf * out, int stream) {
         return ib.first->second.get();
     if (stream % 2 == 0) {
         replyGoAway(
-            out, 
-            m_lastInputStream, 
+            out,
+            m_lastInputStream,
             FrameError::kProtocolError,
             "recv headers frame on even stream id"
         );
@@ -611,8 +611,8 @@ HttpStream * HttpConn::findAlways(CharBuf * out, int stream) {
     }
     if (stream < m_lastInputStream) {
         replyGoAway(
-            out, 
-            m_lastInputStream, 
+            out,
+            m_lastInputStream,
             FrameError::kProtocolError,
             "headers frame on closed stream"
         );
@@ -646,8 +646,8 @@ bool HttpConn::onFrame(
     m_inputFrameLen = getFrameLen(hdr);
     if (m_inputFrameLen > m_maxInputFrame) {
         replyGoAway(
-            out, 
-            m_lastInputStream, 
+            out,
+            m_lastInputStream,
             FrameError::kFrameSizeError,
             "frame size too large"
         );
@@ -680,8 +680,8 @@ bool HttpConn::onFrame(
     switch (m_frameMode) {
     case FrameMode::kContinuation:
         replyGoAway(
-            out, 
-            m_lastInputStream, 
+            out,
+            m_lastInputStream,
             FrameError::kProtocolError,
             "unknown frame, expected continuation"
         );
@@ -691,8 +691,8 @@ bool HttpConn::onFrame(
         return true;
     case FrameMode::kSettings:
         replyGoAway(
-            out, 
-            m_lastInputStream, 
+            out,
+            m_lastInputStream,
             FrameError::kProtocolError,
             "unknown frame, expected settings"
         );
@@ -719,8 +719,8 @@ bool HttpConn::onData(
 
     if (m_frameMode != FrameMode::kNormal || !stream) {
         replyGoAway(
-            out, 
-            m_lastInputStream, 
+            out,
+            m_lastInputStream,
             FrameError::kProtocolError,
             "data frame on stream 0"
         );
@@ -731,8 +731,8 @@ bool HttpConn::onData(
     UnpaddedData data;
     if (!removePadding(&data, src, m_inputFrameLen, 0, flags)) {
         replyGoAway(
-            out, 
-            m_lastInputStream, 
+            out,
+            m_lastInputStream,
             FrameError::kProtocolError,
             "data frame with too much or non-zero padding"
         );
@@ -785,8 +785,8 @@ bool HttpConn::onHeaders(
     if (m_frameMode != FrameMode::kNormal || !stream) {
         // header frames aren't allowed on stream 0
         replyGoAway(
-            out, 
-            m_lastInputStream, 
+            out,
+            m_lastInputStream,
             FrameError::kProtocolError,
             "headers frame on stream 0"
         );
@@ -798,8 +798,8 @@ bool HttpConn::onHeaders(
     int hdrLen = (flags & fPriority) ? 5 : 0;
     if (!removePadding(&ud, src, m_inputFrameLen, hdrLen, flags)) {
         replyGoAway(
-            out, 
-            m_lastInputStream, 
+            out,
+            m_lastInputStream,
             FrameError::kProtocolError,
             "headers frame with too much or non-zero padding"
         );
@@ -811,8 +811,8 @@ bool HttpConn::onHeaders(
         PriorityData pri;
         if (!removePriority(&pri, stream, ud.hdr, hdrLen)) {
             replyGoAway(
-                out, 
-                m_lastInputStream, 
+                out,
+                m_lastInputStream,
                 FrameError::kProtocolError,
                 "headers frame with invalid priority"
             );
@@ -860,8 +860,8 @@ bool HttpConn::onHeaders(
             //     the headers (to maintain the connection decompression
             //     context) instead of dropping the connection.
             replyGoAway(
-                out, 
-                stream, 
+                out,
+                stream,
                 FrameError::kProtocolError,
                 "trailing headers not supported"
             );
@@ -874,8 +874,8 @@ bool HttpConn::onHeaders(
         //     the headers (to maintain the connection decompression
         //     context) instead of dropping the connection.
         replyGoAway(
-            out, 
-            stream, 
+            out,
+            stream,
             FrameError::kProtocolError,
             "headers frame on closed stream"
         );
@@ -889,8 +889,8 @@ bool HttpConn::onHeaders(
     MsgDecoder mdec(*msg);
     if (!m_decoder.parse(&mdec, &msg->heap(), ud.data, ud.dataLen)) {
         replyGoAway(
-            out, 
-            m_lastInputStream, 
+            out,
+            m_lastInputStream,
             FrameError::kCompressionError,
             "header decoding failure"
         );
@@ -921,8 +921,8 @@ bool HttpConn::onPriority(
     if (m_frameMode != FrameMode::kNormal || !stream) {
         // priority frames aren't allowed on stream 0
         replyGoAway(
-            out, 
-            m_lastInputStream, 
+            out,
+            m_lastInputStream,
             FrameError::kProtocolError,
             "priority frame on stream 0"
         );
@@ -942,8 +942,8 @@ bool HttpConn::onPriority(
         m_inputFrameLen
     )) {
         replyGoAway(
-            out, 
-            m_lastInputStream, 
+            out,
+            m_lastInputStream,
             FrameError::kProtocolError,
             "invalid priority on priority frame"
         );
@@ -966,8 +966,8 @@ bool HttpConn::onRstStream(
 
     if (m_frameMode != FrameMode::kNormal || !stream) {
         replyGoAway(
-            out, 
-            m_lastInputStream, 
+            out,
+            m_lastInputStream,
             FrameError::kProtocolError,
             "rststream frame on stream 0"
         );
@@ -975,8 +975,8 @@ bool HttpConn::onRstStream(
     }
     if (m_inputFrameLen != 4) {
         replyGoAway(
-            out, 
-            m_lastInputStream, 
+            out,
+            m_lastInputStream,
             FrameError::kFrameSizeError,
             "rststream frame size must be 4"
         );
@@ -987,8 +987,8 @@ bool HttpConn::onRstStream(
     if (it == m_streams.end()) {
         if (stream > m_lastInputStream) {
             replyGoAway(
-                out, 
-                m_lastInputStream, 
+                out,
+                m_lastInputStream,
                 FrameError::kProtocolError,
                 "rststream frame on idle stream"
             );
@@ -1020,8 +1020,8 @@ bool HttpConn::onSettings(
         || stream
     ) {
         replyGoAway(
-            out, 
-            m_lastInputStream, 
+            out,
+            m_lastInputStream,
             FrameError::kProtocolError,
             "settings frames must be on stream 0"
         );
@@ -1032,8 +1032,8 @@ bool HttpConn::onSettings(
     if (flags & fAck) {
         if (m_inputFrameLen) {
             replyGoAway(
-                out, 
-                m_lastInputStream, 
+                out,
+                m_lastInputStream,
                 FrameError::kFrameSizeError,
                 "settings ack must not have settings changes"
             );
@@ -1041,8 +1041,8 @@ bool HttpConn::onSettings(
         }
         if (!m_unackSettings) {
             replyGoAway(
-                out, 
-                m_lastInputStream, 
+                out,
+                m_lastInputStream,
                 FrameError::kProtocolError,
                 "unmatched settings ack"
             );
@@ -1055,8 +1055,8 @@ bool HttpConn::onSettings(
     // must be an even multiple of identifier/value pairs
     if (m_inputFrameLen % 6) {
         replyGoAway(
-            out, 
-            m_lastInputStream, 
+            out,
+            m_lastInputStream,
             FrameError::kFrameSizeError,
             "settings frame size must be a multiple of 6"
         );
@@ -1082,8 +1082,8 @@ bool HttpConn::onSettings(
 bool HttpConn::setInitialWindowSize(CharBuf * out, unsigned value) {
     if (value > kMaximumWindowSize) {
         replyGoAway(
-            out, 
-            m_lastInputStream, 
+            out,
+            m_lastInputStream,
             FrameError::kFlowControlError,
             "initial window size too large"
         );
@@ -1095,8 +1095,8 @@ bool HttpConn::setInitialWindowSize(CharBuf * out, unsigned value) {
         auto & win = sm.second->m_flowWindow;
         if (diff > 0 && win > kMaximumWindowSize - diff) {
             replyGoAway(
-                out, 
-                m_lastInputStream, 
+                out,
+                m_lastInputStream,
                 FrameError::kFlowControlError,
                 "initial window size too large for existing streams"
             );
@@ -1125,8 +1125,8 @@ bool HttpConn::onPushPromise(
 
     if (m_frameMode != FrameMode::kNormal || !stream) {
         replyGoAway(
-            out, 
-            m_lastInputStream, 
+            out,
+            m_lastInputStream,
             FrameError::kProtocolError,
             "push promise frame on stream 0"
         );
@@ -1157,8 +1157,8 @@ bool HttpConn::onPing(
     if (m_frameMode != FrameMode::kNormal || stream) {
         // Ping frames MUST be on stream 0
         replyGoAway(
-            out, 
-            m_lastInputStream, 
+            out,
+            m_lastInputStream,
             FrameError::kProtocolError,
             "ping frame must be on stream 0"
         );
@@ -1166,8 +1166,8 @@ bool HttpConn::onPing(
     }
     if (m_inputFrameLen != 8) {
         replyGoAway(
-            out, 
-            m_lastInputStream, 
+            out,
+            m_lastInputStream,
             FrameError::kFrameSizeError,
             "ping frame size must be multiple of 8"
         );
@@ -1198,8 +1198,8 @@ bool HttpConn::onGoAway(
     if (stream) {
         // GoAway frames MUST be on stream 0
         replyGoAway(
-            out, 
-            m_lastInputStream, 
+            out,
+            m_lastInputStream,
             FrameError::kProtocolError,
             "goaway frame must be on stream 0"
         );
@@ -1211,8 +1211,8 @@ bool HttpConn::onGoAway(
 
     if (m_lastOutputStream && lastStreamId > m_lastOutputStream) {
         replyGoAway(
-            out, 
-            m_lastInputStream, 
+            out,
+            m_lastInputStream,
             FrameError::kProtocolError,
             "multiple goaway frames must have decreasing last stream ids"
         );
@@ -1228,8 +1228,8 @@ bool HttpConn::onGoAway(
     }
 
     replyGoAway(
-        out, 
-        m_lastInputStream, 
+        out,
+        m_lastInputStream,
         FrameError::kNoError,
         "graceful shutdown"
     );
@@ -1250,8 +1250,8 @@ bool HttpConn::onWindowUpdate(
 
     if (m_frameMode != FrameMode::kNormal) {
         replyGoAway(
-            out, 
-            m_lastInputStream, 
+            out,
+            m_lastInputStream,
             FrameError::kProtocolError,
             "windowupdate unexpected"
         );
@@ -1259,8 +1259,8 @@ bool HttpConn::onWindowUpdate(
     }
     if (m_inputFrameLen != 4) {
         replyGoAway(
-            out, 
-            m_lastInputStream, 
+            out,
+            m_lastInputStream,
             FrameError::kFrameSizeError,
             "windowupdate frame size must be 4"
         );
@@ -1270,8 +1270,8 @@ bool HttpConn::onWindowUpdate(
     int increment = ntoh31(src + kFrameHeaderLen);
     if (!increment) {
         replyGoAway(
-            out, 
-            m_lastInputStream, 
+            out,
+            m_lastInputStream,
             FrameError::kProtocolError,
             "windowupdate with 0 increment"
         );
@@ -1282,8 +1282,8 @@ bool HttpConn::onWindowUpdate(
         // update window of connection
         if (kMaximumWindowSize - increment < m_flowWindow) {
             replyGoAway(
-                out, 
-                m_lastInputStream, 
+                out,
+                m_lastInputStream,
                 FrameError::kFlowControlError,
                 "windowupdate with increment too large"
             );
@@ -1303,8 +1303,8 @@ bool HttpConn::onWindowUpdate(
     if (it == m_streams.end()) {
         if (stream > m_lastInputStream) {
             replyGoAway(
-                out, 
-                m_lastInputStream, 
+                out,
+                m_lastInputStream,
                 FrameError::kProtocolError,
                 "windowupdate on idle stream"
             );
@@ -1339,8 +1339,8 @@ bool HttpConn::onContinuation(
         || stream != m_continueStream
     ) {
         replyGoAway(
-            out, 
-            m_lastInputStream, 
+            out,
+            m_lastInputStream,
             FrameError::kProtocolError,
             "continuation unexpected"
         );
@@ -1433,7 +1433,7 @@ bool HttpConn::writeMsg(
             sm->m_localState = HttpStream::kClosed;
         break;
     default:
-        logMsgCrash() << "httpReply invalid state, {"
+        logMsgFatal() << "httpReply invalid state, {"
             << sm->m_localState << "}";
         return false;
     }
@@ -1495,7 +1495,7 @@ bool HttpConn::addData(
             sm->m_localState = HttpStream::kClosed;
         break;
     default:
-        logMsgCrash() << "httpData invalid state, {" << sm->m_localState << "}";
+        logMsgFatal() << "httpData invalid state, {" << sm->m_localState << "}";
         return false;
     }
 

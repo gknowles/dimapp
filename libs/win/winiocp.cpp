@@ -49,7 +49,7 @@ static void iocpDispatchThread() {
                 // Completion port closed before call to get status.
                 break;
             } else {
-                logMsgCrash() << "GetQueuedCompletionStatusEx: " << err;
+                logMsgFatal() << "GetQueuedCompletionStatusEx: " << err;
             }
         }
 
@@ -144,7 +144,7 @@ void Dim::winIocpInitialize() {
         0     // concurrent threads, 0 for default
     );
     if (!s_iocp)
-        logMsgCrash() << "CreateIoCompletionPort(null): " << WinError{};
+        logMsgFatal() << "CreateIoCompletionPort(null): " << WinError{};
 
     // Start IOCP dispatch task
     taskPushOnce("IOCP Dispatch", iocpDispatchThread);

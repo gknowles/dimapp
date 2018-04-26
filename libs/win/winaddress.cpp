@@ -281,7 +281,7 @@ void Dim::addressGetLocal(vector<Address> * out) {
         &result
     );
     if (err)
-        logMsgCrash() << "getaddrinfo(..localmachine): " << err;
+        logMsgFatal() << "getaddrinfo(..localmachine): " << err;
 
     Endpoint end;
     sockaddr_storage sas;

@@ -965,7 +965,7 @@ static int compare(const Node & left, const Node & right);
 
 //===========================================================================
 static int cmpError(const Node & left, const Node & right) {
-    logMsgCrash() << "compare: incompatible node types, " << left.type
+    logMsgFatal() << "compare: incompatible node types, " << left.type
         << ", " << right.type;
     return 0;
 }
@@ -1137,7 +1137,7 @@ static void insert(Node & left, const Node & right);
 
 //===========================================================================
 static void insError(Node & left, const Node & right) {
-    logMsgCrash() << "insert: incompatible node types, " << left.type
+    logMsgFatal() << "insert: incompatible node types, " << left.type
         << ", " << right.type;
 }
 
@@ -1325,7 +1325,7 @@ static void erase(Node & left, const Node & right);
 
 //===========================================================================
 static void eraError(Node & left, const Node & right) {
-    logMsgCrash() << "erase: incompatible node types, " << left.type
+    logMsgFatal() << "erase: incompatible node types, " << left.type
         << ", " << right.type;
 }
 
@@ -1462,7 +1462,7 @@ static void intersect(Node & left, const Node & right);
 
 //===========================================================================
 static void isecError(Node & left, const Node & right) {
-    logMsgCrash() << "intersect: incompatible node types, " << left.type
+    logMsgFatal() << "intersect: incompatible node types, " << left.type
         << ", " << right.type;
 }
 

@@ -60,6 +60,9 @@ void ConsoleLogger::onLog(LogType type, string_view msg) {
     if (type == kLogTypeError) {
         ConsoleScopedAttr attr(kConsoleError);
         cout.write(buf, msg.size() + 1);
+    } else if (type == kLogTypeWarn) {
+        ConsoleScopedAttr attr(kConsoleWarn);
+        cout.write(buf, msg.size() + 1);
     } else {
         cout.write(buf, msg.size() + 1);
     }

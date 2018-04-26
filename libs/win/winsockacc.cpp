@@ -111,7 +111,7 @@ static bool closeListenHandle(ListenSocket * listen) {
     listen->m_mode = ISocketNotify::kClosing;
     if (listen->m_handle != INVALID_SOCKET) {
         if (SOCKET_ERROR == closesocket(listen->m_handle))
-            logMsgCrash() << "closesocket(listen): " << WinError{};
+            logMsgFatal() << "closesocket(listen): " << WinError{};
         listen->m_handle = INVALID_SOCKET;
     }
     return false;
@@ -206,8 +206,8 @@ void AcceptSocket::onAccept(
 
     bool ok = listen->m_handle != INVALID_SOCKET;
     if (xferError) {
-        if (!ok 
-            && (xferError == ERROR_OPERATION_ABORTED 
+        if (!ok
+            && (xferError == ERROR_OPERATION_ABORTED
                 || xferError == ERROR_NETNAME_DELETED
                 )
         ) {

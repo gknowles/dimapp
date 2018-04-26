@@ -85,7 +85,7 @@ IWinEventWaitNotify::IWinEventWaitNotify(TaskQueueHandle hq)
         INFINITE, // timeout
         WT_EXECUTEINWAITTHREAD
     )) {
-        logMsgCrash() << "RegisterWaitForSingleObject: " << WinError{};
+        logMsgFatal() << "RegisterWaitForSingleObject: " << WinError{};
     }
 }
 

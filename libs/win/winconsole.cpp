@@ -50,7 +50,7 @@ static void enableConsoleFlags(bool enable, DWORD flags) {
         mode &= ~flags;
     }
     if (!SetConsoleMode(hInput, mode))
-        logMsgCrash() << "SetConsoleMode(): " << WinError{};
+        logMsgFatal() << "SetConsoleMode(): " << WinError{};
 }
 
 
@@ -84,7 +84,7 @@ ConsoleScopedAttr::ConsoleScopedAttr(ConsoleAttr attr) {
     HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
     CONSOLE_SCREEN_BUFFER_INFO info;
     if (!GetConsoleScreenBufferInfo(hOutput, &info)) {
-        logMsgCrash() << "GetConsoleScreenBufferInfo: " << GetLastError();
+        logMsgFatal() << "GetConsoleScreenBufferInfo: " << GetLastError();
     }
 
     scoped_lock<mutex> lk{s_mut};
@@ -145,7 +145,7 @@ void Dim::consoleRedoLine() {
     HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
     CONSOLE_SCREEN_BUFFER_INFO info;
     if (!GetConsoleScreenBufferInfo(hOutput, &info)) {
-        logMsgCrash() << "GetConsoleScreenBufferInfo: " << GetLastError();
+        logMsgFatal() << "GetConsoleScreenBufferInfo: " << GetLastError();
     }
     if (info.dwCursorPosition.Y != 0) {
         info.dwCursorPosition.Y -= 1;
