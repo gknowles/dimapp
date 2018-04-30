@@ -29,7 +29,6 @@ namespace Dim {
 class CharBuf : public ITempHeap {
 public:
     class ViewIterator;
-    struct ViewRange;
 
 public:
     CharBuf() {}
@@ -66,7 +65,7 @@ public:
     char * c_str();
     std::string_view view() const;
     std::string_view view(size_t pos, size_t count = -1) const;
-    ViewRange views(size_t pos = 0, size_t count = -1) const;
+    ViewIterator views(size_t pos = 0, size_t count = -1) const;
     void clear();
     void resize(size_t count);
     CharBuf & insert(size_t pos, size_t numCh, char ch);
@@ -184,18 +183,17 @@ public:
     const std::string_view * operator->() const { return &m_view; }
 };
 
+//===========================================================================
+// Free
+inline CharBuf::ViewIterator begin (CharBuf::ViewIterator iter) {
+    return iter;
+}
 
-/****************************************************************************
-*
-*   CharBuf::ViewRange
-*
-***/
-
-struct CharBuf::ViewRange {
-    ViewIterator m_first;
-    ViewIterator begin() { return m_first; }
-    ViewIterator end() { return {}; }
-};
+//===========================================================================
+// Free
+inline CharBuf::ViewIterator end (const CharBuf::ViewIterator & iter) {
+    return {};
+}
 
 
 /****************************************************************************

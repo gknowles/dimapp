@@ -234,14 +234,14 @@ string_view CharBuf::view(size_t pos, size_t count) const {
 }
 
 //===========================================================================
-CharBuf::ViewRange CharBuf::views(size_t pos, size_t count) const {
+CharBuf::ViewIterator CharBuf::views(size_t pos, size_t count) const {
     assert(pos <= (size_t) m_size);
     auto num = min(count, m_size - pos);
     if (!num)
         return {};
     auto ic = find(pos);
-    auto r = ViewRange{ViewIterator{ic.first, (size_t) ic.second, num}};
-    return r;
+    auto vi = ViewIterator{ic.first, (size_t) ic.second, num};
+    return vi;
 }
 
 //===========================================================================
