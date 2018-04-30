@@ -31,6 +31,33 @@ static SecurityStatusToNtStatusFn s_SecurityStatusToNtStatus;
 
 /****************************************************************************
 *
+*   Helpers
+*
+***/
+
+//===========================================================================
+static int getNtStatus(WinError::SecurityStatus status) {
+    switch ((int) status) {
+    case SEC_I_CONTINUE_NEEDED:
+        return 0xC0000016L; // STATUS_MORE_PROCESSING_REQUIRED;
+    default:
+        return s_SecurityStatusToNtStatus(status);
+    }
+}
+
+//===========================================================================
+static int getDosError(WinError::NtStatus status) {
+    auto err = s_NtStatusToDosError(status);
+    if (err == ERROR_MR_MID_NOT_FOUND) {
+        logMsgDebug() << "Conversion of unknown NTSTATUS: "
+            << hex << (int) status;
+    }
+    return err;
+}
+
+
+/****************************************************************************
+*
 *   WinError
 *
 ***/
@@ -53,7 +80,7 @@ WinError::WinError(NtStatus status) {
         m_value = 0;
     } else {
         m_ntStatus = status;
-        m_value = s_NtStatusToDosError(status);
+        m_value = getDosError((NtStatus) status);
     }
 }
 
@@ -65,8 +92,8 @@ WinError::WinError(SecurityStatus status) {
         m_value = 0;
     } else {
         m_secStatus = status;
-        m_ntStatus = s_SecurityStatusToNtStatus(status);
-        m_value = s_NtStatusToDosError(m_ntStatus);
+        m_ntStatus = getNtStatus(status);
+        m_value = getDosError((NtStatus) m_ntStatus);
     }
 }
 
