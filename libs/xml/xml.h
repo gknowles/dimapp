@@ -221,8 +221,6 @@ struct XNode;
 
 class XDocument {
 public:
-    XDocument();
-
     void clear();
     XNode * parse(char src[], std::string_view filename = {});
 

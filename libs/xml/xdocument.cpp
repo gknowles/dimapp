@@ -149,9 +149,6 @@ bool ParserNotify::text(const char value[], size_t valueLen) {
 ***/
 
 //===========================================================================
-XDocument::XDocument() {}
-
-//===========================================================================
 void XDocument::clear() {
     m_root = nullptr;
     m_heap.clear();
