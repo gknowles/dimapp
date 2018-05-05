@@ -228,6 +228,10 @@
 # tools/pargen/pch.h
 # tools/pargen/tests.abnf
 # tools/pargen/write.cpp
+# tools/resupd/README.md
+# tools/resupd/pch.cpp
+# tools/resupd/pch.h
+# tools/resupd/resupd.cpp
 # tools/tnet/README.md
 # tools/tnet/pch.cpp
 # tools/tnet/pch.h
