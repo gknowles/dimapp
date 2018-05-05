@@ -334,6 +334,56 @@ uint64_t Dim::fileSize(string_view path) {
 }
 
 //===========================================================================
+static fs::file_status fileStatus(string_view path) {
+    error_code ec;
+    auto f = fs::u8path(path.begin(), path.end());
+    auto st = fs::status(f, ec);
+    return st;
+}
+
+//===========================================================================
+bool Dim::fileExists(std::string_view path) {
+    auto st = fileStatus(path);
+    return fs::exists(st) && !fs::is_directory(st);
+}
+
+//===========================================================================
+bool Dim::fileDirExists(std::string_view path) {
+    auto st = fileStatus(path);
+    return fs::is_directory(st);
+}
+
+//===========================================================================
+bool Dim::fileReadOnly(std::string_view path) {
+    auto st = fileStatus(path);
+    return fs::exists(st)
+        && (st.permissions() & fs::perms::owner_write) == fs::perms::none;
+}
+
+//===========================================================================
+void Dim::fileReadOnly(std::string_view path, bool enable) {
+    error_code ec;
+    auto f = fs::u8path(path.begin(), path.end());
+    auto st = fs::status(f, ec);
+    auto ro = fs::exists(st)
+        && (st.permissions() & fs::perms::owner_write) == fs::perms::none;
+    if (ro == enable)
+        return;
+
+    auto perms = st.permissions();
+    if (enable) {
+        perms |= fs::perms::owner_write;
+    } else {
+        perms &= ~fs::perms::owner_write;
+    }
+    fs::permissions(f, perms, ec);
+    if (!ec)
+        return;
+    logMsgError() << "Set read only failed: " << path;
+    errno = ec.value();
+}
+
+//===========================================================================
 bool Dim::fileRemove(string_view path, bool recurse) {
     error_code ec;
     auto f = fs::u8path(path.begin(), path.end());
