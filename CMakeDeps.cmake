@@ -79,10 +79,14 @@
 # libs/file/pch.h
 # libs/file/search.cpp
 # libs/json/jbuilder.cpp
+# libs/json/jdocument.cpp
 # libs/json/json.abnf
 # libs/json/json.h
-# libs/json/jsonbaseparse.cpp
-# libs/json/jsonbaseparse.h
+# libs/json/jsonparse.cpp
+# libs/json/jsonparsebaseint.h
+# libs/json/jsonparseimplint.h
+# libs/json/jsonparseint.h
+# libs/json/jsonstream.cpp
 # libs/json/pch.cpp
 # libs/json/pch.h
 # libs/msgpack/intern.h
@@ -181,6 +185,9 @@
 # tests/http/httptest.cpp
 # tests/http/pch.cpp
 # tests/http/pch.h
+# tests/json/jsontest.cpp
+# tests/json/pch.cpp
+# tests/json/pch.h
 # tests/list/listtest.cpp
 # tests/list/pch.cpp
 # tests/list/pch.h

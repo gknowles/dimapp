@@ -93,7 +93,7 @@ void JsonCounters::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     perfGetValues(&m_values);
 
     HttpResponse res;
-    JBuilder bld(res.body());
+    JBuilder bld(&res.body());
     bld.object();
     for (auto && perf : m_values) {
         bld.member(perf.name);

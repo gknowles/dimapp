@@ -83,6 +83,10 @@ inline IJBuilder & IJBuilder::value(const T & val) {
         && !std::is_same_v<T, int64_t>
     ) {
         return value(int64_t(val));
+    } else if constexpr (std::is_convertible_v<T, double>
+        && !std::is_same_v<T, double>
+    ) {
+        return value(double(val));
     } else {
         thread_local std::ostringstream t_os;
         t_os.clear();
@@ -114,8 +118,8 @@ inline IJBuilder & end(IJBuilder & out) {
 //---------------------------------------------------------------------------
 class JBuilder : public IJBuilder {
 public:
-    JBuilder(CharBuf & buf)
-        : m_buf(buf) {}
+    JBuilder(CharBuf * buf)
+        : m_buf(*buf) {}
     void clear() override;
 
 private:
@@ -134,7 +138,7 @@ private:
 ***/
 
 namespace Detail {
-class JsonBaseParser;
+class JsonParser;
 } // namespace
 
 class IJsonStreamNotify {
@@ -143,25 +147,24 @@ public:
     virtual bool startDoc() = 0;
     virtual bool endDoc() = 0;
 
-    virtual bool startElem(const char name[], size_t nameLen) = 0;
-    virtual bool endElem() = 0;
+    virtual bool startArray(std::string_view name) = 0;
+    virtual bool endArray() = 0;
+    virtual bool startObject(std::string_view name) = 0;
+    virtual bool endObject() = 0;
 
-    virtual bool attr(
-        const char name[],
-        size_t nameLen,
-        const char value[],
-        size_t valueLen
-    ) = 0;
-    virtual bool text(const char value[], size_t valueLen) = 0;
+    virtual bool value(std::string_view name, std::string_view val) = 0;
+    virtual bool value(std::string_view name, double val) = 0;
+    virtual bool value(std::string_view name, bool val) = 0;
+    virtual bool value(std::string_view name, nullptr_t) = 0;
 };
 
 class JsonStream {
 public:
-    JsonStream(IJsonStreamNotify & notify);
+    JsonStream(IJsonStreamNotify * notify);
     ~JsonStream();
 
     void clear();
-    bool parse(char src[]);
+    bool parseMore(char src[]);
 
     bool fail(const char errmsg[]);
 
@@ -176,7 +179,7 @@ private:
     unsigned m_line{0};
     const char * m_errmsg{nullptr};
     TempHeap m_heap;
-    Detail::JsonBaseParser * m_base;
+    Detail::JsonParser * m_base;
 };
 
 
@@ -186,27 +189,31 @@ private:
 *
 ***/
 
-struct JValue;
+struct JNode;
 
 class JDocument {
 public:
-    JDocument();
-
     void clear();
-    JValue * parse(char src[], std::string_view filename = {});
+    JNode * parse(char src[], std::string_view filename = {});
 
-    JValue * setRoot(const char name[], const char text[] = nullptr);
-    JValue * addValue(
-        JValue * parent,
-        const char name[],
-        const char text[] = nullptr
+    void setRoot(JNode * root);
+
+    JNode * addArray(JNode * parent, std::string_view name = {});
+    JNode * addObject(JNode * parent, std::string_view name = {});
+    JNode * addValue(
+        JNode * parent,
+        std::string_view val,
+        std::string_view name = {}
     );
+    JNode * addValue(JNode * parent, double val, std::string_view name = {});
+    JNode * addValue(JNode * parent, bool val, std::string_view name = {});
+    JNode * addValue(JNode * parent, nullptr_t, std::string_view name = {});
 
     ITempHeap & heap() { return m_heap; }
 
     const char * filename() const { return m_filename; }
-    JValue * root() { return m_root; }
-    const JValue * root() const { return m_root; }
+    JNode * root() { return m_root; }
+    const JNode * root() const { return m_root; }
 
     const char * errmsg() const { return m_errmsg; }
     size_t errpos() const { return m_errpos; }
@@ -214,7 +221,7 @@ public:
 private:
     TempHeap m_heap;
     const char * m_filename{nullptr};
-    JValue * m_root{nullptr};
+    JNode * m_root{nullptr};
     const char * m_errmsg{nullptr};
     size_t m_errpos{0};
 };
@@ -222,26 +229,22 @@ private:
 //===========================================================================
 // Types (array, object, string, bool, etc)
 //===========================================================================
-enum class JType {
+enum class JType : int8_t {
     kInvalid,
     kObject,
     kArray,
     kString,
     kNumber,
     kBoolean,
+    kNull,
 };
 
-struct JArray {
-};
-struct JObject {
-};
+IJBuilder & operator<<(IJBuilder & out, const JNode & node);
+JType valueType(const JNode * node);
 
-IJBuilder & operator<<(IJBuilder & out, const JValue & elem);
+JDocument * document(JNode * node);
+JNode * parent(JNode * node);
 
-JDocument * document(JValue * node);
-
-JType valueType(const JValue * node);
-
-void unlinkNode(JValue * node);
+void unlinkNode(JNode * node);
 
 } // namespace

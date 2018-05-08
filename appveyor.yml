@@ -36,12 +36,14 @@ test_script:
   - bin\file
   - bin\hpack
   - bin\http
+  - bin\json --test
   - bin\list
   - bin\math
   - bin\msgpack
   - bin\pargen --test
   - bin\path
   - bin\str
+  - bin\time
   - bin\tokentable
   - bin\uset
   - bin\xml --test

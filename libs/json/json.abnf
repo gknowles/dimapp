@@ -1,12 +1,14 @@
-; Copyright Glen Knowles 2016 - 2017.
+; Copyright Glen Knowles 2016 - 2018.
 ; Distributed under the Boost Software License, Version 1.0.
 ;
 ; json.abnf - dim json
 ;
 ; rules to parse json
 %root = JSON-text
-%api.prefix = JsonBase
+%api.prefix = Json
 %api.namespace = Dim::Detail
+%api.parser.file.h = jsonparseint.h
+%api.base.file.h = jsonparsebaseint.h
 
 ; JSON Grammar
 JSON-text = ws value ws
@@ -44,45 +46,54 @@ Char-not-BLOT = WSP / %x20-29 / %x2b-7f / mbchar
 Char-not-BLOT-SLASH = WSP / %x20-29 / %x2b-2e / %x30-7f / mbchar
 
 ; Values
-value = false / null / true / object / array / number / string
+value = false / null / true / object / array / nval / sval
 false = %s"false" { End }
 null = %s"null" { End }
 true = %s"true" { End }
+nval = number { End }
+sval = string { End }
 
 ; Objects
 object = begin-object object-tail { Start, End }
 object-tail = [ member *(value-separator member) ] end-object { Function }
-member = string name-separator value
+member = member-name name-separator value
+member-name = string { End }
 
 ; Arrays
 array = begin-array array-tail { Start, End }
 array-tail = [ value *(value-separator value) ] end-array { Function }
 
 ; Numbers
-number = [minus] int [frac] [exp] { End }
+number = int [frac] [exp]
 decimal-point = "."
 digit1-9 = %x31-39 ; 1-9
 e = "e" ; e E
-exp = e [minus / plus] 1*DIGIT
-frac = decimal-point 1*DIGIT
-int = zero / (digit1-9 *DIGIT) { Char }
-minus = "-"
-plus = "+"
+exp = e [exp-minus / exp-plus] exp-num
+exp-minus = "-" { End }
+exp-plus = "+"
+exp-num = 1*DIGIT { Char+ }
+frac = decimal-point frac-num
+frac-num = 1*DIGIT { Char+ }
+int = [int-minus] int-num
+int-minus = "-" { End }
+int-num = zero / digit1-9 *DIGIT { Char+ }
 zero = "0"
 
 ; Strings
-string = DQUOTE *char DQUOTE
+string = DQUOTE str-text DQUOTE
+str-text = *char { Start+ }
 char = unescaped / escape-single / escape-number
-escape-single = escape (
-    DQUOTE / ; "
-    %x5c / ; \
-    %x2f / ; /
-    %x62 / ; b
-    %x66 / ; f
-    %x6e / ; n
-    %x72 / ; r
-    %x74 ) ; t
-    { End }
-escape-number = escape %x75 4HEXDIG { End }
+escape-single = escape (e-dquote / e-bslash / e-slash / e-bksp / e-feed
+    / e-nl / e-cr / e-tab)
+e-dquote = DQUOTE { End } ; "
+e-bslash = "\" { End }
+e-slash = "/" { End }
+e-bksp = "b" { End }
+e-feed = "f" { End }
+e-nl = "n" { End }
+e-cr = "r" { End }
+e-tab = "t" { End }
+escape-number = escape %x75 escape-num-hex { End }
+escape-num-hex = 4HEXDIG { Char+ }
 escape = %x5c ; \
-unescaped = %x20-21 / %x23-5b / %x5d-7f / mbchar
+unescaped = %x20-21 / %x23-2e / %x30-5b / %x5d-7f / mbchar { Char+ }

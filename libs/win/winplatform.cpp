@@ -222,7 +222,7 @@ void WebAccount::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     CloseHandle(token);
 
     HttpResponse res;
-    JBuilder bld(res.body());
+    JBuilder bld(&res.body());
     bld.array();
     addSidRow(bld, usr->User);
     auto * ptr = grps->Groups,
