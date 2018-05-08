@@ -65,7 +65,8 @@ private:
 
     template <
         typename Char,
-        typename = std::enable_if_t<std::is_same_v<Char, char>>>
+        typename = std::enable_if_t<std::is_same_v<Char, char>>
+    >
     void addRaw(Char const * const & text) {
         append(text);
     }
@@ -107,33 +108,45 @@ inline IXBuilder & operator<<(IXBuilder & out, const T & val) {
     return out.text(t_os.str());
 }
 
-inline IXBuilder &
-operator<<(IXBuilder & out, IXBuilder & (*pfn)(IXBuilder &)) {
+inline IXBuilder & operator<<(
+    IXBuilder & out,
+    IXBuilder & (*pfn)(IXBuilder &)
+) {
     return pfn(out);
 }
 
-inline IXBuilder &
-operator<<(IXBuilder & out, const IXBuilder::ElemNameProxy & e) {
+inline IXBuilder & operator<<(
+    IXBuilder & out,
+    const IXBuilder::ElemNameProxy & e
+) {
     return e.value ? out.elem(e.name, e.value) : out.start(e.name);
 }
-inline IXBuilder::ElemNameProxy
-start(const char name[], const char val[] = nullptr) {
+inline IXBuilder::ElemNameProxy start(
+    const char name[],
+    const char val[] = nullptr
+) {
     return IXBuilder::ElemNameProxy{name, val};
 }
 inline IXBuilder & end(IXBuilder & out) {
     return out.end();
 }
-inline IXBuilder::ElemNameProxy
-elem(const char name[], const char val[] = nullptr) {
+inline IXBuilder::ElemNameProxy elem(
+    const char name[],
+    const char val[] = nullptr
+) {
     return IXBuilder::ElemNameProxy{name, val ? val : ""};
 }
 
-inline IXBuilder &
-operator<<(IXBuilder & out, const IXBuilder::AttrNameProxy & a) {
+inline IXBuilder & operator<<(
+    IXBuilder & out,
+    const IXBuilder::AttrNameProxy & a
+) {
     return a.value ? out.attr(a.name, a.value) : out.startAttr(a.name);
 }
-inline IXBuilder::AttrNameProxy
-attr(const char name[], const char val[] = nullptr) {
+inline IXBuilder::AttrNameProxy attr(
+    const char name[],
+    const char val[] = nullptr
+) {
     return IXBuilder::AttrNameProxy{name, val};
 }
 inline IXBuilder & endAttr(IXBuilder & out) {
@@ -179,7 +192,8 @@ public:
         const char name[],
         size_t nameLen,
         const char value[],
-        size_t valueLen) = 0;
+        size_t valueLen
+    ) = 0;
     virtual bool text(const char value[], size_t valueLen) = 0;
 };
 
