@@ -242,7 +242,7 @@ template <typename T>
     if constexpr (std::is_assignable_v<T, std::string_view>) {
         *out = src;
     } else if constexpr (std::is_assignable_v<T, std::string>) {
-        *out = string(src);
+        *out = std::string{src};
     } else {
         std::stringstream interpreter;
         if (!(interpreter << src) || !(interpreter >> *out)
