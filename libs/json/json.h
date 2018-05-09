@@ -189,7 +189,29 @@ private:
 *
 ***/
 
-struct JNode;
+struct JNode : ListBaseLink<> {
+    enum JType : int8_t {
+        kInvalid,
+        kObject,
+        kArray,
+        kString,
+        kNumber,
+        kBoolean,
+        kNull,
+    };
+
+    JType type;
+    union {
+        std::string_view sval;
+        double nval;
+        bool bval;
+        Dim::List<JNode> vals;
+    };
+
+protected:
+    JNode(JType type);
+    ~JNode();
+};
 
 class JDocument {
 public:
@@ -226,25 +248,29 @@ private:
     size_t m_errpos{0};
 };
 
-//===========================================================================
-// Types (array, object, string, bool, etc)
-//===========================================================================
-enum class JType : int8_t {
-    kInvalid,
-    kObject,
-    kArray,
-    kString,
-    kNumber,
-    kBoolean,
-    kNull,
-};
-
 IJBuilder & operator<<(IJBuilder & out, const JNode & node);
-JType valueType(const JNode * node);
+
+JNode::JType nodeType(const JNode * node);
+std::string_view nodeName(const JNode * node);
 
 JDocument * document(JNode * node);
 JNode * parent(JNode * node);
 
 void unlinkNode(JNode * node);
+
+//===========================================================================
+// Node iteration
+//===========================================================================
+class JNodeIterator : public ForwardListIterator<JNode> {
+public:
+    JNodeIterator();
+    JNodeIterator(JNode * node);
+    JNodeIterator operator++();
+};
+
+inline JNodeIterator begin(const JNodeIterator & iter) { return iter; }
+inline JNodeIterator end(const JNodeIterator & iter) { return {}; }
+
+JNodeIterator nodes(JNode * node);
 
 } // namespace

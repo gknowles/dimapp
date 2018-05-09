@@ -118,36 +118,10 @@ bool StreamNotify::value(string_view name, nullptr_t) {
 *
 ***/
 
-struct Dim::JNode : ListBaseLink<> {
-    JNode * parent;
-    union {
-        string_view name;       // set if parent is an object
-        JDocument * document;   // set if !parent
-    };
-    JType type;
-    union {
-        string_view sval;
-        double nval;
-        bool bval;
-        List<JNode> vals;
-    };
-
-    JNode(JDocument * doc, JNode * parent, string_view name, JType type);
-    ~JNode();
-};
-
 //===========================================================================
-JNode::JNode(JDocument * doc, JNode * parent, string_view name, JType type)
-    : parent{parent}
-    , name{name}
-    , type{type}
+JNode::JNode(JType type)
+    : type{type}
 {
-    if (!parent) {
-        document = doc;
-        doc->setRoot(this);
-    } else {
-        parent->vals.link(this);
-    }
     if (type == JType::kString) {
         new(&sval) string_view;
     } else if (type == JType::kArray || type == JType::kObject) {
@@ -160,10 +134,49 @@ JNode::~JNode() {
     assert(!"~JNode() unimplemented");
 }
 
+
+/****************************************************************************
+*
+*   JNodeInfo
+*
+***/
+
+namespace {
+
+struct JNodeInfo : JNode {
+    JNodeInfo * parent;
+    union {
+        string_view name;       // set if parent is an object
+        JDocument * document;   // set if !parent
+    };
+
+    JNodeInfo(
+        JDocument * doc,
+        JNode * parent,
+        string_view name,
+        JNode::JType type
+    );
+};
+
+} // namespace
+
 //===========================================================================
-// free
-JNode * Dim::parent(JNode * node) {
-    return node->parent;
+JNodeInfo::JNodeInfo(
+    JDocument * doc,
+    JNode * parent,
+    string_view name,
+    JNode::JType type
+)
+    : JNode{type}
+    , parent{static_cast<JNodeInfo *>(parent)}
+    , name{name}
+{
+    if (!parent) {
+        document = doc;
+        doc->setRoot(this);
+    } else {
+        parent->vals.link(this);
+    }
 }
 
 
@@ -201,13 +214,13 @@ void JDocument::setRoot(JNode * root) {
 
 //===========================================================================
 JNode * JDocument::addArray(JNode * parent, string_view name) {
-    auto node = m_heap.emplace<JNode>(this, parent, name, JType::kArray);
+    auto node = m_heap.emplace<JNodeInfo>(this, parent, name, JNode::kArray);
     return node;
 }
 
 //===========================================================================
 JNode * JDocument::addObject(JNode * parent, string_view name) {
-    auto node = m_heap.emplace<JNode>(this, parent, name, JType::kObject);
+    auto node = m_heap.emplace<JNodeInfo>(this, parent, name, JNode::kObject);
     return node;
 }
 
@@ -217,29 +230,62 @@ JNode * JDocument::addValue(
     string_view val,
     string_view name
 ) {
-    auto node = m_heap.emplace<JNode>(this, parent, name, JType::kString);
+    auto node = m_heap.emplace<JNodeInfo>(this, parent, name, JNode::kString);
     node->sval = val;
     return node;
 }
 
 //===========================================================================
 JNode * JDocument::addValue(JNode * parent, double val, string_view name) {
-    auto node = m_heap.emplace<JNode>(this, parent, name, JType::kNumber);
+    auto node = m_heap.emplace<JNodeInfo>(this, parent, name, JNode::kNumber);
     node->nval = val;
     return node;
 }
 
 //===========================================================================
 JNode * JDocument::addValue(JNode * parent, bool val, string_view name) {
-    auto node = m_heap.emplace<JNode>(this, parent, name, JType::kBoolean);
+    auto node = m_heap.emplace<JNodeInfo>(this, parent, name, JNode::kBoolean);
     node->bval = val;
     return node;
 }
 
 //===========================================================================
 JNode * JDocument::addValue(JNode * parent, nullptr_t, string_view name) {
-    auto node = m_heap.emplace<JNode>(this, parent, name, JType::kNull);
+    auto node = m_heap.emplace<JNodeInfo>(this, parent, name, JNode::kNull);
     return node;
+}
+
+
+/****************************************************************************
+*
+*   JNodeIterator
+*
+***/
+
+//===========================================================================
+JNodeIterator::JNodeIterator()
+    : ForwardListIterator{nullptr}
+{}
+
+//===========================================================================
+JNodeIterator::JNodeIterator(JNode * node)
+    : ForwardListIterator{nullptr}
+{
+    if (node->type == JNode::kArray || node->type == JNode::kObject)
+        m_current = node->vals.front();
+}
+
+//===========================================================================
+JNodeIterator JNodeIterator::operator++() {
+    auto ni = static_cast<const JNodeInfo *>(m_current);
+    m_current = ni->parent->vals.next(ni);
+    return *this;
+}
+
+//===========================================================================
+// free
+JNodeIterator Dim::nodes(JNode * node) {
+    return JNodeIterator{node};
 }
 
 
@@ -250,37 +296,65 @@ JNode * JDocument::addValue(JNode * parent, nullptr_t, string_view name) {
 ***/
 
 IJBuilder & Dim::operator<<(IJBuilder & out, const JNode & node) {
-    if (!node.name.empty())
-        out.member(node.name);
+    auto & ni = static_cast<const JNodeInfo &>(node);
+    if (!ni.name.empty())
+        out.member(ni.name);
     switch (node.type) {
-    case JType::kInvalid:
+    case JNode::kInvalid:
         out.value("INVALID");
         assert(!"Writing invalid JSON");
         break;
-    case JType::kObject:
+    case JNode::kObject:
         out.object();
         for (auto & val : node.vals)
             out << val;
         out.end();
         break;
-    case JType::kArray:
+    case JNode::kArray:
         out.array();
         for (auto & val : node.vals)
             out << val;
         out.end();
         break;
-    case JType::kString:
+    case JNode::kString:
         out.value(node.sval);
         break;
-    case JType::kNumber:
+    case JNode::kNumber:
         out.value(node.nval);
         break;
-    case JType::kBoolean:
+    case JNode::kBoolean:
         out.value(node.bval);
         break;
-    case JType::kNull:
+    case JNode::kNull:
         out.value(nullptr);
         break;
     }
     return out;
+}
+
+//===========================================================================
+JNode::JType Dim::nodeType(const JNode * node) {
+    return node->type;
+}
+
+//===========================================================================
+string_view Dim::nodeName(const JNode * node) {
+    return static_cast<const JNodeInfo *>(node)->name;
+}
+
+//===========================================================================
+JDocument * Dim::document(JNode * node) {
+    while (auto next = parent(node))
+        node = next;
+    return static_cast<JNodeInfo *>(node)->document;
+}
+
+//===========================================================================
+JNode * Dim::parent(JNode * node) {
+    return static_cast<JNodeInfo *>(node)->parent;
+}
+
+//===========================================================================
+void Dim::unlinkNode(JNode * node) {
+    parent(node)->vals.unlink(node);
 }

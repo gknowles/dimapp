@@ -362,7 +362,8 @@ bool attrValue(
 //===========================================================================
 // Node iteration
 //===========================================================================
-template <typename T> class XNodeIterator : public ForwardListIterator<T> {
+template <typename T>
+class XNodeIterator : public ForwardListIterator<T> {
     std::string_view m_name;
     XType m_type{XType::kInvalid};
 
@@ -371,7 +372,8 @@ public:
     XNodeIterator operator++();
 };
 
-template <typename T> struct XNodeRange {
+template <typename T>
+struct XNodeRange {
     XNodeIterator<T> m_first;
     XNodeIterator<T> begin() { return m_first; }
     XNodeIterator<T> end() { return {nullptr, XType::kInvalid, {}}; }
@@ -388,7 +390,8 @@ XNodeRange<const XNode> nodes(
 //===========================================================================
 // Attribute iteration
 //===========================================================================
-template <typename T> struct XAttrRange {
+template <typename T>
+struct XAttrRange {
     ForwardListIterator<T> m_first;
     ForwardListIterator<T> begin() { return m_first; }
     ForwardListIterator<T> end() { return {nullptr}; }

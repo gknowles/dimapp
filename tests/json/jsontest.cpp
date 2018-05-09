@@ -63,15 +63,15 @@ int internalTest() {
     bld.clear();
     bld << *root;
     out.pushBack(0);
-    char * data2 = out.data();
-    str = string(data2);
-    EXPECT(str == kJsonText);
-    //unsigned num = 0;
-    //for (auto && node [[maybe_unused]] : nodes(root)) {
-    //    assert(node.name);
-    //    num += 1;
-    //}
-    //EXPECT(num == 2);
+    auto str2 = toString(out);
+    EXPECT(str2 == kJsonText);
+    unsigned num = 0;
+    vector<string_view> names;
+    for (auto && node [[maybe_unused]] : nodes(root)) {
+        names.push_back(nodeName(&node));
+        num += 1;
+    }
+    EXPECT(num == 2);
 
     if (s_errors) {
         cerr << "*** TEST FAILURES: " << s_errors << endl;
