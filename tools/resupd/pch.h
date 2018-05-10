@@ -18,6 +18,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
+#include <unordered_set>
 
 // Platform headers
 #pragma pack(push)
