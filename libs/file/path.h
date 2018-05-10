@@ -128,11 +128,14 @@ private:
 *
 ***/
 
-bool operator==(const Path & left, std::string_view right);
-bool operator==(std::string_view left, const Path & right);
-bool operator==(const Path & left, const Path & right);
+bool operator==(const Path & a, std::string_view b);
+bool operator==(std::string_view a, const Path & b);
+bool operator==(const Path & a, const Path & b);
 
 std::ostream & operator<<(std::ostream & os, const Path & val);
+
+Path operator/ (const Path & a, std::string_view b);
+Path operator+ (const Path & a, std::string_view b);
 
 
 /****************************************************************************

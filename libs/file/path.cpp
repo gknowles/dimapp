@@ -532,3 +532,13 @@ ostream & Dim::operator<<(ostream & os, const Path & val) {
     os << val.view();
     return os;
 }
+
+//===========================================================================
+Path Dim::operator/ (const Path & a, std::string_view b) {
+    return Path{a} /= b;
+}
+
+//===========================================================================
+Path Dim::operator+ (const Path & a, std::string_view b) {
+    return Path{a} += b;
+}
