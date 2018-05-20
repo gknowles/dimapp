@@ -132,12 +132,16 @@ public:
 
     void addHeader(HttpHdr id, const char value[]);
     void addHeader(const char name[], const char value[]);
+    void addHeader(HttpHdr id, TimePoint time);
+    void addHeader(const char name[], TimePoint time);
 
     // When adding references the memory referenced by the name and value
     // pointers must be valid for the life of the HttpMsg, such as constants
     // or strings allocated from this messages Heap().
     void addHeaderRef(HttpHdr id, const char value[]);
     void addHeaderRef(const char name[], const char value[]);
+
+    const char * addRef(TimePoint time);
 
     HdrList headers();
     const HdrList headers() const;
@@ -320,5 +324,14 @@ void httpResetStream(
     int stream,
     bool internal
 );
+
+
+/****************************************************************************
+*
+*   Headers
+*
+***/
+
+bool httpParse(TimePoint * time, std::string_view val);
 
 } // namespace

@@ -192,11 +192,33 @@ void HttpMsg::addHeader(HttpHdr id, const char value[]) {
 
 //===========================================================================
 void HttpMsg::addHeader(const char name[], const char value[]) {
-    HttpHdr id;
-    if (s_hdrNameTbl.find((int *)&id, name))
+    if (auto id = httpHdrFromString(name))
         return addHeader(id, value);
 
     addHeaderRef(kHttpInvalid, m_heap.strdup(name), m_heap.strdup(value));
+}
+
+//===========================================================================
+void HttpMsg::addHeader(HttpHdr id, TimePoint time) {
+    auto hv = addRef(time);
+    if (!hv)
+        logMsgFatal() << "addHeader(" << id << "): invalid time";
+
+    if (auto hv = addRef(time))
+        addHeaderRef(id, hv);
+}
+
+//===========================================================================
+void HttpMsg::addHeader(const char name[], TimePoint time) {
+    auto hv = addRef(time);
+    if (!hv)
+        logMsgFatal() << "addHeader(" << name << "): invalid time";
+
+    if (auto id = httpHdrFromString(name)) {
+        addHeaderRef(id, hv);
+    } else {
+        addHeaderRef(id, m_heap.strdup(name), hv);
+    }
 }
 
 //===========================================================================
@@ -259,6 +281,17 @@ void HttpMsg::addHeaderRef(HttpHdr id, const char value[]) {
 void HttpMsg::addHeaderRef(const char name[], const char value[]) {
     HttpHdr id = tokenTableGetEnum(s_hdrNameTbl, name, kHttpInvalid);
     addHeaderRef(id, name, value);
+}
+
+//===========================================================================
+const char * HttpMsg::addRef(TimePoint time) {
+    const unsigned kHttpDateLen = 30;
+    tm tm;
+    if (!timeToDesc(&tm, time))
+        return nullptr;
+    char * tmp = heap().alloc<char>(kHttpDateLen);
+    strftime(tmp, kHttpDateLen, "%a, %d %b %Y %T GMT", &tm);
+    return tmp;
 }
 
 //===========================================================================
@@ -428,4 +461,11 @@ string_view Dim::to_view(HttpMethod id) {
 //===========================================================================
 HttpMethod Dim::httpMethodFromString(string_view name, HttpMethod def) {
     return tokenTableGetEnum(s_methodNameTbl, name, def);
+}
+
+//===========================================================================
+bool httpParse(TimePoint * time, std::string_view val) {
+    assert(!"httpTimeFromChar not implemented");
+    *time = {};
+    return false;
 }
