@@ -35,13 +35,13 @@ Clock::time_point Clock::now() noexcept {
 // static
 time_t Clock::to_time_t(const time_point & time) noexcept {
     auto ticks = time.time_since_epoch().count();
-    return (time_t)(ticks / kClockTicksPerSecond - kUnixTimeDiff);
+    return (time_t)(ticks / kClockTicksPerSecond);
 }
 
 //===========================================================================
 // static
 Clock::time_point Clock::from_time_t(time_t t) noexcept {
-    return time_point{duration{(t + kUnixTimeDiff) * kClockTicksPerSecond}};
+    return time_point{duration{t * kClockTicksPerSecond}};
 }
 
 
@@ -415,4 +415,17 @@ bool Dim::timeToDesc(tm * tm, TimePoint time) {
         *tm = {};
         return false;
     }
+}
+
+//===========================================================================
+uint64_t Dim::timeToUnix(TimePoint time) {
+    auto ticks = time.time_since_epoch().count();
+    return (uint64_t)(ticks / kClockTicksPerSecond - kUnixTimeDiff);
+}
+
+//===========================================================================
+TimePoint Dim::timeFromUnix(uint64_t unixTime) {
+    return TimePoint{Duration{
+        (unixTime + kUnixTimeDiff) * kClockTicksPerSecond
+    }};
 }

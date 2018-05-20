@@ -128,5 +128,7 @@ bool timeToDesc(tm * tm, TimePoint time);
 
 bool timeFromDesc(TimePoint * time, const tm & tm);
 
+uint64_t timeToUnix(TimePoint time);
+TimePoint timeFromUnix(uint64_t unixTime);
 
 } // namespace
