@@ -342,7 +342,7 @@ static const CERT_CONTEXT * makeCert(
 static bool matchHost(string_view authority, string_view host) {
     if (!host.size())
         return true;
-    if (DnsNameCompare(authority.data(), host.data()))
+    if (DnsNameCompare_W(toWstring(authority).data(), toWstring(host).data()))
         return true;
 
     // TODO: match against wildcard authority
