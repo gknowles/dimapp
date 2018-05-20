@@ -17,6 +17,10 @@ using namespace Dim;
 
 class Dim::TaskQueue : public HandleContent {
 public:
+    static void push(TaskQueue * q, ITaskNotify & task);
+    static void pop(TaskQueue * q);
+
+public:
     TaskQueueHandle hq;
     string name;
 
@@ -29,9 +33,6 @@ public:
     ITaskNotify * last{nullptr};
 
     condition_variable cv;
-
-    void push(ITaskNotify & task);
-    void pop();
 };
 
 
@@ -97,8 +98,8 @@ static void taskQueueThread(TaskQueue * ptr) {
         while (!q.first)
             q.cv.wait(lk);
 
-        auto * task = q.first;
-        q.pop();
+        auto task = q.first;
+        q.pop(&q);
         more = !dynamic_cast<EndThreadTask *>(task);
         lk.unlock();
         task->onTask();
@@ -115,23 +116,23 @@ static void taskQueueThread(TaskQueue * ptr) {
 }
 
 //===========================================================================
-static void setThreads_LK(TaskQueue & q, size_t threads) {
-    int num = (int) threads - q.wantThreads;
-    q.wantThreads = (int)threads;
+static void setThreads_LK(TaskQueue * q, size_t threads) {
+    int num = (int) threads - q->wantThreads;
+    q->wantThreads = (int)threads;
     if (num > 0) {
-        q.curThreads += num;
+        q->curThreads += num;
         s_numThreads += num;
         for (int i = 0; i < num; ++i) {
-            thread thr{taskQueueThread, &q};
+            thread thr{taskQueueThread, q};
             thr.detach();
         }
     } else if (num < 0) {
         for (int i = 0; i > num; --i) {
             s_numEnded += 1;
-            auto * task = new EndThreadTask;
-            q.push(*task);
+            auto task = new EndThreadTask;
+            q->push(q, *task);
         }
-        q.cv.notify_all();
+        q->cv.notify_all();
     }
 }
 
@@ -143,20 +144,22 @@ static void setThreads_LK(TaskQueue & q, size_t threads) {
 ***/
 
 //===========================================================================
-void TaskQueue::push(ITaskNotify & task) {
+// static
+void TaskQueue::push(TaskQueue * q, ITaskNotify & task) {
     task.m_taskNext = nullptr;
-    if (!first) {
-        first = &task;
+    if (!q->first) {
+        q->first = &task;
     } else {
-        last->m_taskNext = &task;
+        q->last->m_taskNext = &task;
     }
-    last = &task;
+    q->last = &task;
 }
 
 //===========================================================================
-void TaskQueue::pop() {
-    auto * task = first;
-    first = task->m_taskNext;
+// static
+void TaskQueue::pop(TaskQueue * q) {
+    auto task = q->first;
+    q->first = task->m_taskNext;
     task->m_taskNext = nullptr;
 }
 
@@ -216,7 +219,7 @@ void Dim::iTaskDestroy() {
 
     // send shutdown task to all task threads
     for (auto && q : s_queues)
-        setThreads_LK(*q.second, 0);
+        setThreads_LK(q.second, 0);
 
     // wait for all threads to stop
     while (s_numThreads)
@@ -283,12 +286,12 @@ TaskQueueHandle Dim::taskComputeQueue() {
 TaskQueueHandle Dim::taskCreateQueue(string_view name, int threads) {
     assert(s_running);
     assert(threads);
-    auto * q = new TaskQueue;
+    auto q = new TaskQueue;
     q->name = name;
 
     scoped_lock<mutex> lk{s_mut};
     q->hq = s_queues.insert(q);
-    setThreads_LK(*q, threads);
+    setThreads_LK(q, threads);
     return q->hq;
 }
 
@@ -297,8 +300,8 @@ void Dim::taskSetQueueThreads(TaskQueueHandle hq, int threads) {
     assert(s_running);
 
     scoped_lock<mutex> lk{s_mut};
-    auto * q = s_queues.find(hq);
-    setThreads_LK(*q, threads);
+    auto q = s_queues.find(hq);
+    setThreads_LK(q, threads);
 }
 
 //===========================================================================
@@ -324,9 +327,9 @@ void Dim::taskPush(
         return;
 
     scoped_lock<mutex> lk{s_mut};
-    auto * q = s_queues.find(hq);
+    auto q = s_queues.find(hq);
     for (auto i = 0; (size_t) i < numTasks; ++tasks, ++i)
-        q->push(**tasks);
+        q->push(q, **tasks);
 
     if (numTasks > 1 && q->curThreads > 1) {
         q->cv.notify_all();
