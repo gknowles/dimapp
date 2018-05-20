@@ -671,9 +671,10 @@ static void routeAdd(PathInfo && pi) {
                 routeAdd(move(m_pi));
                 delete this;
             }
-        } fn;
-        fn.m_pi = move(pi);
-        taskPushEvent(&fn);
+        };
+        auto fn = new RouteAddTask;
+        fn->m_pi = move(pi);
+        taskPushEvent(fn);
         return;
     }
 
