@@ -15,6 +15,7 @@
 #include "xml/xml.h"
 
 // Standard headers
+#include <algorithm>
 #include <cassert>
 #include <cstring>
 #include <deque>

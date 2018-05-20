@@ -30,16 +30,31 @@ public:
 void httpRouteAdd(
     IHttpRouteNotify * notify,
     std::string_view path,
-    unsigned methods = fHttpMethodGet,
+    HttpMethod methods = fHttpMethodGet,
     bool recurse = false
 );
-
+void httpRouteAddFile(
+    std::string_view path,
+    TimePoint mtime,
+    std::string_view content,
+    std::string_view mimeType = {},
+    std::string_view charSet = {}
+);
+void httpRouteAddFileRef(
+    std::string_view path,
+    TimePoint mtime,
+    std::string_view content,
+    std::string_view mimeType = {},
+    std::string_view charSet = {}
+);
 
 struct MimeType {
-    const char * fileExt;
-    const char * type;
-    const char * charSet;
+    std::string_view fileExt;
+    std::string_view type;
+    std::string_view charSet;
 };
+int compareExt(const MimeType & a, const MimeType & b);
+MimeType mimeTypeDefault(std::string_view path);
 
 void httpRouteReply(unsigned reqId, HttpResponse && msg, bool more = false);
 void httpRouteReply(unsigned reqId, CharBuf && data, bool more);
@@ -50,6 +65,13 @@ void httpRouteCancel(unsigned reqId);
 void httpRouteInternalError(unsigned reqId);
 
 void httpRouteReplyWithFile(unsigned reqId, std::string_view path);
+void httpRouteReplyWithFile(
+    unsigned reqId,
+    TimePoint mtime,
+    std::string_view content,
+    std::string_view mimeType,
+    std::string_view charSet
+);
 
 void httpRouteReplyNotFound(unsigned reqId, const HttpRequest & req);
 void httpRouteReply(

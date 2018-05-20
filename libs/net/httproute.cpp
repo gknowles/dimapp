@@ -25,11 +25,18 @@ using namespace Dim;
 namespace {
 
 struct PathInfo {
-    IHttpRouteNotify * notify;
-    bool recurse;
-    string path;
-    size_t segs;
-    unsigned methods;
+    IHttpRouteNotify * notify{nullptr};
+    bool recurse{false};
+    string_view path;
+    size_t segs{0};
+    HttpMethod methods{};
+
+    TimePoint mtime;
+    string_view content;
+    string_view mimeType;
+    string_view charSet;
+
+    string data;
 };
 
 class HttpSocket : public IAppSocketNotify {
@@ -93,22 +100,19 @@ static auto & s_perfRejects = uperf("http.http1 requests rejected");
 ***/
 
 //===========================================================================
-static IHttpRouteNotify * find(string_view path, HttpMethod method) {
-    IHttpRouteNotify * best = nullptr;
-    size_t bestSegs = 0;
-    size_t bestLen = 0;
+static PathInfo * find(string_view path, HttpMethod method) {
+    PathInfo * best = nullptr;
     for (auto && pi : s_paths) {
         if (~pi.methods & method)
             continue;
         if (path == pi.path
             || pi.recurse && path.compare(0, pi.path.size(), pi.path) == 0
         ) {
-            if (pi.segs > bestSegs
-                || pi.segs == bestSegs && pi.path.size() > bestLen
+            if (!best
+                || pi.segs > best->segs
+                || pi.segs == best->segs && pi.path.size() > best->path.size()
             ) {
-                best = pi.notify;
-                bestSegs = pi.segs;
-                bestLen = pi.path.size();
+                best = &pi;
             }
         }
     }
@@ -126,11 +130,19 @@ static void route(unsigned reqId, HttpRequest & req) {
             break;
         }
     }
-    auto notify = find(params.path, method);
-    if (!notify)
+    auto pi = find(params.path, method);
+    if (!pi)
         return httpRouteReplyNotFound(reqId, req);
+    if (pi->notify)
+        return pi->notify->onHttpRequest(reqId, req);
 
-    notify->onHttpRequest(reqId, req);
+    httpRouteReplyWithFile(
+        reqId,
+        pi->mtime,
+        pi->content,
+        pi->mimeType,
+        pi->charSet
+    );
 }
 
 //===========================================================================
@@ -299,6 +311,10 @@ void HttpSocket::reply(unsigned reqId, HttpResponse && msg, bool more) {
         s_perfError += 1;
     }
     addDefaultHeaders(msg);
+    if (!msg.hasHeader(kHttpDate)) {
+        auto now = Clock::now();
+        msg.addHeader(kHttpDate, now);
+    }
 
     if (taskInEventThread()) {
         auto fn = [&](HttpConnHandle h, CharBuf * out, int stream) {
@@ -542,6 +558,57 @@ bool Http1Reject::onSocketRead(AppSocketData & data) {
 
 /****************************************************************************
 *
+*   MimeType
+*
+***/
+
+static MimeType s_mimeTypes[] = {
+    { ".css",  "text/css"                         },
+    { ".html", "text/html"                        },
+    { ".js",   "application/javascript"           },
+    { ".svg",  "image/svg+xml"                    },
+    { ".tsd",  "application/octet-stream"         },
+    { ".tsl",  "application/octet-stream"         },
+    { ".tsw",  "application/octet-stream"         },
+    { ".xml",  "application/xml",         "utf-8" },
+    { ".xsl",  "application/xslt+xml",    "utf-8" },
+};
+
+namespace {
+struct AutoInit {
+    AutoInit() {
+        sort(begin(s_mimeTypes), end(s_mimeTypes), compareExt);
+    }
+};
+static AutoInit s_init;
+} // namespace
+
+//===========================================================================
+int Dim::compareExt(const MimeType & a, const MimeType & b) {
+    if (!a.fileExt.empty() && !b.fileExt.empty())
+        return a.fileExt.compare(b.fileExt);
+    return !a.fileExt.empty() ? -1 : !b.fileExt.empty() ? 1 : 0;
+}
+
+//===========================================================================
+MimeType Dim::mimeTypeDefault(string_view path) {
+    Path tmp{path};
+    auto ext = tmp.extension();
+    auto mt = MimeType{ext.data()};
+    auto ii = equal_range(
+        ::begin(s_mimeTypes),
+        ::end(s_mimeTypes),
+        mt,
+        compareExt
+    );
+    if (ii.first == ii.second)
+        return {};
+    return *ii.first;
+}
+
+
+/****************************************************************************
+*
 *   Shutdown monitor
 *
 ***/
@@ -593,37 +660,111 @@ void Dim::iHttpRouteInitialize() {
 ***/
 
 //===========================================================================
-static void routeAdd(
-    IHttpRouteNotify * notify,
-    string_view path,
-    unsigned methods,
-    bool recurse
-) {
+static void routeAdd(PathInfo && pi) {
+    assert(!pi.path.empty());
+
+    if (!taskInEventThread()) {
+        struct RouteAddTask : ITaskNotify {
+            PathInfo m_pi;
+
+            void onTask() override {
+                routeAdd(move(m_pi));
+                delete this;
+            }
+        } fn;
+        fn.m_pi = move(pi);
+        taskPushEvent(&fn);
+        return;
+    }
+
     if (s_paths.empty() && !appStarting())
         startListen();
-    PathInfo pi;
-    pi.notify = notify;
-    pi.recurse = recurse;
-    pi.path = path;
-    pi.segs = count(path.begin(), path.end(), '/');
-    pi.methods = methods;
-    s_paths.push_back(pi);
+    s_paths.emplace_back(move(pi));
 }
 
 //===========================================================================
 void Dim::httpRouteAdd(
     IHttpRouteNotify * notify,
     string_view path,
-    unsigned methods,
+    HttpMethod methods,
     bool recurse
 ) {
-    assert(!path.empty());
-    if (taskInEventThread())
-        return routeAdd(notify, path, methods, recurse);
+    auto pi = PathInfo();
+    pi.data = path;
 
-    string tpath{path};
-    auto fn = [=]() { routeAdd(notify, tpath, methods, recurse); };
-    taskPushEvent(fn);
+    pi.notify = notify;
+    pi.recurse = recurse;
+    pi.path = pi.data;
+    pi.segs = count(path.begin(), path.end(), '/');
+    pi.methods = methods;
+    routeAdd(move(pi));
+}
+
+//===========================================================================
+static void addFileRouteRefs(
+    PathInfo && pi,
+    string_view path,
+    TimePoint mtime,
+    string_view content,
+    string_view mimeType,
+    string_view charSet
+) {
+    if (pi.mimeType.empty()) {
+        auto mt = mimeTypeDefault(path);
+        mimeType = mt.type;
+        charSet = mt.charSet;
+    }
+
+    pi.path = path;
+    pi.segs = count(path.begin(), path.end(), '/');
+    pi.methods = fHttpMethodGet;
+    pi.mtime = mtime;
+    pi.content = content;
+    pi.mimeType = mimeType;
+    pi.charSet = charSet;
+    routeAdd(move(pi));
+}
+
+//===========================================================================
+void Dim::httpRouteAddFile(
+    string_view path,
+    TimePoint mtime,
+    string_view content,
+    string_view mimeType,
+    string_view charSet
+) {
+    auto pi = PathInfo();
+    pi.data.reserve(path.size() + 1
+        + content.size() + 1
+        + mimeType.size() + 1
+        + charSet.size() + 1
+    );
+    pi.data = path;
+    pi.data += '\0';
+    pi.data += content;
+    pi.data += '\0';
+    pi.data += mimeType;
+    pi.data += '\0';
+    pi.data += charSet;
+    pi.data += '\0';
+
+    path = {pi.data.data(), path.size()};
+    content = {pi.path.data() + 1, content.size()};
+    mimeType = {pi.content.data() + 1, mimeType.size()};
+    charSet = {pi.mimeType.data() + 1, charSet.size()};
+
+    addFileRouteRefs(move(pi), path, mtime, content, mimeType, charSet);
+}
+
+//===========================================================================
+void Dim::httpRouteAddFileRef(
+    string_view path,
+    TimePoint mtime,
+    string_view content,
+    string_view mimeType,
+    string_view charSet
+) {
+    addFileRouteRefs({}, path, mtime, content, mimeType, charSet);
 }
 
 //===========================================================================
@@ -784,17 +925,24 @@ struct ReplyWithFileNotify : IFileReadNotify {
 
 } // namespace
 
-static MimeType s_mimeTypes[] = {
-    { ".css",  "text/css"                         },
-    { ".html", "text/html"                        },
-    { ".js",   "application/javascript"           },
-    { ".svg",  "image/svg+xml"                    },
-    { ".tsd",  "application/octet-stream"         },
-    { ".tsl",  "application/octet-stream"         },
-    { ".tsw",  "application/octet-stream"         },
-    { ".xml",  "application/xml",         "utf-8" },
-    { ".xsl",  "application/xslt+xml",    "utf-8" },
-};
+//===========================================================================
+static void addFileHeaders(
+    HttpResponse * msg,
+    TimePoint mtime,
+    string_view mimeType,
+    string_view charSet
+) {
+    msg->addHeader(kHttp_Status, "200");
+    msg->addHeader(kHttpLastModified, mtime);
+    if (!mimeType.empty()) {
+        auto val = string{mimeType};
+        if (!charSet.empty()) {
+            val += ";charset=";
+            val += charSet;
+        }
+        msg->addHeader(kHttpContentType, val.c_str());
+    }
+}
 
 //===========================================================================
 void Dim::httpRouteReplyWithFile(unsigned reqId, string_view path) {
@@ -804,20 +952,10 @@ void Dim::httpRouteReplyWithFile(unsigned reqId, string_view path) {
         msg.addHeader(kHttp_Status, "404");
         return httpRouteReply(reqId, move(msg), false);
     }
-    msg.addHeader(kHttp_Status, "200");
-    Path tmp{path};
-    auto ext = tmp.extension();
-    for (auto && mt : s_mimeTypes) {
-        if (ext == mt.fileExt) {
-            string value(mt.type);
-            if (mt.charSet) {
-                value += ";charset=";
-                value += mt.charSet;
-            }
-            msg.addHeader(kHttpContentType, value.c_str());
-            break;
-        }
-    }
+    MimeType mt = mimeTypeDefault(path);
+
+    auto mtime = fileLastWriteTime(file);
+    addFileHeaders(&msg, mtime, mt.type, mt.charSet);
     httpRouteReply(reqId, move(msg), true);
     auto notify = new ReplyWithFileNotify;
     notify->m_reqId = reqId;
@@ -827,4 +965,18 @@ void Dim::httpRouteReplyWithFile(unsigned reqId, string_view path) {
         size(notify->m_buffer),
         file
     );
+}
+
+//===========================================================================
+void Dim::httpRouteReplyWithFile(
+    unsigned reqId,
+    TimePoint mtime,
+    string_view content,
+    string_view mimeType,
+    string_view charSet
+) {
+    HttpResponse msg;
+    addFileHeaders(&msg, mtime, mimeType, charSet);
+    msg.body() = content;
+    httpRouteReply(reqId, move(msg));
 }
