@@ -19,6 +19,8 @@
 # libs/app/logfile.cpp
 # libs/app/pch.cpp
 # libs/app/pch.h
+# libs/app/resource.cpp
+# libs/app/resource.h
 # libs/app/webadmin.cpp
 # libs/core/algo.h
 # libs/core/appint.h
@@ -146,6 +148,7 @@
 # libs/win/winint.h
 # libs/win/winiocp.cpp
 # libs/win/winplatform.cpp
+# libs/win/winres.cpp
 # libs/win/winservice.cpp
 # libs/win/winsock.cpp
 # libs/win/winsockacc.cpp

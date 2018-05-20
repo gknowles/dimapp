@@ -17,133 +17,12 @@ using namespace Dim;
 
 const char kVersion[] = "1.0";
 
-namespace {
-
-struct ResNameInfo {
-    vector<string> names;
-};
-
-class ResourceModule {
-public:
-    ~ResourceModule();
-
-    bool open(const Path & path);
-    bool loadNames(vector<string> * names);
-    bool update(string_view name, string_view data);
-    bool commit();
-
-private:
-    HMODULE m_mod{nullptr};
-    Path m_path;
-};
-
-} // namespace
-
 
 /****************************************************************************
 *
 *   Variables
 *
 ***/
-
-
-/****************************************************************************
-*
-*   ResourceModule
-*
-***/
-
-//===========================================================================
-ResourceModule::~ResourceModule() {
-    if (m_mod)
-        EndUpdateResource(m_mod, true);
-}
-
-//===========================================================================
-bool ResourceModule::open(const Path & path) {
-    m_path = path;
-    m_mod = (HMODULE) BeginUpdateResource(m_path.c_str(), FALSE);
-    if (!m_mod) {
-        logMsgError() << "BeginUpdateResource(" << m_path << "): "
-            << WinError{};
-        return false;
-    }
-    return true;
-}
-
-//===========================================================================
-static BOOL CALLBACK enumNameCallback(
-    HMODULE mod,
-    LPCWSTR type,
-    LPWSTR name,
-    LONG_PTR param
-) {
-    auto rni = (ResNameInfo *) param;
-    rni->names.push_back(toString(name));
-    return true;
-}
-
-//===========================================================================
-bool ResourceModule::loadNames(vector<string> * names) {
-    auto h = LoadLibrary(m_path.c_str());
-    if (!h) {
-        logMsgError() << "LoadLibrary(" << m_path << "): " << WinError{};
-        return false;
-    }
-    ResNameInfo rni;
-    WinError err{0};
-    if (!EnumResourceNamesW(
-        h,
-        MAKEINTRESOURCEW(23),
-        enumNameCallback,
-        (LONG_PTR) &rni
-    )) {
-        err.set();
-    }
-    FreeLibrary(h);
-    if (!err) {
-        // no errors enumerating resources
-        names->swap(rni.names);
-    } else if (err == ERROR_RESOURCE_DATA_NOT_FOUND
-        || err == ERROR_RESOURCE_TYPE_NOT_FOUND
-    ) {
-        // no pre-existing resources
-    } else {
-        logMsgError() << "EnumResourceNames(" << m_path << "): "
-            << WinError{};
-        return false;
-    }
-    return true;
-}
-
-//===========================================================================
-bool ResourceModule::update(string_view namev, string_view data) {
-    auto name = toWstring(namev);
-    if (!UpdateResourceW(
-        m_mod,
-        MAKEINTRESOURCEW(23),
-        name.c_str(),
-        MAKELANGID(LANG_NEUTRAL, SUBLANG_NEUTRAL),
-        data.size() ? (void *) data.data() : nullptr,
-        (DWORD) data.size()
-    )) {
-        logMsgError() << "UpdateResource(" << namev << "): " << WinError{};
-        return false;
-    }
-    return true;
-}
-
-//===========================================================================
-bool ResourceModule::commit() {
-    assert(m_mod);
-    WinError err{0};
-    if (!EndUpdateResource(m_mod, false)) {
-        err.set();
-        logMsgError() << "EndUpdateResource(" << m_path << "): " << err;
-    }
-    m_mod = nullptr;
-    return !err;
-}
 
 
 /****************************************************************************
@@ -170,54 +49,63 @@ static void app(int argc, char *argv[]) {
 
     unsigned added = 0;
     unsigned updated = 0;
-    unsigned removed = 0;
 
     target->defaultExt("exe");
-    ResourceModule rm;
-    if (!rm.open(*target))
+    ResHandle h = resOpenForUpdate(*target);
+    if (!h)
         return appSignalShutdown(EX_DATAERR);
-    vector<string> names;
-    if (!rm.loadNames(&names))
-        return appSignalShutdown(EX_DATAERR);
+    Finally rclose{ [=]() { resClose(h); } };
+
+    ResFileMap prev;
+    if (!prev.parse(resLoadHtml(h, kResWebSite))) {
+        prev.clear();
+        logMsgWarn() << "Invalid website resource: " << *target;
+    }
 
     if (!fileExists(*src / "manifest.json"))
         return appSignalUsageError(EX_DATAERR, "File not found: manifest.json");
 
     cout << "Updating '" << *target << "' from '" << *src << endl;
 
-    unordered_set<string_view> nameSet(names.begin(), names.end());
-    string content;
+    ResFileMap files;
     for (auto & fn : FileIter{*src}) {
+        string content;
         if (!fileLoadBinaryWait(&content, fn.path))
             return appSignalShutdown(EX_DATAERR);
         auto path = fn.path.str();
         path.erase(0, src->size() + 1);
-        CharUpper(path.data());
-        if (auto i = nameSet.find(path); i != nameSet.end()) {
-            nameSet.erase(i);
-            updated += 1;
+        auto mtime = fileLastWriteTime(fn.path);
+        if (auto ent = prev.find(path)) {
+            if (ent->mtime != mtime || ent->content != content)
+                updated += 1;
+            prev.erase(path);
         } else {
             added += 1;
         }
-        if (!rm.update(path, content))
-            return appSignalShutdown(EX_DATAERR);
+        files.insert(path, mtime, move(content));
     }
-    content.clear();
-    for (auto & fn : nameSet) {
-        if (!rm.update(fn, content))
-            return appSignalShutdown(EX_DATAERR);
-        removed += 1;
+    auto removed = (unsigned) prev.size();
+
+    if (added + updated + removed == 0) {
+        cout << "Resources: " << files.size() << " (0 changed)" << endl;
+        return appSignalShutdown(EX_OK);
     }
-    if (!rm.commit())
+
+    CharBuf out;
+    files.copy(&out);
+    if (!resUpdate(h, kResWebSite, out.view()))
         return appSignalShutdown(EX_DATAERR);
 
-    ConsoleScopedAttr attr{
-        (added || updated || removed) ? kConsoleHighlight : kConsoleNormal
-    };
-    cout << "Resources: " << added << " added, "
+    rclose = {};
+    if (!resClose(h, true))
+        return appSignalShutdown(EX_DATAERR);
+
+    ConsoleScopedAttr attr{kConsoleHighlight};
+    cout << "Resources: " << files.size() << " ("
+        << added << " added, "
         << updated << " updated, "
         << removed << " removed"
-        << endl;
+        << ")" << endl;
     return appSignalShutdown(EX_OK);
 }
 

@@ -26,6 +26,7 @@
 #include "config.h"
 #include "console.h"
 #include "env.h"
+#include "resource.h"
 
 #include "core/process.h"
 #include "core/types.h"
