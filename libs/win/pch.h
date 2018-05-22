@@ -17,7 +17,9 @@
 #include <algorithm>
 #include <atomic>
 #include <cassert>
+#include <cerrno>
 #include <csignal>
+#include <cstdlib>
 #include <limits>
 #include <list>
 #include <mutex>

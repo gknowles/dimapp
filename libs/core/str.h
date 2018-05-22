@@ -191,6 +191,25 @@ std::string_view StrFrom<T, std::enable_if_t<std::is_floating_point_v<T>>>
     return *this;
 }
 
+#if 0
+//===========================================================================
+template <typename T>
+std::string_view StrFrom<T, std::enable_if_t<std::is_floating_point_v<T>>>
+::set(T val) {
+    auto r = std::to_chars(
+        data,
+        data + sizeof(data),
+        val,
+        std::chars_format::general
+    );
+    auto used = r.ptr - data;
+    assert(used < sizeof(data));
+    data[used] = 0;
+    data[sizeof(data) - 1] = (char) (sizeof(data) - used - 1);
+    return *this;
+}
+#endif
+
 //===========================================================================
 template <typename T>
 StrFrom<T, std::enable_if_t<std::is_floating_point_v<T>>>

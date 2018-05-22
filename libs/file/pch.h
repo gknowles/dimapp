@@ -11,6 +11,7 @@
 
 // Standard headers
 #include <cassert>
+#include <cerrno>
 #include <cstdlib>
 #include <memory>
 #include <unordered_map>
