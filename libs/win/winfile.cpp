@@ -523,7 +523,7 @@ FileHandle Dim::fileOpen(string_view path, File::OpenMode mode) {
         }
     }
 
-    unique_lock<shared_mutex> lk{s_fileMut};
+    unique_lock lk{s_fileMut};
     auto f = file->m_f = s_files.insert(file.release());
     return f;
 }
@@ -563,7 +563,7 @@ static FileHandle attachStdHandle(
         return {};
     }
 
-    unique_lock<shared_mutex> lk{s_fileMut};
+    unique_lock lk{s_fileMut};
     auto f = file->m_f = s_files.insert(file.release());
     return f;
 }
@@ -586,10 +586,10 @@ FileHandle Dim::fileAttachStderr() {
 //===========================================================================
 static WinFileInfo * getInfo(FileHandle f, bool release = false) {
     if (release) {
-        unique_lock<shared_mutex> lk{s_fileMut};
+        unique_lock lk{s_fileMut};
         return s_files.release(f);
     } else {
-        shared_lock<shared_mutex> lk{s_fileMut};
+        shared_lock lk{s_fileMut};
         return s_files.find(f);
     }
 }

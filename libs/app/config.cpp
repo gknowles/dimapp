@@ -99,7 +99,7 @@ void ConfigFile::monitor_UNLK(string_view relpath, IConfigNotify * notify) {
 
 //===========================================================================
 bool ConfigFile::closeWait_UNLK(IConfigNotify * notify) {
-    unique_lock<mutex> lk{s_mut, adopt_lock};
+    unique_lock lk{s_mut, adopt_lock};
     while (s_inNotify && s_inThread != this_thread::get_id())
         s_inCv.wait(lk);
 
@@ -155,7 +155,7 @@ void ConfigFile::onFileChange(string_view fullpath) {
 //===========================================================================
 bool ConfigFile::notify_UNLK(IConfigNotify * notify) {
     unsigned found = 0;
-    unique_lock<mutex> lk{s_mut, adopt_lock};
+    unique_lock lk{s_mut, adopt_lock};
     while (s_inNotify && s_inThread != this_thread::get_id())
         s_inCv.wait(lk);
 

@@ -385,7 +385,7 @@ void AppXmlNotify::onConfigChange(const XDocument & doc) {
         ipAddrs
     );
 
-    scoped_lock<shared_mutex> lk{s_mut};
+    scoped_lock lk{s_mut};
     s_srvCred = move(cred);
 }
 
@@ -406,12 +406,12 @@ static ShutdownNotify s_cleanup;
 //===========================================================================
 void ShutdownNotify::onShutdownConsole (bool firstTry) {
     {
-        shared_lock<shared_mutex> lk{s_mut};
+        shared_lock lk{s_mut};
         if (!s_conns.empty())
             return shutdownIncomplete();
     }
 
-    scoped_lock<shared_mutex> lk{s_mut};
+    scoped_lock lk{s_mut};
     s_srvCred.reset();
 }
 
@@ -431,13 +431,13 @@ void Dim::winTlsInitialize() {
 //===========================================================================
 WinTlsConnHandle Dim::winTlsAccept() {
     auto conn = new ServerConn;
-    scoped_lock<shared_mutex> lk{s_mut};
+    scoped_lock lk{s_mut};
     return s_conns.insert(conn);
 }
 
 //===========================================================================
 void Dim::winTlsClose(WinTlsConnHandle h) {
-    scoped_lock<shared_mutex> lk{s_mut};
+    scoped_lock lk{s_mut};
     s_conns.erase(h);
 }
 
@@ -448,7 +448,7 @@ bool Dim::winTlsRecv(
     WinTlsConnHandle h,
     string_view src
 ) {
-    shared_lock<shared_mutex> lk{s_mut};
+    shared_lock lk{s_mut};
     auto conn = s_conns.find(h);
     return conn->recv(reply, data, src);
 }
@@ -459,7 +459,7 @@ void Dim::winTlsSend(
     WinTlsConnHandle h,
     string_view src
 ) {
-    shared_lock<shared_mutex> lk{s_mut};
+    shared_lock lk{s_mut};
     auto conn = s_conns.find(h);
     conn->send(out, src);
 }

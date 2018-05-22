@@ -305,7 +305,7 @@ int Dim::appRun(IAppNotify * app, int argc, char * argv[], AppFlags flags) {
     s_app->m_argv = argv;
     taskPushEvent(&s_runTask);
 
-    unique_lock<mutex> lk{s_runMut};
+    unique_lock lk{s_runMut};
     while (s_runMode == kRunStarting || s_runMode == kRunRunning)
         s_runCv.wait(lk);
 

@@ -185,7 +185,7 @@ static void destroyBufferSlice(const SocketBuffer & sbuf) {
 
 //===========================================================================
 SocketBuffer::~SocketBuffer() {
-    scoped_lock<mutex> lk{s_mut};
+    scoped_lock lk{s_mut};
     destroyBufferSlice(*this);
 }
 
@@ -211,7 +211,7 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
     if (firstTry)
         return shutdownIncomplete();
 
-    scoped_lock<mutex> lk{s_mut};
+    scoped_lock lk{s_mut};
     while (!s_buffers.empty())
         destroyEmptyBuffer();
 }
@@ -239,7 +239,7 @@ void Dim::copy(
     const SocketBuffer & sbuf,
     size_t bytes
 ) {
-    scoped_lock<mutex> lk{s_mut};
+    scoped_lock lk{s_mut};
 
     assert(bytes <= (size_t) sbuf.capacity);
     BufferSlice * slice;
@@ -259,7 +259,7 @@ void Dim::copy(
 
 //===========================================================================
 unique_ptr<SocketBuffer> Dim::socketGetBuffer() {
-    scoped_lock<mutex> lk{s_mut};
+    scoped_lock lk{s_mut};
 
     // use the first partial or, if there aren't any, the first empty
     auto pbuf = s_partialBufs.front();

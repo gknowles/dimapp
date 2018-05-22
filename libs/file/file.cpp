@@ -81,7 +81,7 @@ void FileAppendStream::close() {
     if (!m_file)
         return;
 
-    unique_lock<mutex> lk{m_mut};
+    unique_lock lk{m_mut};
     while (m_fullBufs + m_lockedBufs)
         m_cv.wait(lk);
 
@@ -115,7 +115,7 @@ void FileAppendStream::append(string_view data) {
         if (!m_buf.empty())
             return;
 
-        unique_lock<mutex> lk{m_mut};
+        unique_lock lk{m_mut};
         m_fullBufs += 1;
         if (m_buf.data() == m_buffers + m_numBufs * m_bufLen) {
             m_buf = {m_buffers, m_bufLen};
@@ -173,7 +173,7 @@ void FileAppendStream::onFileWrite(
     FileHandle f
 ) {
     {
-        unique_lock<mutex> lk{m_mut};
+        unique_lock lk{m_mut};
         m_numWrites -= 1;
         m_lockedBufs -= (int) (data.size() / m_bufLen);
         write_LK();

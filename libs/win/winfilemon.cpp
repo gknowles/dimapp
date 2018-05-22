@@ -156,7 +156,7 @@ bool DirInfo::queue() {
 //===========================================================================
 void DirInfo::closeWait_UNLK (FileMonitorHandle dir) {
     {
-        unique_lock<mutex> lk{s_mut, adopt_lock};
+        unique_lock lk{s_mut, adopt_lock};
 
         if (m_handle == INVALID_HANDLE_VALUE)
             return;
@@ -196,7 +196,7 @@ void DirInfo::addMonitor_UNLK(string_view path, IFileChangeNotify * notify) {
     fi.notifiers.push_back(notify);
 
     // call the notify unless we're in a notify
-    unique_lock<mutex> lk{s_mut, adopt_lock};
+    unique_lock lk{s_mut, adopt_lock};
     while (s_inNotify && s_inThread != this_thread::get_id())
         s_inCv.wait(lk);
 
@@ -232,7 +232,7 @@ void DirInfo::removeMonitorWait_UNLK(
     if (!expandPath(&fullpath, &relpath, file))
         return;
 
-    unique_lock<mutex> lk{s_mut, adopt_lock};
+    unique_lock lk{s_mut, adopt_lock};
     while (notify == s_inNotify && s_inThread != this_thread::get_id())
         s_inCv.wait(lk);
 
@@ -264,7 +264,7 @@ void DirInfo::onTask () {
         }
     }
 
-    unique_lock<mutex> lk{s_mut};
+    unique_lock lk{s_mut};
     if (m_stopping) {
         s_stopping.erase(m_stopping);
         return;
@@ -285,7 +285,7 @@ Duration DirInfo::onTimer (TimePoint now) {
     string relpath;
     unsigned notified = 0;
 
-    unique_lock<mutex> lk{s_mut};
+    unique_lock lk{s_mut};
     for (auto && kv : m_files) {
         expandPath(&fullpath, &relpath, kv.first);
         auto mtime = fileLastWriteTime(fullpath);
@@ -377,7 +377,7 @@ static ShutdownNotify s_cleanup;
 
 //===========================================================================
 void ShutdownNotify::onShutdownConsole(bool firstTry) {
-    scoped_lock<mutex> lk{s_mut};
+    scoped_lock lk{s_mut};
     if (!s_dirs.empty() || !s_stopping.empty())
         return shutdownIncomplete();
 }
@@ -405,7 +405,7 @@ bool Dim::fileMonitorDir(
     FileMonitorHandle h;
     auto hostage = make_unique<DirInfo>(notify);
     if (hostage->start(dir, recurse)) {
-        scoped_lock<mutex> lk{s_mut};
+        scoped_lock lk{s_mut};
         h = s_dirs.insert(hostage.release());
         success = true;
     }
@@ -424,7 +424,7 @@ void Dim::fileMonitorCloseWait(FileMonitorHandle dir) {
 
 //===========================================================================
 string_view Dim::fileMonitorPath(FileMonitorHandle dir) {
-    scoped_lock<mutex> lk{s_mut};
+    scoped_lock lk{s_mut};
     if (auto di = s_dirs.find(dir))
         return di->base();
     return {};
@@ -462,7 +462,7 @@ bool Dim::fileMonitorPath(
     FileMonitorHandle dir,
     string_view file
 ) {
-    scoped_lock<mutex> lk{s_mut};
+    scoped_lock lk{s_mut};
     auto di = s_dirs.find(dir);
     if (!di)
         return false;

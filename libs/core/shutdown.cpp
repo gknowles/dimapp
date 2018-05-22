@@ -175,7 +175,7 @@ void Dim::iShutdownDestroy() {
     s_mainTimer = {};
     timerUpdate(&s_mainTimer, 0ms);
 
-    unique_lock<mutex> lk{s_stopMut};
+    unique_lock lk{s_stopMut};
     while (!s_mainTimer.stopped())
         s_stopCv.wait(lk);
 }

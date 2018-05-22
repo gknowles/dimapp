@@ -101,7 +101,7 @@ static RunTimers s_runTimers;
 void RunTimers::onTask() {
     Duration wait;
     TimePoint now{Clock::now()};
-    unique_lock<mutex> lk{s_mut};
+    unique_lock lk{s_mut};
     assert(s_processing);
     s_processingThread = this_thread::get_id();
     for (;;) {
@@ -150,7 +150,7 @@ void RunTimers::onTask() {
 
 //===========================================================================
 static void timerDispatchThread() {
-    unique_lock<mutex> lk{s_mut};
+    unique_lock lk{s_mut};
     for (;;) {
         if (s_mode == kRunStopping) {
             while (!s_timers.empty())
@@ -237,7 +237,7 @@ TimePoint Timer::update(
     auto expire = wait == kTimerInfinite ? TimePoint::max() : now + wait;
 
     {
-        scoped_lock<mutex> lk{s_mut};
+        scoped_lock lk{s_mut};
         if (!notify->m_timer)
             new Timer{notify};
         auto & timer = notify->m_timer;
@@ -270,7 +270,7 @@ void Timer::closeWait(ITimerNotify * notify) {
         return;
     }
 
-    unique_lock<mutex> lk{s_mut};
+    unique_lock lk{s_mut};
     shared_ptr<Timer> timer{move(notify->m_timer)};
     timer->instance += 1;
     if (this_thread::get_id() == s_processingThread)
@@ -310,13 +310,13 @@ void Dim::iTimerInitialize() {
 //===========================================================================
 void Dim::iTimerDestroy() {
     {
-        scoped_lock<mutex> lk{s_mut};
+        scoped_lock lk{s_mut};
         assert(s_mode == kRunRunning);
         s_mode = kRunStopping;
     }
     s_queueCv.notify_one();
 
-    unique_lock<mutex> lk{s_mut};
+    unique_lock lk{s_mut};
     while (s_mode != kRunStopped)
         s_modeCv.wait(lk);
 }

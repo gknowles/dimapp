@@ -87,7 +87,7 @@ ConsoleScopedAttr::ConsoleScopedAttr(ConsoleAttr attr) {
         logMsgFatal() << "GetConsoleScreenBufferInfo: " << GetLastError();
     }
 
-    scoped_lock<mutex> lk{s_mut};
+    scoped_lock lk{s_mut};
     s_consoleAttrs.push_back(info.wAttributes);
     if (auto i = s_attrs.find(attr); i != s_attrs.end()) {
         info.wAttributes = (WORD) i->second;
@@ -99,7 +99,7 @@ ConsoleScopedAttr::ConsoleScopedAttr(ConsoleAttr attr) {
 ConsoleScopedAttr::~ConsoleScopedAttr() {
     if (m_active) {
         HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-        scoped_lock<mutex> lk{s_mut};
+        scoped_lock lk{s_mut};
         SetConsoleTextAttribute(hOutput, s_consoleAttrs.back());
         s_consoleAttrs.pop_back();
     }

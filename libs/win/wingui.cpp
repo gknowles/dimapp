@@ -278,7 +278,7 @@ void MessageLoopTask::clear() {
 //===========================================================================
 void MessageLoopTask::setWnd(HWND wnd) {
     {
-        scoped_lock<mutex> lk{m_mut};
+        scoped_lock lk{m_mut};
         m_wnd = wnd;
     }
     m_cv.notify_one();
@@ -309,7 +309,7 @@ void MessageLoopTask::enable(Authority auth, bool enable) {
     if (enable == m_enable)
         return;
 
-    unique_lock<mutex> lk{m_mut};
+    unique_lock lk{m_mut};
     while (m_enable != (m_wnd != NULL))
         m_cv.wait(lk);
     m_enable = enable;
@@ -325,7 +325,7 @@ void MessageLoopTask::enable(Authority auth, bool enable) {
 
 //===========================================================================
 bool MessageLoopTask::enabled() const {
-    unique_lock<mutex> lk{m_mut};
+    unique_lock lk{m_mut};
     return m_wnd;
 }
 

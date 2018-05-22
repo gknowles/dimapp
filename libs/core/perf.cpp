@@ -53,7 +53,7 @@ static PerfInfo & getInfo () {
 template <typename T>
 static PerfCounter<T> & perf(string_view name) {
     auto & info = getInfo();
-    unique_lock<shared_mutex> lk{info.mut};
+    unique_lock lk{info.mut};
     info.counters.push_back(make_unique<PerfCounter<T>>());
     auto & cnt = static_cast<PerfCounter<T>&>(*info.counters.back());
     cnt.name = name;
@@ -64,7 +64,7 @@ static PerfCounter<T> & perf(string_view name) {
 template <typename T>
 static PerfFunc<T> & perf(string_view name, function<T()> && fn) {
     auto & info = getInfo();
-    unique_lock<shared_mutex> lk{info.mut};
+    unique_lock lk{info.mut};
     info.counters.push_back(make_unique<PerfFunc<T>>());
     auto & cnt = static_cast<PerfFunc<T>&>(*info.counters.back());
     cnt.name = name;
@@ -201,14 +201,14 @@ inline PerfType PerfFunc<T>::type () const {
 //===========================================================================
 void Dim::iPerfInitialize() {
     auto & info = getInfo();
-    unique_lock<shared_mutex> lk{info.mut};
+    unique_lock lk{info.mut};
     s_numStatic = info.counters.size();
 }
 
 //===========================================================================
 void Dim::iPerfDestroy() {
     auto & info = getInfo();
-    unique_lock<shared_mutex> lk{info.mut};
+    unique_lock lk{info.mut};
     assert(info.counters.size() >= s_numStatic);
     info.counters.resize(s_numStatic);
 }
@@ -259,7 +259,7 @@ void Dim::perfGetValues (vector<PerfValue> * outptr, bool pretty) {
     auto & info = getInfo();
     bool mustSort = false;
     {
-        shared_lock<shared_mutex> lk{info.mut};
+        shared_lock lk{info.mut};
         if (out.size() != info.counters.size()) {
             mustSort = true;
             out.clear();

@@ -74,7 +74,7 @@ static void logMsg(LogType type, string_view msg) {
         return;
     }
 
-    shared_lock<shared_mutex> lk{s_mut};
+    shared_lock lk{s_mut};
     if (!msg.empty() && msg.back() == '\n')
         msg.remove_suffix(1);
     if (s_loggers.empty()) {
@@ -161,14 +161,14 @@ Detail::LogFatal::~LogFatal()
 
 //===========================================================================
 void Dim::iLogInitialize() {
-    unique_lock<shared_mutex> lk{s_mut};
+    unique_lock lk{s_mut};
     s_initialDefault = s_defaultLogger;
     s_initialNumLoggers = s_loggers.size();
 }
 
 //===========================================================================
 void Dim::iLogDestroy() {
-    unique_lock<shared_mutex> lk{s_mut};
+    unique_lock lk{s_mut};
     s_defaultLogger = s_initialDefault;
     assert(s_loggers.size() >= s_initialNumLoggers);
     s_loggers.resize(s_initialNumLoggers);
@@ -185,19 +185,19 @@ void Dim::iLogDestroy() {
 // Monitor log messages
 //===========================================================================
 void Dim::logDefaultMonitor(ILogNotify * notify) {
-    unique_lock<shared_mutex> lk{s_mut};
+    unique_lock lk{s_mut};
     s_defaultLogger = notify ? notify : &s_fallback;
 }
 
 //===========================================================================
 void Dim::logMonitor(ILogNotify * notify) {
-    unique_lock<shared_mutex> lk{s_mut};
+    unique_lock lk{s_mut};
     s_loggers.push_back(notify);
 }
 
 //===========================================================================
 void Dim::logMonitorClose(ILogNotify * notify) {
-    unique_lock<shared_mutex> lk{s_mut};
+    unique_lock lk{s_mut};
     s_loggers.erase(remove(s_loggers.begin(), s_loggers.end(), notify));
 }
 

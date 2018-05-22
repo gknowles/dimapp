@@ -84,7 +84,7 @@ static void iocpDispatchThread() {
         }
     }
 
-    scoped_lock<mutex> lk{s_mut};
+    scoped_lock lk{s_mut};
     s_iocp = 0;
 }
 
@@ -121,7 +121,7 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
         Sleep(0);
     }
 
-    unique_lock<mutex> lk(s_mut);
+    unique_lock lk(s_mut);
     if (s_iocp)
         shutdownIncomplete();
 }

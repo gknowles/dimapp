@@ -94,7 +94,7 @@ static VOID WINAPI ServiceMain(DWORD argc, LPTSTR * argv) {
     iAppPushStartupTask(&s_reportTask);
 
     {
-        scoped_lock<mutex> lk{s_mut};
+        scoped_lock lk{s_mut};
         s_mode = kRunRunning;
     }
     s_cv.notify_one();
@@ -128,7 +128,7 @@ static void serviceDispatchThread() {
     }
 
     {
-        scoped_lock<mutex> lk{s_mut};
+        scoped_lock lk{s_mut};
         s_mode = kRunStopped;
     }
     s_cv.notify_one();
@@ -172,7 +172,7 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
     if (firstTry && (appFlags() & fAppIsService))
         setState(SERVICE_STOPPED);
 
-    scoped_lock<mutex> lk{s_mut};
+    scoped_lock lk{s_mut};
     if (s_mode != kRunStopped)
         return shutdownIncomplete();
 }
@@ -193,7 +193,7 @@ void Dim::winServiceInitialize() {
         // running as a service.
         s_mode = kRunStarting;
         taskPushOnce("Service Dispatcher", serviceDispatchThread);
-        unique_lock<mutex> lk{s_mut};
+        unique_lock lk{s_mut};
         while (s_mode == kRunStarting)
             s_cv.wait(lk);
     }

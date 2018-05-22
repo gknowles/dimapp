@@ -66,7 +66,7 @@ LogBuffer::LogBuffer() {
 
 //===========================================================================
 void LogBuffer::writeLog(string_view msg, bool wait) {
-    unique_lock<mutex> lk{m_mut};
+    unique_lock lk{m_mut};
     if (m_writing.empty()) {
         m_writing.append(msg);
         m_writing.push_back('\n');
@@ -104,7 +104,7 @@ void LogBuffer::writeLog(string_view msg, bool wait) {
 
 //===========================================================================
 bool LogBuffer::closeLog() {
-    scoped_lock<mutex> lk{m_mut};
+    scoped_lock lk{m_mut};
     if (m_writing.empty()) {
         if (m_file) {
             fileClose(m_file);
@@ -123,7 +123,7 @@ void LogBuffer::onFileWrite(
     int64_t offset,
     FileHandle f
 ) {
-    scoped_lock<mutex> lk{m_mut};
+    scoped_lock lk{m_mut};
     m_writing.swap(m_pending);
     m_pending.clear();
     if (m_writing.empty()) {

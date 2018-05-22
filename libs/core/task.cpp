@@ -93,7 +93,7 @@ static void taskQueueThread(TaskQueue * ptr) {
     TaskQueue & q{*ptr};
     iThreadSetName(q.name);
     bool more{true};
-    unique_lock<mutex> lk{s_mut};
+    unique_lock lk{s_mut};
     while (more) {
         while (!q.first)
             q.cv.wait(lk);
@@ -215,7 +215,7 @@ void Dim::iTaskInitialize() {
 //===========================================================================
 void Dim::iTaskDestroy() {
     s_running = false;
-    unique_lock<mutex> lk{s_mut};
+    unique_lock lk{s_mut};
 
     // send shutdown task to all task threads
     for (auto && q : s_queues)
@@ -289,7 +289,7 @@ TaskQueueHandle Dim::taskCreateQueue(string_view name, int threads) {
     auto q = new TaskQueue;
     q->name = name;
 
-    scoped_lock<mutex> lk{s_mut};
+    scoped_lock lk{s_mut};
     q->hq = s_queues.insert(q);
     setThreads_LK(q, threads);
     return q->hq;
@@ -299,7 +299,7 @@ TaskQueueHandle Dim::taskCreateQueue(string_view name, int threads) {
 void Dim::taskSetQueueThreads(TaskQueueHandle hq, int threads) {
     assert(s_running);
 
-    scoped_lock<mutex> lk{s_mut};
+    scoped_lock lk{s_mut};
     auto q = s_queues.find(hq);
     setThreads_LK(q, threads);
 }
@@ -326,7 +326,7 @@ void Dim::taskPush(
     if (!numTasks)
         return;
 
-    scoped_lock<mutex> lk{s_mut};
+    scoped_lock lk{s_mut};
     auto q = s_queues.find(hq);
     for (auto i = 0; (size_t) i < numTasks; ++tasks, ++i)
         q->push(q, **tasks);
