@@ -62,7 +62,6 @@ int internalTest() {
 
     bld.clear();
     bld << *root;
-    out.pushBack(0);
     auto str2 = toString(out);
     EXPECT(str2 == kJsonText);
     unsigned num = 0;
