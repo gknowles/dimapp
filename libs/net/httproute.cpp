@@ -36,7 +36,7 @@ struct PathInfo {
     string_view mimeType;
     string_view charSet;
 
-    string data;
+    unique_ptr<char[]> data;
 };
 
 class HttpSocket : public IAppSocketNotify {
@@ -691,11 +691,11 @@ void Dim::httpRouteAdd(
     bool recurse
 ) {
     auto pi = PathInfo();
-    pi.data = path;
+    pi.data = strDup(path);
 
     pi.notify = notify;
     pi.recurse = recurse;
-    pi.path = pi.data;
+    pi.path = pi.data.get();
     pi.segs = count(path.begin(), path.end(), '/');
     pi.methods = methods;
     routeAdd(move(pi));
@@ -735,24 +735,22 @@ void Dim::httpRouteAddFile(
     string_view charSet
 ) {
     auto pi = PathInfo();
-    pi.data.reserve(path.size() + 1
-        + content.size() + 1
-        + mimeType.size() + 1
-        + charSet.size() + 1
+    string_view * views[] = { &path, &content, &mimeType, &charSet };
+    size_t len = accumulate(
+        begin(views),
+        end(views),
+        (size_t) 0,
+        [](auto & a, auto & b) { return a + b->size() + 1; }
     );
-    pi.data = path;
-    pi.data += '\0';
-    pi.data += content;
-    pi.data += '\0';
-    pi.data += mimeType;
-    pi.data += '\0';
-    pi.data += charSet;
-    pi.data += '\0';
-
-    path = {pi.data.data(), path.size()};
-    content = {pi.path.data() + 1, content.size()};
-    mimeType = {pi.content.data() + 1, mimeType.size()};
-    charSet = {pi.mimeType.data() + 1, charSet.size()};
+    pi.data = make_unique<char[]>(len);
+    auto out = pi.data.get();
+    for (auto && v : views) {
+        auto vlen = v->size();
+        memcpy(out, v->data(), vlen);
+        *v = {out, vlen};
+        out += vlen;
+        *out++ = 0;
+    }
 
     addFileRouteRefs(move(pi), path, mtime, content, mimeType, charSet);
 }
