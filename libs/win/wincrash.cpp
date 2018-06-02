@@ -95,7 +95,6 @@ static void writeDump() {
             | MiniDumpWithIndirectlyReferencedMemory
             | MiniDumpWithProcessThreadData
             | MiniDumpIgnoreInaccessibleMemory
-            | MiniDumpWithFullMemoryInfo
             | MiniDumpWithThreadInfo
         );
         if (!MiniDumpWriteDump(
