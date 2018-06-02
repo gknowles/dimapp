@@ -80,8 +80,8 @@ private:
 
 static List<ConnectTask> s_connecting;
 
-static auto & s_perfConnected = uperf("sock.connections");
-static auto & s_perfCurConnected = uperf("sock.connections (current)");
+static auto & s_perfConnected = uperf("sock.connects");
+static auto & s_perfCurConnected = uperf("sock.connects (current)");
 static auto & s_perfConnectFailed = uperf("sock.connect failed");
 
 

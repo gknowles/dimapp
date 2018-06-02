@@ -69,6 +69,8 @@ static List<Buffer> s_partialBufs;
 static List<Buffer> s_emptyBufs;
 static mutex s_mut;
 
+static auto & s_perfSlices = uperf("sock.buffer slices");
+
 
 /****************************************************************************
 *
@@ -141,6 +143,47 @@ static void createEmptyBuffer() {
 }
 
 //===========================================================================
+static void createBufferSlice(
+    BufferSlice ** sliceOut,
+    Buffer ** bufOut
+) {
+    // use the first partial or, if there aren't any, the first empty
+    auto pbuf = s_partialBufs.front();
+    if (!pbuf)
+        pbuf = s_emptyBufs.front();
+    if (!pbuf) {
+        // all buffers full? create a new one
+        createEmptyBuffer();
+        pbuf = s_emptyBufs.front();
+    }
+    auto & buf = *pbuf;
+
+    BufferSlice * slice;
+    if (buf.used < buf.size) {
+        slice = getSlice(buf, buf.firstFree);
+        buf.firstFree = slice->nextPos;
+    } else {
+        assert(buf.size < buf.reserved);
+        slice = getSlice(buf, buf.size);
+        buf.size += 1;
+    }
+    buf.used += 1;
+
+    if (buf.used == buf.reserved) {
+        // no longer partial: move to full list
+        s_fullBufs.linkFront(pbuf);
+    } else if (buf.used == 1) {
+        // no longer empty: move to partials
+        s_partialBufs.linkFront(pbuf);
+    }
+
+    s_perfSlices += 1;
+
+    *bufOut = pbuf;
+    *sliceOut = slice;
+}
+
+//===========================================================================
 static void destroyEmptyBuffer() {
     assert(!s_emptyBufs.empty());
     auto buf = s_emptyBufs.unlinkFront();
@@ -174,6 +217,8 @@ static void destroyBufferSlice(const SocketBuffer & sbuf) {
         if (s_emptyBufs.size() > s_fullBufs.size() + s_partialBufs.size())
             destroyEmptyBuffer();
     }
+
+    s_perfSlices -= 1;
 }
 
 
@@ -261,42 +306,16 @@ void Dim::copy(
 unique_ptr<SocketBuffer> Dim::socketGetBuffer() {
     scoped_lock lk{s_mut};
 
-    // use the first partial or, if there aren't any, the first empty
-    auto pbuf = s_partialBufs.front();
-    if (!pbuf)
-        pbuf = s_emptyBufs.front();
-    if (!pbuf) {
-        // all buffers full? create a new one
-        createEmptyBuffer();
-        pbuf = s_emptyBufs.front();
-    }
-    auto & buf = *pbuf;
-
     BufferSlice * slice;
-    if (buf.used < buf.size) {
-        slice = getSlice(buf, buf.firstFree);
-        buf.firstFree = slice->nextPos;
-    } else {
-        assert(buf.size < buf.reserved);
-        slice = getSlice(buf, buf.size);
-        buf.size += 1;
-    }
-    buf.used += 1;
+    Buffer * pbuf;
+    createBufferSlice(&slice, &pbuf);
 
     // set pointer to just passed the header
     auto out = make_unique<SocketBuffer>(
         (char *) slice,
-        buf.sliceSize - 1,
-        buf.h.pos
+        pbuf->sliceSize - 1,
+        pbuf->h.pos
     );
-
-    if (buf.used == buf.reserved) {
-        // no longer partial: move to full list
-        s_fullBufs.linkFront(pbuf);
-    } else if (buf.used == 1) {
-        // no longer empty: move to partials
-        s_partialBufs.linkFront(pbuf);
-    }
 
     return out;
 }
