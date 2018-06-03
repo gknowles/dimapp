@@ -74,9 +74,10 @@ static void logMsg(LogType type, string_view msg) {
         return;
     }
 
-    shared_lock lk{s_mut};
     if (!msg.empty() && msg.back() == '\n')
         msg.remove_suffix(1);
+
+    shared_lock lk{s_mut};
     if (s_loggers.empty()) {
         s_defaultLogger->onLog(type, msg);
     } else {
