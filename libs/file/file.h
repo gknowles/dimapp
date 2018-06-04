@@ -44,7 +44,7 @@ namespace File {
         fBlocking = 0x1000,
 
         // Unbuffered but all application buffers must be system page aligned
-        // and a multiple of page size.
+        // and a multiple of page size as returned by filePageSize().
         fAligned = 0x2000,
 
         // Optimize for random or sequential access
@@ -392,11 +392,11 @@ enum ViewMode {
 } // namespace
 
 // page size is determined by the operating system but is always a power of 2
-size_t filePageSize();
+size_t filePageSize(FileHandle f);
 
 // Offset to the start of a view must be a multiple of the view alignment, it
 // is always a multiple of the page size.
-size_t fileViewAlignment();
+size_t fileViewAlignment(FileHandle f);
 
 // The maxLength is the maximum length into the file that view can be extended
 // to cover. A value less than or equal to the length (such as 0) makes a view

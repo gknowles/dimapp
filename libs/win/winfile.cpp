@@ -920,7 +920,12 @@ void Dim::fileCopy(
 ***/
 
 //===========================================================================
-size_t Dim::filePageSize() {
+size_t Dim::filePageSize(FileHandle f) {
+    // Use the page size of the system memory manager as a first approximation
+    // as it will always be a multiple of the physical sector size of any
+    // filesystem that can support a page file.
+    //
+    // TODO: Get the physical sector size of the underlying device
     auto pageSize = envMemoryConfig().pageSize;
 
     // must be a power of 2
@@ -930,7 +935,7 @@ size_t Dim::filePageSize() {
 }
 
 //===========================================================================
-size_t Dim::fileViewAlignment() {
+size_t Dim::fileViewAlignment(FileHandle f) {
     auto mem = envMemoryConfig();
 
     // must be a multiple of the page size
@@ -950,10 +955,10 @@ static bool openView(
     int64_t length,
     int64_t maxLength
 ) {
-    auto pageSize = filePageSize();
+    auto pageSize = filePageSize(f);
     assert(length % pageSize == 0);
     assert(maxLength % pageSize == 0);
-    assert(offset % fileViewAlignment() == 0);
+    assert(offset % fileViewAlignment(f) == 0);
 
     base = nullptr;
     auto file = getInfo(f);

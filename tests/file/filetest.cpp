@@ -31,11 +31,13 @@ static void createEmptyFile(string_view path) {
 static void app(int argc, char *argv[]) {
     string fn = "filetest.tmp";
 
-    size_t psize = filePageSize();
     auto file = fileOpen(
         fn,
         File::fCreat | File::fTrunc | File::fReadWrite | File::fBlocking
     );
+    if (!file)
+        return appSignalShutdown(EX_DATAERR);
+    size_t psize = filePageSize(file);
     fileWriteWait(file, 0, "aaaa", 4);
 
     const char * base;
