@@ -65,6 +65,12 @@ TimePoint timerUpdate(
     Duration wait,
     bool onlyIfSooner = false
 );
+
+// if the timer event is:
+//  - not in progress: the timer is closed
+//  - in progress and this call is from inside the handler: it is marked for
+//      closure and closed when the handler returns.
+//  - in progress: waits until the handler returns and then closes the timer.
 void timerCloseWait(ITimerNotify * notify);
 
 
