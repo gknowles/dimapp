@@ -26,12 +26,14 @@ const unsigned kMaxConfigFileSize = 10'000'000;
 
 namespace {
 
-struct NotifyInfo {
-    IConfigNotify * notify;
+struct NotifyInfo : ListBaseLink<> {
+    IConfigNotify * notify{nullptr};
 };
 
 class ConfigFile : public IFileChangeNotify {
 public:
+    ~ConfigFile();
+
     void monitor_UNLK(string_view relpath, IConfigNotify * notify);
     bool notify_UNLK(IConfigNotify * notify);
     bool closeWait_UNLK(IConfigNotify * notify);
@@ -42,7 +44,7 @@ public:
 private:
     void parseContent(string_view fullpath, string && content);
 
-    list<NotifyInfo> m_notifiers;
+    List<NotifyInfo> m_notifiers;
     unsigned m_changes{0};
 
     string m_content;
@@ -76,10 +78,16 @@ static IConfigNotify * s_inNotify; // notify currently in progress
 ***/
 
 //===========================================================================
+ConfigFile::~ConfigFile() {
+    m_notifiers.clear();
+}
+
+//===========================================================================
 void ConfigFile::monitor_UNLK(string_view relpath, IConfigNotify * notify) {
     bool empty = m_notifiers.empty();
-    NotifyInfo ni = { notify };
-    m_notifiers.push_back(ni);
+    auto ni = new NotifyInfo;
+    m_notifiers.link(ni);
+    ni->notify = notify;
 
     if (empty) {
         s_mut.unlock();
@@ -103,9 +111,9 @@ bool ConfigFile::closeWait_UNLK(IConfigNotify * notify) {
     while (s_inNotify && s_inThread != this_thread::get_id())
         s_inCv.wait(lk);
 
-    for (auto it = m_notifiers.begin(); it != m_notifiers.end(); ++it) {
-        if (notify == it->notify) {
-            m_notifiers.erase(it);
+    for (auto ni = m_notifiers.front(); ni; ni = m_notifiers.next(ni)) {
+        if (notify == ni->notify) {
+            delete ni;
             if (m_notifiers.empty())
                 s_files.erase(string(m_relpath));
             return true;
@@ -159,18 +167,27 @@ bool ConfigFile::notify_UNLK(IConfigNotify * notify) {
     while (s_inNotify && s_inThread != this_thread::get_id())
         s_inCv.wait(lk);
 
-    for (auto it = m_notifiers.begin(); it != m_notifiers.end(); ++it) {
-        if (!notify || notify == it->notify) {
+    // Iterate by walking a marker through the list so that it stays valid
+    // if monitors are added or removed while the change events are running.
+    NotifyInfo marker;
+    m_notifiers.linkFront(&marker);
+    while (auto ni = m_notifiers.next(&marker)) {
+        if (!notify || notify == ni->notify) {
             s_inThread = this_thread::get_id();
-            s_inNotify = it->notify;
+            s_inNotify = ni->notify;
             lk.unlock();
             found += 1;
-            it->notify->onConfigChange(m_xml);
+            ni->notify->onConfigChange(m_xml);
             lk.lock();
             if (notify)
                 break;
         }
+        m_notifiers.link(&marker, ni);
     }
+    m_notifiers.unlink(&marker);
+    if (m_notifiers.empty())
+        s_files.erase(string(m_relpath));
+
     s_inThread = {};
     s_inNotify = nullptr;
     if (found) {
