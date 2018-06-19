@@ -126,15 +126,27 @@ static void createEmptyBuffer() {
     buf->size = 0;
     buf->used = 0;
     buf->firstFree = 0;
-    buf->base = (char *)VirtualAlloc(
+    buf->base = (char *) VirtualAlloc(
         nullptr,
         bytes,
         MEM_COMMIT | MEM_RESERVE | fLargePages,
         PAGE_READWRITE
     );
     if (!buf->base) {
-        logMsgFatal() << "VirtualAlloc(sockbuf): " << WinError{};
-        __assume(0);
+        WinError err;
+        if (err == ERROR_NO_SYSTEM_RESOURCES && fLargePages) {
+            buf->base = (char *) VirtualAlloc(
+                nullptr,
+                bytes,
+                MEM_COMMIT | MEM_RESERVE,
+                PAGE_READWRITE
+            );
+            err.set();
+        }
+        if (!buf->base) {
+            logMsgFatal() << "VirtualAlloc(sockbuf): " << err;
+            __assume(0);
+        }
     }
 
     buf->id = s_rio.RIORegisterBuffer(buf->base, (DWORD)bytes);
