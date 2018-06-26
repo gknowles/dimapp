@@ -6,6 +6,8 @@
 
 #include "cppconf/cppconf.h"
 
+#include "core/log.h"
+
 namespace Dim {
 
 enum ConsoleAttr {
@@ -42,5 +44,7 @@ void consoleCatchCtrlC(bool enable = true);
 void consoleResetStdin();
 void consoleResetStdout();
 void consoleResetStderr();
+
+ILogNotify * consoleBasicLogger();
 
 } // namespace

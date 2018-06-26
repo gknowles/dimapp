@@ -35,42 +35,6 @@ static string s_crashDir; // where to place crash dumps
 
 /****************************************************************************
 *
-*   ConsoleLogger
-*
-***/
-
-namespace {
-class ConsoleLogger : public ILogNotify {
-    void onLog(LogType type, string_view msg) override;
-};
-} // namespace
-static ConsoleLogger s_consoleLogger;
-
-//===========================================================================
-void ConsoleLogger::onLog(LogType type, string_view msg) {
-    char stkbuf[256];
-    unique_ptr<char[]> heapbuf;
-    auto buf = stkbuf;
-    if (msg.size() >= size(stkbuf)) {
-        heapbuf.reset(new char[msg.size() + 1]);
-        buf = heapbuf.get();
-    }
-    memcpy(buf, msg.data(), msg.size());
-    buf[msg.size()] = '\n';
-    if (type == kLogTypeError) {
-        ConsoleScopedAttr attr(kConsoleError);
-        cout.write(buf, msg.size() + 1);
-    } else if (type == kLogTypeWarn) {
-        ConsoleScopedAttr attr(kConsoleWarn);
-        cout.write(buf, msg.size() + 1);
-    } else {
-        cout.write(buf, msg.size() + 1);
-    }
-}
-
-
-/****************************************************************************
-*
 *   app.xml monitor
 *
 ***/
@@ -131,7 +95,7 @@ void RunTask::onTask() {
     if (s_appFlags & fAppWithFiles) {
         iLogFileInitialize();
         if (s_appFlags & fAppWithConsole)
-            logMonitor(&s_consoleLogger);
+            logMonitor(consoleBasicLogger());
     }
     iPlatformConfigInitialize();
     iSocketInitialize();
@@ -296,7 +260,7 @@ int Dim::appRun(IAppNotify * app, int argc, char * argv[], AppFlags flags) {
     iLogInitialize();
     iConsoleInitialize();
     if (flags & fAppWithConsole)
-        logDefaultMonitor(&s_consoleLogger);
+        logDefaultMonitor(consoleBasicLogger());
     iTaskInitialize();
     iTimerInitialize();
 
@@ -353,7 +317,7 @@ void Dim::appSignalUsageError(int code, string_view err, string_view detail) {
     if (code) {
         bool console = !(appFlags() & (fAppWithConsole | fAppIsService));
         if (console)
-            logMonitor(&s_consoleLogger);
+            logMonitor(consoleBasicLogger());
         Cli cli;
         auto em = err.empty() ? cli.errMsg() : err;
         auto dm = detail.empty() ? cli.errDetail() : detail;
@@ -366,7 +330,7 @@ void Dim::appSignalUsageError(int code, string_view err, string_view detail) {
             cli.printUsageEx(os, {}, cli.runCommand());
         }
         if (console)
-            logMonitorClose(&s_consoleLogger);
+            logMonitorClose(consoleBasicLogger());
     }
     appSignalShutdown(code);
 }
