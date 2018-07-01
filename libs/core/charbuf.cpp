@@ -77,8 +77,13 @@ CharBuf::~CharBuf()
 {}
 
 //===========================================================================
-CharBuf & CharBuf::assign(size_t count, char ch) {
-    return replace(0, m_size, count, ch);
+CharBuf & CharBuf::assign(size_t numCh, char ch) {
+    return replace(0, m_size, numCh, ch);
+}
+
+//===========================================================================
+CharBuf & CharBuf::assign(nullptr_t) {
+    return replace(0, m_size, nullptr);
 }
 
 //===========================================================================
@@ -272,6 +277,11 @@ CharBuf & CharBuf::insert(size_t pos, size_t numCh, char ch) {
 }
 
 //===========================================================================
+CharBuf & CharBuf::insert(size_t pos, nullptr_t) {
+    return replace(pos, 0, nullptr);
+}
+
+//===========================================================================
 CharBuf & CharBuf::insert(size_t pos, const char s[]) {
     assert(pos <= (size_t) m_size);
 
@@ -382,8 +392,13 @@ CharBuf & CharBuf::popBack() {
 }
 
 //===========================================================================
-CharBuf & CharBuf::append(size_t count, char ch) {
-    return insert(m_size, count, ch);
+CharBuf & CharBuf::append(size_t numCh, char ch) {
+    return insert(m_size, numCh, ch);
+}
+
+//===========================================================================
+CharBuf & CharBuf::append(nullptr_t) {
+    return insert(m_size, nullptr);
 }
 
 //===========================================================================
@@ -546,6 +561,12 @@ CharBuf & CharBuf::replace(size_t pos, size_t count, size_t numCh, char ch) {
         mydata = myi->data;
         mycount = myi->used;
     }
+}
+
+//===========================================================================
+CharBuf & CharBuf::replace(size_t pos, size_t count, nullptr_t) {
+    assert(!"Attempt to add nullptr to CharBuf");
+    return erase(pos, count);
 }
 
 //===========================================================================

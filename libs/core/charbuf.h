@@ -47,6 +47,7 @@ public:
     CharBuf & operator+=(const CharBuf & src) { return append(src); }
     CharBuf & assign(char ch) { clear(); pushBack(ch); return *this; }
     CharBuf & assign(size_t numCh, char ch);
+    CharBuf & assign(std::nullptr_t);
     CharBuf & assign(const char s[]);
     CharBuf & assign(const char s[], size_t slen);
     CharBuf & assign(std::string_view str, size_t pos = 0, size_t count = -1);
@@ -69,6 +70,7 @@ public:
     void clear();
     void resize(size_t count);
     CharBuf & insert(size_t pos, size_t numCh, char ch);
+    CharBuf & insert(size_t pos, std::nullptr_t);
     CharBuf & insert(size_t pos, const char s[]);
     CharBuf & insert(size_t pos, const char s[], size_t count);
     CharBuf & insert(
@@ -83,6 +85,7 @@ public:
     CharBuf & pushBack(char ch);
     CharBuf & popBack();
     CharBuf & append(size_t numCh, char ch);
+    CharBuf & append(std::nullptr_t);
     CharBuf & append(const char s[]);
     CharBuf & append(const char s[], size_t slen);
     CharBuf & append(std::string_view str, size_t pos = 0, size_t count = -1);
@@ -100,6 +103,7 @@ public:
         size_t bufLen = -1
     ) const;
     CharBuf & replace(size_t pos, size_t count, size_t numCh, char ch);
+    CharBuf & replace(size_t pos, size_t count, std::nullptr_t);
     CharBuf & replace(size_t pos, size_t count, const char s[]);
     CharBuf & replace(size_t pos, size_t count, const char s[], size_t slen);
     CharBuf & replace(
