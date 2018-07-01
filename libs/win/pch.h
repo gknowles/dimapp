@@ -20,6 +20,8 @@
 #include <cerrno>
 #include <csignal>
 #include <cstdlib>
+#include <fcntl.h>
+#include <io.h>
 #include <limits>
 #include <list>
 #include <mutex>

@@ -8,6 +8,8 @@
 
 #include "core/log.h"
 
+#include <cstdint>
+
 namespace Dim {
 
 enum ConsoleAttr {
@@ -44,6 +46,10 @@ void consoleCatchCtrlC(bool enable = true);
 void consoleResetStdin();
 void consoleResetStdout();
 void consoleResetStderr();
+
+// Detaches from current console and attaches to console that the specified
+// process is attached to.
+bool consoleAttach(intptr_t pid);
 
 ILogNotify * consoleBasicLogger();
 
