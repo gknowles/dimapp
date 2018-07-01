@@ -76,3 +76,54 @@ unsigned Dim::envCpus() {
     assert(s_numCpus);
     return s_numCpus;
 }
+
+//===========================================================================
+ProcessRights Dim::envProcessRights() {
+    char sid[SECURITY_MAX_SID_SIZE];
+    DWORD cb = sizeof(sid);;
+    if (!CreateWellKnownSid(WinBuiltinAdministratorsSid, NULL, sid, &cb)) {
+        logMsgError() << "CreateWellKnownSid(Administrators): " << WinError{};
+        return kEnvUserStandard;
+    }
+    BOOL isMember;
+    if (!CheckTokenMembership(NULL, sid, &isMember)) {
+        logMsgError() << "CheckTokenMembership(NULL): " << WinError{};
+        return kEnvUserStandard;
+    }
+    if (isMember)
+        return kEnvUserAdmin;
+
+
+    auto proc = GetCurrentProcess();
+    HANDLE token;
+    if (!OpenProcessToken(proc, TOKEN_QUERY, &token))
+        return kEnvUserStandard;
+
+    TOKEN_LINKED_TOKEN lt;
+    if (!GetTokenInformation(
+        token,
+        TokenLinkedToken,
+        &lt,
+        sizeof(lt),
+        &cb
+    )) {
+        WinError err;
+        if (err == ERROR_NO_SUCH_LOGON_SESSION
+            || err == ERROR_PRIVILEGE_NOT_HELD
+        ) {
+            return kEnvUserStandard;
+        }
+
+        logMsgError() << "GetTokenInformation(TokenLinkedToken): " << err;
+        return kEnvUserStandard;
+    }
+
+    if (!CheckTokenMembership(lt.LinkedToken, sid, &isMember)) {
+        logMsgError() << "CheckTokenMembership(linked): " << WinError{};
+        return kEnvUserStandard;
+    }
+    if (isMember)
+        return kEnvUserRestrictedAdmin;
+
+    return kEnvUserStandard;
+}

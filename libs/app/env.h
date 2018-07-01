@@ -26,4 +26,12 @@ const EnvMemoryConfig & envMemoryConfig();
 
 unsigned envCpus();
 
+// Returns rights available to the current process
+enum ProcessRights {
+    kEnvUserAdmin,           // User in admin group, and process is elevated
+    kEnvUserRestrictedAdmin, // User in admin group, but process not elevated
+    kEnvUserStandard,        // User not in admin group
+};
+ProcessRights envProcessRights();
+
 } // namespace
