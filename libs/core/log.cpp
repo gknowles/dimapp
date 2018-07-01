@@ -199,7 +199,10 @@ void Dim::logMonitor(ILogNotify * notify) {
 //===========================================================================
 void Dim::logMonitorClose(ILogNotify * notify) {
     unique_lock lk{s_mut};
-    s_loggers.erase(remove(s_loggers.begin(), s_loggers.end(), notify));
+    s_loggers.erase(
+        remove(s_loggers.begin(), s_loggers.end(), notify),
+        s_loggers.end()
+    );
 }
 
 //===========================================================================
