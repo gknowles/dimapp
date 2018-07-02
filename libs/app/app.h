@@ -26,6 +26,7 @@
 #include "config.h"
 #include "console.h"
 #include "env.h"
+#include "exec.h"
 #include "resource.h"
 
 #include "core/process.h"
@@ -48,9 +49,9 @@ public:
     virtual ~IAppNotify() = default;
 
     // Since this is called on the event thread, servers should return promptly
-    // to allow event processing to continue. This is especially when running
-    // as a service because the Windows SCM expects regular progress reports
-    // during startup.
+    // to allow event processing to continue. This is especially important when
+    // running as a service because the Windows SCM requires regular progress
+    // reports during startup.
     virtual void onAppRun() = 0;
 
     // argc & argv are set by the framework before the call to onAppRun()
