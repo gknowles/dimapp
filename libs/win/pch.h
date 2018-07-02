@@ -4,6 +4,8 @@
 // pch.h - dim windows platform
 
 // Public header
+#include "win/win.h"
+
 // External library public headers
 #include "dimcli/cli.h"
 
@@ -47,6 +49,7 @@
 #include <CommCtrl.h> // ListView
 #include <DbgHelp.h>
 #include <Psapi.h>
+#include <shellapi.h>
 
 // must come after WinSock2.h
 #include <mstcpip.h> // SIO_LOOPBACK_FAST_PATH
