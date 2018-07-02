@@ -25,6 +25,7 @@ struct EnvMemoryConfig {
 const EnvMemoryConfig & envMemoryConfig();
 
 unsigned envCpus();
+unsigned envProcessId();
 
 // Returns rights available to the current process
 enum ProcessRights {

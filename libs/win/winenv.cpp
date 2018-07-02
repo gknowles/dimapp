@@ -78,6 +78,11 @@ unsigned Dim::envCpus() {
 }
 
 //===========================================================================
+unsigned Dim::envProcessId() {
+    return GetCurrentProcessId();
+}
+
+//===========================================================================
 ProcessRights Dim::envProcessRights() {
     char sid[SECURITY_MAX_SID_SIZE];
     DWORD cb = sizeof(sid);;
