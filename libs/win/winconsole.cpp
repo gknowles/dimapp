@@ -267,8 +267,9 @@ void Dim::consoleResetStderr() {
 bool Dim::consoleAttach(intptr_t pid) {
     // The underlying Windows console handles get closed twice, once by
     // closing the CRT handles and again by FreeConsole. This is arguably
-    // broken, and the second CloseHandle, quite properly, raises an invalid
-    // handle exception when in the debugger.
+    // broken, definitely not thread-safe (the handle could be reused), and
+    // the second CloseHandle, quite properly, raises an invalid handle
+    // exception when in the debugger.
     //
     // But there is no way to do any of the following:
     //  - close the CRT handles without closing the os handles
@@ -277,7 +278,8 @@ bool Dim::consoleAttach(intptr_t pid) {
     //  - free the console without closing the os handles
     //      (SetStdHandle doesn't affect the internal list of handles)
     //
-    // A set_osfhandle(fd, osfhandle) function would be nice... :/
+    // A set_osfhandle(fd, osfhandle) or release_osfhandle(fd) function would
+    // be nice... :/
     _close(0);
     _close(1);
     _close(2);
@@ -288,7 +290,8 @@ bool Dim::consoleAttach(intptr_t pid) {
         success = false;
         WinError err;
         if (err == ERROR_INVALID_HANDLE) {
-            // process doesn't exist or doesn't have a console
+            // Process supposedly attached to the target console doesn't
+            // exist or doesn't have a console.
         } else {
             logMsgError() << "AttachConsole(pid): " << err;
         }
