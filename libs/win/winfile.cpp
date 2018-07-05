@@ -28,7 +28,6 @@ struct WinFileInfo : public HandleContent {
 class IFileOpBase : protected IWinOverlappedNotify {
 public:
     IFileOpBase(TaskQueueHandle hq);
-    virtual ~IFileOpBase() = default;
 
     size_t start(
         WinFileInfo * file,

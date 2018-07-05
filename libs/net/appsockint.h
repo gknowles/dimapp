@@ -73,7 +73,6 @@ public:
     // any known factory the socket is disconnected.
     IAppSocket() {}
     IAppSocket(IAppSocketNotify * notify);
-
     virtual ~IAppSocket();
 
     virtual void disconnect(AppSocket::Disconnect why) = 0;
