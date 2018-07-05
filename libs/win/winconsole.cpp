@@ -31,7 +31,9 @@ static BOOL WINAPI controlCallback(DWORD ctrl) {
     if (s_catchEnabled) {
         switch (ctrl) {
         case CTRL_C_EVENT:
-        case CTRL_BREAK_EVENT: appSignalShutdown(EX_IOERR); return true;
+        case CTRL_BREAK_EVENT:
+            appSignalShutdown(EX_IOERR);
+            return true;
         }
     }
 
@@ -51,6 +53,19 @@ static void enableConsoleFlags(bool enable, DWORD flags) {
     }
     if (!SetConsoleMode(hInput, mode))
         logMsgFatal() << "SetConsoleMode(): " << WinError{};
+}
+
+//===========================================================================
+static bool getStdInfo(int * dst, const wchar_t ** dev, DWORD nstd) {
+    switch (nstd) {
+    case STD_INPUT_HANDLE: *dst = 0; *dev = L"conin$"; break;
+    case STD_OUTPUT_HANDLE: *dst = 1; *dev = L"conout$"; break;
+    case STD_ERROR_HANDLE: *dst = 2; *dev = L"conout$"; break;
+    default:
+        assert(!"Invalid nStdHandle value");
+        return false;
+    }
+    return true;
 }
 
 
@@ -165,43 +180,142 @@ void Dim::consoleRedoLine() {
 
 /****************************************************************************
 *
+*   Reassign CRT lowio handles to duplicates so they can be safely closed.
+*
+*   The first call to FreeConsole() from a console application can not be
+*   done safely -- using documented APIs -- without breaking the standard
+*   C low IO descriptors (0, 1, and 2).
+*
+*   The standard descriptors are initialized by the MSVC CRT to own the
+*   underlying Windows console handles. However, the underlying console also
+*   owns them. This means that they get closed twice, once by closing the
+*   CRT handles and again by FreeConsole. The second CloseHandle, quite
+*   properly, raises an invalid handle exception when in the debugger. The
+*   danger is that the OS could reuse the handle between the calls and we're
+*   now closing the handle to some unrelated thing.
+*
+*   After the first time this is no longer a problem because we dup the
+*   handles when attaching the new console, and it's not a problem for
+*   windowed apps since they don't start with a console.
+*
+*   There is no way to do any of the following:
+*       - close the CRT descriptors without closing the os handles
+*       - attach the CRT descriptors to new os handles without first closing
+*           them (i.e. _dup2 implicitly closes the target).
+*       - free the console without closing the os handles (SetStdHandle doesn't
+*           affect the internal list of handles).
+*       - register an initialization function in a .CRT section to
+*           duplicate the handles before the CRT copies them. (the standard
+*           descriptors are initialized before registered init functions run).
+*
+*   Which leaves the uncomfortable options:
+*       - custom entry point that dups the handles and only then calls
+*           calls mainCRTStartup.
+*       - call the undocumented _free_osfhnd function.
+*
+*   TL;DR
+*   We put a function, that uses the undocumented _free_osfhnd to duplicate
+*   console handles into the standard file descriptors, in the non-standard
+*   .CRT$XIU section so it runs before static constructors.
+*
+***/
+
+extern "C" int __cdecl _free_osfhnd(int);
+
+//===========================================================================
+extern "C" static int reassignCrtHandles() {
+    auto hproc = GetCurrentProcess();
+    for (auto nstd : {STD_INPUT_HANDLE, STD_OUTPUT_HANDLE, STD_ERROR_HANDLE}) {
+        int fd;
+        const wchar_t * dev;
+        getStdInfo(&fd, &dev, nstd);
+
+        auto osf = GetStdHandle(nstd);
+        if (!osf || osf == INVALID_HANDLE_VALUE)
+            continue;
+        if (GetFileType(osf) != FILE_TYPE_CHAR)
+            continue;
+
+        HANDLE osfNew;
+        if (!DuplicateHandle(
+            hproc,
+            osf,
+            hproc,
+            &osfNew,
+            0,      // access
+            false,  // inherit
+            DUPLICATE_SAME_ACCESS
+        )) {
+            continue;
+        }
+
+        _free_osfhnd(fd);
+        auto fdNew = _open_osfhandle((intptr_t) osfNew, _O_TEXT);
+        if (fd != fdNew) {
+            if (_dup2(fdNew, fd) == -1)
+                continue;
+            _close(fdNew);
+        }
+    }
+    return 0;
+}
+
+#pragma section(".CRT$XIU", long, read)
+#pragma data_seg(push)
+#pragma data_seg(".CRT$XIU")
+static auto s_reassignHandles = reassignCrtHandles;
+#pragma data_seg(pop)
+
+
+/****************************************************************************
+*
 *   Console handle
 *
 ***/
 
 //===========================================================================
-static bool getStdInfo(int * dst, const wchar_t ** dev, DWORD nstd) {
-    switch (nstd) {
-    case STD_INPUT_HANDLE: *dst = 0; *dev = L"conin$"; break;
-    case STD_OUTPUT_HANDLE: *dst = 1; *dev = L"conout$"; break;
-    case STD_ERROR_HANDLE: *dst = 2; *dev = L"conout$"; break;
-    default:
-        assert(!"Invalid nStdHandle value");
-        return false;
-    }
-    return true;
-}
-
-//===========================================================================
-inline static void attachStd(DWORD nstd) {
+// Attach existing console handle to standard C file descriptor (stdin,
+// stdout, or stderr).
+static void attachStd(DWORD nstd) {
     int dst;
     const wchar_t * dev;
     if (!getStdInfo(&dst, &dev, nstd))
         return;
 
+    // Get existing handle
     int fd = -1;
-    auto hs = GetStdHandle(nstd);
-    if (!hs || hs == INVALID_HANDLE_VALUE) {
+    auto osfOld = GetStdHandle(nstd);
+    if (!osfOld || osfOld == INVALID_HANDLE_VALUE) {
         logMsgFatal() << "GetStdHandle(" << dst << '/' << dev << "): "
             << errno << ", " << _doserrno;
         return;
     }
-    fd = _open_osfhandle((intptr_t) hs, _O_TEXT);
+    // Duplicate it because the console subsystem owns that handle and will
+    // close it in FreeConsole.
+    HANDLE osfNew;
+    if (!DuplicateHandle(
+        GetCurrentProcess(),
+        osfOld,
+        GetCurrentProcess(),
+        &osfNew,
+        0,
+        false, // inherit
+        DUPLICATE_SAME_ACCESS
+    )) {
+        logMsgFatal() << "DuplicateHandle(" << dst << '/' << dev << "): "
+            << WinError{};
+        return;
+    }
+    // Create file descriptor from the new handle, the fd will own it.
+    fd = _open_osfhandle((intptr_t) osfNew, _O_TEXT);
     if (fd == -1) {
         logMsgFatal() << "open_osfhandle(" << dst << '/' << dev << "): "
             << errno << ", " << _doserrno;
         return;
     }
+    // Assign the new descriptor to the standard value (0, 1, or 2) for stdin,
+    // stdout, or stderr. Skip if fd and dst are already equal, which can
+    // happen if the target fd was previously closed.
     if (fd != dst) {
         if (_dup2(fd, dst) == -1)
             logMsgFatal() << "dup2(" << dst << '/' << dev << "): "
@@ -217,9 +331,9 @@ static void resetStd(DWORD nstd) {
         // process isn't attached to a console
         return;
     }
-    HANDLE hs = GetStdHandle(nstd);
+    HANDLE osf = GetStdHandle(nstd);
     DWORD mode = 0;
-    if (GetConsoleMode(hs, &mode))
+    if (GetConsoleMode(osf, &mode))
         return;
     int dst;
     const wchar_t * dev;
@@ -228,7 +342,7 @@ static void resetStd(DWORD nstd) {
 
     // Create explicit handle to console and attach it to standard file
     // descriptor.
-    hs = CreateFileW(
+    osf = CreateFileW(
         dev,
         GENERIC_READ | GENERIC_WRITE,
         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
@@ -237,11 +351,11 @@ static void resetStd(DWORD nstd) {
         0, // flags and attributes
         NULL // template file
     );
-    if (hs == INVALID_HANDLE_VALUE) {
+    if (osf == INVALID_HANDLE_VALUE) {
         logMsgError() << "CreateFileW(" << dev << "): " << WinError{};
         return;
     }
-    if (!SetStdHandle(nstd, hs)) {
+    if (!SetStdHandle(nstd, osf)) {
         logMsgError() << "SetStdHandle(in): " << WinError{};
     } else {
         attachStd(nstd);
@@ -265,21 +379,6 @@ void Dim::consoleResetStderr() {
 
 //===========================================================================
 bool Dim::consoleAttach(intptr_t pid) {
-    // The underlying Windows console handles get closed twice, once by
-    // closing the CRT handles and again by FreeConsole. This is arguably
-    // broken, definitely not thread-safe (the handle could be reused), and
-    // the second CloseHandle, quite properly, raises an invalid handle
-    // exception when in the debugger.
-    //
-    // But there is no way to do any of the following:
-    //  - close the CRT handles without closing the os handles
-    //  - attach the CRT handles to new os handles without first closing
-    //      them (i.e. _dup2 implicitly closes the target).
-    //  - free the console without closing the os handles
-    //      (SetStdHandle doesn't affect the internal list of handles)
-    //
-    // A set_osfhandle(fd, osfhandle) or release_osfhandle(fd) function would
-    // be nice... :/
     _close(0);
     _close(1);
     _close(2);
