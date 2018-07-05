@@ -29,7 +29,7 @@ struct EncodeItem {
     int bits;
 };
 
-const int16_t kDecodeUnused = numeric_limits<int16_t>::max();
+constexpr int16_t kDecodeUnused = numeric_limits<int16_t>::max();
 
 struct DecodeItem {
     int16_t zero{kDecodeUnused};

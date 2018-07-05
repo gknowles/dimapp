@@ -17,7 +17,7 @@ using namespace Dim;
 
 // Set to 9 seconds to align with the default initial RTO of 3 seconds,
 // see iSocketSetConnectTimeout() below for details.
-const Duration kConnectTimeout{9s};
+constexpr auto kConnectTimeout {9s};
 
 
 /****************************************************************************

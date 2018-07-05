@@ -15,8 +15,8 @@ using namespace Dim;
 *
 ***/
 
-const Duration kUnmatchedTimeout = 10s;
-const Duration kUnmatchedMinWait = 2s;
+constexpr Duration kUnmatchedTimeout = 10s;
+constexpr Duration kUnmatchedMinWait = 2s;
 
 
 /****************************************************************************

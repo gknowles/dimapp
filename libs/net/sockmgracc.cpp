@@ -15,7 +15,7 @@ using namespace Dim;
 *
 ***/
 
-const auto kDefaultInactiveTimeout = 1min;
+constexpr Duration kDefaultInactiveTimeout = 1min;
 
 
 /****************************************************************************

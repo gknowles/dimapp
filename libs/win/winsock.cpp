@@ -22,7 +22,7 @@ const int kWriteQueueSize = 100;
 // the socket is disconnected, the assumption being that the end consumer, if
 // they still care, has a retry in flight and would discard it anyway as
 // being expired.
-const auto kMaxPrewriteQueueTime = 2min;
+constexpr auto kMaxPrewriteQueueTime = 2min;
 
 
 /****************************************************************************

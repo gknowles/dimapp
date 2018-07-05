@@ -130,8 +130,8 @@ constexpr char * hton31(char * out, int val) {
 *
 ***/
 
-const Duration kMaxResetStreamAge = 10s;
-const Duration kMinResetStreamCheckInterval = 2s;
+constexpr Duration kMaxResetStreamAge = 10s;
+constexpr Duration kMinResetStreamCheckInterval = 2s;
 
 namespace {
 class ResetStreamTimer : public ITimerNotify {
