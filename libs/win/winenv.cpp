@@ -83,6 +83,33 @@ unsigned Dim::envProcessId() {
 }
 
 //===========================================================================
+Dim::VersionInfo Dim::envExecVersion() {
+    auto wname = toWstring(envExecPath());
+    DWORD unused;
+    auto len = GetFileVersionInfoSizeW(wname.c_str(), &unused);
+    auto buf = make_unique<char[]>(len);
+    if (!GetFileVersionInfoW(
+        wname.c_str(),
+        0,  // ignored
+        len,
+        buf.get()
+    )) {
+        logMsgFatal() << "GetFileVersionInfo: " << WinError{};
+    }
+    VS_FIXEDFILEINFO * fi;
+    UINT ulen;
+    if (!VerQueryValueW(buf.get(), L"\\", (void **) &fi, &ulen))
+        logMsgFatal() << "VerQueryValue: " << WinError{};
+
+    VersionInfo vi = {};
+    vi.major = HIWORD(fi->dwProductVersionMS);
+    vi.minor = LOWORD(fi->dwProductVersionMS);
+    vi.patch = HIWORD(fi->dwProductVersionLS);
+    vi.build = LOWORD(fi->dwProductVersionLS);
+    return vi;
+}
+
+//===========================================================================
 ProcessRights Dim::envProcessRights() {
     char sid[SECURITY_MAX_SID_SIZE];
     DWORD cb = sizeof(sid);;

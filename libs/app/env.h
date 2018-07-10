@@ -27,6 +27,15 @@ const EnvMemoryConfig & envMemoryConfig();
 unsigned envCpus();
 unsigned envProcessId();
 
+struct VersionInfo {
+    unsigned major;
+    unsigned minor;
+    unsigned patch;
+    unsigned build;
+};
+// Gets version info for this executable
+VersionInfo envExecVersion();
+
 // Returns rights available to the current process
 enum ProcessRights {
     kEnvUserAdmin,           // User in admin group, and process is elevated
