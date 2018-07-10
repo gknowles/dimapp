@@ -115,7 +115,7 @@ SocketBase::SocketBase(ISocketNotify * notify)
 
 //===========================================================================
 SocketBase::~SocketBase() {
-    assert(m_reads.empty() && m_writes.empty());
+    assert(!m_reads && !m_writes);
     ISocketNotify * notify{nullptr};
 
     if (m_notify) {
@@ -211,7 +211,7 @@ bool SocketBase::createQueue() {
 
 //===========================================================================
 void SocketBase::enableEvents() {
-    while (!m_prereads.empty())
+    while (m_prereads)
         requeueRead();
 
     // trigger first RIONotify
@@ -324,7 +324,7 @@ bool SocketBase::onRead(SocketRequest * task) {
         m_notify->onSocketDisconnect();
     }
 
-    if (m_reads.empty() && m_writes.empty()) {
+    if (!m_reads && !m_writes) {
         delete this;
         return false;
     }
@@ -358,7 +358,7 @@ void SocketBase::queuePrewrite(
     s_perfWriteTotal += (unsigned) bytes;
     m_bufInfo.waiting += bytes;
     m_bufInfo.total += bytes;
-    bool wasPrewrites = !m_prewrites.empty();
+    bool wasPrewrites = (bool) m_prewrites;
 
     if (wasPrewrites) {
         auto back = m_prewrites.back();
@@ -408,7 +408,7 @@ void SocketBase::queuePrewrite(
 
 //===========================================================================
 void SocketBase::queueWrites() {
-    while (m_numWrites < m_maxWrites && !m_prewrites.empty()) {
+    while (m_numWrites < m_maxWrites && m_prewrites) {
         m_writes.link(m_prewrites.front());
         m_numWrites += 1;
         auto task = m_writes.back();
@@ -436,15 +436,15 @@ bool SocketBase::onWrite(SocketRequest * task) {
     m_bufInfo.incomplete -= bytes;
 
     // already disconnected and this was the last unresolved write? delete
-    if (m_mode == Mode::kClosed && m_reads.empty() && m_writes.empty()) {
+    if (m_mode == Mode::kClosed && !m_reads && !m_writes) {
         delete this;
         return false;
     }
 
-    bool wasPrewrites = !m_prewrites.empty();
+    bool wasPrewrites = (bool) m_prewrites;
     queueWrites();
-    if (wasPrewrites && m_prewrites.empty() // data no longer waiting
-        || !m_numWrites                     // send queue is empty
+    if (wasPrewrites && !m_prewrites // data no longer waiting
+        || !m_numWrites              // send queue is empty
     ) {
         assert(!m_bufInfo.waiting);
         assert(m_numWrites || !m_bufInfo.incomplete);

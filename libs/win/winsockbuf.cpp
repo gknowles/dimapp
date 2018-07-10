@@ -197,7 +197,7 @@ static void createBufferSlice(
 
 //===========================================================================
 static void destroyEmptyBuffer() {
-    assert(!s_emptyBufs.empty());
+    assert(s_emptyBufs);
     auto buf = s_emptyBufs.unlinkFront();
     auto hostage = unique_ptr<Buffer>(s_buffers.release(buf->h));
     assert(buf == hostage.get());
@@ -269,7 +269,7 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
         return shutdownIncomplete();
 
     scoped_lock lk{s_mut};
-    while (!s_buffers.empty())
+    while (s_buffers)
         destroyEmptyBuffer();
 }
 

@@ -190,6 +190,7 @@ public:
     List();
     List(List && from);
     ~List();
+    explicit operator bool() const { return !empty(); }
 
     bool operator==(const List & right) const;
 

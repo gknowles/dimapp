@@ -407,7 +407,7 @@ static ShutdownNotify s_cleanup;
 void ShutdownNotify::onShutdownConsole (bool firstTry) {
     {
         shared_lock lk{s_mut};
-        if (!s_conns.empty())
+        if (s_conns)
             return shutdownIncomplete();
     }
 

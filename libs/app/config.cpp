@@ -84,12 +84,12 @@ ConfigFile::~ConfigFile() {
 
 //===========================================================================
 void ConfigFile::monitor_UNLK(string_view relpath, IConfigNotify * notify) {
-    bool empty = m_notifiers.empty();
+    bool wasEmpty = !m_notifiers;
     auto ni = new NotifyInfo;
     m_notifiers.link(ni);
     ni->notify = notify;
 
-    if (empty) {
+    if (wasEmpty) {
         s_mut.unlock();
         if (appFlags() & fAppWithFiles) {
             fileMonitor(s_hDir, relpath, this);
@@ -114,7 +114,7 @@ bool ConfigFile::closeWait_UNLK(IConfigNotify * notify) {
     for (auto ni = m_notifiers.front(); ni; ni = m_notifiers.next(ni)) {
         if (notify == ni->notify) {
             delete ni;
-            if (m_notifiers.empty())
+            if (!m_notifiers)
                 s_files.erase(string(m_relpath));
             return true;
         }
@@ -185,7 +185,7 @@ bool ConfigFile::notify_UNLK(IConfigNotify * notify) {
         m_notifiers.link(&marker, ni);
     }
     m_notifiers.unlink(&marker);
-    if (m_notifiers.empty())
+    if (!m_notifiers)
         s_files.erase(string(m_relpath));
 
     s_inThread = {};

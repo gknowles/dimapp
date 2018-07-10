@@ -73,6 +73,10 @@ inline Finally::~Finally() {
 *
 *   ForwardListIterator
 *
+*   The type being iterated over by the iterator must:
+*       - have a m_next member of type T* that points to the next object
+*       - have the m_next member of the last object set to nullptr
+*
 ***/
 
 template <typename T>

@@ -29,6 +29,7 @@ public:
     BitView(const BitView & from) = default;
     BitView(uint64_t * src, size_t srcLen);
 
+    explicit operator bool() const { return !empty(); }
     bool operator==(const BitView & right) const;
 
     bool empty() const { return !m_size; }    // view across nothing

@@ -35,6 +35,7 @@ public:
     CharBuf(const CharBuf & from) { insert(0, from); }
     CharBuf(CharBuf && from) = default;
     ~CharBuf();
+    explicit operator bool() const { return !empty(); }
 
     CharBuf & operator=(const CharBuf & buf) { return assign(buf); }
     CharBuf & operator=(CharBuf && buf) = default;

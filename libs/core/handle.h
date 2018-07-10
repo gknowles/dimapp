@@ -57,6 +57,7 @@ public:
     };
 
 public:
+    explicit operator bool() const { return !empty(); }
     bool empty() const;
 
 protected:

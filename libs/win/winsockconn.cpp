@@ -78,7 +78,7 @@ private:
 *
 ***/
 
-static List<ConnectTask> s_connecting;
+static List<ConnectTask> s_connectTasks;
 
 static auto & s_perfConnected = uperf("sock.connects");
 static auto & s_perfCurConnected = uperf("sock.connects (current)");
@@ -179,7 +179,7 @@ void ConnSocket::connect(
         return pushConnectFailed(notify);
     }
 
-    s_connecting.link(task);
+    s_connectTasks.link(task);
     hostage.release();
 }
 
@@ -279,10 +279,10 @@ static ShutdownNotify s_cleanup;
 //===========================================================================
 void ShutdownNotify::onShutdownConsole(bool firstTry) {
     if (firstTry) {
-        for (auto && task : s_connecting)
+        for (auto && task : s_connectTasks)
             task.m_socket->hardClose();
     }
-    if (!s_connecting.empty())
+    if (s_connectTasks)
         shutdownIncomplete();
 }
 

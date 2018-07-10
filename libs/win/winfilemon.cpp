@@ -72,7 +72,7 @@ private:
 
 static mutex s_mut;
 static HandleMap<FileMonitorHandle, DirInfo> s_dirs;
-static HandleMap<FileMonitorHandle, DirInfo> s_stopping;
+static HandleMap<FileMonitorHandle, DirInfo> s_stoppingDirs;
 static thread::id s_inThread; // thread running any current callback
 static condition_variable s_inCv; // when running callback completes
 static IFileChangeNotify * s_inNotify; // notify currently in progress
@@ -165,7 +165,7 @@ void DirInfo::closeWait_UNLK (FileMonitorHandle dir) {
             s_inCv.wait(lk);
 
         s_dirs.release(dir);
-        m_stopping = s_stopping.insert(this);
+        m_stopping = s_stoppingDirs.insert(this);
     }
 
     if (!CancelIoEx(m_handle, &overlapped())) {
@@ -266,7 +266,7 @@ void DirInfo::onTask () {
 
     unique_lock lk{s_mut};
     if (m_stopping) {
-        s_stopping.erase(m_stopping);
+        s_stoppingDirs.erase(m_stopping);
         return;
     }
     if (m_handle == INVALID_HANDLE_VALUE)
@@ -378,7 +378,7 @@ static ShutdownNotify s_cleanup;
 //===========================================================================
 void ShutdownNotify::onShutdownConsole(bool firstTry) {
     scoped_lock lk{s_mut};
-    if (!s_dirs.empty() || !s_stopping.empty())
+    if (s_dirs || s_stoppingDirs)
         return shutdownIncomplete();
 }
 

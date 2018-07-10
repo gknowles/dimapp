@@ -56,6 +56,7 @@ public:
     UnsignedSet(std::initializer_list<unsigned> from);
     UnsignedSet(std::string_view from);
     ~UnsignedSet();
+    explicit operator bool() const { return !empty(); }
 
     UnsignedSet & operator=(UnsignedSet && from);
     UnsignedSet & operator=(const UnsignedSet & from);

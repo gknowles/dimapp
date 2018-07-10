@@ -167,7 +167,7 @@ bool AcceptManager::onShutdown(bool firstTry) {
         for (auto && sock : m_inactivity.values())
             sock.disconnect(AppSocket::Disconnect::kAppRequest);
     }
-    return m_inactivity.values().empty();
+    return !m_inactivity.values();
 }
 
 //===========================================================================

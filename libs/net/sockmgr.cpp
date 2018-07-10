@@ -92,7 +92,7 @@ void ISockMgrBase::init() {
 
 //===========================================================================
 ISockMgrBase::~ISockMgrBase() {
-    assert(m_inactivity.values().empty());
+    assert(!m_inactivity.values());
 }
 
 //===========================================================================
@@ -142,7 +142,7 @@ void ShutdownNotify::onShutdownClient(bool firstTry) {
         if (mgr.second->shutdown())
             s_mgrs.erase(mgr.first);
     }
-    if (!s_mgrs.empty())
+    if (s_mgrs)
         return shutdownIncomplete();
 }
 

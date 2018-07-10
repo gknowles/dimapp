@@ -271,7 +271,7 @@ static ShutdownNotify s_cleanup;
 
 //===========================================================================
 void ShutdownNotify::onShutdownConsole(bool firstTry) {
-    if (!s_listeners.empty())
+    if (s_listeners)
         return shutdownIncomplete();
 }
 
