@@ -236,8 +236,7 @@ void AcceptSocket::onAccept(
         return;
     }
 
-    auto notify = listen->m_notify->onFactoryCreate();
-    m_notify = notify.release();
+    m_notify = listen->m_notify->onFactoryCreate().release();
 
     // create read/write queue
     if (createQueue()) {
