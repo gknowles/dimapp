@@ -461,6 +461,8 @@ bool SocketBase::onWrite(SocketRequest * task) {
 *
 ***/
 
+thread_local bool t_socketInitialized;
+
 namespace {
 
 class ShutdownNotify : public IShutdownNotify {
@@ -479,6 +481,7 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
     // close windows sockets
     if (WSACleanup())
         logMsgError() << "WSACleanup: " << WinError{};
+    t_socketInitialized = false;
 }
 
 
@@ -488,7 +491,6 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
 *
 ***/
 
-thread_local bool t_socketInitialized;
 static WSAPROTOCOL_INFOW s_protocolInfo;
 
 //===========================================================================
