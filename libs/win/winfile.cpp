@@ -431,13 +431,43 @@ bool Dim::winFileSetErrno(int error) {
 ***/
 
 //===========================================================================
+static FileHandle allocHandle(
+    HANDLE handle,
+    string_view path,
+    File::OpenMode mode
+) {
+    assert(handle && handle != INVALID_HANDLE_VALUE);
+
+    auto file = make_unique<WinFileInfo>();
+    file->m_handle = handle;
+    file->m_mode = mode;
+    file->m_path = path;
+
+    if (~mode & File::fBlocking) {
+        if (!winIocpBindHandle(file->m_handle)) {
+            winFileSetErrno(WinError{});
+            return {};
+        }
+
+        if (!SetFileCompletionNotificationModes(
+            file->m_handle,
+            FILE_SKIP_COMPLETION_PORT_ON_SUCCESS
+                | FILE_SKIP_SET_EVENT_ON_HANDLE
+        )) {
+            winFileSetErrno(WinError{});
+            return {};
+        }
+    }
+
+    unique_lock lk{s_fileMut};
+    auto f = file->m_f = s_files.insert(file.release());
+    return f;
+}
+
+//===========================================================================
 FileHandle Dim::fileOpen(string_view path, File::OpenMode mode) {
     using om = File::OpenMode;
     assert(~mode & om::fInternalFlags);
-
-    auto file = make_unique<WinFileInfo>();
-    file->m_mode = (om)mode;
-    file->m_path = path;
 
     int access = 0;
     if (mode & om::fNoContent) {
@@ -492,8 +522,8 @@ FileHandle Dim::fileOpen(string_view path, File::OpenMode mode) {
         flagsAndAttrs |= FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE;
     }
 
-    file->m_handle = CreateFileW(
-        toWstring(file->m_path).c_str(),
+    auto handle = CreateFileW(
+        toWstring(path).c_str(),
         access,
         share,
         NULL, // security attributes
@@ -501,30 +531,49 @@ FileHandle Dim::fileOpen(string_view path, File::OpenMode mode) {
         flagsAndAttrs,
         NULL // template file
     );
-    if (file->m_handle == INVALID_HANDLE_VALUE) {
+    if (handle == INVALID_HANDLE_VALUE) {
         winFileSetErrno(WinError{});
         return {};
     }
 
-    if (~mode & om::fBlocking) {
-        if (!winIocpBindHandle(file->m_handle)) {
-            winFileSetErrno(WinError{});
+    return allocHandle(handle, path, mode);
+}
+
+//===========================================================================
+static string getName(HANDLE handle) {
+    char tbuf[256];
+    unique_ptr<char[]> buf;
+    auto fni = (FILE_NAME_INFO *) tbuf;
+    DWORD bufLen = sizeof(tbuf);
+    for (;;) {
+        if (GetFileInformationByHandleEx(
+            handle,
+            FileNameInfo,
+            fni,
+            bufLen
+        )) {
+            break;
+        }
+
+        WinError err;
+        if (err != ERROR_INSUFFICIENT_BUFFER || buf) {
+            winFileSetErrno(err);
             return {};
         }
 
-        if (!SetFileCompletionNotificationModes(
-            file->m_handle,
-            FILE_SKIP_COMPLETION_PORT_ON_SUCCESS
-                | FILE_SKIP_SET_EVENT_ON_HANDLE
-        )) {
-            winFileSetErrno(WinError{});
-            return {};
-        }
+        bufLen = sizeof(*fni) + 2 * fni->FileNameLength;
+        buf = make_unique<char[]>(bufLen);
+        fni = (FILE_NAME_INFO *) buf.get();
     }
 
-    unique_lock lk{s_fileMut};
-    auto f = file->m_f = s_files.insert(file.release());
-    return f;
+    return toString(wstring_view(fni->FileName, fni->FileNameLength));
+}
+
+//===========================================================================
+FileHandle Dim::fileOpen(intptr_t osfhandle, File::OpenMode mode) {
+    auto handle = (HANDLE) osfhandle;
+    auto path = getName(handle);
+    return allocHandle(handle, path, mode);
 }
 
 //===========================================================================

@@ -141,10 +141,9 @@ struct FileHandle : HandleBase {};
 
 // on error returns an empty pointer and sets errno to one of:
 //  EEXIST, ENOENT, EBUSY, EACCES, or EIO
-FileHandle fileOpen(
-    std::string_view path,
-    File::OpenMode modeFlags
-);
+FileHandle fileOpen(std::string_view path, File::OpenMode modeFlags);
+//  EINVAL
+FileHandle fileOpen(intptr_t osfhandle, File::OpenMode modeFlags);
 
 // Create references to the standard in/out/err devices. The handle
 // should be closed after use, which detaches from the underlying file
