@@ -98,6 +98,7 @@ void RunTask::onTask() {
             logMonitor(consoleBasicLogger());
     }
     iPlatformConfigInitialize();
+    iPipeInitialize();
     iSocketInitialize();
     iAppSocketInitialize();
     iSockMgrInitialize();

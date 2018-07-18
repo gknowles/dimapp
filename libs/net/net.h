@@ -11,6 +11,7 @@
 #include "apptls.h"
 #include "http.h"
 #include "httproute.h"
+#include "pipe.h"
 #include "socket.h"
 #include "sockmgr.h"
 #include "url.h"

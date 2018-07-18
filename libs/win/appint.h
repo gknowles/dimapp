@@ -18,6 +18,9 @@ void iConsoleInitialize();
 // File
 void iFileInitialize();
 
+// Pipe
+void iPipeInitialize();
+
 // Socket
 void iSocketInitialize();
 
