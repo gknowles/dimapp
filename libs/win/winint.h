@@ -170,8 +170,12 @@ private:
 
 class IWinEventWaitNotify : public IWinOverlappedNotify {
 public:
-    IWinEventWaitNotify(TaskQueueHandle hq = {});
+    // Registers wait unless evt is INVALID_HANDLE_VALUE.
+    IWinEventWaitNotify(TaskQueueHandle hq = {}, HANDLE evt = {});
     ~IWinEventWaitNotify();
+
+    // Must not already be registered (i.e. evt must be INVALID_HANDLE_VALUE)
+    void registerWait(HANDLE evt);
 
     virtual void onTask() override = 0;
 
@@ -203,14 +207,25 @@ bool winFileSetErrno(int error);
 
 /****************************************************************************
 *
-*   IOCP
+*   Iocp
 *
 ***/
 
 void winIocpInitialize();
 
 HANDLE winIocpHandle();
-bool winIocpBindHandle(HANDLE handle);
+bool winIocpBindHandle(HANDLE handle, void * key = nullptr);
+
+
+/****************************************************************************
+*
+*   Pipe
+*
+***/
+
+void iPipeInitialize();
+
+void iPipeCheckThread();
 
 
 /****************************************************************************

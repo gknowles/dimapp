@@ -157,10 +157,10 @@ HANDLE Dim::winIocpHandle() {
 }
 
 //===========================================================================
-bool Dim::winIocpBindHandle(HANDLE handle) {
+bool Dim::winIocpBindHandle(HANDLE handle, void * key) {
     assert(s_iocp);
 
-    if (!CreateIoCompletionPort(handle, s_iocp, NULL, 0)) {
+    if (!CreateIoCompletionPort(handle, s_iocp, (ULONG_PTR) key, 0)) {
         logMsgError() << "CreateIoCompletionPort(handle): " << WinError{};
         return false;
     }

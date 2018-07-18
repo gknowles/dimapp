@@ -70,12 +70,35 @@ static VOID CALLBACK eventWaitCallback(PVOID param, BOOLEAN timeout) {
 }
 
 //===========================================================================
-IWinEventWaitNotify::IWinEventWaitNotify(TaskQueueHandle hq)
+IWinEventWaitNotify::IWinEventWaitNotify(TaskQueueHandle hq, HANDLE handle)
     : IWinOverlappedNotify{hq}
 {
+    overlapped().hEvent = INVALID_HANDLE_VALUE;
+    registerWait(handle);
+}
+
+//===========================================================================
+IWinEventWaitNotify::~IWinEventWaitNotify() {
+    if (m_registeredWait && !UnregisterWaitEx(m_registeredWait, nullptr)) {
+        logMsgError() << "UnregisterWaitEx: " << WinError{};
+    }
+    if (overlapped().hEvent && !CloseHandle(overlapped().hEvent)) {
+        logMsgError() << "CloseHandle(overlapped.hEvent): " << WinError{};
+    }
+}
+
+//===========================================================================
+void IWinEventWaitNotify::registerWait(HANDLE handle) {
     auto & hevt = overlapped().hEvent;
-    hevt = CreateEvent(nullptr, 0, 0, nullptr);
-    assert(hevt);
+    assert(hevt == INVALID_HANDLE_VALUE);
+    if (handle) {
+        if (handle == INVALID_HANDLE_VALUE)
+            return;
+        hevt = handle;
+    } else {
+        hevt = CreateEvent(nullptr, 0, 0, nullptr);
+    }
+    assert(hevt && hevt != INVALID_HANDLE_VALUE);
 
     if (!RegisterWaitForSingleObject(
         &m_registeredWait,
@@ -86,15 +109,5 @@ IWinEventWaitNotify::IWinEventWaitNotify(TaskQueueHandle hq)
         WT_EXECUTEINWAITTHREAD
     )) {
         logMsgFatal() << "RegisterWaitForSingleObject: " << WinError{};
-    }
-}
-
-//===========================================================================
-IWinEventWaitNotify::~IWinEventWaitNotify() {
-    if (m_registeredWait && !UnregisterWaitEx(m_registeredWait, nullptr)) {
-        logMsgError() << "UnregisterWaitEx: " << WinError{};
-    }
-    if (overlapped().hEvent && !CloseHandle(overlapped().hEvent)) {
-        logMsgError() << "CloseHandle(overlapped.hEvent): " << WinError{};
     }
 }
