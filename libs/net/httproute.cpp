@@ -56,7 +56,6 @@ public:
     bool onSocketAccept(const AppSocketInfo & info) override;
     void onSocketDisconnect() override;
     bool onSocketRead(AppSocketData & data) override;
-    void onSocketDestroy() override;
 
 private:
     HttpConnHandle m_conn;
@@ -381,11 +380,6 @@ void HttpSocket::resetReply(unsigned reqId, bool internal) {
 HttpSocket::~HttpSocket () {
     for (auto && id : m_reqIds)
         s_requests.erase(id);
-}
-
-//===========================================================================
-void HttpSocket::onSocketDestroy() {
-    delete this;
 }
 
 //===========================================================================
