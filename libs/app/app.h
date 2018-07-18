@@ -24,9 +24,6 @@
 #include "cppconf/cppconf.h"
 
 #include "config.h"
-#include "console.h"
-#include "env.h"
-#include "exec.h"
 #include "resource.h"
 
 #include "core/process.h"

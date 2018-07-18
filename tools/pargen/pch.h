@@ -11,6 +11,7 @@
 #include "app/app.h"
 #include "core/core.h"
 #include "file/file.h"
+#include "system/system.h"
 
 // Standard headers
 #include <bitset>

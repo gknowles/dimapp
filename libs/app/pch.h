@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017.
+// Copyright Glen Knowles 2017 - 2018.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // pch.h - dim app
@@ -14,6 +14,7 @@
 #include "json/json.h"
 #include "net/address.h"
 #include "net/httproute.h"
+#include "system/system.h"
 #include "xml/xml.h"
 
 // Standard headers

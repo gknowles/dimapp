@@ -11,6 +11,7 @@
 #include "app/app.h"
 #include "core/core.h"
 #include "net/net.h"
+#include "system/system.h"
 #include "wintls/wintls.h"
 
 // Standard headers

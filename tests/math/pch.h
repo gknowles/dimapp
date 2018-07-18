@@ -10,6 +10,7 @@
 // External library public headers
 #include "app/app.h"
 #include "core/log.h"
+#include "system/system.h"
 
 // Standard headers
 #include <iostream>

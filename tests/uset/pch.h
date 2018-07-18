@@ -9,6 +9,7 @@
 // External library public headers
 #include "app/app.h"
 #include "core/log.h"
+#include "system/console.h"
 
 // Standard headers
 #include <iostream>

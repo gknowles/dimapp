@@ -14,6 +14,7 @@
 #include "file/file.h"
 #include "json/json.h"
 #include "net/net.h"
+#include "system/system.h"
 
 // Standard headers
 #include <algorithm>

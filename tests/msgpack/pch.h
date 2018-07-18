@@ -13,6 +13,7 @@
 #include "core/core.h"
 #include "file/file.h"
 #include "json/json.h"
+#include "system/system.h"
 
 // Standard headers
 #include <fstream>

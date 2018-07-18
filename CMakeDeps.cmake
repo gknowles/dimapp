@@ -14,10 +14,6 @@
 # libs/app/appint.h
 # libs/app/config.cpp
 # libs/app/config.h
-# libs/app/console.cpp
-# libs/app/console.h
-# libs/app/env.h
-# libs/app/exec.h
 # libs/app/logfile.cpp
 # libs/app/pch.cpp
 # libs/app/pch.h
@@ -32,6 +28,7 @@
 # libs/core/charbuf.h
 # libs/core/core.h
 # libs/core/core.natvis
+# libs/core/cron.h
 # libs/core/handle.cpp
 # libs/core/handle.h
 # libs/core/hash.cpp
@@ -118,6 +115,7 @@
 # libs/net/net.h
 # libs/net/pch.cpp
 # libs/net/pch.h
+# libs/net/pipe.h
 # libs/net/socket.h
 # libs/net/sockmgr.cpp
 # libs/net/sockmgr.h
@@ -127,6 +125,13 @@
 # libs/net/uri.abnf
 # libs/net/url.cpp
 # libs/net/url.h
+# libs/system/console.cpp
+# libs/system/console.h
+# libs/system/env.h
+# libs/system/exec.h
+# libs/system/pch.cpp
+# libs/system/pch.h
+# libs/system/system.h
 # libs/tls/pch.cpp
 # libs/tls/pch.h
 # libs/tls/tls.cpp
@@ -151,6 +156,7 @@
 # libs/win/wingui.cpp
 # libs/win/winint.h
 # libs/win/winiocp.cpp
+# libs/win/winpipe.cpp
 # libs/win/winplatform.cpp
 # libs/win/winres.cpp
 # libs/win/winsock.cpp

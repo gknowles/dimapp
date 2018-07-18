@@ -1,7 +1,7 @@
 // Copyright Glen Knowles 2017 - 2018.
 // Distributed under the Boost Software License, Version 1.0.
 //
-// env.h - dim app
+// env.h - dim system
 #pragma once
 
 #include "cppconf/cppconf.h"

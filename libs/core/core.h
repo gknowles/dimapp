@@ -9,6 +9,7 @@
 #include "algo.h"
 #include "bitview.h"
 #include "charbuf.h"
+#include "cron.h"
 #include "handle.h"
 #include "hash.h"
 #include "list.h"
