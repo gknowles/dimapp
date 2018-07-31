@@ -324,11 +324,19 @@ void Dim::appSignalUsageError(int code, string_view err, string_view detail) {
         auto dm = detail.empty() ? cli.errDetail() : detail;
         if (!em.empty())
             logMsgError() << "Error: " << em;
-        if (!dm.empty())
-            logMsgInfo() << dm;
+        vector<string_view> lines;
+        if (!dm.empty()) {
+            split(&lines, dm, '\n');
+            for (auto && line : lines)
+                logMsgInfo() << line;
+        }
         {
-            auto os = logMsgInfo();
+            ostringstream os;
             cli.printUsageEx(os, {}, cli.runCommand());
+            auto um = os.str();
+            split(&lines, um, '\n');
+            for (auto && line : lines)
+                logMsgInfo() << line;
         }
         if (console)
             logMonitorClose(consoleBasicLogger());
