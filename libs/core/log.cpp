@@ -145,6 +145,7 @@ Detail::Log::Log(Log && from)
 //===========================================================================
 Detail::Log::~Log() {
     put(0);
+    m_buf[size(m_buf) - 1] = 0;
     auto s = str();
     logMsg(m_type, s);
 }
