@@ -467,6 +467,7 @@ public:
     // Inherited via IPipeNotify
     bool onPipeAccept() override;
     bool onPipeRead(size_t * bytesUsed, string_view data) override;
+    void onPipeDisconnect() override;
 };
 
 class AcceptPipe : public PipeBase, public IWinOverlappedNotify {
@@ -595,16 +596,20 @@ void Dim::pipeListen(
 // ListenPipe
 //===========================================================================
 void ListenPipe::start() {
+    [[maybe_unused]] auto pipe = new AcceptPipe(this, m_name, m_oflags);
 }
 
 //===========================================================================
 void ListenPipe::stop() {
+    m_mode = kRunStopping;
+    PipeBase::close(this);
 }
 
 //===========================================================================
 bool ListenPipe::onPipeAccept() {
     auto notify = m_notify->onFactoryCreate().release();
     PipeBase::setNotify(this, notify);
+    start();
     return notify->onPipeAccept();
 }
 
@@ -612,6 +617,16 @@ bool ListenPipe::onPipeAccept() {
 bool ListenPipe::onPipeRead(size_t * bytesUsed, string_view data) {
     assert(!"Should never be called.");
     return false;
+}
+
+//===========================================================================
+void ListenPipe::onPipeDisconnect() {
+    if (m_mode == kRunStopping) {
+        delete this;
+    } else {
+        assert(m_mode == kRunRunning);
+        start();
+    }
 }
 
 //===========================================================================
@@ -631,7 +646,7 @@ void Dim::pipeListen(
 }
 
 //===========================================================================
-void Dim::pipeCloseWait(
+void Dim::pipeClose(
     IFactory<IPipeNotify> * factory,
     string_view pipeName
 ) {
@@ -639,7 +654,7 @@ void Dim::pipeCloseWait(
 
     for (auto && ls : s_listeners) {
         if (ls.m_notify == factory && ls.m_name == pipeName) {
-            // closeListen(&ls);
+            ls.stop();
             return;
         }
     }

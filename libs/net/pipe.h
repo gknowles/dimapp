@@ -113,7 +113,7 @@ void pipeListen(
     std::string_view pipeName,
     Pipe::OpenMode oflags
 );
-void pipeCloseWait(IFactory<IPipeNotify> * factory, std::string_view pipeName);
+void pipeClose(IFactory<IPipeNotify> * factory, std::string_view pipeName);
 
 //===========================================================================
 template <typename S>
