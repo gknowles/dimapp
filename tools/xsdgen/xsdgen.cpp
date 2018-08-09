@@ -397,7 +397,7 @@ int main(int argc, char * argv[]) {
 //===========================================================================
 Attr::Content convert(Element::Content ec) {
     return tokenTableGetEnum(
-        s_attrContents,
+        s_attrContentTbl,
         tokenTableGetName(s_elemContentTbl, ec, ""),
         Attr::Content::kInvalid
     );
