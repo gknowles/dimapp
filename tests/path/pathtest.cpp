@@ -32,11 +32,26 @@ using namespace Dim;
 static void app(int argc, char * argv[]) {
     int line = 0;
     Path p;
-    p = "..\\a\\b\\..\\base.ext";
-    EXPECT(p == "../a/base.ext"sv);
-    p = "hello";
-    p.defaultExt("txt");
-    EXPECT(p == "hello.txt"sv);
+
+    struct {
+        string_view raw;
+        string_view out;
+        int line;
+    } normalizeTests[] = {
+        { "/..", "/", __LINE__ },
+        { "..", "..", __LINE__ },
+        { "..\\a\\b\\..\\base.ext", "../a/base.ext", __LINE__ },
+        { "one/two/", "one/two/", __LINE__ },
+        { "a/.", "a/", __LINE__ },
+        { "../", "../", __LINE__ },
+    };
+    for (auto && t : normalizeTests) {
+        p.assign(t.raw);
+        if (p != t.out) {
+            logMsgError() << "Line " << t.line << ": Path(" << t.raw
+                << ") == '" << p << "', should be '" << t.out << "'";
+        }
+    }
 
     struct {
         string_view base;
@@ -69,10 +84,16 @@ static void app(int argc, char * argv[]) {
     for (auto && t : resolveTests) {
         p.assign(t.rel);
         p.resolve(t.base);
-        line = t.line;
-        EXPECT(p == t.out);
+        if (p != t.out) {
+            logMsgError() << "Line " << t.line << ": "
+                << t.base << " / " << t.rel << " == '" << p
+                << "', should be '" << t.out << "'";
+        }
     }
-    line = 0;
+
+    p = "hello";
+    p.defaultExt("txt");
+    EXPECT(p == "hello.txt"sv);
 
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);

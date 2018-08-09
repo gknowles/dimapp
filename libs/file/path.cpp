@@ -27,6 +27,13 @@ struct Count {
     explicit Count(string_view path);
 };
 
+enum PrevCharType {
+    kNone,
+    kNormal,
+    kSlash,
+    kDot,
+};
+
 } // namespace
 
 
@@ -63,71 +70,79 @@ static void addExt(string * out, string_view ext) {
 }
 
 //===========================================================================
+static void normalizeAtSlash(
+    string * out,
+    PrevCharType * prevChar,
+    const Count & cnt,
+    char base[],
+    char ptr[],
+    bool pseudoSlash = false
+) {
+    switch (*prevChar) {
+    case kSlash:
+        return;
+    case kDot:
+        {
+            auto pos = ptr - base;
+            if (pos == 1) {
+                out->pop_back();
+                *prevChar = kSlash;
+                return;
+            } else if (pos > 1) {
+                if (ptr[-2] == '/' || ptr[-2] == '\\') {
+                    out->pop_back();
+                    *prevChar = kSlash;
+                    return;
+                }
+                if (ptr[-2] == '.' && pos >= 3
+                    && (ptr[-3] == '/' || ptr[-3] == '\\')
+                ) {
+                    auto * obase = out->data() + cnt.m_rootLen;
+                    auto * slash = out->data() + out->size() - 4;
+                    for (;; --slash) {
+                        if (slash <= obase) {
+                            out->resize(out->size() - 2);
+                            break;
+                        }
+                        if (*slash == '/') {
+                            out->resize(slash - out->data() + 1);
+                            break;
+                        }
+                    }
+                    *prevChar = kSlash;
+                    return;
+                }
+                if (*base == '/') {
+                    while (!out->empty() && out->back() == '.')
+                        out->pop_back();
+                }
+            }
+        }
+        break;
+    case kNone:
+    case kNormal:
+        break;
+    }
+    if (!pseudoSlash)
+        *out += '/';
+    *prevChar = kSlash;
+}
+
+//===========================================================================
 static void normalize(string * path) {
+    Count cnt(*path);
     string out;
     out.reserve(path->size());
-    Count cnt(*path);
     out.append(*path, 0, cnt.m_rootLen);
     auto * base = path->data() + cnt.m_rootLen;
     auto * ptr = base;
-    auto * eptr = ptr + cnt.m_dirLen;
-    enum {
-        kNone,
-        kNormal,
-        kSlash,
-        kDot,
-    } prevChar{kNone};
+    auto * eptr = ptr + cnt.m_dirLen + cnt.m_stemLen + cnt.m_extLen;
+    PrevCharType prevChar{kNone};
     for (; ptr != eptr; ++ptr) {
         switch(*ptr) {
         case '/':
         case '\\':
-            switch (prevChar) {
-            case kSlash:
-                continue;
-            case kDot:
-                {
-                    auto pos = ptr - base;
-                    if (pos == 1) {
-                        out.pop_back();
-                        prevChar = kSlash;
-                        continue;
-                    } else if (pos > 1) {
-                        if (ptr[-2] == '/' || ptr[-2] == '\\') {
-                            out.pop_back();
-                            prevChar = kSlash;
-                            continue;
-                        }
-                        if (ptr[-2] == '.' && pos >= 3
-                            && (ptr[-3] == '/' || ptr[-3] == '\\')
-                        ) {
-                            auto * obase = out.data() + cnt.m_rootLen;
-                            auto * slash = out.data() + out.size() - 4;
-                            for (;; --slash) {
-                                if (slash <= obase) {
-                                    out.resize(out.size() - 2);
-                                    break;
-                                }
-                                if (*slash == '/') {
-                                    out.resize(slash - out.data() + 1);
-                                    break;
-                                }
-                            }
-                            prevChar = kSlash;
-                            continue;
-                        }
-                        if (*base == '/') {
-                            while (!out.empty() && out.back() == '.')
-                                out.pop_back();
-                        }
-                    }
-                }
-                break;
-            case kNone:
-            case kNormal:
-                break;
-            }
-            out += '/';
-            prevChar = kSlash;
+            normalizeAtSlash(&out, &prevChar, cnt, base, ptr);
             break;
         case '.':
             out += '.';
@@ -139,11 +154,13 @@ static void normalize(string * path) {
             break;
         }
     }
-    out.append(ptr);
-    Count ocnt(out);
-    auto pos = ocnt.m_rootLen + ocnt.m_dirLen;
-    while (out.size() > pos && out.back() == '.')
-        out.pop_back();
+    if (prevChar == kDot && !cnt.m_extLen) {
+        if (cnt.m_stemLen == 1
+            || cnt.m_stemLen == 2 && path->data()[path->size() - 2] == '.'
+        ) {
+            normalizeAtSlash(&out, &prevChar, cnt, base, ptr, true);
+        }
+    }
     out.swap(*path);
 }
 
@@ -159,9 +176,9 @@ Count::Count(string_view path) {
     auto * base = path.data();
     auto * ptr = base;
     auto * eptr = ptr + path.size();
-    const char * colon{nullptr};
-    const char * slash{nullptr};
-    const char * dot{nullptr};
+    const char * colon{nullptr};    // first ':'
+    const char * slash{nullptr};    // last '/' or '\'
+    const char * dot{nullptr};      // last '.'
     for (; ptr != eptr; ++ptr) {
         switch(*ptr) {
         case '.':
@@ -191,6 +208,13 @@ Count::Count(string_view path) {
     } else {
         m_stemLen = unsigned(dot - base - m_rootLen - m_dirLen);
         m_extLen = unsigned(eptr - dot);
+        if (m_extLen == 1 && m_stemLen == 1 && dot[-1] == '.') {
+            m_stemLen = 2;
+            m_extLen = 0;
+        } else if (!m_stemLen) {
+            m_stemLen = m_extLen;
+            m_extLen = 0;
+        }
     }
     assert(m_extLen == path.size() - m_rootLen - m_dirLen - m_stemLen);
 }
