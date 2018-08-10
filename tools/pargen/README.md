@@ -37,6 +37,7 @@ The "Core Rules" defined in [RFC 5234 B.1](https://tools.ietf.org/html/rfc5234#a
 | %api.base.file.h | lowercase(%api.prefix) + "parsebase.h" | Header defining base class |
 | %api.base.className | "I" + %api.prefix + "ParserNotify" | Name to give base class |
 | %api.namespace | "" (global) | Namespace to contain parser classes |
+| %include | - | Another file with additional options and/or ABNF, path is relative to the including file |
 
 All values must be defined either directly or indirectly via their defaults.
 

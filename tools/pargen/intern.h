@@ -11,7 +11,7 @@
 *
 ***/
 
-const char kVersion[] = "2.1.3";
+const char kVersion[] = "2.1.4";
 
 
 /****************************************************************************
@@ -21,6 +21,7 @@ const char kVersion[] = "2.1.3";
 ***/
 
 const char kOptionRoot[] = "%root";
+const char kOptionInclude[] = "%include";
 const char kOptionApiPrefix[] = "%api.prefix";
 const char kOptionApiParserHeader[] = "%api.parser.file.h";
 const char kOptionApiParserCpp[] = "%api.parser.file.cpp";
@@ -104,6 +105,9 @@ public:
 
     void addOption(std::string_view name, std::string_view value);
     void setOption(std::string_view name, std::string_view value);
+    void eraseOption(std::string_view name);
+
+    std::vector<std::string_view> optionStrings(std::string_view name) const;
     const char * optionString(
         std::string_view name,
         const char * def = ""

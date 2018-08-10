@@ -83,6 +83,33 @@ void Grammar::setOption(string_view name, string_view value) {
 }
 
 //===========================================================================
+void Grammar::eraseOption(string_view name) {
+    Element key;
+    key.name = name;
+    m_rules.erase(key);
+}
+
+//===========================================================================
+vector<string_view> Grammar::optionStrings(string_view name) const {
+    vector<string_view> out;
+    if (auto elem = element(name)) {
+        auto parent = (const Element *) nullptr;
+        while (!elem->elements.empty()) {
+            parent = elem;
+            elem = &elem->elements.front();
+        }
+        assert(elem->type == Element::kRule);
+        if (!parent) {
+            out.push_back(elem->value);
+        } else {
+            for (auto && e : parent->elements)
+                out.push_back(e.value);
+        }
+    }
+    return out;
+}
+
+//===========================================================================
 const char * Grammar::optionString(string_view name, const char * def) const {
     if (auto elem = element(name)) {
         while (!elem->elements.empty())

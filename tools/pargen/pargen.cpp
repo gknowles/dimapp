@@ -257,23 +257,39 @@ https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
     if (!srcfile)
         return appSignalUsageError("No value given for <source file[.abnf]>");
 
-    // process ABNF file
-    srcfile->defaultExt("abnf");
-    string source;
-    fileLoadBinaryWait(&source, *srcfile);
-    if (source.empty())
-        return appSignalUsageError(EX_USAGE);
-
+    // initialize rules
     TimePoint start = Clock::now();
     Grammar rules;
     getCoreRules(rules);
-    if (!parseAbnf(rules, source, s_cmdopts.minRules)) {
-        logParseError(
-            "parsing failed",
-            *srcfile,
-            rules.errpos(),
-            source);
-        return appSignalShutdown(EX_DATAERR);
+
+    // process ABNF sources
+    deque<string> sources;
+    sources.push_back(srcfile->defaultExt("abnf").c_str());
+    map<string, string> contents;
+    while (!sources.empty()) {
+        auto path = sources.front();
+        sources.pop_front();
+        if (contents.count(path))
+            continue;
+
+        string source;
+        fileLoadBinaryWait(&source, path);
+        if (source.empty())
+            return appSignalUsageError(EX_USAGE);
+        auto & content = contents[path] = move(source);
+        if (!parseAbnf(rules, content, s_cmdopts.minRules)) {
+            logParseError(
+                "parsing failed",
+                path,
+                rules.errpos(),
+                content
+            );
+            return appSignalShutdown(EX_DATAERR);
+        }
+        path = Path(path).removeFilename().c_str();
+        for (auto && f : rules.optionStrings(kOptionInclude))
+            sources.push_back(Path(f).resolve(path).c_str());
+        rules.eraseOption(kOptionInclude);
     }
 
     if (!processOptions(rules))
