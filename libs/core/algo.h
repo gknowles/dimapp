@@ -79,7 +79,7 @@ void erase_unordered_if(Container c, Pred p) {
         } else {
             if (--ei == i)
                 break;
-            *i = move(*ei);
+            *i = std::move(*ei);
         }
     }
     c.erase(ei, c.end());

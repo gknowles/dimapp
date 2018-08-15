@@ -134,7 +134,7 @@ template<typename H, typename T>
 std::pair<H, T *> HandleMapBase::Iterator<H, T>::operator*() {
     H handle;
     handle.pos = int(node - base);
-    return make_pair(handle, static_cast<T *>(node->value));
+    return std::make_pair(handle, static_cast<T *>(node->value));
 }
 
 //===========================================================================

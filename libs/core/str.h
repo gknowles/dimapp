@@ -15,6 +15,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace Dim {
@@ -140,7 +141,7 @@ int StrFrom<T, std::enable_if_t<std::is_integral_v<T>>>
     ptr[i] = 0;
     auto num = i;
     for (i -= 1; i > 0; i -= 2) {
-        swap(*ptr, ptr[i]);
+        std::swap(*ptr, ptr[i]);
         ptr += 1;
     }
     return num;
@@ -263,9 +264,8 @@ template <typename T>
     } else if constexpr (std::is_assignable_v<T, std::string>) {
         *out = std::string{src};
     } else {
-        std::stringstream interpreter;
-        if (!(interpreter << src) || !(interpreter >> *out)
-            || !(interpreter >> std::ws).eof()) {
+        std::stringstream interpreter{src};
+        if (!(interpreter >> *out) || !(interpreter >> std::ws).eof()) {
             *out = {};
             return false;
         }

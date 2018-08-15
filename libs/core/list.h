@@ -483,9 +483,9 @@ void List<T, Tag>::unlinkAll() {
 //===========================================================================
 template <typename T, typename Tag>
 void List<T, Tag>::swap(List & other) {
-    swap(m_base.m_prevLink->m_nextLink, from.m_base.m_prevLink->m_nextLink);
-    swap(m_base.m_nextLink->m_prevLink, from.m_base.m_nextLink->m_prevLink);
-    swap(m_base, from.m_base);
+    swap(m_base.m_prevLink->m_nextLink, other.m_base.m_prevLink->m_nextLink);
+    swap(m_base.m_nextLink->m_prevLink, other.m_base.m_nextLink->m_prevLink);
+    swap(m_base, other.m_base);
 }
 
 //===========================================================================

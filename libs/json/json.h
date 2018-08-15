@@ -92,7 +92,7 @@ inline IJBuilder & IJBuilder::value(const T & val) {
         t_os.clear();
         t_os.str({});
         t_os << val;
-        return value(string_view{t_os.str()});
+        return value(std::string_view{t_os.str()});
     }
 }
 
