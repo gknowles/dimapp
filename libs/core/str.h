@@ -14,6 +14,7 @@
 #include <limits>
 #include <memory>
 #include <string>
+#include <sstream>
 #include <string_view>
 #include <utility>
 #include <vector>
