@@ -267,7 +267,7 @@ template <typename T>
     } else if constexpr (std::is_assignable_v<T, std::string>) {
         *out = std::string{src};
     } else {
-        std::stringstream interpreter{src};
+        std::stringstream interpreter(std::string{src});
         if (!(interpreter >> *out) || !(interpreter >> std::ws).eof()) {
             *out = {};
             return false;
