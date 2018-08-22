@@ -9,6 +9,7 @@
 #include "math.h"
 
 #include <cassert>
+#include <charconv>
 #include <cstdint>
 #include <cstdio>
 #include <limits>
@@ -177,6 +178,7 @@ StrFrom<T, std::enable_if_t<std::is_floating_point_v<T>>>::StrFrom() {
     data[sizeof(data) - 1] = (char) (sizeof(data) - 1);
 }
 
+#if 1
 //===========================================================================
 template <typename T>
 std::string_view StrFrom<T, std::enable_if_t<std::is_floating_point_v<T>>>
@@ -193,7 +195,7 @@ std::string_view StrFrom<T, std::enable_if_t<std::is_floating_point_v<T>>>
     return *this;
 }
 
-#if 0
+#else
 //===========================================================================
 template <typename T>
 std::string_view StrFrom<T, std::enable_if_t<std::is_floating_point_v<T>>>
