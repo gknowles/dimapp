@@ -57,7 +57,7 @@
 #include <MSWSock.h> // Registered IO
 
 #pragma comment(lib, "Dbghelp.lib")
-#pragma comment(lib, "Mincore.lib") // GetFileVersionInfo
+#pragma comment(lib, "Version.lib") // GetFileVersionInfo
 #pragma comment(lib, "synchronization.lib") // WaitOnAddress
 #pragma comment(lib, "ws2_32.lib")
 #pragma pack(pop)
