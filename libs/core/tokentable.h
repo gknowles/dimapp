@@ -35,9 +35,12 @@ public:
     template<int N>
     explicit TokenTable(const Token (&tokens)[N]) : TokenTable(tokens, N) {}
 
+    explicit operator bool() const { return !empty(); }
+
     bool find(int * out, const char name[], size_t nameLen = -1) const;
     bool find(const char ** const out, int id) const;
 
+    bool empty() const { return m_values.empty(); }
     Iterator begin() const;
     Iterator end() const;
 
@@ -58,7 +61,7 @@ private:
     std::vector<Value> m_values;
     std::vector<Index> m_byName;
     std::vector<Index> m_byId;
-    int m_hashLen;
+    int m_hashLen{0};
 };
 
 

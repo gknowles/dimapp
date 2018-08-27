@@ -17,6 +17,9 @@ using namespace Dim;
 
 //===========================================================================
 TokenTable::TokenTable(const Token * src, size_t count) {
+    if (!count)
+        return;
+
     const Token * eptr = src + count;
     m_hashLen = 0;
     for (const Token * a = src + 1; a != eptr; ++a) {
