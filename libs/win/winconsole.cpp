@@ -214,8 +214,8 @@ void Dim::consoleRedoLine() {
 *       - call the undocumented _free_osfhnd function.
 *
 *   TL;DR
-*   We put a function, that uses the undocumented _free_osfhnd to duplicate
-*   console handles into the standard file descriptors, in the non-standard
+*   We put a function, to duplicate console handles into the standard file
+*   descriptors (using the undocumented _free_osfhnd), in the non-standard
 *   .CRT$XIU section so it runs before static constructors.
 *
 ***/
