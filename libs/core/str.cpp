@@ -437,8 +437,10 @@ string Dim::trimBlock(string_view src) {
 
     // remove common leading whitespace
     auto prefix = lines.front().size();
-    for (auto && line : lines)
-        prefix = min(prefix, line.size() - ltrim(line).size());
+    for (auto && line : lines) {
+        if (line.size())
+            prefix = min(prefix, line.size() - ltrim(line).size());
+    }
     if (prefix) {
         for (auto && line : lines)
             line.remove_prefix(prefix);

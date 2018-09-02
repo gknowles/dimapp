@@ -298,7 +298,7 @@ std::string_view rtrim(std::string_view src);
 // Splits source into lines, trims trailing spaces, leading and trailing
 // blank lines, and removes a number of leading whitespace characters from
 // each line equal to the smallest number of leading whitespace characters of
-// any line.
+// any line that still has characters.
 std::string trimBlock(std::string_view src);
 
 std::unique_ptr<char[]> strDup(std::string_view src);
