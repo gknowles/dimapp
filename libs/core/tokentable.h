@@ -9,6 +9,7 @@
 #include "cppconf/cppconf.h"
 
 #include <cassert>
+#include <iterator>
 #include <string_view>
 #include <vector>
 
@@ -32,8 +33,10 @@ public:
 public:
     TokenTable() : TokenTable(nullptr, 0) {}
     TokenTable(const Token * ptr, size_t count);
-    template<int N>
-    explicit TokenTable(const Token (&tokens)[N]) : TokenTable(tokens, N) {}
+    template<typename T>
+    explicit TokenTable(const T & tokens)
+        : TokenTable(std::data(tokens), std::size(tokens))
+    {}
 
     explicit operator bool() const { return !empty(); }
 
