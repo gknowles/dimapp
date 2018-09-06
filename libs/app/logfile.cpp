@@ -45,6 +45,7 @@ private:
 
 } // namespace
 
+static LogType s_logLevel{kLogTypeInfo};
 static LogBuffer s_buffer;
 static string s_hostname = "-";
 static string s_logfile;
@@ -153,6 +154,9 @@ static Logger s_logger;
 //===========================================================================
 void Logger::onLog(LogType type, string_view msg) {
     assert(type < kLogTypes);
+    if (type < appLogLevel())
+        return;
+
     char tmp[256];
     assert(sizeof(tmp) + 2 <= kLogBufferSize);
     const unsigned kFacility = 3; // system daemons
@@ -180,6 +184,30 @@ void Logger::onLog(LogType type, string_view msg) {
         msg.data()
     );
     s_buffer.writeLog(tmp, type == kLogTypeFatal);
+}
+
+
+/****************************************************************************
+*
+*   app.xml monitor
+*
+***/
+
+namespace {
+class ConfigAppXml : public IConfigNotify {
+    void onConfigChange(const XDocument & doc) override;
+};
+} // namespace
+static ConfigAppXml s_appXml;
+
+//===========================================================================
+void ConfigAppXml::onConfigChange(const XDocument & doc) {
+    auto raw = configString(doc, "LogLevel", "warn");
+    if (auto level = fromString(raw, kLogTypeInvalid)) {
+        s_logLevel = level;
+    } else {
+        logMsgError() << "Invalid log level '" << raw << "'";
+    }
 }
 
 
@@ -222,9 +250,15 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
 //===========================================================================
 void Dim::iLogFileInitialize() {
     shutdownMonitor(&s_cleanup);
+    configMonitor("app.xml", &s_appXml);
 
     if (!appLogPath(&s_logfile, "server.log"))
         logMsgFatal() << "Invalid log path: " << s_logfile;
 
     logMonitor(&s_logger);
+}
+
+//===========================================================================
+LogType Dim::appLogLevel() {
+    return s_logLevel;
 }

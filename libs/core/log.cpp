@@ -42,6 +42,15 @@ static ILogNotify * s_defaultLogger{&s_fallback};
 static ILogNotify * s_initialDefault;
 static size_t s_initialNumLoggers;
 
+static thread_local bool t_inProgress;
+
+
+/****************************************************************************
+*
+*   Performance counters
+*
+***/
+
 static PerfCounter<int> * s_perfs[] = {
     nullptr, // log invalid
     &iperf("log.debug"),
@@ -53,8 +62,6 @@ static PerfCounter<int> * s_perfs[] = {
 static_assert(size(s_perfs) == kLogTypes);
 
 static auto & s_perfRecurse = uperf("log.recursion");
-
-static thread_local bool t_inProgress;
 
 
 /****************************************************************************
@@ -182,6 +189,28 @@ void Dim::iLogDestroy() {
 *   Public API
 *
 ***/
+
+//===========================================================================
+// Log types
+//===========================================================================
+const TokenTable::Token s_logTypes[] = {
+    { kLogTypeDebug, "debug" },
+    { kLogTypeInfo,  "info" },
+    { kLogTypeWarn,  "warn" },
+    { kLogTypeError, "error" },
+    { kLogTypeFatal, "fatal" },
+};
+const TokenTable s_logTypeTbl{s_logTypes};
+
+//===========================================================================
+const char * Dim::toString(LogType type, const char def[]) {
+    return tokenTableGetName(s_logTypeTbl, type, def);
+}
+
+//===========================================================================
+LogType Dim::fromString(std::string_view src, LogType def) {
+    return tokenTableGetEnum(s_logTypeTbl, src, def);
+}
 
 //===========================================================================
 // Monitor log messages

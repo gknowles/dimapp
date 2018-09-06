@@ -111,6 +111,8 @@ const std::string & appCrashDir();
 const std::string & appDataDir();
 const std::string & appLogDir();
 
+LogType appLogLevel();
+
 // false if file relative to root is not within the root path. This can happen
 // if file breaks out via ".." or is an absolute path.
 bool appConfigPath(
