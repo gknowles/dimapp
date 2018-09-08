@@ -56,17 +56,23 @@ public:
 
     //-----------------------------------------------------------------------
     // for listeners
-    // returns true if the socket is accepted
+    // Returns true if the socket is accepted
     virtual bool onSocketAccept(const SocketInfo & info) { return true; };
 
     //-----------------------------------------------------------------------
     // for both
     virtual void onSocketDisconnect() {};
+
+    // Only override when the object shouldn't be deleted, such as a static
+    // notifier. Standard destruction logic should be in the destructor.
     virtual void onSocketDestroy() { delete this; }
 
-    // Return true to immediately queue up another read, or return false and
+    // Returns true to immediately queue up another read, or return false and
     // call socketQueueRead later. For every time false is returned
     // socketQueueRead MUST be called exactly once.
+    //
+    // Only called after onSocketConnect or onSocketAccept has been called,
+    // and before onSocketDisconnect().
     virtual bool onSocketRead(SocketData & data) = 0;
 
     // Called when incomplete falls to zero or waiting transitions between
@@ -82,15 +88,26 @@ private:
     SocketBase * m_socket{nullptr};
 };
 
-ISocketNotify::Mode socketGetMode(ISocketNotify * notify);
-void socketDisconnect(ISocketNotify * notify);
 
-// Unlinks notify and links newNotify to the socket, taking ownership of it.
-// If notify wasn't linked newNotify->onSocketDestroy() is called.
-void socketSetNotify(ISocketNotify * notify, ISocketNotify * newNotify);
+/****************************************************************************
+*
+*   Connecting sockets
+*
+*   The application calls socketConnect(...) and then, if the connection
+*   succeeds:
+*       1. onSocketConnect
+*       2. called any number of times
+*           a. onSocketRead
+*           b. onSocketBufferChanged
+*       3. onSocketDisconnect
+*       4. onSocketDestroy
+*
+*   If the connection fails:
+*       1. onSocketConnectFailed
+*       2. onSocketDestroy
+*
+***/
 
-//===========================================================================
-// connect
 //===========================================================================
 // The data, if present, is sent if connect succeeds. This is done via
 // TCP_FASTOPEN if possible so try to keep the data <= 1460 bytes.
@@ -102,8 +119,23 @@ void socketConnect(
     Duration timeout = {} // 0 for default timeout
 );
 
-//===========================================================================
-// listen
+
+/****************************************************************************
+*
+*   Listening sockets
+*
+*   The application calls socketListen() and then:
+*
+*   When a remote client connects:
+*   1. The notifier is constructed using the factory.
+*   2. onSocketAccept and then, if accepted, called any number of times:
+*       a. onSocketRead
+*       b. onSocketBufferChanged
+*   3. onSocketDisconnect
+*   4. onSocketDestroy
+*
+***/
+
 //===========================================================================
 void socketListen(IFactory<ISocketNotify> * factory, const Endpoint & local);
 void socketCloseWait(IFactory<ISocketNotify> * factory, const Endpoint & local);
@@ -123,6 +155,20 @@ inline void socketCloseWait(const Endpoint & local) {
     auto factory = getFactory<ISocketNotify, S>();
     socketCloseWait(factory, local);
 }
+
+
+/****************************************************************************
+*
+*   Functions common to connecting and listening sockets
+*
+***/
+
+ISocketNotify::Mode socketGetMode(ISocketNotify * notify);
+void socketDisconnect(ISocketNotify * notify);
+
+// Unlinks notify and links newNotify to the socket, taking ownership of it.
+// If notify wasn't linked newNotify->onSocketDestroy() is called.
+void socketSetNotify(ISocketNotify * notify, ISocketNotify * newNotify);
 
 //===========================================================================
 // read/write

@@ -57,14 +57,14 @@ public:
 
     //-----------------------------------------------------------------------
     // for listeners
-    // returns true if the pipe is accepted
+    // Returns true if the pipe is accepted
     virtual bool onPipeAccept() { return true; };
 
     //-----------------------------------------------------------------------
     // for both
     virtual void onPipeDisconnect() {};
 
-    // Return true to immediately queue up another read, or return false and
+    // Returns true to immediately queue up another read, or return false and
     // call pipeQueueRead later. For every time false is returned
     // pipeQueueRead MUST be called exactly once.
     virtual bool onPipeRead(size_t * bytesUsed, std::string_view data) = 0;

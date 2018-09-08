@@ -69,7 +69,7 @@ public:
     virtual void onSocketPingRequired() {};
 
     // for listeners
-    // returns true if the socket is accepted, false to disconnect
+    // Returns true if the socket is accepted, false to disconnect
     virtual bool onSocketAccept(const AppSocketInfo & info) { return true; };
 
     // for both

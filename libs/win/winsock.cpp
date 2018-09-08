@@ -312,14 +312,15 @@ bool SocketBase::onRead(SocketRequest * task) {
 
     delete task;
 
-    if (m_mode != Mode::kClosed) {
-        m_mode = Mode::kClosed;
-        m_notify->onSocketDisconnect();
-    }
-
-    if (!m_reads && !m_writes) {
-        delete this;
-        return false;
+    if (!m_reads) {
+        if (m_mode != Mode::kClosed) {
+            m_mode = Mode::kClosed;
+            m_notify->onSocketDisconnect();
+        }
+        if (!m_writes) {
+            delete this;
+            return false;
+        }
     }
     return true;
 }
