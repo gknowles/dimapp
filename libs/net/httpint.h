@@ -96,12 +96,20 @@ private:
     enum class ByteMode : int;
     enum class FrameMode : int;
 
-    void replyGoAway(
+    // Always returns false
+    bool replyGoAway(
         Dim::CharBuf * out,
         int lastStream,
         HttpConn::FrameError error,
-        std::string_view msg = {}
+        std::string_view msg
     );
+    // Always returns false, uses m_lastInputStream in go away message
+    bool replyGoAway(
+        Dim::CharBuf * out,
+        HttpConn::FrameError error,
+        std::string_view msg
+    );
+
     HttpStream * findAlways(CharBuf * out, int stream);
     bool writeMsg(
         CharBuf * out,
