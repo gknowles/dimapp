@@ -109,7 +109,7 @@ SocketBase::SocketBase(ISocketNotify * notify)
 //===========================================================================
 SocketBase::~SocketBase() {
     assert(!m_reads && !m_writes);
-    ISocketNotify * notify{nullptr};
+    ISocketNotify * notify = nullptr;
 
     if (m_notify) {
         notify = m_notify;

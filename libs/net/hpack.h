@@ -65,8 +65,8 @@ private:
     void write(const char str[], size_t len);
     void write(size_t val, char prefix, int prefixBits);
 
-    size_t m_dynSize{0};
-    CharBuf * m_out{nullptr};
+    size_t m_dynSize{};
+    CharBuf * m_out{};
 };
 
 

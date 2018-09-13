@@ -40,13 +40,13 @@ public:
 protected:
     void run();
 
-    WinFileInfo * m_file{nullptr};
-    char * m_buf{nullptr};
-    int m_bufLen{0};
-    int m_bufUnused{0};
-    int64_t m_offset{0};
-    int64_t m_length{0};
-    DWORD m_bytes{0};
+    WinFileInfo * m_file{};
+    char * m_buf{};
+    int m_bufLen{};
+    int m_bufUnused{};
+    int64_t m_offset{};
+    int64_t m_length{};
+    DWORD m_bytes{};
 
 private:
     virtual void onNotify() = 0;
@@ -872,14 +872,14 @@ size_t Dim::fileAppendWait(FileHandle f, const void * buf, size_t bufLen) {
 namespace {
 
 struct ProgressTask : ITaskNotify {
-    IFileCopyNotify * m_notify{nullptr};
+    IFileCopyNotify * m_notify{};
     wstring m_wdst;
     wstring m_wsrc;
     TaskQueueHandle m_hq;
-    int64_t m_offset{0};
-    int64_t m_copied{0};
-    int64_t m_total{0};
-    BOOL m_cancel{false};
+    int64_t m_offset{};
+    int64_t m_copied{};
+    int64_t m_total{};
+    BOOL m_cancel{};
     RunMode m_mode{kRunStarting};
 
     void onTask() override;

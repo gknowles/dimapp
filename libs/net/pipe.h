@@ -79,7 +79,7 @@ public:
 
 private:
     friend class PipeBase;
-    PipeBase * m_pipe{nullptr};
+    PipeBase * m_pipe{};
 };
 
 IPipeNotify::Mode pipeGetMode(IPipeNotify * notify);

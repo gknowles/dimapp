@@ -74,7 +74,11 @@ ResModule::~ResModule() {
 bool ResModule::open(const Path & path) {
     m_path = path;
     if (!m_path.empty()) {
-        m_rhandle = LoadLibraryEx(m_path.c_str(), NULL, LOAD_LIBRARY_AS_DATAFILE);
+        m_rhandle = LoadLibraryEx(
+            m_path.c_str(),
+            NULL,
+            LOAD_LIBRARY_AS_DATAFILE
+        );
         if (!m_rhandle) {
             logMsgError() << "LoadLibrary(" << m_path << "): " << WinError{};
             return false;

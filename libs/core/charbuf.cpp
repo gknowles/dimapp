@@ -367,7 +367,7 @@ CharBuf & CharBuf::rtrim(char ch) {
 
 //===========================================================================
 CharBuf & CharBuf::pushBack(char ch) {
-    Buffer * buf{nullptr};
+    Buffer * buf = nullptr;
     if (!m_size) {
         buf = &m_buffers.emplace_back();
     } else {

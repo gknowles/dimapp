@@ -217,10 +217,10 @@ public:
 
 private:
     IXStreamParserNotify & m_notify;
-    unsigned m_line{0};
-    const char * m_errmsg{nullptr};
+    unsigned m_line{};
+    const char * m_errmsg{};
     TempHeap m_heap;
-    Detail::XmlBaseParser * m_base;
+    Detail::XmlBaseParser * m_base{};
 };
 
 
@@ -264,10 +264,10 @@ public:
 
 private:
     TempHeap m_heap;
-    const char * m_filename{nullptr};
-    XNode * m_root{nullptr};
-    const char * m_errmsg{nullptr};
-    size_t m_errpos{0};
+    const char * m_filename{};
+    XNode * m_root{};
+    const char * m_errmsg{};
+    size_t m_errpos{};
 };
 
 //===========================================================================

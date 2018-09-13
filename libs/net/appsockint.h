@@ -100,13 +100,13 @@ private:
     // unsuccessfully.
     std::list<UnmatchedInfo>::iterator m_pos;
 
-    IAppSocketNotify * m_notify{nullptr};
+    IAppSocketNotify * m_notify{};
 };
 
 struct IAppSocket::UnmatchedInfo {
     TimePoint expiration;
     std::string socketData;
-    IAppSocket * notify{nullptr};
+    IAppSocket * notify{};
 };
 
 class IAppSocket::UnmatchedTimer : public ITimerNotify {

@@ -91,7 +91,7 @@ public:
     char * alloc(size_t bytes, size_t align) override;
 
 private:
-    void * m_buffer{nullptr};
+    void * m_buffer{};
 };
 
 } // namespace

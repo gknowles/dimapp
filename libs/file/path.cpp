@@ -176,9 +176,9 @@ Count::Count(string_view path) {
     auto * base = path.data();
     auto * ptr = base;
     auto * eptr = ptr + path.size();
-    const char * colon{nullptr};    // first ':'
-    const char * slash{nullptr};    // last '/' or '\'
-    const char * dot{nullptr};      // last '.'
+    const char * colon = nullptr;    // first ':'
+    const char * slash = nullptr;    // last '/' or '\'
+    const char * dot = nullptr;      // last '.'
     for (; ptr != eptr; ++ptr) {
         switch(*ptr) {
         case '.':

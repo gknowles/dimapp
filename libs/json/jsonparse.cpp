@@ -3221,7 +3221,7 @@ state315:
 //  - 180 states
 [[gsl::suppress(bounds)]]
 bool JsonParser::stateArrayTail (const char *& ptr) {
-    const char * last{nullptr};
+    const char * last = nullptr;
     unsigned char ch;
     goto state2;
 
@@ -7541,7 +7541,7 @@ state495:
 //  - 251 states
 [[gsl::suppress(bounds)]]
 bool JsonParser::stateObjectTail (const char *& ptr) {
-    const char * last{nullptr};
+    const char * last = nullptr;
     unsigned char ch;
     goto state2;
 

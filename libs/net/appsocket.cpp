@@ -33,7 +33,7 @@ enum FactoryFlags : unsigned {
 };
 
 struct MatchKey {
-    IAppSocketMatchNotify * notify{nullptr};
+    IAppSocketMatchNotify * notify{};
 };
 
 struct FactoryInfo {

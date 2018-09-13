@@ -89,27 +89,27 @@ struct WinServiceConfig {
         };
     };
 
-    const char * serviceName {nullptr};
+    const char * serviceName {};
     Type serviceType {};
     Start startType {};
     ErrCtrl errorControl {};
-    const char * progWithArgs {nullptr};
-    const char * loadOrderGroup {nullptr};
+    const char * progWithArgs {};
+    const char * loadOrderGroup {};
     unsigned loadOrderTag {};
     std::vector<const char *> deps;
-    const char * account {nullptr};
-    const char * password {nullptr};
-    const char * displayName {nullptr};
-    const char * desc {nullptr};
+    const char * account {};
+    const char * password {};
+    const char * displayName {};
+    const char * desc {};
 
-    bool failureFlag {false};
-    Duration failureReset;
-    const char * rebootMsg {nullptr}; // used by FailAction::kReboot
-    const char * failureProgWithArgs {nullptr};
+    bool failureFlag {};
+    Duration failureReset {};
+    const char * rebootMsg {}; // used by FailAction::kReboot
+    const char * failureProgWithArgs {};
     std::vector<Action> failureActions;
 
-    unsigned preferredNode = (unsigned) -1; // -1 for none
-    Duration preshutdownTimeout;
+    unsigned preferredNode {(unsigned) -1}; // -1 for none
+    Duration preshutdownTimeout {};
     std::vector<const char *> privs;
     SidType sidType {};
 

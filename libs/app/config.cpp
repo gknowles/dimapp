@@ -27,7 +27,7 @@ const unsigned kMaxConfigFileSize = 10'000'000;
 namespace {
 
 struct NotifyInfo : ListBaseLink<> {
-    IConfigNotify * notify{nullptr};
+    IConfigNotify * notify{};
 };
 
 class ConfigFile : public IFileChangeNotify {
@@ -45,7 +45,7 @@ private:
     void parseContent(string_view fullpath, string && content);
 
     List<NotifyInfo> m_notifiers;
-    unsigned m_changes{0};
+    unsigned m_changes{};
 
     string m_content;
     XDocument m_xml;

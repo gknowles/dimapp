@@ -85,7 +85,7 @@ public:
 
 private:
     friend class SocketBase;
-    SocketBase * m_socket{nullptr};
+    SocketBase * m_socket{};
 };
 
 

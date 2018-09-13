@@ -80,7 +80,7 @@ public:
 
 private:
     friend class IAppSocket;
-    IAppSocket * m_socket{nullptr};
+    IAppSocket * m_socket{};
 };
 
 void socketDisconnect(IAppSocketNotify * notify);

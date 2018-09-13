@@ -31,7 +31,7 @@ public:
 
 private:
     friend class TaskQueue;
-    ITaskNotify * m_taskNext{nullptr};
+    ITaskNotify * m_taskNext{};
 };
 
 class TaskProxy : public ITaskNotify {

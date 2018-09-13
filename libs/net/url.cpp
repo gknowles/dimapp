@@ -187,7 +187,7 @@ void Dim::urlAddQueryString(HttpQuery * out, string_view src, ITempHeap & heap) 
     auto ptr = src.data();
     auto eptr = ptr + src.size();
 
-    HttpPathParam * param{nullptr};
+    HttpPathParam * param = nullptr;
     unsigned pcts = 0;
     unsigned char ch = *ptr;
     if (ch == '?')

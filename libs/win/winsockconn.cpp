@@ -66,7 +66,7 @@ public:
     void onTask() override;
 
 private:
-    ISocketNotify * m_notify{nullptr};
+    ISocketNotify * m_notify{};
 };
 
 } // namespace

@@ -177,7 +177,7 @@ public:
 private:
     IJsonStreamNotify & m_notify;
     unsigned m_line{0};
-    const char * m_errmsg{nullptr};
+    const char * m_errmsg{};
     TempHeap m_heap;
     Detail::JsonParser * m_base;
 };
@@ -242,9 +242,9 @@ public:
 
 private:
     TempHeap m_heap;
-    const char * m_filename{nullptr};
-    JNode * m_root{nullptr};
-    const char * m_errmsg{nullptr};
+    const char * m_filename{};
+    JNode * m_root{};
+    const char * m_errmsg{};
     size_t m_errpos{0};
 };
 

@@ -25,10 +25,10 @@ using namespace Dim;
 namespace {
 
 struct PathInfo {
-    IHttpRouteNotify * notify{nullptr};
-    bool recurse{false};
+    IHttpRouteNotify * notify{};
+    bool recurse{};
     string_view path;
-    size_t segs{0};
+    size_t segs{};
     HttpMethod methods{};
 
     TimePoint mtime;

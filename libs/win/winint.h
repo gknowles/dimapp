@@ -97,7 +97,7 @@ void winSetOverlapped(
 struct WinOverlappedEvent {
     OVERLAPPED overlapped{};
     void * completionKey{};
-    ITaskNotify * notify{nullptr};
+    ITaskNotify * notify{};
     TaskQueueHandle hq{};
 };
 // Allow reinterpret_cast to/from OVERLAPPED
@@ -180,7 +180,7 @@ public:
     virtual void onTask() override = 0;
 
 private:
-    HANDLE m_registeredWait{nullptr};
+    HANDLE m_registeredWait{};
 };
 
 

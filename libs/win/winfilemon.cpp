@@ -54,7 +54,7 @@ private:
 
     string m_base;
     bool m_recurse{false}; // monitoring includes child directories?
-    IFileChangeNotify * m_notify{nullptr};
+    IFileChangeNotify * m_notify{};
 
     unordered_map<string, FileInfo> m_files;
     HANDLE m_handle{INVALID_HANDLE_VALUE};

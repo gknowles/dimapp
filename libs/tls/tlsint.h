@@ -121,7 +121,7 @@ private:
 
     std::vector<TlsCipherSuite> m_suites;
 
-    CharBuf * m_reply{nullptr};
+    CharBuf * m_reply{};
     TlsRecordEncrypt m_encrypt;
     TlsRecordDecrypt m_in;
 };
@@ -149,7 +149,7 @@ public:
     void end();
 
 private:
-    CharBuf * m_out{nullptr};
+    CharBuf * m_out{};
     TlsRecordEncrypt & m_rec;
 
     unsigned m_type{256};

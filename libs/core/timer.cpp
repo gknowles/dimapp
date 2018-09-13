@@ -29,7 +29,7 @@ public:
     // is the notify still pointing back at this timer?
     bool connected() const;
 
-    ITimerNotify * notify{nullptr};
+    ITimerNotify * notify{};
     TimePoint expiration{TimePoint::max()};
     unsigned instance{0};
 

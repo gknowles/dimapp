@@ -79,7 +79,7 @@ public:
     bool onWrite(PipeRequest * task);
 
 protected:
-    IPipeNotify * m_notify{nullptr};
+    IPipeNotify * m_notify{};
     string m_name;
     OpenMode m_oflags{};
     HANDLE m_handle{INVALID_HANDLE_VALUE};

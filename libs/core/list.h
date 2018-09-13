@@ -121,8 +121,8 @@ void ListBaseLink<Tag>::detach() {
 
 template <typename List, typename T>
 class ListIterator {
-    List * m_container{nullptr};
-    T * m_current{nullptr};
+    List * m_container{};
+    T * m_current{};
 public:
     ListIterator() {}
     ListIterator(List * container, T * node);

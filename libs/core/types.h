@@ -89,7 +89,7 @@ public:
     T * operator->();
 
 protected:
-    T * m_current{nullptr};
+    T * m_current{};
 };
 
 //===========================================================================

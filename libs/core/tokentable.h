@@ -75,7 +75,7 @@ private:
 ***/
 
 class TokenTable::Iterator {
-    const Token * m_current{nullptr};
+    const Token * m_current{};
 public:
     Iterator(const Token * ptr);
     Iterator & operator++();

@@ -45,7 +45,7 @@ public:
     void enableEvents();
 
 protected:
-    ISocketNotify * m_notify{nullptr};
+    ISocketNotify * m_notify{};
     SOCKET m_handle{INVALID_SOCKET};
     SocketInfo m_connInfo;
     Mode m_mode{Mode::kInactive};

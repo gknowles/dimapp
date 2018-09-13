@@ -17,7 +17,7 @@ using namespace Dim;
 
 //===========================================================================
 FARPROC Dim::winLoadProc(const char lib[], const char proc[], bool optional) {
-    FARPROC fn{nullptr};
+    FARPROC fn = nullptr;
     HMODULE mod = LoadLibrary(lib);
     if (!mod) {
         if (!optional)

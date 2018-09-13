@@ -149,9 +149,9 @@ void Dim::copy(Endpoint * out, const sockaddr_storage & storage) {
 namespace {
 
 struct QueryTask : IWinOverlappedNotify {
-    ADDRINFOEXW * results{nullptr};
-    IEndpointNotify * notify{nullptr};
-    HANDLE cancel{nullptr};
+    ADDRINFOEXW * results{};
+    IEndpointNotify * notify{};
+    HANDLE cancel{};
     int id;
 
     vector<Endpoint> ends;
@@ -216,7 +216,7 @@ void Dim::endpointQuery(
     string_view name,
     int defaultPort
 ) {
-    QueryTask * task{nullptr};
+    QueryTask * task = nullptr;
     for (;;) {
         *cancelId = ++s_lastCancelId;
         auto ib = s_tasks.try_emplace(*cancelId);

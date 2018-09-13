@@ -103,7 +103,7 @@ public:
     const T * operator-> () const { return m_ptr; }
 
 private:
-    T * m_ptr{nullptr};
+    T * m_ptr{};
 };
 
 //===========================================================================

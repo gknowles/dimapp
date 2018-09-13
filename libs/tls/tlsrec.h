@@ -54,7 +54,7 @@ private:
     void writePlaintext(CharBuf * out);
     void writeCiphertext(CharBuf * out);
 
-    TlsCipher * m_cipher{nullptr};    // cipher if encrypting
+    TlsCipher * m_cipher{};           // cipher if encrypting
     unsigned m_plainType{256};        // content type being encrypted
     std::vector<uint8_t> m_plaintext; // pending plaintext if encrypting
 };
@@ -95,7 +95,7 @@ private:
     unsigned m_curType{256}; // content type being decrypted
     unsigned m_recPos{0};
     unsigned m_textLen;
-    TlsCipher * m_cipher{nullptr};     // cipher if decrypting
+    TlsCipher * m_cipher{};            // cipher if decrypting
     std::vector<uint8_t> m_ciphertext; // pending ciphertext if decrypting
     CharBuf m_plaintext;               // pending text (incomplete record)
     TlsAlertLevel m_alertLevel{kFatal};

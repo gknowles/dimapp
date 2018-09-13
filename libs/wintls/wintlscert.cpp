@@ -452,7 +452,7 @@ static void addCerts(
         return;
     }
 
-    const CERT_CONTEXT * cert{nullptr};
+    const CERT_CONTEXT * cert = nullptr;
     for (;;) {
         cert = CertFindCertificateInStore(
             hstore,

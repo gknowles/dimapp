@@ -25,9 +25,9 @@ public:
         bool onPipeRead(size_t * bytesUsed, string_view data) override;
         void onPipeDisconnect() override;
 
-        ExecProgram * m_notify{nullptr};
+        ExecProgram * m_notify{};
         StdStream m_strm;
-        bool m_closed{false};
+        bool m_closed{};
     };
 
 public:
@@ -51,17 +51,17 @@ private:
     );
     void checkIfDone();
 
-    IExecNotify * m_notify{nullptr};
+    IExecNotify * m_notify{};
     ExecPipe m_pipes[3];
-    unsigned m_connected{0};
+    unsigned m_connected{};
     HANDLE m_process;
 
     char m_outbuf[4096];
     char m_errbuf[4096];
 
     RunMode m_mode{kRunStarting};
-    bool m_canceled{false};
-    int m_exitCode{0};
+    bool m_canceled{};
+    int m_exitCode{};
 };
 
 } // namespace

@@ -29,8 +29,8 @@ public:
     int curThreads{0};
     int wantThreads{0};
 
-    ITaskNotify * first{nullptr};
-    ITaskNotify * last{nullptr};
+    ITaskNotify * first{};
+    ITaskNotify * last{};
 
     condition_variable cv;
 };

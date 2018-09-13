@@ -180,20 +180,20 @@ private:
 
     CharBuf m_data;
     TempHeap m_heap;
-    HdrName * m_firstHeader{nullptr};
-    int m_stream{0};
+    HdrName * m_firstHeader{};
+    int m_stream{};
 };
 
 struct HttpMsg::HdrValue {
     const char * m_value;
-    HdrValue * m_next{nullptr};
-    HdrValue * m_prev{nullptr};
+    HdrValue * m_next{};
+    HdrValue * m_prev{};
 };
 
 struct HttpMsg::HdrName {
     HttpHdr m_id{kHttpInvalid};
-    const char * m_name{nullptr};
-    HdrName * m_next{nullptr};
+    const char * m_name{};
+    HdrName * m_next{};
     HdrValue m_value;
 
     ForwardListIterator<HdrValue> begin();
@@ -203,7 +203,7 @@ struct HttpMsg::HdrName {
 };
 
 struct HttpMsg::HdrList {
-    HdrName * m_firstHeader{nullptr};
+    HdrName * m_firstHeader{};
 
     ForwardListIterator<HdrName> begin();
     ForwardListIterator<HdrName> end();
@@ -230,7 +230,7 @@ public:
 private:
     bool checkPseudoHeaders() const override;
 
-    HttpQuery * m_query{nullptr};
+    HttpQuery * m_query{};
 };
 
 class HttpResponse : public HttpMsg {

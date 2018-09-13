@@ -96,9 +96,9 @@ inline auto HandleMapBase::end() -> Iterator<H, T> {
 // handle map base iterator - internal only
 //===========================================================================
 template <typename H, typename T> class HandleMapBase::Iterator {
-    HandleMapBase::Node * node{nullptr};
-    HandleMapBase::Node * base{nullptr};
-    HandleMapBase::Node * end{nullptr};
+    HandleMapBase::Node * node{};
+    HandleMapBase::Node * base{};
+    HandleMapBase::Node * end{};
 
 public:
     Iterator() {}

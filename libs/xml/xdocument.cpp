@@ -20,31 +20,31 @@ namespace {
 struct XElemInfo;
 
 struct XAttrInfo : XAttr {
-    XElemInfo * parent{nullptr};
-    XAttrInfo * prev{nullptr};
-    XAttrInfo * next{nullptr};
+    XElemInfo * parent{};
+    XAttrInfo * prev{};
+    XAttrInfo * next{};
 
     XAttrInfo(const char name[], const char value[])
         : XAttr{name, value} {}
 };
 
 struct XNodeInfo : XNode {
-    XElemInfo * parent{nullptr};
-    XNodeInfo * prev{nullptr};
-    XNodeInfo * next{nullptr};
+    XElemInfo * parent{};
+    XNodeInfo * prev{};
+    XNodeInfo * next{};
 
     XNodeInfo(const char name[], const char value[])
         : XNode{name, value} {}
 };
 struct XElemInfo : XNodeInfo {
-    XNodeInfo * firstElem{nullptr};
-    XAttrInfo * firstAttr{nullptr};
-    size_t valueLen{0};
+    XNodeInfo * firstElem{};
+    XAttrInfo * firstAttr{};
+    size_t valueLen{};
 
     using XNodeInfo::XNodeInfo;
 };
 struct XElemRootInfo : XElemInfo {
-    XDocument * document{nullptr};
+    XDocument * document{};
 
     using XElemInfo::XElemInfo;
 };
@@ -75,7 +75,7 @@ public:
 
 private:
     XDocument & m_doc;
-    XElemInfo * m_curElem{nullptr};
+    XElemInfo * m_curElem{};
 };
 
 } // namespace

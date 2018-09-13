@@ -41,7 +41,7 @@ public:
 
     SOCKET m_handle{INVALID_SOCKET};
     unique_ptr<AcceptSocket> m_socket;
-    IFactory<ISocketNotify> * m_notify{nullptr};
+    IFactory<ISocketNotify> * m_notify{};
     Endpoint m_localEnd;
     char m_addrBuf[2 * sizeof sockaddr_storage];
 

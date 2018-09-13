@@ -35,7 +35,7 @@ public:
 
 private:
     JDocument & m_doc;
-    JNode * m_curNode{nullptr};
+    JNode * m_curNode{};
 };
 
 } // namespace
