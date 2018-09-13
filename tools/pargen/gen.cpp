@@ -953,7 +953,7 @@ struct StateKey {
     bool operator!=(const StateKey & right) const;
 };
 struct StateInfo {
-    State * state{nullptr};
+    State * state{};
     StateKey key;
     map<unsigned, vector<unsigned>> usedBy;
 };
@@ -965,11 +965,11 @@ template <> struct hash<StateKey> {
 } // namespace std
 namespace {
 struct DedupInfo {
-    unordered_set<State> * states{nullptr};
+    unordered_set<State> * states{};
     vector<StateInfo> info;
     unordered_map<StateKey, vector<unsigned>> idByKey;
 
-    unsigned lastMapId{0};
+    unsigned lastMapId{};
     vector<unsigned> pmapped;
     vector<unsigned> pmap;
     vector<unsigned> qmapped;

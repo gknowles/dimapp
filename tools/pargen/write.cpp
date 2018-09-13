@@ -614,7 +614,7 @@ static void writeStateFuncIntro(ostream & os, const Element * root) {
     os << "state";
     writeRuleName(os, root->name, true);
     os << R"( (const char *& ptr) {
-    const char * last{nullptr};
+    const char * last = nullptr;
     unsigned char ch;
 )";
     if (root->flags & Element::fOnStart)

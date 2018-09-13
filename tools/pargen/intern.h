@@ -74,12 +74,12 @@ struct Element {
     std::string value;
     unsigned m{1};
     unsigned n{1};
-    unsigned id{0};
-    unsigned pos{0}; // position in sequence, 0 for non-sequences
+    unsigned id{};
+    unsigned pos{}; // position in sequence, 0 for non-sequences
 
     std::vector<Element> elements;
-    const Element * rule{nullptr};
-    const Element * eventRule{nullptr}; // only present if different from rule
+    const Element * rule{};
+    const Element * eventRule{}; // only present if different from rule
     Flags flags{};
     std::string eventName; // only present if different from name
 
@@ -202,10 +202,10 @@ const char kDoneStateName[] = "<DONE>";
 const char kFailedStateName[] = "<FAILED>";
 
 struct StateElement {
-    const Element * elem;
-    unsigned rep;
-    bool started{false};
-    bool recurse{false};
+    const Element * elem{};
+    unsigned rep{};
+    bool started{};
+    bool recurse{};
 
     int compare(const StateElement & right) const;
     bool operator<(const StateElement & right) const;
@@ -217,9 +217,9 @@ struct StateElement {
 };
 
 struct StateEvent {
-    const Element * elem{nullptr};
+    const Element * elem{};
     Element::Flags flags{};
-    int distance{0};
+    int distance{};
 
     int compare(const StateEvent & right) const;
     bool operator<(const StateEvent & right) const;
@@ -234,7 +234,7 @@ struct StatePosition {
     std::vector<StateElement> elems;
     std::vector<StateEvent> events;
     std::vector<StateEvent> delayedEvents;
-    int recurseSe{0}; // state element of recursion entry point (0 for none)
+    int recurseSe{}; // state element of recursion entry point (0 for none)
     int recursePos{-1}; // position in kSequence of recursion entry point
 
     int compare(const StatePosition & right) const;
@@ -243,7 +243,7 @@ struct StatePosition {
 };
 
 struct State {
-    unsigned id{0};
+    unsigned id{};
     std::string name;
     std::vector<std::string> aliases;
 
