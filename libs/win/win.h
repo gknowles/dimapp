@@ -38,7 +38,7 @@ struct WinServiceConfig {
         kAuto,
         kAutoDelayed,
         kBoot,
-        kDemand,
+        kDemand,    // aka Manual
         kDisabled,
         kSystem,
 
