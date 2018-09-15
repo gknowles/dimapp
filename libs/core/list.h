@@ -14,11 +14,11 @@
 // struct MyObj : ListBaseLink<> {};
 // List<MyObj> list;
 // list.link(new MyObj);
-// list.clear(); // delete all the member
+// list.clear(); // deletes all members
 //
 // Example of an object in multiple lists:
-// struct Fruit; // tags only need to be a forward reference, the definition
-// struct Color; //   is not required.
+// struct Fruit; // Tags only need forward references, the definitions
+// struct Color; //   aren't required.
 // struct MyObj : ListBaseLink<Fruit>, ListBaseLink<Color> {};
 // List<MyObj, Fruit> fruits;
 // List<MyObj, Color> colors;
@@ -202,6 +202,8 @@ public:
     iterator end();
     const_iterator begin() const;
     const_iterator end() const;
+    const_iterator cbegin() const { return begin(); }
+    const_iterator cend() const { return end(); }
 
     T * front();
     const T * front() const;
