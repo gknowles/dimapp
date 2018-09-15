@@ -340,6 +340,11 @@ void AppXmlNotify::onConfigChange(const XDocument & doc) {
         CertKey key;
         key.storeName = attrValue(&xstore, "name", "My");
         key.storeLoc = attrValue(&xstore, "location", "Current User");
+        if (key.storeLoc == CertLocation::kInvalid) {
+            logMsgError() << "Invalid certificate store location, '"
+                << attrValue(&xstore, "location") << "'";
+            continue;
+        }
         for (auto && xcert : elems(&xstore, "Certificate")) {
             if (auto val = attrValue(&xcert, "thumbprint")) {
                 key.type = CertKey::kThumbprint;
