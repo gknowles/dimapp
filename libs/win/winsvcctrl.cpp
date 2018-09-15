@@ -49,6 +49,13 @@ const EnumMap s_svcErrCtrls[] = {
     { (int) WinServiceConfig::ErrCtrl::kSevere, SERVICE_ERROR_SEVERE },
     { (int) WinServiceConfig::ErrCtrl::kCritical, SERVICE_ERROR_CRITICAL },
 };
+const EnumMap s_svcSidTypes[] = {
+    { (int) WinServiceConfig::SidType::kNone, SERVICE_SID_TYPE_NONE },
+    { (int) WinServiceConfig::SidType::kUnrestricted,
+        SERVICE_SID_TYPE_UNRESTRICTED },
+    { (int) WinServiceConfig::SidType::kRestricted,
+        SERVICE_SID_TYPE_RESTRICTED },
+};
 
 
 /****************************************************************************
@@ -59,24 +66,34 @@ const EnumMap s_svcErrCtrls[] = {
 
 //===========================================================================
 template<typename E, typename T>
-static DWORD getOsValue(const T & tbl, E value, DWORD def = 0) {
-    if (value == E{} && !def)
-        value = decltype(value)::kDefault;
-    for (auto && v : tbl) {
-        if (v.value == (int) value)
-            return v.osvalue;
-    }
-    return def;
-}
-
-//===========================================================================
-template<typename E, typename T>
 static E getValue(const T & tbl, DWORD osvalue, E def = {}) {
     for (auto && v : tbl) {
         if (v.osvalue == osvalue)
             return (E) v.value;
     }
     return def;
+}
+
+//===========================================================================
+template<typename E, typename T>
+static DWORD getOsValue(const T & tbl, E value) {
+    if (value == E{})
+        value = decltype(value)::kDefault;
+    for (auto && v : tbl) {
+        if (v.value == (int) value)
+            return v.osvalue;
+    }
+    return 0;
+}
+
+//===========================================================================
+template<typename T>
+static CharBuf toMultiString(const T & strings) {
+    CharBuf out;
+    for (auto && str : strings)
+        out.append(str).pushBack('\0');
+    out.pushBack('\0');
+    return out;
 }
 
 
@@ -102,15 +119,11 @@ bool Dim::winSvcInstall(const WinServiceConfig & sconf) {
     }
     Finally scm_f([=]() { CloseServiceHandle(scm); });
 
-    CharBuf depv;
-    for (auto && dep : conf.deps) {
-        depv.append(dep).append(1, '\0');
-    }
-    depv.append(1, '\0');
+    auto deps = toMultiString(conf.deps);
 
     auto svcType = getOsValue(s_svcTypes, conf.serviceType);
-    auto svcStart = getOsValue(s_svcStarts, conf.startType);
-    auto svcErrCtrl = getOsValue(s_svcErrCtrls, conf.errorControl);
+    auto startType = getOsValue(s_svcStarts, conf.startType);
+    auto errCtrl = getOsValue(s_svcErrCtrls, conf.errorControl);
 
     DWORD tagId = conf.loadOrderTag;
     if (conf.loadOrderTag) {
@@ -120,9 +133,9 @@ bool Dim::winSvcInstall(const WinServiceConfig & sconf) {
             return false;
         }
         if (conf.startType != WinServiceConfig::Start::kBoot
-            || conf.startType != WinServiceConfig::Start::kSystem
+            && conf.startType != WinServiceConfig::Start::kSystem
         ) {
-            logMsgError() << "winInstallService: load order tag requires "
+            logMsgError() << "winInstallService: load order tag without "
                 "start type of boot or system";
             return false;
         }
@@ -134,12 +147,12 @@ bool Dim::winSvcInstall(const WinServiceConfig & sconf) {
         conf.displayName,
         SERVICE_ALL_ACCESS,
         svcType,
-        svcStart,
-        svcErrCtrl,
+        startType,
+        errCtrl,
         conf.progWithArgs,
         conf.loadOrderGroup,
         tagId ? &tagId : NULL,
-        depv.data(),
+        deps.data(),
         conf.account,
         conf.password
     );
@@ -177,8 +190,13 @@ bool Dim::winSvcInstall(const WinServiceConfig & sconf) {
     if (conf.failureFlag) {
         SERVICE_FAILURE_ACTIONS_FLAG faf = {};
         faf.fFailureActionsOnNonCrashFailures = true;
-        if (!ChangeServiceConfig2(s, SERVICE_CONFIG_FAILURE_ACTIONS_FLAG, &faf)) {
-            logMsgError() << "ChangeServiceConfig2(FAILURE_FLAG): " << WinError{};
+        if (!ChangeServiceConfig2(
+            s,
+            SERVICE_CONFIG_FAILURE_ACTIONS_FLAG,
+            &faf
+        )) {
+            logMsgError() << "ChangeServiceConfig2(FAILURE_FLAG): "
+                << WinError{};
             return false;
         }
     }
@@ -195,15 +213,71 @@ bool Dim::winSvcInstall(const WinServiceConfig & sconf) {
         case fa.kRunCommand: sc.Type = SC_ACTION_RUN_COMMAND; break;
         }
     }
-    SERVICE_FAILURE_ACTIONS fa = {};
+    SERVICE_FAILURE_ACTIONSW fa = {};
     fa.dwResetPeriod =
         (DWORD) duration_cast<seconds>(conf.failureReset).count();
+    wstring wreboot, wcmd;
+    if (conf.rebootMsg) {
+        wreboot = toWstring(conf.rebootMsg);
+        fa.lpRebootMsg = (LPWSTR) wreboot.c_str();
+    }
+    if (conf.failureProgWithArgs) {
+        wcmd = toWstring(conf.failureProgWithArgs);
+        fa.lpCommand = (LPWSTR) wcmd.c_str();
+    }
     fa.cActions = (DWORD) size(facts);
     fa.lpsaActions = data(facts);
     if (!ChangeServiceConfig2(s, SERVICE_CONFIG_FAILURE_ACTIONS, &fa)) {
         logMsgError() << "ChangeServiceConfig2(FAILURE_ACTIONS): "
             << WinError{};
         return false;
+    }
+
+    if (conf.preferredNode != -1) {
+        SERVICE_PREFERRED_NODE_INFO ni = {};
+        ni.usPreferredNode = (USHORT) conf.preferredNode;
+        if (!ChangeServiceConfig2(s, SERVICE_CONFIG_PREFERRED_NODE, &ni)) {
+            logMsgError() << "ChangeServiceConfig2(PREFERRED_NODE): "
+                << WinError{};
+            return false;
+        }
+    }
+
+    if (conf.preshutdownTimeout.count()) {
+        SERVICE_PRESHUTDOWN_INFO pi = {};
+        pi.dwPreshutdownTimeout = (DWORD) duration_cast<milliseconds>(
+            conf.preshutdownTimeout).count();
+        if (!ChangeServiceConfig2(s, SERVICE_CONFIG_PRESHUTDOWN_INFO, &pi)) {
+            logMsgError() << "ChangeServiceConfig2(PRESHUTDOWN_INFO): "
+                << WinError{};
+            return false;
+        }
+    }
+
+    if (conf.sidType != WinServiceConfig::SidType::kInvalid
+        && conf.sidType != WinServiceConfig::SidType::kDefault
+    ) {
+        SERVICE_SID_INFO si = {};
+        si.dwServiceSidType = getOsValue(s_svcSidTypes, conf.sidType);
+        if (!ChangeServiceConfig2(s, SERVICE_CONFIG_SERVICE_SID_INFO, &si)) {
+            logMsgError() << "ChangeServiceConfig2(SID_INFO): " << WinError{};
+            return false;
+        }
+    }
+
+    if (!conf.privs.empty()) {
+        SERVICE_REQUIRED_PRIVILEGES_INFO pi = {};
+        auto privs = toMultiString(conf.privs);
+        pi.pmszRequiredPrivileges = privs.data();
+        if (!ChangeServiceConfig2(
+            s,
+            SERVICE_CONFIG_REQUIRED_PRIVILEGES_INFO,
+            &pi
+        )) {
+            logMsgError() << "ChangeServiceConfig2(REQUIRED_PRIVILEGES): "
+                << WinError{};
+            return false;
+        }
     }
 
     s_d = {};
