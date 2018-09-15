@@ -489,6 +489,7 @@ static void addCerts(
             WinError err;
             continue;
             // NTE_BAD_PUBLIC_KEY - 8009'0015
+            // NTE_BAD_KEYSET - 8009'0016
             // NTE_SILENT_CONTEXT - 8009'0022
         }
         assert(!mustFree);
@@ -769,6 +770,7 @@ unique_ptr<CredHandle> Dim::iWinTlsCreateCred(
     if (err)
         logMsgFatal() << "AcquireCredentialsHandle: " << err;
     // SEC_E_UNKNOWN_CREDENTIALS - 8009'030d
+    // SEC_E_NO_CREDENTIALS - 8009'030e
     // NTE_BAD_KEYSET - 8009'0016
 
     TimePoint expires(Duration(expiry.QuadPart));

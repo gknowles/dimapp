@@ -105,7 +105,7 @@ struct WinServiceConfig {
     bool failureFlag {};
     Duration failureReset {};
     const char * rebootMsg {}; // used by FailAction::kReboot
-    const char * failureProgWithArgs {};
+    const char * failureProgWithArgs {}; // used by FailAction::kRunCommand
     std::vector<Action> failureActions;
 
     unsigned preferredNode {(unsigned) -1}; // -1 for none
@@ -113,7 +113,7 @@ struct WinServiceConfig {
     std::vector<const char *> privs;
     SidType sidType {};
 
-    // NOTE: TRIGGERS NOT SUPPORTED
+    // NOTE: TRIGGERS NOT IMPLEMENTED
     std::vector<Trigger> triggers;
 };
 

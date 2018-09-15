@@ -49,7 +49,7 @@ void execProgram(
     std::string_view args
 );
 
-// Write handle to stdin of child process
+// Write to stdin of child process
 void execWrite(IExecNotify * notify, std::string_view data);
 
 void execCancel(IExecNotify * notify);
