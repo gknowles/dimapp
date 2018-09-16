@@ -71,8 +71,12 @@ bool execProgramWait(
     std::string_view args
 );
 
-// Waits for program to complete and returns its exit code, returns -1
-// if unable to execute program.
-bool execElevated(int * exitCode, std::string_view prog, std::string_view args);
+// Waits for program to complete, returns false and sets exitCode to -1 if
+// unable to execute program.
+bool execElevatedWait(
+    int * exitCode,
+    std::string_view prog,
+    std::string_view args
+);
 
 } // namespace

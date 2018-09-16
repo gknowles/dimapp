@@ -348,7 +348,11 @@ bool Dim::execProgramWait(
 ***/
 
 //===========================================================================
-bool Dim::execElevated(int * exitCode, string_view prog, string_view args) {
+bool Dim::execElevatedWait(
+    int * exitCode,
+    string_view prog,
+    string_view args
+) {
     SHELLEXECUTEINFOW ei = { sizeof(ei) };
     ei.lpVerb = L"RunAs";
     auto wexe = toWstring(prog);
