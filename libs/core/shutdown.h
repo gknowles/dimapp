@@ -55,7 +55,7 @@ void shutdownMonitor(IShutdownNotify * cleanup);
 void shutdownIncomplete();
 
 // Reset shutdown timeout back to 2 minutes from now. Use with caution, called
-// repeatedly it can delayed shutdown indefinitely (aka hang).
+// repeatedly it can delay shutdown indefinitely (aka hang).
 void shutdownDelay();
 
 

@@ -35,6 +35,48 @@ static string s_crashDir; // where to place crash dumps
 
 /****************************************************************************
 *
+*   Helpers
+*
+***/
+
+//===========================================================================
+static bool makeAppPath(
+    string * out,
+    string_view root,
+    string_view file,
+    bool createDirIfNotExist
+) {
+    auto fp = fs::u8path(root.begin(), root.end())
+        / fs::u8path(file.begin(), file.end());
+    error_code ec;
+    fp = fs::canonical(fp, ec);
+    *out = fp.u8string();
+    replace(out->begin(), out->end(), '\\', '/');
+    if (ec
+        || out->compare(0, root.size(), root.data(), root.size()) != 0
+        || (*out)[root.size()] != '/'
+    ) {
+        return false;
+    }
+    if (createDirIfNotExist)
+        fs::create_directories(fp.remove_filename());
+    return true;
+}
+
+//===========================================================================
+static string makeAppDir(string_view path) {
+    auto fp = fs::current_path() / fs::u8path(path.begin(), path.end());
+    error_code ec;
+    fp = fs::canonical(fp, ec);
+    assert(!ec);
+    string out = fp.u8string();
+    replace(out.begin(), out.end(), '\\', '/');
+    return out;
+}
+
+
+/****************************************************************************
+*
 *   app.xml monitor
 *
 ***/
@@ -49,6 +91,8 @@ static ConfigAppXml s_appXml;
 //===========================================================================
 void ConfigAppXml::onConfigChange(const XDocument & doc) {
     shutdownDisableTimeout(configNumber(doc, "DisableShutdownTimeout"));
+    s_logDir = makeAppDir(configString(doc, "LogDir", "log"));
+    s_dataDir = makeAppDir(configString(doc, "DataDir", "data"));
 }
 
 
@@ -151,41 +195,6 @@ RunMode Dim::appMode() {
 //===========================================================================
 AppFlags Dim::appFlags() {
     return s_appFlags;
-}
-
-//===========================================================================
-static bool makeAppPath(
-    string * out,
-    string_view root,
-    string_view file,
-    bool createDirIfNotExist
-) {
-    auto fp = fs::u8path(root.begin(), root.end())
-        / fs::u8path(file.begin(), file.end());
-    error_code ec;
-    fp = fs::canonical(fp, ec);
-    *out = fp.u8string();
-    replace(out->begin(), out->end(), '\\', '/');
-    if (ec
-        || out->compare(0, root.size(), root.data(), root.size()) != 0
-        || (*out)[root.size()] != '/'
-    ) {
-        return false;
-    }
-    if (createDirIfNotExist)
-        fs::create_directories(fp.remove_filename());
-    return true;
-}
-
-//===========================================================================
-static string makeAppDir(string_view path) {
-    auto fp = fs::current_path() / fs::u8path(path.begin(), path.end());
-    error_code ec;
-    fp = fs::canonical(fp, ec);
-    assert(!ec);
-    string out = fp.u8string();
-    replace(out.begin(), out.end(), '\\', '/');
-    return out;
 }
 
 //===========================================================================

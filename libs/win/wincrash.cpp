@@ -226,7 +226,7 @@ void Dim::winCrashInitialize() {
     if (appFlags() & fAppWithFiles) {
         auto crashDir = appCrashDir();
         vector<FileIter::Entry> found;
-        for (auto && e : FileIter{crashDir})
+        for (auto && e : FileIter{crashDir, "*.dmp"})
             found.push_back(e);
         static const int kMaxKeepFiles = 10;
         if (found.size() > kMaxKeepFiles) {
