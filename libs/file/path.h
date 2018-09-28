@@ -159,6 +159,19 @@ inline void Cli::OptBase::setValueDesc<Path>() {
 
 /****************************************************************************
 *
+*   std::hash
+*
+***/
+
+template<> struct std::hash<Dim::Path> {
+    size_t operator()(const Dim::Path & val) const {
+        return std::hash<std::string>()(val.str());
+    }
+};
+
+
+/****************************************************************************
+*
 *   filesystem::path
 *
 ***/
