@@ -6,6 +6,7 @@
 
 #include "cppconf/cppconf.h"
 
+#include "json/json.h"
 #include "net/http.h"
 #include "net/url.h"
 
@@ -90,5 +91,14 @@ void httpRouteSetDefaultReplyHeader(
     const char name[],
     const char value[] = nullptr
 );
+
+
+/****************************************************************************
+*
+*   Debugging
+*
+***/
+
+void httpRouteGetRoutes(IJBuilder * out);
 
 } // namespace

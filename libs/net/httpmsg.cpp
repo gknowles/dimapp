@@ -459,6 +459,11 @@ string_view Dim::to_view(HttpMethod id) {
 }
 
 //===========================================================================
+vector<string_view> Dim::to_views(HttpMethod methods) {
+    return tokenTableGetFlagNames(s_methodNameTbl, methods);
+}
+
+//===========================================================================
 HttpMethod Dim::httpMethodFromString(string_view name, HttpMethod def) {
     return tokenTableGetEnum(s_methodNameTbl, name, def);
 }

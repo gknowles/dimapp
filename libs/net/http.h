@@ -17,6 +17,7 @@
 #include "net/url.h"
 
 #include <memory>
+#include <string_view>
 #include <vector>
 
 namespace Dim {
@@ -90,7 +91,7 @@ enum HttpHdr {
 std::string_view to_view(HttpHdr id);
 HttpHdr httpHdrFromString(std::string_view name, HttpHdr def = kHttpInvalid);
 
-enum HttpMethod {
+enum HttpMethod : unsigned {
     fHttpMethodInvalid = 0x00,
     fHttpMethodConnect = 0x01,
     fHttpMethodDelete = 0x02,
@@ -108,6 +109,8 @@ HttpMethod httpMethodFromString(
     std::string_view name,
     HttpMethod def = fHttpMethodInvalid
 );
+
+std::vector<std::string_view> to_views(HttpMethod methods);
 
 
 /****************************************************************************

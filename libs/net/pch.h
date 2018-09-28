@@ -11,6 +11,7 @@
 #include "app/app.h"
 #include "core/core.h"
 #include "file/file.h"
+#include "json/json.h"
 #include "wintls/wintls.h"
 #include "xml/xml.h"
 

@@ -30,12 +30,14 @@ struct PathInfo {
     string_view path;
     size_t segs{};
     HttpMethod methods{};
+    unsigned matched{};
 
     TimePoint mtime;
     string_view content;
     string_view mimeType;
     string_view charSet;
 
+    // Internal data referenced by other members
     unique_ptr<char[]> data;
 };
 
@@ -132,6 +134,7 @@ static void route(unsigned reqId, HttpRequest & req) {
     auto pi = find(params.path, method);
     if (!pi)
         return httpRouteReplyNotFound(reqId, req);
+    pi->matched += 1;
     if (pi->notify)
         return pi->notify->onHttpRequest(reqId, req);
 
@@ -972,4 +975,35 @@ void Dim::httpRouteReplyWithFile(
     addFileHeaders(&msg, mtime, mimeType, charSet);
     msg.body() = content;
     httpRouteReply(reqId, move(msg));
+}
+
+
+/****************************************************************************
+*
+*   Debugging
+*
+***/
+
+//===========================================================================
+void Dim::httpRouteGetRoutes(IJBuilder * out) {
+    assert(taskInEventThread());
+    out->array();
+    for (auto && p : s_paths) {
+        out->object();
+        out->member("path");
+        if (p.recurse) {
+            auto path = string(p.path) + "...";
+            out->value(path);
+        } else {
+            out->value(p.path);
+        }
+        out->member("methods");
+        out->array();
+        for (auto mname : to_views(p.methods))
+            out->value(mname);
+        out->end();
+        out->member("matched", p.matched);
+        out->end();
+    }
+    out->end();
 }

@@ -43,7 +43,6 @@ void WebRoot::onHttpRequest(unsigned reqId, HttpRequest & msg) {
 namespace {
 class HtmlCounters : public IHttpRouteNotify {
     void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
-
     vector<PerfValue> m_values;
 };
 } // namespace
@@ -83,7 +82,6 @@ void HtmlCounters::onHttpRequest(unsigned reqId, HttpRequest & msg) {
 namespace {
 class JsonCounters : public IHttpRouteNotify {
     void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
-
     vector<PerfValue> m_values;
 };
 } // namespace
@@ -94,12 +92,36 @@ void JsonCounters::onHttpRequest(unsigned reqId, HttpRequest & msg) {
 
     HttpResponse res;
     JBuilder bld(&res.body());
+
     bld.object();
     for (auto && perf : m_values) {
         bld.member(perf.name);
         bld.valueRaw(perf.value);
     }
     bld.end();
+    res.addHeader(kHttpContentType, "application/json");
+    res.addHeader(kHttp_Status, "200");
+    httpRouteReply(reqId, move(res));
+}
+
+
+/****************************************************************************
+*
+*   JsonRoutes
+*
+***/
+
+namespace {
+class JsonRoutes : public IHttpRouteNotify {
+    void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
+};
+} // namespace
+
+//===========================================================================
+void JsonRoutes::onHttpRequest(unsigned reqId, HttpRequest & msg) {
+    HttpResponse res;
+    JBuilder bld(&res.body());
+    httpRouteGetRoutes(&bld);
     res.addHeader(kHttpContentType, "application/json");
     res.addHeader(kHttp_Status, "200");
     httpRouteReply(reqId, move(res));
@@ -115,10 +137,12 @@ void JsonCounters::onHttpRequest(unsigned reqId, HttpRequest & msg) {
 static WebRoot s_webRoot;
 static HtmlCounters s_htmlCounters;
 static JsonCounters s_jsonCounters;
+static JsonRoutes s_jsonRoutes;
 
 //===========================================================================
 void Dim::iWebAdminInitialize() {
     httpRouteAdd(&s_webRoot, "/", fHttpMethodGet, true);
     httpRouteAdd(&s_htmlCounters, "/srv/counters", fHttpMethodGet);
     httpRouteAdd(&s_jsonCounters, "/srv/counters.json", fHttpMethodGet);
+    httpRouteAdd(&s_jsonRoutes, "/srv/routes.json", fHttpMethodGet);
 }
