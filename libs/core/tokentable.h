@@ -100,18 +100,21 @@ inline const TokenTable::Token & TokenTable::Iterator::operator*() {
 *
 ***/
 
+//===========================================================================
 template <typename E>
 E tokenTableGetEnum(const TokenTable & tbl, const char name[], E defId) {
     int id;
     return tbl.find(&id, name) ? (E)id : defId;
 }
 
+//===========================================================================
 template <typename E>
 E tokenTableGetEnum(const TokenTable & tbl, std::string_view name, E defId) {
     int id;
     return tbl.find(&id, name.data(), name.size()) ? (E)id : defId;
 }
 
+//===========================================================================
 template <typename E>
 const char * tokenTableGetName(
     const TokenTable & tbl,
@@ -120,6 +123,23 @@ const char * tokenTableGetName(
 ) {
     const char * name;
     return tbl.find(&name, (int)id) ? name : defName;
+}
+
+//===========================================================================
+template <typename E>
+std::vector<std::string_view> tokenTableGetFlagNames(
+    const TokenTable & tbl,
+    E flags
+) {
+    auto out = std::vector<std::string_view>{};
+    const char * name = nullptr;
+    while (flags) {
+        auto f = E(1 << trailingZeroBits(flags));
+        flags = flags & ~f;
+        if (tbl.find(&name, f))
+            out.push_back(name);
+    }
+    return out;
 }
 
 } // namespace
