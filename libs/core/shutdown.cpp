@@ -128,7 +128,7 @@ void MainTimer::incomplete() {
     if (!s_disableTimeout
         && Clock::now() - m_shutdownStart > s_shutdownTimeout
     ) {
-        assert(0 && "shutdown timeout");
+        assert(!"shutdown timeout");
         terminate();
     }
 }

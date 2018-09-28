@@ -394,7 +394,7 @@ IXBuilder & Dim::operator<<(IXBuilder & out, string_view val) {
 IXBuilder & Dim::operator<<(IXBuilder & out, const XNode & elem) {
     auto type = nodeType(&elem);
     switch (type) {
-    default: assert(0 && "unknown XML node type"); return out;
+    default: assert(!"unknown XML node type"); return out;
     case XType::kText: out.text(elem.value); return out;
     case XType::kElement: break;
     }
