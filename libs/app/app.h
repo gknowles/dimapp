@@ -28,6 +28,7 @@
 
 #include "core/process.h"
 #include "core/types.h"
+#include "file/path.h"
 
 #include <functional>
 #include <string_view>
@@ -106,32 +107,32 @@ inline bool appStopping() { return appMode() == kRunStopping; }
 // returns flags passed to appRun()
 AppFlags appFlags();
 
-const std::string & appConfigDir();
-const std::string & appCrashDir();
-const std::string & appDataDir();
-const std::string & appLogDir();
+const Path & appConfigDir();
+const Path & appCrashDir();
+const Path & appDataDir();
+const Path & appLogDir();
 
 LogType appLogLevel();
 
 // false if file relative to root is not within the root path. This can happen
 // if file breaks out via ".." or is an absolute path.
 bool appConfigPath(
-    std::string * out,
+    Path * out,
     std::string_view file,
     bool createDirIfNotExist = true
 );
 bool appCrashPath(
-    std::string * out,
+    Path * out,
     std::string_view file,
     bool createDirIfNotExist = true
 );
 bool appDataPath(
-    std::string * out,
+    Path * out,
     std::string_view file,
     bool createDirIfNotExist = true
 );
 bool appLogPath(
-    std::string * out,
+    Path * out,
     std::string_view file,
     bool createDirIfNotExist = true
 );

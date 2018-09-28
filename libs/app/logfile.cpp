@@ -48,7 +48,7 @@ private:
 static LogType s_logLevel{kLogTypeInfo};
 static LogBuffer s_buffer;
 static string s_hostname = "-";
-static string s_logfile;
+static Path s_logfile;
 
 static auto & s_perfDropped = uperf("logfile.buffer dropped");
 

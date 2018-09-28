@@ -41,8 +41,8 @@ public:
     string_view base() const { return m_base; }
     // returns false if file is outside of base directory
     bool expandPath(
-        string * fullpath,
-        string * relpath,
+        Path * fullpath,
+        Path * relpath,
         string_view file
     ) const;
 
@@ -52,11 +52,11 @@ public:
 private:
     bool queue ();
 
-    string m_base;
+    Path m_base;
     bool m_recurse{false}; // monitoring includes child directories?
     IFileChangeNotify * m_notify{};
 
-    unordered_map<string, FileInfo> m_files;
+    unordered_map<Path, FileInfo> m_files;
     HANDLE m_handle{INVALID_HANDLE_VALUE};
     FileMonitorHandle m_stopping;
 };
@@ -176,8 +176,8 @@ void DirInfo::closeWait_UNLK (FileMonitorHandle dir) {
 
 //===========================================================================
 void DirInfo::addMonitor_UNLK(string_view path, IFileChangeNotify * notify) {
-    string fullpath;
-    string relpath;
+    Path fullpath;
+    Path relpath;
     if (!expandPath(&fullpath, &relpath, path)) {
         logMsgError() << "Monitor file not in base directory, "
             << fullpath << ", " << m_base;
@@ -227,8 +227,8 @@ void DirInfo::removeMonitorWait_UNLK(
     string_view file,
     IFileChangeNotify * notify
 ) {
-    string fullpath;
-    string relpath;
+    Path fullpath;
+    Path relpath;
     if (!expandPath(&fullpath, &relpath, file))
         return;
 
@@ -281,8 +281,8 @@ void DirInfo::onTask () {
 
 //===========================================================================
 Duration DirInfo::onTimer (TimePoint now) {
-    string fullpath;
-    string relpath;
+    Path fullpath;
+    Path relpath;
     unsigned notified = 0;
 
     unique_lock lk{s_mut};
@@ -341,20 +341,19 @@ Duration DirInfo::onTimer (TimePoint now) {
 
 //===========================================================================
 bool DirInfo::expandPath(
-    string * fullpath,
-    string * relpath,
+    Path * fullpath,
+    Path * relpath,
     string_view file
 ) const {
     auto fp = fs::u8path(file.begin(), file.end());
-    fp = fs::absolute(fp, fs::u8path(m_base));
+    fp = fs::absolute(fp, fs::u8path(m_base.str()));
     *fullpath = fp.u8string();
-    if (fullpath->compare(0, m_base.size(), m_base) != 0) {
+    if (fullpath->str().compare(0, m_base.str().size(), m_base.str()) != 0) {
         relpath->clear();
         return false;
     }
 
-    *relpath = *fullpath;
-    relpath->erase(0, m_base.size() + 1);
+    *relpath = string(fullpath->str()).erase(0, m_base.str().size() + 1);
     return true;
 }
 
@@ -458,7 +457,7 @@ void Dim::fileMonitorCloseWait(
 
 //===========================================================================
 bool Dim::fileMonitorPath(
-    string * out,
+    Path * out,
     FileMonitorHandle dir,
     string_view file
 ) {
@@ -467,6 +466,6 @@ bool Dim::fileMonitorPath(
     if (!di)
         return false;
 
-    string fullpath;
+    Path fullpath;
     return di->expandPath(&fullpath, out, file);
 }

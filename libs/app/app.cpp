@@ -27,10 +27,10 @@ static IAppNotify * s_app;
 static string s_appName;
 static vector<ITaskNotify *> s_appTasks;
 static AppFlags s_appFlags;
-static string s_logDir;
-static string s_confDir;
-static string s_dataDir;
-static string s_crashDir; // where to place crash dumps
+static Path s_logDir;
+static Path s_confDir;
+static Path s_dataDir;
+static Path s_crashDir; // where to place crash dumps
 
 
 /****************************************************************************
@@ -41,36 +41,28 @@ static string s_crashDir; // where to place crash dumps
 
 //===========================================================================
 static bool makeAppPath(
-    string * out,
+    Path * out,
     string_view root,
     string_view file,
     bool createDirIfNotExist
 ) {
-    auto fp = fs::u8path(root.begin(), root.end())
-        / fs::u8path(file.begin(), file.end());
-    error_code ec;
-    fp = fs::canonical(fp, ec);
-    *out = fp.u8string();
-    replace(out->begin(), out->end(), '\\', '/');
-    if (ec
-        || out->compare(0, root.size(), root.data(), root.size()) != 0
-        || (*out)[root.size()] != '/'
+    *out = Path(root) / file;
+    if (out->str().compare(0, root.size(), root.data(), root.size()) != 0
+        || out->str()[root.size()] != '/'
     ) {
         return false;
     }
-    if (createDirIfNotExist)
-        fs::create_directories(fp.remove_filename());
+    if (createDirIfNotExist) {
+        auto fp = fs::u8path(out->str());
+        error_code ec;
+        fs::create_directories(fp.remove_filename(), ec);
+    }
     return true;
 }
 
 //===========================================================================
-static string makeAppDir(string_view path) {
-    auto fp = fs::current_path() / fs::u8path(path.begin(), path.end());
-    error_code ec;
-    fp = fs::canonical(fp, ec);
-    assert(!ec);
-    string out = fp.u8string();
-    replace(out.begin(), out.end(), '\\', '/');
+static Path makeAppDir(string_view path) {
+    auto out = Path(fs::current_path()) / path;
     return out;
 }
 
@@ -198,42 +190,42 @@ AppFlags Dim::appFlags() {
 }
 
 //===========================================================================
-const string & Dim::appConfigDir() {
+const Path & Dim::appConfigDir() {
     return s_confDir;
 }
 
 //===========================================================================
-bool Dim::appConfigPath(string * out, string_view file, bool cine) {
+bool Dim::appConfigPath(Path * out, string_view file, bool cine) {
     return makeAppPath(out, appConfigDir(), file, cine);
 }
 
 //===========================================================================
-const string & Dim::appLogDir() {
+const Path & Dim::appLogDir() {
     return s_logDir;
 }
 
 //===========================================================================
-bool Dim::appLogPath(string * out, string_view file, bool cine) {
+bool Dim::appLogPath(Path * out, string_view file, bool cine) {
     return makeAppPath(out, appLogDir(), file, cine);
 }
 
 //===========================================================================
-const string & Dim::appDataDir() {
+const Path & Dim::appDataDir() {
     return s_dataDir;
 }
 
 //===========================================================================
-bool Dim::appDataPath(string * out, string_view file, bool cine) {
+bool Dim::appDataPath(Path * out, string_view file, bool cine) {
     return makeAppPath(out, appDataDir(), file, cine);
 }
 
 //===========================================================================
-const string & Dim::appCrashDir() {
+const Path & Dim::appCrashDir() {
     return s_crashDir;
 }
 
 //===========================================================================
-bool Dim::appCrashPath(string * out, string_view file, bool cine) {
+bool Dim::appCrashPath(Path * out, string_view file, bool cine) {
     return makeAppPath(out, appCrashDir(), file, cine);
 }
 

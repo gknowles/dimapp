@@ -65,7 +65,7 @@ private:
 static FileMonitorHandle s_hDir;
 
 static mutex s_mut;
-static unordered_map<string, ConfigFile> s_files;
+static unordered_map<Path, ConfigFile> s_files;
 static thread::id s_inThread; // thread running any current callback
 static condition_variable s_inCv; // when running callback completes
 static IConfigNotify * s_inNotify; // notify currently in progress
@@ -115,7 +115,7 @@ bool ConfigFile::closeWait_UNLK(IConfigNotify * notify) {
         if (notify == ni->notify) {
             delete ni;
             if (!m_notifiers)
-                s_files.erase(string(m_relpath));
+                s_files.erase(Path(m_relpath));
             return true;
         }
     }
@@ -186,7 +186,7 @@ bool ConfigFile::notify_UNLK(IConfigNotify * notify) {
     }
     m_notifiers.unlink(&marker);
     if (!m_notifiers)
-        s_files.erase(string(m_relpath));
+        s_files.erase(Path(m_relpath));
 
     s_inThread = {};
     s_inNotify = nullptr;
@@ -240,7 +240,7 @@ void Dim::iConfigInitialize () {
 ***/
 
 //===========================================================================
-static bool getFullpath(string * out, string_view file) {
+static bool getFullpath(Path * out, string_view file) {
     bool result;
     if (appFlags() & fAppWithFiles) {
         result = fileMonitorPath(out, s_hDir, file);
@@ -254,7 +254,7 @@ static bool getFullpath(string * out, string_view file) {
 
 //===========================================================================
 void Dim::configMonitor(string_view file, IConfigNotify * notify) {
-    string path;
+    Path path;
     if (!getFullpath(&path, file))
         return;
 
@@ -265,7 +265,7 @@ void Dim::configMonitor(string_view file, IConfigNotify * notify) {
 
 //===========================================================================
 void Dim::configCloseWait(string_view file, IConfigNotify * notify) {
-    string path;
+    Path path;
     if (!getFullpath(&path, file))
         return;
 
@@ -280,7 +280,7 @@ void Dim::configChange(
     string_view file,
     IConfigNotify * notify // = nullptr
 ) {
-    string path;
+    Path path;
     if (!getFullpath(&path, file))
         return;
 

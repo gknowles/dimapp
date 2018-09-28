@@ -7,6 +7,7 @@
 #include "cppconf/cppconf.h"
 
 #include "core/handle.h"
+#include "file/path.h"
 
 #include <cstdint>
 #include <memory>
@@ -25,7 +26,6 @@ namespace Dim {
 class IFileChangeNotify {
 public:
     virtual ~IFileChangeNotify () = default;
-
     virtual void onFileChange(std::string_view fullpath) = 0;
 };
 
@@ -60,7 +60,7 @@ void fileMonitorCloseWait(
 // directory. Returns false for invalid parameters (bad directory, file
 // outside of directory, etc.)
 bool fileMonitorPath(
-    std::string * out,
+    Path * out,
     FileMonitorHandle dir,
     std::string_view file
 );
