@@ -37,10 +37,6 @@ struct Clock {
     static const bool is_steady = false;
 
     static time_point now() noexcept;
-
-    // C conversions
-    static time_t to_time_t(const time_point & time) noexcept;
-    static time_point from_time_t(time_t tm) noexcept;
 };
 
 //===========================================================================
@@ -50,6 +46,12 @@ inline Clock::time_point::operator bool() const noexcept {
 
 using Duration = Clock::duration;
 using TimePoint = Clock::time_point;
+
+TimePoint timeNow();
+
+// C conversions
+time_t to_time_t(const TimePoint & time);
+TimePoint from_time_t(time_t t);
 
 
 /****************************************************************************

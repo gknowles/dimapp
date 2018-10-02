@@ -315,7 +315,8 @@ void FileLoadNotify::onFileEnd(int64_t offset, FileHandle f) {
 TimePoint Dim::fileLastWriteTime(string_view path) {
     error_code ec;
     auto f = fs::u8path(path.begin(), path.end());
-    auto tp = TimePoint{fs::last_write_time(f, ec).time_since_epoch()};
+    auto unixtp = chrono::system_clock::to_time_t(fs::last_write_time(f, ec));
+    auto tp = timeFromUnix(unixtp);
     return tp;
 }
 

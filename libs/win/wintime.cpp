@@ -60,6 +60,6 @@ bool Dim::timeFromDesc(TimePoint * time, const tm & tm) {
         *time = {};
         return false;
     }
-    *time = Clock::from_time_t(t);
+    *time = from_time_t(t);
     return true;
 }

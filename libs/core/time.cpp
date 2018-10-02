@@ -28,19 +28,7 @@ constexpr auto kUnixTimeDiff = 11'644'473'600ull;
 //===========================================================================
 // static
 Clock::time_point Clock::now() noexcept {
-    return time_point{duration{iClockGetTicks()}};
-}
-
-//===========================================================================
-// static
-time_t Clock::to_time_t(const time_point & time) noexcept {
-    return (time_t) timeToUnix(time);
-}
-
-//===========================================================================
-// static
-Clock::time_point Clock::from_time_t(time_t t) noexcept {
-    return timeFromUnix((uint64_t) t);
+    return timeNow();
 }
 
 
@@ -407,8 +395,23 @@ bool Dim::timeParse8601(TimePoint * out, string_view str) {
 ***/
 
 //===========================================================================
+time_t Dim::to_time_t(const TimePoint & time) {
+    return (time_t) timeToUnix(time);
+}
+
+//===========================================================================
+TimePoint Dim::from_time_t(time_t t) {
+    return timeFromUnix((uint64_t) t);
+}
+
+//===========================================================================
+TimePoint Dim::timeNow() {
+    return TimePoint{Duration{iClockGetTicks()}};
+}
+
+//===========================================================================
 bool Dim::timeToDesc(tm * tm, TimePoint time) {
-    auto t = Clock::to_time_t(time);
+    auto t = to_time_t(time);
 #pragma warning(suppress : 4996) // deprecated
     if (auto tmp = gmtime(&t)) {
         *tm = *tmp;
