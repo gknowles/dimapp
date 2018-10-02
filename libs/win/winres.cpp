@@ -154,7 +154,7 @@ bool ResModule::loadNames(vector<string> * names) {
     WinError err{0};
     if (!EnumResourceNamesW(
         m_rhandle,
-        MAKEINTRESOURCEW(23),
+        MAKEINTRESOURCEW(10),
         enumNameCallback,
         (LONG_PTR) &rni
     )) {
@@ -181,7 +181,7 @@ string_view ResModule::loadHtml(string_view namev) {
     auto hinfo = FindResourceW(
         m_rhandle,
         name.c_str(),
-        MAKEINTRESOURCEW(23)
+        MAKEINTRESOURCEW(10)
     );
     if (!hinfo)
         return {};
