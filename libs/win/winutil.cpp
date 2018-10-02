@@ -18,10 +18,11 @@ using namespace Dim;
 //===========================================================================
 FARPROC Dim::winLoadProc(const char lib[], const char proc[], bool optional) {
     FARPROC fn = nullptr;
-    HMODULE mod = LoadLibrary(lib);
+    auto wlib = toWstring(lib);
+    HMODULE mod = LoadLibraryW(wlib.c_str());
     if (!mod) {
         if (!optional)
-            logMsgFatal() << "LoadLibrary(" << lib << "): " << WinError{};
+            logMsgFatal() << "LoadLibraryW(" << lib << "): " << WinError{};
         return fn;
     }
 
@@ -41,20 +42,19 @@ FARPROC Dim::winLoadProc(const char lib[], const char proc[], bool optional) {
 ***/
 
 //===========================================================================
-bool Dim::winEnablePrivilege(string_view name, bool enable) {
+bool Dim::winEnablePrivilege(const wchar_t wname[], bool enable) {
     auto proc = GetCurrentProcess();
     HANDLE token;
     if (!OpenProcessToken(proc, TOKEN_ADJUST_PRIVILEGES, &token))
         return false;
 
     bool success = false;
-    auto wname = toWstring(name);
     TOKEN_PRIVILEGES tp;
     tp.PrivilegeCount = 1;
     tp.Privileges[0].Attributes = enable ? SE_PRIVILEGE_ENABLED : 0;
     if (LookupPrivilegeValueW(
         NULL,
-        wname.c_str(),
+        wname,
         &tp.Privileges[0].Luid
     )) {
         if (AdjustTokenPrivileges(

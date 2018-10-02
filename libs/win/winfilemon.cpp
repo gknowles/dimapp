@@ -107,8 +107,8 @@ bool DirInfo::start(string_view path, bool recurse) {
     m_recurse = recurse;
     fs::create_directories(fp, ec);
 
-    m_handle = CreateFile(
-        m_base.c_str(),
+    m_handle = CreateFileW(
+        fp.c_str(),
         FILE_LIST_DIRECTORY, // access
         FILE_SHARE_READ | FILE_SHARE_WRITE, // share mode
         NULL, // security attributes

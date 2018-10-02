@@ -24,7 +24,7 @@ const unsigned kUpdateIntervalMS = 1'000;
 *
 ***/
 
-const char kPerfWndClass[] = "DimPerfCounters";
+const wchar_t kPerfWndClassW[] = L"DimPerfCounters";
 const int kListId = 1;
 const int kTimerId = 1;
 
@@ -39,9 +39,9 @@ const unsigned WM_USER_CLOSEWINDOW = WM_USER;
 
 //===========================================================================
 static HWND createList(HWND parent) {
-    HWND wnd = CreateWindow(
+    HWND wnd = CreateWindowW(
         WC_LISTVIEW,
-        "",
+        L"",
         WS_CHILD | WS_VISIBLE | WS_HSCROLL | WS_VSCROLL | LVS_REPORT,
         0, 0, // x, y
         CW_USEDEFAULT, CW_USEDEFAULT, // cx, cy
@@ -55,15 +55,15 @@ static HWND createList(HWND parent) {
         abort();
     }
 
-    LVCOLUMN lc = {};
+    LVCOLUMNW lc = {};
     lc.mask = LVCF_FMT | LVCF_TEXT | LVCF_SUBITEM;
     lc.fmt = LVCFMT_RIGHT;
-    lc.pszText = (LPSTR) "Value";
+    lc.pszText = (LPWSTR) L"Value";
     lc.iSubItem = 0;
     if (ListView_InsertColumn(wnd, 1, &lc) == -1)
         logMsgFatal() << "ListView_InsertColumn(1): " << WinError{};
     lc.fmt = LVCFMT_LEFT;
-    lc.pszText = (LPSTR) "Name";
+    lc.pszText = (LPWSTR) L"Name";
     lc.iSubItem = 1;
     if (ListView_InsertColumn(wnd, 2, &lc) == -1)
         logMsgFatal() << "ListView_InsertColumn(2): " << WinError{};
@@ -82,15 +82,16 @@ static void moveList(HWND parent) {
 
 //===========================================================================
 static void setItemText(HWND wnd, int item, int col, string_view text) {
-    char tmp[256] = {};
-    LVITEM li = {};
+    auto wtext = toWstring(text);
+    wchar_t tmp[256] = {};
+    LVITEMW li = {};
     li.iItem = item;
     li.iSubItem = col;
     li.mask = LVIF_TEXT;
-    li.pszText = (LPSTR) tmp;
+    li.pszText = (LPWSTR) tmp;
     li.cchTextMax = sizeof(tmp);
-    if (!ListView_GetItem(wnd, &li) || text != li.pszText)
-        ListView_SetItemText(wnd, item, col, (LPSTR) text.data());
+    if (!ListView_GetItem(wnd, &li) || wtext != li.pszText)
+        ListView_SetItemText(wnd, item, col, (LPWSTR) wtext.data());
 }
 
 //===========================================================================
@@ -182,13 +183,13 @@ static LRESULT CALLBACK perfWindowProc(
 
 //===========================================================================
 static HWND createPerfWindow() {
-    WNDCLASSEX wc = {};
+    WNDCLASSEXW wc = {};
     wc.cbSize = sizeof(wc);
     wc.style = CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc = perfWindowProc;
     wc.hInstance = GetModuleHandle(NULL);
-    wc.lpszClassName = kPerfWndClass;
-    if (!RegisterClassEx(&wc))
+    wc.lpszClassName = kPerfWndClassW;
+    if (!RegisterClassExW(&wc))
         logMsgFatal() << "RegisterClassEx: " << WinError{};
 
     long val = GetDialogBaseUnits();
@@ -197,9 +198,9 @@ static HWND createPerfWindow() {
 
     auto name = appName();
     name += " - Counters";
-    auto wnd = CreateWindow(
-        kPerfWndClass,
-        name.c_str(),
+    auto wnd = CreateWindowW(
+        kPerfWndClassW,
+        toWstring(name).c_str(),
         WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, CW_USEDEFAULT, // x, y
         50 * diagX, 50 * diagY, // cx, cy
@@ -343,7 +344,7 @@ void MessageLoopTask::onTask() {
         DispatchMessage(&msg);
     }
 
-    UnregisterClass(kPerfWndClass, GetModuleHandle(NULL));
+    UnregisterClassW(kPerfWndClassW, GetModuleHandle(NULL));
     setWnd(NULL);
 }
 

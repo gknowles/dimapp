@@ -110,23 +110,23 @@ ostream & Dim::operator<<(ostream & os, const WinError & val) {
     auto ntval = (WinError::NtStatus) val;
     auto secval = (WinError::SecurityStatus) val;
     int native = secval ? secval : ntval ? ntval : val;
-    char buf[256] = {};
-    FormatMessage(
+    wchar_t wbuf[256] = {};
+    FormatMessageW(
         FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
         NULL, // source
         native,
         0, // language
-        buf,
-        (DWORD)size(buf),
+        wbuf,
+        (DWORD) size(wbuf),
         NULL
     );
 
     // trim trailing whitespace (i.e. \r\n)
-    char * ptr = buf + strlen(buf) - 1;
-    for (; ptr > buf && isspace((unsigned char)*ptr); --ptr)
+    auto ptr = wbuf + wcslen(wbuf) - 1;
+    for (; ptr > wbuf && iswspace(*ptr); --ptr)
         *ptr = 0;
 
-    os << buf << " (" << (int) val;
+    os << utf8(wbuf) << " (" << (int) val;
     if (ntval || secval) {
         os << hex << ':' << ntval << ':' << secval << dec;
     }

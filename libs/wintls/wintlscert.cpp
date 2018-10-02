@@ -353,7 +353,7 @@ static bool matchHost(string_view authority, string_view host) {
 //===========================================================================
 static bool matchHost(const CERT_CONTEXT * cert, string_view host) {
     // get length of Common Name
-    auto nameLen = CertGetNameString(
+    auto nameLen = CertGetNameStringW(
         cert,
         CERT_NAME_DNS_TYPE,
         CERT_NAME_SEARCH_ALL_NAMES_FLAG,
@@ -365,15 +365,16 @@ static bool matchHost(const CERT_CONTEXT * cert, string_view host) {
         // length 0 means no names found
         return false;
     }
-    string name(nameLen, 0);
-    CertGetNameString(
+    wstring wname(nameLen, 0);
+    CertGetNameStringW(
         cert,
         CERT_NAME_DNS_TYPE,
         CERT_NAME_SEARCH_ALL_NAMES_FLAG,
         (void *) szOID_SUBJECT_ALT_NAME2,
-        name.data(),
-        (DWORD) name.size()
+        wname.data(),
+        (DWORD) wname.size()
     );
+    auto name = toString(wname);
     const char * ptr = name.data();
     while (*ptr) {
         string_view authority{ptr};
@@ -674,25 +675,25 @@ bool CertName::parse(const char src[]) {
 
 //===========================================================================
 string CertName::str() const {
-    string name;
-    DWORD len = CertNameToStr(
+    wstring wname;
+    DWORD len = CertNameToStrW(
         X509_ASN_ENCODING,
         const_cast<CERT_NAME_BLOB *>(&m_blob),
         CERT_SIMPLE_NAME_STR,
         NULL,
         0
     );
-    name.resize(len);
-    CertNameToStr(
+    wname.resize(len);
+    CertNameToStrW(
         X509_ASN_ENCODING,
         const_cast<CERT_NAME_BLOB *>(&m_blob),
         CERT_SIMPLE_NAME_STR,
-        name.data(),
+        wname.data(),
         len
     );
-    assert(len == name.size());
-    name.pop_back();
-    return name;
+    assert(len == wname.size());
+    wname.pop_back();
+    return toString(wname);
 }
 
 
@@ -756,9 +757,9 @@ unique_ptr<CredHandle> Dim::iWinTlsCreateCred(
 
     auto handle = make_unique<CredHandle>();
     TimeStamp expiry;
-    err = (SecStatus) AcquireCredentialsHandle(
+    err = (SecStatus) AcquireCredentialsHandleW(
         NULL, // principal - null for SChannel
-        const_cast<LPSTR>(UNISP_NAME), // package
+        const_cast<LPWSTR>(UNISP_NAME), // package
         SECPKG_CRED_INBOUND,
         NULL, // login id - null for SChannel
         &cred,

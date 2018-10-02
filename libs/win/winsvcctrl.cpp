@@ -141,23 +141,23 @@ bool Dim::winSvcInstall(const WinServiceConfig & sconf) {
         }
     }
 
-    auto s = CreateService(
+    auto s = CreateServiceW(
         scm,
-        conf.serviceName,
-        conf.displayName,
+        toWstring(conf.serviceName).c_str(),
+        toWstring(conf.displayName).c_str(),
         SERVICE_ALL_ACCESS,
         svcType,
         startType,
         errCtrl,
-        conf.progWithArgs,
-        conf.loadOrderGroup,
+        toWstring(conf.progWithArgs).c_str(),
+        conf.loadOrderGroup ? toWstring(conf.loadOrderGroup).c_str() : nullptr,
         tagId ? &tagId : NULL,
-        deps.data(),
-        conf.account,
-        conf.password
+        toWstring(deps.view()).c_str(),
+        conf.account ? toWstring(conf.account).c_str() : nullptr,
+        conf.password ? toWstring(conf.password).c_str() : nullptr
     );
     if (!s) {
-        logMsgError() << "CreateService(" << conf.serviceName << "): "
+        logMsgError() << "CreateServiceW(" << conf.serviceName << "): "
             << WinError{};
         return false;
     }
@@ -167,21 +167,22 @@ bool Dim::winSvcInstall(const WinServiceConfig & sconf) {
     if (conf.startType == WinServiceConfig::Start::kAutoDelayed) {
         SERVICE_DELAYED_AUTO_START_INFO dsi = {};
         dsi.fDelayedAutostart = true;
-        if (!ChangeServiceConfig2(
+        if (!ChangeServiceConfig2W(
             s,
             SERVICE_CONFIG_DELAYED_AUTO_START_INFO,
             &dsi
         )) {
-            logMsgError() << "ChangeServiceConfig2(DELAYED_START): "
+            logMsgError() << "ChangeServiceConfig2W(DELAYED_START): "
                 << WinError{};
         }
     }
 
     if (conf.desc) {
+        auto wdesc = toWstring(conf.desc);
         SERVICE_DESCRIPTION sd = {};
-        sd.lpDescription = (char *) conf.desc;
-        if (!ChangeServiceConfig2(s, SERVICE_CONFIG_DESCRIPTION, &sd)) {
-            logMsgError() << "ChangeServiceConfig2(DESCRIPTION): "
+        sd.lpDescription = (LPWSTR) wdesc.c_str();
+        if (!ChangeServiceConfig2W(s, SERVICE_CONFIG_DESCRIPTION, &sd)) {
+            logMsgError() << "ChangeServiceConfig2W(DESCRIPTION): "
                 << WinError{};
             return false;
         }
@@ -190,12 +191,12 @@ bool Dim::winSvcInstall(const WinServiceConfig & sconf) {
     if (conf.failureFlag) {
         SERVICE_FAILURE_ACTIONS_FLAG faf = {};
         faf.fFailureActionsOnNonCrashFailures = true;
-        if (!ChangeServiceConfig2(
+        if (!ChangeServiceConfig2W(
             s,
             SERVICE_CONFIG_FAILURE_ACTIONS_FLAG,
             &faf
         )) {
-            logMsgError() << "ChangeServiceConfig2(FAILURE_FLAG): "
+            logMsgError() << "ChangeServiceConfig2W(FAILURE_FLAG): "
                 << WinError{};
             return false;
         }
@@ -227,8 +228,8 @@ bool Dim::winSvcInstall(const WinServiceConfig & sconf) {
     }
     fa.cActions = (DWORD) size(facts);
     fa.lpsaActions = data(facts);
-    if (!ChangeServiceConfig2(s, SERVICE_CONFIG_FAILURE_ACTIONS, &fa)) {
-        logMsgError() << "ChangeServiceConfig2(FAILURE_ACTIONS): "
+    if (!ChangeServiceConfig2W(s, SERVICE_CONFIG_FAILURE_ACTIONS, &fa)) {
+        logMsgError() << "ChangeServiceConfig2W(FAILURE_ACTIONS): "
             << WinError{};
         return false;
     }
@@ -236,8 +237,8 @@ bool Dim::winSvcInstall(const WinServiceConfig & sconf) {
     if (conf.preferredNode != -1) {
         SERVICE_PREFERRED_NODE_INFO ni = {};
         ni.usPreferredNode = (USHORT) conf.preferredNode;
-        if (!ChangeServiceConfig2(s, SERVICE_CONFIG_PREFERRED_NODE, &ni)) {
-            logMsgError() << "ChangeServiceConfig2(PREFERRED_NODE): "
+        if (!ChangeServiceConfig2W(s, SERVICE_CONFIG_PREFERRED_NODE, &ni)) {
+            logMsgError() << "ChangeServiceConfig2W(PREFERRED_NODE): "
                 << WinError{};
             return false;
         }
@@ -247,8 +248,8 @@ bool Dim::winSvcInstall(const WinServiceConfig & sconf) {
         SERVICE_PRESHUTDOWN_INFO pi = {};
         pi.dwPreshutdownTimeout = (DWORD) duration_cast<milliseconds>(
             conf.preshutdownTimeout).count();
-        if (!ChangeServiceConfig2(s, SERVICE_CONFIG_PRESHUTDOWN_INFO, &pi)) {
-            logMsgError() << "ChangeServiceConfig2(PRESHUTDOWN_INFO): "
+        if (!ChangeServiceConfig2W(s, SERVICE_CONFIG_PRESHUTDOWN_INFO, &pi)) {
+            logMsgError() << "ChangeServiceConfig2W(PRESHUTDOWN_INFO): "
                 << WinError{};
             return false;
         }
@@ -259,8 +260,8 @@ bool Dim::winSvcInstall(const WinServiceConfig & sconf) {
     ) {
         SERVICE_SID_INFO si = {};
         si.dwServiceSidType = getOsValue(s_svcSidTypes, conf.sidType);
-        if (!ChangeServiceConfig2(s, SERVICE_CONFIG_SERVICE_SID_INFO, &si)) {
-            logMsgError() << "ChangeServiceConfig2(SID_INFO): " << WinError{};
+        if (!ChangeServiceConfig2W(s, SERVICE_CONFIG_SERVICE_SID_INFO, &si)) {
+            logMsgError() << "ChangeServiceConfig2W(SID_INFO): " << WinError{};
             return false;
         }
     }
@@ -268,13 +269,14 @@ bool Dim::winSvcInstall(const WinServiceConfig & sconf) {
     if (!conf.privs.empty()) {
         SERVICE_REQUIRED_PRIVILEGES_INFO pi = {};
         auto privs = toMultiString(conf.privs);
-        pi.pmszRequiredPrivileges = privs.data();
-        if (!ChangeServiceConfig2(
+        auto wprivs = toWstring(privs.view());
+        pi.pmszRequiredPrivileges = (LPWSTR) wprivs.c_str();
+        if (!ChangeServiceConfig2W(
             s,
             SERVICE_CONFIG_REQUIRED_PRIVILEGES_INFO,
             &pi
         )) {
-            logMsgError() << "ChangeServiceConfig2(REQUIRED_PRIVILEGES): "
+            logMsgError() << "ChangeServiceConfig2W(REQUIRED_PRIVILEGES): "
                 << WinError{};
             return false;
         }

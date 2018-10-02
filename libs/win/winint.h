@@ -123,7 +123,7 @@ private:
 
 //---------------------------------------------------------------------------
 // Privileges
-bool winEnablePrivilege(std::string_view name, bool enable = true);
+bool winEnablePrivilege(const wchar_t name[], bool enable = true);
 
 
 /****************************************************************************

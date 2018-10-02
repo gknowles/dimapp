@@ -291,6 +291,9 @@ void split(
     std::string_view src,
     char sep = ' '
 );
+
+// Removes leading and/or trailing whitespace characters (as defined by
+// isspace).
 std::string_view trim(std::string_view src);
 std::string_view ltrim(std::string_view src);
 std::string_view rtrim(std::string_view src);

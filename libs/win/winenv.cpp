@@ -51,16 +51,18 @@ void Dim::winEnvInitialize() {
 //===========================================================================
 const string & Dim::envExecPath() {
     if (s_execPath.empty()) {
+        wstring path;
         DWORD num = 0;
-        while (num == s_execPath.size()) {
-            s_execPath.resize(s_execPath.size() + MAX_PATH);
-            num = GetModuleFileName(
+        while (num == path.size()) {
+            path.resize(path.size() + MAX_PATH);
+            num = GetModuleFileNameW(
                 NULL,
-                s_execPath.data(),
-                (DWORD) s_execPath.size()
+                path.data(),
+                (DWORD) path.size()
             );
         }
-        s_execPath.resize(num);
+        path.resize(num);
+        s_execPath = toString(path);
     }
     return s_execPath;
 }
@@ -233,7 +235,7 @@ static void addSidRow(IJBuilder * out, SID_AND_ATTRIBUTES & sa) {
     DWORD nameLen = 0;
     DWORD domLen = 0;
     SID_NAME_USE use;
-    if (!LookupAccountSid(
+    if (!LookupAccountSidW(
         NULL,
         sa.Sid,
         NULL, &nameLen,
@@ -242,23 +244,23 @@ static void addSidRow(IJBuilder * out, SID_AND_ATTRIBUTES & sa) {
     )) {
         WinError err;
         if (err != ERROR_INSUFFICIENT_BUFFER)
-            logMsgFatal() << "LookupAccountSid(NULL): " << err;
+            logMsgFatal() << "LookupAccountSidW(NULL): " << err;
     }
     nameLen += 1;
     domLen += 1;
-    string name(nameLen, 0);
-    string dom(domLen, 0);
-    if (!LookupAccountSid(
+    wstring wname(nameLen, 0);
+    wstring wdom(domLen, 0);
+    if (!LookupAccountSidW(
         NULL,
         sa.Sid,
-        name.data(), &nameLen,
-        dom.data(), &domLen,
+        wname.data(), &nameLen,
+        wdom.data(), &domLen,
         &use
     )) {
-        logMsgFatal() << "LookupAccountSid: " << WinError{};
+        logMsgFatal() << "LookupAccountSidW: " << WinError{};
     }
-    name.resize(nameLen);
-    dom.resize(domLen);
+    wname.resize(nameLen);
+    wdom.resize(domLen);
 
     out->object();
     out->member("attrs");
@@ -277,8 +279,8 @@ static void addSidRow(IJBuilder * out, SID_AND_ATTRIBUTES & sa) {
         out->value(unk);
     }
     out->end();
-    out->member("name", name);
-    out->member("domain", dom);
+    out->member("name", toString(wname));
+    out->member("domain", toString(wdom));
     if (auto name = tokenTableGetName(s_sidTypeTbl, use)) {
         out->member("type", name);
     } else {

@@ -81,13 +81,13 @@ static VOID WINAPI ServiceMain(DWORD argc, LPTSTR * argv) {
     // Running as a service and services can't have GUI windows
     iAppSetFlags(appFlags() & ~fAppWithGui | fAppIsService);
 
-    s_hstat = RegisterServiceCtrlHandlerEx(
-        "",
+    s_hstat = RegisterServiceCtrlHandlerExW(
+        L"",
         &svcCtrlHandler,
         NULL
     );
     if (!s_hstat)
-        logMsgFatal() << "RegisterServiceCtrlHandlerEx: " << WinError{};
+        logMsgFatal() << "RegisterServiceCtrlHandlerExW: " << WinError{};
 
     assert(appStarting());
     setState(SERVICE_START_PENDING);
@@ -111,19 +111,19 @@ static VOID WINAPI ServiceMain(DWORD argc, LPTSTR * argv) {
 static void serviceDispatchThread() {
     assert(s_mode == kRunStarting);
 
-    SERVICE_TABLE_ENTRY st[] = {
-        { (char *) "", &ServiceMain },
+    SERVICE_TABLE_ENTRYW st[] = {
+        { (LPWSTR) L"", &ServiceMain },
         { NULL, NULL },
     };
     // StartServiceCtrlDispatcher starts the service message loop and doesn't
     // return until the service ends
-    if (!StartServiceCtrlDispatcher(st)) {
+    if (!StartServiceCtrlDispatcherW(st)) {
         WinError err;
         if (err == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT) {
             // failed service controller connect means that we're not running
             // as a service.
         } else {
-            logMsgFatal() << "StartServiceCtrlDispatcher: " << err;
+            logMsgFatal() << "StartServiceCtrlDispatcherW: " << err;
         }
     }
 

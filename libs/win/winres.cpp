@@ -74,8 +74,8 @@ ResModule::~ResModule() {
 bool ResModule::open(const Path & path) {
     m_path = path;
     if (!m_path.empty()) {
-        m_rhandle = LoadLibraryEx(
-            m_path.c_str(),
+        m_rhandle = LoadLibraryExW(
+            toWstring(m_path).c_str(),
             NULL,
             LOAD_LIBRARY_AS_DATAFILE
         );
@@ -91,7 +91,7 @@ bool ResModule::open(const Path & path) {
 bool ResModule::openForUpdate(const Path & path) {
     if (!open(path))
         return false;
-    m_whandle = BeginUpdateResource(m_path.c_str(), FALSE);
+    m_whandle = BeginUpdateResourceW(toWstring(m_path).c_str(), FALSE);
     if (!m_whandle) {
         logMsgError() << "BeginUpdateResource(" << m_path << "): "
             << WinError{};
@@ -107,7 +107,7 @@ bool ResModule::updateHtml(string_view namev, string_view data) {
     auto name = toWstring(namev);
     if (!UpdateResourceW(
         m_whandle,
-        MAKEINTRESOURCEW(23),
+        MAKEINTRESOURCEW(10),
         name.c_str(),
         MAKELANGID(LANG_NEUTRAL, SUBLANG_NEUTRAL),
         data.size() ? (void *) data.data() : nullptr,

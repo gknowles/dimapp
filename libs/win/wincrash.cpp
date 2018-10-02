@@ -53,6 +53,7 @@ static int s_oldNewMode;
 
 static mutex s_mut;
 static Path s_crashFile;
+static wstring s_crashFileW;
 
 
 /****************************************************************************
@@ -64,8 +65,9 @@ static Path s_crashFile;
 //===========================================================================
 static void writeDump() {
     WinError err;
-    auto f = CreateFile(
-        s_crashFile.c_str(),
+
+    auto f = CreateFileW(
+        s_crashFileW.c_str(),
         GENERIC_READ | GENERIC_WRITE,
         0,
         NULL, // security attributes
@@ -244,6 +246,7 @@ void Dim::winCrashInitialize() {
         s_crashFile /= "crash";
         s_crashFile += StrFrom<time_t>(timeToUnix(Clock::now()));
         s_crashFile += ".dmp";
+        s_crashFileW = toWstring(s_crashFile);
     }
 
     RegisterApplicationRecoveryCallback(appRecoveryCallback, NULL, 30'000, 0);
