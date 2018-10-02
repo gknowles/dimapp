@@ -27,10 +27,11 @@ static IAppNotify * s_app;
 static string s_appName;
 static vector<ITaskNotify *> s_appTasks;
 static AppFlags s_appFlags;
-static Path s_logDir;
+static Path s_rootDir;
 static Path s_confDir;
-static Path s_dataDir;
 static Path s_crashDir; // where to place crash dumps
+static Path s_dataDir;
+static Path s_logDir;
 
 
 /****************************************************************************
@@ -62,7 +63,7 @@ static bool makeAppPath(
 
 //===========================================================================
 static Path makeAppDir(string_view path) {
-    auto out = Path(fs::current_path()) / path;
+    auto out = appRootDir() / path;
     return out;
 }
 
@@ -190,6 +191,11 @@ AppFlags Dim::appFlags() {
 }
 
 //===========================================================================
+const Path & Dim::appRootDir() {
+    return s_rootDir;
+}
+
+//===========================================================================
 const Path & Dim::appConfigDir() {
     return s_confDir;
 }
@@ -253,6 +259,7 @@ int Dim::appRun(IAppNotify * app, int argc, char * argv[], AppFlags flags) {
         auto fp = fs::u8path(exeName.c_str());
         fs::current_path(fp.parent_path());
     }
+    s_rootDir = fs::current_path();
     s_confDir = makeAppDir("conf");
     s_logDir = makeAppDir("log");
     s_dataDir = makeAppDir("data");

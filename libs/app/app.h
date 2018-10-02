@@ -107,6 +107,7 @@ inline bool appStopping() { return appMode() == kRunStopping; }
 // returns flags passed to appRun()
 AppFlags appFlags();
 
+const Path & appRootDir();
 const Path & appConfigDir();
 const Path & appCrashDir();
 const Path & appDataDir();
