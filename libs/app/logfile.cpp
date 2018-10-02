@@ -169,12 +169,9 @@ void Logger::onLog(LogType type, string_view msg) {
     case kLogTypeDebug: pri += 7; break;
     default: break;
     }
-    TimePoint now = Clock::now();
-    int tzMinutes = timeZoneMinutes(now);
-    Time8601Str nowStr{now, 3, tzMinutes};
     snprintf(tmp, size(tmp), "<%d>1 %s %s %s %s %s %s %.*s",
         pri,
-        nowStr.c_str(),
+        Time8601Str{}.set().c_str(),
         s_hostname.c_str(),
         "appName",
         "-",    // procid

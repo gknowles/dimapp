@@ -774,7 +774,7 @@ unique_ptr<CredHandle> Dim::iWinTlsCreateCred(
     // NTE_BAD_KEYSET - 8009'0016
 
     TimePoint expires(Duration(expiry.QuadPart));
-    Time8601Str expiryStr(expires, 3, timeZoneMinutes(expires));
+    Time8601Str expiryStr(expires, 3);
     logMsgInfo() << "Credentials expiration: " << expiryStr.c_str();
 
     return handle;
