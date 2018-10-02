@@ -73,6 +73,6 @@ bool resClose(ResHandle h, bool commit = false);
 bool resUpdate(ResHandle h, std::string_view name, std::string_view data);
 
 bool resLoadNames(ResHandle h, std::vector<std::string> * names);
-std::string_view resLoadHtml(ResHandle h, std::string_view name);
+std::string_view resLoadData(ResHandle h, std::string_view name);
 
 } // namespace

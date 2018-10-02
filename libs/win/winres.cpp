@@ -31,11 +31,11 @@ public:
     bool open(const Path & path);
     bool openForUpdate(const Path & path);
 
-    bool updateHtml(std::string_view name, std::string_view data);
+    bool updateData(std::string_view name, std::string_view data);
     bool commit();
 
     bool loadNames(std::vector<std::string> * names);
-    string_view loadHtml(string_view name);
+    string_view loadData(string_view name);
 
 private:
     HANDLE m_whandle{};
@@ -103,7 +103,7 @@ bool ResModule::openForUpdate(const Path & path) {
 }
 
 //===========================================================================
-bool ResModule::updateHtml(string_view namev, string_view data) {
+bool ResModule::updateData(string_view namev, string_view data) {
     auto name = toWstring(namev);
     if (!UpdateResourceW(
         m_whandle,
@@ -176,7 +176,7 @@ bool ResModule::loadNames(vector<string> * names) {
 }
 
 //===========================================================================
-string_view ResModule::loadHtml(string_view namev) {
+string_view ResModule::loadData(string_view namev) {
     auto name = toWstring(namev);
     auto hinfo = FindResourceW(
         m_rhandle,
@@ -238,7 +238,7 @@ bool Dim::resClose(ResHandle h, bool commit) {
 //===========================================================================
 bool Dim::resUpdate(ResHandle h, string_view name, string_view data) {
     if (auto res = s_modules.find(h))
-        return res->updateHtml(name, data);
+        return res->updateData(name, data);
     return false;
 }
 
@@ -250,8 +250,8 @@ bool Dim::resLoadNames(ResHandle h, vector<string> * names) {
 }
 
 //===========================================================================
-string_view Dim::resLoadHtml(ResHandle h, string_view name) {
+string_view Dim::resLoadData(ResHandle h, string_view name) {
     if (auto res = s_modules.find(h))
-        return res->loadHtml(name);
+        return res->loadData(name);
     return {};
 }

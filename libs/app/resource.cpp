@@ -145,7 +145,7 @@ void Dim::resLoadWebSite(string_view moduleName) {
     shutdownMonitor(&s_cleanup);
 
     auto h = resOpen({});
-    auto src = resLoadHtml(h, kResWebSite);
+    auto src = resLoadData(h, kResWebSite);
     resClose(h);
     if (!s_files.parse(src)) {
         s_files.clear();
