@@ -38,6 +38,8 @@ static void app(int argc, char * argv[]) {
         string_view out;
         int line;
     } normalizeTests[] = {
+        { "../../a", "../../a", __LINE__ },
+        { "../a/..", "../", __LINE__ },
         { "/..", "/", __LINE__ },
         { "..", "..", __LINE__ },
         { "..\\a\\b\\..\\base.ext", "../a/base.ext", __LINE__ },
@@ -68,6 +70,7 @@ static void app(int argc, char * argv[]) {
         { "/base",   "/rel",   "/rel",          __LINE__ },
         { "/base",   "c:rel",  "c:rel",         __LINE__ },
         { "/base",   "c:/rel", "c:/rel",        __LINE__ },
+        { "c:",      "rel",    "c:rel",         __LINE__ },
         { "c:base",  "rel",    "c:base/rel",    __LINE__ },
         { "c:base",  "/rel",   "c:/rel",        __LINE__ },
         { "c:base",  "c:rel",  "c:base/rel",    __LINE__ },

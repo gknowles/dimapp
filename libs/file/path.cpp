@@ -70,54 +70,65 @@ static void addExt(string * out, string_view ext) {
 }
 
 //===========================================================================
+static bool normalizeAtDotSlash(
+    string * out,
+    const Count & cnt
+) {
+    auto pos = out->size();
+    auto eptr = out->data() + pos;
+    if (!pos)
+        return true;
+    if (pos == 1) {
+        out->pop_back();
+        return false;
+    }
+    if (eptr[-2] == '/') {
+        // "<prev>/." + "/" => "<prev>/"
+        out->pop_back();
+        return false;
+    }
+    if (eptr[-2] == '.' && pos >= 3 && eptr[-3] == '/') {
+        // "<prev>/.." + "/"
+        auto * obase = out->data() + cnt.m_rootLen;
+        auto * slash = out->data() + out->size() - 4;
+        if (slash < obase) {
+            out->pop_back();
+            out->pop_back();
+            return false;
+        }
+        for (;; --slash) {
+            if (slash <= obase) {
+                slash = obase - 1;
+            } else if (*slash != '/') {
+                continue;
+            }
+            break;
+        }
+        // pop unless previous segment is also ..
+        if (slash + 3 != eptr - 3
+            || slash[1] != '.' || slash[2] != '.'
+        ) {
+            out->resize(slash - out->data() + 1);
+            return false;
+        }
+    }
+    return true;
+}
+
+//===========================================================================
 static void normalizeAtSlash(
     string * out,
     PrevCharType * prevChar,
     const Count & cnt,
-    char base[],
-    char ptr[],
     bool pseudoSlash = false
 ) {
-    switch (*prevChar) {
+    auto pchar = *prevChar;
+    *prevChar = kSlash;
+    switch (pchar) {
     case kSlash:
         return;
     case kDot:
-        {
-            auto pos = ptr - base;
-            if (pos == 1) {
-                out->pop_back();
-                *prevChar = kSlash;
-                return;
-            } else if (pos > 1) {
-                if (ptr[-2] == '/' || ptr[-2] == '\\') {
-                    out->pop_back();
-                    *prevChar = kSlash;
-                    return;
-                }
-                if (ptr[-2] == '.' && pos >= 3
-                    && (ptr[-3] == '/' || ptr[-3] == '\\')
-                ) {
-                    auto * obase = out->data() + cnt.m_rootLen;
-                    auto * slash = out->data() + out->size() - 4;
-                    for (;; --slash) {
-                        if (slash <= obase) {
-                            out->resize(out->size() - 2);
-                            break;
-                        }
-                        if (*slash == '/') {
-                            out->resize(slash - out->data() + 1);
-                            break;
-                        }
-                    }
-                    *prevChar = kSlash;
-                    return;
-                }
-                if (*base == '/') {
-                    while (!out->empty() && out->back() == '.')
-                        out->pop_back();
-                }
-            }
-        }
+        pseudoSlash = !normalizeAtDotSlash(out, cnt) || pseudoSlash;
         break;
     case kNone:
     case kNormal:
@@ -125,7 +136,6 @@ static void normalizeAtSlash(
     }
     if (!pseudoSlash)
         *out += '/';
-    *prevChar = kSlash;
 }
 
 //===========================================================================
@@ -134,15 +144,14 @@ static void normalize(string * path) {
     string out;
     out.reserve(path->size());
     out.append(*path, 0, cnt.m_rootLen);
-    auto * base = path->data() + cnt.m_rootLen;
-    auto * ptr = base;
+    auto * ptr = path->data() + cnt.m_rootLen;
     auto * eptr = ptr + cnt.m_dirLen + cnt.m_stemLen + cnt.m_extLen;
     PrevCharType prevChar{kNone};
     for (; ptr != eptr; ++ptr) {
         switch(*ptr) {
         case '/':
         case '\\':
-            normalizeAtSlash(&out, &prevChar, cnt, base, ptr);
+            normalizeAtSlash(&out, &prevChar, cnt);
             break;
         case '.':
             out += '.';
@@ -158,7 +167,7 @@ static void normalize(string * path) {
         if (cnt.m_stemLen == 1
             || cnt.m_stemLen == 2 && path->data()[path->size() - 2] == '.'
         ) {
-            normalizeAtSlash(&out, &prevChar, cnt, base, ptr, true);
+            normalizeAtSlash(&out, &prevChar, cnt, true);
         }
     }
     out.swap(*path);
@@ -421,12 +430,11 @@ Path & Path::resolve(string_view basePath) {
             return *this;
 
         out += base;
-        if (!out.empty())
-            out += '/';
-        out += dir();
-        if (!out.empty())
-            out += '/';
-        out += filename();
+        if (hasDir() || hasFilename()) {
+            if (base.hasDir() || base.hasFilename())
+                out += '/';
+            out += c_str() + drive().size();
+        }
     }
     return assign(out);
 }
