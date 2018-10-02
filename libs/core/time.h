@@ -82,7 +82,8 @@ class Time8601Str {
     char m_data[33];
 public:
     Time8601Str();
-    Time8601Str(TimePoint time, unsigned precision = 0, int tzMinutes = 0);
+    Time8601Str(TimePoint time, unsigned precision = 0);
+    Time8601Str(TimePoint time, unsigned precision, int tzMinutes);
 
     // sets to current time and time zone
     Time8601Str & set();
@@ -111,7 +112,7 @@ bool timeParse8601(TimePoint * out, std::string_view str);
 *
 ***/
 
-// Returns the local timezone delta from UTC, uses time to determine if
+// Returns the local timezone delta from UTC, uses "time" to determine if
 // daylight savings time is in effect.
 int timeZoneMinutes(TimePoint time);
 

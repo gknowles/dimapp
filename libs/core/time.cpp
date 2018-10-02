@@ -34,14 +34,13 @@ Clock::time_point Clock::now() noexcept {
 //===========================================================================
 // static
 time_t Clock::to_time_t(const time_point & time) noexcept {
-    auto ticks = time.time_since_epoch().count();
-    return (time_t)(ticks / kClockTicksPerSecond);
+    return (time_t) timeToUnix(time);
 }
 
 //===========================================================================
 // static
 Clock::time_point Clock::from_time_t(time_t t) noexcept {
-    return time_point{duration{t * kClockTicksPerSecond}};
+    return timeFromUnix((uint64_t) t);
 }
 
 
@@ -151,6 +150,11 @@ Time8601Str::Time8601Str() {
 }
 
 //===========================================================================
+Time8601Str::Time8601Str(TimePoint time, unsigned precision)
+    : Time8601Str(time, precision, timeZoneMinutes(time))
+{}
+
+//===========================================================================
 Time8601Str::Time8601Str(TimePoint time, unsigned precision, int tzMinutes) {
     set(time, precision, tzMinutes);
 }
@@ -196,7 +200,7 @@ static char * add2Digit(char * out, int val, char suffix) {
 //===========================================================================
 Time8601Str & Time8601Str::set() {
     auto now = Clock::now();
-    return set(now, 0, timeZoneMinutes(now));
+    return set(now);
 }
 
 //===========================================================================
