@@ -126,7 +126,7 @@ bool MainTimer::stopped() const {
 void MainTimer::incomplete() {
     m_incomplete = true;
     if (!s_disableTimeout
-        && Clock::now() - m_shutdownStart > s_shutdownTimeout
+        && timeNow() - m_shutdownStart > s_shutdownTimeout
     ) {
         assert(!"shutdown timeout");
         terminate();
@@ -135,7 +135,7 @@ void MainTimer::incomplete() {
 
 //===========================================================================
 void MainTimer::resetTimer() {
-    m_shutdownStart = Clock::now();
+    m_shutdownStart = timeNow();
 }
 
 //===========================================================================

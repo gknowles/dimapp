@@ -44,7 +44,7 @@ enum RequestType {
 struct PipeRequest : ListBaseLink<>, IWinOverlappedNotify {
     RequestType m_type{kReqInvalid};
     string m_buffer;
-    TimePoint m_qtime{};
+    TimePoint m_qtime;
 
     // Inherited via IWinOverlappedNotify
     void onTask() override;
@@ -370,7 +370,7 @@ void PipeBase::queuePrewrite(string_view data) {
     queueWrites();
     if (auto task = m_prewrites.back()) {
         if (task->m_qtime == TimePoint::min()) {
-            auto now = Clock::now();
+            auto now = timeNow();
             task->m_qtime = now;
             auto maxQTime = now - m_prewrites.front()->m_qtime;
             if (maxQTime > kMaxPrewriteQueueTime) {

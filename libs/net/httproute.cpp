@@ -314,7 +314,7 @@ void HttpSocket::reply(unsigned reqId, HttpResponse && msg, bool more) {
     }
     addDefaultHeaders(msg);
     if (!msg.hasHeader(kHttpDate)) {
-        auto now = Clock::now();
+        auto now = timeNow();
         msg.addHeader(kHttpDate, now);
     }
 

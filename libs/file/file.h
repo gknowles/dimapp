@@ -89,7 +89,7 @@ public:
     struct Entry {
         Path path;
         bool isdir{false};
-        TimePoint mtime{};
+        TimePoint mtime;
     };
 
 public:

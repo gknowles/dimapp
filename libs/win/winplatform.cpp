@@ -47,7 +47,7 @@ static void updateProcessTimes() {
     FILETIME exit;
     FILETIME kernel;
     FILETIME user;
-    auto now = Clock::now();
+    auto now = timeNow();
     if (!GetProcessTimes(GetCurrentProcess(), &creation, &exit, &kernel, &user))
         return;
 

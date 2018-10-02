@@ -96,7 +96,7 @@ inline void TimerList<T,Tag>::setTimeout(Duration timeout, Duration minWait) {
     m_minWait = min(minWait, timeout);
     if (auto node = m_nodes.front()) {
         auto notify = static_cast<ITimerListNotify<Tag>*>(node);
-        timerUpdate(this, notify->m_lastTouched + timeout - Clock::now());
+        timerUpdate(this, notify->m_lastTouched + timeout - timeNow());
     }
 }
 
@@ -104,7 +104,7 @@ inline void TimerList<T,Tag>::setTimeout(Duration timeout, Duration minWait) {
 template <typename T, typename Tag>
 inline void TimerList<T,Tag>::touch(T * node) {
     auto notify = static_cast<ITimerListNotify<Tag>*>(node);
-    notify->m_lastTouched = Clock::now();
+    notify->m_lastTouched = timeNow();
     if (!m_nodes)
         timerUpdate(this, m_timeout);
     m_nodes.link(node);

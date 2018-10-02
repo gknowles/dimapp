@@ -143,7 +143,7 @@ void ConfigFile::parseContent(string_view fullpath, string && content) {
 //===========================================================================
 void ConfigFile::onFileChange(string_view fullpath) {
     m_changes += 1;
-    m_lastChanged = Clock::now();
+    m_lastChanged = timeNow();
     auto f = fileOpen(fullpath, File::fReadOnly | File::fDenyWrite);
 
     // load file

@@ -95,7 +95,7 @@ static auto & s_perfConnectFailed = uperf("sock.connect failed");
 ConnectTask::ConnectTask(unique_ptr<ConnSocket> && sock)
     : m_socket(move(sock))
 {
-    m_expiration = Clock::now() + kConnectTimeout;
+    m_expiration = timeNow() + kConnectTimeout;
 }
 
 //===========================================================================

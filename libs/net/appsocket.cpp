@@ -230,7 +230,7 @@ bool IAppSocket::notifyAccept(const AppSocketInfo & info) {
     if (m_notify)
         return m_notify->onSocketAccept(m_accept);
 
-    auto expiration = Clock::now() + kUnmatchedTimeout;
+    auto expiration = timeNow() + kUnmatchedTimeout;
 
     UnmatchedInfo ui;
     ui.notify = this;

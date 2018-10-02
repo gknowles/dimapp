@@ -100,7 +100,7 @@ static RunTimers s_runTimers;
 //===========================================================================
 void RunTimers::onTask() {
     Duration wait;
-    TimePoint now{Clock::now()};
+    auto now = timeNow();
     unique_lock lk{s_mut};
     assert(s_processing);
     s_processingThread = this_thread::get_id();
@@ -125,7 +125,7 @@ void RunTimers::onTask() {
 
         // update timer
         lk.lock();
-        now = Clock::now();
+        now = timeNow();
         s_processingNotify = nullptr;
         if (!timer->connected()) {
             s_processingCv.notify_all();
@@ -163,7 +163,7 @@ static void timerDispatchThread() {
             s_queueCv.wait(lk);
             continue;
         }
-        Duration wait = s_timers.top().expiration - Clock::now();
+        Duration wait = s_timers.top().expiration - timeNow();
         if (wait <= 0ms) {
             s_processing = true;
             lk.unlock();
@@ -233,7 +233,7 @@ TimePoint Timer::update(
     Duration wait,
     bool onlyIfSooner
 ) {
-    TimePoint now{Clock::now()};
+    auto now = timeNow();
     auto expire = wait == kTimerInfinite ? TimePoint::max() : now + wait;
 
     {

@@ -143,7 +143,7 @@ static ResetStreamTimer s_resetTimer;
 
 //===========================================================================
 Duration ResetStreamTimer::onTimer(TimePoint now) {
-    TimePoint expire = now - kMaxResetStreamAge;
+    auto expire = now - kMaxResetStreamAge;
     while (!empty(s_resetStreams)) {
         auto & rs = s_resetStreams.front();
         if (auto sleep = rs.sm->m_closed - expire; sleep > 0s)
@@ -597,7 +597,7 @@ void HttpConn::resetStream(CharBuf * out, int stream, FrameError error) {
     auto sm = it->second;
     sm->m_localState = HttpStream::kClosed;
     sm->m_remoteState = HttpStream::kClosed;
-    sm->m_closed = Clock::now();
+    sm->m_closed = timeNow();
     auto & rs = s_resetStreams.emplace_back();
     rs.hc = m_handle;
     rs.stream = stream;

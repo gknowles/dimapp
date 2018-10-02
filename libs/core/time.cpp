@@ -187,7 +187,7 @@ static char * add2Digit(char * out, int val, char suffix) {
 
 //===========================================================================
 Time8601Str & Time8601Str::set() {
-    auto now = Clock::now();
+    auto now = timeNow();
     return set(now);
 }
 

@@ -45,7 +45,7 @@ struct Dim::SocketRequest : ListBaseLink<> {
     RequestType m_type{kReqInvalid};
     RIO_BUF m_rbuf{};
     unique_ptr<SocketBuffer> m_buffer;
-    TimePoint m_qtime{};
+    TimePoint m_qtime;
 
     // filled in after completion
     WinError m_xferError{0};
@@ -383,7 +383,7 @@ void SocketBase::queuePrewrite(
     queueWrites();
     if (auto task = m_prewrites.back()) {
         if (task->m_qtime == TimePoint::min()) {
-            auto now = Clock::now();
+            auto now = timeNow();
             task->m_qtime = now;
             auto maxQTime = now - m_prewrites.front()->m_qtime;
             if (maxQTime > kMaxPrewriteQueueTime) {

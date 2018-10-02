@@ -28,7 +28,7 @@ int64_t Dim::iClockGetTicks() {
 //===========================================================================
 int Dim::timeZoneMinutes(TimePoint time) {
     if (!time)
-        time = Clock::now();
+        time = timeNow();
     LARGE_INTEGER in;
     in.QuadPart = time.time_since_epoch().count();
     FILETIME ft;
