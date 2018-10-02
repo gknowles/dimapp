@@ -57,7 +57,7 @@ static void app(int argc, char *argv[]) {
     Finally rclose{ [=]() { resClose(h); } };
 
     ResFileMap prev;
-    if (!prev.parse(resLoadHtml(h, kResWebSite))) {
+    if (!prev.parse(resLoadData(h, kResWebSite))) {
         prev.clear();
         logMsgWarn() << "Invalid website resource: " << *target;
     }
