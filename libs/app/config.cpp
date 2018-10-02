@@ -38,6 +38,8 @@ public:
     bool notify_UNLK(IConfigNotify * notify);
     bool closeWait_UNLK(IConfigNotify * notify);
 
+    void write(IJBuilder * out);
+
     // IFileChangeNotify
     void onFileChange(string_view fullpath) override;
 
@@ -46,6 +48,7 @@ private:
 
     List<NotifyInfo> m_notifiers;
     unsigned m_changes{};
+    TimePoint m_lastChanged{};
 
     string m_content;
     XDocument m_xml;
@@ -140,6 +143,7 @@ void ConfigFile::parseContent(string_view fullpath, string && content) {
 //===========================================================================
 void ConfigFile::onFileChange(string_view fullpath) {
     m_changes += 1;
+    m_lastChanged = Clock::now();
     auto f = fileOpen(fullpath, File::fReadOnly | File::fDenyWrite);
 
     // load file
@@ -196,6 +200,15 @@ bool ConfigFile::notify_UNLK(IConfigNotify * notify) {
         return true;
     }
     return !notify;
+}
+
+//===========================================================================
+void ConfigFile::write(IJBuilder * out) {
+    out->object();
+    out->member("path", m_relpath);
+    out->member("lastChanged", Time8601Str{m_lastChanged}.view());
+    out->member("changes", m_changes);
+    out->end();
 }
 
 
@@ -380,3 +393,20 @@ Duration Dim::configDuration(
     ConfigContext context;
     return configDuration(context, doc, name, defVal);
 }
+
+
+/****************************************************************************
+*
+*   Debugging
+*
+***/
+
+//===========================================================================
+void Dim::configWriteRules(IJBuilder * out) {
+    out->array();
+    scoped_lock lk{s_mut};
+    for (auto && kv : s_files)
+        kv.second.write(out);
+    out->end();
+}
+

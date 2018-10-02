@@ -7,6 +7,7 @@
 #include "cppconf/cppconf.h"
 
 #include "core/time.h"
+#include "json/json.h"
 #include "net/address.h"
 #include "xml/xml.h"
 
@@ -104,5 +105,14 @@ Duration configDuration(
     std::string_view name,
     Duration defVal = {}
 );
+
+
+/****************************************************************************
+*
+*   Debugging
+*
+***/
+
+void configWriteRules(IJBuilder * out);
 
 } // namespace
