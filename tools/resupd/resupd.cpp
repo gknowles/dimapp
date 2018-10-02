@@ -72,8 +72,9 @@ static void app(int argc, char *argv[]) {
         string content;
         if (!fileLoadBinaryWait(&content, fn.path))
             return appSignalShutdown(EX_DATAERR);
-        auto path = fn.path.str();
-        path.erase(1, src->size());
+        auto path = fn.path.str().substr(src->size());
+        if (path[0] != '/')
+            path.insert(0, "/");
         auto mtime = fileLastWriteTime(fn.path);
         if (auto ent = prev.find(path)) {
             if (ent->mtime != mtime || ent->content != content)
