@@ -6,6 +6,8 @@
 
 #include "cppconf/cppconf.h"
 
+#include "json/json.h"
+
 #include <string>
 
 namespace Dim {
@@ -43,5 +45,16 @@ enum ProcessRights {
     kEnvUserStandard,        // User not in admin group
 };
 ProcessRights envProcessRights();
+
+// Dump information about current account
+void envProcessAccount(IJBuilder * out);
+
+TimePoint envProcessStartTime();
+
+struct DiskSpace {
+    uint64_t avail;
+    uint64_t total;
+};
+DiskSpace envDiskSpace(std::string_view path);
 
 } // namespace
