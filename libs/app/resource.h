@@ -15,7 +15,38 @@
 #include <unordered_set>
 #include <vector>
 
+
 namespace Dim {
+
+/****************************************************************************
+*
+*   Resources
+*
+***/
+
+struct ResHandle : HandleBase {};
+
+ResHandle resOpen(std::string_view path);
+ResHandle resOpenForUpdate(std::string_view path);
+
+// Commit can only be true if the handle was opened for update. On such a
+// handle any changes made via resUpdate are not written unless and until
+// resClose is called with commit set to true.
+bool resClose(ResHandle h, bool commit = false);
+
+bool resUpdate(ResHandle h, std::string_view name, std::string_view data);
+
+bool resLoadNames(ResHandle h, std::vector<std::string> * names);
+std::string_view resLoadData(ResHandle h, std::string_view name);
+
+
+/****************************************************************************
+*
+*   Website resource
+*
+***/
+
+const char kResWebSite[] = "WEBSITE";
 
 class ResFileMap {
 public:
@@ -47,32 +78,8 @@ private:
     std::deque<std::string> m_data;
 };
 
-
-/****************************************************************************
-*
-*   Public API
-*
-***/
-
 // Loads file map from resource module and registers the files as http
 // routes. Module defaults to this executable.
 void resLoadWebSite(std::string_view moduleName = {});
-
-const char kResWebSite[] = "WEBSITE";
-
-struct ResHandle : HandleBase {};
-
-ResHandle resOpen(std::string_view path);
-ResHandle resOpenForUpdate(std::string_view path);
-
-// Commit can only be true if the handle was opened for update. On such a
-// handle any changes made via resUpdate are not written unless and until
-// resClose is called with commit set to true.
-bool resClose(ResHandle h, bool commit = false);
-
-bool resUpdate(ResHandle h, std::string_view name, std::string_view data);
-
-bool resLoadNames(ResHandle h, std::vector<std::string> * names);
-std::string_view resLoadData(ResHandle h, std::string_view name);
 
 } // namespace
