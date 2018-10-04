@@ -39,13 +39,13 @@ static void app(int argc, char * argv[]) {
         int line;
     } normalizeTests[] = {
         { "../../a", "../../a", __LINE__ },
-        { "../a/..", "../", __LINE__ },
+        { "../a/..", "..", __LINE__ },
         { "/..", "/", __LINE__ },
         { "..", "..", __LINE__ },
         { "..\\a\\b\\..\\base.ext", "../a/base.ext", __LINE__ },
-        { "one/two/", "one/two/", __LINE__ },
-        { "a/.", "a/", __LINE__ },
-        { "../", "../", __LINE__ },
+        { "one/two/", "one/two", __LINE__ },
+        { "a/.", "a", __LINE__ },
+        { "../", "..", __LINE__ },
     };
     for (auto && t : normalizeTests) {
         p.assign(t.raw);

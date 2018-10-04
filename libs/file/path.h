@@ -20,6 +20,15 @@ namespace Dim {
 *
 *   Path
 *
+*   Paths are always normalized, which means that:
+*   - '.' directories are removed
+*   - non-leading '..' directories are removed along with the immediately
+*     preceding directory.
+*   - backslashes are replaced with forward slashes
+*   - consecutive slashes are replaced with a single forward slash
+*   - the trailing slash is removed, unless it is also the first character
+*     after the root
+*
 ***/
 
 class Path {

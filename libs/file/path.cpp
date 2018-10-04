@@ -170,6 +170,10 @@ static void normalize(string * path) {
             normalizeAtSlash(&out, &prevChar, cnt, true);
         }
     }
+    // remove trailing slash if it's not also the leading slash
+    if (prevChar == kSlash && cnt.m_dirLen > 1)
+        out.pop_back();
+
     out.swap(*path);
 }
 
