@@ -7,7 +7,6 @@
 
 using namespace std;
 using namespace Dim;
-namespace fs = std::experimental::filesystem;
 
 
 /****************************************************************************
@@ -24,9 +23,11 @@ class WebRoot : public IHttpRouteNotify {
 
 //===========================================================================
 void WebRoot::onHttpRequest(unsigned reqId, HttpRequest & msg) {
-    string path = "Web";
-    path += msg.query().path;
-    if (fs::is_regular_file(path)) {
+    auto path = Path("Web");
+    path /= msg.query().path;
+    if (fileDirExists(path))
+        path /= "index.html";
+    if (fileExists(path)) {
         httpRouteReplyWithFile(reqId, path);
     } else {
         httpRouteReplyNotFound(reqId, msg);
