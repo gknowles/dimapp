@@ -785,6 +785,53 @@ File::FileType Dim::fileType(FileHandle f) {
 }
 
 //===========================================================================
+Path Dim::fileGetCurrentDir(std::string_view drive) {
+    wchar_t wdrive[3] = {};
+    switch (drive.size()) {
+    default:
+        if (drive[1] != ':')
+            return {};
+        [[fallthrough]];
+    case 1:
+        if (drive[0] < 'A'
+            || drive[0] > 'Z' && drive[0] < 'a'
+            || drive[0] > 'z'
+        ) {
+            return {};
+        }
+        wdrive[0] = drive[0];
+        wdrive[1] = ':';
+        break;
+    case 0:
+        break;
+    }
+
+    wstring wstr;
+    wchar_t wbuf[MAX_PATH];
+    auto wpath = wbuf;
+    auto len = GetFullPathNameW(wdrive, (DWORD) size(wbuf), wpath, nullptr);
+    if (len > size(wbuf)) {
+        wstr = wstring(len, 0);
+        wpath = wstr.data();
+        len = GetFullPathNameW(wdrive, len, wpath, nullptr);
+    }
+    if (!len) {
+        logMsgError() << "GetFullPathNameW(" << wdrive << "): " << WinError{};
+        return {};
+    }
+    return Path{toString(wpath)};
+}
+
+//===========================================================================
+Path Dim::fileSetCurrentDir(std::string_view path) {
+    if (!SetCurrentDirectoryW(toWstring(path).c_str())) {
+        logMsgError() << "SetCurrentDirectoryW(" << path << "): " << WinError{};
+        return {};
+    }
+    return fileGetCurrentDir(path);
+}
+
+//===========================================================================
 void Dim::fileRead(
     IFileReadNotify * notify,
     void * outBuf,

@@ -7,7 +7,6 @@
 
 using namespace std;
 using namespace Dim;
-namespace fs = std::experimental::filesystem;
 
 
 /****************************************************************************
@@ -100,15 +99,13 @@ DirInfo::~DirInfo () {
 
 //===========================================================================
 bool DirInfo::start(string_view path, bool recurse) {
-    error_code ec;
-    auto fp = fs::u8path(path.begin(), path.end());
-    fp = fs::canonical(fp);
-    m_base = fp.u8string();
+    m_base = fileAbsolutePath(path);
     m_recurse = recurse;
-    fs::create_directories(fp, ec);
+    fileCreateDirs(m_base);
 
+    auto wpath = toWstring(m_base);
     m_handle = CreateFileW(
-        fp.c_str(),
+        wpath.c_str(),
         FILE_LIST_DIRECTORY, // access
         FILE_SHARE_READ | FILE_SHARE_WRITE, // share mode
         NULL, // security attributes
@@ -345,9 +342,7 @@ bool DirInfo::expandPath(
     Path * relpath,
     string_view file
 ) const {
-    auto fp = fs::u8path(file.begin(), file.end());
-    fp = fs::absolute(fp, fs::u8path(m_base.str()));
-    *fullpath = fp.u8string();
+    *fullpath = Path{file}.resolve(m_base);
     if (fullpath->str().compare(0, m_base.str().size(), m_base.str()) != 0) {
         relpath->clear();
         return false;

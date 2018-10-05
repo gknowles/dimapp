@@ -34,6 +34,12 @@ void httpRouteAdd(
     HttpMethod methods = fHttpMethodGet,
     bool recurse = false
 );
+void httpRouteAddRedirect(
+    std::string_view path,
+    std::string_view location,
+    unsigned status = 303,
+    std::string_view msg = {}
+);
 void httpRouteAddFile(
     std::string_view path,
     TimePoint mtime,
@@ -75,6 +81,12 @@ void httpRouteReplyWithFile(
 );
 
 void httpRouteReplyNotFound(unsigned reqId, const HttpRequest & req);
+void httpRouteReplyRedirect(
+    unsigned reqId,
+    std::string_view location,
+    unsigned status = 303,
+    std::string_view msg = {}
+);
 void httpRouteReply(
     unsigned reqId,
     const HttpRequest & req,

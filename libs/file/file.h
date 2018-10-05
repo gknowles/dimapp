@@ -100,18 +100,29 @@ public:
         Flags flags = {}
     );
 
-    bool operator== (const FileIter & right) const;
-    bool operator!= (const FileIter & right) const;
-    const Entry & operator* () const;
-    const Entry * operator-> () const;
-    FileIter & operator++ ();
+    bool operator==(const FileIter & right) const;
+    bool operator!=(const FileIter & right) const;
+    const Entry & operator*() const;
+    const Entry * operator->() const;
+    FileIter & operator++();
 
 private:
     std::shared_ptr<Info> m_info;
 };
 
-inline FileIter begin (FileIter iter) { return iter; }
-inline FileIter end (const FileIter & iter) { return {}; }
+inline FileIter begin(FileIter iter) { return iter; }
+inline FileIter end(const FileIter & iter) { return {}; }
+
+// Drive defaults to the current drive
+Path fileGetCurrentDir(std::string_view drive = {});
+
+// "path" is resolved relative to the current dir of the drive (which
+// defaults to current drive) given in the path.
+Path fileSetCurrentDir(std::string_view path);
+
+// Resolve to an absolute path as if done by:
+// Path{path}.resolve(fileGetCurrentDir(path.drive()))
+Path fileAbsolutePath(std::string_view path);
 
 
 /****************************************************************************
@@ -132,7 +143,6 @@ void fileReadOnly(std::string_view path, bool enable);
 
 bool fileRemove(std::string_view path, bool recurse = false);
 bool fileCreateDirs(std::string_view path);
-
 
 //---------------------------------------------------------------------------
 // With handle

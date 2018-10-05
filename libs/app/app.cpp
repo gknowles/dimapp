@@ -8,7 +8,6 @@
 using namespace std;
 using namespace std::chrono;
 using namespace Dim;
-namespace fs = std::experimental::filesystem;
 
 
 /****************************************************************************
@@ -53,11 +52,8 @@ static bool makeAppPath(
     ) {
         return false;
     }
-    if (createDirIfNotExist) {
-        auto fp = fs::u8path(out->str());
-        error_code ec;
-        fs::create_directories(fp.remove_filename(), ec);
-    }
+    if (createDirIfNotExist)
+        fileCreateDirs(*out);
     return true;
 }
 
@@ -256,10 +252,10 @@ int Dim::appRun(IAppNotify * app, int argc, char * argv[], AppFlags flags) {
     s_appName = exeName.stem();
 
     if (flags & fAppWithChdir) {
-        auto fp = fs::u8path(exeName.c_str());
-        fs::current_path(fp.parent_path());
+        s_rootDir = fileSetCurrentDir(exeName.parentPath());
+    } else {
+        s_rootDir = fileGetCurrentDir();
     }
-    s_rootDir = fs::current_path();
     s_confDir = makeAppDir("conf");
     s_logDir = makeAppDir("log");
     s_dataDir = makeAppDir("data");

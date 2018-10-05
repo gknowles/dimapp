@@ -412,6 +412,12 @@ bool Dim::fileCreateDirs(std::string_view path) {
     return false;
 }
 
+//===========================================================================
+Path Dim::fileAbsolutePath(std::string_view path) {
+    auto fp = Path{path};
+    return fp.resolve(fileGetCurrentDir(fp.drive()));
+}
+
 
 /****************************************************************************
 *
