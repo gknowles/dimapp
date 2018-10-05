@@ -12,8 +12,12 @@
 
 namespace Dim {
 
-// Returns path to this executable being run
-const std::string & envExecPath();
+
+/****************************************************************************
+*
+*   Machine
+*
+***/
 
 struct EnvMemoryConfig {
     size_t pageSize;        // memory page size
@@ -26,8 +30,23 @@ struct EnvMemoryConfig {
 };
 const EnvMemoryConfig & envMemoryConfig();
 
+struct DiskSpace {
+    uint64_t avail;
+    uint64_t total;
+};
+DiskSpace envDiskSpace(std::string_view path);
+
 unsigned envCpus();
-unsigned envProcessId();
+
+
+/****************************************************************************
+*
+*   Executable file
+*
+***/
+
+// Returns path to this executable being run
+const std::string & envExecPath();
 
 struct VersionInfo {
     unsigned major;
@@ -37,6 +56,16 @@ struct VersionInfo {
 };
 // Gets version info for this executable
 VersionInfo envExecVersion();
+
+
+/****************************************************************************
+*
+*   Process
+*
+***/
+
+unsigned envProcessId();
+TimePoint envProcessStartTime();
 
 // Returns rights available to the current process
 enum ProcessRights {
@@ -48,13 +77,5 @@ ProcessRights envProcessRights();
 
 // Dump information about current account
 void envProcessAccount(IJBuilder * out);
-
-TimePoint envProcessStartTime();
-
-struct DiskSpace {
-    uint64_t avail;
-    uint64_t total;
-};
-DiskSpace envDiskSpace(std::string_view path);
 
 } // namespace

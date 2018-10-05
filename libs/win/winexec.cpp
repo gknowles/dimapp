@@ -31,6 +31,9 @@ public:
     };
 
 public:
+    static void write(IExecNotify * notify, std::string_view data);
+
+public:
     ExecProgram(IExecNotify * notify);
     ~ExecProgram();
     void exec(string_view prog, string_view args);
@@ -94,6 +97,12 @@ void ExecProgram::ExecPipe::onPipeDisconnect() {
 ***/
 
 //===========================================================================
+// static
+void ExecProgram::write(IExecNotify * notify, string_view data) {
+    pipeWrite(&notify->m_exec->m_pipes[kStdIn], data);
+}
+
+//===========================================================================
 ExecProgram::ExecProgram(IExecNotify * notify)
     : m_notify(notify)
 {}
@@ -149,8 +158,8 @@ void ExecProgram::exec(string_view prog, string_view args) {
     bool running = CreateProcessW(
         wprog.c_str(),
         wargs.data(),
-        NULL,   // process attrs
-        NULL,   // thread attrs
+        NULL, // process attrs
+        NULL, // thread attrs
         true,
         CREATE_NEW_PROCESS_GROUP,
         NULL, // environment
@@ -284,6 +293,11 @@ void Dim::execProgram(
 
 }
 
+//===========================================================================
+void Dim::execWrite(IExecNotify * notify, std::string_view data) {
+    ExecProgram::write(notify, data);
+}
+
 
 /****************************************************************************
 *
@@ -333,10 +347,12 @@ bool Dim::execProgramWait(
     CharBuf * out,
     CharBuf * err,
     std::string_view prog,
-    std::string_view args
+    std::string_view args,
+    std::string_view stdinData
 ) {
     ExecWaitNotify notify;
     execProgram(&notify, prog, args);
+    execWrite(&notify, stdinData);
     return notify.wait(exitCode, out, err);
 }
 
