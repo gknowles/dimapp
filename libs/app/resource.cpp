@@ -37,12 +37,16 @@ bool ResFileMap::insert(
     string && content
 ) {
     bool inserted = !m_files.count(name);
-
-    name = m_data.emplace_back(name);
+    name = strDup(string(name));
     auto & ent = m_files[name];
     ent.mtime = mtime;
-    ent.content = m_data.emplace_back(move(content));
+    ent.content = strDup(move(content));
     return inserted;
+}
+
+//===========================================================================
+string_view ResFileMap::strDup(string && data) {
+    return m_data.emplace_back(move(data));
 }
 
 //===========================================================================
@@ -141,10 +145,10 @@ void ShutdownNotify::onShutdownConsole (bool firstTry) {
 ***/
 
 //===========================================================================
-void Dim::resLoadWebSite(string_view moduleName) {
+void Dim::resLoadWebSite(string_view urlPrefix, string_view moduleName) {
     shutdownMonitor(&s_cleanup);
 
-    auto h = resOpen({});
+    auto h = resOpen(moduleName);
     auto src = resLoadData(h, kResWebSite);
     resClose(h);
     if (!s_files.parse(src)) {
@@ -152,6 +156,22 @@ void Dim::resLoadWebSite(string_view moduleName) {
         return;
     }
 
-    for (auto && [name, ent] : s_files)
-        httpRouteAddFileRef(name, ent.mtime, ent.content);
+    auto prefix = string(urlPrefix);
+    if (!prefix.empty() && prefix.back() == '/')
+        prefix.pop_back();
+    for (auto && [name, ent] : s_files) {
+        Path route;
+        if (!prefix.empty()) {
+            route = s_files.strDup(prefix + string(name));
+        } else {
+            route = name;
+        }
+        if (route.filename() == "index.html") {
+            route.removeFilename();
+            httpRouteAddFileRef(route, ent.mtime, ent.content);
+            httpRouteAddFileRef(string(route) + "/", ent.mtime, ent.content);
+        } else {
+            httpRouteAddFileRef(route, ent.mtime, ent.content);
+        }
+    }
 }

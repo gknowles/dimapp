@@ -73,6 +73,8 @@ public:
     auto begin() const { return m_files.begin(); }
     auto end() const { return m_files.end(); }
 
+    std::string_view strDup(std::string && data);
+
 private:
     std::unordered_map<std::string_view, Entry> m_files;
     std::deque<std::string> m_data;
@@ -80,6 +82,9 @@ private:
 
 // Loads file map from resource module and registers the files as http
 // routes. Module defaults to this executable.
-void resLoadWebSite(std::string_view moduleName = {});
+void resLoadWebSite(
+    std::string_view urlPrefix = {},
+    std::string_view moduleName = {}
+);
 
 } // namespace
