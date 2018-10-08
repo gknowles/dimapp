@@ -33,9 +33,11 @@ void ConsoleLogger::onLog(LogType type, string_view msg) {
     }
     memcpy(buf, msg.data(), msg.size());
     buf[msg.size()] = '\n';
-    if (type == kLogTypeError) {
+    if (type >= kLogTypeError) {
         ConsoleScopedAttr attr(kConsoleError);
         cout.write(buf, msg.size() + 1);
+        if (type == kLogTypeFatal)
+            cout.flush();
     } else if (type == kLogTypeWarn) {
         ConsoleScopedAttr attr(kConsoleWarn);
         cout.write(buf, msg.size() + 1);
