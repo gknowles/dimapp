@@ -323,9 +323,20 @@ uint64_t Dim::strToUint64(string_view src, char ** eptr, int base) {
 
 /****************************************************************************
 *
-*   Parse string into arbitrary type
+*   String to float
 *
 ***/
+
+//===========================================================================
+static double siFactor(char ** ptr, double binary, double metric) {
+    *ptr += 1;
+    if (**ptr == 'i') {
+        *ptr += 1;
+        return binary;
+    } else {
+        return metric;
+    }
+}
 
 //===========================================================================
 bool Dim::parse(double * out, std::string_view src) {
@@ -335,26 +346,30 @@ bool Dim::parse(double * out, std::string_view src) {
     *out = strtod(buf, &ptr);
     switch (*ptr) {
     case 'k': case 'K':
-        *out *= (ptr[1] == 'i') ? 1024 : 1000;
+        *out *= siFactor(&ptr, 1024, 1000);
         break;
     case 'M':
-        *out *= (ptr[1] == 'i') ? 1024 * 1024 : 1'000'000;
+        *out *= siFactor(&ptr, 1024 * 1024, 1'000'000);
         break;
     case 'G':
-        *out *= (ptr[1] == 'i') ? 1024 * 1024 * 1024 : 1'000'000'000;
+        *out *= siFactor(&ptr, 1024 * 1024 * 1024, 1'000'000'000);
         break;
     case 'T':
-        *out *= (ptr[1] == 'i')
-            ? INT64_C(1024) * 1024 * 1024 * 1024
-            : 1'000'000'000'000;
+        *out *= siFactor(
+            &ptr,
+            INT64_C(1024) * 1024 * 1024 * 1024,
+            1'000'000'000'000
+        );
         break;
     case 'P':
-        *out *= (ptr[1] == 'i')
-            ? INT64_C(1024) * 1024 * 1024 * 1024 * 1024
-            : 1'000'000'000'000;
+        *out *= siFactor(
+            &ptr,
+            INT64_C(1024) * 1024 * 1024 * 1024 * 1024,
+            1'000'000'000'000
+        );
         break;
     }
-    return true;
+    return !*ptr;
 }
 
 
