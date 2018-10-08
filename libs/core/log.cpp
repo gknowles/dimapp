@@ -125,7 +125,7 @@ LogMsgScope::~LogMsgScope() {
 
 //===========================================================================
 void DefaultLogger::onLog(LogType type, string_view msg) {
-    cout.write(msg.data(), msg.size());
+    cout << msg << '\n';
     if (type == kLogTypeFatal)
         cout.flush();
 }
