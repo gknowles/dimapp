@@ -23,8 +23,14 @@ class WebRoot : public IHttpRouteNotify {
 
 //===========================================================================
 void WebRoot::onHttpRequest(unsigned reqId, HttpRequest & msg) {
-    auto path = Path("Web");
-    path /= msg.query().path;
+    auto qpath = msg.query().path;
+    if (qpath[0] == '/')
+        qpath.remove_prefix(1);
+    auto path = Path(qpath).resolve("Web");
+    qpath = path.view();
+    if (qpath != "Web" && qpath.substr(0, 4) != "Web/")
+        return httpRouteReplyNotFound(reqId, msg);
+
     if (fileDirExists(path))
         path /= "index.html";
     if (fileExists(path)) {
