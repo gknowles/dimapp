@@ -169,6 +169,7 @@ auto HttpMsg::HdrName::end() const -> ForwardListIterator<const HdrValue> {
 
 //===========================================================================
 void HttpMsg::clear() {
+    m_flags = {};
     m_data.clear();
     m_heap.clear();
     m_firstHeader = nullptr;
@@ -191,7 +192,17 @@ void HttpMsg::addHeader(HttpHdr id, const char value[]) {
 }
 
 //===========================================================================
+void HttpMsg::addHeader(HttpHdr id, string_view value) {
+    addHeaderRef(id, m_heap.strdup(value));
+}
+
+//===========================================================================
 void HttpMsg::addHeader(const char name[], const char value[]) {
+    addHeader(name, string_view(value));
+}
+
+//===========================================================================
+void HttpMsg::addHeader(const char name[], string_view value) {
     if (auto id = httpHdrFromString(name))
         return addHeader(id, value);
 
@@ -222,6 +233,19 @@ void HttpMsg::addHeader(const char name[], TimePoint time) {
 }
 
 //===========================================================================
+HttpMsg::Flags HttpMsg::toHasFlag(HttpHdr id) const {
+    switch (id) {
+    case kHttp_Status: return fFlagHasStatus;
+    case kHttp_Method: return fFlagHasMethod;
+    case kHttp_Scheme: return fFlagHasScheme;
+    case kHttp_Authority: return fFlagHasAuthority;
+    case kHttp_Path: return fFlagHasPath;
+    default:
+        return {};
+    }
+}
+
+//===========================================================================
 void HttpMsg::addHeaderRef(HttpHdr id, const char name[], const char value[]) {
     auto ni = m_firstHeader;
     auto prev = (HdrName *) nullptr;
@@ -229,12 +253,15 @@ void HttpMsg::addHeaderRef(HttpHdr id, const char name[], const char value[]) {
     for (;;) {
         if (!ni) {
             ni = m_heap.emplace<HdrName>();
+            if (pseudo)
+                m_flags |= toHasFlag(id);
             break;
         }
         if (pseudo && ni->m_name[0] != ':') {
             auto next = ni;
             ni = m_heap.emplace<HdrName>();
             ni->m_next = next;
+            m_flags |= toHasFlag(id);
             break;
         }
         if (ni->m_id == id && (id || strcmp(ni->m_name, name) == 0))

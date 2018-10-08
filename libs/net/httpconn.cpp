@@ -177,7 +177,7 @@ public:
     explicit MsgDecoder(HttpMsg & msg);
 
     explicit operator bool() const;
-    HttpConn::FrameError Error() const;
+    HttpConn::FrameError error() const;
 
 private:
     void onHpackHeader(
@@ -216,7 +216,7 @@ MsgDecoder::operator bool() const {
 }
 
 //===========================================================================
-HttpConn::FrameError MsgDecoder::Error() const {
+HttpConn::FrameError MsgDecoder::error() const {
     return m_error;
 }
 
@@ -885,10 +885,11 @@ bool HttpConn::onHeaders(
         );
     }
     if (!mdec) {
-        resetStream(out, stream, mdec.Error());
-    } else {
-        if (sm->m_remoteState == HttpStream::kClosed)
-            msgs->push_back(move(sm->m_msg));
+        resetStream(out, stream, mdec.error());
+    } else if ((flags & fEndHeaders) && !sm->m_msg->checkPseudoHeaders()) {
+        resetStream(out, stream, FrameError::kProtocolError);
+    } else if (sm->m_remoteState == HttpStream::kClosed) {
+        msgs->push_back(move(sm->m_msg));
     }
     return true;
 }

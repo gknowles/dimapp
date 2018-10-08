@@ -134,7 +134,9 @@ public:
     virtual void swap(HttpMsg & other);
 
     void addHeader(HttpHdr id, const char value[]);
+    void addHeader(HttpHdr id, std::string_view value);
     void addHeader(const char name[], const char value[]);
+    void addHeader(const char name[], std::string_view value);
     void addHeader(HttpHdr id, TimePoint time);
     void addHeader(const char name[], TimePoint time);
 
@@ -165,9 +167,9 @@ public:
     virtual bool isRequest() const = 0;
     int stream() const { return m_stream; }
 
-protected:
     virtual bool checkPseudoHeaders() const = 0;
 
+protected:
     enum Flags : unsigned {
         fFlagHasStatus = 0x01,
         fFlagHasMethod = 0x02,
@@ -177,6 +179,7 @@ protected:
         fFlagHasHeader = 0x20,
     };
     Flags m_flags = {};
+    Flags toHasFlag(HttpHdr id) const;
 
 private:
     void addHeaderRef(HttpHdr id, const char name[], const char value[]);
