@@ -25,12 +25,12 @@ using namespace Dim;
 namespace {
 
 struct PathInfo {
-    IHttpRouteNotify * notify{};
-    bool recurse{};
     string_view path;
-    size_t segs{};
+    bool recurse{};
     HttpMethod methods{};
+    size_t segs{};
     unsigned matched{};
+    IHttpRouteNotify * notify{};
 
     TimePoint mtime;
     string_view content;
@@ -39,6 +39,7 @@ struct PathInfo {
 
     // Internal data referenced by other members
     unique_ptr<char[]> data;
+    unique_ptr<IHttpRouteNotify> notifyOwned;
 };
 
 class HttpSocket : public IAppSocketNotify {
@@ -112,6 +113,9 @@ static PathInfo * find(string_view path, HttpMethod method) {
             if (!best
                 || pi.segs > best->segs
                 || pi.segs == best->segs && pi.path.size() > best->path.size()
+                || pi.segs == best->segs
+                    && pi.path == best->path
+                    && pi.recurse < best->recurse
             ) {
                 best = &pi;
             }
@@ -698,6 +702,54 @@ void Dim::httpRouteAdd(
     routeAdd(move(pi));
 }
 
+namespace {
+class RedirectNotify : public IHttpRouteNotify {
+public:
+    RedirectNotify(string_view location, unsigned status, string_view msg);
+
+    // Inherited via IHttpRouteNotify
+    void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
+private:
+    string m_location;
+    unsigned m_status{};
+    string m_msg;
+};
+} // namespace
+
+//===========================================================================
+RedirectNotify::RedirectNotify(
+    string_view location,
+    unsigned status,
+    string_view msg
+)
+    : m_location(location)
+    , m_status(status)
+    , m_msg(msg)
+{}
+
+//===========================================================================
+void RedirectNotify::onHttpRequest(unsigned reqId, HttpRequest & msg) {
+    httpRouteReplyRedirect(reqId, m_location, m_status, m_msg);
+}
+
+//===========================================================================
+void Dim::httpRouteAddRedirect(
+    string_view path,
+    string_view location,
+    unsigned status,
+    string_view msg
+) {
+    auto pi = PathInfo();
+    pi.data = strDup(path);
+    pi.notifyOwned = make_unique<RedirectNotify>(location, status, msg);
+
+    pi.notify = pi.notifyOwned.get();
+    pi.path = pi.data.get();
+    pi.segs = count(path.begin(), path.end(), '/');
+    pi.methods = fHttpMethodGet;
+    routeAdd(move(pi));
+}
+
 //===========================================================================
 static void addFileRouteRefs(
     PathInfo && pi,
@@ -763,6 +815,13 @@ void Dim::httpRouteAddFileRef(
     addFileRouteRefs({}, path, mtime, content, mimeType, charSet);
 }
 
+
+/****************************************************************************
+*
+*   Reply
+*
+***/
+
 //===========================================================================
 void Dim::httpRouteReply(unsigned reqId, HttpResponse && msg, bool more) {
     HttpSocket::reply(reqId, move(msg), more);
@@ -824,15 +883,14 @@ void Dim::httpRouteReplyNotFound(unsigned reqId, const HttpRequest & req) {
 }
 
 //===========================================================================
-static void routeReply(
-    unsigned reqId,
+static void makeReply(
+    HttpResponse * out,
     const char url[],
     unsigned status,
     std::string_view msg
 ) {
     StrFrom<unsigned> st{status};
-    HttpResponse res;
-    XBuilder bld(&res.body());
+    XBuilder bld(&out->body());
     bld.start("html")
         .start("head").elem("title", st.c_str()).end()
         .start("body");
@@ -846,8 +904,19 @@ static void routeReply(
     }
     bld.end().end().end();
 
-    res.addHeader(kHttpContentType, "text/html");
-    res.addHeader(kHttp_Status, st.c_str());
+    out->addHeader(kHttpContentType, "text/html");
+    out->addHeader(kHttp_Status, st.c_str());
+}
+
+//===========================================================================
+static void routeReply(
+    unsigned reqId,
+    const char url[],
+    unsigned status,
+    std::string_view msg
+) {
+    HttpResponse res;
+    makeReply(&res, url, status, msg);
     httpRouteReply(reqId, move(res));
 }
 
@@ -868,6 +937,19 @@ void Dim::httpRouteReply(
     std::string_view msg
 ) {
     routeReply(reqId, nullptr, status, msg);
+}
+
+//===========================================================================
+void Dim::httpRouteReplyRedirect(
+    unsigned reqId,
+    string_view location,
+    unsigned status,
+    string_view msg
+) {
+    HttpResponse out;
+    makeReply(&out, nullptr, status, msg);
+    out.addHeader(kHttpLocation, location);
+    httpRouteReply(reqId, move(out));
 }
 
 
