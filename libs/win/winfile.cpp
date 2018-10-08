@@ -803,6 +803,7 @@ Path Dim::fileGetCurrentDir(std::string_view drive) {
         wdrive[1] = ':';
         break;
     case 0:
+        wdrive[0] = '.';
         break;
     }
 
@@ -816,7 +817,7 @@ Path Dim::fileGetCurrentDir(std::string_view drive) {
         len = GetFullPathNameW(wdrive, len, wpath, nullptr);
     }
     if (!len) {
-        logMsgError() << "GetFullPathNameW(" << wdrive << "): " << WinError{};
+        logMsgError() << "GetFullPathNameW(" << drive << "): " << WinError{};
         return {};
     }
     return Path{toString(wpath)};
