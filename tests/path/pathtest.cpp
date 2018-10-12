@@ -37,6 +37,25 @@ static void app(int argc, char * argv[]) {
         string_view raw;
         string_view out;
         int line;
+    } parentTests[] = {
+        { "/one/two/three", "/one/two", __LINE__ },
+        { "c:one", "c:", __LINE__ },
+        { "c:/one", "c:/", __LINE__ },
+    };
+    for (auto && t : parentTests) {
+        p.assign(t.raw);
+        auto out = p.parentPath();
+        if (out != t.out) {
+            logMsgError() << "Line " << t.line << ": Path(" << t.raw
+                << ").parentPath() == '" << out << "', should be '" << t.out
+                << "'";
+        }
+    }
+
+    struct {
+        string_view raw;
+        string_view out;
+        int line;
     } normalizeTests[] = {
         { "../../a", "../../a", __LINE__ },
         { "../a/..", "..", __LINE__ },

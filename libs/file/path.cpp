@@ -473,7 +473,7 @@ string_view Path::dir() const {
 //===========================================================================
 string_view Path::parentPath() const {
     Count cnt(m_data);
-    return {m_data.data(), cnt.m_rootLen + cnt.m_dirLen};
+    return {m_data.data(), cnt.m_rootLen + cnt.m_dirLen - (cnt.m_dirLen > 1)};
 }
 
 //===========================================================================
