@@ -12,18 +12,6 @@ namespace fs = std::experimental::filesystem;
 
 /****************************************************************************
 *
-*   Private
-*
-***/
-
-namespace {
-
-
-} // namespace
-
-
-/****************************************************************************
-*
 *   FileIter::Info
 *
 ***/
@@ -75,12 +63,12 @@ static bool find(FileIter::Info * info, bool fromNext) {
         && (info->flags & FileIter::fDirsFirst)
         && fs::is_directory(p->status())
     ) {
-INTO_DIR:
+ENTER_DIR:
         // we were at the directory, now start it's contents
         error_code ec;
         auto q = fs::directory_iterator(*p, ec);
         if (q == end(q))
-            goto OUT_OF_DIR;
+            goto EXITED_DIR;
         info->pos.push_back({q});
         cur = &info->pos.back();
         p = q;
@@ -100,7 +88,7 @@ CHECK_CURRENT:
         cur = &info->pos.back();
         p = cur->iter;
 
-OUT_OF_DIR:
+EXITED_DIR:
         if (info->flags & FileIter::fDirsLast) {
             cur->firstPass = false;
             copy(&info->entry, p);
@@ -113,7 +101,7 @@ OUT_OF_DIR:
     if (!(info->flags & FileIter::fDirsFirst)
         && fs::is_directory(p->status())
     ) {
-        goto INTO_DIR;
+        goto ENTER_DIR;
     }
     copy(&info->entry, p);
     if (!match(*info))
@@ -178,10 +166,3 @@ FileIter & FileIter::operator++ () {
         m_info.reset();
     return *this;
 }
-
-
-/****************************************************************************
-*
-*   Public API
-*
-***/
