@@ -100,6 +100,11 @@ TokenTable::TokenTable(const Token * src, size_t count) {
 }
 
 //===========================================================================
+bool TokenTable::find(int * out, std::string_view name) const {
+    return find(out, name.data(), name.size());
+}
+
+//===========================================================================
 bool TokenTable::find(int * out, const char name[], size_t nameLen) const {
     size_t num = size(m_byName);
     size_t hash = hashStr(name, (int) min((size_t) m_hashLen, nameLen));

@@ -40,6 +40,7 @@ public:
 
     explicit operator bool() const { return !empty(); }
 
+    bool find(int * out, std::string_view name) const;
     bool find(int * out, const char name[], size_t nameLen = -1) const;
     bool find(const char ** const out, int id) const;
 
