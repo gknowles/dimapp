@@ -24,8 +24,8 @@ class WebRoot : public IHttpRouteNotify {
 //===========================================================================
 void WebRoot::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     auto qpath = msg.query().path;
-    if (qpath[0] == '/')
-        qpath.remove_prefix(1);
+    auto prefix = httpRouteGetInfo(reqId).path.size();
+    qpath.remove_prefix(prefix);
     auto path = Path(qpath).resolve("Web");
     qpath = path.view();
     if (qpath != "Web" && qpath.substr(0, 4) != "Web/")
@@ -38,45 +38,6 @@ void WebRoot::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     } else {
         httpRouteReplyNotFound(reqId, msg);
     }
-}
-
-
-/****************************************************************************
-*
-*   HtmlCounters
-*
-***/
-
-namespace {
-class HtmlCounters : public IHttpRouteNotify {
-    void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
-    vector<PerfValue> m_values;
-};
-} // namespace
-
-//===========================================================================
-void HtmlCounters::onHttpRequest(unsigned reqId, HttpRequest & msg) {
-    perfGetValues(&m_values, true);
-
-    HttpResponse res;
-    XBuilder bld(&res.body());
-    bld.start("html").start("body");
-    bld.start("table");
-    bld.start("tr")
-        .elem("th", "Value")
-        .elem("th", "Name")
-        .end();
-    for (auto && perf : m_values) {
-        bld.start("tr")
-            .elem("td", perf.value.c_str())
-            .elem("td", perf.name.data())
-            .end();
-    }
-    bld.end();
-    bld.end().end();
-    res.addHeader(kHttpContentType, "text/html");
-    res.addHeader(kHttp_Status, "200");
-    httpRouteReply(reqId, move(res));
 }
 
 
@@ -142,14 +103,12 @@ void JsonRoutes::onHttpRequest(unsigned reqId, HttpRequest & msg) {
 ***/
 
 static WebRoot s_webRoot;
-static HtmlCounters s_htmlCounters;
 static JsonCounters s_jsonCounters;
 static JsonRoutes s_jsonRoutes;
 
 //===========================================================================
 void Dim::iWebAdminInitialize() {
     httpRouteAdd(&s_webRoot, "/", fHttpMethodGet, true);
-    httpRouteAdd(&s_htmlCounters, "/srv/counters", fHttpMethodGet);
     httpRouteAdd(&s_jsonCounters, "/srv/counters.json", fHttpMethodGet);
     httpRouteAdd(&s_jsonRoutes, "/srv/routes.json", fHttpMethodGet);
 }
