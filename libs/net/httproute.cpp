@@ -66,10 +66,11 @@ private:
 };
 
 struct RequestInfo {
-    HttpSocket * conn;
-    int stream;
+    HttpSocket * conn {nullptr};
+    int stream {0};
+    PathInfo * pi {nullptr};
 
-    RequestInfo(HttpSocket * conn = nullptr, int stream = 0);
+    RequestInfo();
     ~RequestInfo();
 };
 
@@ -125,7 +126,7 @@ static PathInfo * find(string_view path, HttpMethod method) {
 }
 
 //===========================================================================
-static void route(unsigned reqId, HttpRequest & req) {
+static void route(RequestInfo * ri, unsigned reqId, HttpRequest & req) {
     auto & params = req.query();
     auto method = httpMethodFromString(req.method());
     for (auto && param : params.parameters) {
@@ -138,6 +139,7 @@ static void route(unsigned reqId, HttpRequest & req) {
     auto pi = find(params.path, method);
     if (!pi)
         return httpRouteReplyNotFound(reqId, req);
+    ri->pi = pi;
     pi->matched += 1;
     if (pi->notify)
         return pi->notify->onHttpRequest(reqId, req);
@@ -152,14 +154,17 @@ static void route(unsigned reqId, HttpRequest & req) {
 }
 
 //===========================================================================
-static unsigned makeRequestInfo (HttpSocket * conn, int stream) {
+static struct { unsigned id; RequestInfo * ri; } makeRequestInfo(
+    HttpSocket * conn,
+    int stream
+) {
     for (;;) {
         auto id = ++s_nextReqId;
         auto & found = s_requests[id];
         if (!found.conn) {
             found.conn = conn;
             found.stream = stream;
-            return id;
+            return {id, &found};
         }
     }
 }
@@ -225,16 +230,13 @@ static void addDefaultHeaders(HttpResponse & msg) {
 ***/
 
 //===========================================================================
-RequestInfo::RequestInfo (HttpSocket * conn, int stream)
-    : conn(conn)
-    , stream(stream)
-{
+RequestInfo::RequestInfo() {
     s_perfRequests += 1;
     s_perfCurrent += 1;
 }
 
 //===========================================================================
-RequestInfo::~RequestInfo () {
+RequestInfo::~RequestInfo() {
     s_perfCurrent -= 1;
 }
 
@@ -420,7 +422,7 @@ bool HttpSocket::onSocketRead(AppSocketData & data) {
     }
     for (auto && msg : msgs) {
         if (msg->isRequest()) {
-            auto id = makeRequestInfo(this, msg->stream());
+            auto [id, ri] = makeRequestInfo(this, msg->stream());
             if (!m_reqIds.empty() && id < m_reqIds.back()) {
                 auto ub = upper_bound(m_reqIds.begin(), m_reqIds.end(), id);
                 m_reqIds.insert(ub, id);
@@ -428,7 +430,7 @@ bool HttpSocket::onSocketRead(AppSocketData & data) {
                 m_reqIds.push_back(id);
             }
             auto req = static_cast<HttpRequest *>(msg.get());
-            route(id, *req);
+            route(ri, id, *req);
         } else {
         }
     }
@@ -625,6 +627,7 @@ static ShutdownNotify s_cleanup;
 void ShutdownNotify::onShutdownConsole(bool firstTry) {
     if (!s_requests.empty())
         return shutdownIncomplete();
+    s_paths.clear();
 }
 
 
@@ -656,7 +659,51 @@ void Dim::iHttpRouteInitialize() {
 
 /****************************************************************************
 *
-*   Public API
+*   IHttpRouteNotify
+*
+***/
+
+//===========================================================================
+void IHttpRouteNotify::mapParams(const HttpRequest & msg) {
+    if (m_params.empty())
+        return;
+    if (!m_paramTbl) {
+        vector<TokenTable::Token> tokens;
+        for (auto i = 0; i < m_params.size(); ++i) {
+            auto & tok = tokens.emplace_back();
+            tok.id = i;
+            tok.name = m_params[i]->m_name.c_str();
+        }
+        m_paramTbl = TokenTable(tokens);
+    }
+    for (auto && rp : m_params)
+        rp->reset();
+    int id;
+    for (auto && mp : msg.query().parameters) {
+        if (m_paramTbl.find(&id, mp.name)) {
+            auto & rp = *m_params[id];
+            for (auto && v : mp.values)
+                rp.append(v.value);
+        }
+    }
+}
+
+//===========================================================================
+IHttpRouteNotify::Param & IHttpRouteNotify::param(string name) {
+    m_params.push_back(make_unique<Param>(name));
+    return static_cast<Param &>(*m_params.back());
+}
+
+//===========================================================================
+IHttpRouteNotify::ParamVec & IHttpRouteNotify::paramVec(string name) {
+    m_params.push_back(make_unique<ParamVec>(name));
+    return static_cast<ParamVec &>(*m_params.back());
+}
+
+
+/****************************************************************************
+*
+*   Add routes
 *
 ***/
 
@@ -813,6 +860,27 @@ void Dim::httpRouteAddFileRef(
     string_view charSet
 ) {
     addFileRouteRefs({}, path, mtime, content, mimeType, charSet);
+}
+
+
+/****************************************************************************
+*
+*   Query information about requests
+*
+***/
+
+//===========================================================================
+HttpRouteInfo Dim::httpRouteGetInfo(unsigned reqId) {
+    assert(taskInEventThread());
+    HttpRouteInfo ri = {};
+    auto it = s_requests.find(reqId);
+    if (it != s_requests.end()) {
+        auto pi = it->second.pi;
+        ri.path = pi->path;
+        ri.methods = pi->methods;
+        ri.recurse = pi->recurse;
+    }
+    return ri;
 }
 
 
