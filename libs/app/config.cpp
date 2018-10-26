@@ -206,7 +206,7 @@ bool ConfigFile::notify_UNLK(IConfigNotify * notify) {
 void ConfigFile::write(IJBuilder * out) {
     out->object();
     out->member("path", m_relpath);
-    out->member("lastChanged", Time8601Str{m_lastChanged}.view());
+    out->member("lastChanged", m_lastChanged);
     out->member("changes", m_changes);
     out->end();
 }

@@ -410,6 +410,12 @@ TimePoint Dim::timeNow() {
 }
 
 //===========================================================================
+std::ostream & Dim::operator<<(std::ostream & os, TimePoint time) {
+    os << Time8601Str(time).c_str();
+    return os;
+}
+
+//===========================================================================
 bool Dim::timeToDesc(tm * tm, TimePoint time) {
     auto t = to_time_t(time);
 #pragma warning(suppress : 4996) // deprecated
