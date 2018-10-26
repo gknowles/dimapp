@@ -52,8 +52,10 @@ static bool makeAppPath(
     ) {
         return false;
     }
-    if (createDirIfNotExist)
-        fileCreateDirs(*out);
+    if (createDirIfNotExist) {
+        auto fp = *out;
+        fileCreateDirs(fp.removeFilename());
+    }
     return true;
 }
 
