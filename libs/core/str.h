@@ -257,7 +257,7 @@ uint64_t strToUint64(
 *
 ***/
 
-// Uses strtod, but also supports k/K, ki/Ki, M, Mi, suffixes
+// Uses strtod, but also supports k/K, ki/Ki, M/Mi, suffixes
 [[nodiscard]] bool parse(double * out, std::string_view src);
 
 
