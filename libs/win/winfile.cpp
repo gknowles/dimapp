@@ -122,15 +122,16 @@ static HandleMap<FileHandle, WinFileInfo> s_files;
 *
 *   IFileOpBase
 *
+*   Completions only apply to non-blocking handles and are posted to a queue
+*   depending on the type of request, so completions go:
+*   Async:  to the selected (usually event) thread and makes the callback
+*           from there.
+*   Sync:   to an IO thread which then signals the waiting thread, which might
+*           be the event thread.
+*
 ***/
 
 //===========================================================================
-// Completions only apply to non-blocking handles and are posted to a queue
-// depending on the type of request:
-//  Async - completions go to the selected (usually event) thread and make the
-//          callback from there.
-//  Sync  - completions go to an IO thread and signal the waiting thread,
-//          which might be the event thread.
 IFileOpBase::IFileOpBase(TaskQueueHandle hq)
     : IWinOverlappedNotify{hq}
 {}
@@ -185,9 +186,9 @@ void IFileOpBase::run() {
     m_state = kRunning;
     winSetOverlapped(overlapped(), m_offset);
 
-    // Set m_err to pending now, because if onRun() launches it asynchronously
-    // there's no chance to change it. If it's not async, m_err will be set to
-    // something appropriate after onRun() returns.
+    // Set m_err to pending now, because if onRun() launches the operation
+    // asynchronously there's no chance to change it. If it's not async, m_err
+    // will be set to something appropriate after onRun() returns.
     m_err = ERROR_IO_PENDING;
     if (onRun()) {
         m_err = ERROR_SUCCESS;
@@ -196,8 +197,8 @@ void IFileOpBase::run() {
         if (err == ERROR_IO_PENDING)
             return;
 
-        // Only now that we know it's not being processed (and perhaps
-        // already deleted!) asynchronously is it safe to modify "this".
+        // Only now that we know "this" is not being processed (and perhaps
+        // already deleted!) asynchronously is it safe to modify it.
         m_err = err;
     }
 
