@@ -333,16 +333,20 @@ void Dim::appSignalUsageError(int code, string_view err, string_view detail) {
         vector<string_view> lines;
         if (!dm.empty()) {
             split(&lines, dm, '\n');
-            for (auto && line : lines)
-                logMsgInfo() << line;
+            for (auto && line : lines) {
+                if (!line.empty())
+                    logMsgInfo() << line;
+            }
         }
         {
             ostringstream os;
             cli.printUsageEx(os, {}, cli.runCommand());
             auto um = os.str();
             split(&lines, um, '\n');
-            for (auto && line : lines)
-                logMsgInfo() << line;
+            for (auto && line : lines) {
+                if (!line.empty())
+                    logMsgInfo() << line;
+            }
         }
         if (console)
             logMonitorClose(consoleBasicLogger());

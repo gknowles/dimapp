@@ -304,8 +304,8 @@ void Dim::logParseError(
             ch = ch == '\t' ? ' ' : '.';
     }
     logMsgInfo() << string(leftTrunc * 3, '.') << line
-                 << string(rightTrunc * 3, '.');
-    logMsgInfo() << string(pos - first + leftTrunc * 3, ' ') << '^';
+            << string(rightTrunc * 3, '.') << '\n'
+        << string(pos - first + leftTrunc * 3, ' ') << '^';
 }
 
 //===========================================================================
@@ -321,7 +321,6 @@ void Dim::logHexDebug(string_view data) {
     const unsigned char * ptr = (const unsigned char *) data.data();
     for (unsigned pos = 0; pos < data.size(); pos += 16, ptr += 16) {
         auto os = logMsgDebug();
-        os << hex;
         os << setw(6) << pos << ':';
         for (unsigned i = 0; i < 16; ++i) {
             if (i % 4 == 0) os.put(' ');
