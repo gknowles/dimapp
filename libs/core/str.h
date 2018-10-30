@@ -298,6 +298,11 @@ void split(
     std::string_view src,
     char sep = ' '
 );
+void split(
+    std::vector<std::string_view> * out,
+    std::string_view src,
+    std::string_view seps = "\r\n"
+);
 
 // Removes leading and/or trailing whitespace characters (as defined by
 // isspace).
