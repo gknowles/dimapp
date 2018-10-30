@@ -7,6 +7,7 @@
 #include "cppconf/cppconf.h"
 
 #include "core/tokentable.h"
+#include "file/file.h"
 #include "json/json.h"
 #include "net/http.h"
 #include "net/url.h"
@@ -141,6 +142,7 @@ void httpRouteCancel(unsigned reqId);
 void httpRouteInternalError(unsigned reqId);
 
 void httpRouteReplyWithFile(unsigned reqId, std::string_view path);
+void httpRouteReplyWithFile(unsigned reqId, Dim::FileHandle file);
 void httpRouteReplyWithFile(
     unsigned reqId,
     TimePoint mtime,

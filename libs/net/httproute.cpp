@@ -1092,13 +1092,19 @@ static void addFileHeaders(
 
 //===========================================================================
 void Dim::httpRouteReplyWithFile(unsigned reqId, string_view path) {
-    HttpResponse msg;
     auto file = fileOpen(path, File::fReadOnly | File::fDenyNone);
     if (!file) {
+        HttpResponse msg;
         msg.addHeader(kHttp_Status, "404");
         return httpRouteReply(reqId, move(msg), false);
     }
-    MimeType mt = mimeTypeDefault(path);
+    return httpRouteReplyWithFile(reqId, file);
+}
+
+//===========================================================================
+void Dim::httpRouteReplyWithFile(unsigned reqId, FileHandle file) {
+    HttpResponse msg;
+    MimeType mt = mimeTypeDefault(filePath(file));
 
     auto mtime = fileLastWriteTime(file);
     addFileHeaders(&msg, mtime, mt.type, mt.charSet);
