@@ -84,7 +84,7 @@ ostream & Dim::operator<<(ostream & os, const Endpoint & src) {
     )) {
         os << "(bad_sockaddr)";
     } else {
-        os << toString(wstring_view(tmp, tmpLen));
+        os << utf8(tmp, tmpLen);
     }
     return os;
 }

@@ -375,6 +375,12 @@ struct ostream_utf8_return { std::wstring_view src; };
 constexpr ostream_utf8_return utf8(std::wstring_view src) {
     return {src};
 }
+constexpr ostream_utf8_return utf8(const wchar_t src[]) {
+    return {src};
+}
+constexpr ostream_utf8_return utf8(const wchar_t src[], size_t srclen) {
+    return {std::wstring_view(src, srclen)};
+}
 std::ostream & operator<<(std::ostream & os, const ostream_utf8_return & out);
 
 //===========================================================================
