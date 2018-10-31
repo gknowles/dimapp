@@ -315,17 +315,27 @@ bool JsonLogTail::LogJob::onFileRead(
     int64_t offset,
     FileHandle f
 ) {
+    *bytesUsed = data.size();
     vector<string_view> lines;
     split(&lines, data, "\r\n");
     if (m_found < m_limit) {
+        // Searching backwards for start of last "limit" lines.
         m_found += (unsigned) lines.size() - 1;
-        if (m_found < m_limit && offset > 0) {
-            auto pos = offset > (int64_t) size(m_buffer)
-                ? offset - size(m_buffer)
-                : 0;
-            fileRead(this, m_buffer, size(m_buffer), f, pos);
-            return false;
+        if (m_found < m_limit) {
+            if (offset > 0) {
+                // Haven't gone back far enough into the file to find the first
+                // line and we're not already at the beginning of the file.
+                auto pos = offset > (int64_t) size(m_buffer)
+                    ? offset - size(m_buffer)
+                    : 0;
+                fileRead(this, m_buffer, size(m_buffer), f, pos);
+                return true;
+            }
+            m_limit = m_found;
         }
+
+        // Found the first line we will return (either at the limit or, if
+        // there weren't enough lines, the start of the file).
         HttpResponse res;
         res.addHeader(kHttpContentType, "text/plain");
         res.addHeader(kHttp_Status, "200");
@@ -341,13 +351,16 @@ bool JsonLogTail::LogJob::onFileRead(
         m_limit = m_found - (unsigned) lines.size() + 1;
         m_found = m_limit;
         if (m_found) {
+            // If we weren't already in the last block of the file, we re-read
+            // the blocks from here to EOF and add them to the reply.
             auto pos = offset + data.size();
             auto len = m_endPos - pos;
             fileRead(this, m_buffer, size(m_buffer), f, pos, len);
         }
-        return false;
+        return true;
     }
 
+    // Block was re-read and needs to be added to the reply.
     auto i = lines.begin();
     auto e = lines.end() - 1;
     for (; i < e; ++i) {
@@ -357,7 +370,6 @@ bool JsonLogTail::LogJob::onFileRead(
     }
     m_found = m_limit;
     httpRouteReply(m_reqId, lines.back(), m_found);
-    *bytesUsed = data.size();
     return true;
 }
 
