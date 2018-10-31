@@ -121,10 +121,48 @@ static void testParse() {
 }
 
 //===========================================================================
+static void testSplit() {
+    vector<string_view> out;
+
+    //-----------------------------------------------------------------------
+    // split(ch)
+    struct {
+        string_view src;
+        vector<string_view> out;
+        int line;
+    } chTests[] = {
+        { "",     { "" },           __LINE__ },
+        { " ",    { "", "" },       __LINE__ },
+        { "a b ", { "a", "b", "" }, __LINE__ },
+        { " a b", { "", "a", "b" }, __LINE__ },
+    };
+    for (auto && t : chTests) {
+        split(&out, t.src);
+        if (out != t.out) {
+            logMsgError() << "Line " << t.line << ": "
+                << "'" << t.src << "' / ' ' == '" << toString(out)
+                << "', should be '" << toString(t.out) << "'";
+        }
+    }
+
+    //-----------------------------------------------------------------------
+    // split(str)
+    for (auto && t : chTests) {
+        split(&out, t.src, " ");
+        if (out != t.out) {
+            logMsgError() << "Line " << t.line << ": "
+                << "'" << t.src << "' / ' ' == '" << toString(out)
+                << "', should be '" << toString(t.out) << "'";
+        }
+    }
+}
+
+//===========================================================================
 static void app(int argc, char *argv[]) {
     testParse();
     testStrToInt();
     testIntegralStr();
+    testSplit();
 
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);

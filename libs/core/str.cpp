@@ -415,7 +415,7 @@ void Dim::split(
         out->push_back(src.substr(pos, epos - pos));
         pos = src.find_first_not_of(seps, epos);
     }
-    if (epos < src.size())
+    if (!pos || epos < src.size())
         out->push_back({});
 }
 

@@ -301,8 +301,22 @@ void split(
 void split(
     std::vector<std::string_view> * out,
     std::string_view src,
-    std::string_view seps = "\r\n"
+    std::string_view seps // = "\r\n"
 );
+
+//===========================================================================
+template<typename T>
+std::string toString(const std::vector<T> & src, char sep = ' ') {
+    if (src.empty())
+        return {};
+    std::ostringstream os;
+    os << src[0];
+    for (auto i = src.begin() + 1; i < src.end(); ++i) {
+        os << sep;
+        os << *i;
+    }
+    return os.str();
+}
 
 // Removes leading and/or trailing whitespace characters (as defined by
 // isspace).
