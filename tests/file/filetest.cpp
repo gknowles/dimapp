@@ -60,8 +60,49 @@ static void app(int argc, char *argv[]) {
     for (unsigned i = 0; i < 100; ++i) {
         fileReadWait(buf, 4, file, psize);
     }
-
     fileCloseView(file, base);
+
+    auto content = string(10, '#');
+    if (!fileResize(file, size(content)))
+        return appSignalShutdown(EX_DATAERR);
+    fileWriteWait(file, 0, content.data(), content.size());
+    struct Reader : IFileReadNotify {
+        bool onFileRead(
+            size_t * bytesUsed,
+            std::string_view data,
+            int64_t offset,
+            FileHandle f
+        ) override {
+            m_out += data;
+            *bytesUsed = data.size();
+            return true;
+        }
+        void onFileEnd(int64_t offset, FileHandle f) override {
+            m_done = true;
+            m_cv.notify_all();
+        }
+
+        string m_out;
+        mutex m_mut;
+        condition_variable m_cv;
+        bool m_done{false};
+    } reader;
+    fileRead(
+        &reader,
+        buf,
+        size(buf) - 1,
+        file,
+        0,
+        size(content),
+        taskComputeQueue()
+    );
+    unique_lock lk{reader.m_mut};
+    while (!reader.m_done)
+        reader.m_cv.wait(lk);
+
+    if (reader.m_out != content)
+        logMsgError() << "File content mismatch";
+
     fileClose(file);
 
     fileRemove("filetest", true);

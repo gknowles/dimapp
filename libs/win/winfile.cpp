@@ -17,6 +17,8 @@ using namespace Dim;
 
 namespace {
 
+const int64_t kNpos = numeric_limits<int64_t>::max();
+
 struct WinFileInfo : public HandleContent {
     FileHandle m_f;
     string m_path;
@@ -241,7 +243,7 @@ void IFileOpBase::onTask() {
     if (m_err) {
         if (m_err == ERROR_OPERATION_ABORTED) {
             // explicitly canceled
-        } else if (m_err == ERROR_HANDLE_EOF && !m_length) {
+        } else if (m_err == ERROR_HANDLE_EOF && m_length == kNpos) {
             // hit EOF, expected when explicitly reading until the end
         } else if (auto log = logOnError()) {
             logMsgError() << log << '(' << m_file->m_path << "): " << m_err;
@@ -293,7 +295,7 @@ FileReader::FileReader(IFileReadNotify * notify, TaskQueueHandle hq)
 bool FileReader::onRun() {
     auto bufLen = m_bufLen - m_bufUnused;
     auto len = m_length;
-    if (!len || len > bufLen)
+    if (len == kNpos || len > bufLen)
         len = bufLen;
 
     return ReadFile(
@@ -329,8 +331,10 @@ void FileReader::onNotify() {
     if (m_bufUnused)
         memmove(m_buf, m_buf + bytesUsed, m_bufUnused);
 
-    if (m_length > m_bytes)
+    if (m_length != kNpos) {
+        assert(m_length >= m_bytes);
         m_length -= m_bytes;
+    }
 
     return run();
 }
@@ -847,7 +851,7 @@ void Dim::fileRead(
     auto file = getInfo(f);
     assert(file);
     auto ptr = new FileReader{notify, hq};
-    ptr->start(file, outBuf, outBufLen, off, len);
+    ptr->start(file, outBuf, outBufLen, off, len ? len : kNpos);
 }
 
 //===========================================================================
