@@ -265,10 +265,10 @@ public:
         bool onFileRead(
             size_t * bytesUsed,
             string_view data,
+            bool more,
             int64_t offset,
             FileHandle f
         ) override;
-        void onFileEnd(int64_t offset, FileHandle f) override;
     };
 public:
     void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
@@ -312,6 +312,7 @@ void JsonLogTail::onHttpRequest(unsigned reqId, HttpRequest & msg) {
 bool JsonLogTail::LogJob::onFileRead(
     size_t * bytesUsed,
     string_view data,
+    bool more,
     int64_t offset,
     FileHandle f
 ) {
@@ -347,38 +348,36 @@ bool JsonLogTail::LogJob::onFileRead(
             *const_cast<char *>(&*i->end()) = '\n';
             httpRouteReply(m_reqId, {i->data(), i->size() + 1}, true);
         }
-        httpRouteReply(m_reqId, lines.back(), m_found > lines.size());
         m_limit = m_found - (unsigned) lines.size() + 1;
+        httpRouteReply(m_reqId, lines.back(), m_limit);
         m_found = m_limit;
-        if (m_found) {
+        if (m_limit) {
             // If we weren't already in the last block of the file, we re-read
             // the blocks from here to EOF and add them to the reply.
             auto pos = offset + data.size();
             auto len = m_endPos - pos;
             fileRead(this, m_buffer, size(m_buffer), f, pos, len);
         }
-        return true;
+    } else {
+        // Reading forward, replying with lines as we go.
+        auto i = lines.begin();
+        auto e = lines.end() - 1;
+        for (; i < e; ++i) {
+            *const_cast<char *>(&*i->end()) = '\n';
+            httpRouteReply(m_reqId, {i->data(), i->size() + 1}, true);
+            m_limit -= 1;
+        }
+        httpRouteReply(m_reqId, lines.back(), m_limit);
+        m_found = m_limit;
     }
 
-    // Block was re-read and needs to be added to the reply.
-    auto i = lines.begin();
-    auto e = lines.end() - 1;
-    for (; i < e; ++i) {
-        *const_cast<char *>(&*i->end()) = '\n';
-        httpRouteReply(m_reqId, {i->data(), i->size() + 1}, true);
-        m_limit -= 1;
-    }
-    m_found = m_limit;
-    httpRouteReply(m_reqId, lines.back(), m_found);
-    return true;
-}
-
-//===========================================================================
-void JsonLogTail::LogJob::onFileEnd(int64_t offset, FileHandle f) {
     if (!m_limit) {
+        // All lines have been returned
         fileClose(f);
         delete this;
+        return false;
     }
+    return true;
 }
 
 

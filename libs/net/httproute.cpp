@@ -1055,17 +1055,17 @@ struct ReplyWithFileNotify : IFileReadNotify {
     bool onFileRead(
         size_t * bytesUsed,
         string_view data,
+        bool more,
         int64_t offset,
         FileHandle f
     ) override {
         *bytesUsed = data.size();
-        HttpSocket::reply(m_reqId, data, true);
+        HttpSocket::reply(m_reqId, data, more);
+        if (!more) {
+            fileClose(f);
+            delete this;
+        }
         return true;
-    }
-    void onFileEnd(int64_t offset, FileHandle f) override {
-        HttpSocket::reply(m_reqId, string_view(), false);
-        fileClose(f);
-        delete this;
     }
 };
 

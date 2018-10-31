@@ -70,16 +70,17 @@ static void app(int argc, char *argv[]) {
         bool onFileRead(
             size_t * bytesUsed,
             std::string_view data,
+            bool more,
             int64_t offset,
             FileHandle f
         ) override {
             m_out += data;
             *bytesUsed = data.size();
+            if (!more) {
+                m_done = true;
+                m_cv.notify_all();
+            }
             return true;
-        }
-        void onFileEnd(int64_t offset, FileHandle f) override {
-            m_done = true;
-            m_cv.notify_all();
         }
 
         string m_out;

@@ -246,7 +246,9 @@ void IFileOpBase::onTask() {
         } else if (m_err == ERROR_HANDLE_EOF && m_length == kNpos) {
             // hit EOF, expected when explicitly reading until the end
         } else if (auto log = logOnError()) {
-            logMsgError() << log << '(' << m_file->m_path << "): " << m_err;
+            logMsgError() << log << '('
+                << (m_file ? m_file->m_path : "(null)")
+                << "): " << m_err;
         }
     }
 
@@ -293,15 +295,14 @@ FileReader::FileReader(IFileReadNotify * notify, TaskQueueHandle hq)
 
 //===========================================================================
 bool FileReader::onRun() {
-    auto bufLen = m_bufLen - m_bufUnused;
-    auto len = m_length;
-    if (len == kNpos || len > bufLen)
-        len = bufLen;
+    auto reqLen = (int64_t) m_bufLen - m_bufUnused;
+    if (m_length != kNpos && reqLen > m_length)
+        reqLen = m_length;
 
     return ReadFile(
         m_file->m_handle,
         m_buf + m_bufUnused,
-        (DWORD)len,
+        (DWORD)reqLen,
         &m_bytes,
         &overlapped()
     );
@@ -309,32 +310,38 @@ bool FileReader::onRun() {
 
 //===========================================================================
 void FileReader::onNotify() {
+    bool more = true;
+    if (m_length != kNpos) {
+        assert(m_length >= m_bytes);
+        auto reqLen = (int64_t) m_bufLen - m_bufUnused;
+        if (m_length != kNpos && reqLen > m_length)
+            reqLen = m_length;
+        m_length -= m_bytes;
+        more = m_length && m_bytes == reqLen;
+    }
     auto avail = m_bytes + m_bufUnused;
     size_t bytesUsed = 0;
-    bool again = m_bytes && m_notify->onFileRead(
+    if (!m_notify->onFileRead(
         &bytesUsed,
         string_view(m_buf, avail),
+        more,
         m_offset,
         m_file->m_f
-    );
+    )) {
+        more = false;
+    }
     m_offset += m_bytes;
-    if (!again) {
-        m_notify->onFileEnd(m_offset, m_file->m_f);
+    if (!more) {
         delete this;
         return;
     }
 
-    // Unless aborting (i.e. returned false) calls to onFileRead must consume
+    // Unless aborting (i.e. return false) calls to onFileRead must consume
     // at least some bytes.
     assert(bytesUsed && bytesUsed <= avail);
     m_bufUnused = int(avail - bytesUsed);
     if (m_bufUnused)
         memmove(m_buf, m_buf + bytesUsed, m_bufUnused);
-
-    if (m_length != kNpos) {
-        assert(m_length >= m_bytes);
-        m_length -= m_bytes;
-    }
 
     return run();
 }

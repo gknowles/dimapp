@@ -54,15 +54,14 @@ private:
     bool onFileRead(
         size_t * bytesUsed,
         string_view data,
+        bool more,
         int64_t offset,
         FileHandle f
     ) override;
-    void onFileEnd(int64_t offset, FileHandle f) override;
 
     FileHandle m_input;
     bool m_isFile{false};
     unique_ptr<SocketBuffer> m_buffer;
-    int m_bytesRead{0};
 
     bool m_suspended{false};
     int64_t m_offset{0};
@@ -169,7 +168,6 @@ bool ConsoleReader::queryDestroy() {
 //===========================================================================
 void ConsoleReader::read(int64_t offset) {
     assert(m_input);
-    m_bytesRead = 0;
     m_buffer = socketGetBuffer();
     fileRead(this, m_buffer->data, m_buffer->capacity, m_input, offset);
 }
@@ -188,29 +186,26 @@ void ConsoleReader::suspend(bool suspend) {
 bool ConsoleReader::onFileRead(
     size_t * bytesRead,
     string_view data,
+    bool more,
     int64_t offset,
     FileHandle f
 ) {
     *bytesRead = data.size();
-    m_bytesRead = (int) data.size();
-    socketWrite(&s_socket, move(m_buffer), m_bytesRead);
-    // stop reading (return false) so we can get a new buffer
-    return false;
-}
+    auto bytes = (int) data.size();
+    socketWrite(&s_socket, move(m_buffer), bytes);
 
-//===========================================================================
-void ConsoleReader::onFileEnd(int64_t offset, FileHandle f) {
+    // stop reading (return false) so we can get a new buffer
     if (m_input) {
         if (m_isFile) {
-            if (!m_bytesRead || (size_t) offset == fileSize(f)) {
+            if (!bytes || (size_t) offset == fileSize(f)) {
                 fileClose(m_input);
                 consoleResetStdin();
                 init();
             }
         } else {
-            if (!m_bytesRead) {
+            if (!bytes) {
                 m_buffer.reset();
-                return;
+                return false;
             }
         }
         if (m_suspended) {
@@ -221,6 +216,7 @@ void ConsoleReader::onFileEnd(int64_t offset, FileHandle f) {
     } else {
         m_buffer.reset();
     }
+    return false;
 }
 
 

@@ -203,10 +203,10 @@ public:
     bool onFileRead(
         size_t * bytesUsed,
         string_view data,
+        bool more,
         int64_t offset,
         FileHandle f
     ) override;
-    void onFileEnd(int64_t offset, FileHandle f) override;
 };
 
 } // namespace
@@ -227,7 +227,8 @@ FileStreamNotify::FileStreamNotify(
     );
     if (!file) {
         logMsgError() << "File open failed: " << path;
-        onFileEnd(0, file);
+        size_t bytesUsed = 0;
+        onFileRead(&bytesUsed, {}, false, 0, file);
     } else {
         fileRead(this, m_out.get(), blkSize, file, 0, 0, hq);
     }
@@ -237,19 +238,18 @@ FileStreamNotify::FileStreamNotify(
 bool FileStreamNotify::onFileRead(
     size_t * bytesUsed,
     string_view data,
+    bool more,
     int64_t offset,
     FileHandle f
 ) {
     auto eod = m_out.get() + data.size();
     *eod = 0;
-    return m_notify->onFileRead(bytesUsed, data, offset, f);
-}
-
-//===========================================================================
-void FileStreamNotify::onFileEnd(int64_t offset, FileHandle f) {
-    m_notify->onFileEnd(offset, f);
-    fileClose(f);
-    delete this;
+    if (!m_notify->onFileRead(bytesUsed, data, more, offset, f) || !more) {
+        fileClose(f);
+        delete this;
+        return false;
+    }
+    return true;
 }
 
 
@@ -269,10 +269,10 @@ public:
     bool onFileRead(
         size_t * bytesUsed,
         string_view data,
+        bool more,
         int64_t offset,
         FileHandle f
     ) override;
-    void onFileEnd(int64_t offset, FileHandle f) override;
 };
 
 } // namespace
@@ -287,21 +287,19 @@ FileLoadNotify::FileLoadNotify(string * out, IFileReadNotify * notify)
 bool FileLoadNotify::onFileRead(
     size_t * bytesUsed,
     string_view data,
+    bool more,
     int64_t offset,
     FileHandle f
 ) {
+    assert(!more);
     *bytesUsed = data.size();
     // resize the string to match the bytes read, in case it was less than
     // the amount requested
     m_out->resize(data.size());
-    return false;
-}
-
-//===========================================================================
-void FileLoadNotify::onFileEnd(int64_t offset, FileHandle f) {
-    m_notify->onFileEnd(offset, f);
+    m_notify->onFileRead(nullptr, data, more, offset, f);
     fileClose(f);
     delete this;
+    return false;
 }
 
 
@@ -446,7 +444,8 @@ void Dim::fileLoadBinary(
     auto file = fileOpen(path, File::fReadOnly | File::fDenyNone);
     if (!file) {
         logMsgError() << "File open failed: " << path;
-        notify->onFileEnd(0, file);
+        size_t bytesUsed = 0;
+        notify->onFileRead(&bytesUsed, {}, false, 0, file);
         return;
     }
 

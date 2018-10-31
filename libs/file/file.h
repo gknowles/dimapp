@@ -204,24 +204,25 @@ class IFileReadNotify {
 public:
     virtual ~IFileReadNotify() = default;
 
-    // Returns false to prevent more reads, otherwise reads continue until the
-    // requested length has been received. *bytesUsed must be set to how much
-    // data was consumed, when it is less than data.size() the unused portion
-    // will be included as part of the data in the subsequent call. *bytesUsed
-    // is zero on entry and when returning true it must not be left that way.
+    // Returns false to prevent more reads, otherwise reads continue (with more
+    // set to true) until the requested length has been received (at which
+    // point more will be false). *bytesUsed must be set to how much data was
+    // consumed, when it is less than data.size() the unused portion will be
+    // included as part of the data in the subsequent call. *bytesUsed is zero
+    // on entry and when returning true it must not be left that way.
+    //
+    // Guaranteed to be called at least once, on operation failure 'more' is
+    // set to false and data.size() == 0.
     virtual bool onFileRead(
         size_t * bytesUsed,
         std::string_view data,
+        bool more,
         int64_t offset,
         FileHandle f
     ) {
         *bytesUsed = data.size();
-        return true;
+        return false;
     }
-
-    // Guaranteed to be called exactly once, when all data has been read or
-    // the operation failed.
-    virtual void onFileEnd(int64_t offset, FileHandle f) = 0;
 };
 
 void fileRead(
