@@ -17,7 +17,7 @@ using namespace Dim;
 
 namespace {
 
-const int64_t kNpos = numeric_limits<int64_t>::max();
+const int64_t kNpos = -1;
 
 struct WinFileInfo : public HandleContent {
     FileHandle m_f;
@@ -311,14 +311,14 @@ bool FileReader::onRun() {
 //===========================================================================
 void FileReader::onNotify() {
     bool more = true;
+    assert(m_length == kNpos || m_length >= m_bytes);
+    auto reqLen = (int64_t) m_bufLen - m_bufUnused;
     if (m_length != kNpos) {
-        assert(m_length >= m_bytes);
-        auto reqLen = (int64_t) m_bufLen - m_bufUnused;
-        if (m_length != kNpos && reqLen > m_length)
+        if (reqLen > m_length)
             reqLen = m_length;
         m_length -= m_bytes;
-        more = m_length && m_bytes == reqLen;
     }
+    more = m_length && m_bytes == reqLen;
     auto avail = m_bytes + m_bufUnused;
     size_t bytesUsed = 0;
     if (!m_notify->onFileRead(

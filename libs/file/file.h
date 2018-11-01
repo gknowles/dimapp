@@ -249,7 +249,7 @@ void fileStreamBinary(
 );
 
 void fileLoadBinary(
-    IFileReadNotify * notify,   // only onFileEnd() is called
+    IFileReadNotify * notify,
     std::string * out,
     std::string_view path,
     size_t maxSize = 10'000'000,
