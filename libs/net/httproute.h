@@ -106,7 +106,7 @@ private:
 class HttpRouteDirListNotify : public IHttpRouteNotify {
 public:
     HttpRouteDirListNotify(std::string_view path);
-    void set(std::string_view path);
+    HttpRouteDirListNotify & set(std::string_view path);
     void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
 private:
     std::string m_path;

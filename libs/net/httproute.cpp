@@ -739,8 +739,9 @@ HttpRouteDirListNotify::HttpRouteDirListNotify(string_view path)
 {}
 
 //===========================================================================
-void HttpRouteDirListNotify::set(string_view path) {
+HttpRouteDirListNotify & HttpRouteDirListNotify::set(string_view path) {
     m_path = path;
+    return *this;
 }
 
 //===========================================================================
@@ -1035,10 +1036,9 @@ void Dim::httpRouteReplyDirList(
     bld.object();
     bld.member("now", now);
     bld.member("files").array();
-    auto logDir = appLogDir().view();
-    for (auto && f : FileIter(logDir)) {
+    for (auto && f : FileIter(path)) {
         auto rname = f.path.view();
-        rname.remove_prefix(logDir.size() + 1);
+        rname.remove_prefix(path.size() + 1);
         bld.object();
         bld.member("name", rname);
         bld.member("mtime", f.mtime);

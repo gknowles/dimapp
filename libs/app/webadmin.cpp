@@ -98,6 +98,34 @@ void JsonRoutes::onHttpRequest(unsigned reqId, HttpRequest & msg) {
 
 /****************************************************************************
 *
+*   BinDump
+*
+***/
+
+namespace {
+class BinDump : public IHttpRouteNotify {
+    void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
+};
+} // namespace
+
+//===========================================================================
+void BinDump::onHttpRequest(unsigned reqId, HttpRequest & msg) {
+    auto qpath = msg.query().path;
+    auto prefix = httpRouteGetInfo(reqId).path.size();
+    qpath.remove_prefix(prefix);
+    Path path;
+    if (!appCrashPath(&path, qpath, false))
+        return httpRouteReplyNotFound(reqId, msg);
+    if (fileExists(path)) {
+        httpRouteReplyWithFile(reqId, path);
+    } else {
+        httpRouteReplyNotFound(reqId, msg);
+    }
+}
+
+
+/****************************************************************************
+*
 *   Public API
 *
 ***/
@@ -105,10 +133,15 @@ void JsonRoutes::onHttpRequest(unsigned reqId, HttpRequest & msg) {
 static WebRoot s_webRoot;
 static JsonCounters s_jsonCounters;
 static JsonRoutes s_jsonRoutes;
+static HttpRouteDirListNotify s_jsonDumpFiles({});
+static BinDump s_jsonDump;
 
 //===========================================================================
 void Dim::iWebAdminInitialize() {
     httpRouteAdd(&s_webRoot, "/", fHttpMethodGet, true);
     httpRouteAdd(&s_jsonCounters, "/srv/counters.json");
     httpRouteAdd(&s_jsonRoutes, "/srv/routes.json");
+    s_jsonDumpFiles.set(appCrashDir());
+    httpRouteAdd(&s_jsonDumpFiles, "/srv/crashes.json");
+    httpRouteAdd(&s_jsonDump, "/srv/crashes/", fHttpMethodGet, true);
 }
