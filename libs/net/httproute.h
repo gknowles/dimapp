@@ -28,45 +28,9 @@ namespace Dim {
 
 class IHttpRouteNotify {
 public:
-    class ParamBase {
-    public:
-        explicit ParamBase(std::string name) : m_name{move(name)} {}
-        virtual ~ParamBase() = default;
-        ParamBase(const ParamBase &) = delete;
-        ParamBase & operator=(const ParamBase &) = delete;
-        virtual void append(std::string_view value) = 0;
-        virtual void reset() = 0;
-    protected:
-        friend IHttpRouteNotify;
-        std::string m_name;
-    };
-    class Param : public ParamBase {
-    public:
-        using ParamBase::ParamBase;
-        std::string_view & operator*() { return m_value; }
-        std::string_view * operator->() { return &m_value; }
-        explicit operator bool() const { return m_explicit; }
-    private:
-        void append(std::string_view value) final {
-            m_value = value;
-            m_explicit = true;
-        }
-        void reset() final { m_value = {}; m_explicit = false; }
-        std::string_view m_value;
-        bool m_explicit {false};
-    };
-    class ParamVec : public ParamBase {
-    public:
-        using ParamBase::ParamBase;
-        std::vector<std::string_view> & operator*() { return m_values; }
-        std::vector<std::string_view> * operator->() { return &m_values; }
-        std::string_view & operator[](size_t index) { return m_values[index]; }
-        explicit operator bool() const { return !m_values.empty(); }
-    private:
-        void append(std::string_view value) final { m_values.push_back(value); }
-        void reset() final { m_values.clear(); }
-        std::vector<std::string_view> m_values;
-    };
+    class ParamBase;
+    class Param;
+    class ParamVec;
 
 public:
     virtual ~IHttpRouteNotify() = default;
@@ -83,17 +47,76 @@ private:
     TokenTable m_paramTbl;
 };
 
+class IHttpRouteNotify::ParamBase {
+public:
+    explicit ParamBase(std::string name) : m_name{move(name)} {}
+    virtual ~ParamBase() = default;
+    ParamBase(const ParamBase &) = delete;
+    ParamBase & operator=(const ParamBase &) = delete;
+    virtual void append(std::string_view value) = 0;
+    virtual void reset() = 0;
+protected:
+    friend IHttpRouteNotify;
+    std::string m_name;
+};
+
+class IHttpRouteNotify::Param : public ParamBase {
+public:
+    using ParamBase::ParamBase;
+    std::string_view & operator*() { return m_value; }
+    std::string_view * operator->() { return &m_value; }
+    explicit operator bool() const { return m_explicit; }
+private:
+    void append(std::string_view value) final {
+        m_value = value;
+        m_explicit = true;
+    }
+    void reset() final { m_value = {}; m_explicit = false; }
+    std::string_view m_value;
+    bool m_explicit {false};
+};
+
+class IHttpRouteNotify::ParamVec : public ParamBase {
+public:
+    using ParamBase::ParamBase;
+    std::vector<std::string_view> & operator*() { return m_values; }
+    std::vector<std::string_view> * operator->() { return &m_values; }
+    std::string_view & operator[](size_t index) { return m_values[index]; }
+    explicit operator bool() const { return !m_values.empty(); }
+private:
+    void append(std::string_view value) final { m_values.push_back(value); }
+    void reset() final { m_values.clear(); }
+    std::vector<std::string_view> m_values;
+};
+
+class HttpRouteRedirectNotify : public IHttpRouteNotify {
+public:
+    HttpRouteRedirectNotify(
+        std::string_view location,
+        unsigned status = 303,
+        std::string_view msg = {}
+    );
+    void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
+private:
+    std::string m_location;
+    unsigned m_status {};
+    std::string m_msg;
+};
+
+class HttpRouteDirListNotify : public IHttpRouteNotify {
+public:
+    HttpRouteDirListNotify(std::string_view path);
+    void set(std::string_view path);
+    void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
+private:
+    std::string m_path;
+};
+
 void httpRouteAdd(
     IHttpRouteNotify * notify,
     std::string_view path,
     HttpMethod methods = fHttpMethodGet,
     bool recurse = false
-);
-void httpRouteAddRedirect(
-    std::string_view path,
-    std::string_view location,
-    unsigned status = 303,
-    std::string_view msg = {}
 );
 void httpRouteAddFile(
     std::string_view path,
@@ -137,6 +160,14 @@ void httpRouteReply(unsigned reqId, HttpResponse && msg, bool more = false);
 void httpRouteReply(unsigned reqId, CharBuf && data, bool more);
 void httpRouteReply(unsigned reqId, std::string_view data, bool more);
 
+void httpRouteReply(
+    unsigned reqId,
+    const HttpRequest & req,
+    unsigned status,
+    std::string_view msg = {}
+);
+void httpRouteReply(unsigned reqId, unsigned status, std::string_view msg = {});
+
 // Aborts incomplete reply with CANCEL or INTERNAL_ERROR
 void httpRouteCancel(unsigned reqId);
 void httpRouteInternalError(unsigned reqId);
@@ -158,13 +189,11 @@ void httpRouteReplyRedirect(
     unsigned status = 303,
     std::string_view msg = {}
 );
-void httpRouteReply(
+void httpRouteReplyDirList(
     unsigned reqId,
     const HttpRequest & req,
-    unsigned status,
-    std::string_view msg = {}
+    std::string_view path
 );
-void httpRouteReply(unsigned reqId, unsigned status, std::string_view msg = {});
 
 
 /****************************************************************************

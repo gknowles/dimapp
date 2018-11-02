@@ -703,6 +703,57 @@ IHttpRouteNotify::ParamVec & IHttpRouteNotify::paramVec(string name) {
 
 /****************************************************************************
 *
+*   HttpRouteRedirectNotify
+*
+***/
+
+//===========================================================================
+HttpRouteRedirectNotify::HttpRouteRedirectNotify(
+    string_view location,
+    unsigned status,
+    string_view msg
+)
+    : m_location(location)
+    , m_status(status)
+    , m_msg(msg)
+{}
+
+//===========================================================================
+void HttpRouteRedirectNotify::onHttpRequest(
+    unsigned reqId,
+    HttpRequest & msg
+) {
+    httpRouteReplyRedirect(reqId, m_location, m_status, m_msg);
+}
+
+
+/****************************************************************************
+*
+*   HttpRouteDirListNotify
+*
+***/
+
+//===========================================================================
+HttpRouteDirListNotify::HttpRouteDirListNotify(string_view path)
+    : m_path(path)
+{}
+
+//===========================================================================
+void HttpRouteDirListNotify::set(string_view path) {
+    m_path = path;
+}
+
+//===========================================================================
+void HttpRouteDirListNotify::onHttpRequest(
+    unsigned reqId,
+    HttpRequest & msg
+) {
+    httpRouteReplyDirList(reqId, msg, m_path);
+}
+
+
+/****************************************************************************
+*
 *   Add routes
 *
 ***/
@@ -746,54 +797,6 @@ void Dim::httpRouteAdd(
     pi.path = pi.data.get();
     pi.segs = count(path.begin(), path.end(), '/');
     pi.methods = methods;
-    routeAdd(move(pi));
-}
-
-namespace {
-class RedirectNotify : public IHttpRouteNotify {
-public:
-    RedirectNotify(string_view location, unsigned status, string_view msg);
-
-    // Inherited via IHttpRouteNotify
-    void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
-private:
-    string m_location;
-    unsigned m_status{};
-    string m_msg;
-};
-} // namespace
-
-//===========================================================================
-RedirectNotify::RedirectNotify(
-    string_view location,
-    unsigned status,
-    string_view msg
-)
-    : m_location(location)
-    , m_status(status)
-    , m_msg(msg)
-{}
-
-//===========================================================================
-void RedirectNotify::onHttpRequest(unsigned reqId, HttpRequest & msg) {
-    httpRouteReplyRedirect(reqId, m_location, m_status, m_msg);
-}
-
-//===========================================================================
-void Dim::httpRouteAddRedirect(
-    string_view path,
-    string_view location,
-    unsigned status,
-    string_view msg
-) {
-    auto pi = PathInfo();
-    pi.data = strDup(path);
-    pi.notifyOwned = make_unique<RedirectNotify>(location, status, msg);
-
-    pi.notify = pi.notifyOwned.get();
-    pi.path = pi.data.get();
-    pi.segs = count(path.begin(), path.end(), '/');
-    pi.methods = fHttpMethodGet;
     routeAdd(move(pi));
 }
 
@@ -1020,6 +1023,34 @@ void Dim::httpRouteReplyRedirect(
     httpRouteReply(reqId, move(out));
 }
 
+//===========================================================================
+void Dim::httpRouteReplyDirList(
+    unsigned reqId,
+    const HttpRequest & msg,
+    string_view path
+) {
+    auto now = timeNow();
+    HttpResponse res;
+    JBuilder bld(&res.body());
+    bld.object();
+    bld.member("now", now);
+    bld.member("files").array();
+    auto logDir = appLogDir().view();
+    for (auto && f : FileIter(logDir)) {
+        auto rname = f.path.view();
+        rname.remove_prefix(logDir.size() + 1);
+        bld.object();
+        bld.member("name", rname);
+        bld.member("mtime", f.mtime);
+        bld.member("size", fileSize(f.path));
+        bld.end();
+    }
+    bld.end();
+    bld.end();
+    res.addHeader(kHttpContentType, "application/json");
+    res.addHeader(kHttp_Status, "200");
+    httpRouteReply(reqId, move(res));
+}
 
 //===========================================================================
 // AddDefaultReplyHeader
