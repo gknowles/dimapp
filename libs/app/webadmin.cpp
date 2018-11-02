@@ -109,6 +109,6 @@ static JsonRoutes s_jsonRoutes;
 //===========================================================================
 void Dim::iWebAdminInitialize() {
     httpRouteAdd(&s_webRoot, "/", fHttpMethodGet, true);
-    httpRouteAdd(&s_jsonCounters, "/srv/counters.json", fHttpMethodGet);
-    httpRouteAdd(&s_jsonRoutes, "/srv/routes.json", fHttpMethodGet);
+    httpRouteAdd(&s_jsonCounters, "/srv/counters.json");
+    httpRouteAdd(&s_jsonRoutes, "/srv/routes.json");
 }
