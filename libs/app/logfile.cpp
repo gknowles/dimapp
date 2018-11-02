@@ -210,44 +210,6 @@ void ConfigAppXml::onConfigChange(const XDocument & doc) {
 
 /****************************************************************************
 *
-*   JsonLogFiles
-*
-***/
-
-namespace {
-class JsonLogFiles : public IHttpRouteNotify {
-    void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
-};
-} // namespace
-
-//===========================================================================
-void JsonLogFiles::onHttpRequest(unsigned reqId, HttpRequest & msg) {
-    auto now = timeNow();
-    HttpResponse res;
-    JBuilder bld(&res.body());
-    bld.object();
-    bld.member("now", now);
-    bld.member("files").array();
-    auto logDir = appLogDir().view();
-    for (auto && f : FileIter(logDir)) {
-        auto rname = f.path.view();
-        rname.remove_prefix(logDir.size() + 1);
-        bld.object();
-        bld.member("name", rname);
-        bld.member("mtime", f.mtime);
-        bld.member("size", fileSize(f.path));
-        bld.end();
-    }
-    bld.end();
-    bld.end();
-    res.addHeader(kHttpContentType, "application/json");
-    res.addHeader(kHttp_Status, "200");
-    httpRouteReply(reqId, move(res));
-}
-
-
-/****************************************************************************
-*
 *   JsonLogTail
 *
 ***/
@@ -330,7 +292,7 @@ bool JsonLogTail::LogJob::onFileRead(
                     ? offset - size(m_buffer)
                     : 0;
                 fileRead(this, m_buffer, size(m_buffer), f, pos);
-                return true;
+                return false;
             }
             m_limit = m_found;
         }
@@ -349,7 +311,7 @@ bool JsonLogTail::LogJob::onFileRead(
             httpRouteReply(m_reqId, {i->data(), i->size() + 1}, true);
         }
         m_limit = m_found - (unsigned) lines.size() + 1;
-        httpRouteReply(m_reqId, lines.back(), m_limit);
+        httpRouteReply(m_reqId, *e, m_limit);
         m_found = m_limit;
         if (m_limit) {
             // If we weren't already in the last block of the file, we re-read
@@ -357,6 +319,7 @@ bool JsonLogTail::LogJob::onFileRead(
             auto pos = offset + data.size();
             auto len = m_endPos - pos;
             fileRead(this, m_buffer, size(m_buffer), f, pos, len);
+            return false;
         }
     } else {
         // Reading forward, replying with lines as we go.
@@ -367,17 +330,18 @@ bool JsonLogTail::LogJob::onFileRead(
             httpRouteReply(m_reqId, {i->data(), i->size() + 1}, true);
             m_limit -= 1;
         }
-        httpRouteReply(m_reqId, lines.back(), m_limit);
-        m_found = m_limit;
+        httpRouteReply(m_reqId, *e, m_limit);
+        if (m_limit) {
+            // More to return
+            m_found = m_limit;
+            return true;
+        }
     }
 
-    if (!m_limit) {
-        // All lines have been returned
-        fileClose(f);
-        delete this;
-        return false;
-    }
-    return true;
+    // All lines have been returned
+    fileClose(f);
+    delete this;
+    return false;
 }
 
 
@@ -417,7 +381,7 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
 *
 ***/
 
-static JsonLogFiles s_jsonLogFiles;
+static HttpRouteDirListNotify s_jsonLogFiles({});
 static JsonLogTail s_jsonLogTail;
 
 //===========================================================================
@@ -429,6 +393,7 @@ void Dim::iLogFileInitialize() {
         logMsgFatal() << "Invalid log path: " << s_logfile;
 
     logMonitor(&s_logger);
+    s_jsonLogFiles.set(appLogDir());
     httpRouteAdd(&s_jsonLogFiles, "/srv/logfiles.json");
     httpRouteAdd(&s_jsonLogTail, "/srv/logfiles/", fHttpMethodGet, true);
 }
