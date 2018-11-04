@@ -100,9 +100,11 @@ enum IJBuilder::State : int {
     kStateFail,
     kStateFirstValue,
     kStateValue,
+    kStateValueText,
     kStateFirstMember,
     kStateMember,
     kStateMemberValue,
+    kStateMemberValueText,
     kStateDocEnd,
 };
 
@@ -114,24 +116,6 @@ IJBuilder::IJBuilder()
 void IJBuilder::clear() {
     m_state = kStateFirstValue;
     m_stack.clear();
-}
-
-//===========================================================================
-IJBuilder & IJBuilder::object() {
-    switch (m_state) {
-    default:
-        return fail();
-    case kStateValue:
-        append(",\n");
-        break;
-    case kStateFirstValue:
-    case kStateMemberValue:
-        break;
-    }
-    m_state = kStateFirstMember;
-    append('{');
-    m_stack.push_back(true);
-    return *this;
 }
 
 //===========================================================================
@@ -153,6 +137,24 @@ IJBuilder & IJBuilder::array() {
 }
 
 //===========================================================================
+IJBuilder & IJBuilder::object() {
+    switch (m_state) {
+    default:
+        return fail();
+    case kStateValue:
+        append(",\n");
+        break;
+    case kStateFirstValue:
+    case kStateMemberValue:
+        break;
+    }
+    m_state = kStateFirstMember;
+    append('{');
+    m_stack.push_back(true);
+    return *this;
+}
+
+//===========================================================================
 IJBuilder & IJBuilder::end() {
     if (m_stack.empty())
         return fail();
@@ -166,6 +168,10 @@ IJBuilder & IJBuilder::end() {
         assert(!m_stack.back());
         append("\n]");
         break;
+    case kStateValueText:
+        append('"');
+        m_state = kStateValue;
+        return *this;
     case kStateFirstMember:
         assert(m_stack.back());
         append('}');
@@ -174,6 +180,10 @@ IJBuilder & IJBuilder::end() {
         assert(m_stack.back());
         append("\n}");
         break;
+    case kStateMemberValueText:
+        append('"');
+        m_state = kStateMemberValue;
+        return *this;
     }
     m_stack.pop_back();
     if (m_stack.empty()) {
@@ -196,8 +206,29 @@ IJBuilder & IJBuilder::member(string_view name) {
         break;
     }
     m_state = kStateMemberValue;
-    appendString(name);
-    append(':');
+    append('"');
+    addString(name);
+    append("\":");
+    return *this;
+}
+
+//===========================================================================
+IJBuilder & IJBuilder::startValue() {
+    switch (m_state) {
+    default:
+        return fail();
+    case kStateValue:
+        append(",\n");
+        m_state = kStateValueText;
+        break;
+    case kStateFirstValue:
+        m_state = kStateValueText;
+        break;
+    case kStateMemberValue:
+        m_state = kStateMemberValueText;
+        break;
+    }
+    append('"');
     return *this;
 }
 
@@ -212,11 +243,17 @@ IJBuilder & IJBuilder::value(string_view val) {
     case kStateFirstValue:
         m_state = kStateValue;
         break;
+    case kStateValueText:
+    case kStateMemberValueText:
+        addString(val);
+        return *this;
     case kStateMemberValue:
         m_state = kStateMember;
         break;
     }
-    appendString(val);
+    append('"');
+    addString(val);
+    append('"');
     return *this;
 }
 
@@ -231,6 +268,9 @@ IJBuilder & IJBuilder::valueRaw(string_view val) {
     case kStateFirstValue:
         m_state = kStateValue;
         break;
+    case kStateValueText:
+    case kStateMemberValueText:
+        break;
     case kStateMemberValue:
         m_state = kStateMember;
         break;
@@ -242,6 +282,11 @@ IJBuilder & IJBuilder::valueRaw(string_view val) {
 //===========================================================================
 IJBuilder & IJBuilder::value(const char val[]) {
     return value(string_view{val});
+}
+
+//===========================================================================
+IJBuilder & IJBuilder::value(char val) {
+    return value(string_view{&val, 1});
 }
 
 //===========================================================================
@@ -275,8 +320,7 @@ IJBuilder & IJBuilder::value(nullptr_t) {
 }
 
 //===========================================================================
-void IJBuilder::appendString(string_view val) {
-    append('"');
+void IJBuilder::addString(string_view val) {
     auto ptr = val.data();
     auto count = val.size();
     auto base = ptr;
@@ -299,7 +343,6 @@ void IJBuilder::appendString(string_view val) {
 
     if (size_t num = ptr - base)
         append({base, num});
-    append('"');
 }
 
 //===========================================================================

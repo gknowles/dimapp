@@ -31,9 +31,11 @@ public:
 
     virtual void clear();
 
-    IJBuilder & object();
-    IJBuilder & end(); // used to end both objects and arrays
     IJBuilder & array();
+    IJBuilder & object();
+
+    // used to end arrays, objects, and compound strings
+    IJBuilder & end();
 
     IJBuilder & member(std::string_view name);
 
@@ -48,6 +50,7 @@ public:
 
     IJBuilder & value(const char val[]);
     IJBuilder & value(std::string_view val);
+    IJBuilder & value(char val);
     IJBuilder & value(bool val);
     IJBuilder & value(double val);
     IJBuilder & value(int64_t val);
@@ -57,13 +60,17 @@ public:
     template<typename T>
     IJBuilder & value(const T & val);
 
+    // Starts a compound string value, following calls to value() append to it,
+    // this continues until end() is called.
+    IJBuilder & startValue();
+
 protected:
     virtual void append(std::string_view text) = 0;
     virtual void append(char ch) = 0;
     virtual size_t size() const = 0;
 
 private:
-    void appendString(std::string_view val);
+    void addString(std::string_view val);
     IJBuilder & fail();
 
     enum State : int m_state;

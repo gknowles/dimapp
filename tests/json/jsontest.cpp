@@ -72,6 +72,14 @@ int internalTest() {
     }
     EXPECT(num == 2);
 
+    bld.clear();
+    bld.array().startValue() << 'a' << ' ' << 'b' << end;
+    bld.startValue() << 1 << '+' << 1 << '=' << 2 << end;
+    bld.end();
+    const char kTest2[] = "[\"a b\",\n\"1+1=2\"\n]\n";
+    str2 = toString(out);
+    EXPECT(str2 == kTest2);
+
     if (s_errors) {
         cerr << "*** TEST FAILURES: " << s_errors << endl;
         return EX_SOFTWARE;
