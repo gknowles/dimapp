@@ -219,10 +219,12 @@ class JsonLogTail : public IHttpRouteNotify {
 public:
     struct LogJob : IFileReadNotify {
         unsigned m_reqId {0};
-        char m_buffer[8'192];
         unsigned m_limit {0};
         unsigned m_found {0};
         size_t m_endPos {0};
+        char m_buffer[8'192];
+        HttpResponse m_res;
+        JBuilder m_bld{&m_res.body()};
 
         bool onFileRead(
             size_t * bytesUsed,
@@ -252,18 +254,23 @@ void JsonLogTail::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     mapParams(msg);
     auto limit = clamp(strToUint(*m_limit), 10u, 10'000u);
 
-    auto file = fileOpen(path, File::fReadOnly | File::fDenyNone);
-    if (!file) {
-        HttpResponse res;
-        res.addHeader(kHttpContentType, "text/plain");
-        res.addHeader(kHttp_Status, "200");
-        httpRouteReply(reqId, move(res));
-        return;
-    }
     auto job = new LogJob;
     job->m_reqId = reqId;
     job->m_limit = limit;
+    job->m_res.addHeader(kHttpContentType, "application/json");
+    job->m_res.addHeader(kHttp_Status, "200");
+    job->m_bld.object();
+    job->m_bld.member("name", qpath);
+
+    auto file = fileOpen(path, File::fReadOnly | File::fDenyNone);
+    if (!file) {
+        size_t bytesUsed = 0;
+        job->onFileRead(&bytesUsed, {}, false, 0, file);
+        return;
+    }
     job->m_endPos = fileSize(file);
+    job->m_bld.member("size", job->m_endPos);
+    job->m_bld.member("mtime", fileLastWriteTime(file));
     auto pos = job->m_endPos > size(job->m_buffer)
         ? job->m_endPos - size(job->m_buffer)
         : 0;
@@ -299,22 +306,22 @@ bool JsonLogTail::LogJob::onFileRead(
 
         // Found the first line we will return (either at the limit or, if
         // there weren't enough lines, the start of the file).
-        HttpResponse res;
-        res.addHeader(kHttpContentType, "text/plain");
-        res.addHeader(kHttp_Status, "200");
-        httpRouteReply(m_reqId, move(res), true);
+        m_bld.member("lines").array();
         auto i = lines.begin() + m_found - m_limit;
         auto e = lines.end() - 1;
         assert(i <= e);
-        for (; i < e; ++i) {
-            *const_cast<char *>(&*i->end()) = '\n';
-            httpRouteReply(m_reqId, {i->data(), i->size() + 1}, true);
-        }
+        for (; i < e; ++i)
+            m_bld.value(*i);
+        if (!e->empty())
+            m_bld.startValue().value(*e);
         m_limit = m_found - (unsigned) lines.size() + 1;
-        httpRouteReply(m_reqId, *e, m_limit);
-        m_found = m_limit;
         if (m_limit) {
-            // If we weren't already in the last block of the file, we re-read
+            // More to return
+            httpRouteReply(m_reqId, move(m_res), true);
+            m_res.clear();
+            m_found = m_limit;
+
+            // We weren't already in the last block of the file, so re-read
             // the blocks from here to EOF and add them to the reply.
             auto pos = offset + data.size();
             auto len = m_endPos - pos;
@@ -325,20 +332,31 @@ bool JsonLogTail::LogJob::onFileRead(
         // Reading forward, replying with lines as we go.
         auto i = lines.begin();
         auto e = lines.end() - 1;
-        for (; i < e; ++i) {
-            *const_cast<char *>(&*i->end()) = '\n';
-            httpRouteReply(m_reqId, {i->data(), i->size() + 1}, true);
-            m_limit -= 1;
+        if (i < e) {
+            m_bld.value(*i);
+            if (m_bld.state().next == m_bld.Type::kText)
+                m_bld.end();
+            while (++i < e)
+                m_bld.value(*i);
         }
-        httpRouteReply(m_reqId, *e, m_limit);
-        if (m_limit) {
+        if (!e->empty())
+            m_bld.startValue().value(*e);
+        if (more) {
             // More to return
-            m_found = m_limit;
+            httpRouteReply(m_reqId, move(m_res.body()), true);
+            m_res.clear();
             return true;
         }
     }
 
     // All lines have been returned
+    m_bld.end(); // end array of lines
+    m_bld.end(); // end file object
+    if (m_res.headers()) {
+        httpRouteReply(m_reqId, move(m_res));
+    } else {
+        httpRouteReply(m_reqId, move(m_res.body()), false);
+    }
     fileClose(f);
     delete this;
     return false;
@@ -395,7 +413,7 @@ void Dim::iLogFileInitialize() {
     logMonitor(&s_logger);
     s_jsonLogFiles.set(appLogDir());
     httpRouteAdd(&s_jsonLogFiles, "/srv/logfiles.json");
-    httpRouteAdd(&s_jsonLogTail, "/srv/logfiles/", fHttpMethodGet, true);
+    httpRouteAdd(&s_jsonLogTail, "/srv/logtail/", fHttpMethodGet, true);
 }
 
 //===========================================================================
