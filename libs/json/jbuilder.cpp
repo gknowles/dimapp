@@ -280,6 +280,26 @@ IJBuilder & IJBuilder::valueRaw(string_view val) {
 }
 
 //===========================================================================
+IJBuilder::StateReturn IJBuilder::state() const {
+    switch (m_state) {
+    case kStateFirstValue:
+    case kStateValue:
+        return {Type::kValue, Type::kArray};
+    case kStateValueText:
+        return {Type::kText, Type::kArray};
+    case kStateFirstMember:
+    case kStateMember:
+        return {Type::kMember, Type::kObject};
+    case kStateMemberValue:
+        return {Type::kValue, Type::kObject};
+    case kStateMemberValueText:
+        return {Type::kText, Type::kObject};
+    default:
+        return {};
+    }
+}
+
+//===========================================================================
 IJBuilder & IJBuilder::value(const char val[]) {
     return value(string_view{val});
 }

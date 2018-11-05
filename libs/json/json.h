@@ -64,6 +64,20 @@ public:
     // this continues until end() is called.
     IJBuilder & startValue();
 
+    enum class Type : int {
+        kInvalid,
+        kArray,
+        kObject,
+        kMember,
+        kValue,
+        kText,
+    };
+    struct StateReturn {
+        Type next;
+        Type parent;
+    };
+    StateReturn state() const;
+
 protected:
     virtual void append(std::string_view text) = 0;
     virtual void append(char ch) = 0;
