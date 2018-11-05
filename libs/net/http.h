@@ -215,6 +215,8 @@ struct HttpMsg::HdrList {
     ForwardListIterator<HdrName> end();
     ForwardListIterator<const HdrName> begin() const;
     ForwardListIterator<const HdrName> end() const;
+
+    explicit operator bool() const { return m_firstHeader; }
 };
 
 
