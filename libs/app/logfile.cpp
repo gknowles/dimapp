@@ -259,8 +259,10 @@ void JsonLogTail::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     job->m_limit = limit;
     job->m_res.addHeader(kHttpContentType, "application/json");
     job->m_res.addHeader(kHttp_Status, "200");
-    job->m_bld.object();
-    job->m_bld.member("name", qpath);
+    job->m_bld.object()
+        .member("now", now)
+        .member("limit", limit)
+        .member("name", qpath);
 
     auto file = fileOpen(path, File::fReadOnly | File::fDenyNone);
     if (!file) {
