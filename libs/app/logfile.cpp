@@ -252,7 +252,7 @@ void JsonLogTail::onHttpRequest(unsigned reqId, HttpRequest & msg) {
         return httpRouteReplyNotFound(reqId, msg);
 
     mapParams(msg);
-    auto limit = clamp(strToUint(*m_limit), 10u, 10'000u);
+    auto limit = clamp(m_limit ? strToUint(*m_limit) : 50u, 10u, 10'000u);
 
     auto job = new LogJob;
     job->m_reqId = reqId;
