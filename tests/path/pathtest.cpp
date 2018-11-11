@@ -34,7 +34,31 @@ static void app(int argc, char * argv[]) {
     Path p;
 
     struct {
-        string_view raw;
+        string_view in;
+        string_view fname;
+        string_view out;
+        int line;
+    } setFilenameTests[] = {
+        { "/one/two", "2", "/one/2", __LINE__ },
+        { "/one/two", "", "/one", __LINE__ },
+        { "c:one", "1", "c:1", __LINE__ },
+        { "c:/one", "1", "c:/1", __LINE__ },
+        { "c:/one", "", "c:/", __LINE__ },
+        { "c:/", "", "c:/", __LINE__ },
+        { "c:/", "1", "c:/1", __LINE__ },
+    };
+    for (auto && t : setFilenameTests) {
+        p.assign(t.in);
+        auto out = p.setFilename(t.fname);
+        if (out != t.out) {
+            logMsgError() << "Line " << t.line << ": Path(" << t.in
+                << ").setFilename(" << t.fname << ") == '" << out
+                << "', should be '" << t.out << "'";
+        }
+    }
+
+    struct {
+        string_view in;
         string_view out;
         int line;
     } parentTests[] = {
@@ -43,17 +67,17 @@ static void app(int argc, char * argv[]) {
         { "c:/one", "c:/", __LINE__ },
     };
     for (auto && t : parentTests) {
-        p.assign(t.raw);
+        p.assign(t.in);
         auto out = p.parentPath();
         if (out != t.out) {
-            logMsgError() << "Line " << t.line << ": Path(" << t.raw
+            logMsgError() << "Line " << t.line << ": Path(" << t.in
                 << ").parentPath() == '" << out << "', should be '" << t.out
                 << "'";
         }
     }
 
     struct {
-        string_view raw;
+        string_view in;
         string_view out;
         int line;
     } normalizeTests[] = {
@@ -67,9 +91,9 @@ static void app(int argc, char * argv[]) {
         { "../", "..", __LINE__ },
     };
     for (auto && t : normalizeTests) {
-        p.assign(t.raw);
+        p.assign(t.in);
         if (p != t.out) {
-            logMsgError() << "Line " << t.line << ": Path(" << t.raw
+            logMsgError() << "Line " << t.line << ": Path(" << t.in
                 << ") == '" << p << "', should be '" << t.out << "'";
         }
     }

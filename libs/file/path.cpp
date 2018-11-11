@@ -347,11 +347,15 @@ Path & Path::setParentPath(string_view path) {
 //===========================================================================
 Path & Path::setFilename(string_view filename) {
     Count cnt(m_data);
-    m_data.resize(cnt.m_rootLen + cnt.m_dirLen);
     Count scnt(filename);
     filename.remove_prefix(scnt.m_rootLen + scnt.m_dirLen);
-    addStem(&m_data, filename.substr(0, scnt.m_stemLen));
-    addExt(&m_data, filename.substr(scnt.m_stemLen));
+    if (filename.empty()) {
+        m_data.resize(cnt.m_rootLen + cnt.m_dirLen - (cnt.m_dirLen > 1));
+    } else {
+        m_data.resize(cnt.m_rootLen + cnt.m_dirLen);
+        addStem(&m_data, filename.substr(0, scnt.m_stemLen));
+        addExt(&m_data, filename.substr(scnt.m_stemLen));
+    }
     return *this;
 }
 
