@@ -84,7 +84,8 @@ private:
 // routes. Module defaults to this executable.
 void resLoadWebSite(
     std::string_view urlPrefix = {},
-    std::string_view moduleName = {}
+    std::string_view moduleName = {},
+    std::string_view fallbackResFileMap = {}
 );
 
 } // namespace

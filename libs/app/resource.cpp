@@ -145,12 +145,18 @@ void ShutdownNotify::onShutdownConsole (bool firstTry) {
 ***/
 
 //===========================================================================
-void Dim::resLoadWebSite(string_view urlPrefix, string_view moduleName) {
+void Dim::resLoadWebSite(
+    string_view urlPrefix,
+    string_view moduleName,
+    string_view fallbackResFileMap
+) {
     shutdownMonitor(&s_cleanup);
 
     auto h = resOpen(moduleName);
     auto src = resLoadData(h, kResWebSite);
     resClose(h);
+    if (src.empty())
+        src = fallbackResFileMap;
     if (!s_files.parse(src)) {
         s_files.clear();
         return;
@@ -160,18 +166,24 @@ void Dim::resLoadWebSite(string_view urlPrefix, string_view moduleName) {
     if (!prefix.empty() && prefix.back() == '/')
         prefix.pop_back();
     for (auto && [name, ent] : s_files) {
-        Path route;
-        if (!prefix.empty()) {
-            route = s_files.strDup(prefix + string(name));
-        } else {
-            route = name;
-        }
+        auto rname = string_view{name};
+        Path route(prefix);
+        route += rname;
+        bool dir = false;
         if (route.filename() == "index.html") {
+            dir = true;
             route.removeFilename();
-            httpRouteAddFileRef(route, ent.mtime, ent.content);
-            httpRouteAddFileRef(string(route) + "/", ent.mtime, ent.content);
-        } else {
-            httpRouteAddFileRef(route, ent.mtime, ent.content);
+        }
+        if (route != rname) {
+            auto tmp = string(route);
+            if (dir)
+                tmp += '/';
+            rname = s_files.strDup(move(tmp));
+        }
+        httpRouteAddFileRef(rname, ent.mtime, ent.content);
+        if (dir) {
+            rname.remove_suffix(1);
+            httpRouteAddFileRef(rname, ent.mtime, ent.content);
         }
     }
 }
