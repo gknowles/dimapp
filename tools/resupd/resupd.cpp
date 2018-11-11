@@ -101,21 +101,23 @@ inline static void writeStrContent(ostream & os, string_view content) {
 static void writeContent(ostream & os, string_view content) {
     os << " {\n    ";
     auto pos = 5;
-    if (!content.empty()) {
-        for (unsigned char ch : content) {
-            auto digits = 3;
-            if (ch < 10) {
-                digits = 1;
-            } else if (ch < 100) {
-                digits = 2;
-            }
-            if (pos > kMaxWidth - digits - 1) {
-                os << "\n    ";
-                pos = 5;
-            }
-            os << (int) ch << ',';
-            pos += digits + 1;
+    auto cpos = 0;
+    for (unsigned char ch : content) {
+        auto digits = 3;
+        if (ch < 10) {
+            digits = 1;
+        } else if (ch < 100) {
+            digits = 2;
         }
+        if (pos > kMaxWidth - digits - 1) {
+            os << "\n    ";
+            pos = 5;
+        }
+        os << (int) ch;
+        if (++cpos == content.size())
+            break;
+        os << ',';
+        pos += digits + 1;
     }
     os << "\n};\n";
 }
