@@ -490,10 +490,10 @@ string Dim::trimBlock(string_view src) {
 
 //===========================================================================
 unique_ptr<char[]> Dim::strDup(string_view src) {
-    auto ptr = unique_ptr<char[]>(new char[src.size() + 1]);
+    auto ptr = make_unique<char[]>(src.size() + 1);
     memcpy(ptr.get(), src.data(), src.size());
     ptr[src.size()] = 0;
-    return move(ptr);
+    return ptr;
 }
 
 
