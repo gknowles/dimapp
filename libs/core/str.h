@@ -304,20 +304,6 @@ void split(
     std::string_view seps // = "\r\n"
 );
 
-//===========================================================================
-template<typename T>
-std::string toString(const std::vector<T> & src, char sep = ' ') {
-    if (src.empty())
-        return {};
-    std::ostringstream os;
-    os << src[0];
-    for (auto i = src.begin() + 1; i < src.end(); ++i) {
-        os << sep;
-        os << *i;
-    }
-    return os.str();
-}
-
 // Removes leading and/or trailing whitespace characters (as defined by
 // isspace).
 std::string_view trim(std::string_view src);
@@ -331,6 +317,31 @@ std::string_view rtrim(std::string_view src);
 std::string trimBlock(std::string_view src);
 
 std::unique_ptr<char[]> strDup(std::string_view src);
+
+//===========================================================================
+// vector to string
+//===========================================================================
+template<typename T>
+class VectorProxy {
+public:
+    VectorProxy(const std::vector<T> & src) : m_src{src} {}
+    const std::vector<T> & m_src;
+};
+
+//===========================================================================
+template<typename T>
+std::string toString(VectorProxy<T> proxy, char sep = ' ') {
+    auto & src = proxy.m_src;
+    if (src.empty())
+        return {};
+    std::ostringstream os;
+    os << src[0];
+    for (auto i = src.begin() + 1; i < src.end(); ++i) {
+        os << sep;
+        os << *i;
+    }
+    return os.str();
+}
 
 
 /****************************************************************************
