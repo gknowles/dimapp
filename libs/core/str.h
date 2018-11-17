@@ -322,16 +322,7 @@ std::unique_ptr<char[]> strDup(std::string_view src);
 // vector to string
 //===========================================================================
 template<typename T>
-class VectorProxy {
-public:
-    VectorProxy(std::vector<T> const & src) : m_src{src} {}
-    std::vector<T> const & m_src;
-};
-
-//===========================================================================
-template<typename T>
-std::string toString(VectorProxy<T> proxy, char sep = ' ') {
-    auto & src = proxy.m_src;
+std::string toString(std::vector<T> const & src, char sep = ' ') {
     if (src.empty())
         return {};
     std::ostringstream os;
