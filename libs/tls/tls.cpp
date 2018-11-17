@@ -20,8 +20,8 @@ namespace {
 class ClientConn : public TlsConnBase {
 public:
     ClientConn(
-        const char hostName[],
-        const TlsCipherSuite suites[],
+        char const hostName[],
+        TlsCipherSuite const suites[],
         size_t count);
     void connect(CharBuf * out);
 
@@ -32,7 +32,7 @@ private:
 class ServerConn : public TlsConnBase {
 public:
 private:
-    void onTlsHandshake(const TlsClientHelloMsg & msg) override;
+    void onTlsHandshake(TlsClientHelloMsg const & msg) override;
 };
 
 } // namespace
@@ -65,7 +65,7 @@ void TlsConnBase::setSuites(const TlsCipherSuite suites[], size_t count) {
 }
 
 //===========================================================================
-const vector<TlsCipherSuite> & TlsConnBase::suites() const {
+vector<TlsCipherSuite> const & TlsConnBase::suites() const {
     return m_suites;
 }
 
@@ -73,7 +73,7 @@ const vector<TlsCipherSuite> & TlsConnBase::suites() const {
 bool TlsConnBase::recv(
     CharBuf * out,
     CharBuf * data,
-    const void * src,
+    void const * src,
     size_t srcLen) {
     m_reply = out;
     bool success = m_in.parse(data, this, src, srcLen);
@@ -103,7 +103,7 @@ template <typename T> void TlsConnBase::handshake(TlsRecordReader & in) {
 //===========================================================================
 void TlsConnBase::onTlsHandshake(
     TlsHandshakeType type,
-    const uint8_t data[],
+    uint8_t const data[],
     size_t dataLen) {
     TlsRecordReader in(*this, data, dataLen);
     switch (type) {
@@ -123,13 +123,13 @@ void TlsConnBase::onTlsHandshake(
 }
 
 //===========================================================================
-void TlsConnBase::onTlsHandshake(const TlsClientHelloMsg & msg) {}
+void TlsConnBase::onTlsHandshake(TlsClientHelloMsg const & msg) {}
 
 //===========================================================================
-void TlsConnBase::onTlsHandshake(const TlsServerHelloMsg & msg) {}
+void TlsConnBase::onTlsHandshake(TlsServerHelloMsg const & msg) {}
 
 //===========================================================================
-void TlsConnBase::onTlsHandshake(const TlsHelloRetryRequestMsg & msg) {}
+void TlsConnBase::onTlsHandshake(TlsHelloRetryRequestMsg const & msg) {}
 
 
 /****************************************************************************
@@ -169,23 +169,23 @@ void TlsRecordWriter::number16(uint16_t val) {
 }
 
 //===========================================================================
-void TlsRecordWriter::fixed(const void * ptr, size_t count) {
+void TlsRecordWriter::fixed(void const * ptr, size_t count) {
     if (m_buf.size()) {
-        m_buf.append((const char *)ptr, count);
+        m_buf.append((char const *)ptr, count);
     } else {
         m_rec.add(m_out, (TlsContentType)m_type, ptr, count);
     }
 }
 
 //===========================================================================
-void TlsRecordWriter::var(const void * ptr, size_t count) {
+void TlsRecordWriter::var(void const * ptr, size_t count) {
     assert(count < 1 << 8);
     number((uint8_t)count);
     fixed(ptr, count);
 }
 
 //===========================================================================
-void TlsRecordWriter::var16(const void * ptr, size_t count) {
+void TlsRecordWriter::var16(void const * ptr, size_t count) {
     assert(count < 1 << 16);
     number16((uint16_t)count);
     fixed(ptr, count);
@@ -238,11 +238,11 @@ void TlsRecordWriter::end() {
 //===========================================================================
 TlsRecordReader::TlsRecordReader(
     TlsConnBase & conn,
-    const void * ptr,
+    void const * ptr,
     size_t count
 )
     : m_conn(conn)
-    , m_ptr((const uint8_t *)ptr)
+    , m_ptr((uint8_t const *)ptr)
 {
     assert(count < (size_t) numeric_limits<int>::max());
     m_count = (int)count;
@@ -331,12 +331,12 @@ size_t TlsRecordReader::size() const {
 *
 ***/
 
-const uint8_t kClientVersion[] = {3, 4};
+uint8_t const kClientVersion[] = {3, 4};
 
 //===========================================================================
 ClientConn::ClientConn(
-    const char hostName[],
-    const TlsCipherSuite suites[],
+    char const hostName[],
+    TlsCipherSuite const suites[],
     size_t count
 ) {
     if (hostName)
@@ -370,7 +370,7 @@ void ClientConn::connect(CharBuf * outbuf) {
 ***/
 
 //===========================================================================
-void ServerConn::onTlsHandshake(const TlsClientHelloMsg & msg) {}
+void ServerConn::onTlsHandshake(TlsClientHelloMsg const & msg) {}
 
 
 /****************************************************************************
@@ -389,8 +389,8 @@ TlsConnHandle Dim::tlsAccept(const TlsCipherSuite suites[], size_t count) {
 //===========================================================================
 TlsConnHandle Dim::tlsConnect(
     CharBuf * out,
-    const char hostName[],
-    const TlsCipherSuite suites[],
+    char const hostName[],
+    TlsCipherSuite const suites[],
     size_t count
 ) {
     auto conn = new ClientConn(hostName, suites, count);
@@ -408,7 +408,7 @@ bool Dim::tlsRecv(
     CharBuf * out,
     CharBuf * data,
     TlsConnHandle h,
-    const void * src,
+    void const * src,
     size_t srcLen
 ) {
     auto conn = s_conns.find(h);

@@ -46,7 +46,7 @@ std::string_view resLoadData(ResHandle h, std::string_view name);
 *
 ***/
 
-const char kResWebSite[] = "WEBSITE";
+char const kResWebSite[] = "WEBSITE";
 
 class ResFileMap {
 public:
@@ -67,7 +67,7 @@ public:
     void copy(CharBuf * out) const;
     [[nodiscard]] bool parse(std::string_view data);
 
-    const Entry * find(std::string_view name) const;
+    Entry const * find(std::string_view name) const;
     size_t size() const { return m_files.size(); }
 
     auto begin() const { return m_files.begin(); }

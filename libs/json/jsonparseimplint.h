@@ -134,7 +134,7 @@ inline bool JsonParser::onSvalEnd () {
 }
 
 //===========================================================================
-inline bool JsonParser::onStrTextStart (const char * ptr) {
+inline bool JsonParser::onStrTextStart (char const * ptr) {
     m_base = m_cur = (char *) ptr;
     return true;
 }

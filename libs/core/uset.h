@@ -52,14 +52,14 @@ public:
 public:
     UnsignedSet();
     UnsignedSet(UnsignedSet && from);
-    UnsignedSet(const UnsignedSet & from);
+    UnsignedSet(UnsignedSet const & from);
     UnsignedSet(std::initializer_list<unsigned> from);
     UnsignedSet(std::string_view from);
     ~UnsignedSet();
     explicit operator bool() const { return !empty(); }
 
     UnsignedSet & operator=(UnsignedSet && from);
-    UnsignedSet & operator=(const UnsignedSet & from);
+    UnsignedSet & operator=(UnsignedSet const & from);
 
     // iterators
     iterator begin() const;
@@ -80,7 +80,7 @@ public:
         void assign(InputIt first, InputIt last);
     void assign(std::initializer_list<unsigned> il);
     void assign(UnsignedSet && from);
-    void assign(const UnsignedSet & from);
+    void assign(UnsignedSet const & from);
     void assign(std::string_view src); // space separated ranges
     bool insert(unsigned value); // returns true if inserted
     template <typename InputIt, typename = std::enable_if_t<
@@ -88,29 +88,29 @@ public:
         void insert(InputIt first, InputIt last);
     void insert(std::initializer_list<unsigned> il);
     void insert(UnsignedSet && other);
-    void insert(const UnsignedSet & other);
+    void insert(UnsignedSet const & other);
     void insert(std::string_view src); // space separated ranges
     void insert(unsigned low, unsigned high);
     bool erase(unsigned value); // returns true if erased
     void erase(iterator where);
     void erase(unsigned low, unsigned high);
-    void erase(const UnsignedSet & other);
+    void erase(UnsignedSet const & other);
     unsigned pop_back();
     unsigned pop_front();
     void intersect(UnsignedSet && other);
-    void intersect(const UnsignedSet & other);
+    void intersect(UnsignedSet const & other);
     void swap(UnsignedSet & other);
 
     // compare
-    int compare(const UnsignedSet & right) const;
-    bool includes(const UnsignedSet & other) const;
-    bool intersects(const UnsignedSet & other) const;
-    bool operator==(const UnsignedSet & right) const;
-    bool operator!=(const UnsignedSet & right) const;
-    bool operator<(const UnsignedSet & right) const;
-    bool operator>(const UnsignedSet & right) const;
-    bool operator<=(const UnsignedSet & right) const;
-    bool operator>=(const UnsignedSet & right) const;
+    int compare(UnsignedSet const & right) const;
+    bool includes(UnsignedSet const & other) const;
+    bool intersects(UnsignedSet const & other) const;
+    bool operator==(UnsignedSet const & right) const;
+    bool operator!=(UnsignedSet const & right) const;
+    bool operator<(UnsignedSet const & right) const;
+    bool operator>(UnsignedSet const & right) const;
+    bool operator<=(UnsignedSet const & right) const;
+    bool operator>=(UnsignedSet const & right) const;
 
     // search
     size_t count(unsigned val) const;
@@ -121,7 +121,7 @@ public:
     iterator lastContiguous(iterator where) const;
 
 private:
-    void iInsert(const unsigned * first, const unsigned * last);
+    void iInsert(unsigned const * first, unsigned const * last);
 
     Node m_node;
 };
@@ -147,7 +147,7 @@ inline void UnsignedSet::assign(std::initializer_list<unsigned> il) {
 //===========================================================================
 template<typename InputIt, typename>
 inline void UnsignedSet::insert(InputIt first, InputIt last) {
-    if constexpr (std::is_convertible_v<InputIt, const unsigned *>) {
+    if constexpr (std::is_convertible_v<InputIt, unsigned const *>) {
         iInsert(first, last);
     } else {
         for (; first != last; ++first)
@@ -176,20 +176,20 @@ public:
     using reference = value_type;
 public:
     Iterator() {}
-    Iterator(const Iterator & from) = default;
-    Iterator(const Node * node);
-    Iterator(const Node * node, value_type value, unsigned minDepth);
+    Iterator(Iterator const & from) = default;
+    Iterator(Node const * node);
+    Iterator(Node const * node, value_type value, unsigned minDepth);
     Iterator & operator++();
     explicit operator bool() const { return (bool) m_node; }
-    bool operator== (const Iterator & right) const;
-    bool operator!= (const Iterator & right) const;
+    bool operator== (Iterator const & right) const;
+    bool operator!= (Iterator const & right) const;
     value_type operator*() const { return m_value; }
-    const value_type * operator->() const { return &m_value; }
+    value_type const * operator->() const { return &m_value; }
 
     Iterator lastContiguous() const;
 private:
     friend class UnsignedSet;
-    const Node * m_node = nullptr;
+    Node const * m_node = nullptr;
     value_type m_value = 0;
     unsigned m_minDepth = 0;
 };
@@ -211,14 +211,14 @@ public:
     using reference = const value_type&;
 public:
     RangeIterator() {}
-    RangeIterator(const RangeIterator & from) = default;
+    RangeIterator(RangeIterator const & from) = default;
     RangeIterator(Iterator where);
     RangeIterator & operator++();
     explicit operator bool() const { return m_value != kEndValue; }
-    bool operator== (const RangeIterator & right) const;
-    bool operator!= (const RangeIterator & right) const;
-    const value_type & operator*() const { return m_value; }
-    const value_type * operator->() const { return &m_value; }
+    bool operator== (RangeIterator const & right) const;
+    bool operator!= (RangeIterator const & right) const;
+    value_type const & operator*() const { return m_value; }
+    value_type const * operator->() const { return &m_value; }
 private:
     constexpr static value_type kEndValue{1, 0};
     Iterator m_iter;
@@ -245,7 +245,7 @@ struct UnsignedSet::RangeRange {
 *
 ***/
 
-std::ostream & operator<<(std::ostream & os, const UnsignedSet & right);
+std::ostream & operator<<(std::ostream & os, UnsignedSet const & right);
 
 
 } // namespace

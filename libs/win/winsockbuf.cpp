@@ -15,8 +15,8 @@ using namespace Dim;
 *
 ***/
 
-const unsigned kDefaultBufferSliceSize = 4096;
-const unsigned kDefaultBufferSize = 256 * kDefaultBufferSliceSize;
+unsigned const kDefaultBufferSliceSize = 4096;
+unsigned const kDefaultBufferSize = 256 * kDefaultBufferSliceSize;
 
 
 /****************************************************************************
@@ -29,7 +29,7 @@ namespace {
 
 struct BufferHandle : HandleBase {
     BufferHandle() {}
-    explicit BufferHandle(const SocketBuffer & sbuf) { pos = sbuf.owner; }
+    explicit BufferHandle(SocketBuffer const & sbuf) { pos = sbuf.owner; }
 };
 
 struct Buffer : HandleContent, ListBaseLink<> {
@@ -79,7 +79,7 @@ static auto & s_perfSlices = uperf("sock.buffer slices");
 ***/
 
 //===========================================================================
-static BufferSlice * getSlice(const Buffer & buf, int pos) {
+static BufferSlice * getSlice(Buffer const & buf, int pos) {
     char * ptr = (char *)buf.base + pos * buf.sliceSize;
     return (BufferSlice *)ptr;
 }
@@ -88,7 +88,7 @@ static BufferSlice * getSlice(const Buffer & buf, int pos) {
 static void findBufferSlice(
     BufferSlice ** sliceOut,
     Buffer ** bufferOut,
-    const SocketBuffer & sbuf
+    SocketBuffer const & sbuf
 ) {
     auto * slice = (BufferSlice *) sbuf.data;
     BufferHandle h{sbuf};
@@ -207,7 +207,7 @@ static void destroyEmptyBuffer() {
 }
 
 //===========================================================================
-static void destroyBufferSlice(const SocketBuffer & sbuf) {
+static void destroyBufferSlice(SocketBuffer const & sbuf) {
     // get the header
     BufferSlice * slice;
     Buffer * pbuf;
@@ -293,7 +293,7 @@ void Dim::iSocketBufferInitialize(RIO_EXTENSION_FUNCTION_TABLE & rio) {
 //===========================================================================
 void Dim::copy(
     RIO_BUF * out,
-    const SocketBuffer & sbuf,
+    SocketBuffer const & sbuf,
     size_t bytes
 ) {
     scoped_lock lk{s_mut};

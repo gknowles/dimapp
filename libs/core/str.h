@@ -76,7 +76,7 @@ public:
     StrFrom(T val) { set(val); }
     std::string_view set(T val);
     operator std::string_view() const;
-    const char * c_str() const { return data; }
+    char const * c_str() const { return data; }
 
 private:
     using Signed = typename std::make_signed<T>::type;
@@ -165,7 +165,7 @@ public:
     StrFrom(T val) { set(val); }
     std::string_view set(T val);
     operator std::string_view() const;
-    const char * c_str() const { return data; }
+    char const * c_str() const { return data; }
 
 private:
     char data[maxFloatChars<T>() + 1];
@@ -228,10 +228,10 @@ StrFrom<T, std::enable_if_t<std::is_floating_point_v<T>>>
 *
 ***/
 
-int strToInt(const char src[], char ** eptr = nullptr, int base = 10);
-unsigned strToUint(const char src[], char ** eptr = nullptr, int base = 10);
-int64_t strToInt64(const char src[], char ** eptr = nullptr, int base = 10);
-uint64_t strToUint64(const char src[], char ** eptr = nullptr, int base = 10);
+int strToInt(char const src[], char ** eptr = nullptr, int base = 10);
+unsigned strToUint(char const src[], char ** eptr = nullptr, int base = 10);
+int64_t strToInt64(char const src[], char ** eptr = nullptr, int base = 10);
+uint64_t strToUint64(char const src[], char ** eptr = nullptr, int base = 10);
 
 int strToInt(std::string_view src, char ** eptr = nullptr, int base = 10);
 unsigned strToUint(
@@ -324,8 +324,8 @@ std::unique_ptr<char[]> strDup(std::string_view src);
 template<typename T>
 class VectorProxy {
 public:
-    VectorProxy(const std::vector<T> & src) : m_src{src} {}
-    const std::vector<T> & m_src;
+    VectorProxy(std::vector<T> const & src) : m_src{src} {}
+    std::vector<T> const & m_src;
 };
 
 //===========================================================================
@@ -359,7 +359,7 @@ enum UtfType {
     kUtf32LE,
 };
 
-UtfType utfBomType(const char bytes[], size_t count);
+UtfType utfBomType(char const bytes[], size_t count);
 
 //===========================================================================
 constexpr size_t utfBomSize(UtfType type) {
@@ -386,13 +386,13 @@ struct ostream_utf8_return { std::wstring_view src; };
 constexpr ostream_utf8_return utf8(std::wstring_view src) {
     return {src};
 }
-constexpr ostream_utf8_return utf8(const wchar_t src[]) {
+constexpr ostream_utf8_return utf8(wchar_t const src[]) {
     return {src};
 }
-constexpr ostream_utf8_return utf8(const wchar_t src[], size_t srclen) {
+constexpr ostream_utf8_return utf8(wchar_t const src[], size_t srclen) {
     return {std::wstring_view(src, srclen)};
 }
-std::ostream & operator<<(std::ostream & os, const ostream_utf8_return & out);
+std::ostream & operator<<(std::ostream & os, ostream_utf8_return const & out);
 
 //===========================================================================
 template<typename OutIt>

@@ -61,8 +61,8 @@ static string_view urlDecode(string_view src, ITempHeap & heap, bool query) {
 static void addSeg(
     HttpQuery * hp,
     ITempHeap & heap,
-    const char *& base,
-    const char * eptr,
+    char const *& base,
+    char const * eptr,
     unsigned & pcts
 ) {
     auto count = size_t(eptr - base - 1);
@@ -94,8 +94,8 @@ static void setPath(HttpQuery * hp, ITempHeap & heap) {
 static HttpPathParam * addParam(
     HttpQuery * hp,
     ITempHeap & heap,
-    const char *& base,
-    const char * eptr,
+    char const *& base,
+    char const * eptr,
     unsigned & pcts
 ) {
     auto count = size_t(eptr - base - 1);
@@ -114,8 +114,8 @@ static HttpPathParam * addParam(
 static void addParamValue(
     HttpPathParam * param,
     ITempHeap & heap,
-    const char *& base,
-    const char * eptr,
+    char const *& base,
+    char const * eptr,
     unsigned & pcts
 ) {
     auto count = size_t(eptr - base - 1);

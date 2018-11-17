@@ -112,7 +112,7 @@ bool ResFileMap::parse(string_view data) {
 }
 
 //===========================================================================
-const ResFileMap::Entry * ResFileMap::find(string_view name) const {
+ResFileMap::Entry const * ResFileMap::find(string_view name) const {
     if (auto i = m_files.find(name); i != m_files.end())
         return &i->second;
     return nullptr;

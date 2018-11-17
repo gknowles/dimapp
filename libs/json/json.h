@@ -48,7 +48,7 @@ public:
     // preformatted value
     IJBuilder & valueRaw(std::string_view val);
 
-    IJBuilder & value(const char val[]);
+    IJBuilder & value(char const val[]);
     IJBuilder & value(std::string_view val);
     IJBuilder & value(char val);
     IJBuilder & value(bool val);
@@ -58,7 +58,7 @@ public:
     IJBuilder & value(std::nullptr_t);
 
     template<typename T>
-    IJBuilder & value(const T & val);
+    IJBuilder & value(T const & val);
 
     // Starts a compound string value, following calls to value() append to it,
     // this continues until end() is called.
@@ -95,7 +95,7 @@ private:
 
 //===========================================================================
 template<typename T>
-inline IJBuilder & IJBuilder::value(const T & val) {
+inline IJBuilder & IJBuilder::value(T const & val) {
     if constexpr (std::is_convertible_v<T, uint64_t>
         && !std::is_same_v<T, uint64_t>
     ) {
@@ -119,7 +119,7 @@ inline IJBuilder & IJBuilder::value(const T & val) {
 
 //===========================================================================
 template <typename T>
-inline IJBuilder & operator<<(IJBuilder & out, const T & val) {
+inline IJBuilder & operator<<(IJBuilder & out, T const & val) {
     return out.value(val);
 }
 
@@ -187,18 +187,18 @@ public:
     void clear();
     bool parseMore(char src[]);
 
-    bool fail(const char errmsg[]);
+    bool fail(char const errmsg[]);
 
     ITempHeap & heap() { return m_heap; }
     IJsonStreamNotify & notify() { return m_notify; }
 
-    const char * errmsg() const { return m_errmsg; }
+    char const * errmsg() const { return m_errmsg; }
     size_t errpos() const;
 
 private:
     IJsonStreamNotify & m_notify;
     unsigned m_line{0};
-    const char * m_errmsg{};
+    char const * m_errmsg{};
     TempHeap m_heap;
     Detail::JsonParser * m_base;
 };
@@ -254,25 +254,25 @@ public:
 
     ITempHeap & heap() { return m_heap; }
 
-    const char * filename() const { return m_filename; }
+    char const * filename() const { return m_filename; }
     JNode * root() { return m_root; }
-    const JNode * root() const { return m_root; }
+    JNode const * root() const { return m_root; }
 
-    const char * errmsg() const { return m_errmsg; }
+    char const * errmsg() const { return m_errmsg; }
     size_t errpos() const { return m_errpos; }
 
 private:
     TempHeap m_heap;
-    const char * m_filename{};
+    char const * m_filename{};
     JNode * m_root{};
-    const char * m_errmsg{};
+    char const * m_errmsg{};
     size_t m_errpos{0};
 };
 
-IJBuilder & operator<<(IJBuilder & out, const JNode & node);
+IJBuilder & operator<<(IJBuilder & out, JNode const & node);
 
-JNode::JType nodeType(const JNode * node);
-std::string_view nodeName(const JNode * node);
+JNode::JType nodeType(JNode const * node);
+std::string_view nodeName(JNode const * node);
 
 JDocument * document(JNode * node);
 JNode * parent(JNode * node);
@@ -289,8 +289,8 @@ public:
     JNodeIterator operator++();
 };
 
-inline JNodeIterator begin(const JNodeIterator & iter) { return iter; }
-inline JNodeIterator end(const JNodeIterator & iter) { return {}; }
+inline JNodeIterator begin(JNodeIterator const & iter) { return iter; }
+inline JNodeIterator end(JNodeIterator const & iter) { return {}; }
 
 JNodeIterator nodes(JNode * node);
 

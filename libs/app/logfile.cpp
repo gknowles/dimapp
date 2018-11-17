@@ -159,7 +159,7 @@ void Logger::onLog(LogType type, string_view msg) {
 
     char tmp[256];
     assert(sizeof(tmp) + 2 <= kLogBufferSize);
-    const unsigned kFacility = 3; // system daemons
+    unsigned const kFacility = 3; // system daemons
     int pri = 8 * kFacility;
     switch (type) {
     case kLogTypeFatal: pri += 2; break;
@@ -192,13 +192,13 @@ void Logger::onLog(LogType type, string_view msg) {
 
 namespace {
 class ConfigAppXml : public IConfigNotify {
-    void onConfigChange(const XDocument & doc) override;
+    void onConfigChange(XDocument const & doc) override;
 };
 } // namespace
 static ConfigAppXml s_appXml;
 
 //===========================================================================
-void ConfigAppXml::onConfigChange(const XDocument & doc) {
+void ConfigAppXml::onConfigChange(XDocument const & doc) {
     auto raw = configString(doc, "LogLevel", "warn");
     if (auto level = fromString(raw, kLogTypeInvalid)) {
         s_logLevel = level;

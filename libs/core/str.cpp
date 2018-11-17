@@ -48,7 +48,7 @@ constexpr bool isHex(unsigned char ch) {
 #pragma warning(disable: 4102) // 'identifier': unreferenced label
 template<int Flags>
 static uint64_t iStrToAny (
-    const char source[],
+    char const source[],
     char ** endPtr,
     unsigned radix,
     size_t chars = (size_t) -1
@@ -63,8 +63,8 @@ static uint64_t iStrToAny (
         ? (Flags & f64Bit) ? INT64_MAX : INT_MAX
         : (Flags & f64Bit) ? UINT64_MAX : UINT_MAX;
 
-    const char * ptr = source;
-    const char * base;
+    char const * ptr = source;
+    char const * base;
     bool negate = false;
     bool overflow = false;
 
@@ -281,22 +281,22 @@ RETURN_VALUE:
 #pragma warning(pop)
 
 //===========================================================================
-int Dim::strToInt(const char src[], char ** eptr, int base) {
+int Dim::strToInt(char const src[], char ** eptr, int base) {
     return (int) iStrToAny<kInt>(src, eptr, base);
 }
 
 //===========================================================================
-unsigned Dim::strToUint(const char src[], char ** eptr, int base) {
+unsigned Dim::strToUint(char const src[], char ** eptr, int base) {
     return (unsigned) iStrToAny<kUint>(src, eptr, base);
 }
 
 //===========================================================================
-int64_t Dim::strToInt64(const char src[], char ** eptr, int base) {
+int64_t Dim::strToInt64(char const src[], char ** eptr, int base) {
     return (int64_t) iStrToAny<kInt64>(src, eptr, base);
 }
 
 //===========================================================================
-uint64_t Dim::strToUint64(const char src[], char ** eptr, int base) {
+uint64_t Dim::strToUint64(char const src[], char ** eptr, int base) {
     return iStrToAny<kUint64>(src, eptr, base);
 }
 
@@ -389,7 +389,7 @@ void Dim::split(
     auto ptr = src.data();
     auto count = src.size();
     for (;;) {
-        if (auto eptr = (const char *) memchr(ptr, sep, count)) {
+        if (auto eptr = (char const *) memchr(ptr, sep, count)) {
             auto segLen = size_t(eptr - ptr);
             out->push_back(string_view{ptr, segLen});
             ptr = eptr + 1;
@@ -421,8 +421,8 @@ void Dim::split(
 
 //===========================================================================
 string_view Dim::trim(string_view src) {
-    const char * first = src.data();
-    const char * last = first + src.size();
+    char const * first = src.data();
+    char const * last = first + src.size();
     while (first < last && isspace(*first))
         ++first;
     for (; first < last; --last) {
@@ -434,8 +434,8 @@ string_view Dim::trim(string_view src) {
 
 //===========================================================================
 string_view Dim::ltrim(std::string_view src) {
-    const char * first = src.data();
-    const char * last = first + src.size();
+    char const * first = src.data();
+    char const * last = first + src.size();
     while (first < last && isspace(*first))
         ++first;
     return {first, size_t(last - first)};
@@ -443,8 +443,8 @@ string_view Dim::ltrim(std::string_view src) {
 
 //===========================================================================
 string_view Dim::rtrim(std::string_view src) {
-    const char * first = src.data();
-    const char * last = first + src.size();
+    char const * first = src.data();
+    char const * last = first + src.size();
     for (; first < last; --last) {
         if (!isspace(last[-1]))
             break;
@@ -506,7 +506,7 @@ unique_ptr<char[]> Dim::strDup(string_view src) {
 //===========================================================================
 // Wikipedia article on byte order marks:
 //   https://en.wikipedia.org/wiki/Byte_order_mark#Representations_of_byte_order_marks_by_encoding
-UtfType Dim::utfBomType(const char bytes[], size_t count) {
+UtfType Dim::utfBomType(char const bytes[], size_t count) {
     if (count >= 2) {
         switch (bytes[0]) {
         case 0:
@@ -601,7 +601,7 @@ string Dim::toString(wstring_view src) {
 }
 
 //===========================================================================
-ostream & Dim::operator<<(ostream & os, const ostream_utf8_return & out) {
+ostream & Dim::operator<<(ostream & os, ostream_utf8_return const & out) {
     copy_char(out.src, ostreambuf_iterator<char>(os));
     return os;
 }

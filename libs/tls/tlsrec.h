@@ -40,14 +40,14 @@ struct TlsCipher {
     uint64_t m_seq{0};
 
     virtual ~TlsCipher();
-    virtual void add(CharBuf * out, const void * ptr, size_t count) = 0;
+    virtual void add(CharBuf * out, void const * ptr, size_t count) = 0;
 };
 
 class TlsRecordEncrypt {
 public:
     void setCipher(CharBuf * out, TlsCipher * cipher);
 
-    void add(CharBuf * out, TlsContentType ct, const void * ptr, size_t count);
+    void add(CharBuf * out, TlsContentType ct, void const * ptr, size_t count);
     void flush(CharBuf * out);
 
 private:
@@ -65,7 +65,7 @@ public:
     virtual void onTlsAlert(TlsAlertDesc desc, TlsAlertLevel level) = 0;
     virtual void onTlsHandshake(
         TlsHandshakeType type,
-        const uint8_t msg[],
+        uint8_t const msg[],
         size_t msgLen
     ) = 0;
 };
@@ -79,7 +79,7 @@ public:
     bool parse(
         CharBuf * data, // decrypted application data
         ITlsRecordDecryptNotify * notify,
-        const void * src,
+        void const * src,
         size_t srcLen
     );
 

@@ -133,34 +133,34 @@ public:
     void clear();
     virtual void swap(HttpMsg & other);
 
-    void addHeader(HttpHdr id, const char value[]);
+    void addHeader(HttpHdr id, char const value[]);
     void addHeader(HttpHdr id, std::string_view value);
-    void addHeader(const char name[], const char value[]);
-    void addHeader(const char name[], std::string_view value);
+    void addHeader(char const name[], char const value[]);
+    void addHeader(char const name[], std::string_view value);
     void addHeader(HttpHdr id, TimePoint time);
-    void addHeader(const char name[], TimePoint time);
+    void addHeader(char const name[], TimePoint time);
 
     // When adding references the memory referenced by the name and value
     // pointers must be valid for the life of the HttpMsg, such as constants
     // or strings allocated from this messages Heap().
-    void addHeaderRef(HttpHdr id, const char value[]);
-    void addHeaderRef(const char name[], const char value[]);
+    void addHeaderRef(HttpHdr id, char const value[]);
+    void addHeaderRef(char const name[], char const value[]);
 
-    const char * addRef(TimePoint time);
+    char const * addRef(TimePoint time);
 
     HdrList headers();
-    const HdrList headers() const;
+    HdrList const headers() const;
 
     HdrName headers(HttpHdr header);
-    const HdrName headers(HttpHdr header) const;
-    HdrName headers(const char name[]);
-    const HdrName headers(const char name[]) const;
+    HdrName const headers(HttpHdr header) const;
+    HdrName headers(char const name[]);
+    HdrName const headers(char const name[]) const;
 
     bool hasHeader(HttpHdr header) const;
-    bool hasHeader(const char name[]) const;
+    bool hasHeader(char const name[]) const;
 
     CharBuf & body();
-    const CharBuf & body() const;
+    CharBuf const & body() const;
 
     ITempHeap & heap();
 
@@ -182,7 +182,7 @@ protected:
     Flags toHasFlag(HttpHdr id) const;
 
 private:
-    void addHeaderRef(HttpHdr id, const char name[], const char value[]);
+    void addHeaderRef(HttpHdr id, char const name[], char const value[]);
 
     CharBuf m_data;
     TempHeap m_heap;
@@ -191,14 +191,14 @@ private:
 };
 
 struct HttpMsg::HdrValue {
-    const char * m_value;
+    char const * m_value;
     HdrValue * m_next{};
     HdrValue * m_prev{};
 };
 
 struct HttpMsg::HdrName {
     HttpHdr m_id{kHttpInvalid};
-    const char * m_name{};
+    char const * m_name{};
     HdrName * m_next{};
     HdrValue m_value;
 
@@ -225,13 +225,13 @@ public:
     using HttpMsg::HttpMsg;
     void swap(HttpMsg & other) override;
 
-    const char * method() const;
-    const char * scheme() const;
-    const char * authority() const;
+    char const * method() const;
+    char const * scheme() const;
+    char const * authority() const;
 
     // includes path, query, and fragment
-    const char * pathRaw() const;
-    const HttpQuery & query() const;
+    char const * pathRaw() const;
+    HttpQuery const & query() const;
 
     bool isRequest() const override { return true; }
 
@@ -277,7 +277,7 @@ bool httpRecv(
     CharBuf * out,
     std::vector<std::unique_ptr<HttpMsg>> * msgs,
     HttpConnHandle conn,
-    const void * src,
+    void const * src,
     size_t srcLen
 );
 
@@ -285,7 +285,7 @@ bool httpRecv(
 int httpRequest(
     CharBuf * out,
     HttpConnHandle conn,
-    const HttpMsg & msg,
+    HttpMsg const & msg,
     bool more = false
 );
 
@@ -293,7 +293,7 @@ int httpRequest(
 int httpPushPromise(
     CharBuf * out,
     HttpConnHandle conn,
-    const HttpMsg & msg,
+    HttpMsg const & msg,
     bool more = false
 );
 
@@ -303,7 +303,7 @@ bool httpReply(
     CharBuf * out,
     HttpConnHandle conn,
     int stream,
-    const HttpMsg & msg,
+    HttpMsg const & msg,
     bool more = false
 );
 
@@ -314,7 +314,7 @@ bool httpData(
     CharBuf * out,
     HttpConnHandle conn,
     int stream,
-    const CharBuf & data,
+    CharBuf const & data,
     bool more = false
 );
 bool httpData(

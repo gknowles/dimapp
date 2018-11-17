@@ -99,7 +99,7 @@ int appRun(
 *
 ***/
 
-const std::string & appName();
+std::string const & appName();
 RunMode appMode();
 inline bool appStarting() { return appMode() == kRunStarting; }
 inline bool appStopping() { return appMode() == kRunStopping; }
@@ -107,11 +107,11 @@ inline bool appStopping() { return appMode() == kRunStopping; }
 // returns flags passed to appRun()
 AppFlags appFlags();
 
-const Path & appRootDir();
-const Path & appConfigDir();
-const Path & appCrashDir();
-const Path & appDataDir();
-const Path & appLogDir();
+Path const & appRootDir();
+Path const & appConfigDir();
+Path const & appCrashDir();
+Path const & appDataDir();
+Path const & appLogDir();
 
 LogType appLogLevel();
 

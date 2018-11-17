@@ -23,7 +23,7 @@ struct JsonParserBase {
     IJsonStreamNotify & m_notify;
 
     std::string_view m_name;
-    const char * m_base{};
+    char const * m_base{};
     char * m_cur{};
 
     bool m_minus{};

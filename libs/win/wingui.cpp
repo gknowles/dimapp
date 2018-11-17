@@ -15,7 +15,7 @@ using namespace Dim;
 *
 ***/
 
-const unsigned kUpdateIntervalMS = 1'000;
+unsigned const kUpdateIntervalMS = 1'000;
 
 
 /****************************************************************************
@@ -24,11 +24,11 @@ const unsigned kUpdateIntervalMS = 1'000;
 *
 ***/
 
-const wchar_t kPerfWndClassW[] = L"DimPerfCounters";
-const int kListId = 1;
-const int kTimerId = 1;
+wchar_t const kPerfWndClassW[] = L"DimPerfCounters";
+int const kListId = 1;
+int const kTimerId = 1;
 
-const unsigned WM_USER_CLOSEWINDOW = WM_USER;
+unsigned const WM_USER_CLOSEWINDOW = WM_USER;
 
 
 /****************************************************************************
@@ -358,7 +358,7 @@ void MessageLoopTask::onTask() {
 namespace {
 
 class EnableNotify : public IConfigNotify, public ITaskNotify {
-    void onConfigChange(const XDocument & doc) override;
+    void onConfigChange(XDocument const & doc) override;
     void onTask() override;
 };
 
@@ -367,7 +367,7 @@ class EnableNotify : public IConfigNotify, public ITaskNotify {
 static EnableNotify s_notify;
 
 //===========================================================================
-void EnableNotify::onConfigChange(const XDocument & doc) {
+void EnableNotify::onConfigChange(XDocument const & doc) {
     bool enable = configNumber(doc, "EnableGui");
     s_windowTask.enable(MessageLoopTask::kConfigFile, enable);
 }

@@ -36,7 +36,7 @@ public:
     virtual ~IHttpRouteNotify() = default;
     virtual void onHttpRequest(unsigned reqId, HttpRequest & msg) = 0;
 
-    void mapParams(const HttpRequest & msg);
+    void mapParams(HttpRequest const & msg);
 
 protected:
     Param & param(std::string name);
@@ -51,8 +51,8 @@ class IHttpRouteNotify::ParamBase {
 public:
     explicit ParamBase(std::string name) : m_name{move(name)} {}
     virtual ~ParamBase() = default;
-    ParamBase(const ParamBase &) = delete;
-    ParamBase & operator=(const ParamBase &) = delete;
+    ParamBase(ParamBase const &) = delete;
+    ParamBase & operator=(ParamBase const &) = delete;
     virtual void append(std::string_view value) = 0;
     virtual void reset() = 0;
 protected:
@@ -162,7 +162,7 @@ void httpRouteReply(unsigned reqId, std::string_view data, bool more);
 
 void httpRouteReply(
     unsigned reqId,
-    const HttpRequest & req,
+    HttpRequest const & req,
     unsigned status,
     std::string_view msg = {}
 );
@@ -182,7 +182,7 @@ void httpRouteReplyWithFile(
     std::string_view charSet
 );
 
-void httpRouteReplyNotFound(unsigned reqId, const HttpRequest & req);
+void httpRouteReplyNotFound(unsigned reqId, HttpRequest const & req);
 void httpRouteReplyRedirect(
     unsigned reqId,
     std::string_view location,
@@ -191,7 +191,7 @@ void httpRouteReplyRedirect(
 );
 void httpRouteReplyDirList(
     unsigned reqId,
-    const HttpRequest & req,
+    HttpRequest const & req,
     std::string_view path
 );
 
@@ -204,11 +204,11 @@ void httpRouteReplyDirList(
 
 void httpRouteSetDefaultReplyHeader(
     HttpHdr hdr,
-    const char value[] = nullptr
+    char const value[] = nullptr
 );
 void httpRouteSetDefaultReplyHeader(
-    const char name[],
-    const char value[] = nullptr
+    char const name[],
+    char const value[] = nullptr
 );
 
 
@@ -223,7 +223,7 @@ struct MimeType {
     std::string_view type;
     std::string_view charSet;
 };
-int compareExt(const MimeType & a, const MimeType & b);
+int compareExt(MimeType const & a, MimeType const & b);
 MimeType mimeTypeDefault(std::string_view path);
 
 

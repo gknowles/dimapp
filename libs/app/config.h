@@ -41,7 +41,7 @@ class IConfigNotify {
 public:
     virtual ~IConfigNotify () = default;
 
-    virtual void onConfigChange(const XDocument & doc) = 0;
+    virtual void onConfigChange(XDocument const & doc) = 0;
 };
 
 void configMonitor(std::string_view file, IConfigNotify * notify);
@@ -62,46 +62,46 @@ void configChange(
 *
 ***/
 
-const XNode * configElement(
-    const ConfigContext & context,
-    const XDocument & doc,
+XNode const * configElement(
+    ConfigContext const & context,
+    XDocument const & doc,
     std::string_view name
 );
-const char * configString(
-    const ConfigContext & context,
-    const XDocument & doc,
+char const * configString(
+    ConfigContext const & context,
+    XDocument const & doc,
     std::string_view name,
-    const char defVal[] = ""
+    char const defVal[] = ""
 );
 double configNumber(
-    const ConfigContext & context,
-    const XDocument & doc,
+    ConfigContext const & context,
+    XDocument const & doc,
     std::string_view name,
     double defVal = 0
 );
 Duration configDuration(
-    const ConfigContext & context,
-    const XDocument & doc,
+    ConfigContext const & context,
+    XDocument const & doc,
     std::string_view name,
     Duration defVal = {}
 );
 
-const XNode * configElement(
-    const XDocument & doc,
+XNode const * configElement(
+    XDocument const & doc,
     std::string_view name
 );
-const char * configString(
-    const XDocument & doc,
+char const * configString(
+    XDocument const & doc,
     std::string_view name,
-    const char defVal[] = ""
+    char const defVal[] = ""
 );
 double configNumber(
-    const XDocument & doc,
+    XDocument const & doc,
     std::string_view name,
     double defVal = 0
 );
 Duration configDuration(
-    const XDocument & doc,
+    XDocument const & doc,
     std::string_view name,
     Duration defVal = {}
 );

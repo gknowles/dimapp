@@ -58,7 +58,7 @@ public:
         AppSocket::Disconnect why
     );
     static void write(IAppSocketNotify * notify, std::string_view data);
-    static void write(IAppSocketNotify * notify, const CharBuf & data);
+    static void write(IAppSocketNotify * notify, CharBuf const & data);
     static void write(
         IAppSocketNotify * notify,
         std::unique_ptr<SocketBuffer> buffer,
@@ -80,14 +80,14 @@ public:
     virtual void write(std::unique_ptr<SocketBuffer> buffer, size_t bytes) = 0;
     virtual void read() = 0;
 
-    void notifyConnect(const AppSocketInfo & info);
+    void notifyConnect(AppSocketInfo const & info);
     void notifyConnectFailed();
     void notifyPingRequired();
-    bool notifyAccept(const AppSocketInfo & info);
+    bool notifyAccept(AppSocketInfo const & info);
     void notifyDisconnect();
     void notifyDestroy(bool deleteThis = true);
     bool notifyRead(AppSocketData & data);
-    void notifyBufferChanged(const AppSocketBufferInfo & info);
+    void notifyBufferChanged(AppSocketBufferInfo const & info);
 
 protected:
     AppSocketInfo m_accept;

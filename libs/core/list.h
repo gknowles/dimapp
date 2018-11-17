@@ -126,8 +126,8 @@ class ListIterator {
 public:
     ListIterator() {}
     ListIterator(List * container, T * node);
-    bool operator==(const ListIterator & right);
-    bool operator!=(const ListIterator & right);
+    bool operator==(ListIterator const & right);
+    bool operator!=(ListIterator const & right);
     ListIterator & operator++();
     T & operator*();
     T * operator->();
@@ -142,13 +142,13 @@ ListIterator<List, T>::ListIterator(List * container, T * node)
 
 //===========================================================================
 template <typename List, typename T>
-bool ListIterator<List, T>::operator==(const ListIterator & right) {
+bool ListIterator<List, T>::operator==(ListIterator const & right) {
     return m_current == right.m_current;
 }
 
 //===========================================================================
 template <typename List, typename T>
-bool ListIterator<List, T>::operator!=(const ListIterator & right) {
+bool ListIterator<List, T>::operator!=(ListIterator const & right) {
     return !(*this == right);
 }
 
@@ -192,7 +192,7 @@ public:
     ~List();
     explicit operator bool() const { return !empty(); }
 
-    bool operator==(const List & right) const;
+    bool operator==(List const & right) const;
 
     bool empty() const;
     size_t size() const;
@@ -206,13 +206,13 @@ public:
     const_iterator cend() const { return end(); }
 
     T * front();
-    const T * front() const;
+    T const * front() const;
     T * back();
-    const T * back() const;
-    T * next(const T * node);
-    const T * next(const T * node) const;
-    T * prev(const T * node);
-    const T * prev(const T * node) const;
+    T const * back() const;
+    T * next(T const * node);
+    T const * next(T const * node) const;
+    T * prev(T const * node);
+    T const * prev(T const * node) const;
     void link(T * value);
     void link(List && other);
     void linkFront(T * value);
@@ -224,7 +224,7 @@ public:
     void linkAfter(T * pos, T * first, T * last);
     void linkAfter(T * pos, List && other);
     void unlink(T * value);
-    bool linked(const T * value) const;
+    bool linked(T const * value) const;
     T * unlinkBack();
     T * unlinkFront();
     void unlinkAll();
@@ -232,9 +232,9 @@ public:
 
 private:
     link_type * cast(T * node) const;
-    const link_type * cast(const T * node) const;
+    link_type const * cast(T const * node) const;
     T * cast(link_type * link) const;
-    const T * cast(const link_type * link) const;
+    T const * cast(link_type const * link) const;
 
     void linkBase(link_type * pos, link_type * first, link_type * last);
     void linkBaseAfter(link_type * pos, link_type * first, link_type * last);
@@ -269,7 +269,7 @@ List<T, Tag>::~List() {
 
 //===========================================================================
 template <typename T, typename Tag>
-bool List<T, Tag>::operator==(const List & right) const {
+bool List<T, Tag>::operator==(List const & right) const {
     return std::equal(begin(), end(), right.begin(), right.end());
 }
 
@@ -322,7 +322,7 @@ auto List<T, Tag>::end() const -> const_iterator {
 
 //===========================================================================
 template <typename T, typename Tag>
-bool List<T, Tag>::operator==(const List & right) const;
+bool List<T, Tag>::operator==(List const & right) const;
 
 //===========================================================================
 template <typename T, typename Tag>
@@ -332,7 +332,7 @@ T * List<T, Tag>::front() {
 
 //===========================================================================
 template <typename T, typename Tag>
-const T * List<T, Tag>::front() const {
+T const * List<T, Tag>::front() const {
     return const_cast<List *>(this)->front();
 }
 
@@ -344,13 +344,13 @@ T * List<T, Tag>::back() {
 
 //===========================================================================
 template <typename T, typename Tag>
-const T * List<T, Tag>::back() const {
+T const * List<T, Tag>::back() const {
     return const_cast<List *>(this)->back();
 }
 
 //===========================================================================
 template <typename T, typename Tag>
-T * List<T, Tag>::next(const T * node) {
+T * List<T, Tag>::next(T const * node) {
     auto link = cast(node)->m_nextLink;
     assert(link->linked());
     return link != &m_base ? cast(link) : nullptr;
@@ -358,13 +358,13 @@ T * List<T, Tag>::next(const T * node) {
 
 //===========================================================================
 template <typename T, typename Tag>
-const T * List<T, Tag>::next(const T * node) const {
+T const * List<T, Tag>::next(T const * node) const {
     return const_cast<List *>(this)->next(node);
 }
 
 //===========================================================================
 template <typename T, typename Tag>
-T * List<T, Tag>::prev(const T * node) {
+T * List<T, Tag>::prev(T const * node) {
     auto link = cast(node)->m_prevLink;
     assert(link->linked());
     return link != &m_base ? cast(link) : nullptr;
@@ -372,7 +372,7 @@ T * List<T, Tag>::prev(const T * node) {
 
 //===========================================================================
 template <typename T, typename Tag>
-const T * List<T, Tag>::prev(const T * node) const {
+T const * List<T, Tag>::prev(T const * node) const {
     return const_cast<List *>(this)->prev(node);
 }
 
@@ -448,7 +448,7 @@ void List<T, Tag>::unlink(T * value) {
 
 //===========================================================================
 template <typename T, typename Tag>
-bool List<T, Tag>::linked(const T * value) const {
+bool List<T, Tag>::linked(T const * value) const {
     return cast(value)->linked();
 }
 
@@ -498,7 +498,7 @@ auto List<T, Tag>::cast(T * node) const -> link_type * {
 
 //===========================================================================
 template <typename T, typename Tag>
-auto List<T, Tag>::cast(const T * node) const -> const link_type * {
+auto List<T, Tag>::cast(T const * node) const -> link_type const * {
     return node;
 }
 
@@ -510,8 +510,8 @@ T * List<T, Tag>::cast(link_type * link) const {
 
 //===========================================================================
 template <typename T, typename Tag>
-const T * List<T, Tag>::cast(const link_type * link) const {
-    return static_cast<const T *>(link);
+T const * List<T, Tag>::cast(link_type const * link) const {
+    return static_cast<T const *>(link);
 }
 
 //===========================================================================

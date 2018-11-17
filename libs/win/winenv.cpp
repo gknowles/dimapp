@@ -49,7 +49,7 @@ void Dim::winEnvInitialize() {
 ***/
 
 //===========================================================================
-const string & Dim::envExecPath() {
+string const & Dim::envExecPath() {
     if (s_execPath.empty()) {
         wstring path;
         DWORD num = 0;
@@ -68,7 +68,7 @@ const string & Dim::envExecPath() {
 }
 
 //===========================================================================
-const EnvMemoryConfig & Dim::envMemoryConfig() {
+EnvMemoryConfig const & Dim::envMemoryConfig() {
     assert(s_numCpus);
     return s_memCfg;
 }
@@ -202,7 +202,7 @@ ProcessRights Dim::envProcessRights() {
 *
 ***/
 
-const TokenTable::Token s_attrs[] = {
+TokenTable::Token const s_attrs[] = {
     { (int) SE_GROUP_MANDATORY,           "MANDATORY" },
     { (int) SE_GROUP_ENABLED_BY_DEFAULT,  "ENABLED_BY_DEFAULT" },
     { (int) SE_GROUP_ENABLED,             "ENABLED" },
@@ -213,9 +213,9 @@ const TokenTable::Token s_attrs[] = {
     { (int) SE_GROUP_LOGON_ID,            "LOGON_ID" },
     { (int) SE_GROUP_RESOURCE,            "RESOURCE" },
 };
-const TokenTable s_attrTbl(s_attrs);
+TokenTable const s_attrTbl(s_attrs);
 
-const TokenTable::Token s_sidTypes[] = {
+TokenTable::Token const s_sidTypes[] = {
     { SidTypeUser,              "User" },
     { SidTypeGroup,             "Group" },
     { SidTypeDomain,            "Domain" },
@@ -228,7 +228,7 @@ const TokenTable::Token s_sidTypes[] = {
     { SidTypeLabel,             "Label" },
     { SidTypeLogonSession,      "LogonSession" },
 };
-const TokenTable s_sidTypeTbl(s_sidTypes);
+TokenTable const s_sidTypeTbl(s_sidTypes);
 
 //===========================================================================
 static void addSidRow(IJBuilder * out, SID_AND_ATTRIBUTES & sa) {

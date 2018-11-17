@@ -277,7 +277,7 @@ JNodeIterator::JNodeIterator(JNode * node)
 
 //===========================================================================
 JNodeIterator JNodeIterator::operator++() {
-    auto ni = static_cast<const JNodeInfo *>(m_current);
+    auto ni = static_cast<JNodeInfo const *>(m_current);
     m_current = ni->parent->vals.next(ni);
     return *this;
 }
@@ -295,8 +295,8 @@ JNodeIterator Dim::nodes(JNode * node) {
 *
 ***/
 
-IJBuilder & Dim::operator<<(IJBuilder & out, const JNode & node) {
-    auto & ni = static_cast<const JNodeInfo &>(node);
+IJBuilder & Dim::operator<<(IJBuilder & out, JNode const & node) {
+    auto & ni = static_cast<JNodeInfo const &>(node);
     if (!ni.name.empty())
         out.member(ni.name);
     switch (node.type) {
@@ -333,13 +333,13 @@ IJBuilder & Dim::operator<<(IJBuilder & out, const JNode & node) {
 }
 
 //===========================================================================
-JNode::JType Dim::nodeType(const JNode * node) {
+JNode::JType Dim::nodeType(JNode const * node) {
     return node->type;
 }
 
 //===========================================================================
-string_view Dim::nodeName(const JNode * node) {
-    return static_cast<const JNodeInfo *>(node)->name;
+string_view Dim::nodeName(JNode const * node) {
+    return static_cast<JNodeInfo const *>(node)->name;
 }
 
 //===========================================================================

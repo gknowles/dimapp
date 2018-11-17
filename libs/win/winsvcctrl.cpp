@@ -25,7 +25,7 @@ struct EnumMap {
 
 } // namespace
 
-const EnumMap s_svcTypes[] = {
+EnumMap const s_svcTypes[] = {
     { (int) WinServiceConfig::Type::kOwn, SERVICE_WIN32_OWN_PROCESS },
     { (int) WinServiceConfig::Type::kShare, SERVICE_WIN32_SHARE_PROCESS },
     { (int) WinServiceConfig::Type::kKernel, SERVICE_KERNEL_DRIVER },
@@ -35,7 +35,7 @@ const EnumMap s_svcTypes[] = {
     { (int) WinServiceConfig::Type::kUserOwn, SERVICE_USER_OWN_PROCESS },
     { (int) WinServiceConfig::Type::kUserShare, SERVICE_USER_SHARE_PROCESS },
 };
-const EnumMap s_svcStarts[] = {
+EnumMap const s_svcStarts[] = {
     { (int) WinServiceConfig::Start::kAuto, SERVICE_AUTO_START },
     { (int) WinServiceConfig::Start::kAutoDelayed, SERVICE_AUTO_START },
     { (int) WinServiceConfig::Start::kBoot, SERVICE_BOOT_START },
@@ -43,13 +43,13 @@ const EnumMap s_svcStarts[] = {
     { (int) WinServiceConfig::Start::kDisabled, SERVICE_DISABLED },
     { (int) WinServiceConfig::Start::kSystem, SERVICE_SYSTEM_START },
 };
-const EnumMap s_svcErrCtrls[] = {
+EnumMap const s_svcErrCtrls[] = {
     { (int) WinServiceConfig::ErrCtrl::kIgnore, SERVICE_ERROR_IGNORE },
     { (int) WinServiceConfig::ErrCtrl::kNormal, SERVICE_ERROR_NORMAL },
     { (int) WinServiceConfig::ErrCtrl::kSevere, SERVICE_ERROR_SEVERE },
     { (int) WinServiceConfig::ErrCtrl::kCritical, SERVICE_ERROR_CRITICAL },
 };
-const EnumMap s_svcSidTypes[] = {
+EnumMap const s_svcSidTypes[] = {
     { (int) WinServiceConfig::SidType::kNone, SERVICE_SID_TYPE_NONE },
     { (int) WinServiceConfig::SidType::kUnrestricted,
         SERVICE_SID_TYPE_UNRESTRICTED },
@@ -66,7 +66,7 @@ const EnumMap s_svcSidTypes[] = {
 
 //===========================================================================
 template<typename E, typename T>
-static E getValue(const T & tbl, DWORD osvalue, E def = {}) {
+static E getValue(T const & tbl, DWORD osvalue, E def = {}) {
     for (auto && v : tbl) {
         if (v.osvalue == osvalue)
             return (E) v.value;
@@ -76,7 +76,7 @@ static E getValue(const T & tbl, DWORD osvalue, E def = {}) {
 
 //===========================================================================
 template<typename E, typename T>
-static DWORD getOsValue(const T & tbl, E value) {
+static DWORD getOsValue(T const & tbl, E value) {
     if (value == E{})
         value = decltype(value)::kDefault;
     for (auto && v : tbl) {
@@ -88,7 +88,7 @@ static DWORD getOsValue(const T & tbl, E value) {
 
 //===========================================================================
 template<typename T>
-static CharBuf toMultiString(const T & strings) {
+static CharBuf toMultiString(T const & strings) {
     CharBuf out;
     for (auto && str : strings)
         out.append(str).pushBack('\0');
@@ -104,7 +104,7 @@ static CharBuf toMultiString(const T & strings) {
 ***/
 
 //===========================================================================
-bool Dim::winSvcInstall(const WinServiceConfig & sconf) {
+bool Dim::winSvcInstall(WinServiceConfig const & sconf) {
     auto conf{sconf};
 
     if (!conf.progWithArgs)

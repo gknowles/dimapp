@@ -15,10 +15,10 @@ using namespace Dim;
 *
 ***/
 
-const unsigned kDefaultBlockSize = 4096;
-const unsigned kDefaultHeaderTableSize = 4096;
+unsigned const kDefaultBlockSize = 4096;
+unsigned const kDefaultHeaderTableSize = 4096;
 
-const int kMaximumWindowSize = 0x7fff'ffff;
+int const kMaximumWindowSize = 0x7fff'ffff;
 
 
 /****************************************************************************
@@ -57,8 +57,8 @@ struct PriorityData {
     bool exclusive;
 };
 struct UnpaddedData {
-    const char * hdr;
-    const char * data;
+    char const * hdr;
+    char const * data;
     int dataLen;
     int padLen;
 };
@@ -114,7 +114,7 @@ static HandleMap<HttpConnHandle, HttpConn> s_conns;
 ***/
 
 //===========================================================================
-constexpr int ntoh31(const char frame[]) {
+constexpr int ntoh31(char const frame[]) {
     return ntoh32(frame) & 0x7fff'ffff;
 }
 
@@ -182,8 +182,8 @@ public:
 private:
     void onHpackHeader(
         HttpHdr id,
-        const char name[],
-        const char value[],
+        char const name[],
+        char const value[],
         HpackFlags flags
     ) override;
 
@@ -199,8 +199,8 @@ MsgDecoder::MsgDecoder(HttpMsg & msg)
 //===========================================================================
 void MsgDecoder::onHpackHeader(
     HttpHdr id,
-    const char name[],
-    const char value[],
+    char const name[],
+    char const value[],
     HpackFlags flags
 ) {
     if (id) {
@@ -227,8 +227,8 @@ HttpConn::FrameError MsgDecoder::error() const {
 *
 ***/
 
-const int kFrameHeaderLen = 9;
-const char kPrefaceData[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
+int const kFrameHeaderLen = 9;
+char const kPrefaceData[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
 
 //===========================================================================
 static void setFrameHeader(
@@ -272,22 +272,22 @@ static void startFrame(
 }
 
 //===========================================================================
-static int getFrameLen(const char frame[kFrameHeaderLen]) {
+static int getFrameLen(char const frame[kFrameHeaderLen]) {
     return ntoh24(frame);
 }
 
 //===========================================================================
-static FrameType getFrameType(const char frame[kFrameHeaderLen]) {
+static FrameType getFrameType(char const frame[kFrameHeaderLen]) {
     return (FrameType) frame[3];
 }
 
 //===========================================================================
-static HttpConn::FrameFlags getFrameFlags(const char frame[kFrameHeaderLen]) {
+static HttpConn::FrameFlags getFrameFlags(char const frame[kFrameHeaderLen]) {
     return (HttpConn::FrameFlags) frame[4];
 }
 
 //===========================================================================
-static int getFrameStream(const char frame[kFrameHeaderLen]) {
+static int getFrameStream(char const frame[kFrameHeaderLen]) {
     return ntoh31(frame + 5);
 }
 
@@ -365,7 +365,7 @@ void HttpConn::accept(HttpConnHandle h) {
 ***/
 
 //===========================================================================
-static bool skip(const char *& ptr, const char * eptr, const char literal[]) {
+static bool skip(char const *& ptr, char const * eptr, char const literal[]) {
     while (ptr != eptr && *literal) {
         if (*ptr++ != *literal++)
             return false;
@@ -424,7 +424,7 @@ static void replyWindowUpdate(
 //===========================================================================
 static bool removePadding(
     UnpaddedData * out,
-    const char src[],
+    char const src[],
     int frameLen,
     int hdrLen,
     HttpConn::FrameFlags flags
@@ -447,8 +447,8 @@ static bool removePadding(
     out->data += 1;
 
     // verify that the padding is zero filled
-    const char * ptr = out->data + out->dataLen;
-    const char * term = ptr + out->padLen;
+    char const * ptr = out->data + out->dataLen;
+    char const * term = ptr + out->padLen;
     for (; ptr != term; ++ptr) {
         if (*ptr)
             return false;
@@ -461,7 +461,7 @@ static bool removePadding(
 static bool removePriority(
     PriorityData * out,
     int stream,
-    const char hdr[],
+    char const hdr[],
     int hdrLen
 ) {
     if (hdrLen < 5)
@@ -483,11 +483,11 @@ static void updatePriority() {
 bool HttpConn::recv(
     CharBuf * out,
     vector<unique_ptr<HttpMsg>> * msgs,
-    const void * src,
+    void const * src,
     size_t srcLen
 ) {
-    const char * ptr = static_cast<const char *>(src);
-    const char * eptr = ptr + srcLen;
+    char const * ptr = static_cast<char const *>(src);
+    char const * eptr = ptr + srcLen;
     size_t avail;
     switch (m_byteMode) {
     case ByteMode::kPreface:
@@ -638,7 +638,7 @@ HttpStream * HttpConn::findAlways(CharBuf * out, int stream) {
 bool HttpConn::onFrame(
     CharBuf * out,
     vector<unique_ptr<HttpMsg>> * msgs,
-    const char src[]
+    char const src[]
 ) {
     // Frame header
     //  length : 24
@@ -709,7 +709,7 @@ bool HttpConn::onFrame(
 bool HttpConn::onData(
     CharBuf * out,
     vector<unique_ptr<HttpMsg>> * msgs,
-    const char src[],
+    char const src[],
     int stream,
     FrameFlags flags
 ) {
@@ -766,7 +766,7 @@ bool HttpConn::onData(
 bool HttpConn::onHeaders(
     CharBuf * out,
     vector<unique_ptr<HttpMsg>> * msgs,
-    const char src[],
+    char const src[],
     int stream,
     FrameFlags flags
 ) {
@@ -898,7 +898,7 @@ bool HttpConn::onHeaders(
 bool HttpConn::onPriority(
     CharBuf * out,
     vector<unique_ptr<HttpMsg>> * msgs,
-    const char src[],
+    char const src[],
     int stream,
     FrameFlags flags
 ) {
@@ -942,7 +942,7 @@ bool HttpConn::onPriority(
 bool HttpConn::onRstStream(
     CharBuf * out,
     vector<unique_ptr<HttpMsg>> * msgs,
-    const char src[],
+    char const src[],
     int stream,
     FrameFlags flags
 ) {
@@ -985,7 +985,7 @@ bool HttpConn::onRstStream(
 bool HttpConn::onSettings(
     CharBuf * out,
     vector<unique_ptr<HttpMsg>> * msgs,
-    const char src[],
+    char const src[],
     int stream,
     FrameFlags flags
 ) {
@@ -1078,7 +1078,7 @@ bool HttpConn::setInitialWindowSize(CharBuf * out, unsigned value) {
 bool HttpConn::onPushPromise(
     CharBuf * out,
     vector<unique_ptr<HttpMsg>> * msgs,
-    const char src[],
+    char const src[],
     int stream,
     FrameFlags flags
 ) {
@@ -1110,7 +1110,7 @@ bool HttpConn::onPushPromise(
 bool HttpConn::onPing(
     CharBuf * out,
     vector<unique_ptr<HttpMsg>> * msgs,
-    const char src[],
+    char const src[],
     int stream,
     FrameFlags flags
 ) {
@@ -1144,7 +1144,7 @@ bool HttpConn::onPing(
 bool HttpConn::onGoAway(
     CharBuf * out,
     vector<unique_ptr<HttpMsg>> * msgs,
-    const char src[],
+    char const src[],
     int stream,
     FrameFlags flags
 ) {
@@ -1193,7 +1193,7 @@ bool HttpConn::onGoAway(
 bool HttpConn::onWindowUpdate(
     CharBuf * out,
     vector<unique_ptr<HttpMsg>> * msgs,
-    const char src[],
+    char const src[],
     int stream,
     FrameFlags flags
 ) {
@@ -1271,7 +1271,7 @@ bool HttpConn::onWindowUpdate(
 bool HttpConn::onContinuation(
     CharBuf * out,
     vector<unique_ptr<HttpMsg>> * msgs,
-    const char src[],
+    char const src[],
     int stream,
     FrameFlags flags
 ) {
@@ -1308,13 +1308,13 @@ bool HttpConn::writeMsg(
     CharBuf * out,
     int stream,
     HttpStream * sm,
-    const HttpMsg & msg,
+    HttpMsg const & msg,
     bool more
 ) {
     if (sm->m_localState == HttpStream::kClosed)
         return false;
 
-    const CharBuf & body = msg.body();
+    CharBuf const & body = msg.body();
     size_t framePos = out->size();
     size_t maxEndPos = framePos + m_maxOutputFrame + kFrameHeaderLen;
     bool headersOnly = body.empty() && !more;
@@ -1386,7 +1386,7 @@ bool HttpConn::addData(
     CharBuf * out,
     int stream,
     HttpStream * sm,
-    const T & data,
+    T const & data,
     bool more
 ) {
     if (!sm) {
@@ -1497,7 +1497,7 @@ void HttpConn::writeUnsent(
 
 //===========================================================================
 // Serializes a request and returns the stream id used
-int HttpConn::request(CharBuf * out, const HttpMsg & msg, bool more) {
+int HttpConn::request(CharBuf * out, HttpMsg const & msg, bool more) {
     auto sm = make_shared<HttpStream>();
     unsigned id = m_nextOutputStream;
     m_nextOutputStream += 2;
@@ -1508,7 +1508,7 @@ int HttpConn::request(CharBuf * out, const HttpMsg & msg, bool more) {
 
 //===========================================================================
 // Serializes a push promise
-int HttpConn::pushPromise(CharBuf * out, const HttpMsg & msg, bool more) {
+int HttpConn::pushPromise(CharBuf * out, HttpMsg const & msg, bool more) {
     assert(!"push promises not implemented");
     return 0;
 }
@@ -1518,7 +1518,7 @@ int HttpConn::pushPromise(CharBuf * out, const HttpMsg & msg, bool more) {
 bool HttpConn::reply(
     CharBuf * out,
     int stream,
-    const HttpMsg & msg,
+    HttpMsg const & msg,
     bool more
 ) {
     auto it = m_streams.find(stream);
@@ -1579,7 +1579,7 @@ bool Dim::httpRecv(
     CharBuf * out,
     vector<unique_ptr<HttpMsg>> * msgs,
     HttpConnHandle hc,
-    const void * src,
+    void const * src,
     size_t srcLen
 ) {
     if (auto conn = s_conns.find(hc))
@@ -1591,7 +1591,7 @@ bool Dim::httpRecv(
 int Dim::httpRequest(
     CharBuf * out,
     HttpConnHandle hc,
-    const HttpMsg & msg,
+    HttpMsg const & msg,
     bool more
 ) {
     if (auto conn = s_conns.find(hc))
@@ -1603,7 +1603,7 @@ int Dim::httpRequest(
 int Dim::httpPushPromise(
     CharBuf * out,
     HttpConnHandle hc,
-    const HttpMsg & msg,
+    HttpMsg const & msg,
     bool more
 ) {
     if (auto conn = s_conns.find(hc))
@@ -1616,7 +1616,7 @@ bool Dim::httpReply(
     CharBuf * out,
     HttpConnHandle hc,
     int stream,
-    const HttpMsg & msg,
+    HttpMsg const & msg,
     bool more
 ) {
     if (auto conn = s_conns.find(hc))
@@ -1629,7 +1629,7 @@ bool Dim::httpData(
     CharBuf * out,
     HttpConnHandle hc,
     int stream,
-    const CharBuf & data,
+    CharBuf const & data,
     bool more
 ) {
     if (auto conn = s_conns.find(hc))

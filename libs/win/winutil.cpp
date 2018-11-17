@@ -16,7 +16,7 @@ using namespace Dim;
 ***/
 
 //===========================================================================
-FARPROC Dim::winLoadProc(const char lib[], const char proc[], bool optional) {
+FARPROC Dim::winLoadProc(char const lib[], char const proc[], bool optional) {
     FARPROC fn = nullptr;
     auto wlib = toWstring(lib);
     HMODULE mod = LoadLibraryW(wlib.c_str());
@@ -42,7 +42,7 @@ FARPROC Dim::winLoadProc(const char lib[], const char proc[], bool optional) {
 ***/
 
 //===========================================================================
-bool Dim::winEnablePrivilege(const wchar_t wname[], bool enable) {
+bool Dim::winEnablePrivilege(wchar_t const wname[], bool enable) {
     auto proc = GetCurrentProcess();
     HANDLE token;
     if (!OpenProcessToken(proc, TOKEN_ADJUST_PRIVILEGES, &token))

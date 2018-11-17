@@ -31,7 +31,7 @@ using namespace Dim;
 
 namespace {
 
-const TokenTable::Token s_hdrNames[] = {
+TokenTable::Token const s_hdrNames[] = {
     {kHttpInvalid, "INVALID"},
     {kHttp_Authority, ":authority"},
     {kHttp_Method, ":method"},
@@ -89,9 +89,9 @@ const TokenTable::Token s_hdrNames[] = {
     {kHttpWwwAuthenticate, "www-authenticate"},
 };
 static_assert(size(s_hdrNames) == kHttps);
-const TokenTable s_hdrNameTbl(s_hdrNames);
+TokenTable const s_hdrNameTbl(s_hdrNames);
 
-const TokenTable::Token s_methodNames[] = {
+TokenTable::Token const s_methodNames[] = {
     {fHttpMethodConnect, "CONNECT"},
     {fHttpMethodDelete, "DELETE"},
     {fHttpMethodGet, "GET"},
@@ -102,7 +102,7 @@ const TokenTable::Token s_methodNames[] = {
     {fHttpMethodTrace, "TRACE"},
 };
 static_assert(size(s_methodNames) == kHttpMethods);
-const TokenTable s_methodNameTbl(s_methodNames);
+TokenTable const s_methodNameTbl(s_methodNames);
 
 } // namespace
 
@@ -187,7 +187,7 @@ void HttpMsg::swap(HttpMsg & other) {
 }
 
 //===========================================================================
-void HttpMsg::addHeader(HttpHdr id, const char value[]) {
+void HttpMsg::addHeader(HttpHdr id, char const value[]) {
     addHeaderRef(id, m_heap.strdup(value));
 }
 
@@ -197,12 +197,12 @@ void HttpMsg::addHeader(HttpHdr id, string_view value) {
 }
 
 //===========================================================================
-void HttpMsg::addHeader(const char name[], const char value[]) {
+void HttpMsg::addHeader(char const name[], char const value[]) {
     addHeader(name, string_view(value));
 }
 
 //===========================================================================
-void HttpMsg::addHeader(const char name[], string_view value) {
+void HttpMsg::addHeader(char const name[], string_view value) {
     if (auto id = httpHdrFromString(name))
         return addHeader(id, value);
 
@@ -220,7 +220,7 @@ void HttpMsg::addHeader(HttpHdr id, TimePoint time) {
 }
 
 //===========================================================================
-void HttpMsg::addHeader(const char name[], TimePoint time) {
+void HttpMsg::addHeader(char const name[], TimePoint time) {
     auto hv = addRef(time);
     if (!hv)
         logMsgFatal() << "addHeader(" << name << "): invalid time";
@@ -246,7 +246,7 @@ HttpMsg::Flags HttpMsg::toHasFlag(HttpHdr id) const {
 }
 
 //===========================================================================
-void HttpMsg::addHeaderRef(HttpHdr id, const char name[], const char value[]) {
+void HttpMsg::addHeaderRef(HttpHdr id, char const name[], char const value[]) {
     auto ni = m_firstHeader;
     auto prev = (HdrName *) nullptr;
     auto pseudo = name[0] == ':';
@@ -299,20 +299,20 @@ ADD_VALUE:
 }
 
 //===========================================================================
-void HttpMsg::addHeaderRef(HttpHdr id, const char value[]) {
-    const char * name = tokenTableGetName(s_hdrNameTbl, id);
+void HttpMsg::addHeaderRef(HttpHdr id, char const value[]) {
+    char const * name = tokenTableGetName(s_hdrNameTbl, id);
     addHeaderRef(id, name, value);
 }
 
 //===========================================================================
-void HttpMsg::addHeaderRef(const char name[], const char value[]) {
+void HttpMsg::addHeaderRef(char const name[], char const value[]) {
     HttpHdr id = tokenTableGetEnum(s_hdrNameTbl, name, kHttpInvalid);
     addHeaderRef(id, name, value);
 }
 
 //===========================================================================
-const char * HttpMsg::addRef(TimePoint time) {
-    const unsigned kHttpDateLen = 30;
+char const * HttpMsg::addRef(TimePoint time) {
+    unsigned const kHttpDateLen = 30;
     tm tm;
     if (!timeToDesc(&tm, time))
         return nullptr;
@@ -329,7 +329,7 @@ HttpMsg::HdrList HttpMsg::headers() {
 }
 
 //===========================================================================
-const HttpMsg::HdrList HttpMsg::headers() const {
+HttpMsg::HdrList const HttpMsg::headers() const {
     HdrList hl;
     hl.m_firstHeader = m_firstHeader;
     return hl;
@@ -345,18 +345,18 @@ HttpMsg::HdrName HttpMsg::headers(HttpHdr header) {
 }
 
 //===========================================================================
-const HttpMsg::HdrName HttpMsg::headers(HttpHdr header) const {
+HttpMsg::HdrName const HttpMsg::headers(HttpHdr header) const {
     return const_cast<HttpMsg *>(this)->headers(header);
 }
 
 //===========================================================================
-HttpMsg::HdrName HttpMsg::headers(const char name[]) {
+HttpMsg::HdrName HttpMsg::headers(char const name[]) {
     HttpHdr id = tokenTableGetEnum(s_hdrNameTbl, name, kHttpInvalid);
     return headers(id);
 }
 
 //===========================================================================
-const HttpMsg::HdrName HttpMsg::headers(const char name[]) const {
+HttpMsg::HdrName const HttpMsg::headers(char const name[]) const {
     return const_cast<HttpMsg *>(this)->headers(name);
 }
 
@@ -366,7 +366,7 @@ bool HttpMsg::hasHeader(HttpHdr header) const {
 }
 
 //===========================================================================
-bool HttpMsg::hasHeader(const char name[]) const {
+bool HttpMsg::hasHeader(char const name[]) const {
     return headers(name).m_id;
 }
 
@@ -376,7 +376,7 @@ CharBuf & HttpMsg::body() {
 }
 
 //===========================================================================
-const CharBuf & HttpMsg::body() const {
+CharBuf const & HttpMsg::body() const {
     return m_data;
 }
 
@@ -399,27 +399,27 @@ void HttpRequest::swap(HttpMsg & other) {
 }
 
 //===========================================================================
-const char * HttpRequest::method() const {
+char const * HttpRequest::method() const {
     return headers(kHttp_Method).begin()->m_value;
 }
 
 //===========================================================================
-const char * HttpRequest::scheme() const {
+char const * HttpRequest::scheme() const {
     return headers(kHttp_Scheme).begin()->m_value;
 }
 
 //===========================================================================
-const char * HttpRequest::authority() const {
+char const * HttpRequest::authority() const {
     return headers(kHttp_Authority).begin()->m_value;
 }
 
 //===========================================================================
-const char * HttpRequest::pathRaw() const {
+char const * HttpRequest::pathRaw() const {
     return headers(kHttp_Path).begin()->m_value;
 }
 
 //===========================================================================
-const HttpQuery & HttpRequest::query() const {
+HttpQuery const & HttpRequest::query() const {
     if (!m_query) {
         auto self = const_cast<HttpRequest *>(this);
         self->m_query = urlParseHttpPath(pathRaw(), self->heap());
@@ -437,8 +437,8 @@ const HttpQuery & HttpRequest::query() const {
 
 //===========================================================================
 bool HttpRequest::checkPseudoHeaders() const {
-    const Flags must = fFlagHasMethod | fFlagHasScheme | fFlagHasPath;
-    const Flags mustNot = fFlagHasStatus;
+    Flags const must = fFlagHasMethod | fFlagHasScheme | fFlagHasPath;
+    Flags const mustNot = fFlagHasStatus;
     return (m_flags & must) == must && (~m_flags & mustNot);
 }
 
@@ -457,8 +457,8 @@ int HttpResponse::status() const {
 
 //===========================================================================
 bool HttpResponse::checkPseudoHeaders() const {
-    const Flags must = fFlagHasStatus;
-    const Flags mustNot = fFlagHasMethod | fFlagHasScheme | fFlagHasAuthority
+    Flags const must = fFlagHasStatus;
+    Flags const mustNot = fFlagHasMethod | fFlagHasScheme | fFlagHasAuthority
         | fFlagHasPath;
     return (m_flags & must) == must && (~m_flags & mustNot);
 }

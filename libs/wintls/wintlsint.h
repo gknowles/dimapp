@@ -21,7 +21,7 @@ namespace std {
 
 template<>
 struct default_delete<const CERT_CONTEXT> {
-    void operator()(const CERT_CONTEXT * ptr) const;
+    void operator()(CERT_CONTEXT const * ptr) const;
 };
 
 template<>
@@ -54,7 +54,7 @@ struct CertLocation {
             CERT_SYSTEM_STORE_LOCAL_MACHINE_GROUP_POLICY_ID,
     };
 
-    CertLocation & operator=(const CertLocation & right) = default;
+    CertLocation & operator=(CertLocation const & right) = default;
     CertLocation & operator=(std::string_view name);
 
     explicit operator bool() const { return m_value != kInvalid; }
@@ -79,17 +79,17 @@ struct CertKey {
     std::string_view value;
     std::string_view issuer; // used with kSerialNumber
 };
-const char * toString(CertKey::Type type, const char def[] = nullptr);
+char const * toString(CertKey::Type type, char const def[] = nullptr);
 CertKey::Type fromString(std::string_view src, CertKey::Type def);
 
 std::unique_ptr<CredHandle> iWinTlsCreateCred(
-    const CertKey keys[],
+    CertKey const keys[],
     size_t numKeys,
-    const std::vector<std::string_view> & dnsNamesForSelfSigned = {},
-    const std::vector<std::string_view> & ipAddrsForSelfSigned = {}
+    std::vector<std::string_view> const & dnsNamesForSelfSigned = {},
+    std::vector<std::string_view> const & ipAddrsForSelfSigned = {}
 );
 
-bool iWinTlsIsSelfSigned(const CERT_CONTEXT * cert);
-bool iWinTlsMatchHost(const CERT_CONTEXT * cert, std::string_view host);
+bool iWinTlsIsSelfSigned(CERT_CONTEXT const * cert);
+bool iWinTlsMatchHost(CERT_CONTEXT const * cert, std::string_view host);
 
 } // namespace

@@ -72,7 +72,7 @@ static void addExt(string * out, string_view ext) {
 //===========================================================================
 static bool normalizeAtDotSlash(
     string * out,
-    const Count & cnt
+    Count const & cnt
 ) {
     auto pos = out->size();
     auto eptr = out->data() + pos;
@@ -119,7 +119,7 @@ static bool normalizeAtDotSlash(
 static void normalizeAtSlash(
     string * out,
     PrevCharType * prevChar,
-    const Count & cnt,
+    Count const & cnt,
     bool pseudoSlash = false
 ) {
     auto pchar = *prevChar;
@@ -189,9 +189,9 @@ Count::Count(string_view path) {
     auto * base = path.data();
     auto * ptr = base;
     auto * eptr = ptr + path.size();
-    const char * colon = nullptr;    // first ':'
-    const char * slash = nullptr;    // last '/' or '\'
-    const char * dot = nullptr;      // last '.'
+    char const * colon = nullptr;    // first ':'
+    char const * slash = nullptr;    // last '/' or '\'
+    char const * dot = nullptr;      // last '.'
     for (; ptr != eptr; ++ptr) {
         switch(*ptr) {
         case '.':
@@ -247,7 +247,7 @@ Path::Path(string_view from)
 }
 
 //===========================================================================
-Path::Path(const fs::path & from)
+Path::Path(fs::path const & from)
     : m_data(from.generic_u8string())
 {
     normalize(&m_data);
@@ -265,13 +265,13 @@ void Path::swap(Path & from) {
 }
 
 //===========================================================================
-Path & Path::assign(const Path & path) {
+Path & Path::assign(Path const & path) {
     m_data = path.m_data;
     return *this;
 }
 
 //===========================================================================
-Path & Path::assign(const Path & path, string_view defExt) {
+Path & Path::assign(Path const & path, string_view defExt) {
     return assign(path).defaultExt(defExt);
 }
 
@@ -288,12 +288,12 @@ Path & Path::assign(string_view path, string_view defExt) {
 }
 
 //===========================================================================
-Path & Path::assign(const fs::path & path) {
+Path & Path::assign(fs::path const & path) {
     return assign(string_view{path.generic_u8string()});
 }
 
 //===========================================================================
-Path & Path::assign(const fs::path & path, string_view defExt) {
+Path & Path::assign(fs::path const & path, string_view defExt) {
     return assign(path).defaultExt(defExt);
 }
 
@@ -416,7 +416,7 @@ Path & Path::append(string_view path) {
 }
 
 //===========================================================================
-Path & Path::resolve(const Path & base) {
+Path & Path::resolve(Path const & base) {
     return resolve(string_view{base.m_data});
 }
 
@@ -453,7 +453,7 @@ fs::path Path::fsPath() const {
 }
 
 //===========================================================================
-const char * Path::c_str() const {
+char const * Path::c_str() const {
     return m_data.c_str();
 }
 
@@ -553,32 +553,32 @@ bool Path::hasExt() const {
 ***/
 
 //===========================================================================
-bool Dim::operator==(const Path & left, string_view right) {
+bool Dim::operator==(Path const & left, string_view right) {
     return left.view() == right;
 }
 
 //===========================================================================
-bool Dim::operator==(string_view left, const Path & right) {
+bool Dim::operator==(string_view left, Path const & right) {
     return left == right.view();
 }
 
 //===========================================================================
-bool Dim::operator==(const Path & left, const Path & right) {
+bool Dim::operator==(Path const & left, Path const & right) {
     return left.view() == right.view();
 }
 
 //===========================================================================
-ostream & Dim::operator<<(ostream & os, const Path & val) {
+ostream & Dim::operator<<(ostream & os, Path const & val) {
     os << val.view();
     return os;
 }
 
 //===========================================================================
-Path Dim::operator/ (const Path & a, std::string_view b) {
+Path Dim::operator/ (Path const & a, std::string_view b) {
     return Path{a} /= b;
 }
 
 //===========================================================================
-Path Dim::operator+ (const Path & a, std::string_view b) {
+Path Dim::operator+ (Path const & a, std::string_view b) {
     return Path{a} += b;
 }

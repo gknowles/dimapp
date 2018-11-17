@@ -41,11 +41,11 @@ public:
     // Inherited via ISockMgrBase
     bool listening() const override { return true; }
 
-    void setEndpoints(const Endpoint * addrs, size_t count) override;
+    void setEndpoints(Endpoint const * addrs, size_t count) override;
     bool onShutdown(bool firstTry) override;
 
     // Inherited via IConfigNotify via ISockMgrBase
-    void onConfigChange(const XDocument & doc) override;
+    void onConfigChange(XDocument const & doc) override;
 
     // Inherited via IFactory<ISockMgrSocket>
     unique_ptr<IAppSocketNotify> onFactoryCreate() override;
@@ -66,7 +66,7 @@ public:
     void onTimer(TimePoint now) override;
 
     // Inherited via IAppSocketNotify
-    bool onSocketAccept(const AppSocketInfo & info) override;
+    bool onSocketAccept(AppSocketInfo const & info) override;
     void onSocketDestroy() override;
     bool onSocketRead(AppSocketData & data) override;
 };
@@ -104,7 +104,7 @@ void AccMgrSocket::onTimer(TimePoint now) {
 }
 
 //===========================================================================
-bool AccMgrSocket::onSocketAccept (const AppSocketInfo & info) {
+bool AccMgrSocket::onSocketAccept (AppSocketInfo const & info) {
     if (notifyAccept(info)) {
         mgr().touch(this);
         return true;
@@ -143,7 +143,7 @@ AcceptManager::AcceptManager(
 }
 
 //===========================================================================
-void AcceptManager::setEndpoints(const Endpoint * addrs, size_t count) {
+void AcceptManager::setEndpoints(Endpoint const * addrs, size_t count) {
     vector<Endpoint> endpts{addrs, addrs + count};
     sort(endpts.begin(), endpts.end());
     sort(m_endpoints.begin(), m_endpoints.end());
@@ -152,8 +152,8 @@ void AcceptManager::setEndpoints(const Endpoint * addrs, size_t count) {
     for_each_diff(
         endpts.begin(), endpts.end(),
         m_endpoints.begin(), m_endpoints.end(),
-        [&](const Endpoint & ep){ socketListen(this, ep, m_family, console); },
-        [&](const Endpoint & ep){ socketCloseWait(this, ep, m_family); }
+        [&](Endpoint const & ep){ socketListen(this, ep, m_family, console); },
+        [&](Endpoint const & ep){ socketCloseWait(this, ep, m_family); }
     );
 
     m_endpoints = move(endpts);
@@ -171,7 +171,7 @@ bool AcceptManager::onShutdown(bool firstTry) {
 }
 
 //===========================================================================
-void AcceptManager::onConfigChange(const XDocument & doc) {
+void AcceptManager::onConfigChange(XDocument const & doc) {
     auto flags = AppSocket::ConfFlags{};
     if (configNumber(doc, "DisableInactiveTimeout"))
         flags |= AppSocket::fDisableInactiveTimeout;

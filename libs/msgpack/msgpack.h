@@ -46,7 +46,7 @@ public:
     // preformatted value
     IBuilder & valueRaw(std::string_view val);
 
-    IBuilder & value(const char val[]);
+    IBuilder & value(char const val[]);
     IBuilder & value(std::string_view val);
     IBuilder & value(bool val);
     IBuilder & value(double val);
@@ -55,7 +55,7 @@ public:
     IBuilder & value(std::nullptr_t);
 
     template<typename T>
-    IBuilder & value(const T & val);
+    IBuilder & value(T const & val);
 
     size_t depth() const { return m_stack.size(); }
 
@@ -75,7 +75,7 @@ private:
 
 //===========================================================================
 template<typename T>
-inline IBuilder & IBuilder::value(const T & val) {
+inline IBuilder & IBuilder::value(T const & val) {
     if constexpr (std::is_convertible_v<T, uint64_t>
         && !std::is_same_v<T, uint64_t>
     ) {
@@ -95,7 +95,7 @@ inline IBuilder & IBuilder::value(const T & val) {
 
 //===========================================================================
 template<typename T>
-inline IBuilder & operator<<(IBuilder & out, const T & val) {
+inline IBuilder & operator<<(IBuilder & out, T const & val) {
     return out.value(val);
 }
 

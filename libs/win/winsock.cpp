@@ -15,8 +15,8 @@ using namespace Dim;
 *
 ***/
 
-const int kReadQueueSize = 10;
-const int kWriteQueueSize = 100;
+int const kReadQueueSize = 10;
+int const kWriteQueueSize = 100;
 
 // How long data can wait to be sent. When the queue time exceeds this value
 // the socket is disconnected, the assumption being that the end consumer, if
@@ -688,7 +688,7 @@ SOCKET Dim::iSocketCreate() {
 }
 
 //===========================================================================
-SOCKET Dim::iSocketCreate(const Endpoint & end) {
+SOCKET Dim::iSocketCreate(Endpoint const & end) {
     SOCKET handle = iSocketCreate();
     if (handle == INVALID_SOCKET)
         return handle;

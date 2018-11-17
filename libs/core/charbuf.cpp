@@ -15,7 +15,7 @@ using namespace Dim;
 *
 ***/
 
-const unsigned kDefaultBlockSize = 4096;
+unsigned const kDefaultBlockSize = 4096;
 
 
 /****************************************************************************
@@ -87,12 +87,12 @@ CharBuf & CharBuf::assign(nullptr_t) {
 }
 
 //===========================================================================
-CharBuf & CharBuf::assign(const char s[]) {
+CharBuf & CharBuf::assign(char const s[]) {
     return replace(0, m_size, s);
 }
 
 //===========================================================================
-CharBuf & CharBuf::assign(const char s[], size_t count) {
+CharBuf & CharBuf::assign(char const s[], size_t count) {
     return replace(0, m_size, s, count);
 }
 
@@ -108,7 +108,7 @@ CharBuf & CharBuf::assign(string_view str, size_t pos, size_t count) {
 }
 
 //===========================================================================
-CharBuf & CharBuf::assign(const CharBuf & buf, size_t pos, size_t count) {
+CharBuf & CharBuf::assign(CharBuf const & buf, size_t pos, size_t count) {
     return replace(0, m_size, buf, pos, count);
 }
 
@@ -119,7 +119,7 @@ char & CharBuf::front() {
 }
 
 //===========================================================================
-const char & CharBuf::front() const {
+char const & CharBuf::front() const {
     assert(m_size);
     return *m_buffers.front().data;
 }
@@ -133,7 +133,7 @@ char & CharBuf::back() {
 }
 
 //===========================================================================
-const char & CharBuf::back() const {
+char const & CharBuf::back() const {
     assert(m_size);
     auto & buf = m_buffers.back();
     assert(buf.used);
@@ -151,14 +151,14 @@ size_t CharBuf::size() const {
 }
 
 //===========================================================================
-const char * CharBuf::data() const {
+char const * CharBuf::data() const {
     // we need mutable access to rearrange the buffer so that the requested
     // section is contiguous, but the data itself will stay unchanged
     return const_cast<CharBuf *>(this)->data(0, m_size);
 }
 
 //===========================================================================
-const char * CharBuf::data(size_t pos, size_t count) const {
+char const * CharBuf::data(size_t pos, size_t count) const {
     // we need mutable access to rearrange the buffer so that the requested
     // section is contiguous, but the data itself will stay unchanged
     return const_cast<CharBuf *>(this)->data(pos, count);
@@ -210,7 +210,7 @@ char * CharBuf::data(size_t pos, size_t count) {
 }
 
 //===========================================================================
-const char * CharBuf::c_str() const {
+char const * CharBuf::c_str() const {
     // we need mutable access to rearrange the buffer so that the requested
     // section is contiguous, but the data itself will stay unchanged
     return const_cast<CharBuf *>(this)->c_str();
@@ -282,7 +282,7 @@ CharBuf & CharBuf::insert(size_t pos, nullptr_t) {
 }
 
 //===========================================================================
-CharBuf & CharBuf::insert(size_t pos, const char s[]) {
+CharBuf & CharBuf::insert(size_t pos, char const s[]) {
     assert(pos <= (size_t) m_size);
 
     // short-circuit to avoid allocations. find() forces buffer to exist
@@ -294,7 +294,7 @@ CharBuf & CharBuf::insert(size_t pos, const char s[]) {
 }
 
 //===========================================================================
-CharBuf & CharBuf::insert(size_t pos, const char s[], size_t count) {
+CharBuf & CharBuf::insert(size_t pos, char const s[], size_t count) {
     assert(pos <= pos + count && pos <= (size_t) m_size);
 
     // short-circuit to avoid allocations
@@ -308,7 +308,7 @@ CharBuf & CharBuf::insert(size_t pos, const char s[], size_t count) {
 //===========================================================================
 CharBuf & CharBuf::insert(
     size_t pos,
-    const CharBuf & buf,
+    CharBuf const & buf,
     size_t bufPos,
     size_t bufLen
 ) {
@@ -402,12 +402,12 @@ CharBuf & CharBuf::append(nullptr_t) {
 }
 
 //===========================================================================
-CharBuf & CharBuf::append(const char s[]) {
+CharBuf & CharBuf::append(char const s[]) {
     return insert(m_size, s);
 }
 
 //===========================================================================
-CharBuf & CharBuf::append(const char src[], size_t srcLen) {
+CharBuf & CharBuf::append(char const src[], size_t srcLen) {
     return insert(m_size, src, srcLen);
 }
 
@@ -418,12 +418,12 @@ CharBuf & CharBuf::append(string_view str, size_t pos, size_t count) {
 }
 
 //===========================================================================
-CharBuf & CharBuf::append(const CharBuf & buf, size_t pos, size_t count) {
+CharBuf & CharBuf::append(CharBuf const & buf, size_t pos, size_t count) {
     return insert(m_size, buf, pos, count);
 }
 
 //===========================================================================
-int CharBuf::compare(const char s[], size_t count) const {
+int CharBuf::compare(char const s[], size_t count) const {
     return compare(0, m_size, s, count);
 }
 
@@ -431,7 +431,7 @@ int CharBuf::compare(const char s[], size_t count) const {
 int CharBuf::compare(
     size_t pos,
     size_t count,
-    const char s[],
+    char const s[],
     size_t slen
 ) const {
     assert(pos <= (size_t) m_size);
@@ -479,7 +479,7 @@ int CharBuf::compare(size_t pos, size_t count, string_view str) const {
 }
 
 //===========================================================================
-int CharBuf::compare(const CharBuf & buf, size_t pos, size_t count) const {
+int CharBuf::compare(CharBuf const & buf, size_t pos, size_t count) const {
     return compare(0, m_size, buf, pos, count);
 }
 
@@ -487,7 +487,7 @@ int CharBuf::compare(const CharBuf & buf, size_t pos, size_t count) const {
 int CharBuf::compare(
     size_t pos,
     size_t count,
-    const CharBuf & buf,
+    CharBuf const & buf,
     size_t bufPos,
     size_t bufLen
 ) const {
@@ -570,7 +570,7 @@ CharBuf & CharBuf::replace(size_t pos, size_t count, nullptr_t) {
 }
 
 //===========================================================================
-CharBuf & CharBuf::replace(size_t pos, size_t count, const char s[]) {
+CharBuf & CharBuf::replace(size_t pos, size_t count, char const s[]) {
     assert(pos <= (size_t) m_size);
 
     int remove = (int) min(count, m_size - pos);
@@ -606,7 +606,7 @@ CharBuf & CharBuf::replace(size_t pos, size_t count, const char s[]) {
 CharBuf & CharBuf::replace(
     size_t pos,
     size_t count,
-    const char src[],
+    char const src[],
     size_t srcLen
 ) {
     assert(pos <= (size_t) m_size);
@@ -643,7 +643,7 @@ CharBuf & CharBuf::replace(
 CharBuf & CharBuf::replace(
     size_t pos,
     size_t count,
-    const CharBuf & src,
+    CharBuf const & src,
     size_t srcPos,
     size_t srcLen
 ) {
@@ -848,7 +848,7 @@ CharBuf & CharBuf::insert(
 CharBuf & CharBuf::insert(
     buffer_iterator it,
     int pos,
-    const char s[]
+    char const s[]
 ) {
     assert(pos <= it->used);
     auto mydata = it->data + pos;
@@ -904,7 +904,7 @@ CharBuf & CharBuf::insert(
 CharBuf & CharBuf::insert(
     buffer_iterator it,
     int pos,
-    const char s[],
+    char const s[],
     size_t slen
 ) {
     assert(pos <= it->used);
@@ -1084,7 +1084,7 @@ CharBuf::ViewIterator::ViewIterator(
 }
 
 //===========================================================================
-bool CharBuf::ViewIterator::operator!= (const ViewIterator & right) {
+bool CharBuf::ViewIterator::operator!= (ViewIterator const & right) {
     return m_current != right.m_current || m_view != right.m_view;
 }
 
@@ -1114,22 +1114,22 @@ CharBuf::ViewIterator & CharBuf::ViewIterator::operator++() {
 ***/
 
 //===========================================================================
-bool Dim::operator==(const CharBuf & left, string_view right) {
+bool Dim::operator==(CharBuf const & left, string_view right) {
     return left.compare(right) == 0;
 }
 
 //===========================================================================
-bool Dim::operator==(string_view left, const CharBuf & right) {
+bool Dim::operator==(string_view left, CharBuf const & right) {
     return right.compare(left) == 0;
 }
 
 //===========================================================================
-bool Dim::operator==(const CharBuf & left, const CharBuf & right) {
+bool Dim::operator==(CharBuf const & left, CharBuf const & right) {
     return left.compare(right) == 0;
 }
 
 //===========================================================================
-string Dim::toString(const CharBuf & buf, size_t pos, size_t count) {
+string Dim::toString(CharBuf const & buf, size_t pos, size_t count) {
     assert(pos <= buf.size());
     count = min(count, buf.size() - pos);
     string out;
@@ -1139,7 +1139,7 @@ string Dim::toString(const CharBuf & buf, size_t pos, size_t count) {
 }
 
 //===========================================================================
-ostream & Dim::operator<<(ostream & os, const CharBuf & buf) {
+ostream & Dim::operator<<(ostream & os, CharBuf const & buf) {
     for (auto && v : buf.views())
         os << v;
     return os;

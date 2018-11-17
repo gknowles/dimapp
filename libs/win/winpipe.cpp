@@ -15,8 +15,8 @@ using namespace Dim;
 *
 ***/
 
-const int kReadQueueSize = 10;
-const int kWriteQueueSize = 100;
+int const kReadQueueSize = 10;
+int const kWriteQueueSize = 100;
 
 // How long data can wait to be sent. When the queue time exceeds this value
 // the pipe is closed, the assumption being that the end consumer, if they
@@ -24,7 +24,7 @@ const int kWriteQueueSize = 100;
 // expired.
 constexpr auto kMaxPrewriteQueueTime = 2min;
 
-const int kBufferSize = 4096;
+int const kBufferSize = 4096;
 
 
 /****************************************************************************

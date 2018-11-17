@@ -53,7 +53,7 @@ void Dim::tlsSetKeyShare(TlsKeyShare * out, TlsNamedGroup group) {
 //===========================================================================
 static void write(
     TlsRecordWriter * out,
-    const vector<TlsKeyShare> & keys
+    vector<TlsKeyShare> const & keys
 ) {
     if (keys.empty())
         return;
@@ -83,24 +83,24 @@ static void write(
 }
 
 //===========================================================================
-static void write(TlsRecordWriter * out, const TlsKeyShare & key) {
+static void write(TlsRecordWriter * out, TlsKeyShare const & key) {
 }
 
 //===========================================================================
 static void write(
     TlsRecordWriter * out,
-    const vector<TlsPresharedKey> & keys
+    vector<TlsPresharedKey> const & keys
 ) {
 }
 
 //===========================================================================
-static void write(TlsRecordWriter * out, const TlsPresharedKey & key) {
+static void write(TlsRecordWriter * out, TlsPresharedKey const & key) {
 }
 
 //===========================================================================
 static void write(
     TlsRecordWriter * out,
-    const vector<TlsSignatureScheme> & schemes
+    vector<TlsSignatureScheme> const & schemes
 ) {
     if (schemes.empty())
         return;
@@ -150,7 +150,7 @@ static void writeDraftVersion(TlsRecordWriter * out, uint16_t version) {
 ***/
 
 //===========================================================================
-void Dim::tlsWrite(TlsRecordWriter * out, const TlsClientHelloMsg & msg) {
+void Dim::tlsWrite(TlsRecordWriter * out, TlsClientHelloMsg const & msg) {
     out->contentType(kContentHandshake);
     out->number(kClientHello); // handshake.msg_type
     out->start24();            // handshake.length
@@ -180,7 +180,7 @@ void Dim::tlsWrite(TlsRecordWriter * out, const TlsClientHelloMsg & msg) {
 }
 
 //===========================================================================
-void Dim::tlsWrite(TlsRecordWriter * out, const TlsServerHelloMsg & msg) {
+void Dim::tlsWrite(TlsRecordWriter * out, TlsServerHelloMsg const & msg) {
     out->contentType(kContentHandshake);
     out->number(kServerHello); // handshake.msg_type
     out->start24();            // handshake.length
@@ -203,7 +203,7 @@ void Dim::tlsWrite(TlsRecordWriter * out, const TlsServerHelloMsg & msg) {
 //===========================================================================
 void Dim::tlsWrite(
     TlsRecordWriter * out,
-    const TlsHelloRetryRequestMsg & msg
+    TlsHelloRetryRequestMsg const & msg
 ) {
     out->contentType(kContentHandshake);
     out->number(kHelloRetryRequest); // handshake.msg_type

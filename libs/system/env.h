@@ -28,7 +28,7 @@ struct EnvMemoryConfig {
     // to 0.
     size_t minLargeAlloc;   // min large page allocation
 };
-const EnvMemoryConfig & envMemoryConfig();
+EnvMemoryConfig const & envMemoryConfig();
 
 struct DiskSpace {
     uint64_t avail;
@@ -46,7 +46,7 @@ unsigned envCpus();
 ***/
 
 // Returns path to this executable being run
-const std::string & envExecPath();
+std::string const & envExecPath();
 
 struct VersionInfo {
     unsigned major;

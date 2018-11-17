@@ -27,13 +27,13 @@ public:
 public:
     // default constructor calls GetLastError()
     WinError();
-    WinError(const WinError & from) = default;
+    WinError(WinError const & from) = default;
     WinError(int error);
     // sets equivalent standard windows error value
     WinError(NtStatus status);
     WinError(SecurityStatus status);
 
-    WinError & operator=(const WinError & from) = default;
+    WinError & operator=(WinError const & from) = default;
     WinError & operator=(int error) { return *this = WinError{error}; }
     WinError & operator=(NtStatus status) { return *this = WinError{status}; }
     WinError & operator=(SecurityStatus status) {
@@ -54,7 +54,7 @@ private:
     int m_secStatus{0};
 };
 
-std::ostream & operator<<(std::ostream & os, const WinError & val);
+std::ostream & operator<<(std::ostream & os, WinError const & val);
 
 void winErrorInitialize();
 
@@ -68,14 +68,14 @@ void winErrorInitialize();
 //---------------------------------------------------------------------------
 // Load DLL Procedure
 
-FARPROC winLoadProc(const char lib[], const char proc[], bool optional);
+FARPROC winLoadProc(char const lib[], char const proc[], bool optional);
 
 //===========================================================================
 template <typename FN>
 static void winLoadProc(
     FN * fn,
-    const char lib[],
-    const char proc[],
+    char const lib[],
+    char const proc[],
     bool optional = false
 ) {
     // FN must be pointer to function, which will be set to the address of
@@ -123,7 +123,7 @@ private:
 
 //---------------------------------------------------------------------------
 // Privileges
-bool winEnablePrivilege(const wchar_t name[], bool enable = true);
+bool winEnablePrivilege(wchar_t const name[], bool enable = true);
 
 
 /****************************************************************************

@@ -23,7 +23,7 @@ namespace {
 class CertName {
 public:
     CertName() {}
-    CertName(const CertName & from);
+    CertName(CertName const & from);
     CertName(CertName && from);
     ~CertName();
 
@@ -31,11 +31,11 @@ public:
     void reset(CERT_NAME_BLOB blob);
     CERT_NAME_BLOB release();
 
-    bool parse(const char src[]);
+    bool parse(char const src[]);
     string str() const;
 
     operator CERT_NAME_BLOB * () { return &m_blob; }
-    operator const CERT_NAME_BLOB * () const { return &m_blob; }
+    operator CERT_NAME_BLOB const * () const { return &m_blob; }
 
     explicit operator bool() const { return m_blob.cbData; }
 
@@ -114,8 +114,8 @@ template<typename T>
 static void encodeBlob(
     T & out,
     string & outData,
-    const char structType[],
-    const void * structInfo
+    char const structType[],
+    void const * structInfo
 ) {
     if (!CryptEncodeObject(
         X509_ASN_ENCODING,
@@ -143,7 +143,7 @@ static void encodeBlob(
 }
 
 //===========================================================================
-static bool hasEnhancedUsage(const CERT_CONTEXT * cert, string_view oid) {
+static bool hasEnhancedUsage(CERT_CONTEXT const * cert, string_view oid) {
     DWORD cb{0};
     if (!CertGetEnhancedKeyUsage(
         cert,
@@ -178,8 +178,8 @@ static bool hasEnhancedUsage(const CERT_CONTEXT * cert, string_view oid) {
 static void addAltNameExt(
     vector<CERT_EXTENSION> * extVec,
     vector<string> * blobBufs,
-    const vector<string_view> & dnsNames,
-    const vector<string_view> & ipAddrs
+    vector<string_view> const & dnsNames,
+    vector<string_view> const & ipAddrs
 ) {
     if (dnsNames.empty() && ipAddrs.empty())
         return;
@@ -231,10 +231,10 @@ static void addAltNameExt(
 }
 
 //===========================================================================
-static const CERT_CONTEXT * makeCert(
+static CERT_CONTEXT const * makeCert(
     string_view issuerName,
-    const vector<string_view> & dnsNames,
-    const vector<string_view> & ipAddrs
+    vector<string_view> const & dnsNames,
+    vector<string_view> const & ipAddrs
 ) {
     WinError err{0};
     auto nkey = createKey();
@@ -277,7 +277,7 @@ static const CERT_CONTEXT * makeCert(
     exts.cExtension = (DWORD) extVec.size();
     exts.rgExtension = extVec.data();
 
-    const CERT_CONTEXT * cert = CertCreateSelfSignCertificate(
+    CERT_CONTEXT const * cert = CertCreateSelfSignCertificate(
         nkey,
         issuer,
         0, // flags
@@ -303,7 +303,7 @@ static const CERT_CONTEXT * makeCert(
     }
 
     CRYPT_DATA_BLOB data;
-    const wchar_t s_friendlyName[] = L"dimapp-wintls";
+    wchar_t const s_friendlyName[] = L"dimapp-wintls";
     data.pbData = (BYTE *) s_friendlyName;
     data.cbData = sizeof(s_friendlyName);
     if (!CertSetCertificateContextProperty(
@@ -351,7 +351,7 @@ static bool matchHost(string_view authority, string_view host) {
 }
 
 //===========================================================================
-static bool matchHost(const CERT_CONTEXT * cert, string_view host) {
+static bool matchHost(CERT_CONTEXT const * cert, string_view host) {
     // get length of Common Name
     auto nameLen = CertGetNameStringW(
         cert,
@@ -375,7 +375,7 @@ static bool matchHost(const CERT_CONTEXT * cert, string_view host) {
         (DWORD) wname.size()
     );
     auto name = toString(wname);
-    const char * ptr = name.data();
+    char const * ptr = name.data();
     while (*ptr) {
         string_view authority{ptr};
         if (matchHost(authority, host))
@@ -387,7 +387,7 @@ static bool matchHost(const CERT_CONTEXT * cert, string_view host) {
 }
 
 //===========================================================================
-static bool isSelfSigned(const CERT_CONTEXT * cert) {
+static bool isSelfSigned(CERT_CONTEXT const * cert) {
     return CertCompareCertificateName(
         X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,
         &cert->pCertInfo->Subject,
@@ -398,7 +398,7 @@ static bool isSelfSigned(const CERT_CONTEXT * cert) {
 //===========================================================================
 static void addCerts(
     vector<unique_ptr<const CERT_CONTEXT>> & certs,
-    const CertKey & key
+    CertKey const & key
 ) {
     string idBytes;
     if (!hexToBytes(idBytes, key.value, false)) {
@@ -453,7 +453,7 @@ static void addCerts(
         return;
     }
 
-    const CERT_CONTEXT * cert = nullptr;
+    CERT_CONTEXT const * cert = nullptr;
     for (;;) {
         cert = CertFindCertificateInStore(
             hstore,
@@ -507,10 +507,10 @@ static void addCerts(
 //===========================================================================
 static void getCerts(
     vector<unique_ptr<const CERT_CONTEXT>> & certs,
-    const CertKey keys[],
+    CertKey const keys[],
     size_t numKeys,
-    const vector<string_view> & dnsNames,
-    const vector<string_view> & ipAddrs
+    vector<string_view> const & dnsNames,
+    vector<string_view> const & ipAddrs
 ) {
     certs.clear();
     auto ekeys = keys + numKeys;
@@ -541,7 +541,7 @@ static void getCerts(
 
 //===========================================================================
 void std::default_delete<const CERT_CONTEXT>::operator()(
-    const CERT_CONTEXT * ptr
+    CERT_CONTEXT const * ptr
 ) const {
     if (ptr) {
         // free (aka decref) always succeeds
@@ -574,12 +574,12 @@ constexpr TokenTable::Token s_certKeyTypes[] = {
     { CertKey::kThumbprint, "thumbprint" },
     { CertKey::kSerialNumber, "serialNumber" },
 };
-const TokenTable s_certKeyTbl(s_certKeyTypes);
+TokenTable const s_certKeyTbl(s_certKeyTypes);
 
 } // namespace
 
 //===========================================================================
-const char * Dim::toString(CertKey::Type type, const char def[]) {
+char const * Dim::toString(CertKey::Type type, char const def[]) {
     return tokenTableGetName(s_certKeyTbl, type, def);
 }
 
@@ -596,7 +596,7 @@ CertKey::Type Dim::fromString(std::string_view src, CertKey::Type def) {
 ***/
 
 //===========================================================================
-CertName::CertName(const CertName & from) {
+CertName::CertName(CertName const & from) {
     if (from) {
         m_blob.pbData = (BYTE *) malloc(from.m_blob.cbData);
         assert(m_blob.pbData);
@@ -638,8 +638,8 @@ CERT_NAME_BLOB CertName::release() {
 }
 
 //===========================================================================
-bool CertName::parse(const char src[]) {
-    const wchar_t * errstr;
+bool CertName::parse(char const src[]) {
+    wchar_t const * errstr;
     auto wsrc = toWstring(src);
 
     // get length of blob
@@ -711,7 +711,7 @@ constexpr TokenTable::Token kStoreLocs[] = {
     { CertLocation::kLocalMachineEnterprise,  "Local Machine Enterprise" },
     { CertLocation::kLocalMachineGroupPolicy, "Local Machine Group Policy" },
 };
-const TokenTable s_storeLocTbl(kStoreLocs);
+TokenTable const s_storeLocTbl(kStoreLocs);
 
 //===========================================================================
 CertLocation & CertLocation::operator=(string_view name) {
@@ -733,17 +733,17 @@ string_view CertLocation::view() const {
 
 //===========================================================================
 unique_ptr<CredHandle> Dim::iWinTlsCreateCred(
-    const CertKey keys[],
+    CertKey const keys[],
     size_t numKeys,
-    const vector<string_view> & dnsNamesForSelfSigned,
-    const vector<string_view> & ipAddrsForSelfSigned
+    vector<string_view> const & dnsNamesForSelfSigned,
+    vector<string_view> const & ipAddrsForSelfSigned
 ) {
     WinError err{0};
 
     vector<unique_ptr<const CERT_CONTEXT>> certs;
     getCerts(certs, keys, numKeys, dnsNamesForSelfSigned, ipAddrsForSelfSigned);
 
-    vector<const CERT_CONTEXT *> ptrs;
+    vector<CERT_CONTEXT const *> ptrs;
     SCHANNEL_CRED cred = {};
     cred.dwVersion = SCHANNEL_CRED_VERSION;
     cred.dwFlags = SCH_CRED_NO_SYSTEM_MAPPER
@@ -782,11 +782,11 @@ unique_ptr<CredHandle> Dim::iWinTlsCreateCred(
 }
 
 //===========================================================================
-bool Dim::iWinTlsIsSelfSigned(const CERT_CONTEXT * cert) {
+bool Dim::iWinTlsIsSelfSigned(CERT_CONTEXT const * cert) {
     return isSelfSigned(cert);
 }
 
 //===========================================================================
-bool Dim::iWinTlsMatchHost(const CERT_CONTEXT * cert, string_view host) {
+bool Dim::iWinTlsMatchHost(CERT_CONTEXT const * cert, string_view host) {
     return matchHost(cert, host);
 }

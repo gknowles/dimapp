@@ -51,9 +51,9 @@ struct TimerQueueNode {
     unsigned instance;
 
     explicit TimerQueueNode(shared_ptr<Timer> & timer);
-    bool operator<(const TimerQueueNode & right) const;
-    bool operator>(const TimerQueueNode & right) const;
-    bool operator==(const TimerQueueNode & right) const;
+    bool operator<(TimerQueueNode const & right) const;
+    bool operator>(TimerQueueNode const & right) const;
+    bool operator==(TimerQueueNode const & right) const;
 };
 
 } // namespace
@@ -204,17 +204,17 @@ TimerQueueNode::TimerQueueNode(shared_ptr<Timer> & timer)
 {}
 
 //===========================================================================
-bool TimerQueueNode::operator<(const TimerQueueNode & right) const {
+bool TimerQueueNode::operator<(TimerQueueNode const & right) const {
     return expiration < right.expiration;
 }
 
 //===========================================================================
-bool TimerQueueNode::operator>(const TimerQueueNode & right) const {
+bool TimerQueueNode::operator>(TimerQueueNode const & right) const {
     return expiration > right.expiration;
 }
 
 //===========================================================================
-bool TimerQueueNode::operator==(const TimerQueueNode & right) const {
+bool TimerQueueNode::operator==(TimerQueueNode const & right) const {
     return expiration == right.expiration && timer == right.timer
         && instance == right.instance;
 }

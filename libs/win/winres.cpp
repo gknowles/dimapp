@@ -28,8 +28,8 @@ class ResModule : public HandleContent {
 public:
     ~ResModule();
 
-    bool open(const Path & path);
-    bool openForUpdate(const Path & path);
+    bool open(Path const & path);
+    bool openForUpdate(Path const & path);
 
     bool updateData(std::string_view name, std::string_view data);
     bool commit();
@@ -71,7 +71,7 @@ ResModule::~ResModule() {
 }
 
 //===========================================================================
-bool ResModule::open(const Path & path) {
+bool ResModule::open(Path const & path) {
     m_path = path;
     if (!m_path.empty()) {
         m_rhandle = LoadLibraryExW(
@@ -88,7 +88,7 @@ bool ResModule::open(const Path & path) {
 }
 
 //===========================================================================
-bool ResModule::openForUpdate(const Path & path) {
+bool ResModule::openForUpdate(Path const & path) {
     if (!open(path))
         return false;
     m_whandle = BeginUpdateResourceW(toWstring(m_path).c_str(), FALSE);
@@ -190,7 +190,7 @@ string_view ResModule::loadData(string_view namev) {
         logMsgError() << "LoadResource(" << namev << "): " << WinError{};
         return {};
     }
-    auto ptr = (const char *) LockResource(h);
+    auto ptr = (char const *) LockResource(h);
     auto len = SizeofResource(m_rhandle, hinfo);
     return string_view{ptr, len};
 }

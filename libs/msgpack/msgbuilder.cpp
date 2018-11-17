@@ -187,7 +187,7 @@ IBuilder & IBuilder::valueRaw(string_view val) {
 }
 
 //===========================================================================
-IBuilder & IBuilder::value(const char val[]) {
+IBuilder & IBuilder::value(char const val[]) {
     return val ? value(string_view{val}) : value(nullptr);
 }
 

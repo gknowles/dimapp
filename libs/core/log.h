@@ -27,7 +27,7 @@ enum LogType {
     kLogTypeFatal,
     kLogTypes
 };
-const char * toString(LogType type, const char def[]);
+char const * toString(LogType type, char const def[]);
 LogType fromString(std::string_view src, LogType def);
 
 namespace Detail {

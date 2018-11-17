@@ -87,7 +87,7 @@ void sockMgrSetInactiveTimeout(SockMgrHandle mgr, Duration timeout);
 
 void sockMgrSetEndpoints(
     SockMgrHandle mgr,
-    const Endpoint * addrs,
+    Endpoint const * addrs,
     size_t numAddrs
 );
 // Not implemented

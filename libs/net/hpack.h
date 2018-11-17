@@ -50,19 +50,19 @@ public:
     void endBlock();
 
     void header(
-        const char name[],
-        const char value[],
+        char const name[],
+        char const value[],
         HpackFlags flags = {}
     );
     void header(
         HttpHdr name,
-        const char value[],
+        char const value[],
         HpackFlags flags = {}
     );
 
 private:
-    void write(const char str[]);
-    void write(const char str[], size_t len);
+    void write(char const str[]);
+    void write(char const str[], size_t len);
     void write(size_t val, char prefix, int prefixBits);
 
     size_t m_dynSize{};
@@ -82,8 +82,8 @@ public:
 
     virtual void onHpackHeader(
         HttpHdr id,
-        const char name[],
-        const char value[],
+        char const name[],
+        char const value[],
         HpackFlags flags
     ) = 0;
 };
@@ -97,7 +97,7 @@ public:
     [[nodiscard]] bool parse(
         IHpackDecodeNotify * notify,
         ITempHeap * heap,
-        const char src[],
+        char const src[],
         size_t srcLen
     );
     auto & dynamicTable() const { return m_dynTable; }
@@ -108,33 +108,33 @@ private:
     bool readInstruction(
         IHpackDecodeNotify * notify,
         ITempHeap * heap,
-        const char *& src,
+        char const *& src,
         size_t & srcLen
     );
     bool readIndexedField(
         HpackFieldView * out,
         ITempHeap * heap,
         size_t prefixBits,
-        const char *& src,
+        char const *& src,
         size_t & srcLen
     );
     bool readIndexedName(
         HpackFieldView * out,
         ITempHeap * heap,
         size_t prefixBits,
-        const char *& src,
+        char const *& src,
         size_t & srcLen
     );
     bool read(
         size_t * out,
         size_t prefixBits,
-        const char *& src,
+        char const *& src,
         size_t & srcLen
     );
     bool read(
-        const char ** out,
+        char const ** out,
         ITempHeap * heap,
-        const char *& src,
+        char const *& src,
         size_t & srcLen
     );
 

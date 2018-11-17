@@ -27,7 +27,7 @@ static mutex s_mut;
 
 //===========================================================================
 static void iocpDispatchThread() {
-    const int kMaxEntries = 8;
+    int const kMaxEntries = 8;
     OVERLAPPED_ENTRY entries[kMaxEntries];
     ULONG found;
     ITaskNotify * tasks[size(entries)];

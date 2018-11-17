@@ -25,9 +25,9 @@ public:
     template <typename T, typename... Args> T * emplace(Args &&... args);
     template <typename T> T * alloc(size_t num);
 
-    char * strdup(const char src[]);
+    char * strdup(char const src[]);
     char * strdup(std::string_view src);
-    char * strdup(const char src[], size_t len);
+    char * strdup(char const src[], size_t len);
 
     char * alloc(size_t bytes);
     virtual char * alloc(size_t bytes, size_t align) = 0;
@@ -47,7 +47,7 @@ template <typename T> inline T * ITempHeap::alloc(size_t num) {
 }
 
 //===========================================================================
-inline char * ITempHeap::strdup(const char src[]) {
+inline char * ITempHeap::strdup(char const src[]) {
     return strdup(std::string_view(src));
 }
 
@@ -57,7 +57,7 @@ inline char * ITempHeap::strdup(std::string_view src) {
 }
 
 //===========================================================================
-inline char * ITempHeap::strdup(const char src[], size_t len) {
+inline char * ITempHeap::strdup(char const src[], size_t len) {
     char * out = alloc(len + 1, alignof(char));
     std::memcpy(out, src, len);
     out[len] = 0;
@@ -81,7 +81,7 @@ public:
     TempHeap() = default;
     TempHeap(TempHeap && from);
     ~TempHeap();
-    TempHeap & operator=(const TempHeap & from) = delete;
+    TempHeap & operator=(TempHeap const & from) = delete;
     TempHeap & operator=(TempHeap && from);
 
     void clear();

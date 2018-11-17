@@ -108,8 +108,8 @@ struct TlsConnHandle : HandleBase {};
 
 TlsConnHandle tlsConnect(
     CharBuf * out,
-    const char hostName[],
-    const TlsCipherSuite suites[],
+    char const hostName[],
+    TlsCipherSuite const suites[],
     size_t count
 );
 TlsConnHandle tlsAccept(const TlsCipherSuite suites[], size_t count);
@@ -119,14 +119,14 @@ bool tlsRecv(
     CharBuf * out,
     CharBuf * data,
     TlsConnHandle conn,
-    const void * src,
+    void const * src,
     size_t srcLen
 );
 
 void tlsSend(
     CharBuf * out,
     TlsConnHandle conn,
-    const void * src,
+    void const * src,
     size_t srcLen
 );
 

@@ -27,7 +27,7 @@ bool Dim::parse(Address * out, string_view src) {
 }
 
 //===========================================================================
-ostream & Dim::operator<<(ostream & os, const Address & addr) {
+ostream & Dim::operator<<(ostream & os, Address const & addr) {
     Endpoint sa;
     sa.addr = addr;
     return operator<<(os, sa);
@@ -70,7 +70,7 @@ bool Dim::parse(Endpoint * end, string_view src, int defaultPort) {
 }
 
 //===========================================================================
-ostream & Dim::operator<<(ostream & os, const Endpoint & src) {
+ostream & Dim::operator<<(ostream & os, Endpoint const & src) {
     sockaddr_storage sas;
     copy(&sas, src);
     wchar_t tmp[256];
@@ -97,7 +97,7 @@ ostream & Dim::operator<<(ostream & os, const Endpoint & src) {
 ***/
 
 //===========================================================================
-void Dim::copy(sockaddr_storage * out, const Endpoint & src) {
+void Dim::copy(sockaddr_storage * out, Endpoint const & src) {
     *out = {};
     if (!src.addr.data[0]
         && !src.addr.data[1]
@@ -120,16 +120,16 @@ void Dim::copy(sockaddr_storage * out, const Endpoint & src) {
 }
 
 //===========================================================================
-void Dim::copy(Endpoint * out, const sockaddr_storage & storage) {
+void Dim::copy(Endpoint * out, sockaddr_storage const & storage) {
     *out = {};
     if (storage.ss_family == AF_INET) {
-        auto ia = reinterpret_cast<const sockaddr_in &>(storage);
+        auto ia = reinterpret_cast<sockaddr_in const &>(storage);
         out->port = ntohs(ia.sin_port);
         out->addr.data[2] = kIpv4MappedAddress;
         out->addr.data[3] = ntohl(ia.sin_addr.s_addr);
     } else {
         assert(storage.ss_family == AF_INET6);
-        auto ia = reinterpret_cast<const sockaddr_in6 &>(storage);
+        auto ia = reinterpret_cast<sockaddr_in6 const &>(storage);
         out->port = ntohs(ia.sin6_port);
         auto uint32addr = reinterpret_cast<uint32_t *>(ia.sin6_addr.u.Byte);
         out->addr.data[0] = ntohl(uint32addr[0]);

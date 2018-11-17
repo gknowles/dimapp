@@ -51,13 +51,13 @@ public:
 
     //-----------------------------------------------------------------------
     // for connectors
-    virtual void onSocketConnect(const SocketInfo & info) {};
+    virtual void onSocketConnect(SocketInfo const & info) {};
     virtual void onSocketConnectFailed() {};
 
     //-----------------------------------------------------------------------
     // for listeners
     // Returns true if the socket is accepted
-    virtual bool onSocketAccept(const SocketInfo & info) { return true; };
+    virtual bool onSocketAccept(SocketInfo const & info) { return true; };
 
     //-----------------------------------------------------------------------
     // for both
@@ -81,7 +81,7 @@ public:
     // Method invoked inside the socketWrite() call that causes the waiting
     // bytes to exceed zero. Runs as an asynchronous event task when the
     // buffers empty.
-    virtual void onSocketBufferChanged(const SocketBufferInfo & info) {}
+    virtual void onSocketBufferChanged(SocketBufferInfo const & info) {}
 
 private:
     friend class SocketBase;
@@ -113,8 +113,8 @@ private:
 // TCP_FASTOPEN if possible so try to keep the data <= 1460 bytes.
 void socketConnect(
     ISocketNotify * notify,
-    const Endpoint & remote,
-    const Endpoint & local = {}, // 0 for OS selected
+    Endpoint const & remote,
+    Endpoint const & local = {}, // 0 for OS selected
     std::string_view data = {},
     Duration timeout = {} // 0 for default timeout
 );
@@ -137,12 +137,12 @@ void socketConnect(
 ***/
 
 //===========================================================================
-void socketListen(IFactory<ISocketNotify> * factory, const Endpoint & local);
-void socketCloseWait(IFactory<ISocketNotify> * factory, const Endpoint & local);
+void socketListen(IFactory<ISocketNotify> * factory, Endpoint const & local);
+void socketCloseWait(IFactory<ISocketNotify> * factory, Endpoint const & local);
 
 //===========================================================================
 template <typename S>
-inline void socketListen(const Endpoint & local) {
+inline void socketListen(Endpoint const & local) {
     static_assert(std::is_base_of_v<ISocketNotify, S>);
     auto factory = getFactory<ISocketNotify, S>();
     socketListen(factory, local);
@@ -150,7 +150,7 @@ inline void socketListen(const Endpoint & local) {
 
 //===========================================================================
 template <typename S>
-inline void socketCloseWait(const Endpoint & local) {
+inline void socketCloseWait(Endpoint const & local) {
     static_assert(std::is_base_of_v<ISocketNotify, S>);
     auto factory = getFactory<ISocketNotify, S>();
     socketCloseWait(factory, local);
@@ -180,10 +180,10 @@ void socketRead(ISocketNotify * notify);
 
 struct SocketBuffer {
     char * const data;
-    const int capacity;
+    int const capacity;
 
     // for internal use
-    const int owner;
+    int const owner;
 
     SocketBuffer(char * const data, int capacity, int owner)
         : data{data}

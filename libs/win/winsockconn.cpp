@@ -32,8 +32,8 @@ class ConnSocket : public SocketBase {
 public:
     static void connect(
         ISocketNotify * notify,
-        const Endpoint & remote,
-        const Endpoint & local,
+        Endpoint const & remote,
+        Endpoint const & local,
         string_view initialData,
         Duration timeout
     );
@@ -139,8 +139,8 @@ static void pushConnectFailed(ISocketNotify * notify) {
 // static
 void ConnSocket::connect(
     ISocketNotify * notify,
-    const Endpoint & remote,
-    const Endpoint & local,
+    Endpoint const & remote,
+    Endpoint const & local,
     string_view data,
     Duration timeout
 ) {
@@ -355,8 +355,8 @@ void Dim::iSocketSetConnectTimeout(SOCKET s, Duration wait) {
 //===========================================================================
 void Dim::socketConnect(
     ISocketNotify * notify,
-    const Endpoint & remote,
-    const Endpoint & local,
+    Endpoint const & remote,
+    Endpoint const & local,
     string_view data,
     Duration timeout
 ) {

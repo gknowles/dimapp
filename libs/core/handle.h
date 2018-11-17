@@ -104,7 +104,7 @@ public:
     Iterator() {}
     Iterator(Node * base, Node * end);
 
-    bool operator!=(const Iterator & right) const;
+    bool operator!=(Iterator const & right) const;
     std::pair<H, T *> operator*();
     Iterator & operator++();
 };
@@ -125,7 +125,7 @@ HandleMapBase::Iterator<H, T>::Iterator(Node * base, Node * end)
 
 //===========================================================================
 template<typename H, typename T>
-bool HandleMapBase::Iterator<H, T>::operator!=(const Iterator & right) const {
+bool HandleMapBase::Iterator<H, T>::operator!=(Iterator const & right) const {
     return node != right.node;
 }
 

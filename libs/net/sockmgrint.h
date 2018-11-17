@@ -46,7 +46,7 @@ public:
     void onSocketDisconnect() override;
     void onSocketDestroy() override = 0;
     bool onSocketRead(AppSocketData & data) override;
-    void onSocketBufferChanged(const AppSocketBufferInfo & info) override;
+    void onSocketBufferChanged(AppSocketBufferInfo const & info) override;
 
 private:
     ISockMgrBase & m_mgr;
@@ -69,11 +69,11 @@ public:
     bool shutdown();
 
     virtual bool listening() const = 0;
-    virtual void setEndpoints(const Endpoint * addrs, size_t count) = 0;
+    virtual void setEndpoints(Endpoint const * addrs, size_t count) = 0;
     virtual bool onShutdown(bool firstTry) = 0;
 
     // Inherited via IConfigNotify
-    virtual void onConfigChange(const XDocument & doc) override = 0;
+    virtual void onConfigChange(XDocument const & doc) override = 0;
 
 protected:
     void init();

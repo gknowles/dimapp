@@ -16,14 +16,14 @@ using namespace Dim;
 ***/
 
 //===========================================================================
-TokenTable::TokenTable(const Token * src, size_t count) {
+TokenTable::TokenTable(Token const * src, size_t count) {
     if (!count)
         return;
 
-    const Token * eptr = src + count;
+    Token const * eptr = src + count;
     m_hashLen = 0;
-    for (const Token * a = src + 1; a != eptr; ++a) {
-        for (const Token * b = src; b != a; ++b) {
+    for (Token const * a = src + 1; a != eptr; ++a) {
+        for (Token const * b = src; b != a; ++b) {
             int pos = 0;
             while (a->name[pos] == b->name[pos]) {
                 if (!a->name[pos])
@@ -105,16 +105,16 @@ bool TokenTable::find(int * out, std::string_view name) const {
 }
 
 //===========================================================================
-bool TokenTable::find(int * out, const char name[], size_t nameLen) const {
+bool TokenTable::find(int * out, char const name[], size_t nameLen) const {
     size_t num = size(m_byName);
     size_t hash = hashStr(name, (int) min((size_t) m_hashLen, nameLen));
     size_t pos = hash % num;
     int distance = 0;
     for (;;) {
-        const Index & ndx = m_byName[pos];
+        Index const & ndx = m_byName[pos];
         if (distance > ndx.distance)
             break;
-        const Value & val = m_values[ndx.pos];
+        Value const & val = m_values[ndx.pos];
         if (val.hash == hash
             && (size_t) val.nameLen <= nameLen
             && strncmp(val.token.name, name, nameLen) == 0
@@ -136,10 +136,10 @@ bool TokenTable::find(char const ** const out, int id) const {
     size_t pos = id % num;
     int distance = 0;
     for (;;) {
-        const Index & ndx = m_byId[pos];
+        Index const & ndx = m_byId[pos];
         if (distance > ndx.distance)
             break;
-        const Value & val = m_values[ndx.pos];
+        Value const & val = m_values[ndx.pos];
         if (val.token.id == id) {
             *out = val.token.name;
             return true;
@@ -170,13 +170,13 @@ TokenTable::Iterator TokenTable::end() const {
 ***/
 
 //===========================================================================
-TokenTable::Iterator::Iterator(const Token * ptr)
+TokenTable::Iterator::Iterator(Token const * ptr)
     : m_current{ptr}
 {}
 
 //===========================================================================
 TokenTable::Iterator & TokenTable::Iterator::operator++() {
-    auto ptr = reinterpret_cast<const Value *>(m_current);
-    m_current = reinterpret_cast<const Token *>(ptr + 1);
+    auto ptr = reinterpret_cast<Value const *>(m_current);
+    m_current = reinterpret_cast<Token const *>(ptr + 1);
     return *this;
 }

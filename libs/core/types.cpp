@@ -24,7 +24,7 @@ static TokenTable::Token s_runModes[] = {
 static TokenTable s_runModeTbl{s_runModes};
 
 //===========================================================================
-const char * Dim::toString(RunMode mode, const char def[]) {
+char const * Dim::toString(RunMode mode, char const def[]) {
     return tokenTableGetName(s_runModeTbl, mode, def);
 }
 

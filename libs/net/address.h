@@ -44,16 +44,16 @@ struct Address {
     bool isIpv4() const;
     uint32_t getIpv4() const;
 
-    bool operator==(const Address & right) const;
-    bool operator<(const Address & right) const;
+    bool operator==(Address const & right) const;
+    bool operator<(Address const & right) const;
     explicit operator bool() const;
 };
 struct Endpoint {
     Address addr;
     unsigned port{0};
 
-    bool operator==(const Endpoint & right) const;
-    bool operator<(const Endpoint & right) const;
+    bool operator==(Endpoint const & right) const;
+    bool operator<(Endpoint const & right) const;
     explicit operator bool() const;
 };
 struct Network {
@@ -64,13 +64,13 @@ struct Network {
 
 namespace std {
 template <> struct hash<Dim::Address> {
-    size_t operator()(const Dim::Address & val) const;
+    size_t operator()(Dim::Address const & val) const;
 };
 template <> struct hash<Dim::Endpoint> {
-    size_t operator()(const Dim::Endpoint & val) const;
+    size_t operator()(Dim::Endpoint const & val) const;
 };
 template <> struct hash<Dim::Network> {
-    size_t operator()(const Dim::Network & val) const;
+    size_t operator()(Dim::Network const & val) const;
 };
 } // namespace std
 
@@ -79,8 +79,8 @@ namespace Dim {
 [[nodiscard]] bool parse(Address * addr, std::string_view src);
 [[nodiscard]] bool parse(Endpoint * end, std::string_view src, int defaultPort);
 
-std::ostream & operator<<(std::ostream & os, const Address & addr);
-std::ostream & operator<<(std::ostream & os, const Endpoint & end);
+std::ostream & operator<<(std::ostream & os, Address const & addr);
+std::ostream & operator<<(std::ostream & os, Endpoint const & end);
 std::istream & operator>>(std::istream & in, Address & out);
 std::istream & operator>>(std::istream & in, Endpoint & out);
 
@@ -88,8 +88,8 @@ std::istream & operator>>(std::istream & in, Endpoint & out);
 //===========================================================================
 // Native
 //===========================================================================
-void copy(sockaddr_storage * out, const Endpoint & end);
-void copy(Endpoint * out, const sockaddr_storage & storage);
+void copy(sockaddr_storage * out, Endpoint const & end);
+void copy(Endpoint * out, sockaddr_storage const & storage);
 
 
 /****************************************************************************
@@ -104,7 +104,7 @@ class IEndpointNotify {
 public:
     virtual ~IEndpointNotify() = default;
     // count of 0 means either no results or some kind of error occurred
-    virtual void onEndpointFound(const Endpoint * ptr, int count) = 0;
+    virtual void onEndpointFound(Endpoint const * ptr, int count) = 0;
 };
 
 void endpointQuery(

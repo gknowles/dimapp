@@ -70,13 +70,13 @@ public:
     void read() override;
 
     // ISocketNotify
-    void onSocketConnect(const SocketInfo & info) override;
+    void onSocketConnect(SocketInfo const & info) override;
     void onSocketConnectFailed() override;
-    bool onSocketAccept(const SocketInfo & info) override;
+    bool onSocketAccept(SocketInfo const & info) override;
     void onSocketDisconnect() override;
     void onSocketDestroy() override;
     bool onSocketRead(SocketData & data) override;
-    void onSocketBufferChanged(const SocketBufferInfo & info) override;
+    void onSocketBufferChanged(SocketBufferInfo const & info) override;
 
 private:
     Duration onTimer(TimePoint now) override;
@@ -152,7 +152,7 @@ void IAppSocket::write(IAppSocketNotify * notify, string_view data) {
 
 //===========================================================================
 // static
-void IAppSocket::write(IAppSocketNotify * notify, const CharBuf & data) {
+void IAppSocket::write(IAppSocketNotify * notify, CharBuf const & data) {
     if (auto sock = notify->m_socket) {
         for (auto && v : data.views()) {
             sock->write(v);
@@ -209,7 +209,7 @@ void IAppSocket::setNotify(IAppSocketNotify * notify) {
 }
 
 //===========================================================================
-void IAppSocket::notifyConnect(const AppSocketInfo & info) {
+void IAppSocket::notifyConnect(AppSocketInfo const & info) {
     m_accept = info;
     m_notify->onSocketConnect(m_accept);
 }
@@ -225,7 +225,7 @@ void IAppSocket::notifyPingRequired() {
 }
 
 //===========================================================================
-bool IAppSocket::notifyAccept(const AppSocketInfo & info) {
+bool IAppSocket::notifyAccept(AppSocketInfo const & info) {
     m_accept = info;
     if (m_notify)
         return m_notify->onSocketAccept(m_accept);
@@ -270,7 +270,7 @@ void IAppSocket::notifyDestroy(bool deleteThis) {
 static bool findFactory(
     AppSocket::Family * family,
     IFactory<IAppSocketNotify> ** fact,
-    const Endpoint & localEnd,
+    Endpoint const & localEnd,
     string_view data
 ) {
     // find best matching factory endpoint for each family
@@ -388,7 +388,7 @@ bool IAppSocket::notifyRead(AppSocketData & data) {
 }
 
 //===========================================================================
-void IAppSocket::notifyBufferChanged(const AppSocketBufferInfo & info) {
+void IAppSocket::notifyBufferChanged(AppSocketBufferInfo const & info) {
     if (m_notify)
         m_notify->onSocketBufferChanged(info);
 }
@@ -462,7 +462,7 @@ void RawSocket::read() {
 }
 
 //===========================================================================
-void RawSocket::onSocketConnect(const SocketInfo & info) {
+void RawSocket::onSocketConnect(SocketInfo const & info) {
     AppSocketInfo tmp = {};
     tmp.local = info.local;
     tmp.remote = info.remote;
@@ -475,7 +475,7 @@ void RawSocket::onSocketConnectFailed() {
 }
 
 //===========================================================================
-bool RawSocket::onSocketAccept(const SocketInfo & info) {
+bool RawSocket::onSocketAccept(SocketInfo const & info) {
     AppSocketInfo tmp = {};
     tmp.local = info.local;
     tmp.remote = info.remote;
@@ -499,7 +499,7 @@ bool RawSocket::onSocketRead(SocketData & data) {
 }
 
 //===========================================================================
-void RawSocket::onSocketBufferChanged(const SocketBufferInfo & info) {
+void RawSocket::onSocketBufferChanged(SocketBufferInfo const & info) {
     AppSocketBufferInfo ai;
     ai.incomplete = info.incomplete;
     ai.waiting = info.waiting;
@@ -550,13 +550,13 @@ AppSocket::MatchType RawMatch::onMatch(
 
 namespace {
 class AppXmlNotify : public IConfigNotify {
-    void onConfigChange(const XDocument & doc) override;
+    void onConfigChange(XDocument const & doc) override;
 };
 } // namespace
 static AppXmlNotify s_appXml;
 
 //===========================================================================
-void AppXmlNotify::onConfigChange(const XDocument & doc) {
+void AppXmlNotify::onConfigChange(XDocument const & doc) {
     s_disableNoDataTimeout = configNumber(doc, "DisableNoDataTimeout");
     timerUpdate(
         &s_unmatchedTimer,
@@ -638,7 +638,7 @@ void Dim::socketWrite(IAppSocketNotify * notify, string_view data) {
 }
 
 //===========================================================================
-void Dim::socketWrite(IAppSocketNotify * notify, const CharBuf & data) {
+void Dim::socketWrite(IAppSocketNotify * notify, CharBuf const & data) {
     IAppSocket::write(notify, data);
 }
 
@@ -659,8 +659,8 @@ void Dim::socketRead(IAppSocketNotify * notify) {
 //===========================================================================
 void Dim::socketConnect(
     IAppSocketNotify * notify,
-    const Endpoint & remote,
-    const Endpoint & local,
+    Endpoint const & remote,
+    Endpoint const & local,
     string_view data,
     Duration wait
 ) {
@@ -679,7 +679,7 @@ void Dim::socketAddFamily(
 }
 
 //===========================================================================
-static EndpointInfo * findInfo_LK(const Endpoint & end, bool findAlways) {
+static EndpointInfo * findInfo_LK(Endpoint const & end, bool findAlways) {
     for (auto && ep : s_endpoints) {
         if (ep.endpoint == end)
             return &ep;
@@ -697,7 +697,7 @@ static EndpointInfo * findInfo_LK(const Endpoint & end, bool findAlways) {
 static bool addFactory(
     IFactory<IAppSocketNotify> * factory,
     FactoryFlags flags,
-    const Endpoint & end,
+    Endpoint const & end,
     AppSocket::Family fam
 ) {
     auto info = findInfo_LK(end, true);
@@ -715,7 +715,7 @@ static bool addFactory(
 //===========================================================================
 void Dim::socketListen(
     IFactory<IAppSocketNotify> * factory,
-    const Endpoint & end,
+    Endpoint const & end,
     AppSocket::Family fam,
     bool console
 ) {
@@ -729,7 +729,7 @@ void Dim::socketListen(
 //===========================================================================
 void Dim::socketCloseWait(
     IFactory<IAppSocketNotify> * factory,
-    const Endpoint & end,
+    Endpoint const & end,
     AppSocket::Family fam
 ) {
     for (;;) {
@@ -777,7 +777,7 @@ void Dim::socketCloseWait(
 //===========================================================================
 void Dim::socketAddFilter(
     IFactory<IAppSocketNotify> * factory,
-    const Endpoint & end,
+    Endpoint const & end,
     AppSocket::Family fam
 ) {
     addFactory(factory, {}, end, fam);

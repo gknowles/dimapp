@@ -26,16 +26,16 @@ public:
 
 public:
     BitView() = default;
-    BitView(const BitView & from) = default;
+    BitView(BitView const & from) = default;
     BitView(uint64_t * src, size_t srcLen);
 
     explicit operator bool() const { return !empty(); }
-    bool operator==(const BitView & right) const;
+    bool operator==(BitView const & right) const;
 
     bool empty() const { return !m_size; }    // view across nothing
     size_t size() const { return m_size; }    // number of uint64_t's
     uint64_t * data() { return m_data; }
-    const uint64_t * data() const { return m_data; }
+    uint64_t const * data() const { return m_data; }
     BitView & remove_prefix(size_t numUint64);
     BitView & remove_suffix(size_t numUint64);
 

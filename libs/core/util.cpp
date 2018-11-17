@@ -49,7 +49,7 @@ void Dim::cryptRandomBytes(void * vptr, size_t count) {
 *
 ***/
 
-static const unsigned char s_hexToNibble[256] = {
+static unsigned char const s_hexToNibble[256] = {
     16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
     16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
     16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,

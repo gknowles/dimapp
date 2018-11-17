@@ -19,11 +19,11 @@ using namespace Dim;
 *
 ***/
 
-const unsigned kLittleEndian = 0x1234;
-const unsigned kBigEndian = 0x4321;
+unsigned const kLittleEndian = 0x1234;
+unsigned const kBigEndian = 0x4321;
 
-const unsigned kByteOrder = kLittleEndian;
-const bool kNativeUnaligned64 = true;
+unsigned const kByteOrder = kLittleEndian;
+bool const kNativeUnaligned64 = true;
 
 
 /****************************************************************************
@@ -64,10 +64,10 @@ Seed::Seed () {
 ***/
 
 //===========================================================================
-static uint64_t get64le(const void * ptr) {
+static uint64_t get64le(void const * ptr) {
     if constexpr (kByteOrder == kLittleEndian) {
         if constexpr (kNativeUnaligned64) {
-            return *static_cast<const uint64_t *>(ptr);
+            return *static_cast<uint64_t const *>(ptr);
         } else {
             uint64_t out;
             memcpy(&out, ptr, sizeof(out));
@@ -75,7 +75,7 @@ static uint64_t get64le(const void * ptr) {
         }
     } else {
         if constexpr (kNativeUnaligned64) {
-            return bswap64(*static_cast<const uint64_t *>(ptr));
+            return bswap64(*static_cast<uint64_t const *>(ptr));
         } else {
             uint64_t out;
             memcpy(&out, ptr, sizeof(out));
@@ -123,14 +123,14 @@ static void sipRound(
 ***/
 
 //===========================================================================
-size_t Dim::hashBytes(const void * ptr, size_t count) {
+size_t Dim::hashBytes(void const * ptr, size_t count) {
     static Seed seed;
     uint64_t v0 = seed.v0;
     uint64_t v1 = seed.v1;
     uint64_t v2 = seed.v2;
     uint64_t v3 = seed.v3;
 
-    auto * src = static_cast<const unsigned char *>(ptr);
+    auto * src = static_cast<unsigned char const *>(ptr);
     size_t wlen = count & ~7;
     auto * esrc = src + wlen;
     uint64_t m;
@@ -168,13 +168,13 @@ size_t Dim::hashBytes(const void * ptr, size_t count) {
 }
 
 //===========================================================================
-size_t Dim::hashStr(const char src[]) {
+size_t Dim::hashStr(char const src[]) {
     return hashBytes(src, strlen(src));
 }
 
 //===========================================================================
-size_t Dim::hashStr(const char src[], size_t maxlen) {
-    if (auto * eptr = static_cast<const char *>(memchr(src, 0, maxlen)))
+size_t Dim::hashStr(char const src[], size_t maxlen) {
+    if (auto * eptr = static_cast<char const *>(memchr(src, 0, maxlen)))
         maxlen = eptr - src;
     return hashBytes(src, maxlen);
 }

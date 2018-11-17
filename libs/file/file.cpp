@@ -134,7 +134,7 @@ void FileAppendStream::write_LK() {
     if (m_numWrites == m_maxWrites)
         return;
 
-    const char * writeBuf;
+    char const * writeBuf;
     size_t writeCount;
     auto epos = (int) ((m_buf.data() - m_buffers) / m_bufLen);
     if (m_fullBufs > epos) {

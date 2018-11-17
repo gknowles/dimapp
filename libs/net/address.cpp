@@ -23,7 +23,7 @@ using namespace Dim;
 ***/
 
 //===========================================================================
-size_t std::hash<Address>::operator()(const Address & val) const {
+size_t std::hash<Address>::operator()(Address const & val) const {
     size_t out = 0;
     hashCombine(&out, std::hash<int32_t>{}(val.data[0]));
     hashCombine(&out, std::hash<int32_t>{}(val.data[1]));
@@ -34,12 +34,12 @@ size_t std::hash<Address>::operator()(const Address & val) const {
 }
 
 //===========================================================================
-bool Address::operator==(const Address & right) const {
+bool Address::operator==(Address const & right) const {
     return memcmp(this, &right, sizeof *this) == 0;
 }
 
 //===========================================================================
-bool Address::operator<(const Address & right) const {
+bool Address::operator<(Address const & right) const {
     return memcmp(this, &right, sizeof *this) < 0;
 }
 
@@ -78,7 +78,7 @@ istream & Dim::operator>>(istream & in, Address & out) {
 ***/
 
 //===========================================================================
-size_t std::hash<Endpoint>::operator()(const Endpoint & val) const {
+size_t std::hash<Endpoint>::operator()(Endpoint const & val) const {
     size_t out = 0;
     hashCombine(&out, std::hash<Address>{}(val.addr));
     hashCombine(&out, std::hash<unsigned>{}(val.port));
@@ -86,12 +86,12 @@ size_t std::hash<Endpoint>::operator()(const Endpoint & val) const {
 }
 
 //===========================================================================
-bool Endpoint::operator==(const Endpoint & right) const {
+bool Endpoint::operator==(Endpoint const & right) const {
     return port == right.port && addr == right.addr;
 }
 
 //===========================================================================
-bool Endpoint::operator<(const Endpoint & right) const {
+bool Endpoint::operator<(Endpoint const & right) const {
     return tie(addr, port) < tie(right.addr, right.port);
 }
 
@@ -117,7 +117,7 @@ istream & Dim::operator>>(istream & in, Endpoint & out) {
 ***/
 
 //===========================================================================
-size_t std::hash<Network>::operator()(const Network & val) const {
+size_t std::hash<Network>::operator()(Network const & val) const {
     size_t out = 0;
     hashCombine(&out, std::hash<Address>{}(val.addr));
     hashCombine(&out, std::hash<int>{}(val.mask));

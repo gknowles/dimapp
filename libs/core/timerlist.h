@@ -72,7 +72,7 @@ public:
     void unlink(T * notify);
 
     List<T, Tag> & values() { return m_nodes; }
-    const List<T, Tag> & values() const { return m_nodes; }
+    List<T, Tag> const & values() const { return m_nodes; }
 
 private:
     Duration onTimer(TimePoint now) override;

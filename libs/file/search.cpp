@@ -31,7 +31,7 @@ struct FileIter::Info {
 };
 
 //===========================================================================
-static bool match(const FileIter::Info & info) {
+static bool match(FileIter::Info const & info) {
     if (info.entry.isdir) {
         if ((info.flags & (FileIter::fDirsFirst | FileIter::fDirsLast)) == 0)
             return false;
@@ -140,22 +140,22 @@ FileIter::FileIter(
 }
 
 //===========================================================================
-bool FileIter::operator== (const FileIter & right) const {
+bool FileIter::operator== (FileIter const & right) const {
     return m_info == right.m_info;
 }
 
 //===========================================================================
-bool FileIter::operator!= (const FileIter & right) const {
+bool FileIter::operator!= (FileIter const & right) const {
     return m_info != right.m_info;
 }
 
 //===========================================================================
-const FileIter::Entry & FileIter::operator* () const {
+FileIter::Entry const & FileIter::operator* () const {
     return m_info->entry;
 }
 
 //===========================================================================
-const FileIter::Entry * FileIter::operator-> () const {
+FileIter::Entry const * FileIter::operator-> () const {
     return &m_info->entry;
 }
 

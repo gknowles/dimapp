@@ -327,13 +327,13 @@ void ServerConn::send(CharBuf * out, string_view src) {
 
 namespace {
 class AppXmlNotify : public IConfigNotify {
-    void onConfigChange(const XDocument & doc) override;
+    void onConfigChange(XDocument const & doc) override;
 };
 } // namespace
 static AppXmlNotify s_appXml;
 
 //===========================================================================
-void AppXmlNotify::onConfigChange(const XDocument & doc) {
+void AppXmlNotify::onConfigChange(XDocument const & doc) {
     vector<CertKey> keys;
     auto xcerts = configElement(doc, "Certificates");
     for (auto && xstore : elems(xcerts, "Store")) {

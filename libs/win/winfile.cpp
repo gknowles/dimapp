@@ -17,14 +17,14 @@ using namespace Dim;
 
 namespace {
 
-const int64_t kNpos = -1;
+int64_t const kNpos = -1;
 
 struct WinFileInfo : public HandleContent {
     FileHandle m_f;
     string m_path;
     HANDLE m_handle{INVALID_HANDLE_VALUE};
     File::OpenMode m_mode{File::fReadOnly};
-    unordered_map<const void *, File::ViewMode> m_views;
+    unordered_map<void const *, File::ViewMode> m_views;
 };
 
 class IFileOpBase : protected IWinOverlappedNotify {
@@ -54,7 +54,7 @@ private:
     virtual void onNotify() = 0;
     virtual bool onRun() = 0;
     virtual bool asyncOp() = 0;
-    virtual const char * logOnError() = 0;
+    virtual char const * logOnError() = 0;
 
     // IWinOverlappedNotify
     void onTask() override;
@@ -87,7 +87,7 @@ enum SECTION_INHERIT {
 using NtMapViewOfSectionFn = DWORD(WINAPI *)(
     HANDLE hSec,
     HANDLE hProc,
-    const void ** base,
+    void const ** base,
     ULONG_PTR zeroBits,
     SIZE_T commitSize,
     LARGE_INTEGER * secOffset,
@@ -98,7 +98,7 @@ using NtMapViewOfSectionFn = DWORD(WINAPI *)(
 );
 using NtUnmapViewOfSectionFn = DWORD(WINAPI *)(
     HANDLE hProc,
-    const void * base
+    void const * base
 );
 using NtCloseFn = DWORD(WINAPI *)(HANDLE h);
 
@@ -279,7 +279,7 @@ public:
     bool onRun() override;
     void onNotify() override;
     bool asyncOp() override { return m_notify != nullptr; }
-    const char * logOnError() override { return "ReadFile"; }
+    char const * logOnError() override { return "ReadFile"; }
 
 private:
     IFileReadNotify * m_notify;
@@ -361,7 +361,7 @@ public:
     bool onRun() override;
     void onNotify() override;
     bool asyncOp() override { return m_notify != nullptr; }
-    const char * logOnError() override { return "WriteFile"; }
+    char const * logOnError() override { return "WriteFile"; }
 
 private:
     IFileWriteNotify * m_notify;
@@ -879,7 +879,7 @@ void Dim::fileWrite(
     IFileWriteNotify * notify,
     FileHandle f,
     int64_t off,
-    const void * buf,
+    void const * buf,
     size_t bufLen,
     TaskQueueHandle hq
 ) {
@@ -894,7 +894,7 @@ void Dim::fileWrite(
 size_t Dim::fileWriteWait(
     FileHandle f,
     int64_t off,
-    const void * buf,
+    void const * buf,
     size_t bufLen
 ) {
     auto file = getInfo(f);
@@ -907,7 +907,7 @@ size_t Dim::fileWriteWait(
 void Dim::fileAppend(
     IFileWriteNotify * notify,
     FileHandle f,
-    const void * buf,
+    void const * buf,
     size_t bufLen,
     TaskQueueHandle hq
 ) {
@@ -918,7 +918,7 @@ void Dim::fileAppend(
 }
 
 //===========================================================================
-size_t Dim::fileAppendWait(FileHandle f, const void * buf, size_t bufLen) {
+size_t Dim::fileAppendWait(FileHandle f, void const * buf, size_t bufLen) {
     return fileWriteWait(f, 0xffff'ffff'ffff'ffff, buf, bufLen);
 }
 
@@ -1145,7 +1145,7 @@ static bool openView(
     err = (WinError::NtStatus) s_NtMapViewOfSection(
         sec,
         GetCurrentProcess(),
-        (const void **)&base,
+        (void const **)&base,
         0,  // number of high order address bits that must be zero
         0,  // commit size
         &viewOffset,
@@ -1176,7 +1176,7 @@ static bool openView(
 
 //===========================================================================
 bool Dim::fileOpenView(
-    const char *& base,
+    char const *& base,
     FileHandle f,
     File::ViewMode mode,
     int64_t offset,
@@ -1201,7 +1201,7 @@ bool Dim::fileOpenView(
 }
 
 //===========================================================================
-void Dim::fileCloseView(FileHandle f, const void * view) {
+void Dim::fileCloseView(FileHandle f, void const * view) {
     auto file = getInfo(f);
     auto found = file->m_views.erase(view);
     if (!found) {
@@ -1219,7 +1219,7 @@ void Dim::fileCloseView(FileHandle f, const void * view) {
 }
 
 //===========================================================================
-void Dim::fileExtendView(FileHandle f, const void * view, int64_t length) {
+void Dim::fileExtendView(FileHandle f, void const * view, int64_t length) {
     auto file = getInfo(f);
     auto i = file->m_views.find(view);
     if (i == file->m_views.end()) {

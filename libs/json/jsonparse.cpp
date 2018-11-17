@@ -94,8 +94,8 @@ using namespace Dim::Detail;
 // Parser function covering:
 //  - 140 states
 [[gsl::suppress(bounds)]]
-bool JsonParser::parse (const char src[]) {
-    const char * ptr = src;
+bool JsonParser::parse (char const src[]) {
+    char const * ptr = src;
     unsigned char ch;
     goto state2;
 
@@ -3220,8 +3220,8 @@ state315:
 // Parser function covering:
 //  - 180 states
 [[gsl::suppress(bounds)]]
-bool JsonParser::stateArrayTail (const char *& ptr) {
-    const char * last = nullptr;
+bool JsonParser::stateArrayTail (char const *& ptr) {
+    char const * last = nullptr;
     unsigned char ch;
     goto state2;
 
@@ -7540,8 +7540,8 @@ state495:
 // Parser function covering:
 //  - 251 states
 [[gsl::suppress(bounds)]]
-bool JsonParser::stateObjectTail (const char *& ptr) {
-    const char * last = nullptr;
+bool JsonParser::stateObjectTail (char const *& ptr) {
+    char const * last = nullptr;
     unsigned char ch;
     goto state2;
 

@@ -28,7 +28,7 @@ enum RunMode {
     kRunStopping,
 };
 
-const char * toString(RunMode mode, const char def[] = "");
+char const * toString(RunMode mode, char const def[] = "");
 RunMode fromString(std::string_view src, RunMode def);
 
 
@@ -46,8 +46,8 @@ protected:
     NoCopy() = default;
     ~NoCopy() = default;
 
-    NoCopy(const NoCopy &) = delete;
-    NoCopy & operator=(const NoCopy &) = delete;
+    NoCopy(NoCopy const &) = delete;
+    NoCopy & operator=(NoCopy const &) = delete;
 };
 
 
@@ -83,7 +83,7 @@ template <typename T>
 class ForwardListIterator {
 public:
     ForwardListIterator(T * node);
-    bool operator!=(const ForwardListIterator & right);
+    bool operator!=(ForwardListIterator const & right);
     ForwardListIterator & operator++();
     T & operator*();
     T * operator->();
@@ -100,7 +100,7 @@ ForwardListIterator<T>::ForwardListIterator(T * node)
 
 //===========================================================================
 template <typename T>
-bool ForwardListIterator<T>::operator!=(const ForwardListIterator & right) {
+bool ForwardListIterator<T>::operator!=(ForwardListIterator const & right) {
     return m_current != right.m_current;
 }
 

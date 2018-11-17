@@ -74,13 +74,13 @@ static Path makeAppDir(string_view path) {
 
 namespace {
 class ConfigAppXml : public IConfigNotify {
-    void onConfigChange(const XDocument & doc) override;
+    void onConfigChange(XDocument const & doc) override;
 };
 } // namespace
 static ConfigAppXml s_appXml;
 
 //===========================================================================
-void ConfigAppXml::onConfigChange(const XDocument & doc) {
+void ConfigAppXml::onConfigChange(XDocument const & doc) {
     shutdownDisableTimeout(configNumber(doc, "DisableShutdownTimeout"));
     s_logDir = makeAppDir(configString(doc, "LogDir", "log"));
     s_dataDir = makeAppDir(configString(doc, "DataDir", "data"));
@@ -174,7 +174,7 @@ void Dim::iAppSetFlags(AppFlags flags) {
 ***/
 
 //===========================================================================
-const string & Dim::appName() {
+string const & Dim::appName() {
     return s_appName;
 }
 
@@ -189,12 +189,12 @@ AppFlags Dim::appFlags() {
 }
 
 //===========================================================================
-const Path & Dim::appRootDir() {
+Path const & Dim::appRootDir() {
     return s_rootDir;
 }
 
 //===========================================================================
-const Path & Dim::appConfigDir() {
+Path const & Dim::appConfigDir() {
     return s_confDir;
 }
 
@@ -204,7 +204,7 @@ bool Dim::appConfigPath(Path * out, string_view file, bool cine) {
 }
 
 //===========================================================================
-const Path & Dim::appLogDir() {
+Path const & Dim::appLogDir() {
     return s_logDir;
 }
 
@@ -214,7 +214,7 @@ bool Dim::appLogPath(Path * out, string_view file, bool cine) {
 }
 
 //===========================================================================
-const Path & Dim::appDataDir() {
+Path const & Dim::appDataDir() {
     return s_dataDir;
 }
 
@@ -224,7 +224,7 @@ bool Dim::appDataPath(Path * out, string_view file, bool cine) {
 }
 
 //===========================================================================
-const Path & Dim::appCrashDir() {
+Path const & Dim::appCrashDir() {
     return s_crashDir;
 }
 

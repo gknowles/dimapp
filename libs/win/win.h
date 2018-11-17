@@ -89,34 +89,34 @@ struct WinServiceConfig {
         };
     };
 
-    const char * serviceName {};
+    char const * serviceName {};
     Type serviceType {};
     Start startType {};
     ErrCtrl errorControl {};
-    const char * progWithArgs {};
-    const char * loadOrderGroup {};
+    char const * progWithArgs {};
+    char const * loadOrderGroup {};
     unsigned loadOrderTag {};
-    std::vector<const char *> deps;
-    const char * account {};
-    const char * password {};
-    const char * displayName {};
-    const char * desc {};
+    std::vector<char const *> deps;
+    char const * account {};
+    char const * password {};
+    char const * displayName {};
+    char const * desc {};
 
     bool failureFlag {};
     Duration failureReset {};
-    const char * rebootMsg {}; // used by FailAction::kReboot
-    const char * failureProgWithArgs {}; // used by FailAction::kRunCommand
+    char const * rebootMsg {}; // used by FailAction::kReboot
+    char const * failureProgWithArgs {}; // used by FailAction::kRunCommand
     std::vector<Action> failureActions;
 
     unsigned preferredNode {(unsigned) -1}; // -1 for none
     Duration preshutdownTimeout {};
-    std::vector<const char *> privs;
+    std::vector<char const *> privs;
     SidType sidType {};
 
     // NOTE: TRIGGERS NOT IMPLEMENTED
     std::vector<Trigger> triggers;
 };
 
-bool winSvcInstall(const WinServiceConfig & sconf);
+bool winSvcInstall(WinServiceConfig const & sconf);
 
 } // namespace

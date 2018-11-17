@@ -40,10 +40,10 @@ public:
     HuffDecoder(const EncodeItem items[], size_t count);
 
     bool decode(
-        const char ** out,
+        char const ** out,
         ITempHeap * heap,
         size_t unusedBits,
-        const char src[],
+        char const src[],
         size_t count
     ) const;
 
@@ -55,8 +55,8 @@ private:
 } // namespace
 
 struct Dim::HpackFieldView {
-    const char * name;
-    const char * value;
+    char const * name;
+    char const * value;
 };
 
 
@@ -68,7 +68,7 @@ struct Dim::HpackFieldView {
 
 // static table has the following 61 members (not counting 0) as defined by
 // rfc7541 appendix A
-const HpackFieldView kStaticTable[] = {
+HpackFieldView const kStaticTable[] = {
     {},
     {":authority", ""},
     {":method", "GET"},
@@ -135,7 +135,7 @@ const HpackFieldView kStaticTable[] = {
 static_assert(size(kStaticTable) == 62);
 
 // Huffman encoding as defined by rfc7541 appendix B
-const EncodeItem kEncodeTable[] = {
+EncodeItem const kEncodeTable[] = {
     {0x1ff8, 13},     //     (  0) |11111111|11000
     {0x7fffd8, 23},   //     (  1) |11111111|11111111|1011000
     {0xfffffe2, 28},  //     (  2) |11111111|11111111|11111110|0010
@@ -403,7 +403,7 @@ static_assert(size(kEncodeTable) == 257);
 *
 ***/
 
-const HuffDecoder s_decode{kEncodeTable, size(kEncodeTable)};
+HuffDecoder const s_decode{kEncodeTable, size(kEncodeTable)};
 
 
 /****************************************************************************
@@ -413,12 +413,12 @@ const HuffDecoder s_decode{kEncodeTable, size(kEncodeTable)};
 ***/
 
 //===========================================================================
-static size_t fieldSize(const HpackFieldView & fld) {
+static size_t fieldSize(HpackFieldView const & fld) {
     return strlen(fld.name) + strlen(fld.value) + 32;
 }
 
 //===========================================================================
-static size_t fieldSize(const HpackDynField & fld) {
+static size_t fieldSize(HpackDynField const & fld) {
     return size(fld.name) + size(fld.value) + 32;
 }
 
@@ -449,8 +449,8 @@ void HpackEncode::endBlock() {}
 
 //===========================================================================
 void HpackEncode::header(
-    const char name[],
-    const char value[],
+    char const name[],
+    char const value[],
     HpackFlags flags
 ) {
     // (0x00) - literal header field without indexing (new name)
@@ -461,18 +461,18 @@ void HpackEncode::header(
 }
 
 //===========================================================================
-void HpackEncode::header(HttpHdr name, const char value[], HpackFlags flags) {
+void HpackEncode::header(HttpHdr name, char const value[], HpackFlags flags) {
     header(to_view(name).data(), value, flags);
 }
 
 //===========================================================================
-void HpackEncode::write(const char str[]) {
+void HpackEncode::write(char const str[]) {
     size_t len = strlen(str);
     write(str, len);
 }
 
 //===========================================================================
-void HpackEncode::write(const char str[], size_t len) {
+void HpackEncode::write(char const str[], size_t len) {
     // high bit 0 - encode as raw bytes (not Huffman)
     write(len, 0x00, 7);
     m_out->append(str, len);
@@ -510,7 +510,7 @@ void HpackEncode::write(size_t val, char prefix, int prefixBits) {
 HuffDecoder::HuffDecoder(const EncodeItem items[], size_t count) {
     int shortest = numeric_limits<int>::max();
     int longest = 0;
-    const EncodeItem *ptr = items, *term = ptr + count;
+    EncodeItem const *ptr = items, *term = ptr + count;
     for (; ptr != term; ++ptr) {
         shortest = min(shortest, ptr->bits);
         longest = max(longest, ptr->bits);
@@ -552,8 +552,8 @@ static bool read(
     int * out,
     int bits,
     int & availBits,
-    const char *& ptr,
-    const char * eptr
+    char const *& ptr,
+    char const * eptr
 ) {
     if (ptr == eptr) {
         assert(availBits == 8);
@@ -587,16 +587,16 @@ static bool read(
 
 //===========================================================================
 bool HuffDecoder::decode(
-    const char ** out,
+    char const ** out,
     ITempHeap * heap,
     size_t unusedBits,
-    const char src[],
+    char const src[],
     size_t count
 ) const {
     assert(count);
     int avail = (int)unusedBits;
-    const char * ptr = src;
-    const char * eptr = src + count;
+    char const * ptr = src;
+    char const * eptr = src + count;
     char * optr = heap->alloc<char>(2 * count);
     *out = optr;
     int val;
@@ -644,7 +644,7 @@ void HpackDecode::setTableSize(size_t tableSize) {
 bool HpackDecode::parse(
     IHpackDecodeNotify * notify,
     ITempHeap * heap,
-    const char src[],
+    char const src[],
     size_t srcLen
 ) {
     while (srcLen) {
@@ -658,7 +658,7 @@ bool HpackDecode::parse(
 bool HpackDecode::readInstruction(
     IHpackDecodeNotify * notify,
     ITempHeap * heap,
-    const char *& src,
+    char const *& src,
     size_t & srcLen
 ) {
     enum {
@@ -736,7 +736,7 @@ bool HpackDecode::readIndexedField(
     HpackFieldView * out,
     ITempHeap * heap,
     size_t prefixBits,
-    const char *& src,
+    char const *& src,
     size_t & srcLen
 ) {
     size_t index;
@@ -762,7 +762,7 @@ bool HpackDecode::readIndexedName(
     HpackFieldView * out,
     ITempHeap * heap,
     size_t prefixBits,
-    const char *& src,
+    char const *& src,
     size_t & srcLen
 ) {
     size_t index;
@@ -796,7 +796,7 @@ void HpackDecode::pruneDynTable() {
 bool HpackDecode::read(
     size_t * out,
     size_t prefixBits,
-    const char *& src,
+    char const *& src,
     size_t & srcLen
 ) {
     assert(prefixBits >= 1 && prefixBits <= 8);
@@ -825,9 +825,9 @@ bool HpackDecode::read(
 
 //===========================================================================
 bool HpackDecode::read(
-    const char ** out,
+    char const ** out,
     ITempHeap * heap,
-    const char *& src,
+    char const *& src,
     size_t & srcLen
 ) {
     size_t len;

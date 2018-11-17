@@ -43,7 +43,7 @@ bool JsonStream::parseMore(char src[]) {
 }
 
 //===========================================================================
-bool JsonStream::fail(const char errmsg[]) {
+bool JsonStream::fail(char const errmsg[]) {
     m_errmsg = m_heap.strdup(errmsg);
     return false;
 }

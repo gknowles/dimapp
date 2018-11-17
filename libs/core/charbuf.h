@@ -32,38 +32,38 @@ public:
 
 public:
     CharBuf() {}
-    CharBuf(const CharBuf & from) { insert(0, from); }
+    CharBuf(CharBuf const & from) { insert(0, from); }
     CharBuf(CharBuf && from) = default;
     ~CharBuf();
     explicit operator bool() const { return !empty(); }
 
-    CharBuf & operator=(const CharBuf & buf) { return assign(buf); }
+    CharBuf & operator=(CharBuf const & buf) { return assign(buf); }
     CharBuf & operator=(CharBuf && buf) = default;
     CharBuf & operator=(char ch) { return assign(ch); }
-    CharBuf & operator=(const char s[]) { return assign(s); }
+    CharBuf & operator=(char const s[]) { return assign(s); }
     CharBuf & operator=(std::string_view str) { return assign(str); }
     CharBuf & operator+=(char ch) { pushBack(ch); return *this; }
-    CharBuf & operator+=(const char s[]) { return append(s); }
+    CharBuf & operator+=(char const s[]) { return append(s); }
     CharBuf & operator+=(std::string_view str) { return append(str); }
-    CharBuf & operator+=(const CharBuf & src) { return append(src); }
+    CharBuf & operator+=(CharBuf const & src) { return append(src); }
     CharBuf & assign(char ch) { clear(); pushBack(ch); return *this; }
     CharBuf & assign(size_t numCh, char ch);
     CharBuf & assign(std::nullptr_t);
-    CharBuf & assign(const char s[]);
-    CharBuf & assign(const char s[], size_t slen);
+    CharBuf & assign(char const s[]);
+    CharBuf & assign(char const s[], size_t slen);
     CharBuf & assign(std::string_view str, size_t pos = 0, size_t count = -1);
-    CharBuf & assign(const CharBuf & buf, size_t pos = 0, size_t count = -1);
+    CharBuf & assign(CharBuf const & buf, size_t pos = 0, size_t count = -1);
     char & front();
-    const char & front() const;
+    char const & front() const;
     char & back();
-    const char & back() const;
+    char const & back() const;
     bool empty() const;
     size_t size() const;
-    const char * data() const;
-    const char * data(size_t pos, size_t count = -1) const;
+    char const * data() const;
+    char const * data(size_t pos, size_t count = -1) const;
     char * data();
     char * data(size_t pos, size_t count = -1);
-    const char * c_str() const;
+    char const * c_str() const;
     char * c_str();
     std::string_view view() const;
     std::string_view view(size_t pos, size_t count = -1) const;
@@ -72,11 +72,11 @@ public:
     void resize(size_t count);
     CharBuf & insert(size_t pos, size_t numCh, char ch);
     CharBuf & insert(size_t pos, std::nullptr_t);
-    CharBuf & insert(size_t pos, const char s[]);
-    CharBuf & insert(size_t pos, const char s[], size_t count);
+    CharBuf & insert(size_t pos, char const s[]);
+    CharBuf & insert(size_t pos, char const s[], size_t count);
     CharBuf & insert(
         size_t pos,
-        const CharBuf & buf,
+        CharBuf const & buf,
         size_t bufPos = 0,
         size_t bufLen = -1
     );
@@ -87,30 +87,30 @@ public:
     CharBuf & popBack();
     CharBuf & append(size_t numCh, char ch);
     CharBuf & append(std::nullptr_t);
-    CharBuf & append(const char s[]);
-    CharBuf & append(const char s[], size_t slen);
+    CharBuf & append(char const s[]);
+    CharBuf & append(char const s[], size_t slen);
     CharBuf & append(std::string_view str, size_t pos = 0, size_t count = -1);
-    CharBuf & append(const CharBuf & buf, size_t pos = 0, size_t count = -1);
-    int compare(const char s[], size_t count) const;
-    int compare(size_t pos, size_t count, const char s[], size_t slen) const;
+    CharBuf & append(CharBuf const & buf, size_t pos = 0, size_t count = -1);
+    int compare(char const s[], size_t count) const;
+    int compare(size_t pos, size_t count, char const s[], size_t slen) const;
     int compare(std::string_view str) const;
     int compare(size_t pos, size_t count, std::string_view str) const;
-    int compare(const CharBuf & buf, size_t pos = 0, size_t count = -1) const;
+    int compare(CharBuf const & buf, size_t pos = 0, size_t count = -1) const;
     int compare(
         size_t pos,
         size_t count,
-        const CharBuf & buf,
+        CharBuf const & buf,
         size_t bufPos = 0,
         size_t bufLen = -1
     ) const;
     CharBuf & replace(size_t pos, size_t count, size_t numCh, char ch);
     CharBuf & replace(size_t pos, size_t count, std::nullptr_t);
-    CharBuf & replace(size_t pos, size_t count, const char s[]);
-    CharBuf & replace(size_t pos, size_t count, const char s[], size_t slen);
+    CharBuf & replace(size_t pos, size_t count, char const s[]);
+    CharBuf & replace(size_t pos, size_t count, char const s[], size_t slen);
     CharBuf & replace(
         size_t pos,
         size_t count,
-        const CharBuf & src,
+        CharBuf const & src,
         size_t srcPos = 0,
         size_t srcLen = -1
     );
@@ -142,11 +142,11 @@ private:
     std::pair<const_buffer_iterator, int> find(size_t pos) const;
     buffer_iterator split(buffer_iterator it, int pos);
     CharBuf & insert(buffer_iterator it, int pos, size_t numCh, char ch);
-    CharBuf & insert(buffer_iterator it, int pos, const char src[]);
+    CharBuf & insert(buffer_iterator it, int pos, char const src[]);
     CharBuf & insert(
         buffer_iterator it,
         int pos,
-        const char src[],
+        char const src[],
         size_t srcLen
     );
     CharBuf & insert(
@@ -182,10 +182,10 @@ public:
         size_t pos,
         size_t count
     );
-    bool operator!= (const ViewIterator & right);
+    bool operator!= (ViewIterator const & right);
     ViewIterator & operator++();
-    const std::string_view & operator*() const { return m_view; }
-    const std::string_view * operator->() const { return &m_view; }
+    std::string_view const & operator*() const { return m_view; }
+    std::string_view const * operator->() const { return &m_view; }
 };
 
 //===========================================================================
@@ -196,7 +196,7 @@ inline CharBuf::ViewIterator begin (CharBuf::ViewIterator iter) {
 
 //===========================================================================
 // Free
-inline CharBuf::ViewIterator end (const CharBuf::ViewIterator & iter) {
+inline CharBuf::ViewIterator end (CharBuf::ViewIterator const & iter) {
     return {};
 }
 
@@ -207,12 +207,12 @@ inline CharBuf::ViewIterator end (const CharBuf::ViewIterator & iter) {
 *
 ***/
 
-bool operator==(const CharBuf & left, std::string_view right);
-bool operator==(std::string_view left, const CharBuf & right);
-bool operator==(const CharBuf & left, const CharBuf & right);
+bool operator==(CharBuf const & left, std::string_view right);
+bool operator==(std::string_view left, CharBuf const & right);
+bool operator==(CharBuf const & left, CharBuf const & right);
 
-std::string toString(const CharBuf & buf, size_t pos = 0, size_t count = -1);
+std::string toString(CharBuf const & buf, size_t pos = 0, size_t count = -1);
 
-std::ostream & operator<<(std::ostream & os, const CharBuf & buf);
+std::ostream & operator<<(std::ostream & os, CharBuf const & buf);
 
 } // namespace
