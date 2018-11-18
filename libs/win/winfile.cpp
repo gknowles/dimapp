@@ -472,7 +472,8 @@ static FileHandle allocHandle(
     }
 
     unique_lock lk{s_fileMut};
-    auto f = file->m_f = s_files.insert(file.release());
+    auto f = s_files.insert(file.get());
+    file.release()->m_f = f;
     return f;
 }
 
@@ -624,7 +625,8 @@ static FileHandle attachStdHandle(
     }
 
     unique_lock lk{s_fileMut};
-    auto f = file->m_f = s_files.insert(file.release());
+    auto f = s_files.insert(file.get());
+    file.release()->m_f = f;
     return f;
 }
 
