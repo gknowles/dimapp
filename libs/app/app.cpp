@@ -95,7 +95,7 @@ void ConfigAppXml::onConfigChange(XDocument const & doc) {
 
 namespace {
 struct FnProxyAppNotify : public IAppNotify {
-    function<void(int, char*[])> fn;
+    function<void(int, char *[])> fn;
 
     void onAppRun() override;
 };

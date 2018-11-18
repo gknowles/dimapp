@@ -382,7 +382,7 @@ bool IAppSocket::notifyRead(AppSocketData & data) {
 
     // replay data received so far
     AppSocketData tmp;
-    tmp.data = const_cast<char*>(view.data());
+    tmp.data = const_cast<char *>(view.data());
     tmp.bytes = (int) view.size();
     return m_notify->onSocketRead(tmp);
 }
