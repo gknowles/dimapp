@@ -91,7 +91,7 @@ class TlsConnBase
 {
 public:
     TlsConnBase();
-    void setSuites(const TlsCipherSuite suites[], size_t count);
+    void setSuites(TlsCipherSuite const suites[], size_t count);
     std::vector<TlsCipherSuite> const & suites() const;
 
     bool recv(

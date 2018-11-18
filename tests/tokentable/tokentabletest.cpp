@@ -32,7 +32,7 @@ using namespace Dim;
 static void app(int argc, char *argv[]) {
     int line = 0;
 
-    const TokenTable::Token numbers[] = {
+    TokenTable::Token const numbers[] = {
         {1, "one"},
         {2, "two"},
         {3, "three"},
@@ -41,7 +41,7 @@ static void app(int argc, char *argv[]) {
         {21, "twenty-one"},
         {22, "twenty-two"},
     };
-    const TokenTable numberTbl(numbers, size(numbers));
+    TokenTable const numberTbl(numbers, size(numbers));
 
     EXPECT(tokenTableGetEnum(numberTbl, "invalid", 0) == 0);
     for (auto && tok : numbers) {

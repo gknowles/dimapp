@@ -581,7 +581,7 @@ auto XNodeIterator<T>::operator++() -> XNodeIterator {
 }
 
 template XNodeIterator<XNode>;
-template XNodeIterator<const XNode>;
+template XNodeIterator<XNode const>;
 
 //===========================================================================
 // XNodeRange
@@ -593,7 +593,7 @@ XNodeRange<XNode> Dim::elems(XNode * node, string_view name) {
 }
 
 //===========================================================================
-XNodeRange<const XNode> Dim::elems(XNode const * node, string_view name) {
+XNodeRange<XNode const> Dim::elems(XNode const * node, string_view name) {
     node = firstChild(node, name);
     XType type = name.empty() ? XType::kElement : XType::kInvalid;
     return {{node, type, name}};
@@ -606,7 +606,7 @@ XNodeRange<XNode> Dim::nodes(XNode * node, XType type) {
 }
 
 //===========================================================================
-XNodeRange<const XNode> Dim::nodes(XNode const * node, XType type) {
+XNodeRange<XNode const> Dim::nodes(XNode const * node, XType type) {
     node = firstChild(node, {}, type);
     return {{node, type, {}}};
 }
@@ -623,7 +623,7 @@ XAttrRange<XAttr> Dim::attrs(XNode * node) {
 }
 
 //===========================================================================
-XAttrRange<const XAttr> Dim::attrs(XNode const * node) {
+XAttrRange<XAttr const> Dim::attrs(XNode const * node) {
     if (nodeType(node) != XType::kElement)
         return {{nullptr}};
 
@@ -649,10 +649,10 @@ auto ForwardListIterator<XAttr>::operator++() -> ForwardListIterator & {
 }
 
 //===========================================================================
-auto ForwardListIterator<const XAttr>::operator++() -> ForwardListIterator & {
+auto ForwardListIterator<XAttr const>::operator++() -> ForwardListIterator & {
     m_current = next(const_cast<XAttr *>(m_current));
     return *this;
 }
 
 template ForwardListIterator<XAttr>;
-template ForwardListIterator<const XAttr>;
+template ForwardListIterator<XAttr const>;

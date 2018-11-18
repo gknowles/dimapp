@@ -241,7 +241,7 @@ inline bool AbnfParser::onDefinedAsSetEnd() {
 }
 
 //===========================================================================
-inline bool AbnfParser::onGroupStart(const char * ptr) {
+inline bool AbnfParser::onGroupStart(char const * ptr) {
     Element * elem = m_rules.addSequence(m_elems.back(), m_min, m_max);
     m_elems.push_back(elem);
     if (*ptr == '[') {
@@ -252,7 +252,7 @@ inline bool AbnfParser::onGroupStart(const char * ptr) {
 }
 
 //===========================================================================
-inline bool AbnfParser::onGroupEnd(const char * eptr) {
+inline bool AbnfParser::onGroupEnd(char const * eptr) {
     if (eptr[-1] == ']') {
         assert(m_elems.back()->type == Element::kSequence);
         m_elems.pop_back();

@@ -37,7 +37,7 @@ struct DecodeItem {
 };
 class HuffDecoder {
 public:
-    HuffDecoder(const EncodeItem items[], size_t count);
+    HuffDecoder(EncodeItem const items[], size_t count);
 
     bool decode(
         char const ** out,
@@ -507,7 +507,7 @@ void HpackEncode::write(size_t val, char prefix, int prefixBits) {
 //===========================================================================
 // HuffDecoder
 //===========================================================================
-HuffDecoder::HuffDecoder(const EncodeItem items[], size_t count) {
+HuffDecoder::HuffDecoder(EncodeItem const items[], size_t count) {
     int shortest = numeric_limits<int>::max();
     int longest = 0;
     EncodeItem const *ptr = items, *term = ptr + count;

@@ -204,8 +204,8 @@ struct HttpMsg::HdrName {
 
     ForwardListIterator<HdrValue> begin();
     ForwardListIterator<HdrValue> end();
-    ForwardListIterator<const HdrValue> begin() const;
-    ForwardListIterator<const HdrValue> end() const;
+    ForwardListIterator<HdrValue const> begin() const;
+    ForwardListIterator<HdrValue const> end() const;
 };
 
 struct HttpMsg::HdrList {
@@ -213,8 +213,8 @@ struct HttpMsg::HdrList {
 
     ForwardListIterator<HdrName> begin();
     ForwardListIterator<HdrName> end();
-    ForwardListIterator<const HdrName> begin() const;
-    ForwardListIterator<const HdrName> end() const;
+    ForwardListIterator<HdrName const> begin() const;
+    ForwardListIterator<HdrName const> end() const;
 
     explicit operator bool() const { return m_firstHeader; }
 };

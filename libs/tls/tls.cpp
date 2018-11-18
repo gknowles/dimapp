@@ -57,7 +57,7 @@ static HandleMap<TlsConnHandle, TlsConnBase> s_conns;
 TlsConnBase::TlsConnBase() {}
 
 //===========================================================================
-void TlsConnBase::setSuites(const TlsCipherSuite suites[], size_t count) {
+void TlsConnBase::setSuites(TlsCipherSuite const suites[], size_t count) {
     m_suites.assign(suites, suites + count);
     sort(m_suites.begin(), m_suites.end());
     auto last = unique(m_suites.begin(), m_suites.end());
@@ -380,7 +380,7 @@ void ServerConn::onTlsHandshake(TlsClientHelloMsg const & msg) {}
 ***/
 
 //===========================================================================
-TlsConnHandle Dim::tlsAccept(const TlsCipherSuite suites[], size_t count) {
+TlsConnHandle Dim::tlsAccept(TlsCipherSuite const suites[], size_t count) {
     auto conn = new ServerConn;
     conn->setSuites(suites, count);
     return s_conns.insert(conn);

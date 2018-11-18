@@ -11,7 +11,7 @@
 *
 ***/
 
-const char kVersion[] = "1.0.0";
+char const kVersion[] = "1.0.0";
 
 
 /****************************************************************************
@@ -105,8 +105,8 @@ struct Schema {
 *
 ***/
 
-bool writeXsd(Dim::CharBuf * out, const Schema & schema);
+bool writeXsd(Dim::CharBuf * out, Schema const & schema);
 
 Attr::Content convert(Element::Content ec);
 
-void updateXmlFile(const Dim::Path & name, const Dim::CharBuf & content);
+void updateXmlFile(Dim::Path const & name, Dim::CharBuf const & content);

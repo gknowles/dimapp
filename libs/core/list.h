@@ -183,7 +183,7 @@ template <typename T, typename Tag = DefaultTag>
 class List : public NoCopy {
 public:
     using iterator = ListIterator<List, T>;
-    using const_iterator = ListIterator<const List, const T>;
+    using const_iterator = ListIterator<List const, T const>;
     using link_type = ListBaseLink<Tag>;
 
 public:

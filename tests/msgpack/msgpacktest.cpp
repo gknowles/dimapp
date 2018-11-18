@@ -170,7 +170,7 @@ static void app(int argc, char *argv[]) {
     bld.element("compact", true);
     bld.element("schema", 0);
 
-    const char kExpect1[] = "\x82\xa7" "compact\xc3\xa6schema\x0";
+    char const kExpect1[] = "\x82\xa7" "compact\xc3\xa6schema\x0";
     auto ev = string_view(kExpect1, size(kExpect1) - 1);
     EXPECT(buf.view() == ev);
 

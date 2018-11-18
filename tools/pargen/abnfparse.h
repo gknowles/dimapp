@@ -16,11 +16,11 @@ class AbnfParser : public AbnfParserBase {
 public:
     using AbnfParserBase::AbnfParserBase;
 
-    bool parse (const char src[]);
+    bool parse (char const src[]);
     size_t errpos () const { return m_errpos; }
 
 private:
-    bool stateGroupTail (const char *& src);
+    bool stateGroupTail (char const *& src);
 
     // Events
     bool onActionAsEnd ();
@@ -57,8 +57,8 @@ private:
     bool onDecValSimpleEnd ();
     bool onDefinedAsIncrementalEnd ();
     bool onDefinedAsSetEnd ();
-    bool onGroupStart (const char * ptr);
-    bool onGroupEnd (const char * eptr);
+    bool onGroupStart (char const * ptr);
+    bool onGroupEnd (char const * eptr);
     bool onHexValAltFirstEnd ();
     bool onHexValAltSecondEnd ();
     bool onHexValConcatEachEnd ();

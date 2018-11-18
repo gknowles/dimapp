@@ -18,11 +18,11 @@ using namespace Dim;
 namespace {
 
 struct NameValue {
-    const char * name;
-    const char * value;
+    char const * name;
+    char const * value;
     HpackFlags flags;
 
-    bool operator==(const NameValue & right) const;
+    bool operator==(NameValue const & right) const;
 };
 
 class Reader : public IHpackDecodeNotify {
@@ -32,16 +32,16 @@ public:
 private:
     void onHpackHeader(
         HttpHdr id,
-        const char name[],
-        const char value[],
+        char const name[],
+        char const value[],
         HpackFlags flags
     ) override;
 };
 
 struct Test {
-    const char * name;
+    char const * name;
     bool reset;
-    const char * input;
+    char const * input;
     bool result;
     vector<NameValue> headers;
     vector<NameValue> dynTable;
@@ -56,7 +56,7 @@ struct Test {
 *
 ***/
 
-const Test s_tests[] = {
+Test const s_tests[] = {
     {"C.2.1",
      true,
      // @.custom-key.cus
@@ -347,14 +347,14 @@ const Test s_tests[] = {
 ***/
 
 //===========================================================================
-bool NameValue::operator==(const NameValue & right) const {
+bool NameValue::operator==(NameValue const & right) const {
     return strcmp(name, right.name) == 0
         && strcmp(value, right.value) == 0
         && flags == right.flags;
 }
 
 //===========================================================================
-bool operator==(const NameValue & left, const Dim::HpackDynField & right) {
+bool operator==(NameValue const & left, Dim::HpackDynField const & right) {
     return right.name == left.name
         && right.value == left.value;
 }
@@ -369,8 +369,8 @@ bool operator==(const NameValue & left, const Dim::HpackDynField & right) {
 //===========================================================================
 void Reader::onHpackHeader(
     HttpHdr id,
-    const char name[],
-    const char value[],
+    char const name[],
+    char const value[],
     HpackFlags flags
 ) {
     cout << name << ": " << value << "\n";

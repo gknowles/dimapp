@@ -15,7 +15,7 @@ using namespace Dim;
 *
 ***/
 
-const char kVersion[] = "1.0";
+char const kVersion[] = "1.0";
 
 
 /****************************************************************************
@@ -148,7 +148,7 @@ static const uint8_t s_data[] =)";
 
 //===========================================================================
 string_view resWebSiteContent() {
-    return {(const char *) s_data, size(s_data)};
+    return {(char const *) s_data, size(s_data)};
 }
 )";
 }

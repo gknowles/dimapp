@@ -112,7 +112,7 @@ TlsConnHandle tlsConnect(
     TlsCipherSuite const suites[],
     size_t count
 );
-TlsConnHandle tlsAccept(const TlsCipherSuite suites[], size_t count);
+TlsConnHandle tlsAccept(TlsCipherSuite const suites[], size_t count);
 void tlsClose(TlsConnHandle h);
 
 bool tlsRecv(

@@ -55,7 +55,7 @@ template <typename T, typename Enable = void> class StrFrom {};
 
 //===========================================================================
 template <typename T>
-std::ostream & operator<<(std::ostream & os, const StrFrom<T> & str) {
+std::ostream & operator<<(std::ostream & os, StrFrom<T> const & str) {
     os << (std::string_view) str;
     return os;
 }

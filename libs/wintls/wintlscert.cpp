@@ -397,7 +397,7 @@ static bool isSelfSigned(CERT_CONTEXT const * cert) {
 
 //===========================================================================
 static void addCerts(
-    vector<unique_ptr<const CERT_CONTEXT>> & certs,
+    vector<unique_ptr<CERT_CONTEXT const>> & certs,
     CertKey const & key
 ) {
     string idBytes;
@@ -506,7 +506,7 @@ static void addCerts(
 
 //===========================================================================
 static void getCerts(
-    vector<unique_ptr<const CERT_CONTEXT>> & certs,
+    vector<unique_ptr<CERT_CONTEXT const>> & certs,
     CertKey const keys[],
     size_t numKeys,
     vector<string_view> const & dnsNames,
@@ -528,7 +528,7 @@ static void getCerts(
             logMsgInfo() << "Creating temporary self-signed certificate.";
         }
         auto cert = makeCert("wintls.dimapp", dnsNames, ipAddrs);
-        certs.push_back(unique_ptr<const CERT_CONTEXT>(cert));
+        certs.push_back(unique_ptr<CERT_CONTEXT const>(cert));
     }
 }
 
@@ -540,7 +540,7 @@ static void getCerts(
 ***/
 
 //===========================================================================
-void std::default_delete<const CERT_CONTEXT>::operator()(
+void std::default_delete<CERT_CONTEXT const>::operator()(
     CERT_CONTEXT const * ptr
 ) const {
     if (ptr) {
@@ -740,7 +740,7 @@ unique_ptr<CredHandle> Dim::iWinTlsCreateCred(
 ) {
     WinError err{0};
 
-    vector<unique_ptr<const CERT_CONTEXT>> certs;
+    vector<unique_ptr<CERT_CONTEXT const>> certs;
     getCerts(certs, keys, numKeys, dnsNamesForSelfSigned, ipAddrsForSelfSigned);
 
     vector<CERT_CONTEXT const *> ptrs;

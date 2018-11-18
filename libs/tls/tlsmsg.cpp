@@ -117,7 +117,7 @@ static void write(
 }
 
 //===========================================================================
-static void writeSni(TlsRecordWriter * out, const vector<uint8_t> & host) {
+static void writeSni(TlsRecordWriter * out, vector<uint8_t> const & host) {
     if (host.empty())
         return;
 

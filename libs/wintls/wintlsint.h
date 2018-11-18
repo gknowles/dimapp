@@ -20,7 +20,7 @@
 namespace std {
 
 template<>
-struct default_delete<const CERT_CONTEXT> {
+struct default_delete<CERT_CONTEXT const> {
     void operator()(CERT_CONTEXT const * ptr) const;
 };
 

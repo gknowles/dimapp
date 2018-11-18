@@ -50,7 +50,7 @@ int internalTest() {
     bld.member("b", 3);
     bld.end();
 
-    const char kJsonText[] = "{\"a\":[1,\n2\n],\n\"b\":3\n}\n";
+    char const kJsonText[] = "{\"a\":[1,\n2\n],\n\"b\":3\n}\n";
 
     string str = toString(out);
     char * data = str.data();
@@ -76,7 +76,7 @@ int internalTest() {
     bld.array().startValue() << 'a' << ' ' << 'b' << end;
     bld.startValue() << 1 << '+' << 1 << '=' << 2 << end;
     bld.end();
-    const char kTest2[] = "[\"a b\",\n\"1+1=2\"\n]\n";
+    char const kTest2[] = "[\"a b\",\n\"1+1=2\"\n]\n";
     str2 = toString(out);
     EXPECT(str2 == kTest2);
 

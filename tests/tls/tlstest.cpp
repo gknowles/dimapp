@@ -23,7 +23,7 @@ enum TestType : unsigned {
 };
 
 struct Test {
-    const char * name;
+    char const * name;
     TestType flags;
     string input;
     bool result;
@@ -41,7 +41,7 @@ struct Test {
 ***/
 
 // clang-format off
-const Test s_tests[] = {
+Test const s_tests[] = {
     {"connect", fTestReset | fTestClient, {}, true, {}, {}},
     {"simple client hello",
      fTestReset,
@@ -90,10 +90,10 @@ const Test s_tests[] = {
 
 //===========================================================================
 static void app(int argc, char *argv[]) {
-    const TlsCipherSuite kCiphers[] = {
+    TlsCipherSuite const kCiphers[] = {
         TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
     };
-    const char kHost[] = "example.com";
+    char const kHost[] = "example.com";
 
     CharBuf output;
     CharBuf plain;

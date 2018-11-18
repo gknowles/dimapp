@@ -18,20 +18,20 @@ using namespace Dim;
 namespace {
 
 struct NameValue {
-    const char * name;
-    const char * value;
+    char const * name;
+    char const * value;
     unsigned flags;
 
-    bool operator==(const NameValue & right) const;
+    bool operator==(NameValue const & right) const;
 };
 
 struct TestMsg {
     vector<NameValue> headers;
-    const char * body;
+    char const * body;
 };
 
 struct Test {
-    const char * name;
+    char const * name;
     bool reset;
     string input;
     bool result;
@@ -49,7 +49,7 @@ struct Test {
 ***/
 
 // clang-format off
-const Test s_tests[] = {
+Test const s_tests[] = {
     {
         "/a", true,
         {

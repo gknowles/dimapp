@@ -57,11 +57,11 @@ static TaskQueueHandle s_logQ;
 //===========================================================================
 static bool parseAbnf (
     Grammar & rules,
-    const string & src,
+    string const & src,
     bool minRules
 ) {
     AbnfParser parser(rules, minRules);
-    const char * ptr = src.c_str();
+    char const * ptr = src.c_str();
     if (!parser.parse(ptr)) {
         rules.errpos(parser.errpos());
         return false;
@@ -72,7 +72,7 @@ static bool parseAbnf (
 
 //===========================================================================
 static void getCoreRules (Grammar & rules) {
-    const char * coreRules = R"(
+    char const * coreRules = R"(
 ALPHA   =  %x41-5A / %x61-7A ; A-Z / a-z
 BIT     =  "0" / "1"
 CHAR    =  %x01-7F
@@ -217,7 +217,7 @@ static void app (int argc, char * argv[]) {
         .choice(1, "1", "No change to function tags (default).")
         .choice(2, "2", "Add function tags to break rule recursion.")
         .choice(3, "3", "Same as #2, but remove all existing tags first.")
-        .check([](auto & cli, auto & opt, const string & val) {
+        .check([](auto & cli, auto & opt, string const & val) {
             s_cmdopts.resetFunctions = (*opt == 0 || *opt == 3);
             s_cmdopts.markFunctions = (*opt == 2 || *opt == 3);
             return true;
