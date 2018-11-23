@@ -915,8 +915,8 @@ static void routeReset(unsigned reqId, bool internal) {
         return HttpSocket::resetReply(reqId, internal);
 
     struct Task : ITaskNotify {
-        unsigned m_reqId;
-        bool m_internal;
+        unsigned m_reqId{};
+        bool m_internal{};
         void onTask() override {
             HttpSocket::resetReply(m_reqId, m_internal);
             delete this;

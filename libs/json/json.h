@@ -113,7 +113,8 @@ inline IJBuilder & IJBuilder::value(T const & val) {
         t_os.clear();
         t_os.str({});
         t_os << val;
-        return value(std::string_view{t_os.str()});
+        auto tmp = t_os.str();
+        return value(std::string_view{tmp});
     }
 }
 
@@ -200,7 +201,7 @@ private:
     unsigned m_line{0};
     char const * m_errmsg{};
     TempHeap m_heap;
-    Detail::JsonParser * m_base;
+    Detail::JsonParser * m_base{};
 };
 
 

@@ -289,7 +289,8 @@ Path & Path::assign(string_view path, string_view defExt) {
 
 //===========================================================================
 Path & Path::assign(fs::path const & path) {
-    return assign(string_view{path.generic_u8string()});
+    auto tmp = path.generic_u8string();
+    return assign(tmp);
 }
 
 //===========================================================================

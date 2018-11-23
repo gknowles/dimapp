@@ -65,7 +65,7 @@ struct UnpaddedData {
 
 struct ResetStream {
     HttpConnHandle hc;
-    int stream;
+    int stream{};
     shared_ptr<HttpStream> sm;
 };
 

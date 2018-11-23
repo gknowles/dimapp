@@ -191,7 +191,7 @@ private:
 };
 
 struct HttpMsg::HdrValue {
-    char const * m_value;
+    char const * m_value{};
     HdrValue * m_next{};
     HdrValue * m_prev{};
 };

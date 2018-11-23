@@ -25,7 +25,7 @@ namespace {
 
 struct FileIter::Info {
     Path path;
-    Flags flags;
+    Flags flags{};
     vector<DirInfo> pos;
     Entry entry;
 };

@@ -53,8 +53,8 @@ public:
     virtual void onAppRun() = 0;
 
     // argc & argv are set by the framework before the call to onAppRun()
-    int m_argc;
-    char ** m_argv;
+    int m_argc{};
+    char ** m_argv{};
 };
 
 enum AppFlags : unsigned {

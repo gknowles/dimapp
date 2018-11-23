@@ -94,7 +94,7 @@ private:
 
     unsigned m_curType{256}; // content type being decrypted
     unsigned m_recPos{0};
-    unsigned m_textLen;
+    unsigned m_textLen{0};
     TlsCipher * m_cipher{};            // cipher if decrypting
     std::vector<uint8_t> m_ciphertext; // pending ciphertext if decrypting
     CharBuf m_plaintext;               // pending text (incomplete record)

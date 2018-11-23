@@ -38,7 +38,7 @@ maxIntegralChars() {
 template <typename T> constexpr
 std::enable_if_t<std::is_floating_point_v<T>, int>
 maxFloatChars() {
-    auto cnt = 1 // sign
+    constexpr auto cnt = 1 // sign
         + std::numeric_limits<T>::max_digits10 + 1 // digits + decimal point
         + digits10(std::numeric_limits<T>::max_exponent10) + 2; // "e+"
     return (int) cnt;
