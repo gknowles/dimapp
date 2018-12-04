@@ -21,7 +21,11 @@ FileAppendStream::FileAppendStream()
 {}
 
 //===========================================================================
-FileAppendStream::FileAppendStream(int numBufs, int maxWrites, size_t pageSize) {
+FileAppendStream::FileAppendStream(
+    int numBufs,
+    int maxWrites,
+    size_t pageSize
+) {
     init(numBufs, maxWrites, pageSize);
 }
 

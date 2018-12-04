@@ -40,7 +40,6 @@ static MiniDumpWriteDumpFn s_writeDump;
 
 static struct { int sig; void * handler; } s_oldHandlers[] = {
     { SIGABRT },
-    //{ SIGILL },
     //{ SIGSEGV },
 };
 static PTOP_LEVEL_EXCEPTION_FILTER s_oldFilter;
@@ -265,9 +264,7 @@ void Dim::winCrashInitialize() {
     s_oldNewMode = _set_new_mode(1);
 
     //printf(nullptr);
-
     //*(char *) nullptr = 0;
-
     //assert(0);
 }
 
