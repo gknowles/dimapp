@@ -4,4 +4,6 @@ Distributed under the Boost Software License, Version 1.0.
 -->
 
 # resupd
-Update web resources in exe and dll files.
+Builds a web resource from webpack bundle files and either:
+  - updates the resource in exe and dll files
+  - or generates a C++ function that returns the resource data as a string_view.
