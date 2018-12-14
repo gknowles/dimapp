@@ -30,9 +30,10 @@ CharBuf::Buffer::Buffer ()
 {}
 
 //===========================================================================
-CharBuf::Buffer::Buffer (size_t reserve)
+CharBuf::Buffer::Buffer(size_t reserve)
     : data{reserve ? new char[reserve + 1] : nullptr}
     , reserved{(int) reserve}
+    , heapUsed{true}
 {}
 
 //===========================================================================
@@ -47,7 +48,7 @@ CharBuf::Buffer::Buffer(Buffer && from)
 
 //===========================================================================
 CharBuf::Buffer & CharBuf::Buffer::operator=(Buffer && from) {
-    if (data)
+    if (data && heapUsed)
         delete[] data;
     data = from.data;
     from.data = nullptr;
@@ -58,9 +59,10 @@ CharBuf::Buffer & CharBuf::Buffer::operator=(Buffer && from) {
 }
 
 //===========================================================================
-CharBuf::Buffer::~Buffer () {
+CharBuf::Buffer::~Buffer() {
     if (data) {
-        delete[] data;
+        if (heapUsed)
+            delete[] data;
         data = nullptr;
     }
 }
