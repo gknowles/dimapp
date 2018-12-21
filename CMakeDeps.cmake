@@ -187,6 +187,9 @@
 # libs/xml/xmlbaseparsebase.h
 # libs/xml/xmlbaseparseimpl.h
 # libs/xml/xstreamparser.cpp
+# tests/bitview/bitviewtest.cpp
+# tests/bitview/pch.cpp
+# tests/bitview/pch.h
 # tests/charbuf/charbuftest.cpp
 # tests/charbuf/pch.cpp
 # tests/charbuf/pch.h

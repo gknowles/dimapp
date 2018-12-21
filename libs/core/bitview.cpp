@@ -51,6 +51,31 @@ bool BitView::operator[](size_t bitpos) const {
 }
 
 //===========================================================================
+uint64_t BitView::get(size_t bitpos, size_t bitcount) const {
+    assert(bitcount <= kWordBits);
+    auto pos = bitpos / kWordBits;
+    if (pos >= m_size)
+        return 0;
+    auto bit = bitpos % kWordBits;
+    auto bits = kWordBits - bit;
+    if (bits >= bitcount) {
+        if (bits == kWordBits) {
+            return m_data[pos];
+        } else {
+            auto mask = ((uint64_t) 1 << bitcount) - 1;
+            return (m_data[pos] >> bit) & mask;
+        }
+    } else {
+        auto out = m_data[pos] >> bit;
+        if (++pos == m_size)
+            return out;
+        auto mask = ((uint64_t) 1 << (bitcount - bits)) - 1;
+        auto out2 = (m_data[pos] & mask) << bits;
+        return out | out2;
+    }
+}
+
+//===========================================================================
 bool BitView::all() const {
     for (auto i = 0; (size_t) i < m_size; ++i) {
         if (m_data[i] != kWordMax)
@@ -100,7 +125,8 @@ BitView & BitView::set(size_t bitpos) {
 //===========================================================================
 BitView & BitView::set(size_t bitpos, size_t bitcount, uint64_t value) {
     auto pos = bitpos / kWordBits;
-    assert((bitpos + bitcount) / kWordBits < m_size);
+    assert(pos < m_size);
+    assert(!bitcount || (bitpos + bitcount - 1) / kWordBits < m_size);
     assert(bitcount == kWordBits || value < ((uint64_t) 1 << bitcount));
     auto bit = bitpos % kWordBits;
     auto bits = kWordBits - bit;
@@ -110,15 +136,14 @@ BitView & BitView::set(size_t bitpos, size_t bitcount, uint64_t value) {
         } else {
             auto mask = ((uint64_t) 1 << bitcount) - 1;
             mask <<= bit;
-            m_data[pos] = m_data[pos] & ~mask | (value << bit) & mask;
+            m_data[pos] = m_data[pos] & ~mask | (value << bit);
         }
     } else {
         auto mask = ((uint64_t) 1 << bits) - 1;
         mask <<= bit;
-        m_data[pos] = m_data[pos] & ~mask | value & mask;
-        value >>= bit;
-        mask = ~mask;
-        m_data[pos + 1] = m_data[pos + 1] & mask | value & ~mask;
+        m_data[pos] = m_data[pos] & ~mask | (value << bit) & mask;
+        value >>= bits;
+        m_data[pos + 1] = m_data[pos + 1] & mask | value;
     }
     return *this;
 }
