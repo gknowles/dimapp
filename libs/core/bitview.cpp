@@ -98,6 +98,32 @@ BitView & BitView::set(size_t bitpos) {
 }
 
 //===========================================================================
+BitView & BitView::set(size_t bitpos, size_t bitcount, uint64_t value) {
+    auto pos = bitpos / kWordBits;
+    assert((bitpos + bitcount) / kWordBits < m_size);
+    assert(bitcount == kWordBits || value < ((uint64_t) 1 << bitcount));
+    auto bit = bitpos % kWordBits;
+    auto bits = kWordBits - bit;
+    if (bits >= bitcount) {
+        if (bits == kWordBits) {
+            m_data[pos] = value;
+        } else {
+            auto mask = ((uint64_t) 1 << bitcount) - 1;
+            mask <<= bit;
+            m_data[pos] = m_data[pos] & ~mask | (value << bit) & mask;
+        }
+    } else {
+        auto mask = ((uint64_t) 1 << bits) - 1;
+        mask <<= bit;
+        m_data[pos] = m_data[pos] & ~mask | value & mask;
+        value >>= bit;
+        mask = ~mask;
+        m_data[pos + 1] = m_data[pos + 1] & mask | value & ~mask;
+    }
+    return *this;
+}
+
+//===========================================================================
 BitView & BitView::reset() {
     memset(m_data, 0, m_size * sizeof(*m_data));
     return *this;

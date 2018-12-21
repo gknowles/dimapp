@@ -38,6 +38,7 @@ public:
     uint64_t const * data() const { return m_data; }
     BitView & remove_prefix(size_t numUint64);
     BitView & remove_suffix(size_t numUint64);
+    uint64_t get(size_t pos, size_t count);
 
     bool operator[](size_t pos) const;
     bool all() const;
@@ -48,6 +49,7 @@ public:
     BitView & set();
     BitView & set(size_t pos);
     BitView & set(size_t pos, bool value);
+    BitView & set(size_t pos, size_t count, uint64_t value);
     BitView & reset();
     BitView & reset(size_t pos);
     BitView & flip();
