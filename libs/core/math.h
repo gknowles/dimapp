@@ -117,7 +117,7 @@ constexpr int hammingWeight(uint64_t x) {
 namespace Detail {
 
 //===========================================================================
-constexpr int floor_digits10(uint32_t val) {
+constexpr int floorDigits10(uint32_t val) {
     static constexpr uint8_t kTable[] = {
         0, 3, 0, 3, 4, 6, 0, 9, 3, 4, 5, 5, 6, 7, 1, 9,
         2, 3, 6, 8, 4, 5, 7, 2, 6, 8, 7, 2, 8, 1, 1, 9,
@@ -133,7 +133,8 @@ constexpr int floor_digits10(uint32_t val) {
     return kTable[uint32_t(v * UINT64_C(0x07c4'acdd)) >> 27];
 }
 
-constexpr int roundup_digits10(int digits, uint32_t val) {
+//===========================================================================
+constexpr int roundupDigits10(int digits, uint32_t val) {
     static constexpr uint32_t kPowersOf10[] = {
                     1,
                    10,
@@ -154,7 +155,7 @@ constexpr int roundup_digits10(int digits, uint32_t val) {
 //===========================================================================
 // Number of digits required to display a number in decimal
 constexpr int digits10(uint32_t val) {
-    return Detail::roundup_digits10(Detail::floor_digits10(val), val);
+    return Detail::roundupDigits10(Detail::floorDigits10(val), val);
 }
 
 

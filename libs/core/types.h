@@ -214,5 +214,4 @@ std::enable_if_t<is_enum_flags_v<T>, T&> operator^= (T & left, T right) {
     return left = left ^ right;
 }
 
-
 } // namespace
