@@ -104,7 +104,7 @@ static CharBuf toMultiString(T const & strings) {
 ***/
 
 //===========================================================================
-bool Dim::winSvcInstall(WinServiceConfig const & sconf) {
+bool Dim::winSvcCreate(WinServiceConfig const & sconf) {
     auto conf{sconf};
 
     if (!conf.progWithArgs)
@@ -188,7 +188,9 @@ bool Dim::winSvcInstall(WinServiceConfig const & sconf) {
         }
     }
 
-    if (conf.failureFlag) {
+    if (conf.failureFlag == 
+            WinServiceConfig::FailureFlag::kCrashOrNonZeroExitCode
+    ) {
         SERVICE_FAILURE_ACTIONS_FLAG faf = {};
         faf.fFailureActionsOnNonCrashFailures = true;
         if (!ChangeServiceConfig2W(

@@ -50,8 +50,8 @@ static void setState(unsigned status) {
         SERVICE_WIN32_OWN_PROCESS,
         status,
         SERVICE_ACCEPT_STOP,
-        NO_ERROR,
-        0, // service specific exit code
+        ERROR_SERVICE_SPECIFIC_ERROR,
+        NO_ERROR, // service specific exit code
         0, // check point
         30'000 // 30 second wait
     };
