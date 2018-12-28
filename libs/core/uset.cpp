@@ -675,17 +675,17 @@ bool BitmapImpl::insert(Node & node, unsigned value) {
     assert(relBase(value, node.depth) == node.base);
     auto base = (uint64_t *) node.values;
     value = relValue(value, node.depth);
-    assert(value < numBits());
-    auto ptr = base + value / 64;
-    auto tmp = *ptr;
-    *ptr |= 1ull << (value % 64);
-    if (tmp == *ptr)
-        return false;
+    BitView bits{base, numInt64s()};
+    auto tmp = bits.word(value);
     if (!tmp) {
+        bits.set(value);
         node.numValues += 1;
         return true;
     }
-    if (*ptr != 0xffff'ffff'ffff'ffff)
+    if (bits.testAndSet(value))
+        return false;
+
+    if (tmp != 0xffff'ffff'ffff'ffff || node.numValues != numInt64s())
         return true;
     for (unsigned i = 0; i < numInt64s(); ++i) {
         if (base[i] != 0xffff'ffff'ffff'ffff)
@@ -712,13 +712,10 @@ bool BitmapImpl::erase(Node & node, unsigned value) {
     assert(relBase(value, node.depth) == node.base);
     auto base = (uint64_t *) node.values;
     value = relValue(value, node.depth);
-    assert(value < numBits());
-    auto ptr = base + value / 64;
-    auto tmp = *ptr;
-    *ptr &= ~(1ull << (value % 64));
-    if (tmp == *ptr)
+    BitView bits{base, numInt64s()};
+    if (!bits.testAndReset(value))
         return false;
-    if (*ptr || --node.numValues)
+    if (bits.word(value) || --node.numValues)
         return true;
 
     // convert to empty
