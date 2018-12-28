@@ -54,13 +54,20 @@ public:
     BitView & reset(size_t pos);
     BitView & flip();
     BitView & flip(size_t pos);
+    bool testAndSet(size_t pos);
+    bool testAndSet(size_t pos, bool value);
+    bool testAndReset(size_t pos);
+    bool testAndFlip(size_t pos);
 
-    size_t find(size_t bitpos, bool value);
-    size_t find(size_t bitpos = 0);
-    size_t findZero(size_t bitpos = 0);
-    size_t rfind(size_t bitpos, bool value);
-    size_t rfind(size_t bitpos = npos);
-    size_t rfindZero(size_t bitpos = npos);
+    size_t find(size_t bitpos, bool value) const;
+    size_t find(size_t bitpos = 0) const;
+    size_t findZero(size_t bitpos = 0) const;
+    size_t rfind(size_t bitpos, bool value) const;
+    size_t rfind(size_t bitpos = npos) const;
+    size_t rfindZero(size_t bitpos = npos) const;
+
+    // Returns word that contains the bit
+    uint64_t word(size_t bitpos) const;
 
 private:
     uint64_t * m_data = nullptr;
@@ -76,12 +83,17 @@ inline BitView & BitView::set(size_t pos, bool value) {
 }
 
 //===========================================================================
-inline size_t BitView::find(size_t pos, bool value) {
+inline bool BitView::testAndSet(size_t pos, bool value) {
+    return value ? testAndSet(pos) : testAndReset(pos);
+}
+
+//===========================================================================
+inline size_t BitView::find(size_t pos, bool value) const {
     return value ? find(pos) : findZero(pos);
 }
 
 //===========================================================================
-inline size_t BitView::rfind(size_t pos, bool value) {
+inline size_t BitView::rfind(size_t pos, bool value) const {
     return value ? rfind(pos) : rfindZero(pos);
 }
 

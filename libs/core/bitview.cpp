@@ -178,7 +178,44 @@ BitView & BitView::flip(size_t bitpos) {
 }
 
 //===========================================================================
-size_t BitView::find(size_t bitpos) {
+bool BitView::testAndSet(size_t bitpos) {
+    auto pos = bitpos / kWordBits;
+    assert(pos < m_size);
+    auto mask = (uint64_t) 1 << bitpos % kWordBits;
+    auto tmp = m_data[pos];
+    m_data[pos] |= mask;
+    return tmp & mask;
+}
+
+//===========================================================================
+bool BitView::testAndReset(size_t bitpos) {
+    auto pos = bitpos / kWordBits;
+    assert(pos < m_size);
+    auto mask = (uint64_t) 1 << bitpos % kWordBits;
+    auto tmp = m_data[pos];
+    m_data[pos] &= ~mask;
+    return tmp & mask;
+}
+
+//===========================================================================
+bool BitView::testAndFlip(size_t bitpos) {
+    auto pos = bitpos / kWordBits;
+    assert(pos < m_size);
+    auto mask = (uint64_t) 1 << bitpos % kWordBits;
+    auto tmp = m_data[pos];
+    m_data[pos] ^= mask;
+    return tmp & mask;
+}
+
+//===========================================================================
+uint64_t BitView::word(size_t bitpos) const {
+    auto pos = bitpos / kWordBits;
+    assert(pos < m_size);
+    return m_data[pos];
+}
+
+//===========================================================================
+size_t BitView::find(size_t bitpos) const {
     auto pos = bitpos / kWordBits;
     if (pos >= m_size)
         return npos;
@@ -194,7 +231,7 @@ size_t BitView::find(size_t bitpos) {
 }
 
 //===========================================================================
-size_t BitView::findZero(size_t bitpos) {
+size_t BitView::findZero(size_t bitpos) const {
     auto pos = bitpos / kWordBits;
     if (pos >= m_size)
         return npos;
@@ -210,7 +247,7 @@ size_t BitView::findZero(size_t bitpos) {
 }
 
 //===========================================================================
-size_t BitView::rfind(size_t bitpos) {
+size_t BitView::rfind(size_t bitpos) const {
     auto pos = bitpos / kWordBits;
     if (pos < m_size) {
         if (auto val = m_data[pos] & ~(kWordMax << bitpos % kWordBits))
@@ -227,7 +264,7 @@ size_t BitView::rfind(size_t bitpos) {
 }
 
 //===========================================================================
-size_t BitView::rfindZero(size_t bitpos) {
+size_t BitView::rfindZero(size_t bitpos) const {
     auto pos = bitpos / kWordBits;
     if (pos < m_size) {
         if (auto val = ~m_data[pos] & ~(kWordMax << bitpos % kWordBits))
