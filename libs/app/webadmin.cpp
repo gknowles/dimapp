@@ -58,7 +58,7 @@ class JsonCounters : public IHttpRouteNotify {
 void JsonCounters::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     perfGetValues(&m_values);
 
-    HttpResponse res;
+    HttpResponse res(kHttpStatusOk, "application/json");
     JBuilder bld(&res.body());
 
     bld.object();
@@ -67,8 +67,6 @@ void JsonCounters::onHttpRequest(unsigned reqId, HttpRequest & msg) {
         bld.valueRaw(perf.value);
     }
     bld.end();
-    res.addHeader(kHttpContentType, "application/json");
-    res.addHeader(kHttp_Status, "200");
     httpRouteReply(reqId, move(res));
 }
 
@@ -87,11 +85,9 @@ class JsonRoutes : public IHttpRouteNotify {
 
 //===========================================================================
 void JsonRoutes::onHttpRequest(unsigned reqId, HttpRequest & msg) {
-    HttpResponse res;
+    HttpResponse res(kHttpStatusOk, "application/json");
     JBuilder bld(&res.body());
     httpRouteGetRoutes(&bld);
-    res.addHeader(kHttpContentType, "application/json");
-    res.addHeader(kHttp_Status, "200");
     httpRouteReply(reqId, move(res));
 }
 

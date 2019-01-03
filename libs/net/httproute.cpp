@@ -940,7 +940,7 @@ void Dim::httpRouteInternalError(unsigned reqId) {
 
 //===========================================================================
 void Dim::httpRouteReplyNotFound(unsigned reqId, HttpRequest const & req) {
-    HttpResponse res;
+    HttpResponse res(kHttpStatusNotFound, "text/html");
     XBuilder bld(&res.body());
     bld << start("html")
         << start("head") << elem("title", "404 Not Found") << end
@@ -949,8 +949,6 @@ void Dim::httpRouteReplyNotFound(unsigned reqId, HttpRequest const & req) {
         << start("p") << "Requested URL: " << req.pathRaw() << end
         << end
         << end;
-    res.addHeader(kHttpContentType, "text/html");
-    res.addHeader(kHttp_Status, "404");
     httpRouteReply(reqId, move(res));
 }
 
@@ -1031,7 +1029,7 @@ void Dim::httpRouteReplyDirList(
     string_view path
 ) {
     auto now = timeNow();
-    HttpResponse res;
+    HttpResponse res(kHttpStatusOk, "application/json");
     JBuilder bld(&res.body());
     bld.object();
     bld.member("now", now);
@@ -1047,8 +1045,6 @@ void Dim::httpRouteReplyDirList(
     }
     bld.end();
     bld.end();
-    res.addHeader(kHttpContentType, "application/json");
-    res.addHeader(kHttp_Status, "200");
     httpRouteReply(reqId, move(res));
 }
 
@@ -1125,8 +1121,7 @@ static void addFileHeaders(
 void Dim::httpRouteReplyWithFile(unsigned reqId, string_view path) {
     auto file = fileOpen(path, File::fReadOnly | File::fDenyNone);
     if (!file) {
-        HttpResponse msg;
-        msg.addHeader(kHttp_Status, "404");
+        HttpResponse msg(kHttpStatusNotFound);
         return httpRouteReply(reqId, move(msg), false);
     }
     return httpRouteReplyWithFile(reqId, file);

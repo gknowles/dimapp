@@ -88,7 +88,7 @@ enum HttpHdr {
     kHttps
 };
 
-std::string_view to_view(HttpHdr id);
+char const * toString(HttpHdr id);
 HttpHdr httpHdrFromString(std::string_view name, HttpHdr def = kHttpInvalid);
 
 enum HttpMethod : unsigned {
@@ -104,13 +104,74 @@ enum HttpMethod : unsigned {
     kHttpMethods = 8
 };
 
-std::string_view to_view(HttpMethod method);
+char const * toString(HttpMethod method);
 HttpMethod httpMethodFromString(
     std::string_view name,
     HttpMethod def = fHttpMethodInvalid
 );
 
 std::vector<std::string_view> to_views(HttpMethod methods);
+
+enum HttpStatus {
+    // 1xx Informational
+    kHttpStatusContinue = 100,
+    kHttpStatusSwitchingProtocols = 101,
+    // 2xx Success
+    kHttpStatusOk = 200,
+    kHttpStatusCreated = 201,
+    kHttpStatusAccepted = 202,
+    kHttpStatusNonAuthoritative = 203,
+    kHttpStatusNoContent = 204,
+    kHttpStatusResetContent = 205,
+    kHttpStatusPartialContent = 206,
+    // 3xx Redirection
+    kHttpStatusMultipleChoices = 300,
+    kHttpStatusMovedPermanently = 301,
+    kHttpStatusFound = 302,
+    kHttpStatusSeeOther = 303,
+    kHttpStatusNotModified = 304,
+    kHttpStatusUseProxy = 305,
+    kHttpStatusTemporaryRedirect = 307,
+    kHttpStatusPermanentRedirect = 308,
+    // 4xx Client Error
+    kHttpStatusBadRequest = 400,
+    kHttpStatusUnauthorized = 401,
+    kHttpStatusPaymentRequired = 402,
+    kHttpStatusForbidden = 403,
+    kHttpStatusNotFound = 404,
+    kHttpStatusMethodNotAllowed = 405,
+    kHttpStatusNotAcceptable = 406,
+    kHttpStatusProxyAuthenticationRequired = 407,
+    kHttpStatusRequestTimeout = 408,
+    kHttpStatusConflict = 409,
+    kHttpStatusGone = 410,
+    kHttpStatusLengthRequired = 411,
+    kHttpStatusPreconditionFailed = 412,
+    kHttpStatusPayloadTooLarge = 413,
+    kHttpStatusUriTooLong = 414,
+    kHttpStatusUnsupportedMediaType = 415,
+    kHttpStatusRangeNotSatisfiable = 416,
+    kHttpStatusExpectationFailed = 417,
+    kHttpStatusMisdirectedRequest = 421,
+    kHttpStatusUpgradeRequired = 426,
+    kHttpStatusPreconditionRequired = 428,
+    kHttpStatusTooManyRequests = 429,
+    kHttpStatusRequestHeaderFieldsTooLarge = 431,
+    kHttpStatusUnavailableForLegalReasons = 451,
+    // 5xx Server Error
+    kHttpStatusInternalServerError = 500,
+    kHttpStatusNotImplemented = 501,
+    kHttpStatusBadGateway = 502,
+    kHttpStatusServiceUnavailable = 503,
+    kHttpStatusGatewayTimeout = 504,
+    kHttpStatusHttpVersionNotSupported = 505,
+    kHttpStatusVariantAlsoNegotiates = 506,
+    kHttpStatusNotExtended = 510,
+    kHttpStatusNetworkAuthenticationRequired = 511,
+};
+
+// Will fallback to more generic reasons for unknown status codes
+char const * toReasonPhrase(HttpStatus status);
 
 
 /****************************************************************************
@@ -243,6 +304,7 @@ private:
 
 class HttpResponse : public HttpMsg {
 public:
+    HttpResponse(HttpStatus status, std::string_view contentType = {});
     using HttpMsg::HttpMsg;
 
     int status() const;

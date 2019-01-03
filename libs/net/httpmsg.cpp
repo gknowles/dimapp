@@ -178,7 +178,10 @@ void HttpMsg::clear() {
 
 //===========================================================================
 void HttpMsg::swap(HttpMsg & other) {
+    // You can't swap a request with a response. They different data and,
+    // consequently, different memory layouts.
     assert(isRequest() == other.isRequest());
+
     ::swap(m_flags, other.m_flags);
     m_data.swap(other.m_data);
     m_heap.swap(other.m_heap);
@@ -450,6 +453,17 @@ bool HttpRequest::checkPseudoHeaders() const {
 ***/
 
 //===========================================================================
+HttpResponse::HttpResponse(
+    HttpStatus status,
+    string_view contentType
+) {
+    auto str = StrFrom<int>{(int) status};
+    addHeader(kHttp_Status, str);
+    if (!contentType.empty())
+        addHeader(kHttpContentType, contentType);
+}
+
+//===========================================================================
 int HttpResponse::status() const {
     auto val = headers(kHttp_Status).begin()->m_value;
     return strToInt(val);
@@ -471,7 +485,7 @@ bool HttpResponse::checkPseudoHeaders() const {
 ***/
 
 //===========================================================================
-string_view Dim::to_view(HttpHdr id) {
+const char * Dim::toString(HttpHdr id) {
     return tokenTableGetName(s_hdrNameTbl, id);
 }
 
@@ -481,7 +495,7 @@ HttpHdr Dim::httpHdrFromString(string_view name, HttpHdr def) {
 }
 
 //===========================================================================
-string_view Dim::to_view(HttpMethod id) {
+const char * Dim::toString(HttpMethod id) {
     return tokenTableGetName(s_methodNameTbl, id);
 }
 

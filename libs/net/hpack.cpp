@@ -462,7 +462,7 @@ void HpackEncode::header(
 
 //===========================================================================
 void HpackEncode::header(HttpHdr name, char const value[], HpackFlags flags) {
-    header(to_view(name).data(), value, flags);
+    header(toString(name), value, flags);
 }
 
 //===========================================================================

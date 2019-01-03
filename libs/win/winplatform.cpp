@@ -107,11 +107,9 @@ class WebAccount : public IHttpRouteNotify {
 
 //===========================================================================
 void WebAccount::onHttpRequest(unsigned reqId, HttpRequest & msg) {
-    HttpResponse res;
+    HttpResponse res(kHttpStatusOk, "application/json");
     JBuilder bld(&res.body());
     envProcessAccount(&bld);
-    res.addHeader(kHttpContentType, "application/json");
-    res.addHeader(kHttp_Status, "200");
     httpRouteReply(reqId, move(res));
 }
 

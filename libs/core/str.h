@@ -178,7 +178,7 @@ StrFrom<T, std::enable_if_t<std::is_floating_point_v<T>>>::StrFrom() {
     data[sizeof(data) - 1] = (char) (sizeof(data) - 1);
 }
 
-#if 1
+#if 0
 //===========================================================================
 template <typename T>
 std::string_view StrFrom<T, std::enable_if_t<std::is_floating_point_v<T>>>
