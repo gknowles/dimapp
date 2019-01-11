@@ -1,9 +1,10 @@
-// Copyright Glen Knowles 2017 - 2018.
+// Copyright Glen Knowles 2017 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // bitview.h - dim core
 //
-// View of bits over an array of uint64_t's
+// View of bits over an array of uint64_t's, bits of view are in network
+// (i.e. big-endian, MSB first) order.
 
 #pragma once
 
@@ -23,6 +24,7 @@ namespace Dim {
 class BitView {
 public:
     static constexpr size_t npos = (size_t) -1;
+    static constexpr size_t kWordBits = sizeof(uint64_t) * 8;
 
 public:
     BitView() = default;
@@ -73,7 +75,6 @@ private:
     uint64_t * m_data = nullptr;
     size_t m_size = 0;
 
-    static constexpr size_t kWordBits = sizeof(uint64_t) * 8;
     static constexpr uint64_t kWordMax = (uint64_t) -1;
 };
 

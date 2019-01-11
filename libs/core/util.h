@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2018.
+// Copyright Glen Knowles 2016 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // util.h - dim core
@@ -108,13 +108,14 @@ constexpr double ntohf64(void const * vptr) {
 }
 
 //===========================================================================
-constexpr char * hton16(char * out, unsigned val) {
+constexpr char * hton16(void * out, unsigned val) {
     *(uint16_t *)out = bswap16(val);
-    return out;
+    return (char *) out;
 }
 
 //===========================================================================
-constexpr char * hton24(char * out, unsigned val) {
+constexpr char * hton24(void * vout, unsigned val) {
+    auto out = (char *) vout;
     *out++ = (val >> 16) & 0xff;
     *out++ = (val >> 8) & 0xff;
     *out++ = val & 0xff;
@@ -122,24 +123,24 @@ constexpr char * hton24(char * out, unsigned val) {
 }
 
 //===========================================================================
-constexpr char * hton32(char * out, unsigned val) {
+constexpr char * hton32(void * out, unsigned val) {
     *(uint32_t *)out = bswap32(val);
-    return out;
+    return (char *) out;
 }
 
 //===========================================================================
-constexpr char * hton64(char * out, uint64_t val) {
+constexpr char * hton64(void * out, uint64_t val) {
     *(uint64_t *)out = bswap64(val);
-    return out;
+    return (char *) out;
 }
 
 //===========================================================================
-constexpr char * htonf32(char * out, float val) {
+constexpr char * htonf32(void * out, float val) {
     return hton32(out, *(uint32_t *) &val);
 }
 
 //===========================================================================
-constexpr char * htonf64(char * out, double val) {
+constexpr char * htonf64(void * out, double val) {
     return hton64(out, *(uint64_t *) &val);
 }
 

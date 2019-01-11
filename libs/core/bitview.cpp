@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2018.
+// Copyright Glen Knowles 2017 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // bitview.cpp - dim core
@@ -7,6 +7,20 @@
 
 using namespace std;
 using namespace Dim;
+
+
+/****************************************************************************
+*
+*   Helpers
+*
+***/
+
+//===========================================================================
+static constexpr uint64_t bitmask(size_t bitpos) {
+    return bswap64(
+        1ull << (BitView::kWordBits - bitpos % BitView::kWordBits - 1)
+    );
+}
 
 
 /****************************************************************************
@@ -47,7 +61,7 @@ bool BitView::operator[](size_t bitpos) const {
     auto pos = bitpos / kWordBits;
     if (pos >= m_size)
         return false;
-    return m_data[pos] & ((uint64_t) 1 << bitpos % kWordBits);
+    return m_data[pos] & bitmask(bitpos);
 }
 
 //===========================================================================
@@ -57,20 +71,23 @@ uint64_t BitView::get(size_t bitpos, size_t bitcount) const {
     if (pos >= m_size)
         return 0;
     auto bit = bitpos % kWordBits;
-    auto bits = kWordBits - bit;
+    auto bits = kWordBits - bit; // bits in first word after bitpos
+    auto data = ntoh64(m_data + pos);
     if (bits >= bitcount) {
         if (bits == kWordBits) {
-            return m_data[pos];
+            return data;
         } else {
             auto mask = ((uint64_t) 1 << bitcount) - 1;
-            return (m_data[pos] >> bit) & mask;
+            return (data >> (bits - bitcount)) & mask;
         }
     } else {
-        auto out = m_data[pos] >> bit;
+        auto mask = ((uint64_t) 1 << bits) - 1;
+        bits = bitcount - bits; // bits of value in second word
+        auto out = (data & mask) << bits;
         if (++pos == m_size)
             return out;
-        auto mask = ((uint64_t) 1 << (bitcount - bits)) - 1;
-        auto out2 = (m_data[pos] & mask) << bits;
+        auto trailing = kWordBits - bits;
+        auto out2 = ntoh64(m_data + pos) >> trailing;
         return out | out2;
     }
 }
@@ -118,7 +135,7 @@ BitView & BitView::set() {
 BitView & BitView::set(size_t bitpos) {
     auto pos = bitpos / kWordBits;
     assert(pos < m_size);
-    m_data[pos] |= ((uint64_t) 1 << bitpos % kWordBits);
+    m_data[pos] |= bitmask(bitpos);
     return *this;
 }
 
@@ -132,18 +149,26 @@ BitView & BitView::set(size_t bitpos, size_t bitcount, uint64_t value) {
     auto bits = kWordBits - bit;
     if (bits >= bitcount) {
         if (bits == kWordBits) {
-            m_data[pos] = value;
+            hton64(m_data + pos, value);
         } else {
             auto mask = ((uint64_t) 1 << bitcount) - 1;
-            mask <<= bit;
-            m_data[pos] = m_data[pos] & ~mask | (value << bit);
+            auto trailing = bits - bitcount;
+            mask <<= trailing;
+            value <<= trailing;
+            auto ptr = m_data + pos;
+            hton64(ptr, ntoh64(ptr) & ~mask | value);
         }
     } else {
         auto mask = ((uint64_t) 1 << bits) - 1;
-        mask <<= bit;
-        m_data[pos] = m_data[pos] & ~mask | (value << bit) & mask;
-        value >>= bits;
-        m_data[pos + 1] = m_data[pos + 1] & mask | value;
+        auto ptr = m_data + pos;
+        hton64(ptr, ntoh64(ptr) & ~mask | (value >> bit) & mask);
+        bits = bitcount - bits;
+        mask = ((uint64_t) 1 << bits) - 1;
+        auto trailing = kWordBits - bits;
+        mask <<= trailing;
+        value <<= trailing;
+        ptr += 1;
+        hton64(ptr, ntoh64(ptr) & ~mask | value & mask);
     }
     return *this;
 }
@@ -158,7 +183,7 @@ BitView & BitView::reset() {
 BitView & BitView::reset(size_t bitpos) {
     auto pos = bitpos / kWordBits;
     assert(pos < m_size);
-    m_data[pos] &= ~((uint64_t) 1 << bitpos % kWordBits);
+    m_data[pos] &= ~bitmask(bitpos);
     return *this;
 }
 
@@ -173,7 +198,7 @@ BitView & BitView::flip() {
 BitView & BitView::flip(size_t bitpos) {
     auto pos = bitpos / kWordBits;
     assert(pos < m_size);
-    m_data[pos] ^= ((uint64_t) 1 << bitpos % kWordBits);
+    m_data[pos] ^= bitmask(bitpos);
     return *this;
 }
 
@@ -181,7 +206,7 @@ BitView & BitView::flip(size_t bitpos) {
 bool BitView::testAndSet(size_t bitpos) {
     auto pos = bitpos / kWordBits;
     assert(pos < m_size);
-    auto mask = (uint64_t) 1 << bitpos % kWordBits;
+    auto mask = bitmask(bitpos);
     auto tmp = m_data[pos];
     m_data[pos] |= mask;
     return tmp & mask;
@@ -191,7 +216,7 @@ bool BitView::testAndSet(size_t bitpos) {
 bool BitView::testAndReset(size_t bitpos) {
     auto pos = bitpos / kWordBits;
     assert(pos < m_size);
-    auto mask = (uint64_t) 1 << bitpos % kWordBits;
+    auto mask = bitmask(bitpos);
     auto tmp = m_data[pos];
     m_data[pos] &= ~mask;
     return tmp & mask;
@@ -201,7 +226,7 @@ bool BitView::testAndReset(size_t bitpos) {
 bool BitView::testAndFlip(size_t bitpos) {
     auto pos = bitpos / kWordBits;
     assert(pos < m_size);
-    auto mask = (uint64_t) 1 << bitpos % kWordBits;
+    auto mask = bitmask(bitpos);
     auto tmp = m_data[pos];
     m_data[pos] ^= mask;
     return tmp & mask;
@@ -215,17 +240,22 @@ uint64_t BitView::word(size_t bitpos) const {
 }
 
 //===========================================================================
+static constexpr size_t leadingPos(size_t pos, uint64_t data) {
+    return pos * BitView::kWordBits + leadingZeroBits(data);
+}
+
+//===========================================================================
 size_t BitView::find(size_t bitpos) const {
     auto pos = bitpos / kWordBits;
     if (pos >= m_size)
         return npos;
     auto ptr = m_data + pos;
-    if (auto val = *ptr & (kWordMax << bitpos % kWordBits))
-        return pos * kWordBits + trailingZeroBits(val);
+    if (auto val = ntoh64(ptr) & (kWordMax >> bitpos % kWordBits))
+        return leadingPos(pos, val);
     auto last = m_data + m_size;
     while (++ptr != last) {
         if (auto val = *ptr)
-            return (ptr - m_data) * kWordBits + trailingZeroBits(val);
+            return leadingPos(ptr - m_data, ntoh64(&val));
     }
     return npos;
 }
@@ -236,29 +266,35 @@ size_t BitView::findZero(size_t bitpos) const {
     if (pos >= m_size)
         return npos;
     auto ptr = m_data + pos;
-    if (auto val = ~*ptr & (kWordMax << bitpos % kWordBits))
-        return pos * kWordBits + trailingZeroBits(val);
+    if (auto val = ~ntoh64(ptr) & (kWordMax >> bitpos % kWordBits))
+        return leadingPos(pos, val);
     auto last = m_data + m_size;
     while (++ptr != last) {
         if (auto val = ~*ptr)
-            return (ptr - m_data) * kWordBits + trailingZeroBits(val);
+            return leadingPos(ptr - m_data, ntoh64(&val));
     }
     return npos;
 }
 
 //===========================================================================
+static constexpr size_t trailingPos(size_t pos, uint64_t data) {
+    return ++pos * BitView::kWordBits - 1 - trailingZeroBits(data);
+}
+
+//===========================================================================
 size_t BitView::rfind(size_t bitpos) const {
     auto pos = bitpos / kWordBits;
-    if (pos < m_size) {
-        if (auto val = m_data[pos] & ~(kWordMax << bitpos % kWordBits))
-            return pos * kWordBits + leadingZeroBits(val);
-    } else {
-        pos = m_size;
-    }
     auto last = m_data + pos;
+    if (pos < m_size) {
+        auto mask = kWordMax << (kWordBits - bitpos % kWordBits - 1);
+        if (auto val = ntoh64(last) & mask)
+            return trailingPos(pos, val);
+    } else {
+        last = m_data + m_size;
+    }
     while (m_data != last--) {
         if (auto val = *last)
-            return (last - m_data) * kWordBits + leadingZeroBits(val);
+            return trailingPos(last - m_data, ntoh64(&val));
     }
     return npos;
 }
@@ -266,16 +302,16 @@ size_t BitView::rfind(size_t bitpos) const {
 //===========================================================================
 size_t BitView::rfindZero(size_t bitpos) const {
     auto pos = bitpos / kWordBits;
-    if (pos < m_size) {
-        if (auto val = ~m_data[pos] & ~(kWordMax << bitpos % kWordBits))
-            return pos * kWordBits + leadingZeroBits(val);
-    } else {
-        pos = m_size;
-    }
     auto last = m_data + pos;
+    if (pos < m_size) {
+        if (auto val = ~ntoh64(last) & ~(kWordMax >> bitpos % kWordBits))
+            return trailingPos(pos, val);
+    } else {
+        last = m_data + m_size;
+    }
     while (m_data != last--) {
         if (auto val = ~*last)
-            return (last - m_data) * kWordBits + leadingZeroBits(val);
+            return trailingPos(last - m_data, ntoh64(&val));
     }
     return npos;
 }

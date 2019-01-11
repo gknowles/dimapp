@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2018.
+// Copyright Glen Knowles 2017 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // uset.h - dim core
@@ -10,7 +10,7 @@
 #include <initializer_list>
 #include <ostream>
 #include <string_view>
-#include <utility> // std::pair
+#include <utility> // std::declval, std::pair
 
 namespace Dim {
 
