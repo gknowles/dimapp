@@ -309,14 +309,6 @@ void Dim::logParseError(
 }
 
 //===========================================================================
-static ostream & hexbyte(ostream & os, char data) {
-    static constexpr char hexChars[] = "0123456789abcdef";
-    os << hexChars[(unsigned char) data >> 4]
-        << hexChars[(unsigned char) data & 0x0f];
-    return os;
-}
-
-//===========================================================================
 void Dim::logHexDebug(string_view data) {
     unsigned char const * ptr = (unsigned char const *) data.data();
     for (unsigned pos = 0; pos < data.size(); pos += 16, ptr += 16) {
@@ -325,7 +317,7 @@ void Dim::logHexDebug(string_view data) {
         for (unsigned i = 0; i < 16; ++i) {
             if (i % 4 == 0) os.put(' ');
             if (pos + i < data.size()) {
-                hexbyte(os, ptr[i]);
+                hexByte(os, ptr[i]);
             } else {
                 os << "  ";
             }

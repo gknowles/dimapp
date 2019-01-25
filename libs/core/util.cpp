@@ -112,3 +112,9 @@ void Dim::hexFromBytes(string & out, string_view src, bool append) {
         out[pos++] = hexFromNibble(ch & 0x0f);
     }
 }
+
+//===========================================================================
+ostream & Dim::hexByte(ostream & os, char data) {
+    os << hexFromNibble(data >> 4) << hexFromNibble(data & 0x0f);
+    return os;
+}

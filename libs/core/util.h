@@ -52,6 +52,8 @@ unsigned hexToByte(unsigned char high, unsigned char low);
 bool hexToBytes(std::string & out, std::string_view src, bool append);
 void hexFromBytes(std::string & out, std::string_view src, bool append);
 
+std::ostream & hexByte(std::ostream & os, char data);
+
 
 /****************************************************************************
 *
