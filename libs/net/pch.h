@@ -25,6 +25,7 @@
 #include <memory>
 #include <mutex>
 #include <numeric>
+#include <ostream>
 #include <shared_mutex>
 #include <vector>
 

@@ -12,25 +12,7 @@ using namespace Dim;
 
 /****************************************************************************
 *
-*   Declarations
-*
-***/
-
-namespace {
-
-} // namespace
-
-
-/****************************************************************************
-*
-*   Variables
-*
-***/
-
-
-/****************************************************************************
-*
-*   Helpers
+*   URL Decode
 *
 ***/
 
@@ -58,6 +40,150 @@ static string_view urlDecode(string_view src, ITempHeap & heap, bool query) {
 }
 
 //===========================================================================
+string_view Dim::urlDecodePathComponent(string_view src, ITempHeap & heap) {
+    return urlDecode(src, heap, false);
+}
+
+//===========================================================================
+string_view Dim::urlDecodeQueryComponent(
+    string_view src,
+    ITempHeap & heap
+) {
+    return urlDecode(src, heap, true);
+}
+
+
+/****************************************************************************
+*
+*   URL Encode
+*
+***/
+
+//===========================================================================
+static bool escapeInPath(char ch) {
+    switch (ch) {
+    default:
+        return true;
+
+    // unreserved
+    case 'a': case 'b': case 'c': case 'd': case 'e': case 'f': 
+    case 'g': case 'h': case 'i': case 'j': case 'k': case 'l':
+    case 'm': case 'n': case 'o': case 'p': case 'q': case 'r':
+    case 's': case 't': case 'u': case 'v': case 'w': case 'x':
+    case 'y': case 'z': 
+    case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
+    case 'G': case 'H': case 'I': case 'J': case 'K': case 'L':
+    case 'M': case 'N': case 'O': case 'P': case 'Q': case 'R':
+    case 'S': case 'T': case 'U': case 'V': case 'W': case 'X':
+    case 'Y': case 'Z':
+    case '0': case '1': case '2': case '3': case '4': case '5':
+    case '6': case '7': case '8': case '9':
+    case '-': case '.': case '_': case '~':
+    // gen-delims
+    case ':': case '/': case '?': case '#': case '[': case ']': 
+    case '@':
+        return false;
+    }
+}                    
+
+//===========================================================================
+static bool escapeInQuery(char ch) {
+    switch (ch) {
+    default:
+        return true;
+
+    // unreserved
+    case 'a': case 'b': case 'c': case 'd': case 'e': case 'f': 
+    case 'g': case 'h': case 'i': case 'j': case 'k': case 'l':
+    case 'm': case 'n': case 'o': case 'p': case 'q': case 'r':
+    case 's': case 't': case 'u': case 'v': case 'w': case 'x':
+    case 'y': case 'z': 
+    case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
+    case 'G': case 'H': case 'I': case 'J': case 'K': case 'L':
+    case 'M': case 'N': case 'O': case 'P': case 'Q': case 'R':
+    case 'S': case 'T': case 'U': case 'V': case 'W': case 'X':
+    case 'Y': case 'Z':
+    case '0': case '1': case '2': case '3': case '4': case '5':
+    case '6': case '7': case '8': case '9':
+    case '-': case '.': case '_': case '~':
+    // gen-delims
+    case ':': case '/': case '?': case '#': case '[': case ']': 
+    case '@':
+    // sub-delims
+    case '!': case '$': case '&': case '\'': case '(': case ')':
+    case '*': case '+': case ',': case ';': case '=':
+        return false;
+    }
+}                    
+
+//===========================================================================
+static size_t urlEncode(
+    void * vout, 
+    size_t outLen, 
+    string_view src, 
+    bool query
+) {
+    auto out = (char *) vout;
+    for (auto && ch : src) {
+        if (query ? escapeInQuery(ch) : escapeInPath(ch)) {
+            if (outLen < 3)
+                break;
+            *out++ = '%';
+            *out++ = hexFromNibble(uint8_t(ch) >> 4);
+            *out++ = hexFromNibble(uint8_t(ch) & 0xf);
+            outLen -= 3;
+        } else {
+            *out++ = ch;
+            outLen -= 1;
+        }
+        if (!outLen)
+            break;
+    }
+    return out - (char *) vout;
+}
+
+//===========================================================================
+size_t Dim::urlEncodePathComponentLen(std::string_view src) {
+    size_t num = 0;
+    for (auto && ch : src) 
+        num += escapeInPath(ch) ? 3 : 1;
+    return num;
+}
+
+//===========================================================================
+size_t Dim::urlEncodeQueryComponentLen(std::string_view src) {
+    size_t num = 0;
+    for (auto && ch : src) 
+        num += escapeInQuery(ch) ? 3 : 1;
+    return num;
+}
+
+//===========================================================================
+size_t Dim::urlEncodePathComponent(
+    char * out,
+    size_t outLen,
+    string_view src
+) {
+    return urlEncode(out, outLen, src, false);
+}
+
+//===========================================================================
+size_t Dim::urlEncodeQueryComponent(
+    char * out,
+    size_t outLen,
+    string_view src
+) {
+    return urlEncode(out, outLen, src, true);
+}
+
+
+/****************************************************************************
+*
+*   Query strings
+*
+***/
+
+//===========================================================================
 static void addSeg(
     HttpQuery * hp,
     ITempHeap & heap,
@@ -70,7 +196,7 @@ static void addSeg(
     hp->pathSegs.link(seg);
     seg->value = {base, count};
     if (pcts) {
-        seg->value = urlDecode(seg->value, heap, false);
+        seg->value = urlDecodePathComponent(seg->value, heap);
         pcts = 0;
     }
     base = eptr;
@@ -103,7 +229,7 @@ static HttpPathParam * addParam(
     hp->parameters.link(param);
     param->name = {base, count};
     if (pcts) {
-        param->name = urlDecode(param->name, heap, true);
+        param->name = urlDecodeQueryComponent(param->name, heap);
         pcts = 0;
     }
     base = eptr;
@@ -123,18 +249,11 @@ static void addParamValue(
     param->values.link(val);
     val->value = {base, count};
     if (pcts) {
-        val->value = urlDecode(val->value, heap, true);
+        val->value = urlDecodeQueryComponent(val->value, heap);
         pcts = 0;
     }
     base = eptr;
 }
-
-
-/****************************************************************************
-*
-*   Public API
-*
-***/
 
 //===========================================================================
 HttpQuery * Dim::urlParseHttpPath(string_view path, ITempHeap & heap) {
@@ -229,29 +348,4 @@ QUERY_VALUE:
     return;
 }
 
-//===========================================================================
-size_t Dim::urlEncodePathComponent(
-    char * out,
-    size_t outLen,
-    string_view src
-);
 
-//===========================================================================
-size_t Dim::urlEncodeQueryComponent(
-    char * out,
-    size_t outLen,
-    string_view src
-);
-
-//===========================================================================
-string_view Dim::urlDecodePathComponent(string_view src, ITempHeap & heap) {
-    return urlDecode(src, heap, false);
-}
-
-//===========================================================================
-string_view Dim::urlDecodeQueryComponent(
-    string_view src,
-    ITempHeap & heap
-) {
-    return urlDecode(src, heap, true);
-}
