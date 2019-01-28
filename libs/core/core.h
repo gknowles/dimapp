@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2018.
+// Copyright Glen Knowles 2015 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // core.h - dim core primary client header
@@ -20,6 +20,7 @@
 #include "refcount.h"
 #include "shutdown.h"
 #include "str.h"
+#include "strtrie.h"
 #include "task.h"
 #include "tempheap.h"
 #include "time.h"

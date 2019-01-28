@@ -48,6 +48,8 @@
 # libs/core/shutdown.h
 # libs/core/str.cpp
 # libs/core/str.h
+# libs/core/strtrie.cpp
+# libs/core/strtrie.h
 # libs/core/task.cpp
 # libs/core/task.h
 # libs/core/tempheap.cpp
@@ -220,6 +222,9 @@
 # tests/str/pch.cpp
 # tests/str/pch.h
 # tests/str/strtest.cpp
+# tests/strtrie/pch.cpp
+# tests/strtrie/pch.h
+# tests/strtrie/strtrietest.cpp
 # tests/time/pch.cpp
 # tests/time/pch.h
 # tests/time/timetest.cpp
