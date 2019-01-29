@@ -32,6 +32,7 @@ artifacts:
     type: zip
 
 test_script:
+  - bin\bitview
   - bin\charbuf
   - bin\file
   - bin\hpack
@@ -43,6 +44,7 @@ test_script:
   - bin\pargen --test
   - bin\path
   - bin\str
+  - bin\strtrie
   - bin\time
   - bin\tokentable
   - bin\uset
