@@ -144,7 +144,7 @@ Detail::Log::Log(LogType type)
 {}
 
 //===========================================================================
-Detail::Log::Log(Log && from)
+Detail::Log::Log(Log && from) noexcept
     : ostrstream(static_cast<ostrstream &&>(from))
     , m_type(from.m_type)
 {}

@@ -33,7 +33,7 @@ public:
 public:
     CharBuf() {}
     CharBuf(CharBuf const & from) { insert(0, from); }
-    CharBuf(CharBuf && from) = default;
+    CharBuf(CharBuf && from) noexcept = default;
     ~CharBuf();
     explicit operator bool() const { return !empty(); }
 
@@ -131,32 +131,32 @@ private:
 
         Buffer();
         Buffer(size_t reserve);
-        Buffer(Buffer && from);
+        Buffer(Buffer && from) noexcept;
         ~Buffer();
-        Buffer & operator=(Buffer && from);
+        Buffer & operator=(Buffer && from) noexcept;
     };
     using buffer_iterator = std::vector<Buffer>::iterator;
     using const_buffer_iterator = std::vector<Buffer>::const_iterator;
 
     std::pair<buffer_iterator, int> find(size_t pos);
     std::pair<const_buffer_iterator, int> find(size_t pos) const;
-    buffer_iterator split(buffer_iterator it, int pos);
-    CharBuf & insert(buffer_iterator it, int pos, size_t numCh, char ch);
-    CharBuf & insert(buffer_iterator it, int pos, char const src[]);
+    buffer_iterator split(buffer_iterator it, size_t pos);
+    CharBuf & insert(buffer_iterator it, size_t pos, size_t numCh, char ch);
+    CharBuf & insert(buffer_iterator it, size_t pos, char const src[]);
     CharBuf & insert(
         buffer_iterator it,
-        int pos,
+        size_t pos,
         char const src[],
         size_t srcLen
     );
     CharBuf & insert(
         buffer_iterator it,
-        int pos,
+        size_t pos,
         const_buffer_iterator srcIt,
-        int srcPos,
+        size_t srcPos,
         size_t srcLen
     );
-    CharBuf & erase(buffer_iterator it, int pos, int count);
+    CharBuf & erase(buffer_iterator it, size_t pos, size_t count);
 
     std::vector<Buffer> m_buffers;
     int m_lastUsed{0};

@@ -82,7 +82,7 @@ inline bool JsonParser::onNvalEnd () {
             m_expMinus = false;
             m_exp = -m_exp;
         }
-        val = m_int * pow(10.0f, m_exp - m_frac);
+        val = m_int * pow(10.0, m_exp - m_frac);
         m_exp = 0;
         m_frac = 0;
     } else {
@@ -107,6 +107,7 @@ inline bool JsonParser::onExpNumChar (char ch) {
 
 //===========================================================================
 inline bool JsonParser::onFracNumChar (char ch) {
+    assert(ch >= '0');
     m_int = 10 * m_int + (ch - '0');
     m_frac += 1;
     return true;

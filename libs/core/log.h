@@ -35,7 +35,7 @@ namespace Detail {
 class Log : public std::ostrstream {
 public:
     Log(LogType type);
-    Log(Log && from);
+    Log(Log && from) noexcept;
     ~Log();
 
 private:

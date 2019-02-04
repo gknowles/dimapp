@@ -24,7 +24,7 @@ class CertName {
 public:
     CertName() {}
     CertName(CertName const & from);
-    CertName(CertName && from);
+    CertName(CertName && from) noexcept;
     ~CertName();
 
     void reset();
@@ -605,7 +605,7 @@ CertName::CertName(CertName const & from) {
 }
 
 //===========================================================================
-CertName::CertName(CertName && from) {
+CertName::CertName(CertName && from) noexcept {
     swap(m_blob, from.m_blob);
 }
 

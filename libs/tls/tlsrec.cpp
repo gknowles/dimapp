@@ -234,7 +234,7 @@ bool TlsRecordDecrypt::parseAlerts(ITlsRecordDecryptNotify * notify) {
         return parseError(kUnexpectedMessage);
 
     char const * ptr = m_plaintext.data();
-    char const * eptr = ptr + num / 2 * 2;
+    char const * eptr = ptr + (num & ~1);
     while (ptr != eptr) {
         auto level = TlsAlertLevel(*ptr++);
         auto desc = TlsAlertDesc(*ptr++);

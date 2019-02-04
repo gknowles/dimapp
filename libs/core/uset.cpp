@@ -1050,7 +1050,7 @@ static int cmpBit(uint64_t left, uint64_t right) {
         return 0;
     auto a = reverseBits(left);
     auto b = reverseBits(right);
-    uint64_t mask = numeric_limits<uint64_t>::max();
+    constexpr uint64_t mask = numeric_limits<uint64_t>::max();
     if (a < b) {
         return a == (b & (mask << trailingZeroBits(a))) ? -2 : 1;
     } else {
@@ -1682,7 +1682,7 @@ UnsignedSet::UnsignedSet()
 {}
 
 //===========================================================================
-UnsignedSet::UnsignedSet(UnsignedSet && from) {
+UnsignedSet::UnsignedSet(UnsignedSet && from) noexcept {
     swap(from);
 }
 
@@ -1702,7 +1702,7 @@ UnsignedSet::~UnsignedSet() {
 }
 
 //===========================================================================
-UnsignedSet & UnsignedSet::operator=(UnsignedSet && from) {
+UnsignedSet & UnsignedSet::operator=(UnsignedSet && from) noexcept {
     clear();
     swap(from);
     return *this;

@@ -188,9 +188,9 @@ public:
 
 public:
     HttpMsg (int stream = 0) : m_stream{stream} {}
-    HttpMsg (HttpMsg && from) = default;
+    HttpMsg (HttpMsg && from) noexcept = default;
     virtual ~HttpMsg() = default;
-    HttpMsg & operator= (HttpMsg && from) = default;
+    HttpMsg & operator= (HttpMsg && from) noexcept = default;
     void clear();
     virtual void swap(HttpMsg & other);
 

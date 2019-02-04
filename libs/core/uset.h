@@ -51,14 +51,14 @@ public:
 
 public:
     UnsignedSet();
-    UnsignedSet(UnsignedSet && from);
+    UnsignedSet(UnsignedSet && from) noexcept;
     UnsignedSet(UnsignedSet const & from);
     UnsignedSet(std::initializer_list<unsigned> from);
     UnsignedSet(std::string_view from);
     ~UnsignedSet();
     explicit operator bool() const { return !empty(); }
 
-    UnsignedSet & operator=(UnsignedSet && from);
+    UnsignedSet & operator=(UnsignedSet && from) noexcept;
     UnsignedSet & operator=(UnsignedSet const & from);
 
     // iterators

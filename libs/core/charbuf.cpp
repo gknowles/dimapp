@@ -37,7 +37,7 @@ CharBuf::Buffer::Buffer(size_t reserve)
 {}
 
 //===========================================================================
-CharBuf::Buffer::Buffer(Buffer && from)
+CharBuf::Buffer::Buffer(Buffer && from) noexcept
     : data{from.data}
     , used{from.used}
     , reserved{from.reserved}
@@ -47,7 +47,7 @@ CharBuf::Buffer::Buffer(Buffer && from)
 }
 
 //===========================================================================
-CharBuf::Buffer & CharBuf::Buffer::operator=(Buffer && from) {
+CharBuf::Buffer & CharBuf::Buffer::operator=(Buffer && from) noexcept {
     if (data && heapUsed)
         delete[] data;
     data = from.data;
@@ -540,21 +540,21 @@ int CharBuf::compare(
 CharBuf & CharBuf::replace(size_t pos, size_t count, size_t numCh, char ch) {
     assert(pos <= (size_t) m_size);
 
-    int add = (int)numCh;
-    int remove = (int) min(count, m_size - pos);
-    int num = min(add, remove);
+    auto add = numCh;
+    auto remove = min(count, m_size - pos);
+    auto num = min(add, remove);
     auto ic = find(pos);
     auto myi = ic.first;
     auto mydata = myi->data + ic.second;
-    auto mycount = myi->used - ic.second;
+    auto mycount = (size_t) myi->used - ic.second;
 
     // overwrite the overlap, then either erase or insert the rest
     for (;;) {
-        int bytes = min(num, mycount);
+        auto bytes = min(num, mycount);
         memset(mydata, ch, bytes);
         num -= bytes;
         if (!num) {
-            int pos = int(mydata - myi->data) + bytes;
+            auto pos = (int) (mydata - myi->data + bytes);
             return add > remove
                 ? insert(myi, pos, add - remove, ch)
                 : erase(myi, pos, remove - add);
@@ -588,11 +588,11 @@ CharBuf & CharBuf::replace(size_t pos, size_t count, char const s[]) {
     char * eptr = ptr + bytes;
     for (;;) {
         if (!*s)
-            return erase(myi, int(ptr - myi->data), num - int(ptr - mydata));
+            return erase(myi, ptr - myi->data, num - (ptr - mydata));
         if (ptr == eptr) {
             num -= bytes;
             if (!num)
-                return insert(myi, int(ptr - myi->data), s);
+                return insert(myi, ptr - myi->data, s);
             ++myi;
             mydata = myi->data;
             mycount = myi->used;
@@ -629,7 +629,7 @@ CharBuf & CharBuf::replace(
         rdata += bytes;
         num -= bytes;
         if (!num) {
-            int mypos = int(mydata - myi->data) + bytes;
+            auto mypos = (mydata - myi->data) + bytes;
             return add > remove
                 ? insert(myi, mypos, rdata, add - remove)
                 : erase(myi, mypos, remove - add);
@@ -779,10 +779,10 @@ pair<CharBuf::buffer_iterator, int> CharBuf::find(size_t pos) {
 //===========================================================================
 // Move the data (if any) after the split point to a new block immediately
 // following the block being split.
-CharBuf::buffer_iterator CharBuf::split(buffer_iterator it, int pos) {
+CharBuf::buffer_iterator CharBuf::split(buffer_iterator it, size_t pos) {
     assert(pos <= it->used);
     auto rdata = it->data + pos;
-    auto rcount = it->used - pos;
+    auto rcount = it->used - (int) pos;
     int nbufs = 0;
     while (rcount) {
         nbufs += 1;
@@ -796,14 +796,14 @@ CharBuf::buffer_iterator CharBuf::split(buffer_iterator it, int pos) {
         rcount -= bytes;
     }
     it -= nbufs;
-    it->used = pos;
+    it->used = (int) pos;
     return it;
 }
 
 //===========================================================================
 CharBuf & CharBuf::insert(
     buffer_iterator it,
-    int pos,
+    size_t pos,
     size_t numCh,
     char ch
 ) {
@@ -849,7 +849,7 @@ CharBuf & CharBuf::insert(
 //===========================================================================
 CharBuf & CharBuf::insert(
     buffer_iterator it,
-    int pos,
+    size_t pos,
     char const s[]
 ) {
     assert(pos <= it->used);
@@ -905,7 +905,7 @@ CharBuf & CharBuf::insert(
 //===========================================================================
 CharBuf & CharBuf::insert(
     buffer_iterator it,
-    int pos,
+    size_t pos,
     char const s[],
     size_t slen
 ) {
@@ -952,9 +952,9 @@ CharBuf & CharBuf::insert(
 //===========================================================================
 CharBuf & CharBuf::insert(
     buffer_iterator myi,
-    int pos,
+    size_t pos,
     const_buffer_iterator ri,
-    int rpos,
+    size_t rpos,
     size_t rlen
 ) {
     assert(pos <= myi->used);
@@ -963,7 +963,7 @@ CharBuf & CharBuf::insert(
     auto myafter = myi->used - pos;
     auto myavail = myi->reserved - myi->used;
     auto rdata = ri->data + rpos;
-    auto rcount = ri->used - rpos;
+    auto rcount = ri->used - (int) rpos;
     auto add = (int) rlen;
     m_size += add;
 
@@ -1015,13 +1015,14 @@ CharBuf & CharBuf::insert(
 }
 
 //===========================================================================
-CharBuf & CharBuf::erase(buffer_iterator it, int pos, int remove) {
+CharBuf & CharBuf::erase(buffer_iterator it, size_t pos, size_t count) {
     assert(pos <= it->used);
-    assert(m_size >= remove && remove >= 0);
-    if (!remove)
+    assert(m_size >= count && count >= 0);
+    if (!count)
         return *this;
+    auto remove = (int) count;
     auto mydata = it->data + pos;
-    auto mycount = it->used - pos;
+    auto mycount = it->used - (int) pos;
     m_size -= remove;
 
     // remove only part of first buffer?

@@ -167,6 +167,7 @@ void ExecProgram::exec(string_view prog, string_view args) {
         &si,
         &pi
     );
+    CloseHandle(pi.hThread);
     for (auto && p : pipes)
         CloseHandle(p.child);
     if (!running)
@@ -391,9 +392,14 @@ bool Dim::execElevatedWait(
         return false;
     }
 
-    DWORD rc = EX_OSERR;
-    if (WAIT_OBJECT_0 == WaitForSingleObject(ei.hProcess, INFINITE))
-        GetExitCodeProcess(ei.hProcess, &rc);
-    *exitCode = rc;
+    if (!ei.hProcess) {
+        *exitCode = EX_OK;
+    } else {
+        DWORD rc = EX_OSERR;
+        if (WAIT_OBJECT_0 == WaitForSingleObject(ei.hProcess, INFINITE))
+            GetExitCodeProcess(ei.hProcess, &rc);
+        *exitCode = rc;
+        CloseHandle(ei.hProcess);
+    }
     return true;
 }

@@ -188,7 +188,7 @@ public:
 
 public:
     List();
-    List(List && from);
+    List(List && from) noexcept;
     ~List();
     explicit operator bool() const { return !empty(); }
 
@@ -253,7 +253,7 @@ List<T, Tag>::List() {
 
 //===========================================================================
 template <typename T, typename Tag>
-List<T, Tag>::List(List && from) {
+List<T, Tag>::List(List && from) noexcept {
     static_assert(
         std::is_base_of_v<link_type, T>,
         "List member type must be derived from ListBaseLink<Tag>"

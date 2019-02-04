@@ -35,6 +35,10 @@
     4457 /* declaration of 'identifier' hides function parameter */ \
     4800 /* forcing value to bool 'true' or 'false' */ \
     5030 /* attribute 'identifier' is not recognized */ \
+    26495 /* variable 'identifier' is uninitialized. Always initialize a 
+            member variable */ \
+    26451 /* Arithmetic overflow: Using operation 'op' on a %size1% byte value
+            and then casting the result to a %size2% byte value. */ \
 )
 #pragma warning(default: \
     4062 /* enumerator 'identifier' in a switch of enum 'enumeration' is not

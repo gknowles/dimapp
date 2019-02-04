@@ -52,7 +52,7 @@ struct Buffer {
 ***/
 
 //===========================================================================
-TempHeap::TempHeap(TempHeap && from) {
+TempHeap::TempHeap(TempHeap && from) noexcept {
     swap(from);
 }
 
@@ -62,7 +62,7 @@ TempHeap::~TempHeap() {
 }
 
 //===========================================================================
-TempHeap & TempHeap::operator=(TempHeap && from) {
+TempHeap & TempHeap::operator=(TempHeap && from) noexcept {
     swap(from);
     from.clear();
     return *this;
