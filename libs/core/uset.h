@@ -10,6 +10,7 @@
 #include <initializer_list>
 #include <ostream>
 #include <string_view>
+#include <type_traits> // std::enable_if_t, std::is_convertible_v
 #include <utility> // std::declval, std::pair
 
 namespace Dim {
