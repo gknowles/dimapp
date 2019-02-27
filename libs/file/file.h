@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2018.
+// Copyright Glen Knowles 2015 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // file.h - dim file
@@ -186,6 +186,7 @@ TimePoint fileLastWriteTime(FileHandle f);
 // On error returns empty and sets errno to a non-zero value.
 std::string_view filePath(FileHandle f);
 
+// Returns the open mode flags used to create the handle.
 unsigned fileMode(FileHandle f);
 
 // kUnknown is returned for bad handle and system errors as well as when
