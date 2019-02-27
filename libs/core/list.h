@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2018.
+// Copyright Glen Knowles 2016 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // list.h - dim core
@@ -319,10 +319,6 @@ template <typename T, typename Tag>
 auto List<T, Tag>::end() const -> const_iterator {
     return const_iterator{};
 }
-
-//===========================================================================
-template <typename T, typename Tag>
-bool List<T, Tag>::operator==(List const & right) const;
 
 //===========================================================================
 template <typename T, typename Tag>
