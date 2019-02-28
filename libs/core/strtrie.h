@@ -8,8 +8,11 @@
 
 #include "cppconf/cppconf.h"
 
+#include <cstdint>
+#include <memory>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace Dim {
 
@@ -22,6 +25,7 @@ namespace Dim {
 
 class StrTrie {
 public:
+    static constexpr unsigned kPageSize = 256;
     using value_type = std::pair<std::string, std::string>;
     class Iterator;
 
@@ -32,17 +36,26 @@ public:
 
     bool find(std::string * out, std::string_view name) const;
 
-    bool empty() const { return m_data.empty(); }
+    bool empty() const { return m_pages.empty(); }
     Iterator begin() const;
     Iterator end() const;
 
     std::ostream & dump(std::ostream & os) const;
 
 private:
-    unsigned char * nodeAt(size_t pos);
-    unsigned char const * nodeAt(size_t pos) const;
+    bool pageEmpty() const;
+    size_t pageRoot() const;
+    size_t pageNew();
 
-    std::string m_data;
+    uint8_t * nodeAppend(size_t pgno, uint8_t const * node);
+    uint8_t * nodeAt(size_t pgno, size_t pos);
+    uint8_t const * nodeAt(size_t pgno, size_t pos) const;
+
+    // size and capacity, measured in nodes
+    size_t size(size_t pgno) const;
+    size_t capacity(size_t pgno) const;
+
+    std::vector<std::unique_ptr<uint8_t[]>> m_pages;
 };
 
 
