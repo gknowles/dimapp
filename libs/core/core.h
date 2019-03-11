@@ -15,6 +15,7 @@
 #include "list.h"
 #include "log.h"
 #include "math.h"
+#include "pageheap.h"
 #include "perf.h"
 #include "process.h"
 #include "refcount.h"

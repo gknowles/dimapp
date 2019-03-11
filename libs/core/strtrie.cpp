@@ -52,7 +52,7 @@ unsigned const kMaxValueLen = 16;
 
 /****************************************************************************
 *
-*   StrTrie
+*   StrTrieBase
 *
 ***/
 
@@ -131,27 +131,12 @@ static size_t setSwitchVal(
 }
 
 //===========================================================================
-bool StrTrie::pageEmpty() const {
-    return m_pages.empty();
-}
-
-//===========================================================================
-size_t StrTrie::pageRoot() const {
-    return 0;
-}
-
-//===========================================================================
-size_t StrTrie::pageNew() {
-    m_pages.push_back(make_unique<uint8_t[]>(kPageSize));
-    return m_pages.size() - 1;
-}
-
-//===========================================================================
-uint8_t * StrTrie::nodeAppend(size_t pgno, uint8_t const * node) {
-    auto ptr = m_pages[pgno].get();
-    if (ptr[kPageSize - 1] == capacity(pgno))
+uint8_t * StrTrieBase::nodeAppend(size_t pgno, uint8_t const * node) {
+    auto ptr = m_heap.ptr(pgno);
+    auto & last = ptr[m_heap.pageSize() - 1];
+    if (last == capacity(pgno))
         return nullptr;
-    auto inode = ptr[kPageSize - 1]++;
+    auto inode = last++;
     auto out = ptr + inode * kNodeLen;
     if (node) {
         memcpy(out, node, kNodeLen);
@@ -162,31 +147,31 @@ uint8_t * StrTrie::nodeAppend(size_t pgno, uint8_t const * node) {
 }
 
 //===========================================================================
-uint8_t * StrTrie::nodeAt(size_t pgno, size_t pos) {
-    auto ptr = m_pages[pgno].get();
+uint8_t * StrTrieBase::nodeAt(size_t pgno, size_t pos) {
+    auto ptr = m_heap.ptr(pgno);
     return ptr + pos * kNodeLen;
 }
 
 //===========================================================================
-uint8_t const * StrTrie::nodeAt(size_t pgno, size_t pos) const {
-    return const_cast<StrTrie *>(this)->nodeAt(pgno, pos);
+uint8_t const * StrTrieBase::nodeAt(size_t pgno, size_t pos) const {
+    return const_cast<StrTrieBase *>(this)->nodeAt(pgno, pos);
 }
 
 //===========================================================================
-size_t StrTrie::size(size_t pgno) const {
-    auto ptr = m_pages[pgno].get();
-    return ptr[kPageSize - 1];
+size_t StrTrieBase::size(size_t pgno) const {
+    auto ptr = m_heap.ptr(pgno);
+    return ptr[m_heap.pageSize() - 1];
 }
 
 //===========================================================================
-size_t StrTrie::capacity(size_t pgno) const {
-    return (kPageSize - 1) / kNodeLen;
+size_t StrTrieBase::capacity(size_t pgno) const {
+    return (m_heap.pageSize() - 1) / kNodeLen;
 }
 
 //===========================================================================
-bool StrTrie::insert(string_view key, string_view value) {
+bool StrTrieBase::insert(string_view key, string_view value) {
     bool inserted = true;
-    auto pgno = empty() ? pageNew() : pageRoot();
+    auto pgno = empty() ? m_heap.alloc() : m_heap.root();
     auto nNodes = size(pgno);
     auto inode = 0;
     auto node = (uint8_t *) nullptr;
@@ -257,7 +242,7 @@ bool StrTrie::insert(string_view key, string_view value) {
             }
             goto NEXT_NODE;
         }
-        logMsgFatal() << "Invalid StrTrie node type: " << ntype;
+        logMsgFatal() << "Invalid StrTrieBase node type: " << ntype;
 
     NEXT_NODE:
         if (kpos == klen)
@@ -334,14 +319,14 @@ REMOVE_TRAILING_VALUE_NODES:
 }
 
 //===========================================================================
-bool StrTrie::find(string * out, std::string_view key) const {
+bool StrTrieBase::find(string * out, std::string_view key) const {
     out->clear();
     if (empty())
         return false;
     auto kpos = 0;
     auto klen = key.size() * 2;
     auto kval = getKeyVal(key, kpos);
-    auto pgno = pageRoot();
+    auto pgno = m_heap.root();
     auto inode = 0;
     auto node = (uint8_t const *) nullptr;
 
@@ -399,23 +384,23 @@ bool StrTrie::find(string * out, std::string_view key) const {
 }
 
 //===========================================================================
-StrTrie::Iterator StrTrie::begin() const {
+StrTrieBase::Iterator StrTrieBase::begin() const {
     return Iterator{};
 }
 
 //===========================================================================
-StrTrie::Iterator StrTrie::end() const {
+StrTrieBase::Iterator StrTrieBase::end() const {
     return Iterator{};
 }
 
 //===========================================================================
-ostream & StrTrie::dump(ostream & os) const {
+ostream & StrTrieBase::dump(ostream & os) const {
     os << "---\n";
     if (empty())
         return os;
 
     string out;
-    auto pgno = pageRoot();
+    auto pgno = m_heap.root();
     auto nNodes = size(pgno);
     for (auto inode = 0; inode < nNodes; ++inode) {
         auto node = nodeAt(pgno, inode);
@@ -459,11 +444,11 @@ ostream & StrTrie::dump(ostream & os) const {
 
 /****************************************************************************
 *
-*   StrTrie::Iterator
+*   StrTrieBase::Iterator
 *
 ***/
 
 //===========================================================================
-StrTrie::Iterator & StrTrie::Iterator::operator++() {
+StrTrieBase::Iterator & StrTrieBase::Iterator::operator++() {
     return *this;
 }

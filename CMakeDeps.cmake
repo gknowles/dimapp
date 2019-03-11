@@ -38,6 +38,7 @@
 # libs/core/log.cpp
 # libs/core/log.h
 # libs/core/math.h
+# libs/core/pageheap.h
 # libs/core/pch.cpp
 # libs/core/pch.h
 # libs/core/perf.cpp
