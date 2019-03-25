@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2018.
+// Copyright Glen Knowles 2018 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // url.h - dim http
@@ -18,7 +18,7 @@ namespace Dim {
 *   Examples:
 *       *
 *       /
-*       /a/b?x=1&y&z=3
+*       /a/b?x=1&y&z=%33
 *       /c?&w
 *
 ***/
