@@ -35,18 +35,18 @@ static void app(int argc, char *argv[]) {
     StrTrie vals;
     string out;
     EXPECT(vals.empty());
-    auto b = vals.insert("abc", "123");
+    auto b = vals.insert("abc");
     EXPECT(b);
-    EXPECT(vals.find(&out, "abc") && out == "123");
-    EXPECT(!vals.find(&out, "b"));
-    EXPECT(!vals.find(&out, "ab"));
-    EXPECT(!vals.find(&out, "abcd"));
+    EXPECT(vals.lowerBound(&out, "abc") && out == "abc");
+    EXPECT(!vals.lowerBound(&out, "b"));
+    EXPECT(!vals.lowerBound(&out, "ab"));
+    EXPECT(!vals.lowerBound(&out, "abcd"));
     vals.dump(cout);
-    b = vals.insert("a", "1");
+    b = vals.insert("a");
     vals.dump(cout);
     EXPECT(b);
-    EXPECT(vals.find(&out, "a") && out == "1");
-    EXPECT(vals.find(&out, "abc") && out == "123");
+    EXPECT(vals.lowerBound(&out, "a") && out == "a");
+    EXPECT(vals.lowerBound(&out, "abc") && out == "abc");
 
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);

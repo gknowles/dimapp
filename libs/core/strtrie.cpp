@@ -25,7 +25,6 @@ enum NodeType {
     kNodeInvalid,
     kNodeSeg,
     kNodeSwitch,
-    kNodeValue,
 };
 
 unsigned const kNodeLen = 18;
@@ -41,11 +40,6 @@ unsigned const kMaxValueLen = 16;
 //  data[0] & 0x7 = kNodeSwitch
 //  data[1] = index of value node (0 for none)
 //  data[2 - 17] = index by next nibble to get next node for key (0 for none)
-// Value
-//  data[0] & 0x7 = kNodeValue
-//  (data[0] >> 3) + 1 = length in bytes of value [1, 16]
-//  data[1] = index of next node (0 for none)
-//  data[2 - 17] = bytes of value
 
 } // namespace
 
@@ -79,11 +73,6 @@ constexpr uint8_t asSeg0(size_t len) {
 //===========================================================================
 static void setSegLen(uint8_t * node, size_t len) {
     node[0] = asSeg0(len);
-}
-
-//===========================================================================
-static void setValueLen(uint8_t * node, size_t len) {
-    node[0] = (uint8_t) (kNodeValue | ((len - 1) << 3));
 }
 
 //===========================================================================
@@ -169,8 +158,7 @@ size_t StrTrieBase::capacity(size_t pgno) const {
 }
 
 //===========================================================================
-bool StrTrieBase::insert(string_view key, string_view value) {
-    bool inserted = true;
+bool StrTrieBase::insert(string_view key) {
     auto pgno = empty() ? m_heap.alloc() : m_heap.root();
     auto nNodes = size(pgno);
     auto inode = 0;
@@ -246,7 +234,7 @@ bool StrTrieBase::insert(string_view key, string_view value) {
 
     NEXT_NODE:
         if (kpos == klen)
-            goto START_VALUE;
+            return false;
         kval = getKeyVal(key, ++kpos);
     }
     // add key segments
@@ -271,55 +259,19 @@ bool StrTrieBase::insert(string_view key, string_view value) {
         for (auto spos = 0; kpos < klen; ++spos, ++kpos) 
             pushSegVal(node, spos, getKeyVal(key, kpos));
     }
-    inode = (uint8_t) nNodes;
-
-START_VALUE:
-    auto vpos = (size_t) 0;
-    auto vlen = value.size();
-    while (inode < nNodes) {
-        // replace
-        auto slen = min(vlen - vpos, (size_t) kMaxValueLen);
-        setSegLen(node, slen);
-        memcpy(node + 2, value.data() + vpos, slen);
-        vpos += slen;
-        inode = node[1];
-        node = nodeAt(pgno, inode);
-        if (vpos == vlen) {
-            node[1] = 0;
-            goto REMOVE_TRAILING_VALUE_NODES;
-        }
-        if (!inode) {
-            inode = node[1] = (uint8_t) nNodes;
-            node = nodeAt(pgno, inode);
-            inserted = false;
-            break;
-        }
-    }
-    for (;;) {
-        assert(inode == size(pgno));
-        node = nodeAppend(pgno, nullptr);
-        nNodes += 1;
-        auto slen = min(vlen - vpos, (size_t) kMaxValueLen);
-        setValueLen(node, slen);
-        memcpy(node + 2, value.data() + vpos, slen);
-        vpos += slen;
-        if (vpos == vlen)
-            return inserted;
-        inode = node[1] = (uint8_t) nNodes;
-        node = nodeAt(pgno, inode);
-    }
-
-REMOVE_TRAILING_VALUE_NODES:
-    while (inode) {
-        node = nodeAt(pgno, inode);
-        inode = node[1];
-        memset(node, 0, kNodeLen);
-    }
-    return false;
+    if (node) 
+        node[1] = 255;
+    return true;
 }
 
 //===========================================================================
-bool StrTrieBase::find(string * out, std::string_view key) const {
+bool StrTrieBase::contains(std::string_view key) const {
+    string out;
+    return lowerBound(&out, key) && out == key;
+}
+
+//===========================================================================
+bool StrTrieBase::lowerBound(string * out, std::string_view key) const {
     out->clear();
     if (empty())
         return false;
@@ -330,7 +282,7 @@ bool StrTrieBase::find(string * out, std::string_view key) const {
     auto inode = 0;
     auto node = (uint8_t const *) nullptr;
 
-    for (;;) {
+    while (inode != 255) {
         node = nodeAt(pgno, inode);
         auto ntype = nodeType(node);
         if (ntype == kNodeSwitch) {
@@ -342,9 +294,6 @@ bool StrTrieBase::find(string * out, std::string_view key) const {
             kval = getKeyVal(key, ++kpos);
             continue;
         }
-
-        if (ntype == kNodeValue)
-            return false;
 
         if (ntype == kNodeSeg) {
             auto slen = getSegLen(node);
@@ -362,25 +311,8 @@ bool StrTrieBase::find(string * out, std::string_view key) const {
         }
     }
 
-    if (!inode)
-        return false;
-    node = nodeAt(pgno, inode);
-    auto ntype = nodeType(node);
-    if (ntype == kNodeSwitch) {
-        inode = node[1];
-        node = nodeAt(pgno, inode);
-        ntype = nodeType(node);
-    }
-    if (ntype != kNodeValue)
-        return false;
-    for (;;) {
-        out->append((char const *) node + 2, getSegLen(node));
-        inode = node[1];
-        if (!inode)
-            return true;
-        node = nodeAt(pgno, inode);
-        assert(nodeType(node) == kNodeValue);
-    }
+    *out = key;
+    return inode == 255 && kpos == klen;
 }
 
 //===========================================================================
@@ -416,19 +348,6 @@ ostream & StrTrieBase::dump(ostream & os) const {
             break;
         case kNodeSwitch:
             os << " - Switch\n";
-            break;
-        case kNodeValue:
-            os << " - Value/" << (int) getSegLen(node) << " \"";
-            for (auto i = 0; i < getSegLen(node); ++i) {
-                auto ch = node[i + 2];
-                if (isprint(ch)) {
-                    os << ch;
-                } else {
-                    os << '%';
-                    hexByte(os, ch);
-                }
-            }
-            os << "\"\n";
             break;
         case kNodeSeg:
             os << " - Segment/" << (int) getSegLen(node) << "\n";

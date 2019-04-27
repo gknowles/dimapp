@@ -33,11 +33,12 @@ public:
 public:
     StrTrieBase (IPageHeap & heap) : m_heap{heap} {}
 
-    bool insert(std::string_view key, std::string_view value);
+    bool insert(std::string_view key);
 
     explicit operator bool() const { return !empty(); }
 
-    bool find(std::string * out, std::string_view name) const;
+    bool contains(std::string_view name) const;
+    bool lowerBound(std::string * out, std::string_view name) const;
 
     bool empty() const { return m_heap.empty(); }
     Iterator begin() const;
