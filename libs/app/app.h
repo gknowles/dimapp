@@ -107,6 +107,9 @@ inline bool appStopping() { return appMode() == kRunStopping; }
 // returns flags passed to appRun()
 AppFlags appFlags();
 
+// returns EX_OK unless changed by appSignalShutdown()
+int appExitCode();
+
 Path const & appRootDir();
 Path const & appConfigDir();
 Path const & appCrashDir();

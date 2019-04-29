@@ -200,6 +200,11 @@ AppFlags Dim::appFlags() {
 }
 
 //===========================================================================
+int Dim::appExitCode() {
+    return s_exitcode;
+}
+
+//===========================================================================
 Path const & Dim::appRootDir() {
     return s_rootDir;
 }
@@ -260,6 +265,7 @@ int Dim::appRun(IAppNotify * app, int argc, char * argv[], AppFlags flags) {
     s_appFlags = flags;
     s_runMode = kRunStarting;
     s_appTasks.clear();
+    s_exitcode = 0;
 
     auto exeName = (Path) envExecPath();
     s_appName = exeName.stem();
