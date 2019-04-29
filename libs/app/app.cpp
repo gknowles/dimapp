@@ -143,7 +143,18 @@ void RunTask::onTask() {
 
     taskPushEvent(s_appTasks.data(), s_appTasks.size());
 
-    s_runMode = kRunRunning;
+    {
+        unique_lock lk{s_runMut};
+        if (s_runMode == kRunStopping) {
+            // One of the initialization tasks called appSignalShutdown()
+            // moving mode to stopping, so we don't want to move backward
+            // to running.
+        } else {
+            assert(s_runMode == kRunStarting);
+            s_runMode = kRunRunning;
+        }
+    }
+
     s_app->onAppRun();
 }
 
@@ -304,7 +315,10 @@ void Dim::appSignalShutdown(int exitcode) {
     if (exitcode > s_exitcode)
         s_exitcode = exitcode;
 
-    s_runMode = kRunStopping;
+    {
+        unique_lock lk{s_runMut};
+        s_runMode = kRunStopping;
+    }
     s_runCv.notify_one();
 }
 
