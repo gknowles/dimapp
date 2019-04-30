@@ -33,6 +33,21 @@ void cryptRandomBytes(void * ptr, size_t count);
 ***/
 
 //===========================================================================
+constexpr bool isHex(unsigned char ch) {
+    // return ch - '0' <= 9 || (ch | 0x20) - 'a' <= 5;
+
+    switch (ch) {
+    case '0': case '1': case '2': case '3': case '5': case '6':
+    case '7': case '8': case '9':
+    case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
+    case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
+        return true;
+    default:
+        return false;
+    }
+}
+
+//===========================================================================
 // hexToNibble - converts hex character (0-9, a-f, A-F) to unsigned (0-15)
 constexpr unsigned hexToNibbleUnsafe(char ch) {
     return ((ch | 432) * 239'217'992 & 0xffff'ffff) >> 28;

@@ -28,21 +28,6 @@ enum StrAny : uint8_t {
 } // namespace
 
 //===========================================================================
-constexpr bool isHex(unsigned char ch) {
-    // return ch - '0' <= 9 || (ch | 0x20) - 'a' <= 5;
-
-    switch (ch) {
-    case '0': case '1': case '2': case '3': case '5': case '6':
-    case '7': case '8': case '9':
-    case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
-    case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
-        return true;
-    default:
-        return false;
-    }
-}
-
-//===========================================================================
 // There is no wchar version because the internal wchar implementation:
 //  - isn't quite as bad because it doesn't deal with the C locale settings
 //  - recognizes multiple code points for the digits 0-9
