@@ -45,17 +45,23 @@ static RunMode s_mode{kRunStopped};
 ***/
 
 //===========================================================================
-static void setState(unsigned status) {
+static void setState(
+    unsigned status, 
+    bool accepting = true, 
+    int exitcode = EX_OK
+) {
+    DWORD accepts = SERVICE_ACCEPT_STOP;
     SERVICE_STATUS ss = {
         SERVICE_WIN32_OWN_PROCESS,
         status,
-        SERVICE_ACCEPT_STOP,
+        accepting ? accepts : 0,
         ERROR_SERVICE_SPECIFIC_ERROR,
-        NO_ERROR, // service specific exit code
+        (DWORD) exitcode, // service specific exit code
         0, // check point
         30'000 // 30 second wait
     };
-    SetServiceStatus(s_hstat, &ss);
+    if (!SetServiceStatus(s_hstat, &ss))
+        logMsgFatal() << "SetServiceStatus(" << status << "): " << WinError{};
 }
 
 //===========================================================================
@@ -90,7 +96,7 @@ static VOID WINAPI ServiceMain(DWORD argc, LPTSTR * argv) {
         logMsgFatal() << "RegisterServiceCtrlHandlerExW: " << WinError{};
 
     assert(appStarting());
-    setState(SERVICE_START_PENDING);
+    setState(SERVICE_RUNNING, false);
     iAppPushStartupTask(&s_reportTask);
 
     {
@@ -143,6 +149,7 @@ static void serviceDispatchThread() {
 
 //===========================================================================
 void ReportStatusTask::onTask() {
+    // Start accepting service control requests
     setState(SERVICE_RUNNING);
 }
 
@@ -170,7 +177,7 @@ void ShutdownNotify::onShutdownClient(bool firstTry) {
 //===========================================================================
 void ShutdownNotify::onShutdownConsole(bool firstTry) {
     if (firstTry && (appFlags() & fAppIsService))
-        setState(SERVICE_STOPPED);
+        setState(SERVICE_STOPPED, false, appExitCode());
 
     scoped_lock lk{s_mut};
     if (s_mode != kRunStopped)
