@@ -292,7 +292,7 @@ static bool writeSwitchCase(
         if (ns.state != prev) {
             if (pos % kCaseColumns)
                 os << '\n';
-            os << "        goto state" << prev << ";\n";
+            os << "        goto STATE_" << prev << ";\n";
             prev = ns.state;
             pos = 0;
         }
@@ -317,7 +317,7 @@ static bool writeSwitchCase(
     if (pos % kCaseColumns)
         os << '\n';
 
-    os << "        goto state" << cases.back().state << ";\n"
+    os << "        goto STATE_" << cases.back().state << ";\n"
        << "    }\n";
     return true;
 }
@@ -346,7 +346,7 @@ static void writeEventCallback(
         assert(0);
     }
     os << "))\n";
-    os << prefix << "    goto state0;\n";
+    os << prefix << "    goto STATE_0;\n";
 }
 
 //===========================================================================
@@ -462,7 +462,7 @@ static void writeParserState(
     Element const * root,
     bool inclStatePositions
 ) {
-    os << "\nstate" << st.id << ":\n";
+    os << "\nSTATE_" << st.id << ":\n";
     vector<string> aliases = st.aliases;
     if (st.name.empty()) {
         aliases.push_back(to_string(st.id) + ":");
@@ -506,7 +506,7 @@ static void writeParserState(
         if (elems.front().elem == &ElementDone::s_abort) {
             os << "    ptr -= 1;\n";
         }
-        os << "    goto state1;\n";
+        os << "    goto STATE_1;\n";
         return;
     }
 
@@ -540,14 +540,14 @@ static void writeParserState(
             os << "--";
         unsigned id = st.next.empty() ? 0 : st.next[256];
         os << "ptr))\n"
-           << "        goto state" << id << ";\n";
+           << "        goto STATE_" << id << ";\n";
     }
 
     unsigned id = root && !st.next.empty() ? st.next[0] : 0;
     if (id == 1) {
         os << "    ptr -= 1;\n";
     }
-    os << "    goto state" << id << ";\n";
+    os << "    goto STATE_" << id << ";\n";
 }
 
 //===========================================================================
@@ -599,9 +599,9 @@ static void writeMainFuncIntro(ostream & os) {
     os << R"(parse (char const src[]) {
     char const * ptr = src;
     unsigned char ch;
-    goto state2;
+    goto STATE_2;
 
-state0:
+STATE_0:
     // )" << kFailedStateName
            << R"(
     m_errpos = ptr - src - 1;
@@ -621,14 +621,14 @@ static void writeStateFuncIntro(ostream & os, Element const * root) {
         writeEventCallback(os, root->name, Element::fOnStart);
     if (root->flags & Element::fOnStartW)
         writeEventCallback(os, root->name, Element::fOnStartW, "ptr");
-    os << R"(    goto state2;
+    os << R"(    goto STATE_2;
 
-state0:
+STATE_0:
     // )" << kFailedStateName
            << R"(
     if (last) {
         ptr = last;
-        goto state1;
+        goto STATE_1;
     }
     return false;
 )";

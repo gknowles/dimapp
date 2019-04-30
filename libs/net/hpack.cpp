@@ -603,11 +603,11 @@ bool HuffDecoder::decode(
     for (;;) {
         int key = 0;
         if (!read(&key, m_prefixBits, avail, ptr, eptr))
-            goto done;
+            goto DONE;
         do {
             auto & di = m_decodeTable[key];
             if (!read(&key, 1, avail, ptr, eptr))
-                goto done;
+                goto DONE;
             val = (key & 1) ? di.one : di.zero;
             key = val;
         } while (val > 0);
@@ -616,7 +616,7 @@ bool HuffDecoder::decode(
         *optr++ = (char)-val;
     }
 
-done:
+DONE:
     *optr = 0;
     return true;
 }

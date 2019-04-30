@@ -125,7 +125,7 @@ void oldTest() {
                 for (auto && hv : hdr) {
                     if (thi == ethi) {
                         logMsgError() << "expected fewer headers";
-                        goto finished_headers;
+                        goto FINISHED_HEADERS;
                     }
                     if (strcmp(thi->name, hdr.m_name) != 0
                         || strcmp(thi->value, hv.m_value) != 0) {
@@ -137,7 +137,7 @@ void oldTest() {
                     ++thi;
                 }
             }
-        finished_headers:
+        FINISHED_HEADERS:
             if (thi != ethi)
                 logMsgError() << "expected more headers (FAILED)";
         }

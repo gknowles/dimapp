@@ -643,24 +643,24 @@ static void removeConflicts(
     while (mi != matched.end()) {
         for (evi = 0; evi < numEvents; ++evi) {
             if (!used[evi])
-                goto found_unused;
+                goto FOUND_UNUSED;
         }
         matched.erase(mi, matched.end());
         return;
 
-    found_unused:
+    FOUND_UNUSED:
         if (*mi == events[evi])
-            goto matched;
+            goto MATCHED;
         if (mi->flags & Element::fCharEvents) {
             // char can shift around start events
             for (;;) {
                 if ((events[evi].flags & Element::fStartEvents) == 0
                     || ++evi == numEvents
                 ) {
-                    goto unmatched;
+                    goto UNMATCHED;
                 }
                 if (*mi == events[evi])
-                    goto matched;
+                    goto MATCHED;
             }
         } else if (mi->flags & Element::fStartEvents) {
             // start events can shift around char events.
@@ -668,20 +668,20 @@ static void removeConflicts(
                 if ((events[evi].flags & Element::fCharEvents) == 0
                     || ++evi == numEvents
                 ) {
-                    goto unmatched;
+                    goto UNMATCHED;
                 }
                 if (*mi == events[evi])
-                    goto matched;
+                    goto MATCHED;
             }
         }
         assert(mi->flags & Element::fEndEvents);
         // [[fallthrough]];
 
-    unmatched:
+    UNMATCHED:
         mi = matched.erase(mi);
         continue;
 
-    matched:
+    MATCHED:
         used[evi] = true;
         ++mi;
     }

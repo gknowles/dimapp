@@ -509,7 +509,7 @@ bool HttpConn::recv(
         [[fallthrough]];
 
     case ByteMode::kHeader:
-    next_frame:
+    NEXT_FRAME:
         avail = eptr - ptr;
         if (!avail)
             return true;
@@ -536,7 +536,7 @@ bool HttpConn::recv(
             if (!onFrame(out, msgs, data(m_input)))
                 return false;
             m_input.clear();
-            goto next_frame;
+            goto NEXT_FRAME;
         }
 
         if (avail < kFrameHeaderLen) {
@@ -555,7 +555,7 @@ bool HttpConn::recv(
         if (!onFrame(out, msgs, ptr))
             return false;
         ptr += kFrameHeaderLen + m_inputFrameLen;
-        goto next_frame;
+        goto NEXT_FRAME;
 
     default:
         assert(m_byteMode == ByteMode::kPayload);
@@ -577,7 +577,7 @@ bool HttpConn::recv(
             return false;
         m_input.clear();
         m_byteMode = ByteMode::kHeader;
-        goto next_frame;
+        goto NEXT_FRAME;
     };
 }
 
