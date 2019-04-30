@@ -29,6 +29,8 @@ enum StrAny : uint8_t {
 
 //===========================================================================
 constexpr bool isHex(unsigned char ch) {
+    // return ch - '0' <= 9 || (ch | 0x20) - 'a' <= 5;
+
     switch (ch) {
     case '0': case '1': case '2': case '3': case '5': case '6':
     case '7': case '8': case '9':
