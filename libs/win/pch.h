@@ -50,6 +50,10 @@
 // must come after Windows.h
 #include <CommCtrl.h> // ListView
 #include <DbgHelp.h>
+#include <NTSecAPI.h>
+#define LSA_LOOKUP_ISOLATED_AS_LOCAL 0x8000'0000
+#define STATUS_NONE_MAPPED               ((NTSTATUS)0xC0000073L)
+#define STATUS_SOME_NOT_MAPPED           ((NTSTATUS)0x00000107L)
 #include <Psapi.h>
 #include <shellapi.h>
 

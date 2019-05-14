@@ -96,6 +96,63 @@ static CharBuf toMultiString(T const & strings) {
     return out;
 }
 
+//===========================================================================
+static bool grantLogonAsService (char const account[]) {
+    LSA_OBJECT_ATTRIBUTES oa = { sizeof(oa) };
+    LSA_HANDLE h;
+    ACCESS_MASK access = POLICY_LOOKUP_NAMES | POLICY_CREATE_ACCOUNT;
+    auto status = LsaOpenPolicy(NULL, &oa, access, &h);
+    if (status) {
+        WinError err(LsaNtStatusToWinError(status));
+        logMsgError() << "LsaOpenPolicy: " << err;
+        return false;
+    }
+    Finally h_f([=]() { LsaClose(h); });
+
+    auto wacct = toWstring(account);
+    LSA_UNICODE_STRING accts[] = {
+        { (USHORT) wacct.size(), (USHORT) wacct.size(), wacct.data() },
+    };
+    LSA_REFERENCED_DOMAIN_LIST * dl;
+    LSA_TRANSLATED_SID2 * xsid;
+    status = LsaLookupNames2(
+        h, 
+        LSA_LOOKUP_ISOLATED_AS_LOCAL, 
+        (ULONG) size(accts),
+        accts,
+        &dl,
+        &xsid
+    );
+    if (status) {
+        if (status == STATUS_NONE_MAPPED 
+            || status == STATUS_SOME_NOT_MAPPED
+        ) {
+            LsaFreeMemory(dl);
+            LsaFreeMemory(xsid);
+        }
+        WinError err(LsaNtStatusToWinError(status));
+        
+        logMsgError() << "LsaLookupNames2(" << account << "): " << err;
+        return false;
+    }
+
+    wstring wlogon = SE_SERVICE_LOGON_NAME;
+    LSA_UNICODE_STRING rights[] = {
+        { (USHORT) wlogon.size(), (USHORT) wlogon.size(), wlogon.data() },
+    };
+    status = LsaAddAccountRights(h, xsid->Sid, rights, (ULONG) size(rights));
+    if (status) {
+        WinError err(LsaNtStatusToWinError(status));
+        logMsgError() << "LsaAddAccountRights(" << account << ", LOGON): "
+            << err;
+        return false;
+    }
+
+    LsaFreeMemory(dl);
+    LsaFreeMemory(xsid);
+    return true;
+}
+
 
 /****************************************************************************
 *
@@ -286,5 +343,10 @@ bool Dim::winSvcCreate(WinServiceConfig const & sconf) {
 
     s_d = {};
     logMsgInfo() << conf.serviceName << " service created.";
+
+    if (conf.account && *conf.account) {
+        if (!grantLogonAsService(conf.account))
+            return false;
+    }
     return true;
 }
