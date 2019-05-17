@@ -110,37 +110,30 @@ static bool grantLogonAsService (char const account[]) {
     Finally h_f([=]() { LsaClose(h); });
 
     auto wacct = toWstring(account);
-    LSA_UNICODE_STRING accts[] = {
-        { (USHORT) wacct.size(), (USHORT) wacct.size(), wacct.data() },
-    };
-    LSA_REFERENCED_DOMAIN_LIST * dl;
-    LSA_TRANSLATED_SID2 * xsid;
-    status = LsaLookupNames2(
-        h, 
-        LSA_LOOKUP_ISOLATED_AS_LOCAL, 
-        (ULONG) size(accts),
-        accts,
-        &dl,
-        &xsid
-    );
-    if (status) {
-        if (status == STATUS_NONE_MAPPED 
-            || status == STATUS_SOME_NOT_MAPPED
-        ) {
-            LsaFreeMemory(dl);
-            LsaFreeMemory(xsid);
-        }
-        WinError err(LsaNtStatusToWinError(status));
-        
-        logMsgError() << "LsaLookupNames2(" << account << "): " << err;
+    SID_NAME_USE use;
+    SE_SID acct;
+    DWORD acctLen = sizeof(acct);
+    wchar_t domain[256];
+    auto domLen = (DWORD) size(domain);
+    if (!LookupAccountNameW(
+        nullptr,
+        wacct.c_str(),
+        &acct.Sid,
+        &acctLen,
+        domain,
+        &domLen,
+        &use
+    )) {
+        logMsgError() << "LookupAccountNameW(" << account << "): " << WinError{};
         return false;
     }
 
-    wstring wlogon = SE_SERVICE_LOGON_NAME;
+    wchar_t wlogon[] = SE_SERVICE_LOGON_NAME;
+    auto logonLen = (USHORT) sizeof wlogon;
     LSA_UNICODE_STRING rights[] = {
-        { (USHORT) wlogon.size(), (USHORT) wlogon.size(), wlogon.data() },
+        { logonLen - sizeof(wchar_t), logonLen, wlogon },
     };
-    status = LsaAddAccountRights(h, xsid->Sid, rights, (ULONG) size(rights));
+    status = LsaAddAccountRights(h, &acct.Sid, rights, (ULONG) size(rights));
     if (status) {
         WinError err(LsaNtStatusToWinError(status));
         logMsgError() << "LsaAddAccountRights(" << account << ", LOGON): "
@@ -148,8 +141,6 @@ static bool grantLogonAsService (char const account[]) {
         return false;
     }
 
-    LsaFreeMemory(dl);
-    LsaFreeMemory(xsid);
     return true;
 }
 
@@ -176,8 +167,6 @@ bool Dim::winSvcCreate(WinServiceConfig const & sconf) {
     }
     Finally scm_f([=]() { CloseServiceHandle(scm); });
 
-    auto deps = toMultiString(conf.deps);
-
     auto svcType = getOsValue(s_svcTypes, conf.serviceType);
     auto startType = getOsValue(s_svcStarts, conf.startType);
     auto errCtrl = getOsValue(s_svcErrCtrls, conf.errorControl);
@@ -198,6 +187,8 @@ bool Dim::winSvcCreate(WinServiceConfig const & sconf) {
         }
     }
 
+    auto deps = toWstring(toMultiString(conf.deps).view());
+
     auto s = CreateServiceW(
         scm,
         toWstring(conf.serviceName).c_str(),
@@ -209,7 +200,7 @@ bool Dim::winSvcCreate(WinServiceConfig const & sconf) {
         toWstring(conf.progWithArgs).c_str(),
         conf.loadOrderGroup ? toWstring(conf.loadOrderGroup).c_str() : nullptr,
         tagId ? &tagId : NULL,
-        toWstring(deps.view()).c_str(),
+        deps.c_str(),
         conf.account ? toWstring(conf.account).c_str() : nullptr,
         conf.password ? toWstring(conf.password).c_str() : nullptr
     );
@@ -341,12 +332,12 @@ bool Dim::winSvcCreate(WinServiceConfig const & sconf) {
         }
     }
 
-    s_d = {};
-    logMsgInfo() << conf.serviceName << " service created.";
-
     if (conf.account && *conf.account) {
         if (!grantLogonAsService(conf.account))
             return false;
     }
+    
+    s_d = {};
+    logMsgInfo() << conf.serviceName << " service created.";
     return true;
 }

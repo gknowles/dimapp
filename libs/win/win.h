@@ -172,7 +172,7 @@ struct WinServiceStatus {
 };
 
 bool winSvcCreate(WinServiceConfig const & sconf);
-bool winSvcDestroy(std::string_view svcName);
+bool winSvcDelete(std::string_view svcName);
 
 // Update all service parameters to match the configuration, as if it had
 // just been created via winSvcCreate.
