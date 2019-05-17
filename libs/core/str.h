@@ -413,8 +413,10 @@ constexpr OutIt copy_char(char32_t ch, OutIt out) {
 template<typename OutIt>
 constexpr OutIt copy_char(std::wstring_view in, OutIt out) {
     char32_t popFrontUnicode(std::wstring_view * src);
-    while (auto ch = popFrontUnicode(&in))
+    while (!in.empty()) {
+        auto ch = popFrontUnicode(&in);
         out = copy_char(ch, out);
+    }
     return out;
 }
 
@@ -447,8 +449,10 @@ constexpr OutIt copy_wchar(char32_t ch, OutIt out) {
 //===========================================================================
 template<typename OutIt>
 constexpr OutIt copy_wchar(std::string_view in, OutIt out) {
-    while (auto ch = popFrontUnicode(&in))
+    while (!in.empty()) {
+        auto ch = popFrontUnicode(&in);
         out = copy_wchar(ch, out);
+    }
     return out;
 }
 
