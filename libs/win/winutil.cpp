@@ -129,3 +129,140 @@ IWinOverlappedNotify::getOverlappedResult() {
     }
     return {0, bytes};
 }
+
+
+/****************************************************************************
+*
+*   WinSid
+*
+***/
+
+//===========================================================================
+WinSid & WinSid::operator=(const SID & sid) {
+    CopySid(sizeof(m_data), &m_data.Sid, (SID *) &sid);
+    return *this;
+}
+
+//===========================================================================
+WinSid::operator bool() const {
+    return !IsValidSid((SID *) &m_data.Sid);
+}
+
+//===========================================================================
+bool WinSid::operator==(const WinSid & right) const {
+    return EqualSid((SID *) &**this, (SID *) &*right);
+}
+
+//===========================================================================
+bool WinSid::operator==(WELL_KNOWN_SID_TYPE type) const {
+    return IsWellKnownSid((SID *) &**this, type);
+}
+
+//===========================================================================
+void WinSid::reset() {
+    memset(&m_data, 0, sizeof(m_data));
+}
+
+//===========================================================================
+WinSid Dim::winCreateSid(string_view account) {
+    auto wacct = toWstring(account);
+    SID_NAME_USE use;
+    WinSid out;
+    DWORD count = sizeof(out);
+    wchar_t domain[256];
+    auto domLen = (DWORD) size(domain);
+    if (!LookupAccountNameW(
+        nullptr,
+        wacct.c_str(),
+        &*out,
+        &count,
+        domain,
+        &domLen,
+        &use
+    )) {
+        out.reset();
+    }
+    return out;
+}
+
+//===========================================================================
+WinSid Dim::winCreateSid(WELL_KNOWN_SID_TYPE type, const SID * domain) {
+    WinSid out;
+    DWORD cb = sizeof(out);
+    if (!CreateWellKnownSid(
+        type, 
+        (SID *) domain,
+        &*out, 
+        &cb
+    )) {
+        logMsgFatal() << "CreateWellKnownSid: " << WinError{};
+        out.reset();
+    }
+    return out;
+}
+
+//===========================================================================
+bool Dim::winGetAccountName(
+    string * name, 
+    string * domain, 
+    const SID & sid
+) {
+    if (name) 
+        name->clear();
+    if (domain) 
+        domain->clear();
+    DWORD nameLen = 0;
+    DWORD domLen = 0;
+    SID_NAME_USE use;
+    if (!LookupAccountSidW(
+        NULL,
+        (PSID) &sid,
+        NULL, &nameLen,
+        NULL, &domLen,
+        &use
+    )) {
+        WinError err;
+        if (err != ERROR_INSUFFICIENT_BUFFER) 
+            return false;
+    }
+    wstring wname(nameLen, 0);
+    wstring wdom(domLen, 0);
+    if (!LookupAccountSidW(
+        NULL,
+        (PSID) &sid,
+        wname.data(), &nameLen,
+        wdom.data(), &domLen,
+        &use
+    )) {
+        WinError err;
+        return false;
+    }
+    if (name)
+        *name = toString(wname);
+    if (domain)
+        *domain = toString(wdom);
+    return true;
+}
+
+//===========================================================================
+string Dim::toString(const SID & sid) {
+    wchar_t * str;
+    if (!ConvertSidToStringSidW((SID *) &sid, &str)) {
+        return "InvalidSid";
+    } else {
+        return toString(str);
+    }
+}
+
+//===========================================================================
+bool Dim::parse(WinSid * out, string_view src) {
+    PSID tmp;
+    auto wsrc = toWstring(src);
+    if (!ConvertStringSidToSidW(wsrc.c_str(), &tmp)) {
+        out->reset();
+        return false;
+    } else {
+        *out = *(SID *)tmp;
+        return true;
+    }
+}

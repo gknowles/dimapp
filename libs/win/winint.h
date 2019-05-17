@@ -123,7 +123,44 @@ private:
 
 //---------------------------------------------------------------------------
 // Privileges
+
 bool winEnablePrivilege(wchar_t const name[], bool enable = true);
+
+//---------------------------------------------------------------------------
+// Accounts
+
+class WinSid {
+public:
+    WinSid() = default;
+    WinSid(WinSid const & from) = default;
+    WinSid & operator=(const WinSid & right) = default;
+    WinSid & operator=(const SID & sid);
+
+    explicit operator bool() const;
+    bool operator==(const WinSid & right) const;
+    bool operator==(WELL_KNOWN_SID_TYPE type) const;
+    
+    SID * operator->() { return &m_data.Sid; }
+    SID const * operator->() const { return &m_data.Sid; }
+    SID & operator*() { return *operator->(); }
+    SID const & operator*() const { return *operator->(); }
+
+    void reset();
+
+private:
+    SE_SID m_data {};
+};
+
+WinSid winCreateSid(std::string_view name);
+WinSid winCreateSid(WELL_KNOWN_SID_TYPE type, const SID * domain = nullptr);
+bool winGetAccountName(
+    std::string * name, 
+    std::string * domain, 
+    const SID & sid
+);
+
+std::string toString(const SID & sid);
+bool parse(WinSid * out, std::string_view src);
 
 
 /****************************************************************************
