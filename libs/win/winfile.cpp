@@ -966,7 +966,7 @@ static bool updateNamedAccess(
     for (;;) {
         ACL * aclOld;
         auto wpath = toWstring(path);
-        WinError err = GetNamedSecurityInfoW(
+        err = GetNamedSecurityInfoW(
             wpath.c_str(),
             SE_FILE_OBJECT,
             DACL_SECURITY_INFORMATION,
