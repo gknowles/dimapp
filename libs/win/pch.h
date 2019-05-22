@@ -45,6 +45,7 @@
 #include <Windows.h>
 
 // must come after Windows.h
+#include <AclAPI.h>
 #include <CommCtrl.h> // ListView
 #include <DbgHelp.h>
 #include <NTSecAPI.h> // LsaOpenPolicy

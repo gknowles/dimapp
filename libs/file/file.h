@@ -144,6 +144,36 @@ void fileReadOnly(std::string_view path, bool enable);
 bool fileRemove(std::string_view path, bool recurse = false);
 bool fileCreateDirs(std::string_view path);
 
+namespace FileAccess {
+    enum Right {
+        kInvalid,
+        kNone,
+        kFull, // not normally needed, prefer using "Modify"
+        kModify,
+        kReadAndExecute,
+        kReadOnly,
+        kWriteOnly,
+        kDelete,
+    };
+    enum Inherit {
+        kInheritNone,
+        kInheritOnly, // inherited by children but doesn't apply to object
+        kInheritAll,
+    };
+}
+bool fileAddAccess(
+    std::string_view path,
+    std::string_view trustee, // name or Sid of account or group
+    FileAccess::Right allow,
+    FileAccess::Inherit inherit
+);
+bool fileSetAccess(
+    std::string_view path,
+    std::string_view trustee, // name or Sid of account or group
+    FileAccess::Right allow,
+    FileAccess::Inherit inherit
+);
+
 //---------------------------------------------------------------------------
 // With handle
 //---------------------------------------------------------------------------
