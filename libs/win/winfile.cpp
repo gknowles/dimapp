@@ -976,23 +976,33 @@ static bool updateNamedAccess(
             NULL, // sacl
             (PSECURITY_DESCRIPTOR *) &sd
         );
-        if (!err)
+        if (err)
             break;
 
         auto wtrustee = toWstring(trustee);
         EXPLICIT_ACCESSW access = {};
         access.grfAccessMode = mode;
         access.grfAccessPermissions = getWindowsPerms(allow);
-        access.grfInheritance = inherit
-            ? SUB_CONTAINERS_AND_OBJECTS_INHERIT
-            : NO_INHERITANCE;
+        switch (inherit) {
+        case FileAccess::kInheritNone:
+        default:
+            access.grfInheritance = NO_INHERITANCE;
+            break;
+        case FileAccess::kInheritOnly:
+            access.grfInheritance =
+                SUB_CONTAINERS_AND_OBJECTS_INHERIT | INHERIT_ONLY;
+            break;
+        case FileAccess::kInheritAll:
+            access.grfInheritance = SUB_CONTAINERS_AND_OBJECTS_INHERIT;
+            break;
+        }
         access.Trustee.MultipleTrusteeOperation = NO_MULTIPLE_TRUSTEE;
         access.Trustee.TrusteeForm = TRUSTEE_IS_NAME;
         access.Trustee.TrusteeType = TRUSTEE_IS_UNKNOWN;
         access.Trustee.ptstrName = wtrustee.data();
         ACL * aclNew;
         err = SetEntriesInAclW(1, &access, aclOld, &aclNew);
-        if (!err)
+        if (err || !aclNew)
             break;
 
         err = SetNamedSecurityInfoW(
