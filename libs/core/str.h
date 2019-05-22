@@ -334,6 +334,17 @@ std::string toString(std::vector<T> const & src, char sep = ' ') {
     return os.str();
 }
 
+//===========================================================================
+// upper & lower case
+//===========================================================================
+char * toLower(char src[]);
+char * toUpper(char src[]);
+char * toLower(char src[], size_t srclen);
+char * toUpper(char src[], size_t srclen);
+
+std::string toLower(std::string_view src);
+std::string toUpper(std::string_view src);
+
 
 /****************************************************************************
 *

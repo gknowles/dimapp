@@ -483,6 +483,50 @@ unique_ptr<char[]> Dim::strDup(string_view src) {
     return ptr;
 }
 
+//===========================================================================
+char * Dim::toLower(char src[]) {
+    auto & f = use_facet<ctype<char>>(locale());
+    for (auto ptr = src; *ptr; ++ptr)
+        *ptr = f.tolower(*ptr);
+    return src;
+}
+
+//===========================================================================
+char * Dim::toUpper(char src[]) {
+    auto & f = use_facet<ctype<char>>(locale());
+    for (auto ptr = src; *ptr; ++ptr)
+        *ptr = f.toupper(*ptr);
+    return src;
+}
+
+//===========================================================================
+char * Dim::toLower(char src[], size_t srclen) {
+    auto & f = use_facet<ctype<char>>(locale());
+    f.tolower(src, src + srclen);
+    return src;
+}
+
+//===========================================================================
+char * Dim::toUpper(char src[], size_t srclen) {
+    auto & f = use_facet<ctype<char>>(locale());
+    f.toupper(src, src + srclen);
+    return src;
+}
+
+//===========================================================================
+string Dim::toLower(string_view src) {
+    string out(src);
+    toLower(out.data());
+    return out;
+}
+
+//===========================================================================
+string Dim::toUpper(string_view src) {
+    string out(src);
+    toUpper(out.data());
+    return out;
+}
+
 
 /****************************************************************************
 *
