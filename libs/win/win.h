@@ -20,6 +20,11 @@ namespace Dim {
 ***/
 
 struct WinServiceConfig {
+    // Well known service accounts
+    static constexpr char kLocalSystem[] = "LocalSystem";
+    static constexpr char kLocalService[] = "NT AUTHORITY\\LocalService";
+    static constexpr char kNetworkService[] = "NT AUTHORITY\\NetworkService";
+
     enum class Type {
         kInvalid,
         kOwn,
@@ -112,11 +117,10 @@ struct WinServiceConfig {
     char const * loadOrderGroup {};     // Default: none
     unsigned loadOrderTag {};           // Default: none
     std::vector<char const *> deps;     // Default: none
-    char const * account {};            // Default: LocalSystem
-    char const * password {};
-    char const * displayName {};        // Default: copies from service name
+    char const * account {};            // Default: NT Service\<serviceName>
+    char const * password {};           // Default: none
+    char const * displayName {};        // Default: <serviceName>
     char const * desc {};               // Default: none
-
     FailureFlag failureFlag {};         // Default: kCrashOnly
     Duration failureReset {};           // Default: 0 which translates to ???
     char const * rebootMsg {}; // used by FailAction::kReboot
@@ -195,5 +199,7 @@ std::vector<std::string> winSvcFind(
     WinServiceConfig const & conf,
     WinServiceStatus const & stat
 );
+
+bool winSvcGrantLogonAsService(std::string_view account);
 
 } // namespace

@@ -96,54 +96,6 @@ static CharBuf toMultiString(T const & strings) {
     return out;
 }
 
-//===========================================================================
-static bool grantLogonAsService (char const account[]) {
-    LSA_OBJECT_ATTRIBUTES oa = { sizeof(oa) };
-    LSA_HANDLE h;
-    ACCESS_MASK access = POLICY_LOOKUP_NAMES | POLICY_CREATE_ACCOUNT;
-    auto status = LsaOpenPolicy(NULL, &oa, access, &h);
-    if (status) {
-        WinError err(LsaNtStatusToWinError(status));
-        logMsgError() << "LsaOpenPolicy: " << err;
-        return false;
-    }
-    Finally h_f([=]() { LsaClose(h); });
-
-    auto wacct = toWstring(account);
-    SID_NAME_USE use;
-    SE_SID acct;
-    DWORD acctLen = sizeof(acct);
-    wchar_t domain[256];
-    auto domLen = (DWORD) size(domain);
-    if (!LookupAccountNameW(
-        nullptr,
-        wacct.c_str(),
-        &acct.Sid,
-        &acctLen,
-        domain,
-        &domLen,
-        &use
-    )) {
-        logMsgError() << "LookupAccountNameW(" << account << "): " << WinError{};
-        return false;
-    }
-
-    wchar_t wlogon[] = SE_SERVICE_LOGON_NAME;
-    auto logonLen = (USHORT) sizeof wlogon;
-    LSA_UNICODE_STRING rights[] = {
-        { logonLen - sizeof(wchar_t), logonLen, wlogon },
-    };
-    status = LsaAddAccountRights(h, &acct.Sid, rights, (ULONG) size(rights));
-    if (status) {
-        WinError err(LsaNtStatusToWinError(status));
-        logMsgError() << "LsaAddAccountRights(" << account << ", LOGON): "
-            << err;
-        return false;
-    }
-
-    return true;
-}
-
 
 /****************************************************************************
 *
@@ -166,6 +118,12 @@ bool Dim::winSvcCreate(WinServiceConfig const & sconf) {
         return false;
     }
     Finally scm_f([=]() { CloseServiceHandle(scm); });
+
+    string acct;
+    if (!conf.account || !*conf.account) {
+        acct = "NT Service\\"s + conf.serviceName;
+        conf.account = acct.c_str();
+    }
 
     auto svcType = getOsValue(s_svcTypes, conf.serviceType);
     auto startType = getOsValue(s_svcStarts, conf.startType);
@@ -201,7 +159,7 @@ bool Dim::winSvcCreate(WinServiceConfig const & sconf) {
         conf.loadOrderGroup ? toWstring(conf.loadOrderGroup).c_str() : nullptr,
         tagId ? &tagId : NULL,
         deps.c_str(),
-        conf.account ? toWstring(conf.account).c_str() : nullptr,
+        toWstring(conf.account).c_str(),
         conf.password ? toWstring(conf.password).c_str() : nullptr
     );
     if (!s) {
@@ -332,12 +290,64 @@ bool Dim::winSvcCreate(WinServiceConfig const & sconf) {
         }
     }
 
-    if (conf.account && *conf.account) {
-        if (!grantLogonAsService(conf.account))
-            return false;
-    }
+    if (!winSvcGrantLogonAsService(conf.account))
+        return false;
     
     s_d = {};
     logMsgInfo() << conf.serviceName << " service created.";
+    return true;
+}
+
+//===========================================================================
+bool Dim::winSvcGrantLogonAsService (string_view account) {
+    if (account == WinServiceConfig::kLocalSystem) {
+        // LocalSystem implicitly has log on as a service rights and can't
+        // be looked up by name anyway.
+        return true;
+    }
+
+    LSA_OBJECT_ATTRIBUTES oa = { sizeof(oa) };
+    LSA_HANDLE h;
+    ACCESS_MASK access = POLICY_LOOKUP_NAMES | POLICY_CREATE_ACCOUNT;
+    auto status = LsaOpenPolicy(NULL, &oa, access, &h);
+    if (status) {
+        WinError err(LsaNtStatusToWinError(status));
+        logMsgError() << "LsaOpenPolicy: " << err;
+        return false;
+    }
+    Finally h_f([=]() { LsaClose(h); });
+
+    auto wacct = toWstring(account);
+    SID_NAME_USE use;
+    SE_SID acct;
+    DWORD acctLen = sizeof(acct);
+    wchar_t domain[256];
+    auto domLen = (DWORD) size(domain);
+    if (!LookupAccountNameW(
+        nullptr,
+        wacct.c_str(),
+        &acct.Sid,
+        &acctLen,
+        domain,
+        &domLen,
+        &use
+    )) {
+        logMsgError() << "LookupAccountNameW(" << account << "): " << WinError{};
+        return false;
+    }
+
+    wchar_t wlogon[] = SE_SERVICE_LOGON_NAME;
+    auto logonLen = (USHORT) sizeof wlogon;
+    LSA_UNICODE_STRING rights[] = {
+        { logonLen - sizeof(wchar_t), logonLen, wlogon },
+    };
+    status = LsaAddAccountRights(h, &acct.Sid, rights, (ULONG) size(rights));
+    if (status) {
+        WinError err(LsaNtStatusToWinError(status));
+        logMsgError() << "LsaAddAccountRights(" << account << ", LOGON): "
+            << err;
+        return false;
+    }
+
     return true;
 }
