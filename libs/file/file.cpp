@@ -314,6 +314,12 @@ bool FileLoadNotify::onFileRead(
 ***/
 
 //===========================================================================
+Path Dim::fileAbsolutePath(std::string_view path) {
+    auto fp = Path{path};
+    return fp.resolve(fileGetCurrentDir(fp.drive()));
+}
+
+//===========================================================================
 TimePoint Dim::fileLastWriteTime(string_view path) {
     error_code ec;
     auto f = fs::u8path(path.begin(), path.end());
@@ -412,12 +418,6 @@ bool Dim::fileCreateDirs(std::string_view path) {
     logMsgError() << "Create directories failed: " << path;
     errno = ec.value();
     return false;
-}
-
-//===========================================================================
-Path Dim::fileAbsolutePath(std::string_view path) {
-    auto fp = Path{path};
-    return fp.resolve(fileGetCurrentDir(fp.drive()));
 }
 
 
