@@ -35,7 +35,7 @@
     4457 /* declaration of 'identifier' hides function parameter */ \
     4800 /* forcing value to bool 'true' or 'false' */ \
     5030 /* attribute 'identifier' is not recognized */ \
-    26495 /* variable 'identifier' is uninitialized. Always initialize a 
+    26495 /* variable 'identifier' is uninitialized. Always initialize a
             member variable */ \
     26451 /* Arithmetic overflow: Using operation 'op' on a %size1% byte value
             and then casting the result to a %size2% byte value. */ \
@@ -61,7 +61,7 @@
 #pragma warning(disable : 4251)
 #endif
 
-#if _MSC_VER <= 1920
+#if _MSC_VER
 // aligned_alloc added in c++17
 #define aligned_alloc(alignment, size) _aligned_malloc(size, alignment)
 #define aligned_free(ptr) _aligned_free(ptr)
