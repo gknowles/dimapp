@@ -927,6 +927,116 @@ size_t Dim::fileAppendWait(FileHandle f, void const * buf, size_t bufLen) {
 
 /****************************************************************************
 *
+*   Access control
+*
+***/
+
+//===========================================================================
+static unsigned getWindowsPerms(FileAccess::Right right) {
+    switch (right) {
+    case FileAccess::kNone: return 0;
+    case FileAccess::kFull: return FILE_ALL_ACCESS;
+    case FileAccess::kModify:
+        return FILE_GENERIC_READ | FILE_GENERIC_WRITE | FILE_GENERIC_EXECUTE
+            | DELETE;
+    case FileAccess::kReadAndExecute:
+        return FILE_GENERIC_READ | FILE_GENERIC_EXECUTE;
+    case FileAccess::kReadOnly: return FILE_GENERIC_READ;
+    case FileAccess::kWriteOnly: return FILE_GENERIC_WRITE;
+    case FileAccess::kDelete: return DELETE;
+    default:
+        break;
+    }
+    assert(!"Unknown file access right");
+    return 0;
+}
+
+//===========================================================================
+static bool updateNamedAccess(
+    std::string_view path,
+    std::string_view trustee, // name of account or group
+    ACCESS_MODE mode,
+    FileAccess::Right allow,
+    FileAccess::Inherit inherit
+) {
+    WinError err = 0;
+    SECURITY_DESCRIPTOR * sd = nullptr;
+    ACL * aclNew = nullptr;
+
+    for (;;) {
+        ACL * aclOld;
+        auto wpath = toWstring(path);
+        WinError err = GetNamedSecurityInfoW(
+            wpath.c_str(),
+            SE_FILE_OBJECT,
+            DACL_SECURITY_INFORMATION,
+            NULL, // owner
+            NULL, // group
+            &aclOld,
+            NULL, // sacl
+            (PSECURITY_DESCRIPTOR *) &sd
+        );
+        if (!err)
+            break;
+
+        auto wtrustee = toWstring(trustee);
+        EXPLICIT_ACCESSW access = {};
+        access.grfAccessMode = mode;
+        access.grfAccessPermissions = getWindowsPerms(allow);
+        access.grfInheritance = inherit
+            ? SUB_CONTAINERS_AND_OBJECTS_INHERIT
+            : NO_INHERITANCE;
+        access.Trustee.MultipleTrusteeOperation = NO_MULTIPLE_TRUSTEE;
+        access.Trustee.TrusteeForm = TRUSTEE_IS_NAME;
+        access.Trustee.TrusteeType = TRUSTEE_IS_UNKNOWN;
+        access.Trustee.ptstrName = wtrustee.data();
+        ACL * aclNew;
+        err = SetEntriesInAclW(1, &access, aclOld, &aclNew);
+        if (!err)
+            break;
+
+        err = SetNamedSecurityInfoW(
+            wpath.data(),
+            SE_FILE_OBJECT,
+            DACL_SECURITY_INFORMATION,
+            NULL, // owner
+            NULL, // group
+            aclNew,
+            NULL // sacl
+        );
+        break;
+    }
+
+    if (sd)
+        LocalFree(sd);
+    if (aclNew)
+        LocalFree(aclNew);
+    return winFileSetErrno(err);
+}
+
+//===========================================================================
+bool fileAddAccess(
+    std::string_view path,
+    std::string_view trustee, // name or Sid of account or group
+    FileAccess::Right allow,
+    FileAccess::Inherit inherit
+) {
+    return updateNamedAccess(path, trustee, GRANT_ACCESS, allow, inherit);
+}
+
+//===========================================================================
+bool fileSetAccess(
+    std::string_view path,
+    std::string_view trustee, // name or Sid of account or group
+    FileAccess::Right allow,
+    FileAccess::Inherit inherit
+) {
+    return updateNamedAccess(path, trustee, SET_ACCESS, allow, inherit);
+}
+
+
+/****************************************************************************
+*
 *   Copy
 *
 ***/
