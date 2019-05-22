@@ -221,7 +221,7 @@ public:
     value_type const & operator*() const { return m_value; }
     value_type const * operator->() const { return &m_value; }
 private:
-    constexpr static value_type kEndValue{1, 0};
+    static constexpr value_type kEndValue{1, 0};
     Iterator m_iter;
     value_type m_value{kEndValue};
 };
