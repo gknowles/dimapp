@@ -352,7 +352,7 @@ bool Dim::parse(double * out, std::string_view src) {
         *out *= siFactor(
             &ptr,
             INT64_C(1024) * 1024 * 1024 * 1024 * 1024,
-            1'000'000'000'000
+            1'000'000'000'000'000
         );
         break;
     }
