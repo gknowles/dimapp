@@ -188,22 +188,24 @@ void Dim::consoleRedoLine() {
 *
 *   The standard descriptors are initialized by the MSVC CRT to own the
 *   underlying Windows console handles. However, the underlying console also
-*   owns them. This means that they get closed twice, once by closing the
-*   CRT handles and again by FreeConsole. The second CloseHandle, quite
-*   properly, raises an invalid handle exception when in the debugger. The
-*   danger is that the OS could reuse the handle between the calls and we're
-*   now closing the handle to some unrelated thing.
+*   owns them. This means that when the application is only thing running in
+*   the console they get closed twice, once by closing the CRT handles and
+*   again by FreeConsole. The second CloseHandle, quite properly, raises an
+*   invalid handle exception when in the debugger. The danger is that the OS
+*   could reuse the handle between the calls and we're now closing the handle
+*   to some unrelated thing.
 *
 *   After the first time this is no longer a problem because we dup the
-*   handles when attaching the new console, and it's not a problem for
-*   windowed apps since they don't start with a console.
+*   handles when attaching the new console. The most frequent manifestation
+*   is when the console application is run in a new console, and it's not a
+*   problem for windows apps since they don't start with a console.
 *
-*   There is no way to do any of the following:
+*   There is no supported way to do any of the following:
 *       - close the CRT descriptors without closing the os handles
 *       - attach the CRT descriptors to new os handles without first closing
 *           them (i.e. _dup2 implicitly closes the target).
-*       - free the console without closing the os handles (SetStdHandle doesn't
-*           affect the internal list of handles).
+*       - free the console without closing the os handles (SetStdHandle does
+*           not affect the internal list of handles).
 *       - register an initialization function in a .CRT section to
 *           duplicate the handles before the CRT copies them. (the standard
 *           descriptors are initialized before registered init functions run).
