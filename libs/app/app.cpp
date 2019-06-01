@@ -360,7 +360,7 @@ void Dim::appSignalUsageError(int code, string_view err, string_view detail) {
         }
         {
             ostringstream os;
-            cli.printUsageEx(os, {}, cli.runCommand());
+            cli.printUsageEx(os, {}, cli.commandMatched());
             auto um = os.str();
             split(&lines, um, '\n');
             for (auto && line : lines) {
