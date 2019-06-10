@@ -39,7 +39,7 @@ Clock::time_point Clock::now() noexcept {
 ***/
 
 //===========================================================================
-// ms, s, min, h, d, w, mon, y
+// ms, s, m|min, h, d, w, mon, y
 static bool interpret(Duration * out, string_view * units, double val) {
     auto ptr = units->data();
     auto eptr = ptr + units->size();
@@ -47,8 +47,12 @@ static bool interpret(Duration * out, string_view * units, double val) {
         return false;
     switch (*ptr++) {
     case 'm':
-        if (ptr == eptr)
-            return false;
+        if (ptr == eptr) {
+            *out = duration_cast<Duration>(
+                (chrono::duration<double, ratio<60>>) val
+            );
+            break;
+        }
         switch (*ptr++) {
         case 's':
             *out = duration_cast<Duration>(
