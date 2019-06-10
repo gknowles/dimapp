@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2018.
+// Copyright Glen Knowles 2017 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // path.h - dim file
@@ -157,8 +157,8 @@ Path operator+ (Path const & a, std::string_view b);
 
 //===========================================================================
 template <>
-inline void Cli::OptBase::setValueDesc<Path>() {
-    m_valueDesc = "FILE";
+inline std::string Cli::defaultValueDesc<Path>() {
+    return "FILE";
 }
 
 #endif
