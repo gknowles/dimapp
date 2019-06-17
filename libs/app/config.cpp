@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2018.
+// Copyright Glen Knowles 2017 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // config.cpp - dim app
@@ -261,7 +261,7 @@ static bool getFullpath(Path * out, string_view file) {
         result = appConfigPath(out, file, false);
     }
     if (!result)
-        logMsgError() << "File outside of config directory: " << file;
+        logMsgError() << "File outside of configuration directory: " << file;
     return result;
 }
 
