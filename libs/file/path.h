@@ -157,7 +157,7 @@ Path operator+ (Path const & a, std::string_view b);
 
 //===========================================================================
 template <>
-inline std::string Cli::defaultValueDesc<Path>() {
+inline std::string Cli::OptBase::toValueDesc<Path>() const {
     return "FILE";
 }
 
