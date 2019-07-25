@@ -1,5 +1,11 @@
-// Copyright Glen Knowles 2018.
+// Copyright Glen Knowles 2018 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
+//
+// References:
+//  https://en.wikipedia.org/wiki/Cron
+//  https://www.freeformatter.com/cron-expression-generator-quartz.html
+//  http://man7.org/linux/man-pages/man5/crontab.5.html (vixie)
+//  https://crontab.guru/ (vixie)
 //
 // cron.h - dim core
 #pragma once
