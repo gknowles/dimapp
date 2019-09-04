@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2018.
+// Copyright Glen Knowles 2016 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // math.h - dim core
@@ -118,7 +118,7 @@ namespace Detail {
 
 //===========================================================================
 constexpr int floorDigits10(uint32_t val) {
-    static constexpr uint8_t kTable[] = {
+    constexpr uint8_t kTable[] = {
         0, 3, 0, 3, 4, 6, 0, 9, 3, 4, 5, 5, 6, 7, 1, 9,
         2, 3, 6, 8, 4, 5, 7, 2, 6, 8, 7, 2, 8, 1, 1, 9,
     };
@@ -135,7 +135,7 @@ constexpr int floorDigits10(uint32_t val) {
 
 //===========================================================================
 constexpr int roundupDigits10(int digits, uint32_t val) {
-    static constexpr uint32_t kPowersOf10[] = {
+    constexpr uint32_t kPowersOf10[] = {
                     1,
                    10,
                   100,
