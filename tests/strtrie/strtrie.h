@@ -8,7 +8,8 @@
 
 #include "cppconf/cppconf.h"
 
-#include "pageheap.h"
+//#include "pageheap.h"
+#include "core/pageheap.h"
 
 #include <cstdint>
 #include <memory>
@@ -29,6 +30,7 @@ class StrTrieBase {
 public:
     using value_type = std::pair<std::string, std::string>;
     class Iterator;
+    struct Node;
 
 public:
     StrTrieBase (IPageHeap & heap) : m_heap{heap} {}
@@ -47,9 +49,9 @@ public:
     std::ostream & dump(std::ostream & os) const;
 
 private:
-    uint8_t * nodeAppend(size_t pgno, uint8_t const * node);
-    uint8_t * nodeAt(size_t pgno, size_t pos);
-    uint8_t const * nodeAt(size_t pgno, size_t pos) const;
+    Node * nodeAppend(size_t pgno, Node const * node);
+    Node * nodeAt(size_t pgno, size_t pos);
+    Node const * nodeAt(size_t pgno, size_t pos) const;
 
     // size and capacity, measured in nodes
     size_t size(size_t pgno) const;
@@ -90,8 +92,8 @@ inline bool StrTrieBase::Iterator::operator!=(
 }
 
 //===========================================================================
-inline auto StrTrieBase::Iterator::operator*() 
-    -> value_type const & 
+inline auto StrTrieBase::Iterator::operator*()
+    -> value_type const &
 {
     return m_current;
 }

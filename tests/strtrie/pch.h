@@ -4,7 +4,8 @@
 // pch.h - dim test strtrie
 
 // Public header
-#include "core/strtrie.h"
+#include "strtrie.h"
+//#include "core/strtrie.h"
 
 // External library public headers
 #include "app/app.h"
