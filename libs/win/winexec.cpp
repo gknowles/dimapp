@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2018.
+// Copyright Glen Knowles 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // winres.cpp - dim windows platform
@@ -228,12 +228,17 @@ bool ExecProgram::createPipe(
     pipeListen(&m_pipes[strm], name, oflags);
 
     if (child) {
+        unsigned flags = SECURITY_SQOS_PRESENT | SECURITY_IDENTIFICATION;
+        if (oflags & Pipe::fReadOnly)
+            flags |= GENERIC_READ;
+        if (oflags & Pipe::fWriteOnly)
+            flags |= GENERIC_WRITE;
         auto wname = toWstring(name);
         SECURITY_ATTRIBUTES sa = {};
         sa.bInheritHandle = true;
         auto cp = CreateFileW(
             wname.c_str(),
-            oflags == Pipe::fReadOnly ? GENERIC_READ : GENERIC_WRITE,
+            flags,
             0,      // share
             &sa,
             OPEN_EXISTING,
@@ -290,8 +295,8 @@ void Dim::execProgram(
     char bytes[8];
     cryptRandomBytes(bytes, sizeof(bytes));
 
-    auto ep = make_unique<ExecProgram>(notify);
-
+    auto ep = new ExecProgram(notify);
+    ep->exec(prog, args);
 }
 
 //===========================================================================
