@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2018.
+// Copyright Glen Knowles 2017 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // sockmgracc.cpp - dim net
@@ -41,7 +41,7 @@ public:
     // Inherited via ISockMgrBase
     bool listening() const override { return true; }
 
-    void setEndpoints(Endpoint const * addrs, size_t count) override;
+    void setEndpoints(SockAddr const * addrs, size_t count) override;
     bool onShutdown(bool firstTry) override;
 
     // Inherited via IConfigNotify via ISockMgrBase
@@ -143,8 +143,8 @@ AcceptManager::AcceptManager(
 }
 
 //===========================================================================
-void AcceptManager::setEndpoints(Endpoint const * addrs, size_t count) {
-    vector<Endpoint> endpts{addrs, addrs + count};
+void AcceptManager::setEndpoints(SockAddr const * addrs, size_t count) {
+    vector<SockAddr> endpts{addrs, addrs + count};
     sort(endpts.begin(), endpts.end());
     sort(m_endpoints.begin(), m_endpoints.end());
 
@@ -152,8 +152,8 @@ void AcceptManager::setEndpoints(Endpoint const * addrs, size_t count) {
     for_each_diff(
         endpts.begin(), endpts.end(),
         m_endpoints.begin(), m_endpoints.end(),
-        [&](Endpoint const & ep){ socketListen(this, ep, m_family, console); },
-        [&](Endpoint const & ep){ socketCloseWait(this, ep, m_family); }
+        [&](SockAddr const & ep){ socketListen(this, ep, m_family, console); },
+        [&](SockAddr const & ep){ socketCloseWait(this, ep, m_family); }
     );
 
     m_endpoints = move(endpts);
@@ -178,7 +178,7 @@ void AcceptManager::onConfigChange(XDocument const & doc) {
 
     m_confFlags = flags;
 
-    Endpoint addr;
+    SockAddr addr;
     addr.port = (unsigned) configNumber(doc, "Port", 41000);
     setEndpoints(&addr, 1);
 }

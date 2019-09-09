@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2018.
+// Copyright Glen Knowles 2015 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // tnet.cpp - tnet
@@ -22,7 +22,7 @@ enum { kExitConnectFailed = EX__APPBASE, kExitDisconnect };
 
 class SocketConn
     : public ISocketNotify
-    , public IEndpointNotify
+    , public ISockAddrNotify
     , public ITimerNotify
 {
     // Inherited via ISocketNotify
@@ -33,8 +33,8 @@ class SocketConn
     bool onSocketRead(SocketData & data) override;
     void onSocketBufferChanged(SocketBufferInfo const & info) override;
 
-    // Inherited via IEndpointNotify
-    void onEndpointFound(Endpoint const * ptr, int count) override;
+    // Inherited via ISockAddrNotify
+    void onSockAddrFound(SockAddr const * ptr, int count) override;
 
     // Inherited via ITimerNotify
     Duration onTimer(TimePoint now) override;
@@ -74,7 +74,7 @@ private:
 *
 ***/
 
-static Endpoint s_localEnd;
+static SockAddr s_localEnd;
 static int s_cancelAddrId;
 static ConsoleReader s_console;
 static SocketConn s_socket;
@@ -87,7 +87,7 @@ static SocketConn s_socket;
 ***/
 
 //===========================================================================
-void SocketConn::onEndpointFound(Endpoint const * ends, int count) {
+void SocketConn::onSockAddrFound(SockAddr const * ends, int count) {
     if (!count) {
         cout << "Host not found" << endl;
         appSignalShutdown(kExitConnectFailed);
@@ -236,7 +236,7 @@ static ShutdownNotify s_cleanup;
 //===========================================================================
 void ShutdownNotify::onShutdownClient(bool firstTry) {
     if (firstTry) {
-        endpointCancelQuery(s_cancelAddrId);
+        addressCancelQuery(s_cancelAddrId);
         socketDisconnect(&s_socket);
     }
 
@@ -270,7 +270,7 @@ static void app(int argc, char *argv[]) {
     consoleCatchCtrlC();
     s_console.init();
 
-    endpointQuery(&s_cancelAddrId, &s_socket, *remote, 23);
+    addressQuery(&s_cancelAddrId, &s_socket, *remote, 23);
 }
 
 

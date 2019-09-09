@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2018.
+// Copyright Glen Knowles 2017 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // sockmgrconn.cpp - dim net
@@ -38,15 +38,15 @@ public:
         AppSocket::MgrFlags flags
     );
 
-    void connect(Endpoint const & addr);
+    void connect(SockAddr const & addr);
     void connect(ConnMgrSocket & sock);
     void stable(ConnMgrSocket & sock);
-    void shutdown(Endpoint const & addr);
+    void shutdown(SockAddr const & addr);
     void destroy(ConnMgrSocket & sock);
 
     // Inherited via ISockMgrBase
     bool listening() const override { return false; }
-    void setEndpoints(Endpoint const * addrs, size_t count) override;
+    void setEndpoints(SockAddr const * addrs, size_t count) override;
     bool onShutdown(bool firstTry) override;
 
     // Inherited via IConfigNotify
@@ -54,7 +54,7 @@ public:
 
 private:
     TimerList<ConnMgrSocket, RecentLink> m_recent;
-    unordered_map<Endpoint, ConnMgrSocket> m_sockets;
+    unordered_map<SockAddr, ConnMgrSocket> m_sockets;
 };
 
 class ConnMgrSocket final
@@ -73,12 +73,12 @@ public:
     ConnMgrSocket(
         ISockMgrBase & mgr,
         unique_ptr<IAppSocketNotify> notify,
-        Endpoint const & addr
+        SockAddr const & addr
     );
 
     Mode mode() const { return m_mode; }
     bool stopping() const { return m_stopping; }
-    Endpoint const & targetAddress() const { return m_targetAddress; }
+    SockAddr const & targetAddress() const { return m_targetAddress; }
     void connect();
     void shutdown();
 
@@ -101,7 +101,7 @@ public:
     void onSocketDestroy() override;
 
 private:
-    Endpoint m_targetAddress;
+    SockAddr m_targetAddress;
     Mode m_mode{kUnconnected};
     bool m_stopping{false};
 };
@@ -119,7 +119,7 @@ private:
 ConnMgrSocket::ConnMgrSocket(
     ISockMgrBase & mgr,
     unique_ptr<IAppSocketNotify> notify,
-    Endpoint const & addr
+    SockAddr const & addr
 )
     : ISockMgrSocket{mgr, move(notify)}
     , m_targetAddress{addr}
@@ -236,7 +236,7 @@ ConnectManager::ConnectManager(
 }
 
 //===========================================================================
-void ConnectManager::connect(Endpoint const & addr) {
+void ConnectManager::connect(SockAddr const & addr) {
     auto ib = m_sockets.try_emplace(
         addr,
         *this,
@@ -259,7 +259,7 @@ void ConnectManager::stable(ConnMgrSocket & sock) {
 }
 
 //===========================================================================
-void ConnectManager::shutdown(Endpoint const & addr) {
+void ConnectManager::shutdown(SockAddr const & addr) {
     auto it = m_sockets.find(addr);
     if (it != m_sockets.end())
         it->second.shutdown();
@@ -279,17 +279,17 @@ void ConnectManager::destroy(ConnMgrSocket & sock) {
 }
 
 //===========================================================================
-void ConnectManager::setEndpoints(Endpoint const * addrs, size_t count) {
-    vector<Endpoint> endpts{addrs, addrs + count};
+void ConnectManager::setEndpoints(SockAddr const * addrs, size_t count) {
+    vector<SockAddr> endpts{addrs, addrs + count};
     sort(endpts.begin(), endpts.end());
     sort(m_endpoints.begin(), m_endpoints.end());
 
-    vector<Endpoint> removed;
+    vector<SockAddr> removed;
     for_each_diff(
         endpts.begin(), endpts.end(),
         m_endpoints.begin(), m_endpoints.end(),
-        [&](Endpoint const & ep){ connect(ep); },
-        [&](Endpoint const & ep){ shutdown(ep); }
+        [&](SockAddr const & ep){ connect(ep); },
+        [&](SockAddr const & ep){ shutdown(ep); }
     );
 
     m_endpoints = move(endpts);

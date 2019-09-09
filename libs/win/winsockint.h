@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2018.
+// Copyright Glen Knowles 2015 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // winsockint.h - dim windows platform
@@ -92,7 +92,7 @@ void iSocketConnectInitialize();
 
 void iSocketCheckThread();
 SOCKET iSocketCreate();
-SOCKET iSocketCreate(Endpoint const & local);
+SOCKET iSocketCreate(SockAddr const & local);
 void iSocketSetConnectTimeout(SOCKET s, Duration wait);
 
 // Socket buffers

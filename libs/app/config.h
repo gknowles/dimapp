@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2018.
+// Copyright Glen Knowles 2017 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // config.h - dim app
@@ -23,7 +23,7 @@ namespace Dim {
 ***/
 
 struct ConfigContext {
-    Endpoint endpoint;
+    SockAddr endpoint;
     std::string appName;
     unsigned appIndex{0};
     std::string config;

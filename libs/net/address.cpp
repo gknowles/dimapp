@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2018.
+// Copyright Glen Knowles 2015 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // address.cpp - dim net
@@ -18,12 +18,12 @@ using namespace Dim;
 
 /****************************************************************************
 *
-*   Address
+*   NetAddr
 *
 ***/
 
 //===========================================================================
-size_t std::hash<Address>::operator()(Address const & val) const {
+size_t std::hash<NetAddr>::operator()(NetAddr const & val) const {
     size_t out = 0;
     hashCombine(&out, std::hash<int32_t>{}(val.data[0]));
     hashCombine(&out, std::hash<int32_t>{}(val.data[1]));
@@ -34,27 +34,27 @@ size_t std::hash<Address>::operator()(Address const & val) const {
 }
 
 //===========================================================================
-bool Address::operator==(Address const & right) const {
+bool NetAddr::operator==(NetAddr const & right) const {
     return memcmp(this, &right, sizeof *this) == 0;
 }
 
 //===========================================================================
-bool Address::operator<(Address const & right) const {
+bool NetAddr::operator<(NetAddr const & right) const {
     return memcmp(this, &right, sizeof *this) < 0;
 }
 
 //===========================================================================
-bool Address::isIpv4() const {
+bool NetAddr::isIpv4() const {
     return data[2] == kIpv4MappedAddress;
 }
 
 //===========================================================================
-uint32_t Address::getIpv4() const {
+uint32_t NetAddr::getIpv4() const {
     return data[3];
 }
 
 //===========================================================================
-Address::operator bool() const {
+NetAddr::operator bool() const {
     return data[3]
         || data[0]
         || data[1]
@@ -62,7 +62,7 @@ Address::operator bool() const {
 }
 
 //===========================================================================
-istream & Dim::operator>>(istream & in, Address & out) {
+istream & Dim::operator>>(istream & in, NetAddr & out) {
     string tmp;
     in >> tmp;
     if (!parse(&out, tmp.c_str()))
@@ -73,35 +73,35 @@ istream & Dim::operator>>(istream & in, Address & out) {
 
 /****************************************************************************
 *
-*   Endpoint
+*   SockAddr
 *
 ***/
 
 //===========================================================================
-size_t std::hash<Endpoint>::operator()(Endpoint const & val) const {
+size_t std::hash<SockAddr>::operator()(SockAddr const & val) const {
     size_t out = 0;
-    hashCombine(&out, std::hash<Address>{}(val.addr));
+    hashCombine(&out, std::hash<NetAddr>{}(val.addr));
     hashCombine(&out, std::hash<unsigned>{}(val.port));
     return out;
 }
 
 //===========================================================================
-bool Endpoint::operator==(Endpoint const & right) const {
+bool SockAddr::operator==(SockAddr const & right) const {
     return port == right.port && addr == right.addr;
 }
 
 //===========================================================================
-bool Endpoint::operator<(Endpoint const & right) const {
+bool SockAddr::operator<(SockAddr const & right) const {
     return tie(addr, port) < tie(right.addr, right.port);
 }
 
 //===========================================================================
-Endpoint::operator bool() const {
+SockAddr::operator bool() const {
     return port || addr;
 }
 
 //===========================================================================
-istream & Dim::operator>>(istream & in, Endpoint & out) {
+istream & Dim::operator>>(istream & in, SockAddr & out) {
     string tmp;
     in >> tmp;
     if (!parse(&out, tmp.c_str(), 0))
@@ -119,7 +119,7 @@ istream & Dim::operator>>(istream & in, Endpoint & out) {
 //===========================================================================
 size_t std::hash<Network>::operator()(Network const & val) const {
     size_t out = 0;
-    hashCombine(&out, std::hash<Address>{}(val.addr));
+    hashCombine(&out, std::hash<NetAddr>{}(val.addr));
     hashCombine(&out, std::hash<int>{}(val.mask));
     return out;
 }

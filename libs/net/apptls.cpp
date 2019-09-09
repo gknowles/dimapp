@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2018.
+// Copyright Glen Knowles 2017 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // apptls.cpp - dim net
@@ -182,5 +182,5 @@ AppSocket::MatchType TlsMatch::onMatch(
 //===========================================================================
 void Dim::appTlsInitialize() {
     socketAddFamily(AppSocket::kTls, &s_tlsMatch);
-    socketAddFilter<TlsSocket>(Endpoint{}, AppSocket::kTls);
+    socketAddFilter<TlsSocket>(SockAddr{}, AppSocket::kTls);
 }

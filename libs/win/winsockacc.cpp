@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2018.
+// Copyright Glen Knowles 2015 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // winsockacc.cpp - dim windows platform
@@ -42,11 +42,11 @@ public:
     SOCKET m_handle{INVALID_SOCKET};
     unique_ptr<AcceptSocket> m_socket;
     IFactory<ISocketNotify> * m_notify{};
-    Endpoint m_localEnd;
+    SockAddr m_localEnd;
     char m_addrBuf[2 * sizeof sockaddr_storage];
 
 public:
-    ListenSocket(IFactory<ISocketNotify> * notify, Endpoint const & end);
+    ListenSocket(IFactory<ISocketNotify> * notify, SockAddr const & end);
 
     void onTask() override;
 };
@@ -76,7 +76,7 @@ static auto & s_perfNotAccepted = uperf("sock.disconnect (not accepted)");
 //===========================================================================
 ListenSocket::ListenSocket(
     IFactory<ISocketNotify> * notify,
-    Endpoint const & end
+    SockAddr const & end
 )
     : m_notify{notify}
     , m_localEnd{end}
@@ -296,7 +296,7 @@ void Dim::iSocketAcceptInitialize() {
 //===========================================================================
 void Dim::socketListen(
     IFactory<ISocketNotify> * factory,
-    Endpoint const & local
+    SockAddr const & local
 ) {
     iSocketCheckThread();
 
@@ -325,7 +325,7 @@ void Dim::socketListen(
 //===========================================================================
 void Dim::socketCloseWait(
     IFactory<ISocketNotify> * factory,
-    Endpoint const & local
+    SockAddr const & local
 ) {
     iSocketCheckThread();
 

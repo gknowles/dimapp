@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2018.
+// Copyright Glen Knowles 2015 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // winaddress.cpp - dim windows platform
@@ -11,13 +11,13 @@ using namespace Dim;
 
 /****************************************************************************
 *
-*   Address
+*   NetAddr
 *
 ***/
 
 //===========================================================================
-bool Dim::parse(Address * out, string_view src) {
-    Endpoint sa;
+bool Dim::parse(NetAddr * out, string_view src) {
+    SockAddr sa;
     if (!parse(&sa, src, 9)) {
         *out = {};
         return false;
@@ -27,8 +27,8 @@ bool Dim::parse(Address * out, string_view src) {
 }
 
 //===========================================================================
-ostream & Dim::operator<<(ostream & os, Address const & addr) {
-    Endpoint sa;
+ostream & Dim::operator<<(ostream & os, NetAddr const & addr) {
+    SockAddr sa;
     sa.addr = addr;
     return operator<<(os, sa);
 }
@@ -36,12 +36,12 @@ ostream & Dim::operator<<(ostream & os, Address const & addr) {
 
 /****************************************************************************
 *
-*   Endpoint
+*   SockAddr
 *
 ***/
 
 //===========================================================================
-bool Dim::parse(Endpoint * end, string_view src, int defaultPort) {
+bool Dim::parse(SockAddr * end, string_view src, int defaultPort) {
     sockaddr_storage sas;
     int sasLen = sizeof(sas);
     auto tmp = toWstring(src);
@@ -70,7 +70,7 @@ bool Dim::parse(Endpoint * end, string_view src, int defaultPort) {
 }
 
 //===========================================================================
-ostream & Dim::operator<<(ostream & os, Endpoint const & src) {
+ostream & Dim::operator<<(ostream & os, SockAddr const & src) {
     sockaddr_storage sas;
     copy(&sas, src);
     wchar_t tmp[256];
@@ -97,7 +97,7 @@ ostream & Dim::operator<<(ostream & os, Endpoint const & src) {
 ***/
 
 //===========================================================================
-void Dim::copy(sockaddr_storage * out, Endpoint const & src) {
+void Dim::copy(sockaddr_storage * out, SockAddr const & src) {
     *out = {};
     if (!src.addr.data[0]
         && !src.addr.data[1]
@@ -120,7 +120,7 @@ void Dim::copy(sockaddr_storage * out, Endpoint const & src) {
 }
 
 //===========================================================================
-void Dim::copy(Endpoint * out, sockaddr_storage const & storage) {
+void Dim::copy(SockAddr * out, sockaddr_storage const & storage) {
     *out = {};
     if (storage.ss_family == AF_INET) {
         auto ia = reinterpret_cast<sockaddr_in const &>(storage);
@@ -142,7 +142,7 @@ void Dim::copy(Endpoint * out, sockaddr_storage const & storage) {
 
 /****************************************************************************
 *
-*   Address query
+*   NetAddr query
 *
 ***/
 
@@ -150,11 +150,11 @@ namespace {
 
 struct QueryTask : IWinOverlappedNotify {
     ADDRINFOEXW * results{};
-    IEndpointNotify * notify{};
+    ISockAddrNotify * notify{};
     HANDLE cancel{};
     int id;
 
-    vector<Endpoint> ends;
+    vector<SockAddr> ends;
     WinError err{0};
 
     void onTask() override;
@@ -183,7 +183,7 @@ static void CALLBACK addressQueryCallback(
         ADDRINFOEXW * result = task->results;
         while (result) {
             if (result->ai_family == AF_INET) {
-                Endpoint end;
+                SockAddr end;
                 sockaddr_storage sas{};
                 memcpy(&sas, result->ai_addr, result->ai_addrlen);
                 copy(&end, sas);
@@ -203,16 +203,16 @@ void QueryTask::onTask() {
     if (err && err != WSA_E_CANCELLED) {
         logMsgError() << "GetAddrInfoEx: " << err;
     }
-    notify->onEndpointFound(ends.data(), (int)ends.size());
+    notify->onSockAddrFound(ends.data(), (int)ends.size());
     s_tasks.erase(id);
 }
 
 //===========================================================================
 // Public API
 //===========================================================================
-void Dim::endpointQuery(
+void Dim::addressQuery(
     int * cancelId,
-    IEndpointNotify * notify,
+    ISockAddrNotify * notify,
     string_view name,
     int defaultPort
 ) {
@@ -229,7 +229,7 @@ void Dim::endpointQuery(
     task->notify = notify;
 
     // if the name is the string form of an address just return the address
-    Endpoint end;
+    SockAddr end;
     if (parse(&end, name, defaultPort)) {
         task->ends.push_back(end);
         taskPushEvent(task);
@@ -264,14 +264,14 @@ void Dim::endpointQuery(
 }
 
 //===========================================================================
-void Dim::endpointCancelQuery(int cancelId) {
+void Dim::addressCancelQuery(int cancelId) {
     auto it = s_tasks.find(cancelId);
     if (it != s_tasks.end())
         GetAddrInfoExCancel(&it->second.cancel);
 }
 
 //===========================================================================
-void Dim::addressGetLocal(vector<Address> * out) {
+void Dim::addressGetLocal(vector<NetAddr> * out) {
     out->resize(0);
     ADDRINFO * result;
     WinError err = getaddrinfo(
@@ -283,7 +283,7 @@ void Dim::addressGetLocal(vector<Address> * out) {
     if (err)
         logMsgFatal() << "getaddrinfo(..localmachine): " << err;
 
-    Endpoint end;
+    SockAddr end;
     sockaddr_storage sas;
     while (result) {
         if (result->ai_family == AF_INET) {

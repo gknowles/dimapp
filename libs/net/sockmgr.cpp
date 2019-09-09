@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2018.
+// Copyright Glen Knowles 2017 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // sockmgr.cpp - dim net
@@ -179,7 +179,7 @@ void Dim::sockMgrSetInactiveTimeout(SockMgrHandle h, Duration timeout) {
 //===========================================================================
 void Dim::sockMgrSetEndpoints(
     SockMgrHandle h,
-    Endpoint const * addrs,
+    SockAddr const * addrs,
     size_t count
 ) {
     auto mgr = s_mgrs.find(h);

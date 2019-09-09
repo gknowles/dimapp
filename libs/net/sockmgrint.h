@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2018.
+// Copyright Glen Knowles 2017 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // sockmgrint.h - dim net
@@ -69,7 +69,7 @@ public:
     bool shutdown();
 
     virtual bool listening() const = 0;
-    virtual void setEndpoints(Endpoint const * addrs, size_t count) = 0;
+    virtual void setEndpoints(SockAddr const * addrs, size_t count) = 0;
     virtual bool onShutdown(bool firstTry) = 0;
 
     // Inherited via IConfigNotify
@@ -81,7 +81,7 @@ protected:
     std::string m_name;
     IFactory<IAppSocketNotify> * m_cliSockFact;
     AppSocket::Family m_family;
-    std::vector<Endpoint> m_endpoints;
+    std::vector<SockAddr> m_endpoints;
     AppSocket::MgrFlags m_mgrFlags;
     AppSocket::ConfFlags m_confFlags;
 

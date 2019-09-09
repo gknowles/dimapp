@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2018.
+// Copyright Glen Knowles 2017 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // sockmgr.h - dim net
@@ -87,7 +87,7 @@ void sockMgrSetInactiveTimeout(SockMgrHandle mgr, Duration timeout);
 
 void sockMgrSetEndpoints(
     SockMgrHandle mgr,
-    Endpoint const * addrs,
+    SockAddr const * addrs,
     size_t numAddrs
 );
 // Not implemented

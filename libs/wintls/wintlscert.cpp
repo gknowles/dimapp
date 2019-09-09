@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2018.
+// Copyright Glen Knowles 2017 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // wintls.cpp - dim windows platform tls
@@ -194,7 +194,7 @@ static void addAltNameExt(
     }
     vector<string> ipBytes;
     for (auto && n : ipAddrs) {
-        Address ip;
+        NetAddr ip;
         if (!parse(&ip, n)) {
             logMsgError() << "makeCert: invalid IP address: " << n;
             continue;

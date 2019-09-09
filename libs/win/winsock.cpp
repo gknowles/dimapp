@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2018.
+// Copyright Glen Knowles 2015 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // winsock.cpp - dim windows platform
@@ -688,7 +688,7 @@ SOCKET Dim::iSocketCreate() {
 }
 
 //===========================================================================
-SOCKET Dim::iSocketCreate(Endpoint const & end) {
+SOCKET Dim::iSocketCreate(SockAddr const & end) {
     SOCKET handle = iSocketCreate();
     if (handle == INVALID_SOCKET)
         return handle;

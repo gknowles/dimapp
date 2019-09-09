@@ -172,7 +172,7 @@ constexpr char * htonf64(void * out, double val) {
 *
 *   Example usage:
 *   // Service interface
-*   void socketListen(IFactory<ISocketNotify> * fact, Endpoint const & e);
+*   void socketListen(IFactory<ISocketNotify> * fact, SockAddr const & e);
 *
 *   // Client implementation
 *   class MySocket : public ISocketNotify {

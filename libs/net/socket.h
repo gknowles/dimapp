@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2018.
+// Copyright Glen Knowles 2015 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // socket.h - dim net
@@ -13,8 +13,8 @@
 namespace Dim {
 
 struct SocketInfo {
-    Endpoint remote;
-    Endpoint local;
+    SockAddr remote;
+    SockAddr local;
 };
 struct SocketData {
     char * data;
@@ -113,8 +113,8 @@ private:
 // TCP_FASTOPEN if possible so try to keep the data <= 1460 bytes.
 void socketConnect(
     ISocketNotify * notify,
-    Endpoint const & remote,
-    Endpoint const & local = {}, // 0 for OS selected
+    SockAddr const & remote,
+    SockAddr const & local = {}, // 0 for OS selected
     std::string_view data = {},
     Duration timeout = {} // 0 for default timeout
 );
@@ -137,12 +137,12 @@ void socketConnect(
 ***/
 
 //===========================================================================
-void socketListen(IFactory<ISocketNotify> * factory, Endpoint const & local);
-void socketCloseWait(IFactory<ISocketNotify> * factory, Endpoint const & local);
+void socketListen(IFactory<ISocketNotify> * factory, SockAddr const & local);
+void socketCloseWait(IFactory<ISocketNotify> * factory, SockAddr const & local);
 
 //===========================================================================
 template <typename S>
-inline void socketListen(Endpoint const & local) {
+inline void socketListen(SockAddr const & local) {
     static_assert(std::is_base_of_v<ISocketNotify, S>);
     auto factory = getFactory<ISocketNotify, S>();
     socketListen(factory, local);
@@ -150,7 +150,7 @@ inline void socketListen(Endpoint const & local) {
 
 //===========================================================================
 template <typename S>
-inline void socketCloseWait(Endpoint const & local) {
+inline void socketCloseWait(SockAddr const & local) {
     static_assert(std::is_base_of_v<ISocketNotify, S>);
     auto factory = getFactory<ISocketNotify, S>();
     socketCloseWait(factory, local);

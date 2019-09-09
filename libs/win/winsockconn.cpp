@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2018.
+// Copyright Glen Knowles 2015 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // winsockconn.cpp - dim windows platform
@@ -32,8 +32,8 @@ class ConnSocket : public SocketBase {
 public:
     static void connect(
         ISocketNotify * notify,
-        Endpoint const & remote,
-        Endpoint const & local,
+        SockAddr const & remote,
+        SockAddr const & local,
         string_view initialData,
         Duration timeout
     );
@@ -139,8 +139,8 @@ static void pushConnectFailed(ISocketNotify * notify) {
 // static
 void ConnSocket::connect(
     ISocketNotify * notify,
-    Endpoint const & remote,
-    Endpoint const & local,
+    SockAddr const & remote,
+    SockAddr const & local,
     string_view data,
     Duration timeout
 ) {
@@ -355,8 +355,8 @@ void Dim::iSocketSetConnectTimeout(SOCKET s, Duration wait) {
 //===========================================================================
 void Dim::socketConnect(
     ISocketNotify * notify,
-    Endpoint const & remote,
-    Endpoint const & local,
+    SockAddr const & remote,
+    SockAddr const & local,
     string_view data,
     Duration timeout
 ) {

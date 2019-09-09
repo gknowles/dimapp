@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2018.
+// Copyright Glen Knowles 2017 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // appsocket.cpp - dim net
@@ -49,7 +49,7 @@ struct FamilyInfo {
 };
 
 struct EndpointInfo {
-    Endpoint endpoint;
+    SockAddr endpoint;
     vector<FamilyInfo> families;
     unsigned listeners{0};
     unsigned consoles{0};
@@ -270,7 +270,7 @@ void IAppSocket::notifyDestroy(bool deleteThis) {
 static bool findFactory(
     AppSocket::Family * family,
     IFactory<IAppSocketNotify> ** fact,
-    Endpoint const & localEnd,
+    SockAddr const & localEnd,
     string_view data
 ) {
     // find best matching factory endpoint for each family
@@ -659,8 +659,8 @@ void Dim::socketRead(IAppSocketNotify * notify) {
 //===========================================================================
 void Dim::socketConnect(
     IAppSocketNotify * notify,
-    Endpoint const & remote,
-    Endpoint const & local,
+    SockAddr const & remote,
+    SockAddr const & local,
     string_view data,
     Duration wait
 ) {
@@ -679,7 +679,7 @@ void Dim::socketAddFamily(
 }
 
 //===========================================================================
-static EndpointInfo * findInfo_LK(Endpoint const & end, bool findAlways) {
+static EndpointInfo * findInfo_LK(SockAddr const & end, bool findAlways) {
     for (auto && ep : s_endpoints) {
         if (ep.endpoint == end)
             return &ep;
@@ -697,7 +697,7 @@ static EndpointInfo * findInfo_LK(Endpoint const & end, bool findAlways) {
 static bool addFactory(
     IFactory<IAppSocketNotify> * factory,
     FactoryFlags flags,
-    Endpoint const & end,
+    SockAddr const & end,
     AppSocket::Family fam
 ) {
     auto info = findInfo_LK(end, true);
@@ -715,7 +715,7 @@ static bool addFactory(
 //===========================================================================
 void Dim::socketListen(
     IFactory<IAppSocketNotify> * factory,
-    Endpoint const & end,
+    SockAddr const & end,
     AppSocket::Family fam,
     bool console
 ) {
@@ -729,7 +729,7 @@ void Dim::socketListen(
 //===========================================================================
 void Dim::socketCloseWait(
     IFactory<IAppSocketNotify> * factory,
-    Endpoint const & end,
+    SockAddr const & end,
     AppSocket::Family fam
 ) {
     for (;;) {
@@ -777,7 +777,7 @@ void Dim::socketCloseWait(
 //===========================================================================
 void Dim::socketAddFilter(
     IFactory<IAppSocketNotify> * factory,
-    Endpoint const & end,
+    SockAddr const & end,
     AppSocket::Family fam
 ) {
     addFactory(factory, {}, end, fam);
