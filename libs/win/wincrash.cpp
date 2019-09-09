@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2018.
+// Copyright Glen Knowles 2018 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // wincrash.cpp - dim windows platform
@@ -269,7 +269,7 @@ void Dim::winCrashInitialize() {
 }
 
 //===========================================================================
-void Dim::winCrashThreadInitialize() {
+void Dim::winCrashInitializeThread() {
     //for (auto && [sig, handler] : s_oldHandlers)
     //    handler = signal(sig, abortHandler);
 }

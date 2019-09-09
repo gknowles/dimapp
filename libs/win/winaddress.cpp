@@ -154,7 +154,7 @@ struct QueryTask : IWinOverlappedNotify {
     HANDLE cancel{};
     int id;
 
-    vector<SockAddr> ends;
+    vector<SockAddr> addrs;
     WinError err{0};
 
     void onTask() override;
@@ -183,11 +183,11 @@ static void CALLBACK addressQueryCallback(
         ADDRINFOEXW * result = task->results;
         while (result) {
             if (result->ai_family == AF_INET) {
-                SockAddr end;
+                SockAddr addr;
                 sockaddr_storage sas{};
                 memcpy(&sas, result->ai_addr, result->ai_addrlen);
-                copy(&end, sas);
-                task->ends.push_back(end);
+                copy(&addr, sas);
+                task->addrs.push_back(addr);
             }
             result = result->ai_next;
         }
@@ -203,7 +203,7 @@ void QueryTask::onTask() {
     if (err && err != WSA_E_CANCELLED) {
         logMsgError() << "GetAddrInfoEx: " << err;
     }
-    notify->onSockAddrFound(ends.data(), (int)ends.size());
+    notify->onSockAddrFound(addrs.data(), (int)addrs.size());
     s_tasks.erase(id);
 }
 
@@ -229,16 +229,16 @@ void Dim::addressQuery(
     task->notify = notify;
 
     // if the name is the string form of an address just return the address
-    SockAddr end;
-    if (parse(&end, name, defaultPort)) {
-        task->ends.push_back(end);
+    SockAddr addr;
+    if (parse(&addr, name, defaultPort)) {
+        task->addrs.push_back(addr);
         taskPushEvent(task);
         return;
     }
 
-    // Asynchronous completion requires wchar version of:
-    wstring wname{toWstring(name)};
-    wstring wport{to_wstring(defaultPort)};
+    // Asynchronous completion requires wchar_t version of:
+    auto wname = toWstring(name);
+    auto wport = to_wstring(defaultPort);
 
     // extract non-default port if present in name
     size_t pos = wname.rfind(L':');

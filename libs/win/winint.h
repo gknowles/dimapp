@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2018.
+// Copyright Glen Knowles 2015 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // winint.h - dim windows platform
@@ -139,7 +139,7 @@ public:
     explicit operator bool() const;
     bool operator==(const WinSid & right) const;
     bool operator==(WELL_KNOWN_SID_TYPE type) const;
-    
+
     SID * operator->() { return &m_data.Sid; }
     SID const * operator->() const { return &m_data.Sid; }
     SID & operator*() { return *operator->(); }
@@ -154,8 +154,8 @@ private:
 WinSid winCreateSid(std::string_view name);
 WinSid winCreateSid(WELL_KNOWN_SID_TYPE type, const SID * domain = nullptr);
 bool winGetAccountName(
-    std::string * name, 
-    std::string * domain, 
+    std::string * name,
+    std::string * domain,
     const SID & sid
 );
 
@@ -170,7 +170,7 @@ bool parse(WinSid * out, std::string_view src);
 ***/
 
 void winCrashInitialize();
-void winCrashThreadInitialize();
+void winCrashInitializeThread();
 
 
 /****************************************************************************
