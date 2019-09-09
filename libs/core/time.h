@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2018.
+// Copyright Glen Knowles 2015 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // time.h - dim core
@@ -82,7 +82,7 @@ std::string toString(Duration val, DurationFormat fmt);
 ***/
 
 class Time8601Str {
-    char m_data[33];
+    char m_data[34];
 public:
     Time8601Str();
     Time8601Str(TimePoint time, unsigned precision = 0);
