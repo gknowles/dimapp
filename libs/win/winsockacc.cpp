@@ -149,8 +149,8 @@ bool AcceptSocket::accept(ListenSocket * listen) {
             listen->m_socket->m_handle,
             listen->m_addrBuf,
             0,                       // receive data length
-            sizeof sockaddr_storage, // local endpoint length
-            sizeof sockaddr_storage, // remote endpoint length
+            sizeof sockaddr_storage, // local address length
+            sizeof sockaddr_storage, // remote address length
             &bytes,                  // bytes received (ignored)
             &listen->overlapped()
         );

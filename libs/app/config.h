@@ -23,7 +23,7 @@ namespace Dim {
 ***/
 
 struct ConfigContext {
-    SockAddr endpoint;
+    SockAddr saddr;
     std::string appName;
     unsigned appIndex{0};
     std::string config;

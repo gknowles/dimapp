@@ -178,7 +178,7 @@ constexpr char * htonf64(void * out, double val) {
 *   class MySocket : public ISocketNotify {
 *   };
 *
-*   socketListen(getFactory<ISocketNotify, MySocket>(), endpoint);
+*   socketListen(getFactory<ISocketNotify, MySocket>(), sockAddr);
 *
 ***/
 

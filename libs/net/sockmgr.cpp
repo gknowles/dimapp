@@ -177,19 +177,19 @@ void Dim::sockMgrSetInactiveTimeout(SockMgrHandle h, Duration timeout) {
 }
 
 //===========================================================================
-void Dim::sockMgrSetEndpoints(
+void Dim::sockMgrSetAddresses(
     SockMgrHandle h,
     SockAddr const * addrs,
     size_t count
 ) {
     auto mgr = s_mgrs.find(h);
-    mgr->setEndpoints(addrs, count);
+    mgr->setAddresses(addrs, count);
 }
 
 //===========================================================================
-//void Dim::sockMgrMonitorEndpoints(SockMgrHandle h, string_view host) {
+//void Dim::sockMgrMonitorAddresses(SockMgrHandle h, string_view host) {
 //    auto mgr = s_mgrs.find(h);
-//    return mgr->monitorEndpoints(host);
+//    return mgr->monitorAddresses(host);
 //}
 
 //===========================================================================

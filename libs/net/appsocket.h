@@ -179,7 +179,7 @@ inline void socketCloseWait(SockAddr const & end, AppSocket::Family fam) {
 *
 *   AppSocket filter
 *
-*   Factory filters are like listeners except they only apply to endpoints
+*   Factory filters are like listeners except they only apply to addresses
 *   that are already being listened to, rather than creating additional
 *   bindings.
 *

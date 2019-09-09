@@ -333,7 +333,7 @@ std::string_view httpGetError(HttpConnHandle conn);
 // Returns false when no more data will be accepted, either by request
 // of the input or due to error.
 // Even after an error, out and msgs should be processed.
-//  - out: data to send to the remote endpoint is appended
+//  - out: data to send to the remote address is appended
 //  - msgs: zero or more requests, push promises, and/or replies are appended
 bool httpRecv(
     CharBuf * out,

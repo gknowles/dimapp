@@ -46,7 +46,7 @@ public:
 
     // Inherited via ISockMgrBase
     bool listening() const override { return false; }
-    void setEndpoints(SockAddr const * addrs, size_t count) override;
+    void setAddresses(SockAddr const * addrs, size_t count) override;
     bool onShutdown(bool firstTry) override;
 
     // Inherited via IConfigNotify
@@ -279,20 +279,20 @@ void ConnectManager::destroy(ConnMgrSocket & sock) {
 }
 
 //===========================================================================
-void ConnectManager::setEndpoints(SockAddr const * addrs, size_t count) {
+void ConnectManager::setAddresses(SockAddr const * addrs, size_t count) {
     vector<SockAddr> endpts{addrs, addrs + count};
     sort(endpts.begin(), endpts.end());
-    sort(m_endpoints.begin(), m_endpoints.end());
+    sort(m_addrs.begin(), m_addrs.end());
 
     vector<SockAddr> removed;
     for_each_diff(
         endpts.begin(), endpts.end(),
-        m_endpoints.begin(), m_endpoints.end(),
+        m_addrs.begin(), m_addrs.end(),
         [&](SockAddr const & ep){ connect(ep); },
         [&](SockAddr const & ep){ shutdown(ep); }
     );
 
-    m_endpoints = move(endpts);
+    m_addrs = move(endpts);
 }
 
 //===========================================================================

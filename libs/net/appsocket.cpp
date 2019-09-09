@@ -48,8 +48,8 @@ struct FamilyInfo {
     bool operator==(AppSocket::Family fam) const { return fam == family; }
 };
 
-struct EndpointInfo {
-    SockAddr endpoint;
+struct SockAddrInfo {
+    SockAddr saddr;
     vector<FamilyInfo> families;
     unsigned listeners{0};
     unsigned consoles{0};
@@ -95,7 +95,7 @@ private:
 ***/
 
 static vector<MatchKey> s_matchers;
-static vector<EndpointInfo> s_endpoints;
+static vector<SockAddrInfo> s_sockAddrs;
 
 static list<IAppSocket::UnmatchedInfo> s_unmatched;
 static IAppSocket::UnmatchedTimer s_unmatchedTimer;
@@ -270,10 +270,10 @@ void IAppSocket::notifyDestroy(bool deleteThis) {
 static bool findFactory(
     AppSocket::Family * family,
     IFactory<IAppSocketNotify> ** fact,
-    SockAddr const & localEnd,
+    SockAddr const & localAddr,
     string_view data
 ) {
-    // find best matching factory endpoint for each family
+    // find best matching factory socket address for each family
     enum {
         // match types, in reverse priority order
         kUnknown,   // no match
@@ -282,23 +282,23 @@ static bool findFactory(
         kAddr,      // matching address with wildcard port
         kExact,     // both address and port explicitly match
     };
-    struct EndpointKey {
+    struct SockAddrKey {
         IFactory<IAppSocketNotify> * fact;
         int level;
     };
-    vector<EndpointKey> keys(s_matchers.size(), {nullptr, kUnknown});
-    for (auto && info : s_endpoints) {
+    vector<SockAddrKey> keys(s_matchers.size(), {nullptr, kUnknown});
+    for (auto && info : s_sockAddrs) {
         int level{kUnknown};
-        if (info.endpoint == localEnd) {
+        if (info.saddr == localAddr) {
             level = kExact;
-        } else if (!info.endpoint.addr) {
-            if (info.endpoint.port == localEnd.port) {
+        } else if (!info.saddr.addr) {
+            if (info.saddr.port == localAddr.port) {
                 level = kPort;
-            } else if (!info.endpoint.port) {
+            } else if (!info.saddr.port) {
                 level = kWild;
             }
-        } else if (!info.endpoint.port
-            && info.endpoint.addr == localEnd.addr
+        } else if (!info.saddr.port
+            && info.saddr.addr == localAddr.addr
         ) {
             level = kAddr;
         }
@@ -581,13 +581,13 @@ static ShutdownNotify s_cleanup;
 
 //===========================================================================
 void ShutdownNotify::onShutdownClient(bool firstTry) {
-    for (auto && info [[maybe_unused]] : s_endpoints)
+    for (auto && info [[maybe_unused]] : s_sockAddrs)
         assert(info.listeners == info.consoles);
 }
 
 //===========================================================================
 void ShutdownNotify::onShutdownConsole(bool firstTry) {
-    for (auto && info [[maybe_unused]] : s_endpoints)
+    for (auto && info [[maybe_unused]] : s_sockAddrs)
         assert(!info.listeners && !info.consoles);
 
     if (firstTry) {
@@ -679,16 +679,16 @@ void Dim::socketAddFamily(
 }
 
 //===========================================================================
-static EndpointInfo * findInfo_LK(SockAddr const & end, bool findAlways) {
-    for (auto && ep : s_endpoints) {
-        if (ep.endpoint == end)
+static SockAddrInfo * findInfo_LK(SockAddr const & addr, bool findAlways) {
+    for (auto && ep : s_sockAddrs) {
+        if (ep.saddr == addr)
             return &ep;
     }
     if (findAlways) {
-        EndpointInfo info;
-        info.endpoint = end;
-        s_endpoints.push_back(info);
-        return &s_endpoints.back();
+        SockAddrInfo info;
+        info.saddr = addr;
+        s_sockAddrs.push_back(info);
+        return &s_sockAddrs.back();
     }
     return nullptr;
 }
@@ -761,8 +761,8 @@ void Dim::socketCloseWait(
         if (facts.empty()) {
             fams.erase(afi);
             if (fams.empty()) {
-                s_endpoints.erase(
-                    s_endpoints.begin() + (info - s_endpoints.data())
+                s_sockAddrs.erase(
+                    s_sockAddrs.begin() + (info - s_sockAddrs.data())
                 );
             }
         }

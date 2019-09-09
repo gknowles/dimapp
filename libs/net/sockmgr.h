@@ -85,13 +85,13 @@ SockMgrHandle sockMgrConnect(
 // reliably stave off disconnection.
 void sockMgrSetInactiveTimeout(SockMgrHandle mgr, Duration timeout);
 
-void sockMgrSetEndpoints(
+void sockMgrSetAddresses(
     SockMgrHandle mgr,
     SockAddr const * addrs,
     size_t numAddrs
 );
 // Not implemented
-void sockMgrMonitorEndpoints(SockMgrHandle mgr, std::string_view host);
+void sockMgrMonitorAddresses(SockMgrHandle mgr, std::string_view host);
 
 // Starts closing, no new connections will be allowed. Returns true if all
 // sockets are closed. May be called multiple times. After shutdown has

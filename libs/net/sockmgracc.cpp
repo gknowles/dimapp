@@ -41,7 +41,7 @@ public:
     // Inherited via ISockMgrBase
     bool listening() const override { return true; }
 
-    void setEndpoints(SockAddr const * addrs, size_t count) override;
+    void setAddresses(SockAddr const * addrs, size_t count) override;
     bool onShutdown(bool firstTry) override;
 
     // Inherited via IConfigNotify via ISockMgrBase
@@ -143,26 +143,26 @@ AcceptManager::AcceptManager(
 }
 
 //===========================================================================
-void AcceptManager::setEndpoints(SockAddr const * addrs, size_t count) {
+void AcceptManager::setAddresses(SockAddr const * addrs, size_t count) {
     vector<SockAddr> endpts{addrs, addrs + count};
     sort(endpts.begin(), endpts.end());
-    sort(m_endpoints.begin(), m_endpoints.end());
+    sort(m_addrs.begin(), m_addrs.end());
 
     bool console = (m_mgrFlags & AppSocket::fMgrConsole);
     for_each_diff(
         endpts.begin(), endpts.end(),
-        m_endpoints.begin(), m_endpoints.end(),
+        m_addrs.begin(), m_addrs.end(),
         [&](SockAddr const & ep){ socketListen(this, ep, m_family, console); },
         [&](SockAddr const & ep){ socketCloseWait(this, ep, m_family); }
     );
 
-    m_endpoints = move(endpts);
+    m_addrs = move(endpts);
 }
 
 //===========================================================================
 bool AcceptManager::onShutdown(bool firstTry) {
     if (firstTry) {
-        for (auto && ep : m_endpoints)
+        for (auto && ep : m_addrs)
             socketCloseWait(this, ep, m_family);
         for (auto && sock : m_inactivity.values())
             sock.disconnect(AppSocket::Disconnect::kAppRequest);
@@ -180,7 +180,7 @@ void AcceptManager::onConfigChange(XDocument const & doc) {
 
     SockAddr addr;
     addr.port = (unsigned) configNumber(doc, "Port", 41000);
-    setEndpoints(&addr, 1);
+    setAddresses(&addr, 1);
 }
 
 //===========================================================================
