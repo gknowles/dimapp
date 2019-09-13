@@ -107,7 +107,7 @@ bool DirInfo::start(string_view path, bool recurse) {
     m_handle = CreateFileW(
         wpath.c_str(),
         FILE_LIST_DIRECTORY, // access
-        FILE_SHARE_READ | FILE_SHARE_WRITE, // share mode
+        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
         NULL, // security attributes
         OPEN_EXISTING,
         FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
