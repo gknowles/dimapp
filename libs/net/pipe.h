@@ -64,9 +64,9 @@ public:
     // for both
     virtual void onPipeDisconnect() {};
 
-    // Returns true to immediately queue up another read, or return false and
-    // call pipeQueueRead later. For every time false is returned
-    // pipeQueueRead MUST be called exactly once.
+    // Returns true to immediately queue up another read, or false and calls
+    // pipeQueueRead later. For every time false is returned pipeQueueRead
+    // MUST be called exactly once.
     virtual bool onPipeRead(size_t * bytesUsed, std::string_view data) = 0;
 
     // Called when incomplete falls to zero or waiting transitions between

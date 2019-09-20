@@ -499,7 +499,6 @@ AcceptPipe::AcceptPipe(
 {
     auto wname = toWstring(name);
     DWORD flags = FILE_FLAG_FIRST_PIPE_INSTANCE | FILE_FLAG_OVERLAPPED;
-    int access = 0;
     constexpr auto aflags =
         Pipe::fReadOnly | Pipe::fWriteOnly | Pipe::fReadWrite;
     switch (oflags & aflags) {
@@ -508,15 +507,12 @@ AcceptPipe::AcceptPipe(
         break;
     case Pipe::fReadOnly:
         flags |= PIPE_ACCESS_INBOUND;
-        access = GENERIC_READ;
         break;
     case Pipe::fWriteOnly:
         flags |= PIPE_ACCESS_OUTBOUND;
-        access = GENERIC_WRITE;
         break;
     case Pipe::fReadWrite:
         flags |= PIPE_ACCESS_DUPLEX;
-        access = GENERIC_READ | GENERIC_WRITE;
         break;
     }
     m_handle = CreateNamedPipeW(
@@ -609,7 +605,8 @@ void ListenPipe::stop() {
 bool ListenPipe::onPipeAccept() {
     auto notify = m_notify->onFactoryCreate().release();
     PipeBase::setNotify(this, notify);
-    start();
+    if (m_mode == kRunRunning)
+        start();
     return notify->onPipeAccept();
 }
 
