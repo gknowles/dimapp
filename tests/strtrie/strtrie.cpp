@@ -191,6 +191,8 @@ bool StrTrieBase::insert(string_view key) {
     auto kpos = 0; // nibble of key being processed
     auto klen = key.size() * 2;
     auto kval = getKeyVal(key, kpos);
+
+NEXT_NODE:
     while (inode < nNodes) {
         node = nodeAt(pgno, inode);
         auto ntype = ::nodeType(node);
@@ -201,6 +203,7 @@ bool StrTrieBase::insert(string_view key) {
             assert(slen > 1);
             while (kpos < klen) {
                 if (spos == slen) {
+					// end of segment, still more key
                     inode = node->data[1];
                     goto NEXT_NODE;
                 }
@@ -210,9 +213,11 @@ bool StrTrieBase::insert(string_view key) {
                 sval = getSegVal(node, ++spos);
             }
 
-            // change segment to [lead segment] [tail segment] switch
+            // change segment to [lead segment] switch [tail segment]
             auto tinode = 0;
-            if (spos != slen - 1) {
+			if (spos == slen - 1) {
+				tinode = node->data[1];
+			} else {
                 // add tail segment
                 auto tlen = slen - spos - 1;
                 Node tnode = {
@@ -228,13 +233,13 @@ bool StrTrieBase::insert(string_view key) {
                 node = nodeAt(pgno, inode);
             }
             if (!spos) {
-                // convert segment to switch
+                // only single element after detaching tail, convert to switch
                 Node tnode = { kNodeSwitch };
                 setSwitchVal(&tnode, sval, tinode);
                 setSwitchVal(&tnode, kval, nNodes);
                 memcpy(node, &tnode, sizeof(*node));
                 inode = (int) nNodes;
-                goto NEXT_NODE;
+                goto NEXT_NODE_AND_VALUE;
             }
             // truncate segment as lead
             setSegLen(node, spos);
@@ -245,13 +250,13 @@ bool StrTrieBase::insert(string_view key) {
             setSwitchVal(&tnode, sval, tinode);
             if (kpos == klen) {
                 setSwitchVal(&tnode, kval, 255);
-                node = nodeAppend(pgno, &tnode);
+                nodeAppend(pgno, &tnode);
                 return true;
             }
             setSwitchVal(&tnode, kval, nNodes + 1);
-            node = nodeAppend(pgno, &tnode);
-            inode = (uint8_t) ++nNodes;
-            goto NEXT_NODE;
+            nodeAppend(pgno, &tnode);
+            inode = (int) ++nNodes;
+            goto NEXT_NODE_AND_VALUE;
         }
         if (ntype == kNodeSwitch) {
             inode = getSwitchVal(node, kval);
@@ -266,15 +271,16 @@ bool StrTrieBase::insert(string_view key) {
                 if (kpos == klen)
                     return true;
                 setSwitchVal(node, kval, nNodes);
-
+				Node tnode = { kNodeSwitch };
+				setSwitchVal(&tnode, 255, 255);
+				nodeAppend(pgno, &tnode);
+				inode = (int) nNodes;
             }
-            goto NEXT_NODE;
+			goto NEXT_NODE_AND_VALUE;
         }
         logMsgFatal() << "Invalid StrTrieBase node type: " << ntype;
 
-    NEXT_NODE:
-        if (kpos == klen)
-            return false;
+	NEXT_NODE_AND_VALUE:
         kval = getKeyVal(key, ++kpos);
     }
 
@@ -331,7 +337,7 @@ bool StrTrieBase::lowerBound(string * out, std::string_view key) const {
                 inode = node->data[1];
                 break;
             }
-            inode = node->data[kval + 2];
+            inode = getSwitchVal(node, kval);
             kval = getKeyVal(key, ++kpos);
             continue;
         }
