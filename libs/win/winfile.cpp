@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2018.
+// Copyright Glen Knowles 2015 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // winfile.cpp - dim windows platform
@@ -482,7 +482,7 @@ FileHandle Dim::fileOpen(string_view path, File::OpenMode mode) {
     using om = File::OpenMode;
     assert(~mode & om::fInternalFlags);
 
-    int access = 0;
+    int access = SECURITY_SQOS_PRESENT | SECURITY_IDENTIFICATION;
     if (mode & om::fNoContent) {
         assert((~mode & om::fReadOnly) && (~mode & om::fReadWrite));
     } else if (mode & om::fReadOnly) {

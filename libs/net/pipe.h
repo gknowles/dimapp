@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2018.
+// Copyright Glen Knowles 2018 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // pipe.h - dim net
@@ -19,6 +19,12 @@ namespace Pipe {
         fReadOnly = 0x1,
         fWriteOnly = 0x2,
         fReadWrite = 0x4,
+
+        // Used with pipeConnect, access level granted to remote server
+        fSecurityAnonymous = 0x8,
+        fSecurityIdentification = 0x10, // default
+        fSecurityImpersonation = 0x20,
+        fSecurityDelegation = 0x40,
     };
 };
 
