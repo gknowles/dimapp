@@ -59,6 +59,10 @@ public:
 
     size_t depth() const { return m_stack.size(); }
 
+    template<typename T>
+    IBuilder & operator<<(T const & val);
+    IBuilder & operator<<(IBuilder & (*pfn)(IBuilder &));
+
 protected:
     virtual void append(std::string_view text) = 0;
     virtual void append(char ch) = 0;
@@ -95,16 +99,15 @@ inline IBuilder & IBuilder::value(T const & val) {
 
 //===========================================================================
 template<typename T>
-inline IBuilder & operator<<(IBuilder & out, T const & val) {
-    return out.value(val);
+inline IBuilder & IBuilder::operator<<(T const & val) {
+    return value(val);
 }
 
 //===========================================================================
-inline IBuilder & operator<<(
-    IBuilder & out,
+inline IBuilder & IBuilder::operator<<(
     IBuilder & (*pfn)(IBuilder &)
 ) {
-    return pfn(out);
+    return pfn(*this);
 }
 
 //---------------------------------------------------------------------------

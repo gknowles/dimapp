@@ -84,8 +84,10 @@ struct Element {
     std::string eventName; // only present if different from name
 
     bool operator<(Element const & right) const { return name < right.name; }
+
+private:
+    friend std::ostream & operator<<(std::ostream & os, Element const & elem);
 };
-std::ostream & operator<<(std::ostream & os, Element const & elem);
 
 struct ElementDone : Element {
     ElementDone();

@@ -31,6 +31,8 @@ struct Clock {
     public:
         using std::chrono::time_point<Clock>::time_point;
         explicit operator bool() const noexcept;
+    private:
+        friend std::ostream & operator<<(std::ostream & os, time_point time);
     };
 
     static bool const is_monotonic = false;
@@ -48,7 +50,6 @@ using Duration = Clock::duration;
 using TimePoint = Clock::time_point;
 
 TimePoint timeNow();
-std::ostream & operator<<(std::ostream & os, TimePoint time);
 
 // C conversions
 time_t to_time_t(TimePoint const & time);

@@ -122,6 +122,12 @@ public:
     iterator lastContiguous(iterator where) const;
 
 private:
+    friend std::ostream & operator<<(
+        std::ostream & os,
+        UnsignedSet const & right
+    );
+
+private:
     void iInsert(unsigned const * first, unsigned const * last);
 
     Node m_node;
@@ -238,15 +244,6 @@ struct UnsignedSet::RangeRange {
     RangeIterator begin() { return m_first; }
     RangeIterator end() { return {}; }
 };
-
-
-/****************************************************************************
-*
-*   Free functions
-*
-***/
-
-std::ostream & operator<<(std::ostream & os, UnsignedSet const & right);
 
 
 } // namespace

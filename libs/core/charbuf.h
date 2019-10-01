@@ -123,6 +123,19 @@ public:
     char * alloc(size_t bytes, size_t align) override;
 
 private:
+    friend bool operator==(CharBuf const & left, std::string_view right);
+    friend bool operator==(std::string_view left, CharBuf const & right);
+    friend bool operator==(CharBuf const & left, CharBuf const & right);
+
+    friend std::string toString(
+        CharBuf const & buf,
+        size_t pos = 0,
+        size_t count = -1
+    );
+
+    friend std::ostream & operator<<(std::ostream & os, CharBuf const & buf);
+
+private:
     struct Buffer : public NoCopy {
         char * data;
         int used{0};
@@ -207,12 +220,5 @@ inline CharBuf::ViewIterator end (CharBuf::ViewIterator const & iter) {
 *
 ***/
 
-bool operator==(CharBuf const & left, std::string_view right);
-bool operator==(std::string_view left, CharBuf const & right);
-bool operator==(CharBuf const & left, CharBuf const & right);
-
-std::string toString(CharBuf const & buf, size_t pos = 0, size_t count = -1);
-
-std::ostream & operator<<(std::ostream & os, CharBuf const & buf);
 
 } // namespace

@@ -88,6 +88,15 @@ public:
     Dim::TimePoint upperBound(Dim::TimePoint time) const;
 
 private:
+    template<Dim::Cron::WithFlags Flags>
+    friend std::ostream & operator<<(
+        std::ostream & os,
+        Dim::CronDef<Flags> & val
+    ) {
+        return os << val.str();
+    }
+
+private:
     enum {
         kSecPos = 0,
         kMinPos = kSecPos + ((Flags & WithSeconds) ? 60 : 0),
@@ -263,17 +272,4 @@ Dim::TimePoint Dim::CronDef<Flags>::lowerBound(Dim::TimePoint time) const {
 template<Dim::Cron::WithFlags Flags>
 Dim::TimePoint Dim::CronDef<Flags>::upperBound(Dim::TimePoint time) const {
     return {};
-}
-
-
-/****************************************************************************
-*
-*   Free functions
-*
-***/
-
-//===========================================================================
-template<Dim::Cron::WithFlags Flags>
-std::ostream & operator<<(std::ostream & os, Dim::CronDef<Flags> & val) {
-    return os << val.str();
 }

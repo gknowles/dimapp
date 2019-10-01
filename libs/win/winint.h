@@ -49,12 +49,13 @@ public:
     }
 
 private:
+    friend std::ostream & operator<<(std::ostream & os, WinError const & val);
+
+private:
     int m_value;
     int m_ntStatus{0};
     int m_secStatus{0};
 };
-
-std::ostream & operator<<(std::ostream & os, WinError const & val);
 
 void winErrorInitialize();
 

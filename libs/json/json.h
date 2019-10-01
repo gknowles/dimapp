@@ -64,6 +64,10 @@ public:
     // this continues until end() is called.
     IJBuilder & startValue();
 
+    template <typename T>
+    IJBuilder & operator<<(T const & val);
+    IJBuilder & operator<<(IJBuilder & (*pfn)(IJBuilder &));
+
     enum class Type : int {
         kInvalid,
         kArray,
@@ -120,16 +124,15 @@ inline IJBuilder & IJBuilder::value(T const & val) {
 
 //===========================================================================
 template <typename T>
-inline IJBuilder & operator<<(IJBuilder & out, T const & val) {
-    return out.value(val);
+inline IJBuilder & IJBuilder::operator<<(T const & val) {
+    return value(val);
 }
 
 //===========================================================================
-inline IJBuilder & operator<<(
-    IJBuilder & out,
+inline IJBuilder & IJBuilder::operator<<(
     IJBuilder & (*pfn)(IJBuilder &)
 ) {
-    return pfn(out);
+    return pfn(*this);
 }
 
 //===========================================================================
@@ -233,6 +236,9 @@ struct JNode : ListBaseLink<> {
 protected:
     JNode(JType type);
     ~JNode();
+
+private:
+    friend IJBuilder & operator<<(IJBuilder & out, JNode const & node);
 };
 
 class JDocument {
@@ -269,8 +275,6 @@ private:
     char const * m_errmsg{};
     size_t m_errpos{0};
 };
-
-IJBuilder & operator<<(IJBuilder & out, JNode const & node);
 
 JNode::JType nodeType(JNode const * node);
 std::string_view nodeName(JNode const * node);

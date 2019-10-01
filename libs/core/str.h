@@ -53,13 +53,6 @@ maxFloatChars() {
 
 template <typename T, typename Enable = void> class StrFrom {};
 
-//===========================================================================
-template <typename T>
-std::ostream & operator<<(std::ostream & os, StrFrom<T> const & str) {
-    os << (std::string_view) str;
-    return os;
-}
-
 
 /****************************************************************************
 *
@@ -77,6 +70,15 @@ public:
     std::string_view set(T val);
     operator std::string_view() const;
     char const * c_str() const { return data; }
+
+private:
+    friend std::ostream & operator<<(
+        std::ostream & os,
+        StrFrom const & str
+    ) {
+        os << (std::string_view) str;
+        return os;
+    }
 
 private:
     using Signed = typename std::make_signed<T>::type;
@@ -384,7 +386,14 @@ char32_t popFrontUnicode(std::string_view * src);
 size_t unicodeLen(std::string_view src);
 std::string toString(std::wstring_view src);
 
-struct ostream_utf8_return { std::wstring_view src; };
+struct ostream_utf8_return {
+    std::wstring_view src;
+private:
+    friend std::ostream & operator<<(
+        std::ostream & os,
+        ostream_utf8_return const & out
+    );
+};
 constexpr ostream_utf8_return utf8(std::wstring_view src) {
     return {src};
 }
@@ -394,7 +403,6 @@ constexpr ostream_utf8_return utf8(wchar_t const src[]) {
 constexpr ostream_utf8_return utf8(wchar_t const src[], size_t srclen) {
     return {std::wstring_view(src, srclen)};
 }
-std::ostream & operator<<(std::ostream & os, ostream_utf8_return const & out);
 
 //===========================================================================
 template<typename OutIt>

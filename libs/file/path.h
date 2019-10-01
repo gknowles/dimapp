@@ -127,24 +127,15 @@ public:
     bool hasExt() const;
 
 private:
+    friend bool operator==(Path const & a, std::string_view b);
+    friend bool operator==(std::string_view a, Path const & b);
+    friend bool operator==(Path const & a, Path const & b);
+    friend std::ostream & operator<<(std::ostream & os, Path const & val);
+    friend Path operator/ (Path const & a, std::string_view b);
+    friend Path operator+ (Path const & a, std::string_view b);
+
     std::string m_data;
 };
-
-
-/****************************************************************************
-*
-*   Free functions
-*
-***/
-
-bool operator==(Path const & a, std::string_view b);
-bool operator==(std::string_view a, Path const & b);
-bool operator==(Path const & a, Path const & b);
-
-std::ostream & operator<<(std::ostream & os, Path const & val);
-
-Path operator/ (Path const & a, std::string_view b);
-Path operator+ (Path const & a, std::string_view b);
 
 
 /****************************************************************************

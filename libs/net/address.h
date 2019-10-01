@@ -47,6 +47,10 @@ struct NetAddr {
     bool operator==(NetAddr const & right) const;
     bool operator<(NetAddr const & right) const;
     explicit operator bool() const;
+
+private:
+    friend std::ostream & operator<<(std::ostream & os, NetAddr const & addr);
+    friend std::istream & operator>>(std::istream & in, NetAddr & out);
 };
 struct SockAddr {
     NetAddr addr;
@@ -55,6 +59,10 @@ struct SockAddr {
     bool operator==(SockAddr const & right) const;
     bool operator<(SockAddr const & right) const;
     explicit operator bool() const;
+
+private:
+    friend std::ostream & operator<<(std::ostream & os, SockAddr const & end);
+    friend std::istream & operator>>(std::istream & in, SockAddr & out);
 };
 struct Network {
     NetAddr addr;
@@ -77,13 +85,11 @@ template <> struct hash<Dim::Network> {
 namespace Dim {
 
 [[nodiscard]] bool parse(NetAddr * addr, std::string_view src);
-[[nodiscard]] bool parse(SockAddr * end, std::string_view src, int defaultPort);
-
-std::ostream & operator<<(std::ostream & os, NetAddr const & addr);
-std::ostream & operator<<(std::ostream & os, SockAddr const & end);
-std::istream & operator>>(std::istream & in, NetAddr & out);
-std::istream & operator>>(std::istream & in, SockAddr & out);
-
+[[nodiscard]] bool parse(
+    SockAddr * end,
+    std::string_view src,
+    int defaultPort
+);
 
 //===========================================================================
 // Native
