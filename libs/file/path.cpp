@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2018.
+// Copyright Glen Knowles 2017 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // path.cpp - dim file
@@ -7,7 +7,7 @@
 
 using namespace std;
 using namespace Dim;
-namespace fs = std::experimental::filesystem;
+namespace fs = std::filesystem;
 
 
 /****************************************************************************
@@ -247,10 +247,8 @@ Path::Path(string_view from)
 }
 
 //===========================================================================
-Path::Path(fs::path const & from)
-    : m_data(from.generic_u8string())
-{
-    normalize(&m_data);
+Path::Path(fs::path const & from) {
+    assign(from);
 }
 
 //===========================================================================
@@ -290,7 +288,7 @@ Path & Path::assign(string_view path, string_view defExt) {
 //===========================================================================
 Path & Path::assign(fs::path const & path) {
     auto tmp = path.generic_u8string();
-    return assign(tmp);
+    return assign(string_view{(char *) tmp.data(), tmp.size()});
 }
 
 //===========================================================================
@@ -450,7 +448,10 @@ Path & Path::resolve(string_view basePath) {
 
 //===========================================================================
 fs::path Path::fsPath() const {
-    return fs::u8path(m_data);
+    return fs::path(
+        (char8_t *) m_data.data(),
+        (char8_t *) m_data.data() + m_data.size()
+    );
 }
 
 //===========================================================================

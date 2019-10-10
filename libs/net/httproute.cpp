@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2018.
+// Copyright Glen Knowles 2017 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // httproute.cpp - dim net
@@ -835,19 +835,19 @@ void Dim::httpRouteAddFile(
     string_view charSet
 ) {
     auto pi = PathInfo();
-    string_view * views[] = { &path, &content, &mimeType, &charSet };
+    string_view views[] = { path, content, mimeType, charSet };
     size_t len = accumulate(
         begin(views),
         end(views),
         (size_t) 0,
-        [](auto & a, auto & b) { return a + b->size() + 1; }
+        [](auto const & a, auto & b) { return a + b.size() + 1; }
     );
     pi.data = make_unique<char[]>(len);
     auto out = pi.data.get();
     for (auto && v : views) {
-        auto vlen = v->size();
-        memcpy(out, v->data(), vlen);
-        *v = {out, vlen};
+        auto vlen = v.size();
+        memcpy(out, v.data(), vlen);
+        v = {out, vlen};
         out += vlen;
         *out++ = 0;
     }

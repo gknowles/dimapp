@@ -39,7 +39,7 @@ public:
     explicit Path(char const from[]) : Path{std::string_view{from}} {}
     explicit Path(std::string_view from);
     explicit Path(std::string const & from) : Path{std::string_view{from}} {}
-    Path(std::experimental::filesystem::path const & from);
+    Path(std::filesystem::path const & from);
 
     Path & clear();
     void swap(Path & from);
@@ -53,7 +53,7 @@ public:
     Path & operator=(std::string const & from) {
         return assign(std::string_view(from));
     }
-    Path & operator=(std::experimental::filesystem::path const & from) {
+    Path & operator=(std::filesystem::path const & from) {
         return assign(from);
     }
 
@@ -73,9 +73,9 @@ public:
     Path & assign(std::string const & path, std::string_view defExt) {
         return assign(std::string_view{path}, defExt);
     }
-    Path & assign(std::experimental::filesystem::path const & path);
+    Path & assign(std::filesystem::path const & path);
     Path & assign(
-        std::experimental::filesystem::path const & path,
+        std::filesystem::path const & path,
         std::string_view defExt
     );
 
@@ -105,7 +105,7 @@ public:
     explicit operator bool() const { return !empty(); }
     operator std::string_view() const { return m_data; }
 
-    std::experimental::filesystem::path fsPath() const;
+    std::filesystem::path fsPath() const;
     std::string const & str() const { return m_data; }
     std::string_view view() const { return m_data; }
     char const * c_str() const;
@@ -163,7 +163,8 @@ inline std::string Cli::OptBase::toValueDesc<Path>() const {
 *
 ***/
 
-template<> struct std::hash<Dim::Path> {
+template<>
+struct std::hash<Dim::Path> {
     size_t operator()(Dim::Path const & val) const {
         return std::hash<std::string>()(val.str());
     }
@@ -176,17 +177,26 @@ template<> struct std::hash<Dim::Path> {
 *
 ***/
 
+#pragma warning(push)
+#pragma warning(disable: 4996) // disable deprecated warning for u8path
+
 //===========================================================================
 template <>
-inline std::experimental::filesystem::path::path(std::string const & from) {
+inline std::filesystem::path::path(
+    std::string const & from,
+    std::filesystem::path::format
+) {
     *this = u8path(from);
 }
 
 //===========================================================================
 template <>
-inline std::experimental::filesystem::path::path(
+inline std::filesystem::path::path(
     char const * first,
-    char const * last
+    char const * last,
+    std::filesystem::path::format
 ) {
     *this = u8path(first, last);
 }
+
+#pragma warning(pop)

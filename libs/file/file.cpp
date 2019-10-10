@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2018.
+// Copyright Glen Knowles 2016 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // file.cpp - dim file
@@ -7,7 +7,7 @@
 
 using namespace std;
 using namespace Dim;
-namespace fs = std::experimental::filesystem;
+namespace fs = std::filesystem;
 
 
 /****************************************************************************
@@ -320,18 +320,10 @@ Path Dim::fileAbsolutePath(std::string_view path) {
 }
 
 //===========================================================================
-TimePoint Dim::fileLastWriteTime(string_view path) {
-    error_code ec;
-    auto f = fs::u8path(path.begin(), path.end());
-    auto unixtp = chrono::system_clock::to_time_t(fs::last_write_time(f, ec));
-    auto tp = timeFromUnix(unixtp);
-    return tp;
-}
-
-//===========================================================================
 uint64_t Dim::fileSize(string_view path) {
     error_code ec;
-    auto f = fs::u8path(path.begin(), path.end());
+    auto p8 = u8string_view((char8_t *) path.data(), path.size());
+    auto f = fs::path(p8);
     auto len = (uint64_t) fs::file_size(f, ec);
     if (ec) {
         errno = ec.value();
@@ -345,7 +337,8 @@ uint64_t Dim::fileSize(string_view path) {
 //===========================================================================
 static fs::file_status fileStatus(string_view path) {
     error_code ec;
-    auto f = fs::u8path(path.begin(), path.end());
+    auto p8 = u8string_view((char8_t *) path.data(), path.size());
+    auto f = fs::path(p8);
     auto st = fs::status(f, ec);
     return st;
 }
@@ -372,7 +365,8 @@ bool Dim::fileReadOnly(std::string_view path) {
 //===========================================================================
 void Dim::fileReadOnly(std::string_view path, bool enable) {
     error_code ec;
-    auto f = fs::u8path(path.begin(), path.end());
+    auto p8 = u8string_view((char8_t *) path.data(), path.size());
+    auto f = fs::path(p8);
     auto st = fs::status(f, ec);
     auto ro = fs::exists(st)
         && (st.permissions() & fs::perms::owner_write) == fs::perms::none;
@@ -395,7 +389,8 @@ void Dim::fileReadOnly(std::string_view path, bool enable) {
 //===========================================================================
 bool Dim::fileRemove(string_view path, bool recurse) {
     error_code ec;
-    auto f = fs::u8path(path.begin(), path.end());
+    auto p8 = u8string_view((char8_t *) path.data(), path.size());
+    auto f = fs::path(p8);
     if (recurse) {
         fs::remove_all(f, ec);
     } else {
@@ -410,9 +405,10 @@ bool Dim::fileRemove(string_view path, bool recurse) {
 
 //===========================================================================
 bool Dim::fileCreateDirs(std::string_view path) {
-    auto fp = fs::u8path(path.begin(), path.end());
+    auto p8 = u8string_view((char8_t *) path.data(), path.size());
+    auto f = fs::path(p8);
     error_code ec;
-    fs::create_directories(fp, ec);
+    fs::create_directories(f, ec);
     if (!ec)
         return true;
     logMsgError() << "Create directories failed: " << path;

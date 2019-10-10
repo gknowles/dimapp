@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2018.
+// Copyright Glen Knowles 2015 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // visualc.h - dim compiler config
@@ -9,8 +9,10 @@
 #endif
 #define _ITERATOR_DEBUG_LEVEL 0
 
-// disable std::byte because it conflicts with some of the Windows SDK headers
-#define _HAS_STD_BYTE 0
+// conflicts with some of the Windows SDK headers
+#define _HAS_STD_BYTE 0     // std::byte
+#define _HAS_STD_BOOLEAN 0  // std::boolean
+
 #define _SILENCE_CXX17_STRSTREAM_DEPRECATION_WARNING
 
 #ifndef DIMAPP_LIB_KEEP_MACROS

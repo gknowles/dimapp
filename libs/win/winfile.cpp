@@ -438,6 +438,29 @@ bool Dim::winFileSetErrno(int error) {
 
 /****************************************************************************
 *
+*   Public Path API
+*
+***/
+
+//===========================================================================
+TimePoint Dim::fileLastWriteTime(string_view path) {
+    WIN32_FILE_ATTRIBUTE_DATA attrs;
+    if (!GetFileAttributesExW(
+        toWstring(path).c_str(),
+        GetFileExInfoStandard,
+        &attrs)
+    ) {
+        return {};
+    }
+    LARGE_INTEGER out;
+    out.HighPart = attrs.ftLastWriteTime.dwHighDateTime;
+    out.LowPart = attrs.ftLastWriteTime.dwLowDateTime;
+    return TimePoint{Duration{out.QuadPart}};
+}
+
+
+/****************************************************************************
+*
 *   Public Handle API
 *
 ***/
