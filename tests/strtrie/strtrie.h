@@ -31,6 +31,7 @@ public:
     using value_type = std::pair<std::string, std::string>;
     class Iterator;
     struct Node;
+    struct SearchState;
 
 public:
     StrTrieBase (IPageHeap & heap) : m_heap{heap} {}
@@ -49,6 +50,9 @@ public:
     std::ostream & dump(std::ostream & os) const;
 
 private:
+    bool nodeSegInsert (SearchState * ss);
+    bool nodeSwitchInsert (SearchState * ss);
+
     Node * nodeAppend(size_t pgno, Node const * node);
     Node * nodeAt(size_t pgno, size_t pos);
     Node const * nodeAt(size_t pgno, size_t pos) const;
