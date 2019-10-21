@@ -29,6 +29,11 @@
 // variables. Ignored for non-windows builds.
 //#define DIMAPP_LIB_WINAPI_FAMILY_APP
 
+// DIMAPP_PACK_ALIGNMENT: Causes minimum structure padding, generally byte
+// alignment for all data structures not owned by the operating system.
+#define DIMAPP_PACK_ALIGNMENT
+
+
 //---------------------------------------------------------------------------
 // Configuration of this compile. These options, if desired, are set by the
 // application before including the library headers.
@@ -38,6 +43,7 @@
 // code. Setting this macro leaves them available for the application to use.
 // Also included are other platform specific adjustments, such as suppression
 // of specific compiler warnings.
+
 
 //---------------------------------------------------------------------------
 // Internal use only
