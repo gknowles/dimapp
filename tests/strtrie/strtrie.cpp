@@ -75,6 +75,17 @@ enum NodeType {
 *
 ***/
 
+struct OverflowSegNode {
+    unsigned inext;
+    unsigned len;
+    uint8_t data[16];
+};
+struct OverflowSwitchNode {
+    bool endOfKey;
+    unsigned inext[16];
+};
+using OverflowNode = variant<OverflowSegNode, OverflowSwitchNode>;
+
 struct StrTrieBase::Node {
     uint8_t data[kNodeLen];
 };
@@ -88,6 +99,7 @@ struct StrTrieBase::SearchState {
     int kpos;
     size_t klen;
     uint8_t kval;
+    vector<OverflowNode> overflow;
 };
 
 namespace Dim {
@@ -224,7 +236,10 @@ bool StrTrieBase::nodeSegInsert (SearchState * ss) {
     auto sval = getSegVal(ss->node, spos);
     auto slen = getSegLen(ss->node);
     assert(slen > 1);
-    while (ss->kpos < ss->klen) {
+    for (;;) {
+        if (ss->kpos == ss->klen) {
+            break;
+        }
         if (spos == slen) {
 			// end of segment, still more key
             ss->inode = ss->node->data[1];

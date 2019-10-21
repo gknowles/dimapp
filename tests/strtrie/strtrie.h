@@ -15,6 +15,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <variant>
 #include <vector>
 
 namespace Dim {
@@ -36,6 +37,7 @@ public:
 public:
     StrTrieBase (IPageHeap & heap) : m_heap{heap} {}
 
+    // returns whether key was inserted (didn't already exist).
     bool insert(std::string_view key);
 
     explicit operator bool() const { return !empty(); }
