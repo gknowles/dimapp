@@ -35,12 +35,12 @@
     4324 /* structure was padded due to alignment specifier */ \
     4456 /* declaration of 'identifier' hides previous local declaration */ \
     4457 /* declaration of 'identifier' hides function parameter */ \
-    4800 /* forcing value to bool 'true' or 'false' */ \
     5030 /* attribute 'identifier' is not recognized */ \
     26495 /* variable 'identifier' is uninitialized. Always initialize a
             member variable */ \
     26451 /* Arithmetic overflow: Using operation 'op' on a %size1% byte value
             and then casting the result to a %size2% byte value. */ \
+    26812 /* prefer 'enum class' over 'enum' */ \
 )
 #pragma warning(default: \
     4062 /* enumerator 'identifier' in a switch of enum 'enumeration' is not
@@ -53,6 +53,8 @@
     4826 /* conversion from 'type1' to 'type2' is sign-extended */ \
     4928 /* illegal copy-initialization; more than one user-defined conversion
             has been implicitly applied */ \
+    5023 /* detected #pragma warning(push) with no corresponding #pragma
+            warning(pop) \
     5038 /* data member 'ident1' will be initialized after data member
             'ident2' */ \
 )
