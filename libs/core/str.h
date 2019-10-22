@@ -170,6 +170,15 @@ public:
     char const * c_str() const { return data; }
 
 private:
+    friend std::ostream & operator<<(
+        std::ostream & os,
+        StrFrom const & str
+    ) {
+        os << (std::string_view) str;
+        return os;
+    }
+
+private:
     char data[maxFloatChars<T>() + 1];
 };
 
