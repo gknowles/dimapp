@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2018.
+// Copyright Glen Knowles 2016 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // tempheap.cpp - dim core
@@ -40,9 +40,20 @@ struct Buffer {
 
 /****************************************************************************
 *
-*   Variables
+*   Helpers
 *
 ***/
+
+//===========================================================================
+static char * alignPtr(Buffer * buf, size_t bytes, size_t alignment) {
+    void * ptr = (char *)buf + buf->m_reserve - buf->m_avail;
+    size_t avail = buf->m_avail;
+    if (align(alignment, bytes, ptr, avail)) {
+        buf->m_avail = unsigned(avail - bytes);
+        return (char *) ptr;
+    }
+    return nullptr;
+}
 
 
 /****************************************************************************
@@ -63,8 +74,8 @@ TempHeap::~TempHeap() {
 
 //===========================================================================
 TempHeap & TempHeap::operator=(TempHeap && from) noexcept {
+    clear();
     swap(from);
-    from.clear();
     return *this;
 }
 
@@ -85,20 +96,16 @@ void TempHeap::swap(TempHeap & from) {
 }
 
 //===========================================================================
-char * TempHeap::alloc(size_t bytes, size_t align) {
+char * TempHeap::alloc(size_t bytes, size_t alignment) {
     Buffer * buf = (Buffer *)m_buffer;
     Buffer * tmp;
     constexpr unsigned kBufferLen = sizeof(Buffer);
 
     if (buf) {
-        void * ptr = (char *)buf + buf->m_reserve - buf->m_avail;
-        size_t avail = buf->m_avail;
-        if (::align(align, bytes, ptr, avail)) {
-            buf->m_avail = unsigned(avail - bytes);
-            return (char *)ptr;
-        }
+        if (auto ptr = alignPtr(buf, bytes, alignment))
+            return ptr;
     }
-    auto required = unsigned(bytes + align);
+    auto required = unsigned(bytes + alignment);
     if (required > kMaxBufferSize / 3) {
         tmp = (Buffer *)malloc(kBufferLen + required);
         assert(tmp != nullptr);
@@ -126,9 +133,5 @@ char * TempHeap::alloc(size_t bytes, size_t align) {
     }
     buf = tmp;
 
-    void * ptr = (char *)buf + buf->m_reserve - buf->m_avail;
-    size_t avail = buf->m_avail;
-    ::align(align, bytes, ptr, avail);
-    buf->m_avail = unsigned(avail - bytes);
-    return (char *)ptr;
+    return alignPtr(buf, bytes, alignment);
 }

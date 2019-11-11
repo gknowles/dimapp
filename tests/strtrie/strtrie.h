@@ -52,8 +52,22 @@ public:
     std::ostream & dump(std::ostream & os) const;
 
 private:
-    bool nodeSegInsert (SearchState * ss);
-    bool nodeSwitchInsert (SearchState * ss);
+    bool insertAtFork (SearchState * ss);
+    bool insertAtSeg (SearchState * ss);
+    bool splitSegInPlace(
+        SearchState * ss,
+        uint8_t spos,
+        uint8_t slen,
+        uint8_t sval
+    );
+    void addInPlaceSegs(SearchState * ss);
+    bool splitSegToOverflow(
+        SearchState * ss,
+        uint8_t spos,
+        uint8_t slen,
+        uint8_t sval
+    );
+    void addOverflowSegs(SearchState * ss);
 
     Node * nodeAppend(size_t pgno, Node const * node);
     Node * nodeAt(size_t pgno, size_t pos);

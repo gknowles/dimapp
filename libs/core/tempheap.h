@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2018.
+// Copyright Glen Knowles 2015 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // tempheap.h - dim core
@@ -30,7 +30,7 @@ public:
     char * strdup(char const src[], size_t len);
 
     char * alloc(size_t bytes);
-    virtual char * alloc(size_t bytes, size_t align) = 0;
+    virtual char * alloc(size_t bytes, size_t alignment) = 0;
 };
 
 //===========================================================================
@@ -88,7 +88,7 @@ public:
     void swap(TempHeap & from);
 
     // ITempHeap
-    char * alloc(size_t bytes, size_t align) override;
+    char * alloc(size_t bytes, size_t alignment) override;
 
 private:
     void * m_buffer{};
