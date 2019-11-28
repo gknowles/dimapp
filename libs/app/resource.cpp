@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2018.
+// Copyright Glen Knowles 2018 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // resource.cpp - dim app
@@ -112,7 +112,7 @@ bool ResFileMap::parse(string_view data) {
 }
 
 //===========================================================================
-ResFileMap::Entry const * ResFileMap::find(string_view name) const {
+const ResFileMap::Entry * ResFileMap::find(string_view name) const {
     if (auto i = m_files.find(name); i != m_files.end())
         return &i->second;
     return nullptr;

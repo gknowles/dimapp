@@ -18,12 +18,12 @@ class JsonParser : public JsonParserBase {
 public:
     using JsonParserBase::JsonParserBase;
 
-    bool parse (char const src[]);
+    bool parse (const char src[]);
     size_t errpos () const { return m_errpos; }
 
 private:
-    bool stateArrayTail (char const *& src);
-    bool stateObjectTail (char const *& src);
+    bool stateArrayTail (const char *& src);
+    bool stateObjectTail (const char *& src);
 
     // Events
     bool onArrayStart ();
@@ -49,7 +49,7 @@ private:
     bool onNvalEnd ();
     bool onObjectStart ();
     bool onObjectEnd ();
-    bool onStrTextStart (char const * ptr);
+    bool onStrTextStart (const char * ptr);
     bool onSvalEnd ();
     bool onTrueEnd ();
     bool onUnescapedChar (char ch);

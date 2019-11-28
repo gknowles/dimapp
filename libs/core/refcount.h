@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2018.
+// Copyright Glen Knowles 2018 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // refcount.h - dim core
@@ -86,7 +86,7 @@ public:
     explicit RefPtr(T * ptr);
 
     ~RefPtr();
-    RefPtr & operator= (RefPtr const & ptr);
+    RefPtr & operator= (const RefPtr & ptr);
 
     void reset();
     void reset(T * ptr);
@@ -95,12 +95,12 @@ public:
 
     explicit operator bool() const { return m_ptr; }
     T * get() { return m_ptr; }
-    T const * get() const { return m_ptr; }
+    const T * get() const { return m_ptr; }
 
     T & operator* () { return *m_ptr; }
     T * operator-> () { return m_ptr; }
-    T const & operator* () const { return *m_ptr; }
-    T const * operator-> () const { return m_ptr; }
+    const T & operator* () const { return *m_ptr; }
+    const T * operator-> () const { return m_ptr; }
 
 private:
     T * m_ptr{};
@@ -121,7 +121,7 @@ RefPtr<T>::~RefPtr() {
 
 //===========================================================================
 template<typename T>
-RefPtr<T> & RefPtr<T>::operator= (RefPtr const & ptr) {
+RefPtr<T> & RefPtr<T>::operator= (const RefPtr & ptr) {
     m_ptr = ptr->m_ptr;
     if (m_ptr)
         m_ptr->incRef();

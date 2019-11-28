@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2018.
+// Copyright Glen Knowles 2017 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // env.h - dim system
@@ -28,7 +28,7 @@ struct EnvMemoryConfig {
     // to 0.
     size_t minLargeAlloc;   // min large page allocation
 };
-EnvMemoryConfig const & envMemoryConfig();
+const EnvMemoryConfig & envMemoryConfig();
 
 struct DiskSpace {
     uint64_t avail;
@@ -46,7 +46,7 @@ unsigned envCpus();
 ***/
 
 // Returns path to this executable being run
-std::string const & envExecPath();
+const std::string & envExecPath();
 
 struct VersionInfo {
     unsigned major;

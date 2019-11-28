@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2018.
+// Copyright Glen Knowles 2015 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // winerror.cpp - dim windows platform
@@ -106,7 +106,7 @@ WinError & WinError::set() {
 }
 
 //===========================================================================
-ostream & Dim::operator<<(ostream & os, WinError const & val) {
+ostream & Dim::operator<<(ostream & os, const WinError & val) {
     auto ntval = (WinError::NtStatus) val;
     auto secval = (WinError::SecurityStatus) val;
     int native = secval ? secval : ntval ? ntval : val;

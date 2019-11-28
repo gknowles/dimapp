@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2018.
+// Copyright Glen Knowles 2016 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // intern.h - pargen
@@ -11,7 +11,7 @@
 *
 ***/
 
-char const kVersion[] = "2.2.0";
+const char kVersion[] = "2.2.0";
 
 
 /****************************************************************************
@@ -20,19 +20,19 @@ char const kVersion[] = "2.2.0";
 *
 ***/
 
-char const kOptionRoot[] = "%root";
-char const kOptionInclude[] = "%include";
-char const kOptionApiPrefix[] = "%api.prefix";
-char const kOptionApiParserHeader[] = "%api.parser.file.h";
-char const kOptionApiParserCpp[] = "%api.parser.file.cpp";
-char const kOptionApiParserClass[] = "%api.parser.className";
-char const kOptionApiBaseHeader[] = "%api.base.file.h";
-char const kOptionApiBaseClass[] = "%api.base.className";
-char const kOptionApiNamespace[] = "%api.namespace";
+const char kOptionRoot[] = "%root";
+const char kOptionInclude[] = "%include";
+const char kOptionApiPrefix[] = "%api.prefix";
+const char kOptionApiParserHeader[] = "%api.parser.file.h";
+const char kOptionApiParserCpp[] = "%api.parser.file.cpp";
+const char kOptionApiParserClass[] = "%api.parser.className";
+const char kOptionApiBaseHeader[] = "%api.base.file.h";
+const char kOptionApiBaseClass[] = "%api.base.className";
+const char kOptionApiNamespace[] = "%api.namespace";
 
-char const kDoneRuleName[] = "%%DONE";
+const char kDoneRuleName[] = "%%DONE";
 
-unsigned const kUnlimited = unsigned(-1);
+const unsigned kUnlimited = unsigned(-1);
 
 struct Element {
     enum Flags : uint16_t {
@@ -78,15 +78,15 @@ struct Element {
     unsigned pos{}; // position in sequence, 0 for non-sequences
 
     std::vector<Element> elements;
-    Element const * rule{};
-    Element const * eventRule{}; // only present if different from rule
+    const Element * rule{};
+    const Element * eventRule{}; // only present if different from rule
     Flags flags{};
     std::string eventName; // only present if different from name
 
-    bool operator<(Element const & right) const { return name < right.name; }
+    bool operator<(const Element & right) const { return name < right.name; }
 
 private:
-    friend std::ostream & operator<<(std::ostream & os, Element const & elem);
+    friend std::ostream & operator<<(std::ostream & os, const Element & elem);
 };
 
 struct ElementDone : Element {
@@ -110,12 +110,12 @@ public:
     void eraseOption(std::string_view name);
 
     std::vector<std::string_view> optionStrings(std::string_view name) const;
-    char const * optionString(
+    const char * optionString(
         std::string_view name,
-        char const * def = ""
+        const char * def = ""
     ) const;
     unsigned optionUnsigned(std::string_view name, unsigned def = 0) const;
-    char const * operator[](std::string_view name) const;
+    const char * operator[](std::string_view name) const;
 
     Element * addSequenceRule(
         std::string_view name,
@@ -155,10 +155,10 @@ public:
     void addRange(Element * rule, unsigned char a, unsigned char b);
     void addTerminal(Element * rule, unsigned char ch);
 
-    Element const * eventAlways(std::string_view name);
+    const Element * eventAlways(std::string_view name);
 
     Element * element(std::string_view name);
-    Element const * element(std::string_view name) const;
+    const Element * element(std::string_view name) const;
 
     std::set<Element> const & rules() const { return m_rules; }
     std::set<Element> & rules() { return m_rules; }
@@ -181,7 +181,7 @@ bool processOptions(Grammar & rules);
 // modify rules
 bool copyRules(
     Grammar & out,
-    Grammar const & src,
+    const Grammar & src,
     std::string_view root,
     bool failIfExists
 );
@@ -196,38 +196,38 @@ void functionTags(Grammar & rules, Element & rule, bool reset, bool mark);
 *
 ***/
 
-char const kLeftQ[] = ": ";
-char const kRightQ[] = " :";
+const char kLeftQ[] = ": ";
+const char kRightQ[] = " :";
 
-char const kRootStateName[] = "<ROOT>";
-char const kDoneStateName[] = "<DONE>";
-char const kFailedStateName[] = "<FAILED>";
+const char kRootStateName[] = "<ROOT>";
+const char kDoneStateName[] = "<DONE>";
+const char kFailedStateName[] = "<FAILED>";
 
 struct StateElement {
-    Element const * elem{};
+    const Element * elem{};
     unsigned rep{};
     bool started{};
     bool recurse{};
 
-    int compare(StateElement const & right) const;
-    bool operator<(StateElement const & right) const;
-    bool operator==(StateElement const & right) const;
+    int compare(const StateElement & right) const;
+    bool operator<(const StateElement & right) const;
+    bool operator==(const StateElement & right) const;
 
-    bool operator!=(StateElement const & right) const {
+    bool operator!=(const StateElement & right) const {
         return !operator==(right);
     }
 };
 
 struct StateEvent {
-    Element const * elem{};
+    const Element * elem{};
     Element::Flags flags{};
     int distance{};
 
-    int compare(StateEvent const & right) const;
-    bool operator<(StateEvent const & right) const;
-    bool operator==(StateEvent const & right) const;
+    int compare(const StateEvent & right) const;
+    bool operator<(const StateEvent & right) const;
+    bool operator==(const StateEvent & right) const;
 
-    bool operator!=(StateEvent const & right) const {
+    bool operator!=(const StateEvent & right) const {
         return !operator==(right);
     }
 };
@@ -239,9 +239,9 @@ struct StatePosition {
     int recurseSe{}; // state element of recursion entry point (0 for none)
     int recursePos{-1}; // position in kSequence of recursion entry point
 
-    int compare(StatePosition const & right) const;
-    bool operator<(StatePosition const & right) const;
-    bool operator==(StatePosition const & right) const;
+    int compare(const StatePosition & right) const;
+    bool operator<(const StatePosition & right) const;
+    bool operator==(const StatePosition & right) const;
 };
 
 struct State {
@@ -256,23 +256,23 @@ struct State {
     std::vector<unsigned> next;
 
     void clear();
-    bool operator==(State const & right) const;
+    bool operator==(const State & right) const;
 };
 
 //===========================================================================
 namespace std {
 
 template <> struct hash<StateElement> {
-    size_t operator()(StateElement const & val) const;
+    size_t operator()(const StateElement & val) const;
 };
 template <> struct hash<StateEvent> {
-    size_t operator()(StateEvent const & val) const;
+    size_t operator()(const StateEvent & val) const;
 };
 template <> struct hash<StatePosition> {
-    size_t operator()(StatePosition const & val) const;
+    size_t operator()(const StatePosition & val) const;
 };
 template <> struct hash<State> {
-    size_t operator()(State const & val) const;
+    size_t operator()(const State & val) const;
 };
 
 } // namespace std
@@ -281,7 +281,7 @@ template <> struct hash<State> {
 // build state tree
 void buildStateTree(
     std::unordered_set<State> * states,
-    Element const & root,
+    const Element & root,
     bool inclDeps,
     bool dedupStates,
     unsigned depthLimit
@@ -313,13 +313,13 @@ struct RunOptions {
 void writeParser(
     std::ostream & hfile,
     std::ostream & cppfile,
-    Grammar const & rules,
-    RunOptions const & opts
+    const Grammar & rules,
+    const RunOptions & opts
 );
 
 void writeRule(
     std::ostream & os,
-    Element const & rule,
+    const Element & rule,
     size_t maxWidth,
     std::string_view prefix
 );

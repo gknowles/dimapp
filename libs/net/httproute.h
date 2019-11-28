@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2018.
+// Copyright Glen Knowles 2017 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // httpRoute.h - dim net
@@ -36,7 +36,7 @@ public:
     virtual ~IHttpRouteNotify() = default;
     virtual void onHttpRequest(unsigned reqId, HttpRequest & msg) = 0;
 
-    void mapParams(HttpRequest const & msg);
+    void mapParams(const HttpRequest & msg);
 
 protected:
     Param & param(std::string name);
@@ -51,8 +51,8 @@ class IHttpRouteNotify::ParamBase {
 public:
     explicit ParamBase(std::string name) : m_name{move(name)} {}
     virtual ~ParamBase() = default;
-    ParamBase(ParamBase const &) = delete;
-    ParamBase & operator=(ParamBase const &) = delete;
+    ParamBase(const ParamBase &) = delete;
+    ParamBase & operator=(const ParamBase &) = delete;
     virtual void append(std::string_view value) = 0;
     virtual void reset() = 0;
 protected:
@@ -162,7 +162,7 @@ void httpRouteReply(unsigned reqId, std::string_view data, bool more);
 
 void httpRouteReply(
     unsigned reqId,
-    HttpRequest const & req,
+    const HttpRequest & req,
     unsigned status,
     std::string_view msg = {}
 );
@@ -182,7 +182,7 @@ void httpRouteReplyWithFile(
     std::string_view charSet
 );
 
-void httpRouteReplyNotFound(unsigned reqId, HttpRequest const & req);
+void httpRouteReplyNotFound(unsigned reqId, const HttpRequest & req);
 void httpRouteReplyRedirect(
     unsigned reqId,
     std::string_view location,
@@ -191,7 +191,7 @@ void httpRouteReplyRedirect(
 );
 void httpRouteReplyDirList(
     unsigned reqId,
-    HttpRequest const & req,
+    const HttpRequest & req,
     std::string_view path
 );
 
@@ -204,11 +204,11 @@ void httpRouteReplyDirList(
 
 void httpRouteSetDefaultReplyHeader(
     HttpHdr hdr,
-    char const value[] = nullptr
+    const char value[] = nullptr
 );
 void httpRouteSetDefaultReplyHeader(
-    char const name[],
-    char const value[] = nullptr
+    const char name[],
+    const char value[] = nullptr
 );
 
 
@@ -223,7 +223,7 @@ struct MimeType {
     std::string_view type;
     std::string_view charSet;
 };
-int compareExt(MimeType const & a, MimeType const & b);
+int compareExt(const MimeType & a, const MimeType & b);
 MimeType mimeTypeDefault(std::string_view path);
 
 

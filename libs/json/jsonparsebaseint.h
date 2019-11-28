@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2018.
+// Copyright Glen Knowles 2018 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // jsonparsebaseint.h - dim json
@@ -23,7 +23,7 @@ struct JsonParserBase {
     IJsonStreamNotify & m_notify;
 
     std::string_view m_name;
-    char const * m_base{};
+    const char * m_base{};
     char * m_cur{};
 
     bool m_minus{};

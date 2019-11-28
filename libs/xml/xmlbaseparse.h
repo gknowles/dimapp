@@ -18,40 +18,40 @@ class XmlBaseParser : public XmlBaseParserBase {
 public:
     using XmlBaseParserBase::XmlBaseParserBase;
 
-    bool parse (char const src[]);
+    bool parse (const char src[]);
     size_t errpos () const { return m_errpos; }
 
 private:
-    bool stateCp (char const *& src);
-    bool stateElementTail (char const *& src);
+    bool stateCp (const char *& src);
+    bool stateElementTail (const char *& src);
 
     // Events
     bool onAttrCopyChar (char ch);
-    bool onAttrInPlaceEnd (char const * eptr);
-    bool onAttrNameStart (char const * ptr);
-    bool onAttrNameEnd (char const * eptr);
-    bool onAttrValueStart (char const * ptr);
+    bool onAttrInPlaceEnd (const char * eptr);
+    bool onAttrNameStart (const char * ptr);
+    bool onAttrNameEnd (const char * eptr);
+    bool onAttrValueStart (const char * ptr);
     bool onAttrValueEnd ();
-    bool onCDataWithEndStart (char const * ptr);
-    bool onCDataWithEndEnd (char const * eptr);
+    bool onCDataWithEndStart (const char * ptr);
+    bool onCDataWithEndEnd (const char * eptr);
     bool onCharDataChar (char ch);
     bool onCharRefStart ();
     bool onCharRefEnd ();
     bool onCharRefDigitChar (char ch);
     bool onCharRefHexdigChar (char ch);
-    bool onElemNameStart (char const * ptr);
-    bool onElemNameEnd (char const * eptr);
-    bool onElemTextStart (char const * ptr);
+    bool onElemNameStart (const char * ptr);
+    bool onElemNameEnd (const char * eptr);
+    bool onElemTextStart (const char * ptr);
     bool onElemTextEnd ();
     bool onElementEnd ();
     bool onEntityAmpEnd ();
     bool onEntityAposEnd ();
     bool onEntityGtEnd ();
     bool onEntityLtEnd ();
-    bool onEntityOtherEnd (char const * eptr);
+    bool onEntityOtherEnd (const char * eptr);
     bool onEntityQuotEnd ();
-    bool onEntityValueStart (char const * ptr);
-    bool onEntityValueEnd (char const * eptr);
+    bool onEntityValueStart (const char * ptr);
+    bool onEntityValueEnd (const char * eptr);
     bool onNormalizableWsChar ();
 
     // Data members

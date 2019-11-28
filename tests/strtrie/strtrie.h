@@ -69,9 +69,9 @@ private:
     );
     void addOverflowSegs(SearchState * ss);
 
-    Node * nodeAppend(size_t pgno, Node const * node);
+    Node * nodeAppend(size_t pgno, const Node * node);
     Node * nodeAt(size_t pgno, size_t pos);
-    Node const * nodeAt(size_t pgno, size_t pos) const;
+    const Node * nodeAt(size_t pgno, size_t pos) const;
 
     // size and capacity, measured in nodes
     size_t size(size_t pgno) const;
@@ -100,13 +100,13 @@ class StrTrieBase::Iterator {
     value_type m_current;
 public:
     Iterator & operator++();
-    bool operator!=(Iterator const & right) const;
+    bool operator!=(const Iterator & right) const;
     value_type const & operator*();
 };
 
 //===========================================================================
 inline bool StrTrieBase::Iterator::operator!=(
-    Iterator const & right
+    const Iterator & right
 ) const {
     return m_current != right.m_current;
 }

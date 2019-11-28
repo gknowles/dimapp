@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2018.
+// Copyright Glen Knowles 2015 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // app.h - dim app
@@ -99,7 +99,7 @@ int appRun(
 *
 ***/
 
-std::string const & appName();
+const std::string & appName();
 RunMode appMode();
 inline bool appStarting() { return appMode() == kRunStarting; }
 inline bool appStopping() { return appMode() == kRunStopping; }
@@ -110,11 +110,11 @@ AppFlags appFlags();
 // returns EX_OK unless changed by appSignalShutdown()
 int appExitCode();
 
-Path const & appRootDir();
-Path const & appConfigDir();
-Path const & appCrashDir();
-Path const & appDataDir();
-Path const & appLogDir();
+const Path & appRootDir();
+const Path & appConfigDir();
+const Path & appCrashDir();
+const Path & appDataDir();
+const Path & appLogDir();
 
 LogType appLogLevel();
 

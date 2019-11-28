@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2018.
+// Copyright Glen Knowles 2015 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // timer.cpp - dim app
@@ -51,9 +51,9 @@ struct TimerQueueNode {
     unsigned instance;
 
     explicit TimerQueueNode(shared_ptr<Timer> & timer);
-    bool operator<(TimerQueueNode const & right) const;
-    bool operator>(TimerQueueNode const & right) const;
-    bool operator==(TimerQueueNode const & right) const;
+    bool operator<(const TimerQueueNode & right) const;
+    bool operator>(const TimerQueueNode & right) const;
+    bool operator==(const TimerQueueNode & right) const;
 };
 
 } // namespace
@@ -204,17 +204,17 @@ TimerQueueNode::TimerQueueNode(shared_ptr<Timer> & timer)
 {}
 
 //===========================================================================
-bool TimerQueueNode::operator<(TimerQueueNode const & right) const {
+bool TimerQueueNode::operator<(const TimerQueueNode & right) const {
     return expiration < right.expiration;
 }
 
 //===========================================================================
-bool TimerQueueNode::operator>(TimerQueueNode const & right) const {
+bool TimerQueueNode::operator>(const TimerQueueNode & right) const {
     return expiration > right.expiration;
 }
 
 //===========================================================================
-bool TimerQueueNode::operator==(TimerQueueNode const & right) const {
+bool TimerQueueNode::operator==(const TimerQueueNode & right) const {
     return expiration == right.expiration && timer == right.timer
         && instance == right.instance;
 }

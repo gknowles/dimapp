@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2018.
+// Copyright Glen Knowles 2018 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // resupd.cpp - resupd
@@ -15,7 +15,7 @@ using namespace Dim;
 *
 ***/
 
-char const kVersion[] = "1.0";
+const char kVersion[] = "1.0";
 
 
 /****************************************************************************
@@ -148,7 +148,7 @@ static const uint8_t s_data[] =)";
 
 //===========================================================================
 string_view resWebSiteContent() {
-    return {(char const *) s_data, size(s_data)};
+    return {(const char *) s_data, size(s_data)};
 }
 )";
 }

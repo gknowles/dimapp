@@ -23,7 +23,7 @@ using namespace Dim;
 ***/
 
 //===========================================================================
-size_t std::hash<NetAddr>::operator()(NetAddr const & val) const {
+size_t std::hash<NetAddr>::operator()(const NetAddr & val) const {
     size_t out = 0;
     hashCombine(&out, std::hash<int32_t>{}(val.data[0]));
     hashCombine(&out, std::hash<int32_t>{}(val.data[1]));
@@ -34,12 +34,12 @@ size_t std::hash<NetAddr>::operator()(NetAddr const & val) const {
 }
 
 //===========================================================================
-bool NetAddr::operator==(NetAddr const & right) const {
+bool NetAddr::operator==(const NetAddr & right) const {
     return memcmp(this, &right, sizeof *this) == 0;
 }
 
 //===========================================================================
-bool NetAddr::operator<(NetAddr const & right) const {
+bool NetAddr::operator<(const NetAddr & right) const {
     return memcmp(this, &right, sizeof *this) < 0;
 }
 
@@ -78,7 +78,7 @@ istream & Dim::operator>>(istream & in, NetAddr & out) {
 ***/
 
 //===========================================================================
-size_t std::hash<SockAddr>::operator()(SockAddr const & val) const {
+size_t std::hash<SockAddr>::operator()(const SockAddr & val) const {
     size_t out = 0;
     hashCombine(&out, std::hash<NetAddr>{}(val.addr));
     hashCombine(&out, std::hash<unsigned>{}(val.port));
@@ -86,12 +86,12 @@ size_t std::hash<SockAddr>::operator()(SockAddr const & val) const {
 }
 
 //===========================================================================
-bool SockAddr::operator==(SockAddr const & right) const {
+bool SockAddr::operator==(const SockAddr & right) const {
     return port == right.port && addr == right.addr;
 }
 
 //===========================================================================
-bool SockAddr::operator<(SockAddr const & right) const {
+bool SockAddr::operator<(const SockAddr & right) const {
     return tie(addr, port) < tie(right.addr, right.port);
 }
 
@@ -117,7 +117,7 @@ istream & Dim::operator>>(istream & in, SockAddr & out) {
 ***/
 
 //===========================================================================
-size_t std::hash<Network>::operator()(Network const & val) const {
+size_t std::hash<Network>::operator()(const Network & val) const {
     size_t out = 0;
     hashCombine(&out, std::hash<NetAddr>{}(val.addr));
     hashCombine(&out, std::hash<int>{}(val.mask));

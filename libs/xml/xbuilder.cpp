@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2018.
+// Copyright Glen Knowles 2016 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // xbuilder.cpp - dim xml
@@ -28,7 +28,7 @@ enum TextType : char {
     kTextTypes,
 };
 
-char const * kTextEntityTable[] = {
+const char * kTextEntityTable[] = {
     nullptr,
     nullptr,
     nullptr,
@@ -40,7 +40,7 @@ char const * kTextEntityTable[] = {
 static_assert(size(kTextEntityTable) == kTextTypes);
 
 // clang-format off
-char const kTextTypeTable[256] = {
+const char kTextTypeTable[256] = {
 //  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
     2, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, // 0
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 1
@@ -213,10 +213,10 @@ IXBuilder & IXBuilder::text(string_view val) {
 
 //===========================================================================
 template <bool isContent> void IXBuilder::addText(
-    char const val[],
+    const char val[],
     size_t count
 ) {
-    char const * base = val;
+    const char * base = val;
     for (; count; --count, ++val) {
         TextType type = (TextType)kTextTypeTable[*val];
         switch (type) {
@@ -381,7 +381,7 @@ IXBuilder & Dim::operator<<(IXBuilder & out, char val) {
 }
 
 //===========================================================================
-IXBuilder & Dim::operator<<(IXBuilder & out, char const val[]) {
+IXBuilder & Dim::operator<<(IXBuilder & out, const char val[]) {
     return out.text(val);
 }
 
@@ -391,7 +391,7 @@ IXBuilder & Dim::operator<<(IXBuilder & out, string_view val) {
 }
 
 //===========================================================================
-IXBuilder & Dim::operator<<(IXBuilder & out, XNode const & elem) {
+IXBuilder & Dim::operator<<(IXBuilder & out, const XNode & elem) {
     auto type = nodeType(&elem);
     switch (type) {
     default: assert(!"unknown XML node type"); return out;
@@ -412,7 +412,7 @@ IXBuilder & Dim::operator<<(IXBuilder & out, XNode const & elem) {
 }
 
 //===========================================================================
-string Dim::toString(XNode const & elem) {
+string Dim::toString(const XNode & elem) {
     CharBuf buf;
     XBuilder bld(&buf);
     bld << elem;

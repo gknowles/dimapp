@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2018.
+// Copyright Glen Knowles 2018 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // msgparser.cpp - dim msgpack
@@ -17,7 +17,7 @@ using namespace MsgPack;
 ***/
 
 //===========================================================================
-constexpr uint64_t getUnsigned(void const * ptr, size_t width) {
+constexpr uint64_t getUnsigned(const void * ptr, size_t width) {
     switch (width) {
     case 1: return *(uint8_t*) ptr;
     case 2: return ntoh16(ptr);
@@ -29,7 +29,7 @@ constexpr uint64_t getUnsigned(void const * ptr, size_t width) {
 }
 
 //===========================================================================
-constexpr int64_t getSigned(void const * ptr, size_t width) {
+constexpr int64_t getSigned(const void * ptr, size_t width) {
     switch (width) {
     case 1: return *(int8_t*) ptr;
     case 2: return (int16_t) ntoh16(ptr);

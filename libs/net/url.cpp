@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2018.
+// Copyright Glen Knowles 2018 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // url.cpp - dim net
@@ -66,11 +66,11 @@ static bool escapeInPath(char ch) {
         return true;
 
     // unreserved
-    case 'a': case 'b': case 'c': case 'd': case 'e': case 'f': 
+    case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
     case 'g': case 'h': case 'i': case 'j': case 'k': case 'l':
     case 'm': case 'n': case 'o': case 'p': case 'q': case 'r':
     case 's': case 't': case 'u': case 'v': case 'w': case 'x':
-    case 'y': case 'z': 
+    case 'y': case 'z':
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'G': case 'H': case 'I': case 'J': case 'K': case 'L':
     case 'M': case 'N': case 'O': case 'P': case 'Q': case 'R':
@@ -80,11 +80,11 @@ static bool escapeInPath(char ch) {
     case '6': case '7': case '8': case '9':
     case '-': case '.': case '_': case '~':
     // gen-delims
-    case ':': case '/': case '?': case '#': case '[': case ']': 
+    case ':': case '/': case '?': case '#': case '[': case ']':
     case '@':
         return false;
     }
-}                    
+}
 
 //===========================================================================
 static bool escapeInQuery(char ch) {
@@ -93,11 +93,11 @@ static bool escapeInQuery(char ch) {
         return true;
 
     // unreserved
-    case 'a': case 'b': case 'c': case 'd': case 'e': case 'f': 
+    case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
     case 'g': case 'h': case 'i': case 'j': case 'k': case 'l':
     case 'm': case 'n': case 'o': case 'p': case 'q': case 'r':
     case 's': case 't': case 'u': case 'v': case 'w': case 'x':
-    case 'y': case 'z': 
+    case 'y': case 'z':
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
     case 'G': case 'H': case 'I': case 'J': case 'K': case 'L':
     case 'M': case 'N': case 'O': case 'P': case 'Q': case 'R':
@@ -107,20 +107,20 @@ static bool escapeInQuery(char ch) {
     case '6': case '7': case '8': case '9':
     case '-': case '.': case '_': case '~':
     // gen-delims
-    case ':': case '/': case '?': case '#': case '[': case ']': 
+    case ':': case '/': case '?': case '#': case '[': case ']':
     case '@':
     // sub-delims
     case '!': case '$': case '&': case '\'': case '(': case ')':
     case '*': case '+': case ',': case ';': case '=':
         return false;
     }
-}                    
+}
 
 //===========================================================================
 static size_t urlEncode(
-    void * vout, 
-    size_t outLen, 
-    string_view src, 
+    void * vout,
+    size_t outLen,
+    string_view src,
     bool query
 ) {
     auto out = (char *) vout;
@@ -145,7 +145,7 @@ static size_t urlEncode(
 //===========================================================================
 size_t Dim::urlEncodePathComponentLen(std::string_view src) {
     size_t num = 0;
-    for (auto && ch : src) 
+    for (auto && ch : src)
         num += escapeInPath(ch) ? 3 : 1;
     return num;
 }
@@ -153,7 +153,7 @@ size_t Dim::urlEncodePathComponentLen(std::string_view src) {
 //===========================================================================
 size_t Dim::urlEncodeQueryComponentLen(std::string_view src) {
     size_t num = 0;
-    for (auto && ch : src) 
+    for (auto && ch : src)
         num += escapeInQuery(ch) ? 3 : 1;
     return num;
 }
@@ -187,8 +187,8 @@ size_t Dim::urlEncodeQueryComponent(
 static void addSeg(
     HttpQuery * hp,
     ITempHeap & heap,
-    char const *& base,
-    char const * eptr,
+    const char *& base,
+    const char * eptr,
     unsigned & pcts
 ) {
     auto count = size_t(eptr - base - 1);
@@ -220,8 +220,8 @@ static void setPath(HttpQuery * hp, ITempHeap & heap) {
 static HttpPathParam * addParam(
     HttpQuery * hp,
     ITempHeap & heap,
-    char const *& base,
-    char const * eptr,
+    const char *& base,
+    const char * eptr,
     unsigned & pcts
 ) {
     auto count = size_t(eptr - base - 1);
@@ -240,8 +240,8 @@ static HttpPathParam * addParam(
 static void addParamValue(
     HttpPathParam * param,
     ITempHeap & heap,
-    char const *& base,
-    char const * eptr,
+    const char *& base,
+    const char * eptr,
     unsigned & pcts
 ) {
     auto count = size_t(eptr - base - 1);

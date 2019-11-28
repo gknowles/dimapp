@@ -193,17 +193,17 @@ void Dim::iLogDestroy() {
 //===========================================================================
 // Log types
 //===========================================================================
-TokenTable::Token const s_logTypes[] = {
+const TokenTable::Token s_logTypes[] = {
     { kLogTypeDebug, "debug" },
     { kLogTypeInfo,  "info" },
     { kLogTypeWarn,  "warn" },
     { kLogTypeError, "error" },
     { kLogTypeFatal, "fatal" },
 };
-TokenTable const s_logTypeTbl{s_logTypes};
+const TokenTable s_logTypeTbl{s_logTypes};
 
 //===========================================================================
-char const * Dim::toString(LogType type, char const def[]) {
+const char * Dim::toString(LogType type, const char def[]) {
     return tokenTableGetName(s_logTypeTbl, type, def);
 }
 
@@ -310,7 +310,7 @@ void Dim::logParseError(
 
 //===========================================================================
 void Dim::logHexDebug(string_view data) {
-    unsigned char const * ptr = (unsigned char const *) data.data();
+    const unsigned char * ptr = (const unsigned char *) data.data();
     for (unsigned pos = 0; pos < data.size(); pos += 16, ptr += 16) {
         auto os = logMsgDebug();
         os << setw(6) << pos << ':';

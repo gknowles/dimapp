@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2018.
+// Copyright Glen Knowles 2016 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // xmlbaseparseimpl.h - dim xml
@@ -25,25 +25,25 @@ inline bool XmlBaseParser::onAttrCopyChar(char ch) {
 }
 
 //===========================================================================
-inline bool XmlBaseParser::onAttrInPlaceEnd(char const * eptr) {
+inline bool XmlBaseParser::onAttrInPlaceEnd(const char * eptr) {
     m_cur = const_cast<char *>(eptr);
     return true;
 }
 
 //===========================================================================
-inline bool XmlBaseParser::onAttrNameStart(char const * ptr) {
+inline bool XmlBaseParser::onAttrNameStart(const char * ptr) {
     m_attr = ptr;
     return true;
 }
 
 //===========================================================================
-inline bool XmlBaseParser::onAttrNameEnd(char const * eptr) {
+inline bool XmlBaseParser::onAttrNameEnd(const char * eptr) {
     m_attrLen = eptr - m_attr;
     return true;
 }
 
 //===========================================================================
-inline bool XmlBaseParser::onAttrValueStart(char const * ptr) {
+inline bool XmlBaseParser::onAttrValueStart(const char * ptr) {
     m_base = ptr + 1;
     m_cur = const_cast<char *>(m_base);
     return true;
@@ -56,13 +56,13 @@ inline bool XmlBaseParser::onAttrValueEnd() {
 }
 
 //===========================================================================
-inline bool XmlBaseParser::onCDataWithEndStart(char const * ptr) {
+inline bool XmlBaseParser::onCDataWithEndStart(const char * ptr) {
     m_base = ptr;
     return true;
 }
 
 //===========================================================================
-inline bool XmlBaseParser::onCDataWithEndEnd(char const * eptr) {
+inline bool XmlBaseParser::onCDataWithEndEnd(const char * eptr) {
     // leave off trailing "]]>"
     m_notify.text(m_base, eptr - m_base - 3);
     return true;
@@ -120,19 +120,19 @@ inline bool XmlBaseParser::onCharRefHexdigChar(char ch) {
 }
 
 //===========================================================================
-inline bool XmlBaseParser::onElemNameStart(char const * ptr) {
+inline bool XmlBaseParser::onElemNameStart(const char * ptr) {
     m_base = ptr;
     return true;
 }
 
 //===========================================================================
-inline bool XmlBaseParser::onElemNameEnd(char const * eptr) {
+inline bool XmlBaseParser::onElemNameEnd(const char * eptr) {
     m_notify.startElem(m_base, eptr - m_base);
     return true;
 }
 
 //===========================================================================
-inline bool XmlBaseParser::onElemTextStart(char const * ptr) {
+inline bool XmlBaseParser::onElemTextStart(const char * ptr) {
     m_base = ptr;
     m_cur = const_cast<char *>(ptr);
     return true;
@@ -175,8 +175,8 @@ inline bool XmlBaseParser::onEntityLtEnd() {
 }
 
 //===========================================================================
-inline bool XmlBaseParser::onEntityOtherEnd(char const * eptr) {
-    char const * amp = eptr;
+inline bool XmlBaseParser::onEntityOtherEnd(const char * eptr) {
+    const char * amp = eptr;
     while (*amp != '&')
         amp -= 1;
     std::string err{"unknown entity '"};
@@ -192,14 +192,14 @@ inline bool XmlBaseParser::onEntityQuotEnd() {
 }
 
 //===========================================================================
-inline bool XmlBaseParser::onEntityValueStart(char const * ptr) {
+inline bool XmlBaseParser::onEntityValueStart(const char * ptr) {
     m_base = ptr;
     m_cur = const_cast<char *>(ptr);
     return true;
 }
 
 //===========================================================================
-inline bool XmlBaseParser::onEntityValueEnd(char const * eptr) {
+inline bool XmlBaseParser::onEntityValueEnd(const char * eptr) {
     return true;
 }
 

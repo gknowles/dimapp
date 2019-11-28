@@ -27,13 +27,13 @@ public:
 public:
     // default constructor calls GetLastError()
     WinError();
-    WinError(WinError const & from) = default;
+    WinError(const WinError & from) = default;
     WinError(int error);
     // sets equivalent standard windows error value
     WinError(NtStatus status);
     WinError(SecurityStatus status);
 
-    WinError & operator=(WinError const & from) = default;
+    WinError & operator=(const WinError & from) = default;
     WinError & operator=(int error) { return *this = WinError{error}; }
     WinError & operator=(NtStatus status) { return *this = WinError{status}; }
     WinError & operator=(SecurityStatus status) {
@@ -49,7 +49,7 @@ public:
     }
 
 private:
-    friend std::ostream & operator<<(std::ostream & os, WinError const & val);
+    friend std::ostream & operator<<(std::ostream & os, const WinError & val);
 
 private:
     int m_value;
@@ -69,14 +69,14 @@ void winErrorInitialize();
 //---------------------------------------------------------------------------
 // Load DLL Procedure
 
-FARPROC winLoadProc(char const lib[], char const proc[], bool optional);
+FARPROC winLoadProc(const char lib[], const char proc[], bool optional);
 
 //===========================================================================
 template <typename FN>
 static void winLoadProc(
     FN * fn,
-    char const lib[],
-    char const proc[],
+    const char lib[],
+    const char proc[],
     bool optional = false
 ) {
     // FN must be pointer to function, which will be set to the address of
@@ -133,7 +133,7 @@ bool winEnablePrivilege(wchar_t const name[], bool enable = true);
 class WinSid {
 public:
     WinSid() = default;
-    WinSid(WinSid const & from) = default;
+    WinSid(const WinSid & from) = default;
     WinSid & operator=(const WinSid & right) = default;
     WinSid & operator=(const SID & sid);
 
@@ -142,9 +142,9 @@ public:
     bool operator==(WELL_KNOWN_SID_TYPE type) const;
 
     SID * operator->() { return &m_data.Sid; }
-    SID const * operator->() const { return &m_data.Sid; }
+    const SID * operator->() const { return &m_data.Sid; }
     SID & operator*() { return *operator->(); }
-    SID const & operator*() const { return *operator->(); }
+    const SID & operator*() const { return *operator->(); }
 
     void reset();
 

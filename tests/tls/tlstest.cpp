@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2018.
+// Copyright Glen Knowles 2016 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // tlstest.cpp - dim test tls
@@ -23,7 +23,7 @@ enum TestType : unsigned {
 };
 
 struct Test {
-    char const * name;
+    const char * name;
     TestType flags;
     string input;
     bool result;
@@ -41,7 +41,7 @@ struct Test {
 ***/
 
 // clang-format off
-Test const s_tests[] = {
+const Test s_tests[] = {
     {"connect", fTestReset | fTestClient, {}, true, {}, {}},
     {"simple client hello",
      fTestReset,
@@ -90,10 +90,10 @@ Test const s_tests[] = {
 
 //===========================================================================
 static void app(int argc, char *argv[]) {
-    TlsCipherSuite const kCiphers[] = {
+    const TlsCipherSuite kCiphers[] = {
         TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
     };
-    char const kHost[] = "example.com";
+    const char kHost[] = "example.com";
 
     CharBuf output;
     CharBuf plain;

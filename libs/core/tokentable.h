@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2018.
+// Copyright Glen Knowles 2016 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // Maps between a predefined set of enums and their string representations.
@@ -26,23 +26,23 @@ class TokenTable {
 public:
     struct Token {
         int id;
-        char const * name;
+        const char * name;
     };
     class Iterator;
 
 public:
     TokenTable() : TokenTable(nullptr, 0) {}
-    TokenTable(Token const * ptr, size_t count);
+    TokenTable(const Token * ptr, size_t count);
     template<typename T>
-    explicit TokenTable(T const & tokens)
+    explicit TokenTable(const T & tokens)
         : TokenTable(std::data(tokens), std::size(tokens))
     {}
 
     explicit operator bool() const { return !empty(); }
 
     bool find(int * out, std::string_view name) const;
-    bool find(int * out, char const name[], size_t nameLen = -1) const;
-    bool find(char const ** const out, int id) const;
+    bool find(int * out, const char name[], size_t nameLen = -1) const;
+    bool find(const char ** const out, int id) const;
 
     bool empty() const { return m_values.empty(); }
     Iterator begin() const;
@@ -76,21 +76,21 @@ private:
 ***/
 
 class TokenTable::Iterator {
-    Token const * m_current{};
+    const Token * m_current{};
 public:
-    Iterator(Token const * ptr);
+    Iterator(const Token * ptr);
     Iterator & operator++();
-    bool operator!=(Iterator const & right) const;
-    Token const & operator*();
+    bool operator!=(const Iterator & right) const;
+    const Token & operator*();
 };
 
 //===========================================================================
-inline bool TokenTable::Iterator::operator!=(Iterator const & right) const {
+inline bool TokenTable::Iterator::operator!=(const Iterator & right) const {
     return m_current != right.m_current;
 }
 
 //===========================================================================
-inline TokenTable::Token const & TokenTable::Iterator::operator*() {
+inline const TokenTable::Token & TokenTable::Iterator::operator*() {
     return *m_current;
 }
 
@@ -103,37 +103,37 @@ inline TokenTable::Token const & TokenTable::Iterator::operator*() {
 
 //===========================================================================
 template <typename E>
-E tokenTableGetEnum(TokenTable const & tbl, char const name[], E defId) {
+E tokenTableGetEnum(const TokenTable & tbl, const char name[], E defId) {
     int id;
     return tbl.find(&id, name) ? (E)id : defId;
 }
 
 //===========================================================================
 template <typename E>
-E tokenTableGetEnum(TokenTable const & tbl, std::string_view name, E defId) {
+E tokenTableGetEnum(const TokenTable & tbl, std::string_view name, E defId) {
     int id;
     return tbl.find(&id, name.data(), name.size()) ? (E)id : defId;
 }
 
 //===========================================================================
 template <typename E>
-char const * tokenTableGetName(
-    TokenTable const & tbl,
+const char * tokenTableGetName(
+    const TokenTable & tbl,
     E id,
-    char const defName[] = nullptr
+    const char defName[] = nullptr
 ) {
-    char const * name;
+    const char * name;
     return tbl.find(&name, (int)id) ? name : defName;
 }
 
 //===========================================================================
 template <typename E>
 std::vector<std::string_view> tokenTableGetFlagNames(
-    TokenTable const & tbl,
+    const TokenTable & tbl,
     E flags
 ) {
     auto out = std::vector<std::string_view>{};
-    char const * name = nullptr;
+    const char * name = nullptr;
     while (flags) {
         auto f = E(1 << trailingZeroBits(flags));
         flags = flags & ~f;

@@ -59,7 +59,7 @@ bool ISockMgrSocket::onSocketRead (AppSocketData & data) {
 }
 
 //===========================================================================
-void ISockMgrSocket::onSocketBufferChanged(AppSocketBufferInfo const & info) {
+void ISockMgrSocket::onSocketBufferChanged(const AppSocketBufferInfo & info) {
     notifyBufferChanged(info);
 }
 
@@ -179,7 +179,7 @@ void Dim::sockMgrSetInactiveTimeout(SockMgrHandle h, Duration timeout) {
 //===========================================================================
 void Dim::sockMgrSetAddresses(
     SockMgrHandle h,
-    SockAddr const * addrs,
+    const SockAddr * addrs,
     size_t count
 ) {
     auto mgr = s_mgrs.find(h);

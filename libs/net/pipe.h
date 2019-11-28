@@ -81,7 +81,7 @@ public:
     // Method invoked inside the pipeWrite() call that causes the waiting
     // bytes to exceed zero. Runs as an asynchronous event task when the
     // buffers empty.
-    virtual void onPipeBufferChanged(PipeBufferInfo const & info) {}
+    virtual void onPipeBufferChanged(const PipeBufferInfo & info) {}
 
 private:
     friend class PipeBase;

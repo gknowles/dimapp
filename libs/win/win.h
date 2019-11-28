@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2018.
+// Copyright Glen Knowles 2017 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // win.h - dim windows platform
@@ -109,22 +109,22 @@ struct WinServiceConfig {
         };
     };
 
-    char const * serviceName {};        // REQUIRED
+    const char * serviceName {};        // REQUIRED
     Type serviceType {};                // Default: kOwn
     Start startType {};                 // Default: kAuto
     ErrCtrl errorControl {};            // Default: kNormal
-    char const * progWithArgs {};       // Default: path to this executable
-    char const * loadOrderGroup {};     // Default: none
+    const char * progWithArgs {};       // Default: path to this executable
+    const char * loadOrderGroup {};     // Default: none
     unsigned loadOrderTag {};           // Default: none
-    std::vector<char const *> deps;     // Default: none
-    char const * account {};            // Default: NT Service\<serviceName>
-    char const * password {};           // Default: none
-    char const * displayName {};        // Default: <serviceName>
-    char const * desc {};               // Default: none
+    std::vector<const char *> deps;     // Default: none
+    const char * account {};            // Default: NT Service\<serviceName>
+    const char * password {};           // Default: none
+    const char * displayName {};        // Default: <serviceName>
+    const char * desc {};               // Default: none
     FailureFlag failureFlag {};         // Default: kCrashOnly
     Duration failureReset {};           // Default: 0 which translates to ???
-    char const * rebootMsg {}; // used by FailAction::kReboot
-    char const * failureProgWithArgs {}; // required by FailAction::kRunCommand
+    const char * rebootMsg {}; // used by FailAction::kReboot
+    const char * failureProgWithArgs {}; // required by FailAction::kRunCommand
     std::vector<Action> failureActions; // Default: none
 
     // An explicit node number or one of the PreferredNode::Type values.
@@ -132,7 +132,7 @@ struct WinServiceConfig {
                                         // Default: none
 
     Duration preshutdownTimeout {};
-    std::vector<char const *> privs;
+    std::vector<const char *> privs;
     SidType sidType {};
 
     // NOTE: SUPPORT FOR TRIGGERS NOT IMPLEMENTED
@@ -175,29 +175,29 @@ struct WinServiceStatus {
     Flags flags{};
 };
 
-bool winSvcCreate(WinServiceConfig const & sconf);
+bool winSvcCreate(const WinServiceConfig & sconf);
 bool winSvcDelete(std::string_view svcName);
 
 // Update all service parameters to match the configuration, as if it had
 // just been created via winSvcCreate.
-bool winSvcReplace(WinServiceConfig const & sconf);
+bool winSvcReplace(const WinServiceConfig & sconf);
 
 // Updates the service parameters explicitly specified. To explicitly update
 // a vector to remove all values set it to a contain a single "empty" value
 // (nullptr for deps and privs, member of type kInvalid for failureActions
 // and triggers).
-bool winSvcUpdate(WinServiceConfig const & sconf);
+bool winSvcUpdate(const WinServiceConfig & sconf);
 
 bool winSvcQuery(WinServiceConfig * sconf, std::string_view svcName);
 bool winSvcStart(std::string_view svcName, bool wait = true);
 bool winSvcStop(std::string_view svcName, bool wait = true);
 
-// Returns the service names of services that match all the specified 
+// Returns the service names of services that match all the specified
 // configuration and status parameters. If 'conf' and 'stat' are both
 // default constructed (no filter) the names of all services are returned.
 std::vector<std::string> winSvcFind(
-    WinServiceConfig const & conf,
-    WinServiceStatus const & stat
+    const WinServiceConfig & conf,
+    const WinServiceStatus & stat
 );
 
 bool winSvcGrantLogonAsService(std::string_view account);

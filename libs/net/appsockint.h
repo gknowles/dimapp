@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2018.
+// Copyright Glen Knowles 2017 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // appsockint.h - dim net
@@ -58,7 +58,7 @@ public:
         AppSocket::Disconnect why
     );
     static void write(IAppSocketNotify * notify, std::string_view data);
-    static void write(IAppSocketNotify * notify, CharBuf const & data);
+    static void write(IAppSocketNotify * notify, const CharBuf & data);
     static void write(
         IAppSocketNotify * notify,
         std::unique_ptr<SocketBuffer> buffer,
@@ -80,14 +80,14 @@ public:
     virtual void write(std::unique_ptr<SocketBuffer> buffer, size_t bytes) = 0;
     virtual void read() = 0;
 
-    void notifyConnect(AppSocketInfo const & info);
+    void notifyConnect(const AppSocketInfo & info);
     void notifyConnectFailed();
     void notifyPingRequired();
-    bool notifyAccept(AppSocketInfo const & info);
+    bool notifyAccept(const AppSocketInfo & info);
     void notifyDisconnect();
     void notifyDestroy(bool deleteThis = true);
     bool notifyRead(AppSocketData & data);
-    void notifyBufferChanged(AppSocketBufferInfo const & info);
+    void notifyBufferChanged(const AppSocketBufferInfo & info);
 
 protected:
     AppSocketInfo m_accept;

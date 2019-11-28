@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2018.
+// Copyright Glen Knowles 2018 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // winpipe.cpp - dim windows platform
@@ -15,8 +15,8 @@ using namespace Dim;
 *
 ***/
 
-int const kReadQueueSize = 10;
-int const kWriteQueueSize = 100;
+const int kReadQueueSize = 10;
+const int kWriteQueueSize = 100;
 
 // How long data can wait to be sent. When the queue time exceeds this value
 // the pipe is closed, the assumption being that the end consumer, if they
@@ -24,7 +24,7 @@ int const kWriteQueueSize = 100;
 // expired.
 constexpr auto kMaxPrewriteQueueTime = 2min;
 
-int const kBufferSize = 4096;
+const int kBufferSize = 4096;
 
 
 /****************************************************************************

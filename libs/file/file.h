@@ -100,10 +100,10 @@ public:
         Flags flags = {}
     );
 
-    bool operator==(FileIter const & right) const;
-    bool operator!=(FileIter const & right) const;
-    Entry const & operator*() const;
-    Entry const * operator->() const;
+    bool operator==(const FileIter & right) const;
+    bool operator!=(const FileIter & right) const;
+    const Entry & operator*() const;
+    const Entry * operator->() const;
     FileIter & operator++();
 
 private:
@@ -111,7 +111,7 @@ private:
 };
 
 inline FileIter begin(FileIter iter) { return iter; }
-inline FileIter end(FileIter const & iter) { return {}; }
+inline FileIter end(const FileIter & iter) { return {}; }
 
 // Drive defaults to the current drive
 Path fileGetCurrentDir(std::string_view drive = {});
@@ -315,25 +315,25 @@ void fileWrite(
     IFileWriteNotify * notify,
     FileHandle f,
     int64_t offset,
-    void const * buf,
+    const void * buf,
     size_t bufLen,
     TaskQueueHandle hq = {} // queue to notify
 );
 size_t fileWriteWait(
     FileHandle f,
     int64_t offset,
-    void const * buf,
+    const void * buf,
     size_t bufLen
 );
 
 void fileAppend(
     IFileWriteNotify * notify,
     FileHandle f,
-    void const * buf,
+    const void * buf,
     size_t bufLen,
     TaskQueueHandle hq = {} // queue to notify
 );
-size_t fileAppendWait(FileHandle f, void const * buf, size_t bufLen);
+size_t fileAppendWait(FileHandle f, const void * buf, size_t bufLen);
 
 
 /****************************************************************************
@@ -442,7 +442,7 @@ size_t fileViewAlignment(FileHandle f);
 // to cover. A value less than or equal to the length (such as 0) makes a view
 // that can't be extended. The value is rounded up to a multiple of page size.
 bool fileOpenView(
-    char const *& view,
+    const char *& view,
     FileHandle f,
     File::ViewMode mode,    // must be kViewReadOnly
     int64_t offset = 0,
@@ -458,12 +458,12 @@ bool fileOpenView(
     int64_t maxLength = 0   // defaults to not extendable
 );
 
-void fileCloseView(FileHandle f, void const * view);
+void fileCloseView(FileHandle f, const void * view);
 
 // Extend the view up to maxLen that was set when the view was opened. A
 // view can only be extended if the file (which is also extended) was opened
 // for writing. "Extending" with a length less than the current view has
 // no effect and extending beyond maxLen is an error.
-void fileExtendView(FileHandle f, void const * view, int64_t length);
+void fileExtendView(FileHandle f, const void * view, int64_t length);
 
 } // namespace

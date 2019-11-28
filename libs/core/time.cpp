@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2018.
+// Copyright Glen Knowles 2015 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // types.cpp - dim core
@@ -248,7 +248,7 @@ Time8601Str & Time8601Str::set(
 //===========================================================================
 bool parse4Digits(int * out, string_view & src, char suffix) {
     assert(src.size() >= 4u + (bool) suffix);
-    char const * data = src.data();
+    const char * data = src.data();
     unsigned num = (unsigned char) *data++ - '0';
     if (num > 9)
         return false;
@@ -399,7 +399,7 @@ bool Dim::timeParse8601(TimePoint * out, string_view str) {
 ***/
 
 //===========================================================================
-time_t Dim::to_time_t(TimePoint const & time) {
+time_t Dim::to_time_t(const TimePoint & time) {
     return (time_t) timeToUnix(time);
 }
 

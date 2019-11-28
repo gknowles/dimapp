@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2018.
+// Copyright Glen Knowles 2016 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // tlsint.h - dim tls
@@ -68,9 +68,9 @@ struct TlsEncryptedExtensionsMsg {};
 
 void tlsSetKeyShare(TlsKeyShare * out, TlsNamedGroup group);
 
-void tlsWrite(TlsRecordWriter * out, TlsClientHelloMsg const & msg);
-void tlsWrite(TlsRecordWriter * out, TlsServerHelloMsg const & msg);
-void tlsWrite(TlsRecordWriter * out, TlsHelloRetryRequestMsg const & msg);
+void tlsWrite(TlsRecordWriter * out, const TlsClientHelloMsg & msg);
+void tlsWrite(TlsRecordWriter * out, const TlsServerHelloMsg & msg);
+void tlsWrite(TlsRecordWriter * out, const TlsHelloRetryRequestMsg & msg);
 
 bool tlsParse(TlsClientHelloMsg * msg, TlsRecordReader & in);
 bool tlsParse(TlsServerHelloMsg * msg, TlsRecordReader & in);
@@ -91,13 +91,13 @@ class TlsConnBase
 {
 public:
     TlsConnBase();
-    void setSuites(TlsCipherSuite const suites[], size_t count);
+    void setSuites(const TlsCipherSuite suites[], size_t count);
     std::vector<TlsCipherSuite> const & suites() const;
 
     bool recv(
         CharBuf * reply,
         CharBuf * data,
-        void const * src,
+        const void * src,
         size_t srcLen
     );
 
@@ -108,9 +108,9 @@ public:
         uint8_t const msg[],
         size_t msgLen) override;
 
-    virtual void onTlsHandshake(TlsClientHelloMsg const & msg);
-    virtual void onTlsHandshake(TlsServerHelloMsg const & msg);
-    virtual void onTlsHandshake(TlsHelloRetryRequestMsg const & msg);
+    virtual void onTlsHandshake(const TlsClientHelloMsg & msg);
+    virtual void onTlsHandshake(const TlsServerHelloMsg & msg);
+    virtual void onTlsHandshake(const TlsHelloRetryRequestMsg & msg);
 
 private:
     friend class TlsRecordWriter;
@@ -135,11 +135,11 @@ public:
 
     void number(uint8_t val);
     void number16(uint16_t val);
-    void fixed(void const * ptr, size_t count);
+    void fixed(const void * ptr, size_t count);
 
     // Complete variable length vector
-    void var(void const * ptr, size_t count);
-    void var16(void const * ptr, size_t count);
+    void var(const void * ptr, size_t count);
+    void var16(const void * ptr, size_t count);
 
     // Variable length vector. Start the vector, use number and fixed to set
     // the content, and then end the vector. May be nested.
@@ -163,7 +163,7 @@ private:
 
 class TlsRecordReader {
 public:
-    TlsRecordReader(TlsConnBase & conn, void const * ptr, size_t count);
+    TlsRecordReader(TlsConnBase & conn, const void * ptr, size_t count);
 
     uint8_t number();
     uint16_t number16();

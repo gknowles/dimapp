@@ -15,8 +15,8 @@ using namespace Dim;
 *
 ***/
 
-unsigned const kInitBufferSize = 256;
-unsigned const kMaxBufferSize = 4096;
+const unsigned kInitBufferSize = 256;
+const unsigned kMaxBufferSize = 4096;
 
 
 /****************************************************************************

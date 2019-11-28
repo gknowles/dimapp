@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2018.
+// Copyright Glen Knowles 2016 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // xstreamparser.cpp - dim xml
@@ -43,7 +43,7 @@ bool XStreamParser::parseMore(char src[]) {
 }
 
 //===========================================================================
-bool XStreamParser::fail(char const errmsg[]) {
+bool XStreamParser::fail(const char errmsg[]) {
     m_errmsg = m_heap.strdup(errmsg);
     return false;
 }

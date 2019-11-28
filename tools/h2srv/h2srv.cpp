@@ -15,7 +15,7 @@ using namespace Dim;
 *
 ***/
 
-char const kVersion[] = "1.0";
+const char kVersion[] = "1.0";
 
 
 /****************************************************************************
@@ -35,7 +35,7 @@ static SockMgrHandle s_mgr;
 
 class TnetConn : public IAppSocketNotify {
 public:
-    bool onSocketAccept(AppSocketInfo const & accept) override;
+    bool onSocketAccept(const AppSocketInfo & accept) override;
     void onSocketDisconnect() override;
     bool onSocketRead(AppSocketData & data) override;
 
@@ -44,7 +44,7 @@ private:
 };
 
 //===========================================================================
-bool TnetConn::onSocketAccept(AppSocketInfo const & accept) {
+bool TnetConn::onSocketAccept(const AppSocketInfo & accept) {
     m_accept = accept;
     cout << m_accept.remote << " connected on "
         << m_accept.local << endl;
@@ -90,13 +90,13 @@ void ShutdownNotify::onShutdownClient(bool firstTry) {
 
 namespace {
 class ConfigH2srvXml : public IConfigNotify {
-    void onConfigChange(XDocument const & doc) override;
+    void onConfigChange(const XDocument & doc) override;
 };
 } // namespace
 static ConfigH2srvXml s_h2srvXml;
 
 //===========================================================================
-void ConfigH2srvXml::onConfigChange(XDocument const & doc) {
+void ConfigH2srvXml::onConfigChange(const XDocument & doc) {
 }
 
 

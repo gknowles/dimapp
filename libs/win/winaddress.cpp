@@ -27,7 +27,7 @@ bool Dim::parse(NetAddr * out, string_view src) {
 }
 
 //===========================================================================
-ostream & Dim::operator<<(ostream & os, NetAddr const & addr) {
+ostream & Dim::operator<<(ostream & os, const NetAddr & addr) {
     SockAddr sa;
     sa.addr = addr;
     return operator<<(os, sa);
@@ -70,7 +70,7 @@ bool Dim::parse(SockAddr * end, string_view src, int defaultPort) {
 }
 
 //===========================================================================
-ostream & Dim::operator<<(ostream & os, SockAddr const & src) {
+ostream & Dim::operator<<(ostream & os, const SockAddr & src) {
     sockaddr_storage sas;
     copy(&sas, src);
     wchar_t tmp[256];
@@ -97,7 +97,7 @@ ostream & Dim::operator<<(ostream & os, SockAddr const & src) {
 ***/
 
 //===========================================================================
-void Dim::copy(sockaddr_storage * out, SockAddr const & src) {
+void Dim::copy(sockaddr_storage * out, const SockAddr & src) {
     *out = {};
     if (!src.addr.data[0]
         && !src.addr.data[1]

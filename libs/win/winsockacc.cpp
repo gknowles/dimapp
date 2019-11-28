@@ -46,7 +46,7 @@ public:
     char m_addrBuf[2 * sizeof sockaddr_storage];
 
 public:
-    ListenSocket(IFactory<ISocketNotify> * notify, SockAddr const & end);
+    ListenSocket(IFactory<ISocketNotify> * notify, const SockAddr & end);
 
     void onTask() override;
 };
@@ -76,7 +76,7 @@ static auto & s_perfNotAccepted = uperf("sock.disconnect (not accepted)");
 //===========================================================================
 ListenSocket::ListenSocket(
     IFactory<ISocketNotify> * notify,
-    SockAddr const & end
+    const SockAddr & end
 )
     : m_notify{notify}
     , m_localEnd{end}
@@ -296,7 +296,7 @@ void Dim::iSocketAcceptInitialize() {
 //===========================================================================
 void Dim::socketListen(
     IFactory<ISocketNotify> * factory,
-    SockAddr const & local
+    const SockAddr & local
 ) {
     iSocketCheckThread();
 
@@ -325,7 +325,7 @@ void Dim::socketListen(
 //===========================================================================
 void Dim::socketCloseWait(
     IFactory<ISocketNotify> * factory,
-    SockAddr const & local
+    const SockAddr & local
 ) {
     iSocketCheckThread();
 

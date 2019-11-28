@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2018.
+// Copyright Glen Knowles 2017 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // str.h - dim core
@@ -69,12 +69,12 @@ public:
     StrFrom(T val) { set(val); }
     std::string_view set(T val);
     operator std::string_view() const;
-    char const * c_str() const { return data; }
+    const char * c_str() const { return data; }
 
 private:
     friend std::ostream & operator<<(
         std::ostream & os,
-        StrFrom const & str
+        const StrFrom & str
     ) {
         os << (std::string_view) str;
         return os;
@@ -167,12 +167,12 @@ public:
     StrFrom(T val) { set(val); }
     std::string_view set(T val);
     operator std::string_view() const;
-    char const * c_str() const { return data; }
+    const char * c_str() const { return data; }
 
 private:
     friend std::ostream & operator<<(
         std::ostream & os,
-        StrFrom const & str
+        const StrFrom & str
     ) {
         os << (std::string_view) str;
         return os;
@@ -239,10 +239,10 @@ StrFrom<T, std::enable_if_t<std::is_floating_point_v<T>>>
 *
 ***/
 
-int strToInt(char const src[], char ** eptr = nullptr, int base = 10);
-unsigned strToUint(char const src[], char ** eptr = nullptr, int base = 10);
-int64_t strToInt64(char const src[], char ** eptr = nullptr, int base = 10);
-uint64_t strToUint64(char const src[], char ** eptr = nullptr, int base = 10);
+int strToInt(const char src[], char ** eptr = nullptr, int base = 10);
+unsigned strToUint(const char src[], char ** eptr = nullptr, int base = 10);
+int64_t strToInt64(const char src[], char ** eptr = nullptr, int base = 10);
+uint64_t strToUint64(const char src[], char ** eptr = nullptr, int base = 10);
 
 int strToInt(std::string_view src, char ** eptr = nullptr, int base = 10);
 unsigned strToUint(
@@ -372,7 +372,7 @@ enum UtfType {
     kUtf32LE,
 };
 
-UtfType utfBomType(char const bytes[], size_t count);
+UtfType utfBomType(const char bytes[], size_t count);
 
 //===========================================================================
 constexpr size_t utfBomSize(UtfType type) {

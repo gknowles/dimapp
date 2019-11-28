@@ -68,9 +68,9 @@ protected:
     };
 
     static std::vector<TokenTable::Token> const s_macros;
-    static TokenTable const s_macroTbl;
-    static TokenTable const s_wdayTbl;
-    static TokenTable const s_monTbl;
+    static const TokenTable s_macroTbl;
+    static const TokenTable s_wdayTbl;
+    static const TokenTable s_monTbl;
 };
 
 template<Cron::WithFlags Flags = Cron::WithDefault>
@@ -123,7 +123,7 @@ private:
         std::string_view * src,
         int minLow,
         int maxHigh,
-        Dim::TokenTable const * tbl = nullptr
+        const Dim::TokenTable * tbl = nullptr
     );
 
     Data m_data;

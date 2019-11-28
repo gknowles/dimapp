@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2018.
+// Copyright Glen Knowles 2015 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // http.h - dim http
@@ -88,7 +88,7 @@ enum HttpHdr {
     kHttps
 };
 
-char const * toString(HttpHdr id);
+const char * toString(HttpHdr id);
 HttpHdr httpHdrFromString(std::string_view name, HttpHdr def = kHttpInvalid);
 
 enum HttpMethod : unsigned {
@@ -104,7 +104,7 @@ enum HttpMethod : unsigned {
     kHttpMethods = 8
 };
 
-char const * toString(HttpMethod method);
+const char * toString(HttpMethod method);
 HttpMethod httpMethodFromString(
     std::string_view name,
     HttpMethod def = fHttpMethodInvalid
@@ -171,7 +171,7 @@ enum HttpStatus {
 };
 
 // Will fallback to more generic reasons for unknown status codes
-char const * toReasonPhrase(HttpStatus status);
+const char * toReasonPhrase(HttpStatus status);
 
 
 /****************************************************************************
@@ -194,34 +194,34 @@ public:
     void clear();
     virtual void swap(HttpMsg & other);
 
-    void addHeader(HttpHdr id, char const value[]);
+    void addHeader(HttpHdr id, const char value[]);
     void addHeader(HttpHdr id, std::string_view value);
-    void addHeader(char const name[], char const value[]);
-    void addHeader(char const name[], std::string_view value);
+    void addHeader(const char name[], const char value[]);
+    void addHeader(const char name[], std::string_view value);
     void addHeader(HttpHdr id, TimePoint time);
-    void addHeader(char const name[], TimePoint time);
+    void addHeader(const char name[], TimePoint time);
 
     // When adding references the memory referenced by the name and value
     // pointers must be valid for the life of the HttpMsg, such as constants
     // or strings allocated from this messages Heap().
-    void addHeaderRef(HttpHdr id, char const value[]);
-    void addHeaderRef(char const name[], char const value[]);
+    void addHeaderRef(HttpHdr id, const char value[]);
+    void addHeaderRef(const char name[], const char value[]);
 
-    char const * addRef(TimePoint time);
+    const char * addRef(TimePoint time);
 
     HdrList headers();
-    HdrList const headers() const;
+    const HdrList headers() const;
 
     HdrName headers(HttpHdr header);
-    HdrName const headers(HttpHdr header) const;
-    HdrName headers(char const name[]);
-    HdrName const headers(char const name[]) const;
+    const HdrName headers(HttpHdr header) const;
+    HdrName headers(const char name[]);
+    const HdrName headers(const char name[]) const;
 
     bool hasHeader(HttpHdr header) const;
-    bool hasHeader(char const name[]) const;
+    bool hasHeader(const char name[]) const;
 
     CharBuf & body();
-    CharBuf const & body() const;
+    const CharBuf & body() const;
 
     ITempHeap & heap();
 
@@ -243,7 +243,7 @@ protected:
     Flags toHasFlag(HttpHdr id) const;
 
 private:
-    void addHeaderRef(HttpHdr id, char const name[], char const value[]);
+    void addHeaderRef(HttpHdr id, const char name[], const char value[]);
 
     CharBuf m_data;
     TempHeap m_heap;
@@ -252,14 +252,14 @@ private:
 };
 
 struct HttpMsg::HdrValue {
-    char const * m_value{};
+    const char * m_value{};
     HdrValue * m_next{};
     HdrValue * m_prev{};
 };
 
 struct HttpMsg::HdrName {
     HttpHdr m_id{kHttpInvalid};
-    char const * m_name{};
+    const char * m_name{};
     HdrName * m_next{};
     HdrValue m_value;
 
@@ -286,13 +286,13 @@ public:
     using HttpMsg::HttpMsg;
     void swap(HttpMsg & other) override;
 
-    char const * method() const;
-    char const * scheme() const;
-    char const * authority() const;
+    const char * method() const;
+    const char * scheme() const;
+    const char * authority() const;
 
     // includes path, query, and fragment
-    char const * pathRaw() const;
-    HttpQuery const & query() const;
+    const char * pathRaw() const;
+    const HttpQuery & query() const;
 
     bool isRequest() const override { return true; }
 
@@ -339,7 +339,7 @@ bool httpRecv(
     CharBuf * out,
     std::vector<std::unique_ptr<HttpMsg>> * msgs,
     HttpConnHandle conn,
-    void const * src,
+    const void * src,
     size_t srcLen
 );
 
@@ -347,7 +347,7 @@ bool httpRecv(
 int httpRequest(
     CharBuf * out,
     HttpConnHandle conn,
-    HttpMsg const & msg,
+    const HttpMsg & msg,
     bool more = false
 );
 
@@ -355,7 +355,7 @@ int httpRequest(
 int httpPushPromise(
     CharBuf * out,
     HttpConnHandle conn,
-    HttpMsg const & msg,
+    const HttpMsg & msg,
     bool more = false
 );
 
@@ -365,7 +365,7 @@ bool httpReply(
     CharBuf * out,
     HttpConnHandle conn,
     int stream,
-    HttpMsg const & msg,
+    const HttpMsg & msg,
     bool more = false
 );
 
@@ -376,7 +376,7 @@ bool httpData(
     CharBuf * out,
     HttpConnHandle conn,
     int stream,
-    CharBuf const & data,
+    const CharBuf & data,
     bool more = false
 );
 bool httpData(

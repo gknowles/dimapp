@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2018.
+// Copyright Glen Knowles 2018 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // xsdgen.cpp - xsdgen
@@ -29,7 +29,7 @@ constexpr TokenTable::Token s_elemContents[] = {
     { (int) Element::Content::kUnsigned, "unsigned" },
     { (int) Element::Content::kXml, "xml" },
 };
-TokenTable const s_elemContentTbl{s_elemContents};
+const TokenTable s_elemContentTbl{s_elemContents};
 
 constexpr TokenTable::Token s_elemColumns[] = {
     { (int) Element::Column::kName, "name" },
@@ -38,7 +38,7 @@ constexpr TokenTable::Token s_elemColumns[] = {
     { (int) Element::Column::kQuantity, "quantity" },
     { (int) Element::Column::kDefault, "default" },
 };
-TokenTable const s_elemColumnTbl{s_elemColumns};
+const TokenTable s_elemColumnTbl{s_elemColumns};
 
 constexpr TokenTable::Token s_attrContents[] = {
     { (int) Attr::Content::kBool, "bool" },
@@ -46,7 +46,7 @@ constexpr TokenTable::Token s_attrContents[] = {
     { (int) Attr::Content::kString, "string" },
     { (int) Attr::Content::kUnsigned, "unsigned" },
 };
-TokenTable const s_attrContentTbl{s_attrContents};
+const TokenTable s_attrContentTbl{s_attrContents};
 
 constexpr TokenTable::Token s_attrColumns[] = {
     { (int) Attr::Column::kName, "name" },
@@ -54,7 +54,7 @@ constexpr TokenTable::Token s_attrColumns[] = {
     { (int) Attr::Column::kDesc, "desc" },
     { (int) Attr::Column::kRequire, "require" },
 };
-TokenTable const s_attrColumnTbl{s_attrColumns};
+const TokenTable s_attrColumnTbl{s_attrColumns};
 
 
 /****************************************************************************
@@ -404,7 +404,7 @@ Attr::Content convert(Element::Content ec) {
 }
 
 //===========================================================================
-bool compareXmlContent(Path const & name, CharBuf const & content) {
+bool compareXmlContent(const Path & name, const CharBuf & content) {
     auto nc = toString(content);
     XDocument ndoc;
     auto nroot = ndoc.parse(nc.data());
@@ -425,7 +425,7 @@ bool compareXmlContent(Path const & name, CharBuf const & content) {
 }
 
 //===========================================================================
-void updateXmlFile(Path const & name, CharBuf const & content) {
+void updateXmlFile(const Path & name, const CharBuf & content) {
     cout << name << "... " << flush;
     if (compareXmlContent(name, content)) {
         cout << "unchanged" << endl;

@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2018.
+// Copyright Glen Knowles 2018 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // resource.h - dim app
@@ -46,7 +46,7 @@ std::string_view resLoadData(ResHandle h, std::string_view name);
 *
 ***/
 
-char const kResWebSite[] = "WEBSITE";
+const char kResWebSite[] = "WEBSITE";
 
 class ResFileMap {
 public:
@@ -67,7 +67,7 @@ public:
     void copy(CharBuf * out) const;
     [[nodiscard]] bool parse(std::string_view data);
 
-    Entry const * find(std::string_view name) const;
+    const Entry * find(std::string_view name) const;
     size_t size() const { return m_files.size(); }
 
     auto begin() const { return m_files.begin(); }

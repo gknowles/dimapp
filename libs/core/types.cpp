@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2018.
+// Copyright Glen Knowles 2018 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // types.cpp - dim core
@@ -24,7 +24,7 @@ static TokenTable::Token s_runModes[] = {
 static TokenTable s_runModeTbl{s_runModes};
 
 //===========================================================================
-char const * Dim::toString(RunMode mode, char const def[]) {
+const char * Dim::toString(RunMode mode, const char def[]) {
     return tokenTableGetName(s_runModeTbl, mode, def);
 }
 

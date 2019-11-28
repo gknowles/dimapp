@@ -15,7 +15,7 @@ using namespace Dim;
 *
 ***/
 
-unsigned const kAbortBehaviorMask = _WRITE_ABORT_MSG | _CALL_REPORTFAULT;
+const unsigned kAbortBehaviorMask = _WRITE_ABORT_MSG | _CALL_REPORTFAULT;
 
 using SetProcessUserModeExceptionPolicyFn = BOOL(WINAPI *)(DWORD dwFlags);
 using GetProcessUserModeExceptionPolicyFn = BOOL(WINAPI *)(LPDWORD lpFlags);
@@ -229,7 +229,7 @@ void Dim::winCrashInitialize() {
         vector<FileIter::Entry> found;
         for (auto && e : FileIter{crashDir, "*.dmp"})
             found.push_back(e);
-        static int const kMaxKeepFiles = 10;
+        static const int kMaxKeepFiles = 10;
         if (found.size() > kMaxKeepFiles) {
             auto nth = found.end() - kMaxKeepFiles;
             nth_element(

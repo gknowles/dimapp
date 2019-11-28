@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2018.
+// Copyright Glen Knowles 2017 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // wintls.cpp - dim windows platform tls
@@ -327,13 +327,13 @@ void ServerConn::send(CharBuf * out, string_view src) {
 
 namespace {
 class AppXmlNotify : public IConfigNotify {
-    void onConfigChange(XDocument const & doc) override;
+    void onConfigChange(const XDocument & doc) override;
 };
 } // namespace
 static AppXmlNotify s_appXml;
 
 //===========================================================================
-void AppXmlNotify::onConfigChange(XDocument const & doc) {
+void AppXmlNotify::onConfigChange(const XDocument & doc) {
     vector<CertKey> keys;
     auto xcerts = configElement(doc, "Certificates");
     for (auto && xstore : elems(xcerts, "Store")) {

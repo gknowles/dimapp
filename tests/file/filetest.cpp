@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2018.
+// Copyright Glen Knowles 2017 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // file.cpp - dimapp test file
@@ -40,7 +40,7 @@ static void app(int argc, char *argv[]) {
     size_t psize = filePageSize(file);
     fileWriteWait(file, 0, "aaaa", 4);
 
-    char const * base;
+    const char * base;
     if (!fileOpenView(base, file, File::kViewReadOnly, 0, 0, 1001 * psize))
         return appSignalShutdown(EX_DATAERR);
 

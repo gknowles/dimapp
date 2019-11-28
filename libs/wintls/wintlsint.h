@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2018.
+// Copyright Glen Knowles 2017 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // wintls.h - dim windows platform tls
@@ -54,7 +54,7 @@ struct CertLocation {
             CERT_SYSTEM_STORE_LOCAL_MACHINE_GROUP_POLICY_ID,
     };
 
-    CertLocation & operator=(CertLocation const & right) = default;
+    CertLocation & operator=(const CertLocation & right) = default;
     CertLocation & operator=(std::string_view name);
 
     explicit operator bool() const { return m_value != kInvalid; }
@@ -79,11 +79,11 @@ struct CertKey {
     std::string_view value;
     std::string_view issuer; // used with kSerialNumber
 };
-char const * toString(CertKey::Type type, char const def[] = nullptr);
+const char * toString(CertKey::Type type, const char def[] = nullptr);
 CertKey::Type fromString(std::string_view src, CertKey::Type def);
 
 std::unique_ptr<CredHandle> iWinTlsCreateCred(
-    CertKey const keys[],
+    const CertKey keys[],
     size_t numKeys,
     std::vector<std::string_view> const & dnsNamesForSelfSigned = {},
     std::vector<std::string_view> const & ipAddrsForSelfSigned = {}

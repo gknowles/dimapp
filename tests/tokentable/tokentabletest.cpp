@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2018.
+// Copyright Glen Knowles 2017 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // tokentabletest.cpp - dim test tokentable
@@ -32,7 +32,7 @@ using namespace Dim;
 static void app(int argc, char *argv[]) {
     int line = 0;
 
-    TokenTable::Token const numbers[] = {
+    const TokenTable::Token numbers[] = {
         {1, "one"},
         {2, "two"},
         {3, "three"},
@@ -41,7 +41,7 @@ static void app(int argc, char *argv[]) {
         {21, "twenty-one"},
         {22, "twenty-two"},
     };
-    TokenTable const numberTbl(numbers, size(numbers));
+    const TokenTable numberTbl(numbers, size(numbers));
 
     EXPECT(tokenTableGetEnum(numberTbl, "invalid", 0) == 0);
     for (auto && tok : numbers) {

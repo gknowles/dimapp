@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2018.
+// Copyright Glen Knowles 2016 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // tls.h - dim tls
@@ -108,25 +108,25 @@ struct TlsConnHandle : HandleBase {};
 
 TlsConnHandle tlsConnect(
     CharBuf * out,
-    char const hostName[],
-    TlsCipherSuite const suites[],
+    const char hostName[],
+    const TlsCipherSuite suites[],
     size_t count
 );
-TlsConnHandle tlsAccept(TlsCipherSuite const suites[], size_t count);
+TlsConnHandle tlsAccept(const TlsCipherSuite suites[], size_t count);
 void tlsClose(TlsConnHandle h);
 
 bool tlsRecv(
     CharBuf * out,
     CharBuf * data,
     TlsConnHandle conn,
-    void const * src,
+    const void * src,
     size_t srcLen
 );
 
 void tlsSend(
     CharBuf * out,
     TlsConnHandle conn,
-    void const * src,
+    const void * src,
     size_t srcLen
 );
 

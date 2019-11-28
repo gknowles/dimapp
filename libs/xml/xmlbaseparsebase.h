@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2018.
+// Copyright Glen Knowles 2016 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // xmlbaseparsebase.h - dim xml
@@ -19,9 +19,9 @@ struct XmlBaseParserBase {
 
     XStreamParser & m_parser;
     IXStreamParserNotify & m_notify;
-    char const * m_base{};
+    const char * m_base{};
     char * m_cur{};
-    char const * m_attr{};
+    const char * m_attr{};
     size_t m_attrLen{};
     unsigned m_char{};
 };

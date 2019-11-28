@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2018.
+// Copyright Glen Knowles 2016 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // tlsmsg.cpp - dim tls
@@ -83,7 +83,7 @@ static void write(
 }
 
 //===========================================================================
-static void write(TlsRecordWriter * out, TlsKeyShare const & key) {
+static void write(TlsRecordWriter * out, const TlsKeyShare & key) {
 }
 
 //===========================================================================
@@ -94,7 +94,7 @@ static void write(
 }
 
 //===========================================================================
-static void write(TlsRecordWriter * out, TlsPresharedKey const & key) {
+static void write(TlsRecordWriter * out, const TlsPresharedKey & key) {
 }
 
 //===========================================================================
@@ -150,7 +150,7 @@ static void writeDraftVersion(TlsRecordWriter * out, uint16_t version) {
 ***/
 
 //===========================================================================
-void Dim::tlsWrite(TlsRecordWriter * out, TlsClientHelloMsg const & msg) {
+void Dim::tlsWrite(TlsRecordWriter * out, const TlsClientHelloMsg & msg) {
     out->contentType(kContentHandshake);
     out->number(kClientHello); // handshake.msg_type
     out->start24();            // handshake.length
@@ -180,7 +180,7 @@ void Dim::tlsWrite(TlsRecordWriter * out, TlsClientHelloMsg const & msg) {
 }
 
 //===========================================================================
-void Dim::tlsWrite(TlsRecordWriter * out, TlsServerHelloMsg const & msg) {
+void Dim::tlsWrite(TlsRecordWriter * out, const TlsServerHelloMsg & msg) {
     out->contentType(kContentHandshake);
     out->number(kServerHello); // handshake.msg_type
     out->start24();            // handshake.length
@@ -203,7 +203,7 @@ void Dim::tlsWrite(TlsRecordWriter * out, TlsServerHelloMsg const & msg) {
 //===========================================================================
 void Dim::tlsWrite(
     TlsRecordWriter * out,
-    TlsHelloRetryRequestMsg const & msg
+    const TlsHelloRetryRequestMsg & msg
 ) {
     out->contentType(kContentHandshake);
     out->number(kHelloRetryRequest); // handshake.msg_type

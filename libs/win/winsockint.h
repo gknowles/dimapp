@@ -92,12 +92,12 @@ void iSocketConnectInitialize();
 
 void iSocketCheckThread();
 SOCKET iSocketCreate();
-SOCKET iSocketCreate(SockAddr const & local);
+SOCKET iSocketCreate(const SockAddr & local);
 void iSocketSetConnectTimeout(SOCKET s, Duration wait);
 
 // Socket buffers
 void iSocketBufferInitialize(RIO_EXTENSION_FUNCTION_TABLE & rio);
 
-void copy(RIO_BUF * out, SocketBuffer const & buf, size_t bytes);
+void copy(RIO_BUF * out, const SocketBuffer & buf, size_t bytes);
 
 } // namespace

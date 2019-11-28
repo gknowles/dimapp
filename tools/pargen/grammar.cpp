@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2018.
+// Copyright Glen Knowles 2016 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // grammar.cpp - pargen
@@ -93,7 +93,7 @@ void Grammar::eraseOption(string_view name) {
 vector<string_view> Grammar::optionStrings(string_view name) const {
     vector<string_view> out;
     if (auto elem = element(name)) {
-        auto parent = (Element const *) nullptr;
+        auto parent = (const Element *) nullptr;
         while (!elem->elements.empty()) {
             parent = elem;
             elem = &elem->elements.front();
@@ -110,7 +110,7 @@ vector<string_view> Grammar::optionStrings(string_view name) const {
 }
 
 //===========================================================================
-char const * Grammar::optionString(string_view name, char const * def) const {
+const char * Grammar::optionString(string_view name, const char * def) const {
     if (auto elem = element(name)) {
         while (!elem->elements.empty())
             elem = &elem->elements.front();
@@ -129,7 +129,7 @@ unsigned Grammar::optionUnsigned(string_view name, unsigned def) const {
 }
 
 //===========================================================================
-char const * Grammar::operator[](string_view name) const {
+const char * Grammar::operator[](string_view name) const {
     return optionString(name, "");
 }
 
@@ -247,7 +247,7 @@ void Grammar::addRange(Element * rule, unsigned char a, unsigned char b) {
 }
 
 //===========================================================================
-Element const * Grammar::eventAlways(string_view name) {
+const Element * Grammar::eventAlways(string_view name) {
     Element key;
     key.name = name;
     auto it = m_rules.find(key);
@@ -267,7 +267,7 @@ Element * Grammar::element(string_view name) {
 }
 
 //===========================================================================
-Element const * Grammar::element(string_view name) const {
+const Element * Grammar::element(string_view name) const {
     Element key;
     key.name = name;
     auto it = m_rules.find(key);
@@ -286,7 +286,7 @@ Element const * Grammar::element(string_view name) const {
 //===========================================================================
 static void ensureOption(
     Grammar & rules,
-    char const name[],
+    const char name[],
     string_view value
 ) {
     if (!*rules.optionString(name))
@@ -324,8 +324,8 @@ bool processOptions(Grammar & rules) {
 //===========================================================================
 static bool copyRequiredDeps(
     Grammar & out,
-    Grammar const & src,
-    Element const & root
+    const Grammar & src,
+    const Element & root
 ) {
     switch (root.type) {
     case Element::kSequence:
@@ -347,7 +347,7 @@ static bool copyRequiredDeps(
 //===========================================================================
 bool copyRules(
     Grammar & out,
-    Grammar const & src,
+    const Grammar & src,
     string_view rootname,
     bool failIfExists
 ) {
@@ -548,7 +548,7 @@ static void normalizeRule(Element & rule, Grammar & rules) {
 //===========================================================================
 static void normalize(
     Element & rule,
-    Element const * parent,
+    const Element * parent,
     Grammar & rules
 ) {
     if (rule.elements.size() == 1) {

@@ -15,7 +15,7 @@ using namespace Dim;
 *
 ***/
 
-char const kVersion[] = "1.0";
+const char kVersion[] = "1.0";
 
 enum { kExitConnectFailed = EX__APPBASE, kExitDisconnect };
 
@@ -26,15 +26,15 @@ class SocketConn
     , public ITimerNotify
 {
     // Inherited via ISocketNotify
-    void onSocketConnect(SocketInfo const & info) override;
+    void onSocketConnect(const SocketInfo & info) override;
     void onSocketConnectFailed() override;
     void onSocketDisconnect() override;
     void onSocketDestroy() override;
     bool onSocketRead(SocketData & data) override;
-    void onSocketBufferChanged(SocketBufferInfo const & info) override;
+    void onSocketBufferChanged(const SocketBufferInfo & info) override;
 
     // Inherited via ISockAddrNotify
-    void onSockAddrFound(SockAddr const * ptr, int count) override;
+    void onSockAddrFound(const SockAddr * ptr, int count) override;
 
     // Inherited via ITimerNotify
     Duration onTimer(TimePoint now) override;
@@ -87,7 +87,7 @@ static SocketConn s_socket;
 ***/
 
 //===========================================================================
-void SocketConn::onSockAddrFound(SockAddr const * ends, int count) {
+void SocketConn::onSockAddrFound(const SockAddr * ends, int count) {
     if (!count) {
         cout << "Host not found" << endl;
         appSignalShutdown(kExitConnectFailed);
@@ -98,7 +98,7 @@ void SocketConn::onSockAddrFound(SockAddr const * ends, int count) {
 }
 
 //===========================================================================
-void SocketConn::onSocketConnect(SocketInfo const & info) {
+void SocketConn::onSocketConnect(const SocketInfo & info) {
     m_connected = make_unique<ConsoleScopedAttr>(kConsoleGreen);
     cout << "Connected" << endl;
     timerUpdate(this, 500ms);
@@ -129,7 +129,7 @@ bool SocketConn::onSocketRead(SocketData & data) {
 }
 
 //===========================================================================
-void SocketConn::onSocketBufferChanged(SocketBufferInfo const & info) {
+void SocketConn::onSocketBufferChanged(const SocketBufferInfo & info) {
     s_console.suspend(info.waiting);
 }
 

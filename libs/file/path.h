@@ -34,48 +34,48 @@ namespace Dim {
 class Path {
 public:
     Path() {}
-    Path(Path const & from) = default;
+    Path(const Path & from) = default;
     Path(Path && from) noexcept = default;
-    explicit Path(char const from[]) : Path{std::string_view{from}} {}
+    explicit Path(const char from[]) : Path{std::string_view{from}} {}
     explicit Path(std::string_view from);
-    explicit Path(std::string const & from) : Path{std::string_view{from}} {}
-    Path(std::filesystem::path const & from);
+    explicit Path(const std::string & from) : Path{std::string_view{from}} {}
+    Path(const std::filesystem::path & from);
 
     Path & clear();
     void swap(Path & from);
 
-    Path & operator=(Path const & from) = default;
+    Path & operator=(const Path & from) = default;
     Path & operator=(Path && from) noexcept = default;
-    Path & operator=(char const from[]) {
+    Path & operator=(const char from[]) {
         return assign(std::string_view(from));
     }
     Path & operator=(std::string_view from) { return assign(from); }
-    Path & operator=(std::string const & from) {
+    Path & operator=(const std::string & from) {
         return assign(std::string_view(from));
     }
-    Path & operator=(std::filesystem::path const & from) {
+    Path & operator=(const std::filesystem::path & from) {
         return assign(from);
     }
 
-    Path & assign(Path const & path);
-    Path & assign(Path const & path, std::string_view defExt);
-    Path & assign(char const path[]) {
+    Path & assign(const Path & path);
+    Path & assign(const Path & path, std::string_view defExt);
+    Path & assign(const char path[]) {
         return assign(std::string_view{path});
     }
-    Path & assign(char const path[], std::string_view defExt) {
+    Path & assign(const char path[], std::string_view defExt) {
         return assign(std::string_view{path}, defExt);
     }
     Path & assign(std::string_view path);
     Path & assign(std::string_view path, std::string_view defExt);
-    Path & assign(std::string const & path) {
+    Path & assign(const std::string & path) {
         return assign(std::string_view{path});
     }
-    Path & assign(std::string const & path, std::string_view defExt) {
+    Path & assign(const std::string & path, std::string_view defExt) {
         return assign(std::string_view{path}, defExt);
     }
-    Path & assign(std::filesystem::path const & path);
+    Path & assign(const std::filesystem::path & path);
     Path & assign(
-        std::filesystem::path const & path,
+        const std::filesystem::path & path,
         std::string_view defExt
     );
 
@@ -99,16 +99,16 @@ public:
     Path & operator/=(std::string_view path) { return append(path); }
 
     // resolve path relative to base
-    Path & resolve(Path const & base);
+    Path & resolve(const Path & base);
     Path & resolve(std::string_view base);
 
     explicit operator bool() const { return !empty(); }
     operator std::string_view() const { return m_data; }
 
     std::filesystem::path fsPath() const;
-    std::string const & str() const { return m_data; }
+    const std::string & str() const { return m_data; }
     std::string_view view() const { return m_data; }
-    char const * c_str() const;
+    const char * c_str() const;
     size_t size() const;
 
     std::string_view drive() const;
@@ -127,12 +127,12 @@ public:
     bool hasExt() const;
 
 private:
-    friend bool operator==(Path const & a, std::string_view b);
-    friend bool operator==(std::string_view a, Path const & b);
-    friend bool operator==(Path const & a, Path const & b);
-    friend std::ostream & operator<<(std::ostream & os, Path const & val);
-    friend Path operator/ (Path const & a, std::string_view b);
-    friend Path operator+ (Path const & a, std::string_view b);
+    friend bool operator==(const Path & a, std::string_view b);
+    friend bool operator==(std::string_view a, const Path & b);
+    friend bool operator==(const Path & a, const Path & b);
+    friend std::ostream & operator<<(std::ostream & os, const Path & val);
+    friend Path operator/ (const Path & a, std::string_view b);
+    friend Path operator+ (const Path & a, std::string_view b);
 
     std::string m_data;
 };
@@ -165,7 +165,7 @@ inline std::string Cli::OptBase::toValueDesc<Path>() const {
 
 template<>
 struct std::hash<Dim::Path> {
-    size_t operator()(Dim::Path const & val) const {
+    size_t operator()(const Dim::Path & val) const {
         return std::hash<std::string>()(val.str());
     }
 };
@@ -183,7 +183,7 @@ struct std::hash<Dim::Path> {
 //===========================================================================
 template <>
 inline std::filesystem::path::path(
-    std::string const & from,
+    const std::string & from,
     std::filesystem::path::format
 ) {
     *this = u8path(from);
@@ -192,8 +192,8 @@ inline std::filesystem::path::path(
 //===========================================================================
 template <>
 inline std::filesystem::path::path(
-    char const * first,
-    char const * last,
+    const char * first,
+    const char * last,
     std::filesystem::path::format
 ) {
     *this = u8path(first, last);

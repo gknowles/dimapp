@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2018.
+// Copyright Glen Knowles 2017 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // winenv.cpp - dim windows platform
@@ -49,7 +49,7 @@ void Dim::winEnvInitialize() {
 ***/
 
 //===========================================================================
-string const & Dim::envExecPath() {
+const string & Dim::envExecPath() {
     if (s_execPath.empty()) {
         wstring path;
         DWORD num = 0;
@@ -68,7 +68,7 @@ string const & Dim::envExecPath() {
 }
 
 //===========================================================================
-EnvMemoryConfig const & Dim::envMemoryConfig() {
+const EnvMemoryConfig & Dim::envMemoryConfig() {
     assert(s_numCpus);
     return s_memCfg;
 }
@@ -202,7 +202,7 @@ ProcessRights Dim::envProcessRights() {
 *
 ***/
 
-TokenTable::Token const s_attrs[] = {
+const TokenTable::Token s_attrs[] = {
     { (int) SE_GROUP_MANDATORY,           "MANDATORY" },
     { (int) SE_GROUP_ENABLED_BY_DEFAULT,  "ENABLED_BY_DEFAULT" },
     { (int) SE_GROUP_ENABLED,             "ENABLED" },
@@ -213,9 +213,9 @@ TokenTable::Token const s_attrs[] = {
     { (int) SE_GROUP_LOGON_ID,            "LOGON_ID" },
     { (int) SE_GROUP_RESOURCE,            "RESOURCE" },
 };
-TokenTable const s_attrTbl(s_attrs);
+const TokenTable s_attrTbl(s_attrs);
 
-TokenTable::Token const s_sidTypes[] = {
+const TokenTable::Token s_sidTypes[] = {
     { SidTypeUser,              "User" },
     { SidTypeGroup,             "Group" },
     { SidTypeDomain,            "Domain" },
@@ -228,7 +228,7 @@ TokenTable::Token const s_sidTypes[] = {
     { SidTypeLabel,             "Label" },
     { SidTypeLogonSession,      "LogonSession" },
 };
-TokenTable const s_sidTypeTbl(s_sidTypes);
+const TokenTable s_sidTypeTbl(s_sidTypes);
 
 //===========================================================================
 static void addSidRow(IJBuilder * out, SID_AND_ATTRIBUTES & sa) {

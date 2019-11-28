@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2018.
+// Copyright Glen Knowles 2016 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // tlsrec.cpp - dim tls
@@ -18,10 +18,10 @@ using namespace Dim;
 namespace {
 
 // clang-format off
-unsigned const kMaxPlaintext = 16'384;
+const unsigned kMaxPlaintext = 16'384;
 // clang-format on
 
-unsigned const kMaxCiphertext = kMaxPlaintext + 256;
+const unsigned kMaxCiphertext = kMaxPlaintext + 256;
 
 } // namespace
 
@@ -77,7 +77,7 @@ void TlsRecordEncrypt::writeCiphertext(CharBuf * out) {
 void TlsRecordEncrypt::add(
     CharBuf * out,
     TlsContentType ct,
-    void const * vptr,
+    const void * vptr,
     size_t count) {
     // MUST NOT send zero-length fragments of Handshake or Alert types
     assert(ct != kContentAlert && ct != kContentHandshake || count);
@@ -88,7 +88,7 @@ void TlsRecordEncrypt::add(
         flush(out);
     }
 
-    auto ptr = static_cast<char const *>(vptr);
+    auto ptr = static_cast<const char *>(vptr);
     for (;;) {
         size_t num = min(count, size(m_plaintext) - kMaxPlaintext);
         m_plaintext.insert(m_plaintext.end(), ptr, ptr + num);
@@ -128,7 +128,7 @@ void TlsRecordDecrypt::setCipher(TlsCipher * cipher) {
 bool TlsRecordDecrypt::parse(
     CharBuf * data,
     ITlsRecordDecryptNotify * notify,
-    void const * vsrc,
+    const void * vsrc,
     size_t srcLen) {
     auto base = (uint8_t const *)vsrc;
     auto ptr = base;
@@ -233,8 +233,8 @@ bool TlsRecordDecrypt::parseAlerts(ITlsRecordDecryptNotify * notify) {
     if (!num)
         return parseError(kUnexpectedMessage);
 
-    char const * ptr = m_plaintext.data();
-    char const * eptr = ptr + (num & ~1);
+    const char * ptr = m_plaintext.data();
+    const char * eptr = ptr + (num & ~1);
     while (ptr != eptr) {
         auto level = TlsAlertLevel(*ptr++);
         auto desc = TlsAlertDesc(*ptr++);
@@ -250,7 +250,7 @@ bool TlsRecordDecrypt::parseHandshakes(ITlsRecordDecryptNotify * notify) {
     int pos = 0;
     int epos = (int)m_plaintext.size();
     while (pos + 4 <= epos) {
-        char const * ptr = m_plaintext.data(pos, 4);
+        const char * ptr = m_plaintext.data(pos, 4);
         int recLen = (ptr[1] << 16) + (ptr[2] << 8) + ptr[3];
         if (pos + recLen > epos)
             break;

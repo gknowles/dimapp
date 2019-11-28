@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2018.
+// Copyright Glen Knowles 2016 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // tlsrec.h - dim tls
@@ -40,14 +40,14 @@ struct TlsCipher {
     uint64_t m_seq{0};
 
     virtual ~TlsCipher();
-    virtual void add(CharBuf * out, void const * ptr, size_t count) = 0;
+    virtual void add(CharBuf * out, const void * ptr, size_t count) = 0;
 };
 
 class TlsRecordEncrypt {
 public:
     void setCipher(CharBuf * out, TlsCipher * cipher);
 
-    void add(CharBuf * out, TlsContentType ct, void const * ptr, size_t count);
+    void add(CharBuf * out, TlsContentType ct, const void * ptr, size_t count);
     void flush(CharBuf * out);
 
 private:
@@ -79,7 +79,7 @@ public:
     bool parse(
         CharBuf * data, // decrypted application data
         ITlsRecordDecryptNotify * notify,
-        void const * src,
+        const void * src,
         size_t srcLen
     );
 

@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2018.
+// Copyright Glen Knowles 2016 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // jbuilder.cpp - dim json
@@ -25,7 +25,7 @@ enum TextType : char {
     kTextTypes,
 };
 
-char const * kTextEntityTable[] = {
+const char * kTextEntityTable[] = {
     "\\u0000",
     "\\u0001",
     "\\u0002",
@@ -66,7 +66,7 @@ char const * kTextEntityTable[] = {
 static_assert(size(kTextEntityTable) == kTextTypes);
 
 // clang-format off
-char const kTextTypeTable[256] = {
+const char kTextTypeTable[256] = {
 //   0   1   2   3   4   5   6   7   8   9  a   b   c   d   e   f
      0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, // 0
     16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, // 1
@@ -300,7 +300,7 @@ IJBuilder::StateReturn IJBuilder::state() const {
 }
 
 //===========================================================================
-IJBuilder & IJBuilder::value(char const val[]) {
+IJBuilder & IJBuilder::value(const char val[]) {
     return value(string_view{val});
 }
 

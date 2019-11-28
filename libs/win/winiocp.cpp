@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2018.
+// Copyright Glen Knowles 2015 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // winiocp.cpp - dim windows platform
@@ -27,7 +27,7 @@ static mutex s_mut;
 
 //===========================================================================
 static void iocpDispatchThread() {
-    int const kMaxEntries = 8;
+    const int kMaxEntries = 8;
     OVERLAPPED_ENTRY entries[kMaxEntries];
     ULONG found;
     ITaskNotify * tasks[size(entries)];

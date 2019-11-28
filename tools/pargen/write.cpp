@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2018.
+// Copyright Glen Knowles 2016 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // write.cpp - pargen
@@ -16,17 +16,17 @@ using namespace Dim;
 ***/
 
 // forward declarations
-static void writeRuleName(ostream & os, string const & name, bool capitalize);
-static void writeElement(ostream & os, Element const & elem, bool inclPos);
+static void writeRuleName(ostream & os, const string & name, bool capitalize);
+static void writeElement(ostream & os, const Element & elem, bool inclPos);
 
 //===========================================================================
-ostream & operator<<(ostream & os, Element const & elem) {
+ostream & operator<<(ostream & os, const Element & elem) {
     writeElement(os, elem, true);
     return os;
 }
 
 //===========================================================================
-ostream & operator<<(ostream & os, Grammar const & rules) {
+ostream & operator<<(ostream & os, const Grammar & rules) {
     for (auto && rule : rules.rules()) {
         os << "*   " << rule.name;
         os << " = " << rule;
@@ -36,7 +36,7 @@ ostream & operator<<(ostream & os, Grammar const & rules) {
 }
 
 //===========================================================================
-ostream & operator<<(ostream & os, StateElement const & se) {
+ostream & operator<<(ostream & os, const StateElement & se) {
     os << *se.elem << '.' << se.rep;
     if (se.started)
         os << " (STARTED)";
@@ -46,7 +46,7 @@ ostream & operator<<(ostream & os, StateElement const & se) {
 }
 
 //===========================================================================
-ostream & operator<<(ostream & os, StateEvent const & sv) {
+ostream & operator<<(ostream & os, const StateEvent & sv) {
     os << "on";
     writeRuleName(os, sv.elem->name, true);
     switch (sv.flags) {
@@ -65,7 +65,7 @@ ostream & operator<<(ostream & os, StateEvent const & sv) {
 }
 
 //===========================================================================
-static void writeSp(ostream & os, StatePosition const & sp, int pos) {
+static void writeSp(ostream & os, const StatePosition & sp, int pos) {
     os << "    // ===== #" << pos;
     if (sp.recurseSe) {
         os << " (RECURSE "
@@ -89,7 +89,7 @@ static void writeSp(ostream & os, StatePosition const & sp, int pos) {
 }
 
 //===========================================================================
-static void writeElement(ostream & os, Element const & elem, bool inclPos) {
+static void writeElement(ostream & os, const Element & elem, bool inclPos) {
     if (elem.m != 1 || elem.n != 1) {
         if (elem.m)
             os << elem.m;
@@ -196,18 +196,18 @@ static void writeElement(ostream & os, Element const & elem, bool inclPos) {
 static void writeWordwrap(
     ostream & os,
     size_t & pos,
-    string const & str,
+    const string & str,
     size_t maxWidth,
-    string const & prefix
+    const string & prefix
 ) {
-    char const * base = str.c_str();
+    const char * base = str.c_str();
     bool startOfLine = true;
     for (;;) {
         while (*base == ' ')
             base += 1;
         if (!*base)
             return;
-        char const * ptr = strchr(base, ' ');
+        const char * ptr = strchr(base, ' ');
         if (!ptr)
             ptr = str.c_str() + str.size();
         size_t len = ptr - base;
@@ -226,7 +226,7 @@ static void writeWordwrap(
 }
 
 //===========================================================================
-static void writeRuleName(ostream & os, string const & name, bool capitalize) {
+static void writeRuleName(ostream & os, const string & name, bool capitalize) {
     for (auto && ch : name) {
         if (ch == '-') {
             capitalize = true;
@@ -240,7 +240,7 @@ static void writeRuleName(ostream & os, string const & name, bool capitalize) {
 //===========================================================================
 static bool writeSwitchCase(
     ostream & os,
-    State const & st,
+    const State & st,
     bool setLast,
     bool hasEvents
 ) {
@@ -269,7 +269,7 @@ static bool writeSwitchCase(
     sort(
         cases.begin(),
         cases.end(),
-        [&stateKeys](NextState const & e1, NextState const & e2) {
+        [&stateKeys](const NextState & e1, const NextState & e2) {
             return 256 * stateKeys[e1.state] + e1.ch
                 < 256 * stateKeys[e2.state] + e2.ch;
         }
@@ -283,7 +283,7 @@ static bool writeSwitchCase(
     }
     os << "    ch = *ptr++;\n";
 
-    unsigned const kCaseColumns = 6;
+    const unsigned kCaseColumns = 6;
     os << "    switch (ch) {\n";
     unsigned prev = cases.front().state;
     unsigned pos = 0;
@@ -325,10 +325,10 @@ static bool writeSwitchCase(
 //===========================================================================
 static void writeEventCallback(
     ostream & os,
-    string const & name,
+    const string & name,
     Element::Flags type,
-    char const * args = nullptr,
-    string const & prefix = "    "
+    const char * args = nullptr,
+    const string & prefix = "    "
 ) {
     os << prefix << "if (!on";
     writeRuleName(os, name, true);
@@ -350,7 +350,7 @@ static void writeEventCallback(
 }
 
 //===========================================================================
-static void writeEventCallback(ostream & os, StateEvent const & sv) {
+static void writeEventCallback(ostream & os, const StateEvent & sv) {
     ostringstream oargs;
     if (sv.distance) {
         oargs << "ptr";
@@ -379,9 +379,9 @@ static void writeEventCallback(ostream & os, StateEvent const & sv) {
 //===========================================================================
 static void writeStateName(
     ostream & os,
-    string const & name,
+    const string & name,
     size_t maxWidth,
-    string const & prefix
+    const string & prefix
 ) {
     size_t space = maxWidth - size(prefix);
     assert(space > 4);
@@ -458,8 +458,8 @@ static void writeTerminals(ostream & os, bitset<256> const & terminals) {
 //===========================================================================
 static void writeParserState(
     ostream & os,
-    State const & st,
-    Element const * root,
+    const State & st,
+    const Element * root,
     bool inclStatePositions
 ) {
     os << "\nSTATE_" << st.id << ":\n";
@@ -514,11 +514,11 @@ static void writeParserState(
     bool hasSwitch = writeSwitchCase(os, st, root, !events.empty());
 
     // write calls to independent sub-state parsers
-    StatePosition const * call = nullptr;
+    const StatePosition * call = nullptr;
     for (auto && spt : st.positions) {
         if (spt.second.any())
             continue;
-        Element const * elem = spt.first.elems.back().elem;
+        const Element * elem = spt.first.elems.back().elem;
         if (elem->value == kDoneRuleName)
             continue;
         assert(elem->type == Element::kRule);
@@ -553,8 +553,8 @@ static void writeParserState(
 //===========================================================================
 static void writeCppfileStart(
     ostream & os,
-    Grammar const & rules,
-    Grammar const & options
+    const Grammar & rules,
+    const Grammar & options
 ) {
     time_t now = time(nullptr);
     tm tm;
@@ -596,8 +596,8 @@ static void writeCppfileStart(
 
 //===========================================================================
 static void writeMainFuncIntro(ostream & os) {
-    os << R"(parse (char const src[]) {
-    char const * ptr = src;
+    os << R"(parse (const char src[]) {
+    const char * ptr = src;
     unsigned char ch;
     goto STATE_2;
 
@@ -610,11 +610,11 @@ STATE_0:
 }
 
 //===========================================================================
-static void writeStateFuncIntro(ostream & os, Element const * root) {
+static void writeStateFuncIntro(ostream & os, const Element * root) {
     os << "state";
     writeRuleName(os, root->name, true);
-    os << R"( (char const *& ptr) {
-    char const * last = nullptr;
+    os << R"( (const char *& ptr) {
+    const char * last = nullptr;
     unsigned char ch;
 )";
     if (root->flags & Element::fOnStart)
@@ -637,9 +637,9 @@ STATE_0:
 //===========================================================================
 static void writeFunction(
     ostream & os,
-    Element const * root,
+    const Element * root,
     unordered_set<State> const & stateSet,
-    Grammar const & options,
+    const Grammar & options,
     bool inclStatePositions
 ) {
     auto parserClass = options[kOptionApiParserClass];
@@ -657,7 +657,7 @@ bool )" << parserClass
     } else {
         writeStateFuncIntro(os, root);
     }
-    vector<State const *> states;
+    vector<const State *> states;
     states.resize(stateSet.size());
     for (auto && st : stateSet) {
         if (st.id) {
@@ -676,8 +676,8 @@ bool )" << parserClass
 //===========================================================================
 static void writeHeaderfile(
     ostream & os,
-    Grammar const & rules,
-    Grammar const & options
+    const Grammar & rules,
+    const Grammar & options
 ) {
     time_t now = time(nullptr);
     tm tm;
@@ -713,7 +713,7 @@ class )"
 public:
     using )" << baseClass << "::" << baseClass << R"(;
 
-    bool parse (char const src[]);
+    bool parse (const char src[]);
     size_t errpos () const { return m_errpos; }
 
 private:
@@ -724,7 +724,7 @@ private:
             hasFunctionRules = true;
             os << "    bool state";
             writeRuleName(os, elem.name, true);
-            os << " (char const *& src);\n";
+            os << " (const char *& src);\n";
         }
     }
     if (hasFunctionRules)
@@ -748,14 +748,14 @@ private:
         os << "    // Events\n";
         struct {
             Element::Flags flag;
-            char const * text;
+            const char * text;
         } const sigs[] = {
             {Element::fOnStart, "Start ()"},
-            {Element::fOnStartW, "Start (char const * ptr)"},
+            {Element::fOnStartW, "Start (const char * ptr)"},
             {Element::fOnChar, "Char ()"},
             {Element::fOnCharW, "Char (char ch)"},
             {Element::fOnEnd, "End ()"},
-            {Element::fOnEndW, "End (char const * eptr)"},
+            {Element::fOnEndW, "End (const char * eptr)"},
         };
         for (auto && ev : events) {
             for (auto && sig : sigs) {
@@ -788,10 +788,10 @@ private:
 void writeParser(
     ostream & hfile,
     ostream & cppfile,
-    Grammar const & src,
-    RunOptions const & opts
+    const Grammar & src,
+    const RunOptions & opts
 ) {
-    string const & rootname = src[kOptionRoot];
+    const string & rootname = src[kOptionRoot];
     logMsgDebug() << "parser: " << rootname;
 
     Grammar rules;
@@ -850,7 +850,7 @@ void writeParser(
 //===========================================================================
 void writeRule(
     ostream & os,
-    Element const & rule,
+    const Element & rule,
     size_t maxWidth,
     string_view prefix
 ) {

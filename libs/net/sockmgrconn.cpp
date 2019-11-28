@@ -15,8 +15,8 @@ using namespace Dim;
 *
 ***/
 
-auto const kDefaultPingInterval = 30s;
-auto const kReconnectInterval = 5s;
+const auto kDefaultPingInterval = 30s;
+const auto kReconnectInterval = 5s;
 
 
 /****************************************************************************
@@ -38,19 +38,19 @@ public:
         AppSocket::MgrFlags flags
     );
 
-    void connect(SockAddr const & addr);
+    void connect(const SockAddr & addr);
     void connect(ConnMgrSocket & sock);
     void stable(ConnMgrSocket & sock);
-    void shutdown(SockAddr const & addr);
+    void shutdown(const SockAddr & addr);
     void destroy(ConnMgrSocket & sock);
 
     // Inherited via ISockMgrBase
     bool listening() const override { return false; }
-    void setAddresses(SockAddr const * addrs, size_t count) override;
+    void setAddresses(const SockAddr * addrs, size_t count) override;
     bool onShutdown(bool firstTry) override;
 
     // Inherited via IConfigNotify
-    void onConfigChange(XDocument const & doc) override;
+    void onConfigChange(const XDocument & doc) override;
 
 private:
     TimerList<ConnMgrSocket, RecentLink> m_recent;
@@ -73,12 +73,12 @@ public:
     ConnMgrSocket(
         ISockMgrBase & mgr,
         unique_ptr<IAppSocketNotify> notify,
-        SockAddr const & addr
+        const SockAddr & addr
     );
 
     Mode mode() const { return m_mode; }
     bool stopping() const { return m_stopping; }
-    SockAddr const & targetAddress() const { return m_targetAddress; }
+    const SockAddr & targetAddress() const { return m_targetAddress; }
     void connect();
     void shutdown();
 
@@ -95,7 +95,7 @@ public:
     void write(unique_ptr<SocketBuffer> buffer, size_t bytes) override;
 
     // Inherited via IAppSocketNotify
-    void onSocketConnect(AppSocketInfo const & info) override;
+    void onSocketConnect(const AppSocketInfo & info) override;
     void onSocketConnectFailed() override;
     void onSocketDisconnect() override;
     void onSocketDestroy() override;
@@ -119,7 +119,7 @@ private:
 ConnMgrSocket::ConnMgrSocket(
     ISockMgrBase & mgr,
     unique_ptr<IAppSocketNotify> notify,
-    SockAddr const & addr
+    const SockAddr & addr
 )
     : ISockMgrSocket{mgr, move(notify)}
     , m_targetAddress{addr}
@@ -177,7 +177,7 @@ void ConnMgrSocket::write(unique_ptr<SocketBuffer> buffer, size_t bytes) {
 }
 
 //===========================================================================
-void ConnMgrSocket::onSocketConnect (AppSocketInfo const & info) {
+void ConnMgrSocket::onSocketConnect (const AppSocketInfo & info) {
     assert(m_mode == kConnecting);
     mgr().touch(this);
     m_mode = kConnected;
@@ -236,7 +236,7 @@ ConnectManager::ConnectManager(
 }
 
 //===========================================================================
-void ConnectManager::connect(SockAddr const & addr) {
+void ConnectManager::connect(const SockAddr & addr) {
     auto ib = m_sockets.try_emplace(
         addr,
         *this,
@@ -259,7 +259,7 @@ void ConnectManager::stable(ConnMgrSocket & sock) {
 }
 
 //===========================================================================
-void ConnectManager::shutdown(SockAddr const & addr) {
+void ConnectManager::shutdown(const SockAddr & addr) {
     auto it = m_sockets.find(addr);
     if (it != m_sockets.end())
         it->second.shutdown();
@@ -279,7 +279,7 @@ void ConnectManager::destroy(ConnMgrSocket & sock) {
 }
 
 //===========================================================================
-void ConnectManager::setAddresses(SockAddr const * addrs, size_t count) {
+void ConnectManager::setAddresses(const SockAddr * addrs, size_t count) {
     vector<SockAddr> endpts{addrs, addrs + count};
     sort(endpts.begin(), endpts.end());
     sort(m_addrs.begin(), m_addrs.end());
@@ -288,8 +288,8 @@ void ConnectManager::setAddresses(SockAddr const * addrs, size_t count) {
     for_each_diff(
         endpts.begin(), endpts.end(),
         m_addrs.begin(), m_addrs.end(),
-        [&](SockAddr const & ep){ connect(ep); },
-        [&](SockAddr const & ep){ shutdown(ep); }
+        [&](const SockAddr & ep){ connect(ep); },
+        [&](const SockAddr & ep){ shutdown(ep); }
     );
 
     m_addrs = move(endpts);
@@ -310,7 +310,7 @@ bool ConnectManager::onShutdown(bool firstTry) {
 }
 
 //===========================================================================
-void ConnectManager::onConfigChange(XDocument const & doc) {
+void ConnectManager::onConfigChange(const XDocument & doc) {
     auto flags = AppSocket::ConfFlags{};
     if (configNumber(doc, "DisableInactiveTimeout"))
         flags |= AppSocket::fDisableInactiveTimeout;

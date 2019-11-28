@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2018.
+// Copyright Glen Knowles 2016 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // httpint.h - dim http
@@ -18,7 +18,7 @@ namespace Dim {
 *
 ***/
 
-unsigned const kDefaultWindowSize = 65'535;
+const unsigned kDefaultWindowSize = 65'535;
 
 struct HttpStream {
     enum State {
@@ -63,18 +63,18 @@ public:
     bool recv(
         CharBuf * out,
         std::vector<std::unique_ptr<HttpMsg>> * msgs,
-        void const * src,
+        const void * src,
         size_t srcLen
     );
 
     // Serializes a request and returns the stream id used
-    int request(CharBuf * out, HttpMsg const & msg, bool more);
+    int request(CharBuf * out, const HttpMsg & msg, bool more);
 
     // Serializes a push promise
-    int pushPromise(CharBuf * out, HttpMsg const & msg, bool more);
+    int pushPromise(CharBuf * out, const HttpMsg & msg, bool more);
 
     // Serializes a reply on the specified stream
-    bool reply(CharBuf * out, int stream, HttpMsg const & msg, bool more);
+    bool reply(CharBuf * out, int stream, const HttpMsg & msg, bool more);
 
     // Serializes additional data on the stream
     template<typename T>
@@ -82,7 +82,7 @@ public:
         CharBuf * out,
         int stream,
         HttpStream * strm,
-        T const & data,
+        const T & data,
         bool more
     );
 
@@ -115,7 +115,7 @@ private:
         CharBuf * out,
         int stream,
         HttpStream * strm,
-        HttpMsg const & msg,
+        const HttpMsg & msg,
         bool more
     );
     void writeUnsent(CharBuf * out, int stream, HttpStream * strm);
@@ -124,75 +124,75 @@ private:
     bool onFrame(
         CharBuf * out,
         std::vector<std::unique_ptr<HttpMsg>> * msgs,
-        char const src[]
+        const char src[]
     );
     bool onContinuation(
         CharBuf * out,
         std::vector<std::unique_ptr<HttpMsg>> * msgs,
-        char const src[],
+        const char src[],
         int stream,
         FrameFlags flags
     );
     bool onData(
         CharBuf * out,
         std::vector<std::unique_ptr<HttpMsg>> * msgs,
-        char const src[],
+        const char src[],
         int stream,
         FrameFlags flags
     );
     bool onGoAway(
         CharBuf * out,
         std::vector<std::unique_ptr<HttpMsg>> * msgs,
-        char const src[],
+        const char src[],
         int stream,
         FrameFlags flags
     );
     bool onHeaders(
         CharBuf * out,
         std::vector<std::unique_ptr<HttpMsg>> * msgs,
-        char const src[],
+        const char src[],
         int stream,
         FrameFlags flags
     );
     bool onPing(
         CharBuf * out,
         std::vector<std::unique_ptr<HttpMsg>> * msgs,
-        char const src[],
+        const char src[],
         int stream,
         FrameFlags flags
     );
     bool onPriority(
         CharBuf * out,
         std::vector<std::unique_ptr<HttpMsg>> * msgs,
-        char const src[],
+        const char src[],
         int stream,
         FrameFlags flags
     );
     bool onPushPromise(
         CharBuf * out,
         std::vector<std::unique_ptr<HttpMsg>> * msgs,
-        char const src[],
+        const char src[],
         int stream,
         FrameFlags flags
     );
     bool onRstStream(
         CharBuf * out,
         std::vector<std::unique_ptr<HttpMsg>> * msgs,
-        char const src[],
+        const char src[],
         int stream,
         FrameFlags flags
     );
     bool onSettings(
         CharBuf * out,
         std::vector<std::unique_ptr<HttpMsg>> * msgs,
-        char const src[],
+        const char src[],
         int stream,
         FrameFlags flags
     );
     bool onWindowUpdate(
         CharBuf * out,
         std::vector<std::unique_ptr<HttpMsg>> * msgs,
-        char const src[],
+        const char src[],
         int stream,
         FrameFlags flags
     );

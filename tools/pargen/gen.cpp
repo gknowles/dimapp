@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2018.
+// Copyright Glen Knowles 2016 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // gen.cpp - pargen
@@ -21,7 +21,7 @@ static void addPositions(
     State * st,
     StatePosition * sp,
     bool init,
-    Element const & elem,
+    const Element & elem,
     unsigned rep
 );
 
@@ -33,7 +33,7 @@ static void addPositions(
 ***/
 
 //===========================================================================
-size_t std::hash<StateElement>::operator()(StateElement const & val) const {
+size_t std::hash<StateElement>::operator()(const StateElement & val) const {
     size_t out = val.elem->id;
     hashCombine(&out, val.rep);
     hashCombine(&out, val.started);
@@ -42,7 +42,7 @@ size_t std::hash<StateElement>::operator()(StateElement const & val) const {
 }
 
 //===========================================================================
-int StateElement::compare(StateElement const & right) const {
+int StateElement::compare(const StateElement & right) const {
     if (int rc = (int)(elem->id - right.elem->id))
         return rc;
     if (int rc = rep - right.rep)
@@ -55,12 +55,12 @@ int StateElement::compare(StateElement const & right) const {
 }
 
 //===========================================================================
-bool StateElement::operator<(StateElement const & right) const {
+bool StateElement::operator<(const StateElement & right) const {
     return compare(right) < 0;
 }
 
 //===========================================================================
-bool StateElement::operator==(StateElement const & right) const {
+bool StateElement::operator==(const StateElement & right) const {
     return compare(right) == 0;
 }
 
@@ -92,7 +92,7 @@ int compare(
 ***/
 
 //===========================================================================
-size_t std::hash<StatePosition>::operator()(StatePosition const & val) const {
+size_t std::hash<StatePosition>::operator()(const StatePosition & val) const {
     size_t out = 0;
     for (auto && se : val.elems) {
         hashCombine(&out, hash<StateElement>{}(se));
@@ -107,7 +107,7 @@ size_t std::hash<StatePosition>::operator()(StatePosition const & val) const {
 }
 
 //===========================================================================
-int StatePosition::compare(StatePosition const & right) const {
+int StatePosition::compare(const StatePosition & right) const {
     if (int rc = recurseSe - right.recurseSe)
         return rc;
     if (int rc = recursePos - right.recursePos)
@@ -122,12 +122,12 @@ int StatePosition::compare(StatePosition const & right) const {
 }
 
 //===========================================================================
-bool StatePosition::operator<(StatePosition const & right) const {
+bool StatePosition::operator<(const StatePosition & right) const {
     return compare(right) < 0;
 }
 
 //===========================================================================
-bool StatePosition::operator==(StatePosition const & right) const {
+bool StatePosition::operator==(const StatePosition & right) const {
     return compare(right) == 0;
 }
 
@@ -139,7 +139,7 @@ bool StatePosition::operator==(StatePosition const & right) const {
 ***/
 
 //===========================================================================
-size_t std::hash<StateEvent>::operator()(StateEvent const & val) const {
+size_t std::hash<StateEvent>::operator()(const StateEvent & val) const {
     size_t out = val.elem->id;
     hashCombine(&out, val.flags);
     hashCombine(&out, val.distance);
@@ -147,7 +147,7 @@ size_t std::hash<StateEvent>::operator()(StateEvent const & val) const {
 }
 
 //===========================================================================
-int StateEvent::compare(StateEvent const & right) const {
+int StateEvent::compare(const StateEvent & right) const {
     if (int rc = distance - right.distance)
         return rc;
     if (int rc = (int)(elem->id - right.elem->id))
@@ -158,12 +158,12 @@ int StateEvent::compare(StateEvent const & right) const {
 }
 
 //===========================================================================
-bool StateEvent::operator<(StateEvent const & right) const {
+bool StateEvent::operator<(const StateEvent & right) const {
     return compare(right) < 0;
 }
 
 //===========================================================================
-bool StateEvent::operator==(StateEvent const & right) const {
+bool StateEvent::operator==(const StateEvent & right) const {
     return compare(right) == 0;
 }
 
@@ -175,7 +175,7 @@ bool StateEvent::operator==(StateEvent const & right) const {
 ***/
 
 //===========================================================================
-size_t std::hash<State>::operator()(State const & val) const {
+size_t std::hash<State>::operator()(const State & val) const {
     size_t out = 0;
     for (auto && spt : val.positions) {
         hashCombine(&out, hash<StatePosition>{}(spt.first));
@@ -192,7 +192,7 @@ void State::clear() {
 }
 
 //===========================================================================
-bool State::operator==(State const & right) const {
+bool State::operator==(const State & right) const {
     return positions == right.positions;
 }
 
@@ -222,7 +222,7 @@ static void addChildStates(
 );
 
 //===========================================================================
-static size_t findRecursionSimple(StatePosition const * sp) {
+static size_t findRecursionSimple(const StatePosition * sp) {
     size_t depth = sp->elems.size();
     if (depth >= 3) {
         auto first = sp->elems.data();
@@ -246,7 +246,7 @@ static size_t findRecursionSimple(StatePosition const * sp) {
 }
 
 //===========================================================================
-static size_t findRecursionFull(StatePosition const * sp) {
+static size_t findRecursionFull(const StatePosition * sp) {
     size_t depth = sp->elems.size();
     if (depth >= 3) {
         auto m = sp->elems.data() + depth / 2;
@@ -272,7 +272,7 @@ static void addRulePositions(
     bool init
 ) {
     auto & se = sp->elems.back();
-    Element const & elem = *se.elem;
+    const Element & elem = *se.elem;
     *skippable = false;
     if (elem.rule->flags & Element::fFunction) {
         se.recurse = true;
@@ -311,7 +311,7 @@ static void addPositions(
     State * st,
     StatePosition * sp,
     bool init,
-    Element const & rule,
+    const Element & rule,
     unsigned rep
 ) {
     *skippable = false;
@@ -366,7 +366,7 @@ static void addPositions(
 }
 
 //===========================================================================
-static void initPositions(State * st, Element const & root) {
+static void initPositions(State * st, const Element & root) {
     st->positions.clear();
     bool skippable;
     StatePosition sp;
@@ -376,7 +376,7 @@ static void initPositions(State * st, Element const & root) {
 //===========================================================================
 static void addEvent(
     vector<StateEvent> & events,
-    StateElement const & se,
+    const StateElement & se,
     Element::Flags flags
 ) {
     StateEvent sv;
@@ -420,7 +420,7 @@ static void setPositionPrefix(
 //===========================================================================
 static void addDelayedEvents(
     vector<StateEvent> & events,
-    StatePosition const & sp
+    const StatePosition & sp
 ) {
     for (auto && sv : sp.delayedEvents) {
         events.push_back(sv);
@@ -435,7 +435,7 @@ static void addDelayedEvents(
 //===========================================================================
 static void addNextPositions(
     State * st,
-    StatePosition const & sp,
+    const StatePosition & sp,
     bitset<256> const & chars
 ) {
     bool terminal = chars.any();
@@ -489,14 +489,14 @@ static void addNextPositions(
     }
 
     for (; it != eit; ++it) {
-        StateElement const & se = *it;
+        const StateElement & se = *it;
         int recursePos{-1};
 
         // advance to next in sequence
         if (se.elem->type == Element::kSequence) {
             auto & sePrev = it[-1];
-            Element const * cur = sePrev.elem;
-            Element const * last = &se.elem->elements.back();
+            const Element * cur = sePrev.elem;
+            const Element * last = &se.elem->elements.back();
 
             if (cur->type == Element::kRule && sePrev.recurse)
                 recursePos = int(cur - se.elem->elements.data());
@@ -692,7 +692,7 @@ static void removeConflicts(
 static bool delayConflicts(
     StatePosition & nsp,
     vector<StateEvent> const & matched,
-    StateTreeInfo const & sti,
+    const StateTreeInfo & sti,
     bool logError
 ) {
     for (auto && sv : matched) {
@@ -711,7 +711,7 @@ static bool delayConflicts(
 }
 
 //===========================================================================
-static bool resolveEventConflicts(State & st, StateTreeInfo const & sti) {
+static bool resolveEventConflicts(State & st, const StateTreeInfo & sti) {
     if (st.positions.size() == 1)
         return true;
 
@@ -794,7 +794,7 @@ static unsigned addState(
         // it's a new state
         st2->id = ++sti.m_nextStateId;
         st2->name = sti.m_path;
-        char const * show = sti.m_path.data();
+        const char * show = sti.m_path.data();
         if (sti.m_path.size() > 40) {
             show += sti.m_path.size() - 40;
         }
@@ -901,7 +901,7 @@ static void addChildStates(
 //===========================================================================
 void buildStateTree(
     unordered_set<State> * states,
-    Element const & root,
+    const Element & root,
     bool inclDeps,
     bool dedupStates,
     unsigned depthLimit
@@ -949,8 +949,8 @@ struct StateKey {
     vector<StateEvent> events;
     bool next[257];
 
-    bool operator==(StateKey const & right) const;
-    bool operator!=(StateKey const & right) const;
+    bool operator==(const StateKey & right) const;
+    bool operator!=(const StateKey & right) const;
 };
 struct StateInfo {
     State * state{};
@@ -960,7 +960,7 @@ struct StateInfo {
 } // namespace
 namespace std {
 template <> struct hash<StateKey> {
-    size_t operator()(StateKey const & val) const;
+    size_t operator()(const StateKey & val) const;
 };
 } // namespace std
 namespace {
@@ -984,7 +984,7 @@ struct DedupInfo {
 //===========================================================================
 
 //===========================================================================
-size_t std::hash<StateKey>::operator()(StateKey const & val) const {
+size_t std::hash<StateKey>::operator()(const StateKey & val) const {
     size_t out = 0;
     for (auto && sv : val.events) {
         hashCombine(&out, hash<StateEvent>{}(sv));
@@ -994,18 +994,18 @@ size_t std::hash<StateKey>::operator()(StateKey const & val) const {
 }
 
 //===========================================================================
-bool StateKey::operator==(StateKey const & right) const {
+bool StateKey::operator==(const StateKey & right) const {
     return events == right.events
         && memcmp(next, right.next, sizeof next) == 0;
 }
 
 //===========================================================================
-bool StateKey::operator!=(StateKey const & right) const {
+bool StateKey::operator!=(const StateKey & right) const {
     return !operator==(right);
 }
 
 //===========================================================================
-static void copy(StateKey & out, State const & st) {
+static void copy(StateKey & out, const State & st) {
     out.events = st.positions.begin()->first.events;
     if (st.next.empty()) {
         memset(out.next, 0, sizeof out.next);
@@ -1022,7 +1022,7 @@ static void copy(StateKey & out, State const & st) {
 //===========================================================================
 
 //===========================================================================
-static void insertKeyRef(DedupInfo & di, StateInfo const & val) {
+static void insertKeyRef(DedupInfo & di, const StateInfo & val) {
     auto & ids = di.idByKey[val.key];
     auto ii = equal_range(ids.begin(), ids.end(), val.state->id);
     assert(ii.first == ii.second);
@@ -1030,7 +1030,7 @@ static void insertKeyRef(DedupInfo & di, StateInfo const & val) {
 }
 
 //===========================================================================
-static void eraseKeyRef(DedupInfo & di, StateInfo const & val) {
+static void eraseKeyRef(DedupInfo & di, const StateInfo & val) {
     auto & ids = di.idByKey[val.key];
     auto ii = equal_range(ids.begin(), ids.end(), val.state->id);
     assert(ii.first != ii.second);

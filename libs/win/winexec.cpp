@@ -49,7 +49,7 @@ private:
     bool createPipe(
         HANDLE * hchild,
         StdStream strm,
-        Path const & name,
+        const Path & name,
         Pipe::OpenMode oflags
     );
     void checkIfDone();
@@ -222,7 +222,7 @@ void ExecProgram::checkIfDone() {
 bool ExecProgram::createPipe(
     HANDLE * child,
     StdStream strm,
-    Path const & name,
+    const Path & name,
     Pipe::OpenMode oflags
 ) {
     pipeListen(&m_pipes[strm], name, oflags);

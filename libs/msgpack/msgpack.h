@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2018.
+// Copyright Glen Knowles 2018 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // json.h - dim msgpack
@@ -46,7 +46,7 @@ public:
     // preformatted value
     IBuilder & valueRaw(std::string_view val);
 
-    IBuilder & value(char const val[]);
+    IBuilder & value(const char val[]);
     IBuilder & value(std::string_view val);
     IBuilder & value(bool val);
     IBuilder & value(double val);
@@ -55,12 +55,12 @@ public:
     IBuilder & value(std::nullptr_t);
 
     template<typename T>
-    IBuilder & value(T const & val);
+    IBuilder & value(const T & val);
 
     size_t depth() const { return m_stack.size(); }
 
     template<typename T>
-    IBuilder & operator<<(T const & val);
+    IBuilder & operator<<(const T & val);
     IBuilder & operator<<(IBuilder & (*pfn)(IBuilder &));
 
 protected:
@@ -79,7 +79,7 @@ private:
 
 //===========================================================================
 template<typename T>
-inline IBuilder & IBuilder::value(T const & val) {
+inline IBuilder & IBuilder::value(const T & val) {
     if constexpr (std::is_convertible_v<T, uint64_t>
         && !std::is_same_v<T, uint64_t>
     ) {
@@ -99,7 +99,7 @@ inline IBuilder & IBuilder::value(T const & val) {
 
 //===========================================================================
 template<typename T>
-inline IBuilder & IBuilder::operator<<(T const & val) {
+inline IBuilder & IBuilder::operator<<(const T & val) {
     return value(val);
 }
 

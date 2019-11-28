@@ -23,7 +23,7 @@ namespace {
 class CertName {
 public:
     CertName() {}
-    CertName(CertName const & from);
+    CertName(const CertName & from);
     CertName(CertName && from) noexcept;
     ~CertName();
 
@@ -31,7 +31,7 @@ public:
     void reset(CERT_NAME_BLOB blob);
     CERT_NAME_BLOB release();
 
-    bool parse(char const src[]);
+    bool parse(const char src[]);
     string str() const;
 
     operator CERT_NAME_BLOB * () { return &m_blob; }
@@ -114,8 +114,8 @@ template<typename T>
 static void encodeBlob(
     T & out,
     string & outData,
-    char const structType[],
-    void const * structInfo
+    const char structType[],
+    const void * structInfo
 ) {
     if (!CryptEncodeObject(
         X509_ASN_ENCODING,
@@ -375,7 +375,7 @@ static bool matchHost(CERT_CONTEXT const * cert, string_view host) {
         (DWORD) wname.size()
     );
     auto name = toString(wname);
-    char const * ptr = name.data();
+    const char * ptr = name.data();
     while (*ptr) {
         string_view authority{ptr};
         if (matchHost(authority, host))
@@ -398,7 +398,7 @@ static bool isSelfSigned(CERT_CONTEXT const * cert) {
 //===========================================================================
 static void addCerts(
     vector<unique_ptr<CERT_CONTEXT const>> & certs,
-    CertKey const & key
+    const CertKey & key
 ) {
     string idBytes;
     if (!hexToBytes(idBytes, key.value, false)) {
@@ -507,7 +507,7 @@ static void addCerts(
 //===========================================================================
 static void getCerts(
     vector<unique_ptr<CERT_CONTEXT const>> & certs,
-    CertKey const keys[],
+    const CertKey keys[],
     size_t numKeys,
     vector<string_view> const & dnsNames,
     vector<string_view> const & ipAddrs
@@ -574,12 +574,12 @@ constexpr TokenTable::Token s_certKeyTypes[] = {
     { CertKey::kThumbprint, "thumbprint" },
     { CertKey::kSerialNumber, "serialNumber" },
 };
-TokenTable const s_certKeyTbl(s_certKeyTypes);
+const TokenTable s_certKeyTbl(s_certKeyTypes);
 
 } // namespace
 
 //===========================================================================
-char const * Dim::toString(CertKey::Type type, char const def[]) {
+const char * Dim::toString(CertKey::Type type, const char def[]) {
     return tokenTableGetName(s_certKeyTbl, type, def);
 }
 
@@ -596,7 +596,7 @@ CertKey::Type Dim::fromString(std::string_view src, CertKey::Type def) {
 ***/
 
 //===========================================================================
-CertName::CertName(CertName const & from) {
+CertName::CertName(const CertName & from) {
     if (from) {
         m_blob.pbData = (BYTE *) malloc(from.m_blob.cbData);
         assert(m_blob.pbData);
@@ -638,7 +638,7 @@ CERT_NAME_BLOB CertName::release() {
 }
 
 //===========================================================================
-bool CertName::parse(char const src[]) {
+bool CertName::parse(const char src[]) {
     wchar_t const * errstr;
     auto wsrc = toWstring(src);
 
@@ -711,7 +711,7 @@ constexpr TokenTable::Token kStoreLocs[] = {
     { CertLocation::kLocalMachineEnterprise,  "Local Machine Enterprise" },
     { CertLocation::kLocalMachineGroupPolicy, "Local Machine Group Policy" },
 };
-TokenTable const s_storeLocTbl(kStoreLocs);
+const TokenTable s_storeLocTbl(kStoreLocs);
 
 //===========================================================================
 CertLocation & CertLocation::operator=(string_view name) {
@@ -733,7 +733,7 @@ string_view CertLocation::view() const {
 
 //===========================================================================
 unique_ptr<CredHandle> Dim::iWinTlsCreateCred(
-    CertKey const keys[],
+    const CertKey keys[],
     size_t numKeys,
     vector<string_view> const & dnsNamesForSelfSigned,
     vector<string_view> const & ipAddrsForSelfSigned

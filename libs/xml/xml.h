@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2018.
+// Copyright Glen Knowles 2016 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // xml.h - dim xml
@@ -28,12 +28,12 @@ namespace Dim {
 class IXBuilder {
 public:
     struct ElemNameProxy {
-        char const * name;
-        char const * value;
+        const char * name;
+        const char * value;
     };
     struct AttrNameProxy {
-        char const * name;
-        char const * value;
+        const char * name;
+        const char * value;
     };
 
 public:
@@ -59,7 +59,7 @@ protected:
     virtual size_t size() const = 0;
 
 private:
-    template <int N> void addRaw(char const (&text)[N]) {
+    template <int N> void addRaw(const char (&text)[N]) {
         append({text, N - 1});
     }
 
@@ -67,7 +67,7 @@ private:
         typename Char,
         typename = std::enable_if_t<std::is_same_v<Char, char>>
     >
-    void addRaw(Char const * const & text) {
+    void addRaw(const Char * const & text) {
         append(text);
     }
 
@@ -76,7 +76,7 @@ private:
     }
 
     template <bool isContent>
-    void addText(char const text[], size_t count = -1);
+    void addText(const char text[], size_t count = -1);
     IXBuilder & fail();
 
     enum State : int;
@@ -96,11 +96,11 @@ IXBuilder & operator<<(IXBuilder & out, float val);
 IXBuilder & operator<<(IXBuilder & out, double val);
 IXBuilder & operator<<(IXBuilder & out, long double val);
 IXBuilder & operator<<(IXBuilder & out, char val);
-IXBuilder & operator<<(IXBuilder & out, char const val[]);
+IXBuilder & operator<<(IXBuilder & out, const char val[]);
 IXBuilder & operator<<(IXBuilder & out, std::string_view val);
 
 template <typename T>
-inline IXBuilder & operator<<(IXBuilder & out, T const & val) {
+inline IXBuilder & operator<<(IXBuilder & out, const T & val) {
     thread_local std::ostringstream t_os;
     t_os.clear();
     t_os.str({});
@@ -117,13 +117,13 @@ inline IXBuilder & operator<<(
 
 inline IXBuilder & operator<<(
     IXBuilder & out,
-    IXBuilder::ElemNameProxy const & e
+    const IXBuilder::ElemNameProxy & e
 ) {
     return e.value ? out.elem(e.name, e.value) : out.start(e.name);
 }
 inline IXBuilder::ElemNameProxy start(
-    char const name[],
-    char const val[] = nullptr
+    const char name[],
+    const char val[] = nullptr
 ) {
     return IXBuilder::ElemNameProxy{name, val};
 }
@@ -131,21 +131,21 @@ inline IXBuilder & end(IXBuilder & out) {
     return out.end();
 }
 inline IXBuilder::ElemNameProxy elem(
-    char const name[],
-    char const val[] = nullptr
+    const char name[],
+    const char val[] = nullptr
 ) {
     return IXBuilder::ElemNameProxy{name, val ? val : ""};
 }
 
 inline IXBuilder & operator<<(
     IXBuilder & out,
-    IXBuilder::AttrNameProxy const & a
+    const IXBuilder::AttrNameProxy & a
 ) {
     return a.value ? out.attr(a.name, a.value) : out.startAttr(a.name);
 }
 inline IXBuilder::AttrNameProxy attr(
-    char const name[],
-    char const val[] = nullptr
+    const char name[],
+    const char val[] = nullptr
 ) {
     return IXBuilder::AttrNameProxy{name, val};
 }
@@ -185,16 +185,16 @@ public:
     virtual bool startDoc() = 0;
     virtual bool endDoc() = 0;
 
-    virtual bool startElem(char const name[], size_t nameLen) = 0;
+    virtual bool startElem(const char name[], size_t nameLen) = 0;
     virtual bool endElem() = 0;
 
     virtual bool attr(
-        char const name[],
+        const char name[],
         size_t nameLen,
-        char const value[],
+        const char value[],
         size_t valueLen
     ) = 0;
-    virtual bool text(char const value[], size_t valueLen) = 0;
+    virtual bool text(const char value[], size_t valueLen) = 0;
 };
 
 class XStreamParser {
@@ -207,18 +207,18 @@ public:
     // Parses a document without first clearing the temp heap
     bool parseMore(char src[]);
 
-    bool fail(char const errmsg[]);
+    bool fail(const char errmsg[]);
 
     ITempHeap & heap() { return m_heap; }
     IXStreamParserNotify & notify() { return m_notify; }
 
-    char const * errmsg() const { return m_errmsg; }
+    const char * errmsg() const { return m_errmsg; }
     size_t errpos() const;
 
 private:
     IXStreamParserNotify & m_notify;
     unsigned m_line{};
-    char const * m_errmsg{};
+    const char * m_errmsg{};
     TempHeap m_heap;
     Detail::XmlBaseParser * m_base{};
 };
@@ -238,15 +238,15 @@ public:
     void clear();
     XNode * parse(char src[], std::string_view filename = {});
 
-    XNode * setRoot(char const name[], char const text[] = nullptr);
+    XNode * setRoot(const char name[], const char text[] = nullptr);
     XNode * addElem(
         XNode * parent,
-        char const name[],
-        char const text[] = nullptr
+        const char name[],
+        const char text[] = nullptr
     );
-    XAttr * addAttr(XNode * elem, char const name[], char const text[]);
+    XAttr * addAttr(XNode * elem, const char name[], const char text[]);
 
-    XNode * addText(XNode * parent, char const text[]);
+    XNode * addText(XNode * parent, const char text[]);
 
     // Remove all child (not all descendant) text nodes and set the node
     // "value" to the concatenation of the removed text with leading
@@ -255,18 +255,18 @@ public:
 
     ITempHeap & heap() { return m_heap; }
 
-    char const * filename() const { return m_filename; }
+    const char * filename() const { return m_filename; }
     XNode * root() { return m_root; }
-    XNode const * root() const { return m_root; }
+    const XNode * root() const { return m_root; }
 
-    char const * errmsg() const { return m_errmsg; }
+    const char * errmsg() const { return m_errmsg; }
     size_t errpos() const { return m_errpos; }
 
 private:
     TempHeap m_heap;
-    char const * m_filename{};
+    const char * m_filename{};
     XNode * m_root{};
-    char const * m_errmsg{};
+    const char * m_errmsg{};
     size_t m_errpos{};
 };
 
@@ -282,21 +282,21 @@ enum class XType {
 };
 
 struct XNode {
-    char const * const name;
-    char const * const value;
+    const char * const name;
+    const char * const value;
 };
 struct XAttr {
-    char const * const name;
-    char const * const value;
+    const char * const name;
+    const char * const value;
 };
 
-IXBuilder & operator<<(IXBuilder & out, XNode const & elem);
-std::string toString(XNode const & elem);
+IXBuilder & operator<<(IXBuilder & out, const XNode & elem);
+std::string toString(const XNode & elem);
 
 XDocument * document(XNode * node);
 XDocument * document(XAttr * attr);
 
-XType nodeType(XNode const * node);
+XType nodeType(const XNode * node);
 
 void unlinkAttr(XAttr * attr);
 void unlinkNode(XNode * node);
@@ -306,8 +306,8 @@ XNode * firstChild(
     std::string_view name = {},
     XType type = XType::kInvalid
 );
-XNode const * firstChild(
-    XNode const * elem,
+const XNode * firstChild(
+    const XNode * elem,
     std::string_view name = {},
     XType type = XType::kInvalid
 );
@@ -316,8 +316,8 @@ XNode * lastChild(
     std::string_view name = {},
     XType type = XType::kInvalid
 );
-XNode const * lastChild(
-    XNode const * elem,
+const XNode * lastChild(
+    const XNode * elem,
     std::string_view name = {},
     XType type = XType::kInvalid
 );
@@ -327,8 +327,8 @@ XNode * nextSibling(
     std::string_view name = {},
     XType type = XType::kInvalid
 );
-XNode const * nextSibling(
-    XNode const * elem,
+const XNode * nextSibling(
+    const XNode * elem,
     std::string_view name = {},
     XType type = XType::kInvalid
 );
@@ -337,24 +337,24 @@ XNode * prevSibling(
     std::string_view name = {},
     XType type = XType::kInvalid
 );
-XNode const * prevSibling(
-    XNode const * elem,
+const XNode * prevSibling(
+    const XNode * elem,
     std::string_view name = {},
     XType type = XType::kInvalid
 );
 
-char const * text(XNode const * elem, char const def[] = nullptr);
+const char * text(const XNode * elem, const char def[] = nullptr);
 
 XAttr * attr(XNode * elem, std::string_view name);
-XAttr const * attr(XNode const * elem, std::string_view name);
+const XAttr * attr(const XNode * elem, std::string_view name);
 
-char const * attrValue(
-    XNode const * elem,
+const char * attrValue(
+    const XNode * elem,
     std::string_view name,
-    char const def[] = nullptr
+    const char def[] = nullptr
 );
 bool attrValue(
-    XNode const * elem,
+    const XNode * elem,
     std::string_view name,
     bool def
 );
@@ -379,11 +379,11 @@ struct XNodeRange {
     XNodeIterator<T> end() { return {nullptr, XType::kInvalid, {}}; }
 };
 XNodeRange<XNode> elems(XNode * elem, std::string_view name = {});
-XNodeRange<XNode const> elems(XNode const * elem, std::string_view name = {});
+XNodeRange<XNode const> elems(const XNode * elem, std::string_view name = {});
 
 XNodeRange<XNode> nodes(XNode * elem, XType type = XType::kInvalid);
 XNodeRange<XNode const> nodes(
-    XNode const * elem,
+    const XNode * elem,
     XType type = XType::kInvalid
 );
 
@@ -402,6 +402,6 @@ template <>
 auto ForwardListIterator<XAttr const>::operator++() -> ForwardListIterator &;
 
 XAttrRange<XAttr> attrs(XNode * elem);
-XAttrRange<XAttr const> attrs(XNode const * elem);
+XAttrRange<XAttr const> attrs(const XNode * elem);
 
 } // namespace

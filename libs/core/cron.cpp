@@ -24,9 +24,9 @@ vector<TokenTable::Token> const Cron::s_macros = {
     { Cron::kDaily, "midnight" },
     { Cron::kHourly, "hourly" },
 };
-TokenTable const Cron::s_macroTbl(s_macros);
+const TokenTable Cron::s_macroTbl(s_macros);
 
-TokenTable::Token const s_wdays[] = {
+const TokenTable::Token s_wdays[] = {
     { 0, "sun" },
     { 1, "mon" },
     { 2, "tue" },
@@ -35,9 +35,9 @@ TokenTable::Token const s_wdays[] = {
     { 5, "fri" },
     { 6, "sat" },
 };
-TokenTable const Cron::s_wdayTbl(s_wdays);
+const TokenTable Cron::s_wdayTbl(s_wdays);
 
-TokenTable::Token const s_months[] = {
+const TokenTable::Token s_months[] = {
     {  1, "jan" },
     {  2, "feb" },
     {  3, "mar" },
@@ -51,7 +51,7 @@ TokenTable::Token const s_months[] = {
     { 11, "nov" },
     { 12, "dec" },
 };
-TokenTable const Cron::s_monTbl(s_months);
+const TokenTable Cron::s_monTbl(s_months);
 
 
 /****************************************************************************

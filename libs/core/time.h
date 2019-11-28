@@ -35,8 +35,8 @@ struct Clock {
         friend std::ostream & operator<<(std::ostream & os, time_point time);
     };
 
-    static bool const is_monotonic = false;
-    static bool const is_steady = false;
+    static const bool is_monotonic = false;
+    static const bool is_steady = false;
 
     static time_point now() noexcept;
 };
@@ -52,7 +52,7 @@ using TimePoint = Clock::time_point;
 TimePoint timeNow();
 
 // C conversions
-time_t to_time_t(TimePoint const & time);
+time_t to_time_t(const TimePoint & time);
 TimePoint from_time_t(time_t t);
 
 
@@ -99,7 +99,7 @@ public:
         int tzMinutes = 0
     );
 
-    char const * c_str() const { return m_data; }
+    const char * c_str() const { return m_data; }
     std::string_view view() const;
 };
 
@@ -131,7 +131,7 @@ int timeZoneMinutes(TimePoint time);
 // supported and set to -1.
 bool timeToDesc(tm * tm, TimePoint time);
 
-bool timeFromDesc(TimePoint * time, tm const & tm);
+bool timeFromDesc(TimePoint * time, const tm & tm);
 
 uint64_t timeToUnix(TimePoint time);
 TimePoint timeFromUnix(uint64_t unixTime);

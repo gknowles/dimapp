@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2018.
+// Copyright Glen Knowles 2017 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // logfile.cpp - dim app
@@ -159,7 +159,7 @@ void Logger::onLog(LogType type, string_view msg) {
 
     char tmp[256];
     assert(sizeof tmp + 2 <= kLogBufferSize);
-    unsigned const kFacility = 3; // system daemons
+    const unsigned kFacility = 3; // system daemons
     int pri = 8 * kFacility;
     switch (type) {
     case kLogTypeFatal: pri += 2; break;
@@ -192,13 +192,13 @@ void Logger::onLog(LogType type, string_view msg) {
 
 namespace {
 class ConfigAppXml : public IConfigNotify {
-    void onConfigChange(XDocument const & doc) override;
+    void onConfigChange(const XDocument & doc) override;
 };
 } // namespace
 static ConfigAppXml s_appXml;
 
 //===========================================================================
-void ConfigAppXml::onConfigChange(XDocument const & doc) {
+void ConfigAppXml::onConfigChange(const XDocument & doc) {
     auto raw = configString(doc, "LogLevel", "warn");
     if (auto level = fromString(raw, kLogTypeInvalid)) {
         s_logLevel = level;

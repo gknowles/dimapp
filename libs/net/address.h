@@ -44,24 +44,24 @@ struct NetAddr {
     bool isIpv4() const;
     uint32_t getIpv4() const;
 
-    bool operator==(NetAddr const & right) const;
-    bool operator<(NetAddr const & right) const;
+    bool operator==(const NetAddr & right) const;
+    bool operator<(const NetAddr & right) const;
     explicit operator bool() const;
 
 private:
-    friend std::ostream & operator<<(std::ostream & os, NetAddr const & addr);
+    friend std::ostream & operator<<(std::ostream & os, const NetAddr & addr);
     friend std::istream & operator>>(std::istream & in, NetAddr & out);
 };
 struct SockAddr {
     NetAddr addr;
     unsigned port{0};
 
-    bool operator==(SockAddr const & right) const;
-    bool operator<(SockAddr const & right) const;
+    bool operator==(const SockAddr & right) const;
+    bool operator<(const SockAddr & right) const;
     explicit operator bool() const;
 
 private:
-    friend std::ostream & operator<<(std::ostream & os, SockAddr const & end);
+    friend std::ostream & operator<<(std::ostream & os, const SockAddr & end);
     friend std::istream & operator>>(std::istream & in, SockAddr & out);
 };
 struct Network {
@@ -72,13 +72,13 @@ struct Network {
 
 namespace std {
 template <> struct hash<Dim::NetAddr> {
-    size_t operator()(Dim::NetAddr const & val) const;
+    size_t operator()(const Dim::NetAddr & val) const;
 };
 template <> struct hash<Dim::SockAddr> {
-    size_t operator()(Dim::SockAddr const & val) const;
+    size_t operator()(const Dim::SockAddr & val) const;
 };
 template <> struct hash<Dim::Network> {
-    size_t operator()(Dim::Network const & val) const;
+    size_t operator()(const Dim::Network & val) const;
 };
 } // namespace std
 
@@ -94,7 +94,7 @@ namespace Dim {
 //===========================================================================
 // Native
 //===========================================================================
-void copy(sockaddr_storage * out, SockAddr const & end);
+void copy(sockaddr_storage * out, const SockAddr & end);
 void copy(SockAddr * out, sockaddr_storage const & storage);
 size_t bytesUsed(sockaddr_storage const & storage);
 
@@ -111,7 +111,7 @@ class ISockAddrNotify {
 public:
     virtual ~ISockAddrNotify() = default;
     // count of 0 means either no results or some kind of error occurred
-    virtual void onSockAddrFound(SockAddr const * ptr, int count) = 0;
+    virtual void onSockAddrFound(const SockAddr * ptr, int count) = 0;
 };
 
 void addressQuery(

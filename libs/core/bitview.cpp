@@ -36,7 +36,7 @@ BitView::BitView(uint64_t * src, size_t srcLen)
 {}
 
 //===========================================================================
-bool BitView::operator==(BitView const & right) const {
+bool BitView::operator==(const BitView & right) const {
     return m_size == right.m_size
         && memcmp(m_data, right.m_data, m_size) == 0;
 }

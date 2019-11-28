@@ -28,11 +28,11 @@ public:
     void read() override;
 
     // Inherited via IAppSocketNotify
-    bool onSocketAccept(AppSocketInfo const & info) override;
+    bool onSocketAccept(const AppSocketInfo & info) override;
     void onSocketDisconnect() override;
     void onSocketDestroy() override;
     bool onSocketRead(AppSocketData & data) override;
-    void onSocketBufferChanged(AppSocketBufferInfo const & info) override;
+    void onSocketBufferChanged(const AppSocketBufferInfo & info) override;
 
 private:
     deque<unsigned> m_delayedReads;
@@ -89,7 +89,7 @@ void TlsSocket::read() {
 }
 
 //===========================================================================
-bool TlsSocket::onSocketAccept (AppSocketInfo const & info) {
+bool TlsSocket::onSocketAccept (const AppSocketInfo & info) {
     m_conn = winTlsAccept();
     return notifyAccept(info);
 }
@@ -132,7 +132,7 @@ bool TlsSocket::onSocketRead (AppSocketData & data) {
 }
 
 //===========================================================================
-void TlsSocket::onSocketBufferChanged(AppSocketBufferInfo const & info) {
+void TlsSocket::onSocketBufferChanged(const AppSocketBufferInfo & info) {
     notifyBufferChanged(info);
 }
 
@@ -159,7 +159,7 @@ AppSocket::MatchType TlsMatch::onMatch(
     string_view view
 ) {
     assert(fam == AppSocket::kTls);
-    char const prefix[] = {
+    const char prefix[] = {
         22, // content-type handshake
         3,  // legacy major record version
         // 1,  // legacy minor record version

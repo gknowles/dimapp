@@ -89,7 +89,7 @@ bool Dim::CronDef<Flags>::parseField(
     std::string_view * src,
     int minLow,
     int maxHigh,
-    Dim::TokenTable const * tbl
+    const Dim::TokenTable * tbl
 ) {
     while (src->front() == ' ')
         src->remove_prefix(1);

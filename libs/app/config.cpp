@@ -15,7 +15,7 @@ using namespace Dim;
 *
 ***/
 
-unsigned const kMaxConfigFileSize = 10'000'000;
+const unsigned kMaxConfigFileSize = 10'000'000;
 
 
 /****************************************************************************
@@ -311,17 +311,17 @@ void Dim::configChange(
 ***/
 
 //===========================================================================
-XNode const * Dim::configElement(
-    ConfigContext const & context,
-    XDocument const & doc,
+const XNode * Dim::configElement(
+    const ConfigContext & context,
+    const XDocument & doc,
     string_view name
 ) {
     return firstChild(doc.root(), name);
 }
 
 //===========================================================================
-XNode const * Dim::configElement(
-    XDocument const & doc,
+const XNode * Dim::configElement(
+    const XDocument & doc,
     string_view name
 ) {
     ConfigContext context;
@@ -329,11 +329,11 @@ XNode const * Dim::configElement(
 }
 
 //===========================================================================
-char const * Dim::configString(
-    ConfigContext const & context,
-    XDocument const & doc,
+const char * Dim::configString(
+    const ConfigContext & context,
+    const XDocument & doc,
     string_view name,
-    char const defVal[]
+    const char defVal[]
 ) {
     auto elem = configElement(context, doc, name);
     auto val = attrValue(elem, "value", defVal);
@@ -341,10 +341,10 @@ char const * Dim::configString(
 }
 
 //===========================================================================
-char const * Dim::configString(
-    XDocument const & doc,
+const char * Dim::configString(
+    const XDocument & doc,
     string_view name,
-    char const defVal[]
+    const char defVal[]
 ) {
     ConfigContext context;
     return configString(context, doc, name, defVal);
@@ -352,8 +352,8 @@ char const * Dim::configString(
 
 //===========================================================================
 double Dim::configNumber(
-    ConfigContext const & context,
-    XDocument const & doc,
+    const ConfigContext & context,
+    const XDocument & doc,
     string_view name,
     double defVal
 ) {
@@ -364,7 +364,7 @@ double Dim::configNumber(
 
 //===========================================================================
 double Dim::configNumber(
-    XDocument const & doc,
+    const XDocument & doc,
     string_view name,
     double defVal
 ) {
@@ -374,8 +374,8 @@ double Dim::configNumber(
 
 //===========================================================================
 Duration Dim::configDuration(
-    ConfigContext const & context,
-    XDocument const & doc,
+    const ConfigContext & context,
+    const XDocument & doc,
     std::string_view name,
     Duration defVal
 ) {
@@ -386,7 +386,7 @@ Duration Dim::configDuration(
 
 //===========================================================================
 Duration Dim::configDuration(
-    XDocument const & doc,
+    const XDocument & doc,
     std::string_view name,
     Duration defVal
 ) {

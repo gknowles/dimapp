@@ -56,7 +56,7 @@ public:
 
 public:
     ~HttpSocket ();
-    bool onSocketAccept(AppSocketInfo const & info) override;
+    bool onSocketAccept(const AppSocketInfo & info) override;
     void onSocketDisconnect() override;
     bool onSocketRead(AppSocketData & data) override;
 
@@ -189,7 +189,7 @@ struct DefaultHeader {
 static vector<DefaultHeader> s_defaultHeaders;
 
 //===========================================================================
-static void setDefaultReplyHeader(DefaultHeader const & val) {
+static void setDefaultReplyHeader(const DefaultHeader & val) {
     auto ii = equal_range(
         s_defaultHeaders.begin(),
         s_defaultHeaders.end(),
@@ -392,7 +392,7 @@ HttpSocket::~HttpSocket () {
 }
 
 //===========================================================================
-bool HttpSocket::onSocketAccept(AppSocketInfo const & info) {
+bool HttpSocket::onSocketAccept(const AppSocketInfo & info) {
     m_conn = httpAccept();
     return true;
 }
@@ -460,7 +460,7 @@ AppSocket::MatchType Http2Match::onMatch(
     string_view view
 ) {
     assert(fam == AppSocket::kHttp2);
-    char const kPrefaceData[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
+    const char kPrefaceData[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
     size_t const kPrefaceDataLen = size(kPrefaceData) - 1;
     size_t num = min(kPrefaceDataLen, view.size());
     if (view.compare(0, num, kPrefaceData, num) != 0)
@@ -486,7 +486,7 @@ class Http1Reject : public IAppSocketMatchNotify, public IAppSocketNotify {
         string_view view
     ) override;
 
-    bool onSocketAccept(AppSocketInfo const & info) override;
+    bool onSocketAccept(const AppSocketInfo & info) override;
     bool onSocketRead(AppSocketData & data) override;
 
 private:
@@ -520,7 +520,7 @@ AppSocket::MatchType Http1Reject::onMatch(
             return AppSocket::kUnknown;
     }
     ptr += 1;
-    char const kVersion[] = "HTTP/1.";
+    const char kVersion[] = "HTTP/1.";
     size_t const kVersionLen = size(kVersion) - 1;
     size_t num = min(kVersionLen, size_t(eptr - ptr));
     if (memcmp(ptr, kVersion, num) != 0)
@@ -532,7 +532,7 @@ AppSocket::MatchType Http1Reject::onMatch(
 }
 
 //===========================================================================
-bool Http1Reject::onSocketAccept(AppSocketInfo const & info) {
+bool Http1Reject::onSocketAccept(const AppSocketInfo & info) {
     m_info = info;
     return true;
 }
@@ -541,13 +541,13 @@ bool Http1Reject::onSocketAccept(AppSocketInfo const & info) {
 bool Http1Reject::onSocketRead(AppSocketData & data) {
     s_perfRejects += 1;
 
-    char const kBody[] = R"(
+    const char kBody[] = R"(
 <html><body>
 <h1>505 Version Not Supported</h1>
 <p>This service requires use of the HTTP/2 protocol</p>
 </body></html>
 )";
-    auto const kBodyLen = size(kBody) - 1;
+    const auto kBodyLen = size(kBody) - 1;
     ostringstream os;
     os << "HTTP/1.1 505 Version Not Supported\r\n"
         "Content-Length: " << kBodyLen << "\r\n"
@@ -587,7 +587,7 @@ static AutoInit s_init;
 } // namespace
 
 //===========================================================================
-int Dim::compareExt(MimeType const & a, MimeType const & b) {
+int Dim::compareExt(const MimeType & a, const MimeType & b) {
     if (!a.fileExt.empty() && !b.fileExt.empty())
         return a.fileExt.compare(b.fileExt);
     return !a.fileExt.empty() ? -1 : !b.fileExt.empty() ? 1 : 0;
@@ -664,7 +664,7 @@ void Dim::iHttpRouteInitialize() {
 ***/
 
 //===========================================================================
-void IHttpRouteNotify::mapParams(HttpRequest const & msg) {
+void IHttpRouteNotify::mapParams(const HttpRequest & msg) {
     if (m_params.empty())
         return;
     if (!m_paramTbl) {
@@ -840,7 +840,7 @@ void Dim::httpRouteAddFile(
         begin(views),
         end(views),
         (size_t) 0,
-        [](auto const & a, auto & b) { return a + b.size() + 1; }
+        [](const auto & a, auto & b) { return a + b.size() + 1; }
     );
     pi.data = make_unique<char[]>(len);
     auto out = pi.data.get();
@@ -939,7 +939,7 @@ void Dim::httpRouteInternalError(unsigned reqId) {
 }
 
 //===========================================================================
-void Dim::httpRouteReplyNotFound(unsigned reqId, HttpRequest const & req) {
+void Dim::httpRouteReplyNotFound(unsigned reqId, const HttpRequest & req) {
     HttpResponse res(kHttpStatusNotFound, "text/html");
     XBuilder bld(&res.body());
     bld << start("html")
@@ -955,7 +955,7 @@ void Dim::httpRouteReplyNotFound(unsigned reqId, HttpRequest const & req) {
 //===========================================================================
 static void makeReply(
     HttpResponse * out,
-    char const url[],
+    const char url[],
     unsigned status,
     std::string_view msg
 ) {
@@ -981,7 +981,7 @@ static void makeReply(
 //===========================================================================
 static void routeReply(
     unsigned reqId,
-    char const url[],
+    const char url[],
     unsigned status,
     std::string_view msg
 ) {
@@ -993,7 +993,7 @@ static void routeReply(
 //===========================================================================
 void Dim::httpRouteReply(
     unsigned reqId,
-    HttpRequest const & req,
+    const HttpRequest & req,
     unsigned status,
     std::string_view msg
 ) {
@@ -1025,7 +1025,7 @@ void Dim::httpRouteReplyRedirect(
 //===========================================================================
 void Dim::httpRouteReplyDirList(
     unsigned reqId,
-    HttpRequest const & msg,
+    const HttpRequest & msg,
     string_view path
 ) {
     auto now = timeNow();
@@ -1051,7 +1051,7 @@ void Dim::httpRouteReplyDirList(
 //===========================================================================
 // AddDefaultReplyHeader
 //===========================================================================
-void Dim::httpRouteSetDefaultReplyHeader(HttpHdr hdr, char const value[]) {
+void Dim::httpRouteSetDefaultReplyHeader(HttpHdr hdr, const char value[]) {
     if (hdr == kHttpInvalid)
         return;
     auto key = DefaultHeader{hdr, {}, value ? value : ""};
@@ -1060,8 +1060,8 @@ void Dim::httpRouteSetDefaultReplyHeader(HttpHdr hdr, char const value[]) {
 
 //===========================================================================
 void Dim::httpRouteSetDefaultReplyHeader(
-    char const name[],
-    char const value[]
+    const char name[],
+    const char value[]
 ) {
     if (auto hdr = httpHdrFromString(name))
         return httpRouteSetDefaultReplyHeader(hdr, value);

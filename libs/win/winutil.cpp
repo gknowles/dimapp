@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2018.
+// Copyright Glen Knowles 2017 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // winutil.cpp - dim windows platform
@@ -16,7 +16,7 @@ using namespace Dim;
 ***/
 
 //===========================================================================
-FARPROC Dim::winLoadProc(char const lib[], char const proc[], bool optional) {
+FARPROC Dim::winLoadProc(const char lib[], const char proc[], bool optional) {
     FARPROC fn = nullptr;
     auto wlib = toWstring(lib);
     HMODULE mod = LoadLibraryW(wlib.c_str());

@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2018.
+// Copyright Glen Knowles 2015 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // types.h - dim core
@@ -28,7 +28,7 @@ enum RunMode {
     kRunStopping,
 };
 
-char const * toString(RunMode mode, char const def[] = "");
+const char * toString(RunMode mode, const char def[] = "");
 RunMode fromString(std::string_view src, RunMode def);
 
 
@@ -46,8 +46,8 @@ protected:
     NoCopy() = default;
     ~NoCopy() = default;
 
-    NoCopy(NoCopy const &) = delete;
-    NoCopy & operator=(NoCopy const &) = delete;
+    NoCopy(const NoCopy &) = delete;
+    NoCopy & operator=(const NoCopy &) = delete;
 };
 
 
@@ -83,7 +83,7 @@ template <typename T>
 class ForwardListIterator {
 public:
     ForwardListIterator(T * node);
-    bool operator!=(ForwardListIterator const & right) const;
+    bool operator!=(const ForwardListIterator & right) const;
     ForwardListIterator & operator++();
     T & operator*();
     T * operator->();
@@ -101,7 +101,7 @@ ForwardListIterator<T>::ForwardListIterator(T * node)
 //===========================================================================
 template <typename T>
 bool ForwardListIterator<T>::operator!=(
-    ForwardListIterator const & right
+    const ForwardListIterator & right
 ) const {
     return m_current != right.m_current;
 }

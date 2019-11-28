@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2018.
+// Copyright Glen Knowles 2015 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // log.h - dim core
@@ -27,7 +27,7 @@ enum LogType {
     kLogTypeFatal,
     kLogTypes
 };
-char const * toString(LogType type, char const def[]);
+const char * toString(LogType type, const char def[]);
 LogType fromString(std::string_view src, LogType def);
 
 namespace Detail {

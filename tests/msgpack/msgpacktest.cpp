@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2018.
+// Copyright Glen Knowles 2018 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // msgpacktest.cpp - dim test msgpack
@@ -170,7 +170,7 @@ static void app(int argc, char *argv[]) {
     bld.element("compact", true);
     bld.element("schema", 0);
 
-    char const kExpect1[] = "\x82\xa7" "compact\xc3\xa6schema\x0";
+    const char kExpect1[] = "\x82\xa7" "compact\xc3\xa6schema\x0";
     auto ev = string_view(kExpect1, size(kExpect1) - 1);
     EXPECT(buf.view() == ev);
 

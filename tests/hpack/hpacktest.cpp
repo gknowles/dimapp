@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2018.
+// Copyright Glen Knowles 2016 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // hpacktest.cpp - dim test hpack
@@ -18,11 +18,11 @@ using namespace Dim;
 namespace {
 
 struct NameValue {
-    char const * name;
-    char const * value;
+    const char * name;
+    const char * value;
     HpackFlags flags;
 
-    bool operator==(NameValue const & right) const;
+    bool operator==(const NameValue & right) const;
 };
 
 class Reader : public IHpackDecodeNotify {
@@ -32,16 +32,16 @@ public:
 private:
     void onHpackHeader(
         HttpHdr id,
-        char const name[],
-        char const value[],
+        const char name[],
+        const char value[],
         HpackFlags flags
     ) override;
 };
 
 struct Test {
-    char const * name;
+    const char * name;
     bool reset;
-    char const * input;
+    const char * input;
     bool result;
     vector<NameValue> headers;
     vector<NameValue> dynTable;
@@ -56,7 +56,7 @@ struct Test {
 *
 ***/
 
-Test const s_tests[] = {
+const Test s_tests[] = {
     {"C.2.1",
      true,
      // @.custom-key.cus
@@ -347,14 +347,14 @@ Test const s_tests[] = {
 ***/
 
 //===========================================================================
-bool NameValue::operator==(NameValue const & right) const {
+bool NameValue::operator==(const NameValue & right) const {
     return strcmp(name, right.name) == 0
         && strcmp(value, right.value) == 0
         && flags == right.flags;
 }
 
 //===========================================================================
-bool operator==(NameValue const & left, Dim::HpackDynField const & right) {
+bool operator==(const NameValue & left, const Dim::HpackDynField & right) {
     return right.name == left.name
         && right.value == left.value;
 }
@@ -369,8 +369,8 @@ bool operator==(NameValue const & left, Dim::HpackDynField const & right) {
 //===========================================================================
 void Reader::onHpackHeader(
     HttpHdr id,
-    char const name[],
-    char const value[],
+    const char name[],
+    const char value[],
     HpackFlags flags
 ) {
     cout << name << ": " << value << "\n";

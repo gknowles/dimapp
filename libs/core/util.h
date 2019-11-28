@@ -56,7 +56,7 @@ constexpr unsigned hexToNibbleUnsafe(char ch) {
 //===========================================================================
 constexpr char hexFromNibble(unsigned val) {
     assert(val < 16);
-    char const s_chars[] = "0123456789abcdef";
+    const char s_chars[] = "0123456789abcdef";
     return s_chars[val];
 }
 
@@ -77,39 +77,39 @@ std::ostream & hexByte(std::ostream & os, char data);
 ***/
 
 //===========================================================================
-constexpr uint8_t ntoh8(void const * vptr) {
-    auto ptr = static_cast<char const *>(vptr);
+constexpr uint8_t ntoh8(const void * vptr) {
+    auto ptr = static_cast<const char *>(vptr);
     return (uint8_t)ptr[0];
 }
 
 //===========================================================================
-constexpr uint16_t ntoh16(void const * vptr) {
+constexpr uint16_t ntoh16(const void * vptr) {
     auto val = *static_cast<uint16_t const *>(vptr);
     return bswap16(val);
 }
 
 //===========================================================================
-constexpr uint32_t ntoh24(void const * vptr) {
-    auto ptr = static_cast<char const *>(vptr);
+constexpr uint32_t ntoh24(const void * vptr) {
+    auto ptr = static_cast<const char *>(vptr);
     return ((uint32_t)(uint8_t)ptr[0] << 16)
         + ((uint32_t)(uint8_t)ptr[1] << 8)
         + (uint8_t)ptr[2];
 }
 
 //===========================================================================
-constexpr uint32_t ntoh32(void const * vptr) {
+constexpr uint32_t ntoh32(const void * vptr) {
     auto val = *static_cast<uint32_t const *>(vptr);
     return bswap32(val);
 }
 
 //===========================================================================
-constexpr uint64_t ntoh64(void const * vptr) {
+constexpr uint64_t ntoh64(const void * vptr) {
     auto val = *static_cast<uint64_t const *>(vptr);
     return bswap64(val);
 }
 
 //===========================================================================
-constexpr float ntohf32(void const * vptr) {
+constexpr float ntohf32(const void * vptr) {
     float val = 0;
     static_assert(sizeof val == 4 && std::numeric_limits<float>::is_iec559);
     *((uint32_t*) &val) = ntoh32(vptr);
@@ -117,7 +117,7 @@ constexpr float ntohf32(void const * vptr) {
 }
 
 //===========================================================================
-constexpr double ntohf64(void const * vptr) {
+constexpr double ntohf64(const void * vptr) {
     double val = 0;
     static_assert(sizeof val == 8 && std::numeric_limits<float>::is_iec559);
     *((uint64_t*) &val) = ntoh64(vptr);
@@ -172,7 +172,7 @@ constexpr char * htonf64(void * out, double val) {
 *
 *   Example usage:
 *   // Service interface
-*   void socketListen(IFactory<ISocketNotify> * fact, SockAddr const & e);
+*   void socketListen(IFactory<ISocketNotify> * fact, const SockAddr & e);
 *
 *   // Client implementation
 *   class MySocket : public ISocketNotify {

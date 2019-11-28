@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2018.
+// Copyright Glen Knowles 2016 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // util.cpp - dim core
@@ -50,7 +50,7 @@ void Dim::cryptRandomBytes(void * vptr, size_t count) {
 *
 ***/
 
-static unsigned char const s_hexToNibble[256] = {
+static const unsigned char s_hexToNibble[256] = {
     16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
     16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
     16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,

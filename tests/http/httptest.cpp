@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2018.
+// Copyright Glen Knowles 2016 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // httptest.cpp - dim test http
@@ -18,20 +18,20 @@ using namespace Dim;
 namespace {
 
 struct NameValue {
-    char const * name;
-    char const * value;
+    const char * name;
+    const char * value;
     unsigned flags;
 
-    bool operator==(NameValue const & right) const;
+    bool operator==(const NameValue & right) const;
 };
 
 struct TestMsg {
     vector<NameValue> headers;
-    char const * body;
+    const char * body;
 };
 
 struct Test {
-    char const * name;
+    const char * name;
     bool reset;
     string input;
     bool result;
@@ -49,7 +49,7 @@ struct Test {
 ***/
 
 // clang-format off
-Test const s_tests[] = {
+const Test s_tests[] = {
     {
         "/a", true,
         {

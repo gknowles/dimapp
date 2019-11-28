@@ -28,11 +28,11 @@ public:
 
 public:
     BitView() = default;
-    BitView(BitView const & from) = default;
+    BitView(const BitView & from) = default;
     BitView(uint64_t * src, size_t srcLen);
 
     explicit operator bool() const { return !empty(); }
-    bool operator==(BitView const & right) const;
+    bool operator==(const BitView & right) const;
 
     bool empty() const { return !m_size; }    // view across nothing
     size_t size() const { return m_size; }    // number of uint64_t's

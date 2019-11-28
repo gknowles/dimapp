@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2018.
+// Copyright Glen Knowles 2018 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // jsonparseimplint.h - dim json
@@ -135,7 +135,7 @@ inline bool JsonParser::onSvalEnd () {
 }
 
 //===========================================================================
-inline bool JsonParser::onStrTextStart (char const * ptr) {
+inline bool JsonParser::onStrTextStart (const char * ptr) {
     m_base = m_cur = (char *) ptr;
     return true;
 }

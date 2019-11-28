@@ -64,19 +64,19 @@ public:
     virtual ~IAppSocketNotify () = default;
 
     // for connectors
-    virtual void onSocketConnect(AppSocketInfo const & info) {};
+    virtual void onSocketConnect(const AppSocketInfo & info) {};
     virtual void onSocketConnectFailed() {};
     virtual void onSocketPingRequired() {};
 
     // for listeners
     // Returns true if the socket is accepted, false to disconnect
-    virtual bool onSocketAccept(AppSocketInfo const & info) { return true; };
+    virtual bool onSocketAccept(const AppSocketInfo & info) { return true; };
 
     // for both
     virtual void onSocketDisconnect() {};
     virtual void onSocketDestroy() { delete this; }
     virtual bool onSocketRead(AppSocketData & data) = 0;
-    virtual void onSocketBufferChanged(AppSocketBufferInfo const & info) {}
+    virtual void onSocketBufferChanged(const AppSocketBufferInfo & info) {}
 
 private:
     friend class IAppSocket;
@@ -85,7 +85,7 @@ private:
 
 void socketDisconnect(IAppSocketNotify * notify);
 void socketWrite(IAppSocketNotify * notify, std::string_view data);
-void socketWrite(IAppSocketNotify * notify, CharBuf const & data);
+void socketWrite(IAppSocketNotify * notify, const CharBuf & data);
 void socketRead(IAppSocketNotify * notify);
 
 
@@ -97,8 +97,8 @@ void socketRead(IAppSocketNotify * notify);
 
 void socketConnect(
     IAppSocketNotify * notify,
-    SockAddr const & remote,
-    SockAddr const & local = {},
+    const SockAddr & remote,
+    const SockAddr & local = {},
     std::string_view initialData = {},
     Duration timeout = {}
 );
@@ -140,13 +140,13 @@ void socketAddFamily(AppSocket::Family fam, IAppSocketMatchNotify * notify);
 
 void socketListen(
     IFactory<IAppSocketNotify> * factory,
-    SockAddr const & end,
+    const SockAddr & end,
     AppSocket::Family fam,
     bool console = false // console connections for monitoring
 );
 void socketCloseWait(
     IFactory<IAppSocketNotify> * factory,
-    SockAddr const & end,
+    const SockAddr & end,
     AppSocket::Family fam
 );
 
@@ -157,7 +157,7 @@ void socketCloseWait(
 //===========================================================================
 template <typename S>
 inline void socketListen(
-    SockAddr const & end,
+    const SockAddr & end,
     AppSocket::Family fam,
     bool console = false
 ) {
@@ -168,7 +168,7 @@ inline void socketListen(
 
 //===========================================================================
 template <typename S>
-inline void socketCloseWait(SockAddr const & end, AppSocket::Family fam) {
+inline void socketCloseWait(const SockAddr & end, AppSocket::Family fam) {
     static_assert(std::is_base_of_v<IAppSocketNotify, S>);
     auto factory = getFactory<IAppSocketNotify, S>();
     socketCloseWait(factory, end, fam);
@@ -187,13 +187,13 @@ inline void socketCloseWait(SockAddr const & end, AppSocket::Family fam) {
 
 void socketAddFilter(
     IFactory<IAppSocketNotify> * factory,
-    SockAddr const & end,
+    const SockAddr & end,
     AppSocket::Family fam
 );
 
 //===========================================================================
 template <typename S>
-inline void socketAddFilter(SockAddr const & end, AppSocket::Family fam) {
+inline void socketAddFilter(const SockAddr & end, AppSocket::Family fam) {
     static_assert(std::is_base_of_v<IAppSocketNotify, S>);
     auto factory = getFactory<IAppSocketNotify, S>();
     socketAddFilter(factory, end, fam);

@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2018.
+// Copyright Glen Knowles 2015 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // wintime.cpp - dim windows platform
@@ -53,7 +53,7 @@ int Dim::timeZoneMinutes(TimePoint time) {
 }
 
 //===========================================================================
-bool Dim::timeFromDesc(TimePoint * time, tm const & tm) {
+bool Dim::timeFromDesc(TimePoint * time, const tm & tm) {
     auto src = tm;
     auto t = _mkgmtime(&src); // Microsoft extension, libc has timegm()
     if (t == -1) {

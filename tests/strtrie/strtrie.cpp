@@ -56,9 +56,9 @@ using namespace Dim;
 
 namespace {
 
-unsigned const kNodeLen = 18;
-unsigned const kMaxSegLen = 32;
-unsigned const kMaxValueLen = 16;
+const unsigned kNodeLen = 18;
+const unsigned kMaxSegLen = 32;
+const unsigned kMaxValueLen = 16;
 
 enum NodeType : int8_t {
     kNodeInvalid,
@@ -109,7 +109,7 @@ struct StrTrieBase::SearchState {
 namespace Dim {
 
 //===========================================================================
-constexpr NodeType nodeType(StrTrieBase::Node const * node) {
+constexpr NodeType nodeType(const StrTrieBase::Node * node) {
     return NodeType(*node->data & 0x7);
 }
 
@@ -136,12 +136,12 @@ static void setSegLen(StrTrieBase::Node * node, size_t len) {
 }
 
 //===========================================================================
-static uint8_t getSegLen(StrTrieBase::Node const * node) {
+static uint8_t getSegLen(const StrTrieBase::Node * node) {
     return (*node->data >> 3) + 1;
 }
 
 //===========================================================================
-static uint8_t getSegVal(StrTrieBase::Node const * node, size_t pos) {
+static uint8_t getSegVal(const StrTrieBase::Node * node, size_t pos) {
     assert((node->data[0] & 0x7) == kNodeSeg);
     return pos % 2 == 0
         ? (node->data[2 + pos / 2] >> 4)
@@ -164,13 +164,13 @@ static uint8_t pushSegVal(
 }
 
 //===========================================================================
-static size_t getSegNodesRequired (StrTrieBase::SearchState const & ss) {
+static size_t getSegNodesRequired (const StrTrieBase::SearchState & ss) {
     return (ss.klen - ss.kpos + kMaxSegLen - 1) / kMaxSegLen;
 }
 
 //===========================================================================
 static uint8_t getFork(
-    StrTrieBase::Node const * node,
+    const StrTrieBase::Node * node,
     size_t pos
 ) {
     assert((node->data[0] & 0x7) == kNodeFork);
@@ -198,7 +198,7 @@ static size_t setFork(
 //===========================================================================
 StrTrieBase::Node * StrTrieBase::nodeAppend(
     size_t pgno,
-    StrTrieBase::Node const * node
+    const StrTrieBase::Node * node
 ) {
     auto ptr = (Node *) m_heap.ptr(pgno);
     auto & last = ptr->data[m_heap.pageSize() - 1];
@@ -221,7 +221,7 @@ StrTrieBase::Node * StrTrieBase::nodeAt(size_t pgno, size_t pos) {
 }
 
 //===========================================================================
-StrTrieBase::Node const * StrTrieBase::nodeAt(
+const StrTrieBase::Node * StrTrieBase::nodeAt(
     size_t pgno,
     size_t pos
 ) const {
@@ -242,7 +242,7 @@ size_t StrTrieBase::capacity(size_t pgno) const {
 //===========================================================================
 static void addNode (
     vector<OverflowNode> * out,
-    StrTrieBase::Node const & node
+    const StrTrieBase::Node & node
 ) {
     switch (auto type = nodeType(&node)) {
     default:
@@ -558,7 +558,7 @@ bool StrTrieBase::lowerBound(string * out, std::string_view key) const {
     auto kval = getKeyVal(key, kpos);
     auto pgno = m_heap.root();
     auto inode = 0;
-    auto node = (Node const *) nullptr;
+    auto node = (const Node *) nullptr;
 
     while (inode != 255) {
         node = nodeAt(pgno, inode);

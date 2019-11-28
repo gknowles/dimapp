@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2018.
+// Copyright Glen Knowles 2015 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // handle.h - dim core
@@ -104,7 +104,7 @@ public:
     Iterator() {}
     Iterator(Node * base, Node * end);
 
-    bool operator!=(Iterator const & right) const;
+    bool operator!=(const Iterator & right) const;
     std::pair<H, T *> operator*();
     Iterator & operator++();
 };
@@ -125,7 +125,7 @@ HandleMapBase::Iterator<H, T>::Iterator(Node * base, Node * end)
 
 //===========================================================================
 template<typename H, typename T>
-bool HandleMapBase::Iterator<H, T>::operator!=(Iterator const & right) const {
+bool HandleMapBase::Iterator<H, T>::operator!=(const Iterator & right) const {
     return node != right.node;
 }
 

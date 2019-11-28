@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2018.
+// Copyright Glen Knowles 2018 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // jdocument.cpp - dim json
@@ -277,7 +277,7 @@ JNodeIterator::JNodeIterator(JNode * node)
 
 //===========================================================================
 JNodeIterator JNodeIterator::operator++() {
-    auto ni = static_cast<JNodeInfo const *>(m_current);
+    auto ni = static_cast<const JNodeInfo *>(m_current);
     m_current = ni->parent->vals.next(ni);
     return *this;
 }
@@ -295,8 +295,8 @@ JNodeIterator Dim::nodes(JNode * node) {
 *
 ***/
 
-IJBuilder & Dim::operator<<(IJBuilder & out, JNode const & node) {
-    auto & ni = static_cast<JNodeInfo const &>(node);
+IJBuilder & Dim::operator<<(IJBuilder & out, const JNode & node) {
+    auto & ni = static_cast<const JNodeInfo &>(node);
     if (!ni.name.empty())
         out.member(ni.name);
     switch (node.type) {
@@ -333,13 +333,13 @@ IJBuilder & Dim::operator<<(IJBuilder & out, JNode const & node) {
 }
 
 //===========================================================================
-JNode::JType Dim::nodeType(JNode const * node) {
+JNode::JType Dim::nodeType(const JNode * node) {
     return node->type;
 }
 
 //===========================================================================
-string_view Dim::nodeName(JNode const * node) {
-    return static_cast<JNodeInfo const *>(node)->name;
+string_view Dim::nodeName(const JNode * node) {
+    return static_cast<const JNodeInfo *>(node)->name;
 }
 
 //===========================================================================

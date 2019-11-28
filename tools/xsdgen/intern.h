@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2018.
+// Copyright Glen Knowles 2018 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // intern.h - xsdgen
@@ -11,7 +11,7 @@
 *
 ***/
 
-char const kVersion[] = "1.0.0";
+const char kVersion[] = "1.0.0";
 
 
 /****************************************************************************
@@ -105,8 +105,8 @@ struct Schema {
 *
 ***/
 
-bool writeXsd(Dim::CharBuf * out, Schema const & schema);
+bool writeXsd(Dim::CharBuf * out, const Schema & schema);
 
 Attr::Content convert(Element::Content ec);
 
-void updateXmlFile(Dim::Path const & name, Dim::CharBuf const & content);
+void updateXmlFile(const Dim::Path & name, const Dim::CharBuf & content);

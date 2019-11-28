@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2018.
+// Copyright Glen Knowles 2015 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // app.cpp - dim app
@@ -74,13 +74,13 @@ static Path makeAppDir(string_view path) {
 
 namespace {
 class ConfigAppXml : public IConfigNotify {
-    void onConfigChange(XDocument const & doc) override;
+    void onConfigChange(const XDocument & doc) override;
 };
 } // namespace
 static ConfigAppXml s_appXml;
 
 //===========================================================================
-void ConfigAppXml::onConfigChange(XDocument const & doc) {
+void ConfigAppXml::onConfigChange(const XDocument & doc) {
     shutdownDisableTimeout(configNumber(doc, "DisableShutdownTimeout"));
     s_logDir = makeAppDir(configString(doc, "LogDir", "log"));
     s_dataDir = makeAppDir(configString(doc, "DataDir", "data"));
@@ -185,7 +185,7 @@ void Dim::iAppSetFlags(AppFlags flags) {
 ***/
 
 //===========================================================================
-string const & Dim::appName() {
+const string & Dim::appName() {
     return s_appName;
 }
 
@@ -205,12 +205,12 @@ int Dim::appExitCode() {
 }
 
 //===========================================================================
-Path const & Dim::appRootDir() {
+const Path & Dim::appRootDir() {
     return s_rootDir;
 }
 
 //===========================================================================
-Path const & Dim::appConfigDir() {
+const Path & Dim::appConfigDir() {
     return s_confDir;
 }
 
@@ -220,7 +220,7 @@ bool Dim::appConfigPath(Path * out, string_view file, bool cine) {
 }
 
 //===========================================================================
-Path const & Dim::appLogDir() {
+const Path & Dim::appLogDir() {
     return s_logDir;
 }
 
@@ -230,7 +230,7 @@ bool Dim::appLogPath(Path * out, string_view file, bool cine) {
 }
 
 //===========================================================================
-Path const & Dim::appDataDir() {
+const Path & Dim::appDataDir() {
     return s_dataDir;
 }
 
@@ -240,7 +240,7 @@ bool Dim::appDataPath(Path * out, string_view file, bool cine) {
 }
 
 //===========================================================================
-Path const & Dim::appCrashDir() {
+const Path & Dim::appCrashDir() {
     return s_crashDir;
 }
 
