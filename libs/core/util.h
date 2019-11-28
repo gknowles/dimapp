@@ -110,16 +110,16 @@ constexpr uint64_t ntoh64(void const * vptr) {
 
 //===========================================================================
 constexpr float ntohf32(void const * vptr) {
-    static_assert(sizeof(float) == 4 && std::numeric_limits<float>::is_iec559);
     float val = 0;
+    static_assert(sizeof val == 4 && std::numeric_limits<float>::is_iec559);
     *((uint32_t*) &val) = ntoh32(vptr);
     return val;
 }
 
 //===========================================================================
 constexpr double ntohf64(void const * vptr) {
-    static_assert(sizeof(double) == 8 && std::numeric_limits<float>::is_iec559);
     double val = 0;
+    static_assert(sizeof val == 8 && std::numeric_limits<float>::is_iec559);
     *((uint64_t*) &val) = ntoh64(vptr);
     return val;
 }

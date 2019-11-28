@@ -36,13 +36,13 @@ public:
 //===========================================================================
 template <typename T, typename... Args>
 inline T * ITempHeap::emplace(Args &&... args) {
-    char * tmp = alloc(sizeof(T), alignof(T));
+    char * tmp = alloc(sizeof T, alignof(T));
     return new (tmp) T(args...);
 }
 
 //===========================================================================
 template <typename T> inline T * ITempHeap::alloc(size_t num) {
-    char * tmp = alloc(num * sizeof(T), alignof(T));
+    char * tmp = alloc(num * sizeof T, alignof(T));
     return new (tmp) T[num];
 }
 

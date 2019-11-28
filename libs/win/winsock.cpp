@@ -137,7 +137,7 @@ void SocketBase::hardClose() {
     linger opt = {};
     opt.l_onoff = true;
     opt.l_linger = 0;
-    setsockopt(m_handle, SOL_SOCKET, SO_LINGER, (char *)&opt, sizeof(opt));
+    setsockopt(m_handle, SOL_SOCKET, SO_LINGER, (char *)&opt, sizeof opt);
     closesocket(m_handle);
 
     m_mode = Mode::kClosing;
@@ -518,15 +518,15 @@ void Dim::iSocketInitialize() {
 
     // get RIO functions
     GUID extId = WSAID_MULTIPLE_RIO;
-    s_rio.cbSize = sizeof(s_rio);
+    s_rio.cbSize = sizeof s_rio;
     DWORD bytes;
     if (WSAIoctl(
         s,
         SIO_GET_MULTIPLE_EXTENSION_FUNCTION_POINTER,
         &extId,
-        sizeof(extId),
+        sizeof extId,
         &s_rio,
-        sizeof(s_rio),
+        sizeof s_rio,
         &bytes,
         nullptr, // overlapped
         nullptr  // completion routine
@@ -540,9 +540,9 @@ void Dim::iSocketInitialize() {
         s,
         SIO_GET_EXTENSION_FUNCTION_POINTER,
         &extId,
-        sizeof(extId),
+        sizeof extId,
         &SocketBase::s_AcceptEx,
-        sizeof(SocketBase::s_AcceptEx),
+        sizeof SocketBase::s_AcceptEx,
         &bytes,
         nullptr, // overlapped
         nullptr  // completion routine
@@ -555,9 +555,9 @@ void Dim::iSocketInitialize() {
         s,
         SIO_GET_EXTENSION_FUNCTION_POINTER,
         &extId,
-        sizeof(extId),
+        sizeof extId,
         &SocketBase::s_GetAcceptExSockaddrs,
-        sizeof(SocketBase::s_GetAcceptExSockaddrs),
+        sizeof SocketBase::s_GetAcceptExSockaddrs,
         &bytes,
         nullptr, // overlapped
         nullptr  // completion routine
@@ -571,9 +571,9 @@ void Dim::iSocketInitialize() {
         s,
         SIO_GET_EXTENSION_FUNCTION_POINTER,
         &extId,
-        sizeof(extId),
+        sizeof extId,
         &SocketBase::s_ConnectEx,
-        sizeof(SocketBase::s_ConnectEx),
+        sizeof SocketBase::s_ConnectEx,
         &bytes,
         nullptr, // overlapped
         nullptr  // completion routine
@@ -581,7 +581,7 @@ void Dim::iSocketInitialize() {
         logMsgFatal() << "WSAIoctl(get ConnectEx): " << WinError{};
     }
 
-    int piLen = sizeof(s_protocolInfo);
+    int piLen = sizeof s_protocolInfo;
     if (getsockopt(
         s,
         SOL_SOCKET,
@@ -636,7 +636,7 @@ SOCKET Dim::iSocketCreate() {
     if (SOCKET_ERROR == WSAIoctl(
         handle,
         SIO_LOOPBACK_FAST_PATH,
-        &yes, sizeof(yes),
+        &yes, sizeof yes,
         nullptr, 0, // output buffer, buffer size
         &bytes,     // bytes returned
         nullptr,    // overlapped
@@ -650,7 +650,7 @@ SOCKET Dim::iSocketCreate() {
         IPPROTO_TCP,
         TCP_NODELAY,
         (char *) &yes,
-        sizeof(yes)
+        sizeof yes
     )) {
         logMsgError() << "setsockopt(TCP_NODELAY): " << WinError{};
     }
@@ -660,14 +660,14 @@ SOCKET Dim::iSocketCreate() {
         SOL_SOCKET,
         SO_REUSE_UNICASTPORT,
         (char *) &yes,
-        sizeof(yes)
+        sizeof yes
     )) {
         if (SOCKET_ERROR == setsockopt(
             handle,
             SOL_SOCKET,
             SO_PORT_SCALABILITY,
             (char *) &yes,
-            sizeof(yes)
+            sizeof yes
         )) {
             logMsgError() << "setsockopt(SO_PORT_SCALABILITY): " << WinError{};
         }
@@ -678,7 +678,7 @@ SOCKET Dim::iSocketCreate() {
         IPPROTO_TCP,
         TCP_FASTOPEN,
         (char *) &yes,
-        sizeof(yes)
+        sizeof yes
     )) {
         if (IsWindowsVersionOrGreater(10, 0, 1607))
             logMsgDebug() << "setsockopt(TCP_FASTOPEN): " << WinError{};
@@ -695,7 +695,7 @@ SOCKET Dim::iSocketCreate(SockAddr const & end) {
 
     sockaddr_storage sas;
     copy(&sas, end);
-    if (SOCKET_ERROR == ::bind(handle, (sockaddr *)&sas, sizeof(sas))) {
+    if (SOCKET_ERROR == ::bind(handle, (sockaddr *)&sas, sizeof sas)) {
         logMsgError() << "bind(" << end << "): " << WinError{};
         closesocket(handle);
         return INVALID_SOCKET;

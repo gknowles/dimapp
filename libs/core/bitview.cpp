@@ -127,7 +127,7 @@ size_t BitView::count() const {
 
 //===========================================================================
 BitView & BitView::set() {
-    memset(m_data, 0xff, m_size * sizeof(*m_data));
+    memset(m_data, 0xff, m_size * sizeof *m_data);
     return *this;
 }
 
@@ -175,7 +175,7 @@ BitView & BitView::set(size_t bitpos, size_t bitcount, uint64_t value) {
 
 //===========================================================================
 BitView & BitView::reset() {
-    memset(m_data, 0, m_size * sizeof(*m_data));
+    memset(m_data, 0, m_size * sizeof *m_data);
     return *this;
 }
 

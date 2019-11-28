@@ -167,7 +167,7 @@ void ConnSocket::connect(
     bool error = !s_ConnectEx(
         task->m_socket->m_handle,
         (sockaddr *) &sas,
-        sizeof(sas),
+        sizeof sas,
         (void *) data.data(), // send buffer
         (DWORD) data.size(),  // send buffer length
         &bytes, // bytes sent
@@ -232,7 +232,7 @@ void ConnSocket::onConnect(WinError error, int bytes) {
     sockaddr_storage sas = {};
 
     // address of remote node
-    int sasLen = sizeof(sas);
+    int sasLen = sizeof sas;
     if (SOCKET_ERROR == getpeername(m_handle, (sockaddr *)&sas, &sasLen)) {
         logMsgError() << "getpeername: " << WinError{};
         return connectFailed();
@@ -319,7 +319,7 @@ void Dim::iSocketSetConnectTimeout(SOCKET s, Duration wait) {
     if (SOCKET_ERROR == WSAIoctl(
         s,
         SIO_TCP_INITIAL_RTO,
-        &params[0], sizeof(params),
+        &params[0], sizeof params,
         nullptr, 0, // output buffer, buffer size
         &bytes,     // bytes returned
         nullptr,    // overlapped
@@ -339,7 +339,7 @@ void Dim::iSocketSetConnectTimeout(SOCKET s, Duration wait) {
         IPPROTO_TCP,
         TCP_MAXRT,
         (char *) &val,
-        sizeof(val)
+        sizeof val
     )) {
         logMsgError() << "setsockopt(TCP_MAXRT): " << WinError{};
     }

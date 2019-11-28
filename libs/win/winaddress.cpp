@@ -43,7 +43,7 @@ ostream & Dim::operator<<(ostream & os, NetAddr const & addr) {
 //===========================================================================
 bool Dim::parse(SockAddr * end, string_view src, int defaultPort) {
     sockaddr_storage sas;
-    int sasLen = sizeof(sas);
+    int sasLen = sizeof sas;
     auto tmp = toWstring(src);
     if (SOCKET_ERROR == WSAStringToAddressW(
         tmp.data(),
@@ -77,7 +77,7 @@ ostream & Dim::operator<<(ostream & os, SockAddr const & src) {
     DWORD tmpLen = (DWORD) size(tmp);
     if (SOCKET_ERROR == WSAAddressToStringW(
         (sockaddr *)&sas,
-        sizeof(sas),
+        sizeof sas,
         NULL, // protocol info
         tmp,
         &tmpLen
@@ -136,6 +136,16 @@ void Dim::copy(SockAddr * out, sockaddr_storage const & storage) {
         out->addr.data[1] = ntohl(uint32addr[1]);
         out->addr.data[2] = ntohl(uint32addr[2]);
         out->addr.data[3] = ntohl(uint32addr[3]);
+    }
+}
+
+//===========================================================================
+size_t Dim::bytesUsed(sockaddr_storage const & storage) {
+    if (storage.ss_family == AF_INET) {
+        return sizeof sockaddr_in;
+    } else {
+        assert(storage.ss_family == AF_INET6);
+        return sizeof sockaddr_in6;
     }
 }
 

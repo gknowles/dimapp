@@ -34,7 +34,7 @@ static void app(int argc, char *argv[]) {
 
     uint64_t buf[3] = {};
     BitView v(buf, size(buf));
-    string_view sv((char *) buf, sizeof(buf));
+    string_view sv((char *) buf, sizeof buf);
     EXPECT(v.size() == 3);
     EXPECT(v.count() == 0);
     v.set().set(24, 64, (uint64_t) 0x0123'4567'89ab'cdef);

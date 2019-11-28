@@ -180,8 +180,8 @@ static bool getAcceptInfo(SocketInfo * out, SOCKET s, void * buffer) {
     SocketBase::s_GetAcceptExSockaddrs(
         buffer,
         0,
-        sizeof(sockaddr_storage),
-        sizeof(sockaddr_storage),
+        sizeof sockaddr_storage,
+        sizeof sockaddr_storage,
         &lsa,
         &lsaLen,
         &rsa,

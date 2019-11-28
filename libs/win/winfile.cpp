@@ -171,7 +171,7 @@ size_t IFileOpBase::start(
     taskPush(s_hq, this);
     this_thread::yield();
     while (m_trigger == waiting) {
-        WaitOnAddress(&m_trigger, &waiting, sizeof(m_trigger), INFINITE);
+        WaitOnAddress(&m_trigger, &waiting, sizeof m_trigger, INFINITE);
     }
     if (m_err)
         winFileSetErrno(m_err);
@@ -580,7 +580,7 @@ static string getName(HANDLE handle) {
     char tbuf[256];
     unique_ptr<char[]> buf;
     auto fni = (FILE_NAME_INFO *) tbuf;
-    DWORD bufLen = sizeof(tbuf);
+    DWORD bufLen = sizeof tbuf;
     for (;;) {
         if (GetFileInformationByHandleEx(
             handle,
@@ -597,7 +597,7 @@ static string getName(HANDLE handle) {
             return {};
         }
 
-        bufLen = sizeof(*fni) + 2 * fni->FileNameLength;
+        bufLen = sizeof *fni + 2 * fni->FileNameLength;
         buf = make_unique<char[]>(bufLen);
         fni = (FILE_NAME_INFO *) buf.get();
     }

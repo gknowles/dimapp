@@ -989,14 +989,14 @@ size_t std::hash<StateKey>::operator()(StateKey const & val) const {
     for (auto && sv : val.events) {
         hashCombine(&out, hash<StateEvent>{}(sv));
     }
-    hashCombine(&out, hashBytes(val.next, sizeof(val.next)));
+    hashCombine(&out, hashBytes(val.next, sizeof val.next));
     return out;
 }
 
 //===========================================================================
 bool StateKey::operator==(StateKey const & right) const {
     return events == right.events
-        && memcmp(next, right.next, sizeof(next)) == 0;
+        && memcmp(next, right.next, sizeof next) == 0;
 }
 
 //===========================================================================
@@ -1008,7 +1008,7 @@ bool StateKey::operator!=(StateKey const & right) const {
 static void copy(StateKey & out, State const & st) {
     out.events = st.positions.begin()->first.events;
     if (st.next.empty()) {
-        memset(out.next, 0, sizeof(out.next));
+        memset(out.next, 0, sizeof out.next);
         return;
     }
     assert(st.next.size() == 257);

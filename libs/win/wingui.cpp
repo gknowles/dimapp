@@ -89,7 +89,7 @@ static void setItemText(HWND wnd, int item, int col, string_view text) {
     li.iSubItem = col;
     li.mask = LVIF_TEXT;
     li.pszText = (LPWSTR) tmp;
-    li.cchTextMax = sizeof(tmp);
+    li.cchTextMax = sizeof tmp;
     if (!ListView_GetItem(wnd, &li) || wtext != li.pszText)
         ListView_SetItemText(wnd, item, col, (LPWSTR) wtext.data());
 }
@@ -184,7 +184,7 @@ static LRESULT CALLBACK perfWindowProc(
 //===========================================================================
 static HWND createPerfWindow() {
     WNDCLASSEXW wc = {};
-    wc.cbSize = sizeof(wc);
+    wc.cbSize = sizeof wc;
     wc.style = CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc = perfWindowProc;
     wc.hInstance = GetModuleHandle(NULL);

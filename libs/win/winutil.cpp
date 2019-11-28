@@ -139,7 +139,7 @@ IWinOverlappedNotify::getOverlappedResult() {
 
 //===========================================================================
 WinSid & WinSid::operator=(const SID & sid) {
-    CopySid(sizeof(m_data), &m_data.Sid, (SID *) &sid);
+    CopySid(sizeof m_data, &m_data.Sid, (SID *) &sid);
     return *this;
 }
 
@@ -160,7 +160,7 @@ bool WinSid::operator==(WELL_KNOWN_SID_TYPE type) const {
 
 //===========================================================================
 void WinSid::reset() {
-    memset(&m_data, 0, sizeof(m_data));
+    memset(&m_data, 0, sizeof m_data);
 }
 
 //===========================================================================
@@ -168,7 +168,7 @@ WinSid Dim::winCreateSid(string_view account) {
     auto wacct = toWstring(account);
     SID_NAME_USE use;
     WinSid out;
-    DWORD count = sizeof(out);
+    DWORD count = sizeof out;
     wchar_t domain[256];
     auto domLen = (DWORD) size(domain);
     if (!LookupAccountNameW(
@@ -188,11 +188,11 @@ WinSid Dim::winCreateSid(string_view account) {
 //===========================================================================
 WinSid Dim::winCreateSid(WELL_KNOWN_SID_TYPE type, const SID * domain) {
     WinSid out;
-    DWORD cb = sizeof(out);
+    DWORD cb = sizeof out;
     if (!CreateWellKnownSid(
-        type, 
+        type,
         (SID *) domain,
-        &*out, 
+        &*out,
         &cb
     )) {
         logMsgFatal() << "CreateWellKnownSid: " << WinError{};
@@ -203,13 +203,13 @@ WinSid Dim::winCreateSid(WELL_KNOWN_SID_TYPE type, const SID * domain) {
 
 //===========================================================================
 bool Dim::winGetAccountName(
-    string * name, 
-    string * domain, 
+    string * name,
+    string * domain,
     const SID & sid
 ) {
-    if (name) 
+    if (name)
         name->clear();
-    if (domain) 
+    if (domain)
         domain->clear();
     DWORD nameLen = 0;
     DWORD domLen = 0;
@@ -222,7 +222,7 @@ bool Dim::winGetAccountName(
         &use
     )) {
         WinError err;
-        if (err != ERROR_INSUFFICIENT_BUFFER) 
+        if (err != ERROR_INSUFFICIENT_BUFFER)
             return false;
     }
     wstring wname(nameLen, 0);

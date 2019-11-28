@@ -183,7 +183,7 @@ template<typename H, typename T>
 HandleMap<H, T>::HandleMap() {
     static_assert(std::is_base_of_v<HandleBase, H>);
     static_assert(std::is_base_of_v<HandleContent, T>);
-    static_assert(sizeof(HandleBase) == sizeof(H));
+    static_assert(sizeof HandleBase == sizeof H);
 }
 
 //===========================================================================

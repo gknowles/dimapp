@@ -158,7 +158,7 @@ void Logger::onLog(LogType type, string_view msg) {
         return;
 
     char tmp[256];
-    assert(sizeof(tmp) + 2 <= kLogBufferSize);
+    assert(sizeof tmp + 2 <= kLogBufferSize);
     unsigned const kFacility = 3; // system daemons
     int pri = 8 * kFacility;
     switch (type) {

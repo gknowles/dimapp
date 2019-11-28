@@ -24,7 +24,7 @@ unsigned const kBitWidth = 32;
 
 unsigned const kLeafBits = hammingWeight(8 * kDataSize - 1);
 unsigned const kStepBits =
-    hammingWeight(pow2Ceil(kDataSize / sizeof(Node) + 1) / 2 - 1);
+    hammingWeight(pow2Ceil(kDataSize / sizeof Node + 1) / 2 - 1);
 unsigned const kMaxDepth =
     (kBitWidth - kLeafBits + kStepBits - 1) / kStepBits;
 
@@ -169,7 +169,7 @@ struct FullImpl final : IImplBase {
 
 struct VectorImpl final : IImplBase {
     static constexpr size_t maxValues() {
-        return kDataSize / sizeof(*Node::values);
+        return kDataSize / sizeof *Node::values;
     }
 
     void init(Node & node, bool full) override;
@@ -203,7 +203,7 @@ private:
 
 struct BitmapImpl final : IImplBase {
     static constexpr size_t numInt64s() {
-        return kDataSize / sizeof(uint64_t);
+        return kDataSize / sizeof uint64_t;
     }
     static constexpr size_t numBits() { return 64 * numInt64s(); }
 
@@ -235,7 +235,7 @@ struct BitmapImpl final : IImplBase {
 
 struct MetaImpl final : IImplBase {
     static constexpr size_t maxNodes() {
-        return kDataSize / sizeof(*Node::nodes);
+        return kDataSize / sizeof *Node::nodes;
     }
 
     void init(Node & node, bool full) override;
@@ -517,7 +517,7 @@ bool VectorImpl::insert(Node & node, unsigned value) {
     if (node.numValues == maxValues()) {
         convertAndInsert(node, value);
     } else {
-        memmove(ptr + 1, ptr, sizeof(*ptr) * (last - ptr));
+        memmove(ptr + 1, ptr, sizeof *ptr * (last - ptr));
         *ptr = value;
         node.numValues += 1;
     }
@@ -547,7 +547,7 @@ bool VectorImpl::erase(Node & node, unsigned value) {
 
     if (--node.numValues) {
         // Still has values, shift remaining ones down
-        memmove(ptr, ptr + 1, sizeof(*ptr) * (last - ptr - 1));
+        memmove(ptr, ptr + 1, sizeof *ptr * (last - ptr - 1));
     } else {
         // No more values, convert to empty node.
         destroy(node);
@@ -645,7 +645,7 @@ void BitmapImpl::init(Node & node, bool full) {
     node.values = (unsigned *) malloc(node.numBytes);
     assert(node.values);
     if (full) {
-        node.numValues = kDataSize / sizeof(uint64_t);
+        node.numValues = kDataSize / sizeof uint64_t;
         memset(node.values, 0xff, kDataSize);
     } else {
         node.numValues = 0;
@@ -787,7 +787,7 @@ bool BitmapImpl::lastContiguous(
 void MetaImpl::init(Node & node, bool full) {
     assert(node.type == kMeta);
     node.numValues = numNodes(node.depth + 1);
-    node.numBytes = (node.numValues + 1) * sizeof(*node.nodes);
+    node.numBytes = (node.numValues + 1) * sizeof *node.nodes;
     node.nodes = (Node *) malloc(node.numBytes);
     assert(node.nodes);
     auto nptr = node.nodes;
@@ -1061,9 +1061,9 @@ static int cmpBit(uint64_t left, uint64_t right) {
 //===========================================================================
 static int cmpBit(Node const & left, Node const & right) {
     auto li = (uint64_t *) left.values;
-    auto le = li + kDataSize / sizeof(*li);
+    auto le = li + kDataSize / sizeof *li;
     auto ri = (uint64_t *) right.values;
-    auto re = ri + kDataSize / sizeof(*ri);
+    auto re = ri + kDataSize / sizeof *ri;
     for (; li != le && ri != re; ++li, ++ri) {
         if (int rc = cmpBit(*li, *ri)) {
             if (rc == -2) {
@@ -1183,7 +1183,7 @@ static void insVec(Node & left, Node const & right) {
 //===========================================================================
 static void insBitmap(Node & left, Node const & right) {
     auto li = (uint64_t *) left.values;
-    auto le = li + kDataSize / sizeof(*li);
+    auto le = li + kDataSize / sizeof *li;
     auto ri = (uint64_t *) right.values;
     left.numValues = 0;
     for (; li != le; ++li, ++ri) {
@@ -1402,7 +1402,7 @@ static void eraVec(Node & left, Node const & right) {
 //===========================================================================
 static void eraBitmap(Node & left, Node const & right) {
     auto li = (uint64_t *) left.values;
-    auto le = li + kDataSize / sizeof(*li);
+    auto le = li + kDataSize / sizeof *li;
     auto ri = (uint64_t *) right.values;
     left.numValues = 0;
     for (; li != le; ++li, ++ri) {
@@ -1525,7 +1525,7 @@ static void isecVec(Node & left, Node const & right) {
 //===========================================================================
 static void isecBitmap(Node & left, Node const & right) {
     auto li = (uint64_t *) left.values;
-    auto le = li + kDataSize / sizeof(*li);
+    auto le = li + kDataSize / sizeof *li;
     auto ri = (uint64_t *) right.values;
     left.numValues = 0;
     for (; li != le; ++li, ++ri) {

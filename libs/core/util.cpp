@@ -27,13 +27,14 @@ static random_device s_rdev;
 //===========================================================================
 void Dim::cryptRandomBytes(void * vptr, size_t count) {
     auto * ptr = static_cast<char *>(vptr);
-    for (; count >= sizeof(unsigned); count -= sizeof(unsigned)) {
-        unsigned val = s_rdev();
-        memcpy(ptr, &val, sizeof(val));
-        ptr += sizeof(unsigned);
+    unsigned val = 0;
+    for (; count >= sizeof val; count -= sizeof val) {
+        val = s_rdev();
+        memcpy(ptr, &val, sizeof val);
+        ptr += sizeof val;
     }
     if (count) {
-        unsigned val = s_rdev();
+        val = s_rdev();
         switch (count) {
         case 3: *ptr++ = val & 0xff; val >>= 8;
         case 2: *ptr++ = val & 0xff; val >>= 8;
@@ -115,7 +116,7 @@ void Dim::hexFromBytes(string & out, string_view src, bool append) {
 
 //===========================================================================
 ostream & Dim::hexByte(ostream & os, char data) {
-    os << hexFromNibble((unsigned char) data >> 4) 
+    os << hexFromNibble((unsigned char) data >> 4)
         << hexFromNibble(data & 0x0f);
     return os;
 }

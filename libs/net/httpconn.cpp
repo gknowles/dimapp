@@ -268,7 +268,7 @@ static void startFrame(
 ) {
     uint8_t buf[kFrameHeaderLen];
     setFrameHeader(buf, stream, type, length, flags);
-    out->append((char *)&buf, sizeof(buf));
+    out->append((char *)&buf, sizeof buf);
 }
 
 //===========================================================================
@@ -390,8 +390,8 @@ bool HttpConn::replyGoAway(
     char buf[8];
     hton31(buf, lastStream);
     hton32(buf + 4, (int) error);
-    startFrame(out, 0, FrameType::kGoAway, sizeof(buf) + msg.size(), {});
-    out->append(buf, sizeof(buf));
+    startFrame(out, 0, FrameType::kGoAway, sizeof buf + msg.size(), {});
+    out->append(buf, sizeof buf);
     out->append(msg);
     return false;
 }
@@ -417,8 +417,8 @@ static void replyWindowUpdate(
 
     char buf[4];
     hton31(buf, increment);
-    startFrame(out, stream, FrameType::kWindowUpdate, sizeof(buf), {});
-    out->append(buf, sizeof(buf));
+    startFrame(out, stream, FrameType::kWindowUpdate, sizeof buf, {});
+    out->append(buf, sizeof buf);
 }
 
 //===========================================================================
@@ -589,7 +589,7 @@ void HttpConn::resetStream(CharBuf * out, int stream, FrameError error) {
     char buf[4];
     hton32(buf, (int) error);
     startFrame(out, stream, FrameType::kRstStream, 4, {});
-    out->append(buf, sizeof(buf));
+    out->append(buf, sizeof buf);
     auto it = m_streams.find(stream);
     if (it == m_streams.end())
         return;

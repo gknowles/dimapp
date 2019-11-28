@@ -99,7 +99,7 @@ void TempHeap::swap(TempHeap & from) {
 char * TempHeap::alloc(size_t bytes, size_t alignment) {
     Buffer * buf = (Buffer *)m_buffer;
     Buffer * tmp;
-    constexpr unsigned kBufferLen = sizeof(Buffer);
+    constexpr unsigned kBufferLen = sizeof *buf;
 
     if (buf) {
         if (auto ptr = alignPtr(buf, bytes, alignment))

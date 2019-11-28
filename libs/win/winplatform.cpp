@@ -20,7 +20,7 @@ static PROCESS_MEMORY_COUNTERS s_procMem;
 //===========================================================================
 static void updateMemoryCounters() {
     PROCESS_MEMORY_COUNTERS pmc;
-    if (GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc)))
+    if (GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof pmc))
         s_procMem = pmc;
 }
 

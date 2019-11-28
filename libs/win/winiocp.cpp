@@ -53,7 +53,7 @@ static void iocpDispatchThread() {
             }
         }
 
-        memset(used, 0, sizeof(used));
+        memset(used, 0, sizeof used);
         for (;;) {
             int pos = 0;
             int match = numeric_limits<int>::max();

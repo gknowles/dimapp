@@ -194,7 +194,7 @@ bool Dim::winSvcCreate(WinServiceConfig const & sconf) {
         }
     }
 
-    if (conf.failureFlag == 
+    if (conf.failureFlag ==
             WinServiceConfig::FailureFlag::kCrashOrNonZeroExitCode
     ) {
         SERVICE_FAILURE_ACTIONS_FLAG faf = {};
@@ -292,7 +292,7 @@ bool Dim::winSvcCreate(WinServiceConfig const & sconf) {
 
     if (!winSvcGrantLogonAsService(conf.account))
         return false;
-    
+
     s_d = {};
     logMsgInfo() << conf.serviceName << " service created.";
     return true;
@@ -306,7 +306,7 @@ bool Dim::winSvcGrantLogonAsService (string_view account) {
         return true;
     }
 
-    LSA_OBJECT_ATTRIBUTES oa = { sizeof(oa) };
+    LSA_OBJECT_ATTRIBUTES oa = { sizeof oa };
     LSA_HANDLE h;
     ACCESS_MASK access = POLICY_LOOKUP_NAMES | POLICY_CREATE_ACCOUNT;
     auto status = LsaOpenPolicy(NULL, &oa, access, &h);
@@ -320,7 +320,7 @@ bool Dim::winSvcGrantLogonAsService (string_view account) {
     auto wacct = toWstring(account);
     SID_NAME_USE use;
     SE_SID acct;
-    DWORD acctLen = sizeof(acct);
+    DWORD acctLen = sizeof acct;
     wchar_t domain[256];
     auto domLen = (DWORD) size(domain);
     if (!LookupAccountNameW(
@@ -339,7 +339,7 @@ bool Dim::winSvcGrantLogonAsService (string_view account) {
     wchar_t wlogon[] = SE_SERVICE_LOGON_NAME;
     auto logonLen = (USHORT) sizeof wlogon;
     LSA_UNICODE_STRING rights[] = {
-        { logonLen - sizeof(wchar_t), logonLen, wlogon },
+        { logonLen - sizeof *wlogon, logonLen, wlogon },
     };
     status = LsaAddAccountRights(h, &acct.Sid, rights, (ULONG) size(rights));
     if (status) {

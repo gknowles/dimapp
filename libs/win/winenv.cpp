@@ -147,7 +147,7 @@ Dim::VersionInfo Dim::envExecVersion() {
 //===========================================================================
 ProcessRights Dim::envProcessRights() {
     char sid[SECURITY_MAX_SID_SIZE];
-    DWORD cb = sizeof(sid);;
+    DWORD cb = sizeof sid;
     if (!CreateWellKnownSid(WinBuiltinAdministratorsSid, NULL, sid, &cb)) {
         logMsgError() << "CreateWellKnownSid(Administrators): " << WinError{};
         return kEnvUserStandard;
@@ -171,7 +171,7 @@ ProcessRights Dim::envProcessRights() {
         token,
         TokenLinkedToken,
         &lt,
-        sizeof(lt),
+        sizeof lt,
         &cb
     )) {
         WinError err;

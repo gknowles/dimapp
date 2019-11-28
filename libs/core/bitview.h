@@ -24,7 +24,7 @@ namespace Dim {
 class BitView {
 public:
     static constexpr size_t npos = (size_t) -1;
-    static constexpr size_t kWordBits = sizeof(uint64_t) * 8;
+    static constexpr size_t kWordBits = sizeof uint64_t * 8;
 
 public:
     BitView() = default;

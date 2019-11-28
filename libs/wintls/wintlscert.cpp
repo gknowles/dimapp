@@ -85,7 +85,7 @@ static NCRYPT_KEY_HANDLE createKey() {
         nkey,
         NCRYPT_LENGTH_PROPERTY,
         (BYTE *) &val,
-        sizeof(val),
+        sizeof val,
         NCRYPT_SILENT_FLAG
     );
     if (err)
@@ -96,7 +96,7 @@ static NCRYPT_KEY_HANDLE createKey() {
         nkey,
         NCRYPT_EXPORT_POLICY_PROPERTY,
         (BYTE *) &val,
-        sizeof(val),
+        sizeof val,
         NCRYPT_SILENT_FLAG
     );
     if (err)
@@ -305,7 +305,7 @@ static CERT_CONTEXT const * makeCert(
     CRYPT_DATA_BLOB data;
     wchar_t const s_friendlyName[] = L"dimapp-wintls";
     data.pbData = (BYTE *) s_friendlyName;
-    data.cbData = sizeof(s_friendlyName);
+    data.cbData = sizeof s_friendlyName;
     if (!CertSetCertificateContextProperty(
         cert,
         CERT_FRIENDLY_NAME_PROP_ID,

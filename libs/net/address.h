@@ -96,6 +96,7 @@ namespace Dim {
 //===========================================================================
 void copy(sockaddr_storage * out, SockAddr const & end);
 void copy(SockAddr * out, sockaddr_storage const & storage);
+size_t bytesUsed(sockaddr_storage const & storage);
 
 
 /****************************************************************************

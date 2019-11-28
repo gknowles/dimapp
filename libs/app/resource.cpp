@@ -74,10 +74,10 @@ void ResFileMap::copy(CharBuf * out) const {
 
 //===========================================================================
 static bool parseNum(uint64_t * out, string_view * data) {
-    if (data->size() < sizeof(*out))
+    if (data->size() < sizeof *out)
         return false;
     *out = ntoh64(data->data());
-    data->remove_prefix(sizeof(*out));
+    data->remove_prefix(sizeof *out);
     return true;
 }
 

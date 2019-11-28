@@ -252,7 +252,7 @@ bool Dim::CronDef<Flags>::parse(std::string_view src) {
             return false;
     }
 
-    memcpy(&m_data, &d, sizeof(m_data));
+    memcpy(&m_data, &d, sizeof m_data);
     return true;
 }
 

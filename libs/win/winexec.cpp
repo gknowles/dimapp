@@ -121,7 +121,7 @@ void ExecProgram::exec(string_view prog, string_view args) {
     char name[100];
     snprintf(
         name,
-        sizeof(name),
+        sizeof name,
         "//./pipe/local/%u_%p",
         envProcessId(),
         this
@@ -149,7 +149,7 @@ void ExecProgram::exec(string_view prog, string_view args) {
 
     auto wprog = toWstring(prog);
     auto wargs = toWstring(args);
-    STARTUPINFOW si = { sizeof(si) };
+    STARTUPINFOW si = { sizeof si };
     si.dwFlags = STARTF_USESTDHANDLES;
     si.hStdInput = pipes[kStdIn].child;
     si.hStdOutput = pipes[kStdOut].child;
@@ -293,7 +293,7 @@ void Dim::execProgram(
     assert(notify);
 
     char bytes[8];
-    cryptRandomBytes(bytes, sizeof(bytes));
+    cryptRandomBytes(bytes, sizeof bytes);
 
     auto ep = new ExecProgram(notify);
     ep->exec(prog, args);
@@ -375,7 +375,7 @@ bool Dim::execElevatedWait(
     string_view prog,
     string_view args
 ) {
-    SHELLEXECUTEINFOW ei = { sizeof(ei) };
+    SHELLEXECUTEINFOW ei = { sizeof ei };
     ei.lpVerb = L"RunAs";
     auto wexe = toWstring(prog);
     ei.lpFile = wexe.c_str();

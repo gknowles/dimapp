@@ -70,7 +70,7 @@ static uint64_t get64le(void const * ptr) {
             return *static_cast<uint64_t const *>(ptr);
         } else {
             uint64_t out;
-            memcpy(&out, ptr, sizeof(out));
+            memcpy(&out, ptr, sizeof out);
             return out;
         }
     } else {
@@ -78,7 +78,7 @@ static uint64_t get64le(void const * ptr) {
             return bswap64(*static_cast<uint64_t const *>(ptr));
         } else {
             uint64_t out;
-            memcpy(&out, ptr, sizeof(out));
+            memcpy(&out, ptr, sizeof out);
             return bswap64(out);
         }
     }

@@ -207,7 +207,7 @@ StrTrieBase::Node * StrTrieBase::nodeAppend(
     auto inode = last++;
     auto out = ptr + inode;
     if (node) {
-        memcpy(out, node, sizeof(*out));
+        memcpy(out, node, sizeof *out);
     } else {
         assert(!*out->data);
     }
@@ -306,7 +306,7 @@ bool StrTrieBase::splitSegInPlace (
         StrTrieBase::Node tnode = { kNodeFork };
         setFork(&tnode, sval, tinode);
         setFork(&tnode, ss->kval, ss->nNodes);
-        memcpy(ss->node, &tnode, sizeof(*ss->node));
+        memcpy(ss->node, &tnode, sizeof *ss->node);
         ss->inode = (int) ss->nNodes;
     } else {
         // truncate segment as lead

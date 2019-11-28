@@ -93,7 +93,7 @@ private:
 template <typename T>
 StrFrom<T, std::enable_if_t<std::is_integral_v<T>>>::StrFrom() {
     data[0] = 0;
-    data[sizeof(data) - 1] = (char) (sizeof(data) - 1);
+    data[sizeof data - 1] = (char) (sizeof data - 1);
 }
 
 //===========================================================================
@@ -106,13 +106,13 @@ std::string_view StrFrom<T, std::enable_if_t<std::is_integral_v<T>>>
             // "-val" is undefined for MIN_INT, so use safe equivalent
             // "~(Unsigned)val + 1" (assumes 2's complement)
             int used = internalSet(data + 1, ~(Unsigned)val + 1);
-            data[sizeof(data) - 1] = (char) (sizeof(data) - used - 2);
+            data[sizeof data - 1] = (char) (sizeof data - used - 2);
             return *this;
         }
     }
 
     int used = internalSet(data, val);
-    data[sizeof(data) - 1] = (char) (sizeof(data) - used - 1);
+    data[sizeof data - 1] = (char) (sizeof data - used - 1);
     return *this;
 }
 
@@ -120,7 +120,7 @@ std::string_view StrFrom<T, std::enable_if_t<std::is_integral_v<T>>>
 template <typename T>
 StrFrom<T, std::enable_if_t<std::is_integral_v<T>>>
 ::operator std::string_view() const {
-    return std::string_view(data, sizeof(data) - data[sizeof(data) - 1] - 1);
+    return std::string_view(data, sizeof data - data[sizeof data - 1] - 1);
 }
 
 //===========================================================================
@@ -186,7 +186,7 @@ private:
 template <typename T>
 StrFrom<T, std::enable_if_t<std::is_floating_point_v<T>>>::StrFrom() {
     data[0] = 0;
-    data[sizeof(data) - 1] = (char) (sizeof(data) - 1);
+    data[sizeof data - 1] = (char) (sizeof data - 1);
 }
 
 #if 0
@@ -196,13 +196,13 @@ std::string_view StrFrom<T, std::enable_if_t<std::is_floating_point_v<T>>>
 ::set(T val) {
     auto used = std::snprintf(
         data,
-        sizeof(data),
+        sizeof data,
         "%.*g",
         numeric_limits<T>::max_digits10,
         val
     );
-    assert(used < sizeof(data));
-    data[sizeof(data) - 1] = (char) (sizeof(data) - used - 1);
+    assert(used < sizeof data);
+    data[sizeof data - 1] = (char) (sizeof data - used - 1);
     return *this;
 }
 
@@ -213,14 +213,14 @@ std::string_view StrFrom<T, std::enable_if_t<std::is_floating_point_v<T>>>
 ::set(T val) {
     auto r = std::to_chars(
         data,
-        data + sizeof(data),
+        data + sizeof data,
         val,
         std::chars_format::general
     );
     auto used = r.ptr - data;
-    assert(used < sizeof(data));
+    assert(used < sizeof data);
     data[used] = 0;
-    data[sizeof(data) - 1] = (char) (sizeof(data) - used - 1);
+    data[sizeof data - 1] = (char) (sizeof data - used - 1);
     return *this;
 }
 #endif
@@ -229,7 +229,7 @@ std::string_view StrFrom<T, std::enable_if_t<std::is_floating_point_v<T>>>
 template <typename T>
 StrFrom<T, std::enable_if_t<std::is_floating_point_v<T>>>
 ::operator std::string_view() const {
-    return std::string_view(data, sizeof(data) - data[sizeof(data) - 1] - 1);
+    return std::string_view(data, sizeof data - data[sizeof data - 1] - 1);
 }
 
 

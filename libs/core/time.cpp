@@ -138,7 +138,7 @@ bool Dim::parse(Duration * out, string_view src) {
 //===========================================================================
 Time8601Str::Time8601Str() {
     m_data[0] = 0;
-    m_data[sizeof(m_data) - 1] = sizeof(m_data) - 1;
+    m_data[sizeof m_data - 1] = sizeof m_data - 1;
 }
 
 //===========================================================================
@@ -155,7 +155,7 @@ Time8601Str::Time8601Str(TimePoint time, unsigned precision, int tzMinutes) {
 string_view Time8601Str::view() const {
     return string_view(
         m_data,
-        sizeof(m_data) - 1 - m_data[sizeof(m_data) - 1]
+        sizeof m_data - 1 - m_data[sizeof m_data - 1]
     );
 }
 
@@ -234,7 +234,7 @@ Time8601Str & Time8601Str::set(
         out = add2Digit(out, tzMinutes % 60, 0);
     }
     *out = 0;
-    m_data[sizeof(m_data) - 1] = sizeof(m_data) - 1 - (uint8_t) (out - m_data);
+    m_data[sizeof m_data - 1] = sizeof m_data - 1 - (uint8_t) (out - m_data);
     return *this;
 }
 
