@@ -18,6 +18,7 @@
 
 #include "core/types.h"
 
+#include <compare>
 #include <iostream>
 #include <string_view>
 #include <vector>
@@ -44,8 +45,7 @@ struct NetAddr {
     bool isIpv4() const;
     uint32_t getIpv4() const;
 
-    bool operator==(const NetAddr & right) const;
-    bool operator<(const NetAddr & right) const;
+    std::strong_ordering operator<=>(const NetAddr & right) const = default;
     explicit operator bool() const;
 
 private:
@@ -54,10 +54,10 @@ private:
 };
 struct SockAddr {
     NetAddr addr;
-    unsigned port{0};
+    unsigned port = {};
+    unsigned scope = {}; // aka zone
 
-    bool operator==(const SockAddr & right) const;
-    bool operator<(const SockAddr & right) const;
+    std::strong_ordering operator<=>(const SockAddr & right) const = default;
     explicit operator bool() const;
 
 private:
@@ -66,7 +66,7 @@ private:
 };
 struct Network {
     NetAddr addr;
-    int mask{0};
+    int mask = {};
 };
 } // namespace
 

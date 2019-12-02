@@ -111,6 +111,7 @@ void Dim::copy(sockaddr_storage * out, const SockAddr & src) {
         auto ia = reinterpret_cast<sockaddr_in6 *>(out);
         ia->sin6_family = AF_INET6;
         ia->sin6_port = htons((short)src.port);
+        ia->sin6_scope_id = htonl(src.scope);
         auto uint32addr = reinterpret_cast<uint32_t *>(ia->sin6_addr.u.Byte);
         uint32addr[0] = htonl(src.addr.data[0]);
         uint32addr[1] = htonl(src.addr.data[1]);
@@ -131,6 +132,7 @@ void Dim::copy(SockAddr * out, sockaddr_storage const & storage) {
         assert(storage.ss_family == AF_INET6);
         auto ia = reinterpret_cast<sockaddr_in6 const &>(storage);
         out->port = ntohs(ia.sin6_port);
+        out->scope = ntohl(ia.sin6_scope_id);
         auto uint32addr = reinterpret_cast<uint32_t *>(ia.sin6_addr.u.Byte);
         out->addr.data[0] = ntohl(uint32addr[0]);
         out->addr.data[1] = ntohl(uint32addr[1]);

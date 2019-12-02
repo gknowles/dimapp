@@ -34,16 +34,6 @@ size_t std::hash<NetAddr>::operator()(const NetAddr & val) const {
 }
 
 //===========================================================================
-bool NetAddr::operator==(const NetAddr & right) const {
-    return memcmp(this, &right, sizeof *this) == 0;
-}
-
-//===========================================================================
-bool NetAddr::operator<(const NetAddr & right) const {
-    return memcmp(this, &right, sizeof *this) < 0;
-}
-
-//===========================================================================
 bool NetAddr::isIpv4() const {
     return data[2] == kIpv4MappedAddress;
 }
@@ -82,17 +72,8 @@ size_t std::hash<SockAddr>::operator()(const SockAddr & val) const {
     size_t out = 0;
     hashCombine(&out, std::hash<NetAddr>{}(val.addr));
     hashCombine(&out, std::hash<unsigned>{}(val.port));
+    hashCombine(&out, std::hash<unsigned>{}(val.scope));
     return out;
-}
-
-//===========================================================================
-bool SockAddr::operator==(const SockAddr & right) const {
-    return port == right.port && addr == right.addr;
-}
-
-//===========================================================================
-bool SockAddr::operator<(const SockAddr & right) const {
-    return tie(addr, port) < tie(right.addr, right.port);
 }
 
 //===========================================================================
