@@ -7,6 +7,8 @@
 #include "net/hpack.h"
 
 // External library public headers
+#include "dimcli/cli.h"
+
 #include "app/app.h"
 #include "core/log.h"
 #include "system/system.h"

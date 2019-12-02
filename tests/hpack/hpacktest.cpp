@@ -66,6 +66,9 @@ const Test s_tests[] = {
      true,
      {
          {"custom-key", "custom-header"},
+     },
+     {
+         {"custom-key", "custom-header"},
      }},
     {"C.2.2",
      true,
@@ -342,6 +345,15 @@ const Test s_tests[] = {
 
 /****************************************************************************
 *
+*   Variables
+*
+***/
+
+static bool s_verbose;
+
+
+/****************************************************************************
+*
 *   Helpers
 *
 ***/
@@ -373,7 +385,8 @@ void Reader::onHpackHeader(
     const char value[],
     HpackFlags flags
 ) {
-    cout << name << ": " << value << "\n";
+    if (s_verbose)
+        cout << name << ": " << value << "\n";
     headers.push_back({name, value, flags});
 }
 
@@ -386,12 +399,20 @@ void Reader::onHpackHeader(
 
 //===========================================================================
 static void app(int argc, char *argv[]) {
+    Cli cli;
+    cli.opt(&s_verbose, "v verbose.")
+        .desc("Display details of what's happening during processing.");
+    cli.versionOpt("1.0 (" __DATE__ ")");
+    if (!cli.parse(argc, argv))
+        return appSignalUsageError();
+
     TempHeap heap;
     HpackDecode decode(256);
     Reader out;
     bool result;
     for (auto && test : s_tests) {
-        cout << "Test - " << test.name << endl;
+        if (s_verbose)
+            cout << "Test - " << test.name << endl;
         out.headers.clear();
         if (test.reset)
             decode.reset();
@@ -410,7 +431,7 @@ static void app(int argc, char *argv[]) {
             decode.dynamicTable().end(),
             ::operator==
         )) {
-            cout << "dynamic table mismatch (FAILED)" << endl;
+            logMsgError() << "dynamic table mismatch (FAILED)";
         }
     }
 

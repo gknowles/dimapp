@@ -604,13 +604,15 @@ bool HuffDecoder::decode(
         int key = 0;
         if (!read(&key, m_prefixBits, avail, ptr, eptr))
             goto DONE;
-        do {
+        for (;;) {
             auto & di = m_decodeTable[key];
             if (!read(&key, 1, avail, ptr, eptr))
                 goto DONE;
             val = (key & 1) ? di.one : di.zero;
+            if (val <= 0)
+                break;
             key = val;
-        } while (val > 0);
+        }
         if (val < -255)
             return false;
         *optr++ = (char)-val;
@@ -682,7 +684,8 @@ bool HpackDecode::readInstruction(
         } else {
             // new name
             if (!read(&fld.name, heap, ++src, --srcLen)
-                || !read(&fld.value, heap, src, srcLen)) {
+                || !read(&fld.value, heap, src, srcLen)
+            ) {
                 return false;
             }
         }

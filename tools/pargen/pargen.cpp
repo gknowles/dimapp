@@ -109,7 +109,8 @@ static bool internalTest () {
     rules.addOption("%root", "LWSP");
     rules.addOption("%api.prefix", "Test");
     valid = processOptions(rules);
-    logMsgInfo() << "Process options: " << valid;
+    if (s_cmdopts.verbose)
+        logMsgInfo() << "Process options: " << valid;
 
     ostringstream abnf;
     for (auto && rule : rules.rules()) {
@@ -117,7 +118,8 @@ static bool internalTest () {
     }
     rules.clear();
     valid = parseAbnf(rules, abnf.str(), s_cmdopts.minRules);
-    logMsgInfo() << "Valid: " << valid;
+    if (s_cmdopts.verbose)
+        logMsgInfo() << "Valid: " << valid;
     if (!valid)
         return false;
 
@@ -133,7 +135,8 @@ static bool internalTest () {
         writeRule(o2, rule, 79, "");
     }
     valid = valid && (o1.str() == o2.str());
-    logMsgInfo() << "Round trip: " << valid;
+    if (s_cmdopts.verbose)
+        logMsgInfo() << "Round trip: " << valid;
     if (!valid)
         return false;
 
