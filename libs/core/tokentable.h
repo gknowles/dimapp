@@ -80,13 +80,13 @@ class TokenTable::Iterator {
 public:
     Iterator(const Token * ptr);
     Iterator & operator++();
-    bool operator!=(const Iterator & right) const;
+    bool operator==(const Iterator & right) const;
     const Token & operator*();
 };
 
 //===========================================================================
-inline bool TokenTable::Iterator::operator!=(const Iterator & right) const {
-    return m_current != right.m_current;
+inline bool TokenTable::Iterator::operator==(const Iterator & right) const {
+    return m_current == right.m_current;
 }
 
 //===========================================================================

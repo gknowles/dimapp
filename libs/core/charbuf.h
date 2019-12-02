@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <compare>
 #include <list>
 #include <string>
 #include <string_view>
@@ -46,6 +47,25 @@ public:
     CharBuf & operator+=(const char s[]) { return append(s); }
     CharBuf & operator+=(std::string_view str) { return append(str); }
     CharBuf & operator+=(const CharBuf & src) { return append(src); }
+
+    std::strong_ordering operator<=>(const CharBuf & right) const {
+        return compare(right);
+    }
+    std::strong_ordering operator<=>(std::string_view right) const {
+        return compare(right);
+    }
+    std::strong_ordering operator<=>(const char right[]) const {
+        return compare(right);
+    }
+
+    bool operator==(const CharBuf & right) const {
+        return compare(right) == 0;
+    }
+    bool operator==(std::string_view right) const {
+        return compare(right) == 0;
+    }
+    bool operator==(const char right[]) const { return compare(right) == 0; }
+
     CharBuf & assign(char ch) { clear(); pushBack(ch); return *this; }
     CharBuf & assign(size_t numCh, char ch);
     CharBuf & assign(std::nullptr_t);
@@ -91,12 +111,25 @@ public:
     CharBuf & append(const char s[], size_t slen);
     CharBuf & append(std::string_view str, size_t pos = 0, size_t count = -1);
     CharBuf & append(const CharBuf & buf, size_t pos = 0, size_t count = -1);
-    int compare(const char s[], size_t count) const;
-    int compare(size_t pos, size_t count, const char s[], size_t slen) const;
-    int compare(std::string_view str) const;
-    int compare(size_t pos, size_t count, std::string_view str) const;
-    int compare(const CharBuf & buf, size_t pos = 0, size_t count = -1) const;
-    int compare(
+    std::strong_ordering compare(const char s[], size_t count) const;
+    std::strong_ordering compare(
+        size_t pos,
+        size_t count,
+        const char s[],
+        size_t slen
+    ) const;
+    std::strong_ordering compare(std::string_view str) const;
+    std::strong_ordering compare(
+        size_t pos,
+        size_t count,
+        std::string_view str
+    ) const;
+    std::strong_ordering compare(
+        const CharBuf & buf,
+        size_t pos = 0,
+        size_t count = -1
+    ) const;
+    std::strong_ordering compare(
         size_t pos,
         size_t count,
         const CharBuf & buf,
@@ -123,10 +156,6 @@ public:
     char * alloc(size_t bytes, size_t align) override;
 
 private:
-    friend bool operator==(const CharBuf & left, std::string_view right);
-    friend bool operator==(std::string_view left, const CharBuf & right);
-    friend bool operator==(const CharBuf & left, const CharBuf & right);
-
     friend std::string toString(
         const CharBuf & buf,
         size_t pos = 0,
@@ -195,7 +224,7 @@ public:
         size_t pos,
         size_t count
     );
-    bool operator!= (const ViewIterator & right);
+    bool operator== (const ViewIterator & right) const;
     ViewIterator & operator++();
     std::string_view const & operator*() const { return m_view; }
     std::string_view const * operator->() const { return &m_view; }

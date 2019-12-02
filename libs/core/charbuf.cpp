@@ -425,12 +425,12 @@ CharBuf & CharBuf::append(const CharBuf & buf, size_t pos, size_t count) {
 }
 
 //===========================================================================
-int CharBuf::compare(const char s[], size_t count) const {
+strong_ordering CharBuf::compare(const char s[], size_t count) const {
     return compare(0, m_size, s, count);
 }
 
 //===========================================================================
-int CharBuf::compare(
+strong_ordering CharBuf::compare(
     size_t pos,
     size_t count,
     const char s[],
@@ -441,7 +441,7 @@ int CharBuf::compare(
     int rmax = (int) slen;
     int num = min(mymax, rmax);
     if (!num)
-        return mymax - rmax;
+        return mymax <=> rmax;
     auto ic = find(pos);
     auto myi = ic.first;
     auto mycount = myi->used - ic.second;
@@ -450,12 +450,11 @@ int CharBuf::compare(
 
     while (mycount < num) {
         // compare with entire local buffer
-        int rc = memcmp(mydata, rdata, mycount);
-        if (rc)
-            return rc;
+        if (int rc = memcmp(mydata, rdata, mycount))
+            return rc < 0 ? strong_ordering::less : strong_ordering::greater;
         num -= mycount;
         if (!num)
-            return mymax - rmax;
+            return mymax <=> rmax;
         // advance to next local buffer
         rdata += mycount;
         ++myi;
@@ -464,29 +463,28 @@ int CharBuf::compare(
     }
 
     // compare with entire remote buffer
-    int rc = memcmp(mydata, rdata, num);
-    if (rc)
-        return rc;
-    return mymax - rmax;
+    if (int rc = memcmp(mydata, rdata, num))
+        return rc < 0 ? strong_ordering::less : strong_ordering::greater;
+    return mymax <=> rmax;
 }
 
 //===========================================================================
-int CharBuf::compare(string_view str) const {
+strong_ordering CharBuf::compare(string_view str) const {
     return compare(0, m_size, str.data(), str.size());
 }
 
 //===========================================================================
-int CharBuf::compare(size_t pos, size_t count, string_view str) const {
+strong_ordering CharBuf::compare(size_t pos, size_t count, string_view str) const {
     return compare(pos, count, str.data(), str.size());
 }
 
 //===========================================================================
-int CharBuf::compare(const CharBuf & buf, size_t pos, size_t count) const {
+strong_ordering CharBuf::compare(const CharBuf & buf, size_t pos, size_t count) const {
     return compare(0, m_size, buf, pos, count);
 }
 
 //===========================================================================
-int CharBuf::compare(
+strong_ordering CharBuf::compare(
     size_t pos,
     size_t count,
     const CharBuf & buf,
@@ -499,7 +497,7 @@ int CharBuf::compare(
     int rmax = (int) min(bufLen, buf.size() - bufPos);
     int num = min(mymax, rmax);
     if (!num)
-        return mymax - rmax;
+        return mymax <=> rmax;
     auto ic = find(pos);
     auto myi = ic.first;
     auto mydata = myi->data + ic.second;
@@ -511,12 +509,11 @@ int CharBuf::compare(
 
     for (;;) {
         int bytes = min(num, min(mycount, rcount));
-        int rc = memcmp(mydata, rdata, bytes);
-        if (rc)
-            return rc;
+        if (int rc = memcmp(mydata, rdata, bytes))
+            return rc < 0 ? strong_ordering::less : strong_ordering::greater;
         num -= bytes;
         if (!num)
-            return mymax - rmax;
+            return mymax <=> rmax;
         if (mycount -= bytes) {
             mydata += bytes;
         } else {
@@ -1087,8 +1084,8 @@ CharBuf::ViewIterator::ViewIterator(
 }
 
 //===========================================================================
-bool CharBuf::ViewIterator::operator!= (const ViewIterator & right) {
-    return m_current != right.m_current || m_view != right.m_view;
+bool CharBuf::ViewIterator::operator== (const ViewIterator & right) const {
+    return m_current == right.m_current && m_view == right.m_view;
 }
 
 //===========================================================================
@@ -1115,21 +1112,6 @@ CharBuf::ViewIterator & CharBuf::ViewIterator::operator++() {
 *   Free functions
 *
 ***/
-
-//===========================================================================
-bool Dim::operator==(const CharBuf & left, string_view right) {
-    return left.compare(right) == 0;
-}
-
-//===========================================================================
-bool Dim::operator==(string_view left, const CharBuf & right) {
-    return right.compare(left) == 0;
-}
-
-//===========================================================================
-bool Dim::operator==(const CharBuf & left, const CharBuf & right) {
-    return left.compare(right) == 0;
-}
 
 //===========================================================================
 string Dim::toString(const CharBuf & buf, size_t pos, size_t count) {

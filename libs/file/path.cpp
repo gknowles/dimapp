@@ -555,21 +555,6 @@ bool Path::hasExt() const {
 ***/
 
 //===========================================================================
-bool Dim::operator==(const Path & left, string_view right) {
-    return left.view() == right;
-}
-
-//===========================================================================
-bool Dim::operator==(string_view left, const Path & right) {
-    return left == right.view();
-}
-
-//===========================================================================
-bool Dim::operator==(const Path & left, const Path & right) {
-    return left.view() == right.view();
-}
-
-//===========================================================================
 ostream & Dim::operator<<(ostream & os, const Path & val) {
     os << val.view();
     return os;

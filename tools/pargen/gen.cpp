@@ -42,31 +42,24 @@ size_t std::hash<StateElement>::operator()(const StateElement & val) const {
 }
 
 //===========================================================================
-int StateElement::compare(const StateElement & right) const {
-    if (int rc = (int)(elem->id - right.elem->id))
-        return rc;
-    if (int rc = rep - right.rep)
-        return rc;
-    if (int rc = started - right.started)
-        return rc;
-    if (int rc = recurse - right.recurse)
-        return rc;
-    return 0;
-}
-
-//===========================================================================
-bool StateElement::operator<(const StateElement & right) const {
-    return compare(right) < 0;
+strong_ordering StateElement::operator<=>(const StateElement & right) const {
+    if (auto cmp = elem->id <=> right.elem->id; cmp != 0)
+        return cmp;
+    if (auto cmp = rep <=> right.rep; cmp != 0)
+        return cmp;
+    if (auto cmp = started <=> right.started; cmp != 0)
+        return cmp;
+    return recurse <=> right.recurse;
 }
 
 //===========================================================================
 bool StateElement::operator==(const StateElement & right) const {
-    return compare(right) == 0;
+    return *this <=> right == 0;
 }
 
 //===========================================================================
 template<typename T>
-int compare(
+strong_ordering compare(
     vector<T> const & a,
     vector<T> const & b
 ) {
@@ -76,11 +69,11 @@ int compare(
     auto b2 = b1 + b.size();
     for (;; ++a1, ++b1) {
         if (a1 == a2)
-            return b1 != b2 ? -1 : 0;
+            return b1 != b2 ? strong_ordering::less : strong_ordering::equal;
         if (b1 == b2)
-            return 1;
-        if (int rc = a1->compare(*b1))
-            return rc;
+            return strong_ordering::greater;
+        if (auto cmp = *a1 <=> *b1; cmp != 0)
+            return cmp;
     }
 }
 
@@ -107,28 +100,21 @@ size_t std::hash<StatePosition>::operator()(const StatePosition & val) const {
 }
 
 //===========================================================================
-int StatePosition::compare(const StatePosition & right) const {
-    if (int rc = recurseSe - right.recurseSe)
-        return rc;
-    if (int rc = recursePos - right.recursePos)
-        return rc;
-    if (int rc = ::compare(elems, right.elems))
-        return rc;
-    if (int rc = ::compare(events, right.events))
-        return rc;
-    if (int rc = ::compare(delayedEvents, right.delayedEvents))
-        return rc;
-    return 0;
-}
-
-//===========================================================================
-bool StatePosition::operator<(const StatePosition & right) const {
-    return compare(right) < 0;
+strong_ordering StatePosition::operator<=>(const StatePosition & right) const {
+    if (auto cmp = recurseSe <=> right.recurseSe; cmp != 0)
+        return cmp;
+    if (auto cmp = recursePos <=> right.recursePos; cmp != 0)
+        return cmp;
+    if (auto cmp = ::compare(elems, right.elems); cmp != 0)
+        return cmp;
+    if (auto cmp = ::compare(events, right.events); cmp != 0)
+        return cmp;
+    return ::compare(delayedEvents, right.delayedEvents);
 }
 
 //===========================================================================
 bool StatePosition::operator==(const StatePosition & right) const {
-    return compare(right) == 0;
+    return *this <=> right == 0;
 }
 
 
@@ -147,24 +133,17 @@ size_t std::hash<StateEvent>::operator()(const StateEvent & val) const {
 }
 
 //===========================================================================
-int StateEvent::compare(const StateEvent & right) const {
-    if (int rc = distance - right.distance)
-        return rc;
-    if (int rc = (int)(elem->id - right.elem->id))
-        return rc;
-    if (int rc = flags - right.flags)
-        return rc;
-    return 0;
-}
-
-//===========================================================================
-bool StateEvent::operator<(const StateEvent & right) const {
-    return compare(right) < 0;
+strong_ordering StateEvent::operator<=>(const StateEvent & right) const {
+    if (auto cmp = distance <=> right.distance; cmp != 0)
+        return cmp;
+    if (auto cmp = elem->id <=> right.elem->id; cmp != 0)
+        return cmp;
+    return flags <=> right.flags;
 }
 
 //===========================================================================
 bool StateEvent::operator==(const StateEvent & right) const {
-    return compare(right) == 0;
+    return *this <=> right == 0;
 }
 
 
@@ -950,7 +929,6 @@ struct StateKey {
     bool next[257];
 
     bool operator==(const StateKey & right) const;
-    bool operator!=(const StateKey & right) const;
 };
 struct StateInfo {
     State * state{};
@@ -997,11 +975,6 @@ size_t std::hash<StateKey>::operator()(const StateKey & val) const {
 bool StateKey::operator==(const StateKey & right) const {
     return events == right.events
         && memcmp(next, right.next, sizeof next) == 0;
-}
-
-//===========================================================================
-bool StateKey::operator!=(const StateKey & right) const {
-    return !operator==(right);
 }
 
 //===========================================================================

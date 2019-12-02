@@ -140,16 +140,6 @@ FileIter::FileIter(
 }
 
 //===========================================================================
-bool FileIter::operator== (const FileIter & right) const {
-    return m_info == right.m_info;
-}
-
-//===========================================================================
-bool FileIter::operator!= (const FileIter & right) const {
-    return m_info != right.m_info;
-}
-
-//===========================================================================
 const FileIter::Entry & FileIter::operator* () const {
     return m_info->entry;
 }

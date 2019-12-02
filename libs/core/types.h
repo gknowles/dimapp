@@ -83,7 +83,7 @@ template <typename T>
 class ForwardListIterator {
 public:
     ForwardListIterator(T * node);
-    bool operator!=(const ForwardListIterator & right) const;
+    bool operator==(const ForwardListIterator & right) const = default;
     ForwardListIterator & operator++();
     T & operator*();
     T * operator->();
@@ -97,14 +97,6 @@ template <typename T>
 ForwardListIterator<T>::ForwardListIterator(T * node)
     : m_current(node)
 {}
-
-//===========================================================================
-template <typename T>
-bool ForwardListIterator<T>::operator!=(
-    const ForwardListIterator & right
-) const {
-    return m_current != right.m_current;
-}
 
 //===========================================================================
 template <typename T>

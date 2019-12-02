@@ -100,15 +100,15 @@ class StrTrieBase::Iterator {
     value_type m_current;
 public:
     Iterator & operator++();
-    bool operator!=(const Iterator & right) const;
+    bool operator==(const Iterator & right) const;
     value_type const & operator*();
 };
 
 //===========================================================================
-inline bool StrTrieBase::Iterator::operator!=(
+inline bool StrTrieBase::Iterator::operator==(
     const Iterator & right
 ) const {
-    return m_current != right.m_current;
+    return m_current == right.m_current;
 }
 
 //===========================================================================

@@ -100,8 +100,7 @@ public:
         Flags flags = {}
     );
 
-    bool operator==(const FileIter & right) const;
-    bool operator!=(const FileIter & right) const;
+    bool operator==(const FileIter & right) const = default;
     const Entry & operator*() const;
     const Entry * operator->() const;
     FileIter & operator++();

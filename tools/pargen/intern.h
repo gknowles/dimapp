@@ -83,7 +83,14 @@ struct Element {
     Flags flags{};
     std::string eventName; // only present if different from name
 
-    bool operator<(const Element & right) const { return name < right.name; }
+    auto operator<=>(const Element & right) const {
+        if (auto cmp = name.compare(right.name)) {
+            return cmp < 0
+                ? std::strong_ordering::less
+                : std::strong_ordering::greater;
+        }
+        return std::strong_ordering::equal;
+    }
 
 private:
     friend std::ostream & operator<<(std::ostream & os, const Element & elem);
@@ -209,13 +216,8 @@ struct StateElement {
     bool started{};
     bool recurse{};
 
-    int compare(const StateElement & right) const;
-    bool operator<(const StateElement & right) const;
+    std::strong_ordering operator<=>(const StateElement & right) const;
     bool operator==(const StateElement & right) const;
-
-    bool operator!=(const StateElement & right) const {
-        return !operator==(right);
-    }
 };
 
 struct StateEvent {
@@ -223,13 +225,8 @@ struct StateEvent {
     Element::Flags flags{};
     int distance{};
 
-    int compare(const StateEvent & right) const;
-    bool operator<(const StateEvent & right) const;
+    std::strong_ordering operator<=>(const StateEvent & right) const;
     bool operator==(const StateEvent & right) const;
-
-    bool operator!=(const StateEvent & right) const {
-        return !operator==(right);
-    }
 };
 
 struct StatePosition {
@@ -239,8 +236,7 @@ struct StatePosition {
     int recurseSe{}; // state element of recursion entry point (0 for none)
     int recursePos{-1}; // position in kSequence of recursion entry point
 
-    int compare(const StatePosition & right) const;
-    bool operator<(const StatePosition & right) const;
+    std::strong_ordering operator<=>(const StatePosition & right) const;
     bool operator==(const StatePosition & right) const;
 };
 

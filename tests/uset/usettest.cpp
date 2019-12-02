@@ -106,14 +106,14 @@ static void test() {
 
     tmp.assign("1-2");
     tmp2.assign("1 3");
-    int rc = tmp.compare(tmp2);
-    EXPECT(rc == -1);
+    auto cmp = tmp.compare(tmp2);
+    EXPECT(cmp < 0);
     tmp2.assign("1-3");
-    rc = tmp.compare(tmp2);
-    EXPECT(rc == -2);
+    cmp = tmp.compare(tmp2);
+    EXPECT(cmp < 0); // was check for -2 before switch to std::strong_ordering
     tmp.assign("1-2 1000-1100");
-    rc = tmp.compare(tmp2);
-    EXPECT(rc == 1);
+    cmp = tmp.compare(tmp2);
+    EXPECT(cmp > 0);
 
     tmp.assign("1-5000");
     tmp2.assign("10001-15000");

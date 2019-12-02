@@ -1860,8 +1860,11 @@ void UnsignedSet::swap(UnsignedSet & other) {
 }
 
 //===========================================================================
-int UnsignedSet::compare(const UnsignedSet & right) const {
-    return ::compare(m_node, right.m_node);
+strong_ordering UnsignedSet::compare(const UnsignedSet & right) const {
+    if (auto cmp = ::compare(m_node, right.m_node)) {
+        return cmp < 0 ? strong_ordering::less : strong_ordering::greater;
+    }
+    return strong_ordering::equal;
 }
 
 //===========================================================================
@@ -1879,31 +1882,6 @@ bool UnsignedSet::intersects(const UnsignedSet & other) const {
 //===========================================================================
 bool UnsignedSet::operator==(const UnsignedSet & right) const {
     return compare(right) == 0;
-}
-
-//===========================================================================
-bool UnsignedSet::operator!=(const UnsignedSet & right) const {
-    return compare(right) != 0;
-}
-
-//===========================================================================
-bool UnsignedSet::operator<(const UnsignedSet & right) const {
-    return compare(right) < 0;
-}
-
-//===========================================================================
-bool UnsignedSet::operator>(const UnsignedSet & right) const {
-    return compare(right) > 0;
-}
-
-//===========================================================================
-bool UnsignedSet::operator<=(const UnsignedSet & right) const {
-    return compare(right) <= 0;
-}
-
-//===========================================================================
-bool UnsignedSet::operator>=(const UnsignedSet & right) const {
-    return compare(right) >= 0;
 }
 
 //===========================================================================
@@ -1985,11 +1963,6 @@ bool UnsignedSet::Iterator::operator== (const Iterator & right) const {
 }
 
 //===========================================================================
-bool UnsignedSet::Iterator::operator!= (const Iterator & right) const {
-    return !(*this == right);
-}
-
-//===========================================================================
 UnsignedSet::Iterator & UnsignedSet::Iterator::operator++() {
     if (m_value < absBase(*m_node) + valueMask(m_node->depth)) {
         m_value += 1;
@@ -2057,13 +2030,6 @@ bool UnsignedSet::RangeIterator::operator== (
     const RangeIterator & right
 ) const {
     return m_value == right.m_value;
-}
-
-//===========================================================================
-bool UnsignedSet::RangeIterator::operator!= (
-    const RangeIterator & right
-) const {
-    return !(*this == right);
 }
 
 //===========================================================================

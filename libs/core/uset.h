@@ -6,6 +6,7 @@
 
 #include "cppconf/cppconf.h"
 
+#include <compare>
 #include <cstdint>
 #include <initializer_list>
 #include <ostream>
@@ -103,15 +104,11 @@ public:
     void swap(UnsignedSet & other);
 
     // compare
-    int compare(const UnsignedSet & right) const;
+    std::strong_ordering compare(const UnsignedSet & right) const;
     bool includes(const UnsignedSet & other) const;
     bool intersects(const UnsignedSet & other) const;
+    std::strong_ordering operator<=>(const UnsignedSet & right) const;
     bool operator==(const UnsignedSet & right) const;
-    bool operator!=(const UnsignedSet & right) const;
-    bool operator<(const UnsignedSet & right) const;
-    bool operator>(const UnsignedSet & right) const;
-    bool operator<=(const UnsignedSet & right) const;
-    bool operator>=(const UnsignedSet & right) const;
 
     // search
     size_t count(unsigned val) const;
@@ -189,7 +186,6 @@ public:
     Iterator & operator++();
     explicit operator bool() const { return (bool) m_node; }
     bool operator== (const Iterator & right) const;
-    bool operator!= (const Iterator & right) const;
     value_type operator*() const { return m_value; }
     value_type const * operator->() const { return &m_value; }
 
@@ -223,7 +219,6 @@ public:
     RangeIterator & operator++();
     explicit operator bool() const { return m_value != kEndValue; }
     bool operator== (const RangeIterator & right) const;
-    bool operator!= (const RangeIterator & right) const;
     value_type const & operator*() const { return m_value; }
     value_type const * operator->() const { return &m_value; }
 private:

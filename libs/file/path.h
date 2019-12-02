@@ -102,6 +102,9 @@ public:
     Path & resolve(const Path & base);
     Path & resolve(std::string_view base);
 
+    bool operator==(std::string_view b) const { return view() == b; }
+    bool operator==(const Path & b) const { return view() == b.view(); }
+
     explicit operator bool() const { return !empty(); }
     operator std::string_view() const { return m_data; }
 
@@ -127,9 +130,6 @@ public:
     bool hasExt() const;
 
 private:
-    friend bool operator==(const Path & a, std::string_view b);
-    friend bool operator==(std::string_view a, const Path & b);
-    friend bool operator==(const Path & a, const Path & b);
     friend std::ostream & operator<<(std::ostream & os, const Path & val);
     friend Path operator/ (const Path & a, std::string_view b);
     friend Path operator+ (const Path & a, std::string_view b);
