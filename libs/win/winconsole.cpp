@@ -56,7 +56,7 @@ static void enableConsoleFlags(bool enable, DWORD flags) {
 }
 
 //===========================================================================
-static bool getStdInfo(int * dst, wchar_t const ** dev, DWORD nstd) {
+static bool getStdInfo(int * dst, const wchar_t ** dev, DWORD nstd) {
     switch (nstd) {
     case STD_INPUT_HANDLE: *dst = 0; *dev = L"conin$"; break;
     case STD_OUTPUT_HANDLE: *dst = 1; *dev = L"conout$"; break;
@@ -229,7 +229,7 @@ extern "C" static int reassignCrtHandles() {
     auto hproc = GetCurrentProcess();
     for (auto nstd : {STD_INPUT_HANDLE, STD_OUTPUT_HANDLE, STD_ERROR_HANDLE}) {
         int fd;
-        wchar_t const * dev;
+        const wchar_t * dev;
         getStdInfo(&fd, &dev, nstd);
 
         auto osf = GetStdHandle(nstd);
@@ -280,7 +280,7 @@ static auto s_reassignHandles = reassignCrtHandles;
 // stdout, or stderr).
 static void attachStd(DWORD nstd) {
     int dst;
-    wchar_t const * dev;
+    const wchar_t * dev;
     if (!getStdInfo(&dst, &dev, nstd))
         return;
 
@@ -338,7 +338,7 @@ static void resetStd(DWORD nstd) {
     if (GetConsoleMode(osf, &mode))
         return;
     int dst;
-    wchar_t const * dev;
+    const wchar_t * dev;
     if (!getStdInfo(&dst, &dev, nstd))
         return;
 

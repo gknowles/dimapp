@@ -121,16 +121,16 @@ void Dim::copy(sockaddr_storage * out, const SockAddr & src) {
 }
 
 //===========================================================================
-void Dim::copy(SockAddr * out, sockaddr_storage const & storage) {
+void Dim::copy(SockAddr * out, const sockaddr_storage & storage) {
     *out = {};
     if (storage.ss_family == AF_INET) {
-        auto ia = reinterpret_cast<sockaddr_in const &>(storage);
+        auto ia = reinterpret_cast<const sockaddr_in &>(storage);
         out->port = ntohs(ia.sin_port);
         out->addr.data[2] = kIpv4MappedAddress;
         out->addr.data[3] = ntohl(ia.sin_addr.s_addr);
     } else {
         assert(storage.ss_family == AF_INET6);
-        auto ia = reinterpret_cast<sockaddr_in6 const &>(storage);
+        auto ia = reinterpret_cast<const sockaddr_in6 &>(storage);
         out->port = ntohs(ia.sin6_port);
         out->scope = ntohl(ia.sin6_scope_id);
         auto uint32addr = reinterpret_cast<uint32_t *>(ia.sin6_addr.u.Byte);
@@ -142,7 +142,7 @@ void Dim::copy(SockAddr * out, sockaddr_storage const & storage) {
 }
 
 //===========================================================================
-size_t Dim::bytesUsed(sockaddr_storage const & storage) {
+size_t Dim::bytesUsed(const sockaddr_storage & storage) {
     if (storage.ss_family == AF_INET) {
         return sizeof sockaddr_in;
     } else {

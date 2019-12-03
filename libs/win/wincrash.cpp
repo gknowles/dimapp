@@ -140,9 +140,9 @@ extern "C" void abortHandler(int sig) {
 
 //===========================================================================
 void invalidParameterHandler(
-    wchar_t const * expression,
-    wchar_t const * function,
-    wchar_t const * file,
+    const wchar_t * expression,
+    const wchar_t * function,
+    const wchar_t * file,
     unsigned line,
     uintptr_t reserved
 ) {

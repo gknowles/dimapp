@@ -144,7 +144,7 @@ static const uint32_t crc32Table[256] = {
 uint32_t
 Dim::hash_crc32c(uint32_t crc, const void *buf, size_t size)
 {
-	uint8_t const *p = (uint8_t const *) buf;
+	const uint8_t *p = (const uint8_t *) buf;
 
 
 	while (size--)

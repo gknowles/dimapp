@@ -24,7 +24,7 @@ const unsigned kUpdateIntervalMS = 1'000;
 *
 ***/
 
-wchar_t const kPerfWndClassW[] = L"DimPerfCounters";
+const wchar_t kPerfWndClassW[] = L"DimPerfCounters";
 const int kListId = 1;
 const int kTimerId = 1;
 

@@ -21,7 +21,7 @@ namespace std {
 
 template<>
 struct default_delete<CERT_CONTEXT const> {
-    void operator()(CERT_CONTEXT const * ptr) const;
+    void operator()(const CERT_CONTEXT * ptr) const;
 };
 
 template<>
@@ -89,7 +89,7 @@ std::unique_ptr<CredHandle> iWinTlsCreateCred(
     std::vector<std::string_view> const & ipAddrsForSelfSigned = {}
 );
 
-bool iWinTlsIsSelfSigned(CERT_CONTEXT const * cert);
-bool iWinTlsMatchHost(CERT_CONTEXT const * cert, std::string_view host);
+bool iWinTlsIsSelfSigned(const CERT_CONTEXT * cert);
+bool iWinTlsMatchHost(const CERT_CONTEXT * cert, std::string_view host);
 
 } // namespace

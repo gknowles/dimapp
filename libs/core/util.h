@@ -84,7 +84,7 @@ constexpr uint8_t ntoh8(const void * vptr) {
 
 //===========================================================================
 constexpr uint16_t ntoh16(const void * vptr) {
-    auto val = *static_cast<uint16_t const *>(vptr);
+    auto val = *static_cast<const uint16_t *>(vptr);
     return bswap16(val);
 }
 
@@ -98,13 +98,13 @@ constexpr uint32_t ntoh24(const void * vptr) {
 
 //===========================================================================
 constexpr uint32_t ntoh32(const void * vptr) {
-    auto val = *static_cast<uint32_t const *>(vptr);
+    auto val = *static_cast<const uint32_t *>(vptr);
     return bswap32(val);
 }
 
 //===========================================================================
 constexpr uint64_t ntoh64(const void * vptr) {
-    auto val = *static_cast<uint64_t const *>(vptr);
+    auto val = *static_cast<const uint64_t *>(vptr);
     return bswap64(val);
 }
 

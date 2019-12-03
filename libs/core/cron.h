@@ -54,7 +54,7 @@ public:
     };
 
     static constexpr uint8_t maskBit(size_t pos);
-    static constexpr bool getBit(uint8_t const bits[], size_t pos);
+    static constexpr bool getBit(const uint8_t bits[], size_t pos);
     static constexpr void setBit(uint8_t bits[], size_t pos, bool value = true);
 
 protected:
@@ -163,7 +163,7 @@ constexpr uint8_t Dim::Cron::maskBit(size_t pos) {
 }
 
 //===========================================================================
-constexpr bool Dim::Cron::getBit(uint8_t const bits[], size_t pos) {
+constexpr bool Dim::Cron::getBit(const uint8_t bits[], size_t pos) {
     return bits[pos / 8] & maskBit(pos);
 }
 

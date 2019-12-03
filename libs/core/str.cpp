@@ -632,7 +632,7 @@ string Dim::toString(wstring_view src) {
 }
 
 //===========================================================================
-ostream & Dim::operator<<(ostream & os, ostream_utf8_return const & out) {
+ostream & Dim::operator<<(ostream & os, const ostream_utf8_return & out) {
     copy_char(out.src, ostreambuf_iterator<char>(os));
     return os;
 }

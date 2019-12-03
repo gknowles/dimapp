@@ -461,7 +461,7 @@ AppSocket::MatchType Http2Match::onMatch(
 ) {
     assert(fam == AppSocket::kHttp2);
     const char kPrefaceData[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
-    size_t const kPrefaceDataLen = size(kPrefaceData) - 1;
+    const size_t kPrefaceDataLen = size(kPrefaceData) - 1;
     size_t num = min(kPrefaceDataLen, view.size());
     if (view.compare(0, num, kPrefaceData, num) != 0)
         return AppSocket::kUnsupported;
@@ -521,7 +521,7 @@ AppSocket::MatchType Http1Reject::onMatch(
     }
     ptr += 1;
     const char kVersion[] = "HTTP/1.";
-    size_t const kVersionLen = size(kVersion) - 1;
+    const size_t kVersionLen = size(kVersion) - 1;
     size_t num = min(kVersionLen, size_t(eptr - ptr));
     if (memcmp(ptr, kVersion, num) != 0)
         return AppSocket::kUnsupported;

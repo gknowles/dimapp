@@ -226,8 +226,8 @@ public:
     );
     bool operator== (const ViewIterator & right) const;
     ViewIterator & operator++();
-    std::string_view const & operator*() const { return m_view; }
-    std::string_view const * operator->() const { return &m_view; }
+    const std::string_view & operator*() const { return m_view; }
+    const std::string_view * operator->() const { return &m_view; }
 };
 
 //===========================================================================

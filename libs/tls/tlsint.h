@@ -105,7 +105,7 @@ public:
     virtual void onTlsAlert(TlsAlertDesc desc, TlsAlertLevel level) override;
     virtual void onTlsHandshake(
         TlsHandshakeType type,
-        uint8_t const msg[],
+        const uint8_t msg[],
         size_t msgLen) override;
 
     virtual void onTlsHandshake(const TlsClientHelloMsg & msg);
@@ -179,7 +179,7 @@ public:
 private:
     bool m_failed{false};
     TlsConnBase & m_conn;
-    uint8_t const * m_ptr;
+    const uint8_t * m_ptr;
     int m_count;
 };
 

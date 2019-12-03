@@ -130,7 +130,7 @@ bool TlsRecordDecrypt::parse(
     ITlsRecordDecryptNotify * notify,
     const void * vsrc,
     size_t srcLen) {
-    auto base = (uint8_t const *)vsrc;
+    auto base = (const uint8_t *)vsrc;
     auto ptr = base;
     auto eptr = ptr + srcLen;
 

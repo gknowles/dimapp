@@ -103,7 +103,7 @@ template <typename T> void TlsConnBase::handshake(TlsRecordReader & in) {
 //===========================================================================
 void TlsConnBase::onTlsHandshake(
     TlsHandshakeType type,
-    uint8_t const data[],
+    const uint8_t data[],
     size_t dataLen) {
     TlsRecordReader in(*this, data, dataLen);
     switch (type) {
@@ -242,7 +242,7 @@ TlsRecordReader::TlsRecordReader(
     size_t count
 )
     : m_conn(conn)
-    , m_ptr((uint8_t const *)ptr)
+    , m_ptr((const uint8_t *)ptr)
 {
     assert(count < (size_t) numeric_limits<int>::max());
     m_count = (int)count;
@@ -331,7 +331,7 @@ size_t TlsRecordReader::size() const {
 *
 ***/
 
-uint8_t const kClientVersion[] = {3, 4};
+const uint8_t kClientVersion[] = {3, 4};
 
 //===========================================================================
 ClientConn::ClientConn(

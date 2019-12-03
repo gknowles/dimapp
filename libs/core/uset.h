@@ -187,7 +187,7 @@ public:
     explicit operator bool() const { return (bool) m_node; }
     bool operator== (const Iterator & right) const;
     value_type operator*() const { return m_value; }
-    value_type const * operator->() const { return &m_value; }
+    const value_type * operator->() const { return &m_value; }
 
     Iterator lastContiguous() const;
 private:
@@ -219,8 +219,8 @@ public:
     RangeIterator & operator++();
     explicit operator bool() const { return m_value != kEndValue; }
     bool operator== (const RangeIterator & right) const;
-    value_type const & operator*() const { return m_value; }
-    value_type const * operator->() const { return &m_value; }
+    const value_type & operator*() const { return m_value; }
+    const value_type * operator->() const { return &m_value; }
 private:
     static constexpr value_type kEndValue{1, 0};
     Iterator m_iter;

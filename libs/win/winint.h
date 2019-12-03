@@ -125,7 +125,7 @@ private:
 //---------------------------------------------------------------------------
 // Privileges
 
-bool winEnablePrivilege(wchar_t const name[], bool enable = true);
+bool winEnablePrivilege(const wchar_t name[], bool enable = true);
 
 //---------------------------------------------------------------------------
 // Accounts

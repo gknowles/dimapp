@@ -30,7 +30,7 @@ public:
     virtual size_t alloc() = 0;
 
     virtual uint8_t * ptr(size_t pgno) = 0;
-    virtual uint8_t const * ptr(size_t pgno) const = 0;
+    virtual const uint8_t * ptr(size_t pgno) const = 0;
 };
 
 
@@ -50,7 +50,7 @@ public:
     size_t alloc() override;
 
     uint8_t * ptr(size_t pgno) override;
-    uint8_t const * ptr(size_t pgno) const override;
+    const uint8_t * ptr(size_t pgno) const override;
 
 private:
     std::vector<std::unique_ptr<uint8_t[]>> m_pages;
@@ -89,7 +89,7 @@ inline uint8_t * PageHeap<N>::ptr(size_t pgno) {
 
 //===========================================================================
 template <int N>
-inline uint8_t const * PageHeap<N>::ptr(size_t pgno) const {
+inline const uint8_t * PageHeap<N>::ptr(size_t pgno) const {
     return const_cast<PageHeap *>(this)->ptr(pgno);
 }
 

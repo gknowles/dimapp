@@ -95,8 +95,8 @@ namespace Dim {
 // Native
 //===========================================================================
 void copy(sockaddr_storage * out, const SockAddr & end);
-void copy(SockAddr * out, sockaddr_storage const & storage);
-size_t bytesUsed(sockaddr_storage const & storage);
+void copy(SockAddr * out, const sockaddr_storage & storage);
+size_t bytesUsed(const sockaddr_storage & storage);
 
 
 /****************************************************************************

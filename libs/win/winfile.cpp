@@ -17,7 +17,7 @@ using namespace Dim;
 
 namespace {
 
-int64_t const kNpos = -1;
+const int64_t kNpos = -1;
 
 struct WinFileInfo : public HandleContent {
     FileHandle m_f;

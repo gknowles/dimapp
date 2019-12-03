@@ -400,16 +400,16 @@ struct ostream_utf8_return {
 private:
     friend std::ostream & operator<<(
         std::ostream & os,
-        ostream_utf8_return const & out
+        const ostream_utf8_return & out
     );
 };
 constexpr ostream_utf8_return utf8(std::wstring_view src) {
     return {src};
 }
-constexpr ostream_utf8_return utf8(wchar_t const src[]) {
+constexpr ostream_utf8_return utf8(const wchar_t src[]) {
     return {src};
 }
-constexpr ostream_utf8_return utf8(wchar_t const src[], size_t srclen) {
+constexpr ostream_utf8_return utf8(const wchar_t src[], size_t srclen) {
     return {std::wstring_view(src, srclen)};
 }
 

@@ -42,7 +42,7 @@ FARPROC Dim::winLoadProc(const char lib[], const char proc[], bool optional) {
 ***/
 
 //===========================================================================
-bool Dim::winEnablePrivilege(wchar_t const wname[], bool enable) {
+bool Dim::winEnablePrivilege(const wchar_t wname[], bool enable) {
     auto proc = GetCurrentProcess();
     HANDLE token;
     if (!OpenProcessToken(proc, TOKEN_ADJUST_PRIVILEGES, &token))

@@ -65,7 +65,7 @@ public:
     virtual void onTlsAlert(TlsAlertDesc desc, TlsAlertLevel level) = 0;
     virtual void onTlsHandshake(
         TlsHandshakeType type,
-        uint8_t const msg[],
+        const uint8_t msg[],
         size_t msgLen
     ) = 0;
 };

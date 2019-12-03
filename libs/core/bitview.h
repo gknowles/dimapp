@@ -37,7 +37,7 @@ public:
     bool empty() const { return !m_size; }    // view across nothing
     size_t size() const { return m_size; }    // number of uint64_t's
     uint64_t * data() { return m_data; }
-    uint64_t const * data() const { return m_data; }
+    const uint64_t * data() const { return m_data; }
     BitView & remove_prefix(size_t numUint64);
     BitView & remove_suffix(size_t numUint64);
 

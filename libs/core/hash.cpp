@@ -67,7 +67,7 @@ Seed::Seed () {
 static uint64_t get64le(const void * ptr) {
     if constexpr (kByteOrder == kLittleEndian) {
         if constexpr (kNativeUnaligned64) {
-            return *static_cast<uint64_t const *>(ptr);
+            return *static_cast<const uint64_t *>(ptr);
         } else {
             uint64_t out;
             memcpy(&out, ptr, sizeof out);
@@ -75,7 +75,7 @@ static uint64_t get64le(const void * ptr) {
         }
     } else {
         if constexpr (kNativeUnaligned64) {
-            return bswap64(*static_cast<uint64_t const *>(ptr));
+            return bswap64(*static_cast<const uint64_t *>(ptr));
         } else {
             uint64_t out;
             memcpy(&out, ptr, sizeof out);

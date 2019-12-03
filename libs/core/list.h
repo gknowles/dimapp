@@ -225,9 +225,9 @@ public:
 
 private:
     link_type * cast(T * node) const;
-    link_type const * cast(const T * node) const;
+    const link_type * cast(const T * node) const;
     T * cast(link_type * link) const;
-    const T * cast(link_type const * link) const;
+    const T * cast(const link_type * link) const;
 
     void linkBase(link_type * pos, link_type * first, link_type * last);
     void linkBaseAfter(link_type * pos, link_type * first, link_type * last);
@@ -487,7 +487,7 @@ auto List<T, Tag>::cast(T * node) const -> link_type * {
 
 //===========================================================================
 template <typename T, typename Tag>
-auto List<T, Tag>::cast(const T * node) const -> link_type const * {
+auto List<T, Tag>::cast(const T * node) const -> const link_type * {
     return node;
 }
 
@@ -499,7 +499,7 @@ T * List<T, Tag>::cast(link_type * link) const {
 
 //===========================================================================
 template <typename T, typename Tag>
-const T * List<T, Tag>::cast(link_type const * link) const {
+const T * List<T, Tag>::cast(const link_type * link) const {
     return static_cast<const T *>(link);
 }
 
