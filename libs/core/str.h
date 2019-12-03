@@ -84,8 +84,6 @@ private:
     using Signed = typename std::make_signed<T>::type;
     using Unsigned = typename std::make_unsigned<T>::type;
 
-    int internalSet(char * ptr, Unsigned val);
-
     char data[maxIntegralChars<T>() + 1];
 };
 
@@ -100,18 +98,39 @@ StrFrom<T, std::enable_if_t<std::is_integral_v<T>>>::StrFrom() {
 template <typename T>
 std::string_view StrFrom<T, std::enable_if_t<std::is_integral_v<T>>>
 ::set(T val) {
+    Unsigned uval = val;
+    auto ptr = data;
+    auto used = 0;
     if constexpr (std::numeric_limits<T>::is_signed) {
         if (val < 0) {
-            *data = '-';
-            // "-val" is undefined for MIN_INT, so use safe equivalent
-            // "~(Unsigned)val + 1" (assumes 2's complement)
-            int used = internalSet(data + 1, ~(Unsigned)val + 1);
-            data[sizeof data - 1] = (char) (sizeof data - used - 2);
-            return *this;
+            *ptr++ = '-';
+            used += 1;
+            uval = static_cast<Unsigned>(0 - val);
         }
     }
 
-    int used = internalSet(data, val);
+    if (uval < 10) {
+        // optimize for 0 and 1... and 2 through 9 since it's no more cost
+        ptr[0] = static_cast<char>(uval) + '0';
+        ptr[1] = 0;
+        data[sizeof data - 1] = (char) (sizeof data - (used + 1) - 1);
+        return *this;
+    }
+
+    int i = 0;
+    for (;;) {
+        ptr[i] = (uval % 10) + '0';
+        uval /= 10;
+        i += 1;
+        if (!uval)
+            break;
+    }
+    ptr[i] = 0;
+    used += i;
+    for (i -= 1; i > 0; i -= 2) {
+        std::swap(*ptr, ptr[i]);
+        ptr += 1;
+    }
     data[sizeof data - 1] = (char) (sizeof data - used - 1);
     return *this;
 }
@@ -121,34 +140,6 @@ template <typename T>
 StrFrom<T, std::enable_if_t<std::is_integral_v<T>>>
 ::operator std::string_view() const {
     return std::string_view(data, sizeof data - data[sizeof data - 1] - 1);
-}
-
-//===========================================================================
-template <typename T>
-int StrFrom<T, std::enable_if_t<std::is_integral_v<T>>>
-::internalSet(char * ptr, Unsigned val) {
-    if (val < 10) {
-        // optimize for 0 and 1... and 2 through 9 since it's no more cost
-        ptr[0] = static_cast<char>(val) + '0';
-        ptr[1] = 0;
-        return 1;
-    }
-
-    int i = 0;
-    for (;;) {
-        ptr[i] = (val % 10) + '0';
-        val /= 10;
-        i += 1;
-        if (!val)
-            break;
-    }
-    ptr[i] = 0;
-    auto num = i;
-    for (i -= 1; i > 0; i -= 2) {
-        std::swap(*ptr, ptr[i]);
-        ptr += 1;
-    }
-    return num;
 }
 
 
@@ -189,24 +180,6 @@ StrFrom<T, std::enable_if_t<std::is_floating_point_v<T>>>::StrFrom() {
     data[sizeof data - 1] = (char) (sizeof data - 1);
 }
 
-#if 0
-//===========================================================================
-template <typename T>
-std::string_view StrFrom<T, std::enable_if_t<std::is_floating_point_v<T>>>
-::set(T val) {
-    auto used = std::snprintf(
-        data,
-        sizeof data,
-        "%.*g",
-        numeric_limits<T>::max_digits10,
-        val
-    );
-    assert(used < sizeof data);
-    data[sizeof data - 1] = (char) (sizeof data - used - 1);
-    return *this;
-}
-
-#else
 //===========================================================================
 template <typename T>
 std::string_view StrFrom<T, std::enable_if_t<std::is_floating_point_v<T>>>
@@ -223,7 +196,6 @@ std::string_view StrFrom<T, std::enable_if_t<std::is_floating_point_v<T>>>
     data[sizeof data - 1] = (char) (sizeof data - used - 1);
     return *this;
 }
-#endif
 
 //===========================================================================
 template <typename T>
