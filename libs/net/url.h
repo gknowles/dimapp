@@ -23,10 +23,10 @@ namespace Dim {
 *
 ***/
 
-struct HttpPathValue : ListBaseLink<> {
+struct HttpPathValue : ListLink<> {
     std::string_view value;
 };
-struct HttpPathParam : ListBaseLink<> {
+struct HttpPathParam : ListLink<> {
     std::string_view name;
     List<HttpPathValue> values;
 };

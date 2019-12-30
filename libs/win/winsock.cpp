@@ -41,7 +41,7 @@ enum RequestType {
 
 } // namespace
 
-struct Dim::SocketRequest : ListBaseLink<> {
+struct Dim::SocketRequest : ListLink<> {
     RequestType m_type{kReqInvalid};
     RIO_BUF m_rbuf{};
     unique_ptr<SocketBuffer> m_buffer;

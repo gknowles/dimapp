@@ -4,14 +4,14 @@
 // list.h - dim core
 //
 // Intrusive linked list
-//  - Member objects inherit from ListBaseLink one or more times (allowing
+//  - Member objects inherit from ListLink one or more times (allowing
 //    a single object to be in multiple lists).
 //  - Members remove themselves from the list on destruction
 //  - List unlinks (does NOT delete) members on destruction
 //  - size() is O(N)
 //
 // Example usage:
-// struct MyObj : ListBaseLink<> {};
+// struct MyObj : ListLink<> {};
 // List<MyObj> list;
 // list.link(new MyObj);
 // list.clear(); // deletes all members
@@ -19,7 +19,7 @@
 // Example of an object in multiple lists:
 // struct Fruit; // Tags only need forward references, the definitions
 // struct Color; //   aren't required.
-// struct MyObj : ListBaseLink<Fruit>, ListBaseLink<Color> {};
+// struct MyObj : ListLink<Fruit>, ListLink<Color> {};
 // List<MyObj, Fruit> fruits;
 // List<MyObj, Color> colors;
 // auto apple = new MyObj;
@@ -49,15 +49,15 @@ struct DefaultTag;
 
 /****************************************************************************
 *
-*   ListBaseLink
+*   ListLink
 *
 ***/
 
 template <typename Tag = DefaultTag>
-class ListBaseLink : public NoCopy {
+class ListLink : public NoCopy {
 public:
-    ListBaseLink();
-    ~ListBaseLink();
+    ListLink();
+    ~ListLink();
 
 protected:
     void unlink();
@@ -69,25 +69,25 @@ private:
     void construct();
     void detach();
 
-    ListBaseLink * m_prevLink;
-    ListBaseLink * m_nextLink;
+    ListLink * m_prevLink;
+    ListLink * m_nextLink;
 };
 
 //===========================================================================
 template<typename Tag>
-ListBaseLink<Tag>::ListBaseLink () {
+ListLink<Tag>::ListLink () {
     construct();
 }
 
 //===========================================================================
 template<typename Tag>
-ListBaseLink<Tag>::~ListBaseLink () {
+ListLink<Tag>::~ListLink () {
     detach();
 }
 
 //===========================================================================
 template<typename Tag>
-void ListBaseLink<Tag>::unlink() {
+void ListLink<Tag>::unlink() {
     assert(linked());
     detach();
     construct();
@@ -95,19 +95,19 @@ void ListBaseLink<Tag>::unlink() {
 
 //===========================================================================
 template<typename Tag>
-bool ListBaseLink<Tag>::linked() const {
+bool ListLink<Tag>::linked() const {
     return m_prevLink != this;
 }
 
 //===========================================================================
 template<typename Tag>
-void ListBaseLink<Tag>::construct() {
+void ListLink<Tag>::construct() {
     m_prevLink = m_nextLink = this;
 }
 
 //===========================================================================
 template<typename Tag>
-void ListBaseLink<Tag>::detach() {
+void ListLink<Tag>::detach() {
     m_nextLink->m_prevLink = m_prevLink;
     m_prevLink->m_nextLink = m_nextLink;
 }
@@ -177,7 +177,7 @@ class List : public NoCopy {
 public:
     using iterator = ListIterator<List, T>;
     using const_iterator = ListIterator<List const, T const>;
-    using link_type = ListBaseLink<Tag>;
+    using link_type = ListLink<Tag>;
 
 public:
     List();
@@ -240,7 +240,7 @@ template <typename T, typename Tag>
 List<T, Tag>::List() {
     static_assert(
         std::is_base_of_v<link_type, T>,
-        "List member type must be derived from ListBaseLink<Tag>"
+        "List member type must be derived from ListLink<Tag>"
     );
 }
 
@@ -249,7 +249,7 @@ template <typename T, typename Tag>
 List<T, Tag>::List(List && from) noexcept {
     static_assert(
         std::is_base_of_v<link_type, T>,
-        "List member type must be derived from ListBaseLink<Tag>"
+        "List member type must be derived from ListLink<Tag>"
     );
     swap(from);
 }

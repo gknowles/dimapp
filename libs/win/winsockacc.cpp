@@ -32,7 +32,7 @@ public:
 
 class ListenSocket
     : public IWinOverlappedNotify
-    , public ListBaseLink<>
+    , public ListLink<>
 {
 public:
     bool m_stopRequested{false};

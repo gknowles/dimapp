@@ -214,7 +214,7 @@ private:
 *
 ***/
 
-struct JNode : ListBaseLink<> {
+struct JNode : ListLink<> {
     enum JType : int8_t {
         kInvalid,
         kObject,

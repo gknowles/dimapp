@@ -27,7 +27,7 @@ using ANON_NAMESPACE;
 
 ANON_NAMESPACE {
 
-class TestNode : public ListBaseLink<> {
+class TestNode : public ListLink<> {
 public:
     unsigned m_value;
 };

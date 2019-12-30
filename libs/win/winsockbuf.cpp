@@ -32,7 +32,7 @@ struct BufferHandle : HandleBase {
     explicit BufferHandle(const SocketBuffer & sbuf) { pos = sbuf.owner; }
 };
 
-struct Buffer : HandleContent, ListBaseLink<> {
+struct Buffer : HandleContent, ListLink<> {
     RIO_BUFFERID id;
     char * base;
     int sliceSize;

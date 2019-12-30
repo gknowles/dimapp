@@ -41,7 +41,7 @@ enum RequestType {
     kReqWrite,
 };
 
-struct PipeRequest : ListBaseLink<>, IWinOverlappedNotify {
+struct PipeRequest : ListLink<>, IWinOverlappedNotify {
     RequestType m_type{kReqInvalid};
     string m_buffer;
     TimePoint m_qtime;
@@ -453,7 +453,7 @@ bool PipeBase::onWrite(PipeRequest * task) {
 
 namespace {
 
-class ListenPipe : public ListBaseLink<>, public IPipeNotify {
+class ListenPipe : public ListLink<>, public IPipeNotify {
 public:
     IFactory<IPipeNotify> * m_notify;
     string m_name;

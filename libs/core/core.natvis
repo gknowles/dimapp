@@ -55,7 +55,7 @@ Distributed under the Boost Software License, Version 1.0.
     </Expand>
   </Type>
 
-  <Type Name="Dim::ListBaseLink&lt;*&gt;" Inheritable="false">
+  <Type Name="Dim::ListLink&lt;*&gt;" Inheritable="false">
     <DisplayString Condition="m_prevLink == this">{{ not linked }}</DisplayString>
     <DisplayString>{{ linked }}</DisplayString>
   </Type>

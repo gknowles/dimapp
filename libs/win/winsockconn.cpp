@@ -49,7 +49,7 @@ private:
 
 class ConnectTask
     : public IWinOverlappedNotify
-    , public ListBaseLink<>
+    , public ListLink<>
 {
 public:
     TimePoint m_expiration;
