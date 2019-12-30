@@ -6,6 +6,8 @@
 
 #include "cppconf/cppconf.h"
 
+#include <utility> // std::move
+
 namespace Dim {
 
 

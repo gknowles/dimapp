@@ -10,6 +10,7 @@
 
 #include <functional>
 #include <memory>
+#include <utility> // std::move
 
 namespace Dim {
 

@@ -10,6 +10,7 @@
 
 #include <functional>
 #include <string>
+#include <utility> // std::move
 
 namespace Dim {
 
