@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2020.
+// Copyright Glen Knowles 2017 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // win.h - dim windows platform
@@ -178,14 +178,14 @@ struct WinServiceStatus {
 bool winSvcCreate(const WinServiceConfig & sconf);
 bool winSvcDelete(std::string_view svcName);
 
-// Update all service parameters to match the configuration, as if it had just
-// been created via winSvcCreate.
+// Update all service parameters to match the configuration, as if it had
+// just been created via winSvcCreate.
 bool winSvcReplace(const WinServiceConfig & sconf);
 
-// Updates the service parameters explicitly specified. To explicitly remove
-// all values of a vector set it to a contain a single "empty" value (nullptr
-// for deps and privs, member of type kInvalid for failureActions and
-// triggers).
+// Updates the service parameters explicitly specified. To explicitly update
+// a vector to remove all values set it to a contain a single "empty" value
+// (nullptr for deps and privs, member of type kInvalid for failureActions
+// and triggers).
 bool winSvcUpdate(const WinServiceConfig & sconf);
 
 bool winSvcQuery(WinServiceConfig * sconf, std::string_view svcName);
@@ -193,68 +193,13 @@ bool winSvcStart(std::string_view svcName, bool wait = true);
 bool winSvcStop(std::string_view svcName, bool wait = true);
 
 // Returns the service names of services that match all the specified
-// configuration and status parameters. If 'conf' and 'stat' are both default
-// constructed (no filter) the names of all services are returned.
+// configuration and status parameters. If 'conf' and 'stat' are both
+// default constructed (no filter) the names of all services are returned.
 std::vector<std::string> winSvcFind(
     const WinServiceConfig & conf,
     const WinServiceStatus & stat
 );
 
 bool winSvcGrantLogonAsService(std::string_view account);
-
-
-/****************************************************************************
-*
-*   Registry
-*
-***/
-
-class WinRegTree {
-public:
-    enum class Registry {
-        kClassesRoot,
-        kCurrentConfig,
-        kCurrentUser,
-        kLocalMachine,
-        kPerformanceData,
-        kUsers,
-    };
-    enum class ValueType {
-        kBinary,
-        kDword,
-        kDwordLittleEndian,
-        kDwordBigEndian,
-        kExpandSz,
-        kLink,
-        kMultiSz,
-        kNone,
-        kQword,
-        kQwordLittleEndian,
-        kSz,
-    };
-    struct Value {
-        std::string name;
-        ValueType type;
-        std::string data;
-
-        uint64_t qword() const;
-        const std::string str() const;
-        std::string expanded() const;
-        std::vector<std::string_view> multi() const;
-    };
-    struct Key {
-        std::string name;
-        std::vector<Key> keys;
-        std::vector<Value> values;
-        TimePoint lastWrite;
-    };
-
-public:
-    bool load (Registry key, const std::string & root);
-
-private:
-    Registry m_registry;
-    Key m_root;
-};
 
 } // namespace

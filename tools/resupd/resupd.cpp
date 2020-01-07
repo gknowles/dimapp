@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2018 - 2020.
+// Copyright Glen Knowles 2018 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // resupd.cpp - resupd
@@ -263,7 +263,7 @@ static void app(int argc, char *argv[]) {
         fileClose(f);
     }
 
-    ConsoleScopedAttr attr{kConsoleNote};
+    ConsoleScopedAttr attr{kConsoleHighlight};
     cout << "Resources: " << files.size() << " ("
         << added << " added, "
         << updated << " updated, "
