@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2018 - 2019.
+// Copyright Glen Knowles 2018 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // xsdgen.cpp - xsdgen
@@ -437,6 +437,6 @@ void updateXmlFile(const Path & name, const CharBuf & content) {
         return appSignalShutdown(EX_DATAERR);
     fileWriteWait(f, 0, content.data(), content.size());
     fileClose(f);
-    ConsoleScopedAttr color(kConsoleHighlight);
+    ConsoleScopedAttr color(kConsoleNote);
     cout << "UPDATED" << endl;
 }

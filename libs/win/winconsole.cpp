@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2018.
+// Copyright Glen Knowles 2016 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // winconsole.cpp - dim windows platform
@@ -76,16 +76,25 @@ static bool getStdInfo(int * dst, const wchar_t ** dev, DWORD nstd) {
 ***/
 
 static unordered_map<ConsoleAttr, int> s_attrs = {
-    { kConsoleNormal,    // normal white
-        FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE },
-    { kConsoleGreen,     // bright green
-        FOREGROUND_INTENSITY | FOREGROUND_GREEN },
-    { kConsoleHighlight, // bright cyan
-        FOREGROUND_INTENSITY | FOREGROUND_GREEN | FOREGROUND_BLUE },
-    { kConsoleWarn,      // bright yellow
-        FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN },
-    { kConsoleError,     // bright red
-        FOREGROUND_INTENSITY | FOREGROUND_RED },
+    {
+        kConsoleNormal, // normal white
+        FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE
+    },
+    {
+        kConsoleCheer,  // bright green
+        FOREGROUND_INTENSITY | FOREGROUND_GREEN
+    },
+    {
+        kConsoleNote,   // bright cyan
+        FOREGROUND_INTENSITY | FOREGROUND_GREEN | FOREGROUND_BLUE
+    },
+    {   kConsoleWarn,   // bright yellow
+        FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN
+    },
+    {
+        kConsoleError,  // bright red
+        FOREGROUND_INTENSITY | FOREGROUND_RED
+    },
 };
 
 //===========================================================================

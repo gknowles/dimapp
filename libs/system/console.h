@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2018.
+// Copyright Glen Knowles 2016 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // console.h - dim system
@@ -13,11 +13,11 @@
 namespace Dim {
 
 enum ConsoleAttr {
-    kConsoleNormal,
-    kConsoleGreen,
-    kConsoleHighlight,
-    kConsoleWarn,
-    kConsoleError,
+    kConsoleNormal, // normal white
+    kConsoleCheer,  // bright green
+    kConsoleNote,   // bright cyan
+    kConsoleWarn,   // bright yellow
+    kConsoleError,  // bright red
 };
 
 class ConsoleScopedAttr {
