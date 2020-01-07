@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2019.
+// Copyright Glen Knowles 2015 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // tnet.cpp - tnet
@@ -99,7 +99,7 @@ void SocketConn::onSockAddrFound(const SockAddr * ends, int count) {
 
 //===========================================================================
 void SocketConn::onSocketConnect(const SocketInfo & info) {
-    m_connected = make_unique<ConsoleScopedAttr>(kConsoleGreen);
+    m_connected = make_unique<ConsoleScopedAttr>(kConsoleCheer);
     cout << "Connected" << endl;
     timerUpdate(this, 500ms);
 }
