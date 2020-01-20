@@ -82,8 +82,14 @@ public:
     struct Info;
 
     enum Flags : unsigned {
+        // When to return directories in the iteration, either before the
+        // contained files, after them, or both. Implies recursion into
+        // subdirectories.
         fDirsFirst = 0x01,
         fDirsLast  = 0x02,
+
+        // Only return directories, implies recursive search. Nothing will be
+        // returned unless fDirsFirst and/or fDirsLast is also set.
         fDirsOnly  = 0x04,
     };
     struct Entry {
