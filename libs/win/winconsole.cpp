@@ -187,6 +187,16 @@ void Dim::consoleRedoLine() {
     );
 }
 
+//===========================================================================
+unsigned Dim::consoleWidth() {
+    HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_SCREEN_BUFFER_INFO info;
+    if (!GetConsoleScreenBufferInfo(hOutput, &info)) {
+        logMsgFatal() << "GetConsoleScreenBufferInfo: " << GetLastError();
+    }
+    return info.dwSize.X;
+}
+
 
 /****************************************************************************
 *

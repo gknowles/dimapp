@@ -34,6 +34,9 @@ bool consoleAttached();
 // Also enables/disables line buffering.
 void consoleEnableEcho(bool enable = true);
 
+// Width of current console buffer
+unsigned consoleWidth();
+
 // Replace previous line with spaces and set the cursor at its beginning.
 void consoleRedoLine();
 
