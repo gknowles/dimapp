@@ -166,24 +166,44 @@ void Dim::resLoadWebSite(
     if (!prefix.empty() && prefix.back() == '/')
         prefix.pop_back();
     for (auto && [name, ent] : s_files) {
-        auto rname = string_view{name};
+        auto rname = name;
+        auto rcontent = ent.content;
         Path route(prefix);
         route += rname;
         bool dir = false;
-        if (route.filename() == "index.html") {
-            dir = true;
-            route.removeFilename();
+        bool html = false;
+        if (route.extension() == ".html") {
+            html = true;
+            if (route.filename() == "index.html") {
+                dir = true;
+                route.removeFilename();
+            }
         }
         if (route != rname) {
             auto tmp = string(route);
             if (dir)
                 tmp += '/';
+            if (html) {
+                string base = "<base href=\"";
+                base += rname;
+                base += "\">";
+                if (auto pos = rcontent.find(base); pos != string::npos) {
+                    string content;
+                    content += rcontent.substr(0, pos);
+                    content += "<base href=\"";
+                    content += tmp;
+                    content += "\">";
+                    content += rcontent.substr(pos + base.size());
+                    rcontent = s_files.strDup(move(content));
+                }
+            }
             rname = s_files.strDup(move(tmp));
         }
-        httpRouteAddFileRef(rname, ent.mtime, ent.content);
+        auto mime = html ? "text/html"sv : ""sv;
+        httpRouteAddFileRef(rname, ent.mtime, rcontent, mime);
         if (dir) {
             rname.remove_suffix(1);
-            httpRouteAddFileRef(rname, ent.mtime, ent.content);
+            httpRouteAddFileRef(rname, ent.mtime, rcontent, mime);
         }
     }
 }

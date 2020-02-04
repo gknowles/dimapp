@@ -132,6 +132,13 @@ void httpRouteAddFileRef(
     std::string_view mimeType = {},
     std::string_view charSet = {}
 );
+void httpRouteAddAlias(
+    std::string_view path,
+    HttpMethod method,
+    std::string_view aliasPath,
+    HttpMethod aliasMethods = fHttpMethodGet,
+    bool aliasRecurse = false
+);
 
 
 /****************************************************************************

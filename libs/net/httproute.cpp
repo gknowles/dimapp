@@ -32,11 +32,6 @@ struct PathInfo {
     unsigned matched{};
     IHttpRouteNotify * notify{};
 
-    TimePoint mtime;
-    string_view content;
-    string_view mimeType;
-    string_view charSet;
-
     // Internal data referenced by other members
     unique_ptr<char[]> data;
     unique_ptr<IHttpRouteNotify> notifyOwned;
@@ -141,16 +136,7 @@ static void route(RequestInfo * ri, unsigned reqId, HttpRequest & req) {
         return httpRouteReplyNotFound(reqId, req);
     ri->pi = pi;
     pi->matched += 1;
-    if (pi->notify)
-        return pi->notify->onHttpRequest(reqId, req);
-
-    httpRouteReplyWithFile(
-        reqId,
-        pi->mtime,
-        pi->content,
-        pi->mimeType,
-        pi->charSet
-    );
+    pi->notify->onHttpRequest(reqId, req);
 }
 
 //===========================================================================
@@ -568,7 +554,10 @@ bool Http1Reject::onSocketRead(AppSocketData & data) {
 static MimeType s_mimeTypes[] = {
     { ".css",  "text/css"                         },
     { ".html", "text/html"                        },
+    { ".jpeg", "image/jpeg"                       },
+    { ".jpg",  "image/jpeg"                       },
     { ".js",   "application/javascript"           },
+    { ".png",  "image/png"                        },
     { ".svg",  "image/svg+xml"                    },
     { ".tsd",  "application/octet-stream"         },
     { ".tsl",  "application/octet-stream"         },
@@ -588,9 +577,7 @@ static AutoInit s_init;
 
 //===========================================================================
 int Dim::compareExt(const MimeType & a, const MimeType & b) {
-    if (!a.fileExt.empty() && !b.fileExt.empty())
-        return a.fileExt.compare(b.fileExt);
-    return !a.fileExt.empty() ? -1 : !b.fileExt.empty() ? 1 : 0;
+    return a.fileExt.compare(b.fileExt);
 }
 
 //===========================================================================
@@ -755,6 +742,64 @@ void HttpRouteDirListNotify::onHttpRequest(
 
 /****************************************************************************
 *
+*   FileRouteNotify
+*
+***/
+
+namespace {
+
+struct FileRouteNotify : IHttpRouteNotify {
+    void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
+
+    TimePoint m_mtime;
+    string_view m_content;
+    string_view m_mimeType;
+    string_view m_charSet;
+};
+
+} // namespace
+
+//===========================================================================
+void FileRouteNotify::onHttpRequest(unsigned reqId, HttpRequest & msg) {
+    httpRouteReplyWithFile(
+        reqId,
+        m_mtime,
+        m_content,
+        m_mimeType,
+        m_charSet
+    );
+}
+
+
+/****************************************************************************
+*
+*   AliasRouteNotify
+*
+***/
+
+namespace {
+
+struct AliasRouteNotify : IHttpRouteNotify {
+    void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
+
+    string_view m_path;
+    HttpMethod m_method = {};
+};
+
+} // namespace
+
+//===========================================================================
+void AliasRouteNotify::onHttpRequest(unsigned reqId, HttpRequest & msg) {
+    if (auto pi = find(m_path, m_method)) {
+        pi->notify->onHttpRequest(reqId, msg);
+    } else {
+        httpRouteReplyNotFound(reqId, msg);
+    }
+}
+
+
+/****************************************************************************
+*
 *   Add routes
 *
 ***/
@@ -794,10 +839,33 @@ void Dim::httpRouteAdd(
     pi.data = strDup(path);
 
     pi.notify = notify;
-    pi.recurse = recurse;
     pi.path = pi.data.get();
     pi.segs = count(path.begin(), path.end(), '/');
     pi.methods = methods;
+    pi.recurse = recurse;
+    routeAdd(move(pi));
+}
+
+//===========================================================================
+void Dim::httpRouteAddAlias(
+    std::string_view path,
+    HttpMethod method,
+    std::string_view aliasPath,
+    HttpMethod aliasMethods,
+    bool aliasRecurse
+) {
+    auto pi = PathInfo{};
+    string_view * views[] = { &path, &aliasPath };
+    pi.data = strDupGather(views, size(views));
+    pi.path = aliasPath;
+    pi.segs = count(aliasPath.begin(), aliasPath.end(), '/');
+    pi.methods = aliasMethods;
+    pi.recurse = aliasRecurse;
+    auto notify = make_unique<AliasRouteNotify>();
+    notify->m_path = path;
+    notify->m_method = method;
+    pi.notifyOwned = move(notify);
+    pi.notify = pi.notifyOwned.get();
     routeAdd(move(pi));
 }
 
@@ -810,7 +878,7 @@ static void addFileRouteRefs(
     string_view mimeType,
     string_view charSet
 ) {
-    if (pi.mimeType.empty()) {
+    if (mimeType.empty()) {
         auto mt = mimeTypeDefault(path);
         mimeType = mt.type;
         charSet = mt.charSet;
@@ -819,10 +887,13 @@ static void addFileRouteRefs(
     pi.path = path;
     pi.segs = count(path.begin(), path.end(), '/');
     pi.methods = fHttpMethodGet;
-    pi.mtime = mtime;
-    pi.content = content;
-    pi.mimeType = mimeType;
-    pi.charSet = charSet;
+    auto notify = new FileRouteNotify;
+    pi.notifyOwned.reset(notify);
+    notify->m_mtime = mtime;
+    notify->m_content = content;
+    notify->m_mimeType = mimeType;
+    notify->m_charSet = charSet;
+    pi.notify = notify;
     routeAdd(move(pi));
 }
 
@@ -835,23 +906,8 @@ void Dim::httpRouteAddFile(
     string_view charSet
 ) {
     auto pi = PathInfo();
-    string_view views[] = { path, content, mimeType, charSet };
-    size_t len = accumulate(
-        begin(views),
-        end(views),
-        (size_t) 0,
-        [](const auto & a, auto & b) { return a + b.size() + 1; }
-    );
-    pi.data = make_unique<char[]>(len);
-    auto out = pi.data.get();
-    for (auto && v : views) {
-        auto vlen = v.size();
-        memcpy(out, v.data(), vlen);
-        v = {out, vlen};
-        out += vlen;
-        *out++ = 0;
-    }
-
+    string_view * views[] = { &path, &content, &mimeType, &charSet };
+    pi.data = strDupGather(views, size(views));
     addFileRouteRefs(move(pi), path, mtime, content, mimeType, charSet);
 }
 
@@ -1113,7 +1169,7 @@ static void addFileHeaders(
             val += ";charset=";
             val += charSet;
         }
-        msg->addHeader(kHttpContentType, val.c_str());
+        msg->addHeader(kHttpContentType, val);
     }
 }
 
