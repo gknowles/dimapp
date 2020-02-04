@@ -484,6 +484,29 @@ unique_ptr<char[]> Dim::strDup(string_view src) {
 }
 
 //===========================================================================
+std::unique_ptr<char[]> Dim::strDupGather(
+    std::string_view * srcs[],
+    size_t count
+) {
+    size_t len = accumulate(
+        srcs,
+        srcs + count,
+        (size_t) 0,
+        [](const auto & a, auto & b) { return a + b->size() + 1; }
+    );
+    auto out = make_unique<char[]>(len);
+    auto ptr = out.get();
+    for (auto v = srcs; count; ++v, --count) {
+        auto vlen = (*v)->size();
+        memcpy(ptr, (*v)->data(), vlen);
+        **v = {ptr, vlen};
+        ptr += vlen;
+        *ptr++ = 0;
+    }
+    return out;
+}
+
+//===========================================================================
 char * Dim::toLower(char src[]) {
     auto & f = use_facet<ctype<char>>(locale());
     for (auto ptr = src; *ptr; ++ptr)

@@ -293,13 +293,17 @@ std::string_view trim(std::string_view src);
 std::string_view ltrim(std::string_view src);
 std::string_view rtrim(std::string_view src);
 
-// Splits source into lines, trims trailing spaces, leading and trailing
-// blank lines, and removes a number of leading whitespace characters from
-// each line equal to the smallest number of leading whitespace characters of
-// any line that still has characters.
+// Splits source into lines, trims trailing spaces, leading and trailing blank
+// lines, and removes a amount of leading whitespace from each line equal to
+// the smallest amount of leading whitespace of any line that still has
+// characters.
 std::string trimBlock(std::string_view src);
 
 std::unique_ptr<char[]> strDup(std::string_view src);
+
+// Copies contents of all srcs into a single buffer, with null terminators, and
+// updates the srcs to point into that newly allocated buffer.
+std::unique_ptr<char[]> strDupGather(std::string_view * srcs[], size_t count);
 
 //===========================================================================
 // vector to string
