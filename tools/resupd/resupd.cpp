@@ -170,9 +170,6 @@ static void app(int argc, char *argv[]) {
     auto & target = cli.opt<Path>("<outfile>")
         .desc("Usually an executable for resource target or a source file "
             "for c++ target.");
-    cli.opt<string>("<type>")
-        .choice("webpack", "webpack", "Webpack bundle files.")
-        .desc("Type of content in source directory.");
     auto & src = cli.opt<Path>("<srcdir>")
         .desc("Directory of resources to write to target.");
     enum { kResource, kCpp } otype;
@@ -199,9 +196,6 @@ static void app(int argc, char *argv[]) {
     } else {
         target->defaultExt("cpp");
     }
-
-    if (!fileExists(*src / "manifest.json"))
-        return appSignalUsageError(EX_DATAERR, "File not found: manifest.json");
 
     cout << "Updating '" << *target << "' from '" << *src << endl;
 
