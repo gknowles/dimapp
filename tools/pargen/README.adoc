@@ -44,13 +44,13 @@ Header file to generate
 C++ file to generate
 
 | %api.parser.className | %api.prefix + "Parser" |
-Name to give parser class |
+Name to give parser class
 
 | %api.base.file.h | lowercase(%api.prefix) + "parsebase.h" |
-Header defining base class |
+Header defining base class
 
 | %api.base.className | "I" + %api.prefix + "ParserNotify" |
-Name to give base class |
+Name to give base class
 
 | %api.namespace | "" (global) |
 Namespace to contain parser classes
@@ -65,7 +65,8 @@ via their defaults.
 
 == Tags
 
-Triggering callbacks during parsing:
+Triggering callbacks during parsing
+
 - Start
 - Start+
 - End
@@ -74,13 +75,16 @@ Triggering callbacks during parsing:
 - Char+
 
 Change the name of the callback invoked
+
 - As \<rulename>
 
 Root of separate function that can be recursively called
+
 - Function
 
 Rule is only included if corresponding --min-rules or --no-min-rules is
 explicitly enabled. This provides a way to have a small set of states to
 reduce the clutter during development, especially with --state-detail.
+
 - MinRules
 - NoMinRules
