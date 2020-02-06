@@ -1,9 +1,10 @@
-<!--
-Copyright Glen Knowles 2016 - 2018.
+////
+Copyright Glen Knowles 2016 - 2020.
 Distributed under the Boost Software License, Version 1.0.
--->
+////
 
-# pargen
+= pargen
+
 Simplistic parser generator
 
 Generates high performance text parsers from tagged ABNF. The state machine
@@ -25,24 +26,44 @@ the some modifications.
 The "Core Rules" defined in [RFC 5234 B.1](https://tools.ietf.org/html/rfc5234#appendix-B.1)
 ("ALPHA", "BIT", etc) are always included.
 
-## Options
+== Options
 
-| Name | Default | Description |
-|------|---------|-------------|
-| %root | - | Name of the top level rule that matches the input to be parsed |
-| %api.prefix | - | Used in default definitions of other options |
-| %api.parser.file.h | lowercase(%api.prefix) + "parse.h" | Header file to generate |
-| %api.parser.file.cpp | lowercase(%api.prefix) + "parse.cpp" | C++ file to generate |
-| %api.parser.className | %api.prefix + "Parser" | Name to give parser class |
-| %api.base.file.h | lowercase(%api.prefix) + "parsebase.h" | Header defining base class |
-| %api.base.className | "I" + %api.prefix + "ParserNotify" | Name to give base class |
-| %api.namespace | "" (global) | Namespace to contain parser classes |
-| %include | - | Another file with additional options and/or ABNF, path is relative to the including file |
+|===
+| Name | Default | Description
+
+| %root | - |
+Name of the top level rule that matches the input to be parsed
+
+| %api.prefix | - |
+Used in default definitions of other options
+
+| %api.parser.file.h | lowercase(%api.prefix) + "parse.h" |
+Header file to generate
+
+| %api.parser.file.cpp | lowercase(%api.prefix) + "parse.cpp" |
+C++ file to generate
+
+| %api.parser.className | %api.prefix + "Parser" |
+Name to give parser class |
+
+| %api.base.file.h | lowercase(%api.prefix) + "parsebase.h" |
+Header defining base class |
+
+| %api.base.className | "I" + %api.prefix + "ParserNotify" |
+Name to give base class |
+
+| %api.namespace | "" (global) |
+Namespace to contain parser classes
+
+| %include | - |
+Another file with additional options and/or ABNF, path is relative to the
+including file
+|===
 
 All values must be defined. This can be done either explicitly, or implicitly
 via their defaults.
 
-## Tags
+== Tags
 
 Triggering callbacks during parsing:
 - Start

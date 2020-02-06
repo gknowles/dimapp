@@ -1,0 +1,12 @@
+////
+Copyright Glen Knowles 2016 - 2020.
+Distributed under the Boost Software License, Version 1.0.
+////
+
+= dimapp
+:url-ci: https://ci.appveyor.com/project/gknowles/dimapp
+:url-badge: image:https://ci.appveyor.com/api/projects/status/0a248fk1dspywxbm?svg=true
+
+{url-ci}[{url-badge}[Build status]]
+
+Windows server application framework
