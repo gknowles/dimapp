@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2019.
+// Copyright Glen Knowles 2015 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // visualc.h - dim compiler config
@@ -36,10 +36,10 @@
     4456 /* declaration of 'identifier' hides previous local declaration */ \
     4457 /* declaration of 'identifier' hides function parameter */ \
     5030 /* attribute 'identifier' is not recognized */ \
-    26495 /* variable 'identifier' is uninitialized. Always initialize a
-            member variable */ \
     26451 /* Arithmetic overflow: Using operation 'op' on a %size1% byte value
             and then casting the result to a %size2% byte value. */ \
+    26495 /* variable 'identifier' is uninitialized. Always initialize a
+            member variable */ \
     26812 /* prefer 'enum class' over 'enum' */ \
 )
 #pragma warning(default: \
