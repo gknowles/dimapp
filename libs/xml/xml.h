@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2019.
+// Copyright Glen Knowles 2016 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // xml.h - dim xml
@@ -130,7 +130,7 @@ inline IXBuilder::ElemNameProxy start(
     const char name[],
     const char val[] = nullptr
 ) {
-    return IXBuilder::ElemNameProxy{name, val};
+    return IXBuilder::ElemNameProxy{name, val ? val : ""};
 }
 inline IXBuilder & end(IXBuilder & out) {
     return out.end();
