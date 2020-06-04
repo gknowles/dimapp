@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2019.
+// Copyright Glen Knowles 2015 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // types.cpp - dim core
@@ -414,6 +414,9 @@ TimePoint Dim::timeNow() {
 }
 
 //===========================================================================
+namespace Dim {
+std::ostream & operator<<(std::ostream & os, TimePoint time);
+}
 std::ostream & Dim::operator<<(std::ostream & os, TimePoint time) {
     os << Time8601Str(time).c_str();
     return os;

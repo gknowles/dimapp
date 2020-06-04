@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2018 - 2019.
+// Copyright Glen Knowles 2018 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // jdocument.cpp - dim json
@@ -295,6 +295,10 @@ JNodeIterator Dim::nodes(JNode * node) {
 *
 ***/
 
+//===========================================================================
+namespace Dim {
+IJBuilder & operator<<(IJBuilder & out, const JNode & node);
+}
 IJBuilder & Dim::operator<<(IJBuilder & out, const JNode & node) {
     auto & ni = static_cast<const JNodeInfo &>(node);
     if (!ni.name.empty())

@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2019.
+// Copyright Glen Knowles 2015 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // address.cpp - dim net
@@ -7,13 +7,6 @@
 
 using namespace std;
 using namespace Dim;
-
-
-/****************************************************************************
-*
-*   Helpers
-*
-***/
 
 
 /****************************************************************************
@@ -52,12 +45,35 @@ NetAddr::operator bool() const {
 }
 
 //===========================================================================
-istream & Dim::operator>>(istream & in, NetAddr & out) {
+namespace Dim {
+istream & operator>>(istream & in, NetAddr & out) {
     string tmp;
     in >> tmp;
     if (!parse(&out, tmp.c_str()))
         in.setstate(ios_base::failbit);
     return in;
+}
+} // namespace
+
+//===========================================================================
+bool Dim::parse(NetAddr * out, string_view src) {
+    SockAddr sa;
+    if (!parse(&sa, src, 9)) {
+        *out = {};
+        return false;
+    }
+    *out = sa.addr;
+    return true;
+}
+
+//===========================================================================
+namespace Dim {
+ostream & operator<<(ostream & os, const NetAddr & addr);
+}
+ostream & Dim::operator<<(ostream & os, const NetAddr & addr) {
+    SockAddr sa;
+    sa.addr = addr;
+    return operator<<(os, sa);
 }
 
 

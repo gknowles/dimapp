@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2019.
+// Copyright Glen Knowles 2017 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // str.cpp - dim core
@@ -655,6 +655,9 @@ string Dim::toString(wstring_view src) {
 }
 
 //===========================================================================
+namespace Dim {
+ostream & operator<<(ostream & os, const ostream_utf8_return & out);
+}
 ostream & Dim::operator<<(ostream & os, const ostream_utf8_return & out) {
     copy_char(out.src, ostreambuf_iterator<char>(os));
     return os;

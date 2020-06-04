@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2019.
+// Copyright Glen Knowles 2017 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // path.cpp - dim file
@@ -555,7 +555,10 @@ bool Path::hasExt() const {
 ***/
 
 //===========================================================================
-ostream & Dim::operator<<(ostream & os, const Path & val) {
+namespace Dim {
+ostream & operator<< (ostream & os, const Path & val);
+}
+ostream & Dim::operator<< (ostream & os, const Path & val) {
     os << val.view();
     return os;
 }

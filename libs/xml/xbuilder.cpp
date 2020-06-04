@@ -333,64 +333,9 @@ size_t XBuilder::size() const {
 ***/
 
 //===========================================================================
-IXBuilder & Dim::operator<<(IXBuilder & out, int64_t val) {
-    StrFrom<int64_t> tmp(val);
-    return out.text(tmp);
+namespace Dim {
+IXBuilder & operator<<(IXBuilder & out, const XNode & elem);
 }
-
-//===========================================================================
-IXBuilder & Dim::operator<<(IXBuilder & out, uint64_t val) {
-    StrFrom<int64_t> tmp(val);
-    return out.text(tmp);
-}
-
-//===========================================================================
-IXBuilder & Dim::operator<<(IXBuilder & out, int val) {
-    StrFrom<int> tmp(val);
-    return out.text(tmp);
-}
-
-//===========================================================================
-IXBuilder & Dim::operator<<(IXBuilder & out, unsigned val) {
-    StrFrom<unsigned> tmp(val);
-    return out.text(tmp);
-}
-
-//===========================================================================
-IXBuilder & Dim::operator<<(IXBuilder & out, float val) {
-    StrFrom<float> tmp(val);
-    return out.text(tmp);
-}
-
-//===========================================================================
-IXBuilder & Dim::operator<<(IXBuilder & out, double val) {
-    StrFrom<double> tmp(val);
-    return out.text(tmp);
-}
-
-//===========================================================================
-IXBuilder & Dim::operator<<(IXBuilder & out, long double val) {
-    StrFrom<long double> tmp(val);
-    return out.text(tmp);
-}
-
-//===========================================================================
-IXBuilder & Dim::operator<<(IXBuilder & out, char val) {
-    char str[] = {val, 0};
-    return out.text(str);
-}
-
-//===========================================================================
-IXBuilder & Dim::operator<<(IXBuilder & out, const char val[]) {
-    return out.text(val);
-}
-
-//===========================================================================
-IXBuilder & Dim::operator<<(IXBuilder & out, string_view val) {
-    return out.text(val);
-}
-
-//===========================================================================
 IXBuilder & Dim::operator<<(IXBuilder & out, const XNode & elem) {
     auto type = nodeType(&elem);
     switch (type) {

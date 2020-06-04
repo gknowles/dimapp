@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2019.
+// Copyright Glen Knowles 2015 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // winaddress.cpp - dim windows platform
@@ -7,31 +7,6 @@
 
 using namespace std;
 using namespace Dim;
-
-
-/****************************************************************************
-*
-*   NetAddr
-*
-***/
-
-//===========================================================================
-bool Dim::parse(NetAddr * out, string_view src) {
-    SockAddr sa;
-    if (!parse(&sa, src, 9)) {
-        *out = {};
-        return false;
-    }
-    *out = sa.addr;
-    return true;
-}
-
-//===========================================================================
-ostream & Dim::operator<<(ostream & os, const NetAddr & addr) {
-    SockAddr sa;
-    sa.addr = addr;
-    return operator<<(os, sa);
-}
 
 
 /****************************************************************************
@@ -70,7 +45,8 @@ bool Dim::parse(SockAddr * end, string_view src, int defaultPort) {
 }
 
 //===========================================================================
-ostream & Dim::operator<<(ostream & os, const SockAddr & src) {
+namespace Dim {
+ostream & operator<<(ostream & os, const SockAddr & src) {
     sockaddr_storage sas;
     copy(&sas, src);
     wchar_t tmp[256];
@@ -88,6 +64,7 @@ ostream & Dim::operator<<(ostream & os, const SockAddr & src) {
     }
     return os;
 }
+} // namespace
 
 
 /****************************************************************************

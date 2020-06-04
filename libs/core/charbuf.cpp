@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2019.
+// Copyright Glen Knowles 2015 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // charbuf.cpp - dim core
@@ -1124,6 +1124,9 @@ string Dim::toString(const CharBuf & buf, size_t pos, size_t count) {
 }
 
 //===========================================================================
+namespace Dim {
+ostream & operator<<(ostream & os, const CharBuf & buf);
+}
 ostream & Dim::operator<<(ostream & os, const CharBuf & buf) {
     for (auto && v : buf.views())
         os << v;

@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2019.
+// Copyright Glen Knowles 2016 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // util.h - dim core
@@ -8,6 +8,7 @@
 
 #include "math.h"
 
+#include <bit>
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -85,7 +86,11 @@ constexpr uint8_t ntoh8(const void * vptr) {
 //===========================================================================
 constexpr uint16_t ntoh16(const void * vptr) {
     auto val = *static_cast<const uint16_t *>(vptr);
-    return bswap16(val);
+    if constexpr (std::endian::native == std::endian::big) {
+        return val;
+    } else {
+        return bswap16(val);
+    }
 }
 
 //===========================================================================
@@ -99,13 +104,21 @@ constexpr uint32_t ntoh24(const void * vptr) {
 //===========================================================================
 constexpr uint32_t ntoh32(const void * vptr) {
     auto val = *static_cast<const uint32_t *>(vptr);
-    return bswap32(val);
+    if constexpr (std::endian::native == std::endian::big) {
+        return val;
+    } else {
+        return bswap32(val);
+    }
 }
 
 //===========================================================================
 constexpr uint64_t ntoh64(const void * vptr) {
     auto val = *static_cast<const uint64_t *>(vptr);
-    return bswap64(val);
+    if constexpr (std::endian::native == std::endian::big) {
+        return val;
+    } else {
+        return bswap64(val);
+    }
 }
 
 //===========================================================================
@@ -126,7 +139,11 @@ constexpr double ntohf64(const void * vptr) {
 
 //===========================================================================
 constexpr char * hton16(void * out, unsigned val) {
-    *(uint16_t *)out = bswap16(val);
+    if constexpr (std::endian::native == std::endian::big) {
+        *(uint16_t *)out = (uint16_t) val;
+    } else {
+        *(uint16_t *)out = bswap16(val);
+    }
     return (char *) out;
 }
 
@@ -141,13 +158,21 @@ constexpr char * hton24(void * vout, unsigned val) {
 
 //===========================================================================
 constexpr char * hton32(void * out, unsigned val) {
-    *(uint32_t *)out = bswap32(val);
+    if constexpr (std::endian::native == std::endian::big) {
+        *(uint32_t *)out = val;
+    } else {
+        *(uint32_t *)out = bswap32(val);
+    }
     return (char *) out;
 }
 
 //===========================================================================
 constexpr char * hton64(void * out, uint64_t val) {
-    *(uint64_t *)out = bswap64(val);
+    if constexpr (std::endian::native == std::endian::big) {
+        *(uint64_t *)out = val;
+    } else {
+        *(uint64_t *)out = bswap64(val);
+    }
     return (char *) out;
 }
 

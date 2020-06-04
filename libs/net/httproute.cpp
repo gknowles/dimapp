@@ -140,7 +140,12 @@ static void route(RequestInfo * ri, unsigned reqId, HttpRequest & req) {
 }
 
 //===========================================================================
-static struct { unsigned id; RequestInfo * ri; } makeRequestInfo(
+namespace {
+struct MakeRequestInfo_ReturnType {
+    unsigned id;
+    RequestInfo * ri;
+};
+MakeRequestInfo_ReturnType makeRequestInfo(
     HttpSocket * conn,
     int stream
 ) {
@@ -154,6 +159,7 @@ static struct { unsigned id; RequestInfo * ri; } makeRequestInfo(
         }
     }
 }
+} // namespace
 
 
 /****************************************************************************

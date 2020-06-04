@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2019.
+// Copyright Glen Knowles 2016 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // math.h - dim core
@@ -6,6 +6,7 @@
 
 #include "cppconf/cppconf.h"
 
+#include <bit>
 #include <cassert>
 #include <cstdint>
 #include <intrin.h>
@@ -40,10 +41,8 @@ constexpr uint64_t reverseBits(uint64_t x) {
 //===========================================================================
 constexpr int trailingZeroBits(uint64_t val) {
     assert(val != 0);
-#if 0
-    unsigned long count = 0;
-    _BitScanForward64(&count, val);
-    return count;
+#if __cpp_lib_bitops
+    return std::countr_zero(val);
 #else
     int i = 0;
     for (;;) {
@@ -61,10 +60,8 @@ constexpr int trailingZeroBits(uint64_t val) {
 //===========================================================================
 constexpr int leadingZeroBits(uint64_t val) {
     assert(val != 0);
-#if 0
-    unsigned long count = 0;
-    _BitScanReverse64(&count, val);
-    return count;
+#if __cpp_lib_bitops
+    return std::countl_zero(val);
 #else
     auto mask = (uint64_t) 1 << 63;
     int i = 0;
@@ -81,10 +78,8 @@ constexpr int leadingZeroBits(uint64_t val) {
 //===========================================================================
 // Round up to power of 2
 constexpr uint64_t pow2Ceil(uint64_t num) {
-#if 0
-    unsigned long k;
-    _BitScanReverse64(&k, num);
-    return (size_t) 1 << (k + 1);
+#if __cpp_lib_bitops
+    return std::ceil2(num);
 #else
     num -= 1;
     num |= (num >> 1);
@@ -101,8 +96,8 @@ constexpr uint64_t pow2Ceil(uint64_t num) {
 //===========================================================================
 // Number of bits in the number that are set
 constexpr int hammingWeight(uint64_t x) {
-#if 0
-    return _CountOneBits64(x);
+#if __cpp_lib_bitops
+    return (int) std::popcount(x);
 #else
     x = x - ((x >> 1) & 0x5555'5555'5555'5555);
     x = (x & 0x3333'3333'3333'3333) + ((x >> 2) & 0x3333'3333'3333'3333);

@@ -7,6 +7,7 @@
 #include "cppconf/cppconf.h"
 
 #include "core/charbuf.h"
+#include "core/str.h"
 #include "core/types.h"
 
 #include <cstdint>
@@ -28,12 +29,13 @@ namespace Dim {
 class IXBuilder {
 public:
     struct ElemNameProxy {
-        const char * name;
-        const char * value;
+        const std::string_view name;
+        const std::string_view value;
     };
+    struct ElemEndProxy {};
     struct AttrNameProxy {
-        const char * name;
-        const char * value;
+        const std::string_view name;
+        const std::string_view value;
     };
 
 public:
@@ -57,6 +59,42 @@ protected:
     virtual void append(std::string_view text) = 0;
     virtual void appendCopy(size_t pos, size_t count) = 0;
     virtual size_t size() const = 0;
+
+public:
+    template <typename T>
+    friend IXBuilder & operator<<(IXBuilder & out, const T & val) {
+        if constexpr (std::is_same_v<T, char *>) {
+            return out.text(std::string_view(val));
+        } else if constexpr (std::is_same_v<T, char>) {
+            return out.text(std::string_view(&val, 1));
+        } else if constexpr (std::is_arithmetic_v<T>) {
+            Dim::StrFrom<T> tmp(val);
+            return out.text(tmp);
+        } else if constexpr (std::is_same_v<T, ElemNameProxy>) {
+            return val.value.empty()
+                ? out.start(val.name)
+                : out.elem(val.name, val.value);
+        } else if constexpr (std::is_same_v<T, AttrNameProxy>) {
+            return val.value.empty()
+                ? out.startAttr(val.name)
+                : out.attr(val.name, val.value);
+        } else {
+            thread_local std::ostringstream t_os;
+            t_os.clear();
+            t_os.str({});
+            t_os << val;
+            return out.text(t_os.str());
+        }
+    }
+    friend IXBuilder & operator<<(IXBuilder & out, std::string_view val) {
+        return out.text(val);
+    }
+    friend IXBuilder & operator<<(
+        IXBuilder & out,
+        IXBuilder & (*pfn)(IXBuilder &)
+    ) {
+        return pfn(out);
+    }
 
 private:
     template <int N> void addRaw(const char (&text)[N]) {
@@ -88,39 +126,6 @@ private:
     std::vector<Pos> m_stack;
 };
 
-IXBuilder & operator<<(IXBuilder & out, int64_t val);
-IXBuilder & operator<<(IXBuilder & out, uint64_t val);
-IXBuilder & operator<<(IXBuilder & out, int val);
-IXBuilder & operator<<(IXBuilder & out, unsigned val);
-IXBuilder & operator<<(IXBuilder & out, float val);
-IXBuilder & operator<<(IXBuilder & out, double val);
-IXBuilder & operator<<(IXBuilder & out, long double val);
-IXBuilder & operator<<(IXBuilder & out, char val);
-IXBuilder & operator<<(IXBuilder & out, const char val[]);
-IXBuilder & operator<<(IXBuilder & out, std::string_view val);
-
-template <typename T>
-inline IXBuilder & operator<<(IXBuilder & out, const T & val) {
-    thread_local std::ostringstream t_os;
-    t_os.clear();
-    t_os.str({});
-    t_os << val;
-    return out.text(t_os.str());
-}
-
-inline IXBuilder & operator<<(
-    IXBuilder & out,
-    IXBuilder & (*pfn)(IXBuilder &)
-) {
-    return pfn(out);
-}
-
-inline IXBuilder & operator<<(
-    IXBuilder & out,
-    const IXBuilder::ElemNameProxy & e
-) {
-    return e.value ? out.elem(e.name, e.value) : out.start(e.name);
-}
 inline IXBuilder::ElemNameProxy start(
     const char name[],
     const char val[] = nullptr
@@ -131,28 +136,21 @@ inline IXBuilder & end(IXBuilder & out) {
     return out.end();
 }
 inline IXBuilder::ElemNameProxy elem(
-    const char name[],
-    const char val[] = nullptr
+    const std::string_view & name,
+    const std::string_view & val = {}
 ) {
-    return IXBuilder::ElemNameProxy{name, val ? val : ""};
+    return IXBuilder::ElemNameProxy{name, val};
 }
 
-inline IXBuilder & operator<<(
-    IXBuilder & out,
-    const IXBuilder::AttrNameProxy & a
-) {
-    return a.value ? out.attr(a.name, a.value) : out.startAttr(a.name);
-}
 inline IXBuilder::AttrNameProxy attr(
-    const char name[],
-    const char val[] = nullptr
+    const std::string_view & name,
+    const std::string_view & val = {}
 ) {
     return IXBuilder::AttrNameProxy{name, val};
 }
 inline IXBuilder & endAttr(IXBuilder & out) {
     return out.endAttr();
 }
-
 
 //---------------------------------------------------------------------------
 class XBuilder : public IXBuilder {
@@ -284,13 +282,15 @@ enum class XType {
 struct XNode {
     const char * const name;
     const char * const value;
+
+private:
+    friend IXBuilder & operator<<(IXBuilder & out, const XNode & elem);
 };
 struct XAttr {
     const char * const name;
     const char * const value;
 };
 
-IXBuilder & operator<<(IXBuilder & out, const XNode & elem);
 std::string toString(const XNode & elem);
 
 XDocument * document(XNode * node);

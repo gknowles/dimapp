@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2019.
+// Copyright Glen Knowles 2017 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // uset.cpp - dim core
@@ -2053,6 +2053,9 @@ UnsignedSet::RangeIterator & UnsignedSet::RangeIterator::operator++() {
 ***/
 
 //===========================================================================
+namespace Dim {
+ostream & operator<<(ostream & os, const UnsignedSet & right);
+}
 ostream & Dim::operator<<(ostream & os, const UnsignedSet & right) {
     if (auto v = right.ranges().begin()) {
         for (;;) {
