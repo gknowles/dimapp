@@ -42,8 +42,8 @@ static uint64_t iStrToAny (
 ) {
     // the high order partial digit (and the trailing null :P) are not safe
     constexpr unsigned kMaxSafeCharsBase10 = (Flags & f64Bit)
-        ? (unsigned) maxIntegralChars<uint64_t>() - 1
-        : (unsigned) maxIntegralChars<unsigned>() - 1;
+        ? (unsigned) maxNumericChars<uint64_t>() - 1
+        : (unsigned) maxNumericChars<unsigned>() - 1;
     constexpr unsigned kMaxCharsBase16 = (Flags & f64Bit) ? 16 : 8;
 
     constexpr uint64_t kPositiveValueLimit = (Flags & fSigned)
@@ -327,7 +327,7 @@ static double siFactor(char ** ptr, double binary, double metric) {
 
 //===========================================================================
 bool Dim::parse(double * out, std::string_view src) {
-    char buf[maxFloatChars<double>()];
+    char buf[maxNumericChars<double>()];
     buf[src.copy(buf, src.size())] = 0;
     char * ptr;
     *out = strtod(buf, &ptr);

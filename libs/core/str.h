@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2019.
+// Copyright Glen Knowles 2017 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // str.h - dim core
@@ -27,7 +27,7 @@ namespace Dim {
 // type T in base 10.
 template <typename T> constexpr
 std::enable_if_t<std::is_integral_v<T>, int>
-maxIntegralChars() {
+maxNumericChars() {
     return std::numeric_limits<T>::is_signed
         + std::numeric_limits<T>::digits10 + 1;
 }
@@ -37,7 +37,7 @@ maxIntegralChars() {
 // of type T in base 10.
 template <typename T> constexpr
 std::enable_if_t<std::is_floating_point_v<T>, int>
-maxFloatChars() {
+maxNumericChars() {
     constexpr auto cnt = 1 // sign
         + std::numeric_limits<T>::max_digits10 + 1 // digits + decimal point
         + digits10(std::numeric_limits<T>::max_exponent10) + 2; // "e+"
@@ -47,23 +47,18 @@ maxFloatChars() {
 
 /****************************************************************************
 *
-*   StrFrom<>
+*   StrFrom<is_arithmetic_v>
+*
+*   Convert arithmetic type to string_view, includes both floating point
+*   (float, double, long double) and integral (char, long, uint16_t, etc)
+*   types.
 *
 ***/
 
 template <typename T, typename Enable = void> class StrFrom {};
 
-
-/****************************************************************************
-*
-*   StrFrom<is_integral_v<T>>
-*
-*   Convert integral type (char, long, uint16_t, etc) to string_view
-*
-***/
-
 template <typename T>
-class StrFrom<T, std::enable_if_t<std::is_integral_v<T>>> {
+class StrFrom<T, std::enable_if_t<std::is_arithmetic_v<T>>> {
 public:
     StrFrom();
     StrFrom(T val) { set(val); }
@@ -81,114 +76,24 @@ private:
     }
 
 private:
-    using Signed = typename std::make_signed<T>::type;
-    using Unsigned = typename std::make_unsigned<T>::type;
-
-    char data[maxIntegralChars<T>() + 1];
+    char data[maxNumericChars<T>() + 1];
 };
 
 //===========================================================================
 template <typename T>
-StrFrom<T, std::enable_if_t<std::is_integral_v<T>>>::StrFrom() {
+StrFrom<T, std::enable_if_t<std::is_arithmetic_v<T>>>::StrFrom() {
     data[0] = 0;
     data[sizeof data - 1] = (char) (sizeof data - 1);
 }
 
 //===========================================================================
 template <typename T>
-std::string_view StrFrom<T, std::enable_if_t<std::is_integral_v<T>>>
-::set(T val) {
-    Unsigned uval = val;
-    auto ptr = data;
-    auto used = 0;
-    if constexpr (std::numeric_limits<T>::is_signed) {
-        if (val < 0) {
-            *ptr++ = '-';
-            used += 1;
-            uval = static_cast<Unsigned>(0 - val);
-        }
-    }
-
-    if (uval < 10) {
-        // optimize for 0 and 1... and 2 through 9 since it's no more cost
-        ptr[0] = static_cast<char>(uval) + '0';
-        ptr[1] = 0;
-        data[sizeof data - 1] = (char) (sizeof data - (used + 1) - 1);
-        return *this;
-    }
-
-    int i = 0;
-    for (;;) {
-        ptr[i] = (uval % 10) + '0';
-        uval /= 10;
-        i += 1;
-        if (!uval)
-            break;
-    }
-    ptr[i] = 0;
-    used += i;
-    for (i -= 1; i > 0; i -= 2) {
-        std::swap(*ptr, ptr[i]);
-        ptr += 1;
-    }
-    data[sizeof data - 1] = (char) (sizeof data - used - 1);
-    return *this;
-}
-
-//===========================================================================
-template <typename T>
-StrFrom<T, std::enable_if_t<std::is_integral_v<T>>>
-::operator std::string_view() const {
-    return std::string_view(data, sizeof data - data[sizeof data - 1] - 1);
-}
-
-
-/****************************************************************************
-*
-*   StrFrom<is_float_point_v>
-*
-*   Convert floating point type (float, double, long double) to string_view
-*
-***/
-
-template <typename T>
-class StrFrom<T, std::enable_if_t<std::is_floating_point_v<T>>> {
-public:
-    StrFrom();
-    StrFrom(T val) { set(val); }
-    std::string_view set(T val);
-    operator std::string_view() const;
-    const char * c_str() const { return data; }
-
-private:
-    friend std::ostream & operator<<(
-        std::ostream & os,
-        const StrFrom & str
-    ) {
-        os << (std::string_view) str;
-        return os;
-    }
-
-private:
-    char data[maxFloatChars<T>() + 1];
-};
-
-//===========================================================================
-template <typename T>
-StrFrom<T, std::enable_if_t<std::is_floating_point_v<T>>>::StrFrom() {
-    data[0] = 0;
-    data[sizeof data - 1] = (char) (sizeof data - 1);
-}
-
-//===========================================================================
-template <typename T>
-std::string_view StrFrom<T, std::enable_if_t<std::is_floating_point_v<T>>>
+std::string_view StrFrom<T, std::enable_if_t<std::is_arithmetic_v<T>>>
 ::set(T val) {
     auto r = std::to_chars(
         data,
         data + sizeof data,
-        val,
-        std::chars_format::general
+        val
     );
     auto used = r.ptr - data;
     assert(used < sizeof data);
@@ -199,7 +104,7 @@ std::string_view StrFrom<T, std::enable_if_t<std::is_floating_point_v<T>>>
 
 //===========================================================================
 template <typename T>
-StrFrom<T, std::enable_if_t<std::is_floating_point_v<T>>>
+StrFrom<T, std::enable_if_t<std::is_arithmetic_v<T>>>
 ::operator std::string_view() const {
     return std::string_view(data, sizeof data - data[sizeof data - 1] - 1);
 }
