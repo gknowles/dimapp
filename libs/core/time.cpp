@@ -115,8 +115,8 @@ string Dim::toString(Duration val, DurationFormat fmt) {
 
 //===========================================================================
 bool Dim::parse(Duration * out, string_view src) {
-    char buf[maxNumericChars<double>()];
-    buf[src.copy(buf, src.size())] = 0;
+    char buf[maxNumericChars<double>() + 1];
+    buf[src.copy(buf, size(buf) - 1)] = 0;
     char * ptr;
     auto val = strtod(buf, &ptr);
     if (*ptr) {

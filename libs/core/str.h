@@ -25,9 +25,9 @@ namespace Dim {
 //===========================================================================
 // Maximum number of characters needed to represent any integral value of
 // type T in base 10.
-template <typename T> constexpr
-std::enable_if_t<std::is_integral_v<T>, int>
-maxNumericChars() {
+template <typename T>
+requires std::is_integral_v<T>
+constexpr int maxNumericChars() {
     return std::numeric_limits<T>::is_signed
         + std::numeric_limits<T>::digits10 + 1;
 }
@@ -35,9 +35,9 @@ maxNumericChars() {
 //===========================================================================
 // Maximum number of characters needed to represent any floating point value
 // of type T in base 10.
-template <typename T> constexpr
-std::enable_if_t<std::is_floating_point_v<T>, int>
-maxNumericChars() {
+template <typename T>
+requires std::is_floating_point_v<T>
+constexpr int maxNumericChars() {
     constexpr auto cnt = 1 // sign
         + std::numeric_limits<T>::max_digits10 + 1 // digits + decimal point
         + digits10(std::numeric_limits<T>::max_exponent10) + 2; // "e+"

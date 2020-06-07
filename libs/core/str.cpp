@@ -15,211 +15,169 @@ using namespace Dim;
 *
 ***/
 
-namespace {
-enum StrAny : uint8_t {
-    fSigned   = 1,
-    f64Bit    = 2,
+//===========================================================================
+inline unsigned char charToDigit (unsigned char ch) {
+    static constexpr unsigned char kCharToDigit[] = {
+    //    0   1   2   3    4   5   6   7    8   9   a   b    c   d   e    f
+        255,255,255,255, 255,255,255,255, 255,255,255,255, 255,255,255,255,
+        255,255,255,255, 255,255,255,255, 255,255,255,255, 255,255,255,255,
+        255,255,255,255, 255,255,255,255, 255,255,255,255, 255,255,255,255,
+          0,  1,  2,  3,   4,  5,  6,  7,   8,  9,255,255, 255,255,255,255,
+        255, 10, 11, 12,  13, 14, 15, 16,  17, 18, 19, 20,  21, 22, 23, 24,
+         25, 26, 27, 28,  29, 30, 31, 32,  33, 34, 35,255, 255,255,255,255,
+        255, 10, 11, 12,  13, 14, 15, 16,  17, 18, 19, 20,  21, 22, 23, 24,
+         25, 26, 27, 28,  29, 30, 31, 32,  33, 34, 35,255, 255,255,255,255,
+        255,255,255,255, 255,255,255,255, 255,255,255,255, 255,255,255,255,
+        255,255,255,255, 255,255,255,255, 255,255,255,255, 255,255,255,255,
+        255,255,255,255, 255,255,255,255, 255,255,255,255, 255,255,255,255,
+        255,255,255,255, 255,255,255,255, 255,255,255,255, 255,255,255,255,
+        255,255,255,255, 255,255,255,255, 255,255,255,255, 255,255,255,255,
+        255,255,255,255, 255,255,255,255, 255,255,255,255, 255,255,255,255,
+        255,255,255,255, 255,255,255,255, 255,255,255,255, 255,255,255,255,
+        255,255,255,255, 255,255,255,255, 255,255,255,255, 255,255,255,255,
+    };
+    static_assert(std::size(kCharToDigit) == 256);
 
-    kUint     = 0,
-    kUint64   = f64Bit,
-    kInt      = fSigned,
-    kInt64    = fSigned | f64Bit,
-};
-} // namespace
+    return kCharToDigit[ch];
+}
 
 //===========================================================================
 // There is no wchar version because the internal wchar implementation:
 //  - isn't quite as bad because it doesn't deal with the C locale settings
 //  - recognizes multiple code points for the digits 0-9
-#pragma warning(push)
-#pragma warning(disable: 4102) // 'identifier': unreferenced label
-template<int Flags>
-static uint64_t iStrToAny (
+//
+//  chars > MAX_INT is treated as MAX_INT
+template<typename T>
+requires (std::is_integral_v<T> && !std::is_same_v<T, bool>)
+static T strToIntegral (
     const char source[],
     char ** endPtr,
     unsigned radix,
     size_t chars = (size_t) -1
 ) {
     // the high order partial digit (and the trailing null :P) are not safe
-    constexpr unsigned kMaxSafeCharsBase10 = (Flags & f64Bit)
-        ? (unsigned) maxNumericChars<uint64_t>() - 1
-        : (unsigned) maxNumericChars<unsigned>() - 1;
-    constexpr unsigned kMaxCharsBase16 = (Flags & f64Bit) ? 16 : 8;
+    constexpr unsigned kMaxSafeCharsBase10 = std::numeric_limits<T>::digits10;
+    constexpr unsigned kMaxCharsBase16 = 2 * sizeof(T);
 
-    constexpr uint64_t kPositiveValueLimit = (Flags & fSigned)
-        ? (Flags & f64Bit) ? INT64_MAX : INT_MAX
-        : (Flags & f64Bit) ? UINT64_MAX : UINT_MAX;
+    constexpr uint64_t kPositiveValueLimit = std::numeric_limits<T>::max();
 
     const char * ptr = source;
-    const char * base;
-    bool negate = false;
-    bool overflow = false;
+    const char * base = ptr;
+    const char * eptr = (chars > std::numeric_limits<int>::max())
+        ? base + std::numeric_limits<int>::max()
+        : base + chars;
+    bool negate;
+    if constexpr (std::is_signed_v<T>)
+        negate = false;
 
-    unsigned char ch;
     unsigned num;
     uint64_t val = 0;
-    uint64_t valLimit;
-    size_t charLimit;
 
 PARSE_NUMBER:
     if (radix == 10) {
-        base = ptr;
         goto BASE_10;
     } else if (radix == 16) {
-        if (   chars > 1
+        if (chars > 1
             && ptr[0] == '0'
-            && (ptr[1] == 'x' || ptr[1] == 'X')
+            && charToDigit(ptr[1]) == 33 // 'x'
         ) {
             ptr += 2;
-            chars -= 2;
+            base = ptr;
         }
-        base = ptr; // after 0x, if present
         goto BASE_16;
     } else if (!radix) {
         if (chars < 2 || ptr[0] != '0') {
             radix = 10;
-            base = ptr;
             goto BASE_10;
-        }
-        if (ptr[1] == 'x' || ptr[1] == 'X') {
+        } else if (
+            charToDigit(ptr[1]) == 33 // 'x'
+        ) {
             radix = 16;
             ptr += 2;
-            base = ptr; // after 0x
-            chars -= 2;
+            base = ptr;
             goto BASE_16;
         } else {
             radix = 8;
-            base = ptr; // at leading 0
             ptr += 1;
-            chars -= 1;
-            goto BASE_LE10_WITH_OVERFLOW;
+            base = ptr;
+            goto BASE_ANY_WITH_OVERFLOW;
         }
     } else {
-        base = ptr;
-        if (radix >= 2) {
-            if (radix <= 10)
-                goto BASE_LE10_WITH_OVERFLOW;
-            if (radix <= 36)
-                goto BASE_ANY_WITH_OVERFLOW;
-        }
+        if (radix >= 2 && radix <= 36)
+            goto BASE_ANY_WITH_OVERFLOW;
         // invalid base, reset pointer to source and return 0
         ptr = source;
         goto RETURN_VALUE;
     }
 
-BASE_LE10_WITH_OVERFLOW:
-    // less than or equal to base 10, with overflow test
-    valLimit = kPositiveValueLimit;
-    charLimit = 0;
-    for (; chars; ++ptr, --chars) {
-        num = (unsigned char) *ptr - '0';
-        if (num >= radix)
-            break;
-        auto next = radix * val + num;
-        if (next > val && next <= valLimit) {
-            val = next;
-            continue;
-        }
-        if (next == 0 && val == 0)
-            continue;
-        overflow = true;
-    }
-    goto CHECK_OVERFLOW;
-
-BASE_ANY_WITH_OVERFLOW:
-    valLimit = kPositiveValueLimit;
-    charLimit = 0;
-    for (; chars; ++ptr, --chars) {
-        ch = *ptr;
-        if (ch <= '9') {
-            num = ch - '0';
-        } else if (ch <= 'Z') {
-            // ch must be unsigned so that it fails with a too large positive
-            // number when ch - 'A' is negative.
-            static_assert(is_unsigned_v<decltype(ch)>);
-            num = ch - 'A' + 10;
-        } else if (ch <= 'z') {
-            num = ch - 'a' + 10;
-        } else {
-            break;
-        }
-        if (num >= radix)
-            break;
-        auto next = radix * val + num;
-        if (next > val && next <= valLimit) {
-            val = next;
-            continue;
-        }
-        if (next == 0 && val == 0)
-            continue;
-        overflow = true;
-    }
-    goto CHECK_OVERFLOW;
-
-CHECK_OVERFLOW:
-    if constexpr ((Flags & fSigned) != 0) {
-        if (negate) {
-            if constexpr ((Flags & f64Bit) != 0) {
-                valLimit = (uint64_t)-INT64_MIN;
-            } else {
-                valLimit = (unsigned)-INT_MIN;
-            }
-        }
-    }
-    if (overflow || val > valLimit) {
-        val = valLimit;
-        errno = ERANGE;
-        goto RETURN_VALUE;
-    }
-    goto CHECK_NUMBER;
-
-BASE_16:
-    if (chars > kMaxCharsBase16) {
-        charLimit = chars;
-        chars = kMaxCharsBase16;
-    } else {
-        charLimit = 0;
-    }
-    for (; chars; ++ptr, --chars) {
-        ch = *ptr;
-        num = ch - '0';
-        if (num > 9) {
-            num = ch - 'A';
-            if (num > 'f' - 'A')
-                goto CHECK_NUMBER;
-            num = num % ('a' - 'A') + 10;
-            if (num > 15)
-                goto CHECK_NUMBER;
-        }
-        val = (val << 4) + num;
-    }
-    if (charLimit) {
-        if (!*ptr)
-            goto RETURN_VALUE;
-        chars = charLimit - kMaxCharsBase16;
-        goto BASE_ANY_WITH_OVERFLOW;
-    }
-    goto CHECK_NUMBER;
-
 BASE_10:
-    if (chars > kMaxSafeCharsBase10) {
-        charLimit = chars;
-        chars = kMaxSafeCharsBase10;
-        for (; chars; ++ptr, --chars) {
+    if (auto limitPtr = ptr + kMaxSafeCharsBase10; eptr > limitPtr) {
+        for (;;) {
             num = (unsigned char) *ptr - '0';
             if (num > 9)
                 goto CHECK_NUMBER;
             val = 10 * val + num;
+            if (++ptr == limitPtr)
+                break;
         }
-        chars = charLimit - kMaxSafeCharsBase10;
-        goto BASE_LE10_WITH_OVERFLOW;
+        goto BASE_ANY_WITH_OVERFLOW;
     }
-    charLimit = 0;
-    for (; chars; ++ptr, --chars) {
+    for (; ptr != eptr; ++ptr) {
         num = (unsigned char) *ptr - '0';
         if (num > 9)
             goto CHECK_NUMBER;
         val = 10 * val + num;
+    }
+    goto CHECK_NUMBER;
+
+BASE_16:
+    if (auto limitPtr = ptr + kMaxCharsBase16; eptr > limitPtr) {
+        for (;;) {
+            num = charToDigit(*ptr);
+            if (num > 15)
+                goto CHECK_NUMBER;
+            val = 16 * val + num;
+            if (++ptr == limitPtr)
+                break;
+        }
+        goto BASE_ANY_WITH_OVERFLOW;
+    }
+    for (; ptr != eptr; ++ptr) {
+        num = charToDigit(*ptr);
+        if (num > 15)
+            goto CHECK_NUMBER;
+        val = 16 * val + num;
+    }
+    goto CHECK_NUMBER;
+
+BASE_ANY_WITH_OVERFLOW:
+    for (; ptr != eptr; ++ptr) {
+        num = charToDigit(*ptr);
+        if (num >= radix)
+            break;
+        auto next = radix * val + num;
+        if (next > val && next <= kPositiveValueLimit) {
+            val = next;
+            continue;
+        }
+        if (next == 0 && val == 0)
+            continue;
+
+        // overflow, skip remaining digits
+        while (++ptr != eptr) {
+            num = charToDigit(*ptr);
+            if (num >= radix)
+                break;
+        }
+        if constexpr (std::is_signed_v<T>) {
+            val = negate
+                ? -std::numeric_limits<T>::min()
+                : kPositiveValueLimit;
+        } else {
+            val = kPositiveValueLimit;
+        }
+        errno = ERANGE;
+        goto RETURN_VALUE;
     }
     goto CHECK_NUMBER;
 
@@ -232,9 +190,7 @@ CHECK_NUMBER:
             ptr = source;
             goto RETURN_VALUE;
         }
-        if (charLimit)
-            chars = charLimit;
-        for (; chars; --chars, ++ptr) {
+        for (; ptr != eptr; ++ptr) {
             switch (*ptr) {
                 case ' ':   // space
                 case '\t':  // tab
@@ -245,10 +201,10 @@ CHECK_NUMBER:
                     // whitespace
                     continue;
                 case '-':
-                    negate = true;
+                    if constexpr (std::is_signed_v<T>)
+                        negate = true;
                     [[fallthrough]];
                 case '+':
-                    chars -= 1;
                     ptr += 1;
             }
             break;
@@ -261,50 +217,51 @@ CHECK_NUMBER:
 RETURN_VALUE:
     if (endPtr)
         *endPtr = const_cast<char *>(ptr);
-    if (negate)
-        return (Flags & f64Bit) ? -(int64_t)val : (uint64_t)-(int)val;
-    return val;
+    if constexpr (std::is_signed_v<T>) {
+        if (negate)
+            return 0 - static_cast<T>(val);
+    }
+    return static_cast<T>(val);
 }
-#pragma warning(pop)
 
 //===========================================================================
 int Dim::strToInt(const char src[], char ** eptr, int base) {
-    return (int) iStrToAny<kInt>(src, eptr, base);
+    return strToIntegral<int>(src, eptr, base);
 }
 
 //===========================================================================
 unsigned Dim::strToUint(const char src[], char ** eptr, int base) {
-    return (unsigned) iStrToAny<kUint>(src, eptr, base);
+    return strToIntegral<unsigned>(src, eptr, base);
 }
 
 //===========================================================================
 int64_t Dim::strToInt64(const char src[], char ** eptr, int base) {
-    return (int64_t) iStrToAny<kInt64>(src, eptr, base);
+    return strToIntegral<int64_t>(src, eptr, base);
 }
 
 //===========================================================================
 uint64_t Dim::strToUint64(const char src[], char ** eptr, int base) {
-    return iStrToAny<kUint64>(src, eptr, base);
+    return strToIntegral<uint64_t>(src, eptr, base);
 }
 
 //===========================================================================
 int Dim::strToInt(string_view src, char ** eptr, int base) {
-    return (int) iStrToAny<kInt>(src.data(), eptr, base, src.size());
+    return strToIntegral<int>(src.data(), eptr, base, src.size());
 }
 
 //===========================================================================
 unsigned Dim::strToUint(string_view src, char ** eptr, int base) {
-    return (unsigned) iStrToAny<kUint>(src.data(), eptr, base, src.size());
+    return strToIntegral<unsigned>(src.data(), eptr, base, src.size());
 }
 
 //===========================================================================
 int64_t Dim::strToInt64(string_view src, char ** eptr, int base) {
-    return (int64_t) iStrToAny<kInt64>(src.data(), eptr, base, src.size());
+    return strToIntegral<int64_t>(src.data(), eptr, base, src.size());
 }
 
 //===========================================================================
 uint64_t Dim::strToUint64(string_view src, char ** eptr, int base) {
-    return iStrToAny<kUint64>(src.data(), eptr, base, src.size());
+    return strToIntegral<uint64_t>(src.data(), eptr, base, src.size());
 }
 
 
@@ -327,10 +284,11 @@ static double siFactor(char ** ptr, double binary, double metric) {
 
 //===========================================================================
 bool Dim::parse(double * out, std::string_view src) {
-    char buf[maxNumericChars<double>()];
-    buf[src.copy(buf, src.size())] = 0;
-    char * ptr;
-    *out = strtod(buf, &ptr);
+    char buf[maxNumericChars<double>() + 1];
+    buf[src.copy(buf, size(buf) - 1)] = 0;
+    *out = 0;
+    auto r = from_chars(src.data(), src.data() + src.size(), *out);
+    char * ptr = const_cast<char *>(r.ptr);
     switch (*ptr) {
     case 'k': case 'K':
         *out *= siFactor(&ptr, 1024, 1000);
