@@ -58,7 +58,8 @@ constexpr int maxNumericChars() {
 template <typename T, typename Enable = void> class StrFrom {};
 
 template <typename T>
-class StrFrom<T, std::enable_if_t<std::is_arithmetic_v<T>>> {
+requires std::is_arithmetic_v<T>
+class StrFrom<T> {
 public:
     StrFrom();
     StrFrom(T val) { set(val); }
@@ -81,15 +82,16 @@ private:
 
 //===========================================================================
 template <typename T>
-StrFrom<T, std::enable_if_t<std::is_arithmetic_v<T>>>::StrFrom() {
+requires std::is_arithmetic_v<T>
+StrFrom<T>::StrFrom() {
     data[0] = 0;
     data[sizeof data - 1] = (char) (sizeof data - 1);
 }
 
 //===========================================================================
 template <typename T>
-std::string_view StrFrom<T, std::enable_if_t<std::is_arithmetic_v<T>>>
-::set(T val) {
+requires std::is_arithmetic_v<T>
+std::string_view StrFrom<T>::set(T val) {
     auto r = std::to_chars(
         data,
         data + sizeof data,
@@ -104,8 +106,8 @@ std::string_view StrFrom<T, std::enable_if_t<std::is_arithmetic_v<T>>>
 
 //===========================================================================
 template <typename T>
-StrFrom<T, std::enable_if_t<std::is_arithmetic_v<T>>>
-::operator std::string_view() const {
+requires std::is_arithmetic_v<T>
+StrFrom<T>::operator std::string_view() const {
     return std::string_view(data, sizeof data - data[sizeof data - 1] - 1);
 }
 

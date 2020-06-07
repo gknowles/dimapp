@@ -97,14 +97,13 @@ public:
     }
 
 private:
-    template <int N> void addRaw(const char (&text)[N]) {
+    template <int N>
+    void addRaw(const char (&text)[N]) {
         append({text, N - 1});
     }
 
-    template <
-        typename Char,
-        typename = std::enable_if_t<std::is_same_v<Char, char>>
-    >
+    template <typename Char>
+    requires std::is_same_v<Char, char>
     void addRaw(const Char * const & text) {
         append(text);
     }

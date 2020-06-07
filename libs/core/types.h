@@ -165,44 +165,51 @@ struct is_enum_flags<T, true>
 template<typename T> constexpr bool is_enum_flags_v = is_enum_flags<T>::value;
 
 //===========================================================================
-template<typename T> constexpr
-std::enable_if_t<is_enum_flags_v<T>, T> operator~ (T val) {
+template<typename T>
+requires is_enum_flags_v<T>
+constexpr T operator~ (T val) {
     return T(~std::underlying_type_t<T>(val));
 }
 
 //===========================================================================
-template<typename T> constexpr
-std::enable_if_t<is_enum_flags_v<T>, T> operator| (T left, T right) {
+template<typename T>
+requires is_enum_flags_v<T>
+constexpr T operator| (T left, T right) {
     return T(std::underlying_type_t<T>(left) | right);
 }
 
 //===========================================================================
-template<typename T> constexpr
-std::enable_if_t<is_enum_flags_v<T>, T&> operator|= (T & left, T right) {
+template<typename T>
+requires is_enum_flags_v<T>
+constexpr T& operator|= (T & left, T right) {
     return left = left | right;
 }
 
 //===========================================================================
-template<typename T> constexpr
-std::enable_if_t<is_enum_flags_v<T>, T> operator& (T left, T right) {
+template<typename T>
+requires is_enum_flags_v<T>
+constexpr T operator& (T left, T right) {
     return T(std::underlying_type_t<T>(left) & right);
 }
 
 //===========================================================================
-template<typename T> constexpr
-std::enable_if_t<is_enum_flags_v<T>, T&> operator&= (T & left, T right) {
+template<typename T>
+requires is_enum_flags_v<T>
+constexpr T& operator&= (T & left, T right) {
     return left = left & right;
 }
 
 //===========================================================================
-template<typename T> constexpr
-std::enable_if_t<is_enum_flags_v<T>, T> operator^ (T left, T right) {
+template<typename T>
+requires is_enum_flags_v<T>
+constexpr T operator^ (T left, T right) {
     return T(std::underlying_type_t<T>(left) ^ right);
 }
 
 //===========================================================================
-template<typename T> constexpr
-std::enable_if_t<is_enum_flags_v<T>, T&> operator^= (T & left, T right) {
+template<typename T>
+requires is_enum_flags_v<T>
+constexpr T& operator^= (T & left, T right) {
     return left = left ^ right;
 }
 

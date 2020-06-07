@@ -11,7 +11,7 @@
 #include <initializer_list>
 #include <ostream>
 #include <string_view>
-#include <type_traits> // std::enable_if_t, std::is_convertible_v
+#include <type_traits> // std::is_convertible_v
 #include <utility> // std::declval, std::pair
 
 namespace Dim {
@@ -77,16 +77,16 @@ public:
     void clear();
     void fill();
     void assign(unsigned value);
-    template <typename InputIt, typename = std::enable_if_t<
-            std::is_convertible_v<*std::declval<InputIt>(), unsigned> >>
+    template <typename InputIt>
+        requires (std::is_convertible_v<*std::declval<InputIt>(), unsigned>)
         void assign(InputIt first, InputIt last);
     void assign(std::initializer_list<unsigned> il);
     void assign(UnsignedSet && from);
     void assign(const UnsignedSet & from);
     void assign(std::string_view src); // space separated ranges
     bool insert(unsigned value); // returns true if inserted
-    template <typename InputIt, typename = std::enable_if_t<
-            std::is_convertible_v<*std::declval<InputIt>(), unsigned> >>
+    template <typename InputIt>
+        requires (std::is_convertible_v<*std::declval<InputIt>(), unsigned>)
         void insert(InputIt first, InputIt last);
     void insert(std::initializer_list<unsigned> il);
     void insert(UnsignedSet && other);
@@ -136,7 +136,8 @@ inline UnsignedSet::UnsignedSet(std::initializer_list<unsigned> il) {
 }
 
 //===========================================================================
-template<typename InputIt, typename>
+template<typename InputIt>
+requires (std::is_convertible_v<*std::declval<InputIt>(), unsigned>)
 inline void UnsignedSet::assign(InputIt first, InputIt last) {
     clear();
     insert(first, last);
@@ -149,7 +150,8 @@ inline void UnsignedSet::assign(std::initializer_list<unsigned> il) {
 }
 
 //===========================================================================
-template<typename InputIt, typename>
+template<typename InputIt>
+requires (std::is_convertible_v<*std::declval<InputIt>(), unsigned>)
 inline void UnsignedSet::insert(InputIt first, InputIt last) {
     if constexpr (std::is_convertible_v<InputIt, const unsigned *>) {
         iInsert(first, last);
