@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2018 - 2019.
+// Copyright Glen Knowles 2018 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // jsontest.cpp - dim test json
@@ -66,7 +66,7 @@ int internalTest() {
     EXPECT(str2 == kJsonText);
     unsigned num = 0;
     vector<string_view> names;
-    for (auto && node [[maybe_unused]] : nodes(root)) {
+    for ([[maybe_unused]] auto && node : nodes(root)) {
         names.push_back(nodeName(&node));
         num += 1;
     }

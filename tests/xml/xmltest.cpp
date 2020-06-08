@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2018.
+// Copyright Glen Knowles 2016 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // xmltest.cpp - dim test xml
@@ -99,7 +99,7 @@ with '&amp;'">text content</value>
 </root>
 )");
     unsigned num = 0;
-    for (auto && node [[maybe_unused]] : nodes(root, XType::kElement)) {
+    for ([[maybe_unused]] auto && node: nodes(root, XType::kElement)) {
         assert(node.name);
         num += 1;
     }

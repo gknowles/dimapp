@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2019.
+// Copyright Glen Knowles 2016 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // gen.cpp - pargen
@@ -259,7 +259,7 @@ static void addRulePositions(
         // a call. This could also be done for left recursion when the grammar
         // allows it, but that's more difficult to determine.
         if constexpr (true || !init) {
-            auto & terms [[maybe_unused]] = st->positions[*sp];
+            [[maybe_unused]] auto & terms = st->positions[*sp];
             assert(terms.none());
             return;
         }

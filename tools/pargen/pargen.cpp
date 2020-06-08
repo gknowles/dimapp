@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2019.
+// Copyright Glen Knowles 2016 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // pargen.cpp - pargen
@@ -93,7 +93,7 @@ VCHAR   =  %x21-7E
 WSP     =  SP
 WSP     =/ HTAB { NoMinRules }
 )";
-    bool valid [[maybe_unused]] = parseAbnf(
+    [[maybe_unused]] bool valid = parseAbnf(
         rules,
         coreRules,
         s_cmdopts.minRules

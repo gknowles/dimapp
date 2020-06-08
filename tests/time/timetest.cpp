@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2019.
+// Copyright Glen Knowles 2017 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // timetest.cpp - dim test time
@@ -46,7 +46,7 @@ static void parseTest(int line, string_view src, string_view dst) {
 
 //===========================================================================
 static void app(int argc, char *argv[]) {
-    int line [[maybe_unused]] = 0;
+    [[maybe_unused]] int line = 0;
 
     //-----------------------------------------------------------------------
     EXPECT_PARSE("1970-01-01", "1970-01-01T00:00:00.0000000Z");

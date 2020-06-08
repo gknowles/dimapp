@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2019.
+// Copyright Glen Knowles 2017 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // appsocket.cpp - dim net
@@ -581,13 +581,13 @@ static ShutdownNotify s_cleanup;
 
 //===========================================================================
 void ShutdownNotify::onShutdownClient(bool firstTry) {
-    for (auto && info [[maybe_unused]] : s_sockAddrs)
+    for ([[maybe_unused]] auto && info : s_sockAddrs)
         assert(info.listeners == info.consoles);
 }
 
 //===========================================================================
 void ShutdownNotify::onShutdownConsole(bool firstTry) {
-    for (auto && info [[maybe_unused]] : s_sockAddrs)
+    for ([[maybe_unused]] auto && info : s_sockAddrs)
         assert(!info.listeners && !info.consoles);
 
     if (firstTry) {
