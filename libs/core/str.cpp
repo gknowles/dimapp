@@ -66,7 +66,7 @@ static T strToIntegral (
     const char * eptr = (chars > std::numeric_limits<int>::max())
         ? base + std::numeric_limits<int>::max()
         : base + chars;
-    bool negate;
+    [[maybe_unused]] bool negate;
     if constexpr (std::is_signed_v<T>)
         negate = false;
 
