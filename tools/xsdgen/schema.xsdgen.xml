@@ -1,10 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <!--
-Copyright Glen Knowles 2018.
+Copyright Glen Knowles 2018 - 2020.
 Distributed under the Boost Software License, Version 1.0.
 -->
-<Schema xmlns="http://github.com/gknowles/dimapp/xsdgen.xsd">
-  <Output xsdNamespace="http://github.com/gknowles/dimapp/xsdgen.xsd"/>
+<Schema xmlns="http://gknowles.github.io/dimapp/tools/xsdgen/schema.xsd">
+  <Output xsdNamespace="http://gknowles.github.io/dimapp/tools/xsdgen/schema.xsd"/>
   <Overview><![CDATA[
 Definition of xml schema used to generate an xsd and help files.
 ]]></Overview>
