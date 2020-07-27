@@ -427,7 +427,8 @@ bool compareXmlContent(const Path & name, const CharBuf & content) {
 //===========================================================================
 void updateXmlFile(const Path & name, const CharBuf & content) {
     cout << name << "... " << flush;
-    if (compareXmlContent(name, content)) {
+    bool exists = fileExists(name);
+    if (exists && compareXmlContent(name, content)) {
         cout << "unchanged" << endl;
         return;
     }
@@ -438,5 +439,5 @@ void updateXmlFile(const Path & name, const CharBuf & content) {
     fileWriteWait(f, 0, content.data(), content.size());
     fileClose(f);
     ConsoleScopedAttr color(kConsoleNote);
-    cout << "UPDATED" << endl;
+    cout << (exists ? "UPDATED" : "CREATED") << endl;
 }
