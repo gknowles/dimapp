@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2019.
+// Copyright Glen Knowles 2017 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // wintls.cpp - dim windows platform tls
@@ -507,15 +507,13 @@ static void addCerts(
 //===========================================================================
 static void getCerts(
     vector<unique_ptr<CERT_CONTEXT const>> & certs,
-    const CertKey keys[],
-    size_t numKeys,
+    span<const CertKey> keys,
     vector<string_view> const & dnsNames,
     vector<string_view> const & ipAddrs
 ) {
     certs.clear();
-    auto ekeys = keys + numKeys;
-    for (auto ptr = keys; ptr != ekeys; ++ptr)
-        addCerts(certs, *ptr);
+    for (auto&& val : keys)
+        addCerts(certs, val);
 
     // no certs found? try to make a new one
     if (certs.empty()) {
@@ -733,15 +731,14 @@ string_view CertLocation::view() const {
 
 //===========================================================================
 unique_ptr<CredHandle> Dim::iWinTlsCreateCred(
-    const CertKey keys[],
-    size_t numKeys,
+    span<const CertKey> keys,
     vector<string_view> const & dnsNamesForSelfSigned,
     vector<string_view> const & ipAddrsForSelfSigned
 ) {
     WinError err{0};
 
     vector<unique_ptr<CERT_CONTEXT const>> certs;
-    getCerts(certs, keys, numKeys, dnsNamesForSelfSigned, ipAddrsForSelfSigned);
+    getCerts(certs, keys, dnsNamesForSelfSigned, ipAddrsForSelfSigned);
 
     vector<const CERT_CONTEXT *> ptrs;
     SCHANNEL_CRED cred = {};

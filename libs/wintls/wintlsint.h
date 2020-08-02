@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2019.
+// Copyright Glen Knowles 2017 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // wintls.h - dim windows platform tls
@@ -8,6 +8,7 @@
 
 #include "cppconf/cppconf.h"
 
+#include <span>
 #include <string_view>
 
 
@@ -83,8 +84,7 @@ const char * toString(CertKey::Type type, const char def[] = nullptr);
 CertKey::Type fromString(std::string_view src, CertKey::Type def);
 
 std::unique_ptr<CredHandle> iWinTlsCreateCred(
-    const CertKey keys[],
-    size_t numKeys,
+    std::span<const CertKey> keys,
     std::vector<std::string_view> const & dnsNamesForSelfSigned = {},
     std::vector<std::string_view> const & ipAddrsForSelfSigned = {}
 );
