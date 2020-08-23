@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2019.
+// Copyright Glen Knowles 2015 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // winint.h - dim windows platform
@@ -110,6 +110,7 @@ public:
     IWinOverlappedNotify(TaskQueueHandle hq = {});
     OVERLAPPED & overlapped() { return m_evt.overlapped; }
     void * overlappedKey() { return m_evt.completionKey; }
+    TaskQueueHandle overlappedQueue() { return m_evt.hq; }
     void pushOverlappedTask();
 
     // Get error and number of bytes transferred for the operation
@@ -213,7 +214,7 @@ public:
     ~IWinEventWaitNotify();
 
     // Must not already be registered (i.e. evt must be INVALID_HANDLE_VALUE)
-    void registerWait(HANDLE evt);
+    void registerWait(HANDLE evt, bool once = false);
 
     virtual void onTask() override = 0;
 

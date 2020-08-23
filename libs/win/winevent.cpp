@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2018.
+// Copyright Glen Knowles 2015 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // winevent.cpp - dim windows platform
@@ -88,7 +88,7 @@ IWinEventWaitNotify::~IWinEventWaitNotify() {
 }
 
 //===========================================================================
-void IWinEventWaitNotify::registerWait(HANDLE handle) {
+void IWinEventWaitNotify::registerWait(HANDLE handle, bool once) {
     auto & hevt = overlapped().hEvent;
     assert(hevt == INVALID_HANDLE_VALUE);
     if (handle) {
@@ -100,13 +100,16 @@ void IWinEventWaitNotify::registerWait(HANDLE handle) {
     }
     assert(hevt && hevt != INVALID_HANDLE_VALUE);
 
+    auto flags = WT_EXECUTEINWAITTHREAD;
+    if (once)
+        flags |= WT_EXECUTEONLYONCE;
     if (!RegisterWaitForSingleObject(
         &m_registeredWait,
         hevt,
         &eventWaitCallback,
         this,
         INFINITE, // timeout
-        WT_EXECUTEINWAITTHREAD
+        flags
     )) {
         logMsgFatal() << "RegisterWaitForSingleObject: " << WinError{};
     }
