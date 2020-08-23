@@ -216,9 +216,8 @@ public:
 
 //===========================================================================
 template<typename Base, typename Derived>
+requires std::is_base_of_v<Base, Derived>
 inline IFactory<Base> * getFactory() {
-    static_assert(std::is_base_of_v<Base, Derived>);
-
     class Factory : public IFactory<Base> {
         std::unique_ptr<Base> onFactoryCreate() override {
             return std::make_unique<Derived>();
