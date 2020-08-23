@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2018 - 2019.
+// Copyright Glen Knowles 2018 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // winpipe.cpp - dim windows platform
@@ -15,7 +15,7 @@ using namespace Dim;
 *
 ***/
 
-const int kReadQueueSize = 10;
+const int kReadQueueSize = 1;
 const int kWriteQueueSize = 100;
 
 // How long data can wait to be sent. When the queue time exceeds this value
@@ -47,6 +47,7 @@ struct PipeRequest : ListLink<>, IWinOverlappedNotify {
     TimePoint m_qtime;
 
     // Inherited via IWinOverlappedNotify
+    using IWinOverlappedNotify::IWinOverlappedNotify;
     void onTask() override;
 };
 
@@ -62,10 +63,11 @@ public:
     static void close(IPipeNotify * notify);
     static void write(IPipeNotify * notify, string_view data);
     static void read(IPipeNotify * notify);
+    static void setNotify(shared_ptr<PipeBase> pipe, IPipeNotify * notify);
     static void setNotify(IPipeNotify * notify, IPipeNotify * newNotify);
 
 public:
-    PipeBase(IPipeNotify * notify, string_view name, Pipe::OpenMode oflags);
+    PipeBase(string_view name, Pipe::OpenMode oflags, TaskQueueHandle hq);
     virtual ~PipeBase();
 
     void hardClose();
@@ -79,19 +81,23 @@ public:
     bool onWrite(PipeRequest * task);
 
 protected:
+    mutex m_mut;
     IPipeNotify * m_notify{};
     string m_name;
     OpenMode m_oflags{};
     HANDLE m_handle{INVALID_HANDLE_VALUE};
     Mode m_mode{Mode::kInactive};
+    shared_ptr<PipeBase> m_selfRef;
 
 private:
     void requeueRead();
     void queueRead(PipeRequest * task);
     void queuePrewrite(string_view data);
     void queueWrites();
+    bool onRead_LK(PipeRequest * task);
 
     PipeBufferInfo m_bufInfo{};
+    TaskQueueHandle m_hq;
 
     // used by read requests
     List<PipeRequest> m_reads;
@@ -152,8 +158,10 @@ void PipeRequest::onTask() {
 //===========================================================================
 // static
 PipeBase::Mode PipeBase::getMode(IPipeNotify * notify) {
-    if (auto pipe = notify->m_pipe)
+    if (auto pipe = notify->m_pipe) {
+        scoped_lock lk{pipe->m_mut};
         return pipe->m_mode;
+    }
 
     return Mode::kInactive;
 }
@@ -161,29 +169,42 @@ PipeBase::Mode PipeBase::getMode(IPipeNotify * notify) {
 //===========================================================================
 // static
 void PipeBase::close(IPipeNotify * notify) {
-    if (auto pipe = notify->m_pipe)
+    if (auto pipe = notify->m_pipe) {
+        scoped_lock lk{pipe->m_mut};
         pipe->hardClose();
+    }
 }
 
 //===========================================================================
 // static
 void PipeBase::setNotify(IPipeNotify * notify, IPipeNotify * newNotify) {
     if (auto pipe = notify->m_pipe) {
-        notify->m_pipe = nullptr;
+        scoped_lock lk{pipe->m_mut};
+        notify->m_pipe.reset();
         pipe->m_notify = newNotify;
         newNotify->m_pipe = pipe;
     }
 }
 
 //===========================================================================
+// static
+void PipeBase::setNotify(shared_ptr<PipeBase> pipe, IPipeNotify * notify) {
+    scoped_lock lk{pipe->m_mut};
+    assert(!notify->m_pipe && !pipe->m_notify);
+    notify->m_pipe = pipe;
+    pipe->m_selfRef = pipe;
+    pipe->m_notify = notify;
+}
+
+//===========================================================================
 PipeBase::PipeBase(
-    IPipeNotify * notify,
     string_view name,
-    Pipe::OpenMode oflags
+    Pipe::OpenMode oflags,
+    TaskQueueHandle hq
 )
-    : m_notify(notify)
-    , m_name(name)
+    : m_name(name)
     , m_oflags(oflags)
+    , m_hq(hq)
 {
     s_numPipes += 1;
 }
@@ -220,18 +241,26 @@ void PipeBase::hardClose() {
 
 //===========================================================================
 void PipeBase::createQueue() {
-    m_maxReads = kReadQueueSize;
-    m_maxWrites = kWriteQueueSize;
+    if (m_oflags & Pipe::fReadOnly) {
+        m_maxReads = kReadQueueSize;
+        m_maxWrites = 0;
+    } else if (m_oflags & Pipe::fWriteOnly) {
+        m_maxReads = 0;
+        m_maxWrites = kWriteQueueSize;
+    } else {
+        assert(m_oflags & Pipe::fReadWrite);
+        m_maxReads = kReadQueueSize;
+        m_maxWrites = kWriteQueueSize;
+    }
 
     for (int i = 0; i < m_maxReads; ++i) {
-        m_prereads.link(new PipeRequest);
+        m_prereads.link(new PipeRequest(m_hq));
         auto task = m_prereads.back();
         task->m_type = kReqRead;
         task->m_buffer.resize(kBufferSize);
     }
 
     m_mode = Mode::kActive;
-    m_notify->m_pipe = this;
 }
 
 //===========================================================================
@@ -247,8 +276,10 @@ void PipeBase::enableEvents(IPipeNotify * notify) {
 //===========================================================================
 // static
 void PipeBase::read(IPipeNotify * notify) {
-    if (auto sock = notify->m_pipe)
-        sock->requeueRead();
+    if (auto pipe = notify->m_pipe) {
+        scoped_lock lk{pipe->m_mut};
+        pipe->requeueRead();
+    }
 }
 
 //===========================================================================
@@ -265,7 +296,7 @@ void PipeBase::requeueRead() {
     } else {
         assert(m_mode == Mode::kClosing || m_mode == Mode::kClosed);
         task->overlapped() = {};
-        onRead(task);
+        onRead_LK(task);
     }
 }
 
@@ -283,19 +314,31 @@ void PipeBase::queueRead(PipeRequest * task) {
     )) {
         err.set();
     }
-    if (err != ERROR_IO_PENDING) {
+    if (err == ERROR_IO_PENDING) {
+        // expected, since it's attached to a completion port
+    } else if (err == ERROR_BROKEN_PIPE) {
+        task->pushOverlappedTask();
+    } else {
         logMsgFatal() << "ReadFile(pipe): " << err;
     }
 }
 
 //===========================================================================
 bool PipeBase::onRead(PipeRequest * task) {
+    unique_lock lk(m_mut);
+    return onRead_LK(task);
+}
+
+//===========================================================================
+bool PipeBase::onRead_LK(PipeRequest * task) {
     auto res = task->getOverlappedResult();
     if (int bytes = res.bytes) {
         s_perfReadTotal += bytes;
         task->m_buffer.resize(bytes);
         size_t used{0};
+        m_mut.unlock();
         bool more = m_notify->onPipeRead(&used, task->m_buffer);
+        m_mut.lock();
         assert(used == bytes);
         if (!more) {
             // new read will be explicitly requested by application
@@ -315,11 +358,13 @@ bool PipeBase::onRead(PipeRequest * task) {
 
     if (m_mode != Mode::kClosed) {
         m_mode = Mode::kClosed;
+        m_mut.unlock();
         m_notify->onPipeDisconnect();
+        m_mut.lock();
     }
 
     if (!m_reads && !m_writes) {
-        delete this;
+        shared_ptr<PipeBase> ptr = std::move(m_selfRef);
         return false;
     }
     return true;
@@ -330,8 +375,10 @@ bool PipeBase::onRead(PipeRequest * task) {
 void PipeBase::write(IPipeNotify * notify, string_view data) {
     if (!data.size())
         return;
-    if (auto sock = notify->m_pipe)
-        sock->queuePrewrite(data);
+    if (auto pipe = notify->m_pipe) {
+        scoped_lock lk{pipe->m_mut};
+        pipe->queuePrewrite(data);
+    }
 }
 
 //===========================================================================
@@ -360,7 +407,7 @@ void PipeBase::queuePrewrite(string_view data) {
     }
 
     if (bytes) {
-        m_prewrites.link(new PipeRequest);
+        m_prewrites.link(new PipeRequest(m_hq));
         auto task = m_prewrites.back();
         task->m_type = kReqWrite;
         task->m_buffer.reserve(max(data.size(), (size_t) kBufferSize));
@@ -419,6 +466,8 @@ void PipeBase::queueWrites() {
 
 //===========================================================================
 bool PipeBase::onWrite(PipeRequest * task) {
+    scoped_lock lk{m_mut};
+
     auto bytes = task->getOverlappedResult().bytes;
     delete task;
     m_numWrites -= 1;
@@ -455,11 +504,11 @@ namespace {
 
 class ListenPipe : public ListLink<>, public IPipeNotify {
 public:
-    IFactory<IPipeNotify> * m_notify;
+    IFactory<IPipeNotify> * m_factory = {};
     string m_name;
-    Pipe::OpenMode m_oflags;
-    HANDLE m_handle{INVALID_HANDLE_VALUE};
-    RunMode m_mode{kRunStopped};
+    Pipe::OpenMode m_oflags = {};
+    HANDLE m_handle = INVALID_HANDLE_VALUE;
+    RunMode m_mode = kRunStopped;
 
     void start();
     void stop();
@@ -472,8 +521,17 @@ public:
 
 class AcceptPipe : public PipeBase, public IWinOverlappedNotify {
 public:
-    AcceptPipe(IPipeNotify * notify, string_view name, Pipe::OpenMode oflags);
+    static void listen(
+        IPipeNotify * notify,
+        string_view pipeName,
+        Pipe::OpenMode oflags,
+        TaskQueueHandle hq
+    );
+
+public:
+    AcceptPipe(string_view name, Pipe::OpenMode oflags, TaskQueueHandle hq);
     ~AcceptPipe();
+    void connect();
 
     void onTask() override;
 };
@@ -481,6 +539,7 @@ public:
 } // namespace
 
 static List<ListenPipe> s_listeners;
+static mutex s_listenersMut;
 
 static auto & s_perfAccepts = uperf("pipe.accepts");
 static auto & s_perfCurAccepts = uperf("pipe.accepts (current)");
@@ -491,17 +550,42 @@ static auto & s_perfNotAccepted = uperf("pipe.disconnect (not accepted)");
 // AcceptPipe
 //===========================================================================
 AcceptPipe::AcceptPipe(
-    IPipeNotify * notify,
     string_view name,
-    Pipe::OpenMode oflags
+    Pipe::OpenMode oflags,
+    TaskQueueHandle hq
 )
-    : PipeBase(notify, name, oflags)
-{
-    auto wname = toWstring(name);
+    : PipeBase(name, oflags, hq)
+    , IWinOverlappedNotify(hq)
+{}
+
+//===========================================================================
+AcceptPipe::~AcceptPipe() {
+    if (m_mode == Mode::kClosed)
+        s_perfCurAccepts -= 1;
+}
+
+//===========================================================================
+// static
+void AcceptPipe::listen(
+    IPipeNotify * notify,
+    string_view pipeName,
+    Pipe::OpenMode oflags,
+    TaskQueueHandle hq
+) {
+    auto pipe = make_shared<AcceptPipe>(pipeName, oflags, hq);
+    PipeBase::setNotify(pipe, notify);
+    pipe->connect();
+}
+
+//===========================================================================
+void AcceptPipe::connect() {
+    unique_lock lk{m_mut};
+
+    auto wname = toWstring(m_name);
     DWORD flags = FILE_FLAG_FIRST_PIPE_INSTANCE | FILE_FLAG_OVERLAPPED;
     constexpr auto aflags =
         Pipe::fReadOnly | Pipe::fWriteOnly | Pipe::fReadWrite;
-    switch (oflags & aflags) {
+    switch (m_oflags & aflags) {
     default:
         assert(!"Invalid pipe open flags");
         break;
@@ -523,33 +607,43 @@ AcceptPipe::AcceptPipe(
         0,  // out buffer size
         0,  // in buffer size,
         INFINITE,   // default timeout
-        nullptr     // security attributes
+        NULL        // security attributes
     );
     if (m_handle == INVALID_HANDLE_VALUE) {
-        logMsgError() << "CreateNamedPipe: " << WinError{};
+        WinError err;
+        lk.unlock();
+        logMsgError() << "CreateNamedPipe: " << err;
         m_notify->onPipeDisconnect();
         delete this;
         return;
     }
-    if (!ConnectNamedPipe(m_handle, &overlapped())) {
-        WinError err;
-        if (err != ERROR_IO_PENDING) {
-            logMsgError() << "ConnectNamedPipe: " << err;
-            m_notify->onPipeDisconnect();
-            delete this;
-            return;
-        }
+    if (!winIocpBindHandle(m_handle, this)) {
+        lk.unlock();
+        m_notify->onPipeDisconnect();
+        delete this;
+        return;
     }
-}
-
-//===========================================================================
-AcceptPipe::~AcceptPipe() {
-    if (m_mode == Mode::kClosed)
-        s_perfCurAccepts -= 1;
+    if (ConnectNamedPipe(m_handle, &overlapped())) {
+        logMsgFatal() << "ConnectNamedPipe: non-overlapped result";
+        return;
+    }
+    WinError err;
+    if (err == ERROR_PIPE_CONNECTED) {
+        pushOverlappedTask();
+    } else if (err != ERROR_IO_PENDING) {
+        lk.unlock();
+        logMsgError() << "ConnectNamedPipe: " << err;
+        m_notify->onPipeDisconnect();
+        delete this;
+        return;
+    }
+    m_mode = Mode::kAccepting;
 }
 
 //===========================================================================
 void AcceptPipe::onTask() {
+    unique_lock lk{m_mut};
+
     auto [err, bytes] = getOverlappedResult();
     bool ok = m_handle != INVALID_HANDLE_VALUE;
     if (err) {
@@ -561,6 +655,7 @@ void AcceptPipe::onTask() {
         }
     }
     if (!ok) {
+        lk.unlock();
         m_notify->onPipeDisconnect();
         delete this;
         return;
@@ -569,9 +664,13 @@ void AcceptPipe::onTask() {
     createQueue();
     s_perfAccepts += 1;
     s_perfCurAccepts += 1;
+    lk.unlock();
     if (!m_notify->onPipeAccept()) {
         s_perfNotAccepted += 1;
+        lk.lock();
         hardClose();
+    } else {
+        lk.lock();
     }
     enableEvents(nullptr);
 }
@@ -580,11 +679,10 @@ void AcceptPipe::onTask() {
 void Dim::pipeListen(
     IPipeNotify * notify,
     string_view pipeName,
-    Pipe::OpenMode oflags
+    Pipe::OpenMode oflags,
+    TaskQueueHandle hq
 ) {
-    iPipeCheckThread();
-
-    [[maybe_unused]] auto pipe = new AcceptPipe(notify, pipeName, oflags);
+    AcceptPipe::listen(notify, pipeName, oflags, hq);
 }
 
 
@@ -592,7 +690,7 @@ void Dim::pipeListen(
 // ListenPipe
 //===========================================================================
 void ListenPipe::start() {
-    [[maybe_unused]] auto pipe = new AcceptPipe(this, m_name, m_oflags);
+//    [[maybe_unused]] auto pipe = new AcceptPipe(this, m_name, m_oflags);
 }
 
 //===========================================================================
@@ -603,7 +701,7 @@ void ListenPipe::stop() {
 
 //===========================================================================
 bool ListenPipe::onPipeAccept() {
-    auto notify = m_notify->onFactoryCreate().release();
+    auto notify = m_factory->onFactoryCreate().release();
     PipeBase::setNotify(this, notify);
     if (m_mode == kRunRunning)
         start();
@@ -628,17 +726,19 @@ void ListenPipe::onPipeDisconnect() {
 
 //===========================================================================
 void Dim::pipeListen(
-    IFactory<IPipeNotify> * notify,
+    IFactory<IPipeNotify> * factory,
     string_view name,
     Pipe::OpenMode oflags
 ) {
-    iPipeCheckThread();
-
     auto listener = new ListenPipe;
     listener->m_mode = kRunRunning;
-    listener->m_notify = notify;
+    listener->m_factory = factory;
     listener->m_name = name;
     listener->m_oflags = oflags;
+    {
+        scoped_lock lk{s_listenersMut};
+        s_listeners.link(listener);
+    }
     listener->start();
 }
 
@@ -647,14 +747,19 @@ void Dim::pipeClose(
     IFactory<IPipeNotify> * factory,
     string_view pipeName
 ) {
-    iPipeCheckThread();
-
-    for (auto && ls : s_listeners) {
-        if (ls.m_notify == factory && ls.m_name == pipeName) {
-            ls.stop();
-            return;
+    ListenPipe * found = nullptr;
+    {
+        scoped_lock lk{s_listenersMut};
+        for (auto && ls : s_listeners) {
+            if (ls.m_factory == factory && ls.m_name == pipeName) {
+                found = &ls;
+                break;
+            }
         }
     }
+
+    if (found)
+        found->stop();
 }
 
 
@@ -663,8 +768,6 @@ void Dim::pipeClose(
 *   ShutdownNotify
 *
 ***/
-
-thread_local bool t_pipeInitialized;
 
 namespace {
 
@@ -680,7 +783,6 @@ static ShutdownNotify s_cleanup;
 void ShutdownNotify::onShutdownConsole(bool firstTry) {
     if (s_numPipes)
         return shutdownIncomplete();
-    t_pipeInitialized = false;
 }
 
 
@@ -691,15 +793,7 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
 ***/
 
 //===========================================================================
-void Dim::iPipeCheckThread() {
-    if (!t_pipeInitialized)
-        logMsgFatal() << "Pipe services must be called on the event thread";
-}
-
-//===========================================================================
 void Dim::iPipeInitialize() {
-    t_pipeInitialized = true;
-
     shutdownMonitor(&s_cleanup);
 }
 
@@ -712,24 +806,20 @@ void Dim::iPipeInitialize() {
 
 //===========================================================================
 IPipeNotify::Mode Dim::pipeGetMode(IPipeNotify * notify) {
-    iPipeCheckThread();
     return PipeBase::getMode(notify);
 }
 
 //===========================================================================
 void Dim::pipeClose(IPipeNotify * notify) {
-    iPipeCheckThread();
     PipeBase::close(notify);
 }
 
 //===========================================================================
 void Dim::pipeWrite(IPipeNotify * notify, string_view data) {
-    iPipeCheckThread();
     PipeBase::write(notify, data);
 }
 
 //===========================================================================
 void Dim::pipeRead(IPipeNotify * notify) {
-    iPipeCheckThread();
     PipeBase::read(notify);
 }

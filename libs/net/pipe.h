@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2018 - 2019.
+// Copyright Glen Knowles 2018 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // pipe.h - dim net
@@ -85,12 +85,30 @@ public:
 
 private:
     friend class PipeBase;
-    PipeBase * m_pipe{};
+    std::shared_ptr<PipeBase> m_pipe;
 };
 
 IPipeNotify::Mode pipeGetMode(IPipeNotify * notify);
 void pipeClose(IPipeNotify * notify);
 
+
+/****************************************************************************
+*
+*   Connecting pipes
+*
+*   The application calls pipeConnect(...) and then, if the connection
+*   succeeds:
+*       1. onPipeConnect
+*       2. called any number of times
+*           a. onPipeRead
+*           b. onPipeBufferChanged
+*       3. onPipeDisconnect
+*
+*   If the connection fails:
+*       1. onSocketConnectFailed
+*       2. onSocketDestroy
+*
+***/
 //===========================================================================
 // connect
 //===========================================================================
@@ -106,13 +124,29 @@ void pipeConnect(
 // For simple cases a client connecting to a pipe server can also use
 // fileOpen(pipeName, ...), fileRead, and fileWrite.
 
+/****************************************************************************
+*
+*   Listening sockets
+*
+*   The application calls socketListen() and then:
+*
+*   When a remote client connects:
+*       1. The notifier is constructed using the factory.
+*       2. onSocketAccept and then, if accepted, called any number of times:
+*           a. onSocketRead
+*           b. onSocketBufferChanged
+*       3. onSocketDisconnect
+*       4. onSocketDestroy
+*
+***/
 //===========================================================================
 // listen
 //===========================================================================
 void pipeListen(
     IPipeNotify * notify,
     std::string_view pipeName,
-    Pipe::OpenMode oflags
+    Pipe::OpenMode oflags,
+    TaskQueueHandle hq = {}
 );
 void pipeListen(
     IFactory<IPipeNotify> * factory,
