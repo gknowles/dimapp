@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2018.
+// Copyright Glen Knowles 2018 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // exec.h - dim system
@@ -33,6 +33,18 @@ enum StdStream {
 *
 ***/
 
+struct ExecResult {
+    int exitCode;
+    CharBuf out;
+    CharBuf err;
+};
+
+struct ExecOptions {
+    std::string_view workingDir;
+    Dim::Duration timeout = {};
+    std::string_view stdinData;     // WARNING: not tested
+};
+
 //---------------------------------------------------------------------------
 // Asynchronous
 //---------------------------------------------------------------------------
@@ -61,12 +73,28 @@ private:
 
 void execProgram(
     IExecNotify * notify,
-    std::string_view prog,
-    std::string_view args
+    std::string_view cmdline,
+    const ExecOptions & opts = {}
+);
+void execProgram(
+    IExecNotify * notify,
+    const std::vector<std::string> & args,
+    const ExecOptions & opts = {}
 );
 
+//===========================================================================
+template <typename ...Args>
+void execProgram(
+    IExecNotify * notify,
+    const ExecOptions & opts,
+    Args... args
+) {
+    std::vector<std::string> vargs = { std::string(args)... };
+    execProgram(notify, vargs, opts);
+}
+
 // Write to standard input of child process
-// WARNING: Untested
+// WARNING: not tested
 void execWrite(IExecNotify * notify, std::string_view data);
 
 void execCancel(IExecNotify * notify);
@@ -75,13 +103,26 @@ void execCancel(IExecNotify * notify);
 // Synchronous
 //---------------------------------------------------------------------------
 bool execProgramWait(
-    int * exitCode,
-    CharBuf * out,
-    CharBuf * err,
-    std::string_view prog,
-    std::string_view args,
-    std::string_view stdinData = {} // untested
+    ExecResult * res,
+    std::string_view cmdline,
+    const ExecOptions & opts = {}
 );
+bool execProgramWait(
+    ExecResult * res,
+    const std::vector<std::string> & args,
+    const ExecOptions & opts = {}
+);
+
+//===========================================================================
+template <typename... Args>
+bool execProgramWait(
+    ExecResult * res,
+    const ExecOptions & opts,
+    Args... args
+) {
+    std::vector<std::string> vargs = { std::string(args)... };
+    return execProgramWait(res, vargs, opts);
+}
 
 
 /****************************************************************************
@@ -91,11 +132,12 @@ bool execProgramWait(
 ***/
 
 // Waits for program to complete, returns false and sets exitCode to -1 if
-// unable to execute program. Stdio is not captured.
+// unable to execute program. Stdio is not captured. Not allowed from the event
+// thread.
 bool execElevatedWait(
     int * exitCode,
-    std::string_view prog,
-    std::string_view args
+    std::string_view cmdline,
+    std::string_view workingDir = {}
 );
 
 // Helpers to allow elevated process to manually attach it's stdio to the
