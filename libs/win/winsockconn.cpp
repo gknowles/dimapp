@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2019.
+// Copyright Glen Knowles 2015 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // winsockconn.cpp - dim windows platform
@@ -114,7 +114,8 @@ void ConnectTask::onTask() {
 
 //===========================================================================
 ConnectFailedTask::ConnectFailedTask(ISocketNotify * notify)
-    : m_notify(notify) {}
+    : m_notify(notify)
+{}
 
 //===========================================================================
 void ConnectFailedTask::onTask() {

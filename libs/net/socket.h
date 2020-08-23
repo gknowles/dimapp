@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2019.
+// Copyright Glen Knowles 2015 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // socket.h - dim net
@@ -51,20 +51,26 @@ public:
 
     //-----------------------------------------------------------------------
     // for connectors
+    //-----------------------------------------------------------------------
     virtual void onSocketConnect(const SocketInfo & info) {};
     virtual void onSocketConnectFailed() {};
 
     //-----------------------------------------------------------------------
     // for listeners
+    //-----------------------------------------------------------------------
     // Returns true if the socket is accepted
     virtual bool onSocketAccept(const SocketInfo & info) { return true; };
 
     //-----------------------------------------------------------------------
     // for both
+    //-----------------------------------------------------------------------
+    // Every call to onSocketConnect or onSocketAccept will, eventually, have
+    // exactly one corresponding call to onSocketDisconnect. If they are never
+    // called neither is this.
     virtual void onSocketDisconnect() {};
 
-    // Only override when the object shouldn't be deleted, such as a static
-    // notifier. Standard destruction logic should be in the destructor.
+    // Only override to control whether the object is deleted, such as for a
+    // static notifier. Code to run on destruction should be in the destructor.
     virtual void onSocketDestroy() { delete this; }
 
     // Returns true to immediately queue up another read, or return false and
@@ -127,12 +133,12 @@ void socketConnect(
 *   The application calls socketListen() and then:
 *
 *   When a remote client connects:
-*   1. The notifier is constructed using the factory.
-*   2. onSocketAccept and then, if accepted, called any number of times:
-*       a. onSocketRead
-*       b. onSocketBufferChanged
-*   3. onSocketDisconnect
-*   4. onSocketDestroy
+*       1. The notifier is constructed using the factory.
+*       2. onSocketAccept and then, if accepted, called any number of times:
+*           a. onSocketRead
+*           b. onSocketBufferChanged
+*       3. onSocketDisconnect
+*       4. onSocketDestroy
 *
 ***/
 

@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2019.
+// Copyright Glen Knowles 2017 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // appsocket.h - dim net
@@ -140,7 +140,7 @@ void socketAddFamily(AppSocket::Family fam, IAppSocketMatchNotify * notify);
 
 void socketListen(
     IFactory<IAppSocketNotify> * factory,
-    const SockAddr & end,
+    const SockAddr & addr,
     AppSocket::Family fam,
     bool console = false // console connections for monitoring
 );
@@ -156,22 +156,22 @@ void socketCloseWait(
 // IAppSocketNotify, that will be instantiated for incoming connections.
 //===========================================================================
 template <typename S>
+requires std::is_base_of_v<IAppSocketNotify, S>
 inline void socketListen(
-    const SockAddr & end,
+    const SockAddr & addr,
     AppSocket::Family fam,
     bool console = false
 ) {
-    static_assert(std::is_base_of_v<IAppSocketNotify, S>);
     auto factory = getFactory<IAppSocketNotify, S>();
-    socketListen(factory, end, fam, console);
+    socketListen(factory, addr, fam, console);
 }
 
 //===========================================================================
 template <typename S>
-inline void socketCloseWait(const SockAddr & end, AppSocket::Family fam) {
-    static_assert(std::is_base_of_v<IAppSocketNotify, S>);
+requires std::is_base_of_v<IAppSocketNotify, S>
+inline void socketCloseWait(const SockAddr & addr, AppSocket::Family fam) {
     auto factory = getFactory<IAppSocketNotify, S>();
-    socketCloseWait(factory, end, fam);
+    socketCloseWait(factory, addr, fam);
 }
 
 
@@ -187,16 +187,16 @@ inline void socketCloseWait(const SockAddr & end, AppSocket::Family fam) {
 
 void socketAddFilter(
     IFactory<IAppSocketNotify> * factory,
-    const SockAddr & end,
+    const SockAddr & addr,
     AppSocket::Family fam
 );
 
 //===========================================================================
 template <typename S>
-inline void socketAddFilter(const SockAddr & end, AppSocket::Family fam) {
-    static_assert(std::is_base_of_v<IAppSocketNotify, S>);
+requires std::is_base_of_v<IAppSocketNotify, S>
+inline void socketAddFilter(const SockAddr & addr, AppSocket::Family fam) {
     auto factory = getFactory<IAppSocketNotify, S>();
-    socketAddFilter(factory, end, fam);
+    socketAddFilter(factory, addr, fam);
 }
 
 // Add socket filter to already created socket
