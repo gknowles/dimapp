@@ -115,7 +115,7 @@ public:
 
     // Get error and number of bytes transferred for the operation
     struct WinOverlappedResult { WinError err; DWORD bytes; };
-    WinOverlappedResult getOverlappedResult();
+    WinOverlappedResult decodeOverlappedResult();
 
     virtual void onTask() override = 0;
 

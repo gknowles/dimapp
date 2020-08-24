@@ -235,7 +235,7 @@ void IFileOpBase::onTask() {
     // async + non-blocking - event thread
 
     if (m_err == ERROR_IO_PENDING) {
-        auto [err, bytes] = getOverlappedResult();
+        auto [err, bytes] = decodeOverlappedResult();
         m_err = err;
         m_bytes = bytes;
     }

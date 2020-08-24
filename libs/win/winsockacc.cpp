@@ -84,7 +84,7 @@ ListenSocket::ListenSocket(
 
 //===========================================================================
 void ListenSocket::onTask() {
-    auto [err, bytes] = getOverlappedResult();
+    auto [err, bytes] = decodeOverlappedResult();
     m_socket->onAccept(this, err, bytes);
 
     if (!AcceptSocket::accept(this)) {

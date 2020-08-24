@@ -117,7 +117,7 @@ void IWinOverlappedNotify::pushOverlappedTask() {
 
 //===========================================================================
 IWinOverlappedNotify::WinOverlappedResult
-IWinOverlappedNotify::getOverlappedResult() {
+IWinOverlappedNotify::decodeOverlappedResult() {
     DWORD bytes = 0;
     if (!GetOverlappedResult(
         INVALID_HANDLE_VALUE,

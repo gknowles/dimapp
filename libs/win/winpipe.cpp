@@ -331,7 +331,7 @@ bool PipeBase::onRead(PipeRequest * task) {
 
 //===========================================================================
 bool PipeBase::onRead_LK(PipeRequest * task) {
-    auto res = task->getOverlappedResult();
+    auto res = task->decodeOverlappedResult();
     if (int bytes = res.bytes) {
         s_perfReadTotal += bytes;
         task->m_buffer.resize(bytes);
@@ -468,7 +468,7 @@ void PipeBase::queueWrites() {
 bool PipeBase::onWrite(PipeRequest * task) {
     scoped_lock lk{m_mut};
 
-    auto bytes = task->getOverlappedResult().bytes;
+    auto bytes = task->decodeOverlappedResult().bytes;
     delete task;
     m_numWrites -= 1;
     s_perfIncomplete -= bytes;
@@ -644,7 +644,7 @@ void AcceptPipe::connect() {
 void AcceptPipe::onTask() {
     unique_lock lk{m_mut};
 
-    auto [err, bytes] = getOverlappedResult();
+    auto [err, bytes] = decodeOverlappedResult();
     bool ok = m_handle != INVALID_HANDLE_VALUE;
     if (err) {
         if (!ok && err == ERROR_BROKEN_PIPE) {

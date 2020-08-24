@@ -251,7 +251,7 @@ void DirInfo::removeMonitorWait_UNLK(
 
 //===========================================================================
 void DirInfo::onTask () {
-    if (auto err = getOverlappedResult().err) {
+    if (auto err = decodeOverlappedResult().err) {
         if (err != ERROR_NOTIFY_ENUM_DIR) {
             if (err != ERROR_OPERATION_ABORTED) {
                 logMsgError() << "ReadDirectoryChangesW() overlapped: "

@@ -100,7 +100,7 @@ ConnectTask::ConnectTask(unique_ptr<ConnSocket> && sock)
 
 //===========================================================================
 void ConnectTask::onTask() {
-    auto [err, bytes] = getOverlappedResult();
+    auto [err, bytes] = decodeOverlappedResult();
     m_socket.release()->onConnect(err, bytes);
     delete this;
 }
