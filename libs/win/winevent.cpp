@@ -59,26 +59,31 @@ HANDLE WinEvent::release() {
 
 /****************************************************************************
 *
-*   IWinEventWaitNotify
+*   WinEventWaitNotify
 *
 ***/
 
 //===========================================================================
 static VOID CALLBACK eventWaitCallback(PVOID param, BOOLEAN timeout) {
-    auto notify = reinterpret_cast<IWinEventWaitNotify *>(param);
+    auto notify = reinterpret_cast<WinEventWaitNotify *>(param);
     notify->pushOverlappedTask();
 }
 
 //===========================================================================
-IWinEventWaitNotify::IWinEventWaitNotify(TaskQueueHandle hq, HANDLE handle)
+WinEventWaitNotify::WinEventWaitNotify(
+    function<void()> fn,
+    TaskQueueHandle hq,
+    HANDLE handle
+)
     : IWinOverlappedNotify{hq}
+    , m_fn(fn)
 {
     overlapped().hEvent = INVALID_HANDLE_VALUE;
     registerWait(handle);
 }
 
 //===========================================================================
-IWinEventWaitNotify::~IWinEventWaitNotify() {
+WinEventWaitNotify::~WinEventWaitNotify() {
     if (m_registeredWait && !UnregisterWaitEx(m_registeredWait, nullptr)) {
         logMsgError() << "UnregisterWaitEx: " << WinError{};
     }
@@ -88,7 +93,12 @@ IWinEventWaitNotify::~IWinEventWaitNotify() {
 }
 
 //===========================================================================
-void IWinEventWaitNotify::registerWait(HANDLE handle, bool once) {
+void WinEventWaitNotify::onTask() {
+    m_fn();
+}
+
+//===========================================================================
+void WinEventWaitNotify::registerWait(HANDLE handle, bool once) {
     auto & hevt = overlapped().hEvent;
     assert(hevt == INVALID_HANDLE_VALUE);
     if (handle) {

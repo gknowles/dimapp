@@ -8,6 +8,7 @@
 #include "core/timer.h"
 
 #include <cstdint>
+#include <functional>
 #include <iostream>
 
 namespace Dim {
@@ -117,7 +118,7 @@ public:
     struct WinOverlappedResult { WinError err; DWORD bytes; };
     WinOverlappedResult decodeOverlappedResult();
 
-    virtual void onTask() override = 0;
+    void onTask() override = 0;
 
 private:
     WinOverlappedEvent m_evt;
@@ -207,30 +208,34 @@ private:
     HANDLE m_handle;
 };
 
-class IWinEventWaitNotify : public IWinOverlappedNotify {
+class WinEventWaitNotify : public IWinOverlappedNotify {
 public:
     // Registers wait unless evt is INVALID_HANDLE_VALUE.
-    IWinEventWaitNotify(TaskQueueHandle hq = {}, HANDLE evt = {});
-    ~IWinEventWaitNotify();
+    WinEventWaitNotify(
+        std::function<void()> fn,
+        TaskQueueHandle hq = {},
+        HANDLE evt = {}
+    );
+    ~WinEventWaitNotify();
 
     // Must not already be registered (i.e. evt must be INVALID_HANDLE_VALUE)
     void registerWait(HANDLE evt, bool once = false);
 
-    virtual void onTask() override = 0;
-
 private:
+    void onTask() override;
+
     HANDLE m_registeredWait{};
+    std::function<void()> m_fn;
 };
 
 
 /****************************************************************************
 *
-*   Gui
+*   Exec
 *
 ***/
 
-void winGuiInitialize();
-void winGuiConfigInitialize();
+void winExecInitialize();
 
 
 /****************************************************************************
@@ -242,6 +247,16 @@ void winGuiConfigInitialize();
 void winFileMonitorInitialize();
 
 bool winFileSetErrno(int error);
+
+
+/****************************************************************************
+*
+*   Gui
+*
+***/
+
+void winGuiInitialize();
+void winGuiConfigInitialize();
 
 
 /****************************************************************************
@@ -263,8 +278,6 @@ bool winIocpBindHandle(HANDLE handle, void * key = nullptr);
 ***/
 
 void iPipeInitialize();
-
-void iPipeCheckThread();
 
 
 /****************************************************************************
