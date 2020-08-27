@@ -17,7 +17,7 @@ using namespace Dim;
 
 namespace Dim {
 
-class ExecProgram : public IWinEventWaitNotify {
+class ExecProgram {
 public:
     class ExecPipe : public IPipeNotify {
     public:
@@ -37,13 +37,12 @@ public:
     ExecProgram(IExecNotify * notify, TaskQueueHandle hq);
     ~ExecProgram();
     void exec(string_view cmdline, const ExecOptions & opts);
+    TaskQueueHandle queue() const { return m_hq; }
 
     bool onRead(size_t * bytesUsed, StdStream strm, string_view data);
     void onDisconnect(StdStream strm);
 
-    // Inherited via IWinEventWaitNotify
-    // Triggered when child process exits
-    void onTask() override;
+    void onProcessExit();
 
 private:
     bool createPipe(
@@ -52,21 +51,102 @@ private:
         string_view name,
         Pipe::OpenMode oflags
     );
-    bool queryDone() const;
-    void completeIfDone();
-    void complete();
+    bool completeIfDone_LK();
+
+    TaskQueueHandle m_hq;
+    HANDLE m_job = NULL;
+    HANDLE m_process = NULL;
+
+    //-----------------------------------------------------------------------
+    mutex m_mut;
 
     IExecNotify * m_notify{};
     ExecPipe m_pipes[3];
     unsigned m_connected{};
-    HANDLE m_process{INVALID_HANDLE_VALUE};
 
-    RunMode m_mode{kRunStarting};
+    RunMode m_mode{kRunStopped};
     bool m_canceled = true;
     int m_exitCode = -1;
 };
 
 } // namespace
+
+
+/****************************************************************************
+*
+*   IOCP completion thread
+*
+***/
+
+static mutex s_mut;
+static HANDLE s_iocp;
+
+static auto & s_perfPrograms = uperf("exec.programs");
+static auto & s_perfCurPrograms = uperf("exec.programs (current)");
+
+//===========================================================================
+static void jobObjectIocpThread() {
+    const int kMaxEntries = 8;
+    OVERLAPPED_ENTRY entries[kMaxEntries];
+    ULONG found;
+    for (;;) {
+        if (!GetQueuedCompletionStatusEx(
+            s_iocp,
+            entries,
+            (ULONG) size(entries),
+            &found,
+            INFINITE,   // timeout
+            false       // alertable
+        )) {
+            WinError err;
+            if (err == ERROR_ABANDONED_WAIT_0) {
+                // Completion port closed while inside get status.
+                break;
+            } else if (err == ERROR_INVALID_HANDLE) {
+                // Completion port closed before call to get status.
+                break;
+            } else {
+                logMsgFatal() << "GetQueuedCompletionStatusEx(JobPort): "
+                    << err;
+            }
+        }
+
+        for (unsigned i = 0; i < found; ++i) {
+            auto exe = reinterpret_cast<ExecProgram *>(
+                entries[i].lpCompletionKey
+            );
+            DWORD msg = entries[i].dwNumberOfBytesTransferred;
+            DWORD processId = (DWORD) (uintptr_t) entries[i].lpOverlapped;
+            (void) processId;
+            if (msg == JOB_OBJECT_MSG_ACTIVE_PROCESS_ZERO) {
+                taskPush(exe->queue(), [=](){ exe->onProcessExit(); });
+            }
+        }
+    }
+
+    scoped_lock lk{s_mut};
+    s_iocp = 0;
+}
+
+//===========================================================================
+static HANDLE iocpHandle() {
+    scoped_lock lk(s_mut);
+    if (s_iocp)
+        return s_iocp;
+
+    s_iocp = CreateIoCompletionPort(
+        INVALID_HANDLE_VALUE,
+        NULL, // existing port
+        NULL, // completion key
+        0     // concurrent threads, 0 for default
+    );
+    if (!s_iocp)
+        logMsgFatal() << "CreateIoCompletionPort(null): " << WinError{};
+
+    // Start IOCP dispatch task
+    taskPushOnce("JobObject Dispatch", jobObjectIocpThread);
+    return s_iocp;
+}
 
 
 /****************************************************************************
@@ -104,9 +184,12 @@ void ExecProgram::write(IExecNotify * notify, string_view data) {
 
 //===========================================================================
 ExecProgram::ExecProgram(IExecNotify * notify, TaskQueueHandle hq)
-    : IWinEventWaitNotify(hq, INVALID_HANDLE_VALUE)
-    , m_notify(notify)
+    : m_notify(notify)
+    , m_hq(hq)
 {
+    s_perfPrograms += 1;
+    s_perfCurPrograms += 1;
+
     for (auto && e : { kStdIn, kStdOut, kStdErr }) {
         m_pipes[e].m_strm = e;
         m_pipes[e].m_notify = this;
@@ -119,10 +202,58 @@ ExecProgram::~ExecProgram() {
 
     for (auto && pi : m_pipes)
         assert(pi.m_closed);
+
+    s_perfCurPrograms -= 1;
 }
 
 //===========================================================================
 void ExecProgram::exec(string_view cmdline, const ExecOptions & opts) {
+    // Now that we're committed to getting an onProcessExit() call, change mode
+    // so that we'll wait for it.
+    m_mode = kRunStarting;
+
+    bool success = false;
+    for (;;) {
+        m_job = CreateJobObject(NULL, NULL);
+        if (!m_job) {
+            logMsgError() << "CreateJobObjectW()" << WinError{};
+            break;
+        }
+        JOBOBJECT_EXTENDED_LIMIT_INFORMATION ei = {};
+        auto & bi = ei.BasicLimitInformation;
+        bi.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+        if (!SetInformationJobObject(
+            m_job,
+            JobObjectExtendedLimitInformation,
+            &ei,
+            sizeof ei
+        )) {
+            logMsgError() << "SetInformationJobObject(KILL_ON_JOB_CLOSE): "
+                << WinError{};
+            break;
+        }
+        JOBOBJECT_ASSOCIATE_COMPLETION_PORT ap = {};
+        ap.CompletionKey = this;
+        ap.CompletionPort = iocpHandle();
+        if (!SetInformationJobObject(
+            m_job,
+            JobObjectAssociateCompletionPortInformation,
+            &ap,
+            sizeof ap
+        )) {
+            logMsgError() << "SetInformationJobObject(ASSOC_IOCP): "
+                << WinError{};
+            break;
+        }
+
+        success = true;
+        break;
+    }
+    if (!success) {
+        onProcessExit();
+        return;
+    }
+
     char rawname[100];
     snprintf(
         rawname,
@@ -149,7 +280,8 @@ void ExecProgram::exec(string_view cmdline, const ExecOptions & opts) {
                 if (p2.child)
                     CloseHandle(p2.child);
             }
-            return complete();
+            onProcessExit();
+            return;
         }
     }
 
@@ -175,20 +307,29 @@ void ExecProgram::exec(string_view cmdline, const ExecOptions & opts) {
     );
     WinError err;
 
-    // Process is started suspended to aid in debugging.
-    ResumeThread(pi.hThread);
-
-    CloseHandle(pi.hThread);
     for (auto && p : pipes)
         CloseHandle(p.child);
 
     if (!running) {
-        logMsgError() << "CreateProcessW('" << cmdline << "'): " << err;
-        return complete();
+        logMsgError() << "CreateProcessW(" << cmdline << "): " << err;
+        onProcessExit();
+        return;
     }
 
     m_process = pi.hProcess;
-    registerWait(pi.hProcess, true);
+    if (!AssignProcessToJobObject(m_job, m_process)) {
+        logMsgError() << "AssignProcessToJobObject: " << WinError{};
+        onProcessExit();
+        return;
+    }
+
+    // Now that the process has been assigned to the job it can be resumed.
+    // If it had launched a process before joining the job that child would
+    // be untracked.
+    ResumeThread(pi.hThread);
+    CloseHandle(pi.hThread);
+
+    m_mode = kRunRunning;
     if (!opts.stdinData.empty())
         execWrite(m_notify, opts.stdinData);
 }
@@ -204,13 +345,20 @@ bool ExecProgram::onRead(
 
 //===========================================================================
 void ExecProgram::onDisconnect(StdStream strm) {
+    unique_lock lk(m_mut);
     auto & pi = m_pipes[strm];
     pi.m_closed = true;
-    completeIfDone();
+    if (completeIfDone_LK())
+        lk.release();
 }
 
 //===========================================================================
-void ExecProgram::onTask() {
+void ExecProgram::onProcessExit() {
+    unique_lock lk(m_mut);
+    if (m_mode == kRunStarting) {
+        for (auto && pi : m_pipes)
+            pipeClose(&pi);
+    }
     m_mode = kRunStopped;
     DWORD rc;
     if (GetExitCodeProcess(m_process, &rc)) {
@@ -220,34 +368,31 @@ void ExecProgram::onTask() {
         m_canceled = true;
         m_exitCode = -1;
     }
-    completeIfDone();
+    CloseHandle(m_process);
+    CloseHandle(m_job);
+    if (completeIfDone_LK())
+        lk.release();
 }
 
 //===========================================================================
-bool ExecProgram::queryDone() const {
-    return m_pipes[kStdIn].m_closed
-        && m_pipes[kStdOut].m_closed
-        && m_pipes[kStdErr].m_closed
-        && m_mode == kRunStopped;
-}
+bool ExecProgram::completeIfDone_LK() {
+    if (!m_pipes[kStdIn].m_closed
+        || !m_pipes[kStdOut].m_closed
+        || !m_pipes[kStdErr].m_closed
+        || m_mode != kRunStopped
+    ) {
+        return false;
+    }
 
-//===========================================================================
-void ExecProgram::completeIfDone() {
-    if (queryDone())
-        complete();
-}
-
-//===========================================================================
-void ExecProgram::complete() {
     if (m_notify) {
         m_notify->m_exec = nullptr;
         m_notify->onExecComplete(m_canceled, m_exitCode);
         m_notify = nullptr;
     }
-    for (auto && pi : m_pipes)
-        pipeClose(&pi);
-    if (queryDone())
-        delete this;
+
+    m_mut.unlock();
+    delete this;
+    return true;
 }
 
 //===========================================================================
@@ -258,7 +403,7 @@ bool ExecProgram::createPipe(
     Pipe::OpenMode oflags
 ) {
     m_pipes[strm].m_closed = false;
-    pipeListen(&m_pipes[strm], name, oflags, overlappedQueue());
+    pipeListen(&m_pipes[strm], name, oflags, queue());
 
     if (child) {
         unsigned flags = SECURITY_SQOS_PRESENT | SECURITY_IDENTIFICATION;
@@ -467,4 +612,55 @@ bool Dim::execElevatedWait(
         CloseHandle(ei.hProcess);
     }
     return true;
+}
+
+
+/****************************************************************************
+*
+*   Shutdown monitor
+*
+***/
+
+namespace {
+
+class ShutdownNotify : public IShutdownNotify {
+    void onShutdownServer(bool firstTry) override;
+    void onShutdownConsole(bool firstTry) override;
+};
+
+} // namespace
+
+static ShutdownNotify s_cleanup;
+
+//===========================================================================
+void ShutdownNotify::onShutdownServer(bool firstTry) {
+    if (s_perfCurPrograms)
+        return shutdownIncomplete();
+}
+
+//===========================================================================
+void ShutdownNotify::onShutdownConsole(bool firstTry) {
+    scoped_lock lk(s_mut);
+    if (firstTry && s_iocp) {
+        auto h = s_iocp;
+        s_iocp = INVALID_HANDLE_VALUE;
+        if (!CloseHandle(h))
+            logMsgError() << "CloseHandle(IOCP): " << WinError{};
+        Sleep(0);
+    }
+
+    if (s_iocp)
+        shutdownIncomplete();
+}
+
+
+/****************************************************************************
+*
+*   Internal API
+*
+***/
+
+//===========================================================================
+void Dim::winExecInitialize() {
+    shutdownMonitor(&s_cleanup);
 }
