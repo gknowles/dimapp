@@ -105,8 +105,7 @@ void pipeClose(IPipeNotify * notify);
 *       3. onPipeDisconnect
 *
 *   If the connection fails:
-*       1. onSocketConnectFailed
-*       2. onSocketDestroy
+*       1. onPipeDisconnect
 *
 ***/
 //===========================================================================
@@ -126,17 +125,16 @@ void pipeConnect(
 
 /****************************************************************************
 *
-*   Listening sockets
+*   Listening pipes
 *
-*   The application calls socketListen() and then:
+*   The application calls pipeListen() and then:
 *
 *   When a remote client connects:
 *       1. The notifier is constructed using the factory.
-*       2. onSocketAccept and then, if accepted, called any number of times:
-*           a. onSocketRead
-*           b. onSocketBufferChanged
-*       3. onSocketDisconnect
-*       4. onSocketDestroy
+*       2. onPipeAccept and then, if accepted, called any number of times:
+*           a. onPipeRead
+*           b. onPipeBufferChanged
+*       3. onPipeDisconnect
 *
 ***/
 //===========================================================================

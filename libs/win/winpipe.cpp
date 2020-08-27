@@ -69,6 +69,7 @@ public:
 public:
     PipeBase(string_view name, Pipe::OpenMode oflags, TaskQueueHandle hq);
     virtual ~PipeBase();
+    void removeRef();
 
     void hardClose();
     void createQueue();
@@ -118,7 +119,7 @@ private:
 *
 ***/
 
-static atomic_int s_numPipes;
+static atomic<int> s_numPipes;
 
 static auto & s_perfReadTotal = uperf("pipe.read bytes (total)");
 static auto & s_perfIncomplete = uperf("pipe.write bytes (incomplete)");
@@ -213,13 +214,16 @@ PipeBase::PipeBase(
 PipeBase::~PipeBase() {
     assert(!m_reads && !m_writes);
 
-    if (m_notify)
-        m_notify->m_pipe = nullptr;
-
     hardClose();
     m_prereads.clear();
 
     s_numPipes -= 1;
+}
+
+//===========================================================================
+void PipeBase::removeRef() {
+    assert(m_selfRef);
+    m_selfRef.reset();
 }
 
 //===========================================================================
@@ -228,9 +232,11 @@ void PipeBase::hardClose() {
         return;
 
     CloseHandle(m_handle);
-
-    m_mode = Mode::kClosing;
     m_handle = INVALID_HANDLE_VALUE;
+
+    if (m_mode != Mode::kClosed)
+        m_mode = Mode::kClosing;
+
     while (auto req = m_prewrites.front()) {
         auto bytes = (unsigned) req->m_buffer.size();
         m_bufInfo.waiting -= bytes;
@@ -287,7 +293,7 @@ void PipeBase::requeueRead() {
     auto task = m_prereads.front();
 
     // Queuing reads is only allowed after an automatic requeuing was
-    // rejected via returning false from onSocketRead.
+    // rejected via returning false from onPipeRead.
     assert(task);
 
     if (m_mode == Mode::kActive) {
@@ -326,7 +332,12 @@ void PipeBase::queueRead(PipeRequest * task) {
 //===========================================================================
 bool PipeBase::onRead(PipeRequest * task) {
     unique_lock lk(m_mut);
-    return onRead_LK(task);
+    if (!onRead_LK(task)) {
+        // The object has been destroyed, which means m_mut no longer exists.
+        lk.release();
+        return false;
+    }
+    return true;
 }
 
 //===========================================================================
@@ -364,7 +375,8 @@ bool PipeBase::onRead_LK(PipeRequest * task) {
     }
 
     if (!m_reads && !m_writes) {
-        shared_ptr<PipeBase> ptr = std::move(m_selfRef);
+        m_mut.unlock();
+        removeRef();
         return false;
     }
     return true;
@@ -466,7 +478,7 @@ void PipeBase::queueWrites() {
 
 //===========================================================================
 bool PipeBase::onWrite(PipeRequest * task) {
-    scoped_lock lk{m_mut};
+    unique_lock lk{m_mut};
 
     auto bytes = task->decodeOverlappedResult().bytes;
     delete task;
@@ -474,9 +486,10 @@ bool PipeBase::onWrite(PipeRequest * task) {
     s_perfIncomplete -= bytes;
     m_bufInfo.incomplete -= bytes;
 
-    // already disconnected and this was the last unresolved write? delete
+    // Already disconnected and this was the last unresolved write? delete
     if (m_mode == Mode::kClosed && !m_reads && !m_writes) {
-        delete this;
+        lk.unlock();
+        removeRef();
         return false;
     }
 
@@ -614,13 +627,13 @@ void AcceptPipe::connect() {
         lk.unlock();
         logMsgError() << "CreateNamedPipe: " << err;
         m_notify->onPipeDisconnect();
-        delete this;
+        removeRef();
         return;
     }
     if (!winIocpBindHandle(m_handle, this)) {
         lk.unlock();
         m_notify->onPipeDisconnect();
-        delete this;
+        removeRef();
         return;
     }
     if (ConnectNamedPipe(m_handle, &overlapped())) {
@@ -634,7 +647,7 @@ void AcceptPipe::connect() {
         lk.unlock();
         logMsgError() << "ConnectNamedPipe: " << err;
         m_notify->onPipeDisconnect();
-        delete this;
+        removeRef();
         return;
     }
     m_mode = Mode::kAccepting;
@@ -657,7 +670,7 @@ void AcceptPipe::onTask() {
     if (!ok) {
         lk.unlock();
         m_notify->onPipeDisconnect();
-        delete this;
+        removeRef();
         return;
     }
 
