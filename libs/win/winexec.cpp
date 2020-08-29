@@ -318,7 +318,14 @@ void ExecProgram::exec(string_view cmdline, const ExecOptions & opts) {
 
     m_process = pi.hProcess;
     if (!AssignProcessToJobObject(m_job, m_process)) {
-        logMsgError() << "AssignProcessToJobObject: " << WinError{};
+        logMsgError() << "AssignProcessToJobObject(" << cmdline << "): "
+            << WinError{};
+        if (!TerminateProcess(m_process, (UINT) -1)) {
+            logMsgError() << "TerminateProcess(" << cmdline << "): "
+                << WinError{};
+        }
+        CloseHandle(m_process);
+        m_process = NULL;
         onProcessExit();
         return;
     }
