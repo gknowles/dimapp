@@ -9,3 +9,4 @@
 #include "console.h"
 #include "env.h"
 #include "exec.h"
+#include "guid.h"

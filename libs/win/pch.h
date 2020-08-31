@@ -62,6 +62,7 @@
 
 #pragma comment(lib, "Dbghelp.lib")
 #pragma comment(lib, "Version.lib") // GetFileVersionInfo
+#pragma comment(lib, "rpcrt4.lib") // UuidCreate
 #pragma comment(lib, "synchronization.lib") // WaitOnAddress
 #pragma comment(lib, "ws2_32.lib")
 #pragma pack(pop)
