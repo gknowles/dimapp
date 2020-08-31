@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2019.
+// Copyright Glen Knowles 2015 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // winfile.cpp - dim windows platform
@@ -610,6 +610,24 @@ FileHandle Dim::fileOpen(intptr_t osfhandle, File::OpenMode mode) {
     auto handle = (HANDLE) osfhandle;
     auto path = getName(handle);
     return allocHandle(handle, path, mode);
+}
+
+//===========================================================================
+FileHandle Dim::fileCreateTemp(File::OpenMode mode) {
+    wchar_t tmpDir[MAX_PATH];
+    if (!GetTempPathW((DWORD) size(tmpDir), tmpDir))
+        logMsgFatal() << "GetTempPathW: " << WinError{};
+    auto path = Path(toString(wstring_view(tmpDir)));
+    if (!fileCreateDirs(path)) {
+        winFileSetErrno(WinError{});
+        return {};
+    }
+
+    auto fname = toString(newGuid()) + ".tmp";
+    path /= fname;
+
+    mode |= File::fCreat | File::fExcl | File::fReadWrite;
+    return fileOpen(path, mode);
 }
 
 //===========================================================================

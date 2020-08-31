@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2019.
+// Copyright Glen Knowles 2015 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // file.h - dim file
@@ -189,6 +189,10 @@ struct FileHandle : HandleBase {};
 FileHandle fileOpen(std::string_view path, File::OpenMode modeFlags);
 //  EINVAL
 FileHandle fileOpen(intptr_t osfhandle, File::OpenMode modeFlags);
+
+// The modeFlags are or'd with "fCreat | fExcl | fReadWrite" before the
+// underlying call to fileOpen.
+FileHandle fileCreateTemp(File::OpenMode modeFlags = {});
 
 // Create references to the standard in/out/err devices. The handle
 // should be closed after use, which detaches from the underlying file
