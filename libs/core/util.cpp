@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2019.
+// Copyright Glen Knowles 2016 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // util.cpp - dim core
@@ -108,7 +108,7 @@ void Dim::hexFromBytes(string & out, string_view src, bool append) {
 
     auto pos = out.size();
     out.resize(pos + 2 * src.size());
-    for (int ch : src) {
+    for (unsigned char ch : src) {
         out[pos++] = hexFromNibble(ch >> 4);
         out[pos++] = hexFromNibble(ch & 0x0f);
     }
