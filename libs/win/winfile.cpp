@@ -613,7 +613,7 @@ FileHandle Dim::fileOpen(intptr_t osfhandle, File::OpenMode mode) {
 }
 
 //===========================================================================
-FileHandle Dim::fileCreateTemp(File::OpenMode mode) {
+FileHandle Dim::fileCreateTemp(File::OpenMode mode, string_view suffix) {
     wchar_t tmpDir[MAX_PATH];
     if (!GetTempPathW((DWORD) size(tmpDir), tmpDir))
         logMsgFatal() << "GetTempPathW: " << WinError{};
@@ -623,7 +623,8 @@ FileHandle Dim::fileCreateTemp(File::OpenMode mode) {
         return {};
     }
 
-    auto fname = toString(newGuid()) + ".tmp";
+    auto fname = toString(newGuid());
+    fname += suffix;
     path /= fname;
 
     mode |= File::fCreat | File::fExcl | File::fReadWrite;
