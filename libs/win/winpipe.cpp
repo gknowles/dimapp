@@ -315,7 +315,7 @@ void PipeBase::queueRead(PipeRequest * task) {
         m_handle,
         task->m_buffer.data(),
         (DWORD) task->m_buffer.size(),
-        nullptr,
+        NULL,
         &task->overlapped()
     )) {
         err.set();
@@ -324,6 +324,9 @@ void PipeBase::queueRead(PipeRequest * task) {
         // expected, since it's attached to a completion port
     } else if (err == ERROR_BROKEN_PIPE) {
         task->pushOverlappedTask();
+    } else if (!err) {
+        // While an immediate success never happens on files or sockets it
+        // seems to for pipes.
     } else {
         logMsgFatal() << "ReadFile(pipe): " << err;
     }
@@ -636,14 +639,17 @@ void AcceptPipe::connect() {
         removeRef();
         return;
     }
-    if (ConnectNamedPipe(m_handle, &overlapped())) {
+    WinError err = 0;
+    if (!ConnectNamedPipe(m_handle, &overlapped()))
+        err.set();
+    if (err == ERROR_IO_PENDING) {
+        // waiting for completion, as expected
+    } else if (err == ERROR_PIPE_CONNECTED) {
+        pushOverlappedTask();
+    } else if (!err) {
         logMsgFatal() << "ConnectNamedPipe: non-overlapped result";
         return;
-    }
-    WinError err;
-    if (err == ERROR_PIPE_CONNECTED) {
-        pushOverlappedTask();
-    } else if (err != ERROR_IO_PENDING) {
+    } else {
         lk.unlock();
         logMsgError() << "ConnectNamedPipe: " << err;
         m_notify->onPipeDisconnect();
