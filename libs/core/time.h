@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2019.
+// Copyright Glen Knowles 2015 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // time.h - dim core
@@ -67,7 +67,7 @@ enum class DurationFormat {
     kOnePart,   // one unit, three decimals
 };
 std::string toString(Duration val, DurationFormat fmt);
-[[nodiscard]] bool parse(Dim::Duration * out, std::string_view src);
+[[nodiscard]] bool parse(Duration * out, std::string_view src);
 
 
 /****************************************************************************
