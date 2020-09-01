@@ -144,7 +144,8 @@ bool AcceptSocket::accept(ListenSocket * listen) {
 
     if (listen->m_handle != INVALID_SOCKET) {
         DWORD bytes; // ignored, only here for analyzer
-        bool error = !s_AcceptEx(
+        WinError err = 0;
+        if (!s_AcceptEx(
             listen->m_handle,
             listen->m_socket->m_handle,
             listen->m_addrBuf,
@@ -153,12 +154,14 @@ bool AcceptSocket::accept(ListenSocket * listen) {
             sizeof sockaddr_storage, // remote address length
             &bytes,                  // bytes received (ignored)
             &listen->overlapped()
-        );
-        WinError err;
-        if (error && err == ERROR_IO_PENDING)
+        )) {
+            err.set();
+        }
+        if (!err || err == ERROR_IO_PENDING)
             return true;
 
-        logMsgError() << "AcceptEx(" << listen->m_localEnd << "): " << err;
+        if (err != WSAECONNRESET)
+            logMsgError() << "AcceptEx(" << listen->m_localEnd << "): " << err;
     }
 
     listen->m_socket.reset();

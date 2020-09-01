@@ -162,10 +162,11 @@ void ConnSocket::connect(
     auto task = hostage.get();
     iSocketSetConnectTimeout(task->m_socket->m_handle, timeout);
 
+    WinError err = 0;
     sockaddr_storage sas;
     copy(&sas, remote);
     DWORD bytes; // ignored, only here for analyzer
-    bool error = !s_ConnectEx(
+    if (!s_ConnectEx(
         task->m_socket->m_handle,
         (sockaddr *) &sas,
         sizeof sas,
@@ -173,9 +174,10 @@ void ConnSocket::connect(
         (DWORD) data.size(),  // send buffer length
         &bytes, // bytes sent
         &task->overlapped()
-    );
-    WinError err;
-    if (!error || err != ERROR_IO_PENDING) {
+    )) {
+        err.set();
+    }
+    if (err && err != ERROR_IO_PENDING) {
         logMsgError() << "ConnectEx(" << remote << "): " << err;
         return pushConnectFailed(notify);
     }

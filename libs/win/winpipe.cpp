@@ -310,7 +310,7 @@ void PipeBase::requeueRead() {
 void PipeBase::queueRead(PipeRequest * task) {
     task->m_buffer.resize(kBufferSize);
     task->overlapped() = {};
-    WinError err{0};
+    WinError err = 0;
     if (!ReadFile(
         m_handle,
         task->m_buffer.data(),
@@ -321,12 +321,11 @@ void PipeBase::queueRead(PipeRequest * task) {
         err.set();
     }
     if (err == ERROR_IO_PENDING) {
-        // expected, since it's attached to a completion port
+        // Expected, since it's attached to a completion port
     } else if (err == ERROR_BROKEN_PIPE) {
         task->pushOverlappedTask();
     } else if (!err) {
-        // While an immediate success never happens on files or sockets it
-        // seems to for pipes.
+        // Read has already finish, now wait for the completion to be posted.
     } else {
         logMsgFatal() << "ReadFile(pipe): " << err;
     }
@@ -458,7 +457,7 @@ void PipeBase::queueWrites() {
         auto bytes = (unsigned) task->m_buffer.size();
         s_perfWaiting -= bytes;
         m_bufInfo.waiting -= bytes;
-        WinError err{0};
+        WinError err = 0;
         if (!WriteFile(
             m_handle,
             task->m_buffer.data(),
@@ -468,7 +467,7 @@ void PipeBase::queueWrites() {
         )) {
             err.set();
         }
-        if (err != ERROR_IO_PENDING) {
+        if (err && err != ERROR_IO_PENDING) {
             logMsgFatal() << "WriteFile(pipe): " << err;
             delete task;
             m_numWrites -= 1;
@@ -642,13 +641,10 @@ void AcceptPipe::connect() {
     WinError err = 0;
     if (!ConnectNamedPipe(m_handle, &overlapped()))
         err.set();
-    if (err == ERROR_IO_PENDING) {
-        // waiting for completion, as expected
+    if (!err || err == ERROR_IO_PENDING) {
+        // waiting for completion to be posted
     } else if (err == ERROR_PIPE_CONNECTED) {
         pushOverlappedTask();
-    } else if (!err) {
-        logMsgFatal() << "ConnectNamedPipe: non-overlapped result";
-        return;
     } else {
         lk.unlock();
         logMsgError() << "ConnectNamedPipe: " << err;
