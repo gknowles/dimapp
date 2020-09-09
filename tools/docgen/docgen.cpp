@@ -185,14 +185,43 @@ static bool loadSite(Site * out, string * content, string_view path) {
 static bool addOutput(
     Site * out,
     const string & file,
-    CharBuf && content
+    CharBuf && content,
+    bool normalize = true
 ) {
     if (out->outputs.contains(file)) {
         logMsgError() << file << ": multiply defined";
         appSignalShutdown(EX_DATAERR);
         return false;
     }
-    out->outputs[file] = move(content);
+    if (!normalize) {
+        out->outputs[file] = move(content);
+    } else {
+        auto& buf = out->outputs[file];
+        bool hasCR = false;
+        for (auto&& v : content.views()) {
+            for (unsigned i = 0; i < v.size(); ++i) {
+                if (v[i] == '\r') {
+                    if (hasCR)
+                        buf += '\n';
+                    buf += '\r';
+                    hasCR = true;
+                } else if (v[i] == '\n') {
+                    if (!hasCR)
+                        buf += '\r';
+                    buf += '\n';
+                    hasCR = false;
+                } else {
+                    if (hasCR) {
+                        buf += '\n';
+                        hasCR = false;
+                    }
+                    buf += v[i];
+                }
+            }
+        }
+        if (hasCR)
+            buf += '\n';
+    }
     return true;
 }
 
@@ -726,7 +755,7 @@ static bool genStatics(Site * out) {
     //-----------------------------------------------------------------------
     // .nojekyll
     content.clear();
-    if (!addOutput(out, ".nojekyll", move(content)))
+    if (!addOutput(out, ".nojekyll", move(content), false))
         return false;
 
     //-----------------------------------------------------------------------
