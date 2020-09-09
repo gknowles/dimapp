@@ -11,13 +11,6 @@ using namespace Dim;
 
 /****************************************************************************
 *
-*   Declarations
-*
-***/
-
-
-/****************************************************************************
-*
 *   Load site configuration
 *
 ***/
@@ -625,15 +618,17 @@ static void addNavbar(
         .end(); // div.nav-item
 
     // GitHub link
-    bld.start("a")
-        .attr("class", "nav-link py-0 px-3")
-        .attr("href", site.repoUrl)
-        .attr("style", "font-size: 24px;")
-        .start("i")
-            .attr("class", "fa fa-github")
-            .attr("title", "GitHub")
-            .text("").end()
-        .end();
+    if (site.github) {
+        bld.start("a")
+            .attr("class", "nav-link py-0 px-3")
+            .attr("href", site.repoUrl)
+            .attr("style", "font-size: 24px;")
+            .start("i")
+                .attr("class", "fa fa-github")
+                .attr("title", "View Source")
+                .text("").end()
+            .end();
+    }
 
     bld.end(); // div.navbar-nav
     bld.end(); // div#navbarNavAltMarkup
