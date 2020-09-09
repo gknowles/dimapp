@@ -112,16 +112,15 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
     if (firstTry)
         return shutdownIncomplete();
 
+    unique_lock lk(s_mut);
     if (!m_closing) {
         m_closing = true;
         if (!CloseHandle(s_iocp))
             logMsgError() << "CloseHandle(IOCP): " << WinError{};
 
         s_iocp = INVALID_HANDLE_VALUE;
-        Sleep(0);
     }
 
-    unique_lock lk(s_mut);
     if (s_iocp)
         shutdownIncomplete();
 }
