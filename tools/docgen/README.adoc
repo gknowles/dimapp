@@ -7,5 +7,23 @@ Distributed under the Boost Software License, Version 1.0.
 
 Static documentation website generator.
 
-Uses the following ruby gem to translate files to html:
-- http://github.com/github/markup[github-markup]
+* Assumes documentation sources are stored in a git repository.
+* Single docgen.xml file defines how site is generated.
+** Can defer files and urls mappings to copy of docgen.xml at each branch/tag
+   being generated.
+* Allows all markup languages supported by github-markup.
+* Documentation for multiple product versions selectable via dropdown.
+* Can generate table of contents for any or all pages.
+* Updates cross references links between pages within each version.
+** Sources read from git via list of branch/tag combinations.
+* Replaces all contents (except ".git") of output directory with new site
+  files.
+
+== Dependencies
+* https://github.com/github/markup[github-markup]
+* https://fontawesome.com[Font Awesome]
+* https://getbootstrap.com[Bootstrap]
+* https://highlightjs.org[highlight.js]
+
+The others are external dependencies, but github-markup is a ruby gem that
+must be installed.
