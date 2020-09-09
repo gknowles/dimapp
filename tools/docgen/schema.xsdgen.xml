@@ -1,0 +1,39 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright Glen Knowles 2020.
+Distributed under the Boost Software License, Version 1.0.
+-->
+<Schema xmlns="http://gknowles.github.io/dimapp/tools/xsdgen/schema.xsd">
+  <Output xsdNamespace="http://gknowles.github.io/dimapp/tools/docgen/schema.xsd"/>
+  <Overview><![CDATA[
+Definition of xml schema used to generate documentation websites.
+]]></Overview>
+
+  <Root name="Docs" desc="Top level element.">
+    <Attr name="siteName" content="string"
+        desc="Name of site displayed on title bar"/>
+    <Attr name="srcDir" content="string"
+        desc="Location of root directory source files are relative to."/>
+    <Attr name="outDir" content="string"/>
+    <Element name="GitHub" single="true">
+      <Attr name="repoUrl" content="string" require="true"/>
+    </Element>
+
+    <Element name="Page">
+      <Attr name="style" content="string"/>
+      <Element name="Column">
+        <Attr name="content" content="string"/>
+        <Attr name="maxWidth" content="string"/>
+      </Element>
+    </Element>
+
+    <Element name="Nav" single="true">
+      <Element name="Page">
+        <Attr name="name" content="string"/>
+        <Attr name="file" content="string"/>
+        <Attr name="style" content="string"/>
+      </Element>
+    </Element>
+  </Root>
+
+</Schema>
