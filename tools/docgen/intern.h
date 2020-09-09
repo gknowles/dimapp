@@ -56,7 +56,7 @@ struct Page {
     std::string urlSegment;
     std::string pageLayout;
     bool defaultPage = false;
-    std::string xrefFile;
+    std::string xrefFile; // defaults to file
 };
 
 struct Layout {

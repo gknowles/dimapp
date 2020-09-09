@@ -26,9 +26,9 @@ using namespace Dim;
 static bool loadSources(Site * out, XNode * root) {
     for (auto && xsrc : elems(root, "Source")) {
         auto & src = out->sources.emplace_back();
-        src.name = attrValue(&xsrc, "name", "");
-        src.layout = attrValue(&xsrc, "layout", "");
         src.tag = attrValue(&xsrc, "tag", "");
+        src.name = attrValue(&xsrc, "name", src.tag.c_str());
+        src.layout = attrValue(&xsrc, "layout", "");
         src.defaultSource = attrValue(&xsrc, "default", false);
         if (src.defaultSource) {
             if (out->defSource != -1) {
@@ -500,6 +500,15 @@ static void addBootstrapBody(IXBuilder * out) {
 }
 
 //===========================================================================
+static void addBadgeOld(IXBuilder * out) {
+    out->text(" ")
+        .start("span")
+            .attr("class", "badge badge-secondary")
+            .text("Old")
+            .end();
+}
+
+//===========================================================================
 static void addNavbar(
     IXBuilder * out,
     const Site & site,
@@ -564,6 +573,13 @@ static void addNavbar(
     bld.end(); // div.navbar-nav
 
     // Version links
+    bool afterDefault = false;
+    for (auto&& src : site.sources) {
+        if (src.tag == source.tag)
+            break;
+        if (src.defaultSource)
+            afterDefault = true;
+    }
     bld.start("div")
         .attr("class", "navbar-nav")
         .start("div")
@@ -578,11 +594,14 @@ static void addNavbar(
                 .attr("aria-haspopup", "true")
                 .attr("aria-expanded", "false")
                 .attr("title", "Version")
-                .text(source.tag)
-                .end()
-            .start("div")
-                .attr("class", "dropdown-menu dropdown-menu-md-right")
-                .attr("aria-labelledby", "navbarDropdown");
+                .text(source.name);
+    if (afterDefault)
+        addBadgeOld(&bld);
+    bld.end()
+        .start("div")
+            .attr("class", "dropdown-menu dropdown-menu-md-right")
+            .attr("aria-labelledby", "navbarDropdown");
+    afterDefault = false;
     for (auto&& src : site.sources) {
         bld.start("a");
         if (src.tag != source.tag) {
@@ -595,8 +614,12 @@ static void addNavbar(
         } else {
             bld.attr("href", "../" + src.tag + "/index.html");
         }
-        bld.text(src.tag)
-            .end();
+        bld.text(src.name);
+        if (afterDefault)
+            addBadgeOld(&bld);
+        bld.end();
+        if (src.defaultSource)
+            afterDefault = true;
     }
     bld.end() // div.dropdown-menu
         .end(); // div.nav-item
@@ -776,6 +799,9 @@ nav.navbar .navbar-nav .nav-link.active {
     background-color: steelblue;
     color: white;
 }
+nav.navbar span.badge {
+    margin-left: .25rem;
+}
 nav.navbar .dropdown-menu {
     min-width: unset;
 }
@@ -783,7 +809,7 @@ nav.navbar .dropdown-menu {
 nav#toc {
     top: 4rem;
     height: calc(100vh - 4rem);
-    overflow-y: visible;
+    overflow-y: auto;
 }
 nav#toc .nav-link {
     padding-top: 0;
