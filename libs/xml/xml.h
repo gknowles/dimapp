@@ -55,6 +55,21 @@ public:
 
     IXBuilder & text(std::string_view text);
 
+    template <int N>
+    void addRaw(const char (&text)[N]) {
+        append({text, N - 1});
+    }
+
+    template <typename Char>
+    requires std::is_same_v<Char, char>
+    void addRaw(const Char * const & text) {
+        append(text);
+    }
+
+    void addRaw(std::string_view text) {
+        append(text);
+    }
+
 protected:
     virtual void append(std::string_view text) = 0;
     virtual void appendCopy(size_t pos, size_t count) = 0;
@@ -97,21 +112,6 @@ public:
     }
 
 private:
-    template <int N>
-    void addRaw(const char (&text)[N]) {
-        append({text, N - 1});
-    }
-
-    template <typename Char>
-    requires std::is_same_v<Char, char>
-    void addRaw(const Char * const & text) {
-        append(text);
-    }
-
-    void addRaw(std::string_view text) {
-        append(text);
-    }
-
     template <bool isContent>
     void addText(const char text[], size_t count = -1);
     IXBuilder & fail();
