@@ -34,6 +34,7 @@ enum StdStream {
 ***/
 
 struct ExecResult {
+    std::string cmdline;
     int exitCode;
     CharBuf out;
     CharBuf err;

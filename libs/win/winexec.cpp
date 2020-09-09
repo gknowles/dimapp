@@ -514,7 +514,7 @@ class ExecWaitNotify : public IExecNotify {
 public:
     void onExecComplete(bool canceled, int exitCode) override;
 
-    bool wait(ExecResult * res);
+    bool wait(ExecResult * res, string_view cmdline);
 
 private:
     mutex m_mut;
@@ -539,11 +539,12 @@ void ExecWaitNotify::onExecComplete(bool canceled, int exitCode) {
 }
 
 //===========================================================================
-bool ExecWaitNotify::wait(ExecResult * res) {
+bool ExecWaitNotify::wait(ExecResult * res, string_view cmdline) {
     unique_lock lk{m_mut};
     while (!m_complete)
         m_cv.wait(lk);
     *res = {};
+    res->cmdline = cmdline;
     res->out = move(m_out);
     res->err = move(m_err);
     res->exitCode = m_exitCode;
@@ -553,18 +554,18 @@ bool ExecWaitNotify::wait(ExecResult * res) {
 //===========================================================================
 bool Dim::execProgramWait(
     ExecResult * res,
-    std::string_view cmdline,
+    string_view cmdline,
     const ExecOptions & opts
 ) {
     ExecWaitNotify notify;
     execProgram(&notify, cmdline, opts);
-    return notify.wait(res);
+    return notify.wait(res, cmdline);
 }
 
 //===========================================================================
 bool Dim::execProgramWait(
     ExecResult * res,
-    const std::vector<std::string> & args,
+    const vector<string> & args,
     const ExecOptions & opts
 ) {
     return execProgramWait(res, Cli::toCmdline(args), opts);
