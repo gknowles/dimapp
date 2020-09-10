@@ -646,9 +646,7 @@ static void addToc(IXBuilder * out, const vector<TocEntry> & entries) {
                 "nav sticky-top d-print-none d-none d-lg-flex flex-column"
                 )
             .attr("id", "toc")
-            .start("div")
-                .attr("class", "bg-light")
-                .text("");
+            .start("div");
 
     for (auto&& ent : entries) {
         if (ent.depth >= 1 && ent.depth <= 3) {
@@ -800,11 +798,19 @@ nav.navbar span.badge {
 nav.navbar .dropdown-menu {
     min-width: unset;
 }
+nav.navbar .dropdown-menu .dropdown-item:hover {
+    background-color: steelblue;
+    color: white;
+}
 
 nav#toc {
     top: 4rem;
     height: calc(100vh - 4rem);
     overflow-y: auto;
+}
+nav#toc div {
+    border-right: 1px solid #eee;
+    border-left: 1px solid #eee;
 }
 nav#toc .nav-link {
     padding-top: 0;
