@@ -853,6 +853,9 @@ table {
 table p {
     margin-bottom: 0;
 }
+div.scrollable-x {
+    overflow-x: auto;
+}
 )");
     if (!addOutput(out, "css/docgen.css", move(content)))
         return false;
