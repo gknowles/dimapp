@@ -639,7 +639,8 @@ static void addNavbar(
 static void addToc(IXBuilder * out, const vector<TocEntry> & entries) {
     auto & bld = *out;
     bld.start("div")
-        .attr("class", "col-lg-auto")
+        .attr("class", "d-none d-lg-block col-lg-auto")
+        .attr("style", "margin-top: 1.25rem;")
         .start("nav")
             .attr(
                 "class",
@@ -708,7 +709,7 @@ static bool genPage(
     bld.start("div")
         .attr("class", "container")
         .start("div")
-            .attr("class", "row");
+            .attr("class", "row flex-nowrap");
     for (auto&& col : pglay.columns) {
         switch (col.content) {
         case Column::kContentInvalid:
@@ -721,7 +722,7 @@ static bool genPage(
             bld.start("div")
                 .attr(
                     "class",
-                    "col col-md-9 table table-sm table-striped table-hover"
+                    "col col-lg-9 table table-sm table-striped table-hover"
                     )
                 .attr("role", "main")
                 .attr("style", "margin-top: 1rem;")
@@ -805,7 +806,7 @@ nav.navbar .dropdown-menu .dropdown-item:hover {
 
 nav#toc {
     top: 4rem;
-    height: calc(100vh - 4rem);
+    height: calc(100vh - 5rem);
     overflow-y: auto;
 }
 nav#toc div {
