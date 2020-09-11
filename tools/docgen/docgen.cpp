@@ -855,6 +855,13 @@ table p {
 }
 div.scrollable-x {
     overflow-x: auto;
+    margin-bottom: 1rem;
+}
+div.scrollable-x table {
+    margin-bottom: 0;
+}
+table.smaller-td-font td {
+    font-size: smaller;
 }
 )");
     if (!addOutput(out, "css/docgen.css", move(content)))
