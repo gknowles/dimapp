@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2019.
+// Copyright Glen Knowles 2016 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // file.cpp - dim file
@@ -295,15 +295,54 @@ bool FileLoadNotify::onFileRead(
     int64_t offset,
     FileHandle f
 ) {
-    assert(!more);
     *bytesUsed = data.size();
-    // resize the string to match the bytes read, in case it was less than
-    // the amount requested
+    // Resize the string to match the bytes read, in case it was less than
+    // the amount requested.
     m_out->resize(data.size());
-    m_notify->onFileRead(nullptr, data, more, offset, f);
+    m_notify->onFileRead(nullptr, data, false, offset, f);
     fileClose(f);
     delete this;
     return false;
+}
+
+
+/****************************************************************************
+*
+*   FileSaveNotify
+*
+***/
+
+namespace {
+
+class FileSaveNotify : public IFileWriteNotify {
+    IFileWriteNotify * m_notify;
+public:
+    FileSaveNotify(IFileWriteNotify * notify);
+    void onFileWrite(
+        int written,
+        std::string_view data,
+        int64_t offset,
+        FileHandle f
+    ) override;
+};
+
+} // namespace
+
+//===========================================================================
+FileSaveNotify::FileSaveNotify(IFileWriteNotify * notify)
+    : m_notify(notify)
+{}
+
+//===========================================================================
+void FileSaveNotify::onFileWrite(
+    int written,
+    std::string_view data,
+    int64_t offset,
+    FileHandle f
+) {
+    fileClose(f);
+    m_notify->onFileWrite(written, data, offset, {});
+    delete this;
 }
 
 
@@ -463,7 +502,10 @@ bool Dim::fileLoadBinaryWait(
     string_view path,
     size_t maxSize
 ) {
-    auto file = fileOpen(path, File::fReadOnly | File::fDenyNone);
+    auto file = fileOpen(
+        path,
+        File::fReadOnly | File::fDenyNone | File::fBlocking
+    );
     if (!file) {
         logMsgError() << "File open failed: " << path;
         out->clear();
@@ -480,4 +522,41 @@ bool Dim::fileLoadBinaryWait(
     fileReadWait(out->data(), (size_t) bytes, file, 0);
     fileClose(file);
     return true;
+}
+
+//===========================================================================
+void Dim::fileSaveBinary(
+    IFileWriteNotify * notify,
+    std::string_view path,
+    std::string_view data,
+    TaskQueueHandle hq // queue to notify
+) {
+    auto file = fileOpen(path, File::fReadWrite | File::fCreat | File::fTrunc);
+    if (!file) {
+        logMsgError() << "File open failed: " << path;
+        notify->onFileWrite(0, data, 0, file);
+        return;
+    }
+
+    auto proxy = new FileSaveNotify(notify);
+    fileWrite(proxy, file, 0, data.data(), data.size(), hq);
+}
+
+//===========================================================================
+bool Dim::fileSaveBinaryWait(
+    std::string_view path,
+    std::string_view data
+) {
+    auto file = fileOpen(
+        path,
+        File::fReadWrite | File::fCreat | File::fTrunc | File::fBlocking
+    );
+    if (!file) {
+        logMsgError() << "File open failed: " << path;
+        return false;
+    }
+
+    auto bytes = fileWriteWait(file, 0, data.data(), data.size());
+    fileClose(file);
+    return bytes == data.size();
 }

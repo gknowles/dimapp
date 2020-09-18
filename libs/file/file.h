@@ -149,6 +149,8 @@ void fileReadOnly(std::string_view path, bool enable);
 bool fileRemove(std::string_view path, bool recurse = false);
 bool fileCreateDirs(std::string_view path);
 
+std::string fileTempName(std::string_view suffix = ".tmp");
+
 namespace FileAccess {
     enum Right {
         kInvalid,
@@ -291,6 +293,8 @@ void fileStreamBinary(
     TaskQueueHandle hq = {} // queue to notify
 );
 
+// The notify will be called exactly once, when the load has finished, with
+// bytesUsed set to nullptr.
 void fileLoadBinary(
     IFileReadNotify * notify,
     std::string * out,
@@ -346,6 +350,24 @@ void fileAppend(
     TaskQueueHandle hq = {} // queue to notify
 );
 size_t fileAppendWait(FileHandle f, const void * buf, size_t bufLen);
+
+void fileSaveBinary(
+    IFileWriteNotify * notify,
+    std::string_view path,
+    std::string_view data,
+    TaskQueueHandle hq = {} // queue to notify
+);
+bool fileSaveBinaryWait(
+    std::string_view path,
+    std::string_view data
+);
+
+void fileSaveTempFile(
+    IFileWriteNotify * notify,
+    std::string_view data,
+    std::string_view suffix = ".tmp",
+    TaskQueueHandle hq = {} // queue to notify
+);
 
 
 /****************************************************************************

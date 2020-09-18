@@ -458,6 +458,23 @@ TimePoint Dim::fileLastWriteTime(string_view path) {
     return TimePoint{Duration{out.QuadPart}};
 }
 
+//===========================================================================
+std::string Dim::fileTempName(std::string_view suffix) {
+    wchar_t tmpDir[MAX_PATH];
+    if (!GetTempPathW((DWORD) size(tmpDir), tmpDir))
+        logMsgFatal() << "GetTempPathW: " << WinError{};
+    auto path = Path(toString(wstring_view(tmpDir)));
+    if (!fileCreateDirs(path)) {
+        winFileSetErrno(WinError{});
+        return {};
+    }
+
+    auto fname = toString(newGuid());
+    fname += suffix;
+    path /= fname;
+    return path.str();
+}
+
 
 /****************************************************************************
 *
@@ -614,21 +631,11 @@ FileHandle Dim::fileOpen(intptr_t osfhandle, File::OpenMode mode) {
 
 //===========================================================================
 FileHandle Dim::fileCreateTemp(File::OpenMode mode, string_view suffix) {
-    wchar_t tmpDir[MAX_PATH];
-    if (!GetTempPathW((DWORD) size(tmpDir), tmpDir))
-        logMsgFatal() << "GetTempPathW: " << WinError{};
-    auto path = Path(toString(wstring_view(tmpDir)));
-    if (!fileCreateDirs(path)) {
-        winFileSetErrno(WinError{});
+    auto fname = fileTempName(suffix);
+    if (fname.empty())
         return {};
-    }
-
-    auto fname = toString(newGuid());
-    fname += suffix;
-    path /= fname;
-
     mode |= File::fCreat | File::fExcl | File::fReadWrite;
-    return fileOpen(path, mode);
+    return fileOpen(fname, mode);
 }
 
 //===========================================================================
