@@ -296,6 +296,7 @@ int Dim::appRun(IAppNotify * app, int argc, char * argv[], AppFlags flags) {
     unique_lock lk{s_runMut};
     while (s_runMode == kRunStarting || s_runMode == kRunRunning)
         s_runCv.wait(lk);
+    lk.unlock();
 
     iShutdownDestroy();
 
@@ -311,6 +312,7 @@ int Dim::appRun(IAppNotify * app, int argc, char * argv[], AppFlags flags) {
     iTaskDestroy();
     iLogDestroy();
     iPerfDestroy();
+    lk.lock();
     s_runMode = kRunStopped;
     return s_exitcode;
 }
