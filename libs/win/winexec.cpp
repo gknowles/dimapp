@@ -34,7 +34,7 @@ public:
     static void write(IExecNotify * notify, std::string_view data);
 
 public:
-    ExecProgram(IExecNotify * notify, TaskQueueHandle hq);
+    ExecProgram(IExecNotify * notify);
     ~ExecProgram();
     void exec(string_view cmdline, const ExecOptions & opts);
     TaskQueueHandle queue() const { return m_hq; }
@@ -183,9 +183,8 @@ void ExecProgram::write(IExecNotify * notify, string_view data) {
 }
 
 //===========================================================================
-ExecProgram::ExecProgram(IExecNotify * notify, TaskQueueHandle hq)
+ExecProgram::ExecProgram(IExecNotify * notify)
     : m_notify(notify)
-    , m_hq(hq)
 {
     s_perfPrograms += 1;
     s_perfCurPrograms += 1;
@@ -211,6 +210,7 @@ void ExecProgram::exec(string_view cmdline, const ExecOptions & opts) {
     // Now that we're committed to getting an onProcessExit() call, change mode
     // so that we'll wait for it.
     m_mode = kRunStarting;
+    m_hq = opts.hq;
 
     bool success = false;
     for (;;) {
@@ -474,16 +474,19 @@ bool IExecNotify::onExecRead(
 //===========================================================================
 void Dim::execProgram(
     IExecNotify * notify,
-    std::string_view cmdline,
-    const ExecOptions & opts
+    const std::string & cmdline,
+    const ExecOptions & rawOpts
 ) {
     assert(notify);
 
     char bytes[8];
     cryptRandomBytes(bytes, sizeof bytes);
 
-    auto hq = taskInEventThread() ? taskComputeQueue() : taskEventQueue();
-    auto ep = new ExecProgram(notify, hq);
+    auto opts = rawOpts;
+    if (!opts.hq)
+        opts.hq = taskEventQueue();
+
+    auto ep = new ExecProgram(notify);
     ep->exec(cmdline, opts);
 }
 
@@ -554,10 +557,13 @@ bool ExecWaitNotify::wait(ExecResult * res, string_view cmdline) {
 //===========================================================================
 bool Dim::execProgramWait(
     ExecResult * res,
-    string_view cmdline,
-    const ExecOptions & opts
+    const string & cmdline,
+    const ExecOptions & rawOpts
 ) {
     ExecWaitNotify notify;
+    auto opts = rawOpts;
+    if (!opts.hq)
+        opts.hq = taskInEventThread() ? taskComputeQueue() : taskEventQueue();
     execProgram(&notify, cmdline, opts);
     return notify.wait(res, cmdline);
 }
@@ -581,8 +587,8 @@ bool Dim::execProgramWait(
 //===========================================================================
 bool Dim::execElevatedWait(
     int * exitCode,
-    string_view cmdline,
-    string_view workingDir
+    const string & cmdline,
+    const string & workingDir
 ) {
     SHELLEXECUTEINFOW ei = { sizeof ei };
     ei.lpVerb = L"RunAs";

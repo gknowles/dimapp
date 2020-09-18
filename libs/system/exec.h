@@ -13,6 +13,8 @@
 
 #include "cppconf/cppconf.h"
 
+#include "dimcli/cli.h"
+
 #include "core/core.h"
 #include "file/file.h"
 
@@ -41,9 +43,10 @@ struct ExecResult {
 };
 
 struct ExecOptions {
-    std::string_view workingDir;
+    const char * workingDir = "";
     Dim::Duration timeout = {};
     std::string_view stdinData;     // WARNING: not tested
+    Dim::TaskQueueHandle hq;
 };
 
 //---------------------------------------------------------------------------
@@ -74,7 +77,7 @@ private:
 
 void execProgram(
     IExecNotify * notify,
-    std::string_view cmdline,
+    const std::string & cmdline,
     const ExecOptions & opts = {}
 );
 void execProgram(
@@ -90,7 +93,7 @@ void execProgram(
     const ExecOptions & opts,
     Args... args
 ) {
-    std::vector<std::string> vargs = { std::string(args)... };
+    auto vargs = Cli::toArgvL(args...);
     execProgram(notify, vargs, opts);
 }
 
@@ -105,7 +108,7 @@ void execCancel(IExecNotify * notify);
 //---------------------------------------------------------------------------
 bool execProgramWait(
     ExecResult * res,
-    std::string_view cmdline,
+    const std::string & cmdline,
     const ExecOptions & opts = {}
 );
 bool execProgramWait(
@@ -121,7 +124,7 @@ bool execProgramWait(
     const ExecOptions & opts,
     Args... args
 ) {
-    std::vector<std::string> vargs = { std::string(args)... };
+    auto vargs = Cli::toArgvL(args...);
     return execProgramWait(res, vargs, opts);
 }
 
@@ -137,8 +140,8 @@ bool execProgramWait(
 // thread.
 bool execElevatedWait(
     int * exitCode,
-    std::string_view cmdline,
-    std::string_view workingDir = {}
+    const std::string & cmdline,
+    const std::string & workingDir = {}
 );
 
 // Helpers to allow elevated process to manually attach it's stdio to the
@@ -149,6 +152,9 @@ void execListen(
     std::string * pipeName,
     std::string * secret
 );
-void execClientAttach(std::string_view pipeName, std::string_view secret);
+void execClientAttach(
+    const std::string & pipeName,
+    const std::string & secret
+);
 
 } // namespace
