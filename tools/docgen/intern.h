@@ -80,6 +80,8 @@ struct Site {
     std::unordered_map<std::string, Layout> layouts;
     std::unordered_map<std::string, PageLayout> pageLayouts;
     std::unordered_map<std::string, Dim::CharBuf> outputs;
+
+    unsigned pendingWork = 0;
 };
 
 

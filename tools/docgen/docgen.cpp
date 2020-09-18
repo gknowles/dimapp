@@ -11,6 +11,36 @@ using namespace Dim;
 
 /****************************************************************************
 *
+*   Declarations
+*
+***/
+
+namespace {
+
+struct GenPageInfo {
+    Site * out;
+    const Source & src;
+    const Page & page;
+    function<void()> fn;
+
+    string fname;
+    string content;
+};
+
+}
+
+
+/****************************************************************************
+*
+*   Variables
+*
+***/
+
+TimePoint s_startTime;
+
+
+/****************************************************************************
+*
 *   Load site configuration
 *
 ***/
@@ -349,56 +379,114 @@ static void updateXrefLinks(string * content, const Layout & layout) {
 }
 
 //===========================================================================
-static string translate(string_view fname, string_view content) {
-    auto p = Path(fname);
-    auto f = fileCreateTemp({}, p.extension());
-    fileWriteWait(f, 0, content.data(), content.size());
-    auto tmp = string(filePath(f));
-    fileClose(f);
+static void exec(
+    function<void(string&&)> fn,
+    string_view cmdline,
+    string_view errTitle
+) {
+    struct Exec : IExecNotify {
+        function<void(string&&)> fn;
+        string cmdline;
+        string errTitle;
 
-    ExecResult res;
-    execProgramWait(
-        &res,
-        {},
-        "github-markup.bat",
-        tmp
-    );
-
-    fileRemove(tmp);
-    return toString(res.out);
+        void onExecComplete(bool canceled, int exitCode) override {
+            if (exitCode) {
+                logMsgError() << "Error: " << errTitle;
+                logMsgError() << " - " << cmdline;
+                logMsgError() << " - " << m_err;
+                appSignalShutdown(EX_IOERR);
+            } else {
+                if (m_err) {
+                    logMsgWarn() << "Warn: " << errTitle;
+                    logMsgWarn() << " - " << cmdline;
+                    logMsgWarn() << " - " << m_err;
+                }
+                fn(toString(m_out));
+            }
+            delete this;
+        }
+    };
+    auto notify = new Exec;
+    notify->fn = fn;
+    notify->cmdline = cmdline;
+    notify->errTitle = errTitle;
+    execProgram(notify, notify->cmdline);
 }
 
 //===========================================================================
-static string loadContent(
+static void writeContent(
+    function<void()> fn,
+    string_view path,
+    string_view content
+) {
+    struct Write : IFileWriteNotify {
+        function<void()> fn;
+        string path;
+
+        void onFileWrite(
+            int written,
+            std::string_view data,
+            int64_t offset,
+            FileHandle f
+        ) override {
+            if (written != data.size()) {
+                logMsgError() << path << ": error writing file.";
+                appSignalShutdown(EX_IOERR);
+            } else {
+                fn();
+            }
+            delete this;
+        }
+    };
+
+    auto notify = new Write;
+    notify->fn = fn;
+    notify->path = path;
+    fileSaveBinary(notify, path, content);
+}
+
+//===========================================================================
+static void loadContent(
+    function<void(string&&)> fn,
     const Site & site,
     string_view tag,
     string_view file
 ) {
     auto path = Path(file).resolve(site.configFile.parentPath());
     if (tag == "HEAD") {
-        string content;
-        if (!fileLoadBinaryWait(&content, path))
-            return {};
-        return content;
+        struct FileContent : IFileReadNotify {
+            function<void(string&&)> fn;
+            string buf;
+
+            bool onFileRead(
+                size_t * bytesUsed,
+                std::string_view data,
+                bool more,
+                int64_t offset,
+                FileHandle f
+            ) override {
+                fn(move(buf));
+                delete this;
+                return false;
+            }
+        };
+        auto notify = new FileContent;
+        notify->fn = fn;
+        fileLoadBinary(notify, &notify->buf, path);
+        return;
     }
 
     string objname = path.str();
     objname.replace(0, site.gitRoot.size() + 1, string(tag) + ":");
-    ExecResult res;
-    execProgramWait(
-        &res,
-        {},
+
+    auto cmdline = Cli::toCmdlineL(
         "git",
         "-C",
         site.configFile.parentPath(),
         "show",
         objname
     );
-    if (res.err) {
-        logMsgError() << "Error: " << res.cmdline;
-        logMsgError() << "> " << res.err;
-    }
-    return toString(res.out);
+    exec(fn, cmdline, objname);
 }
 
 //===========================================================================
@@ -666,21 +754,18 @@ static void addToc(IXBuilder * out, const vector<TocEntry> & entries) {
 }
 
 //===========================================================================
-static bool genPage(
-    Site * out,
-    const Source & src,
-    const Layout & layout,
-    const Page & page,
-    const PageLayout & pglay
+static CharBuf processPageContent(
+    GenPageInfo * info,
+    string && content
 ) {
-    auto raw = loadContent(*out, src.tag, page.file);
-    if (raw.empty()) {
-        logMsgError() << page.file << ", tag '" << src.tag
-            << "': unable to load content";
-        appSignalShutdown(EX_DATAERR);
-        return false;
-    }
-    auto content = translate(page.file, raw);
+    auto spec = info->src.spec ? info->src.spec.get() : info->out;
+    string layname = info->src.layout.empty() ? "default" : info->src.layout;
+    auto & layout = spec->layouts.find(layname)->second;
+    auto pglayname = info->page.pageLayout.empty()
+        ? "default"s
+        : info->page.pageLayout;
+    auto & pglay = spec->pageLayouts.find(pglayname)->second;
+
     updateXrefLinks(&content, layout);
     auto toc = createToc(&content);
 
@@ -698,14 +783,14 @@ static bool genPage(
         .attr("rel", "stylesheet")
         .attr("href", "../css/docgen.css")
         .end();
-    bld.elem("title", page.name + " - " + out->name);
+    bld.elem("title", info->page.name + " - " + info->out->name);
     bld.end(); // </head>
 
     bld.start("body")
         .attr("data-spy", "scroll")
         .attr("data-target", "#toc")
         .text("\n");
-    addNavbar(&bld, *out, src, layout, page);
+    addNavbar(&bld, *info->out, info->src, layout, info->page);
     bld.start("div")
         .attr("class", "container")
         .start("div")
@@ -738,31 +823,83 @@ static bool genPage(
     addBootstrapBody(&bld);
     bld.end() // </body>
         .end(); // </html>
-
-    auto file = Path(src.tag) / page.urlSegment + ".html";
-    return addOutput(out, file.str(), move(html));
+    return html;
 }
 
 //===========================================================================
-static bool genRedirect(
-    Site * out,
-    string_view outputFile,
-    string_view targetUrl
-) {
-    CharBuf html;
-    html.append("<!doctype html>\n");
-    XBuilder bld(&html);
-    bld << start("html")
-        << start("head")
-            << start("meta") << attr("charset", "utf-8") << end
-            << start("meta")
-                << attr("http-equiv", "refresh")
-                << attr("content")
-                    << "0; url='" << targetUrl << "'" << endAttr
-                << end
-            << end
-        << end;
-    return addOutput(out, string(outputFile), move(html));
+static void genPage(GenPageInfo * info, unsigned phase = 0) {
+    auto spec = info->src.spec ? info->src.spec.get() : info->out;
+    string layname = info->src.layout.empty() ? "default" : info->src.layout;
+
+    unsigned what = 0;
+    if (phase == what++) {
+        auto pglayname = info->page.pageLayout.empty()
+            ? "default"s
+            : info->page.pageLayout;
+        auto pglay = spec->pageLayouts.find(pglayname);
+        if (pglay == spec->pageLayouts.end()) {
+            logMsgError() << "Tag '" << info->src.tag << "': page layout '"
+                << pglayname << "' not defined.";
+            appSignalShutdown(EX_DATAERR);
+            return;
+        }
+        loadContent(
+            [info, what](auto && content) {
+                info->content = move(content);
+                genPage(info, what);
+            },
+            *info->out,
+            info->src.tag,
+            info->page.file
+        );
+        return;
+    }
+    if (phase == what++) {
+        if (info->content.empty()) {
+            logMsgError() << info->page.file << ", tag '" << info->src.tag
+                << "': unable to load content";
+            appSignalShutdown(EX_DATAERR);
+            return;
+        }
+        auto p = Path(info->page.file);
+        p = fileTempName(p.extension());
+        info->fname = p.str();
+        writeContent(
+            [info, what]() { genPage(info, what); },
+            p,
+            info->content
+        );
+        return;
+    }
+    if (phase == what++) {
+        auto cmdline = Cli::toCmdlineL("github-markup.bat", info->fname);
+        exec(
+            [info, what](string && out) {
+                fileRemove(info->fname);
+                info->content = move(out);
+                if (info->content.empty()) {
+                    logMsgError() << info->page.file << ", tag '"
+                        << info->src.tag << "': unable to load content";
+                    appSignalShutdown(EX_DATAERR);
+                } else {
+                    genPage(info, what);
+                }
+            },
+            cmdline,
+            info->page.file + ", tag '" + info->src.tag + "'"
+        );
+        return;
+    }
+    if (phase == what++) {
+        auto html = processPageContent(info, move(info->content));
+        auto file = Path(info->src.tag) / info->page.urlSegment + ".html";
+        if (!addOutput(info->out, file.str(), move(html)))
+            return;
+        info->fn();
+        return;
+    }
+
+    assert(!"unknown phase");
 }
 
 //===========================================================================
@@ -871,106 +1008,29 @@ table.smaller-td-font td {
 }
 
 //===========================================================================
-static bool genSite(Site * out) {
-    out->outputs.clear();
-    ExecResult res;
-    execProgramWait(
-        &res,
-        {},
-        "git",
-        "-C",
-        out->configFile.parentPath(),
-        "rev-parse",
-        "--show-toplevel"
-    );
-    auto buf = toString(res.out);
-    out->gitRoot = Path(trim(buf));
-    if (out->gitRoot.empty()) {
-        logMsgError() << "Error: " << res.cmdline;
-        logMsgError() << "> " << res.err;
-        appSignalShutdown(EX_OSERR);
-        return false;
-    }
+static bool genRedirect(
+    Site * out,
+    string_view outputFile,
+    string_view targetUrl
+) {
+    CharBuf html;
+    html.append("<!doctype html>\n");
+    XBuilder bld(&html);
+    bld << start("html")
+        << start("head")
+            << start("meta") << attr("charset", "utf-8") << end
+            << start("meta")
+                << attr("http-equiv", "refresh")
+                << attr("content")
+                    << "0; url='" << targetUrl << "'" << endAttr
+                << end
+            << end
+        << end;
+    return addOutput(out, string(outputFile), move(html));
+}
 
-    if (!genStatics(out))
-        return false;
-    if (!genRedirect(
-        out,
-        "index.html",
-        out->sources[out->defSource].tag + "/index.html"
-    )) {
-        return false;
-    }
-
-    for (auto && src : out->sources) {
-        auto layname = src.layout;
-        auto spec = out;
-
-        if (layname.empty()) {
-            auto content = loadContent(
-                *out,
-                src.tag,
-                out->configFile.filename()
-            );
-            src.spec = make_unique<Site>();
-            if (!loadSite(
-                src.spec.get(),
-                &content,
-                out->configFile.filename()
-            )) {
-                return false;
-            }
-            spec = src.spec.get();
-            layname = "default";
-        }
-
-        auto layout = spec->layouts.find(layname);
-        if (layout == spec->layouts.end()) {
-            logMsgError() << "Tag '" << src.tag << "': layout '" << layname
-                << "' not defined.";
-            appSignalShutdown(EX_DATAERR);
-            return false;
-        }
-
-        auto & url = layout->second.pages[layout->second.defPage].urlSegment;
-        if (!genRedirect(out, src.tag + "/index.html", url + ".html"))
-            return false;
-
-        for (auto&& page : layout->second.pages) {
-            if (!src.urlSegments.insert(page.urlSegment).second) {
-                logMsgError() << "Tag '" << src.tag << "': url segment '"
-                    << page.urlSegment << "' multiply defined.";
-                appSignalShutdown(EX_DATAERR);
-                return false;
-            }
-        }
-    }
-
-    for (auto && src : out->sources) {
-        auto layname = src.layout;
-        auto spec = src.spec ? src.spec.get() : out;
-
-        if (layname.empty())
-            layname = "default";
-
-        auto layout = spec->layouts.find(layname);
-
-        for (auto && page : layout->second.pages) {
-            auto pglayname = page.pageLayout.empty()
-                ? "default"s
-                : page.pageLayout;
-            auto pglay = spec->pageLayouts.find(pglayname);
-            if (pglay == spec->pageLayouts.end()) {
-                logMsgError() << "Tag '" << src.tag << "': page layout '"
-                    << pglayname << "' not defined.";
-                appSignalShutdown(EX_DATAERR);
-                return false;
-            }
-            if (!genPage(out, src, layout->second, page, pglay->second))
-                return false;
-        }
-    }
-
+//===========================================================================
+static bool writeSite(Site * out) {
     auto odir = Path(out->outDir).resolve(out->configFile.parentPath());
     if (!fileCreateDirs(odir)) {
         logMsgError() << odir << ": unable to create directory.";
@@ -1008,6 +1068,142 @@ static bool genSite(Site * out) {
     return true;
 }
 
+//===========================================================================
+static void genSite(Site * out, unsigned phase = 0) {
+    unsigned what = 0;
+    if (phase == what++) {
+        out->outputs.clear();
+        auto cmdline = Cli::toCmdlineL(
+            "git",
+            "-C",
+            out->configFile.parentPath(),
+            "rev-parse",
+            "--show-toplevel"
+        );
+        exec(
+            [out, what](auto && content) {
+                out->gitRoot = Path(trim(content));
+                genSite(out, what);
+            },
+            cmdline,
+            out->configFile
+        );
+        return;
+    }
+    if (phase == what++) {
+        if (!genStatics(out))
+            return;
+        if (!genRedirect(
+            out,
+            "index.html",
+            out->sources[out->defSource].tag + "/index.html"
+        )) {
+            return;
+        }
+
+        out->pendingWork = (unsigned) out->sources.size();
+        for (auto && src : out->sources) {
+            auto layname = src.layout;
+
+            if (!layname.empty()) {
+                out->pendingWork -= 1;
+            } else {
+                loadContent(
+                    [out, &src, what](auto && content) {
+                        src.spec = make_unique<Site>();
+                        if (loadSite(
+                            src.spec.get(),
+                            &content,
+                            out->configFile.filename()
+                        )) {
+                            genSite(out, what);
+                        }
+                    },
+                    *out,
+                    src.tag,
+                    out->configFile.filename()
+                );
+            }
+        }
+
+        out->pendingWork += 1;
+        phase = what;
+    }
+    if (phase == what++) {
+        if (--out->pendingWork) {
+            // Still have more layouts to load.
+            return;
+        }
+
+        for (auto && src : out->sources) {
+            auto spec = src.spec ? src.spec.get() : out;
+            string layname = src.layout.empty() ? "default" : src.layout;
+            auto layout = spec->layouts.find(layname);
+
+            if (layout == spec->layouts.end()) {
+                logMsgError() << "Tag '" << src.tag << "': layout '" << layname
+                    << "' not defined.";
+                appSignalShutdown(EX_DATAERR);
+                return;
+            }
+
+            auto & url = layout->second.pages[layout->second.defPage].urlSegment;
+            if (!genRedirect(out, src.tag + "/index.html", url + ".html"))
+                return;
+
+            // Count each page as pending work.
+            out->pendingWork += (unsigned) layout->second.pages.size();
+
+            for (auto&& page : layout->second.pages) {
+                if (!src.urlSegments.insert(page.urlSegment).second) {
+                    logMsgError() << "Tag '" << src.tag << "': url segment '"
+                        << page.urlSegment << "' multiply defined.";
+                    appSignalShutdown(EX_DATAERR);
+                    return;
+                }
+            }
+        }
+
+        // generate pages
+        for (auto && src : out->sources) {
+            auto spec = src.spec ? src.spec.get() : out;
+            string layname = src.layout.empty() ? "default" : src.layout;
+            auto layout = spec->layouts.find(layname);
+
+            for (auto && page : layout->second.pages) {
+                auto info = new GenPageInfo({ out, src, page });
+                info->fn = [info, what]() {
+                    genSite(info->out, what);
+                    delete info;
+                };
+                genPage(info);
+            }
+        }
+
+        out->pendingWork += 1;
+        phase = what;
+    }
+    if (phase == what++) {
+        if (--out->pendingWork) {
+            // Still have more pages to generate.
+            return;
+        }
+
+        if (!writeSite(out))
+            return;
+        TimePoint finish = Clock::now();
+        chrono::duration<double> elapsed = finish - s_startTime;
+        logMsgInfo() << "Elapsed time: " << elapsed.count() << " seconds.";
+        logMsgInfo() << out->outputs.size() << " generated files.";
+        logMsgInfo() << "Site generated successfully.";
+        appSignalShutdown(EX_OK);
+        delete out;
+        return;
+    }
+
+    assert(!"unknown phase");
+}
+
 
 /****************************************************************************
 *
@@ -1025,21 +1221,18 @@ static void app(int argc, char * argv[]) {
     if (!cli.parse(argc, argv))
         return appSignalUsageError();
 
+    s_startTime = Clock::now();
     string content;
     if (!fileLoadBinaryWait(&content, *specfile))
         return appSignalUsageError(EX_DATAERR);
 
-    Site site;
-    if (!loadSite(&site, &content, *specfile))
+    auto site = make_unique<Site>();
+    if (!loadSite(site.get(), &content, *specfile))
         return;
-    site.configFile = fileAbsolutePath(*specfile);
-    logMsgInfo() << "Processing '" << site.configFile << "' into '"
-        << site.outDir << "'.";
-    if (!genSite(&site))
-        return;
-
-    logMsgInfo() << "Site generated successfully.";
-    appSignalShutdown(EX_OK);
+    site->configFile = fileAbsolutePath(*specfile);
+    logMsgInfo() << "Processing '" << site->configFile << "' into '"
+        << site->outDir << "'.";
+    genSite(site.release());
 }
 
 
