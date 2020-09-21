@@ -13,8 +13,8 @@ Static documentation website generator.
    being generated.
 * Allows all markup languages supported by github-markup.
 * Documentation for multiple product versions selectable via dropdown.
-* Can generate table of contents for any or all pages.
-* Updates cross references links between pages within each version.
+* Generates per page table of contents.
+* Updates cross references link between pages within each version.
 ** Sources read from git via list of branch/tag combinations.
 * Replaces all contents (except ".git") of output directory with new site
   files.
@@ -25,5 +25,5 @@ Static documentation website generator.
 * https://getbootstrap.com[Bootstrap]
 * https://highlightjs.org[highlight.js]
 
-The others are external dependencies, but github-markup is a ruby gem that
-must be installed.
+The others are external dependencies of the generated site, but github-markup
+is a ruby gem that must be installed for sites to be generated.

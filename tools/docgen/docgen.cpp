@@ -832,7 +832,9 @@ static void genPage(GenPageInfo * info, unsigned phase = 0) {
     string layname = info->src.layout.empty() ? "default" : info->src.layout;
 
     unsigned what = 0;
+
     if (phase == what++) {
+        // Load page markup.
         auto pglayname = info->page.pageLayout.empty()
             ? "default"s
             : info->page.pageLayout;
@@ -855,6 +857,7 @@ static void genPage(GenPageInfo * info, unsigned phase = 0) {
         return;
     }
     if (phase == what++) {
+        // Save markup to temporary file.
         if (info->content.empty()) {
             logMsgError() << info->page.file << ", tag '" << info->src.tag
                 << "': unable to load content";
@@ -872,6 +875,7 @@ static void genPage(GenPageInfo * info, unsigned phase = 0) {
         return;
     }
     if (phase == what++) {
+        // Convert markup into HTML fragment.
         auto cmdline = Cli::toCmdlineL("github-markup.bat", info->fname);
         exec(
             [info, what](string && out) {
@@ -891,6 +895,8 @@ static void genPage(GenPageInfo * info, unsigned phase = 0) {
         return;
     }
     if (phase == what++) {
+        // Update HTML fragment, embed into HTML page, and add to site output
+        // files.
         auto html = processPageContent(info, move(info->content));
         auto file = Path(info->src.tag) / info->page.urlSegment + ".html";
         if (!addOutput(info->out, file.str(), move(html)))
@@ -1071,8 +1077,9 @@ static bool writeSite(Site * out) {
 //===========================================================================
 static void genSite(Site * out, unsigned phase = 0) {
     unsigned what = 0;
+
     if (phase == what++) {
-        out->outputs.clear();
+        // Query metadata of repo containing config file
         auto cmdline = Cli::toCmdlineL(
             "git",
             "-C",
@@ -1090,7 +1097,9 @@ static void genSite(Site * out, unsigned phase = 0) {
         );
         return;
     }
+
     if (phase == what++) {
+        // Generate infrastructure files for site
         if (!genStatics(out))
             return;
         if (!genRedirect(
@@ -1101,6 +1110,7 @@ static void genSite(Site * out, unsigned phase = 0) {
             return;
         }
 
+        // Load layouts of all sources
         out->pendingWork = (unsigned) out->sources.size();
         for (auto && src : out->sources) {
             auto layname = src.layout;
@@ -1129,12 +1139,14 @@ static void genSite(Site * out, unsigned phase = 0) {
         out->pendingWork += 1;
         phase = what;
     }
+
     if (phase == what++) {
         if (--out->pendingWork) {
             // Still have more layouts to load.
             return;
         }
 
+        // Calculate page metadata
         for (auto && src : out->sources) {
             auto spec = src.spec ? src.spec.get() : out;
             string layname = src.layout.empty() ? "default" : src.layout;
@@ -1147,6 +1159,7 @@ static void genSite(Site * out, unsigned phase = 0) {
                 return;
             }
 
+            // Generate infrastructure files for source
             auto & url = layout->second.pages[layout->second.defPage].urlSegment;
             if (!genRedirect(out, src.tag + "/index.html", url + ".html"))
                 return;
@@ -1154,6 +1167,7 @@ static void genSite(Site * out, unsigned phase = 0) {
             // Count each page as pending work.
             out->pendingWork += (unsigned) layout->second.pages.size();
 
+            // Populate list of URLs for source
             for (auto&& page : layout->second.pages) {
                 if (!src.urlSegments.insert(page.urlSegment).second) {
                     logMsgError() << "Tag '" << src.tag << "': url segment '"
@@ -1164,12 +1178,13 @@ static void genSite(Site * out, unsigned phase = 0) {
             }
         }
 
-        // generate pages
+        // Generate pages
         for (auto && src : out->sources) {
             auto spec = src.spec ? src.spec.get() : out;
             string layname = src.layout.empty() ? "default" : src.layout;
             auto layout = spec->layouts.find(layname);
 
+            // Generate pages for source
             for (auto && page : layout->second.pages) {
                 auto info = new GenPageInfo({ out, src, page });
                 info->fn = [info, what]() {
@@ -1183,12 +1198,14 @@ static void genSite(Site * out, unsigned phase = 0) {
         out->pendingWork += 1;
         phase = what;
     }
+
     if (phase == what++) {
         if (--out->pendingWork) {
             // Still have more pages to generate.
             return;
         }
 
+        // Replace site output directory with all the new files.
         if (!writeSite(out))
             return;
         TimePoint finish = Clock::now();
