@@ -34,12 +34,11 @@ public:
 public:
     CharBuf() {}
     CharBuf(const CharBuf & from) { insert(0, from); }
-    CharBuf(CharBuf && from) noexcept = default;
-    ~CharBuf();
+    CharBuf(CharBuf && from) noexcept;
     explicit operator bool() const { return !empty(); }
 
     CharBuf & operator=(const CharBuf & buf) { return assign(buf); }
-    CharBuf & operator=(CharBuf && buf) = default;
+    CharBuf & operator=(CharBuf && buf) noexcept;
     CharBuf & operator=(char ch) { return assign(ch); }
     CharBuf & operator=(const char s[]) { return assign(s); }
     CharBuf & operator=(std::string_view str) { return assign(str); }

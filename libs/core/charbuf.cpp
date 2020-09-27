@@ -75,8 +75,16 @@ CharBuf::Buffer::~Buffer() {
 ***/
 
 //===========================================================================
-CharBuf::~CharBuf()
-{}
+CharBuf::CharBuf(CharBuf && from) noexcept {
+    swap(from);
+}
+
+//===========================================================================
+CharBuf & CharBuf::operator=(CharBuf && buf) noexcept {
+    clear();
+    swap(buf);
+    return *this;
+}
 
 //===========================================================================
 CharBuf & CharBuf::assign(size_t numCh, char ch) {
@@ -720,6 +728,7 @@ void CharBuf::swap(CharBuf & other) {
     ::swap(m_buffers, other.m_buffers);
     ::swap(m_lastUsed, other.m_lastUsed);
     ::swap(m_size, other.m_size);
+    ::swap(m_empty, other.m_empty);
 }
 
 //===========================================================================
