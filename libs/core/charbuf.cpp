@@ -1123,6 +1123,16 @@ CharBuf::ViewIterator & CharBuf::ViewIterator::operator++() {
 ***/
 
 //===========================================================================
+string Dim::toString(const CharBuf & buf) {
+    return toString(buf, 0, (size_t) -1);
+}
+
+//===========================================================================
+string Dim::toString(const CharBuf & buf, size_t pos) {
+    return toString(buf, pos, (size_t) -1);
+}
+
+//===========================================================================
 string Dim::toString(const CharBuf & buf, size_t pos, size_t count) {
     assert(pos <= buf.size());
     count = min(count, buf.size() - pos);

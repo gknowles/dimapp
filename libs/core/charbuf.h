@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2019.
+// Copyright Glen Knowles 2015 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // charbuf.h - dim core
@@ -155,11 +155,9 @@ public:
     char * alloc(size_t bytes, size_t align) override;
 
 private:
-    friend std::string toString(
-        const CharBuf & buf,
-        size_t pos = 0,
-        size_t count = -1
-    );
+    friend std::string toString(const CharBuf & buf);
+    friend std::string toString(const CharBuf & buf, size_t pos);
+    friend std::string toString(const CharBuf & buf, size_t pos, size_t count);
 
     friend std::ostream & operator<<(std::ostream & os, const CharBuf & buf);
 
