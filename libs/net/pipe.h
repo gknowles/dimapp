@@ -7,6 +7,7 @@
 #include "cppconf/cppconf.h"
 
 #include "core/time.h"
+#include "core/types.h"
 
 #include <memory>
 #include <string_view>

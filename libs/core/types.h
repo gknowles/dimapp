@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2019.
+// Copyright Glen Knowles 2015 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // types.h - dim core
@@ -211,6 +211,53 @@ template<typename T>
 requires is_enum_flags_v<T>
 constexpr T& operator^= (T & left, T right) {
     return left = left ^ right;
+}
+
+
+/****************************************************************************
+*
+*   IFactory
+*
+*   If a service defines Base* and accepts IFactory<Base>* in its interface,
+*   clients that define their own class (Derived) derived from Base can use
+*   getFactory<Base, Derived>() to get a pointer to a suitable static factory.
+*
+*   Example usage:
+*   // Service interface
+*   void socketListen(IFactory<ISocketNotify> * fact, const SockAddr & e);
+*
+*   // Client implementation
+*   class MySocket : public ISocketNotify {
+*   };
+*
+*   socketListen(getFactory<ISocketNotify, MySocket>(), sockAddr);
+*
+***/
+
+template<typename T>
+class IFactory {
+public:
+    virtual ~IFactory() = default;
+    virtual std::unique_ptr<T> onFactoryCreate() = 0;
+};
+
+//===========================================================================
+template<typename Base, typename Derived>
+requires std::is_base_of_v<Base, Derived>
+inline IFactory<Base> * getFactory() {
+    class Factory : public IFactory<Base> {
+        std::unique_ptr<Base> onFactoryCreate() override {
+            return std::make_unique<Derived>();
+        }
+    };
+    // As per http://en.cppreference.com/w/cpp/language/inline
+    // "In an inline function, function-local static objects in all function
+    // definitions are shared across all translation units (they all refer to
+    // the same object defined in one translation unit)"
+    //
+    // Note that this is a difference between C and C++
+    static Factory s_factory;
+    return &s_factory;
 }
 
 } // namespace
