@@ -749,7 +749,8 @@ bool Dim::fileFlushViews(FileHandle f) {
     for (auto && kv : file->m_views) {
         if (!FlushViewOfFile(kv.first, 0)) {
             err.set();
-            logMsgError() << "FlushViewOfFile(" << file->m_path << "): " << err;
+            logMsgError() << "FlushViewOfFile(" << file->m_path << "): "
+                << err;
         }
     }
     return winFileSetErrno(err);
@@ -889,7 +890,8 @@ Path Dim::fileGetCurrentDir(std::string_view drive) {
 //===========================================================================
 Path Dim::fileSetCurrentDir(std::string_view path) {
     if (!SetCurrentDirectoryW(toWstring(path).c_str())) {
-        logMsgError() << "SetCurrentDirectoryW(" << path << "): " << WinError{};
+        WinError err;
+        logMsgError() << "SetCurrentDirectoryW(" << path << "): " << err;
         return {};
     }
     return fileGetCurrentDir(path);
@@ -1215,7 +1217,7 @@ size_t Dim::filePageSize(FileHandle f) {
 
 //===========================================================================
 size_t Dim::fileViewAlignment(FileHandle f) {
-    auto mem = envMemoryConfig();
+    auto & mem = envMemoryConfig();
 
     // must be a multiple of the page size
     assert(mem.allocAlign % mem.pageSize == 0);
