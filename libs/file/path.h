@@ -148,7 +148,8 @@ private:
 
 //===========================================================================
 template <>
-inline std::string Cli::OptBase::toValueDesc<Path>() const {
+// static
+inline std::string Cli::valueDesc<Path>() {
     return "FILE";
 }
 
