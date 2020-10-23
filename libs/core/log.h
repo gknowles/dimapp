@@ -87,6 +87,32 @@ void logHexDebug(std::string_view data);
 
 /****************************************************************************
 *
+*   Stopwatch
+*   Used to log elapsed time. Automatically started at program start.
+*
+***/
+
+// Starts if not already running.
+void logStartStopwatch();
+
+// Resets total and lap times to zero. Ignored unless stopwatch is paused.
+void logResetStopwatch();
+
+// Logs total time unless prefix is empty, and pauses stopwatch. Ignored if
+// paused.
+void logPauseStopwatch(std::string_view prefix = "Elapsed time");
+
+// Logs total time unless prefix is empty. Ignored if paused.
+void logStopwatch(std::string_view prefix = "Elapsed time");
+
+// Logs lap time unless prefix is empty, and resets lap time. Lap time is the
+// time since the last lap or, if first lap, since the stopwatch started.
+// Ignored if paused.
+void logStopwatchLap(std::string_view prefix = "Elapsed time");
+
+
+/****************************************************************************
+*
 *   Query log info
 *
 ***/

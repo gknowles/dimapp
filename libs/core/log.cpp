@@ -173,6 +173,7 @@ void Dim::iLogInitialize() {
     unique_lock lk{s_mut};
     s_initialDefault = s_defaultLogger;
     s_initialNumLoggers = s_loggers.size();
+    logStartStopwatch();
 }
 
 //===========================================================================
@@ -327,5 +328,77 @@ void Dim::logHexDebug(string_view data) {
             if (pos + i < data.size())
                 os.put(isprint(ptr[i]) ? (char) ptr[i] : '.');
         }
+    }
+}
+
+
+/****************************************************************************
+*
+*   Stopwatch
+*
+***/
+
+static mutex s_watchMut;
+static Duration s_watchTotal;
+static TimePoint s_watchStart;
+static TimePoint s_watchLap;
+static bool s_watchRunning;
+
+//===========================================================================
+void Dim::logStartStopwatch() {
+    scoped_lock lk{s_watchMut};
+    if (s_watchRunning)
+        return;
+    s_watchRunning = true;
+    s_watchStart = Clock::now();
+    s_watchLap = {};
+}
+
+//===========================================================================
+void Dim::logResetStopwatch() {
+    scoped_lock lk{s_watchMut};
+    if (s_watchRunning)
+        return;
+    s_watchTotal = {};
+}
+
+//===========================================================================
+void Dim::logPauseStopwatch(string_view prefix) {
+    scoped_lock lk{s_watchMut};
+    if (!s_watchRunning)
+        return;
+    s_watchRunning = false;
+    s_watchTotal += Clock::now() - s_watchStart;
+
+    if (!prefix.empty()) {
+        chrono::duration<double> elapsed = s_watchTotal;
+        logMsgInfo() << prefix << ": " << elapsed.count() << " seconds.";
+    }
+}
+
+//===========================================================================
+void Dim::logStopwatch(string_view prefix) {
+    scoped_lock lk{s_watchMut};
+    if (!s_watchRunning)
+        return;
+
+    if (!prefix.empty()) {
+        chrono::duration<double> elapsed = s_watchTotal
+            + Clock::now() - s_watchStart;
+        logMsgInfo() << prefix << ": " << elapsed.count() << " seconds.";
+    }
+}
+
+//===========================================================================
+void Dim::logStopwatchLap(std::string_view prefix) {
+    scoped_lock lk{s_watchMut};
+    if (!s_watchRunning)
+        return;
+    auto start = s_watchLap ? s_watchLap : s_watchStart;
+    s_watchLap = Clock::now();
+
+    if (!prefix.empty()) {
+        chrono::duration<double> elapsed = s_watchLap - start;
+        logMsgInfo() << prefix << ": " << elapsed.count() << " seconds.";
     }
 }
