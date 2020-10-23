@@ -27,3 +27,11 @@ Static documentation website generator.
 
 The others are external dependencies of the generated site, but github-markup
 is a ruby gem that must be installed for sites to be generated.
+
+== Site file layout
+* .nojekyll (so the site can be directly deployed to GitHub)
+* index.html (redirect to default source)
+* css/docgen.css
+* js/ (unused)
+* <source name>/<file path>/<file name>/index.html
+** (for each file in the source)
