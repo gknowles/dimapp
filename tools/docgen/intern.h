@@ -91,3 +91,32 @@ struct Site {
 *
 ***/
 
+void exec(
+    std::function<void(std::string&&)> fn,
+    std::string_view cmdline,
+    std::string_view errTitle
+);
+
+void writeContent(
+    std::function<void()> fn,
+    std::string_view path,
+    std::string_view content
+);
+
+void loadContent(
+    std::function<void(std::string&&)> fn,
+    const Site & site,
+    std::string_view tag,
+    std::string_view file
+);
+
+std::unique_ptr<Site> loadSite(const std::string & specfile);
+std::unique_ptr<Site> loadSite(std::string * content, std::string_view path);
+
+bool addOutput(
+    Site * out,
+    const std::string & file,
+    Dim::CharBuf && content,
+    bool normalize = true
+);
+bool writeOutputs(const Site & out);
