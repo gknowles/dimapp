@@ -460,10 +460,17 @@ TimePoint Dim::fileLastWriteTime(string_view path) {
 
 //===========================================================================
 std::string Dim::fileTempName(std::string_view suffix) {
-    wchar_t tmpDir[MAX_PATH];
-    if (!GetTempPathW((DWORD) size(tmpDir), tmpDir))
-        logMsgFatal() << "GetTempPathW: " << WinError{};
-    auto path = Path(toString(wstring_view(tmpDir)));
+    wstring tmpDir(MAX_PATH, '\0');
+    for (;;) {
+        auto bufLen = size(tmpDir);
+        DWORD count = GetTempPathW((DWORD) bufLen, tmpDir.data());
+        if (!count)
+            logMsgFatal() << "GetTempPathW: " << WinError{};
+        tmpDir.resize(count);
+        if (count <= bufLen)
+            break;
+    }
+    auto path = Path(toString(tmpDir));
     if (!fileCreateDirs(path)) {
         winFileSetErrno(WinError{});
         return {};
