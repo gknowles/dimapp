@@ -149,6 +149,7 @@ void fileReadOnly(std::string_view path, bool enable);
 bool fileRemove(std::string_view path, bool recurse = false);
 bool fileCreateDirs(std::string_view path);
 
+std::string fileTempDir();
 std::string fileTempName(std::string_view suffix = ".tmp");
 
 namespace FileAccess {

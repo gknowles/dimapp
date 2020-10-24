@@ -459,7 +459,7 @@ TimePoint Dim::fileLastWriteTime(string_view path) {
 }
 
 //===========================================================================
-std::string Dim::fileTempName(std::string_view suffix) {
+string Dim::fileTempDir() {
     wstring tmpDir(MAX_PATH, '\0');
     for (;;) {
         auto bufLen = size(tmpDir);
@@ -475,6 +475,14 @@ std::string Dim::fileTempName(std::string_view suffix) {
         winFileSetErrno(WinError{});
         return {};
     }
+    return path.str();
+}
+
+//===========================================================================
+string Dim::fileTempName(string_view suffix) {
+    auto path = Path(fileTempDir());
+    if (!path)
+        return {};
 
     auto fname = toString(newGuid());
     fname += suffix;
@@ -856,7 +864,7 @@ File::FileType Dim::fileType(FileHandle f) {
 }
 
 //===========================================================================
-Path Dim::fileGetCurrentDir(std::string_view drive) {
+Path Dim::fileGetCurrentDir(string_view drive) {
     wchar_t wdrive[3] = {};
     switch (drive.size()) {
     default:
@@ -895,7 +903,7 @@ Path Dim::fileGetCurrentDir(std::string_view drive) {
 }
 
 //===========================================================================
-Path Dim::fileSetCurrentDir(std::string_view path) {
+Path Dim::fileSetCurrentDir(string_view path) {
     if (!SetCurrentDirectoryW(toWstring(path).c_str())) {
         WinError err;
         logMsgError() << "SetCurrentDirectoryW(" << path << "): " << err;
@@ -1011,8 +1019,8 @@ static unsigned getWindowsPerms(FileAccess::Right right) {
 
 //===========================================================================
 static bool updateNamedAccess(
-    std::string_view path,
-    std::string_view trustee, // name of account or group
+    string_view path,
+    string_view trustee, // name of account or group
     ACCESS_MODE mode,
     FileAccess::Right allow,
     FileAccess::Inherit inherit
@@ -1084,8 +1092,8 @@ static bool updateNamedAccess(
 
 //===========================================================================
 bool Dim::fileAddAccess(
-    std::string_view path,
-    std::string_view trustee, // name or Sid of account or group
+    string_view path,
+    string_view trustee, // name or Sid of account or group
     FileAccess::Right allow,
     FileAccess::Inherit inherit
 ) {
@@ -1094,8 +1102,8 @@ bool Dim::fileAddAccess(
 
 //===========================================================================
 bool Dim::fileSetAccess(
-    std::string_view path,
-    std::string_view trustee, // name or Sid of account or group
+    string_view path,
+    string_view trustee, // name or Sid of account or group
     FileAccess::Right allow,
     FileAccess::Inherit inherit
 ) {
