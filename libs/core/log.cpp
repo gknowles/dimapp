@@ -145,16 +145,21 @@ Detail::Log::Log(LogType type)
 
 //===========================================================================
 Detail::Log::Log(Log && from) noexcept
-    : ostrstream(static_cast<ostrstream &&>(from))
+    : ostrstream(m_buf, size(m_buf) - 1)
     , m_type(from.m_type)
-{}
+{
+    write(from.m_buf, from.pcount());
+    from.m_type = kLogTypeInvalid;
+}
 
 //===========================================================================
 Detail::Log::~Log() {
-    put(0);
-    m_buf[size(m_buf) - 1] = 0;
-    auto s = str();
-    logMsg(m_type, s);
+    if (m_type) {
+        put(0);
+        m_buf[size(m_buf) - 1] = 0;
+        auto s = str();
+        logMsg(m_type, s);
+    }
 }
 
 //===========================================================================
