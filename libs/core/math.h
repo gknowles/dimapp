@@ -79,7 +79,7 @@ constexpr int leadingZeroBits(uint64_t val) {
 // Round up to power of 2
 constexpr uint64_t pow2Ceil(uint64_t num) {
 #if __cpp_lib_bitops
-    return std::ceil2(num);
+    return std::bit_ceil(num);
 #else
     num -= 1;
     num |= (num >> 1);
