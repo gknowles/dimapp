@@ -123,18 +123,16 @@ constexpr uint64_t ntoh64(const void * vptr) {
 
 //===========================================================================
 constexpr float ntohf32(const void * vptr) {
-    float val = 0;
-    static_assert(sizeof val == 4 && std::numeric_limits<float>::is_iec559);
-    *((uint32_t*) &val) = ntoh32(vptr);
-    return val;
+    static_assert(sizeof uint32_t == 4);
+    static_assert(std::numeric_limits<float>::is_iec559);
+    return std::bit_cast<float>(ntoh32(vptr));
 }
 
 //===========================================================================
 constexpr double ntohf64(const void * vptr) {
-    double val = 0;
-    static_assert(sizeof val == 8 && std::numeric_limits<float>::is_iec559);
-    *((uint64_t*) &val) = ntoh64(vptr);
-    return val;
+    static_assert(sizeof uint64_t == 8);
+    static_assert(std::numeric_limits<float>::is_iec559);
+    return std::bit_cast<double>(ntoh64(vptr));
 }
 
 //===========================================================================
@@ -178,12 +176,12 @@ constexpr char * hton64(void * out, uint64_t val) {
 
 //===========================================================================
 constexpr char * htonf32(void * out, float val) {
-    return hton32(out, *(uint32_t *) &val);
+    return hton32(out, std::bit_cast<uint32_t>(val));
 }
 
 //===========================================================================
 constexpr char * htonf64(void * out, double val) {
-    return hton64(out, *(uint64_t *) &val);
+    return hton64(out, std::bit_cast<uint64_t>(val));
 }
 
 } // namespace
