@@ -65,7 +65,11 @@ public:
     StrFrom(T val) { set(val); }
     std::string_view set(T val);
     operator std::string_view() const;
-    const char * c_str() const { return data; }
+    const char * c_str() const { return m_data; }
+
+    size_t size() const;
+    bool empty() const { return *m_data == 0; }
+    const char * data() const { return m_data; }
 
 private:
     friend std::ostream & operator<<(
@@ -77,15 +81,15 @@ private:
     }
 
 private:
-    char data[maxNumericChars<T>() + 1];
+    char m_data[maxNumericChars<T>() + 1];
 };
 
 //===========================================================================
 template <typename T>
 requires std::is_arithmetic_v<T>
 StrFrom<T>::StrFrom() {
-    data[0] = 0;
-    data[sizeof data - 1] = (char) (sizeof data - 1);
+    m_data[0] = 0;
+    m_data[sizeof m_data - 1] = (char) (sizeof m_data - 1);
 }
 
 //===========================================================================
@@ -93,14 +97,14 @@ template <typename T>
 requires std::is_arithmetic_v<T>
 std::string_view StrFrom<T>::set(T val) {
     auto r = std::to_chars(
-        data,
-        data + sizeof data,
+        m_data,
+        m_data + sizeof m_data,
         val
     );
-    auto used = r.ptr - data;
-    assert(used < sizeof data);
-    data[used] = 0;
-    data[sizeof data - 1] = (char) (sizeof data - used - 1);
+    auto used = r.ptr - m_data;
+    assert(used < sizeof m_data);
+    m_data[used] = 0;
+    m_data[sizeof m_data - 1] = (char) (sizeof m_data - used - 1);
     return *this;
 }
 
@@ -108,7 +112,14 @@ std::string_view StrFrom<T>::set(T val) {
 template <typename T>
 requires std::is_arithmetic_v<T>
 StrFrom<T>::operator std::string_view() const {
-    return std::string_view(data, sizeof data - data[sizeof data - 1] - 1);
+    return std::string_view(m_data, size());
+}
+
+//===========================================================================
+template <typename T>
+requires std::is_arithmetic_v<T>
+size_t StrFrom<T>::size() const {
+    return sizeof m_data - m_data[sizeof m_data - 1] - 1;
 }
 
 
