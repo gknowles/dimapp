@@ -107,7 +107,8 @@ IWinOverlappedNotify::IWinOverlappedNotify(TaskQueueHandle hq) {
 }
 
 //===========================================================================
-void IWinOverlappedNotify::pushOverlappedTask() {
+void IWinOverlappedNotify::pushOverlappedTask(void * completionKey) {
+    m_evt.completionKey = completionKey;
     if (m_evt.hq) {
         taskPush(m_evt.hq, m_evt.notify);
     } else {

@@ -112,7 +112,7 @@ public:
     OVERLAPPED & overlapped() { return m_evt.overlapped; }
     void * overlappedKey() { return m_evt.completionKey; }
     TaskQueueHandle overlappedQueue() { return m_evt.hq; }
-    void pushOverlappedTask();
+    void pushOverlappedTask(void * completionKey = {});
 
     // Get error and number of bytes transferred for the operation
     struct WinOverlappedResult { WinError err; DWORD bytes; };
