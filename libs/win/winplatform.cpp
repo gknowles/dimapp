@@ -60,7 +60,7 @@ static void updateProcessTimes() {
     auto utime = Duration(tmp.QuadPart);
 
     auto elapsed = now - s_lastSnapshot;
-    auto cores = envCpus();
+    auto cores = envProcessors();
     if (!s_lastSnapshot || elapsed > 1s) {
         if (s_lastSnapshot) {
             auto factor = 100.0f / elapsed.count() / cores;

@@ -36,7 +36,7 @@ struct DiskSpace {
 };
 DiskSpace envDiskSpace(std::string_view path);
 
-unsigned envCpus();
+unsigned envProcessors();
 
 
 /****************************************************************************

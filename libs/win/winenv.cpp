@@ -16,7 +16,7 @@ using namespace Dim;
 ***/
 
 static EnvMemoryConfig s_memCfg;
-static unsigned s_numCpus;
+static unsigned s_numProcessors;
 static string s_execPath;
 
 
@@ -38,7 +38,7 @@ void Dim::winEnvInitialize() {
         // and see if they are supported at all (non-zero).
         s_memCfg.minLargeAlloc = GetLargePageMinimum();
     }
-    s_numCpus = info.dwNumberOfProcessors;
+    s_numProcessors = info.dwNumberOfProcessors;
 }
 
 
@@ -69,14 +69,14 @@ const string & Dim::envExecPath() {
 
 //===========================================================================
 const EnvMemoryConfig & Dim::envMemoryConfig() {
-    assert(s_numCpus);
+    assert(s_numProcessors);
     return s_memCfg;
 }
 
 //===========================================================================
-unsigned Dim::envCpus() {
-    assert(s_numCpus);
-    return s_numCpus;
+unsigned Dim::envProcessors() {
+    assert(s_numProcessors);
+    return s_numProcessors;
 }
 
 //===========================================================================
