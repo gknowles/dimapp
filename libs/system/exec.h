@@ -15,8 +15,9 @@
 
 #include "dimcli/cli.h"
 
-#include "core/core.h"
-#include "file/file.h"
+#include "core/charbuf.h"
+#include "core/task.h"
+#include "core/time.h"
 
 #include <string_view>
 
@@ -37,20 +38,21 @@ enum StdStream {
 
 struct ExecResult {
     std::string cmdline;
-    int exitCode;
+    int exitCode = {};
     CharBuf out;
     CharBuf err;
 };
 
 struct ExecOptions {
-    const char * workingDir = "";
+    std::string workingDir;
     Dim::Duration timeout = {};
-    std::string_view stdinData;     // WARNING: not tested
+    std::string stdinData;     // WARNING: not tested
     Dim::TaskQueueHandle hq;
+    size_t concurrency = (size_t) -1;
 };
 
 //---------------------------------------------------------------------------
-// Asynchronous
+// Complex asynchronous
 //---------------------------------------------------------------------------
 class IExecNotify {
 public:
@@ -72,7 +74,7 @@ protected:
 
 private:
     friend class ExecProgram;
-    ExecProgram * m_exec;
+    ExecProgram * m_exec = nullptr;
 };
 
 void execProgram(
@@ -102,6 +104,31 @@ void execProgram(
 void execWrite(IExecNotify * notify, std::string_view data);
 
 void execCancel(IExecNotify * notify);
+
+//---------------------------------------------------------------------------
+// Simple asynchronous
+//---------------------------------------------------------------------------
+void execProgram(
+    std::function<void(ExecResult && res)> fn,
+    const std::string & cmdline,
+    const ExecOptions & opts = {}
+);
+void execProgram(
+    std::function<void(ExecResult && res)> fn,
+    const std::vector<std::string> & args,
+    const ExecOptions & opts = {}
+);
+
+//===========================================================================
+template <typename ...Args>
+void execProgram(
+    std::function<void(ExecResult && res)> fn,
+    const ExecOptions & opts,
+    Args... args
+) {
+    auto vargs = Cli::toArgvL(args...);
+    execProgram(fn, vargs, opts);
+}
 
 //---------------------------------------------------------------------------
 // Synchronous
@@ -156,5 +183,14 @@ void execClientAttach(
     const std::string & pipeName,
     const std::string & secret
 );
+
+
+/****************************************************************************
+*
+*   Other functions
+*
+***/
+
+void execCancelWaiting();
 
 } // namespace

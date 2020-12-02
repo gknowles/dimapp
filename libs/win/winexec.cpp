@@ -17,11 +17,12 @@ using namespace Dim;
 
 namespace Dim {
 
-class ExecProgram {
+class ExecProgram : public ListLink<> {
 public:
     class ExecPipe : public IPipeNotify {
     public:
         // Inherited via IPipeNotify
+        bool onPipeAccept() override;
         bool onPipeRead(size_t * bytesUsed, string_view data) override;
         void onPipeDisconnect() override;
 
@@ -32,11 +33,16 @@ public:
 
 public:
     static void write(IExecNotify * notify, std::string_view data);
+    static void dequeue();
 
 public:
-    ExecProgram(IExecNotify * notify);
+    ExecProgram(
+        IExecNotify * notify,
+        string_view cmdline,
+        const ExecOptions & opts
+    );
     ~ExecProgram();
-    void exec(string_view cmdline, const ExecOptions & opts);
+    void exec();
     TaskQueueHandle queue() const { return m_hq; }
 
     bool onRead(size_t * bytesUsed, StdStream strm, string_view data);
@@ -56,6 +62,8 @@ private:
     TaskQueueHandle m_hq;
     HANDLE m_job = NULL;
     HANDLE m_process = NULL;
+    string m_cmdline;
+    ExecOptions m_opts;
 
     //-----------------------------------------------------------------------
     mutex m_mut;
@@ -74,15 +82,24 @@ private:
 
 /****************************************************************************
 *
-*   IOCP completion thread
+*   Variables
 *
 ***/
 
+static auto & s_perfTotal = uperf("exec.programs");
+static auto & s_perfIncomplete = uperf("exec.programs (incomplete)");
+static auto & s_perfWaiting = uperf("exec.programs (waiting)");
+
 static mutex s_mut;
 static HANDLE s_iocp;
+static List<ExecProgram> s_programs;
 
-static auto & s_perfPrograms = uperf("exec.programs");
-static auto & s_perfCurPrograms = uperf("exec.programs (current)");
+
+/****************************************************************************
+*
+*   IOCP completion thread
+*
+***/
 
 //===========================================================================
 static void jobObjectIocpThread() {
@@ -156,6 +173,13 @@ static HANDLE iocpHandle() {
 ***/
 
 //===========================================================================
+bool ExecProgram::ExecPipe::onPipeAccept() {
+    if (m_strm == kStdIn)
+        pipeWrite(this, m_notify->m_opts.stdinData);
+    return true;
+}
+
+//===========================================================================
 bool ExecProgram::ExecPipe::onPipeRead(
     size_t * bytesUsed,
     std::string_view data
@@ -183,16 +207,49 @@ void ExecProgram::write(IExecNotify * notify, string_view data) {
 }
 
 //===========================================================================
-ExecProgram::ExecProgram(IExecNotify * notify)
+// static
+void ExecProgram::dequeue() {
+    List<ExecProgram> progs;
+    {
+        scoped_lock lk{s_mut};
+        while (auto prog = s_programs.front()) {
+            if (prog->m_opts.concurrency <= s_perfIncomplete)
+                break;
+            s_perfWaiting -= 1;
+            s_perfIncomplete += 1;
+            progs.link(prog);
+        }
+    }
+    while (auto prog = progs.front()) {
+        prog->unlink();
+        prog->exec();
+    }
+}
+
+//===========================================================================
+ExecProgram::ExecProgram(
+    IExecNotify * notify,
+    string_view cmdline,
+    const ExecOptions & opts
+)
     : m_notify(notify)
+    , m_cmdline(cmdline)
+    , m_opts(opts)
 {
-    s_perfPrograms += 1;
-    s_perfCurPrograms += 1;
+    s_perfTotal += 1;
+    s_perfWaiting += 1;
+
+    m_notify->m_exec = this;
+    if (m_opts.concurrency == 0)
+        m_opts.concurrency = envProcessors();
 
     for (auto && e : { kStdIn, kStdOut, kStdErr }) {
         m_pipes[e].m_strm = e;
         m_pipes[e].m_notify = this;
     }
+
+    scoped_lock lk{s_mut};
+    s_programs.link(this);
 }
 
 //===========================================================================
@@ -202,15 +259,19 @@ ExecProgram::~ExecProgram() {
     for (auto && pi : m_pipes)
         assert(pi.m_closed);
 
-    s_perfCurPrograms -= 1;
+    if (linked()) {
+        s_perfWaiting -= 1;
+    } else {
+        s_perfIncomplete -= 1;
+    }
 }
 
 //===========================================================================
-void ExecProgram::exec(string_view cmdline, const ExecOptions & opts) {
+void ExecProgram::exec() {
     // Now that we're committed to getting an onProcessExit() call, change mode
     // so that we'll wait for it.
     m_mode = kRunStarting;
-    m_hq = opts.hq;
+    m_hq = m_opts.hq;
 
     bool success = false;
     for (;;) {
@@ -285,8 +346,8 @@ void ExecProgram::exec(string_view cmdline, const ExecOptions & opts) {
         }
     }
 
-    auto wcmdline = toWstring(cmdline);
-    auto wworkDir = toWstring(opts.workingDir);
+    auto wcmdline = toWstring(m_cmdline);
+    auto wworkDir = toWstring(m_opts.workingDir);
     STARTUPINFOW si = { sizeof si };
     si.dwFlags = STARTF_USESTDHANDLES;
     si.hStdInput = pipes[kStdIn].child;
@@ -311,17 +372,17 @@ void ExecProgram::exec(string_view cmdline, const ExecOptions & opts) {
         CloseHandle(p.child);
 
     if (!running) {
-        logMsgError() << "CreateProcessW(" << cmdline << "): " << err;
+        logMsgError() << "CreateProcessW(" << m_cmdline << "): " << err;
         onProcessExit();
         return;
     }
 
     m_process = pi.hProcess;
     if (!AssignProcessToJobObject(m_job, m_process)) {
-        logMsgError() << "AssignProcessToJobObject(" << cmdline << "): "
+        logMsgError() << "AssignProcessToJobObject(" << m_cmdline << "): "
             << WinError{};
         if (!TerminateProcess(m_process, (UINT) -1)) {
-            logMsgError() << "TerminateProcess(" << cmdline << "): "
+            logMsgError() << "TerminateProcess(" << m_cmdline << "): "
                 << WinError{};
         }
         CloseHandle(m_process);
@@ -337,8 +398,6 @@ void ExecProgram::exec(string_view cmdline, const ExecOptions & opts) {
     CloseHandle(pi.hThread);
 
     m_mode = kRunRunning;
-    if (!opts.stdinData.empty())
-        execWrite(m_notify, opts.stdinData);
 }
 
 //===========================================================================
@@ -399,6 +458,7 @@ bool ExecProgram::completeIfDone_LK() {
 
     m_mut.unlock();
     delete this;
+    dequeue();
     return true;
 }
 
@@ -419,6 +479,8 @@ bool ExecProgram::createPipe(
             flags |= GENERIC_WRITE;
         if (oflags & Pipe::fWriteOnly)
             flags |= GENERIC_READ;
+        if (oflags & Pipe::fReadWrite)
+            flags |= GENERIC_READ | GENERIC_WRITE;
 
         auto wname = toWstring(name);
         SECURITY_ATTRIBUTES sa = {};
@@ -479,15 +541,12 @@ void Dim::execProgram(
 ) {
     assert(notify);
 
-    char bytes[8];
-    cryptRandomBytes(bytes, sizeof bytes);
-
     auto opts = rawOpts;
     if (!opts.hq)
         opts.hq = taskEventQueue();
 
-    auto ep = new ExecProgram(notify);
-    ep->exec(cmdline, opts);
+    new ExecProgram(notify, cmdline, opts);
+    ExecProgram::dequeue();
 }
 
 //===========================================================================
@@ -507,65 +566,87 @@ void Dim::execWrite(IExecNotify * notify, std::string_view data) {
 
 /****************************************************************************
 *
-*   Execute child program and wait
+*   Simple execute child program
 *
 ***/
 
 namespace {
 
-class ExecWaitNotify : public IExecNotify {
-public:
+struct SimpleExecNotify : public IExecNotify {
+    function<void(ExecResult && res)> m_fn;
+    ExecResult m_res;
+
     void onExecComplete(bool canceled, int exitCode) override;
-
-    bool wait(ExecResult * res, string_view cmdline);
-
-private:
-    mutex m_mut;
-    condition_variable m_cv;
-
-    bool m_complete{false};
-    bool m_canceled{false};
-    int m_exitCode{0};
 };
 
 } // namespace
 
 //===========================================================================
-void ExecWaitNotify::onExecComplete(bool canceled, int exitCode) {
-    {
-        scoped_lock lk{m_mut};
-        m_complete = true;
-        m_canceled = canceled;
-        m_exitCode = exitCode;
-    }
-    m_cv.notify_one();
+void SimpleExecNotify::onExecComplete(bool canceled, int exitCode) {
+    m_res.exitCode = exitCode;
+    m_res.out = move(m_out);
+    m_res.err = move(m_err);
+    m_fn(move(m_res));
+    delete this;
 }
 
 //===========================================================================
-bool ExecWaitNotify::wait(ExecResult * res, string_view cmdline) {
-    unique_lock lk{m_mut};
-    while (!m_complete)
-        m_cv.wait(lk);
-    *res = {};
-    res->cmdline = cmdline;
-    res->out = move(m_out);
-    res->err = move(m_err);
-    res->exitCode = m_exitCode;
-    return !m_canceled;
+void Dim::execProgram(
+    function<void(ExecResult && res)> fn,
+    const string & cmdline,
+    const ExecOptions & opts
+) {
+    auto notify = new SimpleExecNotify;
+    notify->m_fn = fn;
+    notify->m_res.cmdline = cmdline;
+    execProgram(notify, cmdline, opts);
 }
+
+//===========================================================================
+void Dim::execProgram(
+    function<void(ExecResult && res)> fn,
+    const vector<string> & args,
+    const ExecOptions & opts
+) {
+    execProgram(fn, Cli::toCmdline(args), opts);
+}
+
+
+/****************************************************************************
+*
+*   Execute child program and wait
+*
+***/
 
 //===========================================================================
 bool Dim::execProgramWait(
-    ExecResult * res,
+    ExecResult * out,
     const string & cmdline,
     const ExecOptions & rawOpts
 ) {
-    ExecWaitNotify notify;
     auto opts = rawOpts;
     if (!opts.hq)
         opts.hq = taskInEventThread() ? taskComputeQueue() : taskEventQueue();
-    execProgram(&notify, cmdline, opts);
-    return notify.wait(res, cmdline);
+
+    mutex mut;
+    condition_variable cv;
+    out->cmdline = cmdline;
+    bool complete = false;
+    execProgram(
+        [&](ExecResult && res) {
+            {
+                scoped_lock lk{mut};
+                *out = move(res);
+            }
+            cv.notify_one();
+        },
+        cmdline,
+        opts
+    );
+    unique_lock lk{mut};
+    while (!complete)
+        cv.wait(lk);
+    return out->exitCode != -1;
 }
 
 //===========================================================================
@@ -631,6 +712,22 @@ bool Dim::execElevatedWait(
 
 /****************************************************************************
 *
+*   External
+*
+***/
+
+//===========================================================================
+void Dim::execCancelWaiting() {
+    scoped_lock lk{s_mut};
+    while (auto prog = s_programs.front()) {
+        s_programs.unlink(prog);
+        prog->onProcessExit();
+    }
+}
+
+
+/****************************************************************************
+*
 *   Shutdown monitor
 *
 ***/
@@ -648,7 +745,7 @@ static ShutdownNotify s_cleanup;
 
 //===========================================================================
 void ShutdownNotify::onShutdownServer(bool firstTry) {
-    if (s_perfCurPrograms)
+    if (s_perfIncomplete || s_perfWaiting)
         return shutdownIncomplete();
 }
 
