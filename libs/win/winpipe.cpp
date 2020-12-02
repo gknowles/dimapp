@@ -344,8 +344,8 @@ bool PipeBase::onRead(PipeRequest * task) {
 
 //===========================================================================
 bool PipeBase::onRead_LK(PipeRequest * task) {
-    auto res = task->decodeOverlappedResult();
-    if (int bytes = res.bytes) {
+    auto [err, bytes] = task->decodeOverlappedResult();
+    if (bytes) {
         s_perfReadTotal += bytes;
         task->m_buffer.resize(bytes);
         size_t used{0};
@@ -482,8 +482,11 @@ void PipeBase::queueWrites() {
 bool PipeBase::onWrite(PipeRequest * task) {
     unique_lock lk{m_mut};
 
-    auto bytes = task->decodeOverlappedResult().bytes;
+    [[maybe_unused]] auto res = task->decodeOverlappedResult();
+    auto bytes = (DWORD) task->m_buffer.size();
     delete task;
+    assert(res.err || bytes == res.bytes);
+    assert(!res.err || res.err == ERROR_BROKEN_PIPE);
     m_numWrites -= 1;
     s_perfIncomplete -= bytes;
     m_bufInfo.incomplete -= bytes;
