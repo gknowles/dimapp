@@ -323,7 +323,7 @@ void PipeBase::queueRead(PipeRequest * task) {
     if (err == ERROR_IO_PENDING) {
         // Expected, since it's attached to a completion port
     } else if (err == ERROR_BROKEN_PIPE) {
-        task->pushOverlappedTask();
+        task->pushOverlappedTask(this);
     } else if (!err) {
         // Read has already finish, now wait for the completion to be posted.
     } else {
