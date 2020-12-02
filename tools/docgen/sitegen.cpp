@@ -18,14 +18,21 @@ using namespace Dim;
 namespace {
 
 struct CmdOpts {
-    string specfile;
+    string cfgfile;
 
     CmdOpts();
 };
 
+struct TocEntry {
+    size_t pos;
+    unsigned depth;
+    std::string name;
+    std::string link;
+};
+
 struct GenPageInfo {
-    Site * out;
-    const Source & src;
+    Config * out;
+    const Version & ver;
     const Page & page;
     function<void()> fn;
 
@@ -42,7 +49,6 @@ struct GenPageInfo {
 *
 ***/
 
-static TimePoint s_startTime;
 static CmdOpts s_opts;
 
 
@@ -112,9 +118,10 @@ string genAutoId(string_view title) {
 
 //===========================================================================
 static vector<TocEntry> createToc(string * content) {
-    static const std::regex s_toc_entry(
-        //           depth            id        text
-        R"regex(<[hH]([1-6])(?:|\sid="([^"]+)")>(.*)</[hH]\1>)regex"
+    static const regex s_tocEntry(
+        //           depth            id        name
+        R"regex(<[hH]([1-6])(?:|\sid="([^"]+)")>(.*)</[hH]\1>)regex",
+        regex::optimize
     );
 
     unordered_map<string, int> ids;
@@ -123,7 +130,7 @@ static vector<TocEntry> createToc(string * content) {
     size_t pos = 0;
     int h1Count = 0;
     for (;;) {
-        if (!regex_search(content->data() + pos, m, s_toc_entry))
+        if (!regex_search(content->data() + pos, m, s_tocEntry))
             break;
         auto & te = out.emplace_back();
         te.pos = pos + m.position();
@@ -168,9 +175,10 @@ static vector<TocEntry> createToc(string * content) {
 
 //===========================================================================
 static void updateXrefLinks(string * content, const Layout & layout) {
-    static const std::regex s_xref_link(
-        //           depth            id        text
-        R"regex(<a href="([^#"]+)[^"]*">)regex"
+    static const regex s_xrefLink(
+        //               ref
+        R"regex(<a href="([^#"]+)[^"]*">)regex",
+        regex::optimize
     );
 
     unordered_map<string_view, string> mapping;
@@ -181,7 +189,7 @@ static void updateXrefLinks(string * content, const Layout & layout) {
     cmatch m;
     size_t pos = 0;
     for (;;) {
-        if (!regex_search(content->data() + pos, m, s_xref_link))
+        if (!regex_search(content->data() + pos, m, s_xrefLink))
             break;
         if (m[1].matched) {
             auto ref = m.str(1);
@@ -298,8 +306,8 @@ static void addBadgeOld(IXBuilder * out) {
 //===========================================================================
 static void addNavbar(
     IXBuilder * out,
-    const Site & site,
-    const Source & source,
+    const Config & cfg,
+    const Version & version,
     const Layout & layout,
     const Page & page
 ) {
@@ -316,7 +324,7 @@ static void addNavbar(
         .start("a")
             .attr("class", "navbar-brand font-weight-bolder")
             .attr("href", "..")
-            .text(site.name)
+            .text(cfg.siteName)
             .end()
         .start("button")
             .attr("class", "navbar-toggler")
@@ -361,10 +369,10 @@ static void addNavbar(
 
     // Version links
     bool afterDefault = false;
-    for (auto&& src : site.sources) {
-        if (src.tag == source.tag)
+    for (auto&& ver : cfg.versions) {
+        if (ver.tag == version.tag)
             break;
-        if (src.defaultSource)
+        if (ver.defaultSource)
             afterDefault = true;
     }
     bld.start("div")
@@ -381,7 +389,7 @@ static void addNavbar(
                 .attr("aria-haspopup", "true")
                 .attr("aria-expanded", "false")
                 .attr("title", "Version")
-                .text(source.name);
+                .text(version.name);
     if (afterDefault)
         addBadgeOld(&bld);
     bld.end()
@@ -389,33 +397,33 @@ static void addNavbar(
             .attr("class", "dropdown-menu dropdown-menu-md-right")
             .attr("aria-labelledby", "navbarDropdown");
     afterDefault = false;
-    for (auto&& src : site.sources) {
+    for (auto&& ver : cfg.versions) {
         bld.start("a");
-        if (src.tag != source.tag) {
+        if (ver.tag != version.tag) {
             bld.attr("class", "dropdown-item");
         } else {
             bld.attr("class", "dropdown-item active");
         }
-        if (src.urlSegments.contains(page.urlSegment)) {
-            bld.attr("href", "../" + src.tag + "/" + page.urlSegment + ".html");
+        if (ver.urlSegments.contains(page.urlSegment)) {
+            bld.attr("href", "../" + ver.tag + "/" + page.urlSegment + ".html");
         } else {
-            bld.attr("href", "../" + src.tag + "/index.html");
+            bld.attr("href", "../" + ver.tag + "/index.html");
         }
-        bld.text(src.name);
+        bld.text(ver.name);
         if (afterDefault)
             addBadgeOld(&bld);
         bld.end();
-        if (src.defaultSource)
+        if (ver.defaultSource)
             afterDefault = true;
     }
     bld.end() // div.dropdown-menu
         .end(); // div.nav-item
 
     // GitHub link
-    if (site.github) {
+    if (cfg.github) {
         bld.start("a")
             .attr("class", "nav-link py-0 px-3")
-            .attr("href", site.repoUrl)
+            .attr("href", cfg.repoUrl)
             .attr("style", "font-size: 24px;")
             .start("i")
                 .attr("style", "width: 24px")
@@ -466,13 +474,13 @@ static CharBuf processPageContent(
     string && content,
     const string & fname
 ) {
-    auto spec = info->src.spec ? info->src.spec.get() : info->out;
-    string layname = info->src.layout.empty() ? "default" : info->src.layout;
-    auto & layout = spec->layouts.find(layname)->second;
+    auto cfg = info->ver.cfg ? info->ver.cfg.get() : info->out;
+    string layname = info->ver.layout.empty() ? "default" : info->ver.layout;
+    auto & layout = cfg->layouts.find(layname)->second;
     auto pglayname = info->page.pageLayout.empty()
         ? "default"s
         : info->page.pageLayout;
-    auto & pglay = spec->pageLayouts.find(pglayname)->second;
+    auto & pglay = cfg->pageLayouts.find(pglayname)->second;
 
     updateXrefLinks(&content, layout);
     auto toc = createToc(&content);
@@ -491,14 +499,14 @@ static CharBuf processPageContent(
         .attr("rel", "stylesheet")
         .attr("href", "../css/docgen.css")
         .end();
-    bld.elem("title", info->page.name + " - " + info->out->name);
+    bld.elem("title", info->page.name + " - " + info->out->siteName);
     bld.end(); // </head>
 
     bld.start("body")
         .attr("data-spy", "scroll")
         .attr("data-target", "#toc")
         .text("\n");
-    addNavbar(&bld, *info->out, info->src, layout, info->page);
+    addNavbar(&bld, *info->out, info->ver, layout, info->page);
     bld.start("div")
         .attr("class", "container")
         .start("div")
@@ -536,8 +544,8 @@ static CharBuf processPageContent(
 
 //===========================================================================
 static void genPage(GenPageInfo * info, unsigned phase = 0) {
-    auto spec = info->src.spec ? info->src.spec.get() : info->out;
-    string layname = info->src.layout.empty() ? "default" : info->src.layout;
+    auto cfg = info->ver.cfg ? info->ver.cfg.get() : info->out;
+    string layname = info->ver.layout.empty() ? "default" : info->ver.layout;
 
     unsigned what = 0;
 
@@ -546,9 +554,9 @@ static void genPage(GenPageInfo * info, unsigned phase = 0) {
         auto pglayname = info->page.pageLayout.empty()
             ? "default"s
             : info->page.pageLayout;
-        auto pglay = spec->pageLayouts.find(pglayname);
-        if (pglay == spec->pageLayouts.end()) {
-            logMsgError() << "Tag '" << info->src.tag << "': page layout '"
+        auto pglay = cfg->pageLayouts.find(pglayname);
+        if (pglay == cfg->pageLayouts.end()) {
+            logMsgError() << "Tag '" << info->ver.tag << "': page layout '"
                 << pglayname << "' not defined.";
             appSignalShutdown(EX_DATAERR);
             return;
@@ -559,13 +567,13 @@ static void genPage(GenPageInfo * info, unsigned phase = 0) {
                 genPage(info, what);
             },
             *info->out,
-            info->src.tag,
+            info->ver.tag,
             info->page.file
         );
         return;
     }
     if (info->content.empty()) {
-        logMsgError() << info->page.file << ", tag '" << info->src.tag
+        logMsgError() << info->page.file << ", tag '" << info->ver.tag
             << "': unable to load content";
         appSignalShutdown(EX_DATAERR);
         return;
@@ -588,18 +596,22 @@ static void genPage(GenPageInfo * info, unsigned phase = 0) {
         exec(
             [info, what](string && out) {
                 fileRemove(info->fname);
+                if (appStopping()) {
+                    info->fn();
+                    return;
+                }
                 info->content = move(out);
                 genPage(info, what);
             },
             cmdline,
-            info->page.file + ", tag '" + info->src.tag + "'"
+            info->page.file + ", tag '" + info->ver.tag + "'"
         );
         return;
     }
     if (phase == what++) {
         // Update HTML fragment, embed into HTML page, and add to site output
         // files.
-        auto file = Path(info->src.tag) / info->page.urlSegment + ".html";
+        auto file = Path(info->ver.tag) / info->page.urlSegment + ".html";
         auto fname = file.str();
         auto html = processPageContent(info, move(info->content), fname);
         if (!addOutput(info->out, fname, move(html)))
@@ -612,7 +624,7 @@ static void genPage(GenPageInfo * info, unsigned phase = 0) {
 }
 
 //===========================================================================
-static bool genStatics(Site * out) {
+static bool genStatics(Config * out) {
     CharBuf content;
     string fname;
 
@@ -726,7 +738,7 @@ table.smaller-td-font td {
 
 //===========================================================================
 static bool genRedirect(
-    Site * out,
+    Config * out,
     string_view outputFile,
     string_view targetUrl
 ) {
@@ -748,28 +760,8 @@ static bool genRedirect(
 }
 
 //===========================================================================
-static void genSite(Site * out, unsigned phase = 0) {
+static void genSite(Config * out, unsigned phase = 0) {
     unsigned what = 0;
-
-    if (phase == what++) {
-        // Query metadata of repo containing config file
-        auto cmdline = Cli::toCmdlineL(
-            "git",
-            "-C",
-            out->configFile.parentPath(),
-            "rev-parse",
-            "--show-toplevel"
-        );
-        exec(
-            [out, what](auto && content) {
-                out->gitRoot = Path(trim(content));
-                genSite(out, what);
-            },
-            cmdline,
-            out->configFile
-        );
-        return;
-    }
 
     if (phase == what++) {
         // Generate infrastructure files for site
@@ -778,22 +770,22 @@ static void genSite(Site * out, unsigned phase = 0) {
         if (!genRedirect(
             out,
             "index.html",
-            out->sources[out->defSource].tag + "/index.html"
+            out->versions[out->defVersion].tag + "/index.html"
         )) {
             return;
         }
 
-        // Load layouts of all sources
-        out->pendingWork = (unsigned) out->sources.size();
-        for (auto && src : out->sources) {
-            auto layname = src.layout;
+        // Load layouts of all versions
+        out->pendingWork = (unsigned) out->versions.size();
+        for (auto && ver : out->versions) {
+            auto layname = ver.layout;
 
             if (!layname.empty()) {
                 out->pendingWork -= 1;
             } else {
                 loadContent(
-                    [out, &src, what](auto && content) {
-                        if (src.spec = loadSite(
+                    [out, &ver, what](auto && content) {
+                        if (ver.cfg = loadConfig(
                             &content,
                             out->configFile.filename()
                         )) {
@@ -801,7 +793,7 @@ static void genSite(Site * out, unsigned phase = 0) {
                         }
                     },
                     *out,
-                    src.tag,
+                    ver.tag,
                     out->configFile.filename()
                 );
             }
@@ -818,30 +810,30 @@ static void genSite(Site * out, unsigned phase = 0) {
         }
 
         // Calculate page metadata
-        for (auto && src : out->sources) {
-            auto spec = src.spec ? src.spec.get() : out;
-            string layname = src.layout.empty() ? "default" : src.layout;
+        for (auto && ver : out->versions) {
+            auto spec = ver.cfg ? ver.cfg.get() : out;
+            string layname = ver.layout.empty() ? "default" : ver.layout;
             auto layout = spec->layouts.find(layname);
 
             if (layout == spec->layouts.end()) {
-                logMsgError() << "Tag '" << src.tag << "': layout '" << layname
+                logMsgError() << "Tag '" << ver.tag << "': layout '" << layname
                     << "' not defined.";
                 appSignalShutdown(EX_DATAERR);
                 return;
             }
 
-            // Generate infrastructure files for source
+            // Generate infrastructure files for version
             auto & url = layout->second.pages[layout->second.defPage].urlSegment;
-            if (!genRedirect(out, src.tag + "/index.html", url + ".html"))
+            if (!genRedirect(out, ver.tag + "/index.html", url + ".html"))
                 return;
 
             // Count each page as pending work.
             out->pendingWork += (unsigned) layout->second.pages.size();
 
-            // Populate list of URLs for source
+            // Populate list of URLs for version
             for (auto&& page : layout->second.pages) {
-                if (!src.urlSegments.insert(page.urlSegment).second) {
-                    logMsgError() << "Tag '" << src.tag << "': url segment '"
+                if (!ver.urlSegments.insert(page.urlSegment).second) {
+                    logMsgError() << "Tag '" << ver.tag << "': url segment '"
                         << page.urlSegment << "' multiply defined.";
                     appSignalShutdown(EX_DATAERR);
                     return;
@@ -850,14 +842,14 @@ static void genSite(Site * out, unsigned phase = 0) {
         }
 
         // Generate pages
-        for (auto && src : out->sources) {
-            auto spec = src.spec ? src.spec.get() : out;
-            string layname = src.layout.empty() ? "default" : src.layout;
+        for (auto && ver : out->versions) {
+            auto spec = ver.cfg ? ver.cfg.get() : out;
+            string layname = ver.layout.empty() ? "default" : ver.layout;
             auto layout = spec->layouts.find(layname);
 
-            // Generate pages for source
+            // Generate pages for version
             for (auto && page : layout->second.pages) {
-                auto info = new GenPageInfo({ out, src, page });
+                auto info = new GenPageInfo({ out, ver, page });
                 info->fn = [info, what]() {
                     genSite(info->out, what);
                     delete info;
@@ -877,7 +869,8 @@ static void genSite(Site * out, unsigned phase = 0) {
         }
 
         // Replace site output directory with all the new files.
-        if (!writeOutputs(*out))
+        auto odir = Path(out->siteDir).resolve(out->configFile.parentPath());
+        if (!writeOutputs(odir, out->outputs))
             return;
 
         // Clean up
@@ -887,7 +880,7 @@ static void genSite(Site * out, unsigned phase = 0) {
         logMsgInfo() << count << " generated files.";
         {
             ConsoleScopedAttr ca(kConsoleCheer);
-            logMsgInfo() << "Site generated successfully.";
+            logMsgInfo() << "Website generated successfully.";
         }
 
         logPauseStopwatch();
@@ -910,23 +903,27 @@ static bool genCmd(Cli & cli);
 //===========================================================================
 CmdOpts::CmdOpts() {
     Cli cli;
-    cli.command("gen")
+    cli.command("site")
         .desc("Generate website files")
         .action(genCmd);
-    cli.opt(&specfile, "[site def file]", "docgen.xml")
+    cli.opt(&cfgfile, "f file", "docgen.xml")
         .desc("docgen site definition to process.");
 }
 
 //===========================================================================
 static bool genCmd(Cli & cli) {
-    s_startTime = Clock::now();
-    auto site = loadSite(s_opts.specfile);
-    if (!site)
+    auto cfg = loadConfig(s_opts.cfgfile);
+    if (!cfg)
         return cli.fail(EX_DATAERR, "");
+    if (cfg->siteDir.empty()) {
+        logMsgError() << cfg->configFile
+            << ": Output directory for site unspecified.";
+        return cli.fail(EX_DATAERR, "");
+    }
 
-    logMsgInfo() << "Processing '" << site->configFile << "' into '"
-        << site->outDir << "'.";
-    genSite(site.release());
+    logMsgInfo() << "Making WEBSITE files from '" << cfg->configFile
+        << "' to '" << cfg->siteDir << "'.";
+    genSite(cfg.release());
 
     return cli.fail(EX_PENDING, "");
 }

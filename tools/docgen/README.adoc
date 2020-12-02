@@ -5,8 +5,9 @@ Distributed under the Boost Software License, Version 1.0.
 
 = docgen
 
-Static documentation website generator.
+Markup documentation processing.
 
+== Static website generation
 * Assumes documentation sources are stored in a git repository.
 * Single docgen.xml file defines how site is generated.
 ** Can defer files and urls mappings to copy of docgen.xml at each branch/tag
@@ -19,7 +20,15 @@ Static documentation website generator.
 * Replaces all contents (except ".git") of output directory with new site
   files.
 
-== Dependencies
+=== Site file layout
+* .nojekyll (so the site can be directly deployed to GitHub)
+* index.html (redirect to default source)
+* css/docgen.css
+* js/ (unused)
+* <source name>/<file path>/<file name>/index.html
+** (for each file in the source)
+
+=== Dependencies
 * https://github.com/github/markup[github-markup]
 * https://fontawesome.com[Font Awesome]
 * https://getbootstrap.com[Bootstrap]
@@ -28,10 +37,71 @@ Static documentation website generator.
 The others are external dependencies of the generated site, but github-markup
 is a ruby gem that must be installed for sites to be generated.
 
-== Site file layout
-* .nojekyll (so the site can be directly deployed to GitHub)
-* index.html (redirect to default source)
-* css/docgen.css
-* js/ (unused)
-* <source name>/<file path>/<file name>/index.html
-** (for each file in the source)
+== Code sample verification
+* Single docgen.xml file defines how samples are verified.
+* Extracts comment and code blocks, with attributes, from documentation markup.
+** AsciiDoc
+** Markdown - not implemented
+* Apply compile and scripting rules defined for the language in docgen.xml.
+
+=== AsciiDoc
+Comment (////) and code (----) blocks explicitly marked as source and with a
+language are processed. Such as:
+
+[source, asciidoc]
+----
+  [source, C++]
+  ----
+  int a = 1;
+  ----
+----
+
+Or with test additional attributes (see <<Attributes in markup, below>>):
+
+[source, asciidoc]
+----
+  [source, C++, test alt, test file not_main]
+  ...
+----
+
+When a comment block is used, it should be immediately followed by another
+block because AsciiDoc seems to give comments priority, interpreting what
+follows the comment as the block the attributes are modifying. If needed, an
+empty passthrough block can be used to get around this.
+
+[source, asciidoc]
+----
+  [source, C++]
+  ////
+  int a = 1;
+  ////
+  ++++
+  ++++
+----
+
+=== Attributes in markup
+To enable testing, attributes are added to comment or code blocks to specify
+how the extracted code is compiled and tests are run.
+
+* All blocks
+** test ignore - ignore this block
+* Program source code
+** test alt - save current program as alternate
+** test file <name> - apply to one file in program
+** test lang <lang> - overrides code language
+** test prefix <source line ranges> - set global code file prefix for language
+** test repl <target line ranges>
+** test subset <source line ranges>
+* Test scripts
+** test getline <line> <start pos> - marks keyboard input from user
+** test noscript - compile only test, don't try scripts
+
+=== Script.txt format
+Each line starts with the type (a single character), a space, and the content
+of the line. The types are:
+
+* ; - script file comment
+* # - comment about following command line
+* $ - command line to execute
+* < - stdin sent to preceding command line when it's executed
+* > - expected output (stderr and then stdout) from preceding command line

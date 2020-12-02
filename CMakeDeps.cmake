@@ -250,6 +250,7 @@
 # tools/docgen/intern.h
 # tools/docgen/pch.cpp
 # tools/docgen/pch.h
+# tools/docgen/samptest.cpp
 # tools/docgen/schema.xsd
 # tools/docgen/schema.xsdgen.xml
 # tools/docgen/sitegen.cpp

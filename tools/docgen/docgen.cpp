@@ -25,6 +25,15 @@ namespace {
 *
 ***/
 
+constexpr TokenTable::Token s_fileTypes[] = {
+    { (int) Page::kAsciidoc, ".adoc" },
+    { (int) Page::kAsciidoc, ".asc" },
+    { (int) Page::kAsciidoc, ".asciidoc" },
+    { (int) Page::kMarkdown, ".md" },
+    { (int) Page::kMarkdown, ".markdown" },
+};
+const TokenTable s_fileTypeTbl(s_fileTypes);
+
 static TimePoint s_startTime;
 
 
@@ -35,34 +44,95 @@ static TimePoint s_startTime;
 ***/
 
 //===========================================================================
-static bool loadSources(Site * out, XNode * root) {
-    for (auto && xsrc : elems(root, "Source")) {
-        auto & src = out->sources.emplace_back();
-        src.tag = attrValue(&xsrc, "tag", "");
-        src.name = attrValue(&xsrc, "name", src.tag.c_str());
-        src.layout = attrValue(&xsrc, "layout", "");
-        src.defaultSource = attrValue(&xsrc, "default", false);
-        if (src.defaultSource) {
-            if (out->defSource != -1) {
-                logMsgError() << "Multiple default sources for site.";
+static bool loadVersions(Config * out, XNode * root) {
+    for (auto && xver : elems(root, "Version")) {
+        auto & ver = out->versions.emplace_back();
+        ver.tag = attrValue(&xver, "tag", "");
+        ver.name = attrValue(&xver, "name", ver.tag.c_str());
+        ver.layout = attrValue(&xver, "layout", "");
+        ver.defaultSource = attrValue(&xver, "default", false);
+        if (ver.defaultSource) {
+            if (out->defVersion != -1) {
+                logMsgError() << "Multiple default versions for site.";
                 appSignalShutdown(EX_DATAERR);
                 return false;
             }
-            out->defSource = out->sources.size() - 1;
+            out->defVersion = out->versions.size() - 1;
         }
-        if (src.tag.empty()) {
-            logMsgError() << "Missing required Source/@tag attribute.";
+        if (ver.tag.empty()) {
+            logMsgError() << "Missing required Version/@tag attribute.";
             appSignalShutdown(EX_DATAERR);
             return false;
         }
     }
-    if (out->sources.empty()) {
-        logMsgError() << "No sources defined for site.";
+    if (out->versions.empty()) {
+        logMsgError() << "No versions defined for site.";
         appSignalShutdown(EX_DATAERR);
         return false;
     }
-    if (out->defSource == -1)
-        out->defSource = 0;
+    if (out->defVersion == -1)
+        out->defVersion = 0;
+    return true;
+}
+
+//===========================================================================
+static bool loadScripts(Config * out, XNode * root) {
+    for (auto&& xs : elems(root, "Script")) {
+        auto script = make_shared<Script>();
+        script->prefix = attrValue(firstChild(&xs, "ShellPrefix"), "value");
+        script->commentPrefix =
+            attrValue(firstChild(&xs, "CommentPrefix"), "value");
+        for (auto&& xarg : elems(firstChild(&xs, "Shell"), "Arg"))
+            script->shellArgs.emplace_back(attrValue(&xarg, "value"));
+        if (script->shellArgs.empty())
+            continue;
+        for (auto&& xlang : elems(&xs, "Lang")) {
+            auto name = attrValue(&xlang, "name");
+            if (!name) {
+                logMsgError() << "Missing required Lang/@name attribute.";
+                appSignalShutdown(EX_DATAERR);
+                return false;
+            }
+            auto lname = toLower(string_view(name));
+            out->scripts.emplace(lname, script);
+        }
+    }
+    return true;
+}
+
+//===========================================================================
+static bool loadCompilers(Config * out, XNode * root) {
+    for (auto&& xs : elems(root, "Code")) {
+        auto comp = make_shared<Compiler>();
+
+        // Code/Compile
+        auto xc = firstChild(&xs, "Compile");
+        for (auto&& xarg : elems(xc, "Arg"))
+            comp->compileArgs.emplace_back(attrValue(&xarg, "value"));
+        if (comp->compileArgs.empty())
+            continue;
+
+        // Code/File
+        comp->fileExt = attrValue(firstChild(&xs, "File"), "extension", "");
+
+        // Code/Lang
+        for (auto&& xlang : elems(&xs, "Lang")) {
+            auto name = attrValue(&xlang, "name");
+            if (!name) {
+                logMsgError() << "Missing required Lang/@name attribute.";
+                appSignalShutdown(EX_DATAERR);
+                return false;
+            }
+            auto lname = toLower(string_view(name));
+            if (out->scripts.contains(lname)) {
+                logMsgError() << "Language '" << lname << "' can't be both "
+                    "code and script.";
+                appSignalShutdown(EX_DATAERR);
+                return false;
+            }
+            out->compilers.emplace(lname, comp);
+        }
+    }
     return true;
 }
 
@@ -70,6 +140,11 @@ static bool loadSources(Site * out, XNode * root) {
 static bool loadPage(Page * out, XNode * root) {
     out->name = attrValue(root, "name", "");
     out->file = attrValue(root, "file", "");
+    out->type = tokenTableGetEnum(
+        s_fileTypeTbl,
+        Path(out->file).extension(),
+        Page::kUnknown
+    );
     out->xrefFile = attrValue(root, "xrefFile", out->file.c_str());
     out->urlSegment = attrValue(root, "url", "");
     if (out->urlSegment.empty())
@@ -79,7 +154,7 @@ static bool loadPage(Page * out, XNode * root) {
 }
 
 //===========================================================================
-static bool loadLayouts(Site * out, XNode * root) {
+static bool loadLayouts(Config * out, XNode * root) {
     for (auto && xlay : elems(root, "Layout")) {
         Layout lay;
         lay.name = attrValue(&xlay, "name", "");
@@ -139,7 +214,7 @@ static bool loadColumn(Column * out, XNode * root) {
 }
 
 //===========================================================================
-static bool loadPageLayouts(Site * out, XNode * root) {
+static bool loadPageLayouts(Config * out, XNode * root) {
     for (auto && xlayout : elems(root, "PageLayout")) {
         PageLayout layout;
         layout.name = attrValue(&xlayout, "name", "");
@@ -161,6 +236,26 @@ static bool loadPageLayouts(Site * out, XNode * root) {
 
 /****************************************************************************
 *
+*   ShutdownNotify
+*
+***/
+
+namespace {
+class ShutdownNotify : public IShutdownNotify {
+    void onShutdownClient(bool firstTry) override;
+};
+} // namespace
+static ShutdownNotify s_cleanup;
+
+//===========================================================================
+void ShutdownNotify::onShutdownClient(bool firstTry) {
+    if (firstTry)
+        execCancelWaiting();
+}
+
+
+/****************************************************************************
+*
 *   Application
 *
 ***/
@@ -173,6 +268,7 @@ static void app(int argc, char * argv[]) {
         .helpCmd()
         .versionOpt(kVersion, "docgen");
 
+    shutdownMonitor(&s_cleanup);
     s_startTime = Clock::now();
     (void) cli.exec(argc, argv);
     appSignalUsageError();
@@ -193,7 +289,7 @@ int main(int argc, char * argv[]) {
 }
 
 //===========================================================================
-unique_ptr<Site> loadSite(string * content, string_view path) {
+unique_ptr<Config> loadConfig(string * content, string_view path) {
     XDocument doc;
     auto root = doc.parse(content->data(), path);
     if (!root || doc.errmsg()) {
@@ -201,48 +297,72 @@ unique_ptr<Site> loadSite(string * content, string_view path) {
         appSignalShutdown(EX_DATAERR);
         return {};
     }
+    auto out = make_unique<Config>();
+    if (!loadPageLayouts(out.get(), root)
+        || !loadLayouts(out.get(), root)
+    ) {
+        return {};
+    }
 
-    auto out = make_unique<Site>();
-    auto e = firstChild(root, "Site");
-    if (!e) {
+    // Site
+    auto site = firstChild(root, "Site");
+    if (!site) {
         logMsgError() << path << ": Missing Docs/Site";
         appSignalShutdown(EX_DATAERR);
         return {};
     }
-    out->name = attrValue(e, "name", "");
-    out->outDir = attrValue(e, "outDir", "");
-    if (auto github = firstChild(e, "GitHub")) {
+    out->siteName = attrValue(site, "name", "");
+    out->siteDir = attrValue(site, "outDir", "");
+    if (auto github = firstChild(site, "GitHub")) {
         out->github = true;
         out->repoUrl = attrValue(github, "repoUrl", "");
     }
-    if (!loadPageLayouts(out.get(), root)
-        || !loadLayouts(out.get(), root)
-        || !loadSources(out.get(), e)
-    ) {
+    if (!loadVersions(out.get(), site)) {
         return {};
     }
+
+    // Samples
+    if (auto samp = firstChild(root, "Samples")) {
+        out->sampDir = attrValue(samp, "outDir", "");
+        if (!loadScripts(out.get(), samp)
+            || !loadCompilers(out.get(), samp)
+        ) {
+            return {};
+        }
+    }
+
+    out->configFile = fileAbsolutePath(path);
     return out;
 }
 
 //===========================================================================
-unique_ptr<Site> loadSite(const string & specfile) {
+unique_ptr<Config> loadConfig(string_view cfgfile) {
     string content;
-    if (!fileLoadBinaryWait(&content, specfile)) {
+    if (!fileLoadBinaryWait(&content, cfgfile)) {
         appSignalUsageError(EX_DATAERR);
         return {};
     }
 
-    auto site = loadSite(&content, specfile);
-    if (!site)
+    auto out = loadConfig(&content, cfgfile);
+    if (!out)
         return {};
 
-    site->configFile = fileAbsolutePath(specfile);
-    return site;
+    // Query metadata of repo containing config file
+    auto cmdline = Cli::toCmdlineL(
+        "git",
+        "-C",
+        out->configFile.parentPath(),
+        "rev-parse",
+        "--show-toplevel"
+    );
+    content = execWait(cmdline, out->configFile);
+    out->gitRoot = Path(trim(content));
+    return out;
 }
 
 //===========================================================================
 bool addOutput(
-    Site * out,
+    Config * out,
     const string & file,
     CharBuf && content,
     bool normalize
@@ -285,10 +405,11 @@ bool addOutput(
 }
 
 //===========================================================================
-void exec(
+static void exec(
     function<void(string&&)> fn,
     string_view cmdline,
-    string_view errTitle
+    string_view errTitle,
+    const ExecOptions & opts
 ) {
     struct Exec : IExecNotify {
         function<void(string&&)> fn;
@@ -296,11 +417,30 @@ void exec(
         string errTitle;
 
         void onExecComplete(bool canceled, int exitCode) override {
-            if (exitCode) {
-                logMsgError() << "Error: " << errTitle;
-                logMsgError() << " - " << cmdline;
-                logMsgError() << " - " << m_err;
+            if (canceled) {
+                // Rely on execProgram to have already logged an error.
                 appSignalShutdown(EX_IOERR);
+                fn({});
+            } else if (exitCode) {
+                logMsgError() << "Error: " << errTitle;
+                logMsgInfo() << " - " << cmdline;
+                vector<string_view> lines;
+                auto tmp = toString(m_err);
+                split(&lines, tmp, '\n');
+                for (auto&& line : lines) {
+                    line = rtrim(line);
+                    if (line.size())
+                        logMsgError() << " - " << line;
+                }
+                tmp = toString(m_out);
+                split(&lines, tmp, '\n');
+                for (auto&& line : lines) {
+                    line = rtrim(line);
+                    if (line.size())
+                        logMsgInfo() << " - " << line;
+                }
+                appSignalShutdown(EX_IOERR);
+                fn({});
             } else {
                 if (m_err) {
                     logMsgWarn() << "Warn: " << errTitle;
@@ -316,7 +456,53 @@ void exec(
     notify->fn = fn;
     notify->cmdline = cmdline;
     notify->errTitle = errTitle;
-    execProgram(notify, notify->cmdline);
+    execProgram(notify, notify->cmdline, opts);
+}
+
+//===========================================================================
+void exec(
+    function<void(string&&)> fn,
+    string_view cmdline,
+    string_view errTitle,
+    string_view workDir
+) {
+    ExecOptions opts;
+    opts.workingDir = workDir;
+    //opts.concurrency = 2 * envProcessors();
+    exec(fn, cmdline, errTitle, opts);
+}
+
+//===========================================================================
+string execWait(
+    string_view cmdline,
+    string_view errTitle,
+    string_view workDir
+) {
+    string out;
+    mutex mut;
+    condition_variable cv;
+    bool done = false;
+    ExecOptions opts;
+    if (!workDir.empty())
+        opts.workingDir = workDir;
+    opts.hq = taskComputeQueue();
+    //opts.concurrency = 2 * envProcessors();
+    exec(
+        [&](auto && content){
+            mut.lock();
+            out = content;
+            done = true;
+            mut.unlock();
+            cv.notify_one();
+        },
+        cmdline,
+        errTitle,
+        opts
+    );
+    unique_lock lk{mut};
+    while (!done)
+        cv.wait(lk);
+    return out;
 }
 
 //===========================================================================
@@ -354,7 +540,7 @@ void writeContent(
 //===========================================================================
 void loadContent(
     function<void(string&&)> fn,
-    const Site & site,
+    const Config & site,
     string_view tag,
     string_view file
 ) {
@@ -396,8 +582,10 @@ void loadContent(
 }
 
 //===========================================================================
-bool writeOutputs(const Site & out) {
-    auto odir = Path(out.outDir).resolve(out.configFile.parentPath());
+bool writeOutputs(
+    string_view odir,
+    unordered_map<string, CharBuf> files
+) {
     if (!fileCreateDirs(odir)) {
         logMsgError() << odir << ": unable to create directory.";
         appSignalShutdown(EX_IOERR);
@@ -406,16 +594,19 @@ bool writeOutputs(const Site & out) {
     for (auto&& f : FileIter(odir, "*.*", FileIter::fDirsLast)) {
         if (!strstr(f.path.c_str(), "/.git")) {
             if (!fileRemove(f.path)) {
-                logMsgError() << f.path << ": unable to remove.";
-                appSignalShutdown(EX_IOERR);
-                return false;
+                if (!f.isdir) {
+                    appSignalShutdown(EX_IOERR);
+                    return false;
+                }
             }
         }
     }
-    for (auto&& output : out.outputs) {
+    for (auto&& output : files) {
         auto path = Path(output.first).resolve(odir);
         fileCreateDirs(path.parentPath());
-        auto f = fileOpen(path, File::fCreat | File::fExcl | File::fReadWrite);
+        auto f = fileOpen(
+            path,
+            File::fCreat | File::fExcl | File::fReadWrite | File::fBlocking);
         if (!f) {
             logMsgError() << path << ": unable to create.";
             appSignalShutdown(EX_IOERR);
