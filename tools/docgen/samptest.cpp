@@ -116,6 +116,11 @@ const TokenTable s_testAttrTbl(s_testAttrs);
 
 static vector<PageInfo> s_pageInfos;
 
+static auto & s_perfCompile = uperf("docgen.compiles");
+static auto & s_perfCompileFailed = uperf("docgen.compiles (failed)");
+static auto & s_perfRun = uperf("docgen.runs");
+static auto & s_perfRunFailed = uperf("docgen.runs (failed)");
+
 
 /****************************************************************************
 *
@@ -758,6 +763,13 @@ static void processPage(PageInfo * info, unsigned phase = 0) {
     info->fn();
 }
 
+
+/****************************************************************************
+*
+*   Run tests
+*
+***/
+
 struct ProgWork {
     function<void()> fn;
     const PageInfo & info;
@@ -818,6 +830,7 @@ static void runProgDone(
     return;
 
 FAILED:
+    s_perfRunFailed += 1;
     logMsgError() << run.line << ", "
         << testPath(work->info, work->prog.line);
     for (auto pos = 0; auto&& line : lines) {
@@ -874,8 +887,11 @@ static void runProgTests(ProgWork * work, unsigned phase) {
                     return;
                 }
             } else {
+                s_perfCompile += 1;
                 exec(
                     [work, what](string && out) {
+                        if (out.empty())
+                            s_perfCompileFailed += 1;
                         runProgTests(work, what);
                     },
                     cmdline,
@@ -920,6 +936,7 @@ static void runProgTests(ProgWork * work, unsigned phase) {
             }
 
             fileSetCurrentDir(workDir);
+            s_perfRun += 1;
             execProgram(
                 [work, phase, &run](ExecResult && res) {
                     runProgDone(work, phase, run, move(res));
@@ -1052,7 +1069,12 @@ static void testSamples(Config * out, unsigned phase = 0) {
         // Clean up
         delete out;
 
-        {
+        logMsgInfo() << s_perfCompile << " programs compiled.";
+        logMsgInfo() << s_perfRun << " runs executed.";
+        if (auto errs = s_perfCompileFailed + s_perfRunFailed) {
+            ConsoleScopedAttr ca(kConsoleError);
+            logMsgInfo() << "Compile and run failures: " << errs;
+        } else {
             ConsoleScopedAttr ca(kConsoleCheer);
             logMsgInfo() << "Tests run successfully.";
         }
