@@ -1886,6 +1886,11 @@ bool UnsignedSet::operator==(const UnsignedSet & right) const {
 
 //===========================================================================
 size_t UnsignedSet::count(unsigned val) const {
+    return contains(val);
+}
+
+//===========================================================================
+bool UnsignedSet::contains(unsigned val) const {
     return (bool) find(val);
 }
 

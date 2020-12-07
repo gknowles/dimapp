@@ -72,13 +72,15 @@ public:
     // capacity
     bool empty() const;
     size_t size() const;
+    size_t max_size() const;
 
     // modify
     void clear();
     void fill();
     void assign(unsigned value);
     template <typename InputIt>
-        requires (std::is_convertible_v<*std::declval<InputIt>(), unsigned>)
+        requires (std::is_convertible_v<decltype(*std::declval<InputIt>()),
+            unsigned>)
         void assign(InputIt first, InputIt last);
     void assign(std::initializer_list<unsigned> il);
     void assign(UnsignedSet && from);
@@ -86,7 +88,8 @@ public:
     void assign(std::string_view src); // space separated ranges
     bool insert(unsigned value); // returns true if inserted
     template <typename InputIt>
-        requires (std::is_convertible_v<*std::declval<InputIt>(), unsigned>)
+        requires (std::is_convertible_v<decltype(*std::declval<InputIt>()),
+            unsigned>)
         void insert(InputIt first, InputIt last);
     void insert(std::initializer_list<unsigned> il);
     void insert(UnsignedSet && other);
@@ -113,6 +116,7 @@ public:
     // search
     size_t count(unsigned val) const;
     iterator find(unsigned val) const;
+    bool contains(unsigned val) const;
     std::pair<iterator, iterator> equalRange(unsigned val) const;
     iterator lowerBound(unsigned val) const;
     iterator upperBound(unsigned val) const;
@@ -137,7 +141,7 @@ inline UnsignedSet::UnsignedSet(std::initializer_list<unsigned> il) {
 
 //===========================================================================
 template<typename InputIt>
-requires (std::is_convertible_v<*std::declval<InputIt>(), unsigned>)
+requires (std::is_convertible_v<decltype(*std::declval<InputIt>()), unsigned>)
 inline void UnsignedSet::assign(InputIt first, InputIt last) {
     clear();
     insert(first, last);
@@ -151,7 +155,7 @@ inline void UnsignedSet::assign(std::initializer_list<unsigned> il) {
 
 //===========================================================================
 template<typename InputIt>
-requires (std::is_convertible_v<*std::declval<InputIt>(), unsigned>)
+requires (std::is_convertible_v<decltype(*std::declval<InputIt>()), unsigned>)
 inline void UnsignedSet::insert(InputIt first, InputIt last) {
     if constexpr (std::is_convertible_v<InputIt, const unsigned *>) {
         iInsert(first, last);
