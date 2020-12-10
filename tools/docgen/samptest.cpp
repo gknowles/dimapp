@@ -21,7 +21,7 @@ struct CmdOpts {
     string cfgfile;
     string layout;
     unordered_set<string> pages;
-    unordered_set<size_t> lines;
+    UnsignedSet lines;
 
     CmdOpts();
 };
@@ -1103,20 +1103,26 @@ CmdOpts::CmdOpts() {
         .desc("Test code samples embedded in documentation files")
         .action(testCmd);
     cli.opt(&cfgfile, "f file", "docgen.xml")
-        .desc("docgen site definition to process.");
+        .desc("Site definition to process.");
     cli.opt(&layout, "layout", "default")
-        .desc("layout with files to process.");
-    cli.optVec<string>("page")
-        .desc("one or more pages within layout to process.")
-        .after([this](auto & cli, auto & opt, auto & val) {
-            pages.insert(opt->begin(), opt->end());
-            return true;
-        });
-    cli.optVec<size_t>("line")
-        .desc("only process programs generated from samples at specific "
-            "lines.")
-        .after([this](auto & cli, auto & opt, auto & val) {
-            lines.insert(opt->begin(), opt->end());
+        .desc("Layout with files to process.");
+
+    enum { kPage, kLine } mode = kPage;
+    cli.opt(&mode, "page", kPage).flagValue(true)
+        .desc("Following operands are the urls of the pages within the "
+            "layout to process.");
+    cli.opt(&mode, "line", kLine).flagValue()
+        .desc("Following operands are line numbers, or line number "
+            "ranges, of the pages that may contain samples to be processed.");
+    cli.optVec<string>("[operand]")
+        .desc("Page urls and/or line ranges that filter samples to process.")
+        .check([this, &mode](auto & cli, auto & opt, auto & val) {
+            if (mode == kPage) {
+                pages.insert(val);
+            } else {
+                UnsignedSet tmp(val);
+                lines.insert(tmp);
+            }
             return true;
         });
 }
