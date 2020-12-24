@@ -194,11 +194,13 @@ template <typename T>
 *
 ***/
 
+// Splits on every appearance of 'sep' in the source.
 void split(
     std::vector<std::string_view> * out,
     std::string_view src,
     char sep = ' '
 );
+// Splits whenever any of the listed 'seps' are found.
 void split(
     std::vector<std::string_view> * out,
     std::string_view src,
