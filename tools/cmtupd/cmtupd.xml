@@ -1,0 +1,37 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright Glen Knowles 2020.
+Distributed under the Boost Software License, Version 1.0.
+
+Configuration rules are defined by C++ constants.
+This file is just aspirational.
+-->
+<Comments>
+  <Copyright>
+    <Owner>Glen Knowles</Owner>
+    <Format>Copyright {Owner} {Years}.</Format>
+    <Prefix value="# ">
+      <File value="CMakeLists.txt"/>
+      <File value="*.yaml"/>
+      <File value="*.yml"/>
+    </Prefix>
+    <Prefix value="">
+      <File value="*.adoc"/>
+      <File value="*.md"/>
+      <File value="*.natvis"/> <!-- xml -->
+      <File value="*.xml"/>
+      <File value="*.xml.sample"/>
+      <File value="*.xsd"/>
+    </Prefix>
+    <Prefix value="// ">
+      <File value="*.cpp"/>
+      <File value="*.h"/>
+    </Prefix>
+    <Prefix value="; ">
+      <File value="*.abnf"/>
+    </Prefix>
+    <Prefix value=":: ">
+      <File value="*.bat"/>
+    </Prefix>
+  </Copyright>
+</Comments>

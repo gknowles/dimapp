@@ -1,0 +1,9 @@
+////
+Copyright Glen Knowles 2020.
+Distributed under the Boost Software License, Version 1.0.
+////
+
+= cmtupd
+
+Update date range in copyright comments with year of the file's last commit
+time in git.

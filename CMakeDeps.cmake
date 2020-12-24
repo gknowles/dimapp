@@ -148,6 +148,7 @@
 # libs/win/winaddress.cpp
 # libs/win/winconsole.cpp
 # libs/win/wincrash.cpp
+# libs/win/windebug.cpp
 # libs/win/winenv.cpp
 # libs/win/winerror.cpp
 # libs/win/winevent.cpp
@@ -245,6 +246,11 @@
 # tests/xml/pch.cpp
 # tests/xml/pch.h
 # tests/xml/xmltest.cpp
+# tools/cmtupd/README.adoc
+# tools/cmtupd/cmtupd.cpp
+# tools/cmtupd/cmtupd.xml
+# tools/cmtupd/pch.cpp
+# tools/cmtupd/pch.h
 # tools/docgen/README.adoc
 # tools/docgen/docgen.cpp
 # tools/docgen/intern.h
