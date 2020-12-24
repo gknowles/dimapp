@@ -606,7 +606,8 @@ bool writeOutputs(
         fileCreateDirs(path.parentPath());
         auto f = fileOpen(
             path,
-            File::fCreat | File::fExcl | File::fReadWrite | File::fBlocking);
+            File::fCreat | File::fExcl | File::fReadWrite | File::fBlocking
+        );
         if (!f) {
             logMsgError() << path << ": unable to create.";
             appSignalShutdown(EX_IOERR);
