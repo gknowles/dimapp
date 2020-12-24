@@ -637,6 +637,7 @@ bool Dim::execProgramWait(
             {
                 scoped_lock lk{mut};
                 *out = move(res);
+                complete = true;
             }
             cv.notify_one();
         },
