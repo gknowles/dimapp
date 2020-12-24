@@ -499,6 +499,10 @@ static CharBuf processPageContent(
         .attr("rel", "stylesheet")
         .attr("href", "../css/docgen.css")
         .end();
+    bld.start("link")
+        .attr("rel", "stylesheet")
+        .attr("href", "../css/asciidoc.css")
+        .end();
     bld.elem("title", info->page.name + " - " + info->out->siteName);
     bld.end(); // </head>
 
@@ -633,6 +637,27 @@ static bool genStatics(Config * out) {
     fname = ".nojekyll";
     content.clear();
     genFileHeader(&content, fname);
+    if (!addOutput(out, fname, move(content)))
+        return false;
+
+    //-----------------------------------------------------------------------
+    // css/asciidoc.css
+    fname = "css/asciidoc.css";
+    content.assign("/*\n");
+    genFileHeader(&content, fname);
+    content.append(1 + R"(
+*/
+
+.halign-center {
+    text-align: center;
+}
+.halign-left {
+    text-align: left;
+}
+.halign-right {
+    text-align: right;
+}
+)");
     if (!addOutput(out, fname, move(content)))
         return false;
 
