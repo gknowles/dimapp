@@ -808,24 +808,27 @@ static void runProgDone(
         }
     }
     auto i = -1;
-    if (lines.size() != run.output.size()) {
-        if (lines.size() == run.output.size() + 1
+    auto olen = run.output.size();
+    if (lines.size() != olen) {
+        if (lines.size() == olen + 1
             && rtrim(lines.back()).empty()
         ) {
             lines.pop_back();
-        } else if (lines.size() + 1 == run.output.size()
+        } else if (lines.size() + 1 == olen
             && run.output.back().empty()
         ) {
             // last output line blank, ignore it
-        } else {
-            goto FAILED;
+            olen -= 1;
         }
     }
-    for (i = 0; i < lines.size(); ++i) {
+    auto len = min(lines.size(), olen);
+    for (i = 0; i < len; ++i) {
         auto line = rtrim(lines[i]);
         if (run.output[i] != line)
             goto FAILED;
     }
+    if (lines.size() != olen)
+        goto FAILED;
     runProgTests(work, phase);
     return;
 
