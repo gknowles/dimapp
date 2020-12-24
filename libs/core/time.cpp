@@ -425,9 +425,7 @@ std::ostream & Dim::operator<<(std::ostream & os, TimePoint time) {
 //===========================================================================
 bool Dim::timeToDesc(tm * tm, TimePoint time) {
     auto t = to_time_t(time);
-#pragma warning(suppress : 4996) // deprecated
-    if (auto tmp = gmtime(&t)) {
-        *tm = *tmp;
+    if (!gmtime_s(tm, &t)) {
         tm->tm_isdst = -1;
         tm->tm_yday = -1;
         return true;
