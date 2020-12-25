@@ -15,7 +15,6 @@
 #include "wintls/wintls.h"
 
 // Standard headers
-#include <crtdbg.h>
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>

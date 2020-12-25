@@ -135,12 +135,6 @@ static void app(int argc, char *argv[]) {
 
 //===========================================================================
 static int doMain(int argc, char * argv[]) {
-    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF
-        | _CRTDBG_LEAK_CHECK_DF
-        | _CRTDBG_DELAY_FREE_MEM_DF
-    );
-    // _CrtSetBreakAlloc(6909);
-
     return appRun(app, argc, argv, fAppServer | fAppWithConsole);
 }
 

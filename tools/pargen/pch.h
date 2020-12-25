@@ -15,7 +15,6 @@
 
 // Standard headers
 #include <bitset>
-#include <crtdbg.h>
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
