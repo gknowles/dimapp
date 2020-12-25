@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2018.
+// Copyright Glen Knowles 2017 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // winsvc.cpp - dim windows platform
@@ -46,8 +46,8 @@ static RunMode s_mode{kRunStopped};
 
 //===========================================================================
 static void setState(
-    unsigned status, 
-    bool accepting = true, 
+    unsigned status,
+    bool accepting = true,
     int exitcode = EX_OK
 ) {
     DWORD accepts = SERVICE_ACCEPT_STOP;
