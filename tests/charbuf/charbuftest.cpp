@@ -75,11 +75,19 @@ static void app(int argc, char *argv[]) {
     EXPECT(buf == "abcdefgh");
 
     auto blkLen = buf.defaultBlockSize();
+
+    // insert into non-first block
     auto len = 3 * blkLen / 2;
     buf.assign(len, 'a');
     buf.insert(blkLen - 2, "x");
     EXPECT(buf.size() == len + 1);
     EXPECT(buf.compare(blkLen - 4, 5, "aaxaa") == 0);
+
+    // append when exactly on block boundary
+    buf.clear();
+    buf.assign(2 * blkLen, 'a');
+    buf.append("b");
+    EXPECT(buf.size() == 2 * blkLen + 1);
 
     size_t count = 0;
     for (auto && view : buf.views()) {

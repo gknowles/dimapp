@@ -899,13 +899,6 @@ CharBuf & CharBuf::insert(
     char * mybase = mydata;
     char * myend = it->data + it->reserved;
     for (;;) {
-        *mydata++ = *s++;
-        if (!*s) {
-            int bytes = int(mydata - mybase);
-            it->used += bytes;
-            m_size += bytes;
-            return *this;
-        }
         if (mydata == myend) {
             int bytes = int(mydata - mybase);
             it->used += bytes;
@@ -914,6 +907,13 @@ CharBuf & CharBuf::insert(
             mydata = it->data;
             mybase = mydata;
             myend = mydata + it->reserved;
+        }
+        *mydata++ = *s++;
+        if (!*s) {
+            int bytes = int(mydata - mybase);
+            it->used += bytes;
+            m_size += bytes;
+            return *this;
         }
     }
 }
