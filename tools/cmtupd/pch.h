@@ -17,6 +17,7 @@
 // Standard headers
 #include <cstdio>
 #include <cstdlib>
+#include <forward_list>
 #include <iostream>
 #include <regex>
 #include <unordered_set>

@@ -198,7 +198,7 @@ static void app(int argc, char *argv[]) {
         if (!lines.empty() && lines.back().empty())
             lines.pop_back();
 
-        vector<string> changedLines;
+        forward_list<string> changedLines;
         string commitYear;
         for (auto&& line : lines) {
             line = trim(line);
@@ -235,7 +235,8 @@ static void app(int argc, char *argv[]) {
                         commitYear
                     );
                 }
-                line = changedLines.emplace_back(tmp);
+                changedLines.push_front(tmp);
+                line = changedLines.front();
             }
         }
         if (commitYear.empty()) {
