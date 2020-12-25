@@ -295,6 +295,7 @@ static void app(int argc, char *argv[]) {
     if (s_updatedFiles && !s_update)
         cout << "Use '-u' to update." << endl;
 
+    logPauseStopwatch();
     return appSignalShutdown(EX_OK);
 }
 
