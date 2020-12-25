@@ -201,7 +201,7 @@ static void app(int argc, char *argv[]) {
         forward_list<string> changedLines;
         string commitYear;
         for (auto&& line : lines) {
-            line = trim(line);
+            line = rtrim(line);
             auto tmp = string(line);
             CopyrightYear cdate;
             if (!findYear(&cdate, tmp, *rule))
