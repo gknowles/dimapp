@@ -260,6 +260,7 @@
 # tools/docgen/schema.xsd
 # tools/docgen/schema.xsdgen.xml
 # tools/docgen/sitegen.cpp
+# tools/docgen/util.cpp
 # tools/h2srv/h2srv.cpp
 # tools/h2srv/pch.cpp
 # tools/h2srv/pch.h
