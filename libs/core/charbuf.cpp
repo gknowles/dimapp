@@ -318,6 +318,17 @@ CharBuf & CharBuf::insert(size_t pos, const char s[], size_t count) {
 //===========================================================================
 CharBuf & CharBuf::insert(
     size_t pos,
+    std::string_view str,
+    size_t strPos,
+    size_t strLen
+) {
+    assert(strPos <= str.size());
+    return insert(pos, str.data() + strPos, min(strLen, str.size() - strPos));
+}
+
+//===========================================================================
+CharBuf & CharBuf::insert(
+    size_t pos,
     const CharBuf & buf,
     size_t bufPos,
     size_t bufLen
@@ -423,8 +434,7 @@ CharBuf & CharBuf::append(const char src[], size_t srcLen) {
 
 //===========================================================================
 CharBuf & CharBuf::append(string_view str, size_t pos, size_t count) {
-    assert(pos <= str.size());
-    return append(str.data() + pos, min(str.size(), pos + count) - pos);
+    return insert(m_size, str, pos, count);
 }
 
 //===========================================================================

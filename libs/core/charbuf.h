@@ -95,6 +95,12 @@ public:
     CharBuf & insert(size_t pos, const char s[], size_t count);
     CharBuf & insert(
         size_t pos,
+        std::string_view str,
+        size_t strPos,
+        size_t strCount
+    );
+    CharBuf & insert(
+        size_t pos,
         const CharBuf & buf,
         size_t bufPos = 0,
         size_t bufLen = -1
