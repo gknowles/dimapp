@@ -191,12 +191,12 @@ void HttpMsg::swap(HttpMsg & other) {
 
 //===========================================================================
 void HttpMsg::addHeader(HttpHdr id, const char value[]) {
-    addHeaderRef(id, m_heap.strdup(value));
+    addHeaderRef(id, m_heap.strDup(value));
 }
 
 //===========================================================================
 void HttpMsg::addHeader(HttpHdr id, string_view value) {
-    addHeaderRef(id, m_heap.strdup(value));
+    addHeaderRef(id, m_heap.strDup(value));
 }
 
 //===========================================================================
@@ -209,7 +209,7 @@ void HttpMsg::addHeader(const char name[], string_view value) {
     if (auto id = httpHdrFromString(name))
         return addHeader(id, value);
 
-    addHeaderRef(kHttpInvalid, m_heap.strdup(name), m_heap.strdup(value));
+    addHeaderRef(kHttpInvalid, m_heap.strDup(name), m_heap.strDup(value));
 }
 
 //===========================================================================
@@ -231,7 +231,7 @@ void HttpMsg::addHeader(const char name[], TimePoint time) {
     if (auto id = httpHdrFromString(name)) {
         addHeaderRef(id, hv);
     } else {
-        addHeaderRef(id, m_heap.strdup(name), hv);
+        addHeaderRef(id, m_heap.strDup(name), hv);
     }
 }
 

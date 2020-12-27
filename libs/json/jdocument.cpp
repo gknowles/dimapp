@@ -196,7 +196,7 @@ void JDocument::clear() {
 JNode * JDocument::parse(char src[], string_view filename) {
     clear();
     if (!filename.empty())
-        m_filename = m_heap.strdup(filename);
+        m_filename = m_heap.strDup(filename);
     StreamNotify notify(this);
     JsonStream parser(&notify);
     if (!parser.parseMore(src)) {

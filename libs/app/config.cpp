@@ -134,7 +134,7 @@ void ConfigFile::parseContent(string_view fullpath, string && content) {
     m_relpath.remove_prefix(appConfigDir().size() + 1);
     m_xml.parse(m_content.data(), m_relpath);
     m_relpath = m_xml.filename();
-    m_fullpath = m_xml.heap().strdup(fullpath);
+    m_fullpath = m_xml.heap().strDup(fullpath);
 
     // call notifiers
     configChange(m_fullpath, nullptr);

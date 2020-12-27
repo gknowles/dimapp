@@ -44,7 +44,7 @@ bool XStreamParser::parseMore(char src[]) {
 
 //===========================================================================
 bool XStreamParser::fail(const char errmsg[]) {
-    m_errmsg = m_heap.strdup(errmsg);
+    m_errmsg = m_heap.strDup(errmsg);
     return false;
 }
 

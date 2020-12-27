@@ -754,8 +754,8 @@ bool HpackDecode::readIndexedField(
         if (index >= size(m_dynTable))
             return false;
         HpackDynField & dfld = m_dynTable[index];
-        out->name = heap->strdup(dfld.name);
-        out->value = heap->strdup(dfld.value);
+        out->name = heap->strDup(dfld.name);
+        out->value = heap->strDup(dfld.value);
     }
     return true;
 }
@@ -780,7 +780,7 @@ bool HpackDecode::readIndexedName(
         if (index >= size(m_dynTable))
             return false;
         HpackDynField & dfld = m_dynTable[index];
-        out->name = heap->strdup(data(dfld.name));
+        out->name = heap->strDup(data(dfld.name));
     }
     if (!read(&out->value, heap, src, srcLen))
         return false;
@@ -841,7 +841,7 @@ bool HpackDecode::read(
         return false;
 
     if (!huffman) {
-        *out = heap->strdup(string_view(src, len));
+        *out = heap->strDup(string_view(src, len));
     } else {
         if (!s_decode.decode(out, heap, 8, src, len))
             return false;
