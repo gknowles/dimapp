@@ -14,6 +14,7 @@ void iPlatformConfigInitialize();
 
 // Console
 void iConsoleInitialize();
+void iConsoleDestroy();
 
 // File
 void iFileInitialize();

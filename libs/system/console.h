@@ -8,11 +8,13 @@
 
 #include "core/log.h"
 
+#include <atomic>
 #include <cstdint>
 
 namespace Dim {
 
 enum ConsoleAttr {
+    kConsoleInvalid,
     kConsoleNormal, // normal white
     kConsoleCheer,  // bright green
     kConsoleNote,   // bright cyan
@@ -20,8 +22,12 @@ enum ConsoleAttr {
     kConsoleError,  // bright red
 };
 
+unsigned consoleRawAttr();
+void consoleRawAttr(unsigned newAttr);
+
 class ConsoleScopedAttr {
-    int m_active{true};
+    int m_active {true};
+    unsigned m_rawAttrs {0};
 
 public:
     ConsoleScopedAttr(ConsoleAttr attr);

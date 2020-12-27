@@ -299,6 +299,7 @@ int Dim::appRun(IAppNotify * app, int argc, char * argv[], AppFlags flags) {
     lk.unlock();
 
     iShutdownDestroy();
+    iConsoleDestroy();
 
     //-----------------------------------------------------------------------
     // No external effects should happen after this point. Any sockets, pipes,

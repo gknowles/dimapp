@@ -41,17 +41,17 @@ static BOOL WINAPI controlCallback(DWORD ctrl) {
 }
 
 //===========================================================================
-static void enableConsoleFlags(bool enable, DWORD flags) {
-    HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
+static void enableConsoleFlags(DWORD handleOrd, bool enable, DWORD flags) {
+    HANDLE f = GetStdHandle(handleOrd);
     DWORD mode = 0;
-    if (!GetConsoleMode(hInput, &mode))
+    if (!GetConsoleMode(f, &mode))
         return;
     if (enable) {
         mode |= flags;
     } else {
         mode &= ~flags;
     }
-    if (!SetConsoleMode(hInput, mode))
+    if (!SetConsoleMode(f, mode))
         logMsgFatal() << "SetConsoleMode(): " << WinError{};
 }
 
@@ -75,28 +75,26 @@ static bool getStdInfo(int * dst, const wchar_t ** dev, DWORD nstd) {
 *
 ***/
 
-const unordered_map<ConsoleAttr, int> s_attrs = {
-    {
-        kConsoleNormal,    // normal white
-        FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE
-    },
-    {
-        kConsoleCheer,     // bright green
-        FOREGROUND_INTENSITY | FOREGROUND_GREEN
-    },
-    {
-        kConsoleNote, // bright cyan
-        FOREGROUND_INTENSITY | FOREGROUND_GREEN | FOREGROUND_BLUE
-    },
-    {
-        kConsoleWarn,      // bright yellow
-        FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN
-    },
-    {
-        kConsoleError,     // bright red
-        FOREGROUND_INTENSITY | FOREGROUND_RED
-    },
-};
+static atomic<unsigned> s_originalAttr;
+static atomic<int> s_numAttrScopes;
+
+//===========================================================================
+constexpr int findAttr(ConsoleAttr attr) {
+    switch (attr) {
+    case kConsoleNormal: // normal white
+        return FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
+    case kConsoleCheer: // bright green
+        return FOREGROUND_INTENSITY | FOREGROUND_GREEN;
+    case kConsoleNote: // bright cyan
+        return FOREGROUND_INTENSITY | FOREGROUND_GREEN | FOREGROUND_BLUE;
+    case kConsoleWarn: // bright yellow
+        return FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN;
+    case kConsoleError: // bright red
+        return FOREGROUND_INTENSITY | FOREGROUND_RED;
+    default:
+        return -1;
+    }
+}
 
 //===========================================================================
 ConsoleScopedAttr::ConsoleScopedAttr(ConsoleAttr attr) {
@@ -106,27 +104,23 @@ ConsoleScopedAttr::ConsoleScopedAttr(ConsoleAttr attr) {
     }
 
     // save console text attributes
-    HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-    CONSOLE_SCREEN_BUFFER_INFO info{};
-    if (!GetConsoleScreenBufferInfo(hOutput, &info)) {
-        logMsgFatal() << "GetConsoleScreenBufferInfo: " << WinError{};
-    }
+    m_rawAttrs = consoleRawAttr();
+    if (s_numAttrScopes++ == 0)
+        s_originalAttr = m_rawAttrs;
 
-    scoped_lock lk{s_mut};
-    s_consoleAttrs.push_back(info.wAttributes);
-    if (auto i = s_attrs.find(attr); i != s_attrs.end()) {
-        info.wAttributes = (WORD) i->second;
-        SetConsoleTextAttribute(hOutput, info.wAttributes);
-    }
+    if (auto raw = findAttr(attr); raw != -1)
+        consoleRawAttr(raw);
 }
 
 //===========================================================================
 ConsoleScopedAttr::~ConsoleScopedAttr() {
     if (m_active) {
-        HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-        scoped_lock lk{s_mut};
-        SetConsoleTextAttribute(hOutput, s_consoleAttrs.back());
-        s_consoleAttrs.pop_back();
+        if (--s_numAttrScopes == 0) {
+            // Ensure that the last scope always restores the console to its
+            // original state, even with interleaving scopes.
+            m_rawAttrs = s_originalAttr;
+        }
+        consoleRawAttr(m_rawAttrs);
     }
 }
 
@@ -141,6 +135,15 @@ ConsoleScopedAttr::~ConsoleScopedAttr() {
 void Dim::iConsoleInitialize() {
     // set control-c handler
     SetConsoleCtrlHandler(&controlCallback, true);
+    enableConsoleFlags(
+        STD_OUTPUT_HANDLE,
+        true,
+        ENABLE_VIRTUAL_TERMINAL_PROCESSING
+    );
+}
+
+//===========================================================================
+void Dim::iConsoleDestroy() {
 }
 
 
@@ -157,7 +160,11 @@ bool Dim::consoleAttached() {
 
 //===========================================================================
 void Dim::consoleEnableEcho(bool enable) {
-    enableConsoleFlags(enable, ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT);
+    enableConsoleFlags(
+        STD_INPUT_HANDLE,
+        enable,
+        ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT
+    );
 }
 
 //===========================================================================
@@ -195,6 +202,22 @@ unsigned Dim::consoleWidth() {
         logMsgFatal() << "GetConsoleScreenBufferInfo: " << GetLastError();
     }
     return info.dwSize.X;
+}
+
+//===========================================================================
+unsigned Dim::consoleRawAttr() {
+    HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_SCREEN_BUFFER_INFO info{};
+    if (!GetConsoleScreenBufferInfo(hOutput, &info)) {
+        logMsgFatal() << "GetConsoleScreenBufferInfo: " << WinError{};
+    }
+    return info.wAttributes;
+}
+
+//===========================================================================
+void Dim::consoleRawAttr(unsigned newAttr) {
+    HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+    SetConsoleTextAttribute(hOutput, (WORD) newAttr);
 }
 
 
@@ -282,6 +305,9 @@ extern "C" static int reassignCrtHandles() {
     return 0;
 }
 
+// Put function pointer in section that will be automatically called by the
+// C runtime. ".CRT$XIU" is run after the C runtime is initialized (XIC and
+// XIL) but before C++ namespace constructors (XC*).
 #pragma section(".CRT$XIU", long, read)
 #pragma data_seg(push)
 #pragma data_seg(".CRT$XIU")
