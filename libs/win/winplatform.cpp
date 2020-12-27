@@ -133,8 +133,8 @@ static void registerWebAdmin() {
 //===========================================================================
 void Dim::iPlatformInitialize() {
     winErrorInitialize();
-    winDebugInitialize();
     winEnvInitialize();
+    winDebugInitialize();
     winCrashInitialize();
     winIocpInitialize();
     winExecInitialize();
