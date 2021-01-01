@@ -24,29 +24,84 @@ using namespace Dim;
 
 /****************************************************************************
 *
+*   Variables
+*
+***/
+
+static bool s_verbose;
+
+
+/****************************************************************************
+*
+*   Helpers
+*
+***/
+
+//===========================================================================
+static void dump(const StrTrie & vals) {
+    if (s_verbose)
+        vals.dump(cout);
+}
+
+//===========================================================================
+static void internalTests() {
+    int line = 0;
+    StrTrie vals;
+    string out;
+    EXPECT(vals.empty());
+    auto b = vals.insert("abc");
+    EXPECT(b);
+    dump(vals);
+    EXPECT(vals.contains("abc"));
+    EXPECT(!vals.contains("b"));
+    EXPECT(!vals.contains("ab"));
+    EXPECT(!vals.contains("abcd"));
+
+    b = vals.insert("a");
+    dump(vals);
+    EXPECT(b);
+    EXPECT(vals.contains("a"));
+    EXPECT(vals.contains("abc"));
+    EXPECT(!vals.contains("ab"));
+    EXPECT(!vals.contains("abcd"));
+
+    b = vals.insert("ac");
+    dump(vals);
+    EXPECT(vals.contains("ac"));
+
+    b = vals.insert("ade");
+    dump(vals);
+    EXPECT(vals.contains("ade"));
+
+    b = vals.insert("abcdefghijklmnopqrstuvwxyz");
+    dump(vals);
+    EXPECT(vals.contains("abcdefghijklmnopqrstuvwxyz"));
+    EXPECT(vals.contains("abc"));
+}
+
+
+/****************************************************************************
+*
 *   Application
 *
 ***/
 
 //===========================================================================
 static void app(int argc, char *argv[]) {
-    int line = 0;
+    Cli cli;
+    cli.helpNoArgs();
+    cli.versionOpt("1.0 (" __DATE__ ")");
+    cli.opt<bool>(&s_verbose, "v verbose.")
+        .desc("Dump container state between tests.");
+    auto & test = cli.opt<bool>("test", true).desc("Run internal unit tests");
+    if (!cli.parse(argc, argv))
+        return appSignalUsageError();
+    if (!*test) {
+        cout << "No tests run" << endl;
+        return appSignalShutdown(EX_OK);
+    }
 
-    StrTrie vals;
-    string out;
-    EXPECT(vals.empty());
-    auto b = vals.insert("abc");
-    EXPECT(b);
-    EXPECT(vals.lowerBound(&out, "abc") && out == "abc");
-    EXPECT(!vals.lowerBound(&out, "b"));
-    EXPECT(!vals.lowerBound(&out, "ab"));
-    EXPECT(!vals.lowerBound(&out, "abcd"));
-    vals.dump(cout);
-    b = vals.insert("a");
-    vals.dump(cout);
-    EXPECT(b);
-    EXPECT(vals.lowerBound(&out, "a") && out == "a");
-    EXPECT(vals.lowerBound(&out, "abc") && out == "abc");
+    internalTests();
 
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);

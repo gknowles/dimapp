@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2019.
+// Copyright Glen Knowles 2019 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // Uses the page height minimization algorithm for trees described in
@@ -23,9 +23,9 @@ using namespace Dim;
 // Segment
 //  data[0] & 0x7 = kNodeSeg
 //  (data[0] >> 3) + 1 = length in nibbles [1, 32]
-//  data[1] = index of next node (always present)
+//  data[1] = index of next node (255 if end of key with no next node)
 //  data[2 - 17] = contiguous nibbles of key
-// fork
+// Fork
 //  data[0] & 0x7 = kNodeFork
 //  data[1] = 255 if end of key, 0 if not
 //  data[2 - 17] = index by next nibble to get next node for key (0 for none)
@@ -104,6 +104,7 @@ struct StrTrieBase::SearchState {
     size_t klen;
     uint8_t kval;
     vector<OverflowNode> overflow;
+    bool found;
 };
 
 namespace Dim {
@@ -116,7 +117,7 @@ constexpr NodeType nodeType(const StrTrieBase::Node * node) {
 } // namespace
 
 //===========================================================================
-static uint8_t getKeyVal(string_view key, size_t pos) {
+static uint8_t keyVal(string_view key, size_t pos) {
     assert(key.size() * 2 >= pos);
     if (key.size() * 2 == pos)
         return 0xff;
@@ -136,12 +137,12 @@ static void setSegLen(StrTrieBase::Node * node, size_t len) {
 }
 
 //===========================================================================
-static uint8_t getSegLen(const StrTrieBase::Node * node) {
+static uint8_t segLen(const StrTrieBase::Node * node) {
     return (*node->data >> 3) + 1;
 }
 
 //===========================================================================
-static uint8_t getSegVal(const StrTrieBase::Node * node, size_t pos) {
+static uint8_t segVal(const StrTrieBase::Node * node, size_t pos) {
     assert((node->data[0] & 0x7) == kNodeSeg);
     return pos % 2 == 0
         ? (node->data[2 + pos / 2] >> 4)
@@ -164,7 +165,7 @@ static uint8_t pushSegVal(
 }
 
 //===========================================================================
-static size_t getSegNodesRequired (const StrTrieBase::SearchState & ss) {
+static size_t segNodesRequired (const StrTrieBase::SearchState & ss) {
     return (ss.klen - ss.kpos + kMaxSegLen - 1) / kMaxSegLen;
 }
 
@@ -181,24 +182,24 @@ static uint8_t getFork(
 //===========================================================================
 static size_t setFork(
     StrTrieBase::Node * node,
-    uint8_t kval,
+    uint8_t val,
     size_t inode
 ) {
     auto tinode = (uint8_t) inode;
-    assert(kval == 255 || kval < 16);
+    assert(val == 255 || val < 16);
     assert(inode < 256);
-    if (kval == 255) {
+    if (val == 255) {
         node->data[1] = tinode;
     } else {
-        node->data[kval + 2] = tinode;
+        node->data[val + 2] = tinode;
     }
     return tinode;
 }
 
 //===========================================================================
-StrTrieBase::Node * StrTrieBase::nodeAppend(
+StrTrieBase::Node * StrTrieBase::append(
     size_t pgno,
-    const StrTrieBase::Node * node
+    const StrTrieBase::Node & node
 ) {
     auto ptr = (Node *) m_heap.ptr(pgno);
     auto & last = ptr->data[m_heap.pageSize() - 1];
@@ -206,11 +207,7 @@ StrTrieBase::Node * StrTrieBase::nodeAppend(
         return nullptr;
     auto inode = last++;
     auto out = ptr + inode;
-    if (node) {
-        memcpy(out, node, sizeof *out);
-    } else {
-        assert(!*out->data);
-    }
+    *out = node;
     return out;
 }
 
@@ -240,7 +237,7 @@ size_t StrTrieBase::capacity(size_t pgno) const {
 }
 
 //===========================================================================
-static void addNode (
+static void appendNode (
     vector<OverflowNode> * out,
     const StrTrieBase::Node & node
 ) {
@@ -251,7 +248,7 @@ static void addNode (
     case kNodeSeg: {
             auto & seg = out->emplace_back(OverflowNode{type}).seg;
             seg.inext = node.data[1];
-            seg.len = getSegLen(&node);
+            seg.len = segLen(&node);
             copy(node.data + 2, node.data + 18, seg.data);
         }
         break;
@@ -272,7 +269,7 @@ static void copyNodes (
     auto ptr = ss->node - ss->inode;
     auto last = ptr + ss->nNodes;
     for (; ptr <= last; ++ptr)
-        addNode(out, *ptr);
+        appendNode(out, *ptr);
 }
 
 //===========================================================================
@@ -282,51 +279,54 @@ bool StrTrieBase::splitSegInPlace (
     uint8_t slen,
     uint8_t sval
 ) {
-    auto tinode = 0;
-	if (spos == slen - 1) {
-		tinode = ss->node->data[1];
+    auto inext = (uint8_t) 0;
+	if (spos >= slen - 1) {
+		inext = ss->node->data[1];
 	} else {
-        // add tail segment
+        // Add tail segment
         auto tlen = slen - spos - 1;
         StrTrieBase::Node tnode = {
             asSeg0(tlen),
             ss->node->data[1]
         };
         for (auto tpos = 0; tpos < tlen; ++tpos) {
-            auto sval = getSegVal(ss->node, tpos + spos + 1);
+            auto sval = segVal(ss->node, tpos + spos + 1);
             pushSegVal(&tnode, tpos, sval);
         }
-        nodeAppend(ss->pgno, &tnode);
-        tinode = (uint8_t) ss->nNodes++;
+        append(ss->pgno, tnode);
+        inext = (uint8_t) ss->nNodes++;
+
+        // FIXME: Is this just a no-op? Maybe left over from when it was in
+        // a vector that could be moved by append?
         ss->node = nodeAt(ss->pgno, ss->inode);
     }
     if (!spos) {
-        // only single element after detaching tail, so no lead segment
+        // Only single element after detaching tail, so no lead segment
         // needed, convert to fork
         StrTrieBase::Node tnode = { kNodeFork };
-        setFork(&tnode, sval, tinode);
-        setFork(&tnode, ss->kval, ss->nNodes);
-        memcpy(ss->node, &tnode, sizeof *ss->node);
-        ss->inode = (int) ss->nNodes;
+        setFork(&tnode, sval, inext);
+        ss->inode = (ss->kpos + 1 == ss->klen) ? 255 : (int) ss->nNodes;
+        setFork(&tnode, ss->kval, ss->inode);
+        *ss->node = tnode;
     } else {
-        // truncate segment as lead
+        // Truncate segment as lead
         setSegLen(ss->node, spos);
-        // point at fork that's being added
+        // Point at fork that's being added
         ss->node->data[1] = (uint8_t) ss->nNodes;
-        // add fork
+        // Add fork
         StrTrieBase::Node tnode = { kNodeFork };
-        setFork(&tnode, sval, tinode);
+        setFork(&tnode, sval, inext);
         if (ss->kpos == ss->klen) {
             setFork(&tnode, ss->kval, 255);
-            nodeAppend(ss->pgno, &tnode);
+            append(ss->pgno, tnode);
             return true;
         }
         setFork(&tnode, ss->kval, ss->nNodes + 1);
-        nodeAppend(ss->pgno, &tnode);
+        append(ss->pgno, tnode);
         ss->inode = (int) ++ss->nNodes;
     }
 
-    ss->kval = getKeyVal(ss->key, ++ss->kpos);
+    ss->kval = keyVal(ss->key, ++ss->kpos);
     return false;
 }
 
@@ -340,32 +340,35 @@ bool StrTrieBase::splitSegToOverflow (
     assert(spos < slen);
     copyNodes(&ss->overflow, ss);
 
-    auto inext = ss->node->data[1];
-    auto & node = ss->overflow[ss->inode];
-	if (spos < slen - 1) {
-        // add tail segment
+    auto inext = (uint8_t) 0;
+    auto * node = &ss->overflow[ss->inode];
+    if (spos >= slen - 1) {
+        inext = node->seg.data[1];
+    } else {
+        // Add tail segment
         auto & tnode = ss->overflow.emplace_back(OverflowNode{kNodeSeg});
         tnode.seg.len = slen - spos - 1;
         tnode.seg.inext = inext;
         for (unsigned tpos = 0; tpos < tnode.seg.len; ++tpos) {
-            auto sval = getSegVal(ss->node, tpos + spos + 1);
+            auto sval = segVal(ss->node, tpos + spos + 1);
             tnode.seg.data[tpos] = sval;
         }
         inext = (uint8_t) ss->nNodes++;
     }
     if (!spos) {
-        // only single element after detaching tail, so no lead segment
+        // Only single element after detaching tail, so no lead segment
         // needed, convert to fork
         assert(inext != 255);
-        node.type = kNodeFork;
-        node.fork.inext[sval] = inext;
-        node.fork.inext[ss->kval] = (unsigned) ss->nNodes;
+        node->type = kNodeFork;
+        node->fork.inext[sval] = inext;
+        ss->inode = (ss->kpos + 1 == ss->klen) ? 255 : (int) ss->nNodes;
+        node->fork.inext[ss->kval] = ss->inode;
     } else {
-        // truncate segment as lead
-        node.seg.len = spos;
-        // point at fork that's being added
-        node.seg.inext = (unsigned) ss->nNodes;
-        // add fork
+        // Truncate segment as lead
+        node->seg.len = spos;
+        // Point at fork that's being added
+        node->seg.inext = (unsigned) ss->nNodes;
+        // Add fork
         auto & tnode = ss->overflow.emplace_back(OverflowNode{kNodeFork});
         if (sval == 255) {
             tnode.fork.endOfKey = true;
@@ -376,84 +379,93 @@ bool StrTrieBase::splitSegToOverflow (
             tnode.fork.inext[ss->kval] = (unsigned) -1;
             return true;
         }
-        tnode.fork.inext[ss->kval] = (unsigned) ss->nNodes++;
+        tnode.fork.inext[ss->kval] = (unsigned) ss->nNodes + 1;
+        ss->inode = (int) ++ss->nNodes;
     }
 
-    ss->inode = (int) ss->nNodes;
-    ss->kval = getKeyVal(ss->key, ++ss->kpos);
+    ss->kval = keyVal(ss->key, ++ss->kpos);
     return false;
 }
 
 //===========================================================================
 bool StrTrieBase::insertAtSeg (SearchState * ss) {
+    // May split on first, middle, last, after last, or advance to next node.
+
     auto spos = (uint8_t) 0; // split point where key diverges from segment
-    auto slen = getSegLen(ss->node);
-    auto sval = getSegVal(ss->node, spos);
+    auto slen = segLen(ss->node);
+    auto sval = segVal(ss->node, spos);
     assert(slen > 1);
     for (;;) {
-        if (ss->kpos == ss->klen)
-            break;
-        if (spos == slen) {
-			// end of segment, still more key
-            ss->inode = ss->node->data[1];
-            return false;
-        }
         if (ss->kval != sval)
             break;
-        ss->kval = getKeyVal(ss->key, ++ss->kpos);
-        sval = getSegVal(ss->node, ++spos);
+        ss->kval = keyVal(ss->key, ++ss->kpos);
+        if (++spos == slen) {
+			// End of segment, still more key
+            ss->inode = ss->node->data[1];
+            if (ss->inode == 255) {
+                // Fork with after segment end mark
+                sval = 255;
+                break;
+            }
+            // Continue search at next node
+            return false;
+        }
+        sval = segVal(ss->node, spos);
     }
 
-    // change segment to [lead segment] fork [tail segment]
+    // Replace segment with [lead segment] fork [tail segment]
     auto adds = (spos > 0) // needs lead segment
-        + (spos < slen - 1); // needs tail segment
-    if (capacity(ss->pgno) - size(ss->pgno)
-        < getSegNodesRequired(*ss) + adds
-    ) {
+        + (spos < slen); // needs tail segment
+    if (capacity(ss->pgno) - size(ss->pgno) >= segNodesRequired(*ss) + adds)
         return splitSegInPlace(ss, spos, slen, sval);
-    }
 
     return splitSegToOverflow(ss, spos, slen, sval);
 }
 
 //===========================================================================
 bool StrTrieBase::insertAtFork (SearchState * ss) {
-    auto inext = getFork(ss->node, ss->kval);
     if (ss->kpos == ss->klen) {
         assert(ss->kval == 255);
+        auto inext = ss->node->data[1];
         if (!inext) {
-            setFork(ss->node, ss->kval, 255);
-            return true;
-        } else if (inext == 255) {
-            return true;
+            setFork(ss->node, 255, 255);
+        } else {
+            assert(inext == 255);
+            ss->found = true;
         }
-        return false;
+        return true;
     }
 
+    auto inext = getFork(ss->node, ss->kval);
     if (!inext) {
+        if (ss->kpos + 1 == ss->klen) {
+            setFork(ss->node, ss->kval, 255);
+            return true;
+        }
         setFork(ss->node, ss->kval, ss->nNodes);
-        ss->kval = getKeyVal(ss->key, ++ss->kpos);
-        if (capacity(ss->pgno) - size(ss->pgno) < getSegNodesRequired(*ss))
+        ss->kval = keyVal(ss->key, ++ss->kpos);
+        if (capacity(ss->pgno) - size(ss->pgno) < segNodesRequired(*ss))
             copyNodes(&ss->overflow, ss);
         ss->inode = (int) ss->nNodes;
     } else if (inext == 255) {
         setFork(ss->node, ss->kval, ss->nNodes);
-        ss->kval = getKeyVal(ss->key, ++ss->kpos);
+        ss->kval = keyVal(ss->key, ++ss->kpos);
 
 		Node tnode = { kNodeFork };
 		setFork(&tnode, 255, 255);
         if (capacity(ss->pgno) - size(ss->pgno)
-            < getSegNodesRequired(*ss) + 1
+            < segNodesRequired(*ss) + 1
         ) {
             copyNodes(&ss->overflow, ss);
-            addNode(&ss->overflow, tnode);
+            appendNode(&ss->overflow, tnode);
     		ss->inode = (int) ++ss->nNodes;
         } else {
-            nodeAppend(ss->pgno, &tnode);
+            append(ss->pgno, tnode);
     		ss->inode = (int) ++ss->nNodes;
         }
     } else {
-        ss->kval = getKeyVal(ss->key, ++ss->kpos);
+        ss->kval = keyVal(ss->key, ++ss->kpos);
+        ss->inode = inext;
     }
 
     return false;
@@ -467,20 +479,20 @@ void StrTrieBase::addInPlaceSegs(SearchState * ss) {
             asSeg0(kMaxSegLen),
             (uint8_t) (ss->nNodes + 1)
         };
-        ss->node = nodeAppend(ss->pgno, &tnode);
+        ss->node = append(ss->pgno, tnode);
         ss->inode = (uint8_t) ss->nNodes++;
         for (auto spos = 0; spos < kMaxSegLen; ++spos, ++ss->kpos)
-            pushSegVal(ss->node, spos, getKeyVal(ss->key, ss->kpos));
+            pushSegVal(ss->node, spos, keyVal(ss->key, ss->kpos));
     }
     if (ss->kpos < ss->klen) {
         Node tnode = {
             asSeg0(ss->klen - ss->kpos),
             255
         };
-        ss->node = nodeAppend(ss->pgno, &tnode);
+        ss->node = append(ss->pgno, tnode);
         ss->inode = (uint8_t) ss->nNodes++;
         for (auto spos = 0; ss->kpos < ss->klen; ++spos, ++ss->kpos)
-            pushSegVal(ss->node, spos, getKeyVal(ss->key, ss->kpos));
+            pushSegVal(ss->node, spos, keyVal(ss->key, ss->kpos));
     }
     if (ss->node)
         ss->node->data[1] = 255;
@@ -499,21 +511,22 @@ void StrTrieBase::addOverflowSegs(SearchState * ss) {
             tnode.seg.inext = 255;
         }
         for (auto spos = 0u; spos < tnode.seg.len; ++spos, ++ss->kpos)
-            tnode.seg.data[spos] = getKeyVal(ss->key, ss->kpos);
+            tnode.seg.data[spos] = keyVal(ss->key, ss->kpos);
     }
 }
 
 //===========================================================================
-bool StrTrieBase::insert(string_view srckey) {
+// Returns true if key was inserted
+bool StrTrieBase::insert(string_view key) {
     SearchState ss = {};
-    ss.key = srckey;
+    ss.key = key;
     ss.pgno = empty() ? m_heap.alloc() : m_heap.root();
     ss.nNodes = size(ss.pgno);
     ss.inode = 0;
     ss.node = nullptr;
     ss.kpos = 0; // nibble of key being processed
     ss.klen = ss.key.size() * 2;
-    ss.kval = getKeyVal(ss.key, ss.kpos);
+    ss.kval = keyVal(ss.key, ss.kpos);
 
     while (ss.inode < ss.nNodes) {
         ss.node = nodeAt(ss.pgno, ss.inode);
@@ -521,11 +534,11 @@ bool StrTrieBase::insert(string_view srckey) {
         switch (ntype) {
         case kNodeSeg:
             if (insertAtSeg(&ss))
-                return true;
+                return !ss.found;   // return true if inserted
             break;
         case kNodeFork:
             if (insertAtFork(&ss))
-                return true;
+                return !ss.found;   // return true if inserted
             break;
         default:
             logMsgFatal() << "Invalid StrTrieBase node type: " << ntype;
@@ -539,13 +552,53 @@ bool StrTrieBase::insert(string_view srckey) {
         addOverflowSegs(&ss);
     }
 
+    // was an insert; return true
     return true;
 }
 
 //===========================================================================
 bool StrTrieBase::contains(std::string_view key) const {
-    string out;
-    return lowerBound(&out, key) && out == key;
+    if (empty())
+        return false;
+    auto kpos = 0;
+    auto klen = key.size() * 2;
+    auto kval = keyVal(key, kpos);
+    auto pgno = m_heap.root();
+    auto inode = 0;
+    auto node = (const Node *) nullptr;
+
+    for (;;) {
+        node = nodeAt(pgno, inode);
+        auto ntype = nodeType(node);
+        if (ntype == kNodeFork) {
+            if (kpos == klen) {
+                inode = node->data[1];
+                return inode == 255;
+            }
+            inode = getFork(node, kval);
+            if (inode == 255)
+                return kpos + 1 == klen;
+            kval = keyVal(key, ++kpos);
+            continue;
+        }
+
+        if (ntype == kNodeSeg) {
+            auto slen = segLen(node);
+            if (klen - kpos < slen) {
+                return false;
+            } else {
+                for (auto spos = 0; spos < slen; ++spos) {
+                    auto sval = segVal(node, spos);
+                    if (sval != kval)
+                        return false;
+                    kval = keyVal(key, ++kpos);
+                }
+            }
+            inode = node->data[1];
+            if (inode == 255)
+                return kpos == klen;
+        }
+    }
 }
 
 //===========================================================================
@@ -555,10 +608,11 @@ bool StrTrieBase::lowerBound(string * out, std::string_view key) const {
         return false;
     auto kpos = 0;
     auto klen = key.size() * 2;
-    auto kval = getKeyVal(key, kpos);
+    auto kval = keyVal(key, kpos);
     auto pgno = m_heap.root();
     auto inode = 0;
     auto node = (const Node *) nullptr;
+    auto noEqual = false;
 
     while (inode != 255) {
         node = nodeAt(pgno, inode);
@@ -569,19 +623,34 @@ bool StrTrieBase::lowerBound(string * out, std::string_view key) const {
                 break;
             }
             inode = getFork(node, kval);
-            kval = getKeyVal(key, ++kpos);
+            kval = keyVal(key, ++kpos);
             continue;
         }
 
         if (ntype == kNodeSeg) {
-            auto slen = getSegLen(node);
-            if (klen - kpos < slen)
+            auto slen = segLen(node);
+            if (klen - kpos < slen) {
+                for (auto spos = 0; kpos < klen; ++spos) {
+                    auto sval = segVal(node, spos);
+                    if (sval == kval) {
+                        kval = keyVal(key, ++kpos);
+                        continue;
+                    }
+                    if (sval < kval) {
+                        // TODO: go back to last lower branch
+                        assert(0);
+                    }
+                    noEqual = true;
+                    //goto follow to end of this greater key
+                }
                 return false;
-            for (auto spos = 0; spos < slen; ++spos) {
-                auto sval = getSegVal(node, spos);
-                if (sval != kval)
-                    return false;
-                kval = getKeyVal(key, ++kpos);
+            } else {
+                for (auto spos = 0; spos < slen; ++spos) {
+                    auto sval = segVal(node, spos);
+                    if (sval != kval)
+                        return false;
+                    kval = keyVal(key, ++kpos);
+                }
             }
             inode = node->data[1];
             if (kpos == klen)
@@ -628,7 +697,8 @@ ostream & StrTrieBase::dump(ostream & os) const {
             os << " - Fork\n";
             break;
         case kNodeSeg:
-            os << " - Segment/" << (int) getSegLen(node) << "\n";
+            os << " - Segment[" << (int) segLen(node) << "], nxt="
+                << (int) node->data[1] << "\n";
             break;
         default:
             os << " - UNKNOWN(" << ntype << ")\n";

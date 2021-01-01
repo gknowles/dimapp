@@ -42,7 +42,7 @@ test_script:
   - bin\pargen --test
   - bin\path
   - bin\str
-#  - bin\strtrie
+  - bin\strtrie --test
   - bin\time
   - bin\tokentable
   - bin\uset
