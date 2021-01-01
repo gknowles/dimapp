@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2019.
+// Copyright Glen Knowles 2019 - 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // pageheap.h - dim core
@@ -43,11 +43,14 @@ public:
 template <int N>
 class PageHeap : public IPageHeap {
 public:
+    void clear();
+
     size_t root() const override;
     size_t pageSize() const override;
 
-    bool empty() const override;
     size_t alloc() override;
+
+    bool empty() const override;
 
     uint8_t * ptr(size_t pgno) override;
     const uint8_t * ptr(size_t pgno) const override;
@@ -55,6 +58,12 @@ public:
 private:
     std::vector<std::unique_ptr<uint8_t[]>> m_pages;
 };
+
+//===========================================================================
+template <int N>
+inline void PageHeap<N>::clear() {
+    m_pages.clear();
+}
 
 //===========================================================================
 template <int N>
