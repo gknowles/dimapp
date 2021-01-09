@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2019 - 2020.
+// Copyright Glen Knowles 2019 - 2021.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // pageheap.h - dim core
@@ -44,6 +44,7 @@ template <int N>
 class PageHeap : public IPageHeap {
 public:
     void clear();
+    size_t pageCount() const;
 
     size_t root() const override;
     size_t pageSize() const override;
@@ -63,6 +64,12 @@ private:
 template <int N>
 inline void PageHeap<N>::clear() {
     m_pages.clear();
+}
+
+//===========================================================================
+template <int N>
+inline size_t PageHeap<N>::pageCount() const {
+    return m_pages.size();
 }
 
 //===========================================================================
