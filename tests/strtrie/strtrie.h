@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2019 - 2020.
+// Copyright Glen Knowles 2019 - 2021.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // Map from strings to other strings
@@ -8,15 +8,10 @@
 
 #include "cppconf/cppconf.h"
 
-//#include "pageheap.h"
 #include "core/pageheap.h"
 
-#include <cstdint>
-#include <memory>
 #include <string>
 #include <string_view>
-#include <variant>
-#include <vector>
 
 namespace Dim {
 
@@ -32,7 +27,6 @@ public:
     using value_type = std::string;
     class Iterator;
     struct Node;
-    struct SearchState;
 
 public:
     StrTrieBase (IPageHeap & heap) : m_heap{heap} {}
@@ -40,7 +34,7 @@ public:
     // returns whether key was inserted (didn't already exist).
     bool insert(std::string_view val);
 
-    // returns whether key was deleted, was if it wasn't present
+    // returns whether key was deleted, false if it wasn't present
     bool erase(std::string_view val);
 
     explicit operator bool() const { return !empty(); }
@@ -61,31 +55,6 @@ public:
     std::ostream & dump(std::ostream & os) const;
 
 private:
-    bool insertAtFork (SearchState * ss);
-    bool insertAtSeg (SearchState * ss);
-    bool splitSegInPlace(
-        SearchState * ss,
-        uint8_t spos,
-        uint8_t slen,
-        uint8_t sval
-    );
-    void addInPlaceSegs(SearchState * ss);
-    bool splitSegToOverflow(
-        SearchState * ss,
-        uint8_t spos,
-        uint8_t slen,
-        uint8_t sval
-    );
-    void addOverflowSegs(SearchState * ss);
-
-    Node * append(size_t pgno, const Node & node);
-    Node * nodeAt(size_t pgno, size_t pos);
-    const Node * nodeAt(size_t pgno, size_t pos) const;
-
-    // size and capacity, measured in nodes
-    size_t size(size_t pgno) const;
-    size_t capacity(size_t pgno) const;
-
     IPageHeap & m_heap;
 };
 

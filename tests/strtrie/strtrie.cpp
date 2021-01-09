@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2019 - 2020.
+// Copyright Glen Knowles 2019 - 2021.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // Uses the page height minimization algorithm for trees described in
@@ -66,7 +66,7 @@ enum NodeType : int8_t {
     kNodeFork,
 };
 
-struct OverflowNode {
+struct UpdateNode {
     NodeType type;
     union {
         struct {
@@ -81,40 +81,61 @@ struct OverflowNode {
     };
 };
 
+struct SearchState {
+    string_view key;
+    int kpos = 0;
+    size_t klen = 0;
+    uint8_t kval = 0;
+
+    // Current page
+    size_t pgno = 0;
+    size_t nNodes = 0;
+
+    // Current node
+    int inode = 0;
+    StrTrieBase::Node * node = nullptr;
+
+    // Fork to adjacent key
+    int fpos = -1;
+    int ifork = -1;
+
+    // Was key found?
+    bool found = false;
+
+    // Used when more nodes are being added than will fit on the page.
+    vector<OverflowNode> overflow;
+
+    IPageHeap * heap = nullptr;
+
+    SearchState(string_view key, IPageHeap * heap);
+};
+
 } // namespace
 
 
 /****************************************************************************
 *
-*   StrTrieBase
+*   StrTrieBase::Node
 *
 ***/
 
 struct StrTrieBase::Node {
     uint8_t data[kNodeLen];
+
+    bool operator==(const Node&) const = default;
 };
 
-struct StrTrieBase::SearchState {
-    string_view key;
-    size_t pgno;
-    size_t nNodes;
-    int inode;
-    StrTrieBase::Node * node;
-    int kpos;
-    size_t klen;
-    uint8_t kval;
-    vector<OverflowNode> overflow;
-    bool found;
-};
 
-namespace Dim {
+/****************************************************************************
+*
+*   Helpers
+*
+***/
 
 //===========================================================================
 constexpr NodeType nodeType(const StrTrieBase::Node * node) {
     return NodeType(*node->data & 0x7);
 }
-
-} // namespace
 
 //===========================================================================
 static uint8_t keyVal(string_view key, size_t pos) {
@@ -165,7 +186,7 @@ static uint8_t pushSegVal(
 }
 
 //===========================================================================
-static size_t segNodesRequired (const StrTrieBase::SearchState & ss) {
+static size_t segNodesRequired (const SearchState & ss) {
     return (ss.klen - ss.kpos + kMaxSegLen - 1) / kMaxSegLen;
 }
 
@@ -185,55 +206,16 @@ static size_t setFork(
     uint8_t val,
     size_t inode
 ) {
-    auto tinode = (uint8_t) inode;
     assert(val == 255 || val < 16);
     assert(inode < 256);
+
+    auto inext = (uint8_t) inode;
     if (val == 255) {
-        node->data[1] = tinode;
+        node->data[1] = inext;
     } else {
-        node->data[val + 2] = tinode;
+        node->data[val + 2] = inext;
     }
-    return tinode;
-}
-
-//===========================================================================
-StrTrieBase::Node * StrTrieBase::append(
-    size_t pgno,
-    const StrTrieBase::Node & node
-) {
-    auto ptr = (Node *) m_heap.ptr(pgno);
-    auto & last = ptr->data[m_heap.pageSize() - 1];
-    if (last == capacity(pgno))
-        return nullptr;
-    auto inode = last++;
-    auto out = ptr + inode;
-    *out = node;
-    return out;
-}
-
-//===========================================================================
-StrTrieBase::Node * StrTrieBase::nodeAt(size_t pgno, size_t pos) {
-    auto ptr = (Node *) m_heap.ptr(pgno);
-    return ptr + pos;
-}
-
-//===========================================================================
-const StrTrieBase::Node * StrTrieBase::nodeAt(
-    size_t pgno,
-    size_t pos
-) const {
-    return const_cast<StrTrieBase *>(this)->nodeAt(pgno, pos);
-}
-
-//===========================================================================
-size_t StrTrieBase::size(size_t pgno) const {
-    auto ptr = m_heap.ptr(pgno);
-    return ptr[m_heap.pageSize() - 1];
-}
-
-//===========================================================================
-size_t StrTrieBase::capacity(size_t pgno) const {
-    return (m_heap.pageSize() - 1) / kNodeLen;
+    return inext;
 }
 
 //===========================================================================
@@ -264,7 +246,7 @@ static void appendNode (
 //===========================================================================
 static void copyNodes (
     vector<OverflowNode> * out,
-    StrTrieBase::SearchState * ss
+    SearchState * ss
 ) {
     auto ptr = ss->node - ss->inode;
     auto last = ptr + ss->nNodes;
@@ -273,8 +255,80 @@ static void copyNodes (
 }
 
 //===========================================================================
-bool StrTrieBase::splitSegInPlace (
-    StrTrieBase::SearchState * ss,
+// size measured in nodes
+static size_t size(SearchState * ss) {
+    auto ptr = ss->heap->ptr(ss->pgno);
+    return ptr[ss->heap->pageSize() - 1];
+}
+
+//===========================================================================
+// capacity measured in nodes
+static size_t capacity(SearchState * ss) {
+    return (ss->heap->pageSize() - 1) / kNodeLen;
+}
+
+//===========================================================================
+static StrTrieBase::Node * append(
+    SearchState * ss,
+    const StrTrieBase::Node & node
+) {
+    auto ptr = (StrTrieBase::Node *) ss->heap->ptr(ss->pgno);
+    auto & last = ptr->data[ss->heap->pageSize() - 1];
+    if (last == capacity(ss))
+        return nullptr;
+    auto inode = last++;
+    auto out = ptr + inode;
+    *out = node;
+    return out;
+}
+
+//===========================================================================
+static void setNode(SearchState * ss, size_t inode) {
+    ss->inode = (int) inode;
+    auto ptr = (StrTrieBase::Node *) ss->heap->ptr(ss->pgno);
+    assert(ptr);
+    ss->node = ptr + ss->inode;
+}
+
+
+/****************************************************************************
+*
+*   StrTrieBase::Iterator
+*
+***/
+
+//===========================================================================
+StrTrieBase::Iterator & StrTrieBase::Iterator::operator++() {
+    return *this;
+}
+
+
+/****************************************************************************
+*
+*   SearchState
+*
+***/
+
+//===========================================================================
+SearchState::SearchState(string_view key, IPageHeap * heap)
+    : key(key)
+    , kpos(0)
+    , klen(key.size() * 2)
+    , kval(keyVal(key, kpos))
+    , heap(heap)
+{}
+
+
+/****************************************************************************
+*
+*   Insert
+*
+***/
+
+//===========================================================================
+// Returns true if there is more to do
+static bool splitSegInPlace (
+    SearchState * ss,
     uint8_t spos,
     uint8_t slen,
     uint8_t sval
@@ -293,12 +347,8 @@ bool StrTrieBase::splitSegInPlace (
             auto sval = segVal(ss->node, tpos + spos + 1);
             pushSegVal(&tnode, tpos, sval);
         }
-        append(ss->pgno, tnode);
+        append(ss, tnode);
         inext = (uint8_t) ss->nNodes++;
-
-        // FIXME: Is this just a no-op? Maybe left over from when it was in
-        // a vector that could be moved by append?
-        ss->node = nodeAt(ss->pgno, ss->inode);
     }
     if (!spos) {
         // Only single element after detaching tail, so no lead segment
@@ -318,21 +368,22 @@ bool StrTrieBase::splitSegInPlace (
         setFork(&tnode, sval, inext);
         if (ss->kpos == ss->klen) {
             setFork(&tnode, ss->kval, 255);
-            append(ss->pgno, tnode);
-            return true;
+            append(ss, tnode);
+            return false;
         }
         setFork(&tnode, ss->kval, ss->nNodes + 1);
-        append(ss->pgno, tnode);
+        append(ss, tnode);
         ss->inode = (int) ++ss->nNodes;
     }
 
     ss->kval = keyVal(ss->key, ++ss->kpos);
-    return false;
+    return true;
 }
 
 //===========================================================================
-bool StrTrieBase::splitSegToOverflow (
-    StrTrieBase::SearchState * ss,
+// Returns true if there is more to do
+static bool splitSegToOverflow (
+    SearchState * ss,
     uint8_t spos,
     uint8_t slen,
     uint8_t sval
@@ -377,18 +428,19 @@ bool StrTrieBase::splitSegToOverflow (
         }
         if (ss->kpos == ss->klen) {
             tnode.fork.inext[ss->kval] = (unsigned) -1;
-            return true;
+            return false;
         }
         tnode.fork.inext[ss->kval] = (unsigned) ss->nNodes + 1;
         ss->inode = (int) ++ss->nNodes;
     }
 
     ss->kval = keyVal(ss->key, ++ss->kpos);
-    return false;
+    return true;
 }
 
 //===========================================================================
-bool StrTrieBase::insertAtSeg (SearchState * ss) {
+// Returns true if there is more to do
+static bool insertAtSeg (SearchState * ss) {
     // May split on first, middle, last, after last, or advance to next node.
 
     auto spos = (uint8_t) 0; // split point where key diverges from segment
@@ -408,7 +460,7 @@ bool StrTrieBase::insertAtSeg (SearchState * ss) {
                 break;
             }
             // Continue search at next node
-            return false;
+            return true;
         }
         sval = segVal(ss->node, spos);
     }
@@ -416,14 +468,18 @@ bool StrTrieBase::insertAtSeg (SearchState * ss) {
     // Replace segment with [lead segment] fork [tail segment]
     auto adds = (spos > 0) // needs lead segment
         + (spos < slen); // needs tail segment
-    if (capacity(ss->pgno) - size(ss->pgno) >= segNodesRequired(*ss) + adds)
+    if (capacity(ss) - size(ss)
+        >= segNodesRequired(*ss) + adds
+    ) {
         return splitSegInPlace(ss, spos, slen, sval);
+    }
 
     return splitSegToOverflow(ss, spos, slen, sval);
 }
 
 //===========================================================================
-bool StrTrieBase::insertAtFork (SearchState * ss) {
+// Returns true if there is more to do
+static bool insertAtFork (SearchState * ss) {
     if (ss->kpos == ss->klen) {
         assert(ss->kval == 255);
         auto inext = ss->node->data[1];
@@ -433,34 +489,37 @@ bool StrTrieBase::insertAtFork (SearchState * ss) {
             assert(inext == 255);
             ss->found = true;
         }
-        return true;
+        return false;
     }
 
     auto inext = getFork(ss->node, ss->kval);
     if (!inext) {
         if (ss->kpos + 1 == ss->klen) {
             setFork(ss->node, ss->kval, 255);
-            return true;
+            return false;
         }
         setFork(ss->node, ss->kval, ss->nNodes);
         ss->kval = keyVal(ss->key, ++ss->kpos);
-        if (capacity(ss->pgno) - size(ss->pgno) < segNodesRequired(*ss))
+        if (capacity(ss) - size(ss)
+            < segNodesRequired(*ss)
+        ) {
             copyNodes(&ss->overflow, ss);
+        }
         ss->inode = (int) ss->nNodes;
     } else if (inext == 255) {
         setFork(ss->node, ss->kval, ss->nNodes);
         ss->kval = keyVal(ss->key, ++ss->kpos);
 
-		Node tnode = { kNodeFork };
+		StrTrieBase::Node tnode = { kNodeFork };
 		setFork(&tnode, 255, 255);
-        if (capacity(ss->pgno) - size(ss->pgno)
+        if (capacity(ss) - size(ss)
             < segNodesRequired(*ss) + 1
         ) {
             copyNodes(&ss->overflow, ss);
             appendNode(&ss->overflow, tnode);
     		ss->inode = (int) ++ss->nNodes;
         } else {
-            append(ss->pgno, tnode);
+            append(ss, tnode);
     		ss->inode = (int) ++ss->nNodes;
         }
     } else {
@@ -468,28 +527,28 @@ bool StrTrieBase::insertAtFork (SearchState * ss) {
         ss->inode = inext;
     }
 
-    return false;
+    return true;
 }
 
 //===========================================================================
-void StrTrieBase::addInPlaceSegs(SearchState * ss) {
+static void addInPlaceSegs(SearchState * ss) {
     ss->node = nullptr;
     while (ss->klen - ss->kpos > kMaxSegLen) {
-        Node tnode = {
+        StrTrieBase::Node tnode = {
             asSeg0(kMaxSegLen),
             (uint8_t) (ss->nNodes + 1)
         };
-        ss->node = append(ss->pgno, tnode);
+        ss->node = append(ss, tnode);
         ss->inode = (uint8_t) ss->nNodes++;
         for (auto spos = 0; spos < kMaxSegLen; ++spos, ++ss->kpos)
             pushSegVal(ss->node, spos, keyVal(ss->key, ss->kpos));
     }
     if (ss->kpos < ss->klen) {
-        Node tnode = {
+        StrTrieBase::Node tnode = {
             asSeg0(ss->klen - ss->kpos),
             255
         };
-        ss->node = append(ss->pgno, tnode);
+        ss->node = append(ss, tnode);
         ss->inode = (uint8_t) ss->nNodes++;
         for (auto spos = 0; ss->kpos < ss->klen; ++spos, ++ss->kpos)
             pushSegVal(ss->node, spos, keyVal(ss->key, ss->kpos));
@@ -499,7 +558,7 @@ void StrTrieBase::addInPlaceSegs(SearchState * ss) {
 }
 
 //===========================================================================
-void StrTrieBase::addOverflowSegs(SearchState * ss) {
+static void addOverflowSegs(SearchState * ss) {
     for (; ss->kpos < ss->klen; ss->kpos += kMaxSegLen) {
         auto & tnode = ss->overflow.emplace_back(OverflowNode{kNodeSeg});
         ss->nNodes += 1;
@@ -518,26 +577,19 @@ void StrTrieBase::addOverflowSegs(SearchState * ss) {
 //===========================================================================
 // Returns true if key was inserted
 bool StrTrieBase::insert(string_view key) {
-    SearchState ss = {};
-    ss.key = key;
+    auto ss = SearchState(key, &m_heap);
     ss.pgno = empty() ? m_heap.alloc() : m_heap.root();
-    ss.nNodes = size(ss.pgno);
-    ss.inode = 0;
-    ss.node = nullptr;
-    ss.kpos = 0; // nibble of key being processed
-    ss.klen = ss.key.size() * 2;
-    ss.kval = keyVal(ss.key, ss.kpos);
+    ss.nNodes = size(&ss);
 
     while (ss.inode < ss.nNodes) {
-        ss.node = nodeAt(ss.pgno, ss.inode);
-        auto ntype = nodeType(ss.node);
-        switch (ntype) {
+        setNode(&ss, ss.inode);
+        switch (auto ntype = ::nodeType(ss.node)) {
         case kNodeSeg:
-            if (insertAtSeg(&ss))
+            if (!insertAtSeg(&ss))
                 return !ss.found;   // return true if inserted
             break;
         case kNodeFork:
-            if (insertAtFork(&ss))
+            if (!insertAtFork(&ss))
                 return !ss.found;   // return true if inserted
             break;
         default:
@@ -556,87 +608,182 @@ bool StrTrieBase::insert(string_view key) {
     return true;
 }
 
+
+/****************************************************************************
+*
+*   Erase
+*
+***/
+
 //===========================================================================
-bool StrTrieBase::contains(std::string_view key) const {
-    if (empty())
+// Returns true if there is more to do
+static bool findLastForkAtFork(SearchState * ss) {
+    ss->inode = getFork(ss->node, ss->kval);
+    if (!ss->inode)
         return false;
-    auto kpos = 0;
-    auto klen = key.size() * 2;
-    auto kval = keyVal(key, kpos);
-    auto pgno = m_heap.root();
-    auto inode = 0;
-    auto node = (const Node *) nullptr;
+    if (ss->inode == 255) {
+        if (ss->kpos == ss->klen)
+            ss->found = true;
+        return false;
+    }
+    if (ss->kpos == ss->klen)
+        return false;
+
+    ss->ifork = ss->inode;
+    ss->fpos = ss->kpos;
+    ss->kval = keyVal(ss->key, ++ss->kpos);
+    return true;
+}
+
+//===========================================================================
+// Returns true if there is more to do
+static bool findLastForkAtSeg(SearchState * ss) {
+    auto slen = segLen(ss->node);
+    if (ss->klen - ss->kpos < slen)
+        return false;
+    for (auto spos = 0; spos < slen; ++spos) {
+        auto sval = segVal(ss->node, spos);
+        if (sval != ss->kval)
+            return false;
+        ss->kval = keyVal(ss->key, ++ss->kpos);
+    }
+    ss->inode = ss->node->data[1];
+    if (ss->kpos != ss->klen)
+        return ss->inode != 255;
+    ss->found = true;
+    return false;
+}
+
+//===========================================================================
+static void findLastFork(SearchState * ss) {
+    ss->ifork = ss->inode;
+    ss->fpos = 0;
 
     for (;;) {
-        node = nodeAt(pgno, inode);
-        auto ntype = nodeType(node);
+        setNode(ss, ss->inode);
+        switch (auto ntype = ::nodeType(ss->node)) {
+        case kNodeSeg:
+            if (!findLastForkAtSeg(ss))
+                return;
+            break;
+        case kNodeFork:
+            if (!findLastForkAtFork(ss))
+                return;
+            break;
+        default:
+            logMsgFatal() << "Invalid StrTrieBase node type: " << ntype;
+        }
+    }
+}
+
+constexpr static StrTrieBase::Node s_emptyFork = { kNodeFork };
+
+//===========================================================================
+bool StrTrieBase::erase(string_view key) {
+    if (empty())
+        return false;
+
+    auto ss = SearchState(key, &m_heap);
+    ss.pgno = m_heap.root();
+    ss.nNodes = size(&ss);
+
+    findLastFork(&ss);
+    if (!ss.found)
+        return false;
+
+    setNode(&ss, ss.ifork);
+    ss.kpos = ss.fpos;
+    ss.inode = getFork(ss.node, ss.kval);
+    setFork(ss.node, ss.kval, 0);
+    if (*ss.node == s_emptyFork) {
+    }
+    if (memcmp(ss.node, &s_emptyFork, sizeof *ss.node)) {
+        //
+    }
+
+    return true;
+}
+
+
+/****************************************************************************
+*
+*   Find
+*
+***/
+
+//===========================================================================
+bool StrTrieBase::contains(string_view key) const {
+    if (empty())
+        return false;
+
+    auto ss = SearchState(key, &m_heap);
+    ss.pgno = m_heap.root();
+
+    for (;;) {
+        setNode(&ss, ss.inode);
+        auto ntype = ::nodeType(ss.node);
         if (ntype == kNodeFork) {
-            if (kpos == klen) {
-                inode = node->data[1];
-                return inode == 255;
+            if (ss.kpos == ss.klen) {
+                ss.inode = ss.node->data[1];
+                return ss.inode == 255;
             }
-            inode = getFork(node, kval);
-            if (inode == 255)
-                return kpos + 1 == klen;
-            kval = keyVal(key, ++kpos);
+            ss.inode = getFork(ss.node, ss.kval);
+            if (ss.inode == 255)
+                return ss.kpos + 1 == ss.klen;
+            ss.kval = keyVal(ss.key, ++ss.kpos);
             continue;
         }
 
         if (ntype == kNodeSeg) {
-            auto slen = segLen(node);
-            if (klen - kpos < slen) {
+            auto slen = segLen(ss.node);
+            if (ss.klen - ss.kpos < slen)
                 return false;
-            } else {
-                for (auto spos = 0; spos < slen; ++spos) {
-                    auto sval = segVal(node, spos);
-                    if (sval != kval)
-                        return false;
-                    kval = keyVal(key, ++kpos);
-                }
+            for (auto spos = 0; spos < slen; ++spos) {
+                auto sval = segVal(ss.node, spos);
+                if (sval != ss.kval)
+                    return false;
+                ss.kval = keyVal(ss.key, ++ss.kpos);
             }
-            inode = node->data[1];
-            if (inode == 255)
-                return kpos == klen;
+            ss.inode = ss.node->data[1];
+            if (ss.inode == 255)
+                return ss.kpos == ss.klen;
         }
     }
 }
 
 //===========================================================================
-bool StrTrieBase::lowerBound(string * out, std::string_view key) const {
+bool StrTrieBase::lowerBound(string * out, string_view key) const {
     out->clear();
     if (empty())
         return false;
-    auto kpos = 0;
-    auto klen = key.size() * 2;
-    auto kval = keyVal(key, kpos);
-    auto pgno = m_heap.root();
-    auto inode = 0;
-    auto node = (const Node *) nullptr;
+
+    auto ss = SearchState(key, &m_heap);
+    ss.pgno = m_heap.root();
     auto noEqual = false;
 
-    while (inode != 255) {
-        node = nodeAt(pgno, inode);
-        auto ntype = nodeType(node);
+    while (ss.inode != 255) {
+        setNode(&ss, ss.inode);
+        auto ntype = ::nodeType(ss.node);
         if (ntype == kNodeFork) {
-            if (kpos == klen) {
-                inode = node->data[1];
+            if (ss.kpos == ss.klen) {
+                ss.inode = ss.node->data[1];
                 break;
             }
-            inode = getFork(node, kval);
-            kval = keyVal(key, ++kpos);
+            ss.inode = getFork(ss.node, ss.kval);
+            ss.kval = keyVal(key, ++ss.kpos);
             continue;
         }
 
         if (ntype == kNodeSeg) {
-            auto slen = segLen(node);
-            if (klen - kpos < slen) {
-                for (auto spos = 0; kpos < klen; ++spos) {
-                    auto sval = segVal(node, spos);
-                    if (sval == kval) {
-                        kval = keyVal(key, ++kpos);
+            auto slen = segLen(ss.node);
+            if (ss.klen - ss.kpos < slen) {
+                for (auto spos = 0; ss.kpos < ss.klen; ++spos) {
+                    auto sval = segVal(ss.node, spos);
+                    if (sval == ss.kval) {
+                        ss.kval = keyVal(ss.key, ++ss.kpos);
                         continue;
                     }
-                    if (sval < kval) {
+                    if (sval < ss.kval) {
                         // TODO: go back to last lower branch
                         assert(0);
                     }
@@ -646,21 +793,28 @@ bool StrTrieBase::lowerBound(string * out, std::string_view key) const {
                 return false;
             } else {
                 for (auto spos = 0; spos < slen; ++spos) {
-                    auto sval = segVal(node, spos);
-                    if (sval != kval)
+                    auto sval = segVal(ss.node, spos);
+                    if (sval != ss.kval)
                         return false;
-                    kval = keyVal(key, ++kpos);
+                    ss.kval = keyVal(key, ++ss.kpos);
                 }
             }
-            inode = node->data[1];
-            if (kpos == klen)
+            ss.inode = ss.node->data[1];
+            if (ss.kpos == ss.klen)
                 break;
         }
     }
 
     *out = key;
-    return inode == 255 && kpos == klen;
+    return ss.inode == 255 && ss.kpos == ss.klen;
 }
+
+
+/****************************************************************************
+*
+*   Misc
+*
+***/
 
 //===========================================================================
 StrTrieBase::Iterator StrTrieBase::begin() const {
@@ -674,22 +828,22 @@ StrTrieBase::Iterator StrTrieBase::end() const {
 
 //===========================================================================
 ostream & StrTrieBase::dump(ostream & os) const {
-    os << "---\n";
     if (empty())
         return os;
 
-    string out;
-    auto pgno = m_heap.root();
-    auto nNodes = size(pgno);
-    for (auto inode = 0; inode < nNodes; ++inode) {
-        auto node = nodeAt(pgno, inode);
-        os << inode << ": ";
+    auto ss = SearchState({}, &m_heap);
+    ss.pgno = m_heap.root();
+    ss.nNodes = size(&ss);
+    ss.inode = 0;
+    for (; ss.inode < ss.nNodes; ++ss.inode) {
+        setNode(&ss, ss.inode);
+        os << ss.inode << ": ";
         for (auto i = 0; i < kNodeLen; ++i) {
             if (i % 4 == 2) os.put(' ');
-            hexByte(os, node->data[i]);
+            hexByte(os, ss.node->data[i]);
         }
 
-        switch (auto ntype = nodeType(node)) {
+        switch (auto ntype = ::nodeType(ss.node)) {
         case kNodeInvalid:
             os << " -\n";
             break;
@@ -697,8 +851,8 @@ ostream & StrTrieBase::dump(ostream & os) const {
             os << " - Fork\n";
             break;
         case kNodeSeg:
-            os << " - Segment[" << (int) segLen(node) << "], nxt="
-                << (int) node->data[1] << "\n";
+            os << " - Segment[" << (int) segLen(ss.node) << "], nxt="
+                << (int) ss.node->data[1] << "\n";
             break;
         default:
             os << " - UNKNOWN(" << ntype << ")\n";
@@ -706,16 +860,4 @@ ostream & StrTrieBase::dump(ostream & os) const {
         }
     }
     return os;
-}
-
-
-/****************************************************************************
-*
-*   StrTrieBase::Iterator
-*
-***/
-
-//===========================================================================
-StrTrieBase::Iterator & StrTrieBase::Iterator::operator++() {
-    return *this;
 }
