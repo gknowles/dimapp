@@ -38,9 +38,13 @@ static bool s_verbose;
 ***/
 
 //===========================================================================
-static void dump(const StrTrie & vals) {
-    if (s_verbose)
-        vals.dump(cout);
+static bool insert(StrTrie * vals, string_view val) {
+    auto rc = vals->insert(val);
+    if (s_verbose) {
+        cout << "---\ninsert: " << val << '\n';
+        vals->dump(cout);
+    }
+    return rc;
 }
 
 //===========================================================================
@@ -49,32 +53,27 @@ static void internalTests() {
     StrTrie vals;
     string out;
     EXPECT(vals.empty());
-    auto b = vals.insert("abc");
+    auto b = insert(&vals, "abc");
     EXPECT(b);
-    dump(vals);
     EXPECT(vals.contains("abc"));
     EXPECT(!vals.contains("b"));
     EXPECT(!vals.contains("ab"));
     EXPECT(!vals.contains("abcd"));
 
-    b = vals.insert("a");
-    dump(vals);
+    b = insert(&vals, "a");
     EXPECT(b);
     EXPECT(vals.contains("a"));
     EXPECT(vals.contains("abc"));
     EXPECT(!vals.contains("ab"));
     EXPECT(!vals.contains("abcd"));
 
-    b = vals.insert("ac");
-    dump(vals);
+    b = insert(&vals, "ac");
     EXPECT(vals.contains("ac"));
 
-    b = vals.insert("ade");
-    dump(vals);
+    b = insert(&vals, "ade");
     EXPECT(vals.contains("ade"));
 
-    b = vals.insert("abcdefghijklmnopqrstuvwxyz");
-    dump(vals);
+    b = insert(&vals, "abcdefghijklmnopqrstuvwxyz");
     EXPECT(vals.contains("abcdefghijklmnopqrstuvwxyz"));
     EXPECT(vals.contains("abc"));
 }
