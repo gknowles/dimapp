@@ -97,7 +97,7 @@ constexpr uint64_t pow2Ceil(uint64_t num) {
 // Number of bits in the number that are set
 constexpr int hammingWeight(uint64_t x) {
 #if __cpp_lib_bitops
-    return (int) std::popcount(x);
+    return std::popcount(x);
 #else
     x = x - ((x >> 1) & 0x5555'5555'5555'5555);
     x = (x & 0x3333'3333'3333'3333) + ((x >> 2) & 0x3333'3333'3333'3333);
@@ -170,9 +170,9 @@ constexpr uint16_t bswap16(unsigned uval) {
 //===========================================================================
 constexpr uint32_t bswap32(unsigned uval) {
     auto val = (uint32_t) uval;
-    return ((val & 0xff000000) >> 24)
-        | ((val & 0x00ff0000) >> 8)
-        | ((val & 0x0000ff00) << 8)
+    return ((val & 0xff00'0000) >> 24)
+        | ((val & 0x00ff'0000) >> 8)
+        | ((val & 0x0000'ff00) << 8)
         | (val << 24);
 }
 
