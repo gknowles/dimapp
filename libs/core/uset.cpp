@@ -68,7 +68,7 @@ enum NodeType {
     kEmpty,     // contains no values
     kFull,      // contains all values in node's domain
     kVector,    // has vector of values
-    kBitmap,    // has bitmap of values
+    kBitmap,    // has bitmap covering all of node's possible values
     kMeta,      // vector of nodes
     kNodeTypes,
     kMetaEnd,   // marks end of node vector
@@ -1024,11 +1024,14 @@ static int cmpRMetaIf(const Node & left, const Node & right) {
 static int cmpIter(const Node & left, const Node & right) {
     auto li = UnsignedSet::Iterator(&left);
     auto ri = UnsignedSet::Iterator(&right);
-    for (; li && ri; ++li, ++ri) {
+    for (;; ++li, ++ri) {
+        if (!li)
+            return !ri ? 0 : -2;
+        if (!ri)
+            return 2;
         if (*li != *ri)
             return *li > *ri ? 1 : -1;
     }
-    return 2 * ((bool) ri - (bool) li);
 }
 
 //===========================================================================
@@ -1037,11 +1040,14 @@ static int cmpVec(const Node & left, const Node & right) {
     auto le = li + left.numValues;
     auto ri = right.values;
     auto re = ri + right.numValues;
-    for (; li != le && ri != re; ++li, ++ri) {
+    for (;; ++li, ++ri) {
+        if (li == le)
+            return ri == re ? 0 : -2;
+        if (ri == re)
+            return 2;
         if (*li != *ri)
             return *li > *ri ? 1 : -1;
     }
-    return 2 * ((ri == re) - (li == le));
 }
 
 //===========================================================================
@@ -1064,7 +1070,11 @@ static int cmpBit(const Node & left, const Node & right) {
     auto le = li + kDataSize / sizeof *li;
     auto ri = (uint64_t *) right.values;
     auto re = ri + kDataSize / sizeof *ri;
-    for (; li != le && ri != re; ++li, ++ri) {
+    for (;; ++li, ++ri) {
+        if (li == le)
+            return ri == re ? 0 : -2;
+        if (ri == re)
+            return 2;
         if (int rc = cmpBit(*li, *ri)) {
             if (rc == -2) {
                 while (++li != le) {
@@ -1080,7 +1090,6 @@ static int cmpBit(const Node & left, const Node & right) {
             return rc;
         }
     }
-    return 2 * ((ri == re) - (li == le));
 }
 
 //===========================================================================
@@ -1089,7 +1098,11 @@ static int cmpMeta(const Node & left, const Node & right) {
     auto le = li + left.numValues;
     auto ri = right.nodes;
     auto re = ri + right.numValues;
-    for (; li != le && ri != re; ++li, ++ri) {
+    for (;; ++li, ++ri) {
+        if (li == le)
+            return ri == re ? 0 : -2;
+        if (ri == re)
+            return 2;
         if (int rc = compare(*li, *ri)) {
             if (rc == -2) {
                 while (++li != le) {
@@ -1105,13 +1118,12 @@ static int cmpMeta(const Node & left, const Node & right) {
             return rc;
         }
     }
-    return 2 * ((ri == re) - (li == le));
 }
 
 //===========================================================================
 static int compare(const Node & left, const Node & right) {
     using CompareFn = int(const Node & left, const Node & right);
-    static CompareFn * const functs[][kNodeTypes] = {
+    constexpr static CompareFn * functs[][kNodeTypes] = {
     // LEFT                         RIGHT
     //             empty      full        vector     bitmap     meta
     /* empty  */ { cmpEqual,  cmpLessIf,  cmpLessIf, cmpLessIf, cmpLessIf },
@@ -1204,13 +1216,14 @@ static void insMeta(Node & left, const Node & right) {
         if (li->type != kFull)
             goto NOT_FULL;
     }
+    // Convert to full node.
     insFull(left, right);
     return;
 
-    for (; li != le; ++li, ++ri) {
+NOT_FULL:
+    ++li, ++ri;
+    for (; li != le; ++li, ++ri)
         insert(*li, *ri);
-NOT_FULL: ;
-    }
 }
 
 //===========================================================================
@@ -1290,10 +1303,10 @@ static void insMeta(Node & left, Node && right) {
     insFull(left, move(right));
     return;
 
-    for (; li != le; ++li, ++ri) {
+NOT_FULL:
+    ++li, ++ri;
+    for (; li != le; ++li, ++ri)
         insert(*li, move(*ri));
-NOT_FULL: ;
-    }
 }
 
 //===========================================================================
@@ -1365,9 +1378,11 @@ static void eraFind(Node & left, const Node & right) {
             continue;
         }
         if (!ptr->findFirst(&node, &value, right, *li)) {
-            do {
+            for (;;) {
                 *out++ = *li++;
-            } while (li != le);
+                if (li == le)
+                    break;
+            }
             break;
         }
         if (value != *li)
@@ -1427,10 +1442,10 @@ static void eraMeta(Node & left, const Node & right) {
     eraEmpty(left, right);
     return;
 
-    for (; li != le; ++li, ++ri) {
+NOT_EMPTY:
+    ++li, ++ri;
+    for (; li != le; ++li, ++ri)
         erase(*li, *ri);
-NOT_EMPTY: ;
-    }
 }
 
 //===========================================================================
@@ -1549,10 +1564,10 @@ static void isecMeta(Node & left, const Node & right) {
     isecEmpty(left, right);
     return;
 
-    for (; li != le; ++li, ++ri) {
+NOT_EMPTY:
+    ++li, ++ri;
+    for (; li != le; ++li, ++ri)
         intersect(*li, *ri);
-NOT_EMPTY: ;
-    }
 }
 
 //===========================================================================
@@ -1632,10 +1647,10 @@ static void isecMeta(Node & left, Node && right) {
     isecEmpty(left, move(right));
     return;
 
-    for (; li != le; ++li, ++ri) {
+NOT_EMPTY:
+    ++li, ++ri;
+    for (; li != le; ++li, ++ri)
         intersect(*li, move(*ri));
-NOT_EMPTY: ;
-    }
 }
 
 //===========================================================================
