@@ -1756,6 +1756,11 @@ size_t UnsignedSet::size() const {
 }
 
 //===========================================================================
+size_t UnsignedSet::max_size() const {
+    return numeric_limits<unsigned>::max();
+}
+
+//===========================================================================
 void UnsignedSet::clear() {
     impl(m_node)->destroy(m_node);
     m_node = {};

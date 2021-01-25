@@ -184,6 +184,7 @@ public:
     using difference_type = UnsignedSet::difference_type;
     using pointer = const value_type*;
     using reference = value_type;
+
 public:
     Iterator() {}
     Iterator(const Iterator & from) = default;
@@ -191,13 +192,13 @@ public:
     Iterator(const Node * node, value_type value, unsigned minDepth);
     Iterator & operator++();
     explicit operator bool() const { return (bool) m_node; }
-    bool operator== (const Iterator & right) const;
+    bool operator==(const Iterator & right) const;
     value_type operator*() const { return m_value; }
     const value_type * operator->() const { return &m_value; }
 
     Iterator lastContiguous() const;
+
 private:
-    friend class UnsignedSet;
     const Node * m_node = nullptr;
     value_type m_value = 0;
     unsigned m_minDepth = 0;
@@ -218,6 +219,7 @@ public:
     using difference_type = ptrdiff_t;
     using pointer = const value_type*;
     using reference = const value_type&;
+
 public:
     RangeIterator() {}
     RangeIterator(const RangeIterator & from) = default;
@@ -227,6 +229,7 @@ public:
     bool operator== (const RangeIterator & right) const;
     const value_type & operator*() const { return m_value; }
     const value_type * operator->() const { return &m_value; }
+
 private:
     static constexpr value_type kEndValue{1, 0};
     Iterator m_iter;
