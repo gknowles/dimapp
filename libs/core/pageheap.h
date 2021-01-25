@@ -6,6 +6,9 @@
 
 #include "cppconf/cppconf.h"
 
+#include "uset.h"
+
+#include <cassert>
 #include <cstdint>
 #include <memory>
 #include <vector>
@@ -23,11 +26,13 @@ class IPageHeap {
 public:
     virtual ~IPageHeap() = default;
 
+    virtual size_t alloc() = 0;
+    virtual void free(size_t pgno) = 0;
+
     virtual size_t root() const = 0;
     virtual size_t pageSize() const = 0;
 
     virtual bool empty() const = 0;
-    virtual size_t alloc() = 0;
 
     virtual uint8_t * ptr(size_t pgno) = 0;
     virtual const uint8_t * ptr(size_t pgno) const = 0;
@@ -44,19 +49,21 @@ template <int N>
 class PageHeap : public IPageHeap {
 public:
     void clear();
+
     size_t pageCount() const;
+
+    size_t alloc() override;
+    void free(size_t pgno) override;
 
     size_t root() const override;
     size_t pageSize() const override;
-
-    size_t alloc() override;
-
     bool empty() const override;
 
     uint8_t * ptr(size_t pgno) override;
     const uint8_t * ptr(size_t pgno) const override;
 
 private:
+    UnsignedSet m_freePages;
     std::vector<std::unique_ptr<uint8_t[]>> m_pages;
 };
 
@@ -70,6 +77,25 @@ inline void PageHeap<N>::clear() {
 template <int N>
 inline size_t PageHeap<N>::pageCount() const {
     return m_pages.size();
+}
+
+//===========================================================================
+template <int N>
+inline size_t PageHeap<N>::alloc() {
+    if (m_freePages) {
+        return m_freePages.pop_front();
+    } else {
+        m_pages.push_back(std::make_unique<uint8_t[]>(pageSize()));
+        return m_pages.size() - 1;
+    }
+}
+
+//===========================================================================
+template <int N>
+inline void PageHeap<N>::free(size_t pgno) {
+    assert(pgno < m_pages.size());
+    if (!m_freePages.insert((unsigned) pgno))
+        assert(!"page already free");
 }
 
 //===========================================================================
@@ -88,13 +114,6 @@ inline size_t PageHeap<N>::pageSize() const {
 template <int N>
 inline bool PageHeap<N>::empty() const {
     return m_pages.empty();
-}
-
-//===========================================================================
-template <int N>
-inline size_t PageHeap<N>::alloc() {
-    m_pages.push_back(std::make_unique<uint8_t[]>(pageSize()));
-    return m_pages.size() - 1;
 }
 
 //===========================================================================
