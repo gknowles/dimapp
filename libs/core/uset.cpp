@@ -27,6 +27,7 @@ const unsigned kStepBits =
     hammingWeight(pow2Ceil(kDataSize / sizeof Node + 1) / 2 - 1);
 const unsigned kMaxDepth =
     (kBitWidth - kLeafBits + kStepBits - 1) / kStepBits;
+static_assert(UnsignedSet::kBaseBits + kLeafBits >= kBitWidth);
 
 constexpr unsigned maxDepth() {
     return kMaxDepth;
@@ -40,6 +41,13 @@ constexpr unsigned valueMask(unsigned depth) {
     return (1 << bits) - 1;
 }
 
+constexpr unsigned relBase(unsigned value, unsigned depth) {
+    return (value & ~valueMask(depth)) >> 8;
+}
+constexpr unsigned relValue(unsigned value, unsigned depth) {
+    return value & valueMask(depth);
+}
+
 constexpr uint16_t numNodes(unsigned depth) {
     uint16_t ret = 0;
     if (depth) {
@@ -48,31 +56,39 @@ constexpr uint16_t numNodes(unsigned depth) {
     }
     return ret;
 }
+constexpr unsigned nodePos(unsigned value, unsigned depth) {
+    return relValue(value, depth) / (valueMask(depth + 1) + 1);
+}
 
-constexpr unsigned relBase(unsigned value, unsigned depth) {
-    return (value & ~valueMask(depth)) >> 8;
+constexpr unsigned absBase(unsigned value, unsigned depth) {
+    return value & ~valueMask(depth);
 }
-constexpr unsigned relValue(unsigned value, unsigned depth) {
-    return value & valueMask(depth);
+constexpr unsigned absFinal(unsigned value, unsigned depth) {
+    return absBase(value, depth) + valueMask(depth);
 }
+
 constexpr unsigned absBase(const Node & node) {
     return node.base << 8;
+}
+constexpr unsigned absFinal(const Node & node) {
+    return absBase(node) + valueMask(node.depth);
 }
 constexpr unsigned absSize(const Node & node) {
     return valueMask(node.depth) + 1;
 }
 
-namespace {
-
-enum NodeType {
-    kEmpty,     // contains no values
-    kFull,      // contains all values in node's domain
-    kVector,    // has vector of values
-    kBitmap,    // has bitmap covering all of node's possible values
-    kMeta,      // vector of nodes
+enum UnsignedSet::Node::Type : int {
+    kEmpty,         // contains no values
+    kFull,          // contains all values in node's domain
+    kVector,        // has vector of values
+    kBitmap,        // has bitmap covering all of node's possible values
+    kMeta,          // vector of nodes
     kNodeTypes,
-    kMetaEnd,   // marks end of node vector
+    kMetaParent,    // link to parent meta node
 };
+static_assert(Node::kMetaParent < 1 << UnsignedSet::kTypeBits);
+
+namespace {
 
 struct IImplBase {
     using value_type = unsigned;
@@ -95,21 +111,40 @@ struct IImplBase {
     virtual bool erase(Node & node, unsigned value) = 0;
 
     virtual size_t size(const Node & node) const = 0;
+
+    // Find value equal to or greater than "base", returns false if no such
+    // value exists.
     virtual bool findFirst(
         const Node ** onode,
         unsigned * ovalue,
         const Node & node,
-        unsigned first
+        unsigned base
+    ) const = 0;
+    // Find value equal to or less than "base", return false is no such value.
+    virtual bool findLast(
+        const Node ** onode,
+        unsigned * ovalue,
+        const Node & node,
+        unsigned base
     ) const = 0;
 
-    // [first] is empty - return true
-    // [first, end of node] is full - update onode & ovalue, return false
+    // [base] is empty - return true
+    // [start of node, base] is full - update onode & ovalue, return false
+    // otherwise - update onode & ovalue, return true
+    virtual bool firstContiguous(
+        const Node ** onode,
+        unsigned * ovalue,
+        const Node & node,
+        unsigned base
+    ) const = 0;
+    // [base] is empty - return true
+    // [base, end of node] is full - update onode & ovalue, return false
     // otherwise - update onode & ovalue, return true
     virtual bool lastContiguous(
         const Node ** onode,
         unsigned * ovalue,
         const Node & node,
-        unsigned first
+        unsigned base
     ) const = 0;
 };
 
@@ -130,13 +165,25 @@ struct EmptyImpl final : IImplBase {
         const Node ** onode,
         unsigned * ovalue,
         const Node & node,
-        unsigned first
+        unsigned base
+    ) const override;
+    bool findLast(
+        const Node ** onode,
+        unsigned * ovalue,
+        const Node & node,
+        unsigned base
+    ) const override;
+    bool firstContiguous(
+        const Node ** onode,
+        unsigned * ovalue,
+        const Node & node,
+        unsigned base
     ) const override;
     bool lastContiguous(
         const Node ** onode,
         unsigned * ovalue,
         const Node & node,
-        unsigned first
+        unsigned base
     ) const override;
 };
 
@@ -157,13 +204,25 @@ struct FullImpl final : IImplBase {
         const Node ** onode,
         unsigned * ovalue,
         const Node & node,
-        unsigned first
+        unsigned base
+    ) const override;
+    bool findLast(
+        const Node ** onode,
+        unsigned * ovalue,
+        const Node & node,
+        unsigned base
+    ) const override;
+    bool firstContiguous(
+        const Node ** onode,
+        unsigned * ovalue,
+        const Node & node,
+        unsigned base
     ) const override;
     bool lastContiguous(
         const Node ** onode,
         unsigned * ovalue,
         const Node & node,
-        unsigned first
+        unsigned base
     ) const override;
 };
 
@@ -188,13 +247,25 @@ struct VectorImpl final : IImplBase {
         const Node ** onode,
         unsigned * ovalue,
         const Node & node,
-        unsigned first
+        unsigned base
+    ) const override;
+    bool findLast(
+        const Node ** onode,
+        unsigned * ovalue,
+        const Node & node,
+        unsigned base
+    ) const override;
+    bool firstContiguous(
+        const Node ** onode,
+        unsigned * ovalue,
+        const Node & node,
+        unsigned base
     ) const override;
     bool lastContiguous(
         const Node ** onode,
         unsigned * ovalue,
         const Node & node,
-        unsigned first
+        unsigned base
     ) const override;
 
 private:
@@ -223,13 +294,25 @@ struct BitmapImpl final : IImplBase {
         const Node ** onode,
         unsigned * ovalue,
         const Node & node,
-        unsigned first
+        unsigned base
+    ) const override;
+    bool findLast(
+        const Node ** onode,
+        unsigned * ovalue,
+        const Node & node,
+        unsigned base
+    ) const override;
+    bool firstContiguous(
+        const Node ** onode,
+        unsigned * ovalue,
+        const Node & node,
+        unsigned base
     ) const override;
     bool lastContiguous(
         const Node ** onode,
         unsigned * ovalue,
         const Node & node,
-        unsigned first
+        unsigned base
     ) const override;
 };
 
@@ -254,13 +337,25 @@ struct MetaImpl final : IImplBase {
         const Node ** onode,
         unsigned * ovalue,
         const Node & node,
-        unsigned first
+        unsigned base
+    ) const override;
+    bool findLast(
+        const Node ** onode,
+        unsigned * ovalue,
+        const Node & node,
+        unsigned base
+    ) const override;
+    bool firstContiguous(
+        const Node ** onode,
+        unsigned * ovalue,
+        const Node & node,
+        unsigned base
     ) const override;
     bool lastContiguous(
         const Node ** onode,
         unsigned * ovalue,
         const Node & node,
-        unsigned first
+        unsigned base
     ) const override;
 
 private:
@@ -289,7 +384,7 @@ static IImplBase * s_impls[] = {
     &s_bitmapImpl,
     &s_metaImpl,
 };
-static_assert(size(s_impls) == kNodeTypes);
+static_assert(size(s_impls) == Node::kNodeTypes);
 
 //===========================================================================
 static IImplBase * impl(const Node & node) {
@@ -306,7 +401,7 @@ static IImplBase * impl(const Node & node) {
 
 //===========================================================================
 void EmptyImpl::init(Node & node, bool full) {
-    assert(node.type == kEmpty);
+    assert(node.type == Node::kEmpty);
     assert(!full);
     node.numBytes = 0;
     node.numValues = 0;
@@ -315,8 +410,8 @@ void EmptyImpl::init(Node & node, bool full) {
 
 //===========================================================================
 void EmptyImpl::init(Node & node, const Node & from) {
-    assert(node.type == kEmpty);
-    assert(from.type == kEmpty);
+    assert(node.type == Node::kEmpty);
+    assert(from.type == Node::kEmpty);
     node = from;
 }
 
@@ -326,10 +421,10 @@ void EmptyImpl::destroy(Node & node)
 
 //===========================================================================
 bool EmptyImpl::insert(Node & node, unsigned value) {
-    assert(node.type == kEmpty);
+    assert(node.type == Node::kEmpty);
     assert(relBase(value, node.depth) == node.base);
     destroy(node);
-    node.type = kVector;
+    node.type = Node::kVector;
     s_vectorImpl.init(node, false);
     s_vectorImpl.insert(node, value);
     return true;
@@ -364,9 +459,29 @@ bool EmptyImpl::findFirst(
     const Node ** onode,
     unsigned * ovalue,
     const Node & node,
-    unsigned first
+    unsigned base
 ) const {
     return false;
+}
+
+//===========================================================================
+bool EmptyImpl::findLast(
+    const Node ** onode,
+    unsigned * ovalue,
+    const Node & node,
+    unsigned base
+) const {
+    return false;
+}
+
+//===========================================================================
+bool EmptyImpl::firstContiguous(
+    const Node ** onode,
+    unsigned * ovalue,
+    const Node & node,
+    unsigned base
+) const {
+    return true;
 }
 
 //===========================================================================
@@ -374,7 +489,7 @@ bool EmptyImpl::lastContiguous(
     const Node ** onode,
     unsigned * ovalue,
     const Node & node,
-    unsigned first
+    unsigned base
 ) const {
     return true;
 }
@@ -388,7 +503,7 @@ bool EmptyImpl::lastContiguous(
 
 //===========================================================================
 void FullImpl::init(Node & node, bool full) {
-    assert(node.type == kFull);
+    assert(node.type == Node::kFull);
     assert(full);
     node.numBytes = 0;
     node.numValues = 0;
@@ -397,8 +512,8 @@ void FullImpl::init(Node & node, bool full) {
 
 //===========================================================================
 void FullImpl::init(Node & node, const Node & from) {
-    assert(node.type == kFull);
-    assert(from.type == kFull);
+    assert(node.type == Node::kFull);
+    assert(from.type == Node::kFull);
     node = from;
 }
 
@@ -425,11 +540,11 @@ bool FullImpl::erase(Node & node, unsigned value) {
     assert(relBase(value, node.depth) == node.base);
     destroy(node);
     if (node.depth == maxDepth()) {
-        node.type = kBitmap;
+        node.type = Node::kBitmap;
         s_bitmapImpl.init(node, true);
         return s_bitmapImpl.erase(node, value);
     } else {
-        node.type = kMeta;
+        node.type = Node::kMeta;
         s_metaImpl.init(node, true);
         return s_metaImpl.erase(node, value);
     }
@@ -437,7 +552,7 @@ bool FullImpl::erase(Node & node, unsigned value) {
 
 //===========================================================================
 size_t FullImpl::size(const Node & node) const {
-    return valueMask(node.depth) + 1;
+    return absSize(node);
 }
 
 //===========================================================================
@@ -445,12 +560,38 @@ bool FullImpl::findFirst(
     const Node ** onode,
     unsigned * ovalue,
     const Node & node,
-    unsigned first
+    unsigned base
 ) const {
-    assert(relBase(first, node.depth) == node.base);
+    assert(relBase(base, node.depth) == node.base);
     *onode = &node;
-    *ovalue = first;
+    *ovalue = base;
     return true;
+}
+
+//===========================================================================
+bool FullImpl::findLast(
+    const Node ** onode,
+    unsigned * ovalue,
+    const Node & node,
+    unsigned base
+) const {
+    assert(relBase(base, node.depth) == node.base);
+    *onode = &node;
+    *ovalue = base;
+    return true;
+}
+
+//===========================================================================
+bool FullImpl::firstContiguous(
+    const Node ** onode,
+    unsigned * ovalue,
+    const Node & node,
+    unsigned base
+) const {
+    assert(relBase(base, node.depth) == node.base);
+    *onode = &node;
+    *ovalue = absBase(node);
+    return false;
 }
 
 //===========================================================================
@@ -458,11 +599,11 @@ bool FullImpl::lastContiguous(
     const Node ** onode,
     unsigned * ovalue,
     const Node & node,
-    unsigned first
+    unsigned base
 ) const {
-    assert(relBase(first, node.depth) == node.base);
+    assert(relBase(base, node.depth) == node.base);
     *onode = &node;
-    *ovalue = absBase(node) + valueMask(node.depth);
+    *ovalue = absFinal(node);
     return false;
 }
 
@@ -475,7 +616,7 @@ bool FullImpl::lastContiguous(
 
 //===========================================================================
 void VectorImpl::init(Node & node, bool full) {
-    assert(node.type == kVector);
+    assert(node.type == Node::kVector);
     assert(!full);
     node.numBytes = kDataSize;
     node.numValues = 0;
@@ -484,8 +625,8 @@ void VectorImpl::init(Node & node, bool full) {
 
 //===========================================================================
 void VectorImpl::init(Node & node, const Node & from) {
-    assert(node.type == kVector);
-    assert(from.type == kVector);
+    assert(node.type == Node::kVector);
+    assert(from.type == Node::kVector);
     node = from;
     node.values = (unsigned *) malloc(node.numBytes);
     assert(node.values);
@@ -531,7 +672,7 @@ void VectorImpl::insert(
     const unsigned * last
 ) {
     while (first != last) {
-        if (node.type != kVector)
+        if (node.type != Node::kVector)
             return impl(node)->insert(node, first, last);
         insert(node, *first++);
     }
@@ -551,7 +692,7 @@ bool VectorImpl::erase(Node & node, unsigned value) {
     } else {
         // No more values, convert to empty node.
         destroy(node);
-        node.type = kEmpty;
+        node.type = Node::kEmpty;
         s_emptyImpl.init(node, false);
     }
     return true;
@@ -567,11 +708,11 @@ bool VectorImpl::findFirst(
     const Node ** onode,
     unsigned * ovalue,
     const Node & node,
-    unsigned first
+    unsigned base
 ) const {
-    assert(relBase(first, node.depth) == node.base);
+    assert(relBase(base, node.depth) == node.base);
     auto last = node.values + node.numValues;
-    auto ptr = lower_bound(node.values, last, first);
+    auto ptr = lower_bound(node.values, last, base);
     if (ptr != last) {
         *onode = &node;
         *ovalue = *ptr;
@@ -581,34 +722,89 @@ bool VectorImpl::findFirst(
 }
 
 //===========================================================================
+bool VectorImpl::findLast(
+    const Node ** onode,
+    unsigned * ovalue,
+    const Node & node,
+    unsigned base
+) const {
+    assert(relBase(base, node.depth) == node.base);
+    if (base < *node.values) {
+        return false;
+    } else if (base == *node.values) {
+        *ovalue = base;
+    } else {
+        // base > *node.values
+        auto last = node.values + node.numValues;
+        auto ptr = lower_bound(node.values + 1, last, base);
+        *ovalue = ptr[-1];
+    }
+    *onode = &node;
+    return true;
+}
+
+//===========================================================================
+bool VectorImpl::firstContiguous(
+    const Node ** onode,
+    unsigned * ovalue,
+    const Node & node,
+    unsigned base
+) const {
+    assert(relBase(base, node.depth) == node.base);
+    auto last = node.values + node.numValues;
+    auto ptr = lower_bound(node.values, last, base);
+    auto val = base;
+    if (ptr == last || *ptr != val) {
+        // Base not found, return that search is done, but leave onode and
+        // ovalue unchanged.
+        return true;
+    }
+    *onode = &node;
+    while (ptr != node.values) {
+        ptr -= 1;
+        val -= 1;
+        if (*ptr != val) {
+            *ovalue = val + 1;
+            return true;
+        }
+    }
+    *ovalue = val;
+    if (val > absBase(node))
+        return true;
+
+    // May extend into preceding node.
+    return false;
+}
+
+//===========================================================================
 bool VectorImpl::lastContiguous(
     const Node ** onode,
     unsigned * ovalue,
     const Node & node,
-    unsigned first
+    unsigned base
 ) const {
-    assert(relBase(first, node.depth) == node.base);
+    assert(relBase(base, node.depth) == node.base);
     auto last = node.values + node.numValues;
-    auto ptr = lower_bound(node.values, last, first);
-    auto val = first;
-    while (ptr != last) {
-        if (*ptr != val) {
-            if (val != first) {
-                *onode = &node;
-                *ovalue = val - 1;
-            }
-            return true;
-        }
-        val += 1;
-        ptr += 1;
-    }
-    *onode = &node;
-    if (val && val <= absBase(node) + valueMask(node.depth)) {
-        *ovalue = val - 1;
+    auto ptr = lower_bound(node.values, last, base);
+    auto val = base;
+    if (ptr == last || *ptr != val) {
+        // Base not found, return that search is done, but leave onode and
+        // ovalue unchanged.
         return true;
     }
-    // [first, end of node] is full
-    *ovalue = absBase(node) + valueMask(node.depth);
+    *onode = &node;
+    while (++ptr != last) {
+        val += 1;
+        if (*ptr != val) {
+            *ovalue = val - 1;
+            return true;
+        }
+    }
+    *ovalue = val;
+    if (val < absFinal(node))
+        return true;
+
+    // May extend into following node.
     return false;
 }
 
@@ -618,12 +814,12 @@ void VectorImpl::convertAndInsert(Node & node, unsigned value) {
     auto ptr = tmp.values;
     auto last = ptr + tmp.numValues;
     if (tmp.depth == maxDepth()) {
-        node.type = kBitmap;
+        node.type = Node::kBitmap;
         s_bitmapImpl.init(node, false);
         s_bitmapImpl.insert(node, ptr, last);
         s_bitmapImpl.insert(node, value);
     } else {
-        node.type = kMeta;
+        node.type = Node::kMeta;
         s_metaImpl.init(node, false);
         s_metaImpl.insert(node, ptr, last);
         s_metaImpl.insert(node, value);
@@ -640,7 +836,7 @@ void VectorImpl::convertAndInsert(Node & node, unsigned value) {
 
 //===========================================================================
 void BitmapImpl::init(Node & node, bool full) {
-    assert(node.type == kBitmap);
+    assert(node.type == Node::kBitmap);
     node.numBytes = kDataSize;
     node.values = (unsigned *) malloc(node.numBytes);
     assert(node.values);
@@ -655,8 +851,8 @@ void BitmapImpl::init(Node & node, bool full) {
 
 //===========================================================================
 void BitmapImpl::init(Node & node, const Node & from) {
-    assert(node.type == kBitmap);
-    assert(from.type == kBitmap);
+    assert(node.type == Node::kBitmap);
+    assert(from.type == Node::kBitmap);
     node = from;
     node.values = (unsigned *) malloc(node.numBytes);
     assert(node.values);
@@ -671,7 +867,7 @@ void BitmapImpl::destroy(Node & node) {
 
 //===========================================================================
 bool BitmapImpl::insert(Node & node, unsigned value) {
-    assert(node.type == kBitmap);
+    assert(node.type == Node::kBitmap);
     assert(relBase(value, node.depth) == node.base);
     auto base = (uint64_t *) node.values;
     value = relValue(value, node.depth);
@@ -692,7 +888,7 @@ bool BitmapImpl::insert(Node & node, unsigned value) {
             return true;
     }
     destroy(node);
-    node.type = kFull;
+    node.type = Node::kFull;
     s_fullImpl.init(node, true);
     return true;
 }
@@ -720,7 +916,7 @@ bool BitmapImpl::erase(Node & node, unsigned value) {
 
     // convert to empty
     destroy(node);
-    node.type = kEmpty;
+    node.type = Node::kEmpty;
     s_emptyImpl.init(node, false);
     return true;
 }
@@ -737,11 +933,11 @@ bool BitmapImpl::findFirst(
     const Node ** onode,
     unsigned * ovalue,
     const Node & node,
-    unsigned first
+    unsigned key
 ) const {
-    assert(relBase(first, node.depth) == node.base);
+    assert(relBase(key, node.depth) == node.base);
     auto base = (uint64_t *) node.values;
-    auto rel = relValue(first, node.depth);
+    auto rel = relValue(key, node.depth);
     assert(rel < numBits());
     BitView bits{base, numInt64s()};
     if (auto pos = bits.find(rel); pos != bits.npos) {
@@ -753,26 +949,70 @@ bool BitmapImpl::findFirst(
 }
 
 //===========================================================================
+bool BitmapImpl::findLast(
+    const Node ** onode,
+    unsigned * ovalue,
+    const Node & node,
+    unsigned key
+) const {
+    assert(relBase(key, node.depth) == node.base);
+    auto base = (uint64_t *) node.values;
+    auto rel = relValue(key, node.depth);
+    assert(rel < numBits());
+    BitView bits{base, numInt64s()};
+    if (auto pos = bits.rfind(rel); pos != bits.npos) {
+        *onode = &node;
+        *ovalue = (unsigned) pos + absBase(node);
+        return true;
+    }
+    return false;
+}
+
+//===========================================================================
+bool BitmapImpl::firstContiguous(
+    const Node ** onode,
+    unsigned * ovalue,
+    const Node & node,
+    unsigned key
+) const {
+    assert(relBase(key, node.depth) == node.base);
+    auto base = (uint64_t *) node.values;
+    auto rel = relValue(key, node.depth);
+    assert(rel < numBits());
+    BitView bits{base, numInt64s()};
+    if (auto pos = bits.rfindZero(rel); pos != bits.npos) {
+        if (auto val = (unsigned) pos + absBase(node); val != key) {
+            *onode = &node;
+            *ovalue = val + 1;
+        }
+        return true;
+    }
+    *onode = &node;
+    *ovalue = absBase(node);
+    return false;
+}
+
+//===========================================================================
 bool BitmapImpl::lastContiguous(
     const Node ** onode,
     unsigned * ovalue,
     const Node & node,
-    unsigned first
+    unsigned key
 ) const {
-    assert(relBase(first, node.depth) == node.base);
+    assert(relBase(key, node.depth) == node.base);
     auto base = (uint64_t *) node.values;
-    auto rel = relValue(first, node.depth);
+    auto rel = relValue(key, node.depth);
     assert(rel < numBits());
     BitView bits{base, numInt64s()};
     if (auto pos = bits.findZero(rel); pos != bits.npos) {
-        if (auto val = (unsigned) pos + absBase(node); val != first) {
+        if (auto val = (unsigned) pos + absBase(node); val != key) {
             *onode = &node;
             *ovalue = val - 1;
         }
         return true;
     }
     *onode = &node;
-    *ovalue = absBase(node) + valueMask(node.depth);
+    *ovalue = absFinal(node);
     return false;
 }
 
@@ -785,7 +1025,7 @@ bool BitmapImpl::lastContiguous(
 
 //===========================================================================
 void MetaImpl::init(Node & node, bool full) {
-    assert(node.type == kMeta);
+    assert(node.type == Node::kMeta);
     node.numValues = numNodes(node.depth + 1);
     node.numBytes = (node.numValues + 1) * sizeof *node.nodes;
     node.nodes = (Node *) malloc(node.numBytes);
@@ -793,7 +1033,7 @@ void MetaImpl::init(Node & node, bool full) {
     auto nptr = node.nodes;
     auto nlast = node.nodes + node.numValues;
     Node def;
-    def.type = full ? kFull : kEmpty;
+    def.type = full ? Node::kFull : Node::kEmpty;
     def.depth = node.depth + 1;
     def.base = node.base;
     def.numBytes = 0;
@@ -806,14 +1046,14 @@ void MetaImpl::init(Node & node, bool full) {
     // Internally the array of nodes contains a trailing "node" at the end that
     // is a pointer to the parent node.
     *nlast = {};
-    nlast->type = kMetaEnd;
+    nlast->type = Node::kMetaParent;
     nlast->nodes = &node;
 }
 
 //===========================================================================
 void MetaImpl::init(Node & node, const Node & from) {
-    assert(node.type == kMeta);
-    assert(from.type == kMeta);
+    assert(node.type == Node::kMeta);
+    assert(from.type == Node::kMeta);
     node = from;
     node.nodes = (Node *) malloc(node.numBytes);
     assert(node.nodes);
@@ -841,7 +1081,7 @@ void MetaImpl::destroy(Node & node) {
 //===========================================================================
 unsigned MetaImpl::nodePos(const Node & node, unsigned value) const {
     assert(relBase(value, node.depth) == node.base);
-    auto pos = relValue(value, node.depth) / (valueMask(node.depth + 1) + 1);
+    auto pos = ::nodePos(value, node.depth);
     assert(pos < node.numValues);
     return pos;
 }
@@ -852,15 +1092,15 @@ bool MetaImpl::insert(Node & node, unsigned value) {
     auto & rnode = node.nodes[pos];
     if (!impl(rnode)->insert(rnode, value))
         return false;
-    if (rnode.type != kFull)
+    if (rnode.type != Node::kFull)
         return true;
     for (unsigned i = 0; i < node.numValues; ++i) {
-        if (node.nodes[i].type != kFull)
+        if (node.nodes[i].type != Node::kFull)
             return true;
     }
     // convert to full
     destroy(node);
-    node.type = kFull;
+    node.type = Node::kFull;
     s_fullImpl.init(node, true);
     return true;
 }
@@ -881,15 +1121,15 @@ bool MetaImpl::erase(Node & node, unsigned value) {
     auto & rnode = node.nodes[pos];
     if (!impl(rnode)->erase(rnode, value))
         return false;
-    if (rnode.type != kEmpty)
+    if (rnode.type != Node::kEmpty)
         return true;
     for (unsigned i = 0; i < node.numValues; ++i) {
-        if (node.nodes[i].type != kEmpty)
+        if (node.nodes[i].type != Node::kEmpty)
             return true;
     }
     // convert to empty
     destroy(node);
-    node.type = kEmpty;
+    node.type = Node::kEmpty;
     s_emptyImpl.init(node, false);
     return true;
 }
@@ -909,17 +1149,57 @@ bool MetaImpl::findFirst(
     const Node ** onode,
     unsigned * ovalue,
     const Node & node,
-    unsigned first
+    unsigned key
 ) const {
-    auto pos = nodePos(node, first);
-    auto ptr = (const Node *) node.nodes + pos;
+    auto pos = nodePos(node, key);
+    auto ptr = node.nodes + pos;
     auto last = node.nodes + node.numValues;
     for (;;) {
-        if (impl(*ptr)->findFirst(onode, ovalue, *ptr, first))
+        if (impl(*ptr)->findFirst(onode, ovalue, *ptr, key))
             return true;
         if (++ptr == last)
             return false;
-        first = absBase(*ptr);
+        key = absFinal(*ptr);
+    }
+}
+
+//===========================================================================
+bool MetaImpl::findLast(
+    const Node ** onode,
+    unsigned * ovalue,
+    const Node & node,
+    unsigned key
+) const {
+    auto pos = nodePos(node, key);
+    auto ptr = node.nodes + pos;
+    for (;;) {
+        if (impl(*ptr)->findLast(onode, ovalue, *ptr, key))
+            return true;
+        if (ptr == node.nodes)
+            return false;
+        ptr -= 1;
+        key = absBase(*ptr);
+    }
+}
+
+//===========================================================================
+bool MetaImpl::firstContiguous(
+    const Node ** onode,
+    unsigned * ovalue,
+    const Node & node,
+    unsigned key
+) const {
+    auto pos = nodePos(node, key);
+    auto ptr = (const Node *) node.nodes + pos;
+    auto last = node.nodes + node.numValues;
+    for (;;) {
+        if (impl(*ptr)->firstContiguous(onode, ovalue, *ptr, key))
+            return true;
+        *onode = ptr;
+        *ovalue = absBase(*ptr);
+        if (++ptr == last)
+            return false;
+        key = absFinal(*ptr);
     }
 }
 
@@ -928,19 +1208,19 @@ bool MetaImpl::lastContiguous(
     const Node ** onode,
     unsigned * ovalue,
     const Node & node,
-    unsigned first
+    unsigned key
 ) const {
-    auto pos = nodePos(node, first);
+    auto pos = nodePos(node, key);
     auto ptr = (const Node *) node.nodes + pos;
     auto last = node.nodes + node.numValues;
     for (;;) {
-        if (impl(*ptr)->lastContiguous(onode, ovalue, *ptr, first))
+        if (impl(*ptr)->lastContiguous(onode, ovalue, *ptr, key))
             return true;
         *onode = ptr;
-        *ovalue = absBase(*ptr) + valueMask(ptr->depth);
+        *ovalue = absFinal(*ptr);
         if (++ptr == last)
             return false;
-        first = absBase(*ptr);
+        key = absBase(*ptr);
     }
 }
 
@@ -1106,12 +1386,12 @@ static int cmpMeta(const Node & left, const Node & right) {
         if (int rc = compare(*li, *ri)) {
             if (rc == -2) {
                 while (++li != le) {
-                    if (li->type != kEmpty)
+                    if (li->type != Node::kEmpty)
                         return 1;
                 }
             } else if (rc == 2) {
                 while (++ri != re) {
-                    if (ri->type != kEmpty)
+                    if (ri->type != Node::kEmpty)
                         return -1;
                 }
             }
@@ -1123,7 +1403,7 @@ static int cmpMeta(const Node & left, const Node & right) {
 //===========================================================================
 static int compare(const Node & left, const Node & right) {
     using CompareFn = int(const Node & left, const Node & right);
-    constexpr static CompareFn * functs[][kNodeTypes] = {
+    constexpr static CompareFn * functs[][Node::kNodeTypes] = {
     // LEFT                         RIGHT
     //             empty      full        vector     bitmap     meta
     /* empty  */ { cmpEqual,  cmpLessIf,  cmpLessIf, cmpLessIf, cmpLessIf },
@@ -1157,7 +1437,7 @@ static void insSkip(Node & left, const Node & right)
 //===========================================================================
 static void insFull(Node & left, const Node & right) {
     impl(left)->destroy(left);
-    left.type = kFull;
+    left.type = Node::kFull;
     s_fullImpl.init(left, true);
 }
 
@@ -1186,7 +1466,7 @@ static void insRIter(Node & left, const Node & right) {
 
 //===========================================================================
 static void insVec(Node & left, const Node & right) {
-    assert(right.type == kVector);
+    assert(right.type == Node::kVector);
     auto ri = right.values;
     auto re = ri + right.numValues;
     s_vectorImpl.insert(left, ri, re);
@@ -1213,7 +1493,7 @@ static void insMeta(Node & left, const Node & right) {
     auto ri = right.nodes;
     for (; li != le; ++li, ++ri) {
         insert(*li, *ri);
-        if (li->type != kFull)
+        if (li->type != Node::kFull)
             goto NOT_FULL;
     }
     // Convert to full node.
@@ -1229,7 +1509,7 @@ NOT_FULL:
 //===========================================================================
 static void insert(Node & left, const Node & right) {
     using InsertFn = void(Node & left, const Node & right);
-    static InsertFn * const functs[][kNodeTypes] = {
+    static InsertFn * const functs[][Node::kNodeTypes] = {
     // LEFT                         RIGHT
     //             empty    full     vector   bitmap     meta
     /* empty  */ { insSkip, insFull, insCopy, insCopy,   insCopy  },
@@ -1297,7 +1577,7 @@ static void insMeta(Node & left, Node && right) {
     auto ri = right.nodes;
     for (; li != le; ++li, ++ri) {
         insert(*li, move(*ri));
-        if (li->type != kFull)
+        if (li->type != Node::kFull)
             goto NOT_FULL;
     }
     insFull(left, move(right));
@@ -1312,7 +1592,7 @@ NOT_FULL:
 //===========================================================================
 static void insert(Node & left, Node && right) {
     using InsertFn = void(Node & left, Node && right);
-    static InsertFn * const functs[][kNodeTypes] = {
+    static InsertFn * const functs[][Node::kNodeTypes] = {
     // LEFT                         RIGHT
     //             empty    full     vector   bitmap     meta
     /* empty  */ { insSkip, insFull, insMove, insMove,   insMove  },
@@ -1346,7 +1626,7 @@ static void eraSkip(Node & left, const Node & right)
 //===========================================================================
 static void eraEmpty(Node & left, const Node & right) {
     impl(left)->destroy(left);
-    left.type = kEmpty;
+    left.type = Node::kEmpty;
     s_emptyImpl.init(left, false);
 }
 
@@ -1365,7 +1645,7 @@ static void eraChange(Node & left, const Node & right) {
 static void eraFind(Node & left, const Node & right) {
     // Go through values of left vector and skip (aka remove) the ones that
     // are found in right node (values to be erased).
-    assert(left.type == kVector);
+    assert(left.type == Node::kVector);
     auto li = left.values;
     auto out = li;
     auto le = li + left.numValues;
@@ -1395,7 +1675,7 @@ static void eraFind(Node & left, const Node & right) {
 
 //===========================================================================
 static void eraIter(Node & left, const Node & right) {
-    assert(right.type == kVector);
+    assert(right.type == Node::kVector);
     auto ri = right.values;
     auto re = ri + right.numValues;
     for (; ri != re; ++ri)
@@ -1436,7 +1716,7 @@ static void eraMeta(Node & left, const Node & right) {
     auto ri = right.nodes;
     for (; li != le; ++li, ++ri) {
         erase(*li, *ri);
-        if (li->type != kEmpty)
+        if (li->type != Node::kEmpty)
             goto NOT_EMPTY;
     }
     eraEmpty(left, right);
@@ -1451,7 +1731,7 @@ NOT_EMPTY:
 //===========================================================================
 static void erase(Node & left, const Node & right) {
     using EraseFn = void(Node & left, const Node & right);
-    static EraseFn * const functs[][kNodeTypes] = {
+    static EraseFn * const functs[][Node::kNodeTypes] = {
     // LEFT                         RIGHT
     //             empty    full      vector     bitmap     meta
     /* empty  */ { eraSkip, eraSkip,  eraSkip,   eraSkip,   eraSkip   },
@@ -1496,7 +1776,7 @@ static void isecCopy(Node & left, const Node & right) {
 static void isecFind(Node & left, const Node & right) {
     // Go through values of left vector and remove the ones that aren't
     // found in right node.
-    assert(left.type == kVector);
+    assert(left.type == Node::kVector);
     auto li = left.values;
     auto out = li;
     auto le = li + left.numValues;
@@ -1558,7 +1838,7 @@ static void isecMeta(Node & left, const Node & right) {
     auto ri = right.nodes;
     for (; li != le; ++li, ++ri) {
         intersect(*li, *ri);
-        if (li->type != kEmpty)
+        if (li->type != Node::kEmpty)
             goto NOT_EMPTY;
     }
     isecEmpty(left, right);
@@ -1573,7 +1853,7 @@ NOT_EMPTY:
 //===========================================================================
 static void intersect(Node & left, const Node & right) {
     using IsectFn = void(Node & left, const Node & right);
-    static IsectFn * const functs[][kNodeTypes] = {
+    static IsectFn * const functs[][Node::kNodeTypes] = {
     // LEFT                         RIGHT
     //             empty      full      vector     bitmap      meta
     /* empty  */ { isecSkip,  isecSkip, isecSkip,  isecSkip,   isecSkip },
@@ -1641,7 +1921,7 @@ static void isecMeta(Node & left, Node && right) {
     auto ri = right.nodes;
     for (; li != le; ++li, ++ri) {
         intersect(*li, move(*ri));
-        if (li->type != kEmpty)
+        if (li->type != Node::kEmpty)
             goto NOT_EMPTY;
     }
     isecEmpty(left, move(right));
@@ -1656,7 +1936,7 @@ NOT_EMPTY:
 //===========================================================================
 static void intersect(Node & left, Node && right) {
     using IsectFn = void(Node & left, Node && right);
-    static IsectFn * const functs[][kNodeTypes] = {
+    static IsectFn * const functs[][Node::kNodeTypes] = {
     // LEFT                         RIGHT
     //             empty      full      vector     bitmap      meta
     /* empty  */ { isecSkip,  isecSkip, isecEmpty, isecEmpty,  isecEmpty },
@@ -1712,6 +1992,11 @@ UnsignedSet::UnsignedSet(string_view from) {
 }
 
 //===========================================================================
+UnsignedSet::UnsignedSet(unsigned low, unsigned high) {
+    insert(low, high);
+}
+
+//===========================================================================
 UnsignedSet::~UnsignedSet() {
     clear();
 }
@@ -1737,17 +2022,27 @@ UnsignedSet::iterator UnsignedSet::begin() const {
 
 //===========================================================================
 UnsignedSet::iterator UnsignedSet::end() const {
-    return {};
+    return {&m_node, 0, kDepthEnd};
+}
+
+//===========================================================================
+UnsignedSet::reverse_iterator UnsignedSet::rbegin() const {
+    return reverse_iterator(end());
+}
+
+//===========================================================================
+UnsignedSet::reverse_iterator UnsignedSet::rend() const {
+    return reverse_iterator(begin());
 }
 
 //===========================================================================
 UnsignedSet::RangeRange UnsignedSet::ranges() const {
-    return {begin()};
+    return RangeRange(begin());
 }
 
 //===========================================================================
 bool UnsignedSet::empty() const {
-    return m_node.type == kEmpty;
+    return m_node.type == Node::kEmpty;
 }
 
 //===========================================================================
@@ -1769,7 +2064,7 @@ void UnsignedSet::clear() {
 //===========================================================================
 void UnsignedSet::fill() {
     clear();
-    m_node.type = kFull;
+    m_node.type = Node::kFull;
     s_fullImpl.init(m_node, true);
 }
 
@@ -1795,6 +2090,12 @@ void UnsignedSet::assign(const UnsignedSet & from) {
 void UnsignedSet::assign(string_view src) {
     clear();
     insert(src);
+}
+
+//===========================================================================
+void UnsignedSet::assign(unsigned low, unsigned high) {
+    clear();
+    insert(low, high);
 }
 
 //===========================================================================
@@ -1857,10 +2158,23 @@ void UnsignedSet::erase(const UnsignedSet & other) {
 }
 
 //===========================================================================
+void UnsignedSet::erase(unsigned low, unsigned high) {
+    // TODO: make this efficient
+    for (auto i = low; i <= high; ++i)
+        erase(i);
+}
+
+//===========================================================================
 unsigned UnsignedSet::pop_front() {
-    auto i = begin();
-    auto val = *i;
-    erase(i);
+    auto val = front();
+    erase(val);
+    return val;
+}
+
+//===========================================================================
+unsigned UnsignedSet::pop_back() {
+    auto val = back();
+    erase(val);
     return val;
 }
 
@@ -1888,20 +2202,43 @@ strong_ordering UnsignedSet::compare(const UnsignedSet & right) const {
 }
 
 //===========================================================================
-bool UnsignedSet::includes(const UnsignedSet & other) const {
-    assert(!"not implemented");
-    return false;
+bool UnsignedSet::contains(const UnsignedSet & other) const {
+    assert(!"not implemented efficiently");
+    auto tmp = *this;
+    tmp.intersect(other);
+    return tmp.size() == other.size();
 }
 
 //===========================================================================
 bool UnsignedSet::intersects(const UnsignedSet & other) const {
-    assert(!"not implemented");
-    return false;
+    assert(!"not implemented efficiently");
+    auto tmp = *this;
+    tmp.intersect(other);
+    return !tmp.empty();
 }
 
 //===========================================================================
 bool UnsignedSet::operator==(const UnsignedSet & right) const {
     return compare(right) == 0;
+}
+
+//===========================================================================
+unsigned UnsignedSet::front() const {
+    auto i = begin();
+    return *i;
+}
+
+//===========================================================================
+unsigned UnsignedSet::back() const {
+    const Node * node;
+    unsigned value;
+    impl(m_node)->findLast(
+        &node,
+        &value,
+        m_node,
+        numeric_limits<value_type>::max()
+    );
+    return value;
 }
 
 //===========================================================================
@@ -1917,7 +2254,7 @@ bool UnsignedSet::contains(unsigned val) const {
 //===========================================================================
 auto UnsignedSet::find(unsigned val) const -> iterator {
     auto first = lowerBound(val);
-    return first && *first == val ? first : iterator{};
+    return first && *first == val ? first : end();
 }
 
 //===========================================================================
@@ -1937,7 +2274,12 @@ auto UnsignedSet::lowerBound(unsigned val) const -> iterator {
 //===========================================================================
 auto UnsignedSet::upperBound(unsigned val) const -> iterator {
     val += 1;
-    return val ? lowerBound(val) : iterator{};
+    return val ? lowerBound(val) : end();
+}
+
+//===========================================================================
+auto UnsignedSet::firstContiguous(iterator where) const -> iterator {
+    return where.firstContiguous();
 }
 
 //===========================================================================
@@ -1974,42 +2316,133 @@ UnsignedSet::Iterator::Iterator(
     , m_value{value}
     , m_minDepth{minDepth}
 {
-    if (!m_node) {
-        assert(!m_value && !m_minDepth);
+    if (m_minDepth == kDepthEnd) {
+        assert(!m_value);
     } else {
+        assert(m_node);
         if (!impl(*m_node)->findFirst(&m_node, &m_value, *m_node, m_value))
-            *this = {};
+            *this = end();
     }
 }
 
 //===========================================================================
 bool UnsignedSet::Iterator::operator== (const Iterator & right) const {
-    return m_value == right.m_value && m_node == right.m_node;
+    return m_value == right.m_value
+        && m_minDepth == right.m_minDepth
+        && (m_node == right.m_node || !m_node || !right.m_node);
 }
 
 //===========================================================================
 UnsignedSet::Iterator & UnsignedSet::Iterator::operator++() {
-    if (m_value < absBase(*m_node) + valueMask(m_node->depth)) {
+    if (!*this) {
+        if (m_node) {
+            auto from = absBase(*m_node);
+            auto depth = m_node->depth;
+            if (impl(*m_node)->findFirst(&m_node, &m_value, *m_node, from))
+                m_minDepth = depth;
+        }
+        return *this;
+    }
+    if (m_value < absFinal(*m_node)) {
         m_value += 1;
         if (impl(*m_node)->findFirst(&m_node, &m_value, *m_node, m_value))
             return *this;
     }
 
-    for (;;) {
-        if (m_node->depth == m_minDepth) {
-            *this = {};
-            break;
-        }
-        m_node += 1;
-        if (m_node->type == kMetaEnd) {
-            m_node = m_node->nodes;
-            continue;
-        }
-        m_value = absBase(*m_node);
-        if (impl(*m_node)->findFirst(&m_node, &m_value, *m_node, m_value))
-            break;
+CHECK_DEPTH:
+    if (m_node->depth == m_minDepth) {
+        *this = end();
+        return *this;
     }
-    return *this;
+
+CHECK_END_OF_DEPTH:
+    if (absFinal(*m_node) == absFinal(m_value, m_node->depth - 1)) {
+        m_node += 1;
+        assert(m_node->type == Node::kMetaParent);
+        m_node = m_node->nodes;
+        m_value = absBase(*m_node);
+        goto CHECK_DEPTH;
+    }
+
+    m_node += 1;
+    m_value = absBase(*m_node);
+    if (impl(*m_node)->findFirst(&m_node, &m_value, *m_node, m_value))
+        return *this;
+    goto CHECK_END_OF_DEPTH;
+}
+
+//===========================================================================
+UnsignedSet::Iterator & UnsignedSet::Iterator::operator--() {
+    if (!*this) {
+        if (m_node) {
+            auto from = absFinal(*m_node);
+            auto depth = m_node->depth;
+            if (impl(*m_node)->findLast(&m_node, &m_value, *m_node, from))
+                m_minDepth = depth;
+        }
+        return *this;
+    }
+    if (m_value > absBase(*m_node)) {
+        m_value -= 1;
+        if (impl(*m_node)->findLast(&m_node, &m_value, *m_node, m_value))
+            return *this;
+    }
+
+CHECK_DEPTH:
+    if (m_node->depth == m_minDepth) {
+        *this = end();
+        return *this;
+    }
+
+CHECK_END_OF_DEPTH:
+    if (absBase(*m_node) == absBase(m_value, m_node->depth - 1)) {
+        m_node += numNodes(m_node->depth);
+        assert(m_node->type == Node::kMetaParent);
+        m_node = m_node->nodes;
+        m_value = absFinal(*m_node);
+        goto CHECK_DEPTH;
+    }
+
+    m_node -= 1;
+    m_value = absFinal(*m_node);
+    if (impl(*m_node)->findLast(&m_node, &m_value, *m_node, m_value))
+        return *this;
+    goto CHECK_END_OF_DEPTH;
+}
+
+//===========================================================================
+UnsignedSet::Iterator UnsignedSet::Iterator::end() const {
+    return {m_node, 0, kDepthEnd};
+}
+
+//===========================================================================
+UnsignedSet::Iterator UnsignedSet::Iterator::firstContiguous() const {
+    auto node = m_node;
+    auto value = m_value;
+    if (impl(*node)->firstContiguous(&node, &value, *node, value))
+        return {node, value, m_minDepth};
+
+    // Use a temporary to scout out the next node (which may require traversing
+    // the tree to get there) since if it starts with a discontinuity we'll end
+    // the search without advancing.
+    auto ptr = node;
+
+CHECK_DEPTH:
+    if (ptr->depth == m_minDepth)
+        return {node, value, m_minDepth};
+
+CHECK_END_OF_DEPTH:
+    if (absBase(*ptr) == absBase(value, ptr->depth - 1)) {
+        ptr += numNodes(ptr->depth);
+        assert(ptr->type == Node::kMetaParent);
+        ptr = ptr->nodes;
+        goto CHECK_DEPTH;
+    }
+
+    ptr -= 1;
+    if (impl(*ptr)->firstContiguous(&node, &value, *ptr, absFinal(*ptr)))
+        return {node, value, m_minDepth};
+    goto CHECK_END_OF_DEPTH;
 }
 
 //===========================================================================
@@ -2019,20 +2452,27 @@ UnsignedSet::Iterator UnsignedSet::Iterator::lastContiguous() const {
     if (impl(*node)->lastContiguous(&node, &value, *node, value))
         return {node, value, m_minDepth};
 
+    // Use a temporary to scout out the next node (which may require traversing
+    // the tree to find) since if it starts with a discontinuity we end the
+    // search at the current node.
     auto ptr = node;
-    for (;;) {
-        if (!ptr->depth)
-            break;
+
+CHECK_DEPTH:
+    if (ptr->depth == m_minDepth)
+        return {node, value, m_minDepth};
+
+CHECK_END_OF_DEPTH:
+    if (absFinal(*ptr) == absFinal(value, ptr->depth - 1)) {
         ptr += 1;
-        if (ptr->type == kMetaEnd) {
-            ptr = ptr->nodes;
-            assert(ptr->type != kMetaEnd);
-            continue;
-        }
-        if (impl(*ptr)->lastContiguous(&node, &value, *ptr, absBase(*ptr)))
-            break;
+        assert(ptr->type == Node::kMetaParent);
+        ptr = ptr->nodes;
+        goto CHECK_DEPTH;
     }
-    return {node, value, m_minDepth};
+
+    ptr += 1;
+    if (impl(*ptr)->lastContiguous(&node, &value, *ptr, absBase(*ptr)))
+        return {node, value, m_minDepth};
+    goto CHECK_END_OF_DEPTH;
 }
 
 
@@ -2060,12 +2500,45 @@ bool UnsignedSet::RangeIterator::operator== (
 //===========================================================================
 UnsignedSet::RangeIterator & UnsignedSet::RangeIterator::operator++() {
     if (!m_iter) {
-        m_value = kEndValue;
+        if (m_value == kEndValue) {
+            ++m_iter;
+            if (m_iter) {
+                m_value.first = *m_iter;
+                m_iter = m_iter.lastContiguous();
+                m_value.second = *m_iter;
+                ++m_iter;
+            }
+        } else {
+            m_value = kEndValue;
+        }
     } else {
         m_value.first = *m_iter;
         m_iter = m_iter.lastContiguous();
         m_value.second = *m_iter;
         ++m_iter;
+    }
+    return *this;
+}
+
+//===========================================================================
+UnsignedSet::RangeIterator & UnsignedSet::RangeIterator::operator--() {
+    if (!m_iter) {
+        if (m_value == kEndValue) {
+            --m_iter;
+            if (m_iter) {
+                m_value.second = *m_iter;
+                m_iter = m_iter.firstContiguous();
+                m_value.first = *m_iter;
+                --m_iter;
+            }
+        } else {
+            m_value = kEndValue;
+        }
+    } else {
+        m_value.second = *m_iter;
+        m_iter = m_iter.firstContiguous();
+        m_value.first = *m_iter;
+        --m_iter;
     }
     return *this;
 }

@@ -52,9 +52,21 @@ static void test() {
     tmp.insert(3);
     v.assign(tmp.begin(), tmp.end());
     EXPECT(v == vector<unsigned>{{3, 5}});
+
+    // Implementation detail defines: ++end() == begin()
+    val = *++tmp.end();
+    EXPECT(val == 3);
+    val = *--tmp.end();
+    EXPECT(val == 5);
+
+    v.assign(tmp.rbegin(), tmp.rend());
+    EXPECT(v == vector<unsigned>{{5, 3}});
+
     auto r = tmp.ranges();
     vector<pair<unsigned,unsigned>> vr(r.begin(), r.end());
     EXPECT(vr == vector<pair<unsigned,unsigned>>{{3,3},{5,5}});
+    vr.assign(r.rbegin(), r.rend());
+    EXPECT(vr == vector<pair<unsigned,unsigned>>{{5,5},{3,3}});
 
     UnsignedSet tmp2;
     tmp2.insert(5);
@@ -73,6 +85,9 @@ static void test() {
     r = tmp.ranges();
     vr.assign(r.begin(), r.end());
     EXPECT(vr == vector<pair<unsigned,unsigned>>{{0,64},{4096,4159}});
+    val = (++r.end())->first;
+    EXPECT(val == 0);
+
     tmp.insert(4095);
     EXPECT(tmp.size() == 130);
     r = tmp.ranges();
