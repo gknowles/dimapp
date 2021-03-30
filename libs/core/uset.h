@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2020.
+// Copyright Glen Knowles 2017 - 2021.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // uset.h - dim core
@@ -26,17 +26,20 @@ namespace Dim {
 
 class UnsignedSet {
 public:
-    class RangeIterator;
+    template<typename T> class RevIterBase;
+    class Iter;
     class RangeRange;
-    class Iterator;
+    class RangeIter;
 
     using value_type = unsigned;
     using reference = value_type&;
     using const_reference = const value_type&;
-    using iterator = Iterator;
-    using reverse_iterator = std::reverse_iterator<iterator>;
+    using iterator = Iter;
+    using reverse_iterator = typename RevIterBase<Iter>;
     using difference_type = ptrdiff_t;
     using size_type = size_t;
+    using range_iterator = RangeIter;
+    using reverse_range_iterator = typename RevIterBase<RangeIter>;
 
 public:
     constexpr static unsigned kTypeBits = 4;
@@ -120,21 +123,23 @@ public:
     void swap(UnsignedSet & other);
 
     // compare
-    std::strong_ordering compare(const UnsignedSet & right) const;
-    std::strong_ordering operator<=>(const UnsignedSet & right) const;
+    std::strong_ordering compare(const UnsignedSet & other) const;
+    std::strong_ordering operator<=>(const UnsignedSet & other) const;
     bool operator==(const UnsignedSet & right) const;
 
     // search
     unsigned front() const;
     unsigned back() const;
     size_t count(unsigned val) const;
+    size_t count(unsigned low, unsigned high) const;
     iterator find(unsigned val) const;
     bool contains(unsigned val) const;
     bool contains(const UnsignedSet & other) const;
     bool intersects(const UnsignedSet & other) const;
-    std::pair<iterator, iterator> equalRange(unsigned val) const;
+    iterator findLessEqual(unsigned val) const;
     iterator lowerBound(unsigned val) const;
     iterator upperBound(unsigned val) const;
+    std::pair<iterator, iterator> equalRange(unsigned val) const;
 
     // firstContiguous and lastContiguous search backwards and forwards
     // respectively, for as long as consecutive values are present. For
@@ -194,11 +199,50 @@ inline void UnsignedSet::insert(std::initializer_list<unsigned> il) {
 
 /****************************************************************************
 *
-*   UnsignedSet::Iterator
+*   UnsignedSet::RevIterBase
 *
 ***/
 
-class UnsignedSet::Iterator {
+template<typename T>
+class UnsignedSet::RevIterBase {
+public:
+    using iterator_type = T;
+    using iterator_category = std::iterator_traits<T>::iterator_category;
+    using value_type = std::iterator_traits<T>::value_type;
+    using difference_type = std::iterator_traits<T>::difference_type;
+    using pointer = std::iterator_traits<T>::pointer;
+    using reference = std::iterator_traits<T>::reference;
+    using thing = std::reverse_iterator<T>;
+
+public:
+    RevIterBase(T iter)
+        requires std::derived_from<iterator_category,
+            std::bidirectional_iterator_tag>
+        : m_iter(iter)
+    {
+        --m_iter;
+    }
+    RevIterBase & operator++() { --m_iter; return *this; }
+    RevIterBase & operator--() { ++m_iter; return *this; }
+    explicit operator bool() const { return (bool) m_iter; }
+    bool operator==(const RevIterBase & other) const = default;
+    value_type operator*() const { return *m_iter; }
+    const value_type * operator->() const { return &*m_iter; }
+
+    constexpr T base() const { auto tmp = m_iter; ++tmp; return tmp; }
+
+private:
+    T m_iter;
+};
+
+
+/****************************************************************************
+*
+*   UnsignedSet::Iter
+*
+***/
+
+class UnsignedSet::Iter {
 public:
     using iterator_category = std::bidirectional_iterator_tag;
     using value_type = UnsignedSet::value_type;
@@ -207,36 +251,42 @@ public:
     using reference = value_type;
 
 public:
-    Iterator(const Iterator & from) = default;
-    Iterator(const Node * node);
-    Iterator(const Node * node, value_type value, unsigned minDepth);
-    Iterator & operator++();
-    Iterator & operator--();
-    explicit operator bool() const { return m_minDepth != kDepthEnd; }
-    bool operator==(const Iterator & right) const;
+    static Iter makeEnd(const Node * node);
+    static Iter makeFirst(const Node * node);
+    static Iter makeFirst(const Node * node, value_type minValue);
+    static Iter makeLast(const Node * node);
+    static Iter makeLast(const Node * node, value_type maxValue);
+
+public:
+    Iter(const Iter & from) = default;
+    Iter & operator++();
+    Iter & operator--();
+    explicit operator bool() const { return !m_endmark; }
+    bool operator==(const Iter & right) const;
     value_type operator*() const { return m_value; }
     const value_type * operator->() const { return &m_value; }
 
-    Iterator firstContiguous() const;
-    Iterator lastContiguous() const;
+    Iter firstContiguous() const;
+    Iter lastContiguous() const;
+    Iter end() const;
 
 private:
-    friend UnsignedSet;
-    Iterator end() const;
+    Iter(const Node * node);
+    Iter(const Node * node, value_type value);
 
     const Node * m_node = nullptr;
     value_type m_value = 0;
-    unsigned m_minDepth = kDepthEnd;
+    bool m_endmark = true;
 };
 
 
 /****************************************************************************
 *
-*   UnsignedSet::RangeIterator
+*   UnsignedSet::RangeIter
 *
 ***/
 
-class UnsignedSet::RangeIterator {
+class UnsignedSet::RangeIter {
 public:
     using iterator_category = std::bidirectional_iterator_tag;
     using value_type =
@@ -246,19 +296,19 @@ public:
     using reference = const value_type&;
 
 public:
-    RangeIterator(const RangeIterator & from) = default;
-    RangeIterator(Iterator where);
-    RangeIterator & operator++();
-    RangeIterator & operator--();
-    explicit operator bool() const { return m_value != kEndValue; }
-    bool operator== (const RangeIterator & right) const;
+    RangeIter(const RangeIter & from) = default;
+    RangeIter(iterator where);
+    RangeIter & operator++();
+    RangeIter & operator--();
+    explicit operator bool() const { return (bool) m_low; }
+    bool operator== (const RangeIter & right) const;
     const value_type & operator*() const { return m_value; }
     const value_type * operator->() const { return &m_value; }
 
 private:
-    static constexpr value_type kEndValue{1, 0};
-    Iterator m_iter;
-    value_type m_value{kEndValue};
+    iterator m_low;
+    iterator m_high;
+    value_type m_value;
 };
 
 
@@ -270,18 +320,18 @@ private:
 
 class UnsignedSet::RangeRange {
 public:
-    using iterator = RangeIterator;
-    using reverse_iterator = std::reverse_iterator<RangeIterator>;
+    using iterator = RangeIter;
+    using reverse_iterator = RevIterBase<RangeIter>;
 
 public:
-    explicit RangeRange(Iterator iter) : m_first{iter} {}
-    RangeIterator begin() const { return m_first; }
-    RangeIterator end() const { return m_first.end(); }
+    explicit RangeRange(Iter iter) : m_first{iter} {}
+    iterator begin() const { return m_first; }
+    iterator end() const { return m_first.end(); }
     auto rbegin() const { return reverse_iterator(end()); }
     auto rend() const { return reverse_iterator(begin()); }
 
 private:
-    Iterator m_first;
+    Iter m_first;
 };
 
 

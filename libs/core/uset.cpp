@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2020.
+// Copyright Glen Knowles 2017 - 2021.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // uset.cpp - dim core
@@ -1276,8 +1276,8 @@ static int cmpBitIf(const Node & left, const Node & right) {
 
 //===========================================================================
 static int cmpMetaIf(const Node & left, const Node & right) {
-    auto i = UnsignedSet::Iterator{&right};
-    auto ri = UnsignedSet::RangeIterator{i};
+    auto i = UnsignedSet::iterator::makeFirst(&right);
+    auto ri = UnsignedSet::range_iterator{i};
     if (ri->first == absBase(right) && !++ri) {
         return 2;
     } else {
@@ -1302,8 +1302,8 @@ static int cmpRMetaIf(const Node & left, const Node & right) {
 
 //===========================================================================
 static int cmpIter(const Node & left, const Node & right) {
-    auto li = UnsignedSet::Iterator(&left);
-    auto ri = UnsignedSet::Iterator(&right);
+    auto li = UnsignedSet::iterator::makeFirst(&left);
+    auto ri = UnsignedSet::iterator::makeFirst(&right);
     for (;; ++li, ++ri) {
         if (!li)
             return !ri ? 0 : -2;
@@ -1450,7 +1450,7 @@ static void insCopy(Node & left, const Node & right) {
 
 //===========================================================================
 static void insIter(Node & left, const Node & right) {
-    auto ri = UnsignedSet::Iterator(&right);
+    auto ri = UnsignedSet::iterator::makeFirst(&right);
     for (; ri; ++ri)
         impl(left)->insert(left, *ri);
 }
@@ -1632,7 +1632,7 @@ static void eraEmpty(Node & left, const Node & right) {
 
 //===========================================================================
 static void eraChange(Node & left, const Node & right) {
-    auto ri = UnsignedSet::Iterator(&right);
+    auto ri = UnsignedSet::iterator::makeFirst(&right);
     assert(ri);
 
     // convert from full to either bitmap or meta
@@ -2017,12 +2017,12 @@ UnsignedSet & UnsignedSet::operator=(const UnsignedSet & from) {
 
 //===========================================================================
 UnsignedSet::iterator UnsignedSet::begin() const {
-    return {&m_node};
+    return iterator::makeFirst(&m_node);
 }
 
 //===========================================================================
 UnsignedSet::iterator UnsignedSet::end() const {
-    return {&m_node, 0, kDepthEnd};
+    return iterator::makeEnd(&m_node);
 }
 
 //===========================================================================
@@ -2194,6 +2194,11 @@ void UnsignedSet::swap(UnsignedSet & other) {
 }
 
 //===========================================================================
+strong_ordering UnsignedSet::operator<=>(const UnsignedSet & other) const {
+    return compare(other);
+}
+
+//===========================================================================
 strong_ordering UnsignedSet::compare(const UnsignedSet & right) const {
     if (auto cmp = ::compare(m_node, right.m_node)) {
         return cmp < 0 ? strong_ordering::less : strong_ordering::greater;
@@ -2230,20 +2235,26 @@ unsigned UnsignedSet::front() const {
 
 //===========================================================================
 unsigned UnsignedSet::back() const {
-    const Node * node;
-    unsigned value;
-    impl(m_node)->findLast(
-        &node,
-        &value,
-        m_node,
-        numeric_limits<value_type>::max()
-    );
-    return value;
+    auto i = rbegin();
+    return *i;
 }
 
 //===========================================================================
 size_t UnsignedSet::count(unsigned val) const {
     return contains(val);
+}
+
+//===========================================================================
+size_t UnsignedSet::count(unsigned low, unsigned high) const {
+    assert(low <= high);
+    assert(!"Not implemented");
+    auto lower = lowerBound(low);
+    if (!lower || *lower > high)
+        return 0;
+    if (*lower == high)
+        return 1;
+
+    return 0;
 }
 
 //===========================================================================
@@ -2258,23 +2269,28 @@ auto UnsignedSet::find(unsigned val) const -> iterator {
 }
 
 //===========================================================================
-auto UnsignedSet::equalRange(unsigned val) const -> pair<iterator, iterator> {
-    auto first = lowerBound(val);
-    auto last = first;
-    if (last && *last == val)
-        ++last;
-    return {first, last};
+auto UnsignedSet::findLessEqual(unsigned val) const -> iterator {
+    return iterator::makeLast(&m_node, val);
 }
 
 //===========================================================================
 auto UnsignedSet::lowerBound(unsigned val) const -> iterator {
-    return {&m_node, val, m_node.depth};
+    return iterator::makeFirst(&m_node, val);
 }
 
 //===========================================================================
 auto UnsignedSet::upperBound(unsigned val) const -> iterator {
     val += 1;
     return val ? lowerBound(val) : end();
+}
+
+//===========================================================================
+auto UnsignedSet::equalRange(unsigned val) const -> pair<iterator, iterator> {
+    auto first = lowerBound(val);
+    auto last = first;
+    if (last && *last == val)
+        ++last;
+    return {first, last};
 }
 
 //===========================================================================
@@ -2297,49 +2313,83 @@ void UnsignedSet::iInsert(const unsigned * first, const unsigned * last) {
 
 /****************************************************************************
 *
-*   UnsignedSet::Iterator
+*   UnsignedSet::Iter
 *
 ***/
 
 //===========================================================================
-UnsignedSet::Iterator::Iterator(const Node * node)
-    : Iterator{node, absBase(*node), node->depth}
-{}
-
-//===========================================================================
-UnsignedSet::Iterator::Iterator(
-    const Node * node,
-    value_type value,
-    unsigned minDepth
-)
-    : m_node{node}
-    , m_value{value}
-    , m_minDepth{minDepth}
-{
-    if (m_minDepth == kDepthEnd) {
-        assert(!m_value);
-    } else {
-        assert(m_node);
-        if (!impl(*m_node)->findFirst(&m_node, &m_value, *m_node, m_value))
-            *this = end();
+// static
+UnsignedSet::Iter UnsignedSet::Iter::makeEnd(const Node * node) {
+    while (node->depth) {
+        auto pos = nodePos(absBase(*node), node->depth - 1);
+        node += numNodes(node->depth) - pos;
+        node = node->nodes;
     }
+    return Iter(node);
 }
 
 //===========================================================================
-bool UnsignedSet::Iterator::operator== (const Iterator & right) const {
+// static
+UnsignedSet::Iter UnsignedSet::Iter::makeFirst(const Node * node) {
+    return makeFirst(node, absBase(*node));
+}
+
+//===========================================================================
+// static
+UnsignedSet::Iter UnsignedSet::Iter::makeFirst(
+    const Node * node,
+    value_type value
+) {
+    if (impl(*node)->findFirst(&node, &value, *node, value))
+        return {node, value};
+    return {node};
+}
+
+//===========================================================================
+// static
+UnsignedSet::Iter UnsignedSet::Iter::makeLast(const Node * node) {
+    return makeLast(node, absFinal(*node));
+}
+
+//===========================================================================
+// static
+UnsignedSet::Iter UnsignedSet::Iter::makeLast(
+    const Node * node,
+    value_type value
+) {
+    if (impl(*node)->findLast(&node, &value, *node, value))
+        return {node, value};
+    return {node};
+}
+
+//===========================================================================
+UnsignedSet::Iter::Iter(const Node * node)
+    : m_node(node)
+{
+    assert(node->depth == 0 && node->base == 0);
+}
+
+//===========================================================================
+UnsignedSet::Iter::Iter(const Node * node, value_type value)
+    : m_node(node)
+    , m_value(value)
+    , m_endmark(false)
+{}
+
+//===========================================================================
+bool UnsignedSet::Iter::operator== (const Iter & right) const {
     return m_value == right.m_value
-        && m_minDepth == right.m_minDepth
+        && m_endmark == right.m_endmark
         && (m_node == right.m_node || !m_node || !right.m_node);
 }
 
 //===========================================================================
-UnsignedSet::Iterator & UnsignedSet::Iterator::operator++() {
+UnsignedSet::Iter & UnsignedSet::Iter::operator++() {
     if (!*this) {
         if (m_node) {
             auto from = absBase(*m_node);
-            auto depth = m_node->depth;
             if (impl(*m_node)->findFirst(&m_node, &m_value, *m_node, from))
-                m_minDepth = depth;
+                m_endmark = false;
         }
         return *this;
     }
@@ -2350,7 +2400,7 @@ UnsignedSet::Iterator & UnsignedSet::Iterator::operator++() {
     }
 
 CHECK_DEPTH:
-    if (m_node->depth == m_minDepth) {
+    if (m_node->depth == 0) {
         *this = end();
         return *this;
     }
@@ -2372,13 +2422,12 @@ CHECK_END_OF_DEPTH:
 }
 
 //===========================================================================
-UnsignedSet::Iterator & UnsignedSet::Iterator::operator--() {
+UnsignedSet::Iter & UnsignedSet::Iter::operator--() {
     if (!*this) {
         if (m_node) {
             auto from = absFinal(*m_node);
-            auto depth = m_node->depth;
             if (impl(*m_node)->findLast(&m_node, &m_value, *m_node, from))
-                m_minDepth = depth;
+                m_endmark = false;
         }
         return *this;
     }
@@ -2389,7 +2438,7 @@ UnsignedSet::Iterator & UnsignedSet::Iterator::operator--() {
     }
 
 CHECK_DEPTH:
-    if (m_node->depth == m_minDepth) {
+    if (m_node->depth == 0) {
         *this = end();
         return *this;
     }
@@ -2411,16 +2460,16 @@ CHECK_END_OF_DEPTH:
 }
 
 //===========================================================================
-UnsignedSet::Iterator UnsignedSet::Iterator::end() const {
-    return {m_node, 0, kDepthEnd};
+UnsignedSet::Iter UnsignedSet::Iter::end() const {
+    return iterator::makeEnd(m_node);
 }
 
 //===========================================================================
-UnsignedSet::Iterator UnsignedSet::Iterator::firstContiguous() const {
+UnsignedSet::Iter UnsignedSet::Iter::firstContiguous() const {
     auto node = m_node;
     auto value = m_value;
     if (impl(*node)->firstContiguous(&node, &value, *node, value))
-        return {node, value, m_minDepth};
+        return {node, value};
 
     // Use a temporary to scout out the next node (which may require traversing
     // the tree to get there) since if it starts with a discontinuity we'll end
@@ -2428,8 +2477,8 @@ UnsignedSet::Iterator UnsignedSet::Iterator::firstContiguous() const {
     auto ptr = node;
 
 CHECK_DEPTH:
-    if (ptr->depth == m_minDepth)
-        return {node, value, m_minDepth};
+    if (ptr->depth == 0)
+        return {node, value};
 
 CHECK_END_OF_DEPTH:
     if (absBase(*ptr) == absBase(value, ptr->depth - 1)) {
@@ -2441,16 +2490,16 @@ CHECK_END_OF_DEPTH:
 
     ptr -= 1;
     if (impl(*ptr)->firstContiguous(&node, &value, *ptr, absFinal(*ptr)))
-        return {node, value, m_minDepth};
+        return {node, value};
     goto CHECK_END_OF_DEPTH;
 }
 
 //===========================================================================
-UnsignedSet::Iterator UnsignedSet::Iterator::lastContiguous() const {
+UnsignedSet::Iter UnsignedSet::Iter::lastContiguous() const {
     auto node = m_node;
     auto value = m_value;
     if (impl(*node)->lastContiguous(&node, &value, *node, value))
-        return {node, value, m_minDepth};
+        return {node, value};
 
     // Use a temporary to scout out the next node (which may require traversing
     // the tree to find) since if it starts with a discontinuity we end the
@@ -2458,8 +2507,8 @@ UnsignedSet::Iterator UnsignedSet::Iterator::lastContiguous() const {
     auto ptr = node;
 
 CHECK_DEPTH:
-    if (ptr->depth == m_minDepth)
-        return {node, value, m_minDepth};
+    if (ptr->depth == 0)
+        return {node, value};
 
 CHECK_END_OF_DEPTH:
     if (absFinal(*ptr) == absFinal(value, ptr->depth - 1)) {
@@ -2471,7 +2520,7 @@ CHECK_END_OF_DEPTH:
 
     ptr += 1;
     if (impl(*ptr)->lastContiguous(&node, &value, *ptr, absBase(*ptr)))
-        return {node, value, m_minDepth};
+        return {node, value};
     goto CHECK_END_OF_DEPTH;
 }
 
@@ -2483,62 +2532,45 @@ CHECK_END_OF_DEPTH:
 ***/
 
 //===========================================================================
-UnsignedSet::RangeIterator::RangeIterator(Iterator where)
-    : m_iter(where)
+UnsignedSet::RangeIter::RangeIter(iterator where)
+    : m_low(where)
+    , m_high(where)
 {
-    if (m_iter)
-        ++*this;
+    if (m_low) {
+        m_high = m_low.lastContiguous();
+        m_value = { *m_low, *m_high };
+    }
 }
 
 //===========================================================================
-bool UnsignedSet::RangeIterator::operator== (
-    const RangeIterator & right
+bool UnsignedSet::RangeIter::operator== (
+    const RangeIter & other
 ) const {
-    return m_value == right.m_value;
+    return m_low == other.m_low;
 }
 
 //===========================================================================
-UnsignedSet::RangeIterator & UnsignedSet::RangeIterator::operator++() {
-    if (!m_iter) {
-        if (m_value == kEndValue) {
-            ++m_iter;
-            if (m_iter) {
-                m_value.first = *m_iter;
-                m_iter = m_iter.lastContiguous();
-                m_value.second = *m_iter;
-                ++m_iter;
-            }
-        } else {
-            m_value = kEndValue;
-        }
+UnsignedSet::RangeIter & UnsignedSet::RangeIter::operator++() {
+    m_low = m_high;
+    if (++m_low) {
+        m_high = m_low.lastContiguous();
+        m_value = { *m_low, *m_high };
     } else {
-        m_value.first = *m_iter;
-        m_iter = m_iter.lastContiguous();
-        m_value.second = *m_iter;
-        ++m_iter;
+        // Set high to also be at the end.
+        m_high = m_low;
     }
     return *this;
 }
 
 //===========================================================================
-UnsignedSet::RangeIterator & UnsignedSet::RangeIterator::operator--() {
-    if (!m_iter) {
-        if (m_value == kEndValue) {
-            --m_iter;
-            if (m_iter) {
-                m_value.second = *m_iter;
-                m_iter = m_iter.firstContiguous();
-                m_value.first = *m_iter;
-                --m_iter;
-            }
-        } else {
-            m_value = kEndValue;
-        }
+UnsignedSet::RangeIter & UnsignedSet::RangeIter::operator--() {
+    m_high = m_low;
+    if (--m_high) {
+        m_low = m_high.firstContiguous();
+        m_value = { *m_low, *m_high };
     } else {
-        m_value.second = *m_iter;
-        m_iter = m_iter.firstContiguous();
-        m_value.first = *m_iter;
-        --m_iter;
+        // Set low to also be at the end.
+        m_low = m_high;
     }
     return *this;
 }

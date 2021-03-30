@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2020.
+// Copyright Glen Knowles 2017 - 2021.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // usettest.cpp - dim test uset
@@ -52,6 +52,8 @@ static void test() {
     tmp.insert(3);
     v.assign(tmp.begin(), tmp.end());
     EXPECT(v == vector<unsigned>{{3, 5}});
+    EXPECT(tmp.front() == 3);
+    EXPECT(tmp.back() == 5);
 
     // Implementation detail defines: ++end() == begin()
     val = *++tmp.end();
