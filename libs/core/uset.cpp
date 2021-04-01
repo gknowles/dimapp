@@ -1418,6 +1418,231 @@ static int compare(const Node & left, const Node & right) {
 
 /****************************************************************************
 *
+*   contains(const Node &, const Node &)
+*
+***/
+
+static bool contains(const Node & left, const Node & right);
+
+//===========================================================================
+static bool conError(const Node & left, const Node & right) {
+    logMsgFatal() << "contains: incompatible node types, " << left.type
+        << ", " << right.type;
+    return 0;
+}
+
+//===========================================================================
+static bool conTrue(const Node & left, const Node & right) { return true; }
+static bool conFalse(const Node & left, const Node & right) { return false; }
+
+//===========================================================================
+static bool conRVec(const Node & left, const Node & right) {
+    auto ri = right.values;
+    auto re = ri + right.numValues;
+    const Node * onode;
+    unsigned ovalue;
+
+    for (;;) {
+        if (!impl(left)->findFirst(&onode, &ovalue, left, *ri))
+            return false;
+        if (*ri != ovalue || ++ri == re)
+            return true;
+    }
+}
+
+//===========================================================================
+static bool conLVec(const Node & left, const Node & right) {
+    auto li = left.values;
+    auto le = li + left.numValues;
+    const Node * onode;
+    unsigned ovalue;
+
+    impl(right)->findFirst(&onode, &ovalue, right, absBase(right));
+    for (;;) {
+        li = lower_bound(li, le, ovalue);
+        if (li == le || *li != ovalue)
+            return false;
+        if (!impl(right)->findFirst(&onode, &ovalue, right, ovalue + 1))
+            return true;
+    }
+}
+
+//===========================================================================
+static bool conVec(const Node & left, const Node & right) {
+    if (left.numValues < right.numValues)
+        return false;
+
+    auto li = left.values;
+    auto le = li + left.numValues;
+    auto ri = right.values;
+    auto re = ri + right.numValues;
+
+    for (;;) {
+        li = lower_bound(li, le, *ri);
+        if (li == le || *li != *ri)
+            return false;
+        if (++ri == re)
+            return true;
+    }
+}
+
+//===========================================================================
+static bool conBit(const Node & left, const Node & right) {
+    auto li = (uint64_t *) left.values;
+    auto le = li + kDataSize / sizeof *li;
+    auto ri = (uint64_t *) right.values;
+
+    for (;;) {
+        if (*ri != (*li & *ri))
+            return false;
+        if (++li == le)
+            return true;
+        ++ri;
+    }
+}
+
+//===========================================================================
+static bool conMeta(const Node & left, const Node & right) {
+    auto li = left.nodes;
+    auto le = li + left.numValues;
+    auto ri = right.nodes;
+    for (; li != le; ++li, ++ri) {
+        if (!contains(*li, *ri))
+            return false;
+    }
+    return true;
+}
+
+//===========================================================================
+static bool contains(const Node & left, const Node & right) {
+    using Fn = bool(const Node & left, const Node & right);
+    static Fn * const functs[][Node::kNodeTypes] = {
+    // LEFT                         RIGHT
+    //             empty    full      vector    bitmap    meta
+    /* empty  */ { conTrue, conFalse, conFalse, conFalse, conFalse },
+    /* full   */ { conTrue, conTrue,  conTrue,  conTrue,  conTrue  },
+    /* vector */ { conTrue, conFalse, conVec,   conLVec,  conLVec  },
+    /* bitmap */ { conTrue, conFalse, conRVec,  conBit,   conError },
+    /* meta   */ { conTrue, conFalse, conRVec,  conError, conMeta  },
+    };
+    assert(!"not tested");
+    return functs[left.type][right.type](left, right);
+}
+
+
+/****************************************************************************
+*
+*   intersects(const Node &, const Node &)
+*
+***/
+
+static bool intersects(const Node & left, const Node & right);
+
+//===========================================================================
+static bool isecError(const Node & left, const Node & right) {
+    logMsgFatal() << "intersects: incompatible node types, " << left.type
+        << ", " << right.type;
+    return false;
+}
+
+//===========================================================================
+static bool isecTrue(const Node & left, const Node & right) { return true; }
+static bool isecFalse(const Node & left, const Node & right) { return false; }
+
+//===========================================================================
+static bool isecRVec(const Node & left, const Node & right) {
+    auto ri = right.values;
+    auto re = ri + right.numValues;
+    const Node * onode;
+    unsigned ovalue;
+
+    for (;;) {
+        if (impl(left)->findFirst(&onode, &ovalue, left, *ri)
+            && *ri == ovalue
+        ) {
+            return true;
+        }
+        if (++ri == re)
+            return false;
+    }
+}
+
+//===========================================================================
+static bool isecLVec(const Node & left, const Node & right) {
+    return isecRVec(right, left);
+}
+
+//===========================================================================
+static bool isecVec(const Node & left, const Node & right) {
+    auto li = left.values;
+    auto le = li + left.numValues;
+    auto ri = right.values;
+    auto re = ri + right.numValues;
+
+    for (;;) {
+        if (*li == *ri)
+            return true;
+        while (*li < *ri) {
+            if (++li == le)
+                return false;
+        }
+        if (*li == *ri)
+            return true;
+        for (;;) {
+            if (++ri == re)
+                return false;
+            if (*ri >= *li)
+                break;
+        }
+    }
+}
+
+//===========================================================================
+static bool isecBit(const Node & left, const Node & right) {
+    auto li = (uint64_t *) left.values;
+    auto le = li + kDataSize / sizeof *li;
+    auto ri = (uint64_t *) right.values;
+
+    for (;;) {
+        if (*li & *ri)
+            return true;
+        if (++li == le)
+            return false;
+        ++ri;
+    }
+}
+
+//===========================================================================
+static bool isecMeta(const Node & left, const Node & right) {
+    auto li = left.nodes;
+    auto le = li + left.numValues;
+    auto ri = right.nodes;
+    for (; li != le; ++li, ++ri) {
+        if (intersects(*li, *ri))
+            return true;
+    }
+    return false;
+}
+
+//===========================================================================
+static bool intersects(const Node & left, const Node & right) {
+    using Fn = bool(const Node & left, const Node & right);
+    static Fn * const functs[][Node::kNodeTypes] = {
+    // LEFT                         RIGHT
+    //             empty      full       vector     bitmap     meta
+    /* empty  */ { isecFalse, isecFalse, isecFalse, isecFalse, isecFalse },
+    /* full   */ { isecFalse, isecTrue,  isecTrue,  isecTrue,  isecTrue  },
+    /* vector */ { isecFalse, isecTrue,  isecVec,   isecLVec,  isecLVec  },
+    /* bitmap */ { isecFalse, isecTrue,  isecRVec,  isecBit,   isecError },
+    /* meta   */ { isecFalse, isecTrue,  isecRVec,  isecError, isecMeta  },
+    };
+    assert(!"not tested");
+    return functs[left.type][right.type](left, right);
+}
+
+
+/****************************************************************************
+*
 *   insert(Node &, const Node &)
 *
 ***/
@@ -1473,7 +1698,7 @@ static void insVec(Node & left, const Node & right) {
 }
 
 //===========================================================================
-static void insBitmap(Node & left, const Node & right) {
+static void insBit(Node & left, const Node & right) {
     auto li = (uint64_t *) left.values;
     auto le = li + kDataSize / sizeof *li;
     auto ri = (uint64_t *) right.values;
@@ -1515,7 +1740,7 @@ static void insert(Node & left, const Node & right) {
     /* empty  */ { insSkip, insFull, insCopy, insCopy,   insCopy  },
     /* full   */ { insSkip, insSkip, insSkip, insSkip,   insSkip  },
     /* vector */ { insSkip, insFull, insVec,  insRIter,  insRIter },
-    /* bitmap */ { insSkip, insFull, insIter, insBitmap, insError },
+    /* bitmap */ { insSkip, insFull, insIter, insBit,    insError },
     /* meta   */ { insSkip, insFull, insIter, insError,  insMeta  },
     };
     functs[left.type][right.type](left, right);
@@ -1566,8 +1791,8 @@ static void insVec(Node & left, Node && right) {
 }
 
 //===========================================================================
-static void insBitmap(Node & left, Node && right) {
-    insBitmap(left, right);
+static void insBit(Node & left, Node && right) {
+    insBit(left, right);
 }
 
 //===========================================================================
@@ -1594,12 +1819,12 @@ static void insert(Node & left, Node && right) {
     using InsertFn = void(Node & left, Node && right);
     static InsertFn * const functs[][Node::kNodeTypes] = {
     // LEFT                         RIGHT
-    //             empty    full     vector   bitmap     meta
-    /* empty  */ { insSkip, insFull, insMove, insMove,   insMove  },
-    /* full   */ { insSkip, insSkip, insSkip, insSkip,   insSkip  },
-    /* vector */ { insSkip, insFull, insVec,  insRIter,  insRIter },
-    /* bitmap */ { insSkip, insFull, insIter, insBitmap, insError },
-    /* meta   */ { insSkip, insFull, insIter, insError,  insMeta  },
+    //             empty    full     vector   bitmap    meta
+    /* empty  */ { insSkip, insFull, insMove, insMove,  insMove  },
+    /* full   */ { insSkip, insSkip, insSkip, insSkip,  insSkip  },
+    /* vector */ { insSkip, insFull, insVec,  insRIter, insRIter },
+    /* bitmap */ { insSkip, insFull, insIter, insBit,   insError },
+    /* meta   */ { insSkip, insFull, insIter, insError, insMeta  },
     };
     functs[left.type][right.type](left, move(right));
 }
@@ -1695,7 +1920,7 @@ static void eraVec(Node & left, const Node & right) {
 }
 
 //===========================================================================
-static void eraBitmap(Node & left, const Node & right) {
+static void eraBit(Node & left, const Node & right) {
     auto li = (uint64_t *) left.values;
     auto le = li + kDataSize / sizeof *li;
     auto ri = (uint64_t *) right.values;
@@ -1737,7 +1962,7 @@ static void erase(Node & left, const Node & right) {
     /* empty  */ { eraSkip, eraSkip,  eraSkip,   eraSkip,   eraSkip   },
     /* full   */ { eraSkip, eraEmpty, eraIter,   eraChange, eraChange },
     /* vector */ { eraSkip, eraEmpty, eraVec,    eraFind,   eraFind   },
-    /* bitmap */ { eraSkip, eraEmpty, eraIter,   eraBitmap, eraError  },
+    /* bitmap */ { eraSkip, eraEmpty, eraIter,   eraBit,    eraError  },
     /* meta   */ { eraSkip, eraEmpty, eraIter,   eraError,  eraMeta   },
     };
     functs[left.type][right.type](left, right);
@@ -1818,7 +2043,7 @@ static void isecVec(Node & left, const Node & right) {
 }
 
 //===========================================================================
-static void isecBitmap(Node & left, const Node & right) {
+static void isecBit(Node & left, const Node & right) {
     auto li = (uint64_t *) left.values;
     auto le = li + kDataSize / sizeof *li;
     auto ri = (uint64_t *) right.values;
@@ -1855,12 +2080,12 @@ static void intersect(Node & left, const Node & right) {
     using IsectFn = void(Node & left, const Node & right);
     static IsectFn * const functs[][Node::kNodeTypes] = {
     // LEFT                         RIGHT
-    //             empty      full      vector     bitmap      meta
-    /* empty  */ { isecSkip,  isecSkip, isecSkip,  isecSkip,   isecSkip },
-    /* full   */ { isecEmpty, isecSkip, isecCopy,  isecCopy,   isecCopy  },
-    /* vector */ { isecEmpty, isecSkip, isecVec,   isecFind,   isecFind  },
-    /* bitmap */ { isecEmpty, isecSkip, isecRFind, isecBitmap, isecError },
-    /* meta   */ { isecEmpty, isecSkip, isecRFind, isecError,  isecMeta  },
+    //             empty      full      vector     bitmap     meta
+    /* empty  */ { isecSkip,  isecSkip, isecSkip,  isecSkip,  isecSkip },
+    /* full   */ { isecEmpty, isecSkip, isecCopy,  isecCopy,  isecCopy  },
+    /* vector */ { isecEmpty, isecSkip, isecVec,   isecFind,  isecFind  },
+    /* bitmap */ { isecEmpty, isecSkip, isecRFind, isecBit,   isecError },
+    /* meta   */ { isecEmpty, isecSkip, isecRFind, isecError, isecMeta  },
     };
     functs[left.type][right.type](left, right);
 }
@@ -1910,8 +2135,8 @@ static void isecVec(Node & left, Node && right) {
 }
 
 //===========================================================================
-static void isecBitmap(Node & left, Node && right) {
-    isecBitmap(left, right);
+static void isecBit(Node & left, Node && right) {
+    isecBit(left, right);
 }
 
 //===========================================================================
@@ -1938,12 +2163,12 @@ static void intersect(Node & left, Node && right) {
     using IsectFn = void(Node & left, Node && right);
     static IsectFn * const functs[][Node::kNodeTypes] = {
     // LEFT                         RIGHT
-    //             empty      full      vector     bitmap      meta
-    /* empty  */ { isecSkip,  isecSkip, isecEmpty, isecEmpty,  isecEmpty },
-    /* full   */ { isecEmpty, isecSkip, isecMove,  isecMove,   isecMove  },
-    /* vector */ { isecEmpty, isecSkip, isecVec,   isecFind,   isecFind  },
-    /* bitmap */ { isecEmpty, isecSkip, isecRFind, isecBitmap, isecError },
-    /* meta   */ { isecEmpty, isecSkip, isecRFind, isecError,  isecMeta  },
+    //             empty      full      vector     bitmap     meta
+    /* empty  */ { isecSkip,  isecSkip, isecEmpty, isecEmpty, isecEmpty },
+    /* full   */ { isecEmpty, isecSkip, isecMove,  isecMove,  isecMove  },
+    /* vector */ { isecEmpty, isecSkip, isecVec,   isecFind,  isecFind  },
+    /* bitmap */ { isecEmpty, isecSkip, isecRFind, isecBit,   isecError },
+    /* meta   */ { isecEmpty, isecSkip, isecRFind, isecError, isecMeta  },
     };
     functs[left.type][right.type](left, move(right));
 }
@@ -2208,18 +2433,12 @@ strong_ordering UnsignedSet::compare(const UnsignedSet & right) const {
 
 //===========================================================================
 bool UnsignedSet::contains(const UnsignedSet & other) const {
-    assert(!"not implemented efficiently");
-    auto tmp = *this;
-    tmp.intersect(other);
-    return tmp.size() == other.size();
+    return ::contains(m_node, other.m_node);
 }
 
 //===========================================================================
 bool UnsignedSet::intersects(const UnsignedSet & other) const {
-    assert(!"not implemented efficiently");
-    auto tmp = *this;
-    tmp.intersect(other);
-    return !tmp.empty();
+    return ::intersects(m_node, other.m_node);
 }
 
 //===========================================================================
