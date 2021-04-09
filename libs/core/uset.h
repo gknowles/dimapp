@@ -53,8 +53,8 @@ public:
         Type type : kTypeBits;
         unsigned depth : kDepthBits;
         unsigned base : kBaseBits;
-        uint16_t numBytes;     // space allocated
-        uint16_t numValues;
+        uint16_t numBytes;  // space allocated
+        uint16_t numValues; // usage depends on node type
         union {
             unsigned * values;
             Node * nodes;
@@ -69,7 +69,7 @@ public:
     UnsignedSet(const UnsignedSet & from);
     UnsignedSet(std::initializer_list<unsigned> from);
     UnsignedSet(std::string_view from);
-    UnsignedSet(unsigned low, unsigned high);
+    UnsignedSet(unsigned start, size_t count);
     ~UnsignedSet();
     explicit operator bool() const { return !empty(); }
 
@@ -92,7 +92,7 @@ public:
     // modify
     void clear();
     void fill();
-    void assign(unsigned value);
+    void assign(unsigned val);
     template <std::input_iterator InputIt>
         requires (std::is_convertible_v<decltype(*std::declval<InputIt>()),
             unsigned>)
@@ -101,8 +101,8 @@ public:
     void assign(UnsignedSet && from);
     void assign(const UnsignedSet & from);
     void assign(std::string_view src); // space separated ranges
-    void assign(unsigned low, unsigned high);
-    bool insert(unsigned value); // returns true if inserted
+    void assign(unsigned start, size_t count);
+    bool insert(unsigned val); // returns true if inserted
     template <std::input_iterator InputIt>
         requires (std::is_convertible_v<decltype(*std::declval<InputIt>()),
             unsigned>)
@@ -111,11 +111,11 @@ public:
     void insert(UnsignedSet && other);
     void insert(const UnsignedSet & other);
     void insert(std::string_view src); // space separated ranges
-    void insert(unsigned low, unsigned high);
-    bool erase(unsigned value); // returns true if erased
+    void insert(unsigned start, size_t count);
+    bool erase(unsigned val); // returns true if erased
     void erase(iterator where);
     void erase(const UnsignedSet & other);
-    void erase(unsigned low, unsigned high);
+    void erase(unsigned start, size_t count);
     unsigned pop_back();
     unsigned pop_front();
     void intersect(UnsignedSet && other);
@@ -131,7 +131,7 @@ public:
     unsigned front() const;
     unsigned back() const;
     size_t count(unsigned val) const;
-    size_t count(unsigned low, unsigned high) const;
+    size_t count(unsigned start, size_t count) const;
     iterator find(unsigned val) const;
     bool contains(unsigned val) const;
     bool contains(const UnsignedSet & other) const;
@@ -272,7 +272,7 @@ public:
 
 private:
     Iter(const Node * node);
-    Iter(const Node * node, value_type value);
+    Iter(const Node * node, value_type val);
 
     const Node * m_node = nullptr;
     value_type m_value = 0;

@@ -102,13 +102,13 @@ struct IImplBase {
     virtual void init(Node & node, const Node & from) = 0;
 
     virtual void destroy(Node & node) = 0;
-    virtual bool insert(Node & node, unsigned value) = 0;
-    virtual void insert(
+    virtual bool insert(
         Node & node,
         const unsigned * first,
         const unsigned * last
     ) = 0;
-    virtual bool erase(Node & node, unsigned value) = 0;
+    virtual bool insert(Node & node, unsigned start, size_t count) = 0;
+    virtual bool erase(Node & node, unsigned start, size_t count) = 0;
 
     virtual size_t size(const Node & node) const = 0;
 
@@ -152,13 +152,13 @@ struct EmptyImpl final : IImplBase {
     void init(Node & node, bool full) override;
     void init(Node & node, const Node & from) override;
     void destroy(Node & node) override;
-    bool insert(Node & node, unsigned value) override;
-    void insert(
+    bool insert(
         Node & node,
         const unsigned * first,
         const unsigned * last
     ) override;
-    bool erase(Node & node, unsigned value) override;
+    bool insert(Node & node, unsigned start, size_t count) override;
+    bool erase(Node & node, unsigned start, size_t count) override;
 
     size_t size(const Node & node) const override;
     bool findFirst(
@@ -191,13 +191,13 @@ struct FullImpl final : IImplBase {
     void init(Node & node, bool full) override;
     void init(Node & node, const Node & from) override;
     void destroy(Node & node) override;
-    bool insert(Node & node, unsigned value) override;
-    void insert(
+    bool insert(
         Node & node,
         const unsigned * first,
         const unsigned * last
     ) override;
-    bool erase(Node & node, unsigned value) override;
+    bool insert(Node & node, unsigned start, size_t count) override;
+    bool erase(Node & node, unsigned start, size_t count) override;
 
     size_t size(const Node & node) const override;
     bool findFirst(
@@ -234,13 +234,13 @@ struct VectorImpl final : IImplBase {
     void init(Node & node, bool full) override;
     void init(Node & node, const Node & from) override;
     void destroy(Node & node) override;
-    bool insert(Node & node, unsigned value) override;
-    void insert(
+    bool insert(
         Node & node,
         const unsigned * first,
         const unsigned * last
     ) override;
-    bool erase(Node & node, unsigned value) override;
+    bool insert(Node & node, unsigned start, size_t count) override;
+    bool erase(Node & node, unsigned start, size_t count) override;
 
     size_t size(const Node & node) const override;
     bool findFirst(
@@ -269,7 +269,8 @@ struct VectorImpl final : IImplBase {
     ) const override;
 
 private:
-    void convertAndInsert(Node & node, unsigned value);
+    void convert(Node & node);
+    bool erase(Node & node, unsigned * ptr, unsigned * eptr, unsigned * last);
 };
 
 struct BitmapImpl final : IImplBase {
@@ -281,13 +282,13 @@ struct BitmapImpl final : IImplBase {
     void init(Node & node, bool full) override;
     void init(Node & node, const Node & from) override;
     void destroy(Node & node) override;
-    bool insert(Node & node, unsigned value) override;
-    void insert(
+    bool insert(
         Node & node,
         const unsigned * first,
         const unsigned * last
     ) override;
-    bool erase(Node & node, unsigned value) override;
+    bool insert(Node & node, unsigned start, size_t count) override;
+    bool erase(Node & node, unsigned start, size_t count) override;
 
     size_t size(const Node & node) const override;
     bool findFirst(
@@ -314,6 +315,10 @@ struct BitmapImpl final : IImplBase {
         const Node & node,
         unsigned base
     ) const override;
+
+private:
+    void convertToEmpty(Node & node);
+    void convertIfFull(Node & node);
 };
 
 struct MetaImpl final : IImplBase {
@@ -324,13 +329,13 @@ struct MetaImpl final : IImplBase {
     void init(Node & node, bool full) override;
     void init(Node & node, const Node & from) override;
     void destroy(Node & node) override;
-    bool insert(Node & node, unsigned value) override;
-    void insert(
+    bool insert(
         Node & node,
         const unsigned * first,
         const unsigned * last
     ) override;
-    bool erase(Node & node, unsigned value) override;
+    bool insert(Node & node, unsigned start, size_t count) override;
+    bool erase(Node & node, unsigned start, size_t count) override;
 
     size_t size(const Node & node) const override;
     bool findFirst(
@@ -360,6 +365,7 @@ struct MetaImpl final : IImplBase {
 
 private:
     unsigned nodePos(const Node & node, unsigned value) const;
+    bool convertIf(Node & node, Node::Type type);
 };
 
 } // namespace
@@ -397,6 +403,8 @@ static IImplBase * impl(const Node & node) {
 *
 *   EmptyImpl
 *
+*   node.numValues - unused, always 0
+*
 ***/
 
 //===========================================================================
@@ -420,32 +428,39 @@ void EmptyImpl::destroy(Node & node)
 {}
 
 //===========================================================================
-bool EmptyImpl::insert(Node & node, unsigned value) {
-    assert(node.type == Node::kEmpty);
-    assert(relBase(value, node.depth) == node.base);
-    destroy(node);
-    node.type = Node::kVector;
-    s_vectorImpl.init(node, false);
-    s_vectorImpl.insert(node, value);
-    return true;
-}
-
-//===========================================================================
-void EmptyImpl::insert(
+bool EmptyImpl::insert(
     Node & node,
     const unsigned * first,
     const unsigned * last
 ) {
-    if (first != last) {
-        insert(node, *first++);
-        if (first != last)
-            s_vectorImpl.insert(node, first, last);
-    }
+    if (first == last)
+        return false;
+
+    destroy(node);
+    node.type = Node::kVector;
+    s_vectorImpl.init(node, false);
+    s_vectorImpl.insert(node, first, last);
+    return true;
 }
 
 //===========================================================================
-bool EmptyImpl::erase(Node & node, unsigned value) {
-    assert(relBase(value, node.depth) == node.base);
+bool EmptyImpl::insert(Node & node, unsigned start, size_t count) {
+    assert(node.type == Node::kEmpty);
+    assert(count);
+    assert(relBase(start, node.depth) == node.base);
+    assert(count - 1 <= absFinal(node) - start);
+    destroy(node);
+    node.type = Node::kVector;
+    s_vectorImpl.init(node, false);
+    s_vectorImpl.insert(node, start, count);
+    return true;
+}
+
+//===========================================================================
+bool EmptyImpl::erase(Node & node, unsigned start, size_t count) {
+    assert(count);
+    assert(relBase(start, node.depth) == node.base);
+    assert(count - 1 <= absFinal(node) - start);
     return false;
 }
 
@@ -499,6 +514,8 @@ bool EmptyImpl::lastContiguous(
 *
 *   FullImpl
 *
+*   node.numValues - unused, always 0
+*
 ***/
 
 //===========================================================================
@@ -522,31 +539,36 @@ void FullImpl::destroy(Node & node)
 {}
 
 //===========================================================================
-bool FullImpl::insert(Node & node, unsigned value) {
-    assert(relBase(value, node.depth) == node.base);
+bool FullImpl::insert(
+    Node & node,
+    const unsigned * first,
+    const unsigned * last
+) {
     return false;
 }
 
 //===========================================================================
-void FullImpl::insert(
-    Node & node,
-    const unsigned * first,
-    const unsigned * last
-)
-{}
+bool FullImpl::insert(Node & node, unsigned start, size_t count) {
+    assert(count);
+    assert(relBase(start, node.depth) == node.base);
+    assert(count - 1 <= absFinal(node) - start);
+    return false;
+}
 
 //===========================================================================
-bool FullImpl::erase(Node & node, unsigned value) {
-    assert(relBase(value, node.depth) == node.base);
+bool FullImpl::erase(Node & node, unsigned start, size_t count) {
+    assert(count);
+    assert(relBase(start, node.depth) == node.base);
+    assert(count - 1 <= absFinal(node) - start);
     destroy(node);
     if (node.depth == maxDepth()) {
         node.type = Node::kBitmap;
         s_bitmapImpl.init(node, true);
-        return s_bitmapImpl.erase(node, value);
+        return s_bitmapImpl.erase(node, start, count);
     } else {
         node.type = Node::kMeta;
         s_metaImpl.init(node, true);
-        return s_metaImpl.erase(node, value);
+        return s_metaImpl.erase(node, start, count);
     }
 }
 
@@ -612,6 +634,8 @@ bool FullImpl::lastContiguous(
 *
 *   VectorImpl
 *
+*   node.numValues - size (not capacity!) of node.values array
+*
 ***/
 
 //===========================================================================
@@ -640,55 +664,69 @@ void VectorImpl::destroy(Node & node) {
 }
 
 //===========================================================================
-bool VectorImpl::insert(Node & node, unsigned value) {
-    assert(relBase(value, node.depth) == node.base);
-    auto last = node.values + node.numValues;
-    auto ptr = lower_bound(node.values, last, value);
-    if (ptr == last) {
-        if (node.numValues == maxValues()) {
-            convertAndInsert(node, value);
-        } else {
-            *ptr = value;
-            node.numValues += 1;
-        }
-        return true;
-    }
-    if (*ptr == value)
-        return false;
-    if (node.numValues == maxValues()) {
-        convertAndInsert(node, value);
-    } else {
-        memmove(ptr + 1, ptr, sizeof *ptr * (last - ptr));
-        *ptr = value;
-        node.numValues += 1;
-    }
-    return true;
-}
-
-//===========================================================================
-void VectorImpl::insert(
+bool VectorImpl::insert(
     Node & node,
     const unsigned * first,
     const unsigned * last
 ) {
+    bool changed = false;
     while (first != last) {
         if (node.type != Node::kVector)
-            return impl(node)->insert(node, first, last);
-        insert(node, *first++);
+            return impl(node)->insert(node, first, last) || changed;
+        changed = insert(node, *first++, 1) || changed;
+    }
+    return changed;
+}
+
+//===========================================================================
+bool VectorImpl::insert(Node & node, unsigned start, size_t count) {
+    assert(count);
+    assert(relBase(start, node.depth) == node.base);
+    assert(count - 1 <= absFinal(node) - start);
+    auto last = node.values + node.numValues;
+    auto ptr = lower_bound(node.values, last, start);
+    auto eptr = (ptr < last && *ptr < start + count)
+        ? lower_bound(ptr, last, start + count)
+        : ptr;
+    size_t nBelow = ptr - node.values;
+    size_t nOld = eptr - ptr;
+    size_t nAbove = last - eptr;
+    if (count == nOld)
+        return false;
+    auto num = nBelow + count + nAbove;
+    if (num > maxValues()) {
+        convert(node);
+        return impl(node)->insert(node, start, count);
+    }
+
+    node.numValues = (uint16_t) num;
+    if (nAbove)
+        memmove(ptr + count, eptr, nAbove * sizeof *ptr);
+    for (;;) {
+        *ptr++ = start;
+        if (!--count)
+            return true;
+        start += 1;
     }
 }
 
 //===========================================================================
-bool VectorImpl::erase(Node & node, unsigned value) {
-    assert(relBase(value, node.depth) == node.base);
+bool VectorImpl::erase(Node & node, unsigned start, size_t count) {
+    assert(count);
+    assert(relBase(start, node.depth) == node.base);
+    assert(count - 1 <= absFinal(node) - start);
     auto last = node.values + node.numValues;
-    auto ptr = lower_bound(node.values, last, value);
-    if (ptr == last || *ptr != value)
+    auto ptr = lower_bound(node.values, last, start);
+    if (ptr == last || *ptr >= start + count)
+        return false;
+    auto eptr = lower_bound(ptr, last, start + count);
+    if (ptr == eptr)
         return false;
 
-    if (--node.numValues) {
+    node.numValues -= (uint16_t) (eptr - ptr);
+    if (node.numValues) {
         // Still has values, shift remaining ones down
-        memmove(ptr, ptr + 1, sizeof *ptr * (last - ptr - 1));
+        memmove(ptr, eptr, sizeof *ptr * (last - eptr));
     } else {
         // No more values, convert to empty node.
         destroy(node);
@@ -809,7 +847,7 @@ bool VectorImpl::lastContiguous(
 }
 
 //===========================================================================
-void VectorImpl::convertAndInsert(Node & node, unsigned value) {
+void VectorImpl::convert(Node & node) {
     Node tmp{node};
     auto ptr = tmp.values;
     auto last = ptr + tmp.numValues;
@@ -817,12 +855,10 @@ void VectorImpl::convertAndInsert(Node & node, unsigned value) {
         node.type = Node::kBitmap;
         s_bitmapImpl.init(node, false);
         s_bitmapImpl.insert(node, ptr, last);
-        s_bitmapImpl.insert(node, value);
     } else {
         node.type = Node::kMeta;
         s_metaImpl.init(node, false);
         s_metaImpl.insert(node, ptr, last);
-        s_metaImpl.insert(node, value);
     }
     destroy(tmp);
 }
@@ -831,6 +867,8 @@ void VectorImpl::convertAndInsert(Node & node, unsigned value) {
 /****************************************************************************
 *
 *   BitmapImpl
+*
+*   node.numValues - number of non-zero words in the bit view
 *
 ***/
 
@@ -866,27 +904,58 @@ void BitmapImpl::destroy(Node & node) {
 }
 
 //===========================================================================
-bool BitmapImpl::insert(Node & node, unsigned value) {
+bool BitmapImpl::insert(
+    Node & node,
+    const unsigned * first,
+    const unsigned * last
+) {
+    bool changed = false;
+    for (; first != last; ++first)
+        changed = insert(node, *first, 1) || changed;
+    return changed;
+}
+
+//===========================================================================
+bool BitmapImpl::insert(Node & node, unsigned start, size_t count) {
     assert(node.type == Node::kBitmap);
-    assert(relBase(value, node.depth) == node.base);
+    assert(count);
+    assert(relBase(start, node.depth) == node.base);
+    assert(count - 1 <= absFinal(node) - start);
     auto base = (uint64_t *) node.values;
-    value = relValue(value, node.depth);
-    BitView bits{base, numInt64s()};
-    auto tmp = bits.word(value);
-    if (!tmp) {
-        bits.set(value);
-        node.numValues += 1;
+    BitView bits(base, numInt64s());
+
+    auto low = relValue(start, node.depth);
+    auto high = low + count - 1;
+    auto lower = bits.data(low);
+    auto upper = bits.data(high);
+    if (lower == upper) {
+        auto tmp = *lower;
+        bits.set(low, count);
+        if (tmp == *lower)
+            return false;
+        if (!tmp)
+            node.numValues += 1;
         return true;
     }
-    if (bits.testAndSet(value))
+
+    bits.remove_suffix(numInt64s() - (upper - base + 1));
+    auto zero = (unsigned) bits.findZero(low);
+    if (zero > high)
         return false;
 
-    if (tmp != 0xffff'ffff'ffff'ffff || node.numValues != numInt64s())
-        return true;
-    for (unsigned i = 0; i < numInt64s(); ++i) {
-        if (base[i] != 0xffff'ffff'ffff'ffff)
-            return true;
+    lower = bits.data(zero);
+    for (auto ptr = lower; ptr <= upper; ++ptr) {
+        if (!*ptr)
+            node.numValues += 1;
     }
+    bits.set(zero, high - zero + 1);
+
+    if (node.numValues < numInt64s())
+        return true;
+    bits = BitView(base, numInt64s());
+    if (!bits.all())
+        return true;
+
     destroy(node);
     node.type = Node::kFull;
     s_fullImpl.init(node, true);
@@ -894,30 +963,41 @@ bool BitmapImpl::insert(Node & node, unsigned value) {
 }
 
 //===========================================================================
-void BitmapImpl::insert(
-    Node & node,
-    const unsigned * first,
-    const unsigned * last
-) {
-    for (; first != last; ++first)
-        insert(node, *first);
-}
-
-//===========================================================================
-bool BitmapImpl::erase(Node & node, unsigned value) {
-    assert(relBase(value, node.depth) == node.base);
+bool BitmapImpl::erase(Node & node, unsigned start, size_t count) {
+    assert(count);
+    assert(relBase(start, node.depth) == node.base);
+    assert(count - 1 <= absFinal(node) - start);
     auto base = (uint64_t *) node.values;
-    value = relValue(value, node.depth);
-    BitView bits{base, numInt64s()};
-    if (!bits.testAndReset(value))
+    BitView bits(base, numInt64s());
+    auto low = relValue(start, node.depth);
+    auto first = bits.data(low);
+    auto last = bits.data(low + count - 1);
+    bits = BitView(first, last - first + 1);
+    low %= bits.kWordBits;
+    auto high = low + count - 1;
+    low = (unsigned) bits.find(low);
+    if (low > high)
         return false;
-    if (bits.word(value) || --node.numValues)
-        return true;
 
-    // convert to empty
-    destroy(node);
-    node.type = Node::kEmpty;
-    s_emptyImpl.init(node, false);
+    count = high - low + 1;
+    first = bits.data(low);
+    bits = BitView(first, last - first + 1);
+    low %= bits.kWordBits;
+    for (auto ptr = first; ptr <= last; ++ptr) {
+        if (*ptr)
+            node.numValues -= 1;
+    }
+    bits.reset(low, count);
+    for (auto ptr = first; ptr <= last; ++ptr) {
+        if (*ptr)
+            node.numValues += 1;
+    }
+    if (!node.numValues) {
+        destroy(node);
+        node.type = Node::kEmpty;
+        s_emptyImpl.init(node, false);
+    }
+
     return true;
 }
 
@@ -1021,6 +1101,8 @@ bool BitmapImpl::lastContiguous(
 *
 *   MetaImpl
 *
+*   node.numValues - length of node.nodes array
+*
 ***/
 
 //===========================================================================
@@ -1087,51 +1169,80 @@ unsigned MetaImpl::nodePos(const Node & node, unsigned value) const {
 }
 
 //===========================================================================
-bool MetaImpl::insert(Node & node, unsigned value) {
-    auto pos = nodePos(node, value);
-    auto & rnode = node.nodes[pos];
-    if (!impl(rnode)->insert(rnode, value))
-        return false;
-    if (rnode.type != Node::kFull)
-        return true;
-    for (unsigned i = 0; i < node.numValues; ++i) {
-        if (node.nodes[i].type != Node::kFull)
-            return true;
-    }
-    // convert to full
-    destroy(node);
-    node.type = Node::kFull;
-    s_fullImpl.init(node, true);
-    return true;
-}
-
-//===========================================================================
-void MetaImpl::insert(
+bool MetaImpl::insert(
     Node & node,
     const unsigned * first,
     const unsigned * last
 ) {
-    for (; first != last; ++first)
-        insert(node, *first);
+    bool changed = false;
+    while (first != last) {
+        auto final = absFinal(*first, node.depth + 1);
+        auto ptr = node.nodes + nodePos(node, *first);
+        auto mid = first + 1;
+        while (mid != last && *mid > *first && *mid <= final)
+            mid += 1;
+        changed = impl(*ptr)->insert(*ptr, first, mid) || changed;
+        first = mid;
+    }
+    return changed;
 }
 
 //===========================================================================
-bool MetaImpl::erase(Node & node, unsigned value) {
-    auto pos = nodePos(node, value);
-    auto & rnode = node.nodes[pos];
-    if (!impl(rnode)->erase(rnode, value))
-        return false;
-    if (rnode.type != Node::kEmpty)
-        return true;
-    for (unsigned i = 0; i < node.numValues; ++i) {
-        if (node.nodes[i].type != Node::kEmpty)
-            return true;
+bool MetaImpl::insert(Node & node, unsigned start, size_t count) {
+    assert(count);
+    assert(relBase(start, node.depth) == node.base);
+    assert(count - 1 <= absFinal(node) - start);
+    auto ptr = node.nodes + nodePos(node, start);
+    auto step = valueMask(node.depth + 1) + 1;
+    auto maybeFull = true;
+    auto changed = false;
+    for (auto&& [st, cnt] : AlignedIntervalGen(start, count, step)) {
+        if (cnt == step) {
+            if (ptr->type != Node::kFull) {
+                changed = true;
+                impl(*ptr)->destroy(*ptr);
+                ptr->type = Node::kFull;
+                impl(*ptr)->init(*ptr, true);
+            }
+        } else if (impl(*ptr)->insert(*ptr, (value_type) st, cnt)) {
+            changed = true;
+            if (ptr->type != Node::kFull)
+                maybeFull = false;
+        }
+        ptr += 1;
     }
-    // convert to empty
-    destroy(node);
-    node.type = Node::kEmpty;
-    s_emptyImpl.init(node, false);
-    return true;
+    if (changed && maybeFull)
+        convertIf(node, Node::kFull);
+    return changed;
+}
+
+//===========================================================================
+bool MetaImpl::erase(Node & node, unsigned start, size_t count) {
+    assert(count);
+    assert(relBase(start, node.depth) == node.base);
+    assert(count - 1 <= absFinal(node) - start);
+    auto ptr = node.nodes + nodePos(node, start);
+    auto step = valueMask(node.depth + 1) + 1;
+    auto maybeEmpty = true;
+    auto changed = false;
+    for (auto&& [st, cnt] : AlignedIntervalGen(start, count, step)) {
+        if (cnt == step) {
+            if (ptr->type != Node::kEmpty) {
+                changed = true;
+                impl(*ptr)->destroy(*ptr);
+                ptr->type = Node::kEmpty;
+                impl(*ptr)->init(*ptr, false);
+            }
+        } else if (impl(*ptr)->erase(*ptr, (value_type) st, cnt)) {
+            changed = true;
+            if (ptr->type != Node::kEmpty)
+                maybeEmpty = false;
+        }
+        ptr += 1;
+    }
+    if (changed && maybeEmpty)
+        convertIf(node, Node::kEmpty);
+    return changed;
 }
 
 //===========================================================================
@@ -1222,6 +1333,20 @@ bool MetaImpl::lastContiguous(
             return false;
         key = absBase(*ptr);
     }
+}
+
+//===========================================================================
+bool MetaImpl::convertIf(Node & node, Node::Type type) {
+    assert(type == Node::kEmpty || type == Node::kFull);
+    for (unsigned i = 0; i < node.numValues; ++i) {
+        if (node.nodes[i].type != type)
+            return false;
+    }
+    // convert
+    destroy(node);
+    node.type = type;
+    impl(node)->init(node, type == Node::kFull);
+    return true;
 }
 
 
@@ -1677,7 +1802,7 @@ static void insCopy(Node & left, const Node & right) {
 static void insIter(Node & left, const Node & right) {
     auto ri = UnsignedSet::iterator::makeFirst(&right);
     for (; ri; ++ri)
-        impl(left)->insert(left, *ri);
+        impl(left)->insert(left, *ri, 1);
 }
 
 //===========================================================================
@@ -1861,7 +1986,7 @@ static void eraChange(Node & left, const Node & right) {
     assert(ri);
 
     // convert from full to either bitmap or meta
-    impl(left)->erase(left, *ri);
+    impl(left)->erase(left, *ri, 1);
 
     erase(left, right);
 }
@@ -1904,7 +2029,7 @@ static void eraIter(Node & left, const Node & right) {
     auto ri = right.values;
     auto re = ri + right.numValues;
     for (; ri != re; ++ri)
-        impl(left)->erase(left, *ri);
+        impl(left)->erase(left, *ri, 1);
 }
 
 //===========================================================================
@@ -2217,8 +2342,8 @@ UnsignedSet::UnsignedSet(string_view from) {
 }
 
 //===========================================================================
-UnsignedSet::UnsignedSet(unsigned low, unsigned high) {
-    insert(low, high);
+UnsignedSet::UnsignedSet(unsigned start, size_t count) {
+    insert(start, count);
 }
 
 //===========================================================================
@@ -2318,14 +2443,14 @@ void UnsignedSet::assign(string_view src) {
 }
 
 //===========================================================================
-void UnsignedSet::assign(unsigned low, unsigned high) {
+void UnsignedSet::assign(unsigned start, size_t count) {
     clear();
-    insert(low, high);
+    insert(start, count);
 }
 
 //===========================================================================
 bool UnsignedSet::insert(unsigned value) {
-    return impl(m_node)->insert(m_node, value);
+    return impl(m_node)->insert(m_node, value, 1);
 }
 
 //===========================================================================
@@ -2341,34 +2466,31 @@ void UnsignedSet::insert(const UnsignedSet & other) {
 //===========================================================================
 void UnsignedSet::insert(string_view src) {
     char * eptr;
-    auto first = strToUint(src, &eptr);
-    if (!first && (src.data() == eptr || eptr[-1] != '0'))
-        return;
     for (;;) {
+        auto first = strToUint(src, &eptr);
+        if (!first && (src.data() == eptr || eptr[-1] != '0'))
+            return;
+        src.remove_prefix(eptr - src.data());
+
         if (*eptr == '-') {
             auto second = strToUint(eptr + 1, &eptr);
             if (second < first)
                 break;
-            insert(first, second);
+            insert(first, second - first + 1);
         } else {
             insert(first);
         }
-        first = strToUint(eptr, &eptr);
-        if (!first)
-            break;
     }
 }
 
 //===========================================================================
-void UnsignedSet::insert(unsigned low, unsigned high) {
-    // TODO: make this efficient
-    for (auto i = low; i <= high; ++i)
-        insert(i);
+void UnsignedSet::insert(unsigned start, size_t count) {
+    impl(m_node)->insert(m_node, start, count);
 }
 
 //===========================================================================
 bool UnsignedSet::erase(unsigned value) {
-    return impl(m_node)->erase(m_node, value);
+    return impl(m_node)->erase(m_node, value, 1);
 }
 
 //===========================================================================
@@ -2383,10 +2505,8 @@ void UnsignedSet::erase(const UnsignedSet & other) {
 }
 
 //===========================================================================
-void UnsignedSet::erase(unsigned low, unsigned high) {
-    // TODO: make this efficient
-    for (auto i = low; i <= high; ++i)
-        erase(i);
+void UnsignedSet::erase(unsigned start, size_t count) {
+    impl(m_node)->erase(m_node, start, count);
 }
 
 //===========================================================================
@@ -2464,13 +2584,13 @@ size_t UnsignedSet::count(unsigned val) const {
 }
 
 //===========================================================================
-size_t UnsignedSet::count(unsigned low, unsigned high) const {
-    assert(low <= high);
+size_t UnsignedSet::count(unsigned start, size_t count) const {
     assert(!"Not implemented");
-    auto lower = lowerBound(low);
-    if (!lower || *lower > high)
+    auto end = start + count;
+    auto lower = lowerBound(start);
+    if (!lower || *lower > end)
         return 0;
-    if (*lower == high)
+    if (*lower == end)
         return 1;
 
     return 0;

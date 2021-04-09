@@ -30,11 +30,27 @@ using namespace Dim;
 
 //===========================================================================
 static void memleak() {
+    int line = 0;
+    ostringstream os;
+
     // test.eight.seven.*
     UnsignedSet c0, c1;
     c0.assign("1-10000");
+    os.str("");
+    os << c0;
+    EXPECT(os.str() == "1-10000");
+
     c1.assign("801-900 8001-9000");
+    os.str("");
+    os << c1;
+    EXPECT(os.str() == "801-900 8001-9000");
+
     c0.intersect(c1);
+    EXPECT(c0 == c1);
+
+    os.str("");
+    os << c0;
+    EXPECT(os.str() == "801-900 8001-9000");
 }
 
 //===========================================================================
@@ -78,9 +94,9 @@ static void test() {
 
     tmp.clear();
     EXPECT(tmp.empty());
-    tmp.insert(0, 63);
+    tmp.insert(0, 64);
     EXPECT(tmp.size() == 64);
-    tmp.insert(4096, 4096 + 63);
+    tmp.insert(4096, 64);
     EXPECT(tmp.size() == 128);
     tmp.insert(64);
     EXPECT(tmp.size() == 129);
@@ -104,13 +120,13 @@ static void test() {
         {4095,4095},
         {4097,4159}
     });
-    tmp.insert(65,4094);
+    tmp.insert(65, 4094 - 65 + 1);
     EXPECT(tmp.size() == 4159);
     r = tmp.ranges();
     vr.assign(r.begin(), r.end());
     EXPECT(vr == vector<pair<unsigned,unsigned>>{{0,4095},{4097,4159}});
     tmp2.clear();
-    tmp2.insert(4097,4159);
+    tmp2.insert(4097, 63);
     tmp.erase(tmp2);
     EXPECT(tmp.size() == 4096);
     r = tmp.ranges();
