@@ -1,10 +1,10 @@
-// Copyright Glen Knowles 2017 - 2019.
+// Copyright Glen Knowles 2017 - 2021.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // bitview.h - dim core
 //
 // View of bits over an array of uint64_t's, bits of view are in network
-// (i.e. big-endian, MSB first) order.
+// byte order (i.e. big-endian, MSB first).
 
 #pragma once
 
@@ -38,11 +38,12 @@ public:
     size_t size() const { return m_size; }    // number of uint64_t's
     uint64_t * data() { return m_data; }
     const uint64_t * data() const { return m_data; }
-    BitView & remove_prefix(size_t numUint64);
-    BitView & remove_suffix(size_t numUint64);
+    BitView view(size_t wordOffset, size_t wordCount = (size_t) -1) const;
+    BitView & remove_prefix(size_t wordCount);
+    BitView & remove_suffix(size_t wordCount);
 
     bool operator[](size_t pos) const;
-    uint64_t get(size_t pos, size_t count) const;
+    uint64_t getBits(size_t pos, size_t count) const;
     bool all() const;
     bool any() const;
     bool none() const;
@@ -51,11 +52,15 @@ public:
     BitView & set();
     BitView & set(size_t pos);
     BitView & set(size_t pos, bool value);
-    BitView & set(size_t pos, size_t count, uint64_t value);
+    BitView & set(size_t pos, size_t count);
+    BitView & set(size_t pos, size_t count, bool value);
+    BitView & setBits(size_t pos, size_t count, uint64_t value);
     BitView & reset();
     BitView & reset(size_t pos);
+    BitView & reset(size_t pos, size_t count);
     BitView & flip();
     BitView & flip(size_t pos);
+    BitView & flip(size_t pos, size_t count);
     bool testAndSet(size_t pos);
     bool testAndSet(size_t pos, bool value);
     bool testAndReset(size_t pos);
@@ -68,8 +73,10 @@ public:
     size_t rfind(size_t bitpos = npos) const;
     size_t rfindZero(size_t bitpos = npos) const;
 
-    // Returns word that contains the bit
+    // Returns word, or pointer to word, that contains the bit.
     uint64_t word(size_t bitpos) const;
+    uint64_t * data(size_t bitpos);
+    const uint64_t * data(size_t bitpos) const;
 
 private:
     uint64_t * m_data = nullptr;
@@ -81,6 +88,11 @@ private:
 //===========================================================================
 inline BitView & BitView::set(size_t pos, bool value) {
     return value ? set(pos) : reset(pos);
+}
+
+//===========================================================================
+inline BitView & BitView::set(size_t pos, size_t count, bool value) {
+    return value ? set(pos, count) : reset(pos, count);
 }
 
 //===========================================================================

@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2019.
+// Copyright Glen Knowles 2017 - 2021.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // bitview.cpp - dim core
@@ -22,6 +22,62 @@ static constexpr uint64_t bitmask(size_t bitpos) {
     );
 }
 
+//===========================================================================
+template<int Op, typename Word>
+static void apply(Word * ptr, Word mask) {
+    if constexpr (Op == 0) {
+        hton64(ptr, ntoh64(ptr) & ~mask);
+    } else if constexpr (Op == 1) {
+        hton64(ptr, ntoh64(ptr) | mask);
+    } else {
+        static_assert(Op == 2);
+        hton64(ptr, ntoh64(ptr) ^ mask);
+    }
+}
+
+//===========================================================================
+template<int Op, typename Word>
+static void apply(
+    Word * data,
+    size_t dataLen,
+    size_t bitpos,
+    size_t bitcount
+) {
+    constexpr size_t kWordBits = sizeof (Word) * 8;
+    constexpr Word kWordMax = numeric_limits<Word>::max();
+
+    auto pos = bitpos / kWordBits;
+    assert(pos < dataLen);
+    assert(bitcount <= (dataLen - pos) * kWordBits);
+    auto ptr = data + pos;
+    auto bit = bitpos % kWordBits;
+    auto bits = kWordBits - bit;
+    if (bits >= bitcount) {
+        if (bits == kWordBits) {
+            apply<Op>(ptr, kWordMax);
+        } else {
+            auto mask = ((Word) 1 << bitcount) - 1;
+            mask <<= bits - bitcount;
+            apply<Op>(ptr, mask);
+        }
+    } else {
+        if (bits < kWordBits) {
+            auto mask = ((Word) 1 << bits) - 1;
+            apply<Op>(ptr, mask);
+            bitcount -= bits;
+            ptr += 1;
+        }
+        for (; bitcount >= kWordBits; ++ptr, bitcount -= kWordBits) {
+            apply<Op>(ptr, kWordMax);
+        }
+        if (bitcount) {
+            auto mask = ((Word) 1 << bitcount) - 1;
+            mask <<= kWordBits - bitcount;
+            apply<Op>(ptr, mask);
+        }
+    }
+}
+
 
 /****************************************************************************
 *
@@ -42,17 +98,24 @@ bool BitView::operator==(const BitView & right) const {
 }
 
 //===========================================================================
-BitView & BitView::remove_prefix(size_t numUint64) {
-    assert(numUint64 <= m_size);
-    m_data += numUint64;
-    m_size -= numUint64;
+BitView BitView::view(size_t wordOffset, size_t wordCount) const {
+    assert(wordOffset < m_size);
+    wordCount = min(wordCount, m_size - wordOffset);
+    return {m_data + wordOffset, wordCount};
+}
+
+//===========================================================================
+BitView & BitView::remove_prefix(size_t wordCount) {
+    assert(wordCount <= m_size);
+    m_data += wordCount;
+    m_size -= wordCount;
     return *this;
 }
 
 //===========================================================================
-BitView & BitView::remove_suffix(size_t numUint64) {
-    assert(numUint64 <= m_size);
-    m_size -= numUint64;
+BitView & BitView::remove_suffix(size_t wordCount) {
+    assert(wordCount <= m_size);
+    m_size -= wordCount;
     return *this;
 }
 
@@ -65,7 +128,7 @@ bool BitView::operator[](size_t bitpos) const {
 }
 
 //===========================================================================
-uint64_t BitView::get(size_t bitpos, size_t bitcount) const {
+uint64_t BitView::getBits(size_t bitpos, size_t bitcount) const {
     assert(bitcount <= kWordBits);
     auto pos = bitpos / kWordBits;
     if (pos >= m_size)
@@ -74,7 +137,7 @@ uint64_t BitView::get(size_t bitpos, size_t bitcount) const {
     auto bits = kWordBits - bit; // bits in first word after bitpos
     auto data = ntoh64(m_data + pos);
     if (bits >= bitcount) {
-        if (bits == kWordBits) {
+        if (bitcount == kWordBits) {
             return data;
         } else {
             auto mask = ((uint64_t) 1 << bitcount) - 1;
@@ -140,27 +203,32 @@ BitView & BitView::set(size_t bitpos) {
 }
 
 //===========================================================================
-BitView & BitView::set(size_t bitpos, size_t bitcount, uint64_t value) {
+BitView & BitView::set(size_t bitpos, size_t bitcount) {
+    ::apply<1, uint64_t>(m_data, m_size, bitpos, bitcount);
+    return *this;
+}
+
+//===========================================================================
+BitView & BitView::setBits(size_t bitpos, size_t bitcount, uint64_t value) {
     auto pos = bitpos / kWordBits;
     assert(pos < m_size);
     assert(!bitcount || (bitpos + bitcount - 1) / kWordBits < m_size);
     assert(bitcount == kWordBits || value < ((uint64_t) 1 << bitcount));
+    auto ptr = m_data + pos;
     auto bit = bitpos % kWordBits;
     auto bits = kWordBits - bit;
     if (bits >= bitcount) {
-        if (bits == kWordBits) {
-            hton64(m_data + pos, value);
+        if (bitcount == kWordBits) {
+            hton64(ptr, value);
         } else {
             auto mask = ((uint64_t) 1 << bitcount) - 1;
             auto trailing = bits - bitcount;
             mask <<= trailing;
             value <<= trailing;
-            auto ptr = m_data + pos;
             hton64(ptr, ntoh64(ptr) & ~mask | value);
         }
     } else {
         auto mask = ((uint64_t) 1 << bits) - 1;
-        auto ptr = m_data + pos;
         hton64(ptr, ntoh64(ptr) & ~mask | (value >> bit) & mask);
         bits = bitcount - bits;
         mask = ((uint64_t) 1 << bits) - 1;
@@ -188,6 +256,12 @@ BitView & BitView::reset(size_t bitpos) {
 }
 
 //===========================================================================
+BitView & BitView::reset(size_t bitpos, size_t bitcount) {
+    ::apply<0, uint64_t>(m_data, m_size, bitpos, bitcount);
+    return *this;
+}
+
+//===========================================================================
 BitView & BitView::flip() {
     for (auto i = 0; (size_t) i < m_size; ++i)
         m_data[i] = ~m_data[i];
@@ -199,6 +273,12 @@ BitView & BitView::flip(size_t bitpos) {
     auto pos = bitpos / kWordBits;
     assert(pos < m_size);
     m_data[pos] ^= bitmask(bitpos);
+    return *this;
+}
+
+//===========================================================================
+BitView & BitView::flip(size_t bitpos, size_t bitcount) {
+    ::apply<2, uint64_t>(m_data, m_size, bitpos, bitcount);
     return *this;
 }
 
@@ -234,9 +314,19 @@ bool BitView::testAndFlip(size_t bitpos) {
 
 //===========================================================================
 uint64_t BitView::word(size_t bitpos) const {
+    return *data(bitpos);
+}
+
+//===========================================================================
+uint64_t * BitView::data(size_t bitpos) {
     auto pos = bitpos / kWordBits;
     assert(pos < m_size);
-    return m_data[pos];
+    return m_data + pos;
+}
+
+//===========================================================================
+const uint64_t * BitView::data(size_t bitpos) const {
+    return const_cast<BitView *>(this)->data(bitpos);
 }
 
 //===========================================================================
