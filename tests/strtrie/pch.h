@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2019.
+// Copyright Glen Knowles 2019 - 2021.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // pch.h - dim test strtrie
@@ -14,6 +14,7 @@
 
 // Standard headers
 #include <iostream>
+#include <map>
 
 // Platform headers
 // External library internal headers

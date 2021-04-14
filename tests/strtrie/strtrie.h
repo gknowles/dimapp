@@ -10,6 +10,8 @@
 
 #include "core/pageheap.h"
 
+#include <algorithm>
+#include <span>
 #include <string>
 #include <string_view>
 
