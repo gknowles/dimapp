@@ -11,6 +11,7 @@
 #include "cppconf/cppconf.h"
 
 #include <cstdint>
+#include <span>
 
 namespace Dim {
 
@@ -18,6 +19,12 @@ namespace Dim {
 /****************************************************************************
 *
 *   BitView
+*
+*   Unless otherwise indicated methods taking 'pos' and 'count' apply to a
+*   number of bits equal to:
+*       1. bits() - pos + 1, if count equals std::dynamic_extent
+*       2. count, if pos + count <= bits()
+*       3. otherwise undefined, asserts in debug builds
 *
 ***/
 
@@ -38,12 +45,14 @@ public:
     size_t size() const { return m_size; }    // number of uint64_t's
     uint64_t * data() { return m_data; }
     const uint64_t * data() const { return m_data; }
-    BitView view(size_t wordOffset, size_t wordCount = (size_t) -1) const;
+    BitView view(
+        size_t wordOffset,
+        size_t wordCount = std::dynamic_extent
+    ) const;
     BitView & remove_prefix(size_t wordCount);
     BitView & remove_suffix(size_t wordCount);
 
     bool operator[](size_t pos) const;
-    uint64_t getBits(size_t pos, size_t count) const;
     bool all() const;
     bool any() const;
     bool none() const;
@@ -54,7 +63,6 @@ public:
     BitView & set(size_t pos, bool value);
     BitView & set(size_t pos, size_t count);
     BitView & set(size_t pos, size_t count, bool value);
-    BitView & setBits(size_t pos, size_t count, uint64_t value);
     BitView & reset();
     BitView & reset(size_t pos);
     BitView & reset(size_t pos, size_t count);
@@ -72,6 +80,11 @@ public:
     size_t rfind(size_t bitpos, bool value) const;
     size_t rfind(size_t bitpos = npos) const;
     size_t rfindZero(size_t bitpos = npos) const;
+
+    // Get/set sequence of bits as/from an integer. 'count' must be less or
+    // equal to 64 (the number of bits that uint64_t).
+    uint64_t getBits(size_t pos, size_t count) const;
+    BitView & setBits(size_t pos, size_t count, uint64_t value);
 
     // Returns word, or pointer to word, that contains the bit.
     uint64_t word(size_t bitpos) const;

@@ -22,6 +22,7 @@
 #include <queue>
 #include <random>
 #include <shared_mutex>
+#include <span>
 #include <thread>
 #include <utility>
 #include <vector>

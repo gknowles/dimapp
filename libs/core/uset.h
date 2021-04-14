@@ -46,8 +46,6 @@ public:
     constexpr static unsigned kDepthBits = 4;
     constexpr static unsigned kBaseBits = 32 - kTypeBits - kDepthBits;
 
-    constexpr static unsigned kDepthEnd = (1 << kDepthBits) - 1;
-
     struct Node {
         enum Type : int;
         Type type : kTypeBits;

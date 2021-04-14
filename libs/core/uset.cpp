@@ -2485,6 +2485,8 @@ void UnsignedSet::insert(string_view src) {
 
 //===========================================================================
 void UnsignedSet::insert(unsigned start, size_t count) {
+    if (count == dynamic_extent)
+        count = valueMask(0) - start + 1;
     impl(m_node)->insert(m_node, start, count);
 }
 
@@ -2506,6 +2508,8 @@ void UnsignedSet::erase(const UnsignedSet & other) {
 
 //===========================================================================
 void UnsignedSet::erase(unsigned start, size_t count) {
+    if (count == dynamic_extent)
+        count = valueMask(0) - start + 1;
     impl(m_node)->erase(m_node, start, count);
 }
 

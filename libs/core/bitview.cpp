@@ -46,6 +46,8 @@ static void apply(
     constexpr size_t kWordBits = sizeof (Word) * 8;
     constexpr Word kWordMax = numeric_limits<Word>::max();
 
+    if (bitcount == dynamic_extent)
+        bitcount = dataLen * kWordBits - bitpos + 1;
     auto pos = bitpos / kWordBits;
     assert(pos < dataLen);
     assert(bitcount <= (dataLen - pos) * kWordBits);
