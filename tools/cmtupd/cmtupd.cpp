@@ -16,30 +16,35 @@ using namespace Dim;
 ***/
 
 const char kVersion[] = "1.0";
+const char kCopyrightOwner[] = "Glen Knowles";
 
 struct Rule {
+    string text;
     regex pattern;
     string prefix;
     vector<string> formats;
+
+    Rule(string text, string_view prefix);
 };
 static Rule s_rules[] = {
-    { regex("CMakeLists.txt"), "# " },
-    { regex(".*\\.yaml"), "# " },
-    { regex(".*\\.yml"), "# " },
+    { "CMakeLists.txt", "# " },
+    { ".*\\.cmake", "# " },
+    { ".*\\.yaml", "# " },
+    { ".*\\.yml", "# " },
 
-    { regex(".*\\.adoc"), "" },
-    { regex(".*\\.md"), "" },
-    { regex(".*\\.natvis"), "" },     // xml
-    { regex(".*\\.xml"), "" },
-    { regex(".*\\.xml.sample"), "" },
-    { regex(".*\\.xsd"), "" },
+    { ".*\\.adoc", "" },
+    { ".*\\.md", "" },
+    { ".*\\.natvis", "" },     // xml
+    { ".*\\.xml", "" },
+    { ".*\\.xml.sample", "" },
+    { ".*\\.xsd", "" },
 
-    { regex(".*\\.cpp"), "// " },
-    { regex(".*\\.h"), "// " },
+    { ".*\\.cpp", "// " },
+    { ".*\\.h", "// " },
 
-    { regex(".*\\.abnf"), "; " },
+    { ".*\\.abnf", "; " },
 
-    { regex(".*\\.bat"), ":: " },
+    { ".*\\.bat", ":: " },
 };
 
 struct CopyrightYear {
@@ -73,13 +78,8 @@ static int s_updatedFiles;      // files with updated comments
 //===========================================================================
 static Rule * findRule(const string & fname) {
     for (auto&& rule : s_rules) {
-        if (regex_match(fname, rule.pattern)) {
-            rule.formats = {
-                rule.prefix + "Copyright Glen Knowles %n%u%n.%n",
-                rule.prefix + "Copyright Glen Knowles %*u - %n%u%n.%n",
-            };
+        if (regex_match(fname, rule.pattern))
             return &rule;
-        }
     }
     return nullptr;
 }
@@ -142,6 +142,25 @@ static bool replaceFile(
 
 /****************************************************************************
 *
+*   Rule
+*
+***/
+
+//===========================================================================
+Rule::Rule(string text, string_view prefix)
+    : text(text)
+    , pattern(text)
+    , prefix(prefix)
+{
+    this->formats = {
+        this->prefix + "Copyright " + kCopyrightOwner + " %n%u%n.%n",
+        this->prefix + "Copyright " + kCopyrightOwner + " %*u - %n%u%n.%n",
+    };
+}
+
+
+/****************************************************************************
+*
 *   Application
 *
 ***/
@@ -156,11 +175,19 @@ static void app(int argc, char *argv[]) {
         .desc("Files to search (via git ls-files) for updatable comments.");
     cli.opt<bool>(&s_update, "u update.").desc("Update found comments.");
     cli.opt<bool>("v verbose.")
+        .desc("Show status of all matched files.")
         .check([](auto&, auto&, auto & val) {
             s_verbose += (val == "1");
             return true;
-        })
-        .desc("Show status of all matched files.");
+        });
+    ostringstream os;
+    os << "Known file patterns and corresponding line formats used to find "
+        "comments to update:\n";
+    for (auto&& rule : s_rules) {
+        os << "  " << rule.text
+            << "\t" << rule.formats[0] << "\n";
+    }
+    cli.footer(os.str());
     if (!cli.parse(argc, argv))
         return appSignalUsageError();
 
