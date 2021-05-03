@@ -336,6 +336,16 @@ void Dim::logHexDebug(string_view data) {
     }
 }
 
+//===========================================================================
+void Dim::logMultiInfo(string_view text, char sep) {
+    vector<string_view> lines;
+    split(&lines, text, sep);
+    for (auto && line : lines) {
+        if (!line.empty())
+            logMsgInfo() << line;
+    }
+}
+
 
 /****************************************************************************
 *

@@ -80,15 +80,18 @@ void logParseError(
     std::string_view content
 );
 
-// Renders data as 16 byte wide hex dump and debug logs each of the resulting
+// Renders data as 16 byte wide hex dump and debug-logs each of the resulting
 // lines.
 void logHexDebug(std::string_view data);
+
+// Splits text and logs each line as separate info-logs.
+void logMultiInfo(std::string_view text, char sep = '\n');
 
 
 /****************************************************************************
 *
 *   Stopwatch
-*   Used to log elapsed time. Automatically started at program start.
+*   Used to info-log elapsed time. Automatically started at program start.
 *
 ***/
 
