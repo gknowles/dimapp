@@ -26,8 +26,8 @@ class IPageHeap {
 public:
     virtual ~IPageHeap() = default;
 
-    virtual size_t alloc() = 0;
-    virtual void free(size_t pgno) = 0;
+    virtual size_t create() = 0;
+    virtual void destroy(size_t pgno) = 0;
 
     virtual size_t root() const = 0;
     virtual size_t pageSize() const = 0;
@@ -52,8 +52,8 @@ public:
 
     size_t pageCount() const;
 
-    size_t alloc() override;
-    void free(size_t pgno) override;
+    size_t create() override;
+    void destroy(size_t pgno) override;
 
     size_t root() const override;
     size_t pageSize() const override;
@@ -81,7 +81,7 @@ inline size_t PageHeap<N>::pageCount() const {
 
 //===========================================================================
 template <int N>
-inline size_t PageHeap<N>::alloc() {
+inline size_t PageHeap<N>::create() {
     if (m_freePages) {
         return m_freePages.pop_front();
     } else {
@@ -92,7 +92,7 @@ inline size_t PageHeap<N>::alloc() {
 
 //===========================================================================
 template <int N>
-inline void PageHeap<N>::free(size_t pgno) {
+inline void PageHeap<N>::destroy(size_t pgno) {
     assert(pgno < m_pages.size());
     if (!m_freePages.insert((unsigned) pgno))
         assert(!"page already free");

@@ -276,7 +276,7 @@ static size_t numRefs(const SearchState & ss) {
 
 //===========================================================================
 static void allocPage(SearchState * ss) {
-    ss->pgno = (pgno_t) ss->heap->alloc();
+    ss->pgno = (pgno_t) ss->heap->create();
     setCount(ss, 0, 0);
     ss->nNodes = 0;
 }
@@ -785,7 +785,7 @@ static void applyUpdates(SearchState * ss) {
     }
     // Left over source pages after assigning all virtual pages? erase 'em.
     for (auto&& id : spages)
-        ss->heap->free(id);
+        ss->heap->destroy(id);
     // Still more virtual pages after all sources pages have been reused?
     // Assign 'em new pages.
     for (auto&& id : vpages) {
