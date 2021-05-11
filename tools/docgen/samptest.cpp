@@ -983,7 +983,8 @@ static void runProgTests(ProgWork * work, unsigned phase) {
                 {
                     .workingDir = workDir.str(),
                     .envVars = run.env,
-                    .stdinData = input
+                    .stdinData = input,
+                    .concurrency = envProcessors()
                 }
             );
             return;

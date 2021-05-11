@@ -378,7 +378,7 @@ void exec(
 ) {
     ExecOptions opts;
     opts.workingDir = workDir;
-    //opts.concurrency = 2 * envProcessors();
+    opts.concurrency = envProcessors();
     exec(fn, cmdline, errTitle, opts);
 }
 
@@ -396,7 +396,7 @@ string execWait(
     if (!workDir.empty())
         opts.workingDir = workDir;
     opts.hq = taskComputeQueue();
-    //opts.concurrency = 2 * envProcessors();
+    opts.concurrency = envProcessors();
     exec(
         [&](auto && content){
             mut.lock();
