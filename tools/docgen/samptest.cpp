@@ -67,6 +67,7 @@ struct RunInfo {
     string cmdline;
     map<size_t, int> input; // {line, pos} view into outputs
     vector<string> output;
+    map<string, string> env;
 };
 struct TestInfo {
     unsigned line = 0;
@@ -231,9 +232,11 @@ static vector<pair<size_t, size_t>> lineSpans(
     for (unsigned i = 0; i < args.size(); i += 2) {
         auto & range = out.emplace_back();
         range.first = strToInt(args[i]);
-        range.second = args.size() == i + 1
-            ? lines.size() - range.first
-            : strToInt(args[i + 1]);
+        if (args.size() == i + 1) {
+            range.second = lines.size() - range.first;
+        } else {
+            range.second = strToInt(args[i + 1]);
+        }
         if (range.first > range.first + range.second
             || range.first >= lines.size()
             || range.first + range.second > lines.size()
@@ -610,6 +613,7 @@ static void processScript(
     }
     types.push_back(kInvalid);
 
+    map<string, string> env;
     for (unsigned i = 0; i < lines.size();) {
         RunInfo run;
         run.line = blk.line + i;
@@ -619,14 +623,38 @@ static void processScript(
             cmt = trim(cmt);
             run.comments.emplace_back(cmt);
         }
-        if (types[i] == kInvalid)
+        if (types[i] == kInvalid) {
+            // End of list.
             return;
+        }
         if (types[i] != kExecute) {
             logMsgWarn() << info->page.file << ", line " << blk.line + i
                 << ": expected executable statement in script block.";
             return;
         }
         run.cmdline = trim(lines[i].substr(lang.prefix.size()));
+        for (auto&& eset : lang.envSets) {
+            match_results<string_view::const_iterator> m;
+            if (regex_match(lines[i].begin(), lines[i].end(), m, eset)) {
+                assert(m.size() == 3);
+                auto n = m[1].str();
+                auto v = m[2].str();
+                if (n.empty()) {
+                    logMsgWarn() << info->page.file << ", line "
+                        << blk.line + i
+                        << ": setting environment variable with no name.";
+                    return;
+                }
+                if (v.empty()) {
+                    env.erase(n);
+                } else {
+                    env[n] = v;
+                }
+                run.cmdline.clear();
+                break;
+            }
+        }
+        run.env = env;
         for (++i; types[i] == kOutput; ++i) {
             while (input.contains(i)) {
                 auto len = (int) lines[i].size();
@@ -851,7 +879,12 @@ FAILED:
 //===========================================================================
 static void runProgTests(ProgWork * work, unsigned phase) {
     if (appStopping()) {
-        work->fn();
+        if (work->fn) {
+            work->fn();
+            work->fn = {};
+        }
+        if (--work->pendingWork == 0)
+            delete work;
         return;
     }
 
@@ -881,16 +914,19 @@ static void runProgTests(ProgWork * work, unsigned phase) {
             }
             auto cmdline = Cli::toCmdline(args);
             auto title = lang + ", " + testPath(work->info, work->prog.line);
+            s_perfCompile += 1;
             if (first) {
                 first = false;
-                work->pendingWork -= 1;
                 auto out = execWait(cmdline, title, workDir);
                 if (out.empty()) {
+                    s_perfCompileFailed += 1;
                     appSignalShutdown(EX_DATAERR);
+                    work->pendingWork = 1;
+                    runProgTests(work, what);
                     return;
                 }
+                work->pendingWork -= 1;
             } else {
-                s_perfCompile += 1;
                 exec(
                     [work, what](string && out) {
                         if (out.empty())
@@ -938,22 +974,23 @@ static void runProgTests(ProgWork * work, unsigned phase) {
                 input += '\n';
             }
 
-            fileSetCurrentDir(workDir);
             s_perfRun += 1;
             execProgram(
                 [work, phase, &run](ExecResult && res) {
                     runProgDone(work, phase, run, move(res));
                 },
                 cmd,
-                { .stdinData = input }
+                {
+                    .workingDir = workDir.str(),
+                    .envVars = run.env,
+                    .stdinData = input
+                }
             );
-            fileSetCurrentDir(workDriveDir);
-            if (curDir != workDriveDir)
-                fileSetCurrentDir(curDir);
             return;
         }
 
         work->fn();
+        delete work;
         return;
     }
 
@@ -1141,8 +1178,11 @@ static bool testCmd(Cli & cli) {
         return cli.fail(EX_DATAERR, "");
     }
 
-    logMsgInfo() << "Making TEST files from '" << cfg->configFile << "' to '"
+    ostringstream os;
+    os << "Making TEST files from '" << cfg->configFile << "' to '"
         << cfg->sampDir << "'.";
+    auto out = logMsgInfo();
+    cli.printText(out, os.str());
     testSamples(cfg.release());
 
     return cli.fail(EX_PENDING, "");

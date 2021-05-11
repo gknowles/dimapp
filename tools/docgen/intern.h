@@ -35,6 +35,7 @@ struct Compiler {
 struct Script {
     std::string prefix;
     std::string commentPrefix;
+    std::vector<std::regex> envSets;
     std::vector<std::string> shellArgs;
 };
 

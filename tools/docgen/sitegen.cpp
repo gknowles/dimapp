@@ -946,8 +946,12 @@ static bool genCmd(Cli & cli) {
         return cli.fail(EX_DATAERR, "");
     }
 
-    logMsgInfo() << "Making WEBSITE files from '" << cfg->configFile
+    ostringstream os;
+    os << "Making WEBSITE files from '" << cfg->configFile
         << "' to '" << cfg->siteDir << "'.";
+    auto out = logMsgInfo();
+    cli.printText(out, os.str());
+
     genSite(cfg.release());
 
     return cli.fail(EX_PENDING, "");

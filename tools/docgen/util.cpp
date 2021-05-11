@@ -67,11 +67,25 @@ static bool loadVersions(Config * out, XNode * root) {
 static bool loadScripts(Config * out, XNode * root) {
     for (auto&& xs : elems(root, "Script")) {
         auto script = make_shared<Script>();
-        script->prefix = attrValue(firstChild(&xs, "ShellPrefix"), "value");
+        script->prefix =
+            attrValue(firstChild(&xs, "ShellPrefix"), "value", "");
         script->commentPrefix =
-            attrValue(firstChild(&xs, "CommentPrefix"), "value");
-        for (auto&& xarg : elems(firstChild(&xs, "Shell"), "Arg"))
-            script->shellArgs.emplace_back(attrValue(&xarg, "value"));
+            attrValue(firstChild(&xs, "CommentPrefix"), "value", "");
+        for (auto&& xarg : elems(&xs, "SetEnv")) {
+            auto raw = attrValue(&xarg, "regex");
+            if (!raw)
+                continue;
+            auto & regex = script->envSets.emplace_back();
+            regex.assign(raw, regex::optimize);
+            if (regex.mark_count() != 2) {
+                logMsgError() << "SetEnv/@regex must have two captures.";
+                appSignalShutdown(EX_DATAERR);
+                return false;
+            }
+        }
+        for (auto&& xarg : elems(firstChild(&xs, "Shell"), "Arg")) {
+            script->shellArgs.emplace_back(attrValue(&xarg, "value", ""));
+        }
         if (script->shellArgs.empty())
             continue;
         for (auto&& xlang : elems(&xs, "Lang")) {
@@ -96,7 +110,7 @@ static bool loadCompilers(Config * out, XNode * root) {
         // Code/Compile
         auto xc = firstChild(&xs, "Compile");
         for (auto&& xarg : elems(xc, "Arg"))
-            comp->compileArgs.emplace_back(attrValue(&xarg, "value"));
+            comp->compileArgs.emplace_back(attrValue(&xarg, "value", ""));
         if (comp->compileArgs.empty())
             continue;
 
