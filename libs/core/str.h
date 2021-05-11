@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2020.
+// Copyright Glen Knowles 2017 - 2021.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // str.h - dim core
@@ -299,6 +299,9 @@ private:
         const ostream_utf8_return & out
     );
 };
+constexpr ostream_utf8_return utf8(wchar_t wch) {
+    return {std::wstring_view(&wch, 1)};
+}
 constexpr ostream_utf8_return utf8(std::wstring_view src) {
     return {src};
 }
@@ -311,7 +314,8 @@ constexpr ostream_utf8_return utf8(const wchar_t src[], size_t srclen) {
 
 //===========================================================================
 template<typename OutIt>
-constexpr OutIt copy_char(char32_t ch, OutIt out) {
+requires std::output_iterator<OutIt, unsigned char>
+constexpr OutIt writeUtf8(OutIt out, char32_t ch) {
     if (ch < 0x80) {
         *out++ = (unsigned char) ch;
     } else if (ch < 0x800) {
@@ -335,11 +339,12 @@ constexpr OutIt copy_char(char32_t ch, OutIt out) {
 
 //===========================================================================
 template<typename OutIt>
-constexpr OutIt copy_char(std::wstring_view in, OutIt out) {
+requires std::output_iterator<OutIt, unsigned char>
+constexpr OutIt writeUtf8(OutIt out, std::wstring_view in) {
     char32_t popFrontUnicode(std::wstring_view * src);
     while (!in.empty()) {
         auto ch = popFrontUnicode(&in);
-        out = copy_char(ch, out);
+        out = writeUtf8(out, ch);
     }
     return out;
 }
@@ -349,8 +354,8 @@ constexpr OutIt copy_char(std::wstring_view in, OutIt out) {
 // UTF-16
 //---------------------------------------------------------------------------
 
-// returns 0 if src doesn't start with a valid UTF-16 encoded code point,
-// which includes being empty.
+// Returns 0 if src is empty or starts with an invalid UTF-16 encoded code
+// point.
 char32_t popFrontUnicode(std::wstring_view * src);
 
 size_t unicodeLen(std::wstring_view src);
@@ -358,7 +363,8 @@ std::wstring toWstring(std::string_view src);
 
 //===========================================================================
 template<typename OutIt>
-constexpr OutIt copy_wchar(char32_t ch, OutIt out) {
+requires std::output_iterator<OutIt, wchar_t>
+constexpr OutIt writeWchar(OutIt out, char32_t ch) {
     if (ch <= 0xffff) {
         *out++ = (wchar_t) ch;
     } else if (ch <= 0x10ffff) {
@@ -372,10 +378,11 @@ constexpr OutIt copy_wchar(char32_t ch, OutIt out) {
 
 //===========================================================================
 template<typename OutIt>
-constexpr OutIt copy_wchar(std::string_view in, OutIt out) {
+requires std::output_iterator<OutIt, wchar_t>
+constexpr OutIt writeWchar(OutIt out, std::string_view in) {
     while (!in.empty()) {
         auto ch = popFrontUnicode(&in);
-        out = copy_wchar(ch, out);
+        out = writeWchar(out, ch);
     }
     return out;
 }

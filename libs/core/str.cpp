@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2020.
+// Copyright Glen Knowles 2017 - 2021.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // str.cpp - dim core
@@ -608,7 +608,7 @@ size_t Dim::unicodeLen(string_view src) {
 //===========================================================================
 string Dim::toString(wstring_view src) {
     string out;
-    copy_char(src, back_inserter(out));
+    writeUtf8(back_inserter(out), src);
     return out;
 }
 
@@ -617,7 +617,7 @@ namespace Dim {
 ostream & operator<<(ostream & os, const ostream_utf8_return & out);
 }
 ostream & Dim::operator<<(ostream & os, const ostream_utf8_return & out) {
-    copy_char(out.src, ostreambuf_iterator<char>(os));
+    writeUtf8(ostreambuf_iterator<char>(os), out.src);
     return os;
 }
 
@@ -664,6 +664,6 @@ size_t Dim::unicodeLen(wstring_view src) {
 //===========================================================================
 wstring Dim::toWstring(string_view src) {
     wstring out;
-    copy_wchar(src, back_inserter(out));
+    writeWchar(back_inserter(out), src);
     return out;
 }

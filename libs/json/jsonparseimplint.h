@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2018 - 2019.
+// Copyright Glen Knowles 2018 - 2021.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // jsonparseimplint.h - dim json
@@ -188,7 +188,7 @@ inline bool JsonParser::onEscapeNumHexChar (char ch) {
 
 //===========================================================================
 inline bool JsonParser::onEscapeNumberEnd () {
-    m_cur = copy_char(m_hexchar, m_cur);
+    m_cur = writeUtf8(m_cur, m_hexchar);
     m_hexchar = 0;
     return true;
 }
