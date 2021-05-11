@@ -47,6 +47,9 @@ struct ExecResult {
 struct ExecOptions {
     std::string workingDir;
 
+    // This is a delta applied to the application's environment. Set variables
+    // to the empty string to remove them.
+    //
     // The working directory for one or more drives can be set using special
     // environment variables named after the drive. For example, setting "=C"
     // sets the C drive's working directory for the child process.
