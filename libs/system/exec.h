@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2018 - 2020.
+// Copyright Glen Knowles 2018 - 2021.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // exec.h - dim system
@@ -19,6 +19,7 @@
 #include "core/task.h"
 #include "core/time.h"
 
+#include <map>
 #include <string_view>
 
 namespace Dim {
@@ -45,8 +46,17 @@ struct ExecResult {
 
 struct ExecOptions {
     std::string workingDir;
+
+    // The working directory for one or more drives can be set using special
+    // environment variables named after the drive. For example, setting "=C"
+    // sets the C drive's working directory for the child process.
+    //
+    // NOTE: Window's docs are unclear, maybe it's "=C:" instead of "=C" ?
+    //       Please remove this note when verified!
+    std::map<std::string, std::string> envVars;
+
     Dim::Duration timeout = {};
-    std::string stdinData;     // WARNING: not tested
+    std::string stdinData;
     Dim::TaskQueueHandle hq;
     size_t concurrency = (size_t) -1;
 };

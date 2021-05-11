@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2019 - 2020.
+// Copyright Glen Knowles 2019 - 2021.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // winres.cpp - dim windows platform
@@ -346,6 +346,26 @@ void ExecProgram::exec() {
         }
     }
 
+    char * envBlk = nullptr;
+    string envBuf;
+    if (!m_opts.envVars.empty()) {
+        auto env = envGetVars();
+        for (auto&& [name, value] : m_opts.envVars) {
+            if (value.empty()) {
+                env.erase(name);
+            } else {
+                env[name] = value;
+            }
+        }
+        for (auto&& [name, value] : env) {
+            envBuf += name;
+            envBuf += '=';
+            envBuf += value;
+            envBuf += '\0';
+        }
+        envBuf += '\0';
+        envBlk = envBuf.data();
+    }
     auto wcmdline = toWstring(m_cmdline);
     auto wworkDir = toWstring(m_opts.workingDir);
     STARTUPINFOW si = { sizeof si };
@@ -361,7 +381,7 @@ void ExecProgram::exec() {
         NULL, // thread attrs
         true, // inherit handles, true to inherit the pipe handles
         CREATE_NEW_PROCESS_GROUP | CREATE_SUSPENDED,
-        NULL, // environment
+        envBlk,
         wworkDir.empty() ? NULL : wworkDir.c_str(), // current dir
         &si,
         &pi
