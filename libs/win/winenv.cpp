@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2020.
+// Copyright Glen Knowles 2017 - 2021.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // winenv.cpp - dim windows platform
@@ -49,6 +49,69 @@ void Dim::winEnvInitialize() {
 ***/
 
 //===========================================================================
+map<string, string> Dim::envGetVars() {
+    map<string, string> out;
+    auto wenv = GetEnvironmentStringsW();
+    if (!wenv) {
+        logMsgError() << "GetEnvironmentStringsW: " << WinError{};
+        return out;
+    }
+    vector<string_view> nv;
+    wstring_view wvar;
+    for (auto wvars = wenv; *wvars; wvars += wvar.size() + 1) {
+        wvar = wstring_view(wvars);
+        auto var = toString(wvar);
+        split(&nv, var, '=');
+        if (nv.size() == 2 && !nv[0].empty() && !nv[1].empty())
+            out[string(nv[0])] = nv[1];
+    }
+    if (!FreeEnvironmentStringsW(wenv))
+        logMsgError() << "FreeEnvironmentStringsW: " << WinError{};
+    return out;
+}
+
+//===========================================================================
+string Dim::envGetVar(string_view name) {
+    wstring wvar;
+    wvar.resize(wvar.capacity());
+    auto wname = toWstring(name);
+    DWORD cnt = 0;
+    for (;;) {
+        cnt = GetEnvironmentVariableW(
+            wname.data(),
+            wvar.data(),
+            (DWORD) wvar.size() + 1 // include space of terminating null
+        );
+        if (!cnt) {
+            WinError err;
+            if (err != ERROR_ENVVAR_NOT_FOUND) {
+                logMsgError() << "GetEnvironmentVariableW(" << name << "): "
+                    << err;
+            }
+            return {};
+        }
+        if (cnt <= wvar.size()) {
+            wvar.resize(cnt);
+            return toString(wvar);
+        }
+        wvar.resize(cnt - 1);
+    }
+}
+
+//===========================================================================
+bool Dim::envSetVar(string_view name, string_view value) {
+    if (!SetEnvironmentVariableW(
+        toWstring(name).c_str(),
+        toWstring(value).c_str()
+    )) {
+        WinError err;
+        logMsgError() << "SetEnvironmentVariableW(" << name << "): " << err;
+        return false;
+    }
+    return true;
+}
+
+//===========================================================================
 const string & Dim::envExecPath() {
     if (s_execPath.empty()) {
         wstring path;
@@ -90,8 +153,15 @@ TimePoint Dim::envProcessStartTime() {
     FILETIME exit;
     FILETIME kernel;
     FILETIME user;
-    if (!GetProcessTimes(GetCurrentProcess(), &creation, &exit, &kernel, &user))
+    if (!GetProcessTimes(
+        GetCurrentProcess(),
+        &creation,
+        &exit,
+        &kernel,
+        &user
+    )) {
         return {};
+    }
     ULARGE_INTEGER tmp;
     tmp.HighPart = creation.dwHighDateTime;
     tmp.LowPart = creation.dwLowDateTime;
@@ -109,7 +179,7 @@ DiskSpace Dim::envDiskSpace(std::string_view path) {
         &total,
         nullptr
     )) {
-        logMsgFatal() << "GetDiskFreeSpawnEx(" << path << "): " << WinError{};
+        logMsgFatal() << "GetDiskFreeSpaceExW(" << path << "): " << WinError{};
     }
     DiskSpace out;
     out.avail = avail.QuadPart;
@@ -129,12 +199,12 @@ Dim::VersionInfo Dim::envExecVersion() {
         len,
         buf.get()
     )) {
-        logMsgFatal() << "GetFileVersionInfo: " << WinError{};
+        logMsgFatal() << "GetFileVersionInfoW: " << WinError{};
     }
     VS_FIXEDFILEINFO * fi;
     UINT ulen;
     if (!VerQueryValueW(buf.get(), L"\\", (void **) &fi, &ulen))
-        logMsgFatal() << "VerQueryValue: " << WinError{};
+        logMsgFatal() << "VerQueryValueW: " << WinError{};
 
     VersionInfo vi = {};
     vi.major = HIWORD(fi->dwProductVersionMS);

@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2020.
+// Copyright Glen Knowles 2017 - 2021.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // env.h - dim system
@@ -8,6 +8,7 @@
 
 #include "json/json.h"
 
+#include <map>
 #include <string>
 
 namespace Dim {
@@ -77,5 +78,17 @@ ProcessRights envProcessRights();
 
 // Dump information about current account
 void envProcessAccount(IJBuilder * out);
+
+
+/****************************************************************************
+*
+*   Environment Variables
+*
+***/
+
+std::map<std::string, std::string> envGetVars();
+std::string envGetVar(std::string_view name);
+// Returns true if successful
+bool envSetVar(std::string_view name, std::string_view value);
 
 } // namespace
