@@ -37,9 +37,9 @@ enum TestAttr {
     // NOTE: These enums are ordered by priority of execution.
     kTestInvalid,
     kTestIgnore,
-    kTestGetline,
-    kTestNoScript,
     kTestLanguage,
+    kTestNoScript,
+    kTestGetline,
     kTestAlternate,
     kTestFile,
     kTestPrefix,
@@ -85,10 +85,24 @@ struct PageInfo {
 
     unsigned lastProgLine = 0;
     unordered_map<unsigned, TestInfo> tests;
-    vector<string> testPrefix;
+    unordered_map<string, vector<string>> testPrefix;
 };
 
-}
+struct ApplyAttrState {
+    std::function<Dim::Detail::Log(TestAttr attr)> logger;
+    multimap<TestAttr, AttrInfo> attrs;
+    string lang;               // source block lang
+    vector<string_view> lines; // source block lines
+
+    multimap<TestAttr, AttrInfo>::iterator iter;
+    TestAttr attr;
+
+    ApplyAttrState(const CodeBlock & blk);
+    void nextAttr();
+    Dim::Detail::Log olog();
+};
+
+} // namespace
 
 
 /****************************************************************************
@@ -141,7 +155,7 @@ static void genFileHeader(
 }
 
 //===========================================================================
-inline static void genCppHeader(
+static void genCppHeader(
     CharBuf * out,
     const string & fname,
     const string & srcfile,
@@ -329,6 +343,241 @@ static multimap<TestAttr, AttrInfo> getAttrs(const CodeBlock & blk) {
     return attrs;
 }
 
+
+/****************************************************************************
+*
+*   Apply block attributes
+*
+***/
+
+//===========================================================================
+ApplyAttrState::ApplyAttrState(const CodeBlock & blk)
+    : attrs(getAttrs(blk))
+    , iter(attrs.begin())
+    , attr(iter == attrs.end() ? kTestInvalid : iter->first)
+    , lang(blk.lang)
+{
+    split(&lines, blk.content, '\n');
+    for (auto&& line : lines)
+        line = rtrim(line);
+}
+
+//===========================================================================
+void ApplyAttrState::nextAttr() {
+    attr = ++iter == attrs.end() ? kTestInvalid : iter->first;
+}
+
+//===========================================================================
+Dim::Detail::Log ApplyAttrState::olog() {
+    return logger(attr);
+}
+
+//===========================================================================
+// true if ignore enabled
+static bool applyIgnoreAttr(ApplyAttrState & as) {
+    if (as.attr != kTestIgnore)
+        return false;
+
+    if (as.iter->second.args.size() != 0) {
+        as.olog() << "expects no arguments.";
+    }
+    return true;
+}
+
+//===========================================================================
+// true if language updated
+static bool applyLanguageAttr(ApplyAttrState & as) {
+    if (as.attr != kTestLanguage)
+        return false;
+
+    auto & args = as.iter->second.args;
+    as.nextAttr();
+    if (args.size() != 1) {
+        as.olog() << "must have language argument.";
+        return false;
+    } else {
+        as.lang = args[0];
+        return true;
+    }
+}
+
+//===========================================================================
+// true if prefix updated
+static bool applyPrefixAttr(
+    ApplyAttrState & as,
+    vector<string> & prefix
+) {
+    if (as.attr != kTestPrefix)
+        return false;
+
+    vector<string_view> matched;
+    vector<string_view> unmatched;
+    selectLines(
+        &matched,
+        &unmatched,
+        as.iter->second.args,
+        as.lines,
+        [&as]() { return as.olog(); }
+    );
+    as.lines = unmatched;
+    as.nextAttr();
+    if (!matched.empty()) {
+        prefix.assign(matched.begin(), matched.end());
+        return true;
+    }
+    return false;
+}
+
+//===========================================================================
+// true if replacement made
+static bool applyReplaceAttr(
+    ApplyAttrState & as,
+    const vector<string_view> & prevLines
+) {
+    if (as.attr != kTestReplace)
+        return false;
+
+    auto fail = [&as]() { as.nextAttr(); return false; };
+
+    if (auto ni = next(as.iter); ni != as.attrs.end()) {
+        as.olog()
+            << tokenTableGetName(s_testAttrTbl, ni->first)
+            << " attribute takes precedence.";
+        return fail();
+    }
+    if (prevLines.empty()) {
+        as.olog() << "program must already be defined.";
+        return fail();
+    }
+
+    auto rawSpans = lineSpans(
+        as.iter->second.args,
+        prevLines,
+        [&as]() { return as.olog(); }
+    );
+    if (rawSpans.empty()) {
+        // argument parsing failed
+        return fail();
+    }
+    struct Replacement {
+        pair<size_t, size_t> dst;
+        pair<size_t, size_t> src;
+    };
+    vector<Replacement> repls;
+    size_t spos = 0;
+    for (auto&& span : rawSpans) {
+        if (spos >= as.lines.size()) {
+            // spos is size() + 1 unless the block ends with "...".
+            as.olog() << "more ranges than block sections.";
+            return fail();
+        }
+        auto & repl = repls.emplace_back();
+        repl.dst = span;
+        repl.src.first = spos;
+        for (; spos < as.lines.size(); ++spos) {
+            if (trim(as.lines[spos]) == "...")
+                break;
+        }
+        repl.src.second = spos - repl.src.first;
+        spos += 1;
+    }
+    sort(repls.begin(), repls.end(), [](auto & a, auto & b) {
+        return a.dst.first < b.dst.first;
+    });
+
+    vector<string_view> out;
+    size_t dpos = 0;
+    for (auto&& repl : repls) {
+        out.insert(
+            out.end(),
+            prevLines.begin() + dpos,
+            prevLines.begin() + repl.dst.first
+        );
+        dpos = repl.dst.first + repl.dst.second;
+        out.insert(
+            out.end(),
+            as.lines.begin() + repl.src.first,
+            as.lines.begin() + repl.src.first + repl.src.second
+        );
+    }
+    out.insert(
+        out.end(),
+        prevLines.begin() + dpos,
+        prevLines.end()
+    );
+    as.lines = out;
+    as.nextAttr();
+    return true;
+}
+
+//===========================================================================
+// true if lines replaced with subset of them
+static bool applySubsetAttr(ApplyAttrState & as) {
+    bool applied = false;
+    if (as.attr != kTestSubset)
+        return applied;
+
+    if (auto ni = next(as.iter); ni != as.attrs.end()) {
+        as.olog() << "subset attribute ignored in favor of "
+            << tokenTableGetName(s_testAttrTbl, ni->first)
+            << " attribute.";
+    } else {
+        vector<string_view> matched;
+        selectLines(
+            &matched,
+            nullptr,
+            as.iter->second.args,
+            as.lines,
+            [&as]() { return as.olog(); }
+        );
+        if (!matched.empty()) {
+            as.lines = matched;
+            applied = true;
+        }
+    }
+    as.nextAttr();
+    return applied;
+}
+
+//===========================================================================
+// true if ignore enabled
+static bool applyNoScriptAttr(ApplyAttrState & as) {
+    if (as.attr != kTestNoScript)
+        return false;
+
+    if (as.iter->second.args.size() != 0) {
+        as.olog() << "expects no arguments.";
+    }
+    return true;
+}
+
+//===========================================================================
+static map<const char *, int> applyGetlineAttr(ApplyAttrState & as) {
+    map<const char *, int> out;
+    for (; as.attr == kTestGetline; as.nextAttr()) {
+        auto & args = as.iter->second.args;
+        if (args.size() != 2) {
+            as.olog() << "must have line and start position arguments.";
+            continue;
+        }
+        unsigned line = strToUint(args[0]);
+        if (line >= as.lines.size()) {
+            as.olog() << "start line past end of block.";
+            continue;
+        }
+        int pos = strToInt(args[1]);
+        out[as.lines[line].data()] = pos;
+    }
+    return out;
+}
+
+
+/****************************************************************************
+*
+*   Process code blocks
+*
+***/
+
 //===========================================================================
 static void badAttrPrefix(
     ostream & os,
@@ -348,82 +597,49 @@ static void processCompiler(
     const CodeBlock & blk
 ) {
     string fname = "main";
-    auto lang = blk.lang;
     bool keepAlts = false;
     bool keepFiles = false;
-
-    auto attrs = getAttrs(blk);
-    auto iter = attrs.begin();
-    auto attr = iter == attrs.end() ? kTestInvalid : iter->first;
-
-    auto logger = [&info, &blk](TestAttr attr) {
-        return [attr, &info, &blk]() {
-            auto os = logMsgWarn();
-            badAttrPrefix(os, *info, blk, attr);
-            return os;
-        };
-    };
-    auto olog = [&logger](TestAttr attr) {
-        return logger(attr)();
+    ApplyAttrState as(blk);
+    as.logger = [&info, &blk](TestAttr attr) {
+        auto os = logMsgWarn();
+        badAttrPrefix(os, *info, blk, attr);
+        return os;
     };
 
-    if (attr == kTestIgnore) {
-        if (iter->second.args.size() != 0) {
-            olog(attr) << "expects no arguments.";
-        }
+    if (applyIgnoreAttr(as))
         return;
-    }
-    if (attr == kTestLanguage) {
-        auto & args = iter->second.args;
-        if (args.size() != 1) {
-            olog(attr) << "must have language argument.";
-        } else {
-            lang = args[0];
-        }
-        attr = ++iter == attrs.end() ? kTestInvalid : iter->first;
-    }
-    if (attr == kTestAlternate) {
+    applyLanguageAttr(as);
+    if (as.attr == kTestAlternate) {
         if (ti->alts.empty()) {
-            olog(attr) << "no previously defined program.";
-        } else if (iter->second.args.size() != 0) {
-            olog(attr) << "expects no arguments.";
+            as.olog() << "no previously defined program.";
+        } else if (as.iter->second.args.size() != 0) {
+            as.olog() << "expects no arguments.";
         } else {
             keepAlts = true;
         }
-        attr = ++iter == attrs.end() ? kTestInvalid : iter->first;
+        as.nextAttr();
     }
-    if (attr == kTestFile) {
-        auto & keys = iter->second.args;
+    if (as.attr == kTestFile) {
+        auto & keys = as.iter->second.args;
         if (keys.size() != 1) {
-            olog(attr) << "must have filename argument.";
+            as.olog() << "must have filename argument.";
         } else {
             keepFiles = true;
             fname = keys[0];
         }
-        attr = ++iter == attrs.end() ? kTestInvalid : iter->first;
+        as.nextAttr();
     }
-    vector<string_view> lines;
-    split(&lines, blk.content, '\n');
-    for (auto&& line : lines)
-        line = rtrim(line);
-    if (attr == kTestPrefix) {
-        vector<string_view> matched;
-        vector<string_view> unmatched;
-        selectLines(
-            &matched,
-            &unmatched,
-            iter->second.args,
-            lines,
-            logger(attr)
-        );
-        if (!matched.empty())
-            info->testPrefix.assign(matched.begin(), matched.end());
-        lines = unmatched;
-        attr = ++iter == attrs.end() ? kTestInvalid : iter->first;
-    }
+    applyPrefixAttr(as, info->testPrefix[as.lang]);
 
-    if (attr == kTestReplace)
+    vector<string_view> flines;
+    if (!ti->alts.empty() && ti->alts.back().files.contains(fname)) {
+        auto & lines = ti->alts.back().files[fname].lines;
+        flines.assign(lines.begin(), lines.end());
+    }
+    if (applyReplaceAttr(as, flines))
         keepFiles = true;
+    applySubsetAttr(as);
+    assert(as.attr == kTestInvalid);
 
     ProgInfo prog;
     if (ti->alts.empty() || !keepFiles) {
@@ -433,99 +649,9 @@ static void processCompiler(
         prog.line = blk.line;
     }
     auto & file = prog.files[fname];
-    file.lang = lang;
+    file.lang = as.lang;
     file.line = blk.line;
 
-    if (attr == kTestReplace) {
-        if (next(iter) != attrs.end()) {
-            attr = (++iter)->first;
-            olog(kTestReplace)
-                << tokenTableGetName(s_testAttrTbl, attr)
-                << " attribute takes precedence.";
-        } else if (file.lines.empty()) {
-            olog(attr) << "program must already be defined.";
-        } else {
-            vector<string_view> flines(file.lines.begin(), file.lines.end());
-            auto rawSpans = lineSpans(iter->second.args, flines, logger(attr));
-            if (rawSpans.empty()) {
-                // argument parsing failed
-                goto ABORT_REPLACE;
-            }
-            struct Replacement {
-                pair<size_t, size_t> dst;
-                pair<size_t, size_t> src;
-            };
-            vector<Replacement> repls;
-            size_t spos = 0;
-            for (auto&& span : rawSpans) {
-                if (spos >= lines.size()) {
-                    // spos is size() + 1 unless the block ends with "...".
-                    olog(attr) << "more ranges than block sections.";
-                    goto ABORT_REPLACE;
-                }
-                auto & repl = repls.emplace_back();
-                repl.dst = span;
-                repl.src.first = spos;
-                for (; spos < lines.size(); ++spos) {
-                    if (trim(lines[spos]) == "...")
-                        break;
-                }
-                repl.src.second = spos - repl.src.first;
-                spos += 1;
-            }
-            sort(repls.begin(), repls.end(), [](auto & a, auto & b) {
-                return a.dst.first < b.dst.first;
-            });
-
-            vector<string_view> out;
-            size_t dpos = 0;
-            for (auto&& repl : repls) {
-                out.insert(
-                    out.end(),
-                    file.lines.begin() + dpos,
-                    file.lines.begin() + repl.dst.first
-                );
-                dpos = repl.dst.first + repl.dst.second;
-                out.insert(
-                    out.end(),
-                    lines.begin() + repl.src.first,
-                    lines.begin() + repl.src.first + repl.src.second
-                );
-            }
-            out.insert(
-                out.end(),
-                file.lines.begin() + dpos,
-                file.lines.end()
-            );
-            lines = out;
-            keepFiles = true;
-        }
-    ABORT_REPLACE:
-        attr = ++iter == attrs.end() ? kTestInvalid : iter->first;
-    }
-
-    if (attr == kTestSubset) {
-        if (next(iter) != attrs.end()) {
-            attr = (++iter)->first;
-            olog(kTestSubset) << "subset attribute ignored in favor of "
-                << tokenTableGetName(s_testAttrTbl, attr)
-                << " attribute.";
-        } else {
-            vector<string_view> matched;
-            selectLines(
-                &matched,
-                nullptr,
-                iter->second.args,
-                lines,
-                logger(attr)
-            );
-            if (!matched.empty())
-                lines = matched;
-        }
-        attr = ++iter == attrs.end() ? kTestInvalid : iter->first;
-    }
-
-    assert(attr == kTestInvalid);
     if (ti->runs.empty()) {
         if (!ti->line)
             ti->line = blk.line;
@@ -536,7 +662,7 @@ static void processCompiler(
     }
     // Materialize the new lines in case what they're referencing is removed
     // by removing the alts or program.
-    vector<string> newLines(lines.begin(), lines.end());
+    vector<string> newLines(as.lines.begin(), as.lines.end());
     file.lines = move(newLines);
     if (!keepAlts)
         ti->alts.clear();
@@ -545,63 +671,41 @@ static void processCompiler(
 }
 
 //===========================================================================
-static map<unsigned, int> getInputs(
-    const multimap<TestAttr, AttrInfo> & attrs,
-    const PageInfo & info,
-    const CodeBlock & blk
-) {
-    map<unsigned, int> out;
-    auto ii = attrs.equal_range(kTestGetline);
-    for (auto i = ii.first; i != ii.second; ++i) {
-        auto & args = i->second.args;
-        if (args.size() != 2) {
-            auto os = logMsgWarn();
-            badAttrPrefix(os, info, blk, kTestGetline);
-            os << "must have line and start position arguments.";
-            continue;
-        }
-        unsigned line = strToUint(args[0]);
-        int pos = strToInt(args[1]);
-        out[line] = pos;
-    }
-    return out;
-}
-
-//===========================================================================
 static void processScript(
+    vector<string_view> * lines,
     PageInfo * info,
     TestInfo * ti,
     const CodeBlock & blk
 ) {
-    auto lname = blk.lang;
+    ApplyAttrState as(blk);
+    as.logger = [&info, &blk](TestAttr attr) {
+        auto os = logMsgWarn();
+        badAttrPrefix(os, *info, blk, attr);
+        return os;
+    };
 
-    auto attrs = getAttrs(blk);
-    if (attrs.contains(kTestIgnore))
+    if (applyIgnoreAttr(as))
         return;
-
-    if (auto i = attrs.find(kTestLanguage); i != attrs.end()) {
-        auto & args = i->second.args;
-        if (!args.empty())
-            lname = args.front();
-    }
-    if (!info->out->scripts.contains(lname))
+    applyLanguageAttr(as);
+    if (!info->out->scripts.contains(as.lang))
         return;
-    auto & lang = *info->out->scripts[lname];
-
-    if (attrs.contains(kTestNoScript)) {
+    if (applyNoScriptAttr(as)) {
         auto & run = ti->runs.emplace_back();
         run.line = blk.line;
-        run.lang = lname;
+        run.lang = as.lang;
         return;
     }
+    auto input = applyGetlineAttr(as);
+    applyReplaceAttr(as, *lines);
+    applySubsetAttr(as);
 
-    auto input = getInputs(attrs, *info, blk);
+    assert(as.attr == kTestInvalid);
+    *lines = as.lines;
+    auto & lang = *info->out->scripts[as.lang];
 
-    vector<string_view> lines;
-    split(&lines, blk.content, '\n');
     enum { kInvalid, kComment, kExecute, kInput, kOutput };
     vector<int> types;
-    for (auto&& line : lines) {
+    for (auto&& line : as.lines) {
         line = rtrim(line);
         int type = kOutput;
         if (line.starts_with(lang.commentPrefix)) {
@@ -614,12 +718,12 @@ static void processScript(
     types.push_back(kInvalid);
 
     map<string, string> env;
-    for (unsigned i = 0; i < lines.size();) {
+    for (unsigned i = 0; i < as.lines.size();) {
         RunInfo run;
         run.line = blk.line + i;
-        run.lang = lname;
+        run.lang = as.lang;
         for (; types[i] == kComment; ++i) {
-            auto cmt = lines[i].substr(lang.commentPrefix.size());
+            auto cmt = as.lines[i].substr(lang.commentPrefix.size());
             cmt = trim(cmt);
             run.comments.emplace_back(cmt);
         }
@@ -632,10 +736,10 @@ static void processScript(
                 << ": expected executable statement in script block.";
             return;
         }
-        run.cmdline = trim(lines[i].substr(lang.prefix.size()));
+        run.cmdline = trim(as.lines[i].substr(lang.prefix.size()));
         for (auto&& eset : lang.envSets) {
             match_results<string_view::const_iterator> m;
-            if (regex_match(lines[i].begin(), lines[i].end(), m, eset)) {
+            if (regex_match(as.lines[i].begin(), as.lines[i].end(), m, eset)) {
                 assert(m.size() == 3);
                 auto n = m[1].str();
                 auto v = m[2].str();
@@ -656,9 +760,10 @@ static void processScript(
         }
         run.env = env;
         for (++i; types[i] == kOutput; ++i) {
-            while (input.contains(i)) {
-                auto len = (int) lines[i].size();
-                auto pos = input[i];
+            auto data = as.lines[i].data();
+            while (input.contains(data)) {
+                auto len = (int) as.lines[i].size();
+                auto pos = input[data];
                 if (pos >= 0) {
                     if (pos >= len)
                         break;
@@ -670,7 +775,7 @@ static void processScript(
                 run.input[run.output.size()] = pos;
                 break;
             }
-            run.output.emplace_back(lines[i]);
+            run.output.emplace_back(as.lines[i]);
         }
         ti->runs.push_back(move(run));
     }
@@ -756,11 +861,12 @@ static void processPage(PageInfo * info, unsigned phase = 0) {
 
     vector<CodeBlock> blocks = findBlocks(*info);
     TestInfo ti;
+    vector<string_view> scriptLines;
     for (auto&& blk : blocks) {
         if (cfg.compilers.contains(blk.lang)) {
             processCompiler(info, &ti, blk);
         } else if (cfg.scripts.contains(blk.lang)) {
-            processScript(info, &ti, blk);
+            processScript(&scriptLines, info, &ti, blk);
         }
     }
 
@@ -778,7 +884,7 @@ static void processPage(PageInfo * info, unsigned phase = 0) {
                     info->page.file,
                     file.second.line
                 );
-                for (auto&& line : info->testPrefix)
+                for (auto&& line : info->testPrefix[file.second.lang])
                     content.append(line).append("\n");
                 for (auto&& line : file.second.lines)
                     content.append(line).append("\n");

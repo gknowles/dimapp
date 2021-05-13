@@ -83,18 +83,24 @@ empty passthrough block can be used to get around this.
 To enable testing, attributes are added to comment or code blocks to specify
 how the extracted code is compiled and tests are run.
 
-* All blocks
-** test ignore - ignore this block
-* Program source code
-** test alt - save current program as alternate
-** test file <name> - apply to one file in program
-** test lang <lang> - overrides code language
-** test prefix <source line ranges> - set global code file prefix for language
-** test repl <target line ranges>
-** test subset <source line ranges>
-* Test scripts
-** test getline <line> <start pos> - marks keyboard input from user
-** test noscript - compile only test, don't try scripts
+<line ranges>:: Space separated series of space separated <start line> and
+<length> pairs. The last <length> of the last pair can be left off, in which
+case that range extends to the last line.
+
+==== All blocks
+* test ignore - ignore this block
+* test lang <lang> - overrides code language
+* test repl <target line ranges>
+* test subset <source line ranges>
+
+==== Program source code
+* test alt - save current program as alternate
+* test file <name> - apply to one file in program
+* test prefix <source line ranges> - set global code file prefix for language
+
+==== Test scripts
+* test getline <line> <start pos> - marks keyboard input from user
+* test noscript - compile only test, don't try scripts
 
 === Script.txt format
 Each line starts with the type (a single character), a space, and the content
