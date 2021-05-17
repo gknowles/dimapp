@@ -19,6 +19,7 @@
 #include "core/task.h"
 #include "core/time.h"
 
+#include <chrono>
 #include <map>
 #include <string_view>
 
@@ -58,8 +59,13 @@ struct ExecOptions {
     //       Please remove this note when verified!
     std::map<std::string, std::string> envVars;
 
-    Dim::Duration timeout = {};
+    Dim::Duration timeout = (std::chrono::minutes) 5;
     std::string stdinData;
+
+    // Enables additional writes to stdin of child process after it has
+    // been started.
+    bool enableExecWrite = false;
+
     Dim::TaskQueueHandle hq;
     size_t concurrency = (size_t) -1;
 };
@@ -112,7 +118,8 @@ void execProgram(
     execProgram(notify, vargs, opts);
 }
 
-// Write to standard input of child process
+// Write to standard input of child process. execProgram() must have been
+// called for the notify with the enableExecWrite option set to true.
 // WARNING: not tested
 void execWrite(IExecNotify * notify, std::string_view data);
 

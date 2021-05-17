@@ -17,7 +17,10 @@ using namespace Dim;
 
 namespace Dim {
 
-class ExecProgram : public ListLink<> {
+class ExecProgram
+    : public ListLink<>
+    , public ITimerNotify
+{
 public:
     class ExecPipe : public IPipeNotify {
     public:
@@ -25,10 +28,12 @@ public:
         bool onPipeAccept() override;
         bool onPipeRead(size_t * bytesUsed, string_view data) override;
         void onPipeDisconnect() override;
+        void onPipeBufferChanged(const PipeBufferInfo & info) override;
 
         ExecProgram * m_notify = {};
         StdStream m_strm = {};
-        bool m_closed = true;
+        RunMode m_mode = kRunStopped;
+        HANDLE m_child = {};
     };
 
 public:
@@ -47,8 +52,12 @@ public:
 
     bool onRead(size_t * bytesUsed, StdStream strm, string_view data);
     void onDisconnect(StdStream strm);
+    void onBufferChanged(StdStream strm, const PipeBufferInfo & info);
 
-    void onProcessExit();
+    void onJobExit();
+
+    // Inherited via ITimerNotify
+    Duration onTimer(TimePoint now) override;
 
 private:
     bool createPipe(
@@ -57,11 +66,13 @@ private:
         string_view name,
         Pipe::OpenMode oflags
     );
+    void execIfReady();
     bool completeIfDone_LK();
 
     TaskQueueHandle m_hq;
     HANDLE m_job = NULL;
     HANDLE m_process = NULL;
+    HANDLE m_thread = NULL;
     string m_cmdline;
     ExecOptions m_opts;
 
@@ -133,10 +144,12 @@ static void jobObjectIocpThread() {
                 entries[i].lpCompletionKey
             );
             DWORD msg = entries[i].dwNumberOfBytesTransferred;
-            DWORD processId = (DWORD) (uintptr_t) entries[i].lpOverlapped;
-            (void) processId;
+            [[maybe_unused]]
+            DWORD procId = (DWORD) (uintptr_t) entries[i].lpOverlapped;
             if (msg == JOB_OBJECT_MSG_ACTIVE_PROCESS_ZERO) {
-                taskPush(exe->queue(), [=](){ exe->onProcessExit(); });
+                // The process, and any child processes it may have launched,
+                // have exited.
+                taskPush(exe->queue(), [=](){ exe->onJobExit(); });
             }
         }
     }
@@ -174,8 +187,8 @@ static HANDLE iocpHandle() {
 
 //===========================================================================
 bool ExecProgram::ExecPipe::onPipeAccept() {
-    if (m_strm == kStdIn)
-        pipeWrite(this, m_notify->m_opts.stdinData);
+    m_mode = kRunRunning;
+    m_notify->execIfReady();
     return true;
 }
 
@@ -190,6 +203,11 @@ bool ExecProgram::ExecPipe::onPipeRead(
 //===========================================================================
 void ExecProgram::ExecPipe::onPipeDisconnect() {
     m_notify->onDisconnect(m_strm);
+}
+
+//===========================================================================
+void ExecProgram::ExecPipe::onPipeBufferChanged(const PipeBufferInfo & info) {
+    m_notify->onBufferChanged(m_strm, info);
 }
 
 
@@ -248,6 +266,8 @@ ExecProgram::ExecProgram(
         m_pipes[e].m_notify = this;
     }
 
+    timerUpdate(this, m_opts.timeout);
+
     scoped_lock lk{s_mut};
     s_programs.link(this);
 }
@@ -257,7 +277,7 @@ ExecProgram::~ExecProgram() {
     assert(!m_notify);
 
     for (auto && pi : m_pipes)
-        assert(pi.m_closed);
+        assert(pi.m_mode == kRunStopped);
 
     if (linked()) {
         s_perfWaiting -= 1;
@@ -268,10 +288,61 @@ ExecProgram::~ExecProgram() {
 
 //===========================================================================
 void ExecProgram::exec() {
-    // Now that we're committed to getting an onProcessExit() call, change mode
+    // Now that we're committed to getting an onJobExit() call, change mode
     // so that we'll wait for it.
     m_mode = kRunStarting;
     m_hq = m_opts.hq;
+
+    // Create pipes
+    char rawname[100];
+    snprintf(
+        rawname,
+        sizeof rawname,
+        "//./pipe/local/%u_%p",
+        envProcessId(),
+        this
+    );
+    string name = rawname;
+
+    struct {
+        StdStream strm;
+        string name;
+        Pipe::OpenMode oflags;
+    } pipes[] = {
+        { kStdIn, name + ".in", Pipe::fReadWrite },
+        { kStdOut, name + ".out", Pipe::fReadOnly },
+        { kStdErr, name + ".err", Pipe::fReadOnly },
+    };
+    for (auto && p : pipes) {
+        auto & child = m_pipes[p.strm].m_child;
+        if (!createPipe(&child, p.strm, p.name, p.oflags)) {
+            onJobExit();
+            return;
+        }
+    }
+}
+
+//===========================================================================
+void ExecProgram::execIfReady() {
+    unique_lock lk(m_mut);
+    if (m_pipes[kStdIn].m_mode == kRunStarting
+        || m_pipes[kStdOut].m_mode == kRunStarting
+        || m_pipes[kStdErr].m_mode == kRunStarting
+    ) {
+        // If it wasn't the last pipe to finish starting, continue waiting for
+        // the last one.
+        return;
+    }
+    // Now that all pipes have started, check to make sure all are running, and
+    // stop the whole exec if they aren't.
+    if (m_pipes[kStdIn].m_mode != kRunRunning
+        || m_pipes[kStdOut].m_mode != kRunRunning
+        || m_pipes[kStdErr].m_mode != kRunRunning
+    ) {
+        lk.unlock();
+        onJobExit();
+        return;
+    }
 
     bool success = false;
     for (;;) {
@@ -311,39 +382,9 @@ void ExecProgram::exec() {
         break;
     }
     if (!success) {
-        onProcessExit();
+        lk.unlock();
+        onJobExit();
         return;
-    }
-
-    char rawname[100];
-    snprintf(
-        rawname,
-        sizeof rawname,
-        "//./pipe/local/%u_%p",
-        envProcessId(),
-        this
-    );
-    string name = rawname;
-
-    struct {
-        StdStream strm;
-        string name;
-        Pipe::OpenMode oflags;
-        HANDLE child;
-    } pipes[] = {
-        { kStdIn, name + ".in", Pipe::fReadWrite },
-        { kStdOut, name + ".out", Pipe::fReadOnly },
-        { kStdErr, name + ".err", Pipe::fReadOnly },
-    };
-    for (auto && p : pipes) {
-        if (!createPipe(&p.child, p.strm, p.name, p.oflags)) {
-            for (auto && p2 : pipes) {
-                if (p2.child)
-                    CloseHandle(p2.child);
-            }
-            onProcessExit();
-            return;
-        }
     }
 
     char * envBlk = nullptr;
@@ -370,9 +411,9 @@ void ExecProgram::exec() {
     auto wworkDir = toWstring(m_opts.workingDir);
     STARTUPINFOW si = { sizeof si };
     si.dwFlags = STARTF_USESTDHANDLES;
-    si.hStdInput = pipes[kStdIn].child;
-    si.hStdOutput = pipes[kStdOut].child;
-    si.hStdError = pipes[kStdErr].child;
+    si.hStdInput = m_pipes[kStdIn].m_child;
+    si.hStdOutput = m_pipes[kStdOut].m_child;
+    si.hStdError = m_pipes[kStdErr].m_child;
     PROCESS_INFORMATION pi = {};
     bool running = CreateProcessW(
         NULL, // explicit application name (no search path)
@@ -388,16 +429,21 @@ void ExecProgram::exec() {
     );
     WinError err;
 
-    for (auto && p : pipes)
-        CloseHandle(p.child);
+    // Close parents reference to child side of pipes.
+    for (auto && pipe : m_pipes) {
+        CloseHandle(pipe.m_child);
+        pipe.m_child = {};
+    }
 
     if (!running) {
         logMsgError() << "CreateProcessW(" << m_cmdline << "): " << err;
-        onProcessExit();
+        lk.unlock();
+        onJobExit();
         return;
     }
 
     m_process = pi.hProcess;
+    m_thread = pi.hThread;
     if (!AssignProcessToJobObject(m_job, m_process)) {
         logMsgError() << "AssignProcessToJobObject(" << m_cmdline << "): "
             << WinError{};
@@ -407,17 +453,26 @@ void ExecProgram::exec() {
         }
         CloseHandle(m_process);
         m_process = NULL;
-        onProcessExit();
+        lk.unlock();
+        onJobExit();
         return;
     }
 
     // Now that the process has been assigned to the job it can be resumed.
     // If it had launched a process before joining the job that child would
     // be untracked.
-    ResumeThread(pi.hThread);
-    CloseHandle(pi.hThread);
-
     m_mode = kRunRunning;
+    ResumeThread(m_thread);
+    CloseHandle(m_thread);
+
+    auto pipe = &m_pipes[kStdIn];
+    if (!m_opts.stdinData.empty()) {
+        // if !enableExecWrite the pipe will be closed when this write
+        // completes.
+        pipeWrite(pipe, m_opts.stdinData);
+    } else if (!m_opts.enableExecWrite) {
+        pipeClose(pipe);
+    }
 }
 
 //===========================================================================
@@ -433,17 +488,39 @@ bool ExecProgram::onRead(
 void ExecProgram::onDisconnect(StdStream strm) {
     unique_lock lk(m_mut);
     auto & pi = m_pipes[strm];
-    pi.m_closed = true;
+    pi.m_mode = kRunStopped;
     if (completeIfDone_LK())
         lk.release();
 }
 
 //===========================================================================
-void ExecProgram::onProcessExit() {
+void ExecProgram::onBufferChanged(
+    StdStream strm,
+    const PipeBufferInfo & info
+) {
+    if (strm == kStdIn && !m_opts.enableExecWrite && !info.incomplete)
+        pipeClose(&m_pipes[strm]);
+}
+
+//===========================================================================
+Duration ExecProgram::onTimer(TimePoint now) {
+    // Set to null handle so the process will be recognized as canceled.
+    CloseHandle(m_process);
+    m_process = {};
+
+    onJobExit();
+    return kTimerInfinite;
+}
+
+//===========================================================================
+void ExecProgram::onJobExit() {
     unique_lock lk(m_mut);
-    if (m_mode == kRunStarting) {
-        for (auto && pi : m_pipes)
-            pipeClose(&pi);
+    for (auto && pi : m_pipes) {
+        pipeClose(&pi);
+        if (pi.m_child) {
+            CloseHandle(pi.m_child);
+            pi.m_child = {};
+        }
     }
     m_mode = kRunStopped;
     DWORD rc;
@@ -462,9 +539,9 @@ void ExecProgram::onProcessExit() {
 
 //===========================================================================
 bool ExecProgram::completeIfDone_LK() {
-    if (!m_pipes[kStdIn].m_closed
-        || !m_pipes[kStdOut].m_closed
-        || !m_pipes[kStdErr].m_closed
+    if (m_pipes[kStdIn].m_mode != kRunStopped
+        || m_pipes[kStdOut].m_mode != kRunStopped
+        || m_pipes[kStdErr].m_mode != kRunStopped
         || m_mode != kRunStopped
     ) {
         return false;
@@ -489,7 +566,7 @@ bool ExecProgram::createPipe(
     string_view name,
     Pipe::OpenMode oflags
 ) {
-    m_pipes[strm].m_closed = false;
+    m_pipes[strm].m_mode = kRunStarting;
     pipeListen(&m_pipes[strm], name, oflags, queue());
 
     if (child) {
@@ -739,10 +816,14 @@ bool Dim::execElevatedWait(
 
 //===========================================================================
 void Dim::execCancelWaiting() {
-    scoped_lock lk{s_mut};
-    while (auto prog = s_programs.front()) {
+    List<ExecProgram> progs;
+    {
+        scoped_lock lk{s_mut};
+        progs.link(move(s_programs));
+    }
+    while (auto prog = progs.front()) {
         s_programs.unlink(prog);
-        prog->onProcessExit();
+        prog->onJobExit();
     }
 }
 
