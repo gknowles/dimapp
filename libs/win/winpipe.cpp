@@ -73,7 +73,7 @@ public:
 
     void hardClose();
     void createQueue();
-    void enableEvents(IPipeNotify * notify);
+    void enableEvents_LK(IPipeNotify * notify);
 
     // NOTE: If onRead or onWrite return false the pipe has been deleted.
     //       Additionally the task is completed and may be deleted whether or
@@ -91,10 +91,10 @@ protected:
     shared_ptr<PipeBase> m_selfRef;
 
 private:
-    void requeueRead();
-    void queueRead(PipeRequest * task);
-    void queuePrewrite(string_view data);
-    void queueWrites();
+    bool requeueRead_LK();
+    void queueRead_LK(PipeRequest * task);
+    void queuePrewrite_LK(string_view data);
+    void queueWrites_LK();
     bool onRead_LK(PipeRequest * task);
 
     PipeBufferInfo m_bufInfo{};
@@ -270,26 +270,29 @@ void PipeBase::createQueue() {
 }
 
 //===========================================================================
-void PipeBase::enableEvents(IPipeNotify * notify) {
+void PipeBase::enableEvents_LK(IPipeNotify * notify) {
     if (notify)
         m_notify = notify;
 
     // trigger first reads
-    while (m_prereads)
-        requeueRead();
+    while (m_prereads) {
+        if (!requeueRead_LK())
+            m_mut.lock();
+    }
 }
 
 //===========================================================================
 // static
 void PipeBase::read(IPipeNotify * notify) {
     if (auto pipe = notify->m_pipe) {
-        scoped_lock lk{pipe->m_mut};
-        pipe->requeueRead();
+        unique_lock lk{pipe->m_mut};
+        if (!pipe->requeueRead_LK())
+            lk.release();
     }
 }
 
 //===========================================================================
-void PipeBase::requeueRead() {
+bool PipeBase::requeueRead_LK() {
     auto task = m_prereads.front();
 
     // Queuing reads is only allowed after an automatic requeuing was
@@ -298,16 +301,17 @@ void PipeBase::requeueRead() {
 
     if (m_mode == Mode::kActive) {
         m_reads.link(task);
-        queueRead(task);
+        queueRead_LK(task);
+        return true;
     } else {
         assert(m_mode == Mode::kClosing || m_mode == Mode::kClosed);
         task->overlapped() = {};
-        onRead_LK(task);
+        return onRead_LK(task);
     }
 }
 
 //===========================================================================
-void PipeBase::queueRead(PipeRequest * task) {
+void PipeBase::queueRead_LK(PipeRequest * task) {
     task->m_buffer.resize(kBufferSize);
     task->overlapped() = {};
     WinError err = 0;
@@ -360,7 +364,7 @@ bool PipeBase::onRead_LK(PipeRequest * task) {
         }
 
         if (m_mode == Mode::kActive) {
-            queueRead(task);
+            queueRead_LK(task);
             return true;
         }
 
@@ -369,18 +373,18 @@ bool PipeBase::onRead_LK(PipeRequest * task) {
 
     delete task;
 
-    if (m_mode != Mode::kClosed) {
-        m_mode = Mode::kClosed;
-        m_mut.unlock();
-        m_notify->onPipeDisconnect();
-        m_mut.lock();
-    }
+    bool wasClosed = m_mode == Mode::kClosed;
+    bool wasEmpty = !m_reads && !m_writes;
+    m_mode = Mode::kClosed;
 
-    if (!m_reads && !m_writes) {
-        m_mut.unlock();
+    m_mut.unlock();
+    if (!wasClosed)
+        m_notify->onPipeDisconnect();
+    if (wasEmpty) {
         removeRef();
         return false;
     }
+    m_mut.lock();
     return true;
 }
 
@@ -391,12 +395,12 @@ void PipeBase::write(IPipeNotify * notify, string_view data) {
         return;
     if (auto pipe = notify->m_pipe) {
         scoped_lock lk{pipe->m_mut};
-        pipe->queuePrewrite(data);
+        pipe->queuePrewrite_LK(data);
     }
 }
 
 //===========================================================================
-void PipeBase::queuePrewrite(string_view data) {
+void PipeBase::queuePrewrite_LK(string_view data) {
     assert(data.size());
     if (m_mode == Mode::kClosing || m_mode == Mode::kClosed)
         return;
@@ -428,7 +432,7 @@ void PipeBase::queuePrewrite(string_view data) {
         task->m_buffer = data;
     }
 
-    queueWrites();
+    queueWrites_LK();
     if (auto task = m_prewrites.back()) {
         if (task->m_qtime == TimePoint::min()) {
             auto now = timeNow();
@@ -443,13 +447,15 @@ void PipeBase::queuePrewrite(string_view data) {
             // data is now waiting
             assert(m_bufInfo.waiting <= bytes);
             auto info = m_bufInfo;
+            m_mut.unlock();
             m_notify->onPipeBufferChanged(info);
+            m_mut.lock();
         }
     }
 }
 
 //===========================================================================
-void PipeBase::queueWrites() {
+void PipeBase::queueWrites_LK() {
     while (m_numWrites < m_maxWrites && m_prewrites) {
         m_writes.link(m_prewrites.front());
         m_numWrites += 1;
@@ -486,7 +492,10 @@ bool PipeBase::onWrite(PipeRequest * task) {
     auto bytes = (DWORD) task->m_buffer.size();
     delete task;
     assert(res.err || bytes == res.bytes);
-    assert(!res.err || res.err == ERROR_BROKEN_PIPE);
+    assert(!res.err
+        || res.err == ERROR_BROKEN_PIPE     // remote disconnect
+        || res.err == ERROR_OPERATION_ABORTED   // local disconnect
+    );
     m_numWrites -= 1;
     s_perfIncomplete -= bytes;
     m_bufInfo.incomplete -= bytes;
@@ -499,13 +508,14 @@ bool PipeBase::onWrite(PipeRequest * task) {
     }
 
     bool wasPrewrites = (bool) m_prewrites;
-    queueWrites();
+    queueWrites_LK();
     if (wasPrewrites && !m_prewrites // data no longer waiting
         || !m_numWrites              // send queue is empty
     ) {
         assert(!m_bufInfo.waiting);
         assert(m_numWrites || !m_bufInfo.incomplete);
         auto info = m_bufInfo;
+        lk.unlock();
         m_notify->onPipeBufferChanged(info);
     }
     return true;
@@ -690,7 +700,7 @@ void AcceptPipe::onTask() {
     } else {
         lk.lock();
     }
-    enableEvents(nullptr);
+    enableEvents_LK(nullptr);
 }
 
 //===========================================================================
