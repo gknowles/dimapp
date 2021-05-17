@@ -381,7 +381,8 @@ void List<T, Tag>::link(T * pos, T * first, T * last) {
 //===========================================================================
 template <typename T, typename Tag>
 void List<T, Tag>::link(T * pos, List && other) {
-    linkBase(pos, other.front(), other.back());
+    if (other)
+        linkBase(pos, other.front(), other.back());
 }
 
 //===========================================================================
@@ -400,7 +401,8 @@ void List<T, Tag>::linkAfter(T * pos, T * first, T * last) {
 //===========================================================================
 template <typename T, typename Tag>
 void List<T, Tag>::linkAfter(T * pos, List && other) {
-    linkBaseAfter(pos, other.front(), other.back());
+    if (other)
+        linkBaseAfter(pos, other.front(), other.back());
 }
 
 //===========================================================================
@@ -413,7 +415,8 @@ void List<T, Tag>::link(T * value) {
 //===========================================================================
 template <typename T, typename Tag>
 void List<T, Tag>::link(List && other) {
-    linkBase(&m_base, other.front(), other.back());
+    if (other)
+        linkBase(&m_base, other.front(), other.back());
 }
 
 //===========================================================================
@@ -426,7 +429,8 @@ void List<T, Tag>::linkFront(T * value) {
 //===========================================================================
 template <typename T, typename Tag>
 void List<T, Tag>::linkFront(List && other) {
-    linkBaseAfter(&m_base, other.front(), other.back());
+    if (other)
+        linkBaseAfter(&m_base, other.front(), other.back());
 }
 
 //===========================================================================
