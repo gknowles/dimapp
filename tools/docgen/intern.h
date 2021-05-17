@@ -68,6 +68,7 @@ struct Page {
     std::string pageLayout;
     bool defaultPage = false;
     std::string xrefFile; // defaults to file
+    std::string patch;
 };
 
 struct Layout {
@@ -110,12 +111,12 @@ void exec(
     std::function<void(std::string&&)> fn,
     std::string_view cmdline,
     std::string_view errTitle,
-    std::string_view workDir = {}
+    const Dim::ExecOptions & opts = {}
 );
 std::string execWait(
     std::string_view cmdline,
     std::string_view errTitle,
-    std::string_view workDir = {}
+    const Dim::ExecOptions & opts = {}
 );
 
 void writeContent(

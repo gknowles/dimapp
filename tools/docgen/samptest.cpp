@@ -1023,7 +1023,11 @@ static void runProgTests(ProgWork * work, unsigned phase) {
             s_perfCompile += 1;
             if (first) {
                 first = false;
-                auto out = execWait(cmdline, title, workDir);
+                auto out = execWait(
+                    cmdline,
+                    title,
+                    { .workingDir = workDir.str() }
+                );
                 if (out.empty()) {
                     s_perfCompileFailed += 1;
                     appSignalShutdown(EX_DATAERR);
@@ -1041,7 +1045,7 @@ static void runProgTests(ProgWork * work, unsigned phase) {
                     },
                     cmdline,
                     title,
-                    workDir
+                    { .workingDir = workDir.str() }
                 );
             }
         }

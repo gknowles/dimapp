@@ -152,6 +152,7 @@ static bool loadPage(Page * out, XNode * root) {
     if (out->urlSegment.empty())
         out->urlSegment = Path(out->file).stem();
     out->pageLayout = attrValue(root, "pageLayout", "");
+    out->patch = trimBlock(text(firstChild(root, "Patch"), ""));
     return true;
 }
 
@@ -315,7 +316,7 @@ unique_ptr<Config> loadConfig(string_view cfgfile) {
 ***/
 
 //===========================================================================
-static void exec(
+void exec(
     function<void(string&&)> fn,
     string_view cmdline,
     string_view errTitle,
@@ -329,6 +330,9 @@ static void exec(
         void onExecComplete(bool canceled, int exitCode) override {
             if (canceled) {
                 // Rely on execProgram to have already logged an error.
+                logMsgError() << "Error: " << errTitle;
+                logMsgInfo() << " - " << cmdline;
+                logMsgInfo() << " - execProgram timeout exceeded.";
                 appSignalShutdown(EX_IOERR);
                 fn({});
             } else if (exitCode) {
@@ -366,37 +370,24 @@ static void exec(
     notify->fn = fn;
     notify->cmdline = cmdline;
     notify->errTitle = errTitle;
-    execProgram(notify, notify->cmdline, opts);
-}
-
-//===========================================================================
-void exec(
-    function<void(string&&)> fn,
-    string_view cmdline,
-    string_view errTitle,
-    string_view workDir
-) {
-    ExecOptions opts;
-    opts.workingDir = workDir;
-    opts.concurrency = envProcessors();
-    exec(fn, cmdline, errTitle, opts);
+    auto tmpOpts = opts;
+    if (tmpOpts.concurrency == -1)
+        tmpOpts.concurrency = 1; // envProcessors();
+    execProgram(notify, notify->cmdline, tmpOpts);
 }
 
 //===========================================================================
 string execWait(
     string_view cmdline,
     string_view errTitle,
-    string_view workDir
+    const ExecOptions & opts
 ) {
     string out;
     mutex mut;
     condition_variable cv;
     bool done = false;
-    ExecOptions opts;
-    if (!workDir.empty())
-        opts.workingDir = workDir;
-    opts.hq = taskComputeQueue();
-    opts.concurrency = envProcessors();
+    auto tmpOpts = opts;
+    tmpOpts.hq = taskComputeQueue();
     exec(
         [&](auto && content){
             mut.lock();
@@ -407,7 +398,7 @@ string execWait(
         },
         cmdline,
         errTitle,
-        opts
+        tmpOpts
     );
     unique_lock lk{mut};
     while (!done)

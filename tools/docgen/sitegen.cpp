@@ -595,6 +595,36 @@ static void genPage(GenPageInfo * info, unsigned phase = 0) {
         return;
     }
     if (phase == what++) {
+        // Apply patch from config file
+        if (!info->page.patch.empty()) {
+            auto cmdline = Cli::toCmdlineL(
+                "patch",
+                "-r",
+                info->fname + "#",
+                info->fname
+            );
+            exec(
+                [info, what](string && out) {
+                    fileRemove(info->fname + "#");
+                    if (out.empty())
+                        appSignalShutdown(EX_IOERR);
+                    if (appStopping()) {
+                        info->fn();
+                        return;
+                    }
+                    genPage(info, what);
+                },
+                cmdline,
+                info->page.file + ", tag '" + info->ver.tag + "'",
+                { .stdinData = info->page.patch }
+            );
+            return;
+        }
+
+        // No patch, continue to next phase.
+        phase = what;
+    }
+    if (phase == what++) {
         // Convert markup into HTML fragment.
         auto cmdline = Cli::toCmdlineL("github-markup.bat", info->fname);
         exec(
@@ -903,7 +933,10 @@ static void genSite(Config * out, unsigned phase = 0) {
         delete out;
 
         logMsgInfo() << count << " generated files.";
-        {
+        if (int errs = logGetMsgCount(kLogTypeError)) {
+            ConsoleScopedAttr attr(kConsoleError);
+            cerr << "Generation failures: " << errs << endl;
+        } else {
             ConsoleScopedAttr ca(kConsoleCheer);
             logMsgInfo() << "Website generated successfully.";
         }
