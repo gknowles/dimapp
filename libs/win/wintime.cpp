@@ -63,3 +63,11 @@ bool Dim::timeFromDesc(TimePoint * time, const tm & tm) {
     *time = from_time_t(t);
     return true;
 }
+
+//===========================================================================
+Duration Dim::duration(const FILETIME & ft) {
+    LARGE_INTEGER tmp;
+    tmp.HighPart = ft.dwHighDateTime;
+    tmp.LowPart = ft.dwLowDateTime;
+    return Duration(tmp.QuadPart);
+}

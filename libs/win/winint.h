@@ -289,4 +289,13 @@ bool winIocpBindHandle(HANDLE handle, void * key = nullptr);
 void winServiceInitialize();
 
 
+/****************************************************************************
+*
+*   Time
+*
+***/
+
+Dim::Duration duration(const FILETIME & ft);
+
+
 } // namespace

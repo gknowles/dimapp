@@ -162,10 +162,7 @@ TimePoint Dim::envProcessStartTime() {
     )) {
         return {};
     }
-    ULARGE_INTEGER tmp;
-    tmp.HighPart = creation.dwHighDateTime;
-    tmp.LowPart = creation.dwLowDateTime;
-    TimePoint time{Duration{tmp.QuadPart}};
+    TimePoint time{duration(creation)};
     return time;
 }
 

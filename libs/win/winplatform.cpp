@@ -48,17 +48,18 @@ static void updateProcessTimes() {
     FILETIME kernel;
     FILETIME user;
     auto now = timeNow();
-    if (!GetProcessTimes(GetCurrentProcess(), &creation, &exit, &kernel, &user))
+    if (!GetProcessTimes(
+        GetCurrentProcess(),
+        &creation,
+        &exit,
+        &kernel,
+        &user
+    )) {
         return;
+    }
 
-    ULARGE_INTEGER tmp;
-    tmp.HighPart = kernel.dwHighDateTime;
-    tmp.LowPart = kernel.dwLowDateTime;
-    auto ktime = Duration(tmp.QuadPart);
-    tmp.HighPart = user.dwHighDateTime;
-    tmp.LowPart = user.dwLowDateTime;
-    auto utime = Duration(tmp.QuadPart);
-
+    auto ktime = duration(kernel);
+    auto utime = duration(user);
     auto elapsed = now - s_lastSnapshot;
     auto cores = envProcessors();
     if (!s_lastSnapshot || elapsed > 1s) {

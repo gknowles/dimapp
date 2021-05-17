@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2020.
+// Copyright Glen Knowles 2015 - 2021.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // winfile.cpp - dim windows platform
@@ -180,7 +180,7 @@ size_t IFileOpBase::start(
 
 //===========================================================================
 void IFileOpBase::run() {
-    // Threadpool this thread is in:
+    // Thread this is running on:
     // sync + blocking - request thread
     // sync + non-blocking - IO thread, request thread waiting
     // async + blocking - IO thread
@@ -452,10 +452,7 @@ TimePoint Dim::fileLastWriteTime(string_view path) {
     ) {
         return {};
     }
-    LARGE_INTEGER out;
-    out.HighPart = attrs.ftLastWriteTime.dwHighDateTime;
-    out.LowPart = attrs.ftLastWriteTime.dwLowDateTime;
-    return TimePoint{Duration{out.QuadPart}};
+    return TimePoint{duration(attrs.ftLastWriteTime)};
 }
 
 //===========================================================================
@@ -674,6 +671,8 @@ static FileHandle attachStdHandle(
         winFileSetErrno(WinError{});
         return {};
     }
+    // Duplicate the handle so that fileClose works just like for any other
+    // file handle.
     auto proc = GetCurrentProcess();
     if (!DuplicateHandle(
         proc,   // source process
@@ -823,12 +822,12 @@ TimePoint Dim::fileLastWriteTime(FileHandle f) {
         winFileSetErrno(err);
         return TimePoint::min();
     }
-    ULARGE_INTEGER q;
-    q.LowPart = wtime.dwLowDateTime;
-    q.HighPart = wtime.dwHighDateTime;
-    if (!q.QuadPart)
-        winFileSetErrno(NO_ERROR);
-    return TimePoint(Duration(q.QuadPart));
+    auto dur = duration(wtime);
+    if (!dur.count())
+        return TimePoint::min();
+
+    winFileSetErrno(NO_ERROR);
+    return TimePoint(dur);
 }
 
 //===========================================================================
