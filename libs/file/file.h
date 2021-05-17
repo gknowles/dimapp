@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2020.
+// Copyright Glen Knowles 2015 - 2021.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // file.h - dim file
@@ -56,8 +56,8 @@ namespace File {
         fTemp = 0x10000,
 
         // INTERNAL USE ONLY
-        // Underlying native file handle is externally owned, and will be
-        // left open when the file is closed.
+        // Underlying native file handle is externally owned, and will be left
+        // open when the file is closed.
         fNonOwning = 0x20000,
 
         fInternalFlags = fNonOwning,
@@ -121,8 +121,8 @@ inline FileIter end(const FileIter & iter) { return {}; }
 // Drive defaults to the current drive
 Path fileGetCurrentDir(std::string_view drive = {});
 
-// "path" is resolved relative to the current dir of the drive (which
-// defaults to current drive) given in the path.
+// "path" is resolved relative to the current dir of the drive (which defaults
+// to current drive) given in the path.
 Path fileSetCurrentDir(std::string_view path);
 
 // Resolve to an absolute path as if done by:
@@ -200,10 +200,10 @@ FileHandle fileCreateTemp(
     std::string_view suffix = ".tmp"
 );
 
-// Create references to the standard in/out/err devices. The handle
-// should be closed after use, which detaches from the underlying file
-// descriptor. Accessing the same device from multiple handles will have
-// unpredictable results.
+// Create references to the standard in/out/err devices. The handle should be
+// closed after use, which detaches from the underlying file descriptor.
+// Accessing the same device from multiple handles will have unpredictable
+// results.
 FileHandle fileAttachStdin();
 FileHandle fileAttachStdout();
 FileHandle fileAttachStderr();
@@ -234,9 +234,9 @@ std::string_view filePath(FileHandle f);
 // Returns the open mode flags used to create the handle.
 unsigned fileMode(FileHandle f);
 
-// kUnknown is returned for bad handle and system errors as well as when
-// the type is unknown. If kUnknown was not returned due to error, errno will
-// set to 0.
+// kUnknown is returned for bad handle and system errors as well as when the
+// type is unknown. If kUnknown was not returned due to error, errno will set
+// to 0.
 File::FileType fileType(FileHandle f);
 
 
@@ -495,10 +495,10 @@ bool fileOpenView(
 
 void fileCloseView(FileHandle f, const void * view);
 
-// Extend the view up to maxLen that was set when the view was opened. A
-// view can only be extended if the file (which is also extended) was opened
-// for writing. "Extending" with a length less than the current view has
-// no effect and extending beyond maxLen is an error.
+// Extend the view up to maxLen that was set when the view was opened. A view
+// can only be extended if the file (which is also extended) was opened for
+// writing. "Extending" with a length less than the current view has no effect
+// and extending beyond maxLen is an error.
 void fileExtendView(FileHandle f, const void * view, int64_t length);
 
 } // namespace

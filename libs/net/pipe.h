@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2018 - 2020.
+// Copyright Glen Knowles 2018 - 2021.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // pipe.h - dim net
@@ -29,7 +29,7 @@ namespace Pipe {
     };
 };
 
-// incomplete/pending
+// incomplete/waiting
 //   0 /  0   All bytes left the application, but there might still be some
 //              in OS or hardware memory buffers.
 //  >0 /  0   Data is in flight, but more can still be sent immediately.
@@ -109,6 +109,7 @@ void pipeClose(IPipeNotify * notify);
 *       1. onPipeDisconnect
 *
 ***/
+
 //===========================================================================
 // connect
 //===========================================================================
@@ -124,6 +125,7 @@ void pipeConnect(
 // For simple cases a client connecting to a pipe server can also use
 // fileOpen(pipeName, ...), fileRead, and fileWrite.
 
+
 /****************************************************************************
 *
 *   Listening pipes
@@ -138,6 +140,7 @@ void pipeConnect(
 *       3. onPipeDisconnect
 *
 ***/
+
 //===========================================================================
 // listen
 //===========================================================================

@@ -214,8 +214,8 @@ std::string_view ltrim(std::string_view src);
 std::string_view rtrim(std::string_view src);
 
 // Splits source into lines, trims trailing spaces, leading and trailing blank
-// lines, and removes a amount of leading whitespace from each line equal to
-// the smallest amount of leading whitespace of any line that still has
+// lines. Finally, removes an amount of leading whitespace from each line equal
+// to the smallest amount of leading whitespace of any line that still has
 // characters.
 std::string trimBlock(std::string_view src);
 
