@@ -266,8 +266,6 @@ ExecProgram::ExecProgram(
         m_pipes[e].m_notify = this;
     }
 
-    timerUpdate(this, m_opts.timeout);
-
     scoped_lock lk{s_mut};
     s_programs.link(this);
 }
@@ -464,6 +462,9 @@ void ExecProgram::execIfReady() {
     m_mode = kRunRunning;
     ResumeThread(m_thread);
     CloseHandle(m_thread);
+
+    // Start the allowed execution time countdown.
+    timerUpdate(this, m_opts.timeout);
 
     auto pipe = &m_pipes[kStdIn];
     if (!m_opts.stdinData.empty()) {
