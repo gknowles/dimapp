@@ -29,6 +29,9 @@ Markup documentation processing.
 ** (for each file in the source)
 
 === Dependencies
+* https://git-scm.com[git]
+* https://pubs.opengroup.org/onlinepubs/9699919799/utilities/patch.html[patch]
+  (Included in Git for Windows)
 * https://github.com/github/markup[github-markup]
 * https://fontawesome.com[Font Awesome]
 * https://getbootstrap.com[Bootstrap]
