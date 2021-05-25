@@ -54,7 +54,8 @@ public:
         uint16_t numBytes;  // space allocated
         uint16_t numValues; // usage depends on node type
         union {
-            unsigned * values;
+            value_type localValues[sizeof (value_type *) / sizeof value_type];
+            value_type * values;
             Node * nodes;
         };
 
@@ -65,9 +66,9 @@ public:
     UnsignedSet();
     UnsignedSet(UnsignedSet && from) noexcept;
     UnsignedSet(const UnsignedSet & from);
-    UnsignedSet(std::initializer_list<unsigned> from);
+    UnsignedSet(std::initializer_list<value_type> from);
     UnsignedSet(std::string_view from);
-    UnsignedSet(unsigned start, size_t count);
+    UnsignedSet(value_type start, size_t count);
     ~UnsignedSet();
     explicit operator bool() const { return !empty(); }
 
@@ -90,32 +91,32 @@ public:
     // modify
     void clear();
     void fill();
-    void assign(unsigned val);
+    void assign(value_type val);
     template <std::input_iterator InputIt>
         requires (std::is_convertible_v<decltype(*std::declval<InputIt>()),
-            unsigned>)
+            UnsignedSet::value_type>)
         void assign(InputIt first, InputIt last);
-    void assign(std::initializer_list<unsigned> il);
+    void assign(std::initializer_list<value_type> il);
     void assign(UnsignedSet && from);
     void assign(const UnsignedSet & from);
     void assign(std::string_view src); // space separated ranges
-    void assign(unsigned start, size_t count);
-    bool insert(unsigned val); // returns true if inserted
+    void assign(value_type start, size_t count);
+    bool insert(value_type val); // returns true if inserted
     template <std::input_iterator InputIt>
         requires (std::is_convertible_v<decltype(*std::declval<InputIt>()),
-            unsigned>)
+            UnsignedSet::value_type>)
         void insert(InputIt first, InputIt last);
-    void insert(std::initializer_list<unsigned> il);
+    void insert(std::initializer_list<value_type> il);
     void insert(UnsignedSet && other);
     void insert(const UnsignedSet & other);
     void insert(std::string_view src); // space separated ranges
-    void insert(unsigned start, size_t count);
-    bool erase(unsigned val); // returns true if erased
+    void insert(value_type start, size_t count);
+    bool erase(value_type val); // returns true if erased
     void erase(iterator where);
     void erase(const UnsignedSet & other);
-    void erase(unsigned start, size_t count);
-    unsigned pop_back();
-    unsigned pop_front();
+    void erase(value_type start, size_t count);
+    value_type pop_back();
+    value_type pop_front();
     void intersect(UnsignedSet && other);
     void intersect(const UnsignedSet & other);
     void swap(UnsignedSet & other);
@@ -126,18 +127,18 @@ public:
     bool operator==(const UnsignedSet & right) const;
 
     // search
-    unsigned front() const;
-    unsigned back() const;
-    size_t count(unsigned val) const;
-    size_t count(unsigned start, size_t count) const;
-    iterator find(unsigned val) const;
-    bool contains(unsigned val) const;
+    value_type front() const;
+    value_type back() const;
+    size_t count(value_type val) const;
+    size_t count(value_type start, size_t count) const;
+    iterator find(value_type val) const;
+    bool contains(value_type val) const;
     bool contains(const UnsignedSet & other) const;
     bool intersects(const UnsignedSet & other) const;
-    iterator findLessEqual(unsigned val) const;
-    iterator lowerBound(unsigned val) const;
-    iterator upperBound(unsigned val) const;
-    std::pair<iterator, iterator> equalRange(unsigned val) const;
+    iterator findLessEqual(value_type val) const;
+    iterator lowerBound(value_type val) const;
+    iterator upperBound(value_type val) const;
+    std::pair<iterator, iterator> equalRange(value_type val) const;
 
     // firstContiguous and lastContiguous search backwards and forwards
     // respectively, for as long as consecutive values are present. For
@@ -153,35 +154,37 @@ private:
     );
 
 private:
-    void iInsert(const unsigned * first, const unsigned * last);
+    void iInsert(const value_type* first, const value_type* last);
 
     Node m_node;
 };
 
 //===========================================================================
-inline UnsignedSet::UnsignedSet(std::initializer_list<unsigned> il) {
+inline UnsignedSet::UnsignedSet(std::initializer_list<value_type> il) {
     insert(il);
 }
 
 //===========================================================================
 template<std::input_iterator InputIt>
-requires (std::is_convertible_v<decltype(*std::declval<InputIt>()), unsigned>)
+requires (std::is_convertible_v<decltype(*std::declval<InputIt>()),
+    UnsignedSet::value_type>)
 inline void UnsignedSet::assign(InputIt first, InputIt last) {
     clear();
     insert(first, last);
 }
 
 //===========================================================================
-inline void UnsignedSet::assign(std::initializer_list<unsigned> il) {
+inline void UnsignedSet::assign(std::initializer_list<value_type> il) {
     clear();
     insert(il);
 }
 
 //===========================================================================
 template<std::input_iterator InputIt>
-requires (std::is_convertible_v<decltype(*std::declval<InputIt>()), unsigned>)
+requires (std::is_convertible_v<decltype(*std::declval<InputIt>()),
+    UnsignedSet::value_type>)
 inline void UnsignedSet::insert(InputIt first, InputIt last) {
-    if constexpr (std::is_convertible_v<InputIt, const unsigned *>) {
+    if constexpr (std::is_convertible_v<InputIt, const value_type *>) {
         iInsert(first, last);
     } else {
         for (; first != last; ++first)
@@ -190,7 +193,7 @@ inline void UnsignedSet::insert(InputIt first, InputIt last) {
 }
 
 //===========================================================================
-inline void UnsignedSet::insert(std::initializer_list<unsigned> il) {
+inline void UnsignedSet::insert(std::initializer_list<value_type> il) {
     iInsert(il.begin(), il.end());
 }
 

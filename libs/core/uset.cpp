@@ -80,8 +80,9 @@ constexpr unsigned absSize(const Node & node) {
 enum UnsignedSet::Node::Type : int {
     kEmpty,         // contains no values
     kFull,          // contains all values in node's domain
-    kVector,        // has vector of values
-    kBitmap,        // has bitmap covering all of node's possible values
+    kSmVector,      // small vector of values embedded in node struct
+    kVector,        // vector of values
+    kBitmap,        // bitmap covering all of node's possible values
     kMeta,          // vector of nodes
     kNodeTypes,
     kMetaParent,    // link to parent meta node
@@ -129,8 +130,8 @@ struct IImplBase {
     ) const = 0;
 
     // [base] is empty - return true
-    // [start of node, base] is full - update onode & ovalue, return false
-    // otherwise - update onode & ovalue, return true
+    // [start of node, base] is full - output node & value, return false
+    // otherwise - output node & value, return true
     virtual bool firstContiguous(
         const Node ** onode,
         unsigned * ovalue,
@@ -138,8 +139,8 @@ struct IImplBase {
         unsigned base
     ) const = 0;
     // [base] is empty - return true
-    // [base, end of node] is full - update onode & ovalue, return false
-    // otherwise - update onode & ovalue, return true
+    // [base, end of node] is full - output node & value, return false
+    // otherwise - output node & value, return true
     virtual bool lastContiguous(
         const Node ** onode,
         unsigned * ovalue,
@@ -224,6 +225,53 @@ struct FullImpl final : IImplBase {
         const Node & node,
         unsigned base
     ) const override;
+};
+
+struct SmVectorImpl final : IImplBase {
+    static constexpr size_t maxValues() {
+        return sizeof Node::localValues / sizeof *Node::localValues;
+    }
+
+    void init(Node& node, bool full) override;
+    void init(Node& node, const Node& from) override;
+    void destroy(Node& node) override;
+    bool insert(
+        Node& node,
+        const unsigned* first,
+        const unsigned* last
+    ) override;
+    bool insert(Node& node, unsigned start, size_t count) override;
+    bool erase(Node& node, unsigned start, size_t count) override;
+
+    size_t size(const Node& node) const override;
+    bool findFirst(
+        const Node** onode,
+        unsigned* ovalue,
+        const Node& node,
+        unsigned base
+    ) const override;
+    bool findLast(
+        const Node** onode,
+        unsigned* ovalue,
+        const Node& node,
+        unsigned base
+    ) const override;
+    bool firstContiguous(
+        const Node** onode,
+        unsigned* ovalue,
+        const Node& node,
+        unsigned base
+    ) const override;
+    bool lastContiguous(
+        const Node** onode,
+        unsigned* ovalue,
+        const Node& node,
+        unsigned base
+    ) const override;
+
+private:
+    void convert(Node& node);
+    bool erase(Node& node, unsigned* ptr, unsigned* eptr, unsigned* last);
 };
 
 struct VectorImpl final : IImplBase {
@@ -379,6 +427,7 @@ private:
 
 static EmptyImpl s_emptyImpl;
 static FullImpl s_fullImpl;
+static SmVectorImpl s_smallVectorImpl;
 static VectorImpl s_vectorImpl;
 static BitmapImpl s_bitmapImpl;
 static MetaImpl s_metaImpl;
@@ -386,6 +435,7 @@ static MetaImpl s_metaImpl;
 static IImplBase * s_impls[] = {
     &s_emptyImpl,
     &s_fullImpl,
+    &s_smallVectorImpl,
     &s_vectorImpl,
     &s_bitmapImpl,
     &s_metaImpl,
@@ -437,9 +487,9 @@ bool EmptyImpl::insert(
         return false;
 
     destroy(node);
-    node.type = Node::kVector;
-    s_vectorImpl.init(node, false);
-    s_vectorImpl.insert(node, first, last);
+    node.type = Node::kSmVector;
+    s_smallVectorImpl.init(node, false);
+    s_smallVectorImpl.insert(node, first, last);
     return true;
 }
 
@@ -450,9 +500,9 @@ bool EmptyImpl::insert(Node & node, unsigned start, size_t count) {
     assert(relBase(start, node.depth) == node.base);
     assert(count - 1 <= absFinal(node) - start);
     destroy(node);
-    node.type = Node::kVector;
-    s_vectorImpl.init(node, false);
-    s_vectorImpl.insert(node, start, count);
+    node.type = Node::kSmVector;
+    s_smallVectorImpl.init(node, false);
+    s_smallVectorImpl.insert(node, start, count);
     return true;
 }
 
@@ -632,6 +682,229 @@ bool FullImpl::lastContiguous(
 
 /****************************************************************************
 *
+*   SmVectorImpl
+*
+*   node.numValues - size (not capacity!) of node.localValues array
+*
+***/
+
+//===========================================================================
+void SmVectorImpl::init(Node & node, bool full) {
+    assert(node.type == Node::kSmVector);
+    assert(!full);
+    node.numBytes = 0;
+    node.numValues = 0;
+}
+
+//===========================================================================
+void SmVectorImpl::init(Node & node, const Node & from) {
+    assert(node.type == Node::kSmVector);
+    assert(from.type == Node::kSmVector);
+    node = from;
+}
+
+//===========================================================================
+void SmVectorImpl::destroy(Node & node)
+{}
+
+//===========================================================================
+bool SmVectorImpl::insert(
+    Node & node,
+    const unsigned * first,
+    const unsigned * last
+) {
+    bool changed = false;
+    while (first != last) {
+        if (node.type != Node::kSmVector)
+            return impl(node)->insert(node, first, last) || changed;
+        changed = insert(node, *first++, 1) || changed;
+    }
+    return changed;
+}
+
+//===========================================================================
+bool SmVectorImpl::insert(Node & node, unsigned start, size_t count) {
+    assert(count);
+    assert(relBase(start, node.depth) == node.base);
+    assert(count - 1 <= absFinal(node) - start);
+
+    auto last = node.localValues + node.numValues;
+    auto ptr = lower_bound(node.localValues, last, start);
+    auto eptr = (ptr < last && *ptr < start + count)
+        ? lower_bound(ptr, last, start + count)
+        : ptr;
+    size_t nBelow = ptr - node.values;
+    size_t nOld = eptr - ptr;
+    size_t nAbove = last - eptr;
+    if (count == nOld)
+        return false;
+    auto num = nBelow + count + nAbove;
+    if (num > maxValues()) {
+        convert(node);
+        return impl(node)->insert(node, start, count);
+    }
+
+    node.numValues = (uint16_t) num;
+    if (nAbove)
+        memmove(ptr + count, eptr, nAbove * sizeof *ptr);
+    for (;;) {
+        *ptr++ = start;
+        if (!--count)
+            return true;
+        start += 1;
+    }
+}
+
+//===========================================================================
+bool SmVectorImpl::erase(Node & node, unsigned start, size_t count) {
+    assert(count);
+    assert(relBase(start, node.depth) == node.base);
+    assert(count - 1 <= absFinal(node) - start);
+    auto last = node.localValues + node.numValues;
+    auto ptr = lower_bound(node.localValues, last, start);
+    if (ptr == last || *ptr >= start + count)
+        return false;
+    auto eptr = lower_bound(ptr, last, start + count);
+    if (ptr == eptr)
+        return false;
+
+    node.numValues -= (uint16_t) (eptr - ptr);
+    if (node.numValues) {
+        // Still has values, shift remaining ones down
+        memmove(ptr, eptr, sizeof *ptr * (last - eptr));
+    } else {
+        // No more values, convert to empty node.
+        destroy(node);
+        node.type = Node::kEmpty;
+        s_emptyImpl.init(node, false);
+    }
+    return true;
+}
+
+//===========================================================================
+size_t SmVectorImpl::size(const Node & node) const {
+    return node.numValues;
+}
+
+//===========================================================================
+bool SmVectorImpl::findFirst(
+    const Node ** onode,
+    unsigned * ovalue,
+    const Node & node,
+    unsigned base
+) const {
+    assert(relBase(base, node.depth) == node.base);
+    auto last = node.localValues + node.numValues;
+    auto ptr = lower_bound(node.localValues, last, base);
+    if (ptr != last) {
+        *onode = &node;
+        *ovalue = *ptr;
+        return true;
+    }
+    return false;
+}
+
+//===========================================================================
+bool SmVectorImpl::findLast(
+    const Node ** onode,
+    unsigned * ovalue,
+    const Node & node,
+    unsigned base
+) const {
+    assert(relBase(base, node.depth) == node.base);
+    if (base < *node.localValues) {
+        return false;
+    } else if (base == *node.localValues) {
+        *ovalue = base;
+    } else {
+        // base > *node.localValues
+        auto last = node.localValues + node.numValues;
+        auto ptr = lower_bound(node.localValues + 1, last, base);
+        *ovalue = ptr[-1];
+    }
+    *onode = &node;
+    return true;
+}
+
+//===========================================================================
+bool SmVectorImpl::firstContiguous(
+    const Node ** onode,
+    unsigned * ovalue,
+    const Node & node,
+    unsigned base
+) const {
+    assert(relBase(base, node.depth) == node.base);
+    auto last = node.localValues + node.numValues;
+    auto ptr = lower_bound(node.localValues, last, base);
+    auto val = base;
+    if (ptr == last || *ptr != val) {
+        // Base not found, return that search is done, but leave output node
+        // and value unchanged.
+        return true;
+    }
+    *onode = &node;
+    while (ptr != node.localValues) {
+        ptr -= 1;
+        val -= 1;
+        if (*ptr != val) {
+            *ovalue = val + 1;
+            return true;
+        }
+    }
+    *ovalue = val;
+    if (val > absBase(node))
+        return true;
+
+    // May extend into preceding node.
+    return false;
+}
+
+//===========================================================================
+bool SmVectorImpl::lastContiguous(
+    const Node ** onode,
+    unsigned * ovalue,
+    const Node & node,
+    unsigned base
+) const {
+    assert(relBase(base, node.depth) == node.base);
+    auto last = node.localValues + node.numValues;
+    auto ptr = lower_bound(node.localValues, last, base);
+    auto val = base;
+    if (ptr == last || *ptr != val) {
+        // Base not found, return that search is done, but leave output node
+        // and value unchanged.
+        return true;
+    }
+    *onode = &node;
+    while (++ptr != last) {
+        val += 1;
+        if (*ptr != val) {
+            *ovalue = val - 1;
+            return true;
+        }
+    }
+    *ovalue = val;
+    if (val < absFinal(node))
+        return true;
+
+    // May extend into following node.
+    return false;
+}
+
+//===========================================================================
+void SmVectorImpl::convert(Node & node) {
+    Node tmp{node};
+    auto ptr = tmp.localValues;
+    auto last = ptr + tmp.numValues;
+    node.type = Node::kVector;
+    s_vectorImpl.init(node, false);
+    s_vectorImpl.insert(node, ptr, last);
+    destroy(tmp);
+}
+
+
+/****************************************************************************
+*
 *   VectorImpl
 *
 *   node.numValues - size (not capacity!) of node.values array
@@ -644,7 +917,7 @@ void VectorImpl::init(Node & node, bool full) {
     assert(!full);
     node.numBytes = kDataSize;
     node.numValues = 0;
-    node.values = (unsigned *) malloc(node.numBytes);
+    node.values = (unsigned*)malloc(node.numBytes);
 }
 
 //===========================================================================
@@ -652,7 +925,7 @@ void VectorImpl::init(Node & node, const Node & from) {
     assert(node.type == Node::kVector);
     assert(from.type == Node::kVector);
     node = from;
-    node.values = (unsigned *) malloc(node.numBytes);
+    node.values = (unsigned*)malloc(node.numBytes);
     assert(node.values);
     memcpy(node.values, from.values, node.numBytes);
 }
@@ -793,8 +1066,8 @@ bool VectorImpl::firstContiguous(
     auto ptr = lower_bound(node.values, last, base);
     auto val = base;
     if (ptr == last || *ptr != val) {
-        // Base not found, return that search is done, but leave onode and
-        // ovalue unchanged.
+        // Base not found, return that search is done, but leave output node
+        // and value unchanged.
         return true;
     }
     *onode = &node;
@@ -826,8 +1099,8 @@ bool VectorImpl::lastContiguous(
     auto ptr = lower_bound(node.values, last, base);
     auto val = base;
     if (ptr == last || *ptr != val) {
-        // Base not found, return that search is done, but leave onode and
-        // ovalue unchanged.
+        // Base not found, return that search is done, but leave output node
+        // and value unchanged.
         return true;
     }
     *onode = &node;
@@ -848,7 +1121,7 @@ bool VectorImpl::lastContiguous(
 
 //===========================================================================
 void VectorImpl::convert(Node & node) {
-    Node tmp{node};
+    Node tmp {node};
     auto ptr = tmp.values;
     auto last = ptr + tmp.numValues;
     if (tmp.depth == maxDepth()) {
@@ -1378,6 +1651,25 @@ static int cmpMoreIf(const Node & left, const Node & right) { return 2; }
 static int cmpEqual(const Node & left, const Node & right) { return 0; }
 
 //===========================================================================
+static int cmpArray(
+    const unsigned* li,
+    unsigned lcount,
+    const unsigned* ri,
+    unsigned rcount
+) {
+    auto le = li + lcount;
+    auto re = ri + rcount;
+    for (;; ++li, ++ri) {
+        if (li == le)
+            return ri == re ? 0 : -2;
+        if (ri == re)
+            return 2;
+        if (*li != *ri)
+            return *li > *ri ? 1 : -1;
+    }
+}
+
+//===========================================================================
 static int cmpVecIf(const Node & left, const Node & right) {
     auto minMax = absBase(right) + right.numValues - 1;
     if (minMax == right.values[right.numValues - 1]) {
@@ -1385,6 +1677,26 @@ static int cmpVecIf(const Node & left, const Node & right) {
     } else {
         return -1;
     }
+}
+
+//===========================================================================
+static int cmpRVecIf(const Node& left, const Node& right) {
+    return -cmpVecIf(right, left);
+}
+
+//===========================================================================
+static int cmpSVecIf(const Node& left, const Node& right) {
+    auto minMax = absBase(right) + right.numValues - 1;
+    if (minMax == right.localValues[right.numValues - 1]) {
+        return 2;
+    } else {
+        return -1;
+    }
+}
+
+//===========================================================================
+static int cmpRSVecIf(const Node& left, const Node& right) {
+    return -cmpSVecIf(right, left);
 }
 
 //===========================================================================
@@ -1408,11 +1720,6 @@ static int cmpMetaIf(const Node & left, const Node & right) {
     } else {
         return -1;
     }
-}
-
-//===========================================================================
-static int cmpRVecIf(const Node & left, const Node & right) {
-    return -cmpVecIf(right, left);
 }
 
 //===========================================================================
@@ -1440,19 +1747,47 @@ static int cmpIter(const Node & left, const Node & right) {
 }
 
 //===========================================================================
+// vector <=> vector
 static int cmpVec(const Node & left, const Node & right) {
-    auto li = left.values;
-    auto le = li + left.numValues;
-    auto ri = right.values;
-    auto re = ri + right.numValues;
-    for (;; ++li, ++ri) {
-        if (li == le)
-            return ri == re ? 0 : -2;
-        if (ri == re)
-            return 2;
-        if (*li != *ri)
-            return *li > *ri ? 1 : -1;
-    }
+    return cmpArray(
+        left.values,
+        left.numValues,
+        right.values,
+        right.numValues
+    );
+}
+
+//===========================================================================
+// small vector <=> small vector
+static int cmpSVec(const Node& left, const Node& right) {
+    return cmpArray(
+        left.localValues,
+        left.numValues,
+        right.localValues,
+        right.numValues
+    );
+}
+
+//===========================================================================
+// small vector <=> vector
+static int cmpLSVec(const Node& left, const Node& right) {
+    return cmpArray(
+        left.localValues,
+        left.numValues,
+        right.values,
+        right.numValues
+    );
+}
+
+//===========================================================================
+// vector <=> small vector
+static int cmpRSVec(const Node& left, const Node& right) {
+    return cmpArray(
+        left.values,
+        left.numValues,
+        right.localValues,
+        right.numValues
+    );
 }
 
 //===========================================================================
@@ -1529,13 +1864,14 @@ static int cmpMeta(const Node & left, const Node & right) {
 static int compare(const Node & left, const Node & right) {
     using CompareFn = int(const Node & left, const Node & right);
     constexpr static CompareFn * functs[][Node::kNodeTypes] = {
-    // LEFT                         RIGHT
-    //             empty      full        vector     bitmap     meta
-    /* empty  */ { cmpEqual,  cmpLessIf,  cmpLessIf, cmpLessIf, cmpLessIf },
-    /* full   */ { cmpMoreIf, cmpEqual,   cmpVecIf,  cmpBitIf,  cmpMetaIf },
-    /* vector */ { cmpMoreIf, cmpRVecIf,  cmpVec,    cmpIter,   cmpIter   },
-    /* bitmap */ { cmpMoreIf, cmpRBitIf,  cmpIter,   cmpBit,    cmpError  },
-    /* meta   */ { cmpMoreIf, cmpRMetaIf, cmpIter,   cmpError,  cmpMeta   },
+// LEFT                                 RIGHT
+//         empty      full        sm vec     vector     bitmap     meta
+/*empty*/{ cmpEqual,  cmpLessIf,  cmpLessIf, cmpLessIf, cmpLessIf, cmpLessIf },
+/*full */{ cmpMoreIf, cmpEqual,   cmpSVecIf, cmpVecIf,  cmpBitIf,  cmpMetaIf },
+/*svec */{ cmpMoreIf, cmpRSVecIf, cmpSVec,   cmpLSVec,  cmpIter,   cmpIter   },
+/*vec  */{ cmpMoreIf, cmpRVecIf,  cmpRSVec,  cmpVec,    cmpIter,   cmpIter   },
+/*bit  */{ cmpMoreIf, cmpRBitIf,  cmpIter,   cmpIter,   cmpBit,    cmpError  },
+/*meta */{ cmpMoreIf, cmpRMetaIf, cmpIter,   cmpIter,   cmpError,  cmpMeta   },
     };
     return functs[left.type][right.type](left, right);
 }
@@ -1561,10 +1897,13 @@ static bool conTrue(const Node & left, const Node & right) { return true; }
 static bool conFalse(const Node & left, const Node & right) { return false; }
 
 //===========================================================================
-static bool conRVec(const Node & left, const Node & right) {
-    auto ri = right.values;
+static bool conRArray(
+    const Node& left,
+    const Node& right,
+    const UnsignedSet::value_type * ri
+) {
     auto re = ri + right.numValues;
-    const Node * onode;
+    const Node* onode;
     unsigned ovalue;
 
     for (;;) {
@@ -1576,10 +1915,13 @@ static bool conRVec(const Node & left, const Node & right) {
 }
 
 //===========================================================================
-static bool conLVec(const Node & left, const Node & right) {
-    auto li = left.values;
+static bool conLArray(
+    const Node& left,
+    const UnsignedSet::value_type * li,
+    const Node& right
+) {
     auto le = li + left.numValues;
-    const Node * onode;
+    const Node* onode;
     unsigned ovalue;
 
     impl(right)->findFirst(&onode, &ovalue, right, absBase(right));
@@ -1593,14 +1935,17 @@ static bool conLVec(const Node & left, const Node & right) {
 }
 
 //===========================================================================
-static bool conVec(const Node & left, const Node & right) {
-    if (left.numValues < right.numValues)
+static bool conArray(
+    const UnsignedSet::value_type * li,
+    unsigned lcount,
+    const UnsignedSet::value_type * ri,
+    unsigned rcount
+) {
+    if (lcount < rcount)
         return false;
 
-    auto li = left.values;
-    auto le = li + left.numValues;
-    auto ri = right.values;
-    auto re = ri + right.numValues;
+    auto le = li + lcount;
+    auto re = ri + rcount;
 
     for (;;) {
         li = lower_bound(li, le, *ri);
@@ -1609,6 +1954,46 @@ static bool conVec(const Node & left, const Node & right) {
         if (++ri == re)
             return true;
     }
+}
+
+//===========================================================================
+static bool conRVec(const Node & left, const Node & right) {
+    return conRArray(left, right, right.values);
+}
+
+//===========================================================================
+static bool conLVec(const Node & left, const Node & right) {
+    return conLArray(left, left.values, right);
+}
+
+//===========================================================================
+static bool conVec(const Node & left, const Node & right) {
+    return conArray(
+        left.values,
+        left.numValues,
+        right.values,
+        right.numValues
+    );
+}
+
+//===========================================================================
+static bool conRSVec(const Node& left, const Node& right) {
+    return conRArray(left, right, right.localValues);
+}
+
+//===========================================================================
+static bool conLSVec(const Node& left, const Node& right) {
+    return conLArray(left, left.localValues, right);
+}
+
+//===========================================================================
+static bool conSVec(const Node& left, const Node& right) {
+    return conArray(
+        left.localValues,
+        left.numValues,
+        right.localValues,
+        right.numValues
+    );
 }
 
 //===========================================================================
@@ -1642,13 +2027,14 @@ static bool conMeta(const Node & left, const Node & right) {
 static bool contains(const Node & left, const Node & right) {
     using Fn = bool(const Node & left, const Node & right);
     static Fn * const functs[][Node::kNodeTypes] = {
-    // LEFT                         RIGHT
-    //             empty    full      vector    bitmap    meta
-    /* empty  */ { conTrue, conFalse, conFalse, conFalse, conFalse },
-    /* full   */ { conTrue, conTrue,  conTrue,  conTrue,  conTrue  },
-    /* vector */ { conTrue, conFalse, conVec,   conLVec,  conLVec  },
-    /* bitmap */ { conTrue, conFalse, conRVec,  conBit,   conError },
-    /* meta   */ { conTrue, conFalse, conRVec,  conError, conMeta  },
+// LEFT                         RIGHT
+//         empty    full      sm vec    vector    bitmap     meta
+/*empty*/{ conTrue, conFalse, conFalse, conFalse, conFalse, conFalse },
+/*full */{ conTrue, conTrue,  conTrue,  conTrue,  conTrue,  conTrue  },
+/*svec */{ conTrue, conFalse, conSVec,  conLSVec, conLSVec, conLSVec  },
+/*vec  */{ conTrue, conFalse, conRSVec, conVec,   conLVec,  conLVec  },
+/*bit  */{ conTrue, conFalse, conRSVec, conRVec,  conBit,   conError },
+/*meta */{ conTrue, conFalse, conRSVec, conRVec,  conError, conMeta  },
     };
     assert(!"not tested");
     return functs[left.type][right.type](left, right);
@@ -1675,8 +2061,11 @@ static bool isecTrue(const Node & left, const Node & right) { return true; }
 static bool isecFalse(const Node & left, const Node & right) { return false; }
 
 //===========================================================================
-static bool isecRVec(const Node & left, const Node & right) {
-    auto ri = right.values;
+static bool isecRArray(
+    const Node & left,
+    const Node & right,
+    const unsigned * ri
+) {
     auto re = ri + right.numValues;
     const Node * onode;
     unsigned ovalue;
@@ -1693,16 +2082,14 @@ static bool isecRVec(const Node & left, const Node & right) {
 }
 
 //===========================================================================
-static bool isecLVec(const Node & left, const Node & right) {
-    return isecRVec(right, left);
-}
-
-//===========================================================================
-static bool isecVec(const Node & left, const Node & right) {
-    auto li = left.values;
-    auto le = li + left.numValues;
-    auto ri = right.values;
-    auto re = ri + right.numValues;
+static bool isecArray(
+    const unsigned * li,
+    unsigned lcount,
+    const unsigned * ri,
+    unsigned rcount
+) {
+    auto le = li + lcount;
+    auto re = ri + rcount;
 
     for (;;) {
         if (*li == *ri)
@@ -1720,6 +2107,46 @@ static bool isecVec(const Node & left, const Node & right) {
                 break;
         }
     }
+}
+
+//===========================================================================
+static bool isecRVec(const Node& left, const Node& right) {
+    return isecRArray(left, right, right.values);
+}
+
+//===========================================================================
+static bool isecLVec(const Node& left, const Node& right) {
+    return isecRArray(right, left, left.values);
+}
+
+//===========================================================================
+static bool isecVec(const Node& left, const Node& right) {
+    return isecArray(
+        left.values,
+        left.numValues,
+        right.values,
+        right.numValues
+    );
+}
+
+//===========================================================================
+static bool isecRSVec(const Node& left, const Node& right) {
+    return isecRArray(left, right, right.localValues);
+}
+
+//===========================================================================
+static bool isecLSVec(const Node& left, const Node& right) {
+    return isecRArray(right, left, left.localValues);
+}
+
+//===========================================================================
+static bool isecSVec(const Node& left, const Node& right) {
+    return isecArray(
+        left.localValues,
+        left.numValues,
+        right.localValues,
+        right.numValues
+    );
 }
 
 //===========================================================================
@@ -1753,13 +2180,14 @@ static bool isecMeta(const Node & left, const Node & right) {
 static bool intersects(const Node & left, const Node & right) {
     using Fn = bool(const Node & left, const Node & right);
     static Fn * const functs[][Node::kNodeTypes] = {
-    // LEFT                         RIGHT
-    //             empty      full       vector     bitmap     meta
-    /* empty  */ { isecFalse, isecFalse, isecFalse, isecFalse, isecFalse },
-    /* full   */ { isecFalse, isecTrue,  isecTrue,  isecTrue,  isecTrue  },
-    /* vector */ { isecFalse, isecTrue,  isecVec,   isecLVec,  isecLVec  },
-    /* bitmap */ { isecFalse, isecTrue,  isecRVec,  isecBit,   isecError },
-    /* meta   */ { isecFalse, isecTrue,  isecRVec,  isecError, isecMeta  },
+// LEFT                         RIGHT
+//         empty      full       sm vec     vector     bitmap     meta
+/*empty*/{ isecFalse, isecFalse, isecFalse, isecFalse, isecFalse, isecFalse },
+/*full */{ isecFalse, isecTrue,  isecTrue,  isecTrue,  isecTrue,  isecTrue  },
+/*svec */{ isecFalse, isecTrue,  isecSVec,  isecLSVec, isecLSVec, isecLSVec },
+/*vec  */{ isecFalse, isecTrue,  isecRSVec, isecVec,   isecLVec,  isecLVec  },
+/*bit  */{ isecFalse, isecTrue,  isecRSVec, isecRVec,  isecBit,   isecError },
+/*meta */{ isecFalse, isecTrue,  isecRSVec, isecRVec,  isecError, isecMeta  },
     };
     assert(!"not tested");
     return functs[left.type][right.type](left, right);
@@ -1799,18 +2227,19 @@ static void insCopy(Node & left, const Node & right) {
 }
 
 //===========================================================================
-static void insIter(Node & left, const Node & right) {
-    auto ri = UnsignedSet::iterator::makeFirst(&right);
-    for (; ri; ++ri)
-        impl(left)->insert(left, *ri, 1);
+static void insSVec(Node & left, const Node & right) {
+    assert(right.type == Node::kSmVector);
+    auto ri = right.localValues;
+    auto re = ri + right.numValues;
+    impl(left)->insert(left, ri, re);
 }
 
 //===========================================================================
-static void insRIter(Node & left, const Node & right) {
+static void insRevSVec(Node & left, const Node & right) {
     Node tmp;
     insCopy(tmp, right);
     swap(left, tmp);
-    insIter(left, move(tmp));
+    insSVec(left, move(tmp));
     impl(tmp)->destroy(tmp);
 }
 
@@ -1819,7 +2248,16 @@ static void insVec(Node & left, const Node & right) {
     assert(right.type == Node::kVector);
     auto ri = right.values;
     auto re = ri + right.numValues;
-    s_vectorImpl.insert(left, ri, re);
+    impl(left)->insert(left, ri, re);
+}
+
+//===========================================================================
+static void insRevVec(Node & left, const Node & right) {
+    Node tmp;
+    insCopy(tmp, right);
+    swap(left, tmp);
+    insVec(left, move(tmp));
+    impl(tmp)->destroy(tmp);
 }
 
 //===========================================================================
@@ -1860,13 +2298,14 @@ NOT_FULL:
 static void insert(Node & left, const Node & right) {
     using InsertFn = void(Node & left, const Node & right);
     static InsertFn * const functs[][Node::kNodeTypes] = {
-    // LEFT                         RIGHT
-    //             empty    full     vector   bitmap     meta
-    /* empty  */ { insSkip, insFull, insCopy, insCopy,   insCopy  },
-    /* full   */ { insSkip, insSkip, insSkip, insSkip,   insSkip  },
-    /* vector */ { insSkip, insFull, insVec,  insRIter,  insRIter },
-    /* bitmap */ { insSkip, insFull, insIter, insBit,    insError },
-    /* meta   */ { insSkip, insFull, insIter, insError,  insMeta  },
+// LEFT                         RIGHT
+//         empty    full     sm vec   vector      bitmap      meta
+/*empty*/{ insSkip, insFull, insCopy, insCopy,    insCopy,    insCopy    },
+/*full */{ insSkip, insSkip, insSkip, insSkip,    insSkip,    insSkip    },
+/*svec */{ insSkip, insFull, insSVec, insRevSVec, insRevSVec, insRevSVec },
+/*vec  */{ insSkip, insFull, insSVec, insVec,     insRevVec,  insRevVec  },
+/*bit  */{ insSkip, insFull, insSVec, insVec,     insBit,     insError   },
+/*meta */{ insSkip, insFull, insSVec, insVec,     insError,   insMeta    },
     };
     functs[left.type][right.type](left, right);
 }
@@ -1900,19 +2339,25 @@ static void insMove(Node & left, Node && right) {
 }
 
 //===========================================================================
-static void insIter(Node & left, Node && right) {
-    insIter(left, right);
+static void insSVec(Node & left, Node && right) {
+    insSVec(left, right);
 }
 
 //===========================================================================
-static void insRIter(Node & left, Node && right) {
+static void insRevSVec(Node & left, Node && right) {
     swap(left, right);
-    insIter(left, move(right));
+    insSVec(left, move(right));
 }
 
 //===========================================================================
 static void insVec(Node & left, Node && right) {
     insVec(left, right);
+}
+
+//===========================================================================
+static void insRevVec(Node & left, Node && right) {
+    swap(left, right);
+    insVec(left, move(right));
 }
 
 //===========================================================================
@@ -1943,13 +2388,14 @@ NOT_FULL:
 static void insert(Node & left, Node && right) {
     using InsertFn = void(Node & left, Node && right);
     static InsertFn * const functs[][Node::kNodeTypes] = {
-    // LEFT                         RIGHT
-    //             empty    full     vector   bitmap    meta
-    /* empty  */ { insSkip, insFull, insMove, insMove,  insMove  },
-    /* full   */ { insSkip, insSkip, insSkip, insSkip,  insSkip  },
-    /* vector */ { insSkip, insFull, insVec,  insRIter, insRIter },
-    /* bitmap */ { insSkip, insFull, insIter, insBit,   insError },
-    /* meta   */ { insSkip, insFull, insIter, insError, insMeta  },
+// LEFT                         RIGHT
+//         empty    full     sm vec   vector      bitmap      meta
+/*empty*/{ insSkip, insFull, insMove, insMove,    insMove,    insMove    },
+/*full */{ insSkip, insSkip, insSkip, insSkip,    insSkip,    insSkip    },
+/*svec */{ insSkip, insFull, insSVec, insRevSVec, insRevSVec, insRevSVec },
+/*vec  */{ insSkip, insFull, insSVec, insVec,     insRevVec,  insRevVec  },
+/*bit  */{ insSkip, insFull, insSVec, insVec,     insBit,     insError   },
+/*meta */{ insSkip, insFull, insSVec, insVec,     insError,   insMeta    },
     };
     functs[left.type][right.type](left, move(right));
 }
@@ -1992,11 +2438,30 @@ static void eraChange(Node & left, const Node & right) {
 }
 
 //===========================================================================
-static void eraFind(Node & left, const Node & right) {
+static void eraArray(
+    Node & left,
+    unsigned * li,
+    const Node & right,
+    const unsigned * ri
+) {
+    auto le = set_difference(
+        li, li + left.numValues,
+        ri, ri + right.numValues,
+        li
+    );
+    left.numValues = uint16_t(le - li);
+    if (!left.numValues)
+        eraEmpty(left, right);
+}
+
+//===========================================================================
+static void eraLArray(
+    Node & left,
+    unsigned * li,
+    const Node & right
+) {
     // Go through values of left vector and skip (aka remove) the ones that
     // are found in right node (values to be erased).
-    assert(left.type == Node::kVector);
-    auto li = left.values;
     auto out = li;
     auto le = li + left.numValues;
     auto ptr = impl(right);
@@ -2024,24 +2489,48 @@ static void eraFind(Node & left, const Node & right) {
 }
 
 //===========================================================================
-static void eraIter(Node & left, const Node & right) {
-    assert(right.type == Node::kVector);
-    auto ri = right.values;
+static void eraRArray(
+    Node & left,
+    const Node & right,
+    const unsigned * ri
+) {
     auto re = ri + right.numValues;
     for (; ri != re; ++ri)
         impl(left)->erase(left, *ri, 1);
 }
 
 //===========================================================================
+static void eraSVec(Node & left, const Node & right) {
+    eraArray(left, left.localValues, right, right.localValues);
+}
+
+//===========================================================================
+static void eraLSVec(Node & left, const Node & right) {
+    assert(left.type == Node::kSmVector);
+    eraLArray(left, left.localValues, right);
+}
+
+//===========================================================================
+static void eraRSVec(Node & left, const Node & right) {
+    assert(right.type == Node::kSmVector);
+    eraRArray(left, right, right.localValues);
+}
+
+//===========================================================================
 static void eraVec(Node & left, const Node & right) {
-    auto le = set_difference(
-        left.values, left.values + left.numValues,
-        right.values, right.values + right.numValues,
-        left.values
-    );
-    left.numValues = uint16_t(le - left.values);
-    if (!left.numValues)
-        eraEmpty(left, right);
+    eraArray(left, left.values, right, right.values);
+}
+
+//===========================================================================
+static void eraLVec(Node & left, const Node & right) {
+    assert(left.type == Node::kVector);
+    eraLArray(left, left.values, right);
+}
+
+//===========================================================================
+static void eraRVec(Node & left, const Node & right) {
+    assert(right.type == Node::kVector);
+    eraRArray(left, right, right.values);
 }
 
 //===========================================================================
@@ -2082,13 +2571,14 @@ NOT_EMPTY:
 static void erase(Node & left, const Node & right) {
     using EraseFn = void(Node & left, const Node & right);
     static EraseFn * const functs[][Node::kNodeTypes] = {
-    // LEFT                         RIGHT
-    //             empty    full      vector     bitmap     meta
-    /* empty  */ { eraSkip, eraSkip,  eraSkip,   eraSkip,   eraSkip   },
-    /* full   */ { eraSkip, eraEmpty, eraIter,   eraChange, eraChange },
-    /* vector */ { eraSkip, eraEmpty, eraVec,    eraFind,   eraFind   },
-    /* bitmap */ { eraSkip, eraEmpty, eraIter,   eraBit,    eraError  },
-    /* meta   */ { eraSkip, eraEmpty, eraIter,   eraError,  eraMeta   },
+// LEFT                         RIGHT
+//         empty    full      sm vec     vector     bitmap     meta
+/*empty*/{ eraSkip, eraSkip,  eraSkip,   eraSkip,   eraSkip,   eraSkip   },
+/*full */{ eraSkip, eraEmpty, eraChange, eraChange, eraChange, eraChange },
+/*svec */{ eraSkip, eraEmpty, eraSVec,   eraLSVec,  eraLSVec,  eraLSVec  },
+/*vec  */{ eraSkip, eraEmpty, eraRSVec,  eraVec,    eraLVec,   eraLVec   },
+/*bit  */{ eraSkip, eraEmpty, eraRSVec,  eraRVec,   eraBit,    eraError  },
+/*meta */{ eraSkip, eraEmpty, eraRSVec,  eraRVec,   eraError,  eraMeta   },
     };
     functs[left.type][right.type](left, right);
 }
@@ -2123,11 +2613,30 @@ static void isecCopy(Node & left, const Node & right) {
 }
 
 //===========================================================================
-static void isecFind(Node & left, const Node & right) {
+static void isecArray(
+    Node & left,
+    unsigned * li,
+    const Node & right,
+    const unsigned * ri
+) {
+    auto le = set_intersection(
+        li, li + left.numValues,
+        ri, ri + right.numValues,
+        li
+    );
+    left.numValues = uint16_t(le - li);
+    if (!left.numValues)
+        isecEmpty(left, right);
+}
+
+//===========================================================================
+static void isecLArray(
+    Node & left,
+    unsigned * li,
+    const Node & right
+) {
     // Go through values of left vector and remove the ones that aren't
     // found in right node.
-    assert(left.type == Node::kVector);
-    auto li = left.values;
     auto out = li;
     auto le = li + left.numValues;
     auto ptr = impl(right);
@@ -2147,24 +2656,47 @@ static void isecFind(Node & left, const Node & right) {
 }
 
 //===========================================================================
-static void isecRFind(Node & left, const Node & right) {
+static void isecSVec(Node & left, const Node & right) {
+    assert(left.type == Node::kSmVector);
+    isecArray(left, left.localValues, right, right.localValues);
+}
+
+//===========================================================================
+static void isecLSVec(Node & left, const Node & right) {
+    assert(left.type == Node::kSmVector);
+    isecLArray(left, left.localValues, right);
+}
+
+//===========================================================================
+static void isecRSVec(Node & left, const Node & right) {
+    assert(right.type == Node::kSmVector);
     Node tmp;
     isecCopy(tmp, right);
     swap(left, tmp);
-    isecFind(left, move(tmp));
+    isecLArray(left, left.localValues, tmp);
     impl(tmp)->destroy(tmp);
 }
 
 //===========================================================================
 static void isecVec(Node & left, const Node & right) {
-    auto le = set_intersection(
-        left.values, left.values + left.numValues,
-        right.values, right.values + right.numValues,
-        left.values
-    );
-    left.numValues = uint16_t(le - left.values);
-    if (!left.numValues)
-        isecEmpty(left, right);
+    assert(left.type == Node::kVector);
+    isecArray(left, left.values, right, right.values);
+}
+
+//===========================================================================
+static void isecLVec(Node & left, const Node & right) {
+    assert(left.type == Node::kVector);
+    isecLArray(left, left.values, right);
+}
+
+//===========================================================================
+static void isecRVec(Node & left, const Node & right) {
+    assert(right.type == Node::kVector);
+    Node tmp;
+    isecCopy(tmp, right);
+    swap(left, tmp);
+    isecLArray(left, left.values, tmp);
+    impl(tmp)->destroy(tmp);
 }
 
 //===========================================================================
@@ -2204,13 +2736,14 @@ NOT_EMPTY:
 static void intersect(Node & left, const Node & right) {
     using IsectFn = void(Node & left, const Node & right);
     static IsectFn * const functs[][Node::kNodeTypes] = {
-    // LEFT                         RIGHT
-    //             empty      full      vector     bitmap     meta
-    /* empty  */ { isecSkip,  isecSkip, isecSkip,  isecSkip,  isecSkip },
-    /* full   */ { isecEmpty, isecSkip, isecCopy,  isecCopy,  isecCopy  },
-    /* vector */ { isecEmpty, isecSkip, isecVec,   isecFind,  isecFind  },
-    /* bitmap */ { isecEmpty, isecSkip, isecRFind, isecBit,   isecError },
-    /* meta   */ { isecEmpty, isecSkip, isecRFind, isecError, isecMeta  },
+// LEFT                         RIGHT
+//         empty      full      sm vec     vector     bitmap     meta
+/*empty*/{ isecSkip,  isecSkip, isecSkip,  isecSkip,  isecSkip,  isecSkip  },
+/*full */{ isecEmpty, isecSkip, isecCopy,  isecCopy,  isecCopy,  isecCopy  },
+/*svec */{ isecEmpty, isecSkip, isecSVec,  isecLSVec, isecLSVec, isecLSVec },
+/*vec  */{ isecEmpty, isecSkip, isecRSVec, isecVec,   isecLVec,  isecLVec  },
+/*bit  */{ isecEmpty, isecSkip, isecRSVec, isecRVec,  isecBit,   isecError },
+/*meta */{ isecEmpty, isecSkip, isecRSVec, isecRVec,  isecError, isecMeta  },
     };
     functs[left.type][right.type](left, right);
 }
@@ -2244,19 +2777,35 @@ static void isecMove(Node & left, Node && right) {
 }
 
 //===========================================================================
-static void isecFind(Node & left, Node && right) {
-    isecFind(left, right);
+static void isecSVec(Node & left, Node && right) {
+    isecSVec(left, right);
 }
 
 //===========================================================================
-static void isecRFind(Node & left, Node && right) {
+static void isecLSVec(Node & left, Node && right) {
+    isecLSVec(left, right);
+}
+
+//===========================================================================
+static void isecRSVec(Node & left, Node && right) {
     swap(left, right);
-    isecFind(left, move(right));
+    isecLSVec(left, right);
 }
 
 //===========================================================================
 static void isecVec(Node & left, Node && right) {
     isecVec(left, right);
+}
+
+//===========================================================================
+static void isecLVec(Node & left, Node && right) {
+    isecLVec(left, right);
+}
+
+//===========================================================================
+static void isecRVec(Node & left, Node && right) {
+    swap(left, right);
+    isecLVec(left, right);
 }
 
 //===========================================================================
@@ -2287,13 +2836,14 @@ NOT_EMPTY:
 static void intersect(Node & left, Node && right) {
     using IsectFn = void(Node & left, Node && right);
     static IsectFn * const functs[][Node::kNodeTypes] = {
-    // LEFT                         RIGHT
-    //             empty      full      vector     bitmap     meta
-    /* empty  */ { isecSkip,  isecSkip, isecEmpty, isecEmpty, isecEmpty },
-    /* full   */ { isecEmpty, isecSkip, isecMove,  isecMove,  isecMove  },
-    /* vector */ { isecEmpty, isecSkip, isecVec,   isecFind,  isecFind  },
-    /* bitmap */ { isecEmpty, isecSkip, isecRFind, isecBit,   isecError },
-    /* meta   */ { isecEmpty, isecSkip, isecRFind, isecError, isecMeta  },
+// LEFT                         RIGHT
+//         empty      full      sm vec     vector     bitmap     meta
+/*empty*/{ isecSkip,  isecSkip, isecEmpty, isecEmpty, isecEmpty, isecEmpty },
+/*full */{ isecEmpty, isecSkip, isecMove,  isecMove,  isecMove,  isecMove  },
+/*svec */{ isecEmpty, isecSkip, isecSVec,  isecLSVec, isecLSVec, isecLSVec  },
+/*vec  */{ isecEmpty, isecSkip, isecRSVec, isecVec,   isecLVec,  isecLVec  },
+/*bit  */{ isecEmpty, isecSkip, isecRSVec, isecRVec,  isecBit,   isecError },
+/*meta */{ isecEmpty, isecSkip, isecRSVec, isecRVec,  isecError, isecMeta  },
     };
     functs[left.type][right.type](left, move(right));
 }
