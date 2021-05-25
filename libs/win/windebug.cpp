@@ -17,7 +17,8 @@ using namespace Dim;
 
 //===========================================================================
 extern "C" static int attachMemLeakHandle() {
-    if (~_CrtSetDbgFlag(_CRTDBG_REPORT_FLAG) & _CRTDBG_LEAK_CHECK_DF) {
+    auto leakFlags = _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
+    if (~leakFlags & _CRTDBG_LEAK_CHECK_DF) {
         // Leak check disabled.
         return 0;
     }

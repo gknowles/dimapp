@@ -274,7 +274,7 @@ ExecProgram::ExecProgram(
 ExecProgram::~ExecProgram() {
     assert(!m_notify);
 
-    for (auto && pi : m_pipes)
+    for ([[maybe_unused]] auto && pi : m_pipes)
         assert(pi.m_mode == kRunStopped);
 
     if (linked()) {
