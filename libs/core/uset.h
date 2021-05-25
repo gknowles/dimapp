@@ -32,8 +32,8 @@ public:
     class RangeIter;
 
     using value_type = unsigned;
-    using reference = value_type&;
-    using const_reference = const value_type&;
+    using reference = value_type &;
+    using const_reference = const value_type &;
     using iterator = Iter;
     using reverse_iterator = typename RevIterBase<Iter>;
     using difference_type = ptrdiff_t;
@@ -154,7 +154,7 @@ private:
     );
 
 private:
-    void iInsert(const value_type* first, const value_type* last);
+    void iInsert(const value_type * first, const value_type * last);
 
     Node m_node;
 };

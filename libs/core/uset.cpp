@@ -29,26 +29,23 @@ const unsigned kMaxDepth =
     (kBitWidth - kLeafBits + kStepBits - 1) / kStepBits;
 static_assert(UnsignedSet::kBaseBits + kLeafBits >= kBitWidth);
 
-constexpr unsigned maxDepth() {
+static constexpr unsigned maxDepth() {
     return kMaxDepth;
 }
 
-constexpr unsigned valueMask(unsigned depth) {
+static constexpr unsigned valueMask(unsigned depth) {
     assert(depth <= kMaxDepth);
-    unsigned bits = kLeafBits + kStepBits * (kMaxDepth - depth);
-    if (bits >= kBitWidth)
-        return numeric_limits<unsigned>::max();
-    return (1 << bits) - 1;
+    unsigned bits = kBitWidth - (kLeafBits + kStepBits * (kMaxDepth - depth));
+    return numeric_limits<unsigned>::max() >> bits;
 }
-
-constexpr unsigned relBase(unsigned value, unsigned depth) {
+static constexpr unsigned relBase(unsigned value, unsigned depth) {
     return (value & ~valueMask(depth)) >> 8;
 }
-constexpr unsigned relValue(unsigned value, unsigned depth) {
+static constexpr unsigned relValue(unsigned value, unsigned depth) {
     return value & valueMask(depth);
 }
 
-constexpr uint16_t numNodes(unsigned depth) {
+static constexpr uint16_t numNodes(unsigned depth) {
     uint16_t ret = 0;
     if (depth) {
         ret = (uint16_t) 1
@@ -56,24 +53,24 @@ constexpr uint16_t numNodes(unsigned depth) {
     }
     return ret;
 }
-constexpr unsigned nodePos(unsigned value, unsigned depth) {
+static constexpr unsigned nodePos(unsigned value, unsigned depth) {
     return relValue(value, depth) / (valueMask(depth + 1) + 1);
 }
 
-constexpr unsigned absBase(unsigned value, unsigned depth) {
+static constexpr unsigned absBase(unsigned value, unsigned depth) {
     return value & ~valueMask(depth);
 }
-constexpr unsigned absFinal(unsigned value, unsigned depth) {
+static constexpr unsigned absFinal(unsigned value, unsigned depth) {
     return absBase(value, depth) + valueMask(depth);
 }
 
-constexpr unsigned absBase(const Node & node) {
+static constexpr unsigned absBase(const Node & node) {
     return node.base << 8;
 }
-constexpr unsigned absFinal(const Node & node) {
+static constexpr unsigned absFinal(const Node & node) {
     return absBase(node) + valueMask(node.depth);
 }
-constexpr unsigned absSize(const Node & node) {
+static constexpr unsigned absSize(const Node & node) {
     return valueMask(node.depth) + 1;
 }
 
@@ -271,7 +268,6 @@ struct SmVectorImpl final : IImplBase {
 
 private:
     void convert(Node& node);
-    bool erase(Node& node, unsigned* ptr, unsigned* eptr, unsigned* last);
 };
 
 struct VectorImpl final : IImplBase {
@@ -318,7 +314,6 @@ struct VectorImpl final : IImplBase {
 
 private:
     void convert(Node & node);
-    bool erase(Node & node, unsigned * ptr, unsigned * eptr, unsigned * last);
 };
 
 struct BitmapImpl final : IImplBase {
@@ -1796,7 +1791,7 @@ static int cmpBit(uint64_t left, uint64_t right) {
         return 0;
     auto a = reverseBits(left);
     auto b = reverseBits(right);
-    constexpr uint64_t mask = numeric_limits<uint64_t>::max();
+    uint64_t mask = numeric_limits<uint64_t>::max();
     if (a < b) {
         return a == (b & (mask << trailingZeroBits(a))) ? -2 : 1;
     } else {
@@ -1862,8 +1857,8 @@ static int cmpMeta(const Node & left, const Node & right) {
 
 //===========================================================================
 static int compare(const Node & left, const Node & right) {
-    using CompareFn = int(const Node & left, const Node & right);
-    constexpr static CompareFn * functs[][Node::kNodeTypes] = {
+    using Fn = int(const Node & left, const Node & right);
+    static Fn * functs[][Node::kNodeTypes] = {
 // LEFT                                 RIGHT
 //         empty      full        sm vec     vector     bitmap     meta
 /*empty*/{ cmpEqual,  cmpLessIf,  cmpLessIf, cmpLessIf, cmpLessIf, cmpLessIf },
@@ -2296,8 +2291,8 @@ NOT_FULL:
 
 //===========================================================================
 static void insert(Node & left, const Node & right) {
-    using InsertFn = void(Node & left, const Node & right);
-    static InsertFn * const functs[][Node::kNodeTypes] = {
+    using Fn = void(Node & left, const Node & right);
+    static Fn * const functs[][Node::kNodeTypes] = {
 // LEFT                         RIGHT
 //         empty    full     sm vec   vector      bitmap      meta
 /*empty*/{ insSkip, insFull, insCopy, insCopy,    insCopy,    insCopy    },
@@ -2386,8 +2381,8 @@ NOT_FULL:
 
 //===========================================================================
 static void insert(Node & left, Node && right) {
-    using InsertFn = void(Node & left, Node && right);
-    static InsertFn * const functs[][Node::kNodeTypes] = {
+    using Fn = void(Node & left, Node && right);
+    static Fn * const functs[][Node::kNodeTypes] = {
 // LEFT                         RIGHT
 //         empty    full     sm vec   vector      bitmap      meta
 /*empty*/{ insSkip, insFull, insMove, insMove,    insMove,    insMove    },
@@ -2569,8 +2564,8 @@ NOT_EMPTY:
 
 //===========================================================================
 static void erase(Node & left, const Node & right) {
-    using EraseFn = void(Node & left, const Node & right);
-    static EraseFn * const functs[][Node::kNodeTypes] = {
+    using Fn = void(Node & left, const Node & right);
+    static Fn * const functs[][Node::kNodeTypes] = {
 // LEFT                         RIGHT
 //         empty    full      sm vec     vector     bitmap     meta
 /*empty*/{ eraSkip, eraSkip,  eraSkip,   eraSkip,   eraSkip,   eraSkip   },
@@ -2734,8 +2729,8 @@ NOT_EMPTY:
 
 //===========================================================================
 static void intersect(Node & left, const Node & right) {
-    using IsectFn = void(Node & left, const Node & right);
-    static IsectFn * const functs[][Node::kNodeTypes] = {
+    using Fn = void(Node & left, const Node & right);
+    static Fn * const functs[][Node::kNodeTypes] = {
 // LEFT                         RIGHT
 //         empty      full      sm vec     vector     bitmap     meta
 /*empty*/{ isecSkip,  isecSkip, isecSkip,  isecSkip,  isecSkip,  isecSkip  },
@@ -2834,13 +2829,13 @@ NOT_EMPTY:
 
 //===========================================================================
 static void intersect(Node & left, Node && right) {
-    using IsectFn = void(Node & left, Node && right);
-    static IsectFn * const functs[][Node::kNodeTypes] = {
+    using Fn = void(Node & left, Node && right);
+    static Fn * const functs[][Node::kNodeTypes] = {
 // LEFT                         RIGHT
 //         empty      full      sm vec     vector     bitmap     meta
 /*empty*/{ isecSkip,  isecSkip, isecEmpty, isecEmpty, isecEmpty, isecEmpty },
 /*full */{ isecEmpty, isecSkip, isecMove,  isecMove,  isecMove,  isecMove  },
-/*svec */{ isecEmpty, isecSkip, isecSVec,  isecLSVec, isecLSVec, isecLSVec  },
+/*svec */{ isecEmpty, isecSkip, isecSVec,  isecLSVec, isecLSVec, isecLSVec },
 /*vec  */{ isecEmpty, isecSkip, isecRSVec, isecVec,   isecLVec,  isecLVec  },
 /*bit  */{ isecEmpty, isecSkip, isecRSVec, isecRVec,  isecBit,   isecError },
 /*meta */{ isecEmpty, isecSkip, isecRSVec, isecRVec,  isecError, isecMeta  },
@@ -2892,7 +2887,7 @@ UnsignedSet::UnsignedSet(string_view from) {
 }
 
 //===========================================================================
-UnsignedSet::UnsignedSet(unsigned start, size_t count) {
+UnsignedSet::UnsignedSet(value_type start, size_t count) {
     insert(start, count);
 }
 
@@ -2952,7 +2947,7 @@ size_t UnsignedSet::size() const {
 
 //===========================================================================
 size_t UnsignedSet::max_size() const {
-    return numeric_limits<unsigned>::max();
+    return numeric_limits<value_type>::max();
 }
 
 //===========================================================================
@@ -2969,7 +2964,7 @@ void UnsignedSet::fill() {
 }
 
 //===========================================================================
-void UnsignedSet::assign(unsigned value) {
+void UnsignedSet::assign(value_type value) {
     clear();
     insert(value);
 }
@@ -2993,13 +2988,13 @@ void UnsignedSet::assign(string_view src) {
 }
 
 //===========================================================================
-void UnsignedSet::assign(unsigned start, size_t count) {
+void UnsignedSet::assign(value_type start, size_t count) {
     clear();
     insert(start, count);
 }
 
 //===========================================================================
-bool UnsignedSet::insert(unsigned value) {
+bool UnsignedSet::insert(value_type value) {
     return impl(m_node)->insert(m_node, value, 1);
 }
 
@@ -3034,14 +3029,14 @@ void UnsignedSet::insert(string_view src) {
 }
 
 //===========================================================================
-void UnsignedSet::insert(unsigned start, size_t count) {
+void UnsignedSet::insert(value_type start, size_t count) {
     if (count == dynamic_extent)
         count = valueMask(0) - start + 1;
     impl(m_node)->insert(m_node, start, count);
 }
 
 //===========================================================================
-bool UnsignedSet::erase(unsigned value) {
+bool UnsignedSet::erase(value_type value) {
     return impl(m_node)->erase(m_node, value, 1);
 }
 
@@ -3057,21 +3052,21 @@ void UnsignedSet::erase(const UnsignedSet & other) {
 }
 
 //===========================================================================
-void UnsignedSet::erase(unsigned start, size_t count) {
+void UnsignedSet::erase(value_type start, size_t count) {
     if (count == dynamic_extent)
         count = valueMask(0) - start + 1;
     impl(m_node)->erase(m_node, start, count);
 }
 
 //===========================================================================
-unsigned UnsignedSet::pop_front() {
+UnsignedSet::value_type UnsignedSet::pop_front() {
     auto val = front();
     erase(val);
     return val;
 }
 
 //===========================================================================
-unsigned UnsignedSet::pop_back() {
+UnsignedSet::value_type UnsignedSet::pop_back() {
     auto val = back();
     erase(val);
     return val;
@@ -3121,24 +3116,24 @@ bool UnsignedSet::operator==(const UnsignedSet & right) const {
 }
 
 //===========================================================================
-unsigned UnsignedSet::front() const {
+UnsignedSet::value_type UnsignedSet::front() const {
     auto i = begin();
     return *i;
 }
 
 //===========================================================================
-unsigned UnsignedSet::back() const {
+UnsignedSet::value_type UnsignedSet::back() const {
     auto i = rbegin();
     return *i;
 }
 
 //===========================================================================
-size_t UnsignedSet::count(unsigned val) const {
+size_t UnsignedSet::count(value_type val) const {
     return contains(val);
 }
 
 //===========================================================================
-size_t UnsignedSet::count(unsigned start, size_t count) const {
+size_t UnsignedSet::count(value_type start, size_t count) const {
     assert(!"Not implemented");
     auto end = start + count;
     auto lower = lowerBound(start);
@@ -3151,34 +3146,36 @@ size_t UnsignedSet::count(unsigned start, size_t count) const {
 }
 
 //===========================================================================
-bool UnsignedSet::contains(unsigned val) const {
+bool UnsignedSet::contains(value_type val) const {
     return (bool) find(val);
 }
 
 //===========================================================================
-auto UnsignedSet::find(unsigned val) const -> iterator {
+auto UnsignedSet::find(value_type val) const -> iterator {
     auto first = lowerBound(val);
     return first && *first == val ? first : end();
 }
 
 //===========================================================================
-auto UnsignedSet::findLessEqual(unsigned val) const -> iterator {
+auto UnsignedSet::findLessEqual(value_type val) const -> iterator {
     return iterator::makeLast(&m_node, val);
 }
 
 //===========================================================================
-auto UnsignedSet::lowerBound(unsigned val) const -> iterator {
+auto UnsignedSet::lowerBound(value_type val) const -> iterator {
     return iterator::makeFirst(&m_node, val);
 }
 
 //===========================================================================
-auto UnsignedSet::upperBound(unsigned val) const -> iterator {
+auto UnsignedSet::upperBound(value_type val) const -> iterator {
     val += 1;
     return val ? lowerBound(val) : end();
 }
 
 //===========================================================================
-auto UnsignedSet::equalRange(unsigned val) const -> pair<iterator, iterator> {
+auto UnsignedSet::equalRange(value_type val) const
+    -> pair<iterator, iterator>
+{
     auto first = lowerBound(val);
     auto last = first;
     if (last && *last == val)
@@ -3199,7 +3196,7 @@ auto UnsignedSet::lastContiguous(iterator where) const -> iterator {
 //===========================================================================
 // Private
 //===========================================================================
-void UnsignedSet::iInsert(const unsigned * first, const unsigned * last) {
+void UnsignedSet::iInsert(const value_type * first, const value_type * last) {
     impl(m_node)->insert(m_node, first, last);
 }
 
