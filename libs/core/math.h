@@ -163,14 +163,13 @@ constexpr int digits10(uint32_t val) {
 //===========================================================================
 constexpr uint16_t bswap16(unsigned uval) {
     auto val = (uint16_t) uval;
-    return ((val & 0xff00) >> 8)
-        | (val << 8);
+    return (val >> 8) | (val << 8);
 }
 
 //===========================================================================
 constexpr uint32_t bswap32(unsigned uval) {
     auto val = (uint32_t) uval;
-    return ((val & 0xff00'0000) >> 24)
+    return (val >> 24)
         | ((val & 0x00ff'0000) >> 8)
         | ((val & 0x0000'ff00) << 8)
         | (val << 24);
@@ -178,14 +177,35 @@ constexpr uint32_t bswap32(unsigned uval) {
 
 //===========================================================================
 constexpr uint64_t bswap64(uint64_t val) {
-    return ((val & 0xff00'0000'0000'0000) >> 56)
-        | ((val & 0x00ff'0000'0000'0000) >> 40)
-        | ((val & 0x0000'ff00'0000'0000) >> 24)
-        | ((val & 0x0000'00ff'0000'0000) >> 8)
-        | ((val & 0x0000'0000'ff00'0000) << 8)
-        | ((val & 0x0000'0000'00ff'0000) << 24)
-        | ((val & 0x0000'0000'0000'ff00) << 40)
-        | (val << 56);
+    if (std::is_constant_evaluated()) {
+        return (val >> 56)
+            | ((val & 0x00ff'0000'0000'0000) >> 40)
+            | ((val & 0x0000'ff00'0000'0000) >> 24)
+            | ((val & 0x0000'00ff'0000'0000) >> 8)
+            | ((val & 0x0000'0000'ff00'0000) << 8)
+            | ((val & 0x0000'0000'00ff'0000) << 24)
+            | ((val & 0x0000'0000'0000'ff00) << 40)
+            | (val << 56);
+    } else {
+        return _byteswap_uint64(val);
+    }
+}
+
+//===========================================================================
+template<typename T>
+requires std::is_integral_v<T> && std::is_unsigned_v<T>
+constexpr T bswap(T val) {
+    if constexpr (sizeof(T) == 1) {
+        return val;
+    } else if constexpr (sizeof(T) == 2) {
+        return bswap16(val);
+    } else if constexpr (sizeof(T) == 4) {
+        return bswap32(val);
+    } else if constexpr (sizeof(T) == 8) {
+        return bswap64(val);
+    } else {
+        static_assert(!"Must be 8, 16, 32, or 64 bit unsigned integer");
+    }
 }
 
 } // namespace
