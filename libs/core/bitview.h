@@ -58,6 +58,7 @@ public:
     bool none() const;
     size_t bits() const { return kWordBits * m_size; } // size in bits
     size_t count() const;
+    size_t count(size_t pos, size_t count) const;
     BitView & set();
     BitView & set(size_t pos);
     BitView & set(size_t pos, bool value);

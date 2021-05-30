@@ -11,6 +11,24 @@ using namespace Dim;
 
 /****************************************************************************
 *
+*   Declarations
+*
+***/
+
+namespace {
+
+enum OpType {
+    kReset,
+    kSet,
+    kFlip,
+    kCount,
+};
+
+} // namespace
+
+
+/****************************************************************************
+*
 *   Helpers
 *
 ***/
@@ -23,23 +41,26 @@ static constexpr uint64_t bitmask(size_t bitpos) {
 }
 
 //===========================================================================
-template<int Op, typename Word>
-static void apply(Word * ptr, Word mask) {
-    if constexpr (Op == 0) {
-        hton64(ptr, ntoh64(ptr) & ~mask);
-    } else if constexpr (Op == 1) {
-        hton64(ptr, ntoh64(ptr) | mask);
+template<OpType Op, typename Word>
+static void apply(Word * ptr, size_t * count, Word mask) {
+    if constexpr (Op == kReset) {
+        *ptr &= ~mask;
+    } else if constexpr (Op == kSet) {
+        *ptr |= mask;
+    } else if constexpr (Op == kFlip) {
+        *ptr ^= mask;
     } else {
-        static_assert(Op == 2);
-        hton64(ptr, ntoh64(ptr) ^ mask);
+        static_assert(Op == kCount);
+        *count += hammingWeight(*ptr & mask);
     }
 }
 
 //===========================================================================
-template<int Op, typename Word>
+template<OpType Op, typename Word>
 static void apply(
     Word * data,
     size_t dataLen,
+    size_t * count,
     size_t bitpos,
     size_t bitcount
 ) {
@@ -56,26 +77,32 @@ static void apply(
     auto bits = kWordBits - bit;
     if (bits >= bitcount) {
         if (bits == kWordBits) {
-            apply<Op>(ptr, kWordMax);
+            apply<Op>(ptr, count, kWordMax);
         } else {
             auto mask = ((Word) 1 << bitcount) - 1;
             mask <<= bits - bitcount;
-            apply<Op>(ptr, mask);
+            if constexpr (std::endian::native == std::endian::little)
+                mask = bswap64(mask);
+            apply<Op>(ptr, count, mask);
         }
     } else {
         if (bits < kWordBits) {
             auto mask = ((Word) 1 << bits) - 1;
-            apply<Op>(ptr, mask);
+            if constexpr (std::endian::native == std::endian::little)
+                mask = bswap64(mask);
+            apply<Op>(ptr, count, mask);
             bitcount -= bits;
             ptr += 1;
         }
         for (; bitcount >= kWordBits; ++ptr, bitcount -= kWordBits) {
-            apply<Op>(ptr, kWordMax);
+            apply<Op>(ptr, count, kWordMax);
         }
         if (bitcount) {
             auto mask = ((Word) 1 << bitcount) - 1;
             mask <<= kWordBits - bitcount;
-            apply<Op>(ptr, mask);
+            if constexpr (std::endian::native == std::endian::little)
+                mask = bswap64(mask);
+            apply<Op>(ptr, count, mask);
         }
     }
 }
@@ -191,6 +218,13 @@ size_t BitView::count() const {
 }
 
 //===========================================================================
+size_t BitView::count(size_t bitpos, size_t bitcount) const {
+    size_t count = 0;
+    ::apply<kCount, uint64_t>(m_data, m_size, &count, bitpos, bitcount);
+    return count;
+}
+
+//===========================================================================
 BitView & BitView::set() {
     memset(m_data, 0xff, m_size * sizeof *m_data);
     return *this;
@@ -206,7 +240,7 @@ BitView & BitView::set(size_t bitpos) {
 
 //===========================================================================
 BitView & BitView::set(size_t bitpos, size_t bitcount) {
-    ::apply<1, uint64_t>(m_data, m_size, bitpos, bitcount);
+    ::apply<kSet, uint64_t>(m_data, m_size, nullptr, bitpos, bitcount);
     return *this;
 }
 
@@ -259,7 +293,7 @@ BitView & BitView::reset(size_t bitpos) {
 
 //===========================================================================
 BitView & BitView::reset(size_t bitpos, size_t bitcount) {
-    ::apply<0, uint64_t>(m_data, m_size, bitpos, bitcount);
+    ::apply<kReset, uint64_t>(m_data, m_size, nullptr, bitpos, bitcount);
     return *this;
 }
 
@@ -280,7 +314,7 @@ BitView & BitView::flip(size_t bitpos) {
 
 //===========================================================================
 BitView & BitView::flip(size_t bitpos, size_t bitcount) {
-    ::apply<2, uint64_t>(m_data, m_size, bitpos, bitcount);
+    ::apply<kFlip, uint64_t>(m_data, m_size, nullptr, bitpos, bitcount);
     return *this;
 }
 
