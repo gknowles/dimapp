@@ -728,7 +728,7 @@ bool SmVectorImpl::insert(Node & node, unsigned start, size_t count) {
     auto eptr = (ptr < last && *ptr < start + count)
         ? lower_bound(ptr, last, start + count)
         : ptr;
-    size_t nBelow = ptr - node.values;
+    size_t nBelow = ptr - node.localValues;
     size_t nOld = eptr - ptr;
     size_t nAbove = last - eptr;
     if (count == nOld)
@@ -912,7 +912,7 @@ void VectorImpl::init(Node & node, bool full) {
     assert(!full);
     node.numBytes = kDataSize;
     node.numValues = 0;
-    node.values = (unsigned*)malloc(node.numBytes);
+    node.values = (unsigned *) malloc(node.numBytes);
 }
 
 //===========================================================================
@@ -920,9 +920,9 @@ void VectorImpl::init(Node & node, const Node & from) {
     assert(node.type == Node::kVector);
     assert(from.type == Node::kVector);
     node = from;
-    node.values = (unsigned*)malloc(node.numBytes);
+    node.values = (unsigned *) malloc(node.numBytes);
     assert(node.values);
-    memcpy(node.values, from.values, node.numBytes);
+    memcpy(node.values, from.values, node.numValues * sizeof *node.values);
 }
 
 //===========================================================================
@@ -1629,6 +1629,12 @@ bool MetaImpl::convertIf(Node & node, Node::Type type) {
 *       1: left > right
 *       2: left > right, unless right has following non-empty nodes
 *
+*   Assuming meta nodes contain ranges of 100 values:
+*       | 1 2 | <=> | 1 3 |         compares 2 <=> 3, which is -1
+*       | 1 2 | <=> | 1   | ??? |   compares 2 <=> ???, which is 2
+*       | 1 2 | <=> | 1   |         compares 2 <=> none, which is 1
+*       | 1 2 | <=> | 1   | 101 |   compares 2 <=> 101, which is -1
+*
 ***/
 
 static int compare(const Node & left, const Node & right);
@@ -1647,9 +1653,9 @@ static int cmpEqual(const Node & left, const Node & right) { return 0; }
 
 //===========================================================================
 static int cmpArray(
-    const unsigned* li,
+    const unsigned * li,
     unsigned lcount,
-    const unsigned* ri,
+    const unsigned * ri,
     unsigned rcount
 ) {
     auto le = li + lcount;
@@ -1675,12 +1681,12 @@ static int cmpVecIf(const Node & left, const Node & right) {
 }
 
 //===========================================================================
-static int cmpRVecIf(const Node& left, const Node& right) {
+static int cmpRVecIf(const Node & left, const Node & right) {
     return -cmpVecIf(right, left);
 }
 
 //===========================================================================
-static int cmpSVecIf(const Node& left, const Node& right) {
+static int cmpSVecIf(const Node & left, const Node & right) {
     auto minMax = absBase(right) + right.numValues - 1;
     if (minMax == right.localValues[right.numValues - 1]) {
         return 2;
@@ -1690,7 +1696,7 @@ static int cmpSVecIf(const Node& left, const Node& right) {
 }
 
 //===========================================================================
-static int cmpRSVecIf(const Node& left, const Node& right) {
+static int cmpRSVecIf(const Node & left, const Node & right) {
     return -cmpSVecIf(right, left);
 }
 
@@ -1754,7 +1760,7 @@ static int cmpVec(const Node & left, const Node & right) {
 
 //===========================================================================
 // small vector <=> small vector
-static int cmpSVec(const Node& left, const Node& right) {
+static int cmpSVec(const Node & left, const Node & right) {
     return cmpArray(
         left.localValues,
         left.numValues,
@@ -1765,7 +1771,7 @@ static int cmpSVec(const Node& left, const Node& right) {
 
 //===========================================================================
 // small vector <=> vector
-static int cmpLSVec(const Node& left, const Node& right) {
+static int cmpLSVec(const Node & left, const Node & right) {
     return cmpArray(
         left.localValues,
         left.numValues,
@@ -1776,7 +1782,7 @@ static int cmpLSVec(const Node& left, const Node& right) {
 
 //===========================================================================
 // vector <=> small vector
-static int cmpRSVec(const Node& left, const Node& right) {
+static int cmpRSVec(const Node & left, const Node & right) {
     return cmpArray(
         left.values,
         left.numValues,
@@ -1788,14 +1794,27 @@ static int cmpRSVec(const Node& left, const Node& right) {
 //===========================================================================
 static int cmpBit(uint64_t left, uint64_t right) {
     if (left == right)
-        return 0;
-    auto a = reverseBits(left);
-    auto b = reverseBits(right);
+        return 0;   // equal
     uint64_t mask = numeric_limits<uint64_t>::max();
-    if (a < b) {
-        return a == (b & (mask << trailingZeroBits(a))) ? -2 : 1;
+    if (left < right) {
+        if (left != (right & (mask << trailingZeroBits(left)))) {
+            // left bitmap > right bitmap. Which means the right side has gaps,
+            // paradoxically making it greater lexicographically. For example,
+            // { 1, 2, 3 } < { 1, 3 }, since at the second position 2 < 3.
+            // Where the bitmap representations compare reversed, 111 > 101.
+            return 1;
+        } else {
+            // left and right only differ where left has trailing zeros, so if
+            // left has any following non-zero nodes it would be larger
+            // lexicographically due to having the larger gap.
+            return -2;
+        }
     } else {
-        return b == (a & (mask << trailingZeroBits(b))) ? 2 : -1;
+        if (right != (left & (mask << trailingZeroBits(right)))) {
+            return -1;
+        } else {
+            return 2;
+        }
     }
 }
 
@@ -1810,7 +1829,7 @@ static int cmpBit(const Node & left, const Node & right) {
             return ri == re ? 0 : -2;
         if (ri == re)
             return 2;
-        if (int rc = cmpBit(*li, *ri)) {
+        if (int rc = cmpBit(ntoh64(li), ntoh64(ri))) {
             if (rc == -2) {
                 while (++li != le) {
                     if (*li)
@@ -1893,8 +1912,8 @@ static bool conFalse(const Node & left, const Node & right) { return false; }
 
 //===========================================================================
 static bool conRArray(
-    const Node& left,
-    const Node& right,
+    const Node & left,
+    const Node & right,
     const UnsignedSet::value_type * ri
 ) {
     auto re = ri + right.numValues;
@@ -1911,9 +1930,9 @@ static bool conRArray(
 
 //===========================================================================
 static bool conLArray(
-    const Node& left,
+    const Node & left,
     const UnsignedSet::value_type * li,
-    const Node& right
+    const Node & right
 ) {
     auto le = li + left.numValues;
     const Node* onode;
@@ -2457,6 +2476,7 @@ static void eraLArray(
 ) {
     // Go through values of left vector and skip (aka remove) the ones that
     // are found in right node (values to be erased).
+    auto base = li;
     auto out = li;
     auto le = li + left.numValues;
     auto ptr = impl(right);
@@ -2478,7 +2498,7 @@ static void eraLArray(
         if (value != *li)
             *out++ = *li;
     }
-    left.numValues = uint16_t(out - left.values);
+    left.numValues = uint16_t(out - base);
     if (!left.numValues)
         eraEmpty(left, right);
 }
@@ -2632,6 +2652,7 @@ static void isecLArray(
 ) {
     // Go through values of left vector and remove the ones that aren't
     // found in right node.
+    auto base = li;
     auto out = li;
     auto le = li + left.numValues;
     auto ptr = impl(right);
@@ -2645,7 +2666,7 @@ static void isecLArray(
         if (value == *li)
             *out++ = *li;
     }
-    left.numValues = uint16_t(out - left.values);
+    left.numValues = uint16_t(out - base);
     if (!left.numValues)
         isecEmpty(left, right);
 }
@@ -3015,21 +3036,25 @@ void UnsignedSet::insert(string_view src) {
         auto first = strToUint(src, &eptr);
         if (!first && (src.data() == eptr || eptr[-1] != '0'))
             return;
-        src.remove_prefix(eptr - src.data());
 
         if (*eptr == '-') {
-            auto second = strToUint(eptr + 1, &eptr);
+            src.remove_prefix(eptr - src.data() + 1);
+            auto second = strToUint(src, &eptr);
             if (second < first)
                 break;
             insert(first, second - first + 1);
         } else {
             insert(first);
         }
+
+        src.remove_prefix(eptr - src.data());
     }
 }
 
 //===========================================================================
 void UnsignedSet::insert(value_type start, size_t count) {
+    if (!count)
+        return;
     if (count == dynamic_extent)
         count = valueMask(0) - start + 1;
     impl(m_node)->insert(m_node, start, count);
@@ -3053,6 +3078,8 @@ void UnsignedSet::erase(const UnsignedSet & other) {
 
 //===========================================================================
 void UnsignedSet::erase(value_type start, size_t count) {
+    if (!count)
+        return;
     if (count == dynamic_extent)
         count = valueMask(0) - start + 1;
     impl(m_node)->erase(m_node, start, count);
@@ -3135,11 +3162,13 @@ size_t UnsignedSet::count(value_type val) const {
 //===========================================================================
 size_t UnsignedSet::count(value_type start, size_t count) const {
     assert(!"Not implemented");
-    auto end = start + count;
-    auto lower = lowerBound(start);
-    if (!lower || *lower > end)
+    if (!count)
         return 0;
-    if (*lower == end)
+    auto final = start + count - 1;
+    auto lower = lowerBound(start);
+    if (!lower || *lower > final)
+        return 0;
+    if (*lower == final)
         return 1;
 
     return 0;
