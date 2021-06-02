@@ -76,7 +76,7 @@ static void apply(
     auto bit = bitpos % kWordBits;
     auto bits = kWordBits - bit;
     if (bits >= bitcount) {
-        if (bits == kWordBits) {
+        if (bitcount == kWordBits) {
             apply<Op>(ptr, count, kWordMax);
         } else {
             auto mask = ((Word) 1 << bitcount) - 1;
