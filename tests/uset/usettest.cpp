@@ -54,6 +54,49 @@ static void memleak() {
 }
 
 //===========================================================================
+// Test combining Node::kVector nodes.
+// Use too many values for kSmVector, but not so many it converts to kBitmap.
+static void vectors() {
+    int line = 0;
+    UnsignedSet a;
+    UnsignedSet b;
+    ostringstream os;
+
+    a.assign("1 3 5 7 9");
+    b.assign("4 6 8");
+    a.insert(b);
+    EXPECT(a.size() == 8);
+    os.str("");
+    os << a;
+    EXPECT(os.view() == "1 3-9");
+
+    a.assign("1 3 5 7");
+    b.assign("4-6");
+    a.insert(b);
+    EXPECT(a.size() == 6);
+    os.str("");
+    os << a;
+    EXPECT(os.view() == "1 3-7");
+
+    b.clear();
+    b.insert(a);
+    os.str("");
+    os << b;
+    EXPECT(os.view() == "1 3-7");
+    b.insert(a);
+    os.str("");
+    os << b;
+    EXPECT(os.view() == "1 3-7");
+
+    a.assign("1-100");
+    b.assign("90-200");
+    a.insert(b);
+    os.str("");
+    os << a;
+    EXPECT(os.view() == "1-200");
+}
+
+//===========================================================================
 static void test() {
     int line = 0;
 
@@ -158,6 +201,7 @@ static void test() {
 static void app(int argc, char *argv[]) {
     memleak();
     test();
+    vectors();
 
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);

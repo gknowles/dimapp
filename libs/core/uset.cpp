@@ -358,10 +358,6 @@ struct BitmapImpl final : IImplBase {
         const Node & node,
         unsigned base
     ) const override;
-
-private:
-    void convertToEmpty(Node & node);
-    void convertIfFull(Node & node);
 };
 
 struct MetaImpl final : IImplBase {
@@ -1238,28 +1234,43 @@ bool BitmapImpl::erase(Node & node, unsigned start, size_t count) {
     auto base = (uint64_t *) node.values;
     BitView bits(base, numInt64s());
     auto low = relValue(start, node.depth);
-    auto first = bits.data(low);
-    auto last = bits.data(low + count - 1);
-    bits = BitView(first, last - first + 1);
-    low %= bits.kWordBits;
     auto high = low + count - 1;
+    auto lower = bits.data(low);
+    auto upper = bits.data(high);
+    if (lower == upper) {
+        auto tmp = *lower;
+        bits.reset(low, count);
+        if (tmp == *lower)
+            return false;
+        if (!*lower) {
+            node.numValues -= 1;
+            goto CHECK_IF_EMPTY;
+        }
+        return true;
+    }
+
+    bits = BitView(lower, upper - lower + 1);
+    low %= bits.kWordBits;
+    high = low + count - 1;
     low = (unsigned) bits.find(low);
     if (low > high)
         return false;
 
     count = high - low + 1;
-    first = bits.data(low);
-    bits = BitView(first, last - first + 1);
+    lower = bits.data(low);
+    bits = BitView(lower, upper - lower + 1);
     low %= bits.kWordBits;
-    for (auto ptr = first; ptr <= last; ++ptr) {
+    for (auto ptr = lower; ptr <= upper; ++ptr) {
         if (*ptr)
             node.numValues -= 1;
     }
     bits.reset(low, count);
-    for (auto ptr = first; ptr <= last; ++ptr) {
+    for (auto ptr = lower; ptr <= upper; ++ptr) {
         if (*ptr)
             node.numValues += 1;
     }
+
+CHECK_IF_EMPTY:
     if (!node.numValues) {
         destroy(node);
         node.type = Node::kEmpty;
@@ -2241,7 +2252,7 @@ static void insCopy(Node & left, const Node & right) {
 }
 
 //===========================================================================
-static void insSVec(Node & left, const Node & right) {
+static void insRSVec(Node & left, const Node & right) {
     assert(right.type == Node::kSmVector);
     auto ri = right.localValues;
     auto re = ri + right.numValues;
@@ -2249,16 +2260,72 @@ static void insSVec(Node & left, const Node & right) {
 }
 
 //===========================================================================
-static void insRevSVec(Node & left, const Node & right) {
+static void insLSVec(Node & left, const Node & right) {
+    assert(left.type == Node::kSmVector);
     Node tmp;
     insCopy(tmp, right);
     swap(left, tmp);
-    insSVec(left, move(tmp));
+    insRSVec(left, move(tmp));
     impl(tmp)->destroy(tmp);
 }
 
 //===========================================================================
+static void insArray(
+    Node & left,
+    unsigned * li,
+    size_t maxValues,
+    const unsigned * ri,
+    const unsigned * re
+) {
+    assert(left.type == Node::kVector);
+    assert(left.numValues);
+    assert(ri < re);
+    auto rbase = ri;
+    auto rcount = (uint16_t) min<size_t>(
+        re - ri,
+        maxValues - left.numValues
+    );
+    if (rcount) {
+        auto le = li + left.numValues - 1;
+        auto out = le + rcount;
+        ri = re - rcount;
+        re -= 1;
+        for (;;) {
+            auto cmp = *le <=> *re;
+            if (cmp > 0) {
+                *out-- = *le--;
+            } else {
+                *out-- = *re--;
+                if (cmp == 0) {
+                    le -= 1;
+                } else if (le == out) {
+                    left.numValues += rcount;
+                    break;
+                }
+                if (re < ri) {
+                    auto cnt = (li + left.numValues - 1) + rcount - out;
+                    memmove(le + 1, out + 1, cnt * sizeof *ri);
+                    left.numValues = (uint16_t) ((le + 1 - li) + cnt);
+                    break;
+                }
+            }
+        }
+    }
+    if (rbase != ri)
+        impl(left)->insert(left, rbase, ri);
+}
+
+//===========================================================================
 static void insVec(Node & left, const Node & right) {
+    assert(left.type == Node::kVector);
+    assert(right.type == Node::kVector);
+    auto ri = right.values;
+    auto re = ri + right.numValues;
+    insArray(left, left.values, s_vectorImpl.maxValues(), ri, re);
+}
+
+//===========================================================================
+static void insRVec(Node & left, const Node & right) {
     assert(right.type == Node::kVector);
     auto ri = right.values;
     auto re = ri + right.numValues;
@@ -2266,11 +2333,12 @@ static void insVec(Node & left, const Node & right) {
 }
 
 //===========================================================================
-static void insRevVec(Node & left, const Node & right) {
+static void insLVec(Node & left, const Node & right) {
+    assert(left.type == Node::kVector);
     Node tmp;
     insCopy(tmp, right);
     swap(left, tmp);
-    insVec(left, move(tmp));
+    insRVec(left, move(tmp));
     impl(tmp)->destroy(tmp);
 }
 
@@ -2313,13 +2381,13 @@ static void insert(Node & left, const Node & right) {
     using Fn = void(Node & left, const Node & right);
     static Fn * const functs[][Node::kNodeTypes] = {
 // LEFT                         RIGHT
-//         empty    full     sm vec   vector      bitmap      meta
-/*empty*/{ insSkip, insFull, insCopy, insCopy,    insCopy,    insCopy    },
-/*full */{ insSkip, insSkip, insSkip, insSkip,    insSkip,    insSkip    },
-/*svec */{ insSkip, insFull, insSVec, insRevSVec, insRevSVec, insRevSVec },
-/*vec  */{ insSkip, insFull, insSVec, insVec,     insRevVec,  insRevVec  },
-/*bit  */{ insSkip, insFull, insSVec, insVec,     insBit,     insError   },
-/*meta */{ insSkip, insFull, insSVec, insVec,     insError,   insMeta    },
+//         empty    full     sm vec    vector    bitmap    meta
+/*empty*/{ insSkip, insFull, insCopy,  insCopy,  insCopy,  insCopy  },
+/*full */{ insSkip, insSkip, insSkip,  insSkip,  insSkip,  insSkip  },
+/*svec */{ insSkip, insFull, insRSVec, insLSVec, insLSVec, insLSVec },
+/*vec  */{ insSkip, insFull, insRSVec, insVec,   insLVec,  insLVec  },
+/*bit  */{ insSkip, insFull, insRSVec, insRVec,  insBit,   insError },
+/*meta */{ insSkip, insFull, insRSVec, insRVec,  insError, insMeta  },
     };
     functs[left.type][right.type](left, right);
 }
@@ -2353,25 +2421,25 @@ static void insMove(Node & left, Node && right) {
 }
 
 //===========================================================================
-static void insSVec(Node & left, Node && right) {
-    insSVec(left, right);
+static void insRSVec(Node & left, Node && right) {
+    insRSVec(left, right);
 }
 
 //===========================================================================
-static void insRevSVec(Node & left, Node && right) {
+static void insLSVec(Node & left, Node && right) {
     swap(left, right);
-    insSVec(left, move(right));
+    insRSVec(left, move(right));
 }
 
 //===========================================================================
-static void insVec(Node & left, Node && right) {
-    insVec(left, right);
+static void insRVec(Node & left, Node && right) {
+    insRVec(left, right);
 }
 
 //===========================================================================
-static void insRevVec(Node & left, Node && right) {
+static void insLVec(Node & left, Node && right) {
     swap(left, right);
-    insVec(left, move(right));
+    insRVec(left, move(right));
 }
 
 //===========================================================================
@@ -2403,13 +2471,13 @@ static void insert(Node & left, Node && right) {
     using Fn = void(Node & left, Node && right);
     static Fn * const functs[][Node::kNodeTypes] = {
 // LEFT                         RIGHT
-//         empty    full     sm vec   vector      bitmap      meta
-/*empty*/{ insSkip, insFull, insMove, insMove,    insMove,    insMove    },
-/*full */{ insSkip, insSkip, insSkip, insSkip,    insSkip,    insSkip    },
-/*svec */{ insSkip, insFull, insSVec, insRevSVec, insRevSVec, insRevSVec },
-/*vec  */{ insSkip, insFull, insSVec, insVec,     insRevVec,  insRevVec  },
-/*bit  */{ insSkip, insFull, insSVec, insVec,     insBit,     insError   },
-/*meta */{ insSkip, insFull, insSVec, insVec,     insError,   insMeta    },
+//         empty    full     sm vec    vector    bitmap    meta
+/*empty*/{ insSkip, insFull, insMove,  insMove,  insMove,  insMove  },
+/*full */{ insSkip, insSkip, insSkip,  insSkip,  insSkip,  insSkip  },
+/*svec */{ insSkip, insFull, insRSVec, insLSVec, insLSVec, insLSVec },
+/*vec  */{ insSkip, insFull, insRSVec, insRVec,  insLVec,  insLVec  },
+/*bit  */{ insSkip, insFull, insRSVec, insRVec,  insBit,   insError },
+/*meta */{ insSkip, insFull, insRSVec, insRVec,  insError, insMeta  },
     };
     functs[left.type][right.type](left, move(right));
 }
