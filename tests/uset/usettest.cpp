@@ -68,7 +68,7 @@ static void vectors() {
     EXPECT(a.size() == 8);
     os.str("");
     os << a;
-    EXPECT(os.view() == "1 3-9");
+    EXPECT(os.str() == "1 3-9");
 
     a.assign("1 3 5 7");
     b.assign("4-6");
@@ -76,24 +76,24 @@ static void vectors() {
     EXPECT(a.size() == 6);
     os.str("");
     os << a;
-    EXPECT(os.view() == "1 3-7");
+    EXPECT(os.str() == "1 3-7");
 
     b.clear();
     b.insert(a);
     os.str("");
     os << b;
-    EXPECT(os.view() == "1 3-7");
+    EXPECT(os.str() == "1 3-7");
     b.insert(a);
     os.str("");
     os << b;
-    EXPECT(os.view() == "1 3-7");
+    EXPECT(os.str() == "1 3-7");
 
     a.assign("1-100");
     b.assign("90-200");
     a.insert(b);
     os.str("");
     os << a;
-    EXPECT(os.view() == "1-200");
+    EXPECT(os.str() == "1-200");
 }
 
 //===========================================================================
