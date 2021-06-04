@@ -765,7 +765,8 @@ h6[id]::before {
     visibility: hidden;
     content: "";
 }
-ul p {
+ul p,
+ol p {
     margin-bottom: 0;
 }
 table {
