@@ -372,7 +372,7 @@ void exec(
     notify->errTitle = errTitle;
     auto tmpOpts = opts;
     if (tmpOpts.concurrency == -1)
-        tmpOpts.concurrency = 1; // envProcessors();
+        tmpOpts.concurrency = envProcessors();
     execProgram(notify, notify->cmdline, tmpOpts);
 }
 
