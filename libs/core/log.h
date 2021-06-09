@@ -67,12 +67,13 @@ Detail::Log logMsgWarn();
 Detail::Log logMsgError();
 Detail::LogFatal logMsgFatal();
 
-// Logs an error of the form "name(<line no>): msg", followed by two info
-// lines with part or all of the line of content containing the error
-// with a caret indicating it's exact position.
+// Logs an error of the form "name(<line no>): msg", followed by two info lines
+// with part or all of the line of content containing the error with a caret
+// indicating it's exact position.
 //
-// "content" should be the entire source being parsed and "pos" the offset
-// into the content of the error. The line number is calculated from that.
+// "content" should be the entire source being parsed and "pos" the offset into
+// the content of the error. The line number is calculated by counting '\n'
+// characters.
 void logParseError(
     std::string_view msg,
     std::string_view name,
@@ -93,17 +94,18 @@ void logMultiInfo(std::string_view text, char sep = '\n');
 *   Stopwatch
 *   Used to info-log elapsed time. Automatically started at program start.
 *
+*   Total time: time spent not paused.
+*   Lap time: time since the last lap or resume, whichever is more recent.
+*
 ***/
-
-// Starts if not already running.
-void logStartStopwatch();
-
-// Resets total and lap times to zero. Ignored unless stopwatch is paused.
-void logResetStopwatch();
 
 // Logs total time unless prefix is empty, and pauses stopwatch. Ignored if
 // paused.
 void logPauseStopwatch(std::string_view prefix = "Elapsed time");
+
+// Resets lap time, and optionally total time, to zero; resumes stopwatch.
+// Ignored if not paused.
+void logResumeStopwatch(bool resetTotal = false);
 
 // Logs total time unless prefix is empty. Ignored if paused.
 void logStopwatch(std::string_view prefix = "Elapsed time");
