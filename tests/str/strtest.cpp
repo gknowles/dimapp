@@ -180,7 +180,6 @@ static void testCopy() {
     }
 }
 
-
 //===========================================================================
 static void app(int argc, char *argv[]) {
     testParse();
