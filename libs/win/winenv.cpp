@@ -44,91 +44,9 @@ void Dim::winEnvInitialize() {
 
 /****************************************************************************
 *
-*   Public API
+*   System Information
 *
 ***/
-
-//===========================================================================
-map<string, string> Dim::envGetVars() {
-    map<string, string> out;
-    auto wenv = GetEnvironmentStringsW();
-    if (!wenv) {
-        logMsgError() << "GetEnvironmentStringsW: " << WinError{};
-        return out;
-    }
-    vector<string_view> nv;
-    wstring_view wvar;
-    for (auto wvars = wenv; *wvars; wvars += wvar.size() + 1) {
-        wvar = wstring_view(wvars);
-        auto var = toString(wvar);
-        split(&nv, var, '=');
-        if (nv.size() == 2 && !nv[0].empty() && !nv[1].empty())
-            out[string(nv[0])] = nv[1];
-    }
-    if (!FreeEnvironmentStringsW(wenv))
-        logMsgError() << "FreeEnvironmentStringsW: " << WinError{};
-    return out;
-}
-
-//===========================================================================
-string Dim::envGetVar(string_view name) {
-    wstring wvar;
-    wvar.resize(wvar.capacity());
-    auto wname = toWstring(name);
-    DWORD cnt = 0;
-    for (;;) {
-        cnt = GetEnvironmentVariableW(
-            wname.data(),
-            wvar.data(),
-            (DWORD) wvar.size() + 1 // include space of terminating null
-        );
-        if (!cnt) {
-            WinError err;
-            if (err != ERROR_ENVVAR_NOT_FOUND) {
-                logMsgError() << "GetEnvironmentVariableW(" << name << "): "
-                    << err;
-            }
-            return {};
-        }
-        if (cnt <= wvar.size()) {
-            wvar.resize(cnt);
-            return toString(wvar);
-        }
-        wvar.resize(cnt - 1);
-    }
-}
-
-//===========================================================================
-bool Dim::envSetVar(string_view name, string_view value) {
-    if (!SetEnvironmentVariableW(
-        toWstring(name).c_str(),
-        toWstring(value).c_str()
-    )) {
-        WinError err;
-        logMsgError() << "SetEnvironmentVariableW(" << name << "): " << err;
-        return false;
-    }
-    return true;
-}
-
-//===========================================================================
-const string & Dim::envExecPath() {
-    if (s_execPath.empty()) {
-        wstring path;
-        DWORD num = 0;
-        while (num == path.size()) {
-            path.resize(path.size() + MAX_PATH);
-            num = GetModuleFileNameW(
-                NULL,
-                path.data(),
-                (DWORD) path.size()
-            );
-        }
-        path.resize(num);
-        s_execPath = toString(path);
-    }
-    return s_execPath;
-}
 
 //===========================================================================
 const EnvMemoryConfig & Dim::envMemoryConfig() {
@@ -140,30 +58,6 @@ const EnvMemoryConfig & Dim::envMemoryConfig() {
 unsigned Dim::envProcessors() {
     assert(s_numProcessors);
     return s_numProcessors;
-}
-
-//===========================================================================
-unsigned Dim::envProcessId() {
-    return GetCurrentProcessId();
-}
-
-//===========================================================================
-TimePoint Dim::envProcessStartTime() {
-    FILETIME creation;
-    FILETIME exit;
-    FILETIME kernel;
-    FILETIME user;
-    if (!GetProcessTimes(
-        GetCurrentProcess(),
-        &creation,
-        &exit,
-        &kernel,
-        &user
-    )) {
-        return {};
-    }
-    TimePoint time{duration(creation)};
-    return time;
 }
 
 //===========================================================================
@@ -182,6 +76,32 @@ DiskSpace Dim::envDiskSpace(std::string_view path) {
     out.avail = avail.QuadPart;
     out.total = total.QuadPart;
     return out;
+}
+
+
+/****************************************************************************
+*
+*   Executable of Current Process
+*
+***/
+
+//===========================================================================
+const string & Dim::envExecPath() {
+    if (s_execPath.empty()) {
+        wstring path;
+        DWORD num = 0;
+        while (num == path.size()) {
+            path.resize(path.size() + MAX_PATH);
+            num = GetModuleFileNameW(
+                NULL,
+                path.data(),
+                (DWORD) path.size()
+            );
+        }
+        path.resize(num);
+        s_execPath = toString(path);
+    }
+    return s_execPath;
 }
 
 //===========================================================================
@@ -211,6 +131,37 @@ Dim::VersionInfo Dim::envExecVersion() {
     return vi;
 }
 
+
+/****************************************************************************
+*
+*   Current Process
+*
+***/
+
+//===========================================================================
+unsigned Dim::envProcessId() {
+    return GetCurrentProcessId();
+}
+
+//===========================================================================
+TimePoint Dim::envProcessStartTime() {
+    FILETIME creation;
+    FILETIME exit;
+    FILETIME kernel;
+    FILETIME user;
+    if (!GetProcessTimes(
+        GetCurrentProcess(),
+        &creation,
+        &exit,
+        &kernel,
+        &user
+    )) {
+        return {};
+    }
+    TimePoint time{duration(creation)};
+    return time;
+}
+
 //===========================================================================
 ProcessRights Dim::envProcessRights() {
     char sid[SECURITY_MAX_SID_SIZE];
@@ -226,7 +177,6 @@ ProcessRights Dim::envProcessRights() {
     }
     if (isMember)
         return kEnvUserAdmin;
-
 
     auto proc = GetCurrentProcess();
     HANDLE token;
@@ -260,6 +210,24 @@ ProcessRights Dim::envProcessRights() {
         return kEnvUserRestrictedAdmin;
 
     return kEnvUserStandard;
+}
+
+//===========================================================================
+string Dim::envProcessLogDataDir() {
+    PWSTR kfPath;
+    auto res = SHGetKnownFolderPath(
+        FOLDERID_LocalAppData,
+        KF_FLAG_CREATE,
+        NULL,
+        &kfPath
+    );
+    if (FAILED(res)) {
+        WinError err((WinError::HResult) res);
+        logMsgFatal() << "SHGetKnownFolderPath(LocalAppData): " << err;
+    }
+    auto out = toString(kfPath);
+    CoTaskMemFree(kfPath);
+    return out;
 }
 
 
@@ -394,4 +362,74 @@ void Dim::envProcessAccount(IJBuilder * out) {
         addSidRow(out, *ptr);
     }
     out->end();
+}
+
+
+/****************************************************************************
+*
+*   Environment Variables
+*
+***/
+
+//===========================================================================
+map<string, string> Dim::envGetVars() {
+    map<string, string> out;
+    auto wenv = GetEnvironmentStringsW();
+    if (!wenv) {
+        logMsgError() << "GetEnvironmentStringsW: " << WinError{};
+        return out;
+    }
+    vector<string_view> nv;
+    wstring_view wvar;
+    for (auto wvars = wenv; *wvars; wvars += wvar.size() + 1) {
+        wvar = wstring_view(wvars);
+        auto var = toString(wvar);
+        split(&nv, var, '=');
+        if (nv.size() == 2 && !nv[0].empty() && !nv[1].empty())
+            out[string(nv[0])] = nv[1];
+    }
+    if (!FreeEnvironmentStringsW(wenv))
+        logMsgError() << "FreeEnvironmentStringsW: " << WinError{};
+    return out;
+}
+
+//===========================================================================
+string Dim::envGetVar(string_view name) {
+    wstring wvar;
+    wvar.resize(wvar.capacity());
+    auto wname = toWstring(name);
+    DWORD cnt = 0;
+    for (;;) {
+        cnt = GetEnvironmentVariableW(
+            wname.data(),
+            wvar.data(),
+            (DWORD) wvar.size() + 1 // include space of terminating null
+        );
+        if (!cnt) {
+            WinError err;
+            if (err != ERROR_ENVVAR_NOT_FOUND) {
+                logMsgError() << "GetEnvironmentVariableW(" << name << "): "
+                    << err;
+            }
+            return {};
+        }
+        if (cnt <= wvar.size()) {
+            wvar.resize(cnt);
+            return toString(wvar);
+        }
+        wvar.resize(cnt - 1);
+    }
+}
+
+//===========================================================================
+bool Dim::envSetVar(string_view name, string_view value) {
+    if (!SetEnvironmentVariableW(
+        toWstring(name).c_str(),
+        toWstring(value).c_str()
+    )) {
+        WinError err;
+        logMsgError() << "SetEnvironmentVariableW(" << name << "): " << err;
+        return false;
+    }
+    return true;
 }

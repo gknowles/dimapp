@@ -20,6 +20,8 @@ namespace Dim {
 *
 ***/
 
+unsigned envProcessors();
+
 struct EnvMemoryConfig {
     size_t pageSize;        // memory page size
     size_t allocAlign;      // virtual memory allocation alignment
@@ -37,12 +39,10 @@ struct DiskSpace {
 };
 DiskSpace envDiskSpace(std::string_view path);
 
-unsigned envProcessors();
-
 
 /****************************************************************************
 *
-*   Executable file
+*   Current Executable File
 *
 ***/
 
@@ -78,6 +78,10 @@ ProcessRights envProcessRights();
 
 // Dump information about current account
 void envProcessAccount(IJBuilder * out);
+
+// Root of default system directory for application to write crash and log
+// data.
+std::string envProcessLogDataDir();
 
 
 /****************************************************************************

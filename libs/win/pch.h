@@ -52,6 +52,7 @@
 #include <Psapi.h> // GetProcessMemoryInfo
 #include <sddl.h> // ConvertSidToStringSid
 #include <shellapi.h>
+#include <ShlObj_core.h> // SHGetKnownFolderPath
 #include <WinSock2.h>
 #include <WS2tcpip.h> // getaddrinfo, GetAddrInfoEx
 #include <VersionHelpers.h>
