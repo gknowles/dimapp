@@ -687,6 +687,15 @@ static bool genStatics(Config * out) {
 .halign-right {
     text-align: right;
 }
+.table .valign-top {
+    vertical-align: top;
+}
+.table .valign-middle {
+    vertical-align: middle;
+}
+.table .valign-right {
+    vertical-align: bottom;
+}
 )");
     if (!addOutput(out, fname, move(content)))
         return false;
@@ -765,15 +774,12 @@ h6[id]::before {
     visibility: hidden;
     content: "";
 }
-ul p,
-ol p {
+li p,
+table p:last-child {
     margin-bottom: 0;
 }
 table {
     margin-bottom: 1rem;
-}
-table p {
-    margin-bottom: 0;
 }
 div.scrollable-x {
     overflow-x: auto;
