@@ -24,6 +24,7 @@ class WinError {
 public:
     enum NtStatus : unsigned {};
     enum SecurityStatus : unsigned {};
+    enum HResult : unsigned {};
 
 public:
     // default constructor calls GetLastError()
@@ -33,6 +34,7 @@ public:
     // sets equivalent standard windows error value
     WinError(NtStatus status);
     WinError(SecurityStatus status);
+    WinError(HResult result);
 
     WinError & operator=(const WinError & from) = default;
     WinError & operator=(int error) { return *this = WinError{error}; }
@@ -40,6 +42,7 @@ public:
     WinError & operator=(SecurityStatus status) {
         return *this = WinError{status};
     }
+    WinError & operator=(HResult result) { return *this = WinError{result}; }
 
     WinError & set();   // calls GetLastError()
 

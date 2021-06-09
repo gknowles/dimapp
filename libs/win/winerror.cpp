@@ -98,6 +98,25 @@ WinError::WinError(SecurityStatus status) {
 }
 
 //===========================================================================
+WinError::WinError(HResult result) {
+    m_secStatus = 0;
+    if (SUCCEEDED(result)) {
+        m_ntStatus = 0;
+        m_value = 0;
+    } else if (result & FACILITY_NT_BIT) {
+        m_ntStatus = HRESULT_CODE(result);
+        m_value = getDosError((NtStatus) m_ntStatus);
+    } else if (HRESULT_FACILITY(result) == FACILITY_WIN32) {
+        m_ntStatus = 0;
+        m_value = HRESULT_CODE(result);
+    } else {
+        logMsgDebug() << "Unknown HRESULT: " << hex << result;
+        m_ntStatus = 0;
+        m_value = ERROR_MR_MID_NOT_FOUND;
+    }
+}
+
+//===========================================================================
 WinError & WinError::set() {
     m_secStatus = 0;
     m_ntStatus = 0;
