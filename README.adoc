@@ -1,12 +1,17 @@
 ////
-Copyright Glen Knowles 2016 - 2020.
+Copyright Glen Knowles 2016 - 2021.
 Distributed under the Boost Software License, Version 1.0.
 ////
 
 = dimapp
-:url-ci: https://ci.appveyor.com/project/gknowles/dimapp
-:url-badge: image:https://ci.appveyor.com/api/projects/status/0a248fk1dspywxbm?svg=true
+:ci-auth: https://ci.appveyor.com/
+:ci-link: {ci-auth}project/gknowles/dimapp
+:ci-badge: image:{ci-auth}api/projects/status/0a248fk1dspywxbm?svg=true
 
-{url-ci}[{url-badge}[Build status]]
+[%autowidth]
+|===
+h| MSVC 2019
+| {ci-link}[{ci-badge}[Build status]]
+|===
 
 Windows server application framework
