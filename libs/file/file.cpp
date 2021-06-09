@@ -38,7 +38,7 @@ FileAppendStream::~FileAppendStream() {
 
 //===========================================================================
 void FileAppendStream::init(int numBufs, int maxWrites, size_t pageSize) {
-    assert(!m_numBufs);
+    assert(!m_numBufs && pageSize);
     m_numBufs = numBufs;
     m_maxWrites = maxWrites;
     m_bufLen = pageSize;
@@ -60,7 +60,7 @@ bool FileAppendStream::open(string_view path, OpenExisting mode) {
 
 //===========================================================================
 bool FileAppendStream::attach(Dim::FileHandle f) {
-    assert(m_bufLen);
+    assert(m_bufLen && "file append stream has no buffers assigned");
     close();
     m_filePos = fileSize(f);
     if (!m_filePos && errno)

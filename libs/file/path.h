@@ -98,7 +98,7 @@ public:
     Path & append(std::string_view path);
     Path & operator/=(std::string_view path) { return append(path); }
 
-    // resolve path relative to base
+    // Resolve path relative to base.
     Path & resolve(const Path & base);
     Path & resolve(std::string_view base);
 
@@ -114,16 +114,26 @@ public:
     const char * c_str() const;
     size_t size() const;
 
+    // Up to and including first ':' in leading segment.
     std::string_view drive() const;
+
+    // Path without drive or filename.
     std::string_view dir() const;
+
+    // Everything but the last path segment.
     std::string_view parentPath() const;
+
+    // Last segment of path, combines stem and extension.
     std::string_view filename() const;
+
+    // Filename without extension.
     std::string_view stem() const;
+
     std::string_view extension() const;
 
     bool empty() const;
     bool hasDrive() const;
-    bool hasRootDir() const;
+    bool hasRootDir() const;    // If dir not empty and starts with '/'.
     bool hasDir() const;
     bool hasFilename() const;
     bool hasStem() const;
