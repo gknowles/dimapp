@@ -146,22 +146,22 @@ void LogBuffer::onFileWrite(
 
 namespace {
 class Logger : public ILogNotify {
-    void onLog(LogType type, string_view msg) override;
+    void onLog(const LogMsg & log) override;
 };
 } // namespace
 static Logger s_logger;
 
 //===========================================================================
-void Logger::onLog(LogType type, string_view msg) {
-    assert(type < kLogTypes);
-    if (type < appLogLevel())
+void Logger::onLog(const LogMsg & log) {
+    assert(log.type < kLogTypes);
+    if (log.type < appLogLevel())
         return;
 
     char tmp[256];
     assert(sizeof tmp + 2 <= kLogBufferSize);
     const unsigned kFacility = 3; // system daemons
     int pri = 8 * kFacility;
-    switch (type) {
+    switch (log.type) {
     case kLogTypeFatal: pri += 2; break;
     case kLogTypeError: pri += 3; break;
     case kLogTypeWarn: pri += 4; break;
@@ -177,10 +177,10 @@ void Logger::onLog(LogType type, string_view msg) {
         "-",    // procid
         "-",    // msgid
         "-",    // structured data
-        (int) msg.size(),
-        msg.data()
+        (int) log.msg.size(),
+        log.msg.data()
     );
-    s_buffer.writeLog(tmp, type == kLogTypeFatal);
+    s_buffer.writeLog(tmp, log.type == kLogTypeFatal);
 }
 
 

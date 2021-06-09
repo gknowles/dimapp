@@ -23,16 +23,15 @@ class LogTask
 {
 public:
     LogTask () {}
-    LogTask (LogType type, string_view msg);
+    LogTask (const LogMsg & log);
 
     // ITaskNotify
     void onTask () override;
     // ILogNotify
-    void onLog (LogType type, string_view msg) override;
+    void onLog (const LogMsg & log) override;
 
 private:
-    LogType m_type;
-    string m_msg;
+    LogMsg m_log;
 };
 
 } // namespace
@@ -152,15 +151,14 @@ static bool internalTest () {
 ***/
 
 //===========================================================================
-LogTask::LogTask (LogType type, string_view msg)
-    : m_type(type)
-    , m_msg(msg)
+LogTask::LogTask (const LogMsg & log)
+    : m_log(log)
 {}
 
 //===========================================================================
-void LogTask::onLog (LogType type, string_view msg) {
-    if (s_cmdopts.verbose || type != kLogTypeDebug) {
-        auto ptr = new LogTask(type, msg);
+void LogTask::onLog (const LogMsg & log) {
+    if (s_cmdopts.verbose || log.type != kLogTypeDebug) {
+        auto ptr = new LogTask(log);
         if (s_logQ) {
             taskPush(s_logQ, ptr);
         } else {
@@ -171,11 +169,11 @@ void LogTask::onLog (LogType type, string_view msg) {
 
 //===========================================================================
 void LogTask::onTask () {
-    if (m_type == kLogTypeError) {
+    if (m_log.type == kLogTypeError) {
         ConsoleScopedAttr attr(kConsoleError);
-        cerr << "ERROR: " << m_msg << endl;
+        cerr << "ERROR: " << m_log.msg << endl;
     } else {
-        cout << m_msg << endl;
+        cout << m_log.msg << endl;
     }
     delete this;
 }

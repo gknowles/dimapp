@@ -17,32 +17,32 @@ using namespace Dim;
 
 namespace {
 class ConsoleLogger : public ILogNotify {
-    void onLog(LogType type, string_view msg) override;
+    void onLog(const LogMsg & log) override;
 };
 } // namespace
 static ConsoleLogger s_consoleLogger;
 
 //===========================================================================
-void ConsoleLogger::onLog(LogType type, string_view msg) {
+void ConsoleLogger::onLog(const LogMsg & log) {
     char stkbuf[256];
     unique_ptr<char[]> heapbuf;
     auto buf = stkbuf;
-    if (msg.size() >= size(stkbuf)) {
-        heapbuf.reset(new char[msg.size() + 1]);
+    if (log.msg.size() >= size(stkbuf)) {
+        heapbuf.reset(new char[log.msg.size() + 1]);
         buf = heapbuf.get();
     }
-    memcpy(buf, msg.data(), msg.size());
-    buf[msg.size()] = '\n';
-    if (type >= kLogTypeError) {
+    memcpy(buf, log.msg.data(), log.msg.size());
+    buf[log.msg.size()] = '\n';
+    if (log.type >= kLogTypeError) {
         ConsoleScopedAttr attr(kConsoleError);
-        cout.write(buf, msg.size() + 1);
-        if (type == kLogTypeFatal)
+        cout.write(buf, log.msg.size() + 1);
+        if (log.type == kLogTypeFatal)
             cout.flush();
-    } else if (type == kLogTypeWarn) {
+    } else if (log.type == kLogTypeWarn) {
         ConsoleScopedAttr attr(kConsoleWarn);
-        cout.write(buf, msg.size() + 1);
+        cout.write(buf, log.msg.size() + 1);
     } else {
-        cout.write(buf, msg.size() + 1);
+        cout.write(buf, log.msg.size() + 1);
     }
 }
 

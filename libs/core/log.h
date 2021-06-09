@@ -6,6 +6,7 @@
 
 #include "cppconf/cppconf.h"
 
+#include <source_location>
 #include <string_view>
 #include <strstream>
 
@@ -30,16 +31,23 @@ enum LogType {
 const char * toString(LogType type, const char def[]);
 LogType fromString(std::string_view src, LogType def);
 
+struct LogMsg {
+    LogType type;
+    std::source_location loc;
+    std::string_view msg;
+};
+
 namespace Detail {
 
 class Log : public std::ostrstream {
 public:
-    Log(LogType type);
+    Log(LogType type, std::source_location loc);
     Log(Log && from) noexcept;
     ~Log();
 
 private:
     LogType m_type;
+    std::source_location m_loc;
     char m_buf[256];
 };
 
@@ -61,11 +69,21 @@ public:
 *
 ***/
 
-Detail::Log logMsgDebug();
-Detail::Log logMsgInfo();
-Detail::Log logMsgWarn();
-Detail::Log logMsgError();
-Detail::LogFatal logMsgFatal();
+Detail::Log logMsgDebug(
+    std::source_location loc = std::source_location::current()
+);
+Detail::Log logMsgInfo(
+    std::source_location loc = std::source_location::current()
+);
+Detail::Log logMsgWarn(
+    std::source_location loc = std::source_location::current()
+);
+Detail::Log logMsgError(
+    std::source_location loc = std::source_location::current()
+);
+Detail::LogFatal logMsgFatal(
+    std::source_location loc = std::source_location::current()
+);
 
 // Logs an error of the form "name(<line no>): msg", followed by two info lines
 // with part or all of the line of content containing the error with a caret
@@ -135,7 +153,7 @@ int logGetMsgCount(LogType type);
 class ILogNotify {
 public:
     virtual ~ILogNotify() = default;
-    virtual void onLog(LogType type, std::string_view msg) = 0;
+    virtual void onLog(const LogMsg & log) = 0;
 };
 
 void logMonitor(ILogNotify * notify);

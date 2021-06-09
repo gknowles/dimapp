@@ -18,7 +18,7 @@ using namespace Dim;
 namespace {
 
 class DefaultLogger : public ILogNotify {
-    void onLog(LogType type, string_view msg) override;
+    void onLog(const LogMsg & log) override;
 };
 
 class LogMsgScope {
@@ -71,7 +71,7 @@ static auto & s_perfRecurse = uperf("log.recursion");
 ***/
 
 //===========================================================================
-static void logMsg(LogType type, string_view msg) {
+static void logMsg(LogType type, source_location loc, string_view msg) {
     LogMsgScope scope(type);
 
     if (auto perf = s_perfs[type])
@@ -81,15 +81,20 @@ static void logMsg(LogType type, string_view msg) {
         return;
     }
 
-    if (!msg.empty() && msg.back() == '\n')
-        msg.remove_suffix(1);
+    LogMsg log = {
+        .type = type,
+        .loc = loc,
+        .msg = msg,
+    };
+    if (!log.msg.empty() && log.msg.back() == '\n')
+        log.msg.remove_suffix(1);
 
     shared_lock lk{s_mut};
     if (s_loggers.empty()) {
-        s_defaultLogger->onLog(type, msg);
+        s_defaultLogger->onLog(log);
     } else {
         for (auto && notify : s_loggers) {
-            notify->onLog(type, msg);
+            notify->onLog(log);
         }
     }
 }
@@ -124,9 +129,9 @@ LogMsgScope::~LogMsgScope() {
 ***/
 
 //===========================================================================
-void DefaultLogger::onLog(LogType type, string_view msg) {
-    cout << msg << '\n';
-    if (type == kLogTypeFatal)
+void DefaultLogger::onLog(const LogMsg & log) {
+    cout << log.msg << '\n';
+    if (log.type == kLogTypeFatal)
         cout.flush();
 }
 
@@ -138,9 +143,10 @@ void DefaultLogger::onLog(LogType type, string_view msg) {
 ***/
 
 //===========================================================================
-Detail::Log::Log(LogType type)
+Detail::Log::Log(LogType type, source_location loc)
     : ostrstream(m_buf, size(m_buf) - 1)
     , m_type(type)
+    , m_loc(loc)
 {}
 
 //===========================================================================
@@ -158,7 +164,7 @@ Detail::Log::~Log() {
         put(0);
         m_buf[size(m_buf) - 1] = 0;
         auto s = str();
-        logMsg(m_type, s);
+        logMsg(m_type, m_loc, s);
     }
 }
 
@@ -254,28 +260,29 @@ int Dim::logGetMsgCount(LogType type) {
 //===========================================================================
 // Log messages
 //===========================================================================
-Detail::Log Dim::logMsgDebug() {
-    return kLogTypeDebug;
+Detail::Log Dim::logMsgDebug(source_location loc) {
+    auto out = Detail::Log(kLogTypeDebug, loc);
+    return out;
 }
 
 //===========================================================================
-Detail::Log Dim::logMsgInfo() {
-    return kLogTypeInfo;
+Detail::Log Dim::logMsgInfo(source_location loc) {
+    return Detail::Log(kLogTypeInfo, loc);
 }
 
 //===========================================================================
-Detail::Log Dim::logMsgWarn() {
-    return kLogTypeWarn;
+Detail::Log Dim::logMsgWarn(source_location loc) {
+    return Detail::Log(kLogTypeWarn, loc);
 }
 
 //===========================================================================
-Detail::Log Dim::logMsgError() {
-    return kLogTypeError;
+Detail::Log Dim::logMsgError(source_location loc) {
+    return Detail::Log(kLogTypeError, loc);
 }
 
 //===========================================================================
-Detail::LogFatal Dim::logMsgFatal() {
-    return kLogTypeFatal;
+Detail::LogFatal Dim::logMsgFatal(source_location loc) {
+    return Detail::LogFatal(kLogTypeFatal, loc);
 }
 
 //===========================================================================
