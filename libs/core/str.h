@@ -225,6 +225,14 @@ std::unique_ptr<char[]> strDup(std::string_view src);
 // updates the srcs to point into that newly allocated buffer.
 std::unique_ptr<char[]> strDupGather(std::string_view * srcs[], size_t count);
 
+// Never copies more than outLen chars/wchar_ts (including null), returns
+// number of chars copied (not including null). outLen must be >= 1, so the
+// null can fit.
+size_t strCopy(char * out, size_t outLen, std::string_view src);
+size_t strCopy(wchar_t * out, size_t outLen, std::wstring_view src);
+size_t strCopy(char * out, size_t outLen, std::wstring_view src);
+size_t strCopy(wchar_t * out, size_t outLen, std::string_view src);
+
 //===========================================================================
 // vector to string
 //===========================================================================
@@ -318,22 +326,28 @@ requires std::output_iterator<OutIt, unsigned char>
 constexpr OutIt writeUtf8(OutIt out, char32_t ch) {
     if (ch < 0x80) {
         *out++ = (unsigned char) ch;
+        return out;
     } else if (ch < 0x800) {
         *out++ = (unsigned char) ((ch >> 6) + 0xc0);
         *out++ = (unsigned char) ((ch & 0x3f) + 0x80);
-    } else  if (ch < 0xd800 || ch > 0xdfff && ch < 0x10'000) {
-        *out++ = (unsigned char) ((ch >> 12) + 0xe0);
-        *out++ = (unsigned char) (((ch >> 6) & 0x3f) + 0x80);
-        *out++ = (unsigned char) ((ch & 0x3f) + 0x80);
-    } else if (ch >= 0x10'000 && ch < 0x11'0000) {
+        return out;
+    } else if (ch < 0x1'0000) {
+        if (ch < 0xd800 || ch > 0xdfff) {
+            *out++ = (unsigned char) ((ch >> 12) + 0xe0);
+            *out++ = (unsigned char) (((ch >> 6) & 0x3f) + 0x80);
+            *out++ = (unsigned char) ((ch & 0x3f) + 0x80);
+            return out;
+        }
+    } else if (ch < 0x11'0000) {
         *out++ = (unsigned char) ((ch >> 18) + 0xf0);
         *out++ = (unsigned char) (((ch >> 12) & 0x3f) + 0x80);
         *out++ = (unsigned char) (((ch >> 6) & 0x3f) + 0x80);
         *out++ = (unsigned char) ((ch & 0x3f) + 0x80);
-    } else {
-        assert(ch >= 0xd800 && ch <= 0xdfff || ch >= 0x11'000);
-        assert(!"invalid Unicode char");
+        return out;
     }
+
+    assert(ch >= 0xd800 && ch <= 0xdfff || ch > 0x10'ffff);
+    assert(!"invalid Unicode char");
     return out;
 }
 
@@ -343,8 +357,11 @@ requires std::output_iterator<OutIt, unsigned char>
 constexpr OutIt writeUtf8(OutIt out, std::wstring_view in) {
     char32_t popFrontUnicode(std::wstring_view * src);
     while (!in.empty()) {
-        auto ch = popFrontUnicode(&in);
-        out = writeUtf8(out, ch);
+        if (auto ch = popFrontUnicode(&in)) {
+            out = writeUtf8(out, ch);
+        } else {
+            break;
+        }
     }
     return out;
 }
@@ -367,12 +384,15 @@ requires std::output_iterator<OutIt, wchar_t>
 constexpr OutIt writeWchar(OutIt out, char32_t ch) {
     if (ch <= 0xffff) {
         *out++ = (wchar_t) ch;
+        return out;
     } else if (ch <= 0x10ffff) {
         *out++ = (wchar_t) ((ch >> 10) + 0xd800);
         *out++ = (wchar_t) ((ch & 0x3ff) + 0xdc00);
-    } else {
-        assert(!"invalid Unicode char");
+        return out;
     }
+
+    assert(ch > 0x10'ffff);
+    assert(!"invalid Unicode char");
     return out;
 }
 
@@ -381,8 +401,11 @@ template<typename OutIt>
 requires std::output_iterator<OutIt, wchar_t>
 constexpr OutIt writeWchar(OutIt out, std::string_view in) {
     while (!in.empty()) {
-        auto ch = popFrontUnicode(&in);
-        out = writeWchar(out, ch);
+        if (auto ch = popFrontUnicode(&in)) {
+            out = writeWchar(out, ch);
+        } else {
+            break;
+        }
     }
     return out;
 }

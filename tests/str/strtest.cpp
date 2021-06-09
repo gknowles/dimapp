@@ -158,11 +158,36 @@ static void testSplit() {
 }
 
 //===========================================================================
+static void testCopy() {
+    //char buf[10];
+    wchar_t wbuf[10];
+    struct {
+        string_view src;
+        wstring_view dst;
+        int line;
+    } tests[] = {
+        { "abcdefghi",  L"abcdefghi", __LINE__ },
+        { "abcdefghij", L"abcdefghi", __LINE__ },
+    };
+    for (auto&& t : tests) {
+        memset(wbuf, '\xE', size(wbuf) * sizeof *wbuf);
+        strCopy(wbuf, size(wbuf), t.src);
+        if (t.dst != wbuf) {
+            logMsgError() << "Line " << t.line << ": "
+                << "'" << t.src << "' == '" << utf8(wbuf)
+                << "', should be '" << utf8(t.dst) << "'";
+        }
+    }
+}
+
+
+//===========================================================================
 static void app(int argc, char *argv[]) {
     testParse();
     testStrToInt();
     testIntegralStr();
     testSplit();
+    testCopy();
 
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);

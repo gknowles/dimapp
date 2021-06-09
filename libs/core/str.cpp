@@ -464,6 +464,139 @@ std::unique_ptr<char[]> Dim::strDupGather(
     return out;
 }
 
+
+/****************************************************************************
+*
+*   strCopy
+*
+***/
+
+//===========================================================================
+template<typename T>
+static size_t strCopy(T * out, size_t outLen, const T * src, size_t srcLen) {
+    auto cnt = min(outLen, srcLen);
+    memcpy(out, src, cnt * sizeof *out);
+    out[cnt] = 0;
+    return cnt;
+}
+
+//===========================================================================
+size_t Dim::strCopy(char * out, size_t outLen, std::string_view src) {
+    return ::strCopy(out, outLen, src.data(), src.size());
+}
+
+//===========================================================================
+size_t Dim::strCopy(wchar_t * out, size_t outLen, std::wstring_view src) {
+    return ::strCopy(out, outLen, src.data(), src.size());
+}
+
+namespace {
+
+template<typename T>
+class PtrOutIter {
+public:
+    using iterator_category = output_iterator_tag;
+    using value_type = void;
+    using pointer = void;
+    using reference = void;
+    using difference_type = ptrdiff_t;
+
+public:
+    constexpr PtrOutIter() noexcept = default;
+    PtrOutIter(T * out, size_t outLen) noexcept
+        : m_cur(out)
+        , m_end(out + outLen)
+    {}
+    PtrOutIter & operator* () noexcept { return *this; }
+    PtrOutIter & operator= (T val) {
+        if (m_cur < m_end)
+            *m_cur++ = val;
+        return *this;
+    }
+    PtrOutIter & operator++ () noexcept { return *this; }
+    PtrOutIter operator++ (int) noexcept { return *this; }
+
+    T * ptr() const { return m_cur; }
+    T * eptr() const { return m_end; }
+
+private:
+    T * m_cur = {};
+    T * m_end = {};
+};
+
+} // namespace
+
+//===========================================================================
+size_t Dim::strCopy(wchar_t * rawOut, size_t outLen, std::string_view src) {
+    assert(outLen >= 1); // Must have room for terminating null.
+    auto base = (wchar_t *) rawOut;
+    auto ptr = base;
+    auto last = base + outLen - 1;
+    while (last - ptr >= 2) {
+        auto cp = popFrontUnicode(&src);
+        if (!cp) {
+            *ptr = 0;
+            return ptr - base;
+        }
+        ptr = writeWchar(ptr, cp);
+    }
+    wchar_t tmpBuf[4];
+    auto tptr = tmpBuf;
+    auto tlast = tmpBuf + (last - ptr);
+    while (auto cp = popFrontUnicode(&src)) {
+        auto tnext = writeWchar(tptr, cp);
+        if (tnext <= tlast)
+            tptr = tnext;
+        if (tnext >= tlast)
+            break;
+    }
+    if (auto cnt = tptr - tmpBuf; cnt) {
+        memcpy(ptr, tmpBuf, cnt * sizeof *ptr);
+        ptr += cnt;
+    }
+    *ptr = 0;
+    return ptr - base;
+}
+
+//===========================================================================
+size_t Dim::strCopy(char * rawOut, size_t outLen, std::wstring_view src) {
+    assert(outLen >= 1); // Must have room for terminating null.
+    auto base = (unsigned char *) rawOut;
+    auto ptr = base;
+    auto last = base + outLen - 1;
+    while (last - ptr >= 4) {
+        auto cp = popFrontUnicode(&src);
+        if (!cp) {
+            *ptr = 0;
+            return ptr - base;
+        }
+        ptr = writeUtf8(ptr, cp);
+    }
+    unsigned char tmpBuf[8];
+    auto tptr = tmpBuf;
+    auto tlast = tmpBuf + (last - ptr);
+    while (auto cp = popFrontUnicode(&src)) {
+        auto tnext = writeUtf8(tptr, cp);
+        if (tnext <= tlast)
+            tptr = tnext;
+        if (tnext >= tlast)
+            break;
+    }
+    if (auto cnt = tptr - tmpBuf; cnt) {
+        memcpy(ptr, tmpBuf, cnt * sizeof *ptr);
+        ptr += cnt;
+    }
+    *ptr = 0;
+    return ptr - base;
+}
+
+
+/****************************************************************************
+*
+*   Lowercase and Uppercase Conversions
+*
+***/
+
 //===========================================================================
 char * Dim::toLower(char src[]) {
     auto & f = use_facet<ctype<char>>(locale());
@@ -517,7 +650,7 @@ string Dim::toUpper(string_view src) {
 
 //===========================================================================
 // Wikipedia article on byte order marks:
-//   https://en.wikipedia.org/wiki/Byte_order_mark#Representations_of_byte_order_marks_by_encoding
+//  https://tinyurl.com/ep3zfrj6
 UtfType Dim::utfBomType(const char bytes[], size_t count) {
     if (count >= 2) {
         switch (bytes[0]) {
