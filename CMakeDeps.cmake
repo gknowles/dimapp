@@ -3,9 +3,9 @@
 # LICENSE
 # README.adoc
 # appveyor.yml
-# bin/conf/app.xml
-# bin/conf/app.xml.adoc
-# bin/conf/app.xml.sample
+# conf/app.xml
+# conf/app.xml.adoc
+# conf/app.xml.sample
 # configure.bat
 # libs/app/app.cpp
 # libs/app/app.h

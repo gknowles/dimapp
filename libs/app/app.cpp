@@ -26,7 +26,9 @@ static IAppNotify * s_app;
 static string s_appName;
 static vector<ITaskNotify *> s_appTasks;
 static AppFlags s_appFlags;
+static Path s_initialDir;
 static Path s_rootDir;
+static Path s_binDir;
 static Path s_confDir;
 static Path s_crashDir; // where to place crash dumps
 static Path s_dataDir;
@@ -127,7 +129,7 @@ void RunTask::onTask() {
     iFileInitialize();
     iConfigInitialize();
     configMonitor("app.xml", &s_appXml);
-    if (s_appFlags & fAppWithFiles) {
+    if (s_appFlags & fAppWithLogs) {
         iLogFileInitialize();
         if (s_appFlags & fAppWithConsole)
             logMonitor(consoleBasicLogger());
@@ -138,8 +140,7 @@ void RunTask::onTask() {
     iAppSocketInitialize();
     iSockMgrInitialize();
     iHttpRouteInitialize();
-    if (s_appFlags & fAppWithWebAdmin)
-        iWebAdminInitialize();
+    iWebAdminInitialize();
 
     taskPushEvent(s_appTasks.data(), s_appTasks.size());
 
@@ -267,18 +268,23 @@ int Dim::appRun(IAppNotify * app, int argc, char * argv[], AppFlags flags) {
     s_appTasks.clear();
     s_exitcode = 0;
 
+    s_initialDir = fileGetCurrentDir();
     auto exeName = (Path) envExecPath();
     s_appName = exeName.stem();
-
-    if (flags & fAppWithChdir) {
-        s_rootDir = fileSetCurrentDir(exeName.parentPath());
+    s_binDir = exeName.removeFilename();
+    if ((flags & fAppWithFiles) && s_binDir.stem() == "bin") {
+        s_rootDir = s_binDir.parentPath();
+        s_confDir = makeAppDir("conf");
     } else {
-        s_rootDir = fileGetCurrentDir();
+        s_rootDir = Path(envProcessLogDataDir()) / s_appName;
+        s_confDir = s_binDir;
     }
-    s_confDir = makeAppDir("conf");
-    s_logDir = makeAppDir("log");
-    s_dataDir = makeAppDir("data");
     s_crashDir = makeAppDir("crash");
+    s_dataDir = makeAppDir("data");
+    s_logDir = makeAppDir("log");
+
+    if (flags & fAppWithChdir)
+        fileSetCurrentDir(s_rootDir);
 
     iPerfInitialize();
     iLogInitialize();

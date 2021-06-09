@@ -59,16 +59,27 @@ public:
 
 enum AppFlags : unsigned {
     fAppWithChdir = 0x01,
-    fAppWithFiles = 0x02, // conf, log, etc
-    fAppWithWebAdmin = 0x04,
-    fAppWithConsole = 0x10,
-    fAppWithGui = 0x20,
-    fAppWithService = 0x40, // can run as service
+
+    // Has root with bin, conf, crash, log, etc subdirs.
+    fAppWithFiles = 0x02,
+
+    // Writes crash and memory leak dumps.
+    fAppWithDumps = 0x08,
+
+    // Writes logs to log/* files. Does perf dump to logs at exit.
+    fAppWithLogs = 0x04,
+
+    fAppWithWebAdmin = 0x10,
+    fAppWithConsole = 0x20,
+    fAppWithGui = 0x40,
+    fAppWithService = 0x80, // can run as service
     fAppIsService = 0x100, // is running as service
 
-    fAppClient = fAppWithConsole | fAppWithGui,
-    fAppServer = fAppWithChdir | fAppWithFiles | fAppWithWebAdmin
-        | fAppWithGui | fAppWithService,
+    fAppUtility = fAppWithConsole | fAppWithGui,
+    fAppClient = fAppWithFiles | fAppWithDumps | fAppWithConsole
+        | fAppWithGui,
+    fAppServer = fAppWithChdir | fAppWithFiles | fAppWithDumps | fAppWithLogs
+        | fAppWithWebAdmin | fAppWithGui | fAppWithService,
 
     fAppReadOnlyFlags = fAppIsService,
 };
@@ -111,6 +122,8 @@ AppFlags appFlags();
 int appExitCode();
 
 const Path & appRootDir();
+const Path & appInitialDir();
+const Path & appBinDir();
 const Path & appConfigDir();
 const Path & appCrashDir();
 const Path & appDataDir();
@@ -148,7 +161,7 @@ bool appLogPath(
 *
 ***/
 
-// Signals shutdown to begin, the exitcode will be returned from appRun()
+// Signals shutdown to begin, the exit code will be returned from appRun()
 // after shutdown finishes.
 //
 // When running as a Windows service, a call to set SERVICE_STOP_PENDING
@@ -158,12 +171,12 @@ void appSignalShutdown(int exitcode = EX_OK);
 
 // Intended for use with command line errors, calls appSignalShutdown() after
 // reporting the error. Explicit err text implies EX_USAGE, otherwise defaults
-// for exitcode, err, and detail are pulled from the global Dim::Cli instance.
+// for exit code, err, and detail are pulled from the global Dim::Cli instance.
 //
 // Unless the application is running as a service, the error is logged to the
 // console in addition to any other log targets.
 //
-// If exitcode is EX_PENDING appSignalUsageError() returns immediately without
+// If exit code is EX_PENDING appSignalUsageError() returns immediately without
 // doing anything.
 void appSignalUsageError(
     std::string_view err = {},

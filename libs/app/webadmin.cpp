@@ -134,10 +134,12 @@ static BinDump s_jsonDump;
 
 //===========================================================================
 void Dim::iWebAdminInitialize() {
-    httpRouteAdd(&s_webRoot, "/", fHttpMethodGet, true);
-    httpRouteAdd(&s_jsonCounters, "/srv/counters.json");
-    httpRouteAdd(&s_jsonRoutes, "/srv/routes.json");
-    s_jsonDumpFiles.set(appCrashDir());
-    httpRouteAdd(&s_jsonDumpFiles, "/srv/crashes.json");
-    httpRouteAdd(&s_jsonDump, "/srv/crashes/", fHttpMethodGet, true);
+    if (appFlags() & fAppWithWebAdmin) {
+        httpRouteAdd(&s_webRoot, "/", fHttpMethodGet, true);
+        httpRouteAdd(&s_jsonCounters, "/srv/counters.json");
+        httpRouteAdd(&s_jsonRoutes, "/srv/routes.json");
+        s_jsonDumpFiles.set(appCrashDir());
+        httpRouteAdd(&s_jsonDumpFiles, "/srv/crashes.json");
+        httpRouteAdd(&s_jsonDump, "/srv/crashes/", fHttpMethodGet, true);
+    }
 }

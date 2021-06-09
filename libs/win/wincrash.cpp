@@ -130,7 +130,7 @@ extern "C" void abortHandler(int sig) {
     if (IsDebuggerPresent())
         DebugBreak();
 
-    if (appFlags() & fAppWithFiles)
+    if (appFlags() & fAppWithDumps)
         writeDump();
 
     _CrtSetDbgFlag(0);

@@ -15,6 +15,8 @@ using namespace Dim;
 *
 ***/
 
+static wchar_t s_fname[MAX_PATH] = L"memleak.log";
+
 //===========================================================================
 extern "C" static int attachMemLeakHandle() {
     auto leakFlags = _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
@@ -23,7 +25,6 @@ extern "C" static int attachMemLeakHandle() {
         return 0;
     }
 
-    const wchar_t fname[] = L"memleak.log";
     _CrtMemState state;
     _CrtMemCheckpoint(&state);
     auto leaks = state.lCounts[_CLIENT_BLOCK] + state.lCounts[_NORMAL_BLOCK];
@@ -36,14 +37,14 @@ extern "C" static int attachMemLeakHandle() {
                 size(buf),
                 L"\nMemory leaks: %zu, see %s for details.\n",
                 leaks,
-                fname
+                s_fname
             );
             ConsoleScopedAttr attr(kConsoleError);
             HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
             WriteConsoleW(hOutput, buf, len, NULL, NULL);
         }
         auto f = CreateFileW(
-            fname,
+            s_fname,
             GENERIC_READ | GENERIC_WRITE,
             0,      // sharing
             NULL,   // security attributes
@@ -97,5 +98,10 @@ static auto s_attachMemLeakHandle = attachMemLeakHandle;
 
 //===========================================================================
 void Dim::winDebugInitialize() {
+    auto fname = Path("memleak-" + appName()).defaultExt("log");
+    Path out;
+    if (appLogPath(&out, fname))
+        strCopy(s_fname, size(s_fname), out.c_str());
+
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 }
