@@ -20,6 +20,9 @@ using SecStatus = WinError::SecurityStatus;
 
 namespace {
 
+// Wide-char version of RT_RCDATA.
+const auto kResTypeRCData = MAKEINTRESOURCEW(10);
+
 struct ResNameInfo {
     vector<string> names;
 };
@@ -67,7 +70,7 @@ ResModule::~ResModule() {
     if (m_rhandle)
         FreeLibrary(m_rhandle);
     if (m_whandle)
-        EndUpdateResource(m_whandle, true);
+        EndUpdateResourceW(m_whandle, true);
 }
 
 //===========================================================================
@@ -107,7 +110,7 @@ bool ResModule::updateData(string_view namev, string_view data) {
     auto name = toWstring(namev);
     if (!UpdateResourceW(
         m_whandle,
-        MAKEINTRESOURCEW(10),
+        kResTypeRCData,
         name.c_str(),
         MAKELANGID(LANG_NEUTRAL, SUBLANG_NEUTRAL),
         data.size() ? (void *) data.data() : nullptr,
@@ -125,7 +128,7 @@ bool ResModule::commit() {
     FreeLibrary(m_rhandle);
     m_rhandle = nullptr;
     WinError err{0};
-    if (!EndUpdateResource(m_whandle, false)) {
+    if (!EndUpdateResourceW(m_whandle, false)) {
         err.set();
         logMsgError() << "EndUpdateResource(" << m_path << "): " << err;
     }
@@ -154,7 +157,7 @@ bool ResModule::loadNames(vector<string> * names) {
     WinError err{0};
     if (!EnumResourceNamesW(
         m_rhandle,
-        MAKEINTRESOURCEW(10),
+        kResTypeRCData,
         enumNameCallback,
         (LONG_PTR) &rni
     )) {
@@ -181,7 +184,7 @@ string_view ResModule::loadData(string_view namev) {
     auto hinfo = FindResourceW(
         m_rhandle,
         name.c_str(),
-        MAKEINTRESOURCEW(10)
+        kResTypeRCData
     );
     if (!hinfo)
         return {};

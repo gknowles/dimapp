@@ -22,6 +22,9 @@ namespace Dim {
 *
 *   Resources
 *
+*   Only operates on application-defined resources (raw data), also known as
+*   the RT_RCDATA resource type.
+*
 ***/
 
 struct ResHandle : HandleBase {};
