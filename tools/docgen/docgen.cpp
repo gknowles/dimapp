@@ -38,7 +38,7 @@ void ShutdownNotify::onShutdownClient(bool firstTry) {
 //===========================================================================
 static void app(int argc, char * argv[]) {
     Cli cli;
-    cli.header("docgen v"s + kVersion + " (" + kBuildDate + ")")
+    cli.header("docgen v"s + kVersion + " (" __DATE__ ")")
         .helpNoArgs()
         .helpCmd()
         .versionOpt(kVersion, "docgen");
