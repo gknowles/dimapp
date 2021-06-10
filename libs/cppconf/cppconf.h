@@ -17,6 +17,8 @@
 // _LIBCPP_DEBUG (libc++), etc.
 #if __has_include("dimapp_userconfig.h")
 #include "dimapp_userconfig.h"
+#elif __has_include("cppconf/dimapp_userconfig.h")
+#include "cppconf/dimapp_userconfig.h"
 #endif
 
 //---------------------------------------------------------------------------
