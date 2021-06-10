@@ -239,13 +239,14 @@ static void app(int argc, char *argv[]) {
     } else {
         ostringstream os;
         writeCpp(os, *target, out.view());
-        auto n = os.str();
+        auto content = os.view();
         if (fileExists(*target)) {
-            string out;
-            if (!fileLoadBinaryWait(&out, *target))
+            string oldContent;
+            if (!fileLoadBinaryWait(&oldContent, *target))
                 return appSignalShutdown(EX_DATAERR);
-            if (out == n) {
-                cout << "Resources: " << files.size() << " (0 changed)" << endl;
+            if (oldContent == content) {
+                cout << "Resources: " << files.size() << " (0 changed)"
+                    << endl;
                 return appSignalShutdown(EX_OK);
             }
         }
@@ -253,7 +254,7 @@ static void app(int argc, char *argv[]) {
             *target,
             File::fReadWrite | File::fCreat | File::fTrunc | File::fBlocking
         );
-        fileAppendWait(f, n.data(), n.size());
+        fileAppendWait(f, content.data(), content.size());
         fileClose(f);
     }
 

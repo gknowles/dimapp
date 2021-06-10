@@ -546,7 +546,7 @@ bool Http1Reject::onSocketRead(AppSocketData & data) {
         "Content-Type: text/html\r\n"
         "\r\n"
         << kBody;
-    socketWrite(this, os.str());
+    socketWrite(this, os.view());
     return true;
 }
 

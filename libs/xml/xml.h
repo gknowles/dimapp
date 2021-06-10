@@ -98,7 +98,7 @@ public:
             t_os.clear();
             t_os.str({});
             t_os << val;
-            return out.text(t_os.str());
+            return out.text(t_os.view());
         }
     }
     friend IXBuilder & operator<<(IXBuilder & out, std::string_view val) {

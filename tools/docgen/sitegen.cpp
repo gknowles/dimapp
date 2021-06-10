@@ -991,7 +991,6 @@ static bool genCmd(Cli & cli) {
         << "' to '" << cfg->siteDir << "'.";
     auto out = logMsgInfo();
     cli.printText(out, os.str());
-
     genSite(cfg.release());
 
     return cli.fail(EX_PENDING, "");

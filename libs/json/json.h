@@ -117,8 +117,7 @@ inline IJBuilder & IJBuilder::value(const T & val) {
         t_os.clear();
         t_os.str({});
         t_os << val;
-        auto tmp = t_os.str();
-        return value(std::string_view{tmp});
+        return value(t_os.view());
     }
 }
 

@@ -103,7 +103,7 @@ static void testIntegralStr() {
     // ostream
     ostringstream os;
     os << StrFrom<int>(5);
-    EXPECT(os.str() == "5"sv);
+    EXPECT(os.view() == "5");
 }
 
 //===========================================================================

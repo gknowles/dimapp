@@ -363,7 +363,7 @@ void Dim::appSignalUsageError(int code, string_view err, string_view detail) {
             logMultiInfo(dm);
         ostringstream os;
         cli.printUsageEx(os, {}, cli.commandMatched());
-        logMultiInfo(os.str());
+        logMultiInfo(os.view());
         if (console)
             logMonitorClose(consoleBasicLogger());
     }
