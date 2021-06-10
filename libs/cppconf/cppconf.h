@@ -11,6 +11,14 @@
 *
 ***/
 
+// The dimapp_userconfig.h include is defined by the application and may be
+// used to configure the standard library before the headers get included.
+// This includes macros such as _ITERATOR_DEBUG_LEVEL (Microsoft),
+// _LIBCPP_DEBUG (libc++), etc.
+#if __has_include("dimapp_userconfig.h")
+#include "dimapp_userconfig.h"
+#endif
+
 //---------------------------------------------------------------------------
 // Configuration of this installation, these are options that must be the
 // same when building the app as when building the library.
