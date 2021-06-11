@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2020.
+// Copyright Glen Knowles 2017 - 2021.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // winfilemon.cpp - dim windows platform
@@ -152,18 +152,16 @@ bool DirInfo::queue() {
 
 //===========================================================================
 void DirInfo::closeWait_UNLK(FileMonitorHandle dir) {
-    {
-        unique_lock lk{s_mut, adopt_lock};
+    unique_lock lk{s_mut, adopt_lock};
 
-        if (m_handle == INVALID_HANDLE_VALUE)
-            return;
+    while (s_inNotify && s_inThread != this_thread::get_id())
+        s_inCv.wait(lk);
 
-        while (s_inNotify && s_inThread != this_thread::get_id())
-            s_inCv.wait(lk);
+    if (m_handle == INVALID_HANDLE_VALUE)
+        return;
 
-        s_dirs.release(dir);
-        m_stopping = s_stoppingDirs.insert(this);
-    }
+    s_dirs.release(dir);
+    m_stopping = s_stoppingDirs.insert(this);
 
     if (!CancelIoEx(m_handle, &overlapped())) {
         WinError err;
