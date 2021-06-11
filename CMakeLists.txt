@@ -317,7 +317,8 @@ else()
 endif()
 string(TOUPPER "${PROJECT_NAME}" DEFINE_PREFIX)
 
-# OUT_OF_TREE is 0 if binary dir is a subdirectory of source dir, else non-zero.
+# OUT_OF_TREE is 0 if binary dir is a subdirectory of source dir, else
+# non-zero.
 string(FIND "${CMAKE_CURRENT_BINARY_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/"
     OUT_OF_TREE)
 
@@ -440,7 +441,8 @@ elseif(CMAKE_COMPILER_IS_GNUCXX)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++2a")
     endif()
     if(BUILD_COVERAGE)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-arcs -ftest-coverage")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \
+            -fprofile-arcs -ftest-coverage")
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --coverage")
     endif()
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL Clang)
