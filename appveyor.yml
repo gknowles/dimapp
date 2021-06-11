@@ -21,7 +21,6 @@ build_script:
   - md build
   - cd build
   - cmake -G "%GENERATOR%" -A %PLATFORM% -T %TOOLSET% ..
-        -DRECURSIVE_GENERATE:BOOL=ON
   - cmake . -DCMAKE_BUILD_TYPE=%CONFIGURATION%
         -DCMAKE_INSTALL_PREFIX=publish
         -DINSTALL_LIBS:BOOL=ON
