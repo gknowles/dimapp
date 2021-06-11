@@ -45,11 +45,11 @@ public:
         string_view file
     ) const;
 
-    void onTask () override;
-    Duration onTimer (TimePoint now) override;
+    void onTask() override;
+    Duration onTimer(TimePoint now) override;
 
 private:
-    bool queue ();
+    bool queue();
 
     Path m_base;
     bool m_recurse{false}; // monitoring includes child directories?
@@ -90,7 +90,7 @@ DirInfo::DirInfo(IFileChangeNotify * notify)
 {}
 
 //===========================================================================
-DirInfo::~DirInfo () {
+DirInfo::~DirInfo() {
     if (m_handle != INVALID_HANDLE_VALUE && !CloseHandle(m_handle)) {
         WinError err;
         logMsgError() << "CloseHandle(hDir): " << m_base << ", " << err;
@@ -151,7 +151,7 @@ bool DirInfo::queue() {
 }
 
 //===========================================================================
-void DirInfo::closeWait_UNLK (FileMonitorHandle dir) {
+void DirInfo::closeWait_UNLK(FileMonitorHandle dir) {
     {
         unique_lock lk{s_mut, adopt_lock};
 
@@ -250,18 +250,23 @@ void DirInfo::removeMonitorWait_UNLK(
 }
 
 //===========================================================================
-void DirInfo::onTask () {
+void DirInfo::onTask() {
+    auto close = false;
     if (auto err = decodeOverlappedResult().err) {
         if (err != ERROR_NOTIFY_ENUM_DIR) {
             if (err != ERROR_OPERATION_ABORTED) {
                 logMsgError() << "ReadDirectoryChangesW() overlapped: "
                     << m_base << ", " << err;
             }
-            m_handle = INVALID_HANDLE_VALUE;
+            close = true;
         }
     }
 
     unique_lock lk{s_mut};
+    if (close && m_handle != INVALID_HANDLE_VALUE) {
+        CloseHandle(m_handle);
+        m_handle = INVALID_HANDLE_VALUE;
+    }
     if (m_stopping) {
         s_stoppingDirs.erase(m_stopping);
         return;
@@ -277,7 +282,7 @@ void DirInfo::onTask () {
 }
 
 //===========================================================================
-Duration DirInfo::onTimer (TimePoint now) {
+Duration DirInfo::onTimer(TimePoint now) {
     Path fullpath;
     Path relpath;
     unsigned notified = 0;
