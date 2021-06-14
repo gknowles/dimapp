@@ -111,6 +111,7 @@ int appRun(
 ***/
 
 const std::string & appName();
+unsigned appIndex();
 RunMode appMode();
 inline bool appStarting() { return appMode() == kRunStarting; }
 inline bool appStopping() { return appMode() == kRunStopping; }

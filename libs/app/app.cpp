@@ -24,6 +24,7 @@ static RunMode s_runMode{kRunStopped};
 
 static IAppNotify * s_app;
 static string s_appName;
+static unsigned s_appIndex;
 static vector<ITaskNotify *> s_appTasks;
 static AppFlags s_appFlags;
 static Path s_initialDir;
@@ -125,6 +126,17 @@ static RunTask s_runTask;
 
 //===========================================================================
 void RunTask::onTask() {
+    if (s_appFlags & fAppWithService) {
+        Cli cli;
+        cli.opt(&s_appIndex, "app-index", 1)
+            .desc("Identifies service when multiple are configured.");
+
+        // The command line will be validated later by the application, right
+        // now we just need to get the appIndex before processing the
+        // configuration.
+        (void) cli.parse(s_app->m_argc, s_app->m_argv);
+    }
+
     iPlatformInitialize();
     iFileInitialize();
     iConfigInitialize();
@@ -188,6 +200,11 @@ void Dim::iAppSetFlags(AppFlags flags) {
 //===========================================================================
 const string & Dim::appName() {
     return s_appName;
+}
+
+//===========================================================================
+unsigned Dim::appIndex() {
+    return s_appIndex;
 }
 
 //===========================================================================
