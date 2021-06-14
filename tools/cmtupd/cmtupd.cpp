@@ -67,6 +67,7 @@ static int s_matchedFiles;      // scanned files with matching comments
 static int s_comments;          // total matching comments
 static int s_updatedComments;   // comments that were (or would be) updated
 static int s_updatedFiles;      // files with updated comments
+static int s_newerFiles;       // files with comments dated after last commit
 
 
 /****************************************************************************
@@ -226,6 +227,7 @@ static void app(int argc, char *argv[]) {
             lines.pop_back();
 
         forward_list<string> changedLines;
+        auto newerLines = 0;
         string commitYear;
         for (auto&& line : lines) {
             line = rtrim(line);
@@ -248,7 +250,9 @@ static void app(int argc, char *argv[]) {
                 }
                 commitYear = StrFrom<int>(tm.tm_year + 1900);
             }
-            if (cdate.lastYear != commitYear) {
+            if (cdate.lastYear > commitYear) {
+                newerLines += 1;
+            } else if (cdate.lastYear < commitYear) {
                 s_updatedComments += 1;
                 if (cdate.format == 0) {
                     auto pos = cdate.lastYear.data() - tmp.data()
@@ -267,13 +271,16 @@ static void app(int argc, char *argv[]) {
             }
         }
         if (commitYear.empty()) {
-            cout << f << "... ";
-            ConsoleScopedAttr attr(kConsoleWarn);
-            cout << "no matching comments" << endl;
+            cout << f << "... unmatched" << endl;
         } else {
             s_matchedFiles += 1;
             if (changedLines.empty()) {
-                if (s_verbose) {
+                if (newerLines) {
+                    s_newerFiles += 1;
+                    cout << f << "... ";
+                    ConsoleScopedAttr attr(kConsoleWarn);
+                    cout << "NEWER" << endl;
+                } else if (s_verbose) {
                     cout << f << "... unchanged" << endl;
                 }
             } else {
@@ -281,7 +288,7 @@ static void app(int argc, char *argv[]) {
                 if (!s_update) {
                     cout << f << "... ";
                     ConsoleScopedAttr attr(kConsoleWarn);
-                    cout << "out of date" << endl;
+                    cout << "obsolete" << endl;
                 } else {
                     if (!replaceFile(f, lines))
                         return;
@@ -295,6 +302,7 @@ static void app(int argc, char *argv[]) {
     if (s_verbose > 1
         || s_verbose && s_files
         || s_matchedFiles != s_files
+        || s_newerFiles
         || s_updatedFiles
     ) {
         cout << endl;
@@ -306,6 +314,11 @@ static void app(int argc, char *argv[]) {
         ConsoleScopedAttr attr(kConsoleWarn);
         cout << s_files - s_matchedFiles << " unmatched";
     }
+    if (s_newerFiles) {
+        cout << ", ";
+        ConsoleScopedAttr attr(kConsoleWarn);
+        cout << s_newerFiles << " newer";
+    }
     if (s_updatedFiles) {
         if (s_update) {
             cout << ", ";
@@ -314,7 +327,7 @@ static void app(int argc, char *argv[]) {
         } else {
             cout << ", ";
             ConsoleScopedAttr attr(kConsoleWarn);
-            cout << s_updatedFiles << " would be updated";
+            cout << s_updatedFiles << " obsolete";
         }
     }
     cout << endl;
