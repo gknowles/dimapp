@@ -200,15 +200,12 @@ static void addAltNameExt(
             continue;
         }
         auto & bytes = ipBytes.emplace_back();
-        if (ip.isIpv4()) {
+        if (ip.family() == HostAddr::kIpv4) {
             bytes.resize(4);
-            hton32(bytes.data(), ip.getIpv4());
+            hton32(bytes.data(), ip.ipv4());
         } else {
             bytes.resize(16);
-            hton32(bytes.data(), ip.data[0]);
-            hton32(bytes.data() + 4, ip.data[1]);
-            hton32(bytes.data() + 8, ip.data[2]);
-            hton32(bytes.data() + 12, ip.data[3]);
+            memcpy(bytes.data(), ip.data, sizeof ip.data);
         }
         auto & ane = anes.emplace_back();
         ane.dwAltNameChoice = CERT_ALT_NAME_IP_ADDRESS;

@@ -53,19 +53,22 @@
 #include <sddl.h> // ConvertSidToStringSid
 #include <shellapi.h>
 #include <ShlObj_core.h> // SHGetKnownFolderPath
+#include <WinDNS.h>
 #include <WinSock2.h>
 #include <WS2tcpip.h> // getaddrinfo, GetAddrInfoEx
 #include <VersionHelpers.h>
 
 // must come after WinSock2.h
+#include <iphlpapi.h> // GetAdaptersAddresses, ParseNetworkString
 #include <mstcpip.h> // SIO_LOOPBACK_FAST_PATH
 #include <MSWSock.h> // Registered IO
 
 #pragma comment(lib, "Dbghelp.lib")
-#pragma comment(lib, "Version.lib") // GetFileVersionInfo
-#pragma comment(lib, "rpcrt4.lib") // UuidCreate
+#pragma comment(lib, "iphlpapi.lib") // GetAdaptersAddresses
+#pragma comment(lib, "RpcRT4.lib") // UuidCreate
 #pragma comment(lib, "synchronization.lib") // WaitOnAddress
-#pragma comment(lib, "ws2_32.lib")
+#pragma comment(lib, "Version.lib") // GetFileVersionInfo
+#pragma comment(lib, "WS2_32.lib")
 #pragma pack(pop)
 
 // External library internal headers

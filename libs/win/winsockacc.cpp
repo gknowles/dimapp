@@ -42,7 +42,7 @@ public:
     SOCKET m_handle{INVALID_SOCKET};
     unique_ptr<AcceptSocket> m_socket;
     IFactory<ISocketNotify> * m_notify{};
-    SockAddr m_localEnd;
+    SockAddr m_localAddr;
     char m_addrBuf[2 * sizeof sockaddr_storage];
 
 public:
@@ -76,10 +76,10 @@ static auto & s_perfNotAccepted = uperf("sock.disconnect (not accepted)");
 //===========================================================================
 ListenSocket::ListenSocket(
     IFactory<ISocketNotify> * notify,
-    const SockAddr & end
+    const SockAddr & addr
 )
     : m_notify{notify}
-    , m_localEnd{end}
+    , m_localAddr{addr}
 {}
 
 //===========================================================================
@@ -111,7 +111,7 @@ static bool closeListenHandle(ListenSocket * listen) {
     listen->m_mode = ISocketNotify::kClosing;
     if (listen->m_handle != INVALID_SOCKET) {
         if (SOCKET_ERROR == closesocket(listen->m_handle))
-            logMsgFatal() << "closesocket(listen): " << WinError{};
+            logMsgFatal() << "closesocket(listen): " << wsaError();
         listen->m_handle = INVALID_SOCKET;
     }
     return false;
@@ -160,8 +160,10 @@ bool AcceptSocket::accept(ListenSocket * listen) {
         if (!err || err == ERROR_IO_PENDING)
             return true;
 
-        if (err != WSAECONNRESET)
-            logMsgError() << "AcceptEx(" << listen->m_localEnd << "): " << err;
+        if (err != WSAECONNRESET) {
+            logMsgError() << "AcceptEx(" << listen->m_localAddr << "): "
+                << err;
+        }
     }
 
     listen->m_socket.reset();
@@ -235,7 +237,7 @@ void AcceptSocket::onAccept(
         sizeof listen->m_handle
     )) {
         logMsgError() << "setsockopt(SO_UPDATE_ACCEPT_CONTEXT): "
-            << WinError{};
+            << wsaError();
         return;
     }
 
@@ -312,9 +314,9 @@ void Dim::socketListen(
         return;
 
     if (SOCKET_ERROR == listen(sock->m_handle, SOMAXCONN)) {
-        logMsgError() << "listen(SOMAXCONN): " << WinError{};
+        logMsgError() << "listen(SOMAXCONN): " << wsaError();
         if (SOCKET_ERROR == closesocket(sock->m_handle))
-            logMsgError() << "closesocket(listen): " << WinError{};
+            logMsgError() << "closesocket(listen): " << wsaError();
         return;
     }
 
@@ -333,7 +335,7 @@ void Dim::socketCloseWait(
     iSocketCheckThread();
 
     for (auto && ls : s_listeners) {
-        if (ls.m_notify == factory && ls.m_localEnd == local) {
+        if (ls.m_notify == factory && ls.m_localAddr == local) {
             closeListen(&ls);
             return;
         }

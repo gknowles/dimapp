@@ -100,4 +100,6 @@ void iSocketBufferInitialize(RIO_EXTENSION_FUNCTION_TABLE & rio);
 
 void copy(RIO_BUF * out, const SocketBuffer & buf, size_t bytes);
 
+WinError wsaError();
+
 } // namespace

@@ -220,7 +220,7 @@ void ConnSocket::onConnect(WinError error, int bytes) {
         0
     )) {
         logMsgError() << "setsockopt(SO_UPDATE_CONNECT_CONTEXT): "
-            << WinError{};
+            << wsaError();
         return connectFailed();
     }
 
@@ -237,14 +237,14 @@ void ConnSocket::onConnect(WinError error, int bytes) {
     // address of remote node
     int sasLen = sizeof sas;
     if (SOCKET_ERROR == getpeername(m_handle, (sockaddr *)&sas, &sasLen)) {
-        logMsgError() << "getpeername: " << WinError{};
+        logMsgError() << "getpeername: " << wsaError();
         return connectFailed();
     }
     copy(&m_connInfo.remote, sas);
 
     // locally bound address
     if (SOCKET_ERROR == getsockname(m_handle, (sockaddr *)&sas, &sasLen)) {
-        logMsgError() << "getsockname: " << WinError{};
+        logMsgError() << "getsockname: " << wsaError();
         return connectFailed();
     }
     copy(&m_connInfo.local, sas);
@@ -328,7 +328,7 @@ void Dim::iSocketSetConnectTimeout(SOCKET s, Duration wait) {
         nullptr,    // overlapped
         nullptr     // completion routine
     )) {
-        logMsgError() << "WSAIoctl(SIO_TCP_INITIAL_RTO): " << WinError{};
+        logMsgError() << "WSAIoctl(SIO_TCP_INITIAL_RTO): " << wsaError();
     }
 
     // Also set the connection timeout since:
@@ -344,7 +344,7 @@ void Dim::iSocketSetConnectTimeout(SOCKET s, Duration wait) {
         (char *) &val,
         sizeof val
     )) {
-        logMsgError() << "setsockopt(TCP_MAXRT): " << WinError{};
+        logMsgError() << "setsockopt(TCP_MAXRT): " << wsaError();
     }
 }
 

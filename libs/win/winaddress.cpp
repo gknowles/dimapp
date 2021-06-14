@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2020.
+// Copyright Glen Knowles 2015 - 2021.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // winaddress.cpp - dim windows platform
@@ -11,60 +11,107 @@ using namespace Dim;
 
 /****************************************************************************
 *
+*   Helpers
+*
+***/
+
+//===========================================================================
+static bool parse(
+    sockaddr_storage * out,
+    uint16_t * port,
+    uint8_t * prefixLen,
+    string_view src
+) {
+    auto wsrc = toWstring(src);
+    NET_ADDRESS_INFO info;
+    DWORD type = NET_STRING_IP_ADDRESS;
+    if (port) {
+        type = NET_STRING_IP_SERVICE;
+    } else if (prefixLen) {
+        type = NET_STRING_IP_NETWORK;
+    }
+    WinError err = ParseNetworkString(
+        wsrc.data(),
+        type,
+        &info,
+        port,
+        prefixLen
+    );
+    if (err) {
+        if (err != ERROR_INVALID_PARAMETER)
+            logMsgError() << "ParseNetworkString: " << err;
+        *out = {};
+        if (port)
+            *port = 0;
+        if (prefixLen)
+            *prefixLen = (uint8_t) -1;
+        return false;
+    }
+    static_assert(sizeof(*out) >= sizeof(info.IpAddress));
+    memcpy(out, &info.IpAddress, sizeof info.IpAddress);
+    return true;
+}
+
+
+/****************************************************************************
+*
+*   HostAddr
+*
+***/
+
+//===========================================================================
+bool Dim::parse(HostAddr * out, string_view src) {
+    sockaddr_storage sas;
+    if (!parse(&sas, nullptr, nullptr, src)) {
+        *out = {};
+        return false;
+    }
+    copy(out, sas);
+    return true;
+}
+
+
+/****************************************************************************
+*
 *   SockAddr
 *
 ***/
 
 //===========================================================================
-bool Dim::parse(SockAddr * end, string_view src, int defaultPort) {
+bool Dim::parse(SockAddr * out, string_view src, int defaultPort) {
     sockaddr_storage sas;
-    int sasLen = sizeof sas;
-    auto tmp = toWstring(src);
-    if (SOCKET_ERROR == WSAStringToAddressW(
-        tmp.data(),
-        AF_INET,
-        NULL, // protocol info
-        (sockaddr *)&sas,
-        &sasLen
-    )) {
-        if (SOCKET_ERROR == WSAStringToAddressW(
-            tmp.data(),
-            AF_INET6,
-            NULL, // protocol info
-            (sockaddr *)&sas,
-            &sasLen
-        )) {
-            *end = {};
+    uint16_t port;
+    if (!parse(&sas, &port, nullptr, src)) {
+        port = 0;
+        if (!parse(&sas, nullptr, nullptr, src)) {
+            *out = {};
             return false;
         }
     }
-    copy(end, sas);
-    if (!end->port)
-        end->port = defaultPort;
+    copy(out, sas);
+    out->port = port ? port : defaultPort;
     return true;
 }
 
+
+/****************************************************************************
+*
+*   SubnetAddr
+*
+***/
+
 //===========================================================================
-namespace Dim {
-ostream & operator<<(ostream & os, const SockAddr & src) {
+bool Dim::parse(SubnetAddr * out, std::string_view src) {
     sockaddr_storage sas;
-    copy(&sas, src);
-    wchar_t tmp[256];
-    DWORD tmpLen = (DWORD) size(tmp);
-    if (SOCKET_ERROR == WSAAddressToStringW(
-        (sockaddr *)&sas,
-        sizeof sas,
-        NULL, // protocol info
-        tmp,
-        &tmpLen
-    )) {
-        os << "(bad_sockaddr)";
-    } else {
-        os << utf8(tmp, tmpLen);
+    uint8_t prefixLen;
+    if (!parse(&sas, nullptr, &prefixLen, src)) {
+        *out = {};
+        return false;
     }
-    return os;
+    copy(&out->addr, sas);
+    out->prefixLen = prefixLen;
+    return true;
 }
-} // namespace
 
 
 /****************************************************************************
@@ -74,51 +121,6 @@ ostream & operator<<(ostream & os, const SockAddr & src) {
 ***/
 
 //===========================================================================
-void Dim::copy(sockaddr_storage * out, const SockAddr & src) {
-    *out = {};
-    if (!src.addr.data[0]
-        && !src.addr.data[1]
-        && src.addr.data[2] == kIpv4MappedAddress
-    ) {
-        auto ia = reinterpret_cast<sockaddr_in *>(out);
-        ia->sin_family = AF_INET;
-        ia->sin_port = htons((short)src.port);
-        ia->sin_addr.s_addr = htonl(src.addr.data[3]);
-    } else {
-        auto ia = reinterpret_cast<sockaddr_in6 *>(out);
-        ia->sin6_family = AF_INET6;
-        ia->sin6_port = htons((short)src.port);
-        ia->sin6_scope_id = htonl(src.scope);
-        auto uint32addr = reinterpret_cast<uint32_t *>(ia->sin6_addr.u.Byte);
-        uint32addr[0] = htonl(src.addr.data[0]);
-        uint32addr[1] = htonl(src.addr.data[1]);
-        uint32addr[2] = htonl(src.addr.data[2]);
-        uint32addr[3] = htonl(src.addr.data[3]);
-    }
-}
-
-//===========================================================================
-void Dim::copy(SockAddr * out, const sockaddr_storage & storage) {
-    *out = {};
-    if (storage.ss_family == AF_INET) {
-        auto ia = reinterpret_cast<const sockaddr_in &>(storage);
-        out->port = ntohs(ia.sin_port);
-        out->addr.data[2] = kIpv4MappedAddress;
-        out->addr.data[3] = ntohl(ia.sin_addr.s_addr);
-    } else {
-        assert(storage.ss_family == AF_INET6);
-        auto ia = reinterpret_cast<const sockaddr_in6 &>(storage);
-        out->port = ntohs(ia.sin6_port);
-        out->scope = ntohl(ia.sin6_scope_id);
-        auto uint32addr = reinterpret_cast<uint32_t *>(ia.sin6_addr.u.Byte);
-        out->addr.data[0] = ntohl(uint32addr[0]);
-        out->addr.data[1] = ntohl(uint32addr[1]);
-        out->addr.data[2] = ntohl(uint32addr[2]);
-        out->addr.data[3] = ntohl(uint32addr[3]);
-    }
-}
-
-//===========================================================================
 size_t Dim::bytesUsed(const sockaddr_storage & storage) {
     if (storage.ss_family == AF_INET) {
         return sizeof sockaddr_in;
@@ -126,6 +128,53 @@ size_t Dim::bytesUsed(const sockaddr_storage & storage) {
         assert(storage.ss_family == AF_INET6);
         return sizeof sockaddr_in6;
     }
+}
+
+//===========================================================================
+void Dim::copy(sockaddr_storage * out, const HostAddr & addr) {
+    *out = {};
+    auto ia = reinterpret_cast<sockaddr_in6 *>(out);
+    ia->sin6_family = AF_INET6;
+    ia->sin6_scope_id = htonl(addr.scope);
+    assert(sizeof ia->sin6_addr.u.Byte == sizeof addr.data);
+    memcpy(
+        ia->sin6_addr.u.Byte,
+        addr.data,
+        size(ia->sin6_addr.u.Byte)
+    );
+}
+
+//===========================================================================
+void Dim::copy(HostAddr * out, const sockaddr_storage & storage) {
+    *out = {};
+    if (storage.ss_family == AF_INET) {
+        auto ia = reinterpret_cast<const sockaddr_in &>(storage);
+        out->ipv4(ntohl(ia.sin_addr.s_addr));
+    } else {
+        assert(storage.ss_family == AF_INET6);
+        auto ia = reinterpret_cast<const sockaddr_in6 &>(storage);
+        out->scope = ntohl(ia.sin6_scope_id);
+        assert(sizeof ia.sin6_addr.u.Byte == sizeof out->data);
+        memcpy(
+            out->data,
+            ia.sin6_addr.u.Byte,
+            size(out->data)
+        );
+    }
+}
+
+//===========================================================================
+void Dim::copy(sockaddr_storage * out, const SockAddr & src) {
+    auto ia = reinterpret_cast<sockaddr_in6 *>(out);
+    copy(out, src.addr);
+    ia->sin6_port = htons((short)src.port);
+}
+
+//===========================================================================
+void Dim::copy(SockAddr * out, const sockaddr_storage & storage) {
+    auto ia = reinterpret_cast<const sockaddr_in6 &>(storage);
+    copy(&out->addr, storage);
+    out->port = ntohs(ia.sin6_port);
 }
 
 
@@ -262,31 +311,62 @@ void Dim::addressCancelQuery(int cancelId) {
 //===========================================================================
 void Dim::addressGetLocal(vector<HostAddr> * out) {
     out->resize(0);
-    ADDRINFO * result;
-    WinError err = getaddrinfo(
-        "..localmachine",
-        NULL, // service name
-        NULL, // hints
-        &result
-    );
-    if (err)
-        logMsgFatal() << "getaddrinfo(..localmachine): " << err;
 
-    SockAddr end;
-    sockaddr_storage sas;
-    while (result) {
-        if (result->ai_family == AF_INET) {
-            memcpy(&sas, result->ai_addr, result->ai_addrlen);
-            copy(&end, sas);
-            out->push_back(end.addr);
-        }
-        result = result->ai_next;
+    ULONG resLen = 15'000;
+    string buf;
+    for (auto i = 0; i < 3; ++i) {
+        buf.resize(resLen);
+        auto result = (IP_ADAPTER_ADDRESSES *) buf.data();
+        auto err = GetAdaptersAddresses(
+            AF_UNSPEC,
+            GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST
+                | GAA_FLAG_SKIP_DNS_SERVER | GAA_FLAG_SKIP_FRIENDLY_NAME
+            ,
+            NULL,
+            result,
+            &resLen
+        );
+        if (!err)
+            break;
+        buf.resize(0);
+        if (err != ERROR_BUFFER_OVERFLOW)
+            logMsgFatal() << "GetAdaptersAddresses: " << WinError(err);
     }
 
-    // if there are no addresses toss on the loopback with the null port so we
+    SockAddr sockAddr;
+    auto ptr = (IP_ADAPTER_ADDRESSES *) (buf.empty() ? nullptr : buf.data());
+    for (; ptr; ptr = ptr->Next) {
+        auto addr = ptr->FirstUnicastAddress;
+        for (; addr; addr = addr->Next) {
+            if (addr->DadState == IpDadStatePreferred
+                || addr->DadState == IpDadStateDeprecated
+            ) {
+                copy(
+                    &sockAddr,
+                    (sockaddr_storage &) *addr->Address.lpSockaddr
+                );
+                switch (sockAddr.addr.type()) {
+                default:
+                    break;
+                case HostAddr::kLoopback:
+                case HostAddr::kPrivate:
+                case HostAddr::kPublic:
+                    out->push_back(sockAddr.addr);
+                    break;
+                }
+            }
+        }
+    }
+
+    // If there are no addresses toss on the loopback with the null port so we
     // can at least pretend.
     if (out->empty()) {
-        (void) parse(&end, "127.0.0.1", 9);
-        out->push_back(end.addr);
+        (void) parse(&sockAddr.addr, "127.0.0.1");
+        out->push_back(sockAddr.addr);
     }
+
+    sort(out->begin(), out->end(), [](auto & a, auto & b) {
+        return a.type() > b.type()
+            || a.type() == b.type() && a < b;
+    });
 }

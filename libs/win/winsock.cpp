@@ -506,12 +506,12 @@ void Dim::iSocketInitialize() {
 
     // get extension functions
     SOCKET s = WSASocketW(
-        AF_UNSPEC,
+        AF_INET6,
         SOCK_STREAM,
         IPPROTO_TCP,
         NULL, // protocol info (additional creation options)
         0,    // socket group
-        WSA_FLAG_REGISTERED_IO
+        WSA_FLAG_REGISTERED_IO | WSA_FLAG_NO_HANDLE_INHERIT
     );
     if (s == INVALID_SOCKET)
         logMsgFatal() << "WSASocketW: " << WinError{};
@@ -600,7 +600,7 @@ void Dim::iSocketInitialize() {
     // initialize buffer allocator
     iSocketBufferInitialize(s_rio);
     // Don't register cleanup until all dependents (aka sockbuf) have
-    // registered their cleanups (aka been initialized)
+    // registered their cleanups (aka have been initialized)
     shutdownMonitor(&s_cleanup);
     iSocketAcceptInitialize();
     iSocketConnectInitialize();
@@ -609,15 +609,15 @@ void Dim::iSocketInitialize() {
 //===========================================================================
 SOCKET Dim::iSocketCreate() {
     SOCKET handle = WSASocketW(
-        AF_UNSPEC,
-        SOCK_STREAM,
-        IPPROTO_TCP,
+        FROM_PROTOCOL_INFO,
+        FROM_PROTOCOL_INFO,
+        FROM_PROTOCOL_INFO,
         &s_protocolInfo,
         0,
-        WSA_FLAG_REGISTERED_IO
+        WSA_FLAG_REGISTERED_IO | WSA_FLAG_NO_HANDLE_INHERIT
     );
     if (handle == INVALID_SOCKET) {
-        logMsgError() << "WSASocket: " << WinError{};
+        logMsgError() << "WSASocket: " << wsaError();
         return INVALID_SOCKET;
     }
 
@@ -631,30 +631,11 @@ SOCKET Dim::iSocketCreate() {
     }
 
     int yes = 1;
+    int no = 0;
 
-    DWORD bytes;
-    if (SOCKET_ERROR == WSAIoctl(
-        handle,
-        SIO_LOOPBACK_FAST_PATH,
-        &yes, sizeof yes,
-        nullptr, 0, // output buffer, buffer size
-        &bytes,     // bytes returned
-        nullptr,    // overlapped
-        nullptr     // completion routine
-    )) {
-        logMsgError() << "WSAIoctl(SIO_LOOPBACK_FAST_PATH): " << WinError{};
-    }
-
-    if (SOCKET_ERROR == setsockopt(
-        handle,
-        IPPROTO_TCP,
-        TCP_NODELAY,
-        (char *) &yes,
-        sizeof yes
-    )) {
-        logMsgError() << "setsockopt(TCP_NODELAY): " << WinError{};
-    }
-
+    // Allow local ports to be shared among multiple outgoing connections. Like
+    // with incoming connections as long as the combination of remote and
+    // local's address and port is unique everything is fine.
     if (SOCKET_ERROR == setsockopt(
         handle,
         SOL_SOCKET,
@@ -669,10 +650,33 @@ SOCKET Dim::iSocketCreate() {
             (char *) &yes,
             sizeof yes
         )) {
-            logMsgError() << "setsockopt(SO_PORT_SCALABILITY): " << WinError{};
+            logMsgError() << "setsockopt(SO_PORT_SCALABILITY): " << wsaError();
         }
     }
 
+    // Set to dual mode, supporting both Ipv6 and Ipv4 connections.
+    if (SOCKET_ERROR == setsockopt(
+        handle,
+        IPPROTO_IPV6,
+        IPV6_V6ONLY,
+        (char *) &no,
+        sizeof no
+    )) {
+        logMsgDebug() << "setsockopt(IPV6_V6ONLY): " << wsaError();
+    }
+
+    // Disable Nagle algorithm
+    if (SOCKET_ERROR == setsockopt(
+        handle,
+        IPPROTO_TCP,
+        TCP_NODELAY,
+        (char *) &yes,
+        sizeof yes
+    )) {
+        logMsgError() << "setsockopt(TCP_NODELAY): " << wsaError();
+    }
+
+    // Allow some data to be sent during the initial handshake. [RFC 7413]
     if (SOCKET_ERROR == setsockopt(
         handle,
         IPPROTO_TCP,
@@ -681,22 +685,23 @@ SOCKET Dim::iSocketCreate() {
         sizeof yes
     )) {
         if (IsWindowsVersionOrGreater(10, 0, 1607))
-            logMsgDebug() << "setsockopt(TCP_FASTOPEN): " << WinError{};
+            logMsgDebug() << "setsockopt(TCP_FASTOPEN): " << wsaError();
     }
 
     return handle;
 }
 
 //===========================================================================
-SOCKET Dim::iSocketCreate(const SockAddr & end) {
+SOCKET Dim::iSocketCreate(const SockAddr & addr) {
     SOCKET handle = iSocketCreate();
     if (handle == INVALID_SOCKET)
         return handle;
 
     sockaddr_storage sas;
-    copy(&sas, end);
+    copy(&sas, addr);
     if (SOCKET_ERROR == ::bind(handle, (sockaddr *)&sas, sizeof sas)) {
-        logMsgError() << "bind(" << end << "): " << WinError{};
+        auto err = wsaError();
+        logMsgError() << "bind(" << addr << "): " << err;
         closesocket(handle);
         return INVALID_SOCKET;
     }
