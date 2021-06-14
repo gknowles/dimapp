@@ -73,6 +73,12 @@ const char * configString(
     std::string_view name,
     const char defVal[] = ""
 );
+bool configBool(
+    const ConfigContext & context,
+    const XDocument & doc,
+    std::string_view name,
+    bool defVal = false
+);
 double configNumber(
     const ConfigContext & context,
     const XDocument & doc,
@@ -94,6 +100,11 @@ const char * configString(
     const XDocument & doc,
     std::string_view name,
     const char defVal[] = ""
+);
+bool configBool(
+    const XDocument & doc,
+    std::string_view name,
+    bool defVal = false
 );
 double configNumber(
     const XDocument & doc,

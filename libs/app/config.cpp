@@ -73,6 +73,8 @@ static thread::id s_inThread; // thread running any current callback
 static condition_variable s_inCv; // when running callback completes
 static IConfigNotify * s_inNotify; // notify currently in progress
 
+static ConfigContext s_context;
+
 
 /****************************************************************************
 *
@@ -324,8 +326,7 @@ const XNode * Dim::configElement(
     const XDocument & doc,
     string_view name
 ) {
-    ConfigContext context;
-    return configElement(context, doc, name);
+    return configElement(s_context, doc, name);
 }
 
 //===========================================================================
@@ -346,8 +347,36 @@ const char * Dim::configString(
     string_view name,
     const char defVal[]
 ) {
-    ConfigContext context;
-    return configString(context, doc, name, defVal);
+    return configString(s_context, doc, name, defVal);
+}
+
+//===========================================================================
+bool Dim::configBool(
+    const ConfigContext & context,
+    const XDocument & doc,
+    string_view name,
+    bool defVal
+) {
+    static const TokenTable::Token values[] = {
+        { 1, "true" },
+        { 1, "1" },
+        { 0, "false" },
+        { 0, "0" },
+    };
+    static const TokenTable tbl(values);
+    if (auto str = configString(context, doc, name, nullptr)) {
+        defVal = tokenTableGetEnum(tbl, str, false);
+    }
+    return defVal;
+}
+
+//===========================================================================
+bool Dim::configBool(
+    const XDocument & doc,
+    string_view name,
+    bool defVal
+) {
+    return configBool(s_context, doc, name, defVal);
 }
 
 //===========================================================================
@@ -368,8 +397,7 @@ double Dim::configNumber(
     string_view name,
     double defVal
 ) {
-    ConfigContext context;
-    return configNumber(context, doc, name, defVal);
+    return configNumber(s_context, doc, name, defVal);
 }
 
 //===========================================================================
@@ -390,8 +418,7 @@ Duration Dim::configDuration(
     std::string_view name,
     Duration defVal
 ) {
-    ConfigContext context;
-    return configDuration(context, doc, name, defVal);
+    return configDuration(s_context, doc, name, defVal);
 }
 
 
