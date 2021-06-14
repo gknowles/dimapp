@@ -49,7 +49,8 @@ constexpr bool isHex(unsigned char ch) {
 }
 
 //===========================================================================
-// hexToNibble - converts hex character (0-9, a-f, A-F) to unsigned (0-15)
+// Converts hex character (0-9, a-f, A-F) to unsigned (0-15), other characters
+// produce random garbage.
 constexpr unsigned hexToNibbleUnsafe(char ch) {
     return ((ch | 432) * 239'217'992 & 0xffff'ffff) >> 28;
 }
