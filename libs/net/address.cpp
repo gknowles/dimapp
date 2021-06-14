@@ -11,12 +11,12 @@ using namespace Dim;
 
 /****************************************************************************
 *
-*   NetAddr
+*   HostAddr
 *
 ***/
 
 //===========================================================================
-size_t std::hash<NetAddr>::operator()(const NetAddr & val) const {
+size_t std::hash<HostAddr>::operator()(const HostAddr & val) const {
     size_t out = 0;
     hashCombine(&out, std::hash<int32_t>{}(val.data[0]));
     hashCombine(&out, std::hash<int32_t>{}(val.data[1]));
@@ -27,17 +27,17 @@ size_t std::hash<NetAddr>::operator()(const NetAddr & val) const {
 }
 
 //===========================================================================
-bool NetAddr::isIpv4() const {
+bool HostAddr::isIpv4() const {
     return data[2] == kIpv4MappedAddress;
 }
 
 //===========================================================================
-uint32_t NetAddr::getIpv4() const {
+uint32_t HostAddr::getIpv4() const {
     return data[3];
 }
 
 //===========================================================================
-NetAddr::operator bool() const {
+HostAddr::operator bool() const {
     return data[3]
         || data[0]
         || data[1]
@@ -46,7 +46,7 @@ NetAddr::operator bool() const {
 
 //===========================================================================
 namespace Dim {
-istream & operator>>(istream & in, NetAddr & out) {
+istream & operator>>(istream & in, HostAddr & out) {
     string tmp;
     in >> tmp;
     if (!parse(&out, tmp.c_str()))
@@ -56,7 +56,7 @@ istream & operator>>(istream & in, NetAddr & out) {
 } // namespace
 
 //===========================================================================
-bool Dim::parse(NetAddr * out, string_view src) {
+bool Dim::parse(HostAddr * out, string_view src) {
     SockAddr sa;
     if (!parse(&sa, src, 9)) {
         *out = {};
@@ -68,9 +68,9 @@ bool Dim::parse(NetAddr * out, string_view src) {
 
 //===========================================================================
 namespace Dim {
-ostream & operator<<(ostream & os, const NetAddr & addr);
+ostream & operator<<(ostream & os, const HostAddr & addr);
 }
-ostream & Dim::operator<<(ostream & os, const NetAddr & addr) {
+ostream & Dim::operator<<(ostream & os, const HostAddr & addr) {
     SockAddr sa;
     sa.addr = addr;
     return operator<<(os, sa);
@@ -86,7 +86,7 @@ ostream & Dim::operator<<(ostream & os, const NetAddr & addr) {
 //===========================================================================
 size_t std::hash<SockAddr>::operator()(const SockAddr & val) const {
     size_t out = 0;
-    hashCombine(&out, std::hash<NetAddr>{}(val.addr));
+    hashCombine(&out, std::hash<HostAddr>{}(val.addr));
     hashCombine(&out, std::hash<unsigned>{}(val.port));
     hashCombine(&out, std::hash<unsigned>{}(val.scope));
     return out;
@@ -109,14 +109,14 @@ istream & Dim::operator>>(istream & in, SockAddr & out) {
 
 /****************************************************************************
 *
-*   Network
+*   SubnetAddr
 *
 ***/
 
 //===========================================================================
-size_t std::hash<Network>::operator()(const Network & val) const {
+size_t std::hash<SubnetAddr>::operator()(const SubnetAddr & val) const {
     size_t out = 0;
-    hashCombine(&out, std::hash<NetAddr>{}(val.addr));
+    hashCombine(&out, std::hash<HostAddr>{}(val.addr));
     hashCombine(&out, std::hash<int>{}(val.mask));
     return out;
 }

@@ -8,9 +8,9 @@
 *
 *   Networking
 *
-*   NetAddr - machine location (IP)
+*   HostAddr - machine location (IP)
 *   SockAddr - machine location (IP) and service at location (port)
-*   Network - network location (IP) and size (net mask)
+*   SubnetAddr - network location (IP) and size (net mask)
 *
 ***/
 
@@ -35,25 +35,25 @@ namespace Dim {
 *
 ***/
 
-// ::ffff:0:0/96 reserved for IPv4-mapped NetAddr [RFC4291]
+// ::ffff:0:0/96 reserved for IPv4-mapped HostAddr [RFC4291]
 constexpr uint32_t kIpv4MappedAddress = 0xffff0000;
 
 // IP v4 or v6 address
-struct NetAddr {
+struct HostAddr {
     uint32_t data[4] = { 0, 0, kIpv4MappedAddress, 0 };
 
     bool isIpv4() const;
     uint32_t getIpv4() const;
 
-    std::strong_ordering operator<=>(const NetAddr & right) const = default;
+    std::strong_ordering operator<=>(const HostAddr & right) const = default;
     explicit operator bool() const;
 
 private:
-    friend std::ostream & operator<<(std::ostream & os, const NetAddr & addr);
-    friend std::istream & operator>>(std::istream & in, NetAddr & out);
+    friend std::ostream & operator<<(std::ostream & os, const HostAddr & addr);
+    friend std::istream & operator>>(std::istream & in, HostAddr & out);
 };
 struct SockAddr {
-    NetAddr addr;
+    HostAddr addr;
     unsigned port = {};
     unsigned scope = {}; // aka zone
 
@@ -64,27 +64,27 @@ private:
     friend std::ostream & operator<<(std::ostream & os, const SockAddr & end);
     friend std::istream & operator>>(std::istream & in, SockAddr & out);
 };
-struct Network {
-    NetAddr addr;
+struct SubnetAddr {
+    HostAddr addr;
     int mask = {};
 };
 } // namespace
 
 namespace std {
-template <> struct hash<Dim::NetAddr> {
-    size_t operator()(const Dim::NetAddr & val) const;
+template <> struct hash<Dim::HostAddr> {
+    size_t operator()(const Dim::HostAddr & val) const;
 };
 template <> struct hash<Dim::SockAddr> {
     size_t operator()(const Dim::SockAddr & val) const;
 };
-template <> struct hash<Dim::Network> {
-    size_t operator()(const Dim::Network & val) const;
+template <> struct hash<Dim::SubnetAddr> {
+    size_t operator()(const Dim::SubnetAddr & val) const;
 };
 } // namespace std
 
 namespace Dim {
 
-[[nodiscard]] bool parse(NetAddr * addr, std::string_view src);
+[[nodiscard]] bool parse(HostAddr * addr, std::string_view src);
 [[nodiscard]] bool parse(
     SockAddr * end,
     std::string_view src,
@@ -105,7 +105,7 @@ size_t bytesUsed(const sockaddr_storage & storage);
 *
 ***/
 
-void addressGetLocal(std::vector<NetAddr> * out);
+void addressGetLocal(std::vector<HostAddr> * out);
 
 class ISockAddrNotify {
 public:

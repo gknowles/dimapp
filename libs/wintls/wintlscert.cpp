@@ -194,7 +194,7 @@ static void addAltNameExt(
     }
     vector<string> ipBytes;
     for (auto && n : ipAddrs) {
-        NetAddr ip;
+        HostAddr ip;
         if (!parse(&ip, n)) {
             logMsgError() << "makeCert: invalid IP address: " << n;
             continue;

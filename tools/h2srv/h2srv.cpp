@@ -118,7 +118,7 @@ static void app(int argc, char *argv[]) {
 
     consoleCatchCtrlC();
 
-    vector<NetAddr> addrs;
+    vector<HostAddr> addrs;
     addressGetLocal(&addrs);
     cout << "Local Addresses:" << endl;
     for (auto && addr : addrs)

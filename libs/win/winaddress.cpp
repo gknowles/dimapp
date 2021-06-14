@@ -131,7 +131,7 @@ size_t Dim::bytesUsed(const sockaddr_storage & storage) {
 
 /****************************************************************************
 *
-*   NetAddr query
+*   HostAddr query
 *
 ***/
 
@@ -260,7 +260,7 @@ void Dim::addressCancelQuery(int cancelId) {
 }
 
 //===========================================================================
-void Dim::addressGetLocal(vector<NetAddr> * out) {
+void Dim::addressGetLocal(vector<HostAddr> * out) {
     out->resize(0);
     ADDRINFO * result;
     WinError err = getaddrinfo(
