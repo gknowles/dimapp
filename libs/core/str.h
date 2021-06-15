@@ -62,7 +62,7 @@ requires std::is_arithmetic_v<T>
 class StrFrom<T> {
 public:
     StrFrom();
-    StrFrom(T val) { set(val); }
+    explicit StrFrom(T val) { set(val); }
     std::string_view set(T val);
     operator std::string_view() const;
     const char * c_str() const { return m_data; }
@@ -169,14 +169,22 @@ uint64_t strToUint64(
 ***/
 
 //===========================================================================
-// parse - converts from string to T
+// parse - converts from string to T, works when at least one of the following
+// is true for T:
+//  - is assignable from string or string_view
+//  - is constructible from string or string_view
+//  - has an istream extraction operator
 //===========================================================================
 template <typename T>
 [[nodiscard]] bool parse(T * out, std::string_view src) {
     if constexpr (std::is_assignable_v<T, std::string_view>) {
         *out = src;
+    } else if constexpr (std::is_constructible_v<T, std::string_view>) {
+        *out = T(src);
     } else if constexpr (std::is_assignable_v<T, std::string>) {
         *out = std::string{src};
+    } else if constexpr (std::is_constructible_v<T, std::string>) {
+        *out = T(std::string(src));
     } else {
         std::stringstream interpreter(std::string{src});
         if (!(interpreter >> *out) || !(interpreter >> std::ws).eof()) {
