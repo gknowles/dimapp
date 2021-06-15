@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2019.
+// Copyright Glen Knowles 2017 - 2021.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // config.h - dim app
@@ -24,7 +24,7 @@ namespace Dim {
 
 struct ConfigContext {
     SockAddr saddr;
-    std::string appName;
+    std::string appBaseName;
     unsigned appIndex{0};
     std::string config;
     std::string module; // socket manager name

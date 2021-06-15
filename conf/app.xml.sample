@@ -9,10 +9,8 @@ Should be locally copied to app.xml
   <DisableShutdownTimeout value="0"/>
   <DisableInactiveTimeout value="0"/>
   <Port value="41000"/>
-  <EnableGui value="1"/>
+  <EnableGui value="1" name="h2srv"/>
   <LogLevel value="warn"/>
-  <DataDir value="../data"/>
-  <LogDir value="../log"/>
 
   <!--
   Multiple certificates may be included from multiple stores. Each store

@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2020.
+// Copyright Glen Knowles 2017 - 2021.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // config.cpp - dim app
@@ -241,8 +241,13 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
 ***/
 
 //===========================================================================
-void Dim::iConfigInitialize () {
+void Dim::iConfigInitialize() {
     shutdownMonitor(&s_cleanup);
+    vector<HostAddr> addrs;
+    addressGetLocal(&addrs);
+    s_context.saddr.addr = addrs[0];
+    s_context.appBaseName = appBaseName();
+    s_context.appIndex = appIndex();
     if (appFlags() & fAppWithFiles)
         fileMonitorDir(&s_hDir, appConfigDir(), true);
 }
@@ -313,12 +318,64 @@ void Dim::configChange(
 ***/
 
 //===========================================================================
+static bool match(const XNode & node, const ConfigContext & context) {
+    enum { kInvalid, kName, kIndex, kConfig, kModule };
+    constexpr TokenTable::Token keys[] = {
+        { kName, "name" },
+        { kIndex, "index" },
+        { kConfig, "config" },
+        { kModule, "module" },
+    };
+    static const TokenTable keyTbl(keys);
+
+    for (auto&& a : attrs(&node)) {
+        auto key = tokenTableGetEnum(keyTbl, a.name, kInvalid);
+        if (key == kName && context.appBaseName != a.value
+            || key == kIndex && context.appIndex != strToUint(a.value)
+            || key == kConfig && context.config != a.value
+            || key == kModule && context.module != a.value
+        ) {
+            return false;
+        }
+    }
+    return true;
+}
+
+//===========================================================================
+static const XNode * find(
+    const ConfigContext & context,
+    const XNode * node,
+    string_view name
+) {
+    for (auto&& e : elems(node, name)) {
+        if (match(e, context))
+            return &e;
+    }
+    for (auto&& f : elems(node, "Filter")) {
+        auto found = match(f, context);
+        if (!found) {
+            for (auto&& m : elems(&f, "Match")) {
+                if (match(m, context)) {
+                    found = true;
+                    break;
+                }
+            }
+        }
+        if (found) {
+            if (auto out = find(context, &f, name))
+                return out;
+        }
+    }
+    return nullptr;
+}
+
+//===========================================================================
 const XNode * Dim::configElement(
     const ConfigContext & context,
     const XDocument & doc,
     string_view name
 ) {
-    return firstChild(doc.root(), name);
+    return find(context, doc.root(), name);
 }
 
 //===========================================================================
