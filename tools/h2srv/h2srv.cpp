@@ -79,6 +79,7 @@ static ShutdownNotify s_cleanup;
 
 //===========================================================================
 void ShutdownNotify::onShutdownClient(bool firstTry) {
+    logMsgInfo() << "Server stopped";
 }
 
 
