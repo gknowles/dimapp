@@ -17,14 +17,16 @@ using namespace Dim;
 ***/
 
 static int s_exitcode;
+static bool s_usageErrorSignaled;
 
 static mutex s_runMut;
 static condition_variable s_runCv;
 static RunMode s_runMode{kRunStopped};
 
 static IAppNotify * s_app;
-static string s_appName;
+static string s_appBaseName;
 static unsigned s_appIndex;
+static string s_appName;    // appBaseName[<appIndex>], if appIndex > 1
 static vector<ITaskNotify *> s_appTasks;
 static AppFlags s_appFlags;
 static Path s_initialDir;
@@ -126,17 +128,6 @@ static RunTask s_runTask;
 
 //===========================================================================
 void RunTask::onTask() {
-    if (s_appFlags & fAppWithService) {
-        Cli cli;
-        cli.opt(&s_appIndex, "app-index", 1)
-            .desc("Identifies service when multiple are configured.");
-
-        // The command line will be validated later by the application, right
-        // now we just need to get the appIndex before processing the
-        // configuration.
-        (void) cli.parse(s_app->m_argc, s_app->m_argv);
-    }
-
     iPlatformInitialize();
     iFileInitialize();
     iConfigInitialize();
@@ -198,13 +189,18 @@ void Dim::iAppSetFlags(AppFlags flags) {
 ***/
 
 //===========================================================================
-const string & Dim::appName() {
-    return s_appName;
+const string & Dim::appBaseName() {
+    return s_appBaseName;
 }
 
 //===========================================================================
 unsigned Dim::appIndex() {
     return s_appIndex;
+}
+
+//===========================================================================
+const string & Dim::appName() {
+    return s_appName;
 }
 
 //===========================================================================
@@ -220,6 +216,11 @@ AppFlags Dim::appFlags() {
 //===========================================================================
 int Dim::appExitCode() {
     return s_exitcode;
+}
+
+//===========================================================================
+bool Dim::appUsageErrorSignaled() {
+    return s_usageErrorSignaled;
 }
 
 //===========================================================================
@@ -285,9 +286,23 @@ int Dim::appRun(IAppNotify * app, int argc, char * argv[], AppFlags flags) {
     s_appTasks.clear();
     s_exitcode = 0;
 
+    if (s_appFlags & fAppWithService) {
+        Cli cli;
+        cli.opt(&s_appIndex, "app-index", 1)
+            .desc("Identifies service when multiple are configured.");
+
+        // The command line will be validated later by the application, right
+        // now we just need to get the appIndex before processing the
+        // configuration.
+        (void) cli.parse(argc, argv);
+    }
+
     s_initialDir = fileGetCurrentDir();
     auto exeName = (Path) envExecPath();
-    s_appName = exeName.stem();
+    s_appBaseName = exeName.stem();
+    s_appName = s_appBaseName;
+    if (s_appIndex > 1)
+        s_appName += StrFrom<unsigned>(s_appIndex);
     s_binDir = exeName.removeFilename();
     if ((flags & fAppWithFiles) && s_binDir.stem() == "bin") {
         s_rootDir = s_binDir.parentPath();
@@ -367,9 +382,10 @@ void Dim::appSignalUsageError(int code, string_view err, string_view detail) {
     if (code == EX_PENDING)
         return;
 
+    s_usageErrorSignaled = true;
     if (code) {
-        bool console = !(appFlags() & (fAppWithConsole | fAppIsService));
-        if (console)
+        bool hasConsole = appFlags() & (fAppWithConsole | fAppIsService);
+        if (!hasConsole)
             logMonitor(consoleBasicLogger());
         Cli cli;
         auto em = err.empty() ? cli.errMsg() : err;
@@ -381,7 +397,7 @@ void Dim::appSignalUsageError(int code, string_view err, string_view detail) {
         ostringstream os;
         cli.printUsageEx(os, {}, cli.commandMatched());
         logMultiInfo(os.view());
-        if (console)
+        if (!hasConsole)
             logMonitorClose(consoleBasicLogger());
     }
     appSignalShutdown(code);

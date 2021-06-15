@@ -111,6 +111,7 @@ int appRun(
 ***/
 
 const std::string & appName();
+const std::string & appBaseName();
 unsigned appIndex();
 RunMode appMode();
 inline bool appStarting() { return appMode() == kRunStarting; }
@@ -188,5 +189,9 @@ void appSignalUsageError(
     std::string_view err = {},
     std::string_view detail = {}
 );
+
+// Returns true if appSignalUsageError() has been called with any code other
+// than EX_PENDING.
+bool appUsageErrorSignaled();
 
 } // namespace
