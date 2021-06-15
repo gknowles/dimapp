@@ -381,11 +381,13 @@ static ShutdownNotify s_cleanup;
 //===========================================================================
 void ShutdownNotify::onShutdownConsole(bool firstTry) {
     if (firstTry) {
-        vector<PerfValue> perfs;
-        perfGetValues(&perfs, true);
-        for (auto && perf : perfs) {
-            if (perf.value != "0")
-                logMsgInfo() << "perf: " << perf.value << ' ' << perf.name;
+        if (!appUsageErrorSignaled()) {
+            vector<PerfValue> perfs;
+            perfGetValues(&perfs, true);
+            for (auto && perf : perfs) {
+                if (perf.value != "0")
+                    logMsgInfo() << "perf: " << perf.value << ' ' << perf.name;
+            }
         }
         return shutdownIncomplete();
     }
