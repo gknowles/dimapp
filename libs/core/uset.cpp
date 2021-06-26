@@ -108,7 +108,12 @@ struct IImplBase {
     virtual bool insert(Node & node, unsigned start, size_t count) = 0;
     virtual bool erase(Node & node, unsigned start, size_t count) = 0;
 
-    virtual size_t size(const Node & node) const = 0;
+    virtual size_t count(const Node & node) const = 0;
+    virtual size_t count(
+        const Node & node,
+        unsigned start,
+        size_t count
+    ) const = 0;
 
     // Find value equal to or greater than "base", returns false if no such
     // value exists.
@@ -158,7 +163,12 @@ struct EmptyImpl final : IImplBase {
     bool insert(Node & node, unsigned start, size_t count) override;
     bool erase(Node & node, unsigned start, size_t count) override;
 
-    size_t size(const Node & node) const override;
+    size_t count(const Node & node) const override;
+    size_t count(
+        const Node & node,
+        unsigned start,
+        size_t count
+    ) const override;
     bool findFirst(
         const Node ** onode,
         unsigned * ovalue,
@@ -197,7 +207,12 @@ struct FullImpl final : IImplBase {
     bool insert(Node & node, unsigned start, size_t count) override;
     bool erase(Node & node, unsigned start, size_t count) override;
 
-    size_t size(const Node & node) const override;
+    size_t count(const Node & node) const override;
+    size_t count(
+        const Node & node,
+        unsigned start,
+        size_t count
+    ) const override;
     bool findFirst(
         const Node ** onode,
         unsigned * ovalue,
@@ -240,7 +255,12 @@ struct SmVectorImpl final : IImplBase {
     bool insert(Node& node, unsigned start, size_t count) override;
     bool erase(Node& node, unsigned start, size_t count) override;
 
-    size_t size(const Node& node) const override;
+    size_t count(const Node & node) const override;
+    size_t count(
+        const Node & node,
+        unsigned start,
+        size_t count
+    ) const override;
     bool findFirst(
         const Node** onode,
         unsigned* ovalue,
@@ -286,7 +306,12 @@ struct VectorImpl final : IImplBase {
     bool insert(Node & node, unsigned start, size_t count) override;
     bool erase(Node & node, unsigned start, size_t count) override;
 
-    size_t size(const Node & node) const override;
+    size_t count(const Node & node) const override;
+    size_t count(
+        const Node & node,
+        unsigned start,
+        size_t count
+    ) const override;
     bool findFirst(
         const Node ** onode,
         unsigned * ovalue,
@@ -333,7 +358,12 @@ struct BitmapImpl final : IImplBase {
     bool insert(Node & node, unsigned start, size_t count) override;
     bool erase(Node & node, unsigned start, size_t count) override;
 
-    size_t size(const Node & node) const override;
+    size_t count(const Node & node) const override;
+    size_t count(
+        const Node & node,
+        unsigned start,
+        size_t count
+    ) const override;
     bool findFirst(
         const Node ** onode,
         unsigned * ovalue,
@@ -376,7 +406,12 @@ struct MetaImpl final : IImplBase {
     bool insert(Node & node, unsigned start, size_t count) override;
     bool erase(Node & node, unsigned start, size_t count) override;
 
-    size_t size(const Node & node) const override;
+    size_t count(const Node & node) const override;
+    size_t count(
+        const Node & node,
+        unsigned start,
+        size_t count
+    ) const override;
     bool findFirst(
         const Node ** onode,
         unsigned * ovalue,
@@ -506,7 +541,16 @@ bool EmptyImpl::erase(Node & node, unsigned start, size_t count) {
 }
 
 //===========================================================================
-size_t EmptyImpl::size(const Node & node) const {
+size_t EmptyImpl::count(const Node & node) const {
+    return 0;
+}
+
+//===========================================================================
+size_t EmptyImpl::count(
+    const Node & node,
+    unsigned start,
+    size_t count
+) const {
     return 0;
 }
 
@@ -614,8 +658,17 @@ bool FullImpl::erase(Node & node, unsigned start, size_t count) {
 }
 
 //===========================================================================
-size_t FullImpl::size(const Node & node) const {
+size_t FullImpl::count(const Node & node) const {
     return absSize(node);
+}
+
+//===========================================================================
+size_t FullImpl::count(
+    const Node & node,
+    unsigned start,
+    size_t count
+) const {
+    return count;
 }
 
 //===========================================================================
@@ -773,8 +826,25 @@ bool SmVectorImpl::erase(Node & node, unsigned start, size_t count) {
 }
 
 //===========================================================================
-size_t SmVectorImpl::size(const Node & node) const {
+size_t SmVectorImpl::count(const Node & node) const {
     return node.numValues;
+}
+
+//===========================================================================
+size_t SmVectorImpl::count(
+    const Node & node,
+    unsigned start,
+    size_t count
+) const {
+    assert(count);
+    assert(relBase(start, node.depth) == node.base);
+    assert(count - 1 <= absFinal(node) - start);
+    auto last = node.localValues + node.numValues;
+    auto ptr = lower_bound(node.localValues, last, start);
+    if (ptr == last || *ptr >= start + count)
+        return 0;
+    auto eptr = lower_bound(ptr, last, start + count);
+    return eptr - ptr;
 }
 
 //===========================================================================
@@ -1001,8 +1071,25 @@ bool VectorImpl::erase(Node & node, unsigned start, size_t count) {
 }
 
 //===========================================================================
-size_t VectorImpl::size(const Node & node) const {
+size_t VectorImpl::count(const Node & node) const {
     return node.numValues;
+}
+
+//===========================================================================
+size_t VectorImpl::count(
+    const Node & node,
+    unsigned start,
+    size_t count
+) const {
+    assert(count);
+    assert(relBase(start, node.depth) == node.base);
+    assert(count - 1 <= absFinal(node) - start);
+    auto last = node.values + node.numValues;
+    auto ptr = lower_bound(node.values, last, start);
+    if (ptr == last || *ptr >= start + count)
+        return 0;
+    auto eptr = lower_bound(ptr, last, start + count);
+    return eptr - ptr;
 }
 
 //===========================================================================
@@ -1281,10 +1368,25 @@ CHECK_IF_EMPTY:
 }
 
 //===========================================================================
-size_t BitmapImpl::size(const Node & node) const {
+size_t BitmapImpl::count(const Node & node) const {
     auto base = (uint64_t *) node.values;
     BitView bits{base, numInt64s()};
     return bits.count();
+}
+
+//===========================================================================
+size_t BitmapImpl::count(
+    const Node & node,
+    unsigned start,
+    size_t count
+) const {
+    assert(count);
+    assert(relBase(start, node.depth) == node.base);
+    assert(count - 1 <= absFinal(node) - start);
+    auto base = (uint64_t *) node.values;
+    BitView bits{base, numInt64s()};
+    auto low = relValue(start, node.depth);
+    return bits.count(low, count);
 }
 
 //===========================================================================
@@ -1525,12 +1627,47 @@ bool MetaImpl::erase(Node & node, unsigned start, size_t count) {
 }
 
 //===========================================================================
-size_t MetaImpl::size(const Node & node) const {
+size_t MetaImpl::count(const Node & node) const {
     size_t num = 0;
     auto * ptr = node.nodes;
     auto * last = ptr + node.numValues;
     for (; ptr != last; ++ptr)
-        num += impl(*ptr)->size(*ptr);
+        num += impl(*ptr)->count(*ptr);
+    return num;
+}
+
+//===========================================================================
+size_t MetaImpl::count(
+    const Node & node,
+    unsigned start,
+    size_t count
+) const {
+    assert(count);
+    assert(relBase(start, node.depth) == node.base);
+    assert(count - 1 <= absFinal(node) - start);
+    auto pos = nodePos(node, start);
+    auto finalPos = nodePos(node, (value_type) (start + count - 1));
+    auto lower = node.nodes + pos;
+    auto upper = node.nodes + finalPos;
+    if (pos == finalPos) {
+        auto ptr = node.nodes + pos;
+        return impl(*ptr)->count(*ptr, start, count);
+    }
+
+    size_t num = 0;
+    num += impl(*lower)->count(
+        *lower,
+        start,
+        absFinal(*lower) - start + 1
+    );
+    for (auto ptr = lower + 1; ptr < upper; ++ptr) {
+        num += impl(*ptr)->count(*ptr);
+    }
+    num += impl(*upper)->count(
+        *upper,
+        absBase(*upper),
+        start + count - 1
+    );
     return num;
 }
 
@@ -2061,7 +2198,7 @@ static bool contains(const Node & left, const Node & right) {
 /*bit  */{ conTrue, conFalse, conRSVec, conRVec,  conBit,   conError },
 /*meta */{ conTrue, conFalse, conRSVec, conRVec,  conError, conMeta  },
     };
-    assert(!"not tested");
+    assert(!"not tested, contains(const Node&, const Node&)");
     return functs[left.type][right.type](left, right);
 }
 
@@ -2214,7 +2351,7 @@ static bool intersects(const Node & left, const Node & right) {
 /*bit  */{ isecFalse, isecTrue,  isecRSVec, isecRVec,  isecBit,   isecError },
 /*meta */{ isecFalse, isecTrue,  isecRSVec, isecRVec,  isecError, isecMeta  },
     };
-    assert(!"not tested");
+    assert(!"not tested, intersects(const Node&, const Node&)");
     return functs[left.type][right.type](left, right);
 }
 
@@ -3031,7 +3168,7 @@ bool UnsignedSet::empty() const {
 
 //===========================================================================
 size_t UnsignedSet::size() const {
-    return impl(m_node)->size(m_node);
+    return impl(m_node)->count(m_node);
 }
 
 //===========================================================================
@@ -3183,11 +3320,6 @@ void UnsignedSet::swap(UnsignedSet & other) {
 }
 
 //===========================================================================
-strong_ordering UnsignedSet::operator<=>(const UnsignedSet & other) const {
-    return compare(other);
-}
-
-//===========================================================================
 strong_ordering UnsignedSet::compare(const UnsignedSet & right) const {
     if (auto cmp = ::compare(m_node, right.m_node)) {
         return cmp < 0 ? strong_ordering::less : strong_ordering::greater;
@@ -3196,13 +3328,8 @@ strong_ordering UnsignedSet::compare(const UnsignedSet & right) const {
 }
 
 //===========================================================================
-bool UnsignedSet::contains(const UnsignedSet & other) const {
-    return ::contains(m_node, other.m_node);
-}
-
-//===========================================================================
-bool UnsignedSet::intersects(const UnsignedSet & other) const {
-    return ::intersects(m_node, other.m_node);
+strong_ordering UnsignedSet::operator<=>(const UnsignedSet & other) const {
+    return compare(other);
 }
 
 //===========================================================================
@@ -3224,33 +3351,33 @@ UnsignedSet::value_type UnsignedSet::back() const {
 
 //===========================================================================
 size_t UnsignedSet::count(value_type val) const {
-    return contains(val);
+    return count(val, 1);
 }
 
 //===========================================================================
 size_t UnsignedSet::count(value_type start, size_t count) const {
-    assert(!"Not implemented");
-    if (!count)
-        return 0;
-    auto final = start + count - 1;
-    auto lower = lowerBound(start);
-    if (!lower || *lower > final)
-        return 0;
-    if (*lower == final)
-        return 1;
-
-    return 0;
-}
-
-//===========================================================================
-bool UnsignedSet::contains(value_type val) const {
-    return (bool) find(val);
+    return impl(m_node)->count(m_node, start, count);
 }
 
 //===========================================================================
 auto UnsignedSet::find(value_type val) const -> iterator {
     auto first = lowerBound(val);
     return first && *first == val ? first : end();
+}
+
+//===========================================================================
+bool UnsignedSet::contains(value_type val) const {
+    return count(val);
+}
+
+//===========================================================================
+bool UnsignedSet::contains(const UnsignedSet & other) const {
+    return ::contains(m_node, other.m_node);
+}
+
+//===========================================================================
+bool UnsignedSet::intersects(const UnsignedSet & other) const {
+    return ::intersects(m_node, other.m_node);
 }
 
 //===========================================================================
