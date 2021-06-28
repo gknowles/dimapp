@@ -829,13 +829,6 @@ static void genSite(Config * out, unsigned phase = 0) {
         // Generate infrastructure files for site
         if (!genStatics(out))
             return;
-        if (!genRedirect(
-            out,
-            "index.html",
-            out->versions[out->defVersion].tag + "/index.html"
-        )) {
-            return;
-        }
 
         // Load layouts of all versions
         out->pendingWork = (unsigned) out->versions.size();
@@ -872,7 +865,7 @@ static void genSite(Config * out, unsigned phase = 0) {
         }
 
         // Calculate page metadata
-        for (auto && ver : out->versions) {
+        for (auto&& ver : out->versions) {
             auto spec = ver.cfg ? ver.cfg.get() : out;
             string layname = ver.layout.empty() ? "default" : ver.layout;
             auto layout = spec->layouts.find(layname);
@@ -888,6 +881,10 @@ static void genSite(Config * out, unsigned phase = 0) {
             auto & url = layout->second.pages[layout->second.defPage].urlSegment;
             if (!genRedirect(out, ver.tag + "/index.html", url + ".html"))
                 return;
+            if (ver.defaultSource) {
+                if (!genRedirect(out, "index.html", ver.tag + "/index.html"))
+                    return;
+            }
 
             // Count each page as pending work.
             out->pendingWork += (unsigned) layout->second.pages.size();
@@ -899,6 +896,11 @@ static void genSite(Config * out, unsigned phase = 0) {
                         << page.urlSegment << "' multiply defined.";
                     appSignalShutdown(EX_DATAERR);
                     return;
+                }
+                if (ver.defaultSource) {
+                    auto fname = page.urlSegment + ".html";
+                    if (!genRedirect(out, fname, ver.tag + "/" + fname))
+                        return;
                 }
             }
         }
