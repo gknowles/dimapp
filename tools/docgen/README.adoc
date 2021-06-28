@@ -10,28 +10,29 @@ Markup documentation processing.
 == Static website generation
 * Assumes documentation sources are stored in a git repository.
 * Single docgen.xml file defines how site is generated.
-** Can defer files and urls mappings to copy of docgen.xml at each branch/tag
+** Can defer file and URL mappings to copy of docgen.xml at each branch/tag
    being generated.
 * Allows all markup languages supported by github-markup.
 * Documentation for multiple product versions selectable via dropdown.
 * Generates per page table of contents.
 * Updates cross references link between pages within each version.
-** Sources read from git via list of branch/tag combinations.
+** Versions read from git via list of branch/tag combinations.
 * Replaces all contents (except ".git") of output directory with new site
   files.
 
 === Site file layout
 * .nojekyll (so the site can be directly deployed to GitHub)
-* index.html (redirect to default source)
+* index.html (redirect to default version)
 * css/docgen.css
 * js/ (unused)
-* <source name>/<file path>/<file name>/index.html
-** (for each file in the source)
+* <version name>/<url>.html
+** (for each page defined in the version's layout)
 
 === Dependencies
 * https://git-scm.com[git]
 * https://pubs.opengroup.org/onlinepubs/9699919799/utilities/patch.html[patch]
-  (Included in Git for Windows)
+  (needed if you apply patches to old documentation versions, included in Git
+  for Windows)
 * https://github.com/github/markup[github-markup]
 * https://fontawesome.com[Font Awesome]
 * https://getbootstrap.com[Bootstrap]
@@ -51,7 +52,7 @@ is a ruby gem that must be installed for sites to be generated.
 Comment (////) and code (----) blocks explicitly marked as source and with a
 language are processed. Such as:
 
-[source, asciidoc]
+[source, AsciiDoc]
 ----
   [source, C++]
   ----
@@ -61,18 +62,18 @@ language are processed. Such as:
 
 Or with test additional attributes (see <<Attributes in markup, below>>):
 
-[source, asciidoc]
+[source, AsciiDoc]
 ----
   [source, C++, test alt, test file not_main]
   ...
 ----
 
 When a comment block is used, it should be immediately followed by another
-block because AsciiDoc seems to give comments priority, interpreting what
-follows the comment as the block the attributes are modifying. If needed, an
-empty passthrough block can be used to get around this.
+block. The comment block will be interpreted by AsciiDoc as a comment between
+the attributes and following block. An empty passthrough block works well in
+this role.
 
-[source, asciidoc]
+[source, AsciiDoc]
 ----
   [source, C++]
   ////
