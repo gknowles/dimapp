@@ -442,7 +442,7 @@ public:
 };
 
 // !!! Never been used, never been tested (beyond knowing that it requires
-//     exclusive file access to both the source and target...)!
+//     exclusive file access to both the source and target... :P)!
 void fileCopy(
     IFileCopyNotify * notify,
     std::string_view dstPath,

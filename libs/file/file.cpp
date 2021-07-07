@@ -320,7 +320,7 @@ public:
     FileSaveNotify(IFileWriteNotify * notify);
     void onFileWrite(
         int written,
-        std::string_view data,
+        string_view data,
         int64_t offset,
         FileHandle f
     ) override;
@@ -336,7 +336,7 @@ FileSaveNotify::FileSaveNotify(IFileWriteNotify * notify)
 //===========================================================================
 void FileSaveNotify::onFileWrite(
     int written,
-    std::string_view data,
+    string_view data,
     int64_t offset,
     FileHandle f
 ) {
@@ -353,7 +353,7 @@ void FileSaveNotify::onFileWrite(
 ***/
 
 //===========================================================================
-Path Dim::fileAbsolutePath(std::string_view path) {
+Path Dim::fileAbsolutePath(string_view path) {
     auto fp = Path{path};
     return fp.resolve(fileGetCurrentDir(fp.drive()));
 }
@@ -383,26 +383,26 @@ static fs::file_status fileStatus(string_view path) {
 }
 
 //===========================================================================
-bool Dim::fileExists(std::string_view path) {
+bool Dim::fileExists(string_view path) {
     auto st = fileStatus(path);
     return fs::exists(st) && !fs::is_directory(st);
 }
 
 //===========================================================================
-bool Dim::fileDirExists(std::string_view path) {
+bool Dim::fileDirExists(string_view path) {
     auto st = fileStatus(path);
     return fs::is_directory(st);
 }
 
 //===========================================================================
-bool Dim::fileReadOnly(std::string_view path) {
+bool Dim::fileReadOnly(string_view path) {
     auto st = fileStatus(path);
     return fs::exists(st)
         && (st.permissions() & fs::perms::owner_write) == fs::perms::none;
 }
 
 //===========================================================================
-void Dim::fileReadOnly(std::string_view path, bool enable) {
+void Dim::fileReadOnly(string_view path, bool enable) {
     error_code ec;
     auto p8 = u8string_view((char8_t *) path.data(), path.size());
     auto f = fs::path(p8);
@@ -443,7 +443,7 @@ bool Dim::fileRemove(string_view path, bool recurse) {
 }
 
 //===========================================================================
-bool Dim::fileCreateDirs(std::string_view path) {
+bool Dim::fileCreateDirs(string_view path) {
     auto p8 = u8string_view((char8_t *) path.data(), path.size());
     auto f = fs::path(p8);
     error_code ec;
@@ -527,8 +527,8 @@ bool Dim::fileLoadBinaryWait(
 //===========================================================================
 void Dim::fileSaveBinary(
     IFileWriteNotify * notify,
-    std::string_view path,
-    std::string_view data,
+    string_view path,
+    string_view data,
     TaskQueueHandle hq // queue to notify
 ) {
     auto file = fileOpen(path, File::fReadWrite | File::fCreat | File::fTrunc);
@@ -544,8 +544,8 @@ void Dim::fileSaveBinary(
 
 //===========================================================================
 bool Dim::fileSaveBinaryWait(
-    std::string_view path,
-    std::string_view data
+    string_view path,
+    string_view data
 ) {
     auto file = fileOpen(
         path,
@@ -559,4 +559,22 @@ bool Dim::fileSaveBinaryWait(
     auto bytes = fileWriteWait(file, 0, data.data(), data.size());
     fileClose(file);
     return bytes == data.size();
+}
+
+//===========================================================================
+void Dim::fileSaveTempFile(
+    IFileWriteNotify* notify,
+    string_view data,
+    string_view suffix,
+    TaskQueueHandle hq
+) {
+    auto file = fileCreateTemp({}, suffix);
+    if (!file) {
+        logMsgError() << "Create temp file failed.";
+        notify->onFileWrite(0, data, 0, file);
+        return;
+    }
+
+    auto proxy = new FileSaveNotify(notify);
+    fileWrite(proxy, file, 0, data.data(), data.size(), hq);
 }
