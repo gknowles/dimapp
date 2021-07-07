@@ -863,6 +863,33 @@ File::FileType Dim::fileType(FileHandle f) {
 }
 
 //===========================================================================
+FileAlignment Dim::fileAlignment(FileHandle f) {
+    FileAlignment out = {};
+    auto file = getInfo(f);
+    if (!file) {
+        winFileSetErrno(ERROR_INVALID_PARAMETER);
+        return out;
+    }
+
+    FILE_STORAGE_INFO fi;
+    if (!GetFileInformationByHandleEx(
+        file->m_handle,
+        FileStorageInfo,
+        &fi,
+        (DWORD) sizeof fi
+    )) {
+        winFileSetErrno(WinError{});
+        return out;
+    }
+
+    winFileSetErrno(NO_ERROR);
+    out.logicalSector = fi.LogicalBytesPerSector;
+    out.physicalSector =
+        fi.FileSystemEffectivePhysicalBytesPerSectorForAtomicity;
+    return out;
+}
+
+//===========================================================================
 Path Dim::fileGetCurrentDir(string_view drive) {
     wchar_t wdrive[3] = {};
     switch (drive.size()) {

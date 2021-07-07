@@ -235,9 +235,16 @@ std::string_view filePath(FileHandle f);
 unsigned fileMode(FileHandle f);
 
 // kUnknown is returned for bad handle and system errors as well as when the
-// type is unknown. If kUnknown was not returned due to error, errno will set
+// type is unknown. If kUnknown was not returned due to error, errno is set
 // to 0.
 File::FileType fileType(FileHandle f);
+
+struct FileAlignment {
+    // All values measured in bytes
+    unsigned logicalSector;
+    unsigned physicalSector;
+};
+FileAlignment fileAlignment(FileHandle f);
 
 
 /****************************************************************************
