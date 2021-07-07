@@ -3108,6 +3108,11 @@ UnsignedSet::UnsignedSet(const UnsignedSet & from) {
 }
 
 //===========================================================================
+UnsignedSet::UnsignedSet(std::initializer_list<value_type> il) {
+    insert(il);
+}
+
+//===========================================================================
 UnsignedSet::UnsignedSet(string_view from) {
     insert(from);
 }
@@ -3124,15 +3129,13 @@ UnsignedSet::~UnsignedSet() {
 
 //===========================================================================
 UnsignedSet & UnsignedSet::operator=(UnsignedSet && from) noexcept {
-    clear();
-    swap(from);
+    assign(move(from));
     return *this;
 }
 
 //===========================================================================
 UnsignedSet & UnsignedSet::operator=(const UnsignedSet & from) {
-    clear();
-    insert(from);
+    assign(from);
     return *this;
 }
 
@@ -3190,15 +3193,9 @@ void UnsignedSet::fill() {
 }
 
 //===========================================================================
-void UnsignedSet::assign(value_type value) {
-    clear();
-    insert(value);
-}
-
-//===========================================================================
 void UnsignedSet::assign(UnsignedSet && from) {
     clear();
-    insert(move(from));
+    swap(from);
 }
 
 //===========================================================================
@@ -3208,9 +3205,15 @@ void UnsignedSet::assign(const UnsignedSet & from) {
 }
 
 //===========================================================================
-void UnsignedSet::assign(string_view src) {
+void UnsignedSet::assign(value_type value) {
     clear();
-    insert(src);
+    insert(value);
+}
+
+//===========================================================================
+inline void UnsignedSet::assign(std::initializer_list<value_type> il) {
+    clear();
+    insert(il);
 }
 
 //===========================================================================
@@ -3220,8 +3223,9 @@ void UnsignedSet::assign(value_type start, size_t count) {
 }
 
 //===========================================================================
-bool UnsignedSet::insert(value_type value) {
-    return impl(m_node)->insert(m_node, value, 1);
+void UnsignedSet::assign(string_view src) {
+    clear();
+    insert(src);
 }
 
 //===========================================================================
@@ -3232,6 +3236,25 @@ void UnsignedSet::insert(UnsignedSet && other) {
 //===========================================================================
 void UnsignedSet::insert(const UnsignedSet & other) {
     ::insert(m_node, other.m_node);
+}
+
+//===========================================================================
+bool UnsignedSet::insert(value_type value) {
+    return impl(m_node)->insert(m_node, value, 1);
+}
+
+//===========================================================================
+void UnsignedSet::insert(std::initializer_list<value_type> il) {
+    iInsert(il.begin(), il.end());
+}
+
+//===========================================================================
+void UnsignedSet::insert(value_type start, size_t count) {
+    if (!count)
+        return;
+    if (count == dynamic_extent)
+        count = valueMask(0) - start + 1;
+    impl(m_node)->insert(m_node, start, count);
 }
 
 //===========================================================================
@@ -3254,15 +3277,6 @@ void UnsignedSet::insert(string_view src) {
 
         src.remove_prefix(eptr - src.data());
     }
-}
-
-//===========================================================================
-void UnsignedSet::insert(value_type start, size_t count) {
-    if (!count)
-        return;
-    if (count == dynamic_extent)
-        count = valueMask(0) - start + 1;
-    impl(m_node)->insert(m_node, start, count);
 }
 
 //===========================================================================
@@ -3339,14 +3353,21 @@ bool UnsignedSet::operator==(const UnsignedSet & right) const {
 
 //===========================================================================
 UnsignedSet::value_type UnsignedSet::front() const {
+    assert(!empty());
     auto i = begin();
     return *i;
 }
 
 //===========================================================================
 UnsignedSet::value_type UnsignedSet::back() const {
+    assert(!empty());
     auto i = rbegin();
     return *i;
+}
+
+//===========================================================================
+size_t UnsignedSet::count() const {
+    return size();
 }
 
 //===========================================================================

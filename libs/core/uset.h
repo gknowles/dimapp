@@ -91,26 +91,26 @@ public:
     // modify
     void clear();
     void fill();
+    void assign(UnsignedSet&& from);
+    void assign(const UnsignedSet& from);
     void assign(value_type val);
     template <std::input_iterator InputIt>
         requires (std::is_convertible_v<decltype(*std::declval<InputIt>()),
             UnsignedSet::value_type>)
         void assign(InputIt first, InputIt last);
     void assign(std::initializer_list<value_type> il);
-    void assign(UnsignedSet && from);
-    void assign(const UnsignedSet & from);
-    void assign(std::string_view src); // space separated ranges
     void assign(value_type start, size_t count);
+    void assign(std::string_view src); // space separated ranges
+    void insert(UnsignedSet&& other);
+    void insert(const UnsignedSet& other);
     bool insert(value_type val); // returns true if inserted
     template <std::input_iterator InputIt>
         requires (std::is_convertible_v<decltype(*std::declval<InputIt>()),
             UnsignedSet::value_type>)
         void insert(InputIt first, InputIt last);
     void insert(std::initializer_list<value_type> il);
-    void insert(UnsignedSet && other);
-    void insert(const UnsignedSet & other);
-    void insert(std::string_view src); // space separated ranges
     void insert(value_type start, size_t count);
+    void insert(std::string_view src); // space separated ranges
     bool erase(value_type val); // returns true if erased
     void erase(iterator where);
     void erase(const UnsignedSet & other);
@@ -129,6 +129,7 @@ public:
     // search
     value_type front() const;
     value_type back() const;
+    size_t count() const; // alias for size()
     size_t count(value_type val) const;
     size_t count(value_type start, size_t count) const;
     iterator find(value_type val) const;
@@ -143,7 +144,7 @@ public:
     // firstContiguous and lastContiguous search backwards and forwards
     // respectively, for as long as consecutive values are present. For
     // example, given the set { 1, 2, 4, 5, 6, 7, 9 } and starting at 2, first
-    // and last contiguous are 1 and 2, where at 5 they are 4 and 7.
+    // and last contiguous are 1 and 2, but starting at 5 they are 4 and 7.
     iterator firstContiguous(iterator where) const;
     iterator lastContiguous(iterator where) const;
 
@@ -160,23 +161,12 @@ private:
 };
 
 //===========================================================================
-inline UnsignedSet::UnsignedSet(std::initializer_list<value_type> il) {
-    insert(il);
-}
-
-//===========================================================================
 template<std::input_iterator InputIt>
 requires (std::is_convertible_v<decltype(*std::declval<InputIt>()),
     UnsignedSet::value_type>)
 inline void UnsignedSet::assign(InputIt first, InputIt last) {
     clear();
     insert(first, last);
-}
-
-//===========================================================================
-inline void UnsignedSet::assign(std::initializer_list<value_type> il) {
-    clear();
-    insert(il);
 }
 
 //===========================================================================
@@ -190,11 +180,6 @@ inline void UnsignedSet::insert(InputIt first, InputIt last) {
         for (; first != last; ++first)
             insert(*first);
     }
-}
-
-//===========================================================================
-inline void UnsignedSet::insert(std::initializer_list<value_type> il) {
-    iInsert(il.begin(), il.end());
 }
 
 
