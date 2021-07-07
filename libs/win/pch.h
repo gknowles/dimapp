@@ -54,6 +54,7 @@
 #include <shellapi.h>
 #include <ShlObj_core.h> // SHGetKnownFolderPath
 #include <WinDNS.h>
+#include <winioctl.h>
 #include <WinSock2.h>
 #include <WS2tcpip.h> // getaddrinfo, GetAddrInfoEx
 #include <VersionHelpers.h>

@@ -61,14 +61,92 @@ unsigned Dim::envProcessors() {
 }
 
 //===========================================================================
-DiskSpace Dim::envDiskSpace(std::string_view path) {
+DiskAlignment Dim::envDiskAlignment(string_view path) {
+    HANDLE vh = INVALID_HANDLE_VALUE;
+    DiskAlignment out = {};
+
+    for (;;) {
+        wchar_t mountPoint[MAX_PATH + 1];
+        if (!GetVolumePathNameW(
+            toWstring(path).c_str(),
+            mountPoint,
+            (DWORD) size(mountPoint)
+        )) {
+            logMsgFatal() << "GetVolumePathNameW(" << path << "): "
+                << WinError{};
+            break;
+        }
+        wchar_t vname[MAX_PATH + 1];
+        if (!GetVolumeNameForVolumeMountPointW(
+            mountPoint,
+            vname,
+            (DWORD) size(vname)
+        )) {
+            logMsgFatal() << "GetVolumeNameForVolumeMountPointW("
+                << utf8(mountPoint) << "): " << WinError{};
+            break;
+        }
+
+        // CreateFileW needs volume name without trailing slash to open volume,
+        // with the slash it's the root directory of the volume.
+        vname[wcslen(vname) - 1] = 0;
+        vh = CreateFileW(
+            vname,
+            0,      // access - NONE
+            0,      // share mode
+            NULL,   // security attributes,
+            OPEN_EXISTING,
+            0,      // flags and attributes
+            NULL    // template
+        );
+        if (vh == INVALID_HANDLE_VALUE) {
+            logMsgFatal() << "CreateFileW(" << utf8(vname) << "): "
+                << WinError();
+            break;
+        }
+
+        STORAGE_PROPERTY_QUERY qry = {};
+        qry.PropertyId = StorageAccessAlignmentProperty;
+        qry.QueryType = PropertyStandardQuery;
+        STORAGE_ACCESS_ALIGNMENT_DESCRIPTOR sa = {};
+        DWORD bytes;
+        if (!DeviceIoControl(
+            vh,
+            IOCTL_STORAGE_QUERY_PROPERTY,
+            &qry,
+            (DWORD) sizeof qry,
+            &sa,
+            (DWORD) sizeof sa,
+            &bytes,
+            NULL    // overlapped
+        )) {
+            logMsgFatal() << "DeviceIoControl(StorageAccessAlignment): "
+                << WinError{};
+            break;
+        }
+
+        out.cacheLine = sa.BytesPerCacheLine;
+        out.cacheOffset = sa.BytesOffsetForCacheAlignment;
+        out.logicalSector = sa.BytesPerLogicalSector;
+        out.physicalSector = sa.BytesPerPhysicalSector;
+        out.sectorOffset = sa.BytesOffsetForSectorAlignment;
+        break;
+    }
+
+    if (vh != INVALID_HANDLE_VALUE)
+        CloseHandle(vh);
+    return out;
+}
+
+//===========================================================================
+DiskSpace Dim::envDiskSpace(string_view path) {
     ULARGE_INTEGER avail;
     ULARGE_INTEGER total;
     if (!GetDiskFreeSpaceExW(
         toWstring(path).c_str(),
         &avail,
         &total,
-        nullptr
+        NULL        // total free, may be >avail to this process
     )) {
         logMsgFatal() << "GetDiskFreeSpaceExW(" << path << "): " << WinError{};
     }
@@ -88,18 +166,20 @@ DiskSpace Dim::envDiskSpace(std::string_view path) {
 //===========================================================================
 const string & Dim::envExecPath() {
     if (s_execPath.empty()) {
-        wstring path;
-        DWORD num = 0;
-        while (num == path.size()) {
-            path.resize(path.size() + MAX_PATH);
+        DWORD num = MAX_PATH;
+        wstring wpath(num, '\0');
+        for (;;) {
             num = GetModuleFileNameW(
                 NULL,
-                path.data(),
-                (DWORD) path.size()
+                wpath.data(),
+                (DWORD) wpath.size()
             );
+            if (num != wpath.size())
+                break;
+            wpath.resize(2 * wpath.size());
         }
-        path.resize(num);
-        s_execPath = toString(path);
+        wpath.resize(num);
+        s_execPath = toString(wpath);
     }
     return s_execPath;
 }

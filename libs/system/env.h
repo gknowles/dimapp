@@ -33,6 +33,16 @@ struct EnvMemoryConfig {
 };
 const EnvMemoryConfig & envMemoryConfig();
 
+struct DiskAlignment {
+    // All values measured in bytes
+    unsigned cacheLine;
+    unsigned cacheOffset;
+    unsigned logicalSector;
+    unsigned physicalSector;
+    unsigned sectorOffset;
+};
+DiskAlignment envDiskAlignment(std::string_view path);
+
 struct DiskSpace {
     uint64_t avail;
     uint64_t total;
