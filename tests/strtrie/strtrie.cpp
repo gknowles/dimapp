@@ -65,7 +65,13 @@ const unsigned kRefLen = 4;
 using pgno_t = unsigned;
 
 struct PageRef {
-    enum { kInvalid, kSource, kUpdate } type = kInvalid;
+    enum {
+        kInvalid, // no reference
+        kEndMark, // end of key, no linked reference
+        kSource,  // source page
+        kUpdate,  // shadow node in ss->updates
+        kVirtual  // reference to virtual page in ss->vpages
+    } type = kInvalid;
     pgno_t pgno = 0;
 
     auto operator<=>(const PageRef & other) const = default;
@@ -74,7 +80,6 @@ struct PageRef {
 struct NodeRef {
     PageRef page;
     int pos = -1;
-    pgno_t vpgno = (pgno_t) -1;
 
     auto operator<=>(const NodeRef & other) const = default;
 };
@@ -92,11 +97,12 @@ enum NodeType : int8_t {
 
 struct UpdateNode {
     NodeType type;
+    pgno_t vpgno = (pgno_t) -1;
     union {
         struct {
             NodeRef next;   // next.pgno is the vpage number
             unsigned len;
-            uint8_t data[kForkChildCount];
+            uint8_t data[kMaxSegLen];
         } seg;
         struct {
             bool endOfKey;
@@ -110,9 +116,12 @@ struct UpdateNode {
 };
 
 struct VirtualPage {
-    PageRef root;
+    pgno_t targetPgno = (pgno_t) -1;
+    size_t targetNodes = 0;
+    NodeRef root;
     map<PageRef, UnsignedSet> nodes;
-    UnsignedSet refPages;
+    UnsignedSet spageRefs;
+    UnsignedSet vpageRefs;
     UnsignedSet updateRefs;
 };
 
@@ -343,7 +352,7 @@ static StrTrieBase::Node * getNode(SearchState * ss, size_t inode) {
 }
 
 //===========================================================================
-static NodeRef getRemoteRef(SearchState * ss, size_t inode) {
+static NodeRef remoteRef(SearchState * ss, size_t inode) {
     assert(inode < 255);
     auto iref = 255 - inode;
     assert(iref <= numRefs(*ss));
@@ -361,6 +370,39 @@ static NodeRef getRemoteRef(SearchState * ss, size_t inode) {
         0 // inode
     };
     return out;
+}
+
+//===========================================================================
+static uint8_t inode(
+    const VirtualPage & vpage,
+    const NodeRef & ref
+) {
+    if (ref.page.type == PageRef::kInvalid) {
+        return 0;
+    } else if (ref.page.type == PageRef::kEndMark) {
+        return 255;
+    } else {
+        assert(ref.page.type == PageRef::kUpdate);
+        assert(vpage.vpageRefs.empty());
+        if (ref.page.pgno == vpage.targetPgno) {
+            return (uint8_t) ref.pos;
+        } else {
+            auto pos = vpage.spageRefs.count(0, ref.page.pgno);
+            return (uint8_t) (255 - pos);
+        }
+    }
+}
+
+//===========================================================================
+static void setRemoteRef(SearchState * ss, size_t iref, pgno_t pgno) {
+    assert(iref < 255);
+    iref = 255 - iref;
+    auto ptr = ss->heap->ptr(ss->pgno);
+    auto rawRef = ptr + ss->heap->pageSize()
+        - iref * kRefLen;
+    assert(rawRef > ptr);
+    auto ref = (Ref *) rawRef;
+    ref->pgno = pgno;
 }
 
 //===========================================================================
@@ -410,10 +452,10 @@ static UpdateNode & newUpdate(
     int idest
 ) {
     auto ref = NodeRef{{PageRef::kUpdate, ss->pgno}, idest};
-    [[maybe_unused]] auto id = ss->updates.size();
+    auto id = ss->updates.size();
     auto & upd = ss->updates.emplace_back();
-    auto i = ss->updateByRef.insert(pair(ref, ss->updates.size() - 1)).first;
-    assert(i->second == id);
+    assert(!ss->updateByRef.contains(ref));
+    ss->updateByRef[ref] = id;
     return upd;
 }
 
@@ -424,8 +466,7 @@ static UpdateNode & newSeg(
 ) {
     auto & upd = newUpdate(ss, idest);
     upd.type = kNodeSeg;
-    upd.seg.next = {};
-    upd.seg.len = 0;
+    upd.seg = {};
     return upd;
 }
 
@@ -437,10 +478,8 @@ static UpdateNode & newFork(
 ) {
     auto & upd = newUpdate(ss, idest);
     upd.type = kNodeFork;
-    if (zero) {
-        upd.fork.endOfKey = false;
-        uninitialized_default_construct_n(upd.fork.next, size(upd.fork.next));
-    }
+    if (zero)
+        upd.fork = {};
     return upd;
 }
 
@@ -451,15 +490,15 @@ static void mapFringeNode(
     UnsignedSet * nodes,
     int inode
 ) {
-    if (!inode) {
+    if (!inode || inode == 255) {
         // no node
         return;
     } else if (inode >= numNodes(*ss)) {
         // remote node
-        auto ref = getRemoteRef(ss, inode);
+        auto ref = remoteRef(ss, inode);
         assert(ref.pos == 0);
         assert(ref.page.type == PageRef::kSource);
-        vpage->refPages.insert(ref.page.pgno);
+        vpage->spageRefs.insert(ref.page.pgno);
         return;
     }
 
@@ -487,11 +526,29 @@ static void mapFringeNode(
 static void mapFringeNode(SearchState * ss, int inode) {
     auto & vpage = ss->vpages.emplace_back();
     vpage.root = {
-        .type = PageRef::kSource,
-        .pgno = ss->pgno
+        .page = { .type = PageRef::kSource, .pgno = ss->pgno },
+        .pos = inode
     };
-    auto & nodes = vpage.nodes[vpage.root];
+    auto & nodes = vpage.nodes[vpage.root.page];
     mapFringeNode(ss, &vpage, &nodes, inode);
+}
+
+//===========================================================================
+static NodeRef nodeRef(SearchState * ss, uint8_t nval) {
+    NodeRef out;
+    if (!nval) {
+        // use default constructed ref
+    } else if (nval < numNodes(*ss)) {
+        out.pos = nval;
+        out.page.type = PageRef::kSource;
+        out.page.pgno = ss->pgno;
+    } else if (nval < 255) {
+        out = remoteRef(ss, nval);
+    } else {
+        assert(nval == 255);
+        out.page.type = PageRef::kEndMark;
+    }
+    return out;
 }
 
 //===========================================================================
@@ -504,13 +561,9 @@ static UpdateNode & copySeg(
     assert(nodeType(ss->node) == kNodeSeg);
     auto & upd = newSeg(ss, idest);
     upd.seg.len = (unsigned) len;
-    unsigned nval = ss->node->data[1];
-    if (nval < numNodes(*ss)) {
-        upd.seg.next.pos = nval;
-        upd.seg.next.page = {};
-    } else {
-        upd.seg.next = getRemoteRef(ss, nval);
-    }
+    auto nval = ss->node->data[1];
+    upd.seg.next = nodeRef(ss, nval);
+    assert(upd.seg.next.page.type != PageRef::kInvalid);
     for (unsigned i = 0; i < len; ++i) {
         auto sval = segVal(ss->node, i + pos);
         upd.seg.data[i] = sval;
@@ -519,73 +572,102 @@ static UpdateNode & copySeg(
 }
 
 //===========================================================================
-// Returns true if there is more to do
+// Returns false to abort (exact match already exists). Sets ss->inode ==
+// ss->nNodes if the search is over, otherwise ss->inode < ss->nNodes.
 static bool insertAtSeg(SearchState * ss) {
     // Will either split on first, middle, last, after last, or will advance
     // to next node.
 
+    PageRef page = { PageRef::kUpdate, ss->pgno };
+
     auto spos = (uint8_t) 0; // split point where key diverges from segment
     auto slen = segLen(ss->node);
     auto sval = segVal(ss->node, spos);
-    assert(slen > 1);
+    assert(slen > 0);
+    auto leadPos = ss->updates.size();
+    copySeg(ss, ss->inode, 0, slen);
+
     for (;;) {
         if (ss->kval != sval)
             break;
         ss->kval = keyVal(ss->key, ++ss->kpos);
         if (++spos == slen) {
-			// End of segment, still more key
+			// End of segment, still more key?
             ss->inode = ss->node->data[1];
             if (ss->inode == 255) {
-                // Fork with after segment end mark
+                // End of both segment and key? Key was found, abort.
+                if (ss->kval == 255)
+                    return false;
+
+                // Fork with the end mark that's after the segment.
                 sval = 255;
                 break;
             }
             // Continue search at next node
+            auto & lead = ss->updates[leadPos];
+            lead.seg.next.page = page;
             return true;
         }
         sval = segVal(ss->node, spos);
     }
 
     // Replace segment with [lead segment] fork [tail segment]
-    assert(spos < slen);
-    auto inext = (unsigned) 0;
-    UpdateNode * tail = nullptr;
-    if (spos >= slen - 1) {
-        inext = ss->node->data[1];
+    assert(spos <= slen);
+    auto itail = (unsigned) 0;
+    if (spos + 1 >= slen) {
+        itail = ss->node->data[1];
     } else {
         // Add tail segment
-        inext = ss->nNodes++;
-        tail = &copySeg(ss, inext, spos + 1, slen - spos - 1);
+        itail = ss->nNodes++;
+        copySeg(ss, itail, spos + 1, slen - spos - 1);
     }
-    PageRef page = { PageRef::kUpdate, ss->pgno };
+    auto & lead = ss->updates[leadPos];
+    UpdateNode * upd = nullptr;
     if (!spos) {
         // Only single element after detaching tail, so no lead segment needed,
-        // add as fork.
-        assert(inext != 255);
-        auto & upd = newFork(ss, ss->inode);
-        upd.fork.next[sval].pos = inext;
-        upd.fork.next[sval].page = {};
-        ss->inode = (ss->kpos + 1 == ss->klen) ? -1 : ss->nNodes;
-        upd.fork.next[ss->kval].pos = ss->inode;
-        upd.fork.next[ss->kval].page = {};
+        // convert to fork.
+        assert(itail != 255);
+        ss->inode = ss->nNodes;
+        lead.type = kNodeFork;
+        lead.fork = {};
+        upd = &lead;
     } else {
         // Copy truncated node as the lead segment.
-        auto & lead = copySeg(ss, ss->inode, 0, spos);
         // Point at fork that's about to be added.
+        lead.seg.len = spos;
         lead.seg.next.pos = ss->nNodes;
+        lead.seg.next.page = page;
 
         // Add fork.
+        auto & mid = newFork(ss, ss->nNodes);
         ss->inode = ++ss->nNodes;
-        auto & upd = newFork(ss, ss->inode);
-        upd.fork.next[sval].pos = inext;
-        upd.fork.next[sval].page = {};
-        if (ss->kpos == ss->klen) {
-            upd.fork.next[ss->kval].pos = -1;
-            upd.fork.next[ss->kval].page = {};
-            return false;
+        upd = &mid;
+    }
+    if (itail == 255) {
+        if (sval == 255) {
+            upd->fork.endOfKey = true;
+        } else {
+            upd->fork.next[sval].page.type = PageRef::kEndMark;
         }
-        upd.fork.next[ss->kval].pos = ss->inode;
-        upd.fork.next[ss->kval].page = {};
+    } else {
+        assert(sval != 255);
+        upd->fork.next[sval].pos = itail;
+        upd->fork.next[sval].page = page;
+        if (spos + 1 >= slen) {
+            // Continue to unmodified node, no new tail inserted.
+            upd->fork.next[sval].page.type = PageRef::kSource;
+        }
+    }
+    if (ss->kpos + 1 >= ss->klen) {
+        if (ss->kpos == ss->klen) {
+            upd->fork.endOfKey = true;
+            return true;
+        } else {
+            upd->fork.next[ss->kval].page.type = PageRef::kEndMark;
+        }
+    } else {
+        upd->fork.next[ss->kval].pos = ss->nNodes;
+        upd->fork.next[ss->kval].page = page;
     }
 
     // Continue processing the key.
@@ -598,15 +680,9 @@ static UpdateNode & copyFork(SearchState * ss, int idest) {
     assert(nodeType(ss->node) == kNodeFork);
     auto & upd = newFork(ss, idest, false);
     upd.fork.endOfKey = ss->node->data[1];
-    auto nodeCount = numNodes(*ss);
     for (auto i = 0; i < size(upd.fork.next); ++i) {
-        unsigned nval = ss->node->data[i + 2];
-        if (nval < nodeCount) {
-            upd.fork.next[i].pos = nval;
-            upd.fork.next[i].page = {};
-        } else {
-            upd.fork.next[i] = getRemoteRef(ss, nval);
-        }
+        auto nval = ss->node->data[i + 2];
+        upd.fork.next[i] = nodeRef(ss, nval);
     }
     return upd;
 }
@@ -614,6 +690,9 @@ static UpdateNode & copyFork(SearchState * ss, int idest) {
 //===========================================================================
 // Returns true if there is more to do
 static bool insertAtFork (SearchState * ss) {
+    // Will either add branch to fork, or will advance to next node.
+
+    PageRef page = { PageRef::kUpdate, ss->pgno };
     auto & upd = copyFork(ss, ss->inode);
 
     if (ss->kpos == ss->klen) {
@@ -628,26 +707,32 @@ static bool insertAtFork (SearchState * ss) {
         }
     }
 
-
-    auto inext = forkChild(ss->node, ss->kval);
-    if (!inext) {
+    auto & next = upd.fork.next[ss->kval];
+    if (next.page.type == PageRef::kInvalid) {
         if (ss->kpos + 1 == ss->klen) {
-            upd.fork.next[ss->kval].pos = -1;
+            next.page.type = PageRef::kEndMark;
         } else {
-            upd.fork.next[ss->kval].pos = ss->nNodes;
+            next.pos = ss->nNodes;
+            next.page = page;
         }
         ss->kval = keyVal(ss->key, ++ss->kpos);
         ss->inode = ss->nNodes;
-    } else if (inext == 255) {
-        upd.fork.next[ss->kval].pos = ss->nNodes;
+    } else if (next.page.type == PageRef::kEndMark) {
+        next.pos = ss->nNodes;
+        next.page = page;
         ss->kval = keyVal(ss->key, ++ss->kpos);
+        if (ss->kval == 255) {
+            ss->found = true;
+            return false;
+        }
 
         ss->inode = ++ss->nNodes;
         auto & sub = newFork(ss, ss->inode);
         sub.fork.endOfKey = true;
     } else {
+        next.page = page;
         ss->kval = keyVal(ss->key, ++ss->kpos);
-        ss->inode = inext;
+        ss->inode = next.pos;
     }
 
     return true;
@@ -655,17 +740,17 @@ static bool insertAtFork (SearchState * ss) {
 
 //===========================================================================
 static void addSegs(SearchState * ss) {
-    for (; ss->kpos < ss->klen; ss->kpos += kMaxSegLen) {
+    while (ss->kpos < ss->klen) {
         auto & upd = newSeg(ss, ss->nNodes);
         ss->inode = ss->nNodes++;
         if (ss->klen - ss->kpos > kMaxSegLen) {
             upd.seg.len = kMaxSegLen;
-            upd.seg.next.page = {};
-            upd.seg.next.pos = ss->inode;
+            upd.seg.next.page.type = PageRef::kUpdate;
+            upd.seg.next.page.pgno = ss->pgno;
+            upd.seg.next.pos = ss->nNodes;
         } else {
             upd.seg.len = (unsigned) (ss->klen - ss->kpos);
-            upd.seg.next.page = {};
-            upd.seg.next.pos = -1;
+            upd.seg.next.page.type = PageRef::kEndMark;
         }
         for (auto spos = 0u; spos < upd.seg.len; ++spos, ++ss->kpos)
             upd.seg.data[spos] = keyVal(ss->key, ss->kpos);
@@ -673,45 +758,136 @@ static void addSegs(SearchState * ss) {
 }
 
 //===========================================================================
+static UpdateNode & copyAny(SearchState * ss, int idest) {
+    if (auto type = nodeType(ss->node); type == kNodeFork) {
+        return copyFork(ss, idest);
+    } else {
+        assert(type == kNodeSeg);
+        return copySeg(ss, idest, 0, segLen(ss->node));
+    }
+}
+
+//===========================================================================
+static void copySeg(
+    SearchState * ss,
+    const VirtualPage & vpage,
+    const UpdateNode & upd
+) {
+    setSegLen(ss->node, upd.seg.len);
+    ss->node->data[1] = inode(vpage, upd.seg.next);
+    unsigned i = 0;
+    for (; i < upd.seg.len; ++i)
+        pushSegVal(ss->node, i, upd.seg.data[i]);
+    for (; i < kMaxSegLen; ++i)
+        pushSegVal(ss->node, i, 0);
+}
+
+//===========================================================================
+static void copyFork(
+    SearchState * ss,
+    const VirtualPage & vpage,
+    const UpdateNode & upd
+) {
+    ss->node->data[0] = kNodeFork;
+    ss->node->data[1] = upd.fork.endOfKey ? 255 : 0;
+    for (auto i = 0; i < size(upd.fork.next); ++i) {
+        auto & ref = upd.fork.next[i];
+        setForkChild(ss->node, (uint8_t) i, inode(vpage, ref));
+    }
+}
+
+//===========================================================================
+static void copyAny(
+    SearchState * ss,
+    const VirtualPage & vpage,
+    const UpdateNode & upd
+) {
+    if (upd.type == kNodeSeg) {
+        copySeg(ss, vpage, upd);
+    } else {
+        assert(upd.type == kNodeFork);
+        copyFork(ss, vpage, upd);
+    }
+}
+
+//===========================================================================
 static int applyNode(
     SearchState * ss,
-    const NodeRef & ref
+    UnsignedSet * avail,
+    VirtualPage * vpage,
+    const NodeRef & ref,
+    int ikid
 ) {
     auto newPos = ref.pos;
-    auto & vpage = ss->vpages[ref.vpgno];
+    auto spgno = vpage->targetPgno;
     NodeRef kid;
+    if (ref.page.type == PageRef::kVirtual) {
+        auto & vp = ss->vpages[ref.page.pgno];
+        kid.page = { .type = PageRef::kUpdate, .pgno = vp.targetPgno };
+        kid.pos = 0;
+        return inode(vp, kid);
+    }
     if (ref.page.type == PageRef::kSource) {
         seekPage(ss, ref.page.pgno);
         seekNode(ss, ref.pos);
-        for (auto&& inode : kids(*ss->node)) {
+        if (ref.page.pgno != spgno || ref.pos >= vpage->targetNodes) {
+            auto inode = (int) avail->pop_front();
+            [[maybe_unused]] auto & upd = copyAny(ss, inode);
+            NodeRef dref = {
+                .page = { .type = PageRef::kUpdate, .pgno = spgno },
+                .pos = inode
+            };
+            return applyNode(ss, avail, vpage, dref, ikid);
+        }
+        auto subs = kids(*ss->node);
+        for (auto i = ikid; i < subs.size(); ++i) {
+            auto inode = subs[i];
+            if (!inode || inode == 255)
+                continue;
             if (inode >= ss->nNodes) {
-                // TODO: get kid.page from foreign page references and check
-                // if that page (and it's node 1) are on the current vpage.
-                auto remote = getRemoteRef(ss, inode);
-                if (vpage.refPages.contains(remote.page.pgno)) {
-                } else {
-                }
-            } else {
-                kid.page = ref.page;
-                kid.vpgno = ref.vpgno;
-                kid.pos = inode;
+                [[maybe_unused]] auto remote = remoteRef(ss, inode);
+                assert(vpage->spageRefs.contains(remote.page.pgno));
+                [[maybe_unused]] auto & upd = copyAny(ss, ss->inode);
+                auto dref = ref;
+                dref.page.type = PageRef::kUpdate;
+                return applyNode(ss, avail, vpage, dref, i);
             }
-            auto pos = applyNode(ss, kid);
-            if (kid.pos == pos) {
+
+            kid.page = ref.page;
+            kid.pos = inode;
+            auto pos = applyNode(ss, avail, vpage, kid, 0);
+            if (kid.pos != pos) {
+                seekNode(ss, inode);
+                auto & upd = copyAny(ss, ss->inode);
+                auto & sub = kids(upd)[i];
+                sub.page.type = PageRef::kUpdate;
+                sub.pos = pos;
+                auto dref = ref;
+                dref.page.type = PageRef::kUpdate;
+                return applyNode(ss, avail, vpage, dref, i);
             }
         }
+        return ref.pos;
     }
 
     assert(ref.page.type == PageRef::kUpdate);
     auto id = ss->updateByRef[ref];
+    vpage->updateRefs.insert((unsigned) id);
     auto & upd = ss->updates[id];
-    for (auto&& kid : kids(upd)) {
-        auto pos = applyNode(ss, kid);
+    auto subs = kids(upd);
+    for (auto i = ikid; i < subs.size(); ++i) {
+        auto & kid = subs[i];
+        if (kid.page.type == PageRef::kInvalid
+            || kid.page.type == PageRef::kEndMark
+        ) {
+            assert(kid.pos == -1);
+            continue;
+        }
+        auto pos = applyNode(ss, avail, vpage, kid, 0);
         if (kid.pos == pos && kid.page == ref.page)
             continue;
         kid = ref;
         kid.pos = pos;
-        vpage.updateRefs.insert(pos);
     }
 
     return newPos;
@@ -719,10 +895,16 @@ static int applyNode(
 
 //===========================================================================
 static void applyUpdates(SearchState * ss) {
+    // From updated nodes, generate:
+    //  - child to parent graph
+    //  - vector of leaf nodes
+    //  - set of involved source pages
     struct UpdateInfo {
         NodeRef ref;
         size_t parent = (size_t) -1;
-        size_t parentPos = (size_t) -1;
+
+        // for leaf: 0
+        // for branch: 1 + number of unprocessed kids
         size_t unprocessed = 0;
     };
     vector<UpdateInfo> infos(ss->updates.size());
@@ -736,14 +918,16 @@ static void applyUpdates(SearchState * ss) {
         auto pos = -1;
         for (auto&& kid : kids(ss->updates[kv.second])) {
             pos += 1;
-            if (kid.page.type == PageRef::kInvalid) {
+            if (kid.page.type == PageRef::kInvalid
+                || kid.page.type == PageRef::kEndMark
+            ) {
                 // skip empty child
+                assert(kid.pos == -1);
             } else if (kid.page.type == PageRef::kUpdate) {
                 ui.unprocessed += 1;
+                assert(ss->updateByRef.contains(kid));
                 auto id = ss->updateByRef[kid];
-                assert(id);
                 infos[id].parent = kv.second;
-                infos[id].parentPos = pos;
                 branch = true;
             } else {
                 assert(kid.page.type == PageRef::kSource);
@@ -756,7 +940,11 @@ static void applyUpdates(SearchState * ss) {
             unprocessed.push_back(kv.second);
     }
 
-    // Process updated nodes
+    // Process updated nodes and related fringe nodes into virtual pages. Start
+    // with leaf nodes, with branches becoming eligible for processing when all
+    // their leafs are done. Continues all the way up until the root node is
+    // processed. Child virtual pages are merged up into their parents when
+    // possible.
     while (!unprocessed.empty()) {
         auto id = unprocessed.back();
         unprocessed.pop_back();
@@ -764,47 +952,75 @@ static void applyUpdates(SearchState * ss) {
         if (!ui.unprocessed) {
             // leaf
             auto & vpage = ss->vpages.emplace_back();
-            vpage.root = ui.ref.page;
-            auto & nodes = vpage.nodes[vpage.root];
-            nodes.insert(ui.ref.pos);
+            ss->updates[id].vpgno = (pgno_t) (ss->vpages.size() - 1);
+            vpage.root = ui.ref;
+            vpage.nodes[vpage.root.page].insert(ui.ref.pos);
         } else {
             // internal branch
             VirtualPage vmerge;
-            vmerge.root = ui.ref.page;
-            vmerge.nodes[vmerge.root].insert(ui.ref.pos);
+            vmerge.root = ui.ref;
+            vmerge.nodes[vmerge.root.page].insert(ui.ref.pos);
+            UnsignedSet nvRefs;
             for (auto&& kid : kids(ss->updates[id])) {
-                if (kid.page.type == PageRef::kInvalid)
+                if (kid.page.type == PageRef::kInvalid
+                    || kid.page.type == PageRef::kEndMark
+                ) {
+                    assert(kid.pos == -1);
                     continue;
-                if (kid.vpgno == -1) {
-                    assert(kid.page.type == PageRef::kSource);
+                }
+                pgno_t vpgno;
+                if (kid.page.type == PageRef::kSource) {
                     // map fringe page
                     seekPage(ss, kid.page.pgno);
                     mapFringeNode(ss, kid.pos);
-                    kid.vpgno = (pgno_t) ss->vpages.size() - 1;
+                    vpgno = (pgno_t) (ss->vpages.size() - 1);
+                } else {
+                    assert(kid.page.type == PageRef::kUpdate);
+                    auto uid = ss->updateByRef[kid];
+                    auto & upd = ss->updates[uid];
+                    vpgno = upd.vpgno;
                 }
-                auto & vpage = ss->vpages[kid.vpgno];
-                vmerge.refPages.insert(vpage.refPages);
+                // Speculatively update kids assuming they won't be combined
+                // with branch. If we don't update them we would still have to
+                // keep a copy of the vpages to reference somewhere, in case
+                // they aren't all combined.
+                kid.page.type = PageRef::kVirtual;
+                kid.page.pgno = vpgno;
+                kid.pos = 0;
+
+                nvRefs.insert(vpgno);
+                auto & vpage = ss->vpages[vpgno];
+                vmerge.spageRefs.insert(vpage.spageRefs);
+                vmerge.vpageRefs.insert(vpage.vpageRefs);
                 for (auto&& [ref, nodes] : vpage.nodes)
                     vmerge.nodes[ref].insert(nodes);
             }
-            auto nRefs = vmerge.refPages.size();
+            auto nRefs = vmerge.spageRefs.size() + vmerge.vpageRefs.size();
             auto nNodes = 0;
             for (auto&& kv : vmerge.nodes)
                 nNodes += (int) kv.second.size();
             if (!checkCount(ss, nNodes, nRefs)) {
+                // new vpage, separate from kids
                 auto & vpage = ss->vpages.emplace_back();
-                vpage.root = ui.ref.page;
-                vpage.nodes[vpage.root].insert(ui.ref.pos);
+                vpage.root = ui.ref;
+                vpage.nodes[vpage.root.page].insert(ui.ref.pos);
+                vpage.vpageRefs.insert(nvRefs);
             } else {
+                // new vpage, combined with kids
                 ss->vpages.emplace_back(move(vmerge));
                 for (auto&& kid : kids(ss->updates[id])) {
-                    if (kid.vpgno != -1) {
-                        auto & vpage = ss->vpages[kid.vpgno];
+                    if (kid.page.type == PageRef::kVirtual) {
+                        // Update child references to point at local page nodes
+                        // instead of other virtual pages.
+                        auto & vpage = ss->vpages[kid.page.pgno];
+                        kid = vpage.root;
                         vpage.nodes.clear();
-                        vpage.refPages.clear();
+                        vpage.spageRefs.clear();
+                        vpage.vpageRefs.clear();
                     }
                 }
             }
+            ss->updates[id].vpgno = (pgno_t) (ss->vpages.size() - 1);
         }
 
         // Update reference from parent
@@ -813,11 +1029,9 @@ static void applyUpdates(SearchState * ss) {
             // previously empty container.
             assert(unprocessed.empty());
         } else {
-            auto & kid = kids(ss->updates[ui.parent])[ui.parentPos];
-            kid.vpgno = (pgno_t) ss->vpages.size() - 1;
-            auto & ni = infos[ui.parent];
-            assert(ni.unprocessed > 1);
-            if (--ni.unprocessed == 1) {
+            auto & pi = infos[ui.parent];
+            assert(pi.unprocessed > 1);
+            if (--pi.unprocessed == 1) {
                 // Parent has had all children processed, queue for
                 // processing.
                 unprocessed.push_back(ui.parent);
@@ -843,7 +1057,7 @@ static void applyUpdates(SearchState * ss) {
             auto & cnt = vcnts[ref.pgno];
             cnt.vid = i;
             cnt.sid = ref.pgno;
-            cnt.count = vpage.nodes.size();
+            cnt.count = nodes.size();
         }
         for (auto&& cnt : vcnts)
             counts.emplace_back(cnt.second);
@@ -851,10 +1065,9 @@ static void applyUpdates(SearchState * ss) {
     sort(counts.begin(), counts.end(), [](auto & a, auto & b) {
         return a.count > b.count;
     });
-    map<pgno_t, pgno_t> vtos;
     for (auto&& cnt : counts) {
         if (vpages.contains(cnt.vid) && spages.contains(cnt.sid)) {
-            vtos[cnt.vid] = cnt.sid;
+            ss->vpages[cnt.vid].targetPgno = cnt.sid;
             spages.erase(cnt.sid);
             vpages.erase(cnt.vid);
         }
@@ -866,21 +1079,72 @@ static void applyUpdates(SearchState * ss) {
     // Assign 'em new pages.
     for (auto&& id : vpages) {
         allocPage(ss);
-        vtos[id] = ss->pgno;
+        ss->vpages[id].targetPgno = ss->pgno;
     }
 
     // Map node changes to source pages
-    for (auto&& [vid, sid] : vtos) {
-        auto & vpage = ss->vpages[vid];
+    for (pgno_t vpgno = 0; vpgno < ss->vpages.size(); ++vpgno) {
+        auto & vpage = ss->vpages[vpgno];
+        if (vpage.targetPgno == -1)
+            continue;
+        // Translate vpageRefs to spageRefs using the just calculated virtual
+        // to source mapping.
+        for (auto&& vid : vpage.vpageRefs) {
+            auto sid = ss->vpages[vid].targetPgno;
+            assert(sid != -1);
+            vpage.spageRefs.insert(sid);
+        }
+        vpage.vpageRefs.clear();
+        // Count total nodes, and track nodes already in source page.
         UnsignedSet used;
-        auto nNodes = 0;
+        vpage.targetNodes = 0;
         for (auto&& kv : vpage.nodes) {
-            nNodes += (int) kv.second.size();
-            if (kv.first.pgno == vpage.root.pgno)
+            vpage.targetNodes += (int) kv.second.size();
+            if (kv.first.pgno == vpage.root.page.pgno)
                 used.insert(kv.second);
         }
-        used.erase(nNodes, dynamic_extent);
-        applyNode(ss, { .page = vpage.root, .pos = 0, .vpgno = vid });
+        seekPage(ss, vpage.targetPgno);
+
+        // All nodes less than the total that haven't already been used
+        // are available.
+        UnsignedSet avail(0, vpage.targetNodes);
+        avail.erase(used);
+
+        applyNode(
+            ss,
+            &avail,
+            &vpage,
+            vpage.root,
+            0
+        );
+    }
+
+    // Log updates
+    infos.resize(ss->updates.size());
+    for (auto&& [ref, id] : ss->updateByRef) {
+        auto & info = infos[id];
+        info.ref = ref;
+    }
+    for (pgno_t vpgno = 0; vpgno < ss->vpages.size(); ++vpgno) {
+        auto & vpage = ss->vpages[vpgno];
+        if (vpage.nodes.empty())
+            continue;
+        seekPage(ss, vpage.targetPgno);
+        auto nRefs = vpage.spageRefs.size();
+        auto nNodes = vpage.targetNodes;
+        setCount(ss, nNodes, nRefs);
+        auto pos = 1;
+        for (auto&& i : vpage.spageRefs) {
+            setRemoteRef(ss, pos, i);
+            pos += 1;
+        }
+        for (auto&& id : vpage.updateRefs) {
+            auto & upd = ss->updates[id];
+            auto & ref = infos[id].ref;
+            seekPage(ss, ref.page.pgno);
+            seekNode(ss, ref.pos);
+            copyAny(ss, vpage, upd);
+        }
     }
 }
 
@@ -1147,25 +1411,29 @@ ostream & StrTrieBase::dump(ostream & os) const {
     ss.inode = 0;
     for (; ss.inode < ss.nNodes; ++ss.inode) {
         seekNode(&ss, ss.inode);
-        os << ss.inode << ": ";
+        os << setw(3) << ss.inode << ": ";
         for (auto i = 0; i < kNodeLen; ++i) {
             if (i % 4 == 2) os.put(' ');
-            hexByte(os, ss.node->data[i]);
+            if (auto val = ss.node->data[i]) {
+                hexByte(os, ss.node->data[i]);
+            } else {
+                os << "--";
+            }
         }
 
         switch (auto ntype = ::nodeType(ss.node)) {
         case kNodeInvalid:
-            os << " -\n";
+            os << "\n";
             break;
         case kNodeFork:
-            os << " - Fork\n";
+            os << "  Fork\n";
             break;
         case kNodeSeg:
-            os << " - Segment[" << (int) segLen(ss.node) << "], nxt="
+            os << "  Segment[" << (int) segLen(ss.node) << "], next="
                 << (int) ss.node->data[1] << "\n";
             break;
         default:
-            os << " - UNKNOWN(" << ntype << ")\n";
+            os << "  UNKNOWN(" << ntype << ")\n";
             break;
         }
     }

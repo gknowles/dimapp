@@ -39,16 +39,18 @@ static bool s_verbose;
 
 //===========================================================================
 static bool insert(StrTrie * vals, string_view val) {
+    if (s_verbose)
+        cout << "---\ninsert: " << val << ", len=" << val.size() << '\n';
     auto rc = vals->insert(val);
-    if (s_verbose) {
-        cout << "---\ninsert: " << val << '\n';
+    if (s_verbose)
         vals->dump(cout);
-    }
     return rc;
 }
 
 //===========================================================================
-static void internalTests() {
+inline static void internalTests() {
+    if (s_verbose)
+        cout << "\n> INTERNAL TESTS" << endl;
     int line = 0;
     StrTrie vals;
     string out;
@@ -78,6 +80,25 @@ static void internalTests() {
     EXPECT(vals.contains("abc"));
 }
 
+//===========================================================================
+inline static void randomFill() {
+    if (s_verbose)
+        cout << "\n> RANDOM FILL" << endl;
+    [[maybe_unused]] int line = 0;
+    StrTrie vals;
+    default_random_engine s_reng;
+    string key;
+    for (auto i = 0; i < 20; ++i) {
+        key.resize(0);
+        auto len = s_reng() % 25;
+        for (auto j = 0u; j < len; ++j)
+            key += 'a' + char(s_reng() % 26);
+        if (s_verbose)
+            cout << i + 1 << " ";
+        insert(&vals, key);
+    }
+}
+
 
 /****************************************************************************
 *
@@ -100,7 +121,8 @@ static void app(int argc, char *argv[]) {
         return appSignalShutdown(EX_OK);
     }
 
-    internalTests();
+    randomFill();
+    //internalTests();
 
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);
