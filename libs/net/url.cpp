@@ -79,9 +79,11 @@ static bool escapeInPath(char ch) {
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9':
     case '-': case '.': case '_': case '~':
-    // gen-delims
-    case ':': case '/': case '?': case '#': case '[': case ']':
-    case '@':
+    // sub-delims
+    case '!': case '$': case '&': case '\'': case '(': case ')':
+    case '*': case '+': case ',': case ';': case '=':
+    // additional pchar
+    case ':': case '@':
         return false;
     }
 }
@@ -106,12 +108,13 @@ static bool escapeInQuery(char ch) {
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8': case '9':
     case '-': case '.': case '_': case '~':
-    // gen-delims
-    case ':': case '/': case '?': case '#': case '[': case ']':
-    case '@':
     // sub-delims
     case '!': case '$': case '&': case '\'': case '(': case ')':
     case '*': case '+': case ',': case ';': case '=':
+    // additional pchar
+    case ':': case '@':
+    // additional query
+    case '/': case '?':
         return false;
     }
 }
@@ -151,6 +154,19 @@ size_t Dim::urlEncodePathComponentLen(std::string_view src) {
 }
 
 //===========================================================================
+size_t Dim::urlEncodePathComponent(span<char> out, string_view src) {
+    return urlEncode(out.data(), out.size(), src, false);
+}
+
+//===========================================================================
+string Dim::urlEncodePathComponent(string_view src) {
+    string out;
+    out.resize(urlEncodePathComponentLen(src));
+    urlEncode(out.data(), out.size(), src, false);
+    return out;
+}
+
+//===========================================================================
 size_t Dim::urlEncodeQueryComponentLen(std::string_view src) {
     size_t num = 0;
     for (auto && ch : src)
@@ -159,21 +175,16 @@ size_t Dim::urlEncodeQueryComponentLen(std::string_view src) {
 }
 
 //===========================================================================
-size_t Dim::urlEncodePathComponent(
-    char * out,
-    size_t outLen,
-    string_view src
-) {
-    return urlEncode(out, outLen, src, false);
+size_t Dim::urlEncodeQueryComponent(span<char> out, string_view src) {
+    return urlEncode(out.data(), out.size(), src, true);
 }
 
 //===========================================================================
-size_t Dim::urlEncodeQueryComponent(
-    char * out,
-    size_t outLen,
-    string_view src
-) {
-    return urlEncode(out, outLen, src, true);
+string Dim::urlEncodeQueryComponent(string_view src) {
+    string out;
+    out.resize(urlEncodeQueryComponentLen(src));
+    urlEncode(out.data(), out.size(), src, true);
+    return out;
 }
 
 
