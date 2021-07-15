@@ -2423,7 +2423,18 @@ static void insArray(
         maxValues - left.numValues
     );
     if (rcount) {
-        auto le = li + left.numValues - 1;
+        // Copy from
+        // rbase       ri
+        //   a    b    c    d    e
+        //        |<------------ re
+        //
+        // Copy to
+        //       li
+        //  -    A    B    -    -    -
+        //  |<------- le
+        //       |<----------------- out
+        auto lfinal = li + left.numValues - 1;
+        auto le = lfinal;
         auto out = le + rcount;
         ri = re - rcount;
         re -= 1;
@@ -2431,17 +2442,32 @@ static void insArray(
             auto cmp = *le <=> *re;
             if (cmp > 0) {
                 *out-- = *le--;
+                if (le < li) {
+                    // Remaining right values.
+                    auto ucnt = re - ri + 1;
+                    memcpy(li, ri, ucnt * sizeof *ri);
+                    // Move down already merged values.
+                    auto cnt = lfinal + rcount - out;
+                    if (li + ucnt != out + 1)
+                        memmove(li + ucnt, out + 1, cnt * sizeof *ri);
+                    // Set to new count.
+                    left.numValues = (uint16_t) (ucnt + cnt);
+                    break;
+                }
             } else {
                 *out-- = *re--;
                 if (cmp == 0) {
                     le -= 1;
                 } else if (le == out) {
+                    // Reached the end after copying all values; update count.
                     left.numValues += rcount;
                     break;
                 }
                 if (re < ri) {
+                    // Move down already merged values.
                     auto cnt = (li + left.numValues - 1) + rcount - out;
                     memmove(le + 1, out + 1, cnt * sizeof *ri);
+                    // Set to new count.
                     left.numValues = (uint16_t) ((le + 1 - li) + cnt);
                     break;
                 }
