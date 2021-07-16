@@ -2407,6 +2407,7 @@ static void insLSVec(Node & left, const Node & right) {
 }
 
 //===========================================================================
+// FIXME: insArray is buggy, fix and update insert() to use it via insVec.
 static void insArray(
     Node & left,
     unsigned * li,
@@ -2479,7 +2480,7 @@ static void insArray(
 }
 
 //===========================================================================
-static void insVec(Node & left, const Node & right) {
+inline static void insVec(Node & left, const Node & right) {
     assert(left.type == Node::kVector);
     assert(right.type == Node::kVector);
     auto ri = right.values;
@@ -2548,7 +2549,7 @@ static void insert(Node & left, const Node & right) {
 /*empty*/{ insSkip, insFull, insCopy,  insCopy,  insCopy,  insCopy  },
 /*full */{ insSkip, insSkip, insSkip,  insSkip,  insSkip,  insSkip  },
 /*svec */{ insSkip, insFull, insRSVec, insLSVec, insLSVec, insLSVec },
-/*vec  */{ insSkip, insFull, insRSVec, insVec,   insLVec,  insLVec  },
+/*vec  */{ insSkip, insFull, insRSVec, insRVec,  insLVec,  insLVec  },
 /*bit  */{ insSkip, insFull, insRSVec, insRVec,  insBit,   insError },
 /*meta */{ insSkip, insFull, insRSVec, insRVec,  insError, insMeta  },
     };
