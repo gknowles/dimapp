@@ -185,8 +185,8 @@ static uint8_t keyVal(string_view key, size_t pos) {
     if (key.size() * 2 == pos)
         return 0xff;
     return pos % 2 == 0
-        ? (key[pos / 2] >> 4)
-        : (key[pos / 2] & 0xf);
+        ? (uint8_t) key[pos / 2] >> 4
+        : (uint8_t) key[pos / 2] & 0xf;
 }
 
 //===========================================================================
@@ -688,6 +688,20 @@ static UpdateNode & copyFork(SearchState * ss, int idest) {
 }
 
 //===========================================================================
+static void setForkChild(SearchState * ss, UpdateNode * upd) {
+    PageRef page = { PageRef::kUpdate, ss->pgno };
+    auto & next = upd->fork.next[ss->kval];
+    if (ss->kpos + 1 == ss->klen) {
+        next.page.type = PageRef::kEndMark;
+    } else {
+        next.pos = ss->nNodes;
+        next.page = page;
+    }
+    ss->kval = keyVal(ss->key, ++ss->kpos);
+    ss->inode = ss->nNodes;
+}
+
+//===========================================================================
 // Returns true if there is more to do
 static bool insertAtFork (SearchState * ss) {
     // Will either add branch to fork, or will advance to next node.
@@ -709,14 +723,7 @@ static bool insertAtFork (SearchState * ss) {
 
     auto & next = upd.fork.next[ss->kval];
     if (next.page.type == PageRef::kInvalid) {
-        if (ss->kpos + 1 == ss->klen) {
-            next.page.type = PageRef::kEndMark;
-        } else {
-            next.pos = ss->nNodes;
-            next.page = page;
-        }
-        ss->kval = keyVal(ss->key, ++ss->kpos);
-        ss->inode = ss->nNodes;
+        setForkChild(ss, &upd);
     } else if (next.page.type == PageRef::kEndMark) {
         next.pos = ss->nNodes;
         next.page = page;
@@ -726,9 +733,9 @@ static bool insertAtFork (SearchState * ss) {
             return false;
         }
 
-        ss->inode = ++ss->nNodes;
-        auto & sub = newFork(ss, ss->inode);
+        auto & sub = newFork(ss, ss->nNodes++);
         sub.fork.endOfKey = true;
+        setForkChild(ss, &sub);
     } else {
         next.page = page;
         ss->kval = keyVal(ss->key, ++ss->kpos);

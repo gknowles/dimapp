@@ -10,6 +10,7 @@
 // External library public headers
 #include "app/app.h"
 #include "core/core.h"
+#include "net/url.h"
 #include "system/system.h"
 
 // Standard headers

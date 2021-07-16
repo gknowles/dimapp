@@ -40,7 +40,8 @@ static bool s_verbose;
 //===========================================================================
 static bool insert(StrTrie * vals, string_view val) {
     if (s_verbose)
-        cout << "---\ninsert: " << val << ", len=" << val.size() << '\n';
+        cout << "---\ninsert: " << urlEncodeQueryComponent(val)
+            << ", len=" << val.size() << '\n';
     auto rc = vals->insert(val);
     if (s_verbose)
         vals->dump(cout);
@@ -88,9 +89,9 @@ inline static void randomFill() {
     StrTrie vals;
     default_random_engine s_reng;
     string key;
-    for (auto i = 0; i < 20; ++i) {
+    for (auto i = 0; i < 120; ++i) {
         key.resize(0);
-        auto len = s_reng() % 25;
+        auto len = 8u; // s_reng() % 25;
         for (auto j = 0u; j < len; ++j)
             key += 'a' + char(s_reng() % 26);
         if (s_verbose)
@@ -121,8 +122,8 @@ static void app(int argc, char *argv[]) {
         return appSignalShutdown(EX_OK);
     }
 
+    // internalTests();
     randomFill();
-    //internalTests();
 
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);

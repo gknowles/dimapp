@@ -68,7 +68,7 @@ public:
     void swap(StrTrie & other);
 
 private:
-    PageHeap<4096> m_heapImpl;
+    PageHeap<128> m_heapImpl;
 };
 
 
