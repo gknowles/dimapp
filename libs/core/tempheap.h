@@ -22,8 +22,10 @@ class ITempHeap {
 public:
     virtual ~ITempHeap() = default;
 
-    template <typename T, typename... Args> T * emplace(Args &&... args);
-    template <typename T> T * alloc(size_t num);
+    template <typename T, typename... Args>
+        T * emplace(Args &&... args);
+    template <typename T>
+        T * alloc(size_t num);
 
     char * strDup(const char src[]);
     char * strDup(std::string_view src);
@@ -41,7 +43,8 @@ inline T * ITempHeap::emplace(Args &&... args) {
 }
 
 //===========================================================================
-template <typename T> inline T * ITempHeap::alloc(size_t num) {
+template <typename T>
+inline T * ITempHeap::alloc(size_t num) {
     char * tmp = alloc(num * sizeof T, alignof(T));
     return new (tmp) T[num];
 }

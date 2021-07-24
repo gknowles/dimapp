@@ -124,7 +124,7 @@ char * TempHeap::alloc(size_t bytes, size_t alignment) {
             : kInitBufferSize;
         if (reserve < kBufferLen + required)
             reserve = kBufferLen + required;
-        tmp = (Buffer *)malloc(reserve);
+        tmp = (Buffer *) malloc(reserve);
         assert(tmp != nullptr);
         tmp->m_next = buf;
         tmp->m_avail = reserve - kBufferLen;
