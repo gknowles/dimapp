@@ -20,7 +20,12 @@ namespace Dim {
 
 //===========================================================================
 // The ranges must be sorted according to operator<
-template<typename Input1, typename Input2, typename Add, typename Remove>
+template<
+    std::input_iterator Input1,
+    std::input_iterator Input2,
+    typename Add,
+    typename Remove
+>
 void for_each_diff(
     Input1 dst, Input1 edst,  // values to update to
     Input2 src, Input2 esrc,  // values to update from
@@ -74,8 +79,8 @@ REST_OF_SRC:
 //===========================================================================
 template<typename Container, typename Pred>
 void erase_unordered_if(Container c, Pred p) {
-    auto i = c.begin(),
-        ei = c.end();
+    auto i = std::begin(c),
+        ei = std::end(c);
     while (i != ei) {
         if (!p(*i)) {
             i += 1;
@@ -85,7 +90,7 @@ void erase_unordered_if(Container c, Pred p) {
             *i = std::move(*ei);
         }
     }
-    c.erase(ei, c.end());
+    c.erase(ei, std::end(c));
 }
 
 
