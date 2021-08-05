@@ -7,7 +7,9 @@
 
 using namespace std;
 using namespace Dim;
-using Node = UnsignedSet::Node;
+
+template <typename T, typename A>
+using Node = IntegralSet<T,A>::Node;
 
 
 /****************************************************************************
@@ -16,847 +18,1640 @@ using Node = UnsignedSet::Node;
 *
 ***/
 
-const unsigned kDataSize = 512;
-static_assert(hammingWeight(kDataSize) == 1);
-static_assert(kDataSize >= 256);
-
-const unsigned kBitWidth = 32;
-
-const unsigned kLeafBits = hammingWeight(8 * kDataSize - 1);
-const unsigned kStepBits =
-    hammingWeight(pow2Ceil(kDataSize / sizeof Node + 1) / 2 - 1);
-const unsigned kMaxDepth =
-    (kBitWidth - kLeafBits + kStepBits - 1) / kStepBits;
-static_assert(UnsignedSet::kBaseBits + kLeafBits >= kBitWidth);
-
-static constexpr unsigned maxDepth() {
-    return kMaxDepth;
-}
-
-static constexpr unsigned valueMask(unsigned depth) {
-    assert(depth <= kMaxDepth);
-    unsigned bits = kBitWidth - (kLeafBits + kStepBits * (kMaxDepth - depth));
-    return numeric_limits<unsigned>::max() >> bits;
-}
-static constexpr unsigned relBase(unsigned value, unsigned depth) {
-    return (value & ~valueMask(depth)) >> 8;
-}
-static constexpr unsigned relValue(unsigned value, unsigned depth) {
-    return value & valueMask(depth);
-}
-
-static constexpr uint16_t numNodes(unsigned depth) {
-    uint16_t ret = 0;
-    if (depth) {
-        ret = (uint16_t) 1
-            << hammingWeight(valueMask(depth) ^ valueMask(depth - 1));
-    }
-    return ret;
-}
-static constexpr unsigned nodePos(unsigned value, unsigned depth) {
-    return relValue(value, depth) / (valueMask(depth + 1) + 1);
-}
-
-static constexpr unsigned absBase(unsigned value, unsigned depth) {
-    return value & ~valueMask(depth);
-}
-static constexpr unsigned absFinal(unsigned value, unsigned depth) {
-    return absBase(value, depth) + valueMask(depth);
-}
-
-static constexpr unsigned absBase(const Node & node) {
-    return node.base << 8;
-}
-static constexpr unsigned absFinal(const Node & node) {
-    return absBase(node) + valueMask(node.depth);
-}
-static constexpr unsigned absSize(const Node & node) {
-    return valueMask(node.depth) + 1;
-}
-
-enum UnsignedSet::Node::Type : int {
-    kEmpty,         // contains no values
-    kFull,          // contains all values in node's domain
-    kSmVector,      // small vector of values embedded in node struct
-    kVector,        // vector of values
-    kBitmap,        // bitmap covering all of node's possible values
-    kMeta,          // vector of nodes
-    kNodeTypes,
-    kMetaParent,    // link to parent meta node
-};
-static_assert(Node::kMetaParent < 1 << UnsignedSet::kTypeBits);
-
 namespace {
-
-struct IImplBase {
-    using value_type = unsigned;
-
-    // Requires that type, base, and depth are set, but otherwise treats
-    // the node as uninitialized.
-    virtual void init(Node & node, bool full) = 0;
-
-    // Requires that type is set, but otherwise treats the target node as
-    // uninitialized.
-    virtual void init(Node & node, const Node & from) = 0;
-
-    virtual void destroy(Node & node) = 0;
-    virtual bool insert(
-        Node & node,
-        const unsigned * first,
-        const unsigned * last
-    ) = 0;
-    virtual bool insert(Node & node, unsigned start, size_t count) = 0;
-    virtual bool erase(Node & node, unsigned start, size_t count) = 0;
-
-    virtual size_t count(const Node & node) const = 0;
-    virtual size_t count(
-        const Node & node,
-        unsigned start,
-        size_t count
-    ) const = 0;
-
-    // Find value equal to or greater than "base", returns false if no such
-    // value exists.
-    virtual bool findFirst(
-        const Node ** onode,
-        unsigned * ovalue,
-        const Node & node,
-        unsigned base
-    ) const = 0;
-    // Find value equal to or less than "base", return false is no such value.
-    virtual bool findLast(
-        const Node ** onode,
-        unsigned * ovalue,
-        const Node & node,
-        unsigned base
-    ) const = 0;
-
-    // [base] is empty - return true
-    // [start of node, base] is full - output node & value, return false
-    // otherwise - output node & value, return true
-    virtual bool firstContiguous(
-        const Node ** onode,
-        unsigned * ovalue,
-        const Node & node,
-        unsigned base
-    ) const = 0;
-    // [base] is empty - return true
-    // [base, end of node] is full - output node & value, return false
-    // otherwise - output node & value, return true
-    virtual bool lastContiguous(
-        const Node ** onode,
-        unsigned * ovalue,
-        const Node & node,
-        unsigned base
-    ) const = 0;
-};
-
-struct EmptyImpl final : IImplBase {
-    void init(Node & node, bool full) override;
-    void init(Node & node, const Node & from) override;
-    void destroy(Node & node) override;
-    bool insert(
-        Node & node,
-        const unsigned * first,
-        const unsigned * last
-    ) override;
-    bool insert(Node & node, unsigned start, size_t count) override;
-    bool erase(Node & node, unsigned start, size_t count) override;
-
-    size_t count(const Node & node) const override;
-    size_t count(
-        const Node & node,
-        unsigned start,
-        size_t count
-    ) const override;
-    bool findFirst(
-        const Node ** onode,
-        unsigned * ovalue,
-        const Node & node,
-        unsigned base
-    ) const override;
-    bool findLast(
-        const Node ** onode,
-        unsigned * ovalue,
-        const Node & node,
-        unsigned base
-    ) const override;
-    bool firstContiguous(
-        const Node ** onode,
-        unsigned * ovalue,
-        const Node & node,
-        unsigned base
-    ) const override;
-    bool lastContiguous(
-        const Node ** onode,
-        unsigned * ovalue,
-        const Node & node,
-        unsigned base
-    ) const override;
-};
-
-struct FullImpl final : IImplBase {
-    void init(Node & node, bool full) override;
-    void init(Node & node, const Node & from) override;
-    void destroy(Node & node) override;
-    bool insert(
-        Node & node,
-        const unsigned * first,
-        const unsigned * last
-    ) override;
-    bool insert(Node & node, unsigned start, size_t count) override;
-    bool erase(Node & node, unsigned start, size_t count) override;
-
-    size_t count(const Node & node) const override;
-    size_t count(
-        const Node & node,
-        unsigned start,
-        size_t count
-    ) const override;
-    bool findFirst(
-        const Node ** onode,
-        unsigned * ovalue,
-        const Node & node,
-        unsigned base
-    ) const override;
-    bool findLast(
-        const Node ** onode,
-        unsigned * ovalue,
-        const Node & node,
-        unsigned base
-    ) const override;
-    bool firstContiguous(
-        const Node ** onode,
-        unsigned * ovalue,
-        const Node & node,
-        unsigned base
-    ) const override;
-    bool lastContiguous(
-        const Node ** onode,
-        unsigned * ovalue,
-        const Node & node,
-        unsigned base
-    ) const override;
-};
-
-struct SmVectorImpl final : IImplBase {
-    static constexpr size_t maxValues() {
-        return sizeof Node::localValues / sizeof *Node::localValues;
-    }
-
-    void init(Node& node, bool full) override;
-    void init(Node& node, const Node& from) override;
-    void destroy(Node& node) override;
-    bool insert(
-        Node& node,
-        const unsigned* first,
-        const unsigned* last
-    ) override;
-    bool insert(Node& node, unsigned start, size_t count) override;
-    bool erase(Node& node, unsigned start, size_t count) override;
-
-    size_t count(const Node & node) const override;
-    size_t count(
-        const Node & node,
-        unsigned start,
-        size_t count
-    ) const override;
-    bool findFirst(
-        const Node** onode,
-        unsigned* ovalue,
-        const Node& node,
-        unsigned base
-    ) const override;
-    bool findLast(
-        const Node** onode,
-        unsigned* ovalue,
-        const Node& node,
-        unsigned base
-    ) const override;
-    bool firstContiguous(
-        const Node** onode,
-        unsigned* ovalue,
-        const Node& node,
-        unsigned base
-    ) const override;
-    bool lastContiguous(
-        const Node** onode,
-        unsigned* ovalue,
-        const Node& node,
-        unsigned base
-    ) const override;
-
-private:
-    void convert(Node& node);
-};
-
-struct VectorImpl final : IImplBase {
-    static constexpr size_t maxValues() {
-        return kDataSize / sizeof *Node::values;
-    }
-
-    void init(Node & node, bool full) override;
-    void init(Node & node, const Node & from) override;
-    void destroy(Node & node) override;
-    bool insert(
-        Node & node,
-        const unsigned * first,
-        const unsigned * last
-    ) override;
-    bool insert(Node & node, unsigned start, size_t count) override;
-    bool erase(Node & node, unsigned start, size_t count) override;
-
-    size_t count(const Node & node) const override;
-    size_t count(
-        const Node & node,
-        unsigned start,
-        size_t count
-    ) const override;
-    bool findFirst(
-        const Node ** onode,
-        unsigned * ovalue,
-        const Node & node,
-        unsigned base
-    ) const override;
-    bool findLast(
-        const Node ** onode,
-        unsigned * ovalue,
-        const Node & node,
-        unsigned base
-    ) const override;
-    bool firstContiguous(
-        const Node ** onode,
-        unsigned * ovalue,
-        const Node & node,
-        unsigned base
-    ) const override;
-    bool lastContiguous(
-        const Node ** onode,
-        unsigned * ovalue,
-        const Node & node,
-        unsigned base
-    ) const override;
-
-private:
-    void convert(Node & node);
-};
-
-struct BitmapImpl final : IImplBase {
-    static constexpr size_t numInt64s() {
-        return kDataSize / sizeof uint64_t;
-    }
-    static constexpr size_t numBits() { return 64 * numInt64s(); }
-
-    void init(Node & node, bool full) override;
-    void init(Node & node, const Node & from) override;
-    void destroy(Node & node) override;
-    bool insert(
-        Node & node,
-        const unsigned * first,
-        const unsigned * last
-    ) override;
-    bool insert(Node & node, unsigned start, size_t count) override;
-    bool erase(Node & node, unsigned start, size_t count) override;
-
-    size_t count(const Node & node) const override;
-    size_t count(
-        const Node & node,
-        unsigned start,
-        size_t count
-    ) const override;
-    bool findFirst(
-        const Node ** onode,
-        unsigned * ovalue,
-        const Node & node,
-        unsigned base
-    ) const override;
-    bool findLast(
-        const Node ** onode,
-        unsigned * ovalue,
-        const Node & node,
-        unsigned base
-    ) const override;
-    bool firstContiguous(
-        const Node ** onode,
-        unsigned * ovalue,
-        const Node & node,
-        unsigned base
-    ) const override;
-    bool lastContiguous(
-        const Node ** onode,
-        unsigned * ovalue,
-        const Node & node,
-        unsigned base
-    ) const override;
-};
-
-struct MetaImpl final : IImplBase {
-    static constexpr size_t maxNodes() {
-        return kDataSize / sizeof *Node::nodes;
-    }
-
-    void init(Node & node, bool full) override;
-    void init(Node & node, const Node & from) override;
-    void destroy(Node & node) override;
-    bool insert(
-        Node & node,
-        const unsigned * first,
-        const unsigned * last
-    ) override;
-    bool insert(Node & node, unsigned start, size_t count) override;
-    bool erase(Node & node, unsigned start, size_t count) override;
-
-    size_t count(const Node & node) const override;
-    size_t count(
-        const Node & node,
-        unsigned start,
-        size_t count
-    ) const override;
-    bool findFirst(
-        const Node ** onode,
-        unsigned * ovalue,
-        const Node & node,
-        unsigned base
-    ) const override;
-    bool findLast(
-        const Node ** onode,
-        unsigned * ovalue,
-        const Node & node,
-        unsigned base
-    ) const override;
-    bool firstContiguous(
-        const Node ** onode,
-        unsigned * ovalue,
-        const Node & node,
-        unsigned base
-    ) const override;
-    bool lastContiguous(
-        const Node ** onode,
-        unsigned * ovalue,
-        const Node & node,
-        unsigned base
-    ) const override;
-
-private:
-    unsigned nodePos(const Node & node, unsigned value) const;
-    bool convertIf(Node & node, Node::Type type);
-};
-
 } // namespace
 
+template <std::integral T, typename A>
+class IntegralSet<T,A>::Impl {
+    static_assert(std::is_unsigned_v<T>);
 
-/****************************************************************************
-*
-*   Helpers
-*
-***/
+public:
+    enum NodeType : int {
+        kEmpty,         // contains no values
+        kFull,          // contains all values in node's domain
+        kSmVector,      // small vector of values embedded in node struct
+        kVector,        // vector of values
+        kBitmap,        // bitmap covering all of node's possible values
+        kMeta,          // vector of nodes
+        kNodeTypes,
+        kMetaParent,    // link to parent meta node
+    };
+    static_assert(kMetaParent < 1 << kTypeBits);
 
-static EmptyImpl s_emptyImpl;
-static FullImpl s_fullImpl;
-static SmVectorImpl s_smallVectorImpl;
-static VectorImpl s_vectorImpl;
-static BitmapImpl s_bitmapImpl;
-static MetaImpl s_metaImpl;
+    constexpr static size_t kLeafBits = min((size_t) 12, kBitWidth);
+    constexpr static size_t kDataSize = (1 << kLeafBits) / 8;
 
-static IImplBase * s_impls[] = {
-    &s_emptyImpl,
-    &s_fullImpl,
-    &s_smallVectorImpl,
-    &s_vectorImpl,
-    &s_bitmapImpl,
-    &s_metaImpl,
+    constexpr static size_t kStepBits =
+        hammingWeight(pow2Ceil(kDataSize / sizeof Node + 1) / 2 - 1);
+    constexpr static size_t kMaxDepth =
+        (kBitWidth - kLeafBits + kStepBits - 1) / kStepBits;
+    static_assert(kBaseBits + kLeafBits >= kBitWidth);
+
+    constexpr static value_type valueMask(size_t depth) {
+        assert(depth <= kMaxDepth);
+        size_t bits = kBitWidth -
+            (kLeafBits + kStepBits * (kMaxDepth - depth));
+        return numeric_limits<T>::max() >> bits;
+    }
+    constexpr static value_type relBase(value_type value, size_t depth) {
+        return (value & ~valueMask(depth)) >> (kBitWidth - kBaseBits);
+    }
+    constexpr static value_type relValue(value_type value, size_t depth) {
+        return value & valueMask(depth);
+    }
+
+    constexpr static size_t numNodes(unsigned depth) {
+        size_t ret = 0;
+        if (depth) {
+            ret = (size_t) 1
+                << hammingWeight(valueMask(depth) ^ valueMask(depth - 1));
+        }
+        return ret;
+    }
+    constexpr static size_t nodePos(value_type value, size_t depth) {
+        return relValue(value, depth) / (valueMask(depth + 1) + 1);
+    }
+
+    constexpr static value_type absBase(value_type value, size_t depth) {
+        return value & ~valueMask(depth);
+    }
+    constexpr static value_type absFinal(value_type value, size_t depth) {
+        return absBase(value, depth) + valueMask(depth);
+    }
+
+    constexpr static value_type absBase(const Node & node) {
+        return node.base << (kBitWidth - kBaseBits);
+    }
+    constexpr static value_type absFinal(const Node & node) {
+        return absBase(node) + valueMask(node.depth);
+    }
+    constexpr static value_type absSize(const Node & node) {
+        return valueMask(node.depth) + 1;
+    }
+
+    constexpr static size_t smvMaxValues() {
+        return sizeof Node::localValues / sizeof *Node::localValues;
+    }
+    constexpr static size_t vecMaxValues() {
+        return kDataSize / sizeof *Node::values;
+    }
+    constexpr static size_t bitNumInt64s() {
+        return kDataSize / sizeof uint64_t;
+    }
+    constexpr static size_t bitNumBits() {
+        return 64 * bitNumInt64s();
+    }
+
+    // Allocator
+    static void * allocate(A * alloc, size_t bytes);
+    static void deallocate(A * alloc, void * ptr, size_t bytes);
+
+    // misc
+    static void swap(Node & left, Node & right);
+
+    static bool yes(const Node & left, const Node & right);
+    static bool yes(const Node **, T *, const Node & node, T key);
+    static bool no(const Node & left, const Node & right);
+    static bool no(const Node **, T *, const Node & node, T key);
+    static bool no(A *, Node *, const T * first, const T * last);
+    static bool no(A * alloc, Node * node, T start, size_t len);
+
+    static void skip(A * alloc, Node * node);
+    static void skip(A * alloc, Node * left, const Node & right);
+    static void skip(A * alloc, Node * left, Node && right);
+    static void clear(A * alloc, Node * node);
+    static void clear(A * alloc, Node * left, const Node & right);
+    static void clear(A * alloc, Node * left, Node && right);
+    static void fill(A * alloc, Node * node);
+    static void fill(A * alloc, Node * left, const Node & right);
+    static void fill(A * alloc, Node * left, Node && right);
+    static void copy(A * alloc, Node * left, const Node & right);
+    static void copy(A * alloc, Node * left, Node && right);
+
+    static size_t nodePos(const Node & node, unsigned value);
+    static void grow(A * alloc, Node * node, size_t newCount);
+    static bool convertMetaIf(A * alloc, Node * node, NodeType type);
+
+    // init
+    static void init(A * alloc, Node * node, bool full);
+    static void initEmpty(A * alloc, Node * node, bool full);
+    static void initFull(A * alloc, Node * node, bool full);
+    static void initSmv(A * alloc, Node * node, bool full);
+    static void initVec(A * alloc, Node * node, bool full);
+    static void initBit(A * alloc, Node * node, bool full);
+    static void initMeta(A * alloc, Node * node, bool full);
+
+    static void init(A * alloc, Node * node, const Node & from);
+    static void initEmpty(A * alloc, Node * node, const Node & from);
+    static void initFull(A * alloc, Node * node, const Node & from);
+    static void initSmv(A * alloc, Node * node, const Node & from);
+    static void initVec(A * alloc, Node * node, const Node & from);
+    static void initBit(A * alloc, Node * node, const Node & from);
+    static void initMeta(A * alloc, Node * node, const Node & from);
+
+    // destroy
+    static void destroy(A * alloc, Node * node);
+    static void desFree(A * alloc, Node * node);
+    static void desMeta(A * alloc, Node * node);
+
+    // insert
+    static bool insert(A *, Node *, const T * first, const T * last);
+    static bool insEmpty(A *, Node *, const T * first, const T * last);
+    static bool insSmv(A *, Node *, const T * first, const T * last);
+    static bool insVec(A *, Node *, const T * first, const T * last);
+    static bool insBit(A *, Node *, const T * first, const T * last);
+    static bool insMeta(A *, Node *, const T * first, const T * last);
+
+    static bool insert(A * alloc, Node * node, T start, size_t len);
+    static bool insEmpty(A * alloc, Node * node, T start, size_t len);
+    static bool insSmv(A * alloc, Node * node, T start, size_t len);
+    static bool insVec(A * alloc, Node * node, T start, size_t len);
+    static bool insBit(A * alloc, Node * node, T start, size_t len);
+    static bool insMeta(A * alloc, Node * node, T start, size_t len);
+
+    static void insert(A * alloc, Node * left, const Node & right);
+    static void insError(A * alloc, Node * left, const Node & right);
+    static void insRSmv(A * alloc, Node * left, const Node & right);
+    static void insLSmv(A * alloc, Node * left, const Node & right);
+    static void insVec(A * alloc, Node * left, const Node & right);
+    static void insRVec(A * alloc, Node * left, const Node & right);
+    static void insLVec(A * alloc, Node * left, const Node & right);
+    static void insBit(A * alloc, Node * left, const Node & right);
+    static void insMeta(A * alloc, Node * left, const Node & right);
+    static void insArray(
+        A * alloc,
+        Node * left,
+        T * li,
+        size_t maxValues,
+        const T * ri,
+        const T * re
+    );
+
+    static void insert(A * alloc, Node * left, Node && right);
+    static void insError(A * alloc, Node * left, Node && right);
+    static void insRSmv(A * alloc, Node * left, Node && right);
+    static void insLSmv(A * alloc, Node * left, Node && right);
+    static void insRVec(A * alloc, Node * left, Node && right);
+    static void insLVec(A * alloc, Node * left, Node && right);
+    static void insBit(A * alloc, Node * left, Node && right);
+    static void insMeta(A * alloc, Node * left, Node && right);
+
+    // erase
+    static bool erase(A * alloc, Node * node, T start, size_t len);
+    static bool eraFull(A * alloc, Node * node, T start, size_t len);
+    static bool eraSmv(A * alloc, Node * node, T start, size_t len);
+    static bool eraVec(A * alloc, Node * node, T start, size_t len);
+    static bool eraBit(A * alloc, Node * node, T start, size_t len);
+    static bool eraMeta(A * alloc, Node * node, T start, size_t len);
+
+    static void erase(A * alloc, Node * left, const Node & right);
+    static void eraError(A * alloc, Node * left, const Node & right);
+    static void eraChange(A * alloc, Node * left, const Node & right);
+    static void eraSmv(A * alloc, Node * left, const Node & right);
+    static void eraLSmv(A * alloc, Node * left, const Node & right);
+    static void eraRSmv(A * alloc, Node * left, const Node & right);
+    static void eraVec(A * alloc, Node * left, const Node & right);
+    static void eraLVec(A * alloc, Node * left, const Node & right);
+    static void eraRVec(A * alloc, Node * left, const Node & right);
+    static void eraBit(A * alloc, Node * left, const Node & right);
+    static void eraMeta(A * alloc, Node * left, const Node & right);
+    static void eraArray(
+        A * alloc,
+        Node * left,
+        T * li,
+        const Node & right,
+        const T * ri
+    );
+    static void eraLArray(A * alloc, Node * left, T * li, const Node & right);
+    static void eraRArray(
+        A * alloc,
+        Node * left,
+        const Node & right,
+        const T * ri
+    );
+
+    // len
+    static size_t count(const Node & node);
+    static size_t cntEmpty(const Node & node);
+    static size_t cntFull(const Node & node);
+    static size_t cntSmv(const Node & node);
+    static size_t cntVec(const Node & node);
+    static size_t cntBit(const Node & node);
+    static size_t cntMeta(const Node & node);
+
+    static size_t count(const Node & node, T start, size_t len);
+    static size_t cntEmpty(const Node & node, T start, size_t len);
+    static size_t cntFull(const Node & node, T start, size_t len);
+    static size_t cntSmv(const Node & node, T start, size_t len);
+    static size_t cntVec(const Node & node, T start, size_t len);
+    static size_t cntBit(const Node & node, T start, size_t len);
+    static size_t cntMeta(const Node & node, T start, size_t len);
+
+    // find
+    static bool find(const Node **, T *, const Node & node, T key);
+    static bool findEmpty(const Node **, T *, const Node & node, T key);
+    static bool findFull(const Node **, T *, const Node & node, T key);
+    static bool findSmv(const Node **, T *, const Node & node, T key);
+    static bool findVec(const Node **, T *, const Node & node, T key);
+    static bool findBit(const Node **, T *, const Node & node, T key);
+    static bool findMeta(const Node **, T *, const Node & node, T key);
+
+    // rfind
+    static bool rfind(const Node **, T *, const Node & node, T key);
+    static bool rfindSmv(const Node **, T *, const Node & node, T key);
+    static bool rfindVec(const Node **, T *, const Node & node, T key);
+    static bool rfindBit(const Node **, T *, const Node & node, T key);
+    static bool rfindMeta(const Node **, T *, const Node & node, T key);
+
+    // contig
+    static bool contig(const Node **, T *, const Node & node, T key);
+    static bool contigFull(const Node **, T *, const Node & node, T key);
+    static bool contigSmv(const Node **, T *, const Node & node, T key);
+    static bool contigVec(const Node **, T *, const Node & node, T key);
+    static bool contigBit(const Node **, T *, const Node & node, T key);
+    static bool contigMeta(const Node **, T *, const Node & node, T key);
+
+    // rcontig
+    static bool rcontig(const Node **, T *, const Node & node, T key);
+    static bool rcontigFull(const Node **, T *, const Node & node, T key);
+    static bool rcontigSmv(const Node **, T *, const Node & node, T key);
+    static bool rcontigVec(const Node **, T *, const Node & node, T key);
+    static bool rcontigBit(const Node **, T *, const Node & node, T key);
+    static bool rcontigMeta(const Node **, T *, const Node & node, T key);
+
+    // compare
+    static int compare(const Node & left, const Node & right);
+    static int cmpError(const Node & left, const Node & right);
+    static int cmpLessIf(const Node & left, const Node & right);
+    static int cmpMoreIf(const Node & left, const Node & right);
+    static int cmpEqual(const Node & left, const Node & right);
+    static int cmpVecIf(const Node & left, const Node & right);
+    static int cmpRVecIf(const Node & left, const Node & right);
+    static int cmpSmvIf(const Node & left, const Node & right);
+    static int cmpRSmvIf(const Node & left, const Node & right);
+    static int cmpBitIf(const Node & left, const Node & right);
+    static int cmpMetaIf(const Node & left, const Node & right);
+    static int cmpRBitIf(const Node & left, const Node & right);
+    static int cmpRMetaIf(const Node & left, const Node & right);
+    static int cmpIter(const Node & left, const Node & right);
+    static int cmpVec(const Node & left, const Node & right);
+    static int cmpSmv(const Node & left, const Node & right);
+    static int cmpLSmv(const Node & left, const Node & right);
+    static int cmpRSmv(const Node & left, const Node & right);
+    static int cmpBit(const Node & left, const Node & right);
+    static int cmpMeta(const Node & left, const Node & right);
+    static int cmpBit(uint64_t left, uint64_t right);
+    static int cmpArray(
+        const T * li,
+        size_t lcount,
+        const T * ri,
+        size_t rcount
+    );
+
+    // contains
+    static bool contains(const Node & left, const Node & right);
+    static bool conError(const Node & left, const Node & right);
+    static bool conRVec(const Node & left, const Node & right);
+    static bool conLVec(const Node & left, const Node & right);
+    static bool conVec(const Node & left, const Node & right);
+    static bool conRSmv(const Node & left, const Node & right);
+    static bool conLSmv(const Node & left, const Node & right);
+    static bool conSmv(const Node & left, const Node & right);
+    static bool conBit(const Node & left, const Node & right);
+    static bool conMeta(const Node & left, const Node & right);
+    static bool conRArray(const Node & left, const Node & right, const T * ri);
+    static bool conLArray(const Node & left, const T * li, const Node & right);
+    static bool conArray(
+        const T * li,
+        size_t lcount,
+        const T * ri,
+        size_t rcount
+    );
+
+    // intersects
+    static bool intersects(const Node & left, const Node & right);
+    static bool isecError(const Node & left, const Node & right);
+    static bool isecRVec(const Node & left, const Node & right);
+    static bool isecLVec(const Node & left, const Node & right);
+    static bool isecVec(const Node & left, const Node & right);
+    static bool isecRSmv(const Node & left, const Node & right);
+    static bool isecLSmv(const Node & left, const Node & right);
+    static bool isecSmv(const Node & left, const Node & right);
+    static bool isecBit(const Node & left, const Node & right);
+    static bool isecMeta(const Node & left, const Node & right);
+    static bool isecArray(
+        const T * li,
+        size_t lcount,
+        const T * ri,
+        size_t rcount
+    );
+    static bool isecRArray(
+        const Node & left,
+        const Node & right,
+        const T * ri
+    );
+
+    // intersect
+    static void intersect(A * alloc, Node * left, const Node & right);
+    static void isecError(A * alloc, Node * left, const Node & right);
+    static void isecSmv(A * alloc, Node * left, const Node & right);
+    static void isecRSmv(A * alloc, Node * left, const Node & right);
+    static void isecLSmv(A * alloc, Node * left, const Node & right);
+    static void isecVec(A * alloc, Node * left, const Node & right);
+    static void isecRVec(A * alloc, Node * left, const Node & right);
+    static void isecLVec(A * alloc, Node * left, const Node & right);
+    static void isecBit(A * alloc, Node * left, const Node & right);
+    static void isecMeta(A * alloc, Node * left, const Node & right);
+    static void isecArray(
+        A * alloc,
+        Node * left,
+        T * li,
+        const Node & right,
+        const T * ri
+    );
+    static void isecLArray(A * alloc, Node * left, T * li, const Node & right);
+
+    static void intersect(A * alloc, Node * left, Node && right);
+    static void isecError(A * alloc, Node * left, Node && right);
+    static void isecSmv(A * alloc, Node * left, Node && right);
+    static void isecRSmv(A * alloc, Node * left, Node && right);
+    static void isecLSmv(A * alloc, Node * left, Node && right);
+    static void isecVec(A * alloc, Node * left, Node && right);
+    static void isecRVec(A * alloc, Node * left, Node && right);
+    static void isecLVec(A * alloc, Node * left, Node && right);
+    static void isecBit(A * alloc, Node * left, Node && right);
+    static void isecMeta(A * alloc, Node * left, Node && right);
 };
-static_assert(size(s_impls) == Node::kNodeTypes);
+
+
+/****************************************************************************
+*
+*   allocate / deallocate
+*
+***/
 
 //===========================================================================
-static IImplBase * impl(const Node & node) {
-    assert(node.type < size(s_impls));
-    return s_impls[node.type];
+template <std::integral T, typename A>
+void * IntegralSet<T,A>::Impl::allocate(A * alloc, size_t bytes) {
+    using AChar = allocator_traits<A>::template rebind_alloc<char>;
+    auto allocChar = static_cast<AChar>(*alloc);
+    return allocator_traits<AChar>::allocate(allocChar, bytes);
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::deallocate(A * alloc, void * ptr, size_t bytes) {
+    using AChar = allocator_traits<A>::template rebind_alloc<char>;
+    auto allocChar = static_cast<AChar>(*alloc);
+    allocator_traits<AChar>::deallocate(allocChar, (char *) ptr, bytes);
 }
 
 
 /****************************************************************************
 *
-*   EmptyImpl
-*
-*   node.numValues - unused, always 0
+*   misc
 *
 ***/
 
 //===========================================================================
-void EmptyImpl::init(Node & node, bool full) {
-    assert(node.type == Node::kEmpty);
-    assert(!full);
-    node.numBytes = 0;
-    node.numValues = 0;
-    node.values = nullptr;
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::swap(Node & left, Node & right) {
+    Node tmp;
+    memcpy(&tmp, &left, sizeof tmp);
+    memcpy(&left, &right, sizeof left);
+    memcpy(&right, &tmp, sizeof right);
 }
 
 //===========================================================================
-void EmptyImpl::init(Node & node, const Node & from) {
-    assert(node.type == Node::kEmpty);
-    assert(from.type == Node::kEmpty);
-    node = from;
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::yes(const Node & left, const Node & right) {
+    return true;
 }
 
 //===========================================================================
-void EmptyImpl::destroy(Node & node)
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::yes(
+    const Node ** onode,
+    T * ovalue,
+    const Node & node,
+    T key
+) {
+    return true;
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::no(const Node & left, const Node & right) {
+    return false;
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::no(
+    const Node ** onode,
+    T * ovalue,
+    const Node & node,
+    T key
+) {
+    return false;
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::no(
+    A * alloc,
+    Node * node,
+    const T * first,
+    const T * last
+) {
+    return false;
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::no(
+    A * alloc,
+    Node * node,
+    T start,
+    size_t len
+) {
+    return false;
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::skip(A * alloc, Node * node)
 {}
 
 //===========================================================================
-bool EmptyImpl::insert(
-    Node & node,
-    const unsigned * first,
-    const unsigned * last
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::skip(A * alloc, Node * left, const Node & right)
+{}
+
+//===========================================================================
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::skip(A * alloc, Node * left, Node && right)
+{}
+
+//===========================================================================
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::clear(A * alloc, Node * node) {
+    destroy(alloc, node);
+    node->type = kEmpty;
+    init(alloc, node, false);
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::clear(
+    A * alloc,
+    Node * left,
+    const Node & right
+) {
+    clear(alloc, left);
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::clear(A * alloc, Node * left, Node && right) {
+    clear(alloc, left);
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::fill(A * alloc, Node * node) {
+    destroy(alloc, node);
+    node->type = kFull;
+    init(alloc, node, true);
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::fill(
+    A * alloc,
+    Node * left,
+    const Node & right
+) {
+    fill(alloc, left);
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::fill(A * alloc, Node * left, Node && right) {
+    fill(alloc, left);
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::copy(
+    A * alloc,
+    Node * left,
+    const Node & right
+) {
+    destroy(alloc, left);
+    left->type = right.type;
+    init(alloc, left, right);
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::copy(A * alloc, Node * left, Node && right) {
+    swap(*left, right);
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+size_t IntegralSet<T,A>::Impl::nodePos(const Node & node, unsigned value) {
+    assert(relBase(value, node.depth) == node.base);
+    auto pos = nodePos(value, node.depth);
+    assert(pos < node.numValues);
+    return pos;
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::grow(A * alloc, Node * node, size_t len) {
+    Node tmp;
+    memcpy(&tmp, node, sizeof tmp);
+    if (len <= smvMaxValues()) {
+        node->type = kSmVector;
+    } else if (len <= vecMaxValues()) {
+        node->type = kVector;
+    } else if (tmp.depth == kMaxDepth) {
+        node->type = kBitmap;
+    } else {
+        node->type = kMeta;
+    }
+    init(alloc, node, false);
+    insert(alloc, node, move(tmp));
+    destroy(alloc, &tmp);
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::convertMetaIf(
+    A * alloc,
+    Node * node,
+    NodeType type
+) {
+    assert(type == kEmpty || type == kFull);
+    for (size_t i = 0; i < node->numValues; ++i) {
+        if (node->nodes[i].type != type)
+            return false;
+    }
+    // convert
+    if (type == kEmpty) {
+        clear(alloc, node);
+    } else {
+        fill(alloc, node);
+    }
+    return true;
+}
+
+
+/****************************************************************************
+*
+*   init(A * alloc, Node * node, bool full)
+*
+***/
+
+//===========================================================================
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::init(A * alloc, Node * node, bool full) {
+    using Fn = void(A * alloc, Node * node, bool full);
+    constinit static Fn * const functs[kNodeTypes] = {
+        initEmpty,
+        initFull,
+        initSmv,
+        initVec,
+        initBit,
+        initMeta,
+    };
+    return functs[node->type](alloc, node, full);
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::initEmpty(A * alloc, Node * node, bool full) {
+    assert(node->type == kEmpty);
+    assert(!full);
+    node->numBytes = 0;
+    node->numValues = 0;
+    node->values = nullptr;
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::initFull(A * alloc, Node * node, bool full) {
+    assert(node->type == kFull);
+    assert(full);
+    node->numBytes = 0;
+    node->numValues = 0;
+    node->values = nullptr;
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::initSmv(A * alloc, Node * node, bool full) {
+    assert(node->type == kSmVector);
+    assert(!full);
+    node->numBytes = 0;
+    node->numValues = 0;
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::initVec(A * alloc, Node * node, bool full) {
+    assert(node->type == kVector);
+    assert(!full);
+    node->numBytes = kDataSize;
+    node->numValues = 0;
+    node->values = (value_type *) allocate(alloc, node->numBytes);
+    assert(node->values);
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::initBit(A * alloc, Node * node, bool full) {
+    assert(node->type == kBitmap);
+    node->numBytes = kDataSize;
+    node->values = (value_type *) allocate(alloc, node->numBytes);
+    assert(node->values);
+    if (full) {
+        node->numValues = kDataSize / sizeof uint64_t;
+        memset(node->values, 0xff, kDataSize);
+    } else {
+        node->numValues = 0;
+        memset(node->values, 0, kDataSize);
+    }
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::initMeta(A * alloc, Node * node, bool full) {
+    assert(node->type == kMeta);
+    node->numValues = (uint16_t) numNodes(node->depth + 1);
+    node->numBytes = (uint16_t) (node->numValues + 1) * sizeof *node->nodes;
+    node->nodes = (Node *) allocate(alloc, node->numBytes);
+    assert(node->nodes);
+    Node def;
+    def.depth = node->depth + 1;
+    def.base = node->base;
+    if (!full) {
+        def.type = kEmpty;
+        initEmpty(alloc, &def, full);
+    } else {
+        def.type = kFull;
+        initFull(alloc, &def, full);
+    }
+    auto domain = relBase(absSize(def), def.depth);
+    auto nptr = node->nodes;
+    auto nlast = node->nodes + node->numValues;
+    for (; nptr != nlast; ++nptr, def.base += domain)
+        memcpy(nptr, &def, sizeof *nptr);
+
+    // Internally the array of nodes contains a trailing "node" at the end that
+    // is a pointer to the parent node->
+    memset(nlast, 0, sizeof *nlast);
+    nlast->type = kMetaParent;
+    nlast->nodes = node;
+}
+
+
+/****************************************************************************
+*
+*   init(A * alloc, Node * node, const Node & from)
+*
+***/
+
+//===========================================================================
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::init(
+    A * alloc,
+    Node * node,
+    const Node & from
+) {
+    using Fn = void(A * alloc, Node * node, const Node & from);
+    constinit static Fn * const functs[kNodeTypes] = {
+        initEmpty,
+        initFull,
+        initSmv,
+        initVec,
+        initBit,
+        initMeta,
+    };
+    return functs[node->type](alloc, node, from);
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::initEmpty(
+    A * alloc,
+    Node * node,
+    const Node & from
+) {
+    assert(node->type == kEmpty);
+    assert(from.type == kEmpty);
+    memcpy(node, &from, sizeof *node);
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::initFull(
+    A * alloc,
+    Node * node,
+    const Node & from
+) {
+    assert(node->type == kFull);
+    assert(from.type == kFull);
+    memcpy(node, &from, sizeof *node);
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::initSmv(
+    A * alloc,
+    Node * node,
+    const Node & from
+) {
+    assert(node->type == kSmVector);
+    assert(from.type == kSmVector);
+    memcpy(node, &from, sizeof *node);
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::initVec(
+    A * alloc,
+    Node * node,
+    const Node & from
+) {
+    assert(node->type == kVector);
+    assert(from.type == kVector);
+    memcpy(node, &from, sizeof *node);
+    node->values = (value_type *) allocate(alloc, node->numBytes);
+    assert(node->values);
+    memcpy(node->values, from.values, node->numValues * sizeof *node->values);
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::initBit(
+    A * alloc,
+    Node * node,
+    const Node & from
+) {
+    assert(node->type == kBitmap);
+    assert(from.type == kBitmap);
+    memcpy(node, &from, sizeof *node);
+    node->values = (value_type *) allocate(alloc, node->numBytes);
+    assert(node->values);
+    memcpy(node->values, from.values, node->numBytes);
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::initMeta(
+    A * alloc,
+    Node * node,
+    const Node & from
+) {
+    assert(node->type == kMeta);
+    assert(from.type == kMeta);
+    memcpy(node, &from, sizeof *node);
+    node->nodes = (Node *) allocate(alloc, node->numBytes);
+    assert(node->nodes);
+    auto nptr = node->nodes;
+    auto nlast = node->nodes + node->numValues;
+    auto fptr = from.nodes;
+    for (; nptr != nlast; ++nptr, ++fptr) {
+        nptr->type = fptr->type;
+        init(alloc, nptr, *fptr);
+    }
+    memcpy(nlast, fptr, sizeof *nlast);
+    nlast->nodes = node;
+}
+
+
+/****************************************************************************
+*
+*   destroy(A * alloc, Node * node)
+*
+***/
+
+//===========================================================================
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::destroy(A * alloc, Node * node) {
+    using Fn = void(A * alloc, Node * node);
+    constinit static Fn * const functs[kNodeTypes] = {
+        skip,       // empty
+        skip,       // full
+        skip,       // small vector
+        desFree,    // vector
+        desFree,    // bitmap
+        desMeta,    // meta
+    };
+    functs[node->type](alloc, node);
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::desFree(A * alloc, Node * node) {
+    assert(node->values);
+    deallocate(alloc, node->values, node->numBytes);
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::desMeta(A * alloc, Node * node) {
+    assert(node->nodes);
+    auto * ptr = node->nodes;
+    auto * last = ptr + node->numValues;
+    for (; ptr != last; ++ptr)
+        destroy(alloc, ptr);
+    deallocate(alloc, node->nodes, node->numBytes);
+}
+
+
+/****************************************************************************
+*
+*   insert(A * alloc, Node * node, const T * first, const T * last)
+*
+***/
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::insert(
+    A * alloc,
+    Node * node,
+    const T * first,
+    const T * last
+) {
+    using Fn = bool(A * alloc, Node * node, const T * first, const T * last);
+    constinit static Fn * const functs[kNodeTypes] = {
+        insEmpty,   // empty
+        no,         // full
+        insSmv,     // small vector
+        insVec,     // vector
+        insBit,     // bitmap
+        insMeta,    // meta
+    };
+    return functs[node->type](alloc, node, first, last);
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::insEmpty(
+    A * alloc,
+    Node * node,
+    const T * first,
+    const T * last
 ) {
     if (first == last)
         return false;
 
-    destroy(node);
-    node.type = Node::kSmVector;
-    s_smallVectorImpl.init(node, false);
-    s_smallVectorImpl.insert(node, first, last);
+    destroy(alloc, node);
+    node->type = kSmVector;
+    init(alloc, node, false);
+    insert(alloc, node, first, last);
     return true;
 }
 
 //===========================================================================
-bool EmptyImpl::insert(Node & node, unsigned start, size_t count) {
-    assert(node.type == Node::kEmpty);
-    assert(count);
-    assert(relBase(start, node.depth) == node.base);
-    assert(count - 1 <= absFinal(node) - start);
-    destroy(node);
-    node.type = Node::kSmVector;
-    s_smallVectorImpl.init(node, false);
-    s_smallVectorImpl.insert(node, start, count);
-    return true;
-}
-
-//===========================================================================
-bool EmptyImpl::erase(Node & node, unsigned start, size_t count) {
-    assert(count);
-    assert(relBase(start, node.depth) == node.base);
-    assert(count - 1 <= absFinal(node) - start);
-    return false;
-}
-
-//===========================================================================
-size_t EmptyImpl::count(const Node & node) const {
-    return 0;
-}
-
-//===========================================================================
-size_t EmptyImpl::count(
-    const Node & node,
-    unsigned start,
-    size_t count
-) const {
-    return 0;
-}
-
-//===========================================================================
-bool EmptyImpl::findFirst(
-    const Node ** onode,
-    unsigned * ovalue,
-    const Node & node,
-    unsigned base
-) const {
-    return false;
-}
-
-//===========================================================================
-bool EmptyImpl::findLast(
-    const Node ** onode,
-    unsigned * ovalue,
-    const Node & node,
-    unsigned base
-) const {
-    return false;
-}
-
-//===========================================================================
-bool EmptyImpl::firstContiguous(
-    const Node ** onode,
-    unsigned * ovalue,
-    const Node & node,
-    unsigned base
-) const {
-    return true;
-}
-
-//===========================================================================
-bool EmptyImpl::lastContiguous(
-    const Node ** onode,
-    unsigned * ovalue,
-    const Node & node,
-    unsigned base
-) const {
-    return true;
-}
-
-
-/****************************************************************************
-*
-*   FullImpl
-*
-*   node.numValues - unused, always 0
-*
-***/
-
-//===========================================================================
-void FullImpl::init(Node & node, bool full) {
-    assert(node.type == Node::kFull);
-    assert(full);
-    node.numBytes = 0;
-    node.numValues = 0;
-    node.values = nullptr;
-}
-
-//===========================================================================
-void FullImpl::init(Node & node, const Node & from) {
-    assert(node.type == Node::kFull);
-    assert(from.type == Node::kFull);
-    node = from;
-}
-
-//===========================================================================
-void FullImpl::destroy(Node & node)
-{}
-
-//===========================================================================
-bool FullImpl::insert(
-    Node & node,
-    const unsigned * first,
-    const unsigned * last
-) {
-    return false;
-}
-
-//===========================================================================
-bool FullImpl::insert(Node & node, unsigned start, size_t count) {
-    assert(count);
-    assert(relBase(start, node.depth) == node.base);
-    assert(count - 1 <= absFinal(node) - start);
-    return false;
-}
-
-//===========================================================================
-bool FullImpl::erase(Node & node, unsigned start, size_t count) {
-    assert(count);
-    assert(relBase(start, node.depth) == node.base);
-    assert(count - 1 <= absFinal(node) - start);
-    destroy(node);
-    if (node.depth == maxDepth()) {
-        node.type = Node::kBitmap;
-        s_bitmapImpl.init(node, true);
-        return s_bitmapImpl.erase(node, start, count);
-    } else {
-        node.type = Node::kMeta;
-        s_metaImpl.init(node, true);
-        return s_metaImpl.erase(node, start, count);
-    }
-}
-
-//===========================================================================
-size_t FullImpl::count(const Node & node) const {
-    return absSize(node);
-}
-
-//===========================================================================
-size_t FullImpl::count(
-    const Node & node,
-    unsigned start,
-    size_t count
-) const {
-    return count;
-}
-
-//===========================================================================
-bool FullImpl::findFirst(
-    const Node ** onode,
-    unsigned * ovalue,
-    const Node & node,
-    unsigned base
-) const {
-    assert(relBase(base, node.depth) == node.base);
-    *onode = &node;
-    *ovalue = base;
-    return true;
-}
-
-//===========================================================================
-bool FullImpl::findLast(
-    const Node ** onode,
-    unsigned * ovalue,
-    const Node & node,
-    unsigned base
-) const {
-    assert(relBase(base, node.depth) == node.base);
-    *onode = &node;
-    *ovalue = base;
-    return true;
-}
-
-//===========================================================================
-bool FullImpl::firstContiguous(
-    const Node ** onode,
-    unsigned * ovalue,
-    const Node & node,
-    unsigned base
-) const {
-    assert(relBase(base, node.depth) == node.base);
-    *onode = &node;
-    *ovalue = absBase(node);
-    return false;
-}
-
-//===========================================================================
-bool FullImpl::lastContiguous(
-    const Node ** onode,
-    unsigned * ovalue,
-    const Node & node,
-    unsigned base
-) const {
-    assert(relBase(base, node.depth) == node.base);
-    *onode = &node;
-    *ovalue = absFinal(node);
-    return false;
-}
-
-
-/****************************************************************************
-*
-*   SmVectorImpl
-*
-*   node.numValues - size (not capacity!) of node.localValues array
-*
-***/
-
-//===========================================================================
-void SmVectorImpl::init(Node & node, bool full) {
-    assert(node.type == Node::kSmVector);
-    assert(!full);
-    node.numBytes = 0;
-    node.numValues = 0;
-}
-
-//===========================================================================
-void SmVectorImpl::init(Node & node, const Node & from) {
-    assert(node.type == Node::kSmVector);
-    assert(from.type == Node::kSmVector);
-    node = from;
-}
-
-//===========================================================================
-void SmVectorImpl::destroy(Node & node)
-{}
-
-//===========================================================================
-bool SmVectorImpl::insert(
-    Node & node,
-    const unsigned * first,
-    const unsigned * last
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::insSmv(
+    A * alloc,
+    Node * node,
+    const T * first,
+    const T * last
 ) {
     bool changed = false;
     while (first != last) {
-        if (node.type != Node::kSmVector)
-            return impl(node)->insert(node, first, last) || changed;
-        changed = insert(node, *first++, 1) || changed;
+        if (node->type != kSmVector) {
+            return insert(alloc, node, first, last)
+                || changed;
+        }
+        changed = insert(alloc, node, *first++, 1) || changed;
     }
     return changed;
 }
 
 //===========================================================================
-bool SmVectorImpl::insert(Node & node, unsigned start, size_t count) {
-    assert(count);
-    assert(relBase(start, node.depth) == node.base);
-    assert(count - 1 <= absFinal(node) - start);
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::insVec(
+    A * alloc,
+    Node * node,
+    const T * first,
+    const T * last
+) {
+    bool changed = false;
+    while (first != last) {
+        if (node->type != kVector) {
+            return insert(alloc, node, first, last)
+                || changed;
+        }
+        changed = insert(alloc, node, *first++, 1) || changed;
+    }
+    return changed;
+}
 
-    auto last = node.localValues + node.numValues;
-    auto ptr = lower_bound(node.localValues, last, start);
-    auto eptr = (ptr < last && *ptr < start + count)
-        ? lower_bound(ptr, last, start + count)
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::insBit(
+    A * alloc,
+    Node * node,
+    const T * first,
+    const T * last
+) {
+    bool changed = false;
+    for (; first != last; ++first)
+        changed = insert(alloc, node, *first, 1) || changed;
+    return changed;
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::insMeta(
+    A * alloc,
+    Node * node,
+    const T * first,
+    const T * last
+) {
+    bool changed = false;
+    while (first != last) {
+        auto final = absFinal(*first, node->depth + 1);
+        auto ptr = node->nodes + nodePos(*node, *first);
+        auto mid = first + 1;
+        while (mid != last && *mid > *first && *mid <= final)
+            mid += 1;
+        changed = insert(alloc, ptr, first, mid) || changed;
+        first = mid;
+    }
+    return changed;
+}
+
+
+/****************************************************************************
+*
+*   insert(A * alloc, Node * node, const T * first, const T * last)
+*
+***/
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::insert(
+    A * alloc,
+    Node * node,
+    T start,
+    size_t len
+) {
+    using Fn = bool(A * alloc, Node * node, T start, size_t len);
+    constinit static Fn * const functs[kNodeTypes] = {
+        insEmpty,   // empty
+        no,         // full
+        insSmv,     // small vector
+        insVec,     // vector
+        insBit,     // bitmap
+        insMeta,    // meta
+    };
+    return functs[node->type](alloc, node, start, len);
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::insEmpty(
+    A * alloc,
+    Node * node,
+    T start,
+    size_t len
+) {
+    assert(node->type == kEmpty);
+    assert(len);
+    assert(relBase(start, node->depth) == node->base);
+    assert(len - 1 <= absFinal(*node) - start);
+    grow(alloc, node, len);
+    insert(alloc, node, start, len);
+    return true;
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::insSmv(
+    A * alloc,
+    Node * node,
+    T start,
+    size_t len
+) {
+    assert(len);
+    assert(relBase(start, node->depth) == node->base);
+    assert(len - 1 <= absFinal(*node) - start);
+    auto last = node->localValues + node->numValues;
+    auto ptr = lower_bound(node->localValues, last, start);
+    auto eptr = (ptr < last && *ptr < start + len)
+        ? lower_bound(ptr, last, start + len)
         : ptr;
-    size_t nBelow = ptr - node.localValues;
+    size_t nBelow = ptr - node->localValues;
     size_t nOld = eptr - ptr;
     size_t nAbove = last - eptr;
-    if (count == nOld)
+    if (len == nOld)
         return false;
-    auto num = nBelow + count + nAbove;
-    if (num > maxValues()) {
-        convert(node);
-        return impl(node)->insert(node, start, count);
+    auto num = nBelow + len + nAbove;
+    if (num > smvMaxValues()) {
+        grow(alloc, node, num);
+        return insert(alloc, node, start, len);
     }
 
-    node.numValues = (uint16_t) num;
+    node->numValues = (uint16_t) num;
     if (nAbove)
-        memmove(ptr + count, eptr, nAbove * sizeof *ptr);
+        memmove(ptr + len, eptr, nAbove * sizeof *ptr);
     for (;;) {
         *ptr++ = start;
-        if (!--count)
+        if (!--len)
             return true;
         start += 1;
     }
 }
 
 //===========================================================================
-bool SmVectorImpl::erase(Node & node, unsigned start, size_t count) {
-    assert(count);
-    assert(relBase(start, node.depth) == node.base);
-    assert(count - 1 <= absFinal(node) - start);
-    auto last = node.localValues + node.numValues;
-    auto ptr = lower_bound(node.localValues, last, start);
-    if (ptr == last || *ptr >= start + count)
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::insVec(
+    A * alloc,
+    Node * node,
+    T start,
+    size_t len
+) {
+    assert(len);
+    assert(relBase(start, node->depth) == node->base);
+    assert(len - 1 <= absFinal(*node) - start);
+    auto last = node->values + node->numValues;
+    auto ptr = lower_bound(node->values, last, start);
+    auto eptr = (ptr < last && *ptr < start + len)
+        ? lower_bound(ptr, last, start + len)
+        : ptr;
+    size_t nBelow = ptr - node->values;
+    size_t nOld = eptr - ptr;
+    size_t nAbove = last - eptr;
+    if (len == nOld)
         return false;
-    auto eptr = lower_bound(ptr, last, start + count);
+    auto num = nBelow + len + nAbove;
+    if (num > vecMaxValues()) {
+        grow(alloc, node, num);
+        return insert(alloc, node, start, len);
+    }
+
+    node->numValues = (uint16_t) num;
+    if (nAbove)
+        memmove(ptr + len, eptr, nAbove * sizeof *ptr);
+    for (;;) {
+        *ptr++ = start;
+        if (!--len)
+            return true;
+        start += 1;
+    }
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::insBit(
+    A * alloc,
+    Node * node,
+    T start,
+    size_t len
+) {
+    assert(node->type == kBitmap);
+    assert(len);
+    assert(relBase(start, node->depth) == node->base);
+    assert(len - 1 <= absFinal(*node) - start);
+    auto base = (uint64_t *) node->values;
+    BitView bits(base, bitNumInt64s());
+
+    auto low = relValue(start, node->depth);
+    auto high = low + len - 1;
+    auto lower = bits.data(low);
+    auto upper = bits.data(high);
+    if (lower == upper) {
+        auto tmp = *lower;
+        bits.set(low, len);
+        if (tmp == *lower)
+            return false;
+        if (!tmp)
+            node->numValues += 1;
+        return true;
+    }
+
+    bits.remove_suffix(bitNumInt64s() - (upper - base + 1));
+    auto zero = bits.findZero(low);
+    if (zero > high)
+        return false;
+
+    lower = bits.data(zero);
+    for (auto ptr = lower; ptr <= upper; ++ptr) {
+        if (!*ptr)
+            node->numValues += 1;
+    }
+    bits.set(zero, high - zero + 1);
+
+    if (node->numValues < bitNumInt64s())
+        return true;
+    bits = BitView(base, bitNumInt64s());
+    if (!bits.all())
+        return true;
+
+    destroy(alloc, node);
+    node->type = kFull;
+    init(alloc, node, true);
+    return true;
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::insMeta(
+    A * alloc,
+    Node * node,
+    T start,
+    size_t len
+) {
+    assert(len);
+    assert(relBase(start, node->depth) == node->base);
+    assert(len - 1 <= absFinal(*node) - start);
+    auto ptr = node->nodes + nodePos(*node, start);
+    auto step = valueMask(node->depth + 1) + 1;
+    auto maybeFull = true;
+    auto changed = false;
+    for (auto&& [st, cnt] : AlignedIntervalGen(start, len, step)) {
+        if (cnt == step) {
+            if (ptr->type != kFull) {
+                changed = true;
+                fill(alloc, ptr);
+            }
+        } else if (insert(alloc, ptr, (value_type) st, cnt)) {
+            changed = true;
+            if (ptr->type != kFull)
+                maybeFull = false;
+        }
+        ptr += 1;
+    }
+    if (changed && maybeFull)
+        convertMetaIf(alloc, node, kFull);
+    return changed;
+}
+
+
+/****************************************************************************
+*
+*   erase(A * alloc, Node * node, T start, size_t len)
+*
+***/
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::erase(
+    A * alloc,
+    Node * node,
+    T start,
+    size_t len
+) {
+    using Fn = bool(A * alloc, Node * node, T start, size_t len);
+    constinit static Fn * const functs[kNodeTypes] = {
+        no,         // empty
+        eraFull,    // full
+        eraSmv,     // small vector
+        eraVec,     // vector
+        eraBit,     // bitmap
+        eraMeta,    // meta
+    };
+    return functs[node->type](alloc, node, start, len);
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::eraFull(
+    A * alloc,
+    Node * node,
+    T start,
+    size_t len
+) {
+    assert(len);
+    assert(relBase(start, node->depth) == node->base);
+    assert(len - 1 <= absFinal(*node) - start);
+    destroy(alloc, node);
+    if (node->depth == kMaxDepth) {
+        node->type = kBitmap;
+    } else {
+        node->type = kMeta;
+    }
+    init(alloc, node, true);
+    erase(alloc, node, start, len);
+    return true;
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::eraSmv(
+    A * alloc,
+    Node * node,
+    T start,
+    size_t len
+) {
+    assert(len);
+    assert(relBase(start, node->depth) == node->base);
+    assert(len - 1 <= absFinal(*node) - start);
+    auto last = node->localValues + node->numValues;
+    auto ptr = lower_bound(node->localValues, last, start);
+    if (ptr == last || *ptr >= start + len)
+        return false;
+    auto eptr = lower_bound(ptr, last, start + len);
     if (ptr == eptr)
         return false;
 
-    node.numValues -= (uint16_t) (eptr - ptr);
-    if (node.numValues) {
+    node->numValues -= (uint16_t) (eptr - ptr);
+    if (node->numValues) {
         // Still has values, shift remaining ones down
         memmove(ptr, eptr, sizeof *ptr * (last - eptr));
     } else {
         // No more values, convert to empty node.
-        destroy(node);
-        node.type = Node::kEmpty;
-        s_emptyImpl.init(node, false);
+        clear(alloc, node);
     }
     return true;
 }
 
 //===========================================================================
-size_t SmVectorImpl::count(const Node & node) const {
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::eraVec(
+    A * alloc,
+    Node * node,
+    T start,
+    size_t len
+) {
+    assert(len);
+    assert(relBase(start, node->depth) == node->base);
+    assert(len - 1 <= absFinal(*node) - start);
+    auto last = node->values + node->numValues;
+    auto ptr = lower_bound(node->values, last, start);
+    if (ptr == last || *ptr >= start + len)
+        return false;
+    auto eptr = lower_bound(ptr, last, start + len);
+    if (ptr == eptr)
+        return false;
+
+    node->numValues -= (uint16_t) (eptr - ptr);
+    if (node->numValues) {
+        // Still has values, shift remaining ones down
+        memmove(ptr, eptr, sizeof *ptr * (last - eptr));
+    } else {
+        // No more values, convert to empty node->
+        clear(alloc, node);
+    }
+    return true;
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::eraBit(
+    A * alloc,
+    Node * node,
+    T start,
+    size_t len
+) {
+    assert(len);
+    assert(relBase(start, node->depth) == node->base);
+    assert(len - 1 <= absFinal(*node) - start);
+    auto base = (uint64_t *) node->values;
+    BitView bits(base, bitNumInt64s());
+    auto low = relValue(start, node->depth);
+    auto high = low + len - 1;
+    auto lower = bits.data(low);
+    auto upper = bits.data(high);
+    if (lower == upper) {
+        auto tmp = *lower;
+        bits.reset(low, len);
+        if (tmp == *lower)
+            return false;
+        if (!*lower) {
+            node->numValues -= 1;
+            goto CHECK_IF_EMPTY;
+        }
+        return true;
+    }
+
+    bits = BitView(lower, upper - lower + 1);
+    low %= bits.kWordBits;
+    high = low + len - 1;
+    low = (T) bits.find(low);
+    if (low > high)
+        return false;
+
+    len = high - low + 1;
+    lower = bits.data(low);
+    bits = BitView(lower, upper - lower + 1);
+    low %= bits.kWordBits;
+    for (auto ptr = lower; ptr <= upper; ++ptr) {
+        if (*ptr)
+            node->numValues -= 1;
+    }
+    bits.reset(low, len);
+    for (auto ptr = lower; ptr <= upper; ++ptr) {
+        if (*ptr)
+            node->numValues += 1;
+    }
+
+CHECK_IF_EMPTY:
+    if (!node->numValues)
+        clear(alloc, node);
+
+    return true;
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::eraMeta(
+    A * alloc,
+    Node * node,
+    T start,
+    size_t len
+) {
+    assert(len);
+    assert(relBase(start, node->depth) == node->base);
+    assert(len - 1 <= absFinal(*node) - start);
+    auto ptr = node->nodes + nodePos(*node, start);
+    auto step = valueMask(node->depth + 1) + 1;
+    auto maybeEmpty = true;
+    auto changed = false;
+    for (auto&& [st, cnt] : AlignedIntervalGen(start, len, step)) {
+        if (cnt == step) {
+            if (ptr->type != kEmpty) {
+                changed = true;
+                clear(alloc, ptr);
+            }
+        } else if (erase(alloc, ptr, (value_type) st, cnt)) {
+            changed = true;
+            if (ptr->type != kEmpty)
+                maybeEmpty = false;
+        }
+        ptr += 1;
+    }
+    if (changed && maybeEmpty)
+        convertMetaIf(alloc, node, kEmpty);
+    return changed;
+}
+
+
+/****************************************************************************
+*
+*   count(const Node & node)
+*
+***/
+
+//===========================================================================
+template <std::integral T, typename A>
+size_t IntegralSet<T,A>::Impl::count(const Node & node) {
+    using Fn = size_t(const Node & node);
+    constinit static Fn * const functs[kNodeTypes] = {
+        cntEmpty,   // empty
+        cntFull,    // full
+        cntSmv,     // small vector
+        cntVec,     // vector
+        cntBit,     // bitmap
+        cntMeta,    // meta
+    };
+    return functs[node.type](node);
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+size_t IntegralSet<T,A>::Impl::cntEmpty(const Node & node) {
+    return 0;
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+size_t IntegralSet<T,A>::Impl::cntFull(const Node & node) {
+    return absSize(node);
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+size_t IntegralSet<T,A>::Impl::cntSmv(const Node & node) {
     return node.numValues;
 }
 
 //===========================================================================
-size_t SmVectorImpl::count(
+template <std::integral T, typename A>
+size_t IntegralSet<T,A>::Impl::cntVec(const Node & node) {
+    return node.numValues;
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+size_t IntegralSet<T,A>::Impl::cntBit(const Node & node) {
+    auto base = (uint64_t *) node.values;
+    BitView bits{base, bitNumInt64s()};
+    return bits.count();
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+size_t IntegralSet<T,A>::Impl::cntMeta(const Node & node) {
+    size_t num = 0;
+    auto * ptr = node.nodes;
+    auto * last = ptr + node.numValues;
+    for (; ptr != last; ++ptr)
+        num += count(*ptr);
+    return num;
+}
+
+
+/****************************************************************************
+*
+*   count(const Node & node, value_type start, size_t len)
+*
+***/
+
+//===========================================================================
+template <std::integral T, typename A>
+size_t IntegralSet<T,A>::Impl::count(
     const Node & node,
-    unsigned start,
-    size_t count
-) const {
-    assert(count);
+    T start,
+    size_t len
+) {
+    using Fn = size_t(const Node & node, T start, size_t len);
+    constinit static Fn * const functs[kNodeTypes] = {
+        cntEmpty,   // empty
+        cntFull,    // full
+        cntSmv,     // small vector
+        cntVec,     // vector
+        cntBit,     // bitmap
+        cntMeta,    // meta
+    };
+    return functs[node.type](node, start, len);
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+size_t IntegralSet<T,A>::Impl::cntEmpty(
+    const Node & node,
+    T start,
+    size_t len
+) {
+    return 0;
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+size_t IntegralSet<T,A>::Impl::cntFull(
+    const Node & node,
+    T start,
+    size_t len
+) {
+    return len;
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+size_t IntegralSet<T,A>::Impl::cntSmv(
+    const Node & node,
+    T start,
+    size_t len
+) {
+    assert(len);
     assert(relBase(start, node.depth) == node.base);
-    assert(count - 1 <= absFinal(node) - start);
+    assert(len - 1 <= absFinal(node) - start);
     auto last = node.localValues + node.numValues;
     auto ptr = lower_bound(node.localValues, last, start);
-    if (ptr == last || *ptr >= start + count)
+    if (ptr == last || *ptr >= start + len)
         return 0;
-    auto eptr = lower_bound(ptr, last, start + count);
+    auto eptr = lower_bound(ptr, last, start + len);
     return eptr - ptr;
 }
 
 //===========================================================================
-bool SmVectorImpl::findFirst(
-    const Node ** onode,
-    unsigned * ovalue,
+template <std::integral T, typename A>
+size_t IntegralSet<T,A>::Impl::cntVec(
     const Node & node,
-    unsigned base
-) const {
-    assert(relBase(base, node.depth) == node.base);
+    T start,
+    size_t len
+) {
+    assert(len);
+    assert(relBase(start, node.depth) == node.base);
+    assert(len - 1 <= absFinal(node) - start);
+    auto last = node.values + node.numValues;
+    auto ptr = lower_bound(node.values, last, start);
+    if (ptr == last || *ptr >= start + len)
+        return 0;
+    auto eptr = lower_bound(ptr, last, start + len);
+    return eptr - ptr;
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+size_t IntegralSet<T,A>::Impl::cntBit(
+    const Node & node,
+    T start,
+    size_t len
+) {
+    assert(len);
+    assert(relBase(start, node.depth) == node.base);
+    assert(len - 1 <= absFinal(node) - start);
+    auto base = (uint64_t *) node.values;
+    BitView bits{base, bitNumInt64s()};
+    auto low = relValue(start, node.depth);
+    return bits.count(low, len);
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+size_t IntegralSet<T,A>::Impl::cntMeta(
+    const Node & node,
+    T start,
+    size_t len
+) {
+    assert(len);
+    assert(relBase(start, node.depth) == node.base);
+    assert(len - 1 <= absFinal(node) - start);
+    auto pos = nodePos(node, start);
+    auto finalPos = nodePos(node, (value_type) (start + len - 1));
+    auto lower = node.nodes + pos;
+    auto upper = node.nodes + finalPos;
+    if (pos == finalPos) {
+        auto ptr = node.nodes + pos;
+        return count(*ptr, start, len);
+    }
+
+    size_t num = 0;
+    num += count(*lower, start, absFinal(*lower) - start + 1);
+    for (auto ptr = lower + 1; ptr < upper; ++ptr) {
+        num += count(*ptr);
+    }
+    num += count(*upper, absBase(*upper), start + len - 1);
+    return num;
+}
+
+
+/****************************************************************************
+*
+*   find(const Node ** onode, T * ovalue, const Node & node, T key)
+*
+*   Find smallest value >= pos, returns false if not found.
+*
+***/
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::find(
+    const Node ** onode,
+    T * ovalue,
+    const Node & node,
+    T key
+) {
+    using Fn = bool(const Node **, T *, const Node & node, T key);
+    constinit static Fn * const functs[kNodeTypes] = {
+        findEmpty,   // empty
+        findFull,    // full
+        findSmv,     // small vector
+        findVec,     // vector
+        findBit,     // bitmap
+        findMeta,    // meta
+    };
+    return functs[node.type](onode, ovalue, node, key);
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::findEmpty(
+    const Node ** onode,
+    T * ovalue,
+    const Node & node,
+    T key
+) {
+    assert(relBase(key, node.depth) == node.base);
+    return false;
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::findFull(
+    const Node ** onode,
+    T * ovalue,
+    const Node & node,
+    T key
+) {
+    assert(relBase(key, node.depth) == node.base);
+    *onode = &node;
+    *ovalue = key;
+    return true;
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::findSmv(
+    const Node ** onode,
+    T * ovalue,
+    const Node & node,
+    T key
+) {
+    assert(relBase(key, node.depth) == node.base);
     auto last = node.localValues + node.numValues;
-    auto ptr = lower_bound(node.localValues, last, base);
+    auto ptr = lower_bound(node.localValues, last, key);
     if (ptr != last) {
         *onode = &node;
         *ovalue = *ptr;
@@ -866,21 +1661,112 @@ bool SmVectorImpl::findFirst(
 }
 
 //===========================================================================
-bool SmVectorImpl::findLast(
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::findVec(
     const Node ** onode,
-    unsigned * ovalue,
+    T * ovalue,
     const Node & node,
-    unsigned base
-) const {
-    assert(relBase(base, node.depth) == node.base);
-    if (base < *node.localValues) {
+    T key
+) {
+    assert(relBase(key, node.depth) == node.base);
+    auto last = node.values + node.numValues;
+    auto ptr = lower_bound(node.values, last, key);
+    if (ptr != last) {
+        *onode = &node;
+        *ovalue = *ptr;
+        return true;
+    }
+    return false;
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::findBit(
+    const Node ** onode,
+    T * ovalue,
+    const Node & node,
+    T key
+) {
+    assert(relBase(key, node.depth) == node.base);
+    auto base = (uint64_t *) node.values;
+    auto rel = relValue(key, node.depth);
+    assert(rel < bitNumBits());
+    BitView bits{base, bitNumInt64s()};
+    if (auto pos = bits.find(rel); pos != bits.npos) {
+        *onode = &node;
+        *ovalue = (value_type) pos + absBase(node);
+        return true;
+    }
+    return false;
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::findMeta(
+    const Node ** onode,
+    T * ovalue,
+    const Node & node,
+    T key
+) {
+    assert(Impl::relBase(key, node.depth) == node.base);
+    auto pos = Impl::nodePos(node, key);
+    auto ptr = node.nodes + pos;
+    auto last = node.nodes + node.numValues;
+    for (;;) {
+        if (Impl::find(onode, ovalue, *ptr, key))
+            return true;
+        if (++ptr == last)
+            return false;
+        key = Impl::absFinal(*ptr);
+    }
+}
+
+
+/****************************************************************************
+*
+*   rfind(const Node ** onode, T * ovalue, const Node & node, T key)
+*
+*   Find largest value <= pos, returns false if there are none.
+*
+***/
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::rfind(
+    const Node ** onode,
+    T * ovalue,
+    const Node & node,
+    T key
+) {
+    using Fn = bool(const Node **, T *, const Node & node, T key);
+    constinit static Fn * const functs[kNodeTypes] = {
+        findEmpty,    // empty
+        findFull,     // full
+        rfindSmv,     // small vector
+        rfindVec,     // vector
+        rfindBit,     // bitmap
+        rfindMeta,    // meta
+    };
+    return functs[node.type](onode, ovalue, node, key);
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::rfindSmv(
+    const Node ** onode,
+    T * ovalue,
+    const Node & node,
+    T key
+) {
+    assert(relBase(key, node.depth) == node.base);
+    if (key < *node.localValues) {
         return false;
-    } else if (base == *node.localValues) {
-        *ovalue = base;
+    } else if (key == *node.localValues) {
+        *ovalue = key;
     } else {
         // base > *node.localValues
         auto last = node.localValues + node.numValues;
-        auto ptr = lower_bound(node.localValues + 1, last, base);
+        auto ptr = lower_bound(node.localValues + 1, last, key);
         *ovalue = ptr[-1];
     }
     *onode = &node;
@@ -888,16 +1774,283 @@ bool SmVectorImpl::findLast(
 }
 
 //===========================================================================
-bool SmVectorImpl::firstContiguous(
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::rfindVec(
     const Node ** onode,
-    unsigned * ovalue,
+    T * ovalue,
     const Node & node,
-    unsigned base
-) const {
-    assert(relBase(base, node.depth) == node.base);
+    T key
+) {
+    assert(relBase(key, node.depth) == node.base);
+    if (key < *node.values) {
+        return false;
+    } else if (key == *node.values) {
+        *ovalue = key;
+    } else {
+        // base > *node.values
+        auto last = node.values + node.numValues;
+        auto ptr = lower_bound(node.values + 1, last, key);
+        *ovalue = ptr[-1];
+    }
+    *onode = &node;
+    return true;
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::rfindBit(
+    const Node ** onode,
+    T * ovalue,
+    const Node & node,
+    T key
+) {
+    assert(relBase(key, node.depth) == node.base);
+    auto base = (uint64_t *) node.values;
+    auto rel = relValue(key, node.depth);
+    assert(rel < bitNumBits());
+    BitView bits{base, bitNumInt64s()};
+    if (auto pos = bits.rfind(rel); pos != bits.npos) {
+        *onode = &node;
+        *ovalue = (value_type) pos + absBase(node);
+        return true;
+    }
+    return false;
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::rfindMeta(
+    const Node ** onode,
+    T * ovalue,
+    const Node & node,
+    T key
+) {
+    assert(relBase(key, node.depth) == node.base);
+    auto pos = nodePos(node, key);
+    auto ptr = node.nodes + pos;
+    for (;;) {
+        if (rfind(onode, ovalue, *ptr, key))
+            return true;
+        if (ptr == node.nodes)
+            return false;
+        ptr -= 1;
+        key = absBase(*ptr);
+    }
+}
+
+
+/****************************************************************************
+*
+*   contig(const Node ** onode, T * ovalue, const Node & node, T key)
+*
+*   Find largest value in segment contiguously connected with pos. Returns
+*   false if may extend into the next node.
+*
+***/
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::contig(
+    const Node ** onode,
+    T * ovalue,
+    const Node & node,
+    T key
+) {
+    using Fn = bool(const Node **, T *, const Node & node, T key);
+    constinit static Fn * const functs[kNodeTypes] = {
+        yes,            // empty
+        contigFull,     // full
+        contigSmv,      // small vector
+        contigVec,      // vector
+        contigBit,      // bitmap
+        contigMeta,     // meta
+    };
+    return functs[node.type](onode, ovalue, node, key);
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::contigFull(
+    const Node ** onode,
+    T * ovalue,
+    const Node & node,
+    T key
+) {
+    assert(relBase(key, node.depth) == node.base);
+    *onode = &node;
+    *ovalue = absFinal(node);
+    return false;
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::contigSmv(
+    const Node ** onode,
+    T * ovalue,
+    const Node & node,
+    T key
+) {
+    assert(relBase(key, node.depth) == node.base);
     auto last = node.localValues + node.numValues;
-    auto ptr = lower_bound(node.localValues, last, base);
-    auto val = base;
+    auto ptr = lower_bound(node.localValues, last, key);
+    auto val = key;
+    if (ptr == last || *ptr != val) {
+        // Base not found, return that search is done, but leave output node
+        // and value unchanged.
+        return true;
+    }
+    *onode = &node;
+    while (++ptr != last) {
+        val += 1;
+        if (*ptr != val) {
+            *ovalue = val - 1;
+            return true;
+        }
+    }
+    *ovalue = val;
+    if (val < absFinal(node))
+        return true;
+
+    // May extend into following node.
+    return false;
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::contigVec(
+    const Node ** onode,
+    T * ovalue,
+    const Node & node,
+    T key
+) {
+    assert(relBase(key, node.depth) == node.base);
+    auto last = node.values + node.numValues;
+    auto ptr = lower_bound(node.values, last, key);
+    auto val = key;
+    if (ptr == last || *ptr != val) {
+        // Base not found, return that search is done, but leave output node
+        // and value unchanged.
+        return true;
+    }
+    *onode = &node;
+    while (++ptr != last) {
+        val += 1;
+        if (*ptr != val) {
+            *ovalue = val - 1;
+            return true;
+        }
+    }
+    *ovalue = val;
+    if (val < absFinal(node))
+        return true;
+
+    // May extend into following node.
+    return false;
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::contigBit(
+    const Node ** onode,
+    T * ovalue,
+    const Node & node,
+    T key
+) {
+    assert(relBase(key, node.depth) == node.base);
+    auto base = (uint64_t *) node.values;
+    auto rel = relValue(key, node.depth);
+    assert(rel < bitNumBits());
+    BitView bits{base, bitNumInt64s()};
+    if (auto pos = bits.findZero(rel); pos != bits.npos) {
+        if (auto val = (value_type) pos + absBase(node); val != key) {
+            *onode = &node;
+            *ovalue = val - 1;
+        }
+        return true;
+    }
+    *onode = &node;
+    *ovalue = absFinal(node);
+    return false;
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::contigMeta(
+    const Node ** onode,
+    T * ovalue,
+    const Node & node,
+    T key
+) {
+    auto pos = nodePos(node, key);
+    auto ptr = (const Node *) node.nodes + pos;
+    auto last = node.nodes + node.numValues;
+    for (;;) {
+        if (contig(onode, ovalue, *ptr, key))
+            return true;
+        *onode = ptr;
+        *ovalue = absFinal(*ptr);
+        if (++ptr == last)
+            return false;
+        key = absBase(*ptr);
+    }
+}
+
+
+/****************************************************************************
+*
+*   rcontig(const Node ** onode, T * ovalue, const Node & node, T key)
+*
+*   Find smallest value in segment contiguously connected with pos. Returns
+*   false if may extend into preceding node.
+*
+***/
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::rcontig(
+    const Node ** onode,
+    T * ovalue,
+    const Node & node,
+    T key
+) {
+    using Fn = bool(const Node **, T *, const Node & node, T key);
+    constinit static Fn * const functs[kNodeTypes] = {
+        yes,            // empty
+        rcontigFull,     // full
+        rcontigSmv,     // small vector
+        rcontigVec,     // vector
+        rcontigBit,     // bitmap
+        rcontigMeta,    // meta
+    };
+    return functs[node.type](onode, ovalue, node, key);
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::rcontigFull(
+    const Node ** onode,
+    T * ovalue,
+    const Node & node,
+    T key
+) {
+    assert(relBase(key, node.depth) == node.base);
+    *onode = &node;
+    *ovalue = absBase(node);
+    return false;
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::rcontigSmv(
+    const Node ** onode,
+    T * ovalue,
+    const Node & node,
+    T key
+) {
+    assert(relBase(key, node.depth) == node.base);
+    auto last = node.localValues + node.numValues;
+    auto ptr = lower_bound(node.localValues, last, key);
+    auto val = key;
     if (ptr == last || *ptr != val) {
         // Base not found, return that search is done, but leave output node
         // and value unchanged.
@@ -921,228 +2074,17 @@ bool SmVectorImpl::firstContiguous(
 }
 
 //===========================================================================
-bool SmVectorImpl::lastContiguous(
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::rcontigVec(
     const Node ** onode,
-    unsigned * ovalue,
+    T * ovalue,
     const Node & node,
-    unsigned base
-) const {
-    assert(relBase(base, node.depth) == node.base);
-    auto last = node.localValues + node.numValues;
-    auto ptr = lower_bound(node.localValues, last, base);
-    auto val = base;
-    if (ptr == last || *ptr != val) {
-        // Base not found, return that search is done, but leave output node
-        // and value unchanged.
-        return true;
-    }
-    *onode = &node;
-    while (++ptr != last) {
-        val += 1;
-        if (*ptr != val) {
-            *ovalue = val - 1;
-            return true;
-        }
-    }
-    *ovalue = val;
-    if (val < absFinal(node))
-        return true;
-
-    // May extend into following node.
-    return false;
-}
-
-//===========================================================================
-void SmVectorImpl::convert(Node & node) {
-    Node tmp{node};
-    auto ptr = tmp.localValues;
-    auto last = ptr + tmp.numValues;
-    node.type = Node::kVector;
-    s_vectorImpl.init(node, false);
-    s_vectorImpl.insert(node, ptr, last);
-    destroy(tmp);
-}
-
-
-/****************************************************************************
-*
-*   VectorImpl
-*
-*   node.numValues - size (not capacity!) of node.values array
-*
-***/
-
-//===========================================================================
-void VectorImpl::init(Node & node, bool full) {
-    assert(node.type == Node::kVector);
-    assert(!full);
-    node.numBytes = kDataSize;
-    node.numValues = 0;
-    node.values = (unsigned *) malloc(node.numBytes);
-}
-
-//===========================================================================
-void VectorImpl::init(Node & node, const Node & from) {
-    assert(node.type == Node::kVector);
-    assert(from.type == Node::kVector);
-    node = from;
-    node.values = (unsigned *) malloc(node.numBytes);
-    assert(node.values);
-    memcpy(node.values, from.values, node.numValues * sizeof *node.values);
-}
-
-//===========================================================================
-void VectorImpl::destroy(Node & node) {
-    assert(node.values);
-    free(node.values);
-}
-
-//===========================================================================
-bool VectorImpl::insert(
-    Node & node,
-    const unsigned * first,
-    const unsigned * last
+    T key
 ) {
-    bool changed = false;
-    while (first != last) {
-        if (node.type != Node::kVector)
-            return impl(node)->insert(node, first, last) || changed;
-        changed = insert(node, *first++, 1) || changed;
-    }
-    return changed;
-}
-
-//===========================================================================
-bool VectorImpl::insert(Node & node, unsigned start, size_t count) {
-    assert(count);
-    assert(relBase(start, node.depth) == node.base);
-    assert(count - 1 <= absFinal(node) - start);
+    assert(relBase(key, node.depth) == node.base);
     auto last = node.values + node.numValues;
-    auto ptr = lower_bound(node.values, last, start);
-    auto eptr = (ptr < last && *ptr < start + count)
-        ? lower_bound(ptr, last, start + count)
-        : ptr;
-    size_t nBelow = ptr - node.values;
-    size_t nOld = eptr - ptr;
-    size_t nAbove = last - eptr;
-    if (count == nOld)
-        return false;
-    auto num = nBelow + count + nAbove;
-    if (num > maxValues()) {
-        convert(node);
-        return impl(node)->insert(node, start, count);
-    }
-
-    node.numValues = (uint16_t) num;
-    if (nAbove)
-        memmove(ptr + count, eptr, nAbove * sizeof *ptr);
-    for (;;) {
-        *ptr++ = start;
-        if (!--count)
-            return true;
-        start += 1;
-    }
-}
-
-//===========================================================================
-bool VectorImpl::erase(Node & node, unsigned start, size_t count) {
-    assert(count);
-    assert(relBase(start, node.depth) == node.base);
-    assert(count - 1 <= absFinal(node) - start);
-    auto last = node.values + node.numValues;
-    auto ptr = lower_bound(node.values, last, start);
-    if (ptr == last || *ptr >= start + count)
-        return false;
-    auto eptr = lower_bound(ptr, last, start + count);
-    if (ptr == eptr)
-        return false;
-
-    node.numValues -= (uint16_t) (eptr - ptr);
-    if (node.numValues) {
-        // Still has values, shift remaining ones down
-        memmove(ptr, eptr, sizeof *ptr * (last - eptr));
-    } else {
-        // No more values, convert to empty node.
-        destroy(node);
-        node.type = Node::kEmpty;
-        s_emptyImpl.init(node, false);
-    }
-    return true;
-}
-
-//===========================================================================
-size_t VectorImpl::count(const Node & node) const {
-    return node.numValues;
-}
-
-//===========================================================================
-size_t VectorImpl::count(
-    const Node & node,
-    unsigned start,
-    size_t count
-) const {
-    assert(count);
-    assert(relBase(start, node.depth) == node.base);
-    assert(count - 1 <= absFinal(node) - start);
-    auto last = node.values + node.numValues;
-    auto ptr = lower_bound(node.values, last, start);
-    if (ptr == last || *ptr >= start + count)
-        return 0;
-    auto eptr = lower_bound(ptr, last, start + count);
-    return eptr - ptr;
-}
-
-//===========================================================================
-bool VectorImpl::findFirst(
-    const Node ** onode,
-    unsigned * ovalue,
-    const Node & node,
-    unsigned base
-) const {
-    assert(relBase(base, node.depth) == node.base);
-    auto last = node.values + node.numValues;
-    auto ptr = lower_bound(node.values, last, base);
-    if (ptr != last) {
-        *onode = &node;
-        *ovalue = *ptr;
-        return true;
-    }
-    return false;
-}
-
-//===========================================================================
-bool VectorImpl::findLast(
-    const Node ** onode,
-    unsigned * ovalue,
-    const Node & node,
-    unsigned base
-) const {
-    assert(relBase(base, node.depth) == node.base);
-    if (base < *node.values) {
-        return false;
-    } else if (base == *node.values) {
-        *ovalue = base;
-    } else {
-        // base > *node.values
-        auto last = node.values + node.numValues;
-        auto ptr = lower_bound(node.values + 1, last, base);
-        *ovalue = ptr[-1];
-    }
-    *onode = &node;
-    return true;
-}
-
-//===========================================================================
-bool VectorImpl::firstContiguous(
-    const Node ** onode,
-    unsigned * ovalue,
-    const Node & node,
-    unsigned base
-) const {
-    assert(relBase(base, node.depth) == node.base);
-    auto last = node.values + node.numValues;
-    auto ptr = lower_bound(node.values, last, base);
-    auto val = base;
+    auto ptr = lower_bound(node.values, last, key);
+    auto val = key;
     if (ptr == last || *ptr != val) {
         // Base not found, return that search is done, but leave output node
         // and value unchanged.
@@ -1166,283 +2108,20 @@ bool VectorImpl::firstContiguous(
 }
 
 //===========================================================================
-bool VectorImpl::lastContiguous(
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::rcontigBit(
     const Node ** onode,
-    unsigned * ovalue,
+    T * ovalue,
     const Node & node,
-    unsigned base
-) const {
-    assert(relBase(base, node.depth) == node.base);
-    auto last = node.values + node.numValues;
-    auto ptr = lower_bound(node.values, last, base);
-    auto val = base;
-    if (ptr == last || *ptr != val) {
-        // Base not found, return that search is done, but leave output node
-        // and value unchanged.
-        return true;
-    }
-    *onode = &node;
-    while (++ptr != last) {
-        val += 1;
-        if (*ptr != val) {
-            *ovalue = val - 1;
-            return true;
-        }
-    }
-    *ovalue = val;
-    if (val < absFinal(node))
-        return true;
-
-    // May extend into following node.
-    return false;
-}
-
-//===========================================================================
-void VectorImpl::convert(Node & node) {
-    Node tmp {node};
-    auto ptr = tmp.values;
-    auto last = ptr + tmp.numValues;
-    if (tmp.depth == maxDepth()) {
-        node.type = Node::kBitmap;
-        s_bitmapImpl.init(node, false);
-        s_bitmapImpl.insert(node, ptr, last);
-    } else {
-        node.type = Node::kMeta;
-        s_metaImpl.init(node, false);
-        s_metaImpl.insert(node, ptr, last);
-    }
-    destroy(tmp);
-}
-
-
-/****************************************************************************
-*
-*   BitmapImpl
-*
-*   node.numValues - number of non-zero words in the bit view
-*
-***/
-
-//===========================================================================
-void BitmapImpl::init(Node & node, bool full) {
-    assert(node.type == Node::kBitmap);
-    node.numBytes = kDataSize;
-    node.values = (unsigned *) malloc(node.numBytes);
-    assert(node.values);
-    if (full) {
-        node.numValues = kDataSize / sizeof uint64_t;
-        memset(node.values, 0xff, kDataSize);
-    } else {
-        node.numValues = 0;
-        memset(node.values, 0, kDataSize);
-    }
-}
-
-//===========================================================================
-void BitmapImpl::init(Node & node, const Node & from) {
-    assert(node.type == Node::kBitmap);
-    assert(from.type == Node::kBitmap);
-    node = from;
-    node.values = (unsigned *) malloc(node.numBytes);
-    assert(node.values);
-    memcpy(node.values, from.values, node.numBytes);
-}
-
-//===========================================================================
-void BitmapImpl::destroy(Node & node) {
-    assert(node.values);
-    free(node.values);
-}
-
-//===========================================================================
-bool BitmapImpl::insert(
-    Node & node,
-    const unsigned * first,
-    const unsigned * last
+    T key
 ) {
-    bool changed = false;
-    for (; first != last; ++first)
-        changed = insert(node, *first, 1) || changed;
-    return changed;
-}
-
-//===========================================================================
-bool BitmapImpl::insert(Node & node, unsigned start, size_t count) {
-    assert(node.type == Node::kBitmap);
-    assert(count);
-    assert(relBase(start, node.depth) == node.base);
-    assert(count - 1 <= absFinal(node) - start);
-    auto base = (uint64_t *) node.values;
-    BitView bits(base, numInt64s());
-
-    auto low = relValue(start, node.depth);
-    auto high = low + count - 1;
-    auto lower = bits.data(low);
-    auto upper = bits.data(high);
-    if (lower == upper) {
-        auto tmp = *lower;
-        bits.set(low, count);
-        if (tmp == *lower)
-            return false;
-        if (!tmp)
-            node.numValues += 1;
-        return true;
-    }
-
-    bits.remove_suffix(numInt64s() - (upper - base + 1));
-    auto zero = (unsigned) bits.findZero(low);
-    if (zero > high)
-        return false;
-
-    lower = bits.data(zero);
-    for (auto ptr = lower; ptr <= upper; ++ptr) {
-        if (!*ptr)
-            node.numValues += 1;
-    }
-    bits.set(zero, high - zero + 1);
-
-    if (node.numValues < numInt64s())
-        return true;
-    bits = BitView(base, numInt64s());
-    if (!bits.all())
-        return true;
-
-    destroy(node);
-    node.type = Node::kFull;
-    s_fullImpl.init(node, true);
-    return true;
-}
-
-//===========================================================================
-bool BitmapImpl::erase(Node & node, unsigned start, size_t count) {
-    assert(count);
-    assert(relBase(start, node.depth) == node.base);
-    assert(count - 1 <= absFinal(node) - start);
-    auto base = (uint64_t *) node.values;
-    BitView bits(base, numInt64s());
-    auto low = relValue(start, node.depth);
-    auto high = low + count - 1;
-    auto lower = bits.data(low);
-    auto upper = bits.data(high);
-    if (lower == upper) {
-        auto tmp = *lower;
-        bits.reset(low, count);
-        if (tmp == *lower)
-            return false;
-        if (!*lower) {
-            node.numValues -= 1;
-            goto CHECK_IF_EMPTY;
-        }
-        return true;
-    }
-
-    bits = BitView(lower, upper - lower + 1);
-    low %= bits.kWordBits;
-    high = low + count - 1;
-    low = (unsigned) bits.find(low);
-    if (low > high)
-        return false;
-
-    count = high - low + 1;
-    lower = bits.data(low);
-    bits = BitView(lower, upper - lower + 1);
-    low %= bits.kWordBits;
-    for (auto ptr = lower; ptr <= upper; ++ptr) {
-        if (*ptr)
-            node.numValues -= 1;
-    }
-    bits.reset(low, count);
-    for (auto ptr = lower; ptr <= upper; ++ptr) {
-        if (*ptr)
-            node.numValues += 1;
-    }
-
-CHECK_IF_EMPTY:
-    if (!node.numValues) {
-        destroy(node);
-        node.type = Node::kEmpty;
-        s_emptyImpl.init(node, false);
-    }
-
-    return true;
-}
-
-//===========================================================================
-size_t BitmapImpl::count(const Node & node) const {
-    auto base = (uint64_t *) node.values;
-    BitView bits{base, numInt64s()};
-    return bits.count();
-}
-
-//===========================================================================
-size_t BitmapImpl::count(
-    const Node & node,
-    unsigned start,
-    size_t count
-) const {
-    assert(count);
-    assert(relBase(start, node.depth) == node.base);
-    assert(count - 1 <= absFinal(node) - start);
-    auto base = (uint64_t *) node.values;
-    BitView bits{base, numInt64s()};
-    auto low = relValue(start, node.depth);
-    return bits.count(low, count);
-}
-
-//===========================================================================
-bool BitmapImpl::findFirst(
-    const Node ** onode,
-    unsigned * ovalue,
-    const Node & node,
-    unsigned key
-) const {
     assert(relBase(key, node.depth) == node.base);
     auto base = (uint64_t *) node.values;
     auto rel = relValue(key, node.depth);
-    assert(rel < numBits());
-    BitView bits{base, numInt64s()};
-    if (auto pos = bits.find(rel); pos != bits.npos) {
-        *onode = &node;
-        *ovalue = (unsigned) pos + absBase(node);
-        return true;
-    }
-    return false;
-}
-
-//===========================================================================
-bool BitmapImpl::findLast(
-    const Node ** onode,
-    unsigned * ovalue,
-    const Node & node,
-    unsigned key
-) const {
-    assert(relBase(key, node.depth) == node.base);
-    auto base = (uint64_t *) node.values;
-    auto rel = relValue(key, node.depth);
-    assert(rel < numBits());
-    BitView bits{base, numInt64s()};
-    if (auto pos = bits.rfind(rel); pos != bits.npos) {
-        *onode = &node;
-        *ovalue = (unsigned) pos + absBase(node);
-        return true;
-    }
-    return false;
-}
-
-//===========================================================================
-bool BitmapImpl::firstContiguous(
-    const Node ** onode,
-    unsigned * ovalue,
-    const Node & node,
-    unsigned key
-) const {
-    assert(relBase(key, node.depth) == node.base);
-    auto base = (uint64_t *) node.values;
-    auto rel = relValue(key, node.depth);
-    assert(rel < numBits());
-    BitView bits{base, numInt64s()};
+    assert(rel < bitNumBits());
+    BitView bits{base, bitNumInt64s()};
     if (auto pos = bits.rfindZero(rel); pos != bits.npos) {
-        if (auto val = (unsigned) pos + absBase(node); val != key) {
+        if (auto val = (value_type) pos + absBase(node); val != key) {
             *onode = &node;
             *ovalue = val + 1;
         }
@@ -1454,273 +2133,18 @@ bool BitmapImpl::firstContiguous(
 }
 
 //===========================================================================
-bool BitmapImpl::lastContiguous(
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::rcontigMeta(
     const Node ** onode,
-    unsigned * ovalue,
+    T * ovalue,
     const Node & node,
-    unsigned key
-) const {
-    assert(relBase(key, node.depth) == node.base);
-    auto base = (uint64_t *) node.values;
-    auto rel = relValue(key, node.depth);
-    assert(rel < numBits());
-    BitView bits{base, numInt64s()};
-    if (auto pos = bits.findZero(rel); pos != bits.npos) {
-        if (auto val = (unsigned) pos + absBase(node); val != key) {
-            *onode = &node;
-            *ovalue = val - 1;
-        }
-        return true;
-    }
-    *onode = &node;
-    *ovalue = absFinal(node);
-    return false;
-}
-
-
-/****************************************************************************
-*
-*   MetaImpl
-*
-*   node.numValues - length of node.nodes array
-*
-***/
-
-//===========================================================================
-void MetaImpl::init(Node & node, bool full) {
-    assert(node.type == Node::kMeta);
-    node.numValues = numNodes(node.depth + 1);
-    node.numBytes = (node.numValues + 1) * sizeof *node.nodes;
-    node.nodes = (Node *) malloc(node.numBytes);
-    assert(node.nodes);
-    auto nptr = node.nodes;
-    auto nlast = node.nodes + node.numValues;
-    Node def;
-    def.type = full ? Node::kFull : Node::kEmpty;
-    def.depth = node.depth + 1;
-    def.base = node.base;
-    def.numBytes = 0;
-    def.numValues = 0;
-    def.values = nullptr;
-    auto domain = absSize(def) >> 8;
-    for (; nptr != nlast; ++nptr, def.base += domain)
-        *nptr = def;
-
-    // Internally the array of nodes contains a trailing "node" at the end that
-    // is a pointer to the parent node.
-    *nlast = {};
-    nlast->type = Node::kMetaParent;
-    nlast->nodes = &node;
-}
-
-//===========================================================================
-void MetaImpl::init(Node & node, const Node & from) {
-    assert(node.type == Node::kMeta);
-    assert(from.type == Node::kMeta);
-    node = from;
-    node.nodes = (Node *) malloc(node.numBytes);
-    assert(node.nodes);
-    auto nptr = node.nodes;
-    auto nlast = node.nodes + node.numValues;
-    auto fptr = from.nodes;
-    for (; nptr != nlast; ++nptr, ++fptr) {
-        nptr->type = fptr->type;
-        impl(*nptr)->init(*nptr, *fptr);
-    }
-    *nlast = *fptr;
-    nlast->nodes = &node;
-}
-
-//===========================================================================
-void MetaImpl::destroy(Node & node) {
-    assert(node.nodes);
-    auto * ptr = node.nodes;
-    auto * last = ptr + node.numValues;
-    for (; ptr != last; ++ptr)
-        impl(*ptr)->destroy(*ptr);
-    free(node.nodes);
-}
-
-//===========================================================================
-unsigned MetaImpl::nodePos(const Node & node, unsigned value) const {
-    assert(relBase(value, node.depth) == node.base);
-    auto pos = ::nodePos(value, node.depth);
-    assert(pos < node.numValues);
-    return pos;
-}
-
-//===========================================================================
-bool MetaImpl::insert(
-    Node & node,
-    const unsigned * first,
-    const unsigned * last
+    T key
 ) {
-    bool changed = false;
-    while (first != last) {
-        auto final = absFinal(*first, node.depth + 1);
-        auto ptr = node.nodes + nodePos(node, *first);
-        auto mid = first + 1;
-        while (mid != last && *mid > *first && *mid <= final)
-            mid += 1;
-        changed = impl(*ptr)->insert(*ptr, first, mid) || changed;
-        first = mid;
-    }
-    return changed;
-}
-
-//===========================================================================
-bool MetaImpl::insert(Node & node, unsigned start, size_t count) {
-    assert(count);
-    assert(relBase(start, node.depth) == node.base);
-    assert(count - 1 <= absFinal(node) - start);
-    auto ptr = node.nodes + nodePos(node, start);
-    auto step = valueMask(node.depth + 1) + 1;
-    auto maybeFull = true;
-    auto changed = false;
-    for (auto&& [st, cnt] : AlignedIntervalGen(start, count, step)) {
-        if (cnt == step) {
-            if (ptr->type != Node::kFull) {
-                changed = true;
-                impl(*ptr)->destroy(*ptr);
-                ptr->type = Node::kFull;
-                impl(*ptr)->init(*ptr, true);
-            }
-        } else if (impl(*ptr)->insert(*ptr, (value_type) st, cnt)) {
-            changed = true;
-            if (ptr->type != Node::kFull)
-                maybeFull = false;
-        }
-        ptr += 1;
-    }
-    if (changed && maybeFull)
-        convertIf(node, Node::kFull);
-    return changed;
-}
-
-//===========================================================================
-bool MetaImpl::erase(Node & node, unsigned start, size_t count) {
-    assert(count);
-    assert(relBase(start, node.depth) == node.base);
-    assert(count - 1 <= absFinal(node) - start);
-    auto ptr = node.nodes + nodePos(node, start);
-    auto step = valueMask(node.depth + 1) + 1;
-    auto maybeEmpty = true;
-    auto changed = false;
-    for (auto&& [st, cnt] : AlignedIntervalGen(start, count, step)) {
-        if (cnt == step) {
-            if (ptr->type != Node::kEmpty) {
-                changed = true;
-                impl(*ptr)->destroy(*ptr);
-                ptr->type = Node::kEmpty;
-                impl(*ptr)->init(*ptr, false);
-            }
-        } else if (impl(*ptr)->erase(*ptr, (value_type) st, cnt)) {
-            changed = true;
-            if (ptr->type != Node::kEmpty)
-                maybeEmpty = false;
-        }
-        ptr += 1;
-    }
-    if (changed && maybeEmpty)
-        convertIf(node, Node::kEmpty);
-    return changed;
-}
-
-//===========================================================================
-size_t MetaImpl::count(const Node & node) const {
-    size_t num = 0;
-    auto * ptr = node.nodes;
-    auto * last = ptr + node.numValues;
-    for (; ptr != last; ++ptr)
-        num += impl(*ptr)->count(*ptr);
-    return num;
-}
-
-//===========================================================================
-size_t MetaImpl::count(
-    const Node & node,
-    unsigned start,
-    size_t count
-) const {
-    assert(count);
-    assert(relBase(start, node.depth) == node.base);
-    assert(count - 1 <= absFinal(node) - start);
-    auto pos = nodePos(node, start);
-    auto finalPos = nodePos(node, (value_type) (start + count - 1));
-    auto lower = node.nodes + pos;
-    auto upper = node.nodes + finalPos;
-    if (pos == finalPos) {
-        auto ptr = node.nodes + pos;
-        return impl(*ptr)->count(*ptr, start, count);
-    }
-
-    size_t num = 0;
-    num += impl(*lower)->count(
-        *lower,
-        start,
-        absFinal(*lower) - start + 1
-    );
-    for (auto ptr = lower + 1; ptr < upper; ++ptr) {
-        num += impl(*ptr)->count(*ptr);
-    }
-    num += impl(*upper)->count(
-        *upper,
-        absBase(*upper),
-        start + count - 1
-    );
-    return num;
-}
-
-//===========================================================================
-bool MetaImpl::findFirst(
-    const Node ** onode,
-    unsigned * ovalue,
-    const Node & node,
-    unsigned key
-) const {
-    auto pos = nodePos(node, key);
-    auto ptr = node.nodes + pos;
-    auto last = node.nodes + node.numValues;
-    for (;;) {
-        if (impl(*ptr)->findFirst(onode, ovalue, *ptr, key))
-            return true;
-        if (++ptr == last)
-            return false;
-        key = absFinal(*ptr);
-    }
-}
-
-//===========================================================================
-bool MetaImpl::findLast(
-    const Node ** onode,
-    unsigned * ovalue,
-    const Node & node,
-    unsigned key
-) const {
-    auto pos = nodePos(node, key);
-    auto ptr = node.nodes + pos;
-    for (;;) {
-        if (impl(*ptr)->findLast(onode, ovalue, *ptr, key))
-            return true;
-        if (ptr == node.nodes)
-            return false;
-        ptr -= 1;
-        key = absBase(*ptr);
-    }
-}
-
-//===========================================================================
-bool MetaImpl::firstContiguous(
-    const Node ** onode,
-    unsigned * ovalue,
-    const Node & node,
-    unsigned key
-) const {
     auto pos = nodePos(node, key);
     auto ptr = (const Node *) node.nodes + pos;
     auto last = node.nodes + node.numValues;
     for (;;) {
-        if (impl(*ptr)->firstContiguous(onode, ovalue, *ptr, key))
+        if (rcontig(onode, ovalue, *ptr, key))
             return true;
         *onode = ptr;
         *ovalue = absBase(*ptr);
@@ -1730,45 +2154,10 @@ bool MetaImpl::firstContiguous(
     }
 }
 
-//===========================================================================
-bool MetaImpl::lastContiguous(
-    const Node ** onode,
-    unsigned * ovalue,
-    const Node & node,
-    unsigned key
-) const {
-    auto pos = nodePos(node, key);
-    auto ptr = (const Node *) node.nodes + pos;
-    auto last = node.nodes + node.numValues;
-    for (;;) {
-        if (impl(*ptr)->lastContiguous(onode, ovalue, *ptr, key))
-            return true;
-        *onode = ptr;
-        *ovalue = absFinal(*ptr);
-        if (++ptr == last)
-            return false;
-        key = absBase(*ptr);
-    }
-}
-
-//===========================================================================
-bool MetaImpl::convertIf(Node & node, Node::Type type) {
-    assert(type == Node::kEmpty || type == Node::kFull);
-    for (unsigned i = 0; i < node.numValues; ++i) {
-        if (node.nodes[i].type != type)
-            return false;
-    }
-    // convert
-    destroy(node);
-    node.type = type;
-    impl(node)->init(node, type == Node::kFull);
-    return true;
-}
-
 
 /****************************************************************************
 *
-*   compare
+*   Compare
 *
 *   Return values:
 *      -2: left < right, unless left has following non-empty nodes
@@ -1785,26 +2174,38 @@ bool MetaImpl::convertIf(Node & node, Node::Type type) {
 *
 ***/
 
-static int compare(const Node & left, const Node & right);
+//===========================================================================
+template <std::integral T, typename A>
+int IntegralSet<T,A>::Impl::compare(const Node & left, const Node & right) {
+    using Fn = int(const Node & left, const Node & right);
+    static Fn * functs[][kNodeTypes] = {
+// LEFT                         RIGHT
+//         empty      full        sm vec     vector     bitmap     meta
+/*empty*/{ cmpEqual,  cmpLessIf,  cmpLessIf, cmpLessIf, cmpLessIf, cmpLessIf },
+/*full */{ cmpMoreIf, cmpEqual,   cmpSmvIf,  cmpVecIf,  cmpBitIf,  cmpMetaIf },
+/*smv  */{ cmpMoreIf, cmpRSmvIf,  cmpSmv,    cmpLSmv,   cmpIter,   cmpIter   },
+/*vec  */{ cmpMoreIf, cmpRVecIf,  cmpRSmv,   cmpVec,    cmpIter,   cmpIter   },
+/*bit  */{ cmpMoreIf, cmpRBitIf,  cmpIter,   cmpIter,   cmpBit,    cmpError  },
+/*meta */{ cmpMoreIf, cmpRMetaIf, cmpIter,   cmpIter,   cmpError,  cmpMeta   },
+    };
+    return functs[left.type][right.type](left, right);
+}
 
 //===========================================================================
-static int cmpError(const Node & left, const Node & right) {
+template <std::integral T, typename A>
+int IntegralSet<T,A>::Impl::cmpError(const Node & left, const Node & right) {
     logMsgFatal() << "compare: incompatible node types, " << left.type
         << ", " << right.type;
     return 0;
 }
 
 //===========================================================================
-static int cmpLessIf(const Node & left, const Node & right) { return -2; }
-static int cmpMoreIf(const Node & left, const Node & right) { return 2; }
-static int cmpEqual(const Node & left, const Node & right) { return 0; }
-
-//===========================================================================
-static int cmpArray(
-    const unsigned * li,
-    unsigned lcount,
-    const unsigned * ri,
-    unsigned rcount
+template <std::integral T, typename A>
+int IntegralSet<T,A>::Impl::cmpArray(
+    const T * li,
+    size_t lcount,
+    const T * ri,
+    size_t rcount
 ) {
     auto le = li + lcount;
     auto re = ri + rcount;
@@ -1819,7 +2220,26 @@ static int cmpArray(
 }
 
 //===========================================================================
-static int cmpVecIf(const Node & left, const Node & right) {
+template <std::integral T, typename A>
+int IntegralSet<T,A>::Impl::cmpLessIf(const Node & left, const Node & right) {
+    return -2;
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+int IntegralSet<T,A>::Impl::cmpMoreIf(const Node & left, const Node & right) {
+    return 2;
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+int IntegralSet<T,A>::Impl::cmpEqual(const Node & left, const Node & right) {
+    return 0;
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+int IntegralSet<T,A>::Impl::cmpVecIf(const Node & left, const Node & right) {
     auto minMax = absBase(right) + right.numValues - 1;
     if (minMax == right.values[right.numValues - 1]) {
         return 2;
@@ -1829,12 +2249,14 @@ static int cmpVecIf(const Node & left, const Node & right) {
 }
 
 //===========================================================================
-static int cmpRVecIf(const Node & left, const Node & right) {
+template <std::integral T, typename A>
+int IntegralSet<T,A>::Impl::cmpRVecIf(const Node & left, const Node & right) {
     return -cmpVecIf(right, left);
 }
 
 //===========================================================================
-static int cmpSVecIf(const Node & left, const Node & right) {
+template <std::integral T, typename A>
+int IntegralSet<T,A>::Impl::cmpSmvIf(const Node & left, const Node & right) {
     auto minMax = absBase(right) + right.numValues - 1;
     if (minMax == right.localValues[right.numValues - 1]) {
         return 2;
@@ -1844,14 +2266,16 @@ static int cmpSVecIf(const Node & left, const Node & right) {
 }
 
 //===========================================================================
-static int cmpRSVecIf(const Node & left, const Node & right) {
-    return -cmpSVecIf(right, left);
+template <std::integral T, typename A>
+int IntegralSet<T,A>::Impl::cmpRSmvIf(const Node & left, const Node & right) {
+    return -cmpSmvIf(right, left);
 }
 
 //===========================================================================
-static int cmpBitIf(const Node & left, const Node & right) {
+template <std::integral T, typename A>
+int IntegralSet<T,A>::Impl::cmpBitIf(const Node & left, const Node & right) {
     auto base = (uint64_t *) right.values;
-    BitView bits{base, BitmapImpl::numInt64s()};
+    BitView bits{base, bitNumInt64s()};
     auto i = bits.findZero();
     if (i && bits.find(i) == BitView::npos) {
         return 2;
@@ -1861,9 +2285,10 @@ static int cmpBitIf(const Node & left, const Node & right) {
 }
 
 //===========================================================================
-static int cmpMetaIf(const Node & left, const Node & right) {
-    auto i = UnsignedSet::iterator::makeFirst(&right);
-    auto ri = UnsignedSet::range_iterator{i};
+template <std::integral T, typename A>
+int IntegralSet<T,A>::Impl::cmpMetaIf(const Node & left, const Node & right) {
+    auto i = IntegralSet<T,A>::iterator::makeFirst(&right);
+    auto ri = typename IntegralSet<T,A>::range_iterator{i};
     if (ri->first == absBase(right) && !++ri) {
         return 2;
     } else {
@@ -1872,19 +2297,22 @@ static int cmpMetaIf(const Node & left, const Node & right) {
 }
 
 //===========================================================================
-static int cmpRBitIf(const Node & left, const Node & right) {
+template <std::integral T, typename A>
+int IntegralSet<T,A>::Impl::cmpRBitIf(const Node & left, const Node & right) {
     return -cmpBitIf(right, left);
 }
 
 //===========================================================================
-static int cmpRMetaIf(const Node & left, const Node & right) {
+template <std::integral T, typename A>
+int IntegralSet<T,A>::Impl::cmpRMetaIf(const Node & left, const Node & right) {
     return -cmpMetaIf(right, left);
 }
 
 //===========================================================================
-static int cmpIter(const Node & left, const Node & right) {
-    auto li = UnsignedSet::iterator::makeFirst(&left);
-    auto ri = UnsignedSet::iterator::makeFirst(&right);
+template <std::integral T, typename A>
+int IntegralSet<T,A>::Impl::cmpIter(const Node & left, const Node & right) {
+    auto li = IntegralSet<T,A>::iterator::makeFirst(&left);
+    auto ri = IntegralSet<T,A>::iterator::makeFirst(&right);
     for (;; ++li, ++ri) {
         if (!li)
             return !ri ? 0 : -2;
@@ -1897,7 +2325,8 @@ static int cmpIter(const Node & left, const Node & right) {
 
 //===========================================================================
 // vector <=> vector
-static int cmpVec(const Node & left, const Node & right) {
+template <std::integral T, typename A>
+int IntegralSet<T,A>::Impl::cmpVec(const Node & left, const Node & right) {
     return cmpArray(
         left.values,
         left.numValues,
@@ -1908,7 +2337,8 @@ static int cmpVec(const Node & left, const Node & right) {
 
 //===========================================================================
 // small vector <=> small vector
-static int cmpSVec(const Node & left, const Node & right) {
+template <std::integral T, typename A>
+int IntegralSet<T,A>::Impl::cmpSmv(const Node & left, const Node & right) {
     return cmpArray(
         left.localValues,
         left.numValues,
@@ -1919,7 +2349,8 @@ static int cmpSVec(const Node & left, const Node & right) {
 
 //===========================================================================
 // small vector <=> vector
-static int cmpLSVec(const Node & left, const Node & right) {
+template <std::integral T, typename A>
+int IntegralSet<T,A>::Impl::cmpLSmv(const Node & left, const Node & right) {
     return cmpArray(
         left.localValues,
         left.numValues,
@@ -1930,7 +2361,8 @@ static int cmpLSVec(const Node & left, const Node & right) {
 
 //===========================================================================
 // vector <=> small vector
-static int cmpRSVec(const Node & left, const Node & right) {
+template <std::integral T, typename A>
+int IntegralSet<T,A>::Impl::cmpRSmv(const Node & left, const Node & right) {
     return cmpArray(
         left.values,
         left.numValues,
@@ -1940,7 +2372,8 @@ static int cmpRSVec(const Node & left, const Node & right) {
 }
 
 //===========================================================================
-static int cmpBit(uint64_t left, uint64_t right) {
+template <std::integral T, typename A>
+int IntegralSet<T,A>::Impl::cmpBit(uint64_t left, uint64_t right) {
     if (left == right)
         return 0;   // equal
     uint64_t mask = numeric_limits<uint64_t>::max();
@@ -1967,7 +2400,8 @@ static int cmpBit(uint64_t left, uint64_t right) {
 }
 
 //===========================================================================
-static int cmpBit(const Node & left, const Node & right) {
+template <std::integral T, typename A>
+int IntegralSet<T,A>::Impl::cmpBit(const Node & left, const Node & right) {
     auto li = (uint64_t *) left.values;
     auto le = li + kDataSize / sizeof *li;
     auto ri = (uint64_t *) right.values;
@@ -1995,7 +2429,8 @@ static int cmpBit(const Node & left, const Node & right) {
 }
 
 //===========================================================================
-static int cmpMeta(const Node & left, const Node & right) {
+template <std::integral T, typename A>
+int IntegralSet<T,A>::Impl::cmpMeta(const Node & left, const Node & right) {
     auto li = left.nodes;
     auto le = li + left.numValues;
     auto ri = right.nodes;
@@ -2008,34 +2443,18 @@ static int cmpMeta(const Node & left, const Node & right) {
         if (int rc = compare(*li, *ri)) {
             if (rc == -2) {
                 while (++li != le) {
-                    if (li->type != Node::kEmpty)
+                    if (li->type != kEmpty)
                         return 1;
                 }
             } else if (rc == 2) {
                 while (++ri != re) {
-                    if (ri->type != Node::kEmpty)
+                    if (ri->type != kEmpty)
                         return -1;
                 }
             }
             return rc;
         }
     }
-}
-
-//===========================================================================
-static int compare(const Node & left, const Node & right) {
-    using Fn = int(const Node & left, const Node & right);
-    static Fn * functs[][Node::kNodeTypes] = {
-// LEFT                                 RIGHT
-//         empty      full        sm vec     vector     bitmap     meta
-/*empty*/{ cmpEqual,  cmpLessIf,  cmpLessIf, cmpLessIf, cmpLessIf, cmpLessIf },
-/*full */{ cmpMoreIf, cmpEqual,   cmpSVecIf, cmpVecIf,  cmpBitIf,  cmpMetaIf },
-/*svec */{ cmpMoreIf, cmpRSVecIf, cmpSVec,   cmpLSVec,  cmpIter,   cmpIter   },
-/*vec  */{ cmpMoreIf, cmpRVecIf,  cmpRSVec,  cmpVec,    cmpIter,   cmpIter   },
-/*bit  */{ cmpMoreIf, cmpRBitIf,  cmpIter,   cmpIter,   cmpBit,    cmpError  },
-/*meta */{ cmpMoreIf, cmpRMetaIf, cmpIter,   cmpIter,   cmpError,  cmpMeta   },
-    };
-    return functs[left.type][right.type](left, right);
 }
 
 
@@ -2045,31 +2464,45 @@ static int compare(const Node & left, const Node & right) {
 *
 ***/
 
-static bool contains(const Node & left, const Node & right);
-
 //===========================================================================
-static bool conError(const Node & left, const Node & right) {
-    logMsgFatal() << "contains: incompatible node types, " << left.type
-        << ", " << right.type;
-    return 0;
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::contains(const Node & left, const Node & right) {
+    using Fn = bool(const Node & left, const Node & right);
+    static Fn * const functs[][kNodeTypes] = {
+// LEFT                       RIGHT
+//         empty  full  sm vec   vector   bitmap    meta
+/*empty*/{ yes,   no,   no,      no,      no,       no    },
+/*full */{ yes,   yes,  yes,     yes,     yes,      yes   },
+/*smv  */{ yes,   no,   conSmv,  conLSmv, conLSmv,  conLSmv  },
+/*vec  */{ yes,   no,   conRSmv, conVec,  conLVec,  conLVec  },
+/*bit  */{ yes,   no,   conRSmv, conRVec, conBit,   conError },
+/*meta */{ yes,   no,   conRSmv, conRVec, conError, conMeta  },
+    };
+    assert(!"not tested, contains(const Node&, const Node&)");
+    return functs[left.type][right.type](left, right);
 }
 
 //===========================================================================
-static bool conTrue(const Node & left, const Node & right) { return true; }
-static bool conFalse(const Node & left, const Node & right) { return false; }
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::conError(const Node & left, const Node & right) {
+    logMsgFatal() << "contains: incompatible node types, " << left.type
+        << ", " << right.type;
+    return false;
+}
 
 //===========================================================================
-static bool conRArray(
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::conRArray(
     const Node & left,
     const Node & right,
-    const UnsignedSet::value_type * ri
+    const T * ri
 ) {
     auto re = ri + right.numValues;
-    const Node* onode;
-    unsigned ovalue;
+    const Node * onode;
+    T ovalue;
 
     for (;;) {
-        if (!impl(left)->findFirst(&onode, &ovalue, left, *ri))
+        if (!find(&onode, &ovalue, left, *ri))
             return false;
         if (*ri != ovalue || ++ri == re)
             return true;
@@ -2077,31 +2510,33 @@ static bool conRArray(
 }
 
 //===========================================================================
-static bool conLArray(
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::conLArray(
     const Node & left,
-    const UnsignedSet::value_type * li,
+    const T * li,
     const Node & right
 ) {
     auto le = li + left.numValues;
-    const Node* onode;
-    unsigned ovalue;
+    const Node * onode;
+    T ovalue;
 
-    impl(right)->findFirst(&onode, &ovalue, right, absBase(right));
+    find(&onode, &ovalue, right, absBase(right));
     for (;;) {
         li = lower_bound(li, le, ovalue);
         if (li == le || *li != ovalue)
             return false;
-        if (!impl(right)->findFirst(&onode, &ovalue, right, ovalue + 1))
+        if (!find(&onode, &ovalue, right, ovalue + 1))
             return true;
     }
 }
 
 //===========================================================================
-static bool conArray(
-    const UnsignedSet::value_type * li,
-    unsigned lcount,
-    const UnsignedSet::value_type * ri,
-    unsigned rcount
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::conArray(
+    const T * li,
+    size_t lcount,
+    const T * ri,
+    size_t rcount
 ) {
     if (lcount < rcount)
         return false;
@@ -2119,17 +2554,20 @@ static bool conArray(
 }
 
 //===========================================================================
-static bool conRVec(const Node & left, const Node & right) {
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::conRVec(const Node & left, const Node & right) {
     return conRArray(left, right, right.values);
 }
 
 //===========================================================================
-static bool conLVec(const Node & left, const Node & right) {
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::conLVec(const Node & left, const Node & right) {
     return conLArray(left, left.values, right);
 }
 
 //===========================================================================
-static bool conVec(const Node & left, const Node & right) {
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::conVec(const Node & left, const Node & right) {
     return conArray(
         left.values,
         left.numValues,
@@ -2139,17 +2577,20 @@ static bool conVec(const Node & left, const Node & right) {
 }
 
 //===========================================================================
-static bool conRSVec(const Node& left, const Node& right) {
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::conRSmv(const Node& left, const Node& right) {
     return conRArray(left, right, right.localValues);
 }
 
 //===========================================================================
-static bool conLSVec(const Node& left, const Node& right) {
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::conLSmv(const Node& left, const Node& right) {
     return conLArray(left, left.localValues, right);
 }
 
 //===========================================================================
-static bool conSVec(const Node& left, const Node& right) {
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::conSmv(const Node& left, const Node& right) {
     return conArray(
         left.localValues,
         left.numValues,
@@ -2159,7 +2600,8 @@ static bool conSVec(const Node& left, const Node& right) {
 }
 
 //===========================================================================
-static bool conBit(const Node & left, const Node & right) {
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::conBit(const Node & left, const Node & right) {
     auto li = (uint64_t *) left.values;
     auto le = li + kDataSize / sizeof *li;
     auto ri = (uint64_t *) right.values;
@@ -2174,7 +2616,8 @@ static bool conBit(const Node & left, const Node & right) {
 }
 
 //===========================================================================
-static bool conMeta(const Node & left, const Node & right) {
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::conMeta(const Node & left, const Node & right) {
     auto li = left.nodes;
     auto le = li + left.numValues;
     auto ri = right.nodes;
@@ -2185,23 +2628,6 @@ static bool conMeta(const Node & left, const Node & right) {
     return true;
 }
 
-//===========================================================================
-static bool contains(const Node & left, const Node & right) {
-    using Fn = bool(const Node & left, const Node & right);
-    static Fn * const functs[][Node::kNodeTypes] = {
-// LEFT                         RIGHT
-//         empty    full      sm vec    vector    bitmap     meta
-/*empty*/{ conTrue, conFalse, conFalse, conFalse, conFalse, conFalse },
-/*full */{ conTrue, conTrue,  conTrue,  conTrue,  conTrue,  conTrue  },
-/*svec */{ conTrue, conFalse, conSVec,  conLSVec, conLSVec, conLSVec  },
-/*vec  */{ conTrue, conFalse, conRSVec, conVec,   conLVec,  conLVec  },
-/*bit  */{ conTrue, conFalse, conRSVec, conRVec,  conBit,   conError },
-/*meta */{ conTrue, conFalse, conRSVec, conRVec,  conError, conMeta  },
-    };
-    assert(!"not tested, contains(const Node&, const Node&)");
-    return functs[left.type][right.type](left, right);
-}
-
 
 /****************************************************************************
 *
@@ -2209,31 +2635,48 @@ static bool contains(const Node & left, const Node & right) {
 *
 ***/
 
-static bool intersects(const Node & left, const Node & right);
+//===========================================================================
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::intersects(
+    const Node & left,
+    const Node & right
+) {
+    using Fn = bool(const Node & left, const Node & right);
+    static Fn * const functs[][kNodeTypes] = {
+// LEFT                         RIGHT
+//         empty  full  sm vec    vector    bitmap     meta
+/*empty*/{ no,    no,   no,       no,       no,        no        },
+/*full */{ no,    yes,  yes,      yes,      yes,       yes       },
+/*smv  */{ no,    yes,  isecSmv,  isecLSmv, isecLSmv,  isecLSmv  },
+/*vec  */{ no,    yes,  isecRSmv, isecVec,  isecLVec,  isecLVec  },
+/*bit  */{ no,    yes,  isecRSmv, isecRVec, isecBit,   isecError },
+/*meta */{ no,    yes,  isecRSmv, isecRVec, isecError, isecMeta  },
+    };
+    assert(!"not tested, intersects(const Node&, const Node&)");
+    return functs[left.type][right.type](left, right);
+}
 
 //===========================================================================
-static bool isecError(const Node & left, const Node & right) {
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::isecError(const Node & left, const Node & right) {
     logMsgFatal() << "intersects: incompatible node types, " << left.type
         << ", " << right.type;
     return false;
 }
 
 //===========================================================================
-static bool isecTrue(const Node & left, const Node & right) { return true; }
-static bool isecFalse(const Node & left, const Node & right) { return false; }
-
-//===========================================================================
-static bool isecRArray(
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::isecRArray(
     const Node & left,
     const Node & right,
-    const unsigned * ri
+    const T * ri
 ) {
     auto re = ri + right.numValues;
     const Node * onode;
-    unsigned ovalue;
+    T ovalue;
 
     for (;;) {
-        if (impl(left)->findFirst(&onode, &ovalue, left, *ri)
+        if (find(&onode, &ovalue, left, *ri)
             && *ri == ovalue
         ) {
             return true;
@@ -2244,11 +2687,12 @@ static bool isecRArray(
 }
 
 //===========================================================================
-static bool isecArray(
-    const unsigned * li,
-    unsigned lcount,
-    const unsigned * ri,
-    unsigned rcount
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::isecArray(
+    const T * li,
+    size_t lcount,
+    const T * ri,
+    size_t rcount
 ) {
     auto le = li + lcount;
     auto re = ri + rcount;
@@ -2272,17 +2716,20 @@ static bool isecArray(
 }
 
 //===========================================================================
-static bool isecRVec(const Node& left, const Node& right) {
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::isecRVec(const Node & left, const Node & right) {
     return isecRArray(left, right, right.values);
 }
 
 //===========================================================================
-static bool isecLVec(const Node& left, const Node& right) {
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::isecLVec(const Node & left, const Node & right) {
     return isecRArray(right, left, left.values);
 }
 
 //===========================================================================
-static bool isecVec(const Node& left, const Node& right) {
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::isecVec(const Node & left, const Node & right) {
     return isecArray(
         left.values,
         left.numValues,
@@ -2292,17 +2739,20 @@ static bool isecVec(const Node& left, const Node& right) {
 }
 
 //===========================================================================
-static bool isecRSVec(const Node& left, const Node& right) {
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::isecRSmv(const Node & left, const Node & right) {
     return isecRArray(left, right, right.localValues);
 }
 
 //===========================================================================
-static bool isecLSVec(const Node& left, const Node& right) {
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::isecLSmv(const Node & left, const Node & right) {
     return isecRArray(right, left, left.localValues);
 }
 
 //===========================================================================
-static bool isecSVec(const Node& left, const Node& right) {
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::isecSmv(const Node & left, const Node & right) {
     return isecArray(
         left.localValues,
         left.numValues,
@@ -2312,9 +2762,10 @@ static bool isecSVec(const Node& left, const Node& right) {
 }
 
 //===========================================================================
-static bool isecBit(const Node & left, const Node & right) {
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::isecBit(const Node & left, const Node & right) {
     auto li = (uint64_t *) left.values;
-    auto le = li + kDataSize / sizeof *li;
+    auto le = li + bitNumInt64s();
     auto ri = (uint64_t *) right.values;
 
     for (;;) {
@@ -2327,7 +2778,8 @@ static bool isecBit(const Node & left, const Node & right) {
 }
 
 //===========================================================================
-static bool isecMeta(const Node & left, const Node & right) {
+template <std::integral T, typename A>
+bool IntegralSet<T,A>::Impl::isecMeta(const Node & left, const Node & right) {
     auto li = left.nodes;
     auto le = li + left.numValues;
     auto ri = right.nodes;
@@ -2338,23 +2790,6 @@ static bool isecMeta(const Node & left, const Node & right) {
     return false;
 }
 
-//===========================================================================
-static bool intersects(const Node & left, const Node & right) {
-    using Fn = bool(const Node & left, const Node & right);
-    static Fn * const functs[][Node::kNodeTypes] = {
-// LEFT                         RIGHT
-//         empty      full       sm vec     vector     bitmap     meta
-/*empty*/{ isecFalse, isecFalse, isecFalse, isecFalse, isecFalse, isecFalse },
-/*full */{ isecFalse, isecTrue,  isecTrue,  isecTrue,  isecTrue,  isecTrue  },
-/*svec */{ isecFalse, isecTrue,  isecSVec,  isecLSVec, isecLSVec, isecLSVec },
-/*vec  */{ isecFalse, isecTrue,  isecRSVec, isecVec,   isecLVec,  isecLVec  },
-/*bit  */{ isecFalse, isecTrue,  isecRSVec, isecRVec,  isecBit,   isecError },
-/*meta */{ isecFalse, isecTrue,  isecRSVec, isecRVec,  isecError, isecMeta  },
-    };
-    assert(!"not tested, intersects(const Node&, const Node&)");
-    return functs[left.type][right.type](left, right);
-}
-
 
 /****************************************************************************
 *
@@ -2362,66 +2797,56 @@ static bool intersects(const Node & left, const Node & right) {
 *
 ***/
 
-static void insert(Node & left, const Node & right);
+//===========================================================================
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::insert(
+    A * alloc,
+    Node * left,
+    const Node & right
+) {
+    using Fn = void(A * alloc, Node * left, const Node & right);
+    static Fn * const functs[][kNodeTypes] = {
+// LEFT                         RIGHT
+//         empty  full  sm vec   vector   bitmap    meta
+/*empty*/{ skip,  fill, copy,    copy,    copy,     copy     },
+/*full */{ skip,  skip, skip,    skip,    skip,     skip     },
+/*smv  */{ skip,  fill, insRSmv, insLSmv, insLSmv,  insLSmv  },
+/*vec  */{ skip,  fill, insRSmv, insRVec, insLVec,  insLVec  },
+/*bit  */{ skip,  fill, insRSmv, insRVec, insBit,   insError },
+/*meta */{ skip,  fill, insRSmv, insRVec, insError, insMeta  },
+    };
+    functs[left->type][right.type](alloc, left, right);
+}
 
 //===========================================================================
-static void insError(Node & left, const Node & right) {
-    logMsgFatal() << "insert: incompatible node types, " << left.type
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::insError(
+    A * alloc,
+    Node * left,
+    const Node & right
+) {
+    logMsgFatal() << "insert: incompatible node types, " << left->type
         << ", " << right.type;
 }
 
 //===========================================================================
-static void insSkip(Node & left, const Node & right)
-{}
-
-//===========================================================================
-static void insFull(Node & left, const Node & right) {
-    impl(left)->destroy(left);
-    left.type = Node::kFull;
-    s_fullImpl.init(left, true);
-}
-
-//===========================================================================
-static void insCopy(Node & left, const Node & right) {
-    impl(left)->destroy(left);
-    left.type = right.type;
-    impl(left)->init(left, right);
-}
-
-//===========================================================================
-static void insRSVec(Node & left, const Node & right) {
-    assert(right.type == Node::kSmVector);
-    auto ri = right.localValues;
-    auto re = ri + right.numValues;
-    impl(left)->insert(left, ri, re);
-}
-
-//===========================================================================
-static void insLSVec(Node & left, const Node & right) {
-    assert(left.type == Node::kSmVector);
-    Node tmp;
-    insCopy(tmp, right);
-    swap(left, tmp);
-    insRSVec(left, move(tmp));
-    impl(tmp)->destroy(tmp);
-}
-
-//===========================================================================
 // FIXME: insArray is buggy, fix and update insert() to use it via insVec.
-static void insArray(
-    Node & left,
-    unsigned * li,
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::insArray(
+    A * alloc,
+    Node * left,
+    T * li,
     size_t maxValues,
-    const unsigned * ri,
-    const unsigned * re
+    const T * ri,
+    const T * re
 ) {
-    assert(left.type == Node::kVector);
-    assert(left.numValues);
+    assert(left->type == kVector);
+    assert(left->numValues);
     assert(ri < re);
     auto rbase = ri;
     auto rcount = (uint16_t) min<size_t>(
         re - ri,
-        maxValues - left.numValues
+        maxValues - left->numValues
     );
     if (rcount) {
         // Copy from
@@ -2434,7 +2859,7 @@ static void insArray(
         //  -    A    B    -    -    -
         //  |<------- le
         //       |<----------------- out
-        auto lfinal = li + left.numValues - 1;
+        auto lfinal = li + left->numValues - 1;
         auto le = lfinal;
         auto out = le + rcount;
         ri = re - rcount;
@@ -2451,8 +2876,8 @@ static void insArray(
                     auto cnt = lfinal + rcount - out;
                     if (li + ucnt != out + 1)
                         memmove(li + ucnt, out + 1, cnt * sizeof *ri);
-                    // Set to new count.
-                    left.numValues = (uint16_t) (ucnt + cnt);
+                    // Set to new len.
+                    left->numValues = (uint16_t) (ucnt + cnt);
                     break;
                 }
             } else {
@@ -2460,100 +2885,140 @@ static void insArray(
                 if (cmp == 0) {
                     le -= 1;
                 } else if (le == out) {
-                    // Reached the end after copying all values; update count.
-                    left.numValues += rcount;
+                    // Reached the end after copying all values; update len.
+                    left->numValues += rcount;
                     break;
                 }
                 if (re < ri) {
                     // Move down already merged values.
-                    auto cnt = (li + left.numValues - 1) + rcount - out;
+                    auto cnt = (li + left->numValues - 1) + rcount - out;
                     memmove(le + 1, out + 1, cnt * sizeof *ri);
-                    // Set to new count.
-                    left.numValues = (uint16_t) ((le + 1 - li) + cnt);
+                    // Set to new len.
+                    left->numValues = (uint16_t) ((le + 1 - li) + cnt);
                     break;
                 }
             }
         }
     }
     if (rbase != ri)
-        impl(left)->insert(left, rbase, ri);
+        insert(alloc, left, rbase, ri);
 }
 
 //===========================================================================
-inline static void insVec(Node & left, const Node & right) {
-    assert(left.type == Node::kVector);
-    assert(right.type == Node::kVector);
-    auto ri = right.values;
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::insRSmv(
+    A * alloc,
+    Node * left,
+    const Node & right
+) {
+    assert(right.type == kSmVector);
+    auto ri = right.localValues;
     auto re = ri + right.numValues;
-    insArray(left, left.values, s_vectorImpl.maxValues(), ri, re);
+    insert(alloc, left, ri, re);
 }
 
 //===========================================================================
-static void insRVec(Node & left, const Node & right) {
-    assert(right.type == Node::kVector);
-    auto ri = right.values;
-    auto re = ri + right.numValues;
-    impl(left)->insert(left, ri, re);
-}
-
-//===========================================================================
-static void insLVec(Node & left, const Node & right) {
-    assert(left.type == Node::kVector);
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::insLSmv(
+    A * alloc,
+    Node * left,
+    const Node & right
+) {
+    assert(left->type == kSmVector);
     Node tmp;
-    insCopy(tmp, right);
-    swap(left, tmp);
-    insRVec(left, move(tmp));
-    impl(tmp)->destroy(tmp);
+    copy(alloc, &tmp, right);
+    insRSmv(alloc, &tmp, move(*left));
+    swap(*left, tmp);
+    destroy(alloc, &tmp);
 }
 
 //===========================================================================
-static void insBit(Node & left, const Node & right) {
-    auto li = (uint64_t *) left.values;
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::insVec(
+    A * alloc,
+    Node * left,
+    const Node & right
+) {
+    assert(left->type == kVector);
+    assert(right.type == kVector);
+    auto ri = right.values;
+    auto re = ri + right.numValues;
+    insArray(alloc, left, left->values, vecMaxValues(), ri, re);
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::insRVec(
+    A * alloc,
+    Node * left,
+    const Node & right
+) {
+    assert(right.type == kVector);
+    auto ri = right.values;
+    auto re = ri + right.numValues;
+    insert(alloc, left, ri, re);
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::insLVec(
+    A * alloc,
+    Node * left,
+    const Node & right
+) {
+    assert(left->type == kVector);
+    Node tmp;
+    copy(alloc, &tmp, right);
+    insRVec(alloc, &tmp, move(*left));
+    swap(*left, tmp);
+    destroy(alloc, &tmp);
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::insBit(
+    A * alloc,
+    Node * left,
+    const Node & right
+) {
+    auto li = (uint64_t *) left->values;
     auto le = li + kDataSize / sizeof *li;
-    auto ri = (uint64_t *) right.values;
-    left.numValues = 0;
+    auto ri = (const uint64_t *) right.values;
+    left->numValues = 0;
     for (; li != le; ++li, ++ri) {
         if (*li |= *ri)
-            left.numValues += 1;
+            left->numValues += 1;
     }
-    if (left.numValues == BitmapImpl::numInt64s())
-        insFull(left, right);
+    if (left->numValues == bitNumInt64s()) {
+        BitView bits((uint64_t *) left->values, bitNumInt64s());
+        if (bits.all())
+            fill(alloc, left, right);
+    }
 }
 
 //===========================================================================
-static void insMeta(Node & left, const Node & right) {
-    auto li = left.nodes;
-    auto le = li + left.numValues;
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::insMeta(
+    A * alloc,
+    Node * left,
+    const Node & right
+) {
+    auto li = left->nodes;
+    auto le = li + left->numValues;
     auto ri = right.nodes;
     for (; li != le; ++li, ++ri) {
-        insert(*li, *ri);
-        if (li->type != Node::kFull)
+        insert(alloc, li, *ri);
+        if (li->type != kFull)
             goto NOT_FULL;
     }
     // Convert to full node.
-    insFull(left, right);
+    fill(alloc, left, right);
     return;
 
 NOT_FULL:
     ++li, ++ri;
     for (; li != le; ++li, ++ri)
-        insert(*li, *ri);
-}
-
-//===========================================================================
-static void insert(Node & left, const Node & right) {
-    using Fn = void(Node & left, const Node & right);
-    static Fn * const functs[][Node::kNodeTypes] = {
-// LEFT                         RIGHT
-//         empty    full     sm vec    vector    bitmap    meta
-/*empty*/{ insSkip, insFull, insCopy,  insCopy,  insCopy,  insCopy  },
-/*full */{ insSkip, insSkip, insSkip,  insSkip,  insSkip,  insSkip  },
-/*svec */{ insSkip, insFull, insRSVec, insLSVec, insLSVec, insLSVec },
-/*vec  */{ insSkip, insFull, insRSVec, insRVec,  insLVec,  insLVec  },
-/*bit  */{ insSkip, insFull, insRSVec, insRVec,  insBit,   insError },
-/*meta */{ insSkip, insFull, insRSVec, insRVec,  insError, insMeta  },
-    };
-    functs[left.type][right.type](left, right);
+        insert(alloc, li, *ri);
 }
 
 
@@ -2563,87 +3028,79 @@ static void insert(Node & left, const Node & right) {
 *
 ***/
 
-static void insert(Node & left, Node && right);
-
 //===========================================================================
-static void insError(Node & left, Node && right) {
-    insError(left, right);
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::insert(A * alloc, Node * left, Node && right) {
+    using Fn = void(A * alloc, Node * left, Node && right);
+    static Fn * const functs[][kNodeTypes] = {
+// LEFT                     RIGHT
+//         empty  full  sm vec   vector   bitmap    meta
+/*empty*/{ skip,  fill, copy,    copy,    copy,     copy     },
+/*full */{ skip,  skip, skip,    skip,    skip,     skip     },
+/*smv  */{ skip,  fill, insRSmv, insLSmv, insLSmv,  insLSmv  },
+/*vec  */{ skip,  fill, insRSmv, insRVec, insLVec,  insLVec  },
+/*bit  */{ skip,  fill, insRSmv, insRVec, insBit,   insError },
+/*meta */{ skip,  fill, insRSmv, insRVec, insError, insMeta  },
+    };
+    functs[left->type][right.type](alloc, left, move(right));
 }
 
 //===========================================================================
-static void insSkip(Node & left, Node && right)
-{}
-
-//===========================================================================
-static void insFull(Node & left, Node && right) {
-    insFull(left, right);
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::insError(A * alloc, Node * left, Node && right) {
+    insError(alloc, left, right);
 }
 
 //===========================================================================
-static void insMove(Node & left, Node && right) {
-    swap(left, right);
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::insRSmv(A * alloc, Node * left, Node && right) {
+    insRSmv(alloc, left, right);
 }
 
 //===========================================================================
-static void insRSVec(Node & left, Node && right) {
-    insRSVec(left, right);
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::insLSmv(A * alloc, Node * left, Node && right) {
+    swap(*left, right);
+    insRSmv(alloc, left, move(right));
 }
 
 //===========================================================================
-static void insLSVec(Node & left, Node && right) {
-    swap(left, right);
-    insRSVec(left, move(right));
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::insRVec(A * alloc, Node * left, Node && right) {
+    insRVec(alloc, left, right);
 }
 
 //===========================================================================
-static void insRVec(Node & left, Node && right) {
-    insRVec(left, right);
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::insLVec(A * alloc, Node * left, Node && right) {
+    swap(*left, right);
+    insRVec(alloc, left, move(right));
 }
 
 //===========================================================================
-static void insLVec(Node & left, Node && right) {
-    swap(left, right);
-    insRVec(left, move(right));
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::insBit(A * alloc, Node * left, Node && right) {
+    insBit(alloc, left, right);
 }
 
 //===========================================================================
-static void insBit(Node & left, Node && right) {
-    insBit(left, right);
-}
-
-//===========================================================================
-static void insMeta(Node & left, Node && right) {
-    auto li = left.nodes;
-    auto le = li + left.numValues;
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::insMeta(A * alloc, Node * left, Node && right) {
+    auto li = left->nodes;
+    auto le = li + left->numValues;
     auto ri = right.nodes;
     for (; li != le; ++li, ++ri) {
-        insert(*li, move(*ri));
-        if (li->type != Node::kFull)
+        insert(alloc, li, move(*ri));
+        if (li->type != kFull)
             goto NOT_FULL;
     }
-    insFull(left, move(right));
+    fill(alloc, left, move(right));
     return;
 
 NOT_FULL:
     ++li, ++ri;
     for (; li != le; ++li, ++ri)
-        insert(*li, move(*ri));
-}
-
-//===========================================================================
-static void insert(Node & left, Node && right) {
-    using Fn = void(Node & left, Node && right);
-    static Fn * const functs[][Node::kNodeTypes] = {
-// LEFT                         RIGHT
-//         empty    full     sm vec    vector    bitmap    meta
-/*empty*/{ insSkip, insFull, insMove,  insMove,  insMove,  insMove  },
-/*full */{ insSkip, insSkip, insSkip,  insSkip,  insSkip,  insSkip  },
-/*svec */{ insSkip, insFull, insRSVec, insLSVec, insLSVec, insLSVec },
-/*vec  */{ insSkip, insFull, insRSVec, insRVec,  insLVec,  insLVec  },
-/*bit  */{ insSkip, insFull, insRSVec, insRVec,  insBit,   insError },
-/*meta */{ insSkip, insFull, insRSVec, insRVec,  insError, insMeta  },
-    };
-    functs[left.type][right.type](left, move(right));
+        insert(alloc, li, move(*ri));
 }
 
 
@@ -2653,73 +3110,94 @@ static void insert(Node & left, Node && right) {
 *
 ***/
 
-static void erase(Node & left, const Node & right);
+//===========================================================================
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::erase(
+    A * alloc,
+    Node * left,
+    const Node & right
+) {
+    using Fn = void(A * alloc, Node * left, const Node & right);
+    static Fn * const functs[][kNodeTypes] = {
+// LEFT                         RIGHT
+//         empty full   sm vec     vector     bitmap     meta
+/*empty*/{ skip, skip,  skip,      skip,      skip,      skip      },
+/*full */{ skip, clear, eraChange, eraChange, eraChange, eraChange },
+/*smv  */{ skip, clear, eraSmv,    eraLSmv,   eraLSmv,   eraLSmv   },
+/*vec  */{ skip, clear, eraRSmv,   eraVec,    eraLVec,   eraLVec   },
+/*bit  */{ skip, clear, eraRSmv,   eraRVec,   eraBit,    eraError  },
+/*meta */{ skip, clear, eraRSmv,   eraRVec,   eraError,  eraMeta   },
+    };
+    functs[left->type][right.type](alloc, left, right);
+}
 
 //===========================================================================
-static void eraError(Node & left, const Node & right) {
-    logMsgFatal() << "erase: incompatible node types, " << left.type
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::eraError(
+    A * alloc,
+    Node * left,
+    const Node & right
+) {
+    logMsgFatal() << "erase: incompatible node types, " << left->type
         << ", " << right.type;
 }
 
 //===========================================================================
-static void eraSkip(Node & left, const Node & right)
-{}
-
-//===========================================================================
-static void eraEmpty(Node & left, const Node & right) {
-    impl(left)->destroy(left);
-    left.type = Node::kEmpty;
-    s_emptyImpl.init(left, false);
-}
-
-//===========================================================================
-static void eraChange(Node & left, const Node & right) {
-    auto ri = UnsignedSet::iterator::makeFirst(&right);
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::eraChange(
+    A * alloc,
+    Node * left,
+    const Node & right
+) {
+    auto ri = iterator::makeFirst(&right);
     assert(ri);
 
-    // convert from full to either bitmap or meta
-    impl(left)->erase(left, *ri, 1);
-
-    erase(left, right);
+    // Convert from full to either bitmap or meta, and only then erase the
+    // rest.
+    erase(alloc, left, *ri, 1);
+    erase(alloc, left, right);
 }
 
 //===========================================================================
-static void eraArray(
-    Node & left,
-    unsigned * li,
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::eraArray(
+    A * alloc,
+    Node * left,
+    T * li,
     const Node & right,
-    const unsigned * ri
+    const T * ri
 ) {
     auto le = set_difference(
-        li, li + left.numValues,
+        li, li + left->numValues,
         ri, ri + right.numValues,
         li
     );
-    left.numValues = uint16_t(le - li);
-    if (!left.numValues)
-        eraEmpty(left, right);
+    left->numValues = uint16_t(le - li);
+    if (!left->numValues)
+        clear(alloc, left);
 }
 
 //===========================================================================
-static void eraLArray(
-    Node & left,
-    unsigned * li,
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::eraLArray(
+    A * alloc,
+    Node * left,
+    T * li,
     const Node & right
 ) {
     // Go through values of left vector and skip (aka remove) the ones that
     // are found in right node (values to be erased).
     auto base = li;
     auto out = li;
-    auto le = li + left.numValues;
-    auto ptr = impl(right);
+    auto le = li + left->numValues;
     const Node * node = nullptr;
-    unsigned value = 0;
+    T value = 0;
     for (; li != le; ++li) {
         if (*li < value) {
             *out++ = *li;
             continue;
         }
-        if (!ptr->findFirst(&node, &value, right, *li)) {
+        if (!find(&node, &value, right, *li)) {
             for (;;) {
                 *out++ = *li++;
                 if (li == le)
@@ -2730,104 +3208,130 @@ static void eraLArray(
         if (value != *li)
             *out++ = *li;
     }
-    left.numValues = uint16_t(out - base);
-    if (!left.numValues)
-        eraEmpty(left, right);
+    left->numValues = uint16_t(out - base);
+    if (!left->numValues)
+        clear(alloc, left);
 }
 
 //===========================================================================
-static void eraRArray(
-    Node & left,
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::eraRArray(
+    A * alloc,
+    Node * left,
     const Node & right,
-    const unsigned * ri
+    const T * ri
 ) {
     auto re = ri + right.numValues;
     for (; ri != re; ++ri)
-        impl(left)->erase(left, *ri, 1);
+        erase(alloc, left, *ri, 1);
 }
 
 //===========================================================================
-static void eraSVec(Node & left, const Node & right) {
-    eraArray(left, left.localValues, right, right.localValues);
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::eraSmv(
+    A * alloc,
+    Node * left,
+    const Node & right
+) {
+    eraArray(alloc, left, left->localValues, right, right.localValues);
 }
 
 //===========================================================================
-static void eraLSVec(Node & left, const Node & right) {
-    assert(left.type == Node::kSmVector);
-    eraLArray(left, left.localValues, right);
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::eraLSmv(
+    A * alloc,
+    Node * left,
+    const Node & right
+) {
+    assert(left->type == kSmVector);
+    eraLArray(alloc, left, left->localValues, right);
 }
 
 //===========================================================================
-static void eraRSVec(Node & left, const Node & right) {
-    assert(right.type == Node::kSmVector);
-    eraRArray(left, right, right.localValues);
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::eraRSmv(
+    A * alloc,
+    Node * left,
+    const Node & right
+) {
+    assert(right.type == kSmVector);
+    eraRArray(alloc, left, right, right.localValues);
 }
 
 //===========================================================================
-static void eraVec(Node & left, const Node & right) {
-    eraArray(left, left.values, right, right.values);
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::eraVec(
+    A * alloc,
+    Node * left,
+    const Node & right
+) {
+    eraArray(alloc, left, left->values, right, right.values);
 }
 
 //===========================================================================
-static void eraLVec(Node & left, const Node & right) {
-    assert(left.type == Node::kVector);
-    eraLArray(left, left.values, right);
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::eraLVec(
+    A * alloc,
+    Node * left,
+    const Node & right
+) {
+    assert(left->type == kVector);
+    eraLArray(alloc, left, left->values, right);
 }
 
 //===========================================================================
-static void eraRVec(Node & left, const Node & right) {
-    assert(right.type == Node::kVector);
-    eraRArray(left, right, right.values);
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::eraRVec(
+    A * alloc,
+    Node * left,
+    const Node & right
+) {
+    assert(right.type == kVector);
+    eraRArray(alloc, left, right, right.values);
 }
 
 //===========================================================================
-static void eraBit(Node & left, const Node & right) {
-    auto li = (uint64_t *) left.values;
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::eraBit(
+    A * alloc,
+    Node * left,
+    const Node & right
+) {
+    auto li = (uint64_t *) left->values;
     auto le = li + kDataSize / sizeof *li;
     auto ri = (uint64_t *) right.values;
-    left.numValues = 0;
+    left->numValues = 0;
     for (; li != le; ++li, ++ri) {
         if (*li &= ~*ri)
-            left.numValues += 1;
+            left->numValues += 1;
     }
-    if (!left.numValues)
-        eraEmpty(left, right);
+    if (!left->numValues)
+        clear(alloc, left);
 }
 
 //===========================================================================
-static void eraMeta(Node & left, const Node & right) {
-    assert(left.numValues == right.numValues);
-    auto li = left.nodes;
-    auto le = li + left.numValues;
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::eraMeta(
+    A * alloc,
+    Node * left,
+    const Node & right
+) {
+    assert(left->numValues == right.numValues);
+    auto li = left->nodes;
+    auto le = li + left->numValues;
     auto ri = right.nodes;
     for (; li != le; ++li, ++ri) {
-        erase(*li, *ri);
-        if (li->type != Node::kEmpty)
+        erase(alloc, li, *ri);
+        if (li->type != kEmpty)
             goto NOT_EMPTY;
     }
-    eraEmpty(left, right);
+    clear(alloc, left);
     return;
 
 NOT_EMPTY:
     ++li, ++ri;
     for (; li != le; ++li, ++ri)
-        erase(*li, *ri);
-}
-
-//===========================================================================
-static void erase(Node & left, const Node & right) {
-    using Fn = void(Node & left, const Node & right);
-    static Fn * const functs[][Node::kNodeTypes] = {
-// LEFT                         RIGHT
-//         empty    full      sm vec     vector     bitmap     meta
-/*empty*/{ eraSkip, eraSkip,  eraSkip,   eraSkip,   eraSkip,   eraSkip   },
-/*full */{ eraSkip, eraEmpty, eraChange, eraChange, eraChange, eraChange },
-/*svec */{ eraSkip, eraEmpty, eraSVec,   eraLSVec,  eraLSVec,  eraLSVec  },
-/*vec  */{ eraSkip, eraEmpty, eraRSVec,  eraVec,    eraLVec,   eraLVec   },
-/*bit  */{ eraSkip, eraEmpty, eraRSVec,  eraRVec,   eraBit,    eraError  },
-/*meta */{ eraSkip, eraEmpty, eraRSVec,  eraRVec,   eraError,  eraMeta   },
-    };
-    functs[left.type][right.type](left, right);
+        erase(alloc, li, *ri);
 }
 
 
@@ -2837,163 +3341,200 @@ static void erase(Node & left, const Node & right) {
 *
 ***/
 
-static void intersect(Node & left, const Node & right);
+//===========================================================================
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::intersect(
+    A * alloc,
+    Node * left,
+    const Node & right
+) {
+    using Fn = void(A * alloc, Node * left, const Node & right);
+    static Fn * const functs[][kNodeTypes] = {
+// LEFT                         RIGHT
+//         empty  full  sm vec    vector    bitmap     meta
+/*empty*/{ skip,  skip, skip,     skip,     skip,      skip      },
+/*full */{ clear, skip, copy,     copy,     copy,      copy      },
+/*smv  */{ clear, skip, isecSmv,  isecLSmv, isecLSmv,  isecLSmv  },
+/*vec  */{ clear, skip, isecRSmv, isecVec,  isecLVec,  isecLVec  },
+/*bit  */{ clear, skip, isecRSmv, isecRVec, isecBit,   isecError },
+/*meta */{ clear, skip, isecRSmv, isecRVec, isecError, isecMeta  },
+    };
+    functs[left->type][right.type](alloc, left, right);
+}
 
 //===========================================================================
-static void isecError(Node & left, const Node & right) {
-    logMsgFatal() << "intersect: incompatible node types, " << left.type
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::isecError(
+    A * alloc,
+    Node * left,
+    const Node & right
+) {
+    logMsgFatal() << "intersect: incompatible node types, " << left->type
         << ", " << right.type;
 }
 
 //===========================================================================
-static void isecSkip(Node & left, const Node & right)
-{}
-
-//===========================================================================
-static void isecEmpty(Node & left, const Node & right) {
-    eraEmpty(left, right);
-}
-
-//===========================================================================
-static void isecCopy(Node & left, const Node & right) {
-    insCopy(left, right);
-}
-
-//===========================================================================
-static void isecArray(
-    Node & left,
-    unsigned * li,
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::isecArray(
+    A * alloc,
+    Node * left,
+    T * li,
     const Node & right,
-    const unsigned * ri
+    const T * ri
 ) {
     auto le = set_intersection(
-        li, li + left.numValues,
+        li, li + left->numValues,
         ri, ri + right.numValues,
         li
     );
-    left.numValues = uint16_t(le - li);
-    if (!left.numValues)
-        isecEmpty(left, right);
+    left->numValues = uint16_t(le - li);
+    if (!left->numValues)
+        clear(alloc, left);
 }
 
 //===========================================================================
-static void isecLArray(
-    Node & left,
-    unsigned * li,
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::isecLArray(
+    A * alloc,
+    Node * left,
+    T * li,
     const Node & right
 ) {
     // Go through values of left vector and remove the ones that aren't
     // found in right node.
     auto base = li;
     auto out = li;
-    auto le = li + left.numValues;
-    auto ptr = impl(right);
+    auto le = li + left->numValues;
     const Node * node = nullptr;
-    unsigned value = 0;
+    T value = 0;
     for (; li != le; ++li) {
         if (*li < value)
             continue;
-        if (!ptr->findFirst(&node, &value, right, *li))
+        if (!find(&node, &value, right, *li))
             break;
         if (value == *li)
             *out++ = *li;
     }
-    left.numValues = uint16_t(out - base);
-    if (!left.numValues)
-        isecEmpty(left, right);
+    left->numValues = uint16_t(out - base);
+    if (!left->numValues)
+        clear(alloc, left);
 }
 
 //===========================================================================
-static void isecSVec(Node & left, const Node & right) {
-    assert(left.type == Node::kSmVector);
-    isecArray(left, left.localValues, right, right.localValues);
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::isecSmv(
+    A * alloc,
+    Node * left,
+    const Node & right
+) {
+    assert(left->type == kSmVector);
+    isecArray(alloc, left, left->localValues, right, right.localValues);
 }
 
 //===========================================================================
-static void isecLSVec(Node & left, const Node & right) {
-    assert(left.type == Node::kSmVector);
-    isecLArray(left, left.localValues, right);
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::isecLSmv(
+    A * alloc,
+    Node * left,
+    const Node & right
+) {
+    assert(left->type == kSmVector);
+    isecLArray(alloc, left, left->localValues, right);
 }
 
 //===========================================================================
-static void isecRSVec(Node & left, const Node & right) {
-    assert(right.type == Node::kSmVector);
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::isecRSmv(
+    A * alloc,
+    Node * left,
+    const Node & right
+) {
+    assert(right.type == kSmVector);
     Node tmp;
-    isecCopy(tmp, right);
-    swap(left, tmp);
-    isecLArray(left, left.localValues, tmp);
-    impl(tmp)->destroy(tmp);
+    copy(alloc, &tmp, right);
+    isecLArray(alloc, &tmp, tmp.localValues, *left);
+    swap(*left, tmp);
+    destroy(alloc, &tmp);
 }
 
 //===========================================================================
-static void isecVec(Node & left, const Node & right) {
-    assert(left.type == Node::kVector);
-    isecArray(left, left.values, right, right.values);
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::isecVec(
+    A * alloc,
+    Node * left,
+    const Node & right
+) {
+    assert(left->type == kVector);
+    isecArray(alloc, left, left->values, right, right.values);
 }
 
 //===========================================================================
-static void isecLVec(Node & left, const Node & right) {
-    assert(left.type == Node::kVector);
-    isecLArray(left, left.values, right);
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::isecLVec(
+    A * alloc,
+    Node * left,
+    const Node & right
+) {
+    assert(left->type == kVector);
+    isecLArray(alloc, left, left->values, right);
 }
 
 //===========================================================================
-static void isecRVec(Node & left, const Node & right) {
-    assert(right.type == Node::kVector);
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::isecRVec(
+    A * alloc,
+    Node * left,
+    const Node & right
+) {
+    assert(right.type == kVector);
     Node tmp;
-    isecCopy(tmp, right);
-    swap(left, tmp);
-    isecLArray(left, left.values, tmp);
-    impl(tmp)->destroy(tmp);
+    copy(alloc, &tmp, right);
+    swap(*left, tmp);
+    isecLArray(alloc, left, left->values, tmp);
+    destroy(alloc, &tmp);
 }
 
 //===========================================================================
-static void isecBit(Node & left, const Node & right) {
-    auto li = (uint64_t *) left.values;
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::isecBit(
+    A * alloc,
+    Node * left,
+    const Node & right
+) {
+    auto li = (uint64_t *) left->values;
     auto le = li + kDataSize / sizeof *li;
     auto ri = (uint64_t *) right.values;
-    left.numValues = 0;
+    left->numValues = 0;
     for (; li != le; ++li, ++ri) {
         if (*li &= *ri)
-            left.numValues += 1;
+            left->numValues += 1;
     }
-    if (!left.numValues)
-        isecEmpty(left, right);
+    if (!left->numValues)
+        clear(alloc, left);
 }
 
 //===========================================================================
-static void isecMeta(Node & left, const Node & right) {
-    auto li = left.nodes;
-    auto le = li + left.numValues;
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::isecMeta(
+    A * alloc,
+    Node * left,
+    const Node & right
+) {
+    auto li = left->nodes;
+    auto le = li + left->numValues;
     auto ri = right.nodes;
     for (; li != le; ++li, ++ri) {
-        intersect(*li, *ri);
-        if (li->type != Node::kEmpty)
+        intersect(alloc, li, *ri);
+        if (li->type != kEmpty)
             goto NOT_EMPTY;
     }
-    isecEmpty(left, right);
+    clear(alloc, left);
     return;
 
 NOT_EMPTY:
     ++li, ++ri;
     for (; li != le; ++li, ++ri)
-        intersect(*li, *ri);
-}
-
-//===========================================================================
-static void intersect(Node & left, const Node & right) {
-    using Fn = void(Node & left, const Node & right);
-    static Fn * const functs[][Node::kNodeTypes] = {
-// LEFT                         RIGHT
-//         empty      full      sm vec     vector     bitmap     meta
-/*empty*/{ isecSkip,  isecSkip, isecSkip,  isecSkip,  isecSkip,  isecSkip  },
-/*full */{ isecEmpty, isecSkip, isecCopy,  isecCopy,  isecCopy,  isecCopy  },
-/*svec */{ isecEmpty, isecSkip, isecSVec,  isecLSVec, isecLSVec, isecLSVec },
-/*vec  */{ isecEmpty, isecSkip, isecRSVec, isecVec,   isecLVec,  isecLVec  },
-/*bit  */{ isecEmpty, isecSkip, isecRSVec, isecRVec,  isecBit,   isecError },
-/*meta */{ isecEmpty, isecSkip, isecRSVec, isecRVec,  isecError, isecMeta  },
-    };
-    functs[left.type][right.type](left, right);
+        intersect(alloc, li, *ri);
 }
 
 
@@ -3003,109 +3544,104 @@ static void intersect(Node & left, const Node & right) {
 *
 ***/
 
-static void intersect(Node & left, Node && right);
-
 //===========================================================================
-static void isecError(Node & left, Node && right) {
-    isecError(left, right);
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::intersect(A * alloc, Node * left, Node && right) {
+    using Fn = void(A * alloc, Node * left, Node && right);
+    static Fn * const functs[][kNodeTypes] = {
+// LEFT                         RIGHT
+//         empty  full  sm vec    vector    bitmap     meta
+/*empty*/{ skip,  skip, clear,    clear,    clear,     clear     },
+/*full */{ clear, skip, copy,     copy,     copy,      copy      },
+/*smv  */{ clear, skip, isecSmv,  isecLSmv, isecLSmv,  isecLSmv  },
+/*vec  */{ clear, skip, isecRSmv, isecVec,  isecLVec,  isecLVec  },
+/*bit  */{ clear, skip, isecRSmv, isecRVec, isecBit,   isecError },
+/*meta */{ clear, skip, isecRSmv, isecRVec, isecError, isecMeta  },
+    };
+    functs[left->type][right.type](alloc, left, move(right));
 }
 
 //===========================================================================
-static void isecSkip(Node & left, Node && right)
-{}
-
-//===========================================================================
-static void isecEmpty(Node & left, Node && right) {
-    isecEmpty(left, right);
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::isecError(A * alloc, Node * left, Node && right) {
+    isecError(alloc, left, right);
 }
 
 //===========================================================================
-static void isecMove(Node & left, Node && right) {
-    swap(left, right);
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::isecSmv(A * alloc, Node * left, Node && right) {
+    isecSmv(alloc, left, right);
 }
 
 //===========================================================================
-static void isecSVec(Node & left, Node && right) {
-    isecSVec(left, right);
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::isecLSmv(A * alloc, Node * left, Node && right) {
+    isecLSmv(alloc, left, right);
 }
 
 //===========================================================================
-static void isecLSVec(Node & left, Node && right) {
-    isecLSVec(left, right);
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::isecRSmv(A * alloc, Node * left, Node && right) {
+    swap(*left, right);
+    isecLSmv(alloc, left, right);
 }
 
 //===========================================================================
-static void isecRSVec(Node & left, Node && right) {
-    swap(left, right);
-    isecLSVec(left, right);
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::isecVec(A * alloc, Node * left, Node && right) {
+    isecVec(alloc, left, right);
 }
 
 //===========================================================================
-static void isecVec(Node & left, Node && right) {
-    isecVec(left, right);
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::isecLVec(A * alloc, Node * left, Node && right) {
+    isecLVec(alloc, left, right);
 }
 
 //===========================================================================
-static void isecLVec(Node & left, Node && right) {
-    isecLVec(left, right);
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::isecRVec(A * alloc, Node * left, Node && right) {
+    swap(*left, right);
+    isecLVec(alloc, left, right);
 }
 
 //===========================================================================
-static void isecRVec(Node & left, Node && right) {
-    swap(left, right);
-    isecLVec(left, right);
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::isecBit(A * alloc, Node * left, Node && right) {
+    isecBit(alloc, left, right);
 }
 
 //===========================================================================
-static void isecBit(Node & left, Node && right) {
-    isecBit(left, right);
-}
-
-//===========================================================================
-static void isecMeta(Node & left, Node && right) {
-    auto li = left.nodes;
-    auto le = li + left.numValues;
+template <std::integral T, typename A>
+void IntegralSet<T,A>::Impl::isecMeta(A * alloc, Node * left, Node && right) {
+    auto li = left->nodes;
+    auto le = li + left->numValues;
     auto ri = right.nodes;
     for (; li != le; ++li, ++ri) {
-        intersect(*li, move(*ri));
-        if (li->type != Node::kEmpty)
+        intersect(alloc, li, move(*ri));
+        if (li->type != kEmpty)
             goto NOT_EMPTY;
     }
-    isecEmpty(left, move(right));
+    clear(alloc, left);
     return;
 
 NOT_EMPTY:
     ++li, ++ri;
     for (; li != le; ++li, ++ri)
-        intersect(*li, move(*ri));
-}
-
-//===========================================================================
-static void intersect(Node & left, Node && right) {
-    using Fn = void(Node & left, Node && right);
-    static Fn * const functs[][Node::kNodeTypes] = {
-// LEFT                         RIGHT
-//         empty      full      sm vec     vector     bitmap     meta
-/*empty*/{ isecSkip,  isecSkip, isecEmpty, isecEmpty, isecEmpty, isecEmpty },
-/*full */{ isecEmpty, isecSkip, isecMove,  isecMove,  isecMove,  isecMove  },
-/*svec */{ isecEmpty, isecSkip, isecSVec,  isecLSVec, isecLSVec, isecLSVec },
-/*vec  */{ isecEmpty, isecSkip, isecRSVec, isecVec,   isecLVec,  isecLVec  },
-/*bit  */{ isecEmpty, isecSkip, isecRSVec, isecRVec,  isecBit,   isecError },
-/*meta */{ isecEmpty, isecSkip, isecRSVec, isecRVec,  isecError, isecMeta  },
-    };
-    functs[left.type][right.type](left, move(right));
+        intersect(alloc, li, move(*ri));
 }
 
 
 /****************************************************************************
 *
-*   UnsignedSet::Node
+*   IntegralSet::Node
 *
 ***/
 
 //===========================================================================
-UnsignedSet::Node::Node()
-    : type{kEmpty}
+template <std::integral T, typename A>
+IntegralSet<T, A>::Node::Node()
+    : type{Impl::kEmpty}
     , depth{0}
     , base{0}
     , numBytes{0}
@@ -3116,176 +3652,259 @@ UnsignedSet::Node::Node()
 
 /****************************************************************************
 *
-*   UnsignedSet
+*   IntegralSet
 *
 ***/
 
 //===========================================================================
-UnsignedSet::UnsignedSet()
+template <std::integral T, typename A>
+IntegralSet<T, A>::IntegralSet()
 {}
 
 //===========================================================================
-UnsignedSet::UnsignedSet(UnsignedSet && from) noexcept {
-    swap(from);
+template <std::integral T, typename A>
+IntegralSet<T, A>::IntegralSet(const A & alloc)
+    : m_alloc(alloc)
+{}
+
+//===========================================================================
+template <std::integral T, typename A>
+IntegralSet<T, A>::IntegralSet(IntegralSet && from) noexcept
+    : m_alloc(from.m_alloc)
+{
+    Impl::copy(&m_alloc, &m_node, move(from.m_node));
 }
 
 //===========================================================================
-UnsignedSet::UnsignedSet(const UnsignedSet & from) {
-    insert(from);
+template <std::integral T, typename A>
+IntegralSet<T, A>::IntegralSet(const IntegralSet & from) {
+    m_alloc = allocator_traits<A>::select_on_container_copy_construction(
+        from.m_alloc
+    );
+    Impl::copy(&m_alloc, &m_node, from.m_node);
 }
 
 //===========================================================================
-UnsignedSet::UnsignedSet(std::initializer_list<value_type> il) {
+template <std::integral T, typename A>
+IntegralSet<T, A>::IntegralSet(
+    std::initializer_list<value_type> il,
+    const A & alloc
+)
+    : m_alloc(alloc)
+{
     insert(il);
 }
 
 //===========================================================================
-UnsignedSet::UnsignedSet(string_view from) {
+template <std::integral T, typename A>
+IntegralSet<T, A>::IntegralSet(string_view from, const A & alloc)
+    : m_alloc(alloc)
+{
     insert(from);
 }
 
 //===========================================================================
-UnsignedSet::UnsignedSet(value_type start, size_t count) {
-    insert(start, count);
+template <std::integral T, typename A>
+IntegralSet<T, A>::IntegralSet(
+    value_type start,
+    size_t len,
+    const A & alloc
+)
+    : m_alloc(alloc)
+{
+    insert(start, len);
 }
 
 //===========================================================================
-UnsignedSet::~UnsignedSet() {
+template <std::integral T, typename A>
+IntegralSet<T, A>::~IntegralSet() {
     clear();
 }
 
 //===========================================================================
-UnsignedSet & UnsignedSet::operator=(UnsignedSet && from) noexcept {
-    assign(move(from));
+template <std::integral T, typename A>
+IntegralSet<T, A> & IntegralSet<T, A>::operator=(
+    IntegralSet && from
+) noexcept {
+    if (this != &from) {
+        if constexpr(
+            allocator_traits<A>::propagate_on_container_move_assignment::value
+        ) {
+            m_alloc = move(from.m_alloc);
+        }
+        assign(move(from));
+    }
     return *this;
 }
 
 //===========================================================================
-UnsignedSet & UnsignedSet::operator=(const UnsignedSet & from) {
-    assign(from);
+template <std::integral T, typename A>
+IntegralSet<T, A> & IntegralSet<T, A>::operator=(
+    const IntegralSet & from
+) {
+    if (this != &from) {
+        if constexpr(
+            allocator_traits<A>::propagate_on_container_copy_assignment::value
+        ) {
+            m_alloc = from.m_alloc;
+        }
+        assign(from);
+    }
     return *this;
 }
 
 //===========================================================================
-UnsignedSet::iterator UnsignedSet::begin() const {
+template <std::integral T, typename A>
+auto IntegralSet<T, A>::get_allocator() const -> allocator_type {
+    return m_alloc;
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+IntegralSet<T, A>::iterator IntegralSet<T, A>::begin() const {
     return iterator::makeFirst(&m_node);
 }
 
 //===========================================================================
-UnsignedSet::iterator UnsignedSet::end() const {
+template <std::integral T, typename A>
+IntegralSet<T, A>::iterator IntegralSet<T, A>::end() const {
     return iterator::makeEnd(&m_node);
 }
 
 //===========================================================================
-UnsignedSet::reverse_iterator UnsignedSet::rbegin() const {
+template <std::integral T, typename A>
+auto IntegralSet<T, A>::rbegin() const -> reverse_iterator {
     return reverse_iterator(end());
 }
 
 //===========================================================================
-UnsignedSet::reverse_iterator UnsignedSet::rend() const {
+template <std::integral T, typename A>
+auto IntegralSet<T, A>::rend() const -> reverse_iterator {
     return reverse_iterator(begin());
 }
 
 //===========================================================================
-UnsignedSet::RangeRange UnsignedSet::ranges() const {
+template <std::integral T, typename A>
+auto IntegralSet<T, A>::ranges() const -> RangeRange {
     return RangeRange(begin());
 }
 
 //===========================================================================
-bool UnsignedSet::empty() const {
-    return m_node.type == Node::kEmpty;
+template <std::integral T, typename A>
+bool IntegralSet<T, A>::empty() const {
+    return m_node.type == Impl::kEmpty;
 }
 
 //===========================================================================
-size_t UnsignedSet::size() const {
-    return impl(m_node)->count(m_node);
+template <std::integral T, typename A>
+size_t IntegralSet<T, A>::size() const {
+    return Impl::count(m_node);
 }
 
 //===========================================================================
-size_t UnsignedSet::max_size() const {
+template <std::integral T, typename A>
+size_t IntegralSet<T, A>::max_size() const {
     return numeric_limits<value_type>::max();
 }
 
 //===========================================================================
-void UnsignedSet::clear() {
-    impl(m_node)->destroy(m_node);
-    m_node = {};
+template <std::integral T, typename A>
+void IntegralSet<T, A>::clear() {
+    Impl::clear(&m_alloc, &m_node);
 }
 
 //===========================================================================
-void UnsignedSet::fill() {
-    clear();
-    m_node.type = Node::kFull;
-    s_fullImpl.init(m_node, true);
+template <std::integral T, typename A>
+void IntegralSet<T, A>::fill() {
+    Impl::fill(&m_alloc, &m_node);
 }
 
 //===========================================================================
-void UnsignedSet::assign(UnsignedSet && from) {
-    clear();
-    swap(from);
+template <std::integral T, typename A>
+void IntegralSet<T, A>::assign(IntegralSet && from) {
+    if (this != &from) {
+        if (m_alloc == from.m_alloc) {
+            Impl::copy(&m_alloc, &m_node, move(from.m_node));
+        } else {
+            Impl::copy(&m_alloc, &m_node, from.m_node);
+        }
+    }
 }
 
 //===========================================================================
-void UnsignedSet::assign(const UnsignedSet & from) {
-    clear();
-    insert(from);
+template <std::integral T, typename A>
+void IntegralSet<T, A>::assign(const IntegralSet & from) {
+    if (this != &from)
+        Impl::copy(&m_alloc, &m_node, from.m_node);
 }
 
 //===========================================================================
-void UnsignedSet::assign(value_type value) {
+template <std::integral T, typename A>
+void IntegralSet<T, A>::assign(value_type value) {
     clear();
     insert(value);
 }
 
 //===========================================================================
-inline void UnsignedSet::assign(std::initializer_list<value_type> il) {
+template <std::integral T, typename A>
+void IntegralSet<T, A>::assign(std::initializer_list<value_type> il) {
     clear();
     insert(il);
 }
 
 //===========================================================================
-void UnsignedSet::assign(value_type start, size_t count) {
+template <std::integral T, typename A>
+void IntegralSet<T, A>::assign(value_type start, size_t len) {
     clear();
-    insert(start, count);
+    insert(start, len);
 }
 
 //===========================================================================
-void UnsignedSet::assign(string_view src) {
+template <std::integral T, typename A>
+void IntegralSet<T, A>::assign(string_view src) {
     clear();
     insert(src);
 }
 
 //===========================================================================
-void UnsignedSet::insert(UnsignedSet && other) {
-    ::insert(m_node, move(other.m_node));
+template <std::integral T, typename A>
+void IntegralSet<T, A>::insert(IntegralSet && other) {
+    if (this != &other)
+        Impl::insert(&m_alloc, &m_node, move(other.m_node));
 }
 
 //===========================================================================
-void UnsignedSet::insert(const UnsignedSet & other) {
-    ::insert(m_node, other.m_node);
+template <std::integral T, typename A>
+void IntegralSet<T, A>::insert(const IntegralSet & other) {
+    if (this != &other)
+        Impl::insert(&m_alloc, &m_node, other.m_node);
 }
 
 //===========================================================================
-bool UnsignedSet::insert(value_type value) {
-    return impl(m_node)->insert(m_node, value, 1);
+template <std::integral T, typename A>
+bool IntegralSet<T, A>::insert(value_type value) {
+    return Impl::insert(&m_alloc, &m_node, value, 1);
 }
 
 //===========================================================================
-void UnsignedSet::insert(std::initializer_list<value_type> il) {
+template <std::integral T, typename A>
+void IntegralSet<T, A>::insert(std::initializer_list<value_type> il) {
     iInsert(il.begin(), il.end());
 }
 
 //===========================================================================
-void UnsignedSet::insert(value_type start, size_t count) {
-    if (!count)
+template <std::integral T, typename A>
+void IntegralSet<T, A>::insert(value_type start, size_t len) {
+    if (!len)
         return;
-    if (count == dynamic_extent)
-        count = valueMask(0) - start + 1;
-    impl(m_node)->insert(m_node, start, count);
+    if (len == dynamic_extent)
+        len = Impl::valueMask(0) - start + 1;
+    Impl::insert(&m_alloc, &m_node, start, len);
 }
 
 //===========================================================================
-void UnsignedSet::insert(string_view src) {
+template <std::integral T, typename A>
+void IntegralSet<T, A>::insert(string_view src) {
     char * eptr;
     for (;;) {
         auto first = strToUint(src, &eptr);
@@ -3307,145 +3926,183 @@ void UnsignedSet::insert(string_view src) {
 }
 
 //===========================================================================
-bool UnsignedSet::erase(value_type value) {
-    return impl(m_node)->erase(m_node, value, 1);
+template <std::integral T, typename A>
+bool IntegralSet<T, A>::erase(value_type value) {
+    return Impl::erase(&m_alloc, &m_node, value, 1);
 }
 
 //===========================================================================
-void UnsignedSet::erase(UnsignedSet::iterator where) {
+template <std::integral T, typename A>
+void IntegralSet<T, A>::erase(iterator where) {
     assert(where);
     erase(*where);
 }
 
 //===========================================================================
-void UnsignedSet::erase(const UnsignedSet & other) {
-    ::erase(m_node, other.m_node);
+template <std::integral T, typename A>
+void IntegralSet<T, A>::erase(const IntegralSet & other) {
+    if (this != &other) {
+        Impl::erase(&m_alloc, &m_node, other.m_node);
+    } else {
+        clear();
+    }
 }
 
 //===========================================================================
-void UnsignedSet::erase(value_type start, size_t count) {
-    if (!count)
+template <std::integral T, typename A>
+void IntegralSet<T, A>::erase(value_type start, size_t len) {
+    if (!len)
         return;
-    if (count == dynamic_extent)
-        count = valueMask(0) - start + 1;
-    impl(m_node)->erase(m_node, start, count);
+    if (len == dynamic_extent)
+        len = Impl::valueMask(0) - start + 1;
+    Impl::erase(&m_alloc, &m_node, start, len);
 }
 
 //===========================================================================
-UnsignedSet::value_type UnsignedSet::pop_front() {
+template <std::integral T, typename A>
+auto IntegralSet<T, A>::pop_front() -> value_type {
     auto val = front();
     erase(val);
     return val;
 }
 
 //===========================================================================
-UnsignedSet::value_type UnsignedSet::pop_back() {
+template <std::integral T, typename A>
+auto IntegralSet<T, A>::pop_back() -> value_type {
     auto val = back();
     erase(val);
     return val;
 }
 
 //===========================================================================
-void UnsignedSet::intersect(UnsignedSet && other) {
-    ::intersect(m_node, move(other.m_node));
+template <std::integral T, typename A>
+void IntegralSet<T, A>::intersect(IntegralSet && other) {
+    if (this != &other)
+        Impl::intersect(&m_alloc, &m_node, move(other.m_node));
 }
 
 //===========================================================================
-void UnsignedSet::intersect(const UnsignedSet & other) {
-    ::intersect(m_node, other.m_node);
+template <std::integral T, typename A>
+void IntegralSet<T, A>::intersect(const IntegralSet & other) {
+    if (this != &other)
+        Impl::intersect(&m_alloc, &m_node, other.m_node);
 }
 
 //===========================================================================
-void UnsignedSet::swap(UnsignedSet & other) {
-    ::swap(m_node, other.m_node);
+template <std::integral T, typename A>
+void IntegralSet<T, A>::swap(IntegralSet & other) {
+    assert(m_alloc == other.m_alloc);
+    Impl::swap(m_node, other.m_node);
 }
 
 //===========================================================================
-strong_ordering UnsignedSet::compare(const UnsignedSet & right) const {
-    if (auto cmp = ::compare(m_node, right.m_node)) {
+template <std::integral T, typename A>
+strong_ordering IntegralSet<T, A>::compare(const IntegralSet & right) const {
+    if (auto cmp = Impl::compare(m_node, right.m_node)) {
         return cmp < 0 ? strong_ordering::less : strong_ordering::greater;
     }
     return strong_ordering::equal;
 }
 
 //===========================================================================
-strong_ordering UnsignedSet::operator<=>(const UnsignedSet & other) const {
+template <std::integral T, typename A>
+strong_ordering IntegralSet<T, A>::operator<=>(
+    const IntegralSet & other
+) const {
     return compare(other);
 }
 
 //===========================================================================
-bool UnsignedSet::operator==(const UnsignedSet & right) const {
+template <std::integral T, typename A>
+bool IntegralSet<T, A>::operator==(const IntegralSet & right) const {
     return compare(right) == 0;
 }
 
 //===========================================================================
-UnsignedSet::value_type UnsignedSet::front() const {
+template <std::integral T, typename A>
+auto IntegralSet<T, A>::front() const -> value_type {
     assert(!empty());
     auto i = begin();
     return *i;
 }
 
 //===========================================================================
-UnsignedSet::value_type UnsignedSet::back() const {
+template <std::integral T, typename A>
+auto IntegralSet<T, A>::back() const -> value_type {
     assert(!empty());
     auto i = rbegin();
     return *i;
 }
 
 //===========================================================================
-size_t UnsignedSet::count() const {
+template <std::integral T, typename A>
+size_t IntegralSet<T, A>::count() const {
     return size();
 }
 
 //===========================================================================
-size_t UnsignedSet::count(value_type val) const {
+template <std::integral T, typename A>
+size_t IntegralSet<T, A>::count(value_type val) const {
     return count(val, 1);
 }
 
 //===========================================================================
-size_t UnsignedSet::count(value_type start, size_t count) const {
-    return impl(m_node)->count(m_node, start, count);
+template <std::integral T, typename A>
+size_t IntegralSet<T, A>::count(value_type start, size_t len) const {
+    return Impl::count(m_node, start, len);
 }
 
 //===========================================================================
-auto UnsignedSet::find(value_type val) const -> iterator {
+template <std::integral T, typename A>
+auto IntegralSet<T, A>::find(value_type val) const -> iterator {
     auto first = lowerBound(val);
     return first && *first == val ? first : end();
 }
 
 //===========================================================================
-bool UnsignedSet::contains(value_type val) const {
+template <std::integral T, typename A>
+bool IntegralSet<T, A>::contains(value_type val) const {
     return count(val);
 }
 
 //===========================================================================
-bool UnsignedSet::contains(const UnsignedSet & other) const {
-    return ::contains(m_node, other.m_node);
+template <std::integral T, typename A>
+bool IntegralSet<T, A>::contains(const IntegralSet & other) const {
+    if (this != &other) {
+        return Impl::contains(m_node, other.m_node);
+    } else {
+        return true;
+    }
 }
 
 //===========================================================================
-bool UnsignedSet::intersects(const UnsignedSet & other) const {
-    return ::intersects(m_node, other.m_node);
+template <std::integral T, typename A>
+bool IntegralSet<T, A>::intersects(const IntegralSet & other) const {
+    return Impl::intersects(m_node, other.m_node);
 }
 
 //===========================================================================
-auto UnsignedSet::findLessEqual(value_type val) const -> iterator {
+template <std::integral T, typename A>
+auto IntegralSet<T, A>::findLessEqual(value_type val) const -> iterator {
     return iterator::makeLast(&m_node, val);
 }
 
 //===========================================================================
-auto UnsignedSet::lowerBound(value_type val) const -> iterator {
+template <std::integral T, typename A>
+auto IntegralSet<T, A>::lowerBound(value_type val) const -> iterator {
     return iterator::makeFirst(&m_node, val);
 }
 
 //===========================================================================
-auto UnsignedSet::upperBound(value_type val) const -> iterator {
+template <std::integral T, typename A>
+auto IntegralSet<T, A>::upperBound(value_type val) const -> iterator {
     val += 1;
     return val ? lowerBound(val) : end();
 }
 
 //===========================================================================
-auto UnsignedSet::equalRange(value_type val) const
+template <std::integral T, typename A>
+auto IntegralSet<T, A>::equalRange(value_type val) const
     -> pair<iterator, iterator>
 {
     auto first = lowerBound(val);
@@ -3456,35 +4113,42 @@ auto UnsignedSet::equalRange(value_type val) const
 }
 
 //===========================================================================
-auto UnsignedSet::firstContiguous(iterator where) const -> iterator {
+template <std::integral T, typename A>
+auto IntegralSet<T, A>::firstContiguous(iterator where) const -> iterator {
     return where.firstContiguous();
 }
 
 //===========================================================================
-auto UnsignedSet::lastContiguous(iterator where) const -> iterator {
+template <std::integral T, typename A>
+auto IntegralSet<T, A>::lastContiguous(iterator where) const -> iterator {
     return where.lastContiguous();
 }
 
 //===========================================================================
 // Private
 //===========================================================================
-void UnsignedSet::iInsert(const value_type * first, const value_type * last) {
-    impl(m_node)->insert(m_node, first, last);
+template <std::integral T, typename A>
+void IntegralSet<T, A>::iInsert(
+    const value_type * first,
+    const value_type * last
+) {
+    Impl::insert(&m_alloc, &m_node, first, last);
 }
 
 
 /****************************************************************************
 *
-*   UnsignedSet::Iter
+*   IntegralSet::Iter
 *
 ***/
 
 //===========================================================================
 // static
-UnsignedSet::Iter UnsignedSet::Iter::makeEnd(const Node * node) {
+template <std::integral T, typename A>
+auto IntegralSet<T, A>::Iter::makeEnd(const Node * node) -> Iter {
     while (node->depth) {
-        auto pos = nodePos(absBase(*node), node->depth - 1);
-        node += numNodes(node->depth) - pos;
+        auto pos = Impl::nodePos(Impl::absBase(*node), node->depth - 1);
+        node += Impl::numNodes(node->depth) - pos;
         node = node->nodes;
     }
     return Iter(node);
@@ -3492,72 +4156,80 @@ UnsignedSet::Iter UnsignedSet::Iter::makeEnd(const Node * node) {
 
 //===========================================================================
 // static
-UnsignedSet::Iter UnsignedSet::Iter::makeFirst(const Node * node) {
-    return makeFirst(node, absBase(*node));
+template <std::integral T, typename A>
+auto IntegralSet<T, A>::Iter::makeFirst(const Node * node) -> Iter {
+    return makeFirst(node, Impl::absBase(*node));
 }
 
 //===========================================================================
 // static
-UnsignedSet::Iter UnsignedSet::Iter::makeFirst(
+template <std::integral T, typename A>
+auto IntegralSet<T, A>::Iter::makeFirst(
     const Node * node,
     value_type value
-) {
-    if (impl(*node)->findFirst(&node, &value, *node, value))
+) -> Iter {
+    if (Impl::find(&node, &value, *node, value))
         return {node, value};
     return {node};
 }
 
 //===========================================================================
 // static
-UnsignedSet::Iter UnsignedSet::Iter::makeLast(const Node * node) {
-    return makeLast(node, absFinal(*node));
+template <std::integral T, typename A>
+auto IntegralSet<T, A>::Iter::makeLast(const Node * node) -> Iter {
+    return makeLast(node, Impl::absFinal(*node));
 }
 
 //===========================================================================
 // static
-UnsignedSet::Iter UnsignedSet::Iter::makeLast(
+template <std::integral T, typename A>
+auto IntegralSet<T, A>::Iter::makeLast(
     const Node * node,
     value_type value
-) {
-    if (impl(*node)->findLast(&node, &value, *node, value))
+) -> Iter {
+    if (Impl::rfind(&node, &value, *node, value))
         return {node, value};
     return {node};
 }
 
 //===========================================================================
-UnsignedSet::Iter::Iter(const Node * node)
+template <std::integral T, typename A>
+IntegralSet<T, A>::Iter::Iter(const Node * node)
     : m_node(node)
 {
     assert(node->depth == 0 && node->base == 0);
 }
 
 //===========================================================================
-UnsignedSet::Iter::Iter(const Node * node, value_type value)
+template <std::integral T, typename A>
+IntegralSet<T, A>::Iter::Iter(const Node * node, value_type value)
     : m_node(node)
     , m_value(value)
     , m_endmark(false)
 {}
 
 //===========================================================================
-bool UnsignedSet::Iter::operator== (const Iter & right) const {
+template <std::integral T, typename A>
+bool IntegralSet<T, A>::Iter::operator== (const Iter & right) const {
     return m_value == right.m_value
         && m_endmark == right.m_endmark
         && (m_node == right.m_node || !m_node || !right.m_node);
 }
 
 //===========================================================================
-UnsignedSet::Iter & UnsignedSet::Iter::operator++() {
+template <std::integral T, typename A>
+auto IntegralSet<T, A>::Iter::operator++() -> Iter & {
     if (!*this) {
         if (m_node) {
-            auto from = absBase(*m_node);
-            if (impl(*m_node)->findFirst(&m_node, &m_value, *m_node, from))
+            auto from = Impl::absBase(*m_node);
+            if (Impl::find(&m_node, &m_value, *m_node, from))
                 m_endmark = false;
         }
         return *this;
     }
-    if (m_value < absFinal(*m_node)) {
+    if (m_value < Impl::absFinal(*m_node)) {
         m_value += 1;
-        if (impl(*m_node)->findFirst(&m_node, &m_value, *m_node, m_value))
+        if (Impl::find(&m_node, &m_value, *m_node, m_value))
             return *this;
     }
 
@@ -3568,34 +4240,37 @@ CHECK_DEPTH:
     }
 
 CHECK_END_OF_DEPTH:
-    if (absFinal(*m_node) == absFinal(m_value, m_node->depth - 1)) {
+    if (Impl::absFinal(*m_node)
+            == Impl::absFinal(m_value, m_node->depth - 1)
+    ) {
         m_node += 1;
-        assert(m_node->type == Node::kMetaParent);
+        assert(m_node->type == Impl::kMetaParent);
         m_node = m_node->nodes;
-        m_value = absBase(*m_node);
+        m_value = Impl::absBase(*m_node);
         goto CHECK_DEPTH;
     }
 
     m_node += 1;
-    m_value = absBase(*m_node);
-    if (impl(*m_node)->findFirst(&m_node, &m_value, *m_node, m_value))
+    m_value = Impl::absBase(*m_node);
+    if (Impl::find(&m_node, &m_value, *m_node, m_value))
         return *this;
     goto CHECK_END_OF_DEPTH;
 }
 
 //===========================================================================
-UnsignedSet::Iter & UnsignedSet::Iter::operator--() {
+template <std::integral T, typename A>
+auto IntegralSet<T, A>::Iter::operator--() -> Iter & {
     if (!*this) {
         if (m_node) {
-            auto from = absFinal(*m_node);
-            if (impl(*m_node)->findLast(&m_node, &m_value, *m_node, from))
+            auto from = Impl::absFinal(*m_node);
+            if (Impl::rfind(&m_node, &m_value, *m_node, from))
                 m_endmark = false;
         }
         return *this;
     }
-    if (m_value > absBase(*m_node)) {
+    if (m_value > Impl::absBase(*m_node)) {
         m_value -= 1;
-        if (impl(*m_node)->findLast(&m_node, &m_value, *m_node, m_value))
+        if (Impl::rfind(&m_node, &m_value, *m_node, m_value))
             return *this;
     }
 
@@ -3606,31 +4281,33 @@ CHECK_DEPTH:
     }
 
 CHECK_END_OF_DEPTH:
-    if (absBase(*m_node) == absBase(m_value, m_node->depth - 1)) {
-        m_node += numNodes(m_node->depth);
-        assert(m_node->type == Node::kMetaParent);
+    if (Impl::absBase(*m_node) == Impl::absBase(m_value, m_node->depth - 1)) {
+        m_node += Impl::numNodes(m_node->depth);
+        assert(m_node->type == Impl::kMetaParent);
         m_node = m_node->nodes;
-        m_value = absFinal(*m_node);
+        m_value = Impl::absFinal(*m_node);
         goto CHECK_DEPTH;
     }
 
     m_node -= 1;
-    m_value = absFinal(*m_node);
-    if (impl(*m_node)->findLast(&m_node, &m_value, *m_node, m_value))
+    m_value = Impl::absFinal(*m_node);
+    if (Impl::rfind(&m_node, &m_value, *m_node, m_value))
         return *this;
     goto CHECK_END_OF_DEPTH;
 }
 
 //===========================================================================
-UnsignedSet::Iter UnsignedSet::Iter::end() const {
+template <std::integral T, typename A>
+auto IntegralSet<T, A>::Iter::end() const -> Iter {
     return iterator::makeEnd(m_node);
 }
 
 //===========================================================================
-UnsignedSet::Iter UnsignedSet::Iter::firstContiguous() const {
+template <std::integral T, typename A>
+auto IntegralSet<T, A>::Iter::firstContiguous() const -> Iter {
     auto node = m_node;
     auto value = m_value;
-    if (impl(*node)->firstContiguous(&node, &value, *node, value))
+    if (Impl::rcontig(&node, &value, *node, value))
         return {node, value};
 
     // Use a temporary to scout out the next node (which may require traversing
@@ -3643,24 +4320,25 @@ CHECK_DEPTH:
         return {node, value};
 
 CHECK_END_OF_DEPTH:
-    if (absBase(*ptr) == absBase(value, ptr->depth - 1)) {
-        ptr += numNodes(ptr->depth);
-        assert(ptr->type == Node::kMetaParent);
+    if (Impl::absBase(*ptr) == Impl::absBase(value, ptr->depth - 1)) {
+        ptr += Impl::numNodes(ptr->depth);
+        assert(ptr->type == Impl::kMetaParent);
         ptr = ptr->nodes;
         goto CHECK_DEPTH;
     }
 
     ptr -= 1;
-    if (impl(*ptr)->firstContiguous(&node, &value, *ptr, absFinal(*ptr)))
+    if (Impl::rcontig(&node, &value, *ptr, Impl::absFinal(*ptr)))
         return {node, value};
     goto CHECK_END_OF_DEPTH;
 }
 
 //===========================================================================
-UnsignedSet::Iter UnsignedSet::Iter::lastContiguous() const {
+template <std::integral T, typename A>
+auto IntegralSet<T, A>::Iter::lastContiguous() const -> Iter {
     auto node = m_node;
     auto value = m_value;
-    if (impl(*node)->lastContiguous(&node, &value, *node, value))
+    if (Impl::contig(&node, &value, *node, value))
         return {node, value};
 
     // Use a temporary to scout out the next node (which may require traversing
@@ -3673,15 +4351,15 @@ CHECK_DEPTH:
         return {node, value};
 
 CHECK_END_OF_DEPTH:
-    if (absFinal(*ptr) == absFinal(value, ptr->depth - 1)) {
+    if (Impl::absFinal(*ptr) == Impl::absFinal(value, ptr->depth - 1)) {
         ptr += 1;
-        assert(ptr->type == Node::kMetaParent);
+        assert(ptr->type == Impl::kMetaParent);
         ptr = ptr->nodes;
         goto CHECK_DEPTH;
     }
 
     ptr += 1;
-    if (impl(*ptr)->lastContiguous(&node, &value, *ptr, absBase(*ptr)))
+    if (Impl::contig(&node, &value, *ptr, Impl::absBase(*ptr)))
         return {node, value};
     goto CHECK_END_OF_DEPTH;
 }
@@ -3689,12 +4367,13 @@ CHECK_END_OF_DEPTH:
 
 /****************************************************************************
 *
-*   UnsignedSet::RangeIterator
+*   UnsignedSet::RangeIter
 *
 ***/
 
 //===========================================================================
-UnsignedSet::RangeIter::RangeIter(iterator where)
+template <std::integral T, typename A>
+IntegralSet<T, A>::RangeIter::RangeIter(iterator where)
     : m_low(where)
     , m_high(where)
 {
@@ -3705,14 +4384,16 @@ UnsignedSet::RangeIter::RangeIter(iterator where)
 }
 
 //===========================================================================
-bool UnsignedSet::RangeIter::operator== (
+template <std::integral T, typename A>
+bool IntegralSet<T, A>::RangeIter::operator== (
     const RangeIter & other
 ) const {
     return m_low == other.m_low;
 }
 
 //===========================================================================
-UnsignedSet::RangeIter & UnsignedSet::RangeIter::operator++() {
+template <std::integral T, typename A>
+auto IntegralSet<T, A>::RangeIter::operator++() -> RangeIter & {
     m_low = m_high;
     if (++m_low) {
         m_high = m_low.lastContiguous();
@@ -3725,7 +4406,8 @@ UnsignedSet::RangeIter & UnsignedSet::RangeIter::operator++() {
 }
 
 //===========================================================================
-UnsignedSet::RangeIter & UnsignedSet::RangeIter::operator--() {
+template <std::integral T, typename A>
+auto IntegralSet<T, A>::RangeIter::operator--() -> RangeIter & {
     m_high = m_low;
     if (--m_high) {
         m_low = m_high.firstContiguous();
@@ -3761,3 +4443,5 @@ ostream & Dim::operator<<(ostream & os, const UnsignedSet & right) {
     }
     return os;
 }
+
+template class IntegralSet<unsigned>;

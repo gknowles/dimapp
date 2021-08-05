@@ -166,7 +166,9 @@ static void test() {
     tmp.insert(65, 4094 - 65 + 1);
     EXPECT(tmp.size() == 4159);
     r = tmp.ranges();
-    vr.assign(r.begin(), r.end());
+    auto rb = r.begin();
+    auto re = r.end();
+    vr.assign(rb, re);
     EXPECT(vr == vector<pair<unsigned,unsigned>>{{0,4095},{4097,4159}});
     tmp2.clear();
     tmp2.insert(4097, 63);

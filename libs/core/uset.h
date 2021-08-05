@@ -6,7 +6,10 @@
 
 #include "cppconf/cppconf.h"
 
+#include "core/types.h"
+
 #include <compare>
+#include <concepts>
 #include <cstdint>
 #include <initializer_list>
 #include <iterator>
@@ -20,18 +23,22 @@ namespace Dim {
 
 /****************************************************************************
 *
-*   UnsignedSet
+*   IntegralSet
 *
 ***/
 
-class UnsignedSet {
+template <std::integral T, typename A = std::allocator<T>>
+class IntegralSet {
 public:
-    template<typename T> class RevIterBase;
+    template<typename Iter> class RevIterBase;
     class Iter;
     class RangeRange;
     class RangeIter;
+    class Impl;
 
-    using value_type = unsigned;
+    using allocator_type = A;
+
+    using value_type = T;
     using reference = value_type &;
     using const_reference = const value_type &;
     using iterator = Iter;
@@ -42,38 +49,41 @@ public:
     using reverse_range_iterator = typename RevIterBase<RangeIter>;
 
 public:
-    constexpr static unsigned kTypeBits = 4;
-    constexpr static unsigned kDepthBits = 4;
-    constexpr static unsigned kBaseBits = 32 - kTypeBits - kDepthBits;
+    constexpr static size_t kBitWidth = CHAR_BIT * sizeof T;
+    constexpr static size_t kTypeBits = 4;
+    constexpr static size_t kDepthBits = 4;
+    constexpr static size_t kBaseBits = kBitWidth - kTypeBits - kDepthBits;
 
-    struct Node {
-        enum Type : int;
-        Type type : kTypeBits;
+    struct Node : NoCopy {
+        int type : kTypeBits;
         unsigned depth : kDepthBits;
         unsigned base : kBaseBits;
         uint16_t numBytes;  // space allocated
         uint16_t numValues; // usage depends on node type
         union {
-            value_type localValues[sizeof (value_type *) / sizeof value_type];
             value_type * values;
             Node * nodes;
+            value_type localValues[sizeof (value_type *) / sizeof value_type];
         };
 
         Node();
     };
 
 public:
-    UnsignedSet();
-    UnsignedSet(UnsignedSet && from) noexcept;
-    UnsignedSet(const UnsignedSet & from);
-    UnsignedSet(std::initializer_list<value_type> from);
-    UnsignedSet(std::string_view from);
-    UnsignedSet(value_type start, size_t count);
-    ~UnsignedSet();
+    IntegralSet();
+    explicit IntegralSet(const A & alloc);
+    IntegralSet(IntegralSet && from) noexcept;
+    IntegralSet(const IntegralSet & from);
+    IntegralSet(std::initializer_list<value_type> from, const A & alloc = {});
+    IntegralSet(std::string_view from, const A & alloc = {});
+    IntegralSet(value_type start, size_t len, const A & alloc = {});
+    ~IntegralSet();
     explicit operator bool() const { return !empty(); }
 
-    UnsignedSet & operator=(UnsignedSet && from) noexcept;
-    UnsignedSet & operator=(const UnsignedSet & from);
+    IntegralSet & operator=(IntegralSet && from) noexcept;
+    IntegralSet & operator=(const IntegralSet & from);
+
+    allocator_type get_allocator() const;
 
     // iterators
     iterator begin() const;
@@ -91,51 +101,51 @@ public:
     // modify
     void clear();
     void fill();
-    void assign(UnsignedSet&& from);
-    void assign(const UnsignedSet& from);
+    void assign(IntegralSet && from);
+    void assign(const IntegralSet & from);
     void assign(value_type val);
     template <std::input_iterator InputIt>
         requires (std::is_convertible_v<decltype(*std::declval<InputIt>()),
-            UnsignedSet::value_type>)
+            IntegralSet<T, A>::value_type>)
         void assign(InputIt first, InputIt last);
     void assign(std::initializer_list<value_type> il);
-    void assign(value_type start, size_t count);
+    void assign(value_type start, size_t len);
     void assign(std::string_view src); // space separated ranges
-    void insert(UnsignedSet&& other);
-    void insert(const UnsignedSet& other);
+    void insert(IntegralSet && other);
+    void insert(const IntegralSet & other);
     bool insert(value_type val); // returns true if inserted
     template <std::input_iterator InputIt>
         requires (std::is_convertible_v<decltype(*std::declval<InputIt>()),
-            UnsignedSet::value_type>)
+            IntegralSet<T, A>::value_type>)
         void insert(InputIt first, InputIt last);
     void insert(std::initializer_list<value_type> il);
-    void insert(value_type start, size_t count);
+    void insert(value_type start, size_t len);
     void insert(std::string_view src); // space separated ranges
     bool erase(value_type val); // returns true if erased
     void erase(iterator where);
-    void erase(const UnsignedSet & other);
-    void erase(value_type start, size_t count);
+    void erase(const IntegralSet & other);
+    void erase(value_type start, size_t len);
     value_type pop_back();
     value_type pop_front();
-    void intersect(UnsignedSet && other);
-    void intersect(const UnsignedSet & other);
-    void swap(UnsignedSet & other);
+    void intersect(IntegralSet && other);
+    void intersect(const IntegralSet & other);
+    void swap(IntegralSet & other);
 
     // compare
-    std::strong_ordering compare(const UnsignedSet & other) const;
-    std::strong_ordering operator<=>(const UnsignedSet & other) const;
-    bool operator==(const UnsignedSet & right) const;
+    std::strong_ordering compare(const IntegralSet & other) const;
+    std::strong_ordering operator<=>(const IntegralSet & other) const;
+    bool operator==(const IntegralSet & right) const;
 
     // search
     value_type front() const;
     value_type back() const;
     size_t count() const; // alias for size()
     size_t count(value_type val) const;
-    size_t count(value_type start, size_t count) const;
+    size_t count(value_type start, size_t len) const;
     iterator find(value_type val) const;
     bool contains(value_type val) const;
-    bool contains(const UnsignedSet & other) const;
-    bool intersects(const UnsignedSet & other) const;
+    bool contains(const IntegralSet & other) const;
+    bool intersects(const IntegralSet & other) const;
     iterator findLessEqual(value_type val) const;
     iterator lowerBound(value_type val) const;
     iterator upperBound(value_type val) const;
@@ -151,29 +161,32 @@ public:
 private:
     friend std::ostream & operator<<(
         std::ostream & os,
-        const UnsignedSet & right
+        const IntegralSet & right
     );
 
 private:
     void iInsert(const value_type * first, const value_type * last);
 
     Node m_node;
+    allocator_type m_alloc;
 };
 
 //===========================================================================
-template<std::input_iterator InputIt>
-requires (std::is_convertible_v<decltype(*std::declval<InputIt>()),
-    UnsignedSet::value_type>)
-inline void UnsignedSet::assign(InputIt first, InputIt last) {
+template <std::integral T, typename A>
+template <std::input_iterator InputIt>
+    requires (std::is_convertible_v<decltype(*std::declval<InputIt>()),
+        typename IntegralSet<T, A>::value_type>)
+inline void IntegralSet<T, A>::assign(InputIt first, InputIt last) {
     clear();
     insert(first, last);
 }
 
 //===========================================================================
+template <std::integral T, typename A>
 template<std::input_iterator InputIt>
-requires (std::is_convertible_v<decltype(*std::declval<InputIt>()),
-    UnsignedSet::value_type>)
-inline void UnsignedSet::insert(InputIt first, InputIt last) {
+    requires (std::is_convertible_v<decltype(*std::declval<InputIt>()),
+        typename IntegralSet<T, A>::value_type>)
+inline void IntegralSet<T, A>::insert(InputIt first, InputIt last) {
     if constexpr (std::is_convertible_v<InputIt, const value_type *>) {
         iInsert(first, last);
     } else {
@@ -185,23 +198,25 @@ inline void UnsignedSet::insert(InputIt first, InputIt last) {
 
 /****************************************************************************
 *
-*   UnsignedSet::RevIterBase
+*   IntegralSet::RevIterBase
 *
 ***/
 
-template<typename T>
-class UnsignedSet::RevIterBase {
+template <std::integral T, typename A>
+template<typename IterBase>
+class IntegralSet<T, A>::RevIterBase {
 public:
-    using iterator_type = T;
-    using iterator_category = std::iterator_traits<T>::iterator_category;
-    using value_type = std::iterator_traits<T>::value_type;
-    using difference_type = std::iterator_traits<T>::difference_type;
-    using pointer = std::iterator_traits<T>::pointer;
-    using reference = std::iterator_traits<T>::reference;
-    using thing = std::reverse_iterator<T>;
+    using iterator_type = IterBase;
+    using traits = std::iterator_traits<iterator_type>;
+    using iterator_category = traits::iterator_category;
+    using value_type = traits::value_type;
+    using difference_type = traits::difference_type;
+    using pointer = traits::pointer;
+    using reference = traits::reference;
+    using thing = std::reverse_iterator<iterator_type>;
 
 public:
-    RevIterBase(T iter)
+    RevIterBase(iterator_type iter)
         requires std::derived_from<iterator_category,
             std::bidirectional_iterator_tag>
         : m_iter(iter)
@@ -212,27 +227,32 @@ public:
     RevIterBase & operator--() { ++m_iter; return *this; }
     explicit operator bool() const { return (bool) m_iter; }
     bool operator==(const RevIterBase & other) const = default;
-    value_type operator*() const { return *m_iter; }
+    const value_type & operator*() const { return *m_iter; }
     const value_type * operator->() const { return &*m_iter; }
 
-    constexpr T base() const { auto tmp = m_iter; ++tmp; return tmp; }
+    constexpr iterator_type base() const {
+        auto tmp = m_iter;
+        ++tmp;
+        return tmp;
+    }
 
 private:
-    T m_iter;
+    iterator_type m_iter;
 };
 
 
 /****************************************************************************
 *
-*   UnsignedSet::Iter
+*   IntegralSet::Iter
 *
 ***/
 
-class UnsignedSet::Iter {
+template <std::integral T, typename A>
+class IntegralSet<T, A>::Iter {
 public:
     using iterator_category = std::bidirectional_iterator_tag;
-    using value_type = UnsignedSet::value_type;
-    using difference_type = UnsignedSet::difference_type;
+    using value_type = IntegralSet::value_type;
+    using difference_type = IntegralSet::difference_type;
     using pointer = const value_type*;
     using reference = value_type;
 
@@ -249,7 +269,7 @@ public:
     Iter & operator--();
     explicit operator bool() const { return !m_endmark; }
     bool operator==(const Iter & right) const;
-    value_type operator*() const { return m_value; }
+    const value_type & operator*() const { return m_value; }
     const value_type * operator->() const { return &m_value; }
 
     Iter firstContiguous() const;
@@ -268,22 +288,23 @@ private:
 
 /****************************************************************************
 *
-*   UnsignedSet::RangeIter
+*   IntegralSet::RangeIter
 *
 ***/
 
-class UnsignedSet::RangeIter {
+template <std::integral T, typename A>
+class IntegralSet<T, A>::RangeIter {
 public:
     using iterator_category = std::bidirectional_iterator_tag;
     using value_type =
-        std::pair<UnsignedSet::value_type, UnsignedSet::value_type>;
+        std::pair<IntegralSet::value_type, IntegralSet::value_type>;
     using difference_type = ptrdiff_t;
     using pointer = const value_type*;
     using reference = const value_type&;
 
 public:
     RangeIter(const RangeIter & from) = default;
-    RangeIter(iterator where);
+    RangeIter(IntegralSet::iterator where);
     RangeIter & operator++();
     RangeIter & operator--();
     explicit operator bool() const { return (bool) m_low; }
@@ -300,11 +321,12 @@ private:
 
 /****************************************************************************
 *
-*   UnsignedSet::RangeRange
+*   IntegralSet::RangeRange
 *
 ***/
 
-class UnsignedSet::RangeRange {
+template <std::integral T, typename A>
+class IntegralSet<T, A>::RangeRange {
 public:
     using iterator = RangeIter;
     using reverse_iterator = RevIterBase<RangeIter>;
@@ -320,5 +342,15 @@ private:
     Iter m_first;
 };
 
+
+/****************************************************************************
+*
+*   Aliases
+*
+***/
+
+using UnsignedSet = IntegralSet<unsigned>;
+
+extern template class IntegralSet<unsigned>;
 
 } // namespace
