@@ -319,7 +319,7 @@ void XDocument::normalizeText(XNode * node) {
         setValue(ei, firstChar);
         *const_cast<char *>(lastChar) = 0;
     } else {
-        char * ptr = heap().alloc(ei->valueLen + 1);
+        char * ptr = heap().alloc<char>(ei->valueLen + 1);
         setValue(ei, ptr);
         for (;;) {
             *ptr++ = *firstChar++;

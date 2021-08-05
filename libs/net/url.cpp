@@ -19,7 +19,7 @@ using namespace Dim;
 //===========================================================================
 static string_view urlDecode(string_view src, ITempHeap & heap, bool query) {
     auto outlen = src.size();
-    auto obase = heap.alloc(outlen);
+    auto obase = heap.alloc<char>(outlen);
     auto optr = obase;
     auto base = src.data();
     auto eptr = base + outlen;
@@ -218,7 +218,7 @@ static void setPath(HttpQuery * hp, ITempHeap & heap) {
     auto found = size_t{0};
     for (auto && seg : hp->pathSegs)
         found += seg.value.size() + 1;
-    auto * out = heap.alloc(found);
+    auto * out = heap.alloc<char>(found);
     hp->path = {out, found};
     for (auto && seg : hp->pathSegs) {
         *out++ = '/';

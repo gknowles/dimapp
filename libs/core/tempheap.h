@@ -7,6 +7,7 @@
 #include "cppconf/cppconf.h"
 
 #include <cstring>
+#include <memory_resource>
 #include <string_view>
 
 namespace Dim {
@@ -18,7 +19,7 @@ namespace Dim {
 *
 ***/
 
-class ITempHeap {
+class ITempHeap : public std::pmr::memory_resource {
 public:
     virtual ~ITempHeap() = default;
 
@@ -31,15 +32,21 @@ public:
     char * strDup(std::string_view src);
     char * strDup(const char src[], size_t len);
 
-    char * alloc(size_t bytes);
     virtual char * alloc(size_t bytes, size_t alignment) = 0;
+
+    // Inherited via std::pmr::memory_resource
+    void * do_allocate(size_t bytes, size_t alignment) override;
+    void do_deallocate(void * ptr, size_t bytes, size_t alignment) override;
+    bool do_is_equal(
+        const std::pmr::memory_resource & other
+    ) const noexcept override;
 };
 
 //===========================================================================
 template <typename T, typename... Args>
 inline T * ITempHeap::emplace(Args &&... args) {
     char * tmp = alloc(sizeof T, alignof(T));
-    return new (tmp) T(args...);
+    return new (tmp) T(std::forward<Args>(args)...);
 }
 
 //===========================================================================
@@ -68,8 +75,25 @@ inline char * ITempHeap::strDup(const char src[], size_t len) {
 }
 
 //===========================================================================
-inline char * ITempHeap::alloc(size_t bytes) {
-    return alloc(bytes, alignof(char));
+inline void * ITempHeap::do_allocate(size_t bytes, size_t alignment) {
+    return alloc(bytes, alignment);
+}
+
+//===========================================================================
+inline void ITempHeap::do_deallocate(
+    void * ptr,
+    size_t bytes,
+    size_t alignment
+) {
+    // Resources freed only on destruction of heap.
+    return;
+}
+
+//===========================================================================
+inline bool ITempHeap::do_is_equal(
+    const std::pmr::memory_resource & other
+) const noexcept {
+    return this == &other;
 }
 
 
@@ -96,5 +120,6 @@ public:
 private:
     void * m_buffer{};
 };
+
 
 } // namespace
