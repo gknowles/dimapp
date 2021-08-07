@@ -161,13 +161,13 @@ constexpr int digits10(uint32_t val) {
 ***/
 
 //===========================================================================
-constexpr uint16_t bswap16(unsigned uval) {
+constexpr uint16_t bswap16(uint16_t uval) {
     auto val = (uint16_t) uval;
     return (val >> 8) | (val << 8);
 }
 
 //===========================================================================
-constexpr uint32_t bswap32(unsigned uval) {
+constexpr uint32_t bswap32(uint32_t uval) {
     auto val = (uint32_t) uval;
     return (val >> 24)
         | ((val & 0x00ff'0000) >> 8)

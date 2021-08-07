@@ -137,9 +137,9 @@ constexpr double ntohf64(const void * vptr) {
 }
 
 //===========================================================================
-constexpr char * hton16(void * out, unsigned val) {
+constexpr char * hton16(void * out, uint16_t val) {
     if constexpr (std::endian::native == std::endian::big) {
-        *(uint16_t *)out = (uint16_t) val;
+        *(uint16_t *)out = val;
     } else {
         *(uint16_t *)out = bswap16(val);
     }
@@ -147,7 +147,7 @@ constexpr char * hton16(void * out, unsigned val) {
 }
 
 //===========================================================================
-constexpr char * hton24(void * vout, unsigned val) {
+constexpr char * hton24(void * vout, uint32_t val) {
     auto out = (char *) vout;
     *out++ = (val >> 16) & 0xff;
     *out++ = (val >> 8) & 0xff;
@@ -156,7 +156,7 @@ constexpr char * hton24(void * vout, unsigned val) {
 }
 
 //===========================================================================
-constexpr char * hton32(void * out, unsigned val) {
+constexpr char * hton32(void * out, uint32_t val) {
     if constexpr (std::endian::native == std::endian::big) {
         *(uint32_t *)out = val;
     } else {
