@@ -23,8 +23,6 @@ namespace {
 
 template <std::integral T, typename A>
 class IntegralSet<T,A>::Impl {
-    static_assert(std::is_unsigned_v<T>);
-
 public:
     enum NodeType : int {
         kEmpty,         // contains no values
@@ -47,20 +45,20 @@ public:
         (kBitWidth - kLeafBits + kStepBits - 1) / kStepBits;
     static_assert(kBaseBits + kLeafBits >= kBitWidth);
 
-    constexpr static value_type valueMask(size_t depth) {
+    constexpr static storage_type valueMask(size_t depth) {
         assert(depth <= kMaxDepth);
         size_t bits = kBitWidth -
             (kLeafBits + kStepBits * (kMaxDepth - depth));
-        return numeric_limits<T>::max() >> bits;
+        return numeric_limits<storage_type>::max() >> bits;
     }
-    constexpr static value_type relBase(value_type value, size_t depth) {
+    constexpr static storage_type relBase(storage_type value, size_t depth) {
         return (value & ~valueMask(depth)) >> (kBitWidth - kBaseBits);
     }
-    constexpr static value_type relValue(value_type value, size_t depth) {
+    constexpr static storage_type relValue(storage_type value, size_t depth) {
         return value & valueMask(depth);
     }
 
-    constexpr static size_t numNodes(unsigned depth) {
+    constexpr static size_t numNodes(size_t depth) {
         size_t ret = 0;
         if (depth) {
             ret = (size_t) 1
@@ -68,24 +66,24 @@ public:
         }
         return ret;
     }
-    constexpr static size_t nodePos(value_type value, size_t depth) {
+    constexpr static size_t nodePos(storage_type value, size_t depth) {
         return relValue(value, depth) / (valueMask(depth + 1) + 1);
     }
 
-    constexpr static value_type absBase(value_type value, size_t depth) {
+    constexpr static storage_type absBase(storage_type value, size_t depth) {
         return value & ~valueMask(depth);
     }
-    constexpr static value_type absFinal(value_type value, size_t depth) {
+    constexpr static storage_type absFinal(storage_type value, size_t depth) {
         return absBase(value, depth) + valueMask(depth);
     }
 
-    constexpr static value_type absBase(const Node & node) {
+    constexpr static storage_type absBase(const Node & node) {
         return node.base << (kBitWidth - kBaseBits);
     }
-    constexpr static value_type absFinal(const Node & node) {
+    constexpr static storage_type absFinal(const Node & node) {
         return absBase(node) + valueMask(node.depth);
     }
-    constexpr static value_type absSize(const Node & node) {
+    constexpr static storage_type absSize(const Node & node) {
         return valueMask(node.depth) + 1;
     }
 
@@ -102,6 +100,22 @@ public:
         return 64 * bitNumInt64s();
     }
 
+    constexpr static value_type toValue(storage_type val) {
+        if constexpr (is_signed_v<value_type>) {
+            return (value_type) (val + numeric_limits<value_type>::min());
+        } else {
+            return (value_type) val;
+        }
+    }
+    constexpr static storage_type toStorage(value_type val) {
+        if constexpr (is_signed_v<value_type>) {
+            return (storage_type) val
+                + (storage_type) -numeric_limits<value_type>::min();
+        } else {
+            return (storage_type) val;
+        }
+    }
+
     // Allocator
     static void * allocate(A * alloc, size_t bytes);
     static void deallocate(A * alloc, void * ptr, size_t bytes);
@@ -110,11 +124,11 @@ public:
     static void swap(Node & left, Node & right);
 
     static bool yes(const Node & left, const Node & right);
-    static bool yes(const Node **, T *, const Node & node, T key);
+    static bool yes(const Node **, storage_type *, const Node & node, storage_type key);
     static bool no(const Node & left, const Node & right);
-    static bool no(const Node **, T *, const Node & node, T key);
-    static bool no(A *, Node *, const T * first, const T * last);
-    static bool no(A * alloc, Node * node, T start, size_t len);
+    static bool no(const Node **, storage_type *, const Node & node, storage_type key);
+    static bool no(A *, Node *, const storage_type * first, const storage_type * last);
+    static bool no(A * alloc, Node * node, storage_type start, size_t len);
 
     static void skip(A * alloc, Node * node);
     static void skip(A * alloc, Node * left, const Node & right);
@@ -155,19 +169,19 @@ public:
     static void desMeta(A * alloc, Node * node);
 
     // insert
-    static bool insert(A *, Node *, const T * first, const T * last);
-    static bool insEmpty(A *, Node *, const T * first, const T * last);
-    static bool insSmv(A *, Node *, const T * first, const T * last);
-    static bool insVec(A *, Node *, const T * first, const T * last);
-    static bool insBit(A *, Node *, const T * first, const T * last);
-    static bool insMeta(A *, Node *, const T * first, const T * last);
+    static bool insert(A *, Node *, const storage_type * first, const storage_type * last);
+    static bool insEmpty(A *, Node *, const storage_type * first, const storage_type * last);
+    static bool insSmv(A *, Node *, const storage_type * first, const storage_type * last);
+    static bool insVec(A *, Node *, const storage_type * first, const storage_type * last);
+    static bool insBit(A *, Node *, const storage_type * first, const storage_type * last);
+    static bool insMeta(A *, Node *, const storage_type * first, const storage_type * last);
 
-    static bool insert(A * alloc, Node * node, T start, size_t len);
-    static bool insEmpty(A * alloc, Node * node, T start, size_t len);
-    static bool insSmv(A * alloc, Node * node, T start, size_t len);
-    static bool insVec(A * alloc, Node * node, T start, size_t len);
-    static bool insBit(A * alloc, Node * node, T start, size_t len);
-    static bool insMeta(A * alloc, Node * node, T start, size_t len);
+    static bool insert(A * alloc, Node * node, storage_type start, size_t len);
+    static bool insEmpty(A * alloc, Node * node, storage_type start, size_t len);
+    static bool insSmv(A * alloc, Node * node, storage_type start, size_t len);
+    static bool insVec(A * alloc, Node * node, storage_type start, size_t len);
+    static bool insBit(A * alloc, Node * node, storage_type start, size_t len);
+    static bool insMeta(A * alloc, Node * node, storage_type start, size_t len);
 
     static void insert(A * alloc, Node * left, const Node & right);
     static void insError(A * alloc, Node * left, const Node & right);
@@ -181,10 +195,10 @@ public:
     static void insArray(
         A * alloc,
         Node * left,
-        T * li,
+        storage_type * li,
         size_t maxValues,
-        const T * ri,
-        const T * re
+        const storage_type * ri,
+        const storage_type * re
     );
 
     static void insert(A * alloc, Node * left, Node && right);
@@ -197,12 +211,12 @@ public:
     static void insMeta(A * alloc, Node * left, Node && right);
 
     // erase
-    static bool erase(A * alloc, Node * node, T start, size_t len);
-    static bool eraFull(A * alloc, Node * node, T start, size_t len);
-    static bool eraSmv(A * alloc, Node * node, T start, size_t len);
-    static bool eraVec(A * alloc, Node * node, T start, size_t len);
-    static bool eraBit(A * alloc, Node * node, T start, size_t len);
-    static bool eraMeta(A * alloc, Node * node, T start, size_t len);
+    static bool erase(A * alloc, Node * node, storage_type start, size_t len);
+    static bool eraFull(A * alloc, Node * node, storage_type start, size_t len);
+    static bool eraSmv(A * alloc, Node * node, storage_type start, size_t len);
+    static bool eraVec(A * alloc, Node * node, storage_type start, size_t len);
+    static bool eraBit(A * alloc, Node * node, storage_type start, size_t len);
+    static bool eraMeta(A * alloc, Node * node, storage_type start, size_t len);
 
     static void erase(A * alloc, Node * left, const Node & right);
     static void eraError(A * alloc, Node * left, const Node & right);
@@ -218,16 +232,16 @@ public:
     static void eraArray(
         A * alloc,
         Node * left,
-        T * li,
+        storage_type * li,
         const Node & right,
-        const T * ri
+        const storage_type * ri
     );
-    static void eraLArray(A * alloc, Node * left, T * li, const Node & right);
+    static void eraLArray(A * alloc, Node * left, storage_type * li, const Node & right);
     static void eraRArray(
         A * alloc,
         Node * left,
         const Node & right,
-        const T * ri
+        const storage_type * ri
     );
 
     // len
@@ -239,45 +253,45 @@ public:
     static size_t cntBit(const Node & node);
     static size_t cntMeta(const Node & node);
 
-    static size_t count(const Node & node, T start, size_t len);
-    static size_t cntEmpty(const Node & node, T start, size_t len);
-    static size_t cntFull(const Node & node, T start, size_t len);
-    static size_t cntSmv(const Node & node, T start, size_t len);
-    static size_t cntVec(const Node & node, T start, size_t len);
-    static size_t cntBit(const Node & node, T start, size_t len);
-    static size_t cntMeta(const Node & node, T start, size_t len);
+    static size_t count(const Node & node, storage_type start, size_t len);
+    static size_t cntEmpty(const Node & node, storage_type start, size_t len);
+    static size_t cntFull(const Node & node, storage_type start, size_t len);
+    static size_t cntSmv(const Node & node, storage_type start, size_t len);
+    static size_t cntVec(const Node & node, storage_type start, size_t len);
+    static size_t cntBit(const Node & node, storage_type start, size_t len);
+    static size_t cntMeta(const Node & node, storage_type start, size_t len);
 
     // find
-    static bool find(const Node **, T *, const Node & node, T key);
-    static bool findEmpty(const Node **, T *, const Node & node, T key);
-    static bool findFull(const Node **, T *, const Node & node, T key);
-    static bool findSmv(const Node **, T *, const Node & node, T key);
-    static bool findVec(const Node **, T *, const Node & node, T key);
-    static bool findBit(const Node **, T *, const Node & node, T key);
-    static bool findMeta(const Node **, T *, const Node & node, T key);
+    static bool find(const Node **, storage_type *, const Node & node, storage_type key);
+    static bool findEmpty(const Node **, storage_type *, const Node & node, storage_type key);
+    static bool findFull(const Node **, storage_type *, const Node & node, storage_type key);
+    static bool findSmv(const Node **, storage_type *, const Node & node, storage_type key);
+    static bool findVec(const Node **, storage_type *, const Node & node, storage_type key);
+    static bool findBit(const Node **, storage_type *, const Node & node, storage_type key);
+    static bool findMeta(const Node **, storage_type *, const Node & node, storage_type key);
 
     // rfind
-    static bool rfind(const Node **, T *, const Node & node, T key);
-    static bool rfindSmv(const Node **, T *, const Node & node, T key);
-    static bool rfindVec(const Node **, T *, const Node & node, T key);
-    static bool rfindBit(const Node **, T *, const Node & node, T key);
-    static bool rfindMeta(const Node **, T *, const Node & node, T key);
+    static bool rfind(const Node **, storage_type *, const Node & node, storage_type key);
+    static bool rfindSmv(const Node **, storage_type *, const Node & node, storage_type key);
+    static bool rfindVec(const Node **, storage_type *, const Node & node, storage_type key);
+    static bool rfindBit(const Node **, storage_type *, const Node & node, storage_type key);
+    static bool rfindMeta(const Node **, storage_type *, const Node & node, storage_type key);
 
     // contig
-    static bool contig(const Node **, T *, const Node & node, T key);
-    static bool contigFull(const Node **, T *, const Node & node, T key);
-    static bool contigSmv(const Node **, T *, const Node & node, T key);
-    static bool contigVec(const Node **, T *, const Node & node, T key);
-    static bool contigBit(const Node **, T *, const Node & node, T key);
-    static bool contigMeta(const Node **, T *, const Node & node, T key);
+    static bool contig(const Node **, storage_type *, const Node & node, storage_type key);
+    static bool contigFull(const Node **, storage_type *, const Node & node, storage_type key);
+    static bool contigSmv(const Node **, storage_type *, const Node & node, storage_type key);
+    static bool contigVec(const Node **, storage_type *, const Node & node, storage_type key);
+    static bool contigBit(const Node **, storage_type *, const Node & node, storage_type key);
+    static bool contigMeta(const Node **, storage_type *, const Node & node, storage_type key);
 
     // rcontig
-    static bool rcontig(const Node **, T *, const Node & node, T key);
-    static bool rcontigFull(const Node **, T *, const Node & node, T key);
-    static bool rcontigSmv(const Node **, T *, const Node & node, T key);
-    static bool rcontigVec(const Node **, T *, const Node & node, T key);
-    static bool rcontigBit(const Node **, T *, const Node & node, T key);
-    static bool rcontigMeta(const Node **, T *, const Node & node, T key);
+    static bool rcontig(const Node **, storage_type *, const Node & node, storage_type key);
+    static bool rcontigFull(const Node **, storage_type *, const Node & node, storage_type key);
+    static bool rcontigSmv(const Node **, storage_type *, const Node & node, storage_type key);
+    static bool rcontigVec(const Node **, storage_type *, const Node & node, storage_type key);
+    static bool rcontigBit(const Node **, storage_type *, const Node & node, storage_type key);
+    static bool rcontigMeta(const Node **, storage_type *, const Node & node, storage_type key);
 
     // compare
     static int compare(const Node & left, const Node & right);
@@ -302,9 +316,9 @@ public:
     static int cmpMeta(const Node & left, const Node & right);
     static int cmpBit(uint64_t left, uint64_t right);
     static int cmpArray(
-        const T * li,
+        const storage_type * li,
         size_t lcount,
-        const T * ri,
+        const storage_type * ri,
         size_t rcount
     );
 
@@ -319,12 +333,12 @@ public:
     static bool conSmv(const Node & left, const Node & right);
     static bool conBit(const Node & left, const Node & right);
     static bool conMeta(const Node & left, const Node & right);
-    static bool conRArray(const Node & left, const Node & right, const T * ri);
-    static bool conLArray(const Node & left, const T * li, const Node & right);
+    static bool conRArray(const Node & left, const Node & right, const storage_type * ri);
+    static bool conLArray(const Node & left, const storage_type * li, const Node & right);
     static bool conArray(
-        const T * li,
+        const storage_type * li,
         size_t lcount,
-        const T * ri,
+        const storage_type * ri,
         size_t rcount
     );
 
@@ -340,15 +354,15 @@ public:
     static bool isecBit(const Node & left, const Node & right);
     static bool isecMeta(const Node & left, const Node & right);
     static bool isecArray(
-        const T * li,
+        const storage_type * li,
         size_t lcount,
-        const T * ri,
+        const storage_type * ri,
         size_t rcount
     );
     static bool isecRArray(
         const Node & left,
         const Node & right,
-        const T * ri
+        const storage_type * ri
     );
 
     // intersect
@@ -365,11 +379,11 @@ public:
     static void isecArray(
         A * alloc,
         Node * left,
-        T * li,
+        storage_type * li,
         const Node & right,
-        const T * ri
+        const storage_type * ri
     );
-    static void isecLArray(A * alloc, Node * left, T * li, const Node & right);
+    static void isecLArray(A * alloc, Node * left, storage_type * li, const Node & right);
 
     static void intersect(A * alloc, Node * left, Node && right);
     static void isecError(A * alloc, Node * left, Node && right);
@@ -432,9 +446,9 @@ bool IntegralSet<T,A>::Impl::yes(const Node & left, const Node & right) {
 template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::yes(
     const Node ** onode,
-    T * ovalue,
+    storage_type * ovalue,
     const Node & node,
-    T key
+    storage_type key
 ) {
     return true;
 }
@@ -449,9 +463,9 @@ bool IntegralSet<T,A>::Impl::no(const Node & left, const Node & right) {
 template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::no(
     const Node ** onode,
-    T * ovalue,
+    storage_type * ovalue,
     const Node & node,
-    T key
+    storage_type key
 ) {
     return false;
 }
@@ -461,8 +475,8 @@ template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::no(
     A * alloc,
     Node * node,
-    const T * first,
-    const T * last
+    const storage_type * first,
+    const storage_type * last
 ) {
     return false;
 }
@@ -472,7 +486,7 @@ template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::no(
     A * alloc,
     Node * node,
-    T start,
+    storage_type start,
     size_t len
 ) {
     return false;
@@ -666,7 +680,7 @@ void IntegralSet<T,A>::Impl::initVec(A * alloc, Node * node, bool full) {
     assert(!full);
     node->numBytes = kDataSize;
     node->numValues = 0;
-    node->values = (value_type *) allocate(alloc, node->numBytes);
+    node->values = (storage_type *) allocate(alloc, node->numBytes);
     assert(node->values);
 }
 
@@ -675,7 +689,7 @@ template <std::integral T, typename A>
 void IntegralSet<T,A>::Impl::initBit(A * alloc, Node * node, bool full) {
     assert(node->type == kBitmap);
     node->numBytes = kDataSize;
-    node->values = (value_type *) allocate(alloc, node->numBytes);
+    node->values = (storage_type *) allocate(alloc, node->numBytes);
     assert(node->values);
     if (full) {
         node->numValues = kDataSize / sizeof uint64_t;
@@ -789,7 +803,7 @@ void IntegralSet<T,A>::Impl::initVec(
     assert(node->type == kVector);
     assert(from.type == kVector);
     memcpy(node, &from, sizeof *node);
-    node->values = (value_type *) allocate(alloc, node->numBytes);
+    node->values = (storage_type *) allocate(alloc, node->numBytes);
     assert(node->values);
     memcpy(node->values, from.values, node->numValues * sizeof *node->values);
 }
@@ -804,7 +818,7 @@ void IntegralSet<T,A>::Impl::initBit(
     assert(node->type == kBitmap);
     assert(from.type == kBitmap);
     memcpy(node, &from, sizeof *node);
-    node->values = (value_type *) allocate(alloc, node->numBytes);
+    node->values = (storage_type *) allocate(alloc, node->numBytes);
     assert(node->values);
     memcpy(node->values, from.values, node->numBytes);
 }
@@ -875,7 +889,7 @@ void IntegralSet<T,A>::Impl::desMeta(A * alloc, Node * node) {
 
 /****************************************************************************
 *
-*   insert(A * alloc, Node * node, const T * first, const T * last)
+*   insert(A * alloc, Node * node, const storage_type * first, const storage_type * last)
 *
 ***/
 
@@ -884,10 +898,10 @@ template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::insert(
     A * alloc,
     Node * node,
-    const T * first,
-    const T * last
+    const storage_type * first,
+    const storage_type * last
 ) {
-    using Fn = bool(A * alloc, Node * node, const T * first, const T * last);
+    using Fn = bool(A * alloc, Node * node, const storage_type * first, const storage_type * last);
     constinit static Fn * const functs[kNodeTypes] = {
         insEmpty,   // empty
         no,         // full
@@ -904,8 +918,8 @@ template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::insEmpty(
     A * alloc,
     Node * node,
-    const T * first,
-    const T * last
+    const storage_type * first,
+    const storage_type * last
 ) {
     if (first == last)
         return false;
@@ -922,8 +936,8 @@ template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::insSmv(
     A * alloc,
     Node * node,
-    const T * first,
-    const T * last
+    const storage_type * first,
+    const storage_type * last
 ) {
     bool changed = false;
     while (first != last) {
@@ -941,8 +955,8 @@ template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::insVec(
     A * alloc,
     Node * node,
-    const T * first,
-    const T * last
+    const storage_type * first,
+    const storage_type * last
 ) {
     bool changed = false;
     while (first != last) {
@@ -960,8 +974,8 @@ template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::insBit(
     A * alloc,
     Node * node,
-    const T * first,
-    const T * last
+    const storage_type * first,
+    const storage_type * last
 ) {
     bool changed = false;
     for (; first != last; ++first)
@@ -974,8 +988,8 @@ template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::insMeta(
     A * alloc,
     Node * node,
-    const T * first,
-    const T * last
+    const storage_type * first,
+    const storage_type * last
 ) {
     bool changed = false;
     while (first != last) {
@@ -993,7 +1007,7 @@ bool IntegralSet<T,A>::Impl::insMeta(
 
 /****************************************************************************
 *
-*   insert(A * alloc, Node * node, const T * first, const T * last)
+*   insert(A * alloc, Node * node, const storage_type * first, const storage_type * last)
 *
 ***/
 
@@ -1002,10 +1016,10 @@ template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::insert(
     A * alloc,
     Node * node,
-    T start,
+    storage_type start,
     size_t len
 ) {
-    using Fn = bool(A * alloc, Node * node, T start, size_t len);
+    using Fn = bool(A * alloc, Node * node, storage_type start, size_t len);
     constinit static Fn * const functs[kNodeTypes] = {
         insEmpty,   // empty
         no,         // full
@@ -1022,7 +1036,7 @@ template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::insEmpty(
     A * alloc,
     Node * node,
-    T start,
+    storage_type start,
     size_t len
 ) {
     assert(node->type == kEmpty);
@@ -1039,7 +1053,7 @@ template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::insSmv(
     A * alloc,
     Node * node,
-    T start,
+    storage_type start,
     size_t len
 ) {
     assert(len);
@@ -1077,7 +1091,7 @@ template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::insVec(
     A * alloc,
     Node * node,
-    T start,
+    storage_type start,
     size_t len
 ) {
     assert(len);
@@ -1115,7 +1129,7 @@ template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::insBit(
     A * alloc,
     Node * node,
-    T start,
+    storage_type start,
     size_t len
 ) {
     assert(node->type == kBitmap);
@@ -1168,7 +1182,7 @@ template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::insMeta(
     A * alloc,
     Node * node,
-    T start,
+    storage_type start,
     size_t len
 ) {
     assert(len);
@@ -1184,7 +1198,7 @@ bool IntegralSet<T,A>::Impl::insMeta(
                 changed = true;
                 fill(alloc, ptr);
             }
-        } else if (insert(alloc, ptr, (value_type) st, cnt)) {
+        } else if (insert(alloc, ptr, (storage_type) st, cnt)) {
             changed = true;
             if (ptr->type != kFull)
                 maybeFull = false;
@@ -1199,7 +1213,7 @@ bool IntegralSet<T,A>::Impl::insMeta(
 
 /****************************************************************************
 *
-*   erase(A * alloc, Node * node, T start, size_t len)
+*   erase(A * alloc, Node * node, storage_type start, size_t len)
 *
 ***/
 
@@ -1208,10 +1222,10 @@ template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::erase(
     A * alloc,
     Node * node,
-    T start,
+    storage_type start,
     size_t len
 ) {
-    using Fn = bool(A * alloc, Node * node, T start, size_t len);
+    using Fn = bool(A * alloc, Node * node, storage_type start, size_t len);
     constinit static Fn * const functs[kNodeTypes] = {
         no,         // empty
         eraFull,    // full
@@ -1228,7 +1242,7 @@ template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::eraFull(
     A * alloc,
     Node * node,
-    T start,
+    storage_type start,
     size_t len
 ) {
     assert(len);
@@ -1250,7 +1264,7 @@ template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::eraSmv(
     A * alloc,
     Node * node,
-    T start,
+    storage_type start,
     size_t len
 ) {
     assert(len);
@@ -1280,7 +1294,7 @@ template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::eraVec(
     A * alloc,
     Node * node,
-    T start,
+    storage_type start,
     size_t len
 ) {
     assert(len);
@@ -1310,7 +1324,7 @@ template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::eraBit(
     A * alloc,
     Node * node,
-    T start,
+    storage_type start,
     size_t len
 ) {
     assert(len);
@@ -1337,7 +1351,7 @@ bool IntegralSet<T,A>::Impl::eraBit(
     bits = BitView(lower, upper - lower + 1);
     low %= bits.kWordBits;
     high = low + len - 1;
-    low = (T) bits.find(low);
+    low = (storage_type) bits.find(low);
     if (low > high)
         return false;
 
@@ -1367,7 +1381,7 @@ template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::eraMeta(
     A * alloc,
     Node * node,
-    T start,
+    storage_type start,
     size_t len
 ) {
     assert(len);
@@ -1383,7 +1397,7 @@ bool IntegralSet<T,A>::Impl::eraMeta(
                 changed = true;
                 clear(alloc, ptr);
             }
-        } else if (erase(alloc, ptr, (value_type) st, cnt)) {
+        } else if (erase(alloc, ptr, (storage_type) st, cnt)) {
             changed = true;
             if (ptr->type != kEmpty)
                 maybeEmpty = false;
@@ -1463,7 +1477,7 @@ size_t IntegralSet<T,A>::Impl::cntMeta(const Node & node) {
 
 /****************************************************************************
 *
-*   count(const Node & node, value_type start, size_t len)
+*   count(const Node & node, storage_type start, size_t len)
 *
 ***/
 
@@ -1471,10 +1485,10 @@ size_t IntegralSet<T,A>::Impl::cntMeta(const Node & node) {
 template <std::integral T, typename A>
 size_t IntegralSet<T,A>::Impl::count(
     const Node & node,
-    T start,
+    storage_type start,
     size_t len
 ) {
-    using Fn = size_t(const Node & node, T start, size_t len);
+    using Fn = size_t(const Node & node, storage_type start, size_t len);
     constinit static Fn * const functs[kNodeTypes] = {
         cntEmpty,   // empty
         cntFull,    // full
@@ -1490,7 +1504,7 @@ size_t IntegralSet<T,A>::Impl::count(
 template <std::integral T, typename A>
 size_t IntegralSet<T,A>::Impl::cntEmpty(
     const Node & node,
-    T start,
+    storage_type start,
     size_t len
 ) {
     return 0;
@@ -1500,7 +1514,7 @@ size_t IntegralSet<T,A>::Impl::cntEmpty(
 template <std::integral T, typename A>
 size_t IntegralSet<T,A>::Impl::cntFull(
     const Node & node,
-    T start,
+    storage_type start,
     size_t len
 ) {
     return len;
@@ -1510,7 +1524,7 @@ size_t IntegralSet<T,A>::Impl::cntFull(
 template <std::integral T, typename A>
 size_t IntegralSet<T,A>::Impl::cntSmv(
     const Node & node,
-    T start,
+    storage_type start,
     size_t len
 ) {
     assert(len);
@@ -1528,7 +1542,7 @@ size_t IntegralSet<T,A>::Impl::cntSmv(
 template <std::integral T, typename A>
 size_t IntegralSet<T,A>::Impl::cntVec(
     const Node & node,
-    T start,
+    storage_type start,
     size_t len
 ) {
     assert(len);
@@ -1546,7 +1560,7 @@ size_t IntegralSet<T,A>::Impl::cntVec(
 template <std::integral T, typename A>
 size_t IntegralSet<T,A>::Impl::cntBit(
     const Node & node,
-    T start,
+    storage_type start,
     size_t len
 ) {
     assert(len);
@@ -1562,14 +1576,14 @@ size_t IntegralSet<T,A>::Impl::cntBit(
 template <std::integral T, typename A>
 size_t IntegralSet<T,A>::Impl::cntMeta(
     const Node & node,
-    T start,
+    storage_type start,
     size_t len
 ) {
     assert(len);
     assert(relBase(start, node.depth) == node.base);
     assert(len - 1 <= absFinal(node) - start);
     auto pos = nodePos(node, start);
-    auto finalPos = nodePos(node, (value_type) (start + len - 1));
+    auto finalPos = nodePos(node, (storage_type) (start + len - 1));
     auto lower = node.nodes + pos;
     auto upper = node.nodes + finalPos;
     if (pos == finalPos) {
@@ -1589,7 +1603,7 @@ size_t IntegralSet<T,A>::Impl::cntMeta(
 
 /****************************************************************************
 *
-*   find(const Node ** onode, T * ovalue, const Node & node, T key)
+*   find(const Node ** onode, storage_type * ovalue, const Node & node, storage_type key)
 *
 *   Find smallest value >= pos, returns false if not found.
 *
@@ -1599,11 +1613,11 @@ size_t IntegralSet<T,A>::Impl::cntMeta(
 template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::find(
     const Node ** onode,
-    T * ovalue,
+    storage_type * ovalue,
     const Node & node,
-    T key
+    storage_type key
 ) {
-    using Fn = bool(const Node **, T *, const Node & node, T key);
+    using Fn = bool(const Node **, storage_type *, const Node & node, storage_type key);
     constinit static Fn * const functs[kNodeTypes] = {
         findEmpty,   // empty
         findFull,    // full
@@ -1619,9 +1633,9 @@ bool IntegralSet<T,A>::Impl::find(
 template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::findEmpty(
     const Node ** onode,
-    T * ovalue,
+    storage_type * ovalue,
     const Node & node,
-    T key
+    storage_type key
 ) {
     assert(relBase(key, node.depth) == node.base);
     return false;
@@ -1631,9 +1645,9 @@ bool IntegralSet<T,A>::Impl::findEmpty(
 template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::findFull(
     const Node ** onode,
-    T * ovalue,
+    storage_type * ovalue,
     const Node & node,
-    T key
+    storage_type key
 ) {
     assert(relBase(key, node.depth) == node.base);
     *onode = &node;
@@ -1645,9 +1659,9 @@ bool IntegralSet<T,A>::Impl::findFull(
 template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::findSmv(
     const Node ** onode,
-    T * ovalue,
+    storage_type * ovalue,
     const Node & node,
-    T key
+    storage_type key
 ) {
     assert(relBase(key, node.depth) == node.base);
     auto last = node.localValues + node.numValues;
@@ -1664,9 +1678,9 @@ bool IntegralSet<T,A>::Impl::findSmv(
 template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::findVec(
     const Node ** onode,
-    T * ovalue,
+    storage_type * ovalue,
     const Node & node,
-    T key
+    storage_type key
 ) {
     assert(relBase(key, node.depth) == node.base);
     auto last = node.values + node.numValues;
@@ -1683,9 +1697,9 @@ bool IntegralSet<T,A>::Impl::findVec(
 template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::findBit(
     const Node ** onode,
-    T * ovalue,
+    storage_type * ovalue,
     const Node & node,
-    T key
+    storage_type key
 ) {
     assert(relBase(key, node.depth) == node.base);
     auto base = (uint64_t *) node.values;
@@ -1694,7 +1708,7 @@ bool IntegralSet<T,A>::Impl::findBit(
     BitView bits{base, bitNumInt64s()};
     if (auto pos = bits.find(rel); pos != bits.npos) {
         *onode = &node;
-        *ovalue = (value_type) pos + absBase(node);
+        *ovalue = (storage_type) pos + absBase(node);
         return true;
     }
     return false;
@@ -1704,9 +1718,9 @@ bool IntegralSet<T,A>::Impl::findBit(
 template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::findMeta(
     const Node ** onode,
-    T * ovalue,
+    storage_type * ovalue,
     const Node & node,
-    T key
+    storage_type key
 ) {
     assert(Impl::relBase(key, node.depth) == node.base);
     auto pos = Impl::nodePos(node, key);
@@ -1717,14 +1731,14 @@ bool IntegralSet<T,A>::Impl::findMeta(
             return true;
         if (++ptr == last)
             return false;
-        key = Impl::absFinal(*ptr);
+        key = Impl::absBase(*ptr);
     }
 }
 
 
 /****************************************************************************
 *
-*   rfind(const Node ** onode, T * ovalue, const Node & node, T key)
+*   rfind(const Node ** onode, storage_type * ovalue, const Node & node, storage_type key)
 *
 *   Find largest value <= pos, returns false if there are none.
 *
@@ -1734,11 +1748,11 @@ bool IntegralSet<T,A>::Impl::findMeta(
 template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::rfind(
     const Node ** onode,
-    T * ovalue,
+    storage_type * ovalue,
     const Node & node,
-    T key
+    storage_type key
 ) {
-    using Fn = bool(const Node **, T *, const Node & node, T key);
+    using Fn = bool(const Node **, storage_type *, const Node & node, storage_type key);
     constinit static Fn * const functs[kNodeTypes] = {
         findEmpty,    // empty
         findFull,     // full
@@ -1754,9 +1768,9 @@ bool IntegralSet<T,A>::Impl::rfind(
 template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::rfindSmv(
     const Node ** onode,
-    T * ovalue,
+    storage_type * ovalue,
     const Node & node,
-    T key
+    storage_type key
 ) {
     assert(relBase(key, node.depth) == node.base);
     if (key < *node.localValues) {
@@ -1777,9 +1791,9 @@ bool IntegralSet<T,A>::Impl::rfindSmv(
 template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::rfindVec(
     const Node ** onode,
-    T * ovalue,
+    storage_type * ovalue,
     const Node & node,
-    T key
+    storage_type key
 ) {
     assert(relBase(key, node.depth) == node.base);
     if (key < *node.values) {
@@ -1800,9 +1814,9 @@ bool IntegralSet<T,A>::Impl::rfindVec(
 template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::rfindBit(
     const Node ** onode,
-    T * ovalue,
+    storage_type * ovalue,
     const Node & node,
-    T key
+    storage_type key
 ) {
     assert(relBase(key, node.depth) == node.base);
     auto base = (uint64_t *) node.values;
@@ -1811,7 +1825,7 @@ bool IntegralSet<T,A>::Impl::rfindBit(
     BitView bits{base, bitNumInt64s()};
     if (auto pos = bits.rfind(rel); pos != bits.npos) {
         *onode = &node;
-        *ovalue = (value_type) pos + absBase(node);
+        *ovalue = (storage_type) pos + absBase(node);
         return true;
     }
     return false;
@@ -1821,9 +1835,9 @@ bool IntegralSet<T,A>::Impl::rfindBit(
 template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::rfindMeta(
     const Node ** onode,
-    T * ovalue,
+    storage_type * ovalue,
     const Node & node,
-    T key
+    storage_type key
 ) {
     assert(relBase(key, node.depth) == node.base);
     auto pos = nodePos(node, key);
@@ -1834,14 +1848,14 @@ bool IntegralSet<T,A>::Impl::rfindMeta(
         if (ptr == node.nodes)
             return false;
         ptr -= 1;
-        key = absBase(*ptr);
+        key = absFinal(*ptr);
     }
 }
 
 
 /****************************************************************************
 *
-*   contig(const Node ** onode, T * ovalue, const Node & node, T key)
+*   contig(const Node ** onode, storage_type * ovalue, const Node & node, storage_type key)
 *
 *   Find largest value in segment contiguously connected with pos. Returns
 *   false if may extend into the next node.
@@ -1852,11 +1866,11 @@ bool IntegralSet<T,A>::Impl::rfindMeta(
 template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::contig(
     const Node ** onode,
-    T * ovalue,
+    storage_type * ovalue,
     const Node & node,
-    T key
+    storage_type key
 ) {
-    using Fn = bool(const Node **, T *, const Node & node, T key);
+    using Fn = bool(const Node **, storage_type *, const Node & node, storage_type key);
     constinit static Fn * const functs[kNodeTypes] = {
         yes,            // empty
         contigFull,     // full
@@ -1872,9 +1886,9 @@ bool IntegralSet<T,A>::Impl::contig(
 template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::contigFull(
     const Node ** onode,
-    T * ovalue,
+    storage_type * ovalue,
     const Node & node,
-    T key
+    storage_type key
 ) {
     assert(relBase(key, node.depth) == node.base);
     *onode = &node;
@@ -1886,9 +1900,9 @@ bool IntegralSet<T,A>::Impl::contigFull(
 template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::contigSmv(
     const Node ** onode,
-    T * ovalue,
+    storage_type * ovalue,
     const Node & node,
-    T key
+    storage_type key
 ) {
     assert(relBase(key, node.depth) == node.base);
     auto last = node.localValues + node.numValues;
@@ -1919,9 +1933,9 @@ bool IntegralSet<T,A>::Impl::contigSmv(
 template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::contigVec(
     const Node ** onode,
-    T * ovalue,
+    storage_type * ovalue,
     const Node & node,
-    T key
+    storage_type key
 ) {
     assert(relBase(key, node.depth) == node.base);
     auto last = node.values + node.numValues;
@@ -1952,9 +1966,9 @@ bool IntegralSet<T,A>::Impl::contigVec(
 template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::contigBit(
     const Node ** onode,
-    T * ovalue,
+    storage_type * ovalue,
     const Node & node,
-    T key
+    storage_type key
 ) {
     assert(relBase(key, node.depth) == node.base);
     auto base = (uint64_t *) node.values;
@@ -1962,7 +1976,7 @@ bool IntegralSet<T,A>::Impl::contigBit(
     assert(rel < bitNumBits());
     BitView bits{base, bitNumInt64s()};
     if (auto pos = bits.findZero(rel); pos != bits.npos) {
-        if (auto val = (value_type) pos + absBase(node); val != key) {
+        if (auto val = (storage_type) pos + absBase(node); val != key) {
             *onode = &node;
             *ovalue = val - 1;
         }
@@ -1977,9 +1991,9 @@ bool IntegralSet<T,A>::Impl::contigBit(
 template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::contigMeta(
     const Node ** onode,
-    T * ovalue,
+    storage_type * ovalue,
     const Node & node,
-    T key
+    storage_type key
 ) {
     auto pos = nodePos(node, key);
     auto ptr = (const Node *) node.nodes + pos;
@@ -1998,7 +2012,7 @@ bool IntegralSet<T,A>::Impl::contigMeta(
 
 /****************************************************************************
 *
-*   rcontig(const Node ** onode, T * ovalue, const Node & node, T key)
+*   rcontig(const Node ** onode, storage_type * ovalue, const Node & node, storage_type key)
 *
 *   Find smallest value in segment contiguously connected with pos. Returns
 *   false if may extend into preceding node.
@@ -2009,11 +2023,11 @@ bool IntegralSet<T,A>::Impl::contigMeta(
 template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::rcontig(
     const Node ** onode,
-    T * ovalue,
+    storage_type * ovalue,
     const Node & node,
-    T key
+    storage_type key
 ) {
-    using Fn = bool(const Node **, T *, const Node & node, T key);
+    using Fn = bool(const Node **, storage_type *, const Node & node, storage_type key);
     constinit static Fn * const functs[kNodeTypes] = {
         yes,            // empty
         rcontigFull,     // full
@@ -2029,9 +2043,9 @@ bool IntegralSet<T,A>::Impl::rcontig(
 template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::rcontigFull(
     const Node ** onode,
-    T * ovalue,
+    storage_type * ovalue,
     const Node & node,
-    T key
+    storage_type key
 ) {
     assert(relBase(key, node.depth) == node.base);
     *onode = &node;
@@ -2043,9 +2057,9 @@ bool IntegralSet<T,A>::Impl::rcontigFull(
 template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::rcontigSmv(
     const Node ** onode,
-    T * ovalue,
+    storage_type * ovalue,
     const Node & node,
-    T key
+    storage_type key
 ) {
     assert(relBase(key, node.depth) == node.base);
     auto last = node.localValues + node.numValues;
@@ -2077,9 +2091,9 @@ bool IntegralSet<T,A>::Impl::rcontigSmv(
 template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::rcontigVec(
     const Node ** onode,
-    T * ovalue,
+    storage_type * ovalue,
     const Node & node,
-    T key
+    storage_type key
 ) {
     assert(relBase(key, node.depth) == node.base);
     auto last = node.values + node.numValues;
@@ -2111,9 +2125,9 @@ bool IntegralSet<T,A>::Impl::rcontigVec(
 template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::rcontigBit(
     const Node ** onode,
-    T * ovalue,
+    storage_type * ovalue,
     const Node & node,
-    T key
+    storage_type key
 ) {
     assert(relBase(key, node.depth) == node.base);
     auto base = (uint64_t *) node.values;
@@ -2121,7 +2135,7 @@ bool IntegralSet<T,A>::Impl::rcontigBit(
     assert(rel < bitNumBits());
     BitView bits{base, bitNumInt64s()};
     if (auto pos = bits.rfindZero(rel); pos != bits.npos) {
-        if (auto val = (value_type) pos + absBase(node); val != key) {
+        if (auto val = (storage_type) pos + absBase(node); val != key) {
             *onode = &node;
             *ovalue = val + 1;
         }
@@ -2136,9 +2150,9 @@ bool IntegralSet<T,A>::Impl::rcontigBit(
 template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::rcontigMeta(
     const Node ** onode,
-    T * ovalue,
+    storage_type * ovalue,
     const Node & node,
-    T key
+    storage_type key
 ) {
     auto pos = nodePos(node, key);
     auto ptr = (const Node *) node.nodes + pos;
@@ -2202,9 +2216,9 @@ int IntegralSet<T,A>::Impl::cmpError(const Node & left, const Node & right) {
 //===========================================================================
 template <std::integral T, typename A>
 int IntegralSet<T,A>::Impl::cmpArray(
-    const T * li,
+    const storage_type * li,
     size_t lcount,
-    const T * ri,
+    const storage_type * ri,
     size_t rcount
 ) {
     auto le = li + lcount;
@@ -2289,7 +2303,7 @@ template <std::integral T, typename A>
 int IntegralSet<T,A>::Impl::cmpMetaIf(const Node & left, const Node & right) {
     auto i = IntegralSet<T,A>::iterator::makeFirst(&right);
     auto ri = typename IntegralSet<T,A>::range_iterator{i};
-    if (ri->first == absBase(right) && !++ri) {
+    if (toStorage(ri->first) == absBase(right) && !++ri) {
         return 2;
     } else {
         return -1;
@@ -2495,11 +2509,11 @@ template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::conRArray(
     const Node & left,
     const Node & right,
-    const T * ri
+    const storage_type * ri
 ) {
     auto re = ri + right.numValues;
     const Node * onode;
-    T ovalue;
+    storage_type ovalue;
 
     for (;;) {
         if (!find(&onode, &ovalue, left, *ri))
@@ -2513,12 +2527,12 @@ bool IntegralSet<T,A>::Impl::conRArray(
 template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::conLArray(
     const Node & left,
-    const T * li,
+    const storage_type * li,
     const Node & right
 ) {
     auto le = li + left.numValues;
     const Node * onode;
-    T ovalue;
+    storage_type ovalue;
 
     find(&onode, &ovalue, right, absBase(right));
     for (;;) {
@@ -2533,9 +2547,9 @@ bool IntegralSet<T,A>::Impl::conLArray(
 //===========================================================================
 template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::conArray(
-    const T * li,
+    const storage_type * li,
     size_t lcount,
-    const T * ri,
+    const storage_type * ri,
     size_t rcount
 ) {
     if (lcount < rcount)
@@ -2669,11 +2683,11 @@ template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::isecRArray(
     const Node & left,
     const Node & right,
-    const T * ri
+    const storage_type * ri
 ) {
     auto re = ri + right.numValues;
     const Node * onode;
-    T ovalue;
+    storage_type ovalue;
 
     for (;;) {
         if (find(&onode, &ovalue, left, *ri)
@@ -2689,9 +2703,9 @@ bool IntegralSet<T,A>::Impl::isecRArray(
 //===========================================================================
 template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::isecArray(
-    const T * li,
+    const storage_type * li,
     size_t lcount,
-    const T * ri,
+    const storage_type * ri,
     size_t rcount
 ) {
     auto le = li + lcount;
@@ -2835,10 +2849,10 @@ template <std::integral T, typename A>
 void IntegralSet<T,A>::Impl::insArray(
     A * alloc,
     Node * left,
-    T * li,
+    storage_type * li,
     size_t maxValues,
-    const T * ri,
-    const T * re
+    const storage_type * ri,
+    const storage_type * re
 ) {
     assert(left->type == kVector);
     assert(left->numValues);
@@ -3163,9 +3177,9 @@ template <std::integral T, typename A>
 void IntegralSet<T,A>::Impl::eraArray(
     A * alloc,
     Node * left,
-    T * li,
+    storage_type * li,
     const Node & right,
-    const T * ri
+    const storage_type * ri
 ) {
     auto le = set_difference(
         li, li + left->numValues,
@@ -3182,7 +3196,7 @@ template <std::integral T, typename A>
 void IntegralSet<T,A>::Impl::eraLArray(
     A * alloc,
     Node * left,
-    T * li,
+    storage_type * li,
     const Node & right
 ) {
     // Go through values of left vector and skip (aka remove) the ones that
@@ -3191,7 +3205,7 @@ void IntegralSet<T,A>::Impl::eraLArray(
     auto out = li;
     auto le = li + left->numValues;
     const Node * node = nullptr;
-    T value = 0;
+    storage_type value = 0;
     for (; li != le; ++li) {
         if (*li < value) {
             *out++ = *li;
@@ -3219,7 +3233,7 @@ void IntegralSet<T,A>::Impl::eraRArray(
     A * alloc,
     Node * left,
     const Node & right,
-    const T * ri
+    const storage_type * ri
 ) {
     auto re = ri + right.numValues;
     for (; ri != re; ++ri)
@@ -3378,9 +3392,9 @@ template <std::integral T, typename A>
 void IntegralSet<T,A>::Impl::isecArray(
     A * alloc,
     Node * left,
-    T * li,
+    storage_type * li,
     const Node & right,
-    const T * ri
+    const storage_type * ri
 ) {
     auto le = set_intersection(
         li, li + left->numValues,
@@ -3397,7 +3411,7 @@ template <std::integral T, typename A>
 void IntegralSet<T,A>::Impl::isecLArray(
     A * alloc,
     Node * left,
-    T * li,
+    storage_type * li,
     const Node & right
 ) {
     // Go through values of left vector and remove the ones that aren't
@@ -3406,7 +3420,7 @@ void IntegralSet<T,A>::Impl::isecLArray(
     auto out = li;
     auto le = li + left->numValues;
     const Node * node = nullptr;
-    T value = 0;
+    storage_type value = 0;
     for (; li != le; ++li) {
         if (*li < value)
             continue;
@@ -3640,7 +3654,7 @@ NOT_EMPTY:
 
 //===========================================================================
 template <std::integral T, typename A>
-IntegralSet<T, A>::Node::Node()
+IntegralSet<T,A>::Node::Node()
     : type{Impl::kEmpty}
     , depth{0}
     , base{0}
@@ -3658,35 +3672,56 @@ IntegralSet<T, A>::Node::Node()
 
 //===========================================================================
 template <std::integral T, typename A>
-IntegralSet<T, A>::IntegralSet()
+IntegralSet<T,A>::IntegralSet()
 {}
 
 //===========================================================================
 template <std::integral T, typename A>
-IntegralSet<T, A>::IntegralSet(const A & alloc)
+IntegralSet<T,A>::IntegralSet(const A & alloc) noexcept
     : m_alloc(alloc)
 {}
 
 //===========================================================================
 template <std::integral T, typename A>
-IntegralSet<T, A>::IntegralSet(IntegralSet && from) noexcept
-    : m_alloc(from.m_alloc)
+IntegralSet<T,A>::IntegralSet(IntegralSet && from) noexcept
+    : m_alloc(move(from.m_alloc))
 {
     Impl::copy(&m_alloc, &m_node, move(from.m_node));
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-IntegralSet<T, A>::IntegralSet(const IntegralSet & from) {
-    m_alloc = allocator_traits<A>::select_on_container_copy_construction(
+IntegralSet<T,A>::IntegralSet(IntegralSet && from, const A & alloc)
+    : m_alloc(alloc)
+{
+    if (m_alloc == from.m_alloc) {
+        Impl::copy(&m_alloc, &m_node, move(from.m_node));
+    } else {
+        Impl::copy(&m_alloc, &m_node, from.m_node);
+    }
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+IntegralSet<T,A>::IntegralSet(const IntegralSet & from)
+    : m_alloc(allocator_traits<A>::select_on_container_copy_construction(
         from.m_alloc
-    );
+    ))
+{
     Impl::copy(&m_alloc, &m_node, from.m_node);
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-IntegralSet<T, A>::IntegralSet(
+IntegralSet<T,A>::IntegralSet(const IntegralSet & from, const A & alloc)
+    : m_alloc(alloc)
+{
+    Impl::copy(&m_alloc, &m_node, from.m_node);
+}
+
+//===========================================================================
+template <std::integral T, typename A>
+IntegralSet<T,A>::IntegralSet(
     std::initializer_list<value_type> il,
     const A & alloc
 )
@@ -3697,7 +3732,7 @@ IntegralSet<T, A>::IntegralSet(
 
 //===========================================================================
 template <std::integral T, typename A>
-IntegralSet<T, A>::IntegralSet(string_view from, const A & alloc)
+IntegralSet<T,A>::IntegralSet(string_view from, const A & alloc)
     : m_alloc(alloc)
 {
     insert(from);
@@ -3705,7 +3740,7 @@ IntegralSet<T, A>::IntegralSet(string_view from, const A & alloc)
 
 //===========================================================================
 template <std::integral T, typename A>
-IntegralSet<T, A>::IntegralSet(
+IntegralSet<T,A>::IntegralSet(
     value_type start,
     size_t len,
     const A & alloc
@@ -3717,13 +3752,13 @@ IntegralSet<T, A>::IntegralSet(
 
 //===========================================================================
 template <std::integral T, typename A>
-IntegralSet<T, A>::~IntegralSet() {
+IntegralSet<T,A>::~IntegralSet() {
     clear();
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-IntegralSet<T, A> & IntegralSet<T, A>::operator=(
+IntegralSet<T,A> & IntegralSet<T,A>::operator=(
     IntegralSet && from
 ) noexcept {
     if (this != &from) {
@@ -3739,7 +3774,7 @@ IntegralSet<T, A> & IntegralSet<T, A>::operator=(
 
 //===========================================================================
 template <std::integral T, typename A>
-IntegralSet<T, A> & IntegralSet<T, A>::operator=(
+IntegralSet<T,A> & IntegralSet<T,A>::operator=(
     const IntegralSet & from
 ) {
     if (this != &from) {
@@ -3755,73 +3790,73 @@ IntegralSet<T, A> & IntegralSet<T, A>::operator=(
 
 //===========================================================================
 template <std::integral T, typename A>
-auto IntegralSet<T, A>::get_allocator() const -> allocator_type {
+auto IntegralSet<T,A>::get_allocator() const -> allocator_type {
     return m_alloc;
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-IntegralSet<T, A>::iterator IntegralSet<T, A>::begin() const {
+auto IntegralSet<T,A>::begin() const -> iterator {
     return iterator::makeFirst(&m_node);
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-IntegralSet<T, A>::iterator IntegralSet<T, A>::end() const {
+auto IntegralSet<T,A>::end() const -> iterator {
     return iterator::makeEnd(&m_node);
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-auto IntegralSet<T, A>::rbegin() const -> reverse_iterator {
+auto IntegralSet<T,A>::rbegin() const -> reverse_iterator {
     return reverse_iterator(end());
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-auto IntegralSet<T, A>::rend() const -> reverse_iterator {
+auto IntegralSet<T,A>::rend() const -> reverse_iterator {
     return reverse_iterator(begin());
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-auto IntegralSet<T, A>::ranges() const -> RangeRange {
+auto IntegralSet<T,A>::ranges() const -> RangeRange {
     return RangeRange(begin());
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-bool IntegralSet<T, A>::empty() const {
+bool IntegralSet<T,A>::empty() const {
     return m_node.type == Impl::kEmpty;
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-size_t IntegralSet<T, A>::size() const {
+size_t IntegralSet<T,A>::size() const {
     return Impl::count(m_node);
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-size_t IntegralSet<T, A>::max_size() const {
-    return numeric_limits<value_type>::max();
+size_t IntegralSet<T,A>::max_size() const {
+    return numeric_limits<storage_type>::max();
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-void IntegralSet<T, A>::clear() {
+void IntegralSet<T,A>::clear() {
     Impl::clear(&m_alloc, &m_node);
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-void IntegralSet<T, A>::fill() {
+void IntegralSet<T,A>::fill() {
     Impl::fill(&m_alloc, &m_node);
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-void IntegralSet<T, A>::assign(IntegralSet && from) {
+void IntegralSet<T,A>::assign(IntegralSet && from) {
     if (this != &from) {
         if (m_alloc == from.m_alloc) {
             Impl::copy(&m_alloc, &m_node, move(from.m_node));
@@ -3833,114 +3868,125 @@ void IntegralSet<T, A>::assign(IntegralSet && from) {
 
 //===========================================================================
 template <std::integral T, typename A>
-void IntegralSet<T, A>::assign(const IntegralSet & from) {
+void IntegralSet<T,A>::assign(const IntegralSet & from) {
     if (this != &from)
         Impl::copy(&m_alloc, &m_node, from.m_node);
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-void IntegralSet<T, A>::assign(value_type value) {
+void IntegralSet<T,A>::assign(value_type value) {
     clear();
     insert(value);
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-void IntegralSet<T, A>::assign(std::initializer_list<value_type> il) {
+void IntegralSet<T,A>::assign(std::initializer_list<value_type> il) {
     clear();
     insert(il);
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-void IntegralSet<T, A>::assign(value_type start, size_t len) {
+void IntegralSet<T,A>::assign(value_type start, size_t len) {
     clear();
     insert(start, len);
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-void IntegralSet<T, A>::assign(string_view src) {
+void IntegralSet<T,A>::assign(string_view src) {
     clear();
     insert(src);
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-void IntegralSet<T, A>::insert(IntegralSet && other) {
+void IntegralSet<T,A>::insert(IntegralSet && other) {
     if (this != &other)
         Impl::insert(&m_alloc, &m_node, move(other.m_node));
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-void IntegralSet<T, A>::insert(const IntegralSet & other) {
+void IntegralSet<T,A>::insert(const IntegralSet & other) {
     if (this != &other)
         Impl::insert(&m_alloc, &m_node, other.m_node);
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-bool IntegralSet<T, A>::insert(value_type value) {
-    return Impl::insert(&m_alloc, &m_node, value, 1);
+bool IntegralSet<T,A>::insert(value_type value) {
+    return Impl::insert(&m_alloc, &m_node, Impl::toStorage(value), 1);
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-void IntegralSet<T, A>::insert(std::initializer_list<value_type> il) {
+void IntegralSet<T,A>::insert(std::initializer_list<value_type> il) {
     iInsert(il.begin(), il.end());
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-void IntegralSet<T, A>::insert(value_type start, size_t len) {
+void IntegralSet<T,A>::insert(value_type start, size_t len) {
     if (!len)
         return;
+    auto sstart = Impl::toStorage(start);
     if (len == dynamic_extent)
-        len = Impl::valueMask(0) - start + 1;
-    Impl::insert(&m_alloc, &m_node, start, len);
+        len = Impl::valueMask(0) - sstart + 1;
+    Impl::insert(&m_alloc, &m_node, sstart, len);
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-void IntegralSet<T, A>::insert(string_view src) {
-    char * eptr;
+void IntegralSet<T,A>::insert(string_view src) {
     for (;;) {
-        auto first = strToUint(src, &eptr);
-        if (!first && (src.data() == eptr || eptr[-1] != '0'))
-            return;
+        while (src[0] == ' ')
+            src.remove_prefix(1);
 
-        if (*eptr == '-') {
-            src.remove_prefix(eptr - src.data() + 1);
-            auto second = strToUint(src, &eptr);
-            if (second < first)
-                break;
-            insert(first, second - first + 1);
+        T first;
+        auto res = from_chars(src.data(), src.data() + src.size(), first);
+        if (res.ec != errc())
+            break;
+
+        auto sepLen = 0;
+        if (*res.ptr == '-') {
+            sepLen = 1;
+        } else if (*res.ptr == '.' && res.ptr[1] == '.') {
+            sepLen = 2;
         } else {
             insert(first);
+            src.remove_prefix(res.ptr - src.data());
+            continue;
         }
 
-        src.remove_prefix(eptr - src.data());
+        src.remove_prefix(res.ptr - src.data() + sepLen);
+        T second;
+        res = from_chars(src.data(), src.data() + src.size(), second);
+        if (res.ec != errc() || first > second)
+            break;
+        insert(first, second - first + 1);
+        src.remove_prefix(res.ptr - src.data());
     }
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-bool IntegralSet<T, A>::erase(value_type value) {
-    return Impl::erase(&m_alloc, &m_node, value, 1);
+bool IntegralSet<T,A>::erase(value_type value) {
+    return Impl::erase(&m_alloc, &m_node, Impl::toStorage(value), 1);
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-void IntegralSet<T, A>::erase(iterator where) {
+void IntegralSet<T,A>::erase(iterator where) {
     assert(where);
     erase(*where);
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-void IntegralSet<T, A>::erase(const IntegralSet & other) {
+void IntegralSet<T,A>::erase(const IntegralSet & other) {
     if (this != &other) {
         Impl::erase(&m_alloc, &m_node, other.m_node);
     } else {
@@ -3950,17 +3996,18 @@ void IntegralSet<T, A>::erase(const IntegralSet & other) {
 
 //===========================================================================
 template <std::integral T, typename A>
-void IntegralSet<T, A>::erase(value_type start, size_t len) {
+void IntegralSet<T,A>::erase(value_type start, size_t len) {
     if (!len)
         return;
+    auto sstart = Impl::toStorage(start);
     if (len == dynamic_extent)
-        len = Impl::valueMask(0) - start + 1;
-    Impl::erase(&m_alloc, &m_node, start, len);
+        len = Impl::valueMask(0) - sstart + 1;
+    Impl::erase(&m_alloc, &m_node, sstart, len);
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-auto IntegralSet<T, A>::pop_front() -> value_type {
+auto IntegralSet<T,A>::pop_front() -> value_type {
     auto val = front();
     erase(val);
     return val;
@@ -3968,7 +4015,7 @@ auto IntegralSet<T, A>::pop_front() -> value_type {
 
 //===========================================================================
 template <std::integral T, typename A>
-auto IntegralSet<T, A>::pop_back() -> value_type {
+auto IntegralSet<T,A>::pop_back() -> value_type {
     auto val = back();
     erase(val);
     return val;
@@ -3976,28 +4023,28 @@ auto IntegralSet<T, A>::pop_back() -> value_type {
 
 //===========================================================================
 template <std::integral T, typename A>
-void IntegralSet<T, A>::intersect(IntegralSet && other) {
+void IntegralSet<T,A>::intersect(IntegralSet && other) {
     if (this != &other)
         Impl::intersect(&m_alloc, &m_node, move(other.m_node));
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-void IntegralSet<T, A>::intersect(const IntegralSet & other) {
+void IntegralSet<T,A>::intersect(const IntegralSet & other) {
     if (this != &other)
         Impl::intersect(&m_alloc, &m_node, other.m_node);
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-void IntegralSet<T, A>::swap(IntegralSet & other) {
+void IntegralSet<T,A>::swap(IntegralSet & other) {
     assert(m_alloc == other.m_alloc);
     Impl::swap(m_node, other.m_node);
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-strong_ordering IntegralSet<T, A>::compare(const IntegralSet & right) const {
+strong_ordering IntegralSet<T,A>::compare(const IntegralSet & right) const {
     if (auto cmp = Impl::compare(m_node, right.m_node)) {
         return cmp < 0 ? strong_ordering::less : strong_ordering::greater;
     }
@@ -4006,7 +4053,7 @@ strong_ordering IntegralSet<T, A>::compare(const IntegralSet & right) const {
 
 //===========================================================================
 template <std::integral T, typename A>
-strong_ordering IntegralSet<T, A>::operator<=>(
+strong_ordering IntegralSet<T,A>::operator<=>(
     const IntegralSet & other
 ) const {
     return compare(other);
@@ -4014,13 +4061,13 @@ strong_ordering IntegralSet<T, A>::operator<=>(
 
 //===========================================================================
 template <std::integral T, typename A>
-bool IntegralSet<T, A>::operator==(const IntegralSet & right) const {
+bool IntegralSet<T,A>::operator==(const IntegralSet & right) const {
     return compare(right) == 0;
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-auto IntegralSet<T, A>::front() const -> value_type {
+auto IntegralSet<T,A>::front() const -> value_type {
     assert(!empty());
     auto i = begin();
     return *i;
@@ -4028,7 +4075,7 @@ auto IntegralSet<T, A>::front() const -> value_type {
 
 //===========================================================================
 template <std::integral T, typename A>
-auto IntegralSet<T, A>::back() const -> value_type {
+auto IntegralSet<T,A>::back() const -> value_type {
     assert(!empty());
     auto i = rbegin();
     return *i;
@@ -4036,38 +4083,38 @@ auto IntegralSet<T, A>::back() const -> value_type {
 
 //===========================================================================
 template <std::integral T, typename A>
-size_t IntegralSet<T, A>::count() const {
+size_t IntegralSet<T,A>::count() const {
     return size();
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-size_t IntegralSet<T, A>::count(value_type val) const {
+size_t IntegralSet<T,A>::count(value_type val) const {
     return count(val, 1);
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-size_t IntegralSet<T, A>::count(value_type start, size_t len) const {
-    return Impl::count(m_node, start, len);
+size_t IntegralSet<T,A>::count(value_type start, size_t len) const {
+    return Impl::count(m_node, Impl::toStorage(start), len);
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-auto IntegralSet<T, A>::find(value_type val) const -> iterator {
+auto IntegralSet<T,A>::find(value_type val) const -> iterator {
     auto first = lowerBound(val);
     return first && *first == val ? first : end();
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-bool IntegralSet<T, A>::contains(value_type val) const {
+bool IntegralSet<T,A>::contains(value_type val) const {
     return count(val);
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-bool IntegralSet<T, A>::contains(const IntegralSet & other) const {
+bool IntegralSet<T,A>::contains(const IntegralSet & other) const {
     if (this != &other) {
         return Impl::contains(m_node, other.m_node);
     } else {
@@ -4077,32 +4124,32 @@ bool IntegralSet<T, A>::contains(const IntegralSet & other) const {
 
 //===========================================================================
 template <std::integral T, typename A>
-bool IntegralSet<T, A>::intersects(const IntegralSet & other) const {
+bool IntegralSet<T,A>::intersects(const IntegralSet & other) const {
     return Impl::intersects(m_node, other.m_node);
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-auto IntegralSet<T, A>::findLessEqual(value_type val) const -> iterator {
+auto IntegralSet<T,A>::findLessEqual(value_type val) const -> iterator {
     return iterator::makeLast(&m_node, val);
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-auto IntegralSet<T, A>::lowerBound(value_type val) const -> iterator {
+auto IntegralSet<T,A>::lowerBound(value_type val) const -> iterator {
     return iterator::makeFirst(&m_node, val);
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-auto IntegralSet<T, A>::upperBound(value_type val) const -> iterator {
+auto IntegralSet<T,A>::upperBound(value_type val) const -> iterator {
     val += 1;
     return val ? lowerBound(val) : end();
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-auto IntegralSet<T, A>::equalRange(value_type val) const
+auto IntegralSet<T,A>::equalRange(value_type val) const
     -> pair<iterator, iterator>
 {
     auto first = lowerBound(val);
@@ -4114,13 +4161,13 @@ auto IntegralSet<T, A>::equalRange(value_type val) const
 
 //===========================================================================
 template <std::integral T, typename A>
-auto IntegralSet<T, A>::firstContiguous(iterator where) const -> iterator {
+auto IntegralSet<T,A>::firstContiguous(iterator where) const -> iterator {
     return where.firstContiguous();
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-auto IntegralSet<T, A>::lastContiguous(iterator where) const -> iterator {
+auto IntegralSet<T,A>::lastContiguous(iterator where) const -> iterator {
     return where.lastContiguous();
 }
 
@@ -4128,11 +4175,25 @@ auto IntegralSet<T, A>::lastContiguous(iterator where) const -> iterator {
 // Private
 //===========================================================================
 template <std::integral T, typename A>
-void IntegralSet<T, A>::iInsert(
+void IntegralSet<T,A>::iInsert(
     const value_type * first,
     const value_type * last
 ) {
-    Impl::insert(&m_alloc, &m_node, first, last);
+    if constexpr (is_same_v<value_type, storage_type>) {
+        Impl::insert(&m_alloc, &m_node, first, last);
+    } else {
+        storage_type svals[Impl::vecMaxValues()];
+        auto pos = 0;
+        for (; first < last; ++first) {
+            svals[pos] = Impl::toStorage(*first);
+            if (++pos == ::size(svals)) {
+                Impl::insert(&m_alloc, &m_node, svals, svals + pos);
+                pos = 0;
+            }
+        }
+        if (pos)
+            Impl::insert(&m_alloc, &m_node, svals, svals + pos);
+    }
 }
 
 
@@ -4145,7 +4206,7 @@ void IntegralSet<T, A>::iInsert(
 //===========================================================================
 // static
 template <std::integral T, typename A>
-auto IntegralSet<T, A>::Iter::makeEnd(const Node * node) -> Iter {
+auto IntegralSet<T,A>::Iter::makeEnd(const Node * node) -> Iter {
     while (node->depth) {
         auto pos = Impl::nodePos(Impl::absBase(*node), node->depth - 1);
         node += Impl::numNodes(node->depth) - pos;
@@ -4157,44 +4218,46 @@ auto IntegralSet<T, A>::Iter::makeEnd(const Node * node) -> Iter {
 //===========================================================================
 // static
 template <std::integral T, typename A>
-auto IntegralSet<T, A>::Iter::makeFirst(const Node * node) -> Iter {
-    return makeFirst(node, Impl::absBase(*node));
+auto IntegralSet<T,A>::Iter::makeFirst(const Node * node) -> Iter {
+    return makeFirst(node, Impl::toValue(Impl::absBase(*node)));
 }
 
 //===========================================================================
 // static
 template <std::integral T, typename A>
-auto IntegralSet<T, A>::Iter::makeFirst(
+auto IntegralSet<T,A>::Iter::makeFirst(
     const Node * node,
     value_type value
 ) -> Iter {
-    if (Impl::find(&node, &value, *node, value))
-        return {node, value};
+    auto svalue = Impl::toStorage(value);
+    if (Impl::find(&node, &svalue, *node, svalue))
+        return {node, Impl::toValue(svalue)};
     return {node};
 }
 
 //===========================================================================
 // static
 template <std::integral T, typename A>
-auto IntegralSet<T, A>::Iter::makeLast(const Node * node) -> Iter {
-    return makeLast(node, Impl::absFinal(*node));
+auto IntegralSet<T,A>::Iter::makeLast(const Node * node) -> Iter {
+    return makeLast(node, Impl::toValue(Impl::absFinal(*node)));
 }
 
 //===========================================================================
 // static
 template <std::integral T, typename A>
-auto IntegralSet<T, A>::Iter::makeLast(
+auto IntegralSet<T,A>::Iter::makeLast(
     const Node * node,
     value_type value
 ) -> Iter {
-    if (Impl::rfind(&node, &value, *node, value))
-        return {node, value};
+    auto svalue = Impl::toStorage(value);
+    if (Impl::rfind(&node, &svalue, *node, svalue))
+        return {node, Impl::toValue(svalue)};
     return {node};
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-IntegralSet<T, A>::Iter::Iter(const Node * node)
+IntegralSet<T,A>::Iter::Iter(const Node * node)
     : m_node(node)
 {
     assert(node->depth == 0 && node->base == 0);
@@ -4202,7 +4265,7 @@ IntegralSet<T, A>::Iter::Iter(const Node * node)
 
 //===========================================================================
 template <std::integral T, typename A>
-IntegralSet<T, A>::Iter::Iter(const Node * node, value_type value)
+IntegralSet<T,A>::Iter::Iter(const Node * node, value_type value)
     : m_node(node)
     , m_value(value)
     , m_endmark(false)
@@ -4210,7 +4273,7 @@ IntegralSet<T, A>::Iter::Iter(const Node * node, value_type value)
 
 //===========================================================================
 template <std::integral T, typename A>
-bool IntegralSet<T, A>::Iter::operator== (const Iter & right) const {
+bool IntegralSet<T,A>::Iter::operator== (const Iter & right) const {
     return m_value == right.m_value
         && m_endmark == right.m_endmark
         && (m_node == right.m_node || !m_node || !right.m_node);
@@ -4218,19 +4281,24 @@ bool IntegralSet<T, A>::Iter::operator== (const Iter & right) const {
 
 //===========================================================================
 template <std::integral T, typename A>
-auto IntegralSet<T, A>::Iter::operator++() -> Iter & {
+auto IntegralSet<T,A>::Iter::operator++() -> Iter & {
+    auto svalue = Impl::toStorage(m_value);
     if (!*this) {
         if (m_node) {
             auto from = Impl::absBase(*m_node);
-            if (Impl::find(&m_node, &m_value, *m_node, from))
+            if (Impl::find(&m_node, &svalue, *m_node, from)) {
+                m_value = Impl::toValue(svalue);
                 m_endmark = false;
+            }
         }
         return *this;
     }
-    if (m_value < Impl::absFinal(*m_node)) {
-        m_value += 1;
-        if (Impl::find(&m_node, &m_value, *m_node, m_value))
+    if (svalue < Impl::absFinal(*m_node)) {
+        svalue += 1;
+        if (Impl::find(&m_node, &svalue, *m_node, svalue)) {
+            m_value = Impl::toValue(svalue);
             return *this;
+        }
     }
 
 CHECK_DEPTH:
@@ -4241,37 +4309,44 @@ CHECK_DEPTH:
 
 CHECK_END_OF_DEPTH:
     if (Impl::absFinal(*m_node)
-            == Impl::absFinal(m_value, m_node->depth - 1)
+            == Impl::absFinal(svalue, m_node->depth - 1)
     ) {
         m_node += 1;
         assert(m_node->type == Impl::kMetaParent);
         m_node = m_node->nodes;
-        m_value = Impl::absBase(*m_node);
+        svalue = Impl::absBase(*m_node);
         goto CHECK_DEPTH;
     }
 
     m_node += 1;
-    m_value = Impl::absBase(*m_node);
-    if (Impl::find(&m_node, &m_value, *m_node, m_value))
+    svalue = Impl::absBase(*m_node);
+    if (Impl::find(&m_node, &svalue, *m_node, svalue)) {
+        m_value = Impl::toValue(svalue);
         return *this;
+    }
     goto CHECK_END_OF_DEPTH;
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-auto IntegralSet<T, A>::Iter::operator--() -> Iter & {
+auto IntegralSet<T,A>::Iter::operator--() -> Iter & {
+    auto svalue = Impl::toStorage(m_value);
     if (!*this) {
         if (m_node) {
             auto from = Impl::absFinal(*m_node);
-            if (Impl::rfind(&m_node, &m_value, *m_node, from))
+            if (Impl::rfind(&m_node, &svalue, *m_node, from)) {
+                m_value = Impl::toValue(svalue);
                 m_endmark = false;
+            }
         }
         return *this;
     }
-    if (m_value > Impl::absBase(*m_node)) {
-        m_value -= 1;
-        if (Impl::rfind(&m_node, &m_value, *m_node, m_value))
+    if (svalue > Impl::absBase(*m_node)) {
+        svalue -= 1;
+        if (Impl::rfind(&m_node, &svalue, *m_node, svalue)) {
+            m_value = Impl::toValue(svalue);
             return *this;
+        }
     }
 
 CHECK_DEPTH:
@@ -4281,34 +4356,36 @@ CHECK_DEPTH:
     }
 
 CHECK_END_OF_DEPTH:
-    if (Impl::absBase(*m_node) == Impl::absBase(m_value, m_node->depth - 1)) {
+    if (Impl::absBase(*m_node) == Impl::absBase(svalue, m_node->depth - 1)) {
         m_node += Impl::numNodes(m_node->depth);
         assert(m_node->type == Impl::kMetaParent);
         m_node = m_node->nodes;
-        m_value = Impl::absFinal(*m_node);
+        svalue = Impl::absFinal(*m_node);
         goto CHECK_DEPTH;
     }
 
     m_node -= 1;
-    m_value = Impl::absFinal(*m_node);
-    if (Impl::rfind(&m_node, &m_value, *m_node, m_value))
+    svalue = Impl::absFinal(*m_node);
+    if (Impl::rfind(&m_node, &svalue, *m_node, svalue)) {
+        m_value = Impl::toValue(svalue);
         return *this;
+    }
     goto CHECK_END_OF_DEPTH;
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-auto IntegralSet<T, A>::Iter::end() const -> Iter {
+auto IntegralSet<T,A>::Iter::end() const -> Iter {
     return iterator::makeEnd(m_node);
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-auto IntegralSet<T, A>::Iter::firstContiguous() const -> Iter {
+auto IntegralSet<T,A>::Iter::firstContiguous() const -> Iter {
     auto node = m_node;
-    auto value = m_value;
-    if (Impl::rcontig(&node, &value, *node, value))
-        return {node, value};
+    auto svalue = Impl::toStorage(m_value);
+    if (Impl::rcontig(&node, &svalue, *node, svalue))
+        return {node, Impl::toValue(svalue)};
 
     // Use a temporary to scout out the next node (which may require traversing
     // the tree to get there) since if it starts with a discontinuity we'll end
@@ -4317,10 +4394,10 @@ auto IntegralSet<T, A>::Iter::firstContiguous() const -> Iter {
 
 CHECK_DEPTH:
     if (ptr->depth == 0)
-        return {node, value};
+        return {node, Impl::toValue(svalue)};
 
 CHECK_END_OF_DEPTH:
-    if (Impl::absBase(*ptr) == Impl::absBase(value, ptr->depth - 1)) {
+    if (Impl::absBase(*ptr) == Impl::absBase(svalue, ptr->depth - 1)) {
         ptr += Impl::numNodes(ptr->depth);
         assert(ptr->type == Impl::kMetaParent);
         ptr = ptr->nodes;
@@ -4328,18 +4405,18 @@ CHECK_END_OF_DEPTH:
     }
 
     ptr -= 1;
-    if (Impl::rcontig(&node, &value, *ptr, Impl::absFinal(*ptr)))
-        return {node, value};
+    if (Impl::rcontig(&node, &svalue, *ptr, Impl::absFinal(*ptr)))
+        return {node, Impl::toValue(svalue)};
     goto CHECK_END_OF_DEPTH;
 }
 
 //===========================================================================
 template <std::integral T, typename A>
-auto IntegralSet<T, A>::Iter::lastContiguous() const -> Iter {
+auto IntegralSet<T,A>::Iter::lastContiguous() const -> Iter {
     auto node = m_node;
-    auto value = m_value;
-    if (Impl::contig(&node, &value, *node, value))
-        return {node, value};
+    auto svalue = Impl::toStorage(m_value);
+    if (Impl::contig(&node, &svalue, *node, svalue))
+        return {node, Impl::toValue(svalue)};
 
     // Use a temporary to scout out the next node (which may require traversing
     // the tree to find) since if it starts with a discontinuity we end the
@@ -4348,10 +4425,10 @@ auto IntegralSet<T, A>::Iter::lastContiguous() const -> Iter {
 
 CHECK_DEPTH:
     if (ptr->depth == 0)
-        return {node, value};
+        return {node, Impl::toValue(svalue)};
 
 CHECK_END_OF_DEPTH:
-    if (Impl::absFinal(*ptr) == Impl::absFinal(value, ptr->depth - 1)) {
+    if (Impl::absFinal(*ptr) == Impl::absFinal(svalue, ptr->depth - 1)) {
         ptr += 1;
         assert(ptr->type == Impl::kMetaParent);
         ptr = ptr->nodes;
@@ -4359,8 +4436,8 @@ CHECK_END_OF_DEPTH:
     }
 
     ptr += 1;
-    if (Impl::contig(&node, &value, *ptr, Impl::absBase(*ptr)))
-        return {node, value};
+    if (Impl::contig(&node, &svalue, *ptr, Impl::absBase(*ptr)))
+        return {node, Impl::toValue(svalue)};
     goto CHECK_END_OF_DEPTH;
 }
 
@@ -4373,7 +4450,7 @@ CHECK_END_OF_DEPTH:
 
 //===========================================================================
 template <std::integral T, typename A>
-IntegralSet<T, A>::RangeIter::RangeIter(iterator where)
+IntegralSet<T,A>::RangeIter::RangeIter(iterator where)
     : m_low(where)
     , m_high(where)
 {
@@ -4385,7 +4462,7 @@ IntegralSet<T, A>::RangeIter::RangeIter(iterator where)
 
 //===========================================================================
 template <std::integral T, typename A>
-bool IntegralSet<T, A>::RangeIter::operator== (
+bool IntegralSet<T,A>::RangeIter::operator== (
     const RangeIter & other
 ) const {
     return m_low == other.m_low;
@@ -4393,7 +4470,7 @@ bool IntegralSet<T, A>::RangeIter::operator== (
 
 //===========================================================================
 template <std::integral T, typename A>
-auto IntegralSet<T, A>::RangeIter::operator++() -> RangeIter & {
+auto IntegralSet<T,A>::RangeIter::operator++() -> RangeIter & {
     m_low = m_high;
     if (++m_low) {
         m_high = m_low.lastContiguous();
@@ -4407,7 +4484,7 @@ auto IntegralSet<T, A>::RangeIter::operator++() -> RangeIter & {
 
 //===========================================================================
 template <std::integral T, typename A>
-auto IntegralSet<T, A>::RangeIter::operator--() -> RangeIter & {
+auto IntegralSet<T,A>::RangeIter::operator--() -> RangeIter & {
     m_high = m_low;
     if (--m_high) {
         m_low = m_high.firstContiguous();
@@ -4426,22 +4503,8 @@ auto IntegralSet<T, A>::RangeIter::operator--() -> RangeIter & {
 *
 ***/
 
-//===========================================================================
-namespace Dim {
-ostream & operator<<(ostream & os, const UnsignedSet & right);
-}
-ostream & Dim::operator<<(ostream & os, const UnsignedSet & right) {
-    if (auto v = right.ranges().begin()) {
-        for (;;) {
-            os << v->first;
-            if (v->first != v->second)
-                os << '-' << v->second;
-            if (!++v)
-                break;
-            os << ' ';
-        }
-    }
-    return os;
-}
-
+template class IntegralSet<int>;
 template class IntegralSet<unsigned>;
+
+template class IntegralSet<unsigned,
+    std::pmr::polymorphic_allocator<unsigned>>;

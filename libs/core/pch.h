@@ -11,6 +11,7 @@
 #include <atomic>
 #include <cassert>
 #include <cerrno>
+#include <charconv>
 #include <condition_variable>
 #include <functional>
 #include <iomanip>

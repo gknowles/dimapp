@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <initializer_list>
 #include <iterator>
+#include <memory_resource>
 #include <ostream>
 #include <string_view>
 #include <type_traits> // std::is_convertible_v
@@ -37,6 +38,7 @@ public:
     class Impl;
 
     using allocator_type = A;
+    using storage_type = std::make_unsigned_t<T>;
 
     using value_type = T;
     using reference = value_type &;
@@ -61,9 +63,10 @@ public:
         uint16_t numBytes;  // space allocated
         uint16_t numValues; // usage depends on node type
         union {
-            value_type * values;
+            storage_type * values;
             Node * nodes;
-            value_type localValues[sizeof (value_type *) / sizeof value_type];
+            storage_type localValues[
+                sizeof (storage_type *) / sizeof storage_type];
         };
 
         Node();
@@ -71,9 +74,11 @@ public:
 
 public:
     IntegralSet();
-    explicit IntegralSet(const A & alloc);
+    explicit IntegralSet(const A & alloc) noexcept;
     IntegralSet(IntegralSet && from) noexcept;
+    IntegralSet(IntegralSet && from, const A & alloc);
     IntegralSet(const IntegralSet & from);
+    IntegralSet(const IntegralSet & from, const A & alloc);
     IntegralSet(std::initializer_list<value_type> from, const A & alloc = {});
     IntegralSet(std::string_view from, const A & alloc = {});
     IntegralSet(value_type start, size_t len, const A & alloc = {});
@@ -162,7 +167,29 @@ private:
     friend std::ostream & operator<<(
         std::ostream & os,
         const IntegralSet & right
-    );
+    ) {
+        if (auto v = right.ranges().begin()) {
+            for (;;) {
+                os << v->first;
+                if (auto len = v->second - v->first) {
+                    if constexpr (std::is_signed_v<T>) {
+                        if (len > 1) {
+                            os << "..";
+                        } else {
+                            os << ' ';
+                        }
+                    } else {
+                        os << '-';
+                    }
+                    os << v->second;
+                }
+                if (!++v)
+                    break;
+                os << ' ';
+            }
+        }
+        return os;
+    }
 
 private:
     void iInsert(const value_type * first, const value_type * last);
@@ -351,6 +378,10 @@ private:
 
 using UnsignedSet = IntegralSet<unsigned>;
 
+extern template class IntegralSet<int>;
 extern template class IntegralSet<unsigned>;
+
+extern template class IntegralSet<unsigned,
+    std::pmr::polymorphic_allocator<unsigned>>;
 
 } // namespace

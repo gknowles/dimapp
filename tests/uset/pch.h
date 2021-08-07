@@ -13,6 +13,7 @@
 
 // Standard headers
 #include <iostream>
+#include <regex>
 
 // Platform headers
 // External library internal headers

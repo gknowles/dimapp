@@ -15,10 +15,14 @@ using namespace Dim;
 *
 ***/
 
+static int s_passed;
+
 #define EXPECT(...)                                                         \
     if (!bool(__VA_ARGS__)) {                                               \
         logMsgError() << "Line " << (line ? line : __LINE__) << ": EXPECT(" \
                       << #__VA_ARGS__ << ") failed";                        \
+    } else {                                                                \
+        ++s_passed;                                                         \
     }
 
 
@@ -28,79 +32,82 @@ using namespace Dim;
 *
 ***/
 
+template <typename T>
+void expect(
+    const IntegralSet<T> & set,
+    string val,
+    source_location loc = source_location::current()
+) {
+    if constexpr (is_signed_v<T>)
+        val = regex_replace(val, regex("(\\d)-(\\d)"), "$1..$2");
+    ostringstream os;
+    os << set;
+    if (val != os.view()) {
+        logMsgError() << "Line " << loc.line() << ": EXPECT(" << val
+            << ") failed";
+    } else {
+        ++s_passed;
+    }
+}
+
 //===========================================================================
+template <typename T>
 static void memleak() {
     int line = 0;
     ostringstream os;
 
     // test.eight.seven.*
-    UnsignedSet c0, c1;
+    IntegralSet<T> c0, c1;
     c0.assign("1-10000");
-    os.str("");
-    os << c0;
-    EXPECT(os.view() == "1-10000");
+    expect(c0, "1-10000");
 
     c1.assign("801-900 8001-9000");
-    os.str("");
-    os << c1;
-    EXPECT(os.view() == "801-900 8001-9000");
+    expect(c1, "801-900 8001-9000");
 
     c0.intersect(c1);
     EXPECT(c0 == c1);
-
-    os.str("");
-    os << c0;
-    EXPECT(os.view() == "801-900 8001-9000");
+    expect(c0, "801-900 8001-9000");
 }
 
 //===========================================================================
 // Test combining Node::kVector nodes.
 // Use too many values for kSmVector, but not so many it converts to kBitmap.
+template <typename T>
 static void vectors() {
     int line = 0;
-    UnsignedSet a;
-    UnsignedSet b;
-    ostringstream os;
+    IntegralSet<T> a;
+    IntegralSet<T> b;
 
     a.assign("1 3 5 7 9");
     b.assign("4 6 8");
     a.insert(b);
     EXPECT(a.size() == 8);
-    os.str("");
-    os << a;
-    EXPECT(os.view() == "1 3-9");
+    expect(a, "1 3-9");
 
     a.assign("1 3 5 7");
     b.assign("4-6");
     a.insert(b);
     EXPECT(a.size() == 6);
-    os.str("");
-    os << a;
-    EXPECT(os.view() == "1 3-7");
+    expect(a, "1 3-7");
 
     b.clear();
     b.insert(a);
-    os.str("");
-    os << b;
-    EXPECT(os.view() == "1 3-7");
+    expect(b, "1 3-7");
     b.insert(a);
-    os.str("");
-    os << b;
-    EXPECT(os.view() == "1 3-7");
+    expect(b, "1 3-7");
 
     a.assign("1-100");
     b.assign("90-200");
     a.insert(b);
-    os.str("");
-    os << a;
-    EXPECT(os.view() == "1-200");
+    expect(a, "1-200");
 }
 
 //===========================================================================
+template <typename T>
 static void test() {
     int line = 0;
 
-    UnsignedSet tmp;
+    IntegralSet<T> tmp;
     EXPECT(tmp.empty());
     tmp.insert(5);
     EXPECT(tmp.size() == 1);
@@ -129,7 +136,7 @@ static void test() {
     vr.assign(r.rbegin(), r.rend());
     EXPECT(vr == vector<pair<unsigned,unsigned>>{{5,5},{3,3}});
 
-    UnsignedSet tmp2;
+    IntegralSet<T> tmp2;
     tmp2.insert(5);
     tmp.intersect(tmp2);
     v.assign(tmp.begin(), tmp.end());
@@ -200,17 +207,24 @@ static void test() {
 }
 
 //===========================================================================
+template <typename T>
+static void allTests() {
+    memleak<T>();
+    test<T>();
+    vectors<T>();
+}
+
+//===========================================================================
 static void app(int argc, char *argv[]) {
-    memleak();
-    test();
-    vectors();
+    allTests<int>();
+    allTests<unsigned>();
 
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);
         cerr << "*** TEST FAILURES: " << errs << endl;
         appSignalShutdown(EX_SOFTWARE);
     } else {
-        cout << "All tests passed" << endl;
+        cout << "All tests passed: " << s_passed << " tests" << endl;
         appSignalShutdown(EX_OK);
     }
 }
