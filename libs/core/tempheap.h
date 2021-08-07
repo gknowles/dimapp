@@ -34,6 +34,7 @@ public:
 
     virtual char * alloc(size_t bytes, size_t alignment) = 0;
 
+private:
     // Inherited via std::pmr::memory_resource
     void * do_allocate(size_t bytes, size_t alignment) override;
     void do_deallocate(void * ptr, size_t bytes, size_t alignment) override;
@@ -114,10 +115,10 @@ public:
     void clear();
     void swap(TempHeap & from);
 
+private:
     // ITempHeap
     char * alloc(size_t bytes, size_t alignment) override;
 
-private:
     void * m_buffer{};
 };
 
