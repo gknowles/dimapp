@@ -124,10 +124,25 @@ public:
     static void swap(Node & left, Node & right);
 
     static bool yes(const Node & left, const Node & right);
-    static bool yes(const Node **, storage_type *, const Node & node, storage_type key);
+    static bool yes(
+        const Node ** onode,
+        storage_type * ovalue,
+        const Node & node,
+        storage_type key
+    );
     static bool no(const Node & left, const Node & right);
-    static bool no(const Node **, storage_type *, const Node & node, storage_type key);
-    static bool no(A *, Node *, const storage_type * first, const storage_type * last);
+    static bool no(
+        const Node ** onode,
+        storage_type * ovalue,
+        const Node & node,
+        storage_type key
+    );
+    static bool no(
+        A * alloc,
+        Node * node,
+        const storage_type * first,
+        const storage_type * last
+    );
     static bool no(A * alloc, Node * node, storage_type start, size_t len);
 
     static void skip(A * alloc, Node * node);
@@ -169,19 +184,49 @@ public:
     static void desMeta(A * alloc, Node * node);
 
     // insert
-    static bool insert(A *, Node *, const storage_type * first, const storage_type * last);
-    static bool insEmpty(A *, Node *, const storage_type * first, const storage_type * last);
-    static bool insSmv(A *, Node *, const storage_type * first, const storage_type * last);
-    static bool insVec(A *, Node *, const storage_type * first, const storage_type * last);
-    static bool insBit(A *, Node *, const storage_type * first, const storage_type * last);
-    static bool insMeta(A *, Node *, const storage_type * first, const storage_type * last);
+    static bool insert(
+        A * alloc,
+        Node * node,
+        const storage_type * first,
+        const storage_type * last
+    );
+    static bool insEmpty(
+        A * alloc,
+        Node * node,
+        const storage_type * first,
+        const storage_type * last
+    );
+    static bool insSmv(
+        A * alloc,
+        Node * node,
+        const storage_type * first,
+        const storage_type * last
+    );
+    static bool insVec(
+        A * alloc,
+        Node * node,
+        const storage_type * first,
+        const storage_type * last
+    );
+    static bool insBit(
+        A * alloc,
+        Node * node,
+        const storage_type * first,
+        const storage_type * last
+    );
+    static bool insMeta(
+        A * alloc,
+        Node * node,
+        const storage_type * first,
+        const storage_type * last
+    );
 
-    static bool insert(A * alloc, Node * node, storage_type start, size_t len);
-    static bool insEmpty(A * alloc, Node * node, storage_type start, size_t len);
-    static bool insSmv(A * alloc, Node * node, storage_type start, size_t len);
-    static bool insVec(A * alloc, Node * node, storage_type start, size_t len);
-    static bool insBit(A * alloc, Node * node, storage_type start, size_t len);
-    static bool insMeta(A * alloc, Node * node, storage_type start, size_t len);
+    static bool insert(A *, Node * node, storage_type start, size_t len);
+    static bool insEmpty(A *, Node * node, storage_type start, size_t len);
+    static bool insSmv(A *, Node * node, storage_type start, size_t len);
+    static bool insVec(A *, Node * node, storage_type start, size_t len);
+    static bool insBit(A *, Node * node, storage_type start, size_t len);
+    static bool insMeta(A *, Node * node, storage_type start, size_t len);
 
     static void insert(A * alloc, Node * left, const Node & right);
     static void insError(A * alloc, Node * left, const Node & right);
@@ -211,12 +256,12 @@ public:
     static void insMeta(A * alloc, Node * left, Node && right);
 
     // erase
-    static bool erase(A * alloc, Node * node, storage_type start, size_t len);
-    static bool eraFull(A * alloc, Node * node, storage_type start, size_t len);
-    static bool eraSmv(A * alloc, Node * node, storage_type start, size_t len);
-    static bool eraVec(A * alloc, Node * node, storage_type start, size_t len);
-    static bool eraBit(A * alloc, Node * node, storage_type start, size_t len);
-    static bool eraMeta(A * alloc, Node * node, storage_type start, size_t len);
+    static bool erase(A *, Node * node, storage_type start, size_t len);
+    static bool eraFull(A *, Node * node, storage_type start, size_t len);
+    static bool eraSmv(A *, Node * node, storage_type start, size_t len);
+    static bool eraVec(A *, Node * node, storage_type start, size_t len);
+    static bool eraBit(A *, Node * node, storage_type start, size_t len);
+    static bool eraMeta(A *, Node * node, storage_type start, size_t len);
 
     static void erase(A * alloc, Node * left, const Node & right);
     static void eraError(A * alloc, Node * left, const Node & right);
@@ -236,7 +281,12 @@ public:
         const Node & right,
         const storage_type * ri
     );
-    static void eraLArray(A * alloc, Node * left, storage_type * li, const Node & right);
+    static void eraLArray(
+        A * alloc,
+        Node * left,
+        storage_type * li,
+        const Node & right
+    );
     static void eraRArray(
         A * alloc,
         Node * left,
@@ -262,36 +312,156 @@ public:
     static size_t cntMeta(const Node & node, storage_type start, size_t len);
 
     // find
-    static bool find(const Node **, storage_type *, const Node & node, storage_type key);
-    static bool findEmpty(const Node **, storage_type *, const Node & node, storage_type key);
-    static bool findFull(const Node **, storage_type *, const Node & node, storage_type key);
-    static bool findSmv(const Node **, storage_type *, const Node & node, storage_type key);
-    static bool findVec(const Node **, storage_type *, const Node & node, storage_type key);
-    static bool findBit(const Node **, storage_type *, const Node & node, storage_type key);
-    static bool findMeta(const Node **, storage_type *, const Node & node, storage_type key);
+    static bool find(
+        const Node ** onode,
+        storage_type * ovalue,
+        const Node & node,
+        storage_type key
+    );
+    static bool findEmpty(
+        const Node ** onode,
+        storage_type * ovalue,
+        const Node & node,
+        storage_type key
+    );
+    static bool findFull(
+        const Node ** onode,
+        storage_type * ovalue,
+        const Node & node,
+        storage_type key
+    );
+    static bool findSmv(
+        const Node ** onode,
+        storage_type * ovalue,
+        const Node & node,
+        storage_type key
+    );
+    static bool findVec(
+        const Node ** onode,
+        storage_type * ovalue,
+        const Node & node,
+        storage_type key
+    );
+    static bool findBit(
+        const Node ** onode,
+        storage_type * ovalue,
+        const Node & node,
+        storage_type key
+    );
+    static bool findMeta(
+        const Node ** onode,
+        storage_type * ovalue,
+        const Node & node,
+        storage_type key
+    );
 
     // rfind
-    static bool rfind(const Node **, storage_type *, const Node & node, storage_type key);
-    static bool rfindSmv(const Node **, storage_type *, const Node & node, storage_type key);
-    static bool rfindVec(const Node **, storage_type *, const Node & node, storage_type key);
-    static bool rfindBit(const Node **, storage_type *, const Node & node, storage_type key);
-    static bool rfindMeta(const Node **, storage_type *, const Node & node, storage_type key);
+    static bool rfind(
+        const Node ** onode,
+        storage_type * ovalue,
+        const Node & node,
+        storage_type key
+    );
+    static bool rfindSmv(
+        const Node ** onode,
+        storage_type * ovalue,
+        const Node & node,
+        storage_type key
+    );
+    static bool rfindVec(
+        const Node ** onode,
+        storage_type * ovalue,
+        const Node & node,
+        storage_type key
+    );
+    static bool rfindBit(
+        const Node ** onode,
+        storage_type * ovalue,
+        const Node & node,
+        storage_type key
+    );
+    static bool rfindMeta(
+        const Node ** onode,
+        storage_type * ovalue,
+        const Node & node,
+        storage_type key
+    );
 
     // contig
-    static bool contig(const Node **, storage_type *, const Node & node, storage_type key);
-    static bool contigFull(const Node **, storage_type *, const Node & node, storage_type key);
-    static bool contigSmv(const Node **, storage_type *, const Node & node, storage_type key);
-    static bool contigVec(const Node **, storage_type *, const Node & node, storage_type key);
-    static bool contigBit(const Node **, storage_type *, const Node & node, storage_type key);
-    static bool contigMeta(const Node **, storage_type *, const Node & node, storage_type key);
+    static bool contig(
+        const Node ** onode,
+        storage_type * ovalue,
+        const Node & node,
+        storage_type key
+    );
+    static bool contigFull(
+        const Node ** onode,
+        storage_type * ovalue,
+        const Node & node,
+        storage_type key
+    );
+    static bool contigSmv(
+        const Node ** onode,
+        storage_type * ovalue,
+        const Node & node,
+        storage_type key
+    );
+    static bool contigVec(
+        const Node ** onode,
+        storage_type * ovalue,
+        const Node & node,
+        storage_type key
+    );
+    static bool contigBit(
+        const Node ** onode,
+        storage_type * ovalue,
+        const Node & node,
+        storage_type key
+    );
+    static bool contigMeta(
+        const Node ** onode,
+        storage_type * ovalue,
+        const Node & node,
+        storage_type key
+    );
 
     // rcontig
-    static bool rcontig(const Node **, storage_type *, const Node & node, storage_type key);
-    static bool rcontigFull(const Node **, storage_type *, const Node & node, storage_type key);
-    static bool rcontigSmv(const Node **, storage_type *, const Node & node, storage_type key);
-    static bool rcontigVec(const Node **, storage_type *, const Node & node, storage_type key);
-    static bool rcontigBit(const Node **, storage_type *, const Node & node, storage_type key);
-    static bool rcontigMeta(const Node **, storage_type *, const Node & node, storage_type key);
+    static bool rcontig(
+        const Node ** onode,
+        storage_type * ovalue,
+        const Node & node,
+        storage_type key
+    );
+    static bool rcontigFull(
+        const Node ** onode,
+        storage_type * ovalue,
+        const Node & node,
+        storage_type key
+    );
+    static bool rcontigSmv(
+        const Node ** onode,
+        storage_type * ovalue,
+        const Node & node,
+        storage_type key
+    );
+    static bool rcontigVec(
+        const Node ** onode,
+        storage_type * ovalue,
+        const Node & node,
+        storage_type key
+    );
+    static bool rcontigBit(
+        const Node ** onode,
+        storage_type * ovalue,
+        const Node & node,
+        storage_type key
+    );
+    static bool rcontigMeta(
+        const Node ** onode,
+        storage_type * ovalue,
+        const Node & node,
+        storage_type key
+    );
 
     // compare
     static int compare(const Node & left, const Node & right);
@@ -333,8 +503,16 @@ public:
     static bool conSmv(const Node & left, const Node & right);
     static bool conBit(const Node & left, const Node & right);
     static bool conMeta(const Node & left, const Node & right);
-    static bool conRArray(const Node & left, const Node & right, const storage_type * ri);
-    static bool conLArray(const Node & left, const storage_type * li, const Node & right);
+    static bool conRArray(
+        const Node & left,
+        const Node & right,
+        const storage_type * ri
+    );
+    static bool conLArray(
+        const Node & left,
+        const storage_type * li,
+        const Node & right
+    );
     static bool conArray(
         const storage_type * li,
         size_t lcount,
@@ -383,7 +561,12 @@ public:
         const Node & right,
         const storage_type * ri
     );
-    static void isecLArray(A * alloc, Node * left, storage_type * li, const Node & right);
+    static void isecLArray(
+        A * alloc,
+        Node * left,
+        storage_type * li,
+        const Node & right
+    );
 
     static void intersect(A * alloc, Node * left, Node && right);
     static void isecError(A * alloc, Node * left, Node && right);
@@ -889,7 +1072,12 @@ void IntegralSet<T,A>::Impl::desMeta(A * alloc, Node * node) {
 
 /****************************************************************************
 *
-*   insert(A * alloc, Node * node, const storage_type * first, const storage_type * last)
+*   insert(
+*       A * alloc,
+*       Node * node,
+*       const storage_type * first,
+*       const storage_type * last
+*   )
 *
 ***/
 
@@ -901,7 +1089,12 @@ bool IntegralSet<T,A>::Impl::insert(
     const storage_type * first,
     const storage_type * last
 ) {
-    using Fn = bool(A * alloc, Node * node, const storage_type * first, const storage_type * last);
+    using Fn = bool(
+        A * alloc,
+        Node * node,
+        const storage_type * first,
+        const storage_type * last
+    );
     constinit static Fn * const functs[kNodeTypes] = {
         insEmpty,   // empty
         no,         // full
@@ -1007,7 +1200,7 @@ bool IntegralSet<T,A>::Impl::insMeta(
 
 /****************************************************************************
 *
-*   insert(A * alloc, Node * node, const storage_type * first, const storage_type * last)
+*   insert(A * alloc, Node * node, storage_type start, size_t len)
 *
 ***/
 
@@ -1603,7 +1796,12 @@ size_t IntegralSet<T,A>::Impl::cntMeta(
 
 /****************************************************************************
 *
-*   find(const Node ** onode, storage_type * ovalue, const Node & node, storage_type key)
+*   find(
+*       const Node ** onode,
+*       storage_type * ovalue,
+*       const Node & node,
+*       storage_type key
+*   )
 *
 *   Find smallest value >= pos, returns false if not found.
 *
@@ -1617,7 +1815,12 @@ bool IntegralSet<T,A>::Impl::find(
     const Node & node,
     storage_type key
 ) {
-    using Fn = bool(const Node **, storage_type *, const Node & node, storage_type key);
+    using Fn = bool(
+        const Node ** onode,
+        storage_type * ovalue,
+        const Node & node,
+        storage_type key
+    );
     constinit static Fn * const functs[kNodeTypes] = {
         findEmpty,   // empty
         findFull,    // full
@@ -1738,7 +1941,12 @@ bool IntegralSet<T,A>::Impl::findMeta(
 
 /****************************************************************************
 *
-*   rfind(const Node ** onode, storage_type * ovalue, const Node & node, storage_type key)
+*   rfind(
+*       const Node ** onode,
+*       storage_type * ovalue,
+*       const Node & node,
+*       storage_type key
+*   )
 *
 *   Find largest value <= pos, returns false if there are none.
 *
@@ -1752,7 +1960,12 @@ bool IntegralSet<T,A>::Impl::rfind(
     const Node & node,
     storage_type key
 ) {
-    using Fn = bool(const Node **, storage_type *, const Node & node, storage_type key);
+    using Fn = bool(
+        const Node ** onode,
+        storage_type * ovalue,
+        const Node & node,
+        storage_type key
+    );
     constinit static Fn * const functs[kNodeTypes] = {
         findEmpty,    // empty
         findFull,     // full
@@ -1855,7 +2068,12 @@ bool IntegralSet<T,A>::Impl::rfindMeta(
 
 /****************************************************************************
 *
-*   contig(const Node ** onode, storage_type * ovalue, const Node & node, storage_type key)
+*   contig(
+*       const Node ** onode,
+*       storage_type * ovalue,
+*       const Node & node,
+*       storage_type key
+*   )
 *
 *   Find largest value in segment contiguously connected with pos. Returns
 *   false if may extend into the next node.
@@ -1870,7 +2088,12 @@ bool IntegralSet<T,A>::Impl::contig(
     const Node & node,
     storage_type key
 ) {
-    using Fn = bool(const Node **, storage_type *, const Node & node, storage_type key);
+    using Fn = bool(
+        const Node ** onode,
+        storage_type * ovalue,
+        const Node & node,
+        storage_type key
+    );
     constinit static Fn * const functs[kNodeTypes] = {
         yes,            // empty
         contigFull,     // full
@@ -2012,7 +2235,12 @@ bool IntegralSet<T,A>::Impl::contigMeta(
 
 /****************************************************************************
 *
-*   rcontig(const Node ** onode, storage_type * ovalue, const Node & node, storage_type key)
+*   rcontig(
+*       const Node ** onode,
+*       storage_type * ovalue,
+*       const Node & node,
+*       storage_type key
+*   )
 *
 *   Find smallest value in segment contiguously connected with pos. Returns
 *   false if may extend into preceding node.
@@ -2027,7 +2255,12 @@ bool IntegralSet<T,A>::Impl::rcontig(
     const Node & node,
     storage_type key
 ) {
-    using Fn = bool(const Node **, storage_type *, const Node & node, storage_type key);
+    using Fn = bool(
+        const Node ** onode,
+        storage_type * ovalue,
+        const Node & node,
+        storage_type key
+    );
     constinit static Fn * const functs[kNodeTypes] = {
         yes,            // empty
         rcontigFull,     // full
@@ -2807,7 +3040,7 @@ bool IntegralSet<T,A>::Impl::isecMeta(const Node & left, const Node & right) {
 
 /****************************************************************************
 *
-*   insert(Node &, const Node &)
+*   insert(A *, Node &, const Node &)
 *
 ***/
 
@@ -3038,7 +3271,7 @@ NOT_FULL:
 
 /****************************************************************************
 *
-*   insert(Node &, Node &&)
+*   insert(A *, Node &, Node &&)
 *
 ***/
 
@@ -3120,7 +3353,7 @@ NOT_FULL:
 
 /****************************************************************************
 *
-*   erase(Node &, const Node &)
+*   erase(A* alloc, Node * left, const Node & right)
 *
 ***/
 
@@ -3351,7 +3584,7 @@ NOT_EMPTY:
 
 /****************************************************************************
 *
-*   intersect(Node &, const Node &)
+*   intersect(A * alloc, Node &, const Node &)
 *
 ***/
 
@@ -3554,7 +3787,7 @@ NOT_EMPTY:
 
 /****************************************************************************
 *
-*   intersect(Node &, Node &&)
+*   intersect(A * alloc, Node &, Node &&)
 *
 ***/
 
