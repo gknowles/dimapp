@@ -79,7 +79,7 @@ PARSE_NUMBER:
     } else if (radix == 16) {
         if (chars > 1
             && ptr[0] == '0'
-            && charToDigit(ptr[1]) == 33 // 'x'
+            && ptr[1] == 'x'
         ) {
             ptr += 2;
             base = ptr;
@@ -89,9 +89,7 @@ PARSE_NUMBER:
         if (chars < 2 || ptr[0] != '0') {
             radix = 10;
             goto BASE_10;
-        } else if (
-            charToDigit(ptr[1]) == 33 // 'x'
-        ) {
+        } else if (ptr[1] == 'x') {
             radix = 16;
             ptr += 2;
             base = ptr;
