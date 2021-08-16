@@ -985,6 +985,17 @@ void Dim::fileWrite(
 }
 
 //===========================================================================
+void Dim::fileWrite(
+    IFileWriteNotify * notify,
+    FileHandle f,
+    int64_t offset,
+    string_view data,
+    TaskQueueHandle hq
+) {
+    fileWrite(notify, f, offset, data.data(), data.size(), hq);
+}
+
+//===========================================================================
 size_t Dim::fileWriteWait(
     FileHandle f,
     int64_t off,
@@ -995,6 +1006,11 @@ size_t Dim::fileWriteWait(
     assert(file);
     FileWriter op(nullptr, s_hq);
     return op.start(file, const_cast<void *>(buf), bufLen, off, bufLen);
+}
+
+//===========================================================================
+size_t Dim::fileWriteWait(FileHandle f, int64_t offset, string_view data) {
+    return fileWriteWait(f, offset, data.data(), data.size());
 }
 
 //===========================================================================
@@ -1012,8 +1028,23 @@ void Dim::fileAppend(
 }
 
 //===========================================================================
+void Dim::fileAppend(
+    IFileWriteNotify * notify,
+    FileHandle f,
+    string_view data,
+    TaskQueueHandle hq
+) {
+    return fileAppend(notify, f, data.data(), data.size(), hq);
+}
+
+//===========================================================================
 size_t Dim::fileAppendWait(FileHandle f, const void * buf, size_t bufLen) {
     return fileWriteWait(f, 0xffff'ffff'ffff'ffff, buf, bufLen);
+}
+
+//===========================================================================
+size_t Dim::fileAppendWait(FileHandle f, string_view data) {
+    return fileAppendWait(f, data.data(), data.size());
 }
 
 

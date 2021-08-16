@@ -343,12 +343,20 @@ void fileWrite(
     size_t bufLen,
     TaskQueueHandle hq = {} // queue to notify
 );
+void fileWrite(
+    IFileWriteNotify * notify,
+    FileHandle f,
+    int64_t offset,
+    std::string_view data,
+    TaskQueueHandle hq = {} // queue to notify
+);
 size_t fileWriteWait(
     FileHandle f,
     int64_t offset,
     const void * buf,
     size_t bufLen
 );
+size_t fileWriteWait(FileHandle f, int64_t offset, std::string_view data);
 
 void fileAppend(
     IFileWriteNotify * notify,
@@ -357,7 +365,14 @@ void fileAppend(
     size_t bufLen,
     TaskQueueHandle hq = {} // queue to notify
 );
+void fileAppend(
+    IFileWriteNotify * notify,
+    FileHandle f,
+    std::string_view data,
+    TaskQueueHandle hq = {} // queue to notify
+);
 size_t fileAppendWait(FileHandle f, const void * buf, size_t bufLen);
+size_t fileAppendWait(FileHandle f, std::string_view data);
 
 void fileSaveBinary(
     IFileWriteNotify * notify,
