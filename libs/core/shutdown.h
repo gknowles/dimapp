@@ -65,8 +65,8 @@ void shutdownDelay();
 *
 ***/
 
-// FOR DEBUGGING ONLY. Completely disables the timer, allowing shutdown process
-// to run indefinitely. Intended to be controlled by user config.
+// FOR DEBUGGING ONLY. Completely disables the time limit, allowing shutdown
+// process to run forever. Intended to be controlled by user config.
 void shutdownDisableTimeout(bool disable = true);
 
 } // namespace
