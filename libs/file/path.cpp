@@ -247,6 +247,13 @@ Path::Path(string_view from)
 }
 
 //===========================================================================
+Path::Path(std::string && from)
+    : m_data(move(from))
+{
+    normalize(&m_data);
+}
+
+//===========================================================================
 Path::Path(const fs::path & from) {
     assign(from);
 }

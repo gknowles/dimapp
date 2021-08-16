@@ -39,6 +39,7 @@ public:
     explicit Path(const char from[]) : Path{std::string_view{from}} {}
     explicit Path(std::string_view from);
     explicit Path(const std::string & from) : Path{std::string_view{from}} {}
+    explicit Path(std::string && from);
     Path(const std::filesystem::path & from);
 
     Path & clear();
@@ -109,7 +110,8 @@ public:
     operator std::string_view() const { return m_data; }
 
     std::filesystem::path fsPath() const;
-    const std::string & str() const { return m_data; }
+    const std::string & str() const & { return m_data; }
+    std::string str() const && { return std::move(m_data); }
     std::string_view view() const { return m_data; }
     const char * c_str() const;
     size_t size() const;
