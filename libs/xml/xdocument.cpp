@@ -25,7 +25,8 @@ struct XAttrInfo : XAttr {
     XAttrInfo * next{};
 
     XAttrInfo(const char name[], const char value[])
-        : XAttr{name, value} {}
+        : XAttr{name, value}
+    {}
 };
 
 struct XNodeInfo : XNode {
@@ -34,7 +35,8 @@ struct XNodeInfo : XNode {
     XNodeInfo * next{};
 
     XNodeInfo(const char name[], const char value[])
-        : XNode{name, value} {}
+        : XNode{name, value}
+    {}
 };
 struct XElemInfo : XNodeInfo {
     XNodeInfo * firstElem{};
@@ -561,6 +563,70 @@ bool Dim::attrValue(
     if (auto xa = attr(elem, name))
         return xa->value == "true"sv || xa->value == "1"sv;
     return def;
+}
+
+//===========================================================================
+string Dim::attrValueSubst(
+    const XNode * elem,
+    string_view name,
+    const unordered_map<string, string> & vars,
+    const char def[]
+) {
+    if (auto xa = attr(elem, name))
+        return attrValueSubst(xa->value, vars);
+    return def;
+}
+
+//===========================================================================
+string Dim::attrValueSubst(
+    string_view value,
+    const unordered_map<string, string> & vars
+) {
+    string out;
+    auto base = value.data();
+    auto last = base + value.size();
+    auto ptr = base;
+
+IN_FIXED:
+    while (ptr < last) {
+        char ch = *ptr++;
+        switch (ch) {
+        case '{':
+        case '}':
+            if (ptr == last)
+                goto FINISHED;
+            if (*ptr == ch) {
+                out.append(base, ptr);
+                base = ++ptr;
+                continue;
+            }
+            if (ch == '}')
+                goto FINISHED;
+            out.append(base, ptr - 1);
+            base = ptr;
+            goto IN_VARIABLE;
+        }
+    }
+    goto FINISHED;
+
+IN_VARIABLE:
+    while (ptr < last) {
+        char ch = *ptr++;
+        switch (ch) {
+        case '{':
+            goto FINISHED;
+        case '}':
+            if (auto str = string(base, ptr - 1); vars.contains(str))
+                out.append(vars.at(str));
+            base = ptr;
+            goto IN_FIXED;
+        }
+    }
+    goto FINISHED;
+
+FINISHED:
+    out.append(base, last);
+    return out;
 }
 
 //===========================================================================
