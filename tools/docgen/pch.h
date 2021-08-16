@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2020.
+// Copyright Glen Knowles 2020 - 2021.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // pch.h - docgen
@@ -13,6 +13,7 @@
 #include "file/file.h"
 #include "xml/xml.h"
 #include "system/system.h"
+#include "tools/tools.h"
 
 // Standard headers
 #include <cstdio>

@@ -147,7 +147,7 @@ static vector<TocEntry> createToc(string * content) {
         auto num = ids[te.link] += 1;
         if (num > 1) {
             te.link += "--";
-            te.link += StrFrom<int>(num);
+            te.link += StrFrom<int>(num).view();
         }
         if (m[2].matched) {
             auto olen = m.length(2);
@@ -163,7 +163,7 @@ static vector<TocEntry> createToc(string * content) {
     }
 
     // If there's only one H1 and it's the first H*, remove it from the TOC
-    // and increase the bump up all other headers by one.
+    // and bump up all other headers by one.
     if (h1Count == 1 && out[0].depth == 1) {
         out.erase(out.begin());
         for (auto&& te : out)
@@ -603,7 +603,7 @@ static void genPage(GenPageInfo * info, unsigned phase = 0) {
                 info->fname + "#",
                 info->fname
             );
-            exec(
+            execTool(
                 [info, what](string && out) {
                     fileRemove(info->fname + "#");
                     if (out.empty())
@@ -627,7 +627,7 @@ static void genPage(GenPageInfo * info, unsigned phase = 0) {
     if (phase == what++) {
         // Convert markup into HTML fragment.
         auto cmdline = Cli::toCmdlineL("github-markup.bat", info->fname);
-        exec(
+        execTool(
             [info, what](string && out) {
                 fileRemove(info->fname);
                 if (appStopping()) {
@@ -973,8 +973,9 @@ CmdOpts::CmdOpts() {
     cli.command("site")
         .desc("Generate website files")
         .action(genCmd);
-    cli.opt(&cfgfile, "f file", "docgen.xml")
-        .desc("docgen site definition to process.");
+    cli.opt(&cfgfile, "c conf")
+        .desc("docgen site configuration to process. "
+            "(default: {GIT_ROOT}/docs/docgen.xml)");
 }
 
 //===========================================================================

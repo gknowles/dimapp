@@ -106,18 +106,6 @@ struct Config {
 *
 ***/
 
-void exec(
-    std::function<void(std::string&&)> fn,
-    std::string_view cmdline,
-    std::string_view errTitle,
-    const Dim::ExecOptions & opts = {}
-);
-std::string execWait(
-    std::string_view cmdline,
-    std::string_view errTitle,
-    const Dim::ExecOptions & opts = {}
-);
-
 void writeContent(
     std::function<void()> fn,
     std::string_view path,

@@ -167,7 +167,8 @@ static void genCppHeader(
     out->append("*\n")
         .append("* Test program for sample located at:\n")
         .append("*   File: ").append(srcfile).pushBack('\n')
-        .append("*   Line: ").append(StrFrom<size_t>(srcline)).pushBack('\n')
+        .append("*   Line: ").append(StrFrom<size_t>(srcline).view())
+            .pushBack('\n')
         .append("*\n")
         .append("***/\n\n");
 }
@@ -790,7 +791,7 @@ static string testPath(
     auto str = StrFrom<size_t>(line);
     seg.push_back('/');
     seg.append(digits10(info.lastProgLine) - size(str), '0');
-    seg.append(str);
+    seg.append(str.view());
     return seg;
 }
 
@@ -818,7 +819,7 @@ static void addOutputScript(
     content.append("; From '")
         .append(info->page.file)
         .append("', line ")
-        .append(StrFrom<unsigned>(test.runs.front().line))
+        .append(StrFrom<unsigned>(test.runs.front().line).view())
         .append("\n");
     content.append(";\n");
     auto len = content.size();
@@ -826,7 +827,7 @@ static void addOutputScript(
         if (run.cmdline.empty())
             continue;
         content.append("; Line ")
-            .append(StrFrom<unsigned>(run.line))
+            .append(StrFrom<unsigned>(run.line).view())
             .append("\n");
         for (auto&& cmt : run.comments)
             content.append("# ").append(cmt).append("\n");
@@ -1023,7 +1024,7 @@ static void runProgTests(ProgWork * work, unsigned phase) {
             s_perfCompile += 1;
             if (first) {
                 first = false;
-                auto out = execWait(
+                auto out = execToolWait(
                     cmdline,
                     title,
                     { .workingDir = workDir.str() }
@@ -1037,7 +1038,7 @@ static void runProgTests(ProgWork * work, unsigned phase) {
                 }
                 work->pendingWork -= 1;
             } else {
-                exec(
+                execTool(
                     [work, what](string && out) {
                         if (out.empty())
                             s_perfCompileFailed += 1;
@@ -1063,7 +1064,7 @@ static void runProgTests(ProgWork * work, unsigned phase) {
     }
     if (phase == what++) {
         while (--work->pendingWork) {
-            // Execute just the next waiting run.
+            // Execute just the next test waiting run.
             auto pos = work->test.runs.size() - work->pendingWork;
             auto & run = work->test.runs[pos];
             if (run.cmdline.empty())
@@ -1253,8 +1254,9 @@ CmdOpts::CmdOpts() {
     cli.command("test")
         .desc("Test code samples embedded in documentation files")
         .action(testCmd);
-    cli.opt(&cfgfile, "f file", "docgen.xml")
-        .desc("Site definition to process.");
+    cli.opt(&cfgfile, "c conf")
+        .desc("Site configuration to process. "
+            "(default: {GIT_ROOT}/docs/docgen.xml)");
     cli.opt(&layout, "layout", "default")
         .desc("Layout with files to process.");
 
