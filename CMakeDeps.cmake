@@ -73,6 +73,7 @@
 # libs/cppconf/dimcli_userconfig.h
 # libs/file/file.cpp
 # libs/file/file.h
+# libs/file/file.natvis
 # libs/file/filemon.h
 # libs/file/path.cpp
 # libs/file/path.h
@@ -141,6 +142,11 @@
 # libs/tls/tlsmsg.cpp
 # libs/tls/tlsrec.cpp
 # libs/tls/tlsrec.h
+# libs/tools/exec.cpp
+# libs/tools/git.cpp
+# libs/tools/pch.cpp
+# libs/tools/pch.h
+# libs/tools/tools.h
 # libs/win/appint.h
 # libs/win/pch.cpp
 # libs/win/pch.h
