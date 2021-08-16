@@ -389,7 +389,7 @@ static void addSidRow(IJBuilder * out, SID_AND_ATTRIBUTES & sa) {
     }
     if (auto unknown = ~found & sa.Attributes) {
         auto unk = "UNKNOWN("s;
-        unk += StrFrom<unsigned>(unknown);
+        unk += StrFrom<unsigned>(unknown).view();
         unk += ')';
         out->value(unk);
     }
@@ -400,7 +400,7 @@ static void addSidRow(IJBuilder * out, SID_AND_ATTRIBUTES & sa) {
         out->member("type", name);
     } else {
         auto unk = "UNKNOWN("s;
-        unk += StrFrom<underlying_type_t<decltype(use)>>(use);
+        unk += StrFrom<underlying_type_t<decltype(use)>>(use).view();
         unk += ')';
         out->member("type", unk);
     }

@@ -302,7 +302,7 @@ int Dim::appRun(IAppNotify * app, int argc, char * argv[], AppFlags flags) {
     s_appBaseName = exeName.stem();
     s_appName = s_appBaseName;
     if (s_appIndex > 1)
-        s_appName += StrFrom<unsigned>(s_appIndex);
+        s_appName += StrFrom<unsigned>(s_appIndex).view();
     s_binDir = exeName.removeFilename();
     if ((flags & fAppWithFiles) && s_binDir.stem() == "bin") {
         s_rootDir = s_binDir.parentPath();
@@ -343,8 +343,8 @@ int Dim::appRun(IAppNotify * app, int argc, char * argv[], AppFlags flags) {
     // No external effects should happen after this point. Any sockets, pipes,
     // files, or other shared resources MUST ALREADY be closed. When running
     // as a service the SERVICE_STOPPED status has been reported and the
-    // Service Control Manager may have already suspended us indefinitely as
-    // it spun up another instance of the service.
+    // Service Control Manager may have already stopped handling requests from
+    // us in favor of a new instance of the service.
     //-----------------------------------------------------------------------
 
     iTimerDestroy();

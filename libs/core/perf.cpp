@@ -92,18 +92,18 @@ template <typename T>
 static void valueToString(string * out, T val, bool pretty) {
     auto str = StrFrom<T>{val};
     if (!pretty) {
-        *out = str;
+        *out = str.view();
         return;
     }
 
-    auto v = string_view{str};
+    auto v = str.view();
     auto num = v.size();
     auto ptr = v.data();
     auto eptr = ptr + num;
     auto ecomma = eptr;
     if constexpr (is_same_v<T, float>) {
         if (v.find('e') != string_view::npos) {
-            *out = str;
+            *out = str.view();
             return;
         }
         if (auto pos = v.find('.'); pos != string_view::npos) {

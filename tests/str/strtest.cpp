@@ -83,20 +83,20 @@ static void testIntegralStr() {
 
     //-----------------------------------------------------------------------
     // unsigned
-    EXPECT(StrFrom<unsigned>(1234) == "1234"sv);
-    EXPECT(StrFrom<unsigned>(0xffff'ffff) == "4294967295"sv);
-    EXPECT(StrFrom<unsigned>(3) == "3"sv);
+    EXPECT(StrFrom<unsigned>(1234).view() == "1234"sv);
+    EXPECT(StrFrom<unsigned>(0xffff'ffff).view() == "4294967295"sv);
+    EXPECT(StrFrom<unsigned>(3).view() == "3"sv);
 
     //-----------------------------------------------------------------------
     // char
-    EXPECT(StrFrom<char>(1) == "1"sv);
-    EXPECT(StrFrom<char>(127) == "127"sv);
-    EXPECT(StrFrom<char>(-3) == "-3"sv);
-    EXPECT(StrFrom<char>(-128) == "-128"sv);
+    EXPECT(StrFrom<char>(1).view() == "1"sv);
+    EXPECT(StrFrom<char>(127).view() == "127"sv);
+    EXPECT(StrFrom<char>(-3).view() == "-3"sv);
+    EXPECT(StrFrom<char>(-128).view() == "-128"sv);
 
     //-----------------------------------------------------------------------
     // double
-    EXPECT(StrFrom<double>(-0.101234567890123456789e+101) ==
+    EXPECT(StrFrom<double>(-0.101234567890123456789e+101).view() ==
         "-1.0123456789012345e+100"sv);
 
     //-----------------------------------------------------------------------

@@ -68,7 +68,7 @@ static string typeName(
     name += type.name;
     if (auto num = ++info->nameCounts[type.name]; num > 1) {
         name += '-';
-        name += StrFrom<unsigned>(num);
+        name += StrFrom<unsigned>(num).view();
     }
     (*names)[&type] = name;
     return name;

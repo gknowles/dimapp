@@ -64,7 +64,7 @@ public:
     StrFrom();
     explicit StrFrom(T val) { set(val); }
     std::string_view set(T val);
-    operator std::string_view() const;
+    std::string_view view() const;
     const char * c_str() const { return m_data; }
 
     size_t size() const;
@@ -76,7 +76,7 @@ private:
         std::ostream & os,
         const StrFrom & str
     ) {
-        os << (std::string_view) str;
+        os << str.view();
         return os;
     }
 
@@ -105,13 +105,13 @@ std::string_view StrFrom<T>::set(T val) {
     assert(used < sizeof m_data);
     m_data[used] = 0;
     m_data[sizeof m_data - 1] = (char) (sizeof m_data - used - 1);
-    return *this;
+    return view();
 }
 
 //===========================================================================
 template <typename T>
 requires std::is_arithmetic_v<T>
-StrFrom<T>::operator std::string_view() const {
+std::string_view StrFrom<T>::view() const {
     return std::string_view(m_data, size());
 }
 

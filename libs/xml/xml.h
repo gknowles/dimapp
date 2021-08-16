@@ -84,7 +84,7 @@ public:
             return out.text(std::string_view(&val, 1));
         } else if constexpr (std::is_arithmetic_v<T>) {
             Dim::StrFrom<T> tmp(val);
-            return out.text(tmp);
+            return out.text(tmp.view());
         } else if constexpr (std::is_same_v<T, ElemNameProxy>) {
             return val.value.empty()
                 ? out.start(val.name)
@@ -356,6 +356,17 @@ bool attrValue(
     const XNode * elem,
     std::string_view name,
     bool def
+);
+
+std::string attrValueSubst(
+    const XNode * elem,
+    std::string_view name,
+    const std::unordered_map<std::string, std::string> & vars,
+    const char def[] = nullptr
+);
+std::string attrValueSubst(
+    std::string_view value,
+    const std::unordered_map<std::string, std::string> & vars
 );
 
 //===========================================================================

@@ -243,7 +243,7 @@ void Dim::winCrashInitialize() {
         }
         s_crashFile = crashDir;
         s_crashFile /= "crash";
-        s_crashFile += StrFrom<time_t>(timeToUnix(timeNow()));
+        s_crashFile += StrFrom<time_t>(timeToUnix(timeNow())).view();
         s_crashFile += ".dmp";
         s_crashFileW = toWstring(s_crashFile);
     }
