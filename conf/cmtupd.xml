@@ -1,0 +1,65 @@
+﻿<!--
+Copyright Glen Knowles 2020 - 2021.
+Distributed under the Boost Software License, Version 1.0.
+
+Auto-generated variables:
+    %CurrentYear: current year, 4-digits
+    %CommitYear: year file was last committed, 4-digits
+
+Lines match by Match/@regex are replaced with @replace if the file's
+$CommitYear is greater than LastYear.
+
+NOTE: This file is just aspirational. Configuration rules are currently hard
+      coded constants in the code.
+-->
+<Comments>
+  <Rule name="Copyright">
+    <Var name="Owner" value="Glen Knowles"/>
+    <Match regex="^(.*)Copyright (.*) (\d\d\d\d)(?: - (\d\d\d\d))?\.$"
+        replace="{Prefix}Copyright {Owner} {FirstYear} - {$CurrentYear}.">
+      <Capture const="{Prefix}"/>
+      <Capture const="{Owner}"/>
+      <Capture var="FirstYear"/>
+      <Capture var="LastYear" default="{FirstYear}"/>
+    </Match>
+    <Group>
+      <File regex="CMakeLists\.txt"/>
+      <File regex=".*\.cmake"/>
+      <File regex=".*\.yaml"/>
+      <File regex=".*\.yml"/>
+      <Exclude regex="CMakeDeps\.cmake"/>
+      <Var name="Prefix" value="# "/>
+    </Group>
+    <Group>
+      <File regex=".*\.adoc"/>
+      <File regex=".*\.md"/>
+      <File regex=".*\.natvis"/> <!-- xml -->
+      <File regex=".*\.xml"/>
+      <File regex=".*\.xml\.sample"/>
+      <File regex=".*\.xsd"/>
+      <Exclude regex="tools/docgen/schema\.xsd"/>
+      <Exclude regex="tools/xsdgen/schema\.xsd"/>
+      <Var name="Prefix" value=""/>
+    </Group>
+    <Group>
+      <File regex=".*\.cpp"/>
+      <File regex=".*\.h"/>
+      <Exclude regex="libs/core/hash_crc32c\.cpp"/>
+      <Exclude regex="libs/json/jsonparse\.cpp"/>
+      <Exclude regex="libs/json/jsonparseint\.h"/>
+      <Exclude regex="libs/xml/xmlbaseparse\.cpp"/>
+      <Exclude regex="libs/xml/xmlbaseparse\.h"/>
+      <Exclude regex="tools/pargen/abnfparse\.cpp"/>
+      <Exclude regex="tools/pargen/abnfparse\.h"/>
+      <Var name="Prefix" value="// "/>
+    </Group>
+    <Group>
+      <File regex=".*\.abnf"/>
+      <Var name="Prefix" value="; "/>
+    </Group>
+    <Group>
+      <File regex=".*\.bat"/>
+      <Var name="Prefix" value=":: "/>
+    </Group>
+  </Rule>
+</Comments>
