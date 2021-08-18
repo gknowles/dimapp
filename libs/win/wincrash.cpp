@@ -124,7 +124,7 @@ static void writeDump() {
 
 //===========================================================================
 extern "C" void abortHandler(int sig) {
-    printf("Abnormal abort, sig %d\n", sig);
+    printf("\nAbnormal abort, sig %d\n", sig);
     scoped_lock lk{s_mut};
 
     if (IsDebuggerPresent())

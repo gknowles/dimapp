@@ -87,8 +87,8 @@ extern "C" static int attachMemLeakHandle() {
 //      Z   reserved for end of segments sentinel
 //
 // Segments within a terminators category are executed in alphabetical order,
-// XTU is a termination segment that runs after the compiler and library
-// segments have been terminated.
+// XTU is the user termination segment which runs after the compiler and
+// library segments have been terminated.
 
 #pragma section(".CRT$XTU", long, read)
 #pragma data_seg(push)

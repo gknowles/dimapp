@@ -53,7 +53,8 @@ struct ExecOptions {
     //
     // The working directory for one or more drives can be set using special
     // environment variables named after the drive. For example, setting "=C"
-    // sets the C drive's working directory for the child process.
+    // in the environment sets the C drive's working directory for the child
+    // process.
     //
     // NOTE: Window's docs are unclear, maybe it's "=C:" instead of "=C" ?
     //       Please remove this note when verified!
