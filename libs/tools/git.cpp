@@ -42,10 +42,15 @@ bool Dim::gitLoadConfig(
     if (!pathFromCurrentDir.empty()) {
         *configFile = pathFromCurrentDir;
     } else {
-        *gitRoot = gitFindRoot(Path(envExecPath()).parentPath());
+        *gitRoot = gitFindRoot(fileGetCurrentDir());
         *configFile = Path(fallbackPathFromGitRoot).resolve(*gitRoot);
     }
     *gitRoot = gitFindRoot(Path(*configFile).parentPath());
+    if (!fileExists(*configFile)) {
+        auto path = Path(envExecPath()).removeFilename()
+            / Path(*configFile).filename();
+        *configFile = move(path);
+    }
     if (!fileLoadBinaryWait(content, *configFile)) {
         appSignalUsageError(EX_DATAERR);
         configFile->clear();
