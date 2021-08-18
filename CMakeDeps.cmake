@@ -6,6 +6,7 @@
 # conf/app.xml
 # conf/app.xml.adoc
 # conf/app.xml.sample
+# conf/cmtupd.xml
 # configure.bat
 # libs/app/app.cpp
 # libs/app/app.h
@@ -254,7 +255,6 @@
 # tests/xml/xmltest.cpp
 # tools/cmtupd/README.adoc
 # tools/cmtupd/cmtupd.cpp
-# tools/cmtupd/cmtupd.xml
 # tools/cmtupd/pch.cpp
 # tools/cmtupd/pch.h
 # tools/docgen/README.adoc

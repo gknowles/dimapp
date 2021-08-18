@@ -237,7 +237,7 @@ ModelManifest.xml
 .fake/
 
 # Local build target configuration
-conf/*.xml
+conf/app.xml
 
 # Local target application data
 crash/
