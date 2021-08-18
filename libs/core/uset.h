@@ -195,7 +195,7 @@ private:
     void iInsert(const value_type * first, const value_type * last);
 
     Node m_node;
-    allocator_type m_alloc;
+    [[no_unique_address]] allocator_type m_alloc;
 };
 
 //===========================================================================
