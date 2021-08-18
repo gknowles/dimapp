@@ -11,6 +11,7 @@
 
 #include <functional>
 #include <string_view>
+#include <vector>
 
 
 namespace Dim {
@@ -23,18 +24,23 @@ namespace Dim {
 *   Warnings are logged, and errors are both logged and trigger a call to
 *   appSignalShutdown(EX_IOERR).
 *
+*   An error is defined as a failure to launch or an exit code that is not
+*   contained in the 'codes' argument.
+*
 ***/
 
 void execTool(
     std::function<void(std::string&&)> fn,
     std::string_view cmdline,
     std::string_view errTitle,
-    const ExecOptions & opts = {}
+    const ExecOptions & opts = {},
+    const std::vector<int> & codes = {0}
 );
 std::string execToolWait(
     std::string_view cmdline,
     std::string_view errTitle,
-    const ExecOptions & opts = {}
+    const ExecOptions & opts = {},
+    const std::vector<int> & codes = {0}
 );
 
 

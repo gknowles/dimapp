@@ -20,12 +20,14 @@ void Dim::execTool(
     function<void(string&&)> fn,
     string_view cmdline,
     string_view errTitle,
-    const ExecOptions & opts
+    const ExecOptions & opts,
+    const vector<int> & codes
 ) {
     struct Exec : IExecNotify {
         function<void(string&&)> fn;
         string cmdline;
         string errTitle;
+        vector<int> codes;
 
         void onExecComplete(bool canceled, int exitCode) override {
             if (canceled) {
@@ -35,9 +37,12 @@ void Dim::execTool(
                 logMsgInfo() << " - execProgram timeout exceeded.";
                 appSignalShutdown(EX_IOERR);
                 fn({});
-            } else if (exitCode) {
+            } else if (
+                find(codes.begin(), codes.end(), exitCode) == codes.end()
+            ) {
                 logMsgError() << "Error: " << errTitle;
                 logMsgInfo() << " - " << cmdline;
+                logMsgWarn() << " - exit code: " << exitCode;
                 vector<string_view> lines;
                 auto tmp = toString(m_err);
                 split(&lines, tmp, '\n');
@@ -70,6 +75,7 @@ void Dim::execTool(
     notify->fn = fn;
     notify->cmdline = cmdline;
     notify->errTitle = errTitle;
+    notify->codes = codes;
     auto tmpOpts = opts;
     if (tmpOpts.concurrency == -1)
         tmpOpts.concurrency = envProcessors();
@@ -80,7 +86,8 @@ void Dim::execTool(
 string Dim::execToolWait(
     string_view cmdline,
     string_view errTitle,
-    const ExecOptions & opts
+    const ExecOptions & opts,
+    const vector<int> & codes
 ) {
     string out;
     mutex mut;
@@ -100,7 +107,8 @@ string Dim::execToolWait(
         },
         cmdline,
         errTitle,
-        tmpOpts
+        tmpOpts,
+        codes
     );
     unique_lock lk{mut};
     while (!done)
