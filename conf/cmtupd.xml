@@ -15,7 +15,7 @@ NOTE: This file is just aspirational. Configuration rules are currently hard
 <Comments>
   <Rule name="Copyright">
     <Var name="Owner" value="Glen Knowles"/>
-    <Match regex="^(.*)Copyright (.*) (\d\d\d\d)(?: - (\d\d\d\d))?\.$"
+    <Match regex="([^\n]*)Copyright (.*?) (\d\d\d\d)(?: - (\d\d\d\d))?\."
         replace="{Prefix}Copyright {Owner} {FirstYear} - {$CurrentYear}.">
       <Capture const="{Prefix}"/>
       <Capture const="{Owner}"/>
