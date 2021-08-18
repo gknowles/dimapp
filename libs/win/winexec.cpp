@@ -311,6 +311,12 @@ void ExecProgram::exec() {
         { kStdOut, name + ".out", Pipe::fReadOnly },
         { kStdErr, name + ".err", Pipe::fReadOnly },
     };
+
+    // First set all pipes to kRunStarting (not kRunStopped), so that the
+    // following transition to stopped can be unambiguously detected.
+    for (auto&& p : pipes)
+        m_pipes[p.strm].m_mode = kRunStarting;
+
     for (auto && p : pipes) {
         auto & child = m_pipes[p.strm].m_child;
         if (!createPipe(&child, p.strm, p.name, p.oflags)) {
@@ -529,6 +535,7 @@ void ExecProgram::onJobExit() {
         m_canceled = false;
         m_exitCode = rc;
     } else {
+        WinError err;
         m_canceled = true;
         m_exitCode = -1;
     }
