@@ -13,6 +13,7 @@
 #include "file/file.h"
 #include "net/net.h"
 #include "system/system.h"
+#include "tools/tools.h"
 
 // Standard headers
 #include <cstdio>
@@ -21,3 +22,4 @@
 #include <iostream>
 #include <regex>
 #include <unordered_set>
+#include <variant>

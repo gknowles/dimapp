@@ -15,42 +15,77 @@ using namespace Dim;
 *
 ***/
 
-const char kVersion[] = "1.0";
-const char kCopyrightOwner[] = "Glen Knowles";
+const char kVersion[] = "1.1";
 
+const char kVarPrefix[] = "Prefix";
+const char kVarCommitYear[] = "$CommitYear";
+const char kVarCurrentYear[] = "$CurrentYear";
+const char kVarLastYear[] = "LastYear";
+
+namespace {
+
+struct Regex {
+    regex re;
+    string pattern;
+};
+
+struct CaptureConst {
+    string value;
+};
+struct CaptureVar {
+    string name;
+    string defaultValue;
+};
+struct MatchDef {
+    Regex match;
+    string replace;
+    vector<variant<CaptureConst, CaptureVar>> captures;
+};
+struct Group {
+    unordered_map<string, string> vars;
+    vector<Regex> fileNames;
+    vector<Regex> fileExcludes;
+    vector<MatchDef> matchDefs;
+};
 struct Rule {
-    string text;
-    regex pattern;
-    string prefix;
-    vector<string> formats;
-
-    Rule(string text, string_view prefix);
+    string name;
+    vector<MatchDef> matchDefs;
+    vector<Group> groups;
 };
-static Rule s_rules[] = {
-    { "CMakeLists.txt", "# " },
-    { ".*\\.cmake", "# " },
-    { ".*\\.yaml", "# " },
-    { ".*\\.yml", "# " },
-
-    { ".*\\.adoc", "" },
-    { ".*\\.md", "" },
-    { ".*\\.natvis", "" },     // xml
-    { ".*\\.xml", "" },
-    { ".*\\.xml.sample", "" },
-    { ".*\\.xsd", "" },
-
-    { ".*\\.cpp", "// " },
-    { ".*\\.h", "// " },
-
-    { ".*\\.abnf", "; " },
-
-    { ".*\\.bat", ":: " },
+struct Config {
+    Path configFile;
+    Path gitRoot;
+    vector<Rule> rules;
 };
 
-struct CopyrightYear {
-    string_view lastYear;
-    int format = 0;
+struct Result {
+    unsigned matched = 0;
+    unsigned changed = 0;
+    unsigned newer = 0;
+    string content;
 };
+
+} // namespace
+
+
+/****************************************************************************
+*
+*   CmdOpts
+*
+***/
+
+struct CmdOpts {
+    vector<string> files;
+    string configFile;
+
+    bool check;
+    bool update;
+    bool show;
+    int verbose;
+
+    CmdOpts();
+};
+static CmdOpts s_opts;
 
 
 /****************************************************************************
@@ -59,15 +94,224 @@ struct CopyrightYear {
 *
 ***/
 
-static bool s_update;
-static int s_verbose;
+static auto & s_perfSelectedFiles = uperf("cmtupd files selected");
+static auto & s_perfScannedFiles = uperf("cmtupd files scanned");
+static auto & s_perfUnfinishedFiles = uperf("cmtupd files unfinished");
+static auto & s_perfQueuedFiles = uperf("cmtupd files (queued)");
+static auto & s_perfMatchedFiles = uperf("cmtupd files matched");
+static auto & s_perfComments = uperf("cmtupd comments matched");
+static auto & s_perfUpdatedComments = uperf("cmtupd comments updated");
+static auto & s_perfUpdatedFiles = uperf("cmtupd files updated");
+static auto & s_perfNewerFiles = uperf("cmtupd files failed (future)");
 
-static int s_files;             // files scanned for matching comments
-static int s_matchedFiles;      // scanned files with matching comments
-static int s_comments;          // total matching comments
-static int s_updatedComments;   // comments that were (or would be) updated
-static int s_updatedFiles;      // files with updated comments
-static int s_newerFiles;       // files with comments dated after last commit
+static mutex s_progressMut;
+static string s_currentYear = []() {
+    tm tm;
+    timeToDesc(&tm, timeNow());
+    return to_string(tm.tm_year + 1900);
+}();
+
+
+/****************************************************************************
+*
+*   Helpers
+*
+***/
+
+thread_local string s_compilePattern;
+thread_local string s_compileDetailMsg;
+
+//===========================================================================
+static void compileRegex(
+    Regex * regex,
+    string_view dmsg,
+    const string & pattern,
+    regex::flag_type flags = regex_constants::ECMAScript
+) {
+    s_compilePattern = pattern;
+    s_compileDetailMsg = dmsg;
+    regex->pattern = pattern;
+    auto prev = set_terminate([]() -> void {
+        logMsgError() << "Invalid regular expression '"
+            << s_compilePattern << "'";
+        logMsgInfo() << s_compileDetailMsg;
+        _CrtSetDbgFlag(0);
+        _exit(EX_DATAERR);
+    });
+    regex->re.assign(pattern, flags);
+    set_terminate(prev);
+}
+
+
+/****************************************************************************
+*
+*   Load configuration
+*
+***/
+
+//===========================================================================
+static bool loadVars(unordered_map<string, string> * out, XNode * root) {
+    for (auto&& xvar : elems(root, "Var")) {
+        auto name = attrValue(&xvar, "name");
+        if (!name) {
+            logMsgError() << "Invalid Var element, must have @name";
+            appSignalShutdown(EX_DATAERR);
+            return false;
+        }
+        if (*name == '$') {
+            logMsgError() << "Invalid Var @name '" << name << "', names "
+                "starting with '$' are reserved for internally generated "
+                "values.";
+        }
+        (*out)[name] = attrValue(&xvar, "value", "");
+    }
+    return true;
+}
+
+//===========================================================================
+static bool loadMatches(Rule * out, XNode * root) {
+    for (auto&& xmatch : elems(root, "Match")) {
+        auto & match = out->matchDefs.emplace_back();
+        compileRegex(
+            &match.match,
+            "Found in Rule/Match/@regex attribute",
+            attrValue(&xmatch, "regex")
+        );
+        match.replace = attrValue(&xmatch, "replace", "");
+        for (auto&& xcap : elems(&xmatch, "Capture")) {
+            auto & cap = match.captures.emplace_back();
+            if (auto cval = attrValue(&xcap, "const")) {
+                cap = CaptureConst(cval);
+            } else {
+                auto cvar = attrValue(&xcap, "var");
+                auto cdef = attrValue(&xcap, "default", "");
+                if (!cvar) {
+                    logMsgError() << "Invalid Rule/Match/Capture element, "
+                        "must have @const or @var";
+                    appSignalShutdown(EX_DATAERR);
+                    return false;
+                }
+                cap = CaptureVar(cvar, cdef);
+            }
+        }
+    }
+    return true;
+}
+
+//===========================================================================
+static bool loadFileNames(Group * out, XNode * root) {
+    for (auto&& xfile : elems(root, "File")) {
+        auto & file = out->fileNames.emplace_back();
+        if (auto re = attrValue(&xfile, "regex")) {
+            compileRegex(
+                &file,
+                "Found in Rule/Group/File element",
+                re
+            );
+        } else {
+            logMsgError() << "Invalid Rule/Group/File element, "
+                "must have @regex";
+            appSignalShutdown(EX_DATAERR);
+            return false;
+        }
+    }
+    return true;
+}
+
+//===========================================================================
+static bool loadFileExcludes(Group * out, XNode * root) {
+    for (auto&& xexcl : elems(root, "Exclude")) {
+        auto & excl = out->fileExcludes.emplace_back();
+        if (auto re = attrValue(&xexcl, "regex")) {
+            compileRegex(
+                &excl,
+                "Found in Rule/Group/Exclude element",
+                re
+            );
+        } else {
+            logMsgError() << "Invalid Rule/Group/Exclude element, "
+                "must have @regex";
+            appSignalShutdown(EX_DATAERR);
+            return false;
+        }
+    }
+    return true;
+}
+
+//===========================================================================
+static bool loadGroups(Rule * out, XNode * root) {
+    for (auto&& xgroup : elems(root, "Group")) {
+        auto & group = out->groups.emplace_back();
+        group.vars[kVarCurrentYear] = s_currentYear;
+        if (!loadVars(&group.vars, &xgroup)
+            || !loadFileNames(&group, &xgroup)
+            || !loadFileExcludes(&group, &xgroup)
+        ) {
+            return false;
+        }
+        if (group.fileNames.empty())
+            out->groups.pop_back();
+    }
+    return true;
+}
+
+//===========================================================================
+static bool loadRules(Config * out, XNode * root) {
+    for (auto&& xrule : elems(root, "Rule")) {
+        auto & rule = out->rules.emplace_back();
+        rule.name = attrValue(&xrule, "name");
+        unordered_map<string, string> vars;
+        if (!loadVars(&vars, &xrule)
+            || !loadMatches(&rule, &xrule)
+            || !loadGroups(&rule, &xrule)
+        ) {
+            return false;
+        }
+        for (auto&& grp : rule.groups) {
+            grp.vars.insert(vars.begin(), vars.end());
+            grp.vars[kVarPrefix]; // make sure kVarPrefix exists
+            for (auto&& rmat : rule.matchDefs) {
+                grp.matchDefs.push_back(rmat);
+                auto & mat = grp.matchDefs.back();
+                for (auto&& cap : mat.captures) {
+                    if (auto ccon = get_if<CaptureConst>(&cap))
+                        ccon->value = attrValueSubst(ccon->value, grp.vars);
+                }
+            }
+        }
+    }
+    return true;
+}
+
+//===========================================================================
+unique_ptr<Config> loadConfig(string_view cfgfile) {
+    string configFile;
+    string gitRoot;
+    string content;
+    if (!gitLoadConfig(
+        &content,
+        &configFile,
+        &gitRoot,
+        cfgfile,
+        "conf/cmtupd.xml"
+    )) {
+        return {};
+    }
+
+    XDocument doc;
+    auto root = doc.parse(content.data(), configFile);
+    if (!root || doc.errmsg()) {
+        logParseError("Parsing failed", configFile, doc.errpos(), content);
+        appSignalShutdown(EX_DATAERR);
+        return {};
+    }
+    auto out = make_unique<Config>();
+    out->configFile = fileAbsolutePath(configFile);
+    out->gitRoot = gitRoot;
+    if (!loadRules(out.get(), root))
+        return {};
+    return out;
+}
 
 
 /****************************************************************************
@@ -77,48 +321,48 @@ static int s_newerFiles;       // files with comments dated after last commit
 ***/
 
 //===========================================================================
-static Rule * findRule(const string & fname) {
-    for (auto&& rule : s_rules) {
-        if (regex_match(fname, rule.pattern))
-            return &rule;
+static const Group * findGroup(const Rule & rule, const string & fname) {
+    for (auto&& grp : rule.groups) {
+        bool found = false;
+        for (auto&& fn : grp.fileNames) {
+            if (regex_match(fname, fn.re)) {
+                found = true;
+                break;
+            }
+        }
+        if (found) {
+            for (auto&& ex : grp.fileExcludes) {
+                if (regex_match(fname, ex.re)) {
+                    found = false;
+                    break;
+                }
+            }
+            if (found)
+                return &grp;
+        }
     }
     return nullptr;
 }
 
 //===========================================================================
-static bool findYear(
-    CopyrightYear * out,
-    const string & line,
-    const Rule & rule
+static vector<const Group *> findGroups(
+    const Config & cfg,
+    string_view fnameRaw
 ) {
-    int spos = 0, epos = 0;
-    int len = 0;
-    unsigned year = 0;
-    out->format = 0;
-    for (auto&& fmt : rule.formats) {
-        sscanf_s(line.c_str(), fmt.c_str(), &spos, &year, &epos, &len);
-        if (len == line.size())
-            break;
-        out->format += 1;
+    auto fname = string(fnameRaw);
+    vector<const Group *> out;
+    for (auto&& rule : cfg.rules) {
+        if (auto grp = findGroup(rule, fname))
+            out.push_back(grp);
     }
-    if (len != line.size() || year == 0) {
-        *out = {};
-        return false;
-    }
-    out->lastYear = string_view(line.data() + spos, epos - spos);
-    return true;
+    return out;
 }
 
 //===========================================================================
 static bool replaceFile(
     string_view path,
-    const vector<string_view> & content
+    const string & content
 ) {
-    CharBuf buf;
-    for (auto&& line : content) {
-        buf.append(line);
-        buf.append("\r\n");
-    }
     auto f = fileOpen(
         path,
         File::fCreat | File::fTrunc | File::fReadWrite | File::fBlocking
@@ -128,13 +372,11 @@ static bool replaceFile(
         appSignalShutdown(EX_IOERR);
         return false;
     }
-    for (auto&& data : buf.views()) {
-        if (!fileAppendWait(f, data.data(), data.size())) {
-            logMsgError() << path << ": unable to write.";
-            appSignalShutdown(EX_IOERR);
-            fileClose(f);
-            return false;
-        }
+    if (!fileAppendWait(f, content)) {
+        logMsgError() << path << ": unable to write.";
+        appSignalShutdown(EX_IOERR);
+        fileClose(f);
+        return false;
     }
     fileClose(f);
     return true;
@@ -143,20 +385,28 @@ static bool replaceFile(
 
 /****************************************************************************
 *
-*   Rule
+*   CmdOpts
 *
 ***/
 
 //===========================================================================
-Rule::Rule(string text, string_view prefix)
-    : text(text)
-    , pattern(text)
-    , prefix(prefix)
-{
-    this->formats = {
-        this->prefix + "Copyright " + kCopyrightOwner + " %n%u%n.%n",
-        this->prefix + "Copyright " + kCopyrightOwner + " %*u - %n%u%n.%n",
-    };
+CmdOpts::CmdOpts() {
+    Cli cli;
+    cli.optVec<string>(&files, "[FILE]")
+        .desc("Files to search (via git ls-files) for updatable comments.");
+    cli.opt<string>(&configFile, "c conf")
+        .desc("Configuration to process. "
+            "(default: {GIT_ROOT}/conf/cmtupd.xml)");
+    cli.opt<bool>(&check, "c check").desc("Check for updatable comments.");
+    cli.opt<bool>(&update, "u update").desc("Update found comments.");
+    cli.opt<bool>(&show, "s show").desc("Show configuration being executed.");
+    cli.opt<bool>("v verbose.")
+        .desc("Show status of all matched files. Use twice to also show "
+            "excluded files.")
+        .check([this](auto&, auto&, auto & val) {
+            verbose += (val == "1");
+            return true;
+        });
 }
 
 
@@ -167,176 +417,304 @@ Rule::Rule(string text, string_view prefix)
 ***/
 
 //===========================================================================
-static void app(int argc, char *argv[]) {
-    Cli cli;
-    cli.header("cmdupd v"s + kVersion + " (" __DATE__ ")")
-        .helpNoArgs()
-        .versionOpt(kVersion, "cmdupd");
-    auto & files = cli.optVec<string>("[FILE]")
-        .desc("Files to search (via git ls-files) for updatable comments.");
-    cli.opt<bool>(&s_update, "u update.").desc("Update found comments.");
-    cli.opt<bool>("v verbose.")
-        .desc("Show status of all matched files.")
-        .check([](auto&, auto&, auto & val) {
-            s_verbose += (val == "1");
-            return true;
-        });
+static void showConfig(const Config * cfg) {
     ostringstream os;
-    os << "Known file patterns and corresponding line formats used to find "
-        "comments to update:\n";
-    for (auto&& rule : s_rules) {
-        os << "  " << rule.text
-            << "\t" << rule.formats[0] << "\n";
-    }
-    cli.footer(os.str());
-    if (!cli.parse(argc, argv))
-        return appSignalUsageError();
-
-    vector<string> args = { "git", "ls-files" };
-    args.insert(args.end(), files->begin(), files->end());
-    ExecResult res;
-    execProgramWait(&res, args);
-    if (res.exitCode) {
-        logMsgError() << res.err.view();
-        return appSignalShutdown(EX_OSERR);
-    }
-    auto rawNames = toString(res.out);
-    vector<string_view> fnames;
-    split(&fnames, rawNames, '\n');
-
-    vector<string> dateArgs = { "git", "log", "--format=%aI", "-n1", "" };
-    for (auto&& f : fnames) {
-        f = trim(f);
-        if (f.empty())
-            continue;
-        auto fname = (string) Path(f).filename();
-        auto rule = findRule(fname);
-        if (!rule) {
-            if (s_verbose > 1)
-                cout << f << "... skipped" << endl;
-            continue;
-        }
-
-        s_files += 1;
-        string content;
-        if (!fileLoadBinaryWait(&content, f))
-            break;
-        vector<string_view> lines;
-        split(&lines, content, '\n');
-        if (!lines.empty() && lines.back().empty())
-            lines.pop_back();
-
-        forward_list<string> changedLines;
-        auto newerLines = 0;
-        string commitYear;
-        for (auto&& line : lines) {
-            line = rtrim(line);
-            auto tmp = string(line);
-            CopyrightYear cdate;
-            if (!findYear(&cdate, tmp, *rule))
-                continue;
-
-            s_comments += 1;
-            if (commitYear.empty()) {
-                dateArgs.back() = f;
-                execProgramWait(&res, dateArgs);
-                TimePoint commitTime;
-                tm tm;
-                if (!timeParse8601(&commitTime, trim(res.out.view()))
-                    || !timeToDesc(&tm, commitTime)
-                ) {
-                    logMsgError() << "No commit time for '" << f << "'";
-                    return appSignalShutdown(EX_OSERR);
-                }
-                commitYear = StrFrom<int>(tm.tm_year + 1900);
+    os << "Configuration file: " << cfg->configFile << '\n'
+        << "Git root: " << cfg->gitRoot << '\n'
+        << '\n';
+    for (auto&& rule : cfg->rules) {
+        os << "Rule: " << rule.name << '\n'
+            << "Group:\n";
+        for (auto&& grp : rule.groups) {
+            [[maybe_unused]] auto & prefix = grp.vars.at(kVarPrefix);
+            for (auto&& mat : grp.matchDefs) {
+                os << "  Replace\t" << mat.replace << '\n';
             }
-            if (cdate.lastYear > commitYear) {
-                newerLines += 1;
-            } else if (cdate.lastYear < commitYear) {
-                s_updatedComments += 1;
-                if (cdate.format == 0) {
-                    auto pos = cdate.lastYear.data() - tmp.data()
-                        + cdate.lastYear.size();
-                    tmp.insert(pos, commitYear);
-                    tmp.insert(pos, " - ");
-                } else {
-                    tmp.replace(
-                        cdate.lastYear.data() - tmp.data(),
-                        cdate.lastYear.size(),
-                        commitYear
-                    );
-                }
-                changedLines.push_front(tmp);
-                line = changedLines.front();
+            for (auto&& var : grp.vars) {
+                os << "  Var\t" << var.first << '\t' << var.second << '\n';
             }
-        }
-        if (commitYear.empty()) {
-            cout << f << "... unmatched" << endl;
-        } else {
-            s_matchedFiles += 1;
-            if (changedLines.empty()) {
-                if (newerLines) {
-                    s_newerFiles += 1;
-                    cout << f << "... ";
-                    ConsoleScopedAttr attr(kConsoleWarn);
-                    cout << "NEWER" << endl;
-                } else if (s_verbose) {
-                    cout << f << "... unchanged" << endl;
-                }
-            } else {
-                s_updatedFiles += 1;
-                if (!s_update) {
-                    cout << f << "... ";
-                    ConsoleScopedAttr attr(kConsoleWarn);
-                    cout << "obsolete" << endl;
-                } else {
-                    if (!replaceFile(f, lines))
-                        return;
-                    cout << f << "... ";
-                    ConsoleScopedAttr attr(kConsoleNote);
-                    cout << "UPDATED" << endl;
-                }
+            for (auto&& fn : grp.fileNames) {
+                os << "  File\t" << fn.pattern << '\n';
             }
+            for (auto&& fn : grp.fileExcludes) {
+                os << "  Exclude\t" << fn.pattern << '\n';
+            }
+            os << '\n';
         }
+        if (rule.groups.empty())
+            os << '\n';
     }
-    if (s_verbose > 1
-        || s_verbose && s_files
-        || s_matchedFiles != s_files
-        || s_newerFiles
-        || s_updatedFiles
+    Cli cli;
+    cli.printText(cout, os.str());
+}
+
+//===========================================================================
+static void finalReport(const Config * cfg) {
+    if (s_perfQueuedFiles && --s_perfQueuedFiles)
+        return;
+
+    if (s_opts.verbose > 1
+        || s_opts.verbose && s_perfScannedFiles
+        || s_perfMatchedFiles != s_perfScannedFiles
+        || s_perfNewerFiles
+        || s_perfUpdatedFiles
     ) {
         cout << endl;
     }
-    cout << "Files: " << fnames.size() << " selected, "
-        << s_files << " checked";
-    if (s_matchedFiles != s_files) {
+    cout << "Files: " << s_perfSelectedFiles << " selected, "
+        << s_perfScannedFiles << " checked";
+    if (s_perfMatchedFiles != s_perfScannedFiles) {
         cout << ", ";
         ConsoleScopedAttr attr(kConsoleWarn);
-        cout << s_files - s_matchedFiles << " unmatched";
+        cout << s_perfScannedFiles - s_perfMatchedFiles << " unmatched";
     }
-    if (s_newerFiles) {
+    if (s_perfNewerFiles) {
         cout << ", ";
         ConsoleScopedAttr attr(kConsoleWarn);
-        cout << s_newerFiles << " newer";
+        cout << s_perfNewerFiles << " newer";
     }
-    if (s_updatedFiles) {
-        if (s_update) {
+    if (s_perfUpdatedFiles) {
+        if (s_opts.update) {
             cout << ", ";
             ConsoleScopedAttr attr(kConsoleNote);
-            cout << s_updatedFiles << " updated";
+            cout << s_perfUpdatedFiles << " updated";
         } else {
             cout << ", ";
             ConsoleScopedAttr attr(kConsoleWarn);
-            cout << s_updatedFiles << " obsolete";
+            cout << s_perfUpdatedFiles << " obsolete";
         }
     }
     cout << endl;
 
-    if (s_updatedFiles && !s_update)
+    if (s_perfUpdatedFiles && !s_opts.update)
         cout << "Use '-u' to update." << endl;
 
+    delete cfg;
     logStopwatch();
-    return appSignalShutdown(EX_OK);
+    appSignalShutdown(EX_OK);
+}
+
+//===========================================================================
+static bool updateContent(
+    Result * res,
+    const MatchDef & mat,
+    const unordered_map<string, string> & rawVars,
+    string_view fname
+) {
+    auto vars = rawVars;
+    auto commitYear = rawVars.at(kVarCommitYear);
+    string out;
+    cmatch m;
+    size_t pos = 0;
+    auto changes = 0;
+    for (;; pos += m.position() + m.length()) {
+        if (!regex_search(res->content.data() + pos, m, mat.match.re))
+            break;
+        out.append(res->content, pos, m.position());
+        bool found = true;
+        for (auto i = 0; auto&& cap : mat.captures) {
+            i += 1;
+            if (auto capc = get_if<CaptureConst>(&cap)) {
+                if (!m[i].matched || m[i].str() != capc->value) {
+                    found = false;
+                    break;
+                }
+            } else {
+                auto capv = get_if<CaptureVar>(&cap);
+                assert(capv);
+                if (m[i].matched)
+                    vars[capv->name] = m[i].str();
+            }
+        }
+        if (found) {
+            for (auto i = 0; auto&& cap : mat.captures) {
+                i += 1;
+                auto capv = get_if<CaptureVar>(&cap);
+                if (capv && !m[i].matched) {
+                    vars[capv->name] = attrValueSubst(
+                        capv->defaultValue,
+                        vars
+                    );
+                }
+            }
+            s_perfComments += 1;
+            res->matched += 1;
+            auto & lastYear = vars[kVarLastYear];
+            if (lastYear > commitYear) {
+                res->newer += 1;
+                found = false;
+            } else if (lastYear == commitYear) {
+                found = false;
+            }
+        }
+        if (found) {
+            s_perfUpdatedComments += 1;
+            changes += 1;
+            auto rstr = attrValueSubst(mat.replace, vars);
+            out.append(rstr);
+        } else {
+            out.append(m[0].str());
+        }
+    }
+    if (changes) {
+        res->changed += changes;
+        out.append(res->content, pos);
+        res->content = move(out);
+        return true;
+    }
+    return false;
+}
+
+//===========================================================================
+static void processFile(
+    const Config * cfg,
+    const vector<const Group *> & grps,
+    Path fname,
+    string_view commitTimeStr
+) {
+    s_perfUnfinishedFiles += 1;
+    if (appStopping())
+        return;
+
+    TimePoint commitTime;
+    tm tm;
+    if (!timeParse8601(&commitTime, trim(commitTimeStr))
+        || !timeToDesc(&tm, commitTime)
+    ) {
+        logMsgError() << "No commit time for '" << fname << "'";
+        return appSignalShutdown(EX_OSERR);
+    }
+    string commitYear = StrFrom<int>(tm.tm_year + 1900).c_str();
+
+    Result res;
+    auto fullPath = fname;
+    fullPath.resolve(cfg->gitRoot);
+    if (!fileLoadBinaryWait(&res.content, fullPath))
+        return appSignalShutdown(EX_IOERR);
+
+    for (auto&& grp : grps) {
+        auto vars = grp->vars;
+        vars[kVarCommitYear] = commitYear;
+        for (auto&& mat : grp->matchDefs)
+            updateContent(&res, mat, vars, fname);
+    }
+
+    scoped_lock lk(s_progressMut);
+    if (!res.matched) {
+        cout << fname << "... unmatched" << endl;
+    } else {
+        s_perfMatchedFiles += 1;
+        if (!res.changed) {
+            if (res.newer) {
+                s_perfNewerFiles += 1;
+                cout << fname << "... ";
+                ConsoleScopedAttr attr(kConsoleWarn);
+                cout << "NEWER" << endl;
+            } else if (s_opts.verbose) {
+                cout << fname << "... unchanged" << endl;
+            }
+        } else {
+            s_perfUpdatedFiles += 1;
+            if (!s_opts.update) {
+                cout << fname << "... ";
+                ConsoleScopedAttr attr(kConsoleWarn);
+                cout << "obsolete";
+            } else {
+                if (!replaceFile(fullPath, res.content))
+                    return;
+                cout << fname << "... ";
+                ConsoleScopedAttr attr(kConsoleNote);
+                cout << "UPDATED";
+            }
+            if (res.newer) {
+                s_perfNewerFiles += 1;
+                cout << " and ";
+                ConsoleScopedAttr attr(kConsoleWarn);
+                cout << "NEWER";
+            }
+            cout << endl;
+        }
+    }
+
+    s_perfScannedFiles += 1;
+    s_perfUnfinishedFiles -= 1;
+}
+
+//===========================================================================
+static void processFiles(const Config * cfg) {
+    vector<string> args = { "git", "-C", cfg->gitRoot.str(), "ls-files" };
+    for (auto&& file : s_opts.files)
+        file = fileAbsolutePath(file).str();
+    args.insert(args.end(), s_opts.files.begin(), s_opts.files.end());
+    auto rawNames = execToolWait(Cli::toCmdline(args), "List depot files");
+    if (rawNames.empty())
+        return;
+    vector<string_view> fnames;
+    split(&fnames, rawNames, '\n');
+
+    vector<string> dateArgs = {
+        "git", "-C", cfg->gitRoot.str(), "log", "--format=%aI", "-n1", ""
+    };
+    for (auto&& f : fnames) {
+        f = trim(f);
+        if (f.empty())
+            continue;
+        s_perfSelectedFiles += 1;
+        auto fname = Path(f);
+        auto grps = findGroups(*cfg, fname);
+        if (grps.empty()) {
+            if (s_opts.verbose > 1) {
+                scoped_lock lk(s_progressMut);
+                cout << f << "... skipped" << endl;
+            }
+            continue;
+        }
+
+        s_perfQueuedFiles += 1;
+        dateArgs.back() = f;
+        execTool(
+            [cfg, grps, fname](string && out) {
+                processFile(cfg, grps, fname, out);
+                finalReport(cfg);
+            },
+            Cli::toCmdline(dateArgs),
+            f,
+            { .hq = taskEventQueue() },
+            { 0, 128, 259 } // allowed exit codes
+        );
+    }
+
+    if (!s_perfSelectedFiles)
+        finalReport(cfg);
+}
+
+//===========================================================================
+static void app(int argc, char *argv[]) {
+    Cli cli;
+    cli.header("cmtupd v"s + kVersion + " (" __DATE__ ")")
+        .helpNoArgs()
+        .versionOpt(kVersion, "cmtupd");
+    if (!cli.parse(argc, argv))
+        return appSignalUsageError();
+
+    auto conf = loadConfig(s_opts.configFile);
+    if (!conf)
+        return;
+
+    if (s_opts.show)
+        showConfig(conf.get());
+    if (s_opts.check || s_opts.update) {
+        processFiles(conf.release());
+        return;
+    }
+    if (!s_opts.show) {
+        return appSignalUsageError(
+            "No operation selected.",
+            "Pick some combination of --show, --check, or --update."
+        );
+    }
+
+    appSignalShutdown(EX_OK);
 }
 
 
