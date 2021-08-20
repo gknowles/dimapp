@@ -31,7 +31,7 @@ public:
     struct Node;
 
 public:
-    StrTrieBase (IPageHeap & heap) : m_heap{heap} {}
+    StrTrieBase (IPageHeap * pages) : m_pages{pages} {}
 
     // returns whether key was inserted (didn't already exist).
     bool insert(std::string_view val);
@@ -50,19 +50,19 @@ public:
         std::string_view val
     ) const;
 
-    bool empty() const { return m_heap.empty(); }
+    bool empty() const { return m_pages->empty(); }
     Iterator begin() const;
     Iterator end() const;
 
     std::ostream & dump(std::ostream & os) const;
 
 private:
-    IPageHeap & m_heap;
+    IPageHeap * m_pages;
 };
 
 class StrTrie : public StrTrieBase {
 public:
-    StrTrie () : StrTrieBase(m_heapImpl) {}
+    StrTrie () : StrTrieBase(&m_heapImpl) {}
 
     void clear() { m_heapImpl.clear(); }
     void swap(StrTrie & other);

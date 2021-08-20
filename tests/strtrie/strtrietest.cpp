@@ -37,6 +37,7 @@ static bool s_verbose;
 *
 ***/
 
+#if 0
 //===========================================================================
 static bool insert(StrTrie * vals, string_view val) {
     if (s_verbose)
@@ -99,6 +100,7 @@ inline static void randomFill() {
         insert(&vals, key);
     }
 }
+#endif
 
 
 /****************************************************************************
@@ -122,8 +124,8 @@ static void app(int argc, char *argv[]) {
         return appSignalShutdown(EX_OK);
     }
 
-    // internalTests();
-    randomFill();
+    //internalTests();
+    //randomFill();
 
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);
