@@ -353,12 +353,13 @@ if(MSVC)
     set(CMAKE_CXX_FLAGS_DEBUG "/Od")
     if(FALSE AND NOT MSVC_VERSION LESS 1928)
         # "/fsanitize=address" - enables ASAN memory error detector
+        # "/Zi" - debug info format (not present would be no info)
         set(CMAKE_CXX_FLAGS_DEBUG
-            "${CMAKE_CXX_FLAGS_DEBUG} /fsanitize=address")
+            "${CMAKE_CXX_FLAGS_DEBUG} /fsanitize=address /Zi")
     else()
         # "/RTC1" - runtime checks (stack frame over/under run and uninit use)
         # "/ZI" - debug with edit and continue (disables some optimizations)
-        set(CMAKE_CXX_FLAGS_DEBUG "/Od /RTC1 /ZI")
+        set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /RTC1 /ZI")
     endif()
     if(LINK_STATIC_RUNTIME)
         # "/MTd" - multithread debug static runtime
