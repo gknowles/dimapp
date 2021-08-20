@@ -230,7 +230,9 @@ public:
     );
     ~WinEventWaitNotify();
 
-    // Must not already be registered (i.e. evt must be INVALID_HANDLE_VALUE)
+    // Must not already have a registered handle. Does nothing (and can be
+    // called again) if evt is INVALID_HANDLE_VALUE, creates and registers new
+    // event handle if evt is {}, otherwise registers evt.
     void registerWait(HANDLE evt, bool once = false);
 
 private:

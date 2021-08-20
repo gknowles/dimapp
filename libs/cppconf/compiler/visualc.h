@@ -30,6 +30,7 @@
 )
 #endif
 
+// Disable these warnings
 #pragma warning(disable: \
     4100 /* unreferenced formal parameter */ \
     4324 /* structure was padded due to alignment specifier */ \
@@ -42,6 +43,8 @@
             member variable */ \
     26812 /* prefer 'enum class' over 'enum' */ \
 )
+
+// Enable these warnings
 #pragma warning(default: \
     4062 /* enumerator 'identifier' in a switch of enum 'enumeration' is not
             explicitly handled by a case label */ \
