@@ -9,16 +9,17 @@ Auto-generated variables:
 Lines match by Match/@regex are replaced with @replace if the file's
 $CommitYear is greater than LastYear.
 
-NOTE: This file is just aspirational. Configuration rules are currently hard
-      coded constants in the code.
+The attributes @regex, @value, and @default are interpreted as attribute value
+templates, which means that Var's values can be embedded by surrounding the Var
+name in braces. This also means that any braces in the string must be escaped.
+Braces are escaped by doubling them up, so '{{' and '}}' are interpreted as '{'
+and '} respectively.
 -->
 <Comments>
   <Rule name="Copyright">
     <Var name="Owner" value="Glen Knowles"/>
-    <Match regex="([^\n]*)Copyright (.*?) (\d\d\d\d)(?: - (\d\d\d\d))?\."
+    <Match regex="{Prefix}Copyright {Owner} (\d\d\d\d)(?: - (\d\d\d\d))?\."
         replace="{Prefix}Copyright {Owner} {FirstYear} - {$CurrentYear}.">
-      <Capture const="{Prefix}"/>
-      <Capture const="{Owner}"/>
       <Capture var="FirstYear"/>
       <Capture var="LastYear" default="{FirstYear}"/>
     </Match>

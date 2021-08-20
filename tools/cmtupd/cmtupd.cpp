@@ -29,17 +29,14 @@ struct Regex {
     string pattern;
 };
 
-struct CaptureConst {
-    string value;
-};
-struct CaptureVar {
+struct Capture {
     string name;
     string defaultValue;
 };
 struct MatchDef {
     Regex match;
     string replace;
-    vector<variant<CaptureConst, CaptureVar>> captures;
+    vector<Capture> captures;
 };
 struct Group {
     unordered_map<string, string> vars;
@@ -172,41 +169,36 @@ static bool loadVars(unordered_map<string, string> * out, XNode * root) {
 static bool loadMatches(Rule * out, XNode * root) {
     for (auto&& xmatch : elems(root, "Match")) {
         auto & match = out->matchDefs.emplace_back();
-        compileRegex(
-            &match.match,
-            "Found in Rule/Match/@regex attribute",
-            attrValue(&xmatch, "regex")
-        );
+        match.match.pattern = attrValue(&xmatch, "regex");
         match.replace = attrValue(&xmatch, "replace", "");
         for (auto&& xcap : elems(&xmatch, "Capture")) {
-            auto & cap = match.captures.emplace_back();
-            if (auto cval = attrValue(&xcap, "const")) {
-                cap = CaptureConst(cval);
-            } else {
-                auto cvar = attrValue(&xcap, "var");
-                auto cdef = attrValue(&xcap, "default", "");
-                if (!cvar) {
-                    logMsgError() << "Invalid Rule/Match/Capture element, "
-                        "must have @const or @var";
-                    appSignalShutdown(EX_DATAERR);
-                    return false;
-                }
-                cap = CaptureVar(cvar, cdef);
+            auto cvar = attrValue(&xcap, "var");
+            auto cdef = attrValue(&xcap, "default", "");
+            if (!cvar) {
+                logMsgError() << "Invalid Rule/Match/Capture element, "
+                    "must have @const or @var";
+                appSignalShutdown(EX_DATAERR);
+                return false;
             }
+            match.captures.emplace_back(cvar, cdef);
         }
     }
     return true;
 }
 
 //===========================================================================
-static bool loadFileNames(Group * out, XNode * root) {
+static bool loadFileNames(
+    Group * out,
+    XNode * root,
+    const unordered_map<string, string> & vars
+) {
     for (auto&& xfile : elems(root, "File")) {
         auto & file = out->fileNames.emplace_back();
         if (auto re = attrValue(&xfile, "regex")) {
             compileRegex(
                 &file,
                 "Found in Rule/Group/File element",
-                re
+                attrValueSubst(re, vars)
             );
         } else {
             logMsgError() << "Invalid Rule/Group/File element, "
@@ -219,14 +211,18 @@ static bool loadFileNames(Group * out, XNode * root) {
 }
 
 //===========================================================================
-static bool loadFileExcludes(Group * out, XNode * root) {
+static bool loadFileExcludes(
+    Group * out,
+    XNode * root,
+    const unordered_map<string, string> & vars
+) {
     for (auto&& xexcl : elems(root, "Exclude")) {
         auto & excl = out->fileExcludes.emplace_back();
         if (auto re = attrValue(&xexcl, "regex")) {
             compileRegex(
                 &excl,
                 "Found in Rule/Group/Exclude element",
-                re
+                attrValueSubst(re, vars)
             );
         } else {
             logMsgError() << "Invalid Rule/Group/Exclude element, "
@@ -239,18 +235,34 @@ static bool loadFileExcludes(Group * out, XNode * root) {
 }
 
 //===========================================================================
-static bool loadGroups(Rule * out, XNode * root) {
+static bool loadGroups(
+    Rule * out,
+    XNode * root,
+    const unordered_map<string, string> & vars
+) {
     for (auto&& xgroup : elems(root, "Group")) {
-        auto & group = out->groups.emplace_back();
-        group.vars[kVarCurrentYear] = s_currentYear;
-        if (!loadVars(&group.vars, &xgroup)
-            || !loadFileNames(&group, &xgroup)
-            || !loadFileExcludes(&group, &xgroup)
+        auto & grp = out->groups.emplace_back();
+        grp.vars = vars;
+        grp.vars[kVarPrefix]; // make sure kVarPrefix exists
+        grp.vars[kVarCurrentYear] = s_currentYear;
+        if (!loadVars(&grp.vars, &xgroup)
+            || !loadFileNames(&grp, &xgroup, vars)
+            || !loadFileExcludes(&grp, &xgroup, vars)
         ) {
             return false;
         }
-        if (group.fileNames.empty())
+        if (grp.fileNames.empty()) {
             out->groups.pop_back();
+            continue;
+        }
+        grp.matchDefs = out->matchDefs;
+        for (auto&& mat : grp.matchDefs) {
+            compileRegex(
+                &mat.match,
+                "Found in Rule/Match/@regex attribute",
+                attrValueSubst(mat.match.pattern, grp.vars)
+            );
+        }
     }
     return true;
 }
@@ -263,21 +275,9 @@ static bool loadRules(Config * out, XNode * root) {
         unordered_map<string, string> vars;
         if (!loadVars(&vars, &xrule)
             || !loadMatches(&rule, &xrule)
-            || !loadGroups(&rule, &xrule)
+            || !loadGroups(&rule, &xrule, vars)
         ) {
             return false;
-        }
-        for (auto&& grp : rule.groups) {
-            grp.vars.insert(vars.begin(), vars.end());
-            grp.vars[kVarPrefix]; // make sure kVarPrefix exists
-            for (auto&& rmat : rule.matchDefs) {
-                grp.matchDefs.push_back(rmat);
-                auto & mat = grp.matchDefs.back();
-                for (auto&& cap : mat.captures) {
-                    if (auto ccon = get_if<CaptureConst>(&cap))
-                        ccon->value = attrValueSubst(ccon->value, grp.vars);
-                }
-            }
         }
     }
     return true;
@@ -511,49 +511,29 @@ static bool updateContent(
         if (!regex_search(res->content.data() + pos, m, mat.match.re))
             break;
         out.append(res->content, pos, m.position());
-        bool found = true;
         for (auto i = 0; auto&& cap : mat.captures) {
             i += 1;
-            if (auto capc = get_if<CaptureConst>(&cap)) {
-                if (!m[i].matched || m[i].str() != capc->value) {
-                    found = false;
-                    break;
-                }
-            } else {
-                auto capv = get_if<CaptureVar>(&cap);
-                assert(capv);
-                if (m[i].matched)
-                    vars[capv->name] = m[i].str();
-            }
+            if (m[i].matched)
+                vars[cap.name] = m[i].str();
         }
-        if (found) {
-            for (auto i = 0; auto&& cap : mat.captures) {
-                i += 1;
-                auto capv = get_if<CaptureVar>(&cap);
-                if (capv && !m[i].matched) {
-                    vars[capv->name] = attrValueSubst(
-                        capv->defaultValue,
-                        vars
-                    );
-                }
-            }
-            s_perfComments += 1;
-            res->matched += 1;
-            auto & lastYear = vars[kVarLastYear];
-            if (lastYear > commitYear) {
-                res->newer += 1;
-                found = false;
-            } else if (lastYear == commitYear) {
-                found = false;
-            }
+        for (auto i = 0; auto&& cap : mat.captures) {
+            i += 1;
+            if (!m[i].matched)
+                vars[cap.name] = attrValueSubst(cap.defaultValue, vars);
         }
-        if (found) {
+        s_perfComments += 1;
+        res->matched += 1;
+        auto & lastYear = vars[kVarLastYear];
+        if (lastYear > commitYear) {
+            res->newer += 1;
+            out.append(m[0].str());
+        } else if (lastYear == commitYear) {
+            out.append(m[0].str());
+        } else {
             s_perfUpdatedComments += 1;
             changes += 1;
             auto rstr = attrValueSubst(mat.replace, vars);
             out.append(rstr);
-        } else {
-            out.append(m[0].str());
         }
     }
     if (changes) {
@@ -679,7 +659,7 @@ static void processFiles(const Config * cfg) {
             },
             Cli::toCmdline(dateArgs),
             f,
-            { .hq = taskEventQueue() },
+            { .hq = taskComputeQueue() },
             { 0, 128, 259 } // allowed exit codes
         );
     }
