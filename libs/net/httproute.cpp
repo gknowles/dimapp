@@ -575,16 +575,11 @@ static MimeType s_mimeTypes[] = {
 namespace {
 struct AutoInit {
     AutoInit() {
-        sort(begin(s_mimeTypes), end(s_mimeTypes), compareExt);
+        sort(begin(s_mimeTypes), end(s_mimeTypes));
     }
 };
 static AutoInit s_init;
 } // namespace
-
-//===========================================================================
-int Dim::compareExt(const MimeType & a, const MimeType & b) {
-    return a.fileExt.compare(b.fileExt);
-}
 
 //===========================================================================
 MimeType Dim::mimeTypeDefault(string_view path) {
@@ -594,8 +589,7 @@ MimeType Dim::mimeTypeDefault(string_view path) {
     auto ii = equal_range(
         ::begin(s_mimeTypes),
         ::end(s_mimeTypes),
-        mt,
-        compareExt
+        mt
     );
     if (ii.first == ii.second)
         return {};

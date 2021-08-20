@@ -229,8 +229,14 @@ struct MimeType {
     std::string_view fileExt;
     std::string_view type;
     std::string_view charSet;
+
+    friend std::strong_ordering operator<=>(
+        const MimeType & a,
+        const MimeType & b
+    ) {
+        return a.fileExt <=> b.fileExt;
+    }
 };
-int compareExt(const MimeType & a, const MimeType & b);
 MimeType mimeTypeDefault(std::string_view path);
 
 
