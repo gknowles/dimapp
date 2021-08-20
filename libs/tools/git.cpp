@@ -52,7 +52,7 @@ bool Dim::gitLoadConfig(
         *configFile = move(path);
     }
     if (!fileLoadBinaryWait(content, *configFile)) {
-        appSignalUsageError(EX_DATAERR);
+        appSignalShutdown(EX_DATAERR);
         configFile->clear();
         gitRoot->clear();
         return false;
