@@ -9,4 +9,7 @@ Update date range in copyright comments to extend to the current year if the
 year of the file's last commit time is more recent than what's in the current
 copyright comment.
 
-Assumes the date in the comment is formatted as either "YYYY" or "YYYY - YYYY".
+Uses configuration file ($GIT_ROOT/conf/cmtupd.xml by default) to map comment
+formats to file extensions, and to exclude specific files.
+
+Operates on files within the current branch of a git repo.
