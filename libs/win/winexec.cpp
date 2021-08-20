@@ -49,7 +49,10 @@ public:
     ~ExecProgram();
     void exec();
     TaskQueueHandle queue() const { return m_hq; }
+    void terminate();
+    void postJobExit();
 
+    bool onAccept(StdStream strm);
     bool onRead(size_t * bytesUsed, StdStream strm, string_view data);
     void onDisconnect(StdStream strm);
     void onBufferChanged(StdStream strm, const PipeBufferInfo & info);
@@ -66,7 +69,6 @@ private:
         string_view name,
         Pipe::OpenMode oflags
     );
-    void execIfReady();
     bool completeIfDone_LK();
 
     TaskQueueHandle m_hq;
@@ -144,8 +146,8 @@ static void jobObjectIocpThread() {
                 entries[i].lpCompletionKey
             );
             DWORD msg = entries[i].dwNumberOfBytesTransferred;
-            [[maybe_unused]]
-            DWORD procId = (DWORD) (uintptr_t) entries[i].lpOverlapped;
+            [[maybe_unused]] DWORD procId =
+                (DWORD) (uintptr_t) entries[i].lpOverlapped;
             if (msg == JOB_OBJECT_MSG_ACTIVE_PROCESS_ZERO) {
                 // The process, and any child processes it may have launched,
                 // have exited.
@@ -187,9 +189,7 @@ static HANDLE iocpHandle() {
 
 //===========================================================================
 bool ExecProgram::ExecPipe::onPipeAccept() {
-    m_mode = kRunRunning;
-    m_notify->execIfReady();
-    return true;
+    return m_notify->onAccept(m_strm);
 }
 
 //===========================================================================
@@ -285,6 +285,36 @@ ExecProgram::~ExecProgram() {
 }
 
 //===========================================================================
+void ExecProgram::terminate() {
+    unique_lock lk(m_mut);
+    if (m_mode == kRunStopped || !m_process)
+        return;
+
+    if (!TerminateProcess(m_process, (UINT) -1)) {
+        logMsgError() << "TerminateProcess(" << m_cmdline << "): "
+            << WinError{};
+    }
+    CloseHandle(m_process);
+
+    // Set to null handle so the process will be recognized as canceled.
+    m_process = {};
+}
+
+//===========================================================================
+void ExecProgram::postJobExit() {
+    // Exit events are posted to the job queue so the onExecComplete event gets
+    // routed to the task queue selected by the application.
+    if (!PostQueuedCompletionStatus(
+        s_iocp,
+        JOB_OBJECT_MSG_ACTIVE_PROCESS_ZERO,
+        (uintptr_t) this,
+        (OVERLAPPED *) (uintptr_t) GetProcessId(m_process)
+    )) {
+        logMsgFatal() << "PostQueuedCompletionStatus: " << WinError{};
+    }
+}
+
+//===========================================================================
 void ExecProgram::exec() {
     // Now that we're committed to getting an onJobExit() call, change mode
     // so that we'll wait for it.
@@ -320,22 +350,25 @@ void ExecProgram::exec() {
     for (auto && p : pipes) {
         auto & child = m_pipes[p.strm].m_child;
         if (!createPipe(&child, p.strm, p.name, p.oflags)) {
-            onJobExit();
+            postJobExit();
             return;
         }
     }
 }
 
 //===========================================================================
-void ExecProgram::execIfReady() {
+bool ExecProgram::onAccept(StdStream strm) {
     unique_lock lk(m_mut);
+    assert(m_mode == kRunStarting);
+    assert(m_pipes[strm].m_mode == kRunStarting);
+    m_pipes[strm].m_mode = kRunRunning;
     if (m_pipes[kStdIn].m_mode == kRunStarting
         || m_pipes[kStdOut].m_mode == kRunStarting
         || m_pipes[kStdErr].m_mode == kRunStarting
     ) {
         // If it wasn't the last pipe to finish starting, continue waiting for
         // the last one.
-        return;
+        return true;
     }
     // Now that all pipes have started, check to make sure all are running, and
     // stop the whole exec if they aren't.
@@ -344,8 +377,8 @@ void ExecProgram::execIfReady() {
         || m_pipes[kStdErr].m_mode != kRunRunning
     ) {
         lk.unlock();
-        onJobExit();
-        return;
+        postJobExit();
+        return true;
     }
 
     bool success = false;
@@ -387,8 +420,8 @@ void ExecProgram::execIfReady() {
     }
     if (!success) {
         lk.unlock();
-        onJobExit();
-        return;
+        postJobExit();
+        return true;
     }
 
     char * envBlk = nullptr;
@@ -442,8 +475,8 @@ void ExecProgram::execIfReady() {
     if (!running) {
         logMsgError() << "CreateProcessW(" << m_cmdline << "): " << err;
         lk.unlock();
-        onJobExit();
-        return;
+        postJobExit();
+        return true;
     }
 
     m_process = pi.hProcess;
@@ -451,15 +484,10 @@ void ExecProgram::execIfReady() {
     if (!AssignProcessToJobObject(m_job, m_process)) {
         logMsgError() << "AssignProcessToJobObject(" << m_cmdline << "): "
             << WinError{};
-        if (!TerminateProcess(m_process, (UINT) -1)) {
-            logMsgError() << "TerminateProcess(" << m_cmdline << "): "
-                << WinError{};
-        }
-        CloseHandle(m_process);
-        m_process = NULL;
         lk.unlock();
-        onJobExit();
-        return;
+        terminate();
+        postJobExit();
+        return true;
     }
 
     // Now that the process has been assigned to the job it can be resumed.
@@ -480,6 +508,7 @@ void ExecProgram::execIfReady() {
     } else if (!m_opts.enableExecWrite) {
         pipeClose(pipe);
     }
+    return true;
 }
 
 //===========================================================================
@@ -511,16 +540,13 @@ void ExecProgram::onBufferChanged(
 
 //===========================================================================
 Duration ExecProgram::onTimer(TimePoint now) {
-    // Set to null handle so the process will be recognized as canceled.
-    CloseHandle(m_process);
-    m_process = {};
-
-    onJobExit();
+    terminate();
     return kTimerInfinite;
 }
 
 //===========================================================================
 void ExecProgram::onJobExit() {
+    assert(m_mode != kRunStopped);
     unique_lock lk(m_mut);
     for (auto && pi : m_pipes) {
         pipeClose(&pi);
@@ -574,7 +600,7 @@ bool ExecProgram::createPipe(
     string_view name,
     Pipe::OpenMode oflags
 ) {
-    m_pipes[strm].m_mode = kRunStarting;
+    assert(m_pipes[strm].m_mode == kRunStarting);
     pipeListen(&m_pipes[strm], name, oflags, queue());
 
     if (child) {
