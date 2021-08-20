@@ -325,8 +325,10 @@ void PipeBase::queueRead_LK(PipeRequest * task) {
         err.set();
     }
     if (err == ERROR_IO_PENDING) {
-        // Expected, since it's attached to a completion port
+        // Expected, since it's attached to a completion port. Now wait for
+        // completion.
     } else if (err == ERROR_BROKEN_PIPE) {
+        // Synthesize completion event.
         task->pushOverlappedTask(this);
     } else if (!err) {
         // Read has already finish, now wait for the completion to be posted.
@@ -655,8 +657,9 @@ void AcceptPipe::connect() {
     if (!ConnectNamedPipe(m_handle, &overlapped()))
         err.set();
     if (!err || err == ERROR_IO_PENDING) {
-        // waiting for completion to be posted
+        // Wait for completion to be posted.
     } else if (err == ERROR_PIPE_CONNECTED) {
+        // Synthesize completion event.
         pushOverlappedTask();
     } else {
         lk.unlock();
