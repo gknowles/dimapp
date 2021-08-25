@@ -400,7 +400,7 @@ static void addSidRow(IJBuilder * out, SID_AND_ATTRIBUTES & sa) {
         out->member("type", name);
     } else {
         auto unk = "UNKNOWN("s;
-        unk += StrFrom<underlying_type_t<decltype(use)>>(use).view();
+        unk += StrFrom(use).view();
         unk += ')';
         out->member("type", unk);
     }

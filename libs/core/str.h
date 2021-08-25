@@ -33,6 +33,15 @@ constexpr int maxNumericChars() {
 }
 
 //===========================================================================
+// Maximum number of characters needed to represent any value of the
+// underlying type of T in base 10.
+template <typename T>
+requires std::is_enum_v<T>
+constexpr int maxNumericChars() {
+    return maxNumericChars<std::underlying_type_t<T>>();
+}
+
+//===========================================================================
 // Maximum number of characters needed to represent any floating point value
 // of type T in base 10.
 template <typename T>
@@ -56,7 +65,7 @@ constexpr int maxNumericChars() {
 ***/
 
 template <typename T>
-requires std::is_arithmetic_v<T>
+requires (std::is_arithmetic_v<T> || std::is_enum_v<T>)
 class StrFrom {
 public:
     StrFrom();
@@ -84,7 +93,7 @@ private:
 
 //===========================================================================
 template <typename T>
-requires std::is_arithmetic_v<T>
+requires (std::is_arithmetic_v<T> || std::is_enum_v<T>)
 StrFrom<T>::StrFrom() {
     m_data[0] = 0;
     m_data[sizeof m_data - 1] = (char) (sizeof m_data - 1);
@@ -92,14 +101,21 @@ StrFrom<T>::StrFrom() {
 
 //===========================================================================
 template <typename T>
-requires std::is_arithmetic_v<T>
+requires (std::is_arithmetic_v<T> || std::is_enum_v<T>)
 std::string_view StrFrom<T>::set(T val) {
-    auto r = std::to_chars(
-        m_data,
-        m_data + sizeof m_data,
-        val
-    );
-    auto used = r.ptr - m_data;
+    char * ptr;
+    if constexpr (std::is_enum_v<T>) {
+        auto r = std::to_chars(
+            m_data,
+            m_data + sizeof m_data,
+            static_cast<std::underlying_type_t<T>>(val)
+        );
+        ptr = r.ptr;
+    } else {
+        auto r = std::to_chars(m_data, m_data + sizeof m_data, val);
+        ptr = r.ptr;
+    }
+    auto used = ptr - m_data;
     assert(used < sizeof m_data);
     m_data[used] = 0;
     m_data[sizeof m_data - 1] = (char) (sizeof m_data - used - 1);
@@ -108,14 +124,14 @@ std::string_view StrFrom<T>::set(T val) {
 
 //===========================================================================
 template <typename T>
-requires std::is_arithmetic_v<T>
+requires (std::is_arithmetic_v<T> || std::is_enum_v<T>)
 std::string_view StrFrom<T>::view() const {
     return std::string_view(m_data, size());
 }
 
 //===========================================================================
 template <typename T>
-requires std::is_arithmetic_v<T>
+requires (std::is_arithmetic_v<T> || std::is_enum_v<T>)
 size_t StrFrom<T>::size() const {
     return sizeof m_data - m_data[sizeof m_data - 1] - 1;
 }
