@@ -82,6 +82,11 @@ static void testIntegralStr() {
     int line = 0;
 
     //-----------------------------------------------------------------------
+    // int
+    EXPECT(StrFrom(1234).view() == "1234");
+    EXPECT(StrFrom<int>(1234).view() == "1234");
+
+    //-----------------------------------------------------------------------
     // unsigned
     EXPECT(StrFrom<unsigned>(1234).view() == "1234"sv);
     EXPECT(StrFrom<unsigned>(0xffff'ffff).view() == "4294967295"sv);
@@ -102,7 +107,7 @@ static void testIntegralStr() {
     //-----------------------------------------------------------------------
     // ostream
     ostringstream os;
-    os << StrFrom<int>(5);
+    os << StrFrom(5);
     EXPECT(os.view() == "5");
 }
 

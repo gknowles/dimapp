@@ -318,20 +318,18 @@ IJBuilder & IJBuilder::value(bool val) {
 IJBuilder & IJBuilder::value(double val) {
     if (isnan(val) || isinf(val))
         return fail();
-    StrFrom<double> tmp(val);
+    StrFrom tmp(val);
     return valueRaw(tmp.view());
 }
 
 //===========================================================================
 IJBuilder & IJBuilder::value(int64_t val) {
-    StrFrom<int64_t> tmp(val);
-    return valueRaw(tmp.view());
+    return valueRaw(StrFrom(val).view());
 }
 
 //===========================================================================
 IJBuilder & IJBuilder::value(uint64_t val) {
-    StrFrom<uint64_t> tmp(val);
-    return valueRaw(tmp.view());
+    return valueRaw(StrFrom(val).view());
 }
 
 //===========================================================================

@@ -302,7 +302,7 @@ int Dim::appRun(IAppNotify * app, int argc, char * argv[], AppFlags flags) {
     s_appBaseName = exeName.stem();
     s_appName = s_appBaseName;
     if (s_appIndex > 1)
-        s_appName += StrFrom<unsigned>(s_appIndex).view();
+        s_appName += StrFrom(s_appIndex).view();
     s_binDir = exeName.removeFilename();
     if ((flags & fAppWithFiles) && s_binDir.stem() == "bin") {
         s_rootDir = s_binDir.parentPath();

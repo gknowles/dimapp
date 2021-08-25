@@ -564,7 +564,7 @@ static void processFile(
         logMsgError() << "No commit time for '" << fname << "'";
         return appSignalShutdown(EX_OSERR);
     }
-    string commitYear = StrFrom<int>(tm.tm_year + 1900).c_str();
+    string commitYear = StrFrom(tm.tm_year + 1900).c_str();
 
     Result res;
     auto fullPath = fname;

@@ -147,7 +147,7 @@ static vector<TocEntry> createToc(string * content) {
         auto num = ids[te.link] += 1;
         if (num > 1) {
             te.link += "--";
-            te.link += StrFrom<int>(num).view();
+            te.link += StrFrom(num).view();
         }
         if (m[2].matched) {
             auto olen = m.length(2);

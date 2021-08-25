@@ -1015,7 +1015,7 @@ static void makeReply(
     unsigned status,
     std::string_view msg
 ) {
-    StrFrom<unsigned> st{status};
+    StrFrom st{status};
     XBuilder bld(&out->body());
     bld.start("html")
         .start("head").elem("title", st.c_str()).end()

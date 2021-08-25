@@ -90,7 +90,7 @@ static PerfType perfType() {
 //===========================================================================
 template <typename T>
 static void valueToString(string * out, T val, bool pretty) {
-    auto str = StrFrom<T>{val};
+    auto str = StrFrom{val};
     if (!pretty) {
         *out = str.view();
         return;

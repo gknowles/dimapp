@@ -389,7 +389,7 @@ static void addSidRow(IJBuilder * out, SID_AND_ATTRIBUTES & sa) {
     }
     if (auto unknown = ~found & sa.Attributes) {
         auto unk = "UNKNOWN("s;
-        unk += StrFrom<unsigned>(unknown).view();
+        unk += StrFrom(unknown).view();
         unk += ')';
         out->value(unk);
     }

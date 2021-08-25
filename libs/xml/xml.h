@@ -83,7 +83,7 @@ public:
         } else if constexpr (std::is_same_v<T, char>) {
             return out.text(std::string_view(&val, 1));
         } else if constexpr (std::is_arithmetic_v<T>) {
-            Dim::StrFrom<T> tmp(val);
+            Dim::StrFrom tmp(val);
             return out.text(tmp.view());
         } else if constexpr (std::is_same_v<T, ElemNameProxy>) {
             return val.value.empty()

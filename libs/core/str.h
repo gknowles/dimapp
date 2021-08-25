@@ -55,11 +55,9 @@ constexpr int maxNumericChars() {
 *
 ***/
 
-template <typename T, typename Enable = void> class StrFrom {};
-
 template <typename T>
 requires std::is_arithmetic_v<T>
-class StrFrom<T> {
+class StrFrom {
 public:
     StrFrom();
     explicit StrFrom(T val) { set(val); }
