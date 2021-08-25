@@ -112,6 +112,7 @@ public:
     TempHeap & operator=(const TempHeap & from) = delete;
     TempHeap & operator=(TempHeap && from) noexcept;
 
+    using ITempHeap::alloc;
     void clear();
     void swap(TempHeap & from);
 
