@@ -85,13 +85,18 @@ constexpr uint8_t ntoh8(const void * vptr) {
 }
 
 //===========================================================================
-constexpr uint16_t ntoh16(const void * vptr) {
-    auto val = *static_cast<const uint16_t *>(vptr);
+constexpr uint16_t ntoh16(uint16_t val) {
     if constexpr (std::endian::native == std::endian::big) {
         return val;
     } else {
         return bswap16(val);
     }
+}
+
+//===========================================================================
+constexpr uint16_t ntoh16(const void * vptr) {
+    auto val = *static_cast<const uint16_t *>(vptr);
+    return ntoh16(val);
 }
 
 //===========================================================================
@@ -103,8 +108,7 @@ constexpr uint32_t ntoh24(const void * vptr) {
 }
 
 //===========================================================================
-constexpr uint32_t ntoh32(const void * vptr) {
-    auto val = *static_cast<const uint32_t *>(vptr);
+constexpr uint32_t ntoh32(uint32_t val) {
     if constexpr (std::endian::native == std::endian::big) {
         return val;
     } else {
@@ -113,13 +117,24 @@ constexpr uint32_t ntoh32(const void * vptr) {
 }
 
 //===========================================================================
-constexpr uint64_t ntoh64(const void * vptr) {
-    auto val = *static_cast<const uint64_t *>(vptr);
+constexpr uint32_t ntoh32(const void * vptr) {
+    auto val = *static_cast<const uint32_t *>(vptr);
+    return ntoh32(val);
+}
+
+//===========================================================================
+constexpr uint64_t ntoh64(uint64_t val) {
     if constexpr (std::endian::native == std::endian::big) {
         return val;
     } else {
         return bswap64(val);
     }
+}
+
+//===========================================================================
+constexpr uint64_t ntoh64(const void * vptr) {
+    auto val = *static_cast<const uint64_t *>(vptr);
+    return ntoh64(val);
 }
 
 //===========================================================================
@@ -137,12 +152,17 @@ constexpr double ntohf64(const void * vptr) {
 }
 
 //===========================================================================
-constexpr char * hton16(void * out, uint16_t val) {
+constexpr uint16_t hton16(uint16_t val) {
     if constexpr (std::endian::native == std::endian::big) {
-        *(uint16_t *)out = val;
+        return val;
     } else {
-        *(uint16_t *)out = bswap16(val);
+        return bswap16(val);
     }
+}
+
+//===========================================================================
+constexpr char * hton16(void * out, uint16_t val) {
+    *(uint16_t *) out = hton16(val);
     return (char *) out;
 }
 
@@ -156,22 +176,32 @@ constexpr char * hton24(void * vout, uint32_t val) {
 }
 
 //===========================================================================
-constexpr char * hton32(void * out, uint32_t val) {
+constexpr uint32_t hton32(uint32_t val) {
     if constexpr (std::endian::native == std::endian::big) {
-        *(uint32_t *)out = val;
+        return val;
     } else {
-        *(uint32_t *)out = bswap32(val);
+        return bswap32(val);
     }
+}
+
+//===========================================================================
+constexpr char * hton32(void * out, uint32_t val) {
+    *(uint32_t *) out = hton32(val);
     return (char *) out;
 }
 
 //===========================================================================
-constexpr char * hton64(void * out, uint64_t val) {
+constexpr uint64_t hton64(uint64_t val) {
     if constexpr (std::endian::native == std::endian::big) {
-        *(uint64_t *)out = val;
+        return val;
     } else {
-        *(uint64_t *)out = bswap64(val);
+        return bswap64(val);
     }
+}
+
+//===========================================================================
+constexpr char * hton64(void * out, uint64_t val) {
+    *(uint64_t *) out = hton64(val);
     return (char *) out;
 }
 
