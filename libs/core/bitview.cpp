@@ -35,9 +35,10 @@ enum OpType {
 
 //===========================================================================
 static constexpr uint64_t bitmask(size_t bitpos) {
-    return bswap64(
-        1ull << (BitView::kWordBits - bitpos % BitView::kWordBits - 1)
-    );
+    auto mask = 1ull << (BitView::kWordBits - bitpos % BitView::kWordBits - 1);
+    if constexpr (endian::native == endian::little)
+        mask = bswap64(mask);
+    return mask;
 }
 
 //===========================================================================
