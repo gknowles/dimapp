@@ -461,8 +461,9 @@ static void finalReport(const Config * cfg) {
     ) {
         cout << endl;
     }
-    cout << "Files: " << s_perfSelectedFiles << " selected, "
-        << s_perfScannedFiles << " checked";
+    cout << "Files: " << s_perfSelectedFiles << " selected";
+    if (auto excluded = s_perfSelectedFiles - s_perfScannedFiles)
+        cout << ", " << excluded << " excluded";
     if (s_perfMatchedFiles != s_perfScannedFiles) {
         cout << ", ";
         ConsoleScopedAttr attr(kConsoleWarn);
