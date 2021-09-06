@@ -257,6 +257,7 @@
 # tools/cmtupd/cmtupd.cpp
 # tools/cmtupd/pch.cpp
 # tools/cmtupd/pch.h
+# tools/docgen/CHANGELOG.md
 # tools/docgen/README.adoc
 # tools/docgen/docgen.cpp
 # tools/docgen/intern.h

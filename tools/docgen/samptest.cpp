@@ -23,6 +23,9 @@ struct CmdOpts {
     unordered_set<string> pages;
     UnsignedSet lines;
 
+    bool update;
+    bool compile;
+
     CmdOpts();
 };
 
@@ -60,13 +63,19 @@ struct ProgInfo {
     unsigned line = 0;
     unordered_map<string, FileInfo> files;
 };
+struct CodeLine {
+    string text;
+
+    // Offset to input characters to be stripped off the end of the code text
+    // string. Only for scripts.
+    int input;
+};
 struct RunInfo {
     unsigned line = 0;
     string lang;
     vector<string> comments;
     string cmdline;
-    map<size_t, int> input; // {line, pos} view into outputs
-    vector<string> output;
+    vector<CodeLine> output;
     map<string, string> env;
 };
 struct TestInfo {
@@ -85,19 +94,21 @@ struct PageInfo {
 
     unsigned lastProgLine = 0;
     unordered_map<unsigned, TestInfo> tests;
-    unordered_map<string, vector<string>> testPrefix;
+    unordered_map<string, vector<CodeLine>> testPrefix;
+    unordered_map<string, vector<CodeLine>> scriptLines;
 };
 
 struct ApplyAttrState {
     std::function<Dim::Detail::Log(TestAttr attr)> logger;
+    unsigned fileLine;          // position of source block in file
     multimap<TestAttr, AttrInfo> attrs;
-    string lang;               // source block lang
-    vector<string_view> lines; // source block lines
+    string lang;                // source block lang
+    vector<CodeLine> lines;     // source block lines
 
     multimap<TestAttr, AttrInfo>::iterator iter;
     TestAttr attr;
 
-    ApplyAttrState(const CodeBlock & blk);
+    ApplyAttrState(const CodeBlock & blk, const string & file);
     void nextAttr();
     Dim::Detail::Log olog();
 };
@@ -163,11 +174,11 @@ static void genCppHeader(
 ) {
     out->append("/*******************************************************"
         "*********************\n*\n");
-    genFileHeader(out, fname, "* ");
+    genFileHeader(out, fname, "*   ");
     out->append("*\n")
-        .append("* Test program for sample located at:\n")
-        .append("*   File: ").append(srcfile).pushBack('\n')
-        .append("*   Line: ").append(StrFrom(srcline).view())
+        .append("*   Test program for sample located at:\n")
+        .append("*       File: ").append(srcfile).pushBack('\n')
+        .append("*       Line: ").append(StrFrom(srcline).view())
             .pushBack('\n')
         .append("*\n")
         .append("***/\n\n");
@@ -236,7 +247,7 @@ static vector<CodeBlock> findBlocks(const PageInfo & info) {
 //===========================================================================
 static vector<pair<size_t, size_t>> lineSpans(
     const vector<string_view> & args,
-    const vector<string_view> & lines,
+    const vector<CodeLine> & lines,
     std::function<Dim::Detail::Log()> olog
 ) {
     vector<pair<size_t, size_t>> out;
@@ -282,10 +293,10 @@ static vector<pair<size_t, size_t>> lineSpans(
 
 //===========================================================================
 static void selectLines(
-    vector<string_view> * matched,
-    vector<string_view> * unmatched,
+    vector<CodeLine> * matched,
+    vector<CodeLine> * unmatched,
     const vector<string_view> & args,
-    const vector<string_view> & lines,
+    const vector<CodeLine> & lines,
     std::function<Dim::Detail::Log()> olog
 ) {
     if (matched)
@@ -324,7 +335,10 @@ static void selectLines(
 }
 
 //===========================================================================
-static multimap<TestAttr, AttrInfo> getAttrs(const CodeBlock & blk) {
+static multimap<TestAttr, AttrInfo> getAttrs(
+    const CodeBlock & blk,
+    const string & file
+) {
     multimap<TestAttr, AttrInfo> attrs;
     for (auto&& val : blk.attrs) {
         AttrInfo tmp;
@@ -336,8 +350,11 @@ static multimap<TestAttr, AttrInfo> getAttrs(const CodeBlock & blk) {
             tmp.args[1],
             kTestInvalid
         );
-        if (!attr)
+        if (!attr) {
+            logMsgWarn() << file << ", line " << blk.line
+                << ": unknown attribute: '" << tmp.args[1] << "'";
             continue;
+        }
         tmp.args.erase(tmp.args.begin(), tmp.args.begin() + 2);
         attrs.emplace(attr, move(tmp));
     }
@@ -352,15 +369,20 @@ static multimap<TestAttr, AttrInfo> getAttrs(const CodeBlock & blk) {
 ***/
 
 //===========================================================================
-ApplyAttrState::ApplyAttrState(const CodeBlock & blk)
-    : attrs(getAttrs(blk))
+ApplyAttrState::ApplyAttrState(const CodeBlock & blk, const string & file)
+    : fileLine(blk.line)
+    , attrs(getAttrs(blk, file))
     , iter(attrs.begin())
     , attr(iter == attrs.end() ? kTestInvalid : iter->first)
     , lang(blk.lang)
 {
-    split(&lines, blk.content, '\n');
-    for (auto&& line : lines)
-        line = rtrim(line);
+    vector<string_view> rawLines;
+    split(&rawLines, blk.content, '\n');
+    for (auto&& line : rawLines) {
+        auto & cl = lines.emplace_back();
+        cl.text = rtrim(line);
+        cl.input = (int) cl.text.size();
+    }
 }
 
 //===========================================================================
@@ -375,29 +397,29 @@ Dim::Detail::Log ApplyAttrState::olog() {
 
 //===========================================================================
 // true if ignore enabled
-static bool applyIgnoreAttr(ApplyAttrState & as) {
-    if (as.attr != kTestIgnore)
+static bool applyIgnoreAttr(ApplyAttrState * as) {
+    if (as->attr != kTestIgnore)
         return false;
 
-    if (as.iter->second.args.size() != 0) {
-        as.olog() << "expects no arguments.";
+    if (as->iter->second.args.size() != 0) {
+        as->olog() << "expects no arguments.";
     }
     return true;
 }
 
 //===========================================================================
 // true if language updated
-static bool applyLanguageAttr(ApplyAttrState & as) {
-    if (as.attr != kTestLanguage)
+static bool applyLanguageAttr(ApplyAttrState * as) {
+    if (as->attr != kTestLanguage)
         return false;
 
-    auto & args = as.iter->second.args;
-    as.nextAttr();
+    auto & args = as->iter->second.args;
+    as->nextAttr();
     if (args.size() != 1) {
-        as.olog() << "must have language argument.";
+        as->olog() << "must have language argument.";
         return false;
     } else {
-        as.lang = args[0];
+        as->lang = args[0];
         return true;
     }
 }
@@ -405,25 +427,25 @@ static bool applyLanguageAttr(ApplyAttrState & as) {
 //===========================================================================
 // true if prefix updated
 static bool applyPrefixAttr(
-    ApplyAttrState & as,
-    vector<string> & prefix
+    ApplyAttrState * as,
+    vector<CodeLine> * prefix
 ) {
-    if (as.attr != kTestPrefix)
+    if (as->attr != kTestPrefix)
         return false;
 
-    vector<string_view> matched;
-    vector<string_view> unmatched;
+    vector<CodeLine> matched;
+    vector<CodeLine> unmatched;
     selectLines(
         &matched,
         &unmatched,
-        as.iter->second.args,
-        as.lines,
-        [&as]() { return as.olog(); }
+        as->iter->second.args,
+        as->lines,
+        [&as]() { return as->olog(); }
     );
-    as.lines = unmatched;
-    as.nextAttr();
+    as->lines = unmatched;
+    as->nextAttr();
     if (!matched.empty()) {
-        prefix.assign(matched.begin(), matched.end());
+        prefix->assign(matched.begin(), matched.end());
         return true;
     }
     return false;
@@ -432,29 +454,29 @@ static bool applyPrefixAttr(
 //===========================================================================
 // true if replacement made
 static bool applyReplaceAttr(
-    ApplyAttrState & as,
-    const vector<string_view> & prevLines
+    ApplyAttrState * as,
+    const vector<CodeLine> & prevLines
 ) {
-    if (as.attr != kTestReplace)
+    if (as->attr != kTestReplace)
         return false;
 
-    auto fail = [&as]() { as.nextAttr(); return false; };
+    auto fail = [&as]() { as->nextAttr(); return false; };
 
-    if (auto ni = next(as.iter); ni != as.attrs.end()) {
-        as.olog()
+    if (auto ni = next(as->iter); ni != as->attrs.end()) {
+        as->olog()
             << tokenTableGetName(s_testAttrTbl, ni->first)
             << " attribute takes precedence.";
         return fail();
     }
     if (prevLines.empty()) {
-        as.olog() << "program must already be defined.";
+        as->olog() << "program must already be defined.";
         return fail();
     }
 
     auto rawSpans = lineSpans(
-        as.iter->second.args,
+        as->iter->second.args,
         prevLines,
-        [&as]() { return as.olog(); }
+        [&as]() { return as->olog(); }
     );
     if (rawSpans.empty()) {
         // argument parsing failed
@@ -467,16 +489,16 @@ static bool applyReplaceAttr(
     vector<Replacement> repls;
     size_t spos = 0;
     for (auto&& span : rawSpans) {
-        if (spos >= as.lines.size()) {
+        if (spos >= as->lines.size()) {
             // spos is size() + 1 unless the block ends with "...".
-            as.olog() << "more ranges than block sections.";
+            as->olog() << "more ranges than block sections.";
             return fail();
         }
         auto & repl = repls.emplace_back();
         repl.dst = span;
         repl.src.first = spos;
-        for (; spos < as.lines.size(); ++spos) {
-            if (trim(as.lines[spos]) == "...")
+        for (; spos < as->lines.size(); ++spos) {
+            if (trim(as->lines[spos].text) == "...")
                 break;
         }
         repl.src.second = spos - repl.src.first;
@@ -486,7 +508,7 @@ static bool applyReplaceAttr(
         return a.dst.first < b.dst.first;
     });
 
-    vector<string_view> out;
+    vector<CodeLine> out;
     size_t dpos = 0;
     for (auto&& repl : repls) {
         out.insert(
@@ -497,8 +519,8 @@ static bool applyReplaceAttr(
         dpos = repl.dst.first + repl.dst.second;
         out.insert(
             out.end(),
-            as.lines.begin() + repl.src.first,
-            as.lines.begin() + repl.src.first + repl.src.second
+            as->lines.begin() + repl.src.first,
+            as->lines.begin() + repl.src.first + repl.src.second
         );
     }
     out.insert(
@@ -506,70 +528,79 @@ static bool applyReplaceAttr(
         prevLines.begin() + dpos,
         prevLines.end()
     );
-    as.lines = out;
-    as.nextAttr();
+    as->lines = out;
+    as->nextAttr();
     return true;
 }
 
 //===========================================================================
 // true if lines replaced with subset of them
-static bool applySubsetAttr(ApplyAttrState & as) {
+static bool applySubsetAttr(ApplyAttrState * as) {
     bool applied = false;
-    if (as.attr != kTestSubset)
+    if (as->attr != kTestSubset)
         return applied;
 
-    if (auto ni = next(as.iter); ni != as.attrs.end()) {
-        as.olog() << "subset attribute ignored in favor of "
+    if (auto ni = next(as->iter); ni != as->attrs.end()) {
+        as->olog() << "subset attribute ignored in favor of "
             << tokenTableGetName(s_testAttrTbl, ni->first)
             << " attribute.";
     } else {
-        vector<string_view> matched;
+        vector<CodeLine> matched;
         selectLines(
             &matched,
             nullptr,
-            as.iter->second.args,
-            as.lines,
-            [&as]() { return as.olog(); }
+            as->iter->second.args,
+            as->lines,
+            [&as]() { return as->olog(); }
         );
         if (!matched.empty()) {
-            as.lines = matched;
+            as->lines = matched;
             applied = true;
         }
     }
-    as.nextAttr();
+    as->nextAttr();
     return applied;
 }
 
 //===========================================================================
 // true if ignore enabled
-static bool applyNoScriptAttr(ApplyAttrState & as) {
-    if (as.attr != kTestNoScript)
+static bool applyNoScriptAttr(ApplyAttrState * as) {
+    if (as->attr != kTestNoScript)
         return false;
 
-    if (as.iter->second.args.size() != 0) {
-        as.olog() << "expects no arguments.";
+    if (as->iter->second.args.size() != 0) {
+        as->olog() << "expects no arguments.";
     }
     return true;
 }
 
 //===========================================================================
-static map<const char *, int> applyGetlineAttr(ApplyAttrState & as) {
-    map<const char *, int> out;
-    for (; as.attr == kTestGetline; as.nextAttr()) {
-        auto & args = as.iter->second.args;
+// true if any code lines have input text
+static bool applyGetlineAttr(ApplyAttrState * as) {
+    bool applied = false;
+    for (; as->attr == kTestGetline; as->nextAttr()) {
+        auto & args = as->iter->second.args;
         if (args.size() != 2) {
-            as.olog() << "must have line and start position arguments.";
+            as->olog() << "must have line and start position arguments.";
             continue;
         }
         unsigned line = strToUint(args[0]);
-        if (line >= as.lines.size()) {
-            as.olog() << "start line past end of block.";
+        if (line >= as->lines.size()) {
+            as->olog() << "start line past end of block.";
             continue;
         }
-        int pos = strToInt(args[1]);
-        out[as.lines[line].data()] = pos;
+        auto pos = strToInt(args[1]);
+        auto len = (int) as->lines[line].text.size();
+        if (pos >= len || -pos > len) {
+            as->olog() << "start character must be within line.";
+            continue;
+        }
+        if (pos < 0)
+            pos += len;
+        as->lines[line].input = pos;
+        applied = true;
     }
-    return out;
+    return applied;
 }
 
 
@@ -595,76 +626,75 @@ static void badAttrPrefix(
 static void processCompiler(
     PageInfo * info,
     TestInfo * ti,
-    const CodeBlock & blk
+    ApplyAttrState * as
 ) {
+    assert(info->out->compilers.contains(as->lang));
+
     string fname = "main";
     bool keepAlts = false;
     bool keepFiles = false;
-    ApplyAttrState as(blk);
-    as.logger = [&info, &blk](TestAttr attr) {
-        auto os = logMsgWarn();
-        badAttrPrefix(os, *info, blk, attr);
-        return os;
-    };
 
-    if (applyIgnoreAttr(as))
-        return;
-    applyLanguageAttr(as);
-    if (as.attr == kTestAlternate) {
+    if (as->attr == kTestAlternate) {
         if (ti->alts.empty()) {
-            as.olog() << "no previously defined program.";
-        } else if (as.iter->second.args.size() != 0) {
-            as.olog() << "expects no arguments.";
+            as->olog() << "no previously defined program.";
+        } else if (as->iter->second.args.size() != 0) {
+            as->olog() << "expects no arguments.";
         } else {
             keepAlts = true;
         }
-        as.nextAttr();
+        as->nextAttr();
     }
-    if (as.attr == kTestFile) {
-        auto & keys = as.iter->second.args;
+    if (as->attr == kTestFile) {
+        auto & keys = as->iter->second.args;
         if (keys.size() != 1) {
-            as.olog() << "must have filename argument.";
+            as->olog() << "must have filename argument.";
         } else {
             keepFiles = true;
             fname = keys[0];
         }
-        as.nextAttr();
+        as->nextAttr();
     }
-    applyPrefixAttr(as, info->testPrefix[as.lang]);
+    applyPrefixAttr(as, &info->testPrefix[as->lang]);
+    applySubsetAttr(as);
 
-    vector<string_view> flines;
+    vector<CodeLine> flines;
     if (!ti->alts.empty() && ti->alts.back().files.contains(fname)) {
         auto & lines = ti->alts.back().files[fname].lines;
-        flines.assign(lines.begin(), lines.end());
+        for (auto&& line : lines) {
+            auto & fl = flines.emplace_back();
+            fl.text = line;
+            fl.input = (int) fl.text.size();
+        }
     }
     if (applyReplaceAttr(as, flines))
         keepFiles = true;
-    applySubsetAttr(as);
-    assert(as.attr == kTestInvalid);
+    assert(as->attr == kTestInvalid);
 
     ProgInfo prog;
     if (ti->alts.empty() || !keepFiles) {
-        prog.line = blk.line;
+        prog.line = as->fileLine;
     } else {
         prog = ti->alts.back();
-        prog.line = blk.line;
+        prog.line = as->fileLine;
     }
     auto & file = prog.files[fname];
-    file.lang = as.lang;
-    file.line = blk.line;
+    file.lang = as->lang;
+    file.line = as->fileLine;
 
     if (ti->runs.empty()) {
         if (!ti->line)
-            ti->line = blk.line;
+            ti->line = as->fileLine;
     } else {
         info->tests[ti->line] = *ti;
         ti->runs.clear();
-        ti->line = blk.line;
+        ti->line = as->fileLine;
     }
     // Materialize the new lines in case what they're referencing is removed
     // by removing the alts or program.
-    vector<string> newLines(as.lines.begin(), as.lines.end());
-    file.lines = move(newLines);
+    file.lines.clear();
+    for (auto&& line : as->lines) {
+        file.lines.push_back(line.text);
+    }
     if (!keepAlts)
         ti->alts.clear();
     ti->alts.push_back(move(prog));
@@ -673,45 +703,38 @@ static void processCompiler(
 
 //===========================================================================
 static void processScript(
-    vector<string_view> * lines,
     PageInfo * info,
     TestInfo * ti,
-    const CodeBlock & blk
+    ApplyAttrState * as
 ) {
-    ApplyAttrState as(blk);
-    as.logger = [&info, &blk](TestAttr attr) {
-        auto os = logMsgWarn();
-        badAttrPrefix(os, *info, blk, attr);
-        return os;
-    };
+    assert(info->out->scripts.contains(as->lang));
 
-    if (applyIgnoreAttr(as))
-        return;
-    applyLanguageAttr(as);
-    if (!info->out->scripts.contains(as.lang))
-        return;
     if (applyNoScriptAttr(as)) {
         auto & run = ti->runs.emplace_back();
-        run.line = blk.line;
-        run.lang = as.lang;
+        run.line = as->fileLine;
+        run.lang = as->lang;
         return;
     }
-    auto input = applyGetlineAttr(as);
-    applyReplaceAttr(as, *lines);
+    applyGetlineAttr(as);
+
+    auto & scriptLines = info->scriptLines[as->lang];
+    applyReplaceAttr(as, scriptLines);
+    scriptLines = as->lines;
+
     applySubsetAttr(as);
 
-    assert(as.attr == kTestInvalid);
-    *lines = as.lines;
-    auto & lang = *info->out->scripts[as.lang];
+    assert(as->attr == kTestInvalid);
+    auto & lang = *info->out->scripts[as->lang];
 
     enum { kInvalid, kComment, kExecute, kInput, kOutput };
     vector<int> types;
-    for (auto&& line : as.lines) {
-        line = rtrim(line);
+    for (auto&& line : as->lines) {
+        auto text = rtrim(line.text);
+        line.text = text;
         int type = kOutput;
-        if (line.starts_with(lang.commentPrefix)) {
+        if (text.starts_with(lang.commentPrefix)) {
             type = kComment;
-        } else if (line.starts_with(lang.prefix)) {
+        } else if (text.starts_with(lang.prefix)) {
             type = kExecute;
         }
         types.push_back(type);
@@ -719,34 +742,49 @@ static void processScript(
     types.push_back(kInvalid);
 
     map<string, string> env;
-    for (unsigned i = 0; i < as.lines.size();) {
+    for (unsigned i = 0; i < as->lines.size();) {
+        auto text = (string_view) as->lines[i].text;
+        auto input = as->lines[i].input != text.size();
         RunInfo run;
-        run.line = blk.line + i;
-        run.lang = as.lang;
-        for (; types[i] == kComment; ++i) {
-            auto cmt = as.lines[i].substr(lang.commentPrefix.size());
-            cmt = trim(cmt);
+        run.line = as->fileLine + i;
+        run.lang = as->lang;
+        while (types[i] == kComment) {
+            if (input) {
+                logMsgWarn() << info->page.file << ", line "
+                    << as->fileLine + i << ": getline attribute only allowed "
+                    << "for output lines.";
+            }
+            auto cmt = trim(text.substr(lang.commentPrefix.size()));
             run.comments.emplace_back(cmt);
-        }
-        if (types[i] == kInvalid) {
-            // End of list.
-            return;
+
+            i += 1;
+            if (types[i] == kInvalid) {
+                // End of list.
+                return;
+            }
+            text = (string_view) as->lines[i].text;
+            input = as->lines[i].input != text.size();
         }
         if (types[i] != kExecute) {
-            logMsgWarn() << info->page.file << ", line " << blk.line + i
+            logMsgWarn() << info->page.file << ", line " << as->fileLine + i
                 << ": expected executable statement in script block.";
             return;
         }
-        run.cmdline = trim(as.lines[i].substr(lang.prefix.size()));
+        if (input) {
+            logMsgWarn() << info->page.file << ", line "
+                << as->fileLine + i << ": getline attribute only allowed "
+                << "for output lines.";
+        }
+        run.cmdline = trim(text.substr(lang.prefix.size()));
         for (auto&& eset : lang.envSets) {
             match_results<string_view::const_iterator> m;
-            if (regex_match(as.lines[i].begin(), as.lines[i].end(), m, eset)) {
+            if (regex_match(text.begin(), text.end(), m, eset)) {
                 assert(m.size() == 3);
                 auto n = m[1].str();
                 auto v = m[2].str();
                 if (n.empty()) {
                     logMsgWarn() << info->page.file << ", line "
-                        << blk.line + i
+                        << as->fileLine + i
                         << ": setting environment variable with no name.";
                     return;
                 }
@@ -761,22 +799,7 @@ static void processScript(
         }
         run.env = env;
         for (++i; types[i] == kOutput; ++i) {
-            auto data = as.lines[i].data();
-            while (input.contains(data)) {
-                auto len = (int) as.lines[i].size();
-                auto pos = input[data];
-                if (pos >= 0) {
-                    if (pos >= len)
-                        break;
-                } else {
-                    if (-pos > len)
-                        break;
-                    pos += len;
-                }
-                run.input[run.output.size()] = pos;
-                break;
-            }
-            run.output.emplace_back(as.lines[i]);
+            run.output.emplace_back(as->lines[i]);
         }
         ti->runs.push_back(move(run));
     }
@@ -813,9 +836,10 @@ static void addOutputScript(
     const ProgInfo & prog
 ) {
     auto & cfg = *info->out;
+    auto path = Path(testPath(*info, prog.line)) / "script.txt";
 
     CharBuf content;
-    genFileHeader(&content, "script.txt", "; ");
+    genFileHeader(&content, path.str(), "; ");
     content.append("; From '")
         .append(info->page.file)
         .append("', line ")
@@ -832,20 +856,19 @@ static void addOutputScript(
         for (auto&& cmt : run.comments)
             content.append("# ").append(cmt).append("\n");
         content.append("$ ").append(run.cmdline).append("\n");
-        for (unsigned pos = 0; pos < run.output.size(); ++pos) {
-            if (run.input.contains(pos)) {
+        for (auto&& line : run.output) {
+            if (line.input < line.text.size()) {
                 content.append("< ")
-                    .append(run.output[pos].data() + run.input.at(pos))
+                    .append(line.text.substr(line.input))
                     .pushBack('\n');
             }
-            content.append("> ").append(run.output[pos]).pushBack('\n');
+            content.append("> ").append(line.text).pushBack('\n');
         }
     }
     if (len == content.size()) {
         // No runs were added
         content.append("; No script, compile only test\n");
     }
-    auto path = Path(testPath(*info, prog.line)) / "script.txt";
     addOutput(&cfg, path.str(), move(content));
 }
 
@@ -862,12 +885,24 @@ static void processPage(PageInfo * info, unsigned phase = 0) {
 
     vector<CodeBlock> blocks = findBlocks(*info);
     TestInfo ti;
-    vector<string_view> scriptLines;
     for (auto&& blk : blocks) {
-        if (cfg.compilers.contains(blk.lang)) {
-            processCompiler(info, &ti, blk);
-        } else if (cfg.scripts.contains(blk.lang)) {
-            processScript(&scriptLines, info, &ti, blk);
+        ApplyAttrState as(blk, info->page.file);
+        as.logger = [&info, &blk](TestAttr attr) {
+            auto os = logMsgWarn();
+            badAttrPrefix(os, *info, blk, attr);
+            return os;
+        };
+        if (applyIgnoreAttr(&as))
+            continue;
+        applyLanguageAttr(&as);
+
+        if (cfg.compilers.contains(as.lang)) {
+            processCompiler(info, &ti, &as);
+        } else if (cfg.scripts.contains(as.lang)) {
+            processScript(info, &ti, &as);
+        } else {
+            logMsgWarn() << info->page.file << ", line " << blk.line
+                << ": unknown language: '" << as.lang << "'";
         }
     }
 
@@ -886,7 +921,7 @@ static void processPage(PageInfo * info, unsigned phase = 0) {
                     file.second.line
                 );
                 for (auto&& line : info->testPrefix[file.second.lang])
-                    content.append(line).append("\n");
+                    content.append(line.text).append("\n");
                 for (auto&& line : file.second.lines)
                     content.append(line).append("\n");
                 addOutput(&cfg, path.str(), move(content));
@@ -927,19 +962,21 @@ static void runProgDone(
     vector<string_view> lines;
     split(&lines, out, '\n');
     vector<string> tmp;
-    for (auto il = 0; il < lines.size(); ++il) {
-        if (run.input.contains(il)) {
-            auto pos = run.input.at(il);
-            auto line = lines[il];
+    for (auto i = 0; i < lines.size(); ++i) {
+        if (i >= run.output.size())
+            break;
+        const auto & output = run.output[i];
+        if (output.input < output.text.size()) {
+            auto pos = output.input;
+            auto line = lines[i];
             auto & withInput =
                 tmp.emplace_back(line.substr(0, pos));
-            withInput +=
-                run.output[il].substr(run.input.at(il));
+            withInput += output.text.substr(pos);
             lines.insert(
-                lines.begin() + il + 1,
+                lines.begin() + i + 1,
                 line.substr(pos)
             );
-            lines[il] = withInput;
+            lines[i] = withInput;
         }
     }
     auto i = -1;
@@ -950,7 +987,7 @@ static void runProgDone(
         ) {
             lines.pop_back();
         } else if (lines.size() + 1 == olen
-            && run.output.back().empty()
+            && run.output.back().text.empty()
         ) {
             // last output line blank, ignore it
             olen -= 1;
@@ -959,7 +996,7 @@ static void runProgDone(
     auto len = min(lines.size(), olen);
     for (i = 0; i < len; ++i) {
         auto line = rtrim(lines[i]);
-        if (run.output[i] != line)
+        if (run.output[i].text != line)
             goto FAILED;
     }
     if (lines.size() != olen)
@@ -974,7 +1011,7 @@ FAILED:
     for (auto pos = 0; auto&& line : lines) {
         if (pos++ == i) {
             logMsgInfo() << "+ " << line;
-            logMsgInfo() << "- " << run.output[i];
+            logMsgInfo() << "- " << run.output[i].text;
         } else {
             logMsgInfo() << "> " << line;
         }
@@ -1080,8 +1117,9 @@ static void runProgTests(ProgWork * work, unsigned phase) {
             auto cmd = Cli::toCmdline(args);
 
             string input;
-            for (auto&& [line, pos] : run.input) {
-                input += run.output.at(line).substr(pos);
+            for (auto&& line : run.output) {
+                if (line.input < line.text.size())
+                    input += line.text.substr(line.input);
                 input += '\n';
             }
 
@@ -1193,22 +1231,29 @@ static void testSamples(Config * out, unsigned phase = 0) {
         }
 
         // Replace test output directory with all the new files.
-        auto odir = Path(out->sampDir).resolve(out->configFile.parentPath());
-        if (!writeOutputs(odir, out->outputs))
-            return;
         auto count = out->outputs.size();
-        logMsgInfo() << count << " generated files.";
-        {
+        if (s_opts.update) {
+            auto odir = Path(out->sampDir)
+                .resolve(out->configFile.parentPath());
+            if (s_opts.update && !writeOutputs(odir, out->outputs))
+                return;
+            logMsgInfo() << count << " files updated.";
             ConsoleScopedAttr ca(kConsoleNote);
-            logMsgInfo() << "Tests generated successfully.";
+            logMsgInfo() << "Tests generated.";
+        } else {
+            logMsgInfo() << count << " files calculated.";
+            ConsoleScopedAttr ca(kConsoleNote);
+            logMsgInfo() << "Tests calculated.";
         }
 
         // Compile and execute tests
         out->pendingWork = 1;
-        runTests(
-            [out, what]() { testSamples(out, what); },
-            s_pageInfos
-        );
+        if (s_opts.compile) {
+            runTests(
+                [out, what]() { testSamples(out, what); },
+                s_pageInfos
+            );
+        }
 
         phase = what;
     }
@@ -1221,17 +1266,24 @@ static void testSamples(Config * out, unsigned phase = 0) {
         // Clean up
         delete out;
 
-        logMsgInfo() << s_perfCompile << " programs compiled.";
-        logMsgInfo() << s_perfRun << " runs executed.";
-        if (auto errs = s_perfCompileFailed + s_perfRunFailed) {
-            ConsoleScopedAttr ca(kConsoleError);
-            logMsgInfo() << "Compile and run failures: " << errs;
-        } else {
-            ConsoleScopedAttr ca(kConsoleCheer);
-            logMsgInfo() << "Tests run successfully.";
+        auto errs = s_perfCompileFailed + s_perfRunFailed;
+        if (s_opts.compile) {
+            logMsgInfo() << s_perfCompile << " programs compiled.";
+            logMsgInfo() << s_perfRun << " runs executed.";
+            if (errs) {
+                ConsoleScopedAttr ca(kConsoleError);
+                logMsgInfo() << "Compile and run failures: " << errs;
+            } else {
+                ConsoleScopedAttr ca(kConsoleNote);
+                logMsgInfo() << "Tests run successfully.";
+            }
         }
 
-        logPauseStopwatch();
+        if (!errs) {
+            ConsoleScopedAttr ca(kConsoleCheer);
+            logMsgInfo() << "Completed successfully.";
+        }
+        logStopwatch();
         appSignalShutdown(EX_OK);
         return;
     }
@@ -1259,6 +1311,11 @@ CmdOpts::CmdOpts() {
             "(default: {GIT_ROOT}/docs/docgen.xml)");
     cli.opt(&layout, "layout", "default")
         .desc("Layout with files to process.");
+
+    cli.opt(&update, "update", true)
+        .desc("Update files used to compile/run tests.");
+    cli.opt(&compile, "compile", true)
+        .desc("Compile and run tests, but only if update is also enabled.");
 
     enum { kPage, kLine } mode = kPage;
     cli.opt(&mode, "page", kPage).flagValue(true)
