@@ -253,6 +253,7 @@
 # tests/xml/pch.cpp
 # tests/xml/pch.h
 # tests/xml/xmltest.cpp
+# tools/cmtupd/CHANGELOG.md
 # tools/cmtupd/README.adoc
 # tools/cmtupd/cmtupd.cpp
 # tools/cmtupd/pch.cpp
