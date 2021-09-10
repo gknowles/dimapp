@@ -473,6 +473,7 @@ file(GLOB sources
     *.yml
     *.adoc
     *.md
+    *.rst
     *.props
     configure.bat)
 file(GLOB_RECURSE allnames docs/*)

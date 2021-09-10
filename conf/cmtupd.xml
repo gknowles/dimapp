@@ -32,6 +32,18 @@ and '} respectively.
       <Var name="Prefix" value="# "/>
     </Group>
     <Group>
+      <File regex=".*\.cpp"/>
+      <File regex=".*\.h"/>
+      <Exclude regex="libs/core/hash_crc32c\.cpp"/>
+      <Exclude regex="libs/json/jsonparse\.cpp"/>
+      <Exclude regex="libs/json/jsonparseint\.h"/>
+      <Exclude regex="libs/xml/xmlbaseparse\.cpp"/>
+      <Exclude regex="libs/xml/xmlbaseparse\.h"/>
+      <Exclude regex="tools/pargen/abnfparse\.cpp"/>
+      <Exclude regex="tools/pargen/abnfparse\.h"/>
+      <Var name="Prefix" value="// "/>
+    </Group>
+    <Group>
       <File regex=".*\.adoc"/>
       <File regex=".*\.md"/>
       <File regex=".*\.natvis"/> <!-- xml -->
@@ -43,16 +55,8 @@ and '} respectively.
       <Var name="Prefix" value=""/>
     </Group>
     <Group>
-      <File regex=".*\.cpp"/>
-      <File regex=".*\.h"/>
-      <Exclude regex="libs/core/hash_crc32c\.cpp"/>
-      <Exclude regex="libs/json/jsonparse\.cpp"/>
-      <Exclude regex="libs/json/jsonparseint\.h"/>
-      <Exclude regex="libs/xml/xmlbaseparse\.cpp"/>
-      <Exclude regex="libs/xml/xmlbaseparse\.h"/>
-      <Exclude regex="tools/pargen/abnfparse\.cpp"/>
-      <Exclude regex="tools/pargen/abnfparse\.h"/>
-      <Var name="Prefix" value="// "/>
+      <File regex=".*\.rst"/>
+      <Var name="Prefix" value=".. "/>
     </Group>
     <Group>
       <File regex=".*\.abnf"/>
