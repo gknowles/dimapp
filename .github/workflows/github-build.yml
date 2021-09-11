@@ -1,0 +1,63 @@
+# Copyright Glen Knowles 2021.
+# Distributed under the Boost Software License, Version 1.0.
+#
+# github-build.yml
+
+name: build
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch: {}
+
+jobs:
+  build-win:
+    strategy:
+      matrix:
+        platform: [x64]
+        configuration: [Debug, Release]
+        toolset: [v142]
+        image: [windows-2019]
+    runs-on: ${{matrix.image}}
+    defaults:
+      run:
+        shell: cmd
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - name: Build
+      working-directory: ${{github.workspace}}
+      run: |
+        md build
+        cd build
+        cmake .. -G "Visual Studio 16 2019" -A ${{matrix.platform}} -T ${{matrix.toolset}}
+        cmake . -DCMAKE_BUILD_TYPE=${{matrix.configuration}} -DCMAKE_INSTALL_PREFIX=publish -DINSTALL_LIBS:BOOL=ON
+        cmake --build . --target install --config ${{matrix.configuration}}
+        cd publish
+        :: 7z a dimcli-latest.zip include lib
+
+    - name: Test
+      working-directory: ${{github.workspace}}
+      run: |
+        bin\bitview
+        bin\charbuf
+        bin\file
+        bin\hpack
+        bin\http
+        bin\json --test
+        bin\list
+        bin\math
+        bin\msgpack
+        bin\pargen --test
+        bin\path
+        bin\str
+        :: bin\strtrie --test
+        bin\time
+        bin\tokentable
+        bin\uset
+        bin\xml --test
