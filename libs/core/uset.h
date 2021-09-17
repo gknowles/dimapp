@@ -51,10 +51,10 @@ public:
     using reverse_range_iterator = typename RevIterBase<RangeIter>;
 
 public:
-    constexpr static size_t kBitWidth = CHAR_BIT * sizeof T;
-    constexpr static size_t kTypeBits = 4;
-    constexpr static size_t kDepthBits = 4;
-    constexpr static size_t kBaseBits = kBitWidth - kTypeBits - kDepthBits;
+    static const size_t kBitWidth = CHAR_BIT * sizeof T;
+    static const size_t kTypeBits = 4;
+    static const size_t kDepthBits = 4;
+    static const size_t kBaseBits = kBitWidth - kTypeBits - kDepthBits;
 
     struct Node : NoCopy {
         int type : kTypeBits;

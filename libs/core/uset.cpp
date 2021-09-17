@@ -36,12 +36,12 @@ public:
     };
     static_assert(kMetaParent < 1 << kTypeBits);
 
-    constexpr static size_t kLeafBits = min((size_t) 12, kBitWidth);
-    constexpr static size_t kDataSize = (1 << kLeafBits) / 8;
+    constinit static const size_t kLeafBits = min((size_t) 12, kBitWidth);
+    constinit static const size_t kDataSize = (1 << kLeafBits) / 8;
 
-    constexpr static size_t kStepBits =
+    constinit static const size_t kStepBits =
         hammingWeight(pow2Ceil(kDataSize / sizeof Node + 1) / 2 - 1);
-    constexpr static size_t kMaxDepth =
+    constinit static const size_t kMaxDepth =
         (kBitWidth - kLeafBits + kStepBits - 1) / kStepBits;
     static_assert(kBaseBits + kLeafBits >= kBitWidth);
 
