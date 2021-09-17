@@ -8,6 +8,7 @@
 
 #include <cstring>
 #include <memory_resource>
+#include <span>
 #include <string_view>
 
 namespace Dim {
@@ -27,6 +28,8 @@ public:
         T * emplace(Args &&... args);
     template <typename T>
         T * alloc(size_t num);
+    template <typename T>
+        std::span<T> allocSpan(size_t num);
 
     char * strDup(const char src[]);
     char * strDup(std::string_view src);
@@ -53,8 +56,15 @@ inline T * ITempHeap::emplace(Args &&... args) {
 //===========================================================================
 template <typename T>
 inline T * ITempHeap::alloc(size_t num) {
-    char * tmp = alloc(num * sizeof T, alignof(T));
-    return new (tmp) T[num];
+    T * tmp = (T *) alloc(num * sizeof T, alignof(T));
+    std::uninitialized_default_construct_n(tmp, num);
+    return tmp;
+}
+
+//===========================================================================
+template <typename T>
+inline std::span<T> ITempHeap::allocSpan(size_t num) {
+    return std::span(alloc(num), num);
 }
 
 //===========================================================================
