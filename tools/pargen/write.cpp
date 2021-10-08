@@ -418,7 +418,7 @@ static void writeStateName(
 }
 
 //===========================================================================
-static void writeTerminals(ostream & os, bitset<256> const & terminals) {
+static void writeTerminals(ostream & os, const bitset<256> & terminals) {
     if (terminals.none()) {
         os << "< >\n";
         return;
@@ -643,7 +643,7 @@ STATE_0:
 static void writeFunction(
     ostream & os,
     const Element * root,
-    unordered_set<State> const & stateSet,
+    const unordered_set<State> & stateSet,
     const Grammar & options,
     bool inclStatePositions
 ) {

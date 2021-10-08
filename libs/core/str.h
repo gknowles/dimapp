@@ -259,7 +259,7 @@ size_t strCopy(wchar_t * out, size_t outLen, std::string_view src);
 // vector to string
 //===========================================================================
 template<typename T>
-std::string toString(std::vector<T> const & src, char sep = ' ') {
+std::string toString(const std::vector<T> & src, char sep = ' ') {
     if (src.empty())
         return {};
     std::ostringstream os;

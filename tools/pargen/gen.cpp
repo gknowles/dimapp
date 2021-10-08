@@ -60,8 +60,8 @@ bool StateElement::operator==(const StateElement & right) const {
 //===========================================================================
 template<typename T>
 strong_ordering compare(
-    vector<T> const & a,
-    vector<T> const & b
+    const vector<T> & a,
+    const vector<T> & b
 ) {
     auto a1 = a.data();
     auto a2 = a1 + a.size();
@@ -374,7 +374,7 @@ static void setPositionPrefix(
     int recursePos, // position within sequence
     bool recurseSeIncluded, // sequence state element included? else 1 past
                             //   the end, ignored if pos == -1
-    vector<StateEvent> const & events,
+    const vector<StateEvent> & events,
     bool started
 ) {
     sp->elems.assign(begin, end);
@@ -415,7 +415,7 @@ static void addDelayedEvents(
 static void addNextPositions(
     State * st,
     const StatePosition & sp,
-    bitset<256> const & chars
+    const bitset<256> & chars
 ) {
     bool terminal = chars.any();
 
@@ -611,7 +611,7 @@ static void removePositionsWithMoreEvents(State & st) {
 //===========================================================================
 static void removeConflicts(
     vector<StateEvent> & matched,
-    vector<StateEvent> const & events
+    const vector<StateEvent> & events
 ) {
     if (matched.empty())
         return;
@@ -670,7 +670,7 @@ static void removeConflicts(
 // returns false if there are conflicts that can't be delayed
 static bool delayConflicts(
     StatePosition & nsp,
-    vector<StateEvent> const & matched,
+    const vector<StateEvent> & matched,
     const StateTreeInfo & sti,
     bool logError
 ) {

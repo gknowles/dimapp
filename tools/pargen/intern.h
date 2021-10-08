@@ -167,7 +167,7 @@ public:
     Element * element(std::string_view name);
     const Element * element(std::string_view name) const;
 
-    std::set<Element> const & rules() const { return m_rules; }
+    const std::set<Element> & rules() const { return m_rules; }
     std::set<Element> & rules() { return m_rules; }
 
     size_t errpos() const { return m_errpos; }

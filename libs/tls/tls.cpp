@@ -65,7 +65,7 @@ void TlsConnBase::setSuites(const TlsCipherSuite suites[], size_t count) {
 }
 
 //===========================================================================
-vector<TlsCipherSuite> const & TlsConnBase::suites() const {
+const vector<TlsCipherSuite> & TlsConnBase::suites() const {
     return m_suites;
 }
 

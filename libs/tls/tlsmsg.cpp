@@ -53,7 +53,7 @@ void Dim::tlsSetKeyShare(TlsKeyShare * out, TlsNamedGroup group) {
 //===========================================================================
 static void write(
     TlsRecordWriter * out,
-    vector<TlsKeyShare> const & keys
+    const vector<TlsKeyShare> & keys
 ) {
     if (keys.empty())
         return;
@@ -89,7 +89,7 @@ static void write(TlsRecordWriter * out, const TlsKeyShare & key) {
 //===========================================================================
 static void write(
     TlsRecordWriter * out,
-    vector<TlsPresharedKey> const & keys
+    const vector<TlsPresharedKey> & keys
 ) {
 }
 
@@ -100,7 +100,7 @@ static void write(TlsRecordWriter * out, const TlsPresharedKey & key) {
 //===========================================================================
 static void write(
     TlsRecordWriter * out,
-    vector<TlsSignatureScheme> const & schemes
+    const vector<TlsSignatureScheme> & schemes
 ) {
     if (schemes.empty())
         return;
@@ -117,7 +117,7 @@ static void write(
 }
 
 //===========================================================================
-static void writeSni(TlsRecordWriter * out, vector<uint8_t> const & host) {
+static void writeSni(TlsRecordWriter * out, const vector<uint8_t> & host) {
     if (host.empty())
         return;
 

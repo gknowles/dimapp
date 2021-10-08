@@ -178,8 +178,8 @@ static bool hasEnhancedUsage(const CERT_CONTEXT * cert, string_view oid) {
 static void addAltNameExt(
     vector<CERT_EXTENSION> * extVec,
     vector<string> * blobBufs,
-    vector<string_view> const & dnsNames,
-    vector<string_view> const & ipAddrs
+    const vector<string_view> & dnsNames,
+    const vector<string_view> & ipAddrs
 ) {
     if (dnsNames.empty() && ipAddrs.empty())
         return;
@@ -230,8 +230,8 @@ static void addAltNameExt(
 //===========================================================================
 static const CERT_CONTEXT * makeCert(
     string_view issuerName,
-    vector<string_view> const & dnsNames,
-    vector<string_view> const & ipAddrs
+    const vector<string_view> & dnsNames,
+    const vector<string_view> & ipAddrs
 ) {
     WinError err{0};
     auto nkey = createKey();
@@ -505,8 +505,8 @@ static void addCerts(
 static void getCerts(
     vector<unique_ptr<CERT_CONTEXT const>> & certs,
     span<const CertKey> keys,
-    vector<string_view> const & dnsNames,
-    vector<string_view> const & ipAddrs
+    const vector<string_view> & dnsNames,
+    const vector<string_view> & ipAddrs
 ) {
     certs.clear();
     for (auto&& val : keys)
@@ -729,8 +729,8 @@ string_view CertLocation::view() const {
 //===========================================================================
 unique_ptr<CredHandle> Dim::iWinTlsCreateCred(
     span<const CertKey> keys,
-    vector<string_view> const & dnsNamesForSelfSigned,
-    vector<string_view> const & ipAddrsForSelfSigned
+    const vector<string_view> & dnsNamesForSelfSigned,
+    const vector<string_view> & ipAddrsForSelfSigned
 ) {
     WinError err{0};
 

@@ -77,7 +77,7 @@ static string typeName(
 //===========================================================================
 static void writeEnumRestriction(
     IXBuilder * out,
-    vector<EnumValue> const & enumValues
+    const vector<EnumValue> & enumValues
 ) {
     out->start("restriction")
         .attr("base", "string");
@@ -104,7 +104,7 @@ static void writeSimpleRestriction(
 static void writeRestriction(
     IXBuilder * out,
     Attr::Content content,
-    vector<EnumValue> const & enumValues
+    const vector<EnumValue> & enumValues
 ) {
     switch (content) {
     case Attr::Content::kInvalid:
@@ -128,7 +128,7 @@ static void writeRestriction(
 static void writeSimpleType(
     IXBuilder * out,
     Attr::Content content,
-    vector<EnumValue> const & enumValues
+    const vector<EnumValue> & enumValues
 ) {
     out->start("simpleType");
     writeRestriction(out, content, enumValues);
@@ -164,7 +164,7 @@ static void writeElem(IXBuilder * out, XsdInfo * info, const Element & elem) {
 static void writeEnumType(
     IXBuilder * out,
     const string & name,
-    vector<EnumValue> const & enumValues
+    const vector<EnumValue> & enumValues
 ) {
     out->start("simpleType")
         .attr("name", name);

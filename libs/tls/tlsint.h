@@ -92,7 +92,7 @@ class TlsConnBase
 public:
     TlsConnBase();
     void setSuites(const TlsCipherSuite suites[], size_t count);
-    std::vector<TlsCipherSuite> const & suites() const;
+    const std::vector<TlsCipherSuite> & suites() const;
 
     bool recv(
         CharBuf * reply,

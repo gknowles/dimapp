@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2019 - 2020.
+// Copyright Glen Knowles 2019 - 2021.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // crontest.cpp - dim test cron
@@ -47,7 +47,7 @@ static void parseTest(
 //===========================================================================
 static void writeField(
     string * out,
-    uint8_t const * data,
+    const uint8_t * data,
     unsigned fpos,
     unsigned minLow,
     unsigned maxHigh
