@@ -5,8 +5,9 @@
 dimapp
 ======
 
-.. |ci-badge| image:: https://ci.appveyor.com/project/gknowles/dimapp/api/projects/status/0a248fk1dspywxbm?svg=true
+.. |ci-badge| image:: https://ci.appveyor.com/api/projects/status/0a248fk1dspywxbm?svg=true
    :target: https://ci.appveyor.com/project/gknowles/dimapp
+   :alt: Build status
 
 +----------------------------------+
 | MSVC 2019                        |
