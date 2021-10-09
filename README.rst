@@ -5,8 +5,8 @@
 dimapp
 ======
 
-.. |ci-badge| image:: https://ci.appveyor.com/api/projects/status/0a248fk1dspywxbm?svg=true
-   :target: https://ci.appveyor.com/project/gknowles/dimapp
+.. |ci-badge| image:: https://github.com/gknowles/dimapp/actions/workflows/github-build.yml/badge.svg
+   :target: https://github.com/gknowles/dimapp/actions/workflows/github-build.yml
    :alt: Build status
 
 +----------------------------------+
