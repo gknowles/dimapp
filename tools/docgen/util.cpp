@@ -442,7 +442,9 @@ bool writeOutputs(
         return false;
     }
     for (auto&& f : FileIter(odir, "*.*", FileIter::fDirsLast)) {
-        if (!strstr(f.path.c_str(), "/.git")) {
+        // Skip top level directories and files starting with '.git'
+        auto ebase = f.path.c_str() + odir.size();
+        if (strstr(f.path.c_str(), "/.git") != ebase) {
             if (!fileRemove(f.path)) {
                 if (!f.isdir) {
                     appSignalShutdown(EX_IOERR);

@@ -19,7 +19,7 @@ Markup documentation processing.
 * Documentation for multiple product versions selectable via dropdown.
 * Generates per page table of contents.
 * Updates cross references links between pages within each version.
-** Versions read from git via list of branch/tag combinations.
+** Versions selected from git via list of branch/tag combinations.
 * Replaces all contents (except ".git") of output directory with new site
   files.
 
@@ -109,12 +109,16 @@ case that range extends to the last line.
 * test getline <line> <start pos> - marks keyboard input from user
 * test noscript - compile only test, don't try scripts
 
-=== Script.txt format
+=== Format of script.txt
 Each line starts with the type (a single character), a space, and the content
 of the line. The types are:
 
-* ; - script file comment
-* # - comment about following command line
-* $ - command line to execute
-* < - stdin sent to preceding command line when it's executed
-* > - expected output (stderr and then stdout) from preceding command line
+[cols="^,<", options="autowidth"]
+|===
+h| Type h| Description
+| ; | Script file comment
+| # | Documentation comment about following command line
+| $ | Command line to execute
+| < | Input sent to preceding command line's stdin when it's executed
+| > | Expected output (stderr and then stdout) from preceding command line
+|===
