@@ -84,7 +84,7 @@ class StrTrieBase::Iterator {
 public:
     Iterator & operator++();
     bool operator==(const Iterator & right) const;
-    value_type const & operator*();
+    const value_type & operator*();
 };
 
 //===========================================================================
@@ -96,7 +96,7 @@ inline bool StrTrieBase::Iterator::operator==(
 
 //===========================================================================
 inline auto StrTrieBase::Iterator::operator*()
-    -> value_type const &
+    -> const value_type &
 {
     return m_current;
 }

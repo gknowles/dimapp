@@ -37,7 +37,6 @@ static bool s_verbose;
 *
 ***/
 
-#if 0
 //===========================================================================
 static bool insert(StrTrie * vals, string_view val) {
     if (s_verbose)
@@ -100,7 +99,6 @@ inline static void randomFill() {
         insert(&vals, key);
     }
 }
-#endif
 
 
 /****************************************************************************
