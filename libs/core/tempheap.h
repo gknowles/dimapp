@@ -64,7 +64,7 @@ inline T * ITempHeap::alloc(size_t num) {
 //===========================================================================
 template <typename T>
 inline std::span<T> ITempHeap::allocSpan(size_t num) {
-    return std::span(alloc(num), num);
+    return std::span(alloc<T>(num), num);
 }
 
 //===========================================================================
