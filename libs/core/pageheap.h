@@ -28,6 +28,7 @@ public:
 
     virtual size_t create() = 0;
     virtual void destroy(size_t pgno) = 0;
+    virtual void setRoot(size_t pgno) = 0;
 
     virtual size_t root() const = 0;
     virtual size_t pageSize() const = 0;
@@ -54,6 +55,7 @@ public:
 
     size_t create() override;
     void destroy(size_t pgno) override;
+    void setRoot(size_t pgno) override;
 
     size_t root() const override;
     size_t pageSize() const override;
@@ -63,6 +65,7 @@ public:
     const uint8_t * ptr(size_t pgno) const override;
 
 private:
+    size_t m_root = 0;
     UnsignedSet m_freePages;
     std::vector<std::unique_ptr<uint8_t[]>> m_pages;
 };
@@ -100,8 +103,15 @@ inline void PageHeap<N>::destroy(size_t pgno) {
 
 //===========================================================================
 template <int N>
+inline void PageHeap<N>::setRoot(size_t pgno) {
+    assert(pgno < pageCount());
+    m_root = pgno;
+}
+
+//===========================================================================
+template <int N>
 inline size_t PageHeap<N>::root() const {
-    return 0;
+    return m_root;
 }
 
 //===========================================================================
