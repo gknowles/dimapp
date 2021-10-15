@@ -56,7 +56,7 @@ jobs:
         bin\pargen --test
         bin\path
         bin\str
-        :: bin\strtrie --test
+        bin\strtrie --test
         bin\time
         bin\tokentable
         bin\uset
