@@ -61,6 +61,8 @@ inline static void internalTests() {
     EXPECT(vals.contains("abc"));
     EXPECT(!vals.contains("b"));
     EXPECT(!vals.contains("ab"));
+    EXPECT(!vals.contains("abb"));
+    EXPECT(!vals.contains("abd"));
     EXPECT(!vals.contains("abcd"));
 
     b = insert(&vals, "a");
@@ -122,8 +124,8 @@ static void app(int argc, char *argv[]) {
         return appSignalShutdown(EX_OK);
     }
 
-    //internalTests();
-    //randomFill();
+    internalTests();
+    // randomFill();
 
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);
