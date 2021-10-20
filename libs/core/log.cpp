@@ -328,7 +328,7 @@ void Dim::logHexDebug(string_view data) {
         auto os = logMsgDebug();
         os << setw(6) << pos << ':';
         for (unsigned i = 0; i < 16; ++i) {
-            if (i % 4 == 0) os.put(' ');
+            if (i % 2 == 0) os.put(' ');
             if (pos + i < data.size()) {
                 hexByte(os, ptr[i]);
             } else {
