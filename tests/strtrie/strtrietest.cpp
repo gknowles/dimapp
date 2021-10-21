@@ -39,12 +39,12 @@ static bool s_verbose;
 
 //===========================================================================
 static bool insert(StrTrie * vals, string_view val) {
-    if (s_verbose)
-        cout << "---\ninsert: " << urlEncodeQueryComponent(val)
-            << ", len=" << val.size() << '\n';
+    if (s_verbose) {
+        cout << "---\ninsert, len=" << val.size() << ":\n";
+        hexDump(cout, val);
+        vals->verbose(true);
+    }
     auto rc = vals->insert(val);
-    if (s_verbose)
-        vals->dump(cout);
     return rc;
 }
 
@@ -99,6 +99,7 @@ inline static void randomFill() {
         if (s_verbose)
             cout << i + 1 << " ";
         insert(&vals, key);
+        EXPECT(vals.contains(key));
     }
 }
 
@@ -125,7 +126,7 @@ static void app(int argc, char *argv[]) {
     }
 
     internalTests();
-    // randomFill();
+    randomFill();
 
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);

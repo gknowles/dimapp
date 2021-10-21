@@ -32,6 +32,7 @@ public:
 
 public:
     StrTrieBase (IPageHeap * pages) : m_pages{pages} {}
+    virtual ~StrTrieBase () = default;
 
     // returns whether key was inserted (didn't already exist).
     bool insert(std::string_view val);
@@ -54,9 +55,10 @@ public:
     Iterator begin() const;
     Iterator end() const;
 
-    std::ostream & dump(std::ostream & os) const;
+    virtual std::ostream * const debugStream() const { return nullptr; }
 
 private:
+    bool m_verbose = false;
     IPageHeap * m_pages;
 };
 
@@ -67,7 +69,11 @@ public:
     void clear() { m_heapImpl.clear(); }
     void swap(StrTrie & other);
 
+    void verbose(bool enable = true) { m_verbose = enable; }
+    std::ostream * const debugStream() const override;
+
 private:
+    bool m_verbose = false;
     PageHeap<128> m_heapImpl;
 };
 

@@ -18,6 +18,7 @@
 #include <iostream>
 #include <map>
 #include <random>
+#include <ranges>
 
 // Platform headers
 // External library internal headers
