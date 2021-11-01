@@ -131,6 +131,12 @@ struct VirtualPage {
     explicit VirtualPage(TempHeap * heap);
 };
 
+struct SearchFork {
+    pgno_t pgno = (pgno_t) -1;
+    int inode = -1;
+    int fpos = -1;
+    int kpos = -1;
+};
 struct SearchState {
     string_view key;
     int kpos = 0;
@@ -139,19 +145,18 @@ struct SearchState {
 
     // Current page
     pgno_t pgno = 0;
-    int used = 0;
 
     // Current node
     int inode = 0;
     StrTrieBase::Node * node = nullptr;
 
-    // Fork to adjacent key
-    pgno_t fpno = (pgno_t) -1;
-    int ifork = -1;
-    int fpos = -1;
+    // Forks taken in search
+    pmr::deque<SearchFork> forks;
 
     // Was key found?
     bool found = false;
+    pmr::string foundKey;
+    size_t foundKeyLen = 0;
 
     pmr::deque<UpdateBase *> updates;
     pmr::deque<VirtualPage> vpages;
@@ -297,6 +302,28 @@ static void setForkBits(
 static size_t forkLen(const StrTrieBase::Node * node) {
     assert(nodeType(node) == kNodeFork);
     return hammingWeight(forkBits(node));
+}
+
+//===========================================================================
+static int nextForkVal(uint16_t bits, int kval) {
+    assert(kval && kval < 16);
+    auto mask = (1u << (kMaxForkBit - kval - 1)) - 1;
+    auto nbits = bits & mask;
+    if (!nbits)
+        return -1;
+    auto nval = leadingZeroBits(nbits);
+    return nval;
+}
+
+//===========================================================================
+inline static int prevForkVal(uint16_t bits, int kval) {
+    assert(kval && kval < 16);
+    auto mask = 65535u << (kMaxForkBit - kval);
+    auto nbits = bits & mask;
+    if (!nbits)
+        return -1;
+    auto nval = kMaxForkBit - trailingZeroBits(nbits);
+    return (int) nval;
 }
 
 //===========================================================================
@@ -447,6 +474,7 @@ static int nodeLen(const StrTrieBase::Node * node) {
 }
 
 //===========================================================================
+// Returns vector of inode and nodeLen pairs.
 static pmr::vector<pair<int, size_t>> kids(
     SearchState * ss,
     int inode
@@ -513,6 +541,33 @@ static void setRemoteRef(NodeRef * out, SearchState * ss, pgno_t pgno) {
 }
 
 //===========================================================================
+// Allocs NodeRef pointing at next update node.
+static NodeRef * newRef(SearchState * ss) {
+    auto ref = ss->heap->emplace<NodeRef>();
+    setUpdateRef(ref, ss);
+    return ref;
+}
+
+//===========================================================================
+// Allocs NodeRef pointing at position on current source page.
+static NodeRef * newRef(SearchState * ss, ptrdiff_t srcPos, size_t srcLen) {
+    assert(srcPos >= 0);
+    auto ref = ss->heap->emplace<NodeRef>();
+    setSourceRef(ref, ss, srcPos, srcLen);
+    return ref;
+}
+
+//===========================================================================
+// Allocs NodeRef pointing at node on remote virtual page.
+[[maybe_unused]]
+static NodeRef * newRef(SearchState * ss, pgno_t pgno) {
+    assert(pgno >= 0);
+    auto ref = ss->heap->emplace<NodeRef>();
+    setRemoteRef(ref, ss, pgno);
+    return ref;
+}
+
+//===========================================================================
 // UpdateNode helpers
 //===========================================================================
 static int nodeLen(const UpdateBase & upd) {
@@ -542,6 +597,16 @@ static int nodeLen(const UpdateBase & upd) {
         len += kid.data.len;
     }
     return len;
+}
+
+//===========================================================================
+template <typename T>
+static T & newUpdate(SearchState * ss) {
+    auto * upd = ss->heap->emplace<T>();
+    upd->id = (int) ss->updates.size();
+    upd->type = T::s_type;
+    ss->updates.push_back(upd);
+    return *upd;
 }
 
 //===========================================================================
@@ -584,15 +649,31 @@ static void seekNode(SearchState * ss, size_t inode) {
     ss->node = getNode(ss, ss->inode);
 }
 
+//===========================================================================
+static void seekKid(SearchState * ss, size_t pos) {
+    auto root = ss->node - ss->inode;
+    auto inext = ss->inode + nodeHdrLen(ss->node);
+    for (auto i = 0; i < pos; ++i)
+        inext += nodeLen(root + inext);
+    seekNode(ss, inext);
+}
+
+//===========================================================================
+static bool logFatal(SearchState * ss) {
+    logMsgFatal() << "Invalid StrTrieBase node type: "
+        << nodeType(ss->node);
+    return false;
+}
+
 
 /****************************************************************************
 *
-*   StrTrieBase::Iterator
+*   StrTrieBase::Iter
 *
 ***/
 
 //===========================================================================
-StrTrieBase::Iterator & StrTrieBase::Iterator::operator++() {
+StrTrieBase::Iter & StrTrieBase::Iter::operator++() {
     return *this;
 }
 
@@ -604,8 +685,13 @@ StrTrieBase::Iterator & StrTrieBase::Iterator::operator++() {
 ***/
 
 //===========================================================================
+void StrTrie::clear() {
+    m_heapImpl.clear();
+}
+
+//===========================================================================
 std::ostream * const StrTrie::debugStream() const {
-    return m_verbose ? &cout : nullptr;
+    return m_debug ? &cout : nullptr;
 }
 
 
@@ -637,6 +723,8 @@ SearchState::SearchState(
     , klen((int) key.size() * 2)
     , pages(pages)
     , heap(heap)
+    , forks(heap)
+    , foundKey(heap)
     , updates(heap)
     , vpages(heap)
     , spages(heap)
@@ -654,49 +742,13 @@ SearchState::SearchState(
 ***/
 
 //===========================================================================
-// Allocs NodeRef pointing at next update node.
-static NodeRef * newRef(SearchState * ss) {
-    auto ref = ss->heap->emplace<NodeRef>();
-    setUpdateRef(ref, ss);
-    return ref;
-}
-
-//===========================================================================
-// Allocs NodeRef pointing at position on current source page.
-static NodeRef * newRef(SearchState * ss, ptrdiff_t srcPos, size_t srcLen) {
-    assert(srcPos >= 0);
-    auto ref = ss->heap->emplace<NodeRef>();
-    setSourceRef(ref, ss, srcPos, srcLen);
-    return ref;
-}
-
-//===========================================================================
-// Allocs NodeRef pointing at node on remote virtual page.
-[[maybe_unused]]
-static NodeRef * newRef(SearchState * ss, pgno_t pgno) {
-    assert(pgno >= 0);
-    auto ref = ss->heap->emplace<NodeRef>();
-    setRemoteRef(ref, ss, pgno);
-    return ref;
-}
-
-//===========================================================================
-template <typename T>
-static T & newUpdate(SearchState * ss) {
-    auto * upd = ss->heap->emplace<T>();
-    upd->id = (int) ss->updates.size();
-    upd->type = T::s_type;
-    ss->updates.push_back(upd);
-    return *upd;
-}
-
-//===========================================================================
 static UpdateSeg & copySeg(
     SearchState * ss,
     size_t pos,
     size_t len,
-    int halfSeg = -1,
-    NodeRef * halfSegRef = nullptr
+    bool eok,
+    NodeRef * nextRef = nullptr,
+    int halfSeg = -1
 ) {
     assert(nodeType(ss->node) == kNodeSeg);
     assert(pos + len <= segLen(ss->node));
@@ -719,20 +771,14 @@ static UpdateSeg & copySeg(
             *out++ = val;
         }
     }
-    if (halfSeg > -1) {
+    if (halfSeg > -1)
         upd.key[len8 - 1] |= halfSeg;
-        if (!halfSegRef) {
-            upd.endOfKey = true;
-        } else {
-            upd.refs = { halfSegRef, 1 };
-        }
+    if (eok) {
+        upd.endOfKey = true;
     } else {
-        if (nodeEndMarkFlag(ss->node) && pos + len == segLen(ss->node)) {
-            upd.endOfKey = true;
-        } else {
-            auto ref = newRef(ss);
-            upd.refs = { ref, 1 };
-        }
+        if (!nextRef)
+            nextRef = newRef(ss);
+        upd.refs = { nextRef, 1 };
     }
     return upd;
 }
@@ -775,7 +821,7 @@ static bool insertAtSeg(SearchState * ss) {
                 break;
             }
             // Continue search at next node
-            copySeg(ss, 0, slen);
+            copySeg(ss, 0, slen, false);
             seekNode(ss, ss->inode + nodeHdrLen(ss->node));
             return true;
         }
@@ -788,13 +834,11 @@ static bool insertAtSeg(SearchState * ss) {
     //      [tail seg] [tail half seg]
     assert(spos <= slen);
     if (spos > 1) {
-        auto & seg = copySeg(ss, 0, spos & ~1);
-        if (seg.endOfKey) {
-            seg.endOfKey = false;
-            seg.refs = { newRef(ss), 1 };
-        }
+        // Add lead seg.
+        copySeg(ss, 0, spos & ~1, false);
     }
     if (spos % 2 == 1) {
+        // Add lead halfSeg.
         auto & halfSeg = newUpdate<UpdateHalfSeg>(ss);
         halfSeg.nibble = segVal(ss->node, spos - 1);
         auto ref = newRef(ss);
@@ -833,7 +877,7 @@ static bool insertAtSeg(SearchState * ss) {
                 );
             }
         } else if ((slen - spos) % 2 == 1 && nodeType(tail) == kNodeHalfSeg) {
-            // Combined seg with following halfSeg.
+            // Combined rest of seg with following halfSeg.
             setUpdateRef(&fork.refs[0], ss);
             auto ref = (NodeRef *) nullptr;
             if (!nodeEndMarkFlag(tail)) {
@@ -845,21 +889,28 @@ static bool insertAtSeg(SearchState * ss) {
                     nodeLen(ss->node - ss->inode + inext)
                 );
             }
-            copySeg(
-                ss,
-                spos,
-                slen - spos,
-                halfSegVal(tail),
-                ref
-            );
+            copySeg(ss, spos, slen - spos, !ref, ref, halfSegVal(tail));
         } else {
             setUpdateRef(&fork.refs[0], ss);
             if (slen - spos > 1) {
-                // Add seg.
-                copySeg(ss, spos, (slen - spos) & ~1);
+                // Add seg part of the rest of the seg.
+                auto ref = (NodeRef *) nullptr;
+                if ((slen - spos) % 2 == 1) {
+                    copySeg(ss, spos, (slen - spos) & ~1, false);
+                } else {
+                    if (!nodeEndMarkFlag(ss->node)) {
+                        auto inext = ss->inode + nodeHdrLen(ss->node);
+                        ref = newRef(
+                            ss,
+                            inext,
+                            nodeLen(ss->node - ss->inode + inext)
+                        );
+                    }
+                    copySeg(ss, spos, slen - spos, !ref, ref);
+                }
             }
             if ((slen - spos) % 2 == 1) {
-                // Add following halfSeg.
+                // Add halfSeg part of the rest of the seg.
                 auto & halfSeg = newUpdate<UpdateHalfSeg>(ss);
                 halfSeg.nibble = segVal(ss->node, slen - 1);
                 if (nodeEndMarkFlag(ss->node)) {
@@ -1309,36 +1360,26 @@ bool StrTrieBase::insert(string_view key) {
         seekRootPage(ss);
         ss->spages.insert(ss->pgno);
         seekNode(ss, ss->inode);
-        for (;;) {
-            switch (auto ntype = ::nodeType(ss->node)) {
-            case kNodeSeg:
-                if (insertAtSeg(ss))
-                    continue;
-                break;
-            case kNodeHalfSeg:
-                if (insertAtHalfSeg(ss))
-                    continue;
-                break;
-            case kNodeFork:
-                if (insertAtFork(ss))
-                    continue;
-                break;
-            case kNodeEndMark:
-                if (insertAtEndMark(ss))
-                    continue;
-                break;
-            case kNodeRemote:
-                if (insertAtRemote(ss))
-                    continue;
-                break;
-            default:
-                logMsgFatal() << "Invalid StrTrieBase node type: "
-                    << (int) ntype;
-            }
 
-            if (ss->found)
-                return false;
-            break;
+        using Fn = bool(SearchState *);
+        constinit static Fn * const functs[8] = {
+            logFatal,
+            insertAtSeg,
+            insertAtHalfSeg,
+            insertAtFork,
+            insertAtEndMark,
+            insertAtRemote,
+            logFatal,
+            logFatal,
+        };
+        for (;;) {
+            auto ntype = ::nodeType(ss->node);
+            auto fn = functs[ntype];
+            if (!(*fn)(ss)) {
+                if (ss->found)
+                    return false;
+                break;
+            }
         }
     }
 
@@ -1359,33 +1400,6 @@ bool StrTrieBase::insert(string_view key) {
 *   Erase
 *
 ***/
-
-//===========================================================================
-// Returns true if there is more to do
-static bool findLastForkAtFork(SearchState * ss) {
-    if (ss->kpos == ss->klen) {
-        ss->found = nodeEndMarkFlag(ss->node);
-        return false;
-    }
-    if (!forkBit(ss->node, ss->kval))
-        return false;
-
-    auto vals = forkVals(ss, ss->node);
-    auto subs = kids(ss, ss->inode);
-    auto i = 0;
-    for (; i < vals.size(); ++i) {
-        if (vals[i] == ss->kval) {
-            ss->fpno = ss->pgno;
-            ss->ifork = subs[i].first;
-            ss->fpos = ss->kpos;
-            break;
-        }
-    }
-    ss->kval = keyVal(ss->key, ++ss->kpos);
-    auto sub = subs.back();
-    seekNode(ss, sub.first + sub.second);
-    return true;
-}
 
 //===========================================================================
 // Returns true if there is more to do, otherwise false and sets ss->found if
@@ -1409,10 +1423,32 @@ static bool findLastForkAtSeg(SearchState * ss) {
 }
 
 //===========================================================================
-static void findLastFork(SearchState * ss) {
-    ss->ifork = ss->inode;
-    ss->fpos = 0;
+// Returns true if there is more to do
+static bool findLastForkAtFork(SearchState * ss) {
+    if (ss->kpos == ss->klen) {
+        ss->found = nodeEndMarkFlag(ss->node);
+        return false;
+    }
+    if (!forkBit(ss->node, ss->kval))
+        return false;
 
+    auto vals = forkVals(ss, ss->node);
+    auto subs = kids(ss, ss->inode);
+    auto i = 0;
+    for (; i < vals.size(); ++i) {
+        if (vals[i] == ss->kval) {
+            ss->forks.emplace_back(ss->pgno, subs[i].first, ss->kpos);
+            break;
+        }
+    }
+    ss->kval = keyVal(ss->key, ++ss->kpos);
+    auto sub = subs.back();
+    seekNode(ss, sub.first + sub.second);
+    return true;
+}
+
+//===========================================================================
+static void findLastFork(SearchState * ss) {
     for (;;) {
         seekNode(ss, ss->inode);
         switch (auto ntype = ::nodeType(ss->node)) {
@@ -1444,8 +1480,11 @@ bool StrTrieBase::erase(string_view key) {
     if (!ss->found)
         return false;
 
-    seekNode(ss, ss->ifork);
-    ss->kpos = ss->fpos;
+    assert(!ss->forks.empty());
+    auto & fork = ss->forks.back();
+    seekPage(ss, fork.pgno);
+    seekNode(ss, fork.inode);
+    ss->kpos = fork.kpos;
 
     return true;
 }
@@ -1453,7 +1492,7 @@ bool StrTrieBase::erase(string_view key) {
 
 /****************************************************************************
 *
-*   Find
+*   Contains
 *
 ***/
 
@@ -1513,13 +1552,8 @@ static bool containsAtFork(SearchState * ss) {
     if (!forkBit(ss->node, ss->kval))
         return false;
 
-    auto root = ss->node - ss->inode;
-    auto inext = ss->inode + nodeHdrLen(ss->node);
     auto pos = forkPos(ss->node, ss->kval);
-    for (auto i = 0; i < pos; ++i) {
-        inext += nodeLen(root + inext);
-    }
-    seekNode(ss, inext);
+    seekKid(ss, pos);
     if (++ss->kpos < ss->klen)
         ss->kval = keyVal(ss->key, ss->kpos);
     return true;
@@ -1550,34 +1584,174 @@ bool StrTrieBase::contains(string_view key) const {
     seekRootPage(ss);
     seekNode(ss, ss->inode);
 
+    using Fn = bool(SearchState *);
+    constinit static Fn * const functs[8] = {
+        logFatal,
+        containsAtSeg,
+        containsAtHalfSeg,
+        containsAtFork,
+        containsAtEndMark,
+        containsAtRemote,
+        logFatal,
+        logFatal,
+    };
     for (;;) {
-        switch (auto ntype = ::nodeType(ss->node)) {
-        case kNodeSeg:
-            if (containsAtSeg(ss))
-                continue;
-            break;
-        case kNodeHalfSeg:
-            if (containsAtHalfSeg(ss))
-                continue;
-            break;
-        case kNodeFork:
-            if (containsAtFork(ss))
-                continue;
-            break;
-        case kNodeEndMark:
-            if (containsAtEndMark(ss))
-                continue;
-            break;
-        case kNodeRemote:
-            if (containsAtRemote(ss))
-                continue;
-            break;
-        default:
-            logMsgFatal() << "Invalid StrTrieBase node type: "
-                << (int) ntype;
-        }
-        return ss->found;
+        auto ntype = ::nodeType(ss->node);
+        auto fn = functs[ntype];
+        if (!(*fn)(ss))
+            return ss->found;
     }
+}
+
+
+/****************************************************************************
+*
+*   lowerBound
+*
+***/
+
+//===========================================================================
+static void setFoundKey(SearchState * ss) {
+    ss->foundKey = ss->key.substr(0, (ss->kpos + 1) / 2);
+    ss->foundKeyLen = ss->kpos;
+}
+
+//===========================================================================
+static void pushFoundKeyVal(SearchState * ss, int val) {
+    assert(val >= 0 && val <= 15);
+    if (ss->foundKeyLen % 2 == 0) {
+        ss->foundKey.push_back((uint8_t) val << 4);
+    } else {
+        ss->foundKey.back() |= val;
+    }
+    ss->foundKeyLen += 1;
+}
+
+//===========================================================================
+static void seekNextFork(SearchState * ss) {
+    while (!ss->forks.empty()) {
+        auto & fork = ss->forks.back();
+        ss->kpos = fork.kpos;
+        ss->kval = keyVal(ss->key, ss->kpos);
+        seekPage(ss, fork.pgno);
+        seekNode(ss, fork.inode);
+        auto nval = nextForkVal(forkBits(ss->node), ss->kval);
+        if (nval == -1) {
+            ss->forks.pop_back();
+            continue;
+        }
+
+        // Found next fork
+        auto pos = forkPos(ss->node, nval);
+        fork.kpos = pos;
+        seekKid(ss, pos);
+        setFoundKey(ss);
+        pushFoundKeyVal(ss, nval);
+        return;
+    }
+
+    ss->inode = 0;
+    ss->node = nullptr;
+}
+
+//===========================================================================
+static bool lowerBoundAtSeg(SearchState * ss) {
+    auto spos = 0;
+    auto slen = segLen(ss->node);
+    auto sval = segVal(ss->node, spos);
+
+    for (;;) {
+        if (ss->kval != sval)
+            break;
+        if (++ss->kpos != ss->klen)
+            ss->kval = keyVal(ss->key, ss->kpos);
+        if (++spos == slen) {
+            if (nodeEndMarkFlag(ss->node)) {
+                seekNextFork(ss);
+                return false;
+            }
+        }
+        sval = segVal(ss->node, spos);
+    }
+
+    if (ss->kval < sval) {
+        setFoundKey(ss);
+        for (;;) {
+            pushFoundKeyVal(ss, sval);
+            if (++spos == slen)
+                break;
+            sval = segVal(ss->node, spos);
+        }
+        if (nodeEndMarkFlag(ss->node)) {
+            ss->inode = 0;
+            ss->node = nullptr;
+            return false;
+        } else {
+            seekNode(ss, ss->inode + nodeHdrLen(ss->node));
+            return false;
+        }
+    } else {
+        assert(ss->kval > sval);
+        seekNextFork(ss);
+        return false;
+    }
+}
+
+//===========================================================================
+static bool lowerBoundAtHalfSeg(SearchState * ss) {
+    return false;
+}
+
+//===========================================================================
+static bool lowerBoundAtFork(SearchState * ss) {
+    return false;
+}
+
+//===========================================================================
+static bool lowerBoundAtEndMark(SearchState * ss) {
+    return false;
+}
+
+//===========================================================================
+static bool lowerBoundAtRemote(SearchState * ss) {
+    return false;
+}
+
+//===========================================================================
+StrTrieBase::Iter StrTrieBase::lowerBound(std::string_view key) const {
+    if (empty())
+        return Iter{};
+
+    TempHeap heap;
+    auto ss = heap.emplace<SearchState>(key, m_pages, &heap, debugStream());
+    seekRootPage(ss);
+    seekNode(ss, ss->inode);
+
+    using Fn = bool(SearchState *);
+    constinit static Fn * const functs[8] = {
+        logFatal,
+        lowerBoundAtSeg,
+        lowerBoundAtHalfSeg,
+        lowerBoundAtFork,
+        lowerBoundAtEndMark,
+        lowerBoundAtRemote,
+        logFatal,
+        logFatal,
+    };
+    for (;;) {
+        auto ntype = ::nodeType(ss->node);
+        auto fn = functs[ntype];
+        if (!(*fn)(ss)) {
+            if (!ss->found)
+                return Iter{};
+            break;
+        }
+    }
+
+    if (ss->node) {
+    }
+
+    return Iter{};
 }
 
 
@@ -1588,13 +1762,13 @@ bool StrTrieBase::contains(string_view key) const {
 ***/
 
 //===========================================================================
-StrTrieBase::Iterator StrTrieBase::begin() const {
-    return Iterator{};
+StrTrieBase::Iter StrTrieBase::begin() const {
+    return Iter{};
 }
 
 //===========================================================================
-StrTrieBase::Iterator StrTrieBase::end() const {
-    return Iterator{};
+StrTrieBase::Iter StrTrieBase::end() const {
+    return Iter{};
 }
 
 //===========================================================================

@@ -26,23 +26,26 @@ namespace Dim {
 
 class StrTrieBase {
 public:
-    using value_type = std::string;
-    class Iterator;
+    class Iter;
     struct Node;
+
+    using value_type = std::string;
+    using iterator = Iter;
 
 public:
     StrTrieBase (IPageHeap * pages) : m_pages{pages} {}
     virtual ~StrTrieBase () = default;
 
-    // returns whether key was inserted (didn't already exist).
+    // Returns whether key was inserted (didn't already exist).
     bool insert(std::string_view val);
 
-    // returns whether key was deleted, false if it wasn't present
+    // Returns whether key was deleted, false if it wasn't present.
     bool erase(std::string_view val);
 
     explicit operator bool() const { return !empty(); }
 
     bool contains(std::string_view key) const;
+    iterator lowerBound(std::string_view val) const;
     bool lowerBound(std::string * out, std::string_view val) const;
     bool upperBound(std::string * out, std::string_view val) const;
     bool equalRange(
@@ -52,8 +55,8 @@ public:
     ) const;
 
     bool empty() const { return m_pages->empty(); }
-    Iterator begin() const;
-    Iterator end() const;
+    iterator begin() const;
+    iterator end() const;
 
     virtual std::ostream * const debugStream() const { return nullptr; }
 
@@ -66,42 +69,41 @@ class StrTrie : public StrTrieBase {
 public:
     StrTrie () : StrTrieBase(&m_heapImpl) {}
 
-    void clear() { m_heapImpl.clear(); }
-    void swap(StrTrie & other);
+    void clear();
 
-    void verbose(bool enable = true) { m_verbose = enable; }
+    void debug(bool enable = true) { m_debug = enable; }
     std::ostream * const debugStream() const override;
 
 private:
-    bool m_verbose = false;
-    PageHeap<128> m_heapImpl;
+    bool m_debug = false;
+    PageHeap<256> m_heapImpl;
 };
 
 
 /****************************************************************************
 *
-*   StrTrieBase::Iterator
+*   StrTrieBase::Iter
 *
 ***/
 
-class StrTrieBase::Iterator {
+class StrTrieBase::Iter {
     using value_type = StrTrieBase::value_type;
     value_type m_current;
 public:
-    Iterator & operator++();
-    bool operator==(const Iterator & right) const;
+    Iter & operator++();
+    bool operator==(const Iter & right) const;
     const value_type & operator*();
 };
 
 //===========================================================================
-inline bool StrTrieBase::Iterator::operator==(
-    const Iterator & other
+inline bool StrTrieBase::Iter::operator==(
+    const Iter & other
 ) const {
     return m_current == other.m_current;
 }
 
 //===========================================================================
-inline auto StrTrieBase::Iterator::operator*()
+inline auto StrTrieBase::Iter::operator*()
     -> const value_type &
 {
     return m_current;

@@ -42,7 +42,7 @@ static bool insert(StrTrie * vals, string_view val) {
     if (s_verbose) {
         cout << "---\ninsert, len=" << val.size() << ":\n";
         hexDump(cout, val);
-        vals->verbose(true);
+        vals->debug(true);
     }
     auto rc = vals->insert(val);
     return rc;
