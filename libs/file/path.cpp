@@ -571,11 +571,17 @@ ostream & Dim::operator<< (ostream & os, const Path & val) {
 }
 
 //===========================================================================
+namespace Dim {
+    Path operator/ (const Path& a, std::string_view b);
+}
 Path Dim::operator/ (const Path & a, std::string_view b) {
     return Path{a} /= b;
 }
 
 //===========================================================================
+namespace Dim {
+    Path operator+ (const Path& a, std::string_view b);
+}
 Path Dim::operator+ (const Path & a, std::string_view b) {
     return Path{a} += b;
 }
