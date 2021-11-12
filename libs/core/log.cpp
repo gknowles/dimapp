@@ -410,7 +410,7 @@ void Dim::logStopwatchLap(std::string_view prefix) {
     scoped_lock lk{s_watchMut};
     if (!s_watchRunning)
         return;
-    auto start = s_watchLap ? s_watchLap : s_watchStart;
+    auto start = !empty(s_watchLap) ? s_watchLap : s_watchStart;
     s_watchLap = Clock::now();
 
     if (!prefix.empty()) {

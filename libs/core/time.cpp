@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2020.
+// Copyright Glen Knowles 2015 - 2021.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // types.cpp - dim core
@@ -409,14 +409,16 @@ TimePoint Dim::from_time_t(time_t t) {
 }
 
 //===========================================================================
+bool Dim::empty(const TimePoint & time) {
+    return time == TimePoint{};
+}
+
+//===========================================================================
 TimePoint Dim::timeNow() {
     return TimePoint{Duration{iClockGetTicks()}};
 }
 
 //===========================================================================
-namespace Dim {
-std::ostream & operator<<(std::ostream & os, TimePoint time);
-}
 std::ostream & Dim::operator<<(std::ostream & os, TimePoint time) {
     os << Time8601Str(time).c_str();
     return os;

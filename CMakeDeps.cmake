@@ -4,7 +4,6 @@
 # LICENSE
 # README.adoc
 # appveyor.yml
-# conf/app.xml
 # conf/app.xml.adoc
 # conf/app.xml.sample
 # conf/cmtupd.xml

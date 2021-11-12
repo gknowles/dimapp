@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2020.
+// Copyright Glen Knowles 2015 - 2021.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // time.h - dim core
@@ -27,13 +27,7 @@ struct Clock {
     using rep = int64_t;
     using period = std::ratio<1, kClockTicksPerSecond>;
     using duration = std::chrono::duration<rep, period>;
-    class time_point : public std::chrono::time_point<Clock> {
-    public:
-        using std::chrono::time_point<Clock>::time_point;
-        explicit operator bool() const noexcept;
-    private:
-        friend std::ostream & operator<<(std::ostream & os, time_point time);
-    };
+    using time_point = std::chrono::time_point<Clock>;
 
     static const bool is_monotonic = false;
     static const bool is_steady = false;
@@ -41,15 +35,13 @@ struct Clock {
     static time_point now() noexcept;
 };
 
-//===========================================================================
-inline Clock::time_point::operator bool() const noexcept {
-    return *this != time_point{};
-}
-
 using Duration = Clock::duration;
 using TimePoint = Clock::time_point;
 
+bool empty(const TimePoint & time);
 TimePoint timeNow();
+
+std::ostream& operator<<(std::ostream& os, TimePoint time);
 
 // C conversions
 time_t to_time_t(const TimePoint & time);

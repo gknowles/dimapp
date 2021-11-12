@@ -62,8 +62,8 @@ static void updateProcessTimes() {
     auto utime = duration(user);
     auto elapsed = now - s_lastSnapshot;
     auto cores = envProcessors();
-    if (!s_lastSnapshot || elapsed > 1s) {
-        if (s_lastSnapshot) {
+    if (empty(s_lastSnapshot) || elapsed > 1s) {
+        if (!empty(s_lastSnapshot)) {
             auto factor = 100.0f / elapsed.count() / cores;
             s_kernelPct = factor * (float) (ktime - s_kernelTime).count();
             s_userPct = factor * (float) (utime - s_userTime).count();
