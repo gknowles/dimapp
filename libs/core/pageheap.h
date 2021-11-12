@@ -34,6 +34,7 @@ public:
     virtual size_t pageSize() const = 0;
 
     virtual bool empty() const = 0;
+    virtual bool empty(size_t pgno) const = 0;
 
     virtual uint8_t * ptr(size_t pgno) = 0;
     virtual const uint8_t * ptr(size_t pgno) const = 0;
@@ -60,6 +61,7 @@ public:
     size_t root() const override;
     size_t pageSize() const override;
     bool empty() const override;
+    bool empty(size_t pgno) const override;
 
     uint8_t * ptr(size_t pgno) override;
     const uint8_t * ptr(size_t pgno) const override;
@@ -124,6 +126,12 @@ inline size_t PageHeap<N>::pageSize() const {
 template <int N>
 inline bool PageHeap<N>::empty() const {
     return m_pages.empty();
+}
+
+//===========================================================================
+template <int N>
+inline bool PageHeap<N>::empty(size_t pgno) const {
+    return pgno >= pageCount() || m_freePages.contains((unsigned) pgno);
 }
 
 //===========================================================================
