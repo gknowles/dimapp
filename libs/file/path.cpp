@@ -561,27 +561,24 @@ bool Path::hasExt() const {
 *
 ***/
 
-//===========================================================================
 namespace Dim {
-ostream & operator<< (ostream & os, const Path & val);
-}
+ostream& operator<< (ostream& os, const Path& val);
+Path operator/ (const Path& a, std::string_view b);
+Path operator+ (const Path& a, std::string_view b);
+} // namespace
+
+//===========================================================================
 ostream & Dim::operator<< (ostream & os, const Path & val) {
     os << val.view();
     return os;
 }
 
 //===========================================================================
-namespace Dim {
-    Path operator/ (const Path& a, std::string_view b);
-}
 Path Dim::operator/ (const Path & a, std::string_view b) {
     return Path{a} /= b;
 }
 
 //===========================================================================
-namespace Dim {
-    Path operator+ (const Path& a, std::string_view b);
-}
 Path Dim::operator+ (const Path & a, std::string_view b) {
     return Path{a} += b;
 }
