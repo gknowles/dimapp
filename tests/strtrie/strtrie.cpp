@@ -23,6 +23,9 @@ using USet = IntegralSet<unsigned,
 ***/
 
 // PLAN C - implicitly referenced byte aligned nodes
+// Multiroot
+//  data[0] & 0x7 = kNodeMultiroot
+//  data[0] & 0xf0 = number of roots (1 - 16)
 // Segment
 //  data[0] & 0x7 = kNodeSeg
 //  data[0] & 0x8 = has end of key
@@ -42,8 +45,8 @@ using USet = IntegralSet<unsigned,
 // Remote
 //  data[0] & 0x7 = kNodeRemote
 //  data[0] & 0x8 = false (has end of key)
+//  data[0] & 0xf0 = index of node (0 - 15)
 //  data(1, 4) = pgno
-//  data(5, 2) = index of node
 // EndMark
 //  data[0] & 0x7 = kNodeEndMark
 //  data[0] & 0x8 = true (end of key - no content)
@@ -51,8 +54,11 @@ using USet = IntegralSet<unsigned,
 const size_t kMaxForkBit = 16;
 const size_t kMaxSegLen = 32;
 
-const size_t kRemoteNodeLen = 7;
+const size_t kRemoteNodeLen = 5;
+const size_t kForkNodeHdrLen = 3;
 
+const size_t kMinPageSize = kForkNodeHdrLen + kMaxForkBit * kRemoteNodeLen;
+const size_t kMaxPageSize = 65'536;
 
 namespace {
 
@@ -70,20 +76,21 @@ struct PageRef {
     auto operator<=>(const PageRef & other) const = default;
 };
 struct LocalRef {
-    int pos = -1;
-    int len = -1;
+    int pos;
+    int len;
 
     auto operator<=>(const LocalRef & other) const = default;
 };
 struct NodeRef {
     PageRef page;
-    LocalRef data;
+    LocalRef data = { -1, -1 };
 
     auto operator<=>(const NodeRef & other) const = default;
 };
 
 enum NodeType : int8_t {
     kNodeInvalid,
+    kNodeMultiroot,
     kNodeSeg,
     kNodeHalfSeg,
     kNodeFork,
@@ -98,6 +105,10 @@ struct UpdateBase : ListLink<> {
     NodeType type = kNodeInvalid;
     int len = -1;
     span<NodeRef> refs;
+};
+struct UpdateMultiroot : UpdateBase {
+    constexpr static NodeType s_type = kNodeMultiroot;
+    int roots = 0;
 };
 struct UpdateSeg : UpdateBase {
     constexpr static NodeType s_type = kNodeSeg;
@@ -118,15 +129,10 @@ struct UpdateFork : UpdateBase {
 struct UpdateEndMark : UpdateBase {
     constexpr static NodeType s_type = kNodeEndMark;
 };
-struct UpdateRemote : UpdateBase {
-    constexpr static NodeType s_type = kNodeRemote;
-    PageRef page;
-    int pos = -1;
-};
 
 struct VirtualPage {
     pgno_t targetPgno = (pgno_t) -1;
-    NodeRef root;
+    pmr::vector<NodeRef> roots;
 
     explicit VirtualPage(TempHeap * heap);
 };
@@ -231,6 +237,18 @@ static void setEndMarkFlag(StrTrieBase::Node * node, bool eok = true) {
 }
 
 //===========================================================================
+static void setMultiroot(StrTrieBase::Node * node, size_t roots) {
+    assert(roots >= 1 && roots <= 16);
+    node->data[0] = kNodeMultiroot | (int8_t(roots - 1) << 4);
+}
+
+//===========================================================================
+inline static int multirootLen(const StrTrieBase::Node * node) {
+    assert(nodeType(node) == kNodeMultiroot);
+    return (node->data[0] >> 4) + 1;
+}
+
+//===========================================================================
 static int segLen(const StrTrieBase::Node * node) {
     assert(nodeType(node) == kNodeSeg);
     return 2 * (node->data[0] >> 4) + 2;
@@ -306,7 +324,7 @@ static size_t forkLen(const StrTrieBase::Node * node) {
 
 //===========================================================================
 static int nextForkVal(uint16_t bits, int kval) {
-    assert(kval && kval < 16);
+    assert(kval && kval < kMaxForkBit);
     auto mask = (1u << (kMaxForkBit - kval - 1)) - 1;
     auto nbits = bits & mask;
     if (!nbits)
@@ -317,7 +335,7 @@ static int nextForkVal(uint16_t bits, int kval) {
 
 //===========================================================================
 inline static int prevForkVal(uint16_t bits, int kval) {
-    assert(kval && kval < 16);
+    assert(kval && kval < kMaxForkBit);
     auto mask = 65535u << (kMaxForkBit - kval);
     auto nbits = bits & mask;
     if (!nbits)
@@ -327,19 +345,19 @@ inline static int prevForkVal(uint16_t bits, int kval) {
 }
 
 //===========================================================================
-static pmr::vector<uint8_t> forkVals(
+static pmr::basic_string<uint8_t> forkVals(
     SearchState * ss,
     const StrTrieBase::Node * node,
     int kval = -1
 ) {
     assert(nodeType(node) == kNodeFork);
-    pmr::vector<uint8_t> out(ss->heap);
-    auto val = forkBits(node);
+    pmr::basic_string<uint8_t> out(ss->heap);
+    auto bits = forkBits(node);
     if (kval > -1)
-        val |= (0x8000 >> kval);
-    out.reserve(hammingWeight(val));
-    for (uint8_t i = 0; val; ++i, val <<= 1) {
-        if (val & 0x8000)
+        bits |= (0x8000 >> kval);
+    out.reserve(hammingWeight(bits));
+    for (uint8_t i = 0; bits; ++i, bits <<= 1) {
+        if (bits & 0x8000)
             out.push_back(i);
     }
     return out;
@@ -417,14 +435,14 @@ static pgno_t remotePage(StrTrieBase::Node * node) {
 //===========================================================================
 static int remotePos(StrTrieBase::Node * node) {
     assert(nodeType(node) == kNodeRemote);
-    return (int) ntoh16(node->data + 5);
+    return (int) node->data[0] >> 4;
 }
 
 //===========================================================================
-static void setRemoteRef(StrTrieBase::Node * node, pgno_t pgno, size_t inode) {
-    node->data[0] = kNodeRemote;
+static void setRemoteRef(StrTrieBase::Node * node, pgno_t pgno, size_t pos) {
+    assert(pos < 16);
+    node->data[0] = kNodeRemote | (int8_t(pos) << 4);
     hton32(node->data + 1, pgno);
-    hton16(node->data + 5, (uint16_t) inode);
 }
 
 //===========================================================================
@@ -434,12 +452,14 @@ static int nodeHdrLen(const StrTrieBase::Node * node) {
         assert(type == kNodeInvalid);
         assert(!"Invalid node type");
         return 0;
+    case kNodeMultiroot:
+        return 1;
     case kNodeSeg:
         return 1 + segLen(node) / 2;
     case kNodeHalfSeg:
         return 1;
     case kNodeFork:
-        return 3;
+        return kForkNodeHdrLen;
     case kNodeEndMark:
         return 1;
     case kNodeRemote:
@@ -448,67 +468,56 @@ static int nodeHdrLen(const StrTrieBase::Node * node) {
 }
 
 //===========================================================================
-static int nodeLen(const StrTrieBase::Node * node) {
-    auto len = nodeHdrLen(node);
+static size_t numKids(const StrTrieBase::Node * node) {
     switch (auto type = nodeType(node)) {
     default:
         assert(type == kNodeInvalid);
         assert(!"Invalid node type");
-        break;
+        return 0;
+    case kNodeMultiroot:
+        return multirootLen(node);
     case kNodeSeg:
     case kNodeHalfSeg:
-        if (!nodeEndMarkFlag(node))
-            len += nodeLen(node + len);
-        break;
+        return nodeEndMarkFlag(node) ? 0 : 1;
     case kNodeFork:
-        for (auto i = 0; i < forkLen(node); ++i)
-            len += nodeLen(node + len);
-        break;
+        return forkLen(node);
     case kNodeEndMark:
-        break;
+        return 0;
     case kNodeRemote:
-        break;
+        return 0;
     }
+}
+
+//===========================================================================
+static int nodeLen(const StrTrieBase::Node * node) {
+    auto len = nodeHdrLen(node);
+    auto num = numKids(node);
+    for (auto i = 0; i < num; ++i)
+        len += nodeLen(node + len);
     assert(len > 0 && len < INT_MAX);
     return len;
 }
 
 //===========================================================================
 // Returns vector of inode and nodeLen pairs.
-static pmr::vector<pair<int, size_t>> kids(
+static pmr::basic_string<LocalRef> kids(
     SearchState * ss,
     int inode
 ) {
     assert(inode < ss->pages->pageSize());
-    pmr::vector<pair<int, size_t>> out(ss->heap);
+    pmr::basic_string<LocalRef> out(ss->heap);
     auto root = ss->node - ss->inode + inode;
     auto len = nodeHdrLen(root);
     auto node = root + len;
     inode += len;
-    switch (nodeType(root)) {
-    case kNodeSeg:
-    case kNodeHalfSeg:
-        if (!nodeEndMarkFlag(root)) {
+    if (auto num = numKids(root)) {
+        out.reserve(num);
+        for (auto i = 0; i < num; ++i) {
             auto len = nodeLen(node);
-            out.emplace_back(inode, len);
+            out.push_back({inode, len});
             inode += len;
             node += len;
         }
-        break;
-    case kNodeFork:
-        out.reserve(forkLen(root) + 1);
-        for ([[maybe_unused]] auto&& val : forkVals(ss, root)) {
-            auto len = nodeLen(node);
-            out.emplace_back(inode, len);
-            inode += len;
-            node += len;
-        }
-        break;
-    case kNodeEndMark:
-    case kNodeRemote:
-        break;
-    default:
-        assert(!"Invalid node type");
     }
     return out;
 }
@@ -518,7 +527,7 @@ static pmr::vector<pair<int, size_t>> kids(
 //===========================================================================
 static void setUpdateRef(NodeRef * out, SearchState * ss) {
     out->page = { .type = PageRef::kUpdate };
-    out->data = { .pos = (int) ss->updates.size() };
+    out->data = { .pos = (int) ss->updates.size(), .len = -1 };
 }
 
 //===========================================================================
@@ -535,9 +544,14 @@ static void setSourceRef(
 }
 
 //===========================================================================
-static void setRemoteRef(NodeRef * out, SearchState * ss, pgno_t pgno) {
+static void setRemoteRef(
+    NodeRef * out,
+    SearchState * ss,
+    pgno_t pgno,
+    int pos
+) {
     out->page = { .type = PageRef::kVirtual, .pgno = pgno };
-    out->data = { .pos = 0, .len = kRemoteNodeLen };
+    out->data = { .pos = pos, .len = kRemoteNodeLen };
 }
 
 //===========================================================================
@@ -563,35 +577,37 @@ static NodeRef * newRef(SearchState * ss, ptrdiff_t srcPos, size_t srcLen) {
 static NodeRef * newRef(SearchState * ss, pgno_t pgno) {
     assert(pgno >= 0);
     auto ref = ss->heap->emplace<NodeRef>();
-    setRemoteRef(ref, ss, pgno);
+    setRemoteRef(ref, ss, pgno, 0);
     return ref;
 }
 
 //===========================================================================
 // UpdateNode helpers
 //===========================================================================
-static int nodeLen(const UpdateBase & upd) {
-    int len = 0;
+static int nodeHdrLen(const UpdateBase & upd) {
     switch(upd.type) {
     default:
+        assert(upd.type == kNodeInvalid);
         assert(!"Invalid node type");
-        break;
+        return 0;
+    case kNodeMultiroot:
+        return 1;
     case kNodeSeg:
-        len = 1 + static_cast<const UpdateSeg &>(upd).keyLen / 2;
-        break;
+        return 1 + static_cast<const UpdateSeg &>(upd).keyLen / 2;
     case kNodeHalfSeg:
-        len = 1;
-        break;
+        return 1;
     case kNodeFork:
-        len = 3;
-        break;
+        return kForkNodeHdrLen;
     case kNodeEndMark:
-        len = 1;
-        break;
+        return 1;
     case kNodeRemote:
-        len = kRemoteNodeLen;
-        break;
+        return kRemoteNodeLen;
     }
+}
+
+//===========================================================================
+static int nodeLen(const UpdateBase & upd) {
+    int len = nodeHdrLen(upd);
     for (auto&& kid : upd.refs) {
         assert(kid.data.pos > -1 && kid.data.len > -1);
         len += kid.data.len;
@@ -659,39 +675,26 @@ static void seekKid(SearchState * ss, size_t pos) {
 }
 
 //===========================================================================
+static void seekRemote(SearchState* ss, size_t inode) {
+    auto node = getNode(ss, inode);
+    auto pos = remotePos(node);
+    seekPage(ss, remotePage(node));
+    seekNode(ss, 0);
+    if (::nodeType(ss->node) != kNodeMultiroot) {
+        assert(pos == 0);
+    }
+    else {
+        auto roots = kids(ss, 0);
+        assert(pos < roots.size());
+        seekNode(ss, roots[pos].pos);
+    }
+}
+
+//===========================================================================
 static bool logFatal(SearchState * ss) {
     logMsgFatal() << "Invalid StrTrieBase node type: "
         << nodeType(ss->node);
     return false;
-}
-
-
-/****************************************************************************
-*
-*   StrTrieBase::Iter
-*
-***/
-
-//===========================================================================
-StrTrieBase::Iter & StrTrieBase::Iter::operator++() {
-    return *this;
-}
-
-
-/****************************************************************************
-*
-*   StrTrie
-*
-***/
-
-//===========================================================================
-void StrTrie::clear() {
-    m_heapImpl.clear();
-}
-
-//===========================================================================
-std::ostream * const StrTrie::debugStream() const {
-    return m_debug ? &cout : nullptr;
 }
 
 
@@ -703,6 +706,7 @@ std::ostream * const StrTrie::debugStream() const {
 
 //===========================================================================
 VirtualPage::VirtualPage(TempHeap * heap)
+    : roots(heap)
 {}
 
 
@@ -732,6 +736,51 @@ SearchState::SearchState(
 {
     if (klen)
         kval = keyVal(key, kpos);
+}
+
+
+/****************************************************************************
+*
+*   StrTrieBase::Iter
+*
+***/
+
+//===========================================================================
+StrTrieBase::Iter & StrTrieBase::Iter::operator++() {
+    return *this;
+}
+
+//===========================================================================
+StrTrieBase::Iter StrTrieBase::begin() const {
+    return Iter{};
+}
+
+//===========================================================================
+StrTrieBase::Iter StrTrieBase::end() const {
+    return Iter{};
+}
+
+
+/****************************************************************************
+*
+*   StrTrieBase
+*
+***/
+
+//===========================================================================
+StrTrieBase::StrTrieBase(IPageHeap * pages)
+    : m_pages(pages)
+{
+    assert(pages->pageSize() >= kMinPageSize);
+    assert(pages->pageSize() <= kMaxPageSize);
+}
+
+//===========================================================================
+void StrTrieBase::construct(IPageHeap * pages) {
+    assert(pages->pageSize() >= kMinPageSize);
+    assert(pages->pageSize() <= kMaxPageSize);
+    assert(!m_pages);
+    m_pages = pages;
 }
 
 
@@ -832,6 +881,7 @@ static bool insertAtSeg(SearchState * ss) {
     //      [lead seg] [lead half seg]
     //      fork
     //      [tail seg] [tail half seg]
+    //      [rest of key being inserted]
     assert(spos <= slen);
     if (spos > 1) {
         // Add lead seg.
@@ -852,7 +902,9 @@ static bool insertAtSeg(SearchState * ss) {
         fork.refs = {ref, 1};
         setForkBit(&fork, ss->kval, true);
     } else {
-        auto tail = ss->node + nodeHdrLen(ss->node);
+        auto tail = nodeEndMarkFlag(ss->node)
+            ? nullptr
+            : ss->node + nodeHdrLen(ss->node);
         auto nrefs = 2;
         setForkBit(&fork, sval, true);
         spos += 1; // Advance past the val that's in the new fork node.
@@ -865,7 +917,7 @@ static bool insertAtSeg(SearchState * ss) {
         fork.refs = ss->heap->allocSpan<NodeRef>(nrefs);
 
         if (spos == slen) {
-            if (nodeEndMarkFlag(ss->node)) {
+            if (!tail) {
                 setUpdateRef(&fork.refs[0], ss);
                 newUpdate<UpdateEndMark>(ss);
             } else {
@@ -876,7 +928,10 @@ static bool insertAtSeg(SearchState * ss) {
                     nodeLen(tail)
                 );
             }
-        } else if ((slen - spos) % 2 == 1 && nodeType(tail) == kNodeHalfSeg) {
+        } else if ((slen - spos) % 2 == 1
+            && tail
+            && nodeType(tail) == kNodeHalfSeg
+        ) {
             // Combined rest of seg with following halfSeg.
             setUpdateRef(&fork.refs[0], ss);
             auto ref = (NodeRef *) nullptr;
@@ -898,12 +953,12 @@ static bool insertAtSeg(SearchState * ss) {
                 if ((slen - spos) % 2 == 1) {
                     copySeg(ss, spos, (slen - spos) & ~1, false);
                 } else {
-                    if (!nodeEndMarkFlag(ss->node)) {
+                    if (tail) {
                         auto inext = ss->inode + nodeHdrLen(ss->node);
                         ref = newRef(
                             ss,
                             inext,
-                            nodeLen(ss->node - ss->inode + inext)
+                            nodeLen(tail)
                         );
                     }
                     copySeg(ss, spos, slen - spos, !ref, ref);
@@ -913,28 +968,29 @@ static bool insertAtSeg(SearchState * ss) {
                 // Add halfSeg part of the rest of the seg.
                 auto & halfSeg = newUpdate<UpdateHalfSeg>(ss);
                 halfSeg.nibble = segVal(ss->node, slen - 1);
-                if (nodeEndMarkFlag(ss->node)) {
-                    halfSeg.endOfKey = true;
-                } else {
+                if (tail) {
                     auto ref = newRef(
                         ss,
                         ss->inode + tail - ss->node,
                         nodeLen(tail)
                     );
                     halfSeg.refs = {ref, 1};
+                } else {
+                    halfSeg.endOfKey = true;
                 }
             }
         }
 
+        // Add ref to rest of key being inserted.
         if (ss->kpos == ss->klen) {
             ss->found = false;
             return false;
         }
-
         setUpdateRef(&fork.refs[1], ss);
         if (ss->kval < sval)
             swap(fork.refs[0], fork.refs[1]);
     }
+
     // Continue processing the key.
     if (++ss->kpos == ss->klen) {
         newUpdate<UpdateEndMark>(ss);
@@ -946,11 +1002,11 @@ static bool insertAtSeg(SearchState * ss) {
 }
 
 //===========================================================================
-static UpdateHalfSeg & copyHalfSeg(SearchState * ss) {
+static UpdateHalfSeg & copyHalfSeg(SearchState * ss, bool eok) {
     assert(nodeType(ss->node) == kNodeHalfSeg);
     auto & upd = newUpdate<UpdateHalfSeg>(ss);
     upd.nibble = halfSegVal(ss->node);
-    if (nodeEndMarkFlag(ss->node)) {
+    if (eok) {
         upd.endOfKey = true;
     } else {
         auto ref = newRef(ss);
@@ -962,8 +1018,10 @@ static UpdateHalfSeg & copyHalfSeg(SearchState * ss) {
 //===========================================================================
 // Returns true if there is more to do; otherwise false and sets ss->found
 static bool insertAtHalfSeg (SearchState * ss) {
-    // Will either split on key or will advance to next node.
+    // Will either split on value, after value (possible if it's the end of the
+    // key), or will advance to next node.
 
+    auto spos = 0;
     auto sval = halfSegVal(ss->node);
 
     for (;;) {
@@ -973,6 +1031,7 @@ static bool insertAtHalfSeg (SearchState * ss) {
             break;
         if (++ss->kpos != ss->klen)
             ss->kval = keyVal(ss->key, ss->kpos);
+        spos = 1;
         if (nodeEndMarkFlag(ss->node)) {
             if (ss->kpos == ss->klen) {
                 ss->found = true;
@@ -981,41 +1040,52 @@ static bool insertAtHalfSeg (SearchState * ss) {
             break;
         }
         // Continue search at next node
-        copyHalfSeg(ss);
+        copyHalfSeg(ss, false);
         seekNode(ss, ss->inode + nodeHdrLen(ss->node));
         return true;
     }
 
-    auto & fork = newUpdate<UpdateFork>(ss);
-    auto tail = ss->node + nodeHdrLen(ss->node);
-    auto nrefs = 2;
-    setForkBit(&fork, sval, true);
-    if (ss->kpos == ss->klen) {
+    if (spos) {
+        assert(ss->kpos < ss->klen);
+        copyHalfSeg(ss, false);
+        auto & fork = newUpdate<UpdateFork>(ss);
         fork.endOfKey = true;
-        nrefs = 1;
-    } else {
+        auto ref = newRef(ss);
+        fork.refs = {ref, 1};
         setForkBit(&fork, ss->kval, true);
-    }
-    fork.refs = ss->heap->allocSpan<NodeRef>(nrefs);
-    if (nodeEndMarkFlag(ss->node)) {
-        setUpdateRef(&fork.refs[0], ss);
-        newUpdate<UpdateEndMark>(ss);
+        ss->kval = keyVal(ss->key, ++ss->kpos);
     } else {
-        setSourceRef(
-            &fork.refs[0],
-            ss,
-            ss->inode + tail - ss->node,
-            nodeLen(tail)
-        );
-    }
-    if (nrefs == 2) {
-        setUpdateRef(&fork.refs[1], ss);
-        if (ss->kval < sval)
-            swap(fork.refs[0], fork.refs[1]);
-        if (++ss->kpos == ss->klen) {
+        auto & fork = newUpdate<UpdateFork>(ss);
+        auto tail = ss->node + nodeHdrLen(ss->node);
+        auto nrefs = 2;
+        setForkBit(&fork, sval, true);
+        if (ss->kpos == ss->klen) {
+            fork.endOfKey = true;
+            nrefs = 1;
+        } else {
+            setForkBit(&fork, ss->kval, true);
+        }
+        fork.refs = ss->heap->allocSpan<NodeRef>(nrefs);
+        if (nodeEndMarkFlag(ss->node)) {
+            setUpdateRef(&fork.refs[0], ss);
             newUpdate<UpdateEndMark>(ss);
         } else {
-            ss->kval = keyVal(ss->key, ss->kpos);
+            setSourceRef(
+                &fork.refs[0],
+                ss,
+                ss->inode + tail - ss->node,
+                nodeLen(tail)
+            );
+        }
+        if (nrefs == 2) {
+            setUpdateRef(&fork.refs[1], ss);
+            if (ss->kval < sval)
+                swap(fork.refs[0], fork.refs[1]);
+            if (++ss->kpos == ss->klen) {
+                newUpdate<UpdateEndMark>(ss);
+            } else {
+                ss->kval = keyVal(ss->key, ss->kpos);
+            }
         }
     }
     ss->found = false;
@@ -1025,51 +1095,73 @@ static bool insertAtHalfSeg (SearchState * ss) {
 //===========================================================================
 static UpdateFork & copyFork(SearchState * ss, int * inext) {
     assert(nodeType(ss->node) == kNodeFork);
+    *inext = -1;
+
     auto & upd = newUpdate<UpdateFork>(ss);
+    auto bits = forkBits(ss->node);
+    auto refs = kids(ss, ss->inode);
+
     if (ss->kpos == ss->klen) {
+        upd.refs = ss->heap->allocSpan<NodeRef>(refs.size());
         upd.endOfKey = true;
-        auto count = forkLen(ss->node);
-        upd.refs = ss->heap->allocSpan<NodeRef>(count);
-        auto len = nodeHdrLen(ss->node);
-        for (auto i = 0; i < count; ++i) {
-            setSourceRef(
-                &upd.refs[i],
-                ss,
-                ss->inode + len,
-                nodeLen(ss->node + len)
-            );
-            len += upd.refs[i].data.len;
-        }
+        upd.kidBits = bits;
+        for (auto i = 0; i < refs.size(); ++i)
+            setSourceRef(&upd.refs[i], ss, refs[i].pos, refs[i].len);
         return upd;
     }
+
     upd.endOfKey = nodeEndMarkFlag(ss->node);
-    upd.kidBits = setForkBit(forkBits(ss->node), ss->kval, true);
-    auto vals = forkVals(ss, ss->node, ss->kval);
-    upd.refs = ss->heap->allocSpan<NodeRef>(vals.size());
-    auto i = 0;
-    auto len = nodeHdrLen(ss->node);
-    for (; vals[i] < ss->kval; ++i) {
-        setSourceRef(
-            &upd.refs[i],
-            ss,
-            ss->inode + len,
-            nodeLen(ss->node + len)
-        );
-        len += upd.refs[i].data.len;
+    upd.kidBits = setForkBit(bits, ss->kval, true);
+    auto fpos = forkPos(upd.kidBits, ss->kval);
+    if (bits != upd.kidBits) {
+        upd.refs = ss->heap->allocSpan<NodeRef>(refs.size() + 1);
+        for (auto i = 0; i < fpos; ++i)
+            setSourceRef(&upd.refs[i], ss, refs[i].pos, refs[i].len);
+        setUpdateRef(&upd.refs[fpos], ss);
+        for (auto i = fpos; i < refs.size(); ++i)
+            setSourceRef(&upd.refs[i + 1], ss, refs[i].pos, refs[i].len);
+        return upd;
     }
-    *inext = ss->inode + len;
-    setUpdateRef(&upd.refs[i], ss);
-    if (upd.kidBits == forkBits(ss->node))
-        len += nodeLen(ss->node + len);
-    i += 1;
-    for (; i < vals.size(); ++i) {
-        setSourceRef(
-            &upd.refs[i],
-            ss,
-            ss->inode + len,
-            nodeLen(ss->node + len)
-        );
-        len += upd.refs[i].data.len;
+
+    *inext = refs[fpos].pos;
+    upd.refs = ss->heap->allocSpan<NodeRef>(refs.size());
+
+    auto fnode = getNode(ss, refs[fpos].pos);
+    auto rpno = (pgno_t) -1;
+    pmr::basic_string<LocalRef> rrefs;
+    if (nodeType(fnode) == kNodeRemote) {
+        rpno = remotePage(fnode);
+        fnode = getNode(ss, rpno, 0);
+        if (nodeType(fnode) == kNodeMultiroot) {
+            auto pgno = ss->pgno;
+            auto inode = ss->inode;
+            seekPage(ss, rpno);
+            seekNode(ss, 0);
+            rrefs = kids(ss, 0);
+            seekPage(ss, pgno);
+            seekNode(ss, inode);
+        }
+    }
+    for (auto i = 0; i < refs.size(); ++i) {
+        if (i == fpos) {
+            setUpdateRef(&upd.refs[i], ss);
+            continue;
+        }
+        if (rpno == -1) {
+            setSourceRef(&upd.refs[i], ss, refs[i].pos, refs[i].len);
+            continue;
+        }
+        fnode = getNode(ss, refs[i].pos);
+        if (nodeType(fnode) == kNodeRemote
+            && rpno == remotePage(fnode)
+        ) {
+            assert(!rrefs.empty());
+            auto & rref = rrefs[remotePos(fnode)];
+            setSourceRef(&upd.refs[i], ss, rref.pos, rref.len);
+            upd.refs[i].page.pgno = rpno;
+        } else {
+            setSourceRef(&upd.refs[i], ss, refs[i].pos, refs[i].len);
+        }
     }
     return upd;
 }
@@ -1091,12 +1183,15 @@ static bool insertAtFork (SearchState * ss) {
     }
 
     copyFork(ss, &inext);
-    auto matched = forkBit(ss->node, ss->kval);
-    seekNode(ss, inext);
-    ss->kval = keyVal(ss->key, ++ss->kpos);
+    bool matched = forkBit(ss->node, ss->kval);
+    if (++ss->kpos != ss->klen)
+        ss->kval = keyVal(ss->key, ss->kpos);
     if (matched) {
+        seekNode(ss, inext);
         return true;
     } else {
+        if (ss->kpos == ss->klen)
+            newUpdate<UpdateEndMark>(ss);
         ss->found = false;
         return false;
     }
@@ -1107,24 +1202,25 @@ static bool insertAtFork (SearchState * ss) {
 static bool insertAtEndMark(SearchState * ss) {
     if (ss->kpos == ss->klen) {
         ss->found = true;
-    } else {
-        auto & fork = newUpdate<UpdateFork>(ss);
-        fork.endOfKey = true;
-        setForkBit(&fork, ss->kval, true);
-        auto ref = newRef(ss);
-        fork.refs = {ref, 1};
-        ss->found = false;
+        return false;
     }
+
+    auto & fork = newUpdate<UpdateFork>(ss);
+    fork.endOfKey = true;
+    setForkBit(&fork, ss->kval, true);
+    if (++ss->kpos != ss->klen)
+        ss->kval = keyVal(ss->key, ss->kpos);
+    auto ref = newRef(ss);
+    fork.refs = {ref, 1};
+    ss->found = false;
     return false;
 }
 
 //===========================================================================
 // Returns true if there is more to do; otherwise false and sets ss->found
 static bool insertAtRemote(SearchState * ss) {
-    auto pos = remotePos(ss->node);
-    seekPage(ss, remotePage(ss->node));
+    seekRemote(ss, ss->inode);
     ss->spages.insert(ss->pgno);
-    seekNode(ss, pos);
     return true;
 }
 
@@ -1175,14 +1271,17 @@ static void copyAny(SearchState * ss, const NodeRef & ref) {
     } else {
         assert(ref.page.type == PageRef::kVirtual);
         auto & vpage = ss->vpages[ref.page.pgno];
-        setRemoteRef(ss->node, vpage.targetPgno, 0);
+        setRemoteRef(ss->node, vpage.targetPgno, ref.data.pos);
         seekNode(ss, ss->inode + nodeLen(ss->node));
     }
 }
 
 //===========================================================================
 static void copyAny(SearchState * ss, const UpdateBase & upd) {
-    if (upd.type == kNodeSeg) {
+    if (upd.type == kNodeMultiroot) {
+        auto & mroot = static_cast<const UpdateMultiroot &>(upd);
+        setMultiroot(ss->node, mroot.roots);
+    } else if (upd.type == kNodeSeg) {
         auto & seg = static_cast<const UpdateSeg &>(upd);
         setSeg(ss->node, seg.endOfKey, seg.keyLen, seg.key);
     } else if (upd.type == kNodeHalfSeg) {
@@ -1191,17 +1290,95 @@ static void copyAny(SearchState * ss, const UpdateBase & upd) {
     } else if (upd.type == kNodeFork) {
         auto & fork = static_cast<const UpdateFork &>(upd);
         setFork(ss->node, fork.endOfKey, fork.kidBits);
-    } else if (upd.type == kNodeEndMark) {
+    } else {
+        assert(upd.type == kNodeEndMark);
         [[maybe_unused]] auto & mark = static_cast<const UpdateEndMark &>(upd);
         setEndMark(ss->node);
-    } else {
-        assert(upd.type == kNodeRemote);
-        auto & rref = static_cast<const UpdateRemote &>(upd);
-        setRemoteRef(ss->node, rref.page.pgno, rref.pos);
     }
     seekNode(ss, ss->inode + nodeHdrLen(ss->node));
     for (auto&& ref : upd.refs)
         copyAny(ss, ref);
+}
+
+//===========================================================================
+// If the update node is too large to fit on a page with all it's descendants,
+// allocate virtual pages for some or all of the descendant trees.
+static void harvestPages(SearchState * ss, UpdateBase * upd) {
+    upd->len = nodeLen(*upd);
+    auto psize = ss->pages->pageSize();
+    if (upd->len <= psize)
+        return;
+
+    // Parent combined with kids is too big to fit on a single page. Leave kids
+    // on their own pages, with any descendants they've gathered, and start a
+    // new page with just the parent.
+    auto count = 0;
+    NodeRef * refs[kMaxForkBit];
+    int nrefs = 0;
+    for (auto&& ref : upd->refs) {
+        // If the data on the kids page is no bigger than a remote link to
+        // another page, just copy it directly since putting it on a new page
+        // and linking to it won't save any space.
+        //
+        // But the real purpose of this optimization is to prevent moving a
+        // remote reference to it's own page, making remote nodes pointing to
+        // remote nodes, potentially forever.
+        if (ref.data.len > kRemoteNodeLen) {
+            refs[nrefs++] = &ref;
+            count += ref.data.len;
+        }
+    }
+    sort(refs, refs + nrefs, [](auto& a, auto& b) {
+        return a->data.len > b->data.len;
+    });
+
+    int vmap[kMaxForkBit];
+    struct VPInfo {
+        pgno_t pgno;
+        int len = 0;
+        int pos = 0;
+    };
+    pmr::vector<VPInfo> vinfos(ss->heap);
+    vinfos.reserve(3);
+
+ADD_PAGE:
+    auto & nvi = vinfos.emplace_back();
+    nvi.pgno = (pgno_t) ss->vpages.size();
+    nvi.pos = (int) vinfos.size() - 1;
+    ss->vpages.emplace_back(ss->heap);
+    for (auto&& vi : vinfos)
+        vi.len = 0;
+    for (auto i = 0; i < nrefs; ++i) {
+        vmap[i] = vinfos[0].pos;
+        bool multi = vinfos[0].len;
+        vinfos[0].len += refs[i]->data.len;
+        if (vinfos[0].len > psize - multi)
+            goto ADD_PAGE;
+        for (auto vpos = 1; vpos < vinfos.size(); ++vpos) {
+            if (vinfos[vpos - 1].len > vinfos[vpos].len) {
+                swap(vinfos[vpos - 1], vinfos[vpos]);
+            } else {
+                break;
+            }
+        }
+    }
+    for (auto&& vi : vinfos) {
+        assert(vi.len);
+        vi.pos = 0;
+    }
+
+    assert(vinfos.size() <= 3);
+    for (auto i = 0; i < nrefs; ++i) {
+        // Add kid to most empty new page and change the parents link to it
+        // to be a remote reference.
+        auto & vi = vinfos[vmap[i]];
+        ss->vpages[vi.pgno].roots.push_back(*refs[i]);
+        setRemoteRef(refs[i], ss, vi.pgno, vi.pos++);
+    }
+    for (auto & vi : vinfos) {
+        assert(vi.pos);
+    }
+    upd->len = nodeLen(*upd);
 }
 
 //===========================================================================
@@ -1270,37 +1447,8 @@ static void applyUpdates(SearchState * ss) {
                 kid.data.len = nodeLen(*kupd);
             }
         }
-        upd.len = nodeLen(upd);
-        if (ui.unprocessed) {
-            // internal branch
-            assert(ui.unprocessed == 1);
-            if (upd.len > ss->pages->pageSize()) {
-                // Parent combined with kids is too big to fit on a single
-                // page. Leave kids on their own pages, with any descendants
-                // they've gathered, and start a new page with just the parent.
-                for (auto&& ref : upd.refs) {
-                    if (ref.page.type == PageRef::kSource
-                        && ref.data.len <= kRemoteNodeLen
-                    ) {
-                        // If the entry on the kids page is no bigger than a
-                        // remote link to another page, just copy it directly
-                        // since putting it on a new page and linking to it
-                        // won't save any space.
-                        //
-                        // But this isn't just a space optimization, it's real
-                        // purpose is to prevent remote nodes pointing to
-                        // remote nodes, potentially forever.
-                        continue;
-                    }
-                    // Create new page with this kid and change the parents
-                    // link to it to be a remote referrence.
-                    auto & vpage = ss->vpages.emplace_back(ss->heap);
-                    vpage.root = ref;
-                    setRemoteRef(&ref, ss, (pgno_t) ss->vpages.size() - 1);
-                }
-                upd.len = nodeLen(upd);
-            }
-        }
+        assert(ui.unprocessed <= 1);
+        harvestPages(ss, &upd);
 
         // Update reference from parent
         if (ui.parent == -1) {
@@ -1308,9 +1456,10 @@ static void applyUpdates(SearchState * ss) {
             // previously empty container.
             assert(unblocked.empty());
             auto & vpage = ss->vpages.emplace_back(ss->heap);
-            vpage.root.page.type = PageRef::kUpdate;
-            vpage.root.data.pos = id;
-            vpage.root.data.len = upd.len;
+            vpage.roots.push_back({
+                .page = { .type = PageRef::kUpdate },
+                .data = { .pos = id, .len = upd.len },
+            });
             break;
         }
 
@@ -1332,9 +1481,18 @@ static void applyUpdates(SearchState * ss) {
     for (auto&& vpage : ss->vpages) {
         seekPage(ss, vpage.targetPgno);
         seekNode(ss, 0);
-        copyAny(ss, vpage.root);
+        if (auto roots = vpage.roots.size(); roots == 1) {
+            copyAny(ss, vpage.roots[0]);
+        } else {
+            assert(roots <= 16);
+            setMultiroot(ss->node, roots);
+            seekNode(ss, ss->inode + nodeHdrLen(ss->node));
+            for (auto&& root : vpage.roots)
+                copyAny(ss, root);
+        }
     }
-    ss->pages->setRoot(ss->vpages.back().targetPgno);
+    auto rpno = ss->vpages.back().targetPgno;
+    ss->pages->setRoot(rpno);
 
     // Destroy replaced source pages.
     for (auto&& id : ss->spages)
@@ -1363,13 +1521,13 @@ bool StrTrieBase::insert(string_view key) {
 
         using Fn = bool(SearchState *);
         constinit static Fn * const functs[8] = {
-            logFatal,
+            logFatal,   // Invalid
+            logFatal,   // Multiroot
             insertAtSeg,
             insertAtHalfSeg,
             insertAtFork,
             insertAtEndMark,
             insertAtRemote,
-            logFatal,
             logFatal,
         };
         for (;;) {
@@ -1437,13 +1595,13 @@ static bool findLastForkAtFork(SearchState * ss) {
     auto i = 0;
     for (; i < vals.size(); ++i) {
         if (vals[i] == ss->kval) {
-            ss->forks.emplace_back(ss->pgno, subs[i].first, ss->kpos);
+            ss->forks.emplace_back(ss->pgno, subs[i].pos, ss->kpos);
             break;
         }
     }
     ss->kval = keyVal(ss->key, ++ss->kpos);
     auto sub = subs.back();
-    seekNode(ss, sub.first + sub.second);
+    seekNode(ss, sub.pos + sub.len);
     return true;
 }
 
@@ -1532,13 +1690,15 @@ static bool containsAtHalfSeg(SearchState * ss) {
     if (ss->kval != sval)
         return false;
     if (++ss->kpos == ss->klen) {
-        if (nodeEndMarkFlag(ss->node))
+        if (nodeEndMarkFlag(ss->node)) {
             ss->found = true;
-        return false;
+            return false;
+        }
+    } else {
+        ss->kval = keyVal(ss->key, ss->kpos);
+        if (nodeEndMarkFlag(ss->node))
+            return false;
     }
-    if (nodeEndMarkFlag(ss->node))
-        return false;
-    ss->kval = keyVal(ss->key, ss->kpos);
     seekNode(ss, ss->inode + nodeHdrLen(ss->node));
     return true;
 }
@@ -1568,9 +1728,7 @@ static bool containsAtEndMark(SearchState * ss) {
 
 //===========================================================================
 static bool containsAtRemote(SearchState * ss) {
-    auto pos = remotePos(ss->node);
-    seekPage(ss, remotePage(ss->node));
-    seekNode(ss, pos);
+    seekRemote(ss, ss->inode);
     return true;
 }
 
@@ -1586,13 +1744,13 @@ bool StrTrieBase::contains(string_view key) const {
 
     using Fn = bool(SearchState *);
     constinit static Fn * const functs[8] = {
-        logFatal,
+        logFatal,   // Invalid
+        logFatal,   // Multiroot
         containsAtSeg,
         containsAtHalfSeg,
         containsAtFork,
         containsAtEndMark,
         containsAtRemote,
-        logFatal,
         logFatal,
     };
     for (;;) {
@@ -1714,7 +1872,8 @@ static bool lowerBoundAtEndMark(SearchState * ss) {
 
 //===========================================================================
 static bool lowerBoundAtRemote(SearchState * ss) {
-    return false;
+    seekRemote(ss, ss->inode);
+    return true;
 }
 
 //===========================================================================
@@ -1729,13 +1888,13 @@ StrTrieBase::Iter StrTrieBase::lowerBound(std::string_view key) const {
 
     using Fn = bool(SearchState *);
     constinit static Fn * const functs[8] = {
-        logFatal,
+        logFatal,   // Invalid
+        logFatal,   // Multiroot
         lowerBoundAtSeg,
         lowerBoundAtHalfSeg,
         lowerBoundAtFork,
         lowerBoundAtEndMark,
         lowerBoundAtRemote,
-        logFatal,
         logFatal,
     };
     for (;;) {
@@ -1757,19 +1916,50 @@ StrTrieBase::Iter StrTrieBase::lowerBound(std::string_view key) const {
 
 /****************************************************************************
 *
-*   Misc
+*   StrTrie
 *
 ***/
 
 //===========================================================================
-StrTrieBase::Iter StrTrieBase::begin() const {
-    return Iter{};
+StrTrie::StrTrie () {
+    construct(&m_heapImpl);
 }
 
 //===========================================================================
-StrTrieBase::Iter StrTrieBase::end() const {
-    return Iter{};
+void StrTrie::clear() {
+    m_heapImpl.clear();
 }
+
+//===========================================================================
+std::ostream * const StrTrie::debugStream() const {
+    return m_debug ? &cout : nullptr;
+}
+
+//===========================================================================
+void StrTrie::dumpStats(std::ostream & os) {
+    auto num = m_heapImpl.pageCount();
+    size_t usedPages = 0;
+    size_t usedBytes = 0;
+    for (size_t i = 0; i < num; ++i) {
+        if (!m_heapImpl.empty(i)) {
+            usedPages += 1;
+            auto node = (Node *) m_heapImpl.ptr(i);
+            usedBytes += ::nodeLen(node);
+        }
+    }
+    size_t totalBytes = num * m_heapImpl.pageSize();
+    os << "Bytes: " << totalBytes << '\n'
+        << "Pages: " << num << " total, "
+        << usedPages << " used (" << 100.0 * usedPages / num << "%)\n"
+        << "Fill factor: " << 100.0 * usedBytes / totalBytes << "%\n";
+}
+
+
+/****************************************************************************
+*
+*   Misc
+*
+***/
 
 //===========================================================================
 static ostream & dumpAny(ostream & os, SearchState * ss) {
@@ -1785,6 +1975,9 @@ static ostream & dumpAny(ostream & os, SearchState * ss) {
     }
     os << ' ';
     switch (auto ntype = nodeType(ss->node)) {
+    case kNodeMultiroot:
+        os << " Multiroot[" << multirootLen(ss->node) << "]";
+        break;
     case kNodeSeg:
         os << " Seg[" << segLen(ss->node) << "]";
         if (nodeEndMarkFlag(ss->node))
@@ -1817,7 +2010,7 @@ static ostream & dumpAny(ostream & os, SearchState * ss) {
     if (!subs.empty()) {
         ostringstream otmp;
         for (auto & kid : subs)
-            otmp << kid.first << ' ';
+            otmp << kid.pos << ' ';
         if (otmp.view().size() <= 28) {
             os << "  // " << otmp.view();
         } else {
@@ -1834,10 +2027,10 @@ static ostream & dumpAny(ostream & os, SearchState * ss) {
         seekNode(ss, ss->inode + len);
     } else {
         for (auto & kid : subs) {
-            seekNode(ss, kid.first);
+            seekNode(ss, kid.pos);
             dumpAny(os, ss);
         }
-        seekNode(ss, subs.back().first + subs.back().second);
+        seekNode(ss, subs.back().pos + subs.back().len);
     }
     return os;
 }

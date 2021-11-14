@@ -1,7 +1,7 @@
 // Copyright Glen Knowles 2019 - 2021.
 // Distributed under the Boost Software License, Version 1.0.
 //
-// Map from strings to other strings
+// Set of strings
 //
 // strtrie.h - dim core
 #pragma once
@@ -33,7 +33,7 @@ public:
     using iterator = Iter;
 
 public:
-    StrTrieBase (IPageHeap * pages) : m_pages{pages} {}
+    StrTrieBase (IPageHeap * pages);
     virtual ~StrTrieBase () = default;
 
     // Returns whether key was inserted (didn't already exist).
@@ -60,23 +60,27 @@ public:
 
     virtual std::ostream * const debugStream() const { return nullptr; }
 
+protected:
+    StrTrieBase () = default;
+    void construct(IPageHeap * pages);
+
 private:
-    bool m_verbose = false;
-    IPageHeap * m_pages;
+    IPageHeap * m_pages = nullptr;
 };
 
 class StrTrie : public StrTrieBase {
 public:
-    StrTrie () : StrTrieBase(&m_heapImpl) {}
+    StrTrie ();
 
     void clear();
 
     void debug(bool enable = true) { m_debug = enable; }
     std::ostream * const debugStream() const override;
+    void dumpStats(std::ostream & os);
 
 private:
     bool m_debug = false;
-    PageHeap<256> m_heapImpl;
+    PageHeap<4096> m_heapImpl;
 };
 
 

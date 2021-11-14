@@ -16,10 +16,8 @@ using namespace Dim;
 ***/
 
 #define EXPECT(...)                                                         \
-    if (!bool(__VA_ARGS__)) {                                               \
-        logMsgError() << "Line " << (line ? line : __LINE__) << ": EXPECT(" \
-                      << #__VA_ARGS__ << ") failed";                        \
-    }
+    if (!bool(__VA_ARGS__)) \
+        failed(line ? line : __LINE__, #__VA_ARGS__)
 
 
 /****************************************************************************
@@ -36,6 +34,11 @@ static bool s_verbose;
 *   Helpers
 *
 ***/
+
+//===========================================================================
+static void failed(int line, const char msg[]) {
+    logMsgError() << "Line " << line << ": EXPECT(" << msg << ") failed";
+}
 
 //===========================================================================
 static bool insert(StrTrie * vals, string_view val) {
@@ -73,6 +76,8 @@ inline static void internalTests() {
     EXPECT(!vals.contains("abcd"));
 
     b = insert(&vals, "ac");
+    EXPECT(vals.contains("a"));
+    EXPECT(vals.contains("abc"));
     EXPECT(vals.contains("ac"));
 
     b = insert(&vals, "ade");
@@ -91,16 +96,24 @@ inline static void randomFill() {
     StrTrie vals;
     default_random_engine s_reng;
     string key;
-    for (auto i = 0; i < 120; ++i) {
+    auto count = 1000;
+    for (auto i = 0; i < count; ++i) {
         key.resize(0);
-        auto len = 8u; // s_reng() % 25;
+        auto len = s_reng() % 25;
         for (auto j = 0u; j < len; ++j)
             key += 'a' + char(s_reng() % 26);
+        //if (key < "tqb" || key >= "tqd")
+        //    continue;
+        if (i == count - 1)
+            s_verbose = true;
         if (s_verbose)
             cout << i + 1 << " ";
         insert(&vals, key);
         EXPECT(vals.contains(key));
     }
+    cout << "--- Stats\n";
+    vals.dumpStats(cout);
+    cout << endl;
 }
 
 
@@ -112,6 +125,7 @@ inline static void randomFill() {
 
 //===========================================================================
 static void app(int argc, char *argv[]) {
+    cout.imbue(locale(""));
     Cli cli;
     cli.helpNoArgs();
     cli.versionOpt("1.0 (" __DATE__ ")");
@@ -136,6 +150,7 @@ static void app(int argc, char *argv[]) {
         cout << "All tests passed" << endl;
         appSignalShutdown(EX_OK);
     }
+    logStopwatch();
 }
 
 
