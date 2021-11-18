@@ -1375,7 +1375,7 @@ ADD_PAGE:
         ss->vpages[vi.pgno].roots.push_back(*refs[i]);
         setRemoteRef(refs[i], ss, vi.pgno, vi.pos++);
     }
-    for (auto & vi : vinfos) {
+    for ([[maybe_unused]] auto & vi : vinfos) {
         assert(vi.pos);
     }
     upd->len = nodeLen(*upd);
