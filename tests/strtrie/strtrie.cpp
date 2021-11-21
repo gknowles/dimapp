@@ -1375,9 +1375,8 @@ ADD_PAGE:
         ss->vpages[vi.pgno].roots.push_back(*refs[i]);
         setRemoteRef(refs[i], ss, vi.pgno, vi.pos++);
     }
-    for ([[maybe_unused]] auto & vi : vinfos) {
+    for ([[maybe_unused]] auto & vi : vinfos) 
         assert(vi.pos);
-    }
     upd->len = nodeLen(*upd);
 }
 
@@ -1935,29 +1934,123 @@ std::ostream * const StrTrie::debugStream() const {
     return m_debug ? &cout : nullptr;
 }
 
+
+/****************************************************************************
+*
+*   Stats
+*
+***/
+
+namespace {
+
+struct Stats {
+    size_t usedPages;
+    size_t totalPages;
+    size_t pageSize;
+
+    size_t usedBytes;
+    size_t totalNodes;
+    size_t numMultiroot;
+
+    size_t segCount;
+    size_t segTotalLen;
+    size_t segMaxLen;
+    size_t segShortLen;
+
+    size_t halfSegCount;
+    size_t halfSegLast;
+    
+    size_t numFork;
+    size_t totalForkLen;
+    size_t numEndMark;
+    size_t numRemote;
+};
+
+} // namespace
+
+//===========================================================================
+static int addStats(Stats * out, StrTrie::Node * node) {
+    auto len = nodeHdrLen(node);
+    auto num = numKids(node);
+    out->usedBytes += len;
+    out->totalNodes += 1;
+    switch (nodeType(node)) {
+    default:
+        assert(!"Invalid node type");
+        break;
+    case kNodeMultiroot:
+        out->numMultiroot += 1;
+        break;
+    case kNodeSeg:
+    {
+        auto slen = segLen(node);
+        out->segCount += 1;
+        out->segTotalLen += slen;
+        if (slen <= 16) {
+            out->segShortLen += 1;
+        } else if (slen == kMaxSegLen) {
+            out->segMaxLen += 1;
+        }
+        break;
+    }
+    case kNodeHalfSeg:
+        out->halfSegCount += 1;
+        if (nodeEndMarkFlag(node))
+            out->halfSegLast += 1;
+        break;
+    case kNodeFork:
+        out->numFork += 1;
+        out->totalForkLen += num;
+        break;
+    case kNodeEndMark:
+        out->numEndMark += 1;
+        break;
+    case kNodeRemote:
+        out->numRemote += 1;
+        break;
+    }
+    for (auto i = 0; i < num; ++i)
+        len += addStats(out, node + len);
+    return len;
+}
+
 //===========================================================================
 void StrTrie::dumpStats(std::ostream & os) {
-    auto num = m_heapImpl.pageCount();
-    size_t usedPages = 0;
-    size_t usedBytes = 0;
-    for (size_t i = 0; i < num; ++i) {
+    Stats stats = {};
+    stats.totalPages = m_heapImpl.pageCount();
+    stats.pageSize = m_heapImpl.pageSize();
+    for (size_t i = 0; i < stats.totalPages; ++i) {
         if (!m_heapImpl.empty(i)) {
-            usedPages += 1;
+            stats.usedPages += 1;
             auto node = (Node *) m_heapImpl.ptr(i);
-            usedBytes += ::nodeLen(node);
+            addStats(&stats, node);
         }
     }
-    size_t totalBytes = num * m_heapImpl.pageSize();
+    size_t totalBytes = stats.totalPages * stats.pageSize;
     os << "Bytes: " << totalBytes << '\n'
-        << "Pages: " << num << " total, "
-        << usedPages << " used (" << 100.0 * usedPages / num << "%)\n"
-        << "Fill factor: " << 100.0 * usedBytes / totalBytes << "%\n";
+        << "Pages: " << stats.totalPages << " total, " 
+            << stats.usedPages << " used (" 
+            << 100.0 * stats.usedPages / stats.totalPages << "%)\n"
+        << "Fill factor: " << 100.0 * stats.usedBytes / totalBytes << "%\n";
+    os << "Node detail:\n"
+        << "  Total: " << stats.totalNodes << " nodes\n"
+        << "  Multiroot: " << stats.numMultiroot << " nodes\n"
+        << "  Seg: " << stats.segCount << " nodes, " 
+            << (double) stats.segTotalLen / stats.segCount << " avg len, "
+            << 100.0 * stats.segShortLen / stats.segCount << "% short, "
+            << 100.0 * stats.segMaxLen / stats.segCount << "% full\n"
+        << "  HalfSeg: " << stats.halfSegCount << " nodes, "
+            << 100.0 * stats.halfSegLast / stats.halfSegCount << "% last\n"
+        << "  Fork: " << stats.numFork << " nodes, "
+            << (double) stats.totalForkLen / stats.numFork << " avg forks\n"
+        << "  EndMark: " << stats.numEndMark << " nodes\n"
+        << "  Remote: " << stats.numRemote << " nodes\n";
 }
 
 
 /****************************************************************************
 *
-*   Misc
+*   Dump data
 *
 ***/
 
