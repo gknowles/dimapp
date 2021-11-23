@@ -1335,14 +1335,16 @@ static void harvestPages(SearchState * ss, UpdateBase * upd) {
     int vmap[kMaxForkBit];
     struct VPInfo {
         pgno_t pgno;
-        int len = 0;
-        int pos = 0;
+        int len;
+        int pos;
     };
-    pmr::vector<VPInfo> vinfos(ss->heap);
-    vinfos.reserve(3);
+    VPInfo vinfoData[3] = {};
+    auto vinfos = span<VPInfo>(vinfoData, 0);
 
 ADD_PAGE:
-    auto & nvi = vinfos.emplace_back();
+    vinfos = span<VPInfo>(vinfoData, vinfos.size() + 1);
+    auto & nvi = vinfos.back();
+    assert(vinfos.size() <= 3);
     nvi.pgno = (pgno_t) ss->vpages.size();
     nvi.pos = (int) vinfos.size() - 1;
     ss->vpages.emplace_back(ss->heap);
@@ -1367,7 +1369,6 @@ ADD_PAGE:
         vi.pos = 0;
     }
 
-    assert(vinfos.size() <= 3);
     for (auto i = 0; i < nrefs; ++i) {
         // Add kid to most empty new page and change the parents link to it
         // to be a remote reference.
