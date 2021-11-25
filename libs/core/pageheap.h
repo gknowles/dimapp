@@ -75,6 +75,8 @@ private:
 //===========================================================================
 template <int N>
 inline void PageHeap<N>::clear() {
+    m_root = 0;
+    m_freePages.clear();
     m_pages.clear();
 }
 
