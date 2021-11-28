@@ -86,6 +86,11 @@ inline static void internalTests() {
     b = insert(&vals, "abcdefghijklmnopqrstuvwxyz");
     EXPECT(vals.contains("abcdefghijklmnopqrstuvwxyz"));
     EXPECT(vals.contains("abc"));
+
+    vals.clear();
+    insert(&vals, "abc");
+    insert(&vals, "aw");
+    insert(&vals, "abd");
 }
 
 //===========================================================================
@@ -100,8 +105,10 @@ inline static void randomFill() {
     for (auto i = 0; i < count; ++i) {
         key.resize(0);
         auto len = s_reng() % 25;
-        for (auto j = 0u; j < len; ++j)
+        for (auto j = 0u; j < len; ++j) {
             key += 'a' + char(s_reng() % 26);
+            //key += "abyz"[s_reng() % 4];
+        }
         //if (key < "tqb" || key >= "tqd")
         //    continue;
         if (i == count - 1)
