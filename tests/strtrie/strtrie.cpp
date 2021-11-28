@@ -791,45 +791,120 @@ void StrTrieBase::construct(IPageHeap * pages) {
 ***/
 
 //===========================================================================
-static UpdateSeg & copySeg(
-    SearchState * ss,
-    size_t pos,
-    size_t len,
-    bool eok,
-    NodeRef * nextRef = nullptr,
-    int halfSeg = -1
+static NodeRef * addHalfSeg(SearchState * ss, uint8_t val, bool eok) {
+    auto & upd = newUpdate<UpdateHalfSeg>(ss);
+    upd.nibble = val;
+    if (eok) {
+        upd.endOfKey = true;
+        return nullptr;
+    }
+    auto ref = newRef(ss);
+    upd.refs = {ref, 1};
+    return &upd.refs[0];
+}
+
+//===========================================================================
+static void addKeyHalfSeg(SearchState * ss) {
+    if (++ss->kpos == ss->klen) {
+        addHalfSeg(ss, ss->kval, true);
+    } else {
+        addHalfSeg(ss, ss->kval, false);
+        ss->kval = keyVal(ss->key, ss->kpos);
+    }
+}
+
+//===========================================================================
+static void addFork(SearchState * ss, size_t pos) {
+    auto & fork = newUpdate<UpdateFork>(ss);
+    fork.endOfKey = true;
+    setForkBit(&fork, pos, true);
+    fork.refs = {newRef(ss), 1};
+}
+
+//===========================================================================
+static pair<NodeRef *, NodeRef *> addFork(
+    SearchState * ss, 
+    size_t sval,
+    size_t kval
 ) {
+    assert(sval != kval);
+    auto & fork = newUpdate<UpdateFork>(ss);
+    setForkBit(&fork, sval, true);
+    setForkBit(&fork, ss->kval, true);
+    fork.refs = ss->heap->allocSpan<NodeRef>(2);
+    if (sval < kval) {
+        return { &fork.refs[0], &fork.refs[1] };
+    } else {
+        return { &fork.refs[1], &fork.refs[0] };
+    }
+}
+
+//===========================================================================
+static void copySegPrefix(SearchState * ss, size_t pos) {
     assert(nodeType(ss->node) == kNodeSeg);
-    assert(pos + len <= segLen(ss->node));
-    assert(len && (len + (halfSeg > -1)) % 2 == 0);
-    assert(halfSeg >= -1 && halfSeg <= 15);
+    assert(pos <= segLen(ss->node));
+    assert(pos % 2 == 0);
+    if (!pos) 
+        return;
     auto & upd = newUpdate<UpdateSeg>(ss);
-    upd.keyLen = (int) len + (halfSeg > -1);
+    upd.keyLen = (int) pos;
     auto len8 = upd.keyLen / 2;
     upd.key = ss->heap->alloc<uint8_t>(len8);
     auto data = segData(ss->node);
-    if (pos % 2 == 0) {
-        memcpy(upd.key, data + pos / 2, len8);
-    } else {
-        auto epos = pos + len;
-        auto out = upd.key;
-        for (; pos < epos; pos += 2) {
-            uint8_t val = segVal(ss->node, pos) << 4;
-            if (pos + 1 < epos)
-                val |= segVal(ss->node, pos + 1);
-            *out++ = val;
+    memcpy(upd.key, data, len8);
+    upd.refs = { newRef(ss), 1 };
+}
+
+//===========================================================================
+static void copySegSuffix(SearchState * ss, NodeRef * ref, size_t pos) {
+    assert(nodeType(ss->node) == kNodeSeg);
+    assert(pos <= segLen(ss->node));
+    assert(pos % 2 == 0);
+    auto len = segLen(ss->node) - pos;
+    if (!len) {
+        if (nodeEndMarkFlag(ss->node)) {
+            setUpdateRef(ref, ss);
+            newUpdate<UpdateEndMark>(ss);
+        } else {
+            auto hdrLen = nodeHdrLen(ss->node);
+            setSourceRef(
+                ref, 
+                ss, 
+                ss->inode + hdrLen, 
+                nodeLen(ss->node + hdrLen)
+            );
         }
+        return;
     }
-    if (halfSeg > -1)
-        upd.key[len8 - 1] |= halfSeg;
-    if (eok) {
+
+    setUpdateRef(ref, ss);
+    auto & upd = newUpdate<UpdateSeg>(ss);
+    upd.keyLen = (int) len;
+    auto len8 = upd.keyLen / 2;
+    upd.key = ss->heap->alloc<uint8_t>(len8);
+    auto data = segData(ss->node);
+    memcpy(upd.key, data + pos / 2, len8);
+    if (nodeEndMarkFlag(ss->node)) {
         upd.endOfKey = true;
+        return;
+    } 
+    // TODO: merge with following NodeSeg if present.
+    auto hdrLen = nodeHdrLen(ss->node);
+    auto srcRef = newRef(ss, ss->inode + hdrLen, nodeLen(ss->node + hdrLen));
+    upd.refs = { srcRef, 1 };
+}
+
+//===========================================================================
+static void copyHalfSegSuffix(SearchState * ss, size_t spos) {
+    assert(nodeType(ss->node) == kNodeSeg);
+    auto sval = segVal(ss->node, ++spos);
+    auto slen = segLen(ss->node);
+    if (spos + 1 == slen && nodeEndMarkFlag(ss->node)) {
+        addHalfSeg(ss, sval, true);
     } else {
-        if (!nextRef)
-            nextRef = newRef(ss);
-        upd.refs = { nextRef, 1 };
+        auto ref = addHalfSeg(ss, sval, false);
+        copySegSuffix(ss, ref, spos + 1);
     }
-    return upd;
 }
 
 //===========================================================================
@@ -843,6 +918,7 @@ static bool insertAtSeg(SearchState * ss) {
     // Will either split on first, middle, last, after last (possible if it's
     // the end of the key), or will advance to next node.
 
+    assert(ss->kpos % 2 == 0);
     auto spos = 0; // split point where key diverges from segment
     auto slen = segLen(ss->node);
     auto sval = segVal(ss->node, spos);
@@ -851,11 +927,37 @@ static bool insertAtSeg(SearchState * ss) {
     for (;;) {
         if (ss->kpos == ss->klen) {
             // Fork end of key with position in the segment.
+            copySegPrefix(ss, spos);
+            addFork(ss, sval);
+            copyHalfSegSuffix(ss, spos);
             break;
         }
         if (ss->kval != sval) {
-            // Fork in the segment.
-            break;
+            // Fork inside the key and the segment.
+            if (spos % 2 == 0) {
+                // Fork in the first half of the byte.
+                copySegPrefix(ss, spos);
+                auto [sref, kref] = addFork(ss, sval, ss->kval);
+                setUpdateRef(sref, ss);
+                copyHalfSegSuffix(ss, spos);
+                setUpdateRef(kref, ss);
+                ss->kval = keyVal(ss->key, ++ss->kpos);
+                addKeyHalfSeg(ss);
+                break;
+            } else {
+                // Fork in the second half of the byte.
+                copySegPrefix(ss, spos - 1);
+                addHalfSeg(ss, segVal(ss->node, spos - 1), false);
+                auto [sref, kref] = addFork(ss, sval, ss->kval);
+                copySegSuffix(ss, sref, spos + 1);
+                setUpdateRef(kref, ss);
+                if (++ss->kpos == ss->klen) {
+                    newUpdate<UpdateEndMark>(ss);
+                } else {
+                    ss->kval = keyVal(ss->key, ss->kpos);
+                }
+                break;
+            }
         }
         if (++ss->kpos != ss->klen)
             ss->kval = keyVal(ss->key, ss->kpos);
@@ -866,137 +968,23 @@ static bool insertAtSeg(SearchState * ss) {
                     ss->found = true;
                     return false;
                 }
-                // Fork with the end mark that's after the segment.
+                // Fork key with the end mark that's after the segment.
+                copySegPrefix(ss, spos);
+                addFork(ss, ss->kval);
+                ss->kval = keyVal(ss->key, ++ss->kpos);
+                addKeyHalfSeg(ss);
                 break;
             }
             // Continue search at next node
-            copySeg(ss, 0, slen, false);
+            copySegPrefix(ss, spos);
             seekNode(ss, ss->inode + nodeHdrLen(ss->node));
             return true;
         }
         sval = segVal(ss->node, spos);
     }
 
-    // Replace segment with:
-    //      [lead seg] [lead half seg]
-    //      fork
-    //      [tail seg] [tail half seg]
-    //      [rest of key being inserted]
-    assert(spos <= slen);
-    if (spos > 1) {
-        // Add lead seg.
-        copySeg(ss, 0, spos & ~1, false);
-    }
-    if (spos % 2 == 1) {
-        // Add lead halfSeg.
-        auto & halfSeg = newUpdate<UpdateHalfSeg>(ss);
-        halfSeg.nibble = segVal(ss->node, spos - 1);
-        auto ref = newRef(ss);
-        halfSeg.refs = {ref, 1};
-    }
-    auto & fork = newUpdate<UpdateFork>(ss);
-    if (spos == slen) {
-        assert(ss->kpos < ss->klen);
-        fork.endOfKey = true;
-        auto ref = newRef(ss);
-        fork.refs = {ref, 1};
-        setForkBit(&fork, ss->kval, true);
-    } else {
-        auto tail = nodeEndMarkFlag(ss->node)
-            ? nullptr
-            : ss->node + nodeHdrLen(ss->node);
-        auto nrefs = 2;
-        setForkBit(&fork, sval, true);
-        spos += 1; // Advance past the val that's in the new fork node.
-        if (ss->kpos == ss->klen) {
-            fork.endOfKey = true;
-            nrefs = 1;
-        } else {
-            setForkBit(&fork, ss->kval, true);
-        }
-        fork.refs = ss->heap->allocSpan<NodeRef>(nrefs);
-
-        if (spos == slen) {
-            if (!tail) {
-                setUpdateRef(&fork.refs[0], ss);
-                newUpdate<UpdateEndMark>(ss);
-            } else {
-                setSourceRef(
-                    &fork.refs[0],
-                    ss,
-                    ss->inode + tail - ss->node,
-                    nodeLen(tail)
-                );
-            }
-        } else if ((slen - spos) % 2 == 1
-            && tail
-            && nodeType(tail) == kNodeHalfSeg
-        ) {
-            // Combined rest of seg with following halfSeg.
-            setUpdateRef(&fork.refs[0], ss);
-            auto ref = (NodeRef *) nullptr;
-            if (!nodeEndMarkFlag(tail)) {
-                // Ref to node after following halfSeg.
-                auto inext = ss->inode + tail - ss->node + nodeHdrLen(tail);
-                ref = newRef(
-                    ss,
-                    inext,
-                    nodeLen(ss->node - ss->inode + inext)
-                );
-            }
-            copySeg(ss, spos, slen - spos, !ref, ref, halfSegVal(tail));
-        } else {
-            setUpdateRef(&fork.refs[0], ss);
-            if (slen - spos > 1) {
-                // Add seg part of the rest of the seg.
-                auto ref = (NodeRef *) nullptr;
-                if ((slen - spos) % 2 == 1) {
-                    copySeg(ss, spos, (slen - spos) & ~1, false);
-                } else {
-                    if (tail) {
-                        auto inext = ss->inode + nodeHdrLen(ss->node);
-                        ref = newRef(
-                            ss,
-                            inext,
-                            nodeLen(tail)
-                        );
-                    }
-                    copySeg(ss, spos, slen - spos, !ref, ref);
-                }
-            }
-            if ((slen - spos) % 2 == 1) {
-                // Add halfSeg part of the rest of the seg.
-                auto & halfSeg = newUpdate<UpdateHalfSeg>(ss);
-                halfSeg.nibble = segVal(ss->node, slen - 1);
-                if (tail) {
-                    auto ref = newRef(
-                        ss,
-                        ss->inode + tail - ss->node,
-                        nodeLen(tail)
-                    );
-                    halfSeg.refs = {ref, 1};
-                } else {
-                    halfSeg.endOfKey = true;
-                }
-            }
-        }
-
-        // Add ref to rest of key being inserted.
-        if (ss->kpos == ss->klen) {
-            ss->found = false;
-            return false;
-        }
-        setUpdateRef(&fork.refs[1], ss);
-        if (ss->kval < sval)
-            swap(fork.refs[0], fork.refs[1]);
-    }
-
     // Continue processing the key.
-    if (++ss->kpos == ss->klen) {
-        newUpdate<UpdateEndMark>(ss);
-    } else {
-        ss->kval = keyVal(ss->key, ss->kpos);
-    }
+    assert(ss->kpos % 2 == 0);
     ss->found = false;
     return false;
 }
@@ -1227,13 +1215,10 @@ static bool insertAtRemote(SearchState * ss) {
 //===========================================================================
 static void addSegs(SearchState * ss) {
     assert(ss->kpos <= ss->klen);
+    if (ss->kpos % 2 == 1) 
+        addKeyHalfSeg(ss);
     while (int slen = ss->klen - ss->kpos) {
-        if (slen == 1) {
-            auto & upd = newUpdate<UpdateHalfSeg>(ss);
-            upd.endOfKey = true;
-            upd.nibble = keyVal(ss->key, ss->kpos);
-            return;
-        }
+        assert(slen > 1);
         auto & upd = newUpdate<UpdateSeg>(ss);
         if (slen > kMaxSegLen) {
             upd.keyLen = kMaxSegLen;
@@ -1341,7 +1326,7 @@ static void harvestPages(SearchState * ss, UpdateBase * upd) {
     VPInfo vinfoData[3] = {};
     auto vinfos = span<VPInfo>(vinfoData, 0);
 
-ADD_PAGE:
+ADD_VPAGE:
     vinfos = span<VPInfo>(vinfoData, vinfos.size() + 1);
     auto & nvi = vinfos.back();
     assert(vinfos.size() <= 3);
@@ -1355,7 +1340,7 @@ ADD_PAGE:
         bool multi = vinfos[0].len;
         vinfos[0].len += refs[i]->data.len;
         if (vinfos[0].len > psize - multi)
-            goto ADD_PAGE;
+            goto ADD_VPAGE;
         for (auto vpos = 1; vpos < vinfos.size(); ++vpos) {
             if (vinfos[vpos - 1].len > vinfos[vpos].len) {
                 swap(vinfos[vpos - 1], vinfos[vpos]);
@@ -1960,6 +1945,7 @@ struct Stats {
 
     size_t halfSegCount;
     size_t halfSegLast;
+    size_t halfSegPairs;
     
     size_t numFork;
     size_t totalForkLen;
@@ -1996,8 +1982,11 @@ static int addStats(Stats * out, StrTrie::Node * node) {
     }
     case kNodeHalfSeg:
         out->halfSegCount += 1;
-        if (nodeEndMarkFlag(node))
+        if (nodeEndMarkFlag(node)) {
             out->halfSegLast += 1;
+        } else if (nodeType(node + nodeHdrLen(node)) == kNodeHalfSeg) {
+            out->halfSegPairs += 1;
+        }
         break;
     case kNodeFork:
         out->numFork += 1;
@@ -2041,6 +2030,7 @@ void StrTrie::dumpStats(std::ostream & os) {
             << 100.0 * stats.segShortLen / stats.segCount << "% short, "
             << 100.0 * stats.segMaxLen / stats.segCount << "% full\n"
         << "  HalfSeg: " << stats.halfSegCount << " nodes, "
+            << stats.halfSegPairs << " pairs, "
             << 100.0 * stats.halfSegLast / stats.halfSegCount << "% last\n"
         << "  Fork: " << stats.numFork << " nodes, "
             << (double) stats.totalForkLen / stats.numFork << " avg forks\n"
