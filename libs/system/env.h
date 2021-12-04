@@ -60,12 +60,6 @@ DiskSpace envDiskSpace(std::string_view path);
 // Returns path to this executable being run
 const std::string & envExecPath();
 
-struct VersionInfo {
-    unsigned major;
-    unsigned minor;
-    unsigned patch;
-    unsigned build;
-};
 // Gets version info for this executable
 VersionInfo envExecVersion();
 

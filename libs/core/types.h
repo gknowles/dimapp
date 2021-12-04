@@ -7,8 +7,10 @@
 #include "cppconf/cppconf.h"
 
 #include <cassert>
+#include <compare>
 #include <cstdint>
 #include <functional>
+#include <string>
 #include <string_view>
 #include <type_traits>
 
@@ -30,6 +32,25 @@ enum RunMode {
 
 const char * toString(RunMode mode, const char def[] = "");
 RunMode fromString(std::string_view src, RunMode def);
+
+
+/****************************************************************************
+*
+*   VersionInfo
+*
+***/
+
+struct VersionInfo {
+    unsigned major;
+    unsigned minor;
+    unsigned patch;
+    unsigned build;
+
+    bool operator==(const VersionInfo &) const = default;
+    std::strong_ordering operator<=>(const VersionInfo &) const = default;
+};
+
+std::string toString(const VersionInfo & ver);
 
 
 /****************************************************************************

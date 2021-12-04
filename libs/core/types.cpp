@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2018 - 2019.
+// Copyright Glen Knowles 2018 - 2021.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // types.cpp - dim core
@@ -31,4 +31,25 @@ const char * Dim::toString(RunMode mode, const char def[]) {
 //===========================================================================
 RunMode Dim::fromString(string_view src, RunMode def) {
     return tokenTableGetEnum(s_runModeTbl, src, def);
+}
+
+
+/****************************************************************************
+*
+*   VersionInfo
+*
+***/
+
+//===========================================================================
+string Dim::toString(const VersionInfo & ver) {
+    ostringstream os;
+    os << ver.major;
+    if (ver.build) {
+        os << '.' << ver.minor << '.' << ver.patch << '.' << ver.build;
+    } else if (ver.patch) {
+        os << '.' << ver.minor << '.' << ver.patch;
+    } else if (ver.minor) {
+        os << '.' << ver.minor;
+    }
+    return os.str();
 }
