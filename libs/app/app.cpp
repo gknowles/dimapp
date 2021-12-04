@@ -25,6 +25,7 @@ static RunMode s_runMode{kRunStopped};
 
 static IAppNotify * s_app;
 static string s_appBaseName;
+static VersionInfo s_appVer;
 static unsigned s_appIndex;
 static string s_appName;    // appBaseName[<appIndex>], if appIndex > 1
 static vector<ITaskNotify *> s_appTasks;
@@ -194,6 +195,11 @@ const string & Dim::appBaseName() {
 }
 
 //===========================================================================
+const VersionInfo & Dim::appVersion() {
+    return s_appVer;
+}
+
+//===========================================================================
 unsigned Dim::appIndex() {
     return s_appIndex;
 }
@@ -273,14 +279,23 @@ int Dim::appRun(
     function<void(int argc, char *argv[])> fn,
     int argc,
     char * argv[],
+    const VersionInfo & ver,
+    string_view baseName,
     AppFlags flags
 ) {
     s_fnProxyApp.fn = move(fn);
-    return appRun(&s_fnProxyApp, argc, argv, flags);
+    return appRun(&s_fnProxyApp, argc, argv, ver, baseName, flags);
 }
 
 //===========================================================================
-int Dim::appRun(IAppNotify * app, int argc, char * argv[], AppFlags flags) {
+int Dim::appRun(
+    IAppNotify * app, 
+    int argc, 
+    char * argv[], 
+    const VersionInfo & ver,
+    string_view baseName,
+    AppFlags flags
+) {
     s_appFlags = flags;
     s_runMode = kRunStarting;
     s_appTasks.clear();
@@ -292,14 +307,36 @@ int Dim::appRun(IAppNotify * app, int argc, char * argv[], AppFlags flags) {
             .desc("Identifies service when multiple are configured.");
 
         // The command line will be validated later by the application, right
-        // now we just need to get the appIndex before processing the
-        // configuration.
+        // now we just need the appIndex so the configuration can be 
+        // processed.
+        stringstream tin, tout;
+        auto conin = &cli.conin();
+        auto conout = &cli.conout();
+        cli.iostreams(&tin, &tout);
         (void) cli.parse(argc, argv);
+        cli.iostreams(conin, conout);
     }
 
     s_initialDir = fileGetCurrentDir();
     auto exeName = (Path) envExecPath();
-    s_appBaseName = exeName.stem();
+    if (baseName.empty()) {
+        s_appBaseName = exeName.stem();
+    } else {
+        s_appBaseName = baseName;
+    }
+    s_appVer = ver;
+    if (s_appVer != VersionInfo{}) {
+        Cli cli;
+        ostringstream hdr;
+        Time8601Str ds(envProcessBuildTime());
+        auto verStr = toString(s_appVer);
+        hdr << s_appBaseName 
+            << " v" << verStr
+            << " (" << ds.view().substr(0, 10) << ")";
+        cli.header(hdr.str())
+            .versionOpt(verStr, s_appBaseName);
+    }
+
     s_appName = s_appBaseName;
     if (s_appIndex > 1)
         s_appName += StrFrom(s_appIndex).view();

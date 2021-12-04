@@ -318,5 +318,5 @@ static void app(int argc, char *argv[]) {
 
 //===========================================================================
 int main(int argc, char * argv[]) {
-    return appRun(app, argc, argv, fAppClient);
+    return appRun(app, argc, argv);
 }

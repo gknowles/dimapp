@@ -11,9 +11,11 @@ using namespace Dim;
 
 /****************************************************************************
 *
-*   Declarations
+*   Tuning parameters
 *
 ***/
+
+const VersionInfo kVersion = { 1, 0 };
 
 
 /****************************************************************************
@@ -343,9 +345,7 @@ static bool loadSchema(Schema * schema, XNode * root) {
 //===========================================================================
 static void app(int argc, char * argv[]) {
     Cli cli;
-    cli.header("xsdgen v"s + kVersion + " (" __DATE__ ")")
-        .helpNoArgs()
-        .versionOpt(kVersion, "xsdgen");
+    cli.helpNoArgs();
     auto & specfile = cli.opt<Path>("[xsd spec]")
         .desc("Xsd specification to process, extension defaults "
             "to '.xsdgen.xml'");
@@ -389,7 +389,7 @@ static void app(int argc, char * argv[]) {
 
 //===========================================================================
 int main(int argc, char * argv[]) {
-    return appRun(app, argc, argv);
+    return appRun(app, argc, argv, kVersion, "xsdgen");
 }
 
 //===========================================================================

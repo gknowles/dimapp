@@ -12,8 +12,8 @@
 //      stuff, and eventually calls appSignalShutdown(). A command line
 //      tool might do all its work and signal shutdown from inside onAppRun.
 //      Whereas a server might start listening for socket connections and
-//      return, calling appSignalShutdown() only in response to some later
-//      event.
+//      return, eventually calling appSignalShutdown() in response to some 
+//      later event.
 // 4. Stopping - process all shutdown monitors and shutdown the framework
 // 5. Stopped - framework is no longer running and returns from appRun call
 //
@@ -94,12 +94,16 @@ int appRun(
     IAppNotify * app,
     int argc,
     char * argv[],
+    const VersionInfo & ver = {},
+    std::string_view baseName = {}, // defaults to stem of execuable file name
     AppFlags flags = fAppClient
 );
 int appRun(
     std::function<void(int argc, char *argv[])> fn,
     int argc,
     char * argv[],
+    const VersionInfo & ver = {},
+    std::string_view baseName = {}, // defaults to stem of execuable file name
     AppFlags flags = fAppClient
 );
 
@@ -112,6 +116,7 @@ int appRun(
 
 const std::string & appName();
 const std::string & appBaseName();
+const VersionInfo & appVersion();
 unsigned appIndex();
 RunMode appMode();
 inline bool appStarting() { return appMode() == kRunStarting; }
@@ -133,7 +138,7 @@ const Path & appLogDir();
 
 LogType appLogLevel();
 
-// false if file relative to root is not within the root path. This can happen
+// False if file relative to root is not within the root path. This can happen
 // if file breaks out via ".." or is an absolute path.
 bool appConfigPath(
     Path * out,

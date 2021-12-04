@@ -11,11 +11,11 @@ using namespace Dim;
 
 /****************************************************************************
 *
-*   Declarations
+*   Tuning parameters
 *
 ***/
 
-const char kVersion[] = "1.0";
+const VersionInfo kVersion = { 1, 0 };
 
 
 /****************************************************************************
@@ -112,8 +112,7 @@ static void app(int argc, char *argv[]) {
     shutdownMonitor(&s_cleanup);
 
     Cli cli;
-    cli.header("h2srv v"s + kVersion + " (" __DATE__ ") sample http/2 server");
-    cli.versionOpt(kVersion, "h2srv");
+    cli.header(cli.header() + " sample http/2 server");
     if (!cli.parse(argc, argv))
         return appSignalUsageError();
 
@@ -136,7 +135,7 @@ static void app(int argc, char *argv[]) {
 
 //===========================================================================
 static int doMain(int argc, char * argv[]) {
-    return appRun(app, argc, argv, fAppServer | fAppWithConsole);
+    return appRun(app, argc, argv, kVersion, {}, fAppServer | fAppWithConsole);
 }
 
 

@@ -11,11 +11,18 @@ using namespace Dim;
 
 /****************************************************************************
 *
-*   Declarations
+*   Tuning parameters
 *
 ***/
 
-const char kVersion[] = "1.1";
+const VersionInfo kVersion = { 1, 1 };
+
+
+/****************************************************************************
+*
+*   Declarations
+*
+***/
 
 const char kVarPrefix[] = "Prefix";
 const char kVarCommitYear[] = "$CommitYear";
@@ -385,33 +392,6 @@ static bool replaceFile(
 
 /****************************************************************************
 *
-*   CmdOpts
-*
-***/
-
-//===========================================================================
-CmdOpts::CmdOpts() {
-    Cli cli;
-    cli.optVec<string>(&files, "[FILE]")
-        .desc("Files to search (via git ls-files) for updatable comments.");
-    cli.opt<string>(&configFile, "c conf")
-        .desc("Configuration to process. "
-            "(default: {GIT_ROOT}/conf/cmtupd.xml)");
-    cli.opt<bool>(&check, "c check").desc("Check for updatable comments.");
-    cli.opt<bool>(&update, "u update").desc("Update found comments.");
-    cli.opt<bool>(&show, "s show").desc("Show configuration being executed.");
-    cli.opt<bool>("v verbose.")
-        .desc("Show status of all matched files. Use twice to also show "
-            "excluded files.")
-        .check([this](auto&, auto&, auto & val) {
-            verbose += (val == "1");
-            return true;
-        });
-}
-
-
-/****************************************************************************
-*
 *   Application
 *
 ***/
@@ -669,12 +649,37 @@ static void processFiles(const Config * cfg) {
         finalReport(cfg);
 }
 
+
+/****************************************************************************
+*
+*   Command Line
+*
+***/
+
+//===========================================================================
+CmdOpts::CmdOpts() {
+    Cli cli;
+    cli.optVec<string>(&files, "[FILE]")
+        .desc("Files to search (via git ls-files) for updatable comments.");
+    cli.opt<string>(&configFile, "c conf")
+        .desc("Configuration to process. "
+            "(default: {GIT_ROOT}/conf/cmtupd.xml)");
+    cli.opt<bool>(&check, "c check").desc("Check for updatable comments.");
+    cli.opt<bool>(&update, "u update").desc("Update found comments.");
+    cli.opt<bool>(&show, "s show").desc("Show configuration being executed.");
+    cli.opt<bool>("v verbose.")
+        .desc("Show status of all matched files. Use twice to also show "
+            "excluded files.")
+        .check([this](auto&, auto&, auto & val) {
+            verbose += (val == "1");
+            return true;
+        });
+}
+
 //===========================================================================
 static void app(int argc, char *argv[]) {
     Cli cli;
-    cli.header("cmtupd v"s + kVersion + " (" __DATE__ ")")
-        .helpNoArgs()
-        .versionOpt(kVersion, "cmtupd");
+    cli.helpNoArgs();
     if (!cli.parse(argc, argv))
         return appSignalUsageError();
 
@@ -698,14 +703,7 @@ static void app(int argc, char *argv[]) {
     appSignalShutdown(EX_OK);
 }
 
-
-/****************************************************************************
-*
-*   Externals
-*
-***/
-
 //===========================================================================
 int main(int argc, char * argv[]) {
-    return appRun(app, argc, argv);
+    return appRun(app, argc, argv, kVersion);
 }

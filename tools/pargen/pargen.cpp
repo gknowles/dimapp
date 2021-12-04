@@ -11,6 +11,15 @@ using namespace Dim;
 
 /****************************************************************************
 *
+*   Tuning parameters
+*
+***/
+
+const VersionInfo kVersion = { 2, 2 };
+
+
+/****************************************************************************
+*
 *   Declarations
 *
 ***/
@@ -188,20 +197,16 @@ void LogTask::onTask () {
 //===========================================================================
 static void app (int argc, char * argv[]) {
     s_logQ = taskCreateQueue("Logging", 1);
-    string version{kVersion};
 
     Cli cli;
     // header
-    cli.header("pargen v"s + version
-        + " (" __DATE__ ") simplistic parser generator\n"
-    );
+    cli.header(cli.header() + " simplistic parser generator");
     // positional arguments
     auto & srcfile = cli.opt<Path>("[source file(.abnf)]")
         .desc("File containing ABNF rules to process.");
     auto & root = cli.opt<string>("[root rule]")
         .desc("Root rule to use, overrides %root in <source file>.");
     // options
-    cli.versionOpt(version, "pargen");
     cli.helpNoArgs();
     auto & test = cli.opt<bool>("test.").group("~").desc(
         "Run internal test of ABNF parsing logic.");
@@ -339,5 +344,5 @@ int main (int argc, char * argv[]) {
     consoleCatchCtrlC(false);
     LogTask logger;
     logMonitor(&logger);
-    return appRun(app, argc, argv);
+    return appRun(app, argc, argv, kVersion, "pargen");
 }

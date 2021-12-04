@@ -11,8 +11,6 @@
 *
 ***/
 
-const char kVersion[] = "1.1.0";
-
 // forward declarations
 struct Config;
 

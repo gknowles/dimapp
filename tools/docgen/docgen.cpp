@@ -11,6 +11,15 @@ using namespace Dim;
 
 /****************************************************************************
 *
+*   Tuning parameters
+*
+***/
+
+const VersionInfo kVersion = { 1, 1 };
+
+
+/****************************************************************************
+*
 *   ShutdownNotify
 *
 ***/
@@ -38,10 +47,8 @@ void ShutdownNotify::onShutdownClient(bool firstTry) {
 //===========================================================================
 static void app(int argc, char * argv[]) {
     Cli cli;
-    cli.header("docgen v"s + kVersion + " (" __DATE__ ")")
-        .helpNoArgs()
-        .helpCmd()
-        .versionOpt(kVersion, "docgen");
+    cli.helpNoArgs()
+        .helpCmd();
 
     shutdownMonitor(&s_cleanup);
     cli.exec(argc, argv);
@@ -57,5 +64,5 @@ static void app(int argc, char * argv[]) {
 
 //===========================================================================
 int main(int argc, char * argv[]) {
-    return appRun(app, argc, argv);
+    return appRun(app, argc, argv, kVersion);
 }
