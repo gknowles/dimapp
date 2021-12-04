@@ -6,6 +6,7 @@
 
 #include "cppconf/cppconf.h"
 
+#include "core/types.h"
 #include "json/json.h"
 
 #include <map>
@@ -77,6 +78,7 @@ VersionInfo envExecVersion();
 
 unsigned envProcessId();
 TimePoint envProcessStartTime();
+TimePoint envProcessBuildTime();
 
 // Returns rights available to the current process
 enum ProcessRights {

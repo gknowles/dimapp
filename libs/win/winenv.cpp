@@ -243,6 +243,12 @@ TimePoint Dim::envProcessStartTime() {
 }
 
 //===========================================================================
+TimePoint Dim::envProcessBuildTime() {
+    auto utime = GetTimestampForLoadedLibrary(GetModuleHandle(NULL));
+    return timeFromUnix(utime);
+}
+
+//===========================================================================
 ProcessRights Dim::envProcessRights() {
     char sid[SECURITY_MAX_SID_SIZE];
     DWORD cb = sizeof sid;
