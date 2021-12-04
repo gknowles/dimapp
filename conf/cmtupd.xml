@@ -3,10 +3,10 @@ Copyright Glen Knowles 2020 - 2021.
 Distributed under the Boost Software License, Version 1.0.
 
 Auto-generated variables:
-    %CurrentYear: current year, 4-digits
-    %CommitYear: year file was last committed, 4-digits
+    $CurrentYear: current year, 4-digits
+    $CommitYear: year file was last committed, 4-digits
 
-Lines match by Match/@regex are replaced with @replace if the file's
+Lines matched by Match/@regex are replaced with @replace if the file's
 $CommitYear is greater than LastYear.
 
 The attributes @regex, @value, and @default are interpreted as attribute value
