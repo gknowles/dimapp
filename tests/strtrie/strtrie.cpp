@@ -954,6 +954,14 @@ static bool insertAtSeg(SearchState * ss) {
     for (;;) {
         if (ss->kpos == ss->klen) {
             // Fork end of key with position in the segment.
+            // 
+            // Key "a" [61] -> Seg "abc" [61 62 63]
+            //  +---------+  +-----------+
+            //  | Seg "a" |--| Fork--EOK |
+            //  +---------+  |   |       |
+            //               |   |       |  +--------+  +---------+
+            //               |   +--  6  |--| Half 2 |--| Seg "c" |
+            //               +-----------+  +--------+  +---------+
             copySegPrefix(ss, spos);
             addForkWithEnd(ss, sval, true);
             copyHalfSegSuffix(ss, spos);
@@ -963,6 +971,14 @@ static bool insertAtSeg(SearchState * ss) {
             // Fork inside the key and the segment.
             if (spos % 2 == 0) {
                 // Fork in the first half of the byte.
+                // 
+                // Key "ayz" [61 79 7a] -> Seg "abc" [61 62 63]
+                //  +---------+  +-----------+  +--------+  +----------+
+                //  | Seg "a" |--| Fork-- 6  |--| Half 2 |--| Seg "c"  |
+                //  +---------+  |   |       |  +--------+  +----------+
+                //               |   |       |  +--------+  +----------+
+                //               |   +--  7  |--| Half 9 |--| Seg "z"  |
+                //               +-----------+  +--------+  +----------+
                 copySegPrefix(ss, spos);
                 auto [sref, kref] = addFork(ss, sval, ss->kval);
                 setUpdateRef(sref, ss);
@@ -973,6 +989,14 @@ static bool insertAtSeg(SearchState * ss) {
                 break;
             } else {
                 // Fork in the second half of the byte.
+                // 
+                // Key "aef" [61 65 66] -> Seg "abc" [61 62 63]
+                //  +---------+  +--------+  +-----------+  +----------+
+                //  | Seg "a" |--| Half 6 |--| Fork-- 2  |--| Seg "c"  |
+                //  +---------+  +--------+  |   |       |  +----------+
+                //                           |   |       |  +----------+
+                //                           |   +--  5  |--| Seg "f"  |
+                //                           +-----------+  +----------+
                 copySegPrefix(ss, spos - 1);
                 addHalfSeg(ss, segVal(ss->node, spos - 1), false);
                 auto [sref, kref] = addFork(ss, sval, ss->kval);
@@ -991,6 +1015,14 @@ static bool insertAtSeg(SearchState * ss) {
                     return false;
                 }
                 // Fork key with the end mark that's after the segment.
+                // 
+                // Key "abcdef" [61 62 63 64 65 66] -> Seg "abc" [61 62 63]
+                //  +-----------+  +-----------+  +--------+  +----------+
+                //  | Seg "abc" |--| Fork-- 6  |--| Half 4 |--| Seg "ef" |
+                //  +-----------+  |   |       |  +--------+  +----------+
+                //                 |   |       |
+                //                 |   +-- EOK |
+                //                 +-----------+
                 copySegPrefix(ss, spos);
                 addForkWithEnd(ss, ss->kval, true);
                 ss->kval = keyVal(ss->key, ++ss->kpos);
@@ -1036,12 +1068,28 @@ static bool insertAtHalfSeg (SearchState * ss) {
     for (;;) {
         if (ss->kpos == ss->klen) {
             // Fork end of key with half seg.
+            //
+            // Key "" [] -> Half 6
+            //  +-----------+
+            //  | Fork--EOK |
+            //  |   |       |
+            //  |   |       |
+            //  |   +--  6  |
+            //  +-----------+
             auto ref = addForkWithEnd(ss, sval, false);
             copyRef(ss, ref);
             break;
         }
         if (ss->kval != sval) {
             // Fork inside the key with the half seg.
+            //
+            // Key "a" [61] -> Half 7
+            //  +-----------+  +--------+
+            //  | Fork-- 6  |--| Half 1 |
+            //  |   |       |  +--------+
+            //  |   |       |
+            //  |   +--  7  |
+            //  +-----------+
             auto [sref, kref] = addFork(ss, sval, ss->kval);
             copyRef(ss, sref);
             copyKeyRef(ss, kref);
@@ -1055,7 +1103,15 @@ static bool insertAtHalfSeg (SearchState * ss) {
                 ss->found = true;
                 return false;
             }
-            // Fork key with the end mark that's after the segment.
+            // Fork key with the end mark that's after the half seg.
+            //
+            // Key "ab" [61 62] -> Half 6
+            //  +--------+  +-----------+  +---------+
+            //  | Half 6 |--| Fork-- 1  |--| Seg "b" |
+            //  +--------+  |   |       |  +---------+
+            //              |   |       |
+            //              |   +-- EOK |
+            //              +-----------+
             copyHalfSeg(ss, false);
             addForkWithEnd(ss, ss->kval, true);
             ss->kval = keyVal(ss->key, ++ss->kpos);
@@ -1178,18 +1234,23 @@ static bool insertAtFork (SearchState * ss) {
 //===========================================================================
 // Returns true if there is more to do; otherwise false and sets ss->found
 static bool insertAtEndMark(SearchState * ss) {
+    assert(ss->kpos % 2 == 0);
     if (ss->kpos == ss->klen) {
         ss->found = true;
         return false;
     }
 
-    auto & fork = newUpdate<UpdateFork>(ss);
-    fork.endOfKey = true;
-    setForkBit(&fork, ss->kval, true);
-    if (++ss->kpos != ss->klen)
-        ss->kval = keyVal(ss->key, ss->kpos);
-    auto ref = newRef(ss);
-    fork.refs = {ref, 1};
+    // Fork key with end mark.
+    // 
+    // Key "a" [61] -> EndMark
+    //  +-----------+  +--------+
+    //  | Fork-- 6  |--| Half 1 |
+    //  |   |       |  +--------+
+    //  |   |       |
+    //  |   +-- EOK |
+    //  +-----------+
+    addForkWithEnd(ss, ss->kval, true);
+    ss->kval = keyVal(ss->key, ++ss->kpos);
     ss->found = false;
     return false;
 }
