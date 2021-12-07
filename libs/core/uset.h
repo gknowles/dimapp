@@ -111,7 +111,7 @@ public:
     void assign(value_type val);
     template <std::input_iterator InputIt>
         requires (std::is_convertible_v<decltype(*std::declval<InputIt>()),
-            IntegralSet<T, A>::value_type>)
+            typename IntegralSet<T, A>::value_type>)
         void assign(InputIt first, InputIt last);
     void assign(std::initializer_list<value_type> il);
     void assign(value_type start, size_t len);
@@ -121,7 +121,7 @@ public:
     bool insert(value_type val); // returns true if inserted
     template <std::input_iterator InputIt>
         requires (std::is_convertible_v<decltype(*std::declval<InputIt>()),
-            IntegralSet<T, A>::value_type>)
+            typename IntegralSet<T, A>::value_type>)
         void insert(InputIt first, InputIt last);
     void insert(std::initializer_list<value_type> il);
     void insert(value_type start, size_t len);
