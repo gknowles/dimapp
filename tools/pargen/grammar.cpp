@@ -500,7 +500,7 @@ static void normalizeChoice(Element & rule) {
     rule.elements = tmp;
     for (auto && elem : rule.elements)
         elem.pos = 0;
-    sort(rule.elements.begin(), rule.elements.end(), [](auto & a, auto & b) {
+    ranges::sort(rule.elements, [](auto & a, auto & b) {
         return tie(a.name, a.type, a.value) < tie(b.name, b.type, b.value);
     });
 }

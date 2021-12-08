@@ -145,8 +145,8 @@ AcceptManager::AcceptManager(
 //===========================================================================
 void AcceptManager::setAddresses(const SockAddr * addrs, size_t count) {
     vector<SockAddr> endpts{addrs, addrs + count};
-    sort(endpts.begin(), endpts.end());
-    sort(m_addrs.begin(), m_addrs.end());
+    ranges::sort(endpts);
+    ranges::sort(m_addrs);
 
     bool console = (m_mgrFlags & AppSocket::fMgrConsole);
     for_each_diff(

@@ -59,7 +59,7 @@ TlsConnBase::TlsConnBase() {}
 //===========================================================================
 void TlsConnBase::setSuites(const TlsCipherSuite suites[], size_t count) {
     m_suites.assign(suites, suites + count);
-    sort(m_suites.begin(), m_suites.end());
+    ranges::sort(m_suites);
     auto last = unique(m_suites.begin(), m_suites.end());
     m_suites.erase(last, m_suites.end());
 }

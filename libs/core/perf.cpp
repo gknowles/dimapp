@@ -283,9 +283,8 @@ void Dim::perfGetValues (vector<PerfValue> * outptr, bool pretty) {
         }
     }
     if (mustSort) {
-        sort(
-            out.begin(),
-            out.end(),
+        ranges::sort(
+            out,
             [](auto & a, auto & b){ return a.name < b.name; }
         );
     }

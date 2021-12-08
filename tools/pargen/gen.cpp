@@ -1132,7 +1132,7 @@ static bool dedupStateTreePass(DedupInfo & di) {
     // to hash functions and makes sure that we never remove a state that
     // could be the target of a merge from a subsequent state in the same
     // pass.
-    sort(matched.begin(), matched.end(), [](auto & a, auto & b) {
+    ranges::sort(matched, [](auto & a, auto & b) {
         return a.second > b.second;
     });
     for (auto && xy : matched) {

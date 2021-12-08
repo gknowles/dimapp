@@ -266,9 +266,8 @@ static bool writeSwitchCase(
     if (cases.empty())
         return false;
 
-    sort(
-        cases.begin(),
-        cases.end(),
+    ranges::sort(
+        cases,
         [&stateKeys](const NextState & e1, const NextState & e2) {
             return 256 * stateKeys[e1.state] + e1.ch
                 < 256 * stateKeys[e2.state] + e2.ch;
@@ -469,7 +468,7 @@ static void writeParserState(
     } else {
         aliases.push_back(to_string(st.id) + ": " + st.name);
     }
-    sort(aliases.begin(), aliases.end(), [](auto && a, auto && b) {
+    ranges::sort(aliases, [](auto && a, auto && b) {
         return strtoul(a.c_str(), nullptr, 10)
             < strtoul(b.c_str(), nullptr, 10);
     });

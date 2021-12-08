@@ -365,7 +365,7 @@ void Dim::addressGetLocal(vector<HostAddr> * out) {
         out->push_back(sockAddr.addr);
     }
 
-    sort(out->begin(), out->end(), [](auto & a, auto & b) {
+    ranges::sort(*out, [](auto & a, auto & b) {
         return a.type() > b.type()
             || a.type() == b.type() && a < b;
     });

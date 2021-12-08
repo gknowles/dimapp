@@ -277,9 +277,7 @@ static vector<pair<size_t, size_t>> lineSpans(
 
     // check for overlapping ranges
     auto sorted = out;
-    sort(sorted.begin(), sorted.end(), [](auto & a, auto & b) {
-        return a < b;
-    });
+    ranges::sort(sorted, [](auto & a, auto & b) { return a < b; });
     for (unsigned i = 0; i + 1 < sorted.size(); ++i) {
         if (sorted[i].first + sorted[i].second > sorted[i + 1].first) {
             olog() << "overlapping line spans.";
@@ -504,7 +502,7 @@ static bool applyReplaceAttr(
         repl.src.second = spos - repl.src.first;
         spos += 1;
     }
-    sort(repls.begin(), repls.end(), [](auto & a, auto & b) {
+    ranges::sort(repls, [](auto & a, auto & b) {
         return a.dst.first < b.dst.first;
     });
 

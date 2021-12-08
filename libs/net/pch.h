@@ -26,6 +26,7 @@
 #include <mutex>
 #include <numeric>
 #include <ostream>
+#include <ranges>
 #include <shared_mutex>
 #include <vector>
 
