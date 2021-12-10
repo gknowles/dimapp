@@ -1129,7 +1129,7 @@ static bool insertAtHalfSeg (SearchState * ss) {
 }
 
 //===========================================================================
-static UpdateFork & copyFork(SearchState * ss, int * inext) {
+static UpdateFork & copyForkWithKey(SearchState * ss, int * inext) {
     assert(nodeType(ss->node) == kNodeFork);
     *inext = -1;
 
@@ -1208,7 +1208,7 @@ static bool insertAtFork (SearchState * ss) {
     int inext;
     if (ss->kpos == ss->klen) {
         if (!nodeEndMarkFlag(ss->node)) {
-            copyFork(ss, &inext);
+            copyForkWithKey(ss, &inext);
             ss->found = false;
         } else {
             ss->found = true;
@@ -1216,7 +1216,7 @@ static bool insertAtFork (SearchState * ss) {
         return false;
     }
 
-    copyFork(ss, &inext);
+    copyForkWithKey(ss, &inext);
     bool matched = forkBit(ss->node, ss->kval);
     if (++ss->kpos != ss->klen)
         ss->kval = keyVal(ss->key, ss->kpos);
@@ -1689,14 +1689,13 @@ static bool containsAtSeg(SearchState * ss) {
         return false;
     if (memcmp(ss->key.data() + ss->kpos / 2, segData(ss->node), slen / 2))
         return false;
+
     ss->kpos += slen;
     if (ss->kpos != ss->klen)
         ss->kval = keyVal(ss->key, ss->kpos);
     if (nodeEndMarkFlag(ss->node)) {
-        if (ss->kpos == ss->klen) {
+        if (ss->kpos == ss->klen) 
             ss->found = true;
-            return false;
-        }
         return false;
     }
     seekNode(ss, ss->inode + nodeHdrLen(ss->node));
@@ -1710,15 +1709,13 @@ static bool containsAtHalfSeg(SearchState * ss) {
     auto sval = halfSegVal(ss->node);
     if (ss->kval != sval)
         return false;
-    if (++ss->kpos == ss->klen) {
-        if (nodeEndMarkFlag(ss->node)) {
-            ss->found = true;
-            return false;
-        }
-    } else {
+
+    if (++ss->kpos != ss->klen) 
         ss->kval = keyVal(ss->key, ss->kpos);
-        if (nodeEndMarkFlag(ss->node))
-            return false;
+    if (nodeEndMarkFlag(ss->node)) {
+        if (ss->kpos == ss->klen) 
+            ss->found = true;
+        return false;
     }
     seekNode(ss, ss->inode + nodeHdrLen(ss->node));
     return true;
@@ -1735,7 +1732,8 @@ static bool containsAtFork(SearchState * ss) {
 
     auto pos = forkPos(ss->node, ss->kval);
     seekKid(ss, pos);
-    if (++ss->kpos < ss->klen)
+    // Advance kpos *after* using the old kval to get forkPos.
+    if (++ss->kpos != ss->klen) 
         ss->kval = keyVal(ss->key, ss->kpos);
     return true;
 }
