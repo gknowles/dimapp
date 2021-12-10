@@ -230,12 +230,8 @@ struct MimeType {
     std::string_view type;
     std::string_view charSet;
 
-    friend std::strong_ordering operator<=>(
-        const MimeType & a,
-        const MimeType & b
-    ) {
-        return a.fileExt <=> b.fileExt;
-    }
+    std::strong_ordering operator<=>(const MimeType & other) const;
+    bool operator==(const MimeType & other) const = default;
 };
 MimeType mimeTypeDefault(std::string_view path);
 

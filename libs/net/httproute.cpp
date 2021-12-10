@@ -557,7 +557,7 @@ bool Http1Reject::onSocketRead(AppSocketData & data) {
 *
 ***/
 
-static MimeType s_mimeTypes[] = {
+const MimeType s_mimeTypes[] = {
     { ".css",  "text/css"                         },
     { ".html", "text/html"                        },
     { ".jpeg", "image/jpeg"                       },
@@ -571,29 +571,26 @@ static MimeType s_mimeTypes[] = {
     { ".xml",  "application/xml",         "utf-8" },
     { ".xsl",  "application/xslt+xml",    "utf-8" },
 };
+const unordered_map<string_view, MimeType> s_mimeTypeMap = []() {
+    unordered_map<string_view, MimeType> out;
+    for (auto&& mt : s_mimeTypes) 
+        out[mt.fileExt] = mt;
+    return out;
+}();
 
-namespace {
-struct AutoInit {
-    AutoInit() {
-        sort(begin(s_mimeTypes), end(s_mimeTypes));
-    }
-};
-static AutoInit s_init;
-} // namespace
+//===========================================================================
+std::strong_ordering MimeType::operator<=>(const MimeType & other) const {
+    return fileExt <=> other.fileExt;
+}
 
 //===========================================================================
 MimeType Dim::mimeTypeDefault(string_view path) {
     Path tmp{path};
     auto ext = tmp.extension();
-    auto mt = MimeType{ext.data()};
-    auto ii = equal_range(
-        ::begin(s_mimeTypes),
-        ::end(s_mimeTypes),
-        mt
-    );
-    if (ii.first == ii.second)
+    auto i = s_mimeTypeMap.find(ext);
+    if (i == s_mimeTypeMap.end())
         return {};
-    return *ii.first;
+    return i->second;
 }
 
 
