@@ -60,6 +60,8 @@ const size_t kForkNodeHdrLen = 3;
 const size_t kMinPageSize = kForkNodeHdrLen + kMaxForkBit * kRemoteNodeLen;
 const size_t kMaxPageSize = 65'536;
 
+const size_t kMaxNodeTypes = 8;
+
 namespace {
 
 using pgno_t = unsigned;
@@ -98,7 +100,7 @@ enum NodeType : int8_t {
     kNodeRemote,
     kNodeTypes
 };
-static_assert(kNodeTypes <= 8);
+static_assert(kNodeTypes <= kMaxNodeTypes);
 
 struct UpdateBase : ListLink<> {
     int id = 0;
@@ -1547,7 +1549,7 @@ bool StrTrieBase::insert(string_view key) {
         seekNode(ss, ss->inode);
 
         using Fn = bool(SearchState *);
-        constinit static Fn * const functs[8] = {
+        constinit static Fn * const functs[] = {
             logFatal,   // Invalid
             logFatal,   // Multiroot
             insertAtSeg,
@@ -1557,6 +1559,7 @@ bool StrTrieBase::insert(string_view key) {
             insertAtRemote,
             logFatal,
         };
+        static_assert(size(functs) == kMaxNodeTypes);
         for (;;) {
             auto ntype = ::nodeType(ss->node);
             auto fn = functs[ntype];
@@ -1762,7 +1765,7 @@ bool StrTrieBase::contains(string_view key) const {
     seekNode(ss, ss->inode);
 
     using Fn = bool(SearchState *);
-    constinit static Fn * const functs[8] = {
+    constinit static Fn * const functs[] = {
         logFatal,   // Invalid
         logFatal,   // Multiroot
         containsAtSeg,
@@ -1772,6 +1775,7 @@ bool StrTrieBase::contains(string_view key) const {
         containsAtRemote,
         logFatal,
     };
+    static_assert(size(functs) == kMaxNodeTypes);
     for (;;) {
         auto ntype = ::nodeType(ss->node);
         auto fn = functs[ntype];
@@ -1836,22 +1840,29 @@ static bool lowerBoundAtSeg(SearchState * ss) {
     auto spos = 0;
     auto slen = segLen(ss->node);
     auto sval = segVal(ss->node, spos);
+    int rc = 0;
 
-    for (;;) {
-        if (ss->kval != sval)
-            break;
-        if (++ss->kpos != ss->klen)
-            ss->kval = keyVal(ss->key, ss->kpos);
-        if (++spos == slen) {
-            if (nodeEndMarkFlag(ss->node)) {
-                seekNextFork(ss);
-                return false;
-            }
-        }
-        sval = segVal(ss->node, spos);
+    auto kdataLen = ss->klen - ss->kpos;
+    auto kdata = ss->key.data() + ss->kpos / 2;
+    if (kdataLen < slen) {
+        rc = memcmp(kdata, segData(ss->node), kdataLen / 2);
+        if (!rc)
+            rc = -1;
+    } else {
+        rc = memcmp(kdata, segData(ss->node), slen / 2);
     }
 
-    if (ss->kval < sval) {
+    if (!rc) {
+        ss->kpos += slen;
+        if (ss->kpos != ss->klen)
+            ss->kval = keyVal(ss->key, ss->kpos);
+        if (nodeEndMarkFlag(ss->node)) {
+            seekNextFork(ss);
+            return false;
+        }
+        seekNode(ss, ss->inode + nodeHdrLen(ss->node));
+        return true;
+    } else if (rc < 0) {
         setFoundKey(ss);
         for (;;) {
             pushFoundKeyVal(ss, sval);
@@ -1868,7 +1879,7 @@ static bool lowerBoundAtSeg(SearchState * ss) {
             return false;
         }
     } else {
-        assert(ss->kval > sval);
+        assert(rc > 0);
         seekNextFork(ss);
         return false;
     }
@@ -1876,6 +1887,18 @@ static bool lowerBoundAtSeg(SearchState * ss) {
 
 //===========================================================================
 static bool lowerBoundAtHalfSeg(SearchState * ss) {
+    auto sval = halfSegVal(ss->node);
+    if (ss->kval == sval) {
+        if (nodeEndMarkFlag(ss->node)) {
+            seekNextFork(ss);
+            return false;
+        }
+        if (++ss->kpos != ss->klen)
+            ss->kval = keyVal(ss->key, ss->kpos);
+
+    } else if (ss->kval < sval) {
+    } else {
+    }
     return false;
 }
 
@@ -1906,7 +1929,7 @@ StrTrieBase::Iter StrTrieBase::lowerBound(std::string_view key) const {
     seekNode(ss, ss->inode);
 
     using Fn = bool(SearchState *);
-    constinit static Fn * const functs[8] = {
+    constinit static Fn * const functs[] = {
         logFatal,   // Invalid
         logFatal,   // Multiroot
         lowerBoundAtSeg,
@@ -1916,6 +1939,7 @@ StrTrieBase::Iter StrTrieBase::lowerBound(std::string_view key) const {
         lowerBoundAtRemote,
         logFatal,
     };
+    static_assert(size(functs) == kMaxNodeTypes);
     for (;;) {
         auto ntype = ::nodeType(ss->node);
         auto fn = functs[ntype];
