@@ -94,19 +94,25 @@ inline static void internalTests() {
 }
 
 //===========================================================================
-inline static void randomFill() {
-    if (s_verbose)
-        cout << "\n> RANDOM FILL" << endl;
+inline static void randomFill(size_t count, size_t maxLen, size_t charVals) {
+    if (!count)
+        return;
+    if (s_verbose) {
+        cout << "\n> RANDOM FILL: "
+            << "count = " << count 
+            << ", maxLen = " << maxLen
+            << ", charVals = " << charVals
+            << endl;
+    }
     [[maybe_unused]] int line = 0;
     StrTrie vals;
     default_random_engine s_reng;
     string key;
-    auto count = 1000;
     for (auto i = 0; i < count; ++i) {
         key.resize(0);
-        auto len = s_reng() % 25;
+        auto len = s_reng() % maxLen;
         for (auto j = 0u; j < len; ++j) {
-            key += 'a' + char(s_reng() % 26);
+            key += 'a' + char(s_reng() % charVals);
             //key += "abyz"[s_reng() % 4];
         }
         //if (key < "tqb" || key >= "tqd")
@@ -138,16 +144,19 @@ static void app(int argc, char *argv[]) {
     cli.versionOpt("1.0 (" __DATE__ ")");
     cli.opt<bool>(&s_verbose, "v verbose.")
         .desc("Dump container state between tests.");
+    auto & fill = cli.opt<int>("f fill").siUnits("")
+        .desc("Randomly fill a container with this many values.");
     auto & test = cli.opt<bool>("test", true).desc("Run internal unit tests");
     if (!cli.parse(argc, argv))
         return appSignalUsageError();
-    if (!*test) {
+    if (!*test && !*fill) {
         cout << "No tests run" << endl;
         return appSignalShutdown(EX_OK);
     }
 
-    internalTests();
-    randomFill();
+    if (*test)
+        internalTests();
+    randomFill(*fill, 25, 26);
 
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);
