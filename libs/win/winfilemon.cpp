@@ -171,6 +171,8 @@ void DirInfo::closeWait_UNLK(FileMonitorHandle dir) {
 
 //===========================================================================
 void DirInfo::addMonitor_UNLK(string_view path, IFileChangeNotify * notify) {
+    unique_lock lk{s_mut, adopt_lock};
+
     Path fullpath;
     Path relpath;
     if (!expandPath(&fullpath, &relpath, path)) {
@@ -191,7 +193,6 @@ void DirInfo::addMonitor_UNLK(string_view path, IFileChangeNotify * notify) {
     fi.notifiers.push_back(notify);
 
     // call the notify unless we're in a notify
-    unique_lock lk{s_mut, adopt_lock};
     while (s_inNotify && s_inThread != this_thread::get_id())
         s_inCv.wait(lk);
 
@@ -222,12 +223,13 @@ void DirInfo::removeMonitorWait_UNLK(
     string_view file,
     IFileChangeNotify * notify
 ) {
+    unique_lock lk{s_mut, adopt_lock};
+
     Path fullpath;
     Path relpath;
     if (!expandPath(&fullpath, &relpath, file))
         return;
 
-    unique_lock lk{s_mut, adopt_lock};
     while (notify == s_inNotify && s_inThread != this_thread::get_id())
         s_inCv.wait(lk);
 
