@@ -69,7 +69,7 @@ private:
         string_view name,
         Pipe::OpenMode oflags
     );
-    bool completeIfDone_LK();
+    void completeIfDone_UNLK(unique_lock<mutex> * lk);
 
     TaskQueueHandle m_hq;
     HANDLE m_job = NULL;
@@ -250,9 +250,9 @@ ExecProgram::ExecProgram(
     string_view cmdline,
     const ExecOptions & opts
 )
-    : m_notify(notify)
-    , m_cmdline(cmdline)
+    : m_cmdline(cmdline)
     , m_opts(opts)
+    , m_notify(notify)
 {
     s_perfTotal += 1;
     s_perfWaiting += 1;
@@ -468,8 +468,10 @@ bool ExecProgram::onAccept(StdStream strm) {
 
     // Close parents reference to child side of pipes.
     for (auto && pipe : m_pipes) {
-        CloseHandle(pipe.m_child);
-        pipe.m_child = {};
+        if (pipe.m_child) {
+            CloseHandle(pipe.m_child);
+            pipe.m_child = {};
+        }
     }
 
     if (!running) {
@@ -525,8 +527,7 @@ void ExecProgram::onDisconnect(StdStream strm) {
     unique_lock lk(m_mut);
     auto & pi = m_pipes[strm];
     pi.m_mode = kRunStopped;
-    if (completeIfDone_LK())
-        lk.release();
+    completeIfDone_UNLK(&lk);
 }
 
 //===========================================================================
@@ -567,18 +568,18 @@ void ExecProgram::onJobExit() {
     }
     CloseHandle(m_process);
     CloseHandle(m_job);
-    if (completeIfDone_LK())
-        lk.release();
+    completeIfDone_UNLK(&lk);
 }
 
 //===========================================================================
-bool ExecProgram::completeIfDone_LK() {
+void ExecProgram::completeIfDone_UNLK(unique_lock<mutex> * lk) {
     if (m_pipes[kStdIn].m_mode != kRunStopped
         || m_pipes[kStdOut].m_mode != kRunStopped
         || m_pipes[kStdErr].m_mode != kRunStopped
         || m_mode != kRunStopped
     ) {
-        return false;
+        lk->unlock();
+        return;
     }
 
     if (m_notify) {
@@ -587,10 +588,10 @@ bool ExecProgram::completeIfDone_LK() {
         m_notify = nullptr;
     }
 
-    m_mut.unlock();
+    lk->unlock();
+    lk->release();
     delete this;
     dequeue();
-    return true;
 }
 
 //===========================================================================
