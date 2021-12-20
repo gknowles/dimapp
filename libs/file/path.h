@@ -111,7 +111,8 @@ public:
 
     std::filesystem::path fsPath() const;
     const std::string & str() const & { return m_data; }
-    std::string str() const && { return std::move(m_data); }
+    std::string str() const && { 
+        return std::move(const_cast<std::string &>(m_data)); }
     std::string_view view() const { return m_data; }
     const char * c_str() const;
     size_t size() const;
