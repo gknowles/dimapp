@@ -36,9 +36,14 @@ void Dim::cryptRandomBytes(void * vptr, size_t count) {
     if (count) {
         val = s_rdev();
         switch (count) {
-        case 3: *ptr++ = val & 0xff; val >>= 8;
-        case 2: *ptr++ = val & 0xff; val >>= 8;
-        case 1: *ptr++ = val & 0xff;
+        case 3: 
+            *ptr++ = val & 0xff; val >>= 8;
+            [[fallthrough]];
+        case 2: 
+            *ptr++ = val & 0xff; val >>= 8;
+            [[fallthrough]];
+        case 1: 
+            *ptr++ = val & 0xff;
         }
     }
 }
