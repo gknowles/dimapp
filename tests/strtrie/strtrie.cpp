@@ -727,13 +727,13 @@ SearchState::SearchState(
 )
     : key(key)
     , klen((int) key.size() * 2)
-    , pages(pages)
-    , heap(heap)
     , forks(heap)
     , foundKey(heap)
     , updates(heap)
     , vpages(heap)
     , spages(heap)
+    , heap(heap)
+    , pages(pages)
     , debugStream(dstrm)
 {
     if (klen)
@@ -835,7 +835,7 @@ static NodeRef * addForkWithEnd(
 }
 
 //===========================================================================
-static [[nodiscard]] pair<NodeRef *, NodeRef *> addFork(
+[[nodiscard]] static pair<NodeRef *, NodeRef *> addFork(
     SearchState * ss, 
     size_t sval,
     size_t kval
@@ -1862,7 +1862,9 @@ static bool lowerBoundAtSeg(SearchState * ss) {
         }
         seekNode(ss, ss->inode + nodeHdrLen(ss->node));
         return true;
-    } else if (rc < 0) {
+    }
+    
+    if (rc < 0) {
         setFoundKey(ss);
         for (;;) {
             pushFoundKeyVal(ss, sval);

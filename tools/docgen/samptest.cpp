@@ -370,9 +370,9 @@ static multimap<TestAttr, AttrInfo> getAttrs(
 ApplyAttrState::ApplyAttrState(const CodeBlock & blk, const string & file)
     : fileLine(blk.line)
     , attrs(getAttrs(blk, file))
+    , lang(blk.lang)
     , iter(attrs.begin())
     , attr(iter == attrs.end() ? kTestInvalid : iter->first)
-    , lang(blk.lang)
 {
     vector<string_view> rawLines;
     split(&rawLines, blk.content, '\n');
