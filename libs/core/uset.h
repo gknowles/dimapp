@@ -110,8 +110,7 @@ public:
     void assign(const IntegralSet & from);
     void assign(value_type val);
     template <std::input_iterator InputIt>
-        requires (std::is_convertible_v<decltype(*std::declval<InputIt>()),
-            typename IntegralSet<T, A>::value_type>)
+        requires (std::is_convertible_v<decltype(*std::declval<InputIt>()), T>)
         void assign(InputIt first, InputIt last);
     void assign(std::initializer_list<value_type> il);
     void assign(value_type start, size_t len);
@@ -120,8 +119,7 @@ public:
     void insert(const IntegralSet & other);
     bool insert(value_type val); // returns true if inserted
     template <std::input_iterator InputIt>
-        requires (std::is_convertible_v<decltype(*std::declval<InputIt>()),
-            typename IntegralSet<T, A>::value_type>)
+        requires (std::is_convertible_v<decltype(*std::declval<InputIt>()), T>)
         void insert(InputIt first, InputIt last);
     void insert(std::initializer_list<value_type> il);
     void insert(value_type start, size_t len);
@@ -201,8 +199,7 @@ private:
 //===========================================================================
 template <std::integral T, typename A>
 template <std::input_iterator InputIt>
-    requires (std::is_convertible_v<decltype(*std::declval<InputIt>()),
-        typename IntegralSet<T, A>::value_type>)
+    requires (std::is_convertible_v<decltype(*std::declval<InputIt>()), T>)
 inline void IntegralSet<T, A>::assign(InputIt first, InputIt last) {
     clear();
     insert(first, last);
@@ -211,8 +208,7 @@ inline void IntegralSet<T, A>::assign(InputIt first, InputIt last) {
 //===========================================================================
 template <std::integral T, typename A>
 template<std::input_iterator InputIt>
-    requires (std::is_convertible_v<decltype(*std::declval<InputIt>()),
-        typename IntegralSet<T, A>::value_type>)
+    requires (std::is_convertible_v<decltype(*std::declval<InputIt>()), T>)
 inline void IntegralSet<T, A>::insert(InputIt first, InputIt last) {
     if constexpr (std::is_convertible_v<InputIt, const value_type *>) {
         iInsert(first, last);
