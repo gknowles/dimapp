@@ -115,8 +115,8 @@ static void valueToString(string * out, T val, bool pretty) {
     out->resize(v.size() + (v.size() - num) / 3);
     auto optr = out->data();
     switch (num) {
-        case 3: *optr++ = *ptr++;
-        case 2: *optr++ = *ptr++;
+        case 3: *optr++ = *ptr++; [[fallthrough]];
+        case 2: *optr++ = *ptr++; [[fallthrough]];
         case 1: *optr++ = *ptr++;
     }
     while (ptr != ecomma) {

@@ -696,12 +696,11 @@ void AcceptPipe::onTask() {
     s_perfAccepts += 1;
     s_perfCurAccepts += 1;
     lk.unlock();
-    if (!m_notify->onPipeAccept()) {
+    auto accepted = m_notify->onPipeAccept();
+    lk.lock();
+    if (!accepted) {
         s_perfNotAccepted += 1;
-        lk.lock();
         hardClose();
-    } else {
-        lk.lock();
     }
     enableEvents_LK(nullptr);
 }

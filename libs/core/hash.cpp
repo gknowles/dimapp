@@ -145,12 +145,12 @@ size_t Dim::hashBytes(const void * ptr, size_t count) {
     uint64_t b = count % 256;
     m = b << 56;
     switch (count & 7) {
-    case 7: m |= (uint64_t)src[6] << 48;
-    case 6: m |= (uint64_t)src[5] << 40;
-    case 5: m |= (uint64_t)src[4] << 32;
-    case 4: m |= (uint64_t)src[3] << 24;
-    case 3: m |= (uint64_t)src[2] << 16;
-    case 2: m |= (uint64_t)src[1] << 8;
+    case 7: m |= (uint64_t)src[6] << 48; [[fallthrough]];
+    case 6: m |= (uint64_t)src[5] << 40; [[fallthrough]];
+    case 5: m |= (uint64_t)src[4] << 32; [[fallthrough]];
+    case 4: m |= (uint64_t)src[3] << 24; [[fallthrough]];
+    case 3: m |= (uint64_t)src[2] << 16; [[fallthrough]];
+    case 2: m |= (uint64_t)src[1] << 8; [[fallthrough]];
     case 1: m |= (uint64_t)src[0];
     }
     v3 ^= m;

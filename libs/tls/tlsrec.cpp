@@ -149,24 +149,31 @@ bool TlsRecordDecrypt::parse(
                 // application data. The actual type is in the ciphertext.
                 if (m_cipher)
                     return parseError(kUnexpectedMessage);
-            case kContentAppData: break;
-            default: return parseError(kUnexpectedMessage);
+                [[fallthrough]];
+            case kContentAppData: 
+                break;
+            default: 
+                return parseError(kUnexpectedMessage);
             }
+            [[fallthrough]];
         case 1: // protocol version major - MUST ignore
             if (ptr == eptr)
                 return true;
             ptr += 1;
             m_recPos += 1;
+            [[fallthrough]];
         case 2: // protocol version minor - MUST ignore
             if (ptr == eptr)
                 return true;
             ptr += 1;
             m_recPos += 1;
+            [[fallthrough]];
         case 3: // text length MSB
             if (ptr == eptr)
                 return true;
             m_textLen = *ptr++;
             m_recPos += 1;
+            [[fallthrough]];
         case 4: // text length LSB
             if (ptr == eptr)
                 return true;

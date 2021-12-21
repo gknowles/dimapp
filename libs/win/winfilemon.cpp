@@ -160,7 +160,7 @@ bool DirInfo::queue() {
 
 //===========================================================================
 void DirInfo::closeWait_UNLK(unique_lock<mutex> && lk, FileMonitorHandle dir) {
-    assert(lk.owns_lock());
+    assert(lk);
 
     while (s_inNotify && s_inThread != this_thread::get_id())
         s_inCv.wait(lk);
@@ -183,7 +183,7 @@ void DirInfo::addMonitor_UNLK(
     string_view path, 
     IFileChangeNotify * notify
 ) {
-    assert(lk.owns_lock());
+    assert(lk);
 
     Path fullpath;
     Path relpath;
@@ -236,7 +236,7 @@ void DirInfo::removeMonitorWait_UNLK(
     string_view file,
     IFileChangeNotify * notify
 ) {
-    assert(lk.owns_lock());
+    assert(lk);
 
     Path fullpath;
     Path relpath;

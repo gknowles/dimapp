@@ -251,7 +251,7 @@ void Dim::logMonitorClose(ILogNotify * notify) {
 // Query log info
 //===========================================================================
 int Dim::logGetMsgCount(LogType type) {
-    assert(type < kLogTypes);
+    assert(type >= 0 && type < kLogTypes);
     if (auto perf = s_perfs[type])
         return *perf;
     return 0;

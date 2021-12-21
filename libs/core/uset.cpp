@@ -2623,9 +2623,9 @@ template <std::integral T, typename A>
 int IntegralSet<T,A>::Impl::cmpBit(uint64_t left, uint64_t right) {
     if (left == right)
         return 0;   // equal
-    uint64_t mask = numeric_limits<uint64_t>::max();
+    constexpr uint64_t kMask = numeric_limits<uint64_t>::max();
     if (left < right) {
-        if (left != (right & (mask << trailingZeroBits(left)))) {
+        if (left != (right & (kMask << trailingZeroBits(left)))) {
             // left bitmap > right bitmap. Which means the right side has gaps,
             // paradoxically making it greater lexicographically. For example,
             // { 1, 2, 3 } < { 1, 3 }, since at the second position 2 < 3.
@@ -2638,7 +2638,7 @@ int IntegralSet<T,A>::Impl::cmpBit(uint64_t left, uint64_t right) {
             return -2;
         }
     } else {
-        if (right != (left & (mask << trailingZeroBits(right)))) {
+        if (right != (left & (kMask << trailingZeroBits(right)))) {
             return -1;
         } else {
             return 2;

@@ -202,6 +202,7 @@ IJBuilder & IJBuilder::member(string_view name) {
         return fail();
     case kStateMember:
         append(",\n");
+        break;
     case kStateFirstMember:
         break;
     }

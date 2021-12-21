@@ -109,6 +109,7 @@ static void writeRestriction(
     switch (content) {
     case Attr::Content::kInvalid:
         assert(!"Must have content definition");
+        break;
     case Attr::Content::kBool:
         writeSimpleRestriction(out, "boolean");
         break;
@@ -199,6 +200,7 @@ static void writeElemType(
         switch (elem.content) {
         case Element::Content::kInvalid:
             assert(!"No content type");
+            break;
         case Element::Content::kBool:
             startSimpleExtension(out, "boolean");
             out->attr("base", "boolean");
