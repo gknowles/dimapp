@@ -1369,63 +1369,35 @@ static void harvestPages(SearchState * ss, UpdateBase * upd) {
     };
     basic_string<VPInfo> vinfos;
 
-    constexpr auto kMaxFill = 0;
-    if (kMaxFill) {
-        for (;;) {
-            vinfos.push_back({
-                .pgno = (pgno_t) ss->vpages.size(),
-                .len = 0,
-                .pos = (int) vinfos.size()
-            });
-            assert(vinfos.size() <= 3);
-            auto & nvi = vinfos.back();
-            ss->vpages.emplace_back(ss->heap);
-            for (auto i = 0; i < nrefs; ++i) {
-                if (vmap[i])
-                    continue;
-                bool multi = nvi.len;
-                if (nvi.len + refs[i]->data.len <= psize - multi) {
-                    vmap[i] = nvi.pos + 1;
-                    nvi.len += refs[i]->data.len;
-                    upd->len -= refs[i]->data.len - kRemoteNodeLen;
-                }
-            }
-            if (upd->len <= psize)
-                break;
-        }
-    } else {
-    ADD_VPAGE:
-        vinfos.push_back({});
-        auto & nvi = vinfos.back();
+    for (;;) {
+        vinfos.push_back({
+            .pgno = (pgno_t) ss->vpages.size(),
+            .len = 0,
+            .pos = (int) vinfos.size()
+        });
         assert(vinfos.size() <= 3);
-        nvi.pgno = (pgno_t) ss->vpages.size();
-        nvi.pos = (int) vinfos.size() - 1;
+        auto & nvi = vinfos.back();
         ss->vpages.emplace_back(ss->heap);
-        for (auto&& vi : vinfos)
-            vi.len = 0;
         for (auto i = 0; i < nrefs; ++i) {
-            vmap[i] = vinfos[0].pos + 1;
-            bool multi = vinfos[0].len;
-            vinfos[0].len += refs[i]->data.len;
-            if (vinfos[0].len > psize - multi)
-                goto ADD_VPAGE;
-            for (auto vpos = 1; vpos < vinfos.size(); ++vpos) {
-                if (vinfos[vpos - 1].len > vinfos[vpos].len) {
-                    swap(vinfos[vpos - 1], vinfos[vpos]);
-                } else {
-                    break;
-                }
+            if (vmap[i])
+                continue;
+            bool multi = nvi.len;
+            if (nvi.len + refs[i]->data.len <= psize - multi) {
+                vmap[i] = nvi.pos + 1;
+                nvi.len += refs[i]->data.len;
+                upd->len -= refs[i]->data.len - kRemoteNodeLen;
             }
         }
+        if (upd->len <= psize)
+            break;
     }
     for (auto&& vi : vinfos) {
         assert(vi.len);
         vi.pos = 0;
     }
-
     for (auto i = 0; i < nrefs; ++i) {
-        // Add kid to most empty new page and change the parents link to it
-        // to be a remote reference.
+        // Add kids to new pages and change the parents link to them to be
+        // remote references.
         if (auto vpos = vmap[i]) {
             auto & vi = vinfos[vpos - 1];
             ss->vpages[vi.pgno].roots.push_back(*refs[i]);
@@ -1434,11 +1406,7 @@ static void harvestPages(SearchState * ss, UpdateBase * upd) {
     }
     for ([[maybe_unused]] auto & vi : vinfos) 
         assert(vi.pos);
-    if (kMaxFill) {
-        assert(upd->len == nodeLen(*upd));
-    } else {
-        upd->len = nodeLen(*upd);
-    }
+    assert(upd->len == nodeLen(*upd));
 }
 
 //===========================================================================
