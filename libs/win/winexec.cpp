@@ -69,7 +69,7 @@ private:
         string_view name,
         Pipe::OpenMode oflags
     );
-    void completeIfDone_UNLK(unique_lock<mutex> * lk);
+    void completeIfDone_UNLK(unique_lock<mutex> && lk);
 
     TaskQueueHandle m_hq;
     HANDLE m_job = NULL;
@@ -527,7 +527,7 @@ void ExecProgram::onDisconnect(StdStream strm) {
     unique_lock lk(m_mut);
     auto & pi = m_pipes[strm];
     pi.m_mode = kRunStopped;
-    completeIfDone_UNLK(&lk);
+    completeIfDone_UNLK(move(lk));
 }
 
 //===========================================================================
@@ -568,17 +568,17 @@ void ExecProgram::onJobExit() {
     }
     CloseHandle(m_process);
     CloseHandle(m_job);
-    completeIfDone_UNLK(&lk);
+    completeIfDone_UNLK(move(lk));
 }
 
 //===========================================================================
-void ExecProgram::completeIfDone_UNLK(unique_lock<mutex> * lk) {
+void ExecProgram::completeIfDone_UNLK(unique_lock<mutex> && lk) {
+    assert(lk);
     if (m_pipes[kStdIn].m_mode != kRunStopped
         || m_pipes[kStdOut].m_mode != kRunStopped
         || m_pipes[kStdErr].m_mode != kRunStopped
         || m_mode != kRunStopped
     ) {
-        lk->unlock();
         return;
     }
 
@@ -588,8 +588,8 @@ void ExecProgram::completeIfDone_UNLK(unique_lock<mutex> * lk) {
         m_notify = nullptr;
     }
 
-    lk->unlock();
-    lk->release();
+    lk.unlock();
+    lk.release();
     delete this;
     dequeue();
 }

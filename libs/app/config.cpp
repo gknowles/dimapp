@@ -34,9 +34,13 @@ class ConfigFile : public IFileChangeNotify {
 public:
     ~ConfigFile();
 
-    void monitor_UNLK(string_view relpath, IConfigNotify * notify);
-    bool notify_UNLK(IConfigNotify * notify);
-    bool closeWait_UNLK(IConfigNotify * notify);
+    void monitor_UNLK(
+        unique_lock<mutex> && lk, 
+        string_view relpath, 
+        IConfigNotify * notify
+    );
+    bool notify_UNLK(unique_lock<mutex> && lk, IConfigNotify * notify);
+    bool closeWait_UNLK(unique_lock<mutex> && lk, IConfigNotify * notify);
 
     void write(IJBuilder * out);
 
@@ -88,14 +92,19 @@ ConfigFile::~ConfigFile() {
 }
 
 //===========================================================================
-void ConfigFile::monitor_UNLK(string_view relpath, IConfigNotify * notify) {
+void ConfigFile::monitor_UNLK(
+    unique_lock<mutex> && lk, 
+    string_view relpath, 
+    IConfigNotify * notify
+) {
+    assert(lk);
     bool wasEmpty = !m_notifiers;
     auto ni = new NotifyInfo;
     m_notifiers.link(ni);
     ni->notify = notify;
 
     if (wasEmpty) {
-        s_mut.unlock();
+        lk.unlock();
         if (appFlags() & fAppWithFiles) {
             fileMonitor(s_hDir, relpath, this);
         } else {
@@ -106,13 +115,16 @@ void ConfigFile::monitor_UNLK(string_view relpath, IConfigNotify * notify) {
             parseContent(fullpath, {});
         }
     } else {
-        notify_UNLK(notify);
+        notify_UNLK(move(lk), notify);
     }
 }
 
 //===========================================================================
-bool ConfigFile::closeWait_UNLK(IConfigNotify * notify) {
-    unique_lock lk{s_mut, adopt_lock};
+bool ConfigFile::closeWait_UNLK(
+    unique_lock<mutex> && lk, 
+    IConfigNotify * notify
+) {
+    assert(lk);
     while (s_inNotify && s_inThread != this_thread::get_id())
         s_inCv.wait(lk);
 
@@ -167,9 +179,12 @@ void ConfigFile::onFileChange(string_view fullpath) {
 }
 
 //===========================================================================
-bool ConfigFile::notify_UNLK(IConfigNotify * notify) {
+bool ConfigFile::notify_UNLK(
+    unique_lock<mutex> && lk, 
+    IConfigNotify * notify
+) {
+    assert(lk);
     unsigned found = 0;
-    unique_lock lk{s_mut, adopt_lock};
     while (s_inNotify && s_inThread != this_thread::get_id())
         s_inCv.wait(lk);
 
@@ -278,9 +293,9 @@ void Dim::configMonitor(string_view file, IConfigNotify * notify) {
     if (!getFullpath(&path, file))
         return;
 
-    s_mut.lock();
+    unique_lock lk(s_mut);
     auto & cf = s_files[path];
-    cf.monitor_UNLK(path, notify);
+    cf.monitor_UNLK(move(lk), path, notify);
 }
 
 //===========================================================================
@@ -289,9 +304,9 @@ void Dim::configCloseWait(string_view file, IConfigNotify * notify) {
     if (!getFullpath(&path, file))
         return;
 
-    s_mut.lock();
+    unique_lock lk(s_mut);
     auto & cf = s_files[path];
-    if (!cf.closeWait_UNLK(notify))
+    if (!cf.closeWait_UNLK(move(lk), notify))
         logMsgError() << "Close notify not registered, " << file;
 }
 
@@ -304,9 +319,9 @@ void Dim::configChange(
     if (!getFullpath(&path, file))
         return;
 
-    s_mut.lock();
+    unique_lock lk(s_mut);
     auto & cf = s_files[path];
-    if (!cf.notify_UNLK(notify))
+    if (!cf.notify_UNLK(move(lk), notify))
         logMsgError() << "Change notify not registered, " << file;
 }
 

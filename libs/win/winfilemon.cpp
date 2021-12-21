@@ -32,10 +32,18 @@ public:
     ~DirInfo();
 
     bool start(string_view path, bool recurse);
-    void closeWait_UNLK(FileMonitorHandle dir);
+    void closeWait_UNLK(unique_lock<mutex> && lk, FileMonitorHandle dir);
 
-    void addMonitor_UNLK(string_view file, IFileChangeNotify * notify);
-    void removeMonitorWait_UNLK(string_view file, IFileChangeNotify * notify);
+    void addMonitor_UNLK(
+        unique_lock<mutex> && lk, 
+        string_view file, 
+        IFileChangeNotify * notify
+    );
+    void removeMonitorWait_UNLK(
+        unique_lock<mutex> && lk, 
+        string_view file, 
+        IFileChangeNotify * notify
+    );
 
     string_view base() const { return m_base; }
     // returns false if file is outside of base directory
@@ -151,8 +159,8 @@ bool DirInfo::queue() {
 }
 
 //===========================================================================
-void DirInfo::closeWait_UNLK(FileMonitorHandle dir) {
-    unique_lock lk{s_mut, adopt_lock};
+void DirInfo::closeWait_UNLK(unique_lock<mutex> && lk, FileMonitorHandle dir) {
+    assert(lk.owns_lock());
 
     while (s_inNotify && s_inThread != this_thread::get_id())
         s_inCv.wait(lk);
@@ -170,8 +178,12 @@ void DirInfo::closeWait_UNLK(FileMonitorHandle dir) {
 }
 
 //===========================================================================
-void DirInfo::addMonitor_UNLK(string_view path, IFileChangeNotify * notify) {
-    unique_lock lk{s_mut, adopt_lock};
+void DirInfo::addMonitor_UNLK(
+    unique_lock<mutex> && lk, 
+    string_view path, 
+    IFileChangeNotify * notify
+) {
+    assert(lk.owns_lock());
 
     Path fullpath;
     Path relpath;
@@ -220,10 +232,11 @@ void DirInfo::addMonitor_UNLK(string_view path, IFileChangeNotify * notify) {
 
 //===========================================================================
 void DirInfo::removeMonitorWait_UNLK(
+    unique_lock<mutex> && lk, 
     string_view file,
     IFileChangeNotify * notify
 ) {
-    unique_lock lk{s_mut, adopt_lock};
+    assert(lk.owns_lock());
 
     Path fullpath;
     Path relpath;
@@ -415,10 +428,10 @@ bool Dim::fileMonitorDir(
 
 //===========================================================================
 void Dim::fileMonitorCloseWait(FileMonitorHandle dir) {
-    s_mut.lock();
+    unique_lock lk(s_mut);
     auto di = s_dirs.find(dir);
     assert(di);
-    di->closeWait_UNLK(dir);
+    di->closeWait_UNLK(move(lk), dir);
 }
 
 //===========================================================================
@@ -436,10 +449,10 @@ void Dim::fileMonitor(
     IFileChangeNotify * notify
 ) {
     assert(notify);
-    s_mut.lock();
+    unique_lock lk(s_mut);
     auto di = s_dirs.find(dir);
     assert(di);
-    di->addMonitor_UNLK(file, notify);
+    di->addMonitor_UNLK(move(lk), file, notify);
 }
 
 //===========================================================================
@@ -449,10 +462,10 @@ void Dim::fileMonitorCloseWait(
     IFileChangeNotify * notify
 ) {
     assert(notify);
-    s_mut.lock();
+    unique_lock lk(s_mut);
     auto di = s_dirs.find(dir);
     assert(di);
-    di->removeMonitorWait_UNLK(file, notify);
+    di->removeMonitorWait_UNLK(move(lk), file, notify);
 }
 
 //===========================================================================
