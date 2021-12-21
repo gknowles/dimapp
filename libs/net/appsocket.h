@@ -13,6 +13,7 @@
 #include <functional>
 #include <memory>
 #include <string_view>
+#include <type_traits>
 
 namespace Dim {
 
@@ -56,8 +57,6 @@ struct AppSocketBufferInfo {
 *
 ***/
 
-class IAppSocket;
-
 class IAppSocketNotify {
 public:
     virtual ~IAppSocketNotify () = default;
@@ -79,7 +78,7 @@ public:
 
 private:
     friend class IAppSocket;
-    IAppSocket * m_socket{};
+    IAppSocket * m_socket = {};
 };
 
 void socketDisconnect(IAppSocketNotify * notify);

@@ -20,8 +20,11 @@
 #include "core/time.h"
 
 #include <chrono>
+#include <functional>
 #include <map>
+#include <string>
 #include <string_view>
+#include <vector>
 
 namespace Dim {
 
@@ -94,7 +97,7 @@ protected:
 
 private:
     friend class ExecProgram;
-    ExecProgram * m_exec = nullptr;
+    class ExecProgram * m_exec = {};
 };
 
 void execProgram(
