@@ -80,7 +80,7 @@ public:
 
 private:
     bool m_debug = false;
-    PageHeap<256> m_heapImpl;
+    PageHeap<512> m_heapImpl;
 };
 
 

@@ -1361,35 +1361,60 @@ static void harvestPages(SearchState * ss, UpdateBase * upd) {
         return a->data.len > b->data.len;
     });
 
-    int vmap[kMaxForkBit];
+    int vmap[kMaxForkBit] = {};
     struct VPInfo {
         pgno_t pgno;
         int len;
         int pos;
     };
-    VPInfo vinfoData[3] = {};
-    auto vinfos = span<VPInfo>(vinfoData, 0);
+    basic_string<VPInfo> vinfos;
 
-ADD_VPAGE:
-    vinfos = span<VPInfo>(vinfoData, vinfos.size() + 1);
-    auto & nvi = vinfos.back();
-    assert(vinfos.size() <= 3);
-    nvi.pgno = (pgno_t) ss->vpages.size();
-    nvi.pos = (int) vinfos.size() - 1;
-    ss->vpages.emplace_back(ss->heap);
-    for (auto&& vi : vinfos)
-        vi.len = 0;
-    for (auto i = 0; i < nrefs; ++i) {
-        vmap[i] = vinfos[0].pos;
-        bool multi = vinfos[0].len;
-        vinfos[0].len += refs[i]->data.len;
-        if (vinfos[0].len > psize - multi)
-            goto ADD_VPAGE;
-        for (auto vpos = 1; vpos < vinfos.size(); ++vpos) {
-            if (vinfos[vpos - 1].len > vinfos[vpos].len) {
-                swap(vinfos[vpos - 1], vinfos[vpos]);
-            } else {
+    constexpr auto kMaxFill = 0;
+    if (kMaxFill) {
+        for (;;) {
+            vinfos.push_back({
+                .pgno = (pgno_t) ss->vpages.size(),
+                .len = 0,
+                .pos = (int) vinfos.size()
+            });
+            assert(vinfos.size() <= 3);
+            auto & nvi = vinfos.back();
+            ss->vpages.emplace_back(ss->heap);
+            for (auto i = 0; i < nrefs; ++i) {
+                if (vmap[i])
+                    continue;
+                bool multi = nvi.len;
+                if (nvi.len + refs[i]->data.len <= psize - multi) {
+                    vmap[i] = nvi.pos + 1;
+                    nvi.len += refs[i]->data.len;
+                    upd->len -= refs[i]->data.len - kRemoteNodeLen;
+                }
+            }
+            if (upd->len <= psize)
                 break;
+        }
+    } else {
+    ADD_VPAGE:
+        vinfos.push_back({});
+        auto & nvi = vinfos.back();
+        assert(vinfos.size() <= 3);
+        nvi.pgno = (pgno_t) ss->vpages.size();
+        nvi.pos = (int) vinfos.size() - 1;
+        ss->vpages.emplace_back(ss->heap);
+        for (auto&& vi : vinfos)
+            vi.len = 0;
+        for (auto i = 0; i < nrefs; ++i) {
+            vmap[i] = vinfos[0].pos + 1;
+            bool multi = vinfos[0].len;
+            vinfos[0].len += refs[i]->data.len;
+            if (vinfos[0].len > psize - multi)
+                goto ADD_VPAGE;
+            for (auto vpos = 1; vpos < vinfos.size(); ++vpos) {
+                if (vinfos[vpos - 1].len > vinfos[vpos].len) {
+                    swap(vinfos[vpos - 1], vinfos[vpos]);
+                } else {
+                    break;
+                }
             }
         }
     }
@@ -1401,13 +1426,19 @@ ADD_VPAGE:
     for (auto i = 0; i < nrefs; ++i) {
         // Add kid to most empty new page and change the parents link to it
         // to be a remote reference.
-        auto & vi = vinfos[vmap[i]];
-        ss->vpages[vi.pgno].roots.push_back(*refs[i]);
-        setRemoteRef(refs[i], ss, vi.pgno, vi.pos++);
+        if (auto vpos = vmap[i]) {
+            auto & vi = vinfos[vpos - 1];
+            ss->vpages[vi.pgno].roots.push_back(*refs[i]);
+            setRemoteRef(refs[i], ss, vi.pgno, vi.pos++);
+        }
     }
     for ([[maybe_unused]] auto & vi : vinfos) 
         assert(vi.pos);
-    upd->len = nodeLen(*upd);
+    if (kMaxFill) {
+        assert(upd->len == nodeLen(*upd));
+    } else {
+        upd->len = nodeLen(*upd);
+    }
 }
 
 //===========================================================================
@@ -1989,10 +2020,17 @@ std::ostream * const StrTrie::debugStream() const {
 
 namespace {
 
+struct PageStats {
+    size_t parent = 0;
+    size_t keys = 0;
+    size_t depth = 0;
+};
+
 struct Stats {
     size_t usedPages;
     size_t totalPages;
     size_t pageSize;
+    size_t totalKeys;
 
     size_t usedBytes;
     size_t totalNodes;
@@ -2011,17 +2049,20 @@ struct Stats {
     size_t totalForkLen;
     size_t numEndMark;
     size_t numRemote;
+
+    UnsignedSet remotePages;
 };
 
 } // namespace
 
 //===========================================================================
-static int addStats(Stats * out, StrTrie::Node * node) {
+static int addStats(Stats * out, size_t pgno, StrTrie::Node * node) {
     auto len = nodeHdrLen(node);
     auto num = numKids(node);
     out->usedBytes += len;
     out->totalNodes += 1;
-    switch (nodeType(node)) {
+    auto ntype = nodeType(node);
+    switch (ntype) {
     default:
         assert(!"Invalid node type");
         break;
@@ -2029,17 +2070,17 @@ static int addStats(Stats * out, StrTrie::Node * node) {
         out->numMultiroot += 1;
         break;
     case kNodeSeg:
-    {
-        auto slen = segLen(node);
-        out->segCount += 1;
-        out->segTotalLen += slen;
-        if (slen <= 16) {
-            out->segShortLen += 1;
-        } else if (slen == kMaxSegLen) {
-            out->segMaxLen += 1;
+        {
+            auto slen = segLen(node);
+            out->segCount += 1;
+            out->segTotalLen += slen;
+            if (slen <= 16) {
+                out->segShortLen += 1;
+            } else if (slen == kMaxSegLen) {
+                out->segMaxLen += 1;
+            }
+            break;
         }
-        break;
-    }
     case kNodeHalfSeg:
         out->halfSegCount += 1;
         if (nodeEndMarkFlag(node)) {
@@ -2056,12 +2097,27 @@ static int addStats(Stats * out, StrTrie::Node * node) {
         out->numEndMark += 1;
         break;
     case kNodeRemote:
-        out->numRemote += 1;
-        break;
+        {
+            out->numRemote += 1;
+            auto rpno = remotePage(node);
+            assert(rpno < out->totalPages);
+            out->remotePages.insert(rpno);
+            break;
+        }
     }
+    if (nodeEndMarkFlag(node))
+        out->totalKeys += 1; 
     for (auto i = 0; i < num; ++i)
-        len += addStats(out, node + len);
+        len += addStats(out, i, node + len);
     return len;
+}
+
+//===========================================================================
+static size_t pageDepthStats(size_t pgno, vector<PageStats> & pgstats) {
+    auto & ps = pgstats[pgno];
+    if (!ps.depth) 
+        ps.depth = pageDepthStats(ps.parent, pgstats);
+    return ps.depth + 1;
 }
 
 //===========================================================================
@@ -2069,11 +2125,25 @@ void StrTrie::dumpStats(std::ostream & os) {
     Stats stats = {};
     stats.totalPages = m_heapImpl.pageCount();
     stats.pageSize = m_heapImpl.pageSize();
+    vector<PageStats> pgstats(stats.totalPages);
+    pgstats[m_heapImpl.root()] = {
+        .parent = (size_t) -1,
+        .depth = 1
+    };
     for (size_t i = 0; i < stats.totalPages; ++i) {
         if (!m_heapImpl.empty(i)) {
             stats.usedPages += 1;
             auto node = (Node *) m_heapImpl.ptr(i);
-            addStats(&stats, node);
+            auto keys = stats.totalKeys;
+            stats.remotePages.clear();
+            addStats(&stats, i, node);
+            pgstats[i].keys = stats.totalKeys - keys;
+            for (auto&& rpno : stats.remotePages) {
+                assert(!pgstats[rpno].parent);
+                pgstats[rpno].parent = i;
+            }
+        } else {
+            pgstats[i].parent = (size_t) -2;
         }
     }
     size_t totalBytes = stats.totalPages * stats.pageSize;
@@ -2081,6 +2151,7 @@ void StrTrie::dumpStats(std::ostream & os) {
         << "Pages: " << stats.totalPages << " total, " 
             << stats.usedPages << " used (" 
             << 100.0 * stats.usedPages / stats.totalPages << "%)\n"
+        << "Keys: " << stats.totalKeys << " total\n"
         << "Fill factor: " << 100.0 * stats.usedBytes / totalBytes << "%\n";
     os << "Node detail:\n"
         << "  Total: " << stats.totalNodes << " nodes\n"
@@ -2096,6 +2167,29 @@ void StrTrie::dumpStats(std::ostream & os) {
             << (double) stats.totalForkLen / stats.numFork << " avg forks\n"
         << "  EndMark: " << stats.numEndMark << " nodes\n"
         << "  Remote: " << stats.numRemote << " nodes\n";
+
+    struct DepthStats {
+        size_t pages;
+        size_t keys;
+    };
+    vector<DepthStats> dstats;
+    for (auto i = 0; i < stats.totalPages; ++i) {
+        auto & ps = pgstats[i];
+        if (ps.parent == -2) 
+            continue;
+        if (!ps.depth)
+            ps.depth = pageDepthStats(ps.parent, pgstats);
+        if (ps.depth >= dstats.size())
+            dstats.resize(ps.depth + 1);
+        dstats[ps.depth].pages += 1;
+        dstats[ps.depth].keys += ps.keys;
+    }
+    os << "Density by page depth:\n";
+    for (auto i = 1; i < dstats.size(); ++i) {
+        auto & d = dstats[i];
+        os << "  " << i << ": " << d.pages << " pages, " << d.keys 
+            << " keys\n";
+    }
 }
 
 
