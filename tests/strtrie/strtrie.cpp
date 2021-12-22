@@ -1373,7 +1373,7 @@ static void harvestPages(SearchState * ss, UpdateBase * upd) {
         vinfos.push_back({
             .pgno = (pgno_t) ss->vpages.size(),
             .len = 0,
-            .pos = (int) vinfos.size()
+            .pos = 0
         });
         assert(vinfos.size() <= 3);
         auto & nvi = vinfos.back();
@@ -1383,17 +1383,17 @@ static void harvestPages(SearchState * ss, UpdateBase * upd) {
                 continue;
             bool multi = nvi.len;
             if (nvi.len + refs[i]->data.len <= psize - multi) {
-                vmap[i] = nvi.pos + 1;
+                vmap[i] = (int) vinfos.size();
                 nvi.len += refs[i]->data.len;
                 upd->len -= refs[i]->data.len - kRemoteNodeLen;
             }
         }
+        
+        // NOTE: nvi.len *must* be >0, >= psize/2 is just a conjecture!
+        assert(nvi.len >= psize / 2);
+
         if (upd->len <= psize)
             break;
-    }
-    for (auto&& vi : vinfos) {
-        assert(vi.len);
-        vi.pos = 0;
     }
     for (auto i = 0; i < nrefs; ++i) {
         // Add kids to new pages and change the parents link to them to be
