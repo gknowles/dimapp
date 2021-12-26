@@ -70,6 +70,7 @@ bool hexToBytes(std::string & out, std::string_view src, bool append);
 void hexFromBytes(std::string & out, std::string_view src, bool append);
 
 std::ostream & hexByte(std::ostream & os, char data);
+std::ostream & hexDumpLine(std::ostream & os, std::string_view data, size_t pos);
 std::ostream & hexDump(std::ostream & os, std::string_view data);
 
 

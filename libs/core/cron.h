@@ -192,7 +192,7 @@ bool Dim::CronDef<Flags>::parse(std::string_view src) {
         return false;
     if (src[0] == '@') {
         auto withSY = Flags & (WithSeconds | WithYears);
-        auto macro = tokenTableGetEnum(s_macroTbl, src.substr(1), kInvalid);
+        auto macro = s_macroTbl.find(src.substr(1), kInvalid);
         if (macro == kInvalid)
             return false;
         if (withSY == 0) {

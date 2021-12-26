@@ -402,7 +402,7 @@ static void addSidRow(IJBuilder * out, SID_AND_ATTRIBUTES & sa) {
     out->end();
     out->member("name", toString(wname));
     out->member("domain", toString(wdom));
-    if (auto name = tokenTableGetName(s_sidTypeTbl, use)) {
+    if (auto name = s_sidTypeTbl.findName(use)) {
         out->member("type", name);
     } else {
         auto unk = "UNKNOWN("s;

@@ -112,11 +112,10 @@ void execProgram(
 );
 
 //===========================================================================
-template <typename ...Args>
 void execProgram(
     IExecNotify * notify,
     const ExecOptions & opts,
-    Args... args
+    auto... args
 ) {
     auto vargs = Cli::toArgvL(args...);
     execProgram(notify, vargs, opts);
@@ -144,11 +143,10 @@ void execProgram(
 );
 
 //===========================================================================
-template <typename ...Args>
 void execProgram(
     std::function<void(ExecResult && res)> fn,
     const ExecOptions & opts,
-    Args... args
+    auto... args
 ) {
     auto vargs = Cli::toArgvL(args...);
     execProgram(fn, vargs, opts);
@@ -169,11 +167,10 @@ bool execProgramWait(
 );
 
 //===========================================================================
-template <typename... Args>
 bool execProgramWait(
     ExecResult * res,
     const ExecOptions & opts,
-    Args... args
+    auto... args
 ) {
     auto vargs = Cli::toArgvL(args...);
     return execProgramWait(res, vargs, opts);

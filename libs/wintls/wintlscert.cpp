@@ -575,12 +575,12 @@ const TokenTable s_certKeyTbl(s_certKeyTypes);
 
 //===========================================================================
 const char * Dim::toString(CertKey::Type type, const char def[]) {
-    return tokenTableGetName(s_certKeyTbl, type, def);
+    return s_certKeyTbl.findName(type, def);
 }
 
 //===========================================================================
 CertKey::Type Dim::fromString(std::string_view src, CertKey::Type def) {
-    return tokenTableGetEnum(s_certKeyTbl, src, def);
+    return s_certKeyTbl.find(src, def);
 }
 
 
@@ -710,13 +710,13 @@ const TokenTable s_storeLocTbl(kStoreLocs);
 
 //===========================================================================
 CertLocation & CertLocation::operator=(string_view name) {
-    m_value = tokenTableGetEnum(s_storeLocTbl, name, kInvalid);
+    m_value = s_storeLocTbl.find(name, kInvalid);
     return *this;
 }
 
 //===========================================================================
 string_view CertLocation::view() const {
-    return tokenTableGetName(s_storeLocTbl, m_value, "");
+    return s_storeLocTbl.findName(m_value, "");
 }
 
 

@@ -149,16 +149,16 @@ void socketCloseWait(IFactory<ISocketNotify> * factory, const SockAddr & local);
 
 //===========================================================================
 template <typename S>
+requires std::derived_from<S, ISocketNotify>
 inline void socketListen(const SockAddr & local) {
-    static_assert(std::is_base_of_v<ISocketNotify, S>);
     auto factory = getFactory<ISocketNotify, S>();
     socketListen(factory, local);
 }
 
 //===========================================================================
 template <typename S>
+requires std::derived_from<S, ISocketNotify>
 inline void socketCloseWait(const SockAddr & local) {
-    static_assert(std::is_base_of_v<ISocketNotify, S>);
     auto factory = getFactory<ISocketNotify, S>();
     socketCloseWait(factory, local);
 }

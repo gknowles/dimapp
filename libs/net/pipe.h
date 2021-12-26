@@ -159,16 +159,16 @@ void pipeClose(IFactory<IPipeNotify> * factory, std::string_view pipeName);
 
 //===========================================================================
 template <typename S>
+requires std::derived_from<S, IPipeNotify>
 inline void pipeListen(std::string_view pipeName, Pipe::OpenMode oflags) {
-    static_assert(std::is_base_of_v<IPipeNotify, S>);
     auto factory = getFactory<IPipeNotify, S>();
     pipeListen(factory, pipeName, oflags);
 }
 
 //===========================================================================
 template <typename S>
+requires std::derived_from<S, IPipeNotify>
 inline void pipeCloseWait(std::string_view pipeName) {
-    static_assert(std::is_base_of_v<IPipeNotify, S>);
     auto factory = getFactory<IPipeNotify, S>();
     pipeCloseWait(factory, pipeName);
 }

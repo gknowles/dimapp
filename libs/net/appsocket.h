@@ -154,7 +154,7 @@ void socketCloseWait(
 // IAppSocketNotify, that will be instantiated for incoming connections.
 //===========================================================================
 template <typename S>
-requires std::is_base_of_v<IAppSocketNotify, S>
+requires std::derived_from<S, IAppSocketNotify>
 inline void socketListen(
     const SockAddr & addr,
     AppSocket::Family fam,
@@ -166,7 +166,7 @@ inline void socketListen(
 
 //===========================================================================
 template <typename S>
-requires std::is_base_of_v<IAppSocketNotify, S>
+requires std::derived_from<S, IAppSocketNotify>
 inline void socketCloseWait(const SockAddr & addr, AppSocket::Family fam) {
     auto factory = getFactory<IAppSocketNotify, S>();
     socketCloseWait(factory, addr, fam);
@@ -191,7 +191,7 @@ void socketAddFilter(
 
 //===========================================================================
 template <typename S>
-requires std::is_base_of_v<IAppSocketNotify, S>
+requires std::derived_from<S, IAppSocketNotify>
 inline void socketAddFilter(const SockAddr & addr, AppSocket::Family fam) {
     auto factory = getFactory<IAppSocketNotify, S>();
     socketAddFilter(factory, addr, fam);

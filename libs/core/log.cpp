@@ -216,12 +216,12 @@ const TokenTable s_logTypeTbl{s_logTypes};
 
 //===========================================================================
 const char * Dim::toString(LogType type, const char def[]) {
-    return tokenTableGetName(s_logTypeTbl, type, def);
+    return s_logTypeTbl.findName(type, def);
 }
 
 //===========================================================================
 LogType Dim::fromString(std::string_view src, LogType def) {
-    return tokenTableGetEnum(s_logTypeTbl, src, def);
+    return s_logTypeTbl.find(src, def);
 }
 
 //===========================================================================
@@ -323,23 +323,9 @@ void Dim::logParseError(
 
 //===========================================================================
 void Dim::logHexDebug(string_view data) {
-    const unsigned char * ptr = (const unsigned char *) data.data();
-    for (unsigned pos = 0; pos < data.size(); pos += 16, ptr += 16) {
+    for (unsigned pos = 0; pos < data.size(); pos += 16) {
         auto os = logMsgDebug();
-        os << setw(6) << pos << ':';
-        for (unsigned i = 0; i < 16; ++i) {
-            if (i % 2 == 0) os.put(' ');
-            if (pos + i < data.size()) {
-                hexByte(os, ptr[i]);
-            } else {
-                os << "  ";
-            }
-        }
-        os << "  ";
-        for (unsigned i = 0; i < 16; ++i) {
-            if (pos + i < data.size())
-                os.put(isprint(ptr[i]) ? (char) ptr[i] : '.');
-        }
+        hexDumpLine(os, data, pos);
     }
 }
 

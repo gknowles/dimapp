@@ -42,7 +42,12 @@ public:
 
     bool find(int * out, std::string_view name) const;
     bool find(int * out, const char name[], size_t nameLen = -1) const;
-    bool find(const char ** const out, int id) const;
+    bool findName(const char ** const out, int id) const;
+
+    auto find(const char name[], auto defId) const;
+    auto find(std::string_view name, auto defId) const;
+    const char * findName(auto id, const char defName[] = nullptr) const;
+    std::vector<std::string_view> findNames(auto flags) const;
 
     bool empty() const { return m_values.empty(); }
     Iterator begin() const;
@@ -67,6 +72,40 @@ private:
     std::vector<Index> m_byId;
     int m_hashLen{0};
 };
+
+//===========================================================================
+inline auto TokenTable::find(const char name[], auto defId) const {
+    int id;
+    return find(&id, name) ? (decltype(defId)) id : defId;
+}
+
+//===========================================================================
+inline auto TokenTable::find(std::string_view name, auto defId) const {
+    int id;
+    return find(&id, name.data(), name.size()) ? (decltype(defId)) id : defId;
+}
+
+//===========================================================================
+inline const char * TokenTable::findName(
+    auto id, 
+    const char defName[]
+) const {
+    const char * name;
+    return findName(&name, (int)id) ? name : defName;
+}
+
+//===========================================================================
+inline std::vector<std::string_view> TokenTable::findNames(auto flags) const {
+    auto out = std::vector<std::string_view>{};
+    const char * name = nullptr;
+    while (flags) {
+        auto f = (decltype(flags)) (1 << trailingZeroBits(flags));
+        flags = flags & ~f;
+        if (findName(&name, (int) f))
+            out.push_back(name);
+    }
+    return out;
+}
 
 
 /****************************************************************************
@@ -94,53 +133,5 @@ inline const TokenTable::Token & TokenTable::Iterator::operator*() {
     return *m_current;
 }
 
-
-/****************************************************************************
-*
-*   Free functions
-*
-***/
-
-//===========================================================================
-template <typename E>
-E tokenTableGetEnum(const TokenTable & tbl, const char name[], E defId) {
-    int id;
-    return tbl.find(&id, name) ? (E)id : defId;
-}
-
-//===========================================================================
-template <typename E>
-E tokenTableGetEnum(const TokenTable & tbl, std::string_view name, E defId) {
-    int id;
-    return tbl.find(&id, name.data(), name.size()) ? (E)id : defId;
-}
-
-//===========================================================================
-template <typename E>
-const char * tokenTableGetName(
-    const TokenTable & tbl,
-    E id,
-    const char defName[] = nullptr
-) {
-    const char * name;
-    return tbl.find(&name, (int)id) ? name : defName;
-}
-
-//===========================================================================
-template <typename E>
-std::vector<std::string_view> tokenTableGetFlagNames(
-    const TokenTable & tbl,
-    E flags
-) {
-    auto out = std::vector<std::string_view>{};
-    const char * name = nullptr;
-    while (flags) {
-        auto f = E(1 << trailingZeroBits(flags));
-        flags = flags & ~f;
-        if (tbl.find(&name, f))
-            out.push_back(name);
-    }
-    return out;
-}
 
 } // namespace

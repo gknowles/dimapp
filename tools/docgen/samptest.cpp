@@ -343,11 +343,7 @@ static multimap<TestAttr, AttrInfo> getAttrs(
         split(&tmp.args, val);
         if (tmp.args.size() < 2 || tmp.args[0] != "test")
             continue;
-        auto attr = tokenTableGetEnum(
-            s_testAttrTbl,
-            tmp.args[1],
-            kTestInvalid
-        );
+        auto attr = s_testAttrTbl.find(tmp.args[1], kTestInvalid);
         if (!attr) {
             logMsgWarn() << file << ", line " << blk.line
                 << ": unknown attribute: '" << tmp.args[1] << "'";
@@ -462,7 +458,7 @@ static bool applyReplaceAttr(
 
     if (auto ni = next(as->iter); ni != as->attrs.end()) {
         as->olog()
-            << tokenTableGetName(s_testAttrTbl, ni->first)
+            << s_testAttrTbl.findName(ni->first)
             << " attribute takes precedence.";
         return fail();
     }
@@ -540,7 +536,7 @@ static bool applySubsetAttr(ApplyAttrState * as) {
 
     if (auto ni = next(as->iter); ni != as->attrs.end()) {
         as->olog() << "subset attribute ignored in favor of "
-            << tokenTableGetName(s_testAttrTbl, ni->first)
+            << s_testAttrTbl.findName(ni->first)
             << " attribute.";
     } else {
         vector<CodeLine> matched;
@@ -616,7 +612,7 @@ static void badAttrPrefix(
     TestAttr attr
 ) {
     os << info.page.file << ", line " << blk.line
-        << ": " << tokenTableGetName(s_testAttrTbl, attr)
+        << ": " << s_testAttrTbl.findName(attr)
         << " attribute ignored, ";
 }
 

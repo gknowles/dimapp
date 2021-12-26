@@ -85,7 +85,7 @@ struct PerfValue {
     PerfType type;
 };
 
-// The pretty output has localizes the numbers (e.g. commas) and is sorted.
+// The pretty output localizes the numbers (e.g. commas) and is sorted.
 //
 // NOTE: If the passed in array is not empty it is assumed to still have the
 //       contents returned by a previous call to this function.

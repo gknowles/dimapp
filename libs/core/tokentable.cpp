@@ -131,7 +131,7 @@ bool TokenTable::find(int * out, const char name[], size_t nameLen) const {
 }
 
 //===========================================================================
-bool TokenTable::find(const char ** const out, int id) const {
+bool TokenTable::findName(const char ** const out, int id) const {
     size_t num = size(m_byId);
     size_t pos = id % num;
     int distance = 0;

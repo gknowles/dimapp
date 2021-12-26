@@ -344,7 +344,7 @@ static bool match(const XNode & node, const ConfigContext & context) {
     static const TokenTable keyTbl(keys);
 
     for (auto&& a : attrs(&node)) {
-        auto key = tokenTableGetEnum(keyTbl, a.name, kInvalid);
+        auto key = keyTbl.find(a.name, kInvalid);
         if (key == kName && context.appBaseName != a.value
             || key == kIndex && context.appIndex != strToUint(a.value)
             || key == kConfig && context.config != a.value
@@ -436,9 +436,8 @@ bool Dim::configBool(
         { 0, "0" },
     };
     static const TokenTable tbl(values);
-    if (auto str = configString(context, doc, name, nullptr)) {
-        defVal = tokenTableGetEnum(tbl, str, false);
-    }
+    if (auto str = configString(context, doc, name, nullptr)) 
+        defVal = tbl.find(str, false);
     return defVal;
 }
 

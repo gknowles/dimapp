@@ -19,6 +19,22 @@ namespace Dim {
 
 /****************************************************************************
 *
+*   Concepts
+*
+***/
+
+template <typename T>
+concept CharType = std::is_same_v<std::remove_cv_t<T>, char>
+    || std::is_same_v<std::remove_cv_t<T>, signed char>
+    || std::is_same_v<std::remove_cv_t<T>, unsigned char>
+    || std::is_same_v<std::remove_cv_t<T>, char8_t>
+    || std::is_same_v<std::remove_cv_t<T>, char16_t>
+    || std::is_same_v<std::remove_cv_t<T>, char32_t>
+    || std::is_same_v<std::remove_cv_t<T>, wchar_t>;
+
+
+/****************************************************************************
+*
 *   Run modes
 *
 ***/
@@ -264,7 +280,7 @@ public:
 
 //===========================================================================
 template<typename Base, typename Derived>
-requires std::is_base_of_v<Base, Derived>
+requires std::derived_from<Derived, Base>
 inline IFactory<Base> * getFactory() {
     class Factory : public IFactory<Base> {
         std::unique_ptr<Base> onFactoryCreate() override {

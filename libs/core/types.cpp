@@ -25,12 +25,12 @@ static TokenTable s_runModeTbl{s_runModes};
 
 //===========================================================================
 const char * Dim::toString(RunMode mode, const char def[]) {
-    return tokenTableGetName(s_runModeTbl, mode, def);
+    return s_runModeTbl.findName(mode, def);
 }
 
 //===========================================================================
 RunMode Dim::fromString(string_view src, RunMode def) {
-    return tokenTableGetEnum(s_runModeTbl, src, def);
+    return s_runModeTbl.find(src, def);
 }
 
 

@@ -142,8 +142,7 @@ static bool loadCompilers(Config * out, XNode * root) {
 static bool loadPage(Page * out, XNode * root) {
     out->name = attrValue(root, "name", "");
     out->file = attrValue(root, "file", "");
-    out->type = tokenTableGetEnum(
-        s_fileTypeTbl,
+    out->type = s_fileTypeTbl.find(
         Path(out->file).extension(),
         Page::kUnknown
     );
@@ -202,11 +201,7 @@ static const TokenTable s_contentTypeTbl(s_contentTypes);
 //===========================================================================
 static bool loadColumn(Column * out, XNode * root) {
     auto ctStr = attrValue(root, "content", "");
-    out->content = tokenTableGetEnum(
-        s_contentTypeTbl,
-        ctStr,
-        Column::kContentInvalid
-    );
+    out->content = s_contentTypeTbl.find(ctStr, Column::kContentInvalid);
     if (!out->content) {
         logMsgError() << "Invalid Page/Column/@content attribute";
         appSignalShutdown(EX_DATAERR);

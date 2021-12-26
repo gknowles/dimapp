@@ -127,23 +127,30 @@ ostream & Dim::hexByte(ostream & os, char data) {
 }
 
 //===========================================================================
+ostream & Dim::hexDumpLine(ostream & os, string_view data, size_t pos) {
+    assert(pos < data.size());
+    auto ptr = (const unsigned char *) data.data() + pos;
+    os << setw(6) << pos << ':';
+    for (unsigned i = 0; i < 16; ++i) {
+        if (i % 2 == 0) os.put(' ');
+        if (pos + i < data.size()) {
+            hexByte(os, ptr[i]);
+        } else {
+            os << "  ";
+        }
+    }
+    os << "  ";
+    for (unsigned i = 0; i < 16; ++i) {
+        if (pos + i < data.size())
+            os.put(isprint(ptr[i]) ? (char) ptr[i] : '.');
+    }
+    return os;
+}
+
+//===========================================================================
 ostream & Dim::hexDump(ostream & os, string_view data) {
-    const unsigned char * ptr = (const unsigned char *) data.data();
-    for (unsigned pos = 0; pos < data.size(); pos += 16, ptr += 16) {
-        os << setw(6) << pos << ':';
-        for (unsigned i = 0; i < 16; ++i) {
-            if (i % 2 == 0) os.put(' ');
-            if (pos + i < data.size()) {
-                hexByte(os, ptr[i]);
-            } else {
-                os << "  ";
-            }
-        }
-        os << "  ";
-        for (unsigned i = 0; i < 16; ++i) {
-            if (pos + i < data.size())
-                os.put(isprint(ptr[i]) ? (char) ptr[i] : '.');
-        }
+    for (unsigned pos = 0; pos < data.size(); pos += 16) {
+        hexDumpLine(os, data, pos);
         os << '\n';
     }
     return os;

@@ -8,6 +8,7 @@
 
 #include <bit>
 #include <cassert>
+#include <concepts>
 #include <cstdint>
 #include <intrin.h>
 #include <limits>
@@ -192,16 +193,14 @@ constexpr uint64_t bswap64(uint64_t val) {
 }
 
 //===========================================================================
-template<typename T>
-requires std::is_integral_v<T> && std::is_unsigned_v<T>
-constexpr T bswap(T val) {
-    if constexpr (sizeof(T) == 1) {
+constexpr auto bswap(std::unsigned_integral auto val) {
+    if constexpr (sizeof val == 1) {
         return val;
-    } else if constexpr (sizeof(T) == 2) {
+    } else if constexpr (sizeof val == 2) {
         return bswap16(val);
-    } else if constexpr (sizeof(T) == 4) {
+    } else if constexpr (sizeof val == 4) {
         return bswap32(val);
-    } else if constexpr (sizeof(T) == 8) {
+    } else if constexpr (sizeof val == 8) {
         return bswap64(val);
     } else {
         static_assert(!"Must be 8, 16, 32, or 64 bit unsigned integer");

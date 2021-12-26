@@ -47,24 +47,24 @@ SockMgrHandle sockMgrConnect(
 // on a socket class derived from IAppSocketNotify.
 //===========================================================================
 template <typename S>
+requires std::derived_from<S, IAppSocketNotify>
 SockMgrHandle sockMgrListen(
     std::string_view mgrName,
     /* security requirements, */
     AppSocket::Family fam,
     AppSocket::MgrFlags flags = {}
 ) {
-    static_assert(std::is_base_of_v<IAppSocketNotify, S>);
     auto factory = getFactory<IAppSocketNotify, S>();
     return sockMgrListen(mgrName, factory, fam, flags);
 }
 
 //===========================================================================
 template <typename S>
+requires std::derived_from<S, IAppSocketNotify>
 SockMgrHandle sockMgrConnect(
     std::string_view mgrName,
     AppSocket::MgrFlags flags = {}
 ) {
-    static_assert(std::is_base_of_v<IAppSocketNotify, S>);
     auto factory = getFactory<IAppSocketNotify, S>();
     return sockMgrConnect(mgrName, factory, flags);
 }

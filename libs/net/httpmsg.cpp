@@ -303,13 +303,13 @@ ADD_VALUE:
 
 //===========================================================================
 void HttpMsg::addHeaderRef(HttpHdr id, const char value[]) {
-    const char * name = tokenTableGetName(s_hdrNameTbl, id);
+    const char * name = s_hdrNameTbl.findName(id);
     addHeaderRef(id, name, value);
 }
 
 //===========================================================================
 void HttpMsg::addHeaderRef(const char name[], const char value[]) {
-    HttpHdr id = tokenTableGetEnum(s_hdrNameTbl, name, kHttpInvalid);
+    HttpHdr id = s_hdrNameTbl.find(name, kHttpInvalid);
     addHeaderRef(id, name, value);
 }
 
@@ -354,7 +354,7 @@ const HttpMsg::HdrName HttpMsg::headers(HttpHdr header) const {
 
 //===========================================================================
 HttpMsg::HdrName HttpMsg::headers(const char name[]) {
-    HttpHdr id = tokenTableGetEnum(s_hdrNameTbl, name, kHttpInvalid);
+    HttpHdr id = s_hdrNameTbl.find(name, kHttpInvalid);
     return headers(id);
 }
 
@@ -486,27 +486,27 @@ bool HttpResponse::checkPseudoHeaders() const {
 
 //===========================================================================
 const char * Dim::toString(HttpHdr id) {
-    return tokenTableGetName(s_hdrNameTbl, id);
+    return s_hdrNameTbl.findName(id);
 }
 
 //===========================================================================
 HttpHdr Dim::httpHdrFromString(string_view name, HttpHdr def) {
-    return tokenTableGetEnum(s_hdrNameTbl, name, def);
+    return s_hdrNameTbl.find(name, def);
 }
 
 //===========================================================================
 const char * Dim::toString(HttpMethod id) {
-    return tokenTableGetName(s_methodNameTbl, id);
+    return s_methodNameTbl.findName(id);
 }
 
 //===========================================================================
 vector<string_view> Dim::to_views(HttpMethod methods) {
-    return tokenTableGetFlagNames(s_methodNameTbl, methods);
+    return s_methodNameTbl.findNames(methods);
 }
 
 //===========================================================================
 HttpMethod Dim::httpMethodFromString(string_view name, HttpMethod def) {
-    return tokenTableGetEnum(s_methodNameTbl, name, def);
+    return s_methodNameTbl.find(name, def);
 }
 
 //===========================================================================

@@ -95,8 +95,7 @@ static bool loadEnums(vector<EnumValue> * enums, XNode * root) {
 
 //===========================================================================
 static bool loadNote(Schema * schema, Attr::Note * note, XNode * root) {
-    note->column = tokenTableGetEnum(
-        s_attrColumnTbl,
+    note->column = s_attrColumnTbl.find(
         attrValue(root, "column", ""),
         Attr::Column::kInvalid
     );
@@ -130,8 +129,7 @@ static bool loadAttr(
     }
     if (auto ptr = attrValue(root, "name"))
         attr->name = ptr;
-    attr->content = tokenTableGetEnum(
-        s_attrContentTbl,
+    attr->content = s_attrContentTbl.find(
         attrValue(root, "content", ""),
         attr->content
     );
@@ -175,8 +173,7 @@ static bool loadAttr(
 
 //===========================================================================
 static bool loadNote(Schema * schema, Element::Note * note, XNode * root) {
-    note->column = tokenTableGetEnum(
-        s_elemColumnTbl,
+    note->column = s_elemColumnTbl.find(
         attrValue(root, "column", ""),
         Element::Column::kInvalid
     );
@@ -213,8 +210,7 @@ static bool loadElem(
 
     if (auto ptr = attrValue(root, "name"))
         elem->name = ptr;
-    elem->content = tokenTableGetEnum(
-        s_elemContentTbl,
+    elem->content = s_elemContentTbl.find(
         attrValue(root, "content", ""),
         elem->content
     );
@@ -394,9 +390,8 @@ int main(int argc, char * argv[]) {
 
 //===========================================================================
 Attr::Content convert(Element::Content ec) {
-    return tokenTableGetEnum(
-        s_attrContentTbl,
-        tokenTableGetName(s_elemContentTbl, ec, ""),
+    return s_attrContentTbl.find(
+        s_elemContentTbl.findName(ec, ""),
         Attr::Content::kInvalid
     );
 }

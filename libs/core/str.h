@@ -6,7 +6,8 @@
 
 #include "cppconf/cppconf.h"
 
-#include "math.h"
+#include "math.h"   // digits10
+#include "types.h"  // CharType
 
 #include <cassert>
 #include <charconv>
@@ -259,12 +260,15 @@ size_t strCopy(wchar_t * out, size_t outLen, std::string_view src);
 // vector to string
 //===========================================================================
 template<typename T>
-std::string toString(const std::vector<T> & src, char sep = ' ') {
+requires (std::forward_iterator<typename T::const_iterator>
+    && !CharType<typename T::value_type>)
+std::string toString(const T & src, char sep = ' ') {
     if (src.empty())
         return {};
     std::ostringstream os;
-    os << src[0];
-    for (auto i = src.begin() + 1; i < src.end(); ++i) {
+    typename T::const_iterator i = src.cbegin();
+    os << *i;
+    while (++i < src.cend()) {
         os << sep;
         os << *i;
     }

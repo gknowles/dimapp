@@ -43,9 +43,9 @@ static void app(int argc, char *argv[]) {
     };
     const TokenTable numberTbl(numbers, size(numbers));
 
-    EXPECT(tokenTableGetEnum(numberTbl, "invalid", 0) == 0);
+    EXPECT(numberTbl.find("invalid", 0) == 0);
     for (auto && tok : numbers) {
-        EXPECT(tokenTableGetEnum(numberTbl, tok.name, 0) == tok.id);
+        EXPECT(numberTbl.find(tok.name, 0) == tok.id);
     }
 
     auto num = 0;
