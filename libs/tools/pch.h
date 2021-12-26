@@ -14,9 +14,8 @@
 
 // Standard headers
 #include <cassert>
-#include <condition_variable>
 #include <memory>
-#include <mutex>
+#include <semaphore>
 
 // Platform headers
 // External library internal headers

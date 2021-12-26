@@ -90,28 +90,21 @@ string Dim::execToolWait(
     const vector<int> & codes
 ) {
     string out;
-    mutex mut;
-    condition_variable cv;
-    bool done = false;
+    binary_semaphore sem(0);
     auto tmpOpts = opts;
     tmpOpts.hq = taskInEventThread()
         ? taskComputeQueue()
         : taskEventQueue();
     execTool(
         [&](auto && content){
-            mut.lock();
             out = move(content);
-            done = true;
-            mut.unlock();
-            cv.notify_one();
+            sem.release();
         },
         cmdline,
         errTitle,
         tmpOpts,
         codes
     );
-    unique_lock lk{mut};
-    while (!done)
-        cv.wait(lk);
+    sem.acquire();
     return out;
 }
