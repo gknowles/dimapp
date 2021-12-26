@@ -269,15 +269,15 @@ void Dim::perfGetValues (vector<PerfValue> * outptr, bool pretty) {
         }
         for (unsigned i = 0; i < out.size(); ++i) {
             auto & oval = out[i];
-            auto pos = oval.pos;
-            auto cnt = info.counters[pos].get();
+            auto cnt = info.counters[oval.pos].get();
             if (oval.name.data() != cnt->name.data()) {
                 oval.name = cnt->name;
                 oval.value.clear();
             }
-            if (oval.value.empty() || oval.raw != cnt->toDouble()) {
+            auto raw = cnt->toDouble();
+            if (oval.value.empty() || oval.raw != raw) {
                 cnt->toString(&oval.value, pretty);
-                oval.raw = cnt->toDouble();
+                oval.raw = raw;
                 oval.type = cnt->type();
             }
         }
