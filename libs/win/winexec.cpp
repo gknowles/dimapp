@@ -760,25 +760,17 @@ bool Dim::execProgramWait(
     if (!opts.hq)
         opts.hq = taskInEventThread() ? taskComputeQueue() : taskEventQueue();
 
-    mutex mut;
-    condition_variable cv;
+    latch lat(1);
     out->cmdline = cmdline;
-    bool complete = false;
     execProgram(
         [&](ExecResult && res) {
-            {
-                scoped_lock lk{mut};
-                *out = move(res);
-                complete = true;
-            }
-            cv.notify_one();
+            *out = move(res);
+            lat.count_down();
         },
         cmdline,
         opts
     );
-    unique_lock lk{mut};
-    while (!complete)
-        cv.wait(lk);
+    lat.wait();
     return out->exitCode != -1;
 }
 

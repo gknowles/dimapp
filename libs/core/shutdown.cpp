@@ -70,8 +70,7 @@ static MainTimer s_mainTimer;
 static vector<CleanupInfo> s_cleaners;
 
 static Duration s_shutdownTimeout{2min};
-static mutex s_stopMut;
-static condition_variable s_stopCv;
+static atomic_flag s_stopFlag;
 static bool s_disableTimeout{false};
 
 
@@ -100,7 +99,8 @@ Duration MainTimer::onTimer(TimePoint now) {
     case kFinalize:
         s_cleaners.clear();
         m_mode = kDone;
-        s_stopCv.notify_one();
+        s_stopFlag.test_and_set();
+        s_stopFlag.notify_one();
         return kTimerInfinite;
     case kDone:
         break;
@@ -175,9 +175,9 @@ void Dim::iShutdownDestroy() {
     s_mainTimer = {};
     timerUpdate(&s_mainTimer, 0ms);
 
-    unique_lock lk{s_stopMut};
-    while (!s_mainTimer.stopped())
-        s_stopCv.wait(lk);
+    s_stopFlag.wait(false);
+    assert(s_mainTimer.stopped());
+    s_stopFlag.clear();
 }
 
 

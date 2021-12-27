@@ -211,6 +211,7 @@ const string & Dim::appName() {
 
 //===========================================================================
 RunMode Dim::appMode() {
+    scoped_lock lk(s_runMut);
     return s_runMode;
 }
 
@@ -221,6 +222,7 @@ AppFlags Dim::appFlags() {
 
 //===========================================================================
 int Dim::appExitCode() {
+    scoped_lock lk(s_runMut);
     return s_exitcode;
 }
 
@@ -395,14 +397,12 @@ int Dim::appRun(
 
 //===========================================================================
 void Dim::appSignalShutdown(int exitcode) {
+    unique_lock lk{s_runMut};
     assert(s_runMode != kRunStopped);
+    s_runMode = kRunStopping;
     if (exitcode > s_exitcode)
         s_exitcode = exitcode;
-
-    {
-        unique_lock lk{s_runMut};
-        s_runMode = kRunStopping;
-    }
+    lk.unlock();
     s_runCv.notify_one();
 }
 

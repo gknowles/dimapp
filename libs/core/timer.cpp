@@ -309,14 +309,12 @@ void Dim::iTimerInitialize() {
 
 //===========================================================================
 void Dim::iTimerDestroy() {
-    {
-        scoped_lock lk{s_mut};
-        assert(s_mode == kRunRunning);
-        s_mode = kRunStopping;
-    }
-    s_queueCv.notify_one();
-
     unique_lock lk{s_mut};
+    assert(s_mode == kRunRunning);
+    s_mode = kRunStopping;
+    lk.unlock();
+    s_queueCv.notify_one();
+    lk.lock();
     while (s_mode != kRunStopped)
         s_modeCv.wait(lk);
 }

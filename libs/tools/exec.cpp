@@ -90,7 +90,7 @@ string Dim::execToolWait(
     const vector<int> & codes
 ) {
     string out;
-    binary_semaphore sem(0);
+    latch lat(1);
     auto tmpOpts = opts;
     tmpOpts.hq = taskInEventThread()
         ? taskComputeQueue()
@@ -98,13 +98,13 @@ string Dim::execToolWait(
     execTool(
         [&](auto && content){
             out = move(content);
-            sem.release();
+            lat.count_down();
         },
         cmdline,
         errTitle,
         tmpOpts,
         codes
     );
-    sem.acquire();
+    lat.wait();
     return out;
 }

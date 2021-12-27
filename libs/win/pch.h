@@ -25,6 +25,7 @@
 #include <cstdlib>
 #include <fcntl.h>
 #include <io.h>
+#include <latch>
 #include <limits>
 #include <list>
 #include <mutex>

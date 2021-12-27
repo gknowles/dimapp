@@ -14,8 +14,8 @@
 
 // Standard headers
 #include <cassert>
+#include <latch>
 #include <memory>
-#include <semaphore>
 
 // Platform headers
 // External library internal headers
