@@ -16,12 +16,12 @@ using namespace Dim;
 *
 ***/
 
-static int s_exitcode;
-static bool s_usageErrorSignaled;
+static atomic_flag s_usageErrorSignaled;
 
 static mutex s_runMut;
 static condition_variable s_runCv;
 static RunMode s_runMode{kRunStopped};
+static int s_exitcode;
 
 static IAppNotify * s_app;
 static string s_appBaseName;
@@ -149,7 +149,7 @@ void RunTask::onTask() {
     taskPushEvent(s_appTasks.data(), s_appTasks.size());
 
     {
-        unique_lock lk{s_runMut};
+        lock_guard lk{s_runMut};
         if (s_runMode == kRunStopping) {
             // One of the initialization tasks called appSignalShutdown()
             // moving mode to stopping, so we don't want to move backward
@@ -211,7 +211,7 @@ const string & Dim::appName() {
 
 //===========================================================================
 RunMode Dim::appMode() {
-    scoped_lock lk(s_runMut);
+    lock_guard lk(s_runMut);
     return s_runMode;
 }
 
@@ -222,13 +222,13 @@ AppFlags Dim::appFlags() {
 
 //===========================================================================
 int Dim::appExitCode() {
-    scoped_lock lk(s_runMut);
+    lock_guard lk(s_runMut);
     return s_exitcode;
 }
 
 //===========================================================================
 bool Dim::appUsageErrorSignaled() {
-    return s_usageErrorSignaled;
+    return s_usageErrorSignaled.test();
 }
 
 //===========================================================================
@@ -298,10 +298,14 @@ int Dim::appRun(
     string_view baseName,
     AppFlags flags
 ) {
+    {
+        lock_guard lk(s_runMut);
+        assert(s_runMode == kRunStopped);
+        s_runMode = kRunStarting;
+        s_exitcode = 0;
+    }
     s_appFlags = flags;
-    s_runMode = kRunStarting;
     s_appTasks.clear();
-    s_exitcode = 0;
 
     if (s_appFlags & fAppWithService) {
         Cli cli;
@@ -371,7 +375,7 @@ int Dim::appRun(
     taskPushEvent(&s_runTask);
 
     unique_lock lk{s_runMut};
-    while (s_runMode == kRunStarting || s_runMode == kRunRunning)
+    while (s_runMode != kRunStopping)
         s_runCv.wait(lk);
     lk.unlock();
 
@@ -391,6 +395,7 @@ int Dim::appRun(
     iLogDestroy();
     iPerfDestroy();
     lk.lock();
+    assert(s_runMode == kRunStopping);
     s_runMode = kRunStopped;
     return s_exitcode;
 }
@@ -398,12 +403,14 @@ int Dim::appRun(
 //===========================================================================
 void Dim::appSignalShutdown(int exitcode) {
     unique_lock lk{s_runMut};
-    assert(s_runMode != kRunStopped);
-    s_runMode = kRunStopping;
     if (exitcode > s_exitcode)
         s_exitcode = exitcode;
-    lk.unlock();
-    s_runCv.notify_one();
+    if (s_runMode != kRunStopping) {
+        assert(s_runMode != kRunStopped);
+        s_runMode = kRunStopping;
+        lk.unlock();
+        s_runCv.notify_one();
+    }
 }
 
 //===========================================================================
@@ -419,7 +426,7 @@ void Dim::appSignalUsageError(int code, string_view err, string_view detail) {
     if (code == EX_PENDING)
         return;
 
-    s_usageErrorSignaled = true;
+    s_usageErrorSignaled.test_and_set();
     if (code) {
         bool hasConsole = appFlags() & (fAppWithConsole | fAppIsService);
         if (!hasConsole)
