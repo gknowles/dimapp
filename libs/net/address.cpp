@@ -132,7 +132,7 @@ istream & Dim::operator>>(istream & in, HostAddr & out) {
 //===========================================================================
 // Writes word in lowercase hex with no leading zeros.
 static ostream & writeHex(ostream & os, uint16_t word) {
-    switch (leadingZeroBits(word) / 4) {
+    switch (countl_zero(word) / 4) {
     case 0:
         os << hexFromNibble(word >> 12);
         [[fallthrough]];

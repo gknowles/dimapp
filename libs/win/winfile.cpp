@@ -1282,7 +1282,7 @@ size_t Dim::filePageSize(FileHandle f) {
     auto pageSize = envMemoryConfig().pageSize;
 
     // must be a power of 2
-    assert(hammingWeight(pageSize) == 1);
+    assert(popcount(pageSize) == 1);
 
     return pageSize;
 }
@@ -1294,7 +1294,7 @@ size_t Dim::fileViewAlignment(FileHandle f) {
     // must be a multiple of the page size
     assert(mem.allocAlign % mem.pageSize == 0);
     // must be a power of 2
-    assert(hammingWeight(mem.allocAlign) == 1);
+    assert(popcount(mem.allocAlign) == 1);
 
     return mem.allocAlign;
 }

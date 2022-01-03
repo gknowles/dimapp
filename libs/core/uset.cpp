@@ -40,7 +40,7 @@ public:
     constinit static const size_t kDataSize = (1 << kLeafBits) / 8;
 
     constinit static const size_t kStepBits =
-        hammingWeight(pow2Ceil(kDataSize / sizeof Node + 1) / 2 - 1);
+        popcount(bit_ceil(kDataSize / sizeof Node + 1) / 2 - 1);
     constinit static const size_t kMaxDepth =
         (kBitWidth - kLeafBits + kStepBits - 1) / kStepBits;
     static_assert(kBaseBits + kLeafBits >= kBitWidth);
@@ -62,7 +62,7 @@ public:
         size_t ret = 0;
         if (depth) {
             ret = (size_t) 1
-                << hammingWeight(valueMask(depth) ^ valueMask(depth - 1));
+                << popcount(valueMask(depth) ^ valueMask(depth - 1));
         }
         return ret;
     }
@@ -2625,7 +2625,7 @@ int IntegralSet<T,A>::Impl::cmpBit(uint64_t left, uint64_t right) {
         return 0;   // equal
     constexpr uint64_t kMask = numeric_limits<uint64_t>::max();
     if (left < right) {
-        if (left != (right & (kMask << trailingZeroBits(left)))) {
+        if (left != (right & (kMask << countr_zero(left)))) {
             // left bitmap > right bitmap. Which means the right side has gaps,
             // paradoxically making it greater lexicographically. For example,
             // { 1, 2, 3 } < { 1, 3 }, since at the second position 2 < 3.
@@ -2638,7 +2638,7 @@ int IntegralSet<T,A>::Impl::cmpBit(uint64_t left, uint64_t right) {
             return -2;
         }
     } else {
-        if (right != (left & (kMask << trailingZeroBits(right)))) {
+        if (right != (left & (kMask << countr_zero(right)))) {
             return -1;
         } else {
             return 2;

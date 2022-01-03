@@ -15,6 +15,7 @@
 
 // Standard headers
 #include <array>
+#include <bit>
 #include <iostream>
 #include <map>
 #include <random>

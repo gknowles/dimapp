@@ -99,7 +99,7 @@ inline std::vector<std::string_view> TokenTable::findNames(auto flags) const {
     auto out = std::vector<std::string_view>{};
     const char * name = nullptr;
     while (flags) {
-        auto f = (decltype(flags)) (1 << trailingZeroBits(flags));
+        auto f = (decltype(flags)) (1 << std::countr_zero((uintmax_t) flags));
         flags = flags & ~f;
         if (findName(&name, (int) f))
             out.push_back(name);

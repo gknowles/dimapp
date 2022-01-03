@@ -41,7 +41,7 @@ using USet = IntegralSet<unsigned,
 //  data[0] & 0x7 = kNodeFork
 //  data[0] & 0x8 = has end of key
 //  data[1, 2] = bitmap of existing children, all 16 bits means all 16 kids
-//  : followed by nodes[hammingWeight(bitmap)]
+//  : followed by nodes[popcount(bitmap)]
 // Remote
 //  data[0] & 0x7 = kNodeRemote
 //  data[0] & 0x8 = false (has end of key)
@@ -320,7 +320,7 @@ static void setForkBits(
 //===========================================================================
 static size_t forkLen(const StrTrieBase::Node * node) {
     assert(nodeType(node) == kNodeFork);
-    return hammingWeight(forkBits(node));
+    return popcount(forkBits(node));
 }
 
 //===========================================================================
@@ -336,7 +336,7 @@ static int nextForkVal(uint16_t bits, int kval) {
     auto nbits = bits & mask;
     if (!nbits)
         return -1;
-    auto nval = leadingZeroBits(nbits);
+    auto nval = countl_zero(nbits);
     return nval;
 }
 
@@ -347,7 +347,7 @@ inline static int prevForkVal(uint16_t bits, int kval) {
     auto nbits = bits & mask;
     if (!nbits)
         return -1;
-    auto nval = kMaxForkBit - trailingZeroBits(nbits);
+    auto nval = kMaxForkBit - countr_zero(nbits);
     return (int) nval;
 }
 
@@ -362,7 +362,7 @@ static pmr::basic_string<uint8_t> forkVals(
     auto bits = forkBits(node);
     if (kval > -1)
         bits |= (0x8000 >> kval);
-    out.reserve(hammingWeight(bits));
+    out.reserve(popcount(bits));
     for (uint8_t i = 0; bits; ++i, bits <<= 1) {
         if (bits & 0x8000)
             out.push_back(i);
@@ -407,7 +407,7 @@ static void setForkBit(
 //===========================================================================
 static int forkPos(uint16_t bits, size_t val) {
     assert(val < kMaxForkBit);
-    return hammingWeight(bits >> (kMaxForkBit - val));
+    return popcount((uint16_t) (bits >> (kMaxForkBit - val)));
 }
 
 //===========================================================================

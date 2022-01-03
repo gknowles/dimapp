@@ -36,18 +36,6 @@ static void app(int argc, char *argv[]) {
     EXPECT(num == 10);
     num = digits10(999'999'999);
     EXPECT(num == 9);
-    num = hammingWeight(0xffff'ffff'ffff'ffff);
-    EXPECT(num == 64);
-    num = hammingWeight(0xff00'0000'0000'0000);
-    EXPECT(num == 8);
-    num = trailingZeroBits(1);
-    EXPECT(num == 0);
-    num = trailingZeroBits(0x8000'0000'0000'0000);
-    EXPECT(num == 63);
-    num = leadingZeroBits(1);
-    EXPECT(num == 63);
-    num = leadingZeroBits(0x8000'0000'0000'0000);
-    EXPECT(num == 0);
 
     char buf[100];
     double dval = 1.0f;

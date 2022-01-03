@@ -52,7 +52,7 @@ static void apply(Word * ptr, size_t * count, Word mask) {
         *ptr ^= mask;
     } else {
         static_assert(Op == kCount);
-        *count += hammingWeight(*ptr & mask);
+        *count += popcount(*ptr & mask);
     }
 }
 
@@ -214,7 +214,7 @@ size_t BitView::count() const {
         m_data,
         m_data + m_size,
         0,
-        [](auto a, auto b) { return a + hammingWeight(b); }
+        [](auto a, auto b) { return a + popcount(b); }
     );
 }
 
@@ -368,7 +368,7 @@ const uint64_t * BitView::data(size_t bitpos) const {
 
 //===========================================================================
 static constexpr size_t leadingPos(size_t pos, uint64_t data) {
-    return pos * BitView::kWordBits + leadingZeroBits(data);
+    return pos * BitView::kWordBits + countl_zero(data);
 }
 
 //===========================================================================
@@ -405,7 +405,7 @@ size_t BitView::findZero(size_t bitpos) const {
 
 //===========================================================================
 static constexpr size_t trailingPos(size_t pos, uint64_t data) {
-    return ++pos * BitView::kWordBits - 1 - trailingZeroBits(data);
+    return ++pos * BitView::kWordBits - 1 - countr_zero(data);
 }
 
 //===========================================================================
