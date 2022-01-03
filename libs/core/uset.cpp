@@ -4364,6 +4364,14 @@ auto IntegralSet<T,A>::findLessEqual(value_type val) const -> iterator {
 
 //===========================================================================
 template <std::integral T, typename A>
+auto IntegralSet<T,A>::findLess(value_type val) const -> iterator {
+    return val > numeric_limits<value_type>::min()
+        ? findLessEqual(val - 1)
+        : end();
+}
+
+//===========================================================================
+template <std::integral T, typename A>
 auto IntegralSet<T,A>::lowerBound(value_type val) const -> iterator {
     return iterator::makeFirst(&m_node, val);
 }
@@ -4371,8 +4379,9 @@ auto IntegralSet<T,A>::lowerBound(value_type val) const -> iterator {
 //===========================================================================
 template <std::integral T, typename A>
 auto IntegralSet<T,A>::upperBound(value_type val) const -> iterator {
-    val += 1;
-    return val ? lowerBound(val) : end();
+    return val < numeric_limits<value_type>::max() 
+        ? lowerBound(val + 1) 
+        : end();
 }
 
 //===========================================================================

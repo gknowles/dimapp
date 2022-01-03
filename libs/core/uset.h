@@ -150,8 +150,9 @@ public:
     bool contains(const IntegralSet & other) const;
     bool intersects(const IntegralSet & other) const;
     iterator findLessEqual(value_type val) const;
-    iterator lowerBound(value_type val) const;
-    iterator upperBound(value_type val) const;
+    iterator findLess(value_type val) const;
+    iterator lowerBound(value_type val) const;  // greaterEqual
+    iterator upperBound(value_type val) const;  // greater
     std::pair<iterator, iterator> equalRange(value_type val) const;
 
     // firstContiguous and lastContiguous search backwards and forwards
