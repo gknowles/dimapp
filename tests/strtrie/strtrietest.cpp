@@ -87,10 +87,17 @@ inline static void internalTests() {
     EXPECT(vals.contains("abcdefghijklmnopqrstuvwxyz"));
     EXPECT(vals.contains("abc"));
 
-    vals.clear();
-    insert(&vals, "abc");
-    insert(&vals, "aw");
-    insert(&vals, "abd");
+    //vector<string_view> keys = { "abc", "aw", "abd" };
+    //vals.clear();
+    //for (auto&& key : keys)
+    //    insert(&vals, key);
+    //ranges::sort(keys);
+    //auto ri = keys.begin();
+    //for (auto&& key : vals) {
+    //    EXPECT(key == *ri);
+    //    ri += 1;
+    //}
+    //EXPECT(ri == keys.end());
 }
 
 //===========================================================================

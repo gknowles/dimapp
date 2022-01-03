@@ -142,7 +142,6 @@ struct VirtualPage {
 struct SearchFork {
     pgno_t pgno = (pgno_t) -1;
     int inode = -1;
-    int fpos = -1;
     int kpos = -1;
 };
 struct SearchState {
@@ -325,8 +324,14 @@ static size_t forkLen(const StrTrieBase::Node * node) {
 }
 
 //===========================================================================
+static int firstForkVal(uint16_t bits) {
+    auto val = countl_zero(bits);
+    return val;
+}
+
+//===========================================================================
 static int nextForkVal(uint16_t bits, int kval) {
-    assert(kval && kval < kMaxForkBit);
+    assert(kval >= 0 && kval < kMaxForkBit);
     auto mask = (1u << (kMaxForkBit - kval - 1)) - 1;
     auto nbits = bits & mask;
     if (!nbits)
@@ -337,7 +342,7 @@ static int nextForkVal(uint16_t bits, int kval) {
 
 //===========================================================================
 inline static int prevForkVal(uint16_t bits, int kval) {
-    assert(kval && kval < kMaxForkBit);
+    assert(kval >= 0 && kval < kMaxForkBit);
     auto mask = 65535u << (kMaxForkBit - kval);
     auto nbits = bits & mask;
     if (!nbits)
@@ -743,34 +748,12 @@ SearchState::SearchState(
 
 /****************************************************************************
 *
-*   StrTrieBase::Iter
-*
-***/
-
-//===========================================================================
-StrTrieBase::Iter & StrTrieBase::Iter::operator++() {
-    return *this;
-}
-
-//===========================================================================
-StrTrieBase::Iter StrTrieBase::begin() const {
-    return Iter{};
-}
-
-//===========================================================================
-StrTrieBase::Iter StrTrieBase::end() const {
-    return Iter{};
-}
-
-
-/****************************************************************************
-*
 *   StrTrieBase
 *
 ***/
 
 //===========================================================================
-StrTrieBase::StrTrieBase(IPageHeap * pages)
+StrTrieBase::StrTrieBase(IPageHeap * pages) noexcept
     : m_pages(pages)
 {
     assert(pages->pageSize() >= kMinPageSize);
@@ -783,6 +766,20 @@ void StrTrieBase::construct(IPageHeap * pages) {
     assert(pages->pageSize() <= kMaxPageSize);
     assert(!m_pages);
     m_pages = pages;
+}
+
+//===========================================================================
+StrTrieBase::Iter StrTrieBase::begin() const {
+    auto impl = make_shared<Iter::Impl>(this);
+    auto iter = Iter(impl);
+    return ++iter;
+}
+
+//===========================================================================
+StrTrieBase::Iter StrTrieBase::end() const {
+    auto impl = make_shared<Iter::Impl>(this);
+    auto iter = Iter(impl);
+    return iter;
 }
 
 
@@ -1786,7 +1783,7 @@ bool StrTrieBase::contains(string_view key) const {
 
 /****************************************************************************
 *
-*   lowerBound
+*   Search Helpers
 *
 ***/
 
@@ -1835,10 +1832,133 @@ static void seekNextFork(SearchState * ss) {
 }
 
 //===========================================================================
+static void seekFront(SearchState * ss) {
+    for (;;) {
+        auto ntype = nodeType(ss->node);
+        if (ntype == kNodeSeg) {
+            auto slen = segLen(ss->node);
+            ss->foundKey.append((const char *) segData(ss->node), slen / 2);
+            ss->foundKeyLen += slen;
+            if (nodeEndMarkFlag(ss->node))
+                break;
+            seekNode(ss, ss->inode + nodeHdrLen(ss->node));
+        } else if (ntype == kNodeHalfSeg) {
+            pushFoundKeyVal(ss, halfSegVal(ss->node));
+            if (nodeEndMarkFlag(ss->node))
+                break;
+            seekNode(ss, ss->inode + nodeHdrLen(ss->node));
+        } else if (ntype == kNodeFork) {
+            auto & fork = ss->forks.emplace_back();
+            fork.kpos = (int) ss->foundKeyLen;
+            fork.pgno = ss->pgno;
+            fork.inode = ss->inode;
+            if (nodeEndMarkFlag(ss->node))
+                break;
+            auto bits = forkBits(ss->node);
+            auto sval = firstForkVal(bits);
+            pushFoundKeyVal(ss, sval);
+            seekNode(ss, ss->inode + nodeHdrLen(ss->node));
+        } else if (ntype == kNodeEndMark) {
+            break;
+        } else {
+            assert(ntype == kNodeRemote);
+            seekRemote(ss, ss->inode);
+        }
+    }
+}
+
+
+/****************************************************************************
+*
+*   StrTrieBase::Iter
+*
+***/
+
+struct StrTrieBase::Iter::Impl {
+    const StrTrieBase * cont = nullptr;
+    string current;
+    vector<SearchFork> forks;
+    bool endMark = true;
+};
+
+//===========================================================================
+StrTrieBase::Iter::Iter(const StrTrieBase * cont) 
+    : m_impl(make_shared<Impl>(cont))
+{}
+
+//===========================================================================
+StrTrieBase::Iter::Iter(shared_ptr<Impl> impl) 
+    : m_impl(impl)
+{}
+
+//===========================================================================
+StrTrieBase::Iter::operator bool() const {
+    return !m_impl->endMark;
+}
+
+//===========================================================================
+bool StrTrieBase::Iter::operator==(
+    const Iter & other
+) const {
+    return m_impl->current == other.m_impl->current;
+}
+
+//===========================================================================
+auto StrTrieBase::Iter::operator*() const
+    -> const value_type &
+{
+    return m_impl->current;
+}
+
+//===========================================================================
+StrTrieBase::Iter & StrTrieBase::Iter::operator++() {
+    if (m_impl->cont->empty()) {
+        assert(m_impl->endMark);
+        return *this;
+    }
+
+    TempHeap heap;
+    auto ss = heap.emplace<SearchState>(
+        m_impl->current, 
+        m_impl->cont->m_pages,
+        &heap,
+        nullptr
+    );
+    if (m_impl->endMark) {
+        seekRootPage(ss);
+        seekNode(ss, ss->inode);
+    } else {
+        ss->forks.assign(m_impl->forks.begin(), m_impl->forks.end());
+        seekNextFork(ss);
+    }
+    if (ss->node) {
+        seekFront(ss);
+        m_impl->current = ss->foundKey;
+        m_impl->forks.assign(ss->forks.begin(), ss->forks.end());
+        m_impl->endMark = false;
+    } else {
+        m_impl->current.clear();
+        m_impl->forks.clear();
+        m_impl->endMark = true;
+    }
+    return *this;
+}
+
+//===========================================================================
+StrTrieBase::Iter & StrTrieBase::Iter::operator--() {
+    return *this;
+}
+
+
+/****************************************************************************
+*
+*   lowerBound
+*
+***/
+
+//===========================================================================
 static bool lowerBoundAtSeg(SearchState * ss) {
-    auto spos = 0;
     auto slen = segLen(ss->node);
-    auto sval = segVal(ss->node, spos);
     int rc = 0;
 
     auto kdataLen = ss->klen - ss->kpos;
@@ -1851,65 +1971,114 @@ static bool lowerBoundAtSeg(SearchState * ss) {
         rc = memcmp(kdata, segData(ss->node), slen / 2);
     }
 
-    if (!rc) {
-        ss->kpos += slen;
-        if (ss->kpos != ss->klen)
-            ss->kval = keyVal(ss->key, ss->kpos);
-        if (nodeEndMarkFlag(ss->node)) {
-            seekNextFork(ss);
-            return false;
-        }
-        seekNode(ss, ss->inode + nodeHdrLen(ss->node));
-        return true;
-    }
-    
     if (rc < 0) {
         setFoundKey(ss);
-        for (;;) {
-            pushFoundKeyVal(ss, sval);
-            if (++spos == slen)
-                break;
-            sval = segVal(ss->node, spos);
-        }
+        ss->foundKey.append((const char *) segData(ss->node), slen / 2);
+        ss->foundKeyLen += slen;
         if (nodeEndMarkFlag(ss->node)) {
             ss->inode = 0;
             ss->node = nullptr;
-            return false;
         } else {
             seekNode(ss, ss->inode + nodeHdrLen(ss->node));
-            return false;
         }
-    } else {
-        assert(rc > 0);
+        return false;
+    } else if (rc > 0) {
         seekNextFork(ss);
         return false;
+    } else {
+        if (nodeEndMarkFlag(ss->node)) {
+            if (ss->kpos == ss->klen) {
+                setFoundKey(ss);
+                ss->inode = 0;
+                ss->node = nullptr;
+            } else {
+                seekNextFork(ss);
+            }
+            return false;
+        }
+        ss->kpos += slen;
+        if (ss->kpos != ss->klen)
+            ss->kval = keyVal(ss->key, ss->kpos);
+        seekNode(ss, ss->inode + nodeHdrLen(ss->node));
+        return true;
     }
 }
 
 //===========================================================================
 static bool lowerBoundAtHalfSeg(SearchState * ss) {
     auto sval = halfSegVal(ss->node);
-    if (ss->kval == sval) {
+    if (ss->kpos == ss->klen || ss->kval < sval) {
+        setFoundKey(ss);
+        pushFoundKeyVal(ss, sval);
+        if (nodeEndMarkFlag(ss->node)) {
+            ss->inode = 0;
+            ss->node = nullptr;
+        } else {
+            seekNode(ss, ss->inode + nodeHdrLen(ss->node));
+        }
+        return false;
+    } else if (ss->kval > sval) {
+        seekNextFork(ss);
+        return false;
+    } else {
         if (nodeEndMarkFlag(ss->node)) {
             seekNextFork(ss);
             return false;
         }
         if (++ss->kpos != ss->klen)
             ss->kval = keyVal(ss->key, ss->kpos);
-
-    } else if (ss->kval < sval) {
-    } else {
+        seekNode(ss, ss->inode + nodeHdrLen(ss->node));
+        return true;
     }
-    return false;
 }
 
 //===========================================================================
 static bool lowerBoundAtFork(SearchState * ss) {
+    if (ss->kpos == ss->klen) {
+        setFoundKey(ss);
+        if (nodeEndMarkFlag(ss->node)) {
+            ss->inode = 0;
+            ss->node = nullptr;
+        } else {
+            seekNode(ss, ss->inode + nodeHdrLen(ss->node));
+        }
+        return false;
+    }
+    auto bits = forkBits(ss->node);
+    if (forkBit(bits, ss->kval)) {
+        // kval == sval
+        auto & fork = ss->forks.emplace_back();
+        fork.kpos = ss->kpos;
+        fork.pgno = ss->pgno;
+        fork.inode = ss->inode;
+        if (++ss->kpos != ss->klen)
+            ss->kval = keyVal(ss->key, ss->kpos);
+        auto pos = forkPos(bits, ss->kval);
+        seekKid(ss, pos);
+        return true;
+    }
+    auto sval = nextForkVal(bits, ss->kval);
+    if (sval == -1) {
+        // kval > sval
+        seekNextFork(ss);
+        return false;
+    }
+    // kval < sval
+    setFoundKey(ss);
+    pushFoundKeyVal(ss, sval);
+    seekKid(ss, forkPos(bits, sval));
     return false;
 }
 
 //===========================================================================
 static bool lowerBoundAtEndMark(SearchState * ss) {
+    if (ss->kpos == ss->klen) {
+        setFoundKey(ss);
+        ss->inode = 0;
+        ss->node = nullptr;
+        return false;
+    }
+    seekNextFork(ss);
     return false;
 }
 
@@ -1922,7 +2091,7 @@ static bool lowerBoundAtRemote(SearchState * ss) {
 //===========================================================================
 StrTrieBase::Iter StrTrieBase::lowerBound(std::string_view key) const {
     if (empty())
-        return Iter{};
+        return Iter{this};
 
     TempHeap heap;
     auto ss = heap.emplace<SearchState>(key, m_pages, &heap, debugStream());
@@ -1946,15 +2115,21 @@ StrTrieBase::Iter StrTrieBase::lowerBound(std::string_view key) const {
         auto fn = functs[ntype];
         if (!(*fn)(ss)) {
             if (!ss->found)
-                return Iter{};
+                return Iter{this};
             break;
         }
     }
 
     if (ss->node) {
+        seekFront(ss);
+        auto impl = make_shared<Iter::Impl>(this);
+        impl->current = ss->foundKey;
+        impl->forks.assign(ss->forks.begin(), ss->forks.end());
+        impl->endMark = false;
+        return Iter(impl);
     }
 
-    return Iter{};
+    return Iter{this};
 }
 
 

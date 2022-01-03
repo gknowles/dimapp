@@ -33,17 +33,22 @@ public:
     using iterator = Iter;
 
 public:
-    StrTrieBase (IPageHeap * pages);
+    StrTrieBase (IPageHeap * pages) noexcept;
     virtual ~StrTrieBase () = default;
-
-    // Returns whether key was inserted (didn't already exist).
-    bool insert(std::string_view val);
-
-    // Returns whether key was deleted, false if it wasn't present.
-    bool erase(std::string_view val);
-
     explicit operator bool() const { return !empty(); }
 
+    // iterators
+    iterator begin() const;
+    iterator end() const;
+
+    // capacity
+    bool empty() const { return m_pages->empty(); }
+
+    // modify    
+    bool insert(std::string_view val);
+    bool erase(std::string_view val);
+
+    // search
     bool contains(std::string_view key) const;
     iterator lowerBound(std::string_view val) const;
     bool lowerBound(std::string * out, std::string_view val) const;
@@ -53,10 +58,6 @@ public:
         std::string * upper,
         std::string_view val
     ) const;
-
-    bool empty() const { return m_pages->empty(); }
-    iterator begin() const;
-    iterator end() const;
 
     virtual std::ostream * const debugStream() const { return nullptr; }
 
@@ -91,26 +92,27 @@ private:
 ***/
 
 class StrTrieBase::Iter {
-    using value_type = StrTrieBase::value_type;
-    value_type m_current;
 public:
-    Iter & operator++();
+    struct Impl;
+    using value_type = StrTrieBase::value_type;
+    using element_type = const StrTrieBase::value_type;
+    using iterator_category = std::bidirectional_iterator_tag;
+
+public:
+    explicit Iter(const StrTrieBase * cont);
+    explicit Iter(std::shared_ptr<Iter::Impl> impl);
+    Iter(const Iter & from) noexcept = default;
+    Iter & operator=(const Iter & from) noexcept = default;
+    explicit operator bool() const;
+
     bool operator==(const Iter & right) const;
-    const value_type & operator*();
+    const value_type & operator*() const;
+    const value_type * operator->() const;
+    Iter & operator++();
+    Iter & operator--();
+
+private:
+    std::shared_ptr<Impl> m_impl;
 };
-
-//===========================================================================
-inline bool StrTrieBase::Iter::operator==(
-    const Iter & other
-) const {
-    return m_current == other.m_current;
-}
-
-//===========================================================================
-inline auto StrTrieBase::Iter::operator*()
-    -> const value_type &
-{
-    return m_current;
-}
 
 } // namespace
