@@ -3905,11 +3905,6 @@ IntegralSet<T,A>::Node::Node()
 
 //===========================================================================
 template <std::integral T, typename A>
-IntegralSet<T,A>::IntegralSet()
-{}
-
-//===========================================================================
-template <std::integral T, typename A>
 IntegralSet<T,A>::IntegralSet(const A & alloc) noexcept
     : m_alloc(alloc)
 {}

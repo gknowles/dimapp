@@ -73,7 +73,7 @@ public:
     };
 
 public:
-    IntegralSet();
+    IntegralSet() noexcept = default;
     explicit IntegralSet(const A & alloc) noexcept;
     IntegralSet(IntegralSet && from) noexcept;
     IntegralSet(IntegralSet && from, const A & alloc);
@@ -287,7 +287,7 @@ public:
     static Iter makeLast(const Node * node, value_type maxValue);
 
 public:
-    Iter(const Iter & from) = default;
+    Iter(const Iter & from) noexcept = default;
     Iter & operator++();
     Iter & operator--();
     explicit operator bool() const { return !m_endmark; }
