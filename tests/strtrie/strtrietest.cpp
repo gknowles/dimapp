@@ -87,21 +87,22 @@ inline static void internalTests() {
     EXPECT(vals.contains("abcdefghijklmnopqrstuvwxyz"));
     EXPECT(vals.contains("abc"));
 
-    //vector<string_view> keys = { "abc", "aw", "abd" };
-    //vals.clear();
-    //for (auto&& key : keys)
-    //    insert(&vals, key);
-    //ranges::sort(keys);
-    //auto ri = keys.begin();
-    //for (auto&& key : vals) {
-    //    EXPECT(key == *ri);
-    //    ri += 1;
-    //}
-    //EXPECT(ri == keys.end());
+    vector<string_view> keys = { "abc", "aw", "abd" };
+    vals.clear();
+    for (auto&& key : keys)
+        insert(&vals, key);
+    ranges::sort(keys);
+    auto ri = keys.begin();
+    for (auto&& key : vals) {
+        EXPECT(key == *ri);
+        ri += 1;
+    }
+    EXPECT(ri == keys.end());
 }
 
 //===========================================================================
 inline static void randomFill(size_t count, size_t maxLen, size_t charVals) {
+    [[maybe_unused]] int line = 0;
     if (!count)
         return;
     if (s_verbose) {
@@ -111,10 +112,10 @@ inline static void randomFill(size_t count, size_t maxLen, size_t charVals) {
             << ", charVals = " << charVals
             << endl;
     }
-    [[maybe_unused]] int line = 0;
     StrTrie vals;
     default_random_engine s_reng;
     string key;
+    size_t inserted = 0;
     for (auto i = 0; i < count; ++i) {
         key.resize(0);
         auto len = s_reng() % maxLen;
@@ -128,9 +129,12 @@ inline static void randomFill(size_t count, size_t maxLen, size_t charVals) {
             s_verbose = true;
         if (s_verbose)
             cout << i + 1 << " ";
-        insert(&vals, key);
+        if (insert(&vals, key))
+            inserted += 1;
         EXPECT(vals.contains(key));
     }
+    auto dist = (size_t) distance(vals.begin(), vals.end());
+    EXPECT(inserted == dist);
     cout << "--- Stats\n";
     vals.dumpStats(cout);
     cout << endl;

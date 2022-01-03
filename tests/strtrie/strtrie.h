@@ -30,6 +30,7 @@ public:
     struct Node;
 
     using value_type = std::string;
+    using difference_type = ptrdiff_t;
     using iterator = Iter;
 
 public:
@@ -94,9 +95,11 @@ private:
 class StrTrieBase::Iter {
 public:
     struct Impl;
-    using value_type = StrTrieBase::value_type;
-    using element_type = const StrTrieBase::value_type;
     using iterator_category = std::bidirectional_iterator_tag;
+    using value_type = StrTrieBase::value_type;
+    using difference_type = StrTrieBase::difference_type;
+    using pointer = const value_type *;
+    using reference = value_type;
 
 public:
     explicit Iter(const StrTrieBase * cont);
