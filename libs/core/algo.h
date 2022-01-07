@@ -96,6 +96,46 @@ void erase_unordered_if(Container c, Pred p) {
 
 /****************************************************************************
 *
+*   Reverse circle iterator
+*
+***/
+
+template<typename IterBase>
+class reverse_circle_iterator {
+public:
+    using iterator_type = IterBase;
+    using traits = std::iterator_traits<iterator_type>;
+    using iterator_category = traits::iterator_category;
+    using value_type = traits::value_type;
+    using difference_type = traits::difference_type;
+    using pointer = traits::pointer;
+    using reference = traits::reference;
+    static_assert(
+        std::derived_from<iterator_category, std::bidirectional_iterator_tag>
+    );
+
+public:
+    reverse_circle_iterator(iterator_type iter) : m_iter(iter) { --m_iter; }
+    reverse_circle_iterator & operator++() { --m_iter; return *this; }
+    reverse_circle_iterator & operator--() { ++m_iter; return *this; }
+    explicit operator bool() const { return (bool) m_iter; }
+    bool operator==(const reverse_circle_iterator & other) const = default;
+    const value_type & operator*() const { return *m_iter; }
+    const value_type * operator->() const { return &*m_iter; }
+
+    constexpr iterator_type base() const {
+        auto tmp = m_iter;
+        ++tmp;
+        return tmp;
+    }
+
+private:
+    iterator_type m_iter;
+};
+
+
+/****************************************************************************
+*
 *   Aligned intervals
 *
 ***/

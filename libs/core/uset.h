@@ -6,6 +6,7 @@
 
 #include "cppconf/cppconf.h"
 
+#include "core/algo.h"
 #include "core/types.h"
 
 #include <compare>
@@ -31,7 +32,6 @@ namespace Dim {
 template <std::integral T, typename A = std::allocator<T>>
 class IntegralSet {
 public:
-    template<typename Iter> class RevIterBase;
     class Iter;
     class RangeRange;
     class RangeIter;
@@ -44,11 +44,11 @@ public:
     using reference = value_type &;
     using const_reference = const value_type &;
     using iterator = Iter;
-    using reverse_iterator = typename RevIterBase<Iter>;
+    using reverse_iterator = typename reverse_circle_iterator<Iter>;
     using difference_type = ptrdiff_t;
     using size_type = size_t;
     using range_iterator = RangeIter;
-    using reverse_range_iterator = typename RevIterBase<RangeIter>;
+    using reverse_range_iterator = typename reverse_circle_iterator<RangeIter>;
 
 public:
     static const size_t kBitWidth = CHAR_BIT * sizeof T;
@@ -222,51 +222,6 @@ inline void IntegralSet<T, A>::insert(InputIt first, InputIt last) {
 
 /****************************************************************************
 *
-*   IntegralSet::RevIterBase
-*
-***/
-
-template <std::integral T, typename A>
-template<typename IterBase>
-class IntegralSet<T, A>::RevIterBase {
-public:
-    using iterator_type = IterBase;
-    using traits = std::iterator_traits<iterator_type>;
-    using iterator_category = traits::iterator_category;
-    using value_type = traits::value_type;
-    using difference_type = traits::difference_type;
-    using pointer = traits::pointer;
-    using reference = traits::reference;
-    using thing = std::reverse_iterator<iterator_type>;
-
-public:
-    RevIterBase(iterator_type iter)
-        requires std::derived_from<iterator_category,
-            std::bidirectional_iterator_tag>
-        : m_iter(iter)
-    {
-        --m_iter;
-    }
-    RevIterBase & operator++() { --m_iter; return *this; }
-    RevIterBase & operator--() { ++m_iter; return *this; }
-    explicit operator bool() const { return (bool) m_iter; }
-    bool operator==(const RevIterBase & other) const = default;
-    const value_type & operator*() const { return *m_iter; }
-    const value_type * operator->() const { return &*m_iter; }
-
-    constexpr iterator_type base() const {
-        auto tmp = m_iter;
-        ++tmp;
-        return tmp;
-    }
-
-private:
-    iterator_type m_iter;
-};
-
-
-/****************************************************************************
-*
 *   IntegralSet::Iter
 *
 ***/
@@ -353,7 +308,7 @@ template <std::integral T, typename A>
 class IntegralSet<T, A>::RangeRange {
 public:
     using iterator = RangeIter;
-    using reverse_iterator = RevIterBase<RangeIter>;
+    using reverse_iterator = reverse_circle_iterator<RangeIter>;
 
 public:
     explicit RangeRange(Iter iter) : m_first{iter} {}
