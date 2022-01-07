@@ -50,16 +50,17 @@ public:
     bool erase(std::string_view val);
 
     // search
-    bool contains(std::string_view key) const;
+    value_type front() const;
+    value_type back() const;
+    bool contains(std::string_view val) const;
+    iterator find(std::string_view val) const;
+    iterator findLess(std::string_view val) const;
+    iterator findLessEqual(std::string_view val) const;
     iterator lowerBound(std::string_view val) const;
-    bool lowerBound(std::string * out, std::string_view val) const;
-    bool upperBound(std::string * out, std::string_view val) const;
-    bool equalRange(
-        std::string * lower,
-        std::string * upper,
-        std::string_view val
-    ) const;
+    iterator upperBound(std::string_view val) const;
+    std::pair<iterator, iterator> equalRange(std::string_view val) const;
 
+    // debug
     virtual std::ostream * const debugStream() const { return nullptr; }
 
 protected:

@@ -98,6 +98,21 @@ inline static void internalTests() {
         ri += 1;
     }
     EXPECT(ri == keys.end());
+
+    auto vi = vals.lowerBound("abcd");
+    EXPECT(*vi == "abd");
+    vi = vals.find("abd");
+    EXPECT(*vi == "abd");
+    vi = vals.lowerBound("abd");
+    EXPECT(*vi == "abd");
+    vi = vals.upperBound("abd");
+    EXPECT(*vi == "aw");
+    vi = vals.findLess("abd");
+    EXPECT(*vi == "abc");
+    vi = vals.findLessEqual("abd");
+    EXPECT(*vi == "abd");
+    
+    EXPECT(vals.back() == "aw");
 }
 
 //===========================================================================

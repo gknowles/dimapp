@@ -175,9 +175,9 @@ struct SearchState {
     ostream * debugStream = nullptr;
 
     SearchState(
-        string_view key,
+        TempHeap * heap,
         IPageHeap * pages,
-        TempHeap * heap = nullptr,
+        string_view key,
         ostream * debugStream = nullptr
     );
 };
@@ -186,6 +186,8 @@ struct SearchState {
 
 // forward declarations
 static ostream & dumpPage(ostream & os, SearchState * ss);
+static void seekRootPage(SearchState * ss);
+static void seekNode(SearchState * ss, size_t inode);
 
 
 /****************************************************************************
@@ -196,8 +198,36 @@ static ostream & dumpPage(ostream & os, SearchState * ss);
 
 struct StrTrieBase::Node {
     uint8_t data[1];
+
+    static SearchState * makeState(
+        TempHeap * heap, 
+        const StrTrieBase * cont, 
+        string_view key,
+        bool seek = true
+    );
 };
 static_assert(sizeof StrTrieBase::Node == 1);
+
+//===========================================================================
+SearchState * StrTrieBase::Node::makeState(
+    TempHeap * heap, 
+    const StrTrieBase * cont, 
+    string_view key,
+    bool seek
+) {
+    auto ss = heap->emplace<SearchState>(
+        heap, 
+        cont->m_pages, 
+        key,
+        cont->debugStream()
+    );
+    if (seek) {
+        assert(!ss->pages->empty());
+        seekRootPage(ss);
+        seekNode(ss, ss->inode);
+    }
+    return ss;
+}
 
 
 /****************************************************************************
@@ -259,6 +289,12 @@ static int segLen(const StrTrieBase::Node * node) {
 static const uint8_t * segData(const StrTrieBase::Node * node) {
     assert(nodeType(node) == kNodeSeg);
     return node->data + 1;
+}
+
+//===========================================================================
+static string_view segView(const StrTrieBase::Node * node) {
+    assert(nodeType(node) == kNodeSeg);
+    return string_view((const char *) segData(node), segLen(node) / 2);
 }
 
 //===========================================================================
@@ -330,9 +366,8 @@ static int firstForkVal(uint16_t bits) {
 }
 
 //===========================================================================
-[[maybe_unused]] 
 static int lastForkVal(uint16_t bits) {
-    auto val = kMaxForkBit - countr_zero(bits);
+    auto val = kMaxForkBit - countr_zero(bits) - 1;
     return (int) val;
 }
 
@@ -348,14 +383,13 @@ static int nextForkVal(uint16_t bits, int kval) {
 }
 
 //===========================================================================
-[[maybe_unused]] 
 static int prevForkVal(uint16_t bits, int kval) {
     assert(kval >= 0 && kval < kMaxForkBit);
     auto mask = 65535u << (kMaxForkBit - kval);
-    auto nbits = bits & mask;
+    auto nbits = uint16_t(bits & mask);
     if (!nbits)
         return -1;
-    auto nval = kMaxForkBit - countr_zero(nbits);
+    auto nval = kMaxForkBit - countr_zero(nbits) - 1;
     return (int) nval;
 }
 
@@ -643,6 +677,18 @@ static T & newUpdate(SearchState * ss) {
 //===========================================================================
 // SearchState helpers
 //===========================================================================
+static void allocPage(SearchState * ss) {
+    ss->pgno = (pgno_t) ss->pages->create();
+}
+
+//===========================================================================
+static bool logFatal(SearchState * ss) {
+    logMsgFatal() << "Invalid StrTrieBase node type: "
+        << nodeType(ss->node);
+    return false;
+}
+
+//===========================================================================
 static void seekPage(SearchState * ss, pgno_t pgno) {
     ss->pgno = pgno;
 }
@@ -650,11 +696,6 @@ static void seekPage(SearchState * ss, pgno_t pgno) {
 //===========================================================================
 static void seekRootPage(SearchState * ss) {
     seekPage(ss, (pgno_t) ss->pages->root());
-}
-
-//===========================================================================
-static void allocPage(SearchState * ss) {
-    ss->pgno = (pgno_t) ss->pages->create();
 }
 
 //===========================================================================
@@ -705,10 +746,14 @@ static void seekRemote(SearchState* ss, size_t inode) {
 }
 
 //===========================================================================
-static bool logFatal(SearchState * ss) {
-    logMsgFatal() << "Invalid StrTrieBase node type: "
-        << nodeType(ss->node);
-    return false;
+static bool nextKeyVal(SearchState * ss) {
+    assert(ss->kpos < ss->klen);
+    if (++ss->kpos != ss->klen) {
+        ss->kval = keyVal(ss->key, ss->kpos);
+        return true;
+    } else {
+        return false;
+    }
 }
 
 
@@ -732,9 +777,9 @@ VirtualPage::VirtualPage(TempHeap * heap)
 
 //===========================================================================
 SearchState::SearchState(
-    string_view key,
-    IPageHeap * pages,
     TempHeap * heap,
+    IPageHeap * pages,
+    string_view key,
     ostream * dstrm
 )
     : key(key)
@@ -790,503 +835,9 @@ StrTrieBase::Iter StrTrieBase::end() const {
 
 /****************************************************************************
 *
-*   Insert
+*   Apply updates
 *
 ***/
-
-//===========================================================================
-static NodeRef * addHalfSeg(SearchState * ss, uint8_t val, bool eok) {
-    auto & upd = newUpdate<UpdateHalfSeg>(ss);
-    upd.nibble = val;
-    if (eok) {
-        upd.endOfKey = true;
-        return nullptr;
-    }
-    auto ref = newRef(ss);
-    upd.refs = {ref, 1};
-    return &upd.refs[0];
-}
-
-//===========================================================================
-static void addKeyHalfSeg(SearchState * ss) {
-    if (++ss->kpos == ss->klen) {
-        addHalfSeg(ss, ss->kval, true);
-    } else {
-        addHalfSeg(ss, ss->kval, false);
-        ss->kval = keyVal(ss->key, ss->kpos);
-    }
-}
-
-//===========================================================================
-static NodeRef * addForkWithEnd(
-    SearchState * ss, 
-    size_t pos, 
-    bool withNewRef
-) {
-    auto & fork = newUpdate<UpdateFork>(ss);
-    fork.endOfKey = true;
-    setForkBit(&fork, pos, true);
-    NodeRef * ref = nullptr;
-    if (withNewRef) {
-        ref = newRef(ss);
-    } else {
-        ref = ss->heap->emplace<NodeRef>();
-    }
-    fork.refs = {ref, 1};
-    return &fork.refs[0];
-}
-
-//===========================================================================
-[[nodiscard]] static pair<NodeRef *, NodeRef *> addFork(
-    SearchState * ss, 
-    size_t sval,
-    size_t kval
-) {
-    assert(sval != kval);
-    auto & fork = newUpdate<UpdateFork>(ss);
-    setForkBit(&fork, sval, true);
-    setForkBit(&fork, ss->kval, true);
-    fork.refs = ss->heap->allocSpan<NodeRef>(2);
-    if (sval < kval) {
-        return { &fork.refs[0], &fork.refs[1] };
-    } else {
-        return { &fork.refs[1], &fork.refs[0] };
-    }
-}
-
-//===========================================================================
-static void copySegPrefix(SearchState * ss, size_t pos) {
-    assert(nodeType(ss->node) == kNodeSeg);
-    assert(pos <= segLen(ss->node));
-    assert(pos % 2 == 0);
-    // TODO: merge with preceeding NodeSeg if present.
-    if (!pos) 
-        return;
-    auto & upd = newUpdate<UpdateSeg>(ss);
-    upd.keyLen = (int) pos;
-    auto len8 = upd.keyLen / 2;
-    upd.key = ss->heap->alloc<uint8_t>(len8);
-    auto data = segData(ss->node);
-    memcpy(upd.key, data, len8);
-    upd.refs = { newRef(ss), 1 };
-}
-
-//===========================================================================
-static void copyRef(SearchState * ss, NodeRef * ref) {
-    if (nodeEndMarkFlag(ss->node)) {
-        setUpdateRef(ref, ss);
-        newUpdate<UpdateEndMark>(ss);
-    } else {
-        auto hdrLen = nodeHdrLen(ss->node);
-        setSourceRef(
-            ref, 
-            ss, 
-            ss->inode + hdrLen, 
-            nodeLen(ss->node + hdrLen)
-        );
-    }    
-}
-
-//===========================================================================
-static void copyKeyRef(SearchState * ss, NodeRef * ref) {
-    setUpdateRef(ref, ss);
-    if (++ss->kpos == ss->klen) {
-        newUpdate<UpdateEndMark>(ss);
-    } else {
-        ss->kval = keyVal(ss->key, ss->kpos);
-    }    
-}
-
-//===========================================================================
-static void copySegSuffix(SearchState * ss, NodeRef * ref, size_t pos) {
-    assert(nodeType(ss->node) == kNodeSeg);
-    assert(pos <= segLen(ss->node));
-    assert(pos % 2 == 0);
-    auto len = segLen(ss->node) - pos;
-    if (!len) {
-        copyRef(ss, ref);
-        return;
-    }
-
-    setUpdateRef(ref, ss);
-    auto & upd = newUpdate<UpdateSeg>(ss);
-    upd.keyLen = (int) len;
-    auto len8 = upd.keyLen / 2;
-    upd.key = ss->heap->alloc<uint8_t>(len8);
-    auto data = segData(ss->node);
-    memcpy(upd.key, data + pos / 2, len8);
-    if (nodeEndMarkFlag(ss->node)) {
-        upd.endOfKey = true;
-        return;
-    } 
-    // TODO: merge with following NodeSeg if present.
-    auto hdrLen = nodeHdrLen(ss->node);
-    auto srcRef = newRef(ss, ss->inode + hdrLen, nodeLen(ss->node + hdrLen));
-    upd.refs = { srcRef, 1 };
-}
-
-//===========================================================================
-static void copyHalfSegSuffix(SearchState * ss, size_t spos) {
-    assert(nodeType(ss->node) == kNodeSeg);
-    auto sval = segVal(ss->node, ++spos);
-    auto slen = segLen(ss->node);
-    if (spos + 1 == slen && nodeEndMarkFlag(ss->node)) {
-        addHalfSeg(ss, sval, true);
-    } else {
-        auto ref = addHalfSeg(ss, sval, false);
-        copySegSuffix(ss, ref, spos + 1);
-    }
-}
-
-//===========================================================================
-// If the search should continue:
-//      returns true
-//      sets ss->node and ss->inode to the next node
-// If the search is over:
-//      returns false
-//      sets ss->found to true if the key was found, otherwise false
-static bool insertAtSeg(SearchState * ss) {
-    // Will either split on first, middle, last, after last (possible if it's
-    // the end of the key), or will advance to next node.
-
-    assert(ss->kpos % 2 == 0);
-    auto spos = 0; // split point where key diverges from segment
-    auto slen = segLen(ss->node);
-    auto sval = segVal(ss->node, spos);
-    assert(slen > 0);
-
-    for (;;) {
-        if (ss->kpos == ss->klen) {
-            // Fork end of key with position in the segment.
-            // 
-            // Key "a" [61] -> Seg "abc" [61 62 63]
-            //  +---------+  +-----------+
-            //  | Seg "a" |--| Fork--EOK |
-            //  +---------+  |   |       |
-            //               |   |       |  +--------+  +---------+
-            //               |   +--  6  |--| Half 2 |--| Seg "c" |
-            //               +-----------+  +--------+  +---------+
-            copySegPrefix(ss, spos);
-            addForkWithEnd(ss, sval, true);
-            copyHalfSegSuffix(ss, spos);
-            break;
-        }
-        if (ss->kval != sval) {
-            // Fork inside the key and the segment.
-            if (spos % 2 == 0) {
-                // Fork in the first half of the byte.
-                // 
-                // Key "ayz" [61 79 7a] -> Seg "abc" [61 62 63]
-                //  +---------+  +-----------+  +--------+  +----------+
-                //  | Seg "a" |--| Fork-- 6  |--| Half 2 |--| Seg "c"  |
-                //  +---------+  |   |       |  +--------+  +----------+
-                //               |   |       |  +--------+  +----------+
-                //               |   +--  7  |--| Half 9 |--| Seg "z"  |
-                //               +-----------+  +--------+  +----------+
-                copySegPrefix(ss, spos);
-                auto [sref, kref] = addFork(ss, sval, ss->kval);
-                setUpdateRef(sref, ss);
-                copyHalfSegSuffix(ss, spos);
-                setUpdateRef(kref, ss);
-                ss->kval = keyVal(ss->key, ++ss->kpos);
-                addKeyHalfSeg(ss);
-                break;
-            } else {
-                // Fork in the second half of the byte.
-                // 
-                // Key "aef" [61 65 66] -> Seg "abc" [61 62 63]
-                //  +---------+  +--------+  +-----------+  +----------+
-                //  | Seg "a" |--| Half 6 |--| Fork-- 2  |--| Seg "c"  |
-                //  +---------+  +--------+  |   |       |  +----------+
-                //                           |   |       |  +----------+
-                //                           |   +--  5  |--| Seg "f"  |
-                //                           +-----------+  +----------+
-                copySegPrefix(ss, spos - 1);
-                addHalfSeg(ss, segVal(ss->node, spos - 1), false);
-                auto [sref, kref] = addFork(ss, sval, ss->kval);
-                copySegSuffix(ss, sref, spos + 1);
-                copyKeyRef(ss, kref);
-                break;
-            }
-        }
-        if (++ss->kpos != ss->klen)
-            ss->kval = keyVal(ss->key, ss->kpos);
-        if (++spos == slen) {
-            if (nodeEndMarkFlag(ss->node)) {
-                if (ss->kpos == ss->klen) {
-                    // End of both segment and key? Key was found, abort.
-                    ss->found = true;
-                    return false;
-                }
-                // Fork key with the end mark that's after the segment.
-                // 
-                // Key "abcdef" [61 62 63 64 65 66] -> Seg "abc" [61 62 63]
-                //  +-----------+  +-----------+  +--------+  +----------+
-                //  | Seg "abc" |--| Fork-- 6  |--| Half 4 |--| Seg "ef" |
-                //  +-----------+  |   |       |  +--------+  +----------+
-                //                 |   |       |
-                //                 |   +-- EOK |
-                //                 +-----------+
-                copySegPrefix(ss, spos);
-                addForkWithEnd(ss, ss->kval, true);
-                ss->kval = keyVal(ss->key, ++ss->kpos);
-                addKeyHalfSeg(ss);
-                break;
-            }
-            // Continue search at next node
-            copySegPrefix(ss, spos);
-            seekKid(ss, 0);
-            return true;
-        }
-        sval = segVal(ss->node, spos);
-    }
-
-    // Continue processing the key.
-    assert(ss->kpos % 2 == 0);
-    ss->found = false;
-    return false;
-}
-
-//===========================================================================
-static UpdateHalfSeg & copyHalfSeg(SearchState * ss, bool eok) {
-    assert(nodeType(ss->node) == kNodeHalfSeg);
-    auto & upd = newUpdate<UpdateHalfSeg>(ss);
-    upd.nibble = halfSegVal(ss->node);
-    if (eok) {
-        upd.endOfKey = true;
-    } else {
-        auto ref = newRef(ss);
-        upd.refs = { ref, 1 };
-    }
-    return upd;
-}
-
-//===========================================================================
-// Returns true if there is more to do; otherwise false and sets ss->found
-static bool insertAtHalfSeg (SearchState * ss) {
-    // Will either split on value, after value (possible if it's the end of the
-    // key), or will advance to next node.
-
-    auto sval = halfSegVal(ss->node);
-
-    for (;;) {
-        if (ss->kpos == ss->klen) {
-            // Fork end of key with half seg.
-            //
-            // Key "" [] -> Half 6
-            //  +-----------+
-            //  | Fork--EOK |
-            //  |   |       |
-            //  |   |       |
-            //  |   +--  6  |
-            //  +-----------+
-            auto ref = addForkWithEnd(ss, sval, false);
-            copyRef(ss, ref);
-            break;
-        }
-        if (ss->kval != sval) {
-            // Fork inside the key with the half seg.
-            //
-            // Key "a" [61] -> Half 7
-            //  +-----------+  +--------+
-            //  | Fork-- 6  |--| Half 1 |
-            //  |   |       |  +--------+
-            //  |   |       |
-            //  |   +--  7  |
-            //  +-----------+
-            auto [sref, kref] = addFork(ss, sval, ss->kval);
-            copyRef(ss, sref);
-            copyKeyRef(ss, kref);
-            break;
-        }
-        if (++ss->kpos != ss->klen)
-            ss->kval = keyVal(ss->key, ss->kpos);
-        if (nodeEndMarkFlag(ss->node)) {
-            if (ss->kpos == ss->klen) {
-                // End of both key and half seg? Key was found, abort.
-                ss->found = true;
-                return false;
-            }
-            // Fork key with the end mark that's after the half seg.
-            //
-            // Key "ab" [61 62] -> Half 6
-            //  +--------+  +-----------+  +---------+
-            //  | Half 6 |--| Fork-- 1  |--| Seg "b" |
-            //  +--------+  |   |       |  +---------+
-            //              |   |       |
-            //              |   +-- EOK |
-            //              +-----------+
-            copyHalfSeg(ss, false);
-            addForkWithEnd(ss, ss->kval, true);
-            ss->kval = keyVal(ss->key, ++ss->kpos);
-            break;
-        }
-        // Continue search at next node
-        copyHalfSeg(ss, false);
-        seekKid(ss, 0);
-        return true;
-    }
-
-    // Continue processing the key.
-    ss->found = false;
-    return false;
-}
-
-//===========================================================================
-static UpdateFork & copyForkWithKey(SearchState * ss, int * inext) {
-    assert(nodeType(ss->node) == kNodeFork);
-    *inext = -1;
-
-    auto & upd = newUpdate<UpdateFork>(ss);
-    auto bits = forkBits(ss->node);
-    auto refs = kids(ss, ss->inode);
-
-    if (ss->kpos == ss->klen) {
-        upd.refs = ss->heap->allocSpan<NodeRef>(refs.size());
-        upd.endOfKey = true;
-        upd.kidBits = bits;
-        for (auto i = 0; i < refs.size(); ++i)
-            setSourceRef(&upd.refs[i], ss, refs[i].pos, refs[i].len);
-        return upd;
-    }
-
-    upd.endOfKey = nodeEndMarkFlag(ss->node);
-    upd.kidBits = setForkBit(bits, ss->kval, true);
-    auto fpos = forkPos(upd.kidBits, ss->kval);
-    if (bits != upd.kidBits) {
-        upd.refs = ss->heap->allocSpan<NodeRef>(refs.size() + 1);
-        for (auto i = 0; i < fpos; ++i)
-            setSourceRef(&upd.refs[i], ss, refs[i].pos, refs[i].len);
-        setUpdateRef(&upd.refs[fpos], ss);
-        for (auto i = fpos; i < refs.size(); ++i)
-            setSourceRef(&upd.refs[i + 1], ss, refs[i].pos, refs[i].len);
-        return upd;
-    }
-
-    *inext = refs[fpos].pos;
-    upd.refs = ss->heap->allocSpan<NodeRef>(refs.size());
-
-    auto fnode = getNode(ss, refs[fpos].pos);
-    auto rpno = (pgno_t) -1;
-    pmr::basic_string<LocalRef> rrefs;
-    if (nodeType(fnode) == kNodeRemote) {
-        rpno = remotePage(fnode);
-        fnode = getNode(ss, rpno, 0);
-        if (nodeType(fnode) == kNodeMultiroot) {
-            auto pgno = ss->pgno;
-            auto inode = ss->inode;
-            seekPage(ss, rpno);
-            seekNode(ss, 0);
-            rrefs = kids(ss, 0);
-            seekPage(ss, pgno);
-            seekNode(ss, inode);
-        }
-    }
-    for (auto i = 0; i < refs.size(); ++i) {
-        if (i == fpos) {
-            setUpdateRef(&upd.refs[i], ss);
-            continue;
-        }
-        if (rpno == -1) {
-            setSourceRef(&upd.refs[i], ss, refs[i].pos, refs[i].len);
-            continue;
-        }
-        fnode = getNode(ss, refs[i].pos);
-        if (nodeType(fnode) == kNodeRemote && rpno == remotePage(fnode)) {
-            assert(!rrefs.empty());
-            auto & rref = rrefs[remotePos(fnode)];
-            setSourceRef(&upd.refs[i], ss, rref.pos, rref.len);
-            upd.refs[i].page.pgno = rpno;
-        } else {
-            setSourceRef(&upd.refs[i], ss, refs[i].pos, refs[i].len);
-        }
-    }
-    return upd;
-}
-
-//===========================================================================
-// Returns true if there is more to do; otherwise false and sets ss->found
-static bool insertAtFork (SearchState * ss) {
-    // Will either add branch to fork, or will advance to next node.
-
-    int inext;
-    if (ss->kpos == ss->klen) {
-        if (!nodeEndMarkFlag(ss->node)) {
-            copyForkWithKey(ss, &inext);
-            ss->found = false;
-        } else {
-            ss->found = true;
-        }
-        return false;
-    }
-
-    copyForkWithKey(ss, &inext);
-    bool matched = forkBit(ss->node, ss->kval);
-    if (++ss->kpos != ss->klen)
-        ss->kval = keyVal(ss->key, ss->kpos);
-    if (matched) {
-        seekNode(ss, inext);
-        return true;
-    } else {
-        if (ss->kpos == ss->klen)
-            newUpdate<UpdateEndMark>(ss);
-        ss->found = false;
-        return false;
-    }
-}
-
-//===========================================================================
-// Returns true if there is more to do; otherwise false and sets ss->found
-static bool insertAtEndMark(SearchState * ss) {
-    assert(ss->kpos % 2 == 0);
-    if (ss->kpos == ss->klen) {
-        ss->found = true;
-        return false;
-    }
-
-    // Fork key with end mark.
-    // 
-    // Key "a" [61] -> EndMark
-    //  +-----------+  +--------+
-    //  | Fork-- 6  |--| Half 1 |
-    //  |   |       |  +--------+
-    //  |   |       |
-    //  |   +-- EOK |
-    //  +-----------+
-    addForkWithEnd(ss, ss->kval, true);
-    ss->kval = keyVal(ss->key, ++ss->kpos);
-    ss->found = false;
-    return false;
-}
-
-//===========================================================================
-// Returns true if there is more to do; otherwise false and sets ss->found
-static bool insertAtRemote(SearchState * ss) {
-    seekRemote(ss, ss->inode);
-    ss->spages.insert(ss->pgno);
-    return true;
-}
-
-//===========================================================================
-static void addSegs(SearchState * ss) {
-    assert(ss->kpos <= ss->klen);
-    if (ss->kpos % 2 == 1) 
-        addKeyHalfSeg(ss);
-    while (int slen = ss->klen - ss->kpos) {
-        assert(slen > 1);
-        auto & upd = newUpdate<UpdateSeg>(ss);
-        if (slen > kMaxSegLen) {
-            upd.keyLen = kMaxSegLen;
-            upd.refs = { newRef(ss), 1 };
-        } else {
-            upd.keyLen = slen;
-            upd.endOfKey = true;
-        }
-        upd.key = ss->heap->alloc<uint8_t>(upd.keyLen / 2);
-        memcpy(upd.key, ss->key.data() + ss->kpos / 2, upd.keyLen / 2);
-        ss->kpos += upd.keyLen;
-    }
-}
 
 static void copyAny(SearchState * ss, const UpdateBase & upd);
 
@@ -1539,15 +1090,513 @@ static void applyUpdates(SearchState * ss) {
     }
 }
 
+
+/****************************************************************************
+*
+*   Update helpers
+*
+***/
+
+//===========================================================================
+static NodeRef * addHalfSeg(SearchState * ss, uint8_t val, bool eok) {
+    auto & upd = newUpdate<UpdateHalfSeg>(ss);
+    upd.nibble = val;
+    if (eok) {
+        upd.endOfKey = true;
+        return nullptr;
+    }
+    auto ref = newRef(ss);
+    upd.refs = {ref, 1};
+    return &upd.refs[0];
+}
+
+//===========================================================================
+static void addKeyHalfSeg(SearchState * ss) {
+    auto kval = ss->kval;
+    addHalfSeg(ss, kval, !nextKeyVal(ss));
+}
+
+//===========================================================================
+static NodeRef * addForkWithEnd(
+    SearchState * ss, 
+    size_t pos, 
+    bool withNewRef
+) {
+    auto & fork = newUpdate<UpdateFork>(ss);
+    fork.endOfKey = true;
+    setForkBit(&fork, pos, true);
+    NodeRef * ref = nullptr;
+    if (withNewRef) {
+        ref = newRef(ss);
+    } else {
+        ref = ss->heap->emplace<NodeRef>();
+    }
+    fork.refs = {ref, 1};
+    return &fork.refs[0];
+}
+
+//===========================================================================
+[[nodiscard]] static pair<NodeRef *, NodeRef *> addFork(
+    SearchState * ss, 
+    size_t sval,
+    size_t kval
+) {
+    assert(sval != kval);
+    auto & fork = newUpdate<UpdateFork>(ss);
+    setForkBit(&fork, sval, true);
+    setForkBit(&fork, ss->kval, true);
+    fork.refs = ss->heap->allocSpan<NodeRef>(2);
+    if (sval < kval) {
+        return { &fork.refs[0], &fork.refs[1] };
+    } else {
+        return { &fork.refs[1], &fork.refs[0] };
+    }
+}
+
+//===========================================================================
+static void copySegPrefix(SearchState * ss, size_t pos) {
+    assert(nodeType(ss->node) == kNodeSeg);
+    assert(pos <= segLen(ss->node));
+    assert(pos % 2 == 0);
+    // TODO: merge with preceeding NodeSeg if present.
+    if (!pos) 
+        return;
+    auto & upd = newUpdate<UpdateSeg>(ss);
+    upd.keyLen = (int) pos;
+    auto len8 = upd.keyLen / 2;
+    upd.key = ss->heap->alloc<uint8_t>(len8);
+    auto data = segData(ss->node);
+    memcpy(upd.key, data, len8);
+    upd.refs = { newRef(ss), 1 };
+}
+
+//===========================================================================
+static void copyRef(SearchState * ss, NodeRef * ref) {
+    if (nodeEndMarkFlag(ss->node)) {
+        setUpdateRef(ref, ss);
+        newUpdate<UpdateEndMark>(ss);
+    } else {
+        auto hdrLen = nodeHdrLen(ss->node);
+        setSourceRef(
+            ref, 
+            ss, 
+            ss->inode + hdrLen, 
+            nodeLen(ss->node + hdrLen)
+        );
+    }    
+}
+
+//===========================================================================
+static void copyKeyRef(SearchState * ss, NodeRef * ref) {
+    setUpdateRef(ref, ss);
+    if (!nextKeyVal(ss))
+        newUpdate<UpdateEndMark>(ss);
+}
+
+//===========================================================================
+static void copySegSuffix(SearchState * ss, NodeRef * ref, size_t pos) {
+    assert(nodeType(ss->node) == kNodeSeg);
+    assert(pos <= segLen(ss->node));
+    assert(pos % 2 == 0);
+    auto len = segLen(ss->node) - pos;
+    if (!len) {
+        copyRef(ss, ref);
+        return;
+    }
+
+    setUpdateRef(ref, ss);
+    auto & upd = newUpdate<UpdateSeg>(ss);
+    upd.keyLen = (int) len;
+    auto len8 = upd.keyLen / 2;
+    upd.key = ss->heap->alloc<uint8_t>(len8);
+    auto data = segData(ss->node);
+    memcpy(upd.key, data + pos / 2, len8);
+    if (nodeEndMarkFlag(ss->node)) {
+        upd.endOfKey = true;
+        return;
+    } 
+    // TODO: merge with following NodeSeg if present.
+    auto hdrLen = nodeHdrLen(ss->node);
+    auto srcRef = newRef(ss, ss->inode + hdrLen, nodeLen(ss->node + hdrLen));
+    upd.refs = { srcRef, 1 };
+}
+
+//===========================================================================
+static void copyHalfSegSuffix(SearchState * ss, size_t spos) {
+    assert(nodeType(ss->node) == kNodeSeg);
+    auto sval = segVal(ss->node, ++spos);
+    auto slen = segLen(ss->node);
+    if (spos + 1 == slen && nodeEndMarkFlag(ss->node)) {
+        addHalfSeg(ss, sval, true);
+    } else {
+        auto ref = addHalfSeg(ss, sval, false);
+        copySegSuffix(ss, ref, spos + 1);
+    }
+}
+
+
+/****************************************************************************
+*
+*   Insert
+*
+***/
+
+//===========================================================================
+// If the search should continue:
+//      returns true
+//      sets ss->node and ss->inode to the next node
+// If the search is over:
+//      returns false
+//      sets ss->found to true if the key was found, otherwise false
+static bool insertAtSeg(SearchState * ss) {
+    // Will either split on first, middle, last, after last (possible if it's
+    // the end of the key), or will advance to next node.
+
+    assert(ss->kpos % 2 == 0);
+    auto spos = 0; // split point where key diverges from segment
+    auto slen = segLen(ss->node);
+    auto sval = segVal(ss->node, spos);
+    assert(slen > 0);
+
+    for (;;) {
+        if (ss->kpos == ss->klen) {
+            // Fork end of key with position in the segment.
+            // 
+            // Key "a" [61] -> Seg "abc" [61 62 63]
+            //  +---------+  +-----------+
+            //  | Seg "a" |--| Fork--EOK |
+            //  +---------+  |   |       |
+            //               |   |       |  +--------+  +---------+
+            //               |   +--  6  |--| Half 2 |--| Seg "c" |
+            //               +-----------+  +--------+  +---------+
+            copySegPrefix(ss, spos);
+            addForkWithEnd(ss, sval, true);
+            copyHalfSegSuffix(ss, spos);
+            break;
+        }
+        if (ss->kval != sval) {
+            // Fork inside the key and the segment.
+            if (spos % 2 == 0) {
+                // Fork in the first half of the byte.
+                // 
+                // Key "ayz" [61 79 7a] -> Seg "abc" [61 62 63]
+                //  +---------+  +-----------+  +--------+  +----------+
+                //  | Seg "a" |--| Fork-- 6  |--| Half 2 |--| Seg "c"  |
+                //  +---------+  |   |       |  +--------+  +----------+
+                //               |   |       |  +--------+  +----------+
+                //               |   +--  7  |--| Half 9 |--| Seg "z"  |
+                //               +-----------+  +--------+  +----------+
+                copySegPrefix(ss, spos);
+                auto [sref, kref] = addFork(ss, sval, ss->kval);
+                setUpdateRef(sref, ss);
+                copyHalfSegSuffix(ss, spos);
+                setUpdateRef(kref, ss);
+                nextKeyVal(ss);
+                addKeyHalfSeg(ss);
+                break;
+            } else {
+                // Fork in the second half of the byte.
+                // 
+                // Key "aef" [61 65 66] -> Seg "abc" [61 62 63]
+                //  +---------+  +--------+  +-----------+  +----------+
+                //  | Seg "a" |--| Half 6 |--| Fork-- 2  |--| Seg "c"  |
+                //  +---------+  +--------+  |   |       |  +----------+
+                //                           |   |       |  +----------+
+                //                           |   +--  5  |--| Seg "f"  |
+                //                           +-----------+  +----------+
+                copySegPrefix(ss, spos - 1);
+                addHalfSeg(ss, segVal(ss->node, spos - 1), false);
+                auto [sref, kref] = addFork(ss, sval, ss->kval);
+                copySegSuffix(ss, sref, spos + 1);
+                copyKeyRef(ss, kref);
+                break;
+            }
+        }
+        nextKeyVal(ss);
+        if (++spos == slen) {
+            if (nodeEndMarkFlag(ss->node)) {
+                if (ss->kpos == ss->klen) {
+                    // End of both segment and key? Key was found, abort.
+                    ss->found = true;
+                    return false;
+                }
+                // Fork key with the end mark that's after the segment.
+                // 
+                // Key "abcdef" [61 62 63 64 65 66] -> Seg "abc" [61 62 63]
+                //  +-----------+  +-----------+  +--------+  +----------+
+                //  | Seg "abc" |--| Fork-- 6  |--| Half 4 |--| Seg "ef" |
+                //  +-----------+  |   |       |  +--------+  +----------+
+                //                 |   |       |
+                //                 |   +-- EOK |
+                //                 +-----------+
+                copySegPrefix(ss, spos);
+                addForkWithEnd(ss, ss->kval, true);
+                nextKeyVal(ss);
+                addKeyHalfSeg(ss);
+                break;
+            }
+            // Continue search at next node
+            copySegPrefix(ss, spos);
+            seekKid(ss, 0);
+            return true;
+        }
+        sval = segVal(ss->node, spos);
+    }
+
+    // Continue processing the key.
+    assert(ss->kpos % 2 == 0);
+    ss->found = false;
+    return false;
+}
+
+//===========================================================================
+static UpdateHalfSeg & copyHalfSeg(SearchState * ss, bool eok) {
+    assert(nodeType(ss->node) == kNodeHalfSeg);
+    auto & upd = newUpdate<UpdateHalfSeg>(ss);
+    upd.nibble = halfSegVal(ss->node);
+    if (eok) {
+        upd.endOfKey = true;
+    } else {
+        auto ref = newRef(ss);
+        upd.refs = { ref, 1 };
+    }
+    return upd;
+}
+
+//===========================================================================
+// Returns true if there is more to do; otherwise false and sets ss->found
+static bool insertAtHalfSeg (SearchState * ss) {
+    // Will either split on value, after value (possible if it's the end of the
+    // key), or will advance to next node.
+
+    auto sval = halfSegVal(ss->node);
+
+    for (;;) {
+        if (ss->kpos == ss->klen) {
+            // Fork end of key with half seg.
+            //
+            // Key "" [] -> Half 6
+            //  +-----------+
+            //  | Fork--EOK |
+            //  |   |       |
+            //  |   |       |
+            //  |   +--  6  |
+            //  +-----------+
+            auto ref = addForkWithEnd(ss, sval, false);
+            copyRef(ss, ref);
+            break;
+        }
+        if (ss->kval != sval) {
+            // Fork inside the key with the half seg.
+            //
+            // Key "a" [61] -> Half 7
+            //  +-----------+  +--------+
+            //  | Fork-- 6  |--| Half 1 |
+            //  |   |       |  +--------+
+            //  |   |       |
+            //  |   +--  7  |
+            //  +-----------+
+            auto [sref, kref] = addFork(ss, sval, ss->kval);
+            copyRef(ss, sref);
+            copyKeyRef(ss, kref);
+            break;
+        }
+        nextKeyVal(ss);
+        if (nodeEndMarkFlag(ss->node)) {
+            if (ss->kpos == ss->klen) {
+                // End of both key and half seg? Key was found, abort.
+                ss->found = true;
+                return false;
+            }
+            // Fork key with the end mark that's after the half seg.
+            //
+            // Key "ab" [61 62] -> Half 6
+            //  +--------+  +-----------+  +---------+
+            //  | Half 6 |--| Fork-- 1  |--| Seg "b" |
+            //  +--------+  |   |       |  +---------+
+            //              |   |       |
+            //              |   +-- EOK |
+            //              +-----------+
+            copyHalfSeg(ss, false);
+            addForkWithEnd(ss, ss->kval, true);
+            nextKeyVal(ss);
+            break;
+        }
+        // Continue search at next node
+        copyHalfSeg(ss, false);
+        seekKid(ss, 0);
+        return true;
+    }
+
+    // Continue processing the key.
+    ss->found = false;
+    return false;
+}
+
+//===========================================================================
+static UpdateFork & copyForkWithKey(SearchState * ss, int * inext) {
+    assert(nodeType(ss->node) == kNodeFork);
+    *inext = -1;
+
+    auto & upd = newUpdate<UpdateFork>(ss);
+    auto bits = forkBits(ss->node);
+    auto refs = kids(ss, ss->inode);
+
+    if (ss->kpos == ss->klen) {
+        upd.refs = ss->heap->allocSpan<NodeRef>(refs.size());
+        upd.endOfKey = true;
+        upd.kidBits = bits;
+        for (auto i = 0; i < refs.size(); ++i)
+            setSourceRef(&upd.refs[i], ss, refs[i].pos, refs[i].len);
+        return upd;
+    }
+
+    upd.endOfKey = nodeEndMarkFlag(ss->node);
+    upd.kidBits = setForkBit(bits, ss->kval, true);
+    auto fpos = forkPos(upd.kidBits, ss->kval);
+    if (bits != upd.kidBits) {
+        upd.refs = ss->heap->allocSpan<NodeRef>(refs.size() + 1);
+        for (auto i = 0; i < fpos; ++i)
+            setSourceRef(&upd.refs[i], ss, refs[i].pos, refs[i].len);
+        setUpdateRef(&upd.refs[fpos], ss);
+        for (auto i = fpos; i < refs.size(); ++i)
+            setSourceRef(&upd.refs[i + 1], ss, refs[i].pos, refs[i].len);
+        return upd;
+    }
+
+    *inext = refs[fpos].pos;
+    upd.refs = ss->heap->allocSpan<NodeRef>(refs.size());
+
+    auto fnode = getNode(ss, refs[fpos].pos);
+    auto rpno = (pgno_t) -1;
+    pmr::basic_string<LocalRef> rrefs;
+    if (nodeType(fnode) == kNodeRemote) {
+        rpno = remotePage(fnode);
+        fnode = getNode(ss, rpno, 0);
+        if (nodeType(fnode) == kNodeMultiroot) {
+            auto pgno = ss->pgno;
+            auto inode = ss->inode;
+            seekPage(ss, rpno);
+            seekNode(ss, 0);
+            rrefs = kids(ss, 0);
+            seekPage(ss, pgno);
+            seekNode(ss, inode);
+        }
+    }
+    for (auto i = 0; i < refs.size(); ++i) {
+        if (i == fpos) {
+            setUpdateRef(&upd.refs[i], ss);
+            continue;
+        }
+        if (rpno == -1) {
+            setSourceRef(&upd.refs[i], ss, refs[i].pos, refs[i].len);
+            continue;
+        }
+        fnode = getNode(ss, refs[i].pos);
+        if (nodeType(fnode) == kNodeRemote && rpno == remotePage(fnode)) {
+            assert(!rrefs.empty());
+            auto & rref = rrefs[remotePos(fnode)];
+            setSourceRef(&upd.refs[i], ss, rref.pos, rref.len);
+            upd.refs[i].page.pgno = rpno;
+        } else {
+            setSourceRef(&upd.refs[i], ss, refs[i].pos, refs[i].len);
+        }
+    }
+    return upd;
+}
+
+//===========================================================================
+// Returns true if there is more to do; otherwise false and sets ss->found
+static bool insertAtFork (SearchState * ss) {
+    // Will either add branch to fork, or will advance to next node.
+
+    int inext;
+    if (ss->kpos == ss->klen) {
+        if (!nodeEndMarkFlag(ss->node)) {
+            copyForkWithKey(ss, &inext);
+            ss->found = false;
+        } else {
+            ss->found = true;
+        }
+        return false;
+    }
+
+    copyForkWithKey(ss, &inext);
+    bool matched = forkBit(ss->node, ss->kval);
+    nextKeyVal(ss);
+    if (matched) {
+        seekNode(ss, inext);
+        return true;
+    } else {
+        if (ss->kpos == ss->klen)
+            newUpdate<UpdateEndMark>(ss);
+        ss->found = false;
+        return false;
+    }
+}
+
+//===========================================================================
+// Returns true if there is more to do; otherwise false and sets ss->found
+static bool insertAtEndMark(SearchState * ss) {
+    assert(ss->kpos % 2 == 0);
+    if (ss->kpos == ss->klen) {
+        ss->found = true;
+        return false;
+    }
+
+    // Fork key with end mark.
+    // 
+    // Key "a" [61] -> EndMark
+    //  +-----------+  +--------+
+    //  | Fork-- 6  |--| Half 1 |
+    //  |   |       |  +--------+
+    //  |   |       |
+    //  |   +-- EOK |
+    //  +-----------+
+    addForkWithEnd(ss, ss->kval, true);
+    nextKeyVal(ss);
+    ss->found = false;
+    return false;
+}
+
+//===========================================================================
+// Returns true if there is more to do; otherwise false and sets ss->found
+static bool insertAtRemote(SearchState * ss) {
+    seekRemote(ss, ss->inode);
+    ss->spages.insert(ss->pgno);
+    return true;
+}
+
+//===========================================================================
+static void addSegs(SearchState * ss) {
+    assert(ss->kpos <= ss->klen);
+    if (ss->kpos % 2 == 1) 
+        addKeyHalfSeg(ss);
+    while (int slen = ss->klen - ss->kpos) {
+        assert(slen > 1);
+        auto & upd = newUpdate<UpdateSeg>(ss);
+        if (slen > kMaxSegLen) {
+            upd.keyLen = kMaxSegLen;
+            upd.refs = { newRef(ss), 1 };
+        } else {
+            upd.keyLen = slen;
+            upd.endOfKey = true;
+        }
+        upd.key = ss->heap->alloc<uint8_t>(upd.keyLen / 2);
+        memcpy(upd.key, ss->key.data() + ss->kpos / 2, upd.keyLen / 2);
+        ss->kpos += upd.keyLen;
+    }
+}
+
 //===========================================================================
 // Returns true if key was inserted, false if it was already present.
 bool StrTrieBase::insert(string_view key) {
     TempHeap heap;
-    auto ss = heap.emplace<SearchState>(key, m_pages, &heap, debugStream());
+    auto ss = Node::makeState(&heap, this, key, false);
     if (!empty()) {
         seekRootPage(ss);
-        ss->spages.insert(ss->pgno);
         seekNode(ss, ss->inode);
+        ss->spages.insert(ss->pgno);
 
         using Fn = bool(SearchState *);
         constinit static Fn * const functs[] = {
@@ -1601,7 +1650,7 @@ static bool findLastForkAtSeg(SearchState * ss) {
         auto sval = segVal(ss->node, spos);
         if (sval != ss->kval)
             return false;
-        ss->kval = keyVal(ss->key, ++ss->kpos);
+        nextKeyVal(ss);
     }
     if (ss->kpos == ss->klen) {
         ss->found = nodeEndMarkFlag(ss->node);
@@ -1630,7 +1679,7 @@ static bool findLastForkAtFork(SearchState * ss) {
             break;
         }
     }
-    ss->kval = keyVal(ss->key, ++ss->kpos);
+    nextKeyVal(ss);
     auto sub = subs.back();
     seekNode(ss, sub.pos + sub.len);
     return true;
@@ -1662,8 +1711,7 @@ bool StrTrieBase::erase(string_view key) {
         return false;
 
     TempHeap heap;
-    auto ss = heap.emplace<SearchState>(key, m_pages, &heap, debugStream());
-    seekRootPage(ss);
+    auto ss = Node::makeState(&heap, this, key);
 
     findLastFork(ss);
     if (!ss->found)
@@ -1694,9 +1742,8 @@ static bool containsAtSeg(SearchState * ss) {
     if (memcmp(ss->key.data() + ss->kpos / 2, segData(ss->node), slen / 2))
         return false;
 
-    ss->kpos += slen;
-    if (ss->kpos != ss->klen)
-        ss->kval = keyVal(ss->key, ss->kpos);
+    ss->kpos += slen - 1;
+    nextKeyVal(ss);
     if (nodeEndMarkFlag(ss->node)) {
         if (ss->kpos == ss->klen) 
             ss->found = true;
@@ -1714,8 +1761,7 @@ static bool containsAtHalfSeg(SearchState * ss) {
     if (ss->kval != sval)
         return false;
 
-    if (++ss->kpos != ss->klen) 
-        ss->kval = keyVal(ss->key, ss->kpos);
+    nextKeyVal(ss);
     if (nodeEndMarkFlag(ss->node)) {
         if (ss->kpos == ss->klen) 
             ss->found = true;
@@ -1737,8 +1783,7 @@ static bool containsAtFork(SearchState * ss) {
     auto pos = forkPos(ss->node, ss->kval);
     seekKid(ss, pos);
     // Advance kpos *after* using the old kval to get forkPos.
-    if (++ss->kpos != ss->klen) 
-        ss->kval = keyVal(ss->key, ss->kpos);
+    nextKeyVal(ss);
     return true;
 }
 
@@ -1761,9 +1806,7 @@ bool StrTrieBase::contains(string_view key) const {
         return false;
 
     TempHeap heap;
-    auto ss = heap.emplace<SearchState>(key, m_pages, &heap, debugStream());
-    seekRootPage(ss);
-    seekNode(ss, ss->inode);
+    auto ss = Node::makeState(&heap, this, key);
 
     using Fn = bool(SearchState *);
     constinit static Fn * const functs[] = {
@@ -1788,7 +1831,7 @@ bool StrTrieBase::contains(string_view key) const {
 
 /****************************************************************************
 *
-*   Search Helpers
+*   Find Helpers
 *
 ***/
 
@@ -1816,36 +1859,10 @@ static void pushFoundKeyVal(SearchState * ss, int val) {
 }
 
 //===========================================================================
-static void seekNextFork(SearchState * ss) {
-    while (!ss->forks.empty()) {
-        auto & fork = ss->forks.back();
-        seekPage(ss, fork.pgno);
-        seekNode(ss, fork.inode);
-        int nval = -1;
-        if (fork.kpos == ss->klen) {
-            nval = firstForkVal(forkBits(ss->node));
-        } else {
-            ss->kval = keyVal(ss->key, fork.kpos);
-            nval = nextForkVal(forkBits(ss->node), ss->kval);
-        }
-        if (nval == -1) {
-            ss->forks.pop_back();
-            continue;
-        }
-
-        // Found alternate fork
-        ss->kpos = fork.kpos;
-        setFoundKey(ss);
-        ss->kpos += 1;
-        ss->kval = (uint8_t) nval;
-        pushFoundKeyVal(ss, ss->kval);
-        auto pos = forkPos(ss->node, ss->kval);
-        seekKid(ss, pos);
-        return;
-    }
-
-    ss->inode = 0;
-    ss->node = nullptr;
+static void pushFoundKeyVal(SearchState * ss, string_view val) {
+    assert(ss->foundKeyLen % 2 == 0);
+    ss->foundKey += val;
+    ss->foundKeyLen += 2 * val.size();
 }
 
 //===========================================================================
@@ -1853,9 +1870,7 @@ static void seekFront(SearchState * ss) {
     for (;;) {
         auto ntype = nodeType(ss->node);
         if (ntype == kNodeSeg) {
-            auto slen = segLen(ss->node);
-            ss->foundKey.append((const char *) segData(ss->node), slen / 2);
-            ss->foundKeyLen += slen;
+            pushFoundKeyVal(ss, segView(ss->node));
             if (nodeEndMarkFlag(ss->node))
                 break;
             seekKid(ss, 0);
@@ -1885,7 +1900,76 @@ static void seekFront(SearchState * ss) {
 }
 
 //===========================================================================
-static void seekPrevFork(SearchState * ss) {
+static void seekNext(SearchState * ss) {
+    while (!ss->forks.empty()) {
+        auto & fork = ss->forks.back();
+        seekPage(ss, fork.pgno);
+        seekNode(ss, fork.inode);
+        int nval = -1;
+        if (fork.kpos == ss->klen) {
+            nval = firstForkVal(forkBits(ss->node));
+        } else {
+            ss->kval = keyVal(ss->key, fork.kpos);
+            nval = nextForkVal(forkBits(ss->node), ss->kval);
+        }
+        if (nval == -1) {
+            ss->forks.pop_back();
+            continue;
+        }
+
+        // Found alternate fork
+        ss->kpos = fork.kpos;
+        setFoundKey(ss);
+        ss->kpos += 1;
+        ss->kval = (uint8_t) nval;
+        pushFoundKeyVal(ss, ss->kval);
+        auto pos = forkPos(ss->node, ss->kval);
+        seekKid(ss, pos);
+        seekFront(ss);
+        return;
+    }
+
+    ss->inode = 0;
+    ss->node = nullptr;
+}
+
+//===========================================================================
+static void seekBack(SearchState * ss) {
+    for (;;) {
+        auto ntype = nodeType(ss->node);
+        if (ntype == kNodeSeg) {
+            pushFoundKeyVal(ss, segView(ss->node));
+            if (nodeEndMarkFlag(ss->node))
+                break;
+            seekKid(ss, 0);
+        } else if (ntype == kNodeHalfSeg) {
+            pushFoundKeyVal(ss, halfSegVal(ss->node));
+            if (nodeEndMarkFlag(ss->node))
+                break;
+            seekKid(ss, 0);
+        } else if (ntype == kNodeFork) {
+            auto & fork = ss->forks.emplace_back();
+            fork.kpos = (int) ss->foundKeyLen;
+            fork.pgno = ss->pgno;
+            fork.inode = ss->inode;
+            auto bits = forkBits(ss->node);
+            auto sval = lastForkVal(bits);
+            pushFoundKeyVal(ss, sval);
+            auto pos = forkLen(ss->node) - 1;
+            if (nodeEndMarkFlag(ss->node))
+                pos += 1;
+            seekKid(ss, pos);
+        } else if (ntype == kNodeEndMark) {
+            break;
+        } else {
+            assert(ntype == kNodeRemote);
+            seekRemote(ss, ss->inode);
+        }
+    }
+}
+
+//===========================================================================
+static void seekPrev(SearchState * ss) {
     while (!ss->forks.empty()) {
         auto & fork = ss->forks.back();
         seekPage(ss, fork.pgno);
@@ -1904,56 +1988,19 @@ static void seekPrevFork(SearchState * ss) {
         // Found alternate fork
         ss->kpos = fork.kpos;
         setFoundKey(ss);
-        int pos = 0;
         if (nval != -1) {
             ss->kpos += 1;
             ss->kval = (uint8_t) nval;
             pushFoundKeyVal(ss, ss->kval);
-            pos = forkPos(ss->node, ss->kval);
+            auto pos = forkPos(ss->node, ss->kval);
+            seekKid(ss, pos);
+            seekBack(ss);
         }
-        seekKid(ss, pos);
         return;
     }
 
     ss->inode = 0;
     ss->node = nullptr;
-}
-
-//===========================================================================
-static void seekBack(SearchState * ss) {
-    for (;;) {
-        auto ntype = nodeType(ss->node);
-        if (ntype == kNodeSeg) {
-            auto slen = segLen(ss->node);
-            ss->foundKey.append((const char *) segData(ss->node), slen / 2);
-            ss->foundKeyLen += slen;
-            if (nodeEndMarkFlag(ss->node))
-                break;
-            seekKid(ss, 0);
-        } else if (ntype == kNodeHalfSeg) {
-            pushFoundKeyVal(ss, halfSegVal(ss->node));
-            if (nodeEndMarkFlag(ss->node))
-                break;
-            seekKid(ss, 0);
-        } else if (ntype == kNodeFork) {
-            auto & fork = ss->forks.emplace_back();
-            fork.kpos = (int) ss->foundKeyLen;
-            fork.pgno = ss->pgno;
-            fork.inode = ss->inode;
-            auto bits = forkBits(ss->node);
-            auto sval = lastForkVal(bits);
-            pushFoundKeyVal(ss, sval);
-            auto pos = popcount(bits) - 1;
-            if (nodeEndMarkFlag(ss->node))
-                pos += 1;
-            seekKid(ss, pos);
-        } else if (ntype == kNodeEndMark) {
-            break;
-        } else {
-            assert(ntype == kNodeRemote);
-            seekRemote(ss, ss->inode);
-        }
-    }
 }
 
 
@@ -2008,21 +2055,16 @@ StrTrieBase::Iter & StrTrieBase::Iter::operator++() {
     }
 
     TempHeap heap;
-    auto ss = heap.emplace<SearchState>(
-        m_impl->current, 
-        m_impl->cont->m_pages,
-        &heap,
-        nullptr
-    );
+    auto ss = Node::makeState(&heap, m_impl->cont, m_impl->current);
     if (m_impl->endMark) {
         seekRootPage(ss);
         seekNode(ss, ss->inode);
+        seekFront(ss);
     } else {
         ss->forks.assign(m_impl->forks.begin(), m_impl->forks.end());
-        seekNextFork(ss);
+        seekNext(ss);
     }
     if (ss->node) {
-        seekFront(ss);
         m_impl->current = ss->foundKey;
         m_impl->forks.assign(ss->forks.begin(), ss->forks.end());
         m_impl->endMark = false;
@@ -2042,21 +2084,16 @@ StrTrieBase::Iter & StrTrieBase::Iter::operator--() {
     }
 
     TempHeap heap;
-    auto ss = heap.emplace<SearchState>(
-        m_impl->current, 
-        m_impl->cont->m_pages,
-        &heap,
-        nullptr
-    );
+    auto ss = Node::makeState(&heap, m_impl->cont, m_impl->current);
     if (m_impl->endMark) {
         seekRootPage(ss);
         seekNode(ss, ss->inode);
+        seekBack(ss);
     } else {
         ss->forks.assign(m_impl->forks.begin(), m_impl->forks.end());
-        seekPrevFork(ss);
+        seekPrev(ss);
     }
     if (ss->node) {
-        seekBack(ss);
         m_impl->current = ss->foundKey;
         m_impl->forks.assign(ss->forks.begin(), ss->forks.end());
         m_impl->endMark = false;
@@ -2071,12 +2108,31 @@ StrTrieBase::Iter & StrTrieBase::Iter::operator--() {
 
 /****************************************************************************
 *
-*   lowerBound
+*   find
 *
 ***/
 
 //===========================================================================
-static bool lowerBoundAtSeg(SearchState * ss) {
+// Can be called from findAtSeg() and findAtHalfSeg().
+template<bool kLess, bool kGreater, bool kEqual>
+static bool findAtEndMark(SearchState * ss) {
+    if constexpr (kEqual) {
+        if (ss->kpos == ss->klen) {
+            setFoundKey(ss);
+            return false;
+        }
+    }
+    if constexpr (kLess) {
+        seekPrev(ss);
+    } else if constexpr (kGreater) {
+        seekNext(ss);
+    }
+    return false;
+}
+
+//===========================================================================
+template<bool kLess, bool kGreater, bool kEqual>
+static bool findAtSeg(SearchState * ss) {
     auto slen = segLen(ss->node);
     int rc = 0;
 
@@ -2090,76 +2146,109 @@ static bool lowerBoundAtSeg(SearchState * ss) {
         rc = memcmp(kdata, segData(ss->node), slen / 2);
     }
 
-    if (rc < 0) {
-        setFoundKey(ss);
-        ss->foundKey.append((const char *) segData(ss->node), slen / 2);
-        ss->foundKeyLen += slen;
-        if (nodeEndMarkFlag(ss->node)) {
-            ss->inode = 0;
-            ss->node = nullptr;
-        } else {
-            seekKid(ss, 0);
-        }
-        return false;
-    } else if (rc > 0) {
-        seekNextFork(ss);
-        return false;
-    } else {
-        if (nodeEndMarkFlag(ss->node)) {
-            if (ss->kpos == ss->klen) {
-                setFoundKey(ss);
-                ss->inode = 0;
-                ss->node = nullptr;
-            } else {
-                seekNextFork(ss);
-            }
-            return false;
-        }
-        ss->kpos += slen;
-        if (ss->kpos != ss->klen)
-            ss->kval = keyVal(ss->key, ss->kpos);
+    if (rc == 0) {
+        ss->kpos += slen - 1;
+        nextKeyVal(ss);
+        if (nodeEndMarkFlag(ss->node))
+            return findAtEndMark<kLess, kGreater, kEqual>(ss);
         seekKid(ss, 0);
         return true;
     }
+
+    if constexpr (!kLess && !kGreater) {
+        // Not found and must be equal? Fail.
+        ss->inode = 0;
+        ss->node = nullptr;
+    } else if (kLess) {
+        // Not found, use nearest value.
+        if (rc > 0) {
+            // Back up to nearest fork and walk down adjacent branch.
+            seekPrev(ss);
+        } else {
+            // Continue down this chain.
+            setFoundKey(ss);
+            pushFoundKeyVal(ss, segView(ss->node));
+            seekKid(ss, 0);
+            seekBack(ss);
+        }
+    } else if (kGreater) {
+        // Not found, use nearest value.
+        if (rc < 0) {
+            // Back up to nearest fork and walk down adjacent branch.
+            seekNext(ss);
+        } else {
+            // Continue down this chain.
+            setFoundKey(ss);
+            pushFoundKeyVal(ss, segView(ss->node));
+            seekKid(ss, 0);
+            seekFront(ss);
+        }
+    }
+    return false;
 }
 
 //===========================================================================
-static bool lowerBoundAtHalfSeg(SearchState * ss) {
+template<bool kLess, bool kGreater, bool kEqual>
+static bool findAtHalfSeg(SearchState * ss) {
     auto sval = halfSegVal(ss->node);
-    if (ss->kpos == ss->klen || ss->kval < sval) {
-        setFoundKey(ss);
-        pushFoundKeyVal(ss, sval);
-        if (nodeEndMarkFlag(ss->node)) {
-            ss->inode = 0;
-            ss->node = nullptr;
-        } else {
-            seekKid(ss, 0);
-        }
-        return false;
-    } else if (ss->kval > sval) {
-        seekNextFork(ss);
-        return false;
-    } else {
-        if (nodeEndMarkFlag(ss->node)) {
-            seekNextFork(ss);
-            return false;
-        }
-        if (++ss->kpos != ss->klen)
-            ss->kval = keyVal(ss->key, ss->kpos);
+    auto rc = ss->kpos == ss->klen
+        ? strong_ordering::less
+        : ss->kval <=> sval;
+
+    if (rc == 0) {
+        nextKeyVal(ss);
+        if (nodeEndMarkFlag(ss->node))
+            return findAtEndMark<kLess, kGreater, kEqual>(ss);
         seekKid(ss, 0);
         return true;
     }
+
+    if constexpr (!kLess && !kGreater) {
+        // Not found and must be equal? Fail.
+        ss->inode = 0;
+        ss->node = nullptr;
+    } else if (kLess) {
+        // Not found, use nearest value.
+        if (rc > 0) {
+            // Back up to nearest fork and walk down adjacent branch.
+            seekPrev(ss);
+        } else {
+            // Continue down this chain.
+            setFoundKey(ss);
+            pushFoundKeyVal(ss, sval);
+            seekKid(ss, 0);
+            seekBack(ss);
+        }
+    } else if (kGreater) {
+        // Not found, use nearest value.
+        if (rc < 0) {
+            // Back up to nearest fork and walk down adjacent branch.
+            seekNext(ss);
+        } else {
+            // Continue down this chain.
+            setFoundKey(ss);
+            pushFoundKeyVal(ss, sval);
+            seekKid(ss, 0);
+            seekFront(ss);
+        }
+    }
+    return false;
 }
 
 //===========================================================================
-static bool lowerBoundAtFork(SearchState * ss) {
+template<bool kLess, bool kGreater, bool kEqual>
+static bool findAtFork(SearchState * ss) {
     if (ss->kpos == ss->klen) {
-        setFoundKey(ss);
-        if (nodeEndMarkFlag(ss->node)) {
-            ss->inode = 0;
-            ss->node = nullptr;
-        } else {
-            seekKid(ss, 0);
+        if constexpr (kEqual) {
+            if (nodeEndMarkFlag(ss->node)) {
+                setFoundKey(ss);
+                return false;
+            }
+        }
+        if constexpr (kLess) {
+            seekPrev(ss);
+        } else if constexpr (kGreater) {
+            seekFront(ss);
         }
         return false;
     }
@@ -2170,85 +2259,137 @@ static bool lowerBoundAtFork(SearchState * ss) {
         fork.kpos = ss->kpos;
         fork.pgno = ss->pgno;
         fork.inode = ss->inode;
-        if (++ss->kpos != ss->klen)
-            ss->kval = keyVal(ss->key, ss->kpos);
         auto pos = forkPos(bits, ss->kval);
         seekKid(ss, pos);
+        // Advance kpos *after* using the old kval to get forkPos.
+        nextKeyVal(ss);
         return true;
     }
-    auto sval = nextForkVal(bits, ss->kval);
-    if (sval == -1) {
-        // kval > sval
-        seekNextFork(ss);
-        return false;
-    }
-    // kval < sval
-    setFoundKey(ss);
-    pushFoundKeyVal(ss, sval);
-    seekKid(ss, forkPos(bits, sval));
-    return false;
-}
 
-//===========================================================================
-static bool lowerBoundAtEndMark(SearchState * ss) {
-    if (ss->kpos == ss->klen) {
-        setFoundKey(ss);
+    // Not found, must be equal? fail.
+    if constexpr (!kLess && !kGreater) {
         ss->inode = 0;
         ss->node = nullptr;
-        return false;
+    } else if (kLess) {
+        // Not found, use nearest value.
+        auto sval = prevForkVal(bits, ss->kval);
+        if (sval == -1) {
+            // Back up to previous fork and walk down adjacent branch.
+            seekPrev(ss);
+        } else {
+            // Follow value down this fork.
+            setFoundKey(ss);
+            pushFoundKeyVal(ss, sval);
+            seekKid(ss, forkPos(bits, sval));
+            seekBack(ss);
+        }
+    } else if (kGreater) {
+        // Not found, use nearest value.
+        auto sval = nextForkVal(bits, ss->kval);
+        if (sval == -1) {
+            // Back up to previous fork and walk down adjacent branch.
+            seekNext(ss);
+        } else {
+            // Follow value down this fork.
+            setFoundKey(ss);
+            pushFoundKeyVal(ss, sval);
+            seekKid(ss, forkPos(bits, sval));
+            seekFront(ss);
+        }
     }
-    seekNextFork(ss);
     return false;
 }
 
 //===========================================================================
-static bool lowerBoundAtRemote(SearchState * ss) {
+template<bool kLess, bool kGreater, bool kEqual>
+static bool findAtRemote(SearchState * ss) {
     seekRemote(ss, ss->inode);
     return true;
 }
 
 //===========================================================================
-StrTrieBase::Iter StrTrieBase::lowerBound(std::string_view key) const {
-    if (empty())
-        return Iter{this};
+template<bool kLess, bool kGreater, bool kEqual>
+static StrTrieBase::Iter find(const StrTrieBase * cont,  string_view key) {
+    static_assert(!kLess || !kGreater);
+    static_assert(kLess || kGreater || kEqual);
+
+    auto out = make_shared<StrTrieBase::Iter::Impl>(cont);
+    if (cont->empty())
+        return StrTrieBase::Iter(out);
 
     TempHeap heap;
-    auto ss = heap.emplace<SearchState>(key, m_pages, &heap, debugStream());
-    seekRootPage(ss);
-    seekNode(ss, ss->inode);
+    auto ss = StrTrieBase::Node::makeState(&heap, cont, key);
 
     using Fn = bool(SearchState *);
     constinit static Fn * const functs[] = {
         logFatal,   // Invalid
         logFatal,   // Multiroot
-        lowerBoundAtSeg,
-        lowerBoundAtHalfSeg,
-        lowerBoundAtFork,
-        lowerBoundAtEndMark,
-        lowerBoundAtRemote,
+        findAtSeg<kLess, kGreater, kEqual>,
+        findAtHalfSeg<kLess, kGreater, kEqual>,
+        findAtFork<kLess, kGreater, kEqual>,
+        findAtEndMark<kLess, kGreater, kEqual>,
+        findAtRemote<kLess, kGreater, kEqual>,
         logFatal,
     };
     static_assert(size(functs) == kMaxNodeTypes);
     for (;;) {
         auto ntype = ::nodeType(ss->node);
         auto fn = functs[ntype];
-        if (!(*fn)(ss)) {
-            if (!ss->found)
-                return Iter{this};
+        if (!(*fn)(ss)) 
             break;
-        }
     }
 
     if (ss->node) {
-        seekFront(ss);
-        auto impl = make_shared<Iter::Impl>(this);
-        impl->current = ss->foundKey;
-        impl->forks.assign(ss->forks.begin(), ss->forks.end());
-        impl->endMark = false;
-        return Iter(impl);
+        out->current = ss->foundKey;
+        out->forks.assign(ss->forks.begin(), ss->forks.end());
+        out->endMark = false;
     }
+    return StrTrieBase::Iter(out);
+}
 
-    return Iter{this};
+//===========================================================================
+StrTrieBase::Iter StrTrieBase::find(string_view key) const {
+    return ::find<false, false, true>(this, key);
+}
+
+//===========================================================================
+StrTrieBase::Iter StrTrieBase::findLess(string_view key) const {
+    return ::find<true, false, false>(this, key);
+}
+
+//===========================================================================
+StrTrieBase::Iter StrTrieBase::findLessEqual(string_view key) const {
+    return ::find<true, false, true>(this, key);
+}
+
+//===========================================================================
+StrTrieBase::Iter StrTrieBase::lowerBound(string_view key) const {
+    return ::find<false, true, true>(this, key);
+}
+
+//===========================================================================
+StrTrieBase::Iter StrTrieBase::upperBound(string_view key) const {
+    return ::find<false, true, false>(this, key);
+}
+
+//===========================================================================
+auto StrTrieBase::equalRange(string_view key) const 
+    -> pair<Iter, Iter>
+{
+    auto first = lowerBound(key);
+    auto second = first && *first == key ? ++Iter(first) : first; 
+    pair<Iter, Iter> out = { move(first), move(second) };
+    return out;
+}
+
+//===========================================================================
+string StrTrieBase::front() const {
+    return *begin();
+}
+
+//===========================================================================
+string StrTrieBase::back() const {
+    return *--end();
 }
 
 
@@ -2269,7 +2410,7 @@ void StrTrie::clear() {
 }
 
 //===========================================================================
-std::ostream * const StrTrie::debugStream() const {
+ostream * const StrTrie::debugStream() const {
     return m_debug ? &cout : nullptr;
 }
 
