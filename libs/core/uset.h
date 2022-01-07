@@ -145,12 +145,12 @@ public:
     size_t count() const; // alias for size()
     size_t count(value_type val) const;
     size_t count(value_type start, size_t len) const;
-    iterator find(value_type val) const;
     bool contains(value_type val) const;
     bool contains(const IntegralSet & other) const;
     bool intersects(const IntegralSet & other) const;
-    iterator findLessEqual(value_type val) const;
+    iterator find(value_type val) const;
     iterator findLess(value_type val) const;
+    iterator findLessEqual(value_type val) const;
     iterator lowerBound(value_type val) const;  // greaterEqual
     iterator upperBound(value_type val) const;  // greater
     std::pair<iterator, iterator> equalRange(value_type val) const;
