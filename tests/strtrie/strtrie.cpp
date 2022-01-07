@@ -832,6 +832,16 @@ StrTrieBase::Iter StrTrieBase::end() const {
     return iter;
 }
 
+//===========================================================================
+StrTrieBase::reverse_iterator StrTrieBase::rbegin() const {
+    return reverse_iterator(end());
+}
+
+//===========================================================================
+StrTrieBase::reverse_iterator StrTrieBase::rend() const {
+    return reverse_iterator(begin());
+}
+
 
 /****************************************************************************
 *

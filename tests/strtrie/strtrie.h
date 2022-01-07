@@ -32,6 +32,7 @@ public:
     using value_type = std::string;
     using difference_type = ptrdiff_t;
     using iterator = Iter;
+    using reverse_iterator = reverse_circle_iterator<iterator>;
 
 public:
     StrTrieBase (IPageHeap * pages) noexcept;
@@ -41,6 +42,8 @@ public:
     // iterators
     iterator begin() const;
     iterator end() const;
+    reverse_iterator rbegin() const;
+    reverse_iterator rend() const;
 
     // capacity
     bool empty() const { return m_pages->empty(); }
