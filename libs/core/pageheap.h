@@ -103,6 +103,11 @@ inline void PageHeap<N>::destroy(size_t pgno) {
     assert(pgno < m_pages.size());
     if (!m_freePages.insert((unsigned) pgno))
         assert(!"page already free");
+    if (pgno == m_pages.size() - 1) {
+        auto epno = *m_freePages.firstContiguous(--m_freePages.end());
+        m_freePages.erase(epno, pgno - epno + 1);
+        m_pages.resize(epno);
+    }
 }
 
 //===========================================================================
