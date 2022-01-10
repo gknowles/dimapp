@@ -85,7 +85,7 @@ private:
 //===========================================================================
 template <typename T, typename Tag>
 inline TimerList<T,Tag>::TimerList(Duration timeout, Duration minWait) {
-    static_assert(std::is_base_of_v<ITimerListNotify<Tag>, T>);
+    static_assert(std::derived_from<T, ITimerListNotify<Tag>>);
     setTimeout(timeout, minWait);
 }
 

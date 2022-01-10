@@ -239,7 +239,7 @@ private:
 template <typename T, typename Tag>
 List<T, Tag>::List() {
     static_assert(
-        std::is_base_of_v<link_type, T>,
+        std::derived_from<T, link_type>,
         "List member type must be derived from ListLink<Tag>"
     );
 }
@@ -248,7 +248,7 @@ List<T, Tag>::List() {
 template <typename T, typename Tag>
 List<T, Tag>::List(List && from) noexcept {
     static_assert(
-        std::is_base_of_v<link_type, T>,
+        std::derived_from<T, link_type>,
         "List member type must be derived from ListLink<Tag>"
     );
     swap(from);
