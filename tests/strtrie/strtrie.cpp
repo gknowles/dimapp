@@ -26,7 +26,7 @@ using USet = IntegralSet<unsigned,
 // Multiroot
 //  data[0] & 0x7 = kNodeMultiroot
 //  data[0] & 0xf0 = number of roots (1 - 16)
-// Segment
+// Segment - must be byte aligned with key, no odd nibble starts.
 //  data[0] & 0x7 = kNodeSeg
 //  data[0] & 0x8 = has end of key
 //  data[0] & 0xf0 = keyLen (1 - 16) in full bytes (no odd nibble)
@@ -1787,6 +1787,10 @@ static bool eraseAtFork(SearchState * ss) {
         if (nodeEndMarkFlag(ss->node)) {
             copyForkWithKey(ss, &inext);
             ss->found = true;
+
+            // Adjust to length including first variance, which in this case 
+            // is one past the end.
+            ss->klen += 1;  
         }
         return false;
     }
@@ -1812,6 +1816,137 @@ static bool eraseAtRemote(SearchState * ss) {
     seekRemote(ss);
     ss->spages.insert(ss->pgno);
     return true;
+}
+
+//===========================================================================
+static void eraseForkKid(SearchState * ss, UpdateFork * fork) {
+    auto vals = forkVals(ss, fork->kidBits);
+    for (auto i = 0; i < fork->refs.size(); ++i) {
+        if (fork->refs[i].page.type == PageRef::kUpdate) {
+            setForkBit(fork, vals[i], false);
+            copy(
+                fork->refs.begin() + i + 1, 
+                fork->refs.end(),
+                fork->refs.begin() + i
+            );
+            fork->refs = fork->refs.subspan(0, fork->refs.size() - 1);
+            break;
+        }
+    }
+    if (vals.size() == fork->refs.size()) {
+        assert(fork->endOfKey);
+        fork->endOfKey = false;
+    }
+}
+
+//===========================================================================
+static void eraseForkWithEnd(SearchState * ss) {
+    ss->updates.pop_back(); // Remove fork
+    if (ss->updates.size()) {
+        // If parent is seg or half seg, update parent with end mark.
+        auto upd = ss->updates.back();
+        auto ntype = upd->type;
+        if (ntype == kNodeSeg) {
+            auto & half = *static_cast<UpdateHalfSeg *>(upd);
+            half.endOfKey = true;
+            half.refs = {};
+            return;
+        } else if (ntype == kNodeHalfSeg) {
+            auto & seg = *static_cast<UpdateSeg *>(upd);
+            seg.endOfKey = true;
+            seg.refs = {};
+            return;
+        }
+    }
+    // Otherwise replace fork with end mark.
+    newUpdate<UpdateEndMark>(ss);
+}
+
+//===========================================================================
+static void eraseForkWithSegs(SearchState * ss, const UpdateFork & fork) {
+    ss->updates.pop_back(); // Remove fork
+    auto index = fork.refs[0].page.type == PageRef::kSource ? 0 : 1;
+
+    // Is fork on low nibble of byte, rather than the high one?
+    auto lowFork = ss->klen % 2 == 0;
+
+    auto & sref = fork.refs[index];
+    assert(sref.page.type == PageRef::kSource);
+    seekPage(ss, sref.page.pgno);
+    seekNode(ss, sref.data.pos);
+
+    auto vals = forkVals(ss, fork.kidBits);
+    auto sval = vals[index];
+
+    auto istart = (int) ss->updates.size();
+    bool withHalf = false;
+    if (istart 
+        && lowFork
+        && ss->updates.back()->type == kNodeHalfSeg 
+    ) {
+        istart -= 1;
+        withHalf = true;
+    }
+    if (istart) {
+        auto upd = ss->updates[istart - 1];
+        auto seg = static_cast<UpdateSeg *>(upd);
+        if (upd->type == kNodeSeg && seg->keyLen < kMaxSegLen) {
+            istart -= 1;
+            pushFoundKeyVal(ss, segView(seg));
+        }
+    }
+    if (withHalf) {
+        auto half = static_cast<UpdateHalfSeg *>(ss->updates.back());
+        pushFoundKeyVal(ss, half->nibble);
+    }
+
+    pushFoundKeyVal(ss, sval);
+
+    bool endMark = false;
+    if (::nodeType(ss->node) == kNodeEndMark) {
+        endMark = true;
+    } else if (!lowFork
+        && ss->foundKeyLen % 2 == 1 
+        && ::nodeType(ss->node) == kNodeHalfSeg
+    ) {
+        pushFoundKeyVal(ss, halfSegVal(ss->node));
+        if (nodeEndMarkFlag(ss->node)) {
+            endMark = true;
+        } else {
+            seekKid(ss, 0);
+            if (::nodeType(ss->node) == kNodeRemote)
+                eraseAtRemote(ss);
+        }
+    }
+    if (!endMark 
+        && ss->foundKeyLen % 2 == 0
+        && ::nodeType(ss->node) == kNodeSeg
+        && ss->foundKeyLen + segLen(ss->node) <= kMaxSegLen
+    ) {
+        pushFoundKeyVal(ss, segView(ss->node));
+        if (nodeEndMarkFlag(ss->node)) {
+            endMark = true;
+        } else {
+            seekKid(ss, 0);
+            if (::nodeType(ss->node) == kNodeRemote)
+                eraseAtRemote(ss);
+        }
+    }
+
+    if (ss->foundKeyLen >= 2 && ss->foundKeyLen % 2 == 0) {
+        ss->updates.resize(istart);
+        auto & seg = newUpdate<UpdateSeg>(ss);
+        setSegKey(&seg, ss, ss->foundKey);
+        seg.endOfKey = endMark;
+    } else {
+        auto & half = newUpdate<UpdateHalfSeg>(ss);
+        half.nibble = sval;
+        half.endOfKey = endMark;
+    }
+    if (!endMark) {
+        auto srcRef = newRef(ss, ss->inode, nodeLen(ss->node));
+        ss->updates.back()->refs = { srcRef, 1 };
+    }
 }
 
 //===========================================================================
@@ -1844,38 +1979,22 @@ bool StrTrieBase::erase(string_view key) {
     if (!ss->found)
         return false;
 
-    // 1. Remove updates back to closest fork. If there's no fork, make
-    //    container empty and return.
-    // 2. Update fork.
-    //      - Has more than 2 kids (including eok)? 
-    //          - Remove this branch from fork.
-    //      - Has eok? 
-    //          - Parent is seg or half seg? Remove fork and update parent 
-    //            with eok.
-    //          - Otherwise, replace fork with eok node.
-    //      - Has a parent or kid half seg it can merge with?
-    //          - Replace with a seg made by merging the half segs with each 
-    //            other and with additional leading and/or trailing segs if
-    //            possible.
-    //      - Kid is eok node? Replace with half seg w/eok.
-    //      - Otherwise, replace with half seg.
-    // 3. Apply updates
-
-    // Unwind to closest fork.
-    auto fpos = ss->kpos;
+    // Unwind to closest fork, and adjust ss->klen down to the shortest length
+    // at which the key uniquely differs with all other values.
     while (!ss->updates.empty()) {
         auto upd = ss->updates.back();
         if (upd->type == kNodeSeg) {
             auto seg = static_cast<UpdateSeg *>(upd);
-            fpos -= seg->keyLen;
+            ss->klen -= seg->keyLen;
         } else if (upd->type == kNodeHalfSeg) {
-            fpos -= 1;
+            ss->klen -= 1;
         } else if (upd->type == kNodeFork) {
             break;
         }
         ss->updates.pop_back();
     }
     if (ss->updates.empty()) {
+        // No fork, must be the last key, just remove pages.
         applyDestroys(ss);
         assert(ss->pages->empty());
         return true;
@@ -1884,134 +2003,18 @@ bool StrTrieBase::erase(string_view key) {
     auto & fork = *static_cast<UpdateFork *>(ss->updates.back());
 
     if (fork.refs.size() + fork.endOfKey > 2) {
-        // Keep fork but with branch removed.
-        auto vals = forkVals(ss, fork.kidBits);
-        for (auto i = 0; i < fork.refs.size(); ++i) {
-            if (fork.refs[i].page.type == PageRef::kUpdate) {
-                setForkBit(&fork, vals[i], false);
-                copy(
-                    fork.refs.begin() + i + 1, 
-                    fork.refs.end(),
-                    fork.refs.begin() + i
-                );
-                fork.refs = fork.refs.subspan(0, fork.refs.size() - 1);
-                break;
-            }
-        }
-        if (vals.size() == fork.refs.size()) {
-            assert(fork.endOfKey);
-            fork.endOfKey = false;
-        }
+        // Has more than two kids (including eok), keep fork but with branch 
+        // removed.
+        eraseForkKid(ss, &fork);
     } else if (fork.endOfKey 
         && fork.refs[0].page.type == PageRef::kUpdate
     ) {
-        // Replace fork with end mark.
-        ss->updates.pop_back(); // Remove fork
-        bool addEndMark = true;
-        if (ss->updates.size()) {
-            // If parent is seg or half seg, update parent with end mark.
-            auto upd = ss->updates.back();
-            auto ntype = upd->type;
-            if (ntype == kNodeSeg) {
-                auto & half = *static_cast<UpdateHalfSeg *>(upd);
-                half.endOfKey = true;
-                half.refs = {};
-                addEndMark = false;
-            } else if (ntype == kNodeHalfSeg) {
-                auto & seg = *static_cast<UpdateSeg *>(upd);
-                seg.endOfKey = true;
-                seg.refs = {};
-                addEndMark = false;
-            }
-        }
-        if (addEndMark) {
-            // Otherwise replace fork with end mark.
-            newUpdate<UpdateEndMark>(ss);
-        }
+        // Only remaining kid is an end mark, replace fork with end mark.
+        eraseForkWithEnd(ss);
     } else {
-        // Replace fork with half seg that is merged with adjacent segs and
-        // half segs.
-        ss->updates.pop_back(); // Remove fork
-        auto index = fork.refs[0].page.type == PageRef::kSource ? 0 : 1;
-
-        // Is fork on low nibble of byte, rather than the high one?
-        auto lowFork = (fpos - !fork.endOfKey) % 2 == 1;
-
-        auto & sref = fork.refs[index];
-        assert(sref.page.type == PageRef::kSource);
-        seekPage(ss, sref.page.pgno);
-        seekNode(ss, sref.data.pos);
-
-        auto vals = forkVals(ss, fork.kidBits);
-        auto sval = vals[index];
-
-        auto istart = (int) ss->updates.size();
-        bool withHalf = false;
-        if (istart 
-            && lowFork
-            && ss->updates.back()->type == kNodeHalfSeg 
-        ) {
-            istart -= 1;
-            withHalf = true;
-        }
-        if (istart) {
-            auto upd = ss->updates[istart - 1];
-            auto seg = static_cast<UpdateSeg *>(upd);
-            if (upd->type == kNodeSeg && seg->keyLen < kMaxSegLen) {
-                istart -= 1;
-                pushFoundKeyVal(ss, segView(seg));
-            }
-        }
-        if (withHalf) {
-            auto half = static_cast<UpdateHalfSeg *>(ss->updates.back());
-            pushFoundKeyVal(ss, half->nibble);
-        }
-
-        pushFoundKeyVal(ss, sval);
-        bool endMark = false;
-        if (::nodeType(ss->node) == kNodeEndMark) {
-            endMark = true;
-        } else if (!lowFork
-            && ss->foundKeyLen % 2 == 1 
-            && ::nodeType(ss->node) == kNodeHalfSeg
-        ) {
-            pushFoundKeyVal(ss, halfSegVal(ss->node));
-            if (nodeEndMarkFlag(ss->node)) {
-                endMark = true;
-            } else {
-                seekKid(ss, 0);
-                if (::nodeType(ss->node) == kNodeRemote)
-                    eraseAtRemote(ss);
-            }
-        }
-        if (!endMark 
-            && ss->foundKeyLen % 2 == 0
-            && ::nodeType(ss->node) == kNodeSeg
-            && ss->foundKeyLen + segLen(ss->node) <= kMaxSegLen
-        ) {
-            pushFoundKeyVal(ss, segView(ss->node));
-            if (nodeEndMarkFlag(ss->node)) {
-                endMark = true;
-            } else {
-                seekKid(ss, 0);
-                if (::nodeType(ss->node) == kNodeRemote)
-                    eraseAtRemote(ss);
-            }
-        }
-        if (ss->foundKeyLen >= 2 && ss->foundKeyLen % 2 == 0) {
-            ss->updates.resize(istart);
-            auto & seg = newUpdate<UpdateSeg>(ss);
-            setSegKey(&seg, ss, ss->foundKey);
-            seg.endOfKey = endMark;
-        } else {
-            auto & half = newUpdate<UpdateHalfSeg>(ss);
-            half.nibble = sval;
-            half.endOfKey = endMark;
-        }
-        if (!endMark) {
-            auto srcRef = newRef(ss, ss->inode, nodeLen(ss->node));
-            ss->updates.back()->refs = { srcRef, 1 };
-        }
+        // One remaining kid, replace fork with half seg that is merged with 
+        // adjacent segs and half segs.
+        eraseForkWithSegs(ss, fork);
     }
 
     // Apply pending updates
