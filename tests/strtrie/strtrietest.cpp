@@ -41,13 +41,29 @@ static void failed(int line, const char msg[]) {
 }
 
 //===========================================================================
-static bool insert(StrTrie * vals, string_view val) {
+static void printAction(
+    StrTrie * vals, 
+    string_view val, 
+    string_view action
+) {
     if (s_verbose) {
-        cout << "---\ninsert, len=" << val.size() << ":\n";
+        cout << "---\n" << action << ", len=" << val.size() << ":\n";
         hexDump(cout, val);
-        vals->debug(true);
     }
+    vals->debug(s_verbose);
+}
+
+//===========================================================================
+static bool insert(StrTrie * vals, string_view val) {
+    printAction(vals, val, __func__);
     auto rc = vals->insert(val);
+    return rc;
+}
+
+//===========================================================================
+static bool erase(StrTrie * vals, string_view val) {
+    printAction(vals, val, __func__);
+    auto rc = vals->erase(val);
     return rc;
 }
 
@@ -113,6 +129,12 @@ inline static void internalTests() {
     EXPECT(*vi == "abd");
     
     EXPECT(vals.back() == "aw");
+
+    for (auto&& key : keys) {
+        erase(&vals, key);
+        EXPECT(!vals.contains(key));
+    }
+    EXPECT(vals.empty());
 }
 
 //===========================================================================
@@ -131,6 +153,8 @@ inline static void randomFill(size_t count, size_t maxLen, size_t charVals) {
     default_random_engine s_reng;
     string key;
     size_t inserted = 0;
+    vector<string> keys;
+    keys.reserve(count);
     for (auto i = 0; i < count; ++i) {
         key.resize(0);
         auto len = s_reng() % maxLen;
@@ -138,20 +162,34 @@ inline static void randomFill(size_t count, size_t maxLen, size_t charVals) {
             key += 'a' + char(s_reng() % charVals);
             //key += "abyz"[s_reng() % 4];
         }
-        //if (key < "tqb" || key >= "tqd")
-        //    continue;
         if (i == count - 1)
             s_verbose = true;
         if (s_verbose)
             cout << i + 1 << " ";
-        if (insert(&vals, key))
+        if (insert(&vals, key)) {
             inserted += 1;
+            keys.push_back(key);
+        }
         EXPECT(vals.contains(key));
     }
     auto dist = (size_t) distance(vals.begin(), vals.end());
     EXPECT(inserted == dist);
     cout << "--- Stats\n";
     vals.dumpStats(cout);
+    if (s_verbose)
+        cout << endl;
+
+    s_verbose = false;
+    for (auto i = 0; i < keys.size(); ++i) {
+        if (i == keys.size() - 1)
+            s_verbose = true;
+        if (s_verbose)
+            cout << i + 1 << " ";
+        auto & key = keys[i];
+        erase(&vals, key);
+        EXPECT(!vals.contains(key));
+    }
+    EXPECT(vals.empty());
     cout << endl;
 }
 
@@ -172,7 +210,7 @@ static void app(int argc, char *argv[]) {
         .desc("Dump container state between tests.");
     auto & fill = cli.opt<int>("f fill").siUnits("")
         .desc("Randomly fill a container with this many values.");
-    auto & test = cli.opt<bool>("test", true).desc("Run internal unit tests");
+    auto & test = cli.opt<bool>("test", false).desc("Run internal unit tests");
     if (!cli.parse(argc, argv))
         return appSignalUsageError();
     if (!*test && !*fill) {
