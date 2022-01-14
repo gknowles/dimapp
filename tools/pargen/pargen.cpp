@@ -246,7 +246,8 @@ static void app (int argc, char * argv[]) {
               "parser code - may be extremely verbose.");
     cli.opt(&s_cmdopts.writeFunctions, "write-functions", true)
         .desc("Generate recursion breaking dependent functions.\n"
-              "NOTE: If disabled generated files may not be compilable.");
+              "  \t\v\v\v\v\v\vNOTE: Disable for testing only. If disabled "
+              "the generated files may not be compilable.");
     cli.opt(&s_cmdopts.verbose, "v verbose")
         .desc("Display details of what's happening during processing.");
     // footer
