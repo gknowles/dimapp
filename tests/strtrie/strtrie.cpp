@@ -746,6 +746,28 @@ static void pushFoundKeyVal(SearchState * ss, string_view val) {
     ss->foundKeyLen += 2 * val.size();
 }
 
+//===========================================================================
+// Pushes seg or half seg value onto found key, advances to next node 
+// (following remote node if present), and returns false if there is no 
+// following node.
+static bool pushFoundKeyCopy(SearchState * ss) {
+    if (nodeType(ss->node) == kNodeSeg) {
+        pushFoundKeyVal(ss, segView(ss->node));
+    } else {
+        assert(nodeType(ss->node) == kNodeHalfSeg);
+        pushFoundKeyVal(ss, halfSegVal(ss->node));
+    }
+    if (nodeEndMarkFlag(ss->node)) 
+        return false;
+
+    seekKid(ss, 0);
+    if (nodeType(ss->node) == kNodeRemote) {
+        seekRemote(ss);
+        ss->spages.insert(ss->pgno);
+    }
+    return true;
+}
+
 
 /****************************************************************************
 *
@@ -1445,7 +1467,7 @@ static bool insertAtSeg(SearchState * ss) {
         if (ss->kpos == ss->klen) {
             // Fork end of key with position in the segment.
             // 
-            // Key "a" [61] -> Seg "abc" [61 62 63]
+            // Insert "a" [61] into Seg "abc" [61 62 63] makes:
             //  +---------+  +-----------+
             //  | Seg "a" |--| Fork--EOK |
             //  +---------+  |   |       |
@@ -1462,7 +1484,7 @@ static bool insertAtSeg(SearchState * ss) {
             if (spos % 2 == 0) {
                 // Fork in the first half of the byte.
                 // 
-                // Key "ayz" [61 79 7a] -> Seg "abc" [61 62 63]
+                // Insert "ayz" [61 79 7a] info Seg "abc" [61 62 63] makes:
                 //  +---------+  +-----------+  +--------+  +----------+
                 //  | Seg "a" |--| Fork-- 6  |--| Half 2 |--| Seg "c"  |
                 //  +---------+  |   |       |  +--------+  +----------+
@@ -1480,7 +1502,7 @@ static bool insertAtSeg(SearchState * ss) {
             } else {
                 // Fork in the second half of the byte.
                 // 
-                // Key "aef" [61 65 66] -> Seg "abc" [61 62 63]
+                // Insert "aef" [61 65 66] into Seg "abc" [61 62 63] makes:
                 //  +---------+  +--------+  +-----------+  +----------+
                 //  | Seg "a" |--| Half 6 |--| Fork-- 2  |--| Seg "c"  |
                 //  +---------+  +--------+  |   |       |  +----------+
@@ -1505,7 +1527,8 @@ static bool insertAtSeg(SearchState * ss) {
                 }
                 // Fork key with the end mark that's after the segment.
                 // 
-                // Key "abcdef" [61 62 63 64 65 66] -> Seg "abc" [61 62 63]
+                // Insert "abcdef" [61 62 63 64 65 66] into 
+                // { Seg "abc" [61 62 63] } makes:
                 //  +-----------+  +-----------+  +--------+  +----------+
                 //  | Seg "abc" |--| Fork-- 6  |--| Half 4 |--| Seg "ef" |
                 //  +-----------+  |   |       |  +--------+  +----------+
@@ -1544,7 +1567,7 @@ static bool insertAtHalfSeg (SearchState * ss) {
         if (ss->kpos == ss->klen) {
             // Fork end of key with half seg.
             //
-            // Key "" [] -> Half 6
+            // Insert "" [] into { Half 6 } makes:
             //  +-----------+
             //  | Fork--EOK |
             //  |   |       |
@@ -1558,7 +1581,7 @@ static bool insertAtHalfSeg (SearchState * ss) {
         if (ss->kval != sval) {
             // Fork inside the key with the half seg.
             //
-            // Key "a" [61] -> Half 7
+            // Insert "a" [61] into { Half 7 } makes:
             //  +-----------+  +--------+
             //  | Fork-- 6  |--| Half 1 |
             //  |   |       |  +--------+
@@ -1579,7 +1602,7 @@ static bool insertAtHalfSeg (SearchState * ss) {
             }
             // Fork key with the end mark that's after the half seg.
             //
-            // Key "ab" [61 62] -> Half 6
+            // Insert "ab" [61 62] into { Half 6 } makes:
             //  +--------+  +-----------+  +---------+
             //  | Half 6 |--| Fork-- 1  |--| Seg "b" |
             //  +--------+  |   |       |  +---------+
@@ -1643,7 +1666,7 @@ static bool insertAtEndMark(SearchState * ss) {
 
     // Fork key with end mark.
     // 
-    // Key "a" [61] -> EndMark
+    // Insert "a" [61] into { EndMark } makes:
     //  +-----------+  +--------+
     //  | Fork-- 6  |--| Half 1 |
     //  |   |       |  +--------+
@@ -1782,15 +1805,16 @@ static bool eraseAtHalfSeg(SearchState * ss) {
 
 //===========================================================================
 static bool eraseAtFork(SearchState * ss) {
+    // Set foundKeyLen to length including the first variance, which in this 
+    // case is one past the current position whether or not it's just an end 
+    // mark.
+    ss->foundKeyLen = ss->kpos + 1;
+
     int inext;
     if (ss->kpos == ss->klen) {
         if (nodeEndMarkFlag(ss->node)) {
             copyForkWithKey(ss, &inext);
             ss->found = true;
-
-            // Adjust to length including first variance, which in this case 
-            // is one past the end.
-            ss->klen += 1;  
         }
         return false;
     }
@@ -1867,8 +1891,11 @@ static void eraseForkWithSegs(SearchState * ss, const UpdateFork & fork) {
     ss->updates.pop_back(); // Remove fork
     auto index = fork.refs[0].page.type == PageRef::kSource ? 0 : 1;
 
-    // Is fork on low nibble of byte, rather than the high one?
-    auto lowFork = ss->klen % 2 == 0;
+    // Is fork on low nibble of a byte, rather than the high one?
+    auto lowFork = ss->foundKeyLen % 2 == 0;
+
+    // Set foundKeyLen to 0 to clear foundKey for use as a compound seg node.
+    ss->foundKeyLen = 0;
 
     auto & sref = fork.refs[index];
     assert(sref.page.type == PageRef::kSource);
@@ -1877,64 +1904,106 @@ static void eraseForkWithSegs(SearchState * ss, const UpdateFork & fork) {
 
     auto vals = forkVals(ss, fork.kidBits);
     auto sval = vals[index];
-
-    auto istart = (int) ss->updates.size();
-    bool withHalf = false;
-    if (istart 
-        && lowFork
-        && ss->updates.back()->type == kNodeHalfSeg 
-    ) {
-        istart -= 1;
-        withHalf = true;
-    }
-    if (istart) {
-        auto upd = ss->updates[istart - 1];
-        auto seg = static_cast<UpdateSeg *>(upd);
-        if (upd->type == kNodeSeg && seg->keyLen < kMaxSegLen) {
-            istart -= 1;
-            pushFoundKeyVal(ss, segView(seg));
-        }
-    }
-    if (withHalf) {
-        auto half = static_cast<UpdateHalfSeg *>(ss->updates.back());
-        pushFoundKeyVal(ss, half->nibble);
-    }
-
-    pushFoundKeyVal(ss, sval);
-
     bool endMark = false;
-    if (::nodeType(ss->node) == kNodeEndMark) {
-        endMark = true;
-    } else if (!lowFork
-        && ss->foundKeyLen % 2 == 1 
-        && ::nodeType(ss->node) == kNodeHalfSeg
-    ) {
-        pushFoundKeyVal(ss, halfSegVal(ss->node));
-        if (nodeEndMarkFlag(ss->node)) {
-            endMark = true;
-        } else {
-            seekKid(ss, 0);
-            if (::nodeType(ss->node) == kNodeRemote)
-                eraseAtRemote(ss);
-        }
-    }
-    if (!endMark 
-        && ss->foundKeyLen % 2 == 0
-        && ::nodeType(ss->node) == kNodeSeg
-        && ss->foundKeyLen + segLen(ss->node) <= kMaxSegLen
-    ) {
-        pushFoundKeyVal(ss, segView(ss->node));
-        if (nodeEndMarkFlag(ss->node)) {
-            endMark = true;
-        } else {
-            seekKid(ss, 0);
-            if (::nodeType(ss->node) == kNodeRemote)
-                eraseAtRemote(ss);
-        }
-    }
 
-    if (ss->foundKeyLen >= 2 && ss->foundKeyLen % 2 == 0) {
-        ss->updates.resize(istart);
+    if (lowFork
+        && !ss->updates.empty()
+        && ss->updates.back()->type == kNodeHalfSeg
+    ) {
+        //   +------+------+  
+        // --| half | fork |--
+        //   +------+---+--+  
+        //              |     +--------+
+        //              +-----| erased |
+        //                    +--------+ 
+
+        auto half = static_cast<UpdateHalfSeg *>(ss->updates.back());
+        ss->updates.pop_back();
+        if (!ss->updates.empty()
+            && ss->updates.back()->type == kNodeSeg
+        ) {
+            auto seg = static_cast<UpdateSeg *>(ss->updates.back());
+            if (seg->keyLen < kMaxSegLen) {
+                // +-----+  +------+------+  
+                // | SEG |--| half | fork |--
+                // +-----+  +------+---+--+  
+                ss->updates.pop_back();
+                pushFoundKeyVal(ss, segView(seg));
+            }
+        }
+
+        //   +------+------+  
+        // --| HALF | FORK |--
+        //   +------+---+--+  
+        pushFoundKeyVal(ss, half->nibble);
+        pushFoundKeyVal(ss, sval);
+
+        if (nodeType(ss->node) == kNodeEndMark) {
+            //   +------+------+  +-----+
+            // --| half | fork |--| END |
+            //   +------+---+--+  +-----+
+            endMark = true;
+        } else if (nodeType(ss->node) == kNodeSeg
+            && ss->foundKeyLen + segLen(ss->node) <= kMaxSegLen
+        ) {
+            //   +------+------+  +-----+
+            // --| half | fork |--| SEG |--
+            //   +------+---+--+  +-----+
+            endMark = !pushFoundKeyCopy(ss);
+        }
+    } else if (!lowFork
+        && nodeType(ss->node) == kNodeHalfSeg
+    ) {
+        //   +------+------+  
+        // --| fork | half |--
+        //   +---+--+------+  
+        //       |     +--------+
+        //       +-----| erased |
+        //             +--------+ 
+
+        if (!ss->updates.empty()
+            && ss->updates.back()->type == kNodeSeg
+        ) {
+            auto seg = static_cast<UpdateSeg *>(ss->updates.back());
+            if (seg->keyLen < kMaxSegLen) {
+                // +-----+  +------+------+  
+                // | SEG |--| fork | half |--
+                // +-----+  +---+--+------+  
+                ss->updates.pop_back();
+                pushFoundKeyVal(ss, segView(seg));
+            }
+        }
+
+        //   +------+------+  
+        // --| FORK | HALF |--
+        //   +---+--+------+  
+        pushFoundKeyVal(ss, sval);
+        endMark = !pushFoundKeyCopy(ss);
+
+        if (!endMark
+            && nodeType(ss->node) == kNodeSeg
+            && ss->foundKeyLen + segLen(ss->node) <= kMaxSegLen
+        ) {
+            //   +------+------+  +-----+
+            // --| fork | half |--| SEG |
+            //   +---+--+------+  +-----+
+            endMark = !pushFoundKeyCopy(ss);
+        }
+    } else {
+        //   +------+
+        // --| FORK |--
+        //   +---+--+
+        if (nodeType(ss->node) == kNodeEndMark) {
+            //   +------+  +-----+
+            // --| fork |--| END |
+            //   +---+--+  +-----+
+            endMark = true;
+        }
+    }
+        
+    // Add replacement seg or half seg node.
+    if (ss->foundKeyLen) {
+        assert(ss->foundKeyLen >= 2 && ss->foundKeyLen % 2 == 0);
         auto & seg = newUpdate<UpdateSeg>(ss);
         setSegKey(&seg, ss, ss->foundKey);
         seg.endOfKey = endMark;
@@ -1958,6 +2027,10 @@ bool StrTrieBase::erase(string_view key) {
     auto ss = Node::makeState(&heap, this, key);
     ss->spages.insert(ss->pgno);
 
+    // Walk node path, add entries to ss->updates, and set ss->foundKeyLen
+    // to the shortest length at which the key uniquely differs with all other
+    // values. This will be one past the end if it's equal to a prefix of 
+    // another value.
     using Fn = bool(SearchState *);
     constinit static Fn * const functs[] = {
         logFatal,   // Invalid
@@ -1979,18 +2052,11 @@ bool StrTrieBase::erase(string_view key) {
     if (!ss->found)
         return false;
 
-    // Unwind to closest fork, and adjust ss->klen down to the shortest length
-    // at which the key uniquely differs with all other values.
+    // Unwind to closest fork.
     while (!ss->updates.empty()) {
         auto upd = ss->updates.back();
-        if (upd->type == kNodeSeg) {
-            auto seg = static_cast<UpdateSeg *>(upd);
-            ss->klen -= seg->keyLen;
-        } else if (upd->type == kNodeHalfSeg) {
-            ss->klen -= 1;
-        } else if (upd->type == kNodeFork) {
+        if (upd->type == kNodeFork) 
             break;
-        }
         ss->updates.pop_back();
     }
     if (ss->updates.empty()) {
@@ -2140,15 +2206,11 @@ static void seekFront(SearchState * ss) {
     for (;;) {
         auto ntype = nodeType(ss->node);
         if (ntype == kNodeSeg) {
-            pushFoundKeyVal(ss, segView(ss->node));
-            if (nodeEndMarkFlag(ss->node))
+            if (!pushFoundKeyCopy(ss))
                 break;
-            seekKid(ss, 0);
         } else if (ntype == kNodeHalfSeg) {
-            pushFoundKeyVal(ss, halfSegVal(ss->node));
-            if (nodeEndMarkFlag(ss->node))
+            if (!pushFoundKeyCopy(ss))
                 break;
-            seekKid(ss, 0);
         } else if (ntype == kNodeFork) {
             auto & fork = ss->forks.emplace_back();
             fork.kpos = (int) ss->foundKeyLen;
@@ -2208,15 +2270,11 @@ static void seekBack(SearchState * ss) {
     for (;;) {
         auto ntype = nodeType(ss->node);
         if (ntype == kNodeSeg) {
-            pushFoundKeyVal(ss, segView(ss->node));
-            if (nodeEndMarkFlag(ss->node))
+            if (!pushFoundKeyCopy(ss))
                 break;
-            seekKid(ss, 0);
         } else if (ntype == kNodeHalfSeg) {
-            pushFoundKeyVal(ss, halfSegVal(ss->node));
-            if (nodeEndMarkFlag(ss->node))
+            if (!pushFoundKeyCopy(ss))
                 break;
-            seekKid(ss, 0);
         } else if (ntype == kNodeFork) {
             auto & fork = ss->forks.emplace_back();
             fork.kpos = (int) ss->foundKeyLen;
@@ -2437,8 +2495,7 @@ static bool findAtSeg(SearchState * ss) {
         } else {
             // Continue down this chain.
             setFoundKey(ss);
-            pushFoundKeyVal(ss, segView(ss->node));
-            seekKid(ss, 0);
+            pushFoundKeyCopy(ss);
             seekBack(ss);
         }
     } else if (kGreater) {
@@ -2449,8 +2506,7 @@ static bool findAtSeg(SearchState * ss) {
         } else {
             // Continue down this chain.
             setFoundKey(ss);
-            pushFoundKeyVal(ss, segView(ss->node));
-            seekKid(ss, 0);
+            pushFoundKeyCopy(ss);
             seekFront(ss);
         }
     }
@@ -2485,8 +2541,7 @@ static bool findAtHalfSeg(SearchState * ss) {
         } else {
             // Continue down this chain.
             setFoundKey(ss);
-            pushFoundKeyVal(ss, sval);
-            seekKid(ss, 0);
+            pushFoundKeyCopy(ss);
             seekBack(ss);
         }
     } else if (kGreater) {
@@ -2497,8 +2552,7 @@ static bool findAtHalfSeg(SearchState * ss) {
         } else {
             // Continue down this chain.
             setFoundKey(ss);
-            pushFoundKeyVal(ss, sval);
-            seekKid(ss, 0);
+            pushFoundKeyCopy(ss);
             seekFront(ss);
         }
     }
