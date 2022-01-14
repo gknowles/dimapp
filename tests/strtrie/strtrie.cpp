@@ -1991,8 +1991,12 @@ static void eraseForkWithSegs(SearchState * ss, const UpdateFork & fork) {
         }
     } else {
         //   +------+
-        // --| FORK |--
+        // --| fork |--
         //   +---+--+
+        //       |     +--------+
+        //       +-----| erased |
+        //             +--------+ 
+
         if (nodeType(ss->node) == kNodeEndMark) {
             //   +------+  +-----+
             // --| fork |--| END |
@@ -2078,7 +2082,7 @@ bool StrTrieBase::erase(string_view key) {
         // Only remaining kid is an end mark, replace fork with end mark.
         eraseForkWithEnd(ss);
     } else {
-        // One remaining kid, replace fork with half seg that is merged with 
+        // One remaining kid, replace fork with half seg and merge it with 
         // adjacent segs and half segs.
         eraseForkWithSegs(ss, fork);
     }
