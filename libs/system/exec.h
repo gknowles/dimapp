@@ -42,7 +42,9 @@ enum StdStream {
 ***/
 
 struct ExecResult {
+    enum Type { kNotStarted, kExited, kCanceled };
     std::string cmdline;
+    Type exitType = kNotStarted;
     int exitCode = {};
     CharBuf out;
     CharBuf err;
@@ -70,6 +72,10 @@ struct ExecOptions {
     // been started.
     bool enableExecWrite = false;
 
+    // Allows child processes to continue running in the background after 
+    // after the directly executed process ends.
+    bool untrackedChildren = false;
+
     Dim::TaskQueueHandle hq;
     size_t concurrency = (size_t) -1;
 };
@@ -81,7 +87,7 @@ class IExecNotify {
 public:
     virtual ~IExecNotify() = default;
 
-    virtual void onExecComplete(bool canceled, int exitCode) = 0;
+    virtual void onExecComplete(ExecResult::Type exitType, int exitCode) = 0;
 
     // Default implementation accumulates the output into m_out & m_err
     // Returning false stops reading stream

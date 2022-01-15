@@ -85,8 +85,9 @@ private:
     ExecPipe m_pipes[3];
     unsigned m_connected{};
 
+    bool m_exitPosted = false;
     RunMode m_mode{kRunStopped};
-    bool m_canceled = true;
+    ExecResult::Type m_exitType = ExecResult::kNotStarted;
     int m_exitCode = -1;
 };
 
@@ -302,11 +303,16 @@ void ExecProgram::terminate() {
 
 //===========================================================================
 void ExecProgram::postJobExit() {
+    {
+        unique_lock lk{m_mut};
+        m_exitPosted = true;
+    }
+
     // Exit events are posted to the job queue so the onExecComplete event gets
     // routed to the task queue selected by the application.
     if (!PostQueuedCompletionStatus(
         s_iocp,
-        JOB_OBJECT_MSG_ACTIVE_PROCESS_ZERO,
+        JOB_OBJECT_MSG_EXIT_PROCESS,
         (uintptr_t) this,
         (OVERLAPPED *) (uintptr_t) GetProcessId(m_process)
     )) {
@@ -391,6 +397,8 @@ bool ExecProgram::onAccept(StdStream strm) {
         JOBOBJECT_EXTENDED_LIMIT_INFORMATION ei = {};
         auto & bi = ei.BasicLimitInformation;
         bi.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+        if (m_opts.untrackedChildren)
+            bi.LimitFlags |= JOB_OBJECT_LIMIT_SILENT_BREAKAWAY_OK;
         if (!SetInformationJobObject(
             m_job,
             JobObjectExtendedLimitInformation,
@@ -556,14 +564,17 @@ void ExecProgram::onJobExit() {
             pi.m_child = {};
         }
     }
+    auto modeWas = m_mode;
     m_mode = kRunStopped;
     DWORD rc;
     if (GetExitCodeProcess(m_process, &rc)) {
-        m_canceled = false;
+        m_exitType = ExecResult::kExited;
         m_exitCode = rc;
     } else {
         WinError err;
-        m_canceled = true;
+        m_exitType = modeWas == kRunStarting 
+            ? ExecResult::kNotStarted
+            : ExecResult::kCanceled;
         m_exitCode = -1;
     }
     CloseHandle(m_process);
@@ -584,7 +595,7 @@ void ExecProgram::completeIfDone_UNLK(unique_lock<mutex> && lk) {
 
     if (m_notify) {
         m_notify->m_exec = nullptr;
-        m_notify->onExecComplete(m_canceled, m_exitCode);
+        m_notify->onExecComplete(m_exitType, m_exitCode);
         m_notify = nullptr;
     }
 
@@ -708,13 +719,17 @@ struct SimpleExecNotify : public IExecNotify {
     function<void(ExecResult && res)> m_fn;
     ExecResult m_res;
 
-    void onExecComplete(bool canceled, int exitCode) override;
+    void onExecComplete(ExecResult::Type exitType, int exitCode) override;
 };
 
 } // namespace
 
 //===========================================================================
-void SimpleExecNotify::onExecComplete(bool canceled, int exitCode) {
+void SimpleExecNotify::onExecComplete(
+    ExecResult::Type exitType, 
+    int exitCode
+) {
+    m_res.exitType = exitType;
     m_res.exitCode = exitCode;
     m_res.out = move(m_out);
     m_res.err = move(m_err);
@@ -850,7 +865,7 @@ void Dim::execCancelWaiting() {
     }
     while (auto prog = progs.front()) {
         s_programs.unlink(prog);
-        prog->onJobExit();
+        prog->postJobExit();
     }
 }
 

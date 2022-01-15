@@ -29,12 +29,20 @@ void Dim::execTool(
         string errTitle;
         vector<int> codes;
 
-        void onExecComplete(bool canceled, int exitCode) override {
-            if (canceled) {
+        void onExecComplete(
+            ExecResult::Type exitType, 
+            int exitCode
+        ) override {
+            if (exitType != ExecResult::kExited) {
                 // Rely on execProgram to have already logged an error.
                 logMsgError() << "Error: " << errTitle;
                 logMsgInfo() << " - " << cmdline;
-                logMsgInfo() << " - execProgram timeout exceeded.";
+                if (exitType == ExecResult::kNotStarted) {
+                    logMsgInfo() << " - program not started.";
+                } else {
+                    assert(exitType == ExecResult::kCanceled);
+                    logMsgInfo() << " - program timeout exceeded.";
+                }
                 appSignalShutdown(EX_IOERR);
                 fn({});
             } else if (
