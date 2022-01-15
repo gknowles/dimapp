@@ -217,9 +217,12 @@ private:
 ***/
 
 class CharBuf::ViewIterator {
-    const_buffer_iterator m_current;
+    static_assert(std::is_same_v<
+        decltype(CharBuf::m_buffers)::const_iterator::iterator_concept,
+        std::contiguous_iterator_tag>);
+    const Buffer * m_current = {};
     std::string_view m_view;
-    size_t m_count{0};
+    size_t m_count = {};
 public:
     ViewIterator() {}
     ViewIterator(

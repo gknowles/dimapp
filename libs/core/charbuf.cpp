@@ -1093,7 +1093,7 @@ CharBuf::ViewIterator::ViewIterator(
     size_t pos,
     size_t count
 )
-    : m_current{buf}
+    : m_current{&*buf}
     , m_view{buf->data + pos, std::min(count, buf->used - pos)}
     , m_count{count}
 {
@@ -1104,14 +1104,13 @@ CharBuf::ViewIterator::ViewIterator(
 
 //===========================================================================
 bool CharBuf::ViewIterator::operator== (const ViewIterator & right) const {
-    return m_current == right.m_current && m_view == right.m_view;
+    return m_view == right.m_view;
 }
 
 //===========================================================================
 CharBuf::ViewIterator & CharBuf::ViewIterator::operator++() {
     if (m_count -= m_view.size()) {
         ++m_current;
-        assert(m_current != const_buffer_iterator{});
         m_view = {
             m_current->data,
             std::min(m_count, (size_t) m_current->used)
