@@ -4170,7 +4170,7 @@ void IntegralSet<T,A>::insert(value_type start, size_t len) {
 template <std::integral T, typename A>
 void IntegralSet<T,A>::insert(string_view src) {
     for (;;) {
-        while (src[0] == ' ')
+        while (!src.empty() && src[0] == ' ')
             src.remove_prefix(1);
 
         T first;
