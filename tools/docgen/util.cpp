@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2020 - 2021.
+// Copyright Glen Knowles 2020 - 2022.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // util.cpp - docgen
@@ -64,6 +64,23 @@ static bool loadVersions(Config * out, XNode * root) {
 }
 
 //===========================================================================
+static bool loadSpawn(Spawn * out, XNode * root) {
+    for (auto&& elem : elems(root, "Arg"))
+        out->args.emplace_back(attrValue(&elem, "value", ""));
+    for (auto&& elem : elems(root, "Env")) {
+        auto name = attrValue(&elem, "name");
+        if (!name) {
+            logMsgError() << "Missing required Env/@name attribute.";
+            appSignalShutdown(EX_DATAERR);
+            return false;
+        }
+        out->env[name] = attrValue(&elem, "value", "");
+    }
+    out->untracked = attrValue(root, "untracked", false);
+    return true;
+}
+
+//===========================================================================
 static bool loadScripts(Config * out, XNode * root) {
     for (auto&& xs : elems(root, "Script")) {
         auto script = make_shared<Script>();
@@ -83,11 +100,12 @@ static bool loadScripts(Config * out, XNode * root) {
                 return false;
             }
         }
-        for (auto&& xarg : elems(firstChild(&xs, "Shell"), "Arg")) {
-            script->shellArgs.emplace_back(attrValue(&xarg, "value", ""));
-        }
-        if (script->shellArgs.empty())
+
+        if (!loadSpawn(&script->shell, firstChild(&xs, "Shell")))
+            return false;
+        if (script->shell.args.empty())
             continue;
+
         for (auto&& xlang : elems(&xs, "Lang")) {
             auto name = attrValue(&xlang, "name");
             if (!name) {
@@ -108,10 +126,9 @@ static bool loadCompilers(Config * out, XNode * root) {
         auto comp = make_shared<Compiler>();
 
         // Code/Compile
-        auto xc = firstChild(&xs, "Compile");
-        for (auto&& xarg : elems(xc, "Arg"))
-            comp->compileArgs.emplace_back(attrValue(&xarg, "value", ""));
-        if (comp->compileArgs.empty())
+        if (!loadSpawn(&comp->compile, firstChild(&xs, "Compile")))
+            return false;
+        if (comp->compile.args.empty())
             continue;
 
         // Code/File

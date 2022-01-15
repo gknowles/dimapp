@@ -1047,7 +1047,7 @@ static void runProgTests(ProgWork * work, unsigned phase) {
         for (auto&& [lang, files] : filesByLang) {
             auto comp = cfg.compilers[lang];
 
-            auto args = comp->compileArgs;
+            auto args = comp->compile.args;
             for (auto&& file : files) {
                 Path fname(file);
                 fname.defaultExt(comp->fileExt);
@@ -1056,13 +1056,14 @@ static void runProgTests(ProgWork * work, unsigned phase) {
             auto cmdline = Cli::toCmdline(args);
             auto title = lang + ", " + testPath(work->info, work->prog.line);
             s_perfCompile += 1;
+            ExecOptions opts = {
+                .workingDir = workDir.str(), 
+                .envVars = comp->compile.env,
+                .untrackedChildren = comp->compile.untracked,
+            };
             if (first) {
                 first = false;
-                auto out = execToolWait(
-                    cmdline,
-                    title,
-                    { .workingDir = workDir.str() }
-                );
+                auto out = execToolWait(cmdline, title, opts);
                 if (out.empty()) {
                     s_perfCompileFailed += 1;
                     appSignalShutdown(EX_DATAERR);
@@ -1080,7 +1081,7 @@ static void runProgTests(ProgWork * work, unsigned phase) {
                     },
                     cmdline,
                     title,
-                    { .workingDir = workDir.str() }
+                    opts
                 );
             }
         }
@@ -1108,10 +1109,13 @@ static void runProgTests(ProgWork * work, unsigned phase) {
             auto args = Cli::toArgv(run.cmdline);
             args.insert(
                 args.begin(),
-                lang.shellArgs.begin(),
-                lang.shellArgs.end()
+                lang.shell.args.begin(),
+                lang.shell.args.end()
             );
             auto cmd = Cli::toCmdline(args);
+            auto env = lang.shell.env;
+            for (auto&& var : run.env)
+                env[var.first] = var.second;
 
             string input;
             for (auto&& line : run.output) {
@@ -1121,17 +1125,19 @@ static void runProgTests(ProgWork * work, unsigned phase) {
             }
 
             s_perfRun += 1;
+            ExecOptions opts = {
+                .workingDir = workDir.str(),
+                .envVars = env,
+                .stdinData = input,
+                .untrackedChildren = lang.shell.untracked,
+                .concurrency = envProcessors(),
+            };
             execProgram(
                 [work, phase, &run](ExecResult && res) {
                     runProgDone(work, phase, run, move(res));
                 },
                 cmd,
-                {
-                    .workingDir = workDir.str(),
-                    .envVars = run.env,
-                    .stdinData = input,
-                    .concurrency = envProcessors()
-                }
+                opts
             );
             return;
         }
@@ -1170,7 +1176,8 @@ static void runTests(
                     .fn = fn,
                     .info = info,
                     .test = test.second,
-                    .prog = prog
+                    .prog = prog,
+                    .pendingWork = 1
                 });
                 runProgTests(work);
             }
@@ -1180,8 +1187,11 @@ static void runTests(
 
 //===========================================================================
 static void testSamples(Config * out, unsigned phase = 0) {
-    if (appStopping())
+    if (appStopping()) {
+        if (--out->pendingWork == 0)
+            delete out;
         return;
+    }
 
     unsigned what = 0;
 
@@ -1265,7 +1275,9 @@ static void testSamples(Config * out, unsigned phase = 0) {
 
         auto errs = s_perfCompileFailed + s_perfRunFailed;
         if (s_opts.compile) {
-            logMsgInfo() << s_perfCompile << " programs compiled.";
+            if (errs)
+                logMsgInfo();
+            logMsgInfo() << s_perfCompile << " program compiles.";
             logMsgInfo() << s_perfRun << " runs executed.";
             if (errs) {
                 ConsoleScopedAttr ca(kConsoleError);

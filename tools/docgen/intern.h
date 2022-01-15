@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2020 - 2021.
+// Copyright Glen Knowles 2020 - 2022.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // intern.h - docgen
@@ -24,16 +24,22 @@ struct Version {
     std::unordered_set<std::string> urlSegments;
 };
 
+struct Spawn {
+    std::vector<std::string> args;
+    std::map<std::string, std::string> env;
+    bool untracked = false;
+};
+
 struct Compiler {
     std::string fileExt;
-    std::vector<std::string> compileArgs;
+    Spawn compile;
 };
 
 struct Script {
     std::string prefix;
     std::string commentPrefix;
     std::vector<std::regex> envSets;
-    std::vector<std::string> shellArgs;
+    Spawn shell;
 };
 
 struct Column {

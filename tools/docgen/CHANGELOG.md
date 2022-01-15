@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 
 ## docgen 1.1.1 (2022-01-14)
 - Fixed - Last embedded test of documents not processed
+- Fixed - Memory leak when first compile fails
+- Added - Option to let grandchild continue after child process stopped
 
 ## docgen 1.1.0 (2021-09-06)
 - Added - Command line --no-update and --no-compile options
