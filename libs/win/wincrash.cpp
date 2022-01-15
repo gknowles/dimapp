@@ -43,7 +43,8 @@ static struct { int sig; void * handler; } s_oldHandlers[] = {
     //{ SIGSEGV },
 };
 static PTOP_LEVEL_EXCEPTION_FILTER s_oldFilter;
-static int s_oldErrorMode;
+static int s_oldErrorModeWin32;
+static int s_oldErrorModeCrt;
 static unsigned s_oldAbortBehavior;
 static void * s_oldInval;
 static void * s_oldPure;
@@ -193,11 +194,16 @@ static ShutdownNotify s_cleanup;
 
 //===========================================================================
 void ShutdownNotify::onShutdownConsole(bool firstTry) {
+    auto sef = SetUnhandledExceptionFilter(s_oldFilter);
+    if (sef != unhandledExceptionFilter)
+        SetUnhandledExceptionFilter(sef);
+
     for (auto && [sig, handler] : s_oldHandlers) {
         signal(sig, (decltype(SIG_DFL)) handler);
         handler = nullptr;
     }
-    _set_error_mode(s_oldErrorMode);
+    //SetErrorMode(s_oldErrorModeWin32);
+    _set_error_mode(s_oldErrorModeCrt);
     _set_abort_behavior(s_oldAbortBehavior, kAbortBehaviorMask);
     _set_invalid_parameter_handler((_invalid_parameter_handler) s_oldInval);
     _set_purecall_handler((_purecall_handler) s_oldPure);
@@ -249,12 +255,13 @@ void Dim::winCrashInitialize() {
     }
 
     RegisterApplicationRecoveryCallback(appRecoveryCallback, NULL, 30'000, 0);
-    SetUnhandledExceptionFilter(unhandledExceptionFilter);
+    s_oldFilter = SetUnhandledExceptionFilter(unhandledExceptionFilter);
 
     for (auto && [sig, handler] : s_oldHandlers)
         handler = signal(sig, abortHandler);
 
-    s_oldErrorMode = _set_error_mode(_OUT_TO_STDERR);
+    //s_oldErrorModeWin32 = SetErrorMode(SEM_FAILCRITICALERRORS);
+    s_oldErrorModeCrt = _set_error_mode(_OUT_TO_STDERR);
     s_oldAbortBehavior = _set_abort_behavior(0, kAbortBehaviorMask);
     s_oldInval = _set_invalid_parameter_handler(invalidParameterHandler);
     s_oldPure = _set_purecall_handler(pureCallHandler);
