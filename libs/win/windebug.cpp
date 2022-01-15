@@ -19,7 +19,10 @@ static wchar_t s_fname[MAX_PATH] = L"memleak.log";
 
 //===========================================================================
 extern "C" static int attachMemLeakHandle() {
-    auto leakFlags = _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
+    auto leakFlags = 0;
+#ifndef __SANITIZE_ADDRESS__
+    leakFlags = _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
+#endif
     if (~leakFlags & _CRTDBG_LEAK_CHECK_DF) {
         // Leak check disabled.
         return 0;
