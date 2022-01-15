@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2020 - 2021.
+// Copyright Glen Knowles 2020 - 2022.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // samptest.cpp - docgen
@@ -720,12 +720,13 @@ static void processScript(
     assert(as->attr == kTestInvalid);
     auto & lang = *info->out->scripts[as->lang];
 
-    enum { kInvalid, kComment, kExecute, kInput, kOutput };
-    vector<int> types;
+    enum class LineType { kInvalid, kComment, kExecute, kInput, kOutput };
+    using enum LineType;
+    vector<LineType> types;
     for (auto&& line : as->lines) {
         auto text = rtrim(line.text);
         line.text = text;
-        int type = kOutput;
+        auto type = kOutput;
         if (text.starts_with(lang.commentPrefix)) {
             type = kComment;
         } else if (text.starts_with(lang.prefix)) {
@@ -899,6 +900,8 @@ static void processPage(PageInfo * info, unsigned phase = 0) {
                 << ": unknown language: '" << as.lang << "'";
         }
     }
+    if (!ti.runs.empty())
+        info->tests[ti.line] = ti;
 
     for (auto&& test : info->tests) {
         for (auto&& prog : test.second.alts) {
