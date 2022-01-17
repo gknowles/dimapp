@@ -81,10 +81,10 @@ int internalTest() {
     EXPECT(str2 == kTest2);
 
     if (s_errors) {
-        cerr << "*** TEST FAILURES: " << s_errors << endl;
+        cerr << "*** TEST FAILURES: " << s_errors << " (json)" << endl;
         return EX_SOFTWARE;
     }
-    cout << "All tests passed" << endl;
+    cout << "All tests passed (json)" << endl;
     return EX_OK;
 }
 

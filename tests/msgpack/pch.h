@@ -14,6 +14,7 @@
 #include "file/file.h"
 #include "json/json.h"
 #include "system/system.h"
+#include "tools/tools.h"
 
 // Standard headers
 #include <fstream>

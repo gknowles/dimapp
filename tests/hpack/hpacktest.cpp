@@ -435,14 +435,7 @@ static void app(int argc, char *argv[]) {
         }
     }
 
-    if (int errs = logGetMsgCount(kLogTypeError)) {
-        ConsoleScopedAttr attr(kConsoleError);
-        cerr << "*** TEST FAILURES: " << errs << endl;
-        appSignalShutdown(EX_SOFTWARE);
-    } else {
-        cout << "All tests passed" << endl;
-        appSignalShutdown(EX_OK);
-    }
+    testSignalShutdown();
 }
 
 

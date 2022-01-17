@@ -12,6 +12,7 @@
 #include "core/core.h"
 #include "net/url.h"
 #include "system/system.h"
+#include "tools/tools.h"
 
 // Standard headers
 #include <array>

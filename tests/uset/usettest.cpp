@@ -221,10 +221,10 @@ static void app(int argc, char *argv[]) {
 
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);
-        cerr << "*** TEST FAILURES: " << errs << endl;
+        cerr << "*** TEST FAILURES: " << errs << " (uset)" << endl;
         appSignalShutdown(EX_SOFTWARE);
     } else {
-        cout << "All tests passed: " << s_passed << " tests" << endl;
+        cout << "All tests passed: " << s_passed << " tests (uset)" << endl;
         appSignalShutdown(EX_OK);
     }
 }

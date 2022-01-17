@@ -56,14 +56,7 @@ static void app(int argc, char *argv[]) {
     EXPECT_PARSE("1970-01-01T00:00:00.123456789Z", "1970-01-01T00:00:00.1234567Z");
     EXPECT_PARSE("2000-06-15T12:00:00-07:00", "2000-06-15T19:00:00.0000000Z");
 
-    if (int errs = logGetMsgCount(kLogTypeError)) {
-        ConsoleScopedAttr attr(kConsoleError);
-        cerr << "*** TEST FAILURES: " << errs << endl;
-        appSignalShutdown(EX_SOFTWARE);
-    } else {
-        cout << "All tests passed" << endl;
-        appSignalShutdown(EX_OK);
-    }
+    testSignalShutdown();
 }
 
 

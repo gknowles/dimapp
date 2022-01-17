@@ -106,10 +106,10 @@ with '&amp;'">text content</value>
     EXPECT(num == 5);
 
     if (s_errors) {
-        cerr << "*** TEST FAILURES: " << s_errors << endl;
+        cerr << "*** TEST FAILURES: " << s_errors << " (xml)" << endl;
         return EX_SOFTWARE;
     }
-    cout << "All tests passed" << endl;
+    cout << "All tests passed (xml)" << endl;
     return EX_OK;
 }
 

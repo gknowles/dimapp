@@ -50,14 +50,7 @@ static void app(int argc, char *argv[]) {
     o16 = ntoh16(hton16(buf, (uint16_t) -2));
     EXPECT(o16 == 65534);
 
-    if (int errs = logGetMsgCount(kLogTypeError)) {
-        ConsoleScopedAttr attr(kConsoleError);
-        cerr << "*** TEST FAILURES: " << errs << endl;
-        appSignalShutdown(EX_SOFTWARE);
-    } else {
-        cout << "All tests passed" << endl;
-        appSignalShutdown(EX_OK);
-    }
+    testSignalShutdown();
 }
 
 

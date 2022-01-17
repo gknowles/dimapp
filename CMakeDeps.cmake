@@ -147,6 +147,7 @@
 # libs/tools/git.cpp
 # libs/tools/pch.cpp
 # libs/tools/pch.h
+# libs/tools/test.cpp
 # libs/tools/tools.h
 # libs/win/appint.h
 # libs/win/pch.cpp

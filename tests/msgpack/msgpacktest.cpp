@@ -181,14 +181,7 @@ static void app(int argc, char *argv[]) {
     parser.parse(&used, buf.view());
     EXPECT(buf2.view() == "{\"compact\":true,\n\"schema\":0\n}\n");
 
-    if (int errs = logGetMsgCount(kLogTypeError)) {
-        ConsoleScopedAttr attr(kConsoleError);
-        cerr << "*** TEST FAILURES: " << errs << endl;
-        appSignalShutdown(EX_SOFTWARE);
-    } else {
-        cout << "All tests passed" << endl;
-        appSignalShutdown(EX_OK);
-    }
+    testSignalShutdown();
 }
 
 

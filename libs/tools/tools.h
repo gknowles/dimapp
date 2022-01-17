@@ -62,4 +62,16 @@ bool gitLoadConfig(
     std::string_view fallbackPathFromGitRoot
 );
 
+
+/****************************************************************************
+*
+*   Test helper functions
+*
+***/
+
+// Uses logGetMsgCount() and appBaseName() to print final pass/fail report
+// and signal shutdown with EX_OK or EX_SOFTWARE.
+void testSignalShutdown();
+
+
 } // namespace

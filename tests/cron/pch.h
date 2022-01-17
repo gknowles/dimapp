@@ -11,6 +11,7 @@
 #include "core/core.h"
 #include "dimcli/cli.h"
 #include "system/system.h"
+#include "tools/tools.h"
 
 // Standard headers
 #include <iostream>
