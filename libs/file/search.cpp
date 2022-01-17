@@ -45,9 +45,14 @@ static bool match(const FileIter::Info & info) {
 }
 
 //===========================================================================
-static void copy(FileIter::Entry * entry, fs::directory_iterator p) {
+static void copy(
+    FileIter::Entry * entry, 
+    fs::directory_iterator p, 
+    bool firstPass
+) {
     entry->path = p->path();
     entry->isdir = fs::is_directory(p->status());
+    entry->isbefore = firstPass;
     entry->mtime = fileLastWriteTime(entry->path);
 }
 
@@ -91,7 +96,7 @@ CHECK_CURRENT:
 EXITED_DIR:
         if (info->flags & FileIter::fDirsLast) {
             cur->firstPass = false;
-            copy(&info->entry, p);
+            copy(&info->entry, p, cur->firstPass);
             return true;
         }
         goto TRY_NEXT;
@@ -103,7 +108,7 @@ EXITED_DIR:
     ) {
         goto ENTER_DIR;
     }
-    copy(&info->entry, p);
+    copy(&info->entry, p, cur->firstPass);
     if (!match(*info))
         goto TRY_NEXT;
 
