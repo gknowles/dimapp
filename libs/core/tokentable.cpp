@@ -159,7 +159,7 @@ TokenTable::Iterator TokenTable::begin() const {
 
 //===========================================================================
 TokenTable::Iterator TokenTable::end() const {
-    return Iterator{&m_values.end()->token};
+    return Iterator{&m_values.data()[m_values.size()].token};
 }
 
 
