@@ -448,11 +448,33 @@ TimePoint Dim::fileLastWriteTime(string_view path) {
     if (!GetFileAttributesExW(
         toWstring(path).c_str(),
         GetFileExInfoStandard,
-        &attrs)
-    ) {
+        &attrs
+    )) {
         return {};
     }
     return TimePoint{duration(attrs.ftLastWriteTime)};
+}
+
+//===========================================================================
+File::Attrs Dim::fileAttrs(std::string_view path) {
+    WIN32_FILE_ATTRIBUTE_DATA attrs;
+    if (!GetFileAttributesExW(
+        toWstring(path).c_str(),
+        GetFileExInfoStandard,
+        &attrs
+    )) {
+        return {};
+    }
+    return static_cast<File::Attrs>(attrs.dwFileAttributes);
+}
+
+//===========================================================================
+bool Dim::fileAttrs(std::string_view path, File::Attrs attrs) {
+    if (!SetFileAttributesW(toWstring(path).c_str(), (DWORD) attrs)) {
+        winFileSetErrno(WinError{});
+        return false;
+    }
+    return true;
 }
 
 //===========================================================================

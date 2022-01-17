@@ -95,6 +95,7 @@ public:
     struct Entry {
         Path path;
         bool isdir{false};
+        bool isbefore{false};
         TimePoint mtime;
     };
 
@@ -145,6 +146,23 @@ bool fileExists(std::string_view path);
 bool fileDirExists(std::string_view path);
 bool fileReadOnly(std::string_view path);
 void fileReadOnly(std::string_view path, bool enable);
+
+namespace File {
+    enum class Attrs : uint32_t {
+        fReadOnly   = 0x0001,   // FILE_ATTRIBUTE_READONLY
+        fHidden     = 0x0002,   // FILE_ATTRIBUTE_HIDDEN
+        fSystem     = 0x0004,   // FILE_ATTRIBUTE_SYSTEM
+        fDir        = 0x0010,   // FILE_ATTRIBUTE_DIRECTORY
+        fArchive    = 0x0020,   // FILE_ATTRIBUTE_ARCHIVE
+        fDevice     = 0x0040,   // FILE_ATTRIBUTE_DEVICE
+        fNormal     = 0x0080,   // FILE_ATTRIBUTE_NORMAL
+        fTemp       = 0x0100,   // FILE_ATTRIBUTE_TEMPORARY
+        fSparse     = 0x0200,   // FILE_ATTRIBUTE_SPARSE_FILE
+        fReparse    = 0x0400,   // FILE_ATTRIBUTE_REPARSE_POINT
+    };
+}
+File::Attrs fileAttrs(std::string_view path);
+bool fileAttrs(std::string_view path, File::Attrs attrs);
 
 bool fileRemove(std::string_view path, bool recurse = false);
 bool fileCreateDirs(std::string_view path);
