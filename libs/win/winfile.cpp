@@ -24,7 +24,7 @@ struct WinFileInfo : public HandleContent {
     string m_path;
     HANDLE m_handle{INVALID_HANDLE_VALUE};
     File::OpenMode m_mode{File::fReadOnly};
-    unordered_map<const void *, File::ViewMode> m_views;
+    unordered_map<const void *, File::View> m_views;
 };
 
 class IFileOpBase : protected IWinOverlappedNotify {
@@ -456,7 +456,7 @@ TimePoint Dim::fileLastWriteTime(string_view path) {
 }
 
 //===========================================================================
-File::Attrs Dim::fileAttrs(std::string_view path) {
+File::Attrs::Attrs Dim::fileAttrs(std::string_view path) {
     WIN32_FILE_ATTRIBUTE_DATA attrs;
     if (!GetFileAttributesExW(
         toWstring(path).c_str(),
@@ -465,11 +465,11 @@ File::Attrs Dim::fileAttrs(std::string_view path) {
     )) {
         return {};
     }
-    return static_cast<File::Attrs>(attrs.dwFileAttributes);
+    return static_cast<File::Attrs::Attrs>(attrs.dwFileAttributes);
 }
 
 //===========================================================================
-bool Dim::fileAttrs(std::string_view path, File::Attrs attrs) {
+bool Dim::fileAttrs(std::string_view path, File::Attrs::Attrs attrs) {
     if (!SetFileAttributesW(toWstring(path).c_str(), (DWORD) attrs)) {
         winFileSetErrno(WinError{});
         return false;
@@ -869,18 +869,18 @@ unsigned Dim::fileMode(FileHandle f) {
 }
 
 //===========================================================================
-File::FileType Dim::fileType(FileHandle f) {
+File::Type Dim::fileType(FileHandle f) {
     auto file = getInfo(f);
     DWORD type = GetFileType(file->m_handle);
     switch (type) {
-    case FILE_TYPE_CHAR: return File::kCharacter;
-    case FILE_TYPE_DISK: return File::kRegular;
+    case FILE_TYPE_CHAR: return File::Type::kCharacter;
+    case FILE_TYPE_DISK: return File::Type::kRegular;
     case FILE_TYPE_UNKNOWN:
         winFileSetErrno(WinError{});
-        return File::kUnknown;
+        return File::Type::kUnknown;
     default:
         winFileSetErrno(NO_ERROR);
-        return File::kUnknown;
+        return File::Type::kUnknown;
     }
 }
 
@@ -1077,18 +1077,18 @@ size_t Dim::fileAppendWait(FileHandle f, string_view data) {
 ***/
 
 //===========================================================================
-static unsigned getWindowsPerms(FileAccess::Right right) {
+static unsigned getWindowsPerms(File::Access::Right right) {
     switch (right) {
-    case FileAccess::kNone: return 0;
-    case FileAccess::kFull: return FILE_ALL_ACCESS;
-    case FileAccess::kModify:
+    case File::Access::Right::kNone: return 0;
+    case File::Access::Right::kFull: return FILE_ALL_ACCESS;
+    case File::Access::Right::kModify:
         return FILE_GENERIC_READ | FILE_GENERIC_WRITE | FILE_GENERIC_EXECUTE
             | DELETE;
-    case FileAccess::kReadAndExecute:
+    case File::Access::Right::kReadAndExecute:
         return FILE_GENERIC_READ | FILE_GENERIC_EXECUTE;
-    case FileAccess::kReadOnly: return FILE_GENERIC_READ;
-    case FileAccess::kWriteOnly: return FILE_GENERIC_WRITE;
-    case FileAccess::kDelete: return DELETE;
+    case File::Access::Right::kReadOnly: return FILE_GENERIC_READ;
+    case File::Access::Right::kWriteOnly: return FILE_GENERIC_WRITE;
+    case File::Access::Right::kDelete: return DELETE;
     default:
         break;
     }
@@ -1101,8 +1101,8 @@ static bool updateNamedAccess(
     string_view path,
     string_view trustee, // name of account or group
     ACCESS_MODE mode,
-    FileAccess::Right allow,
-    FileAccess::Inherit inherit
+    File::Access::Right allow,
+    File::Access::Inherit inherit
 ) {
     WinError err = 0;
     SECURITY_DESCRIPTOR * sd = nullptr;
@@ -1129,15 +1129,15 @@ static bool updateNamedAccess(
         access.grfAccessMode = mode;
         access.grfAccessPermissions = getWindowsPerms(allow);
         switch (inherit) {
-        case FileAccess::kInheritNone:
+        case File::Access::Inherit::kNone:
         default:
             access.grfInheritance = NO_INHERITANCE;
             break;
-        case FileAccess::kInheritOnly:
+        case File::Access::Inherit::kOnly:
             access.grfInheritance =
                 SUB_CONTAINERS_AND_OBJECTS_INHERIT | INHERIT_ONLY;
             break;
-        case FileAccess::kInheritAll:
+        case File::Access::Inherit::kAll:
             access.grfInheritance = SUB_CONTAINERS_AND_OBJECTS_INHERIT;
             break;
         }
@@ -1173,8 +1173,8 @@ static bool updateNamedAccess(
 bool Dim::fileAddAccess(
     string_view path,
     string_view trustee, // name or Sid of account or group
-    FileAccess::Right allow,
-    FileAccess::Inherit inherit
+    File::Access::Right allow,
+    File::Access::Inherit inherit
 ) {
     return updateNamedAccess(path, trustee, GRANT_ACCESS, allow, inherit);
 }
@@ -1183,8 +1183,8 @@ bool Dim::fileAddAccess(
 bool Dim::fileSetAccess(
     string_view path,
     string_view trustee, // name or Sid of account or group
-    FileAccess::Right allow,
-    FileAccess::Inherit inherit
+    File::Access::Right allow,
+    File::Access::Inherit inherit
 ) {
     return updateNamedAccess(path, trustee, SET_ACCESS, allow, inherit);
 }
@@ -1325,7 +1325,7 @@ size_t Dim::fileViewAlignment(FileHandle f) {
 static bool openView(
     char *& base,
     FileHandle f,
-    File::ViewMode mode,
+    File::View mode,
     int64_t offset,
     int64_t length,
     int64_t maxLength
@@ -1344,7 +1344,7 @@ static bool openView(
     SIZE_T viewSize;
     ULONG access, secProt, allocType, pageProt;
 
-    if (mode == File::kViewReadOnly) {
+    if (mode == File::View::kReadOnly) {
         if (!maxLength || (file->m_mode & File::fReadOnly)) {
             assert(!maxLength);
             // read only view
@@ -1368,7 +1368,7 @@ static bool openView(
             pageProt = PAGE_READONLY;
         }
     } else {
-        assert(mode == File::kViewReadWrite);
+        assert(mode == File::View::kReadWrite);
         assert(file->m_mode & File::fReadWrite);
         if (!maxLength) {
             // writable view
@@ -1445,12 +1445,12 @@ static bool openView(
 bool Dim::fileOpenView(
     const char *& base,
     FileHandle f,
-    File::ViewMode mode,
+    File::View mode,
     int64_t offset,
     int64_t length,
     int64_t maxLength
 ) {
-    assert(mode == File::kViewReadOnly);
+    assert(mode == File::View::kReadOnly);
     return openView((char *&) base, f, mode, offset, length, maxLength);
 }
 
@@ -1458,12 +1458,12 @@ bool Dim::fileOpenView(
 bool Dim::fileOpenView(
     char *& base,
     FileHandle f,
-    File::ViewMode mode,
+    File::View mode,
     int64_t offset,
     int64_t length,
     int64_t maxLength
 ) {
-    assert(mode == File::kViewReadWrite);
+    assert(mode == File::View::kReadWrite);
     return openView(base, f, mode, offset, length, maxLength);
 }
 
@@ -1494,10 +1494,10 @@ void Dim::fileExtendView(FileHandle f, const void * view, int64_t length) {
             << "): unknown view, " << (void *) view;
     }
     ULONG pageProt;
-    if (i->second == File::kViewReadOnly) {
+    if (i->second == File::View::kReadOnly) {
         pageProt = PAGE_READONLY;
     } else {
-        assert(i->second == File::kViewReadWrite);
+        assert(i->second == File::View::kReadWrite);
         pageProt = PAGE_READWRITE;
     }
     assert((uint64_t) length == (uint64_t) (SIZE_T) length);

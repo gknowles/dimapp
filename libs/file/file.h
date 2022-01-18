@@ -63,7 +63,7 @@ namespace File {
         fInternalFlags = fNonOwning,
     };
 
-    enum FileType {
+    enum class Type {
         kUnknown,   // bad handle, system error, or unknown file type
         kRegular,
         kCharacter,
@@ -151,8 +151,8 @@ bool fileDirExists(std::string_view path);
 bool fileReadOnly(std::string_view path);
 void fileReadOnly(std::string_view path, bool enable);
 
-namespace File {
-    enum class Attrs : uint32_t {
+namespace File::Attrs {
+    enum Attrs : uint32_t {
         fReadOnly   = 0x0001,   // FILE_ATTRIBUTE_READONLY
         fHidden     = 0x0002,   // FILE_ATTRIBUTE_HIDDEN
         fSystem     = 0x0004,   // FILE_ATTRIBUTE_SYSTEM
@@ -165,8 +165,8 @@ namespace File {
         fReparse    = 0x0400,   // FILE_ATTRIBUTE_REPARSE_POINT
     };
 }
-File::Attrs fileAttrs(std::string_view path);
-bool fileAttrs(std::string_view path, File::Attrs attrs);
+File::Attrs::Attrs fileAttrs(std::string_view path);
+bool fileAttrs(std::string_view path, File::Attrs::Attrs attrs);
 
 bool fileRemove(std::string_view path, bool recurse = false);
 bool fileCreateDirs(std::string_view path);
@@ -174,8 +174,8 @@ bool fileCreateDirs(std::string_view path);
 std::string fileTempDir();
 std::string fileTempName(std::string_view suffix = ".tmp");
 
-namespace FileAccess {
-    enum Right {
+namespace File::Access {
+    enum class Right {
         kInvalid,
         kNone,
         kFull, // not normally needed, prefer using "Modify"
@@ -185,23 +185,23 @@ namespace FileAccess {
         kWriteOnly,
         kDelete,
     };
-    enum Inherit {
-        kInheritNone,
-        kInheritOnly, // inherited by children but doesn't apply to object
-        kInheritAll,
+    enum class Inherit {
+        kNone,
+        kOnly, // inherited by children but doesn't apply to object
+        kAll,
     };
 }
 bool fileAddAccess(
     std::string_view path,
     std::string_view trustee, // name or Sid of account or group
-    FileAccess::Right allow,
-    FileAccess::Inherit inherit
+    File::Access::Right allow,
+    File::Access::Inherit inherit
 );
 bool fileSetAccess(
     std::string_view path,
     std::string_view trustee, // name or Sid of account or group
-    FileAccess::Right allow,
-    FileAccess::Inherit inherit
+    File::Access::Right allow,
+    File::Access::Inherit inherit
 );
 
 //---------------------------------------------------------------------------
@@ -259,7 +259,7 @@ unsigned fileMode(FileHandle f);
 // kUnknown is returned for bad handle and system errors as well as when the
 // type is unknown. If kUnknown was not returned due to error, errno is set
 // to 0.
-File::FileType fileType(FileHandle f);
+File::Type fileType(FileHandle f);
 
 struct FileAlignment {
     // All values measured in bytes
@@ -503,9 +503,9 @@ void fileCopy(
 
 namespace File {
 
-enum ViewMode {
-    kViewReadOnly,
-    kViewReadWrite,
+enum class View {
+    kReadOnly,
+    kReadWrite,
 };
 
 } // namespace
@@ -523,7 +523,7 @@ size_t fileViewAlignment(FileHandle f);
 bool fileOpenView(
     const char *& view,
     FileHandle f,
-    File::ViewMode mode,    // must be kViewReadOnly
+    File::View mode,    // must be kReadOnly
     int64_t offset = 0,
     int64_t length = 0,     // defaults to current length of file
     int64_t maxLength = 0   // defaults to not extendable
@@ -531,7 +531,7 @@ bool fileOpenView(
 bool fileOpenView(
     char *& view,
     FileHandle f,
-    File::ViewMode mode,    // must be kViewReadWrite
+    File::View mode,    // must be kReadWrite
     int64_t offset = 0,
     int64_t length = 0,     // defaults to current length of file
     int64_t maxLength = 0   // defaults to not extendable

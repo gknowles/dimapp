@@ -158,7 +158,7 @@ void ConsoleReader::init() {
     m_input = fileAttachStdin();
     if (!m_input)
         return appSignalShutdown(EX_IOERR);
-    m_isFile = (fileType(m_input) == File::kRegular);
+    m_isFile = (fileType(m_input) == File::Type::kRegular);
     if (!m_isFile)
         consoleEnableEcho(false);
 }

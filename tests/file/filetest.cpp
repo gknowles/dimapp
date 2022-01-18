@@ -41,7 +41,7 @@ static void app(int argc, char *argv[]) {
     fileWriteWait(file, 0, "aaaa", 4);
 
     const char * base;
-    if (!fileOpenView(base, file, File::kViewReadOnly, 0, 0, 1001 * psize))
+    if (!fileOpenView(base, file, File::View::kReadOnly, 0, 0, 1001 * psize))
         return appSignalShutdown(EX_DATAERR);
 
     fileExtendView(file, base, 1001 * psize);
