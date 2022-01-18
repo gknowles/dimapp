@@ -40,6 +40,12 @@ static bool match(const FileIter::Info & info) {
             return false;
     }
 
+    if (~info.flags & FileIter::fHidden) {
+        auto attrs = (unsigned) fileAttrs(info.entry.path.view());
+        if ((attrs & unsigned(File::Attrs::fHidden))) 
+            return false;
+    }
+
     // TODO: check pattern
     return true;
 }
@@ -52,7 +58,7 @@ static void copy(
 ) {
     entry->path = p->path();
     entry->isdir = fs::is_directory(p->status());
-    entry->isbefore = firstPass;
+    entry->isbefore = entry->isdir && firstPass;
     entry->mtime = fileLastWriteTime(entry->path);
 }
 
@@ -60,20 +66,23 @@ static void copy(
 static bool find(FileIter::Info * info, bool fromNext) {
     auto cur = &info->pos.back();
     auto p = cur->iter;
+    error_code ec;
 
     if (!fromNext)
         goto CHECK_CURRENT;
 
     if (cur->firstPass
         && (info->flags & FileIter::fDirsFirst)
-        && fs::is_directory(p->status())
+        && info->entry.isdir
     ) {
 ENTER_DIR:
-        // we were at the directory, now start it's contents
-        error_code ec;
+        // We were at the directory, now start it's contents
         auto q = fs::directory_iterator(*p, ec);
-        if (q == end(q))
-            goto EXITED_DIR;
+        if (q == end(q)) {
+            // No contents, skip over pushing and popping the dir info stack 
+            // and go straight to processing the exit.
+            goto DIR_EXITED;
+        }
         info->pos.push_back({q});
         cur = &info->pos.back();
         p = q;
@@ -81,20 +90,27 @@ ENTER_DIR:
     }
 
 TRY_NEXT:
-    p = ++cur->iter;
+    p = cur->iter.increment(ec);
+    if (ec)
+        p = end(p);
     cur->firstPass = true;
 
 CHECK_CURRENT:
-    // make for valid entry
     if (p == end(p)) {
+        // No more files in directory, move up to parent.
         info->pos.pop_back();
-        if (info->pos.empty())
+        if (info->pos.empty()) {
+            // Already at search root, return false (end of search).
             return false;
+        }
         cur = &info->pos.back();
         p = cur->iter;
 
-EXITED_DIR:
+DIR_EXITED:
         if (info->flags & FileIter::fDirsLast) {
+            // Always return a directory when leaving it if fDirsLast is
+            // defined. No validation is required, it was checked to be 
+            // desired before it was entered.
             cur->firstPass = false;
             copy(&info->entry, p, cur->firstPass);
             return true;
@@ -103,15 +119,14 @@ EXITED_DIR:
     }
 
     // check filter
-    if (!(info->flags & FileIter::fDirsFirst)
-        && fs::is_directory(p->status())
-    ) {
+    copy(&info->entry, p, cur->firstPass);
+    if (!match(*info)) 
+        goto TRY_NEXT;
+    if (info->entry.isdir && (~info->flags & FileIter::fDirsFirst)) {
+        // Not reporting directories when entered, so rather than reporting 
+        // it, start searching it's contents.
         goto ENTER_DIR;
     }
-    copy(&info->entry, p, cur->firstPass);
-    if (!match(*info))
-        goto TRY_NEXT;
-
     return true;
 }
 

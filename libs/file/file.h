@@ -91,6 +91,10 @@ public:
         // Only return directories, implies recursive search. Nothing will be
         // returned unless fDirsFirst and/or fDirsLast is also set.
         fDirsOnly  = 0x04,
+
+        // Hidden files and directories are excluded by default, this flag 
+        // causes them to be included.
+        fHidden    = 0x08,
     };
     struct Entry {
         Path path;
