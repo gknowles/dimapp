@@ -416,7 +416,7 @@ void Dim::iLogFileInitialize() {
 
     logMonitor(&s_logger);
     s_jsonLogFiles.set(appLogDir());
-    if (appFlags() & fAppWithWebAdmin) {
+    if (appFlags().any(fAppWithWebAdmin)) {
         httpRouteAdd(&s_jsonLogFiles, "/srv/logfiles.json");
         httpRouteAdd(&s_jsonLogTail, "/srv/logtail/", fHttpMethodGet, true);
     }

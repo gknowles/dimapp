@@ -59,7 +59,7 @@ public:
         IFactory<IAppSocketNotify> * fact,
         Duration inactiveTimeout,
         AppSocket::Family fam,
-        AppSocket::MgrFlags flags
+        EnumFlags<AppSocket::MgrFlags> flags
     );
     virtual ~ISockMgrBase();
 
@@ -82,8 +82,8 @@ protected:
     IFactory<IAppSocketNotify> * m_cliSockFact;
     AppSocket::Family m_family;
     std::vector<SockAddr> m_addrs;
-    AppSocket::MgrFlags m_mgrFlags;
-    AppSocket::ConfFlags m_confFlags;
+    EnumFlags<AppSocket::MgrFlags> m_mgrFlags;
+    EnumFlags<AppSocket::ConfFlags> m_confFlags;
 
     RunMode m_mode{kRunRunning};
     TimerList<ISockMgrSocket> m_inactivity;

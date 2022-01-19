@@ -96,7 +96,7 @@ int appRun(
     char * argv[],
     const VersionInfo & ver = {},
     std::string_view baseName = {}, // defaults to stem of execuable file name
-    AppFlags flags = fAppClient
+    EnumFlags<AppFlags> flags = fAppClient
 );
 int appRun(
     std::function<void(int argc, char *argv[])> fn,
@@ -104,7 +104,7 @@ int appRun(
     char * argv[],
     const VersionInfo & ver = {},
     std::string_view baseName = {}, // defaults to stem of execuable file name
-    AppFlags flags = fAppClient
+    EnumFlags<AppFlags> flags = fAppClient
 );
 
 
@@ -123,7 +123,7 @@ inline bool appStarting() { return appMode() == kRunStarting; }
 inline bool appStopping() { return appMode() == kRunStopping; }
 
 // returns flags passed to appRun()
-AppFlags appFlags();
+EnumFlags<AppFlags> appFlags();
 
 // returns EX_OK unless changed by appSignalShutdown()
 int appExitCode();

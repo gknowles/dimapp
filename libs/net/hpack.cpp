@@ -451,17 +451,21 @@ void HpackEncode::endBlock() {}
 void HpackEncode::header(
     const char name[],
     const char value[],
-    HpackFlags flags
+    EnumFlags<HpackFlags> flags
 ) {
     // (0x00) - literal header field without indexing (new name)
     // (0x10) - literal header field never indexed (new name)
-    m_out->append(1, (flags & fNeverIndexed) ? 0x10 : 0x00);
+    m_out->append(1, flags.any(fNeverIndexed) ? 0x10 : 0x00);
     write(name);
     write(value);
 }
 
 //===========================================================================
-void HpackEncode::header(HttpHdr name, const char value[], HpackFlags flags) {
+void HpackEncode::header(
+    HttpHdr name, 
+    const char value[], 
+    EnumFlags<HpackFlags> flags
+) {
     header(toString(name), value, flags);
 }
 
@@ -729,7 +733,7 @@ bool HpackDecode::readInstruction(
         kHttpInvalid,
         fld.name,
         fld.value,
-        mode == kNeverIndexed ? fNeverIndexed : (HpackFlags) 0
+        mode == kNeverIndexed ? fNeverIndexed : HpackFlags{}
     );
     return true;
 }

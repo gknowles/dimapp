@@ -105,7 +105,7 @@ void ConfigFile::monitor_UNLK(
 
     if (wasEmpty) {
         lk.unlock();
-        if (appFlags() & fAppWithFiles) {
+        if (appFlags().any(fAppWithFiles)) {
             fileMonitor(s_hDir, relpath, this);
         } else {
             string fullpath;
@@ -263,7 +263,7 @@ void Dim::iConfigInitialize() {
     s_context.saddr.addr = addrs[0];
     s_context.appBaseName = appBaseName();
     s_context.appIndex = appIndex();
-    if (appFlags() & fAppWithFiles)
+    if (appFlags().any(fAppWithFiles))
         fileMonitorDir(&s_hDir, appConfigDir(), true);
 }
 
@@ -277,7 +277,7 @@ void Dim::iConfigInitialize() {
 //===========================================================================
 static bool getFullpath(Path * out, string_view file) {
     bool result;
-    if (appFlags() & fAppWithFiles) {
+    if (appFlags().any(fAppWithFiles)) {
         result = fileMonitorPath(out, s_hDir, file);
     } else {
         result = appConfigPath(out, file, false);

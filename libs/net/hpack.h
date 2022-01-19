@@ -52,12 +52,12 @@ public:
     void header(
         const char name[],
         const char value[],
-        HpackFlags flags = {}
+        EnumFlags<HpackFlags> flags = {}
     );
     void header(
         HttpHdr name,
         const char value[],
-        HpackFlags flags = {}
+        EnumFlags<HpackFlags> flags = {}
     );
 
 private:
@@ -84,7 +84,7 @@ public:
         HttpHdr id,
         const char name[],
         const char value[],
-        HpackFlags flags
+        EnumFlags<HpackFlags> flags
     ) = 0;
 };
 

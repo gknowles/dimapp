@@ -67,7 +67,7 @@ private:
         HANDLE * hchild,
         StdStream strm,
         string_view name,
-        Pipe::OpenMode oflags
+        EnumFlags<Pipe::OpenMode> oflags
     );
     void completeIfDone_UNLK(unique_lock<mutex> && lk);
 
@@ -341,7 +341,7 @@ void ExecProgram::exec() {
     struct {
         StdStream strm;
         string name;
-        Pipe::OpenMode oflags;
+        EnumFlags<Pipe::OpenMode> oflags;
     } pipes[] = {
         { kStdIn, name + ".in", Pipe::fReadWrite },
         { kStdOut, name + ".out", Pipe::fReadOnly },
@@ -610,31 +610,34 @@ bool ExecProgram::createPipe(
     HANDLE * child,
     StdStream strm,
     string_view name,
-    Pipe::OpenMode oflags
+    EnumFlags<Pipe::OpenMode> oflags
 ) {
+    using enum Pipe::OpenMode;
     assert(m_pipes[strm].m_mode == kRunStarting);
-    pipeListen(&m_pipes[strm], name, oflags, queue());
 
+    pipeListen(&m_pipes[strm], name, oflags, queue());
     if (child) {
+        unsigned access = 0;
         unsigned flags = SECURITY_SQOS_PRESENT | SECURITY_IDENTIFICATION;
         // Child side has read & write reversed from listening parent
-        if (oflags & Pipe::fReadOnly)
-            flags |= GENERIC_WRITE;
-        if (oflags & Pipe::fWriteOnly)
-            flags |= GENERIC_READ;
-        if (oflags & Pipe::fReadWrite)
-            flags |= GENERIC_READ | GENERIC_WRITE;
+        if (oflags.any(fReadOnly)) {
+            access |= GENERIC_WRITE;
+        } else if (oflags.any(fWriteOnly)) {
+            access |= GENERIC_READ;
+        } else if (oflags.any(fReadWrite)) {
+            access |= GENERIC_READ | GENERIC_WRITE;
+        }
 
         auto wname = toWstring(name);
         SECURITY_ATTRIBUTES sa = {};
         sa.bInheritHandle = true;
         auto cp = CreateFileW(
             wname.c_str(),
-            flags,
+            access,
             0,      // share
             &sa,
             OPEN_EXISTING,
-            0,      // attributes and flags
+            flags,  // attributes and flags
             NULL    // template file
         );
         if (cp == INVALID_HANDLE_VALUE) {

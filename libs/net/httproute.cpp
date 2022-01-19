@@ -1234,7 +1234,7 @@ void Dim::httpRouteGetRoutes(IJBuilder * out) {
         }
         out->member("methods");
         out->array();
-        for (auto mname : to_views(p.methods))
+        for (auto mname : toViews(p.methods))
             out->value(mname);
         out->end();
         out->member("matched", p.matched);

@@ -147,6 +147,6 @@ void Dim::iPlatformInitialize() {
 void Dim::iPlatformConfigInitialize() {
     winGuiConfigInitialize();
 
-    if (appFlags() & fAppWithWebAdmin)
+    if (appFlags().any(fAppWithWebAdmin))
         registerWebAdmin();
 }

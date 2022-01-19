@@ -138,8 +138,8 @@ Element * Grammar::addSequenceRule(
     string_view name,
     unsigned m,
     unsigned n,
-    Element::Flags flags
-    ) {
+    EnumFlags<Element::Flags> flags
+) {
     auto e = addChoiceRule(name, m, n, flags);
     e = addSequence(e, 1, 1);
     return e;
@@ -150,7 +150,7 @@ Element * Grammar::addChoiceRule(
     string_view name,
     unsigned m,
     unsigned n,
-    Element::Flags flags
+    EnumFlags<Element::Flags> flags
 ) {
     Element e;
     e.id = ++m_nextElemId;
@@ -366,21 +366,21 @@ bool copyRules(
         return true;
     }
     auto & elem = *ib.first;
-    if ((elem.flags & Element::fFunction)
-        && (elem.flags & Element::fCharEvents)
+    if (elem.flags.any(Element::fFunction) 
+        && elem.flags.any(Element::fCharEvents)
     ) {
         logMsgError() << "Rule with both Function and Char, " << elem.value;
         return false;
     }
-    if ((elem.flags & Element::fStartEvents) == Element::fStartEvents) {
+    if (elem.flags.all(Element::fStartEvents)) {
         logMsgError() << "Rule with both Start and Start+, " << elem.value;
         return false;
     }
-    if ((elem.flags & Element::fEndEvents) == Element::fEndEvents) {
+    if (elem.flags.all(Element::fEndEvents)) {
         logMsgError() << "Rule with both End and End+, " << elem.value;
         return false;
     }
-    if ((elem.flags & Element::fCharEvents) == Element::fCharEvents) {
+    if (elem.flags.all(Element::fCharEvents)) {
         logMsgError() << "Rule with both Char and Char+, " << elem.value;
         return false;
     }
@@ -400,12 +400,12 @@ static void normalizeChoice(Element & rule);
 //===========================================================================
 static void mergeChoice(Element & rule) {
     normalizeChoice(rule);
-    if (rule.flags || rule.m != 1 || rule.n != 1) {
+    if (rule.flags.any() || rule.m != 1 || rule.n != 1) {
         rule.flags |= Element::fComplex;
         return;
     }
     for (auto && e : rule.elements) {
-        if (e.flags & Element::fComplex) {
+        if (e.flags.any(Element::fComplex)) {
             rule.flags |= Element::fComplex;
             return;
         }
@@ -425,15 +425,15 @@ static void mergeRule(Element & rule, Grammar & rules) {
     if (!rule.rule)
         return;
     merge(const_cast<Element &>(*rule.rule), rules);
-    if (rule.rule->flags & Element::fSimple) {
+    if (rule.rule->flags.any(Element::fSimple)) {
         assert(rule.rule->type == Element::kChoice);
         rule.m *= rule.rule->m;
         rule.n = max({rule.n, rule.rule->n, rule.n * rule.rule->n});
         rule.type = rule.rule->type;
         rule.elements = rule.rule->elements;
         rule.rule = nullptr;
-        rule.flags &= ~Element::fComplex;
-        rule.flags |= rule.flags || rule.m != 1 || rule.n != 1
+        rule.flags.reset(Element::fComplex);
+        rule.flags |= rule.flags.any() || rule.m != 1 || rule.n != 1
             ? Element::fComplex
             : Element::fSimple;
     }
@@ -441,14 +441,14 @@ static void mergeRule(Element & rule, Grammar & rules) {
 
 //===========================================================================
 static void mergeTerminal(Element & rule) {
-    rule.flags |= (rule.flags ? Element::fComplex : Element::fSimple);
+    rule.flags |= (rule.flags.any() ? Element::fComplex : Element::fSimple);
 }
 
 //===========================================================================
 static void merge(Element & rule, Grammar & rules) {
-    if (rule.flags & Element::fComplexityFlags)
+    if (rule.flags.any(Element::fComplexityFlags))
         return;
-    if (rule.flags)
+    if (rule.flags.any())
         rule.flags |= Element::fComplex;
 
     for (auto && elem : rule.elements)
@@ -611,9 +611,9 @@ static void addFunctionTags(
         break;
     case Element::kRule:
         wasUsed = used[rule.rule->id];
-        if (wasUsed && (~rule.rule->flags & Element::fCharEvents))
+        if (wasUsed && rule.rule->flags.none(Element::fCharEvents))
             const_cast<Element *>(rule.rule)->flags |= Element::fFunction;
-        if (rule.rule->flags & Element::fFunction)
+        if (rule.rule->flags.any(Element::fFunction))
             return;
         used[rule.rule->id] = true;
         addFunctionTags(rules, const_cast<Element &>(*rule.rule), used);
@@ -630,7 +630,7 @@ void functionTags(Grammar & rules, Element & rule, bool reset, bool mark) {
         size_t maxId = 0;
         for (auto && elem : rules.rules()) {
             if (reset)
-                const_cast<Element &>(elem).flags &= ~Element::fFunction;
+                const_cast<Element &>(elem).flags.reset(Element::fFunction);
             maxId = max((size_t)elem.id, maxId);
         }
         if (mark) {

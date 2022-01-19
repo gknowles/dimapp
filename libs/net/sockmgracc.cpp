@@ -148,7 +148,7 @@ void AcceptManager::setAddresses(const SockAddr * addrs, size_t count) {
     ranges::sort(endpts);
     ranges::sort(m_addrs);
 
-    bool console = (m_mgrFlags & AppSocket::fMgrConsole);
+    bool console = m_mgrFlags.any(AppSocket::fMgrConsole);
     for_each_diff(
         endpts.begin(), endpts.end(),
         m_addrs.begin(), m_addrs.end(),
@@ -172,7 +172,7 @@ bool AcceptManager::onShutdown(bool firstTry) {
 
 //===========================================================================
 void AcceptManager::onConfigChange(const XDocument & doc) {
-    auto flags = AppSocket::ConfFlags{};
+    EnumFlags flags = AppSocket::ConfFlags{};
     if (configNumber(doc, "DisableInactiveTimeout"))
         flags |= AppSocket::fDisableInactiveTimeout;
 

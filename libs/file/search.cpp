@@ -25,7 +25,7 @@ namespace {
 
 struct FileIter::Info {
     Path path;
-    Flags flags{};
+    EnumFlags<Flags> flags{};
     vector<DirInfo> pos;
     Entry entry;
 };
@@ -33,16 +33,16 @@ struct FileIter::Info {
 //===========================================================================
 static bool match(const FileIter::Info & info) {
     if (info.entry.isdir) {
-        if ((info.flags & (FileIter::fDirsFirst | FileIter::fDirsLast)) == 0)
+        if (info.flags.none(FileIter::fDirsFirst | FileIter::fDirsLast))
             return false;
     } else {
-        if (info.flags & FileIter::fDirsOnly)
+        if (info.flags.any(FileIter::fDirsOnly))
             return false;
     }
 
-    if (~info.flags & FileIter::fHidden) {
-        auto attrs = (unsigned) fileAttrs(info.entry.path.view());
-        if ((attrs & unsigned(File::Attrs::fHidden))) 
+    if (info.flags.none(FileIter::fHidden)) {
+        auto attrs = fileAttrs(info.entry.path.view());
+        if (attrs.any(File::Attrs::fHidden))
             return false;
     }
 
@@ -72,7 +72,7 @@ static bool find(FileIter::Info * info, bool fromNext) {
         goto CHECK_CURRENT;
 
     if (cur->firstPass
-        && (info->flags & FileIter::fDirsFirst)
+        && info->flags.any(FileIter::fDirsFirst)
         && info->entry.isdir
     ) {
 ENTER_DIR:
@@ -107,7 +107,7 @@ CHECK_CURRENT:
         p = cur->iter;
 
 DIR_EXITED:
-        if (info->flags & FileIter::fDirsLast) {
+        if (info->flags.any(FileIter::fDirsLast)) {
             // Always return a directory when leaving it if fDirsLast is
             // defined. No validation is required, it was checked to be 
             // desired before it was entered.
@@ -122,7 +122,7 @@ DIR_EXITED:
     copy(&info->entry, p, cur->firstPass);
     if (!match(*info)) 
         goto TRY_NEXT;
-    if (info->entry.isdir && (~info->flags & FileIter::fDirsFirst)) {
+    if (info->entry.isdir && info->flags.none(FileIter::fDirsFirst)) {
         // Not reporting directories when entered, so rather than reporting 
         // it, start searching it's contents.
         goto ENTER_DIR;
@@ -141,7 +141,7 @@ DIR_EXITED:
 FileIter::FileIter(
     string_view dir,
     string_view name,
-    FileIter::Flags flags
+    EnumFlags<FileIter::Flags> flags
 ) {
     m_info = make_shared<Info>();
     m_info->path = dir;

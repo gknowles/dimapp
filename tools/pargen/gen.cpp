@@ -127,7 +127,7 @@ bool StatePosition::operator==(const StatePosition & right) const {
 //===========================================================================
 size_t std::hash<StateEvent>::operator()(const StateEvent & val) const {
     size_t out = val.elem->id;
-    hashCombine(&out, val.flags);
+    hashCombine(&out, val.flags.underlying());
     hashCombine(&out, val.distance);
     return out;
 }
@@ -138,7 +138,7 @@ strong_ordering StateEvent::operator<=>(const StateEvent & right) const {
         return cmp;
     if (auto cmp = elem->id <=> right.elem->id; cmp != 0)
         return cmp;
-    return flags <=> right.flags;
+    return flags.underlying() <=> right.flags.underlying();
 }
 
 //===========================================================================
@@ -253,7 +253,7 @@ static void addRulePositions(
     auto & se = sp->elems.back();
     const Element & elem = *se.elem;
     *skippable = false;
-    if (elem.rule->flags & Element::fFunction) {
+    if (elem.rule->flags.any(Element::fFunction)) {
         se.recurse = true;
         // Don't generate states for right recursion when it can be broken with
         // a call. This could also be done for left recursion when the grammar
@@ -403,9 +403,10 @@ static void addDelayedEvents(
 ) {
     for (auto && sv : sp.delayedEvents) {
         events.push_back(sv);
-        if (sv.flags
-            & (Element::fOnStartW | Element::fOnEndW | Element::fOnCharW)
-        ) {
+        if (sv.flags.any(Element::fOnStartW 
+            | Element::fOnEndW 
+            | Element::fOnCharW
+        )) {
             events.back().distance += 1;
         }
     }
@@ -453,16 +454,16 @@ static void addNextPositions(
         for (auto && se2 : sp.elems) {
             if (se2.elem->type == Element::kRule && !se2.started) {
                 auto flags = se2.elem->rule->flags & Element::fStartEvents;
-                if (flags)
-                    addEvent(events, se2, flags);
+                if (flags.any())
+                    addEvent(events, se2, flags.value());
             }
         }
         // bubble up OnChar events bottom to top
         for (auto it2 = it; it2 != eit; ++it2) {
             if (it2->elem->type == Element::kRule) {
                 auto flags = it2->elem->rule->flags & Element::fCharEvents;
-                if (flags)
-                    addEvent(events, *it2, flags);
+                if (flags.any())
+                    addEvent(events, *it2, flags.value());
             }
         }
     }
@@ -503,11 +504,11 @@ static void addNextPositions(
 
         if (se.elem->type == Element::kRule) {
             if ((se.started || !done)
-                && (~se.elem->rule->flags & Element::fFunction)
+                && se.elem->rule->flags.none(Element::fFunction)
             ) {
                 auto flags = se.elem->rule->flags & Element::fEndEvents;
-                if (flags)
-                    addEvent(events, se, flags);
+                if (flags.any())
+                    addEvent(events, se, flags.value());
             }
             // when exiting the parser (via a done sentinel) go directly out,
             // no not pass go, do not honor repetitions
@@ -630,10 +631,10 @@ static void removeConflicts(
     FOUND_UNUSED:
         if (*mi == events[evi])
             goto MATCHED;
-        if (mi->flags & Element::fCharEvents) {
+        if (mi->flags.any(Element::fCharEvents)) {
             // char can shift around start events
             for (;;) {
-                if ((events[evi].flags & Element::fStartEvents) == 0
+                if (events[evi].flags.none(Element::fStartEvents) 
                     || ++evi == numEvents
                 ) {
                     goto UNMATCHED;
@@ -641,10 +642,10 @@ static void removeConflicts(
                 if (*mi == events[evi])
                     goto MATCHED;
             }
-        } else if (mi->flags & Element::fStartEvents) {
+        } else if (mi->flags.any(Element::fStartEvents)) {
             // start events can shift around char events.
             for (;;) {
-                if ((events[evi].flags & Element::fCharEvents) == 0
+                if (events[evi].flags.none(Element::fCharEvents)
                     || ++evi == numEvents
                 ) {
                     goto UNMATCHED;
@@ -653,7 +654,7 @@ static void removeConflicts(
                     goto MATCHED;
             }
         }
-        assert(mi->flags & Element::fEndEvents);
+        assert(mi->flags.any(Element::fEndEvents));
         // [[fallthrough]];
 
     UNMATCHED:
@@ -851,7 +852,7 @@ static void addChildStates(
             continue;
         }
 
-        assert(elem->rule->flags & Element::fFunction);
+        assert(elem->rule->flags.any(Element::fFunction));
         for (auto && nspt : next.positions) {
             if (nspt.second.none()) {
                 auto && nse = nspt.first.elems.back();

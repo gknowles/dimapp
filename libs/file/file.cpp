@@ -90,7 +90,7 @@ void FileAppendStream::close() {
         m_cv.wait(lk);
 
     if (auto used = m_bufLen - m_buf.size()) {
-        if (~fileMode(m_file) & File::fAligned) {
+        if (fileMode(m_file).none(File::fAligned)) {
             fileAppendWait(m_file, m_buf.data() - used, used);
         } else {
             // Since the old file handle was opened with fAligned we can't use

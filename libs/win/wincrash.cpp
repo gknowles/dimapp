@@ -92,7 +92,7 @@ static void writeDump() {
             RtlCaptureContext(&context);
             record.ExceptionCode = EXCEPTION_BREAKPOINT;
         }
-        auto type = MINIDUMP_TYPE(MiniDumpNormal
+        auto typeFlags = MINIDUMP_TYPE(MiniDumpNormal
             | MiniDumpWithDataSegs
             | MiniDumpWithIndirectlyReferencedMemory
             | MiniDumpWithProcessThreadData
@@ -103,7 +103,7 @@ static void writeDump() {
             GetCurrentProcess(),
             GetCurrentProcessId(),
             f,
-            type,
+            typeFlags,
             &mei,
             NULL,
             NULL
@@ -131,7 +131,7 @@ extern "C" void abortHandler(int sig) {
     if (IsDebuggerPresent())
         DebugBreak();
 
-    if (appFlags() & fAppWithDumps)
+    if (appFlags().any(fAppWithDumps))
         writeDump();
 
     _CrtSetDbgFlag(0);
@@ -230,7 +230,7 @@ void Dim::winCrashInitialize() {
 
     shutdownMonitor(&s_cleanup);
 
-    if (appFlags() & fAppWithFiles) {
+    if (appFlags().any(fAppWithFiles)) {
         auto crashDir = appCrashDir();
         vector<FileIter::Entry> found;
         for (auto && e : FileIter{crashDir, "*.dmp"})

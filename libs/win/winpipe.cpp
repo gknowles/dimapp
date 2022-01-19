@@ -67,7 +67,11 @@ public:
     static void setNotify(IPipeNotify * notify, IPipeNotify * newNotify);
 
 public:
-    PipeBase(string_view name, Pipe::OpenMode oflags, TaskQueueHandle hq);
+    PipeBase(
+        string_view name, 
+        EnumFlags<Pipe::OpenMode> oflags, 
+        TaskQueueHandle hq
+    );
     virtual ~PipeBase();
     void removeRef();
 
@@ -85,7 +89,7 @@ protected:
     mutex m_mut;
     IPipeNotify * m_notify{};
     string m_name;
-    OpenMode m_oflags{};
+    EnumFlags<OpenMode> m_oflags{};
     HANDLE m_handle{INVALID_HANDLE_VALUE};
     Mode m_mode{Mode::kInactive};
     shared_ptr<PipeBase> m_selfRef;
@@ -200,7 +204,7 @@ void PipeBase::setNotify(shared_ptr<PipeBase> pipe, IPipeNotify * notify) {
 //===========================================================================
 PipeBase::PipeBase(
     string_view name,
-    Pipe::OpenMode oflags,
+    EnumFlags<Pipe::OpenMode> oflags,
     TaskQueueHandle hq
 )
     : m_name(name)
@@ -247,14 +251,15 @@ void PipeBase::hardClose() {
 
 //===========================================================================
 void PipeBase::createQueue() {
-    if (m_oflags & Pipe::fReadOnly) {
+    using enum Pipe::OpenMode;
+    if (m_oflags.any(fReadOnly)) {
         m_maxReads = kReadQueueSize;
         m_maxWrites = 0;
-    } else if (m_oflags & Pipe::fWriteOnly) {
+    } else if (m_oflags.any(fWriteOnly)) {
         m_maxReads = 0;
         m_maxWrites = kWriteQueueSize;
     } else {
-        assert(m_oflags & Pipe::fReadWrite);
+        assert(m_oflags.any(fReadWrite));
         m_maxReads = kReadQueueSize;
         m_maxWrites = kWriteQueueSize;
     }
@@ -536,7 +541,7 @@ class ListenPipe : public ListLink<>, public IPipeNotify {
 public:
     IFactory<IPipeNotify> * m_factory = {};
     string m_name;
-    Pipe::OpenMode m_oflags = {};
+    EnumFlags<Pipe::OpenMode> m_oflags = {};
     HANDLE m_handle = INVALID_HANDLE_VALUE;
     RunMode m_mode = kRunStopped;
 
@@ -554,12 +559,16 @@ public:
     static void listen(
         IPipeNotify * notify,
         string_view pipeName,
-        Pipe::OpenMode oflags,
+        EnumFlags<Pipe::OpenMode> oflags,
         TaskQueueHandle hq
     );
 
 public:
-    AcceptPipe(string_view name, Pipe::OpenMode oflags, TaskQueueHandle hq);
+    AcceptPipe(
+        string_view name, 
+        EnumFlags<Pipe::OpenMode> oflags, 
+        TaskQueueHandle hq
+    );
     ~AcceptPipe();
     void connect();
 
@@ -581,7 +590,7 @@ static auto & s_perfNotAccepted = uperf("pipe.disconnect (not accepted)");
 //===========================================================================
 AcceptPipe::AcceptPipe(
     string_view name,
-    Pipe::OpenMode oflags,
+    EnumFlags<Pipe::OpenMode> oflags,
     TaskQueueHandle hq
 )
     : PipeBase(name, oflags, hq)
@@ -599,7 +608,7 @@ AcceptPipe::~AcceptPipe() {
 void AcceptPipe::listen(
     IPipeNotify * notify,
     string_view pipeName,
-    Pipe::OpenMode oflags,
+    EnumFlags<Pipe::OpenMode> oflags,
     TaskQueueHandle hq
 ) {
     auto pipe = make_shared<AcceptPipe>(pipeName, oflags, hq);
@@ -610,24 +619,21 @@ void AcceptPipe::listen(
 //===========================================================================
 void AcceptPipe::connect() {
     unique_lock lk{m_mut};
+    using enum Pipe::OpenMode;
+
+    // Must have exactly one IO mode.
+    assert(m_oflags.count(fReadOnly | fWriteOnly | fReadWrite) == 1);
 
     auto wname = toWstring(m_name);
     DWORD flags = FILE_FLAG_FIRST_PIPE_INSTANCE | FILE_FLAG_OVERLAPPED;
-    constexpr auto aflags =
-        Pipe::fReadOnly | Pipe::fWriteOnly | Pipe::fReadWrite;
-    switch (m_oflags & aflags) {
-    default:
-        assert(!"Invalid pipe open flags");
-        break;
-    case Pipe::fReadOnly:
+    if (m_oflags.any(fReadOnly)) {
         flags |= PIPE_ACCESS_INBOUND;
-        break;
-    case Pipe::fWriteOnly:
+    } else if (m_oflags.any(fWriteOnly)) {
         flags |= PIPE_ACCESS_OUTBOUND;
-        break;
-    case Pipe::fReadWrite:
+    } else if (m_oflags.any(fReadWrite)) {
         flags |= PIPE_ACCESS_DUPLEX;
-        break;
+    } else {
+        assert(!"Invalid pipe open flags");
     }
     m_handle = CreateNamedPipeW(
         wname.c_str(),
@@ -709,7 +715,7 @@ void AcceptPipe::onTask() {
 void Dim::pipeListen(
     IPipeNotify * notify,
     string_view pipeName,
-    Pipe::OpenMode oflags,
+    EnumFlags<Pipe::OpenMode> oflags,
     TaskQueueHandle hq
 ) {
     AcceptPipe::listen(notify, pipeName, oflags, hq);
@@ -758,7 +764,7 @@ void ListenPipe::onPipeDisconnect() {
 void Dim::pipeListen(
     IFactory<IPipeNotify> * factory,
     string_view name,
-    Pipe::OpenMode oflags
+    EnumFlags<Pipe::OpenMode> oflags
 ) {
     auto listener = new ListenPipe;
     listener->m_mode = kRunRunning;

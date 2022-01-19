@@ -147,20 +147,23 @@ void pipeConnect(
 void pipeListen(
     IPipeNotify * notify,
     std::string_view pipeName,
-    Pipe::OpenMode oflags,
+    EnumFlags<Pipe::OpenMode> oflags,
     TaskQueueHandle hq = {}
 );
 void pipeListen(
     IFactory<IPipeNotify> * factory,
     std::string_view pipeName,
-    Pipe::OpenMode oflags
+    EnumFlags<Pipe::OpenMode> oflags
 );
 void pipeClose(IFactory<IPipeNotify> * factory, std::string_view pipeName);
 
 //===========================================================================
 template <typename S>
 requires std::derived_from<S, IPipeNotify>
-inline void pipeListen(std::string_view pipeName, Pipe::OpenMode oflags) {
+inline void pipeListen(
+    std::string_view pipeName, 
+    EnumFlags<Pipe::OpenMode> oflags
+) {
     auto factory = getFactory<IPipeNotify, S>();
     pipeListen(factory, pipeName, oflags);
 }

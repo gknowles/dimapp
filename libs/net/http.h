@@ -110,7 +110,7 @@ HttpMethod httpMethodFromString(
     HttpMethod def = fHttpMethodInvalid
 );
 
-std::vector<std::string_view> to_views(HttpMethod methods);
+std::vector<std::string_view> toViews(EnumFlags<HttpMethod> methods);
 
 enum HttpStatus {
     // 1xx Informational
@@ -239,7 +239,7 @@ protected:
         fFlagHasPath = 0x10,
         fFlagHasHeader = 0x20,
     };
-    Flags m_flags = {};
+    EnumFlags<Flags> m_flags = {};
     Flags toHasFlag(HttpHdr id) const;
 
 private:

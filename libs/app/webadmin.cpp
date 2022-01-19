@@ -134,7 +134,7 @@ static BinDump s_jsonDump;
 
 //===========================================================================
 void Dim::iWebAdminInitialize() {
-    if (appFlags() & fAppWithWebAdmin) {
+    if (appFlags().any(fAppWithWebAdmin)) {
         httpRouteAdd(&s_webRoot, "/", fHttpMethodGet, true);
         httpRouteAdd(&s_jsonCounters, "/srv/counters.json");
         httpRouteAdd(&s_jsonRoutes, "/srv/routes.json");

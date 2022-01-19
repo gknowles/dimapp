@@ -9,7 +9,7 @@
 
 // External library public headers
 #include "app/app.h"
-#include "core/log.h"
+#include "core/core.h"
 #include "system/system.h"
 #include "tools/tools.h"
 

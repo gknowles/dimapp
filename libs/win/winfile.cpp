@@ -23,7 +23,7 @@ struct WinFileInfo : public HandleContent {
     FileHandle m_f;
     string m_path;
     HANDLE m_handle{INVALID_HANDLE_VALUE};
-    File::OpenMode m_mode{File::fReadOnly};
+    EnumFlags<File::OpenMode> m_mode{File::fReadOnly};
     unordered_map<const void *, File::View> m_views;
 };
 
@@ -161,7 +161,7 @@ size_t IFileOpBase::start(
         return m_bytes;
     }
 
-    if (m_file->m_mode & File::fBlocking) {
+    if (m_file->m_mode.any(File::fBlocking)) {
         run();
         return m_bytes;
     }
@@ -456,7 +456,7 @@ TimePoint Dim::fileLastWriteTime(string_view path) {
 }
 
 //===========================================================================
-File::Attrs::Attrs Dim::fileAttrs(std::string_view path) {
+EnumFlags<File::Attrs> Dim::fileAttrs(std::string_view path) {
     WIN32_FILE_ATTRIBUTE_DATA attrs;
     if (!GetFileAttributesExW(
         toWstring(path).c_str(),
@@ -465,12 +465,15 @@ File::Attrs::Attrs Dim::fileAttrs(std::string_view path) {
     )) {
         return {};
     }
-    return static_cast<File::Attrs::Attrs>(attrs.dwFileAttributes);
+    return static_cast<File::Attrs>(attrs.dwFileAttributes);
 }
 
 //===========================================================================
-bool Dim::fileAttrs(std::string_view path, File::Attrs::Attrs attrs) {
-    if (!SetFileAttributesW(toWstring(path).c_str(), (DWORD) attrs)) {
+bool Dim::fileAttrs(std::string_view path, EnumFlags<File::Attrs> attrs) {
+    if (!SetFileAttributesW(
+        toWstring(path).c_str(), 
+        (DWORD) attrs.underlying()
+    )) {
         winFileSetErrno(WinError{});
         return false;
     }
@@ -520,7 +523,7 @@ string Dim::fileTempName(string_view suffix) {
 static FileHandle allocHandle(
     HANDLE handle,
     string_view path,
-    File::OpenMode mode
+    EnumFlags<File::OpenMode> mode
 ) {
     assert(handle && handle != INVALID_HANDLE_VALUE);
 
@@ -529,7 +532,7 @@ static FileHandle allocHandle(
     file->m_mode = mode;
     file->m_path = path;
 
-    if (~mode & File::fBlocking) {
+    if (mode.none(File::fBlocking)) {
         if (!winIocpBindHandle(file->m_handle)) {
             winFileSetErrno(WinError{});
             return {};
@@ -552,60 +555,64 @@ static FileHandle allocHandle(
 }
 
 //===========================================================================
-FileHandle Dim::fileOpen(string_view path, File::OpenMode mode) {
-    using om = File::OpenMode;
-    assert(~mode & om::fInternalFlags);
+FileHandle Dim::fileOpen(string_view path, EnumFlags<File::OpenMode> mode) {
+    using enum File::OpenMode;
+    assert(mode.none(fInternalFlags));
+    // There must be exactly one IO mode.
+    assert(mode.count(fNoContent | fReadOnly | fReadWrite) == 1);
 
-    int access = SECURITY_SQOS_PRESENT | SECURITY_IDENTIFICATION;
-    if (mode & om::fNoContent) {
-        assert((~mode & om::fReadOnly) && (~mode & om::fReadWrite));
-    } else if (mode & om::fReadOnly) {
-        assert((~mode & om::fNoContent) && (~mode & om::fReadWrite));
+    int access = 0;
+    if (mode.any(fNoContent)) {
+        access = 0;
+    } else if (mode.any(fReadOnly)) {
         access = GENERIC_READ;
     } else {
-        assert(mode & om::fReadWrite);
-        assert((~mode & om::fNoContent) && (~mode & om::fReadOnly));
+        assert(mode.any(fReadWrite));
+        assert(mode.none(fNoContent | fReadOnly));
         access = GENERIC_READ | GENERIC_WRITE;
     }
 
     int share = 0;
-    if (mode & om::fDenyWrite) {
-        assert(~mode & om::fDenyNone);
+    if (mode.any(fDenyWrite)) {
+        assert(mode.none(fDenyNone));
         share |= FILE_SHARE_READ;
-    } else if (mode & om::fDenyNone) {
+    } else if (mode.any(fDenyNone)) {
         share |= FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
     }
 
     int creation = 0;
-    if (mode & om::fCreat) {
-        if (mode & om::fExcl) {
-            assert(~mode & om::fTrunc);
+    if (mode.any(fCreat)) {
+        if (mode.any(fExcl)) {
+            assert(mode.none(fTrunc));
             creation = CREATE_NEW;
-        } else if (mode & om::fTrunc) {
+        } else if (mode.any(fTrunc)) {
             creation = CREATE_ALWAYS;
         } else {
             creation = OPEN_ALWAYS;
         }
     } else {
-        assert(~mode & om::fExcl);
-        if (mode & om::fTrunc) {
+        assert(mode.none(fExcl));
+        if (mode.any(fTrunc)) {
             creation = TRUNCATE_EXISTING;
         } else {
             creation = OPEN_EXISTING;
         }
     }
 
+    // Unless impersonation is explicitly desired it should be restricted by
+    // including the SECURITY_SQOS_PRESENT and SECURITY_IDENTIFICATION access
+    // flags when a client opens a named pipe.
     int flagsAndAttrs = 0;
-    if (~mode & om::fBlocking)
+    if (mode.none(fBlocking))
         flagsAndAttrs |= FILE_FLAG_OVERLAPPED;
-    if (mode & om::fAligned)
+    if (mode.any(fAligned))
         flagsAndAttrs |= FILE_FLAG_NO_BUFFERING;
-    if (mode & om::fRandom)
+    if (mode.any(fRandom))
         flagsAndAttrs |= FILE_FLAG_RANDOM_ACCESS;
-    if (mode & om::fSequential)
+    if (mode.any(fSequential))
         flagsAndAttrs |= FILE_FLAG_SEQUENTIAL_SCAN;
-    if (mode & om::fTemp) {
-        assert(mode & om::fReadWrite);
+    if (mode.any(fTemp)) {
+        assert(mode.any(fReadWrite));
         flagsAndAttrs |= FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE;
     }
 
@@ -657,14 +664,17 @@ static string getName(HANDLE handle) {
 }
 
 //===========================================================================
-FileHandle Dim::fileOpen(intptr_t osfhandle, File::OpenMode mode) {
+FileHandle Dim::fileOpen(intptr_t osfhandle, EnumFlags<File::OpenMode> mode) {
     auto handle = (HANDLE) osfhandle;
     auto path = getName(handle);
     return allocHandle(handle, path, mode);
 }
 
 //===========================================================================
-FileHandle Dim::fileCreateTemp(File::OpenMode mode, string_view suffix) {
+FileHandle Dim::fileCreateTemp(
+    EnumFlags<File::OpenMode> mode, 
+    string_view suffix
+) {
     auto fname = fileTempName(suffix);
     if (fname.empty())
         return {};
@@ -676,9 +686,10 @@ FileHandle Dim::fileCreateTemp(File::OpenMode mode, string_view suffix) {
 static FileHandle attachStdHandle(
     int fd,
     string_view path,
-    File::OpenMode mode // must be either fReadOnly or fReadWrite
+    EnumFlags<File::OpenMode> mode // must be either fReadOnly or fReadWrite
 ) {
-    assert(mode == File::fReadOnly || mode == File::fReadWrite);
+    assert(mode.value() == File::fReadOnly 
+        || mode.value() == File::fReadWrite);
     auto file = make_unique<WinFileInfo>();
     file->m_mode = mode | File::fBlocking;
     file->m_path = path;
@@ -802,8 +813,8 @@ void Dim::fileClose(FileHandle f) {
             logMsgFatal() << "fileClose(" << file->m_path
                 << "): has views that are still open";
         }
-        if (~file->m_mode & File::fNonOwning) {
-            if (file->m_mode & File::fBlocking)
+        if (file->m_mode.none(File::fNonOwning)) {
+            if (file->m_mode.any(File::fBlocking))
                 CancelIoEx(file->m_handle, NULL);
             CloseHandle(file->m_handle);
         }
@@ -861,11 +872,11 @@ string_view Dim::filePath(FileHandle f) {
 }
 
 //===========================================================================
-unsigned Dim::fileMode(FileHandle f) {
+EnumFlags<File::OpenMode> Dim::fileMode(FileHandle f) {
     if (auto file = getInfo(f))
         return file->m_mode;
     winFileSetErrno(ERROR_INVALID_PARAMETER);
-    return 0;
+    return {};
 }
 
 //===========================================================================
@@ -1345,7 +1356,7 @@ static bool openView(
     ULONG access, secProt, allocType, pageProt;
 
     if (mode == File::View::kReadOnly) {
-        if (!maxLength || (file->m_mode & File::fReadOnly)) {
+        if (!maxLength || file->m_mode.any(File::fReadOnly)) {
             assert(!maxLength);
             // read only view
             access = SECTION_MAP_READ;
@@ -1356,7 +1367,7 @@ static bool openView(
             allocType = 0;
             pageProt = PAGE_READONLY;
         } else {
-            assert(file->m_mode & File::fReadWrite);
+            assert(file->m_mode.any(File::fReadWrite));
             assert(maxLength >= length);
             // read only but extendable
             access = SECTION_MAP_READ;
@@ -1369,7 +1380,7 @@ static bool openView(
         }
     } else {
         assert(mode == File::View::kReadWrite);
-        assert(file->m_mode & File::fReadWrite);
+        assert(file->m_mode.any(File::fReadWrite));
         if (!maxLength) {
             // writable view
             access = SECTION_MAP_READ | SECTION_MAP_WRITE;

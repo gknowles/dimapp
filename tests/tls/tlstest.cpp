@@ -24,7 +24,7 @@ enum TestType : unsigned {
 
 struct Test {
     const char * name;
-    TestType flags;
+    EnumFlags<TestType> flags;
     string input;
     bool result;
     string output;
@@ -102,11 +102,11 @@ static void app(int argc, char *argv[]) {
     bool result = 0;
     for (auto && test : s_tests) {
         cout << "Test - " << test.name << endl;
-        TlsConnHandle & conn = (test.flags & fTestClient) ? client : server;
-        if ((test.flags & fTestReset) && conn)
+        TlsConnHandle & conn = test.flags.any(fTestClient) ? client : server;
+        if (test.flags.any(fTestReset) && conn)
             tlsClose(conn);
         if (!conn) {
-            if (test.flags & fTestClient) {
+            if (test.flags.any(fTestClient)) {
                 conn = tlsConnect(&output, kHost, kCiphers, size(kCiphers));
             } else {
                 conn = tlsAccept(kCiphers, size(kCiphers));

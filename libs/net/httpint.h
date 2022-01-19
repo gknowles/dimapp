@@ -131,70 +131,70 @@ private:
         std::vector<std::unique_ptr<HttpMsg>> * msgs,
         const char src[],
         int stream,
-        FrameFlags flags
+        EnumFlags<FrameFlags> flags
     );
     bool onData(
         CharBuf * out,
         std::vector<std::unique_ptr<HttpMsg>> * msgs,
         const char src[],
         int stream,
-        FrameFlags flags
+        EnumFlags<FrameFlags> flags
     );
     bool onGoAway(
         CharBuf * out,
         std::vector<std::unique_ptr<HttpMsg>> * msgs,
         const char src[],
         int stream,
-        FrameFlags flags
+        EnumFlags<FrameFlags> flags
     );
     bool onHeaders(
         CharBuf * out,
         std::vector<std::unique_ptr<HttpMsg>> * msgs,
         const char src[],
         int stream,
-        FrameFlags flags
+        EnumFlags<FrameFlags> flags
     );
     bool onPing(
         CharBuf * out,
         std::vector<std::unique_ptr<HttpMsg>> * msgs,
         const char src[],
         int stream,
-        FrameFlags flags
+        EnumFlags<FrameFlags> flags
     );
     bool onPriority(
         CharBuf * out,
         std::vector<std::unique_ptr<HttpMsg>> * msgs,
         const char src[],
         int stream,
-        FrameFlags flags
+        EnumFlags<FrameFlags> flags
     );
     bool onPushPromise(
         CharBuf * out,
         std::vector<std::unique_ptr<HttpMsg>> * msgs,
         const char src[],
         int stream,
-        FrameFlags flags
+        EnumFlags<FrameFlags> flags
     );
     bool onRstStream(
         CharBuf * out,
         std::vector<std::unique_ptr<HttpMsg>> * msgs,
         const char src[],
         int stream,
-        FrameFlags flags
+        EnumFlags<FrameFlags> flags
     );
     bool onSettings(
         CharBuf * out,
         std::vector<std::unique_ptr<HttpMsg>> * msgs,
         const char src[],
         int stream,
-        FrameFlags flags
+        EnumFlags<FrameFlags> flags
     );
     bool onWindowUpdate(
         CharBuf * out,
         std::vector<std::unique_ptr<HttpMsg>> * msgs,
         const char src[],
         int stream,
-        FrameFlags flags
+        EnumFlags<FrameFlags> flags
     );
 
     HttpConnHandle m_handle;

@@ -76,7 +76,7 @@ ISockMgrBase::ISockMgrBase(
     IFactory<IAppSocketNotify> * fact,
     Duration inactiveTimeout,
     AppSocket::Family fam,
-    AppSocket::MgrFlags flags
+    EnumFlags<AppSocket::MgrFlags> flags
 )
     : m_name{name}
     , m_cliSockFact{fact}

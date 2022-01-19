@@ -38,7 +38,7 @@ struct MatchKey {
 
 struct FactoryInfo {
     IFactory<IAppSocketNotify> * factory;
-    FactoryFlags flags{};
+    EnumFlags<FactoryFlags> flags{};
 };
 
 struct FamilyInfo {
@@ -696,13 +696,13 @@ static SockAddrInfo * findInfo_LK(const SockAddr & addr, bool findAlways) {
 //===========================================================================
 static bool addFactory(
     IFactory<IAppSocketNotify> * factory,
-    FactoryFlags flags,
+    EnumFlags<FactoryFlags> flags,
     const SockAddr & end,
     AppSocket::Family fam
 ) {
     auto info = findInfo_LK(end, true);
-    bool addNew = (flags & fListener) && ++info->listeners == 1;
-    if (flags & fConsole)
+    bool addNew = flags.any(fListener) && ++info->listeners == 1;
+    if (flags.any(fConsole))
         info->consoles += 1;
     auto & fams = info->families;
     auto afi = find(fams.begin(), fams.end(), fam);
@@ -719,7 +719,7 @@ void Dim::socketListen(
     AppSocket::Family fam,
     bool console
 ) {
-    FactoryFlags flags = fListener;
+    EnumFlags flags = fListener;
     if (console)
         flags |= fConsole;
     if (addFactory(factory, flags, end, fam))
@@ -748,14 +748,14 @@ void Dim::socketCloseWait(
             facts.begin(),
             facts.end(),
             [=](auto && val) {
-                return val.factory == factory && (val.flags & fListener);
+                return val.factory == factory && val.flags.any(fListener);
             }
         );
         if (i == facts.end())
             break;
 
         bool noListeners = --info->listeners == 0;
-        if (i->flags & fConsole)
+        if (i->flags.any(fConsole))
             info->consoles -= 1;
         facts.erase(i);
         if (facts.empty()) {

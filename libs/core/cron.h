@@ -73,10 +73,10 @@ protected:
     static const TokenTable s_monTbl;
 };
 
-template<Cron::WithFlags Flags = Cron::WithDefault>
+template<EnumFlags<Cron::WithFlags> Flags = Cron::WithDefault>
 class CronDef : public Cron {
 public:
-    static constexpr WithFlags s_flags = Flags;
+    static constexpr Dim::EnumFlags<WithFlags> s_flags = Flags;
 
 public:
     bool parse(std::string_view src);
@@ -88,7 +88,7 @@ public:
     Dim::TimePoint upperBound(Dim::TimePoint time) const;
 
 private:
-    template<Dim::Cron::WithFlags Flags>
+    template<EnumFlags<Cron::WithFlags> Flags>
     friend std::ostream & operator<<(
         std::ostream & os,
         Dim::CronDef<Flags> & val
@@ -99,21 +99,21 @@ private:
 private:
     enum {
         kSecPos = 0,
-        kMinPos = kSecPos + ((Flags & WithSeconds) ? 60 : 0),
+        kMinPos = kSecPos + (Flags.any(WithSeconds) ? 60 : 0),
         kHourPos = kMinPos + 60,
         kDomPos = kHourPos + 24,
         kLastDomPos = kDomPos + 31,
-        kWeekDomPos = kLastDomPos + ((Flags & WithLastDomOffset)
-            ? 30 : (Flags & WithLastDom) ? 1 : 0),
-        kLastAndWeekDomPos = kWeekDomPos + ((Flags & WithWeekDays) ? 31 : 0),
-        kHasDomPos = kLastAndWeekDomPos + ((~Flags & WithWeekDays) ? 0
-            : (Flags & WithLastDomOffset) ? 30 : (Flags & WithLastDom) ? 1 : 0),
+        kWeekDomPos = kLastDomPos + (Flags.any(WithLastDomOffset)
+            ? 30 : Flags.any(WithLastDom) ? 1 : 0),
+        kLastAndWeekDomPos = kWeekDomPos + (Flags.any(WithWeekDays) ? 31 : 0),
+        kHasDomPos = kLastAndWeekDomPos + (Flags.none(WithWeekDays) ? 0
+            : Flags.any(WithLastDomOffset) ? 30 : Flags.any(WithLastDom) ? 1 : 0),
         kMonPos = kHasDomPos + 1,
         kDowPos = kMonPos + 12,
         kLastDowPos = kDowPos + 7,
-        kNthDowPos = kLastDowPos + ((Flags & WithLastDow) ? 7 : 0),
-        kYearPos = kNthDowPos + ((Flags & WithNthDow) ? 35 : 0),
-        kBits = kYearPos + ((Flags & WithYears) ? 130 : 0),
+        kNthDowPos = kLastDowPos + (Flags.any(WithLastDow) ? 7 : 0),
+        kYearPos = kNthDowPos + (Flags.any(WithNthDow) ? 35 : 0),
+        kBits = kYearPos + (Flags.any(WithYears) ? 130 : 0),
     };
     using Data = uint8_t[(kBits + 7) / 8];
 
@@ -184,7 +184,7 @@ constexpr void Dim::Cron::setBit(uint8_t bits[], size_t pos, bool value) {
 ***/
 
 //===========================================================================
-template<Dim::Cron::WithFlags Flags>
+template<Dim::EnumFlags<Dim::Cron::WithFlags> Flags>
 bool Dim::CronDef<Flags>::parse(std::string_view src) {
     Data d = {};
     src = trim(src);
@@ -195,7 +195,7 @@ bool Dim::CronDef<Flags>::parse(std::string_view src) {
         auto macro = s_macroTbl.find(src.substr(1), kInvalid);
         if (macro == kInvalid)
             return false;
-        if (withSY == 0) {
+        if (withSY.none()) {
             switch (macro) {
             case kInvalid: break;
             case kYearly: src = "0 0 1 1 *"; break;
@@ -235,7 +235,7 @@ bool Dim::CronDef<Flags>::parse(std::string_view src) {
         assert(src[0] != '@');
     }
 
-    if constexpr (Flags & WithSeconds) {
+    if constexpr (Flags.any(WithSeconds)) {
         if (!parseField(&d, kSecPos, &src, 0, 59, nullptr))
             return false;
     }
@@ -247,7 +247,7 @@ bool Dim::CronDef<Flags>::parse(std::string_view src) {
     ) {
         return false;
     }
-    if constexpr (Flags & WithYears) {
+    if constexpr (Flags.any(WithYears)) {
         if (!parseField(&d, kYearPos, &src, 1970, 2099, nullptr))
             return false;
     }
@@ -257,19 +257,19 @@ bool Dim::CronDef<Flags>::parse(std::string_view src) {
 }
 
 //===========================================================================
-template<Dim::Cron::WithFlags Flags>
+template<Dim::EnumFlags<Dim::Cron::WithFlags> Flags>
 bool Dim::CronDef<Flags>::contains(Dim::TimePoint time) const {
     return false;
 }
 
 //===========================================================================
-template<Dim::Cron::WithFlags Flags>
+template<Dim::EnumFlags<Dim::Cron::WithFlags> Flags>
 Dim::TimePoint Dim::CronDef<Flags>::lowerBound(Dim::TimePoint time) const {
     return {};
 }
 
 //===========================================================================
-template<Dim::Cron::WithFlags Flags>
+template<Dim::EnumFlags<Dim::Cron::WithFlags> Flags>
 Dim::TimePoint Dim::CronDef<Flags>::upperBound(Dim::TimePoint time) const {
     return {};
 }

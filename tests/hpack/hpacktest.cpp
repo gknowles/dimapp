@@ -20,7 +20,7 @@ namespace {
 struct NameValue {
     const char * name;
     const char * value;
-    HpackFlags flags;
+    EnumFlags<HpackFlags> flags;
 
     bool operator==(const NameValue & right) const;
 };
@@ -34,7 +34,7 @@ private:
         HttpHdr id,
         const char name[],
         const char value[],
-        HpackFlags flags
+        EnumFlags<HpackFlags> flags
     ) override;
 };
 
@@ -383,7 +383,7 @@ void Reader::onHpackHeader(
     HttpHdr id,
     const char name[],
     const char value[],
-    HpackFlags flags
+    EnumFlags<HpackFlags> flags
 ) {
     if (s_verbose)
         cout << name << ": " << value << "\n";

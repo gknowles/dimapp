@@ -298,7 +298,7 @@ void MessageLoopTask::enable(Authority auth, bool enable) {
             assert(auth == kConfigFile);
             m_fromConfig = enable;
         }
-        enable = (appFlags() & fAppWithGui)
+        enable = appFlags().any(fAppWithGui)
             ? s_cliEnable ? *s_cliEnable : m_fromConfig
             : false;
     }

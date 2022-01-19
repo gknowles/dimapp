@@ -85,7 +85,7 @@ static DWORD WINAPI svcCtrlHandler(
 //===========================================================================
 static VOID WINAPI ServiceMain(DWORD argc, LPTSTR * argv) {
     // Running as a service and services can't have GUI windows
-    iAppSetFlags(appFlags() & ~fAppWithGui | fAppIsService);
+    iAppSetFlags(appFlags().reset(fAppWithGui).set(fAppIsService));
 
     s_hstat = RegisterServiceCtrlHandlerExW(
         L"",
@@ -170,13 +170,13 @@ static ShutdownNotify s_cleanup;
 
 //===========================================================================
 void ShutdownNotify::onShutdownClient(bool firstTry) {
-    if (appFlags() & fAppIsService)
+    if (appFlags().any(fAppIsService))
         setState(SERVICE_STOP_PENDING);
 }
 
 //===========================================================================
 void ShutdownNotify::onShutdownConsole(bool firstTry) {
-    if (firstTry && (appFlags() & fAppIsService))
+    if (firstTry && appFlags().any(fAppIsService))
         setState(SERVICE_STOPPED, false, appExitCode());
 
     scoped_lock lk{s_mut};
@@ -193,7 +193,7 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
 
 //===========================================================================
 void Dim::winServiceInitialize() {
-    if (appFlags() & fAppWithService) {
+    if (appFlags().any(fAppWithService)) {
         shutdownMonitor(&s_cleanup);
 
         // Start dispatch thread and wait for it to determine if we're

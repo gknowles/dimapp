@@ -440,9 +440,8 @@ const HttpQuery & HttpRequest::query() const {
 
 //===========================================================================
 bool HttpRequest::checkPseudoHeaders() const {
-    const Flags must = fFlagHasMethod | fFlagHasScheme | fFlagHasPath;
-    const Flags mustNot = fFlagHasStatus;
-    return (m_flags & must) == must && (~m_flags & mustNot);
+    return m_flags.all(fFlagHasMethod | fFlagHasScheme | fFlagHasPath)
+        && m_flags.none(fFlagHasStatus);
 }
 
 
@@ -471,10 +470,8 @@ int HttpResponse::status() const {
 
 //===========================================================================
 bool HttpResponse::checkPseudoHeaders() const {
-    const Flags must = fFlagHasStatus;
-    const Flags mustNot = fFlagHasMethod | fFlagHasScheme | fFlagHasAuthority
-        | fFlagHasPath;
-    return (m_flags & must) == must && (~m_flags & mustNot);
+    return m_flags.all(fFlagHasStatus)
+        && m_flags.none(fFlagHasMethod | fFlagHasScheme | fFlagHasAuthority);
 }
 
 
@@ -500,7 +497,7 @@ const char * Dim::toString(HttpMethod id) {
 }
 
 //===========================================================================
-vector<string_view> Dim::to_views(HttpMethod methods) {
+vector<string_view> Dim::toViews(EnumFlags<HttpMethod> methods) {
     return s_methodNameTbl.findNames(methods);
 }
 

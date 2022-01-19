@@ -12,6 +12,7 @@
 #include "core/handle.h"
 #include "core/task.h"
 #include "core/time.h"
+#include "core/types.h"
 
 #include <condition_variable>
 #include <cstdint>
@@ -24,7 +25,7 @@ namespace Dim {
 
 namespace File {
     enum OpenMode : unsigned {
-        // content access, one *must* be specified
+        // content access, exactly one *must* be specified
         fNoContent = 0x1, // when you only want metadata (time, size, etc)
         fReadOnly = 0x2,
         fReadWrite = 0x4,
@@ -108,7 +109,7 @@ public:
     FileIter(
         std::string_view dir,
         std::string_view name = {},
-        Flags flags = {}
+        EnumFlags<Flags> flags = {}
     );
 
     bool operator==(const FileIter & right) const = default;
@@ -151,8 +152,8 @@ bool fileDirExists(std::string_view path);
 bool fileReadOnly(std::string_view path);
 void fileReadOnly(std::string_view path, bool enable);
 
-namespace File::Attrs {
-    enum Attrs : uint32_t {
+namespace File {
+    enum class Attrs : uint32_t {
         fReadOnly   = 0x0001,   // FILE_ATTRIBUTE_READONLY
         fHidden     = 0x0002,   // FILE_ATTRIBUTE_HIDDEN
         fSystem     = 0x0004,   // FILE_ATTRIBUTE_SYSTEM
@@ -165,8 +166,10 @@ namespace File::Attrs {
         fReparse    = 0x0400,   // FILE_ATTRIBUTE_REPARSE_POINT
     };
 }
-File::Attrs::Attrs fileAttrs(std::string_view path);
-bool fileAttrs(std::string_view path, File::Attrs::Attrs attrs);
+template<> struct is_enum_flags<File::Attrs> : std::true_type {};
+
+EnumFlags<File::Attrs> fileAttrs(std::string_view path);
+bool fileAttrs(std::string_view path, EnumFlags<File::Attrs> attrs);
 
 bool fileRemove(std::string_view path, bool recurse = false);
 bool fileCreateDirs(std::string_view path);
@@ -211,14 +214,17 @@ struct FileHandle : HandleBase {};
 
 // on error returns an empty pointer and sets errno to one of:
 //  EEXIST, ENOENT, EBUSY, EACCES, or EIO
-FileHandle fileOpen(std::string_view path, File::OpenMode modeFlags);
+FileHandle fileOpen(
+    std::string_view path, 
+    EnumFlags<File::OpenMode> modeFlags
+);
 //  EINVAL
-FileHandle fileOpen(intptr_t osfhandle, File::OpenMode modeFlags);
+FileHandle fileOpen(intptr_t osfhandle, EnumFlags<File::OpenMode> modeFlags);
 
 // The modeFlags are or'd with "fCreat | fExcl | fReadWrite" before the
 // underlying call to fileOpen.
 FileHandle fileCreateTemp(
-    File::OpenMode modeFlags = {},
+    EnumFlags<File::OpenMode> modeFlags = {},
     std::string_view suffix = ".tmp"
 );
 
@@ -254,7 +260,7 @@ TimePoint fileLastWriteTime(FileHandle f);
 std::string_view filePath(FileHandle f);
 
 // Returns the open mode flags used to create the handle.
-unsigned fileMode(FileHandle f);
+EnumFlags<File::OpenMode> fileMode(FileHandle f);
 
 // kUnknown is returned for bad handle and system errors as well as when the
 // type is unknown. If kUnknown was not returned due to error, errno is set

@@ -71,7 +71,7 @@ struct Element {
     std::vector<Element> elements;
     const Element * rule{};
     const Element * eventRule{}; // only present if different from rule
-    Flags flags{};
+    Dim::EnumFlags<Flags> flags{};
     std::string eventName; // only present if different from name
 
     auto operator<=>(const Element & right) const {
@@ -119,13 +119,13 @@ public:
         std::string_view name,
         unsigned m,
         unsigned n,
-        Element::Flags flags = {}
+        Dim::EnumFlags<Element::Flags> flags = {}
     );
     Element * addChoiceRule(
         std::string_view name,
         unsigned m,
         unsigned n,
-        Element::Flags flags = {}
+        Dim::EnumFlags<Element::Flags> flags = {}
     );
     Element * addSequence(Element * rule, unsigned m, unsigned n);
     Element * addChoice(Element * rule, unsigned m, unsigned n);
@@ -213,7 +213,7 @@ struct StateElement {
 
 struct StateEvent {
     const Element * elem{};
-    Element::Flags flags{};
+    Dim::EnumFlags<Element::Flags> flags{};
     int distance{};
 
     std::strong_ordering operator<=>(const StateEvent & right) const;

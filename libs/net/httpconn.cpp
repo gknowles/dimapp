@@ -184,7 +184,7 @@ private:
         HttpHdr id,
         const char name[],
         const char value[],
-        HpackFlags flags
+        EnumFlags<HpackFlags> flags
     ) override;
 
     HttpMsg & m_msg;
@@ -201,7 +201,7 @@ void MsgDecoder::onHpackHeader(
     HttpHdr id,
     const char name[],
     const char value[],
-    HpackFlags flags
+    EnumFlags<HpackFlags> flags
 ) {
     if (id) {
         m_msg.addHeaderRef(id, value);
@@ -236,7 +236,7 @@ static void setFrameHeader(
     unsigned stream,
     FrameType type,
     size_t length,
-    HttpConn::FrameFlags flags
+    EnumFlags<HttpConn::FrameFlags> flags
 ) {
     // Frame header
     //  length : 24
@@ -251,7 +251,7 @@ static void setFrameHeader(
     out[1] = (uint8_t)(length >> 8);
     out[2] = (uint8_t)length;
     out[3] = (uint8_t)type;
-    out[4] = (uint8_t)flags;
+    out[4] = (uint8_t)flags.underlying();
     out[5] = (uint8_t)(stream >> 24);
     out[6] = (uint8_t)(stream >> 16);
     out[7] = (uint8_t)(stream >> 8);
@@ -264,7 +264,7 @@ static void startFrame(
     unsigned stream,
     FrameType type,
     size_t length,
-    HttpConn::FrameFlags flags
+    EnumFlags<HttpConn::FrameFlags> flags
 ) {
     uint8_t buf[kFrameHeaderLen];
     setFrameHeader(buf, stream, type, length, flags);
@@ -427,12 +427,12 @@ static bool removePadding(
     const char src[],
     int frameLen,
     int hdrLen,
-    HttpConn::FrameFlags flags
+    EnumFlags<HttpConn::FrameFlags> flags
 ) {
     out->hdr = src + kFrameHeaderLen;
     out->data = out->hdr + hdrLen;
     out->dataLen = frameLen - hdrLen;
-    if (~flags & HttpConn::fPadded) {
+    if (flags.none(HttpConn::fPadded)) {
         out->padLen = 0;
         return true;
     }
@@ -711,7 +711,7 @@ bool HttpConn::onData(
     vector<unique_ptr<HttpMsg>> * msgs,
     const char src[],
     int stream,
-    FrameFlags flags
+    EnumFlags<FrameFlags> flags
 ) {
     // Data frame
     //  if PADDED
@@ -755,7 +755,7 @@ bool HttpConn::onData(
 
     CharBuf & buf = sm->m_msg->body();
     buf.append(data.data, data.dataLen);
-    if (flags & fEndStream) {
+    if (flags.any(fEndStream)) {
         sm->m_remoteState = HttpStream::kClosed;
         msgs->push_back(move(sm->m_msg));
     }
@@ -768,7 +768,7 @@ bool HttpConn::onHeaders(
     vector<unique_ptr<HttpMsg>> * msgs,
     const char src[],
     int stream,
-    FrameFlags flags
+    EnumFlags<FrameFlags> flags
 ) {
     // Headers frame
     //  if PADDED flag
@@ -791,7 +791,7 @@ bool HttpConn::onHeaders(
 
     // adjust for any included padding
     UnpaddedData ud;
-    int hdrLen = (flags & fPriority) ? 5 : 0;
+    int hdrLen = flags.any(fPriority) ? 5 : 0;
     if (!removePadding(&ud, src, m_inputFrameLen, hdrLen, flags)) {
         return replyGoAway(
             out,
@@ -801,7 +801,7 @@ bool HttpConn::onHeaders(
     }
 
     // parse priority
-    if (flags & fPriority) {
+    if (flags.any(fPriority)) {
         PriorityData pri;
         if (!removePriority(&pri, stream, ud.hdr, hdrLen)) {
             return replyGoAway(
@@ -820,7 +820,7 @@ bool HttpConn::onHeaders(
 
     switch (sm->m_remoteState) {
     case HttpStream::kIdle:
-        sm->m_remoteState = (flags & fEndStream)
+        sm->m_remoteState = flags.any(fEndStream)
             ? HttpStream::kClosed
             : HttpStream::kOpen;
         switch (sm->m_localState) {
@@ -840,13 +840,13 @@ bool HttpConn::onHeaders(
         }
         break;
     case HttpStream::kReserved:
-        sm->m_remoteState = (flags & fEndStream)
+        sm->m_remoteState = flags.any(fEndStream)
             ? HttpStream::kClosed
             : HttpStream::kOpen;
         sm->m_msg = make_unique<HttpResponse>(stream);
         break;
     case HttpStream::kOpen:
-        if (flags & fEndStream) {
+        if (flags.any(fEndStream)) {
             // trailing headers not supported
             // !!! should probably send a stream error and process
             //     the headers (to maintain the connection decompression
@@ -872,7 +872,7 @@ bool HttpConn::onHeaders(
         );
     }
 
-    if (~flags & fEndHeaders)
+    if (flags.none(fEndHeaders))
         m_frameMode = FrameMode::kContinuation;
 
     auto * msg = sm->m_msg.get();
@@ -886,7 +886,7 @@ bool HttpConn::onHeaders(
     }
     if (!mdec) {
         resetStream(out, stream, mdec.error());
-    } else if ((flags & fEndHeaders) && !sm->m_msg->checkPseudoHeaders()) {
+    } else if (flags.any(fEndHeaders) && !sm->m_msg->checkPseudoHeaders()) {
         resetStream(out, stream, FrameError::kProtocolError);
     } else if (sm->m_remoteState == HttpStream::kClosed) {
         msgs->push_back(move(sm->m_msg));
@@ -900,7 +900,7 @@ bool HttpConn::onPriority(
     vector<unique_ptr<HttpMsg>> * msgs,
     const char src[],
     int stream,
-    FrameFlags flags
+    EnumFlags<FrameFlags> flags
 ) {
     // Priority frame
     //  exclusive dependency : 1
@@ -944,7 +944,7 @@ bool HttpConn::onRstStream(
     vector<unique_ptr<HttpMsg>> * msgs,
     const char src[],
     int stream,
-    FrameFlags flags
+    EnumFlags<FrameFlags> flags
 ) {
     // RstStream frame
     //  errorCode : 32
@@ -987,7 +987,7 @@ bool HttpConn::onSettings(
     vector<unique_ptr<HttpMsg>> * msgs,
     const char src[],
     int stream,
-    FrameFlags flags
+    EnumFlags<FrameFlags> flags
 ) {
     // Settings frame
     //  array of 0 or more
@@ -1006,7 +1006,7 @@ bool HttpConn::onSettings(
     }
     m_frameMode = FrameMode::kNormal;
 
-    if (flags & fAck) {
+    if (flags.any(fAck)) {
         if (m_inputFrameLen) {
             return replyGoAway(
                 out,
@@ -1080,7 +1080,7 @@ bool HttpConn::onPushPromise(
     vector<unique_ptr<HttpMsg>> * msgs,
     const char src[],
     int stream,
-    FrameFlags flags
+    EnumFlags<FrameFlags> flags
 ) {
     // PushPromise frame
     //  if PADDED flag
@@ -1112,7 +1112,7 @@ bool HttpConn::onPing(
     vector<unique_ptr<HttpMsg>> * msgs,
     const char src[],
     int stream,
-    FrameFlags flags
+    EnumFlags<FrameFlags> flags
 ) {
     // Ping frame
     //  data[8]
@@ -1133,7 +1133,7 @@ bool HttpConn::onPing(
         );
     }
 
-    if (~flags & fAck) {
+    if (flags.none(fAck)) {
         startFrame(out, 0, FrameType::kPing, 8, fAck);
         out->append(src + kFrameHeaderLen, m_inputFrameLen);
     }
@@ -1146,7 +1146,7 @@ bool HttpConn::onGoAway(
     vector<unique_ptr<HttpMsg>> * msgs,
     const char src[],
     int stream,
-    FrameFlags flags
+    EnumFlags<FrameFlags> flags
 ) {
     // GoAway frame
     //  reserved : 1
@@ -1195,7 +1195,7 @@ bool HttpConn::onWindowUpdate(
     vector<unique_ptr<HttpMsg>> * msgs,
     const char src[],
     int stream,
-    FrameFlags flags
+    EnumFlags<FrameFlags> flags
 ) {
     // WindowUpdate frame
     //  reserved : 1
@@ -1273,7 +1273,7 @@ bool HttpConn::onContinuation(
     vector<unique_ptr<HttpMsg>> * msgs,
     const char src[],
     int stream,
-    FrameFlags flags
+    EnumFlags<FrameFlags> flags
 ) {
     // Continuation frame
     //  headerBlock[]

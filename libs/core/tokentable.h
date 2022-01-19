@@ -8,6 +8,8 @@
 
 #include "cppconf/cppconf.h"
 
+#include "core/types.h"
+
 #include <cassert>
 #include <iterator>
 #include <string_view>
@@ -47,7 +49,8 @@ public:
     auto find(const char name[], auto defId) const;
     auto find(std::string_view name, auto defId) const;
     const char * findName(auto id, const char defName[] = nullptr) const;
-    std::vector<std::string_view> findNames(auto flags) const;
+    template<typename T>
+    std::vector<std::string_view> findNames(EnumFlags<T> flags) const;
 
     bool empty() const { return m_values.empty(); }
     Iterator begin() const;
@@ -95,12 +98,16 @@ inline const char * TokenTable::findName(
 }
 
 //===========================================================================
-inline std::vector<std::string_view> TokenTable::findNames(auto flags) const {
+template<typename T>
+inline std::vector<std::string_view> TokenTable::findNames(
+    EnumFlags<T> flags
+) const {
     auto out = std::vector<std::string_view>{};
     const char * name = nullptr;
-    while (flags) {
-        auto f = (decltype(flags)) (1 << std::countr_zero((uintmax_t) flags));
-        flags = flags & ~f;
+    auto raw = flags.underlying();
+    while (raw) {
+        auto f = (decltype(raw)) (1 << std::countr_zero((uintmax_t) raw));
+        raw = raw & ~f;
         if (findName(&name, (int) f))
             out.push_back(name);
     }

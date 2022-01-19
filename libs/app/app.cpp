@@ -29,7 +29,7 @@ static VersionInfo s_appVer;
 static unsigned s_appIndex;
 static string s_appName;    // appBaseName[<appIndex>], if appIndex > 1
 static vector<ITaskNotify *> s_appTasks;
-static AppFlags s_appFlags;
+static EnumFlags<AppFlags> s_appFlags;
 static Path s_initialDir;
 static Path s_rootDir;
 static Path s_binDir;
@@ -133,9 +133,9 @@ void RunTask::onTask() {
     iFileInitialize();
     iConfigInitialize();
     configMonitor("app.xml", &s_appXml);
-    if (s_appFlags & fAppWithLogs) {
+    if (s_appFlags.any(fAppWithLogs)) {
         iLogFileInitialize();
-        if (s_appFlags & fAppWithConsole)
+        if (s_appFlags.any(fAppWithConsole))
             logMonitor(consoleBasicLogger());
     }
     iPlatformConfigInitialize();
@@ -177,7 +177,7 @@ void Dim::iAppPushStartupTask(ITaskNotify * task) {
 }
 
 //===========================================================================
-void Dim::iAppSetFlags(AppFlags flags) {
+void Dim::iAppSetFlags(EnumFlags<AppFlags> flags) {
     assert(appStarting());
     s_appFlags = flags;
 }
@@ -216,7 +216,7 @@ RunMode Dim::appMode() {
 }
 
 //===========================================================================
-AppFlags Dim::appFlags() {
+EnumFlags<AppFlags> Dim::appFlags() {
     return s_appFlags;
 }
 
@@ -283,7 +283,7 @@ int Dim::appRun(
     char * argv[],
     const VersionInfo & ver,
     string_view baseName,
-    AppFlags flags
+    EnumFlags<AppFlags> flags
 ) {
     s_fnProxyApp.fn = move(fn);
     return appRun(&s_fnProxyApp, argc, argv, ver, baseName, flags);
@@ -296,7 +296,7 @@ int Dim::appRun(
     char * argv[], 
     const VersionInfo & ver,
     string_view baseName,
-    AppFlags flags
+    EnumFlags<AppFlags> flags
 ) {
     {
         lock_guard lk(s_runMut);
@@ -307,7 +307,7 @@ int Dim::appRun(
     s_appFlags = flags;
     s_appTasks.clear();
 
-    if (s_appFlags & fAppWithService) {
+    if (s_appFlags.any(fAppWithService)) {
         Cli cli;
         cli.opt(&s_appIndex, "app-index", 1)
             .desc("Identifies service when multiple are configured.");
@@ -347,7 +347,7 @@ int Dim::appRun(
     if (s_appIndex > 1)
         s_appName += StrFrom(s_appIndex).view();
     s_binDir = exeName.removeFilename();
-    if ((flags & fAppWithFiles) && s_binDir.stem() == "bin") {
+    if (flags.any(fAppWithFiles) && s_binDir.stem() == "bin") {
         s_rootDir = s_binDir.parentPath();
         s_confDir = makeAppDir("conf");
     } else {
@@ -358,13 +358,13 @@ int Dim::appRun(
     s_dataDir = makeAppDir("data");
     s_logDir = makeAppDir("log");
 
-    if (flags & fAppWithChdir)
+    if (flags.any(fAppWithChdir))
         fileSetCurrentDir(s_rootDir);
 
     iPerfInitialize();
     iLogInitialize();
     iConsoleInitialize();
-    if (flags & fAppWithConsole)
+    if (flags.any(fAppWithConsole))
         logDefaultMonitor(consoleBasicLogger());
     iTaskInitialize();
     iTimerInitialize();
@@ -428,7 +428,7 @@ void Dim::appSignalUsageError(int code, string_view err, string_view detail) {
 
     s_usageErrorSignaled.test_and_set();
     if (code) {
-        bool hasConsole = appFlags() & (fAppWithConsole | fAppIsService);
+        bool hasConsole = appFlags().any(fAppWithConsole | fAppIsService);
         if (!hasConsole)
             logMonitor(consoleBasicLogger());
         Cli cli;

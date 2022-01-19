@@ -63,17 +63,17 @@ COMPACT:
 }
 
 //===========================================================================
-template<Cron::WithFlags Flags>
+template<EnumFlags<Cron::WithFlags> Flags>
 std::string Dim::CronDef<Flags>::str() const {
     std::string out;
-    if (Flags & WithSeconds)
+    if (Flags.any(WithSeconds))
         writeField(&out, m_data, kSecPos, 0, 59);
     writeField(&out, m_data, kMinPos, 0, 59);
     writeField(&out, m_data, kHourPos, 0, 23);
     // Day of month
     writeField(&out, m_data, kMonPos, 1, 12);
     // Day of week
-    if (Flags & WithYears)
+    if (Flags.any(WithYears))
         writeField(&out, m_data, kYearPos, 1970, 2099);
     return out;
 }
@@ -82,7 +82,7 @@ std::string Dim::CronDef<Flags>::str() const {
 // *
 // <low>-<high>/<interval>[{#[1-5] | L | W}], ...
 // also, if day of month: L[-<offset>][W], ...
-template<Cron::WithFlags Flags>
+template<EnumFlags<Cron::WithFlags> Flags>
 bool Dim::CronDef<Flags>::parseField(
     Dim::CronDef<Flags>::Data * data,
     unsigned fpos,
@@ -122,11 +122,11 @@ bool Dim::CronDef<Flags>::parseField(
                 src->remove_prefix(3);
             } else if (fpos == kDomPos
                 && (src->front() == 'l' || src->front() == 'L')
-                && (Flags & WithLastDom)
+                && Flags.any(WithLastDom)
             ) {
                 src->remove_prefix(1);
                 if (src->front() == '-') {
-                    if (~Flags & WithLastDomOffset)
+                    if (Flags.none(WithLastDomOffset))
                         return false;
                     src->remove_prefix(1);
                     offset = strToUint(*src, &eptr);
@@ -135,7 +135,7 @@ bool Dim::CronDef<Flags>::parseField(
                     src->remove_prefix(eptr - src->data());
                 }
                 if (src->front() == 'w' || src->front() == 'W') {
-                    if (~Flags & WithWeekDays)
+                    if (Flags.none(WithWeekDays))
                         return false;
                     week = true;
                     src->remove_prefix(1);
@@ -168,14 +168,14 @@ bool Dim::CronDef<Flags>::parseField(
 
     PARSE_INTERVAL:
         if (src->front() == '/') {
-            if (~Flags & WithSlash)
+            if (Flags.none(WithSlash))
                 return false;
             isStar = false;
             interval = strToUint(*src, &eptr);
             if (eptr == src->data())
                 return false;
             if (!hasRange) {
-                if (~Flags & WithSlashAutoRange)
+                if (Flags.none(WithSlashAutoRange))
                     return false;
                 high = maxHigh;
             }
@@ -223,26 +223,26 @@ bool Dim::CronDef<Flags>::parseField(
             hasValue = true;
 
         for (int i = low; i <= high; i += interval) {
-            if (fpos == kSecPos && (Flags & WithSeconds)
+            if (fpos == kSecPos && Flags.any(WithSeconds)
                 || fpos == kMinPos
                 || fpos == kHourPos
                 || fpos == kMonPos
-                || fpos == kYearPos && (Flags & WithYears)
+                || fpos == kYearPos && Flags.any(WithYears)
             ) {
                 setBit(*data, fpos + i - minLow);
             } else if (fpos == kDomPos) {
                 if (last) {
-                    assert(Flags & WithLastDom);
-                    assert(!offset || (Flags & WithLastDomOffset));
+                    assert(Flags.any(WithLastDom));
+                    assert(!offset || Flags.any(WithLastDomOffset));
                     if (week) {
-                        assert(Flags & WithWeekDays);
+                        assert(Flags.any(WithWeekDays));
                         setBit(*data, kLastAndWeekDomPos + offset);
                     } else {
                         setBit(*data, kLastDomPos + offset);
                     }
                 } else {
                     if (week) {
-                        assert(Flags & WithWeekDays);
+                        assert(Flags.any(WithWeekDays));
                         setBit(*data, kWeekDomPos + i);
                     } else {
                         setBit(*data, kDomPos + i);
@@ -272,7 +272,7 @@ bool Dim::CronDef<Flags>::parseField(
             setBit(*data, kHasDomPos);
     }
     if (fpos == kDowPos) {
-        if (Flags & WithSoftStarForDays) {
+        if (Flags.any(WithSoftStarForDays)) {
             if (!hasValue) {
                 for (int i = 0; i <= 6; ++i)
                     setBit(*data, kDowPos + i, false);
