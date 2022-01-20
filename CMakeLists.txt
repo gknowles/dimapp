@@ -224,10 +224,12 @@ function(add_exec_project tgt srcdir)
         get_filename_component(libname "${var}" NAME)
         target_link_libraries(${tgt} ${libname})
     endforeach()
-    if(CMAKE_COMPILER_IS_GNUCXX)
+    if(CMAKE_COMPILER_IS_GNUCXX 
+            AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "9")
         # required for #include <experimental/filesystem>
         target_link_libraries(${tgt} "stdc++fs")
-    elseif(CMAKE_CXX_COMPILER_ID STREQUAL Clang)
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL Clang
+            AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "9")
         target_link_libraries(${tgt} "stdc++fs")
     endif()
     write_user_file(${tgt} "debug;props")
@@ -382,8 +384,10 @@ if(MSVC)
 elseif(CMAKE_COMPILER_IS_GNUCXX)
     if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "8")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z")
-    else()
+    elseif(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "11")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++2a")
+    else()
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++2b")
     endif()
     if(BUILD_COVERAGE)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \
@@ -397,8 +401,10 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL Clang)
         # Clang++-6 in c++2a mode, failing with a reference to the unknown
         # std::is_constant_evaluated().
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z")
-    else()
+    elseif(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "12")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++2a")
+    else()
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++2b")
     endif()
     if(BUILD_COVERAGE)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \
