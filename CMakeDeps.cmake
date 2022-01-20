@@ -27,8 +27,6 @@
 # libs/core/charbuf.h
 # libs/core/core.h
 # libs/core/core.natvis
-# libs/core/cron.cpp
-# libs/core/cron.h
 # libs/core/handle.cpp
 # libs/core/handle.h
 # libs/core/hash.cpp
@@ -204,6 +202,8 @@
 # tests/charbuf/charbuftest.cpp
 # tests/charbuf/pch.cpp
 # tests/charbuf/pch.h
+# tests/cron/cron.cpp
+# tests/cron/cron.h
 # tests/cron/crontest.cpp
 # tests/cron/pch.cpp
 # tests/cron/pch.h
