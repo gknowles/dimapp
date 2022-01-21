@@ -186,8 +186,7 @@ struct SearchState {
 
 // forward declarations
 static ostream & dumpPage(ostream & os, SearchState * ss);
-static void seekRootPage(SearchState * ss);
-static void seekNode(SearchState * ss, size_t inode);
+static void seekRootNode(SearchState * ss);
 
 
 /****************************************************************************
@@ -223,8 +222,7 @@ SearchState * StrTrieBase::Node::makeState(
     );
     if (seek) {
         assert(!ss->pages->empty());
-        seekRootPage(ss);
-        seekNode(ss, ss->inode);
+        seekRootNode(ss);
     }
     return ss;
 }
@@ -650,16 +648,6 @@ static bool logFatal(SearchState * ss) {
 }
 
 //===========================================================================
-static void seekPage(SearchState * ss, pgno_t pgno) {
-    ss->pgno = pgno;
-}
-
-//===========================================================================
-static void seekRootPage(SearchState * ss) {
-    seekPage(ss, (pgno_t) ss->pages->root());
-}
-
-//===========================================================================
 static StrTrieBase::Node * getNode(
     SearchState * ss,
     pgno_t pgno,
@@ -677,9 +665,21 @@ static StrTrieBase::Node * getNode(SearchState * ss, size_t pos) {
 }
 
 //===========================================================================
+static void seekNode(SearchState * ss, pgno_t pgno, size_t inode) {
+    ss->pgno = pgno;
+    ss->inode = (int) inode;
+    ss->node = getNode(ss, ss->inode);
+}
+
+//===========================================================================
 static void seekNode(SearchState * ss, size_t inode) {
     ss->inode = (int) inode;
     ss->node = getNode(ss, ss->inode);
+}
+
+//===========================================================================
+static void seekRootNode(SearchState * ss) {
+    seekNode(ss, (pgno_t) ss->pages->root(), 0);
 }
 
 //===========================================================================
@@ -694,14 +694,22 @@ static void seekKid(SearchState * ss, size_t pos) {
 //===========================================================================
 static void seekRemote(SearchState * ss) {
     auto pos = remotePos(ss->node);
-    seekPage(ss, remotePage(ss->node));
-    seekNode(ss, 0);
+    seekNode(ss, remotePage(ss->node), 0);
     if (::nodeType(ss->node) != kNodeMultiroot) {
         assert(pos == 0);
     } else {
         auto roots = kids(ss, 0);
         assert(pos < roots.size());
         seekNode(ss, roots[pos].pos);
+    }
+}
+
+//===========================================================================
+static void consumeIfRemote(SearchState * ss, bool forUpdate) {
+    if (nodeType(ss->node) == kNodeRemote) {
+        seekRemote(ss);
+        if (forUpdate)
+            ss->spages.insert(ss->pgno);
     }
 }
 
@@ -750,7 +758,7 @@ static void pushFoundKeyVal(SearchState * ss, string_view val) {
 // Pushes seg or half seg value onto found key, advances to next node 
 // (following remote node if present), and returns false if there is no 
 // following node.
-static bool pushFoundKeyCopy(SearchState * ss) {
+static bool pushFoundKeyConsume(SearchState * ss, bool forUpdate = false) {
     if (nodeType(ss->node) == kNodeSeg) {
         pushFoundKeyVal(ss, segView(ss->node));
     } else {
@@ -761,10 +769,7 @@ static bool pushFoundKeyCopy(SearchState * ss) {
         return false;
 
     seekKid(ss, 0);
-    if (nodeType(ss->node) == kNodeRemote) {
-        seekRemote(ss);
-        ss->spages.insert(ss->pgno);
-    }
+    consumeIfRemote(ss, forUpdate);
     return true;
 }
 
@@ -1144,11 +1149,9 @@ static UpdateFork & copyForkWithKey(SearchState * ss, int * inext) {
         if (nodeType(fnode) == kNodeMultiroot) {
             auto pgno = ss->pgno;
             auto inode = ss->inode;
-            seekPage(ss, rpno);
-            seekNode(ss, 0);
+            seekNode(ss, rpno, 0);
             rrefs = kids(ss, 0);
-            seekPage(ss, pgno);
-            seekNode(ss, inode);
+            seekNode(ss, pgno, inode);
         }
     }
     for (auto i = 0; i < refs.size(); ++i) {
@@ -1402,8 +1405,7 @@ static void applyUpdates(SearchState * ss) {
     }
     // Copy nodes to new pages.
     for (auto&& vpage : ss->vpages) {
-        seekPage(ss, vpage.targetPgno);
-        seekNode(ss, 0);
+        seekNode(ss, vpage.targetPgno, 0);
         if (auto roots = vpage.roots.size(); roots == 1) {
             copyAny(ss, vpage.roots[0]);
         } else {
@@ -1432,8 +1434,7 @@ static void applyDestroys(SearchState * ss) {
         if (ss->vpages.empty())
             *ss->debugStream << "Page: No Pages\n";
         for (auto&& vpage : ranges::reverse_view(ss->vpages)) {
-            seekPage(ss, vpage.targetPgno);
-            seekNode(ss, 0);
+            seekNode(ss, vpage.targetPgno, 0);
             dumpPage(*ss->debugStream, ss);
         }
     }
@@ -1714,8 +1715,7 @@ bool StrTrieBase::insert(string_view key) {
     TempHeap heap;
     auto ss = Node::makeState(&heap, this, key, false);
     if (!empty()) {
-        seekRootPage(ss);
-        seekNode(ss, ss->inode);
+        seekRootNode(ss);
         ss->spages.insert(ss->pgno);
 
         using Fn = bool(SearchState *);
@@ -1899,8 +1899,10 @@ static void eraseForkWithSegs(SearchState * ss, const UpdateFork & fork) {
 
     auto & sref = fork.refs[index];
     assert(sref.page.type == PageRef::kSource);
-    seekPage(ss, sref.page.pgno);
-    seekNode(ss, sref.data.pos);
+    seekNode(ss, sref.page.pgno, sref.data.pos);
+
+    // Any possible remote was already consume by AddForkWithKey()
+    assert(nodeType(ss->node) != kNodeRemote);
 
     auto vals = forkVals(ss, fork.kidBits);
     auto sval = vals[index];
@@ -1949,7 +1951,7 @@ static void eraseForkWithSegs(SearchState * ss, const UpdateFork & fork) {
             //   +------+------+  +-----+
             // --| half | fork |--| SEG |--
             //   +------+---+--+  +-----+
-            endMark = !pushFoundKeyCopy(ss);
+            endMark = !pushFoundKeyConsume(ss, true);
         }
     } else if (!lowFork
         && nodeType(ss->node) == kNodeHalfSeg
@@ -1978,7 +1980,7 @@ static void eraseForkWithSegs(SearchState * ss, const UpdateFork & fork) {
         // --| FORK | HALF |--
         //   +---+--+------+  
         pushFoundKeyVal(ss, sval);
-        endMark = !pushFoundKeyCopy(ss);
+        endMark = !pushFoundKeyConsume(ss, true);
 
         if (!endMark
             && nodeType(ss->node) == kNodeSeg
@@ -1987,7 +1989,7 @@ static void eraseForkWithSegs(SearchState * ss, const UpdateFork & fork) {
             //   +------+------+  +-----+
             // --| fork | half |--| SEG |
             //   +---+--+------+  +-----+
-            endMark = !pushFoundKeyCopy(ss);
+            endMark = !pushFoundKeyConsume(ss, true);
         }
     } else {
         //   +------+
@@ -2210,10 +2212,10 @@ static void seekFront(SearchState * ss) {
     for (;;) {
         auto ntype = nodeType(ss->node);
         if (ntype == kNodeSeg) {
-            if (!pushFoundKeyCopy(ss))
+            if (!pushFoundKeyConsume(ss))
                 break;
         } else if (ntype == kNodeHalfSeg) {
-            if (!pushFoundKeyCopy(ss))
+            if (!pushFoundKeyConsume(ss))
                 break;
         } else if (ntype == kNodeFork) {
             auto & fork = ss->forks.emplace_back();
@@ -2239,8 +2241,7 @@ static void seekFront(SearchState * ss) {
 static void seekNext(SearchState * ss) {
     while (!ss->forks.empty()) {
         auto & fork = ss->forks.back();
-        seekPage(ss, fork.pgno);
-        seekNode(ss, fork.inode);
+        seekNode(ss, fork.pgno, fork.inode);
         int nval = -1;
         if (fork.kpos == ss->klen) {
             nval = firstForkVal(forkBits(ss->node));
@@ -2274,10 +2275,10 @@ static void seekBack(SearchState * ss) {
     for (;;) {
         auto ntype = nodeType(ss->node);
         if (ntype == kNodeSeg) {
-            if (!pushFoundKeyCopy(ss))
+            if (!pushFoundKeyConsume(ss))
                 break;
         } else if (ntype == kNodeHalfSeg) {
-            if (!pushFoundKeyCopy(ss))
+            if (!pushFoundKeyConsume(ss))
                 break;
         } else if (ntype == kNodeFork) {
             auto & fork = ss->forks.emplace_back();
@@ -2304,8 +2305,7 @@ static void seekBack(SearchState * ss) {
 static void seekPrev(SearchState * ss) {
     while (!ss->forks.empty()) {
         auto & fork = ss->forks.back();
-        seekPage(ss, fork.pgno);
-        seekNode(ss, fork.inode);
+        seekNode(ss, fork.pgno, fork.inode);
         if (fork.kpos == ss->klen) {
             ss->forks.pop_back();
             continue;
@@ -2389,8 +2389,7 @@ StrTrieBase::Iter & StrTrieBase::Iter::operator++() {
     TempHeap heap;
     auto ss = Node::makeState(&heap, m_impl->cont, m_impl->current);
     if (m_impl->endMark) {
-        seekRootPage(ss);
-        seekNode(ss, ss->inode);
+        seekRootNode(ss);
         seekFront(ss);
     } else {
         ss->forks.assign(m_impl->forks.begin(), m_impl->forks.end());
@@ -2418,8 +2417,7 @@ StrTrieBase::Iter & StrTrieBase::Iter::operator--() {
     TempHeap heap;
     auto ss = Node::makeState(&heap, m_impl->cont, m_impl->current);
     if (m_impl->endMark) {
-        seekRootPage(ss);
-        seekNode(ss, ss->inode);
+        seekRootNode(ss);
         seekBack(ss);
     } else {
         ss->forks.assign(m_impl->forks.begin(), m_impl->forks.end());
@@ -2499,7 +2497,7 @@ static bool findAtSeg(SearchState * ss) {
         } else {
             // Continue down this chain.
             setFoundKey(ss);
-            pushFoundKeyCopy(ss);
+            pushFoundKeyConsume(ss);
             seekBack(ss);
         }
     } else if (kGreater) {
@@ -2510,7 +2508,7 @@ static bool findAtSeg(SearchState * ss) {
         } else {
             // Continue down this chain.
             setFoundKey(ss);
-            pushFoundKeyCopy(ss);
+            pushFoundKeyConsume(ss);
             seekFront(ss);
         }
     }
@@ -2545,7 +2543,7 @@ static bool findAtHalfSeg(SearchState * ss) {
         } else {
             // Continue down this chain.
             setFoundKey(ss);
-            pushFoundKeyCopy(ss);
+            pushFoundKeyConsume(ss);
             seekBack(ss);
         }
     } else if (kGreater) {
@@ -2556,7 +2554,7 @@ static bool findAtHalfSeg(SearchState * ss) {
         } else {
             // Continue down this chain.
             setFoundKey(ss);
-            pushFoundKeyCopy(ss);
+            pushFoundKeyConsume(ss);
             seekFront(ss);
         }
     }
