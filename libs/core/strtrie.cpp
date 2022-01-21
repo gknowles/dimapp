@@ -2960,8 +2960,13 @@ static ostream & dumpAny(ostream & os, SearchState * ss) {
         os << " Fork,";
         if (nodeEndMarkFlag(ss->node))
             os << " EOK";
-        for (auto&& pos : forkVals(ss, ss->node))
-            os << ' ' << (int) pos;
+        if (auto&& vals = forkVals(ss, ss->node); !vals.empty()) {
+            for (auto i = 0; i < vals.size(); ++i) {
+                os << ' ' << (int) vals[i];
+                if (i % 5 == 4)
+                    os << ' ';
+            }
+        }
         break;
     case kNodeEndMark:
         os << " EOK";
@@ -2977,17 +2982,15 @@ static ostream & dumpAny(ostream & os, SearchState * ss) {
     auto subs = kids(ss, ss->inode);
     if (!subs.empty()) {
         ostringstream otmp;
-        for (auto & kid : subs)
-            otmp << kid.pos << ' ';
+        for (auto i = 0; i < subs.size(); ++i) {
+            otmp << subs[i].pos << ' ';
+            if (i % 5 == 4)
+                otmp << ' ';
+        }
         if (otmp.view().size() <= 28) {
             os << "  // " << otmp.view();
         } else {
-            string prefix = "          // ";
-            os << '\n' << prefix;
-            Cli cli;
-            string body(size(prefix), '\v');
-            body += otmp.view();
-            cli.printText(os, body);
+            os << "\n          // " << otmp.view();
         }
     }
     os << '\n';

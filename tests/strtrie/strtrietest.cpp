@@ -68,6 +68,30 @@ static bool erase(StrTrie * vals, string_view val) {
 }
 
 //===========================================================================
+static void insertTest(
+    const vector<string_view> & strs, 
+    const vector<string_view> & ghosts = {}
+) {
+    int line = 0;
+    StrTrie vals;
+    for (auto&& str : strs) {
+        EXPECT(insert(&vals, str));
+        EXPECT(vals.contains(str));
+    }
+    for (auto&& str : strs) {
+        EXPECT(vals.contains(str));
+        EXPECT(!insert(&vals, str));
+    }
+    for (auto&& str : ghosts) 
+        EXPECT(!vals.contains(str));
+    for (auto&& str : strs) {
+        EXPECT(erase(&vals, str));
+        EXPECT(!vals.contains(str));
+    }
+    EXPECT(vals.empty());
+}
+
+//===========================================================================
 inline static void internalTests() {
     if (s_verbose)
         cout << "\n> INTERNAL TESTS" << endl;
@@ -75,34 +99,39 @@ inline static void internalTests() {
     StrTrie vals;
     string out;
     EXPECT(vals.empty());
-    auto b = insert(&vals, "abc");
-    EXPECT(b);
-    EXPECT(vals.contains("abc"));
-    EXPECT(!vals.contains("b"));
-    EXPECT(!vals.contains("ab"));
-    EXPECT(!vals.contains("abb"));
-    EXPECT(!vals.contains("abd"));
-    EXPECT(!vals.contains("abcd"));
 
-    b = insert(&vals, "a");
-    EXPECT(b);
-    EXPECT(vals.contains("a"));
-    EXPECT(vals.contains("abc"));
-    EXPECT(!vals.contains("ab"));
-    EXPECT(!vals.contains("abcd"));
+    insertTest({"abc"}, {"", "b", "ab", "abb", "abd", "abcd"});
 
-    b = insert(&vals, "ac");
-    EXPECT(vals.contains("a"));
-    EXPECT(vals.contains("abc"));
-    EXPECT(vals.contains("ac"));
+    // SEG NODE
+    // Fork last seg with end of new key
+    insertTest({"abc", ""}, {"0", "a", "abcd"});            // start of seg
+    insertTest({"abc", "a"}, {"", "0", "b", "ab", "ac"});   // high mid 
+    insertTest({"abc", "ab"}, {"a", "ac"});                 // high end
 
-    b = insert(&vals, "ade");
-    EXPECT(vals.contains("ade"));
+    // Fork last seg with key
+    insertTest({"abc", "x123"});    // high start of seg
+    insertTest({"abc", "b123"});    // low start
+    insertTest({"abc", "ax123"});   // high mid
+    insertTest({"abc", "ac123"});   // low mid
+    insertTest({"abc", "abw123"});  // high end
+    insertTest({"abc", "abd123"});  // low end
+    insertTest({"abc", "abc123"});  // after end
 
-    b = insert(&vals, "abcdefghijklmnopqrstuvwxyz");
-    EXPECT(vals.contains("abcdefghijklmnopqrstuvwxyz"));
-    EXPECT(vals.contains("abc"));
+    // Fork last seg with tailless key
+    insertTest({"abc", "x"});    // high start of seg
+    insertTest({"abc", "b"});    // low start
+    insertTest({"abc", "ax"});   // high mid
+    insertTest({"abc", "ac"});   // low mid
+    insertTest({"abc", "abw"});  // high end
+    insertTest({"abc", "abd"});  // low end
 
+    // Fork middle seg with key
+    insertTest({"abcdefghijklmnopqrstuvwxyz", "abw123"});   // high mid of seg
+    insertTest({"abcdefghijklmnopqrstuvwxyz", "abd123"});   // low mid of seg
+
+
+    //-----------------------------------------------------------------------
+    // Search and iterate
     vector<string_view> keys = { "abc", "aw", "abd" };
     vals.clear();
     for (auto&& key : keys)
