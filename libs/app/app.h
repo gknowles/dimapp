@@ -128,9 +128,25 @@ EnumFlags<AppFlags> appFlags();
 // returns EX_OK unless changed by appSignalShutdown()
 int appExitCode();
 
-const Path & appRootDir();
-const Path & appInitialDir();
-const Path & appBinDir();
+// Application directory structure
+// If bin dir name is "bin":
+//  root 
+//      /bin
+//      /conf
+//      /crash
+//      /data
+//      /log
+//
+// otherwise:
+//  <binDir> (is also config dir)
+//  LOCALAPPDATA/<AppName>
+//      /crash
+//      /data
+//      /log
+
+const Path & appRootDir();      // application root
+const Path & appInitialDir();   // current directory when appRun was called
+const Path & appBinDir();       // directory containing this binary
 const Path & appConfigDir();
 const Path & appCrashDir();
 const Path & appDataDir();
