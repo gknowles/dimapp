@@ -177,6 +177,7 @@
 # libs/win/winsockint.h
 # libs/win/winsvc.cpp
 # libs/win/winsvcctrl.cpp
+# libs/win/winsvcctrl.h
 # libs/win/winthread.cpp
 # libs/win/wintime.cpp
 # libs/win/winutil.cpp
