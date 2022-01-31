@@ -11,6 +11,15 @@ using namespace Dim;
 
 /****************************************************************************
 *
+*   Tuning parameters
+*
+***/
+
+const VersionInfo kVersion = { 1 };
+
+
+/****************************************************************************
+*
 *   Declarations
 *
 ***/
@@ -234,7 +243,6 @@ static void app(int argc, char *argv[]) {
     cout.imbue(locale(""));
     Cli cli;
     cli.helpNoArgs();
-    cli.versionOpt("1.0 (" __DATE__ ")");
     cli.opt<bool>(&s_verbose, "v verbose.")
         .desc("Dump container state between tests.");
     auto & fill = cli.opt<int>("f fill").siUnits("")
@@ -266,5 +274,5 @@ static void app(int argc, char *argv[]) {
 
 //===========================================================================
 int main(int argc, char * argv[]) {
-    return appRun(app, argc, argv);
+    return appRun(app, argc, argv, kVersion);
 }
