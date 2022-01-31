@@ -365,7 +365,7 @@ uint64_t Dim::fileSize(string_view path) {
     auto f = fs::path(p8);
     auto len = (uint64_t) fs::file_size(f, ec);
     if (ec) {
-        errno = ec.value();
+        errno = ec.default_error_condition().value();
         return len;
     }
     if (!len)
@@ -422,7 +422,7 @@ void Dim::fileReadOnly(string_view path, bool enable) {
     if (!ec)
         return;
     logMsgError() << "Set read only failed: " << path;
-    errno = ec.value();
+    errno = ec.default_error_condition().value();
 }
 
 //===========================================================================
@@ -438,7 +438,7 @@ bool Dim::fileRemove(string_view path, bool recurse) {
     if (!ec)
         return true;
     logMsgError() << "Remove failed: " << path;
-    errno = ec.value();
+    errno = ec.default_error_condition().value();
     return false;
 }
 
@@ -451,7 +451,7 @@ bool Dim::fileCreateDirs(string_view path) {
     if (!ec)
         return true;
     logMsgError() << "Create directories failed: " << path;
-    errno = ec.value();
+    errno = ec.default_error_condition().value();
     return false;
 }
 
