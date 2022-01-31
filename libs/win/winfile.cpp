@@ -1118,65 +1118,62 @@ static bool updateNamedAccess(
     WinError err = 0;
     SECURITY_DESCRIPTOR * sd = nullptr;
     ACL * aclNew = nullptr;
+    Finally fin([&]() { 
+        if (sd) 
+            LocalFree(sd); 
+        if (aclNew)
+            LocalFree(aclNew);
+    });
 
-    for (;;) {
-        ACL * aclOld;
-        auto wpath = toWstring(path);
-        err = GetNamedSecurityInfoW(
-            wpath.c_str(),
-            SE_FILE_OBJECT,
-            DACL_SECURITY_INFORMATION,
-            NULL, // owner
-            NULL, // group
-            &aclOld,
-            NULL, // sacl
-            (PSECURITY_DESCRIPTOR *) &sd
-        );
-        if (err)
-            break;
+    ACL * aclOld;
+    auto wpath = toWstring(path);
+    err = GetNamedSecurityInfoW(
+        wpath.c_str(),
+        SE_FILE_OBJECT,
+        DACL_SECURITY_INFORMATION,
+        NULL, // owner
+        NULL, // group
+        &aclOld,
+        NULL, // sacl
+        (PSECURITY_DESCRIPTOR *) &sd
+    );
+    if (err)
+        return winFileSetErrno(err);
 
-        auto wtrustee = toWstring(trustee);
-        EXPLICIT_ACCESSW access = {};
-        access.grfAccessMode = mode;
-        access.grfAccessPermissions = getWindowsPerms(allow);
-        switch (inherit) {
-        case File::Access::Inherit::kNone:
-        default:
-            access.grfInheritance = NO_INHERITANCE;
-            break;
-        case File::Access::Inherit::kOnly:
-            access.grfInheritance =
-                SUB_CONTAINERS_AND_OBJECTS_INHERIT | INHERIT_ONLY;
-            break;
-        case File::Access::Inherit::kAll:
-            access.grfInheritance = SUB_CONTAINERS_AND_OBJECTS_INHERIT;
-            break;
-        }
-        access.Trustee.MultipleTrusteeOperation = NO_MULTIPLE_TRUSTEE;
-        access.Trustee.TrusteeForm = TRUSTEE_IS_NAME;
-        access.Trustee.TrusteeType = TRUSTEE_IS_UNKNOWN;
-        access.Trustee.ptstrName = wtrustee.data();
-        ACL * aclNew;
-        err = SetEntriesInAclW(1, &access, aclOld, &aclNew);
-        if (err || !aclNew)
-            break;
-
-        err = SetNamedSecurityInfoW(
-            wpath.data(),
-            SE_FILE_OBJECT,
-            DACL_SECURITY_INFORMATION,
-            NULL, // owner
-            NULL, // group
-            aclNew,
-            NULL // sacl
-        );
+    auto wtrustee = toWstring(trustee);
+    EXPLICIT_ACCESSW access = {};
+    access.grfAccessMode = mode;
+    access.grfAccessPermissions = getWindowsPerms(allow);
+    switch (inherit) {
+    case File::Access::Inherit::kNone:
+    default:
+        access.grfInheritance = NO_INHERITANCE;
+        break;
+    case File::Access::Inherit::kOnly:
+        access.grfInheritance =
+            SUB_CONTAINERS_AND_OBJECTS_INHERIT | INHERIT_ONLY;
+        break;
+    case File::Access::Inherit::kAll:
+        access.grfInheritance = SUB_CONTAINERS_AND_OBJECTS_INHERIT;
         break;
     }
+    access.Trustee.MultipleTrusteeOperation = NO_MULTIPLE_TRUSTEE;
+    access.Trustee.TrusteeForm = TRUSTEE_IS_NAME;
+    access.Trustee.TrusteeType = TRUSTEE_IS_UNKNOWN;
+    access.Trustee.ptstrName = wtrustee.data();
+    err = SetEntriesInAclW(1, &access, aclOld, &aclNew);
+    if (err || !aclNew)
+        return winFileSetErrno(err);
 
-    if (sd)
-        LocalFree(sd);
-    if (aclNew)
-        LocalFree(aclNew);
+    err = SetNamedSecurityInfoW(
+        wpath.data(),
+        SE_FILE_OBJECT,
+        DACL_SECURITY_INFORMATION,
+        NULL, // owner
+        NULL, // group
+        aclNew,
+        NULL // sacl
+    );
     return winFileSetErrno(err);
 }
 
