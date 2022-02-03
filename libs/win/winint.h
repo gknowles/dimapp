@@ -52,6 +52,10 @@ public:
         return (SecurityStatus) m_secStatus;
     }
 
+    std::error_code code() const {
+        return {m_value, std::system_category()};
+    }
+
 private:
     friend std::ostream & operator<<(std::ostream & os, const WinError & val);
 
