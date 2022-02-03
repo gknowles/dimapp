@@ -8,6 +8,8 @@
 
 #include "winsvcctrl.h"
 
+#include "core/time.h"
+
 #include <vector>
 
 namespace Dim {
