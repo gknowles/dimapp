@@ -84,7 +84,7 @@ static DWORD WINAPI svcCtrlHandler(
 
 //===========================================================================
 static VOID WINAPI ServiceMain(DWORD argc, LPTSTR * argv) {
-    // Running as a service and services can't have GUI windows
+    // Running as a service and services can't have GUI windows.
     iAppSetFlags(appFlags().reset(fAppWithGui).set(fAppIsService));
 
     s_hstat = RegisterServiceCtrlHandlerExW(
@@ -122,11 +122,11 @@ static void serviceDispatchThread() {
         { NULL, NULL },
     };
     // StartServiceCtrlDispatcher starts the service message loop and doesn't
-    // return until the service ends
+    // return until the service ends.
     if (!StartServiceCtrlDispatcherW(st)) {
         WinError err;
         if (err == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT) {
-            // failed service controller connect means that we're not running
+            // Failed service controller connect means that we're not running
             // as a service.
         } else {
             logMsgFatal() << "StartServiceCtrlDispatcherW: " << err;
@@ -149,7 +149,7 @@ static void serviceDispatchThread() {
 
 //===========================================================================
 void ReportStatusTask::onTask() {
-    // Start accepting service control requests
+    // Start accepting service control requests.
     setState(SERVICE_RUNNING);
 }
 
