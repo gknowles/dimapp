@@ -21,6 +21,7 @@
 #include <atomic>
 #include <cassert>
 #include <cerrno>
+#include <codecvt>
 #include <csignal>
 #include <cstdlib>
 #include <fcntl.h>
@@ -28,6 +29,7 @@
 #include <latch>
 #include <limits>
 #include <list>
+#include <locale>
 #include <mutex>
 #include <new.h>
 #include <shared_mutex>

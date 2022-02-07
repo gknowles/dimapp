@@ -240,6 +240,9 @@
 # tests/strtrie-t/pch.cpp
 # tests/strtrie-t/pch.h
 # tests/strtrie-t/strtrie-t.cpp
+# tests/svcctrl-t/pch.cpp
+# tests/svcctrl-t/pch.h
+# tests/svcctrl-t/svcctrl-t.cpp
 # tests/time-t/pch.cpp
 # tests/time-t/pch.h
 # tests/time-t/time-t.cpp
