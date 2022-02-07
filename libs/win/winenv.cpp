@@ -268,6 +268,7 @@ ProcessRights Dim::envProcessRights() {
     HANDLE token;
     if (!OpenProcessToken(proc, TOKEN_QUERY, &token))
         return kEnvUserStandard;
+    Finally fin([=]() { CloseHandle(token); });
 
     TOKEN_LINKED_TOKEN lt;
     if (!GetTokenInformation(
