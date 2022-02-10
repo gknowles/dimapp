@@ -97,12 +97,18 @@ protected:
 struct Finally : public std::function<void()> {
     using function::function;
     ~Finally();
+    void release();
 };
 
 //===========================================================================
 inline Finally::~Finally() {
     if (*this)
         (*this)();
+}
+
+//===========================================================================
+inline void Finally::release() {
+    *this = {};
 }
 
 
