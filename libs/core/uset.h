@@ -282,7 +282,7 @@ public:
     using reference = const value_type&;
 
 public:
-    RangeIter(const RangeIter & from) = default;
+    RangeIter(const RangeIter & from) noexcept = default;
     RangeIter(IntegralSet::iterator where);
     RangeIter & operator++();
     RangeIter & operator--();
