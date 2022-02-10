@@ -411,10 +411,13 @@ int Dim::appRun(
 }
 
 //===========================================================================
-void Dim::appSignalShutdown(int exitcode) {
+void Dim::appSignalShutdown(int code) {
+    if (code == EX_PENDING)
+        return;
+
     unique_lock lk{s_runMut};
-    if (exitcode > s_exitcode)
-        s_exitcode = exitcode;
+    if (code > s_exitcode)
+        s_exitcode = code;
     if (s_runMode != kRunStopping) {
         assert(s_runMode != kRunStopped);
         s_runMode = kRunStopping;

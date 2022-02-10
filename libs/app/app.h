@@ -185,12 +185,13 @@ bool appLogPath(
 ***/
 
 // Signals shutdown to begin, the exit code will be returned from appRun()
-// after shutdown finishes.
+// after shutdown finishes. However, if the exit code is EX_PENDING it 
+// immediately returns without doing anything.
 //
 // When running as a Windows service, a call to set SERVICE_STOP_PENDING
 // is immediately queued, with a change to SERVICE_STOPPED coming only after
 // all application shutdown handlers (see shutdownMonitor) have completed.
-void appSignalShutdown(int exitcode = EX_OK);
+void appSignalShutdown(int exitCode = EX_OK);
 
 // Intended for use with command line errors, calls appSignalShutdown() after
 // reporting the error. Explicit err text implies EX_USAGE, otherwise defaults
