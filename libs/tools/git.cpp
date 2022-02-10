@@ -39,23 +39,32 @@ bool Dim::gitLoadConfig(
     string_view pathFromCurrentDir,
     string_view fallbackPathFromGitRoot
 ) {
+    Finally fin([=]() {
+        appSignalShutdown(EX_DATAERR);
+        content->clear();
+        configFile->clear();
+        gitRoot->clear();
+    });
+    
     if (!pathFromCurrentDir.empty()) {
         *configFile = pathFromCurrentDir;
     } else {
         *gitRoot = gitFindRoot(fileGetCurrentDir());
+        if (gitRoot->empty())
+            return false;;
         *configFile = Path(fallbackPathFromGitRoot).resolve(*gitRoot);
     }
     *gitRoot = gitFindRoot(Path(*configFile).parentPath());
+    if (gitRoot->empty())
+        return false;
     if (!fileExists(*configFile)) {
         auto path = Path(envExecPath()).removeFilename()
             / Path(*configFile).filename();
         *configFile = move(path);
     }
-    if (!fileLoadBinaryWait(content, *configFile)) {
-        appSignalShutdown(EX_DATAERR);
-        configFile->clear();
-        gitRoot->clear();
+    if (!fileLoadBinaryWait(content, *configFile)) 
         return false;
-    }
+
+    fin = {};
     return true;
 }
