@@ -1196,6 +1196,8 @@ static void testSamples(Config * out, unsigned phase = 0) {
     unsigned what = 0;
 
     if (phase == what++) {
+        auto own = unique_ptr<Config>(out);
+
         // Generate tests
         string layname = s_opts.layout.empty() ? "default" : s_opts.layout;
         auto layout = out->layouts.find(layname);
@@ -1229,6 +1231,7 @@ static void testSamples(Config * out, unsigned phase = 0) {
             );
         }
 
+        own.release();
         phase = what;
     }
     if (phase == what++) {
@@ -1236,13 +1239,14 @@ static void testSamples(Config * out, unsigned phase = 0) {
             // Still have more pages to process.
             return;
         }
+        auto own = unique_ptr<Config>(out);
 
         // Replace test output directory with all the new files.
         auto count = out->outputs.size();
         if (s_opts.update) {
             auto odir = Path(out->sampDir)
                 .resolve(out->configFile.parentPath());
-            if (s_opts.update && !writeOutputs(odir, out->outputs))
+            if (!writeOutputs(odir, out->outputs))
                 return;
             logMsgInfo() << count << " files updated.";
             ConsoleScopedAttr ca(kConsoleNote);
@@ -1262,6 +1266,7 @@ static void testSamples(Config * out, unsigned phase = 0) {
             );
         }
 
+        own.release();
         phase = what;
     }
     if (phase == what++) {

@@ -10,6 +10,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
+## docgen 1.1.2 (2022-02-10)
+- Fixed - Hangs after reporting web site generation errors 
+
 ## docgen 1.1.1 (2022-01-14)
 - Fixed - Last embedded test of documents not processed
 - Fixed - Memory leak when first compile fails

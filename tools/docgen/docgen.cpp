@@ -15,7 +15,7 @@ using namespace Dim;
 *
 ***/
 
-const VersionInfo kVersion = { 1, 1, 1 };
+const VersionInfo kVersion = { 1, 1, 2 };
 
 
 /****************************************************************************
@@ -51,8 +51,9 @@ static void app(int argc, char * argv[]) {
         .helpCmd();
 
     shutdownMonitor(&s_cleanup);
-    cli.exec(argc, argv);
-    appSignalUsageError();
+    if (!cli.parse(argc, argv))
+        return appSignalUsageError();
+    appSignalShutdown(cli.exec());
 }
 
 

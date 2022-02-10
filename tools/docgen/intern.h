@@ -129,7 +129,6 @@ std::unique_ptr<Config> loadConfig(
     std::string_view path
 );
 
-void loadGitRoot(Config * out);
 bool addOutput(
     Config * out,
     const std::string & file,

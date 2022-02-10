@@ -42,20 +42,17 @@ static bool loadVersions(Config * out, XNode * root) {
         if (ver.defaultSource) {
             if (out->defVersion != -1) {
                 logMsgError() << "Multiple default versions for site.";
-                appSignalShutdown(EX_DATAERR);
                 return false;
             }
             out->defVersion = out->versions.size() - 1;
         }
         if (ver.tag.empty()) {
             logMsgError() << "Missing required Version/@tag attribute.";
-            appSignalShutdown(EX_DATAERR);
             return false;
         }
     }
     if (out->versions.empty()) {
         logMsgError() << "No versions defined for site.";
-        appSignalShutdown(EX_DATAERR);
         return false;
     }
     if (out->defVersion == -1)
@@ -71,7 +68,6 @@ static bool loadSpawn(Spawn * out, XNode * root) {
         auto name = attrValue(&elem, "name");
         if (!name) {
             logMsgError() << "Missing required Env/@name attribute.";
-            appSignalShutdown(EX_DATAERR);
             return false;
         }
         out->env[name] = attrValue(&elem, "value", "");
@@ -96,7 +92,6 @@ static bool loadScripts(Config * out, XNode * root) {
             regex.assign(raw, regex::optimize);
             if (regex.mark_count() != 2) {
                 logMsgError() << "SetEnv/@regex must have two captures.";
-                appSignalShutdown(EX_DATAERR);
                 return false;
             }
         }
@@ -110,7 +105,6 @@ static bool loadScripts(Config * out, XNode * root) {
             auto name = attrValue(&xlang, "name");
             if (!name) {
                 logMsgError() << "Missing required Lang/@name attribute.";
-                appSignalShutdown(EX_DATAERR);
                 return false;
             }
             auto lname = toLower(string_view(name));
@@ -139,14 +133,12 @@ static bool loadCompilers(Config * out, XNode * root) {
             auto name = attrValue(&xlang, "name");
             if (!name) {
                 logMsgError() << "Missing required Lang/@name attribute.";
-                appSignalShutdown(EX_DATAERR);
                 return false;
             }
             auto lname = toLower(string_view(name));
             if (out->scripts.contains(lname)) {
                 logMsgError() << "Language '" << lname << "' can't be both "
                     "code and script.";
-                appSignalShutdown(EX_DATAERR);
                 return false;
             }
             out->compilers.emplace(lname, comp);
@@ -185,7 +177,6 @@ static bool loadLayouts(Config * out, XNode * root) {
                 if (lay.defPage != -1) {
                     logMsgError() << "Multiple default pages for "
                         "Layout/@name = '" << lay.name << "'.";
-                    appSignalShutdown(EX_DATAERR);
                     return false;
                 }
                 lay.defPage = lay.pages.size() - 1;
@@ -194,7 +185,6 @@ static bool loadLayouts(Config * out, XNode * root) {
         if (lay.pages.empty()) {
             logMsgError() << "No pages defined for "
                 "Layout/@name = '" << lay.name << "'.";
-            appSignalShutdown(EX_DATAERR);
             return false;
         }
         if (lay.defPage == -1)
@@ -202,7 +192,6 @@ static bool loadLayouts(Config * out, XNode * root) {
         if (!out->layouts.insert({lay.name, lay}).second) {
             logMsgError() << "Multiple definitions for "
                 "Layout/@name = '" << lay.name << "'.";
-            appSignalShutdown(EX_DATAERR);
             return false;
         }
     }
@@ -221,7 +210,6 @@ static bool loadColumn(Column * out, XNode * root) {
     out->content = s_contentTypeTbl.find(ctStr, Column::kContentInvalid);
     if (!out->content) {
         logMsgError() << "Invalid Page/Column/@content attribute";
-        appSignalShutdown(EX_DATAERR);
         return false;
     }
     out->maxWidth = attrValue(root, "maxWidth", "");
@@ -241,7 +229,6 @@ static bool loadPageLayouts(Config * out, XNode * root) {
         if (!out->pageLayouts.insert({layout.name, layout}).second) {
             logMsgError() << "Multiple definitions for "
                 "PageLayout/@name = '" << layout.name << "'";
-            appSignalShutdown(EX_DATAERR);
             return false;
         }
     }
@@ -254,7 +241,6 @@ unique_ptr<Config> loadConfig(string * content, string_view path) {
     auto root = doc.parse(content->data(), path);
     if (!root || doc.errmsg()) {
         logParseError("Parsing failed", path, doc.errpos(), *content);
-        appSignalShutdown(EX_DATAERR);
         return {};
     }
     auto out = make_unique<Config>();
@@ -268,7 +254,6 @@ unique_ptr<Config> loadConfig(string * content, string_view path) {
     auto site = firstChild(root, "Site");
     if (!site) {
         logMsgError() << path << ": Missing Docs/Site";
-        appSignalShutdown(EX_DATAERR);
         return {};
     }
     out->siteName = attrValue(site, "name", "");
@@ -342,9 +327,8 @@ void writeContent(
             if (written != data.size()) {
                 logMsgError() << path << ": error writing file.";
                 appSignalShutdown(EX_IOERR);
-            } else {
-                fn();
             }
+            fn();
             delete this;
         }
     };

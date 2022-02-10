@@ -549,6 +549,11 @@ static CharBuf processPageContent(
 
 //===========================================================================
 static void genPage(GenPageInfo * info, unsigned phase = 0) {
+    Finally fin([info] () { info->fn(); });
+
+    if (appStopping()) 
+        return;
+
     auto cfg = info->ver.cfg ? info->ver.cfg.get() : info->out;
     string layname = info->ver.layout.empty() ? "default" : info->ver.layout;
 
@@ -575,7 +580,7 @@ static void genPage(GenPageInfo * info, unsigned phase = 0) {
             info->ver.tag,
             info->page.file
         );
-        return;
+        return fin.release();
     }
     if (info->content.empty()) {
         logMsgError() << info->page.file << ", tag '" << info->ver.tag
@@ -593,7 +598,7 @@ static void genPage(GenPageInfo * info, unsigned phase = 0) {
             p,
             info->content
         );
-        return;
+        return fin.release();
     }
     if (phase == what++) {
         // Apply patch from config file
@@ -609,17 +614,13 @@ static void genPage(GenPageInfo * info, unsigned phase = 0) {
                     fileRemove(info->fname + "#");
                     if (out.empty())
                         appSignalShutdown(EX_IOERR);
-                    if (appStopping()) {
-                        info->fn();
-                        return;
-                    }
                     genPage(info, what);
                 },
                 cmdline,
                 info->page.file + ", tag '" + info->ver.tag + "'",
                 { .stdinData = info->page.patch }
             );
-            return;
+            return fin.release();
         }
 
         // No patch, continue to next phase.
@@ -631,17 +632,13 @@ static void genPage(GenPageInfo * info, unsigned phase = 0) {
         execTool(
             [info, what](string && out) {
                 fileRemove(info->fname);
-                if (appStopping()) {
-                    info->fn();
-                    return;
-                }
                 info->content = move(out);
                 genPage(info, what);
             },
             cmdline,
             info->page.file + ", tag '" + info->ver.tag + "'"
         );
-        return;
+        return fin.release();
     }
     if (phase == what++) {
         // Update HTML fragment, embed into HTML page, and add to site output
@@ -651,8 +648,9 @@ static void genPage(GenPageInfo * info, unsigned phase = 0) {
         auto html = processPageContent(info, move(info->content), fname);
         if (!addOutput(info->out, fname, move(html)))
             return;
+
         info->fn();
-        return;
+        return fin.release();
     }
 
     assert(!"unknown phase");
@@ -793,10 +791,8 @@ table.smaller-td-font td {
     font-size: smaller;
 }
 )");
-    if (!addOutput(out, fname, move(content)))
-        return false;
-
-    return true;
+    
+    return addOutput(out, fname, move(content));
 }
 
 //===========================================================================
@@ -819,16 +815,67 @@ static bool genRedirect(
                 << end
             << end
         << end;
+
     return addOutput(out, fname, move(html));
 }
 
 //===========================================================================
+static bool genRedirects(Config * out) {
+    for (auto&& ver : out->versions) {
+        auto spec = ver.cfg ? ver.cfg.get() : out;
+        string layname = ver.layout.empty() ? "default" : ver.layout;
+        auto layout = spec->layouts.find(layname);
+
+        if (layout == spec->layouts.end()) {
+            logMsgError() << "Tag '" << ver.tag << "': layout '" << layname
+                << "' not defined.";
+            appSignalShutdown(EX_DATAERR);
+            return false;
+        }
+
+        // Generate infrastructure files for version
+        auto & url = layout->second.pages[layout->second.defPage].urlSegment;
+        if (!genRedirect(out, ver.tag + "/index.html", url + ".html"))
+            return false;
+        if (ver.defaultSource) {
+            if (!genRedirect(out, "index.html", ver.tag + "/index.html"))
+                return false;
+        }
+
+        // Populate list of URLs for version
+        for (auto&& page : layout->second.pages) {
+            if (!ver.urlSegments.insert(page.urlSegment).second) {
+                logMsgError() << "Tag '" << ver.tag << "': url segment '"
+                    << page.urlSegment << "' multiply defined.";
+                appSignalShutdown(EX_DATAERR);
+                return false;
+            }
+            if (ver.defaultSource) {
+                auto fname = page.urlSegment + ".html";
+                if (!genRedirect(out, fname, ver.tag + "/" + fname))
+                    return false;
+            }
+        }
+    }
+    return true;
+}
+
+//===========================================================================
 static void genSite(Config * out, unsigned phase = 0) {
+    if (appStopping()) {
+        if (--out->pendingWork == 0)
+            delete out;
+        return;
+    }
+
     unsigned what = 0;
 
     if (phase == what++) {
+        assert(!out->pendingWork);
+        auto own = unique_ptr<Config>(out);
+
         // Generate infrastructure files for site
-        if (!genStatics(out))
+        if (!genStatics(out)) 
             return;
 
         // Load layouts of all versions
@@ -855,6 +902,7 @@ static void genSite(Config * out, unsigned phase = 0) {
             }
         }
 
+        own.release();
         out->pendingWork += 1;
         phase = what;
     }
@@ -864,53 +912,19 @@ static void genSite(Config * out, unsigned phase = 0) {
             // Still have more layouts to load.
             return;
         }
+        auto own = unique_ptr<Config>(out);
 
-        // Calculate page metadata
-        for (auto&& ver : out->versions) {
-            auto spec = ver.cfg ? ver.cfg.get() : out;
-            string layname = ver.layout.empty() ? "default" : ver.layout;
-            auto layout = spec->layouts.find(layname);
-
-            if (layout == spec->layouts.end()) {
-                logMsgError() << "Tag '" << ver.tag << "': layout '" << layname
-                    << "' not defined.";
-                appSignalShutdown(EX_DATAERR);
-                return;
-            }
-
-            // Generate infrastructure files for version
-            auto & url = layout->second.pages[layout->second.defPage].urlSegment;
-            if (!genRedirect(out, ver.tag + "/index.html", url + ".html"))
-                return;
-            if (ver.defaultSource) {
-                if (!genRedirect(out, "index.html", ver.tag + "/index.html"))
-                    return;
-            }
-
-            // Count each page as pending work.
-            out->pendingWork += (unsigned) layout->second.pages.size();
-
-            // Populate list of URLs for version
-            for (auto&& page : layout->second.pages) {
-                if (!ver.urlSegments.insert(page.urlSegment).second) {
-                    logMsgError() << "Tag '" << ver.tag << "': url segment '"
-                        << page.urlSegment << "' multiply defined.";
-                    appSignalShutdown(EX_DATAERR);
-                    return;
-                }
-                if (ver.defaultSource) {
-                    auto fname = page.urlSegment + ".html";
-                    if (!genRedirect(out, fname, ver.tag + "/" + fname))
-                        return;
-                }
-            }
-        }
+        if (!genRedirects(out)) 
+            return;
 
         // Generate pages
         for (auto && ver : out->versions) {
             auto spec = ver.cfg ? ver.cfg.get() : out;
             string layname = ver.layout.empty() ? "default" : ver.layout;
             auto layout = spec->layouts.find(layname);
+
+            // Count each page as pending work.
+            out->pendingWork += (unsigned) layout->second.pages.size();
 
             // Generate pages for version
             for (auto && page : layout->second.pages) {
@@ -923,6 +937,7 @@ static void genSite(Config * out, unsigned phase = 0) {
             }
         }
 
+        own.release();
         out->pendingWork += 1;
         phase = what;
     }
@@ -932,15 +947,15 @@ static void genSite(Config * out, unsigned phase = 0) {
             // Still have more pages to generate.
             return;
         }
+        auto own = unique_ptr<Config>(out);
 
         // Replace site output directory with all the new files.
         auto odir = Path(out->siteDir).resolve(out->configFile.parentPath());
-        if (!writeOutputs(odir, out->outputs))
+        if (!writeOutputs(odir, out->outputs)) 
             return;
 
         // Clean up
         auto count = out->outputs.size();
-        delete out;
 
         logMsgInfo() << count << " generated files.";
         if (int errs = logGetMsgCount(kLogTypeError)) {
