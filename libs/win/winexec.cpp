@@ -312,7 +312,7 @@ void ExecProgram::postJobExit() {
     // routed to the task queue selected by the application.
     if (!PostQueuedCompletionStatus(
         s_iocp,
-        JOB_OBJECT_MSG_EXIT_PROCESS,
+        JOB_OBJECT_MSG_ACTIVE_PROCESS_ZERO,
         (uintptr_t) this,
         (OVERLAPPED *) (uintptr_t) GetProcessId(m_process)
     )) {
@@ -496,7 +496,7 @@ bool ExecProgram::onAccept(StdStream strm) {
             << WinError{};
         lk.unlock();
         terminate();
-        postJobExit();
+        postJobExit();  
         return true;
     }
 
