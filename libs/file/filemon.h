@@ -9,9 +9,6 @@
 #include "core/handle.h"
 #include "file/path.h"
 
-#include <cstdint>
-#include <memory>
-#include <string>
 #include <string_view>
 
 namespace Dim {

@@ -75,6 +75,7 @@
 # libs/file/file.cpp
 # libs/file/file.h
 # libs/file/file.natvis
+# libs/file/fileio.h
 # libs/file/filemon.h
 # libs/file/path.cpp
 # libs/file/path.h

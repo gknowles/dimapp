@@ -12,8 +12,10 @@
 // Standard headers
 #include <cassert>
 #include <cerrno>
+#include <condition_variable>
 #include <cstdlib>
 #include <memory>
+#include <mutex>
 #include <unordered_map>
 #include <vector>
 

@@ -16,8 +16,25 @@ namespace fs = std::filesystem;
 *
 ***/
 
+struct FileAppendStream::Impl {
+    std::mutex mut;
+    std::condition_variable cv;
+    int fullBufs = 0;     // ready to be written
+    int lockedBufs = 0;   // being written
+    int numBufs = 0;
+    int maxWrites = 0;
+    int numWrites = 0;
+    char * buffers = nullptr;  // aligned to page boundary
+    size_t bufLen = 0;
+
+    Dim::FileHandle file;
+    std::string_view buf;
+    size_t filePos = 0;
+};
+
 //===========================================================================
-FileAppendStream::FileAppendStream()
+FileAppendStream::FileAppendStream() 
+    : m_impl(new Impl)
 {}
 
 //===========================================================================
@@ -25,24 +42,33 @@ FileAppendStream::FileAppendStream(
     int numBufs,
     int maxWrites,
     size_t pageSize
-) {
+) 
+    : FileAppendStream()
+{
     init(numBufs, maxWrites, pageSize);
 }
 
 //===========================================================================
 FileAppendStream::~FileAppendStream() {
     close();
-    if (m_buffers)
-        aligned_free(m_buffers);
+    if (m_impl->buffers)
+        aligned_free(m_impl->buffers);
+}
+
+//===========================================================================
+FileAppendStream::operator bool() const { 
+    return (bool) m_impl->file; 
 }
 
 //===========================================================================
 void FileAppendStream::init(int numBufs, int maxWrites, size_t pageSize) {
-    assert(!m_numBufs && pageSize);
-    m_numBufs = numBufs;
-    m_maxWrites = maxWrites;
-    m_bufLen = pageSize;
-    assert(m_numBufs && m_maxWrites && m_maxWrites <= m_numBufs);
+    assert(!m_impl->numBufs && pageSize);
+    m_impl->numBufs = numBufs;
+    m_impl->maxWrites = maxWrites;
+    m_impl->bufLen = pageSize;
+    assert(m_impl->numBufs 
+        && m_impl->maxWrites 
+        && m_impl->maxWrites <= m_impl->numBufs);
 }
 
 //===========================================================================
@@ -60,108 +86,108 @@ bool FileAppendStream::open(string_view path, OpenExisting mode) {
 
 //===========================================================================
 bool FileAppendStream::attach(Dim::FileHandle f) {
-    assert(m_bufLen && "file append stream has no buffers assigned");
+    assert(m_impl->bufLen && "file append stream has no buffers assigned");
     close();
-    m_filePos = fileSize(f);
-    if (!m_filePos && errno)
+    m_impl->filePos = fileSize(f);
+    if (!m_impl->filePos && errno)
         return false;
 
-    m_file = f;
-    if (!m_buffers) {
-        m_buffers = (char *) aligned_alloc(m_bufLen, m_numBufs * m_bufLen);
-        __assume(m_buffers);
+    m_impl->file = f;
+    if (!m_impl->buffers) {
+        m_impl->buffers = (char *) aligned_alloc(m_impl->bufLen, m_impl->numBufs * m_impl->bufLen);
+        __assume(m_impl->buffers);
     }
 
-    auto used = m_filePos % m_bufLen;
-    m_buf = string_view{m_buffers + used, m_bufLen - used};
-    m_filePos -= used;
-    if (m_filePos)
-        fileReadWait(m_buffers, m_bufLen, m_file, m_filePos);
+    auto used = m_impl->filePos % m_impl->bufLen;
+    m_impl->buf = string_view{m_impl->buffers + used, m_impl->bufLen - used};
+    m_impl->filePos -= used;
+    if (m_impl->filePos)
+        fileReadWait(m_impl->buffers, m_impl->bufLen, m_impl->file, m_impl->filePos);
     return true;
 }
 
 //===========================================================================
 void FileAppendStream::close() {
-    if (!m_file)
+    if (!m_impl->file)
         return;
 
-    unique_lock lk{m_mut};
-    while (m_fullBufs + m_lockedBufs)
-        m_cv.wait(lk);
+    unique_lock lk{m_impl->mut};
+    while (m_impl->fullBufs + m_impl->lockedBufs)
+        m_impl->cv.wait(lk);
 
-    if (auto used = m_bufLen - m_buf.size()) {
-        if (fileMode(m_file).none(File::fAligned)) {
-            fileAppendWait(m_file, m_buf.data() - used, used);
+    if (auto used = m_impl->bufLen - m_impl->buf.size()) {
+        if (fileMode(m_impl->file).none(File::fAligned)) {
+            fileAppendWait(m_impl->file, m_impl->buf.data() - used, used);
         } else {
             // Since the old file handle was opened with fAligned we can't use
             // it to write the trailing partial buffer.
-            auto path = (Path) filePath(m_file);
-            fileClose(m_file);
-            m_file = fileOpen(path, File::fReadWrite | File::fBlocking);
-            if (m_file)
-                fileAppendWait(m_file, m_buf.data() - used, used);
+            auto path = (Path) filePath(m_impl->file);
+            fileClose(m_impl->file);
+            m_impl->file = fileOpen(path, File::fReadWrite | File::fBlocking);
+            if (m_impl->file)
+                fileAppendWait(m_impl->file, m_impl->buf.data() - used, used);
         }
     }
-    fileClose(m_file);
-    m_file = {};
+    fileClose(m_impl->file);
+    m_impl->file = {};
 }
 
 //===========================================================================
 void FileAppendStream::append(string_view data) {
-    if (!m_file)
+    if (!m_impl->file)
         return;
 
     while (data.size()) {
-        auto bytes = min(data.size(), m_buf.size());
-        memcpy((char *) m_buf.data(), data.data(), bytes);
-        m_buf.remove_prefix(bytes);
+        auto bytes = min(data.size(), m_impl->buf.size());
+        memcpy((char *) m_impl->buf.data(), data.data(), bytes);
+        m_impl->buf.remove_prefix(bytes);
         data.remove_prefix(bytes);
-        if (!m_buf.empty())
+        if (!m_impl->buf.empty())
             return;
 
-        unique_lock lk{m_mut};
-        m_fullBufs += 1;
-        if (m_buf.data() == m_buffers + m_numBufs * m_bufLen) {
-            m_buf = {m_buffers, m_bufLen};
+        unique_lock lk{m_impl->mut};
+        m_impl->fullBufs += 1;
+        if (m_impl->buf.data() == m_impl->buffers + m_impl->numBufs * m_impl->bufLen) {
+            m_impl->buf = {m_impl->buffers, m_impl->bufLen};
         } else {
-            m_buf = {m_buf.data(), m_bufLen};
+            m_impl->buf = {m_impl->buf.data(), m_impl->bufLen};
         }
         write_LK();
 
-        while (m_fullBufs + m_lockedBufs == m_numBufs)
-            m_cv.wait(lk);
+        while (m_impl->fullBufs + m_impl->lockedBufs == m_impl->numBufs)
+            m_impl->cv.wait(lk);
     }
 }
 
 //===========================================================================
 void FileAppendStream::write_LK() {
-    if (m_numWrites == m_maxWrites)
+    if (m_impl->numWrites == m_impl->maxWrites)
         return;
 
     const char * writeBuf;
     size_t writeCount;
-    auto epos = (int) ((m_buf.data() - m_buffers) / m_bufLen);
-    if (m_fullBufs > epos) {
-        writeCount = (m_fullBufs - epos) * m_bufLen;
-        writeBuf = m_buffers + m_numBufs * m_bufLen - writeCount;
-        m_lockedBufs += m_fullBufs - epos;
-        m_fullBufs = epos;
+    auto epos = (int) ((m_impl->buf.data() - m_impl->buffers) / m_impl->bufLen);
+    if (m_impl->fullBufs > epos) {
+        writeCount = (m_impl->fullBufs - epos) * m_impl->bufLen;
+        writeBuf = m_impl->buffers + m_impl->numBufs * m_impl->bufLen - writeCount;
+        m_impl->lockedBufs += m_impl->fullBufs - epos;
+        m_impl->fullBufs = epos;
     } else {
-        writeCount = m_fullBufs * m_bufLen;
-        writeBuf = m_buffers + epos * m_bufLen - writeCount;
-        m_lockedBufs += m_fullBufs;
-        m_fullBufs = 0;
+        writeCount = m_impl->fullBufs * m_impl->bufLen;
+        writeBuf = m_impl->buffers + epos * m_impl->bufLen - writeCount;
+        m_impl->lockedBufs += m_impl->fullBufs;
+        m_impl->fullBufs = 0;
     }
     if (!writeCount)
         return;
 
-    m_numWrites += 1;
-    size_t writePos = m_filePos;
-    m_filePos += writeCount;
+    m_impl->numWrites += 1;
+    size_t writePos = m_impl->filePos;
+    m_impl->filePos += writeCount;
 
     fileWrite(
         this,
-        m_file,
+        m_impl->file,
         writePos,
         writeBuf,
         writeCount,
@@ -177,12 +203,12 @@ void FileAppendStream::onFileWrite(
     FileHandle f
 ) {
     {
-        unique_lock lk{m_mut};
-        m_numWrites -= 1;
-        m_lockedBufs -= (int) (data.size() / m_bufLen);
+        unique_lock lk{m_impl->mut};
+        m_impl->numWrites -= 1;
+        m_impl->lockedBufs -= (int) (data.size() / m_impl->bufLen);
         write_LK();
     }
-    m_cv.notify_all();
+    m_impl->cv.notify_all();
 }
 
 
@@ -374,7 +400,7 @@ uint64_t Dim::fileSize(string_view path) {
 }
 
 //===========================================================================
-static fs::file_status fileStatus(string_view path) {
+static fs::file_status getPathStatus(string_view path) {
     error_code ec;
     auto p8 = u8string_view((char8_t *) path.data(), path.size());
     auto f = fs::path(p8);
@@ -384,19 +410,19 @@ static fs::file_status fileStatus(string_view path) {
 
 //===========================================================================
 bool Dim::fileExists(string_view path) {
-    auto st = fileStatus(path);
+    auto st = getPathStatus(path);
     return fs::exists(st) && !fs::is_directory(st);
 }
 
 //===========================================================================
 bool Dim::fileDirExists(string_view path) {
-    auto st = fileStatus(path);
+    auto st = getPathStatus(path);
     return fs::is_directory(st);
 }
 
 //===========================================================================
 bool Dim::fileReadOnly(string_view path) {
-    auto st = fileStatus(path);
+    auto st = getPathStatus(path);
     return fs::exists(st)
         && (st.permissions() & fs::perms::owner_write) == fs::perms::none;
 }
