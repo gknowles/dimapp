@@ -490,7 +490,7 @@ error_code Dim::fileAttrs(
 }
 
 //===========================================================================
-error_code Dim::xfileAttrs(
+error_code Dim::fileAttrs(
     std::string_view path, 
     EnumFlags<File::Attrs> attrs
 ) {
@@ -518,7 +518,7 @@ error_code Dim::fileTempDir(Path * out) {
             break;
     }
     auto path = Path(toString(tmpDir));
-    if (xfileCreateDirs(path)) {
+    if (fileCreateDirs(path)) {
         WinError err;
         return err.code();
     }
@@ -794,7 +794,7 @@ static WinFileInfo * getInfo(FileHandle f, bool release = false) {
 }
 
 //===========================================================================
-error_code Dim::xfileResize(FileHandle f, size_t size) {
+error_code Dim::fileResize(FileHandle f, size_t size) {
     auto file = getInfo(f);
     if (!file) {
         WinError err = ERROR_INVALID_PARAMETER;
@@ -816,7 +816,7 @@ error_code Dim::xfileResize(FileHandle f, size_t size) {
 }
 
 //===========================================================================
-error_code Dim::xfileFlush(FileHandle f) {
+error_code Dim::fileFlush(FileHandle f) {
     auto file = getInfo(f);
     if (!file) {
         WinError err = ERROR_INVALID_PARAMETER;
@@ -831,7 +831,7 @@ error_code Dim::xfileFlush(FileHandle f) {
 }
 
 //===========================================================================
-error_code Dim::xfileFlushViews(FileHandle f) {
+error_code Dim::fileFlushViews(FileHandle f) {
     WinError err = 0;
     auto file = getInfo(f);
     if (!file) {
@@ -1016,7 +1016,7 @@ error_code Dim::fileGetCurrentDir(Path * out, string_view drive) {
 }
 
 //===========================================================================
-error_code Dim::xfileSetCurrentDir(string_view path, Path * out) {
+error_code Dim::fileSetCurrentDir(string_view path, Path * out) {
     if (out)
         out->clear();
     if (!SetCurrentDirectoryW(toWstring(path).c_str())) {
@@ -1259,7 +1259,7 @@ static error_code updateNamedAccess(
 }
 
 //===========================================================================
-error_code Dim::xfileAddAccess(
+error_code Dim::fileAddAccess(
     string_view path,
     string_view trustee, // name or Sid of account or group
     File::Access::Right allow,
@@ -1269,7 +1269,7 @@ error_code Dim::xfileAddAccess(
 }
 
 //===========================================================================
-error_code Dim::xfileSetAccess(
+error_code Dim::fileSetAccess(
     string_view path,
     string_view trustee, // name or Sid of account or group
     File::Access::Right allow,
@@ -1527,7 +1527,7 @@ static error_code openView(
 }
 
 //===========================================================================
-error_code Dim::xfileOpenView(
+error_code Dim::fileOpenView(
     const char *& base,
     FileHandle f,
     File::View mode,
@@ -1540,7 +1540,7 @@ error_code Dim::xfileOpenView(
 }
 
 //===========================================================================
-error_code Dim::xfileOpenView(
+error_code Dim::fileOpenView(
     char *& base,
     FileHandle f,
     File::View mode,
@@ -1553,7 +1553,7 @@ error_code Dim::xfileOpenView(
 }
 
 //===========================================================================
-error_code Dim::xfileCloseView(FileHandle f, const void * view) {
+error_code Dim::fileCloseView(FileHandle f, const void * view) {
     auto file = getInfo(f);
     auto found = file->m_views.erase(view);
     if (!found) {
@@ -1572,7 +1572,7 @@ error_code Dim::xfileCloseView(FileHandle f, const void * view) {
 }
 
 //===========================================================================
-error_code Dim::xfileExtendView(FileHandle f, const void * view, int64_t length) {
+error_code Dim::fileExtendView(FileHandle f, const void * view, int64_t length) {
     auto file = getInfo(f);
     auto i = file->m_views.find(view);
     if (i == file->m_views.end()) {

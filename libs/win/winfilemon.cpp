@@ -111,7 +111,7 @@ error_code DirInfo::start(string_view path, bool recurse) {
     if (auto ec = fileAbsolutePath(&m_base, path))
         return ec;
     m_recurse = recurse;
-    if (auto ec = xfileCreateDirs(m_base))
+    if (auto ec = fileCreateDirs(m_base))
         return ec;
 
     auto wpath = toWstring(m_base);

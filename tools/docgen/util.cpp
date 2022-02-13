@@ -435,13 +435,13 @@ bool writeOutputs(
     string_view odir,
     unordered_map<string, CharBuf> files
 ) {
-    if (auto ec = xfileCreateDirs(odir); ec) {
+    if (auto ec = fileCreateDirs(odir); ec) {
         logMsgError() << odir << ": unable to create directory.";
         appSignalShutdown(EX_IOERR);
         return false;
     }
     for (auto&& f : FileIter(odir, "*.*", FileIter::fDirsLast)) {
-        if (auto ec = xfileRemove(f.path); ec) {
+        if (auto ec = fileRemove(f.path); ec) {
             if (!f.isdir) {
                 appSignalShutdown(EX_IOERR);
                 return false;
@@ -450,7 +450,7 @@ bool writeOutputs(
     }
     for (auto&& output : files) {
         auto path = Path(output.first).resolve(odir);
-        xfileCreateDirs(path.parentPath());
+        fileCreateDirs(path.parentPath());
         FileHandle file;
         auto ec = fileOpen(
             &file,

@@ -553,7 +553,7 @@ static void processFile(
     Result res;
     auto fullPath = fname;
     fullPath.resolve(cfg->gitRoot);
-    if (xfileLoadBinaryWait(&res.content, fullPath))
+    if (fileLoadBinaryWait(&res.content, fullPath))
         return appSignalShutdown(EX_IOERR);
 
     for (auto&& grp : grps) {

@@ -60,7 +60,7 @@ static bool makeAppPath(
     }
     if (createDirIfNotExist) {
         auto fp = *out;
-        if (xfileCreateDirs(fp.removeFilename()))
+        if (fileCreateDirs(fp.removeFilename()))
             return false;
     }
     return true;
@@ -370,7 +370,7 @@ int Dim::appRun(
     s_logDir = makeAppDir("log");
 
     if (flags.any(fAppWithChdir))
-        xfileSetCurrentDir(s_rootDir);
+        fileSetCurrentDir(s_rootDir);
 
     iPerfInitialize();
     iLogInitialize();

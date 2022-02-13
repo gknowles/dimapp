@@ -119,7 +119,7 @@ int main(int argc, char * argv[]) {
 
     path->defaultExt("json");
     string content;
-    if (auto ec = xfileLoadBinaryWait(&content, *path); ec)
+    if (auto ec = fileLoadBinaryWait(&content, *path); ec)
         return EX_DATAERR;
     JDocument doc;
     auto root = doc.parse(content.data(), *path);

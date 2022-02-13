@@ -611,7 +611,7 @@ static void genPage(GenPageInfo * info, unsigned phase = 0) {
             );
             execTool(
                 [info, what](string && out) {
-                    xfileRemove(info->fname + "#");
+                    fileRemove(info->fname + "#");
                     if (out.empty())
                         appSignalShutdown(EX_IOERR);
                     genPage(info, what);
@@ -631,7 +631,7 @@ static void genPage(GenPageInfo * info, unsigned phase = 0) {
         auto cmdline = Cli::toCmdlineL("github-markup.bat", info->fname);
         execTool(
             [info, what](string && out) {
-                xfileRemove(info->fname);
+                fileRemove(info->fname);
                 info->content = move(out);
                 genPage(info, what);
             },

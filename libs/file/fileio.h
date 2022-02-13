@@ -126,7 +126,7 @@ std::error_code fileGetCurrentDir(Path * out, std::string_view drive = {});
 
 // "path" is resolved relative to the current dir of the drive (which defaults
 // to current drive) given in the path.
-std::error_code xfileSetCurrentDir(
+std::error_code fileSetCurrentDir(
     std::string_view path, 
     Path * out = nullptr
 );
@@ -150,7 +150,7 @@ std::error_code fileLastWriteTime(TimePoint * out, std::string_view path);
 std::error_code fileExists(bool * out, std::string_view path);
 std::error_code fileDirExists(bool * out, std::string_view path);
 std::error_code fileReadOnly(bool * out, std::string_view path);
-std::error_code xfileReadOnly(std::string_view path, bool enable);
+std::error_code fileReadOnly(std::string_view path, bool enable);
 
 namespace File {
     enum class Attrs : uint32_t {
@@ -169,10 +169,10 @@ namespace File {
 template<> struct is_enum_flags<File::Attrs> : std::true_type {};
 
 std::error_code fileAttrs(EnumFlags<File::Attrs> * out, std::string_view path);
-std::error_code xfileAttrs(std::string_view path, EnumFlags<File::Attrs> attrs);
+std::error_code fileAttrs(std::string_view path, EnumFlags<File::Attrs> attrs);
 
-std::error_code xfileRemove(std::string_view path, bool recurse = false);
-std::error_code xfileCreateDirs(std::string_view path);
+std::error_code fileRemove(std::string_view path, bool recurse = false);
+std::error_code fileCreateDirs(std::string_view path);
 
 std::error_code fileTempDir(Path * out);
 std::error_code fileTempName(
@@ -197,13 +197,13 @@ namespace File::Access {
         kAll,
     };
 }
-std::error_code xfileAddAccess(
+std::error_code fileAddAccess(
     std::string_view path,
     std::string_view trustee, // name or Sid of account or group
     File::Access::Right allow,
     File::Access::Inherit inherit
 );
-std::error_code xfileSetAccess(
+std::error_code fileSetAccess(
     std::string_view path,
     std::string_view trustee, // name or Sid of account or group
     File::Access::Right allow,
@@ -249,11 +249,11 @@ std::error_code fileClose(FileHandle f);
 
 // Changes the files size by either growing or shrinking it. Returns false on
 // errors.
-std::error_code xfileResize(FileHandle f, size_t size);
+std::error_code fileResize(FileHandle f, size_t size);
 
 // Flushes pending writes from the file cache to disk.
-std::error_code xfileFlush(FileHandle f);
-std::error_code xfileFlushViews(FileHandle f);
+std::error_code fileFlush(FileHandle f);
+std::error_code fileFlushViews(FileHandle f);
 
 // On error returns 0 and sets errno to a non-zero value. Otherwise the
 // function returns the size and, if the size was 0, clears errno.
@@ -347,7 +347,7 @@ void fileLoadBinary(
     size_t maxSize = 10'000'000,
     TaskQueueHandle hq = {} // queue to notify
 );
-std::error_code xfileLoadBinaryWait(
+std::error_code fileLoadBinaryWait(
     std::string * out,
     std::string_view path,
     size_t maxSize = 10'000'000
@@ -433,7 +433,7 @@ void fileSaveBinary(
     std::string_view data,
     TaskQueueHandle hq = {} // queue to notify
 );
-std::error_code xfileSaveBinaryWait(
+std::error_code fileSaveBinaryWait(
     std::string_view path,
     std::string_view data
 );
@@ -543,7 +543,7 @@ size_t fileViewAlignment(FileHandle f);
 // The maxLength is the maximum length into the file that view can be extended
 // to cover. A value less than or equal to the length (such as 0) makes a view
 // that can't be extended. The value is rounded up to a multiple of page size.
-std::error_code xfileOpenView(
+std::error_code fileOpenView(
     const char *& view,
     FileHandle f,
     File::View mode,    // must be kReadOnly
@@ -551,7 +551,7 @@ std::error_code xfileOpenView(
     int64_t length = 0,     // defaults to current length of file
     int64_t maxLength = 0   // defaults to not extendable
 );
-std::error_code xfileOpenView(
+std::error_code fileOpenView(
     char *& view,
     FileHandle f,
     File::View mode,    // must be kReadWrite
@@ -560,13 +560,13 @@ std::error_code xfileOpenView(
     int64_t maxLength = 0   // defaults to not extendable
 );
 
-std::error_code xfileCloseView(FileHandle f, const void * view);
+std::error_code fileCloseView(FileHandle f, const void * view);
 
 // Extend the view up to maxLen that was set when the view was opened. A view
 // can only be extended if the file (which is also extended) was opened for
 // writing. "Extending" with a length less than the current view has no effect
 // and extending beyond maxLen is an error.
-std::error_code xfileExtendView(
+std::error_code fileExtendView(
     FileHandle f, 
     const void * view, 
     int64_t length

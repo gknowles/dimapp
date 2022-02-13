@@ -44,11 +44,11 @@ static void app(int argc, char *argv[]) {
     fileWriteWait(nullptr, file, 0, "aaaa", 4);
 
     const char * base;
-    ec = xfileOpenView(base, file, File::View::kReadOnly, 0, 0, 1001 * psize);
+    ec = fileOpenView(base, file, File::View::kReadOnly, 0, 0, 1001 * psize);
     if (ec)
         return appSignalShutdown(EX_DATAERR);
 
-    ec = xfileExtendView(file, base, 1001 * psize);
+    ec = fileExtendView(file, base, 1001 * psize);
     if (ec)
         return appSignalShutdown(EX_DATAERR);
 
@@ -62,15 +62,15 @@ static void app(int argc, char *argv[]) {
             num += 1;
     }
 
-    ec = xfileExtendView(file, base, psize);
+    ec = fileExtendView(file, base, psize);
     static char buf[5] = {};
     for (unsigned i = 0; i < 100; ++i) {
         fileReadWait(nullptr, buf, 4, file, psize);
     }
-    ec = xfileCloseView(file, base);
+    ec = fileCloseView(file, base);
 
     auto content = string(10, '#');
-    if (auto ec = xfileResize(file, size(content)); ec)
+    if (auto ec = fileResize(file, size(content)); ec)
         return appSignalShutdown(EX_DATAERR);
     fileWriteWait(nullptr, file, 0, content.data(), content.size());
     struct Reader : IFileReadNotify {
@@ -114,13 +114,13 @@ static void app(int argc, char *argv[]) {
 
     fileClose(file);
 
-    xfileRemove("file-t", true);
-    xfileCreateDirs("file-t");
+    fileRemove("file-t", true);
+    fileCreateDirs("file-t");
     createEmptyFile("file-t/a.txt");
-    xfileCreateDirs("file-t/b");
+    fileCreateDirs("file-t/b");
     createEmptyFile("file-t/b/ba.txt");
     createEmptyFile("file-t/b.txt");
-    xfileCreateDirs("file-t/c");
+    fileCreateDirs("file-t/c");
     createEmptyFile("file-t/c.txt");
     vector<pair<Path, bool>> found;
     for (auto && e : FileIter(

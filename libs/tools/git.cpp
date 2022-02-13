@@ -68,7 +68,7 @@ bool Dim::gitLoadConfig(
             / Path(*configFile).filename();
         *configFile = move(path);
     }
-    if (auto ec = xfileLoadBinaryWait(content, *configFile); ec) 
+    if (auto ec = fileLoadBinaryWait(content, *configFile); ec) 
         return false;
 
     fin = {};

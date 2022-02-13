@@ -137,7 +137,7 @@ int main(int argc, char * argv[]) {
 
     path->defaultExt("xml");
     string content;
-    if (xfileLoadBinaryWait(&content, *path))
+    if (fileLoadBinaryWait(&content, *path))
         return EX_DATAERR;
 
     XDocument doc;

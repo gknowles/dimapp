@@ -350,7 +350,7 @@ static void app(int argc, char * argv[]) {
 
     specfile->defaultExt("xsdgen.xml");
     string content;
-    if (xfileLoadBinaryWait(&content, *specfile))
+    if (fileLoadBinaryWait(&content, *specfile))
         return appSignalUsageError(EX_DATAERR);
     XDocument doc;
     auto root = doc.parse(content.data(), *specfile);
@@ -406,7 +406,7 @@ bool compareXmlContent(const Path & name, const CharBuf & content) {
     nc = toString(*nroot);
 
     string ocontent;
-    if (xfileLoadBinaryWait(&ocontent, name))
+    if (fileLoadBinaryWait(&ocontent, name))
         return false;
     XDocument odoc;
     auto oroot = odoc.parse(ocontent.data());

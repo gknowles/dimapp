@@ -481,7 +481,7 @@ error_code Dim::fileReadOnly(bool * out, string_view path) {
 }
 
 //===========================================================================
-error_code Dim::xfileReadOnly(string_view path, bool enable) {
+error_code Dim::fileReadOnly(string_view path, bool enable) {
     error_code ec;
     auto p8 = u8string_view((char8_t *) path.data(), path.size());
     auto f = fs::path(p8);
@@ -508,7 +508,7 @@ error_code Dim::xfileReadOnly(string_view path, bool enable) {
 }
 
 //===========================================================================
-error_code Dim::xfileRemove(string_view path, bool recurse) {
+error_code Dim::fileRemove(string_view path, bool recurse) {
     error_code ec;
     auto p8 = u8string_view((char8_t *) path.data(), path.size());
     auto f = fs::path(p8);
@@ -525,7 +525,7 @@ error_code Dim::xfileRemove(string_view path, bool recurse) {
 }
 
 //===========================================================================
-error_code Dim::xfileCreateDirs(string_view path) {
+error_code Dim::fileCreateDirs(string_view path) {
     error_code ec;
     auto p8 = u8string_view((char8_t *) path.data(), path.size());
     auto f = fs::path(p8);
@@ -579,7 +579,7 @@ void Dim::fileLoadBinary(
 }
 
 //===========================================================================
-error_code Dim::xfileLoadBinaryWait(
+error_code Dim::fileLoadBinaryWait(
     string * out,
     string_view path,
     size_t maxSize
@@ -633,7 +633,7 @@ void Dim::fileSaveBinary(
 }
 
 //===========================================================================
-error_code Dim::xfileSaveBinaryWait(
+error_code Dim::fileSaveBinaryWait(
     string_view path,
     string_view data
 ) {

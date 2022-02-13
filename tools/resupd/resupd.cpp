@@ -207,7 +207,7 @@ static void app(int argc, char *argv[]) {
     ResFileMap files;
     for (auto & fn : FileIter{*src}) {
         string content;
-        if (auto ec = xfileLoadBinaryWait(&content, fn.path); ec)
+        if (auto ec = fileLoadBinaryWait(&content, fn.path); ec)
             return appSignalShutdown(EX_DATAERR);
         auto path = fn.path.str().substr(src->size());
         if (path[0] != '/')
@@ -247,7 +247,7 @@ static void app(int argc, char *argv[]) {
         bool found = false;
         if (auto ec = fileExists(&found, *target); !ec && found) {
             string oldContent;
-            if (xfileLoadBinaryWait(&oldContent, *target))
+            if (fileLoadBinaryWait(&oldContent, *target))
                 return appSignalShutdown(EX_DATAERR);
             if (oldContent == content) {
                 cout << "Resources: " << files.size() << " (0 changed)"
