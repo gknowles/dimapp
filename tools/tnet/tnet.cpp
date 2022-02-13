@@ -58,14 +58,7 @@ public:
     void suspend(bool suspend);
 
 private:
-    bool onFileRead(
-        size_t * bytesUsed,
-        string_view data,
-        bool more,
-        int64_t offset,
-        FileHandle f,
-        error_code ec
-    ) override;
+    bool onFileRead(size_t * bytesUsed, const FileReadData & data) override;
 
     FileHandle m_input;
     bool m_isFile{false};
@@ -194,14 +187,10 @@ void ConsoleReader::suspend(bool suspend) {
 //===========================================================================
 bool ConsoleReader::onFileRead(
     size_t * bytesRead,
-    string_view data,
-    bool more,
-    int64_t offset,
-    FileHandle f,
-    error_code ec
+    const FileReadData & data
 ) {
-    *bytesRead = data.size();
-    auto bytes = (int) data.size();
+    *bytesRead = data.data.size();
+    auto bytes = (int) data.data.size();
     socketWrite(&s_socket, move(m_buffer), bytes);
 
     // stop reading (return false) so we can get a new buffer
@@ -209,8 +198,8 @@ bool ConsoleReader::onFileRead(
         if (m_isFile) {
             uint64_t fsize = 0;
             if (!bytes 
-                || fileSize(&fsize, f)
-                || (uint64_t) offset == fsize
+                || fileSize(&fsize, data.f)
+                || (uint64_t) data.offset == fsize
             ) {
                 fileClose(m_input);
                 consoleResetStdin();
@@ -223,9 +212,9 @@ bool ConsoleReader::onFileRead(
             }
         }
         if (m_suspended) {
-            m_offset = offset;
+            m_offset = data.offset;
         } else {
-            read(offset);
+            read(data.offset);
         }
     } else {
         m_buffer.reset();

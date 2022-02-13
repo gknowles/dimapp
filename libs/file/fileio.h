@@ -288,6 +288,14 @@ std::error_code fileAlignment(FileAlignment * out, FileHandle f);
 *
 ***/
 
+struct FileReadData {
+    std::string_view data;
+    bool more;
+    int64_t offset;
+    FileHandle f;
+    std::error_code ec;
+};
+
 class IFileReadNotify {
 public:
     virtual ~IFileReadNotify() = default;
@@ -301,15 +309,8 @@ public:
     //
     // Guaranteed to be called at least once, on operation failure 'more' is
     // set to false and data.size() == 0.
-    virtual bool onFileRead(
-        size_t * bytesUsed,
-        std::string_view data,
-        bool more,
-        int64_t offset,
-        FileHandle f,
-        std::error_code ec
-    ) {
-        *bytesUsed = data.size();
+    virtual bool onFileRead(size_t * bytesUsed, const FileReadData & data) {
+        *bytesUsed = data.data.size();
         return false;
     }
 };
@@ -360,17 +361,18 @@ std::error_code fileLoadBinaryWait(
 *
 ***/
 
+struct FileWriteData {
+    int written;
+    std::string_view data;
+    int64_t offset;
+    FileHandle f;
+    std::error_code ec;
+};
+
 class IFileWriteNotify {
 public:
     virtual ~IFileWriteNotify() = default;
-
-    virtual void onFileWrite(
-        int written,
-        std::string_view data,
-        int64_t offset,
-        FileHandle f,
-        std::error_code ec
-    ) = 0;
+    virtual void onFileWrite(const FileWriteData & data) = 0;
 };
 
 void fileWrite(
@@ -478,13 +480,7 @@ public:
 private:
     void write_LK();
 
-    void onFileWrite(
-        int written,
-        std::string_view data,
-        int64_t offset,
-        Dim::FileHandle f,
-        std::error_code ec
-    ) override;
+    void onFileWrite(const FileWriteData & data) override;
 
     std::unique_ptr<Impl> m_impl;
 };

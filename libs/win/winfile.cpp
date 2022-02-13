@@ -326,17 +326,15 @@ void FileReader::onNotify() {
     }
     more = m_length && m_bytes == reqLen;
     auto avail = m_bytes + m_bufUnused;
+    FileReadData data = {};
+    data.data = string_view(m_buf, avail);
+    data.more = more;
+    data.offset = m_offset;
+    data.f = m_file->m_f;
+    data.ec = m_err.code();
     size_t bytesUsed = 0;
-    if (!m_notify->onFileRead(
-        &bytesUsed,
-        string_view(m_buf, avail),
-        more,
-        m_offset,
-        m_file->m_f,
-        m_err.code()
-    )) {
+    if (!m_notify->onFileRead(&bytesUsed, data)) 
         more = false;
-    }
     m_offset += m_bytes;
     if (!more) {
         delete this;
@@ -399,13 +397,13 @@ WinError FileWriter::onRun() {
 
 //===========================================================================
 void FileWriter::onNotify() {
-    m_notify->onFileWrite(
-        m_bytes,
-        string_view(m_buf, m_bufLen),
-        m_offset,
-        m_file->m_f,
-        m_err.code()
-    );
+    FileWriteData tmp = {};
+    tmp.written = m_bytes;
+    tmp.data = string_view(m_buf, m_bufLen);
+    tmp.offset = m_offset;
+    tmp.f = m_file->m_f;
+    tmp.ec = m_err.code();
+    m_notify->onFileWrite(tmp);
     delete this;
 }
 

@@ -229,17 +229,11 @@ void FileAppendStream::write_LK() {
 }
 
 //===========================================================================
-void FileAppendStream::onFileWrite(
-    int written,
-    string_view data,
-    int64_t offset,
-    FileHandle f,
-    error_code ec
-) {
+void FileAppendStream::onFileWrite(const FileWriteData & data) {
     {
         unique_lock lk{m_impl->mut};
         m_impl->numWrites -= 1;
-        m_impl->lockedBufs -= (int) (data.size() / m_impl->bufLen);
+        m_impl->lockedBufs -= (int) (data.data.size() / m_impl->bufLen);
         write_LK();
     }
     m_impl->cv.notify_all();
@@ -264,14 +258,7 @@ public:
         string_view path,
         size_t blkSize
     );
-    bool onFileRead(
-        size_t * bytesUsed,
-        string_view data,
-        bool more,
-        int64_t offset,
-        FileHandle f,
-        error_code ec
-    ) override;
+    bool onFileRead(size_t * bytesUsed, const FileReadData & data) override;
 };
 
 } // namespace
@@ -293,8 +280,11 @@ FileStreamNotify::FileStreamNotify(
         File::fReadOnly | File::fSequential | File::fDenyNone
     ); ec) {
         logMsgError() << "File open failed: " << path;
-        size_t bytesUsed = 0;
-        onFileRead(&bytesUsed, {}, false, 0, file, ec);
+        FileReadData data = {};
+        data.f = file;
+        data.ec = ec;
+        size_t bytesUsed = data.data.size();
+        onFileRead(&bytesUsed, data);
     } else {
         fileRead(this, m_out.get(), blkSize, file, 0, 0, hq);
     }
@@ -303,18 +293,14 @@ FileStreamNotify::FileStreamNotify(
 //===========================================================================
 bool FileStreamNotify::onFileRead(
     size_t * bytesUsed,
-    string_view data,
-    bool more,
-    int64_t offset,
-    FileHandle f,
-    error_code ec
+    const FileReadData & data
 ) {
-    auto eod = m_out.get() + data.size();
+    auto eod = m_out.get() + data.data.size();
     *eod = 0;
-    if (!m_notify->onFileRead(bytesUsed, data, more, offset, f, ec) 
-        || !more
+    if (!m_notify->onFileRead(bytesUsed, data) 
+        || !data.more
     ) {
-        fileClose(f);
+        fileClose(data.f);
         delete this;
         return false;
     }
@@ -335,14 +321,7 @@ class FileLoadNotify : public IFileReadNotify {
     string * m_out;
 public:
     FileLoadNotify(string * out, IFileReadNotify * notify);
-    bool onFileRead(
-        size_t * bytesUsed,
-        string_view data,
-        bool more,
-        int64_t offset,
-        FileHandle f,
-        error_code ec
-    ) override;
+    bool onFileRead(size_t * bytesUsed, const FileReadData & data) override;
 };
 
 } // namespace
@@ -356,18 +335,13 @@ FileLoadNotify::FileLoadNotify(string * out, IFileReadNotify * notify)
 //===========================================================================
 bool FileLoadNotify::onFileRead(
     size_t * bytesUsed,
-    string_view data,
-    bool more,
-    int64_t offset,
-    FileHandle f,
-    error_code ec
+    const FileReadData & data
 ) {
-    *bytesUsed = data.size();
     // Resize the string to match the bytes read, in case it was less than
     // the amount requested.
-    m_out->resize(data.size());
-    m_notify->onFileRead(nullptr, data, false, offset, f, ec);
-    fileClose(f);
+    m_out->resize(data.data.size());
+    m_notify->onFileRead(bytesUsed, data);
+    fileClose(data.f);
     delete this;
     return false;
 }
@@ -385,13 +359,7 @@ class FileSaveNotify : public IFileWriteNotify {
     IFileWriteNotify * m_notify;
 public:
     FileSaveNotify(IFileWriteNotify * notify);
-    void onFileWrite(
-        int written,
-        string_view data,
-        int64_t offset,
-        FileHandle f,
-        error_code ec
-    ) override;
+    void onFileWrite(const FileWriteData & data) override;
 };
 
 } // namespace
@@ -402,15 +370,14 @@ FileSaveNotify::FileSaveNotify(IFileWriteNotify * notify)
 {}
 
 //===========================================================================
-void FileSaveNotify::onFileWrite(
-    int written,
-    string_view data,
-    int64_t offset,
-    FileHandle f,
-    error_code ec
-) {
-    fileClose(f);
-    m_notify->onFileWrite(written, data, offset, {}, {});
+void FileSaveNotify::onFileWrite(const FileWriteData & data) {
+    fileClose(data.f);
+    FileWriteData tmp = {};
+    tmp.written = data.written;
+    tmp.data = data.data;
+    tmp.offset = data.offset;
+    tmp.ec = data.ec;
+    m_notify->onFileWrite(tmp);
     delete this;
 }
 
@@ -564,8 +531,11 @@ void Dim::fileLoadBinary(
     auto ec = fileOpen(&file, path, File::fReadOnly | File::fDenyNone);
     if (ec) {
         logMsgError() << "File open failed: " << path;
+        FileReadData data = {};
+        data.f = file;
+        data.ec = ec;
         size_t bytesUsed = 0;
-        notify->onFileRead(&bytesUsed, {}, false, 0, file, ec);
+        notify->onFileRead(&bytesUsed, data);
         return;
     }
 
@@ -624,7 +594,11 @@ void Dim::fileSaveBinary(
     );
     if (ec) {
         logMsgError() << "File open failed: " << path;
-        notify->onFileWrite(0, data, 0, file, ec);
+        FileWriteData tmp = {};
+        tmp.data = data;
+        tmp.f = file;
+        tmp.ec = ec;
+        notify->onFileWrite(tmp);
         return;
     }
 
@@ -667,7 +641,11 @@ void Dim::fileSaveTempFile(
     auto ec = fileCreateTemp(&file, {}, suffix);
     if (ec) {
         logMsgError() << "Create temp file failed.";
-        notify->onFileWrite(0, data, 0, file, ec);
+        FileWriteData tmp = {};
+        tmp.data = data;
+        tmp.f = file;
+        tmp.ec = ec;
+        notify->onFileWrite(tmp);
         return;
     }
 

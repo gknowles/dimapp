@@ -319,14 +319,8 @@ void writeContent(
         function<void()> fn;
         string path;
 
-        void onFileWrite(
-            int written,
-            std::string_view data,
-            int64_t offset,
-            FileHandle f,
-            error_code ec
-        ) override {
-            if (written != data.size()) {
+        void onFileWrite(const FileWriteData & data) override {
+            if (data.written != data.data.size()) {
                 logMsgError() << path << ": error writing file.";
                 appSignalShutdown(EX_IOERR);
             }
@@ -356,11 +350,7 @@ void loadContent(
 
             bool onFileRead(
                 size_t * bytesUsed,
-                std::string_view data,
-                bool more,
-                int64_t offset,
-                FileHandle f,
-                error_code ec
+                const FileReadData & data
             ) override {
                 fn(move(buf));
                 delete this;

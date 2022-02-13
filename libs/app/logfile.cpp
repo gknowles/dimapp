@@ -29,13 +29,7 @@ public:
     bool closeLog();
 
 private:
-    void onFileWrite(
-        int written,
-        string_view data,
-        int64_t offset,
-        FileHandle f,
-        error_code ec
-    ) override;
+    void onFileWrite(const FileWriteData & data) override;
 
     mutex m_mut;
     FileHandle m_file;
@@ -125,13 +119,7 @@ bool LogBuffer::closeLog() {
 }
 
 //===========================================================================
-void LogBuffer::onFileWrite(
-    int written,
-    string_view data,
-    int64_t offset,
-    FileHandle f,
-    error_code ec
-) {
+void LogBuffer::onFileWrite(const FileWriteData & data) {
     scoped_lock lk{m_mut};
     m_writing.swap(m_pending);
     m_pending.clear();
@@ -236,11 +224,7 @@ public:
 
         bool onFileRead(
             size_t * bytesUsed,
-            string_view data,
-            bool more,
-            int64_t offset,
-            FileHandle f,
-            error_code ec
+            const FileReadData & data
         ) override;
     };
 public:
@@ -276,8 +260,11 @@ void JsonLogTail::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     FileHandle file;
     auto ec = fileOpen(&file, path, File::fReadOnly | File::fDenyNone);
     if (ec) {
+        FileReadData data = {};
+        data.f = file;
+        data.ec = ec;
         size_t bytesUsed = 0;
-        job->onFileRead(&bytesUsed, {}, false, 0, file, ec);
+        job->onFileRead(&bytesUsed, data);
         return;
     }
     if (ec = fileSize(&job->m_endPos, file); !ec)
@@ -294,26 +281,22 @@ void JsonLogTail::onHttpRequest(unsigned reqId, HttpRequest & msg) {
 //===========================================================================
 bool JsonLogTail::LogJob::onFileRead(
     size_t * bytesUsed,
-    string_view data,
-    bool more,
-    int64_t offset,
-    FileHandle f,
-    error_code ec
+    const FileReadData & data
 ) {
-    *bytesUsed = data.size();
+    *bytesUsed = data.data.size();
     vector<string_view> lines;
-    split(&lines, data, "\r\n");
+    split(&lines, data.data, "\r\n");
     if (m_found < m_limit) {
         // Searching backwards for start of last "limit" lines.
         m_found += (unsigned) lines.size() - 1;
         if (m_found < m_limit) {
-            if (offset > 0) {
+            if (data.offset > 0) {
                 // Haven't gone back far enough into the file to find the first
                 // line and we're not already at the beginning of the file.
-                auto pos = offset > (int64_t) size(m_buffer)
-                    ? offset - size(m_buffer)
+                auto pos = data.offset > (int64_t) size(m_buffer)
+                    ? data.offset - size(m_buffer)
                     : 0;
-                fileRead(this, m_buffer, size(m_buffer), f, pos);
+                fileRead(this, m_buffer, size(m_buffer), data.f, pos);
                 return false;
             }
             m_limit = m_found;
@@ -338,9 +321,9 @@ bool JsonLogTail::LogJob::onFileRead(
 
             // We weren't already in the last block of the file, so re-read
             // the blocks from here to EOF and add them to the reply.
-            auto pos = offset + data.size();
+            auto pos = data.offset + data.data.size();
             auto len = m_endPos - pos;
-            fileRead(this, m_buffer, size(m_buffer), f, pos, len);
+            fileRead(this, m_buffer, size(m_buffer), data.f, pos, len);
             return false;
         }
     } else {
@@ -356,7 +339,7 @@ bool JsonLogTail::LogJob::onFileRead(
         }
         if (!e->empty())
             m_bld.startValue().value(*e);
-        if (more) {
+        if (data.more) {
             // More to return
             httpRouteReply(m_reqId, move(m_res.body()), true);
             m_res.clear();
@@ -372,7 +355,7 @@ bool JsonLogTail::LogJob::onFileRead(
     } else {
         httpRouteReply(m_reqId, move(m_res.body()), false);
     }
-    fileClose(f);
+    fileClose(data.f);
     delete this;
     return false;
 }

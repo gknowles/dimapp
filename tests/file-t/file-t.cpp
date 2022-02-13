@@ -76,15 +76,11 @@ static void app(int argc, char *argv[]) {
     struct Reader : IFileReadNotify {
         bool onFileRead(
             size_t * bytesUsed,
-            std::string_view data,
-            bool more,
-            int64_t offset,
-            FileHandle f,
-            error_code ec
+            const FileReadData & data
         ) override {
-            m_out += data;
-            *bytesUsed = data.size();
-            if (!more) {
+            m_out += data.data;
+            *bytesUsed = data.data.size();
+            if (!data.more) {
                 m_done = true;
                 m_cv.notify_all();
             }
