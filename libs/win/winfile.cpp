@@ -910,26 +910,17 @@ error_code Dim::fileLastWriteTime(TimePoint * out, FileHandle f) {
 }
 
 //===========================================================================
-error_code Dim::filePath(string_view * out, FileHandle f) {
-    *out = {};
+string_view Dim::filePath(FileHandle f) {
     auto file = getInfo(f);
-    if (!file) {
-        WinError err = ERROR_INVALID_PARAMETER;
-        return err.code();
-    }
-    *out = file->m_path;
-    return {};
+    if (!file) 
+        return {};
+    return file->m_path;
 }
 
 //===========================================================================
- error_code Dim::fileMode(EnumFlags<File::OpenMode> * out, FileHandle f) {
+ EnumFlags<File::OpenMode> Dim::fileMode(FileHandle f) {
     auto file = getInfo(f);
-    if (!file) {
-        WinError err = ERROR_INVALID_PARAMETER;
-        return err.code();
-    }
-    *out = file->m_mode;
-    return {};
+    return file ? file->m_mode : File::OpenMode{};
 }
 
 //===========================================================================

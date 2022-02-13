@@ -130,8 +130,7 @@ void FileAppendStream::close() {
         m_impl->cv.wait(lk);
 
     if (auto used = m_impl->bufLen - m_impl->buf.size()) {
-        EnumFlags<File::OpenMode> oflags;
-        fileMode(&oflags, m_impl->file);
+        auto oflags = fileMode(m_impl->file);
         if (oflags.none(File::fAligned)) {
             fileAppendWait(
                 nullptr, 
@@ -142,8 +141,7 @@ void FileAppendStream::close() {
         } else {
             // Since the old file handle was opened with fAligned we can't use
             // it to write the trailing partial buffer.
-            string_view path; 
-            filePath(&path, m_impl->file);
+            auto path = filePath(m_impl->file);
             fileClose(m_impl->file);
             if (auto ec = fileOpen(
                 &m_impl->file, 

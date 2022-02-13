@@ -264,10 +264,10 @@ std::error_code fileSize(uint64_t * out, FileHandle f);
 std::error_code fileLastWriteTime(TimePoint * out, FileHandle f);
 
 // On error returns empty and sets errno to a non-zero value.
-std::error_code filePath(std::string_view * out, FileHandle f);
+std::string_view filePath(FileHandle f);
 
 // Returns the open mode flags used to create the handle.
-std::error_code fileMode(EnumFlags<File::OpenMode> * out, FileHandle f);
+EnumFlags<File::OpenMode> fileMode(FileHandle f);
 
 // kUnknown is returned for bad handle and system errors as well as when the
 // type is unknown. If kUnknown was not returned due to error, errno is set

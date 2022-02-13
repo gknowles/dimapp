@@ -1187,8 +1187,7 @@ void Dim::httpRouteReplyWithFile(unsigned reqId, string_view path) {
 //===========================================================================
 void Dim::httpRouteReplyWithFile(unsigned reqId, FileHandle file) {
     HttpResponse msg;
-    string_view path;
-    filePath(&path, file);
+    auto path = filePath(file);
     MimeType mt = mimeTypeDefault(path);
 
     TimePoint mtime;
