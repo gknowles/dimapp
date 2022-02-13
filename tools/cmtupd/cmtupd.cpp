@@ -313,7 +313,8 @@ unique_ptr<Config> loadConfig(string_view cfgfile) {
         return {};
     }
     auto out = make_unique<Config>();
-    out->configFile = fileAbsolutePath(configFile);
+    if (auto ec = fileAbsolutePath(&out->configFile, configFile); ec)
+        return {};
     out->gitRoot = gitRoot;
     if (!loadRules(out.get(), root))
         return {};
@@ -370,22 +371,24 @@ static bool replaceFile(
     string_view path,
     const string & content
 ) {
-    auto f = fileOpen(
+    FileHandle file;
+    auto ec = fileOpen(
+        &file,
         path,
         File::fCreat | File::fTrunc | File::fReadWrite | File::fBlocking
     );
-    if (!f) {
+    if (ec) {
         logMsgError() << path << ": unable to open.";
         appSignalShutdown(EX_IOERR);
         return false;
     }
-    if (!fileAppendWait(f, content)) {
+    if (auto ec = fileAppendWait(nullptr, file, content); ec) {
         logMsgError() << path << ": unable to write.";
         appSignalShutdown(EX_IOERR);
-        fileClose(f);
+        fileClose(file);
         return false;
     }
-    fileClose(f);
+    fileClose(file);
     return true;
 }
 
@@ -550,7 +553,7 @@ static void processFile(
     Result res;
     auto fullPath = fname;
     fullPath.resolve(cfg->gitRoot);
-    if (!fileLoadBinaryWait(&res.content, fullPath))
+    if (xfileLoadBinaryWait(&res.content, fullPath))
         return appSignalShutdown(EX_IOERR);
 
     for (auto&& grp : grps) {
@@ -604,8 +607,11 @@ static void processFile(
 //===========================================================================
 static void processFiles(const Config * cfg) {
     vector<string> args = { "git", "-C", cfg->gitRoot.str(), "ls-files" };
-    for (auto&& file : s_opts.files)
-        file = fileAbsolutePath(file).str();
+    for (auto&& file : s_opts.files) {
+        Path tmp;
+        fileAbsolutePath(&tmp, file);
+        file = move(tmp.str());
+    }
     args.insert(args.end(), s_opts.files.begin(), s_opts.files.end());
     auto rawNames = execToolWait(Cli::toCmdline(args), "List depot files");
     if (rawNames.empty())

@@ -591,7 +591,7 @@ static void genPage(GenPageInfo * info, unsigned phase = 0) {
     if (phase == what++) {
         // Save markup to temporary file.
         auto p = Path(info->page.file);
-        p = fileTempName(p.extension());
+        fileTempName(&p, p.extension());
         info->fname = p.str();
         writeContent(
             [info, what]() { genPage(info, what); },
@@ -611,7 +611,7 @@ static void genPage(GenPageInfo * info, unsigned phase = 0) {
             );
             execTool(
                 [info, what](string && out) {
-                    fileRemove(info->fname + "#");
+                    xfileRemove(info->fname + "#");
                     if (out.empty())
                         appSignalShutdown(EX_IOERR);
                     genPage(info, what);
@@ -631,7 +631,7 @@ static void genPage(GenPageInfo * info, unsigned phase = 0) {
         auto cmdline = Cli::toCmdlineL("github-markup.bat", info->fname);
         execTool(
             [info, what](string && out) {
-                fileRemove(info->fname);
+                xfileRemove(info->fname);
                 info->content = move(out);
                 genPage(info, what);
             },

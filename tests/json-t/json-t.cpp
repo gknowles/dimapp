@@ -118,17 +118,9 @@ int main(int argc, char * argv[]) {
         return cli.printHelp(cout);
 
     path->defaultExt("json");
-    auto bytes = (size_t) fileSize(*path);
     string content;
-    content.resize(bytes + 1);
-    ifstream in(path->str(), ios_base::in | ios_base::binary);
-    in.read(content.data(), bytes);
-    if (!in) {
-        logMsgError() << "json: Error reading file: " << *path;
+    if (auto ec = xfileLoadBinaryWait(&content, *path); ec)
         return EX_DATAERR;
-    }
-    in.close();
-
     JDocument doc;
     auto root = doc.parse(content.data(), *path);
     if (root && !doc.errmsg()) {

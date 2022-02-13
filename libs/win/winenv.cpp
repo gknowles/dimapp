@@ -174,6 +174,8 @@ const string & Dim::envExecPath() {
                 wpath.data(),
                 (DWORD) wpath.size()
             );
+            if (!num) 
+                logMsgFatal() << "GetModuleFileNameW(NULL): " << WinError();
             if (num != wpath.size())
                 break;
             wpath.resize(2 * wpath.size());

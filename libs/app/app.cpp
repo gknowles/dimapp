@@ -60,7 +60,8 @@ static bool makeAppPath(
     }
     if (createDirIfNotExist) {
         auto fp = *out;
-        fileCreateDirs(fp.removeFilename());
+        if (xfileCreateDirs(fp.removeFilename()))
+            return false;
     }
     return true;
 }
@@ -333,7 +334,7 @@ int Dim::appRun(
         cli.iostreams(conin, conout);
     }
 
-    s_initialDir = fileGetCurrentDir();
+    fileGetCurrentDir(&s_initialDir);
     auto exeName = (Path) envExecPath();
     if (baseName.empty()) {
         s_appBaseName = exeName.stem();
@@ -369,7 +370,7 @@ int Dim::appRun(
     s_logDir = makeAppDir("log");
 
     if (flags.any(fAppWithChdir))
-        fileSetCurrentDir(s_rootDir);
+        xfileSetCurrentDir(s_rootDir);
 
     iPerfInitialize();
     iLogInitialize();

@@ -158,22 +158,38 @@ void ConfigFile::parseContent(string_view fullpath, string && content) {
 void ConfigFile::onFileChange(string_view fullpath) {
     m_changes += 1;
     m_lastChanged = timeNow();
-    auto f = fileOpen(fullpath, File::fReadOnly | File::fDenyWrite);
-
-    // load file
-    auto bytes = fileSize(f);
-    if (bytes > kMaxConfigFileSize) {
-        logMsgError() << "File too large (" << bytes << " bytes): "
-            << fullpath;
-        bytes = 0;
-    }
-
     string content;
-    if (bytes) {
-        content.resize((size_t) bytes);
-        fileReadWait(content.data(), content.size(), f, 0);
+    for (;;) {
+        FileHandle f;
+        auto ec = fileOpen(&f, fullpath, File::fReadOnly | File::fDenyWrite);
+        if (ec)
+            break;
+
+        // load file
+        uint64_t bytes = 0;
+        if (auto ec = fileSize(&bytes, f); ec)
+            break;
+        if (bytes > kMaxConfigFileSize) {
+            logMsgError() << "File too large (" << bytes << " bytes): "
+                << fullpath;
+            bytes = 0;
+        }
+
+        if (bytes) {
+            content.resize((size_t) bytes);
+            if (auto ec = fileReadWait(
+                nullptr, 
+                content.data(), 
+                content.size(), 
+                f, 
+                0
+            ); ec) {
+                bytes = 0;
+            }
+        }
+        fileClose(f);
+        break;
     }
-    fileClose(f);
 
     parseContent(fullpath, move(content));
 }

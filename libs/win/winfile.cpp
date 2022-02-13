@@ -31,7 +31,8 @@ class IFileOpBase : protected IWinOverlappedNotify {
 public:
     IFileOpBase(TaskQueueHandle hq);
 
-    size_t start(
+    WinError start(
+        size_t * bytes,
         WinFileInfo * file,
         void * buf,
         size_t bufLen,
@@ -49,10 +50,11 @@ protected:
     int64_t m_offset{};
     int64_t m_length{};
     DWORD m_bytes{};
+    WinError m_err = NO_ERROR;
 
 private:
     virtual void onNotify() = 0;
-    virtual bool onRun() = 0;
+    virtual WinError onRun() = 0;
     virtual bool asyncOp() = 0;
     virtual const char * logOnError() = 0;
 
@@ -62,8 +64,6 @@ private:
     enum State { kUnstarted, kRunning };
     State m_state{kUnstarted};
     bool m_trigger{false};
-
-    WinError m_err{0};
 };
 
 } // namespace
@@ -139,7 +139,8 @@ IFileOpBase::IFileOpBase(TaskQueueHandle hq)
 {}
 
 //===========================================================================
-size_t IFileOpBase::start(
+WinError IFileOpBase::start(
+    uint64_t * bytes,
     WinFileInfo * file,
     void * buf,
     size_t bufLen,
@@ -153,29 +154,31 @@ size_t IFileOpBase::start(
     m_bufUnused = 0;
     m_offset = off;
     m_length = len;
+    if (bytes)
+        *bytes = 0;
 
     overlapped() = {};
 
     if (asyncOp()) {
         taskPush(s_hq, this);
-        return m_bytes;
+        return ERROR_IO_PENDING;
     }
 
     if (m_file->m_mode.any(File::fBlocking)) {
         run();
-        return m_bytes;
+    } else {
+        m_trigger = true;
+        bool waiting = true;
+        taskPush(s_hq, this);
+        this_thread::yield();
+        while (m_trigger == waiting) {
+            WaitOnAddress(&m_trigger, &waiting, sizeof m_trigger, INFINITE);
+        }
     }
 
-    m_trigger = true;
-    bool waiting = true;
-    taskPush(s_hq, this);
-    this_thread::yield();
-    while (m_trigger == waiting) {
-        WaitOnAddress(&m_trigger, &waiting, sizeof m_trigger, INFINITE);
-    }
-    if (m_err)
-        winFileSetErrno(m_err);
-    return m_bytes;
+    if (bytes)
+        *bytes = m_bytes;
+    return m_err;
 }
 
 //===========================================================================
@@ -192,10 +195,9 @@ void IFileOpBase::run() {
     // asynchronously there's no chance to change it. If it's not async, m_err
     // will be set to something appropriate after onRun() returns.
     m_err = ERROR_IO_PENDING;
-    if (onRun()) {
+    if (auto err = onRun(); !err) {
         m_err = ERROR_SUCCESS;
     } else {
-        WinError err;
         if (err == ERROR_IO_PENDING)
             return;
 
@@ -276,7 +278,7 @@ namespace {
 class FileReader : public IFileOpBase {
 public:
     explicit FileReader(IFileReadNotify * notify, TaskQueueHandle hq);
-    bool onRun() override;
+    WinError onRun() override;
     void onNotify() override;
     bool asyncOp() override { return m_notify != nullptr; }
     const char * logOnError() override { return "ReadFile"; }
@@ -294,18 +296,22 @@ FileReader::FileReader(IFileReadNotify * notify, TaskQueueHandle hq)
 {}
 
 //===========================================================================
-bool FileReader::onRun() {
+WinError FileReader::onRun() {
     auto reqLen = (int64_t) m_bufLen - m_bufUnused;
     if (m_length != kNpos && reqLen > m_length)
         reqLen = m_length;
 
-    return ReadFile(
+    WinError err = 0;
+    if (!ReadFile(
         m_file->m_handle,
         m_buf + m_bufUnused,
         (DWORD)reqLen,
         &m_bytes,
         &overlapped()
-    );
+    )) {
+        err.set();
+    }
+    return err;
 }
 
 //===========================================================================
@@ -326,7 +332,8 @@ void FileReader::onNotify() {
         string_view(m_buf, avail),
         more,
         m_offset,
-        m_file->m_f
+        m_file->m_f,
+        m_err.code()
     )) {
         more = false;
     }
@@ -358,7 +365,7 @@ namespace {
 class FileWriter : public IFileOpBase {
 public:
     explicit FileWriter(IFileWriteNotify * notify, TaskQueueHandle hq);
-    bool onRun() override;
+    WinError onRun() override;
     void onNotify() override;
     bool asyncOp() override { return m_notify != nullptr; }
     const char * logOnError() override { return "WriteFile"; }
@@ -376,14 +383,18 @@ FileWriter::FileWriter(IFileWriteNotify * notify, TaskQueueHandle hq)
 {}
 
 //===========================================================================
-bool FileWriter::onRun() {
-    return WriteFile(
+WinError FileWriter::onRun() {
+    WinError err = 0;
+    if (!WriteFile(
         m_file->m_handle,
         m_buf,
         m_bufLen,
         &m_bytes,
         &overlapped()
-    );
+    )) {
+        err.set();
+    }
+    return err;
 }
 
 //===========================================================================
@@ -392,7 +403,8 @@ void FileWriter::onNotify() {
         m_bytes,
         string_view(m_buf, m_bufLen),
         m_offset,
-        m_file->m_f
+        m_file->m_f,
+        m_err.code()
     );
     delete this;
 }
@@ -443,45 +455,58 @@ bool Dim::winFileSetErrno(int error) {
 ***/
 
 //===========================================================================
-TimePoint Dim::fileLastWriteTime(string_view path) {
+error_code Dim::fileLastWriteTime(TimePoint * out, string_view path) {
+    *out = {};
     WIN32_FILE_ATTRIBUTE_DATA attrs;
     if (!GetFileAttributesExW(
         toWstring(path).c_str(),
         GetFileExInfoStandard,
         &attrs
     )) {
-        return {};
+        WinError err;
+        return err.code();
     }
-    return TimePoint{duration(attrs.ftLastWriteTime)};
+    *out = TimePoint(duration(attrs.ftLastWriteTime));
+    return {};
 }
 
 //===========================================================================
-EnumFlags<File::Attrs> Dim::fileAttrs(std::string_view path) {
+error_code Dim::fileAttrs(
+    EnumFlags<File::Attrs> * out, 
+    std::string_view path
+) {
+    *out = {};
     WIN32_FILE_ATTRIBUTE_DATA attrs;
     if (!GetFileAttributesExW(
         toWstring(path).c_str(),
         GetFileExInfoStandard,
         &attrs
     )) {
-        return {};
+        WinError err;
+        return err.code();
     }
-    return static_cast<File::Attrs>(attrs.dwFileAttributes);
+    *out = static_cast<File::Attrs>(attrs.dwFileAttributes);
+    return {};
 }
 
 //===========================================================================
-bool Dim::fileAttrs(std::string_view path, EnumFlags<File::Attrs> attrs) {
+error_code Dim::xfileAttrs(
+    std::string_view path, 
+    EnumFlags<File::Attrs> attrs
+) {
     if (!SetFileAttributesW(
         toWstring(path).c_str(), 
         (DWORD) attrs.underlying()
     )) {
-        winFileSetErrno(WinError{});
-        return false;
+        WinError err;
+        return err.code();
     }
-    return true;
+    return {};
 }
 
 //===========================================================================
-string Dim::fileTempDir() {
+error_code Dim::fileTempDir(Path * out) {
+    out->clear();
     wstring tmpDir(MAX_PATH, '\0');
     for (;;) {
         auto bufLen = size(tmpDir);
@@ -493,23 +518,26 @@ string Dim::fileTempDir() {
             break;
     }
     auto path = Path(toString(tmpDir));
-    if (!fileCreateDirs(path)) {
-        winFileSetErrno(WinError{});
-        return {};
+    if (xfileCreateDirs(path)) {
+        WinError err;
+        return err.code();
     }
-    return path.str();
+    *out = move(path);
+    return {};
 }
 
 //===========================================================================
-string Dim::fileTempName(string_view suffix) {
-    auto path = Path(fileTempDir());
-    if (!path)
-        return {};
+error_code Dim::fileTempName(Path * out, string_view suffix) {
+    out->clear();
+    Path path;
+    if (auto ec = fileTempDir(&path))
+        return ec;
 
     auto fname = toString(newGuid());
     fname += suffix;
     path /= fname;
-    return path.str();
+    *out = move(path);
+    return {};
 }
 
 
@@ -520,7 +548,8 @@ string Dim::fileTempName(string_view suffix) {
 ***/
 
 //===========================================================================
-static FileHandle allocHandle(
+static error_code allocHandle(
+    FileHandle * out,
     HANDLE handle,
     string_view path,
     EnumFlags<File::OpenMode> mode
@@ -534,8 +563,8 @@ static FileHandle allocHandle(
 
     if (mode.none(File::fBlocking)) {
         if (!winIocpBindHandle(file->m_handle)) {
-            winFileSetErrno(WinError{});
-            return {};
+            WinError err;
+            return err.code();
         }
 
         if (!SetFileCompletionNotificationModes(
@@ -543,23 +572,29 @@ static FileHandle allocHandle(
             FILE_SKIP_COMPLETION_PORT_ON_SUCCESS
                 | FILE_SKIP_SET_EVENT_ON_HANDLE
         )) {
-            winFileSetErrno(WinError{});
-            return {};
+            WinError err;
+            return err.code();
         }
     }
 
     unique_lock lk{s_fileMut};
-    auto f = s_files.insert(file.get());
-    file.release()->m_f = f;
-    return f;
+    *out = s_files.insert(file.get());
+    file.release()->m_f = *out;
+    return {};
 }
 
 //===========================================================================
-FileHandle Dim::fileOpen(string_view path, EnumFlags<File::OpenMode> mode) {
+error_code Dim::fileOpen(
+    FileHandle * out, 
+    string_view path, 
+    EnumFlags<File::OpenMode> mode
+) {
     using enum File::OpenMode;
     assert(mode.none(fInternalFlags));
     // There must be exactly one IO mode.
     assert(mode.count(fNoContent | fReadOnly | fReadWrite) == 1);
+
+    *out = {};
 
     int access = 0;
     if (mode.any(fNoContent)) {
@@ -626,11 +661,11 @@ FileHandle Dim::fileOpen(string_view path, EnumFlags<File::OpenMode> mode) {
         NULL // template file
     );
     if (handle == INVALID_HANDLE_VALUE) {
-        winFileSetErrno(WinError{});
-        return {};
+        WinError err;
+        return err.code();
     }
 
-    return allocHandle(handle, path, mode);
+    return allocHandle(out, handle, path, mode);
 }
 
 //===========================================================================
@@ -664,26 +699,32 @@ static string getName(HANDLE handle) {
 }
 
 //===========================================================================
-FileHandle Dim::fileOpen(intptr_t osfhandle, EnumFlags<File::OpenMode> mode) {
+error_code Dim::fileOpen(
+    FileHandle * out, 
+    intptr_t osfhandle, 
+    EnumFlags<File::OpenMode> mode
+) {
     auto handle = (HANDLE) osfhandle;
     auto path = getName(handle);
-    return allocHandle(handle, path, mode);
+    return allocHandle(out, handle, path, mode);
 }
 
 //===========================================================================
-FileHandle Dim::fileCreateTemp(
+error_code Dim::fileCreateTemp(
+    FileHandle * out, 
     EnumFlags<File::OpenMode> mode, 
     string_view suffix
 ) {
-    auto fname = fileTempName(suffix);
-    if (fname.empty())
+    Path fname;
+    if (auto ec = fileTempName(&fname, suffix))
         return {};
     mode |= File::fCreat | File::fExcl | File::fReadWrite;
-    return fileOpen(fname, mode);
+    return fileOpen(out, fname, mode);
 }
 
 //===========================================================================
-static FileHandle attachStdHandle(
+static error_code attachStdHandle(
+    FileHandle * out, 
     int fd,
     string_view path,
     EnumFlags<File::OpenMode> mode // must be either fReadOnly or fReadWrite
@@ -698,11 +739,11 @@ static FileHandle attachStdHandle(
         // Process doesn't have a console or otherwise redirected standard
         // input/output.
         file->m_handle = INVALID_HANDLE_VALUE;
-        winFileSetErrno(ERROR_FILE_NOT_FOUND);
-        return {};
+        WinError err = ERROR_FILE_NOT_FOUND;
+        return err.code();
     } else if (file->m_handle == INVALID_HANDLE_VALUE) {
-        winFileSetErrno(WinError{});
-        return {};
+        WinError err;
+        return err.code();
     }
     // Duplicate the handle so that fileClose works just like for any other
     // file handle.
@@ -716,29 +757,29 @@ static FileHandle attachStdHandle(
         FALSE,  // inheritable
         DUPLICATE_SAME_ACCESS
     )) {
-        winFileSetErrno(WinError{});
-        return {};
+        WinError err;
+        return err.code();
     }
 
     unique_lock lk{s_fileMut};
-    auto f = s_files.insert(file.get());
-    file.release()->m_f = f;
-    return f;
+    *out = s_files.insert(file.get());
+    file.release()->m_f = *out;
+    return {};
 }
 
 //===========================================================================
-FileHandle Dim::fileAttachStdin() {
-    return attachStdHandle(STD_INPUT_HANDLE, "STDIN", File::fReadOnly);
+error_code Dim::fileAttachStdin(FileHandle * out) {
+    return attachStdHandle(out, STD_INPUT_HANDLE, "STDIN", File::fReadOnly);
 }
 
 //===========================================================================
-FileHandle Dim::fileAttachStdout() {
-    return attachStdHandle(STD_OUTPUT_HANDLE, "STDOUT", File::fReadWrite);
+error_code Dim::fileAttachStdout(FileHandle * out) {
+    return attachStdHandle(out, STD_OUTPUT_HANDLE, "STDOUT", File::fReadWrite);
 }
 
 //===========================================================================
-FileHandle Dim::fileAttachStderr() {
-    return attachStdHandle(STD_ERROR_HANDLE, "STDERR", File::fReadWrite);
+error_code Dim::fileAttachStderr(FileHandle * out) {
+    return attachStdHandle(out, STD_ERROR_HANDLE, "STDERR", File::fReadWrite);
 }
 
 //===========================================================================
@@ -753,46 +794,50 @@ static WinFileInfo * getInfo(FileHandle f, bool release = false) {
 }
 
 //===========================================================================
-bool Dim::fileResize(FileHandle f, size_t size) {
+error_code Dim::xfileResize(FileHandle f, size_t size) {
     auto file = getInfo(f);
-    if (!file)
-        return winFileSetErrno(ERROR_INVALID_PARAMETER);
+    if (!file) {
+        WinError err = ERROR_INVALID_PARAMETER;
+        return err.code();
+    }
     LARGE_INTEGER tmp;
     tmp.QuadPart = size;
     if (!SetFilePointerEx(file->m_handle, tmp, nullptr, FILE_BEGIN)) {
         WinError err;
         logMsgError() << "SetFilePointerEx(" << file->m_path << "): " << err;
-        return winFileSetErrno(err);
+        return err.code();
     }
     if (!SetEndOfFile(file->m_handle)) {
         WinError err;
         logMsgError() << "SetEndOfFile(" << file->m_path << "): " << err;
-        return winFileSetErrno(err);
+        return err.code();
     }
-    return true;
+    return {};
 }
 
 //===========================================================================
-bool Dim::fileFlush(FileHandle f) {
+error_code Dim::xfileFlush(FileHandle f) {
     auto file = getInfo(f);
-    if (!file)
-        return winFileSetErrno(ERROR_INVALID_PARAMETER);
+    if (!file) {
+        WinError err = ERROR_INVALID_PARAMETER;
+        return err.code();
+    }
     if (!FlushFileBuffers(file->m_handle)) {
         WinError err;
         logMsgError() << "FlushFileBuffers(" << file->m_path << "): " << err;
-        return winFileSetErrno(err);
+        return err.code();
     }
-    return true;
+    return {};
 }
 
 //===========================================================================
-bool Dim::fileFlushViews(FileHandle f) {
+error_code Dim::xfileFlushViews(FileHandle f) {
+    WinError err = 0;
     auto file = getInfo(f);
     if (!file) {
-        winFileSetErrno(ERROR_INVALID_PARAMETER);
-        return false;
+        err = ERROR_INVALID_PARAMETER;
+        return err.code();
     }
-    WinError err{0};
     for (auto && kv : file->m_views) {
         if (!FlushViewOfFile(kv.first, 0)) {
             err.set();
@@ -800,108 +845,124 @@ bool Dim::fileFlushViews(FileHandle f) {
                 << err;
         }
     }
-    return winFileSetErrno(err);
+    return err.code();
 }
 
 //===========================================================================
-void Dim::fileClose(FileHandle f) {
+error_code Dim::fileClose(FileHandle f) {
+    WinError err = NO_ERROR;
     auto file = static_cast<unique_ptr<WinFileInfo>>(getInfo(f, true));
-    if (!file)
-        return;
-    if (file->m_handle != INVALID_HANDLE_VALUE) {
+    if (!file) {
+        err = ERROR_INVALID_PARAMETER;
+    } else if (file->m_handle != INVALID_HANDLE_VALUE) {
         if (!file->m_views.empty()) {
             logMsgFatal() << "fileClose(" << file->m_path
                 << "): has views that are still open";
+            err = ERROR_INVALID_PARAMETER;
         }
         if (file->m_mode.none(File::fNonOwning)) {
             if (file->m_mode.any(File::fBlocking))
                 CancelIoEx(file->m_handle, NULL);
-            CloseHandle(file->m_handle);
+            if (!CloseHandle(file->m_handle))
+                err.set();
         }
         file->m_handle = INVALID_HANDLE_VALUE;
     }
+    return err.code();
 }
 
 //===========================================================================
-uint64_t Dim::fileSize(FileHandle f) {
+error_code Dim::fileSize(uint64_t * out, FileHandle f) {
+    *out = {};
     auto file = getInfo(f);
     if (!file) {
-        winFileSetErrno(ERROR_INVALID_PARAMETER);
-        return 0;
+        WinError err = ERROR_INVALID_PARAMETER;
+        return err.code();
     }
     LARGE_INTEGER size;
     if (!GetFileSizeEx(file->m_handle, &size)) {
         WinError err;
         logMsgError() << "GetFileSizeEx(" << file->m_path << "): " << err;
-        winFileSetErrno(err);
-        return 0;
+        return err.code();
     }
-    if (!size.QuadPart)
-        winFileSetErrno(NO_ERROR);
-    return size.QuadPart;
+    *out = size.QuadPart;
+    return {};
 }
 
 //===========================================================================
-TimePoint Dim::fileLastWriteTime(FileHandle f) {
+error_code Dim::fileLastWriteTime(TimePoint * out, FileHandle f) {
+    *out = TimePoint::min();
     auto file = getInfo(f);
     if (!file) {
-        winFileSetErrno(ERROR_INVALID_PARAMETER);
-        return TimePoint::min();
+        WinError err = ERROR_INVALID_PARAMETER;
+        return err.code();
     }
     FILETIME ctime, atime, wtime;
     if (!GetFileTime(file->m_handle, &ctime, &atime, &wtime)) {
         WinError err;
         logMsgError() << "GetFileTime(" << file->m_path << "): " << err;
-        winFileSetErrno(err);
-        return TimePoint::min();
+        return err.code();
     }
     auto dur = duration(wtime);
-    if (!dur.count())
-        return TimePoint::min();
-
-    winFileSetErrno(NO_ERROR);
-    return TimePoint(dur);
-}
-
-//===========================================================================
-string_view Dim::filePath(FileHandle f) {
-    if (auto file = getInfo(f))
-        return file->m_path;
-    winFileSetErrno(ERROR_INVALID_PARAMETER);
+    if (dur.count())
+        *out = TimePoint(dur);
     return {};
 }
 
 //===========================================================================
-EnumFlags<File::OpenMode> Dim::fileMode(FileHandle f) {
-    if (auto file = getInfo(f))
-        return file->m_mode;
-    winFileSetErrno(ERROR_INVALID_PARAMETER);
-    return {};
-}
-
-//===========================================================================
-File::Type Dim::fileType(FileHandle f) {
-    auto file = getInfo(f);
-    DWORD type = GetFileType(file->m_handle);
-    switch (type) {
-    case FILE_TYPE_CHAR: return File::Type::kCharacter;
-    case FILE_TYPE_DISK: return File::Type::kRegular;
-    case FILE_TYPE_UNKNOWN:
-        winFileSetErrno(WinError{});
-        return File::Type::kUnknown;
-    default:
-        winFileSetErrno(NO_ERROR);
-        return File::Type::kUnknown;
-    }
-}
-
-//===========================================================================
-FileAlignment Dim::fileAlignment(FileHandle f) {
-    FileAlignment out = {};
+error_code Dim::filePath(string_view * out, FileHandle f) {
+    *out = {};
     auto file = getInfo(f);
     if (!file) {
-        winFileSetErrno(ERROR_INVALID_PARAMETER);
-        return out;
+        WinError err = ERROR_INVALID_PARAMETER;
+        return err.code();
+    }
+    *out = file->m_path;
+    return {};
+}
+
+//===========================================================================
+ error_code Dim::fileMode(EnumFlags<File::OpenMode> * out, FileHandle f) {
+    auto file = getInfo(f);
+    if (!file) {
+        WinError err = ERROR_INVALID_PARAMETER;
+        return err.code();
+    }
+    *out = file->m_mode;
+    return {};
+}
+
+//===========================================================================
+error_code Dim::fileType(File::Type * out, FileHandle f) {
+    *out = File::Type::kUnknown;
+    auto file = getInfo(f);
+    if (!file) {
+        WinError err = ERROR_INVALID_PARAMETER;
+        return err.code();
+    }
+    WinError err = NO_ERROR;
+    DWORD type = GetFileType(file->m_handle);
+    switch (type) {
+    case FILE_TYPE_CHAR: *out = File::Type::kCharacter; break;
+    case FILE_TYPE_DISK: *out = File::Type::kRegular; break;
+    case FILE_TYPE_UNKNOWN:
+        err.set();
+        *out = File::Type::kUnknown;
+        break;
+    default:
+        *out = File::Type::kUnknown;
+        break;
+    }
+    return err.code();
+}
+
+//===========================================================================
+error_code Dim::fileAlignment(FileAlignment * out, FileHandle f) {
+    *out = {};
+    auto file = getInfo(f);
+    if (!file) {
+        WinError err = ERROR_INVALID_PARAMETER;
+        return err.code();
     }
 
     FILE_STORAGE_INFO fi;
@@ -911,19 +972,19 @@ FileAlignment Dim::fileAlignment(FileHandle f) {
         &fi,
         (DWORD) sizeof fi
     )) {
-        winFileSetErrno(WinError{});
-        return out;
+        WinError err;
+        return err.code();
     }
 
-    winFileSetErrno(NO_ERROR);
-    out.logicalSector = fi.LogicalBytesPerSector;
-    out.physicalSector =
+    out->logicalSector = fi.LogicalBytesPerSector;
+    out->physicalSector =
         fi.FileSystemEffectivePhysicalBytesPerSectorForAtomicity;
-    return out;
+    return {};
 }
 
 //===========================================================================
-Path Dim::fileGetCurrentDir(string_view drive) {
+error_code Dim::fileGetCurrentDir(Path * out, string_view drive) {
+    out->clear();
     wchar_t wdrive[3] = {};
     switch (drive.size()) {
     default:
@@ -955,20 +1016,24 @@ Path Dim::fileGetCurrentDir(string_view drive) {
         len = GetFullPathNameW(wdrive, len, wpath, nullptr);
     }
     if (!len) {
-        logMsgError() << "GetFullPathNameW(" << drive << "): " << WinError{};
-        return {};
+        WinError err;
+        logMsgError() << "GetFullPathNameW(" << drive << "): " << err;
+        return err.code();
     }
-    return Path{toString(wpath)};
+    *out = toString(wpath);
+    return {};
 }
 
 //===========================================================================
-Path Dim::fileSetCurrentDir(string_view path) {
+error_code Dim::xfileSetCurrentDir(string_view path, Path * out) {
+    if (out)
+        out->clear();
     if (!SetCurrentDirectoryW(toWstring(path).c_str())) {
         WinError err;
         logMsgError() << "SetCurrentDirectoryW(" << path << "): " << err;
-        return {};
+        return err.code();
     }
-    return fileGetCurrentDir(path);
+    return out ? fileGetCurrentDir(out) : error_code{};
 }
 
 //===========================================================================
@@ -985,11 +1050,12 @@ void Dim::fileRead(
     auto file = getInfo(f);
     assert(file);
     auto ptr = new FileReader{notify, hq};
-    ptr->start(file, outBuf, outBufLen, off, len ? len : kNpos);
+    ptr->start(nullptr, file, outBuf, outBufLen, off, len ? len : kNpos);
 }
 
 //===========================================================================
-size_t Dim::fileReadWait(
+error_code Dim::fileReadWait(
+    size_t * bytes,
     void * outBuf,
     size_t outBufLen,
     FileHandle f,
@@ -998,7 +1064,8 @@ size_t Dim::fileReadWait(
     auto file = getInfo(f);
     assert(file);
     FileReader op{nullptr, s_hq};
-    return op.start(file, outBuf, outBufLen, off, outBufLen);
+    auto err = op.start(bytes, file, outBuf, outBufLen, off, outBufLen);
+    return err.code();
 }
 
 //===========================================================================
@@ -1014,7 +1081,7 @@ void Dim::fileWrite(
     auto file = getInfo(f);
     assert(file);
     auto ptr = new FileWriter(notify, hq);
-    ptr->start(file, const_cast<void *>(buf), bufLen, off, bufLen);
+    ptr->start(nullptr, file, const_cast<void *>(buf), bufLen, off, bufLen);
 }
 
 //===========================================================================
@@ -1029,7 +1096,8 @@ void Dim::fileWrite(
 }
 
 //===========================================================================
-size_t Dim::fileWriteWait(
+error_code Dim::fileWriteWait(
+    size_t * bytes,
     FileHandle f,
     int64_t off,
     const void * buf,
@@ -1038,12 +1106,25 @@ size_t Dim::fileWriteWait(
     auto file = getInfo(f);
     assert(file);
     FileWriter op(nullptr, s_hq);
-    return op.start(file, const_cast<void *>(buf), bufLen, off, bufLen);
+    auto err = op.start(
+        nullptr, 
+        file, 
+        const_cast<void *>(buf), 
+        bufLen, 
+        off, 
+        bufLen
+    );
+    return err.code();
 }
 
 //===========================================================================
-size_t Dim::fileWriteWait(FileHandle f, int64_t offset, string_view data) {
-    return fileWriteWait(f, offset, data.data(), data.size());
+error_code Dim::fileWriteWait(
+    size_t * bytes,
+    FileHandle f, 
+    int64_t offset, 
+    string_view data
+) {
+    return fileWriteWait(bytes, f, offset, data.data(), data.size());
 }
 
 //===========================================================================
@@ -1071,13 +1152,22 @@ void Dim::fileAppend(
 }
 
 //===========================================================================
-size_t Dim::fileAppendWait(FileHandle f, const void * buf, size_t bufLen) {
-    return fileWriteWait(f, 0xffff'ffff'ffff'ffff, buf, bufLen);
+error_code Dim::fileAppendWait(
+    size_t * bytes,
+    FileHandle f, 
+    const void * buf, 
+    size_t bufLen
+) {
+    return fileWriteWait(bytes, f, 0xffff'ffff'ffff'ffff, buf, bufLen);
 }
 
 //===========================================================================
-size_t Dim::fileAppendWait(FileHandle f, string_view data) {
-    return fileAppendWait(f, data.data(), data.size());
+error_code Dim::fileAppendWait(
+    size_t * bytes, 
+    FileHandle f, 
+    string_view data
+) {
+    return fileAppendWait(bytes, f, data.data(), data.size());
 }
 
 
@@ -1108,7 +1198,7 @@ static unsigned getWindowsPerms(File::Access::Right right) {
 }
 
 //===========================================================================
-static bool updateNamedAccess(
+static error_code updateNamedAccess(
     string_view path,
     string_view trustee, // name of account or group
     ACCESS_MODE mode,
@@ -1138,7 +1228,7 @@ static bool updateNamedAccess(
         (PSECURITY_DESCRIPTOR *) &sd
     );
     if (err)
-        return winFileSetErrno(err);
+        return err.code();
 
     auto wtrustee = toWstring(trustee);
     EXPLICIT_ACCESSW access = {};
@@ -1163,7 +1253,7 @@ static bool updateNamedAccess(
     access.Trustee.ptstrName = wtrustee.data();
     err = SetEntriesInAclW(1, &access, aclOld, &aclNew);
     if (err || !aclNew)
-        return winFileSetErrno(err);
+        return err.code();
 
     err = SetNamedSecurityInfoW(
         wpath.data(),
@@ -1174,11 +1264,11 @@ static bool updateNamedAccess(
         aclNew,
         NULL // sacl
     );
-    return winFileSetErrno(err);
+    return err.code();
 }
 
 //===========================================================================
-bool Dim::fileAddAccess(
+error_code Dim::xfileAddAccess(
     string_view path,
     string_view trustee, // name or Sid of account or group
     File::Access::Right allow,
@@ -1188,7 +1278,7 @@ bool Dim::fileAddAccess(
 }
 
 //===========================================================================
-bool Dim::fileSetAccess(
+error_code Dim::xfileSetAccess(
     string_view path,
     string_view trustee, // name or Sid of account or group
     File::Access::Right allow,
@@ -1330,7 +1420,7 @@ size_t Dim::fileViewAlignment(FileHandle f) {
 }
 
 //===========================================================================
-static bool openView(
+static error_code openView(
     char *& base,
     FileHandle f,
     File::View mode,
@@ -1411,8 +1501,7 @@ static bool openView(
     );
     if (err) {
         logMsgError() << "NtCreateSection(" << file->m_path << "): " << err;
-        winFileSetErrno(err);
-        return false;
+        return err.code();
     }
 
     LARGE_INTEGER viewOffset;
@@ -1431,26 +1520,23 @@ static bool openView(
     );
     if (err) {
         logMsgError() << "NtMapViewOfSection(" << file->m_path << "): " << err;
-        winFileSetErrno(err);
     } else {
         file->m_views[base] = mode;
     }
 
-    // always close the section whether the map view worked or not
+    // Always close the section whether the map view worked or not.
     WinError tmp = (WinError::NtStatus) s_NtClose(sec);
     if (tmp) {
         logMsgError() << "NtClose(" << file->m_path << "): " << tmp;
-        if (!err) {
-            winFileSetErrno(tmp);
+        if (!err) 
             err = tmp;
-        }
     }
 
-    return !err;
+    return err.code();
 }
 
 //===========================================================================
-bool Dim::fileOpenView(
+error_code Dim::xfileOpenView(
     const char *& base,
     FileHandle f,
     File::View mode,
@@ -1463,7 +1549,7 @@ bool Dim::fileOpenView(
 }
 
 //===========================================================================
-bool Dim::fileOpenView(
+error_code Dim::xfileOpenView(
     char *& base,
     FileHandle f,
     File::View mode,
@@ -1476,7 +1562,7 @@ bool Dim::fileOpenView(
 }
 
 //===========================================================================
-void Dim::fileCloseView(FileHandle f, const void * view) {
+error_code Dim::xfileCloseView(FileHandle f, const void * view) {
     auto file = getInfo(f);
     auto found = file->m_views.erase(view);
     if (!found) {
@@ -1491,15 +1577,17 @@ void Dim::fileCloseView(FileHandle f, const void * view) {
         logMsgError() << "NtUnmapViewOfSection(" << file->m_path
             << "): " << err;
     }
+    return err.code();
 }
 
 //===========================================================================
-void Dim::fileExtendView(FileHandle f, const void * view, int64_t length) {
+error_code Dim::xfileExtendView(FileHandle f, const void * view, int64_t length) {
     auto file = getInfo(f);
     auto i = file->m_views.find(view);
     if (i == file->m_views.end()) {
-        logMsgFatal() << "fileExtendView(" << file->m_path
+        logMsgError() << "fileExtendView(" << file->m_path
             << "): unknown view, " << (void *) view;
+        return make_error_code(errc::invalid_argument);
     }
     ULONG pageProt;
     if (i->second == File::View::kReadOnly) {
@@ -1516,11 +1604,13 @@ void Dim::fileExtendView(FileHandle f, const void * view, int64_t length) {
         pageProt
     );
     if (!ptr) {
-        logMsgFatal() << "VirtualAlloc(" << file->m_path
-            << "): " << WinError{};
+        WinError err;
+        logMsgError() << "VirtualAlloc(" << file->m_path << "): " << err;
+        return err.code();
     }
     if (ptr != view) {
         logMsgDebug() << "VirtualAlloc(" << file->m_path << "): " << ptr
             << " (expected " << view << ")";
     }
+    return {};
 }

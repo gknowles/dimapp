@@ -41,7 +41,9 @@ static bool match(const FileIter::Info & info) {
     }
 
     if (info.flags.none(FileIter::fHidden)) {
-        auto attrs = fileAttrs(info.entry.path.view());
+        EnumFlags<File::Attrs> attrs;
+        if (auto ec = fileAttrs(&attrs, info.entry.path.view()); ec)
+            return false;
         if (attrs.any(File::Attrs::fHidden))
             return false;
     }
@@ -59,7 +61,7 @@ static void copy(
     entry->path = p->path();
     entry->isdir = fs::is_directory(p->status());
     entry->isbefore = entry->isdir && firstPass;
-    entry->mtime = fileLastWriteTime(entry->path);
+    fileLastWriteTime(&entry->mtime, entry->path);
 }
 
 //===========================================================================

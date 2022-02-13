@@ -12,6 +12,7 @@
 #include <functional>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <type_traits>
 
 namespace Dim {
@@ -114,6 +115,27 @@ inline void Finally::release() {
 
 /****************************************************************************
 *
+*   Return
+*
+***/
+
+template<typename T>
+class Return {
+public:
+    Return(const std::error_code & code);
+    Return(const T & value);
+    Return(T && value);
+
+
+
+private:
+    std::error_code m_code;
+    T m_value;
+};
+
+
+/****************************************************************************
+*
 *   ForwardListIterator
 *
 *   The type being iterated over by the iterator must:
@@ -164,6 +186,8 @@ T * ForwardListIterator<T>::operator->() {
 
 /****************************************************************************
 *
+*   EnumFlags
+* 
 *   Allow bitwise NOT, AND, XOR and OR operations on enum values
 *
 *   The result of bitwise operations on enums is an instance of the EnumFlags<T>

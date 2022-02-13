@@ -79,8 +79,11 @@ bool FileAppendStream::open(string_view path, OpenExisting mode) {
     case kAppend: flags |= File::fCreat; break;
     case kTrunc: flags |= File::fCreat | File::fTrunc; break;
     }
-    if (auto f = fileOpen(path, flags); !attach(f))
-        fileClose(f);
+    FileHandle f;
+    if (auto ec = fileOpen(&f, path, flags); !ec) {
+        if (!attach(f)) 
+            fileClose(f);
+    }
     return (bool) *this;
 }
 
@@ -88,21 +91,32 @@ bool FileAppendStream::open(string_view path, OpenExisting mode) {
 bool FileAppendStream::attach(Dim::FileHandle f) {
     assert(m_impl->bufLen && "file append stream has no buffers assigned");
     close();
-    m_impl->filePos = fileSize(f);
-    if (!m_impl->filePos && errno)
+    if (auto ec = fileSize(&m_impl->filePos, f); ec)
         return false;
 
     m_impl->file = f;
     if (!m_impl->buffers) {
-        m_impl->buffers = (char *) aligned_alloc(m_impl->bufLen, m_impl->numBufs * m_impl->bufLen);
+        m_impl->buffers = (char *) aligned_alloc(
+            m_impl->bufLen, 
+            m_impl->numBufs * m_impl->bufLen
+        );
         __assume(m_impl->buffers);
     }
 
     auto used = m_impl->filePos % m_impl->bufLen;
     m_impl->buf = string_view{m_impl->buffers + used, m_impl->bufLen - used};
     m_impl->filePos -= used;
-    if (m_impl->filePos)
-        fileReadWait(m_impl->buffers, m_impl->bufLen, m_impl->file, m_impl->filePos);
+    if (m_impl->filePos) {
+        if (auto ec = fileReadWait(
+            nullptr,
+            m_impl->buffers, 
+            m_impl->bufLen, 
+            m_impl->file, 
+            m_impl->filePos
+        ); ec) {
+            return false;
+        }
+    }
     return true;
 }
 
@@ -116,16 +130,33 @@ void FileAppendStream::close() {
         m_impl->cv.wait(lk);
 
     if (auto used = m_impl->bufLen - m_impl->buf.size()) {
-        if (fileMode(m_impl->file).none(File::fAligned)) {
-            fileAppendWait(m_impl->file, m_impl->buf.data() - used, used);
+        EnumFlags<File::OpenMode> oflags;
+        fileMode(&oflags, m_impl->file);
+        if (oflags.none(File::fAligned)) {
+            fileAppendWait(
+                nullptr, 
+                m_impl->file, 
+                m_impl->buf.data() - used, 
+                used
+            );
         } else {
             // Since the old file handle was opened with fAligned we can't use
             // it to write the trailing partial buffer.
-            auto path = (Path) filePath(m_impl->file);
+            string_view path; 
+            filePath(&path, m_impl->file);
             fileClose(m_impl->file);
-            m_impl->file = fileOpen(path, File::fReadWrite | File::fBlocking);
-            if (m_impl->file)
-                fileAppendWait(m_impl->file, m_impl->buf.data() - used, used);
+            if (auto ec = fileOpen(
+                &m_impl->file, 
+                path, 
+                File::fReadWrite | File::fBlocking
+            ); !ec) {
+                fileAppendWait(
+                    nullptr, 
+                    m_impl->file, 
+                    m_impl->buf.data() - used, 
+                    used
+                );
+            }
         }
     }
     fileClose(m_impl->file);
@@ -147,7 +178,9 @@ void FileAppendStream::append(string_view data) {
 
         unique_lock lk{m_impl->mut};
         m_impl->fullBufs += 1;
-        if (m_impl->buf.data() == m_impl->buffers + m_impl->numBufs * m_impl->bufLen) {
+        if (m_impl->buf.data() == 
+                m_impl->buffers + m_impl->numBufs * m_impl->bufLen
+        ) {
             m_impl->buf = {m_impl->buffers, m_impl->bufLen};
         } else {
             m_impl->buf = {m_impl->buf.data(), m_impl->bufLen};
@@ -166,10 +199,12 @@ void FileAppendStream::write_LK() {
 
     const char * writeBuf;
     size_t writeCount;
-    auto epos = (int) ((m_impl->buf.data() - m_impl->buffers) / m_impl->bufLen);
+    auto epos = 
+        (int) ((m_impl->buf.data() - m_impl->buffers) / m_impl->bufLen);
     if (m_impl->fullBufs > epos) {
         writeCount = (m_impl->fullBufs - epos) * m_impl->bufLen;
-        writeBuf = m_impl->buffers + m_impl->numBufs * m_impl->bufLen - writeCount;
+        writeBuf = 
+            m_impl->buffers + m_impl->numBufs * m_impl->bufLen - writeCount;
         m_impl->lockedBufs += m_impl->fullBufs - epos;
         m_impl->fullBufs = epos;
     } else {
@@ -200,7 +235,8 @@ void FileAppendStream::onFileWrite(
     int written,
     string_view data,
     int64_t offset,
-    FileHandle f
+    FileHandle f,
+    error_code ec
 ) {
     {
         unique_lock lk{m_impl->mut};
@@ -235,7 +271,8 @@ public:
         string_view data,
         bool more,
         int64_t offset,
-        FileHandle f
+        FileHandle f,
+        error_code ec
     ) override;
 };
 
@@ -251,14 +288,15 @@ FileStreamNotify::FileStreamNotify(
     : m_notify{notify}
     , m_out(new char[blkSize + 1])
 {
-    auto file = fileOpen(
+    FileHandle file;
+    if (auto ec = fileOpen(
+        &file,
         path,
         File::fReadOnly | File::fSequential | File::fDenyNone
-    );
-    if (!file) {
+    ); ec) {
         logMsgError() << "File open failed: " << path;
         size_t bytesUsed = 0;
-        onFileRead(&bytesUsed, {}, false, 0, file);
+        onFileRead(&bytesUsed, {}, false, 0, file, ec);
     } else {
         fileRead(this, m_out.get(), blkSize, file, 0, 0, hq);
     }
@@ -270,11 +308,14 @@ bool FileStreamNotify::onFileRead(
     string_view data,
     bool more,
     int64_t offset,
-    FileHandle f
+    FileHandle f,
+    error_code ec
 ) {
     auto eod = m_out.get() + data.size();
     *eod = 0;
-    if (!m_notify->onFileRead(bytesUsed, data, more, offset, f) || !more) {
+    if (!m_notify->onFileRead(bytesUsed, data, more, offset, f, ec) 
+        || !more
+    ) {
         fileClose(f);
         delete this;
         return false;
@@ -301,7 +342,8 @@ public:
         string_view data,
         bool more,
         int64_t offset,
-        FileHandle f
+        FileHandle f,
+        error_code ec
     ) override;
 };
 
@@ -319,13 +361,14 @@ bool FileLoadNotify::onFileRead(
     string_view data,
     bool more,
     int64_t offset,
-    FileHandle f
+    FileHandle f,
+    error_code ec
 ) {
     *bytesUsed = data.size();
     // Resize the string to match the bytes read, in case it was less than
     // the amount requested.
     m_out->resize(data.size());
-    m_notify->onFileRead(nullptr, data, false, offset, f);
+    m_notify->onFileRead(nullptr, data, false, offset, f, ec);
     fileClose(f);
     delete this;
     return false;
@@ -348,7 +391,8 @@ public:
         int written,
         string_view data,
         int64_t offset,
-        FileHandle f
+        FileHandle f,
+        error_code ec
     ) override;
 };
 
@@ -364,10 +408,11 @@ void FileSaveNotify::onFileWrite(
     int written,
     string_view data,
     int64_t offset,
-    FileHandle f
+    FileHandle f,
+    error_code ec
 ) {
     fileClose(f);
-    m_notify->onFileWrite(written, data, offset, {});
+    m_notify->onFileWrite(written, data, offset, {}, {});
     delete this;
 }
 
@@ -379,106 +424,117 @@ void FileSaveNotify::onFileWrite(
 ***/
 
 //===========================================================================
-Path Dim::fileAbsolutePath(string_view path) {
-    auto fp = Path{path};
-    return fp.resolve(fileGetCurrentDir(fp.drive()));
-}
-
-//===========================================================================
-uint64_t Dim::fileSize(string_view path) {
-    error_code ec;
-    auto p8 = u8string_view((char8_t *) path.data(), path.size());
-    auto f = fs::path(p8);
-    auto len = (uint64_t) fs::file_size(f, ec);
-    if (ec) {
-        errno = ec.default_error_condition().value();
-        return len;
-    }
-    if (!len)
-        errno = 0;
-    return len;
-}
-
-//===========================================================================
-static fs::file_status getPathStatus(string_view path) {
-    error_code ec;
-    auto p8 = u8string_view((char8_t *) path.data(), path.size());
-    auto f = fs::path(p8);
-    auto st = fs::status(f, ec);
-    return st;
-}
-
-//===========================================================================
-bool Dim::fileExists(string_view path) {
-    auto st = getPathStatus(path);
-    return fs::exists(st) && !fs::is_directory(st);
-}
-
-//===========================================================================
-bool Dim::fileDirExists(string_view path) {
-    auto st = getPathStatus(path);
-    return fs::is_directory(st);
-}
-
-//===========================================================================
-bool Dim::fileReadOnly(string_view path) {
-    auto st = getPathStatus(path);
-    return fs::exists(st)
-        && (st.permissions() & fs::perms::owner_write) == fs::perms::none;
-}
-
-//===========================================================================
-void Dim::fileReadOnly(string_view path, bool enable) {
-    error_code ec;
-    auto p8 = u8string_view((char8_t *) path.data(), path.size());
-    auto f = fs::path(p8);
-    auto st = fs::status(f, ec);
-    auto ro = fs::exists(st)
-        && (st.permissions() & fs::perms::owner_write) == fs::perms::none;
-    if (ro == enable)
-        return;
-
-    auto perms = st.permissions();
-    if (enable) {
-        perms |= fs::perms::owner_write;
+error_code Dim::fileAbsolutePath(Path * out, string_view path) {
+    *out = Path{path};
+    Path tmp;
+    auto ec = fileGetCurrentDir(&tmp, out->drive());
+    if (!ec) {
+        out->resolve(tmp);
     } else {
-        perms &= ~fs::perms::owner_write;
+        out->clear();
     }
-    fs::permissions(f, perms, ec);
-    if (!ec)
-        return;
-    logMsgError() << "Set read only failed: " << path;
-    errno = ec.default_error_condition().value();
+    return ec;
 }
 
 //===========================================================================
-bool Dim::fileRemove(string_view path, bool recurse) {
+error_code Dim::fileSize(uint64_t * out, string_view path) {
+    error_code ec;
+    auto p8 = u8string_view((char8_t *) path.data(), path.size());
+    auto f = fs::path(p8);
+    *out = (uint64_t) fs::file_size(f, ec);
+    if (ec) {
+        logMsgError() << "fs::file_size(" << path << "): " << ec;
+        *out = 0;
+    }
+    return ec;
+}
+
+//===========================================================================
+static pair<error_code, fs::file_status> getPathStatus(string_view path) {
+    error_code ec;
+    auto p8 = u8string_view((char8_t *) path.data(), path.size());
+    auto f = fs::path(p8);
+    auto st = fs::status(f, ec);
+    if (ec)
+        logMsgError() << "fs::status(" << path << "): " << ec;
+    return {ec, st};
+}
+
+//===========================================================================
+error_code Dim::fileExists(bool * out, string_view path) {
+    auto&& [ec, st] = getPathStatus(path);
+    *out = fs::exists(st) && !fs::is_directory(st);
+    return ec;
+}
+
+//===========================================================================
+error_code Dim::fileDirExists(bool * out, string_view path) {
+    auto&& [ec, st] = getPathStatus(path);
+    *out = fs::is_directory(st);
+    return ec;
+}
+
+//===========================================================================
+error_code Dim::fileReadOnly(bool * out, string_view path) {
+    auto&& [ec, st] = getPathStatus(path);
+    *out = fs::exists(st)
+        && (st.permissions() & fs::perms::owner_write) == fs::perms::none;
+    return ec;
+}
+
+//===========================================================================
+error_code Dim::xfileReadOnly(string_view path, bool enable) {
+    error_code ec;
+    auto p8 = u8string_view((char8_t *) path.data(), path.size());
+    auto f = fs::path(p8);
+    auto st = fs::status(f, ec);
+    if (ec) {
+        logMsgError() << "fs::status(" << path << "): " << ec;
+    } else {
+        auto ro = fs::exists(st)
+            && (st.permissions() & fs::perms::owner_write) == fs::perms::none;
+        if (ro == enable)
+            return {};
+
+        auto perms = st.permissions();
+        if (enable) {
+            perms |= fs::perms::owner_write;
+        } else {
+            perms &= ~fs::perms::owner_write;
+        }
+        fs::permissions(f, perms, ec);
+        if (ec)
+            logMsgError() << "fs::permissions(" << path << "): " << ec;
+    }
+    return ec;
+}
+
+//===========================================================================
+error_code Dim::xfileRemove(string_view path, bool recurse) {
     error_code ec;
     auto p8 = u8string_view((char8_t *) path.data(), path.size());
     auto f = fs::path(p8);
     if (recurse) {
         fs::remove_all(f, ec);
+        if (ec)
+            logMsgError() << "fs::remove_all(" << path << "): " << ec;
     } else {
         fs::remove(f, ec);
+        if (ec)
+            logMsgError() << "fs::remove(" << path << "): " << ec;
     }
-    if (!ec)
-        return true;
-    logMsgError() << "Remove failed: " << path;
-    errno = ec.default_error_condition().value();
-    return false;
+    return ec;
 }
 
 //===========================================================================
-bool Dim::fileCreateDirs(string_view path) {
+error_code Dim::xfileCreateDirs(string_view path) {
+    error_code ec;
     auto p8 = u8string_view((char8_t *) path.data(), path.size());
     auto f = fs::path(p8);
-    error_code ec;
     fs::create_directories(f, ec);
-    if (!ec)
-        return true;
-    logMsgError() << "Create directories failed: " << path;
-    errno = ec.default_error_condition().value();
-    return false;
+    if (ec)
+        logMsgError() << "fs::craete_directories(" << path << "): " << ec;
+    return ec;
 }
 
 
@@ -506,15 +562,17 @@ void Dim::fileLoadBinary(
     size_t maxSize,
     TaskQueueHandle hq
 ) {
-    auto file = fileOpen(path, File::fReadOnly | File::fDenyNone);
-    if (!file) {
+    FileHandle file;
+    auto ec = fileOpen(&file, path, File::fReadOnly | File::fDenyNone);
+    if (ec) {
         logMsgError() << "File open failed: " << path;
         size_t bytesUsed = 0;
-        notify->onFileRead(&bytesUsed, {}, false, 0, file);
+        notify->onFileRead(&bytesUsed, {}, false, 0, file, ec);
         return;
     }
 
-    auto bytes = fileSize(file);
+    uint64_t bytes = 0;
+    fileSize(&bytes, file);
     if (bytes > maxSize)
         logMsgError() << "File too large (" << bytes << " bytes): " << path;
     out->resize((size_t) bytes);
@@ -523,31 +581,34 @@ void Dim::fileLoadBinary(
 }
 
 //===========================================================================
-bool Dim::fileLoadBinaryWait(
+error_code Dim::xfileLoadBinaryWait(
     string * out,
     string_view path,
     size_t maxSize
 ) {
-    auto file = fileOpen(
+    FileHandle file;
+    auto ec = fileOpen(
+        &file,
         path,
         File::fReadOnly | File::fDenyNone | File::fBlocking
     );
-    if (!file) {
+    if (ec) {
         logMsgError() << "File open failed: " << path;
         out->clear();
-        return false;
+        return ec;
     }
 
-    auto bytes = fileSize(file);
+    uint64_t bytes = 0;
+    fileSize(&bytes, file);
     if (bytes > maxSize) {
         logMsgError() << "File too large (" << bytes << " bytes): " << path;
         out->clear();
-        return false;
+        return make_error_code(errc::file_too_large);
     }
     out->resize((size_t) bytes);
-    fileReadWait(out->data(), (size_t) bytes, file, 0);
+    ec = fileReadWait(nullptr, out->data(), (size_t) bytes, file, 0);
     fileClose(file);
-    return true;
+    return ec;
 }
 
 //===========================================================================
@@ -557,10 +618,15 @@ void Dim::fileSaveBinary(
     string_view data,
     TaskQueueHandle hq // queue to notify
 ) {
-    auto file = fileOpen(path, File::fReadWrite | File::fCreat | File::fTrunc);
-    if (!file) {
+    FileHandle file;
+    auto ec = fileOpen(
+        &file,
+        path, 
+        File::fReadWrite | File::fCreat | File::fTrunc
+    );
+    if (ec) {
         logMsgError() << "File open failed: " << path;
-        notify->onFileWrite(0, data, 0, file);
+        notify->onFileWrite(0, data, 0, file, ec);
         return;
     }
 
@@ -569,35 +635,41 @@ void Dim::fileSaveBinary(
 }
 
 //===========================================================================
-bool Dim::fileSaveBinaryWait(
+error_code Dim::xfileSaveBinaryWait(
     string_view path,
     string_view data
 ) {
-    auto file = fileOpen(
+    FileHandle file;
+    auto ec = fileOpen(
+        &file,
         path,
         File::fReadWrite | File::fCreat | File::fTrunc | File::fBlocking
     );
-    if (!file) {
+    if (ec) {
         logMsgError() << "File open failed: " << path;
-        return false;
+        return ec;
     }
 
-    auto bytes = fileWriteWait(file, 0, data.data(), data.size());
+    uint64_t bytes = 0;
+    ec = fileWriteWait(&bytes, file, 0, data.data(), data.size());
     fileClose(file);
-    return bytes == data.size();
+    if (!ec && bytes == data.size())
+        return make_error_code(errc::io_error);
+    return ec;
 }
 
 //===========================================================================
 void Dim::fileSaveTempFile(
-    IFileWriteNotify* notify,
+    IFileWriteNotify * notify,
     string_view data,
     string_view suffix,
     TaskQueueHandle hq
 ) {
-    auto file = fileCreateTemp({}, suffix);
-    if (!file) {
+    FileHandle file;
+    auto ec = fileCreateTemp(&file, {}, suffix);
+    if (ec) {
         logMsgError() << "Create temp file failed.";
-        notify->onFileWrite(0, data, 0, file);
+        notify->onFileWrite(0, data, 0, file, ec);
         return;
     }
 

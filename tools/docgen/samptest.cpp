@@ -1033,8 +1033,10 @@ static void runProgTests(ProgWork * work, unsigned phase) {
     auto & cfg = *work->info.out;
     auto workDir = Path(fullTestPath(work->info, work->prog.line));
     auto workDrive = workDir.drive();
-    auto workDriveDir = fileGetCurrentDir(workDrive);
-    auto curDir = fileGetCurrentDir();
+    Path workDriveDir;
+    fileGetCurrentDir(&workDriveDir, workDrive);
+    Path curDir;
+    fileGetCurrentDir(&curDir);
 
     if (phase == what++) {
         // Launch compilers

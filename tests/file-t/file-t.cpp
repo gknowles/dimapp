@@ -17,8 +17,9 @@ using namespace Dim;
 
 //===========================================================================
 static void createEmptyFile(string_view path) {
-    if (auto f = fileOpen(path, File::fCreat | File::fReadWrite))
-        fileClose(f);
+    FileHandle file;
+    if (auto ec = fileOpen(&file, path, File::fCreat | File::fReadWrite); !ec)
+        fileClose(file);
 }
 
 /****************************************************************************
@@ -31,48 +32,55 @@ static void createEmptyFile(string_view path) {
 static void app(int argc, char *argv[]) {
     string fn = "file-t.tmp";
 
-    auto file = fileOpen(
+    FileHandle file;
+    auto ec = fileOpen(
+        &file,
         fn,
         File::fCreat | File::fTrunc | File::fReadWrite | File::fBlocking
     );
-    if (!file)
+    if (ec)
         return appSignalShutdown(EX_DATAERR);
     size_t psize = filePageSize(file);
-    fileWriteWait(file, 0, "aaaa", 4);
+    fileWriteWait(nullptr, file, 0, "aaaa", 4);
 
     const char * base;
-    if (!fileOpenView(base, file, File::View::kReadOnly, 0, 0, 1001 * psize))
+    ec = xfileOpenView(base, file, File::View::kReadOnly, 0, 0, 1001 * psize);
+    if (ec)
         return appSignalShutdown(EX_DATAERR);
 
-    fileExtendView(file, base, 1001 * psize);
+    ec = xfileExtendView(file, base, 1001 * psize);
+    if (ec)
+        return appSignalShutdown(EX_DATAERR);
+
     unsigned num = 0;
     static char v = 0;
     for (size_t i = 1; i < 1000; ++i) {
         v = 0;
-        fileWriteWait(file, i * psize, "bbbb", 4);
+        fileWriteWait(nullptr, file, i * psize, "bbbb", 4);
         v = base[i * psize];
         if (v == 'b')
             num += 1;
     }
 
-    fileExtendView(file, base, psize);
+    ec = xfileExtendView(file, base, psize);
     static char buf[5] = {};
     for (unsigned i = 0; i < 100; ++i) {
-        fileReadWait(buf, 4, file, psize);
+        fileReadWait(nullptr, buf, 4, file, psize);
     }
-    fileCloseView(file, base);
+    ec = xfileCloseView(file, base);
 
     auto content = string(10, '#');
-    if (!fileResize(file, size(content)))
+    if (auto ec = xfileResize(file, size(content)); ec)
         return appSignalShutdown(EX_DATAERR);
-    fileWriteWait(file, 0, content.data(), content.size());
+    fileWriteWait(nullptr, file, 0, content.data(), content.size());
     struct Reader : IFileReadNotify {
         bool onFileRead(
             size_t * bytesUsed,
             std::string_view data,
             bool more,
             int64_t offset,
-            FileHandle f
+            FileHandle f,
+            error_code ec
         ) override {
             m_out += data;
             *bytesUsed = data.size();
@@ -106,13 +114,13 @@ static void app(int argc, char *argv[]) {
 
     fileClose(file);
 
-    fileRemove("file-t", true);
-    fileCreateDirs("file-t");
+    xfileRemove("file-t", true);
+    xfileCreateDirs("file-t");
     createEmptyFile("file-t/a.txt");
-    fileCreateDirs("file-t/b");
+    xfileCreateDirs("file-t/b");
     createEmptyFile("file-t/b/ba.txt");
     createEmptyFile("file-t/b.txt");
-    fileCreateDirs("file-t/c");
+    xfileCreateDirs("file-t/c");
     createEmptyFile("file-t/c.txt");
     vector<pair<Path, bool>> found;
     for (auto && e : FileIter(

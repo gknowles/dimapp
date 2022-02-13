@@ -33,7 +33,8 @@ private:
         int written,
         string_view data,
         int64_t offset,
-        FileHandle f
+        FileHandle f,
+        error_code ec
     ) override;
 
     mutex m_mut;
@@ -72,18 +73,24 @@ void LogBuffer::writeLog(string_view msg, bool wait) {
         m_writing.append(msg);
         m_writing.push_back('\n');
         if (!m_file) {
-            m_file = fileOpen(
+            auto ec = fileOpen(
+                &m_file,
                 s_logfile,
                 File::fCreat | File::fReadWrite | File::fDenyNone
             );
-            if (!m_file) {
+            if (ec) {
                 lk.unlock();
                 logMsgError() << "fileOpen(log file): " << errno;
                 return;
             }
         }
         if (wait) {
-            fileAppendWait(m_file, m_writing.data(), m_writing.size());
+            fileAppendWait(
+                nullptr, 
+                m_file, 
+                m_writing.data(), 
+                m_writing.size()
+            );
             m_writing.clear();
         } else {
             fileAppend(this, m_file, m_writing.data(), m_writing.size());
@@ -98,7 +105,7 @@ void LogBuffer::writeLog(string_view msg, bool wait) {
     }
     m_pending.push_back('\n');
     if (wait) {
-        fileAppendWait(m_file, m_pending.data(), m_pending.size());
+        fileAppendWait(nullptr, m_file, m_pending.data(), m_pending.size());
         m_pending.clear();
     }
 }
@@ -122,7 +129,8 @@ void LogBuffer::onFileWrite(
     int written,
     string_view data,
     int64_t offset,
-    FileHandle f
+    FileHandle f,
+    error_code ec
 ) {
     scoped_lock lk{m_mut};
     m_writing.swap(m_pending);
@@ -231,7 +239,8 @@ public:
             string_view data,
             bool more,
             int64_t offset,
-            FileHandle f
+            FileHandle f,
+            error_code ec
         ) override;
     };
 public:
@@ -264,15 +273,18 @@ void JsonLogTail::onHttpRequest(unsigned reqId, HttpRequest & msg) {
         .member("limit", limit)
         .member("name", qpath);
 
-    auto file = fileOpen(path, File::fReadOnly | File::fDenyNone);
-    if (!file) {
+    FileHandle file;
+    auto ec = fileOpen(&file, path, File::fReadOnly | File::fDenyNone);
+    if (ec) {
         size_t bytesUsed = 0;
-        job->onFileRead(&bytesUsed, {}, false, 0, file);
+        job->onFileRead(&bytesUsed, {}, false, 0, file, ec);
         return;
     }
-    job->m_endPos = fileSize(file);
-    job->m_bld.member("size", job->m_endPos);
-    job->m_bld.member("mtime", fileLastWriteTime(file));
+    if (ec = fileSize(&job->m_endPos, file); !ec)
+        job->m_bld.member("size", job->m_endPos);
+    TimePoint mtime;
+    if (ec = fileLastWriteTime(&mtime, file); !ec)
+        job->m_bld.member("mtime", mtime);
     auto pos = job->m_endPos > size(job->m_buffer)
         ? job->m_endPos - size(job->m_buffer)
         : 0;
@@ -285,7 +297,8 @@ bool JsonLogTail::LogJob::onFileRead(
     string_view data,
     bool more,
     int64_t offset,
-    FileHandle f
+    FileHandle f,
+    error_code ec
 ) {
     *bytesUsed = data.size();
     vector<string_view> lines;

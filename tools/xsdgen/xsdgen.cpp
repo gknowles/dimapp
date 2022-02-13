@@ -350,7 +350,7 @@ static void app(int argc, char * argv[]) {
 
     specfile->defaultExt("xsdgen.xml");
     string content;
-    if (!fileLoadBinaryWait(&content, *specfile))
+    if (xfileLoadBinaryWait(&content, *specfile))
         return appSignalUsageError(EX_DATAERR);
     XDocument doc;
     auto root = doc.parse(content.data(), *specfile);
@@ -406,7 +406,7 @@ bool compareXmlContent(const Path & name, const CharBuf & content) {
     nc = toString(*nroot);
 
     string ocontent;
-    if (!fileLoadBinaryWait(&ocontent, name))
+    if (xfileLoadBinaryWait(&ocontent, name))
         return false;
     XDocument odoc;
     auto oroot = odoc.parse(ocontent.data());
@@ -420,17 +420,23 @@ bool compareXmlContent(const Path & name, const CharBuf & content) {
 //===========================================================================
 void updateXmlFile(const Path & name, const CharBuf & content) {
     cout << name << "... " << flush;
-    bool exists = fileExists(name);
+    bool exists = false;
+    fileExists(&exists, name);
     if (exists && compareXmlContent(name, content)) {
         cout << "unchanged" << endl;
         return;
     }
 
-    auto f = fileOpen(name, File::fReadWrite | File::fCreat | File::fTrunc);
-    if (!f)
+    FileHandle file;
+    auto ec = fileOpen(
+        &file, 
+        name, 
+        File::fReadWrite | File::fCreat | File::fTrunc
+    );
+    if (ec)
         return appSignalShutdown(EX_DATAERR);
-    fileWriteWait(f, 0, content.data(), content.size());
-    fileClose(f);
+    fileWriteWait(nullptr, file, 0, content.data(), content.size());
+    fileClose(file);
     ConsoleScopedAttr color(kConsoleNote);
     cout << (exists ? "UPDATED" : "CREATED") << endl;
 }

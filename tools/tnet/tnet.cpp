@@ -63,7 +63,8 @@ private:
         string_view data,
         bool more,
         int64_t offset,
-        FileHandle f
+        FileHandle f,
+        error_code ec
     ) override;
 
     FileHandle m_input;
@@ -155,10 +156,11 @@ Duration SocketConn::onTimer(TimePoint now) {
 
 //===========================================================================
 void ConsoleReader::init() {
-    m_input = fileAttachStdin();
-    if (!m_input)
+    if (auto ec = fileAttachStdin(&m_input); ec)
         return appSignalShutdown(EX_IOERR);
-    m_isFile = (fileType(m_input) == File::Type::kRegular);
+    File::Type ftype = File::Type::kUnknown;
+    fileType(&ftype, m_input);
+    m_isFile = (ftype == File::Type::kRegular);
     if (!m_isFile)
         consoleEnableEcho(false);
 }
@@ -195,7 +197,8 @@ bool ConsoleReader::onFileRead(
     string_view data,
     bool more,
     int64_t offset,
-    FileHandle f
+    FileHandle f,
+    error_code ec
 ) {
     *bytesRead = data.size();
     auto bytes = (int) data.size();
@@ -204,7 +207,11 @@ bool ConsoleReader::onFileRead(
     // stop reading (return false) so we can get a new buffer
     if (m_input) {
         if (m_isFile) {
-            if (!bytes || (size_t) offset == fileSize(f)) {
+            uint64_t fsize = 0;
+            if (!bytes 
+                || fileSize(&fsize, f)
+                || (uint64_t) offset == fsize
+            ) {
                 fileClose(m_input);
                 consoleResetStdin();
                 init();

@@ -207,12 +207,13 @@ static void app(int argc, char *argv[]) {
     ResFileMap files;
     for (auto & fn : FileIter{*src}) {
         string content;
-        if (!fileLoadBinaryWait(&content, fn.path))
+        if (auto ec = xfileLoadBinaryWait(&content, fn.path); ec)
             return appSignalShutdown(EX_DATAERR);
         auto path = fn.path.str().substr(src->size());
         if (path[0] != '/')
             path.insert(0, "/");
-        auto mtime = fileLastWriteTime(fn.path);
+        TimePoint mtime;
+        fileLastWriteTime(&mtime, fn.path);
         if (auto ent = prev.find(path)) {
             if (ent->mtime != mtime || ent->content != content)
                 updated += 1;
@@ -243,9 +244,10 @@ static void app(int argc, char *argv[]) {
         ostringstream os;
         writeCpp(os, *target, out.view());
         auto content = os.view();
-        if (fileExists(*target)) {
+        bool found = false;
+        if (auto ec = fileExists(&found, *target); !ec && found) {
             string oldContent;
-            if (!fileLoadBinaryWait(&oldContent, *target))
+            if (xfileLoadBinaryWait(&oldContent, *target))
                 return appSignalShutdown(EX_DATAERR);
             if (oldContent == content) {
                 cout << "Resources: " << files.size() << " (0 changed)"
@@ -253,12 +255,16 @@ static void app(int argc, char *argv[]) {
                 return appSignalShutdown(EX_OK);
             }
         }
-        auto f = fileOpen(
+        FileHandle f;
+        auto ec = fileOpen(
+            &f,
             *target,
             File::fReadWrite | File::fCreat | File::fTrunc | File::fBlocking
         );
-        fileAppendWait(f, content.data(), content.size());
-        fileClose(f);
+        if (!ec) {
+            fileAppendWait(nullptr, f, content.data(), content.size());
+            fileClose(f);
+        }
     }
 
     ConsoleScopedAttr attr{kConsoleNote};

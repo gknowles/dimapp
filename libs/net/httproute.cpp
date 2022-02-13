@@ -1087,13 +1087,15 @@ void Dim::httpRouteReplyDirList(
     bld.object();
     bld.member("now", now);
     bld.member("files").array();
+    uint64_t bytes = 0;
     for (auto && f : FileIter(path)) {
         auto rname = f.path.view();
         rname.remove_prefix(path.size() + 1);
         bld.object();
         bld.member("name", rname);
         bld.member("mtime", f.mtime);
-        bld.member("size", fileSize(f.path));
+        fileSize(&bytes, f.path);
+        bld.member("size", bytes);
         bld.end();
     }
     bld.end();
@@ -1137,7 +1139,8 @@ struct ReplyWithFileNotify : IFileReadNotify {
         string_view data,
         bool more,
         int64_t offset,
-        FileHandle f
+        FileHandle f,
+        error_code ec
     ) override {
         *bytesUsed = data.size();
         HttpSocket::reply(m_reqId, data, more);
@@ -1172,8 +1175,9 @@ static void addFileHeaders(
 
 //===========================================================================
 void Dim::httpRouteReplyWithFile(unsigned reqId, string_view path) {
-    auto file = fileOpen(path, File::fReadOnly | File::fDenyNone);
-    if (!file) {
+    FileHandle file;
+    auto ec = fileOpen(&file, path, File::fReadOnly | File::fDenyNone);
+    if (ec) {
         HttpResponse msg(kHttpStatusNotFound);
         return httpRouteReply(reqId, move(msg), false);
     }
@@ -1183,9 +1187,12 @@ void Dim::httpRouteReplyWithFile(unsigned reqId, string_view path) {
 //===========================================================================
 void Dim::httpRouteReplyWithFile(unsigned reqId, FileHandle file) {
     HttpResponse msg;
-    MimeType mt = mimeTypeDefault(filePath(file));
+    string_view path;
+    filePath(&path, file);
+    MimeType mt = mimeTypeDefault(path);
 
-    auto mtime = fileLastWriteTime(file);
+    TimePoint mtime;
+    fileLastWriteTime(&mtime, file);
     addFileHeaders(&msg, mtime, mt.type, mt.charSet);
     httpRouteReply(reqId, move(msg), true);
     auto notify = new ReplyWithFileNotify;

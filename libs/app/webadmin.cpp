@@ -31,9 +31,10 @@ void WebRoot::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     if (qpath != "Web" && qpath.substr(0, 4) != "Web/")
         return httpRouteReplyNotFound(reqId, msg);
 
-    if (fileDirExists(path))
+    bool found = false;
+    if (auto ec = fileDirExists(&found, path); !ec && found)
         path /= "index.html";
-    if (fileExists(path)) {
+    if (auto ec = fileExists(&found, path); !ec && found) {
         httpRouteReplyWithFile(reqId, path);
     } else {
         httpRouteReplyNotFound(reqId, msg);
@@ -112,7 +113,8 @@ void BinDump::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     Path path;
     if (!appCrashPath(&path, qpath, false))
         return httpRouteReplyNotFound(reqId, msg);
-    if (fileExists(path)) {
+    bool found = false;
+    if (auto ec = fileExists(&found, path); !ec && found) {
         httpRouteReplyWithFile(reqId, path);
     } else {
         httpRouteReplyNotFound(reqId, msg);

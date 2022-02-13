@@ -31,7 +31,7 @@ public:
     explicit DirInfo(IFileChangeNotify * notify);
     ~DirInfo();
 
-    bool start(string_view path, bool recurse);
+    error_code start(string_view path, bool recurse);
     void closeWait_UNLK(unique_lock<mutex> && lk, FileMonitorHandle dir);
 
     void addMonitor_UNLK(
@@ -46,7 +46,8 @@ public:
     );
 
     string_view base() const { return m_base; }
-    // returns false if file is outside of base directory
+
+    // Returns false if file is outside of base directory.
     bool expandPath(
         Path * fullpath,
         Path * relpath,
@@ -57,7 +58,7 @@ public:
     Duration onTimer(TimePoint now) override;
 
 private:
-    bool queue();
+    error_code queue();
 
     Path m_base;
     bool m_recurse{false}; // monitoring includes child directories?
@@ -106,10 +107,12 @@ DirInfo::~DirInfo() {
 }
 
 //===========================================================================
-bool DirInfo::start(string_view path, bool recurse) {
-    m_base = fileAbsolutePath(path);
+error_code DirInfo::start(string_view path, bool recurse) {
+    if (auto ec = fileAbsolutePath(&m_base, path))
+        return ec;
     m_recurse = recurse;
-    fileCreateDirs(m_base);
+    if (auto ec = xfileCreateDirs(m_base))
+        return ec;
 
     auto wpath = toWstring(m_base);
     m_handle = CreateFileW(
@@ -125,21 +128,20 @@ bool DirInfo::start(string_view path, bool recurse) {
         WinError err;
         logMsgError() << "CreateFile(FILE_LIST_DIRECTORY): " << m_base
             << ", " << err;
-        winFileSetErrno(err);
-        return false;
+        return err.code();
     }
     if (!winIocpBindHandle(m_handle)) {
+        WinError err;
         CloseHandle(m_handle);
-        winFileSetErrno(WinError{});
         m_handle = INVALID_HANDLE_VALUE;
-        return false;
+        return err.code();
     }
 
     return queue();
 }
 
 //===========================================================================
-bool DirInfo::queue() {
+error_code DirInfo::queue() {
     if (!ReadDirectoryChangesW(
         m_handle,
         NULL, // output buffer
@@ -152,10 +154,10 @@ bool DirInfo::queue() {
     )) {
         WinError err;
         logMsgError() << "ReadDirectoryChangesW(): " << m_base << ", " << err;
-        return false;
+        return err.code();
     }
 
-    return true;
+    return {};
 }
 
 //===========================================================================
@@ -199,9 +201,8 @@ void DirInfo::addMonitor_UNLK(
         if (ntf == notify)
             return;
     }
-    fileSize(fullpath);
-    if (fi.notifiers.empty())
-        fi.mtime = fileLastWriteTime(fullpath);
+    if (fi.notifiers.empty()) 
+        fileLastWriteTime(&fi.mtime, fullpath);
     fi.notifiers.push_back(notify);
 
     // call the notify unless we're in a notify
@@ -299,11 +300,13 @@ Duration DirInfo::onTimer(TimePoint now) {
     Path fullpath;
     Path relpath;
     unsigned notified = 0;
+    TimePoint mtime;
 
     unique_lock lk{s_mut};
     for (auto && kv : m_files) {
         expandPath(&fullpath, &relpath, kv.first);
-        auto mtime = fileLastWriteTime(fullpath);
+        if (auto ec = fileLastWriteTime(&mtime, fullpath); ec)
+            continue;
         if (mtime == kv.second.mtime)
             continue;
         kv.second.mtime = mtime;
@@ -416,7 +419,7 @@ bool Dim::fileMonitorDir(
     bool success = false;
     FileMonitorHandle h;
     auto hostage = make_unique<DirInfo>(notify);
-    if (hostage->start(dir, recurse)) {
+    if (auto ec = hostage->start(dir, recurse); !ec) {
         scoped_lock lk{s_mut};
         h = s_dirs.insert(hostage.release());
         success = true;

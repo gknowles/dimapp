@@ -245,7 +245,7 @@ void Dim::winCrashInitialize() {
                 [](auto & a, auto & b) { return a.mtime < b.mtime; }
             );
             for (auto p = found.begin(); p != nth; ++p)
-                fileRemove(p->path);
+                xfileRemove(p->path);
         }
         s_crashFile = crashDir;
         s_crashFile /= "crash";

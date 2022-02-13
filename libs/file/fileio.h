@@ -16,6 +16,7 @@
 #include <cstdint>
 #include <memory>
 #include <string_view>
+#include <system_error>
 
 namespace Dim {
 
@@ -121,15 +122,18 @@ inline FileIter begin(FileIter iter) { return iter; }
 inline FileIter end(const FileIter & iter) { return {}; }
 
 // Drive defaults to the current drive
-Path fileGetCurrentDir(std::string_view drive = {});
+std::error_code fileGetCurrentDir(Path * out, std::string_view drive = {});
 
 // "path" is resolved relative to the current dir of the drive (which defaults
 // to current drive) given in the path.
-Path fileSetCurrentDir(std::string_view path);
+std::error_code xfileSetCurrentDir(
+    std::string_view path, 
+    Path * out = nullptr
+);
 
 // Resolve to an absolute path as if done by:
 // Path{path}.resolve(fileGetCurrentDir(path.drive()))
-Path fileAbsolutePath(std::string_view path);
+std::error_code fileAbsolutePath(Path * out, std::string_view path);
 
 
 /****************************************************************************
@@ -141,12 +145,12 @@ Path fileAbsolutePath(std::string_view path);
 //---------------------------------------------------------------------------
 // With path
 //---------------------------------------------------------------------------
-uint64_t fileSize(std::string_view path);
-TimePoint fileLastWriteTime(std::string_view path);
-bool fileExists(std::string_view path);
-bool fileDirExists(std::string_view path);
-bool fileReadOnly(std::string_view path);
-void fileReadOnly(std::string_view path, bool enable);
+std::error_code fileSize(uint64_t * out, std::string_view path);
+std::error_code fileLastWriteTime(TimePoint * out, std::string_view path);
+std::error_code fileExists(bool * out, std::string_view path);
+std::error_code fileDirExists(bool * out, std::string_view path);
+std::error_code fileReadOnly(bool * out, std::string_view path);
+std::error_code xfileReadOnly(std::string_view path, bool enable);
 
 namespace File {
     enum class Attrs : uint32_t {
@@ -164,14 +168,17 @@ namespace File {
 }
 template<> struct is_enum_flags<File::Attrs> : std::true_type {};
 
-EnumFlags<File::Attrs> fileAttrs(std::string_view path);
-bool fileAttrs(std::string_view path, EnumFlags<File::Attrs> attrs);
+std::error_code fileAttrs(EnumFlags<File::Attrs> * out, std::string_view path);
+std::error_code xfileAttrs(std::string_view path, EnumFlags<File::Attrs> attrs);
 
-bool fileRemove(std::string_view path, bool recurse = false);
-bool fileCreateDirs(std::string_view path);
+std::error_code xfileRemove(std::string_view path, bool recurse = false);
+std::error_code xfileCreateDirs(std::string_view path);
 
-std::string fileTempDir();
-std::string fileTempName(std::string_view suffix = ".tmp");
+std::error_code fileTempDir(Path * out);
+std::error_code fileTempName(
+    Path * out, 
+    std::string_view suffix = ".tmp"
+);
 
 namespace File::Access {
     enum class Right {
@@ -190,13 +197,13 @@ namespace File::Access {
         kAll,
     };
 }
-bool fileAddAccess(
+std::error_code xfileAddAccess(
     std::string_view path,
     std::string_view trustee, // name or Sid of account or group
     File::Access::Right allow,
     File::Access::Inherit inherit
 );
-bool fileSetAccess(
+std::error_code xfileSetAccess(
     std::string_view path,
     std::string_view trustee, // name or Sid of account or group
     File::Access::Right allow,
@@ -208,18 +215,22 @@ bool fileSetAccess(
 //---------------------------------------------------------------------------
 struct FileHandle : HandleBase {};
 
-// on error returns an empty pointer and sets errno to one of:
-//  EEXIST, ENOENT, EBUSY, EACCES, or EIO
-FileHandle fileOpen(
+std::error_code fileOpen(
+    FileHandle * out,
     std::string_view path, 
     EnumFlags<File::OpenMode> modeFlags
 );
 //  EINVAL
-FileHandle fileOpen(intptr_t osfhandle, EnumFlags<File::OpenMode> modeFlags);
+std::error_code fileOpen(
+    FileHandle * out,
+    intptr_t osfhandle, 
+    EnumFlags<File::OpenMode> modeFlags
+);
 
 // The modeFlags are or'd with "fCreat | fExcl | fReadWrite" before the
 // underlying call to fileOpen.
-FileHandle fileCreateTemp(
+std::error_code fileCreateTemp(
+    FileHandle * out,
     EnumFlags<File::OpenMode> modeFlags = {},
     std::string_view suffix = ".tmp"
 );
@@ -228,47 +239,47 @@ FileHandle fileCreateTemp(
 // closed after use, which detaches from the underlying file descriptor.
 // Accessing the same device from multiple handles will have unpredictable
 // results.
-FileHandle fileAttachStdin();
-FileHandle fileAttachStdout();
-FileHandle fileAttachStderr();
+std::error_code fileAttachStdin(FileHandle * out);
+std::error_code fileAttachStdout(FileHandle * out);
+std::error_code fileAttachStderr(FileHandle * out);
 
 // Closing the file invalidates the handle and releases any internal resources
 // associated with the file.
-void fileClose(FileHandle f);
+std::error_code fileClose(FileHandle f);
 
 // Changes the files size by either growing or shrinking it. Returns false on
 // errors.
-bool fileResize(FileHandle f, size_t size);
+std::error_code xfileResize(FileHandle f, size_t size);
 
 // Flushes pending writes from the file cache to disk.
-bool fileFlush(FileHandle f);
-bool fileFlushViews(FileHandle f);
+std::error_code xfileFlush(FileHandle f);
+std::error_code xfileFlushViews(FileHandle f);
 
 // On error returns 0 and sets errno to a non-zero value. Otherwise the
 // function returns the size and, if the size was 0, clears errno.
-uint64_t fileSize(FileHandle f);
+std::error_code fileSize(uint64_t * out, FileHandle f);
 
 // On error returns TimePoint::min() and sets errno to a non-zero value. If
 // the time was min(), errno is cleared.
-TimePoint fileLastWriteTime(FileHandle f);
+std::error_code fileLastWriteTime(TimePoint * out, FileHandle f);
 
 // On error returns empty and sets errno to a non-zero value.
-std::string_view filePath(FileHandle f);
+std::error_code filePath(std::string_view * out, FileHandle f);
 
 // Returns the open mode flags used to create the handle.
-EnumFlags<File::OpenMode> fileMode(FileHandle f);
+std::error_code fileMode(EnumFlags<File::OpenMode> * out, FileHandle f);
 
 // kUnknown is returned for bad handle and system errors as well as when the
 // type is unknown. If kUnknown was not returned due to error, errno is set
 // to 0.
-File::Type fileType(FileHandle f);
+std::error_code fileType(File::Type * out, FileHandle f);
 
 struct FileAlignment {
     // All values measured in bytes
     unsigned logicalSector;
     unsigned physicalSector;
 };
-FileAlignment fileAlignment(FileHandle f);
+std::error_code fileAlignment(FileAlignment * out, FileHandle f);
 
 
 /****************************************************************************
@@ -295,7 +306,8 @@ public:
         std::string_view data,
         bool more,
         int64_t offset,
-        FileHandle f
+        FileHandle f,
+        std::error_code ec
     ) {
         *bytesUsed = data.size();
         return false;
@@ -311,7 +323,8 @@ void fileRead(
     int64_t length = 0, // 0 to read until the end
     TaskQueueHandle hq = {} // queue to notify
 );
-size_t fileReadWait(
+std::error_code fileReadWait(
+    size_t * out,
     void * outBuf,
     size_t outBufLen,
     FileHandle f,
@@ -334,7 +347,7 @@ void fileLoadBinary(
     size_t maxSize = 10'000'000,
     TaskQueueHandle hq = {} // queue to notify
 );
-bool fileLoadBinaryWait(
+std::error_code xfileLoadBinaryWait(
     std::string * out,
     std::string_view path,
     size_t maxSize = 10'000'000
@@ -355,7 +368,8 @@ public:
         int written,
         std::string_view data,
         int64_t offset,
-        FileHandle f
+        FileHandle f,
+        std::error_code ec
     ) = 0;
 };
 
@@ -374,13 +388,19 @@ void fileWrite(
     std::string_view data,
     TaskQueueHandle hq = {} // queue to notify
 );
-size_t fileWriteWait(
+std::error_code fileWriteWait(
+    size_t * out,
     FileHandle f,
     int64_t offset,
     const void * buf,
     size_t bufLen
 );
-size_t fileWriteWait(FileHandle f, int64_t offset, std::string_view data);
+std::error_code fileWriteWait(
+    size_t * out,
+    FileHandle f, 
+    int64_t offset, 
+    std::string_view data
+);
 
 void fileAppend(
     IFileWriteNotify * notify,
@@ -395,8 +415,17 @@ void fileAppend(
     std::string_view data,
     TaskQueueHandle hq = {} // queue to notify
 );
-size_t fileAppendWait(FileHandle f, const void * buf, size_t bufLen);
-size_t fileAppendWait(FileHandle f, std::string_view data);
+std::error_code fileAppendWait(
+    size_t * out,
+    FileHandle f, 
+    const void * buf, 
+    size_t bufLen
+);
+std::error_code fileAppendWait(
+    size_t * out, 
+    FileHandle f, 
+    std::string_view data
+);
 
 void fileSaveBinary(
     IFileWriteNotify * notify,
@@ -404,7 +433,7 @@ void fileSaveBinary(
     std::string_view data,
     TaskQueueHandle hq = {} // queue to notify
 );
-bool fileSaveBinaryWait(
+std::error_code xfileSaveBinaryWait(
     std::string_view path,
     std::string_view data
 );
@@ -453,7 +482,8 @@ private:
         int written,
         std::string_view data,
         int64_t offset,
-        Dim::FileHandle f
+        Dim::FileHandle f,
+        std::error_code ec
     ) override;
 
     std::unique_ptr<Impl> m_impl;
@@ -473,8 +503,8 @@ public:
     virtual bool onFileCopy(int64_t offset, int64_t copied, int64_t total) {
         return true;
     }
-    // guaranteed to be called exactly once, when the copy is completed
-    // (or failed)
+    // Guaranteed to be called exactly once, when the copy is completed
+    // (or failed).
     virtual void onFileEnd(int64_t offset, int64_t total) = 0;
 };
 
@@ -513,7 +543,7 @@ size_t fileViewAlignment(FileHandle f);
 // The maxLength is the maximum length into the file that view can be extended
 // to cover. A value less than or equal to the length (such as 0) makes a view
 // that can't be extended. The value is rounded up to a multiple of page size.
-bool fileOpenView(
+std::error_code xfileOpenView(
     const char *& view,
     FileHandle f,
     File::View mode,    // must be kReadOnly
@@ -521,7 +551,7 @@ bool fileOpenView(
     int64_t length = 0,     // defaults to current length of file
     int64_t maxLength = 0   // defaults to not extendable
 );
-bool fileOpenView(
+std::error_code xfileOpenView(
     char *& view,
     FileHandle f,
     File::View mode,    // must be kReadWrite
@@ -530,12 +560,16 @@ bool fileOpenView(
     int64_t maxLength = 0   // defaults to not extendable
 );
 
-void fileCloseView(FileHandle f, const void * view);
+std::error_code xfileCloseView(FileHandle f, const void * view);
 
 // Extend the view up to maxLen that was set when the view was opened. A view
 // can only be extended if the file (which is also extended) was opened for
 // writing. "Extending" with a length less than the current view has no effect
 // and extending beyond maxLen is an error.
-void fileExtendView(FileHandle f, const void * view, int64_t length);
+std::error_code xfileExtendView(
+    FileHandle f, 
+    const void * view, 
+    int64_t length
+);
 
 } // namespace

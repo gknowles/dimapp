@@ -276,7 +276,8 @@ unique_ptr<Config> loadConfig(string * content, string_view path) {
         }
     }
 
-    out->configFile = fileAbsolutePath(path);
+    if (auto ec = fileAbsolutePath(&out->configFile, path); ec)
+        return {};
     return out;
 }
 
@@ -322,7 +323,8 @@ void writeContent(
             int written,
             std::string_view data,
             int64_t offset,
-            FileHandle f
+            FileHandle f,
+            error_code ec
         ) override {
             if (written != data.size()) {
                 logMsgError() << path << ": error writing file.";
@@ -357,7 +359,8 @@ void loadContent(
                 std::string_view data,
                 bool more,
                 int64_t offset,
-                FileHandle f
+                FileHandle f,
+                error_code ec
             ) override {
                 fn(move(buf));
                 delete this;
@@ -432,13 +435,13 @@ bool writeOutputs(
     string_view odir,
     unordered_map<string, CharBuf> files
 ) {
-    if (!fileCreateDirs(odir)) {
+    if (auto ec = xfileCreateDirs(odir); ec) {
         logMsgError() << odir << ": unable to create directory.";
         appSignalShutdown(EX_IOERR);
         return false;
     }
     for (auto&& f : FileIter(odir, "*.*", FileIter::fDirsLast)) {
-        if (!fileRemove(f.path)) {
+        if (auto ec = xfileRemove(f.path); ec) {
             if (!f.isdir) {
                 appSignalShutdown(EX_IOERR);
                 return false;
@@ -447,25 +450,27 @@ bool writeOutputs(
     }
     for (auto&& output : files) {
         auto path = Path(output.first).resolve(odir);
-        fileCreateDirs(path.parentPath());
-        auto f = fileOpen(
+        xfileCreateDirs(path.parentPath());
+        FileHandle file;
+        auto ec = fileOpen(
+            &file,
             path,
             File::fCreat | File::fExcl | File::fReadWrite | File::fBlocking
         );
-        if (!f) {
+        if (ec) {
             logMsgError() << path << ": unable to create.";
             appSignalShutdown(EX_IOERR);
             return false;
         }
         for (auto&& data : output.second.views()) {
-            if (!fileAppendWait(f, data.data(), data.size())) {
+            if (fileAppendWait(nullptr, file, data.data(), data.size())) {
                 logMsgError() << path << ": unable to write.";
                 appSignalShutdown(EX_IOERR);
-                fileClose(f);
+                fileClose(file);
                 return false;
             }
         }
-        fileClose(f);
+        fileClose(file);
     }
     return true;
 }

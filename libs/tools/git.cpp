@@ -49,7 +49,10 @@ bool Dim::gitLoadConfig(
     if (!pathFromCurrentDir.empty()) {
         *configFile = pathFromCurrentDir;
     } else {
-        *gitRoot = gitFindRoot(fileGetCurrentDir());
+        Path tmp;
+        if (auto ec = fileGetCurrentDir(&tmp); ec) 
+            return false;
+        *gitRoot = gitFindRoot(tmp.view());
         if (gitRoot->empty())
             return false;;
         *configFile = Path(fallbackPathFromGitRoot).resolve(*gitRoot);
@@ -57,12 +60,15 @@ bool Dim::gitLoadConfig(
     *gitRoot = gitFindRoot(Path(*configFile).parentPath());
     if (gitRoot->empty())
         return false;
-    if (!fileExists(*configFile)) {
+    bool found = false;
+    if (auto ec = fileExists(&found, *configFile)) 
+        return false;
+    if (!found) {
         auto path = Path(envExecPath()).removeFilename()
             / Path(*configFile).filename();
         *configFile = move(path);
     }
-    if (!fileLoadBinaryWait(content, *configFile)) 
+    if (auto ec = xfileLoadBinaryWait(content, *configFile); ec) 
         return false;
 
     fin = {};

@@ -280,7 +280,7 @@ https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
             continue;
 
         string source;
-        fileLoadBinaryWait(&source, path);
+        xfileLoadBinaryWait(&source, path);
         if (source.empty())
             return appSignalUsageError(EX_USAGE);
         auto & content = contents[path] = move(source);
