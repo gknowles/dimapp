@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <intrin.h>
 #include <limits>
+#include <version>
 
 namespace Dim {
 
@@ -124,6 +125,9 @@ constexpr uint64_t bswap64(uint64_t val) {
 
 //===========================================================================
 constexpr auto bswap(std::unsigned_integral auto val) {
+#ifdef __cpp_lib_byteswap
+    return std::byteswap(val);
+#else
     if constexpr (sizeof val == 1) {
         return val;
     } else if constexpr (sizeof val == 2) {
@@ -135,6 +139,7 @@ constexpr auto bswap(std::unsigned_integral auto val) {
     } else {
         static_assert(!"Must be 8, 16, 32, or 64 bit unsigned integer");
     }
+#endif
 }
 
 } // namespace
