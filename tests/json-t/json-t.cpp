@@ -103,6 +103,7 @@ int main(int argc, char * argv[]) {
     _set_error_mode(_OUT_TO_MSGBOX);
 
     Cli cli;
+    cli.helpNoArgs();
     auto & path = cli.opt<Path>("[json file]")
         .desc("File to check is well-formed");
     auto & test = cli.opt<bool>("test.")
@@ -110,8 +111,8 @@ int main(int argc, char * argv[]) {
     auto & echo = cli.opt<bool>("echo")
         .desc("Echo json if well-formed");
     cli.versionOpt("1.0 (" __DATE__ ")");
-    if (!cli.parse(cerr, argc, argv))
-        return cli.exitCode();
+    if (!cli.parse(argc, argv))
+        return cli.printError(cerr);
     if (*test)
         return internalTest();
     if (path->empty())

@@ -149,7 +149,7 @@ void app(int argc, char * argv[]) {
     cli.helpNoArgs();
     auto & test = cli.opt<bool>("test.")
         .desc("Run internal unit tests");
-    if (!cli.parse(cerr, argc, argv))
+    if (!cli.parse(argc, argv))
         return appSignalUsageError();
 
     if (*test)

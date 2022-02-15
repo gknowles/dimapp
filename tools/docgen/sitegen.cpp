@@ -997,12 +997,15 @@ CmdOpts::CmdOpts() {
 //===========================================================================
 static bool genCmd(Cli & cli) {
     auto cfg = loadConfig(s_opts.cfgfile);
-    if (!cfg)
-        return cli.fail(EX_DATAERR, "");
+    if (!cfg) {
+        cli.fail(EX_DATAERR, "");
+        return true;
+    }
     if (cfg->siteDir.empty()) {
         logMsgError() << cfg->configFile
             << ": Output directory for site unspecified.";
-        return cli.fail(EX_DATAERR, "");
+        cli.fail(EX_DATAERR, "");
+        return true;
     }
 
     ostringstream os;
@@ -1012,5 +1015,6 @@ static bool genCmd(Cli & cli) {
     cli.printText(out, os.str());
     genSite(cfg.release());
 
-    return cli.fail(EX_PENDING, "");
+    cli.fail(EX_PENDING, "");
+    return true;
 }

@@ -51,9 +51,9 @@ static void app(int argc, char * argv[]) {
         .helpCmd();
 
     shutdownMonitor(&s_cleanup);
-    if (!cli.parse(argc, argv))
+    if (!cli.exec(argc, argv))
         return appSignalUsageError();
-    appSignalShutdown(cli.exec());
+    appSignalShutdown(cli.exitCode());
 }
 
 

@@ -128,8 +128,8 @@ int main(int argc, char * argv[]) {
     auto & test = cli.opt<bool>("test.").desc("Run internal unit tests");
     auto & echo = cli.opt<bool>("echo").desc("Echo xml if well-formed");
     cli.versionOpt("1.0 (" __DATE__ ")");
-    if (!cli.parse(cerr, argc, argv))
-        return cli.exitCode();
+    if (!cli.parse(argc, argv))
+        return cli.printError(cerr);
     if (*test)
         return internalTest();
     if (path->empty())
