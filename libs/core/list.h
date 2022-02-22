@@ -121,8 +121,13 @@ void ListLink<Tag>::detach() {
 
 template <typename List, typename T>
 class ListIterator {
-    List * m_container{};
-    T * m_current{};
+public:
+    using iterator_category = std::bidirectional_iterator_tag;
+    using value_type = List::value_type;
+    using difference_type = List::difference_type;
+    using pointer = const value_type*;
+    using reference = value_type;
+
 public:
     ListIterator() {}
     ListIterator(List * container, T * node);
@@ -130,6 +135,10 @@ public:
     ListIterator & operator++();
     T & operator*();
     T * operator->();
+
+private:
+    List * m_container{};
+    T * m_current{};
 };
 
 //===========================================================================
@@ -175,6 +184,9 @@ T * ListIterator<List, T>::operator->() {
 template <typename T, typename Tag = DefaultTag>
 class List : public NoCopy {
 public:
+    using value_type = T;
+    using difference_type = ptrdiff_t;
+    using size_type = size_t;
     using iterator = ListIterator<List, T>;
     using const_iterator = ListIterator<List const, T const>;
     using link_type = ListLink<Tag>;
