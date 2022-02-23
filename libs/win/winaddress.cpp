@@ -148,11 +148,11 @@ void Dim::copy(sockaddr_storage * out, const HostAddr & addr) {
 void Dim::copy(HostAddr * out, const sockaddr_storage & storage) {
     *out = {};
     if (storage.ss_family == AF_INET) {
-        auto ia = reinterpret_cast<const sockaddr_in &>(storage);
+        auto & ia = reinterpret_cast<const sockaddr_in &>(storage);
         out->ipv4(ntohl(ia.sin_addr.s_addr));
     } else {
         assert(storage.ss_family == AF_INET6);
-        auto ia = reinterpret_cast<const sockaddr_in6 &>(storage);
+        auto & ia = reinterpret_cast<const sockaddr_in6 &>(storage);
         out->scope = ntohl(ia.sin6_scope_id);
         assert(sizeof ia.sin6_addr.u.Byte == sizeof out->data);
         memcpy(
@@ -172,7 +172,7 @@ void Dim::copy(sockaddr_storage * out, const SockAddr & src) {
 
 //===========================================================================
 void Dim::copy(SockAddr * out, const sockaddr_storage & storage) {
-    auto ia = reinterpret_cast<const sockaddr_in6 &>(storage);
+    auto & ia = reinterpret_cast<const sockaddr_in6 &>(storage);
     copy(&out->addr, storage);
     out->port = ntohs(ia.sin6_port);
 }
