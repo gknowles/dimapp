@@ -38,6 +38,29 @@ Clock::time_point Clock::now() noexcept {
 *
 ***/
 
+using MillisecondsD = chrono::duration<double, milli>;
+using SecondsD      = chrono::duration<double>;
+using MinutesD      = chrono::duration<double, ratio<60>>;
+using HoursD        = chrono::duration<double, ratio<60 * 60>>;
+using DaysD         = chrono::duration<double, ratio<24 * 60 * 60>>;
+using WeeksD        = chrono::duration<double, ratio<7 * 24 * 60 * 60>>;
+using MonthsD       = chrono::duration<double, ratio<30 * 24 * 60 * 60>>;
+using YearsD        = chrono::duration<double, ratio<365 * 24 * 60 * 60>>;
+
+struct DurationScale {
+    const char * suffix;
+    double secs;
+};
+constexpr DurationScale s_durScales[] = {
+    { "y",  365.2425 * 24 * 60 * 60 },
+    { "w",  7 * 24 * 60 * 60 },
+    { "d",  24 * 60 * 60 },
+    { "h",  60 * 60 },
+    { "m",  60 },
+    { "s",  1},
+    { "ms", 0.001 },
+};
+
 //===========================================================================
 // ms, s, m|min, h, d, w, mon, y
 static bool interpret(Duration * out, string_view * units, double val) {
@@ -48,57 +71,41 @@ static bool interpret(Duration * out, string_view * units, double val) {
     switch (*ptr++) {
     case 'm':
         if (ptr == eptr) {
-            *out = duration_cast<Duration>(
-                (chrono::duration<double, ratio<60>>) val
-            );
+            *out = duration_cast<Duration>((MinutesD) val);
             break;
         }
         switch (*ptr++) {
         case 's':
-            *out = duration_cast<Duration>(
-                (chrono::duration<double, milli>) val
-            );
+            *out = duration_cast<Duration>((MillisecondsD) val);
             break;
         case 'i':
             if (ptr == eptr || *ptr++ != 'n')
                 return false;
-            *out = duration_cast<Duration>(
-                (chrono::duration<double, ratio<60>>) val
-            );
+            *out = duration_cast<Duration>((MinutesD) val);
             break;
         case 'o':
             if (ptr == eptr || *ptr++ != 'n')
                 return false;
-            *out = duration_cast<Duration>(
-                (chrono::duration<double, ratio<30 * 24 * 60 * 60>>) val
-            );
+            *out = duration_cast<Duration>((MonthsD) val);
             break;
         default:
             return false;
         }
         break;
     case 's':
-        *out = duration_cast<Duration>((chrono::duration<double>) val);
+        *out = duration_cast<Duration>((SecondsD) val);
         break;
     case 'h':
-        *out = duration_cast<Duration>(
-            (chrono::duration<double, ratio<60 * 60>>) val
-        );
+        *out = duration_cast<Duration>((HoursD) val);
         break;
     case 'd':
-        *out = duration_cast<Duration>(
-            (chrono::duration<double, ratio<24 * 60 * 60>>) val
-        );
+        *out = duration_cast<Duration>((DaysD) val);
         break;
     case 'w':
-        *out = duration_cast<Duration>(
-            (chrono::duration<double, ratio<7 * 24 * 60 * 60>>) val
-        );
+        *out = duration_cast<Duration>((WeeksD) val);
         break;
     case 'y':
-        *out = duration_cast<Duration>(
-            (chrono::duration<double, ratio<365 * 24 * 60 * 60>>) val
-        );
+        *out = duration_cast<Duration>((YearsD) val);
         break;
     default:
         return false;
@@ -109,7 +116,43 @@ static bool interpret(Duration * out, string_view * units, double val) {
 }
 
 //===========================================================================
+static string toStringOnePart(Duration val) {
+    auto secs = duration_cast<SecondsD>(val).count();
+    const DurationScale * scale = s_durScales;
+    for (; scale < end(s_durScales) - 1; ++scale) {
+        if (abs(secs) >= scale->secs) 
+            break;
+    }
+    auto out = format("{:.4g}{}", secs / scale->secs, scale->suffix);
+    return out;
+}
+
+//===========================================================================
+static string toStringTwoPart(Duration val) {
+    auto secs = duration_cast<SecondsD>(val).count();
+    const DurationScale * scale = s_durScales;
+    for (; scale < end(s_durScales) - 1; ++scale) {
+        if (abs(secs) >= scale->secs) 
+            break;
+    }
+    auto first = trunc(secs / scale->secs);
+    auto out = format("{}{}", first, scale->suffix);
+    if (scale < end(s_durScales) - 1) {
+        secs -= first * scale->secs;
+        auto second = round(abs(secs) / scale[1].secs);
+        if (second) 
+            out += format(" {}{}", second, scale[1].suffix);
+    }
+    return out;
+}
+
+//===========================================================================
 string Dim::toString(Duration val, DurationFormat fmt) {
+    if (fmt == DurationFormat::kOnePart) {
+        return toStringOnePart(val);
+    } else if (fmt == DurationFormat::kTwoPart) {
+        return toStringTwoPart(val);
+    }
     return "<duration>";
 }
 
