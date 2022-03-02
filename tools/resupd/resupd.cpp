@@ -88,7 +88,8 @@ inline static void writeStrChar(
 }
 
 //===========================================================================
-inline static void writeStrContent(ostream & os, string_view content) {
+[[maybe_unused]]
+static void writeStrContent(ostream & os, string_view content) {
     os << "\n    \"";
     auto pos = 5;
     if (!content.empty()) {
@@ -145,7 +146,7 @@ using namespace std;
 *
 ***/
 
-static const uint8_t s_data[] =)";
+const uint8_t s_data[] =)";
 
     writeContent(os, content);
 
