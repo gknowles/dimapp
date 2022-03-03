@@ -97,7 +97,7 @@ private:
 static vector<MatchKey> s_matchers;
 static vector<SockAddrInfo> s_sockAddrs;
 
-static list<IAppSocket::UnmatchedInfo> s_unmatched;
+static List<IAppSocket::UnmatchedInfo> s_unmatched;
 static IAppSocket::UnmatchedTimer s_unmatchedTimer;
 static bool s_disableNoDataTimeout;
 
@@ -110,6 +110,18 @@ static auto & s_perfInactive = uperf("sock.disconnect (inactivity)");
 
 /****************************************************************************
 *
+*   IAppSocket::UnmatchedInfo
+*
+***/
+
+//===========================================================================
+IAppSocket::UnmatchedInfo::UnmatchedInfo() {
+    s_unmatched.link(this);
+}
+
+
+/****************************************************************************
+*
 *   IAppSocket::UnmatchedTimer
 *
 ***/
@@ -117,8 +129,8 @@ static auto & s_perfInactive = uperf("sock.disconnect (inactivity)");
 //===========================================================================
 Duration IAppSocket::UnmatchedTimer::onTimer(TimePoint now) {
     while (!s_unmatched.empty()) {
-        auto & info = s_unmatched.front();
-        auto wait = info.notify->checkTimeout_LK(now);
+        auto info = s_unmatched.front();
+        auto wait = info->notify->checkTimeout_LK(now);
         if (wait > 0s)
             return max(wait, kUnmatchedMinWait);
     }
@@ -185,7 +197,7 @@ IAppSocket::IAppSocket(IAppSocketNotify * notify) {
 
 //===========================================================================
 IAppSocket::~IAppSocket() {
-    assert(m_pos == list<UnmatchedInfo>::iterator{});
+    assert(!m_pos);
     assert(!m_notify);
 }
 
@@ -195,7 +207,7 @@ Duration IAppSocket::checkTimeout_LK(TimePoint now) {
     auto wait = m_pos->expiration - now;
     if (wait <= 0s) {
         disconnect(AppSocket::Disconnect::kNoData);
-        s_unmatched.erase(m_pos);
+        delete m_pos;
         m_pos = {};
     }
     return wait;
@@ -232,11 +244,10 @@ bool IAppSocket::notifyAccept(const AppSocketInfo & info) {
 
     auto expiration = timeNow() + kUnmatchedTimeout;
 
-    UnmatchedInfo ui;
-    ui.notify = this;
-    ui.expiration = expiration;
-    s_unmatched.push_back(ui);
-    m_pos = --s_unmatched.end();
+    auto ui = new UnmatchedInfo;
+    ui->notify = this;
+    ui->expiration = expiration;
+    m_pos = s_unmatched.back();
 
     if (!s_disableNoDataTimeout)
         timerUpdate(&s_unmatchedTimer, kUnmatchedTimeout, true);
@@ -247,8 +258,8 @@ bool IAppSocket::notifyAccept(const AppSocketInfo & info) {
 void IAppSocket::notifyDisconnect() {
     if (m_notify)
         m_notify->onSocketDisconnect();
-    if (m_pos != list<UnmatchedInfo>::iterator{}) {
-        s_unmatched.erase(m_pos);
+    if (m_pos) {
+        delete m_pos;
         m_pos = {};
     }
 }
@@ -349,7 +360,7 @@ bool IAppSocket::notifyRead(AppSocketData & data) {
         return m_notify->onSocketRead(data);
 
     // already queued for disconnect? ignore any incoming data
-    if (m_pos == list<UnmatchedInfo>::iterator{})
+    if (!m_pos)
         return true;
 
     string_view view(data.data, data.bytes);
@@ -364,7 +375,7 @@ bool IAppSocket::notifyRead(AppSocketData & data) {
     }
 
     // no longer unmatched - one way or another
-    s_unmatched.erase(m_pos);
+    delete m_pos;
     m_pos = {};
 
     if (!fact) {

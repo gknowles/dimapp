@@ -96,17 +96,19 @@ private:
     Duration checkTimeout_LK(TimePoint now);
     void setNotify(IAppSocketNotify * notify);
 
-    // set to {} when matching is completed, either successfully or
+    // set to nullptr when matching is completed, either successfully or
     // unsuccessfully.
-    std::list<UnmatchedInfo>::iterator m_pos;
+    UnmatchedInfo * m_pos = {};
 
-    IAppSocketNotify * m_notify{};
+    IAppSocketNotify * m_notify = {};
 };
 
-struct IAppSocket::UnmatchedInfo {
+struct IAppSocket::UnmatchedInfo : ListLink<> {
     TimePoint expiration;
     std::string socketData;
-    IAppSocket * notify{};
+    IAppSocket * notify = {};
+
+    UnmatchedInfo();
 };
 
 class IAppSocket::UnmatchedTimer : public ITimerNotify {
