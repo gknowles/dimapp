@@ -7,8 +7,8 @@
 #include "cppconf/cppconf.h"
 
 #include <source_location>
+#include <spanstream>
 #include <string_view>
-#include <strstream>
 
 namespace Dim {
 
@@ -39,7 +39,7 @@ struct LogMsg {
 
 namespace Detail {
 
-class Log : public std::ostrstream {
+class Log : public std::ospanstream {
 public:
     Log(LogType type, std::source_location loc);
     Log(Log && from) noexcept;

@@ -13,8 +13,6 @@
 //#define _HAS_STD_BYTE 0     // std::byte
 //#define _HAS_STD_BOOLEAN 0  // std::boolean
 
-#define _SILENCE_CXX17_STRSTREAM_DEPRECATION_WARNING
-
 #ifndef DIMAPP_LIB_KEEP_MACROS
 #pragma warning(push)
 #endif
