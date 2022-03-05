@@ -84,7 +84,7 @@
 #endif
 
 #if _MSC_VER
-// aligned_alloc added in c++17
-#define aligned_alloc(alignment, size) _aligned_malloc(size, alignment)
-#define aligned_free(ptr) _aligned_free(ptr)
+// Standard aligned_alloc added in c++17, but not supported in MSVC.
+#define mallocAligned(alignment, size) _aligned_malloc(size, alignment)
+#define freeAligned(ptr) _aligned_free(ptr)
 #endif

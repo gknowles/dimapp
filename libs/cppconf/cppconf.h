@@ -81,7 +81,8 @@
 #include "compiler/visualc.h"
 #elif !defined(_WIN32)
 #include "sysexits.h"
-#define aligned_free(ptr) free(ptr)
+#define mallocAligned(alignment, size) aligned_alloc(alignment, size)
+#define freeAligned(ptr) free(ptr)
 #endif
 
 #ifdef DIMAPP_LIB_DYN_LINK

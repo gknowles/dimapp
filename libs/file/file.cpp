@@ -52,7 +52,7 @@ FileAppendStream::FileAppendStream(
 FileAppendStream::~FileAppendStream() {
     close();
     if (m_impl->buffers)
-        aligned_free(m_impl->buffers);
+        freeAligned(m_impl->buffers);
 }
 
 //===========================================================================
@@ -96,7 +96,7 @@ bool FileAppendStream::attach(Dim::FileHandle f) {
 
     m_impl->file = f;
     if (!m_impl->buffers) {
-        m_impl->buffers = (char *) aligned_alloc(
+        m_impl->buffers = (char *) mallocAligned(
             m_impl->bufLen, 
             m_impl->numBufs * m_impl->bufLen
         );
