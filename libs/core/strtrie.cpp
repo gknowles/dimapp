@@ -651,9 +651,10 @@ static bool logFatal(SearchState * ss) {
 static StrTrieBase::Node * getNode(
     SearchState * ss,
     pgno_t pgno,
-    size_t pos
+    size_t pos,
+    bool forUpdate = false
 ) {
-    auto ptr = ss->pages->ptr(pgno);
+    auto ptr = ss->pages->ptr(pgno, forUpdate);
     assert(ptr);
     assert(pos < ss->pages->pageSize() + 1);
     return (StrTrieBase::Node *) (ptr + pos);
@@ -662,6 +663,13 @@ static StrTrieBase::Node * getNode(
 //===========================================================================
 static StrTrieBase::Node * getNode(SearchState * ss, size_t pos) {
     return getNode(ss, ss->pgno, pos);
+}
+
+//===========================================================================
+static void seekNodeForUpdate(SearchState * ss, pgno_t pgno, size_t inode) {
+    ss->pgno = pgno;
+    ss->inode = (int) inode;
+    ss->node = getNode(ss, ss->inode, ss->pgno, true);
 }
 
 //===========================================================================
@@ -684,6 +692,7 @@ static void seekRootNode(SearchState * ss) {
 
 //===========================================================================
 static void seekKid(SearchState * ss, size_t pos) {
+    assert(pos <= numKids(ss->node));
     auto root = ss->node - ss->inode;
     auto inext = ss->inode + nodeHdrLen(ss->node);
     for (auto i = 0; i < pos; ++i)
@@ -1405,7 +1414,7 @@ static void applyUpdates(SearchState * ss) {
     }
     // Copy nodes to new pages.
     for (auto&& vpage : ss->vpages) {
-        seekNode(ss, vpage.targetPgno, 0);
+        seekNodeForUpdate(ss, vpage.targetPgno, 0);
         if (auto roots = vpage.roots.size(); roots == 1) {
             copyAny(ss, vpage.roots[0]);
         } else {
@@ -1416,6 +1425,9 @@ static void applyUpdates(SearchState * ss) {
                 copyAny(ss, root);
         }
     }
+    // Release potentially still active 'for update' seek.
+    seekRootNode(ss);
+    
     auto rpno = ss->vpages.back().targetPgno;
     ss->pages->setRoot(rpno);
 

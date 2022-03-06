@@ -35,7 +35,7 @@ public:
     using reverse_iterator = reverse_circle_iterator<iterator>;
 
 public:
-    StrTrieBase (IPageHeap * pages) noexcept;
+    explicit StrTrieBase (IPageHeap * pages) noexcept;
     virtual ~StrTrieBase () = default;
     explicit operator bool() const { return !empty(); }
 

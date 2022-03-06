@@ -36,7 +36,7 @@ public:
     virtual bool empty() const = 0;
     virtual bool empty(size_t pgno) const = 0;
 
-    virtual uint8_t * ptr(size_t pgno) = 0;
+    virtual uint8_t * ptr(size_t pgno, bool forUpdate = false) = 0;
     virtual const uint8_t * ptr(size_t pgno) const = 0;
 };
 
@@ -63,7 +63,7 @@ public:
     bool empty() const override;
     bool empty(size_t pgno) const override;
 
-    uint8_t * ptr(size_t pgno) override;
+    uint8_t * ptr(size_t pgno, bool forUpdate = false) override;
     const uint8_t * ptr(size_t pgno) const override;
 
 private:
@@ -143,14 +143,14 @@ inline bool PageHeap<N>::empty(size_t pgno) const {
 
 //===========================================================================
 template <int N>
-inline uint8_t * PageHeap<N>::ptr(size_t pgno) {
+inline uint8_t * PageHeap<N>::ptr(size_t pgno, bool forUpdate) {
     return pgno >= m_pages.size() ? nullptr : m_pages[pgno].get();
 }
 
 //===========================================================================
 template <int N>
 inline const uint8_t * PageHeap<N>::ptr(size_t pgno) const {
-    return const_cast<PageHeap *>(this)->ptr(pgno);
+    return const_cast<PageHeap *>(this)->ptr(pgno, false);
 }
 
 } // namespace
