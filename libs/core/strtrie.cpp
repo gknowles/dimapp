@@ -654,7 +654,7 @@ static StrTrieBase::Node * getNode(
     size_t pos,
     bool forUpdate = false
 ) {
-    auto ptr = ss->pages->ptr(pgno, forUpdate);
+    auto ptr = forUpdate ? ss->pages->wptr(pgno) : ss->pages->ptr(pgno);
     assert(ptr);
     assert(pos < ss->pages->pageSize() + 1);
     return (StrTrieBase::Node *) (ptr + pos);
