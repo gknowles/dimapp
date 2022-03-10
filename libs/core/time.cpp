@@ -28,7 +28,7 @@ constexpr auto kUnixTimeDiff = 11'644'473'600ull;
 //===========================================================================
 // static
 Clock::time_point Clock::now() noexcept {
-    return timeNow();
+    return time_point{duration{iClockGetTicks()}};
 }
 
 
@@ -458,7 +458,7 @@ bool Dim::empty(const TimePoint & time) {
 
 //===========================================================================
 TimePoint Dim::timeNow() {
-    return TimePoint{Duration{iClockGetTicks()}};
+    return Clock::now();
 }
 
 //===========================================================================

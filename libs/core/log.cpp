@@ -359,7 +359,7 @@ void Dim::logPauseStopwatch(string_view prefix) {
     if (!s_watchRunning)
         return;
     s_watchRunning = false;
-    s_watchTotal += Clock::now() - s_watchStart;
+    s_watchTotal += timeNow() - s_watchStart;
 
     if (!prefix.empty()) {
         auto tstr = toString(s_watchTotal, DurationFormat::kTwoPart);
@@ -375,7 +375,7 @@ void Dim::logResumeStopwatch(bool reset) {
     if (reset)
         s_watchTotal = {};
     s_watchRunning = true;
-    s_watchStart = Clock::now();
+    s_watchStart = timeNow();
     s_watchLap = {};
 }
 
@@ -386,7 +386,7 @@ void Dim::logStopwatch(string_view prefix) {
         return;
 
     if (!prefix.empty()) {
-        auto elapsed = s_watchTotal + Clock::now() - s_watchStart;
+        auto elapsed = s_watchTotal + timeNow() - s_watchStart;
         auto tstr = toString(elapsed, DurationFormat::kTwoPart);
         logMsgInfo() << prefix << ": " << tstr;
     }
@@ -398,7 +398,7 @@ void Dim::logStopwatchLap(std::string_view prefix) {
     if (!s_watchRunning)
         return;
     auto start = !empty(s_watchLap) ? s_watchLap : s_watchStart;
-    s_watchLap = Clock::now();
+    s_watchLap = timeNow();
 
     if (!prefix.empty()) {
         chrono::duration<double> elapsed = s_watchLap - start;
