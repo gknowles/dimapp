@@ -14,6 +14,9 @@ namespace Dim {
 void iAppPushStartupTask(ITaskNotify * task);
 void iAppSetFlags(EnumFlags<AppFlags> flags);
 
+// AppPerf
+void iAppPerfInitialize();
+
 // Config
 void iConfigInitialize();
 

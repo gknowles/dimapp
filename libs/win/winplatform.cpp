@@ -81,14 +81,29 @@ static float getKernelTime() {
 }
 
 //===========================================================================
-static float getUserTime() {
-    return s_userPct;
+static float getTotalTime() {
+    return s_userPct + s_kernelPct;
+}
+
+static TimePoint s_startTime;
+
+//===========================================================================
+static float getUptime() {
+    auto dur = timeNow() - s_startTime;
+    auto secs = (float) duration_cast<chrono::duration<double>>(dur).count();
+    return secs;
 }
 
 static auto & s_perfWorkMem = fperf("proc.memory (working)", getWorkMem);
 static auto & s_perfPrivateMem = fperf("proc.memory (private)", getPrivateMem);
-static auto & s_perfKernelTime = fperf("proc.time (kernel)", getKernelTime);
-static auto & s_perfUserTime = fperf("proc.time (user)", getUserTime);
+static auto & s_perfKernelTime = fperf("proc.cputime (kernel)", getKernelTime);
+static auto & s_perfUserTime = fperf("proc.cputime (total)", getTotalTime);
+static auto & s_perfUptime = fperf("proc.uptime", getUptime);
+
+//===========================================================================
+static void initPerfs() {
+    s_startTime = envProcessStartTime();
+}
 
 
 /****************************************************************************
@@ -135,6 +150,7 @@ static void registerWebAdmin() {
 void Dim::iPlatformInitialize() {
     winErrorInitialize();
     winEnvInitialize();
+    initPerfs();
     winDebugInitialize();
     winCrashInitialize();
     winIocpInitialize();

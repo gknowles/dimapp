@@ -146,6 +146,7 @@ void RunTask::onTask() {
     iSockMgrInitialize();
     iHttpRouteInitialize();
     iWebAdminInitialize();
+    iAppPerfInitialize();
 
     taskPushEvent(s_appTasks.data(), s_appTasks.size());
 
@@ -345,7 +346,7 @@ int Dim::appRun(
     if (s_appVer != VersionInfo{}) {
         Cli cli;
         ostringstream hdr;
-        Time8601Str ds(envProcessBuildTime());
+        Time8601Str ds(envExecBuildTime());
         auto verStr = toString(s_appVer);
         hdr << s_appBaseName 
             << " v" << verStr

@@ -11,6 +11,7 @@
 # libs/app/app.cpp
 # libs/app/app.h
 # libs/app/appint.h
+# libs/app/appperf.cpp
 # libs/app/config.cpp
 # libs/app/config.h
 # libs/app/logfile.cpp

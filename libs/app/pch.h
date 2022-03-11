@@ -18,6 +18,7 @@
 #include "xml/xml.h"
 
 // Standard headers
+#include <atomic>
 #include <cassert>
 #include <cerrno>
 #include <condition_variable>
