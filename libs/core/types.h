@@ -115,27 +115,6 @@ inline void Finally::release() {
 
 /****************************************************************************
 *
-*   Return
-*
-***/
-
-template<typename T>
-class Return {
-public:
-    Return(const std::error_code & code);
-    Return(const T & value);
-    Return(T && value);
-
-
-
-private:
-    std::error_code m_code;
-    T m_value;
-};
-
-
-/****************************************************************************
-*
 *   ForwardListIterator
 *
 *   The type being iterated over by the iterator must:
