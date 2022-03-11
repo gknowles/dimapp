@@ -262,7 +262,7 @@ static TaskQueueHandle s_taskq;
 static auto & s_cliEnable = Cli{}.opt<bool>("gui")
     .desc("Show UI window")
     .after([](auto & cli, auto & opt, auto & val){
-        if (*opt)
+        if (*opt && appMode() == kRunRunning)
             s_windowTask.enable(MessageLoopTask::kCommandLine, true);
         return true;
     });
