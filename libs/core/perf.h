@@ -38,6 +38,8 @@ struct PerfCounterBase {
 
 template<typename T>
 struct PerfCounter : PerfCounterBase, std::atomic<T> {
+    using std::atomic<T>::operator=;
+
     PerfType type () const override;
     void toString (std::string * out, bool pretty) const override;
     double toDouble () const override;
