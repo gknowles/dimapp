@@ -65,6 +65,7 @@ struct VersionInfo {
 
     bool operator==(const VersionInfo &) const = default;
     std::strong_ordering operator<=>(const VersionInfo &) const = default;
+    explicit operator bool() const { return *this != VersionInfo{}; }
 };
 
 std::string toString(const VersionInfo & ver);
