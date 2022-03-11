@@ -21,16 +21,17 @@ namespace Dim {
 *
 ***/
 
+// Number of logical processors on this machine.
 unsigned envProcessors();
 
 struct EnvMemoryConfig {
-    size_t pageSize;        // memory page size
-    size_t allocAlign;      // virtual memory allocation alignment
+    size_t pageSize;        // Memory page size
+    size_t allocAlign;      // Virtual memory allocation alignment
 
     // Access to large pages requires SeLockMemoryPrivilege, if large pages
     // are not supported (or the process is unprivileged) minLargeAlloc is set
     // to 0.
-    size_t minLargeAlloc;   // min large page allocation
+    size_t minLargeAlloc;   // Minimum large page allocation
 };
 const EnvMemoryConfig & envMemoryConfig();
 
@@ -57,11 +58,14 @@ DiskSpace envDiskSpace(std::string_view path);
 *
 ***/
 
-// Returns path to this executable being run
+// Returns path to this executable being run.
 const std::string & envExecPath();
 
-// Gets version info for this executable
+// Gets version info for this executable.
 VersionInfo envExecVersion();
+
+// Date this executable was built.
+TimePoint envExecBuildTime();
 
 
 /****************************************************************************
@@ -72,7 +76,6 @@ VersionInfo envExecVersion();
 
 unsigned envProcessId();
 TimePoint envProcessStartTime();
-TimePoint envProcessBuildTime();
 
 // Returns rights available to the current process
 enum ProcessRights {

@@ -188,9 +188,14 @@ const string & Dim::envExecPath() {
 
 //===========================================================================
 Dim::VersionInfo Dim::envExecVersion() {
+    VersionInfo out = {};
+
     auto wname = toWstring(envExecPath());
     DWORD unused;
     auto len = GetFileVersionInfoSizeW(wname.c_str(), &unused);
+    if (!len)
+        return out;
+
     auto buf = make_unique<char[]>(len);
     if (!GetFileVersionInfoW(
         wname.c_str(),
@@ -205,12 +210,17 @@ Dim::VersionInfo Dim::envExecVersion() {
     if (!VerQueryValueW(buf.get(), L"\\", (void **) &fi, &ulen))
         logMsgFatal() << "VerQueryValueW: " << WinError{};
 
-    VersionInfo vi = {};
-    vi.major = HIWORD(fi->dwProductVersionMS);
-    vi.minor = LOWORD(fi->dwProductVersionMS);
-    vi.patch = HIWORD(fi->dwProductVersionLS);
-    vi.build = LOWORD(fi->dwProductVersionLS);
-    return vi;
+    out.major = HIWORD(fi->dwProductVersionMS);
+    out.minor = LOWORD(fi->dwProductVersionMS);
+    out.patch = HIWORD(fi->dwProductVersionLS);
+    out.build = LOWORD(fi->dwProductVersionLS);
+    return out;
+}
+
+//===========================================================================
+TimePoint Dim::envExecBuildTime() {
+    auto utime = GetTimestampForLoadedLibrary(GetModuleHandle(NULL));
+    return timeFromUnix(utime);
 }
 
 
@@ -242,12 +252,6 @@ TimePoint Dim::envProcessStartTime() {
     }
     TimePoint time{duration(creation)};
     return time;
-}
-
-//===========================================================================
-TimePoint Dim::envProcessBuildTime() {
-    auto utime = GetTimestampForLoadedLibrary(GetModuleHandle(NULL));
-    return timeFromUnix(utime);
 }
 
 //===========================================================================
