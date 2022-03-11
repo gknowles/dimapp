@@ -25,10 +25,11 @@ static float getBuildAge() {
     
 }
 
-static auto & s_perfVer = fperf("app.version");
-static auto & s_perfPatch = uperf("app.version (patch)");
-static auto & s_perfBuild = uperf("app.version (build)");
-static auto & s_perfBuildAge = fperf("app.build age", getBuildAge);
+static auto & s_perfBuildAge = fperf(
+    "app.build age", 
+    getBuildAge, 
+    PerfFormat::kDuration
+);
 
 
 /****************************************************************************
@@ -39,11 +40,15 @@ static auto & s_perfBuildAge = fperf("app.build age", getBuildAge);
 
 //===========================================================================
 void Dim::iAppPerfInitialize() {
-    auto ver = envExecVersion();
-    auto fver = ver.major + ver.minor / pow(10, digits10(ver.minor));
-    s_perfVer = (float) fver;
-    s_perfPatch = ver.patch;
-    s_perfBuild = ver.build;
+    auto ver = appVersion();
+    if (ver.major) 
+        uperf("app version (major)") = ver.major;
+    if (ver.minor) 
+        uperf("app version (minor)") = ver.minor;
+    if (ver.patch) 
+        uperf("app version (patch)") = ver.patch;
+    if (ver.build) 
+        uperf("app version (build)") = ver.build;
 
     s_buildDate = envExecBuildTime();
 }

@@ -27,8 +27,16 @@ enum class PerfType {
     kNumTypes,
 };
 
+enum class PerfFormat {
+    kMachine,   // Machine readable format
+    kDefault,
+    kSiUnits,
+    kDuration,  // Value measured in seconds, whether float or int
+};
+
 struct PerfCounterBase {
     std::string name;
+    PerfFormat format = PerfFormat::kDefault;
 
     virtual ~PerfCounterBase() = default;
     virtual PerfType type () const = 0;
@@ -61,16 +69,34 @@ struct PerfFunc : PerfCounterBase {
 *
 ***/
 
-PerfCounter<int> & iperf(std::string_view name);
-PerfCounter<unsigned> & uperf(std::string_view name);
-PerfCounter<float> & fperf(std::string_view name);
+PerfCounter<int> & iperf(
+    std::string_view name, 
+    PerfFormat fmt = PerfFormat::kDefault
+);
+PerfCounter<unsigned> & uperf(
+    std::string_view name, 
+    PerfFormat fmt = PerfFormat::kDefault
+);
+PerfCounter<float> & fperf(
+    std::string_view name, 
+    PerfFormat fmt = PerfFormat::kDefault
+);
 
-PerfFunc<int> & iperf(std::string_view name, std::function<int()> fn);
+PerfFunc<int> & iperf(
+    std::string_view name, 
+    std::function<int()> fn, 
+    PerfFormat fmt = PerfFormat::kDefault
+);
 PerfFunc<unsigned> & uperf(
     std::string_view name,
-    std::function<unsigned()> fn
+    std::function<unsigned()> fn, 
+    PerfFormat fmt = PerfFormat::kDefault
 );
-PerfFunc<float> & fperf(std::string_view name, std::function<float()> fn);
+PerfFunc<float> & fperf(
+    std::string_view name, 
+    std::function<float()> fn, 
+    PerfFormat fmt = PerfFormat::kDefault
+);
 
 
 /****************************************************************************

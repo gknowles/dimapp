@@ -51,23 +51,29 @@ static PerfInfo & getInfo () {
 
 //===========================================================================
 template <typename T>
-static PerfCounter<T> & perf(string_view name) {
+static PerfCounter<T> & perf(string_view name, PerfFormat fmt) {
     auto & info = getInfo();
     unique_lock lk{info.mut};
     info.counters.push_back(make_unique<PerfCounter<T>>());
     auto & cnt = static_cast<PerfCounter<T>&>(*info.counters.back());
     cnt.name = name;
+    cnt.format = fmt;
     return cnt;
 }
 
 //===========================================================================
 template <typename T>
-static PerfFunc<T> & perf(string_view name, function<T()> && fn) {
+static PerfFunc<T> & perf(
+    string_view name, 
+    function<T()> && fn, 
+    PerfFormat fmt
+) {
     auto & info = getInfo();
     unique_lock lk{info.mut};
     info.counters.push_back(make_unique<PerfFunc<T>>());
     auto & cnt = static_cast<PerfFunc<T>&>(*info.counters.back());
     cnt.name = name;
+    cnt.format = fmt;
     cnt.fn = move(fn);
     return cnt;
 }
@@ -89,13 +95,33 @@ static PerfType perfType() {
 
 //===========================================================================
 template <typename T>
-static void valueToString(string * out, T val, bool pretty) {
-    auto str = StrFrom{val};
-    if (!pretty) {
-        *out = str.view();
+static void valueToString(string * out, T val, PerfFormat fmt) {
+    if (fmt == PerfFormat::kDuration) {
+        Duration dur;
+        if constexpr (is_same_v<T, float>) {
+            auto tmp = chrono::duration<double>(val);
+            dur = duration_cast<Duration>(tmp);
+        } else {
+            auto tmp = chrono::seconds(val);
+            dur = duration_cast<Duration>(tmp);
+        }
+        *out = toString(dur, DurationFormat::kTwoPart);
         return;
     }
 
+    auto suffix = 0;
+    if (fmt == PerfFormat::kSiUnits) {
+        while (val >= 1000) {
+            suffix += 1;
+            val /= 1000;
+        }
+    }
+
+    auto str = StrFrom{val};
+    if (fmt == PerfFormat::kMachine) {
+        *out = str.view();
+        return;
+    }
     auto v = str.view();
     auto num = v.size();
     auto ptr = v.data();
@@ -131,6 +157,9 @@ static void valueToString(string * out, T val, bool pretty) {
             *optr++ = *ptr++;
         out->resize(optr - out->data());
     }
+    if (fmt == PerfFormat::kSiUnits && suffix) {
+        out->push_back(" kMGTPEZY"[suffix]);
+    }
 }
 
 
@@ -153,7 +182,7 @@ inline double PerfCounter<T>::toDouble () const {
 //===========================================================================
 template<typename T>
 inline void PerfCounter<T>::toString (string * out, bool pretty) const {
-    valueToString(out, (T) *this, pretty);
+    valueToString(out, (T) *this, pretty ? format : PerfFormat::kMachine);
 }
 
 //===========================================================================
@@ -182,7 +211,7 @@ inline double PerfFunc<T>::toDouble () const {
 //===========================================================================
 template<typename T>
 inline void PerfFunc<T>::toString (string * out, bool pretty) const {
-    valueToString(out, fn(), pretty);
+    valueToString(out, fn(), pretty ? format : PerfFormat::kMachine);
 }
 
 //===========================================================================
@@ -221,36 +250,45 @@ void Dim::iPerfDestroy() {
 ***/
 
 //===========================================================================
-PerfCounter<int> & Dim::iperf(string_view name) {
-    return perf<int>(name);
+PerfCounter<int> & Dim::iperf(string_view name, PerfFormat fmt) {
+    return perf<int>(name, fmt);
 }
 
 //===========================================================================
-PerfCounter<unsigned> & Dim::uperf(string_view name) {
-    return perf<unsigned>(name);
+PerfCounter<unsigned> & Dim::uperf(string_view name, PerfFormat fmt) {
+    return perf<unsigned>(name, fmt);
 }
 
 //===========================================================================
-PerfCounter<float> & Dim::fperf(string_view name) {
-    return perf<float>(name);
+PerfCounter<float> & Dim::fperf(string_view name, PerfFormat fmt) {
+    return perf<float>(name, fmt);
 }
 
 //===========================================================================
-PerfFunc<int> & Dim::iperf(string_view name, function<int()> fn) {
-    return perf<int>(name, move(fn));
+PerfFunc<int> & Dim::iperf(
+    string_view name, 
+    function<int()> fn, 
+    PerfFormat fmt
+) {
+    return perf<int>(name, move(fn), fmt);
 }
 
 //===========================================================================
 PerfFunc<unsigned> & Dim::uperf(
     string_view name,
-    function<unsigned()> fn
+    function<unsigned()> fn, 
+    PerfFormat fmt
 ) {
-    return perf<unsigned>(name, move(fn));
+    return perf<unsigned>(name, move(fn), fmt);
 }
 
 //===========================================================================
-PerfFunc<float> & Dim::fperf(string_view name, function<float()> fn) {
-    return perf<float>(name, move(fn));
+PerfFunc<float> & Dim::fperf(
+    string_view name, 
+    function<float()> fn, 
+    PerfFormat fmt
+) {
+    return perf<float>(name, move(fn), fmt);
 }
 
 //===========================================================================

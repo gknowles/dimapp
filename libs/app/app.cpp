@@ -342,8 +342,8 @@ int Dim::appRun(
     } else {
         s_appBaseName = baseName;
     }
-    s_appVer = ver;
-    if (s_appVer != VersionInfo{}) {
+    s_appVer = ver ? ver : envExecVersion();
+    if (s_appVer) {
         Cli cli;
         ostringstream hdr;
         Time8601Str ds(envExecBuildTime());
