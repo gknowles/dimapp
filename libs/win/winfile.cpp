@@ -727,7 +727,7 @@ static error_code attachStdHandle(
     string_view path,
     EnumFlags<File::OpenMode> mode // must be either fReadOnly or fReadWrite
 ) {
-    assert(mode.value() == File::fReadOnly 
+    assert(mode.value() == File::fReadOnly
         || mode.value() == File::fReadWrite);
     auto file = make_unique<WinFileInfo>();
     file->m_mode = mode | File::fBlocking;
@@ -962,6 +962,8 @@ error_code Dim::fileAlignment(FileAlignment * out, FileHandle f) {
         (DWORD) sizeof fi
     )) {
         WinError err;
+        logMsgError() << "GetFileInformationByHandleEx(" << file->m_path 
+            << "): " << err;
         return err.code();
     }
 
@@ -1382,21 +1384,6 @@ void Dim::fileCopy(
 ***/
 
 //===========================================================================
-size_t Dim::filePageSize(FileHandle f) {
-    // Use the page size of the system memory manager as a first approximation
-    // as it will always be a multiple of the physical sector size of any
-    // filesystem that can support a page file.
-    //
-    // TODO: Get the physical sector size of the underlying device
-    auto pageSize = envMemoryConfig().pageSize;
-
-    // must be a power of 2
-    assert(popcount(pageSize) == 1);
-
-    return pageSize;
-}
-
-//===========================================================================
 size_t Dim::fileViewAlignment(FileHandle f) {
     auto & mem = envMemoryConfig();
 
@@ -1417,7 +1404,10 @@ static error_code openView(
     int64_t length,
     int64_t maxLength
 ) {
-    auto pageSize = filePageSize(f);
+    FileAlignment fa;
+    if (auto ec = fileAlignment(&fa, f); ec)
+        return ec;
+    size_t pageSize = fa.physicalSector;
     assert(length % pageSize == 0);
     assert(maxLength % pageSize == 0);
     assert(offset % fileViewAlignment(f) == 0);

@@ -529,9 +529,6 @@ enum class View {
 
 } // namespace
 
-// page size is determined by the operating system but is always a power of 2
-size_t filePageSize(FileHandle f);
-
 // Offset to the start of a view must be a multiple of the view alignment, it
 // is always a multiple of the page size.
 size_t fileViewAlignment(FileHandle f);
