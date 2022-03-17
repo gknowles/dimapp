@@ -8,6 +8,7 @@
 
 #include <cstdint>
 #include <string>
+#include <string_view>
 
 namespace Dim {
 
@@ -32,7 +33,8 @@ struct Guid {
 
 Guid newGuid();
 
+Guid strToGuid(std::string_view val);
 std::string toString(const Guid & val);
-[[nodiscard]] bool parse(Guid * out, std::string_view src);
+[[nodiscard]] bool parse(Guid * out, std::string_view val);
 
 } // namespace
