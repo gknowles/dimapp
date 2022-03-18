@@ -1330,7 +1330,7 @@ bool IntegralSet<T,A>::Impl::insBit(
     assert(relBase(start, node->depth) == node->base);
     assert(len - 1 <= absFinal(*node) - start);
     auto base = (uint64_t *) node->values;
-    BitView bits(base, bitNumInt64s());
+    BitSpan bits(base, bitNumInt64s());
 
     auto low = relValue(start, node->depth);
     auto high = low + len - 1;
@@ -1360,7 +1360,7 @@ bool IntegralSet<T,A>::Impl::insBit(
 
     if (node->numValues < bitNumInt64s())
         return true;
-    bits = BitView(base, bitNumInt64s());
+    bits = BitSpan(base, bitNumInt64s());
     if (!bits.all())
         return true;
 
@@ -1524,7 +1524,7 @@ bool IntegralSet<T,A>::Impl::eraBit(
     assert(relBase(start, node->depth) == node->base);
     assert(len - 1 <= absFinal(*node) - start);
     auto base = (uint64_t *) node->values;
-    BitView bits(base, bitNumInt64s());
+    BitSpan bits(base, bitNumInt64s());
     auto low = relValue(start, node->depth);
     auto high = low + len - 1;
     auto lower = bits.data(low);
@@ -1541,7 +1541,7 @@ bool IntegralSet<T,A>::Impl::eraBit(
         return true;
     }
 
-    bits = BitView(lower, upper - lower + 1);
+    bits = BitSpan(lower, upper - lower + 1);
     low %= bits.kWordBits;
     high = low + len - 1;
     low = (storage_type) bits.find(low);
@@ -1550,7 +1550,7 @@ bool IntegralSet<T,A>::Impl::eraBit(
 
     len = high - low + 1;
     lower = bits.data(low);
-    bits = BitView(lower, upper - lower + 1);
+    bits = BitSpan(lower, upper - lower + 1);
     low %= bits.kWordBits;
     for (auto ptr = lower; ptr <= upper; ++ptr) {
         if (*ptr)

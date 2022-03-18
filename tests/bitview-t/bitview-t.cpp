@@ -33,7 +33,7 @@ static void app(int argc, char *argv[]) {
     int line = 0;
 
     uint64_t buf[3] = {};
-    BitView v(buf, size(buf));
+    BitSpan v(buf, size(buf));
     string_view sv((char *) buf, sizeof buf);
     EXPECT(v.size() == 3);
     EXPECT(v.count() == 0);
