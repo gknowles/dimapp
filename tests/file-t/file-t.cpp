@@ -40,7 +40,10 @@ static void app(int argc, char *argv[]) {
     );
     if (ec)
         return appSignalShutdown(EX_DATAERR);
-    size_t psize = filePageSize(file);
+    FileAlignment fa;
+    if (auto ec = fileAlignment(&fa, file); ec)
+        return appSignalShutdown(EX_DATAERR);
+    auto psize = fa.physicalSector;
     fileWriteWait(nullptr, file, 0, "aaaa", 4);
 
     const char * base;
