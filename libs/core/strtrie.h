@@ -35,8 +35,8 @@ public:
     using reverse_iterator = reverse_circle_iterator<iterator>;
 
 public:
-    explicit StrTrieBase (IPageHeap * pages) noexcept;
-    virtual ~StrTrieBase () = default;
+    explicit StrTrieBase(IPageHeap * pages) noexcept;
+    virtual ~StrTrieBase() = default;
     explicit operator bool() const { return !empty(); }
 
     // iterators
@@ -67,7 +67,7 @@ public:
     virtual std::ostream * const debugStream() const { return nullptr; }
 
 protected:
-    StrTrieBase () = default;
+    StrTrieBase() = default;
     void construct(IPageHeap * pages);
 
 private:
