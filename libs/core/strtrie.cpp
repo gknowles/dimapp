@@ -764,9 +764,8 @@ static void pushFoundKeyVal(SearchState * ss, string_view val) {
 }
 
 //===========================================================================
-// Pushes seg or half seg value onto found key, advances to next node 
-// (following remote node if present), and returns false if there is no 
-// following node.
+// Pushes seg or half seg value onto found key, advances to next node (following
+// remote node if present), and returns false if there is no following node.
 static bool pushFoundKeyConsume(SearchState * ss, bool forUpdate = false) {
     if (nodeType(ss->node) == kNodeSeg) {
         pushFoundKeyVal(ss, segView(ss->node));
@@ -1327,8 +1326,8 @@ static void applyUpdates(SearchState * ss) {
         int parent = -1;
         size_t kidPos = 0;
 
-        // for leaf: 0
-        // for branch: 1 + number of unprocessed kids
+        // - for leaf: 0
+        // - for branch: 1 + number of unprocessed kids
         size_t unprocessed = 0;
     };
     vector<UpdateInfo> infos(ss->updates.size());
@@ -1361,9 +1360,9 @@ static void applyUpdates(SearchState * ss) {
     assert(!unblocked.empty());
 
     // Process updated nodes and related fringe nodes into virtual pages. Start
-    // with leaf nodes, with branches becoming unblocked for processing when
-    // all their leaves are done. Continues all the way up until the root node
-    // is processed. Child virtual pages are merged up into their parents when
+    // with leaf nodes, with branches becoming unblocked for processing when all
+    // their leaves are done. Continues all the way up until the root node is
+    // processed. Child virtual pages are merged up into their parents when
     // possible.
     for (;;) {
         auto id = unblocked.back();
@@ -1385,7 +1384,7 @@ static void applyUpdates(SearchState * ss) {
         assert(ui.unprocessed <= 1);
         harvestPages(ss, &upd);
 
-        // Update reference from parent
+        // Update reference from parent.
         if (ui.parent == -1) {
             // Adding root node as a leaf, must be adding first key to this
             // previously empty container.
@@ -1401,8 +1400,7 @@ static void applyUpdates(SearchState * ss) {
         auto & pi = infos[ui.parent];
         assert(pi.unprocessed > 1);
         if (--pi.unprocessed == 1) {
-            // Parent has had all children processed, queue for
-            // processing.
+            // Parent has had all children processed, queue for processing.
             unblocked.push_back(ui.parent);
         }
     }
@@ -1471,7 +1469,7 @@ static bool insertAtSeg(SearchState * ss) {
     // the end of the key), or will advance to next node.
 
     assert(ss->kpos % 2 == 0);
-    auto spos = 0; // split point where key diverges from segment
+    auto spos = 0; // Split point where key diverges from segment.
     auto slen = segLen(ss->node);
     auto sval = segVal(ss->node, spos);
     assert(slen > 0);
@@ -1479,7 +1477,7 @@ static bool insertAtSeg(SearchState * ss) {
     for (;;) {
         if (ss->kpos == ss->klen) {
             // Fork end of key with position in the segment.
-            // 
+            //
             // Insert "a" [61] into Seg "abc" [61 62 63] makes:
             //  +---------+  +-----------+
             //  | Seg "a" |--| Fork--EOK |
@@ -1496,7 +1494,7 @@ static bool insertAtSeg(SearchState * ss) {
             // Fork inside the key and the segment.
             if (spos % 2 == 0) {
                 // Fork in the first half of the byte.
-                // 
+                //
                 // Insert "ayz" [61 79 7a] info Seg "abc" [61 62 63] makes:
                 //  +---------+  +-----------+  +--------+  +----------+
                 //  | Seg "a" |--| Fork-- 6  |--| Half 2 |--| Seg "c"  |
@@ -1514,7 +1512,7 @@ static bool insertAtSeg(SearchState * ss) {
                 break;
             } else {
                 // Fork in the second half of the byte.
-                // 
+                //
                 // Insert "aef" [61 65 66] into Seg "abc" [61 62 63] makes:
                 //  +---------+  +--------+  +-----------+  +----------+
                 //  | Seg "a" |--| Half 6 |--| Fork-- 2  |--| Seg "c"  |
@@ -1541,7 +1539,7 @@ static bool insertAtSeg(SearchState * ss) {
                 // Fork key with the end mark that's after the segment.
                 // 
                 // Insert "abcdef" [61 62 63 64 65 66] into 
-                // { Seg "abc" [61 62 63] } makes:
+                // Seg "abc" [61 62 63] makes:
                 //  +-----------+  +-----------+  +--------+  +----------+
                 //  | Seg "abc" |--| Fork-- 6  |--| Half 4 |--| Seg "ef" |
                 //  +-----------+  |   |       |  +--------+  +----------+
@@ -1554,7 +1552,7 @@ static bool insertAtSeg(SearchState * ss) {
                 addKeyHalfSeg(ss);
                 break;
             }
-            // Continue search at next node
+            // Continue search at next node.
             copySegPrefix(ss, spos);
             seekKid(ss, 0);
             return true;
@@ -1569,7 +1567,7 @@ static bool insertAtSeg(SearchState * ss) {
 }
 
 //===========================================================================
-// Returns true if there is more to do; otherwise false and sets ss->found
+// Returns true if there is more to do; otherwise false and sets ss->found.
 static bool insertAtHalfSeg (SearchState * ss) {
     // Will either split on value, after value (possible if it's the end of the
     // key), or will advance to next node.
@@ -1627,7 +1625,7 @@ static bool insertAtHalfSeg (SearchState * ss) {
             nextKeyVal(ss);
             break;
         }
-        // Continue search at next node
+        // Continue search at next node.
         copyHalfSeg(ss, false);
         seekKid(ss, 0);
         return true;
@@ -1639,7 +1637,7 @@ static bool insertAtHalfSeg (SearchState * ss) {
 }
 
 //===========================================================================
-// Returns true if there is more to do; otherwise false and sets ss->found
+// Returns true if there is more to do; otherwise false and sets ss->found.
 static bool insertAtFork (SearchState * ss) {
     // Will either add branch to fork, or will advance to next node.
 
@@ -1669,7 +1667,7 @@ static bool insertAtFork (SearchState * ss) {
 }
 
 //===========================================================================
-// Returns true if there is more to do; otherwise false and sets ss->found
+// Returns true if there is more to do; otherwise false and sets ss->found.
 static bool insertAtEndMark(SearchState * ss) {
     assert(ss->kpos % 2 == 0);
     if (ss->kpos == ss->klen) {
@@ -1693,7 +1691,7 @@ static bool insertAtEndMark(SearchState * ss) {
 }
 
 //===========================================================================
-// Returns true if there is more to do; otherwise false and sets ss->found
+// Returns true if there is more to do; otherwise false and sets ss->found.
 static bool insertAtRemote(SearchState * ss) {
     seekRemote(ss);
     ss->spages.insert(ss->pgno);
@@ -1755,11 +1753,11 @@ bool StrTrieBase::insert(string_view key) {
     // Add any trailing key segments.
     addSegs(ss);
 
-    // Apply pending updates
+    // Apply pending updates.
     assert(!ss->updates.empty());
     applyUpdates(ss);
 
-    // was an insert; return true
+    // Was an insert; return true.
     return true;
 }
 
@@ -1817,8 +1815,8 @@ static bool eraseAtHalfSeg(SearchState * ss) {
 
 //===========================================================================
 static bool eraseAtFork(SearchState * ss) {
-    // Set foundKeyLen to length including the first variance, which in this 
-    // case is one past the current position whether or not it's just an end 
+    // Set foundKeyLen to length including the first variance, which in this
+    // case is one past the current position whether or not it's just an end
     // mark.
     ss->foundKeyLen = ss->kpos + 1;
 
@@ -1913,7 +1911,7 @@ static void eraseForkWithSegs(SearchState * ss, const UpdateFork & fork) {
     assert(sref.page.type == PageRef::kSource);
     seekNode(ss, sref.page.pgno, sref.data.pos);
 
-    // Any possible remote was already consume by AddForkWithKey()
+    // Any possible remote was already consume by AddForkWithKey().
     assert(nodeType(ss->node) != kNodeRemote);
 
     auto vals = forkVals(ss, fork.kidBits);
@@ -2045,9 +2043,9 @@ bool StrTrieBase::erase(string_view key) {
     auto ss = Node::makeState(&heap, this, key);
     ss->spages.insert(ss->pgno);
 
-    // Walk node path, add entries to ss->updates, and set ss->foundKeyLen
-    // to the shortest length at which the key uniquely differs with all other
-    // values. This will be one past the end if it's equal to a prefix of 
+    // Walk node path, add entries to ss->updates, and set ss->foundKeyLen to
+    // the shortest length at which the key uniquely differs with all other
+    // values. This will be one past the end if it's equal to a prefix of
     // another value.
     using Fn = bool(SearchState *);
     constinit static Fn * const functs[] = {
@@ -2087,7 +2085,7 @@ bool StrTrieBase::erase(string_view key) {
     auto & fork = *static_cast<UpdateFork *>(ss->updates.back());
 
     if (fork.refs.size() + fork.endOfKey > 2) {
-        // Has more than two kids (including eok), keep fork but with branch 
+        // Has more than two kids (including eok), keep fork but with branch
         // removed.
         eraseForkKid(ss, &fork);
     } else if (fork.endOfKey 
@@ -2096,7 +2094,7 @@ bool StrTrieBase::erase(string_view key) {
         // Only remaining kid is an end mark, replace fork with end mark.
         eraseForkWithEnd(ss);
     } else {
-        // One remaining kid, replace fork with half seg and merge it with 
+        // One remaining kid, replace fork with half seg and merge it with
         // adjacent segs and half segs.
         eraseForkWithSegs(ss, fork);
     }
@@ -2266,7 +2264,7 @@ static void seekNext(SearchState * ss) {
             continue;
         }
 
-        // Found alternate fork
+        // Found alternate fork.
         ss->kpos = fork.kpos;
         setFoundKey(ss);
         ss->kpos += 1;
@@ -2329,7 +2327,7 @@ static void seekPrev(SearchState * ss) {
             continue;
         }
 
-        // Found alternate fork
+        // Found alternate fork.
         ss->kpos = fork.kpos;
         setFoundKey(ss);
         if (nval != -1) {

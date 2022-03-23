@@ -1473,7 +1473,7 @@ bool IntegralSet<T,A>::Impl::eraSmv(
 
     node->numValues -= (uint16_t) (eptr - ptr);
     if (node->numValues) {
-        // Still has values, shift remaining ones down
+        // Still has values, shift remaining ones down.
         memmove(ptr, eptr, sizeof *ptr * (last - eptr));
     } else {
         // No more values, convert to empty node.
@@ -1503,10 +1503,10 @@ bool IntegralSet<T,A>::Impl::eraVec(
 
     node->numValues -= (uint16_t) (eptr - ptr);
     if (node->numValues) {
-        // Still has values, shift remaining ones down
+        // Still has values, shift remaining ones down.
         memmove(ptr, eptr, sizeof *ptr * (last - eptr));
     } else {
-        // No more values, convert to empty node->
+        // No more values, convert to empty node.
         clear(alloc, node);
     }
     return true;
@@ -2075,8 +2075,8 @@ bool IntegralSet<T,A>::Impl::rfindMeta(
 *       storage_type key
 *   )
 *
-*   Find largest value in segment contiguously connected with pos. Returns
-*   false if may extend into the next node.
+*   Find largest value in segment contiguously connected with pos. Returns false
+*   if may extend into the next node.
 *
 ***/
 
@@ -2132,8 +2132,8 @@ bool IntegralSet<T,A>::Impl::contigSmv(
     auto ptr = lower_bound(node.localValues, last, key);
     auto val = key;
     if (ptr == last || *ptr != val) {
-        // Base not found, return that search is done, but leave output node
-        // and value unchanged.
+        // Base not found, return that search is done, but leave output node and
+        // value unchanged.
         return true;
     }
     *onode = &node;
@@ -2165,8 +2165,8 @@ bool IntegralSet<T,A>::Impl::contigVec(
     auto ptr = lower_bound(node.values, last, key);
     auto val = key;
     if (ptr == last || *ptr != val) {
-        // Base not found, return that search is done, but leave output node
-        // and value unchanged.
+        // Base not found, return that search is done, but leave output node and
+        // value unchanged.
         return true;
     }
     *onode = &node;
@@ -2263,7 +2263,7 @@ bool IntegralSet<T,A>::Impl::rcontig(
     );
     constinit static Fn * const functs[kNodeTypes] = {
         yes,            // empty
-        rcontigFull,     // full
+        rcontigFull,    // full
         rcontigSmv,     // small vector
         rcontigVec,     // vector
         rcontigBit,     // bitmap
@@ -2299,8 +2299,8 @@ bool IntegralSet<T,A>::Impl::rcontigSmv(
     auto ptr = lower_bound(node.localValues, last, key);
     auto val = key;
     if (ptr == last || *ptr != val) {
-        // Base not found, return that search is done, but leave output node
-        // and value unchanged.
+        // Base not found, return that search is done, but leave output node and
+        // value unchanged.
         return true;
     }
     *onode = &node;
@@ -2333,8 +2333,8 @@ bool IntegralSet<T,A>::Impl::rcontigVec(
     auto ptr = lower_bound(node.values, last, key);
     auto val = key;
     if (ptr == last || *ptr != val) {
-        // Base not found, return that search is done, but leave output node
-        // and value unchanged.
+        // Base not found, return that search is done, but leave output node and
+        // value unchanged.
         return true;
     }
     *onode = &node;
@@ -2628,8 +2628,8 @@ int IntegralSet<T,A>::Impl::cmpBit(uint64_t left, uint64_t right) {
         if (left != (right & (kMask << countr_zero(left)))) {
             // left bitmap > right bitmap. Which means the right side has gaps,
             // paradoxically making it greater lexicographically. For example,
-            // { 1, 2, 3 } < { 1, 3 }, since at the second position 2 < 3.
-            // Where the bitmap representations compare reversed, 111 > 101.
+            // { 1, 2, 3 } < { 1, 3 }, since at the second position 2 < 3. Where
+            // the bitmap representations compare reversed, 111 > 101.
             return 1;
         } else {
             // left and right only differ where left has trailing zeros, so if
@@ -3399,8 +3399,7 @@ void IntegralSet<T,A>::Impl::eraChange(
     auto ri = iterator::makeFirst(&right);
     assert(ri);
 
-    // Convert from full to either bitmap or meta, and only then erase the
-    // rest.
+    // Convert from full to either bitmap or meta, and only then erase the rest.
     erase(alloc, left, *ri, 1);
     erase(alloc, left, right);
 }
@@ -3432,8 +3431,8 @@ void IntegralSet<T,A>::Impl::eraLArray(
     storage_type * li,
     const Node & right
 ) {
-    // Go through values of left vector and skip (aka remove) the ones that
-    // are found in right node (values to be erased).
+    // Go through values of left vector and skip (aka remove) the ones that are
+    // found in right node (values to be erased).
     auto base = li;
     auto out = li;
     auto le = li + left->numValues;
@@ -3647,8 +3646,8 @@ void IntegralSet<T,A>::Impl::isecLArray(
     storage_type * li,
     const Node & right
 ) {
-    // Go through values of left vector and remove the ones that aren't
-    // found in right node.
+    // Go through values of left vector and remove the ones that aren't found in
+    // right node.
     auto base = li;
     auto out = li;
     auto le = li + left->numValues;
