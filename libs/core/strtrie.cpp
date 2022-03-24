@@ -2860,7 +2860,7 @@ static size_t pageDepthStats(size_t pgno, vector<PageStats> & pgstats) {
 }
 
 //===========================================================================
-void StrTrie::dumpStats(std::ostream & os) {
+void StrTrie::dumpStats(std::ostream & os) const {
     Stats stats = {};
     stats.totalPages = m_heapImpl.pageCount();
     stats.pageSize = m_heapImpl.pageSize();

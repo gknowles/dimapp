@@ -1,7 +1,7 @@
 // Copyright Glen Knowles 2019 - 2022.
 // Distributed under the Boost Software License, Version 1.0.
 //
-// Set of strings
+// Set of strings, all non-const functions invalidate all iterators.
 //
 // strtrie.h - dim core
 #pragma once
@@ -32,7 +32,7 @@ public:
     using value_type = std::string;
     using difference_type = ptrdiff_t;
     using iterator = Iter;
-    using reverse_iterator = reverse_circle_iterator<iterator>;
+    using reverse_iterator = reverse_circular_iterator<iterator>;
 
 public:
     explicit StrTrieBase(IPageHeap * pages) noexcept;
@@ -48,7 +48,7 @@ public:
     // capacity
     bool empty() const { return m_pages->empty(); }
 
-    // modify    
+    // modify
     bool insert(std::string_view val);
     bool erase(std::string_view val);
 
@@ -82,7 +82,7 @@ public:
 
     void debug(bool enable = true) { m_debug = enable; }
     std::ostream * const debugStream() const override;
-    void dumpStats(std::ostream & os);
+    void dumpStats(std::ostream & os) const;
 
 private:
     bool m_debug = false;

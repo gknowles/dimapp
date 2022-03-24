@@ -44,11 +44,11 @@ public:
     using reference = value_type &;
     using const_reference = const value_type &;
     using iterator = Iter;
-    using reverse_iterator = typename reverse_circle_iterator<Iter>;
+    using reverse_iterator = typename reverse_circular_iterator<Iter>;
     using difference_type = ptrdiff_t;
     using size_type = size_t;
     using range_iterator = RangeIter;
-    using reverse_range_iterator = typename reverse_circle_iterator<RangeIter>;
+    using reverse_range_iterator = typename reverse_circular_iterator<RangeIter>;
 
 public:
     static const size_t kBitWidth = CHAR_BIT * sizeof T;
@@ -308,7 +308,7 @@ template <std::integral T, typename A>
 class IntegralSet<T, A>::RangeRange {
 public:
     using iterator = RangeIter;
-    using reverse_iterator = reverse_circle_iterator<RangeIter>;
+    using reverse_iterator = reverse_circular_iterator<RangeIter>;
 
 public:
     explicit RangeRange(Iter iter) : m_first{iter} {}

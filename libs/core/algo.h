@@ -96,12 +96,15 @@ void erase_unordered_if(Container c, Pred p) {
 
 /****************************************************************************
 *
-*   Reverse circle iterator
+*   Reverse circular iterator
+*
+*   A circular iterator is a bidirectional iterator which also guarantees
+*   end()++ == begin() and begin()-- == end().
 *
 ***/
 
 template<typename IterBase>
-class reverse_circle_iterator {
+class reverse_circular_iterator {
 public:
     using iterator_type = IterBase;
     using traits = std::iterator_traits<iterator_type>;
@@ -115,11 +118,11 @@ public:
     );
 
 public:
-    reverse_circle_iterator(iterator_type iter) : m_iter(iter) { --m_iter; }
-    reverse_circle_iterator & operator++() { --m_iter; return *this; }
-    reverse_circle_iterator & operator--() { ++m_iter; return *this; }
+    reverse_circular_iterator(iterator_type iter) : m_iter(iter) { --m_iter; }
+    reverse_circular_iterator & operator++() { --m_iter; return *this; }
+    reverse_circular_iterator & operator--() { ++m_iter; return *this; }
     explicit operator bool() const { return (bool) m_iter; }
-    bool operator==(const reverse_circle_iterator & other) const = default;
+    bool operator==(const reverse_circular_iterator & other) const = default;
     const value_type & operator*() const { return *m_iter; }
     const value_type * operator->() const { return &*m_iter; }
 
