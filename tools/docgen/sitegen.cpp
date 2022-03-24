@@ -296,6 +296,15 @@ static void addBootstrapBody(IXBuilder * out) {
 }
 
 //===========================================================================
+static void addBadgePrelim(IXBuilder * out) {
+    out->text(" ")
+        .start("span")
+            .attr("class", "badge badge-warning")
+            .text("Prelim")
+            .end();
+}
+
+//===========================================================================
 static void addBadgeOld(IXBuilder * out) {
     out->text(" ")
         .start("span")
@@ -369,8 +378,11 @@ static void addNavbar(
     bld.end(); // div.navbar-nav
 
     // Version links
+    bool beforeDefault = true;
     bool afterDefault = false;
     for (auto&& ver : cfg.versions) {
+        if (ver.defaultSource)
+            beforeDefault = false;
         if (ver.tag == version.tag)
             break;
         if (ver.defaultSource)
@@ -391,12 +403,15 @@ static void addNavbar(
                 .attr("aria-expanded", "false")
                 .attr("title", "Version")
                 .text(version.name);
+    if (beforeDefault)
+        addBadgePrelim(&bld);
     if (afterDefault)
         addBadgeOld(&bld);
     bld.end()
         .start("div")
             .attr("class", "dropdown-menu dropdown-menu-md-right")
             .attr("aria-labelledby", "navbarDropdown");
+    beforeDefault = true;
     afterDefault = false;
     for (auto&& ver : cfg.versions) {
         bld.start("a");
@@ -410,11 +425,15 @@ static void addNavbar(
         } else {
             bld.attr("href", "../" + ver.tag + "/index.html");
         }
+        if (ver.defaultSource)
+            beforeDefault = false;
         bld.text(ver.name);
+        if (beforeDefault)
+            addBadgePrelim(&bld);
         if (afterDefault)
             addBadgeOld(&bld);
         bld.end();
-        if (ver.defaultSource)
+        if (ver.defaultSource) 
             afterDefault = true;
     }
     bld.end() // div.dropdown-menu
@@ -726,11 +745,17 @@ nav.navbar span.badge {
     margin-left: .25rem;
 }
 nav.navbar .dropdown-menu {
+    font-size: .875em;
     min-width: unset;
+    max-height: calc(100vh - 3rem);
+    overflow-y: auto;
 }
 nav.navbar .dropdown-menu .dropdown-item:hover {
     background-color: steelblue;
     color: white;
+}
+nav.navbar .dropdown-item {
+    padding: 0 1rem;
 }
 
 nav#toc {
@@ -753,6 +778,7 @@ nav#toc .nav-link:hover {
 }
 nav#toc .nav-link.active {
     color: black;
+    font-weight: bold;
 }
 nav#toc .nav-link.toc-2 {
     padding-left: 2rem;
