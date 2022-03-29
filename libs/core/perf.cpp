@@ -17,10 +17,41 @@ using namespace Dim;
 
 namespace {
 
+struct PerfBase {
+    virtual ~PerfBase() = default;
+
+    virtual PerfType type() const = 0;
+    virtual PerfFormat format() const = 0;
+    virtual double toDouble() const = 0;
+    virtual void toString(string * out, bool pretty) const = 0;
+
+    string m_name;
+};
+
+template<typename T, PerfFormat Fmt>
+struct PerfAtomic final : PerfBase {
+    PerfType type() const override;
+    PerfFormat format() const override { return Fmt; }
+    double toDouble() const override;
+    void toString(string * out, bool pretty) const override;
+
+    atomic<T> m_val;
+};
+
+template<typename T, PerfFormat Fmt>
+struct PerfFunc final : PerfBase {
+    PerfType type() const override;
+    PerfFormat format() const override { return Fmt; }
+    double toDouble() const override;
+    void toString(string * out, bool pretty) const override;
+
+    function<T()> m_fn;
+};
+
 struct PerfInfo {
     // mutex only needed for the vector itself.
     shared_mutex mut;
-    vector<unique_ptr<PerfCounterBase>> counters;
+    vector<unique_ptr<PerfBase>> counters;
 };
 
 } // namespace
@@ -50,32 +81,26 @@ static PerfInfo & getInfo () {
 }
 
 //===========================================================================
-template <typename T>
-static PerfCounter<T> & perf(string_view name, PerfFormat fmt) {
+template <typename T, PerfFormat Fmt>
+static atomic<T> & perf(string_view name) {
     auto & info = getInfo();
     unique_lock lk{info.mut};
-    info.counters.push_back(make_unique<PerfCounter<T>>());
-    auto & cnt = static_cast<PerfCounter<T>&>(*info.counters.back());
-    cnt.name = name;
-    cnt.format = fmt;
-    return cnt;
+    info.counters.push_back(make_unique<PerfAtomic<T, Fmt>>());
+    auto & cnt = static_cast<PerfAtomic<T, Fmt> &>(*info.counters.back());
+    cnt.m_name = name;
+    return cnt.m_val;
 }
 
 //===========================================================================
-template <typename T>
-static PerfFunc<T> & perf(
-    string_view name, 
-    function<T()> && fn, 
-    PerfFormat fmt
-) {
+template <typename T, PerfFormat Fmt>
+static function<T()> & perf(string_view name, function<T()> && fn) {
     auto & info = getInfo();
     unique_lock lk{info.mut};
-    info.counters.push_back(make_unique<PerfFunc<T>>());
-    auto & cnt = static_cast<PerfFunc<T>&>(*info.counters.back());
-    cnt.name = name;
-    cnt.format = fmt;
-    cnt.fn = move(fn);
-    return cnt;
+    info.counters.push_back(make_unique<PerfFunc<T, Fmt>>());
+    auto & cnt = static_cast<PerfFunc<T, Fmt> &>(*info.counters.back());
+    cnt.m_name = name;
+    cnt.m_fn = move(fn);
+    return cnt.m_fn;
 }
 
 //===========================================================================
@@ -93,53 +118,31 @@ static PerfType perfType() {
     }
 }
 
+
+/****************************************************************************
+*
+*   PerfPrint
+*
+***/
+
 //===========================================================================
-template <typename T>
-static void valueToString(string * out, T val, PerfFormat fmt) {
-    if (fmt == PerfFormat::kDuration) {
-        Duration dur;
-        if constexpr (is_same_v<T, float>) {
-            auto tmp = chrono::duration<double>(val);
-            dur = duration_cast<Duration>(tmp);
-        } else {
-            auto tmp = chrono::seconds(val);
-            dur = duration_cast<Duration>(tmp);
-        }
-        *out = toString(dur, DurationFormat::kTwoPart);
-        return;
-    }
+template<typename T, PerfFormat Fmt>
+struct PerfPrint {
+    void format(string * out, T val) const;
+};
 
-    auto suffix = 0;
-    if (fmt == PerfFormat::kSiUnits) {
-        while (val >= 1000) {
-            suffix += 1;
-            val /= 1000;
-        }
-    }
-
-    auto str = StrFrom{val};
-    if (fmt == PerfFormat::kMachine) {
-        *out = str.view();
-        return;
-    }
-    auto v = str.view();
-    auto num = v.size();
-    auto ptr = v.data();
+//===========================================================================
+static void appendWithCommas(string * out, string_view str) {
+    auto num = str.size();
+    auto ptr = str.data();
+    assert(num && *ptr);
+    assert(*ptr != '-');
     auto eptr = ptr + num;
     auto ecomma = eptr;
-    if constexpr (is_same_v<T, float>) {
-        if (v.find('e') != string_view::npos) {
-            *out = str.view();
-            return;
-        }
-        if (auto pos = v.find('.'); pos != string_view::npos) {
-            num = pos;
-            ecomma = ptr + pos;
-        }
-    }
     num = (num - 1) % 3 + 1;
-    out->resize(v.size() + (v.size() - num) / 3);
-    auto optr = out->data();
+    auto olen = out->size();
+    out->resize(olen + str.size() + (str.size() - num) / 3);
+    auto optr = out->data() + olen;
     switch (num) {
         case 3: *optr++ = *ptr++; [[fallthrough]];
         case 2: *optr++ = *ptr++; [[fallthrough]];
@@ -151,43 +154,174 @@ static void valueToString(string * out, T val, PerfFormat fmt) {
         *optr++ = *ptr++;
         *optr++ = *ptr++;
     }
-    if constexpr (is_same_v<T, float>) {
-        // Include decimal point and up to three more digits
-        for (auto i = 0; i < 4 && ptr != eptr; ++i)
-            *optr++ = *ptr++;
-        out->resize(optr - out->data());
-    }
-    if (fmt == PerfFormat::kSiUnits && suffix) {
-        out->push_back(" kMGTPEZY"[suffix]);
-    }
 }
+
+//===========================================================================
+template <typename T>
+requires is_integral_v<T>
+struct PerfPrint<T, PerfFormat::kDefault> {
+    void format(string * out, T val) const {
+        out->clear();
+        if constexpr (is_signed_v<T>) {
+            if (val < 0) {
+                out->assign(1, '-');
+                val = -val;
+            }
+        }
+        auto str = StrFrom{val};
+        appendWithCommas(out, str.view());
+    }
+};
+
+//===========================================================================
+template <>
+struct PerfPrint<float, PerfFormat::kDefault> {
+    void format(string * out, float val) {
+        if (val < 0) {
+            out->assign(1, '-');
+            val = -val;
+        } else {
+            out->clear();
+        }
+        auto str = StrFrom{val};
+        auto v = str.view();
+        if (v.find('e') != string_view::npos) {
+            out->append(v);
+            return;
+        }
+        auto decimal = v.find('.'); 
+        if (decimal == string_view::npos) {
+            appendWithCommas(out, v);
+        } else {
+            appendWithCommas(out, v.substr(0, decimal));
+            v = v.substr(decimal, 4);
+            out->append(v);
+        }
+    }
+};
+
+//===========================================================================
+template<typename T>
+struct PerfPrint<T, PerfFormat::kDuration> {
+    void format(string * out, T val) const {
+        Duration dur;
+        if constexpr (is_same_v<T, float>) {
+            auto tmp = chrono::duration<double>(val);
+            dur = duration_cast<Duration>(tmp);
+        } else {
+            auto tmp = chrono::seconds(val);
+            dur = duration_cast<Duration>(tmp);
+        }
+        *out = toString(dur, DurationFormat::kTwoPart);
+    }
+};
+
+//===========================================================================
+template<typename T>
+struct PerfPrint<T, PerfFormat::kMachine> {
+    void format(string * out, T val) const {
+        auto str = StrFrom{val};
+        *out = str.view();
+    }
+};
+
+//===========================================================================
+template<typename T>
+requires is_integral_v<T>
+struct PerfPrint<T, PerfFormat::kSiUnits> {
+    void format(string * out, T val) const {
+        out->clear();
+        if constexpr (is_signed_v<T>) {
+            if (val < 0) {
+                out->push_back('-');
+                val = -val;
+            }
+        }
+        auto suffix = 0;
+        auto decimal = 0;
+        while (val >= 1000) {
+            suffix += 1;
+            decimal = val % 1000;
+            val /= 1000;
+        }
+
+        auto str = StrFrom{val};
+        out->append(str.view());
+
+        if (decimal) {
+            // Include decimal point and up to three more digits
+            out->push_back('.');
+            for (;;) {
+                out->push_back('0' + (unsigned char) (decimal / 100));
+                decimal %= 100;
+                if (!decimal)
+                    break;
+                decimal *= 10;
+            }
+        }
+        if (suffix) 
+            out->push_back(" kMGTPEZY"[suffix]);
+    }
+};
+
+//===========================================================================
+template<>
+struct PerfPrint<float, PerfFormat::kSiUnits> {
+    void format(string * out, float val) const {
+        if (val < 0) {
+            out->assign(1, '-');
+            val = -val;
+        } else {
+            out->clear();
+        }
+        auto suffix = 0;
+        while (val >= 1000) {
+            suffix += 1;
+            val /= 1000;
+        }
+        while (val && val < 1) {
+            suffix -= 1;
+            val *= 1000;
+        }
+
+        auto str = StrFrom{val};
+        auto v = str.view();
+        if (auto pos = v.find('.'); pos != string_view::npos) {
+            auto len = min(v.size(), pos + 4);
+            v = v.substr(0, len);
+        }
+        out->append(v);
+        if (suffix) 
+            out->push_back("yzafpnum kMGTPEZY"[suffix + 8]);
+    }
+};
 
 
 /****************************************************************************
 *
-*   PerfCounter
+*   PerfAtomic
 *
 ***/
 
-template PerfCounter<int>;
-template PerfCounter<unsigned>;
-template PerfCounter<float>;
-
 //===========================================================================
-template<typename T>
-inline double PerfCounter<T>::toDouble () const {
-    return (double) *this;
+template<typename T, PerfFormat Fmt>
+inline double PerfAtomic<T, Fmt>::toDouble() const {
+    return (double) m_val;
 }
 
 //===========================================================================
-template<typename T>
-inline void PerfCounter<T>::toString (string * out, bool pretty) const {
-    valueToString(out, (T) *this, pretty ? format : PerfFormat::kMachine);
+template<typename T, PerfFormat Fmt>
+inline void PerfAtomic<T, Fmt>::toString(string * out, bool pretty) const {
+    if (pretty) {
+        PerfPrint<T, Fmt>().format(out, m_val);
+    } else {
+        PerfPrint<T, PerfFormat::kMachine>().format(out, m_val);
+    }
 }
 
 //===========================================================================
-template<typename T>
-inline PerfType PerfCounter<T>::type () const {
+template<typename T, PerfFormat Fmt>
+inline PerfType PerfAtomic<T, Fmt>::type() const {
     return perfType<T>();
 }
 
@@ -198,25 +332,25 @@ inline PerfType PerfCounter<T>::type () const {
 *
 ***/
 
-template PerfFunc<int>;
-template PerfFunc<unsigned>;
-template PerfFunc<float>;
-
 //===========================================================================
-template<typename T>
-inline double PerfFunc<T>::toDouble () const {
-    return (double) fn();
+template<typename T, PerfFormat Fmt>
+inline double PerfFunc<T, Fmt>::toDouble () const {
+    return (double) m_fn();
 }
 
 //===========================================================================
-template<typename T>
-inline void PerfFunc<T>::toString (string * out, bool pretty) const {
-    valueToString(out, fn(), pretty ? format : PerfFormat::kMachine);
+template<typename T, PerfFormat Fmt>
+inline void PerfFunc<T, Fmt>::toString (string * out, bool pretty) const {
+    if (pretty) {
+        PerfPrint<T, Fmt>().format(out, m_fn());
+    } else {
+        PerfPrint<T, PerfFormat::kMachine>().format(out, m_fn());
+    }
 }
 
 //===========================================================================
-template<typename T>
-inline PerfType PerfFunc<T>::type () const {
+template<typename T, PerfFormat Fmt>
+inline PerfType PerfFunc<T, Fmt>::type () const {
     return perfType<T>();
 }
 
@@ -250,22 +384,56 @@ void Dim::iPerfDestroy() {
 ***/
 
 //===========================================================================
-PerfCounter<int> & Dim::iperf(string_view name, PerfFormat fmt) {
+template<typename T>
+static atomic<T> & perf(string_view name, PerfFormat fmt) {
+    using enum PerfFormat;
+    switch (fmt) {
+    default:
+        assert(!"Unknown performance counter display format");
+        [[fallthrough]];
+    case kDefault:  return perf<T, kDefault>(name);
+    case kSiUnits:  return perf<T, kSiUnits>(name);
+    case kDuration: return perf<T, kDuration>(name);
+    case kMachine:  return perf<T, kMachine>(name);
+    }
+}
+
+//===========================================================================
+atomic<int> & Dim::iperf(string_view name, PerfFormat fmt) {
     return perf<int>(name, fmt);
 }
 
 //===========================================================================
-PerfCounter<unsigned> & Dim::uperf(string_view name, PerfFormat fmt) {
+atomic<unsigned> & Dim::uperf(string_view name, PerfFormat fmt) {
     return perf<unsigned>(name, fmt);
 }
 
 //===========================================================================
-PerfCounter<float> & Dim::fperf(string_view name, PerfFormat fmt) {
+atomic<float> & Dim::fperf(string_view name, PerfFormat fmt) {
     return perf<float>(name, fmt);
 }
 
 //===========================================================================
-PerfFunc<int> & Dim::iperf(
+template<typename T>
+static function<T()> & perf(
+    string_view name, 
+    function<T()> && fn, 
+    PerfFormat fmt
+) {
+    using enum PerfFormat;
+    switch (fmt) {
+    default:
+        assert(!"Unknown performance counter display format");
+        [[fallthrough]];
+    case kDefault:  return perf<T, kDefault>(name, move(fn));
+    case kSiUnits:  return perf<T, kSiUnits>(name, move(fn));
+    case kDuration: return perf<T, kDuration>(name, move(fn));
+    case kMachine:  return perf<T, kMachine>(name, move(fn));
+    }
+}
+
+//===========================================================================
+function<int()> & Dim::iperf(
     string_view name, 
     function<int()> fn, 
     PerfFormat fmt
@@ -274,7 +442,7 @@ PerfFunc<int> & Dim::iperf(
 }
 
 //===========================================================================
-PerfFunc<unsigned> & Dim::uperf(
+function<unsigned()> & Dim::uperf(
     string_view name,
     function<unsigned()> fn, 
     PerfFormat fmt
@@ -283,7 +451,7 @@ PerfFunc<unsigned> & Dim::uperf(
 }
 
 //===========================================================================
-PerfFunc<float> & Dim::fperf(
+function<float()> & Dim::fperf(
     string_view name, 
     function<float()> fn, 
     PerfFormat fmt
@@ -308,8 +476,8 @@ void Dim::perfGetValues (vector<PerfValue> * outptr, bool pretty) {
         for (unsigned i = 0; i < out.size(); ++i) {
             auto & oval = out[i];
             auto cnt = info.counters[oval.pos].get();
-            if (oval.name.data() != cnt->name.data()) {
-                oval.name = cnt->name;
+            if (oval.name.data() != cnt->m_name.data()) {
+                oval.name = cnt->m_name;
                 oval.value.clear();
             }
             auto raw = cnt->toDouble();
@@ -317,6 +485,7 @@ void Dim::perfGetValues (vector<PerfValue> * outptr, bool pretty) {
                 cnt->toString(&oval.value, pretty);
                 oval.raw = raw;
                 oval.type = cnt->type();
+                oval.format = cnt->format();
             }
         }
     }

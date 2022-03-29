@@ -236,6 +236,9 @@
 # tests/path-t/path-t.cpp
 # tests/path-t/pch.cpp
 # tests/path-t/pch.h
+# tests/perf-t/pch.cpp
+# tests/perf-t/pch.h
+# tests/perf-t/perf-t.cpp
 # tests/str-t/pch.cpp
 # tests/str-t/pch.h
 # tests/str-t/str-t.cpp

@@ -51,7 +51,7 @@ static thread_local bool t_inProgress;
 *
 ***/
 
-static PerfCounter<int> * s_perfs[] = {
+static atomic<int> * s_perfs[] = {
     nullptr, // log invalid
     &iperf("log.debug"),
     &iperf("log.info"),
