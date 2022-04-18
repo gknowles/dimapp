@@ -247,7 +247,7 @@ Path::Path(string_view from)
 }
 
 //===========================================================================
-Path::Path(std::string && from)
+Path::Path(string && from)
     : m_data(move(from))
 {
     normalize(&m_data);
@@ -423,7 +423,7 @@ Path & Path::append(string_view path) {
 
 //===========================================================================
 Path & Path::resolve(const Path & base) {
-    return resolve(string_view{base.m_data});
+    return resolve(base.view());
 }
 
 //===========================================================================
@@ -451,6 +451,24 @@ Path & Path::resolve(string_view basePath) {
         }
     }
     return assign(out);
+}
+
+//===========================================================================
+Path & Path::resolve(const Path & base, string_view fallback) {
+    resolve(base.view());
+    if (m_data.size() >= base.size()) {
+        auto ch = m_data[base.size()];
+        if (m_data.starts_with(base.view()) && (ch == '\0' || ch == '/')) 
+            return *this;
+    }
+    assign(fallback);
+    resolve(base.view());
+    return *this;
+}
+
+//===========================================================================
+Path & Path::resolve(string_view base, string_view fallback) {
+    return resolve(Path{base}, fallback);
 }
 
 //===========================================================================
@@ -563,8 +581,8 @@ bool Path::hasExt() const {
 
 namespace Dim {
 ostream& operator<< (ostream& os, const Path& val);
-Path operator/ (const Path& a, std::string_view b);
-Path operator+ (const Path& a, std::string_view b);
+Path operator/ (const Path& a, string_view b);
+Path operator+ (const Path& a, string_view b);
 } // namespace
 
 //===========================================================================
@@ -574,11 +592,11 @@ ostream & Dim::operator<< (ostream & os, const Path & val) {
 }
 
 //===========================================================================
-Path Dim::operator/ (const Path & a, std::string_view b) {
+Path Dim::operator/ (const Path & a, string_view b) {
     return Path{a} /= b;
 }
 
 //===========================================================================
-Path Dim::operator+ (const Path & a, std::string_view b) {
+Path Dim::operator+ (const Path & a, string_view b) {
     return Path{a} += b;
 }

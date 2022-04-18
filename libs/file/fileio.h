@@ -132,7 +132,8 @@ std::error_code fileSetCurrentDir(
 );
 
 // Resolve to an absolute path as if done by:
-// Path{path}.resolve(fileGetCurrentDir(path.drive()))
+//  Path p{path}
+//  p.resolve(fileGetCurrentDir(p.drive()))
 std::error_code fileAbsolutePath(Path * out, std::string_view path);
 
 

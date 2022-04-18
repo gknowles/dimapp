@@ -21,14 +21,27 @@ namespace Dim {
 *   Path
 *
 *   Paths are always normalized, which means that:
-*   - '.' directories are removed
-*   - non-leading '..' directories are removed along with the immediately
-*     preceding directory.
-*   - backslashes are replaced with forward slashes
-*   - consecutive slashes are replaced with a single forward slash
-*   - the trailing slash is removed, unless it is also the first character
-*     after the root
+*     - '.' directories are removed
+*     - non-leading '..' directories are removed along with the immediately
+*       preceding directory.
+*     - backslashes are replaced with forward slashes
+*     - consecutive slashes are replaced with a single forward slash
+*     - the trailing slash is removed, unless it is also the first character
+*       after the root
 *
+* 
+*   Decomposition:
+* 
+*   C:     /Windows/System32/icacls.exe
+*   C:     log              /server    .log
+*   C:                       myfile    .ext
+*   [drive][------dir------] [--stem--][extension]
+*   [------parentPath------] [-----filename------]
+*
+*   NOTE: The '/' after the 'dir' (assuming a dir is present) is part of
+*         neither 'dir' nor 'filename'. This is to be consistent with
+*         std::filesystem::path.
+* 
 ***/
 
 class Path {
@@ -102,6 +115,11 @@ public:
     // Resolve path relative to base.
     Path & resolve(const Path & base);
     Path & resolve(std::string_view base);
+    // Resolve path relative to base, except that the fallback is used if the
+    // base would not be an ancestor directory of the result. The fallback is
+    // also resolved relative to base.
+    Path & resolve(const Path & base, std::string_view fallback);
+    Path & resolve(std::string_view base, std::string_view fallback);
 
     bool operator==(std::string_view b) const { return view() == b; }
     bool operator==(const Path & b) const { return view() == b.view(); }
@@ -132,6 +150,7 @@ public:
     // Filename without extension.
     std::string_view stem() const;
 
+    // Portion of last segment following and including the last dot.
     std::string_view extension() const;
 
     bool empty() const;
