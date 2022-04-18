@@ -20,6 +20,9 @@ TokenTable::TokenTable(const Token * src, size_t count) {
     if (!count)
         return;
 
+    // Calculate minimum prefixes required for uniqueness and save it as the
+    // hash length. This is equal to one greater than the largest common
+    // prefix.
     const Token * eptr = src + count;
     m_hashLen = 0;
     for (const Token * a = src + 1; a != eptr; ++a) {

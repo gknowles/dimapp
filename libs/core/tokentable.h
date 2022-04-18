@@ -42,13 +42,20 @@ public:
 
     explicit operator bool() const { return !empty(); }
 
+    // Get key from first Token in table with matching name or id. Returns
+    // false if no tokens match.
     bool find(int * out, std::string_view name) const;
     bool find(int * out, const char name[], size_t nameLen = -1) const;
     bool findName(const char ** const out, int id) const;
 
+    // Get key from first Token in table with matching name or id. Returns
+    // defName or defId if no tokens match.
     auto find(const char name[], auto defId) const;
     auto find(std::string_view name, auto defId) const;
     const char * findName(auto id, const char defName[] = nullptr) const;
+
+    // Each bit of the flags is considered as a seperate search, and the
+    // combined results of the searches is returned.
     template<typename T>
     std::vector<std::string_view> findNames(EnumFlags<T> flags) const;
 
@@ -62,13 +69,15 @@ private:
         int nameLen{0};
         size_t hash{0};
     };
-    // Allow reinterpret_cast to/from Token
+    // Ensure reinterpret_cast between Token and Value is safe.
     static_assert(std::is_standard_layout_v<Value>);
     static_assert(offsetof(Value, token) == 0);
 
     struct Index {
-        int pos{0};
-        int distance{-1};
+        // Position in m_values of value being indexed.
+        int pos{0};         
+        // Distance from ideal position in index. -1 if no hash collison.
+        int distance{-1};   
     };
     std::vector<Value> m_values;
     std::vector<Index> m_byName;

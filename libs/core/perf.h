@@ -88,8 +88,8 @@ struct PerfValue {
 
 // The pretty output localizes the numbers (e.g. commas) and is sorted.
 //
-// NOTE: If the passed in array is not empty it is assumed to still have the
-//       contents returned by a previous call to this function.
+// NOTE: If the passed in array is not empty it is assumed to have the contents
+//       returned by a previous call to this function.
 void perfGetValues(std::vector<PerfValue> * out, bool pretty = false);
 
 } // namespace
