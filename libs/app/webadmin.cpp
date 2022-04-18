@@ -11,25 +11,101 @@ using namespace Dim;
 
 /****************************************************************************
 *
-*   WebRoot
+*   Helpers
+*
+***/
+
+//===========================================================================
+static void addRoute(IJBuilder * out, const HttpRouteInfo & ri) {
+    out->object();
+    out->member("path", ri.path);
+    if (ri.recurse)
+        out->member("recurse", ri.recurse);
+    out->member("methods");
+    out->array();
+    for (auto mname : toViews(ri.methods))
+        out->value(mname);
+    out->end();
+    if (!ri.name.empty())
+        out->member("name", ri.name);
+    if (!ri.desc.empty())
+        out->member("desc", ri.desc);
+    if (!ri.renderPath.empty())
+        out->member("renderPath", ri.renderPath);
+    out->member("matched", ri.matched);
+    out->end();
+}
+
+
+/****************************************************************************
+*
+*   IWebAdminNotify
+*
+***/
+
+//===========================================================================
+void IWebAdminNotify::onHttpRequest(
+    unsigned reqId, 
+    HttpRequest & msg
+) {
+    HttpResponse res(kHttpStatusOk);
+    if (m_jsVar) {
+        res.addHeader(kHttpContentType, "text/javascript");
+        res.body().append("const ").append(*m_jsVar).append(" = ");
+    } else {
+        res.addHeader(kHttpContentType, "application/json");
+    }
+    JBuilder bld(&res.body());
+    bld.object()
+        .member("server").object()
+            .member("baseName", appBaseName())
+            .member("appIndex", appIndex())
+            .member("version", toString(appVersion()))
+            .member("buildTime", Time8601Str(envExecBuildTime()).view())
+            .member("startTime", Time8601Str(envProcessStartTime()).view())
+            .member("address", toString(appAddress()))
+            .end()
+        .member("now", Time8601Str(timeNow()).view());
+
+    auto infos = httpRouteGetRoutes();
+    bld.member("navbar").array();
+    for (auto&& ri : infos) {
+        if (!ri.name.empty()) {
+            addRoute(&bld, ri);
+        }
+    }
+    bld.end();
+
+    onWebAdminRequest(&bld, reqId, msg);
+
+    bld.end();
+    httpRouteReply(reqId, move(res));
+}
+
+
+/****************************************************************************
+*
+*   WebFiles - files from appWebDir()
 *
 ***/
 
 namespace {
-class WebRoot : public IHttpRouteNotify {
+class WebFiles : public IHttpRouteNotify {
     void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
 };
 } // namespace
 
 //===========================================================================
-void WebRoot::onHttpRequest(unsigned reqId, HttpRequest & msg) {
+void WebFiles::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     auto qpath = msg.query().path;
     auto prefix = httpRouteGetInfo(reqId).path.size();
     qpath.remove_prefix(prefix);
-    auto path = Path(qpath).resolve("Web");
-    qpath = path.view();
-    if (qpath != "Web" && qpath.substr(0, 4) != "Web/")
+    if (qpath.size() && qpath[0] == '/')
+        qpath.remove_prefix(1);
+    Path path;
+    if (!appWebPath(&path, qpath))
         return httpRouteReplyNotFound(reqId, msg);
+    qpath = path.view();
 
     bool found = false;
     if (auto ec = fileDirExists(&found, path); !ec && found)
@@ -44,31 +120,62 @@ void WebRoot::onHttpRequest(unsigned reqId, HttpRequest & msg) {
 
 /****************************************************************************
 *
+*   JsonAccount
+*
+***/
+
+namespace {
+class JsonAccount : public IWebAdminNotify {
+    void onWebAdminRequest(
+        IJBuilder * out, 
+        unsigned reqId, 
+        HttpRequest & msg
+    ) override;
+};
+} // namespace
+
+//===========================================================================
+void JsonAccount::onWebAdminRequest(
+    IJBuilder * out,
+    unsigned reqId, 
+    HttpRequest & msg
+) {
+    envProcessAccount(out);
+}
+
+
+/****************************************************************************
+*
 *   JsonCounters
 *
 ***/
 
 namespace {
-class JsonCounters : public IHttpRouteNotify {
-    void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
+class JsonCounters : public IWebAdminNotify {
+    void onWebAdminRequest(
+        IJBuilder * out,
+        unsigned reqId, 
+        HttpRequest & msg
+    ) override;
     vector<PerfValue> m_values;
 };
 } // namespace
 
 //===========================================================================
-void JsonCounters::onHttpRequest(unsigned reqId, HttpRequest & msg) {
+void JsonCounters::onWebAdminRequest(
+    IJBuilder * out,
+    unsigned reqId, 
+    HttpRequest & msg
+) {
     perfGetValues(&m_values);
 
-    HttpResponse res(kHttpStatusOk, "application/json");
-    JBuilder bld(&res.body());
-
-    bld.object();
+    out->member("counters");
+    out->object();
     for (auto && perf : m_values) {
-        bld.member(perf.name);
-        bld.valueRaw(perf.value);
+        out->member(perf.name);
+        out->valueRaw(perf.value);
     }
-    bld.end();
-    httpRouteReply(reqId, move(res));
+    out->end();
 }
 
 
@@ -79,34 +186,44 @@ void JsonCounters::onHttpRequest(unsigned reqId, HttpRequest & msg) {
 ***/
 
 namespace {
-class JsonRoutes : public IHttpRouteNotify {
-    void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
+class JsonRoutes : public IWebAdminNotify {
+    void onWebAdminRequest(
+        IJBuilder * out,
+        unsigned reqId, 
+        HttpRequest & msg
+    ) override;
 };
 } // namespace
 
 //===========================================================================
-void JsonRoutes::onHttpRequest(unsigned reqId, HttpRequest & msg) {
-    HttpResponse res(kHttpStatusOk, "application/json");
-    JBuilder bld(&res.body());
-    httpRouteGetRoutes(&bld);
-    httpRouteReply(reqId, move(res));
+void JsonRoutes::onWebAdminRequest(
+    IJBuilder * out,
+    unsigned reqId, 
+    HttpRequest & msg
+) {
+    auto infos = httpRouteGetRoutes();
+    out->member("routes");
+    out->array();
+    for (auto&& info : infos) 
+        addRoute(out, info);
+    out->end();
 }
 
 
 /****************************************************************************
 *
-*   BinDump
+*   CrashFiles
 *
 ***/
 
 namespace {
-class BinDump : public IHttpRouteNotify {
+class CrashFiles : public IHttpRouteNotify {
     void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
 };
 } // namespace
 
 //===========================================================================
-void BinDump::onHttpRequest(unsigned reqId, HttpRequest & msg) {
+void CrashFiles::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     auto qpath = msg.query().path;
     auto prefix = httpRouteGetInfo(reqId).path.size();
     qpath.remove_prefix(prefix);
@@ -128,20 +245,61 @@ void BinDump::onHttpRequest(unsigned reqId, HttpRequest & msg) {
 *
 ***/
 
-static WebRoot s_webRoot;
+static HttpRouteRedirectNotify s_redirectRoot("/web/srv/counters.html");
+static WebFiles s_webFiles;
+static JsonAccount s_jsonAccount;
 static JsonCounters s_jsonCounters;
 static JsonRoutes s_jsonRoutes;
 static HttpRouteDirListNotify s_jsonDumpFiles({});
-static BinDump s_jsonDump;
+static CrashFiles s_crashFiles;
 
 //===========================================================================
 void Dim::iWebAdminInitialize() {
-    if (appFlags().any(fAppWithWebAdmin)) {
-        httpRouteAdd(&s_webRoot, "/", fHttpMethodGet, true);
-        httpRouteAdd(&s_jsonCounters, "/srv/counters.json");
-        httpRouteAdd(&s_jsonRoutes, "/srv/routes.json");
-        s_jsonDumpFiles.set(appCrashDir());
-        httpRouteAdd(&s_jsonDumpFiles, "/srv/crashes.json");
-        httpRouteAdd(&s_jsonDump, "/srv/crashes/", fHttpMethodGet, true);
-    }
+    if (appFlags().none(fAppWithWebAdmin)) 
+        return;
+
+    httpRouteAdd({
+        .notify = &s_redirectRoot,
+        .path = "/",
+    });
+    httpRouteAdd({
+        .notify = &s_webFiles, 
+        .path = "/web", 
+        .recurse = true
+    });
+    httpRouteAdd({
+        .notify = &s_jsonAccount, 
+        .path = "/srv/account.json", 
+        .name = "Account",
+        .desc = "Details of the account this server is running as.",
+        .renderPath = "/web/srv/account.html",
+    });
+    httpRouteAdd({
+        .notify = &s_jsonCounters, 
+        .path = "/srv/counters.json",
+        .name = "Counters",
+        .desc = "Performance counters",
+        .renderPath = "/web/srv/counters.html",
+    });
+    httpRouteAdd({
+        .notify = &s_jsonRoutes, 
+        .path = "/srv/routes.json",
+        .name = "Routes",
+        .desc = "URL routes server is listening for.",
+        .renderPath = "/web/srv/routes.html",
+    });
+    iLogFileWebInitialize();
+    s_jsonDumpFiles.set(appCrashDir());
+    httpRouteAdd({
+        .notify = &s_jsonDumpFiles, 
+        .path = "/srv/crashes.json",
+        .name = "Crashes",
+        .desc = "List of crash dump files.",
+        .renderPath = "/web/srv/crashes.html",
+    });
+    httpRouteAdd({
+        .notify = &s_crashFiles, 
+        .path = "/srv/crashes/", 
+        .recurse = true,
+    });
 }

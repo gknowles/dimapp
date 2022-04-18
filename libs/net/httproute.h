@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2021.
+// Copyright Glen Knowles 2017 - 2022.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // httpRoute.h - dim net
@@ -12,12 +12,43 @@
 #include "net/http.h"
 #include "net/url.h"
 
+#include <initializer_list>
 #include <memory>
+#include <span>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
 namespace Dim {
+
+class IHttpRouteNotify;
+
+
+/****************************************************************************
+*
+*   Declarations
+*
+***/
+
+struct HttpRouteInfo {
+    // Main settings.
+    IHttpRouteNotify * notify = {};
+
+    // Match conditions.
+    std::string_view path;
+    Dim::EnumFlags<HttpMethod> methods = fHttpMethodGet;
+    bool recurse = false;
+
+    // Web console parameters.
+    std::string_view name;
+    std::string_view desc;
+    std::string_view renderPath;
+
+    // Values not set by clients.
+    unsigned matched = 0;
+
+    explicit operator bool() const { return methods.any(); }
+};
 
 
 /****************************************************************************
@@ -112,12 +143,10 @@ private:
     std::string m_path;
 };
 
-void httpRouteAdd(
-    IHttpRouteNotify * notify,
-    std::string_view path,
-    HttpMethod methods = fHttpMethodGet,
-    bool recurse = false
-);
+void httpRouteAdd(const HttpRouteInfo & route);
+void httpRouteAdd(std::initializer_list<HttpRouteInfo> routes);
+void httpRouteAdd(std::span<const HttpRouteInfo> routes);
+
 void httpRouteAddFile(
     std::string_view path,
     TimePoint mtime,
@@ -136,7 +165,7 @@ void httpRouteAddAlias(
     std::string_view path,
     HttpMethod method,
     std::string_view aliasPath,
-    HttpMethod aliasMethods = fHttpMethodGet,
+    Dim::EnumFlags<HttpMethod> aliasMethods = fHttpMethodGet,
     bool aliasRecurse = false
 );
 
@@ -147,13 +176,6 @@ void httpRouteAddAlias(
 *
 ***/
 
-struct HttpRouteInfo {
-    std::string_view path;
-    HttpMethod methods;
-    bool recurse;
-
-    explicit operator bool() const { return methods != fHttpMethodInvalid; }
-};
 HttpRouteInfo httpRouteGetInfo(unsigned reqId);
 
 
@@ -173,7 +195,11 @@ void httpRouteReply(
     unsigned status,
     std::string_view msg = {}
 );
-void httpRouteReply(unsigned reqId, unsigned status, std::string_view msg = {});
+void httpRouteReply(
+    unsigned reqId, 
+    unsigned status, 
+    std::string_view msg = {}
+);
 
 // Aborts incomplete reply with CANCEL or INTERNAL_ERROR
 void httpRouteCancel(unsigned reqId);
@@ -235,13 +261,6 @@ struct MimeType {
 };
 MimeType mimeTypeDefault(std::string_view path);
 
-
-/****************************************************************************
-*
-*   Debugging
-*
-***/
-
-void httpRouteGetRoutes(IJBuilder * out);
+std::vector<HttpRouteInfo> httpRouteGetRoutes();
 
 } // namespace

@@ -24,13 +24,8 @@ using namespace Dim;
 
 namespace {
 
-struct PathInfo {
-    string_view path;
-    bool recurse{};
-    HttpMethod methods{};
-    size_t segs{};
-    unsigned matched{};
-    IHttpRouteNotify * notify{};
+struct PathInfo : HttpRouteInfo {
+    size_t segs {};
 
     // Internal data referenced by other members
     unique_ptr<char[]> data;
@@ -79,6 +74,7 @@ struct RequestInfo {
 ***/
 
 static vector<PathInfo> s_paths;
+static bool s_initialized;
 static unordered_map<unsigned, RequestInfo> s_requests;
 static unsigned s_nextReqId;
 
@@ -98,10 +94,10 @@ static auto & s_perfRejects = uperf("http.http1 requests rejected");
 ***/
 
 //===========================================================================
-static PathInfo * find(string_view path, HttpMethod method) {
+static PathInfo * find(string_view path, EnumFlags<HttpMethod> methods) {
     PathInfo * best = nullptr;
     for (auto && pi : s_paths) {
-        if (~pi.methods & method)
+        if (pi.methods.none(methods))
             continue;
         if (path == pi.path
             || pi.recurse && path.compare(0, pi.path.size(), pi.path) == 0
@@ -136,6 +132,7 @@ static void route(RequestInfo * ri, unsigned reqId, HttpRequest & req) {
         return httpRouteReplyNotFound(reqId, req);
     ri->pi = pi;
     pi->matched += 1;
+    pi->notify->mapParams(req);
     pi->notify->onHttpRequest(reqId, req);
 }
 
@@ -562,7 +559,7 @@ const MimeType s_mimeTypes[] = {
     { ".html", "text/html"                        },
     { ".jpeg", "image/jpeg"                       },
     { ".jpg",  "image/jpeg"                       },
-    { ".js",   "application/javascript"           },
+    { ".js",   "text/javascript"                  },
     { ".png",  "image/png"                        },
     { ".svg",  "image/svg+xml"                    },
     { ".tsd",  "application/octet-stream"         },
@@ -570,6 +567,7 @@ const MimeType s_mimeTypes[] = {
     { ".tsw",  "application/octet-stream"         },
     { ".xml",  "application/xml",         "utf-8" },
     { ".xsl",  "application/xslt+xml",    "utf-8" },
+    { ".vue",  "text/javascript"                  },
 };
 const unordered_map<string_view, MimeType> s_mimeTypeMap = []() {
     unordered_map<string_view, MimeType> out;
@@ -579,7 +577,7 @@ const unordered_map<string_view, MimeType> s_mimeTypeMap = []() {
 }();
 
 //===========================================================================
-std::strong_ordering MimeType::operator<=>(const MimeType & other) const {
+strong_ordering MimeType::operator<=>(const MimeType & other) const {
     return fileExt <=> other.fileExt;
 }
 
@@ -612,6 +610,7 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
     if (!s_requests.empty())
         return shutdownIncomplete();
     s_paths.clear();
+    s_initialized = false;
 }
 
 
@@ -638,6 +637,7 @@ void Dim::iHttpRouteInitialize() {
     socketAddFamily(AppSocket::kHttp1, &s_http1Match);
     if (!s_paths.empty())
         startListen();
+    s_initialized = true;
 }
 
 
@@ -820,49 +820,66 @@ static void routeAdd(PathInfo && pi) {
         return;
     }
 
-    if (s_paths.empty() && !appStarting())
+    if (s_paths.empty() && s_initialized)
         startListen();
     s_paths.emplace_back(move(pi));
 }
 
 //===========================================================================
-void Dim::httpRouteAdd(
-    IHttpRouteNotify * notify,
-    string_view path,
-    HttpMethod methods,
-    bool recurse
-) {
-    auto pi = PathInfo();
-    pi.data = strDup(path);
+static PathInfo makePathInfo(const HttpRouteInfo & route) {
+    auto out = PathInfo();
+    static_cast<HttpRouteInfo &>(out) = route;
+    out.segs = count(out.path.begin(), out.path.end(), '/');
 
-    pi.notify = notify;
-    pi.path = pi.data.get();
-    pi.segs = count(path.begin(), path.end(), '/');
-    pi.methods = methods;
-    pi.recurse = recurse;
-    routeAdd(move(pi));
+    string_view * views[] = { 
+        &out.path, 
+        &out.name, 
+        &out.desc,
+        &out.renderPath,
+    };
+    out.data = strDupGather(views, size(views));
+    return out;
+}
+
+//===========================================================================
+void Dim::httpRouteAdd(const HttpRouteInfo & route) {
+    routeAdd(makePathInfo(route));
+}
+
+//===========================================================================
+void Dim::httpRouteAdd(initializer_list<HttpRouteInfo> routes) {
+    for (auto&& ri : routes)
+        httpRouteAdd(ri);
+}
+
+//===========================================================================
+void Dim::httpRouteAdd(span<const HttpRouteInfo> routes) {
+    for (auto&& ri : routes)
+        httpRouteAdd(ri);
 }
 
 //===========================================================================
 void Dim::httpRouteAddAlias(
-    std::string_view path,
+    string_view path,
     HttpMethod method,
-    std::string_view aliasPath,
-    HttpMethod aliasMethods,
+    string_view aliasPath,
+    EnumFlags<HttpMethod> aliasMethods,
     bool aliasRecurse
 ) {
-    auto pi = PathInfo{};
-    string_view * views[] = { &path, &aliasPath };
-    pi.data = strDupGather(views, size(views));
-    pi.path = aliasPath;
-    pi.segs = count(aliasPath.begin(), aliasPath.end(), '/');
-    pi.methods = aliasMethods;
-    pi.recurse = aliasRecurse;
+    auto pi = makePathInfo({
+        .path = aliasPath,
+        .methods = aliasMethods,
+        .recurse = aliasRecurse,
+        .renderPath = path   // only used to temporarially make a copy
+    });
+
     auto notify = make_unique<AliasRouteNotify>();
-    notify->m_path = path;
+    notify->m_path = pi.renderPath;
     notify->m_method = method;
+
     pi.notifyOwned = move(notify);
     pi.notify = pi.notifyOwned.get();
+    pi.renderPath = {};
     routeAdd(move(pi));
 }
 
@@ -933,9 +950,7 @@ HttpRouteInfo Dim::httpRouteGetInfo(unsigned reqId) {
     auto it = s_requests.find(reqId);
     if (it != s_requests.end()) {
         auto pi = it->second.pi;
-        ri.path = pi->path;
-        ri.methods = pi->methods;
-        ri.recurse = pi->recurse;
+        ri = *pi;
     }
     return ri;
 }
@@ -1010,7 +1025,7 @@ static void makeReply(
     HttpResponse * out,
     const char url[],
     unsigned status,
-    std::string_view msg
+    string_view msg
 ) {
     StrFrom st{status};
     XBuilder bld(&out->body());
@@ -1036,7 +1051,7 @@ static void routeReply(
     unsigned reqId,
     const char url[],
     unsigned status,
-    std::string_view msg
+    string_view msg
 ) {
     HttpResponse res;
     makeReply(&res, url, status, msg);
@@ -1048,7 +1063,7 @@ void Dim::httpRouteReply(
     unsigned reqId,
     const HttpRequest & req,
     unsigned status,
-    std::string_view msg
+    string_view msg
 ) {
     routeReply(reqId, req.pathRaw(), status, msg);
 }
@@ -1057,7 +1072,7 @@ void Dim::httpRouteReply(
 void Dim::httpRouteReply(
     unsigned reqId,
     unsigned status,
-    std::string_view msg
+    string_view msg
 ) {
     routeReply(reqId, nullptr, status, msg);
 }
@@ -1222,25 +1237,10 @@ void Dim::httpRouteReplyWithFile(
 ***/
 
 //===========================================================================
-void Dim::httpRouteGetRoutes(IJBuilder * out) {
+vector<HttpRouteInfo> Dim::httpRouteGetRoutes() {
     assert(taskInEventThread());
-    out->array();
-    for (auto && p : s_paths) {
-        out->object();
-        out->member("path");
-        if (p.recurse) {
-            auto path = string(p.path) + "...";
-            out->value(path);
-        } else {
-            out->value(p.path);
-        }
-        out->member("methods");
-        out->array();
-        for (auto mname : toViews(p.methods))
-            out->value(mname);
-        out->end();
-        out->member("matched", p.matched);
-        out->end();
-    }
-    out->end();
+    vector<HttpRouteInfo> out;
+    for (auto&& p : s_paths) 
+        out.emplace_back(p);
+    return out;
 }
