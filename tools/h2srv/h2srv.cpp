@@ -33,7 +33,7 @@ static SockMgrHandle s_mgr;
 *
 ***/
 
-class TnetConn : public IAppSocketNotify {
+class TNetConn : public IAppSocketNotify {
 public:
     bool onSocketAccept(const AppSocketInfo & accept) override;
     void onSocketDisconnect() override;
@@ -44,7 +44,7 @@ private:
 };
 
 //===========================================================================
-bool TnetConn::onSocketAccept(const AppSocketInfo & accept) {
+bool TNetConn::onSocketAccept(const AppSocketInfo & accept) {
     m_accept = accept;
     cout << m_accept.remote << " connected on "
         << m_accept.local << endl;
@@ -52,12 +52,12 @@ bool TnetConn::onSocketAccept(const AppSocketInfo & accept) {
 }
 
 //===========================================================================
-void TnetConn::onSocketDisconnect() {
+void TNetConn::onSocketDisconnect() {
     cout << m_accept.remote << " disconnected" << endl;
 }
 
 //===========================================================================
-bool TnetConn::onSocketRead(AppSocketData & data) {
+bool TNetConn::onSocketRead(AppSocketData & data) {
     cout << m_accept.remote << ": ";
     cout.write(data.data, data.bytes);
     return true;
@@ -128,7 +128,7 @@ static void app(int argc, char *argv[]) {
     winTlsInitialize();
     appTlsInitialize();
 
-    s_mgr = sockMgrListen<TnetConn>("raw", AppSocket::kRaw);
+    s_mgr = sockMgrListen<TNetConn>("raw", AppSocket::kRaw);
 
     logMsgInfo() << "Server started";
 }
