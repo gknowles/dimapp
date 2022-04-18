@@ -20,6 +20,7 @@
 # libs/app/resource.cpp
 # libs/app/resource.h
 # libs/app/webadmin.cpp
+# libs/app/webadmin.h
 # libs/core/algo.h
 # libs/core/appint.h
 # libs/core/bitview.cpp
@@ -315,3 +316,8 @@
 # vendor/dimcli
 # vendor/dimcli/libs/dimcli/cli.cpp
 # vendor/dimcli/libs/dimcli/cli.h
+# web/srv/counters.html
+# web/srv/head.html
+# web/srv/initialize.js
+# web/srv/navbar.html
+# web/srv/util.js

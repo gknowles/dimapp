@@ -1,0 +1,57 @@
+<!--
+Copyright Glen Knowles 2022.
+Distributed under the Boost Software License, Version 1.0.
+-->
+<nav class="navbar navbar-expand-sm stick-top bg-primary navbar-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand font-weight-bolder" href="/">
+      <span color="red" style="text-transform: uppercase"
+          font-size="x-large"
+          font-weight="bold" font-family="'Arial', serif">
+        {{appName}}
+      </span>
+    </a>
+    <button class="navbar-toggler" type="button"
+        data-toggle="collapse" data-target="#navbarNav"
+        aria-controls="navbarNav" aria-expanded="false"
+        aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav flex-row">
+        <li class="nav-item" active="true">
+          <a href="settings" class="nav-link">Settings</a>
+        </li>
+      </ul>
+      <div class="col text-end">
+        <a href="http://github.com/gknowles/dimapp">
+          <i class="bi-github" style="font-size: x-large; 
+              color: whitesmoke"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+</nav>
+<div class="container-fluid">
+  <div class="row text-nowrap bg-light px-3 pt-1 border-bottom border-primary">
+    <div class="col">
+      <div class="row" style="font-size: smaller">
+        Address {{server.address}};
+        Version {{server.version}};
+        Build age {{readableDuration(elapsedTime(server.buildTime))}}
+      </div>
+      <div class="row">
+        <ul class="list-group list-group-horizontal">
+          <li v-for="menu in navbar" :class="'py-1 list-group-item '+'${menu.active}'">
+            <a :href="menu.renderPath" :title="menu.desc">
+              {{menu.name}}
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+    <div class="col pe-0 text-end text-nowrap">
+      {{now}}
+    </div>
+  </div>
+</div>
