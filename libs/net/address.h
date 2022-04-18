@@ -143,6 +143,10 @@ namespace Dim {
 );
 [[nodiscard]] bool parse(SubnetAddr * out, std::string_view src);
 
+std::string toString(const HostAddr & addr);
+std::string toString(const SockAddr & addr);
+std::string toString(const SubnetAddr & addr);
+
 //===========================================================================
 // Native
 //===========================================================================
@@ -164,7 +168,7 @@ void addressGetLocal(std::vector<HostAddr> * out);
 class ISockAddrNotify {
 public:
     virtual ~ISockAddrNotify() = default;
-    // count of 0 means either no results or some kind of error occurred
+    // Count of 0 means either no results or some kind of error occurred.
     virtual void onSockAddrFound(const SockAddr * ptr, int count) = 0;
 };
 

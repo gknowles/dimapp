@@ -70,6 +70,13 @@ bool Dim::parse(HostAddr * out, string_view src) {
     return true;
 }
 
+//===========================================================================
+string Dim::toString(const HostAddr & addr) {
+    ostringstream os;
+    os << addr;
+    return os.str();
+}
+
 
 /****************************************************************************
 *
@@ -93,6 +100,13 @@ bool Dim::parse(SockAddr * out, string_view src, int defaultPort) {
     return true;
 }
 
+//===========================================================================
+string Dim::toString(const SockAddr & addr) {
+    ostringstream os;
+    os << addr;
+    return os.str();
+}
+
 
 /****************************************************************************
 *
@@ -101,7 +115,7 @@ bool Dim::parse(SockAddr * out, string_view src, int defaultPort) {
 ***/
 
 //===========================================================================
-bool Dim::parse(SubnetAddr * out, std::string_view src) {
+bool Dim::parse(SubnetAddr * out, string_view src) {
     sockaddr_storage sas;
     uint8_t prefixLen;
     if (!parse(&sas, nullptr, &prefixLen, src)) {
