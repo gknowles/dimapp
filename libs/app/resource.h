@@ -7,12 +7,10 @@
 #include "cppconf/cppconf.h"
 
 #include "core/core.h"
-#include "file/path.h"
 
 #include <deque>
 #include <string>
 #include <string_view>
-#include <unordered_set>
 #include <vector>
 
 namespace Dim {

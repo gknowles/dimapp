@@ -144,27 +144,28 @@ AcceptManager::AcceptManager(
 
 //===========================================================================
 void AcceptManager::setAddresses(const SockAddr * addrs, size_t count) {
-    vector<SockAddr> endpts{addrs, addrs + count};
-    ranges::sort(endpts);
+    vector<SockAddr> saddrs{addrs, addrs + count};
+    ranges::sort(saddrs);
     ranges::sort(m_addrs);
 
+    auto fam = m_family;
     bool console = m_mgrFlags.any(AppSocket::fMgrConsole);
     for_each_diff(
-        endpts.begin(), endpts.end(),
+        saddrs.begin(), saddrs.end(),
         m_addrs.begin(), m_addrs.end(),
-        [&](const SockAddr & ep){ socketListen(this, ep, m_family, console); },
-        [&](const SockAddr & ep){ socketCloseWait(this, ep, m_family); }
+        [&](auto & addr){ socketListen(this, addr, fam, console); },
+        [&](auto & addr){ socketCloseWait(this, addr, fam); }
     );
 
-    m_addrs = move(endpts);
+    m_addrs = move(saddrs);
 }
 
 //===========================================================================
 bool AcceptManager::onShutdown(bool firstTry) {
     if (firstTry) {
-        for (auto && ep : m_addrs)
-            socketCloseWait(this, ep, m_family);
-        for (auto && sock : m_inactivity.values())
+        for (auto&& addr : m_addrs)
+            socketCloseWait(this, addr, m_family);
+        for (auto&& sock : m_inactivity.values())
             sock.disconnect(AppSocket::Disconnect::kAppRequest);
     }
     return !m_inactivity.values();

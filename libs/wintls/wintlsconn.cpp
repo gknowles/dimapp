@@ -115,7 +115,8 @@ NEGOTIATE:
             { (unsigned) src.size(), SECBUFFER_TOKEN, (void *) src.data() },
             { (unsigned) size(alpn_chars) - 1,
                 SECBUFFER_APPLICATION_PROTOCOLS,
-                alpn },
+                alpn 
+            },
         };
         SecBufferDesc inDesc{
             SECBUFFER_VERSION,
@@ -140,7 +141,7 @@ NEGOTIATE:
             SecIsValidHandle(&m_context) ? &m_context : NULL,
             &inDesc, // input buffer
             flags,
-            0, // target data representation
+            0, // target data representation (not used with SChannel)
             &m_context,
             &outDesc,
             &outFlags, // attrs of established connection, mirrors input flags
