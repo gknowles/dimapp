@@ -61,7 +61,7 @@ const TokenTable::Token s_hdrNames[] = {
     {kHttpETag, "etag"},
     {kHttpExpect, "expect"},
     {kHttpExpires, "expires"},
-    {kHttpForwardedFor, "forwarded-for"},
+    {kHttpForwarded, "forwarded"},
     {kHttpFrom, "from"},
     {kHttpHost, "host"},
     {kHttpIfMatch, "if-match"},
@@ -178,7 +178,7 @@ void HttpMsg::clear() {
 
 //===========================================================================
 void HttpMsg::swap(HttpMsg & other) {
-    // You can't swap a request with a response. They different data and,
+    // You can't swap a request with a response. They have different data and,
     // consequently, different memory layouts.
     assert(isRequest() == other.isRequest());
 

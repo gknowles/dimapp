@@ -59,7 +59,7 @@ enum HttpHdr {
     kHttpETag,
     kHttpExpect,
     kHttpExpires,
-    kHttpForwardedFor,
+    kHttpForwarded,
     kHttpFrom,
     kHttpHost,
     kHttpIfMatch,
