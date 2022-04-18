@@ -17,6 +17,10 @@
 #pragma warning(push)
 #endif
 
+#ifndef NDEBUG
+#define _CRTDBG_MAP_ALLOC
+#endif
+
 #ifdef DIMAPP_PACK_ALIGNMENT
 #pragma pack(1)
 
