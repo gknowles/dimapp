@@ -131,7 +131,7 @@ ostream & operator<<(ostream & os, const WinError & val);
 ostream & Dim::operator<<(ostream & os, const WinError & val) {
     auto ntval = (WinError::NtStatus) val;
     auto secval = (WinError::SecurityStatus) val;
-    int native = secval ? secval : ntval ? ntval : val;
+    int native = secval ? secval : ntval ? ntval : (int) val;
     wchar_t wbuf[256] = {};
     FormatMessageW(
         FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
