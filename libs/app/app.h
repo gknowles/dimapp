@@ -25,6 +25,7 @@
 
 #include "config.h"
 #include "resource.h"
+#include "webadmin.h"
 
 #include "core/process.h"
 #include "core/types.h"
@@ -128,6 +129,11 @@ EnumFlags<AppFlags> appFlags();
 // returns EX_OK unless changed by appSignalShutdown()
 int appExitCode();
 
+// Used for logging and preferred address outbound connections.
+SockAddr appAddress();
+
+LogType appLogLevel();
+
 // Application directory structure
 // If bin dir name is "bin":
 //  root 
@@ -136,6 +142,7 @@ int appExitCode();
 //      /crash
 //      /data
 //      /log
+//      /web
 //
 // otherwise:
 //  <binDir> (is also config dir)
@@ -143,6 +150,7 @@ int appExitCode();
 //      /crash
 //      /data
 //      /log
+//      /web
 
 const Path & appRootDir();      // application root
 const Path & appInitialDir();   // current directory when appRun was called
@@ -151,8 +159,7 @@ const Path & appConfigDir();
 const Path & appCrashDir();
 const Path & appDataDir();
 const Path & appLogDir();
-
-LogType appLogLevel();
+const Path & appWebDir();
 
 // False if file relative to root is not within the root path. This can happen
 // if file breaks out via ".." or is an absolute path.
@@ -175,6 +182,11 @@ bool appLogPath(
     Path * out,
     std::string_view file,
     bool createDirIfNotExist = true
+);
+bool appWebPath(
+    Path * out,
+    std::string_view file,
+    bool createDirIfNotExist = false
 );
 
 

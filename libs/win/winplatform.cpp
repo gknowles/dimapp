@@ -120,61 +120,26 @@ static void initPerfs() {
 
 /****************************************************************************
 *
-*   Web console
-*
-***/
-
-//===========================================================================
-// User info
-//===========================================================================
-namespace {
-class WebAccount : public IHttpRouteNotify {
-    void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
-};
-} // namespace
-
-//===========================================================================
-void WebAccount::onHttpRequest(unsigned reqId, HttpRequest & msg) {
-    HttpResponse res(kHttpStatusOk, "application/json");
-    JBuilder bld(&res.body());
-    envProcessAccount(&bld);
-    httpRouteReply(reqId, move(res));
-}
-
-//===========================================================================
-// Register Admin UI
-//===========================================================================
-static WebAccount s_account;
-
-//===========================================================================
-static void registerWebAdmin() {
-    httpRouteAdd(&s_account, "/srv/account.json");
-}
-
-
-/****************************************************************************
-*
 *   Internal API
 *
 ***/
 
 //===========================================================================
-void Dim::iPlatformInitialize() {
-    winErrorInitialize();
-    winEnvInitialize();
-    initPerfs();
-    winDebugInitialize();
-    winCrashInitialize();
-    winIocpInitialize();
-    winExecInitialize();
-    winServiceInitialize();
-    winGuiInitialize();
-}
-
-//===========================================================================
-void Dim::iPlatformConfigInitialize() {
-    winGuiConfigInitialize();
-
-    if (appFlags().any(fAppWithWebAdmin))
-        registerWebAdmin();
+void Dim::iPlatformInitialize(PlatformInit phase) {
+    if (phase == PlatformInit::kBeforeAppVars) {
+        winErrorInitialize();
+        winEnvInitialize();
+        initPerfs();
+        winDebugInitialize(phase);
+        winCrashInitialize(phase);
+        winIocpInitialize();
+        winExecInitialize();
+        winServiceInitialize();
+        winGuiInitialize(phase);
+    } else {
+        assert(phase == PlatformInit::kAfterAppVars);
+        winDebugInitialize(phase);
+        winCrashInitialize(phase);
+        winGuiInitialize(phase);
+    }
 }

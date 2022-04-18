@@ -220,7 +220,7 @@ public:
         size_t m_endPos {0};
         char m_buffer[8'192];
         HttpResponse m_res;
-        JBuilder m_bld{&m_res.body()};
+        JBuilder m_bld {&m_res.body()};
 
         bool onFileRead(
             size_t * bytesUsed,
@@ -244,7 +244,6 @@ void JsonLogTail::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     if (!appLogPath(&path, qpath, false))
         return httpRouteReplyNotFound(reqId, msg);
 
-    mapParams(msg);
     auto limit = clamp(m_limit ? strToUint(*m_limit) : 50u, 10u, 10'000u);
 
     auto job = new LogJob;
@@ -412,9 +411,23 @@ void Dim::iLogFileInitialize() {
 
     logMonitor(&s_logger);
     s_jsonLogFiles.set(appLogDir());
+}
+
+//===========================================================================
+void Dim::iLogFileWebInitialize() {
     if (appFlags().any(fAppWithWebAdmin)) {
-        httpRouteAdd(&s_jsonLogFiles, "/srv/logfiles.json");
-        httpRouteAdd(&s_jsonLogTail, "/srv/logtail/", fHttpMethodGet, true);
+        httpRouteAdd({
+            .notify = &s_jsonLogFiles, 
+            .path = "/srv/logfiles.json",
+            .name = "Logs",
+            .desc = "Server logs files.",
+            .renderPath = "/web/srv/logfiles.html",
+        });
+        httpRouteAdd({
+            .notify = &s_jsonLogTail, 
+            .path = "/srv/logtail/", 
+            .recurse = true
+        });
     }
 }
 

@@ -131,7 +131,7 @@ extern "C" void abortHandler(int sig) {
     if (IsDebuggerPresent())
         DebugBreak();
 
-    if (appFlags().any(fAppWithDumps))
+    if (appFlags().any(fAppWithDumps) && s_crashFile)
         writeDump();
 
     _CrtSetDbgFlag(0);
@@ -219,7 +219,7 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
 ***/
 
 //===========================================================================
-void Dim::winCrashInitialize() {
+static void initBeforeVars() {
     // Make sure DbgHelp.dll gets loaded early, otherwise it could deadlock
     // in the loader lock if we're processing a crash in DllMain.
     winLoadProc(
@@ -228,8 +228,32 @@ void Dim::winCrashInitialize() {
         "MiniDumpWriteDump"
     );
 
+    s_crashFile.clear();
     shutdownMonitor(&s_cleanup);
 
+    RegisterApplicationRecoveryCallback(appRecoveryCallback, NULL, 30'000, 0);
+    s_oldFilter = SetUnhandledExceptionFilter(unhandledExceptionFilter);
+
+    for (auto && [sig, handler] : s_oldHandlers)
+        handler = signal(sig, abortHandler);
+
+    //s_oldErrorModeWin32 = SetErrorMode(SEM_FAILCRITICALERRORS);
+    s_oldErrorModeCrt = _set_error_mode(_OUT_TO_STDERR);
+    s_oldAbortBehavior = _set_abort_behavior(0, kAbortBehaviorMask);
+    s_oldInval = _set_invalid_parameter_handler(invalidParameterHandler);
+    s_oldPure = _set_purecall_handler(pureCallHandler);
+
+    s_oldNew = set_new_handler(newHandler);
+    // make malloc failures also call the new_handler
+    s_oldNewMode = _set_new_mode(1);
+
+    //printf(nullptr);
+    //*(char *) nullptr = 0;
+    //assert(0);
+}
+
+//===========================================================================
+static void initAfterVars() {
     if (appFlags().any(fAppWithFiles)) {
         auto crashDir = appCrashDir();
         vector<FileIter::Entry> found;
@@ -253,26 +277,16 @@ void Dim::winCrashInitialize() {
         s_crashFile += ".dmp";
         s_crashFileW = toWstring(s_crashFile);
     }
+}
 
-    RegisterApplicationRecoveryCallback(appRecoveryCallback, NULL, 30'000, 0);
-    s_oldFilter = SetUnhandledExceptionFilter(unhandledExceptionFilter);
-
-    for (auto && [sig, handler] : s_oldHandlers)
-        handler = signal(sig, abortHandler);
-
-    //s_oldErrorModeWin32 = SetErrorMode(SEM_FAILCRITICALERRORS);
-    s_oldErrorModeCrt = _set_error_mode(_OUT_TO_STDERR);
-    s_oldAbortBehavior = _set_abort_behavior(0, kAbortBehaviorMask);
-    s_oldInval = _set_invalid_parameter_handler(invalidParameterHandler);
-    s_oldPure = _set_purecall_handler(pureCallHandler);
-
-    s_oldNew = set_new_handler(newHandler);
-    // make malloc failures also call the new_handler
-    s_oldNewMode = _set_new_mode(1);
-
-    //printf(nullptr);
-    //*(char *) nullptr = 0;
-    //assert(0);
+//===========================================================================
+void Dim::winCrashInitialize(PlatformInit phase) {
+    if (phase == PlatformInit::kBeforeAppVars) {
+        initBeforeVars();
+    } else {
+        assert(phase == PlatformInit::kAfterAppVars);
+        initAfterVars();
+    }
 }
 
 //===========================================================================

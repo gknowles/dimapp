@@ -13,6 +13,8 @@
 
 namespace Dim {
 
+enum class PlatformInit;
+
 
 /****************************************************************************
 *
@@ -179,7 +181,7 @@ bool parse(WinSid * out, std::string_view src);
 *
 ***/
 
-void winCrashInitialize();
+void winCrashInitialize(PlatformInit phase);
 void winCrashInitializeThread();
 
 
@@ -189,7 +191,7 @@ void winCrashInitializeThread();
 *
 ***/
 
-void winDebugInitialize();
+void winDebugInitialize(PlatformInit phase);
 
 
 /****************************************************************************
@@ -273,8 +275,7 @@ bool winFileSetErrno(int error);
 *
 ***/
 
-void winGuiInitialize();
-void winGuiConfigInitialize();
+void winGuiInitialize(PlatformInit phase);
 
 
 /****************************************************************************

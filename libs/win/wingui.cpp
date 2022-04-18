@@ -414,14 +414,15 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
 ***/
 
 //===========================================================================
-void Dim::winGuiInitialize() {
-    shutdownMonitor(&s_cleanup);
-    s_windowTask.clear();
-    s_taskq = taskCreateQueue("Message Loop", 1);
-    iAppPushStartupTask(&s_notify);
-}
+void Dim::winGuiInitialize(PlatformInit phase) {
+    if (phase == PlatformInit::kBeforeAppVars) {
+        shutdownMonitor(&s_cleanup);
+        s_windowTask.clear();
+        s_taskq = taskCreateQueue("Message Loop", 1);
+        iAppPushStartupTask(&s_notify);
+        return;
+    }
 
-//===========================================================================
-void Dim::winGuiConfigInitialize() {
+    assert(phase == PlatformInit::kAfterAppVars);
     configMonitor("app.xml", &s_notify);
 }

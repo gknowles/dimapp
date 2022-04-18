@@ -100,11 +100,15 @@ static auto s_attachMemLeakHandle = attachMemLeakHandle;
 #pragma data_seg(pop)
 
 //===========================================================================
-void Dim::winDebugInitialize() {
+void Dim::winDebugInitialize(PlatformInit phase) {
+    if (phase == PlatformInit::kBeforeAppVars) {
+        _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+        return;
+    }
+
+    assert(phase == PlatformInit::kAfterAppVars);
     auto fname = Path("memleak-" + appName()).defaultExt("log");
     Path out;
     if (appLogPath(&out, fname))
         strCopy(s_fname, size(s_fname), out.c_str());
-
-    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 }

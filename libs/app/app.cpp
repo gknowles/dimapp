@@ -30,13 +30,15 @@ static unsigned s_appIndex;
 static string s_appName;    // appBaseName[<appIndex>], if appIndex > 1
 static vector<ITaskNotify *> s_appTasks;
 static EnumFlags<AppFlags> s_appFlags;
+static SockAddr s_appAddr;  // preferred for outbound connections and logging
 static Path s_initialDir;
 static Path s_rootDir;
-static Path s_binDir;
+static Path s_binDir;   // location of running binary
 static Path s_confDir;
 static Path s_crashDir; // where to place crash dumps
 static Path s_dataDir;
-static Path s_logDir;
+static Path s_logDir;   // where to place log files
+static Path s_webDir;
 
 
 /****************************************************************************
@@ -48,14 +50,14 @@ static Path s_logDir;
 //===========================================================================
 static bool makeAppPath(
     Path * out,
-    string_view root,
+    const Path & root,
     string_view file,
     bool createDirIfNotExist
 ) {
-    *out = Path(root) / file;
-    if (out->str().compare(0, root.size(), root.data(), root.size()) != 0
-        || out->str()[root.size()] != '/'
-    ) {
+    *out = file;
+    out->resolve(root, "/");
+    if (out->dir() == "/") {
+        // Path doesn't have root as a parent.
         return false;
     }
     if (createDirIfNotExist) {
@@ -91,6 +93,7 @@ void ConfigAppXml::onConfigChange(const XDocument & doc) {
     shutdownDisableTimeout(configNumber(doc, "DisableShutdownTimeout"));
     s_logDir = makeAppDir(configString(doc, "LogDir", "log"));
     s_dataDir = makeAppDir(configString(doc, "DataDir", "data"));
+    s_appAddr.port = (unsigned) configNumber(doc, "Port", 41000);
 }
 
 
@@ -117,21 +120,57 @@ void FnProxyAppNotify::onAppRun() {
 
 /****************************************************************************
 *
-*   RunTask
+*   Initialize Application
 *
 ***/
 
-namespace {
-class RunTask : public ITaskNotify {
-    void onTask() override;
-};
-} // namespace
-static RunTask s_runTask;
+//===========================================================================
+static void initVars() {
+    // Application name and version
+    fileGetCurrentDir(&s_initialDir);
+    auto exeName = (Path) envExecPath();
+    if (s_appBaseName.empty()) 
+        s_appBaseName = exeName.stem();
+    if (!s_appVer)
+        s_appVer = envExecVersion();
+    if (s_appVer) {
+        Cli cli;
+        ostringstream hdr;
+        Time8601Str ds(envExecBuildTime());
+        auto verStr = toString(s_appVer);
+        hdr << s_appBaseName 
+            << " v" << verStr
+            << " (" << ds.view().substr(0, 10) << ")";
+        cli.header(hdr.str())
+            .versionOpt(verStr, s_appBaseName);
+    }
+    s_appName = s_appBaseName;
+    if (s_appIndex > 1)
+        s_appName += StrFrom(s_appIndex).view();
+
+    // Directories
+    s_binDir = exeName.parentPath();
+    if (s_appFlags.any(fAppWithFiles) && s_binDir.stem() == "bin") {
+        s_rootDir = s_binDir.parentPath();
+        s_confDir = makeAppDir("conf");
+    } else {
+        s_rootDir = Path(envProcessLogDataDir()) / s_appName;
+        s_confDir = s_binDir;
+    }
+    s_crashDir = makeAppDir("crash");
+    s_dataDir = makeAppDir("data");
+    s_logDir = makeAppDir("log");
+    s_webDir = makeAppDir("web");
+
+    if (s_appFlags.any(fAppWithChdir))
+        fileSetCurrentDir(s_rootDir);
+}
 
 //===========================================================================
-void RunTask::onTask() {
-    iPlatformInitialize();
+static void initApp() {
+    iPlatformInitialize(PlatformInit::kBeforeAppVars);
     iFileInitialize();
+    initVars();
     iConfigInitialize();
     configMonitor("app.xml", &s_appXml);
     if (s_appFlags.any(fAppWithLogs)) {
@@ -139,14 +178,14 @@ void RunTask::onTask() {
         if (s_appFlags.any(fAppWithConsole))
             logMonitor(consoleBasicLogger());
     }
-    iPlatformConfigInitialize();
+    iPlatformInitialize(PlatformInit::kAfterAppVars);
+    iAppPerfInitialize();
     iPipeInitialize();
     iSocketInitialize();
     iAppSocketInitialize();
     iSockMgrInitialize();
     iHttpRouteInitialize();
     iWebAdminInitialize();
-    iAppPerfInitialize();
 
     taskPushEvent(s_appTasks.data(), s_appTasks.size());
 
@@ -192,103 +231,6 @@ void Dim::iAppSetFlags(EnumFlags<AppFlags> flags) {
 ***/
 
 //===========================================================================
-const string & Dim::appBaseName() {
-    return s_appBaseName;
-}
-
-//===========================================================================
-const VersionInfo & Dim::appVersion() {
-    return s_appVer;
-}
-
-//===========================================================================
-unsigned Dim::appIndex() {
-    return s_appIndex;
-}
-
-//===========================================================================
-const string & Dim::appName() {
-    return s_appName;
-}
-
-//===========================================================================
-RunMode Dim::appMode() {
-    lock_guard lk(s_runMut);
-    return s_runMode;
-}
-
-//===========================================================================
-EnumFlags<AppFlags> Dim::appFlags() {
-    return s_appFlags;
-}
-
-//===========================================================================
-int Dim::appExitCode() {
-    lock_guard lk(s_runMut);
-    return s_exitcode;
-}
-
-//===========================================================================
-bool Dim::appUsageErrorSignaled() {
-    return s_usageErrorSignaled.test();
-}
-
-//===========================================================================
-const Path & Dim::appInitialDir() {
-    return s_initialDir;
-}
-
-//===========================================================================
-const Path & Dim::appRootDir() {
-    return s_rootDir;
-}
-
-//===========================================================================
-const Path & Dim::appBinDir() {
-    return s_binDir;
-}
-
-//===========================================================================
-const Path & Dim::appConfigDir() {
-    return s_confDir;
-}
-
-//===========================================================================
-bool Dim::appConfigPath(Path * out, string_view file, bool cine) {
-    return makeAppPath(out, appConfigDir(), file, cine);
-}
-
-//===========================================================================
-const Path & Dim::appLogDir() {
-    return s_logDir;
-}
-
-//===========================================================================
-bool Dim::appLogPath(Path * out, string_view file, bool cine) {
-    return makeAppPath(out, appLogDir(), file, cine);
-}
-
-//===========================================================================
-const Path & Dim::appDataDir() {
-    return s_dataDir;
-}
-
-//===========================================================================
-bool Dim::appDataPath(Path * out, string_view file, bool cine) {
-    return makeAppPath(out, appDataDir(), file, cine);
-}
-
-//===========================================================================
-const Path & Dim::appCrashDir() {
-    return s_crashDir;
-}
-
-//===========================================================================
-bool Dim::appCrashPath(Path * out, string_view file, bool cine) {
-    return makeAppPath(out, appCrashDir(), file, cine);
-}
-
-//===========================================================================
 int Dim::appRun(
     function<void(int argc, char *argv[])> fn,
     int argc,
@@ -310,23 +252,26 @@ int Dim::appRun(
     string_view baseName,
     EnumFlags<AppFlags> flags
 ) {
+    // Save options.
     {
         lock_guard lk(s_runMut);
         assert(s_runMode == kRunStopped);
         s_runMode = kRunStarting;
         s_exitcode = 0;
     }
+    s_usageErrorSignaled.clear();
     s_appFlags = flags;
     s_appTasks.clear();
 
-    if (s_appFlags.any(fAppWithService)) {
+    if (s_appFlags.none(fAppWithService)) {
+        s_appIndex = 1;
+    } else {
         Cli cli;
         cli.opt(&s_appIndex, "app-index", 1)
             .desc("Identifies service when multiple are configured.");
 
         // The command line will be validated later by the application, right
-        // now we just need the appIndex so the configuration can be 
-        // processed.
+        // now we just need the appIndex so the configuration can be processed.
         stringstream tin, tout;
         auto conin = &cli.conin();
         auto conout = &cli.conout();
@@ -335,48 +280,16 @@ int Dim::appRun(
         cli.iostreams(conin, conout);
     }
 
-    fileGetCurrentDir(&s_initialDir);
-    auto exeName = (Path) envExecPath();
-    if (baseName.empty()) {
-        s_appBaseName = exeName.stem();
-    } else {
-        s_appBaseName = baseName;
-    }
-    s_appVer = ver ? ver : envExecVersion();
-    if (s_appVer) {
-        Cli cli;
-        ostringstream hdr;
-        Time8601Str ds(envExecBuildTime());
-        auto verStr = toString(s_appVer);
-        hdr << s_appBaseName 
-            << " v" << verStr
-            << " (" << ds.view().substr(0, 10) << ")";
-        cli.header(hdr.str())
-            .versionOpt(verStr, s_appBaseName);
-    }
+    s_appVer = ver;
+    s_appBaseName = baseName;
+    s_appName.clear();
+    s_webDir.clear();
 
-    s_appName = s_appBaseName;
-    if (s_appIndex > 1)
-        s_appName += StrFrom(s_appIndex).view();
-    s_binDir = exeName.removeFilename();
-    if (flags.any(fAppWithFiles) && s_binDir.stem() == "bin") {
-        s_rootDir = s_binDir.parentPath();
-        s_confDir = makeAppDir("conf");
-    } else {
-        s_rootDir = Path(envProcessLogDataDir()) / s_appName;
-        s_confDir = s_binDir;
-    }
-    s_crashDir = makeAppDir("crash");
-    s_dataDir = makeAppDir("data");
-    s_logDir = makeAppDir("log");
-
-    if (flags.any(fAppWithChdir))
-        fileSetCurrentDir(s_rootDir);
-
+    // Finish initialization and start.
     iPerfInitialize();
     iLogInitialize();
     iConsoleInitialize();
-    if (flags.any(fAppWithConsole))
+    if (s_appFlags.any(fAppWithConsole))
         logDefaultMonitor(consoleBasicLogger());
     iTaskInitialize();
     iTimerInitialize();
@@ -384,8 +297,9 @@ int Dim::appRun(
     s_app = app;
     s_app->m_argc = argc;
     s_app->m_argv = argv;
-    taskPushEvent(&s_runTask);
+    taskPushEvent(initApp);
 
+    // Wait for application to finish.
     unique_lock lk{s_runMut};
     while (s_runMode != kRunStopping)
         s_runCv.wait(lk);
@@ -396,10 +310,10 @@ int Dim::appRun(
 
     //-----------------------------------------------------------------------
     // No external effects should happen after this point. Any sockets, pipes,
-    // files, or other shared resources MUST ALREADY be closed. When running
-    // as a service the SERVICE_STOPPED status has been reported and the
-    // Service Control Manager may have already stopped handling requests from
-    // us in favor of a new instance of the service.
+    // files, or other shared resources MUST already be closed. When running as
+    // a service the SERVICE_STOPPED status has been reported and the Service
+    // Control Manager may have already stopped handling requests from us in
+    // favor of a new instance of the service.
     //-----------------------------------------------------------------------
 
     iTimerDestroy();
@@ -410,6 +324,129 @@ int Dim::appRun(
     assert(s_runMode == kRunStopping);
     s_runMode = kRunStopped;
     return s_exitcode;
+}
+
+//===========================================================================
+unsigned Dim::appIndex() {
+    return s_appIndex;
+}
+
+//===========================================================================
+const VersionInfo & Dim::appVersion() {
+    return s_appVer;
+}
+
+//===========================================================================
+EnumFlags<AppFlags> Dim::appFlags() {
+    return s_appFlags;
+}
+
+//===========================================================================
+const string & Dim::appBaseName() {
+    assert(!s_appName.empty());
+    return s_appBaseName;
+}
+
+//===========================================================================
+const string & Dim::appName() {
+    assert(!s_appName.empty());
+    return s_appName;
+}
+
+//===========================================================================
+const Path & Dim::appInitialDir() {
+    assert(!s_appName.empty());
+    return s_initialDir;
+}
+
+//===========================================================================
+const Path & Dim::appRootDir() {
+    assert(!s_appName.empty());
+    return s_rootDir;
+}
+
+//===========================================================================
+const Path & Dim::appBinDir() {
+    assert(!s_appName.empty());
+    return s_binDir;
+}
+
+//===========================================================================
+const Path & Dim::appConfigDir() {
+    assert(!s_appName.empty());
+    return s_confDir;
+}
+
+//===========================================================================
+const Path & Dim::appLogDir() {
+    assert(!s_appName.empty());
+    return s_logDir;
+}
+
+//===========================================================================
+const Path & Dim::appDataDir() {
+    assert(!s_appName.empty());
+    return s_dataDir;
+}
+
+//===========================================================================
+const Path & Dim::appCrashDir() {
+    assert(!s_appName.empty());
+    return s_crashDir;
+}
+
+//===========================================================================
+const Path & Dim::appWebDir() {
+    assert(!s_webDir.empty());
+    return s_webDir;
+}
+
+//===========================================================================
+SockAddr Dim::appAddress() {
+    assert(!s_appName.empty());
+    return s_appAddr;
+}
+
+//===========================================================================
+RunMode Dim::appMode() {
+    lock_guard lk(s_runMut);
+    return s_runMode;
+}
+
+//===========================================================================
+int Dim::appExitCode() {
+    lock_guard lk(s_runMut);
+    return s_exitcode;
+}
+
+//===========================================================================
+bool Dim::appUsageErrorSignaled() {
+    return s_usageErrorSignaled.test();
+}
+
+//===========================================================================
+bool Dim::appConfigPath(Path * out, string_view file, bool cine) {
+    return makeAppPath(out, appConfigDir(), file, cine);
+}
+
+//===========================================================================
+bool Dim::appLogPath(Path * out, string_view file, bool cine) {
+    return makeAppPath(out, appLogDir(), file, cine);
+}
+
+//===========================================================================
+bool Dim::appDataPath(Path * out, string_view file, bool cine) {
+    return makeAppPath(out, appDataDir(), file, cine);
+}
+
+//===========================================================================
+bool Dim::appCrashPath(Path * out, string_view file, bool cine) {
+    return makeAppPath(out, appCrashDir(), file, cine);
+}
+
+//===========================================================================
+bool Dim::appWebPath(Path * out, string_view file, bool cine) {
+    return makeAppPath(out, appWebDir(), file, cine);
 }
 
 //===========================================================================

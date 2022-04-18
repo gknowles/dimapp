@@ -9,8 +9,11 @@
 namespace Dim {
 
 // Platform
-void iPlatformInitialize();
-void iPlatformConfigInitialize();
+enum class PlatformInit {
+    kBeforeAppVars,
+    kAfterAppVars,
+};
+void iPlatformInitialize(PlatformInit phase);
 
 // Console
 void iConsoleInitialize();

@@ -22,6 +22,7 @@ void iConfigInitialize();
 
 // LogFile
 void iLogFileInitialize();
+void iLogFileWebInitialize();
 
 // WebAdmin
 void iWebAdminInitialize();
