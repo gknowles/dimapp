@@ -42,13 +42,13 @@ static auto & s_perfBuildAge = fperf(
 void Dim::iAppPerfInitialize() {
     auto ver = appVersion();
     if (ver.major) 
-        uperf("app version (major)") = ver.major;
+        uperf("app.version (major)") = ver.major;
     if (ver.minor) 
-        uperf("app version (minor)") = ver.minor;
+        uperf("app.version (minor)") = ver.minor;
     if (ver.patch) 
-        uperf("app version (patch)") = ver.patch;
+        uperf("app.version (patch)") = ver.patch;
     if (ver.build) 
-        uperf("app version (build)") = ver.build;
+        uperf("app.version (build)") = ver.build;
 
     s_buildDate = envExecBuildTime();
 }
