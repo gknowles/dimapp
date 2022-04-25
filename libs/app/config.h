@@ -30,6 +30,8 @@ struct ConfigContext {
     std::string module; // socket manager name
 };
 
+ConfigContext configDefaultContext();
+
 
 /****************************************************************************
 *

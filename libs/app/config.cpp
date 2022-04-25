@@ -274,9 +274,7 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
 //===========================================================================
 void Dim::iConfigInitialize() {
     shutdownMonitor(&s_cleanup);
-    vector<HostAddr> addrs;
-    addressGetLocal(&addrs);
-    s_context.saddr.addr = addrs[0];
+    s_context.saddr = appAddress();
     s_context.appBaseName = appBaseName();
     s_context.appIndex = appIndex();
     if (appFlags().any(fAppWithFiles))
@@ -289,6 +287,11 @@ void Dim::iConfigInitialize() {
 *   Public API
 *
 ***/
+
+//===========================================================================
+ConfigContext Dim::configDefaultContext() {
+    return s_context;
+}
 
 //===========================================================================
 static bool getFullpath(Path * out, string_view file) {
