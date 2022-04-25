@@ -33,6 +33,18 @@ Top level element
 | Disable disconnect of inbound sockets that are inactive
 | 0-1
 
+| Port
+| 
+| 0-1
+
+| EnableGui
+|
+| 0-1
+
+| GroupType
+| Type of group this server is deployed in. { local, dev, stage, live }
+| 0-1
+
 | [Certificates](#&lt;Certificates>)
 | Certificates to use for validating https connections
 | 0-1

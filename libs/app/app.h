@@ -119,20 +119,23 @@ const std::string & appName();
 const std::string & appBaseName();
 const VersionInfo & appVersion();
 unsigned appIndex();
-RunMode appMode();
-inline bool appStarting() { return appMode() == kRunStarting; }
-inline bool appStopping() { return appMode() == kRunStopping; }
 
 // returns flags passed to appRun()
 EnumFlags<AppFlags> appFlags();
 
-// returns EX_OK unless changed by appSignalShutdown()
-int appExitCode();
-
-// Used for logging and preferred address outbound connections.
+// Used for logging and preferred address for outbound connections.
 SockAddr appAddress();
 
 LogType appLogLevel();
+unsigned appGroupIndex();
+std::string appGroupType();
+
+RunMode appMode();
+inline bool appStarting() { return appMode() == kRunStarting; }
+inline bool appStopping() { return appMode() == kRunStopping; }
+
+// returns EX_OK unless changed by appSignalShutdown()
+int appExitCode();
 
 // Application directory structure
 // If bin dir name is "bin":

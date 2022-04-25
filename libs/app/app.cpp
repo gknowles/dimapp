@@ -28,6 +28,8 @@ static string s_appBaseName;
 static VersionInfo s_appVer;
 static unsigned s_appIndex;
 static string s_appName;    // appBaseName[<appIndex>], if appIndex > 1
+static unsigned s_groupIndex;
+static string s_groupType;
 static vector<ITaskNotify *> s_appTasks;
 static EnumFlags<AppFlags> s_appFlags;
 static SockAddr s_appAddr;  // preferred for outbound connections and logging
@@ -94,6 +96,7 @@ void ConfigAppXml::onConfigChange(const XDocument & doc) {
     s_logDir = makeAppDir(configString(doc, "LogDir", "log"));
     s_dataDir = makeAppDir(configString(doc, "DataDir", "data"));
     s_appAddr.port = (unsigned) configNumber(doc, "Port", 41000);
+    s_groupType = configString(doc, "GroupType", "local");
 }
 
 
@@ -164,6 +167,11 @@ static void initVars() {
 
     if (s_appFlags.any(fAppWithChdir))
         fileSetCurrentDir(s_rootDir);
+
+    // Address
+    vector<HostAddr> addrs;
+    addressGetLocal(&addrs);
+    s_appAddr.addr = addrs[0];
 }
 
 //===========================================================================
@@ -265,10 +273,13 @@ int Dim::appRun(
 
     if (s_appFlags.none(fAppWithService)) {
         s_appIndex = 1;
+        s_groupIndex = 1;
     } else {
         Cli cli;
         cli.opt(&s_appIndex, "app-index", 1)
             .desc("Identifies service when multiple are configured.");
+        cli.opt(&s_groupIndex, "group-index", 1)
+            .desc("Identifies service group when there are multiple.");
 
         // The command line will be validated later by the application, right
         // now we just need the appIndex so the configuration can be processed.
@@ -351,6 +362,16 @@ const string & Dim::appBaseName() {
 const string & Dim::appName() {
     assert(!s_appName.empty());
     return s_appName;
+}
+
+//===========================================================================
+unsigned Dim::appGroupIndex() {
+    return s_groupIndex;
+}
+
+//===========================================================================
+string Dim::appGroupType() {
+    return s_groupType;
 }
 
 //===========================================================================

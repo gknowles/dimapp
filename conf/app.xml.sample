@@ -12,6 +12,8 @@ Should be locally copied to app.xml
   <EnableGui value="1" name="h2srv"/>
   <LogLevel value="warn"/>
 
+  <GroupType value="local"/>
+  
   <!--
   Multiple certificates may be included from multiple stores. Each store
   has a name and location from the lists below. For more about what those are,
