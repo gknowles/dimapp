@@ -20,7 +20,6 @@
 #include <algorithm>
 #include <atomic>
 #include <cassert>
-//#include <cerrno>
 #include <codecvt>
 #include <csignal>
 #include <cstdlib>
@@ -52,6 +51,7 @@
 #include <AclAPI.h>
 #include <CommCtrl.h> // ListView
 #include <DbgHelp.h>
+#include <lmcons.h>
 #include <NTSecAPI.h> // LsaOpenPolicy
 #include <Psapi.h> // GetProcessMemoryInfo
 #include <sddl.h> // ConvertSidToStringSid
@@ -63,6 +63,10 @@
 #include <WS2tcpip.h> // getaddrinfo, GetAddrInfoEx
 #include <VersionHelpers.h>
 
+// must come after lmcons.h
+#include <LMAPIbuf.h> // NetApiBufferFree
+#include <LMJoin.h> // NetGetJoinInformation
+
 // must come after WinSock2.h
 #include <iphlpapi.h> // GetAdaptersAddresses, ParseNetworkString
 #include <mstcpip.h> // SIO_LOOPBACK_FAST_PATH
@@ -70,6 +74,7 @@
 
 #pragma comment(lib, "Dbghelp.lib")
 #pragma comment(lib, "iphlpapi.lib") // GetAdaptersAddresses
+#pragma comment(lib, "Netapi32.lib")
 #pragma comment(lib, "RpcRT4.lib") // UuidCreate
 #pragma comment(lib, "synchronization.lib") // WaitOnAddress
 #pragma comment(lib, "Version.lib") // GetFileVersionInfo

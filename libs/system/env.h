@@ -51,6 +51,21 @@ struct DiskSpace {
 };
 DiskSpace envDiskSpace(std::string_view path);
 
+std::string envComputerName();
+
+enum class DomainStatus {
+    kUnknown,
+    kUnjoined,
+    kWorkgroup,
+    kDomain,
+};
+struct EnvDomainMembership {
+    std::string name;
+    DomainStatus status;
+};
+EnvDomainMembership envDomainMembership();
+std::string envDomainStatusToString(DomainStatus value);
+
 
 /****************************************************************************
 *
@@ -85,8 +100,10 @@ enum ProcessRights {
 };
 ProcessRights envProcessRights();
 
+std::string envProcessAccount();
+
 // Dump information about current account
-void envProcessAccount(IJBuilder * out);
+void envProcessAccountInfo(IJBuilder * out);
 
 // Root of default system directory for application to write crash and log
 // data.

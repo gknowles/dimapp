@@ -18,6 +18,7 @@ using namespace Dim;
 static EnvMemoryConfig s_memCfg;
 static unsigned s_numProcessors;
 static string s_execPath;
+static string s_procAcct;
 
 
 /****************************************************************************
@@ -39,6 +40,18 @@ void Dim::winEnvInitialize() {
         s_memCfg.minLargeAlloc = GetLargePageMinimum();
     }
     s_numProcessors = info.dwNumberOfProcessors;
+
+    wstring out;
+    DWORD bufLen = 0;
+    while (!GetUserNameW(out.data(), &bufLen)) {
+        WinError err;
+        if (err == ERROR_INSUFFICIENT_BUFFER) {
+            out.resize(bufLen);
+            continue;
+        }
+        logMsgFatal() << "GetUserNameW: " << err;
+    }
+    s_procAcct = toString(out);
 }
 
 
@@ -153,6 +166,50 @@ DiskSpace Dim::envDiskSpace(string_view path) {
     DiskSpace out;
     out.avail = avail.QuadPart;
     out.total = total.QuadPart;
+    return out;
+}
+
+//===========================================================================
+string Dim::envComputerName() {
+    wchar_t buf[MAX_COMPUTERNAME_LENGTH + 1];
+    DWORD bufLen = (DWORD) size(buf);
+    if (!GetComputerNameW(buf, &bufLen)) 
+        logMsgFatal() << "GetComputerNameW: " << WinError();
+    return toString(buf);
+}
+
+//===========================================================================
+EnvDomainMembership Dim::envDomainMembership() {
+    EnvDomainMembership out = {};
+    wchar_t * buf;
+    NETSETUP_JOIN_STATUS bufType;
+    if (WinError err = NetGetJoinInformation(NULL, &buf, &bufType)) 
+        logMsgFatal() << "NetGetJoinInformation: " << err;
+    switch (bufType) {
+    case NetSetupUnknownStatus: out.status = DomainStatus::kUnknown; break;
+    case NetSetupUnjoined: out.status = DomainStatus::kUnjoined; break;
+    case NetSetupWorkgroupName: out.status = DomainStatus::kWorkgroup;break;
+    case NetSetupDomainName: out.status = DomainStatus::kDomain; break;
+    default:
+        out.status = DomainStatus::kUnknown;
+    }
+    out.name = toString(buf);
+    if (WinError err = NetApiBufferFree(buf)) 
+        logMsgFatal() << "NetApiBufferFree: " << err;
+    return out;
+}
+
+//===========================================================================
+string Dim::envDomainStatusToString(DomainStatus value) {
+    switch (value) {
+    case DomainStatus::kUnknown: return "unknown";
+    case DomainStatus::kUnjoined: return "unjoined";
+    case DomainStatus::kWorkgroup: return "workgroup";
+    case DomainStatus::kDomain: return "domain";
+    }
+    string out = "UNKNOWN(";
+    out += StrFrom{to_underlying(value)}.view();
+    out += ')';
     return out;
 }
 
@@ -331,30 +388,30 @@ string Dim::envProcessLogDataDir() {
 ***/
 
 const TokenTable::Token s_attrs[] = {
-    { (int) SE_GROUP_MANDATORY,           "MANDATORY" },
-    { (int) SE_GROUP_ENABLED_BY_DEFAULT,  "ENABLED_BY_DEFAULT" },
-    { (int) SE_GROUP_ENABLED,             "ENABLED" },
-    { (int) SE_GROUP_OWNER,               "OWNER" },
-    { (int) SE_GROUP_USE_FOR_DENY_ONLY,   "USE_FOR_DENY_ONLY" },
-    { (int) SE_GROUP_INTEGRITY,           "INTEGRITY" },
-    { (int) SE_GROUP_INTEGRITY_ENABLED,   "INTEGRITY_ENABLED" },
-    { (int) SE_GROUP_LOGON_ID,            "LOGON_ID" },
-    { (int) SE_GROUP_RESOURCE,            "RESOURCE" },
+    { (int) SE_GROUP_ENABLED,             "Enabled" },
+    { (int) SE_GROUP_ENABLED_BY_DEFAULT,  "EnabledByDefault" },
+    { (int) SE_GROUP_INTEGRITY,           "Integrity" },
+    { (int) SE_GROUP_INTEGRITY_ENABLED,   "IntegrityEnabled" },
+    { (int) SE_GROUP_LOGON_ID,            "LogonId" },
+    { (int) SE_GROUP_MANDATORY,           "Mandatory" },
+    { (int) SE_GROUP_OWNER,               "Owner" },
+    { (int) SE_GROUP_RESOURCE,            "Resource" },
+    { (int) SE_GROUP_USE_FOR_DENY_ONLY,   "UseForDenyOnly" },
 };
 const TokenTable s_attrTbl(s_attrs);
 
 const TokenTable::Token s_sidTypes[] = {
-    { SidTypeUser,              "User" },
-    { SidTypeGroup,             "Group" },
-    { SidTypeDomain,            "Domain" },
     { SidTypeAlias,             "Alias" },
-    { SidTypeWellKnownGroup,    "WellKnownGroup" },
-    { SidTypeDeletedAccount,    "DeletedAccount" },
-    { SidTypeInvalid,           "Invalid" },
-    { SidTypeUnknown,           "Unknown" },
     { SidTypeComputer,          "Computer" },
+    { SidTypeDeletedAccount,    "DeletedAccount" },
+    { SidTypeDomain,            "Domain" },
+    { SidTypeGroup,             "Group" },
+    { SidTypeInvalid,           "Invalid" },
     { SidTypeLabel,             "Label" },
     { SidTypeLogonSession,      "LogonSession" },
+    { SidTypeUnknown,           "Unknown" },
+    { SidTypeUser,              "User" },
+    { SidTypeWellKnownGroup,    "WellKnownGroup" },
 };
 const TokenTable s_sidTypeTbl(s_sidTypes);
 
@@ -421,7 +478,7 @@ static void addSidRow(IJBuilder * out, SID_AND_ATTRIBUTES & sa) {
 }
 
 //===========================================================================
-void Dim::envProcessAccount(IJBuilder * out) {
+void Dim::envProcessAccountInfo(IJBuilder * out) {
     auto proc = GetCurrentProcess();
     HANDLE token;
     if (!OpenProcessToken(proc, TOKEN_QUERY, &token))
@@ -447,14 +504,20 @@ void Dim::envProcessAccount(IJBuilder * out) {
         logMsgFatal() << "GetTokenInformation(TokenGroups): " << WinError{};
     CloseHandle(token);
 
-    out->array();
+    out->member("user");
     addSidRow(out, usr->User);
+    out->member("groups").array();
     auto * ptr = grps->Groups,
         *eptr = ptr + grps->GroupCount;
     for (; ptr != eptr; ++ptr) {
         addSidRow(out, *ptr);
     }
     out->end();
+}
+
+//===========================================================================
+string Dim::envProcessAccount() {
+    return s_procAcct;
 }
 
 
