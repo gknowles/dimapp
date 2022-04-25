@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<!--
+Copyright Glen Knowles 2022.
+Distributed under the Boost Software License, Version 1.0.
+-->
+<html>
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
+<script src="initialize.js"></script>
+<script src="about-common.js"></script>
+<script src="/srv/about/computer.json?jsVar=srvdata"></script>
+<script>
+addOpts({
+  computed: {
+    miniNavSelected() {
+      return 'Computer'
+    },
+  },
+})
+</script>
+</head>
+<body>
+<div id="app" style="visibility: hidden">
+  <script>includeHtmlFragment('navbar.html')</script>
+
+  <div class="container-fluid mt-2">
+    <script>includeHtmlFragment('about-common.html')</script>
+
+    <div class="row">
+    <div class="col-auto">
+    <dl>
+      <dt>Domain</dt>
+      <dd>{{domain.name}} ({{domain.status}})</dd>
+      <dt>Addresses</dt>
+      <dd></dd>
+      <dt>OS Version</dt>
+      <dd></dd>
+      <dt>DNS?</dt>
+      <dd></dd>
+    </dl>
+    </div>
+    </div>
+  </div>
+</div>
+
+<script>finalize()</script>
+</body>
+</html>

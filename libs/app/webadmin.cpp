@@ -16,7 +16,11 @@ using namespace Dim;
 ***/
 
 //===========================================================================
-static void addRoute(IJBuilder * out, const HttpRouteInfo & ri) {
+static void addRoute(
+    IJBuilder * out, 
+    const HttpRouteInfo & ri,
+    bool active = false
+) {
     out->object();
     out->member("path", ri.path);
     if (ri.recurse)
@@ -33,6 +37,8 @@ static void addRoute(IJBuilder * out, const HttpRouteInfo & ri) {
     if (!ri.renderPath.empty())
         out->member("renderPath", ri.renderPath);
     out->member("matched", ri.matched);
+    if (active)
+        out->member("active", true);
     out->end();
 }
 
@@ -55,23 +61,45 @@ void IWebAdminNotify::onHttpRequest(
     } else {
         res.addHeader(kHttpContentType, "application/json");
     }
+    auto ri = httpRouteGetInfo(reqId);
+    auto root = Path(msg.query().path);
+    auto segs = count(ri.path.begin(), ri.path.end(), '/');
+    for (auto i = 0; i < segs; ++i) 
+        root.removeFilename();
+    auto relPath = ri.path.substr(root.str().size() - 1);
     JBuilder bld(&res.body());
-    bld.object()
-        .member("server").object()
-            .member("baseName", appBaseName())
-            .member("appIndex", appIndex())
-            .member("version", toString(appVersion()))
-            .member("buildTime", Time8601Str(envExecBuildTime()).view())
-            .member("startTime", Time8601Str(envProcessStartTime()).view())
-            .member("address", toString(appAddress()))
-            .end()
-        .member("now", Time8601Str(timeNow()).view());
+    bld.object().member("server").object();
+    bld.member("baseName", appBaseName())
+        .member("appIndex", appIndex())
+        .member("version", toString(appVersion()))
+        .member("buildTime", Time8601Str(envExecBuildTime()).view())
+        .member("startTime", Time8601Str(envProcessStartTime()).view())
+        .member("address", toString(appAddress()));
+    bld.member("runAs", envProcessAccount());
+    bld.member("computerName", envComputerName());
+    bld.member("groupIndex", appGroupIndex())
+        .member("groupType", appGroupType());
+    bld.end();
+    bld.member("now", Time8601Str(timeNow()).view())
+        .member("root", root);
 
     auto infos = httpRouteGetRoutes();
+    HttpRouteInfo * best = nullptr;
+    for (auto&& ri : infos) {
+        if (!ri.name.empty()) {
+            auto cpath = Path(ri.path).setExt({}).str();
+            if (cpath.size() <= relPath.size()
+                && relPath.compare(0, cpath.size(), cpath) == 0
+                && (!best || best->path.size() < cpath.size())
+            ) {
+                best = &ri;
+            }
+        }
+    }
     bld.member("navbar").array();
     for (auto&& ri : infos) {
         if (!ri.name.empty()) {
-            addRoute(&bld, ri);
+            addRoute(&bld, ri, best == &ri);
         }
     }
     bld.end();
@@ -140,7 +168,40 @@ void JsonAccount::onWebAdminRequest(
     unsigned reqId, 
     HttpRequest & msg
 ) {
-    envProcessAccount(out);
+    envProcessAccountInfo(out);
+}
+
+
+/****************************************************************************
+*
+*   JsonComputer
+*
+***/
+
+namespace {
+class JsonComputer : public IWebAdminNotify {
+    void onWebAdminRequest(
+        IJBuilder * out, 
+        unsigned reqId, 
+        HttpRequest & msg
+    ) override;
+};
+} // namespace
+
+//===========================================================================
+void JsonComputer::onWebAdminRequest(
+    IJBuilder * out,
+    unsigned reqId, 
+    HttpRequest & msg
+) {
+    auto di = envDomainMembership();
+    out->member("domain").object()
+        .member("name", di.name)
+        .member("status", envDomainStatusToString(di.status))
+        .end();
+//addresses
+//os version
+//dns?
 }
 
 
@@ -245,9 +306,10 @@ void CrashFiles::onHttpRequest(unsigned reqId, HttpRequest & msg) {
 *
 ***/
 
-static HttpRouteRedirectNotify s_redirectRoot("/web/srv/counters.html");
+static HttpRouteRedirectNotify s_redirectRoot("/web/srv/about-counters.html");
 static WebFiles s_webFiles;
 static JsonAccount s_jsonAccount;
+static JsonComputer s_jsonComputer;
 static JsonCounters s_jsonCounters;
 static JsonRoutes s_jsonRoutes;
 static HttpRouteDirListNotify s_jsonDumpFiles({});
@@ -268,25 +330,27 @@ void Dim::iWebAdminInitialize() {
         .recurse = true
     });
     httpRouteAdd({
+        .notify = &s_redirectRoot,
+        .path = "/srv/about",
+        .name = "About",
+        .desc = "Details about this server instance",
+        .renderPath = "/web/srv/about-counters.html",
+    });
+    httpRouteAdd({
         .notify = &s_jsonAccount, 
-        .path = "/srv/account.json", 
-        .name = "Account",
-        .desc = "Details of the account this server is running as.",
-        .renderPath = "/web/srv/account.html",
+        .path = "/srv/about/account.json", 
+    });
+    httpRouteAdd({
+        .notify = &s_jsonComputer, 
+        .path = "/srv/about/computer.json", 
     });
     httpRouteAdd({
         .notify = &s_jsonCounters, 
-        .path = "/srv/counters.json",
-        .name = "Counters",
-        .desc = "Performance counters",
-        .renderPath = "/web/srv/counters.html",
+        .path = "/srv/about/counters.json",
     });
     httpRouteAdd({
         .notify = &s_jsonRoutes, 
-        .path = "/srv/routes.json",
-        .name = "Routes",
-        .desc = "URL routes server is listening for.",
-        .renderPath = "/web/srv/routes.html",
+        .path = "/srv/about/routes.json",
     });
     iLogFileWebInitialize();
     s_jsonDumpFiles.set(appCrashDir());

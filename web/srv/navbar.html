@@ -20,20 +20,19 @@ Distributed under the Boost Software License, Version 1.0.
     <div class="collapse navbar-collapse" id="navbarNav">
       <ul class="navbar-nav flex-row">
         <li class="nav-item" active="true">
-          <a href="settings" class="nav-link">Settings</a>
+          <a :href="root + 'srv/about'" class="nav-link">Admin</a>
         </li>
       </ul>
       <div class="col text-end">
         <a href="http://github.com/gknowles/dimapp">
-          <i class="bi-github" style="font-size: x-large; 
-              color: whitesmoke"></i>
+          <i class="bi-github" style="font-size: x-large; color: white"></i>
         </a>
       </div>
     </div>
   </div>
 </nav>
-<div class="container-fluid">
-  <div class="row text-nowrap bg-light px-3 pt-1 border-bottom border-primary">
+<div class="container-fluid navbar-settings">
+  <div class="row text-nowrap px-3 pt-1 border-bottom border-primary">
     <div class="col">
       <div class="row" style="font-size: smaller">
         Address {{server.address}};
@@ -42,7 +41,9 @@ Distributed under the Boost Software License, Version 1.0.
       </div>
       <div class="row">
         <ul class="list-group list-group-horizontal">
-          <li v-for="menu in navbar" :class="'py-1 list-group-item '+'${menu.active}'">
+          <li v-for="menu in navbar" 
+            class='py-1 list-group-item list-group-item-action w-auto'
+            :style="menu.active ? 'background-color: lightgray' : ''">
             <a :href="menu.renderPath" :title="menu.desc">
               {{menu.name}}
             </a>

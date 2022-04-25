@@ -1,0 +1,31 @@
+/*
+Copyright Glen Knowles 2022.
+Distributed under the Boost Software License, Version 1.0.
+*/
+
+table {
+    margin: 10px 0px;
+}
+table th {
+    border: 1px solid;
+    padding: 0px 10px;
+    text-align: center;
+}
+
+table td {
+    border: 1px solid;
+    padding: 0px 10px;
+}
+
+dl {
+    display: grid;
+    grid-template-columns: auto auto;
+    margin: 10px 0px 10px 10px;
+}
+dt {
+    text-align: right;
+    margin: 0px 0px 0px 10px;
+}
+dd {
+    margin: 0px 0px 0px 10px;
+}

@@ -39,3 +39,16 @@ function readableDuration(val) {
     }
     return out
 }
+
+// Splits arr onto an array of pages where each page is an array of up to
+// pageSize elements of arr.
+function makePages(arr, pageSize) {
+      let out = []
+      let pageOut = []
+      for (let [i, cnt] of arr.entries()) {
+        if (i % pageSize == 0) 
+          out.push([])
+        out[out.length - 1].push(cnt)
+      }
+      return out
+}

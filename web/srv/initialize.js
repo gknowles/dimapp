@@ -3,66 +3,44 @@ Copyright Glen Knowles 2022.
 Distributed under the Boost Software License, Version 1.0.
 */
 
-var loadWaits = 1
-
-//===========================================================================
-function includeHtmlFragment(src) {
-  let node = document.currentScript
-  loadWaits += 1
-  const frame = document.createElement("iframe")
-  node.insertAdjacentElement('afterend', frame)
-  frame.style.display = 'none'
-  frame.onload = function() {
-    this.insertAdjacentHTML('afterend', this.contentDocument.body.innerHTML)
-    this.remove()
-    createApp()
-  }
-  frame.src = src
-  node.remove()
-}
+var appOpts = {}
 
 //===========================================================================
 function createApp() {
-  loadWaits -= 1
-  if (loadWaits > 0) 
-    return
+    createApp.waitingHtmlFragments -= 1
+    if (createApp.waitingHtmlFragments > 0) 
+        return
 
-  const app = Vue.createApp({
-      data() {
-          return srvdata
-      },
-      computed: {
-          nowSecs() {
-              return Date.parse(this.now) / 1000
-          },
-          appName() { 
-              let out = this.server.baseName
-              if (this.server.appIndex > 1)
-                  out += this.server.appIndex.toString()
-              return out
-          },
-      },
-      methods: {
-          readableDuration,
-          elapsedTime,
-      },
-  });
-
-  app.mount('#app')
-  document.getElementById('app').style.visibility = 'visible'
-}
-
-//===========================================================================
-function addTags(tags) {
-    let self = document.currentScript
-    for (let i = tags.length - 1; i >= 0; --i) {
-        let el = document.createElement(tags[i].tag)
-        for (let prop in tags[i].props) {
-            el[prop] = tags[i].props[prop]
-        }
-        self.insertAdjacentElement('afterend', el)
+    let newOpts = appOpts
+    appOpts = {
+        data() {
+            return srvdata
+        },
+        computed: {
+            nowSecs() {
+                return Date.parse(this.now) / 1000
+            },
+            appName() { 
+                let out = this.server.baseName
+                if (this.server.appIndex > 1)
+                    out += this.server.appIndex.toString()
+                return out
+            },
+        },
+        methods: {
+            readableDuration,
+            elapsedTime,
+        },
     }
+    addOpts(newOpts)
+
+    const app = Vue.createApp(appOpts)
+    app.mount('#app')
+    let el = document.getElementById('app')
+    el.classList.add('groupType-' + appOpts.data().server.groupType)
+    el.style.visibility = 'visible'
 }
+createApp.waitingHtmlFragments = 1
 
 //===========================================================================
 function finalize() {
@@ -82,6 +60,56 @@ function finalize() {
     addTags(tags)
 }
 
+//===========================================================================
+function includeHtmlFragment(src) {
+    let node = document.currentScript
+    createApp.waitingHtmlFragments += 1
+    const frame = document.createElement("iframe")
+    node.insertAdjacentElement('afterend', frame)
+    frame.style.display = 'none'
+    frame.onload = function() {
+        this.insertAdjacentHTML(
+            'afterend', 
+            this.contentDocument.body.innerHTML
+        )
+        this.remove()
+        createApp()
+    }
+    frame.src = src
+    node.remove()
+}
+
+//===========================================================================
+// Merge in additional application options.
+function addOpts(newOpts) {
+    if (newOpts !== null) {
+        for (let opt in newOpts) {
+            let val = newOpts[opt]
+            if (val === null)
+                continue
+            if (typeof val === 'object' && appOpts[opt]) {
+                Object.assign(appOpts[opt], val)
+            } else if (typeof val == 'array') {
+                alert('appOpt[' + opt + ']: array options not supported')
+            } else {
+                appOpts[opt] = val
+            }
+        }
+    }
+}
+
+//===========================================================================
+function addTags(tags) {
+    let self = document.currentScript
+    for (let i = tags.length - 1; i >= 0; --i) {
+        let el = document.createElement(tags[i].tag)
+        for (let prop in tags[i].props) {
+            el[prop] = tags[i].props[prop]
+        }
+        self.insertAdjacentElement('afterend', el)
+    }
+}
+
 
 /****************************************************************************
 *
@@ -90,7 +118,7 @@ function finalize() {
 ***/
 
 //===========================================================================
-function init() {
+(function() {
     let tags = [
         { tag: 'link', props: { 
             rel: 'stylesheet', 
@@ -102,6 +130,14 @@ function init() {
             rel: 'stylesheet', 
             href: 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css',
         }},
+        { tag: 'link', props: {
+            rel: 'stylesheet',
+            href: 'init.css'
+        }},
+        { tag: 'link', props: {
+            rel: 'stylesheet',
+            href: 'groupType.css'
+        }},
         { tag: 'script', props: {
             src: 'https://unpkg.com/vue@3',
         }},
@@ -112,6 +148,4 @@ function init() {
 
     addTags(tags)
     window.addEventListener('load', createApp)
-}
-
-init()
+}())

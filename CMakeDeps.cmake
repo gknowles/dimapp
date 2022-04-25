@@ -316,8 +316,14 @@
 # vendor/dimcli
 # vendor/dimcli/libs/dimcli/cli.cpp
 # vendor/dimcli/libs/dimcli/cli.h
-# web/srv/counters.html
-# web/srv/head.html
+# web/srv/about-account.html
+# web/srv/about-common.html
+# web/srv/about-common.js
+# web/srv/about-computer.html
+# web/srv/about-counters.html
+# web/srv/about-routes.html
+# web/srv/groupType.css
+# web/srv/init.css
 # web/srv/initialize.js
 # web/srv/navbar.html
 # web/srv/util.js

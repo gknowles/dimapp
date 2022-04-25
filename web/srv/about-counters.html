@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<!--
+Copyright Glen Knowles 2022.
+Distributed under the Boost Software License, Version 1.0.
+-->
+<html>
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
+<script src="initialize.js"></script>
+<script src="about-common.js"></script>
+<script src="/srv/about/counters.json?jsVar=srvdata"></script>
+<script>
+addOpts({
+  computed: {
+    miniNavSelected() {
+      return 'Counters'
+    },
+    sortedCounters() {
+      const pageSize = 25
+      // Returns array of 'pages' where each page is an array of up to pageSize
+      // counter objects with name and value.
+      let arr = [];
+      for (let name in this.counters)
+        arr.push({name: name, value: this.counters[name]})
+      arr.sort((a, b) => { 
+        let rc = a.name.includes('.') - b.name.includes('.')
+        if (rc != 0)
+          return rc
+        return (a.name < b.name) ? -1 : (a.name == b.name) ? 0 : 1
+      })
+      return makePages(arr, pageSize)
+    },
+  },
+})
+</script>
+</head>
+<body>
+<div id="app" style="visibility: hidden">
+  <script>includeHtmlFragment('navbar.html')</script>
+
+  <div class="container-fluid mt-2">
+    <script>includeHtmlFragment('about-common.html')</script>
+
+    <div class="row gx-3">
+      <template v-for="page in sortedCounters">
+        <div class='col-auto'>
+          <table>
+            <tr>
+              <th>Name</th>
+              <th>Value</th>
+            </tr>
+            <tr v-for="cnt in page">
+              <td style='white-space: nowrap'>{{ cnt.name }}</td>
+              <td style='text-align: right'>
+                {{ cnt.value.toLocaleString() }}
+              </td>
+            </tr>
+          </table>
+        </div>
+      </template>
+    </div>
+  </div>
+</div>
+
+<script>finalize()</script>
+</body>
+</html>

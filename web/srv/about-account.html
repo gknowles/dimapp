@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<!--
+Copyright Glen Knowles 2022.
+Distributed under the Boost Software License, Version 1.0.
+-->
+<html>
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
+<script src="initialize.js"></script>
+<script src="about-common.js"></script>
+<script src="/srv/about/account.json?jsVar=srvdata"></script>
+<script>
+addOpts({
+  computed: {
+    miniNavSelected() {
+      return 'Account'
+    },
+    sortedGroups() {
+      const pageSize = 25
+      // Returns array of 'pages' where each page is an array of up to pageSize
+      // objects.
+      let arr = this.groups;
+      arr.sort((a, b) => { 
+        if (a.type != b.type)
+          return (a.type < b.type) ? -1 : 1
+        if (a.name != b.name)
+          return (a.name < b.name) ? -1 : 1
+        return 0
+      })
+      return makePages(arr, pageSize)
+    },
+  },
+})
+</script>
+</head>
+<body>
+<div id="app" style="visibility: hidden">
+  <script>includeHtmlFragment('navbar.html')</script>
+
+  <div class="container-fluid mt-2">
+    <script>includeHtmlFragment('about-common.html')</script>
+
+    <h3>User</h3>
+    <div class="row">
+    <div class="col-auto">
+    <dl class="mt-0">
+      <dt>Name</dt>
+      <dd>{{user.name}}</dd>
+      <dt>Domain</dt>
+      <dd>{{user.domain}}</dd>
+    </dl>
+    </div>
+    </div>
+
+    <h3>Groups</h3>
+    <div class="row gx-3">
+      <template v-for="page in sortedGroups">
+        <div class='col-auto'>
+          <table>
+            <tr>
+              <th>Type</th>
+              <th>Name</th>
+              <th>Domain</th>
+              <th>Attributes</th>
+            </tr>
+            <tr v-for="prin in page">
+              <td>{{ prin.type }}</td>
+              <td>{{ prin.name }}</td>
+              <td style="white-space: nowrap">{{ prin.domain }}</td>
+              <td>
+                <template v-for="(attr, index) in prin.attrs">
+                  <template v-if="index > 0">, </template>
+                  {{ attr }}
+                </template>
+              </td>
+            </tr>
+          </table>
+        </div>
+      </template>
+    </div>
+
+    <h3>Privileges</h3>
+
+  </div>
+</div>
+
+<script>finalize()</script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+<!--
+Copyright Glen Knowles 2022.
+Distributed under the Boost Software License, Version 1.0.
+-->
+<div class='row'>
+  <dl class='col-auto'>
+    <dt>Start Time</dt>
+    <dd>
+      {{server.startTime}} 
+      ({{readableDuration(elapsedTime(server.startTime))}})
+    </dd>
+    <dt>App Index</dt>
+    <dd>{{server.appIndex}}</dd>
+    <dt>Group Index</dt>
+    <dd>{{server.groupIndex}} ({{server.groupType}})</dd>
+  </dl>
+  <dl class='col-auto'>
+    <dt>Address</dt>
+    <dd>{{server.address}}</dd>
+    <dt>Account</dt>
+    <dd>{{server.runAs}}</dd>
+    <dt>Computer</dt>
+    <dd>{{server.computerName}}</dd>
+  </dl>
+</div>
+<div class='row gx-3 mb-3'>
+  <template v-for='(nav, index) in miniNav()'>
+    <template v-if='index > 0'>|</template>
+    <div v-if='nav.name == miniNavSelected' class='col-auto'>{{nav.name}}</div>
+    <a v-else class='col-auto' :href='nav.href'>{{nav.name}}</a>
+  </template>
+</div>

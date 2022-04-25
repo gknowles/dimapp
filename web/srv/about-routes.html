@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<!--
+Copyright Glen Knowles 2022.
+Distributed under the Boost Software License, Version 1.0.
+-->
+<html>
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1,
+  shrink-to-fit=no"/>
+<script src="initialize.js"></script>
+<script src="about-common.js"></script>
+<script src="/srv/about/routes.json?jsVar=srvdata"></script>
+<script>
+addOpts({
+  computed: {
+    miniNavSelected() {
+      return 'Routes'
+    },
+    sortedRoutes() {
+      const pageSize = 25
+      // Returns array of 'pages' where each page is an array of up to pageSize
+      // objects.
+      let arr = this.routes;
+      arr.sort((a, b) => { 
+        if (a.path != b.path)
+          return (a.path < b.path) ? -1 : 1
+        return 0
+      })
+      return makePages(arr, pageSize)
+    },
+  },
+})
+</script>
+</head>
+<body>
+<div id="app" style="visibility: hidden">
+  <script>includeHtmlFragment('navbar.html')</script>
+
+  <div class="container-fluid mt-2">
+    <script>includeHtmlFragment('about-common.html')</script>
+
+    <div class="row gx-3">
+      <template v-for="page in sortedRoutes">
+        <div class="col-auto">
+          <table>
+            <tr>
+              <th>Path</th>
+              <th>Methods</th>
+              <th>Matched</th>
+              <th>Name</th>
+              <th>Desc</th>
+              <th>Render</th>
+            </tr>
+            <tr v-for="val in page">
+              <td>{{val.path}}</td>
+              <td>
+                <template v-for="(name, index) in val.methods">
+                  <template v-if="index > 0">, </template>
+                  {{name}}
+                </template>
+              </td>
+              <td class="text-end">{{val.matched.toLocaleString()}}</td>
+              <td>{{val.name}}</td>
+              <td>{{val.desc}}</td>
+              <td>{{val.renderPath}}</td>
+            </tr>
+          </table>
+        </div>
+      </template>
+    </div>
+  </div>
+</div>
+
+<script>finalize()</script>
+</body>
+</html>
