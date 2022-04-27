@@ -50,16 +50,16 @@ static void addRoute(
 ***/
 
 //===========================================================================
-void IWebAdminNotify::onHttpRequest(
-    unsigned reqId, 
-    HttpRequest & msg
+JBuilder IWebAdminNotify::initResponse(
+    HttpResponse * res, 
+    unsigned reqId,
+    const HttpRequest & msg
 ) {
-    HttpResponse res(kHttpStatusOk);
     if (m_jsVar) {
-        res.addHeader(kHttpContentType, "text/javascript");
-        res.body().append("const ").append(*m_jsVar).append(" = ");
+        res->addHeader(kHttpContentType, "text/javascript");
+        res->body().append("const ").append(*m_jsVar).append(" = ");
     } else {
-        res.addHeader(kHttpContentType, "application/json");
+        res->addHeader(kHttpContentType, "application/json");
     }
     auto ri = httpRouteGetInfo(reqId);
     auto root = Path(msg.query().path);
@@ -67,7 +67,7 @@ void IWebAdminNotify::onHttpRequest(
     for (auto i = 0; i < segs; ++i) 
         root.removeFilename();
     auto relPath = ri.path.substr(root.str().size() - 1);
-    JBuilder bld(&res.body());
+    JBuilder bld(&res->body());
     bld.object().member("server").object();
     bld.member("baseName", appBaseName())
         .member("appIndex", appIndex())
@@ -103,11 +103,7 @@ void IWebAdminNotify::onHttpRequest(
         }
     }
     bld.end();
-
-    onWebAdminRequest(&bld, reqId, msg);
-
-    bld.end();
-    httpRouteReply(reqId, move(res));
+    return bld;
 }
 
 
@@ -154,21 +150,17 @@ void WebFiles::onHttpRequest(unsigned reqId, HttpRequest & msg) {
 
 namespace {
 class JsonAccount : public IWebAdminNotify {
-    void onWebAdminRequest(
-        IJBuilder * out, 
-        unsigned reqId, 
-        HttpRequest & msg
-    ) override;
+    void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
 };
 } // namespace
 
 //===========================================================================
-void JsonAccount::onWebAdminRequest(
-    IJBuilder * out,
-    unsigned reqId, 
-    HttpRequest & msg
-) {
-    envProcessAccountInfo(out);
+void JsonAccount::onHttpRequest(unsigned reqId, HttpRequest & msg) {
+    auto res = HttpResponse(kHttpStatusOk);
+    auto bld = initResponse(&res, reqId, msg);
+    envProcessAccountInfo(&bld);
+    bld.end();
+    httpRouteReply(reqId, move(res));
 }
 
 
@@ -180,28 +172,24 @@ void JsonAccount::onWebAdminRequest(
 
 namespace {
 class JsonComputer : public IWebAdminNotify {
-    void onWebAdminRequest(
-        IJBuilder * out, 
-        unsigned reqId, 
-        HttpRequest & msg
-    ) override;
+    void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
 };
 } // namespace
 
 //===========================================================================
-void JsonComputer::onWebAdminRequest(
-    IJBuilder * out,
-    unsigned reqId, 
-    HttpRequest & msg
-) {
+void JsonComputer::onHttpRequest(unsigned reqId, HttpRequest & msg) {
+    auto res = HttpResponse(kHttpStatusOk);
+    auto bld = initResponse(&res, reqId, msg);
     auto di = envDomainMembership();
-    out->member("domain").object()
+    bld.member("domain").object()
         .member("name", di.name)
         .member("status", envDomainStatusToString(di.status))
         .end();
-//addresses
-//os version
-//dns?
+    //addresses
+    //os version
+    //dns?
+    bld.end();
+    httpRouteReply(reqId, move(res));
 }
 
 
@@ -213,30 +201,27 @@ void JsonComputer::onWebAdminRequest(
 
 namespace {
 class JsonCounters : public IWebAdminNotify {
-    void onWebAdminRequest(
-        IJBuilder * out,
-        unsigned reqId, 
-        HttpRequest & msg
-    ) override;
+    void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
+
     vector<PerfValue> m_values;
 };
 } // namespace
 
 //===========================================================================
-void JsonCounters::onWebAdminRequest(
-    IJBuilder * out,
-    unsigned reqId, 
-    HttpRequest & msg
-) {
+void JsonCounters::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     perfGetValues(&m_values);
 
-    out->member("counters");
-    out->object();
+    auto res = HttpResponse(kHttpStatusOk);
+    auto bld = initResponse(&res, reqId, msg);
+    bld.member("counters");
+    bld.object();
     for (auto && perf : m_values) {
-        out->member(perf.name);
-        out->valueRaw(perf.value);
+        bld.member(perf.name);
+        bld.valueRaw(perf.value);
     }
-    out->end();
+    bld.end();
+    bld.end();
+    httpRouteReply(reqId, move(res));
 }
 
 
@@ -248,26 +233,23 @@ void JsonCounters::onWebAdminRequest(
 
 namespace {
 class JsonRoutes : public IWebAdminNotify {
-    void onWebAdminRequest(
-        IJBuilder * out,
-        unsigned reqId, 
-        HttpRequest & msg
-    ) override;
+    void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
 };
 } // namespace
 
 //===========================================================================
-void JsonRoutes::onWebAdminRequest(
-    IJBuilder * out,
-    unsigned reqId, 
-    HttpRequest & msg
-) {
+void JsonRoutes::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     auto infos = httpRouteGetRoutes();
-    out->member("routes");
-    out->array();
+
+    auto res = HttpResponse(kHttpStatusOk);
+    auto bld = initResponse(&res, reqId, msg);
+    bld.member("routes");
+    bld.array();
     for (auto&& info : infos) 
-        addRoute(out, info);
-    out->end();
+        addRoute(&bld, info);
+    bld.end();
+    bld.end();
+    httpRouteReply(reqId, move(res));
 }
 
 

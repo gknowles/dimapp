@@ -23,14 +23,14 @@ namespace Dim {
 
 class IWebAdminNotify : public IHttpRouteNotify {
 public:
-    virtual void onWebAdminRequest(
-        IJBuilder * out, 
+    JBuilder initResponse(
+        HttpResponse * out, 
         unsigned reqId, 
-        HttpRequest & msg
-    ) = 0;
+        const HttpRequest & req
+    );
 
-protected:
-    void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
+    // Inherited via IHttpRouteNotify
+    void onHttpRequest(unsigned reqId, HttpRequest & msg) override = 0;
 
 private:
     Param & m_jsVar = param("jsVar");
