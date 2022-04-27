@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<!--
+Copyright Glen Knowles 2022.
+Distributed under the Boost Software License, Version 1.0.
+
+log-tail.html - dim webapp
+-->
+<html>
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
+<script src="initialize.js"></script>
+<script>
+const params = new URLSearchParams(location.search)
+let file = params.get('file')
+params.delete('file')
+params.set('jsVar', 'srvdata')
+let tags = [
+  { tag: 'script', props: {
+      src: "/srv/log/tail/" + file + '?' + params.toString(),
+  }},
+]
+addTags(tags)
+</script>
+</head>
+<body>
+<div id="app" style="visibility: hidden">
+  <script>includeHtmlFragment('navbar.html')</script>
+
+  <div class="container-fluid mt-2">
+    <div class="row gx-3">
+      <dl class="col-auto">
+        <dt>Name</dt>
+        <dd>{{file.name}}</dd>
+        <dt>Size</dt>
+        <dd>{{file.size}}</dd>
+        <dt>Age</dt>
+        <dd>{{readableDuration(elapsedTime(file.mtime))}}</dd>
+      </dl>
+    </div>
+    <div class="row gx-3">
+      <h4 v-if="file.lines.length &lt; file.limit">
+        Entire File ({{file.lines.length}} lines)
+      </h4>
+      <h4 v-else>
+        Last {{file.lines.length}} Lines
+      </h4>
+      <p>
+        <template v-for="line in file.lines">
+          {{line}}<br>
+        </template>
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>finalize()</script>
+</body>
+</html>

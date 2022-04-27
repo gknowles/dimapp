@@ -206,12 +206,47 @@ void ConfigAppXml::onConfigChange(const XDocument & doc) {
 
 /****************************************************************************
 *
+*   JsonLogFiles
+*
+***/
+
+namespace {
+class JsonLogFiles : public IWebAdminNotify {
+    void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
+};
+} // namespace
+
+//===========================================================================
+void JsonLogFiles::onHttpRequest(unsigned reqId, HttpRequest & msg) {
+    auto res = HttpResponse(kHttpStatusOk);
+    auto bld = initResponse(&res, reqId, msg);
+    auto dir = appLogDir();
+    bld.member("files").array();
+    uint64_t bytes = 0;
+    for (auto&& f : FileIter(dir, "*.log")) {
+        auto rname = f.path.view();
+        rname.remove_prefix(dir.size() + 1);
+        fileSize(&bytes, f.path);
+        bld.object()
+            .member("name", rname)
+            .member("mtime", f.mtime)
+            .member("size", bytes)
+            .end();
+    }
+    bld.end();
+    bld.end();
+    httpRouteReply(reqId, move(res));
+}
+
+
+/****************************************************************************
+*
 *   JsonLogTail
 *
 ***/
 
 namespace {
-class JsonLogTail : public IHttpRouteNotify {
+class JsonLogTail : public IWebAdminNotify {
 public:
     struct LogJob : IFileReadNotify {
         unsigned m_reqId {0};
@@ -219,7 +254,7 @@ public:
         unsigned m_found {0};
         size_t m_endPos {0};
         char m_buffer[8'192];
-        HttpResponse m_res;
+        HttpResponse m_res{kHttpStatusOk};
         JBuilder m_bld {&m_res.body()};
 
         bool onFileRead(
@@ -236,7 +271,6 @@ private:
 
 //===========================================================================
 void JsonLogTail::onHttpRequest(unsigned reqId, HttpRequest & msg) {
-    auto now = timeNow();
     auto qpath = msg.query().path;
     auto prefix = httpRouteGetInfo(reqId).path.size();
     qpath.remove_prefix(prefix);
@@ -249,10 +283,8 @@ void JsonLogTail::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     auto job = new LogJob;
     job->m_reqId = reqId;
     job->m_limit = limit;
-    job->m_res.addHeader(kHttpContentType, "application/json");
-    job->m_res.addHeader(kHttp_Status, "200");
-    job->m_bld.object()
-        .member("now", now)
+    job->m_bld = initResponse(&job->m_res, reqId, msg);
+    job->m_bld.member("file").object()
         .member("limit", limit)
         .member("name", qpath);
 
@@ -282,9 +314,11 @@ bool JsonLogTail::LogJob::onFileRead(
     size_t * bytesUsed,
     const FileReadData & data
 ) {
+    constexpr size_t kMaxLineLen = 256;
+
     *bytesUsed = data.data.size();
     vector<string_view> lines;
-    split(&lines, data.data, "\r\n");
+    split(&lines, data.data, "\r\n", kMaxLineLen);
     if (m_found < m_limit) {
         // Searching backwards for start of last "limit" lines.
         m_found += (unsigned) lines.size() - 1;
@@ -331,7 +365,7 @@ bool JsonLogTail::LogJob::onFileRead(
         auto e = lines.end() - 1;
         if (i < e) {
             m_bld.value(*i);
-            if (m_bld.state().next == m_bld.Type::kText)
+            if (m_bld.state().next == JBuilder::Type::kText)
                 m_bld.end();
             while (++i < e)
                 m_bld.value(*i);
@@ -349,6 +383,7 @@ bool JsonLogTail::LogJob::onFileRead(
     // All lines have been returned
     m_bld.end(); // end array of lines
     m_bld.end(); // end file object
+    m_bld.end(); // end web admin object
     if (m_res.headers()) {
         httpRouteReply(m_reqId, move(m_res));
     } else {
@@ -398,7 +433,7 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
 *
 ***/
 
-static HttpRouteDirListNotify s_jsonLogFiles({});
+static JsonLogFiles s_jsonLogFiles;
 static JsonLogTail s_jsonLogTail;
 
 //===========================================================================
@@ -410,7 +445,6 @@ void Dim::iLogFileInitialize() {
         logMsgFatal() << "Invalid log path: " << s_logfile;
 
     logMonitor(&s_logger);
-    s_jsonLogFiles.set(appLogDir());
 }
 
 //===========================================================================
@@ -418,14 +452,14 @@ void Dim::iLogFileWebInitialize() {
     if (appFlags().any(fAppWithWebAdmin)) {
         httpRouteAdd({
             .notify = &s_jsonLogFiles, 
-            .path = "/srv/logfiles.json",
+            .path = "/srv/log/files.json",
             .name = "Logs",
             .desc = "Server logs files.",
-            .renderPath = "/web/srv/logfiles.html",
+            .renderPath = "/web/srv/log-files.html",
         });
         httpRouteAdd({
             .notify = &s_jsonLogTail, 
-            .path = "/srv/logtail/", 
+            .path = "/srv/log/tail/", 
             .recurse = true
         });
     }
