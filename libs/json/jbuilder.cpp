@@ -383,20 +383,20 @@ IJBuilder & IJBuilder::fail() {
 //===========================================================================
 void JBuilder::clear() {
     IJBuilder::clear();
-    m_buf.clear();
+    m_buf->clear();
 }
 
 //===========================================================================
 void JBuilder::append(string_view val) {
-    m_buf.append(val);
+    m_buf->append(val);
 }
 
 //===========================================================================
 void JBuilder::append(char val) {
-    m_buf.append(1, val);
+    m_buf->append(1, val);
 }
 
 //===========================================================================
 size_t JBuilder::size() const {
-    return m_buf.size();
+    return m_buf->size();
 }

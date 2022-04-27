@@ -20,14 +20,28 @@ namespace Dim {
 
 /****************************************************************************
 *
-*   Json builder
+*   Json builder interface
 *
 ***/
 
 class IJBuilder {
 public:
+    enum class Type : int {
+        kInvalid,
+        kArray,
+        kObject,
+        kMember,
+        kValue,
+        kText,
+    };
+
+public:
     IJBuilder();
+    IJBuilder(const IJBuilder & from) noexcept = default;
+    IJBuilder(IJBuilder && from) noexcept = default;
     virtual ~IJBuilder() = default;
+    IJBuilder & operator=(const IJBuilder & from) noexcept = default;
+    IJBuilder & operator=(IJBuilder && from) noexcept = default;
 
     virtual void clear();
 
@@ -68,14 +82,6 @@ public:
     IJBuilder & operator<<(const T & val);
     IJBuilder & operator<<(IJBuilder & (*pfn)(IJBuilder &));
 
-    enum class Type : int {
-        kInvalid,
-        kArray,
-        kObject,
-        kMember,
-        kValue,
-        kText,
-    };
     struct StateReturn {
         Type next;
         Type parent;
@@ -139,11 +145,19 @@ inline IJBuilder & end(IJBuilder & out) {
     return out.end();
 }
 
-//---------------------------------------------------------------------------
+
+/****************************************************************************
+*
+*   Json builder
+*
+***/
+
 class JBuilder : public IJBuilder {
 public:
-    JBuilder(CharBuf * buf)
-        : m_buf(*buf) {}
+    JBuilder(CharBuf * buf) : m_buf(buf) {}
+    JBuilder(const JBuilder & from) noexcept = default;
+    JBuilder & operator=(const JBuilder & from) noexcept = default;
+
     void clear() override;
 
 private:
@@ -151,7 +165,7 @@ private:
     void append(char ch) override;
     size_t size() const override;
 
-    CharBuf & m_buf;
+    CharBuf * m_buf;
 };
 
 
