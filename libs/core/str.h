@@ -229,6 +229,14 @@ void split(
     std::string_view src,
     std::string_view seps // = "\r\n"
 );
+// Splits whenever any of the listed 'seps' are found, or after maxLen chars
+// go by without encountering any of 'seps'.
+void split(
+    std::vector<std::string_view> * out,
+    std::string_view src,
+    std::string_view seps,
+    size_t maxLen
+);
 
 // Removes leading and/or trailing whitespace characters (as defined by
 // isspace).

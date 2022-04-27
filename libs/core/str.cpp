@@ -363,6 +363,29 @@ void Dim::split(
 }
 
 //===========================================================================
+void Dim::split(
+    vector<string_view> * out,
+    string_view src,
+    string_view seps,
+    size_t maxLen
+) {
+    out->clear();
+    size_t pos = 0;
+    size_t epos = src.size();
+    while (pos < src.size()) {
+        epos = src.find_first_of(seps, pos);
+        auto len = epos - pos;
+        for (; len > maxLen; len -= maxLen, pos += maxLen) {
+            out->push_back(src.substr(pos, maxLen));
+        }
+        out->push_back(src.substr(pos, len));
+        pos = src.find_first_not_of(seps, epos);
+    }
+    if (!pos || epos < src.size())
+        out->push_back({});
+}
+
+//===========================================================================
 string_view Dim::trim(string_view src) {
     const char * first = src.data();
     const char * last = first + src.size();
