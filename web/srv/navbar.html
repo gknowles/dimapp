@@ -42,18 +42,17 @@ navbar.html - dim webapp
         Build age {{readableDuration(elapsedTime(server.buildTime))}}
       </div>
       <div class="row">
-        <ul class="list-group list-group-horizontal">
-          <li v-for="menu in navbar" 
-            class='py-1 list-group-item list-group-item-action w-auto'
-            :style="menu.active ? 'background-color: lightgray' : ''">
-            <a :href="menu.renderPath" :title="menu.desc">
-              {{menu.name}}
-            </a>
-          </li>
-        </ul>
+        <a v-for="menu in navbar" 
+          :class="'col-auto border py-1 ' 
+            + (menu.active ? 'bg-selected' : 'bg-light')"
+          :href="menu.renderPath" 
+          :title="menu.desc"
+          >
+            {{menu.name}}
+        </a>
       </div>
     </div>
-    <div class="col pe-0 text-end text-nowrap">
+    <div class="col-auto pe-0 text-end text-nowrap">
       {{now}}
     </div>
   </div>
