@@ -255,6 +255,41 @@ void JsonRoutes::onHttpRequest(unsigned reqId, HttpRequest & msg) {
 
 /****************************************************************************
 *
+*   JsonCrashFiles
+*
+***/
+
+namespace {
+class JsonCrashFiles : public IWebAdminNotify {
+    void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
+};
+} // namespace
+
+//===========================================================================
+void JsonCrashFiles::onHttpRequest(unsigned reqId, HttpRequest & msg) {
+    auto res = HttpResponse(kHttpStatusOk);
+    auto bld = initResponse(&res, reqId, msg);
+    auto dir = appCrashDir();
+    bld.member("files").array();
+    uint64_t bytes = 0;
+    for (auto&& f : FileIter(dir, "*.dmp")) {
+        auto rname = f.path.view();
+        rname.remove_prefix(dir.size() + 1);
+        fileSize(&bytes, f.path);
+        bld.object()
+            .member("name", rname)
+            .member("mtime", f.mtime)
+            .member("size", bytes)
+            .end();
+    }
+    bld.end();
+    bld.end();
+    httpRouteReply(reqId, move(res));
+}
+
+
+/****************************************************************************
+*
 *   CrashFiles
 *
 ***/
@@ -294,7 +329,7 @@ static JsonAccount s_jsonAccount;
 static JsonComputer s_jsonComputer;
 static JsonCounters s_jsonCounters;
 static JsonRoutes s_jsonRoutes;
-static HttpRouteDirListNotify s_jsonDumpFiles({});
+static JsonCrashFiles s_jsonCrashFiles;
 static CrashFiles s_crashFiles;
 
 //===========================================================================
@@ -335,9 +370,8 @@ void Dim::iWebAdminInitialize() {
         .path = "/srv/about/routes.json",
     });
     iLogFileWebInitialize();
-    s_jsonDumpFiles.set(appCrashDir());
     httpRouteAdd({
-        .notify = &s_jsonDumpFiles, 
+        .notify = &s_jsonCrashFiles, 
         .path = "/srv/crashes.json",
         .name = "Crashes",
         .desc = "List of crash dump files.",
@@ -347,5 +381,33 @@ void Dim::iWebAdminInitialize() {
         .notify = &s_crashFiles, 
         .path = "/srv/crashes/", 
         .recurse = true,
+    });
+    httpRouteAdd({
+        .notify = nullptr, 
+        .path = "/srv/configs.json",
+        .name = "Configs",
+        .desc = "Configuration file references.",
+        .renderPath = "/web/srv/configs.html",
+    });
+    httpRouteAdd({
+        .notify = nullptr, 
+        .path = "/srv/conns.json",
+        .name = "Connections",
+        .desc = "Connections to other servers.",
+        .renderPath = "/web/srv/conns.html",
+    });
+    httpRouteAdd({
+        .notify = nullptr, 
+        .path = "/srv/memory.json",
+        .name = "Memory",
+        .desc = "Internal memory usage of process.",
+        .renderPath = "/web/srv/memory.html",
+    });
+    httpRouteAdd({
+        .notify = nullptr, 
+        .path = "/srv/messages.json",
+        .name = "Messages",
+        .desc = "Messages sent or received.",
+        .renderPath = "/web/srv/messages.html",
     });
 }
