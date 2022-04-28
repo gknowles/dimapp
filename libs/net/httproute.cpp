@@ -130,8 +130,10 @@ static void route(RequestInfo * ri, unsigned reqId, HttpRequest & req) {
     auto pi = find(params.path, method);
     if (!pi)
         return httpRouteReplyNotFound(reqId, req);
-    ri->pi = pi;
     pi->matched += 1;
+    if (!pi->notify)
+        return httpRouteReplyNotFound(reqId, req);
+    ri->pi = pi;
     pi->notify->mapParams(req);
     pi->notify->onHttpRequest(reqId, req);
 }
