@@ -3,13 +3,15 @@
 Copyright Glen Knowles 2022.
 Distributed under the Boost Software License, Version 1.0.
 
-log-tail.html - dim webapp
+file-log-tail.html - dim webapp
 -->
 <html>
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, 
+    shrink-to-fit=no"/>
 <script src="initialize.js"></script>
+<script src="file-common.js"></script>
 <script>
 const params = new URLSearchParams(location.search)
 let file = params.get('file')
@@ -17,7 +19,7 @@ params.delete('file')
 params.set('jsVar', 'srvdata')
 let tags = [
   { tag: 'script', props: {
-      src: "/srv/log/tail/" + file + '?' + params.toString(),
+      src: "/srv/file/log/tail/" + file + '?' + params.toString(),
   }},
 ]
 addTags(tags)
@@ -28,6 +30,8 @@ addTags(tags)
   <script>includeHtmlFragment('navbar.html')</script>
 
   <div class="container-fluid mt-2">
+    <script>fileIntro('')</script>
+
     <div class="row gx-3">
       <dl class="col-auto">
         <dt>Name</dt>

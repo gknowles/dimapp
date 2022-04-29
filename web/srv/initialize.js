@@ -63,7 +63,7 @@ function finalize() {
 }
 
 //===========================================================================
-function includeHtmlFragment(src) {
+function includeHtmlFragment(src, keep) {
     let node = document.currentScript
     createApp.waitingHtmlFragments += 1
     const frame = document.createElement("iframe")
@@ -78,7 +78,8 @@ function includeHtmlFragment(src) {
         createApp()
     }
     frame.src = src
-    node.remove()
+    if (!keep)
+        node.remove()
 }
 
 //===========================================================================

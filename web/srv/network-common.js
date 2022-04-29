@@ -2,7 +2,7 @@
 Copyright Glen Knowles 2022.
 Distributed under the Boost Software License, Version 1.0.
 
-about-common.js - dim webapp
+network-common.js - dim webapp
 */
 
 (function() {
@@ -10,17 +10,16 @@ about-common.js - dim webapp
         methods: {
             miniNav() {
                 return [
-                    { name: 'Counters', href: 'about-counters.html' },
-                    { name: 'Account', href: 'about-account.html' },
-                    { name: 'Computer', href: 'about-computer.html' },
-                    { name: 'Memory', href: 'about-memory.html', disabled: true },
+                    { name: 'Connections', href: 'network-conns.html', disabled: true },
+                    { name: 'Routes', href: 'network-routes.html' },
+                    { name: 'Messages', href: 'network-messages.html', disabled: true },
                 ]
             },
         },
     })
 })()
 
-function aboutIntro(selected) {
+function networkIntro(selected) {
     addOpts({
         computed: {
             miniNavSelected() {
@@ -29,6 +28,5 @@ function aboutIntro(selected) {
         },
     })
     includeHtmlFragment('navbar-mini.html', true)
-    includeHtmlFragment('about-common.html', true)
     document.currentScript.remove()
 }

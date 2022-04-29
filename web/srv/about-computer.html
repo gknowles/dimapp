@@ -12,22 +12,13 @@ about-computer.html - dim webapp
 <script src="initialize.js"></script>
 <script src="about-common.js"></script>
 <script src="/srv/about/computer.json?jsVar=srvdata"></script>
-<script>
-addOpts({
-  computed: {
-    miniNavSelected() {
-      return 'Computer'
-    },
-  },
-})
-</script>
 </head>
 <body>
 <div id="app" style="visibility: hidden">
   <script>includeHtmlFragment('navbar.html')</script>
 
   <div class="container-fluid mt-2">
-    <script>includeHtmlFragment('about-common.html')</script>
+    <script>aboutIntro('Computer')</script>
 
     <div class="row">
     <div class="col-auto">

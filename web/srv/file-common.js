@@ -2,7 +2,7 @@
 Copyright Glen Knowles 2022.
 Distributed under the Boost Software License, Version 1.0.
 
-about-common.js - dim webapp
+file-common.js - dim webapp
 */
 
 (function() {
@@ -10,17 +10,16 @@ about-common.js - dim webapp
         methods: {
             miniNav() {
                 return [
-                    { name: 'Counters', href: 'about-counters.html' },
-                    { name: 'Account', href: 'about-account.html' },
-                    { name: 'Computer', href: 'about-computer.html' },
-                    { name: 'Memory', href: 'about-memory.html', disabled: true },
+                    { name: 'Configs', href: 'file-configs.html', disabled: true },
+                    { name: 'Logs', href: 'file-logs.html' },
+                    { name: 'Crashes', href: 'file-crashes.html' },
                 ]
             },
         },
     })
 })()
 
-function aboutIntro(selected) {
+function fileIntro(selected) {
     addOpts({
         computed: {
             miniNavSelected() {
@@ -29,6 +28,5 @@ function aboutIntro(selected) {
         },
     })
     includeHtmlFragment('navbar-mini.html', true)
-    includeHtmlFragment('about-common.html', true)
     document.currentScript.remove()
 }

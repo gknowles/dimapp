@@ -452,14 +452,11 @@ void Dim::iLogFileWebInitialize() {
     if (appFlags().any(fAppWithWebAdmin)) {
         httpRouteAdd({
             .notify = &s_jsonLogFiles, 
-            .path = "/srv/log/files.json",
-            .name = "Logs",
-            .desc = "Server logs files.",
-            .renderPath = "/web/srv/log-files.html",
+            .path = "/srv/file/logs.json",
         });
         httpRouteAdd({
             .notify = &s_jsonLogTail, 
-            .path = "/srv/log/tail/", 
+            .path = "/srv/file/log/tail/", 
             .recurse = true
         });
     }

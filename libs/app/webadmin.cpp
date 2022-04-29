@@ -75,8 +75,6 @@ JBuilder IWebAdminNotify::initResponse(
         .member("buildTime", Time8601Str(envExecBuildTime()).view())
         .member("startTime", Time8601Str(envProcessStartTime()).view())
         .member("address", toString(appAddress()));
-    bld.member("runAs", envProcessAccount());
-    bld.member("computerName", envComputerName());
     bld.member("groupIndex", appGroupIndex())
         .member("groupType", appGroupType());
     bld.end();
@@ -142,6 +140,13 @@ void WebFiles::onHttpRequest(unsigned reqId, HttpRequest & msg) {
 }
 
 
+//===========================================================================
+static void addAboutVars(IJBuilder * out) {
+    out->member("runAs", envProcessAccount());
+    out->member("computerName", envComputerName());
+}
+
+
 /****************************************************************************
 *
 *   JsonAccount
@@ -158,6 +163,7 @@ class JsonAccount : public IWebAdminNotify {
 void JsonAccount::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     auto res = HttpResponse(kHttpStatusOk);
     auto bld = initResponse(&res, reqId, msg);
+    addAboutVars(&bld);
     envProcessAccountInfo(&bld);
     bld.end();
     httpRouteReply(reqId, move(res));
@@ -180,6 +186,7 @@ class JsonComputer : public IWebAdminNotify {
 void JsonComputer::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     auto res = HttpResponse(kHttpStatusOk);
     auto bld = initResponse(&res, reqId, msg);
+    addAboutVars(&bld);
     auto di = envDomainMembership();
     bld.member("domain").object()
         .member("name", di.name)
@@ -213,6 +220,7 @@ void JsonCounters::onHttpRequest(unsigned reqId, HttpRequest & msg) {
 
     auto res = HttpResponse(kHttpStatusOk);
     auto bld = initResponse(&res, reqId, msg);
+    addAboutVars(&bld);
     bld.member("counters");
     bld.object();
     for (auto && perf : m_values) {
@@ -346,12 +354,18 @@ void Dim::iWebAdminInitialize() {
         .path = "/web", 
         .recurse = true
     });
+
+    // About
     httpRouteAdd({
-        .notify = &s_redirectRoot,
+        .notify = nullptr,
         .path = "/srv/about",
         .name = "About",
         .desc = "Details about this server instance",
         .renderPath = "/web/srv/about-counters.html",
+    });
+    httpRouteAdd({
+        .notify = &s_jsonCounters, 
+        .path = "/srv/about/counters.json",
     });
     httpRouteAdd({
         .notify = &s_jsonAccount, 
@@ -362,52 +376,47 @@ void Dim::iWebAdminInitialize() {
         .path = "/srv/about/computer.json", 
     });
     httpRouteAdd({
-        .notify = &s_jsonCounters, 
-        .path = "/srv/about/counters.json",
+        .notify = nullptr,
+        .path = "/srv/about/memory.json"
     });
+
+    // Network
     httpRouteAdd({
-        .notify = &s_jsonRoutes, 
-        .path = "/srv/about/routes.json",
-    });
-    iLogFileWebInitialize();
-    httpRouteAdd({
-        .notify = &s_jsonCrashFiles, 
-        .path = "/srv/crashes.json",
-        .name = "Crashes",
-        .desc = "List of crash dump files.",
-        .renderPath = "/web/srv/crashes.html",
-    });
-    httpRouteAdd({
-        .notify = &s_crashFiles, 
-        .path = "/srv/crashes/", 
-        .recurse = true,
-    });
-    httpRouteAdd({
-        .notify = nullptr, 
-        .path = "/srv/configs.json",
-        .name = "Configs",
-        .desc = "Configuration file references.",
-        .renderPath = "/web/srv/configs.html",
+        .notify = nullptr,
+        .path = "/srv/network",
+        .name = "Network",
+        .desc = "Communication between servers.",
+        .renderPath = "/web/srv/network-routes.html",
     });
     httpRouteAdd({
         .notify = nullptr, 
         .path = "/srv/conns.json",
-        .name = "Connections",
-        .desc = "Connections to other servers.",
-        .renderPath = "/web/srv/conns.html",
     });
     httpRouteAdd({
-        .notify = nullptr, 
-        .path = "/srv/memory.json",
-        .name = "Memory",
-        .desc = "Internal memory usage of process.",
-        .renderPath = "/web/srv/memory.html",
+        .notify = &s_jsonRoutes, 
+        .path = "/srv/network/routes.json",
     });
     httpRouteAdd({
         .notify = nullptr, 
         .path = "/srv/messages.json",
-        .name = "Messages",
-        .desc = "Messages sent or received.",
-        .renderPath = "/web/srv/messages.html",
+    });
+
+    // Files
+    iLogFileWebInitialize();
+    httpRouteAdd({
+        .notify = nullptr,
+        .path = "/srv/file",
+        .name = "Files",
+        .desc = "Log, crash, config, and other files.",
+        .renderPath = "/web/srv/file-logs.html"
+    });
+    httpRouteAdd({
+        .notify = &s_jsonCrashFiles, 
+        .path = "/srv/file/crashes.json",
+    });
+    httpRouteAdd({
+        .notify = &s_crashFiles, 
+        .path = "/srv/file/crashes/", 
+        .recurse = true,
     });
 }

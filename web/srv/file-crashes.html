@@ -3,14 +3,15 @@
 Copyright Glen Knowles 2022.
 Distributed under the Boost Software License, Version 1.0.
 
-crashes.html - dim webapp
+file-crashes.html - dim webapp
 -->
 <html>
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
 <script src="initialize.js"></script>
-<script src="/srv/crashes.json?jsVar=srvdata"></script>
+<script src="file-common.js"></script>
+<script src="/srv/file/crashes.json?jsVar=srvdata"></script>
 <script>
 addOpts({
   computed: {
@@ -41,6 +42,8 @@ addOpts({
   <script>includeHtmlFragment('navbar.html')</script>
 
   <div class="container-fluid mt-2">
+    <script>fileIntro('Crashes')</script>
+
     <div class="row gx-3">
       <template v-if="sortedFiles.length == 0">
         <div class="col-auto">

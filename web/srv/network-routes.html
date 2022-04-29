@@ -3,7 +3,7 @@
 Copyright Glen Knowles 2022.
 Distributed under the Boost Software License, Version 1.0.
 
-about-routes.html - dim webapp
+network-routes.html - dim webapp
 -->
 <html>
 <head>
@@ -11,14 +11,11 @@ about-routes.html - dim webapp
 <meta name="viewport" content="width=device-width, initial-scale=1,
   shrink-to-fit=no"/>
 <script src="initialize.js"></script>
-<script src="about-common.js"></script>
-<script src="/srv/about/routes.json?jsVar=srvdata"></script>
+<script src="network-common.js"></script>
+<script src="/srv/network/routes.json?jsVar=srvdata"></script>
 <script>
 addOpts({
   computed: {
-    miniNavSelected() {
-      return 'Routes'
-    },
     sortedRoutes() {
       const pageSize = 25
       // Returns array of 'pages' where each page is an array of up to pageSize
@@ -40,7 +37,7 @@ addOpts({
   <script>includeHtmlFragment('navbar.html')</script>
 
   <div class="container-fluid mt-2">
-    <script>includeHtmlFragment('about-common.html')</script>
+    <script>networkIntro('Routes')</script>
 
     <div class="row gx-3">
       <template v-for="page in sortedRoutes">

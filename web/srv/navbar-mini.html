@@ -1,0 +1,18 @@
+<!--
+Copyright Glen Knowles 2022.
+Distributed under the Boost Software License, Version 1.0.
+
+navbar-mini.html - dim webapp
+-->
+<div class='row gx-3 mb-3'>
+  <template v-for='(nav, index) in miniNav()'>
+    <template v-if='index > 0'>|</template>
+    <div v-if='nav.disabled' class='col-auto text-decoration-line-through'>
+      {{nav.name}}
+    </div>
+    <div v-else-if='nav.name == miniNavSelected' class='col-auto'>
+      {{nav.name}}
+    </div>
+    <a v-else class='col-auto' :href='nav.href'>{{nav.name}}</a>
+  </template>
+</div>

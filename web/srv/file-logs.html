@@ -3,14 +3,15 @@
 Copyright Glen Knowles 2022.
 Distributed under the Boost Software License, Version 1.0.
 
-log-files.html - dim webapp
+file-logs.html - dim webapp
 -->
 <html>
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
 <script src="initialize.js"></script>
-<script src="/srv/log/files.json?jsVar=srvdata"></script>
+<script src="file-common.js"></script>
+<script src="/srv/file/logs.json?jsVar=srvdata"></script>
 <script>
 addOpts({
   computed: {
@@ -41,6 +42,8 @@ addOpts({
   <script>includeHtmlFragment('navbar.html')</script>
 
   <div class="container-fluid mt-2">
+    <script>fileIntro('Logs')</script>
+
     <div class="row gx-3">
       <template v-for="page in sortedFiles">
         <div class='col-auto'>
@@ -52,7 +55,7 @@ addOpts({
             </tr>
             <tr v-for="val in page">
               <td style='white-space: nowrap'>
-                <a :href="'log-tail.html?file=' + 
+                <a :href="'file-log-tail.html?file=' + 
                     encodeURIComponent(val.name)">
                   {{ val.name }}
                 </a>

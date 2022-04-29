@@ -15,9 +15,6 @@ about-counters.html - dim webapp
 <script>
 addOpts({
   computed: {
-    miniNavSelected() {
-      return 'Counters'
-    },
     sortedCounters() {
       const pageSize = 25
       // Returns array of 'pages' where each page is an array of up to pageSize
@@ -42,7 +39,7 @@ addOpts({
   <script>includeHtmlFragment('navbar.html')</script>
 
   <div class="container-fluid mt-2">
-    <script>includeHtmlFragment('about-common.html')</script>
+    <script>aboutIntro('Counters')</script>
 
     <div class="row gx-3">
       <template v-for="page in sortedCounters">

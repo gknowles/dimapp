@@ -321,9 +321,15 @@
 # web/srv/about-common.js
 # web/srv/about-computer.html
 # web/srv/about-counters.html
-# web/srv/about-routes.html
+# web/srv/file-common.js
+# web/srv/file-crashes.html
+# web/srv/file-log-tail.html
+# web/srv/file-logs.html
 # web/srv/groupType.css
 # web/srv/init.css
 # web/srv/initialize.js
+# web/srv/navbar-mini.html
 # web/srv/navbar.html
+# web/srv/network-common.js
+# web/srv/network-routes.html
 # web/srv/util.js
