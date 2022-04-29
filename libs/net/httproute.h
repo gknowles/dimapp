@@ -162,11 +162,9 @@ void httpRouteAddFileRef(
     std::string_view charSet = {}
 );
 void httpRouteAddAlias(
-    std::string_view path,
-    HttpMethod method,
-    std::string_view aliasPath,
-    Dim::EnumFlags<HttpMethod> aliasMethods = fHttpMethodGet,
-    bool aliasRecurse = false
+    const HttpRouteInfo & alias,
+    std::string_view targetPath,
+    HttpMethod targetMethod = fHttpMethodGet
 );
 
 

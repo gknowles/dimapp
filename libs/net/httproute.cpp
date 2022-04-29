@@ -781,7 +781,7 @@ namespace {
 struct AliasRouteNotify : IHttpRouteNotify {
     void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
 
-    string_view m_path;
+    string m_path;
     HttpMethod m_method = {};
 };
 
@@ -862,26 +862,19 @@ void Dim::httpRouteAdd(span<const HttpRouteInfo> routes) {
 
 //===========================================================================
 void Dim::httpRouteAddAlias(
-    string_view path,
-    HttpMethod method,
-    string_view aliasPath,
-    EnumFlags<HttpMethod> aliasMethods,
-    bool aliasRecurse
+    const HttpRouteInfo & alias,
+    string_view targetPath,
+    HttpMethod targetMethod
 ) {
-    auto pi = makePathInfo({
-        .path = aliasPath,
-        .methods = aliasMethods,
-        .recurse = aliasRecurse,
-        .renderPath = path   // only used to temporarially make a copy
-    });
+    assert(!alias.notify);
+    auto pi = makePathInfo(alias);
 
     auto notify = make_unique<AliasRouteNotify>();
-    notify->m_path = pi.renderPath;
-    notify->m_method = method;
+    notify->m_path = targetPath;
+    notify->m_method = targetMethod;
 
     pi.notifyOwned = move(notify);
     pi.notify = pi.notifyOwned.get();
-    pi.renderPath = {};
     routeAdd(move(pi));
 }
 
