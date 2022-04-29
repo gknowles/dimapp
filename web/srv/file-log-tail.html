@@ -19,7 +19,7 @@ params.delete('file')
 params.set('jsVar', 'srvdata')
 let tags = [
   { tag: 'script', props: {
-      src: "/srv/file/log/tail/" + file + '?' + params.toString(),
+      src: "/srv/file/logs/tail/" + file + '?' + params.toString(),
   }},
 ]
 addTags(tags)
@@ -27,11 +27,9 @@ addTags(tags)
 </head>
 <body>
 <div id="app" style="visibility: hidden">
-  <script>includeHtmlFragment('navbar.html')</script>
+  <script>fileIntro('Logs')</script>
 
   <div class="container-fluid mt-2">
-    <script>fileIntro('')</script>
-
     <div class="row gx-3">
       <dl class="col-auto">
         <dt>Name</dt>

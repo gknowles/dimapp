@@ -5,12 +5,14 @@ Distributed under the Boost Software License, Version 1.0.
 util.js - dim webapp
 */
 
+//===========================================================================
 // Duration from this.now to val, measured in seconds, where val is an ISO-8601
 // date string.
 function elapsedTime(val) {
     return this.nowSecs - Date.parse(val) / 1000
 }
 
+//===========================================================================
 function readableDuration(val) {
     if (!val)
         return isNaN(val) ? 'NaNs' : '0s'
@@ -42,6 +44,7 @@ function readableDuration(val) {
     return out
 }
 
+//===========================================================================
 // Splits arr onto an array of pages where each page is an array of up to
 // pageSize elements of arr.
 function makePages(arr, pageSize) {

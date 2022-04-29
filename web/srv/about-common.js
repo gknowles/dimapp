@@ -5,8 +5,14 @@ Distributed under the Boost Software License, Version 1.0.
 about-common.js - dim webapp
 */
 
-(function() {
+//===========================================================================
+function aboutIntro(selected) {
     addOpts({
+        computed: {
+            miniNavSelected() {
+                return selected
+            },
+        },
         methods: {
             miniNav() {
                 return [
@@ -18,17 +24,7 @@ about-common.js - dim webapp
             },
         },
     })
-})()
-
-function aboutIntro(selected) {
-    addOpts({
-        computed: {
-            miniNavSelected() {
-                return selected
-            },
-        },
-    })
-    includeHtmlFragment('navbar-mini.html', true)
-    includeHtmlFragment('about-common.html', true)
+    includeHtmlFragment('navbar.html')
+    includeHtmlFragment('about-common.html')
     document.currentScript.remove()
 }

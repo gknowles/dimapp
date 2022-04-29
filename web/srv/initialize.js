@@ -32,6 +32,9 @@ function createApp() {
         methods: {
             readableDuration,
             elapsedTime,
+            miniNav() {
+                return []
+            },
         },
     }
     addOpts(newOpts)
@@ -63,11 +66,11 @@ function finalize() {
 }
 
 //===========================================================================
-function includeHtmlFragment(src, keep) {
+function includeHtmlFragment(src) {
     let node = document.currentScript
     createApp.waitingHtmlFragments += 1
     const frame = document.createElement("iframe")
-    node.insertAdjacentElement('afterend', frame)
+    node.insertAdjacentElement('beforebegin', frame)
     frame.style.display = 'none'
     frame.onload = function() {
         this.insertAdjacentHTML(
@@ -78,8 +81,13 @@ function includeHtmlFragment(src, keep) {
         createApp()
     }
     frame.src = src
-    if (!keep)
-        node.remove()
+}
+
+//===========================================================================
+function replaceWithHtmlFragment(src, keep) {
+    let node = document.currentScript
+    includeHtmlFragment(src)
+    node.remove()
 }
 
 //===========================================================================

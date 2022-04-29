@@ -39,12 +39,15 @@ addOpts({
 </head>
 <body>
 <div id="app" style="visibility: hidden">
-  <script>includeHtmlFragment('navbar.html')</script>
+  <script>fileIntro('Logs')</script>
 
   <div class="container-fluid mt-2">
-    <script>fileIntro('Logs')</script>
-
     <div class="row gx-3">
+      <template v-if="sortedFiles.length == 0">
+        <div class="col-auto">
+          No log files.
+        </div>
+      </template>
       <template v-for="page in sortedFiles">
         <div class='col-auto'>
           <table>

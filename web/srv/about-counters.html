@@ -36,11 +36,9 @@ addOpts({
 </head>
 <body>
 <div id="app" style="visibility: hidden">
-  <script>includeHtmlFragment('navbar.html')</script>
+  <script>aboutIntro('Counters')</script>
 
   <div class="container-fluid mt-2">
-    <script>aboutIntro('Counters')</script>
-
     <div class="row gx-3">
       <template v-for="page in sortedCounters">
         <div class='col-auto'>

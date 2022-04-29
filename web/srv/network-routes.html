@@ -34,11 +34,9 @@ addOpts({
 </head>
 <body>
 <div id="app" style="visibility: hidden">
-  <script>includeHtmlFragment('navbar.html')</script>
+  <script>networkIntro('Routes')</script>
 
   <div class="container-fluid mt-2">
-    <script>networkIntro('Routes')</script>
-
     <div class="row gx-3">
       <template v-for="page in sortedRoutes">
         <div class="col-auto">

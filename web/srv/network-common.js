@@ -5,8 +5,14 @@ Distributed under the Boost Software License, Version 1.0.
 network-common.js - dim webapp
 */
 
-(function() {
+//===========================================================================
+function networkIntro(selected) {
     addOpts({
+        computed: {
+            miniNavSelected() {
+                return selected
+            },
+        },
         methods: {
             miniNav() {
                 return [
@@ -17,16 +23,6 @@ network-common.js - dim webapp
             },
         },
     })
-})()
-
-function networkIntro(selected) {
-    addOpts({
-        computed: {
-            miniNavSelected() {
-                return selected
-            },
-        },
-    })
-    includeHtmlFragment('navbar-mini.html', true)
+    includeHtmlFragment('navbar.html')
     document.currentScript.remove()
 }
