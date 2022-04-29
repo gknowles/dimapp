@@ -456,7 +456,7 @@ void Dim::iLogFileWebInitialize() {
         });
         httpRouteAdd({
             .notify = &s_jsonLogTail, 
-            .path = "/srv/file/log/tail/", 
+            .path = "/srv/file/logs/tail/", 
             .recurse = true
         });
     }
