@@ -162,7 +162,6 @@ const Path & appConfigDir();
 const Path & appCrashDir();
 const Path & appDataDir();
 const Path & appLogDir();
-const Path & appWebDir();
 
 // False if file relative to root is not within the root path. This can happen
 // if file breaks out via ".." or is an absolute path.
@@ -185,11 +184,6 @@ bool appLogPath(
     Path * out,
     std::string_view file,
     bool createDirIfNotExist = true
-);
-bool appWebPath(
-    Path * out,
-    std::string_view file,
-    bool createDirIfNotExist = false
 );
 
 

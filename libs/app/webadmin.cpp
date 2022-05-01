@@ -11,6 +11,15 @@ using namespace Dim;
 
 /****************************************************************************
 *
+*   Variables
+*
+***/
+
+static vector<Path> s_webRoots;
+
+
+/****************************************************************************
+*
 *   Helpers
 *
 ***/
@@ -77,6 +86,8 @@ JBuilder IWebAdminNotify::initResponse(
         .member("address", toString(appAddress()));
     bld.member("groupIndex", appGroupIndex())
         .member("groupType", appGroupType());
+    if (appFlags().any(fAppIsService))
+        bld.member("service", true);
     bld.end();
     bld.member("now", Time8601Str(timeNow()).view())
         .member("root", root);
@@ -107,7 +118,7 @@ JBuilder IWebAdminNotify::initResponse(
 
 /****************************************************************************
 *
-*   WebFiles - files from appWebDir()
+*   WebFiles - files from WebRoot
 *
 ***/
 
@@ -125,20 +136,24 @@ void WebFiles::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     if (qpath.size() && qpath[0] == '/')
         qpath.remove_prefix(1);
     Path path;
-    if (!appWebPath(&path, qpath))
-        return httpRouteReplyNotFound(reqId, msg);
-    qpath = path.view();
-
-    bool found = false;
-    if (auto ec = fileDirExists(&found, path); !ec && found)
-        path /= "index.html";
-    if (auto ec = fileExists(&found, path); !ec && found) {
-        httpRouteReplyWithFile(reqId, path);
-    } else {
-        httpRouteReplyNotFound(reqId, msg);
+    for (auto&& root : s_webRoots) {
+        if (fileChildPath(&path, root, qpath, false)) 
+            continue;
+        bool found = false;
+        if (!fileDirExists(&found, path) && found)
+            path /= "index.html";
+        if (!fileExists(&found, path.view()) && found)
+            return httpRouteReplyWithFile(reqId, path);
     }
+    httpRouteReplyNotFound(reqId, msg);
 }
 
+
+/****************************************************************************
+*
+*   About helpers
+*
+***/
 
 //===========================================================================
 static void addAboutVars(IJBuilder * out) {
@@ -149,7 +164,7 @@ static void addAboutVars(IJBuilder * out) {
 
 /****************************************************************************
 *
-*   JsonAccount
+*   About - JsonAccount
 *
 ***/
 
@@ -172,7 +187,7 @@ void JsonAccount::onHttpRequest(unsigned reqId, HttpRequest & msg) {
 
 /****************************************************************************
 *
-*   JsonComputer
+*   About - JsonComputer
 *
 ***/
 
@@ -202,7 +217,7 @@ void JsonComputer::onHttpRequest(unsigned reqId, HttpRequest & msg) {
 
 /****************************************************************************
 *
-*   JsonCounters
+*   About - JsonCounters
 *
 ***/
 
@@ -327,6 +342,31 @@ void CrashFiles::onHttpRequest(unsigned reqId, HttpRequest & msg) {
 
 /****************************************************************************
 *
+*   Configuration files - s_appXml
+*
+***/
+
+namespace {
+class ConfigAppXml : public IConfigNotify {
+    void onConfigChange(const XDocument & doc) override;
+};
+} // namespace
+static ConfigAppXml s_appXml;
+
+//===========================================================================
+void ConfigAppXml::onConfigChange(const XDocument & doc) {
+    s_webRoots.clear();
+    for (auto&& root : configStrings(doc, "WebRoot"))
+        s_webRoots.push_back(Path(root));
+    if (s_webRoots.empty())
+        s_webRoots.push_back(Path("web"));
+    for (auto&& root : s_webRoots) 
+        root.resolve(appRootDir());
+}
+
+
+/****************************************************************************
+*
 *   Public API
 *
 ***/
@@ -344,6 +384,8 @@ static CrashFiles s_crashFiles;
 void Dim::iWebAdminInitialize() {
     if (appFlags().none(fAppWithWebAdmin)) 
         return;
+
+    configMonitor("app.xml", &s_appXml);
 
     httpRouteAdd({
         .notify = &s_redirectRoot,

@@ -50,27 +50,6 @@ static Path s_webDir;
 ***/
 
 //===========================================================================
-static bool makeAppPath(
-    Path * out,
-    const Path & root,
-    string_view file,
-    bool createDirIfNotExist
-) {
-    *out = file;
-    out->resolve(root, "/");
-    if (out->dir() == "/") {
-        // Path doesn't have root as a parent.
-        return false;
-    }
-    if (createDirIfNotExist) {
-        auto fp = *out;
-        if (fileCreateDirs(fp.removeFilename()))
-            return false;
-    }
-    return true;
-}
-
-//===========================================================================
 static Path makeAppDir(string_view path) {
     auto out = appRootDir() / path;
     return out;
@@ -417,12 +396,6 @@ const Path & Dim::appCrashDir() {
 }
 
 //===========================================================================
-const Path & Dim::appWebDir() {
-    assert(!s_webDir.empty());
-    return s_webDir;
-}
-
-//===========================================================================
 SockAddr Dim::appAddress() {
     assert(!s_appName.empty());
     return s_appAddr;
@@ -447,27 +420,22 @@ bool Dim::appUsageErrorSignaled() {
 
 //===========================================================================
 bool Dim::appConfigPath(Path * out, string_view file, bool cine) {
-    return makeAppPath(out, appConfigDir(), file, cine);
+    return !fileChildPath(out, appConfigDir(), file, cine);
 }
 
 //===========================================================================
 bool Dim::appLogPath(Path * out, string_view file, bool cine) {
-    return makeAppPath(out, appLogDir(), file, cine);
+    return !fileChildPath(out, appLogDir(), file, cine);
 }
 
 //===========================================================================
 bool Dim::appDataPath(Path * out, string_view file, bool cine) {
-    return makeAppPath(out, appDataDir(), file, cine);
+    return !fileChildPath(out, appDataDir(), file, cine);
 }
 
 //===========================================================================
 bool Dim::appCrashPath(Path * out, string_view file, bool cine) {
-    return makeAppPath(out, appCrashDir(), file, cine);
-}
-
-//===========================================================================
-bool Dim::appWebPath(Path * out, string_view file, bool cine) {
-    return makeAppPath(out, appWebDir(), file, cine);
+    return !fileChildPath(out, appCrashDir(), file, cine);
 }
 
 //===========================================================================
