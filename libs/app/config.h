@@ -25,9 +25,11 @@ namespace Dim {
 struct ConfigContext {
     SockAddr saddr;
     std::string appBaseName;
-    unsigned appIndex{0};
+    unsigned appIndex = 0;
     std::string config;
     std::string module; // socket manager name
+    std::string groupType;
+    unsigned groupIndex = 0;
 };
 
 ConfigContext configDefaultContext();
@@ -46,7 +48,15 @@ public:
     virtual void onConfigChange(const XDocument & doc) = 0;
 };
 
-void configMonitor(std::string_view file, IConfigNotify * notify);
+IConfigNotify * configMonitor(std::string_view file, IConfigNotify * notify);
+IConfigNotify * configMonitor(
+    std::string_view file, 
+    std::unique_ptr<IConfigNotify> && notify
+);
+IConfigNotify * configMonitor(
+    std::string_view file, 
+    std::function<void(const XDocument &)> fn
+);
 void configCloseWait(std::string_view file, IConfigNotify * notify);
 
 // If notify is null, all notifiers monitoring the file are called. Otherwise,
@@ -117,6 +127,26 @@ Duration configDuration(
     const XDocument & doc,
     std::string_view name,
     Duration defVal = {}
+);
+
+std::vector<const char *> configStrings(
+    const ConfigContext & context,
+    const XDocument & doc,
+    std::string_view name
+);
+std::vector<double> configNumbers(
+    const ConfigContext & context,
+    const XDocument & doc,
+    std::string_view name
+);
+
+std::vector<const char *> configStrings(
+    const XDocument & doc,
+    std::string_view name
+);
+std::vector<double> configNumbers(
+    const XDocument & doc,
+    std::string_view name
 );
 
 

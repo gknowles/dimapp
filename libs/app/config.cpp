@@ -27,7 +27,8 @@ const unsigned kMaxConfigFileSize = 10'000'000;
 namespace {
 
 struct NotifyInfo : ListLink<> {
-    IConfigNotify * notify{};
+    IConfigNotify * notify {};
+    unique_ptr<IConfigNotify> owner;
 };
 
 class ConfigFile : public IFileChangeNotify {
@@ -37,7 +38,8 @@ public:
     void monitor_UNLK(
         unique_lock<mutex> && lk, 
         string_view relpath, 
-        IConfigNotify * notify
+        IConfigNotify * notify,
+        bool takeOwnership
     );
     bool notify_UNLK(unique_lock<mutex> && lk, IConfigNotify * notify);
     bool closeWait_UNLK(unique_lock<mutex> && lk, IConfigNotify * notify);
@@ -95,13 +97,16 @@ ConfigFile::~ConfigFile() {
 void ConfigFile::monitor_UNLK(
     unique_lock<mutex> && lk, 
     string_view relpath, 
-    IConfigNotify * notify
+    IConfigNotify * notify,
+    bool takeOwnersip
 ) {
     assert(lk);
     bool wasEmpty = !m_notifiers;
     auto ni = new NotifyInfo;
     m_notifiers.link(ni);
     ni->notify = notify;
+    if (takeOwnersip)
+        ni->owner.reset(notify);
 
     if (wasEmpty) {
         lk.unlock();
@@ -307,14 +312,49 @@ static bool getFullpath(Path * out, string_view file) {
 }
 
 //===========================================================================
-void Dim::configMonitor(string_view file, IConfigNotify * notify) {
+static IConfigNotify * addMonitor(
+    string_view file, 
+    IConfigNotify * notify,
+    bool takeOwnership
+) {
     Path path;
     if (!getFullpath(&path, file))
-        return;
+        return nullptr;
 
     unique_lock lk(s_mut);
     auto & cf = s_files[path];
-    cf.monitor_UNLK(move(lk), path, notify);
+    cf.monitor_UNLK(move(lk), path, notify, takeOwnership);
+    return notify;
+}
+
+//===========================================================================
+IConfigNotify * Dim::configMonitor(string_view file, IConfigNotify * notify) {
+    return addMonitor(file, notify, false);
+}
+
+//===========================================================================
+IConfigNotify * Dim::configMonitor(
+    string_view file, 
+    unique_ptr<IConfigNotify> && notify
+) {
+    return addMonitor(file, notify.release(), true);
+}
+
+//===========================================================================
+IConfigNotify * Dim::configMonitor(
+    string_view file, 
+    function<void(const XDocument &)> fn
+) {
+    struct Notify : IConfigNotify {
+        function<void(const XDocument &)> m_fn;
+
+        void onConfigChange(const XDocument & doc) override {
+            m_fn(doc);
+        }
+    };
+    auto notify = make_unique<Notify>();
+    notify->m_fn = move(fn);
+    return configMonitor(file, move(notify));
 }
 
 //===========================================================================
@@ -353,21 +393,34 @@ void Dim::configChange(
 
 //===========================================================================
 static bool match(const XNode & node, const ConfigContext & context) {
-    enum { kInvalid, kName, kIndex, kConfig, kModule };
+    enum { 
+        kInvalid, 
+        kName, 
+        kIndex, 
+        kConfig, 
+        kModule, 
+        kGroupType, 
+        kGroupIndex 
+    };
     constexpr TokenTable::Token keys[] = {
         { kName, "name" },
         { kIndex, "index" },
         { kConfig, "config" },
         { kModule, "module" },
+        { kGroupType, "groupType" },
+        { kGroupIndex, "groupIndex" },
     };
     static const TokenTable keyTbl(keys);
 
     for (auto&& a : attrs(&node)) {
         auto key = keyTbl.find(a.name, kInvalid);
+        auto ival = strToUint(a.value);
         if (key == kName && context.appBaseName != a.value
-            || key == kIndex && context.appIndex != strToUint(a.value)
+            || key == kIndex && context.appIndex != ival
             || key == kConfig && context.config != a.value
             || key == kModule && context.module != a.value
+            || key == kGroupType && context.groupType != a.value
+            || key == kGroupIndex && context.groupIndex != ival
         ) {
             return false;
         }
@@ -382,7 +435,7 @@ static const XNode * find(
     string_view name
 ) {
     for (auto&& e : elems(node, name)) {
-        if (match(e, context))
+        if (match(e, context)) 
             return &e;
     }
     for (auto&& f : elems(node, "Filter")) {
@@ -421,6 +474,11 @@ const XNode * Dim::configElement(
 }
 
 //===========================================================================
+static const char * elemToString(const XNode * elem, const char defVal[]) {
+    return attrValue(elem, "value", defVal);
+}
+
+//===========================================================================
 const char * Dim::configString(
     const ConfigContext & context,
     const XDocument & doc,
@@ -428,7 +486,7 @@ const char * Dim::configString(
     const char defVal[]
 ) {
     auto elem = configElement(context, doc, name);
-    auto val = attrValue(elem, "value", defVal);
+    auto val = elemToString(elem, defVal);
     return val;
 }
 
@@ -442,12 +500,7 @@ const char * Dim::configString(
 }
 
 //===========================================================================
-bool Dim::configBool(
-    const ConfigContext & context,
-    const XDocument & doc,
-    string_view name,
-    bool defVal
-) {
+static bool elemToBool(const XNode * elem, bool defVal) {
     static const TokenTable::Token values[] = {
         { 1, "true" },
         { 1, "1" },
@@ -455,9 +508,22 @@ bool Dim::configBool(
         { 0, "0" },
     };
     static const TokenTable tbl(values);
-    if (auto str = configString(context, doc, name, nullptr)) 
-        defVal = tbl.find(str, false);
+
+    if (auto str = elemToString(elem, nullptr))
+        return tbl.find(str, false);
     return defVal;
+}
+
+//===========================================================================
+bool Dim::configBool(
+    const ConfigContext & context,
+    const XDocument & doc,
+    string_view name,
+    bool defVal
+) {
+    auto elem = configElement(context, doc, name);
+    auto val = elemToBool(elem, defVal);
+    return val;
 }
 
 //===========================================================================
@@ -470,15 +536,22 @@ bool Dim::configBool(
 }
 
 //===========================================================================
+static double elemToNumber(const XNode * elem, double defVal) {
+    if (auto str = elemToString(elem, nullptr))
+        (void) parse(&defVal, str);
+    return defVal;
+}
+
+//===========================================================================
 double Dim::configNumber(
     const ConfigContext & context,
     const XDocument & doc,
     string_view name,
     double defVal
 ) {
-    if (auto str = configString(context, doc, name, nullptr))
-        (void) parse(&defVal, str);
-    return defVal;
+    auto elem = configElement(context, doc, name);
+    auto val = elemToNumber(elem, defVal);
+    return val;
 }
 
 //===========================================================================
@@ -494,7 +567,7 @@ double Dim::configNumber(
 Duration Dim::configDuration(
     const ConfigContext & context,
     const XDocument & doc,
-    std::string_view name,
+    string_view name,
     Duration defVal
 ) {
     if (auto str = configString(context, doc, name, nullptr))
@@ -505,10 +578,57 @@ Duration Dim::configDuration(
 //===========================================================================
 Duration Dim::configDuration(
     const XDocument & doc,
-    std::string_view name,
+    string_view name,
     Duration defVal
 ) {
     return configDuration(s_context, doc, name, defVal);
+}
+
+//===========================================================================
+vector<const char *> Dim::configStrings(
+    const ConfigContext & context,
+    const XDocument & doc,
+    string_view name
+) {
+    vector<const char *> out;
+    auto root = configElement(context, doc, name);
+    if (auto str = elemToString(root, nullptr))
+        out.push_back(str);
+    for (auto&& elem : elems(root, "Value")) {
+        if (!match(elem, context))
+            continue;
+        if (auto str = elemToString(&elem, nullptr))
+            out.push_back(str);
+    }
+    return out;
+}
+
+//===========================================================================
+vector<const char *> Dim::configStrings(
+    const XDocument & doc,
+    string_view name
+) {
+    return configStrings(s_context, doc, name);
+}
+
+//===========================================================================
+vector<double> Dim::configNumbers(
+    const ConfigContext & context,
+    const XDocument & doc,
+    string_view name
+) {
+    vector<double> out;
+    for (auto&& str : configStrings(context, doc, name))
+        out.push_back(strToUint(str));
+    return out;
+}
+
+//===========================================================================
+vector<double> Dim::configNumbers(
+    const XDocument & doc,
+    string_view name
+) {
+    return configNumbers(s_context, doc, name);
 }
 
 
