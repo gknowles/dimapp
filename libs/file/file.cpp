@@ -402,6 +402,27 @@ error_code Dim::fileAbsolutePath(Path * out, string_view path) {
 }
 
 //===========================================================================
+error_code Dim::fileChildPath(
+    Path * out,
+    const Path & root,
+    string_view file,
+    bool createDirIfNotExist
+) {
+    *out = file;
+    out->resolve(root, "/");
+    if (out->dir() == "/") {
+        // Path doesn't have root as a parent.
+        return make_error_code(errc::invalid_argument);
+    }
+    if (createDirIfNotExist) {
+        auto fp = *out;
+        if (auto ec = fileCreateDirs(fp.removeFilename()))
+            return ec;
+    }
+    return {};
+}
+
+//===========================================================================
 error_code Dim::fileSize(uint64_t * out, string_view path) {
     error_code ec;
     auto p8 = u8string_view((char8_t *) path.data(), path.size());
