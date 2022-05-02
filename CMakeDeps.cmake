@@ -328,7 +328,6 @@
 # web/srv/groupType.css
 # web/srv/init.css
 # web/srv/initialize.js
-# web/srv/navbar-mini.html
 # web/srv/navbar.html
 # web/srv/network-common.js
 # web/srv/network-routes.html

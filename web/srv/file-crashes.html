@@ -58,7 +58,7 @@ addOpts({
             </tr>
             <tr v-for="val in page">
               <td style='white-space: nowrap'>
-                <a href="'crashes/' + (val.name)">
+                <a :href="'/srv/file/crashes/' + (val.name)">
                   {{ val.name }}
                 </a>
               </td>
