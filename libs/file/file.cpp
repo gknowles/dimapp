@@ -441,7 +441,7 @@ static pair<error_code, fs::file_status> getPathStatus(string_view path) {
     auto p8 = u8string_view((char8_t *) path.data(), path.size());
     auto f = fs::path(p8);
     auto st = fs::status(f, ec);
-    if (ec)
+    if (ec && st.type() != filesystem::file_type::not_found)
         logMsgError() << "fs::status(" << path << "): " << ec;
     return {ec, st};
 }
@@ -449,7 +449,9 @@ static pair<error_code, fs::file_status> getPathStatus(string_view path) {
 //===========================================================================
 error_code Dim::fileExists(bool * out, string_view path) {
     auto&& [ec, st] = getPathStatus(path);
-    *out = fs::exists(st) && !fs::is_directory(st);
+    *out = fs::is_regular_file(st);
+    if (ec == errc::no_such_file_or_directory)
+        return {};
     return ec;
 }
 
@@ -457,6 +459,8 @@ error_code Dim::fileExists(bool * out, string_view path) {
 error_code Dim::fileDirExists(bool * out, string_view path) {
     auto&& [ec, st] = getPathStatus(path);
     *out = fs::is_directory(st);
+    if (ec == errc::no_such_file_or_directory)
+        return {};
     return ec;
 }
 
