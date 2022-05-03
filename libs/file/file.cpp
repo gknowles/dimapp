@@ -8,6 +8,7 @@
 using namespace std;
 using namespace Dim;
 namespace fs = std::filesystem;
+using fm = Dim::File::OpenMode;
 
 
 /****************************************************************************
@@ -73,11 +74,11 @@ void FileAppendStream::init(int numBufs, int maxWrites, size_t pageSize) {
 
 //===========================================================================
 bool FileAppendStream::open(string_view path, OpenExisting mode) {
-    auto flags = File::fReadWrite | File::fAligned | File::fDenyWrite;
+    auto flags = fm::fReadWrite | fm::fAligned | fm::fDenyWrite;
     switch (mode) {
-    case kFail: flags |= File::fCreat | File::fExcl; break;
-    case kAppend: flags |= File::fCreat; break;
-    case kTrunc: flags |= File::fCreat | File::fTrunc; break;
+    case kFail: flags |= fm::fCreat | fm::fExcl; break;
+    case kAppend: flags |= fm::fCreat; break;
+    case kTrunc: flags |= fm::fCreat | fm::fTrunc; break;
     }
     FileHandle f;
     if (auto ec = fileOpen(&f, path, flags); !ec) {
@@ -131,7 +132,7 @@ void FileAppendStream::close() {
 
     if (auto used = m_impl->bufLen - m_impl->buf.size()) {
         auto oflags = fileMode(m_impl->file);
-        if (oflags.none(File::fAligned)) {
+        if (oflags.none(fm::fAligned)) {
             fileAppendWait(
                 nullptr, 
                 m_impl->file, 
@@ -146,7 +147,7 @@ void FileAppendStream::close() {
             if (auto ec = fileOpen(
                 &m_impl->file, 
                 path, 
-                File::fReadWrite | File::fBlocking
+                fm::fReadWrite | fm::fBlocking
             ); !ec) {
                 fileAppendWait(
                     nullptr, 
@@ -274,11 +275,12 @@ FileStreamNotify::FileStreamNotify(
     , m_out(new char[blkSize + 1])
 {
     FileHandle file;
-    if (auto ec = fileOpen(
-        &file,
-        path,
-        File::fReadOnly | File::fSequential | File::fDenyNone
-    ); ec) {
+    auto ec = fileOpen(
+        &file, 
+        path, 
+        fm::fReadOnly | fm::fSequential | fm::fDenyNone
+    );
+    if (ec) {
         logMsgError() << "File open failed: " << path;
         FileReadData data = {};
         data.f = file;
@@ -553,7 +555,7 @@ void Dim::fileLoadBinary(
     TaskQueueHandle hq
 ) {
     FileHandle file;
-    auto ec = fileOpen(&file, path, File::fReadOnly | File::fDenyNone);
+    auto ec = fileOpen(&file, path, fm::fReadOnly | fm::fDenyNone);
     if (ec) {
         logMsgError() << "File open failed: " << path;
         FileReadData data = {};
@@ -581,9 +583,9 @@ error_code Dim::fileLoadBinaryWait(
 ) {
     FileHandle file;
     auto ec = fileOpen(
-        &file,
-        path,
-        File::fReadOnly | File::fDenyNone | File::fBlocking
+        &file, 
+        path, 
+        fm::fReadOnly | fm::fDenyNone | fm::fBlocking
     );
     if (ec) {
         logMsgError() << "File open failed: " << path;
@@ -612,11 +614,7 @@ void Dim::fileSaveBinary(
     TaskQueueHandle hq // queue to notify
 ) {
     FileHandle file;
-    auto ec = fileOpen(
-        &file,
-        path, 
-        File::fReadWrite | File::fCreat | File::fTrunc
-    );
+    auto ec = fileOpen(&file, path, fm::fReadWrite | fm::fCreat | fm::fTrunc);
     if (ec) {
         logMsgError() << "File open failed: " << path;
         FileWriteData tmp = {};
@@ -638,9 +636,9 @@ error_code Dim::fileSaveBinaryWait(
 ) {
     FileHandle file;
     auto ec = fileOpen(
-        &file,
-        path,
-        File::fReadWrite | File::fCreat | File::fTrunc | File::fBlocking
+        &file, 
+        path, 
+        fm::fReadWrite | fm::fCreat | fm::fTrunc | fm::fBlocking
     );
     if (ec) {
         logMsgError() << "File open failed: " << path;

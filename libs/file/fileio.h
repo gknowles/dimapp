@@ -21,7 +21,7 @@
 namespace Dim {
 
 namespace File {
-    enum OpenMode : unsigned {
+    enum class OpenMode : unsigned {
         // content access, exactly one *must* be specified
         fNoContent = 0x1, // when you only want metadata (time, size, etc)
         fReadOnly = 0x2,
@@ -67,6 +67,10 @@ namespace File {
         kCharacter,
     };
 };
+
+template<> 
+struct is_enum_flags<enum class File::OpenMode : unsigned> 
+    : std::true_type {};
 
 
 /****************************************************************************

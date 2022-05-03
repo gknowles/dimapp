@@ -62,6 +62,8 @@ LogBuffer::LogBuffer() {
 
 //===========================================================================
 void LogBuffer::writeLog(string_view msg, bool wait) {
+    using enum File::OpenMode;
+
     unique_lock lk{m_mut};
     if (m_writing.empty()) {
         m_writing.append(msg);
@@ -70,7 +72,7 @@ void LogBuffer::writeLog(string_view msg, bool wait) {
             auto ec = fileOpen(
                 &m_file,
                 s_logfile,
-                File::fCreat | File::fReadWrite | File::fDenyNone
+                fCreat | fReadWrite | fDenyNone
             );
             if (ec) {
                 lk.unlock();
@@ -288,8 +290,9 @@ void JsonLogTail::onHttpRequest(unsigned reqId, HttpRequest & msg) {
         .member("limit", limit)
         .member("name", qpath);
 
+    using om = File::OpenMode;
     FileHandle file;
-    auto ec = fileOpen(&file, path, File::fReadOnly | File::fDenyNone);
+    auto ec = fileOpen(&file, path, om::fReadOnly | om::fDenyNone);
     if (ec) {
         FileReadData data = {};
         data.f = file;

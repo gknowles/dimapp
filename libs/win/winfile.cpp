@@ -7,6 +7,8 @@
 
 using namespace std;
 using namespace Dim;
+using fm = Dim::File::OpenMode;
+using fv = Dim::File::View;
 
 
 /****************************************************************************
@@ -23,7 +25,7 @@ struct WinFileInfo : public HandleContent {
     FileHandle m_f;
     string m_path;
     HANDLE m_handle{INVALID_HANDLE_VALUE};
-    EnumFlags<File::OpenMode> m_mode{File::fReadOnly};
+    EnumFlags<File::OpenMode> m_mode{fm::fReadOnly};
     unordered_map<const void *, File::View> m_views;
 };
 
@@ -164,7 +166,7 @@ WinError IFileOpBase::start(
         return ERROR_IO_PENDING;
     }
 
-    if (m_file->m_mode.any(File::fBlocking)) {
+    if (m_file->m_mode.any(fm::fBlocking)) {
         run();
     } else {
         m_trigger = true;
@@ -559,7 +561,7 @@ static error_code allocHandle(
     file->m_mode = mode;
     file->m_path = path;
 
-    if (mode.none(File::fBlocking)) {
+    if (mode.none(fm::fBlocking)) {
         if (!winIocpBindHandle(file->m_handle)) {
             WinError err;
             return err.code();
@@ -716,7 +718,7 @@ error_code Dim::fileCreateTemp(
     Path fname;
     if (auto ec = fileTempName(&fname, suffix))
         return {};
-    mode |= File::fCreat | File::fExcl | File::fReadWrite;
+    mode |= fm::fCreat | fm::fExcl | fm::fReadWrite;
     return fileOpen(out, fname, mode);
 }
 
@@ -727,10 +729,10 @@ static error_code attachStdHandle(
     string_view path,
     EnumFlags<File::OpenMode> mode // must be either fReadOnly or fReadWrite
 ) {
-    assert(mode.value() == File::fReadOnly
-        || mode.value() == File::fReadWrite);
+    assert(mode.value() == fm::fReadOnly
+        || mode.value() == fm::fReadWrite);
     auto file = make_unique<WinFileInfo>();
-    file->m_mode = mode | File::fBlocking;
+    file->m_mode = mode | fm::fBlocking;
     file->m_path = path;
     file->m_handle = GetStdHandle(fd);
     if (file->m_handle == NULL) {
@@ -767,17 +769,17 @@ static error_code attachStdHandle(
 
 //===========================================================================
 error_code Dim::fileAttachStdin(FileHandle * out) {
-    return attachStdHandle(out, STD_INPUT_HANDLE, "STDIN", File::fReadOnly);
+    return attachStdHandle(out, STD_INPUT_HANDLE, "STDIN", fm::fReadOnly);
 }
 
 //===========================================================================
 error_code Dim::fileAttachStdout(FileHandle * out) {
-    return attachStdHandle(out, STD_OUTPUT_HANDLE, "STDOUT", File::fReadWrite);
+    return attachStdHandle(out, STD_OUTPUT_HANDLE, "STDOUT", fm::fReadWrite);
 }
 
 //===========================================================================
 error_code Dim::fileAttachStderr(FileHandle * out) {
-    return attachStdHandle(out, STD_ERROR_HANDLE, "STDERR", File::fReadWrite);
+    return attachStdHandle(out, STD_ERROR_HANDLE, "STDERR", fm::fReadWrite);
 }
 
 //===========================================================================
@@ -858,8 +860,8 @@ error_code Dim::fileClose(FileHandle f) {
                 << "): has views that are still open";
             err = ERROR_INVALID_PARAMETER;
         }
-        if (file->m_mode.none(File::fNonOwning)) {
-            if (file->m_mode.any(File::fBlocking))
+        if (file->m_mode.none(fm::fNonOwning)) {
+            if (file->m_mode.any(fm::fBlocking))
                 CancelIoEx(file->m_handle, NULL);
             if (!CloseHandle(file->m_handle))
                 err.set();
@@ -1421,8 +1423,8 @@ static error_code openView(
     SIZE_T viewSize;
     ULONG access, secProt, allocType, pageProt;
 
-    if (mode == File::View::kReadOnly) {
-        if (!maxLength || file->m_mode.any(File::fReadOnly)) {
+    if (mode == fv::kReadOnly) {
+        if (!maxLength || file->m_mode.any(fm::fReadOnly)) {
             assert(!maxLength);
             // read only view
             access = SECTION_MAP_READ;
@@ -1433,7 +1435,7 @@ static error_code openView(
             allocType = 0;
             pageProt = PAGE_READONLY;
         } else {
-            assert(file->m_mode.any(File::fReadWrite));
+            assert(file->m_mode.any(fm::fReadWrite));
             assert(maxLength >= length);
             // read only but extendable
             access = SECTION_MAP_READ;
@@ -1445,8 +1447,8 @@ static error_code openView(
             pageProt = PAGE_READONLY;
         }
     } else {
-        assert(mode == File::View::kReadWrite);
-        assert(file->m_mode.any(File::fReadWrite));
+        assert(mode == fv::kReadWrite);
+        assert(file->m_mode.any(fm::fReadWrite));
         if (!maxLength) {
             // writable view
             access = SECTION_MAP_READ | SECTION_MAP_WRITE;
@@ -1523,7 +1525,7 @@ error_code Dim::fileOpenView(
     int64_t length,
     int64_t maxLength
 ) {
-    assert(mode == File::View::kReadOnly);
+    assert(mode == fv::kReadOnly);
     return openView((char *&) base, f, mode, offset, length, maxLength);
 }
 
@@ -1536,7 +1538,7 @@ error_code Dim::fileOpenView(
     int64_t length,
     int64_t maxLength
 ) {
-    assert(mode == File::View::kReadWrite);
+    assert(mode == fv::kReadWrite);
     return openView(base, f, mode, offset, length, maxLength);
 }
 
@@ -1569,10 +1571,10 @@ error_code Dim::fileExtendView(FileHandle f, const void * view, int64_t length) 
         return make_error_code(errc::invalid_argument);
     }
     ULONG pageProt;
-    if (i->second == File::View::kReadOnly) {
+    if (i->second == fv::kReadOnly) {
         pageProt = PAGE_READONLY;
     } else {
-        assert(i->second == File::View::kReadWrite);
+        assert(i->second == fv::kReadWrite);
         pageProt = PAGE_READWRITE;
     }
     assert((uint64_t) length == (uint64_t) (SIZE_T) length);

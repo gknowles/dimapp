@@ -371,12 +371,10 @@ static bool replaceFile(
     string_view path,
     const string & content
 ) {
+    using enum File::OpenMode;
+    
     FileHandle file;
-    auto ec = fileOpen(
-        &file,
-        path,
-        File::fCreat | File::fTrunc | File::fReadWrite | File::fBlocking
-    );
+    auto ec = fileOpen(&file, path, fCreat | fTrunc | fReadWrite | fBlocking);
     if (ec) {
         logMsgError() << path << ": unable to open.";
         appSignalShutdown(EX_IOERR);

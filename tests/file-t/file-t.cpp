@@ -17,14 +17,12 @@ using namespace Dim;
 
 //===========================================================================
 static void app(int argc, char *argv[]) {
+    using enum File::OpenMode;
+
     string fn = "file-t.tmp";
 
     FileHandle file;
-    auto ec = fileOpen(
-        &file,
-        fn,
-        File::fCreat | File::fTrunc | File::fReadWrite | File::fBlocking
-    );
+    auto ec = fileOpen(&file, fn, fCreat | fTrunc | fReadWrite | fBlocking);
     if (ec)
         return appSignalShutdown(EX_DATAERR);
     FileAlignment fa;

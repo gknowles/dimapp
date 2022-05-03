@@ -242,6 +242,8 @@ static void app(int argc, char *argv[]) {
         if (!resClose(h, true))
             return appSignalShutdown(EX_DATAERR);
     } else {
+        using enum Dim::File::OpenMode;
+
         ostringstream os;
         writeCpp(os, *target, out.view());
         auto content = os.view();
@@ -260,7 +262,7 @@ static void app(int argc, char *argv[]) {
         auto ec = fileOpen(
             &f,
             *target,
-            File::fReadWrite | File::fCreat | File::fTrunc | File::fBlocking
+            fReadWrite | fCreat | fTrunc | fBlocking
         );
         if (!ec) {
             fileAppendWait(nullptr, f, content.data(), content.size());

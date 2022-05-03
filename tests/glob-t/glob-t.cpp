@@ -7,6 +7,7 @@
 
 using namespace std;
 using namespace Dim;
+using fm = Dim::File::OpenMode;
 
 
 /****************************************************************************
@@ -18,7 +19,7 @@ using namespace Dim;
 //===========================================================================
 static void createEmptyFile(string_view path) {
     FileHandle file;
-    if (auto ec = fileOpen(&file, path, File::fCreat | File::fReadWrite); !ec)
+    if (auto ec = fileOpen(&file, path, fm::fCreat | fm::fReadWrite); !ec)
         fileClose(file);
 }
 

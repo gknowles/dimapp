@@ -419,6 +419,8 @@ bool compareXmlContent(const Path & name, const CharBuf & content) {
 
 //===========================================================================
 void updateXmlFile(const Path & name, const CharBuf & content) {
+    using enum File::OpenMode;
+
     cout << name << "... " << flush;
     bool exists = false;
     fileExists(&exists, name);
@@ -428,11 +430,7 @@ void updateXmlFile(const Path & name, const CharBuf & content) {
     }
 
     FileHandle file;
-    auto ec = fileOpen(
-        &file, 
-        name, 
-        File::fReadWrite | File::fCreat | File::fTrunc
-    );
+    auto ec = fileOpen(&file, name, fReadWrite | fCreat | fTrunc);
     if (ec)
         return appSignalShutdown(EX_DATAERR);
     fileWriteWait(nullptr, file, 0, content.data(), content.size());

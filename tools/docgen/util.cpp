@@ -439,13 +439,15 @@ bool writeOutputs(
         }
     }
     for (auto&& output : files) {
+        using enum File::OpenMode;
+
         auto path = Path(output.first).resolve(odir);
         fileCreateDirs(path.parentPath());
         FileHandle file;
         auto ec = fileOpen(
             &file,
             path,
-            File::fCreat | File::fExcl | File::fReadWrite | File::fBlocking
+            fCreat | fExcl | fReadWrite | fBlocking
         );
         if (ec) {
             logMsgError() << path << ": unable to create.";

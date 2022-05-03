@@ -161,12 +161,14 @@ void ConfigFile::parseContent(string_view fullpath, string && content) {
 
 //===========================================================================
 void ConfigFile::onFileChange(string_view fullpath) {
+    using enum File::OpenMode;
+
     m_changes += 1;
     m_lastChanged = timeNow();
     string content;
     for (;;) {
         FileHandle f;
-        auto ec = fileOpen(&f, fullpath, File::fReadOnly | File::fDenyWrite);
+        auto ec = fileOpen(&f, fullpath, fReadOnly | fDenyWrite);
         if (ec)
             break;
 

@@ -1181,8 +1181,10 @@ static void addFileHeaders(
 
 //===========================================================================
 void Dim::httpRouteReplyWithFile(unsigned reqId, string_view path) {
+    using enum Dim::File::OpenMode;
+    
     FileHandle file;
-    auto ec = fileOpen(&file, path, File::fReadOnly | File::fDenyNone);
+    auto ec = fileOpen(&file, path, fReadOnly | fDenyNone);
     if (ec) {
         HttpResponse msg(kHttpStatusNotFound);
         return httpRouteReply(reqId, move(msg), false);
