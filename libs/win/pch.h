@@ -82,7 +82,7 @@
 #pragma pack(pop)
 
 // External library internal headers
-#include "app/appint.h" // iAppPushStartupTask
+#include "app/appint.h" // iAppQueueStartupTask
 #include "core/timeint.h" // iClockGetTicks
 #include "core/threadint.h" // iThreadSetName
 

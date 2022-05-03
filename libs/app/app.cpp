@@ -199,7 +199,7 @@ static void initApp() {
 ***/
 
 //===========================================================================
-void Dim::iAppPushStartupTask(ITaskNotify * task) {
+void Dim::iAppQueueStartupTask(ITaskNotify * task) {
     assert(appStarting());
     s_appTasks.push_back(task);
 }

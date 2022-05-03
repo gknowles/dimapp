@@ -97,7 +97,7 @@ static VOID WINAPI ServiceMain(DWORD argc, LPTSTR * argv) {
 
     assert(appStarting());
     setState(SERVICE_RUNNING, false);
-    iAppPushStartupTask(&s_reportTask);
+    iAppQueueStartupTask(&s_reportTask);
 
     {
         scoped_lock lk{s_mut};
