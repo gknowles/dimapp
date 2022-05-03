@@ -11,19 +11,6 @@ using namespace Dim;
 
 /****************************************************************************
 *
-*   Helpers
-*
-***/
-
-//===========================================================================
-static void createEmptyFile(string_view path) {
-    FileHandle file;
-    if (auto ec = fileOpen(&file, path, File::fCreat | File::fReadWrite); !ec)
-        fileClose(file);
-}
-
-/****************************************************************************
-*
 *   Application
 *
 ***/
@@ -112,52 +99,6 @@ static void app(int argc, char *argv[]) {
         logMsgError() << "File content mismatch";
 
     fileClose(file);
-
-    fileRemove("file-t", true);
-    fileCreateDirs("file-t");
-    createEmptyFile("file-t/a.txt");
-    fileCreateDirs("file-t/b");
-    createEmptyFile("file-t/b/ba.txt");
-    createEmptyFile("file-t/b.txt");
-    fileCreateDirs("file-t/c");
-    createEmptyFile("file-t/c.txt");
-    vector<pair<Path, bool>> found;
-    for (auto && e : FileIter(
-        "file-t",
-        "a.txt",
-        FileIter::fDirsFirst | FileIter::fDirsLast
-    )) {
-        found.push_back({e.path, e.isdir});
-    }
-    vector<pair<Path, bool>> expected = {
-        { Path{"file-t/a.txt"}, false },
-        { Path{"file-t/b"}, true },
-        { Path{"file-t/b/ba.txt"}, false },
-        { Path{"file-t/b"}, true },
-        { Path{"file-t/b.txt"}, false },
-        { Path{"file-t/c"}, true },
-        { Path{"file-t/c"}, true },
-        { Path{"file-t/c.txt"}, false },
-    };
-    if (found != expected) {
-        logMsgError() << "File search didn't match";
-        for (auto i = 0; i < found.size() || i < expected.size(); ++i) {
-            auto os = logMsgInfo();
-            if (i < expected.size()) {
-                os.width(30);
-                os << expected[i].first;
-                os << (expected[i].second ? '*' : ' ');
-            } else {
-                os.width(31);
-                os << ' ';
-            }
-            if (i < found.size()) {
-                os.width(30);
-                os << found[i].first;
-                os << (found[i].second ? '*' : ' ');
-            }
-        }
-    }
 
     testSignalShutdown();
 }

@@ -216,6 +216,9 @@
 # tests/file-t/file-t.cpp
 # tests/file-t/pch.cpp
 # tests/file-t/pch.h
+# tests/glob-t/glob-t.cpp
+# tests/glob-t/pch.cpp
+# tests/glob-t/pch.h
 # tests/hpack-t/hpack-t.cpp
 # tests/hpack-t/pch.cpp
 # tests/hpack-t/pch.h

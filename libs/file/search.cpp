@@ -48,7 +48,7 @@ static bool match(const FileIter::Info & info) {
             return false;
     }
 
-    // TODO: check pattern
+    // TODO: check if info.entry.path matches info.path
     return true;
 }
 
