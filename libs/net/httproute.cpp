@@ -1098,7 +1098,7 @@ void Dim::httpRouteReplyDirList(
     bld.member("now", now);
     bld.member("files").array();
     uint64_t bytes = 0;
-    for (auto && f : FileIter(path)) {
+    for (auto && f : fileGlob(path)) {
         auto rname = f.path.view();
         rname.remove_prefix(path.size() + 1);
         bld.object();

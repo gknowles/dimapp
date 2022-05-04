@@ -206,7 +206,7 @@ static void app(int argc, char *argv[]) {
     unsigned added = 0;
     unsigned updated = 0;
     ResFileMap files;
-    for (auto & fn : FileIter{*src}) {
+    for (auto & fn : fileGlob(*src)) {
         string content;
         if (auto ec = fileLoadBinaryWait(&content, fn.path); ec)
             return appSignalShutdown(EX_DATAERR);

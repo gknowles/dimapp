@@ -256,8 +256,8 @@ static void initBeforeVars() {
 static void initAfterVars() {
     if (appFlags().any(fAppWithFiles)) {
         auto crashDir = appCrashDir();
-        vector<FileIter::Entry> found;
-        for (auto && e : FileIter{crashDir, "*.dmp"})
+        vector<GlobEntry> found;
+        for (auto && e : fileGlob(crashDir, "*.dmp"))
             found.push_back(e);
         static const int kMaxKeepFiles = 10;
         if (found.size() > kMaxKeepFiles) {

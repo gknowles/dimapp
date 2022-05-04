@@ -68,9 +68,7 @@ namespace File {
     };
 };
 
-template<> 
-struct is_enum_flags<enum class File::OpenMode : unsigned> 
-    : std::true_type {};
+template<> struct is_enum_flags<File::OpenMode> : std::true_type {};
 
 
 /****************************************************************************
@@ -78,52 +76,6 @@ struct is_enum_flags<enum class File::OpenMode : unsigned>
 *   Directory
 *
 ***/
-
-class FileIter {
-public:
-    struct Info;
-
-    enum Flags : unsigned {
-        // When to return directories in the iteration, either before the
-        // contained files, after them, or both. Implies recursion into
-        // subdirectories.
-        fDirsFirst = 0x01,
-        fDirsLast  = 0x02,
-
-        // Only return directories, implies recursive search. Nothing will be
-        // returned unless fDirsFirst and/or fDirsLast is also set.
-        fDirsOnly  = 0x04,
-
-        // Hidden files and directories are excluded by default, this flag 
-        // causes them to be included.
-        fHidden    = 0x08,
-    };
-    struct Entry {
-        Path path;
-        bool isdir{false};
-        bool isbefore{false};
-        TimePoint mtime;
-    };
-
-public:
-    FileIter() {}
-    FileIter(
-        std::string_view dir,
-        std::string_view name = {},
-        EnumFlags<Flags> flags = {}
-    );
-
-    bool operator==(const FileIter & right) const = default;
-    const Entry & operator*() const;
-    const Entry * operator->() const;
-    FileIter & operator++();
-
-private:
-    std::shared_ptr<Info> m_info;
-};
-
-inline FileIter begin(FileIter iter) { return iter; }
-inline FileIter end(const FileIter & iter) { return {}; }
 
 // Drive defaults to the current drive
 std::error_code fileGetCurrentDir(Path * out, std::string_view drive = {});

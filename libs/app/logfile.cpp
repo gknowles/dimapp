@@ -225,7 +225,7 @@ void JsonLogFiles::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     auto dir = appLogDir();
     bld.member("files").array();
     uint64_t bytes = 0;
-    for (auto&& f : FileIter(dir, "*.log")) {
+    for (auto&& f : fileGlob(dir, "*.log")) {
         auto rname = f.path.view();
         rname.remove_prefix(dir.size() + 1);
         fileSize(&bytes, f.path);

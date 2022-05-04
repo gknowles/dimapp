@@ -8,4 +8,5 @@
 
 #include "fileio.h"
 #include "filemon.h"
+#include "glob.h"
 #include "path.h"

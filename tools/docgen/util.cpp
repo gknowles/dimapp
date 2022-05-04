@@ -430,7 +430,7 @@ bool writeOutputs(
         appSignalShutdown(EX_IOERR);
         return false;
     }
-    for (auto&& f : FileIter(odir, "*.*", FileIter::fDirsLast)) {
+    for (auto&& f : fileGlob(odir, "*.*", GlobMode::fDirsLast)) {
         if (auto ec = fileRemove(f.path); ec) {
             if (!f.isdir) {
                 appSignalShutdown(EX_IOERR);

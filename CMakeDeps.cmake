@@ -79,11 +79,12 @@
 # libs/file/file.natvis
 # libs/file/fileio.h
 # libs/file/filemon.h
+# libs/file/glob.cpp
+# libs/file/glob.h
 # libs/file/path.cpp
 # libs/file/path.h
 # libs/file/pch.cpp
 # libs/file/pch.h
-# libs/file/search.cpp
 # libs/json/jbuilder.cpp
 # libs/json/jdocument.cpp
 # libs/json/json.abnf

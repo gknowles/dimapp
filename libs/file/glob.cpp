@@ -8,6 +8,7 @@
 using namespace std;
 using namespace Dim;
 namespace fs = std::filesystem;
+using enum Dim::GlobMode;
 
 
 /****************************************************************************
@@ -23,24 +24,24 @@ namespace {
     };
 } // namespace
 
-struct FileIter::Info {
+struct GlobIter::Info {
     Path path;
-    EnumFlags<Flags> flags{};
+    EnumFlags<GlobMode> flags{};
     vector<DirInfo> pos;
-    Entry entry;
+    GlobEntry entry;
 };
 
 //===========================================================================
-static bool match(const FileIter::Info & info) {
+static bool match(const GlobIter::Info & info) {
     if (info.entry.isdir) {
-        if (info.flags.none(FileIter::fDirsFirst | FileIter::fDirsLast))
+        if (info.flags.none(fDirsFirst | fDirsLast))
             return false;
     } else {
-        if (info.flags.any(FileIter::fDirsOnly))
+        if (info.flags.any(fDirsOnly))
             return false;
     }
 
-    if (info.flags.none(FileIter::fHidden)) {
+    if (info.flags.none(fHidden)) {
         EnumFlags<File::Attrs> attrs;
         if (auto ec = fileAttrs(&attrs, info.entry.path.view()); ec)
             return false;
@@ -54,7 +55,7 @@ static bool match(const FileIter::Info & info) {
 
 //===========================================================================
 static void copy(
-    FileIter::Entry * entry, 
+    GlobEntry * entry, 
     fs::directory_iterator p, 
     bool firstPass
 ) {
@@ -65,7 +66,7 @@ static void copy(
 }
 
 //===========================================================================
-static bool find(FileIter::Info * info, bool fromNext) {
+static bool find(GlobIter::Info * info, bool fromNext) {
     auto cur = &info->pos.back();
     auto p = cur->iter;
     error_code ec;
@@ -74,7 +75,7 @@ static bool find(FileIter::Info * info, bool fromNext) {
         goto CHECK_CURRENT;
 
     if (cur->firstPass
-        && info->flags.any(FileIter::fDirsFirst)
+        && info->flags.any(fDirsFirst)
         && info->entry.isdir
     ) {
 ENTER_DIR:
@@ -109,7 +110,7 @@ CHECK_CURRENT:
         p = cur->iter;
 
 DIR_EXITED:
-        if (info->flags.any(FileIter::fDirsLast)) {
+        if (info->flags.any(fDirsLast)) {
             // Always return a directory when leaving it if fDirsLast is
             // defined. No validation is required, it was checked to be 
             // desired before it was entered.
@@ -124,7 +125,7 @@ DIR_EXITED:
     copy(&info->entry, p, cur->firstPass);
     if (!match(*info)) 
         goto TRY_NEXT;
-    if (info->entry.isdir && info->flags.none(FileIter::fDirsFirst)) {
+    if (info->entry.isdir && info->flags.none(fDirsFirst)) {
         // Not reporting directories when entered, so rather than reporting 
         // it, start searching it's contents.
         goto ENTER_DIR;
@@ -135,46 +136,59 @@ DIR_EXITED:
 
 /****************************************************************************
 *
-*   FileIter
+*   GlobIter
 *
 ***/
 
 //===========================================================================
-FileIter::FileIter(
-    string_view dir,
-    string_view name,
-    EnumFlags<FileIter::Flags> flags
-) {
-    m_info = make_shared<Info>();
-    m_info->path = dir;
-    m_info->path /= name.empty() ? "*" : name;
-    m_info->flags = flags;
-    error_code ec;
-    auto path = Path{m_info->path.parentPath()};
-    auto it = fs::directory_iterator{path.empty() ? "." : path.fsPath(), ec};
-    if (it == end(it)) {
-        m_info.reset();
-    } else {
-        m_info->pos.push_back({it});
-        if (!find(m_info.get(), false))
-            m_info.reset();
-    }
-}
+GlobIter::GlobIter(shared_ptr<Info> info)
+    : m_info(info)
+{}
 
 //===========================================================================
-const FileIter::Entry & FileIter::operator* () const {
+const GlobEntry & GlobIter::operator* () const {
     return m_info->entry;
 }
 
 //===========================================================================
-const FileIter::Entry * FileIter::operator-> () const {
+const GlobEntry * GlobIter::operator-> () const {
     return &m_info->entry;
 }
 
 //===========================================================================
-FileIter & FileIter::operator++ () {
+GlobIter & GlobIter::operator++ () {
     assert(m_info);
     if (!find(m_info.get(), true))
         m_info.reset();
     return *this;
+}
+
+
+/****************************************************************************
+*
+*   Public API
+*
+***/
+
+//===========================================================================
+GlobIter Dim::fileGlob(
+    string_view dir,
+    string_view name,
+    EnumFlags<GlobMode> flags
+) {
+    auto info = make_shared<GlobIter::Info>();
+    info->path = dir;
+    info->path /= name.empty() ? "*" : name;
+    info->flags = flags;
+    error_code ec;
+    auto path = Path{info->path.parentPath()};
+    auto it = fs::directory_iterator{path.empty() ? "." : path.fsPath(), ec};
+    if (it == end(it)) {
+        info.reset();
+    } else {
+        info->pos.push_back({it});
+        if (!find(info.get(), false))
+            info.reset();
+    }
+    return GlobIter{info};
 }

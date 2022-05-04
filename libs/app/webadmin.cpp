@@ -295,7 +295,7 @@ void JsonCrashFiles::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     auto dir = appCrashDir();
     bld.member("files").array();
     uint64_t bytes = 0;
-    for (auto&& f : FileIter(dir, "*.dmp")) {
+    for (auto&& f : fileGlob(dir, "*.dmp")) {
         auto rname = f.path.view();
         rname.remove_prefix(dir.size() + 1);
         fileSize(&bytes, f.path);

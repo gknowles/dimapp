@@ -40,10 +40,10 @@ static void app(int argc, char *argv[]) {
     fileCreateDirs("file-t/c");
     createEmptyFile("file-t/c.txt");
     vector<pair<Path, bool>> found;
-    for (auto && e : FileIter(
+    for (auto && e : fileGlob(
         "file-t",
         "a.txt",
-        FileIter::fDirsFirst | FileIter::fDirsLast
+        GlobMode::fDirsFirst | GlobMode::fDirsLast
     )) {
         found.push_back({e.path, e.isdir});
     }
