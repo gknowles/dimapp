@@ -7,8 +7,8 @@
 
 using namespace std;
 using namespace Dim;
+using enum Glob::Mode;
 namespace fs = std::filesystem;
-using enum Dim::GlobMode;
 
 
 /****************************************************************************
@@ -24,15 +24,15 @@ namespace {
     };
 } // namespace
 
-struct GlobIter::Info {
+struct Glob::Iter::Info {
     Path path;
-    EnumFlags<GlobMode> flags{};
+    EnumFlags<Glob::Mode> flags{};
     vector<DirInfo> pos;
-    GlobEntry entry;
+    Glob::Entry entry;
 };
 
 //===========================================================================
-static bool match(const GlobIter::Info & info) {
+static bool match(const Glob::Iter::Info & info) {
     if (info.entry.isdir) {
         if (info.flags.none(fDirsFirst | fDirsLast))
             return false;
@@ -55,7 +55,7 @@ static bool match(const GlobIter::Info & info) {
 
 //===========================================================================
 static void copy(
-    GlobEntry * entry, 
+    Glob::Entry * entry, 
     fs::directory_iterator p, 
     bool firstPass
 ) {
@@ -66,7 +66,7 @@ static void copy(
 }
 
 //===========================================================================
-static bool find(GlobIter::Info * info, bool fromNext) {
+static bool find(Glob::Iter::Info * info, bool fromNext) {
     auto cur = &info->pos.back();
     auto p = cur->iter;
     error_code ec;
@@ -136,27 +136,27 @@ DIR_EXITED:
 
 /****************************************************************************
 *
-*   GlobIter
+*   Glob::Iter
 *
 ***/
 
 //===========================================================================
-GlobIter::GlobIter(shared_ptr<Info> info)
+Glob::Iter::Iter(shared_ptr<Info> info)
     : m_info(info)
 {}
 
 //===========================================================================
-const GlobEntry & GlobIter::operator* () const {
+const Glob::Entry & Glob::Iter::operator* () const {
     return m_info->entry;
 }
 
 //===========================================================================
-const GlobEntry * GlobIter::operator-> () const {
+const Glob::Entry * Glob::Iter::operator-> () const {
     return &m_info->entry;
 }
 
 //===========================================================================
-GlobIter & GlobIter::operator++ () {
+Glob::Iter & Glob::Iter::operator++ () {
     assert(m_info);
     if (!find(m_info.get(), true))
         m_info.reset();
@@ -171,12 +171,12 @@ GlobIter & GlobIter::operator++ () {
 ***/
 
 //===========================================================================
-GlobIter Dim::fileGlob(
+Glob::Iter Dim::fileGlob(
     string_view dir,
     string_view name,
-    EnumFlags<GlobMode> flags
+    EnumFlags<Glob::Mode> flags
 ) {
-    auto info = make_shared<GlobIter::Info>();
+    auto info = make_shared<Glob::Iter::Info>();
     info->path = dir;
     info->path /= name.empty() ? "*" : name;
     info->flags = flags;
@@ -190,5 +190,5 @@ GlobIter Dim::fileGlob(
         if (!find(info.get(), false))
             info.reset();
     }
-    return GlobIter{info};
+    return Glob::Iter{info};
 }

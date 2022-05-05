@@ -15,6 +15,7 @@
 #include <string_view>
 
 namespace Dim {
+namespace Glob {
 
 
 /****************************************************************************
@@ -22,8 +23,8 @@ namespace Dim {
 *   Directory search
 *
 ***/
- 
-enum class GlobMode : unsigned {
+
+enum Mode : unsigned {
     // When to return directories in the iteration, either before the
     // contained files, after them, or both. Implies recursion into
     // subdirectories.
@@ -39,40 +40,46 @@ enum class GlobMode : unsigned {
     fHidden    = 0x08,
 };
 
-struct GlobEntry {
+struct Entry {
     Path path;
     bool isdir{false};
     bool isbefore{false};
     TimePoint mtime;
 };
 
-class GlobIter {
+class Iter {
 public:
     struct Info;
 
 public:
-    GlobIter() {}
-    GlobIter(std::shared_ptr<Info> info);
+    Iter() {}
+    Iter(std::shared_ptr<Info> info);
 
-    bool operator==(const GlobIter & right) const = default;
-    const GlobEntry & operator*() const;
-    const GlobEntry * operator->() const;
-    GlobIter & operator++();
+    bool operator==(const Iter & right) const = default;
+    const Entry & operator*() const;
+    const Entry * operator->() const;
+    Iter & operator++();
 
 private:
     std::shared_ptr<Info> m_info;
 };
 
-inline GlobIter begin(GlobIter iter) { return iter; }
-inline GlobIter end(const GlobIter & iter) { return {}; }
+inline Iter begin(Iter iter) { return iter; }
+inline Iter end(const Iter & iter) { return {}; }
 
-template<> struct is_enum_flags<GlobMode> : std::true_type {};
+} // namespace
 
 
-GlobIter fileGlob(
+/****************************************************************************
+*
+*   Public API
+*
+***/
+
+Glob::Iter fileGlob(
     std::string_view dir, 
     std::string_view name = {}, 
-    EnumFlags<GlobMode> flags = {}
+    EnumFlags<Glob::Mode> flags = {}
 );
 
 } // namespace

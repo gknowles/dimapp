@@ -43,7 +43,7 @@ static void app(int argc, char *argv[]) {
     for (auto && e : fileGlob(
         "file-t",
         "a.txt",
-        GlobMode::fDirsFirst | GlobMode::fDirsLast
+        Glob::fDirsFirst | Glob::fDirsLast
     )) {
         found.push_back({e.path, e.isdir});
     }
