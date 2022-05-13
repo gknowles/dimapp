@@ -49,14 +49,14 @@ private:
 //===========================================================================
 template <typename T, typename... Args>
 inline T * ITempHeap::emplace(Args &&... args) {
-    char * tmp = alloc(sizeof T, alignof(T));
+    char * tmp = alloc(sizeof(T), alignof(T));
     return new (tmp) T(std::forward<Args>(args)...);
 }
 
 //===========================================================================
 template <typename T>
 inline T * ITempHeap::alloc(size_t num) {
-    T * tmp = (T *) alloc(num * sizeof T, alignof(T));
+    T * tmp = (T *) alloc(num * sizeof(T), alignof(T));
     std::uninitialized_default_construct_n(tmp, num);
     return tmp;
 }

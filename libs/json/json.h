@@ -97,7 +97,8 @@ private:
     void addString(std::string_view val);
     IJBuilder & fail();
 
-    enum State : int m_state;
+    enum State : int;
+    State m_state = {};
 
     // objects are true, arrays are false
     std::vector<bool> m_stack;

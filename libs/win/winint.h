@@ -10,6 +10,8 @@
 #include <cstdint>
 #include <functional>
 #include <iostream>
+#include <memory> // pointer_traits
+#include <type_traits>
 
 namespace Dim {
 
@@ -92,7 +94,9 @@ static void winLoadProc(
     // FN must be pointer to function, which will be set to the address of
     // the procedure being loaded.
     static_assert(std::is_pointer_v<FN>);
-    static_assert(std::is_function_v<std::pointer_traits<FN>::element_type>);
+    static_assert(std::is_function_v<
+        typename std::pointer_traits<FN>::element_type
+    >);
     *fn = (FN) winLoadProc(lib, proc, optional);
 }
 

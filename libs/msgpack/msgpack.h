@@ -72,7 +72,8 @@ private:
     void appendString(std::string_view val);
     bool pop();
 
-    enum class State : int m_state;
+    enum class State : int;
+    State m_state = {};
     unsigned m_remaining{0};
     std::vector<std::pair<State,unsigned>> m_stack;
 };

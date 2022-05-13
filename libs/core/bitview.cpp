@@ -65,7 +65,7 @@ static void apply(
     size_t bitpos,
     size_t bitcount
 ) {
-    constexpr size_t kWordBits = sizeof Word * 8;
+    constexpr size_t kWordBits = sizeof(Word) * 8;
     constexpr Word kWordMax = numeric_limits<Word>::max();
 
     if (bitcount == dynamic_extent)
