@@ -188,7 +188,7 @@ public:
     using difference_type = ptrdiff_t;
     using size_type = size_t;
     using iterator = ListIterator<List, T>;
-    using const_iterator = ListIterator<List const, T const>;
+    using const_iterator = ListIterator<const List, const T>;
     using link_type = ListLink<Tag>;
 
 public:
@@ -210,14 +210,10 @@ public:
     const_iterator cbegin() const { return begin(); }
     const_iterator cend() const { return end(); }
 
-    T * front();
-    const T * front() const;
-    T * back();
-    const T * back() const;
-    T * next(const T * node);
-    const T * next(const T * node) const;
-    T * prev(const T * node);
-    const T * prev(const T * node) const;
+    auto * front(this auto && self);
+    auto * back(this auto && self);
+    auto * next(this auto && self, const T * node);
+    auto * prev(this auto && self, const T * node);
     void link(T * value);
     void link(List && other);
     void linkFront(T * value);
@@ -327,54 +323,30 @@ auto List<T, Tag>::end() const -> const_iterator {
 
 //===========================================================================
 template <typename T, typename Tag>
-T * List<T, Tag>::front() {
-    return m_base.linked() ? cast(m_base.m_nextLink) : nullptr;
+auto * List<T, Tag>::front(this auto && self) {
+    return self.m_base.linked() ? self.cast(self.m_base.m_nextLink) : nullptr;
 }
 
 //===========================================================================
 template <typename T, typename Tag>
-const T * List<T, Tag>::front() const {
-    return const_cast<List *>(this)->front();
+auto * List<T, Tag>::back(this auto && self) {
+    return self.m_base.linked() ? self.cast(self.m_base.m_prevLink) : nullptr;
 }
 
 //===========================================================================
 template <typename T, typename Tag>
-T * List<T, Tag>::back() {
-    return m_base.linked() ? cast(m_base.m_prevLink) : nullptr;
-}
-
-//===========================================================================
-template <typename T, typename Tag>
-const T * List<T, Tag>::back() const {
-    return const_cast<List *>(this)->back();
-}
-
-//===========================================================================
-template <typename T, typename Tag>
-T * List<T, Tag>::next(const T * node) {
-    auto link = cast(node)->m_nextLink;
+auto * List<T, Tag>::next(this auto && self, const T * node) {
+    auto link = self.cast(node)->m_nextLink;
     assert(link->linked());
-    return link != &m_base ? cast(link) : nullptr;
+    return link != &self.m_base ? self.cast(link) : nullptr;
 }
 
 //===========================================================================
 template <typename T, typename Tag>
-const T * List<T, Tag>::next(const T * node) const {
-    return const_cast<List *>(this)->next(node);
-}
-
-//===========================================================================
-template <typename T, typename Tag>
-T * List<T, Tag>::prev(const T * node) {
-    auto link = cast(node)->m_prevLink;
+auto * List<T, Tag>::prev(this auto && self, const T * node) {
+    auto link = self.cast(node)->m_prevLink;
     assert(link->linked());
-    return link != &m_base ? cast(link) : nullptr;
-}
-
-//===========================================================================
-template <typename T, typename Tag>
-const T * List<T, Tag>::prev(const T * node) const {
-    return const_cast<List *>(this)->prev(node);
+    return link != &self.m_base ? self.cast(link) : nullptr;
 }
 
 //===========================================================================
