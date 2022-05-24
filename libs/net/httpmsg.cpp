@@ -124,13 +124,13 @@ auto HttpMsg::HdrList::end() -> ForwardListIterator<HdrName> {
 }
 
 //===========================================================================
-auto HttpMsg::HdrList::begin() const -> ForwardListIterator<HdrName const> {
-    return ForwardListIterator<HdrName const>{m_firstHeader};
+auto HttpMsg::HdrList::begin() const -> ForwardListIterator<const HdrName> {
+    return ForwardListIterator<const HdrName>{m_firstHeader};
 }
 
 //===========================================================================
-auto HttpMsg::HdrList::end() const -> ForwardListIterator<HdrName const> {
-    return ForwardListIterator<HdrName const>{nullptr};
+auto HttpMsg::HdrList::end() const -> ForwardListIterator<const HdrName> {
+    return ForwardListIterator<const HdrName>{nullptr};
 }
 
 
@@ -151,13 +151,13 @@ auto HttpMsg::HdrName::end() -> ForwardListIterator<HdrValue> {
 }
 
 //===========================================================================
-auto HttpMsg::HdrName::begin() const -> ForwardListIterator<HdrValue const> {
-    return ForwardListIterator<HdrValue const>(&m_value);
+auto HttpMsg::HdrName::begin() const -> ForwardListIterator<const HdrValue> {
+    return ForwardListIterator<const HdrValue>(&m_value);
 }
 
 //===========================================================================
-auto HttpMsg::HdrName::end() const -> ForwardListIterator<HdrValue const> {
-    return ForwardListIterator<HdrValue const>(nullptr);
+auto HttpMsg::HdrName::end() const -> ForwardListIterator<const HdrValue> {
+    return ForwardListIterator<const HdrValue>(nullptr);
 }
 
 

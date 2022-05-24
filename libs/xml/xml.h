@@ -389,10 +389,10 @@ struct XNodeRange {
     XNodeIterator<T> end() { return {nullptr, XType::kInvalid, {}}; }
 };
 XNodeRange<XNode> elems(XNode * elem, std::string_view name = {});
-XNodeRange<XNode const> elems(const XNode * elem, std::string_view name = {});
+XNodeRange<const XNode> elems(const XNode * elem, std::string_view name = {});
 
 XNodeRange<XNode> nodes(XNode * elem, XType type = XType::kInvalid);
-XNodeRange<XNode const> nodes(
+XNodeRange<const XNode> nodes(
     const XNode * elem,
     XType type = XType::kInvalid
 );
@@ -409,9 +409,9 @@ struct XAttrRange {
 template <>
 auto ForwardListIterator<XAttr>::operator++() -> ForwardListIterator &;
 template <>
-auto ForwardListIterator<XAttr const>::operator++() -> ForwardListIterator &;
+auto ForwardListIterator<const XAttr>::operator++() -> ForwardListIterator &;
 
 XAttrRange<XAttr> attrs(XNode * elem);
-XAttrRange<XAttr const> attrs(const XNode * elem);
+XAttrRange<const XAttr> attrs(const XNode * elem);
 
 } // namespace
