@@ -162,15 +162,15 @@ size_t CharBuf::size() const {
 
 //===========================================================================
 const char * CharBuf::data() const {
-    // we need mutable access to rearrange the buffer so that the requested
-    // section is contiguous, but the data itself will stay unchanged
+    // Mutable access is required so the buffer can be rearranged to make the
+    // requested section contiguous, but the data itself will stay unchanged.
     return const_cast<CharBuf *>(this)->data(0, m_size);
 }
 
 //===========================================================================
 const char * CharBuf::data(size_t pos, size_t count) const {
-    // we need mutable access to rearrange the buffer so that the requested
-    // section is contiguous, but the data itself will stay unchanged
+    // Mutable access is required so the buffer can be rearranged to make the
+    // requested section contiguous, but the data itself will stay unchanged.
     return const_cast<CharBuf *>(this)->data(pos, count);
 }
 
@@ -221,8 +221,8 @@ char * CharBuf::data(size_t pos, size_t count) {
 
 //===========================================================================
 const char * CharBuf::c_str() const {
-    // we need mutable access to rearrange the buffer so that the requested
-    // section is contiguous, but the data itself will stay unchanged
+    // Mutable access is required so the buffer can be rearranged to make the
+    // requested section contiguous, but the data itself will stay unchanged.
     return const_cast<CharBuf *>(this)->c_str();
 }
 
