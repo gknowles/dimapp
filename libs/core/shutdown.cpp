@@ -129,7 +129,7 @@ void MainTimer::incomplete() {
         && timeNow() - m_shutdownStart > s_shutdownTimeout
     ) {
         assert(!"shutdown timeout");
-        terminate();
+        abort();
     }
 }
 
