@@ -34,6 +34,9 @@ public:
     char * strDup(const char src[]);
     char * strDup(std::string_view src);
     char * strDup(const char src[], size_t len);
+    std::string_view viewDup(const char src[]);
+    std::string_view viewDup(std::string_view src);
+    std::string_view viewDup(const char src[], size_t len);
 
     virtual char * alloc(size_t bytes, size_t alignment) = 0;
 
@@ -83,6 +86,22 @@ inline char * ITempHeap::strDup(const char src[], size_t len) {
     std::memcpy(out, src, len);
     out[len] = 0;
     return out;
+}
+
+//===========================================================================
+inline std::string_view ITempHeap::viewDup(const char src[]) {
+    return viewDup(std::string_view(src));
+}
+
+//===========================================================================
+inline std::string_view ITempHeap::viewDup(std::string_view src) {
+    return viewDup(src.data(), src.size());
+}
+
+//===========================================================================
+inline std::string_view ITempHeap::viewDup(const char src[], size_t len) {
+    char * out = strDup(src, len);
+    return {out, len};
 }
 
 //===========================================================================
