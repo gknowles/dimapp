@@ -189,7 +189,7 @@ struct PerfPrint<float, PerfFormat::kDefault> {
             out->append(v);
             return;
         }
-        auto decimal = v.find('.'); 
+        auto decimal = v.find('.');
         if (decimal == string_view::npos) {
             appendWithCommas(out, v);
         } else {
@@ -259,7 +259,7 @@ struct PerfPrint<T, PerfFormat::kSiUnits> {
                 decimal *= 10;
             }
         }
-        if (suffix) 
+        if (suffix)
             out->push_back(" kMGTPEZY"[suffix]);
     }
 };
@@ -291,7 +291,7 @@ struct PerfPrint<float, PerfFormat::kSiUnits> {
             v = v.substr(0, len);
         }
         out->append(v);
-        if (suffix) 
+        if (suffix)
             out->push_back("yzafpnum kMGTPEZY"[suffix + 8]);
     }
 };
@@ -416,8 +416,8 @@ atomic<float> & Dim::fperf(string_view name, PerfFormat fmt) {
 //===========================================================================
 template<typename T>
 static function<T()> & perf(
-    string_view name, 
-    function<T()> && fn, 
+    string_view name,
+    function<T()> && fn,
     PerfFormat fmt
 ) {
     using enum PerfFormat;
@@ -434,8 +434,8 @@ static function<T()> & perf(
 
 //===========================================================================
 function<int()> & Dim::iperf(
-    string_view name, 
-    function<int()> fn, 
+    string_view name,
+    function<int()> fn,
     PerfFormat fmt
 ) {
     return perf<int>(name, move(fn), fmt);
@@ -444,7 +444,7 @@ function<int()> & Dim::iperf(
 //===========================================================================
 function<unsigned()> & Dim::uperf(
     string_view name,
-    function<unsigned()> fn, 
+    function<unsigned()> fn,
     PerfFormat fmt
 ) {
     return perf<unsigned>(name, move(fn), fmt);
@@ -452,8 +452,8 @@ function<unsigned()> & Dim::uperf(
 
 //===========================================================================
 function<float()> & Dim::fperf(
-    string_view name, 
-    function<float()> fn, 
+    string_view name,
+    function<float()> fn,
     PerfFormat fmt
 ) {
     return perf<float>(name, move(fn), fmt);
