@@ -72,8 +72,8 @@ struct ExecOptions {
     // been started.
     bool enableExecWrite = false;
 
-    // Allows child processes to continue running in the background after 
-    // after the directly executed process ends.
+    // Allows child processes of the executed process to continue running in
+    // the background after after the executed process ends.
     bool untrackedChildren = false;
 
     Dim::TaskQueueHandle hq;

@@ -110,15 +110,16 @@ void logMultiInfo(std::string_view text, char sep = '\n');
 /****************************************************************************
 *
 *   Stopwatch
-*   Used to info-log elapsed time. Automatically started at program start.
+*   Used to info-log elapsed time. Timer automatically started at program
+*   start.
 *
-*   Total time: time spent not paused.
-*   Lap time: time since the last lap or resume, whichever is more recent.
+*   Total time: Time spent not paused.
+*   Lap time: Time since the last lap or resume, whichever is more recent.
 *
 ***/
 
-// Logs total time unless prefix is empty, and pauses stopwatch. Ignored if
-// paused.
+// Logs total time if prefix is not empty, and pauses stopwatch. Ignored if
+// already paused.
 void logPauseStopwatch(std::string_view prefix = "Elapsed time");
 
 // Resets lap time, and optionally total time, to zero; resumes stopwatch.

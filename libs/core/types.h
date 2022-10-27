@@ -167,27 +167,27 @@ T * ForwardListIterator<T>::operator->() {
 /****************************************************************************
 *
 *   EnumFlags
-* 
+*
 *   Allow bitwise NOT, AND, XOR and OR operations on enum values
 *
 *   The result of bitwise operations on enums is an instance of the EnumFlags<T>
 *   class templated on the enum. There is no conversion back from a EnumFlags
 *   object to an enum.
-* 
+*
 *   Function arguments that expect a bit field of options or'd together should
 *   do it by taking a EnumFlags<T> by value.
-* 
-*   Testing of flags is done with the any(), all(), and none() member 
+*
+*   Testing of flags is done with the any(), all(), and none() member
 *   functions.
 *
 *   enum EnumA : unsigned { A1 = 1, A2 = 2, A3 = 4 };
 *   EnumFlags<EnumA> flags = A1 | A2;
 *   flags |= A3;
-* 
+*
 *   bool testFor1and3(EnumFlags<EnumA> flags) {
 *       return flags.all(A1 | A3);
 *   }
-* 
+*
 *   To override this behavior the type traits of individual enums can be
 *   specialized one way or the other:
 *   template<> struct is_enum_flags<enum A : int> : std::true_type {};
@@ -248,27 +248,27 @@ public:
     constexpr EnumFlags & operator^= (EnumFlags other);
 
     // PRIVATE
-    // Access is public to make this a structural class type, which is 
-    // required for use as a non-type template parameter.
+    // Access is public to make this a structural class type; so that it can
+    // be used as a non-type template parameter.
     std::underlying_type_t<T> m_value;
 };
 
 //===========================================================================
 template<EnumFlagsType T>
-constexpr EnumFlags<T>::EnumFlags(T val) 
-    : m_value(std::to_underlying(val)) 
+constexpr EnumFlags<T>::EnumFlags(T val)
+    : m_value(std::to_underlying(val))
 {}
 
 //===========================================================================
 template<EnumFlagsType T>
-constexpr auto EnumFlags<T>::underlying() const { 
-    return m_value; 
+constexpr auto EnumFlags<T>::underlying() const {
+    return m_value;
 }
 
 //===========================================================================
 template<EnumFlagsType T>
-constexpr T EnumFlags<T>::value() const { 
-    return static_cast<T>(m_value); 
+constexpr T EnumFlags<T>::value() const {
+    return static_cast<T>(m_value);
 }
 
 //===========================================================================
@@ -364,61 +364,61 @@ constexpr EnumFlags<T> & EnumFlags<T>::operator^=(EnumFlags other) {
 
 //===========================================================================
 template<EnumFlagsType T>
-constexpr EnumFlags<T> operator~(EnumFlags<T> a) { 
-    return ~a.underlying(); 
+constexpr EnumFlags<T> operator~(EnumFlags<T> a) {
+    return ~a.underlying();
 }
 
 //===========================================================================
 template<EnumFlagsType T>
-constexpr auto operator|(EnumFlags<T> a, EnumFlags<T> b) { 
+constexpr auto operator|(EnumFlags<T> a, EnumFlags<T> b) {
     return EnumFlags<T>(a) |= b;
 }
 template<EnumFlagsType T>
-constexpr auto operator|(EnumFlags<T> a, T b) { 
+constexpr auto operator|(EnumFlags<T> a, T b) {
     return EnumFlags<T>(a) |= b;
 }
 template<EnumFlagsType T>
-constexpr auto operator|(T a, EnumFlags<T> b) { 
+constexpr auto operator|(T a, EnumFlags<T> b) {
     return EnumFlags<T>(a) |= b;
 }
 template<EnumFlagsType T>
-constexpr auto operator|(T a, T b) { 
+constexpr auto operator|(T a, T b) {
     return EnumFlags<T>(a) |= b;
 }
 
 //===========================================================================
 template<EnumFlagsType T>
-constexpr auto operator&(EnumFlags<T> a, EnumFlags<T> b) { 
+constexpr auto operator&(EnumFlags<T> a, EnumFlags<T> b) {
     return EnumFlags<T>(a) &= b;
 }
 template<EnumFlagsType T>
-constexpr auto operator&(EnumFlags<T> a, T b) { 
+constexpr auto operator&(EnumFlags<T> a, T b) {
     return EnumFlags<T>(a) &= b;
 }
 template<EnumFlagsType T>
-constexpr auto operator&(T a, EnumFlags<T> b) { 
+constexpr auto operator&(T a, EnumFlags<T> b) {
     return EnumFlags<T>(a) &= b;
 }
 template<EnumFlagsType T>
-constexpr auto operator&(T a, T b) { 
+constexpr auto operator&(T a, T b) {
     return EnumFlags<T>(a) &= b;
 }
 
 //===========================================================================
 template<EnumFlagsType T>
-constexpr auto operator^(EnumFlags<T> a, EnumFlags<T> b) { 
+constexpr auto operator^(EnumFlags<T> a, EnumFlags<T> b) {
     return EnumFlags<T>(a) ^= b;
 }
 template<EnumFlagsType T>
-constexpr auto operator^(EnumFlags<T> a, T b) { 
+constexpr auto operator^(EnumFlags<T> a, T b) {
     return EnumFlags<T>(a) ^= b;
 }
 template<EnumFlagsType T>
-constexpr auto operator^(T a, EnumFlags<T> b) { 
+constexpr auto operator^(T a, EnumFlags<T> b) {
     return EnumFlags<T>(a) ^= b;
 }
 template<EnumFlagsType T>
-constexpr auto operator^(T a, T b) { 
+constexpr auto operator^(T a, T b) {
     return EnumFlags<T>(a) ^= b;
 }
 
