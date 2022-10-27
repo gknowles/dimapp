@@ -573,7 +573,7 @@ const MimeType s_mimeTypes[] = {
 };
 const unordered_map<string_view, MimeType> s_mimeTypeMap = []() {
     unordered_map<string_view, MimeType> out;
-    for (auto&& mt : s_mimeTypes) 
+    for (auto&& mt : s_mimeTypes)
         out[mt.fileExt] = mt;
     return out;
 }();
@@ -833,9 +833,9 @@ static PathInfo makePathInfo(const HttpRouteInfo & route) {
     static_cast<HttpRouteInfo &>(out) = route;
     out.segs = count(out.path.begin(), out.path.end(), '/');
 
-    string_view * views[] = { 
-        &out.path, 
-        &out.name, 
+    string_view * views[] = {
+        &out.path,
+        &out.name,
         &out.desc,
         &out.renderPath,
     };
@@ -1022,7 +1022,7 @@ static void makeReply(
     unsigned status,
     string_view msg
 ) {
-    StrFrom st{status};
+    auto st = to_string(status);
     XBuilder bld(&out->body());
     bld.start("html")
         .start("head").elem("title", st.c_str()).end()
@@ -1182,7 +1182,7 @@ static void addFileHeaders(
 //===========================================================================
 void Dim::httpRouteReplyWithFile(unsigned reqId, string_view path) {
     using enum Dim::File::OpenMode;
-    
+
     FileHandle file;
     auto ec = fileOpen(&file, path, fReadOnly | fDenyNone);
     if (ec) {
@@ -1237,7 +1237,7 @@ void Dim::httpRouteReplyWithFile(
 vector<HttpRouteInfo> Dim::httpRouteGetRoutes() {
     assert(taskInEventThread());
     vector<HttpRouteInfo> out;
-    for (auto&& p : s_paths) 
+    for (auto&& p : s_paths)
         out.emplace_back(p);
     return out;
 }

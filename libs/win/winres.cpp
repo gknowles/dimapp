@@ -145,7 +145,7 @@ static BOOL CALLBACK enumNameCallback(
 ) {
     auto rni = (ResNameInfo *) param;
     auto str = IS_INTRESOURCE(name)
-        ? "#"s + StrFrom(LOWORD(name)).c_str()
+        ? "#"s + to_string(LOWORD(name))
         : toString(name);
     rni->names.push_back(str);
     return true;

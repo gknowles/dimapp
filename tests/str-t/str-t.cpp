@@ -83,31 +83,31 @@ static void testIntegralStr() {
 
     //-----------------------------------------------------------------------
     // int
-    EXPECT(StrFrom(1234).view() == "1234");
-    EXPECT(StrFrom<int>(1234).view() == "1234");
+    EXPECT(toChars(1234).view() == "1234");
+    EXPECT(toChars<int>(1234).view() == "1234");
 
     //-----------------------------------------------------------------------
     // unsigned
-    EXPECT(StrFrom<unsigned>(1234).view() == "1234"sv);
-    EXPECT(StrFrom<unsigned>(0xffff'ffff).view() == "4294967295"sv);
-    EXPECT(StrFrom<unsigned>(3).view() == "3"sv);
+    EXPECT(toChars<unsigned>(1234).view() == "1234"sv);
+    EXPECT(toChars<unsigned>(0xffff'ffff).view() == "4294967295"sv);
+    EXPECT(toChars<unsigned>(3).view() == "3"sv);
 
     //-----------------------------------------------------------------------
     // char
-    EXPECT(StrFrom<char>(1).view() == "1"sv);
-    EXPECT(StrFrom<char>(127).view() == "127"sv);
-    EXPECT(StrFrom<char>(-3).view() == "-3"sv);
-    EXPECT(StrFrom<char>(-128).view() == "-128"sv);
+    EXPECT(toChars<char>(1).view() == "1"sv);
+    EXPECT(toChars<char>(127).view() == "127"sv);
+    EXPECT(toChars<char>(-3).view() == "-3"sv);
+    EXPECT(toChars<char>(-128).view() == "-128"sv);
 
     //-----------------------------------------------------------------------
     // double
-    EXPECT(StrFrom<double>(-0.101234567890123456789e+101).view() ==
+    EXPECT(toChars<double>(-0.101234567890123456789e+101).view() ==
         "-1.0123456789012345e+100"sv);
 
     //-----------------------------------------------------------------------
     // ostream
     ostringstream os;
-    os << StrFrom(5);
+    os << toChars(5);
     EXPECT(os.view() == "5");
 }
 

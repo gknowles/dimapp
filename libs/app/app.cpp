@@ -111,7 +111,7 @@ static void initVars() {
     // Application name and version
     fileGetCurrentDir(&s_initialDir);
     auto exeName = (Path) envExecPath();
-    if (s_appBaseName.empty()) 
+    if (s_appBaseName.empty())
         s_appBaseName = exeName.stem();
     if (!s_appVer)
         s_appVer = envExecVersion();
@@ -120,7 +120,7 @@ static void initVars() {
         ostringstream hdr;
         Time8601Str ds(envExecBuildTime());
         auto verStr = toString(s_appVer);
-        hdr << s_appBaseName 
+        hdr << s_appBaseName
             << " v" << verStr
             << " (" << ds.view().substr(0, 10) << ")";
         cli.header(hdr.str())
@@ -128,7 +128,7 @@ static void initVars() {
     }
     s_appName = s_appBaseName;
     if (s_appIndex > 1)
-        s_appName += StrFrom(s_appIndex).view();
+        s_appName += to_string(s_appIndex);
 
     // Directories
     s_binDir = exeName.parentPath();
@@ -232,9 +232,9 @@ int Dim::appRun(
 
 //===========================================================================
 int Dim::appRun(
-    IAppNotify * app, 
-    int argc, 
-    char * argv[], 
+    IAppNotify * app,
+    int argc,
+    char * argv[],
     const VersionInfo & ver,
     string_view baseName,
     EnumFlags<AppFlags> flags

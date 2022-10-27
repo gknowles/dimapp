@@ -173,7 +173,7 @@ DiskSpace Dim::envDiskSpace(string_view path) {
 string Dim::envComputerName() {
     wchar_t buf[MAX_COMPUTERNAME_LENGTH + 1];
     DWORD bufLen = (DWORD) size(buf);
-    if (!GetComputerNameW(buf, &bufLen)) 
+    if (!GetComputerNameW(buf, &bufLen))
         logMsgFatal() << "GetComputerNameW: " << WinError();
     return toString(buf);
 }
@@ -183,7 +183,7 @@ EnvDomainMembership Dim::envDomainMembership() {
     EnvDomainMembership out = {};
     wchar_t * buf;
     NETSETUP_JOIN_STATUS bufType;
-    if (WinError err = NetGetJoinInformation(NULL, &buf, &bufType)) 
+    if (WinError err = NetGetJoinInformation(NULL, &buf, &bufType))
         logMsgFatal() << "NetGetJoinInformation: " << err;
     switch (bufType) {
     case NetSetupUnknownStatus: out.status = DomainStatus::kUnknown; break;
@@ -194,7 +194,7 @@ EnvDomainMembership Dim::envDomainMembership() {
         out.status = DomainStatus::kUnknown;
     }
     out.name = toString(buf);
-    if (WinError err = NetApiBufferFree(buf)) 
+    if (WinError err = NetApiBufferFree(buf))
         logMsgFatal() << "NetApiBufferFree: " << err;
     return out;
 }
@@ -208,7 +208,7 @@ string Dim::envDomainStatusToString(DomainStatus value) {
     case DomainStatus::kDomain: return "domain";
     }
     string out = "UNKNOWN(";
-    out += StrFrom{to_underlying(value)}.view();
+    out += to_string(to_underlying(value));
     out += ')';
     return out;
 }
@@ -231,7 +231,7 @@ const string & Dim::envExecPath() {
                 wpath.data(),
                 (DWORD) wpath.size()
             );
-            if (!num) 
+            if (!num)
                 logMsgFatal() << "GetModuleFileNameW(NULL): " << WinError();
             if (num != wpath.size())
                 break;
@@ -459,7 +459,7 @@ static void addSidRow(IJBuilder * out, SID_AND_ATTRIBUTES & sa) {
     }
     if (auto unknown = ~found & sa.Attributes) {
         auto unk = "UNKNOWN("s;
-        unk += StrFrom(unknown).view();
+        unk += to_string(unknown);
         unk += ')';
         out->value(unk);
     }
@@ -470,7 +470,7 @@ static void addSidRow(IJBuilder * out, SID_AND_ATTRIBUTES & sa) {
         out->member("type", name);
     } else {
         auto unk = "UNKNOWN("s;
-        unk += StrFrom(use).view();
+        unk += to_string(use);
         unk += ')';
         out->member("type", unk);
     }

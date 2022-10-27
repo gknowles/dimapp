@@ -178,7 +178,7 @@ static void genCppHeader(
     out->append("*\n")
         .append("*   Test program for sample located at:\n")
         .append("*       File: ").append(srcfile).pushBack('\n')
-        .append("*       Line: ").append(StrFrom(srcline).view())
+        .append("*       Line: ").append(to_string(srcline))
             .pushBack('\n')
         .append("*\n")
         .append("***/\n\n");
@@ -806,10 +806,10 @@ static string testPath(
     size_t line
 ) {
     auto seg = info.page.urlSegment;
-    auto str = StrFrom(line);
+    auto str = to_string(line);
     seg.push_back('/');
     seg.append(digits10(info.lastProgLine) - size(str), '0');
-    seg.append(str.view());
+    seg.append(str);
     return seg;
 }
 
@@ -838,7 +838,7 @@ static void addOutputScript(
     content.append("; From '")
         .append(info->page.file)
         .append("', line ")
-        .append(StrFrom(test.runs.front().line).view())
+        .append(to_string(test.runs.front().line))
         .append("\n");
     content.append(";\n");
     auto len = content.size();
@@ -846,7 +846,7 @@ static void addOutputScript(
         if (run.cmdline.empty())
             continue;
         content.append("; Line ")
-            .append(StrFrom(run.line).view())
+            .append(to_string(run.line))
             .append("\n");
         for (auto&& cmt : run.comments)
             content.append("# ").append(cmt).append("\n");
@@ -1059,7 +1059,7 @@ static void runProgTests(ProgWork * work, unsigned phase) {
             auto title = lang + ", " + testPath(work->info, work->prog.line);
             s_perfCompile += 1;
             ExecOptions opts = {
-                .workingDir = workDir.str(), 
+                .workingDir = workDir.str(),
                 .envVars = comp->compile.env,
                 .untrackedChildren = comp->compile.untracked,
             };

@@ -273,7 +273,7 @@ static void initAfterVars() {
         }
         s_crashFile = crashDir;
         s_crashFile /= "crash";
-        s_crashFile += StrFrom(timeToUnix(timeNow())).view();
+        s_crashFile += to_string(timeToUnix(timeNow()));
         s_crashFile += ".dmp";
         s_crashFileW = toWstring(s_crashFile);
     }

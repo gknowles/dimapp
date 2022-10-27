@@ -78,6 +78,7 @@ struct Result {
 *
 ***/
 
+namespace {
 struct CmdOpts {
     vector<string> files;
     string configFile;
@@ -89,6 +90,7 @@ struct CmdOpts {
 
     CmdOpts();
 };
+} // namespace
 static CmdOpts s_opts;
 
 
@@ -372,7 +374,7 @@ static bool replaceFile(
     const string & content
 ) {
     using enum File::OpenMode;
-    
+
     FileHandle file;
     auto ec = fileOpen(&file, path, fCreat | fTrunc | fReadWrite | fBlocking);
     if (ec) {
@@ -546,7 +548,7 @@ static void processFile(
         logMsgError() << "No commit time for '" << fname << "'";
         return appSignalShutdown(EX_OSERR);
     }
-    string commitYear = StrFrom(tm.tm_year + 1900).c_str();
+    string commitYear = to_string(tm.tm_year + 1900);
 
     Result res;
     auto fullPath = fname;

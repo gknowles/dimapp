@@ -168,8 +168,7 @@ struct PerfPrint<T, PerfFormat::kDefault> {
                 val = -val;
             }
         }
-        auto str = StrFrom{val};
-        appendWithCommas(out, str.view());
+        appendWithCommas(out, to_string(val));
     }
 };
 
@@ -183,8 +182,8 @@ struct PerfPrint<float, PerfFormat::kDefault> {
         } else {
             out->clear();
         }
-        auto str = StrFrom{val};
-        auto v = str.view();
+        auto str = to_string(val);
+        auto v = string_view(str);
         if (v.find('e') != string_view::npos) {
             out->append(v);
             return;
@@ -220,8 +219,7 @@ struct PerfPrint<T, PerfFormat::kDuration> {
 template<typename T>
 struct PerfPrint<T, PerfFormat::kMachine> {
     void format(string * out, T val) const {
-        auto str = StrFrom{val};
-        *out = str.view();
+        *out = to_string(val);
     }
 };
 
@@ -245,8 +243,7 @@ struct PerfPrint<T, PerfFormat::kSiUnits> {
             val /= 1000;
         }
 
-        auto str = StrFrom{val};
-        out->append(str.view());
+        out->append(to_string(val));
 
         if (decimal) {
             // Include decimal point and up to three more digits
@@ -284,8 +281,8 @@ struct PerfPrint<float, PerfFormat::kSiUnits> {
             val *= 1000;
         }
 
-        auto str = StrFrom{val};
-        auto v = str.view();
+        auto str = to_string(val);
+        auto v = string_view{str};
         if (auto pos = v.find('.'); pos != string_view::npos) {
             auto len = min(v.size(), pos + 4);
             v = v.substr(0, len);

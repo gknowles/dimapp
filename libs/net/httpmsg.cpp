@@ -456,8 +456,8 @@ HttpResponse::HttpResponse(
     HttpStatus status,
     string_view contentType
 ) {
-    auto str = StrFrom{status};
-    addHeader(kHttp_Status, str.view());
+    auto str = to_string(status);
+    addHeader(kHttp_Status, str);
     if (!contentType.empty())
         addHeader(kHttpContentType, contentType);
 }

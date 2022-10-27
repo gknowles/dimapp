@@ -148,7 +148,7 @@ static vector<TocEntry> createToc(string * content) {
         auto num = ids[te.link] += 1;
         if (num > 1) {
             te.link += "--";
-            te.link += StrFrom(num).view();
+            te.link += toChars(num).view();
         }
         if (m[2].matched) {
             auto olen = m.length(2);
@@ -433,7 +433,7 @@ static void addNavbar(
         if (afterDefault)
             addBadgeOld(&bld);
         bld.end();
-        if (ver.defaultSource) 
+        if (ver.defaultSource)
             afterDefault = true;
     }
     bld.end() // div.dropdown-menu
@@ -570,7 +570,7 @@ static CharBuf processPageContent(
 static void genPage(GenPageInfo * info, unsigned phase = 0) {
     Finally fin([info] () { info->fn(); });
 
-    if (appStopping()) 
+    if (appStopping())
         return;
 
     auto cfg = info->ver.cfg ? info->ver.cfg.get() : info->out;
@@ -817,7 +817,7 @@ table.smaller-td-font td {
     font-size: smaller;
 }
 )");
-    
+
     return addOutput(out, fname, move(content));
 }
 
@@ -901,7 +901,7 @@ static void genSite(Config * out, unsigned phase = 0) {
         auto own = unique_ptr<Config>(out);
 
         // Generate infrastructure files for site
-        if (!genStatics(out)) 
+        if (!genStatics(out))
             return;
 
         // Load layouts of all versions
@@ -940,7 +940,7 @@ static void genSite(Config * out, unsigned phase = 0) {
         }
         auto own = unique_ptr<Config>(out);
 
-        if (!genRedirects(out)) 
+        if (!genRedirects(out))
             return;
 
         // Generate pages
@@ -977,7 +977,7 @@ static void genSite(Config * out, unsigned phase = 0) {
 
         // Replace site output directory with all the new files.
         auto odir = Path(out->siteDir).resolve(out->configFile.parentPath());
-        if (!writeOutputs(odir, out->outputs)) 
+        if (!writeOutputs(odir, out->outputs))
             return;
 
         // Clean up

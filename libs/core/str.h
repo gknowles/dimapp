@@ -57,9 +57,9 @@ constexpr int maxNumericChars() {
 
 /****************************************************************************
 *
-*   StrFrom<is_arithmetic_v>
+*   ToCharsBuf<is_arithmetic_v>
 *
-*   Convert arithmetic type to string_view, includes both floating point
+*   Convert arithmetic type to char buffer, includes both floating point
 *   (float, double, long double) and integral (char, long, uint16_t, etc)
 *   types.
 *
@@ -67,22 +67,22 @@ constexpr int maxNumericChars() {
 
 template <typename T>
 requires (std::is_arithmetic_v<T> || std::is_enum_v<T>)
-class StrFrom {
+class ToCharsBuf {
 public:
-    StrFrom();
-    explicit StrFrom(T val) { set(val); }
+    ToCharsBuf();
+    explicit ToCharsBuf(T val) { set(val); }
     std::string_view set(T val);
     std::string_view view() const;
-    const char * c_str() const { return m_data; }
+    const char * c_str() const & { return data(); }
 
     size_t size() const;
     bool empty() const { return *m_data == 0; }
-    const char * data() const { return m_data; }
+    const char * data() const & { return m_data; }
 
 private:
     friend std::ostream & operator<<(
         std::ostream & os,
-        const StrFrom & str
+        const ToCharsBuf & str
     ) {
         os << str.view();
         return os;
@@ -95,7 +95,7 @@ private:
 //===========================================================================
 template <typename T>
 requires (std::is_arithmetic_v<T> || std::is_enum_v<T>)
-StrFrom<T>::StrFrom() {
+ToCharsBuf<T>::ToCharsBuf() {
     m_data[0] = 0;
     m_data[sizeof m_data - 1] = (char) (sizeof m_data - 1);
 }
@@ -103,7 +103,7 @@ StrFrom<T>::StrFrom() {
 //===========================================================================
 template <typename T>
 requires (std::is_arithmetic_v<T> || std::is_enum_v<T>)
-std::string_view StrFrom<T>::set(T val) {
+std::string_view ToCharsBuf<T>::set(T val) {
     char * ptr;
     if constexpr (std::is_enum_v<T>) {
         auto r = std::to_chars(
@@ -126,15 +126,21 @@ std::string_view StrFrom<T>::set(T val) {
 //===========================================================================
 template <typename T>
 requires (std::is_arithmetic_v<T> || std::is_enum_v<T>)
-std::string_view StrFrom<T>::view() const {
-    return std::string_view(m_data, size());
+std::string_view ToCharsBuf<T>::view() const {
+    return std::string_view(data(), size());
 }
 
 //===========================================================================
 template <typename T>
 requires (std::is_arithmetic_v<T> || std::is_enum_v<T>)
-size_t StrFrom<T>::size() const {
+size_t ToCharsBuf<T>::size() const {
     return sizeof m_data - m_data[sizeof m_data - 1] - 1;
+}
+
+//===========================================================================
+template <typename T>
+ToCharsBuf<T> toChars(T val) {
+    return ToCharsBuf<T>(val);
 }
 
 
