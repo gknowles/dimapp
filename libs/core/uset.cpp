@@ -18,9 +18,6 @@ using Node = IntegralSet<T,A>::Node;
 *
 ***/
 
-namespace {
-} // namespace
-
 template <std::integral T, typename A>
 class IntegralSet<T,A>::Impl {
 public:
@@ -4378,8 +4375,8 @@ auto IntegralSet<T,A>::lowerBound(value_type val) const -> iterator {
 //===========================================================================
 template <std::integral T, typename A>
 auto IntegralSet<T,A>::upperBound(value_type val) const -> iterator {
-    return val < numeric_limits<value_type>::max() 
-        ? lowerBound(val + 1) 
+    return val < numeric_limits<value_type>::max()
+        ? lowerBound(val + 1)
         : end();
 }
 
