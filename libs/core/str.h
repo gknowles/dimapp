@@ -57,14 +57,23 @@ constexpr int maxNumericChars() {
 
 /****************************************************************************
 *
-*   ToCharsBuf<is_arithmetic_v>
+*   Arithmetic to string
 *
-*   Convert arithmetic type to char buffer, includes both floating point
-*   (float, double, long double) and integral (char, long, uint16_t, etc)
-*   types.
+*   Convert arithmetic type to char buffer, handles both floating point (float,
+*   double, long double) and integral (char, long, uint16_t, etc) types.
 *
 ***/
 
+template <typename T> requires (std::is_arithmetic_v<T> || std::is_enum_v<T>)
+class ToCharsBuf;
+
+//===========================================================================
+template <typename T>
+ToCharsBuf<T> toChars(T val) {
+    return ToCharsBuf<T>(val);
+}
+
+//===========================================================================
 template <typename T>
 requires (std::is_arithmetic_v<T> || std::is_enum_v<T>)
 class ToCharsBuf {
@@ -135,12 +144,6 @@ template <typename T>
 requires (std::is_arithmetic_v<T> || std::is_enum_v<T>)
 size_t ToCharsBuf<T>::size() const {
     return sizeof m_data - m_data[sizeof m_data - 1] - 1;
-}
-
-//===========================================================================
-template <typename T>
-ToCharsBuf<T> toChars(T val) {
-    return ToCharsBuf<T>(val);
 }
 
 
