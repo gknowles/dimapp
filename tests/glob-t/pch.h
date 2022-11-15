@@ -18,5 +18,8 @@
 #include <iostream>
 
 // Platform headers
+
 // External library internal headers
+#include "file/globast.h"
+
 // Internal headers

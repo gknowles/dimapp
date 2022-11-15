@@ -14,6 +14,7 @@
 #include <cerrno>
 #include <condition_variable>
 #include <cstdlib>
+#include <deque>
 #include <memory>
 #include <mutex>
 #include <unordered_map>
@@ -21,4 +22,6 @@
 
 // Platform headers
 // External library internal headers
+
 // Internal headers
+#include "file/globast.h"

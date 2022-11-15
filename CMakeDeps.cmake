@@ -81,6 +81,8 @@
 # libs/file/filemon.h
 # libs/file/glob.cpp
 # libs/file/glob.h
+# libs/file/globast.cpp
+# libs/file/globast.h
 # libs/file/path.cpp
 # libs/file/path.h
 # libs/file/pch.cpp
