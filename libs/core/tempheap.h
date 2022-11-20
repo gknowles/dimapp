@@ -82,7 +82,7 @@ inline char * ITempHeap::strDup(std::string_view src) {
 
 //===========================================================================
 inline char * ITempHeap::strDup(const char src[], size_t len) {
-    char * out = alloc(len + 1, alignof(char));
+    auto out = alloc<char>(len + 1);
     std::memcpy(out, src, len);
     out[len] = 0;
     return out;
@@ -100,7 +100,8 @@ inline std::string_view ITempHeap::viewDup(std::string_view src) {
 
 //===========================================================================
 inline std::string_view ITempHeap::viewDup(const char src[], size_t len) {
-    char * out = strDup(src, len);
+    auto out = alloc<char>(len);
+    std::memcpy(out, src, len);
     return {out, len};
 }
 
