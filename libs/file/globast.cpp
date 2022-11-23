@@ -1,7 +1,7 @@
 // Copyright Glen Knowles 2022.
 // Distributed under the Boost Software License, Version 1.0.
 //
-// search.cpp - dim file
+// globast.cpp - dim file
 #include "pch.h"
 #pragma hdrstop
 
@@ -70,14 +70,202 @@ Glob::Info::~Info() {
 ***/
 
 //===========================================================================
-MatchResult Dim::Glob::matchSegment(const Node & node, string_view val) {
-    return kNoMatch;
+vector<const PathSegment *> Dim::Glob::pathSegments(const Info & glob) {
+    vector<const PathSegment *> out;
+    auto node = glob.roots.front();
+    while (node) {
+        assert(node->type == kPathSeg);
+        auto seg = static_cast<const PathSeg *>(node);
+        out.push_back(&seg->pathSeg);
+        node = seg->next.front();
+        assert(node == seg->next.back());
+
+    }
+    return out;
 }
 
 //===========================================================================
 NodeType Dim::Glob::getType(const Node & node) {
     return node.type;
 }
+
+static MatchResult matchNode(
+    const List<Node> * parts,
+    const Node * node,
+    string_view val
+);
+
+//===========================================================================
+static MatchResult matchNextNode(
+    const List<Node> * parts,
+    const Node * node,
+    string_view val
+) {
+    node = parts ? parts->next(node) : nullptr;
+    return matchNode(parts, node, val);
+}
+
+//===========================================================================
+static MatchResult matchNode(
+    const List<Node> * parts,
+    const PartChoice * node,
+    string_view val
+) {
+    if (!parts)
+        return matchNode(parts, static_cast<const Node *>(node), val);
+
+    auto & choices = node->parts;
+    // TODO: stop at minimum required length of the following string
+    for (int i = 0; i <= val.size(); ++i) {
+        for (auto && sn : choices) {
+            if (!matchNode(parts, &sn, val.substr(0, i)))
+                continue;
+            if (matchNextNode(parts, node, val.substr(i)))
+                return kMatch;
+        }
+    }
+    return kNoMatch;
+}
+
+//===========================================================================
+static MatchResult matchNode(
+    const List<Node> * parts,
+    const Node * node,
+    string_view val
+) {
+    auto type = node ? node->type : kPartEmpty;
+
+    switch (type) {
+    case kPartEmpty:
+        return val.empty() ? kMatch : kNoMatch;
+
+    case kPartLiteral:
+    {
+        auto & lit = static_cast<const PartLiteral *>(node)->val;
+        auto len = lit.size();
+        if (lit != val.substr(0, len))
+            return kNoMatch;
+        return matchNextNode(parts, node, val.substr(len));
+    }
+
+    case kPartBlot:
+        // TODO: stop at minimum required length of the following string
+        for (; !val.empty(); val.remove_prefix(1)) {
+            if (matchNextNode(parts, node, val))
+                return kMatch;
+        }
+        return matchNextNode(parts, node, val);
+
+    case kPartDoubleBlot:
+        return kMatchRest;
+
+    case kPartCharChoice:
+        if (val.empty()
+            || !static_cast<const PartCharChoice *>(node)->vals.test(val[0])
+        ) {
+            return kNoMatch;
+        }
+        return matchNextNode(parts, node, val.substr(1));
+
+    case kPartChoice:
+        return matchNode(
+            parts,
+            static_cast<const PartChoice *>(node),
+            val
+        );
+
+    case kPartList:
+        //auto sn = static_cast<const
+        //if (auto match = matchNode(
+        return kNoMatch;
+
+    default:
+        assert(!"Not searchable path segment node type");
+        return kNoMatch;
+    }
+}
+
+//===========================================================================
+MatchResult Dim::Glob::matchSegment(const PathSegment & seg, string_view val) {
+    assert(seg.node->type == kPathSeg);
+    auto sn = static_cast<const PathSeg *>(seg.node);
+    return matchNode(&sn->parts, sn->parts.front(), val);
+}
+
+//===========================================================================
+static bool IsLastSegment(const PathSegment & seg) {
+    assert(seg.node->type == kPathSeg);
+    auto sn = static_cast<const PathSeg *>(seg.node);
+    return sn->next.empty();
+}
+
+//===========================================================================
+Search Dim::Glob::newSearch(const Info & glob) {
+    Search out;
+    out.glob = &glob;
+    out.current.push_back(nullptr);
+    for (auto&& node : glob.roots) {
+        auto seg = static_cast<const PathSeg *>(&node);
+        out.current.push_back(&seg->pathSeg);
+    }
+    return out;
+}
+
+//===========================================================================
+MatchResult Dim::Glob::matchSearch(
+    Search * srch,
+    string_view val,
+    bool lastSeg
+) {
+    auto matches = 0;
+    for (auto i = srch->current.size(); i > 0;) {
+        auto seg = srch->current[--i];
+        if (!seg)
+            break;
+        if (lastSeg != IsLastSegment(*seg))
+            continue;
+        if (auto match = matchSegment(*seg, val)) {
+            if (lastSeg)
+                return kMatch;
+            if (match == kMatchRest) {
+                // If a branch matches the rest, no other branches are needed.
+                // All we care about is if it match, not how many different
+                // ways it matches.
+                if (matches) {
+                    // Remove other branches as redundant.
+                    srch->current.resize(srch->current.size() - matches);
+                } else {
+                    srch->current.push_back(nullptr);
+                }
+                srch->current.push_back(seg);
+                return match;
+            }
+            if (!matches++)
+                srch->current.push_back(nullptr);
+            srch->current.push_back(seg);
+        }
+    }
+    return matches ? kMatch : kNoMatch;
+}
+
+//===========================================================================
+void Dim::Glob::popSearchSeg(Search * srch) {
+    for (;;) {
+        assert(!srch->current.empty());
+        if (srch->current.back() == nullptr) {
+            srch->current.pop_back();
+            break;
+        }
+        srch->current.pop_back();
+    }
+}
+
+
+/****************************************************************************
+*
+*   toString
+*
+***/
 
 static void append(string * out, const Node & node, GlobType type, int indent);
 
@@ -314,6 +502,7 @@ Node * Dim::Glob::addSeg(Info * glob, Node * node) {
     auto seg = glob->heap.emplace<PathSeg>();
     if (auto parent = static_cast<PathSeg *>(node)) {
         assert(node->type == kPathSeg);
+        seg->parent = parent;
         parent->next.link(seg);
     } else {
         glob->roots.link(seg);
@@ -340,6 +529,7 @@ Node * Dim::Glob::addPartEmpty(Info * glob, Node * node) {
     assert(node->type == kPathSeg);
     auto seg = static_cast<PathSeg *>(node);
     auto sn = glob->heap.emplace<PartEmpty>();
+    sn->parent = seg;
     seg->parts.link(sn);
     return sn;
 }
@@ -349,6 +539,7 @@ Node * Dim::Glob::addPartLiteral(Info * glob, Node * node, string_view val) {
     assert(node->type == kPathSeg);
     auto seg = static_cast<PathSeg *>(node);
     auto sn = glob->heap.emplace<PartLiteral>();
+    sn->parent = seg;
     seg->parts.link(sn);
     sn->val = glob->heap.viewDup(val);
     return sn;
@@ -365,6 +556,7 @@ Node * Dim::Glob::addPartBlot(Info * glob, Node * node) {
     }
     glob->pathType = kCondition;
     auto sn = glob->heap.emplace<PartBlot>();
+    sn->parent = seg;
     seg->parts.link(sn);
     sn->count = 1;
     return sn;
@@ -392,6 +584,7 @@ Node * Dim::Glob::addPartCharChoice(
     glob->pathType = kCondition;
     auto seg = static_cast<PathSeg *>(node);
     auto sn = glob->heap.emplace<PartCharChoice>();
+    sn->parent = seg;
     seg->parts.link(sn);
     sn->vals = move(vals);
     return sn;
@@ -403,6 +596,7 @@ Node * Dim::Glob::addPartChoice(Info * glob, Node * node) {
     glob->pathType = kCondition;
     auto seg = static_cast<PathSeg *>(node);
     auto sn = glob->heap.emplace<PartChoice>();
+    sn->parent = seg;
     seg->parts.link(sn);
     return sn;
 }
@@ -417,7 +611,9 @@ static T * copyNode(Info * glob, Node * raw) {
         || is_same_v<T, PartChoice>
     ) {
         for (auto&& node : src->parts) {
-            sn->parts.link(copyNode(glob, &node));
+            auto cp = copyNode(glob, &node);
+            cp->parent = sn;
+            sn->parts.link(cp);
         }
     } else if constexpr (is_same_v<T, PartCharChoice>) {
         sn->vals = src->vals;
@@ -818,6 +1014,19 @@ END:
             assert(st.mode == ParseMode::kSet);
             goto IN_SET;
         }
+    }
+    return true;
+}
+
+//===========================================================================
+bool Dim::Glob::parse(
+    Info * glob,
+    const std::vector<std::string> & srcs,
+    GlobType type
+) {
+    for (auto&& src : srcs) {
+        if (!parse(glob, src, type))
+            return false;
     }
     return true;
 }

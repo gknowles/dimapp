@@ -1,10 +1,13 @@
 // Copyright Glen Knowles 2022.
 // Distributed under the Boost Software License, Version 1.0.
 //
-// globint.h - dim file
+// globast.h - dim file
 #pragma once
 
 #include <bitset>
+#include <string>
+#include <string_view>
+#include <vector>
 
 namespace Dim::Glob {
 
@@ -48,6 +51,7 @@ enum NodeType {
 
 struct Node : Dim::ListLink<> {
     NodeType type;
+    Node * parent = {};
 };
 
 struct PathSegment {
@@ -74,6 +78,14 @@ struct Info {
     ~Info();
 };
 
+struct Search {
+    const Info * glob = {};
+
+    // Sets of pointers are separated by a nullptr. Each set includes all paths
+    // that have matched at that search depth.
+    std::vector<const PathSegment *> current;
+};
+
 
 /****************************************************************************
 *
@@ -82,11 +94,16 @@ struct Info {
 ***/
 
 // Returns an entry for each segment of path.
-std::span<PathSegment> pathSegments(const Info & glob);
-// Use the node values returned by pathSegments()
-MatchResult matchSegment(const Node & node, std::string_view val);
+std::vector<const PathSegment *> pathSegments(const Info & glob);
 
 NodeType getType(const Node & node);
+
+// Use the node values returned by pathSegments()
+MatchResult matchSegment(const PathSegment & node, std::string_view val);
+
+Search newSearch(const Info & glob);
+MatchResult matchSearch(Search * srch, std::string_view segVal, bool lastSeg);
+void popSearchSeg(Search * srch);
 
 std::string toString(const Node & node, GlobType type = kRuby);
 
