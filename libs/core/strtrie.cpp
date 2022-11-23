@@ -199,8 +199,8 @@ struct StrTrieBase::Node {
     uint8_t data[1];
 
     static SearchState * makeState(
-        TempHeap * heap, 
-        const StrTrieBase * cont, 
+        TempHeap * heap,
+        const StrTrieBase * cont,
         string_view key,
         bool seek = true
     );
@@ -209,14 +209,14 @@ static_assert(sizeof StrTrieBase::Node == 1);
 
 //===========================================================================
 SearchState * StrTrieBase::Node::makeState(
-    TempHeap * heap, 
-    const StrTrieBase * cont, 
+    TempHeap * heap,
+    const StrTrieBase * cont,
     string_view key,
     bool seek
 ) {
     auto ss = heap->emplace<SearchState>(
-        heap, 
-        cont->m_pages, 
+        heap,
+        cont->m_pages,
         key,
         cont->debugStream()
     );
@@ -292,7 +292,7 @@ static const uint8_t * segData(const StrTrieBase::Node * node) {
 //===========================================================================
 static string_view segView(
     const StrTrieBase::Node * node,
-    size_t spos = 0, 
+    size_t spos = 0,
     size_t slen = dynamic_extent
 ) {
     assert(nodeType(node) == kNodeSeg);
@@ -773,7 +773,7 @@ static bool pushFoundKeyConsume(SearchState * ss, bool forUpdate = false) {
         assert(nodeType(ss->node) == kNodeHalfSeg);
         pushFoundKeyVal(ss, halfSegVal(ss->node));
     }
-    if (nodeEndMarkFlag(ss->node)) 
+    if (nodeEndMarkFlag(ss->node))
         return false;
 
     seekKid(ss, 0);
@@ -919,8 +919,8 @@ static T & newUpdate(SearchState * ss) {
 
 //===========================================================================
 static string_view segView(
-    UpdateBase * upd, 
-    size_t spos = 0, 
+    UpdateBase * upd,
+    size_t spos = 0,
     size_t slen = dynamic_extent
 ) {
     assert(upd->type == kNodeSeg);
@@ -971,11 +971,11 @@ static void setForkBit(
     } else {
         auto hdrLen = nodeHdrLen(ss->node);
         out = makeSourceRef(
-            ss, 
-            ss->inode + hdrLen, 
+            ss,
+            ss->inode + hdrLen,
             nodeLen(ss->node + hdrLen)
         );
-    }    
+    }
     return out;
 }
 
@@ -1000,8 +1000,8 @@ static void addKeyHalfSeg(SearchState * ss) {
 
 //===========================================================================
 static NodeRef * addForkWithEnd(
-    SearchState * ss, 
-    size_t pos, 
+    SearchState * ss,
+    size_t pos,
     bool withNewRef
 ) {
     auto & fork = newUpdate<UpdateFork>(ss);
@@ -1019,7 +1019,7 @@ static NodeRef * addForkWithEnd(
 
 //===========================================================================
 [[nodiscard]] static pair<NodeRef *, NodeRef *> addFork(
-    SearchState * ss, 
+    SearchState * ss,
     size_t sval,
     size_t kval
 ) {
@@ -1053,7 +1053,7 @@ static void copySegPrefix(SearchState * ss, size_t pos) {
     assert(pos <= segLen(ss->node));
     assert(pos % 2 == 0);
     // TODO: merge with preceeding NodeSeg if present.
-    if (!pos) 
+    if (!pos)
         return;
     auto & upd = newUpdate<UpdateSeg>(ss);
     setSegKey(&upd, ss, segView(ss->node, 0, pos));
@@ -1066,7 +1066,7 @@ static void copySegPrefix(SearchState * ss, size_t pos) {
     assert(pos <= segLen(ss->node));
     assert(pos % 2 == 0);
     auto len = segLen(ss->node) - pos;
-    if (!len) 
+    if (!len)
         return copyRef(ss);
 
     auto out = makeUpdateRef(ss);
@@ -1078,12 +1078,12 @@ static void copySegPrefix(SearchState * ss, size_t pos) {
         // TODO: merge with following NodeSeg if present.
         auto hdrLen = nodeHdrLen(ss->node);
         auto srcRef = newRef(
-            ss, 
-            ss->inode + hdrLen, 
+            ss,
+            ss->inode + hdrLen,
             nodeLen(ss->node + hdrLen)
         );
         upd.refs = { srcRef, 1 };
-    } 
+    }
     return out;
 }
 
@@ -1294,7 +1294,7 @@ static void harvestPages(SearchState * ss, UpdateBase * upd) {
                 upd->len -= refs[i]->data.len - kRemoteNodeLen;
             }
         }
-        
+
         // NOTE: nvi.len *must* be >0, >= psize/2 is just a conjecture!
         assert(nvi.len >= psize / 2);
 
@@ -1310,7 +1310,7 @@ static void harvestPages(SearchState * ss, UpdateBase * upd) {
             *refs[i] = makeRemoteRef(ss, vi.pgno, vi.pos++);
         }
     }
-    for ([[maybe_unused]] auto & vi : vinfos) 
+    for ([[maybe_unused]] auto & vi : vinfos)
         assert(vi.pos);
     assert(upd->len == nodeLen(*upd));
 }
@@ -1425,7 +1425,7 @@ static void applyUpdates(SearchState * ss) {
     }
     // Release potentially still active 'for update' seek.
     seekRootNode(ss);
-    
+
     auto rpno = ss->vpages.back().targetPgno;
     ss->pages->setRoot(rpno);
 
@@ -1537,8 +1537,8 @@ static bool insertAtSeg(SearchState * ss) {
                     return false;
                 }
                 // Fork key with the end mark that's after the segment.
-                // 
-                // Insert "abcdef" [61 62 63 64 65 66] into 
+                //
+                // Insert "abcdef" [61 62 63 64 65 66] into
                 // Seg "abc" [61 62 63] makes:
                 //  +-----------+  +-----------+  +--------+  +----------+
                 //  | Seg "abc" |--| Fork-- 6  |--| Half 4 |--| Seg "ef" |
@@ -1676,7 +1676,7 @@ static bool insertAtEndMark(SearchState * ss) {
     }
 
     // Fork key with end mark.
-    // 
+    //
     // Insert "a" [61] into { EndMark } makes:
     //  +-----------+  +--------+
     //  | Fork-- 6  |--| Half 1 |
@@ -1701,7 +1701,7 @@ static bool insertAtRemote(SearchState * ss) {
 //===========================================================================
 static void addSegs(SearchState * ss) {
     assert(ss->kpos <= ss->klen);
-    if (ss->kpos % 2 == 1) 
+    if (ss->kpos % 2 == 1)
         addKeyHalfSeg(ss);
     while (int slen = ss->klen - ss->kpos) {
         assert(slen > 1);
@@ -1743,7 +1743,7 @@ bool StrTrieBase::insert(string_view key) {
         for (;;) {
             auto ntype = ::nodeType(ss->node);
             auto fn = functs[ntype];
-            if (!(*fn)(ss)) 
+            if (!(*fn)(ss))
                 break;
         }
         if (ss->found)
@@ -1859,7 +1859,7 @@ static void eraseForkKid(SearchState * ss, UpdateFork * fork) {
         if (fork->refs[i].page.type == PageRef::kUpdate) {
             setForkBit(fork, vals[i], false);
             copy(
-                fork->refs.begin() + i + 1, 
+                fork->refs.begin() + i + 1,
                 fork->refs.end(),
                 fork->refs.begin() + i
             );
@@ -1922,12 +1922,12 @@ static void eraseForkWithSegs(SearchState * ss, const UpdateFork & fork) {
         && !ss->updates.empty()
         && ss->updates.back()->type == kNodeHalfSeg
     ) {
-        //   +------+------+  
+        //   +------+------+
         // --| half | fork |--
-        //   +------+---+--+  
+        //   +------+---+--+
         //              |     +--------+
         //              +-----| erased |
-        //                    +--------+ 
+        //                    +--------+
 
         auto half = static_cast<UpdateHalfSeg *>(ss->updates.back());
         ss->updates.pop_back();
@@ -1936,17 +1936,17 @@ static void eraseForkWithSegs(SearchState * ss, const UpdateFork & fork) {
         ) {
             auto seg = static_cast<UpdateSeg *>(ss->updates.back());
             if (seg->keyLen < kMaxSegLen) {
-                // +-----+  +------+------+  
+                // +-----+  +------+------+
                 // | SEG |--| half | fork |--
-                // +-----+  +------+---+--+  
+                // +-----+  +------+---+--+
                 ss->updates.pop_back();
                 pushFoundKeyVal(ss, segView(seg));
             }
         }
 
-        //   +------+------+  
+        //   +------+------+
         // --| HALF | FORK |--
-        //   +------+---+--+  
+        //   +------+---+--+
         pushFoundKeyVal(ss, half->nibble);
         pushFoundKeyVal(ss, sval);
 
@@ -1966,29 +1966,29 @@ static void eraseForkWithSegs(SearchState * ss, const UpdateFork & fork) {
     } else if (!lowFork
         && nodeType(ss->node) == kNodeHalfSeg
     ) {
-        //   +------+------+  
+        //   +------+------+
         // --| fork | half |--
-        //   +---+--+------+  
+        //   +---+--+------+
         //       |     +--------+
         //       +-----| erased |
-        //             +--------+ 
+        //             +--------+
 
         if (!ss->updates.empty()
             && ss->updates.back()->type == kNodeSeg
         ) {
             auto seg = static_cast<UpdateSeg *>(ss->updates.back());
             if (seg->keyLen < kMaxSegLen) {
-                // +-----+  +------+------+  
+                // +-----+  +------+------+
                 // | SEG |--| fork | half |--
-                // +-----+  +---+--+------+  
+                // +-----+  +---+--+------+
                 ss->updates.pop_back();
                 pushFoundKeyVal(ss, segView(seg));
             }
         }
 
-        //   +------+------+  
+        //   +------+------+
         // --| FORK | HALF |--
-        //   +---+--+------+  
+        //   +---+--+------+
         pushFoundKeyVal(ss, sval);
         endMark = !pushFoundKeyConsume(ss, true);
 
@@ -2007,7 +2007,7 @@ static void eraseForkWithSegs(SearchState * ss, const UpdateFork & fork) {
         //   +---+--+
         //       |     +--------+
         //       +-----| erased |
-        //             +--------+ 
+        //             +--------+
 
         if (nodeType(ss->node) == kNodeEndMark) {
             //   +------+  +-----+
@@ -2016,7 +2016,7 @@ static void eraseForkWithSegs(SearchState * ss, const UpdateFork & fork) {
             endMark = true;
         }
     }
-        
+
     // Add replacement seg or half seg node.
     if (ss->foundKeyLen) {
         assert(ss->foundKeyLen >= 2 && ss->foundKeyLen % 2 == 0);
@@ -2071,7 +2071,7 @@ bool StrTrieBase::erase(string_view key) {
     // Unwind to closest fork.
     while (!ss->updates.empty()) {
         auto upd = ss->updates.back();
-        if (upd->type == kNodeFork) 
+        if (upd->type == kNodeFork)
             break;
         ss->updates.pop_back();
     }
@@ -2088,7 +2088,7 @@ bool StrTrieBase::erase(string_view key) {
         // Has more than two kids (including eok), keep fork but with branch
         // removed.
         eraseForkKid(ss, &fork);
-    } else if (fork.endOfKey 
+    } else if (fork.endOfKey
         && fork.refs[0].page.type == PageRef::kUpdate
     ) {
         // Only remaining kid is an end mark, replace fork with end mark.
@@ -2127,7 +2127,7 @@ static bool containsAtSeg(SearchState * ss) {
     ss->kpos += slen - 1;
     nextKeyVal(ss);
     if (nodeEndMarkFlag(ss->node)) {
-        if (ss->kpos == ss->klen) 
+        if (ss->kpos == ss->klen)
             ss->found = true;
         return false;
     }
@@ -2145,7 +2145,7 @@ static bool containsAtHalfSeg(SearchState * ss) {
 
     nextKeyVal(ss);
     if (nodeEndMarkFlag(ss->node)) {
-        if (ss->kpos == ss->klen) 
+        if (ss->kpos == ss->klen)
             ss->found = true;
         return false;
     }
@@ -2360,12 +2360,12 @@ struct StrTrieBase::Iter::Impl {
 };
 
 //===========================================================================
-StrTrieBase::Iter::Iter(const StrTrieBase * cont) 
+StrTrieBase::Iter::Iter(const StrTrieBase * cont)
     : m_impl(make_shared<Impl>(cont))
 {}
 
 //===========================================================================
-StrTrieBase::Iter::Iter(shared_ptr<Impl> impl) 
+StrTrieBase::Iter::Iter(shared_ptr<Impl> impl)
     : m_impl(impl)
 {}
 
@@ -2671,7 +2671,7 @@ static StrTrieBase::Iter find(const StrTrieBase * cont,  string_view key) {
     for (;;) {
         auto ntype = ::nodeType(ss->node);
         auto fn = functs[ntype];
-        if (!(*fn)(ss)) 
+        if (!(*fn)(ss))
             break;
     }
 
@@ -2709,11 +2709,11 @@ StrTrieBase::Iter StrTrieBase::upperBound(string_view key) const {
 }
 
 //===========================================================================
-auto StrTrieBase::equalRange(string_view key) const 
+auto StrTrieBase::equalRange(string_view key) const
     -> pair<Iter, Iter>
 {
     auto first = lowerBound(key);
-    auto second = first && *first == key ? ++Iter(first) : first; 
+    auto second = first && *first == key ? ++Iter(first) : first;
     pair<Iter, Iter> out = { move(first), move(second) };
     return out;
 }
@@ -2783,7 +2783,7 @@ struct Stats {
     size_t halfSegCount;
     size_t halfSegLast;
     size_t halfSegPairs;
-    
+
     size_t numFork;
     size_t totalForkLen;
     size_t numEndMark;
@@ -2845,7 +2845,7 @@ static int addStats(Stats * out, size_t pgno, StrTrie::Node * node) {
         }
     }
     if (nodeEndMarkFlag(node))
-        out->totalKeys += 1; 
+        out->totalKeys += 1;
     for (auto i = 0; i < num; ++i)
         len += addStats(out, i, node + len);
     return len;
@@ -2854,7 +2854,7 @@ static int addStats(Stats * out, size_t pgno, StrTrie::Node * node) {
 //===========================================================================
 static size_t pageDepthStats(size_t pgno, vector<PageStats> & pgstats) {
     auto & ps = pgstats[pgno];
-    if (!ps.depth) 
+    if (!ps.depth)
         ps.depth = pageDepthStats(ps.parent, pgstats);
     return ps.depth + 1;
 }
@@ -2887,8 +2887,8 @@ void StrTrie::dumpStats(std::ostream & os) const {
     }
     size_t totalBytes = stats.totalPages * stats.pageSize;
     os << "Bytes: " << totalBytes << '\n'
-        << "Pages: " << stats.totalPages << " total, " 
-            << stats.usedPages << " used (" 
+        << "Pages: " << stats.totalPages << " total, "
+            << stats.usedPages << " used ("
             << 100.0 * stats.usedPages / stats.totalPages << "%), "
             << "size=" << stats.pageSize << "\n"
         << "Keys: " << stats.totalKeys << " total\n"
@@ -2896,7 +2896,7 @@ void StrTrie::dumpStats(std::ostream & os) const {
     os << "Node detail:\n"
         << "  Total: " << stats.totalNodes << " nodes\n"
         << "  Multiroot: " << stats.numMultiroot << " nodes\n"
-        << "  Seg: " << stats.segCount << " nodes, " 
+        << "  Seg: " << stats.segCount << " nodes, "
             << (double) stats.segTotalLen / stats.segCount << " avg len, "
             << 100.0 * stats.segShortLen / stats.segCount << "% short, "
             << 100.0 * stats.segMaxLen / stats.segCount << "% full\n"
@@ -2915,7 +2915,7 @@ void StrTrie::dumpStats(std::ostream & os) const {
     vector<DepthStats> dstats;
     for (auto i = 0; i < stats.totalPages; ++i) {
         auto & ps = pgstats[i];
-        if (ps.parent == -2) 
+        if (ps.parent == -2)
             continue;
         if (!ps.depth)
             ps.depth = pageDepthStats(ps.parent, pgstats);
@@ -2927,7 +2927,7 @@ void StrTrie::dumpStats(std::ostream & os) const {
     os << "Density by page depth:\n";
     for (auto i = 1; i < dstats.size(); ++i) {
         auto & d = dstats[i];
-        os << "  " << i << ": " << d.pages << " pages, " << d.keys 
+        os << "  " << i << ": " << d.pages << " pages, " << d.keys
             << " keys\n";
     }
 }
