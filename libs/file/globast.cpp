@@ -111,9 +111,6 @@ static MatchResult matchNode(
     const PartChoice * node,
     string_view val
 ) {
-    if (!parts)
-        return matchNode(parts, static_cast<const Node *>(node), val);
-
     auto & choices = node->parts;
     // TODO: stop at minimum required length of the following string
     for (int i = 0; i <= val.size(); ++i) {
@@ -123,6 +120,23 @@ static MatchResult matchNode(
             if (matchNextNode(parts, node, val.substr(i)))
                 return kMatch;
         }
+    }
+    return kNoMatch;
+}
+
+//===========================================================================
+static MatchResult matchNode(
+    const List<Node> * parts,
+    const PartList * node,
+    string_view val
+) {
+    auto subparts = &node->parts;
+    // TODO: stop at minimum required length of the following string
+    for (int i = 0; i <= val.size(); ++i) {
+        if (!matchNode(subparts, subparts->front(), val.substr(0, i)))
+            continue;
+        if (matchNextNode(parts, node, val.substr(i)))
+            return kMatch;
     }
     return kNoMatch;
 }
@@ -175,9 +189,11 @@ static MatchResult matchNode(
         );
 
     case kPartList:
-        //auto sn = static_cast<const
-        //if (auto match = matchNode(
-        return kNoMatch;
+        return matchNode(
+            parts,
+            static_cast<const PartList *>(node),
+            val
+        );
 
     default:
         assert(!"Not searchable path segment node type");
@@ -193,6 +209,20 @@ MatchResult Dim::Glob::matchSegment(const PathSegment & seg, string_view val) {
 }
 
 //===========================================================================
+Search Dim::Glob::newSearch(const Info & glob) {
+    Search out;
+    out.glob = &glob;
+    out.current.push_back(nullptr);
+    for (auto&& node : glob.roots) {
+        assert(node.type == kPathSeg);
+        auto seg = static_cast<const PathSeg *>(&node);
+        out.current.push_back(&seg->pathSeg);
+    }
+    return out;
+}
+
+//===========================================================================
+[[maybe_unused]]
 static bool IsLastSegment(const PathSegment & seg) {
     assert(seg.node->type == kPathSeg);
     auto sn = static_cast<const PathSeg *>(seg.node);
@@ -200,15 +230,20 @@ static bool IsLastSegment(const PathSegment & seg) {
 }
 
 //===========================================================================
-Search Dim::Glob::newSearch(const Info & glob) {
-    Search out;
-    out.glob = &glob;
-    out.current.push_back(nullptr);
-    for (auto&& node : glob.roots) {
-        auto seg = static_cast<const PathSeg *>(&node);
-        out.current.push_back(&seg->pathSeg);
+static void AddNext(Search * srch, const PathSegment & seg, bool withNull) {
+    if (withNull)
+        srch->current.push_back(nullptr);
+    assert(seg.node->type == kPathSeg);
+    auto sn = static_cast<const PathSeg *>(seg.node);
+    for (auto&& next : sn->next) {
+        if (next.pathSeg.type == kDynamicAny) {
+            AddNext(srch, next.pathSeg, false);
+        } else {
+            srch->current.push_back(&next.pathSeg);
+        }
     }
-    return out;
+    if (seg.type == kDynamicAny)
+        srch->current.push_back(&seg);
 }
 
 //===========================================================================
@@ -222,27 +257,34 @@ MatchResult Dim::Glob::matchSearch(
         auto seg = srch->current[--i];
         if (!seg)
             break;
-        if (lastSeg != IsLastSegment(*seg))
+        assert(seg->node->type == kPathSeg);
+        auto sn = static_cast<const PathSeg *>(seg->node);
+        if (lastSeg && !sn->next.empty()
+            || !lastSeg && sn->next.empty() && seg->type != kDynamicAny
+        ) {
             continue;
+        }
         if (auto match = matchSegment(*seg, val)) {
             if (lastSeg)
-                return kMatch;
-            if (match == kMatchRest) {
-                // If a branch matches the rest, no other branches are needed.
-                // All we care about is if it match, not how many different
-                // ways it matches.
-                if (matches) {
-                    // Remove other branches as redundant.
-                    srch->current.resize(srch->current.size() - matches);
-                } else {
-                    srch->current.push_back(nullptr);
-                }
-                srch->current.push_back(seg);
                 return match;
+            if (match == kMatchRest) {
+                if (!sn->next.empty()) {
+                    match = kMatch;
+                } else {
+                    // If a branch matches the rest, no other branches are
+                    // needed. All we care about is if it matches, not how many
+                    // different ways it matches.
+                    if (matches) {
+                        // Remove other branches as redundant.
+                        srch->current.resize(srch->current.size() - matches);
+                    } else {
+                        srch->current.push_back(nullptr);
+                    }
+                    srch->current.push_back(seg);
+                    return match;
+                }
             }
-            if (!matches++)
-                srch->current.push_back(nullptr);
-            srch->current.push_back(seg);
+            AddNext(srch, *seg, !matches++);
         }
     }
     return matches ? kMatch : kNoMatch;

@@ -61,7 +61,7 @@ static vector<pair<int, int>> diff(
 }
 
 //===========================================================================
-static void astTests() {
+static void parseTests() {
     vector<tuple<string, string>> tests = {
         { "abc", "abc" },
 
@@ -142,6 +142,64 @@ static void astTests() {
 }
 
 //===========================================================================
+static void matchTests() {
+    using enum Glob::MatchResult;
+    vector<tuple<string, Glob::MatchResult, vector<string>>> tests = {
+        { "**/xyz", kMatch, { "abc", "xyz" } },
+
+        { "abc", kMatch, { "abc" } },
+        { "abc", kNoMatch, { "xyz" } },
+        { "[abc]", kMatch, { "a" } },
+        { "xyz[abc]", kMatch, { "xyza" } },
+        { "[abc]xyz", kMatch, { "axyz" } },
+        { "[abc][xyz]", kMatch, { "bz" } },
+        { "a/b/c", kMatch, { "a", "b", "c" } },
+
+        { "*", kMatch, { "abc" } },
+        { "*/*", kNoMatch, { "abc" } },
+        { "*/*", kMatch, { "abc", "xyz" } },
+        { "**", kMatchRest, { "abc" } },
+        { "**", kMatchRest, { "abc", "xyz" } },
+        { "abc/**", kMatchRest, { "abc", "xyz" } },
+        { "**/xyz", kMatch, { "abc", "xyz" } },
+        { "**/xyz", kNoMatch, { "abc", "xy" } },
+    };
+    for (auto && [pattern, expected, values] : tests) {
+        assert(size(values) > 0);
+        Glob::Info info;
+        if (!Glob::parse(&info, pattern)) {
+            logMsgError() << "Glob parse failed for matchTest: " << pattern;
+            continue;
+        }
+        auto stdpat = toString(info);
+        auto srch = newSearch(info);
+        for (auto i = 0; i < values.size(); ++i) {
+            if (i + 1 == values.size()) {
+                auto mr = matchSearch(&srch, values[i], true);
+                if (mr != expected)
+                    goto FAILED;
+            } else {
+                auto mr = matchSearch(&srch, values[i], false);
+                if (mr == kMatchRest) {
+                    if (expected != kMatchRest)
+                        goto FAILED;
+                    break;
+                } else {
+                    if (mr != kMatch)
+                        goto FAILED;
+                }
+            }
+            continue;
+
+        FAILED:
+            logMsgError() << "Segment (" << i << " of " << size(values) << ") "
+                "didn't match for: " << values[i] << " in " << pattern;
+            break;
+        }
+    }
+}
+
+//===========================================================================
 static void fileTests() {
     fileRemove("file-t", true);
     fileCreateDirs("file-t");
@@ -192,7 +250,8 @@ static void fileTests() {
 
 //===========================================================================
 static void app(int argc, char *argv[]) {
-    astTests();
+    parseTests();
+    matchTests();
     fileTests();
     testSignalShutdown();
 }
