@@ -25,6 +25,7 @@
 #include <ranges>
 #include <shared_mutex>
 #include <span>
+#include <stacktrace>
 #include <thread>
 #include <utility>
 #include <vector>
