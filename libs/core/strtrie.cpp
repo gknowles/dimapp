@@ -643,7 +643,7 @@ static void allocPage(SearchState * ss) {
 //===========================================================================
 static bool logFatal(SearchState * ss) {
     logMsgFatal() << "Invalid StrTrieBase node type: "
-        << nodeType(ss->node);
+        << (int) nodeType(ss->node);
     return false;
 }
 
