@@ -52,6 +52,7 @@ jobs:
         bin\bitview-t
         bin\charbuf-t
         bin\file-t
+        bin\glob-t
         bin\hpack-t
         bin\http-t
         bin\json-t --test
