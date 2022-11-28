@@ -19,6 +19,7 @@
 #include <iostream>
 #include <memory>
 #include <mutex>
+#include <stacktrace>
 #include <thread>
 #include <vector>
 

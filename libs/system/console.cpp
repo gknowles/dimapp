@@ -37,8 +37,10 @@ void ConsoleLogger::onLog(const LogMsg & log) {
     if (log.type >= kLogTypeError) {
         ConsoleScopedAttr attr(kConsoleError);
         cout << msg;
-        if (log.type == kLogTypeFatal)
+        if (log.type == kLogTypeFatal) {
+            cout << stacktrace::current();
             cout.flush();
+        }
     } else if (log.type == kLogTypeWarn) {
         ConsoleScopedAttr attr(kConsoleWarn);
         cout << msg;
