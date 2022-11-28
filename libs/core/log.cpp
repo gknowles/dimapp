@@ -116,7 +116,7 @@ LogMsgScope::LogMsgScope(LogType type)
 
 //===========================================================================
 LogMsgScope::~LogMsgScope() {
-    t_inProgress = false;
+    t_inProgress = m_inProgress;
     if (m_type == kLogTypeFatal)
         abort();
 }
