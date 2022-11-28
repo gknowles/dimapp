@@ -24,8 +24,8 @@ namespace Dim {
 class IWebAdminNotify : public IHttpRouteNotify {
 public:
     JBuilder initResponse(
-        HttpResponse * out, 
-        unsigned reqId, 
+        HttpResponse * out,
+        unsigned reqId,
         const HttpRequest & req
     );
 

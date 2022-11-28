@@ -35,10 +35,10 @@ using namespace Dim;
 
 //===========================================================================
 static void failed(
-    const char msg[], 
+    const char msg[],
     source_location sloc = source_location::current()
 ) {
-    logMsgError(sloc) << "Line " << sloc.line() 
+    logMsgError(sloc) << "Line " << sloc.line()
         << ": EXPECT(" << msg << ") failed";
 }
 
@@ -119,7 +119,7 @@ void internalTest() {
     conf.addNetworkStartTrigger();
     conf.addNetworkStopTrigger();
     conf.addDomainJoinTrigger()
-        .stopService();    
+        .stopService();
     conf.addDomainLeaveTrigger()
         .startService();
     conf.addPortOpenTrigger()

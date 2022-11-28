@@ -45,12 +45,12 @@ bool Dim::gitLoadConfig(
         configFile->clear();
         gitRoot->clear();
     });
-    
+
     if (!pathFromCurrentDir.empty()) {
         *configFile = pathFromCurrentDir;
     } else {
         Path tmp;
-        if (auto ec = fileGetCurrentDir(&tmp); ec) 
+        if (auto ec = fileGetCurrentDir(&tmp); ec)
             return false;
         *gitRoot = gitFindRoot(tmp.view());
         if (gitRoot->empty())
@@ -61,14 +61,14 @@ bool Dim::gitLoadConfig(
     if (gitRoot->empty())
         return false;
     bool found = false;
-    if (auto ec = fileExists(&found, *configFile)) 
+    if (auto ec = fileExists(&found, *configFile))
         return false;
     if (!found) {
         auto path = Path(envExecPath()).removeFilename()
             / Path(*configFile).filename();
         *configFile = move(path);
     }
-    if (auto ec = fileLoadBinaryWait(content, *configFile); ec) 
+    if (auto ec = fileLoadBinaryWait(content, *configFile); ec)
         return false;
 
     fin = {};

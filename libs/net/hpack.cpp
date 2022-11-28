@@ -462,8 +462,8 @@ void HpackEncode::header(
 
 //===========================================================================
 void HpackEncode::header(
-    HttpHdr name, 
-    const char value[], 
+    HttpHdr name,
+    const char value[],
     EnumFlags<HpackFlags> flags
 ) {
     header(toString(name), value, flags);

@@ -50,11 +50,11 @@ public:
 
 IConfigNotify * configMonitor(std::string_view file, IConfigNotify * notify);
 IConfigNotify * configMonitor(
-    std::string_view file, 
+    std::string_view file,
     std::unique_ptr<IConfigNotify> && notify
 );
 IConfigNotify * configMonitor(
-    std::string_view file, 
+    std::string_view file,
     std::function<void(const XDocument &)> fn
 );
 void configCloseWait(std::string_view file, IConfigNotify * notify);

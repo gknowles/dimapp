@@ -115,7 +115,7 @@ NEGOTIATE:
             { (unsigned) src.size(), SECBUFFER_TOKEN, (void *) src.data() },
             { (unsigned) size(alpn_chars) - 1,
                 SECBUFFER_APPLICATION_PROTOCOLS,
-                alpn 
+                alpn
             },
         };
         SecBufferDesc inDesc{

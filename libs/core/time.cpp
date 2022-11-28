@@ -120,7 +120,7 @@ static string toStringOnePart(Duration val) {
     auto secs = duration_cast<SecondsD>(val).count();
     const DurationScale * scale = s_durScales;
     for (; scale < end(s_durScales) - 1; ++scale) {
-        if (abs(secs) >= scale->secs) 
+        if (abs(secs) >= scale->secs)
             break;
     }
     auto out = format("{:.4g}{}", secs / scale->secs, scale->suffix);
@@ -132,7 +132,7 @@ static string toStringTwoPart(Duration val) {
     auto secs = duration_cast<SecondsD>(val).count();
     const DurationScale * scale = s_durScales;
     for (; scale < end(s_durScales) - 1; ++scale) {
-        if (abs(secs) >= scale->secs) 
+        if (abs(secs) >= scale->secs)
             break;
     }
     auto first = trunc(secs / scale->secs);
@@ -140,7 +140,7 @@ static string toStringTwoPart(Duration val) {
     if (scale < end(s_durScales) - 1) {
         secs -= first * scale->secs;
         auto second = round(abs(secs) / scale[1].secs);
-        if (second) 
+        if (second)
             out += format(" {}{}", second, scale[1].suffix);
     }
     return out;

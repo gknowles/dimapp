@@ -35,13 +35,13 @@ public:
     void closeWait_UNLK(unique_lock<mutex> && lk, FileMonitorHandle dir);
 
     void addMonitor_UNLK(
-        unique_lock<mutex> && lk, 
-        string_view file, 
+        unique_lock<mutex> && lk,
+        string_view file,
         IFileChangeNotify * notify
     );
     void removeMonitorWait_UNLK(
-        unique_lock<mutex> && lk, 
-        string_view file, 
+        unique_lock<mutex> && lk,
+        string_view file,
         IFileChangeNotify * notify
     );
 
@@ -181,8 +181,8 @@ void DirInfo::closeWait_UNLK(unique_lock<mutex> && lk, FileMonitorHandle dir) {
 
 //===========================================================================
 void DirInfo::addMonitor_UNLK(
-    unique_lock<mutex> && lk, 
-    string_view path, 
+    unique_lock<mutex> && lk,
+    string_view path,
     IFileChangeNotify * notify
 ) {
     assert(lk);
@@ -201,7 +201,7 @@ void DirInfo::addMonitor_UNLK(
         if (ntf == notify)
             return;
     }
-    if (fi.notifiers.empty()) 
+    if (fi.notifiers.empty())
         fileLastWriteTime(&fi.mtime, fullpath);
     fi.notifiers.push_back(notify);
 
@@ -233,7 +233,7 @@ void DirInfo::addMonitor_UNLK(
 
 //===========================================================================
 void DirInfo::removeMonitorWait_UNLK(
-    unique_lock<mutex> && lk, 
+    unique_lock<mutex> && lk,
     string_view file,
     IFileChangeNotify * notify
 ) {

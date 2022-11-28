@@ -150,9 +150,9 @@ bool TlsRecordDecrypt::parse(
                 if (m_cipher)
                     return parseError(kUnexpectedMessage);
                 [[fallthrough]];
-            case kContentAppData: 
+            case kContentAppData:
                 break;
-            default: 
+            default:
                 return parseError(kUnexpectedMessage);
             }
             [[fallthrough]];

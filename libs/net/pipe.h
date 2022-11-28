@@ -161,7 +161,7 @@ void pipeClose(IFactory<IPipeNotify> * factory, std::string_view pipeName);
 template <typename S>
 requires std::derived_from<S, IPipeNotify>
 inline void pipeListen(
-    std::string_view pipeName, 
+    std::string_view pipeName,
     EnumFlags<Pipe::OpenMode> oflags
 ) {
     auto factory = getFactory<IPipeNotify, S>();

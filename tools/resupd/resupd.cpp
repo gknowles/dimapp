@@ -73,13 +73,13 @@ inline static void writeStrChar(
         }
         os << '\\';
         switch (digits) {
-        case 3: 
-            os << (ch >> 6) % 8; 
+        case 3:
+            os << (ch >> 6) % 8;
             [[fallthrough]];
-        case 2: 
-            os << (ch >> 3) % 8; 
+        case 2:
+            os << (ch >> 3) % 8;
             [[fallthrough]];
-        case 1: 
+        case 1:
             os << ch % 8;
         }
         pos += digits + 1;

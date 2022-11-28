@@ -34,7 +34,7 @@ struct FileAppendStream::Impl {
 };
 
 //===========================================================================
-FileAppendStream::FileAppendStream() 
+FileAppendStream::FileAppendStream()
     : m_impl(new Impl)
 {}
 
@@ -43,7 +43,7 @@ FileAppendStream::FileAppendStream(
     int numBufs,
     int maxWrites,
     size_t pageSize
-) 
+)
     : FileAppendStream()
 {
     init(numBufs, maxWrites, pageSize);
@@ -57,8 +57,8 @@ FileAppendStream::~FileAppendStream() {
 }
 
 //===========================================================================
-FileAppendStream::operator bool() const { 
-    return (bool) m_impl->file; 
+FileAppendStream::operator bool() const {
+    return (bool) m_impl->file;
 }
 
 //===========================================================================
@@ -67,8 +67,8 @@ void FileAppendStream::init(int numBufs, int maxWrites, size_t pageSize) {
     m_impl->numBufs = numBufs;
     m_impl->maxWrites = maxWrites;
     m_impl->bufLen = pageSize;
-    assert(m_impl->numBufs 
-        && m_impl->maxWrites 
+    assert(m_impl->numBufs
+        && m_impl->maxWrites
         && m_impl->maxWrites <= m_impl->numBufs);
 }
 
@@ -82,7 +82,7 @@ bool FileAppendStream::open(string_view path, OpenExisting mode) {
     }
     FileHandle f;
     if (auto ec = fileOpen(&f, path, flags); !ec) {
-        if (!attach(f)) 
+        if (!attach(f))
             fileClose(f);
     }
     return (bool) *this;
@@ -98,7 +98,7 @@ bool FileAppendStream::attach(Dim::FileHandle f) {
     m_impl->file = f;
     if (!m_impl->buffers) {
         m_impl->buffers = (char *) mallocAligned(
-            m_impl->bufLen, 
+            m_impl->bufLen,
             m_impl->numBufs * m_impl->bufLen
         );
         __assume(m_impl->buffers);
@@ -110,9 +110,9 @@ bool FileAppendStream::attach(Dim::FileHandle f) {
     if (m_impl->filePos) {
         if (auto ec = fileReadWait(
             nullptr,
-            m_impl->buffers, 
-            m_impl->bufLen, 
-            m_impl->file, 
+            m_impl->buffers,
+            m_impl->bufLen,
+            m_impl->file,
             m_impl->filePos
         ); ec) {
             return false;
@@ -134,9 +134,9 @@ void FileAppendStream::close() {
         auto oflags = fileMode(m_impl->file);
         if (oflags.none(fm::fAligned)) {
             fileAppendWait(
-                nullptr, 
-                m_impl->file, 
-                m_impl->buf.data() - used, 
+                nullptr,
+                m_impl->file,
+                m_impl->buf.data() - used,
                 used
             );
         } else {
@@ -145,14 +145,14 @@ void FileAppendStream::close() {
             auto path = filePath(m_impl->file);
             fileClose(m_impl->file);
             if (auto ec = fileOpen(
-                &m_impl->file, 
-                path, 
+                &m_impl->file,
+                path,
                 fm::fReadWrite | fm::fBlocking
             ); !ec) {
                 fileAppendWait(
-                    nullptr, 
-                    m_impl->file, 
-                    m_impl->buf.data() - used, 
+                    nullptr,
+                    m_impl->file,
+                    m_impl->buf.data() - used,
                     used
                 );
             }
@@ -177,7 +177,7 @@ void FileAppendStream::append(string_view data) {
 
         unique_lock lk{m_impl->mut};
         m_impl->fullBufs += 1;
-        if (m_impl->buf.data() == 
+        if (m_impl->buf.data() ==
                 m_impl->buffers + m_impl->numBufs * m_impl->bufLen
         ) {
             m_impl->buf = {m_impl->buffers, m_impl->bufLen};
@@ -198,11 +198,11 @@ void FileAppendStream::write_LK() {
 
     const char * writeBuf;
     size_t writeCount;
-    auto epos = 
+    auto epos =
         (int) ((m_impl->buf.data() - m_impl->buffers) / m_impl->bufLen);
     if (m_impl->fullBufs > epos) {
         writeCount = (m_impl->fullBufs - epos) * m_impl->bufLen;
-        writeBuf = 
+        writeBuf =
             m_impl->buffers + m_impl->numBufs * m_impl->bufLen - writeCount;
         m_impl->lockedBufs += m_impl->fullBufs - epos;
         m_impl->fullBufs = epos;
@@ -276,8 +276,8 @@ FileStreamNotify::FileStreamNotify(
 {
     FileHandle file;
     auto ec = fileOpen(
-        &file, 
-        path, 
+        &file,
+        path,
         fm::fReadOnly | fm::fSequential | fm::fDenyNone
     );
     if (ec) {
@@ -299,7 +299,7 @@ bool FileStreamNotify::onFileRead(
 ) {
     auto eod = m_out.get() + data.data.size();
     *eod = 0;
-    if (!m_notify->onFileRead(bytesUsed, data) 
+    if (!m_notify->onFileRead(bytesUsed, data)
         || !data.more
     ) {
         fileClose(data.f);
@@ -583,8 +583,8 @@ error_code Dim::fileLoadBinaryWait(
 ) {
     FileHandle file;
     auto ec = fileOpen(
-        &file, 
-        path, 
+        &file,
+        path,
         fm::fReadOnly | fm::fDenyNone | fm::fBlocking
     );
     if (ec) {
@@ -636,8 +636,8 @@ error_code Dim::fileSaveBinaryWait(
 ) {
     FileHandle file;
     auto ec = fileOpen(
-        &file, 
-        path, 
+        &file,
+        path,
         fm::fReadWrite | fm::fCreat | fm::fTrunc | fm::fBlocking
     );
     if (ec) {

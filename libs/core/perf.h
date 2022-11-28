@@ -42,31 +42,31 @@ enum class PerfFormat {
 ***/
 
 std::atomic<int> & iperf(
-    std::string_view name, 
+    std::string_view name,
     PerfFormat fmt = PerfFormat::kDefault
 );
 std::atomic<unsigned> & uperf(
-    std::string_view name, 
+    std::string_view name,
     PerfFormat fmt = PerfFormat::kDefault
 );
 std::atomic<float> & fperf(
-    std::string_view name, 
+    std::string_view name,
     PerfFormat fmt = PerfFormat::kDefault
 );
 
 std::function<int()> & iperf(
-    std::string_view name, 
-    std::function<int()> fn, 
+    std::string_view name,
+    std::function<int()> fn,
     PerfFormat fmt = PerfFormat::kDefault
 );
 std::function<unsigned()> & uperf(
     std::string_view name,
-    std::function<unsigned()> fn, 
+    std::function<unsigned()> fn,
     PerfFormat fmt = PerfFormat::kDefault
 );
 std::function<float()> & fperf(
-    std::string_view name, 
-    std::function<float()> fn, 
+    std::string_view name,
+    std::function<float()> fn,
     PerfFormat fmt = PerfFormat::kDefault
 );
 

@@ -29,9 +29,9 @@ namespace Dim {
 *     - the trailing slash is removed, unless it is also the first character
 *       after the root
 *
-* 
+*
 *   Decomposition:
-* 
+*
 *   C:     /Windows/System32/icacls.exe
 *   C:     log              /server    .log
 *   C:                       myfile    .ext
@@ -41,7 +41,7 @@ namespace Dim {
 *   NOTE: The '/' after the 'dir' (assuming a dir is present) is part of
 *         neither 'dir' nor 'filename'. This is to be consistent with
 *         std::filesystem::path.
-* 
+*
 ***/
 
 class Path {
@@ -129,7 +129,7 @@ public:
 
     std::filesystem::path fsPath() const;
     const std::string & str() const & { return m_data; }
-    std::string str() const && { 
+    std::string str() const && {
         return std::move(const_cast<std::string &>(m_data)); }
     std::string_view view() const { return m_data; }
     const char * c_str() const;

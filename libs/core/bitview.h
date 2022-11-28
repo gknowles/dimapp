@@ -22,7 +22,7 @@ namespace Dim {
 *
 *   Unless otherwise indicated methods taking 'pos' and 'count' apply to a
 *   number of bits equal to:
-*       1. bits() - pos + 1 (i.e. all following), if count equals 
+*       1. bits() - pos + 1 (i.e. all following), if count equals
 *          std::dynamic_extent
 *       2. count, if pos + count <= bits()
 *       3. otherwise undefined, asserts in debug builds
@@ -116,7 +116,7 @@ private:
 *
 *   Unless otherwise indicated methods taking 'pos' and 'count' apply to a
 *   number of bits equal to:
-*       1. bits() - pos + 1 (i.e. all following), if count equals 
+*       1. bits() - pos + 1 (i.e. all following), if count equals
 *          std::dynamic_extent
 *       2. count, if pos + count <= bits()
 *       3. otherwise undefined, asserts in debug builds

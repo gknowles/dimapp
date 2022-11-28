@@ -335,7 +335,7 @@ void FileReader::onNotify() {
     data.f = m_file->m_f;
     data.ec = m_err.code();
     size_t bytesUsed = 0;
-    if (!m_notify->onFileRead(&bytesUsed, data)) 
+    if (!m_notify->onFileRead(&bytesUsed, data))
         more = false;
     m_offset += m_bytes;
     if (!more) {
@@ -472,7 +472,7 @@ error_code Dim::fileLastWriteTime(TimePoint * out, string_view path) {
 
 //===========================================================================
 error_code Dim::fileAttrs(
-    EnumFlags<File::Attrs> * out, 
+    EnumFlags<File::Attrs> * out,
     std::string_view path
 ) {
     *out = {};
@@ -491,11 +491,11 @@ error_code Dim::fileAttrs(
 
 //===========================================================================
 error_code Dim::fileAttrs(
-    std::string_view path, 
+    std::string_view path,
     EnumFlags<File::Attrs> attrs
 ) {
     if (!SetFileAttributesW(
-        toWstring(path).c_str(), 
+        toWstring(path).c_str(),
         (DWORD) attrs.underlying()
     )) {
         WinError err;
@@ -585,8 +585,8 @@ static error_code allocHandle(
 
 //===========================================================================
 error_code Dim::fileOpen(
-    FileHandle * out, 
-    string_view path, 
+    FileHandle * out,
+    string_view path,
     EnumFlags<File::OpenMode> mode
 ) {
     using enum File::OpenMode;
@@ -700,8 +700,8 @@ static string getName(HANDLE handle) {
 
 //===========================================================================
 error_code Dim::fileOpen(
-    FileHandle * out, 
-    intptr_t osfhandle, 
+    FileHandle * out,
+    intptr_t osfhandle,
     EnumFlags<File::OpenMode> mode
 ) {
     auto handle = (HANDLE) osfhandle;
@@ -711,8 +711,8 @@ error_code Dim::fileOpen(
 
 //===========================================================================
 error_code Dim::fileCreateTemp(
-    FileHandle * out, 
-    EnumFlags<File::OpenMode> mode, 
+    FileHandle * out,
+    EnumFlags<File::OpenMode> mode,
     string_view suffix
 ) {
     Path fname;
@@ -724,7 +724,7 @@ error_code Dim::fileCreateTemp(
 
 //===========================================================================
 static error_code attachStdHandle(
-    FileHandle * out, 
+    FileHandle * out,
     int fd,
     string_view path,
     EnumFlags<File::OpenMode> mode // must be either fReadOnly or fReadWrite
@@ -912,7 +912,7 @@ error_code Dim::fileLastWriteTime(TimePoint * out, FileHandle f) {
 //===========================================================================
 string_view Dim::filePath(FileHandle f) {
     auto file = getInfo(f);
-    if (!file) 
+    if (!file)
         return {};
     return file->m_path;
 }
@@ -964,7 +964,7 @@ error_code Dim::fileAlignment(FileAlignment * out, FileHandle f) {
         (DWORD) sizeof fi
     )) {
         WinError err;
-        logMsgError() << "GetFileInformationByHandleEx(" << file->m_path 
+        logMsgError() << "GetFileInformationByHandleEx(" << file->m_path
             << "): " << err;
         return err.code();
     }
@@ -1100,11 +1100,11 @@ error_code Dim::fileWriteWait(
     assert(file);
     FileWriter op(nullptr, s_hq);
     auto err = op.start(
-        nullptr, 
-        file, 
-        const_cast<void *>(buf), 
-        bufLen, 
-        off, 
+        nullptr,
+        file,
+        const_cast<void *>(buf),
+        bufLen,
+        off,
         bufLen
     );
     return err.code();
@@ -1113,8 +1113,8 @@ error_code Dim::fileWriteWait(
 //===========================================================================
 error_code Dim::fileWriteWait(
     size_t * bytes,
-    FileHandle f, 
-    int64_t offset, 
+    FileHandle f,
+    int64_t offset,
     string_view data
 ) {
     return fileWriteWait(bytes, f, offset, data.data(), data.size());
@@ -1147,8 +1147,8 @@ void Dim::fileAppend(
 //===========================================================================
 error_code Dim::fileAppendWait(
     size_t * bytes,
-    FileHandle f, 
-    const void * buf, 
+    FileHandle f,
+    const void * buf,
     size_t bufLen
 ) {
     return fileWriteWait(bytes, f, 0xffff'ffff'ffff'ffff, buf, bufLen);
@@ -1156,8 +1156,8 @@ error_code Dim::fileAppendWait(
 
 //===========================================================================
 error_code Dim::fileAppendWait(
-    size_t * bytes, 
-    FileHandle f, 
+    size_t * bytes,
+    FileHandle f,
     string_view data
 ) {
     return fileAppendWait(bytes, f, data.data(), data.size());
@@ -1201,9 +1201,9 @@ static error_code updateNamedAccess(
     WinError err = 0;
     SECURITY_DESCRIPTOR * sd = nullptr;
     ACL * aclNew = nullptr;
-    Finally fin([&]() { 
-        if (sd) 
-            LocalFree(sd); 
+    Finally fin([&]() {
+        if (sd)
+            LocalFree(sd);
         if (aclNew)
             LocalFree(aclNew);
     });
@@ -1509,7 +1509,7 @@ static error_code openView(
     WinError tmp = (WinError::NtStatus) s_NtClose(sec);
     if (tmp) {
         logMsgError() << "NtClose(" << file->m_path << "): " << tmp;
-        if (!err) 
+        if (!err)
             err = tmp;
     }
 

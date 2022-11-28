@@ -36,8 +36,8 @@ public:
     ~ConfigFile();
 
     void monitor_UNLK(
-        unique_lock<mutex> && lk, 
-        string_view relpath, 
+        unique_lock<mutex> && lk,
+        string_view relpath,
         IConfigNotify * notify,
         bool takeOwnership
     );
@@ -95,8 +95,8 @@ ConfigFile::~ConfigFile() {
 
 //===========================================================================
 void ConfigFile::monitor_UNLK(
-    unique_lock<mutex> && lk, 
-    string_view relpath, 
+    unique_lock<mutex> && lk,
+    string_view relpath,
     IConfigNotify * notify,
     bool takeOwnersip
 ) {
@@ -126,7 +126,7 @@ void ConfigFile::monitor_UNLK(
 
 //===========================================================================
 bool ConfigFile::closeWait_UNLK(
-    unique_lock<mutex> && lk, 
+    unique_lock<mutex> && lk,
     IConfigNotify * notify
 ) {
     assert(lk);
@@ -185,10 +185,10 @@ void ConfigFile::onFileChange(string_view fullpath) {
         if (bytes) {
             content.resize((size_t) bytes);
             if (auto ec = fileReadWait(
-                nullptr, 
-                content.data(), 
-                content.size(), 
-                f, 
+                nullptr,
+                content.data(),
+                content.size(),
+                f,
                 0
             ); ec) {
                 bytes = 0;
@@ -203,7 +203,7 @@ void ConfigFile::onFileChange(string_view fullpath) {
 
 //===========================================================================
 bool ConfigFile::notify_UNLK(
-    unique_lock<mutex> && lk, 
+    unique_lock<mutex> && lk,
     IConfigNotify * notify
 ) {
     assert(lk);
@@ -315,7 +315,7 @@ static bool getFullpath(Path * out, string_view file) {
 
 //===========================================================================
 static IConfigNotify * addMonitor(
-    string_view file, 
+    string_view file,
     IConfigNotify * notify,
     bool takeOwnership
 ) {
@@ -336,7 +336,7 @@ IConfigNotify * Dim::configMonitor(string_view file, IConfigNotify * notify) {
 
 //===========================================================================
 IConfigNotify * Dim::configMonitor(
-    string_view file, 
+    string_view file,
     unique_ptr<IConfigNotify> && notify
 ) {
     return addMonitor(file, notify.release(), true);
@@ -344,7 +344,7 @@ IConfigNotify * Dim::configMonitor(
 
 //===========================================================================
 IConfigNotify * Dim::configMonitor(
-    string_view file, 
+    string_view file,
     function<void(const XDocument &)> fn
 ) {
     struct Notify : IConfigNotify {
@@ -395,14 +395,14 @@ void Dim::configChange(
 
 //===========================================================================
 static bool match(const XNode & node, const ConfigContext & context) {
-    enum { 
-        kInvalid, 
-        kName, 
-        kIndex, 
-        kConfig, 
-        kModule, 
-        kGroupType, 
-        kGroupIndex 
+    enum {
+        kInvalid,
+        kName,
+        kIndex,
+        kConfig,
+        kModule,
+        kGroupType,
+        kGroupIndex
     };
     constexpr TokenTable::Token keys[] = {
         { kName, "name" },
@@ -437,7 +437,7 @@ static const XNode * find(
     string_view name
 ) {
     for (auto&& e : elems(node, name)) {
-        if (match(e, context)) 
+        if (match(e, context))
             return &e;
     }
     for (auto&& f : elems(node, "Filter")) {

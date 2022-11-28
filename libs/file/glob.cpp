@@ -29,6 +29,7 @@ struct Glob::Iter::Info {
     EnumFlags<Glob::Mode> flags{};
     vector<DirInfo> pos;
     Glob::Entry entry;
+    Search search;
 };
 
 //===========================================================================
@@ -55,8 +56,8 @@ static bool match(const Glob::Iter::Info & info) {
 
 //===========================================================================
 static void copy(
-    Glob::Entry * entry, 
-    fs::directory_iterator p, 
+    Glob::Entry * entry,
+    fs::directory_iterator p,
     bool firstPass
 ) {
     entry->path = p->path();
@@ -82,7 +83,7 @@ ENTER_DIR:
         // We were at the directory, now start it's contents
         auto q = fs::directory_iterator(*p, ec);
         if (q == end(q)) {
-            // No contents, skip over pushing and popping the dir info stack 
+            // No contents, skip over pushing and popping the dir info stack
             // and go straight to processing the exit.
             goto DIR_EXITED;
         }
@@ -112,7 +113,7 @@ CHECK_CURRENT:
 DIR_EXITED:
         if (info->flags.any(fDirsLast)) {
             // Always return a directory when leaving it if fDirsLast is
-            // defined. No validation is required, it was checked to be 
+            // defined. No validation is required, it was checked to be
             // desired before it was entered.
             cur->firstPass = false;
             copy(&info->entry, p, cur->firstPass);
@@ -123,10 +124,10 @@ DIR_EXITED:
 
     // check filter
     copy(&info->entry, p, cur->firstPass);
-    if (!match(*info)) 
+    if (!match(*info))
         goto TRY_NEXT;
     if (info->entry.isdir && info->flags.none(fDirsFirst)) {
-        // Not reporting directories when entered, so rather than reporting 
+        // Not reporting directories when entered, so rather than reporting
         // it, start searching it's contents.
         goto ENTER_DIR;
     }
@@ -182,11 +183,11 @@ Glob::Iter Dim::fileGlob(
     info->flags = flags;
     error_code ec;
     auto path = Path{info->path.parentPath()};
-    auto it = fs::directory_iterator{path.empty() ? "." : path.fsPath(), ec};
-    if (it == end(it)) {
+    auto p = fs::directory_iterator{path.empty() ? "." : path.fsPath(), ec};
+    if (p == end(p)) {
         info.reset();
     } else {
-        info->pos.push_back({it});
+        info->pos.push_back({p});
         if (!find(info.get(), false))
             info.reset();
     }

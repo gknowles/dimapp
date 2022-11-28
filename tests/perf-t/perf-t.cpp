@@ -47,9 +47,9 @@ template<typename T, typename U>
 requires is_convertible_v<U, T>
 static void testValue(
     int line,
-    atomic<T> & cnt, 
-    string_view name, 
-    U val, 
+    atomic<T> & cnt,
+    string_view name,
+    U val,
     string_view expected
 ) {
     cnt = (T) val;

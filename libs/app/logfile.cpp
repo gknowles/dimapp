@@ -82,9 +82,9 @@ void LogBuffer::writeLog(string_view msg, bool wait) {
         }
         if (wait) {
             fileAppendWait(
-                nullptr, 
-                m_file, 
-                m_writing.data(), 
+                nullptr,
+                m_file,
+                m_writing.data(),
                 m_writing.size()
             );
             m_writing.clear();
@@ -454,12 +454,12 @@ void Dim::iLogFileInitialize() {
 void Dim::iLogFileWebInitialize() {
     if (appFlags().any(fAppWithWebAdmin)) {
         httpRouteAdd({
-            .notify = &s_jsonLogFiles, 
+            .notify = &s_jsonLogFiles,
             .path = "/srv/file/logs.json",
         });
         httpRouteAdd({
-            .notify = &s_jsonLogTail, 
-            .path = "/srv/file/logs/tail/", 
+            .notify = &s_jsonLogTail,
+            .path = "/srv/file/logs/tail/",
             .recurse = true
         });
     }

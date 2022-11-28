@@ -68,8 +68,8 @@ public:
 
 public:
     PipeBase(
-        string_view name, 
-        EnumFlags<Pipe::OpenMode> oflags, 
+        string_view name,
+        EnumFlags<Pipe::OpenMode> oflags,
         TaskQueueHandle hq
     );
     virtual ~PipeBase();
@@ -565,8 +565,8 @@ public:
 
 public:
     AcceptPipe(
-        string_view name, 
-        EnumFlags<Pipe::OpenMode> oflags, 
+        string_view name,
+        EnumFlags<Pipe::OpenMode> oflags,
         TaskQueueHandle hq
     );
     ~AcceptPipe();

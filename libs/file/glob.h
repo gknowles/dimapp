@@ -35,7 +35,7 @@ enum Mode : unsigned {
     // returned unless fDirsFirst and/or fDirsLast is also set.
     fDirsOnly  = 0x04,
 
-    // Hidden files and directories are excluded by default, this flag 
+    // Hidden files and directories are excluded by default, this flag
     // causes them to be included.
     fHidden    = 0x08,
 };
@@ -77,8 +77,8 @@ inline Iter end(const Iter & iter) { return {}; }
 ***/
 
 Glob::Iter fileGlob(
-    std::string_view dir, 
-    std::string_view name = {}, 
+    std::string_view dir,
+    std::string_view name = {},
     EnumFlags<Glob::Mode> flags = {}
 );
 

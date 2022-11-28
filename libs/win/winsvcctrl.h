@@ -44,7 +44,7 @@ struct WinServiceConfig {
         kDefault = kOwn,
     };
     Type serviceType {};
-    
+
     enum class Start {
         kInvalid,
         kAuto,
@@ -67,15 +67,15 @@ struct WinServiceConfig {
 
         kDefault = kNormal,
     };
-    ErrCtrl errorControl {};   
+    ErrCtrl errorControl {};
 
-    std::optional<std::string> progWithArgs;               
+    std::optional<std::string> progWithArgs;
                                             // Default: path to this executable
-    std::optional<std::string> loadOrderGroup;     
+    std::optional<std::string> loadOrderGroup;
                                             // Default: none
-    std::optional<unsigned> loadOrderTag {};           
+    std::optional<unsigned> loadOrderTag {};
                                             // Default: none
-    std::optional<std::vector<std::string>> deps;          
+    std::optional<std::vector<std::string>> deps;
                                             // Default: none
     std::optional<std::string> account;     // Default: NT Service\<serviceName>
     std::optional<std::string> password;    // Default: none
@@ -90,13 +90,13 @@ struct WinServiceConfig {
         kDefault = kCrashOnly,
     };
     FailureFlag failureFlag {};             // Default: kCrashOnly
-    
-    std::optional<std::chrono::seconds> failureReset {};               
+
+    std::optional<std::chrono::seconds> failureReset {};
                                             // Default: none
     std::optional<std::string> rebootMsg; // used with FailAction::kReboot
 
     // required by FailAction::kRunCommand
-    std::string failureProgWithArgs; 
+    std::string failureProgWithArgs;
 
     struct Action {
         enum class Type {
@@ -111,7 +111,7 @@ struct WinServiceConfig {
         Type type {};
         std::chrono::milliseconds delay;
     };
-    std::optional<std::vector<Action>> failureActions;     
+    std::optional<std::vector<Action>> failureActions;
                                             // Default: none
 
     enum class PreferredNode {
@@ -137,12 +137,12 @@ struct WinServiceConfig {
 
         kDefault = kNone,
     };
-    SidType sidType {};        
+    SidType sidType {};
 
-    // Can be enabled if the service account is kLocalSystem and the service 
+    // Can be enabled if the service account is kLocalSystem and the service
     // type is kOwn, kShared, kUserOwn, or kUserShared.
     // https://docs.microsoft.com/windows/win32/services/interactive-services
-    bool interactive {}; 
+    bool interactive {};
 
     struct Trigger {
         enum class Type {
@@ -171,7 +171,7 @@ struct WinServiceConfig {
 
         // For kCustom, the guid of the event provider
         // https://docs.microsoft.com/windows/win32/api/evntprov/nf-evntprov-eventregister
-        // 
+        //
         // For kDeviceInterfaceArrival, the device interface class
         // https://docs.microsoft.com/windows-hardware/drivers/install/overview-of-device-interface-classes
         std::string subTypeGuid {};
@@ -199,7 +199,7 @@ struct WinServiceConfig {
         kDefault = kNone,
     };
     // Only allowed if executable is be signed.
-    LaunchProt launchProt {};           
+    LaunchProt launchProt {};
 };
 
 struct WinServiceStatus {

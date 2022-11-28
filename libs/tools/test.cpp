@@ -19,11 +19,11 @@ using namespace Dim;
 void Dim::testSignalShutdown() {
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);
-        cerr << "*** TEST FAILURES: " << errs 
+        cerr << "*** TEST FAILURES: " << errs
             << " (" << appBaseName() << ")" << endl;
         appSignalShutdown(EX_SOFTWARE);
     } else {
-        cout << "All tests passed" 
+        cout << "All tests passed"
             << " (" << appBaseName() << ")" << endl;
         appSignalShutdown(EX_OK);
     }

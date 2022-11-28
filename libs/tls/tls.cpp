@@ -215,16 +215,16 @@ void TlsRecordWriter::end() {
     size_t count = m_buf.size() - pos.pos;
     char buf[4];
     switch (pos.width) {
-    default: 
+    default:
         assert(0);
         break;
-    case 3: 
+    case 3:
         buf[1] = uint8_t(count >> 16);
         [[fallthrough]];
-    case 2: 
+    case 2:
         buf[2] = uint8_t(count >> 8);
         [[fallthrough]];
-    case 1: 
+    case 1:
         buf[3] = uint8_t(count);
     };
     m_buf.replace(pos.pos, pos.width, buf + 4 - pos.width, pos.width);

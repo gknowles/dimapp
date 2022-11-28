@@ -51,8 +51,8 @@ static void failed(int line, const char msg[]) {
 
 //===========================================================================
 static void printAction(
-    StrTrie * vals, 
-    string_view val, 
+    StrTrie * vals,
+    string_view val,
     string_view action
 ) {
     if (s_verbose) {
@@ -78,7 +78,7 @@ static bool erase(StrTrie * vals, string_view val) {
 
 //===========================================================================
 static void insertTest(
-    const vector<string_view> & strs, 
+    const vector<string_view> & strs,
     const vector<string_view> & ghosts = {}
 ) {
     int line = 0;
@@ -91,7 +91,7 @@ static void insertTest(
         EXPECT(vals.contains(str));
         EXPECT(!insert(&vals, str));
     }
-    for (auto&& str : ghosts) 
+    for (auto&& str : ghosts)
         EXPECT(!vals.contains(str));
     for (auto&& str : strs) {
         EXPECT(erase(&vals, str));
@@ -114,7 +114,7 @@ inline static void internalTests() {
     // SEG NODE
     // Fork last seg with end of new key
     insertTest({"abc", ""}, {"0", "a", "abcd"});            // start of seg
-    insertTest({"abc", "a"}, {"", "0", "b", "ab", "ac"});   // high mid 
+    insertTest({"abc", "a"}, {"", "0", "b", "ab", "ac"});   // high mid
     insertTest({"abc", "ab"}, {"a", "ac"});                 // high end
 
     // Fork last seg with key
@@ -165,7 +165,7 @@ inline static void internalTests() {
     EXPECT(*vi == "abc");
     vi = vals.findLessEqual("abd");
     EXPECT(*vi == "abd");
-    
+
     EXPECT(vals.back() == "aw");
 
     for (auto&& key : keys) {
@@ -182,7 +182,7 @@ inline static void randomFill(size_t count, size_t maxLen, size_t charVals) {
         return;
     if (s_verbose) {
         cout << "\n> RANDOM FILL: "
-            << "count = " << count 
+            << "count = " << count
             << ", maxLen = " << maxLen
             << ", charVals = " << charVals
             << endl;

@@ -22,12 +22,11 @@ static float getBuildAge() {
     auto dur = timeNow() - s_buildDate;
     auto secs = (float) duration_cast<chrono::duration<double>>(dur).count();
     return secs;
-    
 }
 
 static auto & s_perfBuildAge = fperf(
-    "app.build age", 
-    getBuildAge, 
+    "app.build age",
+    getBuildAge,
     PerfFormat::kDuration
 );
 
@@ -41,13 +40,13 @@ static auto & s_perfBuildAge = fperf(
 //===========================================================================
 void Dim::iAppPerfInitialize() {
     auto ver = appVersion();
-    if (ver.major) 
+    if (ver.major)
         uperf("app.version (major)") = ver.major;
-    if (ver.minor) 
+    if (ver.minor)
         uperf("app.version (minor)") = ver.minor;
-    if (ver.patch) 
+    if (ver.patch)
         uperf("app.version (patch)") = ver.patch;
-    if (ver.build) 
+    if (ver.build)
         uperf("app.version (build)") = ver.build;
 
     s_buildDate = envExecBuildTime();

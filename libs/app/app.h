@@ -12,7 +12,7 @@
 //      stuff, and eventually calls appSignalShutdown(). A command line
 //      tool might do all its work and signal shutdown from inside onAppRun.
 //      Whereas a server might start listening for socket connections and
-//      return, eventually calling appSignalShutdown() in response to some 
+//      return, eventually calling appSignalShutdown() in response to some
 //      later event.
 // 4. Stopping - process all shutdown monitors and shutdown the framework
 // 5. Stopped - framework is no longer running and returns from appRun call
@@ -139,7 +139,7 @@ int appExitCode();
 
 // Application directory structure
 // If bin dir name is "bin":
-//  root 
+//  root
 //      /bin
 //      /conf
 //      /crash
@@ -194,7 +194,7 @@ bool appLogPath(
 ***/
 
 // Signals shutdown to begin, the exit code will be returned from appRun()
-// after shutdown finishes. However, if the exit code is EX_PENDING it 
+// after shutdown finishes. However, if the exit code is EX_PENDING it
 // immediately returns without doing anything.
 //
 // When running as a Windows service, a call to set SERVICE_STOP_PENDING

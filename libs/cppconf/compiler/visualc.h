@@ -51,9 +51,9 @@
 #pragma warning(default: \
     4062 /* enumerator 'identifier' in a switch of enum 'enumeration' is not
             explicitly handled by a case label */ \
-    4255 /* 'function': no function prototype given: converting '()' to 
+    4255 /* 'function': no function prototype given: converting '()' to
             '(void)' */ \
-    4263 /* 'function' : member function does not override any base class 
+    4263 /* 'function' : member function does not override any base class
             virtual member function */ \
     4265 /* 'class': class has virtual functions, but destructor is not
             virtual */ \
@@ -66,16 +66,16 @@
     5022 /* 'type': multiple move constructors specified */ \
     5023 /* detected #pragma warning(push) with no corresponding #pragma
             warning(pop) */ \
-    5032 /* detected #pragma warning(push) with no corresponding #pragma 
+    5032 /* detected #pragma warning(push) with no corresponding #pragma
             warning(pop) */ \
     5038 /* data member 'ident1' will be initialized after data member
             'ident2' */ \
-    5041 /* 'member-name': out-of-line definition for constexpr static data 
+    5041 /* 'member-name': out-of-line definition for constexpr static data
             member is not needed and is deprecated in C++17. */ \
-    5240 /* 'attribute-name': attribute is ignored in this syntactic 
+    5240 /* 'attribute-name': attribute is ignored in this syntactic
             position */ \
-    5249 /* 'bitfield' of type 'enumeration_name' has named enumerators with 
-            values that cannot be represented in the given bit field width of 
+    5249 /* 'bitfield' of type 'enumeration_name' has named enumerators with
+            values that cannot be represented in the given bit field width of
             'bitfield_width'. */ \
 )
 

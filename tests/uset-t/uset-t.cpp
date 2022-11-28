@@ -221,7 +221,7 @@ static void app(int argc, char *argv[]) {
 
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);
-        cerr << "*** TEST FAILURES: " << errs 
+        cerr << "*** TEST FAILURES: " << errs
             << " (" << appBaseName() << ")" << endl;
         appSignalShutdown(EX_SOFTWARE);
     } else {

@@ -403,8 +403,8 @@ static void addDelayedEvents(
 ) {
     for (auto && sv : sp.delayedEvents) {
         events.push_back(sv);
-        if (sv.flags.any(Element::fOnStartW 
-            | Element::fOnEndW 
+        if (sv.flags.any(Element::fOnStartW
+            | Element::fOnEndW
             | Element::fOnCharW
         )) {
             events.back().distance += 1;
@@ -634,7 +634,7 @@ static void removeConflicts(
         if (mi->flags.any(Element::fCharEvents)) {
             // char can shift around start events
             for (;;) {
-                if (events[evi].flags.none(Element::fStartEvents) 
+                if (events[evi].flags.none(Element::fStartEvents)
                     || ++evi == numEvents
                 ) {
                     goto UNMATCHED;

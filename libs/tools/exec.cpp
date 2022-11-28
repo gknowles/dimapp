@@ -30,7 +30,7 @@ void Dim::execTool(
         vector<int> codes;
 
         void onExecComplete(
-            ExecResult::Type exitType, 
+            ExecResult::Type exitType,
             int exitCode
         ) override {
             if (exitType != ExecResult::kExited) {

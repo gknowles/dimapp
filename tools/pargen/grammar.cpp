@@ -366,7 +366,7 @@ bool copyRules(
         return true;
     }
     auto & elem = *ib.first;
-    if (elem.flags.any(Element::fFunction) 
+    if (elem.flags.any(Element::fFunction)
         && elem.flags.any(Element::fCharEvents)
     ) {
         logMsgError() << "Rule with both Function and Char, " << elem.value;

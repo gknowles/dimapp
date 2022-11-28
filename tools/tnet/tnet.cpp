@@ -197,7 +197,7 @@ bool ConsoleReader::onFileRead(
     if (m_input) {
         if (m_isFile) {
             uint64_t fsize = 0;
-            if (!bytes 
+            if (!bytes
                 || fileSize(&fsize, data.f)
                 || (uint64_t) data.offset == fsize
             ) {

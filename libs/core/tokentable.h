@@ -75,9 +75,9 @@ private:
 
     struct Index {
         // Position in m_values of value being indexed.
-        int pos{0};         
+        int pos{0};
         // Distance from ideal position in index. -1 if no hash collison.
-        int distance{-1};   
+        int distance{-1};
     };
     std::vector<Value> m_values;
     std::vector<Index> m_byName;
@@ -99,7 +99,7 @@ inline auto TokenTable::find(std::string_view name, auto defId) const {
 
 //===========================================================================
 inline const char * TokenTable::findName(
-    auto id, 
+    auto id,
     const char defName[]
 ) const {
     const char * name;

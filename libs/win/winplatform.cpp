@@ -95,20 +95,20 @@ static float getUptime() {
 }
 
 static auto & s_perfWorkMem = fperf(
-    "proc.memory (working)", 
-    getWorkMem, 
+    "proc.memory (working)",
+    getWorkMem,
     PerfFormat::kSiUnits
 );
 static auto & s_perfPrivateMem = fperf(
-    "proc.memory (private)", 
-    getPrivateMem, 
+    "proc.memory (private)",
+    getPrivateMem,
     PerfFormat::kSiUnits
 );
 static auto & s_perfKernelTime = fperf("proc.cputime (kernel)", getKernelTime);
 static auto & s_perfUserTime = fperf("proc.cputime (total)", getTotalTime);
 static auto & s_perfUptime = fperf(
-    "proc.uptime", 
-    getUptime, 
+    "proc.uptime",
+    getUptime,
     PerfFormat::kDuration
 );
 

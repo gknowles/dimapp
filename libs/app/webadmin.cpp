@@ -26,7 +26,7 @@ static vector<Path> s_webRoots;
 
 //===========================================================================
 static void addRoute(
-    IJBuilder * out, 
+    IJBuilder * out,
     const HttpRouteInfo & ri,
     bool active = false
 ) {
@@ -60,7 +60,7 @@ static void addRoute(
 
 //===========================================================================
 JBuilder IWebAdminNotify::initResponse(
-    HttpResponse * res, 
+    HttpResponse * res,
     unsigned reqId,
     const HttpRequest & msg
 ) {
@@ -73,7 +73,7 @@ JBuilder IWebAdminNotify::initResponse(
     auto ri = httpRouteGetInfo(reqId);
     auto root = Path(msg.query().path);
     auto segs = count(ri.path.begin(), ri.path.end(), '/');
-    for (auto i = 0; i < segs; ++i) 
+    for (auto i = 0; i < segs; ++i)
         root.removeFilename();
     auto relPath = ri.path.substr(root.str().size() - 1);
     JBuilder bld(&res->body());
@@ -137,7 +137,7 @@ void WebFiles::onHttpRequest(unsigned reqId, HttpRequest & msg) {
         qpath.remove_prefix(1);
     Path path;
     for (auto&& root : s_webRoots) {
-        if (fileChildPath(&path, root, qpath, false)) 
+        if (fileChildPath(&path, root, qpath, false))
             continue;
         bool found = false;
         if (!fileDirExists(&found, path) && found)
@@ -268,7 +268,7 @@ void JsonRoutes::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     auto bld = initResponse(&res, reqId, msg);
     bld.member("routes");
     bld.array();
-    for (auto&& info : infos) 
+    for (auto&& info : infos)
         addRoute(&bld, info);
     bld.end();
     bld.end();
@@ -360,7 +360,7 @@ void ConfigAppXml::onConfigChange(const XDocument & doc) {
         s_webRoots.push_back(Path(root));
     if (s_webRoots.empty())
         s_webRoots.push_back(Path("web"));
-    for (auto&& root : s_webRoots) 
+    for (auto&& root : s_webRoots)
         root.resolve(appRootDir());
 }
 
@@ -382,7 +382,7 @@ static CrashFiles s_crashFiles;
 
 //===========================================================================
 void Dim::iWebAdminInitialize() {
-    if (appFlags().none(fAppWithWebAdmin)) 
+    if (appFlags().none(fAppWithWebAdmin))
         return;
 
     configMonitor("app.xml", &s_appXml);
@@ -392,8 +392,8 @@ void Dim::iWebAdminInitialize() {
         .path = "/",
     });
     httpRouteAdd({
-        .notify = &s_webFiles, 
-        .path = "/web", 
+        .notify = &s_webFiles,
+        .path = "/web",
         .recurse = true
     });
 
@@ -406,16 +406,16 @@ void Dim::iWebAdminInitialize() {
         .renderPath = "/web/srv/about-counters.html",
     });
     httpRouteAdd({
-        .notify = &s_jsonCounters, 
+        .notify = &s_jsonCounters,
         .path = "/srv/about/counters.json",
     });
     httpRouteAdd({
-        .notify = &s_jsonAccount, 
-        .path = "/srv/about/account.json", 
+        .notify = &s_jsonAccount,
+        .path = "/srv/about/account.json",
     });
     httpRouteAdd({
-        .notify = &s_jsonComputer, 
-        .path = "/srv/about/computer.json", 
+        .notify = &s_jsonComputer,
+        .path = "/srv/about/computer.json",
     });
     httpRouteAdd({
         .notify = nullptr,
@@ -431,15 +431,15 @@ void Dim::iWebAdminInitialize() {
         .renderPath = "/web/srv/network-routes.html",
     });
     httpRouteAdd({
-        .notify = nullptr, 
+        .notify = nullptr,
         .path = "/srv/conns.json",
     });
     httpRouteAdd({
-        .notify = &s_jsonRoutes, 
+        .notify = &s_jsonRoutes,
         .path = "/srv/network/routes.json",
     });
     httpRouteAdd({
-        .notify = nullptr, 
+        .notify = nullptr,
         .path = "/srv/messages.json",
     });
 
@@ -453,12 +453,12 @@ void Dim::iWebAdminInitialize() {
         .renderPath = "/web/srv/file-logs.html"
     });
     httpRouteAdd({
-        .notify = &s_jsonCrashFiles, 
+        .notify = &s_jsonCrashFiles,
         .path = "/srv/file/crashes.json",
     });
     httpRouteAdd({
-        .notify = &s_crashFiles, 
-        .path = "/srv/file/crashes/", 
+        .notify = &s_crashFiles,
+        .path = "/srv/file/crashes/",
         .recurse = true,
     });
 }

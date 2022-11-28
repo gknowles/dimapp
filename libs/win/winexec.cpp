@@ -496,7 +496,7 @@ bool ExecProgram::onAccept(StdStream strm) {
             << WinError{};
         lk.unlock();
         terminate();
-        postJobExit();  
+        postJobExit();
         return true;
     }
 
@@ -572,7 +572,7 @@ void ExecProgram::onJobExit() {
         m_exitCode = rc;
     } else {
         WinError err;
-        m_exitType = modeWas == kRunStarting 
+        m_exitType = modeWas == kRunStarting
             ? ExecResult::kNotStarted
             : ExecResult::kCanceled;
         m_exitCode = -1;
@@ -729,7 +729,7 @@ struct SimpleExecNotify : public IExecNotify {
 
 //===========================================================================
 void SimpleExecNotify::onExecComplete(
-    ExecResult::Type exitType, 
+    ExecResult::Type exitType,
     int exitCode
 ) {
     m_res.exitType = exitType;

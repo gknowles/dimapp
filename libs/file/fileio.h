@@ -83,7 +83,7 @@ std::error_code fileGetCurrentDir(Path * out, std::string_view drive = {});
 // "path" is resolved relative to the current dir of the drive (which defaults
 // to current drive) given in the path.
 std::error_code fileSetCurrentDir(
-    std::string_view path, 
+    std::string_view path,
     Path * out = nullptr
 );
 
@@ -142,7 +142,7 @@ std::error_code fileCreateDirs(std::string_view path);
 
 std::error_code fileTempDir(Path * out);
 std::error_code fileTempName(
-    Path * out, 
+    Path * out,
     std::string_view suffix = ".tmp"
 );
 
@@ -183,13 +183,13 @@ struct FileHandle : HandleBase {};
 
 std::error_code fileOpen(
     FileHandle * out,
-    std::string_view path, 
+    std::string_view path,
     EnumFlags<File::OpenMode> modeFlags
 );
 //  EINVAL
 std::error_code fileOpen(
     FileHandle * out,
-    intptr_t osfhandle, 
+    intptr_t osfhandle,
     EnumFlags<File::OpenMode> modeFlags
 );
 
@@ -365,8 +365,8 @@ std::error_code fileWriteWait(
 );
 std::error_code fileWriteWait(
     size_t * out,
-    FileHandle f, 
-    int64_t offset, 
+    FileHandle f,
+    int64_t offset,
     std::string_view data
 );
 
@@ -385,13 +385,13 @@ void fileAppend(
 );
 std::error_code fileAppendWait(
     size_t * out,
-    FileHandle f, 
-    const void * buf, 
+    FileHandle f,
+    const void * buf,
     size_t bufLen
 );
 std::error_code fileAppendWait(
-    size_t * out, 
-    FileHandle f, 
+    size_t * out,
+    FileHandle f,
     std::string_view data
 );
 
@@ -526,8 +526,8 @@ std::error_code fileCloseView(FileHandle f, const void * view);
 // writing. "Extending" with a length less than the current view has no effect
 // and extending beyond maxLen is an error.
 std::error_code fileExtendView(
-    FileHandle f, 
-    const void * view, 
+    FileHandle f,
+    const void * view,
     int64_t length
 );
 

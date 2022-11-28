@@ -194,8 +194,8 @@ void httpRouteReply(
     std::string_view msg = {}
 );
 void httpRouteReply(
-    unsigned reqId, 
-    unsigned status, 
+    unsigned reqId,
+    unsigned status,
     std::string_view msg = {}
 );
 

@@ -458,7 +458,7 @@ Path & Path::resolve(const Path & base, string_view fallback) {
     resolve(base.view());
     if (m_data.size() >= base.size()) {
         auto ch = m_data[base.size()];
-        if (m_data.starts_with(base.view()) && (ch == '\0' || ch == '/')) 
+        if (m_data.starts_with(base.view()) && (ch == '\0' || ch == '/'))
             return *this;
     }
     assign(fallback);
