@@ -19,7 +19,9 @@
 #include <iostream>
 #include <memory>
 #include <mutex>
+#ifdef __cpp_lib_stacktrace
 #include <stacktrace>
+#endif
 #include <thread>
 #include <vector>
 

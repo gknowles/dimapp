@@ -132,7 +132,9 @@ LogMsgScope::~LogMsgScope() {
 void DefaultLogger::onLog(const LogMsg & log) {
     cout << log.msg << '\n';
     if (log.type == kLogTypeFatal) {
+#ifdef __cpp_lib_stacktrace
         cout << stacktrace::current();
+#endif
         cout.flush();
     }
 }
