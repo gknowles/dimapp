@@ -12,7 +12,6 @@
 #include <cstdint>
 #include <intrin.h>
 #include <limits>
-#include <version>
 
 namespace Dim {
 

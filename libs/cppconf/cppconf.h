@@ -111,3 +111,4 @@
 ***/
 
 #include <cstddef>  // size_t, byte, NULL, offsetof
+#include <version>  // __cpp_lib_*
