@@ -80,7 +80,7 @@ static bool find(Glob::Iter::Info * info, bool fromNext) {
         && info->entry.isdir
     ) {
 ENTER_DIR:
-        // We were at the directory, now start it's contents
+        // We were at the directory, now start it's contents.
         auto q = fs::directory_iterator(*p, ec);
         if (q == end(q)) {
             // No contents, skip over pushing and popping the dir info stack
@@ -113,8 +113,8 @@ CHECK_CURRENT:
 DIR_EXITED:
         if (info->flags.any(fDirsLast)) {
             // Always return a directory when leaving it if fDirsLast is
-            // defined. No validation is required, it was checked to be
-            // desired before it was entered.
+            // defined. No validation is required, it's desirability was
+            // checked before it was entered.
             cur->firstPass = false;
             copy(&info->entry, p, cur->firstPass);
             return true;
@@ -122,7 +122,7 @@ DIR_EXITED:
         goto TRY_NEXT;
     }
 
-    // check filter
+    // Check filter.
     copy(&info->entry, p, cur->firstPass);
     if (!match(*info))
         goto TRY_NEXT;
