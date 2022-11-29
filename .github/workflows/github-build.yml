@@ -49,7 +49,6 @@ jobs:
     - name: Test
       working-directory: ${{github.workspace}}
       run: |
-        setlocal enableextensions enabledelayedexpansion
         for %%t in (
             bin\bitview-t
             bin\charbuf-t
@@ -70,13 +69,6 @@ jobs:
             bin\uset-t
             "bin\xml --test"
         ) do (
-            call :runtest %%t
+            %%~t
+            if errorlevel 1 goto :eof
         )
-        goto :eof
-
-        :runtest
-        set $v=%1
-        set $v=%$v:"=%
-        %$v%
-        if errorlevel 1 exit %errorlevel%
-        goto :eof
