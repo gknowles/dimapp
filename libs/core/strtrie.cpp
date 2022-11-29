@@ -478,13 +478,13 @@ static void setEndMark(StrTrieBase::Node * node) {
 }
 
 //===========================================================================
-static pgno_t remotePage(StrTrieBase::Node * node) {
+static pgno_t remotePage(const StrTrieBase::Node * node) {
     assert(nodeType(node) == kNodeRemote);
     return (pgno_t) ntoh32(node->data + 1);
 }
 
 //===========================================================================
-static int remotePos(StrTrieBase::Node * node) {
+static int remotePos(const StrTrieBase::Node * node) {
     assert(nodeType(node) == kNodeRemote);
     return (int) node->data[0] >> 4;
 }
@@ -648,41 +648,51 @@ static bool logFatal(SearchState * ss) {
 }
 
 //===========================================================================
-static StrTrieBase::Node * getNode(
+static StrTrieBase::Node * getNodeForUpdate(
     SearchState * ss,
     pgno_t pgno,
-    size_t pos,
-    bool forUpdate = false
+    size_t pos
 ) {
-    auto ptr = forUpdate ? ss->pages->wptr(pgno) : ss->pages->ptr(pgno);
+    auto ptr = ss->pages->wptr(pgno);
     assert(ptr);
     assert(pos < ss->pages->pageSize() + 1);
-    return (StrTrieBase::Node *) (ptr + pos);
-}
-
-//===========================================================================
-static StrTrieBase::Node * getNode(SearchState * ss, size_t pos) {
-    return getNode(ss, ss->pgno, pos);
+    return reinterpret_cast<StrTrieBase::Node *>(ptr + pos);
 }
 
 //===========================================================================
 static void seekNodeForUpdate(SearchState * ss, pgno_t pgno, size_t inode) {
     ss->pgno = pgno;
     ss->inode = (int) inode;
-    ss->node = getNode(ss, ss->inode, ss->pgno, true);
+    ss->node = getNodeForUpdate(ss, ss->pgno, ss->inode);
 }
 
 //===========================================================================
-static void seekNode(SearchState * ss, pgno_t pgno, size_t inode) {
-    ss->pgno = pgno;
-    ss->inode = (int) inode;
-    ss->node = getNode(ss, ss->inode);
+static const StrTrieBase::Node * getNode(
+    SearchState * ss,
+    pgno_t pgno,
+    size_t pos
+) {
+    auto ptr = ss->pages->ptr(pgno);
+    assert(ptr);
+    assert(pos < ss->pages->pageSize() + 1);
+    return reinterpret_cast<const StrTrieBase::Node *>(ptr + pos);
+}
+
+//===========================================================================
+static const StrTrieBase::Node * getNode(SearchState * ss, size_t pos) {
+    return getNode(ss, ss->pgno, pos);
 }
 
 //===========================================================================
 static void seekNode(SearchState * ss, size_t inode) {
     ss->inode = (int) inode;
-    ss->node = getNode(ss, ss->inode);
+    ss->node = const_cast<StrTrieBase::Node *>(getNode(ss, ss->inode));
+}
+
+//===========================================================================
+static void seekNode(SearchState * ss, pgno_t pgno, size_t inode) {
+    ss->pgno = pgno;
+    seekNode(ss, inode);
 }
 
 //===========================================================================
@@ -1336,24 +1346,22 @@ static void applyUpdates(SearchState * ss) {
         auto id = upd->id;
         auto & ui = infos[id];
         ui.upd = upd;
-        bool branch = false;
-        auto pos = -1;
-        for (auto&& kid : ui.upd->refs) {
-            pos += 1;
+        for (auto pos = 0; auto&& kid : ui.upd->refs) {
             if (kid.page.type == PageRef::kUpdate) {
                 assert(kid.data.pos < infos.size());
                 assert(infos[kid.data.pos].parent == -1);
                 ui.unprocessed += 1;
                 infos[kid.data.pos].parent = id;
                 infos[kid.data.pos].kidPos = pos;
-                branch = true;
             } else {
                 assert(kid.page.type == PageRef::kSource);
-                branch = true;
             }
+            pos += 1;
         }
-        if (branch)
+        if (!ui.upd->refs.empty()) {
+            // Add one for being a branch instead of just a leaf.
             ui.unprocessed += 1;
+        }
         if (ui.unprocessed < 2)
             unblocked.push_back(id);
     }
@@ -1386,8 +1394,7 @@ static void applyUpdates(SearchState * ss) {
 
         // Update reference from parent.
         if (ui.parent == -1) {
-            // Adding root node as a leaf, must be adding first key to this
-            // previously empty container.
+            // Adding root node.
             assert(unblocked.empty());
             auto & vpage = ss->vpages.emplace_back(ss->heap);
             vpage.roots.push_back({
@@ -1396,7 +1403,6 @@ static void applyUpdates(SearchState * ss) {
             });
             break;
         }
-
         auto & pi = infos[ui.parent];
         assert(pi.unprocessed > 1);
         if (--pi.unprocessed == 1) {

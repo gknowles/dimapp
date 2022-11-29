@@ -107,8 +107,6 @@ inline static void internalTests() {
     string out;
     check(vals.empty());
 
-    insertTest({"abc", ""}, {"0", "a", "abcd"});            // start of seg
-
     insertTest({"abc"}, {"", "b", "ab", "abb", "abd", "abcd"});
 
     // SEG NODE
