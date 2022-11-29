@@ -78,5 +78,5 @@ jobs:
         set $v=%1
         set $v=%$v:"=%
         %$v%
-        if errorlevel 1 exit /b %errorlevel%
-        exit :eof
+        if errorlevel 1 exit %errorlevel%
+        goto :eof
