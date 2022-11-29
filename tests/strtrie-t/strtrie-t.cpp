@@ -20,17 +20,6 @@ const VersionInfo kVersion = { 1 };
 
 /****************************************************************************
 *
-*   Declarations
-*
-***/
-
-#define EXPECT(...)                                                         \
-    if (!bool(__VA_ARGS__)) \
-        failed(line ? line : __LINE__, #__VA_ARGS__)
-
-
-/****************************************************************************
-*
 *   Variables
 *
 ***/
@@ -45,8 +34,18 @@ static bool s_verbose;
 ***/
 
 //===========================================================================
-static void failed(int line, const char msg[]) {
-    logMsgError() << "Line " << line << ": EXPECT(" << msg << ") failed";
+static void check(
+    bool expr,
+    const source_location base = source_location::current(),
+    const source_location rel = source_location::current()
+) {
+    if (!expr) {
+        auto os = logMsgError();
+        os << "Line " << base.line();
+        if (base.line() != rel.line())
+            os << " (detected at " << rel.line() << ")";
+        os << ": failed";
+    }
 }
 
 //===========================================================================
@@ -79,35 +78,36 @@ static bool erase(StrTrie * vals, string_view val) {
 //===========================================================================
 static void insertTest(
     const vector<string_view> & strs,
-    const vector<string_view> & ghosts = {}
+    const vector<string_view> & ghosts = {},
+    source_location loc = source_location::current()
 ) {
-    int line = 0;
     StrTrie vals;
     for (auto&& str : strs) {
-        EXPECT(insert(&vals, str));
-        EXPECT(vals.contains(str));
+        check(insert(&vals, str), loc);
+        check(vals.contains(str), loc);
     }
     for (auto&& str : strs) {
-        EXPECT(vals.contains(str));
-        EXPECT(!insert(&vals, str));
+        check(vals.contains(str), loc);
+        check(!insert(&vals, str), loc);
     }
     for (auto&& str : ghosts)
-        EXPECT(!vals.contains(str));
+        check(!vals.contains(str), loc);
     for (auto&& str : strs) {
-        EXPECT(erase(&vals, str));
-        EXPECT(!vals.contains(str));
+        check(erase(&vals, str), loc);
+        check(!vals.contains(str), loc);
     }
-    EXPECT(vals.empty());
+    check(vals.empty(), loc);
 }
 
 //===========================================================================
 inline static void internalTests() {
     if (s_verbose)
         cout << "\n> INTERNAL TESTS" << endl;
-    int line = 0;
     StrTrie vals;
     string out;
-    EXPECT(vals.empty());
+    check(vals.empty());
+
+    insertTest({"abc", ""}, {"0", "a", "abcd"});            // start of seg
 
     insertTest({"abc"}, {"", "b", "ab", "abb", "abd", "abcd"});
 
@@ -148,31 +148,31 @@ inline static void internalTests() {
     ranges::sort(keys);
     auto ri = keys.begin();
     for (auto&& key : vals) {
-        EXPECT(key == *ri);
+        check(key == *ri);
         ri += 1;
     }
-    EXPECT(ri == keys.end());
+    check(ri == keys.end());
 
     auto vi = vals.lowerBound("abcd");
-    EXPECT(*vi == "abd");
+    check(*vi == "abd");
     vi = vals.find("abd");
-    EXPECT(*vi == "abd");
+    check(*vi == "abd");
     vi = vals.lowerBound("abd");
-    EXPECT(*vi == "abd");
+    check(*vi == "abd");
     vi = vals.upperBound("abd");
-    EXPECT(*vi == "aw");
+    check(*vi == "aw");
     vi = vals.findLess("abd");
-    EXPECT(*vi == "abc");
+    check(*vi == "abc");
     vi = vals.findLessEqual("abd");
-    EXPECT(*vi == "abd");
+    check(*vi == "abd");
 
-    EXPECT(vals.back() == "aw");
+    check(vals.back() == "aw");
 
     for (auto&& key : keys) {
         erase(&vals, key);
-        EXPECT(!vals.contains(key));
+        check(!vals.contains(key));
     }
-    EXPECT(vals.empty());
+    check(vals.empty());
 }
 
 //===========================================================================
@@ -208,10 +208,10 @@ inline static void randomFill(size_t count, size_t maxLen, size_t charVals) {
             inserted += 1;
             keys.push_back(key);
         }
-        EXPECT(vals.contains(key));
+        check(vals.contains(key));
     }
     auto dist = (size_t) distance(vals.begin(), vals.end());
-    EXPECT(inserted == dist);
+    check(inserted == dist);
     cout << "--- Stats\n";
     vals.dumpStats(cout);
     if (s_verbose)
@@ -225,9 +225,9 @@ inline static void randomFill(size_t count, size_t maxLen, size_t charVals) {
             cout << i + 1 << " ";
         auto & key = keys[i];
         erase(&vals, key);
-        EXPECT(!vals.contains(key));
+        check(!vals.contains(key));
     }
-    EXPECT(vals.empty());
+    check(vals.empty());
     cout << endl;
 }
 
