@@ -55,7 +55,7 @@ jobs:
             bin\file-t
             bin\glob-t
             bin\hpack-t
-            bin\http-t
+            "bin\http-t --test"
             "bin\json-t --test"
             bin\list-t
             bin\math-t

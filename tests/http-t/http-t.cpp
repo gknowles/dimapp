@@ -11,6 +11,15 @@ using namespace Dim;
 
 /****************************************************************************
 *
+*   Tuning parameters
+*
+***/
+
+const VersionInfo kVersion = { 1 };
+
+
+/****************************************************************************
+*
 *   Declarations
 *
 ***/
@@ -40,6 +49,15 @@ struct Test {
 };
 
 } // namespace
+
+
+/****************************************************************************
+*
+*   Variables
+*
+***/
+
+static bool s_verbose;
 
 
 /****************************************************************************
@@ -88,7 +106,7 @@ const Test s_tests[] = {
 
 /****************************************************************************
 *
-*   Helpers
+*   Tests
 *
 ***/
 
@@ -99,7 +117,8 @@ void oldTest() {
     bool result;
     vector<unique_ptr<HttpMsg>> msgs;
     for (auto && test : s_tests) {
-        cout << "Test - " << test.name << endl;
+        if (s_verbose)
+            cout << "Test - " << test.name << endl;
         if (test.reset && conn)
             httpClose(conn);
         if (!conn)
@@ -146,16 +165,10 @@ void oldTest() {
     httpClose(conn);
 }
 
-
-/****************************************************************************
-*
-*   Application
-*
-***/
-
 //===========================================================================
-static void app(int argc, char *argv[]) {
-    oldTest();
+static void localTest() {
+    if (s_verbose)
+        cout << "Test - local" << endl;
 
     bool result;
     vector<unique_ptr<HttpMsg>> msgs;
@@ -184,7 +197,32 @@ static void app(int argc, char *argv[]) {
     }
     httpClose(hsrv);
     httpClose(hcli);
+}
 
+
+/****************************************************************************
+*
+*   Application
+*
+***/
+
+//===========================================================================
+static void app(int argc, char *argv[]) {
+    Cli cli;
+    cli.helpNoArgs();
+    cli.opt<bool>(&s_verbose, "v verbose.")
+        .desc("Show names of tests as they are processed.");
+    auto & test = cli.opt<bool>("test", false)
+        .desc("Run internal unit tests.");
+    if (!cli.parse(argc, argv))
+        return appSignalUsageError();
+    if (!*test) {
+        cout << "No tests run." << endl;
+        return appSignalShutdown(EX_OK);
+    }
+
+    oldTest();
+    localTest();
     testSignalShutdown();
 }
 
@@ -197,5 +235,5 @@ static void app(int argc, char *argv[]) {
 
 //===========================================================================
 int main(int argc, char * argv[]) {
-    return appRun(app, argc, argv);
+    return appRun(app, argc, argv, kVersion);
 }
