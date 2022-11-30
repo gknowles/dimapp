@@ -40,6 +40,7 @@ public:
     void onLog (const LogMsg & log) override;
 
 private:
+    string m_msg;
     LogMsg m_log;
 };
 
@@ -148,7 +149,7 @@ static bool internalTest () {
     if (!valid)
         return false;
 
-    logMsgInfo() << "All tests passed";
+    logMsgInfo() << "All tests passed (" << appBaseName() << ")";
     return true;
 }
 
@@ -161,7 +162,8 @@ static bool internalTest () {
 
 //===========================================================================
 LogTask::LogTask (const LogMsg & log)
-    : m_log(log)
+    : m_msg(log.msg)
+    , m_log({log.type, log.loc, m_msg})
 {}
 
 //===========================================================================
