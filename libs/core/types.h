@@ -237,7 +237,11 @@ public:
     constexpr bool operator==(const EnumFlags & val) const noexcept = default;
     constexpr bool any() const;
     constexpr bool any(EnumFlags mask) const;
+
+    // Prefer any() for testing a single bit, use of all() should imply that
+    // the mask will, some of the time, have multiple bits.
     constexpr bool all(EnumFlags mask) const;
+
     constexpr bool none() const;
     constexpr bool none(EnumFlags mask) const;
 
