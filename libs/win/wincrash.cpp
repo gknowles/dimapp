@@ -271,10 +271,8 @@ static void initAfterVars() {
             for (auto p = found.begin(); p != nth; ++p)
                 fileRemove(p->path);
         }
-        s_crashFile = crashDir;
-        s_crashFile /= "crash";
-        s_crashFile += to_string(timeToUnix(timeNow()));
-        s_crashFile += ".dmp";
+        auto name = "crash" + to_string(timeToUnix(timeNow())) + ".dmp";
+        s_crashFile = crashDir / name;
         s_crashFileW = toWstring(s_crashFile);
     }
 }
