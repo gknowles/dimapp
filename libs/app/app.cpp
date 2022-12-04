@@ -276,9 +276,9 @@ int Dim::appRun(
     s_webDir.clear();
 
     // Finish initialization and start.
+    iPlatformInitialize(PlatformInit::kBeforeAll);
     iPerfInitialize();
     iLogInitialize();
-    iConsoleInitialize();
     if (s_appFlags.any(fAppWithConsole))
         logDefaultMonitor(consoleBasicLogger());
     iTaskInitialize();
@@ -296,7 +296,6 @@ int Dim::appRun(
     lk.unlock();
 
     iShutdownDestroy();
-    iConsoleDestroy();
 
     //-----------------------------------------------------------------------
     // No external effects should happen after this point. Any sockets, pipes,
@@ -310,6 +309,7 @@ int Dim::appRun(
     iTaskDestroy();
     iLogDestroy();
     iPerfDestroy();
+    iPlatformDestroy();
     lk.lock();
     assert(s_runMode == kRunStopping);
     s_runMode = kRunStopped;

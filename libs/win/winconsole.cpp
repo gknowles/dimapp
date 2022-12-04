@@ -132,7 +132,7 @@ ConsoleScopedAttr::~ConsoleScopedAttr() {
 ***/
 
 //===========================================================================
-void Dim::iConsoleInitialize() {
+void Dim::winConsoleInitialize() {
     // set control-c handler
     SetConsoleCtrlHandler(&controlCallback, true);
     enableConsoleFlags(
@@ -140,10 +140,6 @@ void Dim::iConsoleInitialize() {
         true,
         ENABLE_VIRTUAL_TERMINAL_PROCESSING
     );
-}
-
-//===========================================================================
-void Dim::iConsoleDestroy() {
 }
 
 

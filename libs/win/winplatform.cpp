@@ -126,7 +126,11 @@ static void initPerfs() {
 
 //===========================================================================
 void Dim::iPlatformInitialize(PlatformInit phase) {
-    if (phase == PlatformInit::kBeforeAppVars) {
+    switch (phase) {
+    case PlatformInit::kBeforeAll:
+        winConsoleInitialize();
+        break;
+    case PlatformInit::kBeforeAppVars:
         winErrorInitialize();
         winEnvInitialize();
         initPerfs();
@@ -136,10 +140,15 @@ void Dim::iPlatformInitialize(PlatformInit phase) {
         winExecInitialize();
         winServiceInitialize();
         winGuiInitialize(phase);
-    } else {
-        assert(phase == PlatformInit::kAfterAppVars);
+        break;
+    case PlatformInit::kAfterAppVars:
         winDebugInitialize(phase);
         winCrashInitialize(phase);
         winGuiInitialize(phase);
+        break;
     }
 }
+
+//===========================================================================
+void Dim::iPlatformDestroy()
+{}

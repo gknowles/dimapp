@@ -181,6 +181,15 @@ bool parse(WinSid * out, std::string_view src);
 
 /****************************************************************************
 *
+*   Console
+*
+***/
+
+void winConsoleInitialize();
+
+
+/****************************************************************************
+*
 *   Crash
 *
 ***/
@@ -269,7 +278,6 @@ void winExecInitialize();
 ***/
 
 void winFileMonitorInitialize();
-
 bool winFileSetErrno(int error);
 
 
