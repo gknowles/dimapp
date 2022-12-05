@@ -18,11 +18,6 @@ namespace Dim::Glob {
 *
 ***/
 
-enum GlobType {
-    kInvalid,
-    kRuby,
-};
-
 enum PathType {
     kExact,         // Literal
     kCondition,     // Char choice, string choice, or embedded blot.
@@ -94,18 +89,25 @@ struct Search {
 ***/
 
 // Returns an entry for each segment of path.
-std::vector<const PathSegment *> pathSegments(const Info & glob);
+[[nodiscard]] std::vector<const PathSegment *> pathSegments(const Info & glob);
 
-NodeType getType(const Node & node);
+[[nodiscard]] NodeType getType(const Node & node);
 
 // Use the node values returned by pathSegments()
-MatchResult matchSegment(const PathSegment & node, std::string_view val);
+[[nodiscard]] MatchResult matchSegment(
+    const PathSegment & node,
+    std::string_view val
+);
 
-Search newSearch(const Info & glob);
-MatchResult matchSearch(Search * srch, std::string_view segVal, bool lastSeg);
+[[nodiscard]] Search newSearch(const Info & glob);
+[[nodiscard]] MatchResult matchSearch(
+    Search * srch,
+    std::string_view segVal,
+    bool lastSeg
+);
 void popSearchSeg(Search * srch);
 
-std::string toString(const Node & node, GlobType type = kRuby);
+[[nodiscard]] std::string toString(const Node & node, GlobType type = kRuby);
 
 
 /****************************************************************************
@@ -132,13 +134,17 @@ Node * addPartChoice(Info * glob, Node * seg);
 
 // Parses src into glob struct, logs error and returns false on parsing
 // failures.
-bool parse(Info * glob, std::string_view src, GlobType type = kRuby);
-bool parse(
+[[nodiscard]] bool parse(
+    Info * glob,
+    std::string_view src,
+    GlobType type = kRuby
+);
+[[nodiscard]] bool parse(
     Info * glob,
     const std::vector<std::string> & src,
     GlobType type = kRuby
 );
 
-std::string toString(const Info & glob);
+[[nodiscard]] std::string toString(const Info & glob);
 
 } // namespace

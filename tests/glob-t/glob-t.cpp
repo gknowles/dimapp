@@ -145,7 +145,7 @@ static void parseTests() {
 static void matchTests() {
     using enum Glob::MatchResult;
     vector<tuple<string, Glob::MatchResult, vector<string>>> tests = {
-        { "**/xyz", kMatch, { "abc", "xyz" } },
+        { "**/xyz", kMatch, { "xyz" } },
 
         { "abc", kMatch, { "abc" } },
         { "abc", kNoMatch, { "xyz" } },
@@ -161,6 +161,7 @@ static void matchTests() {
         { "**", kMatchRest, { "abc" } },
         { "**", kMatchRest, { "abc", "xyz" } },
         { "abc/**", kMatchRest, { "abc", "xyz" } },
+        { "**/xyz", kMatch, { "xyz" } },
         { "**/xyz", kMatch, { "abc", "xyz" } },
         { "**/xyz", kNoMatch, { "abc", "xy" } },
     };
@@ -212,7 +213,7 @@ static void fileTests() {
     vector<pair<Path, bool>> found;
     for (auto && e : fileGlob(
         "file-t",
-        "a.txt",
+        "**/*.txt",
         Glob::fDirsFirst | Glob::fDirsLast
     )) {
         found.push_back({e.path, e.isdir});
@@ -234,7 +235,7 @@ static void fileTests() {
             if (i < expected.size()) {
                 os.width(30);
                 os << expected[i].first;
-                os << (expected[i].second ? '*' : ' ');
+                os << (expected[i].second ? '/' : ' ');
             } else {
                 os.width(31);
                 os << ' ';
@@ -242,7 +243,7 @@ static void fileTests() {
             if (i < found.size()) {
                 os.width(30);
                 os << found[i].first;
-                os << (found[i].second ? '*' : ' ');
+                os << (found[i].second ? '/' : ' ');
             }
         }
     }

@@ -209,19 +209,6 @@ MatchResult Dim::Glob::matchSegment(const PathSegment & seg, string_view val) {
 }
 
 //===========================================================================
-Search Dim::Glob::newSearch(const Info & glob) {
-    Search out;
-    out.glob = &glob;
-    out.current.push_back(nullptr);
-    for (auto&& node : glob.roots) {
-        assert(node.type == kPathSeg);
-        auto seg = static_cast<const PathSeg *>(&node);
-        out.current.push_back(&seg->pathSeg);
-    }
-    return out;
-}
-
-//===========================================================================
 [[maybe_unused]]
 static bool IsLastSegment(const PathSegment & seg) {
     assert(seg.node->type == kPathSeg);
@@ -244,6 +231,23 @@ static void AddNext(Search * srch, const PathSegment & seg, bool withNull) {
     }
     if (seg.type == kDynamicAny)
         srch->current.push_back(&seg);
+}
+
+//===========================================================================
+Search Dim::Glob::newSearch(const Info & glob) {
+    Search out;
+    out.glob = &glob;
+    out.current.push_back(nullptr);
+    for (auto&& node : glob.roots) {
+        assert(node.type == kPathSeg);
+        auto seg = static_cast<const PathSeg *>(&node);
+        if (seg->pathSeg.type == kDynamicAny) {
+            AddNext(&out, seg->pathSeg, false);
+        } else {
+            out.current.push_back(&seg->pathSeg);
+        }
+    }
+    return out;
 }
 
 //===========================================================================
@@ -462,7 +466,7 @@ string Dim::Glob::toString(const Info & glob) {
         return out;
     }
     for (;;) {
-        out += toString(*node, glob.type);
+        append(&out, *node, glob.type, 0);
         node = glob.roots.next(node);
         if (!node)
             break;
@@ -734,7 +738,7 @@ static Node * copyNode(Info * glob, Node * node) {
 *    * - Matches zero or more characters of a single file or directory name.
 *        But, does not match '/' character or leading '.' character.
 *    ** - Like *, but also matches '/' (i.e. directories recursively).
-*         TBD: Must be followed by '/'? Or only thing in path seg?
+*         Must be followed by '/' and be the only thing in path seg.
 *    ? - Matches one character, except '/' and leading '.'.
 *    [set] - Matches any one character in set, except '/'.
 *    {p,q} - Matches literal p or q. May have any number of literals.

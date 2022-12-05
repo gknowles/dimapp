@@ -24,6 +24,11 @@ namespace Glob {
 *
 ***/
 
+enum GlobType {
+    kInvalid,
+    kRuby,
+};
+
 enum Mode : unsigned {
     // When to return directories in the iteration, either before the
     // contained files, after them, or both. Implies recursion into
@@ -77,9 +82,10 @@ inline Iter end(const Iter & iter) { return {}; }
 ***/
 
 Glob::Iter fileGlob(
-    std::string_view dir,
-    std::string_view name = {},
-    EnumFlags<Glob::Mode> flags = {}
+    std::string_view root,
+    std::string_view pattern = {},
+    EnumFlags<Glob::Mode> flags = {},
+    Glob::GlobType type = Glob::kRuby
 );
 
 } // namespace
