@@ -26,35 +26,6 @@ Guid Dim::newGuid() {
 }
 
 //===========================================================================
-Guid Dim::strToGuid(std::string_view val) {
-    Guid out;
-    if (val.size() != 36
-        || val[8] != '-'
-        || val[12] != '-'
-        || val[16] != '-'
-        || val[20] != '-'
-    ) {
-        return {};
-    }
-
-    string buf;
-    if (!hexToBytes(buf, val.substr(0, 8), false)
-        || !hexToBytes(buf, val.substr(9, 4), true)
-        || !hexToBytes(buf, val.substr(14, 4), true)
-        || !hexToBytes(buf, val.substr(19, 4), true)
-        || !hexToBytes(buf, val.substr(24, 12), true)
-    ) {
-        return {};
-    }
-
-    out.data1 = ntoh32(buf.data());
-    out.data2 = ntoh16(buf.data() + 4);
-    out.data3 = ntoh16(buf.data() + 6);
-    memcpy(out.data4, buf.data() + 8, sizeof out.data4);
-    return out;
-}
-
-//===========================================================================
 string Dim::toString(const Guid & val) {
     string out;
     char buf[4];
