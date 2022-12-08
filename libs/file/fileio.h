@@ -137,6 +137,8 @@ template<> struct is_enum_flags<File::Attrs> : std::true_type {};
 std::error_code fileAttrs(EnumFlags<File::Attrs> * out, std::string_view path);
 std::error_code fileAttrs(std::string_view path, EnumFlags<File::Attrs> attrs);
 
+std::error_code fileResize(std::string_view path, size_t size);
+
 std::error_code fileRemove(std::string_view path, bool recurse = false);
 std::error_code fileCreateDirs(std::string_view path);
 

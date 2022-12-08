@@ -502,6 +502,17 @@ error_code Dim::fileReadOnly(string_view path, bool enable) {
 }
 
 //===========================================================================
+error_code Dim::fileResize(string_view path, size_t newSize) {
+    error_code ec;
+    auto p8 = u8string_view((char8_t *) path.data(), path.size());
+    auto f = fs::path(p8);
+    fs::resize_file(f, newSize, ec);
+    if (ec)
+        logMsgError() << "fs::resize_file(" << path << "): " << ec;
+    return ec;
+}
+
+//===========================================================================
 error_code Dim::fileRemove(string_view path, bool recurse) {
     error_code ec;
     auto p8 = u8string_view((char8_t *) path.data(), path.size());
