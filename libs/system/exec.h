@@ -57,12 +57,9 @@ struct ExecOptions {
     // to the empty string to remove them.
     //
     // The working directory for one or more drives can be set using special
-    // environment variables named after the drive. For example, setting "=C"
+    // environment variables named after the drive. For example, setting "=C:"
     // in the environment sets the C drive's working directory for the child
     // process.
-    //
-    // NOTE: Window's docs are unclear, maybe it's "=C:" instead of "=C" ?
-    //       Please remove this note when verified!
     std::map<std::string, std::string> envVars;
 
     Dim::Duration timeout = (std::chrono::minutes) 5;
