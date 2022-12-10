@@ -637,7 +637,7 @@ error_code Dim::fileOpen(
     // Unless impersonation is explicitly desired it should be restricted by
     // including the SECURITY_SQOS_PRESENT and SECURITY_IDENTIFICATION access
     // flags when a client opens a named pipe.
-    int flagsAndAttrs = 0;
+    int flagsAndAttrs = SECURITY_SQOS_PRESENT | SECURITY_IDENTIFICATION;
     if (mode.none(fBlocking))
         flagsAndAttrs |= FILE_FLAG_OVERLAPPED;
     if (mode.any(fAligned))
