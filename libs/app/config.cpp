@@ -156,6 +156,7 @@ void ConfigFile::parseContent(string_view fullpath, string && content) {
     m_fullpath = m_xml.heap().strDup(fullpath);
 
     // call notifiers
+    logMsgInfo() << "Config file '" << m_relpath << "' loaded";
     configChange(m_fullpath, nullptr);
 }
 

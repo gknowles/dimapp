@@ -156,15 +156,14 @@ static void initVars() {
 //===========================================================================
 static void initApp() {
     iPlatformInitialize(PlatformInit::kBeforeAppVars);
+    if (s_appFlags.all(fAppWithLogs | fAppWithConsole))
+        logMonitor(consoleBasicLogger());
     iFileInitialize();
     initVars();
     iConfigInitialize();
     configMonitor("app.xml", &s_appXml);
-    if (s_appFlags.any(fAppWithLogs)) {
+    if (s_appFlags.any(fAppWithLogs))
         iLogFileInitialize();
-        if (s_appFlags.any(fAppWithConsole))
-            logMonitor(consoleBasicLogger());
-    }
     iPlatformInitialize(PlatformInit::kAfterAppVars);
     iAppPerfInitialize();
     iPipeInitialize();
