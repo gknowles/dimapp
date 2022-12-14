@@ -247,6 +247,8 @@ static void initBeforeVars() {
     // make malloc failures also call the new_handler
     s_oldNewMode = _set_new_mode(1);
 
+    // These should all be caught and, if configured thusly, have a crash dump
+    // generated for them.
     //printf(nullptr);
     //*(char *) nullptr = 0;
     //assert(0);
@@ -271,7 +273,8 @@ static void initAfterVars() {
             for (auto p = found.begin(); p != nth; ++p)
                 fileRemove(p->path);
         }
-        auto name = "crash" + to_string(timeToUnix(timeNow())) + ".dmp";
+        auto name = appName() + "-" + to_string(timeToUnix(timeNow()))
+            + ".dmp";
         s_crashFile = crashDir / name;
         s_crashFileW = toWstring(s_crashFile);
     }
