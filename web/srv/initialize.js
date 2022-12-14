@@ -10,7 +10,7 @@ var appOpts = {}
 //===========================================================================
 function createApp() {
     createApp.waitingHtmlFragments -= 1
-    if (createApp.waitingHtmlFragments > 0) 
+    if (createApp.waitingHtmlFragments > 0)
         return
 
     let newOpts = appOpts
@@ -22,7 +22,7 @@ function createApp() {
             nowSecs() {
                 return Date.parse(this.now) / 1000
             },
-            appName() { 
+            appName() {
                 let out = this.server.baseName
                 if (this.server.appIndex > 1)
                     out += this.server.appIndex.toString()
@@ -40,6 +40,9 @@ function createApp() {
     addOpts(newOpts)
 
     const app = Vue.createApp(appOpts)
+    for (var name in appOpts.components) {
+        app.component(name, appOpts.components[name])
+    }
     app.mount('#app')
     let el = document.getElementById('app')
     el.classList.add('groupType-' + appOpts.data().server.groupType)
@@ -51,13 +54,17 @@ createApp.waitingHtmlFragments = 1
 function finalize() {
     let tags = [
         { tag: 'script', props: {
-            src: 'https://cdn.jsdelivr.net/npm/@popperjs/core@2.10.2/dist/umd/popper.min.js',
-            integrity: 'sha384-7+zCNj/IqJ95wo16oMtfsKbZ9ccEh31eOz1HGyDuCQ6wgnyJNSYdrPa03rtR1zdB',
+            src:
+'https://cdn.jsdelivr.net/npm/@popperjs/core@2.10.2/dist/umd/popper.min.js',
+            integrity:
+'sha384-7+zCNj/IqJ95wo16oMtfsKbZ9ccEh31eOz1HGyDuCQ6wgnyJNSYdrPa03rtR1zdB',
             crossOrigin: 'anonymous',
         }},
         { tag: 'script', props: {
-            src: 'https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js',
-            integrity: 'sha384-QJHtvGhmr9XOIpI6YVutG+2QOK9T+ZnN4kzFN1RtK3zEFEIsxhlmWl5/YESvpZ13',
+            src:
+'https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js',
+            integrity:
+'sha384-QJHtvGhmr9XOIpI6YVutG+2QOK9T+ZnN4kzFN1RtK3zEFEIsxhlmWl5/YESvpZ13',
             crossOrigin: 'anonymous',
         }},
     ]
@@ -74,7 +81,7 @@ function includeHtmlFragment(src) {
     frame.style.display = 'none'
     frame.onload = function() {
         this.insertAdjacentHTML(
-            'afterend', 
+            'afterend',
             this.contentDocument.body.innerHTML
         )
         this.remove()
@@ -131,15 +138,18 @@ function addTags(tags) {
 //===========================================================================
 (function() {
     let tags = [
-        { tag: 'link', props: { 
-            rel: 'stylesheet', 
-            integrity: 'sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3',
+        { tag: 'link', props: {
+            rel: 'stylesheet',
+            integrity:
+'sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3',
             crossOrigin: 'anonymous',
-            href: 'https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css',
+            href:
+'https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css',
         }},
         { tag: 'link', props: {
-            rel: 'stylesheet', 
-            href: 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css',
+            rel: 'stylesheet',
+            href:
+'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css',
         }},
         { tag: 'link', props: {
             rel: 'stylesheet',
