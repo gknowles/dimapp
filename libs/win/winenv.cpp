@@ -387,7 +387,7 @@ string Dim::envProcessLogDataDir() {
 *
 ***/
 
-const TokenTable::Token s_attrs[] = {
+const TokenTable::Token s_sidAttrs[] = {
     { (int) SE_GROUP_ENABLED,             "Enabled" },
     { (int) SE_GROUP_ENABLED_BY_DEFAULT,  "EnabledByDefault" },
     { (int) SE_GROUP_INTEGRITY,           "Integrity" },
@@ -398,7 +398,7 @@ const TokenTable::Token s_attrs[] = {
     { (int) SE_GROUP_RESOURCE,            "Resource" },
     { (int) SE_GROUP_USE_FOR_DENY_ONLY,   "UseForDenyOnly" },
 };
-const TokenTable s_attrTbl(s_attrs);
+const TokenTable s_sidAttrTbl(s_sidAttrs);
 
 const TokenTable::Token s_sidTypes[] = {
     { SidTypeAlias,             "Alias" },
@@ -415,8 +415,36 @@ const TokenTable::Token s_sidTypes[] = {
 };
 const TokenTable s_sidTypeTbl(s_sidTypes);
 
+const TokenTable::Token s_privAttrs[] = {
+    { (int) SE_PRIVILEGE_ENABLED,
+    "Enabled" },
+    { (int) SE_PRIVILEGE_ENABLED_BY_DEFAULT, "EnabledByDefault" },
+    { (int) SE_PRIVILEGE_USED_FOR_ACCESS,    "UsedForAccess" },
+};
+const TokenTable s_privAttrTbl(s_privAttrs);
+
+//===========================================================================
+static void addAttrs(IJBuilder * out, int attrs, const TokenTable & tbl) {
+    out->array();
+    unsigned found = {};
+    for (auto && attr : tbl) {
+        if (attr.id & attrs) {
+            found |= attr.id;
+            out->value(attr.name);
+        }
+    }
+    if (auto unknown = ~found & attrs) {
+        auto unk = "UNKNOWN("s;
+        unk += to_string(unknown);
+        unk += ')';
+        out->value(unk);
+    }
+    out->end();
+}
+
 //===========================================================================
 static void addSidRow(IJBuilder * out, SID_AND_ATTRIBUTES & sa) {
+    // Get domain and account names
     DWORD nameLen = 0;
     DWORD domLen = 0;
     SID_NAME_USE use;
@@ -447,23 +475,17 @@ static void addSidRow(IJBuilder * out, SID_AND_ATTRIBUTES & sa) {
     wname.resize(nameLen);
     wdom.resize(domLen);
 
+    // Get sid string
+    LPWSTR wsidPtr;
+    if (!ConvertSidToStringSidW(sa.Sid, &wsidPtr))
+        logMsgFatal() << "ConvertSidToStringSidW: " << WinError{};
+    auto wsid = toString(wsidPtr);
+    LocalFree(wsidPtr);
+
     out->object();
+    out->member("sid", wsid);
     out->member("attrs");
-    out->array();
-    unsigned found = {};
-    for (auto && attr : s_attrTbl) {
-        if (attr.id & sa.Attributes) {
-            found |= attr.id;
-            out->value(attr.name);
-        }
-    }
-    if (auto unknown = ~found & sa.Attributes) {
-        auto unk = "UNKNOWN("s;
-        unk += to_string(unknown);
-        unk += ')';
-        out->value(unk);
-    }
-    out->end();
+    addAttrs(out, sa.Attributes, s_sidAttrTbl);
     out->member("name", toString(wname));
     out->member("domain", toString(wdom));
     if (auto name = s_sidTypeTbl.findName(use)) {
@@ -478,39 +500,74 @@ static void addSidRow(IJBuilder * out, SID_AND_ATTRIBUTES & sa) {
 }
 
 //===========================================================================
+template<typename T>
+static unique_ptr<T> getTokenInfo(
+    HANDLE token,
+    TOKEN_INFORMATION_CLASS iclass,
+    string_view logName
+) {
+    DWORD len;
+    BOOL result = GetTokenInformation(token, iclass, NULL, 0, &len);
+    WinError err;
+    if (result || err != ERROR_INSUFFICIENT_BUFFER) {
+        logMsgFatal() << "GetTokenInformation(" << logName << ", NULL): "
+            << err;
+    }
+    auto info = unique_ptr<T>((T *) malloc(len));
+    if (!GetTokenInformation(token, iclass, info.get(), len, &len)) {
+        err.set();
+        logMsgFatal() << "GetTokenInformation(" << logName << "): " << err;
+    }
+    return info;
+}
+
+//===========================================================================
+static string privilegeName(LUID id) {
+    DWORD len = 0;
+    BOOL result = LookupPrivilegeNameA(NULL, &id, NULL, &len);
+    WinError err;
+    if (result || err != ERROR_INSUFFICIENT_BUFFER)
+        logMsgFatal() << "LookupPrivilegeNameA(NULL): " << err;
+    string out;
+    out.resize(len);
+    if (!LookupPrivilegeNameA(NULL, &id, out.data(), &len))
+        logMsgFatal() << "LookupPrivilegeNameA: " << err.set();
+    out.pop_back();
+    return out;
+}
+
+//===========================================================================
 void Dim::envProcessAccountInfo(IJBuilder * out) {
     auto proc = GetCurrentProcess();
     HANDLE token;
     if (!OpenProcessToken(proc, TOKEN_QUERY, &token))
         logMsgFatal() << "OpenProcessToken: " << WinError{};
-    DWORD len;
-    BOOL result = GetTokenInformation(token, TokenUser, NULL, 0, &len);
-    WinError err;
-    if (result || err != ERROR_INSUFFICIENT_BUFFER) {
-        logMsgFatal() << "GetTokenInformation(TokenUser, NULL): "
-            << WinError{};
-    }
-    auto usr = unique_ptr<TOKEN_USER>((TOKEN_USER *) malloc(len));
-    if (!GetTokenInformation(token, TokenUser, usr.get(), len, &len))
-        logMsgFatal() << "GetTokenInformation(TokenUser): " << WinError{};
-    result = GetTokenInformation(token, TokenGroups, NULL, 0, &len);
-    err.set();
-    if (result || err != ERROR_INSUFFICIENT_BUFFER) {
-        logMsgFatal() << "GetTokenInformation(TokenGroups, NULL): "
-            << WinError{};
-    }
-    auto grps = unique_ptr<TOKEN_GROUPS>((TOKEN_GROUPS *) malloc(len));
-    if (!GetTokenInformation(token, TokenGroups, grps.get(), len, &len))
-        logMsgFatal() << "GetTokenInformation(TokenGroups): " << WinError{};
+
+    auto usr = getTokenInfo<TOKEN_USER>(token, TokenUser, "TokenUser");
+    auto grps = getTokenInfo<TOKEN_GROUPS_AND_PRIVILEGES>(
+        token,
+        TokenGroupsAndPrivileges,
+        "TokenGroupsAndPrivileges"
+    );
     CloseHandle(token);
 
     out->member("user");
     addSidRow(out, usr->User);
     out->member("groups").array();
-    auto * ptr = grps->Groups,
-        *eptr = ptr + grps->GroupCount;
-    for (; ptr != eptr; ++ptr) {
-        addSidRow(out, *ptr);
+    for (auto&& val : span(grps->Sids, grps->SidCount))
+        addSidRow(out, val);
+    out->end();
+    out->member("restrictedGroups").array();
+    for (auto&& val : span(grps->RestrictedSids, grps->RestrictedSidCount))
+        addSidRow(out, val);
+    out->end();
+    out->member("privileges").array();
+    for (auto&& val : span(grps->Privileges, grps->PrivilegeCount)) {
+        out->object();
+        out->member("attrs");
+        addAttrs(out, val.Attributes, s_privAttrTbl);
+        out->member("name", privilegeName(val.Luid));
+        out->end();
     }
     out->end();
 }
