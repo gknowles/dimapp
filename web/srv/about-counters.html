@@ -22,7 +22,7 @@ addOpts({
       let arr = [];
       for (let name in this.counters)
         arr.push({name: name, value: this.counters[name]})
-      arr.sort((a, b) => { 
+      arr.sort((a, b) => {
         let rc = a.name.includes('.') - b.name.includes('.')
         if (rc != 0)
           return rc
@@ -44,14 +44,14 @@ addOpts({
         <div class='col-auto'>
           <table>
             <tr>
-              <th>Name</th>
               <th>Value</th>
+              <th>Name</th>
             </tr>
             <tr v-for="cnt in page">
-              <td style='white-space: nowrap'>{{ cnt.name }}</td>
               <td style='text-align: right'>
                 {{ cnt.value.toLocaleString() }}
               </td>
+              <td style='white-space: nowrap'>{{ cnt.name }}</td>
             </tr>
           </table>
         </div>
