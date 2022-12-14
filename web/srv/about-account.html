@@ -13,32 +13,80 @@ about-account.html - dim webapp
 <script src="about-common.js"></script>
 <script src="/srv/about/account.json?jsVar=srvdata"></script>
 <script>
+function makeGroupPages(groups, pageSize) {
+  let arr = groups
+  arr.sort((a, b) => {
+    if (a.type != b.type)
+      return (a.type < b.type) ? -1 : 1
+    if (a.name != b.name)
+      return (a.name < b.name) ? -1 : 1
+    return 0
+  })
+  return makePages(arr, pageSize)
+}
+
 addOpts({
   computed: {
     sortedGroups() {
-      const pageSize = 25
-      // Returns array of 'pages' where each page is an array of up to pageSize
-      // objects.
-      let arr = this.groups;
-      arr.sort((a, b) => { 
-        if (a.type != b.type)
-          return (a.type < b.type) ? -1 : 1
-        if (a.name != b.name)
-          return (a.name < b.name) ? -1 : 1
-        return 0
-      })
-      return makePages(arr, pageSize)
+      return makeGroupPages(this.groups, 25)
     },
+    sortedRestrictedGroups() {
+      return makeGroupPages(this.restrictedGroups, 25)
+    },
+    sortedPrivileges() {
+      let arr = this.privileges
+      arr.sort((a, b) => {
+        return a.name == b.name
+          ? 0
+          : a.name < b.name ? -1 : 1
+      })
+      return makePages(arr, 25)
+    }
+  },
+  components: {
+    "group-table": {
+      data() { return {} },
+      props: ['groups'],
+      template: "#draw-group-table"
+    }
   },
 })
 </script>
+
+<template id="draw-group-table">
+  <div class="row gx-3">
+    <template v-for="page in groups">
+      <div class='col-auto'>
+        <table>
+          <tr>
+            <th>Type</th>
+            <th>Name</th>
+            <th>Domain</th>
+            <th>Attributes</th>
+          </tr>
+          <tr v-for="prin in page">
+            <td>{{ prin.type }}</td>
+            <td :title="prin.sid">{{ prin.name }}</td>
+            <td style="white-space: nowrap">{{ prin.domain }}</td>
+            <td>
+              <template v-for="(attr, index) in prin.attrs">
+                <template v-if="index > 0">, </template>
+                {{ attr }}
+              </template>
+            </td>
+          </tr>
+        </table>
+      </div>
+    </template>
+  </div>
+</template>
 </head>
 <body>
 <div id="app" style="visibility: hidden">
   <script>aboutIntro('Account')</script>
 
   <div class="container-fluid mt-2">
-    <h3>User</h3>
+    <h3>Account</h3>
     <div class="row">
     <div class="col-auto">
     <dl class="mt-0">
@@ -51,22 +99,26 @@ addOpts({
     </div>
 
     <h3>Groups</h3>
+    <group-table :groups="sortedGroups"></group-table>
+
+    <template v-if="this.restrictedGroups.length > 0">
+      <h3>Restricted Groups</h3>
+      <group-table :groups="sortedRestrictedGroups"></group-table>
+    </template>
+
+    <h3>Privileges</h3>
     <div class="row gx-3">
-      <template v-for="page in sortedGroups">
-        <div class='col-auto'>
+      <template v-for="page in sortedPrivileges">
+        <div class="col-auto">
           <table>
             <tr>
-              <th>Type</th>
               <th>Name</th>
-              <th>Domain</th>
               <th>Attributes</th>
             </tr>
-            <tr v-for="prin in page">
-              <td>{{ prin.type }}</td>
-              <td>{{ prin.name }}</td>
-              <td style="white-space: nowrap">{{ prin.domain }}</td>
+            <tr v-for="priv in page">
+              <td>{{ priv.name }}</td>
               <td>
-                <template v-for="(attr, index) in prin.attrs">
+                <template v-for="(attr, index) in priv.attrs">
                   <template v-if="index > 0">, </template>
                   {{ attr }}
                 </template>
@@ -76,9 +128,6 @@ addOpts({
         </div>
       </template>
     </div>
-
-    <h3>Privileges</h3>
-
   </div>
 </div>
 
