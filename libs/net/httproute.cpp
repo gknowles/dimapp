@@ -789,11 +789,12 @@ struct AliasRouteNotify : IHttpRouteNotify {
 
 //===========================================================================
 void AliasRouteNotify::onHttpRequest(unsigned reqId, HttpRequest & msg) {
-    if (auto pi = find(m_path, m_method)) {
-        pi->notify->onHttpRequest(reqId, msg);
-    } else {
-        httpRouteReplyNotFound(reqId, msg);
-    }
+    msg.removeHeader(kHttp_Method);
+    msg.removeHeader(kHttp_Path);
+    msg.addHeader(kHttp_Method, toString(m_method));
+    msg.addHeader(kHttp_Path, m_path);
+    auto & ri = s_requests[reqId];
+    route(&ri, reqId, msg);
 }
 
 
