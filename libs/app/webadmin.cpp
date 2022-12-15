@@ -396,6 +396,7 @@ void Dim::iWebAdminInitialize() {
         .path = "/web",
         .recurse = true
     });
+    httpRouteAddAlias({ .path = "/favicon.ico" }, "/web/favicon.ico");
 
     // About
     httpRouteAdd({
