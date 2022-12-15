@@ -92,16 +92,16 @@ const char * toString(HttpHdr id);
 HttpHdr httpHdrFromString(std::string_view name, HttpHdr def = kHttpInvalid);
 
 enum HttpMethod : unsigned {
-    fHttpMethodInvalid = 0x00,
-    fHttpMethodConnect = 0x01,
-    fHttpMethodDelete = 0x02,
-    fHttpMethodGet = 0x04,
-    fHttpMethodHead = 0x08,
-    fHttpMethodOptions = 0x10,
-    fHttpMethodPost = 0x20,
-    fHttpMethodPut = 0x40,
-    fHttpMethodTrace = 0x80,
-    kHttpMethods = 8
+    fHttpMethodInvalid  = 0x00,
+    fHttpMethodConnect  = 0x01,
+    fHttpMethodDelete   = 0x02,
+    fHttpMethodGet      = 0x04,
+    fHttpMethodHead     = 0x08,
+    fHttpMethodOptions  = 0x10,
+    fHttpMethodPost     = 0x20,
+    fHttpMethodPut      = 0x40,
+    fHttpMethodTrace    = 0x80,
+    kHttpMethods        = 8
 };
 
 const char * toString(HttpMethod method);
@@ -203,11 +203,15 @@ public:
 
     // When adding references the memory referenced by the name and value
     // pointers must be valid for the life of the HttpMsg, such as constants
-    // or strings allocated from this messages Heap().
+    // or strings allocated from this messages heap().
     void addHeaderRef(HttpHdr id, const char value[]);
     void addHeaderRef(const char name[], const char value[]);
 
     const char * addRef(TimePoint time);
+
+    // Returns true if header removed, false if header wasn't found.
+    bool removeHeader(HttpHdr id);
+    bool removeHeader(const char name[]);
 
     HdrList headers();
     const HdrList headers() const;
@@ -231,6 +235,13 @@ public:
     virtual bool checkPseudoHeaders() const = 0;
 
 protected:
+    virtual void addHeaderRef(
+        HttpHdr id,
+        const char name[],
+        const char value[]
+    );
+    virtual bool removeHeader(HttpHdr id, const char name[]);
+
     enum Flags : unsigned {
         fFlagHasStatus = 0x01,
         fFlagHasMethod = 0x02,
@@ -243,8 +254,6 @@ protected:
     Flags toHasFlag(HttpHdr id) const;
 
 private:
-    void addHeaderRef(HttpHdr id, const char name[], const char value[]);
-
     CharBuf m_data;
     TempHeap m_heap;
     HdrName * m_firstHeader{};
@@ -284,6 +293,7 @@ struct HttpMsg::HdrList {
 class HttpRequest : public HttpMsg {
 public:
     using HttpMsg::HttpMsg;
+    using HttpMsg::removeHeader;
     void swap(HttpMsg & other) override;
 
     const char * method() const;
@@ -298,6 +308,7 @@ public:
 
 private:
     bool checkPseudoHeaders() const override;
+    bool removeHeader(HttpHdr id, const char name[]) override;
 
     HttpQuery * m_query{};
 };

@@ -177,9 +177,11 @@ static void localTest() {
     auto hsrv = httpAccept();
     auto hcli = httpConnect(&cbuf);
     HttpRequest msg;
-    msg.addHeaderRef(kHttp_Method, "get");
+    msg.addHeaderRef(kHttp_Method, "post");
     msg.addHeaderRef(kHttp_Scheme, "https");
     msg.addHeaderRef(kHttp_Path, "/");
+    msg.removeHeader(kHttp_Method);
+    msg.addHeaderRef(kHttp_Method, "get");
     int streamId = httpRequest(&cbuf, hcli, msg);
     ignore = streamId;
 

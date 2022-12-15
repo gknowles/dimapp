@@ -325,6 +325,42 @@ const char * HttpMsg::addRef(TimePoint time) {
 }
 
 //===========================================================================
+bool HttpMsg::removeHeader(HttpHdr id, const char name[]) {
+    auto ni = m_firstHeader;
+    auto prev = (HdrName *) nullptr;
+    for (;;) {
+        if (!ni)
+            return false;
+        if (ni->m_id == id && (id || strcmp(ni->m_name, name) == 0))
+            break;
+        prev = ni;
+        ni = ni->m_next;
+    }
+
+    // Update list to skip header.
+    if (name[0] == ':')
+        m_flags.reset(toHasFlag(id));
+    if (!prev) {
+        m_firstHeader = ni->m_next;
+    } else {
+        prev->m_next = ni->m_next;
+    }
+    return true;
+}
+
+//===========================================================================
+bool HttpMsg::removeHeader(HttpHdr id) {
+    auto name = s_hdrNameTbl.findName(id);
+    return removeHeader(id, name);
+}
+
+//===========================================================================
+bool HttpMsg::removeHeader(const char name[]) {
+    auto id = s_hdrNameTbl.find(name, kHttpInvalid);
+    return removeHeader(id, name);
+}
+
+//===========================================================================
 HttpMsg::HdrList HttpMsg::headers() {
     HdrList hl;
     hl.m_firstHeader = m_firstHeader;
@@ -442,6 +478,13 @@ const HttpQuery & HttpRequest::query() const {
 bool HttpRequest::checkPseudoHeaders() const {
     return m_flags.all(fFlagHasMethod | fFlagHasScheme | fFlagHasPath)
         && m_flags.none(fFlagHasStatus);
+}
+
+//===========================================================================
+bool HttpRequest::removeHeader(HttpHdr id, const char name[]) {
+    if (id == kHttp_Path)
+        m_query = nullptr;
+    return HttpMsg::removeHeader(id, name);
 }
 
 
