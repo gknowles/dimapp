@@ -54,18 +54,22 @@ createApp.waitingHtmlFragments = 1
 function finalize() {
     let tags = [
         { tag: 'script', props: {
-            src:
-'https://cdn.jsdelivr.net/npm/@popperjs/core@2.10.2/dist/umd/popper.min.js',
+            src: '/web/srv/vendor/popperjs@2.10.2/popper.min.js',
             integrity:
 'sha384-7+zCNj/IqJ95wo16oMtfsKbZ9ccEh31eOz1HGyDuCQ6wgnyJNSYdrPa03rtR1zdB',
             crossOrigin: 'anonymous',
+            onerror: (event) => { this.href =
+'https://cdn.jsdelivr.net/npm/@popperjs/core@2.10.2/dist/umd/popper.min.js'
+            },
         }},
         { tag: 'script', props: {
-            src:
-'https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js',
+            src: '/web/srv/vendor/bootstrap@5.1.3/bootstrap.min.js',
             integrity:
 'sha384-QJHtvGhmr9XOIpI6YVutG+2QOK9T+ZnN4kzFN1RtK3zEFEIsxhlmWl5/YESvpZ13',
             crossOrigin: 'anonymous',
+            onerror: (event) => { this.href =
+'https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js'
+            },
         }},
     ]
 
@@ -143,13 +147,17 @@ function addTags(tags) {
             integrity:
 'sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3',
             crossOrigin: 'anonymous',
-            href:
-'https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css',
+            href: '/web/srv/vendor/bootstrap@5.1.3/bootstrap.min.css',
+            onerror: (event) => { this.href =
+'https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css'
+            },
         }},
         { tag: 'link', props: {
             rel: 'stylesheet',
-            href:
-'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css',
+            href: '/web/srv/vendor/bootstrap-icons@1.8.1/bootstrap-icons.css',
+            onerror: (event) => { this.href =
+'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css'
+            },
         }},
         { tag: 'link', props: {
             rel: 'stylesheet',
@@ -160,7 +168,10 @@ function addTags(tags) {
             href: 'groupType.css'
         }},
         { tag: 'script', props: {
-            src: 'https://unpkg.com/vue@3',
+            src: '/web/srv/vendor/vue@3.2.45/vue.global.prod.js',
+            onerror: (event) => { this.href =
+'https://unpkg.com/vue@3.2.45/dist/vue.global.prod.js'
+            },
         }},
         { tag: 'script', props: {
             src: 'util.js',
