@@ -11,10 +11,39 @@ using namespace Dim;
 
 /****************************************************************************
 *
+*   Private declarations
+*
+***/
+
+//---------------------------------------------------------------------------
+// Windows API declarations not available from Windows.h
+//---------------------------------------------------------------------------
+#pragma pack(push)
+#pragma pack()
+struct DIM_OSVERSIONINFOEXW {
+    DWORD dwOSVersionInfoSize;
+    DWORD dwMajorVersion;
+    DWORD dwMinorVersion;
+    DWORD dwBuildNumber;
+    DWORD dwPlatformId;
+    WCHAR szCSDVersion[ 128 ];     // Maintenance string for PSS usage
+    WORD  wServicePackMajor;
+    WORD  wServicePackMinor;
+    WORD  wSuiteMask;
+    BYTE  wProductType;
+    BYTE  wReserved;
+};
+#pragma pack(pop)
+using RtlGetVersionFn = NTSTATUS(WINAPI *)(DIM_OSVERSIONINFOEXW * info);
+
+
+/****************************************************************************
+*
 *   Variables
 *
 ***/
 
+static RtlGetVersionFn s_RtlGetVersion;
 static EnvMemoryConfig s_memCfg;
 static unsigned s_numProcessors;
 static string s_execPath;
@@ -179,6 +208,31 @@ string Dim::envComputerName() {
 }
 
 //===========================================================================
+string Dim::envComputerDnsName() {
+    wstring wbuf;
+    DWORD bufLen = (DWORD) size(wbuf);
+    if (!GetComputerNameExW(
+        ComputerNameDnsFullyQualified,
+        NULL,
+        &bufLen
+    )) {
+        WinError err;
+        if (err != ERROR_MORE_DATA)
+            logMsgFatal() << "GetComputerNameExW(NULL): " << err;
+    }
+    wbuf.resize(bufLen);
+    if (!GetComputerNameExW(
+        ComputerNameDnsFullyQualified,
+        wbuf.data(),
+        &bufLen
+    )) {
+        WinError err;
+        logMsgFatal() << "GetComputerNameExW: " << err;
+    }
+    return toString(wbuf);
+}
+
+//===========================================================================
 EnvDomainMembership Dim::envDomainMembership() {
     EnvDomainMembership out = {};
     wchar_t * buf;
@@ -211,6 +265,41 @@ string Dim::envDomainStatusToString(DomainStatus value) {
     out += to_string(to_underlying(value));
     out += ')';
     return out;
+}
+
+//===========================================================================
+Dim::VersionInfo Dim::envOSVersion() {
+    VersionInfo out = {};
+    if (!s_RtlGetVersion)
+        winLoadProc(&s_RtlGetVersion, "ntdll", "RtlGetVersion");
+    DIM_OSVERSIONINFOEXW info = { sizeof(info) };
+    WinError err = s_RtlGetVersion(&info);
+    if (!err) {
+        out.major = info.dwMajorVersion;
+        out.minor = info.dwMinorVersion;
+        out.build = info.dwBuildNumber;
+        out.patch = 0;
+    }
+    return out;
+}
+
+//===========================================================================
+void Dim::envOSVersion(IJBuilder * out) {
+    if (!s_RtlGetVersion)
+        winLoadProc(&s_RtlGetVersion, "ntdll", "RtlGetVersion");
+    DIM_OSVERSIONINFOEXW info = { sizeof(info) };
+    if (WinError err = s_RtlGetVersion(&info)) {
+        logMsgError() << "RtlGetVersion: " << err;
+        return;
+    }
+    out->member("version").object();
+    out->member("major", info.dwMajorVersion)
+        .member("minor", info.dwMinorVersion)
+        .member("build", info.dwBuildNumber)
+        .member("svcPackName", toString(info.szCSDVersion))
+        .member("svcPackMajor", info.wServicePackMajor)
+        .member("svcPackMinor", info.wServicePackMinor);
+    out->end();
 }
 
 

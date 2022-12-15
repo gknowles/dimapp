@@ -52,6 +52,7 @@ struct DiskSpace {
 DiskSpace envDiskSpace(std::string_view path);
 
 std::string envComputerName();
+std::string envComputerDnsName();
 
 enum class DomainStatus {
     kUnknown,
@@ -65,6 +66,16 @@ struct EnvDomainMembership {
 };
 EnvDomainMembership envDomainMembership();
 std::string envDomainStatusToString(DomainStatus value);
+
+
+/****************************************************************************
+*
+*   Operating System
+*
+***/
+
+VersionInfo envOSVersion();
+void envOSVersion(IJBuilder * out);
 
 
 /****************************************************************************

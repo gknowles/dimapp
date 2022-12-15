@@ -9,6 +9,9 @@ init.css - dim webapp
 .bg-selected {
     background-color: lightgrey;
 }
+.disabled {
+    background-color: lightgrey;
+}
 
 table {
     margin: 10px 0px;

@@ -47,7 +47,7 @@
 #define UNICODE
 #include <Windows.h>
 
-// must come after Windows.h
+// Must come after Windows.h
 #include <AclAPI.h>
 #include <CommCtrl.h> // ListView
 #include <DbgHelp.h>
@@ -63,11 +63,11 @@
 #include <WS2tcpip.h> // getaddrinfo, GetAddrInfoEx
 #include <VersionHelpers.h>
 
-// must come after lmcons.h
+// Must come after lmcons.h
 #include <LMAPIbuf.h> // NetApiBufferFree
 #include <LMJoin.h> // NetGetJoinInformation
 
-// must come after WinSock2.h
+// Must come after WinSock2.h
 #include <iphlpapi.h> // GetAdaptersAddresses, ParseNetworkString
 #include <mstcpip.h> // SIO_LOOPBACK_FAST_PATH
 #include <MSWSock.h> // Registered IO

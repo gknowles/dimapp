@@ -202,14 +202,28 @@ void JsonComputer::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     auto res = HttpResponse(kHttpStatusOk);
     auto bld = initResponse(&res, reqId, msg);
     addAboutVars(&bld);
+
+    // Domain
     auto di = envDomainMembership();
     bld.member("domain").object()
         .member("name", di.name)
         .member("status", envDomainStatusToString(di.status))
         .end();
-    //addresses
-    //os version
-    //dns?
+
+    // Addresses
+    std::vector<HostAddr> addrs;
+    addressGetLocal(&addrs);
+    bld.member("addresses").array();
+    for (auto&& addr : addrs)
+        bld.value(toString(addr));
+    bld.end();
+
+    // OS Version
+    envOSVersion(&bld);
+
+    // Fully qualified DNS name of thie host.
+    bld.member("fullDnsName", envComputerDnsName());
+
     bld.end();
     httpRouteReply(reqId, move(res));
 }

@@ -8,7 +8,8 @@ about-computer.html - dim webapp
 <html>
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
+<meta name="viewport" content="width=device-width, initial-scale=1,
+  shrink-to-fit=no"/>
 <script src="initialize.js"></script>
 <script src="about-common.js"></script>
 <script src="/srv/about/computer.json?jsVar=srvdata"></script>
@@ -24,11 +25,21 @@ about-computer.html - dim webapp
       <dt>Domain</dt>
       <dd>{{domain.name}} ({{domain.status}})</dd>
       <dt>Addresses</dt>
-      <dd></dd>
+      <dd>
+        <div v-for="addr in addresses">{{ addr }}</div>
+      </dd>
       <dt>OS Version</dt>
-      <dd></dd>
-      <dt>DNS?</dt>
-      <dd></dd>
+      <dd>
+        <div>
+          Windows {{version.major}}.{{version.minor}}.{{version.build}}
+        </div>
+        <div v-if="version.svcPackMajor > 0">
+          {{version.svcPackName}}
+          (Version {{version.svcPackMajor}}.{{version.svcPackMinor}})
+        </div>
+      </dd>
+      <dt>DNS</dt>
+      <dd>{{fullDnsName}}</dd>
     </dl>
     </div>
     </div>
