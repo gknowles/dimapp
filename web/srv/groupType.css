@@ -13,7 +13,7 @@ groupTypes.css - dim webapp
 
 .groupType-local table th {
     background-color: #0d6efd;
-    border-color: #0d6efd;
+    border-color: black;
     color: #f8f9fa;
 }
 

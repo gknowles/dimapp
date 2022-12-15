@@ -57,7 +57,7 @@ addOpts({
               <th>Size</th>
               <th>Age</th>
             </tr>
-            <tr v-for="val in page">
+            <tr v-for="val in page" :class="ageClass(val.mtime)">
               <td style='white-space: nowrap'>
                 <a :href="'file-log-tail.html?file=' +
                     encodeURIComponent(val.name)">
@@ -65,12 +65,17 @@ addOpts({
                 </a>
               </td>
               <td>{{val.size}}</td>
-              <td>{{readableDuration(elapsedTime(val.mtime))}}</td>
+              <td>{{readableAge(val.mtime)}}</td>
             </tr>
           </table>
         </div>
       </template>
     </div>
+    <table>
+      <tr><td>Modified within the last hour</td></tr>
+      <tr class='recent'><td>Modified within 24 hours</td></tr>
+      <tr class='old'><td>More than 24 hours since last modified</td></tr>
+    </table>
   </div>
 </div>
 

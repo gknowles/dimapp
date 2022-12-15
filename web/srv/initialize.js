@@ -31,7 +31,20 @@ function createApp() {
         },
         methods: {
             readableDuration,
-            elapsedTime,
+            elapsedTime(val) {
+                return this.nowSecs - Date.parse(val) / 1000
+            },
+            readableAge(val) {
+                if (typeof val === 'undefined') return '-'
+                return this.readableDuration(this.elapsedTime(val))
+            },
+            ageClass(val) {
+                if (typeof val === 'undefined') return 'disabled'
+                let age = this.elapsedTime(val)
+                if (age < 3600) return 'null'
+                if (age < 24 * 3600) return 'recent'
+                return 'old'
+            },
             miniNav() {
                 return []
             },

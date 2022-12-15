@@ -6,13 +6,6 @@ util.js - dim webapp
 */
 
 //===========================================================================
-// Duration from this.now to val, measured in seconds, where val is an ISO-8601
-// date string.
-function elapsedTime(val) {
-    return this.nowSecs - Date.parse(val) / 1000
-}
-
-//===========================================================================
 function readableDuration(val) {
     if (!val)
         return isNaN(val) ? 'NaNs' : '0s'
@@ -51,7 +44,7 @@ function makePages(arr, pageSize) {
       let out = []
       let pageOut = []
       for (let [i, cnt] of arr.entries()) {
-        if (i % pageSize == 0) 
+        if (i % pageSize == 0)
           out.push([])
         out[out.length - 1].push(cnt)
       }

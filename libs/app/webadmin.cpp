@@ -46,6 +46,8 @@ static void addRoute(
     if (!ri.renderPath.empty())
         out->member("renderPath", ri.renderPath);
     out->member("matched", ri.matched);
+    if (ri.matched)
+        out->member("lastMatched", ri.lastMatched);
     if (active)
         out->member("active", true);
     out->end();

@@ -12,6 +12,12 @@ init.css - dim webapp
 .disabled {
     background-color: lightgrey;
 }
+.recent {
+    background-color: #D3FED8;
+}
+.old {
+    background-color: lightgreen;
+}
 
 table {
     margin: 10px 0px;

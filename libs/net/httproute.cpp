@@ -131,6 +131,7 @@ static void route(RequestInfo * ri, unsigned reqId, HttpRequest & req) {
     if (!pi)
         return httpRouteReplyNotFound(reqId, req);
     pi->matched += 1;
+    pi->lastMatched = timeNow();
     if (!pi->notify)
         return httpRouteReplyNotFound(reqId, req);
     ri->pi = pi;

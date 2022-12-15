@@ -46,6 +46,7 @@ struct HttpRouteInfo {
 
     // Values not set by clients.
     unsigned matched = 0;
+    Dim::TimePoint lastMatched = {};
 
     explicit operator bool() const { return methods.any(); }
 };
