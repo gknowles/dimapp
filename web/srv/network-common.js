@@ -16,9 +16,11 @@ function networkIntro(selected) {
         methods: {
             miniNav() {
                 return [
-                    { name: 'Connections', href: 'network-conns.html', disabled: true },
+                    { name: 'Connections', href: 'network-conns.html',
+                        disabled: true },
                     { name: 'Routes', href: 'network-routes.html' },
-                    { name: 'Messages', href: 'network-messages.html', disabled: true },
+                    { name: 'Messages', href: 'network-messages.html',
+                        disabled: true },
                 ]
             },
         },

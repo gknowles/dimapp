@@ -8,7 +8,8 @@ file-crashes.html - dim webapp
 <html>
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
+<meta name="viewport" content="width=device-width, initial-scale=1,
+    shrink-to-fit=no"/>
 <script src="initialize.js"></script>
 <script src="file-common.js"></script>
 <script src="/srv/file/crashes.json?jsVar=srvdata"></script>
@@ -20,7 +21,7 @@ addOpts({
       // Returns array of 'pages' where each page is an array of up to pageSize
       // objects.
       let arr = this.files
-      arr.sort((a, b) => { 
+      arr.sort((a, b) => {
         if (a.mtime > b.mtime)
           return -1
         if (a.mtime < b.mtime)
