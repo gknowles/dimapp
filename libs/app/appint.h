@@ -19,6 +19,7 @@ void iAppPerfInitialize();
 
 // Config
 void iConfigInitialize();
+void iConfigWebInitialize();
 
 // LogFile
 void iLogFileInitialize();

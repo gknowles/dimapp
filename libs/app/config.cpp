@@ -50,16 +50,23 @@ public:
     void onFileChange(string_view fullpath) override;
 
 private:
-    void parseContent(string_view fullpath, string && content);
+    void parseContent(
+        string_view fullpath,
+        uint64_t bytes,
+        TimePoint mtime,
+        string && content
+    );
 
     List<NotifyInfo> m_notifiers;
-    unsigned m_changes{};
-    TimePoint m_lastChanged{};
+    unsigned m_changes = {};
+    TimePoint m_lastChanged = {};
 
     string m_content;
     XDocument m_xml;
     string_view m_fullpath;
     string_view m_relpath;
+    uint64_t m_bytes = 0;
+    TimePoint m_mtime = {};
 };
 
 } // namespace
@@ -117,7 +124,7 @@ void ConfigFile::monitor_UNLK(
             fullpath = appConfigDir();
             fullpath += '/';
             fullpath += relpath;
-            parseContent(fullpath, {});
+            parseContent(fullpath, 0, {}, {});
         }
     } else {
         notify_UNLK(move(lk), notify);
@@ -147,7 +154,14 @@ bool ConfigFile::closeWait_UNLK(
 }
 
 //===========================================================================
-void ConfigFile::parseContent(string_view fullpath, string && content) {
+void ConfigFile::parseContent(
+    string_view fullpath,
+    uint64_t bytes,
+    TimePoint mtime,
+    string && content
+) {
+    m_bytes = bytes;
+    m_mtime = mtime;
     m_content = move(content);
     m_relpath = fullpath;
     m_relpath.remove_prefix(appConfigDir().size() + 1);
@@ -156,7 +170,7 @@ void ConfigFile::parseContent(string_view fullpath, string && content) {
     m_fullpath = m_xml.heap().strDup(fullpath);
 
     // call notifiers
-    logMsgInfo() << "Config file '" << m_relpath << "' loaded";
+    logMsgInfo() << "Config file '" << m_relpath << "' changed";
     configChange(m_fullpath, nullptr);
 }
 
@@ -167,23 +181,25 @@ void ConfigFile::onFileChange(string_view fullpath) {
     m_changes += 1;
     m_lastChanged = timeNow();
     string content;
+    uint64_t bytes = 0;
+    TimePoint mtime = {};
     for (;;) {
         FileHandle f;
         auto ec = fileOpen(&f, fullpath, fReadOnly | fDenyWrite);
-        if (ec)
+        if (ec) {
+            logMsgError() << "File open failed '" << fullpath << "': "
+                << ec.message();
             break;
+        }
 
         // load file
-        uint64_t bytes = 0;
+        fileLastWriteTime(&mtime, f);
         if (auto ec = fileSize(&bytes, f); ec)
             break;
         if (bytes > kMaxConfigFileSize) {
             logMsgError() << "File too large (" << bytes << " bytes): "
                 << fullpath;
-            bytes = 0;
-        }
-
-        if (bytes) {
+        } else if (bytes) {
             content.resize((size_t) bytes);
             if (auto ec = fileReadWait(
                 nullptr,
@@ -192,14 +208,14 @@ void ConfigFile::onFileChange(string_view fullpath) {
                 f,
                 0
             ); ec) {
-                bytes = 0;
+                content.clear();
             }
         }
         fileClose(f);
         break;
     }
 
-    parseContent(fullpath, move(content));
+    parseContent(fullpath, bytes, mtime, move(content));
 }
 
 //===========================================================================
@@ -246,9 +262,13 @@ bool ConfigFile::notify_UNLK(
 //===========================================================================
 void ConfigFile::write(IJBuilder * out) {
     out->object();
-    out->member("path", m_relpath);
+    out->member("name", m_relpath);
+    out->member("size", m_bytes);
+    out->member("mtime", m_mtime);
+    out->member("contentSize", size(m_content));
     out->member("lastChanged", m_lastChanged);
     out->member("changes", m_changes);
+    out->member("notifiers", size(m_notifiers));
     out->end();
 }
 
@@ -648,5 +668,90 @@ void Dim::configWriteRules(IJBuilder * out) {
     for (auto && kv : s_files)
         kv.second.write(out);
     out->end();
+}
+
+
+/****************************************************************************
+*
+*   JsonConfigs
+*
+***/
+
+namespace {
+class JsonConfigs : public IWebAdminNotify {
+    void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
+};
+} // namespace
+
+//===========================================================================
+void JsonConfigs::onHttpRequest(unsigned reqId, HttpRequest & msg) {
+    auto res = HttpResponse(kHttpStatusOk);
+    auto bld = initResponse(&res, reqId, msg);
+    auto dir = appConfigDir();
+    bld.member("files");
+    configWriteRules(&bld);
+    bld.end();
+    httpRouteReply(reqId, move(res));
+}
+
+
+/****************************************************************************
+*
+*   JsonConfigFile
+*
+***/
+
+namespace {
+class JsonConfigFile : public IWebAdminNotify {
+    void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
+};
+} // namespace
+
+//===========================================================================
+void JsonConfigFile::onHttpRequest(unsigned reqId, HttpRequest & msg) {
+    auto qpath = msg.query().path;
+    auto prefix = httpRouteGetInfo(reqId).path.size();
+    qpath.remove_prefix(prefix);
+    Path path;
+    if (!appConfigPath(&path, qpath, false))
+        return httpRouteReplyNotFound(reqId, msg);
+
+    auto dir = appConfigDir();
+    string content;
+    auto ec = fileLoadBinaryWait(&content, path);
+    if (ec)
+        return httpRouteReplyNotFound(reqId, msg);
+
+    auto res = HttpResponse(kHttpStatusOk);
+    auto bld = initResponse(&res, reqId, msg);
+    bld.member("file").object()
+        .member("name", qpath);
+    TimePoint mtime;
+    if (ec = fileLastWriteTime(&mtime, path); !ec)
+        bld.member("mtime", mtime);
+    bld.member("size", content.size());
+    bld.member("content", content);
+    bld.end();
+    bld.end();
+    httpRouteReply(reqId, move(res));
+}
+
+
+static JsonConfigs s_jsonConfigs;
+static JsonConfigFile s_jsonConfigFile;
+
+//===========================================================================
+void Dim::iConfigWebInitialize() {
+    if (appFlags().any(fAppWithWebAdmin)) {
+        httpRouteAdd({
+            .notify = &s_jsonConfigs,
+            .path = "/srv/file/configs.json",
+        });
+        httpRouteAdd({
+            .notify = &s_jsonConfigFile,
+            .path = "/srv/file/configs/",
+            .recurse = true
+        });
+    }
 }
 

@@ -3,7 +3,7 @@
 Copyright Glen Knowles 2022.
 Distributed under the Boost Software License, Version 1.0.
 
-file-log-tail.html - dim webapp
+file-config-content.html - dim webapp
 -->
 <html>
 <head>
@@ -19,7 +19,7 @@ params.delete('file')
 params.set('jsVar', 'srvdata')
 let tags = [
   { tag: 'script', props: {
-      src: "/srv/file/logs/tail/" + file + '?' + params.toString(),
+      src: "/srv/file/configs/" + file + '?' + params.toString(),
   }},
 ]
 addTags(tags)
@@ -27,7 +27,7 @@ addTags(tags)
 </head>
 <body>
 <div id="app" style="visibility: hidden">
-  <script>fileIntro('Logs')</script>
+  <script>fileIntro('Configs')</script>
 
   <div class="container-fluid mt-2">
     <div class="row gx-3">
@@ -38,30 +38,11 @@ addTags(tags)
         <dd>{{file.size}}</dd>
         <dt>Age</dt>
         <dd>{{readableDuration(elapsedTime(file.mtime))}}</dd>
-        <dt>Line Limit</dt>
-        <dd>
-          <template v-for="val in [20,50,100,200,500]">
-            <a v-if="val != file.limit"
-              :href="updateUrl({ limit: val })">
-              {{val}}
-            </a>
-            <span v-else>{{val}}</span>
-            <span>&nbsp;</span>
-          </template>
-        </dd>
       </dl>
     </div>
     <div class="row gx-3">
-      <h4 v-if="file.lines.length &lt; file.limit">
-        Entire File ({{file.lines.length}} lines)
-      </h4>
-      <h4 v-else>
-        Last {{file.lines.length}} Lines
-      </h4>
-      <p>
-        <template v-for="line in file.lines">
-          {{line}}<br>
-        </template>
+      <p style="white-space: pre-wrap">
+        {{file.content}}
       </p>
     </div>
   </div>

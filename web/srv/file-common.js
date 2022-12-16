@@ -16,8 +16,7 @@ function fileIntro(selected) {
         methods: {
             miniNav() {
                 return [
-                    { name: 'Configs', href: 'file-configs.html',
-                        disabled: true },
+                    { name: 'Configs', href: 'file-configs.html' },
                     { name: 'Logs', href: 'file-logs.html' },
                     { name: 'Crashes', href: 'file-crashes.html' },
                 ]

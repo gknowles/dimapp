@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<!--
+Copyright Glen Knowles 2022.
+Distributed under the Boost Software License, Version 1.0.
+
+file-configs.html - dim webapp
+-->
+<html>
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1,
+    shrink-to-fit=no"/>
+<script src="initialize.js"></script>
+<script src="file-common.js"></script>
+<script src="/srv/file/configs.json?jsVar=srvdata"></script>
+<script>
+addOpts({
+  computed: {
+    sortedFiles() {
+      const pageSize = 25
+      // Returns array of 'pages' where each page is an array of up to pageSize
+      // objects.
+      let arr = this.files
+      arr.sort((a, b) => {
+        if (a.name < b.name)
+          return -1
+        if (a.name > b.name)
+          return 1
+        return 0
+      })
+      return makePages(arr, pageSize)
+    },
+  },
+})
+</script>
+</head>
+<body>
+<div id="app" style="visibility: hidden">
+  <script>fileIntro('Configs')</script>
+
+  <div class="container-fluid mt-2">
+    <div class="row gx-3">
+      <template v-if="sortedFiles.length == 0">
+        <div class="col-auto">
+          No config files.
+        </div>
+      </template>
+      <template v-for="page in sortedFiles">
+        <div class='col-auto'>
+          <table>
+            <tr>
+              <th colspan="3">Disk</th>
+              <th colspan="4">Memory</th>
+            </tr>
+            <tr>
+              <th>Name</th>
+              <th>Age</th>
+              <th>Size</th>
+              <th>Notifiers</th>
+              <th>Changes</th>
+              <th>Last Change</th>
+              <th>Size</th>
+            </tr>
+            <tr v-for="val in page"
+                :class="val.contentSize == 0 ? 'disabled'
+                    : ageClass(val.lastChanged)">
+              <td style='white-space: nowrap'>
+                <a v-if="val.content > 0" :href="makeUrl(
+                    'file-config-content.html', {file: val.name})">
+                  {{val.name}}
+                </a>
+                <template v-else>{{val.name}}</template>
+              </td>
+              <td>{{readableAge(val.mtime)}}</td>
+              <td class='text-end'>{{val.size.toLocaleString()}}</td>
+              <td class='text-end'>{{val.notifiers.toLocaleString()}}</td>
+              <td class='text-end'>{{val.changes.toLocaleString()}}</td>
+              <td>{{readableAge(val.lastChanged)}}</td>
+              <td class='text-end'>{{val.contentSize.toLocaleString()}}</td>
+            </tr>
+          </table>
+        </div>
+      </template>
+    </div>
+    <table>
+      <tr class='disabled'><td>No content loaded</td></tr>
+      <tr><td>Modified within the last hour</td></tr>
+      <tr class='recent'><td>Modified within 24 hours</td></tr>
+      <tr class='old'><td>More than 24 hours since last modified</td></tr>
+    </table>
+  </div>
+</div>
+
+<script>finalize()</script>
+</body>
+</html>

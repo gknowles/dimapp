@@ -322,12 +322,15 @@
 # vendor/dimcli
 # vendor/dimcli/libs/dimcli/cli.cpp
 # vendor/dimcli/libs/dimcli/cli.h
+# web/favicon.ico
 # web/srv/about-account.html
 # web/srv/about-common.html
 # web/srv/about-common.js
 # web/srv/about-computer.html
 # web/srv/about-counters.html
 # web/srv/file-common.js
+# web/srv/file-config-content.html
+# web/srv/file-configs.html
 # web/srv/file-crashes.html
 # web/srv/file-log-tail.html
 # web/srv/file-logs.html
@@ -338,3 +341,11 @@
 # web/srv/network-common.js
 # web/srv/network-routes.html
 # web/srv/util.js
+# web/srv/vendor/bootstrap-icons@1.8.1/bootstrap-icons.css
+# web/srv/vendor/bootstrap-icons@1.8.1/fonts/bootstrap-icons.woff2
+# web/srv/vendor/bootstrap@5.1.3/bootstrap.min.css
+# web/srv/vendor/bootstrap@5.1.3/bootstrap.min.css.map
+# web/srv/vendor/bootstrap@5.1.3/bootstrap.min.js
+# web/srv/vendor/bootstrap@5.1.3/bootstrap.min.js.map
+# web/srv/vendor/popperjs@2.10.2/popper.min.js
+# web/srv/vendor/vue@3.2.45/vue.global.prod.js

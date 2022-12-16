@@ -266,7 +266,7 @@ void JsonCounters::onHttpRequest(unsigned reqId, HttpRequest & msg) {
 
 /****************************************************************************
 *
-*   JsonRoutes
+*   Network - JsonRoutes
 *
 ***/
 
@@ -294,7 +294,7 @@ void JsonRoutes::onHttpRequest(unsigned reqId, HttpRequest & msg) {
 
 /****************************************************************************
 *
-*   JsonCrashFiles
+*   Files - JsonCrashFiles
 *
 ***/
 
@@ -329,7 +329,7 @@ void JsonCrashFiles::onHttpRequest(unsigned reqId, HttpRequest & msg) {
 
 /****************************************************************************
 *
-*   CrashFiles
+*   Files - CrashFiles
 *
 ***/
 
@@ -461,6 +461,7 @@ void Dim::iWebAdminInitialize() {
     });
 
     // Files
+    iConfigWebInitialize();
     iLogFileWebInitialize();
     httpRouteAdd({
         .notify = nullptr,
