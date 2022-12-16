@@ -343,7 +343,8 @@ void IJBuilder::addString(string_view val) {
     auto count = val.size();
     auto base = ptr;
     for (; count; --count, ++ptr) {
-        auto type = (TextType)kTextTypeTable[*ptr];
+        unsigned char ch = *ptr;
+        auto type = (TextType)kTextTypeTable[ch];
         switch (type) {
         case kTextTypeInvalid:
             m_state = kStateFail;
