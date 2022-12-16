@@ -341,7 +341,7 @@ bool JsonLogTail::LogJob::onFileRead(
         // Found the first line we will return (either at the limit or, if
         // there weren't enough lines, the start of the file).
         m_bld.member("lines").array();
-        auto i = lines.begin() + m_found - m_limit;
+        auto i = lines.begin() + (m_found - m_limit);
         auto e = lines.end() - 1;
         assert(i <= e);
         for (; i < e; ++i)

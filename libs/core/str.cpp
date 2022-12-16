@@ -374,6 +374,8 @@ void Dim::split(
     size_t epos = src.size();
     while (pos < src.size()) {
         epos = src.find_first_of(seps, pos);
+        if (epos == string::npos)
+            epos = src.size();
         auto len = epos - pos;
         for (; len > maxLen; len -= maxLen, pos += maxLen) {
             out->push_back(src.substr(pos, maxLen));
