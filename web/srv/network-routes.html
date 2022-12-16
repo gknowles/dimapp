@@ -57,9 +57,11 @@ addOpts({
             <tr :class="ageClass(val.lastMatched)">
               <td>
                 <a v-if="val.methods.includes('GET')" :href="val.path">
-                  {{val.path}}
+                  {{val.path}}{{val.recurse ? '...' : ''}}
                 </a>
-                <template v-else>{{val.path}}</template>
+                <template v-else>
+                  {{val.path}}{{val.recurse ? '...' : ''}}
+                </template>
               </td>
               <td>
                 <template v-for="(name, index) in val.methods">
