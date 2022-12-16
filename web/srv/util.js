@@ -50,3 +50,33 @@ function makePages(arr, pageSize) {
       }
       return out
 }
+
+//===========================================================================
+function makeUrl(path, params) {
+    let out = ""
+    for (let n in params) {
+        out = out.concat(
+            '&',
+            encodeURIComponent(n),
+            '=',
+            encodeURIComponent(params[n])
+        )
+    }
+    if (out.length > 0) {
+        return path + '?' + out.substring(1)
+    } else {
+        return path
+    }
+}
+
+//===========================================================================
+// Return query string containing the parameters from the current location
+// and overridden with values from params.
+function updateUrl(params) {
+    let loc = window.location
+    let query = new URLSearchParams(loc.search)
+    for (let n in params) {
+        query.set(n, params[n])
+    }
+    return '?' + query.toString()
+}

@@ -30,6 +30,9 @@ function createApp() {
             },
         },
         methods: {
+            miniNav() { return [] },
+            makeUrl,
+            updateUrl,
             readableDuration,
             elapsedTime(val) {
                 return this.nowSecs - Date.parse(val) / 1000
@@ -44,9 +47,6 @@ function createApp() {
                 if (age < 3600) return 'null'
                 if (age < 24 * 3600) return 'recent'
                 return 'old'
-            },
-            miniNav() {
-                return []
             },
         },
     }

@@ -38,8 +38,17 @@ addTags(tags)
         <dd>{{file.size}}</dd>
         <dt>Age</dt>
         <dd>{{readableDuration(elapsedTime(file.mtime))}}</dd>
-        <dt>Limit</dt>
-        <dd>{{file.limit}}</dd>
+        <dt>Line Limit</dt>
+        <dd>
+          <template v-for="val in [20,50,100,200,500]">
+            <a v-if="val != file.limit"
+              :href="updateUrl({ limit: val })">
+              {{val}}
+            </a>
+            <span v-else>{{val}}</span>
+            <span>&nbsp;</span>
+          </template>
+        </dd>
       </dl>
     </div>
     <div class="row gx-3">
