@@ -71,13 +71,14 @@ addOpts({
           <th>Line</th>
           <th>File</th>
         </tr>
-        <tr v-for="val in sortedBlocks">
+        <tr v-for="val in sortedBlocks"
+            :class="{ 'disabled fw-bold': val.file == 'TOTAL' }">
           <td class="text-end">{{val.total.toLocaleString()}}</td>
           <td class="text-end">{{val.count.toLocaleString()}}</td>
-          <td class="text-end">{{val.size.toLocaleString()}}</td>
           <td class="text-end">
-            <template v-if="val.file == 'UNKNOWN'">-</template>
-            <template v-else>{{val.line.toLocaleString()}}</template>
+            {{val.size ? val.size.toLocaleString() : '-'}}</td>
+          <td class="text-end">
+            {{val.line ? val.line.toLocaleString() : '-'}}
           </td>
           <td>{{val.file}}</td>
         </tr>
