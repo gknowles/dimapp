@@ -266,6 +266,35 @@ void JsonCounters::onHttpRequest(unsigned reqId, HttpRequest & msg) {
 
 /****************************************************************************
 *
+*   About - JsonMemory
+*
+***/
+
+namespace {
+class JsonMemory : public IWebAdminNotify {
+    void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
+
+    Param & m_confirm = param("confirm");
+};
+} // namespace
+
+//===========================================================================
+void JsonMemory::onHttpRequest(unsigned reqId, HttpRequest & msg) {
+    auto res = HttpResponse(kHttpStatusOk);
+    auto bld = initResponse(&res, reqId, msg);
+    addAboutVars(&bld);
+    if (*m_confirm == "on") {
+        debugDumpMemory(&bld);
+    } else {
+        bld.member("blocks").array().end();
+    }
+    bld.end();
+    httpRouteReply(reqId, move(res));
+}
+
+
+/****************************************************************************
+*
 *   Network - JsonRoutes
 *
 ***/
@@ -392,6 +421,7 @@ static WebFiles s_webFiles;
 static JsonAccount s_jsonAccount;
 static JsonComputer s_jsonComputer;
 static JsonCounters s_jsonCounters;
+static JsonMemory s_jsonMemory;
 static JsonRoutes s_jsonRoutes;
 static JsonCrashFiles s_jsonCrashFiles;
 static CrashFiles s_crashFiles;
@@ -435,7 +465,7 @@ void Dim::iWebAdminInitialize() {
         .path = "/srv/about/computer.json",
     });
     httpRouteAdd({
-        .notify = nullptr,
+        .notify = &s_jsonMemory,
         .path = "/srv/about/memory.json"
     });
 

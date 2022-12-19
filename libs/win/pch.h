@@ -46,6 +46,7 @@
 #define NOMINMAX
 #define UNICODE
 #include <Windows.h>
+#include <crtdbg.h>
 
 // Must come after Windows.h
 #include <AclAPI.h>

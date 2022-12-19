@@ -18,7 +18,7 @@
 #endif
 
 #ifndef NDEBUG
-#define _CRTDBG_MAP_ALLOC
+#define _CRTDBG_MAP_ALLOC 1
 #endif
 
 #ifdef DIMAPP_PACK_ALIGNMENT

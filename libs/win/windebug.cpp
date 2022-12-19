@@ -8,6 +8,204 @@
 using namespace std;
 using namespace Dim;
 
+#include <array>
+
+
+/****************************************************************************
+*
+*   OtherHeap
+*
+***/
+
+namespace {
+
+class OtherHeap : public ITempHeap {
+public:
+    OtherHeap(HANDLE h);
+    ~OtherHeap();
+
+    // ITempHeap
+    using ITempHeap::alloc;
+    char * alloc(size_t bytes, size_t alignment) override;
+
+    // Inherited via std::pmr::memory_resource
+    void * do_allocate(size_t bytes, size_t alignment) override;
+    void do_deallocate(void * ptr, size_t bytes, size_t alignment) override;
+    bool do_is_equal(
+        const std::pmr::memory_resource & other
+    ) const noexcept override;
+
+private:
+    HANDLE m_heap = INVALID_HANDLE_VALUE;
+};
+
+} // namespace
+
+//===========================================================================
+OtherHeap::OtherHeap(HANDLE h)
+    : m_heap(h)
+{}
+
+//===========================================================================
+OtherHeap::~OtherHeap() {
+    if (!HeapDestroy(m_heap))
+        logMsgError() << "HeapDestroy(Other): " << WinError{};
+}
+
+//===========================================================================
+inline void * OtherHeap::do_allocate(size_t bytes, size_t alignment) {
+    assert(has_single_bit(alignment));
+    if (alignment <= MEMORY_ALLOCATION_ALIGNMENT)
+        return HeapAlloc(m_heap, 0, bytes);
+    auto space = bytes + alignment - MEMORY_ALLOCATION_ALIGNMENT;
+    auto ptr = HeapAlloc(m_heap, 0, space);
+    return align(alignment, bytes, ptr, space);
+}
+
+//===========================================================================
+inline void OtherHeap::do_deallocate(
+    void * ptr,
+    size_t bytes,
+    size_t alignment
+) {
+    HeapFree(m_heap, 0, ptr);
+}
+
+//===========================================================================
+inline bool OtherHeap::do_is_equal(
+    const pmr::memory_resource & other
+) const noexcept {
+    return this == &other;
+}
+
+//===========================================================================
+char * OtherHeap::alloc(size_t bytes, size_t alignment) {
+    return (char *) do_allocate(bytes, alignment);
+}
+
+
+/****************************************************************************
+*
+*   Public API
+*
+***/
+
+namespace {
+
+const int kNoMansLandSize = 4;
+const unsigned char kNoMansLandImage[] = {
+    0xfd, 0xfd, 0xfd, 0xfd
+};
+static_assert(kNoMansLandSize == size(kNoMansLandImage));
+
+struct CrtMemBlockHeader {
+    CrtMemBlockHeader * blockHeaderNext;
+    CrtMemBlockHeader * blockHeaderPrev;
+    const char * fileName;
+    int lineNumber;
+    int blockUse;
+    size_t dataSize;
+    long requestNumber;
+    unsigned char gap[kNoMansLandSize];
+
+    // Followed by:
+    // unsigned char data[dataSize];
+    // unsigned char anotherGap[kNoMansLandSize];
+};
+
+struct MemRef {
+    const char * fileName;
+    int lineNumber;
+    size_t dataSize;
+
+    bool operator==(const MemRef &) const = default;
+};
+
+} // namespace
+
+template<>
+struct std::hash<MemRef> {
+    size_t operator()(const MemRef & val) const {
+        auto hash = std::hash<const char *>()(val.fileName);
+        hashCombine(&hash, std::hash<int>()(val.lineNumber));
+        hashCombine(&hash, std::hash<size_t>()(val.dataSize));
+        return hash;
+    }
+};
+
+//===========================================================================
+void Dim::debugDumpMemory(IJBuilder * out) {
+    auto h2 = HeapCreate(HEAP_NO_SERIALIZE, 0, 0);
+    if (!h2) {
+        logMsgError() << "HeapCreate: " << WinError{};
+        return;
+    }
+    OtherHeap heap2(h2);
+    pmr::monotonic_buffer_resource mr(&heap2);
+    auto files = heap2.emplace<pmr::unordered_set<const char *>>(&mr);
+    auto groups = heap2.emplace<pmr::unordered_map<MemRef, size_t>>(&mr);
+
+    HANDLE h = (HANDLE) _get_heap_handle();
+    if (!HeapLock(h)) {
+        logMsgFatal() << "HeapLock(crtHeap): " << WinError();
+        return;
+    }
+
+    WinError err = 0;
+    {
+        Finally funlock([h]() {
+            if (!HeapUnlock(h))
+                logMsgFatal() << "HeapUnlock(crtHeap): " << WinError();
+        });
+
+        PROCESS_HEAP_ENTRY ent = {};
+        while (HeapWalk(h, &ent)) {
+            if (~ent.wFlags & PROCESS_HEAP_ENTRY_BUSY)
+                continue;
+            if (ent.cbData < sizeof(CrtMemBlockHeader) + kNoMansLandSize)
+                continue;
+            auto hdr = reinterpret_cast<CrtMemBlockHeader *>(ent.lpData);
+            if (memcmp(hdr->gap, kNoMansLandImage, kNoMansLandSize) != 0)
+                continue;
+            auto anotherGap = (unsigned char *) ent.lpData + ent.cbData
+                - kNoMansLandSize;
+            if (memcmp(anotherGap, kNoMansLandImage, kNoMansLandSize) != 0)
+                continue;
+            if (!files->contains(hdr->fileName)) {
+                // validate as pointer to valid filename:
+                //  - in bounds
+                //  - less than 256 chars
+                files->insert(hdr->fileName);
+            }
+            MemRef ref = {
+                .fileName = hdr->fileName,
+                .lineNumber = hdr->lineNumber,
+                .dataSize = hdr->dataSize,
+            };
+            (*groups)[ref] += 1;
+        }
+        err.set();
+    }
+    if (err != ERROR_NO_MORE_ITEMS)
+        logMsgError() << "HeapWalk(crtHeap): " << err;
+
+    out->member("blocks").array();
+    for (auto&& mem : *groups) {
+        out->object();
+        if (mem.first.fileName) {
+            out->member("file", mem.first.fileName)
+                .member("line", mem.first.lineNumber);
+        } else {
+            out->member("file", "UNKNOWN")
+                .member("line", 0);
+        }
+        out->member("size", mem.first.dataSize);
+        out->member("count", mem.second);
+        out->end();
+    }
+    out->end();
+}
+
 
 /****************************************************************************
 *

@@ -19,8 +19,7 @@ function aboutIntro(selected) {
                     { name: 'Counters', href: 'about-counters.html' },
                     { name: 'Account', href: 'about-account.html' },
                     { name: 'Computer', href: 'about-computer.html' },
-                    { name: 'Memory', href: 'about-memory.html',
-                        disabled: true },
+                    { name: 'Memory', href: 'about-memory.html' },
                 ]
             },
         },

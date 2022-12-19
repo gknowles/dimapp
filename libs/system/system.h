@@ -7,6 +7,7 @@
 #include "cppconf/cppconf.h"
 
 #include "console.h"
+#include "debug.h"
 #include "env.h"
 #include "exec.h"
 #include "guid.h"

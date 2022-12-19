@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<!--
+Copyright Glen Knowles 2022.
+Distributed under the Boost Software License, Version 1.0.
+
+about-memory.html - dim webapp
+-->
+<html>
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1,
+    shrink-to-fit=no"/>
+<script src="initialize.js"></script>
+<script src="about-common.js"></script>
+<script>
+const params = new URLSearchParams(location.search)
+params.set('jsVar', 'srvdata')
+let tags = [
+  { tag: 'script', props: {
+      src: "/srv/about/memory.json" + '?' + params.toString(),
+  }},
+]
+addTags(tags)
+</script>
+<script>
+addOpts({
+  computed: {
+    sortedBlocks() {
+      let arr = this.blocks
+      let total = 0
+      let count = 0
+      for (let val of arr) {
+        val.total = val.size * val.count
+        total += val.total
+        count += val.count
+      }
+      arr.push({total: total, count: count, size: 0, line: 0, file: "TOTAL"})
+      arr.sort((a, b) => {
+        return b.total - a.total
+      })
+      return arr;
+    },
+  },
+})
+</script>
+</head>
+<body>
+<div id="app" style="visibility: hidden">
+  <script>aboutIntro("Memory")</script>
+
+  <div class="container-fluid mt-2">
+    <div class="row">
+    <div class="col-auto">
+      <template v-if="sortedBlocks.length == 1">
+        <form>
+          <p>The server is completely suspended while a full memory breakdown
+          is created, this can be very disruptive especially for busy servers
+          with large memory footprints.</p>
+          <p>If you're sure, check 'confirm' then click 'Dump Memory'.</p>
+          <input type=checkbox id=confirm name=confirm>
+          <label for=confirm>&nbsp;Confirm</label>
+          <p/>
+          <input type=submit value="Dump Memory"/>
+        </form>
+      </template>
+      <table v-else>
+        <tr>
+          <th>Total</th>
+          <th>Count</th>
+          <th>Size</th>
+          <th>Line</th>
+          <th>File</th>
+        </tr>
+        <tr v-for="val in sortedBlocks">
+          <td class="text-end">{{val.total.toLocaleString()}}</td>
+          <td class="text-end">{{val.count.toLocaleString()}}</td>
+          <td class="text-end">{{val.size.toLocaleString()}}</td>
+          <td class="text-end">
+            <template v-if="val.file == 'UNKNOWN'">-</template>
+            <template v-else>{{val.line.toLocaleString()}}</template>
+          </td>
+          <td>{{val.file}}</td>
+        </tr>
+      </table>
+    </div>
+    </div>
+  </div>
+</div>
+
+<script>finalize()</script>
+</body>
+</html>

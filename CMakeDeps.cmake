@@ -135,6 +135,7 @@
 # libs/net/url.h
 # libs/system/console.cpp
 # libs/system/console.h
+# libs/system/debug.h
 # libs/system/env.h
 # libs/system/exec.h
 # libs/system/guid.h
@@ -328,6 +329,7 @@
 # web/srv/about-common.js
 # web/srv/about-computer.html
 # web/srv/about-counters.html
+# web/srv/about-memory.html
 # web/srv/file-common.js
 # web/srv/file-config-content.html
 # web/srv/file-configs.html
