@@ -256,28 +256,29 @@ static void initBeforeVars() {
 
 //===========================================================================
 static void initAfterVars() {
-    if (appFlags().any(fAppWithFiles)) {
-        auto crashDir = appCrashDir();
-        vector<Glob::Entry> found;
-        for (auto && e : fileGlob(crashDir, "*.dmp"))
-            found.push_back(e);
-        static const int kMaxKeepFiles = 10;
-        if (found.size() > kMaxKeepFiles) {
-            auto nth = found.end() - kMaxKeepFiles;
-            nth_element(
-                found.begin(),
-                nth,
-                found.end(),
-                [](auto & a, auto & b) { return a.mtime < b.mtime; }
-            );
-            for (auto p = found.begin(); p != nth; ++p)
-                fileRemove(p->path);
-        }
-        auto name = appName() + "-" + to_string(timeToUnix(timeNow()))
-            + ".dmp";
-        s_crashFile = crashDir / name;
-        s_crashFileW = toWstring(s_crashFile);
+    if (appFlags().none(fAppWithFiles))
+        return;
+
+    auto crashDir = appCrashDir();
+    vector<Glob::Entry> found;
+    for (auto && e : fileGlob(crashDir, "*.dmp"))
+        found.push_back(e);
+    static const int kMaxKeepFiles = 10;
+    if (found.size() > kMaxKeepFiles) {
+        auto nth = found.end() - kMaxKeepFiles;
+        nth_element(
+            found.begin(),
+            nth,
+            found.end(),
+            [](auto & a, auto & b) { return a.mtime < b.mtime; }
+        );
+        for (auto p = found.begin(); p != nth; ++p)
+            fileRemove(p->path);
     }
+    auto name = appName() + "-" + to_string(timeToUnix(timeNow()))
+        + ".dmp";
+    s_crashFile = crashDir / name;
+    s_crashFileW = toWstring(s_crashFile);
 }
 
 //===========================================================================
