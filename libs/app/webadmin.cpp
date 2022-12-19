@@ -497,8 +497,8 @@ void Dim::iWebAdminInitialize() {
         .notify = nullptr,
         .path = "/srv/file",
         .name = "Files",
-        .desc = "Log, crash, config, and other files.",
-        .renderPath = "/web/srv/file-logs.html"
+        .desc = "Config, log, crash, and other files.",
+        .renderPath = "/web/srv/file-configs.html"
     });
     httpRouteAdd({
         .notify = &s_jsonCrashFiles,
