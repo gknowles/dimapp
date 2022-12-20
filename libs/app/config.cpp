@@ -170,7 +170,8 @@ void ConfigFile::parseContent(
     m_fullpath = m_xml.heap().strDup(fullpath);
 
     // call notifiers
-    logMsgInfo() << "Config file '" << m_relpath << "' changed";
+    if (appFlags().any(fAppWithFiles))
+        logMsgInfo() << "Config file '" << m_relpath << "' changed";
     configChange(m_fullpath, nullptr);
 }
 
@@ -197,8 +198,8 @@ void ConfigFile::onFileChange(string_view fullpath) {
         if (auto ec = fileSize(&bytes, f); ec)
             break;
         if (bytes > kMaxConfigFileSize) {
-            logMsgError() << "File too large (" << bytes << " bytes): "
-                << fullpath;
+            logMsgError() << "File too large '" << fullpath << "': "
+                << bytes << " bytes";
         } else if (bytes) {
             content.resize((size_t) bytes);
             if (auto ec = fileReadWait(
