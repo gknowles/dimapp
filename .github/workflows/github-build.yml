@@ -33,7 +33,7 @@ jobs:
     - name: Build
       working-directory: ${{github.workspace}}
       run: |
-        if not exist conf/app.xml copy conf/app.xml.sample app.xml
+        if not exist "conf/app.xml" copy "conf/app.xml.sample" "conf/app.xml"
         md build
         cd build
         if "${{matrix.toolset}}" == "v143" (
