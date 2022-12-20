@@ -97,8 +97,8 @@ void pipeClose(IPipeNotify * notify);
 *
 *   Connecting pipes
 *
-*   The application calls pipeConnect(...) and then, if the connection
-*   succeeds:
+*   The application calls pipeConnect(...) and then it gets callbacks, if the
+*   connection succeeds:
 *       1. onPipeConnect
 *       2. called any number of times
 *           a. onPipeRead
