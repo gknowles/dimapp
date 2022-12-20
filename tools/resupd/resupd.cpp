@@ -176,17 +176,21 @@ static void app(int argc, char *argv[]) {
             "for c++ target.");
     auto & src = cli.opt<Path>("<srcdir>")
         .desc("Directory of resources to write to target.");
+
     enum { kResource, kCpp } otype;
     cli.group("Output Type").sortKey("1");
     cli.opt(&otype, "r", kResource).flagValue(true)
         .desc("Update windows file resource.");
     cli.opt(&otype, "c", kCpp).flagValue()
         .desc("Write data as c++ source file.");
+
+    auto & verbose = cli.opt<bool>("v", false)
+        .desc("Verbose list of changes.");
     if (!cli.parse(argc, argv))
         return appSignalUsageError();
 
     ResHandle h;
-    Finally rclose{ [=]() { resClose(h); } };
+    Finally rclose{ [&]() { resClose(h); } };
     ResFileMap prev;
     if (otype == kResource) {
         target->defaultExt("exe");
@@ -201,12 +205,12 @@ static void app(int argc, char *argv[]) {
         target->defaultExt("cpp");
     }
 
-    cout << "Updating '" << *target << "' from '" << *src << endl;
+    cout << "Updating '" << *target << "' from '" << *src << "'" << endl;
 
     unsigned added = 0;
     unsigned updated = 0;
     ResFileMap files;
-    for (auto & fn : fileGlob(*src)) {
+    for (auto&& fn : fileGlob(*src, "**")) {
         string content;
         if (auto ec = fileLoadBinaryWait(&content, fn.path); ec)
             return appSignalShutdown(EX_DATAERR);
@@ -216,11 +220,16 @@ static void app(int argc, char *argv[]) {
         TimePoint mtime;
         fileLastWriteTime(&mtime, fn.path);
         if (auto ent = prev.find(path)) {
-            if (ent->mtime != mtime || ent->content != content)
+            if (ent->mtime != mtime || ent->content != content) {
                 updated += 1;
+                if (*verbose)
+                    cout << path << " updated" << endl;
+            }
             prev.erase(path);
         } else {
             added += 1;
+            if (*verbose)
+                cout << path << " added" << endl;
         }
         files.insert(path, mtime, move(content));
     }
@@ -229,6 +238,11 @@ static void app(int argc, char *argv[]) {
     if (added + updated + removed == 0) {
         cout << "Resources: " << files.size() << " (0 changed)" << endl;
         return appSignalShutdown(EX_OK);
+    }
+
+    if (*verbose) {
+        for (auto&& [name, ent] : prev)
+            cout << name << " removed" << endl;
     }
 
     CharBuf out;
