@@ -97,7 +97,7 @@ int appRun(
     char * argv[],
     const VersionInfo & ver = {},   // defaults to envExecVersion()
     std::string_view baseName = {}, // defaults to stem of execuable file name
-    EnumFlags<AppFlags> flags = fAppClient
+    EnumFlags<AppFlags> flags = fAppUtility
 );
 int appRun(
     std::function<void(int argc, char *argv[])> fn,
@@ -105,7 +105,7 @@ int appRun(
     char * argv[],
     const VersionInfo & ver = {},   // defaults to envExecVersion()
     std::string_view baseName = {}, // defaults to stem of execuable file name
-    EnumFlags<AppFlags> flags = fAppClient
+    EnumFlags<AppFlags> flags = fAppUtility
 );
 
 
