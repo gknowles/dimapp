@@ -201,7 +201,6 @@ static void matchTests() {
 }
 
 //===========================================================================
-[[maybe_unused]]
 static auto glob(
     string_view root,
     string_view pattern,
@@ -214,7 +213,6 @@ static auto glob(
 }
 
 //===========================================================================
-[[maybe_unused]]
 static void compare(
     const vector<pair<string, bool>> & found,
     const vector<pair<string, bool>> & expected
