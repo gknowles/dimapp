@@ -35,14 +35,8 @@ struct Glob::Iter::Info {
 
 //===========================================================================
 static bool match(Glob::Iter::Info * info) {
-    if (info->entry.isdir) {
-        if (info->flags.none(fDirsFirst | fDirsLast))
-            return false;
-    } else {
-        if (info->flags.any(fDirsOnly))
-            return false;
-    }
-
+    if (!info->entry.isdir && info->flags.any(fDirsOnly))
+        return false;
     if (info->flags.none(fHidden)) {
         EnumFlags<File::Attrs> attrs;
         if (auto ec = fileAttrs(&attrs, info->entry.path.view()); ec)

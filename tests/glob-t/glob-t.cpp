@@ -201,33 +201,24 @@ static void matchTests() {
 }
 
 //===========================================================================
-static void fileTests() {
-    fileRemove("file-t", true);
-    fileCreateDirs("file-t");
-    createEmptyFile("file-t/a.txt");
-    fileCreateDirs("file-t/b");
-    createEmptyFile("file-t/b/ba.txt");
-    createEmptyFile("file-t/b.txt");
-    fileCreateDirs("file-t/c");
-    createEmptyFile("file-t/c.txt");
-    vector<pair<Path, bool>> found;
-    for (auto && e : fileGlob(
-        "file-t",
-        "**/*.txt",
-        Glob::fDirsFirst | Glob::fDirsLast
-    )) {
-        found.push_back({e.path, e.isdir});
-    }
-    vector<pair<Path, bool>> expected = {
-        { Path{"file-t/a.txt"},     false   },
-        { Path{"file-t/b"},         true    },
-        { Path{"file-t/b/ba.txt"},  false   },
-        { Path{"file-t/b"},         true    },
-        { Path{"file-t/b.txt"},     false   },
-        { Path{"file-t/c"},         true    },
-        { Path{"file-t/c"},         true    },
-        { Path{"file-t/c.txt"},     false   },
-    };
+[[maybe_unused]]
+static auto glob(
+    string_view root,
+    string_view pattern,
+    EnumFlags<Glob::Mode> flags = {}
+) {
+    vector<pair<string, bool>> out;
+    for (auto&& e : fileGlob(root, pattern, flags))
+        out.push_back({e.path.str(), e.isdir});
+    return out;
+}
+
+//===========================================================================
+[[maybe_unused]]
+static void compare(
+    const vector<pair<string, bool>> & found,
+    const vector<pair<string, bool>> & expected
+) {
     if (found != expected) {
         logMsgError() << "File search didn't match";
         for (auto i = 0; i < found.size() || i < expected.size(); ++i) {
@@ -247,6 +238,42 @@ static void fileTests() {
             }
         }
     }
+}
+
+//===========================================================================
+static void fileTests() {
+    fileRemove("file-t", true);
+    fileCreateDirs("file-t");
+    createEmptyFile("file-t/a.txt");
+    fileCreateDirs("file-t/b");
+    createEmptyFile("file-t/b/ba.txt");
+    createEmptyFile("file-t/b.txt");
+    fileCreateDirs("file-t/c");
+    createEmptyFile("file-t/c.txt");
+
+    auto found = glob(
+        "file-t",
+        "**/*.txt",
+        Glob::fDirsFirst | Glob::fDirsLast
+    );
+    vector<pair<string, bool>> expected = {
+        { "file-t/a.txt",       false   },
+        { "file-t/b",           true    },
+        { "file-t/b/ba.txt",    false   },
+        { "file-t/b",           true    },
+        { "file-t/b.txt",       false   },
+        { "file-t/c",           true    },
+        { "file-t/c",           true    },
+        { "file-t/c.txt",       false   },
+    };
+    compare(found, expected);
+
+    compare(glob("file-t", "**/*.txt"), {
+        { "file-t/a.txt",       false   },
+        { "file-t/b/ba.txt",    false   },
+        { "file-t/b.txt",       false   },
+        { "file-t/c.txt",       false   },
+    });
 }
 
 //===========================================================================
