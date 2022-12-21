@@ -107,7 +107,7 @@ static PathInfo * find(string_view path, EnumFlags<HttpMethod> methods) {
                 || pi.segs == best->segs && pi.path.size() > best->path.size()
                 || pi.segs == best->segs
                     && pi.path == best->path
-                    && pi.recurse < best->recurse
+                    && pi.recurse <= best->recurse
             ) {
                 best = &pi;
             }
