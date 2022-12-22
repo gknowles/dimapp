@@ -790,11 +790,13 @@ struct AliasRouteNotify : IHttpRouteNotify {
 
 //===========================================================================
 void AliasRouteNotify::onHttpRequest(unsigned reqId, HttpRequest & msg) {
+    auto & ri = s_requests[reqId];
+    string opath = msg.pathRaw();
+    opath.replace(0, ri.pi->path.size(), m_path);
     msg.removeHeader(kHttp_Method);
     msg.removeHeader(kHttp_Path);
     msg.addHeader(kHttp_Method, toString(m_method));
-    msg.addHeader(kHttp_Path, m_path);
-    auto & ri = s_requests[reqId];
+    msg.addHeader(kHttp_Path, opath);
     route(&ri, reqId, msg);
 }
 
