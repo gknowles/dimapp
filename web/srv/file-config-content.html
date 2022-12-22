@@ -35,9 +35,9 @@ addTags(tags)
         <dt>Name</dt>
         <dd>{{file.name}}</dd>
         <dt>Size</dt>
-        <dd>{{file.size}}</dd>
+        <dd>{{file.size.toLocaleString()}}</dd>
         <dt>Age</dt>
-        <dd>{{readableDuration(elapsedTime(file.mtime))}}</dd>
+        <dd>{{readableAge(file.mtime)}}</dd>
       </dl>
     </div>
     <div class="row gx-3">

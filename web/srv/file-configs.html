@@ -53,30 +53,44 @@ addOpts({
               <th colspan="4">Memory</th>
             </tr>
             <tr>
-              <th>Name</th>
-              <th>Age</th>
-              <th>Size</th>
-              <th>Notifiers</th>
-              <th>Changes</th>
-              <th>Last Change</th>
-              <th>Size</th>
+              <th onclick="tableSort(this, {skipRows: 2, asc: true})">Name</th>
+              <th onclick="tableSort(this, {skipRows: 2, reverse: true})">
+                Age
+              </th>
+              <th onclick="tableSort(this, {skipRows: 2})">Size</th>
+              <th onclick="tableSort(this, {skipRows: 2})">Notifiers</th>
+              <th onclick="tableSort(this, {skipRows: 2})">Changes</th>
+              <th onclick="tableSort(this, {skipRows: 2, reverse: true})">
+                Last Change
+              </th>
+              <th onclick="tableSort(this, {skipRows: 2})">Size</th>
             </tr>
             <tr v-for="val in page"
                 :class="val.contentSize == 0 ? 'disabled'
                     : ageClass(val.lastChanged)">
               <td style='white-space: nowrap'>
-                <a v-if="val.content > 0" :href="makeUrl(
+                <a v-if="val.contentSize > 0" :href="makeUrl(
                     'file-config-content.html', {file: val.name})">
                   {{val.name}}
                 </a>
                 <template v-else>{{val.name}}</template>
               </td>
-              <td>{{readableAge(val.mtime)}}</td>
-              <td class='text-end'>{{val.size.toLocaleString()}}</td>
-              <td class='text-end'>{{val.notifiers.toLocaleString()}}</td>
-              <td class='text-end'>{{val.changes.toLocaleString()}}</td>
-              <td>{{readableAge(val.lastChanged)}}</td>
-              <td class='text-end'>{{val.contentSize.toLocaleString()}}</td>
+              <td :sort-key="val.mtime">{{readableAge(val.mtime)}}</td>
+              <td :sort-key="val.size" class='text-end'>
+                {{val.size.toLocaleString()}}
+              </td>
+              <td :sort-key="val.notifiers" class='text-end'>
+                {{val.notifiers.toLocaleString()}}
+              </td>
+              <td :sort-key="val.changes" class='text-end'>
+                {{val.changes.toLocaleString()}}
+              </td>
+              <td :sort-key="val.lastChanged">
+                {{readableAge(val.lastChanged)}}
+              </td>
+              <td :sort-key="val.contentSize" class='text-end'>
+                {{val.contentSize.toLocaleString()}}
+              </td>
             </tr>
           </table>
         </div>

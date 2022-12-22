@@ -31,6 +31,18 @@ table td {
     border: 1px solid;
     padding: 0px 10px;
 }
+table th.table-sort-asc::after {
+    content: " \f148";
+    font-family: bootstrap-icons !important;
+    line-height: 1;
+    vertical-align: -.125em;
+}
+table th.table-sort-desc::after {
+    content: " \f128";
+    font-family: bootstrap-icons !important;
+    line-height: 1;
+    vertical-align: -.125em;
+}
 
 dl {
     display: grid;

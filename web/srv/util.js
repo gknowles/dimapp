@@ -80,3 +80,65 @@ function updateUrl(params) {
     }
     return '?' + query.toString()
 }
+
+
+/****************************************************************************
+*
+*   Sorting tables
+*
+*   Based on answer to "Sorting HTML table with JavaScript" at
+*   https://stackoverflow.com/questions/14267781
+*
+***/
+
+//===========================================================================
+function tableCellValue(tr, idx) {
+    const node = tr.children[idx]
+    return node.getAttribute('sort-key')
+        || node.innerText
+        || node.textContent
+}
+
+//===========================================================================
+function tableRowCompare(idx, asc) {
+    return (a, b) => {
+        const v1 = tableCellValue(a, idx)
+        const v2 = tableCellValue(b, idx)
+        const cmp = v1 !== '' && v2 !== '' && !isNaN(v1) && !isNaN(v2)
+            ? v1 - v2
+            : v1.toString().localeCompare(v2);
+        return asc ? cmp : -cmp;
+    }
+}
+
+//===========================================================================
+// Options:
+//  skipRows    Header rows to leave in place (default: 1)
+//  reverse     Reverse comparator making up down and down up (default: false)
+//  asc         Initial sort order is ascending (default: false)
+//  idx         Row column to use as key, defaults to the position of this cell
+//                in its containing row. Used to adjust for colspan/rowspan.
+function tableSort(th, options) {
+    const opts = options || {}
+    let asc = opts.asc == undefined ? false : opts.asc
+    const skips = opts.skipRows || 1
+    const rev = opts.reverse || false
+    const table = th.closest('table')
+    const rows = Array.from(table.tBodies[0].rows).slice(skips)
+    const idx = opts.idx == undefined
+        ? Array.from(th.parentNode.children).indexOf(th)
+        : opts.idx
+    asc = typeof th['sort-asc'] !== 'undefined'
+        ? !th['sort-asc']
+        : !asc
+    th['sort-asc'] = asc
+    rows.sort(tableRowCompare(idx, rev ? !asc : asc))
+    table.tBodies[0].append(...rows)
+    if (asc) {
+        th.classList.add('table-sort-asc')
+        th.classList.remove('table-sort-desc')
+    } else {
+        th.classList.add('table-sort-desc')
+        th.classList.remove('table-sort-asc')
+    }
+}

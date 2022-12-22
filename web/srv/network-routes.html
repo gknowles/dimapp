@@ -42,41 +42,55 @@ addOpts({
         <div class="col-auto">
           <table>
             <tr>
-              <th rowspan="2">Path</th>
+              <th rowspan="2"
+                  onclick="tableSort(this, {skipRows: 2, asc: true})">
+                Path
+              </th>
               <th rowspan="2">Methods</th>
               <th colspan="2">Matched</th>
-              <th rowspan="2">Name</th>
-              <th rowspan="2">Desc</th>
-              <th rowspan="2">Render</th>
+              <th rowspan="2" onclick="tableSort(this, {skipRows: 2, idx: 4})">
+                Name
+              </th>
+              <th rowspan="2" onclick="tableSort(this, {skipRows: 2, idx: 5})">
+                Desc
+              </th>
+              <th rowspan="2" onclick="tableSort(this, {skipRows: 2, idx: 6})">
+                Render<
+              /th>
             </tr>
             <tr>
-              <th>Count</th>
-              <th>Age</th>
+              <th onclick="tableSort(this, {skipRows: 2, idx: 2})">Count</th>
+              <th onclick="tableSort(this,
+                  {skipRows: 2, idx: 3, reverse: true})">
+                Age
+              </th>
             </tr>
             <template v-for="val in page">
-            <tr :class="ageClass(val.lastMatched)">
-              <td>
-                <a v-if="val.methods.includes('GET')" :href="val.path">
-                  {{val.path}}{{val.recurse ? '...' : ''}}
-                </a>
-                <template v-else>
-                  {{val.path}}{{val.recurse ? '...' : ''}}
-                </template>
-              </td>
-              <td>
-                <template v-for="(name, index) in val.methods">
-                  <template v-if="index > 0">, </template>
-                  {{name}}
-                </template>
-              </td>
-              <td class="text-end">{{val.matched.toLocaleString()}}</td>
-              <td class="text-center">
-                {{readableAge(val.lastMatched)}}
-              </td>
-              <td>{{val.name}}</td>
-              <td>{{val.desc}}</td>
-              <td>{{val.renderPath}}</td>
-            </tr>
+              <tr :class="ageClass(val.lastMatched)">
+                <td>
+                  <a v-if="val.methods.includes('GET')" :href="val.path">
+                    {{val.path}}{{val.recurse ? '...' : ''}}
+                  </a>
+                  <template v-else>
+                    {{val.path}}{{val.recurse ? '...' : ''}}
+                  </template>
+                </td>
+                <td>
+                  <template v-for="(name, index) in val.methods">
+                    <template v-if="index > 0">, </template>
+                    {{name}}
+                  </template>
+                </td>
+                <td :sort-key="val.matched" class="text-end">
+                  {{val.matched.toLocaleString()}}
+                </td>
+                <td :sort-key="val.lastMatched" class="text-center">
+                  {{readableAge(val.lastMatched)}}
+                </td>
+                <td>{{val.name}}</td>
+                <td>{{val.desc}}</td>
+                <td>{{val.renderPath}}</td>
+              </tr>
             </template>
           </table>
         </div>

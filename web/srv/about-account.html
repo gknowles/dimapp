@@ -60,9 +60,9 @@ addOpts({
       <div class='col-auto'>
         <table>
           <tr>
-            <th>Type</th>
-            <th>Name</th>
-            <th>Domain</th>
+            <th onclick="tableSort(this)">Type</th>
+            <th onclick="tableSort(this, {asc: true})">Name</th>
+            <th onclick="tableSort(this)">Domain</th>
             <th>Attributes</th>
           </tr>
           <tr v-for="prin in page">
@@ -113,7 +113,7 @@ addOpts({
         <div class="col-auto">
           <table>
             <tr>
-              <th>Name</th>
+              <th onclick="tableSort(this, {asc: true})">Name</th>
               <th>Attributes</th>
             </tr>
             <tr v-for="priv in page">
