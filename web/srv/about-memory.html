@@ -65,32 +65,27 @@ addOpts({
       </template>
       <table v-else>
         <tr>
-          <th onclick="tableSort(this, {skipRows: 2})">Total</th>
-          <th onclick="tableSort(this, {skipRows: 2, asc: true})">Count</th>
-          <th onclick="tableSort(this, {skipRows: 2, asc: true})">Size</th>
-          <th onclick="tableSort(this, {skipRows: 2})">Line</th>
-          <th onclick="tableSort(this, {skipRows: 2})">File</th>
+          <th onclick="tableSort(this)">Total</th>
+          <th onclick="tableSort(this)">Count</th>
+          <th onclick="tableSort(this)">Size</th>
+          <th onclick="tableSort(this)">Line</th>
+          <th onclick="tableSort(this)">File</th>
         </tr>
         <tr v-for="val in sortedBlocks.slice(0,1)"
-            :class="{ 'disabled fw-bold': val.file == 'TOTAL' }">
+            class="unsortable disabled fw-bold">
           <td class="text-end">{{val.total.toLocaleString()}}</td>
           <td class="text-end">{{val.count.toLocaleString()}}</td>
           <td class="text-end">-</td>
           <td class="text-end">-</td>
           <td>{{val.file}}</td>
         </tr>
-        <tr v-for="val in sortedBlocks.slice(1)"
-            :class="{ 'disabled fw-bold': val.file == 'TOTAL' }">
-          <td :sort-key="val.total" class="text-end">
-            {{val.total.toLocaleString()}}
-          </td>
-          <td :sort-key="val.count" class="text-end">
-            {{val.count.toLocaleString()}}
-          </td>
-          <td :sort-key="val.size" class="text-end">
+        <tr v-for="val in sortedBlocks.slice(1)">
+          <td class="text-end">{{val.total.toLocaleString()}}</td>
+          <td class="text-end">{{val.count.toLocaleString()}}</td>
+          <td class="text-end">
             {{val.size ? val.size.toLocaleString() : '-'}}
           </td>
-          <td :sort-key="val.line" class="text-end">
+          <td class="text-end">
             {{val.line ? val.line.toLocaleString() : '-'}}
           </td>
           <td>{{val.file}}</td>

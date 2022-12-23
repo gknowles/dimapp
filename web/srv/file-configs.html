@@ -53,17 +53,13 @@ addOpts({
               <th colspan="4">Memory</th>
             </tr>
             <tr>
-              <th onclick="tableSort(this, {skipRows: 2, asc: true})">Name</th>
-              <th onclick="tableSort(this, {skipRows: 2, reverse: true})">
-                Age
-              </th>
-              <th onclick="tableSort(this, {skipRows: 2})">Size</th>
-              <th onclick="tableSort(this, {skipRows: 2})">Notifiers</th>
-              <th onclick="tableSort(this, {skipRows: 2})">Changes</th>
-              <th onclick="tableSort(this, {skipRows: 2, reverse: true})">
-                Last Change
-              </th>
-              <th onclick="tableSort(this, {skipRows: 2})">Size</th>
+              <th onclick="tableSort(this)">Name</th>
+              <th onclick="tableSort(this)">Age</th>
+              <th onclick="tableSort(this)">Size</th>
+              <th onclick="tableSort(this)">Notifiers</th>
+              <th onclick="tableSort(this)">Changes</th>
+              <th onclick="tableSort(this)">Last Change</th>
+              <th onclick="tableSort(this)">Size</th>
             </tr>
             <tr v-for="val in page"
                 :class="val.contentSize == 0 ? 'disabled'
@@ -75,22 +71,12 @@ addOpts({
                 </a>
                 <template v-else>{{val.name}}</template>
               </td>
-              <td :sort-key="val.mtime">{{readableAge(val.mtime)}}</td>
-              <td :sort-key="val.size" class='text-end'>
-                {{val.size.toLocaleString()}}
-              </td>
-              <td :sort-key="val.notifiers" class='text-end'>
-                {{val.notifiers.toLocaleString()}}
-              </td>
-              <td :sort-key="val.changes" class='text-end'>
-                {{val.changes.toLocaleString()}}
-              </td>
-              <td :sort-key="val.lastChanged">
-                {{readableAge(val.lastChanged)}}
-              </td>
-              <td :sort-key="val.contentSize" class='text-end'>
-                {{val.contentSize.toLocaleString()}}
-              </td>
+              <td>{{readableAge(val.mtime)}}</td>
+              <td class='text-end'>{{val.size.toLocaleString()}}</td>
+              <td class='text-end'>{{val.notifiers.toLocaleString()}}</td>
+              <td class='text-end'>{{val.changes.toLocaleString()}}</td>
+              <td>{{readableAge(val.lastChanged)}}</td>
+              <td class='text-end'>{{val.contentSize.toLocaleString()}}</td>
             </tr>
           </table>
         </div>

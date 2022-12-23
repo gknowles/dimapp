@@ -25,7 +25,7 @@ function readableDuration(val) {
         { name: undefined, secs: 0 },
     ]
     let matched = false
-    for (u of units) {
+    for (let u of units) {
         if (u.secs > val) continue
         out += Math.trunc(val / u.secs).toFixed(0)
         out += u.name
@@ -35,6 +35,40 @@ function readableDuration(val) {
         matched = true
     }
     return out
+}
+
+//===========================================================================
+function parseDuration(val) {
+    let units = {
+        y: 365 * 24 * 60 * 60,
+        w: 7 * 24 * 60 * 60,
+        d: 24 * 60 * 60,
+        h: 60 * 60,
+        m: 60,
+        s: 1,
+        ms: 0.001,
+    }
+    if (val == '-')
+        return Infinity
+    let out = 0
+    let vals = val.split(' ')
+    if (vals.length == 0)
+        return NaN
+    for (let v of vals) {
+        let match = v.match(/([^a-z]+)([a-z]+)/)
+        if (!match || match[0] != v)
+            return NaN
+        let vn = parseInt(match[1]) * units[match[2]];
+        if (isNaN(vn))
+            return vn
+        out += vn
+    }
+    return out
+}
+
+//===========================================================================
+function parseLocaleFloat(val) {
+    return parseFloat(val.toString().replace(',', ''))
 }
 
 //===========================================================================
@@ -92,6 +126,49 @@ function updateUrl(params) {
 ***/
 
 //===========================================================================
+function tableHeaderRows(th) {
+    const table = th.closest('table')
+    for (let x in table.rows) {
+        if (table.rows[x].classList.contains('unsortable'))
+            continue
+        for (let cell of table.rows[x].cells) {
+            if (cell.nodeName != 'TH')
+                return x
+            if (cell === th) {
+                cell.classList.add('table-sort-active')
+            } else {
+                cell.classList.remove('table-sort-active')
+            }
+        }
+    }
+    return table.rows.length
+}
+
+//===========================================================================
+function tableCellIndex(th) {
+    const table = th.closest('table')
+    let indexes = []
+    for (let row of table.rows) {
+        let x = 0
+        for (let cell of row.cells) {
+            while (indexes[x] > 0) {
+                indexes[x] -= 1
+                x += 1
+            }
+            if (cell === th)
+                return x
+            for (let espan = x + cell.colSpan; x < espan; ++x) {
+                indexes[x] = cell.rowSpan - 1
+            }
+        }
+        while (x < indexes.length && indexes[x] > 0) {
+            indexes[x] -= 1
+            x += 1
+        }
+    }
+}
+
+//===========================================================================
 function tableCellValue(tr, idx) {
     const node = tr.children[idx]
     return node.getAttribute('sort-key')
@@ -104,35 +181,53 @@ function tableRowCompare(idx, asc) {
     return (a, b) => {
         const v1 = tableCellValue(a, idx)
         const v2 = tableCellValue(b, idx)
-        const cmp = v1 !== '' && v2 !== '' && !isNaN(v1) && !isNaN(v2)
-            ? v1 - v2
-            : v1.toString().localeCompare(v2);
+
+        // Durations?
+        const d1 = parseDuration(v1)
+        if (!isNaN(d1)) {
+            const d2 = parseDuration(v2)
+            if (!isNaN(d2)) {
+                // Can't subtract because d1 and/or d2 could be infinity.
+                const cmp = d1 == d2 ? 0 : d1 < d2 ? -1 : 1
+                return asc ? cmp : -cmp
+            }
+        }
+
+        // Locale numbers?
+        const n1 = parseLocaleFloat(v1)
+        if (!isNaN(n1)) {
+            const n2 = parseLocaleFloat(v2)
+            if (!isNaN(n2))
+                return asc ? n1 - n2 : n2 - n1
+        }
+
+        // Must be strings
+        const cmp = v1.toString().localeCompare(v2)
         return asc ? cmp : -cmp;
     }
 }
 
 //===========================================================================
-// Options:
-//  skipRows    Header rows to leave in place (default: 1)
-//  reverse     Reverse comparator making up down and down up (default: false)
-//  asc         Initial sort order is ascending (default: false)
-//  idx         Row column to use as key, defaults to the position of this cell
-//                in its containing row. Used to adjust for colspan/rowspan.
-function tableSort(th, options) {
-    const opts = options || {}
-    let asc = opts.asc == undefined ? false : opts.asc
-    const skips = opts.skipRows || 1
-    const rev = opts.reverse || false
+// Configurable classes:
+//      tr.unsortable - Not be repositioned by sort. However, it must
+//          immediately follow the header rows for this to be honored.
+// Configurable attributes:
+//      td.sort-key - Used instead of content for comparisons, if present.
+function tableSort(th) {
     const table = th.closest('table')
+    const skips = tableHeaderRows(th)
     const rows = Array.from(table.tBodies[0].rows).slice(skips)
-    const idx = opts.idx == undefined
-        ? Array.from(th.parentNode.children).indexOf(th)
-        : opts.idx
-    asc = typeof th['sort-asc'] !== 'undefined'
-        ? !th['sort-asc']
-        : !asc
-    th['sort-asc'] = asc
-    rows.sort(tableRowCompare(idx, rev ? !asc : asc))
+    const idx = tableCellIndex(th)
+    let asc = false
+    let cmp = tableRowCompare(idx, asc)
+    for (let i = 1; i < rows.length; ++i) {
+        if (cmp(rows[i - 1], rows[i]) < 0) {
+            asc = true
+            cmp = tableRowCompare(idx, asc)
+            break
+        }
+    }
+    rows.sort(cmp)
     table.tBodies[0].append(...rows)
     if (asc) {
         th.classList.add('table-sort-asc')

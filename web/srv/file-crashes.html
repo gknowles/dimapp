@@ -55,9 +55,7 @@ addOpts({
             <tr>
               <th onclick="tableSort(this)">Name</th>
               <th onclick="tableSort(this)">Size</th>
-              <th onclick="tableSort(this, {asc: true, reverse: true})">
-                Age
-              </th>
+              <th onclick="tableSort(this)">Age</th>
             </tr>
             <tr v-for="val in page" :class="ageClass(val.mtime)">
               <td style='white-space: nowrap'>
@@ -65,8 +63,8 @@ addOpts({
                   {{ val.name }}
                 </a> <i class="bi-box-arrow-down"/>
               </td>
-              <td :sort-key="val.size">{{val.size.toLocaleString()}}</td>
-              <td :sort-key="val.mtime">{{readableAge(val.mtime)}}</td>
+              <td>{{val.size.toLocaleString()}}</td>
+              <td>{{readableAge(val.mtime)}}</td>
             </tr>
           </table>
         </div>
