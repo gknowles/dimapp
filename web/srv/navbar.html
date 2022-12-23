@@ -55,9 +55,14 @@ navbar.html - dim webapp
       </div>
     </div>
     <div class="col-auto">
-      <div class="row text-end text-nowrap">
-        {{now}}
-      </div>
+      <a class="row text-nowrap" :href="updateUrl({refresh: null})">{{now}}</a>
+      <a class="row justify-content-end text-nowrap" :href="getRefreshUrl()">
+        {{
+        'Refresh ('
+          + (getParam('refresh') ? 'seconds: ' + getParam('refresh') : 'None')
+          + ')'
+        }}
+      </a>
     </div>
   </div>
   <template v-if="miniNav().length > 0">

@@ -33,6 +33,8 @@ function createApp() {
             miniNav() { return [] },
             makeUrl,
             updateUrl,
+            getParam,
+            getRefreshUrl,
             readableDuration,
             elapsedTime(val) {
                 return this.nowSecs - Date.parse(val) / 1000
@@ -60,6 +62,11 @@ function createApp() {
     let el = document.getElementById('app')
     el.classList.add('groupType-' + appOpts.data().server.groupType)
     el.style.visibility = 'visible'
+
+    let ref = parseInt(getParam('refresh'))
+    if (ref) {
+        setTimeout(function() { window.location.reload() }, ref * 1000)
+    }
 }
 createApp.waitingHtmlFragments = 1
 

@@ -110,9 +110,29 @@ function updateUrl(params) {
     let loc = window.location
     let query = new URLSearchParams(loc.search)
     for (let n in params) {
-        query.set(n, params[n])
+        let val = params[n]
+        if (val == undefined || val == null) {
+            query.delete(n)
+        } else {
+            query.set(n, params[n])
+        }
     }
     return '?' + query.toString()
+}
+
+//===========================================================================
+function getParam(name, defVal) {
+    let params = new URLSearchParams(window.location.search)
+    return params.get(name) || defVal
+}
+
+//===========================================================================
+function getRefreshUrl() {
+    let rawRef = getParam('refresh')
+    let ref = parseInt(rawRef) || Infinity;
+    let refs = [Infinity, 2, 10];
+    let pos = (refs.indexOf(ref) + 1);
+    return updateUrl({refresh: refs[pos]});
 }
 
 
