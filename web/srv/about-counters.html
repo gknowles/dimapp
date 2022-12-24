@@ -50,10 +50,8 @@ addOpts({
             </tr>
             <tr v-for="cnt in page"
                 :class="cnt.value == 0 ? 'disabled' : null">
-              <td style='text-align: right'>
-                {{ cnt.value.toLocaleString() }}
-              </td>
-              <td style='white-space: nowrap'>{{ cnt.name }}</td>
+              <td class='text-end'>{{ cnt.value.toLocaleString() }}</td>
+              <td class='text-nowrap'>{{ cnt.name }}</td>
             </tr>
           </table>
         </div>

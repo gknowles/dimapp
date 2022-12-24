@@ -68,7 +68,7 @@ addOpts({
           <tr v-for="prin in page">
             <td>{{ prin.type }}</td>
             <td :title="prin.sid">{{ prin.name }}</td>
-            <td style="white-space: nowrap">{{ prin.domain }}</td>
+            <td class="text-nowrap">{{ prin.domain }}</td>
             <td>
               <template v-for="(attr, index) in prin.attrs">
                 <template v-if="index > 0">, </template>

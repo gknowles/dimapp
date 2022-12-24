@@ -58,7 +58,7 @@ addOpts({
               <th onclick="tableSort(this)">Age</th>
             </tr>
             <tr v-for="val in page" :class="ageClass(val.mtime)">
-              <td style='white-space: nowrap'>
+              <td class='text-nowrap'>
                 <a :href="'file-log-tail.html?file=' +
                     encodeURIComponent(val.name)">
                   {{ val.name }}
