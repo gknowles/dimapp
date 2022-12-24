@@ -68,7 +68,7 @@ function parseDuration(val) {
 
 //===========================================================================
 function parseLocaleFloat(val) {
-    return parseFloat(val.toString().replace(',', ''))
+    return Number(val.toString().replace(',', ''))
 }
 
 //===========================================================================
@@ -232,18 +232,21 @@ function tableRowCompare(idx, asc) {
 //      tr.unsortable - Not be repositioned by sort. However, it must
 //          immediately follow the header rows for this to be honored.
 // Configurable attributes:
+//      th.sort-reverse - Comparisons are reversed.
 //      td.sort-key - Used instead of content for comparisons, if present.
 function tableSort(th) {
     const table = th.closest('table')
     const skips = tableHeaderRows(th)
     const rows = Array.from(table.tBodies[0].rows).slice(skips)
     const idx = tableCellIndex(th)
+    const rattr = th.getAttribute('sort-reverse')
+    const rev = rattr != undefined && rattr != '0' && rattr != 'false'
     let asc = false
-    let cmp = tableRowCompare(idx, asc)
+    let cmp = tableRowCompare(idx, rev ? !asc : asc)
     for (let i = 1; i < rows.length; ++i) {
         if (cmp(rows[i - 1], rows[i]) < 0) {
             asc = true
-            cmp = tableRowCompare(idx, asc)
+            cmp = tableRowCompare(idx, rev ? !asc : asc)
             break
         }
     }
