@@ -265,7 +265,8 @@ void ConfigFile::write(IJBuilder * out) {
     out->object();
     out->member("name", m_relpath);
     out->member("size", m_bytes);
-    out->member("mtime", m_mtime);
+    if (!empty(m_mtime))
+        out->member("mtime", m_mtime);
     out->member("contentSize", size(m_content));
     out->member("lastChanged", m_lastChanged);
     out->member("changes", m_changes);
