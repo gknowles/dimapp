@@ -54,7 +54,7 @@ addOpts({
             </tr>
             <tr>
               <th onclick="tableSort(this)">Name</th>
-              <th onclick="tableSort(this)">Age</th>
+              <th onclick="tableSort(this)">Last Modified</th>
               <th onclick="tableSort(this)">Size</th>
               <th onclick="tableSort(this)">Notifiers</th>
               <th onclick="tableSort(this)">Changes</th>
@@ -71,11 +71,14 @@ addOpts({
                 </a>
                 <template v-else>{{val.name}}</template>
               </td>
-              <td>{{readableAge(val.mtime)}}</td>
+              <td v-if='val.mtime'>
+                {{val.mtime + ' (' + readableAge(val.mtime) + ')'}}
+              </td>
+              <td v-else class='text-center'>-</td>
               <td class='text-end'>{{val.size.toLocaleString()}}</td>
               <td class='text-end'>{{val.notifiers.toLocaleString()}}</td>
               <td class='text-end'>{{val.changes.toLocaleString()}}</td>
-              <td>{{readableAge(val.lastChanged)}}</td>
+              <td class='text-center'>{{readableAge(val.lastChanged)}}</td>
               <td class='text-end'>{{val.contentSize.toLocaleString()}}</td>
             </tr>
           </table>

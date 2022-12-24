@@ -55,7 +55,7 @@ addOpts({
             <tr>
               <th onclick="tableSort(this)">Name</th>
               <th onclick="tableSort(this)">Size</th>
-              <th onclick="tableSort(this)">Age</th>
+              <th onclick="tableSort(this)">Last Modified</th>
             </tr>
             <tr v-for="val in page" :class="ageClass(val.mtime)">
               <td class='text-nowrap'>
@@ -65,7 +65,7 @@ addOpts({
                 </a>
               </td>
               <td class="text-end">{{val.size.toLocaleString()}}</td>
-              <td class="text-end">{{readableAge(val.mtime)}}</td>
+              <td>{{val.mtime + ' (' + readableAge(val.mtime) + ')'}}</td>
             </tr>
           </table>
         </div>

@@ -58,11 +58,10 @@ addTags(tags)
       <h4 v-else>
         Last {{file.lines.length}} Lines
       </h4>
-      <p>
-        <template v-for="line in file.lines">
-          {{line}}<br>
-        </template>
-      </p>
+      <pre>
+<template v-for="line in file.lines">{{line}}
+</template>
+      </pre>
     </div>
   </div>
 </div>

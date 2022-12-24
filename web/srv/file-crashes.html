@@ -26,11 +26,7 @@ addOpts({
           return -1
         if (a.mtime < b.mtime)
           return 1
-        if (a.name < b.name)
-          return -1
-        if (a.name > b.name)
-          return 1
-        return 0
+        return a.name.localeCompare(b.name)
       })
       return makePages(arr, pageSize)
     },
@@ -55,7 +51,7 @@ addOpts({
             <tr>
               <th onclick="tableSort(this)">Name</th>
               <th onclick="tableSort(this)">Size</th>
-              <th onclick="tableSort(this)">Age</th>
+              <th onclick="tableSort(this)">Last Modified</th>
             </tr>
             <tr v-for="val in page" :class="ageClass(val.mtime)">
               <td class='text-nowrap'>
@@ -63,8 +59,8 @@ addOpts({
                   {{ val.name }}
                 </a> <i class="bi-box-arrow-down"/>
               </td>
-              <td>{{val.size.toLocaleString()}}</td>
-              <td>{{readableAge(val.mtime)}}</td>
+              <td class='text-end'>{{val.size.toLocaleString()}}</td>
+              <td>{{val.mtime + ' (' + readableAge(val.mtime) + ')'}}</td>
             </tr>
           </table>
         </div>
