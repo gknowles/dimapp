@@ -226,6 +226,12 @@ void JsonComputer::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     // Fully qualified DNS name of thie host.
     bld.member("fullDnsName", envComputerDnsName());
 
+    // Environment Variables
+    bld.member("env").object();
+    for (auto&& [name, val] : envGetVars())
+        bld.member(name, val);
+    bld.end();
+
     bld.end();
     httpRouteReply(reqId, move(res));
 }
