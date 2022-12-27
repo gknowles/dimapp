@@ -15,7 +15,7 @@ using namespace Dim;
 *
 ***/
 
-const VersionInfo kVersion = { 2, 2 };
+const VersionInfo kVersion = { 2, 2, 1 };
 
 
 /****************************************************************************
