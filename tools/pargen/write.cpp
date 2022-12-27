@@ -309,7 +309,7 @@ static bool writeSwitchCase(
         os << ':';
         if (++pos % kCaseColumns == 0) {
             os << '\n';
-        } else if (i != cases.size() && cases[i + 1].state == ns.state) {
+        } else if (i + 1 < cases.size() && cases[i + 1].state == ns.state) {
             os << ' ';
         }
     }
