@@ -1,4 +1,4 @@
-; Copyright Glen Knowles 2016 - 2017.
+; Copyright Glen Knowles 2016 - 2022.
 ; Distributed under the Boost Software License, Version 1.0.
 ;
 ; xml.abnf - dim xml
@@ -156,7 +156,8 @@ attrValue = DQUOTE attrText DQUOTE / "'" attrTextApos "'" ; [10]
 attrText = [attrInPlace] *((Reference / normalizable-ws) [attrCopy])
 attrInPlace = *Char-not-ws-AMP-DQUOTE-LT { End+ }
 attrCopy = *Char-not-ws-AMP-DQUOTE-LT { Char+ }
-attrTextApos = [attrInPlaceApos] *((Reference / normalizable-ws) [attrCopyApos])
+attrTextApos = [attrInPlaceApos] *((Reference / normalizable-ws)
+    [attrCopyApos])
 attrInPlaceApos = *Char-not-ws-AMP-APOS-LT { End+, As attrInPlace }
 attrCopyApos = *Char-not-ws-AMP-APOS-LT { Char+, As attrCopy }
 normalizable-ws = ws { Char }
