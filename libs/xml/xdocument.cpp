@@ -41,12 +41,13 @@ struct XNodeInfo : XNode {
 struct XElemInfo : XNodeInfo {
     XNodeInfo * firstElem{};
     XAttrInfo * firstAttr{};
-    size_t valueLen{};
+    size_t valueLen{};  // combined length of child text nodes
 
     using XNodeInfo::XNodeInfo;
 };
 struct XElemRootInfo : XElemInfo {
     XDocument * document{};
+    string_view parsedText;
 
     using XElemInfo::XElemInfo;
 };
@@ -66,14 +67,15 @@ public:
     // IXStreamParserNotify
     bool startDoc() override;
     bool endDoc() override;
-    bool startElem(const char name[], size_t nameLen) override;
+    bool startElem(char * name, size_t nameLen) override;
     bool endElem() override;
     bool attr(
-        const char name[],
+        char name[],
         size_t nameLen,
-        const char value[],
-        size_t valueLen) override;
-    bool text(const char value[], size_t valueLen) override;
+        char value[],
+        size_t valueLen
+    ) override;
+    bool text(char value[], size_t valueLen) override;
 
 private:
     XDocument & m_doc;
@@ -91,7 +93,8 @@ private:
 
 //===========================================================================
 ParserNotify::ParserNotify(XDocument & doc)
-    : m_doc(doc) {}
+    : m_doc(doc)
+{}
 
 //===========================================================================
 bool ParserNotify::startDoc() {
@@ -105,10 +108,10 @@ bool ParserNotify::endDoc() {
 }
 
 //===========================================================================
-bool ParserNotify::startElem(const char name[], size_t nameLen) {
+bool ParserNotify::startElem(char name[], size_t nameLen) {
     const_cast<char *>(name)[nameLen] = 0;
     if (!m_curElem) {
-        m_curElem = static_cast<XElemInfo *>(m_doc.setRoot(name));
+        m_curElem = static_cast<XElemRootInfo *>(m_doc.setRoot(name));
     } else {
         m_curElem = static_cast<XElemInfo *>(m_doc.addElem(m_curElem, name));
     }
@@ -124,9 +127,9 @@ bool ParserNotify::endElem() {
 
 //===========================================================================
 bool ParserNotify::attr(
-    const char name[],
+    char name[],
     size_t nameLen,
-    const char value[],
+    char value[],
     size_t valueLen
 ) {
     const_cast<char *>(name)[nameLen] = 0;
@@ -137,7 +140,7 @@ bool ParserNotify::attr(
 }
 
 //===========================================================================
-bool ParserNotify::text(const char value[], size_t valueLen) {
+bool ParserNotify::text(char value[], size_t valueLen) {
     const_cast<char *>(value)[valueLen] = 0;
     m_doc.addText(m_curElem, value);
     return true;
@@ -168,7 +171,9 @@ XNode * XDocument::parse(char src[], string_view filename) {
         m_errpos = parser.errpos();
         return nullptr;
     }
-    return m_root;
+    auto root = static_cast<XElemRootInfo *>(m_root);
+    root->parsedText = src;
+    return root;
 }
 
 //===========================================================================
@@ -351,22 +356,39 @@ NO_TEXT:
 ***/
 
 //===========================================================================
-XDocument * Dim::document(XAttr * attr) {
-    if (!attr)
-        return nullptr;
-    auto ai = static_cast<XAttrInfo *>(attr);
+static const XElemRootInfo * rootNode(const XNode & node) {
+    auto ni = static_cast<const XNodeInfo *>(&node);
+    while (ni->parent)
+        ni = ni->parent;
+    return static_cast<const XElemRootInfo *>(ni);
+}
+
+//===========================================================================
+const XDocument * Dim::document(const XNode * node) {
+    return node
+        ? rootNode(*node)->document
+        : nullptr;
+}
+
+//===========================================================================
+const XDocument * Dim::document(const XAttr * attr) {
+    auto ai = static_cast<const XAttrInfo *>(attr);
     return document(ai->parent);
 }
 
 //===========================================================================
 XDocument * Dim::document(XNode * node) {
-    if (!node)
-        return nullptr;
-    auto ni = static_cast<XNodeInfo *>(node);
-    while (ni->parent)
-        ni = ni->parent;
-    auto ri = static_cast<XElemRootInfo *>(ni);
-    return ri->document;
+    return const_cast<XDocument *>(document(const_cast<const XNode *>(node)));
+}
+
+//===========================================================================
+XDocument * Dim::document(XAttr * attr) {
+    return const_cast<XDocument *>(document(const_cast<const XAttr *>(attr)));
+}
+
+//===========================================================================
+string_view Dim::parsedText(const XNode & node) {
+    return rootNode(node)->parsedText;
 }
 
 //===========================================================================
@@ -557,7 +579,7 @@ const char * Dim::attrValue(
 //===========================================================================
 bool Dim::attrValue(
     const XNode * elem,
-    std::string_view name,
+    string_view name,
     bool def
 ) {
     if (auto xa = attr(elem, name))
@@ -566,10 +588,40 @@ bool Dim::attrValue(
 }
 
 //===========================================================================
+static function<bool(string*, const string&)> mapLookup(
+    const unordered_map<string, string> & vars
+) {
+    return [&vars](string * out, const string & val) {
+        if (!vars.contains(val))
+            return false;
+        *out = vars.at(val);
+        return true;
+    };
+}
+
+//===========================================================================
 string Dim::attrValueSubst(
     const XNode * elem,
     string_view name,
     const unordered_map<string, string> & vars,
+    const char def[]
+) {
+    return attrValueSubst(elem, name, mapLookup(vars), def);
+}
+
+//===========================================================================
+string Dim::attrValueSubst(
+    string_view value,
+    const unordered_map<string, string> & vars
+) {
+    return attrValueSubst(value, mapLookup(vars));
+}
+
+//===========================================================================
+string Dim::attrValueSubst(
+    const XNode * elem,
+    string_view name,
+    function<bool(string*, const string&)> vars,
     const char def[]
 ) {
     if (auto xa = attr(elem, name))
@@ -580,12 +632,13 @@ string Dim::attrValueSubst(
 //===========================================================================
 string Dim::attrValueSubst(
     string_view value,
-    const unordered_map<string, string> & vars
+    function<bool(string*, const string&)> vars
 ) {
     string out;
     auto base = value.data();
     auto last = base + value.size();
     auto ptr = base;
+    string var;
 
 IN_FIXED:
     while (ptr < last) {
@@ -616,8 +669,8 @@ IN_VARIABLE:
         case '{':
             goto FINISHED;
         case '}':
-            if (auto str = string(base, ptr - 1); vars.contains(str))
-                out.append(vars.at(str));
+            if (auto str = string(base, ptr - 1); vars(&var, str))
+                out.append(var);
             base = ptr;
             goto IN_FIXED;
         }

@@ -19,11 +19,12 @@ struct XmlBaseParserBase {
 
     XStreamParser & m_parser;
     IXStreamParserNotify & m_notify;
-    const char * m_base{};
-    char * m_cur{};
-    const char * m_attr{};
-    size_t m_attrLen{};
-    unsigned m_char{};
+    size_t m_lineNumber = {};
+    char * m_base = {};
+    char * m_cur = {};
+    char * m_attr = {};
+    size_t m_attrLen = {};
+    unsigned m_char = {};
 };
 
 //===========================================================================

@@ -111,8 +111,7 @@ public:
     }
 
 private:
-    template <bool isContent>
-    void addText(const char text[], size_t count = -1);
+    template <bool isContent> void addText(std::string_view val);
     IXBuilder & fail();
 
     enum State : int;
@@ -181,16 +180,16 @@ public:
     virtual bool startDoc() = 0;
     virtual bool endDoc() = 0;
 
-    virtual bool startElem(const char name[], size_t nameLen) = 0;
+    virtual bool startElem(char name[], size_t nameLen) = 0;
     virtual bool endElem() = 0;
 
     virtual bool attr(
-        const char name[],
+        char name[],
         size_t nameLen,
-        const char value[],
+        char value[],
         size_t valueLen
     ) = 0;
-    virtual bool text(const char value[], size_t valueLen) = 0;
+    virtual bool text(char value[], size_t valueLen) = 0;
 };
 
 class XStreamParser {
@@ -213,7 +212,6 @@ public:
 
 private:
     IXStreamParserNotify & m_notify;
-    unsigned m_line{};
     const char * m_errmsg{};
     TempHeap m_heap;
     Detail::XmlBaseParser * m_base{};
@@ -290,9 +288,14 @@ struct XAttr {
 };
 
 std::string toString(const XNode & elem);
+std::string xpathString(const XNode & elem);
+
+std::string_view parsedText(const XNode & elem);
 
 XDocument * document(XNode * node);
 XDocument * document(XAttr * attr);
+const XDocument * document(const XNode * node);
+const XDocument * document(const XAttr * attr);
 
 XType nodeType(const XNode * node);
 
@@ -357,6 +360,12 @@ bool attrValue(
     bool def
 );
 
+//===========================================================================
+// Attribute value templates
+//
+// Uses {}'s to delimit keys as per xpath rules:
+// https://www.w3.org/TR/xslt20/#attribute-value-templates
+//===========================================================================
 std::string attrValueSubst(
     const XNode * elem,
     std::string_view name,
@@ -366,6 +375,17 @@ std::string attrValueSubst(
 std::string attrValueSubst(
     std::string_view value,
     const std::unordered_map<std::string, std::string> & vars
+);
+
+std::string attrValueSubst(
+    const XNode * elem,
+    std::string_view name,
+    std::function<bool(std::string * out, const std::string&)> vars,
+    const char def[] = nullptr
+);
+std::string attrValueSubst(
+    std::string_view value,
+    std::function<bool(std::string * out, const std::string&)> vars
 );
 
 //===========================================================================

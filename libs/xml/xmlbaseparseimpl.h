@@ -32,7 +32,7 @@ inline bool XmlBaseParser::onAttrInPlaceEnd(const char * eptr) {
 
 //===========================================================================
 inline bool XmlBaseParser::onAttrNameStart(const char * ptr) {
-    m_attr = ptr;
+    m_attr = const_cast<char *>(ptr);
     return true;
 }
 
@@ -44,20 +44,25 @@ inline bool XmlBaseParser::onAttrNameEnd(const char * eptr) {
 
 //===========================================================================
 inline bool XmlBaseParser::onAttrValueStart(const char * ptr) {
-    m_base = ptr + 1;
+    m_base = const_cast<char *>(ptr) + 1;
     m_cur = const_cast<char *>(m_base);
     return true;
 }
 
 //===========================================================================
 inline bool XmlBaseParser::onAttrValueEnd() {
-    m_notify.attr(m_attr, m_attrLen, m_base, m_cur - m_base);
+    m_notify.attr(
+        m_attr,
+        m_attrLen,
+        m_base,
+        m_cur - m_base
+    );
     return true;
 }
 
 //===========================================================================
 inline bool XmlBaseParser::onCDataWithEndStart(const char * ptr) {
-    m_base = ptr;
+    m_base = const_cast<char *>(ptr);
     return true;
 }
 
@@ -121,7 +126,7 @@ inline bool XmlBaseParser::onCharRefHexdigChar(char ch) {
 
 //===========================================================================
 inline bool XmlBaseParser::onElemNameStart(const char * ptr) {
-    m_base = ptr;
+    m_base = const_cast<char *>(ptr);
     return true;
 }
 
@@ -133,7 +138,7 @@ inline bool XmlBaseParser::onElemNameEnd(const char * eptr) {
 
 //===========================================================================
 inline bool XmlBaseParser::onElemTextStart(const char * ptr) {
-    m_base = ptr;
+    m_base = const_cast<char *>(ptr);
     m_cur = const_cast<char *>(ptr);
     return true;
 }
@@ -193,7 +198,7 @@ inline bool XmlBaseParser::onEntityQuotEnd() {
 
 //===========================================================================
 inline bool XmlBaseParser::onEntityValueStart(const char * ptr) {
-    m_base = ptr;
+    m_base = const_cast<char *>(ptr);
     m_cur = const_cast<char *>(ptr);
     return true;
 }

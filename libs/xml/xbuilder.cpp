@@ -200,34 +200,34 @@ IXBuilder & IXBuilder::text(string_view val) {
         m_state = kStateText;
         break;
     case kStateAttrText:
-        addText<false>(val.data(), val.size());
+        addText<false>(val);
         return *this;
     case kStateText:
     case kStateTextRBracket:
     case kStateTextRBracket2:
         break;
     }
-    addText<true>(val.data(), val.size());
+    addText<true>(val);
     return *this;
 }
 
 //===========================================================================
-template <bool isContent> void IXBuilder::addText(
-    const char val[],
-    size_t count
-) {
-    const char * base = val;
-    for (; count; --count, ++val) {
-        TextType type = (TextType)kTextTypeTable[*val];
+template <bool isContent>
+void IXBuilder::addText(string_view val) {
+    auto ptr = val.data();
+    auto base = val.data();
+    auto count = val.size();
+    for (; count; --count, ++ptr) {
+        TextType type = (TextType)kTextTypeTable[*ptr];
         switch (type) {
         case kTextTypeGreater:
             // in content, ">" must be escaped when following "]]"
-            if (isContent) {
-                if (val - base >= 2) {
-                    if (val[-1] == ']' && val[-2] == ']')
+            if constexpr (isContent) {
+                if (ptr - base >= 2) {
+                    if (ptr[-1] == ']' && ptr[-2] == ']')
                         break;
-                } else if (val - base == 1) {
-                    if (val[-1] == ']'
+                } else if (ptr - base == 1) {
+                    if (ptr[-1] == ']'
                         && (m_state == kStateTextRBracket
                             || m_state == kStateTextRBracket2)) {
                         break;
@@ -243,7 +243,7 @@ template <bool isContent> void IXBuilder::addText(
         case kTextTypeNull:
             goto DONE;
         case kTextTypeQuote:
-            if (isContent)
+            if constexpr (isContent)
                 continue;
             break;
         case kTextTypeAmp:
@@ -256,32 +256,33 @@ template <bool isContent> void IXBuilder::addText(
             assert(!"invalid XML text type enum value");
         }
 
-        addRaw({base, size_t(val - base)});
+        addRaw({base, size_t(ptr - base)});
         addRaw(kTextEntityTable[type]);
-        base = val + 1;
-        if (isContent)
+        base = ptr + 1;
+        if constexpr (isContent)
             m_state = kStateText;
     }
 
 DONE:
-    if (size_t num = val - base) {
-        addRaw({base, num});
-        if (isContent) {
-            if (val[-1] != ']') {
-                m_state = kStateText;
-            } else {
-                if (num == 1) {
-                    if (m_state == kStateText) {
-                        m_state = kStateTextRBracket;
-                    } else {
-                        m_state = kStateTextRBracket2;
-                    }
+    size_t num = ptr - base;
+    if (!num)
+        return;
+    addRaw({base, num});
+    if constexpr (isContent) {
+        if (ptr[-1] != ']') {
+            m_state = kStateText;
+        } else {
+            if (num == 1) {
+                if (m_state == kStateText) {
+                    m_state = kStateTextRBracket;
                 } else {
-                    if (val[-2] != ']') {
-                        m_state = kStateTextRBracket;
-                    } else {
-                        m_state = kStateTextRBracket2;
-                    }
+                    m_state = kStateTextRBracket2;
+                }
+            } else {
+                if (ptr[-2] != ']') {
+                    m_state = kStateTextRBracket;
+                } else {
+                    m_state = kStateTextRBracket2;
                 }
             }
         }

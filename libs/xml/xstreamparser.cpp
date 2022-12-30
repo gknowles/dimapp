@@ -26,13 +26,11 @@ XStreamParser::~XStreamParser()
 
 //===========================================================================
 void XStreamParser::clear() {
-    m_line = 0;
     m_errmsg = nullptr;
 }
 
 //===========================================================================
 bool XStreamParser::parseMore(char src[]) {
-    m_line = 0;
     m_errmsg = nullptr;
     m_base = m_heap.emplace<Detail::XmlBaseParser>(*this);
     m_notify.startDoc();
