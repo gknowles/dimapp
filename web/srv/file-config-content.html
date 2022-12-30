@@ -31,14 +31,28 @@ addTags(tags)
 
   <div class="container-fluid mt-2">
     <div class="row gx-3">
-      <dl class="col-auto">
-        <dt>Name</dt>
-        <dd>{{file.name}}</dd>
-        <dt>Size</dt>
-        <dd>{{file.size.toLocaleString()}}</dd>
-        <dt>Age</dt>
-        <dd>{{readableAge(file.mtime)}}</dd>
-      </dl>
+      <div class="col-auto">
+        <dl class="mt-0">
+          <dt>Name</dt>
+          <dd>{{file.name}}</dd>
+          <dt>Last Modified</dt>
+          <dd>{{readableAge(file.mtime)}}</dd>
+          <dt>Size</dt>
+          <dd>{{file.size.toLocaleString()}}</dd>
+        </dl>
+      </div>
+      <div class="col-auto">
+        <dl class="mt-0">
+          <dt>Notifiers</dt>
+          <dd>{{file.notifiers}}</dd>
+          <dt>Changes</dt>
+          <dd>{{file.changes}}</dd>
+          <dt>Last Change</dt>
+          <dd>{{readableAge(file.lastChanged)}}</dd>
+          <dt>Size</dt>
+          <dd>{{file.contentSize.toLocaleString()}}</dd>
+        </dl>
+      </div>
     </div>
     <div class="row gx-3">
       <h4>Content</h4>

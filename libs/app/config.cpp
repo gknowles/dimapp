@@ -44,7 +44,9 @@ public:
     bool notify_UNLK(unique_lock<mutex> && lk, IConfigNotify * notify);
     bool closeWait_UNLK(unique_lock<mutex> && lk, IConfigNotify * notify);
 
-    void write(IJBuilder * out);
+    void reparse_LK();
+
+    void write(IJBuilder * out, bool withContent);
 
     // IFileChangeNotify
     void onFileChange(string_view fullpath) override;
@@ -62,8 +64,9 @@ private:
     TimePoint m_lastChanged = {};
 
     string m_content;
+    string m_parseSource;
     XDocument m_xml;
-    string_view m_fullpath;
+    string m_fullpath;
     string_view m_relpath;
     uint64_t m_bytes = 0;
     TimePoint m_mtime = {};
@@ -115,19 +118,20 @@ void ConfigFile::monitor_UNLK(
     if (takeOwnersip)
         ni->owner.reset(notify);
 
-    if (wasEmpty) {
-        lk.unlock();
-        if (appFlags().any(fAppWithFiles)) {
-            fileMonitor(s_hDir, relpath, this);
-        } else {
-            string fullpath;
-            fullpath = appConfigDir();
-            fullpath += '/';
-            fullpath += relpath;
-            parseContent(fullpath, 0, {}, {});
-        }
-    } else {
+    if (!wasEmpty) {
         notify_UNLK(move(lk), notify);
+        return;
+    }
+
+    lk.unlock();
+    if (appFlags().any(fAppWithFiles)) {
+        fileMonitor(s_hDir, relpath, this);
+    } else {
+        string fullpath;
+        fullpath = appConfigDir();
+        fullpath += '/';
+        fullpath += relpath;
+        parseContent(fullpath, 0, {}, {});
     }
 }
 
@@ -144,7 +148,7 @@ bool ConfigFile::closeWait_UNLK(
         if (notify == ni->notify) {
             delete ni;
             if (!m_notifiers)
-                s_files.erase(Path(m_relpath));
+                s_files.erase(Path(m_fullpath));
             return true;
         }
     }
@@ -163,16 +167,20 @@ void ConfigFile::parseContent(
     m_bytes = bytes;
     m_mtime = mtime;
     m_content = move(content);
-    m_relpath = fullpath;
+    m_fullpath = fullpath;
+    m_relpath = m_fullpath;
     m_relpath.remove_prefix(appConfigDir().size() + 1);
-    m_xml.parse(m_content.data(), m_relpath);
-    m_relpath = m_xml.filename();
-    m_fullpath = m_xml.heap().strDup(fullpath);
 
     // call notifiers
     if (appFlags().any(fAppWithFiles))
         logMsgInfo() << "Config file '" << m_relpath << "' changed";
     configChange(m_fullpath, nullptr);
+}
+
+//===========================================================================
+void ConfigFile::reparse_LK() {
+    m_parseSource = m_content;
+    m_xml.parse(m_parseSource.data(), m_relpath);
 }
 
 //===========================================================================
@@ -248,7 +256,7 @@ bool ConfigFile::notify_UNLK(
     }
     m_notifiers.unlink(&marker);
     if (!m_notifiers)
-        s_files.erase(Path(m_relpath));
+        s_files.erase(Path(m_fullpath));
 
     s_inThread = {};
     s_inNotify = nullptr;
@@ -261,7 +269,7 @@ bool ConfigFile::notify_UNLK(
 }
 
 //===========================================================================
-void ConfigFile::write(IJBuilder * out) {
+void ConfigFile::write(IJBuilder * out, bool withContent) {
     out->object();
     out->member("name", m_relpath);
     out->member("size", m_bytes);
@@ -271,6 +279,8 @@ void ConfigFile::write(IJBuilder * out) {
     out->member("lastChanged", m_lastChanged);
     out->member("changes", m_changes);
     out->member("notifiers", size(m_notifiers));
+    if (withContent)
+        out->member("content", m_parseSource);
     out->end();
 }
 
@@ -405,6 +415,7 @@ void Dim::configChange(
 
     unique_lock lk(s_mut);
     auto & cf = s_files[path];
+    cf.reparse_LK();
     if (!cf.notify_UNLK(move(lk), notify))
         logMsgError() << "Change notify not registered, " << file;
 }
@@ -416,9 +427,8 @@ void Dim::configChange(
 *
 ***/
 
-//===========================================================================
-static bool match(const XNode & node, const ConfigContext & context) {
-    enum {
+namespace {
+    enum MatchType {
         kInvalid,
         kName,
         kIndex,
@@ -427,18 +437,22 @@ static bool match(const XNode & node, const ConfigContext & context) {
         kGroupType,
         kGroupIndex
     };
-    constexpr TokenTable::Token keys[] = {
-        { kName, "name" },
-        { kIndex, "index" },
-        { kConfig, "config" },
-        { kModule, "module" },
-        { kGroupType, "groupType" },
-        { kGroupIndex, "groupIndex" },
-    };
-    static const TokenTable keyTbl(keys);
+} // namespace
 
+constexpr TokenTable::Token s_matchTypes[] = {
+    { kName, "name" },
+    { kIndex, "index" },
+    { kConfig, "config" },
+    { kModule, "module" },
+    { kGroupType, "groupType" },
+    { kGroupIndex, "groupIndex" },
+};
+const TokenTable s_matchTypeTbl(s_matchTypes);
+
+//===========================================================================
+static bool match(const XNode & node, const ConfigContext & context) {
     for (auto&& a : attrs(&node)) {
-        auto key = keyTbl.find(a.name, kInvalid);
+        auto key = s_matchTypeTbl.find(a.name, kInvalid);
         auto ival = strToUint(a.value);
         if (key == kName && context.appBaseName != a.value
             || key == kIndex && context.appIndex != ival
@@ -499,8 +513,45 @@ const XNode * Dim::configElement(
 }
 
 //===========================================================================
-static const char * elemToString(const XNode * elem, const char defVal[]) {
-    return attrValue(elem, "value", defVal);
+static bool evalAttrTemplate(
+    string * out,
+    const string & val,
+    const ConfigContext & context
+) {
+    auto key = s_matchTypeTbl.find(val, kInvalid);
+    switch (key) {
+    case kName: *out = context.appBaseName; return true;
+    case kIndex: *out = to_string(context.appIndex); return true;
+    case kConfig: *out = context.config; return true;
+    case kModule: *out = context.module; return true;
+    case kGroupType: *out = context.groupType; return true;
+    case kGroupIndex: *out = to_string(context.groupIndex); return true;
+    case kInvalid:
+        break;
+    }
+    return false;
+}
+
+//===========================================================================
+static const char * elemToString(
+    const ConfigContext & context,
+    const XNode * elem,
+    const char defVal[]
+) {
+    auto raw = attrValue(elem, "value");
+    if (!raw)
+        return defVal;
+    auto val = attrValueSubst(
+        raw,
+        [&context](string * out, const string & val) {
+            return evalAttrTemplate(out, val, context);
+        }
+    );
+    if (raw == val)
+        return raw;
+    auto doc = const_cast<XDocument *>(document(elem));
+    raw = doc->heap().strDup(raw);
+    return raw;
 }
 
 //===========================================================================
@@ -511,7 +562,7 @@ const char * Dim::configString(
     const char defVal[]
 ) {
     auto elem = configElement(context, doc, name);
-    auto val = elemToString(elem, defVal);
+    auto val = elemToString(context, elem, defVal);
     return val;
 }
 
@@ -525,7 +576,11 @@ const char * Dim::configString(
 }
 
 //===========================================================================
-static bool elemToBool(const XNode * elem, bool defVal) {
+static bool elemToBool(
+    const ConfigContext & context,
+    const XNode * elem,
+    bool defVal
+) {
     static const TokenTable::Token values[] = {
         { 1, "true" },
         { 1, "1" },
@@ -534,7 +589,7 @@ static bool elemToBool(const XNode * elem, bool defVal) {
     };
     static const TokenTable tbl(values);
 
-    if (auto str = elemToString(elem, nullptr))
+    if (auto str = elemToString(context, elem, nullptr))
         return tbl.find(str, false);
     return defVal;
 }
@@ -547,22 +602,22 @@ bool Dim::configBool(
     bool defVal
 ) {
     auto elem = configElement(context, doc, name);
-    auto val = elemToBool(elem, defVal);
+    auto val = elemToBool(context, elem, defVal);
     return val;
 }
 
 //===========================================================================
-bool Dim::configBool(
-    const XDocument & doc,
-    string_view name,
-    bool defVal
-) {
+bool Dim::configBool(const XDocument & doc, string_view name, bool defVal) {
     return configBool(s_context, doc, name, defVal);
 }
 
 //===========================================================================
-static double elemToNumber(const XNode * elem, double defVal) {
-    if (auto str = elemToString(elem, nullptr))
+static double elemToNumber(
+    const ConfigContext & context,
+    const XNode * elem,
+    double defVal
+) {
+    if (auto str = elemToString(context, elem, nullptr))
         (void) parse(&defVal, str);
     return defVal;
 }
@@ -575,7 +630,7 @@ double Dim::configNumber(
     double defVal
 ) {
     auto elem = configElement(context, doc, name);
-    auto val = elemToNumber(elem, defVal);
+    auto val = elemToNumber(context, elem, defVal);
     return val;
 }
 
@@ -617,12 +672,12 @@ vector<const char *> Dim::configStrings(
 ) {
     vector<const char *> out;
     auto root = configElement(context, doc, name);
-    if (auto str = elemToString(root, nullptr))
+    if (auto str = elemToString(context, root, nullptr))
         out.push_back(str);
     for (auto&& elem : elems(root, "Value")) {
         if (!match(elem, context))
             continue;
-        if (auto str = elemToString(&elem, nullptr))
+        if (auto str = elemToString(context, &elem, nullptr))
             out.push_back(str);
     }
     return out;
@@ -668,7 +723,7 @@ void Dim::configWriteRules(IJBuilder * out) {
     out->array();
     scoped_lock lk{s_mut};
     for (auto && kv : s_files)
-        kv.second.write(out);
+        kv.second.write(out, false);
     out->end();
 }
 
@@ -715,26 +770,17 @@ void JsonConfigFile::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     auto prefix = httpRouteGetInfo(reqId).path.size();
     qpath.remove_prefix(prefix);
     Path path;
-    if (!appConfigPath(&path, qpath, false))
+    if (!getFullpath(&path, qpath))
         return httpRouteReplyNotFound(reqId, msg);
 
-    auto dir = appConfigDir();
-    string content;
-    auto ec = fileLoadBinaryWait(&content, path);
-    if (ec)
-        return httpRouteReplyNotFound(reqId, msg);
-
+    unique_lock lk(s_mut);
+    auto & cf = s_files[path];
     auto res = HttpResponse(kHttpStatusOk);
     auto bld = initResponse(&res, reqId, msg);
-    bld.member("file").object()
-        .member("name", qpath);
-    TimePoint mtime;
-    if (ec = fileLastWriteTime(&mtime, path); !ec)
-        bld.member("mtime", mtime);
-    bld.member("size", content.size());
-    bld.member("content", content);
+    bld.member("file");
+    cf.write(&bld, true);
     bld.end();
-    bld.end();
+    lk.unlock();
     httpRouteReply(reqId, move(res));
 }
 
