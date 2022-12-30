@@ -16,6 +16,7 @@ using namespace Dim;
 ***/
 
 static vector<Path> s_webRoots;
+static unordered_map<string, string> s_appData;
 
 
 /****************************************************************************
@@ -93,6 +94,12 @@ JBuilder IWebAdminNotify::initResponse(
     bld.end();
     bld.member("now", Time8601Str(timeNow()).view())
         .member("root", root);
+    if (!s_appData.empty()) {
+        bld.member("appData").object();
+        for (auto&& [n, v] : s_appData)
+            bld.member(n, v);
+        bld.end();
+    }
 
     auto infos = httpRouteGetRoutes();
     HttpRouteInfo * best = nullptr;
@@ -418,6 +425,25 @@ void ConfigAppXml::onConfigChange(const XDocument & doc) {
 
 /****************************************************************************
 *
+*   ShutdownNotify
+*
+***/
+
+namespace {
+class ShutdownNotify : public IShutdownNotify {
+    void onShutdownConsole (bool firstTry) override;
+};
+} // namespace
+static ShutdownNotify s_cleanup;
+
+//===========================================================================
+void ShutdownNotify::onShutdownConsole (bool firstTry) {
+    s_appData.clear();
+}
+
+
+/****************************************************************************
+*
 *   Public API
 *
 ***/
@@ -515,4 +541,9 @@ void Dim::iWebAdminInitialize() {
         .path = "/srv/file/crashes/",
         .recurse = true,
     });
+}
+
+//===========================================================================
+unordered_map<string, string> & Dim::webAdminAppData() {
+    return s_appData;
 }

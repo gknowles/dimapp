@@ -36,5 +36,6 @@ private:
     Param & m_jsVar = param("jsVar");
 };
 
+std::unordered_map<std::string, std::string> & webAdminAppData();
 
 } // namespace
