@@ -25,8 +25,8 @@ navbar.html - dim webapp
           <a :href="root + 'srv/about'" class="nav-link">Admin</a>
         </li>
       </ul>
-      <div class="col text-end">
-        <a href="http://github.com/gknowles/dimapp">
+      <div v-if="appData['github']" class="col text-end">
+        <a :href="appData.github">
           <i class="bi-github" style="font-size: x-large; color: white"></i>
         </a>
       </div>

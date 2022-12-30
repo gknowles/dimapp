@@ -111,6 +111,8 @@ void ConfigH2srvXml::onConfigChange(const XDocument & doc) {
 static void app(int argc, char *argv[]) {
     shutdownMonitor(&s_cleanup);
 
+    webAdminAppData()["github"] = "http://github.com/gknowles/dimapp";
+
     Cli cli;
     cli.header(cli.header() + " sample http/2 server");
     if (!cli.parse(argc, argv))
