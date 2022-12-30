@@ -547,10 +547,10 @@ static const char * elemToString(
             return evalAttrTemplate(out, val, context);
         }
     );
-    if (raw == val)
+    if (val == raw)
         return raw;
     auto doc = const_cast<XDocument *>(document(elem));
-    raw = doc->heap().strDup(raw);
+    raw = doc->heap().strDup(val);
     return raw;
 }
 
