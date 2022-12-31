@@ -24,7 +24,8 @@ function aboutIntro(selected) {
             },
         },
     })
-    includeHtmlFragment('navbar.html')
+    includeHtmlFragment('../navbar.html')
+    includeHtmlFragment('navbar-debug.html')
     includeHtmlFragment('about-common.html')
     document.currentScript.remove()
 }

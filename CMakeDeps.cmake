@@ -324,6 +324,7 @@
 # vendor/dimcli/libs/dimcli/cli.cpp
 # vendor/dimcli/libs/dimcli/cli.h
 # web/favicon.ico
+# web/navbar.html
 # web/srv/about-account.html
 # web/srv/about-common.html
 # web/srv/about-common.js
@@ -339,7 +340,7 @@
 # web/srv/groupType.css
 # web/srv/init.css
 # web/srv/initialize.js
-# web/srv/navbar.html
+# web/srv/navbar-debug.html
 # web/srv/network-common.js
 # web/srv/network-routes.html
 # web/srv/util.js

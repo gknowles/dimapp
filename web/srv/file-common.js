@@ -23,6 +23,7 @@ function fileIntro(selected) {
             },
         },
     })
-    includeHtmlFragment('navbar.html')
+    includeHtmlFragment('../navbar.html')
+    includeHtmlFragment('navbar-debug.html')
     document.currentScript.remove()
 }

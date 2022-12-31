@@ -25,6 +25,7 @@ function networkIntro(selected) {
             },
         },
     })
-    includeHtmlFragment('navbar.html')
+    includeHtmlFragment('../navbar.html')
+    includeHtmlFragment('navbar-debug.html')
     document.currentScript.remove()
 }

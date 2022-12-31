@@ -42,11 +42,8 @@ addOpts({
         <div class="col-auto">
           <table>
             <tr>
-              <th rowspan="2"
-                  onclick="tableSort(this)">
-                Path
-              </th>
-              <th rowspan="2">Methods</th>
+              <th rowspan="2" onclick="tableSort(this)">Path</th>
+              <th rowspan="2" onclick="tableSort(this)">Methods</th>
               <th colspan="2">Matched</th>
               <th rowspan="2" onclick="tableSort(this)">Name</th>
               <th rowspan="2" onclick="tableSort(this)">Desc</th>
@@ -59,7 +56,8 @@ addOpts({
             <template v-for="val in page">
               <tr :class="ageClass(val.lastMatched)">
                 <td>
-                  <a v-if="val.methods.includes('GET')" :href="val.path">
+                  <a v-if="val.methods.includes('GET')"
+                      :href="val.renderPath ? val.renderPath : val.path">
                     {{val.path}}{{val.recurse ? '...' : ''}}
                   </a>
                   <template v-else>

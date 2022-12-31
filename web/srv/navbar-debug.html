@@ -2,37 +2,8 @@
 Copyright Glen Knowles 2022.
 Distributed under the Boost Software License, Version 1.0.
 
-navbar.html - dim webapp
+navbar-debug.html - dim webapp
 -->
-<nav class="navbar navbar-expand-sm stick-top bg-primary navbar-dark">
-  <div class="container-fluid">
-    <a class="navbar-brand font-weight-bolder" href="/">
-      <span style="text-transform: uppercase"
-          font-size="x-large"
-          font-weight="bold" font-family="'Arial', serif">
-        {{appName}}
-      </span>
-    </a>
-    <button class="navbar-toggler" type="button"
-        data-toggle="collapse" data-target="#navbarNav"
-        aria-controls="navbarNav" aria-expanded="false"
-        aria-label="Toggle navigation">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="navbarNav">
-      <ul class="navbar-nav flex-row">
-        <li class="nav-item" active="true">
-          <a :href="root + 'srv/about'" class="nav-link">Admin</a>
-        </li>
-      </ul>
-      <div v-if="appData['github']" class="col text-end">
-        <a :href="appData.github">
-          <i class="bi-github" style="font-size: x-large; color: white"></i>
-        </a>
-      </div>
-    </div>
-  </div>
-</nav>
 <div class="container-fluid bg-groupType">
   <div class="row text-nowrap px-3 pt-1 border-bottom border-secondary">
     <div class="col">
