@@ -94,12 +94,10 @@ JBuilder IWebAdminNotify::initResponse(
     bld.end();
     bld.member("now", Time8601Str(timeNow()).view())
         .member("root", root);
-    if (!s_appData.empty()) {
-        bld.member("appData").object();
-        for (auto&& [n, v] : s_appData)
-            bld.member(n, v);
-        bld.end();
-    }
+    bld.member("appData").object();
+    for (auto&& [n, v] : s_appData)
+        bld.member(n, v);
+    bld.end();
 
     auto infos = httpRouteGetRoutes();
     HttpRouteInfo * best = nullptr;
