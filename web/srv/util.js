@@ -229,8 +229,8 @@ function tableRowCompare(idx, asc) {
 
 //===========================================================================
 // Configurable classes:
-//      tr.unsortable - Not be repositioned by sort. However, it must
-//          immediately follow the header rows for this to be honored.
+//      tr.unsortable - Not repositioned by sort. Must immediately follow the
+//          header (or other unsortable) rows for this to be honored.
 // Configurable attributes:
 //      th.sort-reverse - Comparisons are reversed.
 //      td.sort-key - Used instead of content for comparisons, if present.

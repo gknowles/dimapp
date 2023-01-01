@@ -82,7 +82,7 @@ JBuilder IWebAdminNotify::initResponse(
     auto relPath = ri.path.substr(root.str().size() - 1);
     JBuilder bld(&res->body());
     bld.object().member("server").object();
-    bld.member("baseName", appBaseName())
+    bld.member("productName", appBaseName())
         .member("appIndex", appIndex())
         .member("version", toString(appVersion()))
         .member("buildTime", Time8601Str(envExecBuildTime()).view())

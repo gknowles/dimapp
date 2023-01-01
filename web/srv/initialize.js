@@ -23,7 +23,7 @@ function createApp() {
                 return Date.parse(this.now) / 1000
             },
             appName() {
-                let out = this.server.baseName
+                let out = this.server.productName
                 if (this.server.appIndex > 1)
                     out += this.server.appIndex.toString()
                 return out
