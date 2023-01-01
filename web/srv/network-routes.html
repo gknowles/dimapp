@@ -50,7 +50,8 @@ addOpts({
             <th onclick="tableSort(this)">Age</th>
           </tr>
           <template v-for="val in sortedRoutes">
-            <tr :class="ageClass(val.lastMatched)">
+            <tr :class="val.implemented ? ageClass(val.lastMatched) 
+                : 'invalid'">
               <td>
                 <a v-if="val.methods.includes('GET')"
                     :href="val.renderPath ? val.renderPath : val.path">
@@ -81,6 +82,7 @@ addOpts({
       <tr><td>Has matched within the last hour</td></tr>
       <tr class='recent'><td>Has matched within 24 hours</td></tr>
       <tr class='old'><td>More than 24 hours since last match</td></tr>
+      <tr class='invalid'><td>Unimplemented</td></tr>
     </table>
   </div>
 </div>

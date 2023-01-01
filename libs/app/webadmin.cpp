@@ -35,6 +35,7 @@ static void addRoute(
     out->member("path", ri.path);
     if (ri.recurse)
         out->member("recurse", ri.recurse);
+    out->member("implemented", ri.notify || !ri.renderPath.empty());
     out->member("methods");
     out->array();
     for (auto mname : toViews(ri.methods))
@@ -509,7 +510,7 @@ void Dim::iWebAdminInitialize() {
     });
     httpRouteAdd({
         .notify = nullptr,
-        .path = "/srv/conns.json",
+        .path = "/srv/network/conns.json",
     });
     httpRouteAdd({
         .notify = &s_jsonRoutes,
@@ -517,7 +518,7 @@ void Dim::iWebAdminInitialize() {
     });
     httpRouteAdd({
         .notify = nullptr,
-        .path = "/srv/messages.json",
+        .path = "/srv/network/messages.json",
     });
 
     // Files

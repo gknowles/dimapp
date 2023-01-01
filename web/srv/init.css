@@ -18,6 +18,15 @@ init.css - dim webapp
 .old {
     background-color: lightgreen;
 }
+.invalid {
+    background: repeating-linear-gradient(
+        135deg,
+        transparent,
+        transparent 5px,
+        lightgray 5px,
+        lightgray 7px
+    );
+}
 
 table {
     margin: 10px 0px;
