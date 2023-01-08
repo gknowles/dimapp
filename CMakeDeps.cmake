@@ -351,4 +351,5 @@
 # web/srv/vendor/bootstrap@5.1.3/bootstrap.min.js
 # web/srv/vendor/bootstrap@5.1.3/bootstrap.min.js.map
 # web/srv/vendor/popperjs@2.10.2/popper.min.js
+# web/srv/vendor/popperjs@2.10.2/popper.min.js.map
 # web/srv/vendor/vue@3.2.45/vue.global.prod.js
