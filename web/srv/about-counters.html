@@ -21,8 +21,18 @@ addOpts({
       // Returns array of 'pages' where each page is an array of up to pageSize
       // counter objects with name and value.
       let arr = [];
-      for (let name in this.counters)
-        arr.push({name: name, value: this.counters[name]})
+      for (let name in this.counters) {
+        let val = this.counters[name]
+        arr.push({
+          name: name,
+          value: Number.isInteger(val)
+            ? val.toLocaleString()
+            : val.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })
+        })
+      }
       arr.sort((a, b) => {
         let rc = a.name.includes('.') - b.name.includes('.')
         if (rc != 0)
@@ -49,8 +59,8 @@ addOpts({
               <th>Name</th>
             </tr>
             <tr v-for="cnt in page"
-                :class="cnt.value == 0 ? 'disabled' : null">
-              <td class='text-end'>{{ cnt.value.toLocaleString() }}</td>
+                :class="cnt.value == '0' ? 'disabled' : null">
+              <td class='text-end'>{{ cnt.value }}</td>
               <td class='text-nowrap'>{{ cnt.name }}</td>
             </tr>
           </table>
