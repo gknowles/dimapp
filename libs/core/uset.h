@@ -50,6 +50,8 @@ public:
     using range_iterator = RangeIter;
     using reverse_range_iterator = typename reverse_circular_iterator<RangeIter>;
 
+    static const value_type npos = std::numeric_limits<value_type>::max();
+
 public:
     static const size_t kBitWidth = CHAR_BIT * sizeof T;
     static const size_t kTypeBits = 4;
