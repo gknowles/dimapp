@@ -48,6 +48,8 @@ static void updateProcessTimes() {
     FILETIME kernel;
     FILETIME user;
     auto now = timeNow();
+    if (s_lastSnapshot + 1s > now)
+        return;
     if (!GetProcessTimes(
         GetCurrentProcess(),
         &creation,
@@ -61,10 +63,10 @@ static void updateProcessTimes() {
     auto ktime = duration(kernel);
     auto utime = duration(user);
     auto elapsed = now - s_lastSnapshot;
-    auto cores = envProcessors();
+    [[maybe_unused]] auto cores = envProcessors();
     if (empty(s_lastSnapshot) || elapsed > 1s) {
         if (!empty(s_lastSnapshot)) {
-            auto factor = 100.0f / elapsed.count() / cores;
+            auto factor = 100.0f / elapsed.count(); // / cores;
             s_kernelPct = factor * (float) (ktime - s_kernelTime).count();
             s_userPct = factor * (float) (utime - s_userTime).count();
         }
@@ -81,7 +83,8 @@ static float getKernelTime() {
 }
 
 //===========================================================================
-static float getTotalTime() {
+static float getAllTime() {
+    updateProcessTimes();
     return s_userPct + s_kernelPct;
 }
 
@@ -104,8 +107,8 @@ static auto & s_perfPrivateMem = fperf(
     getPrivateMem,
     PerfFormat::kSiUnits
 );
+static auto & s_perfAllTime = fperf("proc.cputime (all)", getAllTime);
 static auto & s_perfKernelTime = fperf("proc.cputime (kernel)", getKernelTime);
-static auto & s_perfUserTime = fperf("proc.cputime (total)", getTotalTime);
 static auto & s_perfUptime = fperf(
     "proc.uptime",
     getUptime,
