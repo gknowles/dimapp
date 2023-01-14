@@ -356,7 +356,7 @@ static void initPositions(State * st, const Element & root) {
 static void addEvent(
     vector<StateEvent> & events,
     const StateElement & se,
-    Element::Flags flags
+    EnumFlags<Element::Flags> flags
 ) {
     StateEvent sv;
     sv.elem = se.elem->rule;
@@ -503,12 +503,12 @@ static void addNextPositions(
         }
 
         if (se.elem->type == Element::kRule) {
+            auto flags = se.elem->rule->flags;
             if ((se.started || !done)
-                && se.elem->rule->flags.none(Element::fFunction)
+                && !flags.any(Element::fFunction)
+                && flags.any(Element::fEndEvents)
             ) {
-                auto flags = se.elem->rule->flags & Element::fEndEvents;
-                if (flags.any())
-                    addEvent(events, se, flags.value());
+                addEvent(events, se, flags & Element::fEndEvents);
             }
             // when exiting the parser (via a done sentinel) go directly out,
             // no not pass go, do not honor repetitions
@@ -634,7 +634,7 @@ static void removeConflicts(
         if (mi->flags.any(Element::fCharEvents)) {
             // char can shift around start events
             for (;;) {
-                if (events[evi].flags.none(Element::fStartEvents)
+                if (!events[evi].flags.any(Element::fStartEvents)
                     || ++evi == numEvents
                 ) {
                     goto UNMATCHED;
@@ -645,7 +645,7 @@ static void removeConflicts(
         } else if (mi->flags.any(Element::fStartEvents)) {
             // start events can shift around char events.
             for (;;) {
-                if (events[evi].flags.none(Element::fCharEvents)
+                if (!events[evi].flags.any(Element::fCharEvents)
                     || ++evi == numEvents
                 ) {
                     goto UNMATCHED;

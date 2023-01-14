@@ -256,7 +256,7 @@ static void initBeforeVars() {
 
 //===========================================================================
 static void initAfterVars() {
-    if (appFlags().none(fAppWithFiles))
+    if (!appFlags().any(fAppWithFiles))
         return;
 
     auto crashDir = appCrashDir();

@@ -242,9 +242,6 @@ public:
     // the mask will, some of the time, have multiple bits.
     constexpr bool all(EnumFlags mask) const;
 
-    constexpr bool none() const;
-    constexpr bool none(EnumFlags mask) const;
-
     constexpr size_t count() const;
     constexpr size_t count(EnumFlags mask) const;
 
@@ -320,18 +317,6 @@ constexpr bool EnumFlags<T>::any(EnumFlags other) const {
 template<EnumFlagsType T>
 constexpr bool EnumFlags<T>::all(EnumFlags other) const {
     return (m_value & other.underlying()) == other.underlying();
-}
-
-//===========================================================================
-template<EnumFlagsType T>
-constexpr bool EnumFlags<T>::none() const {
-    return !m_value;
-}
-
-//===========================================================================
-template<EnumFlagsType T>
-constexpr bool EnumFlags<T>::none(EnumFlags other) const {
-    return (m_value & other.underlying()) == 0;
 }
 
 //===========================================================================

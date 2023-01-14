@@ -459,7 +459,7 @@ static CrashFiles s_crashFiles;
 
 //===========================================================================
 void Dim::iWebAdminInitialize() {
-    if (appFlags().none(fAppWithWebAdmin))
+    if (!appFlags().any(fAppWithWebAdmin))
         return;
 
     configMonitor("app.xml", &s_appXml);

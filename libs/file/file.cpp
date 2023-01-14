@@ -132,7 +132,9 @@ void FileAppendStream::close() {
 
     if (auto used = m_impl->bufLen - m_impl->buf.size()) {
         auto oflags = fileMode(m_impl->file);
-        if (oflags.none(fm::fAligned)) {
+        if (!oflags.any(fm::fAligned)) {
+            // Access is unaligned, so write whatever still in the buffer
+            // without doing anything special.
             fileAppendWait(
                 nullptr,
                 m_impl->file,

@@ -477,7 +477,7 @@ const HttpQuery & HttpRequest::query() const {
 //===========================================================================
 bool HttpRequest::checkPseudoHeaders() const {
     return m_flags.all(fFlagHasMethod | fFlagHasScheme | fFlagHasPath)
-        && m_flags.none(fFlagHasStatus);
+        && !m_flags.any(fFlagHasStatus);
 }
 
 //===========================================================================
@@ -514,7 +514,7 @@ int HttpResponse::status() const {
 //===========================================================================
 bool HttpResponse::checkPseudoHeaders() const {
     return m_flags.all(fFlagHasStatus)
-        && m_flags.none(fFlagHasMethod | fFlagHasScheme | fFlagHasAuthority);
+        && !m_flags.any(fFlagHasMethod | fFlagHasScheme | fFlagHasAuthority);
 }
 
 

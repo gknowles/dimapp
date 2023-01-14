@@ -37,12 +37,17 @@ struct Glob::Iter::Info {
 static bool match(Glob::Iter::Info * info) {
     if (!info->entry.isdir && info->flags.any(fDirsOnly))
         return false;
-    if (info->flags.none(fHidden)) {
+    if (!info->flags.any(fHidden)) {
+        // Not including hidden files.
         EnumFlags<File::Attrs> attrs;
-        if (auto ec = fileAttrs(&attrs, info->entry.path.view()); ec)
+        if (auto ec = fileAttrs(&attrs, info->entry.path.view()); ec) {
+            // Can't determine if it's a hidden file, exclude it.
             return false;
-        if (attrs.any(File::Attrs::fHidden))
+        }
+        if (attrs.any(File::Attrs::fHidden)) {
+            // It is a hidden file, exclude it.
             return false;
+        }
     }
 
     auto res = Glob::matchSearch(
@@ -126,7 +131,7 @@ DIR_EXITED:
     copy(&info->entry, p, cur->firstPass);
     if (!match(info))
         goto TRY_NEXT;
-    if (info->entry.isdir && info->flags.none(fDirsFirst)) {
+    if (info->entry.isdir && !info->flags.any(fDirsFirst)) {
         // Not reporting directories when entered, so rather than reporting
         // it, start searching it's contents.
         goto ENTER_DIR;

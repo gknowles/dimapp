@@ -249,7 +249,7 @@ int Dim::appRun(
     s_appFlags = flags;
     s_appTasks.clear();
 
-    if (s_appFlags.none(fAppWithService)) {
+    if (!s_appFlags.any(fAppWithService)) {
         s_appIndex = 1;
         s_groupIndex = 1;
     } else {

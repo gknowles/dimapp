@@ -97,7 +97,7 @@ static auto & s_perfRejects = uperf("http.http1 requests rejected");
 static PathInfo * find(string_view path, EnumFlags<HttpMethod> methods) {
     PathInfo * best = nullptr;
     for (auto && pi : s_paths) {
-        if (pi.methods.none(methods))
+        if (!pi.methods.any(methods))
             continue;
         if (path == pi.path
             || pi.recurse && path.compare(0, pi.path.size(), pi.path) == 0

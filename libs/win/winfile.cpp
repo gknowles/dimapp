@@ -561,7 +561,7 @@ static error_code allocHandle(
     file->m_mode = mode;
     file->m_path = path;
 
-    if (mode.none(fm::fBlocking)) {
+    if (!mode.any(fm::fBlocking)) {
         if (!winIocpBindHandle(file->m_handle)) {
             WinError err;
             return err.code();
@@ -590,7 +590,7 @@ error_code Dim::fileOpen(
     EnumFlags<File::OpenMode> mode
 ) {
     using enum File::OpenMode;
-    assert(mode.none(fInternalFlags));
+    assert(!mode.any(fInternalFlags));
     // There must be exactly one IO mode.
     assert(mode.count(fNoContent | fReadOnly | fReadWrite) == 1);
 
@@ -603,13 +603,13 @@ error_code Dim::fileOpen(
         access = GENERIC_READ;
     } else {
         assert(mode.any(fReadWrite));
-        assert(mode.none(fNoContent | fReadOnly));
+        assert(!mode.any(fNoContent | fReadOnly));
         access = GENERIC_READ | GENERIC_WRITE;
     }
 
     int share = 0;
     if (mode.any(fDenyWrite)) {
-        assert(mode.none(fDenyNone));
+        assert(!mode.any(fDenyNone));
         share |= FILE_SHARE_READ;
     } else if (mode.any(fDenyNone)) {
         share |= FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
@@ -618,7 +618,7 @@ error_code Dim::fileOpen(
     int creation = 0;
     if (mode.any(fCreat)) {
         if (mode.any(fExcl)) {
-            assert(mode.none(fTrunc));
+            assert(!mode.any(fTrunc));
             creation = CREATE_NEW;
         } else if (mode.any(fTrunc)) {
             creation = CREATE_ALWAYS;
@@ -626,7 +626,7 @@ error_code Dim::fileOpen(
             creation = OPEN_ALWAYS;
         }
     } else {
-        assert(mode.none(fExcl));
+        assert(!mode.any(fExcl));
         if (mode.any(fTrunc)) {
             creation = TRUNCATE_EXISTING;
         } else {
@@ -638,7 +638,7 @@ error_code Dim::fileOpen(
     // including the SECURITY_SQOS_PRESENT and SECURITY_IDENTIFICATION access
     // flags when a client opens a named pipe.
     int flagsAndAttrs = SECURITY_SQOS_PRESENT | SECURITY_IDENTIFICATION;
-    if (mode.none(fBlocking))
+    if (!mode.any(fBlocking))
         flagsAndAttrs |= FILE_FLAG_OVERLAPPED;
     if (mode.any(fAligned))
         flagsAndAttrs |= FILE_FLAG_NO_BUFFERING;
@@ -860,7 +860,7 @@ error_code Dim::fileClose(FileHandle f) {
                 << "): has views that are still open";
             err = ERROR_INVALID_PARAMETER;
         }
-        if (file->m_mode.none(fm::fNonOwning)) {
+        if (!file->m_mode.any(fm::fNonOwning)) {
             if (file->m_mode.any(fm::fBlocking))
                 CancelIoEx(file->m_handle, NULL);
             if (!CloseHandle(file->m_handle))

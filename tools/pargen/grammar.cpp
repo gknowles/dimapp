@@ -611,7 +611,7 @@ static void addFunctionTags(
         break;
     case Element::kRule:
         wasUsed = used[rule.rule->id];
-        if (wasUsed && rule.rule->flags.none(Element::fCharEvents))
+        if (wasUsed && !rule.rule->flags.any(Element::fCharEvents))
             const_cast<Element *>(rule.rule)->flags |= Element::fFunction;
         if (rule.rule->flags.any(Element::fFunction))
             return;

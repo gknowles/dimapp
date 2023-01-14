@@ -432,7 +432,7 @@ static bool removePadding(
     out->hdr = src + kFrameHeaderLen;
     out->data = out->hdr + hdrLen;
     out->dataLen = frameLen - hdrLen;
-    if (flags.none(HttpConn::fPadded)) {
+    if (!flags.any(HttpConn::fPadded)) {
         out->padLen = 0;
         return true;
     }
@@ -872,7 +872,7 @@ bool HttpConn::onHeaders(
         );
     }
 
-    if (flags.none(fEndHeaders))
+    if (!flags.any(fEndHeaders))
         m_frameMode = FrameMode::kContinuation;
 
     auto * msg = sm->m_msg.get();
@@ -1133,7 +1133,9 @@ bool HttpConn::onPing(
         );
     }
 
-    if (flags.none(fAck)) {
+    if (!flags.any(fAck)) {
+        // The ping was not an Ack, therefore it was a request for
+        // acknowledgement. So send an Ack.
         startFrame(out, 0, FrameType::kPing, 8, fAck);
         out->append(src + kFrameHeaderLen, m_inputFrameLen);
     }
