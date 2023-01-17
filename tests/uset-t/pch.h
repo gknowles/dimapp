@@ -10,6 +10,7 @@
 #include "app/app.h"
 #include "core/log.h"
 #include "system/console.h"
+#include "tools/tools.h"
 
 // Standard headers
 #include <iostream>
