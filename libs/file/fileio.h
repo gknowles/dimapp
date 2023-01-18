@@ -22,10 +22,13 @@ namespace Dim {
 
 namespace File {
     enum class OpenMode : unsigned {
-        // content access, exactly one *must* be specified
-        fNoContent = 0x1, // when you only want metadata (time, size, etc)
+        // Content access, exactly one *must* be specified.
+        fNoContent = 0x1, // When you only want metadata (time, size, etc).
         fReadOnly = 0x2,
         fReadWrite = 0x4,
+
+        // Remove access, allows fileRemoveOnClose() to be used on file handle.
+        fRemove = 0x1'0000,
 
         // creation
         fCreat = 0x10, // create if not exist
@@ -51,12 +54,12 @@ namespace File {
 
         // Temporary file, will be deleted when closed, also a hint to file
         // caching.
-        fTemp = 0x10000,
+        fTemp = 0x2'0000,
 
         // INTERNAL USE ONLY
         // Underlying native file handle is externally owned, and will be left
         // open when the file is closed.
-        fNonOwning = 0x20000,
+        fNonOwning = 0x4'0000,
 
         fInternalFlags = fNonOwning,
     };
@@ -218,6 +221,10 @@ std::error_code fileClose(FileHandle f);
 // Changes the files size by either growing or shrinking it. Returns false on
 // errors.
 std::error_code fileResize(FileHandle f, size_t size);
+
+// Must have delete access to file, either by opening it with fRemove or some
+// other means.
+std::error_code fileRemoveOnClose(FileHandle f, bool enable = true);
 
 // Flushes pending writes from the file cache to disk.
 std::error_code fileFlush(FileHandle f);

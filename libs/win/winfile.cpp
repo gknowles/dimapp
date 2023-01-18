@@ -603,9 +603,10 @@ error_code Dim::fileOpen(
         access = GENERIC_READ;
     } else {
         assert(mode.any(fReadWrite));
-        assert(!mode.any(fNoContent | fReadOnly));
         access = GENERIC_READ | GENERIC_WRITE;
     }
+    if (mode.any(fRemove))
+        access |= DELETE;
 
     int share = 0;
     if (mode.any(fDenyWrite)) {
@@ -800,16 +801,43 @@ error_code Dim::fileResize(FileHandle f, size_t size) {
         WinError err = ERROR_INVALID_PARAMETER;
         return err.code();
     }
-    LARGE_INTEGER tmp;
-    tmp.QuadPart = size;
-    if (!SetFilePointerEx(file->m_handle, tmp, nullptr, FILE_BEGIN)) {
+    FILE_END_OF_FILE_INFO info = {};
+    info.EndOfFile.QuadPart = size;
+    if (!SetFileInformationByHandle(
+        file->m_handle,
+        FileEndOfFileInfo,
+        &info,
+        sizeof info
+    )) {
         WinError err;
-        logMsgError() << "SetFilePointerEx(" << file->m_path << "): " << err;
+        logMsgError() << "SetFileInformationByHandle(EndOfFile, "
+            << file->m_path << "): " << err;
         return err.code();
     }
-    if (!SetEndOfFile(file->m_handle)) {
+    return {};
+}
+
+//===========================================================================
+// Handle must have DELETE rights
+error_code Dim::fileRemoveOnClose(FileHandle f, bool enable) {
+    auto file = getInfo(f);
+    if (!file) {
+        WinError err = ERROR_INVALID_PARAMETER;
+        return err.code();
+    }
+
+    FILE_DISPOSITION_INFO info = {
+        .DeleteFile = enable
+    };
+    if (!SetFileInformationByHandle(
+        file->m_handle,
+        FileDispositionInfo,
+        &info,
+        sizeof info
+    )) {
         WinError err;
-        logMsgError() << "SetEndOfFile(" << file->m_path << "): " << err;
+        logMsgError() << "SetFileInformationByHandle(Disposition, "
+            << file->m_path << "): " << err;
         return err.code();
     }
     return {};
