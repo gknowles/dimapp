@@ -69,6 +69,13 @@ bool gitLoadConfig(
 *
 ***/
 
+// Monitors log messages and filters out those that match the messages once
+// each and in the order given. Logs an error if called with some messages
+// still unmatched, but still registers the new list.
+void testLogMsgs(
+    const std::vector<std::pair<LogType, std::string>> & msgs
+);
+
 // Uses logGetMsgCount() and appBaseName() to print final pass/fail report
 // and signal shutdown with EX_OK or EX_SOFTWARE.
 void testSignalShutdown();
