@@ -51,6 +51,7 @@ void Logger::onLog(const LogMsg & log) {
         auto & [type, msg] = m_msgs.front();
         if (log.type == type && log.msg == msg) {
             m_msgs.erase(m_msgs.begin());
+            logAddMsgCount(type, -1);
             return;
         }
     }

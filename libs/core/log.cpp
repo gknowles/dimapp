@@ -253,13 +253,20 @@ void Dim::logMonitorClose(ILogNotify * notify) {
 }
 
 //===========================================================================
-// Query log info
+// Log metadata
 //===========================================================================
 int Dim::logGetMsgCount(LogType type) {
     assert(type >= 0 && type < kLogTypes);
     if (auto perf = s_perfs[type])
         return *perf;
     return 0;
+}
+
+//===========================================================================
+void Dim::logAddMsgCount(LogType type, int count) {
+    assert(type >= 0 && type < kLogTypes);
+    if (auto perf = s_perfs[type])
+        *perf += count;
 }
 
 //===========================================================================

@@ -143,6 +143,7 @@ void logStopwatchLap(std::string_view prefix = "Elapsed time");
 
 // Returns the number of messages of the selected type that have been logged
 int logGetMsgCount(LogType type);
+void logAddMsgCount(LogType type, int count);
 
 
 /****************************************************************************
