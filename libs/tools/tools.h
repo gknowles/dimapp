@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2021 - 2022.
+// Copyright Glen Knowles 2021 - 2023.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // system.h - dim tools

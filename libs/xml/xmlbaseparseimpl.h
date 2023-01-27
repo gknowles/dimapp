@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2019.
+// Copyright Glen Knowles 2016 - 2023.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // xmlbaseparseimpl.h - dim xml

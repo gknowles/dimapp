@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2020.
+// Copyright Glen Knowles 2015 - 2023.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // task.h - dim core
