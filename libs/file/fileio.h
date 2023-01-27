@@ -219,7 +219,7 @@ std::error_code fileAttachStderr(FileHandle * out);
 std::error_code fileClose(FileHandle f);
 
 // Changes the files size by either growing or shrinking it. Returns false on
-// errors.
+// errors. Requires write access and that there are no open views.
 std::error_code fileResize(FileHandle f, size_t size);
 
 // Must have delete access to file, either by opening it with fRemove or some

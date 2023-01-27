@@ -801,16 +801,38 @@ error_code Dim::fileResize(FileHandle f, size_t size) {
         WinError err = ERROR_INVALID_PARAMETER;
         return err.code();
     }
-    FILE_END_OF_FILE_INFO info = {};
-    info.EndOfFile.QuadPart = size;
+    if (!file->m_views.empty()) {
+        logMsgError() << "fileResize(" << file->m_path << "): has open views.";
+    }
+
+    // Change logical end of file.
+    FILE_END_OF_FILE_INFO eofi = {};
+    eofi.EndOfFile.QuadPart = size;
     if (!SetFileInformationByHandle(
         file->m_handle,
         FileEndOfFileInfo,
-        &info,
-        sizeof info
+        &eofi,
+        sizeof eofi
     )) {
         WinError err;
         logMsgError() << "SetFileInformationByHandle(EndOfFile, "
+            << file->m_path << "): " << err;
+        return err.code();
+    }
+    // Even though the logical file size has changed, if it was a decreased,
+    // its allocate size (the space reserved for it) hasn't also changed. To
+    // free space in the file system its allocation size must also be
+    // decreased. If the file size was increased this call is unneeded.
+    FILE_ALLOCATION_INFO fai = {};
+    fai.AllocationSize = eofi.EndOfFile;
+    if (!SetFileInformationByHandle(
+        file->m_handle,
+        FileAllocationInfo,
+        &fai,
+        sizeof fai
+    )) {
+        WinError err;
+        logMsgError() << "SetFileInformationByHandle(Allocation, "
             << file->m_path << "): " << err;
         return err.code();
     }
@@ -885,7 +907,7 @@ error_code Dim::fileClose(FileHandle f) {
     } else if (file->m_handle != INVALID_HANDLE_VALUE) {
         if (!file->m_views.empty()) {
             logMsgFatal() << "fileClose(" << file->m_path
-                << "): has views that are still open";
+                << "): has views that are still open.";
             err = ERROR_INVALID_PARAMETER;
         }
         if (!file->m_mode.any(fm::fNonOwning)) {
@@ -1619,7 +1641,7 @@ error_code Dim::fileExtendView(FileHandle f, const void * view, int64_t length) 
     }
     if (ptr != view) {
         logMsgDebug() << "VirtualAlloc(" << file->m_path << "): " << ptr
-            << " (expected " << view << ")";
+            << " (expected " << view << ").";
     }
     return {};
 }
