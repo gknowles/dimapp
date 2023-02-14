@@ -204,7 +204,7 @@ template<typename T>
 struct PerfPrint<T, PerfFormat::kDuration> {
     void format(string * out, T val) const {
         Duration dur;
-        if constexpr (is_same_v<T, float>) {
+        if constexpr (is_floating_point_v<T>) {
             auto tmp = chrono::duration<double>(val);
             dur = duration_cast<Duration>(tmp);
         } else {
