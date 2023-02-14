@@ -139,7 +139,7 @@ static string toStringTwoPart(Duration val) {
     auto out = format("{}{}", first, scale->suffix);
     if (scale < end(s_durScales) - 1) {
         secs -= first * scale->secs;
-        auto second = round(abs(secs) / scale[1].secs);
+        auto second = trunc(abs(secs) / scale[1].secs);
         if (second)
             out += format(" {}{}", second, scale[1].suffix);
     }
