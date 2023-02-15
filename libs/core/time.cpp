@@ -57,7 +57,7 @@ constexpr DurationScale s_durScales[] = {
     { "d",  24 * 60 * 60 },
     { "h",  60 * 60 },
     { "m",  60 },
-    { "s",  1},
+    { "s",  1 },
     { "ms", 0.001 },
 };
 
@@ -139,6 +139,7 @@ static string toStringTwoPart(Duration val) {
     auto out = format("{}{}", first, scale->suffix);
     if (scale < end(s_durScales) - 1) {
         secs -= first * scale->secs;
+        secs += numeric_limits<double>::epsilon();
         auto second = trunc(abs(secs) / scale[1].secs);
         if (second)
             out += format(" {}{}", second, scale[1].suffix);
