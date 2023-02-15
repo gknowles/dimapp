@@ -2896,7 +2896,6 @@ bool IntegralSet<T,A>::Impl::intersects(
 /*bit  */{ no,    yes,  isecRSmv, isecRVec, isecBit,   isecError },
 /*meta */{ no,    yes,  isecRSmv, isecRVec, isecError, isecMeta  },
     };
-    assert(!"not tested, intersects(const Node&, const Node&)");
     return functs[left.type][right.type](left, right);
 }
 

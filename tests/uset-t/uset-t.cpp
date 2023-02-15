@@ -204,6 +204,12 @@ static void test() {
     tmp2.assign("10001-15000");
     tmp.intersect(tmp2);
     EXPECT(tmp.empty());
+
+    tmp.assign("1 3 5");
+    tmp2.assign("2 4 6");
+    EXPECT(!tmp.intersects(tmp2));
+    tmp.insert(4);
+    EXPECT(tmp.intersects(tmp2));
 }
 
 //===========================================================================
