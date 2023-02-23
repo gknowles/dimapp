@@ -75,7 +75,7 @@ public:
     };
 
 public:
-    IntegralSet() noexcept = default;
+    IntegralSet() = default;
     explicit IntegralSet(const A & alloc) noexcept;
     IntegralSet(IntegralSet && from) noexcept;
     IntegralSet(IntegralSet && from, const A & alloc);
@@ -245,7 +245,7 @@ public:
     static Iter makeLast(const Node * node, value_type maxValue);
 
 public:
-    Iter(const Iter & from) noexcept = default;
+    Iter(const Iter & from) = default;
     Iter & operator++();
     Iter & operator--();
     explicit operator bool() const { return !m_endmark; }
@@ -284,7 +284,7 @@ public:
     using reference = const value_type&;
 
 public:
-    RangeIter(const RangeIter & from) noexcept = default;
+    RangeIter(const RangeIter & from) = default;
     RangeIter(IntegralSet::iterator where);
     RangeIter & operator++();
     RangeIter & operator--();

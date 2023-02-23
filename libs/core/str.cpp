@@ -525,7 +525,7 @@ public:
     using difference_type = ptrdiff_t;
 
 public:
-    constexpr PtrOutIter() noexcept = default;
+    constexpr PtrOutIter() = default;
     PtrOutIter(T * out, size_t outLen) noexcept
         : m_cur(out)
         , m_end(out + outLen)

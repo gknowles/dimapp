@@ -222,8 +222,8 @@ public:
     using enum_type = T;
 
 public:
-    constexpr EnumFlags() noexcept = default;
-    constexpr EnumFlags(const EnumFlags & val) noexcept = default;
+    constexpr EnumFlags() = default;
+    constexpr EnumFlags(const EnumFlags & val) = default;
     constexpr EnumFlags(T val);
 
     constexpr EnumFlags & set (EnumFlags other);
@@ -234,7 +234,7 @@ public:
     constexpr auto underlying() const;
     constexpr T value() const;
 
-    constexpr bool operator==(const EnumFlags & val) const noexcept = default;
+    constexpr bool operator==(const EnumFlags & val) const = default;
     constexpr bool any() const;
     constexpr bool any(EnumFlags mask) const;
 

@@ -37,11 +37,11 @@ public:
 
 public:
     IJBuilder();
-    IJBuilder(const IJBuilder & from) noexcept = default;
-    IJBuilder(IJBuilder && from) noexcept = default;
+    IJBuilder(const IJBuilder & from) = default;
+    IJBuilder(IJBuilder && from) = default;
     virtual ~IJBuilder() = default;
-    IJBuilder & operator=(const IJBuilder & from) noexcept = default;
-    IJBuilder & operator=(IJBuilder && from) noexcept = default;
+    IJBuilder & operator=(const IJBuilder & from) = default;
+    IJBuilder & operator=(IJBuilder && from) = default;
 
     virtual void clear();
 
@@ -156,8 +156,8 @@ inline IJBuilder & end(IJBuilder & out) {
 class JBuilder : public IJBuilder {
 public:
     JBuilder(CharBuf * buf) : m_buf(buf) {}
-    JBuilder(const JBuilder & from) noexcept = default;
-    JBuilder & operator=(const JBuilder & from) noexcept = default;
+    JBuilder(const JBuilder & from) = default;
+    JBuilder & operator=(const JBuilder & from) = default;
 
     void clear() override;
 

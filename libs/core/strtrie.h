@@ -108,8 +108,8 @@ public:
 public:
     explicit Iter(const StrTrieBase * cont);
     explicit Iter(std::shared_ptr<Iter::Impl> impl);
-    Iter(const Iter & from) noexcept = default;
-    Iter & operator=(const Iter & from) noexcept = default;
+    Iter(const Iter & from) = default;
+    Iter & operator=(const Iter & from) = default;
     explicit operator bool() const;
 
     bool operator==(const Iter & right) const;

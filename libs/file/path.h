@@ -48,7 +48,7 @@ class Path {
 public:
     Path() {}
     Path(const Path & from) = default;
-    Path(Path && from) noexcept = default;
+    Path(Path && from) = default;
     explicit Path(const char from[]) : Path{std::string_view{from}} {}
     explicit Path(std::string_view from);
     explicit Path(const std::string & from) : Path{std::string_view{from}} {}
@@ -59,7 +59,7 @@ public:
     void swap(Path & from);
 
     Path & operator=(const Path & from) = default;
-    Path & operator=(Path && from) noexcept = default;
+    Path & operator=(Path && from) = default;
     Path & operator=(const char from[]) {
         return assign(std::string_view(from));
     }
