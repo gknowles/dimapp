@@ -27,7 +27,7 @@ struct Version {
 struct Spawn {
     std::vector<std::string> args;
     std::map<std::string, std::string> env;
-    bool untracked = false;
+    bool untrackedChildren = false;
 };
 
 struct Compiler {
@@ -72,6 +72,8 @@ struct Page {
     bool defaultPage = false;
     std::string xrefFile; // defaults to file
     std::string patch;
+    bool site = true;   // processed by site generation
+    bool test = true;   // searched for tests
 };
 
 struct Layout {

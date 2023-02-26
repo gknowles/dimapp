@@ -72,7 +72,7 @@ static bool loadSpawn(Spawn * out, XNode * root) {
         }
         out->env[name] = attrValue(&elem, "value", "");
     }
-    out->untracked = attrValue(root, "untracked", false);
+    out->untrackedChildren = attrValue(root, "untracked", false);
     return true;
 }
 
@@ -155,6 +155,8 @@ static bool loadPage(Page * out, XNode * root) {
         Path(out->file).extension(),
         Page::kUnknown
     );
+    out->site = attrValue(root, "site", true);
+    out->test = attrValue(root, "test", true);
     out->xrefFile = attrValue(root, "xrefFile", out->file.c_str());
     out->urlSegment = attrValue(root, "url", "");
     if (out->urlSegment.empty())
@@ -430,7 +432,7 @@ bool writeOutputs(
         appSignalShutdown(EX_IOERR);
         return false;
     }
-    for (auto&& f : fileGlob(odir, "*.*", Glob::fDirsLast)) {
+    for (auto&& f : fileGlob(odir, "**", Glob::fDirsLast)) {
         if (auto ec = fileRemove(f.path); ec) {
             if (!f.isdir) {
                 appSignalShutdown(EX_IOERR);

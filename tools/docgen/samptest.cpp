@@ -186,10 +186,17 @@ static void genCppHeader(
 
 //===========================================================================
 static vector<CodeBlock> findAsciidocBlocks(const PageInfo & info) {
+    // Asciidoc code block format:
+    //   [source, <attrs...>]
+    //   ////
+    //   Code content
+    //   ////
+    //
+    // Regex captures:
+    //   \1  attrs
+    //   \2  starting separator (---- or ////)
+    //   \3  content
     static const regex s_codeBlock(
-        // 1. attrs
-        // 2. separator (---- or ////)
-        // 3. content
         R"regex(
 \[\s*[Ss][Oo][Uu][Rr][Cc][Ee]\s*,([^\]]*)\]\r?
 (----|////)\r?
@@ -201,12 +208,14 @@ static vector<CodeBlock> findAsciidocBlocks(const PageInfo & info) {
 
     vector<CodeBlock> out;
     cmatch m;
-    size_t pos = 0;
+    auto base = info.content.data();
+    size_t line = 0;
     for (;;) {
-        if (!regex_search(info.content.data() + pos, m, s_codeBlock))
+        if (!regex_search(base, m, s_codeBlock))
             break;
         auto & code = out.emplace_back();
-        code.line = (unsigned) (pos + m.position() + 1);
+
+        // Attributes
         auto rawAttrs = m.str(1);
         vector<string_view> attrs;
         split(&attrs, rawAttrs, ',');
@@ -215,20 +224,66 @@ static vector<CodeBlock> findAsciidocBlocks(const PageInfo & info) {
             for (auto i = 1; i < attrs.size(); ++i)
                 code.attrs.emplace_back(trim(attrs[i]));
         }
-        code.content = m.str(3);
 
-        pos += m.position() + m.length();
+        // Content
+        code.content = m.str(3);
+        line += count(base, base + m.position(3), '\n');
+        code.line = (unsigned) line + 1;
+        line += count(base + m.position(3), m[0].second, '\n');
+
+        base = m[0].second;
     }
 
-    // Convert character offsets to line numbers
-    pos = 0;
-    unsigned line = 1;
-    for (auto&& code : out) {
-        while (pos < code.line) {
-            if (info.content[pos++] == '\n')
-                line += 1;
+    return out;
+}
+
+//===========================================================================
+static vector<CodeBlock> findMarkdownBlocks(const PageInfo & info) {
+    // Markdown code block format:
+    //   ~~~ <language> <attrs...>
+    //   Code content
+    //   ~~~
+    // Regex captures:
+    //   \1  starting separator (``` or ~~~)
+    //   \2  language attr (C++, console)
+    //   \3  other attrs with leading comma
+    //   \4  other attrs
+    //   \5  content
+    static const regex s_codeBlock(
+        R"regex(
+\s*(```|~~~)\s*([^ \r]*)\s*,\s*[Ss][Oo][Uu][Rr][Cc][Ee]\s*(,([^\r\n]*))?\r?
+([[:print:][:cntrl:]]*?)\r?
+\1(?=\r?
+))regex",
+        regex::optimize
+    );
+
+    vector<CodeBlock> out;
+    cmatch m;
+    auto base = info.content.data();
+    size_t line = 0;
+    for (;;) {
+        if (!regex_search(base, m, s_codeBlock))
+            break;
+        auto & code = out.emplace_back();
+
+        // Attributes
+        code.lang = toLower(trim(m.str(2)));
+        if (m[4].matched) {
+            auto rawAttrs = m.str(4);
+            vector<string_view> attrs;
+            split(&attrs, rawAttrs, ',');
+            for (auto&& attr : attrs)
+                code.attrs.emplace_back(trim(attr));
         }
-        code.line = line + 2;
+
+        // Content
+        code.content = m.str(5);
+        line += count(base, base + m.position(5), '\n');
+        code.line = (unsigned) line + 1;
+        line += count(base + m.position(5), m[0].second, '\n');
+
+        base = m[0].second;
     }
 
     return out;
@@ -239,6 +294,8 @@ static vector<CodeBlock> findBlocks(const PageInfo & info) {
     switch (info.page.type) {
     case Page::kAsciidoc:
         return findAsciidocBlocks(info);
+    case Page::kMarkdown:
+        return findMarkdownBlocks(info);
     default:
         return {};
     }
@@ -255,7 +312,7 @@ static vector<pair<size_t, size_t>> lineSpans(
         olog() << "requires range arguments.";
         return out;
     }
-    for (unsigned i = 0; i < args.size(); i += 2) {
+    for (size_t i = 0; i < args.size(); i += 2) {
         auto & range = out.emplace_back();
         range.first = strToInt(args[i]);
         if (args.size() == i + 1) {
@@ -276,10 +333,11 @@ static vector<pair<size_t, size_t>> lineSpans(
     }
 
     // check for overlapping ranges
+    assert(!out.empty());
     auto sorted = out;
-    ranges::sort(sorted, [](auto & a, auto & b) { return a < b; });
-    for (unsigned i = 0; i + 1 < sorted.size(); ++i) {
-        if (sorted[i].first + sorted[i].second > sorted[i + 1].first) {
+    ranges::sort(sorted);
+    for (auto i = sorted.begin(); i < sorted.end() - 1; ++i) {
+        if (i->first + i->second > (i + 1)->first) {
             olog() << "overlapping line spans.";
             out.clear();
             return out;
@@ -965,14 +1023,10 @@ static void runProgDone(
         const auto & output = run.output[i];
         if (output.input < output.text.size()) {
             auto pos = output.input;
-            auto line = lines[i];
-            auto & withInput =
-                tmp.emplace_back(line.substr(0, pos));
+            auto & line = lines[i];
+            auto & withInput = tmp.emplace_back(line.substr(0, pos));
             withInput += output.text.substr(pos);
-            lines.insert(
-                lines.begin() + i + 1,
-                line.substr(pos)
-            );
+            lines.insert(lines.begin() + i + 1, line.substr(pos));
             lines[i] = withInput;
         }
     }
@@ -1061,7 +1115,7 @@ static void runProgTests(ProgWork * work, unsigned phase) {
             ExecOptions opts = {
                 .workingDir = workDir.str(),
                 .envVars = comp->compile.env,
-                .untrackedChildren = comp->compile.untracked,
+                .untrackedChildren = comp->compile.untrackedChildren,
             };
             if (first) {
                 first = false;
@@ -1131,7 +1185,7 @@ static void runProgTests(ProgWork * work, unsigned phase) {
                 .workingDir = workDir.str(),
                 .envVars = env,
                 .stdinData = input,
-                .untrackedChildren = lang.shell.untracked,
+                .untrackedChildren = lang.shell.untrackedChildren,
                 .concurrency = envProcessors(),
             };
             execProgram(
@@ -1208,12 +1262,9 @@ static void testSamples(Config * out, unsigned phase = 0) {
         s_pageInfos.reserve(layout->second.pages.size());
         out->pendingWork = (unsigned) layout->second.pages.size() + 1;
         for (auto && page : layout->second.pages) {
-            if (page.type != Page::kAsciidoc) {
-                out->pendingWork -= 1;
-                continue;
-            }
-            if (!s_opts.pages.empty()
-                && !s_opts.pages.contains(page.urlSegment)
+            if (!page.test
+                || !s_opts.pages.empty()
+                    && !s_opts.pages.contains(page.urlSegment)
             ) {
                 out->pendingWork -= 1;
                 continue;
