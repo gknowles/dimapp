@@ -20,10 +20,37 @@ jobs:
         configuration: [Debug, Release]
         toolset: [v143]
         image: [windows-2022]
+        include:
+          - platform: x64
+            configuration: Debug
+            toolset: v143
+            image: windows-2022
+            coverage: true
     runs-on: ${{matrix.image}}
     defaults:
       run:
         shell: cmd
+    env:
+      tests: |
+          bin\bitview-t
+          bin\charbuf-t
+          bin\file-t
+          bin\glob-t
+          bin\hpack-t
+          "bin\http-t --test"
+          "bin\json-t --test"
+          bin\list-t
+          bin\math-t
+          bin\msgpack-t
+          "bin\pargen --test"
+          bin\path-t
+          bin\str-t
+          "bin\strtrie-t --test"
+          bin\time-t
+          bin\tokentable-t
+          bin\uset-t
+          "bin\xml --test"
+
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -48,6 +75,7 @@ jobs:
         :: 7z a dimcli-latest.zip include lib
 
     - name: Test
+      if: ${{!matrix.coverage}}
       working-directory: ${{github.workspace}}
       run: |
         for %%t in (
@@ -73,3 +101,20 @@ jobs:
             %%~t
             if errorlevel 1 goto :eof
         )
+
+    - name: Setup OpenCppCoverage
+      if: ${{matrix.coverage}}
+      working-directory: ${{github.workspace}}
+      run: |
+        choco install OpenCppCoverage -y
+        echo "C:\Program Files\OpenCppCoverage" >> ${{env.GITHUB_PATH}}
+
+    - name: Test
+      if: ${{matrix.coverage}}
+      working-directory: ${{github.workspace}}
+      run: |
+
+    - name: Report Coverage
+      if: ${{matrix.coverage}}
+      working-directory: ${{github.workspace}}
+      run: |
