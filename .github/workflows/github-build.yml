@@ -96,6 +96,7 @@ jobs:
       if: ${{matrix.coverage}}
       working-directory: ${{github.workspace}}
       run: |
+        setlocal EnableDelayedExpansion
         set ccexe="C\Program Files\OpenCppCoverage\OpenCppCoverage.exe"
         set cc=%ccexe%^
             --export_type binary:temp.cov^
@@ -105,13 +106,11 @@ jobs:
             --excluded_sources tests^
             --excluded_sources testlibs^
             --excluded_line_regex ".* LCOV_EXCL_LINE.*"^
-        for %%t in (${{env.tests}}) do (
-            set cmd=%%~t
-            echo p=%cmd% b=!cmd!
+        for %t in (${{env.tests}}) do (
             if exist merged.cov (
-                %cc% --input_coverage merged.cov -- !cmd!
+                %cc% --input_coverage merged.cov -- %~t
             ) else (
-                %cc% -- !cmd!
+                %cc% -- %~t
             )
             if errorlevel 1 goto :eof
             copy temp.cov merged.cov
