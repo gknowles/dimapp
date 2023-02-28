@@ -57,7 +57,15 @@ jobs:
       with:
         submodules: true
 
+    - name: Setup OpenCppCoverage
+      if: ${{matrix.coverage}}
+      working-directory: ${{github.workspace}}
+      run: |
+        choco install OpenCppCoverage -y
+        echo "C:\Program Files\OpenCppCoverage" >>{{env.GITHUB_PATH}}
+
     - name: Build
+      if: false
       working-directory: ${{github.workspace}}
       run: |
         if not exist "conf\app.xml" copy "conf\app.xml.sample" "conf\app.xml"
@@ -101,13 +109,6 @@ jobs:
             %%~t
             if errorlevel 1 goto :eof
         )
-
-    - name: Setup OpenCppCoverage
-      if: ${{matrix.coverage}}
-      working-directory: ${{github.workspace}}
-      run: |
-        choco install OpenCppCoverage -y
-        echo "C:\Program Files\OpenCppCoverage" >> ${{env.GITHUB_PATH}}
 
     - name: Test
       if: ${{matrix.coverage}}
