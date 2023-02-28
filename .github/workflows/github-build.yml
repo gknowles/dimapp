@@ -96,24 +96,24 @@ jobs:
       if: ${{matrix.coverage}}
       working-directory: ${{github.workspace}}
       run: |
-        echo >config.txt  modules=${{github.workspace}}
-        echo >>config.txt sources=${{github.workspace}}
-        echo >>config.txt export_type=binary:temp.cov
-        echo >>config.txt excluded_sources=vendor
-        echo >>config.txt excluded_sources=${{github.workspace}}\tests
-        echo >>config.txt excluded_sources=${{github.workspace}}\testlibs
-        echo >>config.txt excluded_line_regex=.* LCOV_EXCL_LINE.*
-        echo %path%
+        set ccexe="C\Program Files\OpenCppCoverage\OpenCppCoverage.exe"
+        set cc=%ccexe%^
+            --modules ${{github.workspace}}^
+            --sources ${{github.workspace}}^
+            --export_type binary:temp.cov^
+            --excluded_sources vendor^
+            --excluded_sources tests^
+            --excluded_sources testlibs^
+            --excluded_line_regex ".* LCOV_EXCL_LINE.*"^
         for %%t in (${{env.tests}}) do (
             if exist merged.cov (
-                OpenCppCoverage --input_coverage merged.cov^
-                    --config_file config.txt -- %%~t
+                %cc% --input_coverage merged.cov -- %%~t
             ) else (
-                OpenCppCoverage --config_file config.txt -- %%~t
+                %cc% -- %%~t
             )
             copy temp.cov merged.cov
         )
-        OpenCppCoverage --input_coverage merged.cov --export_type cobertura:merged.xml
+        %ccexe% --input_coverage merged.cov --export_type cobertura:merged.xml
 
     - name: Report Coverage
       if: ${{matrix.coverage}}
