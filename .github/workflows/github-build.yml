@@ -107,10 +107,11 @@ jobs:
             --excluded_line_regex ".* LCOV_EXCL_LINE.*"^
         for %%t in (${{env.tests}}) do (
             set cmd=%%~t
+            echo p=%cmd% b=!cmd!
             if exist merged.cov (
-                %cc% --input_coverage merged.cov -- %cmd%
+                %cc% --input_coverage merged.cov -- !cmd!
             ) else (
-                %cc% -- %cmd%
+                %cc% -- !cmd!
             )
             if errorlevel 1 goto :eof
             copy temp.cov merged.cov
