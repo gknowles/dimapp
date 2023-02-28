@@ -20,6 +20,7 @@ jobs:
         configuration: [Debug, Release]
         toolset: [v143]
         image: [windows-2022]
+        coverage: [false]
         include:
           - platform: x64
             configuration: Debug
@@ -82,7 +83,7 @@ jobs:
         cd publish
         :: 7z a dimcli-latest.zip include lib
 
-    - name: Test
+    - name: Test Without Coverage
       if: ${{!matrix.coverage}}
       working-directory: ${{github.workspace}}
       run: |
@@ -110,7 +111,7 @@ jobs:
             if errorlevel 1 goto :eof
         )
 
-    - name: Test
+    - name: Test With Coverage
       if: ${{matrix.coverage}}
       working-directory: ${{github.workspace}}
       run: |
