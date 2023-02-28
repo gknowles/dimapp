@@ -98,19 +98,21 @@ jobs:
       run: |
         set ccexe="C\Program Files\OpenCppCoverage\OpenCppCoverage.exe"
         set cc=%ccexe%^
+            --export_type binary:temp.cov^
             --modules ${{github.workspace}}^
             --sources ${{github.workspace}}^
-            --export_type binary:temp.cov^
             --excluded_sources vendor^
             --excluded_sources tests^
             --excluded_sources testlibs^
             --excluded_line_regex ".* LCOV_EXCL_LINE.*"^
         for %%t in (${{env.tests}}) do (
+            set cmd=%%~t
             if exist merged.cov (
-                %cc% --input_coverage merged.cov -- %%~t
+                %cc% --input_coverage merged.cov -- %cmd%
             ) else (
-                %cc% -- %%~t
+                %cc% -- %cmd%
             )
+            if errorlevel 1 goto :eof
             copy temp.cov merged.cov
         )
         %ccexe% --input_coverage merged.cov --export_type cobertura:merged.xml
