@@ -103,6 +103,7 @@ jobs:
         echo >>config.txt excluded_sources=${{github.workspace}}\tests
         echo >>config.txt excluded_sources=${{github.workspace}}\testlibs
         echo >>config.txt excluded_line_regex=.* LCOV_EXCL_LINE.*
+        echo %path%
         for %%t in (${{env.tests}}) do (
             if exist merged.cov (
                 OpenCppCoverage --input_coverage merged.cov^
