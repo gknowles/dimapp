@@ -59,11 +59,11 @@ jobs:
         submodules: true
 
     - name: Setup OpenCppCoverage
-      if: ${{matrix.coverage}}
+      if: matrix.coverage
       working-directory: ${{github.workspace}}
       run: |
         choco install OpenCppCoverage -y
-        echo "C:\Program Files\OpenCppCoverage" >>{{env.GITHUB_PATH}}
+        echo "C:\Program Files\OpenCppCoverage" >>${{env.GITHUB_PATH}}
 
     - name: Build
       working-directory: ${{github.workspace}}
@@ -84,7 +84,7 @@ jobs:
         :: 7z a dimcli-latest.zip include lib
 
     - name: Test Without Coverage
-      if: ${{!matrix.coverage}}
+      if: !matrix.coverage
       working-directory: ${{github.workspace}}
       run: |
         for %%t in (${{env.tests}}) do (
@@ -93,7 +93,7 @@ jobs:
         )
 
     - name: Test With Coverage
-      if: ${{matrix.coverage}}
+      if: matrix.coverage
       working-directory: ${{github.workspace}}
       run: |
         set prog="C\Program Files\OpenCppCoverage\OpenCppCoverage.exe"
@@ -117,7 +117,7 @@ jobs:
         %prog% --input_coverage merged.cov --export_type cobertura:merged.xml
 
     - name: Report Coverage
-      if: ${{matrix.coverage}}
+      if: matrix.coverage
       uses: codecov/codecov-action@v2
       with:
         files: merged.xml
