@@ -1,5 +1,5 @@
 ////
-Copyright Glen Knowles 2016 - 2021.
+Copyright Glen Knowles 2016 - 2023.
 Distributed under the Boost Software License, Version 1.0.
 ////
 
@@ -8,10 +8,18 @@ Distributed under the Boost Software License, Version 1.0.
 :ci-link: {ci-root}github-build.yml
 :ci-badge: image:{ci-root}github-build.yml/badge.svg
 
+:cov-link: https://codecov.io/gh/gknowles/dimapp
+:cov-badge-1: image:https://img.shields.io/badge/dynamic/json
+:cov-badge-2: {cov-badge-1}?color=success&label=codecov&logo=codecov
+:cov-badge-3: {cov-badge-2}&query=%24.commit.totals.c&suffix=%25
+:cov-badge-4: {cov-badge-3}&url=https%3A%2F%2Fcodecov.io%2Fapi
+:cov-badge:     {cov-badge-4}%2Fgh%2Fgknowles%2Fdimapp%2Fbranch%2Fmaster
+
 [%autowidth]
 |===
-h| MSVC 2022
-| {ci-link}[{ci-badge}[Build status]]
+h| MSVC 2022 h| Test Coverage
+| {ci-link}[{ci-badge}[Github]]
+| {cov-link}[{cov-badge}[Codecov]]
 |===
 
 Windows server application framework
