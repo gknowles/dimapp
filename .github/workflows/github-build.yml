@@ -53,17 +53,16 @@ jobs:
           "bin\xml --test"
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v3
-      with:
-        submodules: true
-
     - name: Setup OpenCppCoverage
       if: ${{matrix.coverage}}
       working-directory: ${{github.workspace}}
       run: |
         choco install OpenCppCoverage -y
-        echo "C:\Program Files\OpenCppCoverage" >>{{env.GITHUB_PATH}}
+
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        submodules: true
 
     - name: Build
       working-directory: ${{github.workspace}}
@@ -97,25 +96,25 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
         setlocal EnableDelayedExpansion
-        set ccexe="C\Program Files\OpenCppCoverage\OpenCppCoverage.exe"
-        set cc=%ccexe%^
+        set prog="C\Program Files\OpenCppCoverage\OpenCppCoverage.exe"
+        set opts=^
             --export_type binary:temp.cov^
             --modules ${{github.workspace}}^
             --sources ${{github.workspace}}^
             --excluded_sources vendor^
             --excluded_sources tests^
             --excluded_sources testlibs^
-            --excluded_line_regex ".* LCOV_EXCL_LINE.*"^
-        for %t in (${{env.tests}}) do (
+            --excluded_line_regex ".* LCOV_EXCL_LINE.*"
+        for %%t in (${{env.tests}}) do (
             if exist merged.cov (
-                %cc% --input_coverage merged.cov -- %~t
+                %prog% %opts% --input_coverage merged.cov -- %%~t
             ) else (
-                %cc% -- %~t
+                %prog% %opts% -- %%~t
             )
             if errorlevel 1 goto :eof
             copy temp.cov merged.cov
         )
-        %ccexe% --input_coverage merged.cov --export_type cobertura:merged.xml
+        %prog% --input_coverage merged.cov --export_type cobertura:merged.xml
 
     - name: Report Coverage
       if: ${{matrix.coverage}}
