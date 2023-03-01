@@ -63,7 +63,7 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
         choco install OpenCppCoverage -y
-        echo %GITHUB_PATH%
+        echo "C:\Program Files\OpenCppCoverage" >> %GITHUB_PATH%
 
     - name: Build
       working-directory: ${{github.workspace}}
@@ -104,13 +104,11 @@ jobs:
             --excluded_sources tests^
             --excluded_sources testlibs^
             --excluded_line_regex ".* LCOV_EXCL_LINE.*"
-        set cc=%prog% %opts%
         for %%t in (${{env.tests}}) do (
-            echo %cc% -- %%~t
             if exist merged.cov (
                 %prog% %opts% --input_coverage merged.cov -- %%~t
             ) else (
-                %cc% -- %%~t
+                %prog% %opts% -- %%~t
             )
             if errorlevel 1 goto :eof
             copy temp.cov merged.cov
