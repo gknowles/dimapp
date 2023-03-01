@@ -17,10 +17,10 @@ jobs:
     strategy:
       matrix:
         platform: [x64]
-        configuration: [Debug]
+        configuration: [Debug, Release]
         toolset: [v143]
         image: [windows-2022]
-        coverage: [true]
+        coverage: [false]
         include:
           - platform: x64
             configuration: Debug
