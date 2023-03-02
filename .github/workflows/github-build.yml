@@ -83,7 +83,7 @@ jobs:
         cd publish
         :: 7z a dimcli-latest.zip include lib
 
-    - name: Test Without Coverage
+    - name: Test
       if: ${{ !matrix.coverage }}
       working-directory: ${{github.workspace}}
       run: |
@@ -92,7 +92,7 @@ jobs:
             if errorlevel 1 goto :eof
         )
 
-    - name: Test With Coverage
+    - name: Test Coverage
       if: matrix.coverage
       working-directory: ${{github.workspace}}
       run: |
