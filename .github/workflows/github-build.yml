@@ -53,17 +53,17 @@ jobs:
           "bin\xml --test"
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v3
-      with:
-        submodules: true
-
     - name: Setup OpenCppCoverage
       if: matrix.coverage
       working-directory: ${{github.workspace}}
       run: |
         choco install OpenCppCoverage -y
         echo "C:\Program Files\OpenCppCoverage" >> %GITHUB_PATH%
+
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        submodules: true
 
     - name: Build
       working-directory: ${{github.workspace}}
