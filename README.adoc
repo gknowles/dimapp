@@ -4,16 +4,12 @@ Distributed under the Boost Software License, Version 1.0.
 ////
 
 = dimapp
-:ci-root: https://github.com/gknowles/dimapp/actions/workflows/
-:ci-link: {ci-root}github-build.yml
-:ci-badge: image:{ci-root}github-build.yml/badge.svg
+:ci-root: https://github.com/gknowles/dimapp/actions/workflows
+:ci-link: {ci-root}/github-build.yml
+:ci-badge: image:{ci-root}/github-build.yml/badge.svg
 
 :cov-link: https://codecov.io/gh/gknowles/dimapp
-:cov-badge-1: image:https://img.shields.io/badge/dynamic/json
-:cov-badge-2: {cov-badge-1}?color=success&label=codecov&logo=codecov
-:cov-badge-3: {cov-badge-2}&query=%24.commit.totals.c&suffix=%25
-:cov-badge-4: {cov-badge-3}&url=https%3A%2F%2Fcodecov.io%2Fapi
-:cov-badge:     {cov-badge-4}%2Fgh%2Fgknowles%2Fdimapp%2Fbranch%2Fmaster
+:cov-badge: {cov-link}/branch/master/graph/badge.svg?token=AsZbKqf6lA
 
 [%autowidth]
 |===
