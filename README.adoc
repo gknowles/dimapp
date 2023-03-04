@@ -9,7 +9,7 @@ Distributed under the Boost Software License, Version 1.0.
 :ci-badge: image:{ci-root}/github-build.yml/badge.svg
 
 :cov-link: https://codecov.io/gh/gknowles/dimapp
-:cov-badge: {cov-link}/branch/master/graph/badge.svg?token=AsZbKqf6lA
+:cov-badge: image:{cov-link}/branch/master/graph/badge.svg?token=AsZbKqf6lA
 
 [%autowidth]
 |===
