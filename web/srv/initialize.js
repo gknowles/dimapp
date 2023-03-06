@@ -18,6 +18,24 @@ function createApp() {
         data() {
             return srvdata
         },
+        mounted() {
+            // Listener for sortable table headers
+            const hdrs = document.querySelectorAll("th.sortable");
+            hdrs.forEach(
+                hdr => hdr.addEventListener('click', () => { this.tableSort(hdr) })
+            )
+
+            // Make #app element visible and reflect the server's group type.
+            let el = document.getElementById('app')
+            el.classList.add('groupType-' + appOpts.data().server.groupType)
+            el.style.visibility = 'visible'
+
+            // Set page refresh time if there's a "refresh" query parameter.
+            let ref = parseInt(getParam('refresh'))
+            if (ref) {
+                setTimeout(() => { window.location.reload() }, ref * 1000)
+            }
+        },
         computed: {
             nowSecs() {
                 return Date.parse(this.now) / 1000
@@ -30,19 +48,6 @@ function createApp() {
             },
         },
         methods: {
-            miniNav() { return [] },
-            makeUrl,
-            updateUrl,
-            getParam,
-            getRefreshUrl,
-            readableDuration,
-            elapsedTime(val) {
-                return this.nowSecs - Date.parse(val) / 1000
-            },
-            readableAge(val) {
-                if (typeof val === 'undefined') return '-'
-                return this.readableDuration(this.elapsedTime(val))
-            },
             ageClass(val) {
                 if (typeof val === 'undefined') return 'disabled'
                 let age = this.elapsedTime(val)
@@ -50,6 +55,20 @@ function createApp() {
                 if (age < 24 * 3600) return 'recent'
                 return 'old'
             },
+            elapsedTime(val) {
+                return this.nowSecs - Date.parse(val) / 1000
+            },
+            getParam,
+            getRefreshUrl,
+            makeUrl,
+            miniNav() { return [] },
+            readableAge(val) {
+                if (typeof val === 'undefined') return '-'
+                return this.readableDuration(this.elapsedTime(val))
+            },
+            readableDuration,
+            tableSort,
+            updateUrl,
         },
     }
     addOpts(newOpts)
@@ -59,14 +78,6 @@ function createApp() {
         app.component(name, appOpts.components[name])
     }
     app.mount('#app')
-    let el = document.getElementById('app')
-    el.classList.add('groupType-' + appOpts.data().server.groupType)
-    el.style.visibility = 'visible'
-
-    let ref = parseInt(getParam('refresh'))
-    if (ref) {
-        setTimeout(function() { window.location.reload() }, ref * 1000)
-    }
 }
 createApp.waitingHtmlFragments = 1
 

@@ -65,11 +65,11 @@ addOpts({
       </template>
       <table v-else>
         <tr>
-          <th onclick="tableSort(this)">Total</th>
-          <th onclick="tableSort(this)">Count</th>
-          <th onclick="tableSort(this)">Size</th>
-          <th onclick="tableSort(this)">Line</th>
-          <th onclick="tableSort(this)">File</th>
+          <th class="sortable">Total</th>
+          <th class="sortable">Count</th>
+          <th class="sortable">Size</th>
+          <th class="sortable">Line</th>
+          <th class="sortable">File</th>
         </tr>
         <tr v-for="val in sortedBlocks.slice(0,1)"
             class="unsortable disabled fw-bold">

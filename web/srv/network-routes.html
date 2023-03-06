@@ -38,19 +38,19 @@ addOpts({
       <div class="col-auto">
         <table>
           <tr>
-            <th rowspan="2" onclick="tableSort(this)">Path</th>
-            <th rowspan="2" onclick="tableSort(this)">Methods</th>
+            <th rowspan="2" class="sortable">Path</th>
+            <th rowspan="2" class="sortable">Methods</th>
             <th colspan="2">Matched</th>
-            <th rowspan="2" onclick="tableSort(this)">Name</th>
-            <th rowspan="2" onclick="tableSort(this)">Desc</th>
-            <th rowspan="2" onclick="tableSort(this)">Render</th>
+            <th rowspan="2" class="sortable">Name</th>
+            <th rowspan="2" class="sortable">Desc</th>
+            <th rowspan="2" class="sortable">Render</th>
           </tr>
           <tr>
-            <th onclick="tableSort(this)">Count</th>
-            <th onclick="tableSort(this)">Age</th>
+            <th class="sortable">Count</th>
+            <th class="sortable">Age</th>
           </tr>
           <template v-for="val in sortedRoutes">
-            <tr :class="val.implemented ? ageClass(val.lastMatched) 
+            <tr :class="val.implemented ? ageClass(val.lastMatched)
                 : 'invalid'">
               <td>
                 <a v-if="val.methods.includes('GET')"

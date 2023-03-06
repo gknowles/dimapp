@@ -28,6 +28,10 @@ init.css - dim webapp
     );
 }
 
+th.sortable {
+    cursor: pointer;
+}
+
 table {
     margin: 10px 0px;
 }

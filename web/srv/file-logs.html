@@ -53,9 +53,9 @@ addOpts({
         <div class='col-auto'>
           <table>
             <tr>
-              <th onclick="tableSort(this)">Name</th>
-              <th onclick="tableSort(this)">Size</th>
-              <th onclick="tableSort(this)">Last Modified</th>
+              <th class="sortable">Name</th>
+              <th class="sortable">Size</th>
+              <th class="sortable">Last Modified</th>
             </tr>
             <tr v-for="val in page" :class="ageClass(val.mtime)">
               <td class='text-nowrap'>

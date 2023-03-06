@@ -53,13 +53,13 @@ addOpts({
               <th colspan="4">Memory</th>
             </tr>
             <tr>
-              <th onclick="tableSort(this)">Name</th>
-              <th onclick="tableSort(this)">Last Modified</th>
-              <th onclick="tableSort(this)">Size</th>
-              <th onclick="tableSort(this)">Notifiers</th>
-              <th onclick="tableSort(this)">Changes</th>
-              <th onclick="tableSort(this)">Last Change</th>
-              <th onclick="tableSort(this)">Size</th>
+              <th class="sortable">Name</th>
+              <th class="sortable">Last Modified</th>
+              <th class="sortable">Size</th>
+              <th class="sortable">Notifiers</th>
+              <th class="sortable">Changes</th>
+              <th class="sortable">Last Change</th>
+              <th class="sortable">Size</th>
             </tr>
             <tr v-for="val in page"
                 :class="val.contentSize == 0 ? 'disabled'
