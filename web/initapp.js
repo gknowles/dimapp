@@ -21,5 +21,5 @@ function navTopIntro(selected) {
             },
         },
     })
-    includeHtmlFragment('/web/navtop.html')
+    includeHtmlFragment('srv/navtop.html')
 }
