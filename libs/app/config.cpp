@@ -719,7 +719,9 @@ vector<double> Dim::configNumbers(
 ***/
 
 //===========================================================================
-void Dim::configWriteRules(IJBuilder * out) {
+void Dim::configWriteRules(IJBuilder * out, string_view member) {
+    if (!member.empty())
+        out->member(member);
     out->array();
     scoped_lock lk{s_mut};
     for (auto && kv : s_files)
@@ -745,8 +747,7 @@ void JsonConfigs::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     auto res = HttpResponse(kHttpStatusOk);
     auto bld = initResponse(&res, reqId, msg);
     auto dir = appConfigDir();
-    bld.member("files");
-    configWriteRules(&bld);
+    configWriteRules(&bld, "files");
     bld.end();
     httpRouteReply(reqId, move(res));
 }

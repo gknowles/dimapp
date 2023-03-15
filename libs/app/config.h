@@ -156,6 +156,6 @@ std::vector<double> configNumbers(
 *
 ***/
 
-void configWriteRules(IJBuilder * out);
+void configWriteRules(IJBuilder * out, std::string_view member = {});
 
 } // namespace
