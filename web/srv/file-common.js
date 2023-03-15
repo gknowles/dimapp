@@ -7,23 +7,23 @@ file-common.js - dim webapp
 
 //===========================================================================
 function fileIntro(selected) {
+    navTopIntro('Debug')
     addOpts({
         computed: {
-            miniNavSelected() {
+            navSubSelected() {
                 return selected
             },
         },
         methods: {
-            miniNav() {
+            navSub() {
                 return [
-                    { name: 'Configs', href: 'file-configs.html' },
-                    { name: 'Logs', href: 'file-logs.html' },
-                    { name: 'Crashes', href: 'file-crashes.html' },
+                    { name: 'Configs', href: 'srv/file-configs.html' },
+                    { name: 'Logs', href: 'srv/file-logs.html' },
+                    { name: 'Crashes', href: 'srv/file-crashes.html' },
                 ]
             },
         },
     })
-    includeHtmlFragment('../navbar.html')
-    includeHtmlFragment('navbar-debug.html')
+    includeHtmlFragment('srv/navsub.html')
     document.currentScript.remove()
 }

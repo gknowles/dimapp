@@ -2,7 +2,7 @@
 Copyright Glen Knowles 2022.
 Distributed under the Boost Software License, Version 1.0.
 
-navbar.html - dim webapp
+navtop.html - dimapp webapp
 -->
 <nav class="navbar navbar-expand-sm stick-top bg-primary navbar-dark">
   <div class="container-fluid">
@@ -21,14 +21,22 @@ navbar.html - dim webapp
     </button>
     <div class="collapse navbar-collapse" id="navbarNav">
       <ul class="navbar-nav flex-row">
-        <li class="nav-item" active="true">
-          <a :href="root + 'web/srv/about-counters.html'" class="nav-link">
-            Debug
-          </a>
-        </li>
+        <template v-for="item in navTop()">
+          <li class="nav-item">
+            <a v-if="item.href" :class="'nav-link'
+                    + (item.name == navTopSelected ? ' active' : '')"
+                :href="root + 'web/' + item.href">
+              {{item.name}}
+            </a>
+            <a v-else :class="'nav-link'
+                + (item.name == navTopSelected ? ' active' : '')">
+              {{item.name}}
+            </a>
+          </li>
+        </template>
       </ul>
       <div class="col text-end">
-        <a href="http://github.com/gknowles/dimapp">
+        <a :href="sourceHost">
           <i class="bi-github" style="font-size: x-large; color: white"></i>
         </a>
        </div>

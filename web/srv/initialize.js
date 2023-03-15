@@ -7,6 +7,10 @@ initialize.js - dim webapp
 
 var appOpts = {}
 
+// This script is at <base>/srv/initialize.js, resolve src relative to <base>.
+var appRoot = new URL(document.currentScript.src, document.URL)
+appRoot = new URL('..', appRoot)
+
 //===========================================================================
 function createApp() {
     createApp.waitingHtmlFragments -= 1
@@ -22,7 +26,10 @@ function createApp() {
             // Listener for sortable table headers
             const hdrs = document.querySelectorAll("th.sortable");
             hdrs.forEach(
-                hdr => hdr.addEventListener('click', () => { this.tableSort(hdr) })
+                hdr => hdr.addEventListener(
+                    'click',
+                    () => { this.tableSort(hdr) }
+                )
             )
 
             // Make #app element visible and reflect the server's group type.
@@ -61,7 +68,8 @@ function createApp() {
             getParam,
             getRefreshUrl,
             makeUrl,
-            miniNav() { return [] },
+            navSub() { return [] },
+            navTop() { return [] },
             readableAge(val) {
                 if (typeof val === 'undefined') return '-'
                 return this.readableDuration(this.elapsedTime(val))
@@ -85,7 +93,7 @@ createApp.waitingHtmlFragments = 1
 function finalize() {
     let tags = [
         { tag: 'script', props: {
-            src: '/web/srv/vendor/popperjs@2.10.2/popper.min.js',
+            src: appRoot + 'srv/vendor/popperjs@2.10.2/popper.min.js',
             integrity:
 'sha384-7+zCNj/IqJ95wo16oMtfsKbZ9ccEh31eOz1HGyDuCQ6wgnyJNSYdrPa03rtR1zdB',
             crossOrigin: 'anonymous',
@@ -94,7 +102,7 @@ function finalize() {
             },
         }},
         { tag: 'script', props: {
-            src: '/web/srv/vendor/bootstrap@5.1.3/bootstrap.min.js',
+            src: appRoot + 'srv/vendor/bootstrap@5.1.3/bootstrap.min.js',
             integrity:
 'sha384-QJHtvGhmr9XOIpI6YVutG+2QOK9T+ZnN4kzFN1RtK3zEFEIsxhlmWl5/YESvpZ13',
             crossOrigin: 'anonymous',
@@ -122,7 +130,8 @@ function includeHtmlFragment(src) {
         this.remove()
         createApp()
     }
-    frame.src = src
+    let url = new URL(src, appRoot)
+    frame.src = url.href
 }
 
 //===========================================================================
@@ -178,34 +187,35 @@ function addTags(tags) {
             integrity:
 'sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3',
             crossOrigin: 'anonymous',
-            href: '/web/srv/vendor/bootstrap@5.1.3/bootstrap.min.css',
+            href: appRoot + 'srv/vendor/bootstrap@5.1.3/bootstrap.min.css',
             onerror: (event) => { this.href =
 'https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css'
             },
         }},
         { tag: 'link', props: {
             rel: 'stylesheet',
-            href: '/web/srv/vendor/bootstrap-icons@1.8.1/bootstrap-icons.css',
+            href: appRoot +
+                'srv/vendor/bootstrap-icons@1.8.1/bootstrap-icons.css',
             onerror: (event) => { this.href =
 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css'
             },
         }},
         { tag: 'link', props: {
             rel: 'stylesheet',
-            href: 'init.css'
+            href: appRoot + 'srv/init.css'
         }},
         { tag: 'link', props: {
             rel: 'stylesheet',
-            href: 'groupType.css'
+            href: appRoot + 'srv/groupType.css'
         }},
         { tag: 'script', props: {
-            src: '/web/srv/vendor/vue@3.2.45/vue.global.prod.js',
+            src: appRoot + 'srv/vendor/vue@3.2.45/vue.global.prod.js',
             onerror: (event) => { this.href =
 'https://unpkg.com/vue@3.2.45/dist/vue.global.prod.js'
             },
         }},
         { tag: 'script', props: {
-            src: 'util.js',
+            src: appRoot + 'srv/util.js',
         }},
     ]
 

@@ -7,25 +7,25 @@ about-common.js - dim webapp
 
 //===========================================================================
 function aboutIntro(selected) {
+    navTopIntro('Debug')
     addOpts({
         computed: {
-            miniNavSelected() {
+            navSubSelected() {
                 return selected
             },
         },
         methods: {
-            miniNav() {
+            navSub() {
                 return [
-                    { name: 'Counters', href: 'about-counters.html' },
-                    { name: 'Account', href: 'about-account.html' },
-                    { name: 'Computer', href: 'about-computer.html' },
-                    { name: 'Memory', href: 'about-memory.html' },
+                    { name: 'Counters', href: 'srv/about-counters.html' },
+                    { name: 'Account', href: 'srv/about-account.html' },
+                    { name: 'Computer', href: 'srv/about-computer.html' },
+                    { name: 'Memory', href: 'srv/about-memory.html' },
                 ]
             },
         },
     })
-    includeHtmlFragment('../navbar.html')
-    includeHtmlFragment('navbar-debug.html')
-    includeHtmlFragment('about-common.html')
+    includeHtmlFragment('srv/navsub.html')
+    includeHtmlFragment('srv/about-common.html')
     document.currentScript.remove()
 }

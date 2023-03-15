@@ -2,7 +2,7 @@
 Copyright Glen Knowles 2022.
 Distributed under the Boost Software License, Version 1.0.
 
-navbar-debug.html - dim webapp
+navsub.html - dim webapp
 -->
 <div class="container-fluid bg-groupType">
   <div class="row text-nowrap px-3 pt-1 border-bottom border-secondary">
@@ -36,22 +36,24 @@ navbar-debug.html - dim webapp
       </a>
     </div>
   </div>
-  <template v-if="miniNav().length > 0">
+  <template v-if="navSub().length > 0">
     <div class='row mb-3 border-bottom border-primary bg-light'>
-      <template v-for='(nav, index) in miniNav()'>
+      <template v-for='(nav, index) in navSub()'>
         <div v-if='nav.disabled'
             class='col-auto border-start border-end
               text-decoration-line-through'>
           {{nav.name}}
         </div>
-        <a v-else-if='nav.name == miniNavSelected'
+        <a v-else-if='nav.name == navSubSelected'
             class='col-auto border-start border-end fw-bolder'
-            :href='nav.href'>
+            :href="root + 'web/' + nav.href">
           {{nav.name}}
         </a>
         <a v-else
             class='col-auto border-start border-end'
-            :href='nav.href'>{{nav.name}}</a>
+            :href="root + 'web/' + nav.href">
+          {{nav.name}}
+        </a>
       </template>
     </div>
   </template>

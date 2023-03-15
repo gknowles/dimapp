@@ -7,25 +7,25 @@ network-common.js - dim webapp
 
 //===========================================================================
 function networkIntro(selected) {
+    navTopIntro('Debug')
     addOpts({
         computed: {
-            miniNavSelected() {
+            navSubSelected() {
                 return selected
             },
         },
         methods: {
-            miniNav() {
+            navSub() {
                 return [
-                    { name: 'Connections', href: 'network-conns.html',
+                    { name: 'Connections', href: 'srv/network-conns.html',
                         disabled: true },
-                    { name: 'Routes', href: 'network-routes.html' },
-                    { name: 'Messages', href: 'network-messages.html',
+                    { name: 'Routes', href: 'srv/network-routes.html' },
+                    { name: 'Messages', href: 'srv/network-messages.html',
                         disabled: true },
                 ]
             },
         },
     })
-    includeHtmlFragment('../navbar.html')
-    includeHtmlFragment('navbar-debug.html')
+    includeHtmlFragment('srv/navsub.html')
     document.currentScript.remove()
 }
