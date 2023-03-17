@@ -39,7 +39,8 @@ struct HttpRouteInfo {
     Dim::EnumFlags<HttpMethod> methods = fHttpMethodGet;
     bool recurse = false;
 
-    // Web console parameters.
+    // Web console parameters. IWebAdminNotify only reports routes with
+    // non-empty names.
     std::string_view name;
     std::string_view desc;
     std::string_view renderPath;
