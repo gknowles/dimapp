@@ -56,11 +56,11 @@ function createApp() {
         },
         methods: {
             ageClass(val) {
-                if (typeof val === 'undefined') return 'disabled'
+                if (typeof val === 'undefined') return 'bg-disabled'
                 let age = this.elapsedTime(val)
                 if (age < 3600) return 'null'
-                if (age < 24 * 3600) return 'recent'
-                return 'old'
+                if (age < 24 * 3600) return 'bg-recent'
+                return 'bg-old'
             },
             elapsedTime(val) {
                 return this.nowSecs - Date.parse(val) / 1000

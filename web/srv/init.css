@@ -9,16 +9,19 @@ init.css - dim webapp
 .bg-selected {
     background-color: lightgrey;
 }
-.disabled {
+.bg-disabled {
     background-color: lightgrey;
 }
-.recent {
+.bg-error {
+    background-color: lightpink;
+}
+.bg-recent {
     background-color: #D3FED8;
 }
-.old {
+.bg-old {
     background-color: lightgreen;
 }
-.invalid {
+.bg-invalid {
     background: repeating-linear-gradient(
         135deg,
         transparent,

@@ -60,7 +60,7 @@ addOpts({
               <th>Name</th>
             </tr>
             <tr v-for="cnt in page"
-                :class="cnt.value == '0' ? 'disabled' : null">
+                :class="cnt.value == '0' ? 'bg-disabled' : null">
               <td class='text-end'>{{ cnt.value }}</td>
               <td class='text-nowrap'>{{ cnt.name }}</td>
             </tr>
@@ -70,7 +70,7 @@ addOpts({
     </div>
     <table>
       <tr><td>Has a non-zero value</td></tr>
-      <tr class='disabled'><td>Value is zero</td></tr>
+      <tr class='bg-disabled'><td>Value is zero</td></tr>
     </table>
   </div>
 </div>
