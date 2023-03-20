@@ -21,43 +21,6 @@ static unordered_map<string, string> s_appData;
 
 /****************************************************************************
 *
-*   Helpers
-*
-***/
-
-//===========================================================================
-static void addRoute(
-    IJBuilder * out,
-    const HttpRouteInfo & ri,
-    bool active = false
-) {
-    out->object();
-    out->member("path", ri.path);
-    if (ri.recurse)
-        out->member("recurse", ri.recurse);
-    out->member("implemented", ri.notify || !ri.renderPath.empty());
-    out->member("methods");
-    out->array();
-    for (auto mname : toViews(ri.methods))
-        out->value(mname);
-    out->end();
-    if (!ri.name.empty())
-        out->member("name", ri.name);
-    if (!ri.desc.empty())
-        out->member("desc", ri.desc);
-    if (!ri.renderPath.empty())
-        out->member("renderPath", ri.renderPath);
-    out->member("matched", ri.matched);
-    if (ri.matched)
-        out->member("lastMatched", ri.lastMatched);
-    if (active)
-        out->member("active", true);
-    out->end();
-}
-
-
-/****************************************************************************
-*
 *   IWebAdminNotify
 *
 ***/
@@ -116,7 +79,7 @@ JBuilder IWebAdminNotify::initResponse(
     bld.member("navbar").array();
     for (auto&& ri : infos) {
         if (!ri.name.empty()) {
-            addRoute(&bld, ri, best == &ri);
+            httpRouteWrite(&bld, ri, best == &ri);
         }
     }
     bld.end();
@@ -326,7 +289,7 @@ void JsonRoutes::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     bld.member("routes");
     bld.array();
     for (auto&& info : infos)
-        addRoute(&bld, info);
+        httpRouteWrite(&bld, info);
     bld.end();
     bld.end();
     httpRouteReply(reqId, move(res));

@@ -810,6 +810,7 @@ void AliasRouteNotify::onHttpRequest(unsigned reqId, HttpRequest & msg) {
 //===========================================================================
 static void routeAdd(PathInfo && pi) {
     assert(!pi.path.empty());
+    assert(!pi.matched && empty(pi.lastMatched));
 
     if (!taskInEventThread()) {
         struct RouteAddTask : ITaskNotify {
@@ -1244,4 +1245,34 @@ vector<HttpRouteInfo> Dim::httpRouteGetRoutes() {
     for (auto&& p : s_paths)
         out.emplace_back(p);
     return out;
+}
+
+//===========================================================================
+void Dim::httpRouteWrite(
+    IJBuilder * out,
+    const HttpRouteInfo & ri,
+    bool active
+) {
+    out->object();
+    out->member("path", ri.path);
+    if (ri.recurse)
+        out->member("recurse", ri.recurse);
+    out->member("implemented", ri.notify || !ri.renderPath.empty());
+    out->member("methods");
+    out->array();
+    for (auto mname : toViews(ri.methods))
+        out->value(mname);
+    out->end();
+    if (!ri.name.empty())
+        out->member("name", ri.name);
+    if (!ri.desc.empty())
+        out->member("desc", ri.desc);
+    if (!ri.renderPath.empty())
+        out->member("renderPath", ri.renderPath);
+    out->member("matched", ri.matched);
+    if (ri.matched)
+        out->member("lastMatched", ri.lastMatched);
+    if (active)
+        out->member("active", true);
+    out->end();
 }

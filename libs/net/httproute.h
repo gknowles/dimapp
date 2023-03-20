@@ -262,5 +262,10 @@ struct MimeType {
 MimeType mimeTypeDefault(std::string_view path);
 
 std::vector<HttpRouteInfo> httpRouteGetRoutes();
+void httpRouteWrite(
+    IJBuilder * out,
+    const HttpRouteInfo & ri,
+    bool active = false
+);
 
 } // namespace
