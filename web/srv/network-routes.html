@@ -62,11 +62,7 @@ addOpts({
                   {{val.path}}{{val.recurse ? '...' : ''}}
                 </template>
               </td>
-              <td>
-                <template v-for="(name, index) in val.methods">
-                  <template v-if="index > 0">, </template>
-                  {{name}}
-                </template>
+              <td>{{val.methods.join(', ')}}</td>
               </td>
               <td class="text-end">{{val.matched.toLocaleString()}}</td>
               <td class="text-center">{{readableAge(val.lastMatched)}}</td>
