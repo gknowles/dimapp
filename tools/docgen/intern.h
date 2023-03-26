@@ -58,6 +58,12 @@ struct PageLayout {
     std::vector<Column> columns;
 };
 
+enum LoadMode : uint8_t {
+    fLoadSite  = 1,  // included in site generation
+    fLoadTests = 2,  // searched for tests
+    fLoadAny   = fLoadSite | fLoadTests,
+};
+
 struct Page {
     enum Type {
         kUnknown,
@@ -72,8 +78,7 @@ struct Page {
     bool defaultPage = false;
     std::string xrefFile; // defaults to file
     std::string patch;
-    bool site = true;   // processed by site generation
-    bool test = true;   // searched for tests
+    Dim::EnumFlags<LoadMode> modes = fLoadAny;
 };
 
 struct Layout {
@@ -125,10 +130,11 @@ void loadContent(
     std::string_view file
 );
 
-std::unique_ptr<Config> loadConfig(std::string_view cfgfile);
+std::unique_ptr<Config> loadConfig(std::string_view cfgfile, LoadMode mode);
 std::unique_ptr<Config> loadConfig(
     std::string * content,
-    std::string_view path
+    std::string_view path,
+    LoadMode mode
 );
 
 bool addOutput(

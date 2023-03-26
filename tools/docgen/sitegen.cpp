@@ -916,7 +916,8 @@ static void genSite(Config * out, unsigned phase = 0) {
                     [out, &ver, what](auto && content) {
                         if (ver.cfg = loadConfig(
                             &content,
-                            out->configFile.filename()
+                            out->configFile.filename(),
+                            fLoadSite
                         )) {
                             genSite(out, what);
                         }
@@ -954,10 +955,6 @@ static void genSite(Config * out, unsigned phase = 0) {
 
             // Generate pages for version
             for (auto && page : layout->second.pages) {
-                if (!page.site) {
-                    out->pendingWork -= 1;
-                    continue;
-                }
                 auto info = new GenPageInfo({ out, ver, page });
                 info->fn = [info, what]() {
                     genSite(info->out, what);
@@ -1026,7 +1023,7 @@ CmdOpts::CmdOpts() {
 
 //===========================================================================
 static bool genCmd(Cli & cli) {
-    auto cfg = loadConfig(s_opts.cfgfile);
+    auto cfg = loadConfig(s_opts.cfgfile, fLoadSite);
     if (!cfg) {
         cli.fail(EX_DATAERR, "");
         return true;

@@ -155,8 +155,11 @@ static bool loadPage(Page * out, XNode * root) {
         Path(out->file).extension(),
         Page::kUnknown
     );
-    out->site = attrValue(root, "site", true);
-    out->test = attrValue(root, "test", true);
+    out->modes = {};
+    if (attrValue(root, "site", true))
+        out->modes |= fLoadSite;
+    if (attrValue(root, "test", true))
+        out->modes |= fLoadTests;
     out->xrefFile = attrValue(root, "xrefFile", out->file.c_str());
     out->urlSegment = attrValue(root, "url", "");
     if (out->urlSegment.empty())
@@ -167,7 +170,7 @@ static bool loadPage(Page * out, XNode * root) {
 }
 
 //===========================================================================
-static bool loadLayouts(Config * out, XNode * root) {
+static bool loadLayouts(Config * out, XNode * root, LoadMode mode) {
     for (auto && xlay : elems(root, "Layout")) {
         Layout lay;
         lay.name = attrValue(&xlay, "name", "");
@@ -183,11 +186,16 @@ static bool loadLayouts(Config * out, XNode * root) {
                 }
                 lay.defPage = lay.pages.size() - 1;
             }
+            if (!pg.modes.any(mode))
+                lay.pages.pop_back();
         }
         if (lay.pages.empty()) {
-            logMsgError() << "No pages defined for "
-                "Layout/@name = '" << lay.name << "'.";
-            return false;
+            if (mode == fLoadSite) {
+                logMsgError() << "No pages defined for "
+                    "Layout/@name = '" << lay.name << "'.";
+                return false;
+            }
+            continue;
         }
         if (lay.defPage == -1)
             lay.defPage = 0;
@@ -238,7 +246,11 @@ static bool loadPageLayouts(Config * out, XNode * root) {
 }
 
 //===========================================================================
-unique_ptr<Config> loadConfig(string * content, string_view path) {
+unique_ptr<Config> loadConfig(
+    string * content,
+    string_view path,
+    LoadMode mode
+) {
     XDocument doc;
     auto root = doc.parse(content->data(), path);
     if (!root || doc.errmsg()) {
@@ -247,7 +259,7 @@ unique_ptr<Config> loadConfig(string * content, string_view path) {
     }
     auto out = make_unique<Config>();
     if (!loadPageLayouts(out.get(), root)
-        || !loadLayouts(out.get(), root)
+        || !loadLayouts(out.get(), root, mode)
     ) {
         return {};
     }
@@ -284,7 +296,7 @@ unique_ptr<Config> loadConfig(string * content, string_view path) {
 }
 
 //===========================================================================
-unique_ptr<Config> loadConfig(string_view cfgfile) {
+unique_ptr<Config> loadConfig(string_view cfgfile, LoadMode mode) {
     string configFile;
     string gitRoot;
     string content;
@@ -297,7 +309,7 @@ unique_ptr<Config> loadConfig(string_view cfgfile) {
     )) {
         return {};
     }
-    auto out = loadConfig(&content, configFile);
+    auto out = loadConfig(&content, configFile, mode);
     if (!out)
         return {};
     out->gitRoot = gitRoot;

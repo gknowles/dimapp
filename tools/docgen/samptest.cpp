@@ -246,12 +246,12 @@ static vector<CodeBlock> findMarkdownBlocks(const PageInfo & info) {
     // Regex captures:
     //   \1  starting separator (``` or ~~~)
     //   \2  language attr (C++, console)
-    //   \3  other attrs with leading comma
+    //   \3  other attrs with leading comma - unused
     //   \4  other attrs
     //   \5  content
     static const regex s_codeBlock(
         R"regex(
-\s*(```|~~~)\s*([^ \r]*)\s*,\s*[Ss][Oo][Uu][Rr][Cc][Ee]\s*(,([^\r\n]*))?\r?
+\s*(```|~~~)\s*([^ \r]*)\s*(,([^\r\n]*))?\r?
 ([[:print:][:cntrl:]]*?)\r?
 \1(?=\r?
 ))regex",
@@ -1262,9 +1262,8 @@ static void testSamples(Config * out, unsigned phase = 0) {
         s_pageInfos.reserve(layout->second.pages.size());
         out->pendingWork = (unsigned) layout->second.pages.size() + 1;
         for (auto && page : layout->second.pages) {
-            if (!page.test
-                || !s_opts.pages.empty()
-                    && !s_opts.pages.contains(page.urlSegment)
+            if (!s_opts.pages.empty()
+                && !s_opts.pages.contains(page.urlSegment)
             ) {
                 out->pendingWork -= 1;
                 continue;
@@ -1406,7 +1405,7 @@ CmdOpts::CmdOpts() {
 
 //===========================================================================
 static bool testCmd(Cli & cli) {
-    auto cfg = loadConfig(s_opts.cfgfile);
+    auto cfg = loadConfig(s_opts.cfgfile, fLoadTests);
     if (!cfg) {
         cli.fail(EX_DATAERR, "");
         return true;

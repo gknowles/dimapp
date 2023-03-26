@@ -1,5 +1,5 @@
 ﻿<!--
-Copyright Glen Knowles 2021 - 2022.
+Copyright Glen Knowles 2021 - 2023.
 Distributed under the Boost Software License, Version 1.0.
 -->
 
@@ -10,8 +10,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
+## docgen 1.1.3 (2023-03-26)
+- Added - Auto-testing for samples in markdown files
+
 ## docgen 1.1.2 (2022-02-10)
-- Fixed - Hangs after reporting web site generation errors 
+- Fixed - Hangs after reporting web site generation errors
 
 ## docgen 1.1.1 (2022-01-14)
 - Fixed - Last embedded test of documents not processed
