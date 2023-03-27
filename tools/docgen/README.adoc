@@ -1,5 +1,5 @@
 ////
-Copyright Glen Knowles 2020 - 2021.
+Copyright Glen Knowles 2020 - 2023.
 Distributed under the Boost Software License, Version 1.0.
 ////
 
@@ -88,6 +88,24 @@ this role.
   ////
   ++++
   ++++
+----
+
+=== Markdown
+Code (``` or ~~~) blocks with a language are processed. Such as:
+
+[source, AsciiDoc]
+----
+  ~~~ C++
+  int a = 1;
+  ~~~
+----
+
+Or with test additional attributes (see <<Attributes in markup, below>>):
+
+[source, AsciiDoc]
+----
+  ~~~ C++, test alt, test file not_main]
+  ...
 ----
 
 === Attributes in markup

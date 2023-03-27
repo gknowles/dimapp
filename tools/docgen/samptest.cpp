@@ -240,7 +240,7 @@ static vector<CodeBlock> findAsciidocBlocks(const PageInfo & info) {
 //===========================================================================
 static vector<CodeBlock> findMarkdownBlocks(const PageInfo & info) {
     // Markdown code block format:
-    //   ~~~ <language> <attrs...>
+    //   ~~~ <language>[, <attrs...>]
     //   Code content
     //   ~~~
     // Regex captures:
