@@ -55,6 +55,7 @@ JBuilder IWebAdminNotify::initResponse(
         .member("groupType", appGroupType());
     if (appFlags().any(fAppIsService))
         bld.member("service", true);
+    bld.member("execPath", envExecPath());
     bld.end();
     bld.member("now", Time8601Str(timeNow()).view())
         .member("root", root);

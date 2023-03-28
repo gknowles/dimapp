@@ -38,26 +38,30 @@ addOpts({
     <div class="row">
       <h3>Computer</h3>
       <div class="col-auto">
-      <dl>
-        <dt>Domain</dt>
-        <dd>{{domain.name}} ({{domain.status}})</dd>
-        <dt>Addresses</dt>
-        <dd>
-          <div v-for="addr in addresses">{{ addr }}</div>
-        </dd>
-        <dt>OS Version</dt>
-        <dd>
-          <div>
-            Windows {{version.major}}.{{version.minor}}.{{version.build}}
-          </div>
-          <div v-if="version.svcPackMajor > 0">
-            {{version.svcPackName}}
-            (Version {{version.svcPackMajor}}.{{version.svcPackMinor}})
-          </div>
-        </dd>
-        <dt>DNS</dt>
-        <dd>{{fullDnsName}}</dd>
-      </dl>
+        <dl>
+          <dt>OS Version</dt>
+          <dd>
+            <div>
+              Windows {{version.major}}.{{version.minor}}.{{version.build}}
+            </div>
+            <div v-if="version.svcPackMajor > 0">
+              {{version.svcPackName}}
+              (Version {{version.svcPackMajor}}.{{version.svcPackMinor}})
+            </div>
+          </dd>
+          <dt>Domain</dt>
+          <dd>{{domain.name}} ({{domain.status}})</dd>
+          <dt>DNS</dt>
+          <dd>{{fullDnsName}}</dd>
+        </dl>
+      </div>
+      <div class="col-auto">
+        <dl>
+          <dt>Addresses</dt>
+          <dd>
+            <div v-for="addr in addresses">{{ addr }}</div>
+          </dd>
+        </dl>
       </div>
     </div>
     <div class="row">
