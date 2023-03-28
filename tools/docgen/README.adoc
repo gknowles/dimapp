@@ -52,7 +52,7 @@ is a ruby gem that must be installed for sites to be generated.
 * Single docgen.xml file defines how samples are verified.
 * Extracts comment and code blocks, with attributes, from documentation markup.
 ** AsciiDoc
-** Markdown - not implemented
+** Markdown
 * Apply compile and scripting rules defined for the language in docgen.xml.
 
 === AsciiDoc
