@@ -104,18 +104,36 @@ function makeUrl(path, params) {
 }
 
 //===========================================================================
+// Updates key with value.
+//  - null or undefined value removes the key from the query string.
+//  - non-array value replaces the key's value.
+//  - array value has its members appended to the key, except that null members
+//    remove the key. So you can replace an array by using an array value whose
+//    first member is a null.
+function updateUrlParam(query, key, val) {
+    if (val == null) {
+        query.delete(key)
+    } else if (Array.isArray(val)) {
+        for (let v of val) {
+            if (v == null) {
+                query.delete(key)
+            } else {
+                query.append(key, v)
+            }
+        }
+    } else {
+        query.set(key, val)
+    }
+}
+
+//===========================================================================
 // Return query string containing the parameters from the current location
 // and overridden with values from params.
 function updateUrl(params) {
     let loc = window.location
     let query = new URLSearchParams(loc.search)
     for (let n in params) {
-        let val = params[n]
-        if (val == undefined || val == null) {
-            query.delete(n)
-        } else {
-            query.set(n, params[n])
-        }
+        updateUrlParam(query, n, params[n])
     }
     return '?' + query.toString()
 }

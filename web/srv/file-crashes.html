@@ -40,6 +40,7 @@ addOpts({
   <script>fileIntro('Crashes')</script>
 
   <div class="container-fluid mt-2">
+    <h3>Crash Files</h3>
     <div class="row gx-3">
       <template v-if="sortedFiles.length == 0">
         <div class="col-auto">
@@ -67,7 +68,7 @@ addOpts({
         </div>
       </template>
     </div>
-    <table>
+    <table v-if="sortedFiles.length > 0">
       <tr><td>Modified within the last hour</td></tr>
       <tr class='bg-recent'><td>Modified within 24 hours</td></tr>
       <tr class='bg-old'><td>More than 24 hours since last modified</td></tr>

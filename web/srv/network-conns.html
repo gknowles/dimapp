@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<!--
+Copyright Glen Knowles 2022.
+Distributed under the Boost Software License, Version 1.0.
+
+network-conns.html - dim webapp
+-->
+<html>
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1,
+    shrink-to-fit=no"/>
+<script src="initialize.js"></script>
+<script src="../initapp.js"></script>
+<script src="network-common.js"></script>
+<script src="/srv/network/conns.json?jsVar=srvdata"></script>
+<script>
+addOpts({
+  computed: {
+    sortedMgrs() {
+      let arr = this.mgrs;
+      arr.sort((a, b) => {
+        if (a.name != b.name)
+          return (a.name < b.name) ? -1 : 1
+        return 0
+      })
+      return arr
+    },
+    sortedSockets() {
+      let arr = []
+      for (let mgr of this.mgrs) {
+        if (!mgr.show)
+          continue
+        for (let sock of mgr.sockets) {
+          arr.push(sock)
+          arr[arr.length - 1].mgr = mgr.name
+        }
+      }
+      arr.sort((a, b) => {
+        if (a.mgr != b.mgr)
+          return (a.mgr < b.mgr) ? -1 : 1
+        if (a.remoteAddr != b.remoteAddr)
+          return (a.remoteAddr < b.remoteAddr) ? -1 : 1
+        return 0
+      })
+      return arr
+    },
+  },
+  methods: {
+    updateMgrs(name, enable) {
+      let mgrs = this.mgrs
+      let arr = [null]
+      for (let mgr of mgrs) {
+        if (mgr.name == name) {
+          if (enable)
+            arr.push(mgr.name)
+        } else if (mgr.show) {
+            arr.push(mgr.name)
+        }
+      }
+      return { mgr: arr }
+    },
+  },
+})
+</script>
+</head>
+<body>
+<div id="app" style="visibility: hidden">
+  <script>networkIntro('Connections')</script>
+
+  <div class="container-fluid mt-2">
+    <h3>Socket Managers</h3>
+    <div class="row">
+      <div class="col-auto">
+        <table>
+          <tr>
+            <th class="sortable">Name</th>
+            <th class="sortable">Family</th>
+            <th class="sortable">Direction</th>
+            <th class="sortable">Addresses</th>
+            <th class="sortable">Flags</th>
+            <th class="sortable">Sockets</th>
+          </tr>
+          <template v-for="val in sortedMgrs">
+            <tr :class="val.socketCount > 0 ? null : 'bg-disabled'">
+              <td>{{val.name}}</td>
+              <td class='text-center'>{{val.family}}</td>
+              <td class='text-center'>
+                {{val.inbound ? 'Inbound' : 'Outbound'}}
+              </td>
+              <td class='text-center'>
+                <template v-for="addr in val.addrs">
+                  <div>{{addr}}</div>
+                </template>
+              </td>
+              <td class='text-center'>
+                <template v-for="flag in val.mgrFlags">
+                  <div>{{flag}}</div>
+                </template>
+              </td>
+              <td class="text-end">{{val.socketCount.toLocaleString()}}</td>
+              <td class='bg-body border-0'>
+                <a :class="val.show ? null : 'text-decoration-line-through'"
+                    :href="updateUrl(updateMgrs(val.name, !val.show))"
+                >Show</a>
+              </td>
+            </tr>
+          </template>
+        </table>
+      </div>
+    </div>
+    <table>
+      <tr class='bg-disabled'><td>No connected sockets</td></tr>
+      <tr><td>Has one or more connected sockets</td></tr>
+    </table>
+
+    <h3>Sockets</h3>
+    <div class="row gx-3">
+    <div class='col-auto'>
+      <table>
+        <tr>
+          <th rowspan="2" class="sortable">Manager</th>
+          <th rowspan="2" class="sortable">Direction</th>
+          <th colspan="2">Mode</th>
+          <th rowspan="2" class="sortable">Remote Address</th>
+          <th rowspan="2" class="sortable">Local Address</th>
+        </tr>
+        <tr>
+          <th class="sortable">State</th>
+          <th class="sortable">Last Changed</th>
+        </tr>
+        <template v-for="val in sortedSockets">
+          <tr>
+            <td>{{val.mgr}}</td>
+            <td class='text-center'>
+              {{val.inbound ? 'Inbound' : 'Outbound'}}
+            </td>
+            <td class='text-center'>{{val.mode}}</td>
+            <td class='text-end'>{{readableAge(val.lastModeTime)}}</td>
+            <td class='text-center'>{{val.remoteAddr}}</td>
+            <td class='text-center'>{{val.localAddr}}</td>
+          </tr>
+        </template>
+      </table>
+    </div>
+    </div>
+  </div>
+</div>
+
+<script>finalize()</script>
+</body>
+</html>

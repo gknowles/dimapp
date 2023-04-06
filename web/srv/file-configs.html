@@ -40,6 +40,7 @@ addOpts({
   <script>fileIntro('Configs')</script>
 
   <div class="container-fluid mt-2">
+    <h3>Config Files</h3>
     <div class="row gx-3">
       <template v-if="sortedFiles.length == 0">
         <div class="col-auto">
@@ -50,7 +51,7 @@ addOpts({
         <div class='col-auto'>
           <table>
             <tr>
-              <th colspan="3">Disk</th>
+              <th colspan="3">File</th>
               <th colspan="4">Memory</th>
             </tr>
             <tr>
@@ -59,7 +60,7 @@ addOpts({
               <th class="sortable">Size</th>
               <th class="sortable">Notifiers</th>
               <th class="sortable">Changes</th>
-              <th class="sortable">Last Change</th>
+              <th class="sortable">Last Changed</th>
               <th class="sortable">Size</th>
             </tr>
             <tr v-for="val in page"
@@ -86,7 +87,7 @@ addOpts({
         </div>
       </template>
     </div>
-    <table>
+    <table v-if="sortedFiles.length > 0">
       <tr class='bg-disabled'><td>No content loaded</td></tr>
       <tr><td>Loaded within the last hour</td></tr>
       <tr class='bg-recent'><td>Loaded within 24 hours</td></tr>

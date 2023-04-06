@@ -343,6 +343,7 @@
 # web/srv/navsub.html
 # web/srv/navtop.html
 # web/srv/network-common.js
+# web/srv/network-conns.html
 # web/srv/network-routes.html
 # web/srv/util.js
 # web/srv/vendor/bootstrap-icons@1.8.1/bootstrap-icons.css

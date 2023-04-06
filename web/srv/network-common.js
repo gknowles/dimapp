@@ -17,8 +17,7 @@ function networkIntro(selected) {
         methods: {
             navSub() {
                 return [
-                    { name: 'Connections', href: 'srv/network-conns.html',
-                        disabled: true },
+                    { name: 'Connections', href: 'srv/network-conns.html' },
                     { name: 'Routes', href: 'srv/network-routes.html' },
                     { name: 'Messages', href: 'srv/network-messages.html',
                         disabled: true },

@@ -50,13 +50,14 @@ addOpts({
   <script>aboutIntro("Memory")</script>
 
   <div class="container-fluid mt-2">
+    <h3>Memory Usage</h3>
     <div class="row">
     <div class="col-auto">
       <template v-if="sortedBlocks.length == 1">
         <form>
           <p>The server is completely suspended while a full memory breakdown
-          is created, this can be very disruptive especially for busy servers
-          with large memory footprints.</p>
+          is created, this can be very disruptive for busy servers with large
+          memory footprints.</p>
           <p>If you're sure, check 'confirm' then click 'Dump Memory'.</p>
           <input type=checkbox id=confirm name=confirm>
           <label for=confirm>&nbsp;Confirm</label>

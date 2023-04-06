@@ -31,26 +31,25 @@ addTags(tags)
   <script>fileIntro('Configs')</script>
 
   <div class="container-fluid mt-2">
+    <h3>Config File - {{file.name}}</h3>
     <div class="row gx-3">
       <div class="col-auto">
         <dl class="mt-0">
-          <dt>Name</dt>
-          <dd>{{file.name}}</dd>
           <dt>Last Modified</dt>
           <dd>{{readableAge(file.mtime)}}</dd>
-          <dt>Size</dt>
+          <dt>File Size</dt>
           <dd>{{file.size.toLocaleString()}}</dd>
+          <dt>Notifiers</dt>
+          <dd>{{file.notifiers}}</dd>
         </dl>
       </div>
       <div class="col-auto">
         <dl class="mt-0">
-          <dt>Notifiers</dt>
-          <dd>{{file.notifiers}}</dd>
           <dt>Changes</dt>
           <dd>{{file.changes}}</dd>
-          <dt>Last Change</dt>
+          <dt>Last Changed</dt>
           <dd>{{readableAge(file.lastChanged)}}</dd>
-          <dt>Size</dt>
+          <dt>Content Size</dt>
           <dd>{{file.contentSize.toLocaleString()}}</dd>
         </dl>
       </div>
