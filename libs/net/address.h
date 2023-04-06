@@ -27,7 +27,7 @@
 #include <string_view>
 #include <vector>
 
-// forward declarations
+// Forward declarations
 struct sockaddr_storage;
 
 namespace Dim {

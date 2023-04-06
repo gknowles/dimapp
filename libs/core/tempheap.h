@@ -24,12 +24,9 @@ class ITempHeap : public std::pmr::memory_resource {
 public:
     virtual ~ITempHeap() = default;
 
-    template <typename T, typename... Args>
-        T * emplace(Args &&... args);
-    template <typename T>
-        T * alloc(size_t num);
-    template <typename T>
-        std::span<T> allocSpan(size_t num);
+    template <typename T, typename... Args> T * emplace(Args &&... args);
+    template <typename T> T * alloc(size_t num);
+    template <typename T> std::span<T> allocSpan(size_t num);
 
     char * strDup(const char src[]);
     char * strDup(std::string_view src);

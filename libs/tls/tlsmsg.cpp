@@ -351,7 +351,8 @@ static bool parseExt(
 }
 
 //===========================================================================
-template <typename T> static bool parseExts(T * msg, TlsRecordReader & in) {
+template <typename T>
+static bool parseExts(T * msg, TlsRecordReader & in) {
     // no extensions? done
     if (!in.size())
         return true;
