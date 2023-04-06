@@ -13,9 +13,16 @@
 
 namespace Dim {
 
-struct SocketInfo {
-    SockAddr remote;
+
+/****************************************************************************
+*
+*   Declarations
+*
+***/
+
+struct SocketConnectInfo {
     SockAddr local;
+    SockAddr remote;
 };
 struct SocketData {
     char * data;
@@ -29,7 +36,7 @@ struct SocketData {
 //  >0 / >0   There is data both in flight and waiting. Acknowledgment must
 //              come from peer before more can be sent.
 struct SocketBufferInfo {
-    size_t incomplete;  // bytes sent but not yet ACK'd by peer
+    size_t incomplete;  // bytes sent but waiting for ACK by peer
     size_t waiting;     // bytes waiting to be sent
     size_t total;       // total bytes sent to socket
 };
@@ -53,14 +60,16 @@ public:
     //-----------------------------------------------------------------------
     // for connectors
     //-----------------------------------------------------------------------
-    virtual void onSocketConnect(const SocketInfo & info) {};
+    virtual void onSocketConnect(const SocketConnectInfo & info) {};
     virtual void onSocketConnectFailed() {};
 
     //-----------------------------------------------------------------------
     // for listeners
     //-----------------------------------------------------------------------
     // Returns true if the socket is accepted
-    virtual bool onSocketAccept(const SocketInfo & info) { return true; };
+    virtual bool onSocketAccept(const SocketConnectInfo & info) {
+        return true;
+    };
 
     //-----------------------------------------------------------------------
     // for both
@@ -94,6 +103,15 @@ private:
     friend class SocketBase;
     SocketBase * m_socket{};
 };
+
+
+/****************************************************************************
+*
+*   Conversions
+*
+***/
+
+std::string_view toString(ISocketNotify::Mode mode);
 
 
 /****************************************************************************
@@ -170,7 +188,25 @@ inline void socketCloseWait(const SockAddr & local) {
 *
 ***/
 
-ISocketNotify::Mode socketGetMode(ISocketNotify * notify);
+ISocketNotify::Mode socketGetMode(const ISocketNotify * notify);
+
+enum class SocketDir {
+    kInvalid,
+    kInbound,
+    kOutbound,
+};
+struct SocketInfo {
+    SocketDir dir;
+    ISocketNotify::Mode mode;
+    TimePoint lastModeTime;      // When the mode changed.
+    SockAddr local;
+    SockAddr remote;
+    TimePoint lastReadTime;      // When read was last received.
+    TimePoint lastWriteTime;     // When write was last sent.
+    SocketBufferInfo buffer;
+};
+SocketInfo socketGetInfo(const ISocketNotify * notify);
+
 void socketDisconnect(ISocketNotify * notify);
 
 // Unlinks notify and links newNotify to the socket, taking ownership of it.

@@ -37,6 +37,7 @@ public:
     virtual ISockMgrBase & mgr() { return m_mgr; }
 
     // Inherited via IAppSocket
+    SocketInfo getInfo() const override;
     void disconnect(AppSocket::Disconnect why) override = 0;
     void write(std::string_view data) override;
     void write(std::unique_ptr<SocketBuffer> buffer, size_t bytes) override;
@@ -67,6 +68,8 @@ public:
     void touch(ISockMgrSocket * sock);
     void unlink(ISockMgrSocket * sock);
     bool shutdown();
+    SockMgrInfo info() const;
+    size_t getSockInfos(std::vector<SocketInfo> * out, size_t limit) const;
 
     virtual bool listening() const = 0;
     virtual void setAddresses(const SockAddr * addrs, size_t count) = 0;

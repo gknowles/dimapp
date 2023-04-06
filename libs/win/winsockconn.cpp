@@ -157,7 +157,7 @@ void ConnSocket::connect(
     if (!winIocpBindHandle((HANDLE) sock->m_handle))
         return pushConnectFailed(notify);
 
-    sock->m_mode = Mode::kConnecting;
+    sock->mode(Mode::kConnecting);
     auto hostage = make_unique<ConnectTask>(move(sock));
     auto task = hostage.get();
     iSocketSetConnectTimeout(task->m_socket->m_handle, timeout);
@@ -188,7 +188,7 @@ void ConnSocket::connect(
 
 //===========================================================================
 ConnSocket::~ConnSocket() {
-    if (m_mode == Mode::kClosed)
+    if (mode() == Mode::kClosed)
         s_perfCurConnected -= 1;
 }
 
@@ -202,10 +202,10 @@ void ConnSocket::connectFailed() {
 void ConnSocket::onConnect(WinError error, int bytes) {
     unique_ptr<ConnSocket> hostage(this);
 
-    if (m_mode == ISocketNotify::kClosing)
+    if (mode() == Mode::kClosing)
         return connectFailed();
 
-    assert(m_mode == ISocketNotify::kConnecting);
+    assert(mode() == Mode::kConnecting);
 
     if (error)
         return connectFailed();

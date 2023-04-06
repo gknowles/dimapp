@@ -67,6 +67,8 @@ public:
         Duration timeout,
         Duration minWait = kTimerDefaultMinWait
     );
+    Duration timeout() const { return m_timeout; }
+    Duration minWait() const { return m_minWait; }
 
     void touch(T * notify);
     void unlink(T * notify);

@@ -34,6 +34,11 @@ ISockMgrSocket::ISockMgrSocket(
 {}
 
 //===========================================================================
+SocketInfo ISockMgrSocket::getInfo() const {
+    return socketGetInfo(this);
+}
+
+//===========================================================================
 void ISockMgrSocket::write(string_view data) {
     socketWrite(this, data);
 }
@@ -122,6 +127,39 @@ bool ISockMgrBase::shutdown() {
     return false;
 }
 
+//===========================================================================
+SockMgrInfo ISockMgrBase::info() const {
+    SockMgrInfo out;
+    out.name = m_name;
+    out.family = m_family;
+    out.inbound = listening();
+    out.addrs = m_addrs;
+    out.mgrFlags = m_mgrFlags;
+    out.confFlags = m_confFlags;
+    out.inactiveTimeout = m_inactivity.timeout();
+    out.inactiveMinWait = m_inactivity.minWait();
+    return out;
+}
+
+//===========================================================================
+size_t Dim::ISockMgrBase::getSockInfos(
+    vector<SocketInfo> * out,
+    size_t limit
+) const {
+    size_t found = 0;
+    for (auto&& sock : m_inactivity.values()) {
+        if (limit) {
+            limit -= 1;
+            auto & info = out->emplace_back(sock.getInfo());
+            info.dir = listening()
+                ? SocketDir::kInbound
+                : SocketDir::kOutbound;
+        }
+        found += 1;
+    }
+    return found;
+}
+
 
 /****************************************************************************
 *
@@ -166,6 +204,34 @@ SockMgrHandle Dim::iSockMgrAdd(ISockMgrBase * mgr) {
 
 /****************************************************************************
 *
+*   Conversions
+*
+***/
+
+TokenTable s_mgrFlags({
+    { AppSocket::MgrFlags::fMgrConsole, "console" },
+});
+TokenTable s_confFlags({
+    { AppSocket::ConfFlags::fDisableInactiveTimeout, "disableTimeout" },
+});
+
+//===========================================================================
+vector<string_view> Dim::toStrings(
+    EnumFlags<AppSocket::MgrFlags> flags
+) {
+    return s_mgrFlags.findNames(flags);
+}
+
+//===========================================================================
+vector<string_view> Dim::toStrings(
+    EnumFlags<AppSocket::ConfFlags> flags
+) {
+    return s_confFlags.findNames(flags);
+}
+
+
+/****************************************************************************
+*
 *   Public API
 *
 ***/
@@ -204,4 +270,60 @@ void Dim::sockMgrDestroy(SockMgrHandle h) {
         assert(mgr->shutdown());
         s_mgrs.erase(h);
     }
+}
+
+//===========================================================================
+vector<SockMgrInfo> Dim::sockMgrGetInfos() {
+    vector<SockMgrInfo> out;
+    for (auto&& mgr : s_mgrs) {
+        out.push_back(mgr.second->info());
+        out.back().handle = mgr.first;
+    }
+    return out;
+}
+
+//===========================================================================
+size_t Dim::sockMgrWriteInfo(
+    IJBuilder * out,
+    const SockMgrInfo & info,
+    bool show,
+    size_t limit
+) {
+    auto mgr = s_mgrs.find(info.handle);
+    if (!mgr)
+        return 0;
+    out->object();
+    out->member("name", info.name);
+    out->member("family", info.family);
+    out->member("inbound", info.inbound);
+    out->member("addrs").array(info.addrs.begin(), info.addrs.end());
+    out->member("mgrFlags").array(toStrings(info.mgrFlags));
+    out->member("confFlags").array(toStrings(info.confFlags));
+    out->member("inactiveTimeout", info.inactiveTimeout);
+    out->member("inactiveMinWait", info.inactiveMinWait);
+    out->member("show", show);
+    vector<SocketInfo> socks;
+    auto found = mgr->getSockInfos(&socks, limit);
+    out->member("socketCount", found);
+    out->member("sockets").array();
+    for (auto&& sock: socks) {
+        out->object();
+        if (sock.dir == SocketDir::kInbound) {
+            out->member("inbound", true);
+        } else if (sock.dir == SocketDir::kOutbound) {
+            out->member("inbound", false);
+        }
+        out->member("mode", toString(sock.mode))
+            .member("lastModeTime", sock.lastModeTime)
+            .member("localAddr", sock.local)
+            .member("remoteAddr", sock.remote);
+        if (!empty(sock.lastReadTime))
+            out->member("lastReadTime", sock.lastReadTime);
+        if (!empty(sock.lastWriteTime))
+            out->member("lastWriteTime", sock.lastWriteTime);
+        out->end();
+    }
+    out->end();
+    out->end();
+    return found;
 }

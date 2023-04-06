@@ -95,7 +95,7 @@ public:
     void write(unique_ptr<SocketBuffer> buffer, size_t bytes) override;
 
     // Inherited via IAppSocketNotify
-    void onSocketConnect(const AppSocketInfo & info) override;
+    void onSocketConnect(const AppSocketConnectInfo & info) override;
     void onSocketConnectFailed() override;
     void onSocketDisconnect() override;
     void onSocketDestroy() override;
@@ -177,7 +177,7 @@ void ConnMgrSocket::write(unique_ptr<SocketBuffer> buffer, size_t bytes) {
 }
 
 //===========================================================================
-void ConnMgrSocket::onSocketConnect (const AppSocketInfo & info) {
+void ConnMgrSocket::onSocketConnect (const AppSocketConnectInfo & info) {
     assert(m_mode == kConnecting);
     mgr().touch(this);
     m_mode = kConnected;

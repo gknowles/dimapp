@@ -46,7 +46,7 @@ public:
 
 public:
     ~HttpSocket ();
-    bool onSocketAccept(const AppSocketInfo & info) override;
+    bool onSocketAccept(const AppSocketConnectInfo & info) override;
     void onSocketDisconnect() override;
     bool onSocketRead(AppSocketData & data) override;
 
@@ -384,7 +384,7 @@ HttpSocket::~HttpSocket () {
 }
 
 //===========================================================================
-bool HttpSocket::onSocketAccept(const AppSocketInfo & info) {
+bool HttpSocket::onSocketAccept(const AppSocketConnectInfo & info) {
     m_conn = httpAccept();
     return true;
 }
@@ -478,11 +478,11 @@ class Http1Reject : public IAppSocketMatchNotify, public IAppSocketNotify {
         string_view view
     ) override;
 
-    bool onSocketAccept(const AppSocketInfo & info) override;
+    bool onSocketAccept(const AppSocketConnectInfo & info) override;
     bool onSocketRead(AppSocketData & data) override;
 
 private:
-    AppSocketInfo m_info;
+    AppSocketConnectInfo m_info;
 };
 
 } // namespace
@@ -524,7 +524,7 @@ AppSocket::MatchType Http1Reject::onMatch(
 }
 
 //===========================================================================
-bool Http1Reject::onSocketAccept(const AppSocketInfo & info) {
+bool Http1Reject::onSocketAccept(const AppSocketConnectInfo & info) {
     m_info = info;
     return true;
 }

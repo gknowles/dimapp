@@ -46,18 +46,17 @@ public:
     virtual void clear();
 
     IJBuilder & array();
+    template <std::input_iterator It> IJBuilder & array(It first, It last);
+    template <std::ranges::input_range T> IJBuilder & array(const T & range);
+
     IJBuilder & object();
 
     // used to end arrays, objects, and compound strings
     IJBuilder & end();
 
     IJBuilder & member(std::string_view name);
-
     template <typename T>
-    IJBuilder & member(std::string_view name, T val) {
-        member(name) << val;
-        return *this;
-    }
+        IJBuilder & member(std::string_view name, const T & val);
 
     // preformatted value
     IJBuilder & valueRaw(std::string_view val);
@@ -71,15 +70,13 @@ public:
     IJBuilder & value(uint64_t val);
     IJBuilder & value(std::nullptr_t);
 
-    template<typename T>
-    IJBuilder & value(const T & val);
+    template<typename T> IJBuilder & value(const T & val);
 
     // Starts a compound string value, following calls to value() append to it,
     // this continues until end() is called.
     IJBuilder & startValue();
 
-    template <typename T>
-    IJBuilder & operator<<(const T & val);
+    template <typename T> IJBuilder & operator<<(const T & val);
     IJBuilder & operator<<(IJBuilder & (*pfn)(IJBuilder &));
 
     struct StateReturn {
@@ -103,6 +100,28 @@ private:
     // objects are true, arrays are false
     std::vector<bool> m_stack;
 };
+
+//===========================================================================
+template <std::input_iterator InputIt>
+inline IJBuilder & IJBuilder::array(InputIt first, InputIt last) {
+    return this->array(std::ranges::subrange(first, last));
+}
+
+//===========================================================================
+template <std::ranges::input_range T>
+inline IJBuilder & IJBuilder::array(const T & range) {
+    this->array();
+    for (auto && val : range)
+        this->value(val);
+    return end();
+}
+
+//===========================================================================
+template <typename T>
+inline IJBuilder & IJBuilder::member(std::string_view name, const T & val) {
+    this->member(name) << val;
+    return *this;
+}
 
 //===========================================================================
 template<typename T>

@@ -22,13 +22,14 @@ public:
     ~TlsSocket();
 
     // Inherited via IAppSocket
+    SocketInfo getInfo() const override;
     void disconnect(AppSocket::Disconnect why) override;
     void write(string_view data) override;
     void write(unique_ptr<SocketBuffer> buffer, size_t bytes) override;
     void read() override;
 
     // Inherited via IAppSocketNotify
-    bool onSocketAccept(const AppSocketInfo & info) override;
+    bool onSocketAccept(const AppSocketConnectInfo & info) override;
     void onSocketDisconnect() override;
     void onSocketDestroy() override;
     bool onSocketRead(AppSocketData & data) override;
@@ -63,6 +64,11 @@ TlsSocket::~TlsSocket() {
 }
 
 //===========================================================================
+SocketInfo TlsSocket::getInfo() const {
+    return socketGetInfo(this);
+}
+
+//===========================================================================
 void TlsSocket::disconnect(AppSocket::Disconnect why) {
     socketDisconnect(this, why);
 }
@@ -89,7 +95,7 @@ void TlsSocket::read() {
 }
 
 //===========================================================================
-bool TlsSocket::onSocketAccept (const AppSocketInfo & info) {
+bool TlsSocket::onSocketAccept (const AppSocketConnectInfo & info) {
     m_conn = winTlsAccept();
     return notifyAccept(info);
 }

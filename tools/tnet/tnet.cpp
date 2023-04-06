@@ -33,7 +33,7 @@ class SocketConn
     , public ITimerNotify
 {
     // Inherited via ISocketNotify
-    void onSocketConnect(const SocketInfo & info) override;
+    void onSocketConnect(const SocketConnectInfo & info) override;
     void onSocketConnectFailed() override;
     void onSocketDisconnect() override;
     void onSocketDestroy() override;
@@ -99,7 +99,7 @@ void SocketConn::onSockAddrFound(const SockAddr * ends, int count) {
 }
 
 //===========================================================================
-void SocketConn::onSocketConnect(const SocketInfo & info) {
+void SocketConn::onSocketConnect(const SocketConnectInfo & info) {
     m_connected = make_unique<ConsoleScopedAttr>(kConsoleCheer);
     cout << "Connected" << endl;
     timerUpdate(this, 500ms);

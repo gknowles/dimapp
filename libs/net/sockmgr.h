@@ -14,6 +14,13 @@
 
 namespace Dim {
 
+
+/****************************************************************************
+*
+*   Declarations
+*
+***/
+
 namespace AppSocket {
 enum MgrFlags : unsigned {
     fMgrConsole = 0x01, // console connections (for server monitoring)
@@ -100,5 +107,40 @@ bool sockMgrShutdown(SockMgrHandle mgr);
 
 // Destroys the manager, all sockets must already be closed.
 void sockMgrDestroy(SockMgrHandle mgr);
+
+
+/****************************************************************************
+*
+*   Utilities
+*
+***/
+
+namespace AppSocket {
+    enum ConfFlags : unsigned;
+}
+
+std::vector<std::string_view> toStrings(EnumFlags<AppSocket::MgrFlags> flags);
+std::vector<std::string_view> toStrings(EnumFlags<AppSocket::ConfFlags> flags);
+
+struct SockMgrInfo {
+    SockMgrHandle handle;
+    std::string name;
+    AppSocket::Family family;
+    bool inbound;
+    std::vector<SockAddr> addrs;
+    EnumFlags<AppSocket::MgrFlags> mgrFlags;
+    EnumFlags<AppSocket::ConfFlags> confFlags;
+    Duration inactiveTimeout;
+    Duration inactiveMinWait;
+};
+std::vector<SockMgrInfo> sockMgrGetInfos();
+
+// Returns the number of sockets included.
+size_t sockMgrWriteInfo(
+    IJBuilder * out,
+    const SockMgrInfo & info,
+    bool active = false,
+    size_t limit = 0        // Maximum number of connected sockets to include.
+);
 
 } // namespace

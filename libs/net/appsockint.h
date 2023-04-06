@@ -53,6 +53,7 @@ public:
     class UnmatchedTimer;
 
 public:
+    static SocketInfo getInfo(const IAppSocketNotify * notify);
     static void disconnect(
         IAppSocketNotify * notify,
         AppSocket::Disconnect why
@@ -71,26 +72,27 @@ public:
     // against the registered listeners to find a factory and that factory
     // will be used to create a notify. If the incoming data doesn't map to
     // any known factory the socket is disconnected.
-    IAppSocket() {}
+    IAppSocket() = default;
     IAppSocket(IAppSocketNotify * notify);
     virtual ~IAppSocket();
 
+    virtual SocketInfo getInfo() const = 0;
     virtual void disconnect(AppSocket::Disconnect why) = 0;
     virtual void write(std::string_view data) = 0;
     virtual void write(std::unique_ptr<SocketBuffer> buffer, size_t bytes) = 0;
     virtual void read() = 0;
 
-    void notifyConnect(const AppSocketInfo & info);
+    void notifyConnect(const AppSocketConnectInfo & info);
     void notifyConnectFailed();
     void notifyPingRequired();
-    bool notifyAccept(const AppSocketInfo & info);
+    bool notifyAccept(const AppSocketConnectInfo & info);
     void notifyDisconnect();
     void notifyDestroy(bool deleteThis = true);
     bool notifyRead(AppSocketData & data);
     void notifyBufferChanged(const AppSocketBufferInfo & info);
 
 protected:
-    AppSocketInfo m_accept;
+    AppSocketConnectInfo m_accept;
 
 private:
     Duration checkTimeout_LK(TimePoint now);
@@ -121,6 +123,8 @@ class IAppSocket::UnmatchedTimer : public ITimerNotify {
 *   AppSocket notify
 *
 ***/
+
+SocketInfo socketGetInfo(IAppSocketNotify * notify);
 
 void socketDisconnect(IAppSocketNotify * notify, AppSocket::Disconnect why);
 

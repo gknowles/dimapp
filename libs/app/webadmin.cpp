@@ -64,7 +64,10 @@ JBuilder IWebAdminNotify::initResponse(
         bld.member(n, v);
     bld.end();
 
+    // Named routes that appear on the navbar.
     auto infos = httpRouteGetRoutes();
+    // Find named route that is the longest matrching prefix of the current
+    // route, will be marked as active on the navbar.
     HttpRouteInfo * best = nullptr;
     for (auto&& ri : infos) {
         if (!ri.name.empty()) {
@@ -84,6 +87,7 @@ JBuilder IWebAdminNotify::initResponse(
         }
     }
     bld.end();
+
     return bld;
 }
 
@@ -271,6 +275,46 @@ void JsonMemory::onHttpRequest(unsigned reqId, HttpRequest & msg) {
 
 /****************************************************************************
 *
+*   Network - JsonConns
+*
+***/
+
+namespace {
+class JsonConns : public IWebAdminNotify {
+    void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
+
+    ParamVec<> & m_mgrs = paramVec("mgr");
+    Param<int> & m_limit = param<int>("limit", 100);
+};
+} // namespace
+
+//===========================================================================
+void JsonConns::onHttpRequest(unsigned reqId, HttpRequest & msg) {
+    auto infos = sockMgrGetInfos();
+    size_t limit = *m_limit;
+    unordered_set<string_view> mgrs;
+    for (auto && mgr : *m_mgrs)
+        mgrs.insert(mgr);
+
+    auto res = HttpResponse(kHttpStatusOk);
+    auto bld = initResponse(&res, reqId, msg);
+    bld.member("mgrs");
+    bld.array();
+    for (auto&& info : infos) {
+        if (mgrs.empty() || mgrs.contains(info.name)) {
+            limit -= sockMgrWriteInfo(&bld, info, true, limit);
+        } else {
+            sockMgrWriteInfo(&bld, info, false, 0);
+        }
+    }
+    bld.end();
+    bld.end();
+    httpRouteReply(reqId, move(res));
+}
+
+
+/****************************************************************************
+*
 *   Network - JsonRoutes
 *
 ***/
@@ -417,6 +461,7 @@ static JsonAccount s_jsonAccount;
 static JsonComputer s_jsonComputer;
 static JsonCounters s_jsonCounters;
 static JsonMemory s_jsonMemory;
+static JsonConns s_jsonConns;
 static JsonRoutes s_jsonRoutes;
 static JsonCrashFiles s_jsonCrashFiles;
 static CrashFiles s_crashFiles;
@@ -473,7 +518,7 @@ void Dim::iWebAdminInitialize() {
         .renderPath = "/web/srv/network-routes.html",
     });
     httpRouteAdd({
-        .notify = nullptr,
+        .notify = &s_jsonConns,
         .path = "/srv/network/conns.json",
     });
     httpRouteAdd({

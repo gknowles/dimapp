@@ -15,6 +15,11 @@
 #include <string_view>
 #include <type_traits>
 
+// Forward declarations
+namespace Dim {
+struct SocketInfo;
+} // namespace
+
 namespace Dim {
 
 
@@ -35,10 +40,10 @@ namespace AppSocket {
     };
 }
 
-struct AppSocketInfo {
+struct AppSocketConnectInfo {
     AppSocket::Family fam;
-    SockAddr remote;
     SockAddr local;
+    SockAddr remote;
 };
 struct AppSocketData {
     char * data;
@@ -62,13 +67,13 @@ public:
     virtual ~IAppSocketNotify () = default;
 
     // for connectors
-    virtual void onSocketConnect(const AppSocketInfo & info) {};
+    virtual void onSocketConnect(const AppSocketConnectInfo & info) {};
     virtual void onSocketConnectFailed() {};
     virtual void onSocketPingRequired() {};
 
     // for listeners
     // Returns true if the socket is accepted, false to disconnect
-    virtual bool onSocketAccept(const AppSocketInfo & info) { return true; };
+    virtual bool onSocketAccept(const AppSocketConnectInfo & info) { return true; };
 
     // for both
     virtual void onSocketDisconnect() {};
@@ -81,6 +86,7 @@ private:
     IAppSocket * m_socket = {};
 };
 
+SocketInfo socketGetInfo(const IAppSocketNotify * notify);
 void socketDisconnect(IAppSocketNotify * notify);
 void socketWrite(IAppSocketNotify * notify, std::string_view data);
 void socketWrite(IAppSocketNotify * notify, const CharBuf & data);

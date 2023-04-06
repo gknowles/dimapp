@@ -8,6 +8,11 @@
 using namespace std;
 using namespace Dim;
 
+// Forward declarations
+namespace Dim {
+struct SocketInfo;
+} // namespace
+
 
 /****************************************************************************
 *
@@ -64,15 +69,16 @@ public:
     RawSocket() {}
     explicit RawSocket(IAppSocketNotify * notify);
 
+    SocketInfo getInfo() const override;
     void disconnect(AppSocket::Disconnect why) override;
     void write(string_view data) override;
     void write(unique_ptr<SocketBuffer> buffer, size_t bytes) override;
     void read() override;
 
     // ISocketNotify
-    void onSocketConnect(const SocketInfo & info) override;
+    void onSocketConnect(const SocketConnectInfo & info) override;
     void onSocketConnectFailed() override;
-    bool onSocketAccept(const SocketInfo & info) override;
+    bool onSocketAccept(const SocketConnectInfo & info) override;
     void onSocketDisconnect() override;
     void onSocketDestroy() override;
     bool onSocketRead(SocketData & data) override;
@@ -144,6 +150,15 @@ Duration IAppSocket::UnmatchedTimer::onTimer(TimePoint now) {
 *   IAppSocket
 *
 ***/
+
+//===========================================================================
+// static
+SocketInfo IAppSocket::getInfo(const IAppSocketNotify * notify) {
+    SocketInfo out = {};
+    if (auto sock = notify->m_socket)
+        out = sock->getInfo();
+    return out;
+}
 
 //===========================================================================
 // static
@@ -221,7 +236,7 @@ void IAppSocket::setNotify(IAppSocketNotify * notify) {
 }
 
 //===========================================================================
-void IAppSocket::notifyConnect(const AppSocketInfo & info) {
+void IAppSocket::notifyConnect(const AppSocketConnectInfo & info) {
     m_accept = info;
     m_notify->onSocketConnect(m_accept);
 }
@@ -237,7 +252,7 @@ void IAppSocket::notifyPingRequired() {
 }
 
 //===========================================================================
-bool IAppSocket::notifyAccept(const AppSocketInfo & info) {
+bool IAppSocket::notifyAccept(const AppSocketConnectInfo & info) {
     m_accept = info;
     if (m_notify)
         return m_notify->onSocketAccept(m_accept);
@@ -417,6 +432,11 @@ RawSocket::RawSocket(IAppSocketNotify * notify)
 {}
 
 //===========================================================================
+SocketInfo RawSocket::getInfo() const {
+    return socketGetInfo(this);
+}
+
+//===========================================================================
 void RawSocket::disconnect(AppSocket::Disconnect why) {
     if (m_bufferUsed) {
         socketWrite(this, move(m_buffer), m_bufferUsed);
@@ -473,10 +493,11 @@ void RawSocket::read() {
 }
 
 //===========================================================================
-void RawSocket::onSocketConnect(const SocketInfo & info) {
-    AppSocketInfo tmp = {};
-    tmp.local = info.local;
-    tmp.remote = info.remote;
+void RawSocket::onSocketConnect(const SocketConnectInfo & info) {
+    AppSocketConnectInfo tmp = {
+        .local = info.local,
+        .remote = info.remote,
+    };
     return notifyConnect(tmp);
 }
 
@@ -486,10 +507,11 @@ void RawSocket::onSocketConnectFailed() {
 }
 
 //===========================================================================
-bool RawSocket::onSocketAccept(const SocketInfo & info) {
-    AppSocketInfo tmp = {};
-    tmp.local = info.local;
-    tmp.remote = info.remote;
+bool RawSocket::onSocketAccept(const SocketConnectInfo & info) {
+    AppSocketConnectInfo tmp = {
+        .local = info.local,
+        .remote = info.remote,
+    };
     return notifyAccept(tmp);
 }
 
@@ -629,6 +651,11 @@ void Dim::iAppSocketInitialize() {
 *   Public API
 *
 ***/
+
+//===========================================================================
+SocketInfo Dim::socketGetInfo(const IAppSocketNotify * notify) {
+    return IAppSocket::getInfo(notify);
+}
 
 //===========================================================================
 void Dim::socketDisconnect(IAppSocketNotify * notify) {

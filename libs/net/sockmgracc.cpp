@@ -66,7 +66,7 @@ public:
     void onTimer(TimePoint now) override;
 
     // Inherited via IAppSocketNotify
-    bool onSocketAccept(const AppSocketInfo & info) override;
+    bool onSocketAccept(const AppSocketConnectInfo & info) override;
     void onSocketDestroy() override;
     bool onSocketRead(AppSocketData & data) override;
 };
@@ -104,7 +104,7 @@ void AccMgrSocket::onTimer(TimePoint now) {
 }
 
 //===========================================================================
-bool AccMgrSocket::onSocketAccept (const AppSocketInfo & info) {
+bool AccMgrSocket::onSocketAccept (const AppSocketConnectInfo & info) {
     if (notifyAccept(info)) {
         mgr().touch(this);
         return true;

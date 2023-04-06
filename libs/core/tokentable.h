@@ -39,6 +39,9 @@ public:
     explicit TokenTable(const T & tokens)
         : TokenTable(std::data(tokens), std::size(tokens))
     {}
+    explicit TokenTable(std::initializer_list<Token> tokens)
+        : TokenTable(std::data(tokens), std::size(tokens))
+    {}
 
     explicit operator bool() const { return !empty(); }
 

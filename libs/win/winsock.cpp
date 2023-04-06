@@ -85,11 +85,27 @@ LPFN_CONNECTEX SocketBase::s_ConnectEx;
 
 //===========================================================================
 // static
-SocketBase::Mode SocketBase::getMode(ISocketNotify * notify) {
+SocketBase::Mode SocketBase::getMode(const ISocketNotify * notify) {
     if (auto sock = notify->m_socket)
-        return sock->m_mode;
+        return sock->mode();
 
     return Mode::kInactive;
+}
+
+//===========================================================================
+// static
+SocketInfo SocketBase::getInfo(const ISocketNotify * notify) {
+    SocketInfo out = {};
+    if (auto sock = notify->m_socket) {
+        out.mode = sock->m_mode;
+        out.lastModeTime = sock->m_lastModeTime;
+        out.local = sock->m_connInfo.local;
+        out.remote = sock->m_connInfo.remote;
+        out.lastReadTime = sock->m_lastReadTime;
+        out.lastWriteTime = sock->m_lastWriteTime;
+        out.buffer = sock->m_bufInfo;
+    }
+    return out;
 }
 
 //===========================================================================
@@ -212,6 +228,14 @@ void SocketBase::enableEvents() {
         logMsgFatal() << "RIONotify: " << WinError{error};
 }
 
+
+//===========================================================================
+void SocketBase::mode(Mode mode) {
+    if (mode != m_mode) {
+        m_mode = mode;
+        m_lastModeTime = timeNow();
+    }
+}
 
 //===========================================================================
 void SocketBase::onTask() {
@@ -716,10 +740,29 @@ SOCKET Dim::iSocketCreate(const SockAddr & addr) {
 *
 ***/
 
+TokenTable s_socketModeTbl({
+    { ISocketNotify::kAccepting, "accepting" },
+    { ISocketNotify::kConnecting, "connecting" },
+    { ISocketNotify::kActive, "active" },
+    { ISocketNotify::kClosing, "closing" },
+    { ISocketNotify::kClosed, "closed" },
+});
+
 //===========================================================================
-ISocketNotify::Mode Dim::socketGetMode(ISocketNotify * notify) {
+std::string_view Dim::toString(ISocketNotify::Mode mode) {
+    return s_socketModeTbl.findName(mode, "UNKNOWN");
+}
+
+//===========================================================================
+ISocketNotify::Mode Dim::socketGetMode(const ISocketNotify * notify) {
     iSocketCheckThread();
     return SocketBase::getMode(notify);
+}
+
+//===========================================================================
+SocketInfo Dim::socketGetInfo(const ISocketNotify * notify) {
+    iSocketCheckThread();
+    return SocketBase::getInfo(notify);
 }
 
 //===========================================================================

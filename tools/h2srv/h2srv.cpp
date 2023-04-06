@@ -35,16 +35,16 @@ static SockMgrHandle s_mgr;
 
 class TNetConn : public IAppSocketNotify {
 public:
-    bool onSocketAccept(const AppSocketInfo & accept) override;
+    bool onSocketAccept(const AppSocketConnectInfo & accept) override;
     void onSocketDisconnect() override;
     bool onSocketRead(AppSocketData & data) override;
 
 private:
-    AppSocketInfo m_accept;
+    AppSocketConnectInfo m_accept;
 };
 
 //===========================================================================
-bool TNetConn::onSocketAccept(const AppSocketInfo & accept) {
+bool TNetConn::onSocketAccept(const AppSocketConnectInfo & accept) {
     m_accept = accept;
     cout << m_accept.remote << " connected on "
         << m_accept.local << endl;

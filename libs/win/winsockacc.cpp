@@ -139,7 +139,7 @@ bool AcceptSocket::accept(ListenSocket * listen) {
     if (sock->m_handle == INVALID_SOCKET)
         return closeListenHandle(listen);
 
-    sock->m_mode = Mode::kAccepting;
+    sock->mode(Mode::kAccepting);
     listen->m_socket = move(sock);
 
     if (listen->m_handle != INVALID_SOCKET) {
@@ -172,12 +172,12 @@ bool AcceptSocket::accept(ListenSocket * listen) {
 
 //===========================================================================
 AcceptSocket::~AcceptSocket() {
-    if (m_mode == Mode::kClosed)
+    if (mode() == Mode::kClosed)
         s_perfCurAccepts -= 1;
 }
 
 //===========================================================================
-static bool getAcceptInfo(SocketInfo * out, SOCKET s, void * buffer) {
+static bool getAcceptInfo(SocketConnectInfo * out, SOCKET s, void * buffer) {
     sockaddr * lsa;
     int lsaLen;
     sockaddr * rsa;
@@ -225,7 +225,7 @@ void AcceptSocket::onAccept(
     if (!ok)
         return;
 
-    SocketInfo info;
+    SocketConnectInfo info;
     if (!getAcceptInfo(&info, m_handle, listen->m_addrBuf))
         return;
 
