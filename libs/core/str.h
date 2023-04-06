@@ -64,7 +64,8 @@ constexpr int maxNumericChars() {
 *
 ***/
 
-template <typename T> requires (std::is_arithmetic_v<T> || std::is_enum_v<T>)
+template <typename T>
+requires (std::is_arithmetic_v<T> || std::is_enum_v<T>)
 class ToCharsBuf;
 
 //===========================================================================
@@ -197,7 +198,8 @@ uint64_t strToUint64(
 // is true for T:
 //  - is assignable from string or string_view
 //  - is constructible from string or string_view
-//  - has an istream extraction operator
+//  - is arithmetic and works with from_chars
+//  - is non-arithmetic and has an istream extraction operator
 //===========================================================================
 template <typename T>
 [[nodiscard]] bool parse(T * out, std::string_view src) {
@@ -209,6 +211,12 @@ template <typename T>
         *out = std::string{src};
     } else if constexpr (std::is_constructible_v<T, std::string>) {
         *out = T(std::string(src));
+    } else if constexpr (std::is_arithmetic_v<T>) {
+        auto r = std::from_chars(src.data(), src.data() + src.size(), *out);
+        if (r.ec != std::errc{} || r.ptr != src.data() + src.size()) {
+            *out = {};
+            return false;
+        }
     } else {
         std::stringstream interpreter(std::string{src});
         if (!(interpreter >> *out) || !(interpreter >> std::ws).eof()) {
@@ -323,11 +331,16 @@ UtfType utfBomType(const char bytes[], size_t count);
 
 //===========================================================================
 constexpr size_t utfBomSize(UtfType type) {
-    return type == kUtf8
-        ? 3
-        : (type == kUtf16BE || type == kUtf16LE)
-            ? 2
-            : (type == kUtf32BE || type == kUtf32LE) ? 4 : 0;
+    switch (type) {
+    case kUtf8:
+        return 3;
+    case kUtf16BE: case kUtf16LE:
+        return 2;
+    case kUtf32BE: case kUtf32LE:
+        return 4;
+    default:
+        return 0;
+    }
 }
 
 
