@@ -33,7 +33,7 @@ public:
     void onHttpRequest(unsigned reqId, HttpRequest & msg) override = 0;
 
 private:
-    Param & m_jsVar = param("jsVar");
+    Param<> & m_jsVar = param("jsVar");
 };
 
 std::unordered_map<std::string, std::string> & webAdminAppData();

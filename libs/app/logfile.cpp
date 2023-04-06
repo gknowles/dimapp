@@ -267,7 +267,7 @@ public:
 public:
     void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
 private:
-    Param & m_limit = param("limit");
+    Param<unsigned> & m_limit = param<unsigned>("limit", 50);
 };
 } // namespace
 
@@ -280,7 +280,7 @@ void JsonLogTail::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     if (!appLogPath(&path, qpath, false))
         return httpRouteReplyNotFound(reqId, msg);
 
-    auto limit = clamp(m_limit ? strToUint(*m_limit) : 50u, 10u, 10'000u);
+    auto limit = clamp(*m_limit, 10u, 10'000u);
 
     auto job = new LogJob;
     job->m_reqId = reqId;

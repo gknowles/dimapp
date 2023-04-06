@@ -250,7 +250,7 @@ namespace {
 class JsonMemory : public IWebAdminNotify {
     void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
 
-    Param & m_confirm = param("confirm");
+    Param<> & m_confirm = param("confirm");
 };
 } // namespace
 

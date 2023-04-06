@@ -663,7 +663,7 @@ void IHttpRouteNotify::mapParams(const HttpRequest & msg) {
         }
         m_paramTbl = TokenTable(tokens);
     }
-    for (auto && rp : m_params)
+    for (auto&& rp : m_params)
         rp->reset();
     int id;
     for (auto && mp : msg.query().parameters) {
@@ -673,18 +673,8 @@ void IHttpRouteNotify::mapParams(const HttpRequest & msg) {
                 rp.append(v.value);
         }
     }
-}
-
-//===========================================================================
-IHttpRouteNotify::Param & IHttpRouteNotify::param(string name) {
-    m_params.push_back(make_unique<Param>(name));
-    return static_cast<Param &>(*m_params.back());
-}
-
-//===========================================================================
-IHttpRouteNotify::ParamVec & IHttpRouteNotify::paramVec(string name) {
-    m_params.push_back(make_unique<ParamVec>(name));
-    return static_cast<ParamVec &>(*m_params.back());
+    for (auto&& rp : m_params)
+        rp->finalize();
 }
 
 

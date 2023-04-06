@@ -62,8 +62,8 @@ struct HttpRouteInfo {
 class IHttpRouteNotify {
 public:
     class ParamBase;
-    class Param;
-    class ParamVec;
+    template<typename T> class Param;
+    template<typename T> class ParamVec;
 
 public:
     virtual ~IHttpRouteNotify() = default;
@@ -72,54 +72,16 @@ public:
     void mapParams(const HttpRequest & msg);
 
 protected:
-    Param & param(std::string name);
-    ParamVec & paramVec(std::string name);
+    template<typename T = std::string_view>
+    Param<T> & param(std::string name);
+    template<typename T = std::string_view>
+    Param<T> & param(std::string name, const T & defVal);
+    template<typename T = std::string_view>
+    ParamVec<T> & paramVec(std::string name);
 
 private:
     std::vector<std::unique_ptr<ParamBase>> m_params;
     TokenTable m_paramTbl;
-};
-
-class IHttpRouteNotify::ParamBase {
-public:
-    explicit ParamBase(std::string name) : m_name{move(name)} {}
-    virtual ~ParamBase() = default;
-    ParamBase(const ParamBase &) = delete;
-    ParamBase & operator=(const ParamBase &) = delete;
-    virtual void append(std::string_view value) = 0;
-    virtual void reset() = 0;
-protected:
-    friend IHttpRouteNotify;
-    std::string m_name;
-};
-
-class IHttpRouteNotify::Param : public ParamBase {
-public:
-    using ParamBase::ParamBase;
-    std::string_view & operator*() { return m_value; }
-    std::string_view * operator->() { return &m_value; }
-    explicit operator bool() const { return m_explicit; }
-private:
-    void append(std::string_view value) final {
-        m_value = value;
-        m_explicit = true;
-    }
-    void reset() final { m_value = {}; m_explicit = false; }
-    std::string_view m_value;
-    bool m_explicit {false};
-};
-
-class IHttpRouteNotify::ParamVec : public ParamBase {
-public:
-    using ParamBase::ParamBase;
-    std::vector<std::string_view> & operator*() { return m_values; }
-    std::vector<std::string_view> * operator->() { return &m_values; }
-    std::string_view & operator[](size_t index) { return m_values[index]; }
-    explicit operator bool() const { return !m_values.empty(); }
-private:
-    void append(std::string_view value) final { m_values.push_back(value); }
-    void reset() final { m_values.clear(); }
-    std::vector<std::string_view> m_values;
 };
 
 class HttpRouteRedirectNotify : public IHttpRouteNotify {
@@ -168,6 +130,147 @@ void httpRouteAddAlias(
     std::string_view targetPath,
     HttpMethod targetMethod = fHttpMethodGet
 );
+
+
+/****************************************************************************
+*
+*   Parsing request parameters
+*
+***/
+
+class IHttpRouteNotify::ParamBase {
+public:
+    explicit ParamBase(std::string name) : m_name{move(name)} {}
+    virtual ~ParamBase() = default;
+    ParamBase(const ParamBase &) = delete;
+    ParamBase & operator=(const ParamBase &) = delete;
+    virtual void reset() = 0;
+    virtual void append(std::string_view value) = 0;
+    virtual void finalize() = 0;
+protected:
+    friend IHttpRouteNotify;
+    std::string m_name;
+    bool m_hasDefault {false};
+};
+
+template<typename T = std::string_view>
+class IHttpRouteNotify::Param : public ParamBase {
+public:
+    using ParamBase::ParamBase;
+    explicit Param(std::string name, const T & defVal);
+    explicit operator bool() const { return m_explicit; }
+    T & operator*() { return m_value; }
+    T * operator->() { return &m_value; }
+private:
+    void reset() final;
+    void append(std::string_view value) final;
+    void finalize() final;
+
+    T m_value;
+    bool m_explicit {false};
+    T m_default;
+};
+
+template<typename T = std::string_view>
+class IHttpRouteNotify::ParamVec : public ParamBase {
+public:
+    using ParamBase::ParamBase;
+    explicit operator bool() const { return !m_values.empty(); }
+    std::vector<T> & operator*() { return m_values; }
+    std::vector<T> * operator->() { return &m_values; }
+    T & operator[](size_t index) { return m_values[index]; }
+    size_t size() const { return m_values.size(); }
+private:
+    void reset() final;
+    void append(std::string_view value) final;
+    void finalize() final;
+
+    std::vector<T> m_values;
+    std::vector<T> m_default;
+};
+
+//===========================================================================
+// IHttpRouteNotify
+//===========================================================================
+template<typename T>
+IHttpRouteNotify::Param<T> & IHttpRouteNotify::param(std::string name) {
+    m_params.push_back(std::make_unique<Param<T>>(name));
+    return static_cast<Param<T> &>(*m_params.back());
+}
+
+//===========================================================================
+template<typename T>
+IHttpRouteNotify::Param<T> & IHttpRouteNotify::param(
+    std::string name,
+    const T & defVal
+) {
+    m_params.push_back(std::make_unique<Param<T>>(name, defVal));
+    return static_cast<Param<T> &>(*m_params.back());
+}
+
+//===========================================================================
+template<typename T>
+IHttpRouteNotify::ParamVec<T> & IHttpRouteNotify::paramVec(
+    std::string name
+) {
+    m_params.push_back(std::make_unique<ParamVec<T>>(name));
+    return static_cast<ParamVec<T> &>(*m_params.back());
+}
+
+//===========================================================================
+// IHttpRouteNotify::Param<T>
+//===========================================================================
+template<typename T>
+IHttpRouteNotify::Param<T>::Param(std::string name, const T & defVal)
+    : ParamBase{move(name)}
+{
+    m_default = defVal;
+    m_hasDefault = true;
+}
+
+//===========================================================================
+template<typename T>
+void IHttpRouteNotify::Param<T>::append(std::string_view value) {
+    if (parse(&m_value, value))
+        m_explicit = true;
+}
+
+//===========================================================================
+template<typename T>
+void IHttpRouteNotify::Param<T>::finalize() {
+    if (!m_explicit && m_hasDefault)
+        m_value = m_default;
+}
+
+//===========================================================================
+template<typename T>
+void IHttpRouteNotify::Param<T>::reset() {
+    m_value = {};
+    m_explicit = false;
+}
+
+//===========================================================================
+// IHttpRouteNotify::ParamVec<T>
+//===========================================================================
+template<typename T>
+void IHttpRouteNotify::ParamVec<T>::append(std::string_view value) {
+    T val;
+    if (parse(&val, value))
+        m_values.push_back(val);
+}
+
+//===========================================================================
+template<typename T>
+void IHttpRouteNotify::ParamVec<T>::finalize() {
+    if (m_values.empty() && m_hasDefault)
+        m_values = m_default;
+}
+
+//===========================================================================
+template<typename T>
+void IHttpRouteNotify::ParamVec<T>::reset() {
+    m_values.clear();
+}
 
 
 /****************************************************************************
