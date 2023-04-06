@@ -267,7 +267,7 @@ public:
 public:
     void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
 private:
-    Param<unsigned> & m_limit = param<unsigned>("limit", 50);
+    Param<unsigned> m_limit = {this, "limit", 50};
 };
 } // namespace
 

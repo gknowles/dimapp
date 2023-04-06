@@ -254,7 +254,7 @@ namespace {
 class JsonMemory : public IWebAdminNotify {
     void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
 
-    Param<> & m_confirm = param("confirm");
+    Param<> m_confirm = {this, "confirm"};
 };
 } // namespace
 
@@ -283,8 +283,8 @@ namespace {
 class JsonConns : public IWebAdminNotify {
     void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
 
-    ParamVec<> & m_mgrs = paramVec("mgr");
-    Param<int> & m_limit = param<int>("limit", 100);
+    ParamVec<> m_mgrs = { this, "mgr" };
+    Param<int> m_limit = { this, "limit", 100 };
 };
 } // namespace
 
