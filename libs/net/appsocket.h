@@ -42,8 +42,8 @@ namespace AppSocket {
 
 struct AppSocketConnectInfo {
     AppSocket::Family fam;
-    SockAddr local;
-    SockAddr remote;
+    SockAddr localAddr;
+    SockAddr remoteAddr;
 };
 struct AppSocketData {
     char * data;

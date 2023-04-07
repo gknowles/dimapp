@@ -195,9 +195,9 @@ static bool getAcceptInfo(SocketConnectInfo * out, SOCKET s, void * buffer) {
 
     sockaddr_storage sas;
     memcpy(&sas, lsa, lsaLen);
-    copy(&out->local, sas);
+    copy(&out->localAddr, sas);
     memcpy(&sas, rsa, rsaLen);
-    copy(&out->remote, sas);
+    copy(&out->remoteAddr, sas);
     return true;
 }
 

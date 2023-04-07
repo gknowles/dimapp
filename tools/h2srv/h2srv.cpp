@@ -46,19 +46,19 @@ private:
 //===========================================================================
 bool TNetConn::onSocketAccept(const AppSocketConnectInfo & accept) {
     m_accept = accept;
-    cout << m_accept.remote << " connected on "
-        << m_accept.local << endl;
+    cout << m_accept.remoteAddr << " connected on "
+        << m_accept.localAddr << endl;
     return true;
 }
 
 //===========================================================================
 void TNetConn::onSocketDisconnect() {
-    cout << m_accept.remote << " disconnected" << endl;
+    cout << m_accept.remoteAddr << " disconnected" << endl;
 }
 
 //===========================================================================
 bool TNetConn::onSocketRead(AppSocketData & data) {
-    cout << m_accept.remote << ": ";
+    cout << m_accept.remoteAddr << ": ";
     cout.write(data.data, data.bytes);
     return true;
 }

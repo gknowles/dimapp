@@ -99,8 +99,8 @@ SocketInfo SocketBase::getInfo(const ISocketNotify * notify) {
     if (auto sock = notify->m_socket) {
         out.mode = sock->m_mode;
         out.lastModeTime = sock->m_lastModeTime;
-        out.local = sock->m_connInfo.local;
-        out.remote = sock->m_connInfo.remote;
+        out.localAddr = sock->m_connInfo.localAddr;
+        out.remoteAddr = sock->m_connInfo.remoteAddr;
         out.lastReadTime = sock->m_lastReadTime;
         out.lastWriteTime = sock->m_lastWriteTime;
         out.buffer = sock->m_bufInfo;

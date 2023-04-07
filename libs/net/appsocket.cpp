@@ -383,7 +383,7 @@ bool IAppSocket::notifyRead(AppSocketData & data) {
         view = m_pos->socketData.append(view);
 
     IFactory<IAppSocketNotify> * fact;
-    if (!findFactory(&m_accept.fam, &fact, m_accept.local, view)) {
+    if (!findFactory(&m_accept.fam, &fact, m_accept.localAddr, view)) {
         if (m_pos->socketData.empty())
             m_pos->socketData.assign(data.data, data.bytes);
         return true;
@@ -495,8 +495,8 @@ void RawSocket::read() {
 //===========================================================================
 void RawSocket::onSocketConnect(const SocketConnectInfo & info) {
     AppSocketConnectInfo tmp = {
-        .local = info.local,
-        .remote = info.remote,
+        .localAddr = info.localAddr,
+        .remoteAddr = info.remoteAddr,
     };
     return notifyConnect(tmp);
 }
@@ -509,8 +509,8 @@ void RawSocket::onSocketConnectFailed() {
 //===========================================================================
 bool RawSocket::onSocketAccept(const SocketConnectInfo & info) {
     AppSocketConnectInfo tmp = {
-        .local = info.local,
-        .remote = info.remote,
+        .localAddr = info.localAddr,
+        .remoteAddr = info.remoteAddr,
     };
     return notifyAccept(tmp);
 }

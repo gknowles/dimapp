@@ -315,8 +315,8 @@ size_t Dim::sockMgrWriteInfo(
         }
         out->member("mode", toString(sock.mode))
             .member("lastModeTime", sock.lastModeTime)
-            .member("localAddr", sock.local)
-            .member("remoteAddr", sock.remote);
+            .member("localAddr", sock.localAddr)
+            .member("remoteAddr", sock.remoteAddr);
         if (!empty(sock.lastReadTime))
             out->member("lastReadTime", sock.lastReadTime);
         if (!empty(sock.lastWriteTime))

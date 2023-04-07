@@ -240,14 +240,14 @@ void ConnSocket::onConnect(WinError error, int bytes) {
         logMsgError() << "getpeername: " << wsaError();
         return connectFailed();
     }
-    copy(&m_connInfo.remote, sas);
+    copy(&m_connInfo.remoteAddr, sas);
 
     // locally bound address
     if (SOCKET_ERROR == getsockname(m_handle, (sockaddr *)&sas, &sasLen)) {
         logMsgError() << "getsockname: " << wsaError();
         return connectFailed();
     }
-    copy(&m_connInfo.local, sas);
+    copy(&m_connInfo.localAddr, sas);
 
     //-----------------------------------------------------------------------
     // create read/write queue

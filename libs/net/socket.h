@@ -21,8 +21,8 @@ namespace Dim {
 ***/
 
 struct SocketConnectInfo {
-    SockAddr local;
-    SockAddr remote;
+    SockAddr localAddr;
+    SockAddr remoteAddr;
 };
 struct SocketData {
     char * data;
@@ -199,8 +199,8 @@ struct SocketInfo {
     SocketDir dir;
     ISocketNotify::Mode mode;
     TimePoint lastModeTime;      // When the mode changed.
-    SockAddr local;
-    SockAddr remote;
+    SockAddr localAddr;
+    SockAddr remoteAddr;
     TimePoint lastReadTime;      // When read was last received.
     TimePoint lastWriteTime;     // When write was last sent.
     SocketBufferInfo buffer;
