@@ -225,8 +225,7 @@ void AcceptSocket::onAccept(
     if (!ok)
         return;
 
-    SocketConnectInfo info;
-    if (!getAcceptInfo(&info, m_handle, listen->m_addrBuf))
+    if (!getAcceptInfo(&m_connInfo, m_handle, listen->m_addrBuf))
         return;
 
     if (SOCKET_ERROR == setsockopt(
@@ -248,7 +247,7 @@ void AcceptSocket::onAccept(
         s_perfAccepts += 1;
         s_perfCurAccepts += 1;
         hostage.release();
-        if (!m_notify->onSocketAccept(info)) {
+        if (!m_notify->onSocketAccept(m_connInfo)) {
             s_perfNotAccepted += 1;
             hardClose();
         }
