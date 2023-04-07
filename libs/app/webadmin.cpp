@@ -283,7 +283,7 @@ namespace {
 class JsonConns : public IWebAdminNotify {
     void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
 
-    ParamVec<> m_mgrs = { this, "mgr" };
+    ParamVec<> m_hiddenMgrs = { this, "!mgr" };
     Param<int> m_limit = { this, "limit", 100 };
 };
 } // namespace
@@ -292,19 +292,19 @@ class JsonConns : public IWebAdminNotify {
 void JsonConns::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     auto infos = sockMgrGetInfos();
     size_t limit = *m_limit;
-    unordered_set<string_view> mgrs;
-    for (auto && mgr : *m_mgrs)
-        mgrs.insert(mgr);
+    unordered_set<string_view> hidden;
+    for (auto && mgr : *m_hiddenMgrs)
+        hidden.insert(mgr);
 
     auto res = HttpResponse(kHttpStatusOk);
     auto bld = initResponse(&res, reqId, msg);
     bld.member("mgrs");
     bld.array();
     for (auto&& info : infos) {
-        if (mgrs.empty() || mgrs.contains(info.name)) {
-            limit -= sockMgrWriteInfo(&bld, info, true, limit);
-        } else {
+        if (hidden.contains(info.name)) {
             sockMgrWriteInfo(&bld, info, false, 0);
+        } else {
+            limit -= sockMgrWriteInfo(&bld, info, true, limit);
         }
     }
     bld.end();

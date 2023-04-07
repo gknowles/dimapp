@@ -13,8 +13,29 @@ network-conns.html - dim webapp
 <script src="initialize.js"></script>
 <script src="../initapp.js"></script>
 <script src="network-common.js"></script>
-<script src="/srv/network/conns.json?jsVar=srvdata"></script>
 <script>
+  const params = new URLSearchParams(location.search)
+  params.set('jsVar', 'srvdata')
+  let url = '/srv/network/conns.json?' + params.toString()
+  addTags([
+    { tag: 'script', props: { src: url }},
+  ])
+</script>
+<script>
+function updateHiddenMgrs(name, enable) {
+  let mgrs = this.mgrs
+  let arr = [null]
+  for (let mgr of mgrs) {
+    if (mgr.name == name) {
+      if (!enable)
+        arr.push(mgr.name)
+    } else if (!mgr.show) {
+        arr.push(mgr.name)
+    }
+  }
+  return { "!mgr": arr }
+}
+
 addOpts({
   computed: {
     sortedMgrs() {
@@ -47,19 +68,7 @@ addOpts({
     },
   },
   methods: {
-    updateMgrs(name, enable) {
-      let mgrs = this.mgrs
-      let arr = [null]
-      for (let mgr of mgrs) {
-        if (mgr.name == name) {
-          if (enable)
-            arr.push(mgr.name)
-        } else if (mgr.show) {
-            arr.push(mgr.name)
-        }
-      }
-      return { mgr: arr }
-    },
+    updateHiddenMgrs,
   },
 })
 </script>
@@ -101,7 +110,7 @@ addOpts({
               <td class="text-end">{{val.socketCount.toLocaleString()}}</td>
               <td class='bg-body border-0'>
                 <a :class="val.show ? null : 'text-decoration-line-through'"
-                    :href="updateUrl(updateMgrs(val.name, !val.show))"
+                    :href="updateUrl(updateHiddenMgrs(val.name, !val.show))"
                 >Show</a>
               </td>
             </tr>
@@ -130,7 +139,7 @@ addOpts({
           <th class="sortable">Last Changed</th>
         </tr>
         <template v-for="val in sortedSockets">
-          <tr>
+          <tr :class="val.mode == 'active' ? null : 'bg-disabled'">
             <td>{{val.mgr}}</td>
             <td class='text-center'>
               {{val.inbound ? 'Inbound' : 'Outbound'}}
