@@ -319,8 +319,11 @@ size_t Dim::sockMgrWriteInfo(
             .member("remoteAddr", sock.remoteAddr);
         if (!empty(sock.lastReadTime))
             out->member("lastReadTime", sock.lastReadTime);
+        out->member("bytesRead", sock.readTotal);
         if (!empty(sock.lastWriteTime))
             out->member("lastWriteTime", sock.lastWriteTime);
+        out->member("bytesWritten", sock.buffer.total)
+            .member("bytesWaiting", sock.buffer.waiting);
         out->end();
     }
     out->end();

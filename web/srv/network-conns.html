@@ -33,39 +33,56 @@ function updateHiddenMgrs(name, enable) {
         arr.push(mgr.name)
     }
   }
-  return { "!mgr": arr }
+  return { "~mgr": arr }
+}
+
+function sortedMgrs() {
+  let arr = this.mgrs;
+  arr.sort((a, b) => {
+    if (a.name != b.name)
+      return (a.name < b.name) ? -1 : 1
+    return 0
+  })
+  return arr
+}
+
+function sortedSockets() {
+  let arr = []
+  for (let mgr of this.mgrs) {
+    if (!mgr.show)
+      continue
+    for (let sock of mgr.sockets) {
+      arr.push(sock)
+      arr[arr.length - 1].mgr = mgr.name
+    }
+  }
+  arr.sort((a, b) => {
+    if (a.mgr != b.mgr)
+      return (a.mgr < b.mgr) ? -1 : 1
+    if (a.remoteAddr != b.remoteAddr)
+      return (a.remoteAddr < b.remoteAddr) ? -1 : 1
+    return 0
+  })
+  return arr
+}
+
+function countSockets() {
+  let total = 0
+  let found = 0
+  for (let mgr of this.mgrs) {
+    if (mgr.show) {
+      total += mgr.socketCount
+      found += mgr.sockets.length
+    }
+  }
+  return { total, found }
 }
 
 addOpts({
   computed: {
-    sortedMgrs() {
-      let arr = this.mgrs;
-      arr.sort((a, b) => {
-        if (a.name != b.name)
-          return (a.name < b.name) ? -1 : 1
-        return 0
-      })
-      return arr
-    },
-    sortedSockets() {
-      let arr = []
-      for (let mgr of this.mgrs) {
-        if (!mgr.show)
-          continue
-        for (let sock of mgr.sockets) {
-          arr.push(sock)
-          arr[arr.length - 1].mgr = mgr.name
-        }
-      }
-      arr.sort((a, b) => {
-        if (a.mgr != b.mgr)
-          return (a.mgr < b.mgr) ? -1 : 1
-        if (a.remoteAddr != b.remoteAddr)
-          return (a.remoteAddr < b.remoteAddr) ? -1 : 1
-        return 0
-      })
-      return arr
-    },
+    sortedMgrs,
+    sortedSockets,
+    countSockets,
   },
   methods: {
     updateHiddenMgrs,
@@ -123,31 +140,47 @@ addOpts({
       <tr><td>Has one or more connected sockets</td></tr>
     </table>
 
-    <h3>Sockets</h3>
+    <h3>
+      Sockets
+      <template v-if="countSockets.found != countSockets.total">
+        ({{countSockets.found.toLocaleString()}} of
+        {{countSockets.total.toLocaleString()}} shown)
+      </template>
+    </h3>
     <div class="row gx-3">
     <div class='col-auto'>
       <table>
         <tr>
           <th rowspan="2" class="sortable">Manager</th>
-          <th rowspan="2" class="sortable">Direction</th>
+          <th rowspan="2" class="sortable">Dir</th>
           <th colspan="2">Mode</th>
           <th rowspan="2" class="sortable">Remote Address</th>
           <th rowspan="2" class="sortable">Local Address</th>
+          <th colspan="3">Sent</th>
+          <th colspan="2">Received</th>
         </tr>
         <tr>
           <th class="sortable">State</th>
-          <th class="sortable">Last Changed</th>
+          <th class="sortable">Age</th>
+          <th class="sortable">Bytes</th>
+          <th class="sortable">Age</th>
+          <th class="sortable">Waiting</th>
+          <th class="sortable">Bytes</th>
+          <th class="sortable">Age</th>
         </tr>
         <template v-for="val in sortedSockets">
           <tr :class="val.mode == 'active' ? null : 'bg-disabled'">
             <td>{{val.mgr}}</td>
-            <td class='text-center'>
-              {{val.inbound ? 'Inbound' : 'Outbound'}}
-            </td>
+            <td class='text-center'>{{val.inbound ? 'In' : 'Out'}}</td>
             <td class='text-center'>{{val.mode}}</td>
             <td class='text-end'>{{readableAge(val.lastModeTime)}}</td>
             <td class='text-center'>{{val.remoteAddr}}</td>
             <td class='text-center'>{{val.localAddr}}</td>
+            <td class='text-end'>{{val.bytesWritten.toLocaleString()}}</td>
+            <td class='text-end'>{{readableAge(val.lastWriteTime)}}</td>
+            <td class='text-end'>{{val.bytesWaiting.toLocaleString()}}</td>
+            <td class='text-end'>{{val.bytesRead.toLocaleString()}}</td>
+            <td class='text-end'>{{readableAge(val.lastReadTime)}}</td>
           </tr>
         </template>
       </table>

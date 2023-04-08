@@ -283,7 +283,7 @@ namespace {
 class JsonConns : public IWebAdminNotify {
     void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
 
-    ParamVec<> m_hiddenMgrs = { this, "!mgr" };
+    ParamVec<> m_hiddenMgrs = { this, "~mgr" };
     Param<int> m_limit = { this, "limit", 100 };
 };
 } // namespace

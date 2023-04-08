@@ -72,13 +72,13 @@ private:
 
     RIO_RQ m_rq = {RIO_INVALID_RQ};
     RIO_CQ m_cq = {RIO_INVALID_CQ};
-    SocketBufferInfo m_bufInfo = {};
 
     // used by read requests
     List<SocketRequest> m_reads;
     int m_maxReads{0};
     List<SocketRequest> m_prereads;
     TimePoint m_lastReadTime = {};   // When read was last received.
+    size_t m_bytesRead = 0;
 
     // used by write requests
     List<SocketRequest> m_writes;
@@ -86,6 +86,7 @@ private:
     int m_maxWrites{0};
     List<SocketRequest> m_prewrites;
     TimePoint m_lastWriteTime = {};  // When write was last sent.
+    SocketBufferInfo m_bufInfo = {};
 };
 
 

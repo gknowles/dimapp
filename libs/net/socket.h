@@ -202,6 +202,7 @@ struct SocketInfo {
     SockAddr localAddr;
     SockAddr remoteAddr;
     TimePoint lastReadTime;      // When read was last received.
+    size_t readTotal;            // Total bytes read from socket.
     TimePoint lastWriteTime;     // When write was last sent.
     SocketBufferInfo buffer;
 };

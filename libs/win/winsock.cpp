@@ -102,6 +102,7 @@ SocketInfo SocketBase::getInfo(const ISocketNotify * notify) {
         out.localAddr = sock->m_connInfo.localAddr;
         out.remoteAddr = sock->m_connInfo.remoteAddr;
         out.lastReadTime = sock->m_lastReadTime;
+        out.readTotal = sock->m_bytesRead;
         out.lastWriteTime = sock->m_lastWriteTime;
         out.buffer = sock->m_bufInfo;
     }
@@ -313,6 +314,9 @@ void SocketBase::queueRead(SocketRequest * task) {
 bool SocketBase::onRead(SocketRequest * task) {
     if (int bytes = task->m_xferBytes) {
         s_perfReadTotal += bytes;
+        m_bytesRead += bytes;
+        m_lastReadTime = timeNow();
+
         SocketData data;
         data.data = (char *)task->m_buffer->data;
         data.bytes = bytes;
@@ -373,9 +377,7 @@ void SocketBase::queuePrewrite(
         return;
 
     s_perfWaiting += (unsigned) bytes;
-    s_perfWriteTotal += (unsigned) bytes;
     m_bufInfo.waiting += bytes;
-    m_bufInfo.total += bytes;
     bool wasPrewrites = (bool) m_prewrites;
 
     if (wasPrewrites) {
@@ -449,9 +451,12 @@ void SocketBase::queueWrites() {
 bool SocketBase::onWrite(SocketRequest * task) {
     auto bytes = task->m_rbuf.Length;
     delete task;
-    m_numWrites -= 1;
     s_perfIncomplete -= bytes;
+    s_perfWriteTotal += bytes;
+    m_numWrites -= 1;
     m_bufInfo.incomplete -= bytes;
+    m_bufInfo.total += bytes;
+    m_lastWriteTime = timeNow();
 
     // already disconnected and this was the last unresolved write? delete
     if (m_mode == Mode::kClosed && !m_reads && !m_writes) {
