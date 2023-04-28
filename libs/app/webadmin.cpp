@@ -66,7 +66,7 @@ JBuilder IWebAdminNotify::initResponse(
 
     // Named routes that appear on the navbar.
     auto infos = httpRouteGetRoutes();
-    // Find named route that is the longest matrching prefix of the current
+    // Find named route that is the longest matching prefix of the current
     // route, will be marked as active on the navbar.
     HttpRouteInfo * best = nullptr;
     for (auto&& ri : infos) {
