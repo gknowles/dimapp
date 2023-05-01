@@ -22,9 +22,10 @@ namespace {
 class LogBuffer : IFileWriteNotify {
 public:
     LogBuffer();
+    void setFileName(const Path & name);
     void writeLog(string_view msg, bool wait);
 
-    // returns true if close completed, otherwise try again until no more
+    // Returns true if close completed, otherwise try again until no more
     // writes are pending.
     bool closeLog();
 
@@ -32,18 +33,17 @@ private:
     void onFileWrite(const FileWriteData & data) override;
 
     mutex m_mut;
+    Path m_fileName;
     FileHandle m_file;
     string m_pending;
     string m_writing;
-    bool m_closing{false};
+    bool m_closing = false;
 };
 
 } // namespace
 
-static LogType s_logLevel{kLogTypeInfo};
+static LogType s_logLevel = kLogTypeInfo;
 static LogBuffer s_buffer;
-static string s_hostname = "-";
-static Path s_logfile;
 
 static auto & s_perfDropped = uperf("logfile.buffer dropped");
 
@@ -61,6 +61,11 @@ LogBuffer::LogBuffer() {
 }
 
 //===========================================================================
+void LogBuffer::setFileName(const Path & name) {
+    m_fileName = name;
+}
+
+//===========================================================================
 void LogBuffer::writeLog(string_view msg, bool wait) {
     using enum File::OpenMode;
 
@@ -69,9 +74,10 @@ void LogBuffer::writeLog(string_view msg, bool wait) {
         m_writing.append(msg);
         m_writing.push_back('\n');
         if (!m_file) {
+            m_closing = false;
             auto ec = fileOpen(
                 &m_file,
-                s_logfile,
+                m_fileName,
                 fCreat | fReadWrite | fDenyNone
             );
             if (ec) {
@@ -138,19 +144,49 @@ void LogBuffer::onFileWrite(const FileWriteData & data) {
 
 /****************************************************************************
 *
-*   Logger
+*   Default Log Format
 *
 ***/
 
 namespace {
-class Logger : public ILogNotify {
+class DefaultFormat : public ILogNotify {
     void onLog(const LogMsg & log) override;
 };
 } // namespace
-static Logger s_logger;
+static DefaultFormat s_defaultFmt;
 
 //===========================================================================
-void Logger::onLog(const LogMsg & log) {
+void DefaultFormat::onLog(const LogMsg & log) {
+    assert(log.type < kLogTypes);
+    if (log.type < appLogLevel())
+        return;
+
+    auto str = format("{} {} [{}@{}] {}",
+        Time8601Str{}.set().view(),
+        toUpper(toString(log.type, "UNKNOWN")),
+        appName(),
+        toString(appAddress().addr),
+        log.msg
+    );
+    s_buffer.writeLog(str, log.type == kLogTypeFatal);
+}
+
+
+/****************************************************************************
+*
+*   SysLog Format
+*
+***/
+
+namespace {
+class SysLogFormat : public ILogNotify {
+    void onLog(const LogMsg & log) override;
+};
+} // namespace
+static SysLogFormat s_syslogFmt;
+
+//===========================================================================
+void SysLogFormat::onLog(const LogMsg & log) {
     assert(log.type < kLogTypes);
     if (log.type < appLogLevel())
         return;
@@ -167,12 +203,12 @@ void Logger::onLog(const LogMsg & log) {
     case kLogTypeDebug: pri += 7; break;
     default: break;
     }
-    snprintf(tmp, size(tmp), "<%d>1 %s %s %s %s %s %s %.*s",
+    snprintf(tmp, size(tmp), "<%d>1 %s %s %s %u %s %s %.*s",
         pri,
         Time8601Str{}.set().c_str(),
-        s_hostname.c_str(),
-        "appName",
-        "-",    // procid
+        envComputerName().c_str(),
+        appName().c_str(),
+        envProcessId(),
         "-",    // msgid
         "-",    // structured data
         (int) log.msg.size(),
@@ -444,10 +480,12 @@ void Dim::iLogFileInitialize() {
     shutdownMonitor(&s_cleanup);
     configMonitor("app.xml", &s_appXml);
 
-    if (!appLogPath(&s_logfile, "server.log"))
-        logMsgFatal() << "Invalid log path: " << s_logfile;
+    Path file;
+    if (!appLogPath(&file, "server.log"))
+        logMsgFatal() << "Invalid log path: " << file;
+    s_buffer.setFileName(file);
 
-    logMonitor(&s_logger);
+    logMonitor(&s_defaultFmt);
 }
 
 //===========================================================================
