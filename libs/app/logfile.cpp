@@ -19,10 +19,18 @@ constexpr unsigned kLogBufferSize = 65'536;
 
 namespace {
 
-class LogBuffer : IFileWriteNotify {
+class ILogFormat {
 public:
-    LogBuffer();
+    virtual ~ILogFormat() = default;
+    virtual void onFormatLog(string * out, const LogMsg & log) const = 0;
+    virtual void onFormatHeader(string * out) const {}
+};
+
+class LogFile : IFileWriteNotify, public ILogNotify {
+public:
+    LogFile();
     void setFileName(const Path & name);
+    void setFormatter(const ILogFormat * fmt);
     void writeLog(string_view msg, bool wait);
 
     // Returns true if close completed, otherwise try again until no more
@@ -31,6 +39,7 @@ public:
 
 private:
     void onFileWrite(const FileWriteData & data) override;
+    void onLog(const LogMsg & log) override;
 
     mutex m_mut;
     Path m_fileName;
@@ -38,35 +47,42 @@ private:
     string m_pending;
     string m_writing;
     bool m_closing = false;
+    const ILogFormat * m_fmt;
 };
 
 } // namespace
 
 static LogType s_logLevel = kLogTypeInfo;
-static LogBuffer s_buffer;
+static LogFile s_log;
 
 static auto & s_perfDropped = uperf("logfile.buffer dropped");
+static auto & s_perfLineTrunc = uperf("logfile.log line truncated");
 
 
 /****************************************************************************
 *
-*   LogBuffer
+*   LogFile
 *
 ***/
 
 //===========================================================================
-LogBuffer::LogBuffer() {
+LogFile::LogFile() {
     m_writing.reserve(kLogBufferSize);
     m_pending.reserve(kLogBufferSize);
 }
 
 //===========================================================================
-void LogBuffer::setFileName(const Path & name) {
+void LogFile::setFileName(const Path & name) {
     m_fileName = name;
 }
 
 //===========================================================================
-void LogBuffer::writeLog(string_view msg, bool wait) {
+void LogFile::setFormatter(const ILogFormat * fmt) {
+    m_fmt = fmt;
+}
+
+//===========================================================================
+void LogFile::writeLog(string_view msg, bool wait) {
     using enum File::OpenMode;
 
     unique_lock lk{m_mut};
@@ -113,7 +129,7 @@ void LogBuffer::writeLog(string_view msg, bool wait) {
 }
 
 //===========================================================================
-bool LogBuffer::closeLog() {
+bool LogFile::closeLog() {
     scoped_lock lk{m_mut};
     if (m_writing.empty()) {
         if (m_file) {
@@ -127,7 +143,7 @@ bool LogBuffer::closeLog() {
 }
 
 //===========================================================================
-void LogBuffer::onFileWrite(const FileWriteData & data) {
+void LogFile::onFileWrite(const FileWriteData & data) {
     scoped_lock lk{m_mut};
     m_writing.swap(m_pending);
     m_pending.clear();
@@ -141,6 +157,20 @@ void LogBuffer::onFileWrite(const FileWriteData & data) {
     fileAppend(this, m_file, m_writing.data(), m_writing.size());
 }
 
+//===========================================================================
+void LogFile::onLog(const LogMsg & log) {
+    assert(log.type < kLogTypes);
+    if (log.type < appLogLevel())
+        return;
+    string out;
+    m_fmt->onFormatLog(&out, log);
+    if (out.size() > kLogBufferSize - 2) {
+        s_perfLineTrunc += 1;
+        out.resize(kLogBufferSize - 2);
+    }
+    writeLog(out, log.type == kLogTypeFatal);
+}
+
 
 /****************************************************************************
 *
@@ -149,26 +179,21 @@ void LogBuffer::onFileWrite(const FileWriteData & data) {
 ***/
 
 namespace {
-class DefaultFormat : public ILogNotify {
-    void onLog(const LogMsg & log) override;
+class DefaultFormat : public ILogFormat {
+    void onFormatLog(string * out, const LogMsg & log) const override;
 };
 } // namespace
 static DefaultFormat s_defaultFmt;
 
 //===========================================================================
-void DefaultFormat::onLog(const LogMsg & log) {
-    assert(log.type < kLogTypes);
-    if (log.type < appLogLevel())
-        return;
-
-    auto str = format("{} {} [{}@{}] {}",
+void DefaultFormat::onFormatLog(string * out, const LogMsg & log) const {
+    *out = format("{} {} [{}@{}] {}",
         Time8601Str{}.set().view(),
         toUpper(toString(log.type, "UNKNOWN")),
         appName(),
         toString(appAddress().addr),
         log.msg
     );
-    s_buffer.writeLog(str, log.type == kLogTypeFatal);
 }
 
 
@@ -179,18 +204,14 @@ void DefaultFormat::onLog(const LogMsg & log) {
 ***/
 
 namespace {
-class SysLogFormat : public ILogNotify {
-    void onLog(const LogMsg & log) override;
+class SysLogFormat : public ILogFormat {
+    void onFormatLog(string * out, const LogMsg & log) const override;
 };
 } // namespace
 static SysLogFormat s_syslogFmt;
 
 //===========================================================================
-void SysLogFormat::onLog(const LogMsg & log) {
-    assert(log.type < kLogTypes);
-    if (log.type < appLogLevel())
-        return;
-
+void SysLogFormat::onFormatLog(string * out, const LogMsg & log) const {
     char tmp[256];
     assert(sizeof tmp + 2 <= kLogBufferSize);
     const unsigned kFacility = 3; // system daemons
@@ -214,7 +235,7 @@ void SysLogFormat::onLog(const LogMsg & log) {
         (int) log.msg.size(),
         log.msg.data()
     );
-    s_buffer.writeLog(tmp, log.type == kLogTypeFatal);
+    *out = tmp;
 }
 
 
@@ -461,7 +482,7 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
         return shutdownIncomplete();
     }
 
-    if (!s_buffer.closeLog())
+    if (!s_log.closeLog())
         return shutdownIncomplete();
 }
 
@@ -483,9 +504,10 @@ void Dim::iLogFileInitialize() {
     Path file;
     if (!appLogPath(&file, "server.log"))
         logMsgFatal() << "Invalid log path: " << file;
-    s_buffer.setFileName(file);
+    s_log.setFileName(file);
+    s_log.setFormatter(&s_defaultFmt);
 
-    logMonitor(&s_defaultFmt);
+    logMonitor(&s_log);
 }
 
 //===========================================================================
