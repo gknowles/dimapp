@@ -475,8 +475,10 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
             vector<PerfValue> perfs;
             perfGetValues(&perfs, true);
             for (auto && perf : perfs) {
-                if (perf.value != "0")
-                    logMsgInfo() << "perf: " << perf.value << ' ' << perf.name;
+                if (perf.value != "0") {
+                    logMsgDebug() << "PERF " << perf.name << ": "
+                        << perf.value;
+                }
             }
         }
         return shutdownIncomplete();
