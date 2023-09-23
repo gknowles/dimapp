@@ -6,6 +6,7 @@
 
 #include "cppconf/cppconf.h"
 
+#include <bit>
 #include <cassert>
 #include <compare>
 #include <cstdint>
