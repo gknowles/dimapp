@@ -32,7 +32,8 @@ Distributed under the Boost Software License, Version 1.0.
         <Variable Name="ptr" InitialValue="m_base.m_nextLink"/>
         <Loop>
           <Break Condition="ptr == base"/>
-          <Item>($T1 *) ptr</Item>
+          <Item Condition="ptr == ($T1 *) ptr">($T1 *) ptr</Item>
+          <Item>ptr</Item>
           <Exec>ptr = ptr->m_nextLink</Exec>
         </Loop>
       </CustomListItems>
@@ -61,7 +62,9 @@ Distributed under the Boost Software License, Version 1.0.
   </Type>
 
   <Type Name="Dim::ListLink&lt;*&gt;" Inheritable="false">
-    <DisplayString Condition="m_prevLink == this">{{ not linked }}</DisplayString>
+    <DisplayString Condition="m_prevLink == this">
+      {{ not linked }}
+    </DisplayString>
     <DisplayString>{{ linked }}</DisplayString>
   </Type>
 </AutoVisualizer>
