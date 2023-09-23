@@ -3,7 +3,6 @@
 # CHANGELOG.adoc
 # LICENSE
 # README.adoc
-# appveyor.yml
 # conf/app.xml.adoc
 # conf/app.xml.sample
 # conf/cmtupd.xml
