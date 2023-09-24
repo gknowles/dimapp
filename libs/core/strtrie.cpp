@@ -151,7 +151,7 @@ struct SearchState {
     uint8_t kval = 0;
 
     // Current page
-    pgno_t pgno = 0;
+    pgno_t pgno = (pgno_t) -1;
 
     // Current node
     int inode = 0;
@@ -667,6 +667,11 @@ static void seekNodeForUpdate(SearchState * ss, pgno_t pgno, size_t inode) {
 }
 
 //===========================================================================
+static void seekNodeForUpdate(SearchState * ss, size_t inode) {
+    seekNodeForUpdate(ss, ss->pgno, inode);
+}
+
+//===========================================================================
 static const StrTrieBase::Node * getNode(
     SearchState * ss,
     pgno_t pgno,
@@ -684,15 +689,15 @@ static const StrTrieBase::Node * getNode(SearchState * ss, size_t pos) {
 }
 
 //===========================================================================
-static void seekNode(SearchState * ss, size_t inode) {
+static void seekNode(SearchState * ss, pgno_t pgno, size_t inode) {
+    ss->pgno = pgno;
     ss->inode = (int) inode;
     ss->node = const_cast<StrTrieBase::Node *>(getNode(ss, ss->inode));
 }
 
 //===========================================================================
-static void seekNode(SearchState * ss, pgno_t pgno, size_t inode) {
-    ss->pgno = pgno;
-    seekNode(ss, inode);
+static void seekNode(SearchState * ss, size_t inode) {
+    seekNode(ss, ss->pgno, inode);
 }
 
 //===========================================================================
@@ -701,13 +706,25 @@ static void seekRootNode(SearchState * ss) {
 }
 
 //===========================================================================
-static void seekKid(SearchState * ss, size_t pos) {
+static int getKidOffset(SearchState * ss, size_t pos) {
     assert(pos <= numKids(ss->node));
     auto root = ss->node - ss->inode;
     auto inext = ss->inode + nodeHdrLen(ss->node);
     for (auto i = 0; i < pos; ++i)
         inext += nodeLen(root + inext);
-    seekNode(ss, inext);
+    return inext;
+}
+
+//===========================================================================
+static void seekKidForUpdate(SearchState * ss, size_t pos) {
+    auto inode = getKidOffset(ss, pos);
+    seekNodeForUpdate(ss, inode);
+}
+
+//===========================================================================
+static void seekKid(SearchState * ss, size_t pos) {
+    auto inode = getKidOffset(ss, pos);
+    seekNode(ss, inode);
 }
 
 //===========================================================================
@@ -1212,12 +1229,12 @@ static void copyAny(SearchState * ss, const NodeRef & ref) {
         auto node = getNode(ss, ref.page.pgno, ref.data.pos);
         assert(nodeLen(node) == ref.data.len);
         memcpy(ss->node, node, ref.data.len);
-        seekNode(ss, ss->inode + ref.data.len);
+        seekNodeForUpdate(ss, ss->inode + ref.data.len);
     } else {
         assert(ref.page.type == PageRef::kVirtual);
         auto & vpage = ss->vpages[ref.page.pgno];
         setRemoteRef(ss->node, vpage.targetPgno, ref.data.pos);
-        seekNode(ss, ss->inode + nodeLen(ss->node));
+        seekNodeForUpdate(ss, ss->inode + nodeLen(ss->node));
     }
 }
 
@@ -1240,7 +1257,7 @@ static void copyAny(SearchState * ss, const UpdateBase & upd) {
         [[maybe_unused]] auto & mark = static_cast<const UpdateEndMark &>(upd);
         setEndMark(ss->node);
     }
-    seekKid(ss, 0);
+    seekKidForUpdate(ss, 0);
     for (auto&& ref : upd.refs)
         copyAny(ss, ref);
 }
@@ -1429,12 +1446,9 @@ static void applyUpdates(SearchState * ss) {
                 copyAny(ss, root);
         }
     }
-    // Release potentially still active 'for update' seek.
-    seekRootNode(ss);
 
     auto rpno = ss->vpages.back().targetPgno;
     ss->pages->setRoot(rpno);
-
     applyDestroys(ss);
 }
 

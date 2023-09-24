@@ -32,9 +32,9 @@ namespace Dim {
 *
 *   Decomposition:
 *
-*   C:     /Windows/System32/icacls.exe
+*   C:     /Windows/System32/executable.exe
 *   C:     log              /server    .log
-*   C:                       myfile    .ext
+*   C:                       MyFile    .ext
 *   [drive][------dir------] [--stem--][extension]
 *   [------parentPath------] [-----filename------]
 *
