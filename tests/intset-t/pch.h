@@ -1,10 +1,10 @@
 // Copyright Glen Knowles 2017 - 2023.
 // Distributed under the Boost Software License, Version 1.0.
 //
-// pch.h - dim test uset
+// pch.h - dim test intset
 
 // Public header
-#include "core/uset.h"
+#include "core/intset.h"
 
 // External library public headers
 #include "app/app.h"

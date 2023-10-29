@@ -33,6 +33,8 @@
 # libs/core/hash.cpp
 # libs/core/hash.h
 # libs/core/hash_crc32c.cpp
+# libs/core/intset.cpp
+# libs/core/intset.h
 # libs/core/list.h
 # libs/core/log.cpp
 # libs/core/log.h
@@ -65,8 +67,6 @@
 # libs/core/tokentable.h
 # libs/core/types.cpp
 # libs/core/types.h
-# libs/core/uset.cpp
-# libs/core/uset.h
 # libs/core/util.cpp
 # libs/core/util.h
 # libs/cppconf/compiler/visualc.h
@@ -228,6 +228,9 @@
 # tests/http-t/http-t.cpp
 # tests/http-t/pch.cpp
 # tests/http-t/pch.h
+# tests/intset-t/pch.cpp
+# tests/intset-t/pch.h
+# tests/intset-t/uset-t.cpp
 # tests/json-t/json-t.cpp
 # tests/json-t/pch.cpp
 # tests/json-t/pch.h
@@ -264,9 +267,6 @@
 # tests/tokentable-t/pch.cpp
 # tests/tokentable-t/pch.h
 # tests/tokentable-t/tokentable-t.cpp
-# tests/uset-t/pch.cpp
-# tests/uset-t/pch.h
-# tests/uset-t/uset-t.cpp
 # tools/cmtupd/CHANGELOG.md
 # tools/cmtupd/README.adoc
 # tools/cmtupd/cmtupd.cpp

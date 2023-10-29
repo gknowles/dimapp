@@ -12,6 +12,7 @@
 //#include "cron.h"
 #include "handle.h"
 #include "hash.h"
+#include "intset.h"
 #include "list.h"
 #include "log.h"
 #include "math.h"
@@ -29,5 +30,4 @@
 #include "timerlist.h"
 #include "tokentable.h"
 #include "types.h"
-#include "uset.h"
 #include "util.h"

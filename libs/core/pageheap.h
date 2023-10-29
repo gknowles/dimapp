@@ -6,7 +6,7 @@
 
 #include "cppconf/cppconf.h"
 
-#include "uset.h"
+#include "intset.h"
 
 #include <cassert>
 #include <cstdint>

@@ -1,7 +1,7 @@
 // Copyright Glen Knowles 2017 - 2023.
 // Distributed under the Boost Software License, Version 1.0.
 //
-// uset.h - dim core
+// intset.h - dim core
 #pragma once
 
 #include "cppconf/cppconf.h"
