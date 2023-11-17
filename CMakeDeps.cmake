@@ -228,9 +228,9 @@
 # tests/http-t/http-t.cpp
 # tests/http-t/pch.cpp
 # tests/http-t/pch.h
+# tests/intset-t/intset-t.cpp
 # tests/intset-t/pch.cpp
 # tests/intset-t/pch.h
-# tests/intset-t/uset-t.cpp
 # tests/json-t/json-t.cpp
 # tests/json-t/pch.cpp
 # tests/json-t/pch.h
