@@ -1483,7 +1483,7 @@ static void applyDestroys(SearchState * ss) {
 //      sets ss->node and ss->inode to the next node
 // If the search is over:
 //      returns false
-//      sets ss->found to true if the key was found, otherwise false
+//      sets ss->found to true if the key was found, otherwise remains false
 static bool insertAtSeg(SearchState * ss) {
     // Will either split on first, middle, last, after last (possible if it's
     // the end of the key), or will advance to next node.
@@ -1582,7 +1582,6 @@ static bool insertAtSeg(SearchState * ss) {
 
     // Continue processing the key.
     assert(ss->kpos % 2 == 0);
-    ss->found = false;
     return false;
 }
 
@@ -1652,7 +1651,6 @@ static bool insertAtHalfSeg (SearchState * ss) {
     }
 
     // Continue processing the key.
-    ss->found = false;
     return false;
 }
 
@@ -1663,11 +1661,10 @@ static bool insertAtFork (SearchState * ss) {
 
     int inext;
     if (ss->kpos == ss->klen) {
-        if (!nodeEndMarkFlag(ss->node)) {
-            copyForkWithKey(ss, &inext);
-            ss->found = false;
-        } else {
+        if (nodeEndMarkFlag(ss->node)) {
             ss->found = true;
+        } else {
+            copyForkWithKey(ss, &inext);
         }
         return false;
     }
@@ -1681,7 +1678,6 @@ static bool insertAtFork (SearchState * ss) {
     } else {
         if (ss->kpos == ss->klen)
             newUpdate<UpdateEndMark>(ss);
-        ss->found = false;
         return false;
     }
 }
@@ -1706,7 +1702,6 @@ static bool insertAtEndMark(SearchState * ss) {
     //  +-----------+
     addForkWithEnd(ss, ss->kval, true);
     nextKeyVal(ss);
-    ss->found = false;
     return false;
 }
 
@@ -1931,7 +1926,7 @@ static void eraseForkWithSegs(SearchState * ss, const UpdateFork & fork) {
     assert(sref.page.type == PageRef::kSource);
     seekNode(ss, sref.page.pgno, sref.data.pos);
 
-    // Any possible remote was already consume by AddForkWithKey().
+    // Any possible remote was already consume by copyForkWithKey().
     assert(nodeType(ss->node) != kNodeRemote);
 
     auto vals = forkVals(ss, fork.kidBits);
@@ -2176,7 +2171,8 @@ static bool containsAtHalfSeg(SearchState * ss) {
 //===========================================================================
 static bool containsAtFork(SearchState * ss) {
     if (ss->kpos == ss->klen) {
-        ss->found = nodeEndMarkFlag(ss->node);
+        if (nodeEndMarkFlag(ss->node))
+            ss->found = true;
         return false;
     }
     if (!forkBit(ss->node, ss->kval))
