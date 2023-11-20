@@ -1441,7 +1441,7 @@ static void applyUpdates(SearchState * ss) {
         } else {
             assert(roots <= 16);
             setMultiroot(ss->node, roots);
-            seekKid(ss, 0);
+            seekKidForUpdate(ss, 0);
             for (auto&& root : vpage.roots)
                 copyAny(ss, root);
         }
