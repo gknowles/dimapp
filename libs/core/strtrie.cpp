@@ -23,33 +23,33 @@ using USet = IntegralSet<unsigned,
 ***/
 
 // PLAN C - implicitly referenced byte aligned nodes
-// Multiroot
+// Multiroot (1)
 //  data[0] & 0x7 = kNodeMultiroot
 //  data[0] & 0xf0 = number of roots (1 - 16)
-// Segment - must be byte aligned with key, no odd nibble starts.
+// Segment (2) - must be byte aligned with key, no odd nibble starts.
 //  data[0] & 0x7 = kNodeSeg
 //  data[0] & 0x8 = has end of key
 //  data[0] & 0xf0 = keyLen (1 - 16) in full bytes (no odd nibble)
 //  data[1, keyLen] = bytes of key
 //  : followed by next node - only if not eok
-// Half Segment
+// Half Segment (3)
 //  data[0] & 0x7 = kNodeHalfSeg
 //  data[0] & 0x8 = has end of key
 //  data[0] & 0xf0 = key (1 nibble in length)
 //  : followed by next node - only if not eok
-// Fork
+// Fork (4)
 //  data[0] & 0x7 = kNodeFork
 //  data[0] & 0x8 = has end of key
 //  data[1, 2] = bitmap of existing children, all 16 bits means all 16 kids
 //  : followed by nodes[popcount(bitmap)]
-// Remote
+// EndMark (5)
+//  data[0] & 0x7 = kNodeEndMark
+//  data[0] & 0x8 = true (end of key - no content)
+// Remote (6)
 //  data[0] & 0x7 = kNodeRemote
 //  data[0] & 0x8 = false (has end of key)
 //  data[0] & 0xf0 = index of node (0 - 15)
-//  data(1, 4) = pgno
-// EndMark
-//  data[0] & 0x7 = kNodeEndMark
-//  data[0] & 0x8 = true (end of key - no content)
+//  data[1, 4] = pgno
 
 const size_t kMaxForkBit = 16;
 const size_t kMaxSegLen = 32;
@@ -589,7 +589,7 @@ static pmr::basic_string<LocalRef> kids(
     size_t pos,
     size_t len
 ) {
-    assert(pos && pos < INT_MAX);
+    assert(pos < INT_MAX);
     assert(len < INT_MAX);
     NodeRef out;
     out.page = { .type = PageRef::kSource, .pgno = ss->pgno };
@@ -1200,11 +1200,15 @@ static UpdateFork & copyForkWithKey(SearchState * ss, int * inext) {
         }
         fnode = getNode(ss, refs[i].pos);
         if (nodeType(fnode) == kNodeRemote && rpno == remotePage(fnode)) {
+            // Remote reference to same page that update extends to, use source
+            // from that page.
             assert(!rrefs.empty());
             auto & rref = rrefs[remotePos(fnode)];
             upd.refs[i] = makeSourceRef(ss, rref.pos, rref.len);
             upd.refs[i].page.pgno = rpno;
         } else {
+            // Remote page different from what update will, use this remote
+            // reference.
             upd.refs[i] = makeSourceRef(ss, refs[i].pos, refs[i].len);
         }
     }
@@ -1916,7 +1920,7 @@ static void eraseForkWithSegs(SearchState * ss, const UpdateFork & fork) {
     ss->updates.pop_back(); // Remove fork
     auto index = fork.refs[0].page.type == PageRef::kSource ? 0 : 1;
 
-    // Is fork on low nibble of a byte, rather than the high one?
+    // Is fork on low nibble of byte, rather than high one?
     auto lowFork = ss->foundKeyLen % 2 == 0;
 
     // Set foundKeyLen to 0 to clear foundKey for use as a compound seg node.
@@ -1925,9 +1929,6 @@ static void eraseForkWithSegs(SearchState * ss, const UpdateFork & fork) {
     auto & sref = fork.refs[index];
     assert(sref.page.type == PageRef::kSource);
     seekNode(ss, sref.page.pgno, sref.data.pos);
-
-    // Any possible remote was already consume by copyForkWithKey().
-    assert(nodeType(ss->node) != kNodeRemote);
 
     auto vals = forkVals(ss, fork.kidBits);
     auto sval = vals[index];
