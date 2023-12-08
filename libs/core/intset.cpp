@@ -21,18 +21,6 @@ using Node = IntegralSet<T,A>::Node;
 template <std::integral T, typename A>
 class IntegralSet<T,A>::Impl {
 public:
-    enum NodeType : int {
-        kEmpty,         // contains no values
-        kFull,          // contains all values in node's domain
-        kSmVector,      // small vector of values embedded in node struct
-        kVector,        // vector of values
-        kBitmap,        // bitmap covering all of node's possible values
-        kMeta,          // vector of nodes
-        kNodeTypes,
-        kMetaParent,    // link to parent meta node
-    };
-    static_assert(kMetaParent < 1 << kTypeBits);
-
     constinit static const size_t kLeafBits = min((size_t) 12, kBitWidth);
     constinit static const size_t kDataSize = (1 << kLeafBits) / 8;
 
@@ -3883,7 +3871,7 @@ NOT_EMPTY:
 //===========================================================================
 template <std::integral T, typename A>
 IntegralSet<T,A>::Node::Node()
-    : type{Impl::kEmpty}
+    : type{kEmpty}
     , depth{0}
     , base{0}
     , numBytes{0}
@@ -4050,7 +4038,7 @@ auto IntegralSet<T,A>::ranges() const -> RangeRange {
 //===========================================================================
 template <std::integral T, typename A>
 bool IntegralSet<T,A>::empty() const {
-    return m_node.type == Impl::kEmpty;
+    return m_node.type == kEmpty;
 }
 
 //===========================================================================
@@ -4544,7 +4532,7 @@ CHECK_END_OF_DEPTH:
             == Impl::absFinal(svalue, m_node->depth - 1)
     ) {
         m_node += 1;
-        assert(m_node->type == Impl::kMetaParent);
+        assert(m_node->type == kMetaParent);
         m_node = m_node->nodes;
         svalue = Impl::absBase(*m_node);
         goto CHECK_DEPTH;
@@ -4590,7 +4578,7 @@ CHECK_DEPTH:
 CHECK_END_OF_DEPTH:
     if (Impl::absBase(*m_node) == Impl::absBase(svalue, m_node->depth - 1)) {
         m_node += Impl::numNodes(m_node->depth);
-        assert(m_node->type == Impl::kMetaParent);
+        assert(m_node->type == kMetaParent);
         m_node = m_node->nodes;
         svalue = Impl::absFinal(*m_node);
         goto CHECK_DEPTH;
@@ -4631,7 +4619,7 @@ CHECK_DEPTH:
 CHECK_END_OF_DEPTH:
     if (Impl::absBase(*ptr) == Impl::absBase(svalue, ptr->depth - 1)) {
         ptr += Impl::numNodes(ptr->depth);
-        assert(ptr->type == Impl::kMetaParent);
+        assert(ptr->type == NodeType::kMetaParent);
         ptr = ptr->nodes;
         goto CHECK_DEPTH;
     }
@@ -4662,7 +4650,7 @@ CHECK_DEPTH:
 CHECK_END_OF_DEPTH:
     if (Impl::absFinal(*ptr) == Impl::absFinal(svalue, ptr->depth - 1)) {
         ptr += 1;
-        assert(ptr->type == Impl::kMetaParent);
+        assert(ptr->type == kMetaParent);
         ptr = ptr->nodes;
         goto CHECK_DEPTH;
     }

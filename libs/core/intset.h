@@ -58,8 +58,19 @@ public:
     static const size_t kDepthBits = 4;
     static const size_t kBaseBits = kBitWidth - kTypeBits - kDepthBits;
 
+    enum NodeType : int {
+        kEmpty,         // contains no values
+        kFull,          // contains all values in node's domain
+        kSmVector,      // small vector of values embedded in node struct
+        kVector,        // vector of values
+        kBitmap,        // bitmap covering all of node's possible values
+        kMeta,          // vector of nodes
+        kNodeTypes,
+        kMetaParent,    // link to parent meta node
+    };
+    static_assert(kMetaParent < 1 << kTypeBits);
     struct Node : NoCopy {
-        int type : kTypeBits;
+        enum NodeType type : kTypeBits;
         unsigned depth : kDepthBits;
         unsigned base : kBaseBits;
         uint16_t numBytes;  // space allocated
