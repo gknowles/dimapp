@@ -2094,6 +2094,7 @@ bool StrTrieBase::erase(string_view key) {
     if (ss->updates.empty()) {
         // No fork, must be the last key, just remove pages.
         applyDestroys(ss);
+        ss->pages->setRoot((pgno_t) -1);
         assert(ss->pages->empty());
         return true;
     }
