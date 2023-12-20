@@ -602,6 +602,19 @@ void IntegralSet<T,A>::Impl::swap(Node & left, Node & right) {
     memcpy(&tmp, &left, sizeof tmp);
     memcpy(&left, &right, sizeof left);
     memcpy(&right, &tmp, sizeof right);
+
+    // If a kMeta child is changing it's parent, change it's parent reference
+    // to the new parent.
+    if (left.type == kMeta) {
+        auto nlast = left.nodes + left.numValues;
+        assert(nlast->type == kMetaParent);
+        nlast->nodes = &left;
+    }
+    if (right.type == kMeta) {
+        auto nlast = right.nodes + right.numValues;
+        assert(nlast->type == kMetaParent);
+        nlast->nodes = &right;
+    }
 }
 
 //===========================================================================

@@ -210,6 +210,19 @@ static void test() {
     EXPECT(!tmp.intersects(tmp2));
     tmp.insert(4);
     EXPECT(tmp.intersects(tmp2));
+
+    // Swap with meta node.
+    tmp.clear();
+    tmp2.assign("1-5000 10001-15000 20001-25000");
+    swap(tmp, tmp2);
+    tmp.erase(2, 4999);
+    tmp.erase(10002, 4999);
+    tmp.erase(20002, 4999);
+    size_t cnt = tmp.count();
+    EXPECT(cnt == 3);
+    for ([[maybe_unused]] auto&& v : tmp)
+        cnt += 1;
+    EXPECT(cnt == 3);
 }
 
 //===========================================================================
