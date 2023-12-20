@@ -220,6 +220,7 @@ static void test() {
     tmp.erase(20002, 4999);
     size_t cnt = tmp.count();
     EXPECT(cnt == 3);
+    cnt = 0;
     for ([[maybe_unused]] auto&& v : tmp)
         cnt += 1;
     EXPECT(cnt == 3);
