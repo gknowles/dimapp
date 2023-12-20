@@ -50,6 +50,9 @@ public:
 template <int N>
 class PageHeap : public IPageHeap {
 public:
+    static const unsigned npos = (unsigned) -1;
+
+public:
     void clear();
 
     size_t pageCount() const;
@@ -113,7 +116,8 @@ inline void PageHeap<N>::destroy(size_t pgno) {
 //===========================================================================
 template <int N>
 inline void PageHeap<N>::setRoot(size_t pgno) {
-    assert(pgno < pageCount());
+    assert(pgno <= npos);
+    assert(pgno == npos && pageCount() == 0 || pgno < pageCount());
     m_root = pgno;
 }
 
