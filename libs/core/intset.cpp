@@ -738,6 +738,7 @@ void IntegralSet<T,A>::Impl::copy(
 //===========================================================================
 template <std::integral T, typename A>
 void IntegralSet<T,A>::Impl::copy(A * alloc, Node * left, Node && right) {
+    clear(alloc, left);
     swap(*left, right);
 }
 
@@ -893,7 +894,7 @@ void IntegralSet<T,A>::Impl::initMeta(A * alloc, Node * node, bool full) {
         memcpy(nptr, &def, sizeof *nptr);
 
     // Internally the array of nodes contains a trailing "node" at the end that
-    // is a pointer to the parent node->
+    // is a pointer to the parent node.
     memset(nlast, 0, sizeof *nlast);
     nlast->type = kMetaParent;
     nlast->nodes = node;
@@ -1010,6 +1011,7 @@ void IntegralSet<T,A>::Impl::initMeta(
         nptr->type = fptr->type;
         init(alloc, nptr, *fptr);
     }
+    // Copy and update kMetaParent node.
     memcpy(nlast, fptr, sizeof *nlast);
     nlast->nodes = node;
 }
@@ -3024,7 +3026,7 @@ bool IntegralSet<T,A>::Impl::isecMeta(const Node & left, const Node & right) {
 
 /****************************************************************************
 *
-*   insert(A *, Node &, const Node &)
+*   insert(A *, Node *, const Node &)
 *
 ***/
 
@@ -4430,6 +4432,7 @@ auto IntegralSet<T,A>::Iter::makeEnd(const Node * node) -> Iter {
     while (node->depth) {
         auto pos = Impl::nodePos(Impl::absBase(*node), node->depth - 1);
         node += Impl::numNodes(node->depth) - pos;
+        assert(node->type == kMetaParent);
         node = node->nodes;
     }
     return Iter(node);

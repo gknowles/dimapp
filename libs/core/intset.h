@@ -68,7 +68,7 @@ public:
         kNodeTypes,
         kMetaParent,    // link to parent meta node
     };
-    static_assert(kMetaParent < 1 << kTypeBits);
+    static_assert(kMetaParent < (1 << kTypeBits));
     struct Node : NoCopy {
         enum NodeType type : kTypeBits;
         unsigned depth : kDepthBits;
