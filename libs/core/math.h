@@ -30,6 +30,23 @@ constexpr uint8_t reverseBits(uint8_t x) {
 }
 
 //===========================================================================
+constexpr uint16_t reverseBits(uint16_t x) {
+    x = ((x & 0xaaaa) >> 1)|((x & 0x5555) << 1);
+    x = ((x & 0xcccc) >> 2)|((x & 0x3333) << 2);
+    x = ((x & 0xf0f0) >> 4)|((x & 0x0f0f) << 4);
+    return (x >> 8) | (x << 8);
+}
+
+//===========================================================================
+constexpr uint32_t reverseBits(uint32_t x) {
+    x = ((x & 0xaaaa'aaaa) >> 1)|((x & 0x5555'5555) << 1);
+    x = ((x & 0xcccc'cccc) >> 2)|((x & 0x3333'3333) << 2);
+    x = ((x & 0xf0f0'f0f0) >> 4)|((x & 0x0f0f'0f0f) << 4);
+    x = ((x & 0xff00'ff00) >> 8)|((x & 0x00ff'00ff) << 8);
+    return (x >> 16) | (x << 16);
+}
+
+//===========================================================================
 constexpr uint64_t reverseBits(uint64_t x) {
     x = ((x & 0xaaaa'aaaa'aaaa'aaaa) >> 1)|((x & 0x5555'5555'5555'5555) << 1);
     x = ((x & 0xcccc'cccc'cccc'cccc) >> 2)|((x & 0x3333'3333'3333'3333) << 2);
@@ -82,6 +99,9 @@ constexpr int roundupDigits10(int digits, uint32_t val) {
 // Number of digits required to display a number in decimal
 constexpr int digits10(uint32_t val) {
     return Detail::roundupDigits10(Detail::floorDigits10(val), val);
+
+    // Alternate implementation:
+    //  return floor(log10(val)) + 1;
 }
 
 } // namespace
