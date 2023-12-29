@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2021.
+// Copyright Glen Knowles 2016 - 2023.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // util.h - dim core
@@ -91,7 +91,7 @@ constexpr uint16_t ntoh16(uint16_t val) {
     if constexpr (std::endian::native == std::endian::big) {
         return val;
     } else {
-        return bswap16(val);
+        return std::byteswap(val);
     }
 }
 
@@ -114,7 +114,7 @@ constexpr uint32_t ntoh32(uint32_t val) {
     if constexpr (std::endian::native == std::endian::big) {
         return val;
     } else {
-        return bswap32(val);
+        return std::byteswap(val);
     }
 }
 
@@ -129,7 +129,7 @@ constexpr uint64_t ntoh64(uint64_t val) {
     if constexpr (std::endian::native == std::endian::big) {
         return val;
     } else {
-        return bswap64(val);
+        return std::byteswap(val);
     }
 }
 
@@ -158,7 +158,7 @@ constexpr uint16_t hton16(uint16_t val) {
     if constexpr (std::endian::native == std::endian::big) {
         return val;
     } else {
-        return bswap16(val);
+        return std::byteswap(val);
     }
 }
 
@@ -182,7 +182,7 @@ constexpr uint32_t hton32(uint32_t val) {
     if constexpr (std::endian::native == std::endian::big) {
         return val;
     } else {
-        return bswap32(val);
+        return std::byteswap(val);
     }
 }
 
@@ -197,7 +197,7 @@ constexpr uint64_t hton64(uint64_t val) {
     if constexpr (std::endian::native == std::endian::big) {
         return val;
     } else {
-        return bswap64(val);
+        return std::byteswap(val);
     }
 }
 

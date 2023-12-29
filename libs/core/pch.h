@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2022.
+// Copyright Glen Knowles 2015 - 2023.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // pch.h - dim core
@@ -9,6 +9,7 @@
 // External library public headers
 // Standard headers
 #include <atomic>
+#include <bit>
 #include <cassert>
 #include <cerrno>
 #include <charconv>

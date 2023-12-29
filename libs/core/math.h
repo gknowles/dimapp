@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2022.
+// Copyright Glen Knowles 2016 - 2023.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // math.h - dim core
@@ -82,63 +82,6 @@ constexpr int roundupDigits10(int digits, uint32_t val) {
 // Number of digits required to display a number in decimal
 constexpr int digits10(uint32_t val) {
     return Detail::roundupDigits10(Detail::floorDigits10(val), val);
-}
-
-
-/****************************************************************************
-*
-*   Byte swap
-*
-***/
-
-//===========================================================================
-constexpr uint16_t bswap16(uint16_t uval) {
-    auto val = (uint16_t) uval;
-    return (val >> 8) | (val << 8);
-}
-
-//===========================================================================
-constexpr uint32_t bswap32(uint32_t uval) {
-    auto val = (uint32_t) uval;
-    return (val >> 24)
-        | ((val & 0x00ff'0000) >> 8)
-        | ((val & 0x0000'ff00) << 8)
-        | (val << 24);
-}
-
-//===========================================================================
-constexpr uint64_t bswap64(uint64_t val) {
-    if (std::is_constant_evaluated()) {
-        return (val >> 56)
-            | ((val & 0x00ff'0000'0000'0000) >> 40)
-            | ((val & 0x0000'ff00'0000'0000) >> 24)
-            | ((val & 0x0000'00ff'0000'0000) >> 8)
-            | ((val & 0x0000'0000'ff00'0000) << 8)
-            | ((val & 0x0000'0000'00ff'0000) << 24)
-            | ((val & 0x0000'0000'0000'ff00) << 40)
-            | (val << 56);
-    } else {
-        return _byteswap_uint64(val);
-    }
-}
-
-//===========================================================================
-constexpr auto bswap(std::unsigned_integral auto val) {
-#ifdef __cpp_lib_byteswap
-    return std::byteswap(val);
-#else
-    if constexpr (sizeof val == 1) {
-        return val;
-    } else if constexpr (sizeof val == 2) {
-        return bswap16(val);
-    } else if constexpr (sizeof val == 4) {
-        return bswap32(val);
-    } else if constexpr (sizeof val == 8) {
-        return bswap64(val);
-    } else {
-        static_assert(!"Must be 8, 16, 32, or 64 bit unsigned integer");
-    }
-#endif
 }
 
 } // namespace

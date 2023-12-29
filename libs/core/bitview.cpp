@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2022.
+// Copyright Glen Knowles 2017 - 2023.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // bitview.cpp - dim core
@@ -37,7 +37,7 @@ enum OpType {
 static constexpr uint64_t bitmask(size_t bitpos) {
     auto mask = 1ull << (BitView::kWordBits - bitpos % BitView::kWordBits - 1);
     if constexpr (endian::native == endian::little)
-        mask = bswap64(mask);
+        mask = byteswap(mask);
     return mask;
 }
 
@@ -83,14 +83,14 @@ static void apply(
             auto mask = ((Word) 1 << bitcount) - 1;
             mask <<= bits - bitcount;
             if constexpr (std::endian::native == std::endian::little)
-                mask = bswap64(mask);
+                mask = byteswap(mask);
             apply<Op, Word>(ptr, count, mask);
         }
     } else {
         if (bits < kWordBits) {
             auto mask = ((Word) 1 << bits) - 1;
             if constexpr (std::endian::native == std::endian::little)
-                mask = bswap64(mask);
+                mask = byteswap(mask);
             apply<Op, Word>(ptr, count, mask);
             bitcount -= bits;
             ptr += 1;
@@ -102,7 +102,7 @@ static void apply(
             auto mask = ((Word) 1 << bitcount) - 1;
             mask <<= kWordBits - bitcount;
             if constexpr (std::endian::native == std::endian::little)
-                mask = bswap64(mask);
+                mask = byteswap(mask);
             apply<Op, Word>(ptr, count, mask);
         }
     }

@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2021.
+// Copyright Glen Knowles 2016 - 2023.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // hash.cpp - dim core
@@ -75,11 +75,11 @@ static uint64_t get64le(const void * ptr) {
         }
     } else {
         if constexpr (kNativeUnaligned64) {
-            return bswap64(*static_cast<const uint64_t *>(ptr));
+            return byteswap(*static_cast<const uint64_t *>(ptr));
         } else {
             uint64_t out;
             memcpy(&out, ptr, sizeof out);
-            return bswap64(out);
+            return byteswap(out);
         }
     }
 }
