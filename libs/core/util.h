@@ -149,7 +149,7 @@ constexpr float ntohf32(const void * vptr) {
 //===========================================================================
 constexpr double ntohf64(const void * vptr) {
     static_assert(sizeof uint64_t == 8);
-    static_assert(std::numeric_limits<float>::is_iec559);
+    static_assert(std::numeric_limits<double>::is_iec559);
     return std::bit_cast<double>(ntoh64(vptr));
 }
 
