@@ -282,7 +282,8 @@ size_t IBitView::rfindZero(size_t bitpos) const {
     auto pos = bitpos / kWordBits;
     auto last = data() + pos;
     if (pos < size()) {
-        if (auto val = ~ntoh64(last) & ~(kWordMax >> bitpos % kWordBits))
+        auto mask = kWordMax << (kWordBits - bitpos % kWordBits - 1);
+        if (auto val = ~ntoh64(last) & mask)
             return trailingPos(pos, val);
     } else {
         last = data() + size();

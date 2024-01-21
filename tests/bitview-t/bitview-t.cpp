@@ -73,6 +73,22 @@ static void app(int argc, char *argv[]) {
     EXPECT(v.rfind(1) == 1);
     EXPECT(v.rfind(64 * size(buf) - 1) == 64 * size(buf) - 1);
     EXPECT(v.rfind() == 64 * size(buf) - 1);
+    EXPECT(v.findZero() == v.npos);
+    EXPECT(v.rfindZero() == v.npos);
+
+    v.reset().set(1).set(3);
+    EXPECT(v.find(0) == 1);
+    EXPECT(v.find(2) == 3);
+    EXPECT(v.find(4) == BitView::npos);
+    EXPECT(v.rfind(2) == 1);
+    EXPECT(v.rfind(4) == 3);
+    EXPECT(v.rfind(48) == 3);
+    EXPECT(v.rfind(0) == v.npos);
+    EXPECT(v.findZero(0) == 0);
+    EXPECT(v.findZero(1) == 2);
+    EXPECT(v.rfindZero() == 64 * size(buf) - 1);
+    EXPECT(v.rfindZero(2) == 2);
+    EXPECT(v.rfindZero(1) == 0);
 
     testSignalShutdown();
 }
