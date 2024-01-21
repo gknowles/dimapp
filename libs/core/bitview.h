@@ -160,7 +160,7 @@ public:
     // equal to 64 (the number of bits that uint64_t can hold).
     BitSpan & setBits(size_t pos, size_t count, uint64_t value);
 
-    // Returns word, or pointer to word, that contains the bit.
+    // Returns pointer to word that contains the bit.
     uint64_t * data(size_t bitpos);
 
 private:
