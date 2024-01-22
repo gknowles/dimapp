@@ -33,7 +33,7 @@ jobs:
         shell: cmd
     env:
       tests: |
-          bin\bitview-t
+          bin\bitspan-t
           bin\charbuf-t
           bin\file-t
           bin\glob-t
