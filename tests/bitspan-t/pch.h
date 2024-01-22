@@ -1,10 +1,10 @@
 // Copyright Glen Knowles 2018 - 2022.
 // Distributed under the Boost Software License, Version 1.0.
 //
-// pch.h - dim test bitview
+// pch.h - dim test bitspan
 
 // Public header
-#include "core/bitview.h"
+#include "core/bitspan.h"
 
 // External library public headers
 #include "app/app.h"

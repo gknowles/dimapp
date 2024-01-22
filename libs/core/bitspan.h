@@ -1,7 +1,7 @@
 // Copyright Glen Knowles 2017 - 2023.
 // Distributed under the Boost Software License, Version 1.0.
 //
-// bitview.h - dim core
+// bitspan.h - dim core
 //
 // View of bits over an array of uint64_t's, bits of view are in network
 // byte order (i.e. big-endian, MSB first).

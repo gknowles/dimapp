@@ -22,8 +22,8 @@
 # libs/app/webadmin.h
 # libs/core/algo.h
 # libs/core/appint.h
-# libs/core/bitview.cpp
-# libs/core/bitview.h
+# libs/core/bitspan.cpp
+# libs/core/bitspan.h
 # libs/core/charbuf.cpp
 # libs/core/charbuf.h
 # libs/core/core.h
@@ -205,9 +205,9 @@
 # libs/xml/xmlbaseparsebase.h
 # libs/xml/xmlbaseparseimpl.h
 # libs/xml/xstreamparser.cpp
-# tests/bitview-t/bitview-t.cpp
-# tests/bitview-t/pch.cpp
-# tests/bitview-t/pch.h
+# tests/bitspan-t/bitspan-t.cpp
+# tests/bitspan-t/pch.cpp
+# tests/bitspan-t/pch.h
 # tests/charbuf-t/charbuf-t.cpp
 # tests/charbuf-t/pch.cpp
 # tests/charbuf-t/pch.h
