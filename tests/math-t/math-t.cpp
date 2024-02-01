@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2022.
+// Copyright Glen Knowles 2017 - 2024.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // math-t.cpp - dim test core
@@ -49,6 +49,8 @@ static void app(int argc, char *argv[]) {
     EXPECT(o16 == 33000);
     o16 = ntoh16(hton16(buf, (uint16_t) -2));
     EXPECT(o16 == 65534);
+    auto o32 = ntoh32(hton32(buf, 123456789));
+    EXPECT(o32 == 123456789);
 
     testSignalShutdown();
 }

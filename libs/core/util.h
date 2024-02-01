@@ -171,9 +171,9 @@ constexpr char * hton16(void * out, uint16_t val) {
 //===========================================================================
 constexpr char * hton24(void * vout, uint32_t val) {
     auto out = (char *) vout;
-    *out++ = (val >> 16) & 0xff;
-    *out++ = (val >> 8) & 0xff;
-    *out++ = val & 0xff;
+    out[0] = (val >> 16) & 0xff;
+    out[1] = (val >> 8) & 0xff;
+    out[2] = val & 0xff;
     return out;
 }
 
