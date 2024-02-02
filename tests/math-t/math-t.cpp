@@ -39,17 +39,20 @@ static void app(int argc, char *argv[]) {
 
     char buf[100];
     double dval = 1.0f;
-    auto ptr = htonf64(buf, dval);
-    auto dout = ntohf64(ptr);
+    htonf64(buf, dval);
+    auto dout = ntohf64(buf);
     EXPECT(dval == dout);
-    ptr = hton16(buf, 32000);
-    auto o16 = ntoh16(ptr);
+    hton16(buf, 32000);
+    auto o16 = ntoh16(buf);
     EXPECT(o16 == 32000);
-    o16 = ntoh16(hton16(buf, 33000));
+    hton16(buf, 33000);
+    o16 = ntoh16(buf);
     EXPECT(o16 == 33000);
-    o16 = ntoh16(hton16(buf, (uint16_t) -2));
+    hton16(buf, (uint16_t) -2);
+    o16 = ntoh16(buf);
     EXPECT(o16 == 65534);
-    auto o32 = ntoh32(hton32(buf, 123456789));
+    hton32(buf, 123456789);
+    auto o32 = ntoh32(buf);
     EXPECT(o32 == 123456789);
 
     testSignalShutdown();

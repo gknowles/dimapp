@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2018 - 2020.
+// Copyright Glen Knowles 2018 - 2024.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // resource.cpp - dim app
@@ -57,7 +57,9 @@ bool ResFileMap::erase(string_view name) {
 //===========================================================================
 static void appendNum(CharBuf * out, uint64_t val) {
     char tmp[8];
-    out->append(hton64(tmp, val), size(tmp));
+    static_assert(size(tmp) == sizeof val);
+    hton64(tmp, val);
+    out->append(tmp, size(tmp));
 }
 
 //===========================================================================

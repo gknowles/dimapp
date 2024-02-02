@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2023.
+// Copyright Glen Knowles 2016 - 2024.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // httpconn.cpp - dim http
@@ -119,8 +119,8 @@ constexpr int ntoh31(const char frame[]) {
 }
 
 //===========================================================================
-constexpr char * hton31(char * out, int val) {
-    return hton32(out, unsigned(val) & 0x7fff'ffff);
+constexpr void hton31(char * out, int val) {
+    hton32(out, unsigned(val) & 0x7fff'ffff);
 }
 
 

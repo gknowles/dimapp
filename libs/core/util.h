@@ -163,18 +163,28 @@ constexpr uint16_t hton16(uint16_t val) {
 }
 
 //===========================================================================
-constexpr char * hton16(void * out, uint16_t val) {
+constexpr void hton16(void * out, uint16_t val) {
     *(uint16_t *) out = hton16(val);
-    return (char *) out;
 }
 
 //===========================================================================
-constexpr char * hton24(void * vout, uint32_t val) {
+constexpr void hton16(char ** out, uint16_t val) {
+    hton16(*out, val);
+    *out += sizeof val;
+}
+
+//===========================================================================
+constexpr void hton24(void * vout, uint32_t val) {
     auto out = (char *) vout;
     out[0] = (val >> 16) & 0xff;
     out[1] = (val >> 8) & 0xff;
     out[2] = val & 0xff;
-    return out;
+}
+
+//===========================================================================
+constexpr void hton24(char ** out, uint32_t val) {
+    hton24(*out, val);
+    *out += 3;
 }
 
 //===========================================================================
@@ -187,9 +197,14 @@ constexpr uint32_t hton32(uint32_t val) {
 }
 
 //===========================================================================
-constexpr char * hton32(void * out, uint32_t val) {
+constexpr void hton32(void * out, uint32_t val) {
     *(uint32_t *) out = hton32(val);
-    return (char *) out;
+}
+
+//===========================================================================
+constexpr void hton32(char ** out, uint32_t val) {
+    hton32(*out, val);
+    *out += sizeof val;
 }
 
 //===========================================================================
@@ -202,19 +217,34 @@ constexpr uint64_t hton64(uint64_t val) {
 }
 
 //===========================================================================
-constexpr char * hton64(void * out, uint64_t val) {
+constexpr void hton64(void * out, uint64_t val) {
     *(uint64_t *) out = hton64(val);
-    return (char *) out;
 }
 
 //===========================================================================
-constexpr char * htonf32(void * out, float val) {
-    return hton32(out, std::bit_cast<uint32_t>(val));
+constexpr void hton64(char ** out, uint64_t val) {
+    hton64(*out, val);
+    *out += sizeof val;
 }
 
 //===========================================================================
-constexpr char * htonf64(void * out, double val) {
-    return hton64(out, std::bit_cast<uint64_t>(val));
+constexpr void htonf32(void * out, float val) {
+    hton32(out, std::bit_cast<uint32_t>(val));
+}
+
+//===========================================================================
+constexpr void htonf32(char ** out, float val) {
+    hton32(out, std::bit_cast<uint32_t>(val));
+}
+
+//===========================================================================
+constexpr void htonf64(void * out, double val) {
+    hton64(out, std::bit_cast<uint64_t>(val));
+}
+
+//===========================================================================
+constexpr void htonf64(char ** out, double val) {
+    hton64(out, std::bit_cast<uint64_t>(val));
 }
 
 } // namespace
