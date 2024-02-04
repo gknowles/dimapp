@@ -83,20 +83,40 @@ std::ostream & hexDump(std::ostream & os, std::string_view data);
 //===========================================================================
 // Network to host endian
 //===========================================================================
-constexpr uint8_t ntoh8(const void * vptr, const void ** eptr = nullptr) {
-    auto ptr = static_cast<const uint8_t *>(vptr);
-    if (eptr)
-        *eptr = ptr + 1;
-    return *ptr;
-}
-
-//===========================================================================
 constexpr uint16_t ntoh16(uint16_t val) {
     if constexpr (std::endian::native == std::endian::big) {
         return val;
     } else {
         return std::byteswap(val);
     }
+}
+
+//===========================================================================
+constexpr uint32_t ntoh32(uint32_t val) {
+    if constexpr (std::endian::native == std::endian::big) {
+        return val;
+    } else {
+        return std::byteswap(val);
+    }
+}
+
+//===========================================================================
+constexpr uint64_t ntoh64(uint64_t val) {
+    if constexpr (std::endian::native == std::endian::big) {
+        return val;
+    } else {
+        return std::byteswap(val);
+    }
+}
+
+//===========================================================================
+// Network to host endian from buffer
+//===========================================================================
+constexpr uint8_t ntoh8(const void * vptr, const void ** eptr = nullptr) {
+    auto ptr = static_cast<const uint8_t *>(vptr);
+    if (eptr)
+        *eptr = ptr + 1;
+    return *ptr;
 }
 
 //===========================================================================
@@ -118,15 +138,6 @@ constexpr uint32_t ntoh24(const void * vptr, const void ** eptr = nullptr) {
 }
 
 //===========================================================================
-constexpr uint32_t ntoh32(uint32_t val) {
-    if constexpr (std::endian::native == std::endian::big) {
-        return val;
-    } else {
-        return std::byteswap(val);
-    }
-}
-
-//===========================================================================
 constexpr uint32_t ntoh32(const void * vptr, const void ** eptr = nullptr) {
     auto ptr = static_cast<const uint32_t *>(vptr);
     if (eptr)
@@ -135,12 +146,10 @@ constexpr uint32_t ntoh32(const void * vptr, const void ** eptr = nullptr) {
 }
 
 //===========================================================================
-constexpr uint64_t ntoh64(uint64_t val) {
-    if constexpr (std::endian::native == std::endian::big) {
-        return val;
-    } else {
-        return std::byteswap(val);
-    }
+constexpr float ntohf32(const void * vptr, const void ** eptr = nullptr) {
+    static_assert(sizeof uint32_t == 4);
+    static_assert(std::numeric_limits<float>::is_iec559);
+    return std::bit_cast<float>(ntoh32(vptr, eptr));
 }
 
 //===========================================================================
@@ -149,13 +158,6 @@ constexpr uint64_t ntoh64(const void * vptr, const void ** eptr = nullptr) {
     if (eptr)
         *eptr = ptr + 1;
     return ntoh64(*ptr);
-}
-
-//===========================================================================
-constexpr float ntohf32(const void * vptr, const void ** eptr = nullptr) {
-    static_assert(sizeof uint32_t == 4);
-    static_assert(std::numeric_limits<float>::is_iec559);
-    return std::bit_cast<float>(ntoh32(vptr, eptr));
 }
 
 //===========================================================================
@@ -177,6 +179,26 @@ constexpr uint16_t hton16(uint16_t val) {
 }
 
 //===========================================================================
+constexpr uint32_t hton32(uint32_t val) {
+    if constexpr (std::endian::native == std::endian::big) {
+        return val;
+    } else {
+        return std::byteswap(val);
+    }
+}
+
+//===========================================================================
+constexpr uint64_t hton64(uint64_t val) {
+    if constexpr (std::endian::native == std::endian::big) {
+        return val;
+    } else {
+        return std::byteswap(val);
+    }
+}
+
+//===========================================================================
+// Host to network endian in buffer
+//===========================================================================
 constexpr void hton16(void * out, uint16_t val, void ** eptr = nullptr) {
     auto ptr = static_cast<uint16_t *>(out);
     if (eptr)
@@ -195,15 +217,6 @@ constexpr void hton24(void * out, uint32_t val, void ** eptr = nullptr) {
 }
 
 //===========================================================================
-constexpr uint32_t hton32(uint32_t val) {
-    if constexpr (std::endian::native == std::endian::big) {
-        return val;
-    } else {
-        return std::byteswap(val);
-    }
-}
-
-//===========================================================================
 constexpr void hton32(void * out, uint32_t val, void ** eptr = nullptr) {
     auto ptr = static_cast<uint32_t *>(out);
     if (eptr)
@@ -212,12 +225,8 @@ constexpr void hton32(void * out, uint32_t val, void ** eptr = nullptr) {
 }
 
 //===========================================================================
-constexpr uint64_t hton64(uint64_t val) {
-    if constexpr (std::endian::native == std::endian::big) {
-        return val;
-    } else {
-        return std::byteswap(val);
-    }
+constexpr void htonf32(void * out, float val, void ** eptr = nullptr) {
+    hton32(out, std::bit_cast<uint32_t>(val), eptr);
 }
 
 //===========================================================================
@@ -226,11 +235,6 @@ constexpr void hton64(void * out, uint64_t val, void ** eptr = nullptr) {
     if (eptr)
         *eptr = ptr + 1;
     *ptr = hton64(val);
-}
-
-//===========================================================================
-constexpr void htonf32(void * out, float val, void ** eptr = nullptr) {
-    hton32(out, std::bit_cast<uint32_t>(val), eptr);
 }
 
 //===========================================================================
