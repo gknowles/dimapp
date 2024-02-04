@@ -112,56 +112,74 @@ constexpr uint64_t ntoh64(uint64_t val) {
 //===========================================================================
 // Network to host endian from buffer
 //===========================================================================
-constexpr uint8_t ntoh8(const void * vptr, const void ** eptr = nullptr) {
+constexpr uint8_t ntoh8(const void * vptr, const std::byte ** eptr = nullptr) {
     auto ptr = static_cast<const uint8_t *>(vptr);
     if (eptr)
-        *eptr = ptr + 1;
+        *eptr = reinterpret_cast<const std::byte *>(ptr + 1);
     return *ptr;
 }
 
 //===========================================================================
-constexpr uint16_t ntoh16(const void * vptr, const void ** eptr = nullptr) {
+constexpr uint16_t ntoh16(
+    const void * vptr,
+    const std::byte ** eptr = nullptr
+) {
     auto ptr = static_cast<const uint16_t *>(vptr);
     if (eptr)
-        *eptr = ptr + 1;
+        *eptr = reinterpret_cast<const std::byte *>(ptr + 1);
     return ntoh16(*ptr);
 }
 
 //===========================================================================
-constexpr uint32_t ntoh24(const void * vptr, const void ** eptr = nullptr) {
+constexpr uint32_t ntoh24(
+    const void * vptr,
+    const std::byte ** eptr = nullptr
+) {
     auto ptr = static_cast<const char *>(vptr);
     if (eptr)
-        *eptr = ptr + 3;
+        *eptr = reinterpret_cast<const std::byte *>(ptr + 3);
     return ((uint32_t)(uint8_t)ptr[0] << 16)
         + ((uint32_t)(uint8_t)ptr[1] << 8)
         + (uint8_t)ptr[2];
 }
 
 //===========================================================================
-constexpr uint32_t ntoh32(const void * vptr, const void ** eptr = nullptr) {
+constexpr uint32_t ntoh32(
+    const void * vptr,
+    const std::byte ** eptr = nullptr
+) {
     auto ptr = static_cast<const uint32_t *>(vptr);
     if (eptr)
-        *eptr = ptr + 1;
+        *eptr = reinterpret_cast<const std::byte *>(ptr + 1);
     return ntoh32(*ptr);
 }
 
 //===========================================================================
-constexpr float ntohf32(const void * vptr, const void ** eptr = nullptr) {
+constexpr float ntohf32(
+    const void * vptr,
+    const std::byte ** eptr = nullptr
+) {
     static_assert(sizeof uint32_t == 4);
     static_assert(std::numeric_limits<float>::is_iec559);
     return std::bit_cast<float>(ntoh32(vptr, eptr));
 }
 
 //===========================================================================
-constexpr uint64_t ntoh64(const void * vptr, const void ** eptr = nullptr) {
+constexpr uint64_t ntoh64(
+    const void * vptr,
+    const std::byte ** eptr = nullptr
+) {
     auto ptr = static_cast<const uint64_t *>(vptr);
     if (eptr)
-        *eptr = ptr + 1;
+        *eptr = reinterpret_cast<const std::byte *>(ptr + 1);
     return ntoh64(*ptr);
 }
 
 //===========================================================================
-constexpr double ntohf64(const void * vptr, const void ** eptr = nullptr) {
+constexpr double ntohf64(
+    const void * vptr,
+    const std::byte ** eptr = nullptr
+) {
     static_assert(sizeof uint64_t == 8);
     static_assert(std::numeric_limits<double>::is_iec559);
     return std::bit_cast<double>(ntoh64(vptr, eptr));
@@ -199,47 +217,75 @@ constexpr uint64_t hton64(uint64_t val) {
 //===========================================================================
 // Host to network endian in buffer
 //===========================================================================
-constexpr void hton16(void * out, uint16_t val, void ** eptr = nullptr) {
+constexpr std::byte * hton16(
+    void * out,
+    uint16_t val,
+    std::byte ** eptr = nullptr
+) {
     auto ptr = static_cast<uint16_t *>(out);
     if (eptr)
-        *eptr = ptr + 1;
+        *eptr = reinterpret_cast<std::byte *>(ptr + 1);
     *ptr = hton16(val);
+    return static_cast<std::byte *>(out);
 }
 
 //===========================================================================
-constexpr void hton24(void * out, uint32_t val, void ** eptr = nullptr) {
+constexpr std::byte * hton24(
+    void * out,
+    uint32_t val,
+    std::byte ** eptr = nullptr
+) {
     auto ptr = static_cast<uint8_t *>(out);
     if (eptr)
-        *eptr = ptr + 3;
+        *eptr = reinterpret_cast<std::byte *>(ptr + 3);
     ptr[0] = (val >> 16) & 0xff;
     ptr[1] = (val >> 8) & 0xff;
     ptr[2] = val & 0xff;
+    return static_cast<std::byte *>(out);
 }
 
 //===========================================================================
-constexpr void hton32(void * out, uint32_t val, void ** eptr = nullptr) {
+constexpr std::byte * hton32(
+    void * out,
+    uint32_t val,
+    std::byte ** eptr = nullptr
+) {
     auto ptr = static_cast<uint32_t *>(out);
     if (eptr)
-        *eptr = ptr + 1;
+        *eptr = reinterpret_cast<std::byte *>(ptr + 1);
     *ptr = hton32(val);
+    return static_cast<std::byte *>(out);
 }
 
 //===========================================================================
-constexpr void htonf32(void * out, float val, void ** eptr = nullptr) {
-    hton32(out, std::bit_cast<uint32_t>(val), eptr);
+constexpr std::byte * htonf32(
+    void * out,
+    float val,
+    std::byte ** eptr = nullptr
+) {
+    return hton32(out, std::bit_cast<uint32_t>(val), eptr);
 }
 
 //===========================================================================
-constexpr void hton64(void * out, uint64_t val, void ** eptr = nullptr) {
+constexpr std::byte * hton64(
+    void * out,
+    uint64_t val,
+    std::byte ** eptr = nullptr
+) {
     auto ptr = static_cast<uint64_t *>(out);
     if (eptr)
-        *eptr = ptr + 1;
+        *eptr = reinterpret_cast<std::byte *>(ptr + 1);
     *ptr = hton64(val);
+    return static_cast<std::byte *>(out);
 }
 
 //===========================================================================
-constexpr void htonf64(void * out, double val, void ** eptr = nullptr) {
-    hton64(out, std::bit_cast<uint64_t>(val), eptr);
+constexpr std::byte * htonf64(
+    void * out,
+    double val,
+    std::byte ** eptr = nullptr
+) {
+    return hton64(out, std::bit_cast<uint64_t>(val), eptr);
 }
 
 } // namespace
