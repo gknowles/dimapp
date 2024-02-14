@@ -163,7 +163,13 @@ inline static void internalTests() {
     check(*vi == "abc");
     vi = vals.findLessEqual("abd");
     check(*vi == "abd");
+    auto ii = vals.equalRange("abc");
+    check(*ii.first == "abc");
+    check(*ii.second == "abd");
+    ii = vals.equalRange("abe");
+    check(*ii.first == "aw" && ii.first == ii.second);
 
+    check(vals.front() == "abc");
     check(vals.back() == "aw");
 
     for (auto&& key : keys) {
@@ -174,8 +180,35 @@ inline static void internalTests() {
 }
 
 //===========================================================================
+static string toKey(uint64_t val) {
+    const char * names[] = {
+        "zero", "one", "two", "three", "four",
+        "five", "six", "seven", "eight", "nine",
+    };
+    string out;
+    for (; val >= 10; val /= 10) {
+        out += names[val % 10];
+        out += '.';
+    }
+    out += names[val];
+    return out;
+}
+
+//===========================================================================
+inline static void fillTests() {
+    if (s_verbose)
+        cout << "\n> FILL TESTS" << endl;
+    StrTrie vals;
+    for (auto i = 0; i < 1000; ++i)
+        vals.insert(toKey(i));
+    ostringstream out;
+    vals.dumpStats(out);
+    vals.StrTrieBase::clear();
+    check(vals.empty());
+}
+
+//===========================================================================
 inline static void randomFill(size_t count, size_t maxLen, size_t charVals) {
-    [[maybe_unused]] int line = 0;
     if (!count)
         return;
     if (s_verbose) {
@@ -253,8 +286,10 @@ static void app(int argc, char *argv[]) {
         return appSignalShutdown(EX_OK);
     }
 
-    if (*test)
+    if (*test) {
         internalTests();
+        fillTests();
+    }
     if (*fill)
         randomFill(*fill, 25, 26);
 

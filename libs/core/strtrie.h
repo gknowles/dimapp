@@ -49,8 +49,10 @@ public:
     bool empty() const { return m_pages->empty(); }
 
     // modify
+    virtual void clear();
     bool insert(std::string_view val);
     bool erase(std::string_view val);
+    bool eraseWithPrefix(std::string_view prefix);
 
     // search
     value_type front() const;
@@ -78,7 +80,7 @@ class StrTrie : public StrTrieBase {
 public:
     StrTrie ();
 
-    void clear();
+    void clear() override;
 
     void debug(bool enable = true) { m_debug = enable; }
     std::ostream * const debugStream() const override;
@@ -108,7 +110,8 @@ public:
 public:
     explicit Iter(const StrTrieBase * cont);
     explicit Iter(std::shared_ptr<Iter::Impl> impl);
-    Iter(const Iter & from) = default;
+    Iter(const Iter & from);
+    Iter(Iter && from) : Iter(from.m_impl) {}
     Iter & operator=(const Iter & from) = default;
     explicit operator bool() const;
 

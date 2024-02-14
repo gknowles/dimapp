@@ -2127,6 +2127,54 @@ bool StrTrieBase::erase(string_view key) {
 
 /****************************************************************************
 *
+*   Clear
+*
+***/
+
+//===========================================================================
+static int nodeLenAndPages(USet * out, const StrTrieBase::Node * node) {
+    auto len = nodeHdrLen(node);
+    auto type = nodeType(node);
+    if (type == kNodeRemote) {
+        out->insert(remotePage(node));
+        return len;
+    }
+    auto num = numKids(node);
+    for (auto i = 0; i < num; ++i)
+        len += nodeLenAndPages(out, node + len);
+    assert(len > 0 && len < INT_MAX);
+    return len;
+}
+
+//===========================================================================
+void StrTrieBase::clear() {
+    if (empty())
+        return;
+
+    TempHeap heap;
+    auto ss = Node::makeState(&heap, this, {}, false);
+    USet processed(ss->heap);
+    USet unprocessed(ss->heap);
+    unprocessed.insert((pgno_t) ss->pages->root());
+    while (unprocessed) {
+        ss->spages.clear();
+        for (auto && pgno : unprocessed) {
+            seekNode(ss, pgno, 0);
+            nodeLenAndPages(&ss->spages, ss->node);
+        }
+        processed.insert(unprocessed);
+        swap(ss->spages, unprocessed);
+        unprocessed.erase(processed);
+    }
+    swap(ss->spages, processed);
+    applyDestroys(ss);
+    ss->pages->setRoot((pgno_t) -1);
+    assert(ss->pages->empty());
+}
+
+
+/****************************************************************************
+*
 *   Contains
 *
 ***/
@@ -2376,6 +2424,11 @@ struct StrTrieBase::Iter::Impl {
     vector<SearchFork> forks;
     bool endMark = true;
 };
+
+//===========================================================================
+StrTrieBase::Iter::Iter(const Iter & from)
+    : m_impl(make_shared<Impl>(*from.m_impl))
+{}
 
 //===========================================================================
 StrTrieBase::Iter::Iter(const StrTrieBase * cont)
@@ -2731,7 +2784,9 @@ auto StrTrieBase::equalRange(string_view key) const
     -> pair<Iter, Iter>
 {
     auto first = lowerBound(key);
-    auto second = first && *first == key ? ++Iter(first) : first;
+    auto second = first;
+    if (second && *second == key)
+        ++second;
     pair<Iter, Iter> out = { move(first), move(second) };
     return out;
 }
