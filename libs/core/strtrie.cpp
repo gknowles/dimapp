@@ -2819,8 +2819,13 @@ void StrTrie::clear() {
 }
 
 //===========================================================================
+void StrTrie::debugStream(std::ostream * os) {
+    m_dstream = os;
+}
+
+//===========================================================================
 ostream * const StrTrie::debugStream() const {
-    return m_debug ? &cout : nullptr;
+    return m_dstream;
 }
 
 

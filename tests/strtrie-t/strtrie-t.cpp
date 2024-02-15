@@ -58,7 +58,7 @@ static void printAction(
         cout << "---\n" << action << ", len=" << val.size() << ":\n";
         hexDump(cout, val);
     }
-    vals->debug(s_verbose);
+    vals->debugStream(s_verbose ? &cout : nullptr);
 }
 
 //===========================================================================
@@ -203,6 +203,8 @@ inline static void fillTests() {
         vals.insert(toKey(i));
     ostringstream out;
     vals.dumpStats(out);
+    out.str({});
+    vals.debugStream(&out);
     vals.StrTrieBase::clear();
     check(vals.empty());
 }

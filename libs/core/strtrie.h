@@ -82,12 +82,12 @@ public:
 
     void clear() override;
 
-    void debug(bool enable = true) { m_debug = enable; }
+    void debugStream(std::ostream * os);
     std::ostream * const debugStream() const override;
     void dumpStats(std::ostream & os) const;
 
 private:
-    bool m_debug = false;
+    std::ostream * m_dstream = nullptr;
     PageHeap<512> m_heapImpl;
 };
 
