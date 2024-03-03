@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017.
+// Copyright Glen Knowles 2017 - 2024.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // dimcli_userconfig.h - dim cppconf
