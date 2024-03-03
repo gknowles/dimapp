@@ -77,6 +77,13 @@
     5249 /* 'bitfield' of type 'enumeration_name' has named enumerators with
             values that cannot be represented in the given bit field width of
             'bitfield_width'. */ \
+    5262 /* implicit fall-through occurs here; are you missing a break
+            statement? Use [[fallthrough]] when a break statement is
+            intentionally omitted between cases */ \
+    5266 /* 'const' qualifier on return type has no effect */ \
+    5267 /* definition of implicit copy constructor/assignment operator for
+            'type' is deprecated because it has a user-provided assignment
+            operator/copy constructor */ \
 )
 
 #ifdef DIMAPP_LIB_DYN_LINK

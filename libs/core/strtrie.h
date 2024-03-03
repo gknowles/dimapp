@@ -66,7 +66,7 @@ public:
     std::pair<iterator, iterator> equalRange(std::string_view val) const;
 
     // debug
-    virtual std::ostream * const debugStream() const { return nullptr; }
+    virtual std::ostream * debugStream() const { return nullptr; }
 
 protected:
     StrTrieBase() = default;
@@ -83,7 +83,7 @@ public:
     void clear() override;
 
     void debugStream(std::ostream * os);
-    std::ostream * const debugStream() const override;
+    std::ostream * debugStream() const override;
     void dumpStats(std::ostream & os) const;
 
 private:

@@ -257,6 +257,7 @@ public:
 
 public:
     Iter(const Iter & from) = default;
+    Iter & operator=(const Iter & from) = default;
     Iter & operator++();
     Iter & operator--();
     explicit operator bool() const { return !m_endmark; }

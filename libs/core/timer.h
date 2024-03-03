@@ -36,6 +36,7 @@ class ITimerNotify {
 public:
     virtual ~ITimerNotify();
     virtual Duration onTimer(TimePoint now) = 0;
+    ITimerNotify & operator=(const ITimerNotify & other) = default;
 
 private:
     friend class Timer;

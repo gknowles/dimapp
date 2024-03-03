@@ -2824,7 +2824,7 @@ void StrTrie::debugStream(std::ostream * os) {
 }
 
 //===========================================================================
-ostream * const StrTrie::debugStream() const {
+ostream * StrTrie::debugStream() const {
     return m_dstream;
 }
 

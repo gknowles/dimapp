@@ -93,6 +93,7 @@ public:
     BitView() = default;
     BitView(const BitView & from) = default;
     BitView(const uint64_t * src, size_t srcLen);
+    BitView & operator=(const BitView & from) = default;
 
     BitView view(
         size_t wordOffset,
@@ -128,6 +129,7 @@ public:
     BitSpan() = default;
     BitSpan(const BitSpan & from) = default;
     BitSpan(uint64_t * src, size_t srcLen);
+    BitSpan & operator=(const BitSpan & from) = default;
 
     size_t size() const final { return m_size; }
     const uint64_t * data() const final { return m_data; }

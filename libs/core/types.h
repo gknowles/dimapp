@@ -100,6 +100,7 @@ protected:
 
 struct Finally : public std::function<void()> {
     using function::function;
+    using function::operator=;
     ~Finally();
     void release();
 };
@@ -246,6 +247,7 @@ public:
     constexpr size_t count() const;
     constexpr size_t count(EnumFlags mask) const;
 
+    constexpr EnumFlags & operator= (const EnumFlags & other) = default;
     constexpr EnumFlags & operator|= (EnumFlags other);
     constexpr EnumFlags & operator&= (EnumFlags other);
     constexpr EnumFlags & operator^= (EnumFlags other);
