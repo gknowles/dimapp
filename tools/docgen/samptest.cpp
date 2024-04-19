@@ -926,7 +926,7 @@ static void addOutputScript(
 }
 
 //===========================================================================
-static void processPage(PageInfo * info, unsigned phase = 0) {
+static void processPage(PageInfo * info) {
     string layname = s_opts.layout.empty() ? "default" : s_opts.layout;
     auto & cfg = *info->out;
 
@@ -996,20 +996,19 @@ static void processPage(PageInfo * info, unsigned phase = 0) {
 ***/
 
 struct ProgWork {
+    unsigned phase = 0;
+    unsigned pendingWork = 0;
     function<void()> fn;
     const PageInfo & info;
     const TestInfo & test;
     const ProgInfo & prog;
-
-    unsigned pendingWork = 0;
 };
 
-static void runProgTests(ProgWork * work, unsigned phase = 0);
+static void runProgTests(ProgWork * work);
 
 //===========================================================================
 static void runProgDone(
     ProgWork * work,
-    unsigned phase,
     const RunInfo & run,
     ExecResult && res
 ) {
@@ -1052,7 +1051,7 @@ static void runProgDone(
     }
     if (lines.size() != olen)
         goto FAILED;
-    runProgTests(work, phase);
+    runProgTests(work);
     return;
 
 FAILED:
@@ -1068,11 +1067,11 @@ FAILED:
         }
     }
     work->pendingWork = 1;
-    runProgTests(work, phase);
+    runProgTests(work);
 }
 
 //===========================================================================
-static void runProgTests(ProgWork * work, unsigned phase) {
+static void runProgTests(ProgWork * work) {
     if (appStopping()) {
         if (work->fn) {
             work->fn();
@@ -1092,12 +1091,13 @@ static void runProgTests(ProgWork * work, unsigned phase) {
     Path curDir;
     fileGetCurrentDir(&curDir);
 
-    if (phase == what++) {
+    if (work->phase == what++) {
         // Launch compilers
         auto filesByLang = unordered_map<string, vector<string>>();
 
         for (auto&& file : work->prog.files)
             filesByLang[file.second.lang].push_back(file.first);
+        work->phase = what;
         work->pendingWork = (unsigned) filesByLang.size() + 1;
         static bool first = true;
         for (auto&& [lang, files] : filesByLang) {
@@ -1125,7 +1125,7 @@ static void runProgTests(ProgWork * work, unsigned phase) {
                         s_perfCompileFailed += 1;
                     appSignalShutdown(EX_DATAERR);
                     work->pendingWork = 1;
-                    runProgTests(work, what);
+                    runProgTests(work);
                     return;
                 }
                 work->pendingWork -= 1;
@@ -1134,7 +1134,7 @@ static void runProgTests(ProgWork * work, unsigned phase) {
                     [work, what](auto && res) {
                         if (!res.success)
                             s_perfCompileFailed += 1;
-                        runProgTests(work, what);
+                        runProgTests(work);
                     },
                     cmdline,
                     title,
@@ -1142,19 +1142,17 @@ static void runProgTests(ProgWork * work, unsigned phase) {
                 );
             }
         }
-
-        phase = what;
     }
-    if (phase == what++) {
+    if (work->phase == what++) {
         if (--work->pendingWork) {
             // Still more compiles to process.
             return;
         }
 
+        work->phase = what;
         work->pendingWork = (unsigned) work->test.runs.size() + 1;
-        phase = what;
     }
-    if (phase == what++) {
+    if (work->phase == what++) {
         while (--work->pendingWork) {
             // Execute just the next test waiting run.
             auto pos = work->test.runs.size() - work->pendingWork;
@@ -1193,8 +1191,8 @@ static void runProgTests(ProgWork * work, unsigned phase) {
                 .concurrency = envProcessors(),
             };
             execProgram(
-                [work, phase, &run](ExecResult && res) {
-                    runProgDone(work, phase, run, move(res));
+                [work, &run](ExecResult && res) {
+                    runProgDone(work, run, move(res));
                 },
                 cmd,
                 opts
@@ -1233,11 +1231,12 @@ static void runTests(
                     continue;
                 }
                 auto work = new ProgWork ({
+                    .phase = 0,
+                    .pendingWork = 1,
                     .fn = fn,
                     .info = info,
                     .test = test.second,
                     .prog = prog,
-                    .pendingWork = 1
                 });
                 runProgTests(work);
             }
@@ -1246,10 +1245,10 @@ static void runTests(
 }
 
 //===========================================================================
-static void testSamples(Config * out, unsigned phase = 0) {
+static void testSamples(Config * out) {
     unsigned what = 0;
 
-    if (phase == what++) {
+    if (out->phase == what++) {
         auto own = unique_ptr<Config>(out);
 
         // Generate tests
@@ -1258,6 +1257,7 @@ static void testSamples(Config * out, unsigned phase = 0) {
 
         // Generate tests for layout
         s_pageInfos.reserve(layout->second.pages.size());
+        out->phase = what;
         out->pendingWork = (unsigned) layout->second.pages.size() + 1;
         for (auto && page : layout->second.pages) {
             if (!s_opts.pages.empty()
@@ -1268,10 +1268,10 @@ static void testSamples(Config * out, unsigned phase = 0) {
             }
             auto & info = s_pageInfos.emplace_back(out, page);
             info.fn = [info, what]() {
-                testSamples(info.out, what);
+                testSamples(info.out);
             };
             loadContent(
-                [&info, what](auto && content) {
+                [&info](auto && content) {
                     info.content = move(content);
                     processPage(&info);
                 },
@@ -1282,9 +1282,8 @@ static void testSamples(Config * out, unsigned phase = 0) {
         }
 
         own.release();
-        phase = what;
     }
-    if (phase == what++) {
+    if (out->phase == what++) {
         if (--out->pendingWork) {
             // Still have more pages to process.
             return;
@@ -1308,18 +1307,18 @@ static void testSamples(Config * out, unsigned phase = 0) {
         }
 
         // Compile and execute tests
+        out->phase = what;
         out->pendingWork = 1;
         if (s_opts.compile && !appStopping()) {
             runTests(
-                [out, what]() { testSamples(out, what); },
+                [out, what]() { testSamples(out); },
                 s_pageInfos
             );
         }
 
         own.release();
-        phase = what;
     }
-    if (phase == what++) {
+    if (out->phase == what++) {
         if (--out->pendingWork) {
             // Still have more tests to process.
             return;
