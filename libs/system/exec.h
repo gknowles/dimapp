@@ -42,10 +42,10 @@ enum StdStream {
 ***/
 
 struct ExecResult {
-    enum Type { kNotStarted, kExited, kCanceled };
-    std::string cmdline;
+    enum Type { kNotStarted, kFinished, kCanceled, kTimeout };
     Type exitType = kNotStarted;
     int exitCode = {};
+    std::string cmdline;
     CharBuf out;
     CharBuf err;
 };
@@ -215,6 +215,7 @@ void execClientAttach(
 *
 ***/
 
-void execCancelWaiting();
+// Returns number of waiting programs canceled.
+unsigned execCancelWaiting();
 
 } // namespace

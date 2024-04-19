@@ -387,7 +387,13 @@ void loadContent(
         "show",
         objname
     );
-    execTool(fn, cmdline, objname);
+    execTool(
+        [fn](auto && res) {
+            fn(move(res.output));
+        },
+        cmdline,
+        objname
+    );
 }
 
 //===========================================================================

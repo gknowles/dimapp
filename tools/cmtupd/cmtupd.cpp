@@ -613,11 +613,11 @@ static void processFiles(const Config * cfg) {
         file = move(tmp.str());
     }
     args.insert(args.end(), s_opts.files.begin(), s_opts.files.end());
-    auto rawNames = execToolWait(Cli::toCmdline(args), "List depot files");
-    if (rawNames.empty())
+    auto res = execToolWait(Cli::toCmdline(args), "List depot files");
+    if (res.output.empty())
         return;
     vector<string_view> fnames;
-    split(&fnames, rawNames, '\n');
+    split(&fnames, res.output, '\n');
 
     vector<string> dateArgs = {
         "git", "-C", cfg->gitRoot.str(), "log", "--format=%aI", "-n1", ""
@@ -640,8 +640,8 @@ static void processFiles(const Config * cfg) {
         s_perfQueuedFiles += 1;
         dateArgs.back() = f;
         execTool(
-            [cfg, grps, fname](string && out) {
-                processFile(cfg, grps, fname, out);
+            [cfg, grps, fname](auto && res) {
+                processFile(cfg, grps, fname, res.output);
                 finalReport(cfg);
             },
             Cli::toCmdline(dateArgs),

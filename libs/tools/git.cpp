@@ -26,8 +26,8 @@ string Dim::gitFindRoot(string_view path) {
         "rev-parse",
         "--show-toplevel"
     );
-    auto content = execToolWait(cmdline, path);
-    return Path(trim(content)).str();
+    auto res = execToolWait(cmdline, path);
+    return Path(trim(res.output)).str();
 }
 
 //===========================================================================
@@ -71,6 +71,6 @@ bool Dim::gitLoadConfig(
     if (auto ec = fileLoadBinaryWait(content, *configFile); ec)
         return false;
 
-    fin = {};
+    fin.release();
     return true;
 }

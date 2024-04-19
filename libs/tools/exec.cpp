@@ -17,14 +17,14 @@ using namespace Dim;
 
 //===========================================================================
 void Dim::execTool(
-    function<void(string&&)> fn,
+    function<void(ExecToolResult&&)> fn,
     string_view cmdline,
     string_view errTitle,
     const ExecOptions & opts,
     const vector<int> & codes
 ) {
     struct Exec : IExecNotify {
-        function<void(string&&)> fn;
+        function<void(ExecToolResult&&)> fn;
         string cmdline;
         string errTitle;
         vector<int> codes;
@@ -33,18 +33,22 @@ void Dim::execTool(
             ExecResult::Type exitType,
             int exitCode
         ) override {
-            if (exitType != ExecResult::kExited) {
+            ExecToolResult res = {};
+            if (exitType == ExecResult::kNotStarted
+                || exitType == ExecResult::kTimeout
+            ) {
                 // Rely on execProgram to have already logged an error.
                 logMsgError() << "Error: " << errTitle;
                 logMsgInfo() << " - " << cmdline;
                 if (exitType == ExecResult::kNotStarted) {
                     logMsgInfo() << " - program not started.";
                 } else {
-                    assert(exitType == ExecResult::kCanceled);
+                    assert(exitType == ExecResult::kTimeout);
                     logMsgInfo() << " - program timeout exceeded.";
                 }
-                appSignalShutdown(EX_IOERR);
-                fn({});
+            } else if (exitType == ExecResult::kCanceled) {
+                assert(appMode() == kRunStopping);
+                res.success = true;
             } else if (
                 find(codes.begin(), codes.end(), exitCode) == codes.end()
             ) {
@@ -66,16 +70,18 @@ void Dim::execTool(
                     if (line.size())
                         logMsgInfo() << " - " << line;
                 }
-                appSignalShutdown(EX_IOERR);
-                fn({});
             } else {
                 if (m_err) {
                     logMsgWarn() << "Warn: " << errTitle;
                     logMsgWarn() << " - " << cmdline;
                     logMsgWarn() << " - " << m_err;
                 }
-                fn(toString(m_out));
+                res.success = true;
+                res.output = move(toString(m_out));
             }
+            if (!res.success)
+                appSignalShutdown(EX_IOERR);
+            fn(move(res));
             delete this;
         }
     };
@@ -91,13 +97,13 @@ void Dim::execTool(
 }
 
 //===========================================================================
-string Dim::execToolWait(
+ExecToolResult Dim::execToolWait(
     string_view cmdline,
     string_view errTitle,
     const ExecOptions & opts,
     const vector<int> & codes
 ) {
-    string out;
+    ExecToolResult out;
     latch lat(1);
     auto tmpOpts = opts;
     tmpOpts.hq = taskInEventThread()

@@ -19,24 +19,30 @@ namespace Dim {
 
 /****************************************************************************
 *
-*   Exec subprocess - used by command line utilities to launch children
+*   Exec process - used by command line utilities to launch children
 *
 *   Warnings are logged, and errors are both logged and trigger a call to
 *   appSignalShutdown(EX_IOERR).
 *
-*   An error is defined as a failure to launch or an exit code that is not
-*   contained in the 'codes' argument.
+*   An error is defined as a failure to launch, timeout, or an exit code that
+*   is not contained in the 'codes' argument. Otherwise, it's a success.
+*
+*   A warning is any text written to stderr by a successful process.
 *
 ***/
 
+struct ExecToolResult {
+    bool success;           // was the program run successfully?
+    std::string output;     // stdout from program if success, otherwise empty.
+};
 void execTool(
-    std::function<void(std::string&&)> fn,
+    std::function<void(ExecToolResult &&)> fn,
     std::string_view cmdline,
     std::string_view errTitle,
     const ExecOptions & opts = {},
     const std::vector<int> & codes = {0}
 );
-std::string execToolWait(
+ExecToolResult execToolWait(
     std::string_view cmdline,
     std::string_view errTitle,
     const ExecOptions & opts = {},

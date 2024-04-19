@@ -1119,9 +1119,10 @@ static void runProgTests(ProgWork * work, unsigned phase) {
             };
             if (first) {
                 first = false;
-                auto out = execToolWait(cmdline, title, opts);
-                if (out.empty()) {
-                    s_perfCompileFailed += 1;
+                auto res = execToolWait(cmdline, title, opts);
+                if (res.output.empty()) {
+                    if (!res.success)
+                        s_perfCompileFailed += 1;
                     appSignalShutdown(EX_DATAERR);
                     work->pendingWork = 1;
                     runProgTests(work, what);
@@ -1130,8 +1131,8 @@ static void runProgTests(ProgWork * work, unsigned phase) {
                 work->pendingWork -= 1;
             } else {
                 execTool(
-                    [work, what](string && out) {
-                        if (out.empty())
+                    [work, what](auto && res) {
+                        if (!res.success)
                             s_perfCompileFailed += 1;
                         runProgTests(work, what);
                     },
@@ -1158,8 +1159,11 @@ static void runProgTests(ProgWork * work, unsigned phase) {
             // Execute just the next test waiting run.
             auto pos = work->test.runs.size() - work->pendingWork;
             auto & run = work->test.runs[pos];
-            if (run.cmdline.empty())
+            if (run.cmdline.empty()) {
+                // Not an executable test, advance to next (pendingWork is
+                // decremented and used to index into the runs).
                 continue;
+            }
             auto & lang = *cfg.scripts[run.lang];
 
             auto args = Cli::toArgv(run.cmdline);
@@ -1243,12 +1247,6 @@ static void runTests(
 
 //===========================================================================
 static void testSamples(Config * out, unsigned phase = 0) {
-    if (appStopping()) {
-        if (--out->pendingWork == 0)
-            delete out;
-        return;
-    }
-
     unsigned what = 0;
 
     if (phase == what++) {
@@ -1311,7 +1309,7 @@ static void testSamples(Config * out, unsigned phase = 0) {
 
         // Compile and execute tests
         out->pendingWork = 1;
-        if (s_opts.compile) {
+        if (s_opts.compile && !appStopping()) {
             runTests(
                 [out, what]() { testSamples(out, what); },
                 s_pageInfos

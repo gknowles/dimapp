@@ -629,9 +629,9 @@ static void genPage(GenPageInfo * info, unsigned phase = 0) {
                 info->fname
             );
             execTool(
-                [info, what](string && out) {
+                [info, what](auto && res) {
                     fileRemove(info->fname + "#");
-                    if (out.empty())
+                    if (res.output.empty())
                         appSignalShutdown(EX_IOERR);
                     genPage(info, what);
                 },
@@ -649,9 +649,9 @@ static void genPage(GenPageInfo * info, unsigned phase = 0) {
         // Convert markup into HTML fragment.
         auto cmdline = Cli::toCmdlineL("github-markup.bat", info->fname);
         execTool(
-            [info, what](string && out) {
+            [info, what](auto && res) {
                 fileRemove(info->fname);
-                info->content = move(out);
+                info->content = move(res.output);
                 genPage(info, what);
             },
             cmdline,

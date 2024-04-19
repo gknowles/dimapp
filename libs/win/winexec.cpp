@@ -48,9 +48,10 @@ public:
     );
     ~ExecProgram();
     void exec();
-    TaskQueueHandle queue() const { return m_hq; }
+    TaskQueueHandle queue() const { return m_opts.hq; }
     void terminate();
     void postJobExit();
+    void notify(ExecResult::Type exitType, int exitCode);
 
     bool onAccept(StdStream strm);
     bool onRead(size_t * bytesUsed, StdStream strm, string_view data);
@@ -71,7 +72,6 @@ private:
     );
     void completeIfDone_UNLK(unique_lock<mutex> && lk);
 
-    TaskQueueHandle m_hq;
     HANDLE m_job = NULL;
     HANDLE m_process = NULL;
     HANDLE m_thread = NULL;
@@ -261,6 +261,8 @@ ExecProgram::ExecProgram(
     m_notify->m_exec = this;
     if (m_opts.concurrency == 0)
         m_opts.concurrency = envProcessors();
+    if (!m_opts.hq)
+        m_opts.hq = taskEventQueue();
 
     for (auto && e : { kStdIn, kStdOut, kStdErr }) {
         m_pipes[e].m_strm = e;
@@ -306,6 +308,7 @@ void ExecProgram::postJobExit() {
     {
         unique_lock lk{m_mut};
         m_exitPosted = true;
+        assert(queue().pos);
     }
 
     // Exit events are posted to the job queue so the onExecComplete event gets
@@ -325,7 +328,6 @@ void ExecProgram::exec() {
     // Now that we're committed to getting an onJobExit() call, change mode
     // so that we'll wait for it.
     m_mode = kRunStarting;
-    m_hq = m_opts.hq;
 
     // Create pipes
     char rawname[100];
@@ -568,13 +570,13 @@ void ExecProgram::onJobExit() {
     m_mode = kRunStopped;
     DWORD rc;
     if (GetExitCodeProcess(m_process, &rc)) {
-        m_exitType = ExecResult::kExited;
+        m_exitType = ExecResult::kFinished;
         m_exitCode = rc;
     } else {
         WinError err;
         m_exitType = modeWas == kRunStarting
             ? ExecResult::kNotStarted
-            : ExecResult::kCanceled;
+            : ExecResult::kTimeout;
         m_exitCode = -1;
     }
     CloseHandle(m_process);
@@ -593,16 +595,21 @@ void ExecProgram::completeIfDone_UNLK(unique_lock<mutex> && lk) {
         return;
     }
 
-    if (m_notify) {
-        m_notify->m_exec = nullptr;
-        m_notify->onExecComplete(m_exitType, m_exitCode);
-        m_notify = nullptr;
-    }
+    notify(m_exitType, m_exitCode);
 
     lk.unlock();
     lk.release();
     delete this;
     dequeue();
+}
+
+//===========================================================================
+void ExecProgram::notify(ExecResult::Type exitType, int exitCode) {
+    if (m_notify) {
+        m_notify->m_exec = nullptr;
+        m_notify->onExecComplete(exitType, exitCode);
+        m_notify = nullptr;
+    }
 }
 
 //===========================================================================
@@ -683,13 +690,9 @@ bool IExecNotify::onExecRead(
 void Dim::execProgram(
     IExecNotify * notify,
     const std::string & cmdline,
-    const ExecOptions & rawOpts
+    const ExecOptions & opts
 ) {
     assert(notify);
-
-    auto opts = rawOpts;
-    if (!opts.hq)
-        opts.hq = taskEventQueue();
 
     new ExecProgram(notify, cmdline, opts);
     ExecProgram::dequeue();
@@ -860,16 +863,24 @@ bool Dim::execElevatedWait(
 ***/
 
 //===========================================================================
-void Dim::execCancelWaiting() {
+unsigned Dim::execCancelWaiting() {
     List<ExecProgram> progs;
     {
         scoped_lock lk{s_mut};
         progs.link(move(s_programs));
     }
+    unsigned found = 0;
     while (auto prog = progs.front()) {
+        found += 1;
         s_programs.unlink(prog);
-        prog->postJobExit();
+        taskPush(prog->queue(), [prog](){
+            prog->notify(ExecResult::kCanceled, -1);
+            delete prog;
+        });
     }
+    s_perfWaiting -= found;
+    s_perfIncomplete += found;
+    return found;
 }
 
 
