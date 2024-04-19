@@ -171,7 +171,8 @@ DWORD WINAPI appRecoveryCallback(void * param) {
 //===========================================================================
 LONG WINAPI unhandledExceptionFilter(EXCEPTION_POINTERS * ei) {
     _pxcptinfoptrs = ei;
-    logMsgFatal() << "Unhandled exception";
+    logMsgFatal() << "Unhandled exception (code: "
+        << hex << ei->ExceptionRecord->ExceptionCode << ")";
     return EXCEPTION_CONTINUE_SEARCH;
 }
 
