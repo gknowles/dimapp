@@ -997,6 +997,7 @@ static void processPage(PageInfo * info) {
 
 struct ProgWork {
     unsigned phase = 0;
+    bool serialized = false;    // If only one work item runs at a time.
     unsigned pendingWork = 0;
     function<void()> fn;
     const PageInfo & info;
@@ -1066,7 +1067,6 @@ FAILED:
             logMsgInfo() << "> " << line;
         }
     }
-    work->pendingWork = 1;
     runProgTests(work);
 }
 
@@ -1077,7 +1077,7 @@ static void runProgTests(ProgWork * work) {
             work->fn();
             work->fn = {};
         }
-        if (--work->pendingWork == 0)
+        if (work->serialized || --work->pendingWork == 0)
             delete work;
         return;
     }
@@ -1151,6 +1151,7 @@ static void runProgTests(ProgWork * work) {
 
         work->phase = what;
         work->pendingWork = (unsigned) work->test.runs.size() + 1;
+        work->serialized = true;
     }
     if (work->phase == what++) {
         while (--work->pendingWork) {
@@ -1311,7 +1312,7 @@ static void testSamples(Config * out) {
         out->pendingWork = 1;
         if (s_opts.compile && !appStopping()) {
             runTests(
-                [out, what]() { testSamples(out); },
+                [out]() { testSamples(out); },
                 s_pageInfos
             );
         }
