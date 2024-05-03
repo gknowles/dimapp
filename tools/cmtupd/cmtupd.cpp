@@ -410,12 +410,16 @@ static void showConfig(const Config * cfg) {
             << "Group:\n";
         for (auto&& grp : rule.groups) {
             [[maybe_unused]] auto & prefix = grp.vars.at(kVarPrefix);
+            os << '\f';
             for (auto&& mat : grp.matchDefs) {
                 os << "  Replace\t" << mat.replace << '\n';
             }
+            os << '\f';
             for (auto&& var : grp.vars) {
-                os << "  Var\t" << var.first << '\t' << var.second << '\n';
+                os << "  Var\t\a15 30\a"
+                    << var.first << '\t' << var.second << '\n';
             }
+            os << '\f';
             for (auto&& fn : grp.fileNames) {
                 os << "  File\t" << fn.pattern << '\n';
             }
