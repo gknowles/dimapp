@@ -1,5 +1,5 @@
 ﻿<!--
-Copyright Glen Knowles 2021.
+Copyright Glen Knowles 2021 - 2024.
 Distributed under the Boost Software License, Version 1.0.
 -->
 
@@ -10,7 +10,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
-## Unreleased
+## cmtupd 1.1.1 (2024-04-19)
+- Fixed - Crash showing complex configuration
 
-## cmtupd 1.0.0 (2021-09-06)
+## cmtupd 1.1.0 (2021-09-06)
 - First public release
