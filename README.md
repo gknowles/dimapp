@@ -42,7 +42,7 @@ msbuild /p:Configuration=Release /m /v:m build\dimapp.sln
 
 Or in Visual Studio:
 
-~~~
+~~~ console
 devenv build\dimapp.sln
 ~~~
 
