@@ -204,9 +204,9 @@ private:
     CharBuf & erase(buffer_iterator it, size_t pos, size_t count);
 
     std::vector<Buffer> m_buffers;
-    int m_lastUsed{0};
-    int m_size{0};
-    char m_empty{0};
+    int m_lastUsed {0};
+    int m_size {0};
+    char m_empty {0};
 };
 
 

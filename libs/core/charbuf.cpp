@@ -278,7 +278,7 @@ void CharBuf::resize(size_t count) {
 CharBuf & CharBuf::insert(size_t pos, size_t numCh, char ch) {
     assert(pos <= pos + numCh && pos <= (size_t) m_size);
 
-    // short-circuit to avoid allocations
+    // Short-circuit to avoid allocations.
     if (!numCh)
         return *this;
 
@@ -295,7 +295,7 @@ CharBuf & CharBuf::insert(size_t pos, nullptr_t) {
 CharBuf & CharBuf::insert(size_t pos, const char s[]) {
     assert(pos <= (size_t) m_size);
 
-    // short-circuit to avoid allocations. find() forces buffer to exist
+    // Short-circuit to avoid allocations, find() forces buffer to exist.
     if (!*s)
         return *this;
 
@@ -307,7 +307,7 @@ CharBuf & CharBuf::insert(size_t pos, const char s[]) {
 CharBuf & CharBuf::insert(size_t pos, const char s[], size_t count) {
     assert(pos <= pos + count && pos <= (size_t) m_size);
 
-    // short-circuit to avoid allocations
+    // Short-circuit to avoid allocations.
     if (!count)
         return *this;
 
@@ -337,7 +337,7 @@ CharBuf & CharBuf::insert(
     assert(bufPos <= (size_t) buf.m_size);
     auto add = (int) min(bufLen, buf.m_size - bufPos);
 
-    // short-circuit to avoid allocations
+    // Short-circuit to avoid allocations.
     if (!add)
         return *this;
 
@@ -351,7 +351,7 @@ CharBuf & CharBuf::erase(size_t pos, size_t count) {
     assert(pos <= (size_t) m_size);
     auto remove = (int) min(count, m_size - pos);
 
-    // short-circuit to avoid allocations
+    // Short-circuit to avoid allocations.
     if (!remove)
         return *this;
 
@@ -467,20 +467,20 @@ strong_ordering CharBuf::compare(
     auto rdata = s;
 
     while (mycount < num) {
-        // compare with entire local buffer
+        // Compare with entire local buffer.
         if (int rc = memcmp(mydata, rdata, mycount))
             return rc < 0 ? strong_ordering::less : strong_ordering::greater;
         num -= mycount;
         if (!num)
             return mymax <=> rmax;
-        // advance to next local buffer
+        // Advance to next local buffer.
         rdata += mycount;
         ++myi;
         mydata = myi->data;
         mycount = myi->used;
     }
 
-    // compare with entire remote buffer
+    // Compare with entire remote buffer.
     if (int rc = memcmp(mydata, rdata, num))
         return rc < 0 ? strong_ordering::less : strong_ordering::greater;
     return mymax <=> rmax;
@@ -535,7 +535,7 @@ strong_ordering CharBuf::compare(
         if (mycount -= bytes) {
             mydata += bytes;
         } else {
-            // advance to next local buffer
+            // Advance to next local buffer
             ++myi;
             mydata = myi->data;
             mycount = myi->used;
@@ -543,7 +543,7 @@ strong_ordering CharBuf::compare(
         if (rcount -= bytes) {
             rdata += bytes;
         } else {
-            // advance to next remote buffer
+            // Advance to next remote buffer
             ++ri;
             rdata = ri->data;
             rcount = ri->used;
@@ -563,20 +563,24 @@ CharBuf & CharBuf::replace(size_t pos, size_t count, size_t numCh, char ch) {
     auto mydata = myi->data + ic.second;
     auto mycount = (size_t) myi->used - ic.second;
 
-    // overwrite the overlap, then either erase or insert the rest
+    // Overwrite the overlap.
     for (;;) {
         auto bytes = min(num, mycount);
         memset(mydata, ch, bytes);
+        if (num == bytes)
+            break;
         num -= bytes;
-        if (!num) {
-            auto pos = (int) (mydata - myi->data + bytes);
-            return add > remove
-                ? insert(myi, pos, add - remove, ch)
-                : erase(myi, pos, remove - add);
-        }
         ++myi;
         mydata = myi->data;
         mycount = myi->used;
+    }
+
+    // Erase or insert the rest.
+    pos = (mydata - myi->data + num);
+    if (add > remove) {
+        return insert(myi, pos, add - remove, ch);
+    } else {
+        return erase(myi, pos, remove - add);
     }
 }
 
@@ -597,7 +601,7 @@ CharBuf & CharBuf::replace(size_t pos, size_t count, const char s[]) {
     auto mydata = myi->data + ic.second;
     auto mycount = myi->used - ic.second;
 
-    // copy the overlap, then either erase or insert the rest
+    // Copy the overlap, then either erase or insert the rest.
     char * ptr = mydata;
     int bytes = min(num, mycount);
     char * eptr = ptr + bytes;
@@ -637,23 +641,26 @@ CharBuf & CharBuf::replace(
     auto mycount = myi->used - ic.second;
     auto rdata = src;
 
-    // copy the overlap, then either erase or insert the rest
+    // Copy the overlap.
     for (;;) {
         int bytes = min(num, mycount);
         memcpy(mydata, rdata, bytes);
         rdata += bytes;
+        if (num == bytes)
+            break;
         num -= bytes;
-        if (!num) {
-            auto mypos = (mydata - myi->data) + bytes;
-            return add > remove
-                ? insert(myi, mypos, rdata, add - remove)
-                : erase(myi, mypos, remove - add);
-        }
         ++myi;
         mydata = myi->data;
         mycount = myi->used;
     }
 
+    // Erase or insert the rest.
+    auto mypos = (mydata - myi->data) + num;
+    if (add > remove) {
+        return insert(myi, mypos, rdata, add - remove);
+    } else {
+        return erase(myi, mypos, remove - add);
+    }
 }
 
 //===========================================================================
@@ -667,34 +674,29 @@ CharBuf & CharBuf::replace(
     assert(pos <= (size_t) m_size);
     assert(srcPos <= (size_t) src.m_size);
 
-    int add = (int) min(srcLen, src.m_size - srcPos);
-    int remove = (int) min(count, m_size - pos);
-    int num = min(add, remove);
+    auto add = min(srcLen, src.m_size - srcPos);
+    auto remove = min(count, m_size - pos);
+    auto num = min(add, remove);
     auto ic = find(pos);
     auto myi = ic.first;
     auto mydata = myi->data + ic.second;
-    auto mycount = myi->used - ic.second;
+    auto mycount = size_t(myi->used - ic.second);
     auto ic2 = src.find(srcPos);
     auto ri = ic2.first;
     auto rdata = ri->data + ic2.second;
-    auto rcount = ri->used - ic2.second;
+    auto rcount = size_t(ri->used - ic2.second);
 
-    // copy the overlap, then either erase or insert the rest
+    // Copy the overlap.
     for (;;) {
-        int bytes = min(num, min(mycount, rcount));
+        auto bytes = min(num, min(mycount, rcount));
         memcpy(mydata, rdata, bytes);
+        if (num == bytes)
+            break;
         num -= bytes;
-        if (!num) {
-            int mypos = int(mydata - myi->data) + bytes;
-            int rpos = int(rdata - ri->data) + bytes;
-            return add > remove
-                ? insert(myi, mypos, ri, rpos, add - remove)
-                : erase(myi, mypos, remove - add);
-        }
         if (mycount -= bytes) {
             mydata += bytes;
         } else {
-            // advance to next local buffer
+            // Advance to next local buffer.
             ++myi;
             mydata = myi->data;
             mycount = myi->used;
@@ -702,11 +704,20 @@ CharBuf & CharBuf::replace(
         if (rcount -= bytes) {
             rdata += bytes;
         } else {
-            // advance to next remote buffer
+            // Advance to next remote buffer.
             ++ri;
             rdata = ri->data;
             rcount = ri->used;
         }
+    }
+
+    // Erase or insert the rest.
+    auto mypos = mydata - myi->data + num;
+    auto rpos = rdata - ri->data + num;
+    if (add > remove) {
+        return insert(myi, mypos, ri, rpos, add - remove);
+    } else {
+        return erase(myi, mypos, remove - add);
     }
 }
 
@@ -769,7 +780,7 @@ pair<CharBuf::buffer_iterator, int> CharBuf::find(size_t pos) {
         for (;;) {
             int used = it->used;
             if (off <= used) {
-                // when on the border between two buffers we want to point
+                // When on the border between two buffers we want to point
                 // at the start of the later one rather than one past the end
                 // of the earlier.
                 if (off < used || used < it->reserved)
@@ -831,7 +842,7 @@ CharBuf & CharBuf::insert(
     m_size += add;
 
     if (add <= myavail) {
-        // fits inside the current buffer
+        // Fits inside the current buffer.
         if (add) {
             memmove(mydata + add, mydata, myafter);
             memset(mydata, ch, add);
@@ -840,15 +851,15 @@ CharBuf & CharBuf::insert(
         return *this;
     }
 
-    // Split the block if we're inserting into the middle of it
+    // Split the block if we're inserting into the middle of it.
     it = split(it, pos);
     mydata = it->data + pos;
     myafter = 0;
     myavail = it->reserved - it->used;
 
     // Copy to the rest of the current block and to as many new blocks as
-    // needed. These blocks are inserted after the current block and before
-    // the new block with the data that was after the insertion point.
+    // needed. These blocks are inserted after the current block and before the
+    // new block with the data that was after the insertion point.
     for (;;) {
         int bytes = min(add, myavail);
         memset(mydata, ch, bytes);
@@ -873,8 +884,8 @@ CharBuf & CharBuf::insert(
     auto myafter = it->used - pos;
     auto myavail = it->reserved - it->used;
 
-    // memchr s for \0 within the number of bytes that will fit in the
-    // current block
+    // Search s for \0 within the number of bytes that will fit in the current
+    // block.
     char * eptr = (char *)memchr(s, 0, myavail + 1);
     if (eptr) {
         // the string fits inside the current buffer
@@ -887,15 +898,15 @@ CharBuf & CharBuf::insert(
         return *this;
     }
 
-    // Split the block if we're inserting into the middle of it
+    // Split the block if we're inserting into the middle of it.
     it = split(it, pos);
     mydata = it->data + pos;
     myafter = 0;
     myavail = it->reserved - it->used;
 
     // Copy to the rest of the current block and to as many new blocks as
-    // needed. These blocks are inserted after the current block and before
-    // the new block with the data that was after the insertion point.
+    // needed. These blocks are inserted after the current block and before the
+    // new block with the data that was after the insertion point.
     char * mybase = mydata;
     char * myend = it->data + it->reserved;
     for (;;) {
@@ -933,7 +944,7 @@ CharBuf & CharBuf::insert(
     m_size += add;
 
     if (add <= myavail) {
-        // the string fits inside the current buffer
+        // The string fits inside the current buffer.
         if (add) {
             memmove(mydata + add, mydata, myafter);
             memcpy(mydata, s, add);
@@ -942,15 +953,15 @@ CharBuf & CharBuf::insert(
         return *this;
     }
 
-    // Split the block if we're inserting into the middle of it
+    // Split the block if we're inserting into the middle of it.
     it = split(it, pos);
     mydata = it->data + pos;
     myafter = 0;
     myavail = it->reserved - it->used;
 
     // Copy to the rest of the current block and to as many new blocks as
-    // needed. These blocks are inserted after the current block and before
-    // the new block with the data that was after the insertion point.
+    // needed. These blocks are inserted after the current block and before the
+    // new block with the data that was after the insertion point.
     for (;;) {
         int bytes = min(add, myavail);
         memcpy(mydata, s, bytes);
@@ -1000,7 +1011,7 @@ CharBuf & CharBuf::insert(
         }
     }
 
-    // Split the block if we're inserting into the middle of it
+    // Split the block if we're inserting into the middle of it.
     myi = split(myi, pos);
     mydata = myi->data + pos;
     myafter = 0;
@@ -1041,28 +1052,28 @@ CharBuf & CharBuf::erase(buffer_iterator it, size_t pos, size_t count) {
     auto mycount = it->used - (int) pos;
     m_size -= remove;
 
-    // remove only part of first buffer?
     if (pos) {
+        // Remove only from the first buffer.
         int num = mycount - remove;
         if (num > 0) {
-            // entire erase fits within fraction of first buffer
+            // Entire erase fits within fraction of first buffer.
             memmove(mydata, mydata + remove, num);
             it->used -= remove;
             return *this;
         }
-        // remove tail of first buffer
+        // Remove tail of first buffer.
         it->used -= mycount;
         remove -= mycount;
         if (!remove)
             return *this;
 
-        // erase extends past the first buffer
+        // Erase extends past the first buffer.
         ++it;
         mydata = it->data;
         mycount = it->used;
     }
 
-    // remove entire buffers spanned by the erase
+    // Remove entire buffers spanned by the erase.
     while (mycount <= remove) {
         it = m_buffers.erase(it);
         remove -= mycount;
@@ -1071,7 +1082,7 @@ CharBuf & CharBuf::erase(buffer_iterator it, size_t pos, size_t count) {
         mycount = it->used;
     }
 
-    // there are bytes to remove from the beginning of one final buffer
+    // There are bytes to remove from the beginning of one final buffer.
     mydata = it->data;
     mycount = it->used;
     int num = mycount - remove;
