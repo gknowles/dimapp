@@ -58,11 +58,13 @@ addOpts({
           <p>The server is completely suspended while a full memory breakdown
           is created, this can be very disruptive for busy servers with large
           memory footprints.</p>
-          <p>If you're sure, check 'confirm' then click 'Dump Memory'.</p>
-          <input type=checkbox id=confirm name=confirm>
-          <label for=confirm>&nbsp;Confirm</label>
+          <p>If you're sure, check 'enable' then click 'Dump Memory'.</p>
+          <input type=checkbox id=confirm name=confirm
+            onclick="document.getElementById('dumpsubmit').disabled =
+                !this.checked">
+          <label for=confirm>&nbsp;Enable</label>
           <p/>
-          <input type=submit value="Dump Memory"/>
+          <input type=submit id=dumpsubmit value="Dump Memory" disabled/>
         </form>
       </template>
       <table v-else>
