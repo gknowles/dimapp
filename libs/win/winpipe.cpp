@@ -125,10 +125,22 @@ private:
 
 static atomic<int> s_numPipes;
 
-static auto & s_perfReadTotal = uperf("pipe.read bytes (total)");
-static auto & s_perfIncomplete = uperf("pipe.write bytes (incomplete)");
-static auto & s_perfWaiting = uperf("pipe.write bytes (waiting)");
-static auto & s_perfWriteTotal = uperf("pipe.write bytes (total)");
+static auto & s_perfReadTotal = uperf(
+    "pipe.read bytes (total)",
+    PerfFormat::kSiUnits
+);
+static auto & s_perfIncomplete = uperf(
+    "pipe.write bytes (incomplete)",
+    PerfFormat::kSiUnits
+);
+static auto & s_perfWaiting = uperf(
+    "pipe.write bytes (waiting)",
+    PerfFormat::kSiUnits
+);
+static auto & s_perfWriteTotal = uperf(
+    "pipe.write bytes (total)",
+    PerfFormat::kSiUnits
+);
 
 // The data in the send queue is either too massive or too old.
 static auto & s_perfBacklog = uperf("pipe.disconnect (write backlog)");
