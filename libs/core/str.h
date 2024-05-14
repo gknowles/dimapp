@@ -211,7 +211,7 @@ template <typename T>
         *out = std::string{src};
     } else if constexpr (std::is_constructible_v<T, std::string>) {
         *out = T(std::string(src));
-    } else if constexpr (std::is_arithmetic_v<T>) {
+    } else if constexpr (std::is_arithmetic_v<T> && !std::is_same_v<T, bool>) {
         auto r = std::from_chars(src.data(), src.data() + src.size(), *out);
         if (r.ec != std::errc{} || r.ptr != src.data() + src.size()) {
             *out = {};
