@@ -222,12 +222,13 @@ class JsonCounters : public IWebAdminNotify {
     void onHttpRequest(unsigned reqId, HttpRequest & msg) override;
 
     vector<PerfValue> m_values;
+    Param<bool> m_pretty = {this, "pretty", false};
 };
 } // namespace
 
 //===========================================================================
 void JsonCounters::onHttpRequest(unsigned reqId, HttpRequest & msg) {
-    perfGetValues(&m_values);
+    perfGetValues(&m_values, *m_pretty);
 
     auto res = HttpResponse(kHttpStatusOk);
     auto bld = initResponse(&res, reqId, msg);
@@ -236,7 +237,11 @@ void JsonCounters::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     bld.object();
     for (auto && perf : m_values) {
         bld.member(perf.name);
-        bld.valueRaw(perf.value);
+        if (*m_pretty) {
+            bld.value(perf.value);
+        } else {
+            bld.valueRaw(perf.value);
+        }
     }
     bld.end();
     bld.end();
