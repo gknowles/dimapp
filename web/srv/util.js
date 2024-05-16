@@ -158,29 +158,10 @@ function getRefreshUrl() {
 *
 *   Sorting tables
 *
-*   Based on answer to "Sorting HTML table with JavaScript" at
+*   Thanks to answer for "Sorting HTML table with JavaScript" at
 *   https://stackoverflow.com/questions/14267781
 *
 ***/
-
-//===========================================================================
-function tableHeaderRows(th) {
-    const table = th.closest('table')
-    for (let x in table.rows) {
-        if (table.rows[x].classList.contains('unsortable'))
-            continue
-        for (let cell of table.rows[x].cells) {
-            if (cell.nodeName != 'TH')
-                return x
-            if (cell === th) {
-                cell.classList.add('table-sort-active')
-            } else {
-                cell.classList.remove('table-sort-active')
-            }
-        }
-    }
-    return table.rows.length
-}
 
 //===========================================================================
 function tableCellIndex(th) {
@@ -208,7 +189,9 @@ function tableCellIndex(th) {
 
 //===========================================================================
 function tableCellValue(tr, idx) {
-    const node = tr.children[idx]
+    const node = tr.cells[idx]
+    if (node == null)
+        return ""
     return node.getAttribute('sort-key')
         || node.innerText
         || node.textContent
@@ -246,7 +229,77 @@ function tableRowCompare(idx, asc) {
 }
 
 //===========================================================================
+function tableHeaderRows(table, th) {
+    const same = (table == th.closest('table'))
+    for (const x in table.rows) {
+        if (table.rows[x].classList.contains('unsortable'))
+            continue
+        for (let cell of table.rows[x].cells) {
+            if (cell.nodeName != 'TH')
+                return parseInt(x)
+        }
+    }
+    return table.rows.length
+}
+
+//===========================================================================
+function updateHeaderClass(table, th, asc) {
+    const same = (table == th.closest('table'))
+    for (const x in table.rows) {
+        for (let cell of table.rows[x].cells) {
+            if (cell.nodeName != 'TH')
+                return
+            if (same && cell === th
+                || !same && cell.textContent == th.textContent
+            ) {
+                cell.classList.add('table-sort-active')
+                if (asc) {
+                    cell.classList.add('table-sort-asc')
+                    cell.classList.remove('table-sort-desc')
+                } else {
+                    cell.classList.add('table-sort-desc')
+                    cell.classList.remove('table-sort-asc')
+                }
+            } else {
+                cell.classList.remove('table-sort-active')
+            }
+        }
+    }
+}
+
+//===========================================================================
+function tableSortDirection(th, rows) {
+    // Get column index and sort direction of key
+    const idx = tableCellIndex(th)
+    const rattr = th.getAttribute('sort-reverse')
+    const rev = rattr != undefined && rattr != '0' && rattr != 'false'
+
+    let asc
+    if (th.classList.contains('table-sort-asc')) {
+        // Was ascending, target descending (i.e. not ascending)
+        asc = false
+    } else if (th.classList.contains('table-sort-desc')) {
+        // Was descending, target ascending
+        asc = true
+    } else {
+        asc = false
+        let cmp = tableRowCompare(idx, rev ? !asc : asc)
+        for (let i = 1; i < rows.length; ++i) {
+            if (cmp(rows[i - 1], rows[i]) < 0) {
+                // Found row not in ascending order, change to ascending sort.
+                asc = true
+                break
+            }
+        }
+    }
+    let cmp = tableRowCompare(idx, rev ? !asc : asc)
+    return [asc, cmp]
+}
+
+//===========================================================================
 // Configurable classes:
+//      div.sort-group - Contains one or more tables, all with the same
+//          columns, whose rows are sorted as a group.
 //      tr.unsortable - Not repositioned by sort. Must immediately follow the
 //          header (or other unsortable) rows for this to be honored.
 // Configurable attributes:
@@ -254,27 +307,33 @@ function tableRowCompare(idx, asc) {
 //      td.sort-key - Used instead of content for comparisons, if present.
 function tableSort(th) {
     const table = th.closest('table')
-    const skips = tableHeaderRows(th)
-    const rows = Array.from(table.tBodies[0].rows).slice(skips)
-    const idx = tableCellIndex(th)
-    const rattr = th.getAttribute('sort-reverse')
-    const rev = rattr != undefined && rattr != '0' && rattr != 'false'
-    let asc = false
-    let cmp = tableRowCompare(idx, rev ? !asc : asc)
-    for (let i = 1; i < rows.length; ++i) {
-        if (cmp(rows[i - 1], rows[i]) < 0) {
-            asc = true
-            cmp = tableRowCompare(idx, rev ? !asc : asc)
-            break
-        }
+    const grproot = table.closest('div.sort-group')
+    const tables = grproot
+        ? Array.from(grproot.getElementsByTagName('table'))
+        : [table]
+    const tabs = tables.map((x) => ({
+        table: x,
+        skipped: tableHeaderRows(x, th),
+        count: x.rows.length,
+    }))
+    let rows = []
+    for (let tab of tabs) {
+        let trows = Array.from(tab.table.rows).slice(tab.skipped)
+        rows = rows.concat(trows)
     }
+
+    let [asc, cmp] = tableSortDirection(th, rows)
     rows.sort(cmp)
-    table.tBodies[0].append(...rows)
-    if (asc) {
-        th.classList.add('table-sort-asc')
-        th.classList.remove('table-sort-desc')
-    } else {
-        th.classList.add('table-sort-desc')
-        th.classList.remove('table-sort-asc')
+    if (rows.length > 0 && cmp(rows[0], rows.at(-1)) == 0) {
+        // All values are equal, report sort as ascending.
+        asc = true
+    }
+
+    // Move the now sorted rows back to tables in group and update the arrow
+    // symbols in their headers.
+    for (let tab of tabs) {
+        let trows = rows.splice(0, tab.count - tab.skipped)
+        tab.table.tBodies[0].append(...trows)
+        updateHeaderClass(tab.table, th, asc)
     }
 }

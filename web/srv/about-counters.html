@@ -52,13 +52,13 @@ addOpts({
 
   <div class="container-fluid mt-2">
     <h3>Performance Counters</h3>
-    <div class="row gx-3">
+    <div class="row gx-3 sort-group">
       <template v-for="page in sortedCounters">
         <div class='col-auto'>
           <table>
             <tr>
-              <th>Value</th>
-              <th>Name</th>
+              <th class="sortable">Value</th>
+              <th class="sortable">Name</th>
             </tr>
             <tr v-for="cnt in page"
                 :class="cnt.value == '0' ? 'bg-disabled' : null">

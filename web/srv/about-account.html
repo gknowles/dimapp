@@ -64,7 +64,7 @@ addOpts({
             <th class="sortable">Type</th>
             <th class="sortable">Name</th>
             <th class="sortable">Domain</th>
-            <th>Attributes</th>
+            <th class="sortable">Attributes</th>
           </tr>
           <tr v-for="prin in page">
             <td>{{ prin.type }}</td>
@@ -114,8 +114,8 @@ addOpts({
         <div class="col-auto">
           <table>
             <tr>
-              <th class="sortable" onclick="tableSort(this)">Name</th>
-              <th>Attributes</th>
+              <th class="sortable">Name</th>
+              <th class="sortable">Attributes</th>
             </tr>
             <tr v-for="priv in page">
               <td>{{ priv.name }}</td>

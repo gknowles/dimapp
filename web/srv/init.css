@@ -52,14 +52,14 @@ table th.table-sort-asc::after {
     font-family: bootstrap-icons !important;
     line-height: 1;
     vertical-align: -.125em;
-    opacity: 0.5;
+    opacity: 0.6;
 }
 table th.table-sort-desc::after {
     content: " \f128";
     font-family: bootstrap-icons !important;
     line-height: 1;
     vertical-align: -.125em;
-    opacity: 0.5;
+    opacity: 0.6;
 }
 table th.table-sort-active::after {
     opacity: 1;
