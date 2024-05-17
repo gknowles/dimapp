@@ -105,8 +105,8 @@ static void writeStrContent(ostream & os, string_view content) {
 
 //===========================================================================
 static void writeContent(ostream & os, string_view content) {
-    os << " {\n    ";
-    auto pos = 5;
+    os << "{";
+    auto pos = kMaxWidth;
     auto cpos = 0;
     for (unsigned char ch : content) {
         auto digits = 3;
@@ -146,7 +146,7 @@ using namespace std;
 *
 ***/
 
-const uint8_t s_data[] =)";
+const uint8_t s_data[] = )";
 
     writeContent(os, content);
 
