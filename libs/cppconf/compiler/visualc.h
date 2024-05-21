@@ -92,8 +92,6 @@
 #pragma warning(disable : 4251)
 #endif
 
-#if _MSC_VER
 // Standard aligned_alloc added in c++17, but not supported in MSVC.
 #define mallocAligned(alignment, size) _aligned_malloc(size, alignment)
 #define freeAligned(ptr) _aligned_free(ptr)
-#endif
