@@ -7,8 +7,8 @@
 #include "xml/xml.h"
 
 // External library public headers
+#include "core/hex.h"
 #include "core/str.h"
-#include "core/util.h"
 
 // Standard headers
 #include <algorithm>

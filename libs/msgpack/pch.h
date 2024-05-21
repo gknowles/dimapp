@@ -7,8 +7,8 @@
 #include "msgpack/msgpack.h"
 
 // External library public headers
+#include "core/endian.h"
 #include "core/str.h"
-#include "core/util.h"
 
 // Standard headers
 #include <iostream>

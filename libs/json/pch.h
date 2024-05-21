@@ -8,7 +8,6 @@
 
 // External library public headers
 #include "core/str.h"
-#include "core/util.h"
 
 // Standard headers
 #include <algorithm>
