@@ -64,7 +64,7 @@ addOpts({
               <th class="sortable">Size</th>
             </tr>
             <tr v-for="val in page"
-                :class="val.contentSize == 0 ? 'disabled'
+                :class="val.contentSize == 0 ? 'bg-disabled'
                     : ageClass(val.lastChanged)">
               <td class='text-nowrap'>
                 <a v-if="val.contentSize > 0" :href="makeUrl(
