@@ -6,6 +6,9 @@ init.css - dim webapp
 */
 
 
+.bg-normal {
+    background-color: white;
+}
 .bg-selected {
     background-color: lightgrey;
 }
@@ -38,7 +41,7 @@ th.sortable {
 table {
     margin: 10px 0px;
 }
-table:has(th.sortable) tbody tr:hover {
+table:has(th.sortable) tbody tr:hover td {
     background-color: #f7efd5;
 }
 table th {

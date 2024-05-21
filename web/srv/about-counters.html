@@ -60,8 +60,9 @@ addOpts({
               <th class="sortable">Value</th>
               <th class="sortable">Name</th>
             </tr>
-            <tr v-for="cnt in page"
-                :class="cnt.value == '0' ? 'bg-disabled' : null">
+            <tr v-for="cnt in page" :class="{
+              'bg-disabled': cnt.value == '0' || cnt.value == '0.000'
+            }">
               <td class='text-end'>{{ cnt.value }}</td>
               <td class='text-nowrap'>{{ cnt.name }}</td>
             </tr>
