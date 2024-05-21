@@ -38,6 +38,9 @@ th.sortable {
 table {
     margin: 10px 0px;
 }
+table:has(th.sortable) tbody tr:hover {
+    background-color: #f7efd5;
+}
 table th {
     border: 1px solid;
     padding: 0px 10px;
