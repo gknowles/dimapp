@@ -67,6 +67,34 @@ function parseDuration(val) {
 }
 
 //===========================================================================
+function parseSI(val) {
+    let units = {
+        k: 1000,
+        K: 1000,
+        M: 1000 * 1000,
+        G: 1000 * 1000 * 1000,
+        T: 1000 * 1000 * 1000 * 1000,
+        P: 1000 * 1000 * 1000 * 1000 * 1000,
+        ki: 1024,
+        Ki: 1024,
+        Mi: 1024 * 1024,
+        Gi: 1024 * 1024 * 1024,
+        Ti: 1024 * 1024 * 1024 * 1024,
+        Pi: 1024 * 1024 * 1024 * 1024 * 1024,
+    }
+    if (val == '-')
+        return Infinity
+    let src = val.trim()
+    if (src.length == 0)
+        return NaN
+    let match = src.match(/([^a-z]+)([A-Za-z]+)/)
+    if (!match || match[0] != src)
+        return NaN
+    let out = parseFloat(match[1]) * units[match[2]];
+    return out
+}
+
+//===========================================================================
 function parseLocaleFloat(val) {
     return Number(val.toString().replace(',', ''))
 }
@@ -198,31 +226,36 @@ function tableCellValue(tr, idx) {
 }
 
 //===========================================================================
+// Parse durations, SI units, or locale numbers to float
+function parseCellNumber(val) {
+    let out = parseDuration(val)
+    if (!isNaN(out))
+        return out
+    out = parseSI(val)
+    if (!isNaN(out))
+        return out
+    out = parseLocaleFloat(val)
+    return out
+}
+
+//===========================================================================
 function tableRowCompare(idx, asc) {
     return (a, b) => {
         const v1 = tableCellValue(a, idx)
         const v2 = tableCellValue(b, idx)
 
-        // Durations?
-        const d1 = parseDuration(v1)
-        if (!isNaN(d1)) {
-            const d2 = parseDuration(v2)
-            if (!isNaN(d2)) {
-                // Can't subtract because d1 and/or d2 could be infinity.
-                const cmp = d1 == d2 ? 0 : d1 < d2 ? -1 : 1
+        // Numeric (duration, SI, or locale)?
+        const n1 = parseCellNumber(v1)
+        if (!isNaN(n1)) {
+            const n2 = parseCellNumber(v2)
+            if (!isNaN(n2)) {
+                // Can't subtract because n1 and/or n2 could be infinity.
+                const cmp = n1 == n2 ? 0 : n1 < n2 ? -1 : 1
                 return asc ? cmp : -cmp
             }
         }
 
-        // Locale numbers?
-        const n1 = parseLocaleFloat(v1)
-        if (!isNaN(n1)) {
-            const n2 = parseLocaleFloat(v2)
-            if (!isNaN(n2))
-                return asc ? n1 - n2 : n2 - n1
-        }
-
-        // Must be strings
+        // Not resolvable as numeric, so compare as strings
         const cmp = v1.toString().localeCompare(v2)
         return asc ? cmp : -cmp;
     }
@@ -243,7 +276,7 @@ function tableHeaderRows(table, th) {
 }
 
 //===========================================================================
-function updateHeaderClass(table, th, asc) {
+function updateTableHeaderClass(table, th, asc) {
     const same = (table == th.closest('table'))
     for (const x in table.rows) {
         for (let cell of table.rows[x].cells) {
@@ -334,6 +367,6 @@ function tableSort(th) {
     for (let tab of tabs) {
         let trows = rows.splice(0, tab.count - tab.skipped)
         tab.table.tBodies[0].append(...trows)
-        updateHeaderClass(tab.table, th, asc)
+        updateTableHeaderClass(tab.table, th, asc)
     }
 }
