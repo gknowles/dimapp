@@ -30,7 +30,6 @@
 # libs/core/core.natvis
 # libs/core/crypt.cpp
 # libs/core/crypt.h
-# libs/core/endian.cpp
 # libs/core/endian.h
 # libs/core/handle.cpp
 # libs/core/handle.h
@@ -45,6 +44,8 @@
 # libs/core/log.cpp
 # libs/core/log.h
 # libs/core/math.h
+# libs/core/memory.cpp
+# libs/core/memory.h
 # libs/core/pageheap.h
 # libs/core/pch.cpp
 # libs/core/pch.h
