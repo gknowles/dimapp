@@ -19,6 +19,7 @@
 #include "list.h"
 #include "log.h"
 #include "math.h"
+#include "memory.h"
 #include "pageheap.h"
 #include "perf.h"
 #include "process.h"

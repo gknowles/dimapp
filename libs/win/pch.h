@@ -32,6 +32,7 @@
 #include <mutex>
 #include <new.h>
 #include <shared_mutex>
+#include <stacktrace>
 #include <system_error>
 #include <thread>
 #include <unordered_map>
