@@ -169,7 +169,7 @@ LogTask::LogTask (const LogMsg & log)
 //===========================================================================
 void LogTask::onLog (const LogMsg & log) {
     if (s_cmdopts.verbose || log.type != kLogTypeDebug) {
-        auto ptr = new LogTask(log);
+        auto ptr = NEW(LogTask)(log);
         if (s_logQ) {
             taskPush(s_logQ, ptr);
         } else {

@@ -323,7 +323,7 @@ void HttpSocket::reply(unsigned reqId, HttpResponse && msg, bool more) {
         return iReply(reqId, fn, more);
     }
 
-    auto task = new ReplyTask<HttpResponse>(reqId, more);
+    auto task = NEW(ReplyTask<HttpResponse>)(reqId, more);
     task->data = move(msg);
     task->fn = [task](HttpConnHandle h, CharBuf * out, int stream) {
         httpReply(out, h, stream, task->data, task->more);
@@ -341,7 +341,7 @@ void HttpSocket::reply(unsigned reqId, string_view data, bool more) {
         return iReply(reqId, fn, more);
     }
 
-    auto task = new ReplyTask<string>(reqId, more);
+    auto task = NEW(ReplyTask<string>)(reqId, more);
     task->data = data;
     task->fn = [task](HttpConnHandle h, CharBuf * out, int stream) {
         httpData(out, h, stream, task->data, task->more);
@@ -359,7 +359,7 @@ void HttpSocket::reply(unsigned reqId, CharBuf && data, bool more) {
         return iReply(reqId, fn, more);
     }
 
-    auto task = new ReplyTask<CharBuf>{reqId, more};
+    auto task = NEW(ReplyTask<CharBuf>){reqId, more};
     task->data = move(data);
     task->fn = [task](HttpConnHandle h, CharBuf * out, int stream) -> void {
         httpData(out, h, stream, task->data, task->more);
@@ -811,7 +811,7 @@ static void routeAdd(PathInfo && pi) {
                 delete this;
             }
         };
-        auto fn = new RouteAddTask;
+        auto fn = NEW(RouteAddTask);
         fn->m_pi = move(pi);
         taskPushEvent(fn);
         return;
@@ -891,7 +891,7 @@ static void addFileRouteRefs(
     pi.path = path;
     pi.segs = count(path.begin(), path.end(), '/');
     pi.methods = fHttpMethodGet;
-    auto notify = new FileRouteNotify;
+    auto notify = NEW(FileRouteNotify);
     pi.notifyOwned.reset(notify);
     notify->m_mtime = mtime;
     notify->m_content = content;
@@ -980,7 +980,7 @@ static void routeReset(unsigned reqId, bool internal) {
             delete this;
         }
     };
-    auto task = new Task;
+    auto task = NEW(Task);
     task->m_reqId = reqId;
     task->m_internal = internal;
     taskPushEvent(task);
@@ -1197,7 +1197,7 @@ void Dim::httpRouteReplyWithFile(unsigned reqId, FileHandle file) {
     fileLastWriteTime(&mtime, file);
     addFileHeaders(&msg, mtime, mt.type, mt.charSet);
     httpRouteReply(reqId, move(msg), true);
-    auto notify = new ReplyWithFileNotify;
+    auto notify = NEW(ReplyWithFileNotify);
     notify->m_reqId = reqId;
     fileRead(
         notify,

@@ -694,7 +694,7 @@ void Dim::execProgram(
 ) {
     assert(notify);
 
-    new ExecProgram(notify, cmdline, opts);
+    NEW(ExecProgram)(notify, cmdline, opts);
     ExecProgram::dequeue();
 }
 
@@ -749,7 +749,7 @@ void Dim::execProgram(
     const string & cmdline,
     const ExecOptions & opts
 ) {
-    auto notify = new SimpleExecNotify;
+    auto notify = NEW(SimpleExecNotify);
     notify->m_fn = fn;
     notify->m_res.cmdline = cmdline;
     execProgram(notify, cmdline, opts);

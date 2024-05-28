@@ -118,7 +118,7 @@ static void createEmptyBuffer() {
         bytes = numeric_limits<DWORD>::max() / granularity * granularity;
     }
 
-    auto buf = new Buffer;
+    auto buf = NEW(Buffer);
     buf->h = s_buffers.insert(buf);
     s_emptyBufs.link(buf);
     buf->sliceSize = s_sliceSize;

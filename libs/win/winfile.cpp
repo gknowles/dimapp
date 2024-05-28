@@ -1092,7 +1092,7 @@ void Dim::fileRead(
     assert(notify);
     auto file = getInfo(f);
     assert(file);
-    auto ptr = new FileReader{notify, hq};
+    auto ptr = NEW(FileReader){notify, hq};
     ptr->start(nullptr, file, outBuf, outBufLen, off, len ? len : kNpos);
 }
 
@@ -1123,7 +1123,7 @@ void Dim::fileWrite(
     assert(notify);
     auto file = getInfo(f);
     assert(file);
-    auto ptr = new FileWriter(notify, hq);
+    auto ptr = NEW(FileWriter)(notify, hq);
     ptr->start(nullptr, file, const_cast<void *>(buf), bufLen, off, bufLen);
 }
 
@@ -1420,7 +1420,7 @@ void Dim::fileCopy(
     TaskQueueHandle hq
 ) {
     assert(notify);
-    auto task = new ProgressTask;
+    auto task = NEW(ProgressTask);
     task->m_notify = notify;
     task->m_wdst = toWstring(dst);
     task->m_wsrc = toWstring(src);

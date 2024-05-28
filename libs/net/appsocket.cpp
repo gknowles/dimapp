@@ -259,7 +259,7 @@ bool IAppSocket::notifyAccept(const AppSocketConnectInfo & info) {
 
     auto expiration = timeNow() + kUnmatchedTimeout;
 
-    auto ui = new UnmatchedInfo;
+    auto ui = NEW(UnmatchedInfo);
     ui->notify = this;
     ui->expiration = expiration;
     m_pos = s_unmatched.back();

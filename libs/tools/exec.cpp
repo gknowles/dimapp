@@ -85,7 +85,7 @@ void Dim::execTool(
             delete this;
         }
     };
-    auto notify = new Exec;
+    auto notify = NEW(Exec);
     notify->fn = fn;
     notify->cmdline = cmdline;
     notify->errTitle = errTitle;

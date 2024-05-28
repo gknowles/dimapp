@@ -435,7 +435,7 @@ void Dim::winTlsInitialize() {
 
 //===========================================================================
 WinTlsConnHandle Dim::winTlsAccept() {
-    auto conn = new ServerConn;
+    auto conn = NEW(ServerConn);
     scoped_lock lk{s_mut};
     return s_conns.insert(conn);
 }

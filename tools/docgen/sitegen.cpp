@@ -955,7 +955,7 @@ static void genSite(Config * out, unsigned phase = 0) {
 
             // Generate pages for version
             for (auto && page : layout->second.pages) {
-                auto info = new GenPageInfo({ out, ver, page });
+                auto info = NEW(GenPageInfo)({ out, ver, page });
                 info->fn = [info, what]() {
                     genSite(info->out, what);
                     delete info;

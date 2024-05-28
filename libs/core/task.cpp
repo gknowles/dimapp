@@ -129,7 +129,7 @@ static void setThreads_LK(TaskQueue * q, size_t threads) {
     } else if (num < 0) {
         for (int i = 0; i > num; --i) {
             s_numEnded += 1;
-            auto task = new EndThreadTask;
+            auto task = NEW(EndThreadTask);
             q->push(q, *task);
         }
         q->cv.notify_all();
@@ -286,7 +286,7 @@ TaskQueueHandle Dim::taskComputeQueue() {
 TaskQueueHandle Dim::taskCreateQueue(string_view name, int threads) {
     assert(s_running);
     assert(threads);
-    auto q = new TaskQueue;
+    auto q = NEW(TaskQueue);
     q->name = name;
 
     scoped_lock lk{s_mut};
@@ -306,7 +306,7 @@ void Dim::taskSetQueueThreads(TaskQueueHandle hq, int threads) {
 
 //===========================================================================
 void Dim::taskPush(TaskQueueHandle hq, function<void()> && fn) {
-    taskPush(hq, new FunctionTask{move(fn)});
+    taskPush(hq, NEW(FunctionTask){move(fn)});
 }
 
 //===========================================================================
@@ -340,5 +340,5 @@ void Dim::taskPush(
 
 //===========================================================================
 void Dim::taskPushOnce(string_view name, function<void()> && fn) {
-    new RunOnceTask(name, move(fn));
+    NEW(RunOnceTask)(name, move(fn));
 }

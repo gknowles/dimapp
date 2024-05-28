@@ -738,7 +738,7 @@ void Dim::pipeListen(
 // ListenPipe
 //===========================================================================
 void ListenPipe::start() {
-//    [[maybe_unused]] auto pipe = new AcceptPipe(this, m_name, m_oflags);
+//    [[maybe_unused]] auto pipe = NEW(AcceptPipe)(this, m_name, m_oflags);
 }
 
 //===========================================================================
@@ -778,7 +778,7 @@ void Dim::pipeListen(
     string_view name,
     EnumFlags<Pipe::OpenMode> oflags
 ) {
-    auto listener = new ListenPipe;
+    auto listener = NEW(ListenPipe);
     listener->m_mode = kRunRunning;
     listener->m_factory = factory;
     listener->m_name = name;

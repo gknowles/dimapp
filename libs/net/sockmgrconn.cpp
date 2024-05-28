@@ -330,6 +330,6 @@ SockMgrHandle Dim::sockMgrConnect(
     IFactory<IAppSocketNotify> * factory,
     AppSocket::MgrFlags flags
 ) {
-    auto mgr = new ConnectManager(mgrName, factory, flags);
+    auto mgr = NEW(ConnectManager)(mgrName, factory, flags);
     return iSockMgrAdd(mgr);
 }
