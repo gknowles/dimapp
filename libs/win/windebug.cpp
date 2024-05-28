@@ -53,7 +53,7 @@ OtherHeap::~OtherHeap() {
 }
 
 //===========================================================================
-inline void * OtherHeap::do_allocate(size_t bytes, size_t alignment) {
+void * OtherHeap::do_allocate(size_t bytes, size_t alignment) {
     assert(has_single_bit(alignment));
     if (alignment <= MEMORY_ALLOCATION_ALIGNMENT)
         return HeapAlloc(m_heap, 0, bytes);
@@ -63,7 +63,7 @@ inline void * OtherHeap::do_allocate(size_t bytes, size_t alignment) {
 }
 
 //===========================================================================
-inline void OtherHeap::do_deallocate(
+void OtherHeap::do_deallocate(
     void * ptr,
     size_t bytes,
     size_t alignment
@@ -72,7 +72,7 @@ inline void OtherHeap::do_deallocate(
 }
 
 //===========================================================================
-inline bool OtherHeap::do_is_equal(
+bool OtherHeap::do_is_equal(
     const pmr::memory_resource & other
 ) const noexcept {
     return this == &other;
@@ -117,8 +117,15 @@ struct MemRef {
     const char * fileName;
     int lineNumber;
     size_t dataSize;
+    mutable long request;
 
-    bool operator==(const MemRef &) const = default;
+    bool operator==(const MemRef & other) const {
+        return operator<=>(other) == 0;
+    }
+    strong_ordering operator<=>(const MemRef & other) const {
+        return tie(lineNumber, dataSize, fileName) <=>
+            tie(other.lineNumber, other.dataSize, other.fileName);
+    }
 };
 
 } // namespace
@@ -142,7 +149,6 @@ void Dim::debugDumpMemory(IJBuilder * out) {
     }
     OtherHeap heap2(h2);
     pmr::monotonic_buffer_resource mr(&heap2);
-    auto files = heap2.emplace<pmr::unordered_set<const char *>>(&mr);
     auto groups = heap2.emplace<pmr::unordered_map<MemRef, size_t>>(&mr);
 
     HANDLE h = (HANDLE) _get_heap_handle();
@@ -171,37 +177,56 @@ void Dim::debugDumpMemory(IJBuilder * out) {
                 - kNoMansLandSize;
             if (memcmp(anotherGap, kNoMansLandImage, kNoMansLandSize) != 0)
                 continue;
-            if (!files->contains(hdr->fileName)) {
-                // validate as pointer to valid filename:
-                //  - in bounds
-                //  - less than 256 chars
-                files->insert(hdr->fileName);
-            }
             MemRef ref = {
                 .fileName = hdr->fileName,
                 .lineNumber = hdr->lineNumber,
                 .dataSize = hdr->dataSize,
+                .request = hdr->requestNumber,
             };
-            (*groups)[ref] += 1;
+            if (auto i = groups->find(ref); i == groups->end()) {
+                groups->insert(i, {ref, 1});
+            } else {
+                if (ref.request > i->first.request)
+                    i->first.request = ref.request;
+                i->second += 1;
+            }
         }
         err.set();
     }
     if (err != ERROR_NO_MORE_ITEMS)
         logMsgError() << "HeapWalk(crtHeap): " << err;
 
+    auto files = heap2.emplace<pmr::unordered_map<const char *, bool>>(&mr);
     out->member("blocks").array();
     for (auto&& mem : *groups) {
-        out->object();
-        if (mem.first.fileName) {
-            out->member("file", mem.first.fileName)
-                .member("line", mem.first.lineNumber);
+        auto ref = mem.first;
+        if (ref.lineNumber) {
+            if (!files->contains(ref.fileName)) {
+                // validate as pointer to valid filename:
+                //  - in bounds
+                //  - less than 256 chars
+                files->emplace(ref.fileName, true);
+            }
+            if (!ref.fileName)
+                ref.fileName = "UNKNOWN";
         } else {
-            out->member("file", "UNKNOWN")
-                .member("line", 0);
+            stacktrace_entry ent;
+            static_assert(sizeof ent == sizeof ref.fileName);
+            memcpy(&ent, &ref.fileName, sizeof ent);
+            if (ent) {
+                ref.fileName = heap2.strDup(ent.source_file());
+                ref.lineNumber = ent.source_line();
+            } else {
+                ref.fileName = "UNKNOWN";
+            }
         }
-        out->member("size", mem.first.dataSize);
-        out->member("count", mem.second);
-        out->end();
+        out->object()
+            .member("file", ref.fileName)
+            .member("line", ref.lineNumber)
+            .member("size", ref.dataSize)
+            .member("count", mem.second)
+            .member("request", ref.request)
+            .end();
     }
     out->end();
 }

@@ -30,12 +30,15 @@ addOpts({
       let arr = this.blocks
       let total = 0
       let count = 0
+      let request = 0
       for (let val of arr) {
         val.total = val.size * val.count
         total += val.total
         count += val.count
+        if (request < val.request)
+          request = val.request
       }
-      arr.push({total: total, count: count, size: 0, line: 0, file: "TOTAL"})
+      arr.push({request: request, total: total, count: count})
       arr.sort((a, b) => {
         return b.total - a.total
       })
@@ -69,6 +72,7 @@ addOpts({
       </template>
       <table v-else>
         <tr>
+          <th class="sortable">Request</th>
           <th class="sortable">Total</th>
           <th class="sortable">Count</th>
           <th class="sortable">Size</th>
@@ -77,13 +81,15 @@ addOpts({
         </tr>
         <tr v-for="val in sortedBlocks.slice(0,1)"
             class="unsortable disabled fw-bold">
+          <td class="text-end">{{val.request.toLocaleString()}}</td>
           <td class="text-end">{{val.total.toLocaleString()}}</td>
           <td class="text-end">{{val.count.toLocaleString()}}</td>
           <td class="text-end">-</td>
           <td class="text-end">-</td>
-          <td>{{val.file}}</td>
+          <td>TOTAL</td>
         </tr>
         <tr v-for="val in sortedBlocks.slice(1)">
+          <td class="text-end">{{val.request.toLocaleString()}}</td>
           <td class="text-end">{{val.total.toLocaleString()}}</td>
           <td class="text-end">{{val.count.toLocaleString()}}</td>
           <td class="text-end">
