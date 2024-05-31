@@ -50,7 +50,7 @@ private:
 template <typename T, typename... Args>
 inline T * ITempHeap::emplace(Args &&... args) {
     char * tmp = alloc(sizeof(T), alignof(T));
-    return new (tmp) T(std::forward<Args>(args)...);
+    return new(tmp) T(std::forward<Args>(args)...);
 }
 
 //===========================================================================

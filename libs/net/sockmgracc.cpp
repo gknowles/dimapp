@@ -208,6 +208,6 @@ SockMgrHandle Dim::sockMgrListen(
     AppSocket::Family fam,
     AppSocket::MgrFlags flags
 ) {
-    auto mgr = NEW(AcceptManager)(mgrName, factory, fam, flags);
+    auto mgr = new AcceptManager(mgrName, factory, fam, flags);
     return iSockMgrAdd(mgr);
 }

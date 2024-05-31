@@ -1550,7 +1550,7 @@ void HttpConn::deleteStream(int stream, HttpStream * sm) {
 
 //===========================================================================
 HttpConnHandle Dim::httpConnect(CharBuf * out) {
-    auto conn = NEW(HttpConn);
+    auto conn = new HttpConn;
     auto h = s_conns.insert(conn);
     conn->connect(out, h);
     return h;
@@ -1558,7 +1558,7 @@ HttpConnHandle Dim::httpConnect(CharBuf * out) {
 
 //===========================================================================
 HttpConnHandle Dim::httpAccept() {
-    auto conn = NEW(HttpConn);
+    auto conn = new HttpConn;
     auto h = s_conns.insert(conn);
     conn->accept(h);
     return h;

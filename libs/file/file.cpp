@@ -556,7 +556,7 @@ void Dim::fileStreamBinary(
     size_t blkSize,
     TaskQueueHandle hq
 ) {
-    NEW(FileStreamNotify)(notify, hq, path, blkSize);
+    new FileStreamNotify(notify, hq, path, blkSize);
 }
 
 //===========================================================================
@@ -584,7 +584,7 @@ void Dim::fileLoadBinary(
     if (bytes > maxSize)
         logMsgError() << "File too large (" << bytes << " bytes): " << path;
     out->resize((size_t) bytes);
-    auto proxy = NEW(FileLoadNotify)(out, notify);
+    auto proxy = new FileLoadNotify(out, notify);
     fileRead(proxy, out->data(), (size_t) bytes, file, 0, 0, hq);
 }
 
@@ -638,7 +638,7 @@ void Dim::fileSaveBinary(
         return;
     }
 
-    auto proxy = NEW(FileSaveNotify)(notify);
+    auto proxy = new FileSaveNotify(notify);
     fileWrite(proxy, file, 0, data.data(), data.size(), hq);
 }
 
@@ -685,6 +685,6 @@ void Dim::fileSaveTempFile(
         return;
     }
 
-    auto proxy = NEW(FileSaveNotify)(notify);
+    auto proxy = new FileSaveNotify(notify);
     fileWrite(proxy, file, 0, data.data(), data.size(), hq);
 }

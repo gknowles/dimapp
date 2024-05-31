@@ -1231,7 +1231,7 @@ static void runTests(
                     out->pendingWork -= 1;
                     continue;
                 }
-                auto work = NEW(ProgWork)({
+                auto work = new ProgWork({
                     .phase = 0,
                     .pendingWork = 1,
                     .fn = fn,

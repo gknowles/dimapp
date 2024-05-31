@@ -343,7 +343,7 @@ void writeContent(
         }
     };
 
-    auto notify = NEW(Write);
+    auto notify = new Write;
     notify->fn = fn;
     notify->path = path;
     fileSaveBinary(notify, path, content);
@@ -371,7 +371,7 @@ void loadContent(
                 return false;
             }
         };
-        auto notify = NEW(FileContent);
+        auto notify = new FileContent;
         notify->fn = fn;
         fileLoadBinary(notify, &notify->buf, path);
         return;

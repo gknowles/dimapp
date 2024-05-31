@@ -339,7 +339,7 @@ void JsonLogTail::onHttpRequest(unsigned reqId, HttpRequest & msg) {
 
     auto limit = clamp(*m_limit, 10u, 10'000u);
 
-    auto job = NEW(LogJob);
+    auto job = new LogJob;
     job->m_reqId = reqId;
     job->m_limit = limit;
     job->m_bld = initResponse(&job->m_res, reqId, msg);

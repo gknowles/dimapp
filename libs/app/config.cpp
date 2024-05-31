@@ -112,7 +112,7 @@ void ConfigFile::monitor_UNLK(
 ) {
     assert(lk);
     bool wasEmpty = !m_notifiers;
-    auto ni = NEW(NotifyInfo);
+    auto ni = new NotifyInfo;
     m_notifiers.link(ni);
     ni->notify = notify;
     if (takeOwnersip)

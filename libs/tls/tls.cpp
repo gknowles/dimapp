@@ -388,7 +388,7 @@ void ServerConn::onTlsHandshake(const TlsClientHelloMsg & msg) {}
 
 //===========================================================================
 TlsConnHandle Dim::tlsAccept(const TlsCipherSuite suites[], size_t count) {
-    auto conn = NEW(ServerConn);
+    auto conn = new ServerConn;
     conn->setSuites(suites, count);
     return s_conns.insert(conn);
 }
@@ -400,7 +400,7 @@ TlsConnHandle Dim::tlsConnect(
     const TlsCipherSuite suites[],
     size_t count
 ) {
-    auto conn = NEW(ClientConn)(hostName, suites, count);
+    auto conn = new ClientConn(hostName, suites, count);
     conn->connect(out);
     return s_conns.insert(conn);
 }

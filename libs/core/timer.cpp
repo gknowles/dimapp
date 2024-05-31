@@ -239,7 +239,7 @@ TimePoint Timer::update(
     {
         scoped_lock lk{s_mut};
         if (!notify->m_timer)
-            NEW(Timer)(notify);
+            new Timer(notify);
         auto & timer = notify->m_timer;
         if (onlyIfSooner && !(expire < timer->expiration))
             return timer->expiration;
