@@ -25,6 +25,7 @@ static void * alloc(size_t count) {
     if (!stack.empty())
         file = (const char *) stack[0].native_handle();
     auto out = _malloc_dbg(count, _NORMAL_BLOCK, file, 0);
+    assert(out);
     return out;
 }
 
