@@ -758,12 +758,6 @@ size_t CharBuf::defaultBlockSize() const {
 }
 
 //===========================================================================
-// ITempHeap
-char * CharBuf::alloc(size_t bytes, size_t align) {
-    return nullptr;
-}
-
-//===========================================================================
 // private
 //===========================================================================
 pair<CharBuf::const_buffer_iterator, int> CharBuf::find(size_t pos) const {

@@ -8,6 +8,7 @@
 
 #include "core/charbuf.h"
 #include "core/str.h"
+#include "core/tempheap.h"
 #include "core/types.h"
 
 #include <cstdint>

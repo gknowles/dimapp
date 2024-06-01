@@ -6,7 +6,6 @@
 
 #include "cppconf/cppconf.h"
 
-#include "core/tempheap.h"
 #include "core/types.h"
 
 #include <algorithm>
@@ -27,7 +26,7 @@ namespace Dim {
 *
 ***/
 
-class CharBuf : public ITempHeap {
+class CharBuf {
 public:
     class ViewIterator;
 
@@ -157,9 +156,6 @@ public:
 
     size_t defaultBlockSize() const;
 
-    // ITempHeap
-    char * alloc(size_t bytes, size_t align) override;
-
 private:
     friend std::string toString(const CharBuf & buf);
     friend std::string toString(const CharBuf & buf, size_t pos);
@@ -247,13 +243,6 @@ inline CharBuf::ViewIterator begin (CharBuf::ViewIterator iter) {
 inline CharBuf::ViewIterator end (const CharBuf::ViewIterator & iter) {
     return {};
 }
-
-
-/****************************************************************************
-*
-*   Free functions
-*
-***/
 
 
 } // namespace
