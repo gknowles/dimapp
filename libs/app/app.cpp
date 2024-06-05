@@ -300,8 +300,8 @@ int Dim::appRun(
     // No external effects should happen after this point. Any sockets, pipes,
     // files, or other shared resources MUST already be closed. When running as
     // a service the SERVICE_STOPPED status has been reported and the Service
-    // Control Manager may have already stopped handling requests from us in
-    // favor of a new instance of the service.
+    // Control Manager may have already stopped handling requests from this
+    // run of the executable in favor of a new instance of the service.
     //-----------------------------------------------------------------------
 
     iTimerDestroy();

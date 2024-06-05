@@ -46,7 +46,6 @@ using RtlGetVersionFn = NTSTATUS(WINAPI *)(DIM_OSVERSIONINFOEXW * info);
 static RtlGetVersionFn s_RtlGetVersion;
 static EnvMemoryConfig s_memCfg;
 static unsigned s_numProcessors;
-static string s_execPath;
 static string s_procAcct;
 
 
@@ -58,6 +57,8 @@ static string s_procAcct;
 
 //===========================================================================
 void Dim::winEnvInitialize() {
+    winLoadProc(&s_RtlGetVersion, "ntdll", "RtlGetVersion");
+
     SYSTEM_INFO info;
     GetSystemInfo(&info);
     s_memCfg = {};
@@ -68,6 +69,7 @@ void Dim::winEnvInitialize() {
         // and see if they are supported at all (non-zero).
         s_memCfg.minLargeAlloc = GetLargePageMinimum();
     }
+
     s_numProcessors = info.dwNumberOfProcessors;
 
     wstring out;
@@ -310,26 +312,34 @@ void Dim::envOSVersion(IJBuilder * out) {
 ***/
 
 //===========================================================================
-const string & Dim::envExecPath() {
-    if (s_execPath.empty()) {
-        DWORD num = MAX_PATH;
-        wstring wpath(num, '\0');
-        for (;;) {
-            num = GetModuleFileNameW(
-                NULL,
-                wpath.data(),
-                (DWORD) wpath.size()
-            );
-            if (!num)
-                logMsgFatal() << "GetModuleFileNameW(NULL): " << WinError();
-            if (num != wpath.size())
-                break;
-            wpath.resize(2 * wpath.size());
-        }
-        wpath.resize(num);
-        s_execPath = toString(wpath);
+static string execPath() {
+    // While you'd think you could use _get_wpgmptr() or _get_pgmptr() and save
+    // a kernel call it's not so easy. They both assert that the program was
+    // started via the matching flavor of wmain or main. A fact which,
+    // depending on the app, might change based on being started as a service
+    // or console application.
+    DWORD num = MAX_PATH;
+    wstring wpath(num, '\0');
+    for (;;) {
+        num = GetModuleFileNameW(
+            NULL,
+            wpath.data(),
+            (DWORD) wpath.size()
+        );
+        if (!num)
+            logMsgFatal() << "GetModuleFileNameW(NULL): " << WinError();
+        if (num != wpath.size())
+            break;
+        wpath.resize(2 * wpath.size());
     }
-    return s_execPath;
+    wpath.resize(num);
+    return toString(wpath);
+}
+
+//===========================================================================
+const string & Dim::envExecPath() {
+    static string path = execPath();
+    return path;
 }
 
 //===========================================================================
@@ -365,8 +375,13 @@ Dim::VersionInfo Dim::envExecVersion() {
 
 //===========================================================================
 TimePoint Dim::envExecBuildTime() {
-    auto utime = GetTimestampForLoadedLibrary(GetModuleHandle(NULL));
-    return timeFromUnix(utime);
+    // GetTimestampForLoadedLibrary is a DbgHelp function and therefore access
+    // must be serialized.
+    static auto time = []() {
+        auto utime = GetTimestampForLoadedLibrary(GetModuleHandle(NULL));
+        return timeFromUnix(utime);
+    }();
+    return time;
 }
 
 
