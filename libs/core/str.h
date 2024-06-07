@@ -183,7 +183,7 @@ uint64_t strToUint64(
 *
 ***/
 
-// Uses strtod, but also supports k/K, ki/Ki, M/Mi, suffixes
+// Uses strtod, but also supports SI (k/K, ki/Ki, M/Mi, ...) suffixes
 [[nodiscard]] bool parse(double * out, std::string_view src);
 
 
@@ -261,10 +261,10 @@ std::string_view trim(std::string_view src);
 std::string_view ltrim(std::string_view src);
 std::string_view rtrim(std::string_view src);
 
-// Splits source into lines, trims trailing spaces, leading and trailing blank
-// lines. Finally, removes an amount of leading whitespace from each line equal
-// to the smallest amount of leading whitespace of any line that still has
-// characters.
+// Splits source into lines, removes trailing spaces, removes leading and
+// trailing blank lines. Finally, removes the amount of leading whitespace
+// common to all lines that still have characters, preserving additional
+// leading whitespace that individual lines may have.
 std::string trimBlock(std::string_view src);
 
 std::unique_ptr<char[]> strDup(std::string_view src);
