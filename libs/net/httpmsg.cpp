@@ -420,7 +420,7 @@ const CharBuf & HttpMsg::body() const {
 }
 
 //===========================================================================
-ITempHeap & HttpMsg::heap() {
+IHeap & HttpMsg::heap() {
     return m_heap;
 }
 

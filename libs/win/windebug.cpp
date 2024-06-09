@@ -79,7 +79,7 @@ struct std::hash<MemRef> {
 
 namespace {
 
-class OtherHeap : public ITempHeap {
+class OtherHeap : public IHeap {
 public:
     OtherHeap();
     ~OtherHeap();
@@ -87,16 +87,9 @@ public:
 
     HANDLE handle() const { return m_heap; }
 
-    // ITempHeap
-    using ITempHeap::alloc;
-    char * alloc(size_t bytes, size_t alignment) override;
-
     // Inherited via std::pmr::memory_resource
     void * do_allocate(size_t bytes, size_t alignment) override;
     void do_deallocate(void * ptr, size_t bytes, size_t alignment) override;
-    bool do_is_equal(
-        const std::pmr::memory_resource & other
-    ) const noexcept override;
 
 private:
     HANDLE m_heap = INVALID_HANDLE_VALUE;
@@ -137,18 +130,6 @@ void OtherHeap::do_deallocate(
     size_t alignment
 ) {
     HeapFree(m_heap, 0, ptr);
-}
-
-//===========================================================================
-bool OtherHeap::do_is_equal(
-    const pmr::memory_resource & other
-) const noexcept {
-    return this == &other;
-}
-
-//===========================================================================
-char * OtherHeap::alloc(size_t bytes, size_t alignment) {
-    return (char *) do_allocate(bytes, alignment);
 }
 
 

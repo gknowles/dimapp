@@ -226,7 +226,7 @@ public:
 
     bool fail(const char errmsg[]);
 
-    ITempHeap & heap() { return m_heap; }
+    IHeap & heap() { return m_heap; }
     IJsonStreamNotify & notify() { return m_notify; }
 
     const char * errmsg() const { return m_errmsg; }
@@ -292,7 +292,7 @@ public:
     JNode * addValue(JNode * parent, bool val, std::string_view name = {});
     JNode * addValue(JNode * parent, nullptr_t, std::string_view name = {});
 
-    ITempHeap & heap() { return m_heap; }
+    IHeap & heap() { return m_heap; }
 
     const char * filename() const { return m_filename; }
     JNode * root() { return m_root; }

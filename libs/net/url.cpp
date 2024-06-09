@@ -17,7 +17,7 @@ using namespace Dim;
 ***/
 
 //===========================================================================
-static string_view urlDecode(string_view src, ITempHeap & heap, bool query) {
+static string_view urlDecode(string_view src, IHeap & heap, bool query) {
     auto outlen = src.size();
     auto obase = heap.alloc<char>(outlen);
     auto optr = obase;
@@ -40,14 +40,14 @@ static string_view urlDecode(string_view src, ITempHeap & heap, bool query) {
 }
 
 //===========================================================================
-string_view Dim::urlDecodePathComponent(string_view src, ITempHeap & heap) {
+string_view Dim::urlDecodePathComponent(string_view src, IHeap & heap) {
     return urlDecode(src, heap, false);
 }
 
 //===========================================================================
 string_view Dim::urlDecodeQueryComponent(
     string_view src,
-    ITempHeap & heap
+    IHeap & heap
 ) {
     return urlDecode(src, heap, true);
 }
@@ -197,7 +197,7 @@ string Dim::urlEncodeQueryComponent(string_view src) {
 //===========================================================================
 static void addSeg(
     HttpQuery * hp,
-    ITempHeap & heap,
+    IHeap & heap,
     const char *& base,
     const char * eptr,
     unsigned & pcts
@@ -214,7 +214,7 @@ static void addSeg(
 }
 
 //===========================================================================
-static void setPath(HttpQuery * hp, ITempHeap & heap) {
+static void setPath(HttpQuery * hp, IHeap & heap) {
     auto found = size_t{0};
     for (auto && seg : hp->pathSegs)
         found += seg.value.size() + 1;
@@ -230,7 +230,7 @@ static void setPath(HttpQuery * hp, ITempHeap & heap) {
 //===========================================================================
 static HttpPathParam * addParam(
     HttpQuery * hp,
-    ITempHeap & heap,
+    IHeap & heap,
     const char *& base,
     const char * eptr,
     unsigned & pcts
@@ -250,7 +250,7 @@ static HttpPathParam * addParam(
 //===========================================================================
 static void addParamValue(
     HttpPathParam * param,
-    ITempHeap & heap,
+    IHeap & heap,
     const char *& base,
     const char * eptr,
     unsigned & pcts
@@ -267,7 +267,7 @@ static void addParamValue(
 }
 
 //===========================================================================
-HttpQuery * Dim::urlParseHttpPath(string_view path, ITempHeap & heap) {
+HttpQuery * Dim::urlParseHttpPath(string_view path, IHeap & heap) {
     auto qry = heap.emplace<HttpQuery>();
     if (path.empty())
         return qry;
@@ -310,7 +310,7 @@ SEGMENTS:
 }
 
 //===========================================================================
-void Dim::urlAddQueryString(HttpQuery * out, string_view src, ITempHeap & heap) {
+void Dim::urlAddQueryString(HttpQuery * out, string_view src, IHeap & heap) {
     if (src.empty())
         return;
 

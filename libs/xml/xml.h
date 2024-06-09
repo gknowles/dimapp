@@ -205,7 +205,7 @@ public:
 
     bool fail(const char errmsg[]);
 
-    ITempHeap & heap() { return m_heap; }
+    IHeap & heap() { return m_heap; }
     IXStreamParserNotify & notify() { return m_notify; }
 
     const char * errmsg() const { return m_errmsg; }
@@ -248,7 +248,7 @@ public:
     // and trailing spaces removed *after* concatenation.
     void normalizeText(XNode * elem);
 
-    ITempHeap & heap() { return m_heap; }
+    IHeap & heap() { return m_heap; }
 
     const char * filename() const { return m_filename; }
     XNode * root() { return m_root; }

@@ -96,7 +96,7 @@ public:
 
     [[nodiscard]] bool parse(
         IHpackDecodeNotify * notify,
-        ITempHeap * heap,
+        IHeap * heap,
         const char src[],
         size_t srcLen
     );
@@ -107,20 +107,20 @@ private:
 
     bool readInstruction(
         IHpackDecodeNotify * notify,
-        ITempHeap * heap,
+        IHeap * heap,
         const char *& src,
         size_t & srcLen
     );
     bool readIndexedField(
         HpackFieldView * out,
-        ITempHeap * heap,
+        IHeap * heap,
         size_t prefixBits,
         const char *& src,
         size_t & srcLen
     );
     bool readIndexedName(
         HpackFieldView * out,
-        ITempHeap * heap,
+        IHeap * heap,
         size_t prefixBits,
         const char *& src,
         size_t & srcLen
@@ -133,7 +133,7 @@ private:
     );
     bool read(
         const char ** out,
-        ITempHeap * heap,
+        IHeap * heap,
         const char *& src,
         size_t & srcLen
     );

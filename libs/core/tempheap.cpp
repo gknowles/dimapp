@@ -96,7 +96,7 @@ void TempHeap::swap(TempHeap & from) {
 }
 
 //===========================================================================
-char * TempHeap::alloc(size_t bytes, size_t alignment) {
+void * TempHeap::do_allocate(size_t bytes, size_t alignment) {
     Buffer * buf = (Buffer *)m_buffer;
     Buffer * tmp;
     constexpr unsigned kBufferLen = sizeof *buf;
@@ -134,4 +134,14 @@ char * TempHeap::alloc(size_t bytes, size_t alignment) {
     buf = tmp;
 
     return alignPtr(buf, bytes, alignment);
+}
+
+//===========================================================================
+inline void TempHeap::do_deallocate(
+    void * ptr,
+    size_t bytes,
+    size_t alignment
+) {
+    // Resources freed only on destruction of heap.
+    return;
 }

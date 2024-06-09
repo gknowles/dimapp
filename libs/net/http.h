@@ -227,7 +227,7 @@ public:
     CharBuf & body();
     const CharBuf & body() const;
 
-    ITempHeap & heap();
+    IHeap & heap();
 
     virtual bool isRequest() const = 0;
     int stream() const { return m_stream; }

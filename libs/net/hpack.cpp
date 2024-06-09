@@ -41,7 +41,7 @@ public:
 
     bool decode(
         const char ** out,
-        ITempHeap * heap,
+        IHeap * heap,
         size_t unusedBits,
         const char src[],
         size_t count
@@ -592,7 +592,7 @@ static bool read(
 //===========================================================================
 bool HuffDecoder::decode(
     const char ** out,
-    ITempHeap * heap,
+    IHeap * heap,
     size_t unusedBits,
     const char src[],
     size_t count
@@ -649,7 +649,7 @@ void HpackDecode::setTableSize(size_t tableSize) {
 //===========================================================================
 bool HpackDecode::parse(
     IHpackDecodeNotify * notify,
-    ITempHeap * heap,
+    IHeap * heap,
     const char src[],
     size_t srcLen
 ) {
@@ -663,7 +663,7 @@ bool HpackDecode::parse(
 //===========================================================================
 bool HpackDecode::readInstruction(
     IHpackDecodeNotify * notify,
-    ITempHeap * heap,
+    IHeap * heap,
     const char *& src,
     size_t & srcLen
 ) {
@@ -741,7 +741,7 @@ bool HpackDecode::readInstruction(
 //===========================================================================
 bool HpackDecode::readIndexedField(
     HpackFieldView * out,
-    ITempHeap * heap,
+    IHeap * heap,
     size_t prefixBits,
     const char *& src,
     size_t & srcLen
@@ -767,7 +767,7 @@ bool HpackDecode::readIndexedField(
 //===========================================================================
 bool HpackDecode::readIndexedName(
     HpackFieldView * out,
-    ITempHeap * heap,
+    IHeap * heap,
     size_t prefixBits,
     const char *& src,
     size_t & srcLen
@@ -833,7 +833,7 @@ bool HpackDecode::read(
 //===========================================================================
 bool HpackDecode::read(
     const char ** out,
-    ITempHeap * heap,
+    IHeap * heap,
     const char *& src,
     size_t & srcLen
 ) {
