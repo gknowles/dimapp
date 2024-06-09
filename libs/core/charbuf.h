@@ -109,6 +109,7 @@ public:
     CharBuf & rtrim(char ch);
     CharBuf & pushBack(char ch);
     CharBuf & popBack();
+    CharBuf & append(char ch) { return pushBack(ch); }
     CharBuf & append(size_t numCh, char ch);
     CharBuf & append(std::nullptr_t);
     CharBuf & append(const char s[]);
