@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2022.
+// Copyright Glen Knowles 2017 - 2024.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // str-t.cpp - dim test str
@@ -78,13 +78,14 @@ static void testStrToInt() {
 }
 
 //===========================================================================
-static void testIntegralStr() {
+static void testToChars() {
     int line = 0;
 
     //-----------------------------------------------------------------------
     // int
     EXPECT(toChars(1234).view() == "1234");
     EXPECT(toChars<int>(1234).view() == "1234");
+    EXPECT(toHexChars(1234).view() == "4d2");
 
     //-----------------------------------------------------------------------
     // unsigned
@@ -98,6 +99,11 @@ static void testIntegralStr() {
     EXPECT(toChars<char>(127).view() == "127"sv);
     EXPECT(toChars<char>(-3).view() == "-3"sv);
     EXPECT(toChars<char>(-128).view() == "-128"sv);
+
+    //-----------------------------------------------------------------------
+    // float
+    EXPECT(toChars(numeric_limits<float>::max()).view() == "3.4028235e+38");
+    EXPECT(toHexChars(numeric_limits<float>::max()).view() == "1.fffffep+127");
 
     //-----------------------------------------------------------------------
     // double
@@ -189,7 +195,7 @@ static void testCopy() {
 static void app(int argc, char *argv[]) {
     testParse();
     testStrToInt();
-    testIntegralStr();
+    testToChars();
     testSplit();
     testCopy();
 

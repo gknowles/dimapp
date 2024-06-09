@@ -23,71 +23,89 @@
 
 namespace Dim {
 
-//===========================================================================
-// Maximum number of characters needed to represent any integral value of
-// type T in base 10.
+/****************************************************************************
+*
+*   Arithmetic to string - Helpers
+*
+*   Convert arithmetic type to char buffer, handles both floating point (float,
+*   double, long double) and integral (char, long, uint16_t, etc) types, but
+*   not bools.
+*
+***/
+
 template <typename T>
-requires std::is_integral_v<T>
+concept Charable = (
+    std::is_arithmetic_v<T> && !std::is_same_v<T, bool>
+    || std::is_enum_v<T>
+);
+
+//===========================================================================
+// Maximum number of characters needed to represent value of type T in base 10.
+template <Charable T>
 constexpr int maxNumericChars() {
-    return std::numeric_limits<T>::is_signed
-        + std::numeric_limits<T>::digits10 + 1;
+    if constexpr (std::is_integral_v<T>) {
+        return std::numeric_limits<T>::is_signed
+            + std::numeric_limits<T>::digits10
+            + 1; // decimal point
+    } else if constexpr (std::is_enum_v<T>) {
+        return maxNumericChars<std::underlying_type_t<T>>();
+    } else {
+        static_assert(std::is_floating_point_v<T>);
+        return 1 // sign
+            + std::numeric_limits<T>::max_digits10 // digits
+            + 1 // decimal point
+            + 2 // "e+"
+            + digits10(std::numeric_limits<T>::max_exponent10);
+    }
 }
 
 //===========================================================================
-// Maximum number of characters needed to represent any value of the
-// underlying type of T in base 10.
-template <typename T>
-requires std::is_enum_v<T>
-constexpr int maxNumericChars() {
-    return maxNumericChars<std::underlying_type_t<T>>();
-}
-
-//===========================================================================
-// Maximum number of characters needed to represent any floating point value
-// of type T in base 10.
-template <typename T>
-requires std::is_floating_point_v<T>
-constexpr int maxNumericChars() {
-    constexpr auto cnt = 1 // sign
-        + std::numeric_limits<T>::max_digits10 + 1 // digits + decimal point
-        + digits10(std::numeric_limits<T>::max_exponent10) + 2; // "e+"
-    return (int) cnt;
+// Maximum number of characters needed to represent value of type T in base 16.
+template <Charable T>
+constexpr int maxNumericHexChars() {
+    if constexpr (std::is_integral_v<T>) {
+        return std::numeric_limits<T>::is_signed
+            + digits16(std::numeric_limits<T>::digits)
+            + 1; // decimal point
+    } else if constexpr (std::is_enum_v<T>) {
+        return maxNumericChars<std::underlying_type_t<T>>();
+    } else {
+        static_assert(std::is_floating_point_v<T>);
+        return 1 // sign
+            + (std::numeric_limits<T>::digits + 3) / 4 // digits
+            + 1 // decimal point
+            + 2 // "p+"
+            + digits16(std::numeric_limits<T>::max_exponent);
+    }
 }
 
 
 /****************************************************************************
 *
-*   Arithmetic to string
-*
-*   Convert arithmetic type to char buffer, handles both floating point (float,
-*   double, long double) and integral (char, long, uint16_t, etc) types.
+*   Arithmetic to string - ToCharsBuf
 *
 ***/
 
-template <typename T>
-requires (std::is_arithmetic_v<T> || std::is_enum_v<T>)
-class ToCharsBuf;
-
-//===========================================================================
-template <typename T>
-ToCharsBuf<T> toChars(T val) {
-    return ToCharsBuf<T>(val);
-}
-
-//===========================================================================
-template <typename T>
-requires (std::is_arithmetic_v<T> || std::is_enum_v<T>)
+template <Charable T, int Base>
 class ToCharsBuf {
+public:
+    constexpr static size_t s_maxChars = Base == 16
+        ? maxNumericHexChars<T>()
+        : maxNumericChars<T>();
+
 public:
     ToCharsBuf();
     explicit ToCharsBuf(T val) { set(val); }
     std::string_view set(T val);
-    std::string_view view() const;
-    const char * c_str() const & { return data(); }
 
     size_t size() const;
     bool empty() const { return *m_data == 0; }
     const char * data() const & { return m_data; }
+    std::string_view view() const;
+    const char * c_str() const & { return data(); }
+
+    operator std::string_view() const { return view(); }
+    operator std::string() const { return view(); }
 
 private:
     friend std::ostream & operator<<(
@@ -99,33 +117,45 @@ private:
     }
 
 private:
-    char m_data[maxNumericChars<T>() + 1];
+    char m_data[s_maxChars + 1];
 };
 
 //===========================================================================
-template <typename T>
-requires (std::is_arithmetic_v<T> || std::is_enum_v<T>)
-ToCharsBuf<T>::ToCharsBuf() {
+template <Charable T, int Base>
+ToCharsBuf<T, Base>::ToCharsBuf() {
     m_data[0] = 0;
     m_data[sizeof m_data - 1] = (char) (sizeof m_data - 1);
 }
 
 //===========================================================================
-template <typename T>
-requires (std::is_arithmetic_v<T> || std::is_enum_v<T>)
-std::string_view ToCharsBuf<T>::set(T val) {
-    char * ptr;
+template <Charable T, int Base>
+std::string_view ToCharsBuf<T, Base>::set(T val) {
+    const auto dataEnd = m_data + sizeof m_data;
+    std::to_chars_result res;
     if constexpr (std::is_enum_v<T>) {
-        auto r = std::to_chars(
+        res = std::to_chars(
             m_data,
-            m_data + sizeof m_data,
-            static_cast<std::underlying_type_t<T>>(val)
+            dataEnd,
+            static_cast<std::underlying_type_t<T>>(val),
+            Base
         );
-        ptr = r.ptr;
+    } else if constexpr (std::is_integral_v<T>) {
+        res = std::to_chars(m_data, dataEnd, val, Base);
     } else {
-        auto r = std::to_chars(m_data, m_data + sizeof m_data, val);
-        ptr = r.ptr;
+        static_assert(std::is_floating_point_v<T>);
+        if constexpr (Base == 10) {
+            res = std::to_chars(m_data, dataEnd, val);
+        } else {
+            static_assert(Base == 16);
+            res = std::to_chars(
+                m_data,
+                dataEnd,
+                val,
+                std::chars_format::hex
+            );
+        }
     }
+    auto ptr = res.ptr;
     auto used = ptr - m_data;
     assert(used < sizeof m_data);
     m_data[used] = 0;
@@ -134,17 +164,38 @@ std::string_view ToCharsBuf<T>::set(T val) {
 }
 
 //===========================================================================
-template <typename T>
-requires (std::is_arithmetic_v<T> || std::is_enum_v<T>)
-std::string_view ToCharsBuf<T>::view() const {
+template <Charable T, int Base>
+std::string_view ToCharsBuf<T, Base>::view() const {
     return std::string_view(data(), size());
 }
 
 //===========================================================================
-template <typename T>
-requires (std::is_arithmetic_v<T> || std::is_enum_v<T>)
-size_t ToCharsBuf<T>::size() const {
+template <Charable T, int Base>
+size_t ToCharsBuf<T, Base>::size() const {
     return sizeof m_data - m_data[sizeof m_data - 1] - 1;
+}
+
+
+/****************************************************************************
+*
+*   Arithmetic to string - toChars
+*
+***/
+
+//===========================================================================
+// toChars(5)
+// toChars<int>(5)
+template <Charable T>
+ToCharsBuf<T, 10> toChars(T val) {
+    return ToCharsBuf<T, 10>(val);
+}
+
+//===========================================================================
+// toHexChars(5)
+// toHexChars<int>(5)
+template <Charable T>
+ToCharsBuf<T, 16> toHexChars(T val) {
+    return ToCharsBuf<T, 16>(val);
 }
 
 
