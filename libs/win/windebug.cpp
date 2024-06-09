@@ -13,6 +13,66 @@ using namespace Dim;
 
 /****************************************************************************
 *
+*   Declarations
+*
+***/
+
+static wchar_t s_fname[MAX_PATH] = L"memleak.log";
+
+namespace {
+
+const int kNoMansLandSize = 4;
+const unsigned char kNoMansLandImage[] = {
+    0xfd, 0xfd, 0xfd, 0xfd
+};
+static_assert(kNoMansLandSize == size(kNoMansLandImage));
+
+struct CrtMemBlockHeader {
+    CrtMemBlockHeader * blockHeaderNext;
+    CrtMemBlockHeader * blockHeaderPrev;
+    const char * fileName;
+    int lineNumber;
+    int blockUse;
+    size_t dataSize;
+    long requestNumber;
+    unsigned char gap[kNoMansLandSize];
+
+    // Followed by:
+    // unsigned char data[dataSize];
+    // unsigned char anotherGap[kNoMansLandSize];
+};
+
+struct MemRef {
+    const char * fileName;
+    int lineNumber;
+    size_t dataSize;
+    mutable long request;
+    unsigned char * data;
+
+    bool operator==(const MemRef & other) const {
+        return operator<=>(other) == 0;
+    }
+    strong_ordering operator<=>(const MemRef & other) const {
+        return tie(lineNumber, dataSize, fileName) <=>
+            tie(other.lineNumber, other.dataSize, other.fileName);
+    }
+};
+
+} // namespace
+
+template<>
+struct std::hash<MemRef> {
+    size_t operator()(const MemRef & val) const {
+        auto hash = std::hash<const char *>()(val.fileName);
+        hashCombine(&hash, std::hash<int>()(val.lineNumber));
+        hashCombine(&hash, std::hash<size_t>()(val.dataSize));
+        return hash;
+    }
+};
+
+
+/****************************************************************************
+*
 *   OtherHeap
 *
 ***/
@@ -21,8 +81,11 @@ namespace {
 
 class OtherHeap : public ITempHeap {
 public:
-    OtherHeap(HANDLE h);
+    OtherHeap();
     ~OtherHeap();
+    explicit operator bool() const { return m_heap != INVALID_HANDLE_VALUE; }
+
+    HANDLE handle() const { return m_heap; }
 
     // ITempHeap
     using ITempHeap::alloc;
@@ -42,13 +105,18 @@ private:
 } // namespace
 
 //===========================================================================
-OtherHeap::OtherHeap(HANDLE h)
-    : m_heap(h)
-{}
+OtherHeap::OtherHeap() {
+    auto h = HeapCreate(HEAP_NO_SERIALIZE, 0, 0);
+    if (!h) {
+        logMsgError() << "HeapCreate: " << WinError{};
+        return;
+    }
+    m_heap = h;
+}
 
 //===========================================================================
 OtherHeap::~OtherHeap() {
-    if (!HeapDestroy(m_heap))
+    if (m_heap != INVALID_HANDLE_VALUE && !HeapDestroy(m_heap))
         logMsgError() << "HeapDestroy(Other): " << WinError{};
 }
 
@@ -86,140 +154,140 @@ char * OtherHeap::alloc(size_t bytes, size_t alignment) {
 
 /****************************************************************************
 *
-*   Public API
+*   MemTrackData
 *
 ***/
 
-namespace {
+struct MemTrackData {
+    OtherHeap m_heap;
+    pmr::monotonic_buffer_resource m_res;
 
-const int kNoMansLandSize = 4;
-const unsigned char kNoMansLandImage[] = {
-    0xfd, 0xfd, 0xfd, 0xfd
-};
-static_assert(kNoMansLandSize == size(kNoMansLandImage));
-
-struct CrtMemBlockHeader {
-    CrtMemBlockHeader * blockHeaderNext;
-    CrtMemBlockHeader * blockHeaderPrev;
-    const char * fileName;
-    int lineNumber;
-    int blockUse;
-    size_t dataSize;
-    long requestNumber;
-    unsigned char gap[kNoMansLandSize];
-
-    // Followed by:
-    // unsigned char data[dataSize];
-    // unsigned char anotherGap[kNoMansLandSize];
-};
-
-struct MemRef {
-    const char * fileName;
-    int lineNumber;
-    size_t dataSize;
-    mutable long request;
-
-    bool operator==(const MemRef & other) const {
-        return operator<=>(other) == 0;
-    }
-    strong_ordering operator<=>(const MemRef & other) const {
-        return tie(lineNumber, dataSize, fileName) <=>
-            tie(other.lineNumber, other.dataSize, other.fileName);
-    }
-};
-
-} // namespace
-
-template<>
-struct std::hash<MemRef> {
-    size_t operator()(const MemRef & val) const {
-        auto hash = std::hash<const char *>()(val.fileName);
-        hashCombine(&hash, std::hash<int>()(val.lineNumber));
-        hashCombine(&hash, std::hash<size_t>()(val.dataSize));
-        return hash;
-    }
+    MemTrackData();
+    explicit operator bool() const { return (bool) m_heap; }
 };
 
 //===========================================================================
-void Dim::debugDumpMemory(IJBuilder * out) {
-    auto h2 = HeapCreate(HEAP_NO_SERIALIZE, 0, 0);
-    if (!h2) {
-        logMsgError() << "HeapCreate: " << WinError{};
-        return;
-    }
-    OtherHeap heap2(h2);
-    pmr::monotonic_buffer_resource mr(&heap2);
-    auto groups = heap2.emplace<pmr::unordered_map<MemRef, size_t>>(&mr);
+MemTrackData::MemTrackData()
+    : m_res(&m_heap)
+{}
 
+
+/****************************************************************************
+*
+*   Helpers
+*
+***/
+
+//===========================================================================
+static void eachAlloc(function<bool(const MemRef &)> fn) {
     HANDLE h = (HANDLE) _get_heap_handle();
     if (!HeapLock(h)) {
         logMsgFatal() << "HeapLock(crtHeap): " << WinError();
         return;
     }
 
-    WinError err = 0;
-    {
-        Finally funlock([h]() {
-            if (!HeapUnlock(h))
-                logMsgFatal() << "HeapUnlock(crtHeap): " << WinError();
-        });
-
-        PROCESS_HEAP_ENTRY ent = {};
-        while (HeapWalk(h, &ent)) {
-            if (~ent.wFlags & PROCESS_HEAP_ENTRY_BUSY)
-                continue;
-            if (ent.cbData < sizeof(CrtMemBlockHeader) + kNoMansLandSize)
-                continue;
-            auto hdr = reinterpret_cast<CrtMemBlockHeader *>(ent.lpData);
-            if (memcmp(hdr->gap, kNoMansLandImage, kNoMansLandSize) != 0)
-                continue;
-            auto anotherGap = (unsigned char *) ent.lpData + ent.cbData
-                - kNoMansLandSize;
-            if (memcmp(anotherGap, kNoMansLandImage, kNoMansLandSize) != 0)
-                continue;
-            MemRef ref = {
-                .fileName = hdr->fileName,
-                .lineNumber = hdr->lineNumber,
-                .dataSize = hdr->dataSize,
-                .request = hdr->requestNumber,
-            };
-            if (auto i = groups->find(ref); i == groups->end()) {
-                groups->insert(i, {ref, 1});
-            } else {
-                if (ref.request > i->first.request)
-                    i->first.request = ref.request;
-                i->second += 1;
-            }
-        }
-        err.set();
+    PROCESS_HEAP_ENTRY ent = {};
+    while (HeapWalk(h, &ent)) {
+        if (~ent.wFlags & PROCESS_HEAP_ENTRY_BUSY)
+            continue;
+        if (ent.cbData < sizeof(CrtMemBlockHeader) + kNoMansLandSize)
+            continue;
+        auto hdr = reinterpret_cast<CrtMemBlockHeader *>(ent.lpData);
+        if (memcmp(hdr->gap, kNoMansLandImage, kNoMansLandSize) != 0)
+            continue;
+        auto hdrEnd = (unsigned char *) ent.lpData + ent.cbData;
+        auto anotherGap = hdrEnd - kNoMansLandSize;
+        if (memcmp(anotherGap, kNoMansLandImage, kNoMansLandSize) != 0)
+            continue;
+        MemRef ref = {
+            .fileName = hdr->fileName,
+            .lineNumber = hdr->lineNumber,
+            .dataSize = hdr->dataSize,
+            .request = hdr->requestNumber,
+            .data = hdrEnd,
+        };
+        if (!fn(ref))
+            break;
     }
+    WinError err;
+    if (!HeapUnlock(h))
+        logMsgFatal() << "HeapUnlock(crtHeap): " << WinError();
     if (err != ERROR_NO_MORE_ITEMS)
         logMsgError() << "HeapWalk(crtHeap): " << err;
+}
 
-    auto files = heap2.emplace<pmr::unordered_map<const char *, bool>>(&mr);
+//===========================================================================
+static bool checkName(const char * fileName) {
+    bool success = true;
+    __try {
+        if (fileName) {
+            if (!memchr(fileName, 0, 512))
+                success = false;
+        }
+    } __except(EXCEPTION_EXECUTE_HANDLER) {
+        success = false;
+    }
+    return success;
+}
+
+//===========================================================================
+static MemRef decode(
+    MemTrackData & state,
+    const MemRef & mem,
+    bool trace
+) {
+    auto ref = mem;
+    if (!checkName(ref.fileName)) {
+        ref.fileName = "INVALID";
+        return ref;
+    }
+    if (ref.fileName && ref.lineNumber) {
+        return ref;
+    }
+    if (trace && ref.fileName) {
+        stacktrace_entry ent;
+        static_assert(sizeof ent == sizeof ref.fileName);
+        memcpy(&ent, &ref.fileName, sizeof ent);
+        if (ent) {
+            ref.fileName = state.m_heap.strDup(ent.source_file());
+            ref.lineNumber = ent.source_line();
+            return ref;
+        }
+    }
+    ref.fileName = "UNKNOWN";
+    return ref;
+}
+
+
+/****************************************************************************
+*
+*   Public API
+*
+***/
+
+//===========================================================================
+void Dim::debugDumpMemory(IJBuilder * out) {
+    MemTrackData state;
+    if (!state)
+        return;
+    auto groups = state.m_heap.emplace<pmr::unordered_map<MemRef, size_t>>(
+        &state.m_res
+    );
+
+    eachAlloc([groups](const MemRef & ref) {
+        if (auto i = groups->find(ref); i == groups->end()) {
+            groups->insert(i, {ref, 1});
+        } else {
+            if (ref.request > i->first.request)
+                i->first.request = ref.request;
+            i->second += 1;
+        }
+        return true;
+    });
+
     out->member("blocks").array();
     for (auto&& mem : *groups) {
-        auto ref = mem.first;
-        if (ref.lineNumber) {
-            if (!files->contains(ref.fileName)) {
-                // validate as pointer to valid filename:
-                //  - in bounds
-                //  - less than 256 chars
-                files->emplace(ref.fileName, true);
-            }
-            if (!ref.fileName)
-                ref.fileName = "UNKNOWN";
-        } else {
-            stacktrace_entry ent;
-            static_assert(sizeof ent == sizeof ref.fileName);
-            memcpy(&ent, &ref.fileName, sizeof ent);
-            if (ent) {
-                ref.fileName = heap2.strDup(ent.source_file());
-                ref.lineNumber = ent.source_line();
-            } else {
-                ref.fileName = "UNKNOWN";
-            }
-        }
+        auto ref = decode(state, mem.first, true);
         out->object()
             .member("file", ref.fileName)
             .member("line", ref.lineNumber)
@@ -238,10 +306,63 @@ void Dim::debugDumpMemory(IJBuilder * out) {
 *
 ***/
 
-static wchar_t s_fname[MAX_PATH] = L"memleak.log";
+//===========================================================================
+inline static void dumpMemoryLeaks(HANDLE f) {
+    MemTrackData state;
+    if (!state)
+        return;
+
+    CharBuf out;
+    size_t count = 0;
+    size_t bytes = 0;
+    eachAlloc([&](const MemRef & mem) {
+        count += 1;
+        bytes += mem.dataSize;
+        if (count > 100)
+            return true;
+        auto ref = decode(state, mem, false);
+
+        // first line, meta data
+        out.pushBack('{').append(toChars(ref.request)).append("}");
+        if (ref.lineNumber) {
+            out.pushBack(' ').append(ref.fileName)
+                .pushBack('(').append(toChars(ref.lineNumber)).pushBack(')');
+        }
+        out.append(": block at ")
+            .append(toHexChars(bit_cast<uintptr_t>(ref.data)))
+            .append(", ").append(toChars(ref.dataSize))
+            .append(" bytes.\n");
+
+        // second line, raw data
+        out.pushBack(' ');
+        for (auto i = 0; i < 32; ++i) {
+            if (i % 4 == 0)
+                out.pushBack(' ');
+            if (i < ref.dataSize) {
+                out.append(hexFromByte(ref.data[i]).data());
+            } else {
+                out.append("  ");
+            }
+        }
+        out.append("  <");
+        for (auto i = 0; i < 32; ++i) {
+            if (i < ref.dataSize && isprint(ref.data[i])) {
+                out.pushBack(ref.data[i]);
+            } else {
+                out.pushBack(' ');
+            }
+        }
+        out.append(">\n");
+        return true;
+    });
+    out.append("\nTotal leaks: ")
+        .append(toChars(count)).append(" blocks, ")
+        .append(toChars(bytes)).append(" bytes.")
+        .pushBack('\n');
+}
 
 //===========================================================================
-extern "C" static int attachMemLeakHandle() {
+extern "C" static int registeredMemLeakCheck() {
     auto leakFlags = 0;
 #ifndef __SANITIZE_ADDRESS__
     leakFlags = _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
@@ -257,7 +378,7 @@ extern "C" static int attachMemLeakHandle() {
     if (leaks) {
         if (GetConsoleWindow() != NULL) {
             // Has console attached.
-            wchar_t buf[256];
+            wchar_t buf[512];
             auto len = swprintf(
                 buf,
                 size(buf),
@@ -280,12 +401,14 @@ extern "C" static int attachMemLeakHandle() {
         );
         if (f == INVALID_HANDLE_VALUE) {
             WinError err;
+        } else if (false) {
+            dumpMemoryLeaks(f);
         } else {
             _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
             _CrtSetReportFile(_CRT_WARN, f);
             _CrtDumpMemoryLeaks();
-            CloseHandle(f);
         }
+        CloseHandle(f);
 
         _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_DEBUG);
         if (IsDebuggerPresent())
@@ -294,6 +417,7 @@ extern "C" static int attachMemLeakHandle() {
     return 0;
 }
 
+//===========================================================================
 // pragma sections
 // .CRT$Xpq
 //  p (category) values:
@@ -319,7 +443,7 @@ extern "C" static int attachMemLeakHandle() {
 #pragma section(".CRT$XTU", long, read)
 #pragma data_seg(push)
 #pragma data_seg(".CRT$XTU")
-static auto s_attachMemLeakHandle = attachMemLeakHandle;
+static auto s_registeredMemLeakCheck = registeredMemLeakCheck;
 #pragma data_seg(pop)
 
 //===========================================================================
