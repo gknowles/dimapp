@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2023.
+// Copyright Glen Knowles 2016 - 2024.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // math.h - dim core
@@ -102,6 +102,15 @@ constexpr int digits10(uint32_t val) {
 
     // Alternate implementation:
     //  return floor(log10(val)) + 1;
+}
+
+//===========================================================================
+// Number of digits required to display a number in hexadecimal
+constexpr int digits16(uint64_t val) {
+    return (std::bit_width(val) + 3) / 4 + 1;
+
+    // Alternate implementation:
+    //  return floor(log16(val)) + 1;
 }
 
 } // namespace
