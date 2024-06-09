@@ -6,6 +6,7 @@
 
 #include "cppconf/cppconf.h"
 
+#include <array>
 #include <string>
 #include <string_view>
 
@@ -50,6 +51,16 @@ constexpr char hexFromNibble(unsigned val) {
 // On invalid input these return 16 and 256 respectively
 unsigned hexToNibble(unsigned char val);
 unsigned hexToByte(unsigned char high, unsigned char low);
+
+//===========================================================================
+constexpr auto hexFromByte(unsigned val) {
+    assert(val < 256);
+    std::array<char, 3> out;
+    out[0] = hexFromNibble(val >> 8);
+    out[1] = hexFromNibble(val & 0xf);
+    out[2] = 0;
+    return out;
+}
 
 bool hexToBytes(std::string & out, std::string_view src, bool append);
 void hexFromBytes(std::string & out, std::string_view src, bool append);
