@@ -16,5 +16,5 @@
 // Platform headers
 // External library internal headers
 // Internal headers
-#include "json/jsonparseint.h"
+#include "json/jsonparseint.g.h"
 #include "json/jsonparseimplint.h"

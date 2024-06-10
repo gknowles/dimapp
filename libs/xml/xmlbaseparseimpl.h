@@ -3,7 +3,7 @@
 //
 // xmlbaseparseimpl.h - dim xml
 
-#include "xmlbaseparse.h"
+#include "xmlbaseparse.g.h"
 
 #include <string>
 

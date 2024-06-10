@@ -7,7 +7,7 @@
 %root = JSON-text
 %api.prefix = Json
 %api.namespace = Dim::Detail
-%api.parser.file.h = jsonparseint.h
+%api.output.file.h = jsonparseint.g.h
 %api.base.file.h = jsonparsebaseint.h
 
 ; JSON Grammar

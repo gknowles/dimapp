@@ -14,9 +14,9 @@
 const char kOptionRoot[] = "%root";
 const char kOptionInclude[] = "%include";
 const char kOptionApiPrefix[] = "%api.prefix";
-const char kOptionApiParserHeader[] = "%api.parser.file.h";
-const char kOptionApiParserCpp[] = "%api.parser.file.cpp";
-const char kOptionApiParserClass[] = "%api.parser.className";
+const char kOptionApiOutputHeader[] = "%api.output.file.h";
+const char kOptionApiOutputCpp[] = "%api.output.file.cpp";
+const char kOptionApiOutputClass[] = "%api.output.className";
 const char kOptionApiBaseHeader[] = "%api.base.file.h";
 const char kOptionApiBaseClass[] = "%api.base.className";
 const char kOptionApiNamespace[] = "%api.namespace";

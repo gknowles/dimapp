@@ -304,12 +304,12 @@ bool processOptions(Grammar & rules) {
         logMsgError() << "Option not found, " << kOptionApiPrefix;
         return false;
     }
-    ensureOption(rules, kOptionApiParserClass, prefix + "Parser");
+    ensureOption(rules, kOptionApiOutputClass, prefix + "Parser");
     ensureOption(rules, kOptionApiBaseClass, prefix + "ParserBase");
     auto & f = use_facet<ctype<char>>(locale());
     f.tolower(prefix.data(), prefix.data() + prefix.size());
-    ensureOption(rules, kOptionApiParserHeader, prefix + "parse.h");
-    ensureOption(rules, kOptionApiParserCpp, prefix + "parse.cpp");
+    ensureOption(rules, kOptionApiOutputHeader, prefix + "parse.g.h");
+    ensureOption(rules, kOptionApiOutputCpp, prefix + "parse.g.cpp");
     ensureOption(rules, kOptionApiBaseHeader, prefix + "parsebase.h");
     return true;
 }

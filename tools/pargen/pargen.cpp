@@ -307,13 +307,13 @@ https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
     if (root->size())
         rules.setOption(kOptionRoot, *root);
 
-    auto ohName = rules.optionString(kOptionApiParserHeader);
+    auto ohName = rules.optionString(kOptionApiOutputHeader);
     ofstream oh(ohName);
     if (!oh) {
         logMsgError() << ohName << ": open failed";
         return appSignalShutdown(EX_IOERR);
     }
-    auto ocppName = rules.optionString(kOptionApiParserCpp);
+    auto ocppName = rules.optionString(kOptionApiOutputCpp);
     ofstream ocpp(ocppName);
     if (!ocpp) {
         logMsgError() << ocppName << ": open failed";

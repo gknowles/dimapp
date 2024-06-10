@@ -3,7 +3,7 @@
 //
 // jsonparseimplint.h - dim json
 
-#include "jsonparseint.h"
+#include "jsonparseint.g.h"
 
 #include <string>
 

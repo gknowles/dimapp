@@ -5,7 +5,7 @@
 
 #include "core/core.h"
 
-#include "abnfparse.h"
+#include "abnfparse.g.h"
 
 
 /****************************************************************************

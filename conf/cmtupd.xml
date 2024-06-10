@@ -35,12 +35,8 @@ and '} respectively.
       <File regex=".*\.cpp"/>
       <File regex=".*\.h"/>
       <Exclude regex="libs/core/hash_crc32c\.cpp"/>
-      <Exclude regex="libs/json/jsonparse\.cpp"/>
-      <Exclude regex="libs/json/jsonparseint\.h"/>
-      <Exclude regex="libs/xml/xmlbaseparse\.cpp"/>
-      <Exclude regex="libs/xml/xmlbaseparse\.h"/>
-      <Exclude regex="tools/pargen/abnfparse\.cpp"/>
-      <Exclude regex="tools/pargen/abnfparse\.h"/>
+      <Exclude regex=".*\.g.cpp"/>
+      <Exclude regex=".*\.g.h"/>
       <Var name="Prefix" value="// "/>
     </Group>
     <Group>

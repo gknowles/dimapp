@@ -38,13 +38,13 @@ Name of the top level rule that matches the input to be parsed
 | %api.prefix | - |
 Used in default definitions of other options
 
-| %api.parser.file.h | lowercase(%api.prefix) + "parse.h" |
+| %api.output.file.h | lowercase(%api.prefix) + "parse.g.h" |
 Header file to generate
 
-| %api.parser.file.cpp | lowercase(%api.prefix) + "parse.cpp" |
+| %api.output.file.cpp | lowercase(%api.prefix) + "parse.g.cpp" |
 C++ file to generate
 
-| %api.parser.className | %api.prefix + "Parser" |
+| %api.output.className | %api.prefix + "Parser" |
 Name to give parser class
 
 | %api.base.file.h | lowercase(%api.prefix) + "parsebase.h" |

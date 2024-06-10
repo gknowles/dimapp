@@ -17,5 +17,5 @@
 // Platform headers
 // External library internal headers
 // Internal headers
-#include "xml/xmlbaseparse.h"
+#include "xml/xmlbaseparse.g.h"
 #include "xml/xmlbaseparseimpl.h"
