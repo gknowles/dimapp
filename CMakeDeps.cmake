@@ -95,10 +95,10 @@
 # libs/json/jdocument.cpp
 # libs/json/json.abnf
 # libs/json/json.h
-# libs/json/jsonparse.cpp
+# libs/json/jsonparse.g.cpp
 # libs/json/jsonparsebaseint.h
 # libs/json/jsonparseimplint.h
-# libs/json/jsonparseint.h
+# libs/json/jsonparseint.g.h
 # libs/json/jsonstream.cpp
 # libs/json/pch.cpp
 # libs/json/pch.h
@@ -205,8 +205,8 @@
 # libs/xml/xdocument.cpp
 # libs/xml/xml.abnf
 # libs/xml/xml.h
-# libs/xml/xmlbaseparse.cpp
-# libs/xml/xmlbaseparse.h
+# libs/xml/xmlbaseparse.g.cpp
+# libs/xml/xmlbaseparse.g.h
 # libs/xml/xmlbaseparsebase.h
 # libs/xml/xmlbaseparseimpl.h
 # libs/xml/xstreamparser.cpp
@@ -293,8 +293,8 @@
 # tools/h2srv/pch.h
 # tools/pargen/README.adoc
 # tools/pargen/abnf.abnf
-# tools/pargen/abnfparse.cpp
-# tools/pargen/abnfparse.h
+# tools/pargen/abnfparse.g.cpp
+# tools/pargen/abnfparse.g.h
 # tools/pargen/abnfparsebase.h
 # tools/pargen/abnfparseimpl.h
 # tools/pargen/gen.cpp
