@@ -77,12 +77,19 @@
 #define DIMAPP_LIB_NO_CONSOLE
 #endif
 
+#if defined(NDEBUG)
+#define DIMAPP_LIB_BUILD_DEBUG 0
+#else
+#define DIMAPP_LIB_BUILD_DEBUG 1
+#endif
+
 #if defined _MSC_VER
 #include "compiler/visualc.h"
 #elif !defined(_WIN32)
 #include "sysexits.h"
 #define mallocAligned(alignment, size) aligned_alloc(alignment, size)
 #define freeAligned(ptr) free(ptr)
+#define NO_UNIQUE_ADDRESS [[no_unique_address]]
 #endif
 
 #ifdef DIMAPP_LIB_DYN_LINK
@@ -95,12 +102,6 @@
 #endif
 #else
 #define DIMAPP_LIB_DECL
-#endif
-
-#if defined(NDEBUG)
-#define DIMAPP_LIB_BUILD_DEBUG 0
-#else
-#define DIMAPP_LIB_BUILD_DEBUG 1
 #endif
 
 

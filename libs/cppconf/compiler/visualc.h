@@ -95,3 +95,12 @@
 // Standard aligned_alloc added in c++17, but not supported in MSVC.
 #define mallocAligned(alignment, size) _aligned_malloc(size, alignment)
 #define freeAligned(ptr) _aligned_free(ptr)
+
+// [[no_unique_address]] wasn't immediately fully supported because it broke
+// binary compatibility:
+// https://devblogs.microsoft.com/cppblog/msvc-cpp20-and-the-std-cpp20-switch/#c20-no_unique_address
+#if _MSC_VER >= 1929
+#define NO_UNIQUE_ADDRESS [[no_unique_address, msvc::no_unique_address]]
+#else
+#define NO_UNIQUE_ADDRESS
+#endif
