@@ -255,7 +255,8 @@ int Dim::appRun(
     } else {
         Cli cli;
         cli.opt(&s_appIndex, "app-index", 1)
-            .desc("Identifies service when multiple are configured.");
+            .desc("Identifies service when multiple instances "
+                "are configured.");
         cli.opt(&s_groupIndex, "group-index", 1)
             .desc("Identifies service group when there are multiple.");
 
