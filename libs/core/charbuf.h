@@ -12,41 +12,42 @@
 #include <cassert>
 #include <compare>
 #include <list>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility> // std::pair
-#include <vector>
 
 namespace Dim {
 
 
 /****************************************************************************
 *
-*   CharBuf
+*   CharBufBase
 *
 ***/
 
-class CharBuf {
+class CharBufBase {
 public:
     class ViewIterator;
 
 public:
-    CharBuf() {}
-    CharBuf(const CharBuf & from) { insert(0, from); }
-    CharBuf(CharBuf && from) noexcept;
+    CharBufBase() {}
+    CharBufBase(const CharBufBase & from) { insert(0, from); }
+    CharBufBase(CharBufBase && from) noexcept;
+    virtual ~CharBufBase();
     explicit operator bool() const { return !empty(); }
 
-    CharBuf & operator=(const CharBuf & buf) { return assign(buf); }
-    CharBuf & operator=(CharBuf && buf) noexcept;
-    CharBuf & operator=(char ch) { return assign(ch); }
-    CharBuf & operator=(const char s[]) { return assign(s); }
-    CharBuf & operator=(std::string_view str) { return assign(str); }
-    CharBuf & operator+=(char ch) { pushBack(ch); return *this; }
-    CharBuf & operator+=(const char s[]) { return append(s); }
-    CharBuf & operator+=(std::string_view str) { return append(str); }
-    CharBuf & operator+=(const CharBuf & src) { return append(src); }
+    CharBufBase & operator=(const CharBufBase & buf) { return assign(buf); }
+    CharBufBase & operator=(CharBufBase && buf) noexcept;
+    CharBufBase & operator=(char ch) { return assign(ch); }
+    CharBufBase & operator=(const char s[]) { return assign(s); }
+    CharBufBase & operator=(std::string_view str) { return assign(str); }
+    CharBufBase & operator+=(char ch) { return pushBack(ch); }
+    CharBufBase & operator+=(const char s[]) { return append(s); }
+    CharBufBase & operator+=(std::string_view str) { return append(str); }
+    CharBufBase & operator+=(const CharBufBase & src) { return append(src); }
 
-    std::strong_ordering operator<=>(const CharBuf & right) const {
+    std::strong_ordering operator<=>(const CharBufBase & right) const {
         return compare(right);
     }
     std::strong_ordering operator<=>(std::string_view right) const {
@@ -56,7 +57,7 @@ public:
         return compare(right);
     }
 
-    bool operator==(const CharBuf & right) const {
+    bool operator==(const CharBufBase & right) const {
         return compare(right) == 0;
     }
     bool operator==(std::string_view right) const {
@@ -64,13 +65,21 @@ public:
     }
     bool operator==(const char right[]) const { return compare(right) == 0; }
 
-    CharBuf & assign(char ch) { clear(); pushBack(ch); return *this; }
-    CharBuf & assign(size_t numCh, char ch);
-    CharBuf & assign(std::nullptr_t);
-    CharBuf & assign(const char s[]);
-    CharBuf & assign(const char s[], size_t slen);
-    CharBuf & assign(std::string_view str, size_t pos = 0, size_t count = -1);
-    CharBuf & assign(const CharBuf & buf, size_t pos = 0, size_t count = -1);
+    CharBufBase & assign(char ch) { clear(); return pushBack(ch); }
+    CharBufBase & assign(size_t numCh, char ch);
+    CharBufBase & assign(std::nullptr_t);
+    CharBufBase & assign(const char s[]);
+    CharBufBase & assign(const char s[], size_t slen);
+    CharBufBase & assign(
+        std::string_view str,
+        size_t pos = 0,
+        size_t count = -1
+    );
+    CharBufBase & assign(
+        const CharBufBase & buf,
+        size_t pos = 0,
+        size_t count = -1
+    );
     char & front();
     const char & front() const;
     char & back();
@@ -88,34 +97,42 @@ public:
     ViewIterator views(size_t pos = 0, size_t count = -1) const;
     void clear();
     void resize(size_t count);
-    CharBuf & insert(size_t pos, size_t numCh, char ch);
-    CharBuf & insert(size_t pos, std::nullptr_t);
-    CharBuf & insert(size_t pos, const char s[]);
-    CharBuf & insert(size_t pos, const char s[], size_t count);
-    CharBuf & insert(
+    CharBufBase & insert(size_t pos, size_t numCh, char ch);
+    CharBufBase & insert(size_t pos, std::nullptr_t);
+    CharBufBase & insert(size_t pos, const char s[]);
+    CharBufBase & insert(size_t pos, const char s[], size_t count);
+    CharBufBase & insert(
         size_t pos,
         std::string_view str,
         size_t strPos,
         size_t strCount
     );
-    CharBuf & insert(
+    CharBufBase & insert(
         size_t pos,
-        const CharBuf & buf,
+        const CharBufBase & buf,
         size_t bufPos = 0,
         size_t bufLen = -1
     );
-    CharBuf & erase(size_t pos = 0, size_t count = -1);
-    CharBuf & ltrim(char ch);
-    CharBuf & rtrim(char ch);
-    CharBuf & pushBack(char ch);
-    CharBuf & popBack();
-    CharBuf & append(char ch) { return pushBack(ch); }
-    CharBuf & append(size_t numCh, char ch);
-    CharBuf & append(std::nullptr_t);
-    CharBuf & append(const char s[]);
-    CharBuf & append(const char s[], size_t slen);
-    CharBuf & append(std::string_view str, size_t pos = 0, size_t count = -1);
-    CharBuf & append(const CharBuf & buf, size_t pos = 0, size_t count = -1);
+    CharBufBase & erase(size_t pos = 0, size_t count = -1);
+    CharBufBase & ltrim(char ch);
+    CharBufBase & rtrim(char ch);
+    CharBufBase & pushBack(char ch);
+    CharBufBase & popBack();
+    CharBufBase & append(char ch) { return pushBack(ch); }
+    CharBufBase & append(size_t numCh, char ch);
+    CharBufBase & append(std::nullptr_t);
+    CharBufBase & append(const char s[]);
+    CharBufBase & append(const char s[], size_t slen);
+    CharBufBase & append(
+        std::string_view str,
+        size_t pos = 0,
+        size_t count = -1
+    );
+    CharBufBase & append(
+        const CharBufBase & buf,
+        size_t pos = 0,
+        size_t count = -1
+    );
     std::strong_ordering compare(const char s[], size_t count) const;
     std::strong_ordering compare(
         size_t pos,
@@ -130,93 +147,118 @@ public:
         std::string_view str
     ) const;
     std::strong_ordering compare(
-        const CharBuf & buf,
+        const CharBufBase & buf,
         size_t pos = 0,
         size_t count = -1
     ) const;
     std::strong_ordering compare(
         size_t pos,
         size_t count,
-        const CharBuf & buf,
+        const CharBufBase & buf,
         size_t bufPos = 0,
         size_t bufLen = -1
     ) const;
-    CharBuf & replace(size_t pos, size_t count, size_t numCh, char ch);
-    CharBuf & replace(size_t pos, size_t count, std::nullptr_t);
-    CharBuf & replace(size_t pos, size_t count, const char s[]);
-    CharBuf & replace(size_t pos, size_t count, const char s[], size_t slen);
-    CharBuf & replace(
+    CharBufBase & replace(size_t pos, size_t count, size_t numCh, char ch);
+    CharBufBase & replace(size_t pos, size_t count, std::nullptr_t);
+    CharBufBase & replace(size_t pos, size_t count, const char s[]);
+    CharBufBase & replace(
         size_t pos,
         size_t count,
-        const CharBuf & src,
+        const char s[],
+        size_t slen
+    );
+    CharBufBase & replace(
+        size_t pos,
+        size_t count,
+        const CharBufBase & src,
         size_t srcPos = 0,
         size_t srcLen = -1
     );
     size_t copy(char * out, size_t count, size_t pos = 0) const;
-    void swap(CharBuf & other);
+    void swap(CharBufBase & other);
 
     size_t defaultBlockSize() const;
 
 private:
-    friend std::string toString(const CharBuf & buf);
-    friend std::string toString(const CharBuf & buf, size_t pos);
-    friend std::string toString(const CharBuf & buf, size_t pos, size_t count);
+    friend std::string toString(const CharBufBase & buf);
+    friend std::string toString(const CharBufBase & buf, size_t pos);
+    friend std::string toString(
+        const CharBufBase & buf,
+        size_t pos,
+        size_t count
+    );
 
-    friend std::ostream & operator<<(std::ostream & os, const CharBuf & buf);
+    friend std::ostream & operator<<(
+        std::ostream & os,
+        const CharBufBase & buf
+    );
 
-private:
+protected:
     struct Buffer : public NoCopy {
-        char * data;
-        int used{0};
-        int reserved;
-        bool heapUsed{false};
+        char * data {nullptr};
+        int used {0};
+        int reserved {0};
+        bool mustFree {false};
 
         Buffer();
-        Buffer(size_t reserve);
+        Buffer(std::span<char> buf, bool fromHeap);
         Buffer(Buffer && from) noexcept;
         ~Buffer();
+        Buffer & operator=(const Buffer & from) noexcept;
         Buffer & operator=(Buffer && from) noexcept;
     };
-    using buffer_iterator = std::vector<Buffer>::iterator;
-    using const_buffer_iterator = std::vector<Buffer>::const_iterator;
+    using buffer_iterator = Buffer *;
+    using const_buffer_iterator = const Buffer *;
 
     std::pair<buffer_iterator, int> find(size_t pos);
     std::pair<const_buffer_iterator, int> find(size_t pos) const;
     buffer_iterator split(buffer_iterator it, size_t pos);
-    CharBuf & insert(buffer_iterator it, size_t pos, size_t numCh, char ch);
-    CharBuf & insert(buffer_iterator it, size_t pos, const char src[]);
-    CharBuf & insert(
+    CharBufBase & insert(
+        buffer_iterator it,
+        size_t pos,
+        size_t numCh,
+        char ch
+    );
+    CharBufBase & insert(buffer_iterator it, size_t pos, const char src[]);
+    CharBufBase & insert(
         buffer_iterator it,
         size_t pos,
         const char src[],
         size_t srcLen
     );
-    CharBuf & insert(
+    CharBufBase & insert(
         buffer_iterator it,
         size_t pos,
         const_buffer_iterator srcIt,
         size_t srcPos,
         size_t srcLen
     );
-    CharBuf & erase(buffer_iterator it, size_t pos, size_t count);
+    CharBufBase & erase(buffer_iterator it, size_t pos, size_t count);
 
-    std::vector<Buffer> m_buffers;
-    int m_lastUsed {0};
+    buffer_iterator eraseBuf(buffer_iterator first, buffer_iterator last);
+    Buffer makeBuf(size_t bytes);
+    buffer_iterator appendBuf();
+    buffer_iterator emplaceBuf(buffer_iterator pos);
+
+    virtual void * allocate(size_t bytes);
+    virtual void deallocate(void * ptr, size_t bytes);
+
     int m_size {0};
-    char m_empty {0};
+    char m_empty = '\0';    // empty string representation
+
+    // buffers
+    std::span<Buffer> m_buffers;
+    size_t m_reserved = 0;
 };
 
 
 /****************************************************************************
 *
-*   CharBuf::ViewIterator
+*   CharBufBase::ViewIterator
 *
 ***/
 
-class CharBuf::ViewIterator {
-    static_assert(std::is_same_v<
-        decltype(CharBuf::m_buffers)::const_iterator::iterator_concept,
-        std::contiguous_iterator_tag>);
+class CharBufBase::ViewIterator {
     const Buffer * m_current = {};
     std::string_view m_view;
     size_t m_count = {};
@@ -235,15 +277,84 @@ public:
 
 //===========================================================================
 // Free
-inline CharBuf::ViewIterator begin (CharBuf::ViewIterator iter) {
+inline CharBufBase::ViewIterator begin (CharBufBase::ViewIterator iter) {
     return iter;
 }
 
 //===========================================================================
 // Free
-inline CharBuf::ViewIterator end (const CharBuf::ViewIterator & iter) {
+inline CharBufBase::ViewIterator end (const CharBufBase::ViewIterator & iter) {
     return {};
 }
 
+
+/****************************************************************************
+*
+*   CharBufAlloc
+*
+***/
+
+template <typename A>
+concept CharAllocator = (std::is_same_v<typename A::value_type, char>);
+
+template <CharAllocator A = std::allocator<char>>
+class CharBufAlloc : public CharBufBase {
+public:
+    using allocator_type = A;
+    using alloc_traits = std::allocator_traits<allocator_type>;
+    using buffer_alloc = alloc_traits::template rebind_alloc<Buffer>;
+
+public:
+    using CharBufBase::CharBufBase;
+
+// Definition of implicit assignment operator for 'ident' is deprecated because
+// it has a user-provided destructor.
+//
+// This warning is (I believe) in error because of the following using
+// declaration that brings in explicit assignment operators.
+#pragma warning(suppress: 5267)
+    ~CharBufAlloc() override;
+
+    using CharBufBase::operator=;
+
+    // Inherited via CharBufBase
+    void * allocate(size_t bytes) final;
+    void deallocate(void * ptr, size_t bytes) final;
+
+private:
+    NO_UNIQUE_ADDRESS allocator_type m_alloc;
+};
+
+//===========================================================================
+template <CharAllocator A>
+CharBufAlloc<A>::~CharBufAlloc() {
+    // Call clear() here so that the base class that knows what needs to be
+    // destroyed can do so while that derived class providing the deallocate
+    // method is still available.
+    clear();
+}
+
+//===========================================================================
+template <CharAllocator A>
+void * CharBufAlloc<A>::allocate(size_t bytes) {
+    auto alloc = m_alloc;
+    return alloc_traits::allocate(alloc, bytes);
+}
+
+//===========================================================================
+template <CharAllocator A>
+void CharBufAlloc<A>::deallocate(void * ptr, size_t bytes) {
+    auto alloc = m_alloc;
+    alloc_traits::deallocate(alloc, (char *) ptr, bytes);
+}
+
+
+/****************************************************************************
+*
+*   CharBuf
+*
+***/
+
+using CharBuf = CharBufAlloc<>;
 
 } // namespace
