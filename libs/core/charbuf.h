@@ -305,17 +305,33 @@ public:
     using buffer_alloc = alloc_traits::template rebind_alloc<Buffer>;
 
 public:
-    using CharBufBase::CharBufBase;
-
-// Definition of implicit assignment operator for 'ident' is deprecated because
-// it has a user-provided destructor.
-//
-// This warning is (I believe) in error because of the following using
-// declaration that brings in explicit assignment operators.
-#pragma warning(suppress: 5267)
+    CharBufAlloc() {}
+    CharBufAlloc(const CharBufAlloc & from) : CharBufBase(from) {}
+    CharBufAlloc(CharBufAlloc && from) noexcept
+        : CharBufBase(std::move(from))
+    {}
     ~CharBufAlloc() override;
 
-    using CharBufBase::operator=;
+    CharBufAlloc & operator=(const CharBufAlloc & from) {
+        CharBufBase::operator=(from);
+        return *this;
+    }
+    CharBufAlloc & operator=(CharBufAlloc && from) {
+        CharBufBase::operator=(std::move(from));
+        return *this;
+    }
+    CharBufAlloc & operator=(char ch) {
+        CharBufBase::operator=(ch);
+        return *this;
+    }
+    CharBufAlloc & operator=(const char s[]) {
+        CharBufBase::operator=(s);
+        return *this;
+    }
+    CharBufAlloc & operator=(std::string_view str) {
+        CharBufBase::operator=(str);
+        return *this;
+    }
 
     // Inherited via CharBufBase
     void * allocate(size_t bytes) final;
