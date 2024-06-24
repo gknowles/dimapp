@@ -8,6 +8,7 @@
 
 // External library public headers
 // Standard headers
+#include <algorithm>
 #include <atomic>
 #include <bit>
 #include <cassert>

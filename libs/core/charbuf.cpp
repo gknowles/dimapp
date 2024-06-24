@@ -854,7 +854,7 @@ CharBufBase::buffer_iterator CharBufBase::split(
     int nbufs = 0;
     while (rcount) {
         nbufs += 1;
-        it = emplaceBuf(++it);
+        it = insertBuf(++it);
         auto mydata = it->data;
         auto mycount = it->reserved;
         int bytes = min(mycount, rcount);
@@ -908,7 +908,7 @@ CharBufBase & CharBufBase::insert(
         add -= bytes;
         if (!add)
             return *this;
-        it = emplaceBuf(++it);
+        it = insertBuf(++it);
         mydata = it->data;
         myavail = it->reserved;
     }
@@ -955,7 +955,7 @@ CharBufBase & CharBufBase::insert(
             int bytes = int(mydata - mybase);
             it->used += bytes;
             m_size += bytes;
-            it = emplaceBuf(++it);
+            it = insertBuf(++it);
             mydata = it->data;
             mybase = mydata;
             myend = mydata + it->reserved;
@@ -1011,7 +1011,7 @@ CharBufBase & CharBufBase::insert(
         add -= bytes;
         if (!add)
             return *this;
-        it = emplaceBuf(++it);
+        it = insertBuf(++it);
         mydata = it->data;
         myavail = it->reserved;
     }
@@ -1059,7 +1059,7 @@ CharBufBase & CharBufBase::insert(
     myavail = myi->reserved - myi->used;
 
     for (;;) {
-        int bytes = min(add, min(myavail, rcount));
+        int bytes = min({add, myavail, rcount});
         memcpy(mydata, rdata, bytes);
         myi->used += bytes;
         add -= bytes;
@@ -1068,7 +1068,7 @@ CharBufBase & CharBufBase::insert(
         if (myavail -= bytes) {
             mydata += bytes;
         } else {
-            myi = emplaceBuf(++myi);
+            myi = insertBuf(++myi);
             mydata = myi->data;
             myavail = myi->reserved;
         }
@@ -1145,18 +1145,19 @@ auto CharBufBase::makeBuf(size_t bytes) -> Buffer {
 
 //===========================================================================
 auto CharBufBase::appendBuf() -> buffer_iterator {
-    return emplaceBuf(m_buffers.data() + m_buffers.size());
+    return insertBuf(m_buffers.data() + m_buffers.size());
 }
 
 //===========================================================================
-auto CharBufBase::emplaceBuf(buffer_iterator pos) -> buffer_iterator {
+auto CharBufBase::insertBuf(buffer_iterator pos) -> buffer_iterator {
     auto len = m_buffers.size();
     auto first = m_buffers.data();
     auto last = first + len;
     assert(first <= pos && pos <= last);
     auto off = pos - first;
     if (len < m_reserved) {
-        memmove(pos + 1, pos, (last - pos) * sizeof *pos);
+        if (pos < last)
+            memmove(pos + 1, pos, (last - pos) * sizeof *pos);
         m_buffers = { first, len + 1 };
     } else {
         m_reserved = 2 * m_reserved + 8;

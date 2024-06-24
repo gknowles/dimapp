@@ -238,7 +238,7 @@ protected:
     buffer_iterator eraseBuf(buffer_iterator first, buffer_iterator last);
     Buffer makeBuf(size_t bytes);
     buffer_iterator appendBuf();
-    buffer_iterator emplaceBuf(buffer_iterator pos);
+    buffer_iterator insertBuf(buffer_iterator pos);
 
     virtual void * allocate(size_t bytes);
     virtual void deallocate(void * ptr, size_t bytes);
@@ -306,7 +306,9 @@ public:
 
 public:
     CharBufAlloc() {}
-    CharBufAlloc(const CharBufAlloc & from) : CharBufBase(from) {}
+    CharBufAlloc(const CharBufAlloc & from) {
+        insert(0, from);
+    }
     CharBufAlloc(CharBufAlloc && from) noexcept
         : CharBufBase(std::move(from))
     {}

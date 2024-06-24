@@ -105,6 +105,12 @@ static void app(int argc, char *argv[]) {
     buf.pushBack('b');
     EXPECT(buf == "b");
 
+    {
+        // Copy construct and destroy CharBuf that's greater than block size
+        assert(buf2.size() > blkLen);
+        auto tmp = buf2;
+    }
+
     testSignalShutdown();
 }
 
