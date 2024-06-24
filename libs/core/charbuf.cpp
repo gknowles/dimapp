@@ -84,13 +84,8 @@ CharBufBase::Buffer::~Buffer() {
 ***/
 
 //===========================================================================
-CharBufBase::CharBufBase(CharBufBase && from) noexcept {
-    swap(from);
-}
-
-//===========================================================================
 CharBufBase::~CharBufBase() {
-    assert(!m_size && !m_reserved);
+    assert(!m_size && !m_reserved && m_buffers.empty());
 }
 
 //===========================================================================
@@ -1160,6 +1155,7 @@ auto CharBufBase::insertBuf(buffer_iterator pos) -> buffer_iterator {
             memmove(pos + 1, pos, (last - pos) * sizeof *pos);
         m_buffers = { first, len + 1 };
     } else {
+        auto oldBytes = m_reserved * sizeof *pos;
         m_reserved = 2 * m_reserved + 8;
         auto dfirst = (Buffer *) allocate(m_reserved * sizeof *pos);
         if (pos > first)
@@ -1168,6 +1164,7 @@ auto CharBufBase::insertBuf(buffer_iterator pos) -> buffer_iterator {
             memcpy(dfirst + off + 1, pos, (last - pos) * sizeof *pos);
         pos = dfirst + off;
         m_buffers = { dfirst, len + 1 };
+        deallocate(first, oldBytes);
     }
     new(pos) Buffer(makeBuf(defaultBlockSize()));
     return pos;

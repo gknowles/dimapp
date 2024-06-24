@@ -32,8 +32,6 @@ public:
 
 public:
     CharBufBase() {}
-    CharBufBase(const CharBufBase & from) { insert(0, from); }
-    CharBufBase(CharBufBase && from) noexcept;
     virtual ~CharBufBase();
     explicit operator bool() const { return !empty(); }
 
@@ -306,12 +304,8 @@ public:
 
 public:
     CharBufAlloc() {}
-    CharBufAlloc(const CharBufAlloc & from) {
-        insert(0, from);
-    }
-    CharBufAlloc(CharBufAlloc && from) noexcept
-        : CharBufBase(std::move(from))
-    {}
+    CharBufAlloc(const CharBufAlloc & from) { insert(0, from); }
+    CharBufAlloc(CharBufAlloc && from) noexcept { swap(from); }
     ~CharBufAlloc() override;
 
     CharBufAlloc & operator=(const CharBufAlloc & from) {
