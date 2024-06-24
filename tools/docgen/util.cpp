@@ -443,7 +443,7 @@ bool addOutput(
 //===========================================================================
 bool writeOutputs(
     string_view odir,
-    unordered_map<string, CharBuf> files
+    const unordered_map<string, CharBuf> & files
 ) {
     if (auto ec = fileCreateDirs(odir); ec) {
         logMsgError() << odir << ": unable to create directory.";

@@ -146,5 +146,5 @@ bool addOutput(
 );
 bool writeOutputs(
     std::string_view odir,
-    std::unordered_map<std::string, Dim::CharBuf> files
+    const std::unordered_map<std::string, Dim::CharBuf> & files
 );

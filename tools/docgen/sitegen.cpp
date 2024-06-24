@@ -459,6 +459,31 @@ static void addNavbar(
 }
 
 //===========================================================================
+static void addTocEntries(
+    IXBuilder * out,
+    const vector<TocEntry> & entries,
+    bool foreground
+) {
+    auto & bld = *out;
+    bld.start("div")
+        << attr("style") << "grid-row-start: 1; grid-column-start: 1;";
+    if (!foreground)
+        bld << "visibility: hidden;" << endAttr
+            << attr("class", "nav-shadow");
+    for (auto&& ent : entries) {
+        if (ent.depth >= 1 && ent.depth <= 3) {
+            bld.start("a") << attr("class");
+            bld << "nav-link toc-" << ent.depth << endAttr
+                << attr("href") << "#" << ent.link << endAttr
+                << "";
+            bld.addRaw(ent.name);
+            bld.end();
+        }
+    }
+    bld.end();
+}
+
+//===========================================================================
 static void addToc(IXBuilder * out, const vector<TocEntry> & entries) {
     auto & bld = *out;
     bld.start("div")
@@ -470,20 +495,13 @@ static void addToc(IXBuilder * out, const vector<TocEntry> & entries) {
                 "nav sticky-top d-print-none d-none d-lg-flex flex-column"
                 )
             .attr("id", "toc")
-            .start("div");
+            .start("div")
+                .attr("style", "display: grid; grid-template-columns: 1fr;");
 
-    for (auto&& ent : entries) {
-        if (ent.depth >= 1 && ent.depth <= 3) {
-            bld.start("a")
-                << attr("class") << "nav-link toc-" << ent.depth << endAttr
-                << attr("href") << "#" << ent.link << endAttr
-                << "";
-            bld.addRaw(ent.name);
-            bld.end();
-        }
-    }
+    addTocEntries(out, entries, false);
+    addTocEntries(out, entries, true);
 
-    bld.end() // div.bg-light
+    bld.end() // div.d-grid
         .end() // nav
         .end(); // div.col-md-2
 }
@@ -776,7 +794,8 @@ nav#toc .nav-link:hover {
     background-color: steelblue;
     color: white;
 }
-nav#toc .nav-link.active {
+nav#toc .nav-link.active,
+nav#toc .nav-shadow .nav-link {
     color: black;
     font-weight: bold;
 }
@@ -978,8 +997,10 @@ static void genSite(Config * out, unsigned phase = 0) {
 
         // Replace site output directory with all the new files.
         auto odir = Path(out->siteDir).resolve(out->configFile.parentPath());
-        if (!writeOutputs(odir, out->outputs))
-            return;
+        {
+            if (!writeOutputs(odir, out->outputs))
+                return;
+        }
 
         // Clean up
         auto count = out->outputs.size();
