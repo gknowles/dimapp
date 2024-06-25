@@ -20,65 +20,6 @@ const unsigned kDefaultBlockSize = 4096;
 
 /****************************************************************************
 *
-*   CharBufBase::Buffer
-*
-***/
-
-//===========================================================================
-CharBufBase::Buffer::Buffer ()
-{}
-
-//===========================================================================
-CharBufBase::Buffer::Buffer(span<char> buf, bool fromHeap)
-    : data{buf.empty() ? nullptr : buf.data()}
-    , reserved{buf.empty() ? 0 : (int) buf.size() - 1}
-    , mustFree{fromHeap}
-{
-    assert(buf.size() != 1);
-}
-
-//===========================================================================
-CharBufBase::Buffer::Buffer(Buffer && from) noexcept
-    : data{from.data}
-    , used{from.used}
-    , reserved{from.reserved}
-    , mustFree{from.mustFree}
-{
-    from.data = nullptr;
-}
-
-//===========================================================================
-CharBufBase::Buffer & CharBufBase::Buffer::operator=(
-    const Buffer & from
-) noexcept {
-    assert(!data || !mustFree);
-    assert(!from.data || !from.mustFree);
-    data = from.data;
-    used = from.used;
-    reserved = from.reserved;
-    mustFree = from.mustFree;
-    return *this;
-}
-
-//===========================================================================
-CharBufBase::Buffer & CharBufBase::Buffer::operator=(Buffer && from) noexcept {
-    assert(!data || !mustFree);
-    data = from.data;
-    used = from.used;
-    reserved = from.reserved;
-    mustFree = from.mustFree;
-    from.data = nullptr;
-    return *this;
-}
-
-//===========================================================================
-CharBufBase::Buffer::~Buffer() {
-    assert(!data);
-}
-
-
-/****************************************************************************
-*
 *   CharBufBase
 *
 ***/
@@ -273,16 +214,25 @@ CharBufBase::ViewIterator CharBufBase::views(size_t pos, size_t count) const {
 }
 
 //===========================================================================
-void CharBufBase::clear() {
+void CharBufBase::destruct() {
     // This is the method used by the derived class during destruction. All
     // deallocations required at destruction are done here, while the derived
     // classes deallocate is still available.
-    if (m_size) {
-        erase(m_buffers.data(), 0, m_size);
+    m_size = 0;
+    for (auto&& buf : m_buffers) {
+        if (buf.mustFree && buf.data)
+            deallocate(buf.data, buf.reserved + 1);
+    }
+    if (m_reserved) {
         deallocate(m_buffers.data(), m_reserved * sizeof (Buffer));
         m_reserved = 0;
         m_buffers = {};
     }
+}
+
+//===========================================================================
+void CharBufBase::clear() {
+    erase(0, m_size);
 }
 
 //===========================================================================
@@ -785,8 +735,8 @@ size_t CharBufBase::copy(char * out, size_t count, size_t pos) const {
 void CharBufBase::swap(CharBufBase & other) {
     ::swap(m_size, other.m_size);
     ::swap(m_empty, other.m_empty);
-    ::swap(m_buffers, m_buffers);
-    ::swap(m_reserved, m_reserved);
+    ::swap(m_buffers, other.m_buffers);
+    ::swap(m_reserved, other.m_reserved);
 }
 
 //===========================================================================
@@ -1133,8 +1083,14 @@ CharBufBase & CharBufBase::erase(
 
 //===========================================================================
 auto CharBufBase::makeBuf(size_t bytes) -> Buffer {
+    assert(bytes > 1);
     auto data = (char *) allocate(bytes);
-    Buffer out(span(data, bytes), true);
+    Buffer out = {
+        .data = data,
+        .used = 0,
+        .reserved = (int) bytes - 1,
+        .mustFree = true,
+    };
     return out;
 }
 

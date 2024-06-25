@@ -192,18 +192,13 @@ private:
     );
 
 protected:
-    struct Buffer : public NoCopy {
+    void destruct();
+
+    struct Buffer {
         char * data {nullptr};
         int used {0};
         int reserved {0};
         bool mustFree {false};
-
-        Buffer();
-        Buffer(std::span<char> buf, bool fromHeap);
-        Buffer(Buffer && from) noexcept;
-        ~Buffer();
-        Buffer & operator=(const Buffer & from) noexcept;
-        Buffer & operator=(Buffer && from) noexcept;
     };
     using buffer_iterator = Buffer *;
     using const_buffer_iterator = const Buffer *;
@@ -340,10 +335,10 @@ private:
 //===========================================================================
 template <CharAllocator A>
 CharBufAlloc<A>::~CharBufAlloc() {
-    // Call clear() here so that the base class that knows what needs to be
+    // Call destruct() here so that the base class that knows what needs to be
     // destroyed can do so while that derived class providing the deallocate
     // method is still available.
-    clear();
+    destruct();
 }
 
 //===========================================================================
