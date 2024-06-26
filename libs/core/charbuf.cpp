@@ -30,6 +30,21 @@ CharBufBase::~CharBufBase() {
 }
 
 //===========================================================================
+void CharBufBase::destruct() {
+    // This is the method used by the derived class during destruction. All
+    // deallocations required at destruction are done here, while the derived
+    // classes deallocate is still available.
+    m_size = 0;
+    for (auto&& buf : m_buffers)
+        clearBuf(&buf);
+    if (m_reserved) {
+        deallocate(m_buffers.data(), m_reserved * sizeof (Buffer));
+        m_reserved = 0;
+        m_buffers = {};
+    }
+}
+
+//===========================================================================
 CharBufBase & CharBufBase::operator=(CharBufBase && buf) noexcept {
     clear();
     swap(buf);
@@ -152,7 +167,8 @@ char * CharBufBase::data(size_t pos, size_t count) {
             auto tmp = makeBuf(bufsize);
             memcpy(tmp.data, myi->data, myi->used);
             tmp.used = myi->used;
-            *myi = move(tmp);
+            clearBuf(myi);
+            *myi = tmp;
         }
         num -= myi->used;
         auto mydata = myi->data + myi->used;
@@ -211,23 +227,6 @@ CharBufBase::ViewIterator CharBufBase::views(size_t pos, size_t count) const {
     auto ic = find(pos);
     auto vi = ViewIterator{ic.first, (size_t) ic.second, num};
     return vi;
-}
-
-//===========================================================================
-void CharBufBase::destruct() {
-    // This is the method used by the derived class during destruction. All
-    // deallocations required at destruction are done here, while the derived
-    // classes deallocate is still available.
-    m_size = 0;
-    for (auto&& buf : m_buffers) {
-        if (buf.mustFree && buf.data)
-            deallocate(buf.data, buf.reserved + 1);
-    }
-    if (m_reserved) {
-        deallocate(m_buffers.data(), m_reserved * sizeof (Buffer));
-        m_reserved = 0;
-        m_buffers = {};
-    }
 }
 
 //===========================================================================
@@ -759,7 +758,7 @@ pair<CharBufBase::buffer_iterator, int> CharBufBase::find(size_t pos) {
     assert(pos <= (size_t) m_size);
     int off = (int)pos;
     if (off < m_size / 2) {
-        auto it = &m_buffers.front();
+        auto it = m_buffers.data();
         for (;;) {
             int used = it->used;
             if (off <= used) {
@@ -1084,14 +1083,31 @@ CharBufBase & CharBufBase::erase(
 //===========================================================================
 auto CharBufBase::makeBuf(size_t bytes) -> Buffer {
     assert(bytes > 1);
-    auto data = (char *) allocate(bytes);
+    auto data = (char *) allocate(bytes + 1);
     Buffer out = {
         .data = data,
         .used = 0,
-        .reserved = (int) bytes - 1,
+        .reserved = (int) bytes,
         .mustFree = true,
     };
     return out;
+}
+
+//===========================================================================
+void CharBufBase::clearBuf(Buffer * out) {
+    if (out->data) {
+        assert(out->reserved);
+        if (out->mustFree) {
+            deallocate(out->data, out->reserved + 1);
+            out->mustFree = false;
+        }
+        out->data = nullptr;
+        out->used = 0;
+        out->reserved = 0;
+    } else {
+        assert(!out->used && !out->reserved);
+        out->mustFree = false;
+    }
 }
 
 //===========================================================================
@@ -1137,13 +1153,8 @@ auto CharBufBase::eraseBuf(buffer_iterator pos1, buffer_iterator pos2)
     auto first = m_buffers.data();
     auto last = first + len;
     assert(first <= pos1 && pos2 <= last);
-    for (auto i = pos1; i < pos2; ++i) {
-        if (i->data) {
-            if (i->mustFree)
-                deallocate(i->data, i->reserved + 1);
-            i->data = nullptr;
-        }
-    }
+    for (auto i = pos1; i < pos2; ++i)
+        clearBuf(i);
     if (pos2 < last)
         memmove(pos1, pos2, (last - pos2) * sizeof *pos1);
     m_buffers = { first, len - (pos2 - pos1) };

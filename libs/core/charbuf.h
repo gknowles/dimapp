@@ -228,8 +228,9 @@ protected:
     );
     CharBufBase & erase(buffer_iterator it, size_t pos, size_t count);
 
-    buffer_iterator eraseBuf(buffer_iterator first, buffer_iterator last);
     Buffer makeBuf(size_t bytes);
+    void clearBuf(Buffer * out);
+    buffer_iterator eraseBuf(buffer_iterator first, buffer_iterator last);
     buffer_iterator appendBuf();
     buffer_iterator insertBuf(buffer_iterator pos);
 

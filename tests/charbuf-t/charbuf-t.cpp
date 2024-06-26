@@ -111,6 +111,10 @@ static void app(int argc, char *argv[]) {
         auto tmp = buf2;
     }
 
+    buf = buf2;
+    auto buf3 = move(buf);
+    auto v3 = buf3.view();
+
     testSignalShutdown();
 }
 
