@@ -97,6 +97,7 @@ string genAutoId(string_view title) {
     if (title.empty())
         return out;
 
+    // In the title, reduce runs of illegal chars (and dashes) to a single '-'.
     bool multisep = false;
     if (~s_defs.flags[(unsigned char) title[0]] & kStartChar) {
         out += '-';
@@ -113,6 +114,7 @@ string genAutoId(string_view title) {
         out += ch;
         multisep = false;
     }
+
     toLower(out.data());
     return out;
 }
@@ -220,11 +222,11 @@ static void addHighlightJsHead(IXBuilder * out) {
     bld.start("link")
         .attr("rel", "stylesheet")
         .attr("href", "https://cdnjs.cloudflare.com/ajax/libs/"
-            "highlight.js/10.1.2/styles/default.min.css")
+            "highlight.js/11.9.0/styles/default.min.css")
         .end();
     bld.start("script")
         .attr("src", "https://cdnjs.cloudflare.com/ajax/libs/"
-            "highlight.js/10.1.2/highlight.min.js")
+            "highlight.js/11.9.0/highlight.min.js")
         .text("")
         .end();
     bld.start("script")
@@ -236,7 +238,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
         if (lang == 'shell session') {
             lang = 'console';
         }
-        var code = hljs.highlight(lang, block.textContent);
+        var code = hljs.highlight(block.textContent, {language: lang});
         block.className += 'hljs';
         block.innerHTML = code.value;
     } catch (e) {
@@ -257,10 +259,10 @@ static void addBootstrapHead(IXBuilder * out) {
         .end();
     bld.start("link")
         .attr("rel", "stylesheet")
-        .attr("href", "https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/"
+        .attr("href", "https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/"
             "css/bootstrap.min.css")
-        .attr("integrity", "sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9H"
-            "uZOnIxN0hoP+VmmDGMN5t9UJ0Z")
+        .attr("integrity",
+"sha384-xOolHFLEh07PJGoPkLv1IbcEPTNtaed2xpHsD9ESMhqIYd0nLMwNLD69Npy4HI+N")
         .attr("crossorigin", "anonymous")
         .end();
     return;
@@ -270,25 +272,26 @@ static void addBootstrapHead(IXBuilder * out) {
 static void addBootstrapBody(IXBuilder * out) {
     auto & bld = *out;
     bld.start("script")
-        .attr("src", "https://code.jquery.com/jquery-3.5.1.slim.min.js")
-        .attr("integrity", "sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38M"
-            "VBnE+IbbVYUew+OrCXaRkfj")
+        .attr("src", "https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/"
+            "jquery.slim.min.js")
+        .attr("integrity",
+"sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj")
         .attr("crossorigin", "anonymous")
         .text("")
         .end();
     bld.start("script")
         .attr("src", "https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/"
             "popper.min.js")
-        .attr("integrity", "sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlF"
-            "hbGU+6BZp6G7niu735Sk7lN")
+        .attr("integrity",
+"sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN")
         .attr("crossorigin", "anonymous")
         .text("")
         .end();
     bld.start("script")
-        .attr("src", "https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/"
+        .attr("src", "https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/"
             "bootstrap.min.js")
-        .attr("integrity", "sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfP"
-            "lYxofvL8/KUEfYiJOMMV+rV")
+        .attr("integrity",
+"sha384-+sLIOodYLS7CIrQpBjl+C7nPvqq+FbNUBDunl/OZv93DB7Ln/533i8e/mZXLi/P+")
         .attr("crossorigin", "anonymous")
         .text("")
         .end();
@@ -299,7 +302,7 @@ static void addBootstrapBody(IXBuilder * out) {
 static void addBadgePrelim(IXBuilder * out) {
     out->text(" ")
         .start("span")
-            .attr("class", "badge badge-warning")
+            .attr("class", "badge prelim-badge")
             .text("Prelim")
             .end();
 }
@@ -308,7 +311,7 @@ static void addBadgePrelim(IXBuilder * out) {
 static void addBadgeOld(IXBuilder * out) {
     out->text(" ")
         .start("span")
-            .attr("class", "badge badge-secondary")
+            .attr("class", "badge old-badge")
             .text("Old")
             .end();
 }
@@ -332,7 +335,7 @@ static void addNavbar(
             .text(kSchemaType == kDark ? "navbar-dark" : "navbar-light")
             .endAttr()
         .start("a")
-            .attr("class", "navbar-brand font-weight-bolder")
+            .attr("class", "navbar-brand fw-bolder")
             .attr("href", "..")
             .text(cfg.siteName)
             .end()
@@ -466,16 +469,17 @@ static void addTocEntries(
 ) {
     auto & bld = *out;
     bld.start("div")
-        << attr("style") << "grid-row-start: 1; grid-column-start: 1;";
+        << attr("style") << "grid-row-start: 1; grid-column-start: 1;"
+        << endAttr;
     if (!foreground)
-        bld << "visibility: hidden;" << endAttr
-            << attr("class", "nav-shadow");
+        bld << attr("class", "invisible nav-shadow");
     for (auto&& ent : entries) {
         if (ent.depth >= 1 && ent.depth <= 3) {
             bld.start("a") << attr("class");
-            bld << "nav-link toc-" << ent.depth << endAttr
-                << attr("href") << "#" << ent.link << endAttr
-                << "";
+            bld << "nav-link toc-" << ent.depth << endAttr;
+            if (foreground)
+                bld << attr("href") << "#" << ent.link << endAttr;
+            bld << "";
             bld.addRaw(ent.name);
             bld.end();
         }
@@ -530,6 +534,7 @@ static CharBuf processPageContent(
         .attr("lang", "en")
         .start("head")
         .start("meta").attr("charset", "utf-8").end();
+    bld.elem("title", info->page.name + " - " + info->out->siteName);
     addBootstrapHead(&bld);
     addFontAwesomeHead(&bld);
     addHighlightJsHead(&bld);
@@ -541,12 +546,27 @@ static CharBuf processPageContent(
         .attr("rel", "stylesheet")
         .attr("href", "../css/asciidoc.css")
         .end();
-    bld.elem("title", info->page.name + " - " + info->out->siteName);
+    bld.elem("script", 1 + R"(
+document.addEventListener('DOMContentLoaded', (event) => {
+  document.querySelectorAll('table.tableblock').forEach((tab) => {
+    tab.classList.add('table', 'table-sm', 'table-striped', 'table-hover')
+  });
+  /*
+  document.querySelectorAll('div[role="main"] [id]').forEach((h) => {
+    let par = h.closest('div')
+    let id = h.id
+    h.removeAttribute('id')
+    par.setAttribute('id', id)
+  });
+  */
+});
+)");
     bld.end(); // </head>
 
     bld.start("body")
         .attr("data-spy", "scroll")
         .attr("data-target", "#toc")
+        .attr("data-smooth-scroll", "false")
         .text("\n");
     addNavbar(&bld, *info->out, info->ver, layout, info->page);
     bld.start("div")
@@ -563,12 +583,8 @@ static CharBuf processPageContent(
             break;
         case Column::kContentBody:
             bld.start("div")
-                .attr(
-                    "class",
-                    "col col-lg-9 table table-sm table-striped table-hover"
-                    )
+                .attr("class", "col col-lg-9 mt-3")
                 .attr("role", "main")
-                .attr("style", "margin-top: 1rem;")
                 .text("");
             html.append(content);
             bld.end();
@@ -761,6 +777,14 @@ nav.navbar .navbar-nav .nav-link.active {
 }
 nav.navbar span.badge {
     margin-left: .25rem;
+}
+nav.navbar span.badge.prelim-badge {
+    background-color: rgb(255 193 7);
+    color: black;
+}
+nav.navbar span.badge.old-badge {
+    background-color: lightgray;
+    color: black;
 }
 nav.navbar .dropdown-menu {
     font-size: .875em;

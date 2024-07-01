@@ -40,10 +40,10 @@ Markup documentation processing.
 ** https://github.com/github/markup[github-markup]
 * Loaded by client browser
 ** https://fontawesome.com[Font Awesome] 4.7.0
-** https://getbootstrap.com[Bootstrap] 4.5.2
+** https://getbootstrap.com[Bootstrap] 4.6.2
 *** https://jquery.com[jquery] 3.5.1
 *** https://popper.js.org[popper] 1.16.1
-** https://highlightjs.org[highlight.js] 10.1.2
+** https://highlightjs.org[highlight.js] 11.9.0
 
 The others are external dependencies of the generated site, but github-markup
 is a ruby gem that must be installed for sites to be generated.

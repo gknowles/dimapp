@@ -10,16 +10,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
-## docgen 1.1.4 (2024-04-19)
+## docgen 1.3.2 (2024-07-01)
+- Cosmetic - Update bootstrap to 4.6.2 and highlistjs to 11.9.0
+
+## docgen 1.3.1 (2024-04-19)
 - Fixed - Memory leak after compilation errors.
 
-## docgen 1.1.3 (2023-03-26)
+## docgen 1.3.0 (2023-03-26)
 - Added - Auto-testing for samples in markdown files
 
-## docgen 1.1.2 (2022-02-10)
+## docgen 1.2.1 (2022-02-10)
 - Fixed - Hangs after reporting web site generation errors
 
-## docgen 1.1.1 (2022-01-14)
+## docgen 1.2.0 (2022-01-14)
 - Fixed - Last embedded test of documents not processed
 - Fixed - Memory leak when first compile fails
 - Added - Option to let grandchild continue after child process stopped
