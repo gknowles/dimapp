@@ -117,7 +117,7 @@ CHECK_CURRENT:
 
 DIR_EXITED:
         if (info->flags.any(fDirsLast)) {
-            // Always return a directory when leaving it if fDirsLast is
+            // Always return the directory when leaving it if fDirsLast is
             // defined. No pattern match required, it was matched before it was
             // entered.
             cur->firstPass = false;

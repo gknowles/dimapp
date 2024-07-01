@@ -284,10 +284,7 @@ public:
     //
     // Guaranteed to be called at least once, on operation failure 'more' is
     // set to false and data.size() == 0.
-    virtual bool onFileRead(size_t * bytesUsed, const FileReadData & data) {
-        *bytesUsed = data.data.size();
-        return false;
-    }
+    virtual bool onFileRead(size_t * bytesUsed, const FileReadData & data);
 };
 
 void fileRead(

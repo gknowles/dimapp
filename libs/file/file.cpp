@@ -13,6 +13,22 @@ using fm = Dim::File::OpenMode;
 
 /****************************************************************************
 *
+*   IFileReadNotify
+*
+***/
+
+//===========================================================================
+bool IFileReadNotify::onFileRead(
+    size_t * bytesUsed,
+    const FileReadData & data
+) {
+    *bytesUsed = data.data.size();
+    return false;
+}
+
+
+/****************************************************************************
+*
 *   FileAppendStream
 *
 ***/
