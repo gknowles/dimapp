@@ -42,6 +42,7 @@ struct Count {
     bool hasExt() const;
 
     string resolve(const Count & base) const;
+    string relative(const Count & base) const;
 };
 
 enum PrevCharType {
@@ -364,6 +365,56 @@ string Count::resolve(const Count & base) const {
     return out;
 }
 
+//===========================================================================
+string Count::relative(const Count & base) const {
+    string out;
+
+    if (drive() != base.drive()) {
+        out += m_path;
+        return out;
+    }
+    if (hasRootDir() != base.hasRootDir()) {
+        if (hasRootDir()) {
+            out += m_path.data() + drive().size();
+        } else {
+            out = m_path;
+        }
+    } else {
+        // Find first segment difference (skip leading common segments).
+        int segDiff = m_rootLen - 1;
+        int i = m_rootLen;
+        auto last = min(m_path.size(), base.m_path.size());
+        for (;; ++i) {
+            if (i == last) {
+                if (m_path.size() > last && m_path[last] == '/'
+                    || base.m_path.size() > last && base.m_path[last] == '/'
+                ) {
+                    // The end of the shorter path is also the end of a segment
+                    // in the longer, therefore it is a common segment.
+                    segDiff = i;
+                }
+                break;
+            }
+            if (m_path[i] != base.m_path[i])
+                break;
+            if (m_path[i] == '/')
+                segDiff = i;
+        }
+        // Add ".." segment for each remaining base segments.
+        if (i < base.m_path.size()) {
+            out += "../";
+            for (auto ch : base.m_path.substr(i)) {
+                if (ch == '/')
+                    out += "../";
+            }
+        }
+        // Add each remaining segments from this.
+        out += m_path.substr(segDiff + 1);
+    }
+    // No need to normalize, the caller will do that via assign.
+    return out;
+}
+
 
 /****************************************************************************
 *
@@ -582,6 +633,19 @@ Path & Path::resolve(const Path & base, string_view fallback) {
 //===========================================================================
 Path & Path::resolve(string_view base, string_view fallback) {
     return resolve(Path{base}, fallback);
+}
+
+//===========================================================================
+Path & Path::relative(const Path & baseRaw) {
+    Count cnt(m_data);
+    Count base(baseRaw.m_data);
+    auto out = cnt.relative(base);
+    return assign(out);
+}
+
+//===========================================================================
+Path & Path::relative(std::string_view base) {
+    return relative(Path(base));
 }
 
 //===========================================================================

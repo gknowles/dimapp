@@ -121,6 +121,12 @@ public:
     Path & resolve(const Path & base, std::string_view fallback);
     Path & resolve(std::string_view base, std::string_view fallback);
 
+    // Change path to be relative to base. No change is made if it can't be
+    // unambiguously reached from the base. This is usually due to conflicting
+    // drives or root dirs.
+    Path & relative(const Path & base);
+    Path & relative(std::string_view base);
+
     bool operator==(std::string_view b) const { return view() == b; }
     bool operator==(const Path & b) const { return view() == b.view(); }
 

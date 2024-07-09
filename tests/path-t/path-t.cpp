@@ -166,6 +166,23 @@ static void app(int argc, char * argv[]) {
         }
     }
 
+    // relative tests - run applicable resolve tests backwards
+    for (auto && t : resolveTests) {
+        if (!t.relativeTest)
+            continue;
+        if (t.sloc.line() == 110) {
+            // Only here as breakpoint for debugging.
+            p.clear();
+        }
+        p.assign(t.out);
+        p.relative(t.base);
+        if (p != t.rel) {
+            logMsgError() << "Line " << t.sloc.line() << ": Relativize '"
+                << t.out << "' - '" << t.base << "' == '" << p
+                << "', should be '" << t.rel << "'";
+        }
+    }
+
     p = "hello";
     p.defaultExt("txt");
     EXPECT(p == "hello.txt"sv);
