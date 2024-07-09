@@ -19,12 +19,29 @@ namespace fs = std::filesystem;
 namespace {
 
 struct Count {
+    string_view m_path;
     unsigned m_rootLen;     // includes trailing ':'
     unsigned m_dirLen;      // includes leading and/or trailing '/'
     unsigned m_stemLen;
     unsigned m_extLen;      // includes leading '.'
 
     explicit Count(string_view path);
+
+    string_view drive() const;      // Through first ':' in first segment.
+    string_view dir() const;        // Path without drive or filename.
+    string_view parentPath() const; // Drive and dir.
+    string_view filename() const;   // Last segment of path.
+    string_view stem() const;       // Filename without extension.
+    string_view extension() const;  // Portion of filename from last dot.
+
+    bool hasDrive() const;
+    bool hasRootDir() const;    // If dir not empty and starts with '/'.
+    bool hasDir() const;
+    bool hasFilename() const;
+    bool hasStem() const;
+    bool hasExt() const;
+
+    string resolve(const Count & base) const;
 };
 
 enum PrevCharType {
@@ -70,48 +87,58 @@ static void addExt(string * out, string_view ext) {
 }
 
 //===========================================================================
+// Returns true if the slash should be kept, otherwise the output path has
+// been modified and the slash should be skipped.
 static bool normalizeAtDotSlash(
     string * out,
     const Count & cnt
 ) {
-    auto pos = out->size();
-    auto eptr = out->data() + pos;
-    if (!pos)
-        return true;
-    if (pos == 1) {
+    auto dirpos = out->size() - cnt.m_rootLen;
+    assert(dirpos > 0); // Must have leading dot to call this function.
+    auto eptr = out->data() + out->size();
+
+    // Handle current directory self reference (single dot).
+    if (dirpos == 1 || eptr[-2] == '/') {
+        // Either: "." + "/" => ""
+        //     Or: "<prev>/." + "/" => "<prev>/"
         out->pop_back();
         return false;
     }
-    if (eptr[-2] == '/') {
-        // "<prev>/." + "/" => "<prev>/"
-        out->pop_back();
-        return false;
-    }
-    if (eptr[-2] == '.' && pos >= 3 && eptr[-3] == '/') {
+
+    // Handle parent directory reference (double dot).
+    if (dirpos >= 3 && eptr[-2] == '.' && eptr[-3] == '/') {
         // "<prev>/.." + "/"
-        auto * obase = out->data() + cnt.m_rootLen;
+
+        if (dirpos == 3) {
+            // "/.."
+            out->resize(out->size() - 2);
+            return false;
+        }
+
+        // Find slash at start of segment before the current ".." one.
+        auto * obase =  // First place slash could be.
+            out->data() + cnt.m_rootLen;
+
+        // Last possible place for slash. The segment closing slash is at -3,
+        // so start just before that.
         auto * slash = out->data() + out->size() - 4;
-        if (slash < obase) {
-            out->pop_back();
-            out->pop_back();
-            return false;
+        for (; slash >= obase; --slash) {
+            if (*slash == '/')
+                break;
         }
-        for (;; --slash) {
-            if (slash <= obase) {
-                slash = obase - 1;
-            } else if (*slash != '/') {
-                continue;
-            }
-            break;
-        }
-        // pop unless previous segment is also ..
-        if (slash + 3 != eptr - 3
-            || slash[1] != '.' || slash[2] != '.'
+
+        // Keep new ".." segment if the previous segment is also "..".
+        if (slash + 3 == eptr - 3
+            && slash[1] == '.' && slash[2] == '.'
         ) {
-            out->resize(slash - out->data() + 1);
-            return false;
+            return true;
         }
+
+        // Remove previous path segment and current ".." segment.
+        out->resize(slash - out->data() + 1);
+        return false;
     }
+
     return true;
 }
 
@@ -120,21 +147,22 @@ static void normalizeAtSlash(
     string * out,
     PrevCharType * prevChar,
     const Count & cnt,
-    bool pseudoSlash = false
+    bool addSlash = true
 ) {
     auto pchar = *prevChar;
     *prevChar = kSlash;
     switch (pchar) {
     case kSlash:
+        // Consecutive slashes after the first are discarded.
         return;
     case kDot:
-        pseudoSlash = !normalizeAtDotSlash(out, cnt) || pseudoSlash;
+        addSlash = normalizeAtDotSlash(out, cnt) && addSlash;
         break;
     case kNone:
     case kNormal:
         break;
     }
-    if (!pseudoSlash)
+    if (addSlash)
         *out += '/';
 }
 
@@ -144,8 +172,11 @@ static void normalize(string * path) {
     string out;
     out.reserve(path->size());
     out.append(*path, 0, cnt.m_rootLen);
+
+    // Only normalize the portion following the root name.
     auto * ptr = path->data() + cnt.m_rootLen;
     auto * eptr = ptr + cnt.m_dirLen + cnt.m_stemLen + cnt.m_extLen;
+
     PrevCharType prevChar{kNone};
     for (; ptr != eptr; ++ptr) {
         switch(*ptr) {
@@ -163,15 +194,25 @@ static void normalize(string * path) {
             break;
         }
     }
+
+    // Check if last segment is "." or "..", and if it is process as if there's
+    // a following slash so it's interpreted as the path modifying pseudo
+    // directory that it is.
     if (prevChar == kDot && !cnt.m_extLen) {
         if (cnt.m_stemLen == 1
             || cnt.m_stemLen == 2 && path->data()[path->size() - 2] == '.'
         ) {
-            normalizeAtSlash(&out, &prevChar, cnt, true);
+            normalizeAtSlash(
+                &out,
+                &prevChar,
+                cnt,
+                false    // add slash?
+            );
         }
     }
+
     // remove trailing slash if it's not also the leading slash
-    if (prevChar == kSlash && cnt.m_dirLen > 1)
+    if (out.size() > cnt.m_rootLen + 1 && out.back() == '/')
         out.pop_back();
 
     out.swap(*path);
@@ -186,6 +227,7 @@ static void normalize(string * path) {
 
 //===========================================================================
 Count::Count(string_view path) {
+    m_path = path;
     auto * base = path.data();
     auto * ptr = base;
     auto * eptr = ptr + path.size();
@@ -230,6 +272,96 @@ Count::Count(string_view path) {
         }
     }
     assert(m_extLen == path.size() - m_rootLen - m_dirLen - m_stemLen);
+}
+
+//===========================================================================
+string_view Count::drive() const {
+    return {m_path.data(), m_rootLen};
+}
+
+//===========================================================================
+string_view Count::dir() const {
+    return {m_path.data() + m_rootLen, m_dirLen};
+}
+
+//===========================================================================
+string_view Count::parentPath() const {
+    return {m_path.data(), m_rootLen + m_dirLen - (m_dirLen > 1)};
+}
+
+//===========================================================================
+string_view Count::filename() const {
+   return {
+        m_path.data() + m_rootLen + m_dirLen,
+        m_stemLen + m_extLen
+    };
+}
+
+//===========================================================================
+string_view Count::stem() const {
+    return {m_path.data() + m_rootLen + m_dirLen, m_stemLen};
+}
+
+//===========================================================================
+string_view Count::extension() const {
+    return {
+        m_path.data() + m_rootLen + m_dirLen + m_stemLen,
+        m_extLen
+    };
+}
+
+//===========================================================================
+bool Count::hasDrive() const {
+    return m_rootLen;
+}
+
+//===========================================================================
+bool Count::hasRootDir() const {
+    return m_dirLen && m_path[m_rootLen] == '/';
+}
+
+//===========================================================================
+bool Count::hasDir() const {
+    return m_dirLen;
+}
+
+//===========================================================================
+bool Count::hasFilename() const {
+    return m_stemLen + m_extLen;
+}
+
+//===========================================================================
+bool Count::hasStem() const {
+    return m_stemLen;
+}
+
+//===========================================================================
+bool Count::hasExt() const {
+    return m_extLen;
+}
+
+//===========================================================================
+string Count::resolve(const Count & base) const {
+    string out;
+
+    if (hasRootDir()) {
+        if (!hasDrive()) {
+            addRoot(&out, base.drive());
+        }
+        out += m_path;
+    } else {
+        if (drive() != base.drive() && hasDrive()) {
+            out += m_path;
+        } else {
+            out += base.m_path;
+            if (hasDir() || hasFilename()) {
+                if (base.hasDir() || base.hasFilename())
+                    out += '/';
+                out += m_path.data() + drive().size();
+            }
+        }
+    }
+    return out;
 }
 
 
@@ -422,47 +554,28 @@ Path & Path::append(string_view path) {
 }
 
 //===========================================================================
-Path & Path::resolve(const Path & base) {
-    return resolve(base.view());
-}
-
-//===========================================================================
-Path & Path::resolve(string_view basePath) {
-    string out;
-    Path base;
-    base.setParentPath(basePath);
-
-    if (hasRootDir()) {
-        if (!hasDrive()) {
-            addRoot(&out, base.drive());
-            out += m_data;
-        } else {
-            return *this;
-        }
-    } else {
-        if (drive() != base.drive() && hasDrive())
-            return *this;
-
-        out += base;
-        if (hasDir() || hasFilename()) {
-            if (base.hasDir() || base.hasFilename())
-                out += '/';
-            out += c_str() + drive().size();
-        }
-    }
+Path & Path::resolve(const Path & baseRaw) {
+    Count cnt(m_data);
+    Count base(baseRaw.m_data);
+    auto out = cnt.resolve(base);
     return assign(out);
 }
 
 //===========================================================================
+Path & Path::resolve(string_view base) {
+    return resolve(Path(base));
+}
+
+//===========================================================================
 Path & Path::resolve(const Path & base, string_view fallback) {
-    resolve(base.view());
+    resolve(base);
     if (m_data.size() >= base.size()) {
         auto ch = m_data[base.size()];
         if (m_data.starts_with(base.view()) && (ch == '\0' || ch == '/'))
             return *this;
     }
     assign(fallback);
-    resolve(base.view());
+    resolve(base);
     return *this;
 }
 
@@ -491,44 +604,32 @@ size_t Path::size() const {
 
 //===========================================================================
 string_view Path::drive() const {
-    Count cnt(m_data);
-    return {m_data.data(), cnt.m_rootLen};
+    return Count(m_data).drive();
 }
 
 //===========================================================================
 string_view Path::dir() const {
-    Count cnt(m_data);
-    return {m_data.data() + cnt.m_rootLen, cnt.m_dirLen};
+    return Count(m_data).dir();
 }
 
 //===========================================================================
 string_view Path::parentPath() const {
-    Count cnt(m_data);
-    return {m_data.data(), cnt.m_rootLen + cnt.m_dirLen - (cnt.m_dirLen > 1)};
+    return Count(m_data).parentPath();
 }
 
 //===========================================================================
 string_view Path::filename() const {
-    Count cnt(m_data);
-    return {
-        m_data.data() + cnt.m_rootLen + cnt.m_dirLen,
-        cnt.m_stemLen + cnt.m_extLen
-    };
+    return Count(m_data).filename();
 }
 
 //===========================================================================
 string_view Path::stem() const {
-    Count cnt(m_data);
-    return {m_data.data() + cnt.m_rootLen + cnt.m_dirLen, cnt.m_stemLen};
+    return Count(m_data).stem();
 }
 
 //===========================================================================
 string_view Path::extension() const {
-    Count cnt(m_data);
-    return {
-        m_data.data() + cnt.m_rootLen + cnt.m_dirLen + cnt.m_stemLen,
-        cnt.m_extLen
-    };
+    return Count(m_data).extension();
 }
 
 //===========================================================================
@@ -538,38 +639,32 @@ bool Path::empty() const {
 
 //===========================================================================
 bool Path::hasDrive() const {
-    Count cnt(m_data);
-    return cnt.m_rootLen;
+    return Count(m_data).hasDrive();
 }
 
 //===========================================================================
 bool Path::hasRootDir() const {
-    Count cnt(m_data);
-    return cnt.m_dirLen && m_data[cnt.m_rootLen] == '/';
+    return Count(m_data).hasRootDir();
 }
 
 //===========================================================================
 bool Path::hasDir() const {
-    Count cnt(m_data);
-    return cnt.m_dirLen;
+    return Count(m_data).hasDir();
 }
 
 //===========================================================================
 bool Path::hasFilename() const {
-    Count cnt(m_data);
-    return cnt.m_stemLen + cnt.m_extLen;
+    return Count(m_data).hasFilename();
 }
 
 //===========================================================================
 bool Path::hasStem() const {
-    Count cnt(m_data);
-    return cnt.m_stemLen;
+    return Count(m_data).hasStem();
 }
 
 //===========================================================================
 bool Path::hasExt() const {
-    Count cnt(m_data);
-    return cnt.m_extLen;
+    return Count(m_data).hasExt();
 }
 
 

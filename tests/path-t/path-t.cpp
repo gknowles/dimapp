@@ -80,9 +80,13 @@ static void app(int argc, char * argv[]) {
         string_view out;
         source_location sloc = source_location::current();
     } normalizeTests[] = {
+        { "a", "a" },
+        { "a/..", "" },
+        { "/..", "/" },
+        { "a/../b", "b" },
+        { "/a/../b", "/b" },
         { "../../a", "../../a" },
         { "../a/..", ".." },
-        { "/..", "/" },
         { "..", ".." },
         { "..\\a\\b\\..\\base.ext", "../a/base.ext" },
         { "one/two/", "one/two" },
@@ -101,37 +105,63 @@ static void app(int argc, char * argv[]) {
         string_view base;
         string_view rel;
         string_view out;
+        bool relativeTest = true;
         source_location sloc = source_location::current();
     } resolveTests[] = {
-        { "",        "rel",    "rel"         },
-        { "base",    "rel",    "base/rel"    },
-        { "base",    "/rel",   "/rel"        },
-        { "base",    "c:rel",  "c:rel"       },
-        { "base",    "c:/rel", "c:/rel"      },
-        { "/base",   "rel",    "/base/rel"   },
-        { "/base",   "/rel",   "/rel"        },
-        { "/base",   "c:rel",  "c:rel"       },
-        { "/base",   "c:/rel", "c:/rel"      },
-        { "c:",      "rel",    "c:rel"       },
-        { "c:base",  "rel",    "c:base/rel"  },
-        { "c:base",  "/rel",   "c:/rel"      },
-        { "c:base",  "c:rel",  "c:base/rel"  },
-        { "c:base",  "c:/rel", "c:/rel"      },
-        { "c:base",  "a:rel",  "a:rel"       },
-        { "c:base",  "a:/rel", "a:/rel"      },
-        { "c:/base", "rel",    "c:/base/rel" },
-        { "c:/base", "/rel",   "c:/rel"      },
-        { "c:/base", "c:rel",  "c:/base/rel" },
-        { "c:/base", "c:/rel", "c:/rel"      },
-        { "c:/base", "a:rel",  "a:rel"       },
-        { "c:/base", "a:/rel", "a:/rel"      },
+        { "",        "rel",       "rel"          },
+        { "",        "../rel",    "../rel",      },
+        { "",        "c:rel",     "c:rel"        },
+        { "base",    "rel",       "base/rel"     },
+        { "base",    "..",        ""             },
+        { "base",    "../rel",    "rel"          },
+        { "base",    "../../rel", "../rel"       },
+        { "base",    "/rel",      "/rel"         },
+        { "base",    "c:rel",     "c:rel"        },
+        { "base",    "c:/rel",    "c:/rel"       },
+        { "base/b2", "../rel",    "base/rel"     },
+        { "base/b2", "../../rel", "rel"          },
+        { "/base",   "rel",       "/base/rel"    },
+        { "/base",   "..",        "/"            },
+        { "/base",   "../rel",    "/rel"         },
+        { "/base",   "../../rel", "/rel",        false },
+        { "/base",   "/rel",      "/rel",        false },
+        { "/base",   "c:rel",     "c:rel"        },
+        { "/base",   "c:/rel",    "c:/rel"       },
+        { "c:",      "rel",       "c:rel"        },
+        { "c:",      "..",        "c:.."         },
+        { "c:",      "../rel",    "c:../rel"     },
+        { "c:",      "/rel",      "c:/rel"       },
+        { "c:",      "c:rel",     "c:rel",       false },
+        { "c:",      "c:../rel",  "c:../rel",    false },
+        { "c:",      "c:/rel",    "c:/rel",      false },
+        { "c:",      "a:rel",     "a:rel"        },
+        { "c:",      "a:/rel",    "a:/rel"       },
+        { "c:base",  "rel",       "c:base/rel"   },
+        { "c:base",  "..",        "c:"           },
+        { "c:base",  "../rel",    "c:rel"        },
+        { "c:base",  "../../rel", "c:../rel"     },
+        { "c:base",  "/rel",      "c:/rel"       },
+        { "c:base",  "c:rel",     "c:base/rel",  false },
+        { "c:base",  "c:../rel",  "c:rel",       false },
+        { "c:base",  "c:/rel",    "c:/rel",      false },
+        { "c:base",  "a:rel",     "a:rel"        },
+        { "c:base",  "a:/rel",    "a:/rel"       },
+        { "c:/base", "rel",       "c:/base/rel"  },
+        { "c:/base", "..",        "c:/"          },
+        { "c:/base", "../rel",    "c:/rel"       },
+        { "c:/base", "../../rel", "c:/rel",      false },
+        { "c:/base", "/rel",      "c:/rel",      false },
+        { "c:/base", "c:rel",     "c:/base/rel", false },
+        { "c:/base", "c:/rel",    "c:/rel",      false },
+        { "c:/base", "a:rel",     "a:rel"        },
+        { "c:/base", "a:/rel",    "a:/rel"       },
     };
     for (auto && t : resolveTests) {
         p.assign(t.rel);
         p.resolve(t.base);
         if (p != t.out) {
-            logMsgError() << "Line " << t.sloc.line() << ": "
-                << t.base << " / " << t.rel << " == '" << p
+            logMsgError() << "Line " << t.sloc.line() << ": Resolve '"
+                << t.base << "' / '" << t.rel << "' == '" << p
                 << "', should be '" << t.out << "'";
         }
     }

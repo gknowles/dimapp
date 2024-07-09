@@ -32,11 +32,11 @@ namespace Dim {
 *
 *   Decomposition:
 *
+*   [drive][------dir------] [--stem--][extension]
+*   [------parentPath------] [-----filename------]
 *   C:     /Windows/System32/executable.exe
 *   C:     log              /server    .log
 *   C:                       MyFile    .ext
-*   [drive][------dir------] [--stem--][extension]
-*   [------parentPath------] [-----filename------]
 *
 *   NOTE: The '/' after the 'dir' (assuming a dir is present) is part of
 *         neither 'dir' nor 'filename'. This is to be consistent with
@@ -150,7 +150,7 @@ public:
     // Filename without extension.
     std::string_view stem() const;
 
-    // Portion of last segment following and including the last dot.
+    // Portion of last segment starting with it's last dot.
     std::string_view extension() const;
 
     bool empty() const;
