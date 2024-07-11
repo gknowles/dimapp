@@ -361,11 +361,18 @@ void loadContent(
         struct FileContent : IFileReadNotify {
             function<void(string&&)> fn;
             string buf;
+            string tag;
+            string path;
 
             bool onFileRead(
                 size_t * bytesUsed,
                 const FileReadData & data
             ) override {
+                if (data.ec) {
+                    logMsgError() << path << '@' << tag
+                        << ": error reading file.";
+                    appSignalShutdown(EX_IOERR);
+                }
                 fn(move(buf));
                 delete this;
                 return false;
@@ -373,6 +380,8 @@ void loadContent(
         };
         auto notify = new FileContent;
         notify->fn = fn;
+        notify->tag = tag;
+        notify->path = path;
         fileLoadBinary(notify, &notify->buf, path);
         return;
     }
