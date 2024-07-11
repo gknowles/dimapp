@@ -399,19 +399,16 @@ void loadContent(
 //===========================================================================
 bool addOutput(
     Config * out,
-    const string & file,
+    const Path & file,
     CharBuf && content,
-    bool normalize
+    bool forceCRLF
 ) {
-    if (out->outputs.contains(file)) {
-        logMsgError() << file << ": multiply defined";
-        appSignalShutdown(EX_DATAERR);
-        return false;
-    }
-    if (!normalize) {
-        out->outputs[file] = move(content);
+    auto & fname = file.str();
+
+    CharBuf buf;
+    if (!forceCRLF) {
+        buf = move(content);
     } else {
-        auto& buf = out->outputs[file];
         bool hasCR = false;
         for (auto&& v : content.views()) {
             for (unsigned i = 0; i < v.size(); ++i) {
@@ -437,6 +434,15 @@ bool addOutput(
         if (hasCR)
             buf += '\n';
     }
+
+    static mutex s_mut;
+    scoped_lock lock(s_mut);
+    if (out->outputs.contains(fname)) {
+        logMsgError() << fname << ": multiply defined";
+        appSignalShutdown(EX_DATAERR);
+        return false;
+    }
+    out->outputs[fname] = move(buf);
     return true;
 }
 

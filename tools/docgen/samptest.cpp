@@ -922,7 +922,7 @@ static void addOutputScript(
         // No runs were added
         content.append("; No script, compile only test\n");
     }
-    addOutput(&cfg, path.str(), move(content));
+    addOutput(&cfg, path, move(content));
 }
 
 //===========================================================================
@@ -979,7 +979,7 @@ static void processPage(PageInfo * info) {
                     content.append(line.text).append("\n");
                 for (auto&& line : file.second.lines)
                     content.append(line).append("\n");
-                addOutput(&cfg, path.str(), move(content));
+                addOutput(&cfg, path, move(content));
             }
             addOutputScript(info, test.second, prog);
         }
@@ -1371,8 +1371,8 @@ CmdOpts::CmdOpts() {
         .desc("Test code samples embedded in documentation files")
         .action(testCmd);
     cli.opt(&cfgfile, "c conf")
-        .desc("Site configuration to process. "
-            "(default: {GIT_ROOT}/docs/docgen.xml)");
+        .desc("Site configuration to process.")
+        .defaultDesc("{GIT_ROOT}/docs/docgen.xml");
     cli.opt(&layout, "layout", "default")
         .desc("Layout with files to process.");
 

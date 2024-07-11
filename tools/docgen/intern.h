@@ -140,9 +140,9 @@ std::unique_ptr<Config> loadConfig(
 
 bool addOutput(
     Config * out,
-    const std::string & file,
+    const Dim::Path & file,
     Dim::CharBuf && content,
-    bool normalize = true
+    bool forceCRLF = true
 );
 bool writeOutputs(
     std::string_view odir,
