@@ -108,7 +108,7 @@ struct Config {
     std::unordered_map<std::string, Dim::CharBuf> outputs;
 
     unsigned phase = 0;
-    unsigned pendingWork = 0;
+    std::atomic<unsigned> pendingWork = 0;
 };
 
 

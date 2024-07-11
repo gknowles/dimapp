@@ -998,11 +998,23 @@ static void processPage(PageInfo * info) {
 struct ProgWork {
     unsigned phase = 0;
     bool serialized = false;    // If only one work item runs at a time.
-    unsigned pendingWork = 0;
+    atomic<unsigned> pendingWork = 1;
     function<void()> fn;
     const PageInfo & info;
     const TestInfo & test;
     const ProgInfo & prog;
+
+    ProgWork(
+        function<void()> fn,
+        const PageInfo & info,
+        const TestInfo & test,
+        const ProgInfo & prog
+    )
+        : fn(fn)
+        , info(info)
+        , test(test)
+        , prog(prog)
+    {}
 };
 
 static void runProgTests(ProgWork * work);
@@ -1231,14 +1243,7 @@ static void runTests(
                     out->pendingWork -= 1;
                     continue;
                 }
-                auto work = new ProgWork({
-                    .phase = 0,
-                    .pendingWork = 1,
-                    .fn = fn,
-                    .info = info,
-                    .test = test.second,
-                    .prog = prog,
-                });
+                auto work = new ProgWork(fn, info, test.second, prog);
                 runProgTests(work);
             }
         }

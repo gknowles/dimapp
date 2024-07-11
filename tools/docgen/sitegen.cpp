@@ -946,16 +946,19 @@ static void genSite(Config * out, unsigned phase = 0) {
         if (!genStatics(out))
             return;
 
-        // Load layouts of all versions
-        out->pendingWork = (unsigned) out->versions.size();
+        // This passthrough task (needed if all else is removed).
+        out->pendingWork = 1;
+
+        // Load layouts of all versions.
         for (auto && ver : out->versions) {
             auto layname = ver.layout;
 
             if (!layname.empty()) {
                 // If a layout was specified it overrides the configuration at
                 // the tag. Especially useful for old tags with no config file.
-                out->pendingWork -= 1;
             } else {
+                // Load version of docgen.xml at the tag.
+                out->pendingWork += 1;
                 loadContent(
                     [out, &ver, what](auto && content) {
                         if (ver.cfg = loadConfig(
@@ -974,7 +977,6 @@ static void genSite(Config * out, unsigned phase = 0) {
         }
 
         own.release();
-        out->pendingWork += 1;
         phase = what;
     }
 
@@ -988,17 +990,19 @@ static void genSite(Config * out, unsigned phase = 0) {
         if (!genRedirects(out))
             return;
 
+        // This passthrough task (needed if all else is removed).
+        out->pendingWork = 1;
+
         // Generate pages
         for (auto && ver : out->versions) {
             auto spec = ver.cfg ? ver.cfg.get() : out;
             string layname = ver.layout.empty() ? "default" : ver.layout;
             auto layout = spec->layouts.find(layname);
 
-            // Count each page as pending work.
-            out->pendingWork += (unsigned) layout->second.pages.size();
 
             // Generate pages for version
             for (auto && page : layout->second.pages) {
+                out->pendingWork += 1;
                 auto info = new GenPageInfo({ out, ver, page });
                 info->fn = [info, what]() {
                     genSite(info->out, what);
@@ -1009,7 +1013,6 @@ static void genSite(Config * out, unsigned phase = 0) {
         }
 
         own.release();
-        out->pendingWork += 1;
         phase = what;
     }
 
