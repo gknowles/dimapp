@@ -302,9 +302,9 @@ public:
     CharBufAlloc() {}
     CharBufAlloc(const CharBufAlloc & from) { insert(0, from); }
     CharBufAlloc(CharBufAlloc && from) noexcept { swap(from); }
-    CharBufAlloc(char ch) { pushBack(ch); }
-    CharBufAlloc(const char s[]) { insert(0, s); }
-    CharBufAlloc(std::string_view str) { insert(0, str); }
+    explicit CharBufAlloc(char ch) { pushBack(ch); }
+    explicit CharBufAlloc(const char s[]) { insert(0, s); }
+    explicit CharBufAlloc(std::string_view str) { insert(0, str); }
     ~CharBufAlloc() override;
 
     CharBufAlloc & operator=(const CharBufAlloc & from) {
