@@ -45,6 +45,15 @@ struct GenPageInfo {
 
 /****************************************************************************
 *
+*   Forward declarations
+*
+***/
+
+static void genSite(Config * out, unsigned phase = 0);
+
+
+/****************************************************************************
+*
 *   Variables
 *
 ***/
@@ -70,6 +79,26 @@ static void genHtmlHeader(CharBuf * out, const Path & fname) {
     out->append("<!DOCTYPE html>\n<!--\n");
     genFileHeader(out, fname);
     out->append("-->\n");
+}
+
+//===========================================================================
+static void genFaviconLink(
+    IXBuilder * out,
+    const Path & fname,
+    const Config & cfg
+) {
+    if (cfg.siteFavicon.empty()) {
+        fname.size();
+    } else {
+        Path href("favicon.ico");
+        if (cfg.tag.empty())
+            href.relative(fname.parentPath());
+        *out << start("link")
+            << attr("rel", "icon")
+            << attr("type", "image/x-icon")
+            << attr("href", href)
+            << end;
+    }
 }
 
 //===========================================================================
@@ -535,6 +564,7 @@ static CharBuf processPageContent(
         .start("head")
         .start("meta").attr("charset", "utf-8").end();
     bld.elem("title", info->page.name + " - " + info->out->siteName);
+    genFaviconLink(&bld, fname, *cfg);
     addBootstrapHead(&bld);
     addFontAwesomeHead(&bld);
     addHighlightJsHead(&bld);
@@ -880,8 +910,9 @@ static bool genRedirect(
                 << attr("http-equiv", "refresh")
                 << attr("content")
                     << "0; url='" << targetUrl << "'" << endAttr
-                << end
-            << end
+                << end;
+    genFaviconLink(&bld, fname, *out);
+    bld << end
         << end;
 
     return addOutput(out, fname, move(html));
@@ -929,7 +960,34 @@ static bool genRedirects(Config * out) {
 }
 
 //===========================================================================
-static void genSite(Config * out, unsigned phase = 0) {
+static void loadFavicon(
+    Config * out,
+    Config * spec,
+    unsigned phase,
+    const string & tag
+) {
+    if (spec->siteFavicon.empty())
+        return;
+
+    out->pendingWork += 1;
+    loadContent(
+        [out, spec, phase](auto && content) {
+            if (!content.empty()) {
+                Path fname("favicon.ico");
+                if (out != spec)
+                    fname.resolve(spec->tag);
+                addOutput(out, fname, CharBuf(content), false);
+                genSite(out, phase);
+            }
+        },
+        *out,
+        tag,
+        out->siteFavicon
+    );
+}
+
+//===========================================================================
+static void genSite(Config * out, unsigned phase) {
     if (appStopping()) {
         if (--out->pendingWork == 0)
             delete out;
@@ -949,6 +1007,9 @@ static void genSite(Config * out, unsigned phase = 0) {
         // This passthrough task (needed if all else is removed).
         out->pendingWork = 1;
 
+        // Load favicon.ico.
+        loadFavicon(out, out, what, "HEAD");
+
         // Load layouts of all versions.
         for (auto && ver : out->versions) {
             auto layname = ver.layout;
@@ -963,15 +1024,17 @@ static void genSite(Config * out, unsigned phase = 0) {
                     [out, &ver, what](auto && content) {
                         if (ver.cfg = loadConfig(
                             &content,
-                            out->configFile.filename(),
+                            out->configFile,
+                            out->gitRoot,
                             fLoadSite
                         )) {
+                            ver.cfg->tag = ver.tag;
                             genSite(out, what);
                         }
                     },
                     *out,
                     ver.tag,
-                    out->configFile.filename()
+                    out->configFile
                 );
             }
         }
@@ -999,6 +1062,15 @@ static void genSite(Config * out, unsigned phase = 0) {
             string layname = ver.layout.empty() ? "default" : ver.layout;
             auto layout = spec->layouts.find(layname);
 
+            // Load favicon.ico
+            if (spec != out) {
+                // Version has it's own config, and therefore could have it's
+                // own favicon.
+                loadFavicon(out, spec, what, ver.tag);
+            } else {
+                // Version has no config; it's relying on the HEAD versions
+                // favicon (or lack thereof).
+            }
 
             // Generate pages for version
             for (auto && page : layout->second.pages) {

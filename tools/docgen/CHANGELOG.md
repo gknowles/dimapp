@@ -10,8 +10,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
-## docgen 1.3.2 (2024-07-01)
+## docgen 1.4.0 (2024-07-11)
 - Cosmetic - Update bootstrap to 4.6.2 and highlistjs to 11.9.0
+- Fixed - Race condition detecting child process completions
+- Added - Report git errors loading content
+- Fixed - Race condition adding files to output set
+- Added - Support for favicon.ico
 
 ## docgen 1.3.1 (2024-04-19)
 - Fixed - Memory leak after compilation errors.

@@ -90,9 +90,11 @@ struct Layout {
 struct Config {
     Dim::Path configFile;
     Dim::Path gitRoot;
+    std::string tag;
 
     std::string siteName;
     std::string siteDir;
+    std::string siteFavicon;
     bool github = false;
     std::string repoUrl;
     size_t defVersion = (size_t) -1;
@@ -135,6 +137,7 @@ std::unique_ptr<Config> loadConfig(std::string_view cfgfile, LoadMode mode);
 std::unique_ptr<Config> loadConfig(
     std::string * content,
     std::string_view path,
+    std::string_view gitRoot,
     LoadMode mode
 );
 

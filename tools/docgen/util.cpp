@@ -249,6 +249,7 @@ static bool loadPageLayouts(Config * out, XNode * root) {
 unique_ptr<Config> loadConfig(
     string * content,
     string_view path,
+    string_view gitRoot,
     LoadMode mode
 ) {
     XDocument doc;
@@ -272,6 +273,7 @@ unique_ptr<Config> loadConfig(
     }
     out->siteName = attrValue(site, "name", "");
     out->siteDir = attrValue(site, "outDir", "");
+    out->siteFavicon = attrValue(site, "favicon", "");
     if (auto github = firstChild(site, "GitHub")) {
         out->github = true;
         out->repoUrl = attrValue(github, "repoUrl", "");
@@ -292,6 +294,7 @@ unique_ptr<Config> loadConfig(
 
     if (auto ec = fileAbsolutePath(&out->configFile, path); ec)
         return {};
+    out->gitRoot = gitRoot;
     return out;
 }
 
@@ -309,11 +312,7 @@ unique_ptr<Config> loadConfig(string_view cfgfile, LoadMode mode) {
     )) {
         return {};
     }
-    auto out = loadConfig(&content, configFile, mode);
-    if (!out)
-        return {};
-    out->gitRoot = gitRoot;
-    return out;
+    return loadConfig(&content, configFile, gitRoot, mode);
 }
 
 
