@@ -95,8 +95,9 @@ std::error_code fileSetCurrentDir(
 //  p.resolve(fileGetCurrentDir(p.drive()))
 std::error_code fileAbsolutePath(Path * out, std::string_view path);
 
-// False if file relative to root is not within the root path. This can happen
-// if file breaks out via ".." or is an absolute path.
+// Returns errc::invalid_argument if file relative to root is not within the
+// root path. This can happen if file breaks out via ".." or is an absolute
+// path.
 std::error_code fileChildPath(
     Path * out,
     const Path & root,
