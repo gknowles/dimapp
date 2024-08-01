@@ -15,7 +15,7 @@ using namespace Dim;
 *
 ***/
 
-const VersionInfo kVersion = { 1, 1, 1 };
+const VersionInfo kVersion = { 1, 1, 2 };
 
 
 /****************************************************************************
@@ -101,12 +101,14 @@ static CmdOpts s_opts;
 ***/
 
 static auto & s_perfSelectedFiles = uperf("cmtupd files selected");
+static auto & s_perfSkippedFiles = uperf("cmtupd files skipped (unselected)");
 static auto & s_perfScannedFiles = uperf("cmtupd files scanned");
 static auto & s_perfUnfinishedFiles = uperf("cmtupd files unfinished");
 static auto & s_perfQueuedFiles = uperf("cmtupd files (queued)");
 static auto & s_perfMatchedFiles = uperf("cmtupd files matched");
 static auto & s_perfComments = uperf("cmtupd comments matched");
 static auto & s_perfUpdatedComments = uperf("cmtupd comments updated");
+static auto & s_perfUnchangedFiles = uperf("cmtupd files unchanged");
 static auto & s_perfUpdatedFiles = uperf("cmtupd files updated");
 static auto & s_perfNewerFiles = uperf("cmtupd files failed (future)");
 
@@ -437,8 +439,7 @@ static void showConfig(const Config * cfg) {
 
 //===========================================================================
 static void finalReport(const Config * cfg) {
-    if (s_perfQueuedFiles && --s_perfQueuedFiles)
-        return;
+    assert(!s_perfQueuedFiles);
 
     if (s_opts.verbose > 1
         || s_opts.verbose && s_perfScannedFiles
@@ -451,6 +452,8 @@ static void finalReport(const Config * cfg) {
     cout << "Files: " << s_perfSelectedFiles << " selected";
     if (auto excluded = s_perfSelectedFiles - s_perfScannedFiles)
         cout << ", " << excluded << " excluded";
+    if (auto unchanged = s_perfUnchangedFiles.load())
+        cout << ", " << unchanged << " unchanged";
     if (s_perfMatchedFiles != s_perfScannedFiles) {
         cout << ", ";
         ConsoleScopedAttr attr(kConsoleWarn);
@@ -578,8 +581,10 @@ static void processFile(
                 cout << fname << "... ";
                 ConsoleScopedAttr attr(kConsoleWarn);
                 cout << "NEWER" << endl;
-            } else if (s_opts.verbose) {
-                cout << fname << "... unchanged" << endl;
+            } else {
+                s_perfUnchangedFiles += 1;
+                if (s_opts.verbose)
+                    cout << fname << "... unchanged" << endl;
             }
         } else {
             s_perfUpdatedFiles += 1;
@@ -626,6 +631,7 @@ static void processFiles(const Config * cfg) {
     vector<string> dateArgs = {
         "git", "-C", cfg->gitRoot.str(), "log", "--format=%aI", "-n1", ""
     };
+    s_perfQueuedFiles += 1;
     for (auto&& f : fnames) {
         f = trim(f);
         if (f.empty())
@@ -638,6 +644,7 @@ static void processFiles(const Config * cfg) {
                 scoped_lock lk(s_progressMut);
                 cout << f << "... skipped" << endl;
             }
+            s_perfSkippedFiles += 1;
             continue;
         }
 
@@ -646,7 +653,8 @@ static void processFiles(const Config * cfg) {
         execTool(
             [cfg, grps, fname](auto && res) {
                 processFile(cfg, grps, fname, res.output);
-                finalReport(cfg);
+                if (!--s_perfQueuedFiles)
+                    finalReport(cfg);
             },
             Cli::toCmdline(dateArgs),
             f,
@@ -655,7 +663,8 @@ static void processFiles(const Config * cfg) {
         );
     }
 
-    if (!s_perfSelectedFiles)
+    // Decrement queued file count and report if none remaining.
+    if (!--s_perfQueuedFiles)
         finalReport(cfg);
 }
 
@@ -706,7 +715,7 @@ static void app(int argc, char *argv[]) {
     if (!s_opts.show) {
         return appSignalUsageError(
             "No operation selected.",
-            "Pick some combination of --show, --check, or --update."
+            "Pick some combination of --show, --check, and --update."
         );
     }
 
