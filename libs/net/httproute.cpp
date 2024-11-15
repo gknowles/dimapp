@@ -1017,7 +1017,7 @@ static void makeReply(
     unsigned status,
     string_view msg
 ) {
-    auto st = to_string(status);
+    auto st = toString(status);
     XBuilder bld(&out->body());
     bld.start("html")
         .start("head").elem("title", st.c_str()).end()

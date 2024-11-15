@@ -128,7 +128,7 @@ static void initVars() {
     }
     s_appName = s_appBaseName;
     if (s_appIndex > 1)
-        s_appName += to_string(s_appIndex);
+        s_appName += toChars(s_appIndex);
 
     // Directories
     s_binDir = exeName.parentPath();

@@ -84,7 +84,7 @@ public:
         } else if constexpr (std::is_same_v<T, char>) {
             return out.text(std::string_view(&val, 1));
         } else if constexpr (std::is_arithmetic_v<T>) {
-            return out.text(std::to_string(val));
+            return out.text(toChars(val).view());
         } else if constexpr (std::is_same_v<T, ElemNameProxy>) {
             return val.value.empty()
                 ? out.start(val.name)

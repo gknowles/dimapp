@@ -8,6 +8,7 @@
 
 #include <atomic>
 #include <functional>
+#include <string>
 #include <string_view>
 
 namespace Dim {

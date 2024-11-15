@@ -1050,11 +1050,12 @@ static void mergeState(unsigned dstId, unsigned srcId, DedupInfo & di) {
     }
 
     // update dst name with merge history
-    dst.state->aliases.push_back(to_string(srcId) + ": " + src.state->name);
+    dst.state->aliases.push_back(toString(srcId) + ": " + src.state->name);
     dst.state->aliases.insert(
         dst.state->aliases.end(),
         src.state->aliases.begin(),
-        src.state->aliases.end());
+        src.state->aliases.end()
+    );
 
     // delete source state and it's dedup info
     di.states->erase(*src.state);

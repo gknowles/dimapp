@@ -34,7 +34,7 @@ static void app(int argc, char *argv[]) {
 
     CharBuf buf;
     buf.assign("abcdefgh");
-    EXPECT(toString(buf) == "abcdefgh"); // to_string
+    EXPECT(toString(buf) == "abcdefgh"); // toString
 
     // replace in the middle with sz
     buf.replace(3, 3, "DEF"); // same size

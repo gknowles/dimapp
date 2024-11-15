@@ -464,9 +464,9 @@ static void writeParserState(
     os << "\nSTATE_" << st.id << ":\n";
     vector<string> aliases = st.aliases;
     if (st.name.empty()) {
-        aliases.push_back(to_string(st.id) + ":");
+        aliases.push_back(toString(st.id) + ":");
     } else {
-        aliases.push_back(to_string(st.id) + ": " + st.name);
+        aliases.push_back(toString(st.id) + ": " + st.name);
     }
     ranges::sort(aliases, [](auto && a, auto && b) {
         return strtoul(a.c_str(), nullptr, 10)

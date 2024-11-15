@@ -43,7 +43,7 @@ public:
     unique_ptr<AcceptSocket> m_socket;
     IFactory<ISocketNotify> * m_notify{};
     SockAddr m_localAddr;
-    char m_addrBuf[2 * sizeof sockaddr_storage];
+    char m_addrBuf[2 * sizeof (sockaddr_storage)];
 
 public:
     ListenSocket(IFactory<ISocketNotify> * notify, const SockAddr & end);

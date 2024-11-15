@@ -201,6 +201,20 @@ ToCharsBuf<T, 16> toHexChars(T val) {
 
 /****************************************************************************
 *
+*   Arithmetic to string - toString
+*
+***/
+
+//===========================================================================
+template <Charable T>
+std::string toString(T val) {
+    std::string out(toChars(val).view());
+    return out;
+}
+
+
+/****************************************************************************
+*
 *   String to integral
 *
 ***/

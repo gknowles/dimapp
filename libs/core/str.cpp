@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2023.
+// Copyright Glen Knowles 2017 - 2024.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // str.cpp - dim core
@@ -18,7 +18,7 @@ using namespace Dim;
 //===========================================================================
 inline unsigned char charToDigit (unsigned char ch) {
     static constexpr unsigned char kCharToDigit[] = {
-    //    0   1   2   3    4   5   6   7    8   9   a   b    c   d   e    f
+    //    0   1   2   3    4   5   6   7    8   9   a   b    c   d   e   f
         255,255,255,255, 255,255,255,255, 255,255,255,255, 255,255,255,255,
         255,255,255,255, 255,255,255,255, 255,255,255,255, 255,255,255,255,
         255,255,255,255, 255,255,255,255, 255,255,255,255, 255,255,255,255,

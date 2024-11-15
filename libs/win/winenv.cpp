@@ -263,9 +263,7 @@ string Dim::envDomainStatusToString(DomainStatus value) {
     case DomainStatus::kWorkgroup: return "workgroup";
     case DomainStatus::kDomain: return "domain";
     }
-    string out = "UNKNOWN(";
-    out += to_string(to_underlying(value));
-    out += ')';
+    string out = "UNKNOWN(" + toString(value) + ')';
     return out;
 }
 
@@ -538,9 +536,7 @@ static void addAttrs(IJBuilder * out, int attrs, const TokenTable & tbl) {
         }
     }
     if (auto unknown = ~found & attrs) {
-        auto unk = "UNKNOWN("s;
-        unk += to_string(unknown);
-        unk += ')';
+        auto unk = "UNKNOWN(" + toString(unknown) + ')';
         out->value(unk);
     }
     out->end();
@@ -595,9 +591,7 @@ static void addSidRow(IJBuilder * out, SID_AND_ATTRIBUTES & sa) {
     if (auto name = s_sidTypeTbl.findName(use)) {
         out->member("type", name);
     } else {
-        auto unk = "UNKNOWN("s;
-        unk += to_string(use);
-        unk += ')';
+        auto unk = "UNKNOWN(" + toString(use) + ')';
         out->member("type", unk);
     }
     out->end();

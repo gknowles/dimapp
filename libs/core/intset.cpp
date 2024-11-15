@@ -25,7 +25,7 @@ public:
     constinit static const size_t kDataSize = (1 << kLeafBits) / 8;
 
     constinit static const size_t kStepBits =
-        popcount(bit_ceil(kDataSize / sizeof Node + 1) / 2 - 1);
+        popcount(bit_ceil(kDataSize / sizeof (Node) + 1) / 2 - 1);
     constinit static const size_t kMaxDepth =
         (kBitWidth - kLeafBits + kStepBits - 1) / kStepBits;
     static_assert(kBaseBits + kLeafBits >= kBitWidth);
@@ -79,7 +79,7 @@ public:
         return kDataSize / sizeof *Node::values;
     }
     constexpr static size_t bitNumInt64s() {
-        return kDataSize / sizeof uint64_t;
+        return kDataSize / sizeof (uint64_t);
     }
     constexpr static size_t bitNumBits() {
         return 64 * bitNumInt64s();
@@ -874,7 +874,7 @@ void IntegralSet<T,A>::Impl::initBit(A * alloc, Node * node, bool full) {
     node->values = (storage_type *) allocate(alloc, node->numBytes);
     assert(node->values);
     if (full) {
-        node->numValues = kDataSize / sizeof uint64_t;
+        node->numValues = kDataSize / sizeof (uint64_t);
         memset(node->values, 0xff, kDataSize);
     } else {
         node->numValues = 0;

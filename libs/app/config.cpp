@@ -521,11 +521,11 @@ static bool evalAttrTemplate(
     auto key = s_matchTypeTbl.find(val, kInvalid);
     switch (key) {
     case kName: *out = context.appBaseName; return true;
-    case kIndex: *out = to_string(context.appIndex); return true;
+    case kIndex: *out = toString(context.appIndex); return true;
     case kConfig: *out = context.config; return true;
     case kModule: *out = context.module; return true;
     case kGroupType: *out = context.groupType; return true;
-    case kGroupIndex: *out = to_string(context.groupIndex); return true;
+    case kGroupIndex: *out = toString(context.groupIndex); return true;
     case kInvalid:
         break;
     }

@@ -116,7 +116,7 @@ static mutex s_progressMut;
 static string s_currentYear = []() {
     tm tm;
     timeToDesc(&tm, timeNow());
-    return to_string(tm.tm_year + 1900);
+    return toString(tm.tm_year + 1900);
 }();
 
 
@@ -555,7 +555,7 @@ static void processFile(
         logMsgError() << "No commit time for '" << fname << "'";
         return appSignalShutdown(EX_OSERR);
     }
-    string commitYear = to_string(tm.tm_year + 1900);
+    string commitYear = toString(tm.tm_year + 1900);
 
     Result res;
     auto fullPath = fname;

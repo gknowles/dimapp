@@ -53,7 +53,7 @@ public:
     static const value_type npos = std::numeric_limits<value_type>::max();
 
 public:
-    static const size_t kBitWidth = CHAR_BIT * sizeof T;
+    static const size_t kBitWidth = CHAR_BIT * sizeof (T);
     static const size_t kTypeBits = 4;
     static const size_t kDepthBits = 4;
     static const size_t kBaseBits = kBitWidth - kTypeBits - kDepthBits;
@@ -79,7 +79,7 @@ public:
             storage_type * values;
             Node * nodes;
             storage_type localValues[
-                sizeof (storage_type *) / sizeof storage_type];
+                sizeof (storage_type *) / sizeof (storage_type)];
         };
 
         Node();

@@ -178,7 +178,7 @@ static void genCppHeader(
     out->append("*\n")
         .append("*   Test program for sample located at:\n")
         .append("*       File: ").append(srcfile).pushBack('\n')
-        .append("*       Line: ").append(to_string(srcline))
+        .append("*       Line: ").append(toString(srcline))
             .pushBack('\n')
         .append("*\n")
         .append("***/\n\n");
@@ -864,7 +864,7 @@ static string testPath(
     size_t line
 ) {
     auto seg = info.page.urlSegment;
-    auto str = to_string(line);
+    auto str = toString(line);
     seg.push_back('/');
     seg.append(digits10(info.lastProgLine) - size(str), '0');
     seg.append(str);
@@ -896,7 +896,7 @@ static void addOutputScript(
     content.append("; From '")
         .append(info->page.file)
         .append("', line ")
-        .append(to_string(test.runs.front().line))
+        .append(toString(test.runs.front().line))
         .append("\n");
     content.append(";\n");
     auto len = content.size();
@@ -904,7 +904,7 @@ static void addOutputScript(
         if (run.cmdline.empty())
             continue;
         content.append("; Line ")
-            .append(to_string(run.line))
+            .append(toString(run.line))
             .append("\n");
         for (auto&& cmt : run.comments)
             content.append("# ").append(cmt).append("\n");

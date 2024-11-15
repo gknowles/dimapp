@@ -185,12 +185,12 @@ private:
 
 //===========================================================================
 template <typename T> inline T TlsRecordReader::number() {
-    if constexpr (sizeof T == 1) {
+    if constexpr (sizeof (T) == 1) {
         return (T) number();
-    } else if constexpr (sizeof T == 2) {
+    } else if constexpr (sizeof (T) == 2) {
         return (T) number16();
     } else {
-        assert(sizeof T == 3);
+        assert(sizeof (T) == 3);
         return (T) number24();
     }
 }

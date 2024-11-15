@@ -499,7 +499,7 @@ HttpResponse::HttpResponse(
     HttpStatus status,
     string_view contentType
 ) {
-    auto str = to_string(status);
+    auto str = toString(status);
     addHeader(kHttp_Status, str);
     if (!contentType.empty())
         addHeader(kHttpContentType, contentType);

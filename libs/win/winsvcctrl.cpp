@@ -280,7 +280,7 @@ static pair<T *, size_t> reserve(const FuncInfo & info, size_t bytes) {
 //===========================================================================
 template<typename T>
 static pair<T *, size_t> reserve(const FuncInfo & info) {
-    return reserve<T>(info, sizeof T);
+    return reserve<T>(info, sizeof (T));
 }
 
 //===========================================================================

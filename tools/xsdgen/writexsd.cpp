@@ -68,7 +68,7 @@ static string typeName(
     name += type.name;
     if (auto num = ++info->nameCounts[type.name]; num > 1) {
         name += '-';
-        name += to_string(num);
+        name += toString(num);
     }
     (*names)[&type] = name;
     return name;
