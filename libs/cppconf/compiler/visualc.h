@@ -40,6 +40,7 @@
     4456 /* declaration of 'identifier' hides previous local declaration */ \
     4457 /* declaration of 'identifier' hides function parameter */ \
     5030 /* attribute 'identifier' is not recognized */ \
+    26110 /* Caller failing to hold 'lock' before calling function 'func'. */ \
     26451 /* Arithmetic overflow: Using operation 'op' on a %size1% byte value
             and then casting the result to a %size2% byte value. */ \
     26495 /* variable 'identifier' is uninitialized. Always initialize a
