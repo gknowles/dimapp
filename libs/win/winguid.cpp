@@ -24,22 +24,3 @@ Guid Dim::newGuid() {
 
     return val;
 }
-
-//===========================================================================
-string Dim::toString(const Guid & val) {
-    string out;
-    char buf[4];
-    hton32(buf, val.data1);
-    hexFromBytes(out, string_view(buf, 4), true);
-    out += '-';
-    hton16(buf, val.data2);
-    hexFromBytes(out, string_view(buf, 2), true);
-    out += '-';
-    hton16(buf, val.data3);
-    hexFromBytes(out, string_view(buf, 2), true);
-    out += '-';
-    hexFromBytes(out, string_view((char *) val.data4, 2), true);
-    out += '-';
-    hexFromBytes(out, string_view((char *) val.data4 + 2, 6), true);
-    return out;
-}

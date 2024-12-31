@@ -142,6 +142,7 @@
 # libs/system/debug.h
 # libs/system/env.h
 # libs/system/exec.h
+# libs/system/guid.cpp
 # libs/system/guid.h
 # libs/system/pch.cpp
 # libs/system/pch.h
