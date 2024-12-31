@@ -95,7 +95,7 @@ protected:
     AppSocketConnectInfo m_accept;
 
 private:
-    Duration checkTimeout_LK(TimePoint now);
+    Duration checkTimeout(TimePoint now);
     void setNotify(IAppSocketNotify * notify);
 
     // set to nullptr when matching is completed, either successfully or

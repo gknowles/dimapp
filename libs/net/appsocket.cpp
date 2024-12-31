@@ -136,7 +136,7 @@ IAppSocket::UnmatchedInfo::UnmatchedInfo() {
 Duration IAppSocket::UnmatchedTimer::onTimer(TimePoint now) {
     while (!s_unmatched.empty()) {
         auto info = s_unmatched.front();
-        auto wait = info->notify->checkTimeout_LK(now);
+        auto wait = info->notify->checkTimeout(now);
         if (wait > 0s)
             return max(wait, kUnmatchedMinWait);
     }
@@ -217,7 +217,7 @@ IAppSocket::~IAppSocket() {
 }
 
 //===========================================================================
-Duration IAppSocket::checkTimeout_LK(TimePoint now) {
+Duration IAppSocket::checkTimeout(TimePoint now) {
     assert(!m_notify);
     auto wait = m_pos->expiration - now;
     if (wait <= 0s) {
@@ -717,7 +717,7 @@ void Dim::socketAddFamily(
 }
 
 //===========================================================================
-static SockAddrInfo * findInfo_LK(const SockAddr & addr, bool findAlways) {
+static SockAddrInfo * findInfo(const SockAddr & addr, bool findAlways) {
     for (auto && ep : s_sockAddrs) {
         if (ep.saddr == addr)
             return &ep;
@@ -738,7 +738,7 @@ static bool addFactory(
     const SockAddr & end,
     AppSocket::Family fam
 ) {
-    auto info = findInfo_LK(end, true);
+    auto info = findInfo(end, true);
     bool addNew = flags.any(fListener) && ++info->listeners == 1;
     if (flags.any(fConsole))
         info->consoles += 1;
@@ -771,7 +771,7 @@ void Dim::socketCloseWait(
     AppSocket::Family fam
 ) {
     for (;;) {
-        auto info = findInfo_LK(end, false);
+        auto info = findInfo(end, false);
         if (!info)
             break;
         auto & fams = info->families;

@@ -44,7 +44,7 @@ public:
     bool notify_UNLK(unique_lock<mutex> && lk, IConfigNotify * notify);
     bool closeWait_UNLK(unique_lock<mutex> && lk, IConfigNotify * notify);
 
-    void reparse_LK();
+    void reparse_LK(unique_lock<mutex> & lk);
 
     void write(IJBuilder * out, bool withContent);
 
@@ -178,7 +178,8 @@ void ConfigFile::parseContent(
 }
 
 //===========================================================================
-void ConfigFile::reparse_LK() {
+void ConfigFile::reparse_LK(unique_lock<mutex> & lk) {
+    assert(lk && lk.mutex() == &s_mut);
     m_parseSource = m_content;
     m_xml.parse(m_parseSource.data(), m_relpath);
 }
@@ -415,7 +416,7 @@ void Dim::configChange(
 
     unique_lock lk(s_mut);
     auto & cf = s_files[path];
-    cf.reparse_LK();
+    cf.reparse_LK(lk);
     if (!cf.notify_UNLK(move(lk), notify))
         logMsgError() << "Change notify not registered, " << file;
 }

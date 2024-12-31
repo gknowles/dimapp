@@ -116,7 +116,12 @@ static void taskQueueThread(TaskQueue * ptr) {
 }
 
 //===========================================================================
-static void setThreads_LK(TaskQueue * q, size_t threads) {
+static void setThreads_LK(
+    unique_lock<mutex> & lk,
+    TaskQueue * q,
+    size_t threads
+) {
+    assert(lk && lk.mutex() == &s_mut);
     int num = (int) threads - q->wantThreads;
     q->wantThreads = (int)threads;
     if (num > 0) {
@@ -219,7 +224,7 @@ void Dim::iTaskDestroy() {
 
     // send shutdown task to all task threads
     for (auto && q : s_queues)
-        setThreads_LK(q.second, 0);
+        setThreads_LK(lk, q.second, 0);
 
     // wait for all threads to stop
     while (s_numThreads)
@@ -289,9 +294,9 @@ TaskQueueHandle Dim::taskCreateQueue(string_view name, int threads) {
     auto q = new TaskQueue;
     q->name = name;
 
-    scoped_lock lk{s_mut};
+    unique_lock lk{s_mut};
     q->hq = s_queues.insert(q);
-    setThreads_LK(q, threads);
+    setThreads_LK(lk, q, threads);
     return q->hq;
 }
 
@@ -299,9 +304,9 @@ TaskQueueHandle Dim::taskCreateQueue(string_view name, int threads) {
 void Dim::taskSetQueueThreads(TaskQueueHandle hq, int threads) {
     assert(s_running);
 
-    scoped_lock lk{s_mut};
+    unique_lock lk{s_mut};
     auto q = s_queues.find(hq);
-    setThreads_LK(q, threads);
+    setThreads_LK(lk, q, threads);
 }
 
 //===========================================================================

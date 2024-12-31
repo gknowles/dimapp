@@ -77,7 +77,7 @@ public:
 
     void hardClose();
     void createQueue();
-    void enableEvents_LK(IPipeNotify * notify);
+    void enableEvents_LK(unique_lock<mutex> & lk, IPipeNotify * notify);
 
     // NOTE: If onRead or onWrite return false the pipe has been deleted.
     //       Additionally the task is completed and may be deleted whether or
@@ -95,11 +95,11 @@ protected:
     shared_ptr<PipeBase> m_selfRef;
 
 private:
-    bool requeueRead_LK();
-    void queueRead_LK(PipeRequest * task);
-    void queuePrewrite_LK(string_view data);
-    void queueWrites_LK();
-    bool onRead_LK(PipeRequest * task);
+    bool requeueRead_LK(unique_lock<mutex> & lk);
+    void queueRead_LK(unique_lock<mutex> & lk, PipeRequest * task);
+    void queuePrewrite_LK(unique_lock<mutex> & lk, string_view data);
+    void queueWrites_LK(unique_lock<mutex> & lk);
+    bool onRead_LK(unique_lock<mutex> & lk, PipeRequest * task);
 
     PipeBufferInfo m_bufInfo{};
     TaskQueueHandle m_hq;
@@ -287,14 +287,15 @@ void PipeBase::createQueue() {
 }
 
 //===========================================================================
-void PipeBase::enableEvents_LK(IPipeNotify * notify) {
+void PipeBase::enableEvents_LK(unique_lock<mutex> & lk, IPipeNotify * notify) {
+    assert(lk && lk.mutex() == &m_mut);
     if (notify)
         m_notify = notify;
 
     // trigger first reads
     while (m_prereads) {
-        if (!requeueRead_LK())
-            m_mut.lock();
+        if (!requeueRead_LK(lk))
+            lk.lock();
     }
 }
 
@@ -303,13 +304,14 @@ void PipeBase::enableEvents_LK(IPipeNotify * notify) {
 void PipeBase::read(IPipeNotify * notify) {
     if (auto pipe = notify->m_pipe) {
         unique_lock lk{pipe->m_mut};
-        if (!pipe->requeueRead_LK())
+        if (!pipe->requeueRead_LK(lk))
             lk.release();
     }
 }
 
 //===========================================================================
-bool PipeBase::requeueRead_LK() {
+bool PipeBase::requeueRead_LK(unique_lock<mutex> & lk) {
+    assert(lk && lk.mutex() == &m_mut);
     auto task = m_prereads.front();
 
     // Queuing reads is only allowed after an automatic requeuing was
@@ -318,17 +320,18 @@ bool PipeBase::requeueRead_LK() {
 
     if (m_mode == Mode::kActive) {
         m_reads.link(task);
-        queueRead_LK(task);
+        queueRead_LK(lk, task);
         return true;
     } else {
         assert(m_mode == Mode::kClosing || m_mode == Mode::kClosed);
         task->overlapped() = {};
-        return onRead_LK(task);
+        return onRead_LK(lk, task);
     }
 }
 
 //===========================================================================
-void PipeBase::queueRead_LK(PipeRequest * task) {
+void PipeBase::queueRead_LK(unique_lock<mutex> & lk, PipeRequest * task) {
+    assert(lk && lk.mutex() == &m_mut);
     task->m_buffer.resize(kBufferSize);
     task->overlapped() = {};
     WinError err = 0;
@@ -357,7 +360,7 @@ void PipeBase::queueRead_LK(PipeRequest * task) {
 //===========================================================================
 bool PipeBase::onRead(PipeRequest * task) {
     unique_lock lk(m_mut);
-    if (!onRead_LK(task)) {
+    if (!onRead_LK(lk, task)) {
         // The object has been destroyed, which means m_mut no longer exists.
         lk.release();
         return false;
@@ -366,7 +369,8 @@ bool PipeBase::onRead(PipeRequest * task) {
 }
 
 //===========================================================================
-bool PipeBase::onRead_LK(PipeRequest * task) {
+bool PipeBase::onRead_LK(unique_lock<mutex> & lk, PipeRequest * task) {
+    assert(lk && lk.mutex() == &m_mut);
     auto [err, bytes] = task->decodeOverlappedResult();
     if (bytes) {
         s_perfReadTotal += bytes;
@@ -383,7 +387,7 @@ bool PipeBase::onRead_LK(PipeRequest * task) {
         }
 
         if (m_mode == Mode::kActive) {
-            queueRead_LK(task);
+            queueRead_LK(lk, task);
             return true;
         }
 
@@ -413,13 +417,14 @@ void PipeBase::write(IPipeNotify * notify, string_view data) {
     if (!data.size())
         return;
     if (auto pipe = notify->m_pipe) {
-        scoped_lock lk{pipe->m_mut};
-        pipe->queuePrewrite_LK(data);
+        unique_lock lk{pipe->m_mut};
+        pipe->queuePrewrite_LK(lk, data);
     }
 }
 
 //===========================================================================
-void PipeBase::queuePrewrite_LK(string_view data) {
+void PipeBase::queuePrewrite_LK(unique_lock<mutex> & lk, string_view data) {
+    assert(lk && lk.mutex() == &m_mut);
     assert(data.size());
     if (m_mode == Mode::kClosing || m_mode == Mode::kClosed)
         return;
@@ -451,7 +456,7 @@ void PipeBase::queuePrewrite_LK(string_view data) {
         task->m_buffer = data;
     }
 
-    queueWrites_LK();
+    queueWrites_LK(lk);
     if (auto task = m_prewrites.back()) {
         if (task->m_qtime == TimePoint::min()) {
             auto now = timeNow();
@@ -474,7 +479,8 @@ void PipeBase::queuePrewrite_LK(string_view data) {
 }
 
 //===========================================================================
-void PipeBase::queueWrites_LK() {
+void PipeBase::queueWrites_LK(unique_lock<mutex> & lk) {
+    assert(lk && lk.mutex() == &m_mut);
     while (m_numWrites < m_maxWrites && m_prewrites) {
         m_writes.link(m_prewrites.front());
         m_numWrites += 1;
@@ -527,7 +533,7 @@ bool PipeBase::onWrite(PipeRequest * task) {
     }
 
     bool wasPrewrites = (bool) m_prewrites;
-    queueWrites_LK();
+    queueWrites_LK(lk);
     if (wasPrewrites && !m_prewrites // data no longer waiting
         || !m_numWrites              // send queue is empty
     ) {
@@ -720,7 +726,7 @@ void AcceptPipe::onTask() {
         s_perfNotAccepted += 1;
         hardClose();
     }
-    enableEvents_LK(nullptr);
+    enableEvents_LK(lk, nullptr);
 }
 
 //===========================================================================

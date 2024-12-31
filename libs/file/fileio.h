@@ -451,8 +451,6 @@ public:
     void append(std::string_view data);
 
 private:
-    void write_LK();
-
     void onFileWrite(const FileWriteData & data) override;
 
     std::unique_ptr<Impl> m_impl;

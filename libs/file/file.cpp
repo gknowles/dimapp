@@ -181,6 +181,47 @@ void FileAppendStream::close() {
 }
 
 //===========================================================================
+static void write_LK(
+    unique_lock<mutex> & lk,
+    IFileWriteNotify * notify,
+    FileAppendStream::Impl * impl
+) {
+    assert(lk && lk.mutex() == &impl->mut);
+    if (impl->numWrites == impl->maxWrites)
+        return;
+
+    const char * writeBuf;
+    size_t writeCount;
+    auto epos = (int) ((impl->buf.data() - impl->buffers) / impl->bufLen);
+    if (impl->fullBufs > epos) {
+        writeCount = (impl->fullBufs - epos) * impl->bufLen;
+        writeBuf = impl->buffers + impl->numBufs * impl->bufLen - writeCount;
+        impl->lockedBufs += impl->fullBufs - epos;
+        impl->fullBufs = epos;
+    } else {
+        writeCount = impl->fullBufs * impl->bufLen;
+        writeBuf = impl->buffers + epos * impl->bufLen - writeCount;
+        impl->lockedBufs += impl->fullBufs;
+        impl->fullBufs = 0;
+    }
+    if (!writeCount)
+        return;
+
+    impl->numWrites += 1;
+    size_t writePos = impl->filePos;
+    impl->filePos += writeCount;
+
+    fileWrite(
+        notify,
+        impl->file,
+        writePos,
+        writeBuf,
+        writeCount,
+        taskComputeQueue()
+    );
+}
+
+//===========================================================================
 void FileAppendStream::append(string_view data) {
     if (!m_impl->file)
         return;
@@ -202,49 +243,11 @@ void FileAppendStream::append(string_view data) {
         } else {
             m_impl->buf = {m_impl->buf.data(), m_impl->bufLen};
         }
-        write_LK();
+        write_LK(lk, this, m_impl.get());
 
         while (m_impl->fullBufs + m_impl->lockedBufs == m_impl->numBufs)
             m_impl->cv.wait(lk);
     }
-}
-
-//===========================================================================
-void FileAppendStream::write_LK() {
-    if (m_impl->numWrites == m_impl->maxWrites)
-        return;
-
-    const char * writeBuf;
-    size_t writeCount;
-    auto epos =
-        (int) ((m_impl->buf.data() - m_impl->buffers) / m_impl->bufLen);
-    if (m_impl->fullBufs > epos) {
-        writeCount = (m_impl->fullBufs - epos) * m_impl->bufLen;
-        writeBuf =
-            m_impl->buffers + m_impl->numBufs * m_impl->bufLen - writeCount;
-        m_impl->lockedBufs += m_impl->fullBufs - epos;
-        m_impl->fullBufs = epos;
-    } else {
-        writeCount = m_impl->fullBufs * m_impl->bufLen;
-        writeBuf = m_impl->buffers + epos * m_impl->bufLen - writeCount;
-        m_impl->lockedBufs += m_impl->fullBufs;
-        m_impl->fullBufs = 0;
-    }
-    if (!writeCount)
-        return;
-
-    m_impl->numWrites += 1;
-    size_t writePos = m_impl->filePos;
-    m_impl->filePos += writeCount;
-
-    fileWrite(
-        this,
-        m_impl->file,
-        writePos,
-        writeBuf,
-        writeCount,
-        taskComputeQueue()
-    );
 }
 
 //===========================================================================
@@ -253,7 +256,7 @@ void FileAppendStream::onFileWrite(const FileWriteData & data) {
         unique_lock lk{m_impl->mut};
         m_impl->numWrites -= 1;
         m_impl->lockedBufs -= (int) (data.data.size() / m_impl->bufLen);
-        write_LK();
+        write_LK(lk, this, m_impl.get());
     }
     m_impl->cv.notify_all();
 }
