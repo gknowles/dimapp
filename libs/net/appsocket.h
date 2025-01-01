@@ -38,6 +38,8 @@ namespace AppSocket {
         kRaw,
         kNumFamilies,
     };
+
+    std::string toString(Family code);
 }
 
 struct AppSocketConnectInfo {

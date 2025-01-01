@@ -100,17 +100,22 @@ addOpts({
       <div class="col-auto">
         <table>
           <tr>
+            <th rowspan="2" class="sortable">Name</th>
+            <th colspan="2">Family</th>
+            <th rowspan="2" class="sortable">Direction</th>
+            <th rowspan="2" class="sortable">Addresses</th>
+            <th rowspan="2" class="sortable">Flags</th>
+            <th rowspan="2" class="sortable">Sockets</th>
+          </tr>
+          <tr>
+            <th class="sortable">Id</th>
             <th class="sortable">Name</th>
-            <th class="sortable">Family</th>
-            <th class="sortable">Direction</th>
-            <th class="sortable">Addresses</th>
-            <th class="sortable">Flags</th>
-            <th class="sortable">Sockets</th>
           </tr>
           <template v-for="val in sortedMgrs">
             <tr :class="val.socketCount > 0 ? null : 'bg-disabled'">
               <td>{{val.name}}</td>
-              <td class='text-center'>{{val.family}}</td>
+              <td class='text-end'>{{val.family}}</td>
+              <td class='text-start'>{{val.familyName}}</td>
               <td class='text-center'>
                 {{val.inbound ? 'Inbound' : 'Outbound'}}
               </td>

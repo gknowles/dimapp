@@ -652,6 +652,23 @@ void Dim::iAppSocketInitialize() {
 *
 ***/
 
+static const auto s_appSocketFamilyNames = TokenTable{
+    { AppSocket::kTls, "tls" },
+    { AppSocket::kHttp1, "http1" },
+    { AppSocket::kHttp2, "http2" },
+    { AppSocket::kRaw, "raw" },
+};
+
+//===========================================================================
+string Dim::AppSocket::toString(AppSocket::Family code) {
+    const char * name = nullptr;
+    if (s_appSocketFamilyNames.findName(&name, code)) {
+        return name;
+    } else {
+        return "UNKNOWN";
+    }
+}
+
 //===========================================================================
 SocketInfo Dim::socketGetInfo(const IAppSocketNotify * notify) {
     return IAppSocket::getInfo(notify);

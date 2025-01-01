@@ -295,6 +295,7 @@ size_t Dim::sockMgrWriteInfo(
     out->object();
     out->member("name", info.name);
     out->member("family", info.family);
+    out->member("familyName", toString(info.family));
     out->member("inbound", info.inbound);
     out->member("addrs").array(info.addrs.begin(), info.addrs.end());
     out->member("mgrFlags").array(toStrings(info.mgrFlags));
