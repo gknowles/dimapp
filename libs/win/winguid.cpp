@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2020 - 2022.
+// Copyright Glen Knowles 2020 - 2025.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // winguid.cpp - dim windows platform
