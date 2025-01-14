@@ -58,6 +58,9 @@ public:
     static const size_t kDepthBits = 4;
     static const size_t kBaseBits = kBitWidth - kTypeBits - kDepthBits;
 
+    static_assert(std::numeric_limits<T>::radix == 2);
+    static_assert(std::numeric_limits<storage_type>::digits == kBitWidth);
+
     enum NodeType : int {
         kEmpty,         // contains no values
         kFull,          // contains all values in node's domain
