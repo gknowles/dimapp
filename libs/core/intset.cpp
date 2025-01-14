@@ -105,7 +105,7 @@ public:
     static void * allocate(A * alloc, size_t bytes);
     static void deallocate(A * alloc, void * ptr, size_t bytes);
 
-    // misc
+    // Miscellaneous
     static void swap(Node & left, Node & right);
 
     static bool yes(const Node & left, const Node & right);
@@ -279,7 +279,7 @@ public:
         const storage_type * ri
     );
 
-    // len
+    // count
     static size_t count(const Node & node);
     static size_t cntEmpty(const Node & node);
     static size_t cntFull(const Node & node);
@@ -591,7 +591,7 @@ void IntegralSet<T,A>::Impl::deallocate(A * alloc, void * ptr, size_t bytes) {
 
 /****************************************************************************
 *
-*   misc
+*   Miscellaneous
 *
 ***/
 
