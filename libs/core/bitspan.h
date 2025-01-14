@@ -58,8 +58,8 @@ public:
     size_t rfind(size_t bitpos = npos) const;
     size_t rfindZero(size_t bitpos = npos) const;
 
-    // Get/set sequence of bits as/from an integer. 'count' must be less or
-    // equal to 64 (the number of bits that uint64_t can hold).
+    // Get sequence of bits as an integer. 'count' must be less or equal to 64
+    // (the number of bits that uint64_t can hold).
     uint64_t getBits(size_t pos, size_t count) const;
 
     // Returns word, or pointer to word, that contains the bit.
@@ -158,8 +158,8 @@ public:
     bool testAndReset(size_t pos);
     bool testAndFlip(size_t pos);
 
-    // Get/set sequence of bits as/from an integer. 'count' must be less or
-    // equal to 64 (the number of bits that uint64_t can hold).
+    // Set sequence of bits from an integer. 'count' must be less or equal to
+    // 64 (the number of bits that uint64_t can hold).
     BitSpan & setBits(size_t pos, size_t count, uint64_t value);
 
     // Returns pointer to word that contains the bit.
