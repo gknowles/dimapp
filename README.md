@@ -24,7 +24,6 @@ Windows server application framework
 
 ### Configure
 
-[source, shell session]
 ~~~ console
 git clone https://github.com/gknowles/dimapp.git
 cd dimapp
