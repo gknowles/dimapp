@@ -102,18 +102,45 @@ static void app(int argc, char *argv[]) {
 
     buf.assign("a");
     buf.resize(0);
+
     buf.pushBack('b');
     EXPECT(buf == "b");
+    buf.pushFront('a');
+    EXPECT(buf == "ab");
+    buf.popFront();
+    EXPECT(buf == "b");
+    buf.popFront();
+    EXPECT(buf == "");
 
-    {
-        // Copy construct and destroy CharBuf that's greater than block size
-        assert(buf2.size() > blkLen);
-        auto tmp = buf2;
-    }
+    // Multiblock find, skip, and trim
+    buf.clear();
+    buf.append(blkLen / 2, 'a');
+    buf.append(blkLen / 2, 'b');
+    buf2 = buf;
+    buf2.append(buf);
+    EXPECT(buf2.find('a') == 0);
+    EXPECT(buf2.find('b') == blkLen / 2);
+    EXPECT(buf2.find('c') == -1);
+    EXPECT(buf2.find('a', blkLen - 1) == blkLen);
+    EXPECT(buf2.skip('b') == 0);
+    EXPECT(buf2.skip('a') == blkLen / 2);
+    EXPECT(buf2.skip('b', blkLen / 2) == blkLen);
+    EXPECT(buf2.rskip('b') == 3 * blkLen / 2);
+    EXPECT(buf2.rskip('a', blkLen / 2 - 1) == -1);
+    buf2.ltrim('a').rtrim('b');
+    EXPECT(buf2.size() == blkLen);
 
+    // Multiblock move and view
+    buf2.assign(2 * blkLen, 'b');
     buf = buf2;
     auto buf3 = move(buf);
     auto v3 = buf3.view();
+
+    {
+        // Copy construct and destroy CharBuf that's greater than block size
+        buf2.assign(2 * blkLen, 'b');
+        auto tmp = buf2;
+    }
 
     testSignalShutdown();
 }

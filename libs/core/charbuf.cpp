@@ -156,7 +156,7 @@ char * CharBufBase::data(size_t pos, size_t count) {
 
     count = min<size_t>(count, m_size);
     auto need = (int) min(count, m_size - pos);
-    auto ic = find(pos);
+    auto ic = findBuf(pos);
     auto myi = ic.first;
     auto num = ic.second + need;
 
@@ -224,7 +224,7 @@ CharBufBase::ViewIterator CharBufBase::views(size_t pos, size_t count) const {
     auto num = min(count, m_size - pos);
     if (!num)
         return {};
-    auto ic = find(pos);
+    auto ic = findBuf(pos);
     auto vi = ViewIterator{ic.first, (size_t) ic.second, num};
     return vi;
 }
@@ -244,6 +244,95 @@ void CharBufBase::resize(size_t count) {
 }
 
 //===========================================================================
+size_t CharBufBase::find(char ch, size_t pos) const {
+    assert(pos <= (size_t) m_size);
+    auto ic = findBuf(pos);
+    for (;;) {
+        auto base = ic.first->data + ic.second;
+        auto ptr = (char *) memchr(base, ch, ic.first->used - ic.second);
+        if (ptr)
+            return pos + (ptr - base);
+        pos += ic.first->used - ic.second;
+        if (pos == (size_t) m_size)
+            return (size_t) -1;
+        ic = { ic.first + 1, 0 };
+    }
+}
+
+//===========================================================================
+size_t CharBufBase::skip(char ch, size_t pos) const {
+    assert(pos <= (size_t) m_size);
+    auto ic = findBuf(pos);
+    for (;;) {
+        auto base = ic.first->data + ic.second;
+        auto eptr = ic.first->data + ic.first->used;
+        for (auto ptr = base; ptr < eptr; ++ptr) {
+            if (*ptr != ch)
+                return pos + (ptr - base);
+        }
+        pos += ic.first->used - ic.second;
+        if (pos == (size_t) m_size)
+            return (size_t) -1;
+        ic = { ic.first + 1, 0 };
+    }
+}
+
+//===========================================================================
+template <typename Cmp>
+static size_t rsearch(
+    char ch,
+    size_t pos,
+    size_t size,
+    CharBufBase::const_buffer_iterator i,
+    int off,
+    Cmp cmp
+) {
+    assert(pos >= off);
+    assert(off < i->used);
+    for (;;) {
+        auto ptr = i->data + off + 1;
+        while (--ptr >= i->data) {
+            if (cmp(*ptr, ch))
+                return pos - (ptr - i->data);
+        }
+        pos -= off;
+        if (!pos)
+            return (size_t) -1;
+        i -= 1;
+        off = i->used - 1;
+    }
+}
+
+//===========================================================================
+size_t CharBufBase::rfind(char ch, size_t pos) const {
+    assert(pos <= (size_t) m_size);
+    auto ic = findBuf(pos);
+    return rsearch(
+        ch,
+        pos,
+        m_size,
+        ic.first,
+        ic.second,
+        equal_to<char>{}
+    );
+}
+
+//===========================================================================
+size_t CharBufBase::rskip(char ch, size_t pos) const {
+    assert(pos <= (size_t) m_size);
+    auto ic = findBuf(pos);
+    return rsearch(
+        ch,
+        pos,
+        m_size,
+        ic.first,
+        ic.second,
+        not_equal_to<char>{}
+    );
+}
+
+
+//===========================================================================
 CharBufBase & CharBufBase::insert(size_t pos, size_t numCh, char ch) {
     assert(pos <= pos + numCh && pos <= (size_t) m_size);
 
@@ -251,7 +340,7 @@ CharBufBase & CharBufBase::insert(size_t pos, size_t numCh, char ch) {
     if (!numCh)
         return *this;
 
-    auto ic = find(pos);
+    auto ic = findBuf(pos);
     return insert(ic.first, ic.second, numCh, ch);
 }
 
@@ -268,7 +357,7 @@ CharBufBase & CharBufBase::insert(size_t pos, const char s[]) {
     if (!*s)
         return *this;
 
-    auto ic = find(pos);
+    auto ic = findBuf(pos);
     return insert(ic.first, ic.second, s);
 }
 
@@ -280,7 +369,7 @@ CharBufBase & CharBufBase::insert(size_t pos, const char s[], size_t count) {
     if (!count)
         return *this;
 
-    auto ic = find(pos);
+    auto ic = findBuf(pos);
     return insert(ic.first, ic.second, s, count);
 }
 
@@ -310,8 +399,8 @@ CharBufBase & CharBufBase::insert(
     if (!add)
         return *this;
 
-    auto ic = find(pos);
-    auto ic2 = buf.find(bufPos);
+    auto ic = findBuf(pos);
+    auto ic2 = buf.findBuf(bufPos);
     return insert(ic.first, ic.second, ic2.first, ic2.second, add);
 }
 
@@ -324,35 +413,55 @@ CharBufBase & CharBufBase::erase(size_t pos, size_t count) {
     if (!remove)
         return *this;
 
-    auto ic = find(pos);
+    auto ic = findBuf(pos);
     return erase(ic.first, ic.second, remove);
 }
 
 //===========================================================================
+CharBufBase & CharBufBase::ltrim(char ch) {
+    auto pos = skip(ch);
+    if (pos == -1)
+        return *this;
+    return erase(0, pos);
+}
+
+//===========================================================================
 CharBufBase & CharBufBase::rtrim(char ch) {
-    auto myi = &m_buffers.back();
-    for (;;) {
-        if (!m_size)
-            return *this;
-        auto base = myi->data;
-        auto eptr = base + myi->used - 1;
-        auto ptr = eptr;
-        for (;;) {
-            if (*ptr != ch) {
-                if (auto num = int(eptr - ptr)) {
-                    m_size -= num;
-                    myi->used -= num;
-                }
-                return *this;
-            }
-            if (ptr == base)
-                break;
-            ptr -= 1;
-        }
-        m_size -= myi->used;
-        eraseBuf(myi, myi + 1);
-        myi -= 1;
+    auto pos = rskip(ch);
+    if (pos == -1)
+        return *this;
+    return erase(pos);
+}
+
+//===========================================================================
+CharBufBase & CharBufBase::pushFront(char ch) {
+    Buffer * buf = nullptr;
+    if (!m_size) {
+        buf = appendBuf();
+    } else {
+        buf = &m_buffers.front();
+        if (buf->reserved == buf->used)
+            buf = insertBuf(buf);
     }
+
+    memmove(buf->data + 1, buf->data, buf->used);
+    buf->data[0] = ch;
+    m_size += 1;
+    buf->used += 1;
+    return *this;
+}
+
+//===========================================================================
+CharBufBase & CharBufBase::popFront() {
+    assert(m_size);
+    m_size -= 1;
+    auto & buf = m_buffers.front();
+    if (!--buf.used) {
+        eraseBuf(&buf, &buf + 1);
+    } else {
+        memmove(buf.data, buf.data + 1, buf.used);
+    }
+    return *this;
 }
 
 //===========================================================================
@@ -433,7 +542,7 @@ strong_ordering CharBufBase::compare(
     int num = min(mymax, rmax);
     if (!num)
         return mymax <=> rmax;
-    auto ic = find(pos);
+    auto ic = findBuf(pos);
     auto myi = ic.first;
     auto mycount = myi->used - ic.second;
     auto mydata = myi->data + ic.second;
@@ -497,11 +606,11 @@ strong_ordering CharBufBase::compare(
     int num = min(mymax, rmax);
     if (!num)
         return mymax <=> rmax;
-    auto ic = find(pos);
+    auto ic = findBuf(pos);
     auto myi = ic.first;
     auto mydata = myi->data + ic.second;
     auto mycount = myi->used - ic.second;
-    ic = buf.find(bufPos);
+    ic = buf.findBuf(bufPos);
     auto ri = ic.first;
     auto rdata = ri->data + ic.second;
     auto rcount = ri->used - ic.second;
@@ -544,7 +653,7 @@ CharBufBase & CharBufBase::replace(
     auto add = numCh;
     auto remove = min(count, m_size - pos);
     auto num = min(add, remove);
-    auto ic = find(pos);
+    auto ic = findBuf(pos);
     auto myi = ic.first;
     auto mydata = myi->data + ic.second;
     auto mycount = (size_t) myi->used - ic.second;
@@ -582,7 +691,7 @@ CharBufBase & CharBufBase::replace(size_t pos, size_t count, const char s[]) {
 
     int remove = (int) min(count, m_size - pos);
     int num = remove;
-    auto ic = find(pos);
+    auto ic = findBuf(pos);
     auto myi = ic.first;
     auto mydata = myi->data + ic.second;
     auto mycount = myi->used - ic.second;
@@ -621,7 +730,7 @@ CharBufBase & CharBufBase::replace(
     int add = (int)srcLen;
     int remove = (int) min(count, m_size - pos);
     int num = min(add, remove);
-    auto ic = find(pos);
+    auto ic = findBuf(pos);
     auto myi = ic.first;
     auto mydata = myi->data + ic.second;
     auto mycount = myi->used - ic.second;
@@ -663,11 +772,11 @@ CharBufBase & CharBufBase::replace(
     auto add = min(srcLen, src.m_size - srcPos);
     auto remove = min(count, m_size - pos);
     auto num = min(add, remove);
-    auto ic = find(pos);
+    auto ic = findBuf(pos);
     auto myi = ic.first;
     auto mydata = myi->data + ic.second;
     auto mycount = size_t(myi->used - ic.second);
-    auto ic2 = src.find(srcPos);
+    auto ic2 = src.findBuf(srcPos);
     auto ri = ic2.first;
     auto rdata = ri->data + ic2.second;
     auto rcount = size_t(ri->used - ic2.second);
@@ -712,7 +821,7 @@ size_t CharBufBase::copy(char * out, size_t count, size_t pos) const {
     assert(pos <= (size_t) m_size);
     count = min(count, m_size - pos);
     auto num = (int) count;
-    auto ic = find(pos);
+    auto ic = findBuf(pos);
     auto myi = ic.first;
     auto mydata = myi->data + ic.second;
     auto mycount = myi->used - ic.second;
@@ -746,15 +855,15 @@ size_t CharBufBase::defaultBlockSize() const {
 //===========================================================================
 // private
 //===========================================================================
-pair<CharBufBase::const_buffer_iterator, int> CharBufBase::find(
+pair<CharBufBase::const_buffer_iterator, int> CharBufBase::findBuf(
     size_t pos
 ) const {
-    auto ic = const_cast<CharBufBase *>(this)->find(pos);
+    auto ic = const_cast<CharBufBase *>(this)->findBuf(pos);
     return ic;
 }
 
 //===========================================================================
-pair<CharBufBase::buffer_iterator, int> CharBufBase::find(size_t pos) {
+pair<CharBufBase::buffer_iterator, int> CharBufBase::findBuf(size_t pos) {
     assert(pos <= (size_t) m_size);
     int off = (int)pos;
     if (off < m_size / 2) {
@@ -788,7 +897,7 @@ pair<CharBufBase::buffer_iterator, int> CharBufBase::find(size_t pos) {
 //===========================================================================
 // Move the data (if any) after the split point to a new block immediately
 // following the block being split.
-CharBufBase::buffer_iterator CharBufBase::split(
+CharBufBase::buffer_iterator CharBufBase::splitBuf(
     buffer_iterator it,
     size_t pos
 ) {
@@ -837,7 +946,7 @@ CharBufBase & CharBufBase::insert(
     }
 
     // Split the block if we're inserting into the middle of it.
-    it = split(it, pos);
+    it = splitBuf(it, pos);
     mydata = it->data + pos;
     myafter = 0;
     myavail = it->reserved - it->used;
@@ -884,7 +993,7 @@ CharBufBase & CharBufBase::insert(
     }
 
     // Split the block if we're inserting into the middle of it.
-    it = split(it, pos);
+    it = splitBuf(it, pos);
     mydata = it->data + pos;
     myafter = 0;
     myavail = it->reserved - it->used;
@@ -939,7 +1048,7 @@ CharBufBase & CharBufBase::insert(
     }
 
     // Split the block if we're inserting into the middle of it.
-    it = split(it, pos);
+    it = splitBuf(it, pos);
     mydata = it->data + pos;
     myafter = 0;
     myavail = it->reserved - it->used;
@@ -997,7 +1106,7 @@ CharBufBase & CharBufBase::insert(
     }
 
     // Split the block if we're inserting into the middle of it.
-    myi = split(myi, pos);
+    myi = splitBuf(myi, pos);
     mydata = myi->data + pos;
     myafter = 0;
     myavail = myi->reserved - myi->used;

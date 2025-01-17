@@ -95,6 +95,14 @@ public:
     ViewIterator views(size_t pos = 0, size_t count = -1) const;
     void clear();
     void resize(size_t count);
+
+    size_t find(char ch, size_t pos = 0) const;
+    size_t rfind(char ch) const { return rfind(ch, size() - 1); }
+    size_t rfind(char ch, size_t pos) const;
+    size_t skip(char ch, size_t pos = 0) const;
+    size_t rskip(char ch) const { return rskip(ch, size() - 1); }
+    size_t rskip(char ch, size_t pos) const;
+
     CharBufBase & insert(size_t pos, size_t numCh, char ch);
     CharBufBase & insert(size_t pos, std::nullptr_t);
     CharBufBase & insert(size_t pos, const char s[]);
@@ -116,6 +124,8 @@ public:
     CharBufBase & rtrim(char ch);
     CharBufBase & pushBack(char ch);
     CharBufBase & popBack();
+    CharBufBase & pushFront(char ch);
+    CharBufBase & popFront();
     CharBufBase & append(char ch) { return pushBack(ch); }
     CharBufBase & append(size_t numCh, char ch);
     CharBufBase & append(std::nullptr_t);
@@ -203,9 +213,6 @@ protected:
     using buffer_iterator = Buffer *;
     using const_buffer_iterator = const Buffer *;
 
-    std::pair<buffer_iterator, int> find(size_t pos);
-    std::pair<const_buffer_iterator, int> find(size_t pos) const;
-    buffer_iterator split(buffer_iterator it, size_t pos);
     CharBufBase & insert(
         buffer_iterator it,
         size_t pos,
@@ -228,6 +235,9 @@ protected:
     );
     CharBufBase & erase(buffer_iterator it, size_t pos, size_t count);
 
+    std::pair<buffer_iterator, int> findBuf(size_t pos);
+    std::pair<const_buffer_iterator, int> findBuf(size_t pos) const;
+    buffer_iterator splitBuf(buffer_iterator it, size_t pos);
     Buffer makeBuf(size_t bytes);
     void clearBuf(Buffer * out);
     buffer_iterator eraseBuf(buffer_iterator first, buffer_iterator last);
