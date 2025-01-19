@@ -135,6 +135,9 @@ static void app(int argc, char *argv[]) {
     buf = buf2;
     auto buf3 = move(buf);
     auto v3 = buf3.view();
+    buf = v3;
+    buf3 = move(buf);
+    EXPECT(buf2.size() == buf3.size());
 
     {
         // Copy construct and destroy CharBuf that's greater than block size
