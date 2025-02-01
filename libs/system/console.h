@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2020.
+// Copyright Glen Knowles 2016 - 2025.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // console.h - dim system
@@ -8,7 +8,6 @@
 
 #include "core/log.h"
 
-#include <atomic>
 #include <cstdint>
 
 namespace Dim {
@@ -46,8 +45,9 @@ unsigned consoleWidth();
 // Replace previous line with spaces and set the cursor at its beginning.
 void consoleRedoLine();
 
-// When enabled a control-c sent to the console triggers a graceful shutdown,
-// by calling appSignalShutdown(EX_IOERR), instead of immediate termination.
+// When enabled a ctrl-c or ctrl-break sent to the console triggers a graceful
+// shutdown, by calling appSignalShutdown(EX_IOERR), instead of immediate
+// termination.
 void consoleCatchCtrlC(bool enable = true);
 
 // If the standard IO has been redirected these functions will reset them
