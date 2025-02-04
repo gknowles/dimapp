@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2019.
+// Copyright Glen Knowles 2015 - 2025.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // winthread.cpp - dim windows platform
@@ -24,9 +24,12 @@ class ThreadName {
     SetThreadDescriptionFn m_setDesc;
     GetThreadDescriptionFn m_getDesc;
 public:
-    ThreadName();
+    static ThreadName & instance();
+public:
     void set(string_view name);
     string get() const;
+private:
+    ThreadName();
 };
 
 } // namespace
@@ -37,6 +40,13 @@ public:
 *   ThreadName
 *
 ***/
+
+//===========================================================================
+// static
+ThreadName & ThreadName::instance() {
+    static ThreadName s_name;
+    return s_name;
+}
 
 //===========================================================================
 ThreadName::ThreadName() {
@@ -81,12 +91,12 @@ void Dim::iThreadInitialize() {
 
 //===========================================================================
 void Dim::iThreadSetName(string_view name) {
-    static ThreadName s_name;
+    auto & s_name = ThreadName::instance();
     s_name.set(name);
 }
 
 //===========================================================================
 string Dim::iThreadGetName() {
-    static ThreadName s_name;
+    auto & s_name = ThreadName::instance();
     return s_name.get();
 }
