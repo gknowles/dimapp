@@ -25,7 +25,7 @@ Specifies the outputs to be generated and their options.
         desc="Overall structure and purpose of the schema.">
       <Overview>
         <![CDATA[
-Descriptive text about the structure and purpose of the schema as a whole.">
+Descriptive text about the structure and purpose of the schema as a whole.
 ]]>
       </Overview>
     </Element>
