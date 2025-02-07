@@ -113,7 +113,7 @@ static auto & s_perfUpdatedFiles = uperf("cmtupd files updated");
 static auto & s_perfNewerFiles = uperf("cmtupd files failed (future)");
 
 static mutex s_progressMut;
-static string s_currentYear = []() {
+const string s_currentYear = []() {
     tm tm;
     timeToDesc(&tm, timeNow());
     return toString(tm.tm_year + 1900);
