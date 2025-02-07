@@ -1,5 +1,5 @@
 ////
-Copyright Glen Knowles 2020 - 2024.
+Copyright Glen Knowles 2020 - 2025.
 Distributed under the Boost Software License, Version 1.0.
 ////
 
@@ -23,7 +23,7 @@ Markup documentation processing.
 * Replaces all contents (except ".git") of output directory with new site
   files.
 
-=== Site file layout
+=== File layout of generated site
 * .nojekyll (so the site can be directly deployed to GitHub)
 * index.html (redirect to default version)
 * css/docgen.css
@@ -50,7 +50,8 @@ is a ruby gem that must be installed for sites to be generated.
 
 == Code sample verification
 * Single docgen.xml file defines how samples are verified.
-* Extracts comment and code blocks, with attributes, from documentation markup.
+* Extracts comment and code blocks, with attributes, from documentation
+  markup. Supported formats are:
 ** AsciiDoc
 ** Markdown
 * Apply compile and scripting rules defined for the language in docgen.xml.
@@ -93,7 +94,7 @@ this role.
 === Markdown
 Code (``` or ~~~) blocks with a language are processed. Such as:
 
-[source, AsciiDoc]
+[source, Markdown]
 ----
   ~~~ C++
   int a = 1;
@@ -102,9 +103,9 @@ Code (``` or ~~~) blocks with a language are processed. Such as:
 
 Or with test additional attributes (see <<Attributes in markup, below>>):
 
-[source, AsciiDoc]
+[source, Markdown]
 ----
-  ~~~ C++, test alt, test file not_main]
+  ~~~ C++, test alt, test file not_main
   ...
 ----
 
