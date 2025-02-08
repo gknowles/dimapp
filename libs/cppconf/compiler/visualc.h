@@ -81,6 +81,8 @@
     5262 /* implicit fall-through occurs here; are you missing a break
             statement? Use [[fallthrough]] when a break statement is
             intentionally omitted between cases */ \
+    5263 /* calling 'std::move' on a temporary object prevents copy
+            elision */ \
     5266 /* 'const' qualifier on return type has no effect */ \
     5267 /* definition of implicit copy constructor/assignment operator for
             'type' is deprecated because it has a user-provided assignment
