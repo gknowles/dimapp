@@ -67,7 +67,7 @@ public:
     // IXStreamParserNotify
     bool startDoc() override;
     bool endDoc() override;
-    bool startElem(char * name, size_t nameLen) override;
+    bool startElem(char name[], size_t nameLen) override;
     bool endElem() override;
     bool attr(
         char name[],

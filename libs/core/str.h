@@ -347,7 +347,7 @@ size_t strCopy(char * out, size_t outLen, std::wstring_view src);
 size_t strCopy(wchar_t * out, size_t outLen, std::string_view src);
 
 //===========================================================================
-// vector to string
+// container to string
 //===========================================================================
 template<typename T>
 requires (std::forward_iterator<typename T::const_iterator>

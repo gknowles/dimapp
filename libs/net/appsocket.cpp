@@ -661,12 +661,7 @@ static const auto s_appSocketFamilyNames = TokenTable{
 
 //===========================================================================
 string Dim::AppSocket::toString(AppSocket::Family code) {
-    const char * name = nullptr;
-    if (s_appSocketFamilyNames.findName(&name, code)) {
-        return name;
-    } else {
-        return "UNKNOWN";
-    }
+    return s_appSocketFamilyNames.findName(code, "UNKNOWN");
 }
 
 //===========================================================================
