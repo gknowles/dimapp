@@ -20,6 +20,8 @@ enum ConsoleAttr {
     kConsoleWarn,   // bright yellow
     kConsoleError,  // bright red
 };
+[[nodiscard]] std::string toString(ConsoleAttr attr);
+[[nodiscard]] bool parse(ConsoleAttr * out, std::string_view src);
 
 unsigned consoleRawAttr();
 void consoleRawAttr(unsigned newAttr);

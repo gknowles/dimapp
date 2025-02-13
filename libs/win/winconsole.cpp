@@ -71,12 +71,33 @@ static bool getStdInfo(int * dst, const wchar_t ** dev, DWORD nstd) {
 
 /****************************************************************************
 *
-*   ConsoleScopedAttr
+*   ConsoleAttr
 *
 ***/
 
-static atomic<unsigned> s_originalAttr;
-static atomic<int> s_numAttrScopes;
+const auto s_consoleAttrTbl = TokenTable{
+    { kConsoleNormal, "normal" },
+    { kConsoleCheer,  "cheer" },
+    { kConsoleNote,   "note" },
+    { kConsoleWarn,   "warn" },
+    { kConsoleError,  "error" },
+};
+
+//===========================================================================
+string Dim::toString(ConsoleAttr attr) {
+    return s_consoleAttrTbl.findName(attr, "invalid");
+}
+
+//===========================================================================
+bool Dim::parse(ConsoleAttr * out, string_view src) {
+    int id;
+    if (auto result = s_consoleAttrTbl.find(&id, src)) {
+        *out = (ConsoleAttr) id;
+        return true;
+    }
+    *out = kConsoleInvalid;
+    return false;
+}
 
 //===========================================================================
 constexpr int findAttr(ConsoleAttr attr) {
@@ -95,6 +116,16 @@ constexpr int findAttr(ConsoleAttr attr) {
         return -1;
     }
 }
+
+
+/****************************************************************************
+*
+*   ConsoleScopedAttr
+*
+***/
+
+static atomic<unsigned> s_originalAttr;
+static atomic<int> s_numAttrScopes;
 
 //===========================================================================
 ConsoleScopedAttr::ConsoleScopedAttr(ConsoleAttr attr) {
@@ -219,7 +250,7 @@ void Dim::consoleRawAttr(unsigned newAttr) {
 
 /****************************************************************************
 *
-*   Reassign CRT lowio handles to duplicates so they can be safely closed.
+*   Reassign CRT low IO handles to duplicates so they can be safely closed.
 *
 *   The first call to FreeConsole() from a console application can not be
 *   done safely -- using documented APIs -- without breaking the standard
@@ -227,17 +258,17 @@ void Dim::consoleRawAttr(unsigned newAttr) {
 *
 *   The standard descriptors are initialized by the MSVC CRT to own the
 *   underlying Windows console handles. However, the underlying console also
-*   owns them. This means that when the application is only thing running in
-*   the console they get closed twice, once by closing the CRT handles and
+*   owns them. This means that when the application is the only thing running
+*   in the console they get closed twice, once by closing the CRT handles and
 *   again by FreeConsole. The second CloseHandle, quite properly, raises an
 *   invalid handle exception when in the debugger. The danger is that the OS
-*   could reuse the handle between the calls and we're now closing the handle
-*   to some unrelated thing.
+*   could reuse the handle between the calls and we'd then be closing the
+*   handle to some unrelated thing.
 *
 *   After the first time this is no longer a problem because we dup the
 *   handles when attaching the new console. The most frequent manifestation
 *   is when the console application is run in a new console, and it's not a
-*   problem for windows apps since they don't start with a console.
+*   problem for windowed apps since they don't start with a console.
 *
 *   There is no supported way to do any of the following:
 *       - close the CRT descriptors without closing the os handles
