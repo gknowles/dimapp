@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2018 - 2024.
+// Copyright Glen Knowles 2018 - 2025.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // winpipe.cpp - dim windows platform
@@ -294,8 +294,10 @@ void PipeBase::enableEvents_LK(unique_lock<mutex> & lk, IPipeNotify * notify) {
 
     // trigger first reads
     while (m_prereads) {
-        if (!requeueRead_LK(lk))
+        if (!requeueRead_LK(lk)) {
+            // This pipe has been unlocked and dereferenced.
             lk.lock();
+        }
     }
 }
 
@@ -304,8 +306,10 @@ void PipeBase::enableEvents_LK(unique_lock<mutex> & lk, IPipeNotify * notify) {
 void PipeBase::read(IPipeNotify * notify) {
     if (auto pipe = notify->m_pipe) {
         unique_lock lk{pipe->m_mut};
-        if (!pipe->requeueRead_LK(lk))
+        if (!pipe->requeueRead_LK(lk)) {
+            // The pipe has been unlocked and dereferenced.
             lk.release();
+        }
     }
 }
 
@@ -361,7 +365,8 @@ void PipeBase::queueRead_LK(unique_lock<mutex> & lk, PipeRequest * task) {
 bool PipeBase::onRead(PipeRequest * task) {
     unique_lock lk(m_mut);
     if (!onRead_LK(lk, task)) {
-        // The object has been destroyed, which means m_mut no longer exists.
+        // The pipe has been unlocked and dereferenced, which means m_mut may
+        // no longer exist.
         lk.release();
         return false;
     }
@@ -376,9 +381,9 @@ bool PipeBase::onRead_LK(unique_lock<mutex> & lk, PipeRequest * task) {
         s_perfReadTotal += bytes;
         task->m_buffer.resize(bytes);
         size_t used{0};
-        m_mut.unlock();
+        lk.unlock();
         bool more = m_notify->onPipeRead(&used, task->m_buffer);
-        m_mut.lock();
+        lk.lock();
         assert(used == bytes);
         if (!more) {
             // new read will be explicitly requested by application
@@ -400,14 +405,14 @@ bool PipeBase::onRead_LK(unique_lock<mutex> & lk, PipeRequest * task) {
     bool wasEmpty = !m_reads && !m_writes;
     m_mode = Mode::kClosed;
 
-    m_mut.unlock();
+    lk.unlock();
     if (!wasClosed)
         m_notify->onPipeDisconnect();
     if (wasEmpty) {
         removeRef();
         return false;
     }
-    m_mut.lock();
+    lk.lock();
     return true;
 }
 
@@ -471,9 +476,9 @@ void PipeBase::queuePrewrite_LK(unique_lock<mutex> & lk, string_view data) {
             // data is now waiting
             assert(m_bufInfo.waiting <= bytes);
             auto info = m_bufInfo;
-            m_mut.unlock();
+            lk.unlock();
             m_notify->onPipeBufferChanged(info);
-            m_mut.lock();
+            lk.lock();
         }
     }
 }
