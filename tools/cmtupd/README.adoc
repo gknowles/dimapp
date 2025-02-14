@@ -1,5 +1,5 @@
 ////
-Copyright Glen Knowles 2020 - 2021.
+Copyright Glen Knowles 2020 - 2025.
 Distributed under the Boost Software License, Version 1.0.
 ////
 
@@ -12,4 +12,6 @@ copyright comment.
 Uses configuration file ($GIT_ROOT/conf/cmtupd.xml by default) to map comment
 formats to file extensions, and to exclude specific files.
 
-Operates on files within the current branch of a git repo.
+Operates on files within the current branch of a git repo, this is a safety
+feature ensuring that bad changes from bad rules or file errors can always be
+reverted.

@@ -1,5 +1,5 @@
 ﻿<!--
-Copyright Glen Knowles 2021 - 2024.
+Copyright Glen Knowles 2021 - 2025.
 Distributed under the Boost Software License, Version 1.0.
 -->
 
@@ -10,7 +10,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
-## cmtupd 1.1.2 (2024-07-31)
+## cmtupd 2.0.0 (2024-02-14)
+- Added - Allow Var elements as direct children of Comments
+- Changed - Replace implicit copyright action with explicit configuration
+
+## cmtupd 1.1.2 (2024-07-31) (should have been version 1.2.0)
 - Fixed - Race printing final report
 - Added - Include files unchanged in final report
 

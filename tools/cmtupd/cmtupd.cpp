@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2020 - 2024.
+// Copyright Glen Knowles 2020 - 2025.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // cmtupd.cpp - cmtupd
@@ -15,7 +15,7 @@ using namespace Dim;
 *
 ***/
 
-const VersionInfo kVersion = { 1, 1, 2 };
+const VersionInfo kVersion = { 2, 0, 0 };
 
 
 /****************************************************************************
@@ -35,15 +35,38 @@ struct Regex {
     regex re;
     string pattern;
 };
-
 struct Capture {
     string name;
     string defaultValue;
+};
+struct Condition {
+    string opName;
+    function<bool(const string&, const string&)> op;
+    string arg1;
+    string arg2;
+};
+struct Action {
+    enum Type { kInvalid, kSkip, kUpdate } type;
+    Condition cond;
+    string report;
+    ConsoleAttr reportType = {};
+    unsigned reportPriority = {};
+
+    strong_ordering operator<=>(const Action & other) const {
+        // Lowest type first.
+        auto rc = reportType <=> other.reportType;
+        if (rc == 0) {
+            // Best (lowest) priority first.
+            rc = reportPriority <=> other.reportPriority;
+        }
+        return rc;
+    }
 };
 struct MatchDef {
     Regex match;
     string replace;
     vector<Capture> captures;
+    vector<Action> actions;
 };
 struct Group {
     unordered_map<string, string> vars;
@@ -60,12 +83,21 @@ struct Config {
     Path configFile;
     Path gitRoot;
     vector<Rule> rules;
+    unsigned numActions = {};
 };
 
+struct Count {
+    const Action * act;
+    unsigned count = {};
+    strong_ordering operator<=>(const Count & other) const {
+        return *act <=> *other.act;
+    }
+};
 struct Result {
-    unsigned matched = 0;
-    unsigned changed = 0;
-    unsigned newer = 0;
+    unsigned matched = {};
+    unsigned unchanged = {};
+    vector<Count> cnts;
+    unordered_map<string, size_t> byReport;
     string content;
 };
 
@@ -106,13 +138,13 @@ static auto & s_perfScannedFiles = uperf("cmtupd files scanned");
 static auto & s_perfUnfinishedFiles = uperf("cmtupd files unfinished");
 static auto & s_perfQueuedFiles = uperf("cmtupd files (queued)");
 static auto & s_perfMatchedFiles = uperf("cmtupd files matched");
-static auto & s_perfComments = uperf("cmtupd comments matched");
-static auto & s_perfUpdatedComments = uperf("cmtupd comments updated");
+static auto & s_perfMatchByRule = uperf("cmtupd rule matches");
+static auto & s_perfUpdateByRule = uperf("cmtupd rule triggered updates");
 static auto & s_perfUnchangedFiles = uperf("cmtupd files unchanged");
 static auto & s_perfUpdatedFiles = uperf("cmtupd files updated");
-static auto & s_perfNewerFiles = uperf("cmtupd files failed (future)");
 
 static mutex s_progressMut;
+static Result s_result;
 const string s_currentYear = []() {
     tm tm;
     timeToDesc(&tm, timeNow());
@@ -163,13 +195,13 @@ static bool loadVars(unordered_map<string, string> * out, XNode * root) {
         auto name = attrValue(&xvar, "name");
         if (!name) {
             logMsgError() << "Invalid Var element, must have @name";
-            appSignalShutdown(EX_DATAERR);
             return false;
         }
         if (*name == '$') {
             logMsgError() << "Invalid Var @name '" << name << "', names "
                 "starting with '$' are reserved for internally generated "
                 "values.";
+            continue;
         }
         (*out)[name] = attrValue(&xvar, "value", "");
     }
@@ -177,68 +209,108 @@ static bool loadVars(unordered_map<string, string> * out, XNode * root) {
 }
 
 //===========================================================================
-static bool loadMatches(Rule * out, XNode * root) {
+static bool loadCapture(MatchDef * out, XNode * root) {
+    auto cvar = attrValue(root, "var");
+    auto cdef = attrValue(root, "default", "");
+    if (!cvar) {
+        logMsgError() << "Invalid Rule/Match/Capture element, "
+            "must have @const or @var";
+        return false;
+    }
+    out->captures.emplace_back(cvar, cdef);
+    return true;
+}
+
+//===========================================================================
+static bool loadCond(Condition * out, XNode * root) {
+    auto opName = attrValue(root, "op");
+    if (opName) {
+        out->opName = opName;
+        if (out->opName == "=") out->op = equal_to<string>();
+        else if (out->opName == "!=") out->op = not_equal_to<string>();
+        else if (out->opName == "<") out->op = less<string>();
+        else if (out->opName == "<=") out->op = less_equal<string>();
+        else if (out->opName == ">") out->op = greater<string>();
+        else if (out->opName == ">=") out->op = greater_equal<string>();
+        else {
+            logMsgError() << "Invalid Rule/Match/Action/Cond/@op, "
+                "allowed values: =, !=, <, <=, >, or >=";
+            return false;
+        }
+    }
+    out->arg1 = attrValue(root, "arg1", "");
+    out->arg2 = attrValue(root, "arg2", "");
+    return true;
+}
+
+//===========================================================================
+static bool loadAction(
+    MatchDef * out,
+    XNode * root,
+    unsigned * numActions,
+    Action::Type type
+) {
+    auto & act = out->actions.emplace_back();
+    act.type = type;
+    auto rep = attrValue(root, "report", "???");
+    if (type == Action::kUpdate && s_opts.check)
+        rep = attrValue(root, "checkReport", rep);
+    act.report = rep;
+    if (!parse(&act.reportType, attrValue(root, "reportType", "normal"))) {
+        logMsgError() << "Invalid Rule/Match/Action/@reportType, must be: "
+            "normal, cheer, note, warn, or error";
+        return false;
+    }
+    if (type == Action::kUpdate && act.reportType <= kConsoleNormal) {
+        logMsgError() << "Update actions must have reportType greater "
+            "than 'normal'";
+        return false;
+    }
+    act.reportPriority = ++*numActions;
+    return loadCond(&act.cond, root);
+}
+
+//===========================================================================
+static bool loadMatches(Rule * out, XNode * root, unsigned * numMatches) {
     for (auto&& xmatch : elems(root, "Match")) {
         auto & match = out->matchDefs.emplace_back();
         match.match.pattern = attrValue(&xmatch, "regex");
         match.replace = attrValue(&xmatch, "replace", "");
-        for (auto&& xcap : elems(&xmatch, "Capture")) {
-            auto cvar = attrValue(&xcap, "var");
-            auto cdef = attrValue(&xcap, "default", "");
-            if (!cvar) {
-                logMsgError() << "Invalid Rule/Match/Capture element, "
-                    "must have @const or @var";
-                appSignalShutdown(EX_DATAERR);
-                return false;
+        for (auto&& xe : elems(&xmatch)) {
+            bool success = false;
+            if (xe.name == "Capture"sv) {
+                success = loadCapture(&match, &xe);
+            } else if (xe.name == "Skip"sv) {
+                success = loadAction(&match, &xe, numMatches, Action::kSkip);
+            } else if (xe.name == "Update"sv) {
+                success = loadAction(&match, &xe, numMatches, Action::kUpdate);
             }
-            match.captures.emplace_back(cvar, cdef);
+            if (!success)
+                return false;
         }
     }
     return true;
 }
 
 //===========================================================================
-static bool loadFileNames(
-    Group * out,
+static bool loadRegexes(
+    vector<Regex> * out,
     XNode * root,
+    const char elemName[],
     const unordered_map<string, string> & vars
 ) {
-    for (auto&& xfile : elems(root, "File")) {
-        auto & file = out->fileNames.emplace_back();
-        if (auto re = attrValue(&xfile, "regex")) {
+    auto elemPath = string("Rule/Group/") + elemName + " element";
+    for (auto&& xfile : elems(root, elemName)) {
+        auto & rx = out->emplace_back();
+        if (auto val = attrValue(&xfile, "regex")) {
             compileRegex(
-                &file,
-                "Found in Rule/Group/File element",
-                attrValueSubst(re, vars)
+                &rx,
+                "Found in " + elemPath,
+                attrValueSubst(val, vars)
             );
         } else {
-            logMsgError() << "Invalid Rule/Group/File element, "
+            logMsgError() << "Invalid " << elemPath << ", "
                 "must have @regex";
-            appSignalShutdown(EX_DATAERR);
-            return false;
-        }
-    }
-    return true;
-}
-
-//===========================================================================
-static bool loadFileExcludes(
-    Group * out,
-    XNode * root,
-    const unordered_map<string, string> & vars
-) {
-    for (auto&& xexcl : elems(root, "Exclude")) {
-        auto & excl = out->fileExcludes.emplace_back();
-        if (auto re = attrValue(&xexcl, "regex")) {
-            compileRegex(
-                &excl,
-                "Found in Rule/Group/Exclude element",
-                attrValueSubst(re, vars)
-            );
-        } else {
-            logMsgError() << "Invalid Rule/Group/Exclude element, "
-                "must have @regex";
-            appSignalShutdown(EX_DATAERR);
             return false;
         }
     }
@@ -257,8 +329,8 @@ static bool loadGroups(
         grp.vars[kVarPrefix]; // make sure kVarPrefix exists
         grp.vars[kVarCurrentYear] = s_currentYear;
         if (!loadVars(&grp.vars, &xgroup)
-            || !loadFileNames(&grp, &xgroup, vars)
-            || !loadFileExcludes(&grp, &xgroup, vars)
+            || !loadRegexes(&grp.fileNames, &xgroup, "File", vars)
+            || !loadRegexes(&grp.fileExcludes, &xgroup, "Exclude", vars)
         ) {
             return false;
         }
@@ -279,14 +351,18 @@ static bool loadGroups(
 }
 
 //===========================================================================
-static bool loadRules(Config * out, XNode * root) {
+static bool loadRules(
+    Config * out,
+    XNode * root,
+    const unordered_map<string, string> & vars
+) {
     for (auto&& xrule : elems(root, "Rule")) {
         auto & rule = out->rules.emplace_back();
         rule.name = attrValue(&xrule, "name");
-        unordered_map<string, string> vars;
-        if (!loadVars(&vars, &xrule)
-            || !loadMatches(&rule, &xrule)
-            || !loadGroups(&rule, &xrule, vars)
+        auto rvars = vars;
+        if (!loadVars(&rvars, &xrule)
+            || !loadMatches(&rule, &xrule, &out->numActions)
+            || !loadGroups(&rule, &xrule, rvars)
         ) {
             return false;
         }
@@ -320,8 +396,13 @@ unique_ptr<Config> loadConfig(string_view cfgfile) {
     if (auto ec = fileAbsolutePath(&out->configFile, configFile); ec)
         return {};
     out->gitRoot = gitRoot;
-    if (!loadRules(out.get(), root))
+    unordered_map<string, string> vars;
+    if (!loadVars(&vars, root)
+        || !loadRules(out.get(), root, vars)
+    ) {
+        appSignalShutdown(EX_DATAERR);
         return {};
+    }
     return out;
 }
 
@@ -359,15 +440,31 @@ static const Group * findGroup(const Rule & rule, const string & fname) {
 //===========================================================================
 static vector<const Group *> findGroups(
     const Config & cfg,
-    string_view fnameRaw
+    const Path & fnameRaw
 ) {
-    auto fname = string(fnameRaw);
+    auto fname = fnameRaw.str();
     vector<const Group *> out;
     for (auto&& rule : cfg.rules) {
         if (auto grp = findGroup(rule, fname))
             out.push_back(grp);
     }
     return out;
+}
+
+//===========================================================================
+static const Action * findAction(
+    const MatchDef & def,
+    const unordered_map<string, string> & vars
+) {
+    for (auto&& val : def.actions) {
+        if (!val.cond.op)
+            return &val;
+        auto arg1 = attrValueSubst(val.cond.arg1, vars);
+        auto arg2 = attrValueSubst(val.cond.arg2, vars);
+        if (val.cond.op(arg1, arg2))
+            return &val;
+    }
+    return nullptr;
 }
 
 //===========================================================================
@@ -394,6 +491,31 @@ static bool replaceFile(
     return true;
 }
 
+//===========================================================================
+static void updateResult(Result * out, const Action * act, int count = 1) {
+    auto ib = out->byReport.emplace(pair{act->report, out->cnts.size()});
+    Count * cnt = {};
+    if (ib.second) {
+        cnt = &out->cnts.emplace_back();
+        cnt->act = act;
+    } else {
+        cnt = &out->cnts[ib.second];
+        if (*act > *cnt->act)
+            cnt->act = act;
+    }
+    cnt->count += count;
+}
+
+//===========================================================================
+static void updateResult(Result * out, const Result & res) {
+    out->matched += (res.matched > 0);
+    out->unchanged += (res.unchanged > 0);
+    for (auto&& cnt : res.cnts) {
+        assert(cnt.count);
+        updateResult(out, cnt.act);
+    }
+}
+
 
 /****************************************************************************
 *
@@ -409,7 +531,31 @@ static void showConfig(const Config * cfg) {
         << '\n';
     for (auto&& rule : cfg->rules) {
         os << "Rule: " << rule.name << '\n'
-            << "Group:\n";
+            << "Matches:\n";
+        for (auto&& mat : rule.matchDefs) {
+            os << '\f';
+            os << "  Regex\t" << mat.match.pattern << '\n';
+            os << "  Replace\t" << mat.replace << '\n';
+            os << '\f';
+            for (auto&& cap : mat.captures) {
+                os << "  Capture\t" << cap.name << '\t' << cap.defaultValue
+                    << '\n';
+            }
+            os << "  Actions:\n";
+            os << '\f';
+            for (auto&& act : mat.actions) {
+                os << "    " << (act.type == Action::kSkip ? "Skip" : "Update")
+                    << '\t' << act.report
+                    << "\t\a5 15\a" << toString(act.reportType);
+                if (!act.cond.opName.empty()) {
+                    os << '\t' << act.cond.arg1
+                        << ' ' << act.cond.opName << ' '
+                        << act.cond.arg2;
+                }
+                os << '\n';
+            }
+        }
+        os << "Groups:\n";
         for (auto&& grp : rule.groups) {
             [[maybe_unused]] auto & prefix = grp.vars.at(kVarPrefix);
             os << '\f';
@@ -444,7 +590,6 @@ static void finalReport(const Config * cfg) {
     if (s_opts.verbose > 1
         || s_opts.verbose && s_perfScannedFiles
         || s_perfMatchedFiles != s_perfScannedFiles
-        || s_perfNewerFiles
         || s_perfUpdatedFiles
     ) {
         cout << endl;
@@ -454,26 +599,18 @@ static void finalReport(const Config * cfg) {
         cout << ", " << excluded << " excluded";
     if (auto unchanged = s_perfUnchangedFiles.load())
         cout << ", " << unchanged << " unchanged";
-    if (s_perfMatchedFiles != s_perfScannedFiles) {
-        cout << ", ";
-        ConsoleScopedAttr attr(kConsoleWarn);
-        cout << s_perfScannedFiles - s_perfMatchedFiles << " unmatched";
+
+    if (auto unmatched = s_perfScannedFiles - s_perfMatchedFiles) {
+        Action act = { Action::kSkip, {}, "unmatched", kConsoleWarn, 0 };
+        updateResult(&s_result, &act, unmatched);
     }
-    if (s_perfNewerFiles) {
+
+    s_result.byReport.clear();
+    sort(s_result.cnts.begin(), s_result.cnts.end());
+    for (auto&& cnt : s_result.cnts) {
         cout << ", ";
-        ConsoleScopedAttr attr(kConsoleWarn);
-        cout << s_perfNewerFiles << " newer";
-    }
-    if (s_perfUpdatedFiles) {
-        if (s_opts.update) {
-            cout << ", ";
-            ConsoleScopedAttr attr(kConsoleNote);
-            cout << s_perfUpdatedFiles << " updated";
-        } else {
-            cout << ", ";
-            ConsoleScopedAttr attr(kConsoleWarn);
-            cout << s_perfUpdatedFiles << " obsolete";
-        }
+        ConsoleScopedAttr attr(cnt.act->reportType);
+        cout << cnt.count << ' ' << cnt.act->report;
     }
     cout << endl;
 
@@ -493,7 +630,6 @@ static bool updateContent(
     string_view fname
 ) {
     auto vars = rawVars;
-    auto commitYear = rawVars.at(kVarCommitYear);
     string out;
     cmatch m;
     size_t pos = 0;
@@ -501,34 +637,42 @@ static bool updateContent(
     for (;; pos += m.position() + m.length()) {
         if (!regex_search(res->content.data() + pos, m, mat.match.re))
             break;
+        s_perfMatchByRule += 1;
+        res->matched += 1;
         out.append(res->content, pos, m.position());
+        // Save values from matched captures.
         for (auto i = 0; auto&& cap : mat.captures) {
             i += 1;
             if (m[i].matched)
                 vars[cap.name] = m[i].str();
         }
+        // Save default values for captures that didn't match. This is done
+        // after the matched are saved so substitutions in the defaults can
+        // reference them.
         for (auto i = 0; auto&& cap : mat.captures) {
             i += 1;
             if (!m[i].matched)
                 vars[cap.name] = attrValueSubst(cap.defaultValue, vars);
         }
-        s_perfComments += 1;
-        res->matched += 1;
-        auto & lastYear = vars[kVarLastYear];
-        if (lastYear > commitYear) {
-            res->newer += 1;
-            out.append(m[0].str());
-        } else if (lastYear == commitYear) {
+
+        auto act = findAction(mat, vars);
+        if (!act) {
+            res->unchanged += 1;
+            continue;
+        }
+        updateResult(res, act);
+
+        if (act->type == Action::kSkip) {
             out.append(m[0].str());
         } else {
-            s_perfUpdatedComments += 1;
+            assert(act->type == Action::kUpdate);
+            s_perfUpdateByRule += 1;
             changes += 1;
             auto rstr = attrValueSubst(mat.replace, vars);
             out.append(rstr);
         }
     }
     if (changes) {
-        res->changed += changes;
         out.append(res->content, pos);
         res->content = move(out);
         return true;
@@ -543,6 +687,7 @@ static void processFile(
     Path fname,
     string_view commitTimeStr
 ) {
+    Result res;
     s_perfUnfinishedFiles += 1;
     if (appStopping())
         return;
@@ -557,7 +702,6 @@ static void processFile(
     }
     string commitYear = toString(tm.tm_year + 1900);
 
-    Result res;
     auto fullPath = fname;
     fullPath.resolve(cfg->gitRoot);
     if (fileLoadBinaryWait(&res.content, fullPath))
@@ -571,43 +715,50 @@ static void processFile(
     }
 
     scoped_lock lk(s_progressMut);
+    bool updated = false;
     if (!res.matched) {
         cout << fname << "... unmatched" << endl;
     } else {
         s_perfMatchedFiles += 1;
-        if (!res.changed) {
-            if (res.newer) {
-                s_perfNewerFiles += 1;
-                cout << fname << "... ";
-                ConsoleScopedAttr attr(kConsoleWarn);
-                cout << "NEWER" << endl;
-            } else {
-                s_perfUnchangedFiles += 1;
-                if (s_opts.verbose)
-                    cout << fname << "... unchanged" << endl;
+        res.byReport.clear();
+        sort(res.cnts.begin(), res.cnts.end());
+        if (s_opts.verbose
+            || res.cnts.back().act->reportType > kConsoleNormal
+        ) {
+            cout << fname << "... ";
+            auto first = true;
+            if (res.unchanged) {
+                first = false;
+                cout << "unchanged";
             }
-        } else {
-            s_perfUpdatedFiles += 1;
-            if (!s_opts.update) {
-                cout << fname << "... ";
-                ConsoleScopedAttr attr(kConsoleWarn);
-                cout << "obsolete";
-            } else {
-                if (!replaceFile(fullPath, res.content))
-                    return;
-                cout << fname << "... ";
-                ConsoleScopedAttr attr(kConsoleNote);
-                cout << "UPDATED";
-            }
-            if (res.newer) {
-                s_perfNewerFiles += 1;
-                cout << " and ";
-                ConsoleScopedAttr attr(kConsoleWarn);
-                cout << "NEWER";
+            for (auto&& cnt : res.cnts) {
+                if (first) {
+                    first = false;
+                } else {
+                    cout << ", ";
+                }
+                if (cnt.act->reportType == kConsoleNormal) {
+                    cout << cnt.act->report;
+                } else {
+                    assert(cnt.act->reportType != kConsoleInvalid);
+                    ConsoleScopedAttr attr(cnt.act->reportType);
+                    cout << cnt.act->report;
+                }
+                if (!updated && cnt.act->type == Action::kUpdate) {
+                    updated = true;
+                    s_perfUpdatedFiles += 1;
+                    if (s_opts.update) {
+                        if (!replaceFile(fullPath, res.content))
+                            return;
+                    }
+                }
             }
             cout << endl;
         }
+        if (res.unchanged && !updated)
+            s_perfUnchangedFiles += 1;
     }
+    updateResult(&s_result, res);
 
     s_perfScannedFiles += 1;
     s_perfUnfinishedFiles -= 1;
@@ -619,7 +770,7 @@ static void processFiles(const Config * cfg) {
     for (auto&& file : s_opts.files) {
         Path tmp;
         fileAbsolutePath(&tmp, file);
-        file = move(tmp.str());
+        file = move(tmp).str();
     }
     args.insert(args.end(), s_opts.files.begin(), s_opts.files.end());
     auto res = execToolWait(Cli::toCmdline(args), "List depot files");
