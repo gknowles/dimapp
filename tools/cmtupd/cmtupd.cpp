@@ -723,7 +723,8 @@ static void processFile(
         res.byReport.clear();
         sort(res.cnts.begin(), res.cnts.end());
         if (s_opts.verbose
-            || res.cnts.back().act->reportType > kConsoleNormal
+            || !res.cnts.empty()
+                && res.cnts.back().act->reportType > kConsoleNormal
         ) {
             cout << fname << "... ";
             auto first = true;
