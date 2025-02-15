@@ -25,7 +25,8 @@ and '} respectively.
       <Action type="skip" arg1="{LastYear}" op=">" arg2="{$CommitYear}"
           report="NEWER" reportType="warn"/>
       <Action type="update" arg1="{LastYear}" op="&lt;" arg2="{$CommitYear}"
-          report="UPDATED" checkReport="obsolete" reportType="note"/>
+          report="UPDATED" reportType="note"
+          checkReport="obsolete" checkReportType="warn"/>
     </Match>
     <Group>
       <File regex="CMakeLists\.txt"/>
@@ -39,9 +40,9 @@ and '} respectively.
     <Group>
       <File regex=".*\.cpp"/>
       <File regex=".*\.h"/>
-      <Exclude regex="libs/core/hash_crc32c\.cpp"/>
       <Exclude regex=".*\.g\.cpp"/>
       <Exclude regex=".*\.g\.h"/>
+      <Exclude regex="libs/core/hash_crc32c\.cpp"/>
       <Var name="Prefix" value="// "/>
     </Group>
     <Group>

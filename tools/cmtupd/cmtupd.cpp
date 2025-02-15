@@ -269,10 +269,13 @@ static bool loadActions(
             return false;
         }
         auto rep = attrValue(&xe, "report", "???");
-        if (act.type == Action::kUpdate && s_opts.check)
+        auto rtype = attrValue(&xe, "reportType", "normal");
+        if (act.type == Action::kUpdate && s_opts.check) {
             rep = attrValue(&xe, "checkReport", rep);
+            rtype = attrValue(&xe, "checkReportType", rtype);
+        }
         act.report = rep;
-        if (!parse(&act.reportType, attrValue(&xe, "reportType", "normal"))) {
+        if (!parse(&act.reportType, rtype)) {
             logMsgError() << "Invalid Rule/Match/Action/@reportType, must be: "
                 "normal, cheer, note, warn, or error";
             return false;
@@ -612,10 +615,9 @@ static void finalReport(const Config * cfg) {
     if (auto unchanged = s_perfUnchangedFiles.load())
         cout << ", " << unchanged << " unchanged";
 
-    if (auto unmatched = s_perfScannedFiles - s_perfMatchedFiles) {
-        Action act = { Action::kSkip, {}, "unmatched", kConsoleWarn, 0 };
+    Action act = { Action::kSkip, {}, "unmatched", kConsoleWarn, 0 };
+    if (auto unmatched = s_perfScannedFiles - s_perfMatchedFiles)
         updateResult(&s_result, &act, unmatched);
-    }
 
     s_result.byReport.clear();
     sort(s_result.cnts.begin(), s_result.cnts.end());
