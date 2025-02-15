@@ -389,15 +389,7 @@ void Dim::split(
 
 //===========================================================================
 string_view Dim::trim(string_view src) {
-    const char * first = src.data();
-    const char * last = first + src.size();
-    while (first < last && isspace(*first))
-        ++first;
-    for (; first < last; --last) {
-        if (!isspace(last[-1]))
-            break;
-    }
-    return {first, size_t(last - first)};
+    return rtrim(ltrim(src));
 }
 
 //===========================================================================
