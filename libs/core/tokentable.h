@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2023.
+// Copyright Glen Knowles 2016 - 2025.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // Maps between a predefined set of enums and their string representations.
@@ -57,7 +57,7 @@ public:
     auto find(std::string_view name, auto defId) const;
     const char * findName(auto id, const char defName[] = nullptr) const;
 
-    // Each bit of the flags is considered as a seperate search, and the
+    // Each bit of the flags is considered as a separate search, and the
     // combined results of the searches is returned.
     template<typename T>
     std::vector<std::string_view> findNames(EnumFlags<T> flags) const;
@@ -79,7 +79,7 @@ private:
     struct Index {
         // Position in m_values of value being indexed.
         int pos{0};
-        // Distance from ideal position in index. -1 if no hash collison.
+        // Distance from ideal position in index. -1 if no hash collision.
         int distance{-1};
     };
     std::vector<Value> m_values;

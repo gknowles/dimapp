@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2022.
+// Copyright Glen Knowles 2016 - 2025.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // tokentable.cpp - dim core
@@ -48,7 +48,7 @@ TokenTable::TokenTable(const Token * src, size_t count) {
         vals->nameLen = (int)strlen(ptr->name);
     }
 
-    // use a semi-prime number of slots so a questionable hash function
+    // Use a semi-prime number of slots so a questionable hash function
     // (such as some low bits usually 0) is less likely to cluster.
     size_t num = 2 * count + 1;
 
