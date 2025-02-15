@@ -15,3 +15,18 @@ formats to file extensions, and to exclude specific files.
 Operates on files within the current branch of a git repo, this is a safety
 feature ensuring that bad changes from bad rules or file errors can always be
 reverted.
+
+== cmtupd.xml Configuration File
+
+Auto-generated vars (aka variables):
+    $CurrentYear: current year, 4-digits
+    $CommitYear: year file was last committed, 4-digits
+
+Lines matched by Match/@regex are replaced with @replace if an update action
+is triggered.
+
+The attributes @value, @regex, @replace, @default, @arg1, and @arg2 are
+interpreted as simple attribute value templates, where the embraced content is
+replaced with the value of the named Var and literal braces must be escaped.
+Braces are escaped by doubling them up, so '{{' and '}}' are interpreted as '{'
+and '} respectively.
