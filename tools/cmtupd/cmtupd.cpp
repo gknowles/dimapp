@@ -46,7 +46,7 @@ struct Condition {
     string arg2;
 };
 struct Action {
-    enum Type { kInvalid, kSkip, kUpdate } type;
+    enum Type { kInvalid, kSkip, kUpdate } type = {};
     Condition cond;
     string report;
     ConsoleAttr reportType = {};
@@ -62,6 +62,12 @@ struct Action {
         return rc;
     }
 };
+const TokenTable::Token s_actionTypes[] = {
+    { Action::kSkip, "skip" },
+    { Action::kUpdate, "update" },
+};
+const TokenTable s_actionTypeTbl(s_actionTypes);
+
 struct MatchDef {
     Regex match;
     string replace;
@@ -83,7 +89,7 @@ struct Config {
     Path configFile;
     Path gitRoot;
     vector<Rule> rules;
-    unsigned numActions = {};
+    unsigned numActions = {};   // used to assign default action priorities
 };
 
 struct Count {
@@ -209,15 +215,17 @@ static bool loadVars(unordered_map<string, string> * out, XNode * root) {
 }
 
 //===========================================================================
-static bool loadCapture(MatchDef * out, XNode * root) {
-    auto cvar = attrValue(root, "var");
-    auto cdef = attrValue(root, "default", "");
-    if (!cvar) {
-        logMsgError() << "Invalid Rule/Match/Capture element, "
-            "must have @const or @var";
-        return false;
+static bool loadCaptures(MatchDef * out, XNode * root) {
+    for (auto&& xe : elems(root, "Capture")) {
+        auto cvar = attrValue(&xe, "var");
+        auto cdef = attrValue(&xe, "default", "");
+        if (!cvar) {
+            logMsgError() << "Invalid Rule/Match/Capture element, "
+                "must have @const or @var";
+            return false;
+        }
+        out->captures.emplace_back(cvar, cdef);
     }
-    out->captures.emplace_back(cvar, cdef);
     return true;
 }
 
@@ -233,7 +241,7 @@ static bool loadCond(Condition * out, XNode * root) {
         else if (out->opName == ">") out->op = greater<string>();
         else if (out->opName == ">=") out->op = greater_equal<string>();
         else {
-            logMsgError() << "Invalid Rule/Match/Action/Cond/@op, "
+            logMsgError() << "Invalid Rule/Match/Action/@op, "
                 "allowed values: =, !=, <, <=, >, or >=";
             return false;
         }
@@ -244,49 +252,53 @@ static bool loadCond(Condition * out, XNode * root) {
 }
 
 //===========================================================================
-static bool loadAction(
+static bool loadActions(
     MatchDef * out,
     XNode * root,
-    unsigned * numActions,
-    Action::Type type
+    unsigned * numActions
 ) {
-    auto & act = out->actions.emplace_back();
-    act.type = type;
-    auto rep = attrValue(root, "report", "???");
-    if (type == Action::kUpdate && s_opts.check)
-        rep = attrValue(root, "checkReport", rep);
-    act.report = rep;
-    if (!parse(&act.reportType, attrValue(root, "reportType", "normal"))) {
-        logMsgError() << "Invalid Rule/Match/Action/@reportType, must be: "
-            "normal, cheer, note, warn, or error";
-        return false;
+    for (auto&& xe : elems(root, "Action")) {
+        auto & act = out->actions.emplace_back();
+        act.type = s_actionTypeTbl.find(
+            attrValue(&xe, "type"),
+            Action::kInvalid
+        );
+        if (!act.type) {
+            logMsgError() << "Invalid Rule/Match/Action/@type, must be: "
+                "skip, or update";
+            return false;
+        }
+        auto rep = attrValue(&xe, "report", "???");
+        if (act.type == Action::kUpdate && s_opts.check)
+            rep = attrValue(&xe, "checkReport", rep);
+        act.report = rep;
+        if (!parse(&act.reportType, attrValue(&xe, "reportType", "normal"))) {
+            logMsgError() << "Invalid Rule/Match/Action/@reportType, must be: "
+                "normal, cheer, note, warn, or error";
+            return false;
+        }
+        if (act.type == Action::kUpdate && act.reportType <= kConsoleNormal) {
+            logMsgError() << "Update actions must have reportType greater "
+                "than 'normal'";
+            return false;
+        }
+        act.reportPriority = ++*numActions;
+        if (!loadCond(&act.cond, &xe))
+            return false;
     }
-    if (type == Action::kUpdate && act.reportType <= kConsoleNormal) {
-        logMsgError() << "Update actions must have reportType greater "
-            "than 'normal'";
-        return false;
-    }
-    act.reportPriority = ++*numActions;
-    return loadCond(&act.cond, root);
+    return true;
 }
 
 //===========================================================================
-static bool loadMatches(Rule * out, XNode * root, unsigned * numMatches) {
+static bool loadMatches(Rule * out, XNode * root, unsigned * numActions) {
     for (auto&& xmatch : elems(root, "Match")) {
         auto & match = out->matchDefs.emplace_back();
         match.match.pattern = attrValue(&xmatch, "regex");
         match.replace = attrValue(&xmatch, "replace", "");
-        for (auto&& xe : elems(&xmatch)) {
-            bool success = false;
-            if (xe.name == "Capture"sv) {
-                success = loadCapture(&match, &xe);
-            } else if (xe.name == "Skip"sv) {
-                success = loadAction(&match, &xe, numMatches, Action::kSkip);
-            } else if (xe.name == "Update"sv) {
-                success = loadAction(&match, &xe, numMatches, Action::kUpdate);
-            }
-            if (!success)
-                return false;
+        if (!loadCaptures(&match, &xmatch)
+            || !loadActions(&match, &xmatch, numActions)
+        ) {
+            return false;
         }
     }
     return true;

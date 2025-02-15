@@ -22,9 +22,9 @@ and '} respectively.
         replace="{Prefix}Copyright {Owner} {FirstYear} - {$CurrentYear}.">
       <Capture var="FirstYear"/>
       <Capture var="LastYear" default="{FirstYear}"/>
-      <Skip arg1="{LastYear}" op=">" arg2="{$CommitYear}"
+      <Action type="skip" arg1="{LastYear}" op=">" arg2="{$CommitYear}"
           report="NEWER" reportType="warn"/>
-      <Update arg1="{LastYear}" op="&lt;" arg2="{$CommitYear}"
+      <Action type="update" arg1="{LastYear}" op="&lt;" arg2="{$CommitYear}"
           report="UPDATED" checkReport="obsolete" reportType="note"/>
     </Match>
     <Group>
