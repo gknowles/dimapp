@@ -669,7 +669,7 @@ IN_VARIABLE:
         case '{':
             goto FINISHED;
         case '}':
-            if (auto str = string(base, ptr - 1); vars(&var, str))
+            if (auto str = string(trim({base, ptr - 1})); vars(&var, str))
                 out.append(var);
             base = ptr;
             goto IN_FIXED;
