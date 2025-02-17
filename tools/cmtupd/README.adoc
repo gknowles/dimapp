@@ -21,8 +21,14 @@ reverted.
 
 == cmtupd.xml Configuration File
 Auto-generated vars (aka variables):
-    $CurrentYear: current year, 4-digits
-    $CommitYear: year file was last committed, 4-digits
+
+[%autowidth]
+|===
+| Name         | Description
+
+| $CurrentYear | Current year, 4-digits
+| $CommitYear  | Year file was last committed, 4-digits
+|===
 
 Lines matched by Match/@regex are replaced with @replace if an update action
 is triggered.
