@@ -11,12 +11,12 @@ Markup documentation processing.
 * Assumes documentation sources are stored in a git repository.
 * Single configuration file defines how site is generated, looks for
   "&lt;GIT_ROOT>/docs/docgen.xml" by default.
-** Can defer file and URL mappings to revision of docgen.xml at each branch/tag
-   being generated.
+** File and URL mappings are defered to revision of docgen.xml at each
+   branch/tag being generated.
 * Allows all markup languages supported by github-markup.
 * Syntax highlighting done dynamically by
   https://highlightjs.org[highlight.js].
-* Documentation for multiple product versions selectable via dropdown.
+* Documentation for multiple product versions with dropdown to switch.
 * Generates per page table of contents.
 * Updates cross references links between pages within each version.
 ** Versions selected from git via list of branch/tag combinations.
@@ -46,7 +46,8 @@ Markup documentation processing.
 ** https://highlightjs.org[highlight.js] 11.9.0
 
 The others are external dependencies of the generated site, but github-markup
-is a ruby gem that must be installed for sites to be generated.
+is a ruby gem that must be installed (along with ruby) for sites to be
+generated.
 
 == Code sample verification
 * Single docgen.xml file defines how samples are verified.
@@ -55,6 +56,7 @@ is a ruby gem that must be installed for sites to be generated.
 ** AsciiDoc
 ** Markdown
 * Apply compile and scripting rules defined for the language in docgen.xml.
+* Compare output with what's specified in the documentation.
 
 === AsciiDoc
 Comment (////) and code (----) blocks explicitly marked as source and with a
@@ -132,7 +134,7 @@ case that range extends to the last line.
 * test getline <line> <start pos> - marks keyboard input from user
 * test noscript - compile only test, don't try scripts
 
-=== Format of script.txt
+=== Format of script.txt (for exposition only)
 Each line starts with the type (a single character), a space, and the content
 of the line. The types are:
 

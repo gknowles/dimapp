@@ -16,8 +16,10 @@ Operates on files within the current branch of a git repo, this is a safety
 feature ensuring that bad changes from bad rules or file errors can always be
 reverted.
 
-== cmtupd.xml Configuration File
+== Dependencies
+* https://git-scm.com[git]
 
+== cmtupd.xml Configuration File
 Auto-generated vars (aka variables):
     $CurrentYear: current year, 4-digits
     $CommitYear: year file was last committed, 4-digits

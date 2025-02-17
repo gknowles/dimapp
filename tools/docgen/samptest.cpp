@@ -37,7 +37,7 @@ struct CodeBlock {
 };
 
 enum TestAttr {
-    // NOTE: These enums are ordered by priority of execution.
+    // NOTE: These enums are in priority of execution order, DO NOT REORDER.
     kTestInvalid,
     kTestIgnore,
     kTestLanguage,
