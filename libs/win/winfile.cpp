@@ -161,6 +161,12 @@ WinError IFileOpBase::start(
 
     overlapped() = {};
 
+    // Note that non-blocking (aka overlapped) IO is always posted to an IO
+    // thread that then makes the OS call. This is because when a thread ends
+    // all of it's incomplete non-blocking IO requests are canceled by the OS
+    // and, unlike other threads, we know the File IO threads will hang around
+    // until the program shuts down.
+
     if (asyncOp()) {
         taskPush(s_hq, this);
         return ERROR_IO_PENDING;
