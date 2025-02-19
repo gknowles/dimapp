@@ -667,7 +667,8 @@ SOCKET Dim::iSocketCreate() {
         FILE_SKIP_SET_EVENT_ON_HANDLE
     )) {
         logMsgError()
-            << "SetFileCompletionNotificationModes(SKIP_EVENT_ON_HANDLE): "
+            << "SetFileCompletionNotificationModes("
+                "FILE_SKIP_SET_EVENT_ON_HANDLE): "
             << WinError{};
     }
 
