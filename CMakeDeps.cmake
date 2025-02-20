@@ -7,6 +7,7 @@
 # conf/app.xml.sample
 # conf/cmtupd.xml
 # configure.bat
+# docs/howto-add-submodule.md
 # libs/app/app.cpp
 # libs/app/app.h
 # libs/app/appint.h
@@ -328,6 +329,7 @@
 # vendor/dimcli
 # vendor/dimcli/libs/dimcli/cli.cpp
 # vendor/dimcli/libs/dimcli/cli.h
+# vendor/gh-pages
 # web/favicon.ico
 # web/initapp.js
 # web/srv/about-account.html
