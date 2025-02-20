@@ -55,6 +55,13 @@ static bool loadVersions(Config * out, XNode * root) {
         logMsgError() << "No versions defined for site.";
         return false;
     }
+    for (auto&& ver : out->versions) {
+        auto ib = out->versionsByTag.try_emplace(ver.tag, &ver);
+        if (!ib.second) {
+            logMsgError() << "Multiple versions with same @tag attribute.";
+            return false;
+        }
+    }
     if (out->defVersion == -1)
         out->defVersion = 0;
     return true;
@@ -164,7 +171,7 @@ static bool loadPage(Page * out, XNode * root) {
     out->urlSegment = attrValue(root, "url", "");
     if (out->urlSegment.empty())
         out->urlSegment = Path(out->file).stem();
-    out->pageLayout = attrValue(root, "pageLayout", "");
+    out->pageLayout = attrValue(root, "pageLayout", "default");
     out->patch = trimBlock(text(firstChild(root, "Patch"), ""));
     return true;
 }

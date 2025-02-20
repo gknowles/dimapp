@@ -548,9 +548,7 @@ static CharBuf processPageContent(
     auto cfg = info->ver.cfg ? info->ver.cfg.get() : info->out;
     string layname = info->ver.layout.empty() ? "default" : info->ver.layout;
     auto & layout = cfg->layouts.find(layname)->second;
-    auto pglayname = info->page.pageLayout.empty()
-        ? "default"s
-        : info->page.pageLayout;
+    auto pglayname = info->page.pageLayout;
     auto & pglay = cfg->pageLayouts.find(pglayname)->second;
 
     updateXrefLinks(&content, layout);
@@ -644,15 +642,12 @@ static void genPage(GenPageInfo * info, unsigned phase = 0) {
 
     if (phase == what++) {
         // Load page markup.
-        auto pglayname = info->page.pageLayout.empty()
-            ? "default"s
-            : info->page.pageLayout;
+        auto pglayname = info->page.pageLayout;
         auto pglay = cfg->pageLayouts.find(pglayname);
         if (pglay == cfg->pageLayouts.end()) {
             logMsgError() << "Tag '" << info->ver.tag << "': page layout '"
                 << pglayname << "' not defined.";
-            appSignalShutdown(EX_DATAERR);
-            return;
+            return appSignalShutdown(EX_DATAERR);
         }
         loadContent(
             [info, what](auto && content) {
@@ -668,8 +663,7 @@ static void genPage(GenPageInfo * info, unsigned phase = 0) {
     if (info->content.empty()) {
         logMsgError() << info->page.file << ", tag '" << info->ver.tag
             << "': unable to load content";
-        appSignalShutdown(EX_DATAERR);
-        return;
+        return appSignalShutdown(EX_DATAERR);
     }
     if (phase == what++) {
         // Save markup to temporary file.
@@ -1059,7 +1053,15 @@ static void genSite(Config * out, unsigned phase) {
         // Generate pages
         for (auto && ver : out->versions) {
             auto spec = ver.cfg ? ver.cfg.get() : out;
-            string layname = ver.layout.empty() ? "default" : ver.layout;
+            if (!spec->versionsByTag.contains(ver.tag)) {
+                logMsgError() << out->configFile << ", tag '" << ver.tag
+                    << "': tagged version of config file has matching no "
+                        "Version/@tag";
+                return appSignalShutdown(EX_DATAERR);
+            }
+            auto layname = spec->versionsByTag[ver.tag]->layout;
+            if (layname.empty())
+                layname = "default";
             auto layout = spec->layouts.find(layname);
 
             // Load favicon.ico
@@ -1115,8 +1117,7 @@ static void genSite(Config * out, unsigned phase) {
         }
 
         logPauseStopwatch();
-        appSignalShutdown(EX_OK);
-        return;
+        return appSignalShutdown(EX_OK);
     }
 
     assert(!"unknown phase");

@@ -99,6 +99,7 @@ struct Config {
     std::string repoUrl;
     size_t defVersion = (size_t) -1;
     std::vector<Version> versions;
+    std::unordered_map<std::string, Version*> versionsByTag;
 
     std::string sampDir;
     std::unordered_map<std::string, std::shared_ptr<Compiler>> compilers;
