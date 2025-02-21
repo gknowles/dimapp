@@ -7,6 +7,8 @@
 # conf/app.xml.sample
 # conf/cmtupd.xml
 # configure.bat
+# docs/docgen.xml
+# docs/favicon.ico
 # docs/howto-add-submodule.md
 # libs/app/app.cpp
 # libs/app/app.h
