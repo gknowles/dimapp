@@ -87,6 +87,12 @@ struct Layout {
     std::vector<Page> pages;
 };
 
+struct SiteFile {
+    std::string file;
+    std::string tag;
+    std::string url;
+};
+
 struct Config {
     Dim::Path configFile;
     Dim::Path gitRoot;
@@ -100,6 +106,7 @@ struct Config {
     size_t defVersion = (size_t) -1;
     std::vector<Version> versions;
     std::unordered_map<std::string, Version*> versionsByTag;
+    std::vector<SiteFile> files;
 
     std::string sampDir;
     std::unordered_map<std::string, std::shared_ptr<Compiler>> compilers;

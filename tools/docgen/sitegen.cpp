@@ -971,8 +971,8 @@ static void loadFavicon(
                 if (out != spec)
                     fname.resolve(spec->tag);
                 addOutput(out, fname, CharBuf(content), false);
-                genSite(out, phase);
             }
+            genSite(out, phase);
         },
         *out,
         tag,
@@ -1004,8 +1004,25 @@ static void genSite(Config * out, unsigned phase) {
         // Load favicon.ico.
         loadFavicon(out, out, what, "HEAD");
 
+        // Load site files
+        for (auto&& file : out->files) {
+            out->pendingWork += 1;
+            loadContent(
+                [out, &file, what](auto && content) {
+                    if (!content.empty()) {
+                        Path fname(file.url);
+                        addOutput(out, fname, CharBuf(content), false);
+                    }
+                    genSite(out, what);
+                },
+                *out,
+                file.tag,
+                file.file
+            );
+        }
+
         // Load layouts of all versions.
-        for (auto && ver : out->versions) {
+        for (auto&& ver : out->versions) {
             auto layname = ver.layout;
 
             if (!layname.empty()) {
@@ -1023,8 +1040,8 @@ static void genSite(Config * out, unsigned phase) {
                             fLoadSite
                         )) {
                             ver.cfg->tag = ver.tag;
-                            genSite(out, what);
                         }
+                        genSite(out, what);
                     },
                     *out,
                     ver.tag,

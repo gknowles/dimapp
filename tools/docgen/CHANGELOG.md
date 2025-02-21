@@ -10,6 +10,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
+## docgen 1.5.0 (2025-02-20)
+- Fixed - Honor non-default layouts from older tagged versions
+- Added - Support for adding arbitrary site wide files
+
 ## docgen 1.4.0 (2024-07-11)
 - Cosmetic - Update bootstrap to 4.6.2 and highlistjs to 11.9.0
 - Fixed - Race condition detecting child process completions

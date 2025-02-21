@@ -68,6 +68,25 @@ static bool loadVersions(Config * out, XNode * root) {
 }
 
 //===========================================================================
+static bool loadFiles(Config * out, XNode * root) {
+    for (auto && xe : elems(root, "File")) {
+        auto & file = out->files.emplace_back();
+        file.file = attrValue(&xe, "file", "");
+        file.tag = attrValue(&xe, "tag", "");
+        file.url = attrValue(&xe, "url", "");
+        if (file.tag.empty()) {
+            logMsgError() << "Missing required File/@tag attribute.";
+            return false;
+        }
+        if (file.file.empty()) {
+            logMsgError() << "Missing required File/@file attribute.";
+            return false;
+        }
+    }
+    return true;
+}
+
+//===========================================================================
 static bool loadSpawn(Spawn * out, XNode * root) {
     for (auto&& elem : elems(root, "Arg"))
         out->args.emplace_back(attrValue(&elem, "value", ""));
@@ -285,7 +304,9 @@ unique_ptr<Config> loadConfig(
         out->github = true;
         out->repoUrl = attrValue(github, "repoUrl", "");
     }
-    if (!loadVersions(out.get(), site)) {
+    if (!loadVersions(out.get(), site)
+        || !loadFiles(out.get(), site)
+    ) {
         return {};
     }
 
@@ -362,7 +383,8 @@ void loadContent(
     string_view tag,
     string_view file
 ) {
-    auto path = Path(file).resolve(site.configFile.parentPath());
+    auto configDir = site.configFile.parentPath();
+    auto path = Path(file).resolve(configDir);
     if (tag == "HEAD") {
         struct FileContent : IFileReadNotify {
             function<void(string&&)> fn;
@@ -398,7 +420,7 @@ void loadContent(
     auto cmdline = Cli::toCmdlineL(
         "git",
         "-C",
-        site.configFile.parentPath(),
+        configDir,
         "show",
         objname
     );
