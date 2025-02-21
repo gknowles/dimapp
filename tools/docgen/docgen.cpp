@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2020 - 2024.
+// Copyright Glen Knowles 2020 - 2025.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // docgen.cpp - docgen
@@ -15,7 +15,7 @@ using namespace Dim;
 *
 ***/
 
-const VersionInfo kVersion = { 1, 4, 0 };
+const VersionInfo kVersion = { 1, 5, 0 };
 
 
 /****************************************************************************
