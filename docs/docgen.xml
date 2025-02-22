@@ -15,8 +15,8 @@ https://github.com/gknowles/dimapp/tree/master/tools/docgen
         url="tools/docgen/schema.xsd"/>
   </Site>
   <Layout name="default">
-    <Page name="About" file="../README.md" default="true"/>
-    <Page name="Change Log" file="../CHANGELOG.md"/>
+    <Page name="About" file="about.adoc" default="true"/>
+    <Page name="Change Log" file="../CHANGELOG.md" url="changelog"/>
   </Layout>
   <PageLayout name="default">
     <Column content="toc" maxWidth="25%"/>

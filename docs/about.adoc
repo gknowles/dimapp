@@ -1,0 +1,50 @@
+////
+Copyright Glen Knowles 2025.
+Distributed under the Boost Software License, Version 1.0.
+////
+
+= About
+:idprefix:
+:idseparator: -
+
+== Overview
+Windows framework for server and console applications
+
+* Run in console or as service
+* XML config files
+* Diagnostics
+** Logging to console and/or file
+** Performance counters
+** Crash dump files
+** Web UI
+*** External files
+*** Compiled into binary
+* Task queue
+* Timers
+* Containers
+** bitspan/bitview
+** charbuf
+** intset
+** strtrie
+** tempheap
+** tokentable - string to/from enum bimap
+** file io
+*** sync/async
+*** monitor for change
+*** ruby style filename globbing
+** Net
+*** tcp
+*** http2
+*** tls via SSPI
+*** windows pipes
+* Utilities
+** cmtupd
+** docgen
+** pargen
+** resupd
+** tnet
+** xsdgen
+
+== This Website
+It's very bare bones at this point and largely exists just to host schema files
+(xml, json, etc).
