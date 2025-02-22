@@ -15,7 +15,7 @@ using namespace Dim;
 *
 ***/
 
-const VersionInfo kVersion = { 2, 0, 0 };
+const VersionInfo kVersion = { 2, 0, 1 };
 
 
 /****************************************************************************
@@ -789,8 +789,6 @@ static void processFiles(const Config * cfg) {
     }
     args.insert(args.end(), s_opts.files.begin(), s_opts.files.end());
     auto res = execToolWait(Cli::toCmdline(args), "List depot files");
-    if (res.output.empty())
-        return;
     vector<string_view> fnames;
     split(&fnames, res.output, '\n');
 

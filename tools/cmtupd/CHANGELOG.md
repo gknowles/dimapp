@@ -10,7 +10,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
-## cmtupd 2.0.0 (2024-02-14)
+## cmtupd 2.0.1 (2025-02-22)
+- Fixed - Hang when no matching files are selected
+
+## cmtupd 2.0.0 (2025-02-14)
 - Added - Allow Var elements as direct children of Comments
 - Changed - Replace implicit copyright action with explicit configuration
 
