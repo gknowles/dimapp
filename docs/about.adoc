@@ -39,7 +39,7 @@ Windows framework for server and console applications
 *** tcp
 *** http2
 *** tls via SSPI
-*** windows pipes
+*** pipes
 * Utilities
 ** cmtupd
 ** docgen

@@ -17,7 +17,8 @@ Distributed under the Boost Software License, Version 1.0.
     - git commit --allow-empty -m "Initial gh-pages commit"
     - git push -u origin gh-pages
 3. Add as vendor submodule
-    - git submodule add -b gh-pages https://github.com/gknowles/dimapp.git
-      gh-pages
+    - git submodule add -b gh-pages <url to git repository> gh-pages
+      (would using "origin" for the repository do what we want?)
 
 # Outstanding Issues
+None

@@ -15,7 +15,7 @@ Distributed under the Boost Software License, Version 1.0.
 [cov-link]: https://codecov.io/gh/gknowles/dimapp/tree/master
 [cov-badge]: https://codecov.io/gh/gknowles/dimapp/branch/master/graph/badge.svg?token=AsZbKqf6lA
 
-Windows server application framework
+Windows framework for server and console applications.
 
 ## Working on the dimapp project
 ### Prerequisites
