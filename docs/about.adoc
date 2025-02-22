@@ -7,6 +7,9 @@ Distributed under the Boost Software License, Version 1.0.
 :idprefix:
 :idseparator: -
 
+It's very bare bones at this point and largely exists just to host schema files
+(for xml, json, etc).
+
 == Overview
 Windows framework for server and console applications
 
@@ -44,7 +47,3 @@ Windows framework for server and console applications
 ** resupd
 ** tnet
 ** xsdgen
-
-== This Website
-It's very bare bones at this point and largely exists just to host schema files
-(xml, json, etc).
