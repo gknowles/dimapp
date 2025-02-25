@@ -7,6 +7,7 @@
 # conf/app.xml.sample
 # conf/cmtupd.xml
 # configure.bat
+# docs/about.adoc
 # docs/docgen.xml
 # docs/favicon.ico
 # docs/howto-add-submodule.md
