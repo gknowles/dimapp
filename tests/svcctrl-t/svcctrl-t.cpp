@@ -143,16 +143,11 @@ void internalTest() {
 *
 ***/
 
-//===========================================================================
-void app(int argc, char * argv[]) {
-    Cli cli;
-    cli.helpNoArgs();
-    auto & test = cli.opt<bool>("test.")
-        .desc("Run internal unit tests");
-    if (!cli.parse(argc, argv))
-        return appSignalUsageError();
+static bool s_test;
 
-    if (*test)
+//===========================================================================
+void app(Cli & cli) {
+    if (s_test)
         internalTest();
     testSignalShutdown();
 }
@@ -166,5 +161,8 @@ void app(int argc, char * argv[]) {
 
 //===========================================================================
 int main(int argc, char * argv[]) {
-    return appRun(app, argc, argv);
+    Cli cli;
+    cli.helpNoArgs().action(app);
+    cli.opt(&s_test, "test.").desc("Run internal unit tests");
+    return appRun(argc, argv);
 }

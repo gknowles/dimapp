@@ -16,7 +16,7 @@ using namespace Dim;
 ***/
 
 //===========================================================================
-static void app(int argc, char *argv[]) {
+static void app(Cli & cli) {
     using enum File::OpenMode;
 
     string fn = "file-t.tmp";
@@ -110,6 +110,7 @@ static void app(int argc, char *argv[]) {
 
 //===========================================================================
 int main(int argc, char * argv[]) {
-    int code = appRun(app, argc, argv);
+    Cli().action(app);
+    int code = appRun(argc, argv);
     return code;
 }

@@ -1147,7 +1147,7 @@ static void genSite(Config * out, unsigned phase) {
 *
 ***/
 
-static bool genCmd(Cli & cli);
+static void genCmd(Cli & cli);
 
 //===========================================================================
 CmdOpts::CmdOpts() {
@@ -1161,17 +1161,14 @@ CmdOpts::CmdOpts() {
 }
 
 //===========================================================================
-static bool genCmd(Cli & cli) {
+static void genCmd(Cli & cli) {
     auto cfg = loadConfig(s_opts.cfgfile, fLoadSite);
-    if (!cfg) {
-        cli.fail(EX_DATAERR, "");
-        return true;
-    }
+    if (!cfg)
+        return cli.fail(EX_DATAERR, "");
     if (cfg->siteDir.empty()) {
         logMsgError() << cfg->configFile
             << ": Output directory for site unspecified.";
-        cli.fail(EX_DATAERR, "");
-        return true;
+        return cli.fail(EX_DATAERR, "");
     }
 
     ostringstream os;
@@ -1182,5 +1179,4 @@ static bool genCmd(Cli & cli) {
     genSite(cfg.release());
 
     cli.fail(EX_PENDING, "");
-    return true;
 }

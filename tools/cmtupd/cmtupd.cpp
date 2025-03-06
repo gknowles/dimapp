@@ -840,32 +840,7 @@ static void processFiles(const Config * cfg) {
 ***/
 
 //===========================================================================
-CmdOpts::CmdOpts() {
-    Cli cli;
-    cli.optVec<string>(&files, "[FILE]")
-        .desc("Files to search (via git ls-files) for updatable comments.");
-    cli.opt<string>(&configFile, "c conf")
-        .desc("Configuration to process. "
-            "(default: {GIT_ROOT}/conf/cmtupd.xml)");
-    cli.opt<bool>(&check, "c check").desc("Check for updatable comments.");
-    cli.opt<bool>(&update, "u update").desc("Update found comments.");
-    cli.opt<bool>(&show, "s show").desc("Show configuration being executed.");
-    cli.opt<bool>("v verbose.")
-        .desc("Show status of all matched files. Use twice to also show "
-            "excluded files.")
-        .check([this](auto&, auto&, auto & val) {
-            verbose += (val == "1");
-            return true;
-        });
-}
-
-//===========================================================================
-static void app(int argc, char *argv[]) {
-    Cli cli;
-    cli.helpNoArgs();
-    if (!cli.parse(argc, argv))
-        return appSignalUsageError();
-
+static void app(Cli & cli) {
     auto conf = loadConfig(s_opts.configFile);
     if (!conf)
         return;
@@ -887,6 +862,27 @@ static void app(int argc, char *argv[]) {
 }
 
 //===========================================================================
+CmdOpts::CmdOpts() {
+    Cli cli;
+    cli.helpNoArgs().action(app);
+    cli.optVec<string>(&files, "[FILE]")
+        .desc("Files to search (via git ls-files) for updatable comments.");
+    cli.opt<string>(&configFile, "c conf")
+        .desc("Configuration to process. "
+            "(default: {GIT_ROOT}/conf/cmtupd.xml)");
+    cli.opt<bool>(&check, "c check").desc("Check for updatable comments.");
+    cli.opt<bool>(&update, "u update").desc("Update found comments.");
+    cli.opt<bool>(&show, "s show").desc("Show configuration being executed.");
+    cli.opt<bool>("v verbose.")
+        .desc("Show status of all matched files. Use twice to also show "
+            "excluded files.")
+        .check([this](auto&, auto&, auto & val) {
+            verbose += (val == "1");
+            return true;
+        });
+}
+
+//===========================================================================
 int main(int argc, char * argv[]) {
-    return appRun(app, argc, argv, kVersion);
+    return appRun(argc, argv, kVersion);
 }

@@ -785,7 +785,7 @@ void writeParser(
     ostream & hfile,
     ostream & cppfile,
     const Grammar & src,
-    const RunOptions & opts
+    const CmdOpts & opts
 ) {
     const string & rootname = src[kOptionRoot];
     logMsgDebug() << "parser: " << rootname;

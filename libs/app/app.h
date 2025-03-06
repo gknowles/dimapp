@@ -1,21 +1,25 @@
-// Copyright Glen Knowles 2015 - 2022.
-// Distributed under the Boost Software License, Version 1.0.
+// Copyright Glen Knowles 2015 - 2022. Distributed under the Boost Software
+// License, Version 1.0.
 //
 // app.h - dim app
 //
 // Application life-cycle
 //
-// 1. Stopped - application performs initialization and then calls appRun,
-//      usually from main(), to start the framework.
-// 2. Starting - framework initialization, state never seen by application
-// 3. Running - framework calls IAppNotify::onAppRun(). Application then does
-//      stuff, and eventually calls appSignalShutdown(). A command line
-//      tool might do all its work and signal shutdown from inside onAppRun.
-//      Whereas a server might start listening for socket connections and
-//      return, eventually calling appSignalShutdown() in response to some
-//      later event.
-// 4. Stopping - process all shutdown monitors and shutdown the framework
-// 5. Stopped - framework is no longer running and returns from appRun call
+// 1. Stopped - application configures command line options via Cli and
+//      performs any other initialization, and then calls appRun, usually from
+//      main(), to start the framework.
+// 2. Starting - framework initialization, state never seen by application.
+// 3. Running - framework calls Cli::exec() on the event thread. Application
+//      then does stuff, and eventually calls appSignalShutdown(). A command
+//      line tool might do all its work and signal shutdown from inside the
+//      exec handler. Whereas a server might start listening for socket
+//      connections and return, eventually calling appSignalShutdown() in
+//      response to some later event. For windows services the state is changed
+//      from PENDING_START to RUNNING only after the exec handler returns.
+// 4. Stopping - triggered by appSignalShutdown(), process all shutdown
+//      monitors and shutdown the framework.
+// 5. Stopped - framework is no longer running and appRun returns with the exit
+//      code passed to appSignalShutdown().
 //
 // After the framework has stopped you can call appRun over again.
 
@@ -42,21 +46,6 @@ namespace Dim {
 *   Run application
 *
 ***/
-
-class IAppNotify {
-public:
-    virtual ~IAppNotify() = default;
-
-    // Since this is called on the event thread, servers should return promptly
-    // to allow event processing to continue. This is especially important when
-    // running as a service because the Windows SCM requires regular progress
-    // reports during startup.
-    virtual void onAppRun() = 0;
-
-    // argc & argv are set by the framework before the call to onAppRun()
-    int m_argc{};
-    char ** m_argv{};
-};
 
 enum AppFlags : unsigned {
     fAppWithChdir = 0x01,
@@ -85,26 +74,27 @@ enum AppFlags : unsigned {
     fAppReadOnlyFlags = fAppIsService,
 };
 
-// Returns exit code.
+// Before calling appRun, the application must configure (via Cli) subcommands
+// and/or the default cli.action().
+//
+// The default action (or subcommand) is called by the framework on the event
+// thread, therefore servers should spawn whatever tasks they need then return
+// promptly to allow event processing to continue. This is especially important
+// when running as a service because the Windows SCM requires regular progress
+// reports during startup.
 //
 // When running as a Windows service, the state is initially set to
-// START_PENDING and only switched to RUNNING after calling either the
-// onAppRun() method (for notifier version) or the function (for the function
-// version).
+// START_PENDING and only switched to RUNNING after the exec action has
+// returned.
+//
+// For a command line utility that doesn't do any asynchronous work it is fine
+// to do all of the work in the action handler and then call
+// appSignalShutdown() just before returning.
 int appRun(
-    IAppNotify * app,
     int argc,
     char * argv[],
     const VersionInfo & ver = {},   // defaults to envExecVersion()
-    std::string_view baseName = {}, // defaults to stem of execuable file name
-    EnumFlags<AppFlags> flags = fAppUtility
-);
-int appRun(
-    std::function<void(int argc, char *argv[])> fn,
-    int argc,
-    char * argv[],
-    const VersionInfo & ver = {},   // defaults to envExecVersion()
-    std::string_view baseName = {}, // defaults to stem of execuable file name
+    std::string_view baseName = {}, // defaults to stem of executable file name
     EnumFlags<AppFlags> flags = fAppUtility
 );
 

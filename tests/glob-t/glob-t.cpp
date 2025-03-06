@@ -275,7 +275,7 @@ static void fileTests() {
 }
 
 //===========================================================================
-static void app(int argc, char *argv[]) {
+static void app(Cli & cli) {
     parseTests();
     matchTests();
     fileTests();
@@ -293,6 +293,7 @@ static void app(int argc, char *argv[]) {
 int main(int argc, char * argv[]) {
     // _CrtSetBreakAlloc(2109);
 
-    int code = appRun(app, argc, argv);
+    Cli().action(app);
+    int code = appRun(argc, argv);
     return code;
 }

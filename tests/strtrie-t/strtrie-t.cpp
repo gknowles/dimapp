@@ -271,32 +271,25 @@ inline static void randomFill(size_t count, size_t maxLen, size_t charVals) {
 *
 ***/
 
+static int s_fill;
+static bool s_test;
+
 //===========================================================================
-static void app(int argc, char *argv[]) {
-    cout.imbue(locale(""));
-    Cli cli;
-    cli.helpNoArgs();
-    cli.opt<bool>(&s_verbose, "v verbose.")
-        .desc("Dump container state between tests.");
-    auto & fill = cli.opt<int>("f fill").siUnits("")
-        .desc("Randomly fill a container with this many values.");
-    auto & test = cli.opt<bool>("test", false).desc("Run internal unit tests");
-    if (!cli.parse(argc, argv))
-        return appSignalUsageError();
-    if (!*test && !*fill) {
+static void app(Cli & cli) {
+    if (!s_test && !s_fill) {
         cout << "No tests run" << endl;
         return appSignalShutdown(EX_OK);
     }
 
-    if (*test) {
+    if (s_test) {
         internalTests();
         fillTests();
     }
-    if (*fill)
-        randomFill(*fill, 25, 26);
+    if (s_fill)
+        randomFill(s_fill, 25, 26);
 
     testSignalShutdown();
-    if (*fill)
+    if (s_fill)
         logStopwatch();
 }
 
@@ -309,5 +302,13 @@ static void app(int argc, char *argv[]) {
 
 //===========================================================================
 int main(int argc, char * argv[]) {
-    return appRun(app, argc, argv, kVersion);
+    cout.imbue(locale(""));
+    Cli cli;
+    cli.helpNoArgs().action(app);
+    cli.opt(&s_verbose, "v verbose.")
+        .desc("Dump container state between tests.");
+    cli.opt(&s_fill, "f fill").siUnits("")
+        .desc("Randomly fill a container with this many values.");
+    cli.opt(&s_test, "test", false).desc("Run internal unit tests");
+    return appRun(argc, argv, kVersion);
 }

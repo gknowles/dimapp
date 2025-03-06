@@ -108,16 +108,10 @@ void ConfigH2srvXml::onConfigChange(const XDocument & doc) {
 ***/
 
 //===========================================================================
-static void app(int argc, char *argv[]) {
+static void app(Cli & cli) {
     shutdownMonitor(&s_cleanup);
 
     webAdminAppData()["github"] = "http://github.com/gknowles/dimapp";
-
-    Cli cli;
-    cli.header(cli.header() + " sample http/2 server");
-    if (!cli.parse(argc, argv))
-        return appSignalUsageError();
-
     consoleCatchCtrlC();
 
     vector<HostAddr> addrs;
@@ -137,7 +131,10 @@ static void app(int argc, char *argv[]) {
 
 //===========================================================================
 static int doMain(int argc, char * argv[]) {
-    return appRun(app, argc, argv, kVersion, {}, fAppServer | fAppWithConsole);
+    Cli cli;
+    cli.header(cli.header() + " sample http/2 server")
+        .action(app);
+    return appRun(argc, argv, kVersion, {}, fAppServer | fAppWithConsole);
 }
 
 

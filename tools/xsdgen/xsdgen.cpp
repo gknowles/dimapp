@@ -338,31 +338,25 @@ static bool loadSchema(Schema * schema, XNode * root) {
 *
 ***/
 
-//===========================================================================
-static void app(int argc, char * argv[]) {
-    Cli cli;
-    cli.helpNoArgs();
-    auto & specfile = cli.opt<Path>("[xsd spec]")
-        .desc("Xsd specification to process, extension defaults "
-            "to '.xsdgen.xml'");
-    if (!cli.parse(argc, argv))
-        return appSignalUsageError();
+static Path s_specfile;
 
-    specfile->defaultExt("xsdgen.xml");
+//===========================================================================
+static void app(Cli & cli) {
+    s_specfile.defaultExt("xsdgen.xml");
     string content;
-    if (fileLoadBinaryWait(&content, *specfile))
+    if (fileLoadBinaryWait(&content, s_specfile))
         return appSignalUsageError(EX_DATAERR);
     XDocument doc;
-    auto root = doc.parse(content.data(), *specfile);
+    auto root = doc.parse(content.data(), s_specfile);
     if (!root || doc.errmsg()) {
-        logParseError("Parsing failed", *specfile, doc.errpos(), content);
+        logParseError("Parsing failed", s_specfile, doc.errpos(), content);
         return appSignalShutdown(EX_DATAERR);
     }
 
     Schema schema;
     if (!loadSchema(&schema, root))
         return appSignalShutdown(EX_DATAERR);
-    schema.xsdFile = *specfile;
+    schema.xsdFile = s_specfile;
     if (schema.xsdFile.extension() == ".xml")
         schema.xsdFile.setExt("");
     schema.xsdFile.setExt(".xsd");
@@ -385,7 +379,12 @@ static void app(int argc, char * argv[]) {
 
 //===========================================================================
 int main(int argc, char * argv[]) {
-    return appRun(app, argc, argv, kVersion, "xsdgen");
+    Cli cli;
+    cli.helpNoArgs().action(app);
+    cli.opt(&s_specfile, "[xsd spec]")
+        .desc("Xsd specification to process, extension defaults "
+            "to '.xsdgen.xml'");
+    return appRun(argc, argv, kVersion, "xsdgen");
 }
 
 //===========================================================================

@@ -282,7 +282,11 @@ void dedupStateTree(std::unordered_set<State> & states);
 *
 ***/
 
-struct RunOptions {
+struct CmdOpts {
+    Dim::Path srcfile;
+    std::string root;
+    bool test;
+
     bool minRules;
     bool mergeRules;
     bool resetFunctions;
@@ -294,6 +298,8 @@ struct RunOptions {
     bool writeStatePositions;
     bool writeFunctions;
     bool verbose;
+
+    CmdOpts();
 };
 
 // write generated code
@@ -301,7 +307,7 @@ void writeParser(
     std::ostream & hfile,
     std::ostream & cppfile,
     const Grammar & rules,
-    const RunOptions & opts
+    const CmdOpts & opts
 );
 
 void writeRule(

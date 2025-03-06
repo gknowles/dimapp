@@ -42,7 +42,7 @@ public:
 ***/
 
 //===========================================================================
-static void app(int argc, char *argv[]) {
+static void app(Cli & cli) {
     int line = 0;
 
     List<TestNode> list;
@@ -81,5 +81,6 @@ static void app(int argc, char *argv[]) {
 
 //===========================================================================
 int main(int argc, char * argv[]) {
-    return appRun(app, argc, argv);
+    Cli().action(app);
+    return appRun(argc, argv);
 }

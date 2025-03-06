@@ -75,7 +75,8 @@ private:
 *
 ***/
 
-static SockAddr s_localEnd;
+static SockAddr s_localAddr;
+static string s_remoteAddrStr;
 static int s_cancelAddrId;
 static ConsoleReader s_console;
 static SocketConn s_socket;
@@ -93,8 +94,8 @@ void SocketConn::onSockAddrFound(const SockAddr * ends, int count) {
         cout << "Host not found" << endl;
         appSignalShutdown(kExitConnectFailed);
     } else {
-        cout << "Connecting on " << s_localEnd << " to " << *ends << endl;
-        socketConnect(this, *ends, s_localEnd);
+        cout << "Connecting on " << s_localAddr << " to " << *ends << endl;
+        socketConnect(this, *ends, s_localAddr);
     }
 }
 
@@ -258,20 +259,11 @@ void ShutdownNotify::onShutdownClient(bool firstTry) {
 ***/
 
 //===========================================================================
-static void app(int argc, char *argv[]) {
+static void app(Cli & cli) {
     shutdownMonitor(&s_cleanup);
-
-    Cli cli;
-    cli.helpNoArgs();
-    auto & remote = cli.opt<string>("<remote address>");
-    cli.opt(&s_localEnd, "[local address]");
-    if (!cli.parse(argc, argv))
-        return appSignalUsageError();
-
     consoleCatchCtrlC();
     s_console.init();
-
-    addressQuery(&s_cancelAddrId, &s_socket, *remote, 23);
+    addressQuery(&s_cancelAddrId, &s_socket, s_remoteAddrStr, 23);
 }
 
 
@@ -283,5 +275,10 @@ static void app(int argc, char *argv[]) {
 
 //===========================================================================
 int main(int argc, char * argv[]) {
-    return appRun(app, argc, argv, kVersion, "tnet");
+    Cli cli;
+    cli.helpNoArgs();
+    cli.opt(&s_remoteAddrStr, "<remote address>");
+    cli.opt(&s_localAddr, "[local address]");
+    cli.action(app);
+    return appRun(argc, argv, kVersion, "tnet");
 }

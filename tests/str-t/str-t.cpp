@@ -192,7 +192,7 @@ static void testCopy() {
 }
 
 //===========================================================================
-static void app(int argc, char *argv[]) {
+static void app(Cli & cli) {
     testParse();
     testStrToInt();
     testToChars();
@@ -211,5 +211,6 @@ static void app(int argc, char *argv[]) {
 
 //===========================================================================
 int main(int argc, char * argv[]) {
-    return appRun(app, argc, argv);
+    Cli().action(app);
+    return appRun(argc, argv);
 }

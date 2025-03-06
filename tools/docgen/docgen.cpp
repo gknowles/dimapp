@@ -45,15 +45,8 @@ void ShutdownNotify::onShutdownClient(bool firstTry) {
 ***/
 
 //===========================================================================
-static void app(int argc, char * argv[]) {
-    Cli cli;
-    cli.helpNoArgs()
-        .helpCmd();
-
+static void app(Cli & cli) {
     shutdownMonitor(&s_cleanup);
-    if (!cli.exec(argc, argv))
-        return appSignalUsageError();
-    appSignalShutdown(cli.exitCode());
 }
 
 
@@ -65,5 +58,9 @@ static void app(int argc, char * argv[]) {
 
 //===========================================================================
 int main(int argc, char * argv[]) {
-    return appRun(app, argc, argv, kVersion);
+    Cli cli;
+    cli.helpNoArgs()
+        .helpCmd()
+        .beforeExec(app);
+    return appRun(argc, argv, kVersion);
 }

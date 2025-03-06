@@ -398,14 +398,7 @@ void Reader::onHpackHeader(
 ***/
 
 //===========================================================================
-static void app(int argc, char *argv[]) {
-    Cli cli;
-    cli.opt(&s_verbose, "v verbose.")
-        .desc("Display details of what's happening during processing.");
-    cli.versionOpt("1.0 (" __DATE__ ")");
-    if (!cli.parse(argc, argv))
-        return appSignalUsageError();
-
+static void app(Cli & cli) {
     TempHeap heap;
     HpackDecode decode(256);
     Reader out;
@@ -447,5 +440,10 @@ static void app(int argc, char *argv[]) {
 
 //===========================================================================
 int main(int argc, char * argv[]) {
-    return appRun(app, argc, argv);
+    Cli cli;
+    cli.helpNoArgs().action(app);
+    cli.opt(&s_verbose, "v verbose.")
+        .desc("Display details of what's happening during processing.");
+    cli.versionOpt("1.0 (" __DATE__ ")");
+    return appRun(argc, argv);
 }

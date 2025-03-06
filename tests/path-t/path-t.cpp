@@ -29,7 +29,7 @@ using namespace Dim;
 ***/
 
 //===========================================================================
-static void app(int argc, char * argv[]) {
+static void app(Cli & cli) {
     Path p;
 
     struct {
@@ -199,6 +199,6 @@ static void app(int argc, char * argv[]) {
 
 //===========================================================================
 int main(int argc, char * argv[]) {
-    int code = appRun(app, argc, argv);
-    return code;
+    Cli().action(app);
+    return appRun(argc, argv);
 }

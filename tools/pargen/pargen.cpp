@@ -53,7 +53,7 @@ private:
 *
 ***/
 
-static RunOptions s_cmdopts;
+static CmdOpts s_opts;
 static TaskQueueHandle s_logQ;
 
 
@@ -105,7 +105,7 @@ WSP     =/ HTAB { NoMinRules }
     [[maybe_unused]] bool valid = parseAbnf(
         rules,
         coreRules,
-        s_cmdopts.minRules
+        s_opts.minRules
     );
     assert(valid);
 }
@@ -118,7 +118,7 @@ static bool internalTest () {
     rules.addOption("%root", "LWSP");
     rules.addOption("%api.prefix", "Test");
     valid = processOptions(rules);
-    if (s_cmdopts.verbose)
+    if (s_opts.verbose)
         logMsgInfo() << "Process options: " << valid;
 
     ostringstream abnf;
@@ -126,8 +126,8 @@ static bool internalTest () {
         writeRule(abnf, rule, 79, "");
     }
     rules.clear();
-    valid = parseAbnf(rules, abnf.str(), s_cmdopts.minRules);
-    if (s_cmdopts.verbose)
+    valid = parseAbnf(rules, abnf.str(), s_opts.minRules);
+    if (s_opts.verbose)
         logMsgInfo() << "Valid: " << valid;
     if (!valid)
         return false;
@@ -139,12 +139,12 @@ static bool internalTest () {
 
     ostringstream o2;
     rules.clear();
-    valid = parseAbnf(rules, o1.str(), s_cmdopts.minRules);
+    valid = parseAbnf(rules, o1.str(), s_opts.minRules);
     for (auto && rule : rules.rules()) {
         writeRule(o2, rule, 79, "");
     }
     valid = valid && (o1.str() == o2.str());
-    if (s_cmdopts.verbose)
+    if (s_opts.verbose)
         logMsgInfo() << "Round trip: " << valid;
     if (!valid)
         return false;
@@ -168,7 +168,7 @@ LogTask::LogTask (const LogMsg & log)
 
 //===========================================================================
 void LogTask::onLog (const LogMsg & log) {
-    if (s_cmdopts.verbose || log.type != kLogTypeDebug) {
+    if (s_opts.verbose || log.type != kLogTypeDebug) {
         auto ptr = NEW(LogTask)(log);
         if (s_logQ) {
             taskPush(s_logQ, ptr);
@@ -196,27 +196,27 @@ void LogTask::onTask () {
 *
 ***/
 
-//===========================================================================
-static void app (int argc, char * argv[]) {
-    s_logQ = taskCreateQueue("Logging", 1);
+static void app(Cli & cli);
 
+//===========================================================================
+CmdOpts::CmdOpts() {
     Cli cli;
-    // header
-    cli.header(cli.header() + " simplistic parser generator");
+    cli.header(cli.header() + " simplistic parser generator")
+        .action(app);
     // positional arguments
-    auto & srcfile = cli.opt<Path>("[source file(.abnf)]")
+    cli.opt(&srcfile, "[source file(.abnf)]")
         .desc("File containing ABNF rules to process.");
-    auto & root = cli.opt<string>("[root rule]")
+    cli.opt(&root, "[root rule]")
         .desc("Root rule to use, overrides %root in <source file>.");
     // options
     cli.helpNoArgs();
-    auto & test = cli.opt<bool>("test.").group("~").desc(
+    cli.opt(&test, "test.").group("~").desc(
         "Run internal test of ABNF parsing logic.");
-    cli.opt(&s_cmdopts.minRules, "min-rules", false)
+    cli.opt(&minRules, "min-rules", false)
         .desc("Use reduced core rules: ALPHA, DIGIT, CRLF, HEXDIG, NEWLINE, "
               "VCHAR, and WSP are shortened to fewer (usually 1) characters. "
               "And ignores user rules tagged with NoMinRules.");
-    cli.opt(&s_cmdopts.mergeRules, "m merge-rules", false)
+    cli.opt(&mergeRules, "m merge-rules", false)
         .desc("Allow merging of rules that aren't required to be separate.");
     cli.opt("f mark-functions", 1)
         .valueDesc("LEVEL")
@@ -225,45 +225,49 @@ static void app (int argc, char * argv[]) {
         .choice(1, "1", "No change to function tags (default).")
         .choice(2, "2", "Add function tags to break rule recursion.")
         .choice(3, "3", "Same as #2, but remove all existing tags first.")
-        .check([](auto & cli, auto & opt, const string & val) {
-            s_cmdopts.resetFunctions = (*opt == 0 || *opt == 3);
-            s_cmdopts.markFunctions = (*opt == 2 || *opt == 3);
+        .check([&](auto & cli, auto & opt, const string & val) {
+            resetFunctions = (*opt == 0 || *opt == 3);
+            markFunctions = (*opt == 2 || *opt == 3);
             return true;
         });
-    cli.opt(&s_cmdopts.includeCallbacks, "!C callbacks", true)
+    cli.opt(&includeCallbacks, "!C callbacks", true)
         .desc("Include callback events, otherwise generated parser reduced "
               "down to pass/fail syntax check.");
-    cli.opt(&s_cmdopts.buildStateTree, "!B build", true)
+    cli.opt(&buildStateTree, "!B build", true)
         .desc("Build the state tree, otherwise only stub versions of parser "
               "are generated.");
-    cli.opt(&s_cmdopts.stateTreeDepthLimit, "l depth-limit", 0)
+    cli.opt(&stateTreeDepthLimit, "l depth-limit", 0)
         .desc("Limit state tree depth, skip anything that would go deeper. "
               "0 for unlimited.");
-    cli.opt(&s_cmdopts.dedupStateTree, "!D dedup", true)
+    cli.opt(&dedupStateTree, "!D dedup", true)
         .desc("Purge duplicate entries from the state tree, duplicates occur "
               "when multiple paths through the rules end with the same series "
               "of transitions.");
-    cli.opt(&s_cmdopts.writeStatePositions, "s state-detail.")
+    cli.opt(&writeStatePositions, "s state-detail.")
         .desc("Include details of the states as comments in the generated "
               "parser code - may be extremely verbose.");
-    cli.opt(&s_cmdopts.writeFunctions, "write-functions", true)
+    cli.opt(&writeFunctions, "write-functions", true)
         .desc("Generate recursion breaking dependent functions.\n"
               "  \t\v\v\v\v\v\vNOTE: Disable for testing only. If disabled "
               "the generated files may not be compilable.");
-    cli.opt(&s_cmdopts.verbose, "v verbose")
+    cli.opt(&verbose, "v verbose")
         .desc("Display details of what's happening during processing.");
     // footer
     cli.footer(1 + R"(
 For additional information, see:
 https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
 )");
-    if (!cli.parse(argc, argv))
-        return appSignalUsageError();
-    if (*test) {
+}
+
+//===========================================================================
+static void app(Cli & cli) {
+    s_logQ = taskCreateQueue("Logging", 1);
+
+    if (s_opts.test) {
         int code = internalTest() ? EX_OK : EX_SOFTWARE;
         return appSignalShutdown(code);
     }
-    if (!srcfile)
+    if (!s_opts.srcfile)
         return appSignalUsageError("No value given for <source file[.abnf]>");
 
     // initialize rules
@@ -273,7 +277,7 @@ https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
 
     // process ABNF sources
     deque<string> sources;
-    sources.push_back(srcfile->defaultExt("abnf").c_str());
+    sources.push_back(s_opts.srcfile.defaultExt("abnf").c_str());
     map<string, string> contents;
     while (!sources.empty()) {
         auto path = sources.front();
@@ -286,7 +290,7 @@ https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
         if (source.empty())
             return appSignalUsageError(EX_USAGE);
         auto & content = contents[path] = move(source);
-        if (!parseAbnf(rules, content, s_cmdopts.minRules)) {
+        if (!parseAbnf(rules, content, s_opts.minRules)) {
             logParseError(
                 "parsing failed",
                 path,
@@ -304,8 +308,8 @@ https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
     if (!processOptions(rules))
         return appSignalShutdown(EX_DATAERR);
 
-    if (root->size())
-        rules.setOption(kOptionRoot, *root);
+    if (s_opts.root.size())
+        rules.setOption(kOptionRoot, s_opts.root);
 
     auto ohName = rules.optionString(kOptionApiOutputHeader);
     ofstream oh(ohName);
@@ -319,7 +323,7 @@ https://github.com/gknowles/dimapp/tree/master/tools/pargen/README.md
         logMsgError() << ocppName << ": open failed";
         return appSignalShutdown(EX_IOERR);
     }
-    writeParser(oh, ocpp, rules, s_cmdopts);
+    writeParser(oh, ocpp, rules, s_opts);
     oh.close();
     ocpp.close();
     TimePoint finish = Clock::now();
@@ -347,5 +351,5 @@ int main (int argc, char * argv[]) {
     consoleCatchCtrlC(false);
     LogTask logger;
     logMonitor(&logger);
-    return appRun(app, argc, argv, kVersion, "pargen");
+    return appRun(argc, argv, kVersion, "pargen");
 }

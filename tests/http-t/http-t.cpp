@@ -58,7 +58,7 @@ struct Test {
 ***/
 
 static bool s_verbose;
-
+static bool s_test;
 
 /****************************************************************************
 *
@@ -209,16 +209,8 @@ static void localTest() {
 ***/
 
 //===========================================================================
-static void app(int argc, char *argv[]) {
-    Cli cli;
-    cli.helpNoArgs();
-    cli.opt<bool>(&s_verbose, "v verbose.")
-        .desc("Show names of tests as they are processed.");
-    auto & test = cli.opt<bool>("test", false)
-        .desc("Run internal unit tests.");
-    if (!cli.parse(argc, argv))
-        return appSignalUsageError();
-    if (!*test) {
+static void app(Cli & cli) {
+    if (!s_test) {
         cout << "No tests run." << endl;
         return appSignalShutdown(EX_OK);
     }
@@ -237,5 +229,11 @@ static void app(int argc, char *argv[]) {
 
 //===========================================================================
 int main(int argc, char * argv[]) {
-    return appRun(app, argc, argv, kVersion);
+    Cli cli;
+    cli.helpNoArgs().action(app);
+    cli.opt(&s_verbose, "v verbose.")
+        .desc("Show names of tests as they are processed.");
+    cli.opt(&s_test, "test", false)
+        .desc("Run internal unit tests.");
+    return appRun(argc, argv, kVersion);
 }

@@ -1367,7 +1367,7 @@ static void testSamples(Config * out) {
 *
 ***/
 
-static bool testCmd(Cli & cli);
+static void testCmd(Cli & cli);
 
 //===========================================================================
 CmdOpts::CmdOpts() {
@@ -1407,17 +1407,14 @@ CmdOpts::CmdOpts() {
 }
 
 //===========================================================================
-static bool testCmd(Cli & cli) {
+static void testCmd(Cli & cli) {
     auto cfg = loadConfig(s_opts.cfgfile, fLoadTests);
-    if (!cfg) {
-        cli.fail(EX_DATAERR, "");
-        return true;
-    }
+    if (!cfg)
+        return cli.fail(EX_DATAERR, "");
     if (cfg->sampDir.empty()) {
         logMsgError() << cfg->configFile
             << ": Output directory for samples unspecified.";
-        cli.fail(EX_DATAERR, "");
-        return true;
+        return cli.fail(EX_DATAERR, "");
     }
 
     ostringstream os;
@@ -1428,5 +1425,4 @@ static bool testCmd(Cli & cli) {
     testSamples(cfg.release());
 
     cli.fail(EX_PENDING, "");
-    return true;
 }

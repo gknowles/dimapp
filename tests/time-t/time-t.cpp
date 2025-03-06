@@ -45,7 +45,7 @@ static void parseTest(int line, string_view src, string_view dst) {
 ***/
 
 //===========================================================================
-static void app(int argc, char *argv[]) {
+static void app(Cli & cli) {
     [[maybe_unused]] int line = 0;
 
     //-----------------------------------------------------------------------
@@ -86,5 +86,6 @@ static void app(int argc, char *argv[]) {
 
 //===========================================================================
 int main(int argc, char * argv[]) {
-    return appRun(app, argc, argv);
+    Cli().action(app);
+    return appRun(argc, argv);
 }

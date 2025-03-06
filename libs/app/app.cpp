@@ -23,7 +23,6 @@ static condition_variable s_runCv;
 static RunMode s_runMode{kRunStopped};
 static int s_exitcode;
 
-static IAppNotify * s_app;
 static string s_appBaseName;
 static VersionInfo s_appVer;
 static unsigned s_appIndex;
@@ -76,27 +75,6 @@ void ConfigAppXml::onConfigChange(const XDocument & doc) {
     s_dataDir = makeAppDir(configString(doc, "DataDir", "data"));
     s_appAddr.port = (unsigned) configNumber(doc, "Port", 41000);
     s_groupType = configString(doc, "GroupType", "local");
-}
-
-
-/****************************************************************************
-*
-*   FnProxyAppNotify
-*
-***/
-
-namespace {
-struct FnProxyAppNotify : public IAppNotify {
-    function<void(int, char *[])> fn;
-
-    void onAppRun() override;
-};
-} // namespace
-static FnProxyAppNotify s_fnProxyApp;
-
-//===========================================================================
-void FnProxyAppNotify::onAppRun() {
-    fn(m_argc, m_argv);
 }
 
 
@@ -187,7 +165,8 @@ static void initApp() {
         }
     }
 
-    s_app->onAppRun();
+    Cli cli;
+    cli.exec();
 }
 
 
@@ -218,20 +197,6 @@ void Dim::iAppSetFlags(EnumFlags<AppFlags> flags) {
 
 //===========================================================================
 int Dim::appRun(
-    function<void(int argc, char *argv[])> fn,
-    int argc,
-    char * argv[],
-    const VersionInfo & ver,
-    string_view baseName,
-    EnumFlags<AppFlags> flags
-) {
-    s_fnProxyApp.fn = move(fn);
-    return appRun(&s_fnProxyApp, argc, argv, ver, baseName, flags);
-}
-
-//===========================================================================
-int Dim::appRun(
-    IAppNotify * app,
     int argc,
     char * argv[],
     const VersionInfo & ver,
@@ -249,26 +214,21 @@ int Dim::appRun(
     s_appFlags = flags;
     s_appTasks.clear();
 
+    Cli cli;
     if (!s_appFlags.any(fAppWithService)) {
         s_appIndex = 1;
         s_groupIndex = 1;
     } else {
-        Cli cli;
         cli.opt(&s_appIndex, "app-index", 1)
             .desc("Identifies service when multiple instances "
                 "are configured.");
         cli.opt(&s_groupIndex, "group-index", 1)
             .desc("Identifies service group when there are multiple.");
-
-        // The command line will be validated later by the application, right
-        // now we just need the appIndex so the configuration can be processed.
-        stringstream tin, tout;
-        auto conin = &cli.conin();
-        auto conout = &cli.conout();
-        cli.iostreams(&tin, &tout);
-        (void) cli.parse(argc, argv);
-        cli.iostreams(conin, conout);
     }
+
+    // The command line will be validated later by the application, right now
+    // we just need the appIndex and groupIndex to process the configuration.
+    auto parseOk = cli.parse(argc, argv);
 
     s_appVer = ver;
     s_appBaseName = baseName;
@@ -284,10 +244,11 @@ int Dim::appRun(
     iTaskInitialize();
     iTimerInitialize();
 
-    s_app = app;
-    s_app->m_argc = argc;
-    s_app->m_argv = argv;
-    taskPushEvent(initApp);
+    if (parseOk) {
+        taskPushEvent(initApp);
+    } else {
+        appSignalUsageError();
+    }
 
     // Wait for application to finish.
     unique_lock lk{s_runMut};
@@ -302,7 +263,7 @@ int Dim::appRun(
     // files, or other shared resources MUST already be closed. When running as
     // a service the SERVICE_STOPPED status has been reported and the Service
     // Control Manager may have already stopped handling requests from this
-    // run of the executable in favor of a new instance of the service.
+    // process in favor of a new instance of the service.
     //-----------------------------------------------------------------------
 
     iTimerDestroy();

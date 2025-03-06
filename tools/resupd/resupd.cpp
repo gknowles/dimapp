@@ -166,55 +166,65 @@ string_view resWebSiteContent() {
 *
 ***/
 
+static struct CmdOpts {
+    Path target;
+    Path src;
+    enum { kResource, kCpp } otype;
+    bool verbose;
+
+    CmdOpts();
+} s_opts;
+
 //===========================================================================
-static void app(int argc, char *argv[]) {
+CmdOpts::CmdOpts() {
     Cli cli;
     cli.helpNoArgs();
     cli.sortKey("2");
-    auto & target = cli.opt<Path>("<outfile>")
+    cli.opt(&target, "<outfile>")
         .desc("Usually an executable for resource target or a source file "
             "for c++ target.");
-    auto & src = cli.opt<Path>("<srcdir>")
+    cli.opt(&src, "<srcdir>")
         .desc("Directory of resources to write to target.");
 
-    enum { kResource, kCpp } otype;
     cli.group("Output Type").sortKey("1");
     cli.opt(&otype, "r", kResource).flagValue(true)
         .desc("Update windows file resource.");
     cli.opt(&otype, "c", kCpp).flagValue()
         .desc("Write data as c++ source file.");
 
-    auto & verbose = cli.opt<bool>("v", false)
+    cli.opt(&verbose, "v", false)
         .desc("Verbose list of changes.");
-    if (!cli.parse(argc, argv))
-        return appSignalUsageError();
+}
 
+//===========================================================================
+static void app(Cli & cli) {
     ResHandle h;
     Finally rclose{ [&]() { resClose(h); } };
     ResFileMap prev;
-    if (otype == kResource) {
-        target->defaultExt("exe");
-        h = resOpenForUpdate(*target);
+    if (s_opts.otype == CmdOpts::kResource) {
+        s_opts.target.defaultExt("exe");
+        h = resOpenForUpdate(s_opts.target);
         if (!h)
             return appSignalShutdown(EX_DATAERR);
         if (!prev.parse(resLoadData(h, kResWebSite))) {
             prev.clear();
-            logMsgWarn() << "Invalid website resource: " << *target;
+            logMsgWarn() << "Invalid website resource: " << s_opts.target;
         }
     } else {
-        target->defaultExt("cpp");
+        s_opts.target.defaultExt("cpp");
     }
 
-    cout << "Updating '" << *target << "' from '" << *src << "'" << endl;
+    cout << "Updating '" << s_opts.target << "' from '" << s_opts.src
+        << "'" << endl;
 
     unsigned added = 0;
     unsigned updated = 0;
     ResFileMap files;
-    for (auto&& fn : fileGlob(*src, "**")) {
+    for (auto&& fn : fileGlob(s_opts.src, "**")) {
         string content;
         if (auto ec = fileLoadBinaryWait(&content, fn.path); ec)
             return appSignalShutdown(EX_DATAERR);
-        auto path = fn.path.str().substr(src->size());
+        auto path = fn.path.str().substr(s_opts.src.size());
         if (path[0] != '/')
             path.insert(0, "/");
         TimePoint mtime;
@@ -222,13 +232,13 @@ static void app(int argc, char *argv[]) {
         if (auto ent = prev.find(path)) {
             if (ent->mtime != mtime || ent->content != content) {
                 updated += 1;
-                if (*verbose)
+                if (s_opts.verbose)
                     cout << path << " updated" << endl;
             }
             prev.erase(path);
         } else {
             added += 1;
-            if (*verbose)
+            if (s_opts.verbose)
                 cout << path << " added" << endl;
         }
         files.insert(path, mtime, move(content));
@@ -240,7 +250,7 @@ static void app(int argc, char *argv[]) {
         return appSignalShutdown(EX_OK);
     }
 
-    if (*verbose) {
+    if (s_opts.verbose) {
         for (auto&& [name, ent] : prev)
             cout << name << " removed" << endl;
     }
@@ -248,7 +258,7 @@ static void app(int argc, char *argv[]) {
     CharBuf out;
     files.copy(&out);
 
-    if (otype == kResource) {
+    if (s_opts.otype == CmdOpts::kResource) {
         if (!resUpdate(h, kResWebSite, out.view()))
             return appSignalShutdown(EX_DATAERR);
 
@@ -259,12 +269,12 @@ static void app(int argc, char *argv[]) {
         using enum Dim::File::OpenMode;
 
         ostringstream os;
-        writeCpp(os, *target, out.view());
+        writeCpp(os, s_opts.target, out.view());
         auto content = os.view();
         bool found = false;
-        if (auto ec = fileExists(&found, *target); !ec && found) {
+        if (auto ec = fileExists(&found, s_opts.target); !ec && found) {
             string oldContent;
-            if (fileLoadBinaryWait(&oldContent, *target))
+            if (fileLoadBinaryWait(&oldContent, s_opts.target))
                 return appSignalShutdown(EX_DATAERR);
             if (oldContent == content) {
                 cout << "Resources: " << files.size() << " (0 changed)"
@@ -275,7 +285,7 @@ static void app(int argc, char *argv[]) {
         FileHandle f;
         auto ec = fileOpen(
             &f,
-            *target,
+            s_opts.target,
             fReadWrite | fCreat | fTrunc | fBlocking
         );
         if (!ec) {
@@ -302,5 +312,6 @@ static void app(int argc, char *argv[]) {
 
 //===========================================================================
 int main(int argc, char * argv[]) {
-    return appRun(app, argc, argv, kVersion, "resupd");
+    Cli().action(app);
+    return appRun(argc, argv, kVersion, "resupd");
 }

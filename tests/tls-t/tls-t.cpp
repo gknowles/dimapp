@@ -89,7 +89,7 @@ const Test s_tests[] = {
 ***/
 
 //===========================================================================
-static void app(int argc, char *argv[]) {
+static void app(Cli & cli) {
     const TlsCipherSuite kCiphers[] = {
         TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
     };
@@ -141,5 +141,6 @@ static void app(int argc, char *argv[]) {
 
 //===========================================================================
 int main(int argc, char * argv[]) {
-    return appRun(app, argc, argv);
+    Cli().action(app);
+    return appRun(argc, argv);
 }
