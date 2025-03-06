@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2022.
+// Copyright Glen Knowles 2022 - 2025.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // glob-t.cpp - dimapp test glob-t
