@@ -770,10 +770,8 @@ static void processFile(
             if (res.unchanged)
                 s_perfUnchangedFiles += 1;
         } else {
-            if (s_opts.update) {
-                if (!replaceFile(fullPath, res.content))
-                    return;
-            }
+            if (s_opts.update)
+                replaceFile(fullPath, res.content);
         }
     }
     updateResult(&s_result, res);
