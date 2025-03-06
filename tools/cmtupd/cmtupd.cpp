@@ -492,12 +492,12 @@ static bool replaceFile(
     FileHandle file;
     auto ec = fileOpen(&file, path, fCreat | fTrunc | fReadWrite | fBlocking);
     if (ec) {
-        logMsgError() << path << ": unable to open.";
+        logMsgError() << path << ": unable to open, " << ec.value();
         appSignalShutdown(EX_IOERR);
         return false;
     }
     if (auto ec = fileAppendWait(nullptr, file, content); ec) {
-        logMsgError() << path << ": unable to write.";
+        logMsgError() << path << ": unable to write, " << ec.value();
         appSignalShutdown(EX_IOERR);
         fileClose(file);
         return false;
@@ -762,16 +762,19 @@ static void processFile(
                 if (!updated && cnt.act->type == Action::kUpdate) {
                     updated = true;
                     s_perfUpdatedFiles += 1;
-                    if (s_opts.update) {
-                        if (!replaceFile(fullPath, res.content))
-                            return;
-                    }
                 }
             }
             cout << endl;
         }
-        if (res.unchanged && !updated)
-            s_perfUnchangedFiles += 1;
+        if (!updated) {
+            if (res.unchanged)
+                s_perfUnchangedFiles += 1;
+        } else {
+            if (s_opts.update) {
+                if (!replaceFile(fullPath, res.content))
+                    return;
+            }
+        }
     }
     updateResult(&s_result, res);
 
