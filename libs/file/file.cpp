@@ -302,7 +302,7 @@ FileStreamNotify::FileStreamNotify(
         fm::fReadOnly | fm::fSequential | fm::fDenyNone
     );
     if (ec) {
-        logMsgError() << "File open failed: " << path;
+        logMsgError() << "File open failed: " << path << ", " << ec;
         FileReadData data = {};
         data.f = file;
         data.ec = ec;
@@ -589,7 +589,7 @@ void Dim::fileLoadBinary(
     FileHandle file;
     auto ec = fileOpen(&file, path, fm::fReadOnly | fm::fDenyNone);
     if (ec) {
-        logMsgError() << "File open failed: " << path;
+        logMsgError() << "File open failed: " << path << ", " << ec;
         FileReadData data = {};
         data.f = file;
         data.ec = ec;
@@ -614,19 +614,20 @@ error_code Dim::fileLoadBinaryWait(
     size_t maxSize
 ) {
     FileHandle file;
+    uint64_t bytes = 0;
     auto ec = fileOpen(
         &file,
         path,
         fm::fReadOnly | fm::fDenyNone | fm::fBlocking
     );
+    if (!ec)
+        ec = fileSize(&bytes, file);
     if (ec) {
-        logMsgError() << "File open failed: " << path;
+        logMsgError() << "File open failed: " << path << ", " << ec;
         out->clear();
         return ec;
     }
 
-    uint64_t bytes = 0;
-    fileSize(&bytes, file);
     if (bytes > maxSize) {
         logMsgError() << "File too large (" << bytes << " bytes): " << path;
         out->clear();
@@ -648,7 +649,7 @@ void Dim::fileSaveBinary(
     FileHandle file;
     auto ec = fileOpen(&file, path, fm::fReadWrite | fm::fCreat | fm::fTrunc);
     if (ec) {
-        logMsgError() << "File open failed: " << path;
+        logMsgError() << "File open failed: " << path << ", " << ec;
         FileWriteData tmp = {};
         tmp.data = data;
         tmp.f = file;
@@ -673,7 +674,7 @@ error_code Dim::fileSaveBinaryWait(
         fm::fReadWrite | fm::fCreat | fm::fTrunc | fm::fBlocking
     );
     if (ec) {
-        logMsgError() << "File open failed: " << path;
+        logMsgError() << "File open failed: " << path << ", " << ec;
         return ec;
     }
 
@@ -695,7 +696,7 @@ void Dim::fileSaveTempFile(
     FileHandle file;
     auto ec = fileCreateTemp(&file, {}, suffix);
     if (ec) {
-        logMsgError() << "Create temp file failed.";
+        logMsgError() << "Create temp file failed, " << ec << ".";
         FileWriteData tmp = {};
         tmp.data = data;
         tmp.f = file;

@@ -281,7 +281,7 @@ static bool loadActions(
             return false;
         }
         if (act.type == Action::kUpdate && act.reportType <= kConsoleNormal) {
-            logMsgError() << "Update actions must have reportType greater "
+            logMsgError() << "Update actions must have @reportType greater "
                 "than 'normal'";
             return false;
         }
