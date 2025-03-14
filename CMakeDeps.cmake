@@ -296,6 +296,7 @@
 # tools/h2srv/h2srv.cpp
 # tools/h2srv/pch.cpp
 # tools/h2srv/pch.h
+# tools/pargen/CHANGELOG.md
 # tools/pargen/README.adoc
 # tools/pargen/abnf.abnf
 # tools/pargen/abnfparse.g.cpp
