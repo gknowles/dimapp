@@ -69,6 +69,8 @@ public:
     virtual std::ostream * debugStream() const { return nullptr; }
 
 protected:
+    // These protected members exist so that a derived class can use a member
+    // variable (which is constructed after the base) as the page heap.
     StrTrieBase() = default;
     void construct(IPageHeap * pages);
 

@@ -138,18 +138,29 @@ inline static void internalTests() {
 
 
     //-----------------------------------------------------------------------
+    vals.clear();
+    vals.clear(); // test clearing empty container
+    check(vals.begin() == vals.end());
+
     // Search and iterate
     vector<string_view> keys = { "abc", "aw", "abd" };
-    vals.clear();
     for (auto&& key : keys)
         insert(&vals, key);
     ranges::sort(keys);
-    auto ri = keys.begin();
+    // Forward iterators
+    auto i = keys.begin();
     for (auto&& key : vals) {
-        check(key == *ri);
+        check(key == *i);
+        i += 1;
+    }
+    check(i == keys.end());
+    // Reverse iterators
+    auto ri = keys.rbegin();
+    for (auto rvi = vals.rbegin(); rvi != vals.rend(); ++rvi) {
+        check(*rvi == *ri);
         ri += 1;
     }
-    check(ri == keys.end());
+    check(ri == keys.rend());
 
     auto vi = vals.lowerBound("abcd");
     check(*vi == "abd");
