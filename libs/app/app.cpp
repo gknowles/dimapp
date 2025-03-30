@@ -166,7 +166,8 @@ static void initApp() {
     }
 
     Cli cli;
-    cli.exec();
+    if (!cli.exec())
+        appSignalUsageError();
 }
 
 
