@@ -119,7 +119,7 @@ public:
 
     bool operator==(const Iter & right) const;
     const value_type & operator*() const;
-    const value_type * operator->() const;
+    const value_type * operator->() const { return &operator*(); }
     Iter & operator++();
     Iter & operator--();
 
