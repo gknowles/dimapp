@@ -11,6 +11,15 @@ using namespace Dim;
 
 /****************************************************************************
 *
+*   Tuning parameters
+*
+***/
+
+const VersionInfo kVersion = { 1 };
+
+
+/****************************************************************************
+*
 *   Declarations
 *
 ***/
@@ -350,6 +359,7 @@ const Test s_tests[] = {
 ***/
 
 static bool s_verbose;
+static bool s_test;
 
 
 /****************************************************************************
@@ -399,6 +409,11 @@ void Reader::onHpackHeader(
 
 //===========================================================================
 static void app(Cli & cli) {
+    if (!s_test) {
+        cout << "No tests run." << endl;
+        return appSignalShutdown(EX_OK);
+    }
+
     TempHeap heap;
     HpackDecode decode(256);
     Reader out;
@@ -444,6 +459,7 @@ int main(int argc, char * argv[]) {
     cli.helpNoArgs().action(app);
     cli.opt(&s_verbose, "v verbose.")
         .desc("Display details of what's happening during processing.");
-    cli.versionOpt("1.0 (" __DATE__ ")");
-    return appRun(argc, argv);
+    cli.opt(&s_test, "test", false)
+        .desc("Run internal unit tests.");
+    return appRun(argc, argv, kVersion);
 }

@@ -37,7 +37,7 @@ jobs:
           bin\charbuf-t
           bin\file-t
           bin\glob-t
-          bin\hpack-t
+          "bin\hpack-t --test"
           "bin\http-t --test"
           bin\intset-t
           "bin\json-t --test"

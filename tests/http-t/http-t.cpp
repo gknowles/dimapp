@@ -60,6 +60,7 @@ struct Test {
 static bool s_verbose;
 static bool s_test;
 
+
 /****************************************************************************
 *
 *   Test vectors
