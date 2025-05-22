@@ -1,4 +1,4 @@
-# Copyright Glen Knowles 2021 - 2024.
+# Copyright Glen Knowles 2021 - 2025.
 # Distributed under the Boost Software License, Version 1.0.
 #
 # github-build.yml
@@ -19,13 +19,13 @@ jobs:
         platform: [x64]
         configuration: [Debug, Release]
         toolset: [v143]
-        image: [windows-2022]
+        image: [windows-2025]
         coverage: [false]
         include:
           - platform: x64
             configuration: Debug
             toolset: v143
-            image: windows-2022
+            image: windows-2025
             coverage: true
     runs-on: ${{matrix.image}}
     defaults:
@@ -71,11 +71,9 @@ jobs:
         if not exist "conf\app.xml" copy "conf\app.xml.sample" "conf\app.xml"
         md build
         cd build
-        if "${{matrix.toolset}}" == "v143" (
-          set generator=Visual Studio 17 2022
-        ) else (
-          set generator=Visual Studio 16 2019
-        )
+        set generator=Visual Studio 16 2019
+        if "${{matrix.toolset}}" == "v142" set generator=Visual Studio 17 2022
+        if "${{matrix.toolset}}" == "v143" set generator=Visual Studio 17 2022
         cmake .. -G"%generator%" -A${{matrix.platform}} -T${{matrix.toolset}}
         cmake . -DCMAKE_BUILD_TYPE=${{matrix.configuration}}^
             -DCMAKE_INSTALL_PREFIX=publish -DINSTALL_LIBS:BOOL=ON
