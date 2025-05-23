@@ -166,8 +166,10 @@ static void initApp() {
     }
 
     Cli cli;
-    if (!cli.exec())
-        appSignalUsageError();
+    cli.exec();
+
+    // Falls back to appSignalShutdown() if exit code is 0
+    appSignalUsageError();
 }
 
 
@@ -273,6 +275,7 @@ int Dim::appRun(
     iPerfDestroy();
     iPlatformDestroy();
     lk.lock();
+    s_usageErrorSignaled.clear();
     assert(s_runMode == kRunStopping);
     s_runMode = kRunStopped;
     return s_exitcode;
@@ -412,7 +415,7 @@ void Dim::appSignalShutdown(int code) {
         assert(s_runMode != kRunStopped);
         s_runMode = kRunStopping;
         lk.unlock();
-        s_runCv.notify_one();
+        s_runCv.notify_all();
     }
 }
 
