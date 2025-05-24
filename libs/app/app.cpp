@@ -415,6 +415,9 @@ void Dim::appSignalShutdown(int code) {
         assert(s_runMode != kRunStopped);
         s_runMode = kRunStopping;
         lk.unlock();
+        // In addition to the main thread waiting on the CV some other thread
+        // may also be waiting on s_runMut via a call to one of the app
+        // functions. Therefore notify_one() isn't enough.
         s_runCv.notify_all();
     }
 }
