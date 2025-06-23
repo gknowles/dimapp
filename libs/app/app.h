@@ -184,8 +184,7 @@ bool appLogPath(
 ***/
 
 // Signals shutdown to begin, the exit code will be returned from appRun()
-// after shutdown finishes. However, if the exit code is EX_PENDING it
-// immediately returns without doing anything.
+// after shutdown finishes.
 //
 // When running as a Windows service, a call to set SERVICE_STOP_PENDING
 // is immediately queued, with a change to SERVICE_STOPPED coming only after
@@ -198,9 +197,6 @@ void appSignalShutdown(int exitCode = EX_OK);
 //
 // Unless the application is running as a service, the error is logged to the
 // console in addition to any other log targets.
-//
-// If exit code is EX_PENDING appSignalUsageError() returns immediately without
-// doing anything.
 void appSignalUsageError(
     std::string_view err = {},
     std::string_view detail = {}
@@ -211,8 +207,7 @@ void appSignalUsageError(
     std::string_view detail = {}
 );
 
-// Returns true if appSignalUsageError() has been called with any code other
-// than EX_PENDING.
+// Returns true if appSignalUsageError() has been called.
 bool appUsageErrorSignaled();
 
 } // namespace

@@ -1177,6 +1177,4 @@ static void genCmd(Cli & cli) {
     auto out = logMsgInfo();
     cli.printText(out, os.str());
     genSite(cfg.release());
-
-    cli.fail(EX_PENDING, "");
 }

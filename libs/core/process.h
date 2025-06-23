@@ -24,10 +24,6 @@ enum {
     // Start of exit codes defined by this application
     EX__APPBASE = 10,
 
-    // Exit code is being set by an asynchronously event that hasn't completed,
-    // prevents appSignalUsageError() from taking action.
-    EX_PENDING = 63,
-
     // On *nix the following EX_* constants are defined in <sysexits.h>
     // These are centered around why a command line utility might fail.
     EX__BASE = 64,       // base value for standard error codes

@@ -1423,6 +1423,4 @@ static void testCmd(Cli & cli) {
     auto out = logMsgInfo();
     cli.printText(out, os.str());
     testSamples(cfg.release());
-
-    cli.fail(EX_PENDING, "");
 }

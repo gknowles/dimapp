@@ -405,9 +405,6 @@ bool Dim::appCrashPath(Path * out, string_view file, bool cine) {
 
 //===========================================================================
 void Dim::appSignalShutdown(int code) {
-    if (code == EX_PENDING)
-        return;
-
     unique_lock lk{s_runMut};
     if (code > s_exitcode)
         s_exitcode = code;
@@ -432,9 +429,6 @@ void Dim::appSignalUsageError(string_view err, string_view detail) {
 
 //===========================================================================
 void Dim::appSignalUsageError(int code, string_view err, string_view detail) {
-    if (code == EX_PENDING)
-        return;
-
     s_usageErrorSignaled.test_and_set();
     if (code) {
         bool hasConsole = appFlags().any(fAppWithConsole | fAppIsService);
