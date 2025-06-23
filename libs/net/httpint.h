@@ -40,7 +40,7 @@ struct HttpStream {
     ~HttpStream();
 };
 
-class HttpConn : public HandleContent {
+class HttpConn : public std::enable_shared_from_this<HttpConn> {
 public:
     enum FrameFlags : uint8_t;
     enum class FrameError : int;
@@ -50,9 +50,9 @@ public:
 
     // Initialize as an outgoing connection, must be first method called
     // on outgoing connections after construction.
-    void connect(CharBuf * out, HttpConnHandle hc);
+    void connect(CharBuf * out);
 
-    void accept(HttpConnHandle hc);
+    void accept();
 
     // Returns false when no more data will be accepted, either by request
     // of the input or due to error.
@@ -197,7 +197,6 @@ private:
         EnumFlags<FrameFlags> flags
     );
 
-    HttpConnHandle m_handle;
     bool m_outgoing{false};
 
     // byte parsing

@@ -114,7 +114,7 @@ const Test s_tests[] = {
 //===========================================================================
 void oldTest() {
     CharBuf output;
-    HttpConnHandle conn{};
+    shared_ptr<HttpConn> conn;
     bool result;
     vector<unique_ptr<HttpMsg>> msgs;
     for (auto && test : s_tests) {

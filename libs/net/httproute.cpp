@@ -36,7 +36,11 @@ class HttpSocket : public IAppSocketNotify {
 public:
     static void iReply(
         unsigned reqId,
-        const function<void(HttpConnHandle h, CharBuf * out, int stream)> & fn,
+        const function<void(
+            shared_ptr<HttpConn> conn,
+            CharBuf * out,
+            int stream
+            )> & fn,
         bool more
     );
     static void reply(unsigned reqId, HttpResponse && msg, bool more);
@@ -51,12 +55,12 @@ public:
     bool onSocketRead(AppSocketData & data) override;
 
 private:
-    HttpConnHandle m_conn;
+    shared_ptr<HttpConn> m_conn;
     vector<unsigned> m_reqIds;
 };
 
 struct RequestInfo {
-    HttpSocket * conn {nullptr};
+    HttpSocket * sock {nullptr};
     int stream {0};
     PathInfo * pi {nullptr};
 
@@ -146,14 +150,14 @@ struct MakeRequestInfo_ReturnType {
     RequestInfo * ri;
 };
 MakeRequestInfo_ReturnType makeRequestInfo(
-    HttpSocket * conn,
+    HttpSocket * sock,
     int stream
 ) {
     for (;;) {
         auto id = ++s_nextReqId;
         auto & found = s_requests[id];
-        if (!found.conn) {
-            found.conn = conn;
+        if (!found.sock) {
+            found.sock = sock;
             found.stream = stream;
             return {id, &found};
         }
@@ -246,7 +250,7 @@ struct ReplyTask : ITaskNotify {
     ReplyTask(unsigned reqId, bool more);
     void onTask() override;
 
-    function<void(HttpConnHandle h, CharBuf * out, int stream)> fn;
+    function<void(shared_ptr<HttpConn> conn, CharBuf * out, int stream)> fn;
     unsigned reqId;
     T data;
     bool more;
@@ -279,19 +283,23 @@ void ReplyTask<T>::onTask() {
 // static
 void HttpSocket::iReply(
     unsigned reqId,
-    const function<void(HttpConnHandle h, CharBuf * out, int stream)> & fn,
+    const function<void(
+        shared_ptr<HttpConn> conn,
+        CharBuf * out,
+        int stream
+        )> & fn,
     bool more
 ) {
     auto it = s_requests.find(reqId);
     if (it == s_requests.end())
         return;
-    auto conn = it->second.conn;
+    auto sock = it->second.sock;
     CharBuf out;
-    fn(conn->m_conn, &out, it->second.stream);
-    socketWrite(conn, out);
+    fn(sock->m_conn, &out, it->second.stream);
+    socketWrite(sock, out);
     if (!more) {
         s_requests.erase(it);
-        auto & ids = conn->m_reqIds;
+        auto & ids = sock->m_reqIds;
         for (auto & id : ids) {
             if (reqId < id)
                 continue;
@@ -317,16 +325,16 @@ void HttpSocket::reply(unsigned reqId, HttpResponse && msg, bool more) {
     }
 
     if (taskInEventThread()) {
-        auto fn = [&](HttpConnHandle h, CharBuf * out, int stream) {
-            httpReply(out, h, stream, msg, more);
+        auto fn = [&](shared_ptr<HttpConn> conn, CharBuf * out, int stream) {
+            httpReply(out, conn, stream, msg, more);
         };
         return iReply(reqId, fn, more);
     }
 
     auto task = new ReplyTask<HttpResponse>(reqId, more);
     task->data = move(msg);
-    task->fn = [task](HttpConnHandle h, CharBuf * out, int stream) {
-        httpReply(out, h, stream, task->data, task->more);
+    task->fn = [task](shared_ptr<HttpConn> conn, CharBuf * out, int stream) {
+        httpReply(out, conn, stream, task->data, task->more);
     };
     taskPushEvent(task);
 }
@@ -335,16 +343,16 @@ void HttpSocket::reply(unsigned reqId, HttpResponse && msg, bool more) {
 // static
 void HttpSocket::reply(unsigned reqId, string_view data, bool more) {
     if (taskInEventThread()) {
-        auto fn = [&](HttpConnHandle h, CharBuf * out, int stream) {
-            httpData(out, h, stream, data, more);
+        auto fn = [&](auto conn, CharBuf * out, int stream) {
+            httpData(out, conn, stream, data, more);
         };
         return iReply(reqId, fn, more);
     }
 
     auto task = new ReplyTask<string>(reqId, more);
     task->data = data;
-    task->fn = [task](HttpConnHandle h, CharBuf * out, int stream) {
-        httpData(out, h, stream, task->data, task->more);
+    task->fn = [task](auto conn, CharBuf * out, int stream) {
+        httpData(out, conn, stream, task->data, task->more);
     };
     taskPushEvent(task);
 }
@@ -353,16 +361,16 @@ void HttpSocket::reply(unsigned reqId, string_view data, bool more) {
 // static
 void HttpSocket::reply(unsigned reqId, CharBuf && data, bool more) {
     if (taskInEventThread()) {
-        auto fn = [&](HttpConnHandle h, CharBuf * out, int stream) -> void {
-            httpData(out, h, stream, data, more);
+        auto fn = [&](auto conn, CharBuf * out, int stream) -> void {
+            httpData(out, conn, stream, data, more);
         };
         return iReply(reqId, fn, more);
     }
 
     auto task = new ReplyTask<CharBuf>(reqId, more);
     task->data = move(data);
-    task->fn = [task](HttpConnHandle h, CharBuf * out, int stream) -> void {
-        httpData(out, h, stream, task->data, task->more);
+    task->fn = [task](auto conn, CharBuf * out, int stream) -> void {
+        httpData(out, conn, stream, task->data, task->more);
     };
     taskPushEvent(task);
 }
@@ -371,8 +379,8 @@ void HttpSocket::reply(unsigned reqId, CharBuf && data, bool more) {
 // static
 void HttpSocket::resetReply(unsigned reqId, bool internal) {
     s_perfReset += 1;
-    auto fn = [&](HttpConnHandle h, CharBuf * out, int stream) -> void {
-        httpResetStream(out, h, stream, internal);
+    auto fn = [&](auto conn, CharBuf * out, int stream) -> void {
+        httpResetStream(out, conn, stream, internal);
     };
     iReply(reqId, fn, false);
 }

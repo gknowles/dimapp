@@ -333,13 +333,13 @@ private:
 *
 ***/
 
-struct HttpConnHandle : HandleBase {};
+class HttpConn;
 
-HttpConnHandle httpConnect(CharBuf * out);
-HttpConnHandle httpAccept();
+std::shared_ptr<HttpConn> httpConnect(CharBuf * out);
+std::shared_ptr<HttpConn> httpAccept();
 
-void httpClose(HttpConnHandle conn);
-std::string_view httpGetError(HttpConnHandle conn);
+void httpClose(std::shared_ptr<HttpConn> conn);
+std::string_view httpGetError(std::shared_ptr<HttpConn> conn);
 
 // Returns false when no more data will be accepted, either by request
 // of the input or due to error.
@@ -349,7 +349,7 @@ std::string_view httpGetError(HttpConnHandle conn);
 bool httpRecv(
     CharBuf * out,
     std::vector<std::unique_ptr<HttpMsg>> * msgs,
-    HttpConnHandle conn,
+    std::shared_ptr<HttpConn> conn,
     const void * src,
     size_t srcLen
 );
@@ -357,7 +357,7 @@ bool httpRecv(
 // Serializes a request and returns the stream id used
 int httpRequest(
     CharBuf * out,
-    HttpConnHandle conn,
+    std::shared_ptr<HttpConn> conn,
     const HttpMsg & msg,
     bool more = false
 );
@@ -365,7 +365,7 @@ int httpRequest(
 // Serializes a push promise and returns the stream id used
 int httpPushPromise(
     CharBuf * out,
-    HttpConnHandle conn,
+    std::shared_ptr<HttpConn> conn,
     const HttpMsg & msg,
     bool more = false
 );
@@ -374,7 +374,7 @@ int httpPushPromise(
 // been closed.
 bool httpReply(
     CharBuf * out,
-    HttpConnHandle conn,
+    std::shared_ptr<HttpConn> conn,
     int stream,
     const HttpMsg & msg,
     bool more = false
@@ -385,14 +385,14 @@ bool httpReply(
 // been closed.
 bool httpData(
     CharBuf * out,
-    HttpConnHandle conn,
+    std::shared_ptr<HttpConn> conn,
     int stream,
     const CharBuf & data,
     bool more = false
 );
 bool httpData(
     CharBuf * out,
-    HttpConnHandle conn,
+    std::shared_ptr<HttpConn> conn,
     int stream,
     std::string_view data,
     bool more = false
@@ -401,7 +401,7 @@ bool httpData(
 // Resets stream with either INTERNAL_ERROR or CANCEL
 void httpResetStream(
     CharBuf * out,
-    HttpConnHandle conn,
+    std::shared_ptr<HttpConn> conn,
     int stream,
     bool internal
 );

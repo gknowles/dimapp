@@ -64,7 +64,7 @@ struct UnpaddedData {
 };
 
 struct ResetStream {
-    HttpConnHandle hc;
+    weak_ptr<HttpConn> conn;
     int stream{};
     shared_ptr<HttpStream> sm;
 };
@@ -96,15 +96,6 @@ enum HttpConn::FrameFlags : uint8_t {
     fPadded = 0x08,
     fPriority = 0x20,
 };
-
-
-/****************************************************************************
-*
-*   Variables
-*
-***/
-
-static HandleMap<HttpConnHandle, HttpConn> s_conns;
 
 
 /****************************************************************************
@@ -152,7 +143,7 @@ Duration ResetStreamTimer::onTimer(TimePoint now) {
         if (rs.sm->m_localState == HttpStream::kClosed
             && rs.sm->m_remoteState == HttpStream::kClosed
         ) {
-            if (HttpConn * conn = s_conns.find(rs.hc))
+            if (auto conn = rs.conn.lock())
                 conn->deleteStream(rs.stream, rs.sm.get());
         } else {
             assert(rs.sm->m_localState == HttpStream::kDeleted);
@@ -340,9 +331,8 @@ HttpConn::HttpConn()
 {}
 
 //===========================================================================
-void HttpConn::connect(CharBuf * out, HttpConnHandle h) {
+void HttpConn::connect(CharBuf * out) {
     assert(m_byteMode == ByteMode::kPreface);
-    m_handle = h;
     m_outgoing = true;
     m_nextOutputStream = 1;
     out->append(kPrefaceData);
@@ -352,9 +342,8 @@ void HttpConn::connect(CharBuf * out, HttpConnHandle h) {
 }
 
 //===========================================================================
-void HttpConn::accept(HttpConnHandle h) {
+void HttpConn::accept() {
     assert(m_byteMode == ByteMode::kPreface);
-    m_handle = h;
 }
 
 
@@ -599,7 +588,7 @@ void HttpConn::resetStream(CharBuf * out, int stream, FrameError error) {
     sm->m_remoteState = HttpStream::kClosed;
     sm->m_closed = timeNow();
     auto & rs = s_resetStreams.emplace_back();
-    rs.hc = m_handle;
+    rs.conn = weak_from_this();
     rs.stream = stream;
     rs.sm = sm;
     timerUpdate(&s_resetTimer, kMaxResetStreamAge, true);
@@ -1549,29 +1538,27 @@ void HttpConn::deleteStream(int stream, HttpStream * sm) {
 ***/
 
 //===========================================================================
-HttpConnHandle Dim::httpConnect(CharBuf * out) {
-    auto conn = new HttpConn;
-    auto h = s_conns.insert(conn);
-    conn->connect(out, h);
-    return h;
+std::shared_ptr<HttpConn> Dim::httpConnect(CharBuf * out) {
+    auto conn = make_shared<HttpConn>();
+    conn->connect(out);
+    return conn;
 }
 
 //===========================================================================
-HttpConnHandle Dim::httpAccept() {
-    auto conn = new HttpConn;
-    auto h = s_conns.insert(conn);
-    conn->accept(h);
-    return h;
+std::shared_ptr<HttpConn> Dim::httpAccept() {
+    auto conn = make_shared<HttpConn>();
+    conn->accept();
+    return conn;
 }
 
 //===========================================================================
-void Dim::httpClose(HttpConnHandle hc) {
-    s_conns.erase(hc);
+void Dim::httpClose(std::shared_ptr<HttpConn> conn) {
+    conn.reset();
 }
 
 //===========================================================================
-string_view Dim::httpGetError(HttpConnHandle hc) {
-    if (auto conn = s_conns.find(hc))
+string_view Dim::httpGetError(std::shared_ptr<HttpConn> conn) {
+    if (conn)
         return conn->errmsg();
     return {};
 }
@@ -1580,11 +1567,11 @@ string_view Dim::httpGetError(HttpConnHandle hc) {
 bool Dim::httpRecv(
     CharBuf * out,
     vector<unique_ptr<HttpMsg>> * msgs,
-    HttpConnHandle hc,
+    std::shared_ptr<HttpConn> conn,
     const void * src,
     size_t srcLen
 ) {
-    if (auto conn = s_conns.find(hc))
+    if (conn)
         return conn->recv(out, msgs, src, srcLen);
     return false;
 }
@@ -1592,11 +1579,11 @@ bool Dim::httpRecv(
 //===========================================================================
 int Dim::httpRequest(
     CharBuf * out,
-    HttpConnHandle hc,
+    std::shared_ptr<HttpConn> conn,
     const HttpMsg & msg,
     bool more
 ) {
-    if (auto conn = s_conns.find(hc))
+    if (conn)
         return conn->request(out, msg, more);
     return 0;
 }
@@ -1604,11 +1591,11 @@ int Dim::httpRequest(
 //===========================================================================
 int Dim::httpPushPromise(
     CharBuf * out,
-    HttpConnHandle hc,
+    std::shared_ptr<HttpConn> conn,
     const HttpMsg & msg,
     bool more
 ) {
-    if (auto conn = s_conns.find(hc))
+    if (conn)
         return conn->pushPromise(out, msg, more);
     return 0;
 }
@@ -1616,12 +1603,12 @@ int Dim::httpPushPromise(
 //===========================================================================
 bool Dim::httpReply(
     CharBuf * out,
-    HttpConnHandle hc,
+    std::shared_ptr<HttpConn> conn,
     int stream,
     const HttpMsg & msg,
     bool more
 ) {
-    if (auto conn = s_conns.find(hc))
+    if (conn)
         return conn->reply(out, stream, msg, more);
     return false;
 }
@@ -1629,12 +1616,12 @@ bool Dim::httpReply(
 //===========================================================================
 bool Dim::httpData(
     CharBuf * out,
-    HttpConnHandle hc,
+    std::shared_ptr<HttpConn> conn,
     int stream,
     const CharBuf & data,
     bool more
 ) {
-    if (auto conn = s_conns.find(hc))
+    if (conn)
         return conn->addData(out, stream, nullptr, data, more);
     return false;
 }
@@ -1642,12 +1629,12 @@ bool Dim::httpData(
 //===========================================================================
 bool Dim::httpData(
     CharBuf * out,
-    HttpConnHandle hc,
+    std::shared_ptr<HttpConn> conn,
     int stream,
     string_view data,
     bool more
 ) {
-    if (auto conn = s_conns.find(hc))
+    if (conn)
         return conn->addData(out, stream, nullptr, data, more);
     return false;
 }
@@ -1655,11 +1642,11 @@ bool Dim::httpData(
 //===========================================================================
 void Dim::httpResetStream(
     CharBuf * out,
-    HttpConnHandle hc,
+    std::shared_ptr<HttpConn> conn,
     int stream,
     bool internal
 ) {
-    if (auto conn = s_conns.find(hc)) {
+    if (conn) {
         conn->resetStream(
             out,
             stream,
