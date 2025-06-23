@@ -166,10 +166,10 @@ static void initApp() {
     }
 
     Cli cli;
-    cli.exec();
-
-    // Falls back to appSignalShutdown() if exit code is 0
-    appSignalUsageError();
+    if (!cli.exec()) {
+        // Falls back to appSignalShutdown() if exit code is 0
+        appSignalUsageError();
+    }
 }
 
 
