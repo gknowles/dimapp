@@ -277,8 +277,13 @@ static void app(Cli & cli) {
 int main(int argc, char * argv[]) {
     Cli cli;
     cli.helpNoArgs();
-    cli.opt(&s_remoteAddrStr, "<remote address>");
-    cli.opt(&s_localAddr, "[local address]");
+    cli.opt(&s_remoteAddrStr, "<remote address>")
+        .desc("TCP/IP address to connect to with raw console input/output. "
+        "Uses port 23 (telnet) if no port specified.");
+    cli.opt(&s_localAddr, "[local address]")
+        .desc("Local TCP/IP address to bind with. Must be in IPv4 or IPv6 "
+        "dot notation. Default allows the OS choose.");
+    cli.footer("For a remote telnet site to test with try \"telehack.com\".");
     cli.action(app);
     return appRun(argc, argv, kVersion, "tnet");
 }
