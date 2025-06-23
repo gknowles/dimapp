@@ -145,7 +145,7 @@ static void app(Cli & cli) {
     EXPECT_VAL(fsi, name, 1.25e-8, "12.5n");
 
     name = "test.float.duration";
-    EXPECT_VAL(fdur, name, 1'000'000, "1w 5d");
+    EXPECT_VAL(fdur, name, 1'000'000, "1w 4d");
     EXPECT_VAL(fdur, name, 1.5, "1s 500ms");
     EXPECT_VAL(fdur, name, -0.5, "-500ms");
 

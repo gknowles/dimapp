@@ -46,6 +46,7 @@ jobs:
           bin\msgpack-t
           "bin\pargen --test"
           bin\path-t
+          bin\perf-t
           bin\str-t
           "bin\strtrie-t --test"
           bin\time-t
