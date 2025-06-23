@@ -280,7 +280,7 @@ void Dim::addressQuery(
     task->id = *cancelId;
     task->notify = notify;
 
-    // if the name is the string form of an address just return the address
+    // if the name is the string form of a raw address just return the address
     SockAddr addr;
     if (parse(&addr, name, defaultPort)) {
         task->addrs.push_back(addr);

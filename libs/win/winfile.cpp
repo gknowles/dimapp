@@ -760,7 +760,7 @@ static error_code attachStdHandle(
         file->m_handle,
         proc,   // target process
         &file->m_handle,
-        0,      // access (ignored)
+        0,      // access (ignored, mooted by DUPLICATE_SAME_ACCESS)
         FALSE,  // inheritable
         DUPLICATE_SAME_ACCESS
     )) {

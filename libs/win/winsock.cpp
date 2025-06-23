@@ -496,7 +496,7 @@ bool SocketBase::onWrite(SocketRequest * task) {
 *
 ***/
 
-thread_local bool t_socketInitialized;
+thread_local bool t_socketRunning;
 
 namespace {
 
@@ -516,7 +516,7 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
     // close windows sockets
     if (WSACleanup())
         logMsgError() << "WSACleanup: " << WinError{};
-    t_socketInitialized = false;
+    t_socketRunning = false;
 }
 
 
@@ -530,13 +530,15 @@ static WSAPROTOCOL_INFOW s_protocolInfo;
 
 //===========================================================================
 void Dim::iSocketCheckThread() {
-    if (!t_socketInitialized)
-        logMsgFatal() << "Socket services must be called on the event thread";
+    if (!t_socketRunning) {
+        logMsgFatal() << "Socket services must be called on the event thread "
+            " and must be running.";
+    }
 }
 
 //===========================================================================
 void Dim::iSocketInitialize() {
-    t_socketInitialized = true;
+    t_socketRunning = true;
 
     WSADATA data = {};
     WinError err = WSAStartup(WINSOCK_VERSION, &data);
