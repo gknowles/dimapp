@@ -93,7 +93,7 @@ void SocketConn::onSockAddrFound(const SockAddr * ends, int count) {
     if (!count) {
         cout << "Host not found" << endl;
         appSignalShutdown(kExitConnectFailed);
-    } else {
+    } else if (!appStopping()) {
         cout << "Connecting on " << s_localAddr << " to " << *ends << endl;
         socketConnect(this, *ends, s_localAddr);
     }
