@@ -194,6 +194,9 @@ function addTags(tags) {
         }},
         { tag: 'link', props: {
             rel: 'stylesheet',
+            integrity:
+'sha384-He3RckdFB2wffiHOcESa3sf4Ida+ni/fw9SSzAcfY2EPnU1zkK/sLUzw2C5Tyuhj',
+            crossOrigin: 'anonymous',
             href: appRoot +
                 'srv/vendor/bootstrap-icons@1.8.1/bootstrap-icons.css',
             onerror: (event) => { this.href =
@@ -210,6 +213,9 @@ function addTags(tags) {
         }},
         { tag: 'script', props: {
             src: appRoot + 'srv/vendor/vue@3.2.45/vue.global.prod.js',
+            integrity:
+'sha384-w4L+s8BW1EtTnMQtvUXyHkzjvhpPyCGR7IBebBAHquUXQ20ZCLuAVg2ZWRWriVPL',
+            crossOrigin: 'anonymous',
             onerror: (event) => { this.href =
 'https://unpkg.com/vue@3.2.45/dist/vue.global.prod.js'
             },
