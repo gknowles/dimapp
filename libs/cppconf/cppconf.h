@@ -89,6 +89,8 @@
 #include "sysexits.h"
 #define mallocAligned(alignment, size) aligned_alloc(alignment, size)
 #define freeAligned(ptr) free(ptr)
+#define mallocAuto(size) alloca(size)
+#define freeAuto(ptr)
 #define NO_UNIQUE_ADDRESS [[no_unique_address]]
 #endif
 

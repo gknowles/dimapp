@@ -7,6 +7,7 @@
 #ifndef _CPPUNWIND
 #define _HAS_EXCEPTIONS 0
 #endif
+#define _MSVC_STL_DESTRUCTOR_TOMBSTONES 1
 //#define _ITERATOR_DEBUG_LEVEL 0
 
 // Features that historically conflicted with some of the Windows SDK headers
@@ -19,6 +20,7 @@
 
 #ifndef NDEBUG
 #define _CRTDBG_MAP_ALLOC 1
+#define _MSVC_STL_HARDENING 1
 #endif
 
 #ifdef DIMAPP_PACK_ALIGNMENT
@@ -98,6 +100,9 @@
 // Standard aligned_alloc added in c++17, but not supported in MSVC.
 #define mallocAligned(alignment, size) _aligned_malloc(size, alignment)
 #define freeAligned(ptr) _aligned_free(ptr)
+
+#define mallocAuto(size) _alloca(size)
+#define freeAuto(ptr)
 
 // [[no_unique_address]] wasn't immediately fully supported because it broke
 // binary compatibility:
