@@ -160,6 +160,15 @@ uint64_t IBitView::getBits(size_t bitpos, size_t bitcount) const {
 }
 
 //===========================================================================
+size_t IBitView::copy(
+    void * dst,
+    size_t dpos,
+    size_t cnt,
+    size_t pos = 0
+) const {
+}
+
+//===========================================================================
 bool IBitView::all() const {
     for (auto&& word : words()) {
         if (word != kWordMax)
@@ -383,6 +392,19 @@ BitSpan & BitSpan::set(size_t bitpos) {
 BitSpan & BitSpan::set(size_t bitpos, size_t bitcount) {
     ::apply<kSet, uint64_t>(m_data, m_size, nullptr, bitpos, bitcount);
     return *this;
+}
+
+//===========================================================================
+BitSpan & BitSpan::set(size_t pos, const void * src, size_t spos, size_t cnt) {
+}
+
+//===========================================================================
+BitSpan & BitSpan::set(
+    size_t pos,
+    const IBitView &src,
+    size_t spos,
+    size_t cnt = npos
+) {
 }
 
 //===========================================================================

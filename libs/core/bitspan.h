@@ -62,6 +62,8 @@ public:
     // (the number of bits that uint64_t can hold).
     uint64_t getBits(size_t pos, size_t count) const;
 
+    size_t copy(void * dst, size_t dpos, size_t cnt, size_t pos = 0) const;
+
     // Returns word, or pointer to word, that contains the bit.
     uint64_t word(size_t bitpos) const;
     const uint64_t * data(size_t bitpos) const;
@@ -147,6 +149,13 @@ public:
     BitSpan & set(size_t pos, bool value);
     BitSpan & set(size_t pos, size_t count);
     BitSpan & set(size_t pos, size_t count, bool value);
+    BitSpan & set(size_t pos, const void * src, size_t spos, size_t cnt);
+    BitSpan & set(
+        size_t pos,
+        const IBitView &src,
+        size_t spos,
+        size_t cnt = npos
+    );
     BitSpan & reset();
     BitSpan & reset(size_t pos);
     BitSpan & reset(size_t pos, size_t count);
@@ -161,6 +170,41 @@ public:
     // Set sequence of bits from an integer. 'count' must be less or equal to
     // 64 (the number of bits that uint64_t can hold).
     BitSpan & setBits(size_t pos, size_t count, uint64_t value);
+
+    // Insert, erase, and replace do not change the size of the span.
+    //  - If bits are removed the values of that number of bits at the end of
+    //    the span become undefined.
+    //  - If bits are added any that would move past the end of the span are
+    //    discarded.
+    BitSpan & insert(size_t pos, const void * src, size_t spos, size_t cnt);
+    BitSpan & insert(
+        size_t pos,
+        const BitSpan & src,
+        size_t spos,
+        size_t cnt = npos
+    );
+    BitSpan & insert(size_t pos, size_t cnt, bool value);
+    BitSpan & erase(size_t pos, size_t cnt);
+    BitSpan & replace(
+        size_t pos,
+        size_t cnt,
+        const void * src,
+        size_t spos,
+        size_t scnt = npos
+    );
+    BitSpan & replace(
+        size_t pos,
+        size_t cnt,
+        const IBitView & src,
+        size_t spos,
+        size_t scnt = npos
+    );
+    BitSpan & replace(
+        size_t pos,
+        size_t cnt,
+        size_t scnt,
+        bool value
+    );
 
     // Returns pointer to word that contains the bit.
     uint64_t * data(size_t bitpos);
