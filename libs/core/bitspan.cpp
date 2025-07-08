@@ -164,8 +164,10 @@ size_t IBitView::copy(
     void * dst,
     size_t dpos,
     size_t cnt,
-    size_t pos = 0
+    size_t pos //= 0
 ) const {
+    assert(!"IBitView::copy not implemented");
+    return 0;
 }
 
 //===========================================================================
@@ -396,6 +398,8 @@ BitSpan & BitSpan::set(size_t bitpos, size_t bitcount) {
 
 //===========================================================================
 BitSpan & BitSpan::set(size_t pos, const void * src, size_t spos, size_t cnt) {
+    assert(!"BitSpan::set not implemented");
+    return *this;
 }
 
 //===========================================================================
@@ -403,8 +407,10 @@ BitSpan & BitSpan::set(
     size_t pos,
     const IBitView &src,
     size_t spos,
-    size_t cnt = npos
+    size_t cnt // = npos
 ) {
+    assert(!"BitSpan::set not implemented");
+    return *this;
 }
 
 //===========================================================================
