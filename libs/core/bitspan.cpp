@@ -118,6 +118,113 @@ static void apply(
 ***/
 
 //===========================================================================
+// static
+void IBitView::copy(
+    void * vdst,
+    size_t dpos,
+    void * vsrc,
+    size_t spos,
+    size_t cnt
+) {
+    if (!cnt)
+        return;
+    auto dst = (uint8_t *) vdst;
+    if (dpos >= 8) {
+        dst += dpos / 8;
+        dpos %= 8;
+    }
+    auto src = (uint8_t *) vsrc;
+    if (spos >= 8) {
+        src += spos / 8;
+        spos %= 8;
+    }
+
+    if (dpos + cnt <= 8) {
+        // dst is only a single byte.
+        auto mask = uint8_t(255 >> (8 - cnt) << (8 - dpos - cnt));
+        if (spos + cnt <= 8) {
+            // From one byte to another.
+            auto val = *src;
+            if (int d = int(spos - dpos)) {
+                if (d > 0) {
+                    val >>= d;
+                } else {
+                    val <<= -d;
+                }
+            }
+            *dst = val & mask | *dst & ~mask;
+            return;
+        }
+        // From two bytes to one.
+        assert(spos > dpos);
+        auto val = *src << (spos - dpos) | src[1] >> (8 - cnt + 8 - spos);
+        *dst = val & mask | *dst & ~mask;
+        return;
+    }
+
+    if (dpos == spos) {
+        // src and dst are bit aligned.
+        if (dpos) {
+            auto mask = 255 >> dpos;
+            auto val = *src++;
+            *dst++ = val & mask | *dst & ~mask;
+            cnt -= 8 - dpos;
+        }
+        if (cnt % 8 == 0) {
+            // src and dst are fully *byte* aligned.
+            if (cnt)
+                memcpy(dst, src, cnt / 8);
+            return;
+        }
+        if (cnt >= 8) {
+            memcpy(dst, src, cnt / 8);
+            src += cnt / 8;
+            dst += cnt / 8;
+            cnt %= 8;
+        }
+        auto mask = 255 << (8 - cnt);
+        *dst = *src & mask | *dst & ~mask;
+        return;
+    }
+
+    // src and dst start at unaligned bits.
+    if (dpos > spos) {
+        // From part of one byte to first dst byte.
+        //   spos 2      dpos 4
+        //   00aaaabb -> 0000aaaa
+        auto mask = uint8_t(255 >> dpos);
+        auto val = *src++ >> (dpos - spos);
+        *dst++ = val & mask | *dst & ~mask;
+        spos = 8 - (dpos - spos);
+    } else {
+        assert(dpos < spos);
+        // From one byte and part of another to first dst byte.
+        //   spos 5                 dpos 3
+        //   00000aaa + bbcccccc -> 000aaabb
+        auto mask = uint8_t(255 >> dpos);
+        auto val = *src++ << (spos - dpos) | src[1] >> (8 - spos + dpos);
+        *dst++ = val & mask | *dst & ~mask;
+        spos = 8 - (spos - dpos);
+    }
+    cnt -= 8 - dpos;
+    for (; cnt >= 8; cnt -= 8) {
+        *dst++ = *src++ << spos | src[1] >> (8 - spos);
+    }
+    if (cnt) {
+        auto mask = uint8_t(255 < (8 - cnt));
+        if (cnt <= 8 - spos ) {
+            // From part of one byte to front of last dst byte.
+            auto val = *src << spos;
+            *dst = val & mask | *dst & ~mask;
+        } else {
+            // From two bytes to last dst byte.
+            auto val = *src << spos | src[1] >> (8 - spos);
+            *dst = val & mask | *dst & ~mask;
+        }
+    }
+}
+
+//===========================================================================
 bool IBitView::operator==(const IBitView & right) const {
     return size() == right.size()
         && memcmp(data(), right.data(), size()) == 0;
@@ -161,12 +268,28 @@ uint64_t IBitView::getBits(size_t bitpos, size_t bitcount) const {
 
 //===========================================================================
 size_t IBitView::copy(
-    void * dst,
+    void * vdst,
     size_t dpos,
     size_t cnt,
     size_t pos //= 0
 ) const {
-    assert(!"IBitView::copy not implemented");
+    auto dst = (uint8_t *) vdst;
+    if (dpos > 7) {
+        dst += dpos / 8;
+        dpos %= 8;
+    }
+    auto bits = size() * kWordBits;
+    if (!dpos && !pos) {
+        if (pos < bits) {
+            if (cnt < bits - pos) {
+                if (cnt % 8 == 0) {
+                    //memcpy(
+                    //return cnt;
+                }
+            }
+        }
+    }
+    assert(!"Not implemented");
     return 0;
 }
 

@@ -24,12 +24,21 @@ using namespace Dim;
 
 /****************************************************************************
 *
-*   Application
+*   Tests
 *
 ***/
 
 //===========================================================================
-static void app(Cli & cli) {
+static void copyTests() {
+    int line = 0;
+
+    uint64_t buf[3] = {};
+    BitSpan v(buf, size(buf));
+    EXPECT(true);
+}
+
+//===========================================================================
+static void setBitTests() {
     int line = 0;
 
     uint64_t buf[3] = {};
@@ -63,7 +72,14 @@ static void app(Cli & cli) {
     EXPECT(a == 0x89ab'cdef'0000);
     a = v.getBits(144, 48);
     EXPECT(a == 0x4567'89ab'cdef);
+}
 
+//===========================================================================
+static void findTests() {
+    int line = 0;
+
+    uint64_t buf[3] = {};
+    BitSpan v(buf, size(buf));
     v.set();
     EXPECT(v.find(0) == 0);
     EXPECT(v.find(1) == 1);
@@ -89,6 +105,20 @@ static void app(Cli & cli) {
     EXPECT(v.rfindZero() == 64 * size(buf) - 1);
     EXPECT(v.rfindZero(2) == 2);
     EXPECT(v.rfindZero(1) == 0);
+}
+
+
+/****************************************************************************
+*
+*   Application
+*
+***/
+
+//===========================================================================
+static void app(Cli & cli) {
+    copyTests();
+    setBitTests();
+    findTests();
 
     testSignalShutdown();
 }

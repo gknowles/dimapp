@@ -34,6 +34,14 @@ public:
     static constexpr size_t npos = (size_t) -1;
     static constexpr size_t kWordBits = sizeof uint64_t * 8;
 
+    static void copy(
+        void * dst,
+        size_t dpos,
+        void * src,
+        size_t spos,
+        size_t cnt
+    );
+
 public:
     virtual size_t size() const = 0;    // number of uint64_t's
     virtual const uint64_t * data() const = 0;
