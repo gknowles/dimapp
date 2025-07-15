@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2024.
+// Copyright Glen Knowles 2016 - 2025.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // hex.cpp - dim core
@@ -49,34 +49,43 @@ unsigned Dim::hexToByte(unsigned char high, unsigned char low) {
 }
 
 //===========================================================================
-bool Dim::hexToBytes(string & out, string_view src, bool append) {
+bool Dim::hexToBytes(string * out, string_view src, bool append) {
     if (src.size() % 2)
         return false;
     if (!append)
-        out.clear();
+        out->clear();
 
-    auto pos = out.size();
-    out.resize(pos + src.size() / 2);
+    auto pos = out->size();
+    out->resize(pos + src.size() / 2);
     for (size_t i = 0; i < src.size(); i += 2) {
         auto val = hexToByte(src[i], src[i + 1]);
         if (val == 256)
             return false;
-        out[pos++] = (char) val;
+        (*out)[pos++] = (char) val;
     }
     return true;
 }
 
 //===========================================================================
-void Dim::hexFromBytes(string & out, string_view src, bool append) {
-    if (!append)
-        out.clear();
+void Dim::hexAppendBytes(string * out, string_view src) {
+    auto pos = out->size();
+    out->resize(pos + 2 * src.size());
+    for (unsigned char ch : src) {
+        (*out)[pos++] = hexFromNibble(ch >> 4);
+        (*out)[pos++] = hexFromNibble(ch & 0x0f);
+    }
+}
 
+//===========================================================================
+string Dim::hexFromBytes(string_view src) {
+    string out;
     auto pos = out.size();
     out.resize(pos + 2 * src.size());
     for (unsigned char ch : src) {
         out[pos++] = hexFromNibble(ch >> 4);
         out[pos++] = hexFromNibble(ch & 0x0f);
     }
+    return out;
 }
 
 //===========================================================================

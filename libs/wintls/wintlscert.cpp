@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2022.
+// Copyright Glen Knowles 2017 - 2025.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // wintls.cpp - dim windows platform tls
@@ -398,7 +398,7 @@ static void addCerts(
     const CertKey & key
 ) {
     string idBytes;
-    if (!hexToBytes(idBytes, key.value, false)) {
+    if (!hexToBytes(&idBytes, key.value, false)) {
         logMsgError() << "findCert, malformed search key, {"
             << key.value << "}";
         return;

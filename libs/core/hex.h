@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2024.
+// Copyright Glen Knowles 2016 - 2025.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // hex.h - dim core
@@ -62,11 +62,19 @@ constexpr auto hexFromByte(unsigned val) {
     return out;
 }
 
-bool hexToBytes(std::string & out, std::string_view src, bool append);
-void hexFromBytes(std::string & out, std::string_view src, bool append);
+bool hexToBytes(std::string * out, std::string_view src, bool append = false);
+void hexAppendBytes(
+    std::string * out,
+    std::string_view src
+);
+std::string hexFromBytes(std::string_view src);
 
 std::ostream & hexByte(std::ostream & os, char data);
-std::ostream & hexDumpLine(std::ostream & os, std::string_view data, size_t pos);
+std::ostream & hexDumpLine(
+    std::ostream & os,
+    std::string_view data,
+    size_t pos
+);
 std::ostream & hexDump(std::ostream & os, std::string_view data);
 
 } // namespace
