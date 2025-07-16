@@ -24,9 +24,65 @@ using namespace Dim;
 
 /****************************************************************************
 *
+*   Helpers
+*
+***/
+
+//===========================================================================
+static void invert(string * val) {
+    for (auto i = 0; i < val->size(); ++i)
+        (*val)[i] = ~(unsigned char)(*val)[i];
+}
+
+/****************************************************************************
+*
 *   Tests
 *
 ***/
+
+struct CopyTest {
+    size_t cnt;
+    string dst;
+    size_t dpos;
+    string src;
+    size_t spos;
+    string out;
+    source_location sloc = source_location::current();
+};
+
+enum TestMode {
+    kNormal,
+    kInverted,
+};
+
+//===========================================================================
+static bool execTest(const CopyTest & t, TestMode mode = kNormal) {
+    string src, dst, out;
+    if (!hexToBytes(&src, t.src)
+        || !hexToBytes(&dst, t.dst)
+        || !hexToBytes(&out, t.out)
+        ) {
+        logMsgError() << "Line " << t.sloc.line()
+            << ": Invalid test definition.";
+        return false;
+    }
+    if (mode == kInverted) {
+        invert(&src);
+        invert(&dst);
+        invert(&out);
+    }
+    auto ddat = dst.data();
+    auto sdat = src.data();
+    BitSpan::copy(ddat, t.dpos, sdat, t.spos, t.cnt);
+    if (dst != out) {
+        logMsgError() << "Line " << t.sloc.line()
+            << (mode == kInverted ? " inverted" : "")
+            << ": output '" << hexFromBytes(dst) << "', expected '"
+            << hexFromBytes(out);
+        return false;
+    }
+    return true;
+}
 
 //===========================================================================
 static void copyTests() {
@@ -35,6 +91,44 @@ static void copyTests() {
     uint64_t buf[3] = {};
     BitSpan v(buf, size(buf));
     EXPECT(true);
+
+    CopyTest tests[] = {
+        // cnt     dst        src       result
+        {   0,   "ff", 0,   "00", 0,    "ff" },
+        {   8,   "00", 0,   "ff", 0,    "ff" },
+        {   8,   "ff00", 8, "00ff", 8,  "ffff" },
+
+        {   1,   "7f", 0,   "40", 1,   "ff" },
+        {   1,   "bf", 1,   "40", 1,   "ff" },
+        {   1,   "df", 2,   "40", 1,   "ff" },
+        {   1,   "fe", 7,   "40", 1,   "ff" },
+        {   1,   "fe", 7,   "80", 0,   "ff" },
+        {   1,   "fe", 7,   "01", 7,   "ff" },
+        {   7,   "01", 0,   "7f", 1,   "ff" },
+        {   7,   "80", 1,   "fe", 0,   "ff" },
+
+        {   3,   "1f", 0,   "01c0", 7, "ff" },
+        {   3,   "e3", 3,   "0380", 6, "ff" },
+        {   3,   "f8", 5,   "01c0", 7, "ff" },
+
+        {   8,   "e01f",   3,   "1fe0",   3,   "ffff" },
+        {  16,   "e0001f", 3,   "1fffe0", 3,   "ffffff" },
+
+        {   3,   "fe3f", 7,   "e0",   0,   "ffff" },
+        {   3,   "fc7f", 6,   "07",   5,   "ffff" },
+        {   3,   "fe3f", 7,   "0380", 6,   "ffff" },
+
+        {  11,   "fe003f", 7, "ffe0", 0,   "ffffff" },
+        {  11,   "fe003f", 7, "03ff80", 6, "ffffff" },
+        {  11,   "fc007f", 6, "01ffc0", 7, "ffffff" },
+        {  22,   "800001", 1, "fffffc", 0, "ffffff" },
+        {  22,   "800001", 1, "7ffffe", 1, "ffffff" },
+        {  22,   "800001", 1, "3fffff", 2, "ffffff" },
+    };
+    for (auto&& t : tests) {
+        execTest(t);
+        execTest(t, kInverted);
+    }
 }
 
 //===========================================================================

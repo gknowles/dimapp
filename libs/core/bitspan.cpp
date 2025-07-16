@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2024.
+// Copyright Glen Knowles 2017 - 2025.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // bitview.cpp - dim core
@@ -126,8 +126,6 @@ void IBitView::copy(
     size_t spos,
     size_t cnt
 ) {
-    if (!cnt)
-        return;
     auto dst = (uint8_t *) vdst;
     if (dpos >= 8) {
         dst += dpos / 8;
@@ -139,32 +137,15 @@ void IBitView::copy(
         spos %= 8;
     }
 
-    if (dpos + cnt <= 8) {
-        // dst is only a single byte.
-        auto mask = uint8_t(255 >> (8 - cnt) << (8 - dpos - cnt));
-        if (spos + cnt <= 8) {
-            // From one byte to another.
-            auto val = *src;
-            if (int d = int(spos - dpos)) {
-                if (d > 0) {
-                    val >>= d;
-                } else {
-                    val <<= -d;
-                }
-            }
-            *dst = val & mask | *dst & ~mask;
-            return;
-        }
-        // From two bytes to one.
-        assert(spos > dpos);
-        auto val = *src << (spos - dpos) | src[1] >> (8 - cnt + 8 - spos);
-        *dst = val & mask | *dst & ~mask;
-        return;
-    }
-
-    if (dpos == spos) {
+    if (spos == dpos) {
         // src and dst are bit aligned.
         if (dpos) {
+            if (dpos + cnt < 8) {
+                // dst is only a single byte.
+                auto mask = uint8_t(255 >> (8 - cnt) << (8 - dpos - cnt));
+                *dst = *src & mask | *dst & ~mask;
+                return;
+            }
             auto mask = 255 >> dpos;
             auto val = *src++;
             *dst++ = val & mask | *dst & ~mask;
@@ -187,31 +168,65 @@ void IBitView::copy(
         return;
     }
 
-    // src and dst start at unaligned bits.
-    if (dpos > spos) {
+    // Start at unaligned bits.
+    if (dpos + cnt <= 8) {
+        // dst is only a single byte.
+        auto mask = uint8_t(255 >> (8 - cnt) << (8 - dpos - cnt));
+        if (spos + cnt <= 8) {
+            // From one byte to another.
+            auto val = *src;
+            if (spos > dpos) {
+                val <<= spos - dpos;
+            } else {
+                assert(spos < dpos);
+                val >>= dpos - spos;
+            }
+            *dst = val & mask | *dst & ~mask;
+            return;
+        }
+        // From two bytes to one.
+        assert(spos > dpos);
+        auto a = *src << (spos - dpos);
+        auto b = src[1] >> (dpos + 8 - spos);
+        auto val = a | b;
+        *dst = val & mask | *dst & ~mask;
+        return;
+    }
+
+    // Multibyte starting at unaligned bits.
+    if (spos < dpos) {
         // From part of one byte to first dst byte.
         //   spos 2      dpos 4
         //   00aaaabb -> 0000aaaa
         auto mask = uint8_t(255 >> dpos);
-        auto val = *src++ >> (dpos - spos);
+        auto val = *src >> (dpos - spos);
         *dst++ = val & mask | *dst & ~mask;
         spos = 8 - (dpos - spos);
     } else {
-        assert(dpos < spos);
+        assert(spos > dpos);
         // From one byte and part of another to first dst byte.
         //   spos 5                 dpos 3
         //   00000aaa + bbcccccc -> 000aaabb
         auto mask = uint8_t(255 >> dpos);
-        auto val = *src++ << (spos - dpos) | src[1] >> (8 - spos + dpos);
+        auto a = *src << (spos - dpos);
+        auto b = src[1] >> (8 - (spos - dpos));
+        src += 1;
+        auto val = a | b;
         *dst++ = val & mask | *dst & ~mask;
-        spos = 8 - (spos - dpos);
+        spos = spos - dpos;
     }
     cnt -= 8 - dpos;
+    // Copy to middle bytes of dst.
     for (; cnt >= 8; cnt -= 8) {
-        *dst++ = *src++ << spos | src[1] >> (8 - spos);
+        auto a = *src << spos;
+        auto b = src[1] >> (8 - spos);
+        src += 1;
+        auto val = a | b;
+        *dst++ = uint8_t(val);
     }
     if (cnt) {
-        auto mask = uint8_t(255 < (8 - cnt));
+        // Copy to partial last byte of dst.
+        auto mask = uint8_t(255 << (8 - cnt));
         if (cnt <= 8 - spos ) {
             // From part of one byte to front of last dst byte.
             auto val = *src << spos;
