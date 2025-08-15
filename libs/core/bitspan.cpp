@@ -118,60 +118,127 @@ static void apply(
 ***/
 
 //===========================================================================
-// static
-void IBitView::copy(
+template<typename T, typename U>
+constexpr static T combine(T dst, T src, U mask) {
+    // Equivalent to: src & mask | dst & ~mask
+    return (src ^ dst) & mask ^ dst;
+}
+
+//===========================================================================
+static uint64_t ntoh64(const void * ptr, size_t bytes) {
+    assert(bytes <= sizeof uint64_t);
+    uint64_t out = 0;
+    memcpy(&out, ptr, bytes);
+    if constexpr (std::endian::native == std::endian::little)
+        out = byteswap(out);
+    return out;
+}
+
+//===========================================================================
+static uint64_t ntoh64l(const void * ptr, size_t bytes) {
+    assert(bytes <= sizeof uint64_t);
+    uint64_t out = 0;
+    memcpy((char *) &out + sizeof out - bytes, ptr, bytes);
+    if constexpr (std::endian::native == std::endian::little)
+        out = byteswap(out);
+    return out;
+}
+
+//===========================================================================
+// Only store some of the most significant bytes.
+static void hton64(void * ptr, uint64_t val, size_t bytes) {
+    assert(bytes <= sizeof val);
+    if constexpr (std::endian::native == std::endian::little)
+        val = byteswap(val);
+    memcpy(ptr, &val, bytes);
+}
+
+//===========================================================================
+// Only store some of the *least* significant bytes.
+static void hton64l(void * ptr, uint64_t val, size_t bytes) {
+    assert(bytes <= sizeof val);
+    if constexpr (std::endian::native == std::endian::little)
+        val = byteswap(val);
+    memcpy(ptr, (char *) &val + sizeof val - bytes, bytes);
+}
+
+//===========================================================================
+static void bitmoveAligned(
+    unsigned char * dst,
+    const unsigned char * src,
+    size_t pos,
+    size_t cnt
+) {
+    // The full bytes of src and dst are bit aligned, memcpy can be used.
+    bool head = false;
+    unsigned char hval = 0;
+    unsigned char tval;
+    if (pos) {
+        // dst starts with a partial byte.
+        if (pos + cnt < 8) {
+            // dst is only a single byte.
+            auto mask = UCHAR_MAX >> (8 - cnt) << (8 - pos - cnt);
+            *dst = combine(*dst, *src, mask);
+            return;
+        }
+        // Calculate partial byte head.
+        head = true;
+        hval = combine(*dst++, *src++, UCHAR_MAX >> pos);
+        cnt -= 8 - pos;
+    }
+    if (cnt % 8 == 0) {
+        // Remainder of src and dst are fully *byte* aligned.
+        if (cnt) {
+            auto bytes = cnt / 8;
+            if (dst + bytes <= src || src + bytes <= dst) {
+                memcpy(dst, src, bytes);
+            } else {
+                memmove(dst, src, bytes);
+            }
+        }
+        if (head)
+            dst[-1] = hval;
+        return;
+    }
+    // Calculate partial byte tail.
+    auto bytes = cnt / 8;
+    tval = combine(dst[bytes], src[bytes], UCHAR_MAX << (8 - cnt % 8));
+    if (bytes) {
+        // Copy bytes that are bit aligned (the middle bytes).
+        if (dst + bytes <= src || src + bytes <= dst) {
+            memcpy(dst, src, bytes);
+        } else {
+            memmove(dst, src, bytes);
+        }
+    }
+    // Store head (if present) and tail partial bytes.
+    if (head)
+        dst[-1] = hval;
+    dst[cnt / 8] = tval;
+    return;
+}
+
+//===========================================================================
+[[maybe_unused]]
+static void bitmove8(
     void * vdst,
     size_t dpos,
-    void * vsrc,
+    const void * vsrc,
     size_t spos,
     size_t cnt
 ) {
-    auto dst = (uint8_t *) vdst;
-    if (dpos >= 8) {
-        dst += dpos / 8;
-        dpos %= 8;
-    }
-    auto src = (uint8_t *) vsrc;
-    if (spos >= 8) {
-        src += spos / 8;
-        spos %= 8;
-    }
+    auto dst = (unsigned char *) vdst + dpos / 8;
+    auto src = (const unsigned char *) vsrc + spos / 8;
+    dpos %= 8;
+    spos %= 8;
 
-    if (spos == dpos) {
-        // src and dst are bit aligned.
-        if (dpos) {
-            if (dpos + cnt < 8) {
-                // dst is only a single byte.
-                auto mask = uint8_t(255 >> (8 - cnt) << (8 - dpos - cnt));
-                *dst = *src & mask | *dst & ~mask;
-                return;
-            }
-            auto mask = 255 >> dpos;
-            auto val = *src++;
-            *dst++ = val & mask | *dst & ~mask;
-            cnt -= 8 - dpos;
-        }
-        if (cnt % 8 == 0) {
-            // src and dst are fully *byte* aligned.
-            if (cnt)
-                memcpy(dst, src, cnt / 8);
-            return;
-        }
-        if (cnt >= 8) {
-            memcpy(dst, src, cnt / 8);
-            src += cnt / 8;
-            dst += cnt / 8;
-            cnt %= 8;
-        }
-        auto mask = 255 << (8 - cnt);
-        *dst = *src & mask | *dst & ~mask;
-        return;
-    }
+    if (spos == dpos)
+        return bitmoveAligned(dst, src, spos, cnt);
 
     // Start at unaligned bits.
     if (dpos + cnt <= 8) {
         // dst is only a single byte.
-        auto mask = uint8_t(255 >> (8 - cnt) << (8 - dpos - cnt));
+        unsigned char mask = UCHAR_MAX >> (8 - cnt) << (8 - dpos - cnt);
         if (spos + cnt <= 8) {
             // From one byte to another.
             auto val = *src;
@@ -181,62 +248,230 @@ void IBitView::copy(
                 assert(spos < dpos);
                 val >>= dpos - spos;
             }
-            *dst = val & mask | *dst & ~mask;
+            *dst = combine(*dst, val, mask);
             return;
         }
         // From two bytes to one.
         assert(spos > dpos);
         auto a = *src << (spos - dpos);
         auto b = src[1] >> (dpos + 8 - spos);
-        auto val = a | b;
-        *dst = val & mask | *dst & ~mask;
+        auto val = unsigned char(a | b);
+        *dst = combine(*dst, val, mask);
         return;
     }
 
     // Multibyte starting at unaligned bits.
+    unsigned char hval;
+    unsigned char tval = 0;
+    auto sval = *src;
     if (spos < dpos) {
         // From part of one byte to first dst byte.
         //   spos 2      dpos 4
-        //   00aaaabb -> 0000aaaa
-        auto mask = uint8_t(255 >> dpos);
-        auto val = *src >> (dpos - spos);
-        *dst++ = val & mask | *dst & ~mask;
+        //   00111122 -> 00001111
+        hval = sval >> (dpos - spos);
         spos = 8 - (dpos - spos);
     } else {
         assert(spos > dpos);
         // From one byte and part of another to first dst byte.
         //   spos 5                 dpos 3
-        //   00000aaa + bbcccccc -> 000aaabb
-        auto mask = uint8_t(255 >> dpos);
-        auto a = *src << (spos - dpos);
-        auto b = src[1] >> (8 - (spos - dpos));
-        src += 1;
-        auto val = a | b;
-        *dst++ = val & mask | *dst & ~mask;
+        //   00000111 + 22333333 -> 00011122
         spos = spos - dpos;
+        auto a = sval << spos;
+        sval = *++src;
+        auto b = sval >> (8 - spos);
+        hval = unsigned char(a | b);
     }
     cnt -= 8 - dpos;
-    // Copy to middle bytes of dst.
-    for (; cnt >= 8; cnt -= 8) {
-        auto a = *src << spos;
-        auto b = src[1] >> (8 - spos);
-        src += 1;
-        auto val = a | b;
-        *dst++ = uint8_t(val);
-    }
-    if (cnt) {
-        // Copy to partial last byte of dst.
-        auto mask = uint8_t(255 << (8 - cnt));
-        if (cnt <= 8 - spos ) {
-            // From part of one byte to front of last dst byte.
-            auto val = *src << spos;
-            *dst = val & mask | *dst & ~mask;
-        } else {
-            // From two bytes to last dst byte.
-            auto val = *src << spos | src[1] >> (8 - spos);
-            *dst = val & mask | *dst & ~mask;
+    auto bytes = cnt / 8;
+    auto tcnt = cnt % 8;
+    if (tcnt) {
+        // From src to partial last byte of dst.
+        tval = src[bytes] << spos;
+        if (cnt % 8 > 8 - spos ) {
+            // From two bytes instead of one to last dst byte.
+            tval |= src[bytes + 1] >> (8 - spos);
         }
     }
+    // Copy to middle bytes of dst.
+    if (dst < src && src <= dst + bytes) {
+        sval = src[bytes];
+        for (auto i = bytes; i > 0; --i) {
+            auto b = sval >> (8 - spos);
+            sval = src[i - 1];
+            auto a = sval << spos;
+            auto val = unsigned char(a | b);
+            dst[i] = val;
+        }
+    } else {
+        for (auto i = 1; i <= bytes; ++i) {
+            auto a = sval << spos;
+            sval = src[i];
+            auto b = sval >> (8 - spos);
+            auto val = unsigned char(a | b);
+            dst[i] = val;
+        }
+    }
+    // Copy to head and tail bytes of dst.
+    *dst = combine(*dst, hval, UCHAR_MAX >> dpos);
+    if (tcnt) {
+        dst[bytes + 1] = combine(
+            dst[bytes + 1],
+            tval,
+            UCHAR_MAX << (8 - tcnt)
+        );
+    }
+}
+
+//===========================================================================
+[[maybe_unused]]
+static void bitcpy64(
+    void * vdst,
+    size_t vdpos,
+    const void * vsrc,
+    size_t vspos,
+    size_t cnt
+) {
+    // Bytes must be 8 bit.
+    static_assert(std::numeric_limits<unsigned char>::digits == 8);
+    auto dst = (unsigned char *) vdst + vdpos / 8;
+    auto src = (const unsigned char *) vsrc + vspos / 8;
+    auto spos = vspos % 8;
+    auto dpos = vdpos % 8;
+
+    if (spos == dpos) {
+        // The full bytes of src and dst are bit aligned, memcpy can be used.
+        return bitmoveAligned(dst, src, spos, cnt);
+    }
+
+    // Starts at unaligned bits.
+    if (dpos + cnt <= 64) {
+        // Copying to whole or part of single 64-bit chunk of memory.
+        auto dwidth = (dpos + cnt + 7) / 8;
+        auto swidth = (spos + cnt + 7) / 8;
+        auto mask = UINT64_MAX >> (64 - cnt) << (64 - dpos - cnt);
+        if (spos + cnt <= 64) {
+            // From one 64-bit to another.
+            auto val = ntoh64(src, swidth);
+            if (spos > dpos) {
+                val <<= spos - dpos;
+            } else {
+                assert(spos < dpos);
+                val >>= dpos - spos;
+            }
+            auto dval = ntoh64(dst, dwidth);
+            dval = combine(dval, val, mask);
+            hton64(dst, dval, dwidth);
+            return;
+        }
+        // From 9 bytes to 64-bit.
+        assert(spos > dpos);
+        assert(swidth == 9);
+        assert(dwidth == 8);
+        auto a = ntoh64(src, 8) << (spos - dpos);
+        auto b = src[8] >> (8 - (spos - dpos));
+        auto val = a | b;
+        auto dval = ntoh64(dst, 8);
+        dval = combine(dval, val, mask);
+        hton64(dst, dval, 8);
+        return;
+    }
+
+    // Multi-qword starting at unaligned bits and maybe unaligned bytes too.
+
+    // | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | ... | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+    //          111111111122222222222222------------------
+    //                        111111111122222222222222------------------
+
+    auto daddr = ((uintptr_t) dst) % 8;
+    auto saddr = ((uintptr_t) src) % 8;
+
+    uint64_t sval = 0;
+    auto sqpos = spos;
+    if (!saddr) {
+        sval = ntoh64(*(uint64_t *) src);
+        src += 8;
+    } else {
+        if (vsrc <= src - saddr) {
+            sval = ntoh64(*(uint64_t *) (src - saddr));
+        } else {
+            sval = ntoh64l(src, 8 - saddr);
+        }
+        src += 8 - saddr;
+        sqpos += 8 * saddr;
+    }
+    uint64_t dval = uint64_t(*dst) << (56 - 8 * daddr);
+    auto dqpos = dpos;
+    if (daddr) {
+        dqpos += 8 * daddr;
+    }
+    if (sqpos < dqpos) {
+        // | 0| 8|16|24|32|40|48|56|  | 0| 8|16|24|32|40|48|56|
+        //        111111112222222222  ------------                  src
+        //                  11111111  2222222222------------        dst
+        auto mask = UINT64_MAX >> dqpos;
+        auto val = sval >> (dqpos - sqpos);
+        dval = combine(dval, val, mask);
+        sqpos = 64 - (dqpos - sqpos);
+    } else {
+        // | 0| 8|16|24|32|40|48|56|  | 0| 8|16|24|32|40|48|56|
+        //                  11111111  2222222222------------        src
+        //        111111112222222222  ------------                  dst
+        assert(sqpos > dqpos);
+        auto mask = UINT64_MAX >> dqpos;
+        auto a = sval << (sqpos - dqpos);
+        auto bcnt = (cnt - (64 - sqpos) + 7) / 8;
+        sval = ntoh64(src, bcnt);
+        src += bcnt;
+        auto b = sval >> (64 - (sqpos - dpos));
+        auto val = a | b;
+        dval = combine(dval, val, mask);
+        sqpos = dqpos - sqpos;
+    }
+    hton64l(dst, dval, 8 - daddr);
+    dst += 8 - daddr;
+    cnt -= 64 - dqpos;
+    // Copy to middle qwords of dst.
+    for (; cnt >= 64; cnt -= 64) {
+        auto a = sval << sqpos;
+        sval = ntoh64(src);
+        src += 8;
+        auto b = sval >> (64 - sqpos);
+        dval = a | b;
+        hton64(dst, dval);
+        dst += 8;
+    }
+    if (cnt) {
+        // Copy to partial last qword of dst.
+        auto mask = UINT64_MAX << (64 - cnt);
+        auto val = sval;
+        if (cnt <= 64 - sqpos) {
+            // From part of one qword to front of last dst qword.
+            val = sval << sqpos;
+        } else {
+            // From two qwords to last dst qword.
+            auto a = sval << sqpos;
+            auto scnt = (cnt - (64 - sqpos) + 7) / 8;
+            sval = ntoh64(src, scnt);
+            auto b = sval >> (64 - sqpos);
+            val = a | b;
+        }
+        auto dcnt = (cnt + 7) / 8;
+        dval = uint64_t(dst[dcnt]) << (64 - 8 * dcnt);
+        dval = combine(dval, val, mask);
+        hton64(dst, dval, dcnt);
+    }
+}
+
+//===========================================================================
+// static
+void IBitView::copy(
+    void * vdst,
+    size_t dpos,
+    const void * vsrc,
+    size_t spos,
+    size_t cnt
+) {
+    bitmove8(vdst, dpos, vsrc, spos, cnt);
 }
 
 //===========================================================================
@@ -288,24 +523,8 @@ size_t IBitView::copy(
     size_t cnt,
     size_t pos //= 0
 ) const {
-    auto dst = (uint8_t *) vdst;
-    if (dpos > 7) {
-        dst += dpos / 8;
-        dpos %= 8;
-    }
-    auto bits = size() * kWordBits;
-    if (!dpos && !pos) {
-        if (pos < bits) {
-            if (cnt < bits - pos) {
-                if (cnt % 8 == 0) {
-                    //memcpy(
-                    //return cnt;
-                }
-            }
-        }
-    }
-    assert(!"Not implemented");
-    return 0;
+    copy(vdst, dpos, data(), pos, cnt);
+    return cnt;
 }
 
 //===========================================================================
@@ -536,7 +755,10 @@ BitSpan & BitSpan::set(size_t bitpos, size_t bitcount) {
 
 //===========================================================================
 BitSpan & BitSpan::set(size_t pos, const void * src, size_t spos, size_t cnt) {
-    assert(!"BitSpan::set not implemented");
+    assert(pos < bits());
+    if (cnt > bits() - pos)
+        cnt = bits() - pos;
+    copy(data(), pos, src, spos, cnt);
     return *this;
 }
 
@@ -547,8 +769,7 @@ BitSpan & BitSpan::set(
     size_t spos,
     size_t cnt // = npos
 ) {
-    assert(!"BitSpan::set not implemented");
-    return *this;
+    return set(pos, src.data(), spos, cnt);
 }
 
 //===========================================================================
@@ -660,4 +881,110 @@ uint64_t * BitSpan::data(size_t bitpos) {
     auto pos = bitpos / kWordBits;
     assert(pos < m_size);
     return m_data + pos;
+}
+
+//===========================================================================
+size_t BitSpan::insertGap(size_t bitpos, size_t cnt) {
+    auto pos = bitpos / kWordBits;
+    assert(pos < m_size);
+    if (cnt < bits() - bitpos) {
+        auto ocnt = bits() - bitpos - cnt;
+        if (cnt < ocnt) {
+            assert(cnt >= ocnt
+                && "BitSpan::insertGap: unsupported overlapping copy");
+            // use unimplemented "bitmove" function?
+        } else {
+            copy(data(), bitpos + cnt, ocnt, bitpos);
+        }
+        return cnt;
+    } else {
+        return bits() - bitpos;
+    }
+}
+
+//===========================================================================
+BitSpan & BitSpan::insert(
+    size_t pos,
+    const void * src,
+    size_t spos,
+    size_t cnt
+) {
+    insertGap(pos, cnt);
+    set(pos, src, spos, cnt);
+    return *this;
+}
+
+//===========================================================================
+BitSpan & BitSpan::insert(
+    size_t pos,
+    const IBitView & src,
+    size_t spos,
+    size_t cnt
+) {
+    return insert(pos, src.data(), spos, cnt);
+}
+
+//===========================================================================
+BitSpan & BitSpan::insert(size_t pos, size_t cnt, bool value) {
+    insertGap(pos, cnt);
+    return set(pos, cnt, value);
+}
+
+//===========================================================================
+BitSpan & BitSpan::erase(size_t pos, size_t cnt) {
+    assert(pos < bits());
+    if (bits() - pos > cnt) {
+        copy(data(), pos, data(), pos + cnt, bits() - pos - cnt);
+    }
+    return *this;
+}
+
+//===========================================================================
+size_t BitSpan::replaceWithGap(size_t pos, size_t cnt, size_t scnt) {
+    assert(pos < bits());
+    cnt = min(cnt, bits() - pos);
+    scnt = min(scnt, bits() - pos);
+    auto ocnt = cnt;
+    if (cnt < scnt) {
+        ocnt = scnt - cnt;
+        insertGap(pos + cnt, ocnt);
+    } else if (cnt > scnt) {
+        ocnt = cnt - scnt;
+        erase(pos + scnt, ocnt);
+    }
+    return ocnt;
+}
+
+//===========================================================================
+BitSpan & BitSpan::replace(
+    size_t pos,
+    size_t cnt,
+    const void * src,
+    size_t spos,
+    size_t scnt
+) {
+    auto ocnt = replaceWithGap(pos, cnt, scnt);
+    return set(pos, src, spos, ocnt);
+}
+
+//===========================================================================
+BitSpan & BitSpan::replace(
+    size_t pos,
+    size_t cnt,
+    const IBitView & src,
+    size_t spos,
+    size_t scnt
+) {
+    return replace(pos, cnt, src.data(), spos, scnt);
+}
+
+//===========================================================================
+BitSpan & BitSpan::replace(
+    size_t pos,
+    size_t cnt,
+    size_t scnt,
+    bool value
+) {
+    auto ocnt = replaceWithGap(pos, cnt, scnt);
+    return set(pos, ocnt, value);
 }

@@ -34,18 +34,104 @@ static void invert(string * val) {
         (*val)[i] = ~(unsigned char)(*val)[i];
 }
 
+//===========================================================================
+// The sequences (<num>) and [<num>] are replaced with <num> '0' or 'f'
+// characters respectively.
+//
+// Examples:
+//  "5(2)6" -> "5006"
+//  "[3]e(1)d" -> "fffe0d"
+static string expand(const string & val) {
+    string out;
+    auto ptr = val.data();
+    auto eptr = ptr + val.size();
+    char * next = {};
+
+    for (; ptr != eptr; ++ptr) {
+        if (*ptr == '(') {
+            auto num = strToUint(ptr + 1, &next);
+            if (*next == ')') {
+                ptr = next;
+                out.append(num, '0');
+                continue;
+            }
+        } else if (*ptr == '[') {
+            auto num = strToUint(ptr + 1, &next);
+            if (*next == ']') {
+                ptr = next;
+                out.append(num, 'f');
+                continue;
+            }
+        }
+        out += *ptr;
+    }
+    return out;
+}
+
+//===========================================================================
+// Encodes consecutive sequences of 4 or more '0' or 'f' characters as (<num>)
+// or [<num>] respecitvely.
+static string reduce(const string & val) {
+    string out;
+    auto ptr = val.data();
+    auto eptr = ptr + val.size();
+    auto n = 0;
+    char nch = 0;
+
+IN_RAW:
+    for (; ptr != eptr; ++ptr) {
+        switch (*ptr) {
+        case '0':
+        case 'f':
+            goto IN_KEY;
+        case '1': case '2': case '3': case '4': case '5': case '6': case '7':
+        case '8': case '9':
+        case 'a': case 'b': case 'c': case 'd': case 'e':
+            out += *ptr;
+            break;
+        default:
+            assert(!"Invalid chars in hex string");
+            out += *ptr;
+            break;
+        }
+    }
+    return out;
+
+IN_KEY:
+    nch = *ptr++;
+    n = 1;
+    for (; ptr != eptr; ++ptr) {
+        if (*ptr != nch)
+            break;
+        n += 1;
+    }
+    if (n < 4) {
+        out.append(n, nch);
+    } else if (nch == '0') {
+        out += "(" + toString(n) + ")";
+    } else {
+        assert(nch == 'f');
+        out += "[" + toString(n) + "]";
+    }
+    goto IN_RAW;
+}
+
+
 /****************************************************************************
 *
 *   Tests
 *
 ***/
 
+struct CopyTestMem {
+    string raw;
+    size_t pos;
+    size_t align;
+};
 struct CopyTest {
     size_t cnt;
-    string dst;
-    size_t dpos;
-    string src;
-    size_t spos;
+    CopyTestMem dst;
+    CopyTestMem src;
     string out;
     source_location sloc = source_location::current();
 };
@@ -58,9 +144,9 @@ enum TestMode {
 //===========================================================================
 static bool execTest(const CopyTest & t, TestMode mode = kNormal) {
     string src, dst, out;
-    if (!hexToBytes(&src, t.src)
-        || !hexToBytes(&dst, t.dst)
-        || !hexToBytes(&out, t.out)
+    if (!hexToBytes(&src, expand(t.src.raw))
+        || !hexToBytes(&dst, expand(t.dst.raw))
+        || !hexToBytes(&out, expand(t.out))
         ) {
         logMsgError() << "Line " << t.sloc.line()
             << ": Invalid test definition.";
@@ -71,14 +157,16 @@ static bool execTest(const CopyTest & t, TestMode mode = kNormal) {
         invert(&dst);
         invert(&out);
     }
-    auto ddat = dst.data();
-    auto sdat = src.data();
-    BitSpan::copy(ddat, t.dpos, sdat, t.spos, t.cnt);
+    dst.insert(0, t.dst.align, '\0');
+    auto ddat = dst.data() + t.dst.align;
+    src.insert(0, t.src.align, '\0');
+    auto sdat = src.data() + t.src.align;
+    BitSpan::copy(ddat, t.dst.pos, sdat, t.src.pos, t.cnt);
     if (dst != out) {
         logMsgError() << "Line " << t.sloc.line()
             << (mode == kInverted ? " inverted" : "")
-            << ": output '" << hexFromBytes(dst) << "', expected '"
-            << hexFromBytes(out);
+            << ": output '" << reduce(hexFromBytes(dst)) << "'"
+            << ", expected '" << reduce(hexFromBytes(out)) << "'";
         return false;
     }
     return true;
@@ -93,37 +181,60 @@ static void copyTests() {
     EXPECT(true);
 
     CopyTest tests[] = {
-        // cnt     dst        src       result
-        {   0,   "ff", 0,   "00", 0,    "ff" },
-        {   8,   "00", 0,   "ff", 0,    "ff" },
-        {   8,   "ff00", 8, "00ff", 8,  "ffff" },
+        {  11, {"fe003f", 7 },  {"ffe0", 0 },    "[6]" },
+        // cnt    dst        src       result
+        // bitcpy8
+        {   0, {"ff", 0 },   {"00", 0 },   "ff" },
+        {   8, {"00", 0 },   {"ff", 0 },   "ff" },
+        {   8, {"ff00", 8 }, {"00ff", 8 }, "[4]" },
 
-        {   1,   "7f", 0,   "40", 1,   "ff" },
-        {   1,   "bf", 1,   "40", 1,   "ff" },
-        {   1,   "df", 2,   "40", 1,   "ff" },
-        {   1,   "fe", 7,   "40", 1,   "ff" },
-        {   1,   "fe", 7,   "80", 0,   "ff" },
-        {   1,   "fe", 7,   "01", 7,   "ff" },
-        {   7,   "01", 0,   "7f", 1,   "ff" },
-        {   7,   "80", 1,   "fe", 0,   "ff" },
+        {   1, {"7f", 0 }, {"40", 1 }, "ff" },
+        {   1, {"bf", 1 }, {"40", 1 }, "ff" },
+        {   1, {"df", 2 }, {"40", 1 }, "ff" },
+        {   1, {"fe", 7 }, {"40", 1 }, "ff" },
+        {   1, {"fe", 7 }, {"80", 0 }, "ff" },
+        {   1, {"fe", 7 }, {"01", 7 }, "ff" },
+        {   7, {"01", 0 }, {"7f", 1 }, "ff" },
+        {   7, {"80", 1 }, {"fe", 0 }, "ff" },
 
-        {   3,   "1f", 0,   "01c0", 7, "ff" },
-        {   3,   "e3", 3,   "0380", 6, "ff" },
-        {   3,   "f8", 5,   "01c0", 7, "ff" },
+        {   3, {"1f", 0 }, {"01c0", 7 }, "ff" },
+        {   3, {"e3", 3 }, {"0380", 6 }, "ff" },
+        {   3, {"f8", 5 }, {"01c0", 7 }, "ff" },
 
-        {   8,   "e01f",   3,   "1fe0",   3,   "ffff" },
-        {  16,   "e0001f", 3,   "1fffe0", 3,   "ffffff" },
+        {   8, {"e01f", 3 },   {"1fe0", 3 },   "[4]" },
+        {  16, {"e0001f", 3 }, {"1fffe0", 3 }, "[6]" },
 
-        {   3,   "fe3f", 7,   "e0",   0,   "ffff" },
-        {   3,   "fc7f", 6,   "07",   5,   "ffff" },
-        {   3,   "fe3f", 7,   "0380", 6,   "ffff" },
+        {   3, {"fe3f", 7 },    {"e0", 0 },      "[4]" },
+        {   3, {"fc7f", 6 },    {"07", 5 },      "[4]" },
+        {   3, {"fe3f", 7 },    {"0380", 6 },    "[4]" },
+        {  11, {"fe003f", 7 },  {"ffe0", 0 },    "[6]" },
+        {  11, {"fe003f", 7 },  {"03ff80", 6 },  "[6]" },
+        {  11, {"fc007f", 6 },  {"01ffc0", 7 },  "[6]" },
+        {  22, {"80(2)01", 1 }, {"ff[2]fc", 0 }, "[6]" },
+        {  22, {"80(2)01", 1 }, {"7f[2]fe", 1 }, "[6]" },
+        {  22, {"80(2)01", 1 }, {"3f[2]ff", 2 }, "[6]" },
 
-        {  11,   "fe003f", 7, "ffe0", 0,   "ffffff" },
-        {  11,   "fe003f", 7, "03ff80", 6, "ffffff" },
-        {  11,   "fc007f", 6, "01ffc0", 7, "ffffff" },
-        {  22,   "800001", 1, "fffffc", 0, "ffffff" },
-        {  22,   "800001", 1, "7ffffe", 1, "ffffff" },
-        {  22,   "800001", 1, "3fffff", 2, "ffffff" },
+        //-------------------------------------------------------------------
+        // bitcpy64
+        {   0,  {"[16]", 0 },      {"(16)", 0 },      "[16]" },
+        {  64,  {"[16]", 0 },      {"[16]", 0 },      "[16]" },
+        {  64,  {"[16](16)", 64 }, {"(16)[16]", 64 }, "[32]" },
+
+        // 8 bytes from 9 bytes
+        {  63,  {"(14)01", 0 },  {"01[14]fc", 7 },  "[16]" },
+        {  63,  {"80(14)", 1 },  {"3f[14]80", 2 },  "[16]" },
+
+        // Multiple qwords
+        {  67,  {"[14]fe(16)3f[14]", 63 },  {"[16]e0", 0},  "[48]" },
+        {  67,  {"[14]fe(16)3f[14]", 63 },  {"00[16]e0", 8},  "[48]" },
+        {  67,  {"[14]fe(16)3f[14]", 63 },  {"[16]e0", 0, 2},  "[48]" },
+
+        //{  51,  "fc0000000000007f", 6,
+        //        "07ffffffffffff00", 5,
+        //        "#" },
+        //{ 115,  "fe.0000000000003f", 7,
+        //        "03#ffffffffffff80", 6,
+        //        "##" },
     };
     for (auto&& t : tests) {
         execTest(t);

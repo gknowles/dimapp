@@ -36,10 +36,10 @@ public:
 
     static void copy(
         void * dst,
-        size_t dpos,
-        void * src,
-        size_t spos,
-        size_t cnt
+        size_t dpos,    // Offset from dst of bits to update.
+        const void * src,
+        size_t spos,    // Offset from src of bits to copy.
+        size_t cnt      // Number of bits to copy.
     );
 
 public:
@@ -182,12 +182,12 @@ public:
     // Insert, erase, and replace do not change the size of the span.
     //  - If bits are removed the values of that number of bits at the end of
     //    the span become undefined.
-    //  - If bits are added any that would move past the end of the span are
-    //    discarded.
+    //  - If bits are inserted any that would be pushed past the end of the
+    //    span are discarded.
     BitSpan & insert(size_t pos, const void * src, size_t spos, size_t cnt);
     BitSpan & insert(
         size_t pos,
-        const BitSpan & src,
+        const IBitView & src,
         size_t spos,
         size_t cnt = npos
     );
@@ -218,6 +218,9 @@ public:
     uint64_t * data(size_t bitpos);
 
 private:
+    size_t insertGap(size_t bitpos, size_t cnt);
+    size_t replaceWithGap(size_t pos, size_t cnt, size_t scnt);
+
     uint64_t * m_data = nullptr;
     size_t m_size = 0;
 };
