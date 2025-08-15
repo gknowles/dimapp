@@ -885,17 +885,10 @@ uint64_t * BitSpan::data(size_t bitpos) {
 
 //===========================================================================
 size_t BitSpan::insertGap(size_t bitpos, size_t cnt) {
-    auto pos = bitpos / kWordBits;
-    assert(pos < m_size);
+    assert(bitpos < bits());
     if (cnt < bits() - bitpos) {
         auto ocnt = bits() - bitpos - cnt;
-        if (cnt < ocnt) {
-            assert(cnt >= ocnt
-                && "BitSpan::insertGap: unsupported overlapping copy");
-            // use unimplemented "bitmove" function?
-        } else {
-            copy(data(), bitpos + cnt, ocnt, bitpos);
-        }
+        copy(data(), bitpos + cnt, ocnt, bitpos);
         return cnt;
     } else {
         return bits() - bitpos;
