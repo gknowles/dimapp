@@ -453,16 +453,6 @@ TimePoint Dim::from_time_t(time_t t) {
 }
 
 //===========================================================================
-bool Dim::empty(const TimePoint & time) {
-    return time == TimePoint{};
-}
-
-//===========================================================================
-TimePoint Dim::timeNow() {
-    return Clock::now();
-}
-
-//===========================================================================
 std::ostream & Dim::operator<<(std::ostream & os, TimePoint time) {
     os << Time8601Str(time).c_str();
     return os;
