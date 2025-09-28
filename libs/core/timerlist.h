@@ -95,7 +95,7 @@ inline TimerList<T,Tag>::TimerList(Duration timeout, Duration minWait) {
 template <typename T, typename Tag>
 inline void TimerList<T,Tag>::setTimeout(Duration timeout, Duration minWait) {
     m_timeout = timeout;
-    m_minWait = min(minWait, timeout);
+    m_minWait = ::min(minWait, timeout);
     if (auto node = m_nodes.front()) {
         auto notify = static_cast<ITimerListNotify<Tag>*>(node);
         timerUpdate(this, notify->m_lastTouched + timeout - timeNow());

@@ -36,15 +36,10 @@ struct Clock {
 };
 
 using Duration = Clock::duration;
+using TimePoint = Clock::time_point;
 
-class TimePoint : public Clock::time_point {
-public:
-    using Clock::time_point::time_point;
-    TimePoint(const Clock::time_point & from) : Clock::time_point(from) {}
-    explicit operator bool () const { return *this == TimePoint{}; }
-};
-
-inline bool empty(const TimePoint & time) { return !time; }
+inline bool empty(const Duration & dt) { return dt == Duration::zero(); }
+inline bool empty(const TimePoint & time) { return time == TimePoint{}; }
 inline TimePoint timeNow() { return Clock::now(); }
 
 std::ostream& operator<<(std::ostream& os, TimePoint time);
