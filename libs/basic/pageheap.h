@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2019 - 2023.
+// Copyright Glen Knowles 2019 - 2025.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // pageheap.h - dim basic
