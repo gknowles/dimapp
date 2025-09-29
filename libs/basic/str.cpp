@@ -1,7 +1,7 @@
 // Copyright Glen Knowles 2017 - 2025.
 // Distributed under the Boost Software License, Version 1.0.
 //
-// str.cpp - dim core
+// str.cpp - dim basic
 #include "pch.h"
 #pragma hdrstop
 

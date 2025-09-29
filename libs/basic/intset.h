@@ -1,13 +1,13 @@
 // Copyright Glen Knowles 2017 - 2025.
 // Distributed under the Boost Software License, Version 1.0.
 //
-// intset.h - dim core
+// intset.h - dim basic
 #pragma once
 
 #include "cppconf/cppconf.h"
 
-#include "core/algo.h"
-#include "core/types.h"
+#include "basic/algo.h"
+#include "basic/types.h"
 
 #include <compare>
 #include <concepts>

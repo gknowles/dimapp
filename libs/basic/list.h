@@ -1,7 +1,7 @@
 // Copyright Glen Knowles 2016 - 2022.
 // Distributed under the Boost Software License, Version 1.0.
 //
-// list.h - dim core
+// list.h - dim basic
 //
 // Intrusive linked list
 //  - Member objects inherit from ListLink one or more times (allowing
@@ -36,7 +36,7 @@
 
 #include "cppconf/cppconf.h"
 
-#include "core/types.h"
+#include "basic/types.h"
 
 #include <algorithm>
 

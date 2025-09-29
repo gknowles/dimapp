@@ -4,7 +4,7 @@
 // pch.h - dim test tokentable
 
 // Public header
-#include "core/tokentable.h"
+#include "basic/tokentable.h"
 
 // External library public headers
 #include "app/app.h"

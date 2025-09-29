@@ -5,7 +5,7 @@
 // "Clustering Techniques for Minimizing External Path Length"
 // https://tinyurl.com/y52mkc22
 //
-// strtrie.cpp - dim core
+// strtrie.cpp - dim basic
 #include "pch.h"
 #pragma hdrstop
 
@@ -642,8 +642,9 @@ static void allocPage(SearchState * ss) {
 
 //===========================================================================
 static bool logFatal(SearchState * ss) {
-    logMsgFatal() << "Invalid StrTrieBase node type: "
-        << (int) nodeType(ss->node);
+    //logMsgFatal() << "Invalid StrTrieBase node type: "
+    //    << (int) nodeType(ss->node);
+    assert(!"Invalid StrTrieBase node type");
     return false;
 }
 
@@ -1756,7 +1757,7 @@ bool StrTrieBase::insert(string_view key) {
             insertAtFork,
             insertAtEndMark,
             insertAtRemote,
-            logFatal,
+            logFatal,   // undefined
         };
         static_assert(size(functs) == kMaxNodeTypes);
         for (;;) {
@@ -2072,7 +2073,7 @@ bool StrTrieBase::erase(string_view key) {
         eraseAtFork,
         eraseAtEndMark,
         eraseAtRemote,
-        logFatal,
+        logFatal,   // undefined
     };
     static_assert(size(functs) == kMaxNodeTypes);
     for (;;) {
@@ -2265,7 +2266,7 @@ bool StrTrieBase::contains(string_view key) const {
         containsAtFork,
         containsAtEndMark,
         containsAtRemote,
-        logFatal,
+        logFatal,   // undefined
     };
     static_assert(size(functs) == kMaxNodeTypes);
     for (;;) {
@@ -2736,7 +2737,7 @@ static StrTrieBase::Iter find(const StrTrieBase * cont,  string_view key) {
         findAtFork<kLess, kGreater, kEqual>,
         findAtEndMark<kLess, kGreater, kEqual>,
         findAtRemote<kLess, kGreater, kEqual>,
-        logFatal,
+        logFatal,   // undefined
     };
     static_assert(size(functs) == kMaxNodeTypes);
     for (;;) {

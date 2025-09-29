@@ -6,6 +6,7 @@
 
 #include "cppconf/cppconf.h"
 
+#include "basic/basic.h"
 #include "core/core.h"
 
 namespace Dim {

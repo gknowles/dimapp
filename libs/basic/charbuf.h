@@ -1,12 +1,12 @@
 // Copyright Glen Knowles 2015 - 2025.
 // Distributed under the Boost Software License, Version 1.0.
 //
-// charbuf.h - dim core
+// charbuf.h - dim basic
 #pragma once
 
 #include "cppconf/cppconf.h"
 
-#include "core/types.h"
+#include "basic/types.h"
 
 #include <algorithm>
 #include <cassert>

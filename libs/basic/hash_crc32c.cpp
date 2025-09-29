@@ -1,4 +1,4 @@
-// hash_crc32c.cpp - dim core
+// hash_crc32c.cpp - dim basic
 //
 // Implements crc32c, based on implementation from:
 // https://svnweb.freebsd.org/base/stable/10/sys/libkern/crc32.c?revision=256281

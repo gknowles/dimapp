@@ -1,7 +1,7 @@
 // Copyright Glen Knowles 2017 - 2025.
 // Distributed under the Boost Software License, Version 1.0.
 //
-// intset.cpp - dim core
+// intset.cpp - dim basic
 #include "pch.h"
 #pragma hdrstop
 
@@ -2441,8 +2441,9 @@ int IntegralSet<T,A>::Impl::compare(const Node & left, const Node & right) {
 //===========================================================================
 template <std::integral T, typename A>
 int IntegralSet<T,A>::Impl::cmpError(const Node & left, const Node & right) {
-    logMsgFatal() << "compare: incompatible node types, " << left.type
-        << ", " << right.type;
+    //logMsgFatal() << "compare: incompatible node types, " << left.type
+    //    << ", " << right.type;
+    assert(!"compare: incompatible node types");
     return 0;
 }
 
@@ -2732,8 +2733,9 @@ bool IntegralSet<T,A>::Impl::contains(const Node & left, const Node & right) {
 //===========================================================================
 template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::conError(const Node & left, const Node & right) {
-    logMsgFatal() << "contains: incompatible node types, " << left.type
-        << ", " << right.type;
+    //logMsgFatal() << "contains: incompatible node types, " << left.type
+    //    << ", " << right.type;
+    assert(!"contains: incompatible node types");
     return false;
 }
 
@@ -2905,8 +2907,9 @@ bool IntegralSet<T,A>::Impl::intersects(
 //===========================================================================
 template <std::integral T, typename A>
 bool IntegralSet<T,A>::Impl::isecError(const Node & left, const Node & right) {
-    logMsgFatal() << "intersects: incompatible node types, " << left.type
-        << ", " << right.type;
+    //logMsgFatal() << "intersects: incompatible node types, " << left.type
+    //    << ", " << right.type;
+    assert(!"intersects: incompatible node types");
     return false;
 }
 
@@ -3071,8 +3074,9 @@ void IntegralSet<T,A>::Impl::insError(
     Node * left,
     const Node & right
 ) {
-    logMsgFatal() << "insert: incompatible node types, " << left->type
-        << ", " << right.type;
+    //logMsgFatal() << "insert: incompatible node types, " << left->type
+    //    << ", " << right.type;
+    assert(!"insert: incompatible node types");
 }
 
 //===========================================================================
@@ -3384,8 +3388,9 @@ void IntegralSet<T,A>::Impl::eraError(
     Node * left,
     const Node & right
 ) {
-    logMsgFatal() << "erase: incompatible node types, " << left->type
-        << ", " << right.type;
+    //logMsgFatal() << "erase: incompatible node types, " << left->type
+    //    << ", " << right.type;
+    assert(!"erase: incompatible node types");
 }
 
 //===========================================================================
@@ -3614,8 +3619,9 @@ void IntegralSet<T,A>::Impl::isecError(
     Node * left,
     const Node & right
 ) {
-    logMsgFatal() << "intersect: incompatible node types, " << left->type
-        << ", " << right.type;
+    //logMsgFatal() << "intersect: incompatible node types, " << left->type
+    //    << ", " << right.type;
+    assert(!"intersect: incompatible node types");
 }
 
 //===========================================================================

@@ -7,7 +7,7 @@
 #include "json/json.h"
 
 // External library public headers
-#include "core/str.h"
+#include "basic/str.h"
 
 // Standard headers
 #include <algorithm>

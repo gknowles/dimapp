@@ -3,12 +3,12 @@
 //
 // Set of strings, all non-const functions invalidate all iterators.
 //
-// strtrie.h - dim core
+// strtrie.h - dim basic
 #pragma once
 
 #include "cppconf/cppconf.h"
 
-#include "core/pageheap.h"
+#include "basic/pageheap.h"
 
 #include <algorithm>
 #include <span>

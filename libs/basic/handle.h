@@ -1,7 +1,7 @@
 // Copyright Glen Knowles 2015 - 2024.
 // Distributed under the Boost Software License, Version 1.0.
 //
-// handle.h - dim core
+// handle.h - dim basic
 #pragma once
 
 #include "cppconf/cppconf.h"

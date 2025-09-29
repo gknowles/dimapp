@@ -4,7 +4,7 @@
 // pch.h - dim test bitspan
 
 // Public header
-#include "core/bitspan.h"
+#include "basic/bitspan.h"
 
 // External library public headers
 #include "app/app.h"

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright Glen Knowles 2018 - 2023.
+Distributed under the Boost Software License, Version 1.0.
+-->
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <!-- Handle -->
+  <Type Name="Dim::HandleBase">
+    <DisplayString>{pos}</DisplayString>
+  </Type>
+
+  <!-- List<T, Tag> -->
+  <Type Name="Dim::List&lt;*,*&gt;">
+    <DisplayString Condition="m_base.m_prevLink == &amp;m_base">
+      {{ size=0 }}
+    </DisplayString>
+    <DisplayString Condition="m_base.m_prevLink == m_base.m_nextLink">
+      {{ size=1 }}
+    </DisplayString>
+    <DisplayString>{{ size>=2 }}</DisplayString>
+    <Expand>
+      <CustomListItems MaxItemsPerView="100">
+        <Variable Name="base" InitialValue="&amp;m_base"/>
+        <Variable Name="ptr" InitialValue="m_base.m_nextLink"/>
+        <Loop>
+          <Break Condition="ptr == base"/>
+          <Item Condition="ptr == ($T1 *) ptr">($T1 *) ptr</Item>
+          <Item>ptr</Item>
+          <Exec>ptr = ptr->m_nextLink</Exec>
+        </Loop>
+      </CustomListItems>
+    </Expand>
+  </Type>
+  <Type Name="Dim::List&lt;*,*&gt;" Priority="Low">
+    <!-- fallback definition when template type is in anonymous namespace -->
+    <DisplayString Condition="m_base.m_prevLink == &amp;m_base">
+      {{ size=0 }}
+    </DisplayString>
+    <DisplayString Condition="m_base.m_prevLink == m_base.m_nextLink">
+      {{ size=1 }}
+    </DisplayString>
+    <DisplayString>{{ size>=2 }}</DisplayString>
+    <Expand>
+      <CustomListItems MaxItemsPerView="100">
+        <Variable Name="base" InitialValue="&amp;m_base"/>
+        <Variable Name="ptr" InitialValue="m_base.m_nextLink"/>
+        <Loop>
+          <Break Condition="ptr == base"/>
+          <Item>ptr</Item>
+          <Exec>ptr = ptr->m_nextLink</Exec>
+        </Loop>
+      </CustomListItems>
+    </Expand>
+  </Type>
+
+  <Type Name="Dim::ListLink&lt;*&gt;" Inheritable="false">
+    <DisplayString Condition="m_prevLink == this">
+      {{ not linked }}
+    </DisplayString>
+    <DisplayString>{{ linked }}</DisplayString>
+  </Type>
+</AutoVisualizer>

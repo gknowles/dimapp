@@ -6,7 +6,7 @@
 
 #include "cppconf/cppconf.h"
 
-#include "core/charbuf.h"
+#include "basic/charbuf.h"
 
 #include <cstdint>
 #include <memory>

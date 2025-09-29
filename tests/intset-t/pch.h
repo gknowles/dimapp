@@ -4,7 +4,7 @@
 // pch.h - dim test intset
 
 // Public header
-#include "core/intset.h"
+#include "basic/intset.h"
 
 // External library public headers
 #include "app/app.h"

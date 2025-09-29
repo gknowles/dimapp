@@ -12,10 +12,10 @@
 
 #include "cppconf/cppconf.h"
 
-#include "core/str.h"
+#include "basic/str.h"
+#include "basic/tokentable.h"
+#include "basic/types.h"
 #include "core/time.h"
-#include "core/tokentable.h"
-#include "core/types.h"
 
 #include <cstdint>
 #include <string>

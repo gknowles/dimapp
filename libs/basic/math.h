@@ -1,7 +1,7 @@
 // Copyright Glen Knowles 2016 - 2024.
 // Distributed under the Boost Software License, Version 1.0.
 //
-// math.h - dim core
+// math.h - dim basic
 #pragma once
 
 #include "cppconf/cppconf.h"

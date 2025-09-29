@@ -15,7 +15,7 @@
 
 #include "dimcli/cli.h"
 
-#include "core/charbuf.h"
+#include "basic/charbuf.h"
 #include "core/task.h"
 #include "core/time.h"
 

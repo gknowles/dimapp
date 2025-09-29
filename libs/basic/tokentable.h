@@ -3,12 +3,12 @@
 //
 // Maps between a predefined set of enums and their string representations.
 //
-// tokentable.h - dim core
+// tokentable.h - dim basic
 #pragma once
 
 #include "cppconf/cppconf.h"
 
-#include "core/types.h"
+#include "basic/types.h"
 
 #include <cassert>
 #include <iterator>

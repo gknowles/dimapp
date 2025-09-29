@@ -4,7 +4,7 @@
 // pch.h - dim test str
 
 // Public header
-#include "core/str.h"
+#include "basic/str.h"
 
 // External library public headers
 #include "app/app.h"

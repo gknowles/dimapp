@@ -1,14 +1,12 @@
 // Copyright Glen Knowles 2015 - 2024.
 // Distributed under the Boost Software License, Version 1.0.
 //
-// pch.h - dim core
+// pch.h - dim basic
 
 // Public header
-#include "core/core.h"
-
-// External library public headers
 #include "basic/basic.h"
 
+// External library public headers
 // Standard headers
 #include <algorithm>
 #include <atomic>
@@ -29,9 +27,6 @@
 #include <ranges>
 #include <shared_mutex>
 #include <span>
-#ifdef __cpp_lib_stacktrace
-#include <stacktrace>
-#endif
 #include <thread>
 #include <utility>
 #include <vector>
@@ -39,6 +34,3 @@
 // Platform headers
 // External library internal headers
 // Internal headers
-#include "core/appint.h"
-#include "core/threadint.h"
-#include "core/timeint.h"

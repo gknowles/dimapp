@@ -1,7 +1,7 @@
 // Copyright Glen Knowles 2016 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
-// hash.h - dim core
+// hash.h - dim basic
 #pragma once
 
 #include "cppconf/cppconf.h"

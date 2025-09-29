@@ -9,7 +9,7 @@
 
 #include "cppconf/cppconf.h"
 
-#include "core/charbuf.h"
+#include "basic/charbuf.h"
 #include "net/http.h"
 
 #include <deque>

@@ -4,7 +4,7 @@
 // pch.h - dim test math
 
 // Public header
-#include "core/math.h"
+#include "basic/math.h"
 
 // External library public headers
 #include "app/app.h"

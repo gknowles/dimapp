@@ -6,10 +6,10 @@
 
 #include "cppconf/cppconf.h"
 
-#include "core/charbuf.h"
-#include "core/str.h"
-#include "core/tempheap.h"
-#include "core/types.h"
+#include "basic/charbuf.h"
+#include "basic/str.h"
+#include "basic/tempheap.h"
+#include "basic/types.h"
 
 #include <cstdint>
 #include <memory>

@@ -6,9 +6,9 @@
 
 #include "cppconf/cppconf.h"
 
-#include "core/charbuf.h"
+#include "basic/charbuf.h"
+#include "basic/types.h"
 #include "core/time.h"
-#include "core/types.h"
 
 #include <functional>
 #include <memory>

@@ -1,7 +1,7 @@
 // Copyright Glen Knowles 2018 - 2019.
 // Distributed under the Boost Software License, Version 1.0.
 //
-// refcount.h - dim core
+// refcount.h - dim basic
 #pragma once
 
 #include "cppconf/cppconf.h"

@@ -7,6 +7,7 @@
 #include "file/file.h"
 
 // External library public headers
+#include "basic/basic.h"
 #include "core/core.h"
 
 // Standard headers

@@ -1,13 +1,13 @@
 // Copyright Glen Knowles 2017 - 2025.
 // Distributed under the Boost Software License, Version 1.0.
 //
-// str.h - dim core
+// str.h - dim basic
 #pragma once
 
 #include "cppconf/cppconf.h"
 
-#include "math.h"   // digits10
-#include "types.h"  // CharType
+#include "basic/math.h"   // digits10
+#include "basic/types.h"  // CharType
 
 #include <cassert>
 #include <charconv>

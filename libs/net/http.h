@@ -11,9 +11,10 @@
 
 #include "cppconf/cppconf.h"
 
-#include "core/charbuf.h"
-#include "core/handle.h"
-#include "core/types.h" // ForwardListIterator
+#include "basic/charbuf.h"
+#include "basic/handle.h"
+#include "basic/tempheap.h"
+#include "basic/types.h" // ForwardListIterator
 #include "net/url.h"
 
 #include <memory>

@@ -1,12 +1,12 @@
 // Copyright Glen Knowles 2019 - 2023.
 // Distributed under the Boost Software License, Version 1.0.
 //
-// pageheap.h - dim core
+// pageheap.h - dim basic
 #pragma once
 
 #include "cppconf/cppconf.h"
 
-#include "intset.h"
+#include "basic/intset.h"
 
 #include <cassert>
 #include <cstdint>
