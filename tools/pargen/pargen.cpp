@@ -265,10 +265,10 @@ static void app(Cli & cli) {
 
     if (s_opts.test) {
         int code = internalTest() ? EX_OK : EX_SOFTWARE;
-        return appSignalShutdown(code);
+        return cli.fail(code);
     }
     if (!s_opts.srcfile)
-        return appSignalUsageError("No value given for <source file[.abnf]>");
+        return cli.badUsage("No value given for <source file[.abnf]>");
 
     // initialize rules
     TimePoint start = Clock::now();
@@ -288,7 +288,7 @@ static void app(Cli & cli) {
         string source;
         fileLoadBinaryWait(&source, path);
         if (source.empty())
-            return appSignalUsageError(EX_USAGE);
+            return cli.fail(EX_USAGE);
         auto & content = contents[path] = move(source);
         if (!parseAbnf(rules, content, s_opts.minRules)) {
             logParseError(
@@ -297,7 +297,7 @@ static void app(Cli & cli) {
                 rules.errpos(),
                 content
             );
-            return appSignalShutdown(EX_DATAERR);
+            return cli.fail(EX_DATAERR);
         }
         path = Path(path).removeFilename().c_str();
         for (auto && f : rules.optionStrings(kOptionInclude))
@@ -306,7 +306,7 @@ static void app(Cli & cli) {
     }
 
     if (!processOptions(rules))
-        return appSignalShutdown(EX_DATAERR);
+        return cli.fail(EX_DATAERR);
 
     if (s_opts.root.size())
         rules.setOption(kOptionRoot, s_opts.root);
@@ -315,13 +315,13 @@ static void app(Cli & cli) {
     ofstream oh(ohName);
     if (!oh) {
         logMsgError() << ohName << ": open failed";
-        return appSignalShutdown(EX_IOERR);
+        return cli.fail(EX_IOERR);
     }
     auto ocppName = rules.optionString(kOptionApiOutputCpp);
     ofstream ocpp(ocppName);
     if (!ocpp) {
         logMsgError() << ocppName << ": open failed";
-        return appSignalShutdown(EX_IOERR);
+        return cli.fail(EX_IOERR);
     }
     writeParser(oh, ocpp, rules, s_opts);
     oh.close();
@@ -332,11 +332,11 @@ static void app(Cli & cli) {
 
     if (int errs = logGetMsgCount(kLogTypeError)) {
         logMsgError() << "Errors encountered: " << errs;
-        return appSignalShutdown(EX_DATAERR);
+        return cli.fail(EX_DATAERR);
     }
     logMsgInfo() << "Errors encountered: " << 0;
     s_logQ = {};
-    appSignalShutdown(EX_OK);
+    cli.success();
 }
 
 

@@ -844,22 +844,21 @@ static void processFiles(const Config * cfg) {
 static void app(Cli & cli) {
     auto conf = loadConfig(s_opts.configFile);
     if (!conf)
-        return;
+        return cli.fail(EX_DATAERR);
 
     if (s_opts.show)
         showConfig(conf.get());
     if (s_opts.check || s_opts.update) {
         processFiles(conf.release());
-        return;
+        return cli.fail(EX_PENDING);
     }
     if (!s_opts.show) {
-        return appSignalUsageError(
+        return cli.badUsage(
             "No operation selected.",
+            "",
             "Pick some combination of --show, --check, and --update."
         );
     }
-
-    appSignalShutdown(EX_OK);
 }
 
 //===========================================================================

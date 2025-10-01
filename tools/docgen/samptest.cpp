@@ -1410,11 +1410,11 @@ CmdOpts::CmdOpts() {
 static void testCmd(Cli & cli) {
     auto cfg = loadConfig(s_opts.cfgfile, fLoadTests);
     if (!cfg)
-        return cli.fail(EX_DATAERR, "");
+        return cli.fail(EX_DATAERR);
     if (cfg->sampDir.empty()) {
         logMsgError() << cfg->configFile
             << ": Output directory for samples unspecified.";
-        return cli.fail(EX_DATAERR, "");
+        return cli.fail(EX_DATAERR);
     }
 
     ostringstream os;
@@ -1423,4 +1423,5 @@ static void testCmd(Cli & cli) {
     auto out = logMsgInfo();
     cli.printText(out, os.str());
     testSamples(cfg.release());
+    cli.fail(EX_PENDING);
 }

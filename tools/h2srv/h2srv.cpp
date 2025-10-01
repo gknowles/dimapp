@@ -127,6 +127,7 @@ static void app(Cli & cli) {
     s_mgr = sockMgrListen<TNetConn>("raw", AppSocket::kRaw);
 
     logMsgInfo() << "Server started";
+    cli.fail(EX_PENDING);
 }
 
 //===========================================================================

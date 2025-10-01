@@ -264,6 +264,7 @@ static void app(Cli & cli) {
     consoleCatchCtrlC();
     s_console.init();
     addressQuery(&s_cancelAddrId, &s_socket, s_remoteAddrStr, 23);
+    cli.fail(EX_PENDING);
 }
 
 

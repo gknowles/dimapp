@@ -345,17 +345,17 @@ static void app(Cli & cli) {
     s_specfile.defaultExt("xsdgen.xml");
     string content;
     if (fileLoadBinaryWait(&content, s_specfile))
-        return appSignalUsageError(EX_DATAERR);
+        return cli.fail(EX_DATAERR);
     XDocument doc;
     auto root = doc.parse(content.data(), s_specfile);
     if (!root || doc.errmsg()) {
         logParseError("Parsing failed", s_specfile, doc.errpos(), content);
-        return appSignalShutdown(EX_DATAERR);
+        return cli.fail(EX_DATAERR);
     }
 
     Schema schema;
     if (!loadSchema(&schema, root))
-        return appSignalShutdown(EX_DATAERR);
+        return cli.fail(EX_DATAERR);
     schema.xsdFile = s_specfile;
     if (schema.xsdFile.extension() == ".xml")
         schema.xsdFile.setExt("");
@@ -363,11 +363,9 @@ static void app(Cli & cli) {
 
     CharBuf buf;
     if (!writeXsd(&buf, schema))
-        return appSignalShutdown(EX_DATAERR);
+        return cli.fail(EX_DATAERR);
 
     updateXmlFile(schema.xsdFile, buf);
-
-    appSignalShutdown(EX_OK);
 }
 
 

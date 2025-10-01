@@ -205,7 +205,7 @@ static void app(Cli & cli) {
         s_opts.target.defaultExt("exe");
         h = resOpenForUpdate(s_opts.target);
         if (!h)
-            return appSignalShutdown(EX_DATAERR);
+            return cli.fail(EX_DATAERR);
         if (!prev.parse(resLoadData(h, kResWebSite))) {
             prev.clear();
             logMsgWarn() << "Invalid website resource: " << s_opts.target;
@@ -223,7 +223,7 @@ static void app(Cli & cli) {
     for (auto&& fn : fileGlob(s_opts.src, "**")) {
         string content;
         if (auto ec = fileLoadBinaryWait(&content, fn.path); ec)
-            return appSignalShutdown(EX_DATAERR);
+            return cli.fail(EX_DATAERR);
         auto path = fn.path.str().substr(s_opts.src.size());
         if (path[0] != '/')
             path.insert(0, "/");
@@ -247,7 +247,7 @@ static void app(Cli & cli) {
 
     if (added + updated + removed == 0) {
         cout << "Resources: " << files.size() << " (0 changed)" << endl;
-        return appSignalShutdown(EX_OK);
+        return cli.success();
     }
 
     if (s_opts.verbose) {
@@ -260,11 +260,11 @@ static void app(Cli & cli) {
 
     if (s_opts.otype == CmdOpts::kResource) {
         if (!resUpdate(h, kResWebSite, out.view()))
-            return appSignalShutdown(EX_DATAERR);
+            return cli.fail(EX_DATAERR);
 
         rclose = {};
         if (!resClose(h, true))
-            return appSignalShutdown(EX_DATAERR);
+            return cli.fail(EX_DATAERR);
     } else {
         using enum Dim::File::OpenMode;
 
@@ -275,11 +275,11 @@ static void app(Cli & cli) {
         if (auto ec = fileExists(&found, s_opts.target); !ec && found) {
             string oldContent;
             if (fileLoadBinaryWait(&oldContent, s_opts.target))
-                return appSignalShutdown(EX_DATAERR);
+                return cli.fail(EX_DATAERR);
             if (oldContent == content) {
                 cout << "Resources: " << files.size() << " (0 changed)"
                     << endl;
-                return appSignalShutdown(EX_OK);
+                return cli.success();
             }
         }
         FileHandle f;
@@ -300,7 +300,7 @@ static void app(Cli & cli) {
         << updated << " updated, "
         << removed << " removed"
         << ")" << endl;
-    return appSignalShutdown(EX_OK);
+    return cli.success();
 }
 
 

@@ -166,8 +166,12 @@ static void initApp() {
     }
 
     Cli cli;
-    if (!cli.exec()) {
-        // Falls back to appSignalShutdown() if exit code is 0
+    if (!cli.exec() || cli.exitCode() != EX_PENDING) {
+        // Extended parsing failed or the action completed without requesting
+        // to wait for a later asynchronous call to appSignal*().
+        //
+        // Signal usage error, which falls back to appSignalShutdown() if exit
+        // code is 0.
         appSignalUsageError();
     }
 }
@@ -429,7 +433,10 @@ void Dim::appSignalUsageError(string_view err, string_view detail) {
 
 //===========================================================================
 void Dim::appSignalUsageError(int code, string_view err, string_view detail) {
-    s_usageErrorSignaled.test_and_set();
+    if (s_usageErrorSignaled.test_and_set()) {
+        // Previous usage error already reported.
+        return;
+    }
     if (code) {
         bool hasConsole = appFlags().any(fAppWithConsole | fAppIsService);
         if (!hasConsole)

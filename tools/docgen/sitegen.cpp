@@ -1116,10 +1116,8 @@ static void genSite(Config * out, unsigned phase) {
 
         // Replace site output directory with all the new files.
         auto odir = Path(out->siteDir).resolve(out->configFile.parentPath());
-        {
-            if (!writeOutputs(odir, out->outputs))
-                return;
-        }
+        if (!writeOutputs(odir, out->outputs))
+            return;
 
         // Clean up
         auto count = out->outputs.size();
@@ -1164,11 +1162,11 @@ CmdOpts::CmdOpts() {
 static void genCmd(Cli & cli) {
     auto cfg = loadConfig(s_opts.cfgfile, fLoadSite);
     if (!cfg)
-        return cli.fail(EX_DATAERR, "");
+        return cli.fail(EX_DATAERR);
     if (cfg->siteDir.empty()) {
         logMsgError() << cfg->configFile
             << ": Output directory for site unspecified.";
-        return cli.fail(EX_DATAERR, "");
+        return cli.fail(EX_DATAERR);
     }
 
     ostringstream os;
@@ -1177,4 +1175,5 @@ static void genCmd(Cli & cli) {
     auto out = logMsgInfo();
     cli.printText(out, os.str());
     genSite(cfg.release());
+    cli.fail(EX_PENDING);
 }
