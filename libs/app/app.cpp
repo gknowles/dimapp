@@ -438,8 +438,10 @@ void Dim::appSignalUsageError(int code, string_view err, string_view detail) {
         return;
     }
     if (code) {
-        bool hasConsole = appFlags().any(fAppWithConsole | fAppIsService);
-        if (!hasConsole)
+        // fAppWithConsole and fAppIsService already have all the console
+        // logging they're allowed.
+        bool addConLog = !appFlags().any(fAppWithConsole | fAppIsService);
+        if (addConLog)
             logMonitor(consoleBasicLogger());
         Cli cli;
         auto em = err.empty() ? cli.errMsg() : err;
@@ -451,7 +453,7 @@ void Dim::appSignalUsageError(int code, string_view err, string_view detail) {
         ostringstream os;
         cli.printUsageEx(os, {}, cli.commandMatched());
         logMultiInfo(os.view());
-        if (!hasConsole)
+        if (addConLog)
             logMonitorClose(consoleBasicLogger());
     }
     appSignalShutdown(code);
