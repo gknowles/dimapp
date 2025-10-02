@@ -819,8 +819,14 @@ bool Dim::execElevatedWait(
 ) {
     SHELLEXECUTEINFOW ei = { sizeof ei };
     ei.lpVerb = L"RunAs";
-    auto args = Cli::toArgv(string(cmdline));
-    auto wexe = toWstring(args.empty() ? "" : args[0]);
+    auto args = Cli::toArgv(cmdline);
+    auto nexe = args.empty() ? "" : args[0];
+
+    // ShellExecute, unlike every other windows API I'm aware of, requires
+    // the file path use backslashes as the directory separator.
+    nexe = Path(nexe).preferredStr();
+
+    auto wexe = toWstring(nexe);
     ei.lpFile = wexe.c_str();
     auto wargs = toWstring(cmdline);
     ei.lpParameters = wargs.c_str();
@@ -837,7 +843,7 @@ bool Dim::execElevatedWait(
         if (err == ERROR_CANCELLED) {
             logMsgError() << "Operation canceled.";
         } else {
-            logMsgError() << "ShellExecuteExW: " << WinError();
+            logMsgError() << "ShellExecuteExW(" << nexe << "): " << WinError();
         }
         *exitCode = -1;
         return false;

@@ -141,6 +141,11 @@ public:
     const char * c_str() const;
     size_t size() const;
 
+    // Returns path with all directory separators converted to the preferred
+    // directory separator. Which means on Windows '/' is converted to '\' on
+    // POSIX no changes are made.
+    std::string preferredStr() const;
+
     // Up to and including first ':' in leading segment.
     std::string_view drive() const;
 

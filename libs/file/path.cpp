@@ -667,6 +667,15 @@ size_t Path::size() const {
 }
 
 //===========================================================================
+string Path::preferredStr() const {
+    string out;
+    for (auto&& ch : m_data) {
+        out += (ch == '/') ? '\\' : ch;
+    }
+    return out;
+}
+
+//===========================================================================
 string_view Path::drive() const {
     return Count(m_data).drive();
 }
