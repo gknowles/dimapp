@@ -16,7 +16,7 @@ using namespace Dim;
 *
 ***/
 
-static atomic_flag s_usageErrorSignaled;
+static atomic_flag s_cliShutdownSignaled;
 
 static mutex s_runMut;
 static condition_variable s_runCv;
@@ -52,6 +52,38 @@ static Path s_webDir;
 static Path makeAppDir(string_view path) {
     auto out = appRootDir() / path;
     return out;
+}
+
+//===========================================================================
+static void signalCliShutdown(bool withUsage) {
+    if (s_cliShutdownSignaled.test_and_set()) {
+        // Previous cli shutdown already reported.
+        return;
+    }
+    Cli cli;
+    auto code = cli.exitCode();
+    if (code) {
+        // fAppWithConsole and fAppIsService already have all the console
+        // logging they're allowed.
+        bool addConLog = !appFlags().any(fAppWithConsole | fAppIsService);
+        if (addConLog)
+            logMonitor(consoleBasicLogger());
+        Cli cli;
+        auto em = cli.errMsg();
+        auto dm = cli.errDetail();
+        if (!em.empty())
+            logMsgError() << "Error: " << em;
+        if (!dm.empty())
+            logMultiInfo(dm);
+        if (withUsage) {
+            ostringstream os;
+            cli.printUsageEx(os, {}, cli.commandMatched());
+            logMultiInfo(os.view());
+        }
+        if (addConLog)
+            logMonitorClose(consoleBasicLogger());
+    }
+    appSignalShutdown(code);
 }
 
 
@@ -166,13 +198,15 @@ static void initApp() {
     }
 
     Cli cli;
-    if (!cli.exec() || cli.exitCode() != EX_PENDING) {
+    if (!cli.exec()) {
         // Extended parsing failed or the action completed without requesting
         // to wait for a later asynchronous call to appSignal*().
         //
         // Signal usage error, which falls back to appSignalShutdown() if exit
         // code is 0.
-        appSignalUsageError();
+        signalCliShutdown(true);
+    } else if (cli.exitCode() != EX_PENDING) {
+        signalCliShutdown(false);
     }
 }
 
@@ -217,7 +251,7 @@ int Dim::appRun(
         s_runMode = kRunStarting;
         s_exitcode = 0;
     }
-    s_usageErrorSignaled.clear();
+    s_cliShutdownSignaled.clear();
     s_appFlags = flags;
     s_appTasks.clear();
 
@@ -254,7 +288,7 @@ int Dim::appRun(
     if (parseOk) {
         taskPushEvent(initApp);
     } else {
-        appSignalUsageError();
+        signalCliShutdown(true);
     }
 
     // Wait for application to finish.
@@ -279,7 +313,7 @@ int Dim::appRun(
     iPerfDestroy();
     iPlatformDestroy();
     lk.lock();
-    s_usageErrorSignaled.clear();
+    s_cliShutdownSignaled.clear();
     assert(s_runMode == kRunStopping);
     s_runMode = kRunStopped;
     return s_exitcode;
@@ -383,8 +417,8 @@ int Dim::appExitCode() {
 }
 
 //===========================================================================
-bool Dim::appUsageErrorSignaled() {
-    return s_usageErrorSignaled.test();
+bool Dim::appCliShutdownSignaled() {
+    return s_cliShutdownSignaled.test();
 }
 
 //===========================================================================
@@ -421,40 +455,4 @@ void Dim::appSignalShutdown(int code) {
         // functions. Therefore notify_one() isn't enough.
         s_runCv.notify_all();
     }
-}
-
-//===========================================================================
-void Dim::appSignalUsageError(string_view err, string_view detail) {
-    if (!err.empty())
-        return appSignalUsageError(EX_USAGE, err, detail);
-    Cli cli;
-    appSignalUsageError(cli.exitCode(), err, detail);
-}
-
-//===========================================================================
-void Dim::appSignalUsageError(int code, string_view err, string_view detail) {
-    if (s_usageErrorSignaled.test_and_set()) {
-        // Previous usage error already reported.
-        return;
-    }
-    if (code) {
-        // fAppWithConsole and fAppIsService already have all the console
-        // logging they're allowed.
-        bool addConLog = !appFlags().any(fAppWithConsole | fAppIsService);
-        if (addConLog)
-            logMonitor(consoleBasicLogger());
-        Cli cli;
-        auto em = err.empty() ? cli.errMsg() : err;
-        auto dm = detail.empty() ? cli.errDetail() : detail;
-        if (!em.empty())
-            logMsgError() << "Error: " << em;
-        if (!dm.empty())
-            logMultiInfo(dm);
-        ostringstream os;
-        cli.printUsageEx(os, {}, cli.commandMatched());
-        logMultiInfo(os.view());
-        if (addConLog)
-            logMonitorClose(consoleBasicLogger());
-    }
-    appSignalShutdown(code);
 }

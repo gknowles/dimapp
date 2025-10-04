@@ -191,23 +191,9 @@ bool appLogPath(
 // all application shutdown handlers (see shutdownMonitor) have completed.
 void appSignalShutdown(int exitCode = EX_OK);
 
-// Intended for use with command line errors, calls appSignalShutdown() after
-// reporting the error. Explicit err text implies EX_USAGE, otherwise defaults
-// for exit code, err, and detail are pulled from the global Dim::Cli instance.
-//
-// Unless the application is running as a service, the error is logged to the
-// console in addition to any other log targets.
-void appSignalUsageError(
-    std::string_view err = {},
-    std::string_view detail = {}
-);
-void appSignalUsageError(
-    int exitcode,
-    std::string_view err = {},
-    std::string_view detail = {}
-);
-
-// Returns true if appSignalUsageError() has been called.
-bool appUsageErrorSignaled();
+// Returns true if appSignalShutdown() has been called because the
+// application's action or subcommand returned without calling
+// cli.fail(EX_PENDING) or otherwise setting the cli exit code to EX_PENDING.
+bool appCliShutdownSignaled();
 
 } // namespace

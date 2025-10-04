@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2024.
+// Copyright Glen Knowles 2017 - 2025.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // logfile.cpp - dim app
@@ -471,7 +471,7 @@ static ShutdownNotify s_cleanup;
 //===========================================================================
 void ShutdownNotify::onShutdownConsole(bool firstTry) {
     if (firstTry) {
-        if (!appUsageErrorSignaled()) {
+        if (!appCliShutdownSignaled()) {
             vector<PerfValue> perfs;
             perfGetValues(&perfs, true);
             for (auto && perf : perfs) {
