@@ -172,8 +172,10 @@ void ConfigFile::parseContent(
     m_relpath.remove_prefix(appConfigDir().size() + 1);
 
     // call notifiers
-    if (appFlags().any(fAppWithFiles))
-        logMsgInfo() << "Config file '" << m_relpath << "' changed";
+    if (appFlags().any(fAppWithFiles)) {
+        logMsgInfo() << "Config file '" << m_relpath << "' "
+            << (m_changes > 1 ? "changed" : "loaded");
+    }
     configChange(m_fullpath, nullptr);
 }
 
