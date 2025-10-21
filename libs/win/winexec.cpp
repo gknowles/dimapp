@@ -822,8 +822,9 @@ bool Dim::execElevatedWait(
     auto args = Cli::toArgv(cmdline);
     auto nexe = args.empty() ? "" : args[0];
 
-    // ShellExecute, unlike every other windows API I'm aware of, requires
-    // the file path use backslashes as the directory separator.
+    // ShellExecute, unlike every other windows API I'm aware of, treats
+    // forward slash as the end of the path rather than as a directory
+    // separator.
     nexe = Path(nexe).preferredStr();
 
     auto wexe = toWstring(nexe);
