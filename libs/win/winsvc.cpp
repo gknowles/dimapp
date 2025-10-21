@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2022.
+// Copyright Glen Knowles 2017 - 2025.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // winsvc.cpp - dim windows platform
@@ -48,7 +48,7 @@ static RunMode s_mode{kRunStopped};
 static void setState(
     unsigned status,
     bool accepting = true,
-    int exitcode = EX_OK
+    int exitCode = EX_OK
 ) {
     DWORD accepts = SERVICE_ACCEPT_STOP;
     SERVICE_STATUS ss = {
@@ -56,7 +56,7 @@ static void setState(
         status,
         accepting ? accepts : 0,
         ERROR_SERVICE_SPECIFIC_ERROR,
-        (DWORD) exitcode, // service specific exit code
+        (DWORD) exitCode, // service specific exit code
         0, // check point
         30'000 // 30 second wait
     };
@@ -75,6 +75,8 @@ static DWORD WINAPI svcCtrlHandler(
     default:
         return ERROR_CALL_NOT_IMPLEMENTED;
     case SERVICE_CONTROL_INTERROGATE:
+        // The SCM remembers the last reported status, so there's no need to
+        // do anything here as we always report it when it changes.
         return NO_ERROR;
     case SERVICE_CONTROL_STOP:
         appSignalShutdown();
@@ -126,8 +128,8 @@ static void serviceDispatchThread() {
     if (!StartServiceCtrlDispatcherW(st)) {
         WinError err;
         if (err == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT) {
-            // Failed service controller connect means that we're not running
-            // as a service.
+            // Failed service controller connect is how to detect we're not
+            // running as a service.
         } else {
             logMsgFatal() << "StartServiceCtrlDispatcherW: " << err;
         }
