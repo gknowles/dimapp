@@ -149,6 +149,7 @@ const EnumMap s_svcLaunchProts[] = {
 
 //===========================================================================
 template<typename E, typename T>
+requires (!is_same_v<E, WinSvcConf::Type>)
 static E getValue(const T & tbl, DWORD osvalue, E def = {}) {
     for (auto && v : tbl) {
         if (v.osvalue == osvalue)
@@ -158,14 +159,12 @@ static E getValue(const T & tbl, DWORD osvalue, E def = {}) {
 }
 
 //===========================================================================
-template<int N>
-static WinSvcConf::Type getValue(
-    const EnumMap tbl[N],
+static WinSvcConf::Type getSvcType(
     DWORD osvalue,
-    WinSvcConf::Type def
+    WinSvcConf::Type def = WinSvcConf::Type::kInvalid
 ) {
     auto value = def;
-    for (auto&& em : tbl) {
+    for (auto&& em : s_svcTypes) {
         if ((osvalue & em.osvalue) == em.osvalue) {
             value = static_cast<WinSvcConf::Type>(em.value);
             // Keep searching after a match, so a following kUserOwn or
@@ -905,11 +904,7 @@ static error_code queryConf(
     if (!cfg)
         return ec;
 
-    out->serviceType = getValue(
-        s_svcTypes,
-        cfg->dwServiceType,
-        WinSvcConf::Type::kInvalid
-    );
+    out->serviceType = getSvcType(cfg->dwServiceType);
     if (out->serviceType == WinSvcConf::Type::kInvalid) {
         return reportBadRange(
             info,
@@ -1188,11 +1183,7 @@ static error_code parseStat(
     const SERVICE_STATUS_PROCESS & ssp
 ) {
     *out = {};
-    out->serviceType = getValue(
-        s_svcTypes,
-        ssp.dwServiceType,
-        WinSvcConf::Type::kInvalid
-    );
+    out->serviceType = getSvcType(ssp.dwServiceType);
     if (out->serviceType == WinSvcConf::Type::kInvalid) {
         return reportBadRange(
             info,
