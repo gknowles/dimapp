@@ -44,13 +44,13 @@ static void failed(
 
 //===========================================================================
 void internalTest() {
-    static constexpr auto svcName = "svcctrl-test"sv;
+    static constexpr auto svcName = "svcctrl-t"sv;
     error_code ec;
-    WinServiceStatus st;
-    WinServiceConfig conf;
+    WinSvcStat st;
+    WinSvcConf conf;
 
-    vector<WinServiceStatus> states;
-    WinServiceFilter filter;
+    vector<WinSvcStat> states;
+    WinSvcFilter filter;
     filter.names.insert(string(svcName));
     ec = winSvcFind(&states, filter);
     EXPECT(!ec);
@@ -70,25 +70,25 @@ void internalTest() {
     conf.displayName = conf.serviceName + " display";
     conf.desc = "Test service description.";
     conf.progWithArgs = Cli::toCmdlineL(envExecPath(), "arg1");
-    conf.sidType = WinServiceConfig::SidType::kRestricted;
+    conf.sidType = WinSvcConf::SidType::kRestricted;
     conf.deps = { "Tcpip", "Afd" };
-    conf.failureFlag = WinServiceConfig::FailureFlag::kCrashOrNonZeroExitCode;
+    conf.failureFlag = WinSvcConf::FailureFlag::kCrashOrNonZeroExitCode;
     conf.failureReset = 24h;
     conf.failureActions = {
-        { WinServiceConfig::Action::kRestart, 10s },
-        { WinServiceConfig::Action::kRestart, 60s },
-        { WinServiceConfig::Action::kRestart, 10min },
+        { WinSvcConf::Action::kRestart, 10s },
+        { WinSvcConf::Action::kRestart, 60s },
+        { WinSvcConf::Action::kRestart, 10min },
     };
     ec = winSvcCreate(conf);
     EXPECT(!ec);
-    ec = winSvcQuery(svcName, &conf);
+    ec = winSvcQuery(&conf, nullptr, svcName);
     EXPECT(!ec);
     // EXPECT(ec.value() == 1060);
     ec = winSvcDelete(svcName);
     EXPECT(!ec);
 
 #if 0
-    WinServiceConfig conf;
+    WinSvcConf conf;
     conf.serviceName("Tismet")
         .displayName("Tismet Server")
         .desc("Provides efficient storage, processing, and access to time "

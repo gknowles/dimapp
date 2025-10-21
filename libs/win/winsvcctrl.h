@@ -6,6 +6,8 @@
 
 #include "cppconf/cppconf.h"
 
+#include "basic/basic.h"
+
 #include <chrono>
 #include <optional>
 #include <string>
@@ -18,32 +20,51 @@ namespace Dim {
 
 /****************************************************************************
 *
-*   Service
+*   Service configuration
 *
 ***/
 
-struct WinServiceConfig {
+struct WinSvcConf {
     // Well known service accounts
     static constexpr char kLocalSystem[] = "LocalSystem";
     static constexpr char kLocalService[] = "NT AUTHORITY\\LocalService";
     static constexpr char kNetworkService[] = "NT AUTHORITY\\NetworkService";
 
-    std::string serviceName;                // REQUIRED
+    std::string serviceName;        // REQUIRED
 
     enum class Type {
         kInvalid,
         kOwn,
         kShared,
-        kKernel,
-        kFileSys,
-        kRecognizer,
-        kAdapter,
         kUserOwn,
         kUserShared,
+        kPackageOwn,
+        kPackageShared,
+        kKernelDriver,
+        kFileSysDriver,
+        kRecognizerDriver,
+        kAdapter,
 
         kDefault = kOwn,
     };
     Type serviceType {};
+
+    // Can be enabled if the service account is kLocalSystem and the service
+    // type is kOwn, kShared, kUserOwn, or kUserShared.
+    // https://docs.microsoft.com/windows/win32/services/interactive-services
+    bool interactive {};
+
+    // User (or package?) specific instance of kUserOwn or kUserShared (or
+    // kPackageOwn or kPackageShared?) service. The service name will be <name
+    // of service template>_<LUID>.
+    bool instance {};
+
+    // Beginning with Windows 10 (version 1703) shared services may be split
+    // off to their own SvcHost process. They are split by default if you have
+    // over 3.5GB memory, see SvcHostSplitDisable in services
+    // HKLM\SYSTEM\CurrentControlSet\Services entry.
+    // https://docs.microsoft.com/windows/application-management/svchost-service-refactoring
+    bool sharedServiceSplitEnabled {};
 
     enum class Start {
         kInvalid,
@@ -69,17 +90,13 @@ struct WinServiceConfig {
     };
     ErrCtrl errorControl {};
 
-    std::optional<std::string> progWithArgs;
-                                            // Default: path to this executable
-    std::optional<std::string> loadOrderGroup;
-                                            // Default: none
-    std::optional<unsigned> loadOrderTag {};
-                                            // Default: none
-    std::optional<std::vector<std::string>> deps;
-                                            // Default: none
-    std::optional<std::string> account;     // Default: NT Service\<serviceName>
+    std::optional<std::string> progWithArgs; // Default: path to this program
+    std::optional<std::string> loadOrderGroup;      // Default: none
+    std::optional<unsigned> loadOrderTag {};        // Default: none
+    std::optional<std::vector<std::string>> deps;   // Default: none
+    std::optional<std::string> account;     // Default: NT Service\<svcName>
     std::optional<std::string> password;    // Default: none
-    std::optional<std::string> displayName; // Default: <serviceName>
+    std::optional<std::string> displayName; // Default: <svcName>
     std::optional<std::string> desc;        // Default: none
 
     enum class FailureFlag {
@@ -91,8 +108,7 @@ struct WinServiceConfig {
     };
     FailureFlag failureFlag {};             // Default: kCrashOnly
 
-    std::optional<std::chrono::seconds> failureReset {};
-                                            // Default: none
+    std::optional<std::chrono::seconds> failureReset {}; // Default: none
     std::optional<std::string> rebootMsg; // used with FailAction::kReboot
 
     // required by FailAction::kRunCommand
@@ -139,11 +155,6 @@ struct WinServiceConfig {
     };
     SidType sidType {};
 
-    // Can be enabled if the service account is kLocalSystem and the service
-    // type is kOwn, kShared, kUserOwn, or kUserShared.
-    // https://docs.microsoft.com/windows/win32/services/interactive-services
-    bool interactive {};
-
     struct Trigger {
         enum class Type {
             kInvalid,
@@ -166,6 +177,8 @@ struct WinServiceConfig {
             kInvalid,
             kServiceStart,
             kServiceStop,
+
+            kDefault = kInvalid,
         };
         Action action {};
 
@@ -183,8 +196,14 @@ struct WinServiceConfig {
             kLevel,
             kKeywordAny,
             kKeywordAll,
+
+            kDefault = kInvalid,
         };
-        std::vector<std::string> dataItems;
+        struct DataItem {
+            DataType type;
+            std::string data;   // limited to maximum of 1024 bytes
+        };
+        std::vector<DataItem> dataItems;
     };
     // NOTE: SUPPORT FOR TRIGGERS NOT IMPLEMENTED
     std::optional<std::vector<Trigger>> triggers;
@@ -198,11 +217,30 @@ struct WinServiceConfig {
 
         kDefault = kNone,
     };
-    // Only allowed if executable is be signed.
+    // Only allowed if executable is signed.
     LaunchProt launchProt {};
 };
 
-struct WinServiceStatus {
+std::error_code winSvcCreate(const WinSvcConf & sconf);
+std::error_code winSvcDelete(std::string_view svcName);
+
+// Update all service parameters to match the configuration, as if it had just
+// been created via winSvcCreate.
+std::error_code winSvcReplace(const WinSvcConf & sconf);
+
+// Updates the service parameters explicitly specified.
+std::error_code winSvcUpdate(const WinSvcConf & sconf);
+
+std::error_code winSvcGrantLogonAsService(std::string_view account);
+
+
+/****************************************************************************
+*
+*   Service status
+*
+***/
+
+struct WinSvcStat {
     enum class State {
         kInvalid,
         kContinuePending,
@@ -215,7 +253,7 @@ struct WinServiceStatus {
 
         kDefault = kRunning,
     };
-    enum class Control : unsigned {
+    enum class Accept : unsigned {
         fInvalid,
         fNetBindChange          = 1 << 0,
         fParamChange            = 1 << 1,
@@ -237,11 +275,11 @@ struct WinServiceStatus {
 
     std::string serviceName;
     std::string displayName;
-    WinServiceConfig::Type serviceType{};
+    WinSvcConf::Type serviceType{};
     bool interactive{};
 
-    State state{};
-    unsigned accepted{}; // conbination of Control flags
+    State state = State::kInvalid;
+    unsigned accepted{}; // combination of Accept flags
     unsigned exitCode{};
     unsigned checkPoint{};
     unsigned waitHint{};
@@ -249,40 +287,116 @@ struct WinServiceStatus {
     Flags flags{};
 };
 
-
-std::error_code winSvcCreate(const WinServiceConfig & sconf);
-std::error_code winSvcDelete(std::string_view svcName);
-
-// Update all service parameters to match the configuration, as if it had just
-// been created via winSvcCreate.
-std::error_code winSvcReplace(const WinServiceConfig & sconf);
-
-// Updates the service parameters explicitly specified.
-std::error_code winSvcUpdate(const WinServiceConfig & sconf);
-
 std::error_code winSvcQuery(
-    std::string_view svcName,
-    WinServiceConfig * conf = nullptr,
-    WinServiceStatus * stat = nullptr
+    WinSvcConf * conf,    // Set to nullptr if config data not wanted
+    WinSvcStat * stat,    // Set to nullptr if status not wanted
+    std::string_view svcName
 );
 
 // Returns the service names of services that match all the specified
-// configuration and status parameters. If 'conf' and 'stat' are both default
-// constructed (no filter) the names of all services are returned.
-struct WinServiceFilter {
+// configuration and status parameters. If the filter has an empty set of
+// names, types, etc it will match all names, types, etc respectively. To be
+// found a service must match all filter conditions (names, types, etc).
+struct WinSvcFilter {
     std::unordered_set<std::string> names;
-    std::unordered_set<WinServiceConfig::Type> types;
-    std::unordered_set<WinServiceStatus::State> states;
+    std::unordered_set<WinSvcConf::Type> types;
+    std::unordered_set<WinSvcStat::State> states;
     std::unordered_set<unsigned> processIds;
 };
 std::error_code winSvcFind(
-    std::vector<WinServiceStatus> * out,
-    const WinServiceFilter & filter = {}
+    std::vector<WinSvcStat> * out,
+    const WinSvcFilter & filter = {}
 );
 
-std::error_code winSvcGrantLogonAsService(std::string_view account);
 
-std::error_code winSvcStart(std::string_view svcName, bool wait = true);
-std::error_code winSvcStop(std::string_view svcName, bool wait = true);
+/****************************************************************************
+*
+*   Service control
+*
+***/
 
+struct WinSvcCtrl {
+    enum class General : uint32_t {
+        kUnplanned = 1,
+
+        // With kCustom, major and minor codes must be within the [min, max]
+        // bounds reserved for custom values included in the enums below.
+        kCustom = 2,
+
+        kPlanned = 4,
+    };
+    enum class Major : uint32_t {
+        kOther = 1,
+        kHardware = 2,
+        kOperatingSystem = 3,
+        kSoftware = 4,
+        kApplication = 5,
+        kNone = 6,
+
+        kMinCustom = 64,
+        kMaxCustom = 255,
+    };
+    enum class Minor : uint32_t {
+        kOther = 1,
+        kMaintenance = 2,
+        kInstallation = 3,
+        kUpgrade = 4,
+        kReconfig = 5,
+        kHung = 6,
+        kUnstable = 7,
+        kDisk = 8,
+        kNetworkCard = 9,
+        kEnvironment = 10,
+        kHardwareDriver = 11,
+        kOtherDriver = 12,
+        kServicePack = 13,
+        kSoftwareUpdate = 14,
+        kSecurityFix = 15,
+        kSecurity = 16,
+        kNetworkConnectivity = 17,
+        kWMI = 18,   // Microsoft Management Instrumentation framework
+        kServicePackUninstall = 19,
+        kSoftwareUpdateUninstall = 20,
+        kSecurityFixUninstall = 21,
+        kMMC = 22,   // Microsoft Management Console framework
+        kNone = 23,
+        kMemoryLimit = 24,  // Misspelled as "MEMOTYLIMIT" in winsvc.h
+
+        kMinCustom = 1,
+        kMaxCustom = 65'535,
+    };
+    struct Reason {
+        General general : 4 = General::kUnplanned;
+        uint32_t gap : 4 = 0;
+        Major major : 8 = Major::kNone;
+        Minor minor : 16 = Minor::kNone;
+    };
+};
+
+// Aims for one legitimate start attempt to be made, either by this function or
+// some other parallel attempt.
+std::error_code winSvcStart(
+    WinSvcStat * out, // Set to nullptr if status not wanted
+    std::string_view svcName,
+    const std::vector<std::string> & args = {},
+    bool wait = true    // wait for start pending to complete?
+);
+
+std::error_code winSvcStop(
+    WinSvcStat * out, // Set to nullptr if status not wanted
+    std::string_view svcName,
+    WinSvcCtrl::Reason reason = {},
+    std::string_view comment = {}, // Truncated to 127 characters
+    bool wait = true
+);
+std::error_code winSvcPause(
+    WinSvcStat * out, // Set to nullptr if status not wanted
+    std::string_view svcName,
+    bool wait = true
+);
+std::error_code winSvcContinue(
+    WinSvcStat * out, // Set to nullptr if status not wanted
+    std::string_view svcName,
+    bool wait = true
+);
 } // namespace
