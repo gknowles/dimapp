@@ -22,15 +22,38 @@ struct EnumMap {
     int value;
     DWORD osvalue;
 };
+
 struct FuncInfo : public NoCopy {
     SC_HANDLE scm = {};
     SC_HANDLE svc = {};
     string svcName;
+    string opName;
     bool logErrors = true;
     mutable vector<std::byte> buf;
 
-    FuncInfo(string_view svcName);
+    FuncInfo(string_view svcName, string_view opName);
     ~FuncInfo();
+};
+
+struct OsSvcConf {
+    const wchar_t * svcName;
+    DWORD svcType = 0;
+    DWORD startType = 0;
+    DWORD errCtrl = 0;
+    const wchar_t * binPath = nullptr;
+    const wchar_t * loadGroup = nullptr;
+    DWORD * tagIdPtr = nullptr;
+    const wchar_t * deps = nullptr;
+    const wchar_t * account = nullptr;
+    const wchar_t * password = nullptr;
+    const wchar_t * dname = nullptr;
+
+    const wchar_t * addPtr(const string & val);
+    void setTagPtr(const optional<unsigned> & val);
+
+private:
+    list<wstring> strs;
+    DWORD rawTagId = 0;
 };
 
 } // namespace
@@ -59,6 +82,124 @@ inline static wstring to_wstring(const string & str) {
 
 #pragma warning(pop)
 
+//===========================================================================
+template<typename T>
+static string toMultistring(const T & strings) {
+    string out;
+    for (auto && str : strings)
+        out.append(str).push_back('\0');
+    out.push_back('\0');
+    return out;
+}
+
+//===========================================================================
+static vector<string> splitMultistring(const wchar_t src[]) {
+    vector<string> out;
+    if (src) {
+        auto ptr = src;
+        while (*ptr) {
+            auto eptr = wcschr(ptr, '\0');
+            out.push_back(toString(wstring_view{ptr, size_t(eptr - ptr)}));
+            ptr = eptr + 1;
+        }
+    }
+    return out;
+}
+
+
+/****************************************************************************
+*
+*   FuncInfo
+*
+***/
+
+//===========================================================================
+FuncInfo::FuncInfo(string_view svcName, string_view opName)
+    : svcName{svcName}
+    , opName(opName)
+{}
+
+//===========================================================================
+FuncInfo::~FuncInfo() {
+    if (this->svc)
+        CloseServiceHandle(this->svc);
+    if (this->scm)
+        CloseServiceHandle(this->scm);
+}
+
+//===========================================================================
+template<typename T>
+static pair<T *, size_t> reserve(const FuncInfo & info, size_t bytes) {
+    auto alignment = alignof(T);
+    if (info.buf.empty()) {
+        // According to Microsoft docs the maximum size of the buffer for
+        // QueryServiceConfigW or QueryServiceConfig2W is 8k bytes.
+        info.buf.resize(8192 + alignment);
+    }
+    if (bytes + alignment > info.buf.size()) {
+        info.buf.resize(bytes + alignment);
+    } else {
+        bytes = info.buf.size() - alignment;
+    }
+    void * ptr = info.buf.data();
+    auto count = info.buf.size();
+    ptr = align(alignment, bytes, ptr, count);
+    assert(ptr);
+    return {reinterpret_cast<T *>(ptr), count};
+}
+
+//===========================================================================
+template<typename T>
+static pair<T *, size_t> reserve(const FuncInfo & info) {
+    return reserve<T>(info, sizeof (T));
+}
+
+//===========================================================================
+template<typename T>
+static pair<T *, size_t> reserve(
+    vector<const wchar_t *> * ptrs,
+    const FuncInfo & info
+) {
+    struct WithPad {
+        T val;
+        wchar_t buf[1];
+    };
+    size_t cnt = 0;
+    for (auto&& ptr : *ptrs)
+        cnt += wcslen(ptr) + 1;
+    cnt = offsetof(WithPad, buf) + cnt * sizeof(wchar_t);
+    auto&& [val, bytes] = reserve<WithPad>(info, cnt);
+    auto base = val->buf;
+    for (auto&& ptr : *ptrs) {
+        wcscpy(base, ptr);
+        ptr = base;
+        base += wcslen(base) + 1;
+    }
+    return {&val->val, bytes};
+}
+
+
+/****************************************************************************
+*
+*   OsSvcConf
+*
+***/
+
+//===========================================================================
+const wchar_t * OsSvcConf::addPtr(const string & val) {
+    return this->strs.emplace_back(toWstring(val)).c_str();
+}
+
+//===========================================================================
+void OsSvcConf::setTagPtr(const optional<unsigned> & val) {
+    if (val) {
+        this->rawTagId = (DWORD) *val;
+        this->tagIdPtr = &this->rawTagId;
+    } else {
+        this->tagIdPtr = nullptr;
+    }
+}
+
 
 /****************************************************************************
 *
@@ -68,6 +209,7 @@ inline static wstring to_wstring(const string & str) {
 
 namespace {
 const EnumMap s_svcTypes[] = {
+    { (int) WinSvcConf::Type::kInvalid, SERVICE_NO_CHANGE },
     { (int) WinSvcConf::Type::kOwn, SERVICE_WIN32_OWN_PROCESS },
 
     // Must come after kOwn, as a kShared that happens to be running under
@@ -103,6 +245,7 @@ const EnumMap s_svcTypes[] = {
     },
 };
 const EnumMap s_svcStarts[] = {
+    { (int) WinSvcConf::Start::kInvalid, SERVICE_NO_CHANGE },
     { (int) WinSvcConf::Start::kAuto, SERVICE_AUTO_START },
     { (int) WinSvcConf::Start::kAutoDelayed, SERVICE_AUTO_START },
     { (int) WinSvcConf::Start::kBoot, SERVICE_BOOT_START },
@@ -111,13 +254,21 @@ const EnumMap s_svcStarts[] = {
     { (int) WinSvcConf::Start::kSystem, SERVICE_SYSTEM_START },
 };
 const EnumMap s_svcErrCtrls[] = {
+    { (int) WinSvcConf::ErrCtrl::kInvalid, SERVICE_NO_CHANGE },
     { (int) WinSvcConf::ErrCtrl::kIgnore, SERVICE_ERROR_IGNORE },
     { (int) WinSvcConf::ErrCtrl::kNormal, SERVICE_ERROR_NORMAL },
     { (int) WinSvcConf::ErrCtrl::kSevere, SERVICE_ERROR_SEVERE },
     { (int) WinSvcConf::ErrCtrl::kCritical, SERVICE_ERROR_CRITICAL },
 };
 const EnumMap s_svcSidTypes[] = {
-    { (int) WinSvcConf::SidType::kNone, SERVICE_SID_TYPE_NONE },
+    {
+        (int) WinSvcConf::SidType::kInvalid,
+        SERVICE_NO_CHANGE
+    },
+    {
+        (int) WinSvcConf::SidType::kNone,
+        SERVICE_SID_TYPE_NONE
+    },
     {
         (int) WinSvcConf::SidType::kUnrestricted,
         SERVICE_SID_TYPE_UNRESTRICTED
@@ -128,6 +279,10 @@ const EnumMap s_svcSidTypes[] = {
     },
 };
 const EnumMap s_svcLaunchProts[] = {
+    {
+        (int) WinSvcConf::LaunchProt::kInvalid,
+        SERVICE_NO_CHANGE
+    },
     {
         (int) WinSvcConf::LaunchProt::kNone,
         SERVICE_LAUNCH_PROTECTED_NONE
@@ -176,9 +331,8 @@ static WinSvcConf::Type getSvcType(
 
 //===========================================================================
 template<typename E, typename T>
-static DWORD getOsValue(const T & tbl, E value, bool enableDefault = true) {
-    if (enableDefault && value == E{})
-        value = decltype(value)::kDefault;
+requires (is_enum_v<E>)
+static DWORD getOsValue(const T & tbl, E value) {
     for (auto && v : tbl) {
         if (v.value == (int) value)
             return v.osvalue;
@@ -187,26 +341,40 @@ static DWORD getOsValue(const T & tbl, E value, bool enableDefault = true) {
 }
 
 //===========================================================================
-template<typename T>
-static CharBuf toMultistring(const T & strings) {
-    CharBuf out;
-    for (auto && str : strings)
-        out.append(str).pushBack('\0');
-    out.pushBack('\0');
-    return out;
+template<typename E, typename T>
+static DWORD getOsValue(
+    const T & tbl,
+    optional<E> value,
+    bool enableDefault = true
+) {
+    if (!value) {
+        if (enableDefault) {
+            value = E::kDefault;
+        } else {
+            return SERVICE_NO_CHANGE;
+        }
+    }
+    return getOsValue(tbl, *value);
 }
 
 //===========================================================================
-static vector<string> splitMultistring(const wchar_t src[]) {
-    vector<string> out;
-    if (src) {
-        auto ptr = src;
-        while (*ptr) {
-            auto eptr = wcschr(ptr, '\0');
-            out.push_back(toString(wstring_view{ptr, size_t(eptr - ptr)}));
-            ptr = eptr + 1;
-        }
-    }
+static OsSvcConf getOsConf(const WinSvcConf & conf) {
+    OsSvcConf out;
+    out.svcName = out.addPtr(conf.serviceName);
+    out.svcType = getOsValue(s_svcTypes, conf.serviceType, false);
+    if (conf.interactive && out.svcType != SERVICE_NO_CHANGE)
+        out.svcType |= SERVICE_INTERACTIVE_PROCESS;
+    out.startType = getOsValue(s_svcStarts, conf.startType, false);
+    out.errCtrl = getOsValue(s_svcErrCtrls, conf.errorControl, false);
+    out.binPath = out.addPtr(*conf.progWithArgs);
+    out.loadGroup = out.addPtr(conf.loadOrderGroup.value_or({}));
+    out.setTagPtr(conf.loadOrderTag);
+    if (conf.deps)
+        out.deps = out.addPtr(toMultistring(*conf.deps));
+    out.account = out.addPtr(*conf.account);
+    if (conf.password)
+        out.password = out.addPtr(*conf.password);
+    out.dname = out.addPtr(*conf.displayName);
     return out;
 }
 
@@ -410,58 +578,69 @@ static error_code reportChange2Error(
 }
 
 //===========================================================================
-static error_code openScm(
-    FuncInfo * info,
-    DWORD access,
-    const char infoName[]
-) {
+static error_code openScm(FuncInfo * info, DWORD access) {
     info->scm = OpenSCManagerW(NULL, NULL, access);
     if (!info->scm)
-        return reportError(*info, "OpenSCManagerW", infoName);
+        return reportError(*info, "OpenSCManagerW", info->opName);
     return {};
 }
 
 //===========================================================================
-static error_code openSvc(
-    FuncInfo * info,
-    DWORD access,
-    const char infoName[]
-) {
+static error_code openSvc(FuncInfo * info, DWORD access) {
     info->svc = OpenServiceW(
         info->scm,
         toWstring(info->svcName).c_str(),
         access
     );
     if (!info->svc)
-        return reportError(*info, "OpenServiceW", infoName);
+        return reportError(*info, "OpenServiceW", info->opName);
     return {};
 }
 
 //===========================================================================
-template<typename T>
-static pair<T *, size_t> reserve(const FuncInfo & info, size_t bytes) {
-    auto alignment = alignof(T);
-    if (info.buf.empty()) {
-        // According to Microsoft docs the maximum size of the buffer for
-        // QueryServiceConfigW or QueryServiceConfig2W is 8k bytes.
-        info.buf.resize(8192 + alignment);
+// Checks for required but unspecified parameters and either sets them to
+// defaults or, when that's not possible, returns an error.
+static error_code prepareForCreate(WinSvcConf * out) {
+    if (out->serviceName.empty()) {
+        logMsgError() << "WinSvcConf: no service name";
+        return make_error_code(errc::invalid_argument);
     }
-    if (bytes + alignment > info.buf.size()) {
-        info.buf.resize(bytes + alignment);
-    } else {
-        bytes = info.buf.size() - alignment;
+    if (out->loadOrderTag) {
+        if (!out->loadOrderGroup) {
+            logMsgError() << "winInstallService: "
+                "load order tag without load order group";
+            return make_error_code(errc::invalid_argument);
+        }
+        if (out->startType != WinSvcConf::Start::kBoot
+            && out->startType != WinSvcConf::Start::kSystem
+        ) {
+            logMsgError() << "winInstallService: load order tag without "
+                "start type of boot or system";
+            return make_error_code(errc::invalid_argument);
+        }
     }
-    void * ptr = info.buf.data();
-    auto count = info.buf.size();
-    ptr = align(alignment, bytes, ptr, count);
-    assert(ptr);
-    return {reinterpret_cast<T *>(ptr), count};
-}
 
-//===========================================================================
-template<typename T>
-static pair<T *, size_t> reserve(const FuncInfo & info) {
-    return reserve<T>(info, sizeof (T));
+    if (!out->serviceType)
+        out->serviceType = WinSvcConf::Type::kDefault;
+    if (!out->startType)
+        out->startType = WinSvcConf::Start::kDefault;
+    if (!out->errorControl)
+        out->errorControl = WinSvcConf::ErrCtrl::kDefault;
+    if (!out->progWithArgs)
+        out->progWithArgs = envExecPath();
+    if (!out->displayName)
+        out->displayName = out->serviceName;
+    if (!out->deps)
+        out->deps = {};
+    if (!out->account || out->account->empty()) {
+        out->account = "NT Service\\" + out->serviceName;
+    } else if (toLower(*out->account) == toLower(WinSvcConf::kLocalSystem)) {
+        out->account->clear();
+    }
+    if (!out->password)
+        out->password = {};
+
+    return {};
 }
 
 //===========================================================================
@@ -477,17 +656,22 @@ static error_code changeAllConf2(
             return reportChange2Error(info, "DESCRIPTION");
     }
 
-    if (conf.failureActions) {
+    if (conf.failureActions
+        || conf.rebootMsg
+        || conf.failureProgWithArgs
+    ) {
         vector<SC_ACTION> facts;
-        for (auto && fa : *conf.failureActions) {
-            auto & sc = facts.emplace_back();
-            sc.Delay = (DWORD) fa.delay.count();
-            switch (fa.type) {
-            case fa.kInvalid: [[fallthrough]];
-            case fa.kNone: sc.Type = SC_ACTION_NONE; break;
-            case fa.kRestart: sc.Type = SC_ACTION_RESTART; break;
-            case fa.kReboot: sc.Type = SC_ACTION_REBOOT; break;
-            case fa.kRunCommand: sc.Type = SC_ACTION_RUN_COMMAND; break;
+        if (conf.failureActions) {
+            for (auto && fa : *conf.failureActions) {
+                auto & sc = facts.emplace_back();
+                sc.Delay = (DWORD) fa.delay.count();
+                switch (fa.type) {
+                case fa.kInvalid: [[fallthrough]];
+                case fa.kNone: sc.Type = SC_ACTION_NONE; break;
+                case fa.kRestart: sc.Type = SC_ACTION_RESTART; break;
+                case fa.kReboot: sc.Type = SC_ACTION_REBOOT; break;
+                case fa.kRunCommand: sc.Type = SC_ACTION_RUN_COMMAND; break;
+                }
             }
         }
         SERVICE_FAILURE_ACTIONSW fa = {};
@@ -499,8 +683,8 @@ static error_code changeAllConf2(
             wreboot = toWstring(*conf.rebootMsg);
             fa.lpRebootMsg = wreboot.data();
         }
-        if (!conf.failureProgWithArgs.empty()) {
-            wcmd = toWstring(conf.failureProgWithArgs);
+        if (conf.failureProgWithArgs) {
+            wcmd = toWstring(*conf.failureProgWithArgs);
             fa.lpCommand = wcmd.data();
         }
         fa.cActions = (DWORD) size(facts);
@@ -557,7 +741,7 @@ static error_code changeAllConf2(
     if (conf.privs) {
         SERVICE_REQUIRED_PRIVILEGES_INFOW pi = {};
         auto privs = toMultistring(*conf.privs);
-        auto wprivs = toWstring(privs.view());
+        auto wprivs = toWstring(privs);
         pi.pmszRequiredPrivileges = wprivs.data();
         if (!ChangeServiceConfig2W(
             info.svc,
@@ -620,11 +804,13 @@ static error_code changeAllConf2(
         }
     }
 
-    if (conf.preferredNode !=
-        (unsigned) WinSvcConf::PreferredNode::kInvalid
-    ) {
+    if (conf.preferredNode) {
         SERVICE_PREFERRED_NODE_INFO ni = {};
-        ni.usPreferredNode = (USHORT) conf.preferredNode;
+        if (conf.preferredNode == WinSvcConf::kNoPreferredNode) {
+            ni.fDelete = true;
+        } else {
+            ni.usPreferredNode = (USHORT) *conf.preferredNode;
+        }
         if (!ChangeServiceConfig2W(
             info.svc,
             SERVICE_CONFIG_PREFERRED_NODE,
@@ -634,7 +820,7 @@ static error_code changeAllConf2(
         }
     }
 
-    if (conf.launchProt != WinSvcConf::LaunchProt::kInvalid) {
+    if (conf.launchProt) {
         SERVICE_LAUNCH_PROTECTED_INFO lpi = {};
         lpi.dwLaunchProtected = getOsValue(s_svcLaunchProts, conf.launchProt);
         if (!ChangeServiceConfig2W(
@@ -652,26 +838,6 @@ static error_code changeAllConf2(
 
 /****************************************************************************
 *
-*   FuncInfo
-*
-***/
-
-//===========================================================================
-FuncInfo::FuncInfo(string_view svcName)
-    : svcName{string(svcName)}
-{}
-
-//===========================================================================
-FuncInfo::~FuncInfo() {
-    if (this->svc)
-        CloseServiceHandle(this->svc);
-    if (this->scm)
-        CloseServiceHandle(this->scm);
-}
-
-
-/****************************************************************************
-*
 *   Create and Delete
 *
 ***/
@@ -680,68 +846,29 @@ FuncInfo::~FuncInfo() {
 error_code Dim::winSvcCreate(const WinSvcConf & sconf) {
     auto conf{sconf};
 
-    if (!conf.progWithArgs)
-        conf.progWithArgs = envExecPath();
-    if (!conf.displayName)
-        conf.displayName = conf.serviceName;
-    assert(!conf.serviceName.empty());
-
-    auto info = FuncInfo(conf.serviceName);
-    if (auto ec = openScm(&info, SC_MANAGER_CREATE_SERVICE, "CREATE"))
+    if (auto ec = prepareForCreate(&conf))
+        return ec;
+    auto info = FuncInfo(conf.serviceName, "CREATE");
+    if (auto ec = openScm(&info, SC_MANAGER_CREATE_SERVICE))
         return ec;
 
-    string acct;
-    if (!conf.account || conf.account->empty()) {
-        acct = "NT Service\\"s + conf.serviceName;
-        conf.account = acct.c_str();
-    } else if (*conf.account == WinSvcConf::kLocalSystem) {
-        conf.account->clear();
-    }
-
-    auto svcType = getOsValue(s_svcTypes, conf.serviceType);
-    if (conf.interactive)
-        svcType |= SERVICE_INTERACTIVE_PROCESS;
-    auto startType = getOsValue(s_svcStarts, conf.startType);
-    auto errCtrl = getOsValue(s_svcErrCtrls, conf.errorControl);
-
-    DWORD tagId = conf.loadOrderTag.value_or(0);
-    if (conf.loadOrderTag) {
-        if (!conf.loadOrderGroup) {
-            logMsgError() << "winInstallService: "
-                "load order tag without load order group";
-            return make_error_code(errc::invalid_argument);
-        }
-        if (conf.startType != WinSvcConf::Start::kBoot
-            && conf.startType != WinSvcConf::Start::kSystem
-        ) {
-            logMsgError() << "winInstallService: load order tag without "
-                "start type of boot or system";
-            return make_error_code(errc::invalid_argument);
-        }
-    }
-
-    optional<wstring> deps;
-    if (conf.deps)
-        deps = toWstring(toMultistring(*conf.deps).view());
-
+    auto c = getOsConf(conf);
     info.svc = CreateServiceW(
         info.scm,
-        toWstring(conf.serviceName).c_str(),
-        toWstring(*conf.displayName).c_str(),
-        SERVICE_ALL_ACCESS,
-        svcType,
-        startType,
-        errCtrl,
-        toWstring(*conf.progWithArgs).c_str(),
-        conf.loadOrderGroup
-            ? toWstring(*conf.loadOrderGroup).c_str()
-            : nullptr,
-        tagId ? &tagId : nullptr,
-        deps ? deps->c_str() : nullptr,
-        conf.account
-            ? toWstring(*conf.account).c_str()
-            : nullptr,
-        conf.password ? toWstring(*conf.password).c_str() : nullptr
+        c.svcName,
+        c.dname,
+        DELETE  // to delete if following config fails
+            | SERVICE_CHANGE_CONFIG // to set config2 options
+            | SERVICE_START,        // to set failure actions
+        c.svcType,
+        c.startType,
+        c.errCtrl,
+        c.binPath,
+        c.loadGroup,
+        c.tagIdPtr,
+        c.deps,
+        c.account,
+        c.password
     );
     if (!info.svc)
         return reportError(info, "CreateServiceW");
@@ -761,10 +888,10 @@ error_code Dim::winSvcCreate(const WinSvcConf & sconf) {
 error_code Dim::winSvcDelete(std::string_view svcName) {
     assert(!svcName.empty());
 
-    auto info = FuncInfo{svcName};
-    if (auto ec = openScm(&info, SC_MANAGER_CONNECT, "DELETE_SERVICE"))
+    auto info = FuncInfo{svcName, "DELETE"};
+    if (auto ec = openScm(&info, SC_MANAGER_CONNECT))
         return ec;
-    if (auto ec = openSvc(&info, DELETE, "DELETE"))
+    if (auto ec = openSvc(&info, DELETE))
         return ec;
 
     if (!DeleteService(info.svc))
@@ -1139,12 +1266,9 @@ static error_code queryConf(
     ); !ec) {
         return ec;
     } else {
-        if (cfg->fDelete) {
-            out->preferredNode =
-                (unsigned) WinSvcConf::PreferredNode::kNone;
-        } else {
-            out->preferredNode = cfg->usPreferredNode;
-        }
+        out->preferredNode = cfg->fDelete
+            ? WinSvcConf::kNoPreferredNode
+            : cfg->usPreferredNode;
     }
 
     // Launch protected
@@ -1160,13 +1284,13 @@ static error_code queryConf(
             cfg->dwLaunchProtected,
             WinSvcConf::LaunchProt::kInvalid
         );
-        if (out->launchProt == WinSvcConf::LaunchProt::kInvalid) {
+        if (*out->launchProt == WinSvcConf::LaunchProt::kInvalid) {
             return reportQuery2BadRange(
                 info,
                 "LAUNCH_PROTECTED",
                 format(
                     "unknown launch protected ({})",
-                    toString(out->launchProt)
+                    toString(cfg->dwLaunchProtected)
                 )
             );
         }
@@ -1296,13 +1420,12 @@ error_code Dim::winSvcQuery(
 ) {
     assert(!svcName.empty());
 
-    auto info = FuncInfo(svcName);
-
-    if (auto ec = openScm(&info, SC_MANAGER_CONNECT, "QUERY"))
+    auto info = FuncInfo(svcName, "QUERY");
+    if (auto ec = openScm(&info, SC_MANAGER_CONNECT))
         return ec;
     DWORD access = bool(conf) * SERVICE_QUERY_CONFIG
         | bool(stat) * SERVICE_QUERY_STATUS;
-    if (auto ec = openSvc(&info, access, "QUERY"))
+    if (auto ec = openSvc(&info, access))
         return ec;
 
     if (!conf && !stat)
@@ -1327,8 +1450,9 @@ error_code Dim::winSvcFind(
     unordered_set<string> names;
     for (auto&& name : filter.names)
         names.insert(toLower(name));
-    auto info = FuncInfo({});
-    if (auto ec = openScm(&info, SC_MANAGER_ENUMERATE_SERVICE, "ENUMERATE"))
+
+    auto info = FuncInfo({}, "ENUMERATE");
+    if (auto ec = openScm(&info, SC_MANAGER_ENUMERATE_SERVICE))
         return ec;
 
     DWORD needed = 0;
@@ -1377,6 +1501,139 @@ error_code Dim::winSvcFind(
         if (success)
             return {};
     }
+}
+
+
+/****************************************************************************
+*
+*   Update
+*
+***/
+
+//===========================================================================
+static error_code changeAllConf(
+    const FuncInfo & info,
+    const WinSvcConf & conf
+) {
+    auto c = getOsConf(conf);
+    if (!ChangeServiceConfigW(
+        info.svc,
+        c.svcType,
+        c.startType,
+        c.errCtrl,
+        c.binPath,
+        c.loadGroup,
+        c.tagIdPtr,
+        c.deps,
+        c.account,
+        c.password,
+        c.dname
+    )) {
+        return reportError(info, "ChangeServiceConfigW");
+    }
+    return {};
+}
+
+//===========================================================================
+error_code Dim::winSvcReplace(const WinSvcConf & conf) {
+    auto info = FuncInfo(conf.serviceName, "REPLACE");
+    if (auto ec = openScm(&info, SC_MANAGER_CONNECT))
+        return ec;
+    if (auto ec = openSvc(&info, SERVICE_QUERY_CONFIG | SERVICE_CHANGE_CONFIG))
+        return ec;
+
+    WinSvcConf base = {};
+    if (auto ec = queryConf(&base, info))
+        return ec;
+    WinSvcConf upd = {};
+    if (auto ec = winSrvMakeUpdate(&upd, conf, base))
+        return ec;
+    if (auto ec = changeAllConf(info, conf))
+        return ec;
+    if (auto ec = changeAllConf2(info, conf))
+        return ec;
+
+    logMsgInfo() << conf.serviceName << " service replaced.";
+    return {};
+}
+
+//===========================================================================
+error_code Dim::winSvcUpdate(const WinSvcConf & conf) {
+    auto info = FuncInfo(conf.serviceName, "UPDATE");
+    if (auto ec = openScm(&info, SC_MANAGER_CONNECT))
+        return ec;
+    if (auto ec = openSvc(&info, SERVICE_CHANGE_CONFIG))
+        return ec;
+
+    if (auto ec = changeAllConf(info, conf))
+        return ec;
+    if (auto ec = changeAllConf2(info, conf))
+        return ec;
+
+    logMsgInfo() << conf.serviceName << " service updated.";
+    return {};
+}
+
+//===========================================================================
+template<typename T>
+static void dedup(optional<T> * out, const optional<T> & base) {
+    if (*out == base) {
+        *out = {};
+    } else if (!*out) {
+        // Set to default value instead of no value.
+        **out = {};
+    }
+}
+
+//===========================================================================
+error_code Dim::winSrvMakeUpdate(
+    WinSvcConf * out,
+    const WinSvcConf & targetRaw,
+    const WinSvcConf & baseRaw
+) {
+    *out = targetRaw;
+    auto base = baseRaw;
+    if (auto ec = prepareForCreate(out))
+        return ec;
+    if (auto ec = prepareForCreate(&base))
+        return ec;
+
+    if (out->serviceName != base.serviceName) {
+        // Not to be confused with the display name!
+        //
+        // The only way to "change" the service name is to delete it and create
+        // a new one with the desired name. Well, you could also edit it in the
+        // registry and then reboot the computer but...
+        return make_error_code(errc::invalid_argument);
+    }
+
+    if (out->serviceType == base.serviceType
+        && out->interactive == base.interactive
+    ) {
+        out->serviceType = {};
+    }
+    dedup(&out->startType, base.startType);
+    dedup(&out->errorControl, base.errorControl);
+    dedup(&out->progWithArgs, base.progWithArgs);
+    dedup(&out->loadOrderGroup, base.loadOrderGroup);
+    dedup(&out->loadOrderTag, base.loadOrderTag);
+    dedup(&out->deps, base.deps);
+    dedup(&out->account, base.account);
+    dedup(&out->password, base.password);
+    dedup(&out->displayName, base.displayName);
+    dedup(&out->desc, base.desc);
+    dedup(&out->failureFlag, base.failureFlag);
+    dedup(&out->failureReset, base.failureReset);
+    dedup(&out->rebootMsg, base.rebootMsg);
+    dedup(&out->failureProgWithArgs, base.failureProgWithArgs);
+    dedup(&out->failureActions, base.failureActions);
+    dedup(&out->preferredNode, base.preferredNode);
+    dedup(&out->preshutdownTimeout, base.preshutdownTimeout);
+    dedup(&out->privs, base.privs);
+    dedup(&out->sidType, base.sidType);
+    dedup(&out->triggers, base.triggers);
+    dedup(&out->launchProt, base.launchProt);
+    return {};
 }
 
 
@@ -1438,12 +1695,11 @@ error_code Dim::winSvcStart(
     if (!out)
         out = &st;
 
-    auto kInfoName = "START";
-    auto info = FuncInfo(svcName);
-    if (auto ec = openScm(&info, SC_MANAGER_CONNECT, kInfoName))
+    auto info = FuncInfo(svcName, "START");
+    if (auto ec = openScm(&info, SC_MANAGER_CONNECT))
         return ec;
     DWORD access = SERVICE_START | wait * SERVICE_QUERY_STATUS;
-    if (auto ec = openSvc(&info, access, kInfoName))
+    if (auto ec = openSvc(&info, access))
         return ec;
 
     vector<const wchar_t *> wptrs(args.size());
@@ -1463,7 +1719,7 @@ TRY_START:
         if (err == ERROR_SERVICE_ALREADY_RUNNING) {
             wasRunning = true;
         } else {
-            return reportError(info, kInfoName);
+            return reportError(info, "StartServiceW");
         }
     }
     if (auto ec = queryStat(out, info))
@@ -1506,12 +1762,11 @@ error_code Dim::winSvcStop(
     if (!out)
         out = &st;
 
-    auto kInfoName = "STOP";
-    auto info = FuncInfo(svcName);
-    if (auto ec = openScm(&info, SC_MANAGER_CONNECT, kInfoName))
+    auto info = FuncInfo(svcName, "STOP");
+    if (auto ec = openScm(&info, SC_MANAGER_CONNECT))
         return ec;
     DWORD access = SERVICE_STOP | wait * SERVICE_QUERY_STATUS;
-    if (auto ec = openSvc(&info, access, kInfoName))
+    if (auto ec = openSvc(&info, access))
         return ec;
 
     assert(comment.size() <= 127);
@@ -1535,11 +1790,17 @@ error_code Dim::winSvcStop(
         } else if (err == ERROR_SERVICE_CANNOT_ACCEPT_CTRL) {
             // Was already stopping. This error still populates ServiceStatus.
         } else {
-            return reportError(info, kInfoName);
+            return reportError(info, "ControlServiceExW");
         }
     }
-    if (auto ec = parseStat(out, info, kInfoName, oparams.ServiceStatus))
+    if (auto ec = parseStat(
+        out,
+        info,
+        "ControlServiceExW",
+        oparams.ServiceStatus
+    )) {
         return ec;
+    }
 
     if (!wait)
         return {};
@@ -1567,7 +1828,7 @@ static error_code control(
     WinSvcStat * out,
     string_view svcName,
     bool wait,
-    const char infoName[],
+    const char opName[],
     unsigned control,
     WinSvcStat::State action,
     WinSvcStat::State pendingAction
@@ -1576,11 +1837,11 @@ static error_code control(
     if (!out)
         out = &st;
 
-    auto info = FuncInfo(svcName);
-    if (auto ec = openScm(&info, SC_MANAGER_CONNECT, infoName))
+    auto info = FuncInfo(svcName, opName);
+    if (auto ec = openScm(&info, SC_MANAGER_CONNECT))
         return ec;
     DWORD access = SERVICE_PAUSE_CONTINUE | wait * SERVICE_QUERY_STATUS;
-    if (auto ec = openSvc(&info, access, infoName))
+    if (auto ec = openSvc(&info, access))
         return ec;
 
     SERVICE_CONTROL_STATUS_REASON_PARAMSW oparams = {};
@@ -1598,8 +1859,14 @@ static error_code control(
         || err == ERROR_SERVICE_CANNOT_ACCEPT_CTRL
         || err == ERROR_SERVICE_NOT_ACTIVE
     ) {
-        if (auto ec = parseStat(out, info, infoName, oparams.ServiceStatus))
+        if (auto ec = parseStat(
+            out,
+            info,
+            "ControlServiceExW",
+            oparams.ServiceStatus
+        )) {
             return ec;
+        }
     }
     if (err)
         return err.code();

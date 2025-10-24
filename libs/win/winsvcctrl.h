@@ -47,24 +47,25 @@ struct WinSvcConf {
 
         kDefault = kOwn,
     };
-    Type serviceType {};
+    std::optional<Type> serviceType;
 
     // Can be enabled if the service account is kLocalSystem and the service
-    // type is kOwn, kShared, kUserOwn, or kUserShared.
+    // type is kOwn, kShared, kUserOwn, or kUserShared. Ignored if serviceType
+    // is not set.
     // https://docs.microsoft.com/windows/win32/services/interactive-services
     bool interactive {};
 
     // User (or package?) specific instance of kUserOwn or kUserShared (or
     // kPackageOwn or kPackageShared?) service. The service name will be <name
     // of service template>_<LUID>.
-    bool instance {};
+    bool instance {}; // Can be queried, can't be changed.
 
     // Beginning with Windows 10 (version 1703) shared services may be split
     // off to their own SvcHost process. They are split by default if you have
     // over 3.5GB memory, see SvcHostSplitDisable in services
     // HKLM\SYSTEM\CurrentControlSet\Services entry.
     // https://docs.microsoft.com/windows/application-management/svchost-service-refactoring
-    bool sharedServiceSplitEnabled {};
+    bool sharedServiceSplitEnabled {}; // Can be queried, can't be changed.
 
     enum class Start {
         kInvalid,
@@ -77,7 +78,7 @@ struct WinSvcConf {
 
         kDefault = kAuto,
     };
-    Start startType {};
+    std::optional<Start> startType;
 
     enum class ErrCtrl {
         kInvalid,
@@ -88,11 +89,11 @@ struct WinSvcConf {
 
         kDefault = kNormal,
     };
-    ErrCtrl errorControl {};
+    std::optional<ErrCtrl> errorControl;
 
     std::optional<std::string> progWithArgs; // Default: path to this program
     std::optional<std::string> loadOrderGroup;      // Default: none
-    std::optional<unsigned> loadOrderTag {};        // Default: none
+    std::optional<unsigned> loadOrderTag;           // Default: none
     std::optional<std::vector<std::string>> deps;   // Default: none
     std::optional<std::string> account;     // Default: NT Service\<svcName>
     std::optional<std::string> password;    // Default: none
@@ -106,15 +107,15 @@ struct WinSvcConf {
 
         kDefault = kCrashOnly,
     };
-    FailureFlag failureFlag {};             // Default: kCrashOnly
+    std::optional<FailureFlag> failureFlag; // Default: kCrashOnly
 
-    std::optional<std::chrono::seconds> failureReset {}; // Default: none
-    std::optional<std::string> rebootMsg; // used with FailAction::kReboot
-
-    // required by FailAction::kRunCommand
-    std::string failureProgWithArgs;
+    std::optional<std::chrono::seconds> failureReset; // Default: none
+    std::optional<std::string> rebootMsg; // FailAction::kReboot
+    std::optional<std::string> failureProgWithArgs; // FailAction::kRunCommand
 
     struct Action {
+        bool operator==(const Action & other) const = default;
+
         enum class Type {
             kInvalid,
             kNone,
@@ -127,20 +128,12 @@ struct WinSvcConf {
         Type type {};
         std::chrono::milliseconds delay;
     };
-    std::optional<std::vector<Action>> failureActions;
-                                            // Default: none
+    std::optional<std::vector<Action>> failureActions;  // Default: none
 
-    enum class PreferredNode {
-        kInvalid = -1,
-        kNone = -2,
+    static constexpr unsigned kNoPreferredNode = (unsigned) -1;
+    std::optional<unsigned> preferredNode;  // Default: kNoPreferredNode
 
-        kDefault = kNone,
-    };
-    // An explicit node number or one of the PreferredNode values.
-    unsigned preferredNode {(unsigned) PreferredNode::kInvalid};
-                                            // Default: none
-
-    std::optional<std::chrono::milliseconds> preshutdownTimeout {};
+    std::optional<std::chrono::milliseconds> preshutdownTimeout;
                                             // Default: none
 
     std::optional<std::vector<std::string>> privs;
@@ -153,9 +146,11 @@ struct WinSvcConf {
 
         kDefault = kNone,
     };
-    SidType sidType {};
+    std::optional<SidType> sidType;
 
     struct Trigger {
+        bool operator==(const Trigger & other) const = default;
+
         enum class Type {
             kInvalid,
             kCustom,
@@ -200,12 +195,13 @@ struct WinSvcConf {
             kDefault = kInvalid,
         };
         struct DataItem {
+            bool operator==(const DataItem & other) const = default;
+
             DataType type;
             std::string data;   // limited to maximum of 1024 bytes
         };
         std::vector<DataItem> dataItems;
     };
-    // NOTE: SUPPORT FOR TRIGGERS NOT IMPLEMENTED
     std::optional<std::vector<Trigger>> triggers;
 
     enum class LaunchProt {
@@ -218,7 +214,7 @@ struct WinSvcConf {
         kDefault = kNone,
     };
     // Only allowed if executable is signed.
-    LaunchProt launchProt {};
+    std::optional<LaunchProt> launchProt;
 };
 
 std::error_code winSvcCreate(const WinSvcConf & sconf);
@@ -230,6 +226,14 @@ std::error_code winSvcReplace(const WinSvcConf & sconf);
 
 // Updates the service parameters explicitly specified.
 std::error_code winSvcUpdate(const WinSvcConf & sconf);
+
+// Output the delta between two configurations, which could be used in a
+// following call to winSvcUpdate().
+std::error_code winSrvMakeUpdate(
+    WinSvcConf * out,
+    const WinSvcConf & target,
+    const WinSvcConf & base
+);
 
 std::error_code winSvcGrantLogonAsService(std::string_view account);
 
