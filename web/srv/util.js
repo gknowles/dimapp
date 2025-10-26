@@ -334,7 +334,7 @@ function tableSortDirection(th, rows) {
 //      div.sort-group - Contains one or more tables, all with the same
 //          columns, whose rows are sorted as a group.
 //      tr.unsortable - Not repositioned by sort. Must immediately follow the
-//          header (or other unsortable) rows for this to be honored.
+//          header (or other unsortable) rows to be honored.
 // Configurable attributes:
 //      th.sort-reverse - Comparisons are reversed.
 //      td.sort-key - Used instead of content for comparisons, if present.
