@@ -29,6 +29,7 @@ static unsigned s_appIndex;
 static string s_appName;    // appBaseName[<appIndex>], if appIndex > 1
 static unsigned s_groupIndex;
 static string s_groupType;
+static string s_appSvcName;
 static vector<ITaskNotify *> s_appTasks;
 static EnumFlags<AppFlags> s_appFlags;
 static SockAddr s_appAddr;  // preferred for outbound connections and logging
@@ -139,6 +140,11 @@ static void initVars() {
     s_appName = s_appBaseName;
     if (s_appIndex > 1)
         s_appName += toChars(s_appIndex);
+    s_appSvcName = s_appName;
+    if (s_groupIndex > 1) {
+        s_appSvcName += '.';
+        s_appSvcName += toChars(s_groupIndex);
+    }
 
     // Directories
     s_binDir = exeName.parentPath();
@@ -357,6 +363,12 @@ unsigned Dim::appGroupIndex() {
 //===========================================================================
 string Dim::appGroupType() {
     return s_groupType;
+}
+
+//===========================================================================
+const string & Dim::appServiceName() {
+    assert(!s_appName.empty());
+    return s_appSvcName;
 }
 
 //===========================================================================

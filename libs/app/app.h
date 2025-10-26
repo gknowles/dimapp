@@ -118,6 +118,7 @@ const std::string & appName();
 const std::string & appBaseName();
 const VersionInfo & appVersion();
 unsigned appIndex();
+const std::string & appServiceName();
 
 // returns flags passed to appRun()
 EnumFlags<AppFlags> appFlags();
