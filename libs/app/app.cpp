@@ -244,6 +244,9 @@ int Dim::appRun(
     string_view baseName,
     EnumFlags<AppFlags> flags
 ) {
+    assert(!flags.any(fAppReadOnlyFlags));
+    flags.reset(fAppReadOnlyFlags);
+
     // Save options.
     {
         lock_guard lk(s_runMut);

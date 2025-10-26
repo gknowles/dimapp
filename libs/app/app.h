@@ -49,29 +49,38 @@ namespace Dim {
 
 enum AppFlags : unsigned {
     fAppWithChdir = 0x01,
-
-    // Has root with bin, conf, crash, log, etc subdirs.
-    fAppWithFiles = 0x02,
+    fAppWithConsole = 0x20,
 
     // Writes crash and memory leak dumps.
     fAppWithDumps = 0x08,
 
+    // Has root with bin, conf, crash, log, etc subdirs.
+    fAppWithFiles = 0x02,
+
+    fAppWithGui = 0x40,     // show window with performance metrics
+
+    // Enable app-index and group-index cli options. These indexes can then be
+    // used to distinguish between multiple services on the same system.
+    fAppWithIndex = 0x200,
+
     // Writes logs to log/* files. Does perf dump to logs at exit.
     fAppWithLogs = 0x04,
 
-    fAppWithWebAdmin = 0x10,
-    fAppWithConsole = 0x20,
-    fAppWithGui = 0x40,
     fAppWithService = 0x80, // can run as service
+    fAppWithWebAdmin = 0x10,
+
+    //-----------------------------------------------------------------------
+    // Read only flags.
     fAppIsService = 0x100, // is running as service
 
-    fAppUtility = fAppWithConsole | fAppWithGui,
-    fAppClient = fAppWithFiles | fAppWithDumps | fAppWithConsole
-        | fAppWithGui,
-    fAppServer = fAppWithChdir | fAppWithFiles | fAppWithDumps | fAppWithLogs
-        | fAppWithWebAdmin | fAppWithGui | fAppWithService,
-
     fAppReadOnlyFlags = fAppIsService,
+
+    //-----------------------------------------------------------------------
+    // Compound Flags
+    fAppUtility = fAppWithConsole | fAppWithGui,
+    fAppClient = fAppWithConsole | fAppWithDumps | fAppWithFiles | fAppWithGui,
+    fAppServer = fAppWithChdir | fAppWithDumps | fAppWithFiles | fAppWithGui
+        | fAppWithIndex | fAppWithLogs | fAppWithService | fAppWithWebAdmin,
 };
 
 // Before calling appRun, the application must configure (via Cli) subcommands
