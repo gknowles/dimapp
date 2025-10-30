@@ -880,7 +880,6 @@ error_code Dim::winSvcCreate(const WinSvcConf & sconf) {
         return ec;
 
     sDel = {};
-    logMsgInfo() << conf.serviceName << " service created.";
     return {};
 }
 
@@ -897,7 +896,6 @@ error_code Dim::winSvcDelete(std::string_view svcName) {
     if (!DeleteService(info.svc))
         return reportError(info, "DeleteService");
 
-    logMsgInfo() << svcName << " service deleted.";
     return {};
 }
 
@@ -1376,10 +1374,18 @@ static error_code parseStat(
     out->checkPoint = ssp.dwCheckPoint;
     out->waitHint = ssp.dwWaitHint;
     out->processId = ssp.dwProcessId;
-    if (ssp.dwServiceFlags & SERVICE_RUNS_IN_SYSTEM_PROCESS) {
-        out->flags = WinSvcStat::Flags::kInSystemProcess;
-    } else {
-        out->flags = WinSvcStat::Flags::kNormal;
+    if (auto sf = ssp.dwServiceFlags) {
+        using enum WinSvcStat::Flags;
+        struct {
+            WinSvcStat::Flags flag;
+            DWORD osflag;
+        } flags[] = {
+            { fInSystemProcess, SERVICE_RUNS_IN_SYSTEM_PROCESS },
+        };
+        for (auto&& ff : flags) {
+            if (sf & ff.osflag)
+                out->flags |= (unsigned) ff.flag;
+        }
     }
     return {};
 }
@@ -1389,7 +1395,6 @@ static error_code queryStat(
     WinSvcStat * out,
     const FuncInfo & info
 ) {
-    *out = {};
     DWORD needed = 0;
     for (;;) {
         auto&& [ssp, count] = reserve<SERVICE_STATUS_PROCESS>(info, needed);
@@ -1553,7 +1558,6 @@ error_code Dim::winSvcReplace(const WinSvcConf & conf) {
     if (auto ec = changeAllConf2(info, conf))
         return ec;
 
-    logMsgInfo() << conf.serviceName << " service replaced.";
     return {};
 }
 
@@ -1570,7 +1574,6 @@ error_code Dim::winSvcUpdate(const WinSvcConf & conf) {
     if (auto ec = changeAllConf2(info, conf))
         return ec;
 
-    logMsgInfo() << conf.serviceName << " service updated.";
     return {};
 }
 
@@ -1578,10 +1581,12 @@ error_code Dim::winSvcUpdate(const WinSvcConf & conf) {
 template<typename T>
 static void dedup(optional<T> * out, const optional<T> & base) {
     if (*out == base) {
+        // Values are the same, set to no change (an empty optional).
         *out = {};
     } else if (!*out) {
-        // Set to default value instead of no value.
-        **out = {};
+        // Values are different and there is no new value, set to default
+        // so old value will be changed (likely via removal).
+        *out = T{};
     }
 }
 
@@ -1735,6 +1740,7 @@ TRY_START:
         } else if (out->state == kStartPending) {
             // proceed to final pending
         } else {
+            out->alreadyInState = true;
             return {};
         }
     }
@@ -1771,7 +1777,9 @@ error_code Dim::winSvcStop(
 
     assert(comment.size() <= 127);
     SERVICE_CONTROL_STATUS_REASON_PARAMSW oparams = {};
-    oparams.dwReason = bit_cast<unsigned>(reason);
+    oparams.dwReason = (uint32_t) reason.general << 28
+        | (uint32_t) reason.major << 16
+        | (uint32_t) reason.minor;
     wstring wcmt;
     if (!wcmt.empty()) {
         wcmt = toWstring(comment);
@@ -1785,10 +1793,12 @@ error_code Dim::winSvcStop(
         &oparams
     )) {
         err.set();
-        if (err == ERROR_SERVICE_NOT_ACTIVE) {
-            // Already stopped. This error still populates ServiceStatus.
-        } else if (err == ERROR_SERVICE_CANNOT_ACCEPT_CTRL) {
-            // Was already stopping. This error still populates ServiceStatus.
+        if (err == ERROR_SERVICE_NOT_ACTIVE
+            || err == ERROR_SERVICE_CANNOT_ACCEPT_CTRL)
+        {
+            // Already stopped or stopping. This error still populates
+            // ServiceStatus.
+            out->alreadyInState = true;
         } else {
             return reportError(info, "ControlServiceExW");
         }

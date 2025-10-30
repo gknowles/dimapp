@@ -258,7 +258,6 @@ struct WinSvcStat {
         kDefault = kRunning,
     };
     enum class Accept : unsigned {
-        fInvalid,
         fNetBindChange          = 1 << 0,
         fParamChange            = 1 << 1,
         fPauseContinue          = 1 << 2,
@@ -269,26 +268,26 @@ struct WinSvcStat {
         fPowerEvent             = 1 << 7,
         fSessionChange          = 1 << 8,
     };
-    enum class Flags {
-        kInvalid,
-        kNormal             = 1 << 0,
-        kInSystemProcess    = 1 << 1,
-
-        kDefault = kNormal,
+    enum class Flags : unsigned {
+        fInSystemProcess    = 1 << 1,
     };
 
-    std::string serviceName;
-    std::string displayName;
     WinSvcConf::Type serviceType{};
     bool interactive{};
-
     State state = State::kInvalid;
-    unsigned accepted{}; // combination of Accept flags
+    unsigned accepted{};    // combination of Accept flags
     unsigned exitCode{};
     unsigned checkPoint{};
     unsigned waitHint{};
     unsigned processId{};
-    Flags flags{};
+    unsigned flags{};       // combination of Flags flags
+
+    // Set by winSvcFind()
+    std::string serviceName;
+    std::string displayName;
+
+    // Set by winSvcStart/Stop/Pause/Continue
+    bool alreadyInState{};
 };
 
 std::error_code winSvcQuery(
