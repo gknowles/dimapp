@@ -228,10 +228,11 @@ public:
     constexpr EnumFlags(const EnumFlags & val) = default;
     constexpr EnumFlags(T val);
 
-    constexpr EnumFlags & set (EnumFlags other);
-    constexpr EnumFlags & reset ();
-    constexpr EnumFlags & reset (EnumFlags other);
-    constexpr EnumFlags & flip (EnumFlags other);
+    constexpr EnumFlags & set(EnumFlags other);
+    constexpr EnumFlags & set(EnumFlags other, bool value);
+    constexpr EnumFlags & reset();
+    constexpr EnumFlags & reset(EnumFlags other);
+    constexpr EnumFlags & flip(EnumFlags other);
 
     constexpr auto underlying() const;
     constexpr T value() const;
@@ -247,10 +248,10 @@ public:
     constexpr size_t count() const;
     constexpr size_t count(EnumFlags mask) const;
 
-    constexpr EnumFlags & operator= (const EnumFlags & other) = default;
-    constexpr EnumFlags & operator|= (EnumFlags other);
-    constexpr EnumFlags & operator&= (EnumFlags other);
-    constexpr EnumFlags & operator^= (EnumFlags other);
+    constexpr EnumFlags & operator=(const EnumFlags & other) = default;
+    constexpr EnumFlags & operator|=(EnumFlags other);
+    constexpr EnumFlags & operator&=(EnumFlags other);
+    constexpr EnumFlags & operator^=(EnumFlags other);
 
     // PRIVATE
     // Access is public to make this a structural class type; so that it can
@@ -281,6 +282,12 @@ template<EnumFlagsType T>
 constexpr EnumFlags<T> & EnumFlags<T>::set(EnumFlags other) {
     m_value |= other.underlying();
     return *this;
+}
+
+//===========================================================================
+template<EnumFlagsType T>
+constexpr EnumFlags<T> & EnumFlags<T>::set(EnumFlags other, bool val) {
+    return val ? set(other) : reset(other);
 }
 
 //===========================================================================
