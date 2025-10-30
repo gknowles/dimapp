@@ -813,14 +813,28 @@ bool Dim::execProgramWait(
 
 //===========================================================================
 bool Dim::execElevatedWait(
-    int * exitCode,
+    ExecResult * out,
     const string & cmdline,
     const string & workingDir
 ) {
+    *out = {};
+    out->cmdline = cmdline;
+
     SHELLEXECUTEINFOW ei = { sizeof ei };
     ei.lpVerb = L"RunAs";
+    ei.fMask = SEE_MASK_NOASYNC
+        | SEE_MASK_NOCLOSEPROCESS
+        | SEE_MASK_FLAG_NO_UI
+        //| SEE_MASK_NO_CONSOLE
+        ;
+    ei.nShow = SW_HIDE;
+
     auto args = Cli::toArgv(cmdline);
-    auto nexe = args.empty() ? "" : args[0];
+    string nexe;
+    if (!args.empty()) {
+        nexe = args[0];
+        args.erase(args.begin());
+    }
 
     // ShellExecute, unlike every other windows API I'm aware of, treats
     // forward slash as the end of the path rather than as a directory
@@ -829,34 +843,33 @@ bool Dim::execElevatedWait(
 
     auto wexe = toWstring(nexe);
     ei.lpFile = wexe.c_str();
-    auto wargs = toWstring(cmdline);
+    auto wargs = toWstring(Cli::toCmdline(args));
     ei.lpParameters = wargs.c_str();
     auto wdir = toWstring(workingDir);
     if (wdir.size())
         ei.lpDirectory = wdir.c_str();
-    ei.fMask = SEE_MASK_NOASYNC
-        | SEE_MASK_NOCLOSEPROCESS
-        | SEE_MASK_FLAG_NO_UI
-        ;
-    ei.nShow = SW_HIDE;
+
     if (!ShellExecuteExW(&ei)) {
         WinError err;
         if (err == ERROR_CANCELLED) {
-            logMsgError() << "Operation canceled.";
+            out->exitType = ExecResult::kCanceled;
         } else {
             logMsgError() << "ShellExecuteExW(" << nexe << "): " << WinError();
         }
-        *exitCode = -1;
+        out->exitCode = -1;
         return false;
     }
 
+    out->exitType = ExecResult::kFinished;
     if (!ei.hProcess) {
-        *exitCode = EX_OK;
+        // No process was launched, intentionally. This is expected for
+        // documents but shouldn't occur with programs.
+        out->exitCode = EX_OK;
     } else {
         DWORD rc = EX_OSERR;
         if (WAIT_OBJECT_0 == WaitForSingleObject(ei.hProcess, INFINITE))
             GetExitCodeProcess(ei.hProcess, &rc);
-        *exitCode = rc;
+        out->exitCode = rc;
         CloseHandle(ei.hProcess);
     }
     return true;

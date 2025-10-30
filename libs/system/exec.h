@@ -186,11 +186,17 @@ bool execProgramWait(
 *
 ***/
 
-// Waits for program to complete, returns false and sets exitCode to -1 if
-// unable to execute program. Stdio is not captured. Not allowed from the event
-// thread.
+// Runs program with elevated access rights.
+//  - Waits for program to complete.
+//  - Stdio is not captured.
+//  - Not allowed from the event thread.
+//
+//  exitType        exitCode
+//  kNotStarted     -1          Unable to execute program.
+//  kCanceled       -1          User explicitly refused UAC elevation request.
+//  kFinished       <returned>  Exit code returned by program at exit.
 bool execElevatedWait(
-    int * exitCode,
+    ExecResult * res,
     const std::string & cmdline,
     const std::string & workingDir = {}
 );
