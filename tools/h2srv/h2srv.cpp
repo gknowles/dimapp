@@ -135,7 +135,7 @@ static int doMain(int argc, char * argv[]) {
     Cli cli;
     cli.header(cli.header() + " sample http/2 server")
         .action(app);
-    return appRun(argc, argv, kVersion, {}, fAppServer | fAppWithConsole);
+    return appRun(argc, argv, kVersion, "h2srv", fAppServer | fAppWithConsole);
 }
 
 

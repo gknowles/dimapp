@@ -68,5 +68,5 @@ static void app(Cli & cli) {
 //===========================================================================
 int main(int argc, char * argv[]) {
     Cli().action(app);
-    return appRun(argc, argv);
+    return appRun(argc, argv, fAppTest);
 }

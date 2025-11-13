@@ -240,37 +240,41 @@ static void compare(
 
 //===========================================================================
 static void fileTests() {
-    fileRemove("file-t", true);
-    fileCreateDirs("file-t");
-    createEmptyFile("file-t/a.txt");
-    fileCreateDirs("file-t/b");
-    createEmptyFile("file-t/b/ba.txt");
-    createEmptyFile("file-t/b.txt");
-    fileCreateDirs("file-t/c");
-    createEmptyFile("file-t/c.txt");
+    Path base;
+    appDataPath(&base, "glob-t", false);
+    fileRemove(base, true);
+    fileCreateDirs(base);
+    fileSetCurrentDir(appDataDir());
+
+    createEmptyFile("glob-t/a.txt");
+    fileCreateDirs("glob-t/b");
+    createEmptyFile("glob-t/b/ba.txt");
+    createEmptyFile("glob-t/b.txt");
+    fileCreateDirs("glob-t/c");
+    createEmptyFile("glob-t/c.txt");
 
     auto found = glob(
-        "file-t",
+        "glob-t",
         "**/*.txt",
         Glob::fDirsFirst | Glob::fDirsLast
     );
     vector<pair<string, bool>> expected = {
-        { "file-t/a.txt",       false   },
-        { "file-t/b",           true    },
-        { "file-t/b/ba.txt",    false   },
-        { "file-t/b",           true    },
-        { "file-t/b.txt",       false   },
-        { "file-t/c",           true    },
-        { "file-t/c",           true    },
-        { "file-t/c.txt",       false   },
+        { "glob-t/a.txt",       false   },
+        { "glob-t/b",           true    },
+        { "glob-t/b/ba.txt",    false   },
+        { "glob-t/b",           true    },
+        { "glob-t/b.txt",       false   },
+        { "glob-t/c",           true    },
+        { "glob-t/c",           true    },
+        { "glob-t/c.txt",       false   },
     };
     compare(found, expected);
 
-    compare(glob("file-t", "**/*.txt"), {
-        { "file-t/a.txt",       false   },
-        { "file-t/b/ba.txt",    false   },
-        { "file-t/b.txt",       false   },
-        { "file-t/c.txt",       false   },
+    compare(glob("glob-t", "**/*.txt"), {
+        { "glob-t/a.txt",       false   },
+        { "glob-t/b/ba.txt",    false   },
+        { "glob-t/b.txt",       false   },
+        { "glob-t/c.txt",       false   },
     });
 }
 
@@ -294,6 +298,6 @@ int main(int argc, char * argv[]) {
     // _CrtSetBreakAlloc(2109);
 
     Cli().action(app);
-    int code = appRun(argc, argv);
+    int code = appRun(argc, argv, fAppTest);
     return code;
 }

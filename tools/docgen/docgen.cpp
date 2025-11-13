@@ -62,5 +62,5 @@ int main(int argc, char * argv[]) {
     cli.helpNoArgs()
         .helpCmd()
         .beforeExec(app);
-    return appRun(argc, argv, kVersion);
+    return appRun(argc, argv, kVersion, "docgen");
 }

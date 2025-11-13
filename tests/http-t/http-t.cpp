@@ -236,5 +236,5 @@ int main(int argc, char * argv[]) {
         .desc("Show names of tests as they are processed.");
     cli.opt(&s_test, "test", false)
         .desc("Run internal unit tests.");
-    return appRun(argc, argv, kVersion);
+    return appRun(argc, argv, kVersion, {}, fAppTest);
 }

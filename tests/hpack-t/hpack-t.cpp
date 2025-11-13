@@ -461,5 +461,5 @@ int main(int argc, char * argv[]) {
         .desc("Display details of what's happening during processing.");
     cli.opt(&s_test, "test", false)
         .desc("Run internal unit tests.");
-    return appRun(argc, argv, kVersion);
+    return appRun(argc, argv, kVersion, {}, fAppTest);
 }

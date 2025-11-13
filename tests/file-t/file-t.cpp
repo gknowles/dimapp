@@ -19,7 +19,8 @@ using namespace Dim;
 static void app(Cli & cli) {
     using enum File::OpenMode;
 
-    string fn = "file-t.tmp";
+    Path fn;
+    appDataPath(&fn, "file-t/file-t.tmp");
 
     FileHandle file;
     auto ec = fileOpen(&file, fn, fCreat | fTrunc | fReadWrite | fBlocking);
@@ -111,6 +112,6 @@ static void app(Cli & cli) {
 //===========================================================================
 int main(int argc, char * argv[]) {
     Cli().action(app);
-    int code = appRun(argc, argv);
+    int code = appRun(argc, argv, fAppTest);
     return code;
 }

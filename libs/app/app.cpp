@@ -243,6 +243,11 @@ void Dim::iAppSetFlags(EnumFlags<AppFlags> flags) {
 ***/
 
 //===========================================================================
+int Dim::appRun(int argc, char * argv[], EnumFlags<AppFlags> flags) {
+    return appRun(argc, argv, {}, {}, flags);
+}
+
+//===========================================================================
 int Dim::appRun(
     int argc,
     char * argv[],

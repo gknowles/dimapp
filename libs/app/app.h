@@ -77,6 +77,7 @@ enum AppFlags : unsigned {
 
     //-----------------------------------------------------------------------
     // Compound Flags
+    fAppTest = fAppWithChdir | fAppWithConsole | fAppWithFiles | fAppWithGui,
     fAppUtility = fAppWithConsole | fAppWithGui,
     fAppClient = fAppWithConsole | fAppWithDumps | fAppWithFiles | fAppWithGui,
     fAppServer = fAppWithChdir | fAppWithDumps | fAppWithFiles | fAppWithGui
@@ -106,6 +107,7 @@ int appRun(
     std::string_view baseName = {}, // defaults to stem of executable file name
     EnumFlags<AppFlags> flags = fAppUtility
 );
+int appRun(int argc, char * argv[], EnumFlags<AppFlags> flags);
 
 
 /****************************************************************************
@@ -138,7 +140,7 @@ inline bool appStopping() { return appMode() == kRunStopping; }
 int appExitCode();
 
 // Application directory structure
-// If bin dir name is "bin":
+// If fAppWithFiles and the directory containing this executable is "bin":
 //  root
 //      /bin
 //      /conf
@@ -148,7 +150,7 @@ int appExitCode();
 //      /web
 //
 // otherwise:
-//  <binDir> (is also config dir)
+//  <binDir> directory containing this executable (is also conf dir)
 //  LOCALAPPDATA/<AppName>
 //      /crash
 //      /data

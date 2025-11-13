@@ -884,5 +884,5 @@ CmdOpts::CmdOpts() {
 
 //===========================================================================
 int main(int argc, char * argv[]) {
-    return appRun(argc, argv, kVersion);
+    return appRun(argc, argv, kVersion, "cmtupd");
 }

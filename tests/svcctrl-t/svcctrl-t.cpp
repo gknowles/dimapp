@@ -164,5 +164,5 @@ int main(int argc, char * argv[]) {
     Cli cli;
     cli.helpNoArgs().action(app);
     cli.opt(&s_test, "test.").desc("Run internal unit tests");
-    return appRun(argc, argv);
+    return appRun(argc, argv, fAppTest);
 }

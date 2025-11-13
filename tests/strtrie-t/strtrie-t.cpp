@@ -321,5 +321,5 @@ int main(int argc, char * argv[]) {
     cli.opt(&s_fill, "f fill").siUnits("")
         .desc("Randomly fill a container with this many values.");
     cli.opt(&s_test, "test", false).desc("Run internal unit tests");
-    return appRun(argc, argv, kVersion);
+    return appRun(argc, argv, kVersion, {}, fAppTest);
 }
