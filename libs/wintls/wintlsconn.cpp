@@ -208,7 +208,10 @@ NEGOTIATE:
             // there is any additional data.
             continue;
         }
+
         logMsgError() << "AcceptSecurityContext: " << err;
+        // SEC_E_CERT_UNKNOWN - 8009'0327
+
         if (outBufs[2].cbBuffer) {
             out->append((char *) outBufs[2].pvBuffer, outBufs[2].cbBuffer);
             FreeContextBuffer(outBufs[2].pvBuffer);
