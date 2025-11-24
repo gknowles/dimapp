@@ -1327,8 +1327,8 @@ static void harvestPages(SearchState * ss, UpdateBase * upd) {
             }
         }
 
-        // NOTE: nvi.len *must* be >0, >= psize/2 is just a conjecture!
-        assert(nvi.len >= psize / 2);
+        // NOTE: nvi.len *must* be >0, otherwise why make a page?
+        assert(nvi.len >= kRemoteNodeLen);
 
         if (upd->len <= psize)
             break;
