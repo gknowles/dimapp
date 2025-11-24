@@ -61,8 +61,8 @@ public:
     iterator find(std::string_view val) const;
     iterator findLess(std::string_view val) const;
     iterator findLessEqual(std::string_view val) const;
-    iterator lowerBound(std::string_view val) const;
-    iterator upperBound(std::string_view val) const;
+    iterator lowerBound(std::string_view val) const;    // greaterEqual
+    iterator upperBound(std::string_view val) const;    // greater
     std::pair<iterator, iterator> equalRange(std::string_view val) const;
 
     // debug

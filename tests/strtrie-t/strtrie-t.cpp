@@ -143,7 +143,12 @@ inline static void internalTests() {
     check(vals.begin() == vals.end());
 
     // Search and iterate
-    vector<string_view> keys = { "abc", "aw", "abd" };
+    vector<string_view> keys = {
+        "abc", "aw", "abd",
+        "bbb",
+        "cc", "ccc", "ccccc",
+        "z"
+    };
     for (auto&& key : keys)
         insert(&vals, key);
     ranges::sort(keys);
@@ -162,18 +167,45 @@ inline static void internalTests() {
     }
     check(ri == keys.rend());
 
-    auto vi = vals.lowerBound("abcd");
+    auto vi = vals.find("abd");
     check(*vi == "abd");
-    vi = vals.find("abd");
-    check(*vi == "abd");
-    vi = vals.lowerBound("abd");
-    check(*vi == "abd");
-    vi = vals.upperBound("abd");
-    check(*vi == "aw");
+    vi = vals.find("bb");
+    check(!vi);
+    vi = vals.find("cc");
+    check(*vi == "cc");
+    vi = vals.find("ccccc");
+    check(*vi == "ccccc");
+
     vi = vals.findLess("abd");
     check(*vi == "abc");
+    vi = vals.findLess("cccc");
+    check(*vi == "ccc");
+    vi = vals.findLess("cccd");
+    check(*vi == "ccccc");
+    vi = vals.findLess("ccccd");
+    check(*vi == "ccccc");
+
     vi = vals.findLessEqual("abd");
     check(*vi == "abd");
+    vi = vals.findLessEqual("ccccd");
+    check(*vi == "ccccc");
+
+    vi = vals.lowerBound("abcd");
+    check(*vi == "abd");
+    vi = vals.lowerBound("aa");
+    check(*vi == "abc");
+    vi = vals.lowerBound("ab");
+    check(*vi == "abc");
+    vi = vals.lowerBound("~");
+    check(!vi);
+    vi = vals.lowerBound("abd");
+    check(*vi == "abd");
+
+    vi = vals.upperBound("abd");
+    check(*vi == "aw");
+    vi = vals.upperBound("ccccb");
+    check(*vi == "ccccc");
+
     auto ii = vals.equalRange("abc");
     check(*ii.first == "abc");
     check(*ii.second == "abd");
@@ -181,7 +213,7 @@ inline static void internalTests() {
     check(*ii.first == "aw" && ii.first == ii.second);
 
     check(vals.front() == "abc");
-    check(vals.back() == "aw");
+    check(vals.back() == "z");
 
     for (auto&& key : keys) {
         erase(&vals, key);

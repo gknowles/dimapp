@@ -2366,8 +2366,6 @@ static void seekBack(SearchState * ss) {
             auto sval = lastForkVal(bits);
             pushFoundKeyVal(ss, sval);
             auto pos = forkLen(ss->node) - 1;
-            if (nodeEndMarkFlag(ss->node))
-                pos += 1;
             seekKid(ss, pos);
         } else if (ntype == kNodeEndMark) {
             break;
@@ -2573,24 +2571,24 @@ static bool findAtSeg(SearchState * ss) {
         ss->node = nullptr;
     } else if (kLess) {
         // Not found, use nearest value.
-        if (rc > 0) {
-            // Back up to nearest fork and walk down adjacent branch.
+        if (rc < 0) {
+            // Key less than found, back up to nearest fork and walk down
+            // adjacent branch.
             seekPrev(ss);
         } else {
-            // Continue down this chain.
+            // Key greater than found, continue down this chain.
             setFoundKey(ss);
-            pushFoundKeyConsume(ss);
             seekBack(ss);
         }
     } else if (kGreater) {
         // Not found, use nearest value.
-        if (rc < 0) {
-            // Back up to nearest fork and walk down adjacent branch.
+        if (rc > 0) {
+            // Key greater than found, back up to nearest fork and walk down
+            // adjacent branch.
             seekNext(ss);
         } else {
-            // Continue down this chain.
+            // Key less than found, continue down this chain.
             setFoundKey(ss);
-            pushFoundKeyConsume(ss);
             seekFront(ss);
         }
     }
@@ -2619,24 +2617,24 @@ static bool findAtHalfSeg(SearchState * ss) {
         ss->node = nullptr;
     } else if (kLess) {
         // Not found, use nearest value.
-        if (rc > 0) {
-            // Back up to nearest fork and walk down adjacent branch.
+        if (rc < 0) {
+            // Key less than found, back up to nearest fork and walk down
+            // adjacent branch.
             seekPrev(ss);
         } else {
-            // Continue down this chain.
+            // Key greater than found, continue down this chain.
             setFoundKey(ss);
-            pushFoundKeyConsume(ss);
             seekBack(ss);
         }
     } else if (kGreater) {
         // Not found, use nearest value.
-        if (rc < 0) {
-            // Back up to nearest fork and walk down adjacent branch.
+        if (rc > 0) {
+            // Key greater than found, back up to nearest fork and walk down
+            // adjacent branch.
             seekNext(ss);
         } else {
-            // Continue down this chain.
+            // Key less than found, continue down this chain.
             setFoundKey(ss);
-            pushFoundKeyConsume(ss);
             seekFront(ss);
         }
     }
