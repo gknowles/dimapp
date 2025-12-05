@@ -218,8 +218,8 @@ public:
     uint64_t * data(size_t bitpos);
 
 private:
-    size_t insertGap(size_t bitpos, size_t cnt);
-    size_t replaceWithGap(size_t pos, size_t cnt, size_t scnt);
+    void insertGap(size_t bitpos, size_t cnt);
+    void replaceWithGap(size_t pos, size_t cnt, size_t scnt);
 
     uint64_t * m_data = nullptr;
     size_t m_size = 0;

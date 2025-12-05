@@ -884,14 +884,14 @@ uint64_t * BitSpan::data(size_t bitpos) {
 }
 
 //===========================================================================
-size_t BitSpan::insertGap(size_t bitpos, size_t cnt) {
+void BitSpan::insertGap(size_t bitpos, size_t cnt) {
     assert(bitpos < bits());
     if (cnt < bits() - bitpos) {
         auto ocnt = bits() - bitpos - cnt;
         copy(data(), bitpos + cnt, ocnt, bitpos);
-        return cnt;
     } else {
-        return bits() - bitpos;
+        // Gap extends to last bit, so we're just discarding the tail and
+        // there's no need to move anything.
     }
 }
 
@@ -933,19 +933,15 @@ BitSpan & BitSpan::erase(size_t pos, size_t cnt) {
 }
 
 //===========================================================================
-size_t BitSpan::replaceWithGap(size_t pos, size_t cnt, size_t scnt) {
+void BitSpan::replaceWithGap(size_t pos, size_t cnt, size_t scnt) {
     assert(pos < bits());
     cnt = min(cnt, bits() - pos);
     scnt = min(scnt, bits() - pos);
-    auto ocnt = cnt;
     if (cnt < scnt) {
-        ocnt = scnt - cnt;
-        insertGap(pos + cnt, ocnt);
+        insertGap(pos + cnt, scnt - cnt);
     } else if (cnt > scnt) {
-        ocnt = cnt - scnt;
-        erase(pos + scnt, ocnt);
+        erase(pos + scnt, cnt - scnt);
     }
-    return ocnt;
 }
 
 //===========================================================================
@@ -956,8 +952,8 @@ BitSpan & BitSpan::replace(
     size_t spos,
     size_t scnt
 ) {
-    auto ocnt = replaceWithGap(pos, cnt, scnt);
-    return set(pos, src, spos, ocnt);
+    replaceWithGap(pos, cnt, scnt);
+    return set(pos, src, spos, scnt);
 }
 
 //===========================================================================
@@ -978,6 +974,6 @@ BitSpan & BitSpan::replace(
     size_t scnt,
     bool value
 ) {
-    auto ocnt = replaceWithGap(pos, cnt, scnt);
-    return set(pos, ocnt, value);
+    replaceWithGap(pos, cnt, scnt);
+    return set(pos, cnt, value);
 }
