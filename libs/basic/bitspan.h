@@ -70,7 +70,7 @@ public:
     // (the number of bits that uint64_t can hold).
     uint64_t getBits(size_t pos, size_t count) const;
 
-    size_t copy(void * dst, size_t dpos, size_t cnt, size_t pos = 0) const;
+    size_t copy(void * dst, size_t dpos, size_t pos, size_t cnt) const;
 
     // Returns word, or pointer to word, that contains the bit.
     uint64_t word(size_t bitpos) const;

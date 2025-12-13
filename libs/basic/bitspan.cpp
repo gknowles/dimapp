@@ -520,9 +520,11 @@ uint64_t IBitView::getBits(size_t bitpos, size_t bitcount) const {
 size_t IBitView::copy(
     void * vdst,
     size_t dpos,
-    size_t cnt,
-    size_t pos //= 0
+    size_t pos,
+    size_t cnt
 ) const {
+    assert(pos <= bits());
+    cnt = min(cnt, bits() - pos);
     copy(vdst, dpos, data(), pos, cnt);
     return cnt;
 }
@@ -888,7 +890,7 @@ void BitSpan::insertGap(size_t bitpos, size_t cnt) {
     assert(bitpos < bits());
     if (cnt < bits() - bitpos) {
         auto ocnt = bits() - bitpos - cnt;
-        copy(data(), bitpos + cnt, ocnt, bitpos);
+        copy(data(), bitpos + cnt, bitpos, ocnt);
     } else {
         // Gap extends to last bit, so we're just discarding the tail and
         // there's no need to move anything.
