@@ -293,7 +293,9 @@ static void bitmove8(
         }
     }
     // Copy to middle bytes of dst.
-    if (dst < src && src <= dst + bytes) {
+    if ((src < dst || src == dst && spos < dpos)
+        && (src + bytes > dst || src + bytes == dst && spos > dpos)
+    ) {
         sval = src[bytes];
         for (auto i = bytes; i > 0; --i) {
             auto b = sval >> (8 - spos);
