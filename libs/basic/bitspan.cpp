@@ -177,6 +177,10 @@ static void bitmoveAligned(
         // dst starts with a partial byte.
         if (pos + cnt < 8) {
             // dst is only a single byte.
+            if (!cnt) {
+                // No bits to copy.
+                return;
+            }
             auto mask = UCHAR_MAX >> (8 - cnt) << (8 - pos - cnt);
             *dst = combine(*dst, *src, mask);
             return;
@@ -241,6 +245,10 @@ static void bitmove8(
         unsigned char mask = UCHAR_MAX >> (8 - cnt) << (8 - dpos - cnt);
         if (spos + cnt <= 8) {
             // From one byte to another.
+            if (!cnt) {
+                // No bits to copy.
+                return;
+            }
             auto val = *src;
             if (spos > dpos) {
                 val <<= spos - dpos;
@@ -465,6 +473,52 @@ static void bitcpy64(
 }
 
 //===========================================================================
+template<OpType Op>
+static void set(void * vdst, size_t dpos, size_t dcnt) {
+    auto dst = (unsigned char *) vdst + dpos / 8;
+    dpos = dpos % 8;
+    if (dpos) {
+        if (dpos + dcnt <= 8) {
+            auto mask = (unsigned char) (255 << (8 - dcnt) >> dpos);
+            apply<Op, unsigned char>(dst, nullptr, mask);
+            return;
+        }
+        auto mask = (unsigned char) (255 >> dpos);
+        apply<Op, unsigned char>(dst, nullptr, mask);
+        dcnt -= dpos;
+        dpos = 0;
+        dst += 1;
+    }
+    if (dcnt >= 8) {
+        auto bytes = dcnt / 8;
+        if constexpr (Op == kReset) {
+            memset(dst, 0, bytes);
+        } else {
+            static_assert(Op == kSet);
+            memset(dst, 0xff, bytes);
+        }
+        dcnt %= 8;
+        if (!dcnt)
+            return;
+        dst += bytes;
+    }
+    auto mask = (unsigned char) (255 << (8 - dcnt));
+    apply<Op, unsigned char>(dst, nullptr, mask);
+}
+
+//===========================================================================
+// static
+void IBitView::set(void * vdst, size_t dpos, size_t dcnt) {
+    ::set<kSet>(vdst, dpos, dcnt);
+}
+
+//===========================================================================
+// static
+void IBitView::reset(void * vdst, size_t dpos, size_t dcnt) {
+    ::set<kReset>(vdst, dpos, dcnt);
+}
+
+//===========================================================================
 // static
 void IBitView::copy(
     void * vdst,
@@ -474,6 +528,61 @@ void IBitView::copy(
     size_t cnt
 ) {
     bitmove8(vdst, dpos, vsrc, spos, cnt);
+}
+
+//===========================================================================
+// static
+void IBitView::erase(void * dst, size_t dsize, size_t dpos, size_t dcnt) {
+    assert(dpos < dsize);
+    if (dsize - dpos > dcnt) {
+        auto ocnt = dsize - dpos - dcnt;
+        copy(dst, dpos, dst, dpos + dcnt, ocnt);
+        reset(dst, dsize - dcnt, dcnt);
+    } else {
+        dcnt = dsize - dpos;
+        reset(dst, dpos, dcnt);
+    }
+}
+
+//===========================================================================
+static void insertGap(
+    void * dst,
+    size_t dsize,
+    size_t dreserve,
+    size_t dpos,
+    size_t dcnt
+) {
+    assert(dpos < dsize);
+    if (dcnt < dsize - dpos) {
+        auto ocnt = min(dsize - dpos - dcnt, dreserve - dpos - dcnt);
+        IBitView::copy(dst, dpos + dcnt, dst, dpos, ocnt);
+    } else {
+        // Gap extends to last bit, so we're just discarding the tail and
+        // there's no need to move anything.
+    }
+}
+
+//===========================================================================
+// static
+void IBitView::replace(
+    void * dst,
+    size_t dsize,   // Bits of data at dst.
+    size_t dreserve,// Space for data at dst, for growing inserts.
+    size_t dpos,    // Offset from dst of bits to replace.
+    size_t dcnt,    // Number of bits to be replaced.
+    const void * src,
+    size_t spos,    // Offset from src of bits to insert.
+    size_t scnt     // Number of bits used to replacement of the old bits.
+) {
+    assert(dpos < dsize);
+    dcnt = min(dcnt, dsize - dpos);
+    scnt = min(scnt, dsize - dpos);
+    if (dcnt < scnt) {
+        insertGap(dst, dsize, dreserve, dpos + dcnt, scnt - dcnt);
+    } else if (dcnt > scnt) {
+        erase(dst, dsize, dpos + scnt, dcnt - scnt);
+    }
+    copy(dst, dpos, src, spos, scnt);
 }
 
 //===========================================================================
@@ -753,7 +862,10 @@ BitSpan & BitSpan::set(size_t bitpos) {
 
 //===========================================================================
 BitSpan & BitSpan::set(size_t bitpos, size_t bitcount) {
-    ::apply<kSet, uint64_t>(m_data, m_size, nullptr, bitpos, bitcount);
+    assert(bitpos < bits());
+    if (bitcount > bits() - bitpos)
+        bitcount = bits() - bitpos;
+    IBitView::set(m_data, bitpos, bitcount);
     return *this;
 }
 
@@ -825,7 +937,10 @@ BitSpan & BitSpan::reset(size_t bitpos) {
 
 //===========================================================================
 BitSpan & BitSpan::reset(size_t bitpos, size_t bitcount) {
-    ::apply<kReset, uint64_t>(m_data, m_size, nullptr, bitpos, bitcount);
+    assert(bitpos < bits());
+    if (bitcount > bits() - bitpos)
+        bitcount = bits() - bitpos;
+    IBitView::reset(m_data, bitpos, bitcount);
     return *this;
 }
 

@@ -34,12 +34,25 @@ public:
     static constexpr size_t npos = (size_t) -1;
     static constexpr size_t kWordBits = sizeof uint64_t * 8;
 
+    static void set(void * dst, size_t dpos, size_t dcnt);
+    static void reset(void * dst, size_t dpos, size_t dcnt);
     static void copy(
         void * dst,
         size_t dpos,    // Offset from dst of bits to update.
         const void * src,
         size_t spos,    // Offset from src of bits to copy.
         size_t cnt      // Number of bits to copy.
+    );
+    static void erase(void * dst, size_t dsize, size_t dpos, size_t dcnt);
+    static void replace(
+        void * dst,
+        size_t dsize,   // Bits of data at dst.
+        size_t dreserve,// Space for data at dst, for growing inserts.
+        size_t dpos,    // Offset from dst of bits to replace.
+        size_t dcnt,    // Number of bits to be replaced.
+        const void * src,
+        size_t spos,    // Offset from src of bits to insert.
+        size_t scnt     // Number of bits used to replacement of the old bits.
     );
 
 public:
