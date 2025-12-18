@@ -784,7 +784,7 @@ size_t IBitView::rfindZero(size_t bitpos) const {
 ***/
 
 //===========================================================================
-constexpr BitView::BitView(const uint64_t * src, size_t srcLen)
+BitView::BitView(const uint64_t * src, size_t srcLen)
     : m_data{src}
     , m_size{srcLen}
 {}
@@ -819,7 +819,7 @@ BitView & BitView::remove_suffix(size_t wordCount) {
 ***/
 
 //===========================================================================
-constexpr BitSpan::BitSpan(uint64_t * src, size_t srcLen)
+BitSpan::BitSpan(uint64_t * src, size_t srcLen)
     : m_data{src}
     , m_size{srcLen}
 {}

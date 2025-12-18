@@ -113,9 +113,9 @@ inline size_t IBitView::rfind(size_t pos, bool value) const {
 
 class BitView : public IBitView {
 public:
-    constexpr BitView() = default;
-    constexpr BitView(const BitView & from) = default;
-    constexpr BitView(const uint64_t * src, size_t srcLen);
+    BitView() = default;
+    BitView(const BitView & from) = default;
+    BitView(const uint64_t * src, size_t srcLen);
     BitView & operator=(const BitView & from) = default;
 
     BitView view(
@@ -149,9 +149,9 @@ private:
 
 class BitSpan : public IBitView {
 public:
-    constexpr BitSpan() = default;
-    constexpr BitSpan(const BitSpan & from) = default;
-    constexpr BitSpan(uint64_t * src, size_t srcLen);
+    BitSpan() = default;
+    BitSpan(const BitSpan & from) = default;
+    BitSpan(uint64_t * src, size_t srcLen);
     BitSpan & operator=(const BitSpan & from) = default;
 
     size_t size() const final { return m_size; }
