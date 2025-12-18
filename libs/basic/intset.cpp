@@ -1777,13 +1777,13 @@ size_t IntegralSet<T,A>::Impl::cntMeta(
     assert(len - 1 <= absFinal(node) - start);
     auto pos = nodePos(node, start);
     auto finalPos = nodePos(node, (storage_type) (start + len - 1));
-    auto lower = node.nodes + pos;
-    auto upper = node.nodes + finalPos;
     if (pos == finalPos) {
         auto ptr = node.nodes + pos;
         return count(*ptr, start, len);
     }
 
+    auto lower = node.nodes + pos;
+    auto upper = node.nodes + finalPos;
     size_t num = 0;
     num += count(*lower, start, absFinal(*lower) - start + 1);
     for (auto ptr = lower + 1; ptr < upper; ++ptr) {
