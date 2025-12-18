@@ -485,7 +485,7 @@ static void set(void * vdst, size_t dpos, size_t dcnt) {
         }
         auto mask = (unsigned char) (255 >> dpos);
         apply<Op, unsigned char>(dst, nullptr, mask);
-        dcnt -= dpos;
+        dcnt -= 8 - dpos;
         dpos = 0;
         dst += 1;
     }
@@ -854,14 +854,16 @@ BitSpan & BitSpan::set() {
 
 //===========================================================================
 BitSpan & BitSpan::set(size_t bitpos) {
+    assert(bitpos < bits());
     auto pos = bitpos / kWordBits;
-    assert(pos < m_size);
     m_data[pos] |= bitmask(bitpos);
     return *this;
 }
 
 //===========================================================================
 BitSpan & BitSpan::set(size_t bitpos, size_t bitcount) {
+    if (bitcount == 1)
+        return set(bitpos);
     assert(bitpos < bits());
     if (bitcount > bits() - bitpos)
         bitcount = bits() - bitpos;
@@ -937,6 +939,8 @@ BitSpan & BitSpan::reset(size_t bitpos) {
 
 //===========================================================================
 BitSpan & BitSpan::reset(size_t bitpos, size_t bitcount) {
+    if (bitcount == 1)
+        return reset(bitpos);
     assert(bitpos < bits());
     if (bitcount > bits() - bitpos)
         bitcount = bits() - bitpos;
@@ -961,6 +965,8 @@ BitSpan & BitSpan::flip(size_t bitpos) {
 
 //===========================================================================
 BitSpan & BitSpan::flip(size_t bitpos, size_t bitcount) {
+    if (bitcount == 1)
+        return flip(bitpos);
     ::apply<kFlip, uint64_t>(m_data, m_size, nullptr, bitpos, bitcount);
     return *this;
 }
