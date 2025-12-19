@@ -2726,7 +2726,6 @@ bool IntegralSet<T,A>::Impl::contains(const Node & left, const Node & right) {
 /*bit  */{ yes,   no,   conRSmv, conRVec, conBit,   conError },
 /*meta */{ yes,   no,   conRSmv, conRVec, conError, conMeta  },
     };
-    assert(!"not tested, contains(const Node&, const Node&)");
     return functs[left.type][right.type](left, right);
 }
 
@@ -2751,9 +2750,9 @@ bool IntegralSet<T,A>::Impl::conRArray(
     storage_type ovalue;
 
     for (;;) {
-        if (!find(&onode, &ovalue, left, *ri))
+        if (!find(&onode, &ovalue, left, *ri) || *ri != ovalue)
             return false;
-        if (*ri != ovalue || ++ri == re)
+        if (++ri == re)
             return true;
     }
 }

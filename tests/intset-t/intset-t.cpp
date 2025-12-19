@@ -52,7 +52,7 @@ void expect(
 
 //===========================================================================
 template <typename T>
-static void memleak() {
+static void memleakTest() {
     int line = 0;
     ostringstream os;
 
@@ -73,7 +73,7 @@ static void memleak() {
 // Test combining Node::kVector nodes.
 // Use too many values for kSmVector, but not so many it converts to kBitmap.
 template <typename T>
-static void vectors() {
+static void vectorTest() {
     int line = 0;
     IntegralSet<T> a;
     IntegralSet<T> b;
@@ -104,7 +104,41 @@ static void vectors() {
 
 //===========================================================================
 template <typename T>
-static void test() {
+static void containTest() {
+    int line = 0;
+    IntegralSet<T> a;
+    IntegralSet<T> b;
+
+    // 2 sm vectors
+    a.assign("1 2");
+    b.assign("1 2");
+    EXPECT(a.contains(b));  // equal lists
+    b.assign("1");
+    EXPECT(a.contains(b));  // contained shorter list
+    b.assign("3");
+    EXPECT(!a.contains(b)); // shorter list with uncontained values
+    EXPECT(!b.contains(a));  // shorter list doesn't contain longer
+
+    // 2 vectors
+    a.assign("1 2 4 5 7 8");
+    b.assign("2 4 8");
+    EXPECT(a.contains(b));
+
+    // 1 sm vec, 1 vec
+    a.assign("1 2 4 5 7 8");
+    b.assign("2");
+    EXPECT(a.contains(b));
+    b.assign("2 3");
+    EXPECT(!a.contains(b));
+    b.assign("4 7");
+    EXPECT(a.contains(b));
+    EXPECT(!b.contains(a));
+
+}
+
+//===========================================================================
+template <typename T>
+static void miscTest() {
     int line = 0;
 
     IntegralSet<T> tmp;
@@ -229,9 +263,10 @@ static void test() {
 //===========================================================================
 template <typename T>
 static void allTests() {
-    memleak<T>();
-    test<T>();
-    vectors<T>();
+    memleakTest<T>();
+    miscTest<T>();
+    vectorTest<T>();
+    containTest<T>();
 }
 
 //===========================================================================
