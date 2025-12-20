@@ -479,7 +479,7 @@ static void set(void * vdst, size_t dpos, size_t dcnt) {
     dpos = dpos % 8;
     if (dpos) {
         if (dpos + dcnt <= 8) {
-            auto mask = (unsigned char) (255 << (8 - dcnt) >> dpos);
+            unsigned char mask = UCHAR_MAX >> (8 - dcnt) << (8 - dpos - dcnt);
             apply<Op, unsigned char>(dst, nullptr, mask);
             return;
         }
@@ -502,7 +502,7 @@ static void set(void * vdst, size_t dpos, size_t dcnt) {
             return;
         dst += bytes;
     }
-    auto mask = (unsigned char) (255 << (8 - dcnt));
+    unsigned char mask = UCHAR_MAX << (8 - dcnt);
     apply<Op, unsigned char>(dst, nullptr, mask);
 }
 
