@@ -784,12 +784,6 @@ size_t IBitView::rfindZero(size_t bitpos) const {
 ***/
 
 //===========================================================================
-BitView::BitView(const uint64_t * src, size_t srcLen)
-    : m_data{src}
-    , m_size{srcLen}
-{}
-
-//===========================================================================
 BitView BitView::view(size_t wordOffset, size_t wordCount) const {
     assert(wordOffset < m_size);
     wordCount = min(wordCount, m_size - wordOffset);
@@ -817,12 +811,6 @@ BitView & BitView::remove_suffix(size_t wordCount) {
 *   BitSpan
 *
 ***/
-
-//===========================================================================
-BitSpan::BitSpan(uint64_t * src, size_t srcLen)
-    : m_data{src}
-    , m_size{srcLen}
-{}
 
 //===========================================================================
 BitSpan BitSpan::subspan(size_t wordOffset, size_t wordCount) const {

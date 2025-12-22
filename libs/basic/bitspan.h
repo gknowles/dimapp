@@ -56,6 +56,11 @@ public:
     );
 
 public:
+    constexpr IBitView() = default;
+    constexpr IBitView(const IBitView & other) = default;
+    virtual ~IBitView() = default;
+    IBitView & operator=(const IBitView & from) = default;
+
     virtual size_t size() const = 0;    // number of uint64_t's
     virtual const uint64_t * data() const = 0;
 
@@ -113,9 +118,9 @@ inline size_t IBitView::rfind(size_t pos, bool value) const {
 
 class BitView : public IBitView {
 public:
-    BitView() = default;
-    BitView(const BitView & from) = default;
-    BitView(const uint64_t * src, size_t srcLen);
+    constexpr BitView() = default;
+    constexpr BitView(const BitView & from) = default;
+    constexpr BitView(const uint64_t * src, size_t srcLen);
     BitView & operator=(const BitView & from) = default;
 
     BitView view(
@@ -133,6 +138,12 @@ private:
     size_t m_size = 0;
 };
 
+//===========================================================================
+inline constexpr BitView::BitView(const uint64_t * src, size_t srcLen)
+    : m_data(src)
+    , m_size(srcLen)
+{}
+
 
 /****************************************************************************
 *
@@ -149,9 +160,9 @@ private:
 
 class BitSpan : public IBitView {
 public:
-    BitSpan() = default;
-    BitSpan(const BitSpan & from) = default;
-    BitSpan(uint64_t * src, size_t srcLen);
+    constexpr BitSpan() = default;
+    constexpr BitSpan(const BitSpan & from) = default;
+    constexpr BitSpan(uint64_t * src, size_t srcLen);
     BitSpan & operator=(const BitSpan & from) = default;
 
     size_t size() const final { return m_size; }
@@ -237,6 +248,12 @@ private:
     uint64_t * m_data = nullptr;
     size_t m_size = 0;
 };
+
+//===========================================================================
+inline constexpr BitSpan::BitSpan(uint64_t * src, size_t srcLen)
+    : m_data(src)
+    , m_size(srcLen)
+{}
 
 //===========================================================================
 inline BitSpan & BitSpan::set(size_t pos, bool value) {
