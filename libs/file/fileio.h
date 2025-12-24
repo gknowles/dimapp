@@ -30,14 +30,15 @@ namespace File {
         // Remove access, allows fileRemoveOnClose() to be used on file handle.
         fRemove = 0x1'0000,
 
-        // creation
-        fCreat = 0x10, // create if not exist
-        fExcl = 0x20,  // fail if already exists
-        fTrunc = 0x40, // truncate if already exists
+        // Open mode, by default it is a failure if the file doesn't exist.
+        fCreat = 0x10, // Create if not exist.
+        fExcl = 0x20,  // Fail if already exists (requires fCreat also set).
+        fTrunc = 0x40, // Truncate if already exists.
 
-        // sharing, mutually exclusive, not more than one can be set
-        fDenyWrite = 0x100, // others can read
-        fDenyNone = 0x200,  // others can read, write, or delete
+        // Sharing, mutually exclusive, not more than one can be set. The
+        // default is to deny all access to others.
+        fDenyWrite = 0x100, // Others can read.
+        fDenyNone = 0x200,  // Others can read, write, or delete
 
         // Optimize for the file*Wait family of functions. Opens file without
         // FILE_FLAG_OVERLAPPED and does asynchronous by posting the requests
