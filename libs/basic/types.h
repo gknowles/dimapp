@@ -365,7 +365,7 @@ constexpr EnumFlags<T> & EnumFlags<T>::operator^=(EnumFlags other) {
 //===========================================================================
 template<EnumFlagsType T>
 constexpr EnumFlags<T> operator~(EnumFlags<T> a) {
-    return ~a.underlying();
+    return (T) ~a.underlying();
 }
 
 //===========================================================================
