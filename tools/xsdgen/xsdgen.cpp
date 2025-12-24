@@ -427,7 +427,7 @@ void updateXmlFile(const Path & name, const CharBuf & content) {
     }
 
     FileHandle file;
-    auto ec = fileOpen(&file, name, fReadWrite | fCreat | fTrunc);
+    auto ec = fileOpen(&file, name, fReadWrite | fOpenAlways | fTrunc);
     if (ec)
         return appSignalShutdown(EX_DATAERR);
     fileWriteWait(nullptr, file, 0, content.data(), content.size());

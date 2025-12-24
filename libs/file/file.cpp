@@ -92,9 +92,9 @@ void FileAppendStream::init(int numBufs, int maxWrites, size_t pageSize) {
 bool FileAppendStream::open(string_view path, OpenExisting mode) {
     auto flags = fm::fReadWrite | fm::fAligned | fm::fDenyWrite;
     switch (mode) {
-    case kFail: flags |= fm::fCreat | fm::fExcl; break;
-    case kAppend: flags |= fm::fCreat; break;
-    case kTrunc: flags |= fm::fCreat | fm::fTrunc; break;
+    case kFail: flags |= fm::fOpenNew; break;
+    case kAppend: flags |= fm::fOpenAlways; break;
+    case kTrunc: flags |= fm::fOpenAlways | fm::fTrunc; break;
     }
     FileHandle f;
     if (auto ec = fileOpen(&f, path, flags); !ec) {
@@ -647,7 +647,11 @@ void Dim::fileSaveBinary(
     TaskQueueHandle hq // queue to notify
 ) {
     FileHandle file;
-    auto ec = fileOpen(&file, path, fm::fReadWrite | fm::fCreat | fm::fTrunc);
+    auto ec = fileOpen(
+        &file,
+        path,
+        fm::fReadWrite | fm::fOpenAlways | fm::fTrunc
+    );
     if (ec) {
         logMsgError() << "File open failed: " << path << ", " << ec;
         FileWriteData tmp = {};
@@ -671,7 +675,7 @@ error_code Dim::fileSaveBinaryWait(
     auto ec = fileOpen(
         &file,
         path,
-        fm::fReadWrite | fm::fCreat | fm::fTrunc | fm::fBlocking
+        fm::fReadWrite | fm::fOpenAlways | fm::fTrunc | fm::fBlocking
     );
     if (ec) {
         logMsgError() << "File open failed: " << path << ", " << ec;

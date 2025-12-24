@@ -286,7 +286,7 @@ static void app(Cli & cli) {
         auto ec = fileOpen(
             &f,
             s_opts.target,
-            fReadWrite | fCreat | fTrunc | fBlocking
+            fReadWrite | fOpenAlways | fTrunc | fBlocking
         );
         if (!ec) {
             fileAppendWait(nullptr, f, content.data(), content.size());

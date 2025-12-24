@@ -23,7 +23,11 @@ static void app(Cli & cli) {
     appDataPath(&fn, "file-t/file-t.tmp");
 
     FileHandle file;
-    auto ec = fileOpen(&file, fn, fCreat | fTrunc | fReadWrite | fBlocking);
+    auto ec = fileOpen(
+        &file,
+        fn,
+        fOpenAlways | fTrunc | fReadWrite | fBlocking
+    );
     if (ec)
         return appSignalShutdown(EX_DATAERR);
     FileAlignment fa;

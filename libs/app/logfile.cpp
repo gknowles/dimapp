@@ -94,7 +94,7 @@ void LogFile::writeLog(string_view msg, bool wait) {
             auto ec = fileOpen(
                 &m_file,
                 m_fileName,
-                fCreat | fReadWrite | fDenyNone
+                fOpenAlways | fReadWrite | fDenyNone
             );
             if (ec) {
                 lk.unlock();

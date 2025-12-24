@@ -27,13 +27,16 @@ namespace File {
         fReadOnly = 0x2,
         fReadWrite = 0x4,
 
-        // Remove access, allows fileRemoveOnClose() to be used on file handle.
+        // Access to remove file, allows fileRemoveOnClose() to be used on file
+        // handle.
         fRemove = 0x1'0000,
 
-        // Open mode, by default it is a failure if the file doesn't exist.
-        fCreat = 0x10, // Create if not exist.
-        fExcl = 0x20,  // Fail if already exists (requires fCreat also set).
-        fTrunc = 0x40, // Truncate if already exists.
+        // Mode                 File exists         File not found
+        fOpenExisting = 0,      // Open file          Error         (Default)
+        fOpenNew = 0x10,        // Error              Create file
+        fOpenAlways = 0x20,     // Open file          Create file
+
+        fTrunc = 0x80,
 
         // Sharing, mutually exclusive, not more than one can be set. The
         // default is to deny all access to others.

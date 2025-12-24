@@ -19,9 +19,15 @@ using fm = Dim::File::OpenMode;
 //===========================================================================
 static void createEmptyFile(string_view path) {
     FileHandle file;
-    if (auto ec = fileOpen(&file, path, fm::fCreat | fm::fReadWrite); !ec)
+    auto ec = fileOpen(
+        &file,
+        path,
+        fm::fNoContent | fm::fOpenAlways | fm::fTrunc
+    );
+    if (!ec)
         fileClose(file);
 }
+
 
 /****************************************************************************
 *

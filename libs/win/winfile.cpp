@@ -612,7 +612,7 @@ error_code Dim::fileOpen(
         access = GENERIC_READ | GENERIC_WRITE;
     }
     if (mode.any(fRemove))
-        access |= DELETE;
+        access |= DELETE;   // Allows both delete and rename.
 
     int share = 0;
     if (mode.any(fDenyWrite)) {
@@ -623,17 +623,16 @@ error_code Dim::fileOpen(
     }
 
     int creation = 0;
-    if (mode.any(fCreat)) {
-        if (mode.any(fExcl)) {
-            assert(!mode.any(fTrunc));
-            creation = CREATE_NEW;
-        } else if (mode.any(fTrunc)) {
+    if (mode.any(fOpenNew)) {
+        assert(!mode.any(fTrunc));
+        creation = CREATE_NEW;
+    } else if (mode.any(fOpenAlways)) {
+        if (mode.any(fTrunc)) {
             creation = CREATE_ALWAYS;
         } else {
             creation = OPEN_ALWAYS;
         }
     } else {
-        assert(!mode.any(fExcl));
         if (mode.any(fTrunc)) {
             creation = TRUNCATE_EXISTING;
         } else {
@@ -725,7 +724,7 @@ error_code Dim::fileCreateTemp(
     Path fname;
     if (auto ec = fileTempName(&fname, suffix))
         return {};
-    mode |= fm::fCreat | fm::fExcl | fm::fReadWrite;
+    mode |= fm::fOpenNew | fm::fReadWrite;
     return fileOpen(out, fname, mode);
 }
 

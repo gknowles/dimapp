@@ -507,11 +507,7 @@ bool writeOutputs(
         auto path = Path(output.first).resolve(odir);
         fileCreateDirs(path.parentPath());
         FileHandle file;
-        auto ec = fileOpen(
-            &file,
-            path,
-            fCreat | fExcl | fReadWrite | fBlocking
-        );
+        auto ec = fileOpen(&file, path, fOpenNew | fReadWrite | fBlocking);
         if (ec) {
             logMsgError() << path << ": unable to create.";
             appSignalShutdown(EX_IOERR);

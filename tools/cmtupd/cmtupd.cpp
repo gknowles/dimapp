@@ -490,7 +490,11 @@ static bool replaceFile(
     using enum File::OpenMode;
 
     FileHandle file;
-    auto ec = fileOpen(&file, path, fCreat | fTrunc | fReadWrite | fBlocking);
+    auto ec = fileOpen(
+        &file,
+        path,
+        fOpenAlways | fTrunc | fReadWrite | fBlocking
+    );
     if (ec) {
         logMsgError() << path << ": unable to open, " << ec.value();
         appSignalShutdown(EX_IOERR);
