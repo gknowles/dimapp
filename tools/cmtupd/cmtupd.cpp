@@ -54,12 +54,8 @@ struct Action {
 
     strong_ordering operator<=>(const Action & other) const {
         // Lowest type first.
-        auto rc = reportType <=> other.reportType;
-        if (rc == 0) {
-            // Best (lowest) priority first.
-            rc = reportPriority <=> other.reportPriority;
-        }
-        return rc;
+        return tie(reportType, reportPriority) <=>
+            tie(other.reportType, other.reportPriority);
     }
 };
 const TokenTable::Token s_actionTypes[] = {
@@ -95,7 +91,7 @@ struct Config {
 struct Count {
     const Action * act;
     unsigned count = {};
-    strong_ordering operator<=>(const Count & other) const {
+    auto operator<=>(const Count & other) const {
         return *act <=> *other.act;
     }
 };

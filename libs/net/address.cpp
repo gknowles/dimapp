@@ -265,3 +265,8 @@ size_t std::hash<SubnetAddr>::operator()(const SubnetAddr & val) const {
     hashCombine(&out, std::hash<int>{}(val.prefixLen));
     return out;
 }
+
+//===========================================================================
+SubnetAddr::operator bool() const {
+    return prefixLen || addr;
+}

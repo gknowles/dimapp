@@ -588,7 +588,7 @@ const unordered_map<string_view, MimeType> s_mimeTypeMap = []() {
 }();
 
 //===========================================================================
-strong_ordering MimeType::operator<=>(const MimeType & other) const {
+auto MimeType::operator<=>(const MimeType & other) const {
     return fileExt <=> other.fileExt;
 }
 

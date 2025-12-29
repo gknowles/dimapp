@@ -153,7 +153,7 @@ public:
     // compare
     std::strong_ordering compare(const IntegralSet & other) const;
     std::strong_ordering operator<=>(const IntegralSet & other) const;
-    bool operator==(const IntegralSet & right) const;
+    bool operator==(const IntegralSet & other) const;
 
     // search
     value_type front() const;
@@ -181,9 +181,9 @@ public:
 private:
     friend std::ostream & operator<<(
         std::ostream & os,
-        const IntegralSet & right
+        const IntegralSet & val
     ) {
-        if (auto v = right.ranges().begin()) {
+        if (auto v = val.ranges().begin()) {
             for (;;) {
                 os << v->first;
                 if (auto len = v->second - v->first) {

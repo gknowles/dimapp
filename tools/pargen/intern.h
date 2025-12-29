@@ -75,12 +75,7 @@ struct Element {
     std::string eventName; // only present if different from name
 
     auto operator<=>(const Element & right) const {
-        if (auto cmp = name.compare(right.name)) {
-            return cmp < 0
-                ? std::strong_ordering::less
-                : std::strong_ordering::greater;
-        }
-        return std::strong_ordering::equal;
+        return name <=> right.name;
     }
 
 private:

@@ -65,8 +65,7 @@ struct VersionInfo {
     unsigned patch;
     unsigned build;
 
-    bool operator==(const VersionInfo &) const = default;
-    std::strong_ordering operator<=>(const VersionInfo &) const = default;
+    auto operator<=>(const VersionInfo &) const = default;
     explicit operator bool() const { return *this != VersionInfo{}; }
 };
 

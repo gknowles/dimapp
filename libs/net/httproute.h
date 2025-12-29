@@ -339,7 +339,7 @@ struct MimeType {
     std::string_view type;
     std::string_view charSet;
 
-    std::strong_ordering operator<=>(const MimeType & other) const;
+    auto operator<=>(const MimeType & other) const;
     bool operator==(const MimeType & other) const = default;
 };
 MimeType mimeTypeDefault(std::string_view path);

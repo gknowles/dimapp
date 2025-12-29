@@ -45,15 +45,11 @@ public:
     CharBufBase & operator+=(std::string_view str) { return append(str); }
     CharBufBase & operator+=(const CharBufBase & src) { return append(src); }
 
-    std::strong_ordering operator<=>(const CharBufBase & right) const {
+    auto operator<=>(const CharBufBase & right) const {
         return compare(right);
     }
-    std::strong_ordering operator<=>(std::string_view right) const {
-        return compare(right);
-    }
-    std::strong_ordering operator<=>(const char right[]) const {
-        return compare(right);
-    }
+    auto operator<=>(std::string_view right) const { return compare(right); }
+    auto operator<=>(const char right[]) const { return compare(right); }
 
     bool operator==(const CharBufBase & right) const {
         return compare(right) == 0;

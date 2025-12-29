@@ -85,7 +85,7 @@ public:
     // Sets to "::FFFF.a.b.c.d" format
     uint32_t ipv4(uint32_t addr);
 
-    std::strong_ordering operator<=>(const HostAddr & right) const = default;
+    auto operator<=>(const HostAddr & right) const = default;
     explicit operator bool() const;
 
 private:
@@ -97,7 +97,7 @@ struct SockAddr {
     HostAddr addr;
     unsigned port = {};
 
-    std::strong_ordering operator<=>(const SockAddr & right) const = default;
+    auto operator<=>(const SockAddr & right) const = default;
     explicit operator bool() const;
 
 private:
@@ -108,6 +108,9 @@ private:
 struct SubnetAddr {
     HostAddr addr;
     unsigned prefixLen = {};
+
+    auto operator<=>(const SubnetAddr & right) const = default;
+    explicit operator bool() const;
 
 private:
     friend std::ostream & operator<<(
