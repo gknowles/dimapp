@@ -19,7 +19,7 @@ Windows framework for server and console applications.
 
 ## Working on the dimapp project
 ### Prerequisites
-* CMake >= 3.6
+* CMake >= 3.10
 * Visual Studio 2022
 
 ### Configure
