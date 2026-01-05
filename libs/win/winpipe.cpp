@@ -96,9 +96,9 @@ protected:
 
 private:
     bool requeueRead_LK(unique_lock<mutex> & lk);
-    void queueRead_LK(unique_lock<mutex> & lk, PipeRequest * task);
+    void queueRead_LK(const unique_lock<mutex> & lk, PipeRequest * task);
     void queuePrewrite_LK(unique_lock<mutex> & lk, string_view data);
-    void queueWrites_LK(unique_lock<mutex> & lk);
+    void queueWrites_LK(const unique_lock<mutex> & lk);
     bool onRead_LK(unique_lock<mutex> & lk, PipeRequest * task);
 
     PipeBufferInfo m_bufInfo{};
@@ -334,7 +334,10 @@ bool PipeBase::requeueRead_LK(unique_lock<mutex> & lk) {
 }
 
 //===========================================================================
-void PipeBase::queueRead_LK(unique_lock<mutex> & lk, PipeRequest * task) {
+void PipeBase::queueRead_LK(
+    const unique_lock<mutex> & lk,
+    PipeRequest * task
+) {
     assert(lk && lk.mutex() == &m_mut);
     task->m_buffer.resize(kBufferSize);
     task->overlapped() = {};
@@ -484,7 +487,7 @@ void PipeBase::queuePrewrite_LK(unique_lock<mutex> & lk, string_view data) {
 }
 
 //===========================================================================
-void PipeBase::queueWrites_LK(unique_lock<mutex> & lk) {
+void PipeBase::queueWrites_LK(const unique_lock<mutex> & lk) {
     assert(lk && lk.mutex() == &m_mut);
     while (m_numWrites < m_maxWrites && m_prewrites) {
         m_writes.link(m_prewrites.front());
