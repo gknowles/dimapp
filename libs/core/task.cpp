@@ -117,7 +117,7 @@ static void taskQueueThread(TaskQueue * ptr) {
 
 //===========================================================================
 static void setThreads_LK(
-    unique_lock<mutex> & lk,
+    const unique_lock<mutex> & lk,
     TaskQueue * q,
     size_t threads
 ) {

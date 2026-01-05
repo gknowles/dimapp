@@ -182,7 +182,7 @@ void FileAppendStream::close() {
 
 //===========================================================================
 static void write_LK(
-    unique_lock<mutex> & lk,
+    const unique_lock<mutex> & lk,
     IFileWriteNotify * notify,
     FileAppendStream::Impl * impl
 ) {
