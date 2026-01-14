@@ -402,11 +402,16 @@ static int prevForkVal(uint16_t bits, int kval) {
 //===========================================================================
 static pmr::basic_string<uint8_t> forkVals(SearchState * ss, uint16_t bits) {
     pmr::basic_string<uint8_t> out(ss->heap);
-    out.reserve(popcount(bits));
-    for (uint8_t i = 0; bits; ++i, bits <<= 1) {
-        if (bits & 0x8000)
-            out.push_back(i);
-    }
+    out.resize_and_overwrite(
+        popcount(bits),
+        [bits](uint8_t * out, auto n) mutable {
+            for (uint8_t i = 0; bits; ++i, bits <<= 1) {
+                if (bits & 0x8000)
+                    *out++ = i;
+            }
+            return n;
+        }
+    );
     return out;
 }
 
@@ -561,15 +566,16 @@ static pmr::basic_string<LocalRef> kids(
     auto len = nodeHdrLen(root);
     auto node = root + len;
     inode += len;
-    if (auto num = numKids(root)) {
-        out.reserve(num);
-        for (auto i = 0; i < num; ++i) {
+    auto num = numKids(root);
+    out.resize_and_overwrite(num, [=](LocalRef * out, auto n) mutable {
+        for (auto i = 0; i < n; ++i) {
             auto len = nodeLen(node);
-            out.push_back({inode, len});
+            *out++ = {inode, len};
             inode += len;
             node += len;
         }
-    }
+        return n;
+    });
     return out;
 }
 
