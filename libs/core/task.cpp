@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2015 - 2024.
+// Copyright Glen Knowles 2015 - 2026.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // task.cpp - dim app
