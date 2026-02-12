@@ -215,6 +215,79 @@ XNode * XDocument::addElem(
 }
 
 //===========================================================================
+XNode * XDocument::addElemBefore(
+    XNode * sibling,
+    const char name[],
+    const char text[]
+) {
+    assert(sibling);
+    assert(name);
+    auto * si = static_cast<XElemInfo *>(sibling);
+    assert(si->parent);
+    auto * ni = heap().emplace<XElemInfo>(name, text ? text : "");
+    auto * p = si->parent;
+    ni->parent = p;
+    ni->prev = si->prev;
+    ni->prev->next = ni;
+    ni->next = si;
+    si->prev = ni;
+    if (p->firstElem == si)
+        p->firstElem = ni;
+    return ni;
+}
+
+//===========================================================================
+XNode * XDocument::addElemAfter(
+    XNode * sibling,
+    const char name[],
+    const char text[]
+) {
+    assert(sibling);
+    assert(name);
+    auto * si = static_cast<XElemInfo *>(sibling);
+    assert(si->parent);
+    auto * ni = heap().emplace<XElemInfo>(name, text ? text : "");
+    auto * p = si->parent;
+    ni->parent = p;
+    ni->prev = si;
+    ni->next = si->next;
+    ni->next->prev = ni;
+    si->next = ni;
+    return ni;
+}
+
+//===========================================================================
+static XNode * copyChildNodes(
+    XDocument * doc,
+    XNode * out,
+    const XNode & from
+) {
+    for (auto&& xa : attrs(&from))
+        doc->addAttr(out, xa.name, xa.value);
+    for (auto&& xe : elems(&from))
+        doc->addElem(out, xe);
+    return out;
+}
+
+//===========================================================================
+XNode * XDocument::addElem(XNode * parent, const XNode & from) {
+    auto node = addElem(parent, from.name, from.value);
+    return copyChildNodes(this, node, from);
+}
+
+//===========================================================================
+XNode * XDocument::addElemBefore(XNode * sibling, const XNode & from) {
+    auto node = addElemBefore(sibling, from.name, from.value);
+    return copyChildNodes(this, node, from);
+}
+
+//===========================================================================
+XNode * XDocument::addElemAfter(XNode * sibling, const XNode & from) {
+    auto node = addElemAfter(sibling, from.name, from.value);
+    return copyChildNodes(this, node, from);
+}
+
+//===========================================================================
 XAttr * XDocument::addAttr(
     XNode * elem,
     const char name[],
@@ -364,6 +437,18 @@ static const XElemRootInfo * rootNode(const XNode & node) {
 }
 
 //===========================================================================
+static const XElemInfo * parentNode(const XNode & node) {
+    auto ni = static_cast<const XNodeInfo *>(&node);
+    return ni->parent;
+}
+
+//===========================================================================
+static const XElemInfo * parentNode(const XAttr & attr) {
+    auto ni = static_cast<const XAttrInfo *>(&attr);
+    return ni->parent;
+}
+
+//===========================================================================
 const XDocument * Dim::document(const XNode * node) {
     return node
         ? rootNode(*node)->document
@@ -372,8 +457,9 @@ const XDocument * Dim::document(const XNode * node) {
 
 //===========================================================================
 const XDocument * Dim::document(const XAttr * attr) {
-    auto ai = static_cast<const XAttrInfo *>(attr);
-    return document(ai->parent);
+    return attr
+        ? document(parentNode(*attr))
+        : nullptr;
 }
 
 //===========================================================================
@@ -384,6 +470,26 @@ XDocument * Dim::document(XNode * node) {
 //===========================================================================
 XDocument * Dim::document(XAttr * attr) {
     return const_cast<XDocument *>(document(const_cast<const XAttr *>(attr)));
+}
+
+//===========================================================================
+const XNode * Dim::parent(const XNode * node) {
+    return node ? parentNode(*node) : nullptr;
+}
+
+//===========================================================================
+const XNode * Dim::parent(const XAttr * attr) {
+    return attr ? parentNode(*attr) : nullptr;
+}
+
+//===========================================================================
+XNode * Dim::parent(XNode * node) {
+    return const_cast<XNode *>(parent(const_cast<const XNode *>(node)));
+}
+
+//===========================================================================
+XNode * Dim::parent(XAttr * attr) {
+    return const_cast<XNode *>(parent(const_cast<const XAttr *>(attr)));
 }
 
 //===========================================================================
@@ -494,6 +600,8 @@ XNode * Dim::nextSibling(XNode * node, string_view name, XType type) {
     if (!node)
         return nullptr;
     auto ni = static_cast<XNodeInfo *>(node);
+    if (!ni->parent)
+        return nullptr;
     auto first = ni->parent->firstElem;
     while (ni->next != first) {
         ni = ni->next;
@@ -762,12 +870,14 @@ static XAttr * next(XAttr * attr) {
 }
 
 //===========================================================================
+template <>
 auto ForwardListIterator<XAttr>::operator++() -> ForwardListIterator & {
     m_current = next(m_current);
     return *this;
 }
 
 //===========================================================================
+template <>
 auto ForwardListIterator<const XAttr>::operator++() -> ForwardListIterator & {
     m_current = next(const_cast<XAttr *>(m_current));
     return *this;

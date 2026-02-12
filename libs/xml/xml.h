@@ -239,8 +239,21 @@ public:
         const char name[],
         const char text[] = nullptr
     );
-    XAttr * addAttr(XNode * elem, const char name[], const char text[]);
+    XNode * addElem(XNode * parent, const XNode & from);
+    XNode * addElemBefore(
+        XNode * sibling,
+        const char name[],
+        const char text[] = nullptr
+    );
+    XNode * addElemBefore(XNode * sibling, const XNode & from);
+    XNode * addElemAfter(
+        XNode * sibling,
+        const char name[],
+        const char text[] = nullptr
+    );
+    XNode * addElemAfter(XNode * sibling, const XNode & from);
 
+    XAttr * addAttr(XNode * elem, const char name[], const char text[]);
     XNode * addText(XNode * parent, const char text[]);
 
     // Remove all child (not all descendant) text nodes and set the node
@@ -290,6 +303,7 @@ struct XAttr {
 
 std::string toString(const XNode & elem);
 std::string xpathString(const XNode & elem);
+std::string xpathString(const XAttr & attr);
 
 std::string_view parsedText(const XNode & elem);
 
@@ -297,6 +311,11 @@ XDocument * document(XNode * node);
 XDocument * document(XAttr * attr);
 const XDocument * document(const XNode * node);
 const XDocument * document(const XAttr * attr);
+
+XNode * parent(XNode * node);
+XNode * parent(XAttr * attr);
+const XNode * parent(const XNode * node);
+const XNode * parent(const XAttr * attr);
 
 XType nodeType(const XNode * node);
 
