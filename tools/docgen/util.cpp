@@ -21,6 +21,12 @@ constexpr TokenTable::Token s_fileTypes[] = {
     { (int) Page::kAsciidoc, ".asciidoc" },
     { (int) Page::kMarkdown, ".md" },
     { (int) Page::kMarkdown, ".markdown" },
+    { (int) Page::kCpp,      ".c" },
+    { (int) Page::kCpp,      ".cpp" },
+    { (int) Page::kCpp,      ".cxx" },
+    { (int) Page::kCpp,      ".h" },
+    { (int) Page::kCpp,      ".hpp" },
+    { (int) Page::kCpp,      ".hxx" },
 };
 const TokenTable s_fileTypeTbl(s_fileTypes);
 
@@ -174,24 +180,64 @@ static bool loadCompilers(Config * out, XNode * root) {
 }
 
 //===========================================================================
-static bool loadPage(Page * out, XNode * root) {
+static bool loadPage(
+    Page * rootPage,
+    Page * out,
+    const XNode * root
+) {
     out->name = attrValue(root, "name", "");
     out->file = attrValue(root, "file", "");
     out->type = s_fileTypeTbl.find(
         Path(out->file).extension(),
         Page::kUnknown
     );
+    out->urlSegment = attrValue(root, "url", "");
+    if (out->urlSegment.empty())
+        out->urlSegment = Path(out->file).stem();
+    if (rootPage != out) {
+        out->rootPage = rootPage->rootPage;
+        out->urlSegment = Path(rootPage->urlSegment) / out->urlSegment;
+        out->urlRoot = Path(rootPage->urlRoot) / "..";
+    } else {
+        out->urlRoot = "..";
+    }
+    out->pageLayout = attrValue(root, "pageLayout", "default");
+    out->defaultPage = attrValue(root, "default", false);
+    out->xrefFile = attrValue(root, "xrefFile", out->file.c_str());
+    out->patch = trimBlock(text(firstChild(root, "Patch"), ""));
     out->modes = {};
     if (attrValue(root, "site", true))
         out->modes |= fLoadSite;
     if (attrValue(root, "test", true))
         out->modes |= fLoadTests;
-    out->xrefFile = attrValue(root, "xrefFile", out->file.c_str());
-    out->urlSegment = attrValue(root, "url", "");
-    if (out->urlSegment.empty())
-        out->urlSegment = Path(out->file).stem();
-    out->pageLayout = attrValue(root, "pageLayout", "default");
-    out->patch = trimBlock(text(firstChild(root, "Patch"), ""));
+
+    // Page can have either a @file attribute...
+    if (!out->file.empty()) {
+        if (firstChild(root, "Page")) {
+            logMsgError() << "Both @file and Page children in "
+                "Page/@name = '" << out->name << "'.";
+            return false;
+        }
+        return true;
+    }
+    // ... or child Page elements.
+    for (auto && xpage : elems(root, "Page")) {
+        auto pos = rootPage->pages.size();
+        auto * pg = &rootPage->pages.emplace_back();
+        pg->depth = out->depth + 1;
+        pg->rootPage = out->rootPage;
+        if (!loadPage(rootPage, pg, &xpage))
+            return false;
+        pg = &rootPage->pages[pos];
+        if (pg->defaultPage) {
+            if (rootPage->defChildPage != -1) {
+                logMsgError() << "Multiple default child pages for "
+                    "Page/@name = '" << out->name << "'.";
+                return false;
+            }
+            rootPage->defChildPage = rootPage->pages.size() - 1;
+        }
+    }
     return true;
 }
 
@@ -202,7 +248,8 @@ static bool loadLayouts(Config * out, XNode * root, LoadMode mode) {
         lay.name = attrValue(&xlay, "name", "");
         for (auto && xpage : elems(&xlay, "Page")) {
             auto & pg = lay.pages.emplace_back();
-            if (!loadPage(&pg, &xpage))
+            pg.rootPage = lay.pages.size() - 1;
+            if (!loadPage(&pg, &pg, &xpage))
                 return false;
             if (pg.defaultPage) {
                 if (lay.defPage != -1) {
@@ -237,6 +284,7 @@ static bool loadLayouts(Config * out, XNode * root, LoadMode mode) {
 constexpr TokenTable::Token s_contentTypes[] = {
     { Column::kContentToc, "toc" },
     { Column::kContentBody, "body" },
+    { Column::kContentGroupToc, "group-toc" },
 };
 static const TokenTable s_contentTypeTbl(s_contentTypes);
 
@@ -245,7 +293,7 @@ static bool loadColumn(Column * out, XNode * root) {
     auto ctStr = attrValue(root, "content", "");
     out->content = s_contentTypeTbl.find(ctStr, Column::kContentInvalid);
     if (!out->content) {
-        logMsgError() << "Invalid Page/Column/@content attribute";
+        logMsgError() << "Invalid Page/Column/@content attribute.";
         return false;
     }
     out->maxWidth = attrValue(root, "maxWidth", "");
@@ -264,10 +312,72 @@ static bool loadPageLayouts(Config * out, XNode * root) {
         }
         if (!out->pageLayouts.insert({layout.name, layout}).second) {
             logMsgError() << "Multiple definitions for "
-                "PageLayout/@name = '" << layout.name << "'";
+                "PageLayout/@name = '" << layout.name << "'.";
             return false;
         }
     }
+    return true;
+}
+
+//===========================================================================
+static bool copyVar(
+    XNode ** root,
+    XDocument * doc,
+    unordered_map<string, vector<XNode*>> * vars
+) {
+    auto ref = attrValue(*root, "ref", "");
+    auto i = vars->find(ref);
+    if (i == vars->end() || i->second.empty()) {
+        logMsgError() << "Variable not found for CopyOf/@ref = '"
+            << ref << "'.";
+        return false;
+    }
+    auto xref = i->second.back();
+    auto xr = *root;
+    for (auto&& xe : elems(xref)) {
+        xr = doc->addElemAfter(xr, xe);
+    }
+    xr = nextSibling(*root);
+    unlinkNode(*root);
+    *root = xr;
+    return true;
+}
+
+//===========================================================================
+static bool findVars(
+    XNode * root,
+    XDocument * doc,
+    unordered_map<string, vector<XNode*>> * vars
+) {
+    set<string> names;
+    for (auto&& xe : elems(root, "Var")) {
+        auto name = attrValue(&xe, "name");
+        if (!name || !*name) {
+            logMsgError() << "Missing required Var/@name attribute.";
+            return false;
+        }
+        if (!names.insert(name).second) {
+            logMsgError() << "Multiple definitions for "
+                "Var/@name = '" << name << "'.";
+            return false;
+        }
+        (*vars)[name].push_back(&xe);
+    }
+    auto xe = firstChild(root, {}, XType::kElement);
+    while (xe) {
+        if (xe->name == "CopyOf"sv) {
+            if (!copyVar(&xe, doc, vars))
+                return false;
+        } else if (xe->name == "Var"sv) {
+            xe = nextSibling(xe);
+        } else {
+            if (!findVars(xe, doc, vars))
+                return false;
+            xe = nextSibling(xe);
+        }
+    }
+    for (auto&& name : names)
+        (*vars)[name].pop_back();
     return true;
 }
 
@@ -284,6 +394,13 @@ unique_ptr<Config> loadConfig(
         logParseError("Parsing failed", path, doc.errpos(), *content);
         return {};
     }
+
+    // Variables
+    unordered_map<string, vector<XNode*>> vars;
+    if (!findVars(root, &doc, &vars))
+        return {};
+
+    // Layouts
     auto out = make_unique<Config>();
     if (!loadPageLayouts(out.get(), root)
         || !loadLayouts(out.get(), root, mode)

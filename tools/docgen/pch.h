@@ -19,9 +19,14 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
+#include <iterator>
+#include <list>
 #include <map>
 #include <regex>
+#include <set>
+#include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 // Platform headers
 // External library internal headers

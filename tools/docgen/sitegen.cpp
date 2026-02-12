@@ -365,7 +365,7 @@ static void addNavbar(
             .endAttr()
         .start("a")
             .attr("class", "navbar-brand fw-bolder")
-            .attr("href", "..")
+            .attr("href", page.urlRoot)
             .text(cfg.siteName)
             .end()
         .start("button")
@@ -388,22 +388,24 @@ static void addNavbar(
     bld.start("div")
         .attr("class", "navbar-nav mr-auto");
     for (auto&& pg : layout.pages) {
-        if (pg.urlSegment != page.urlSegment) {
-            bld.start("a")
-                .attr("class", "nav-link")
-                .attr("href", pg.urlSegment + ".html")
-                .text(pg.name)
-                .end();
-        } else {
+        auto url = page.urlRoot + "/" + version.tag
+            + "/" + pg.urlSegment + ".html";
+        if (pg.rootPage == page.rootPage) {
             bld.start("a")
                 .attr("class", "nav-link active")
-                .attr("href", pg.urlSegment + ".html")
+                .attr("href", url)
                 .text(pg.name)
                 .text(" ")
                 .start("span")
-                    .attr("class", "sr-only")
-                    .text("(current)")
-                    .end()
+                .attr("class", "sr-only")
+                .text("(current)")
+                .end()
+                .end();
+        } else {
+            bld.start("a")
+                .attr("class", "nav-link")
+                .attr("href", url)
+                .text(pg.name)
                 .end();
         }
     }
@@ -453,9 +455,10 @@ static void addNavbar(
             bld.attr("class", "dropdown-item active");
         }
         if (ver.urlSegments.contains(page.urlSegment)) {
-            bld.attr("href", "../" + ver.tag + "/" + page.urlSegment + ".html");
+            bld.attr("href",
+                Path(page.urlRoot) / ver.tag / page.urlSegment + ".html");
         } else {
-            bld.attr("href", "../" + ver.tag + "/index.html");
+            bld.attr("href", page.urlRoot + "/" + ver.tag + "/index.html");
         }
         if (ver.defaultSource)
             beforeDefault = false;
@@ -568,11 +571,11 @@ static CharBuf processPageContent(
     addHighlightJsHead(&bld);
     bld.start("link")
         .attr("rel", "stylesheet")
-        .attr("href", "../css/docgen.css")
+        .attr("href", info->page.urlRoot + "/css/docgen.css")
         .end();
     bld.start("link")
         .attr("rel", "stylesheet")
-        .attr("href", "../css/asciidoc.css")
+        .attr("href", info->page.urlRoot + "/css/asciidoc.css")
         .end();
     bld.elem("script", 1 + R"(
 document.addEventListener('DOMContentLoaded', (event) => {
@@ -606,16 +609,30 @@ document.addEventListener('DOMContentLoaded', (event) => {
         case Column::kContentInvalid:
             assert(!"INTERNAL: Invalid column content");
             break;
-        case Column::kContentToc:
-            addToc(&bld, toc);
-            break;
         case Column::kContentBody:
             bld.start("div")
                 .attr("class", "col col-lg-9 mt-3")
-                .attr("role", "main")
-                .text("");
-            html.append(content);
+                .attr("role", "main");
+            if (info->page.type == Page::kCpp) {
+                bld.start("h1")
+                    .attr("id", genAutoId(info->page.name))
+                    .text(info->page.name)
+                    .end();
+                bld.elem("br");
+                bld.start("pre").attr("lang", "C++")
+                    .start("code")
+                    .text(content)
+                    .end()   // code
+                    .end(); // pre
+            } else {
+                bld.text("");
+                html.append(content);
+            }
             bld.end();
+            break;
+        case Column::kContentGroupToc:
+        case Column::kContentToc:
+            addToc(&bld, toc);
             break;
         }
     }
@@ -913,6 +930,23 @@ static bool genRedirect(
 }
 
 //===========================================================================
+static bool addUrlSegments(Version * out, const vector<Page> & pages) {
+    for (auto&& page : pages) {
+        if (!page.file.empty()) {
+            if (!out->urlSegments.insert(page.urlSegment).second) {
+                logMsgError() << "Tag '" << out->tag << "': url segment '"
+                    << page.urlSegment << "' multiply defined.";
+                appSignalShutdown(EX_DATAERR);
+                return false;
+            }
+        }
+        if (!addUrlSegments(out, page.pages))
+            return false;
+    }
+    return true;
+}
+
+//===========================================================================
 static bool genRedirects(Config * out) {
     for (auto&& ver : out->versions) {
         auto spec = ver.cfg ? ver.cfg.get() : out;
@@ -936,15 +970,19 @@ static bool genRedirects(Config * out) {
         }
 
         // Populate list of URLs for version
+        addUrlSegments(&ver, layout->second.pages);
+
+        // Generate redirect files for subpages
         for (auto&& page : layout->second.pages) {
-            if (!ver.urlSegments.insert(page.urlSegment).second) {
-                logMsgError() << "Tag '" << ver.tag << "': url segment '"
-                    << page.urlSegment << "' multiply defined.";
-                appSignalShutdown(EX_DATAERR);
-                return false;
+            auto fname = page.urlSegment + ".html";
+            if (!page.pages.empty()) {
+                auto cp = page.pages.begin();
+                advance(cp, page.defChildPage);
+                auto url = cp->urlSegment + ".html";
+                if (!genRedirect(out, ver.tag + "/" + fname, url))
+                    return false;
             }
             if (ver.defaultSource) {
-                auto fname = page.urlSegment + ".html";
                 if (!genRedirect(out, fname, ver.tag + "/" + fname))
                     return false;
             }
@@ -1092,14 +1130,26 @@ static void genSite(Config * out, unsigned phase) {
             }
 
             // Generate pages for version
-            for (auto && page : layout->second.pages) {
-                out->pendingWork += 1;
-                auto info = new GenPageInfo({ out, ver, page });
-                info->fn = [info, what]() {
-                    genSite(info->out, what);
-                    delete info;
-                };
-                genPage(info);
+            for (auto && rootPage : layout->second.pages) {
+                vector<Page *> pageList;
+                pageList.reserve(rootPage.pages.size());
+                if (!rootPage.file.empty()) {
+                    pageList.push_back(&rootPage);
+                } else {
+                    for (auto && page : rootPage.pages) {
+                        if (!page.file.empty())
+                            pageList.push_back(&page);
+                    }
+                }
+                for (auto && page : pageList) {
+                    out->pendingWork += 1;
+                    auto info = new GenPageInfo({ out, ver, *page });
+                    info->fn = [info, what]() {
+                        genSite(info->out, what);
+                        delete info;
+                    };
+                    genPage(info);
+                }
             }
         }
 

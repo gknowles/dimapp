@@ -45,6 +45,7 @@ struct Script {
 struct Column {
     enum Content {
         kContentInvalid,
+        kContentGroupToc,
         kContentToc,
         kContentBody,
     };
@@ -69,16 +70,23 @@ struct Page {
         kUnknown,
         kAsciidoc,
         kMarkdown,
+        kCpp,
     };
     std::string name;
     std::string file;
     Type type = kUnknown;
     std::string urlSegment;
+    std::string urlRoot;
     std::string pageLayout;
     bool defaultPage = false;
     std::string xrefFile; // defaults to file
     std::string patch;
     Dim::EnumFlags<LoadMode> modes = fLoadAny;
+
+    size_t rootPage = 0;
+    unsigned depth = 0;
+    std::vector<Page> pages;
+    size_t defChildPage = (size_t) -1;
 };
 
 struct Layout {
