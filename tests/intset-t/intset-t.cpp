@@ -109,6 +109,9 @@ static void containTest() {
     IntegralSet<T> a;
     IntegralSet<T> b;
 
+    auto asize = sizeof a;
+    EXPECT(asize == sizeof b);
+
     // 2 sm vectors
     a.assign("1 2");
     b.assign("1 2");
