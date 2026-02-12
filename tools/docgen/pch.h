@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2020 - 2021.
+// Copyright Glen Knowles 2020 - 2026.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // pch.h - docgen
