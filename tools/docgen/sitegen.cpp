@@ -608,6 +608,34 @@ static void addGroupToc(
 }
 
 //===========================================================================
+static void addBodyCol(
+    IXBuilder * out,
+    const Page & page,
+    const string & content
+) {
+    auto & bld = *out;
+    bld.start("div")
+        .attr("class", "col col-lg-9 mt-3")
+        .attr("role", "main");
+    if (page.type == Page::kCpp) {
+        bld.start("h1")
+            .attr("id", genAutoId(page.name))
+            .text(page.name)
+            .end();
+        bld.elem("br");
+        bld.start("pre").attr("lang", "C++")
+            .start("code")
+            .text(content)
+            .end()   // code
+            .end(); // pre
+    } else {
+        bld.text("");
+        bld.addRaw(content);
+    }
+    bld.end();
+}
+
+//===========================================================================
 static CharBuf processPageContent(
     GenPageInfo * info,
     string && content,
@@ -677,25 +705,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
             assert(!"INTERNAL: Invalid column content");
             break;
         case Column::kContentBody:
-            bld.start("div")
-                .attr("class", "col col-lg-9 mt-3")
-                .attr("role", "main");
-            if (info->page.type == Page::kCpp) {
-                bld.start("h1")
-                    .attr("id", genAutoId(info->page.name))
-                    .text(info->page.name)
-                    .end();
-                bld.elem("br");
-                bld.start("pre").attr("lang", "C++")
-                    .start("code")
-                    .text(content)
-                    .end()   // code
-                    .end(); // pre
-            } else {
-                bld.text("");
-                html.append(content);
-            }
-            bld.end();
+            addBodyCol(&bld, info->page, content);
             break;
         case Column::kContentGroupToc:
             addGroupToc(&bld, info->page, layout, info->ver);
