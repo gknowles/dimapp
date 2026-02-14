@@ -927,7 +927,6 @@ static void addOutputScript(
 
 //===========================================================================
 static void processPage(PageInfo * info) {
-    string layname = s_opts.layout.empty() ? "default" : s_opts.layout;
     auto & cfg = *info->out;
 
     if (info->content.empty()) {
@@ -1255,11 +1254,9 @@ static void testSamples(Config * out) {
     unsigned what = 0;
 
     if (out->phase == what++) {
-        auto own = unique_ptr<Config>(out);
-
         // Generate tests
-        string layname = s_opts.layout.empty() ? "default" : s_opts.layout;
-        auto layout = out->layouts.find(layname);
+        auto own = unique_ptr<Config>(out);
+        auto layout = out->layouts.find(s_opts.layout);
 
         // Generate tests for layout
         s_pageInfos.reserve(layout->second.pages.size());
@@ -1414,6 +1411,11 @@ static void testCmd(Cli & cli) {
     if (cfg->sampDir.empty()) {
         logMsgError() << cfg->configFile
             << ": Output directory for samples unspecified.";
+        return cli.fail(EX_DATAERR);
+    }
+    if (!cfg->layouts.contains(s_opts.layout)) {
+        logMsgError() << cfg->configFile
+            << ": Requested layout '" << s_opts.layout << "' not found.";
         return cli.fail(EX_DATAERR);
     }
 
