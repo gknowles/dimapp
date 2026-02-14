@@ -494,6 +494,31 @@ static void addNavbar(
 }
 
 //===========================================================================
+static void addSideStart(IXBuilder * out) {
+    auto & bld = *out;
+    bld.start("div")
+        .attr("class", "d-none d-lg-block col-lg-auto")
+        .attr("style", "margin-top: 1.25rem;")
+        .start("nav")
+        .attr(
+            "class",
+            "nav sticky-top d-print-none d-none d-lg-flex flex-column"
+        )
+        .attr("style", "scrollbar-gutter: stable")
+        .attr("id", "toc")
+        .start("div")
+        .attr("style", "display: grid; grid-template-columns: 1fr;");
+}
+
+//===========================================================================
+static void addSideEnd(IXBuilder * out) {
+    auto & bld = *out;
+    bld.end()  // div.grid
+        .end() // nav
+        .end(); // div.d-lg-block
+}
+
+//===========================================================================
 static void addTocEntries(
     IXBuilder * out,
     const vector<TocEntry> & entries,
@@ -521,25 +546,65 @@ static void addTocEntries(
 
 //===========================================================================
 static void addToc(IXBuilder * out, const vector<TocEntry> & entries) {
-    auto & bld = *out;
-    bld.start("div")
-        .attr("class", "d-none d-lg-block col-lg-auto")
-        .attr("style", "margin-top: 1.25rem;")
-        .start("nav")
-            .attr(
-                "class",
-                "nav sticky-top d-print-none d-none d-lg-flex flex-column"
-                )
-            .attr("id", "toc")
-            .start("div")
-                .attr("style", "display: grid; grid-template-columns: 1fr;");
-
+    addSideStart(out);
     addTocEntries(out, entries, false);
     addTocEntries(out, entries, true);
+    addSideEnd(out);
+}
 
-    bld.end() // div.d-grid
-        .end() // nav
-        .end(); // div.col-md-2
+//===========================================================================
+static void addGroupTocEntries(
+    XBuilder * out,
+    const Page & page,
+    const Layout & layout,
+    const Version & version,
+    bool foreground
+) {
+    auto & bld = *out;
+    bld.start("div")
+        << attr("style") << "grid-row-start: 1; grid-column-start: 1;"
+        << endAttr;
+    if (!foreground)
+        bld << attr("class", "invisible nav-shadow");
+    auto i = layout.pages.begin();
+    advance(i, page.rootPage);
+    auto & rootPage = *i;
+    for (auto&& pg : rootPage.pages) {
+        if (!pg.file.empty()) {
+            bld.start("a") << attr("class") << "nav-link";
+        } else {
+            bld.start("span") << attr("class") << "nav-title";
+        }
+        bld << " toc-" << pg.depth;
+        if (&pg == &page)
+            bld << " active";
+        bld << endAttr;
+        if (!pg.file.empty()) {
+            bld << attr("href")
+                << Path(pg.urlRoot) / version.tag / pg.urlSegment + ".html"
+                << endAttr;
+        }
+        bld << "";
+        bld.addRaw(pg.name);
+        bld.end();
+    }
+
+    bld.end();
+}
+
+//===========================================================================
+static void addGroupToc(
+    XBuilder * out,
+    const Page & page,
+    const Layout & layout,
+    const Version & version
+) {
+    if (!page.depth)
+        return;
+    addSideStart(out);
+    addGroupTocEntries(out, page, layout, version, false);
+    addGroupTocEntries(out, page, layout, version, true);
+    addSideEnd(out);
 }
 
 //===========================================================================
@@ -594,11 +659,13 @@ document.addEventListener('DOMContentLoaded', (event) => {
 )");
     bld.end(); // </head>
 
-    bld.start("body")
-        .attr("data-spy", "scroll")
-        .attr("data-target", "#toc")
-        .attr("data-smooth-scroll", "false")
-        .text("\n");
+    bld.start("body");
+    if (!pglay.scrollSpy.empty()) {
+        bld.attr("data-spy", "scroll")
+            .attr("data-target", pglay.scrollSpy)
+            .attr("data-smooth-scroll", "false");
+    }
+    bld.text("\n");
     addNavbar(&bld, *info->out, info->ver, layout, info->page);
     bld.start("div")
         .attr("class", "container")
@@ -631,6 +698,8 @@ document.addEventListener('DOMContentLoaded', (event) => {
             bld.end();
             break;
         case Column::kContentGroupToc:
+            addGroupToc(&bld, info->page, layout, info->ver);
+            break;
         case Column::kContentToc:
             addToc(&bld, toc);
             break;
@@ -849,10 +918,16 @@ nav#toc div {
     border-right: 1px solid #eee;
     border-left: 1px solid #eee;
 }
+nav#toc .nav-title,
 nav#toc .nav-link {
     padding-top: 0;
     padding-bottom: 0;
     font-size: .875em;
+}
+nav#toc .nav-title {
+    padding-left: 1rem;
+    color: black;
+    text-transform: uppercase;
 }
 nav#toc .nav-link:hover {
     background-color: steelblue;
@@ -863,9 +938,11 @@ nav#toc .nav-shadow .nav-link {
     color: black;
     font-weight: bold;
 }
+nav#toc .nav-title.toc-2,
 nav#toc .nav-link.toc-2 {
     padding-left: 2rem;
 }
+nav#toc .nav-title.toc-3,
 nav#toc .nav-link.toc-3 {
     padding-left: 3rem;
 }
@@ -930,7 +1007,7 @@ static bool genRedirect(
 }
 
 //===========================================================================
-static bool addUrlSegments(Version * out, const vector<Page> & pages) {
+static bool addUrlSegments(Version * out, const list<Page> & pages) {
     for (auto&& page : pages) {
         if (!page.file.empty()) {
             if (!out->urlSegments.insert(page.urlSegment).second) {
@@ -961,7 +1038,10 @@ static bool genRedirects(Config * out) {
         }
 
         // Generate infrastructure files for version
-        auto & url = layout->second.pages[layout->second.defPage].urlSegment;
+        auto defPage = layout->second.pages.begin();
+        if (layout->second.defPage != -1)
+            advance(defPage, layout->second.defPage);
+        auto & url = defPage->urlSegment;
         if (!genRedirect(out, ver.tag + "/index.html", url + ".html"))
             return false;
         if (ver.defaultSource) {
@@ -977,7 +1057,8 @@ static bool genRedirects(Config * out) {
             auto fname = page.urlSegment + ".html";
             if (!page.pages.empty()) {
                 auto cp = page.pages.begin();
-                advance(cp, page.defChildPage);
+                if (page.defChildPage != -1)
+                    advance(cp, page.defChildPage);
                 auto url = cp->urlSegment + ".html";
                 if (!genRedirect(out, ver.tag + "/" + fname, url))
                     return false;

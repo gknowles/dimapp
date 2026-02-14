@@ -56,6 +56,7 @@ struct Column {
 
 struct PageLayout {
     std::string name;
+    std::string scrollSpy;
     std::vector<Column> columns;
 };
 
@@ -83,16 +84,16 @@ struct Page {
     std::string patch;
     Dim::EnumFlags<LoadMode> modes = fLoadAny;
 
-    size_t rootPage = 0;
+    size_t rootPage = (size_t) -1;
     unsigned depth = 0;
-    std::vector<Page> pages;
+    std::list<Page> pages;
     size_t defChildPage = (size_t) -1;
 };
 
 struct Layout {
     std::string name;
     size_t defPage = (size_t) -1;
-    std::vector<Page> pages;
+    std::list<Page> pages;
 };
 
 struct SiteFile {

@@ -222,14 +222,12 @@ static bool loadPage(
     }
     // ... or child Page elements.
     for (auto && xpage : elems(root, "Page")) {
-        auto pos = rootPage->pages.size();
-        auto * pg = &rootPage->pages.emplace_back();
-        pg->depth = out->depth + 1;
-        pg->rootPage = out->rootPage;
-        if (!loadPage(rootPage, pg, &xpage))
+        auto & pg = rootPage->pages.emplace_back();
+        pg.rootPage = rootPage->rootPage;
+        pg.depth = out->depth + 1;
+        if (!loadPage(rootPage, &pg, &xpage))
             return false;
-        pg = &rootPage->pages[pos];
-        if (pg->defaultPage) {
+        if (pg.defaultPage) {
             if (rootPage->defChildPage != -1) {
                 logMsgError() << "Multiple default child pages for "
                     "Page/@name = '" << out->name << "'.";
@@ -237,6 +235,12 @@ static bool loadPage(
             }
             rootPage->defChildPage = rootPage->pages.size() - 1;
         }
+    }
+    if (rootPage->defChildPage == -1
+        && rootPage == out
+        && !rootPage->pages.empty()
+    ) {
+        rootPage->defChildPage = 0;
     }
     return true;
 }
@@ -257,7 +261,7 @@ static bool loadLayouts(Config * out, XNode * root, LoadMode mode) {
                         "Layout/@name = '" << lay.name << "'.";
                     return false;
                 }
-                lay.defPage = lay.pages.size() - 1;
+                lay.defPage = pg.rootPage;
             }
             if (!pg.modes.any(mode))
                 lay.pages.pop_back();
@@ -270,6 +274,8 @@ static bool loadLayouts(Config * out, XNode * root, LoadMode mode) {
             }
             continue;
         }
+
+        // Layout has pages.
         if (lay.defPage == -1)
             lay.defPage = 0;
         if (!out->layouts.insert({lay.name, lay}).second) {
@@ -305,6 +311,7 @@ static bool loadPageLayouts(Config * out, XNode * root) {
     for (auto && xlayout : elems(root, "PageLayout")) {
         PageLayout layout;
         layout.name = attrValue(&xlayout, "name", "");
+        layout.scrollSpy = attrValue(&xlayout, "scrollSpy", "");
         for (auto && xcol : elems(&xlayout, "Column")) {
             auto & col = layout.columns.emplace_back();
             if (!loadColumn(&col, &xcol))
