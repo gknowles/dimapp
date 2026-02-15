@@ -194,6 +194,7 @@ static bool loadPage(
     out->urlSegment = attrValue(root, "url", "");
     if (out->urlSegment.empty())
         out->urlSegment = Path(out->file).stem();
+
     if (rootPage != out) {
         out->rootPage = rootPage->rootPage;
         out->urlSegment = Path(rootPage->urlSegment) / out->urlSegment;
@@ -201,15 +202,20 @@ static bool loadPage(
     } else {
         out->urlRoot = "..";
     }
-    out->pageLayout = attrValue(root, "pageLayout", "default");
     out->defaultPage = attrValue(root, "default", false);
     out->xrefFile = attrValue(root, "xrefFile", out->file.c_str());
     out->patch = trimBlock(text(firstChild(root, "Patch"), ""));
-    out->modes = {};
-    if (attrValue(root, "site", true))
-        out->modes |= fLoadSite;
-    if (attrValue(root, "test", true))
-        out->modes |= fLoadTests;
+
+    // Inheritable members
+    out->pageLayout = attrValue(root, "pageLayout", out->pageLayout.c_str());
+    out->modes.set(
+        fLoadSite,
+        attrValue(root, "site", out->modes.any(fLoadSite))
+    );
+    out->modes.set(
+        fLoadTests,
+        attrValue(root, "test", out->modes.any(fLoadTests))
+    );
 
     // Page can have either a @file attribute...
     if (!out->file.empty()) {
@@ -221,10 +227,12 @@ static bool loadPage(
         return true;
     }
     // ... or child Page elements.
-    for (auto && xpage : elems(root, "Page")) {
+    for (auto&& xpage : elems(root, "Page")) {
         auto & pg = rootPage->pages.emplace_back();
         pg.rootPage = rootPage->rootPage;
         pg.depth = out->depth + 1;
+        pg.pageLayout = out->pageLayout;
+        pg.modes = out->modes;
         if (!loadPage(rootPage, &pg, &xpage))
             return false;
         if (pg.defaultPage) {
@@ -240,7 +248,14 @@ static bool loadPage(
         && rootPage == out
         && !rootPage->pages.empty()
     ) {
-        rootPage->defChildPage = 0;
+        for (auto&& page : out->pages) {
+            out->defChildPage += 1;
+            if (!page.file.empty())
+                return true;
+        }
+        logMsgError() << "No descendent with @file for Page[@name='"
+            << out->name << "'.";
+        return false;
     }
     return true;
 }
@@ -253,6 +268,7 @@ static bool loadLayouts(Config * out, XNode * root, LoadMode mode) {
         for (auto && xpage : elems(&xlay, "Page")) {
             auto & pg = lay.pages.emplace_back();
             pg.rootPage = lay.pages.size() - 1;
+            pg.pageLayout = "default";
             if (!loadPage(&pg, &pg, &xpage))
                 return false;
             if (pg.defaultPage) {

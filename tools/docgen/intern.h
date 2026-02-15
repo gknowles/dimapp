@@ -78,16 +78,19 @@ struct Page {
     Type type = kUnknown;
     std::string urlSegment;
     std::string urlRoot;
-    std::string pageLayout;
     bool defaultPage = false;
     std::string xrefFile; // defaults to file
     std::string patch;
-    Dim::EnumFlags<LoadMode> modes = fLoadAny;
 
+    // For child pages
     size_t rootPage = (size_t) -1;
     unsigned depth = 0;
     std::list<Page> pages;
     size_t defChildPage = (size_t) -1;
+
+    // Inherited
+    std::string pageLayout;
+    Dim::EnumFlags<LoadMode> modes = fLoadAny;
 };
 
 struct Layout {
