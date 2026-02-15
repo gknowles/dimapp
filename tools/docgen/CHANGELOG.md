@@ -10,16 +10,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
+## Unreleased (2026-02-??)
+- Added - Process code files into site pages
+- Added - Variables and their inclusion in docgen.xml
+- Added - Groups of pages with table of contents for the group
+- Fixed - Crash making tests when requested layout not found
+
 ## docgen 1.5.0 (2025-02-20)
 - Fixed - Honor non-default layouts from older tagged versions
-- Added - Support for adding arbitrary site wide files
+- Added - Arbitrary site wide files
 
 ## docgen 1.4.0 (2024-07-11)
 - Cosmetic - Update bootstrap to 4.6.2 and highlistjs to 11.9.0
 - Fixed - Race condition detecting child process completions
 - Added - Report git errors loading content
 - Fixed - Race condition adding files to output set
-- Added - Support for favicon.ico
+- Added - favicon.ico
 
 ## docgen 1.3.1 (2024-04-19)
 - Fixed - Memory leak after compilation errors.
@@ -37,7 +43,7 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 
 ## docgen 1.1.0 (2021-09-06)
 - Added - Command line --no-update and --no-compile options
-- Added - Support "test repl" attribute for scripts
+- Added - Attribute "test repl" for scripts
 - Added - More diagnostics parsing tests from documentation
 
 ## docgen 1.0.0 (2021-08-16)
