@@ -254,7 +254,6 @@ static void addPrismJsHead(IXBuilder * out, const Page & page) {
         .end();
     bld.start("script")
         .attr("src", page.urlRoot / "vendor" / "prismjs@1.30.0" / "prism.js")
-        .text("") // script elements must have separate closing tag (no '/>')
         .end();
 }
 
@@ -269,7 +268,6 @@ static void addHighlightJsHead(IXBuilder * out, Page::Type type) {
     bld.start("script")
         .attr("src", "https://cdnjs.cloudflare.com/ajax/libs/"
             "highlight.js/11.9.0/highlight.min.js")
-        .text("")
         .end();
     bld.start("script")
         .text(1 + R"(
@@ -318,7 +316,6 @@ static void addBootstrapBody(IXBuilder * out) {
         .attr("integrity",
 "sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj")
         .attr("crossorigin", "anonymous")
-        .text("")
         .end();
     bld.start("script")
         .attr("src", "https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/"
@@ -326,7 +323,6 @@ static void addBootstrapBody(IXBuilder * out) {
         .attr("integrity",
 "sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN")
         .attr("crossorigin", "anonymous")
-        .text("")
         .end();
     bld.start("script")
         .attr("src", "https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/"
@@ -334,7 +330,6 @@ static void addBootstrapBody(IXBuilder * out) {
         .attr("integrity",
 "sha384-+sLIOodYLS7CIrQpBjl+C7nPvqq+FbNUBDunl/OZv93DB7Ln/533i8e/mZXLi/P+")
         .attr("crossorigin", "anonymous")
-        .text("")
         .end();
 }
 
@@ -566,7 +561,7 @@ static void addToc(IXBuilder * out, const vector<TocEntry> & entries) {
 
 //===========================================================================
 static void addGroupTocEntries(
-    XBuilder * out,
+    IXBuilder * out,
     const Page & page,
     const Layout & layout,
     const Version & version,
@@ -606,7 +601,7 @@ static void addGroupTocEntries(
 
 //===========================================================================
 static void addGroupToc(
-    XBuilder * out,
+    IXBuilder * out,
     const Page & page,
     const Layout & layout,
     const Version & version
@@ -667,7 +662,7 @@ static CharBuf processPageContent(
 
     CharBuf html;
     genHtmlHeader(&html, fname);
-    XBuilder bld(&html);
+    HtmlBuilder bld(&html);
     bld.start("html")
         .attr("lang", "en")
         .start("head")

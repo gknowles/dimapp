@@ -13,6 +13,7 @@
 // Standard headers
 #include <algorithm>
 #include <iostream>
+#include <unordered_set>
 
 // Platform headers
 // External library internal headers

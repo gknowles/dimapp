@@ -46,7 +46,7 @@ public:
     virtual void clear();
 
     IXBuilder & start(std::string_view name);
-    IXBuilder & end();
+    virtual IXBuilder & end();
     IXBuilder & startAttr(std::string_view name);
     IXBuilder & endAttr();
 
@@ -72,9 +72,17 @@ public:
     }
 
 protected:
+    enum State : int;
+
     virtual void append(std::string_view text) = 0;
     virtual void appendCopy(size_t pos, size_t count) = 0;
+    virtual std::string_view view(size_t pos, size_t count) = 0;
     virtual size_t size() const = 0;
+
+    // Ends start tag, sets state to kStateText. Does not close element.
+    IXBuilder & endStart();
+    State state() const;
+    std::string_view elemName();
 
 public:
     template <typename T>
@@ -115,7 +123,6 @@ private:
     template <bool isContent> void addText(std::string_view val);
     IXBuilder & fail();
 
-    enum State : int;
     State m_state;
     struct Pos {
         size_t pos;
@@ -156,12 +163,33 @@ public:
     XBuilder(CharBuf * buf) : m_buf(*buf) {}
     void clear() override;
 
+protected:
+    CharBuf & buf() { return m_buf; }
+    const CharBuf & buf() const { return m_buf; }
+
 private:
     void append(std::string_view text) override;
     void appendCopy(size_t pos, size_t count) override;
+    std::string_view view(size_t pos, size_t count) override;
     size_t size() const override;
 
     CharBuf & m_buf;
+};
+
+
+/****************************************************************************
+*
+*   HTML Builder
+*
+***/
+
+class HtmlBuilder : public XBuilder {
+public:
+    static bool voidElemName(std::string_view name);
+
+public:
+    using XBuilder::XBuilder;
+    virtual IXBuilder & end();
 };
 
 

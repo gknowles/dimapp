@@ -212,6 +212,30 @@ IXBuilder & IXBuilder::text(string_view val) {
 }
 
 //===========================================================================
+IXBuilder & IXBuilder::endStart() {
+    switch (m_state) {
+    default: return fail();
+    case kStateElemName:
+    case kStateAttrEnd:
+        addRaw(">\n");
+        m_state = kStateText;
+        break;
+    }
+    return *this;
+}
+
+//===========================================================================
+IXBuilder::State IXBuilder::state() const {
+    return m_state;
+}
+
+//===========================================================================
+string_view IXBuilder::elemName() {
+    auto & top = m_stack.back();
+    return view(top.pos, top.len);
+}
+
+//===========================================================================
 template <bool isContent>
 void IXBuilder::addText(string_view val) {
     auto ptr = val.data();
@@ -322,8 +346,59 @@ void XBuilder::appendCopy(size_t pos, size_t count) {
 }
 
 //===========================================================================
+string_view XBuilder::view(size_t pos, size_t count) {
+    return m_buf.view(pos, count);
+}
+
+//===========================================================================
 size_t XBuilder::size() const {
     return m_buf.size();
+}
+
+
+/****************************************************************************
+*
+*   HTML Builder
+*
+***/
+
+static unordered_set<string> s_voidNames = {
+    "area",
+    "base",
+    "br",
+    "col",
+    "command",
+    "enbed",
+    "hr",
+    "img",
+    "input",
+    "keygen",
+    "link",
+    "meta",
+    "param",
+    "source",
+    "track",
+    "wbr",
+};
+
+//===========================================================================
+// static
+bool HtmlBuilder::voidElemName(string_view name) {
+    auto lname = toLower(name);
+    return s_voidNames.contains(lname);
+}
+
+//===========================================================================
+IXBuilder & HtmlBuilder::end() {
+    auto st = state();
+    if (st == kStateElemName || st == kStateAttrEnd) {
+        auto name = elemName();
+        if (!voidElemName(name)) {
+            // Close start tag, forcing a full separate </end> tag.
+            endStart();
+        }
+    }
+    return XBuilder::end();
 }
 
 
