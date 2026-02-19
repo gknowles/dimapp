@@ -161,8 +161,10 @@ char * CharBufBase::data(size_t pos, size_t count) {
     auto num = ic.second + need;
 
     if (num > myi->used) {
+        auto ic2 = findBuf(pos + need);
+        num += ic2.first->used - ic2.second;
         if (num > myi->reserved) {
-            size_t bufsize = count + kDefaultBlockSize - 1;
+            size_t bufsize = num + kDefaultBlockSize - 1;
             bufsize -= bufsize % kDefaultBlockSize;
             auto tmp = makeBuf(bufsize);
             memcpy(tmp.data, myi->data, myi->used);
