@@ -292,9 +292,17 @@
 # tools/docgen/intern.h
 # tools/docgen/pch.cpp
 # tools/docgen/pch.h
+# tools/docgen/res/.nojekyll
+# tools/docgen/res/code/asciidoc.css
+# tools/docgen/res/code/docgen.css
+# tools/docgen/res/vendor/prismjs@1.30.0/prism.css
+# tools/docgen/res/vendor/prismjs@1.30.0/prism.js
+# tools/docgen/res/vendor/prismjs@1.30.0/prism.min.css
+# tools/docgen/res/vendor/prismjs@1.30.0/prism.min.js
 # tools/docgen/samptest.cpp
 # tools/docgen/schema.xsd
 # tools/docgen/schema.xsdgen.xml
+# tools/docgen/sitefiles.g.cpp
 # tools/docgen/sitegen.cpp
 # tools/docgen/util.cpp
 # tools/h2srv/h2srv.cpp

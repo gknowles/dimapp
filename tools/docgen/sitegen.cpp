@@ -246,7 +246,20 @@ static void addFontAwesomeHead(IXBuilder * out) {
 }
 
 //===========================================================================
-static void addHighlightJsHead(IXBuilder * out) {
+static void addPrismJsHead(IXBuilder * out, const Page & page) {
+    auto & bld = *out;
+    bld.start("link")
+        .attr("rel", "stylesheet")
+        .attr("href", page.urlRoot / "vendor" / "prismjs@1.30.0" / "prism.css")
+        .end();
+    bld.start("script")
+        .attr("src", page.urlRoot / "vendor" / "prismjs@1.30.0" / "prism.js")
+        .text("") // script elements must have separate closing tag (no '/>')
+        .end();
+}
+
+//===========================================================================
+static void addHighlightJsHead(IXBuilder * out, Page::Type type) {
     auto & bld = *out;
     bld.start("link")
         .attr("rel", "stylesheet")
@@ -294,7 +307,6 @@ static void addBootstrapHead(IXBuilder * out) {
 "sha384-xOolHFLEh07PJGoPkLv1IbcEPTNtaed2xpHsD9ESMhqIYd0nLMwNLD69Npy4HI+N")
         .attr("crossorigin", "anonymous")
         .end();
-    return;
 }
 
 //===========================================================================
@@ -324,7 +336,6 @@ static void addBootstrapBody(IXBuilder * out) {
         .attr("crossorigin", "anonymous")
         .text("")
         .end();
-    return;
 }
 
 //===========================================================================
@@ -388,8 +399,7 @@ static void addNavbar(
     bld.start("div")
         .attr("class", "navbar-nav mr-auto");
     for (auto&& pg : layout.pages) {
-        auto url = page.urlRoot + "/" + version.tag
-            + "/" + pg.urlSegment + ".html";
+        auto url = page.urlRoot / version.tag / pg.urlSegment + ".html";
         if (pg.rootPage == page.rootPage) {
             bld.start("a")
                 .attr("class", "nav-link active")
@@ -455,10 +465,12 @@ static void addNavbar(
             bld.attr("class", "dropdown-item active");
         }
         if (ver.urlSegments.contains(page.urlSegment)) {
-            bld.attr("href",
-                Path(page.urlRoot) / ver.tag / page.urlSegment + ".html");
+            bld.attr(
+                "href",
+                page.urlRoot / ver.tag / page.urlSegment + ".html"
+            );
         } else {
-            bld.attr("href", page.urlRoot + "/" + ver.tag + "/index.html");
+            bld.attr("href", page.urlRoot / ver.tag / "index.html");
         }
         if (ver.defaultSource)
             beforeDefault = false;
@@ -581,7 +593,7 @@ static void addGroupTocEntries(
         bld << endAttr;
         if (!pg.file.empty()) {
             bld << attr("href")
-                << Path(pg.urlRoot) / version.tag / pg.urlSegment + ".html"
+                << pg.urlRoot / version.tag / pg.urlSegment + ".html"
                 << endAttr;
         }
         bld << "";
@@ -623,10 +635,13 @@ static void addBodyCol(
             .text(page.name)
             .end();
         bld.elem("br");
-        bld.start("pre").attr("lang", "C++")
+        bld.start("pre")
+                .attr("lang", "C++")
+                .attr("class", "line-numbers")
             .start("code")
-            .text(content)
-            .end()   // code
+                .attr("class", "language-cpp")
+                .text(content)
+                .end()
             .end(); // pre
     } else {
         bld.text("");
@@ -659,17 +674,19 @@ static CharBuf processPageContent(
         .start("meta").attr("charset", "utf-8").end();
     bld.elem("title", info->page.name + " - " + info->out->siteName);
     genFaviconLink(&bld, fname, *cfg);
+    if (info->page.type == Page::kCpp) {
+        addPrismJsHead(&bld, info->page);
+    } else {
+        addHighlightJsHead(&bld, info->page.type);
+    }
     addBootstrapHead(&bld);
     addFontAwesomeHead(&bld);
-    addHighlightJsHead(&bld);
-    bld.start("link")
-        .attr("rel", "stylesheet")
-        .attr("href", info->page.urlRoot + "/css/docgen.css")
-        .end();
-    bld.start("link")
-        .attr("rel", "stylesheet")
-        .attr("href", info->page.urlRoot + "/css/asciidoc.css")
-        .end();
+    for (auto&& f : {"docgen.css", "asciidoc.css", "prism.css"}) {
+        bld.start("link")
+            .attr("rel", "stylesheet")
+            .attr("href", info->page.urlRoot / "code" / f)
+            .end();
+    }
     bld.elem("script", 1 + R"(
 document.addEventListener('DOMContentLoaded', (event) => {
   document.querySelectorAll('table.tableblock').forEach((tab) => {
@@ -829,166 +846,22 @@ static void genPage(GenPageInfo * info, unsigned phase = 0) {
 }
 
 //===========================================================================
-static bool genStatics(Config * out) {
-    CharBuf content;
-    Path fname;
-
-    //-----------------------------------------------------------------------
-    // .nojekyll
-    fname = ".nojekyll";
-    content.clear();
-    genFileHeader(&content, fname);
-    if (!addOutput(out, fname, move(content)))
+[[maybe_unused]]
+static bool genEmbeddedStatics(Config * out) {
+    ResFileMap files;
+    if (!files.parse(resWebSiteContent())) {
+        logMsgError() << "INTERNAL ERROR: loading predefined site files";
+        appSignalShutdown(EX_SOFTWARE);
         return false;
-
-    //-----------------------------------------------------------------------
-    // css/asciidoc.css
-    fname = "css/asciidoc.css";
-    content.assign("/*\n");
-    genFileHeader(&content, fname);
-    content.append(1 + R"(
-*/
-
-.halign-center {
-    text-align: center;
-}
-.halign-left {
-    text-align: left;
-}
-.halign-right {
-    text-align: right;
-}
-.table .valign-top {
-    vertical-align: top;
-}
-.table .valign-middle {
-    vertical-align: middle;
-}
-.table .valign-right {
-    vertical-align: bottom;
-}
-)");
-    if (!addOutput(out, fname, move(content)))
-        return false;
-
-    //-----------------------------------------------------------------------
-    // css/docgen.css
-    fname = "css/docgen.css";
-    content.assign("/*\n");
-    genFileHeader(&content, fname);
-    content.append(1 + R"(
-*/
-
-body {
-    position: relative;
-}
-
-nav.navbar {
-    padding: 0rem 1rem;
-}
-nav.navbar-dark .navbar-nav .nav-link {
-    color: white;
-}
-nav.navbar .navbar-nav .nav-link:hover,
-nav.navbar .navbar-nav .nav-link.active {
-    background-color: steelblue;
-    color: white;
-}
-nav.navbar span.badge {
-    margin-left: .25rem;
-}
-nav.navbar span.badge.prelim-badge {
-    background-color: rgb(255 193 7);
-    color: black;
-}
-nav.navbar span.badge.old-badge {
-    background-color: lightgray;
-    color: black;
-}
-nav.navbar .dropdown-menu {
-    font-size: .875em;
-    min-width: unset;
-    max-height: calc(100vh - 3rem);
-    overflow-y: auto;
-}
-nav.navbar .dropdown-menu .dropdown-item:hover {
-    background-color: steelblue;
-    color: white;
-}
-nav.navbar .dropdown-item {
-    padding: 0 1rem;
-}
-
-nav#toc {
-    top: 4rem;
-    height: calc(100vh - 5rem);
-    overflow-y: auto;
-}
-nav#toc div {
-    border-right: 1px solid #eee;
-    border-left: 1px solid #eee;
-}
-nav#toc .nav-title,
-nav#toc .nav-link {
-    padding-top: 0;
-    padding-bottom: 0;
-    font-size: .875em;
-}
-nav#toc .nav-title {
-    padding-left: 1rem;
-    color: black;
-    text-transform: uppercase;
-}
-nav#toc .nav-link:hover {
-    background-color: steelblue;
-    color: white;
-}
-nav#toc .nav-link.active,
-nav#toc .nav-shadow .nav-link {
-    color: black;
-    font-weight: bold;
-}
-nav#toc .nav-title.toc-2,
-nav#toc .nav-link.toc-2 {
-    padding-left: 2rem;
-}
-nav#toc .nav-title.toc-3,
-nav#toc .nav-link.toc-3 {
-    padding-left: 3rem;
-}
-
-h1[id]::before,
-h2[id]::before,
-h3[id]::before,
-h4[id]::before,
-h5[id]::before,
-h6[id]::before {
-    display: block;
-    height: calc(3rem + 1rem);
-    margin-top: -4rem;
-    visibility: hidden;
-    content: "";
-}
-li p,
-table p:last-child {
-    margin-bottom: 0;
-}
-table {
-    margin-bottom: 1rem;
-}
-div.scrollable-x {
-    overflow-x: auto;
-    margin-bottom: 1rem;
-}
-div.scrollable-x table {
-    margin-bottom: 0;
-}
-table.smaller-td-font td {
-    font-size: smaller;
-}
-)");
-
-    return addOutput(out, fname, move(content));
+    }
+    unordered_map<string, string> vars;
+    vars["version"] = toString(appVersion());
+    for (auto&& f : files) {
+        CharBuf buf(f.second.content);
+        if (!addOutput(out, Path(f.first).relative("/"), move(buf)))
+            return false;
+    }
+    return true;
 }
 
 //===========================================================================
@@ -1124,7 +997,7 @@ static void genSite(Config * out, unsigned phase) {
         auto own = unique_ptr<Config>(out);
 
         // Generate infrastructure files for site.
-        if (!genStatics(out))
+        if (!genEmbeddedStatics(out))
             return;
 
         // This passthrough task (needed if all else is removed).

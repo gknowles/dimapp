@@ -77,7 +77,7 @@ struct Page {
     std::string file;
     Type type = kUnknown;
     std::string urlSegment;
-    std::string urlRoot;
+    Dim::Path urlRoot;
     bool defaultPage = false;
     std::string xrefFile; // defaults to file
     std::string patch;
@@ -171,3 +171,5 @@ bool writeOutputs(
     std::string_view odir,
     const std::unordered_map<std::string, Dim::CharBuf> & files
 );
+
+std::string_view resWebSiteContent();
