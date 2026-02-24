@@ -383,25 +383,26 @@ std::string toUpper(std::string_view src);
 *
 ***/
 
-enum UtfType {
-    kUtfUnknown,
-    kUtf8,
-    kUtf16BE,
-    kUtf16LE,
-    kUtf32BE,
-    kUtf32LE,
+enum class UtfType {
+    kUnknown,
+    k8,
+    k16BE,
+    k16LE,
+    k32BE,
+    k32LE,
 };
 
 UtfType utfBomType(const char bytes[], size_t count);
 
 //===========================================================================
 constexpr size_t utfBomSize(UtfType type) {
+    using enum UtfType;
     switch (type) {
-    case kUtf8:
+    case k8:
         return 3;
-    case kUtf16BE: case kUtf16LE:
+    case k16BE: case k16LE:
         return 2;
-    case kUtf32BE: case kUtf32LE:
+    case k32BE: case k32LE:
         return 4;
     default:
         return 0;

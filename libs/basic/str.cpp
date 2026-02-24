@@ -667,33 +667,34 @@ string Dim::toUpper(string_view src) {
 // Wikipedia article on byte order marks:
 //  https://tinyurl.com/ep3zfrj6
 UtfType Dim::utfBomType(const char bytes[], size_t count) {
+    using enum UtfType;
     if (count >= 2) {
         switch (bytes[0]) {
         case 0:
             if (count >= 4 && bytes[1] == 0 && bytes[2] == '\xfe'
                 && bytes[3] == '\xff'
             ) {
-                return kUtf32BE;
+                return k32BE;
             }
             break;
         case '\xef':
             if (count >= 3 && bytes[1] == '\xbb' && bytes[2] == '\xbf')
-                return kUtf8;
+                return k8;
             break;
         case '\xfe':
             if (bytes[1] == '\xff')
-                return kUtf16BE;
+                return k16BE;
             break;
         case '\xff':
             if (bytes[1] == '\xfe') {
                 if (count >= 4 && bytes[2] == 0 && bytes[3] == 0)
-                    return kUtf32LE;
-                return kUtf16LE;
+                    return k32LE;
+                return k16LE;
             }
             break;
         }
     }
-    return kUtfUnknown;
+    return kUnknown;
 }
 
 
